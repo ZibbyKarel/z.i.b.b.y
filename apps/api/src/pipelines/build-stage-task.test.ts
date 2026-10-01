@@ -35,4 +35,13 @@ describe("buildStageTask", () => {
     expect(task).toContain("nejsou pass");
     expect(task).toContain("Bez tagu");
   });
+  it("spells out the run folder when given", () => {
+    const task = buildStageTask({
+      phaseId: "x",
+      consumesAbs: null,
+      producesAbs: null,
+      runDirAbs: "/runs/r1",
+    });
+    expect(task).toContain('($ZIBBY_RUN_DIR) je "/runs/r1"');
+  });
 });

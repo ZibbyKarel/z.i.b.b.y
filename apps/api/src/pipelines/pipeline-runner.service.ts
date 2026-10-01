@@ -2217,6 +2217,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         consumesAbs,
         producesAbs,
         qualify: phase.qualify,
+        runDirAbs: path.dirname(cwd),
       });
       // Memory grounding (Phase 4): per-stage so each phase's agent gets the North
       // Star + relevant MOCs + the project note. Fail-open ("" on any error).

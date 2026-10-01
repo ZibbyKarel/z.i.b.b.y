@@ -13,6 +13,10 @@ name: Delivery Loop
 desc: "Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor"
 department: dev # required on create (422 without it) — see below
 complexity: deep # the ladder rung: light | standard | deep
+project: my-app # optional default project binding (see below)
+budget: # optional per-run spend cap (see "Budget")
+  maxCostUsd: 5
+  warnAtPct: 70 # default 70
 phases:
   - id: architekt
     type: agent
@@ -20,6 +24,14 @@ phases:
     model: opus # overrides the agent's default model for this phase
     thinking: high
     produces: spec.md # handoff file for the next phase
+    approval: ask # operator checkpoint once this phase lands green (see "Approval gate")
+
+  - id: render
+    type: tool # deterministic transform in the stage sandbox, no tokens
+    consumes: spec.md
+    produces: assets.zip
+    commands:
+      - product-factory render spec.md assets.zip
 
   - id: kodér
     type: agent
@@ -70,6 +82,17 @@ outputs: # what happens to the finished work (delivery sinks)
 
 The body of the `.md` file is the instructions for the whole pipeline
 (context hint).
+
+**Default project (`project`).** Optional project id a run binds to when the caller
+names none (an automation, a manual start); the runner resolves
+`projectRef ?? pipeline.project`. The project supplies the stage env + secrets (for
+example which image provider a `tool` phase uses) and its checkout as the agent cwd.
+An explicit project on the start request still wins.
+
+**Phase types.** `type` is `agent` (default), `verify` or `tool`. Schema rules: an
+`agent` phase requires `agent`/`model`/`thinking`/`consumes`/`produces`; a `verify`
+phase must not name an agent; a `tool` phase requires `commands` and `produces` and must
+not set `agent`/`model`/`thinking`.
 
 ### Ownership (`department`) and the ladder rung (`complexity`)
 
@@ -196,8 +219,17 @@ a dangling loop target; `409` on an id conflict; `404` for a missing/unsafe id.
 running → done       (every phase passed + outputs delivered)
         → failed     (a phase failed, retry/escalation were exhausted, and there's no then.fail)
         → parked     (the loop was exhausted → durable parking for human review;
-                      or a `pr` output is waiting on the gate → parkedReason "output")
+                      or a `pr` output is waiting on the gate → parkedReason "output";
+                      or a phase checkpoint / spend cap is waiting → parkedReason "gate" / "budget")
 ```
+
+Run fields added by the gates and the budget:
+
+| Field                      | When                                 | Meaning                                                                                                                             |
+| -------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `pendingGate`              | `parkedReason` is `gate` or `budget` | `{ phaseId, cursor, handoffSource }` — where the driver re-enters on approve (`cursor: null` = chain finished, deliver the outputs) |
+| `budget`                   | the pipeline declares a `budget`     | `{ maxCostUsd, warnAtPct, spentUsd, warned? }` — snapshot of the cap plus spend so far                                              |
+| `StageRun.externalCostUsd` | a stage reported non-model spend     | sum of `costUsd` over the lines of `<stageDir>/costs.jsonl`; absent when none                                                       |
 
 ### Log polling (unified surface)
 
@@ -233,6 +265,9 @@ reachable from `stageRuns`).
    `department` (see "Wiring: pipeline stage dispatch" below) — before the
    sandbox is created.
 3. Builds the prompt = pipeline prompt + phase instructions + the handoff file's content.
+   The stage task (`buildStageTask`, `build-stage-task.ts`) also names the run folder
+   (`$ZIBBY_RUN_DIR`, via the `runDirAbs` option) so an agent without Bash can still
+   reach earlier phases' artifacts in its subfolders.
 4. Calls `RunnerCore.spawn()` for a `pipeline-stage` kind.
 5. Waits for it to finish (polling the sidecar status).
 6. Reads the output from the `produces` file (or the log's last N lines).
@@ -278,6 +313,59 @@ Deterministic commands — no agent, no tokens, no intents:
 2. Exit code 0 = pass, anything else = fail.
 3. Command logs are appended to the pipeline run log.
 
+### Phase: tool
+
+A deterministic **transform** between agents — no model, no tokens, no intents.
+Where `verify` checks the project checkout, `tool` runs its `commands` **in the stage
+sandbox** (`consumes` → `commands` → `produces`): the `consumes` symlink and the
+`produces` file live there, never in the project checkout, and it never falls back to
+project/default checks.
+
+- Requires `commands` (max 50) and `produces`; `agent`/`model`/`thinking` are rejected.
+- Supports `consumes`, `loop` (back-edge on failure, same retry/escalation machinery
+  as any phase), and `approval: ask`.
+- Exit code 0 = pass, anything else = fail. The `produces` file becomes the next
+  phase's handoff.
+- Env: the project's env + secrets, plus `ZIBBY_RUN_DIR` (the run root) and
+  `ZIBBY_STAGE_DIR` (this stage's sandbox) so a tool can write run-wide artifacts
+  (e.g. a `book/` folder) that survive a loop re-dispatch.
+- **PATH:** the repo's `node_modules/.bin` goes **first** for a tool stage, so workspace
+  CLIs (`product-factory`) resolve however the API was started. Agent stages get it
+  appended **last**, so a project checkout's own toolchain is never shadowed.
+- A tool that pays for something outside the model (a cloud image API) appends
+  `{"costUsd": n}` lines to `<stageDir>/costs.jsonl`; see _Budget_.
+
+### Approval gate (`approval: ask`)
+
+Any phase type may carry `approval: ask` — an operator checkpoint, absent (the default)
+meaning fully autonomous. Once the phase lands green (`produces` written):
+
+1. the run parks: `status: "parked"`, `parkedReason: "gate"`, `pendingGate` set, and
+   `currentStage` points at the next phase;
+2. an approval of `kind: "pipeline-gate"`, `action: "stage-approval"` (risk `low`,
+   `runId` = pipelineRunId, carrying the pipeline's department) tells the operator to
+   review the produced file;
+3. **approve** re-enters the driver at the next phase (or delivers the outputs when the
+   chain is finished); **reject** fails the run (`status: "failed"`).
+
+### Budget (`budget`)
+
+An optional per-run spend cap: `budget: { maxCostUsd, warnAtPct }` (`maxCostUsd > 0`,
+`warnAtPct` 1–100, default 70). Absent = uncapped. The run carries a snapshot as
+`PipelineRun.budget` with `spentUsd`.
+
+- **Spend** = the sum over every finished stage of `costUsd` (model) +
+  `externalCostUsd` (the `costUsd` of each line of `<stageDir>/costs.jsonl`; a missing
+  file is zero, a malformed line is skipped with a warning).
+- **Warn:** the first time spend reaches `warnAtPct` of the cap, a warning is logged and
+  `budget.warned` is set.
+- **Cap:** the check runs at the **next phase boundary** — after the stage that crossed
+  the cap, before the next one spends more. Over the cap the run parks with
+  `parkedReason: "budget"` and a `pipeline-gate` approval with
+  `action: "spend-past-cap"` (risk `medium`).
+- **Approve** raises the cap by another `maxCostUsd` (new cap = spend so far +
+  `maxCostUsd`, `warned` reset) and continues; **reject** fails the run.
+
 ### Phase: qualify (an agent's verdict drives the loop, Phase 45)
 
 An agent phase with `qualify: true` is a _subjective_ gate (a complement to
@@ -311,6 +399,13 @@ absent from a definition by default, and absence is invisible at runtime,
 so `apps/api/src/pipelines/shipped-pipelines.test.ts` parses every shipped
 `.zibby/data/pipelines/*.pipeline.md` against `PipelineSchema` and pins which
 phases are gates.
+
+### Demo stage (tests)
+
+Without an LLM, stages run `demo-stage.mjs`. Besides its fail/gap/drift knobs,
+`PIPELINE_DEMO_FIXTURE_DIR` lets a demo run feed real artifacts to downstream `tool`
+phases: when `<dir>/<phaseId>/<produces>` exists it is copied as the work product (the
+verdict tag, if any, is appended); otherwise the usual placeholder text is written.
 
 ### Loop and escalation
 
@@ -390,11 +485,15 @@ folders, created in `start()`:
 A run parks when:
 
 - the `loop` is exhausted (`maxRetries` reached) and there's no `then.fail`,
-- or explicitly via `then: { fail: park }`.
+- or explicitly via `then: { fail: park }`,
+- or a phase with `approval: ask` finished (`parkedReason: "gate"`),
+- or the run's spend passed its `budget` cap (`parkedReason: "budget"`).
 
 A parked pipeline run:
 
-- Is durable (survives an API restart).
+- Is durable (survives an API restart) for the parks that have no live child:
+  `retries`, `output`, `gate` and `budget`. An `approval` park (a live stage child
+  blocking on a gate decision) does not survive — its child dies with the API.
 - Shows up in the UI with a human-review option.
 - Can be manually decided by the operator (resume / abandon).
 - Writes a `pipeline-parked` event to the activity log.
@@ -404,9 +503,16 @@ A parked pipeline run:
 Same as for agent runs: `PipelineRunnerService` checks running stage runs on
 init and reconciles orphaned `running` → `interrupted`.
 
+Runs parked `retries`, `output`, `gate` or `budget` are **left parked** on reconstruct:
+their `pendingGate` / `pendingOutput` / `parked` detail is in the persisted aggregate,
+and the matching `pipeline-gate` / `pipeline-output` approval resumes them after the
+restart.
+
 A restart also drops every in-memory `EmployeeAllocator` lease (the allocator
 holds no persisted state) — a stage found `running` with a dead PID
 reconciles to `interrupted` same as always, and a subsequent resume/retry
 re-acquires its lease fresh rather than assuming one is still held.
 
 <!-- ZibbyCorp ZB-05a (2026-09-25): recordArtifact gains the chain-step emitter (fail-soft, like the scout emission). -->
+
+<!-- Publishing factory P1/P4 (2026-10-01): tool phase, approval: ask, budget, default project, run-folder line in the stage task, PIPELINE_DEMO_FIXTURE_DIR. -->

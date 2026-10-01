@@ -11,8 +11,10 @@ export function buildStageTask(opts: {
   consumesAbs: string | null;
   producesAbs: string | null;
   qualify?: boolean;
+  /** The run root (`$ZIBBY_RUN_DIR`) — spelled out so an agent without Bash can still reach earlier artifacts. */
+  runDirAbs?: string;
 }): string {
-  const { phaseId, consumesAbs, producesAbs, qualify } = opts;
+  const { phaseId, consumesAbs, producesAbs, qualify, runDirAbs } = opts;
   return [
     `Proveď fázi pipeline "${phaseId}".`,
     consumesAbs
@@ -20,6 +22,10 @@ export function buildStageTask(opts: {
         "předchozí fáze, ne o pracovní kopii; neupravuj ho na místě."
       : "",
     producesAbs ? `Výstup zapiš do "${producesAbs}".` : "",
+    runDirAbs
+      ? `Složka celého běhu ($ZIBBY_RUN_DIR) je "${runDirAbs}" — výstupy dřívějších fází ` +
+        "najdeš v jejích podsložkách."
+      : "",
     qualify
       ? "Na úplný konec výstupu zapiš svůj verdikt přesně jedním tagem: " +
         "<verdict>pass</verdict> (práce splňuje zadání), " +

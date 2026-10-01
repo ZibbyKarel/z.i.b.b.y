@@ -191,6 +191,14 @@ describe("Agents API (e2e)", () => {
     expect(res.body.message).toContain("department");
   });
 
+  it("D-022: rejects create with an unknown department (422)", async () => {
+    const res = await request(app.getHttpServer())
+      .post(BASE)
+      .send({ ...validBody, id: "ghost-writer", department: "ghost" });
+    expect(res.status).toBe(422);
+    expect(res.body.message).toContain("ghost");
+  });
+
   it("NS2 F1b: accepts create with a valid department (201)", async () => {
     const res = await request(app.getHttpServer()).post(BASE).send(validBody);
     expect(res.status).toBe(201);

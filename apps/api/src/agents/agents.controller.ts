@@ -1,6 +1,8 @@
 import { Controller } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { agentsContract } from "@zibby/contracts";
+import { unknownDepartment422 } from "../departments/departments.errors";
+import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { makeErrorMapper } from "../shared/http/error-mapping";
 import { AgentConflictError, AgentNotFoundError, InvalidAgentIdError } from "./agents.errors";
 import { AgentsStorageService } from "./agents.storage.service";
@@ -19,18 +21,23 @@ const unprocessable = (message: string) => ({ status: 422 as const, body: { mess
  */
 @Controller()
 export class AgentsController {
-  constructor(private readonly storage: AgentsStorageService) {}
+  constructor(
+    private readonly storage: AgentsStorageService,
+    private readonly departments: DepartmentsStorageService,
+  ) {}
 
   @TsRestHandler(agentsContract)
   handler() {
     return tsRestHandler(agentsContract, {
-      createAgent: ({ body }) => {
+      createAgent: async ({ body }) => {
         // NS2 F1b: every new agent must be attributed to a department — pre-F1
         // agents are exempt (tagged by the owner-backfill sweep instead), so
         // this is a create-only guard, not a schema-level requirement.
         if (!body.department) {
-          return Promise.resolve(unprocessable("department is required"));
+          return unprocessable("department is required");
         }
+        const missing = await this.departments.firstMissing([body.department]);
+        if (missing) return unknownDepartment422(missing);
         return errors.created(() => this.storage.create(body));
       },
 
