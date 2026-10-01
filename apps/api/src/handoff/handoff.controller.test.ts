@@ -3,6 +3,7 @@ import { Test } from "@nestjs/testing";
 import type { Chain, HandoffRule, HandoffSignalKind } from "@zibby/contracts";
 import request from "supertest";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { ChainInUseError, ChainNotFoundError, InvalidChainInputError } from "./chain.errors";
 import { ChainsService } from "./chains.service";
 import { SignalKindNotFoundError, SystemSignalKindError } from "./handoff-signal-kind.errors";
@@ -79,6 +80,10 @@ describe("handoffContract CRUD routes", () => {
         {
           provide: HandoffSignalKindStore,
           useValue: { list: signalKindStoreList },
+        },
+        {
+          provide: DepartmentsStorageService,
+          useValue: { firstMissing: vi.fn(async () => null) },
         },
         {
           provide: ChainsService,

@@ -1,0 +1,13 @@
+{
+  "id": "dist",
+  "code": "DIST",
+  "name": "Distribution",
+  "tagline": "Editions and marketplace packages",
+  "mandate": "Balí jeden zdrojový produkt do edic pro konkrétní tržiště a připravuje publikaci. Publikuje jen po schválení operátorem.",
+  "color": "#38bdf8",
+  "division": "business",
+  "icon": "send",
+  "fallback": "primary",
+  "tierDefault": null,
+  "createdAt": "2026-10-01T20:30:00.000Z"
+}

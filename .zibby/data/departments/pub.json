@@ -1,0 +1,13 @@
+{
+  "id": "pub",
+  "code": "PUB",
+  "name": "Publishing",
+  "tagline": "Sellable digital products — books, workbooks, printables",
+  "mandate": "Vyrábí prodejné digitální produkty z příležitosti — knihy, sešity, tiskoviny. Vlastní výrobní pipeline, jejich jednotkovou cenu a kontrolu kvality.",
+  "color": "#c084fc",
+  "division": "business",
+  "icon": "book",
+  "fallback": "primary",
+  "tierDefault": null,
+  "createdAt": "2026-10-01T20:30:00.000Z"
+}

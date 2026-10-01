@@ -296,3 +296,72 @@ describe("attemptsFromStageRuns", () => {
     expect(attemptsFromStageRuns([])).toEqual({});
   });
 });
+
+describe("tool + approval round-trip", () => {
+  const withTool: Pipeline = {
+    ...existing,
+    phases: [
+      {
+        id: "pre",
+        type: "agent",
+        agent: "writer",
+        consumes: "task.md",
+        produces: "outline.md",
+        model: "sonnet",
+        thinking: "medium",
+      },
+      {
+        id: "w",
+        type: "agent",
+        agent: "writer",
+        consumes: "outline.md",
+        produces: "book.md",
+        model: "sonnet",
+        thinking: "medium",
+        qualify: true,
+        approval: "ask",
+        loop: {
+          to: "pre",
+          maxRetries: 1,
+          escalate: false,
+          then: "park",
+          driftTo: "pre",
+        },
+      },
+      {
+        id: "img",
+        type: "tool",
+        consumes: "book.md",
+        produces: "images.md",
+        commands: ["gen --all", "zip out"],
+        approval: "ask",
+      },
+      { id: "v", type: "verify", commands: ["pnpm test"] },
+    ],
+  };
+
+  it("keeps type, commands, produces, consumes, approval, qualify and driftTo", () => {
+    const phases = graphToPhases(phasesToGraph(withTool, agents), INITIAL_ASSIGNMENT);
+    expect(phases[1]).toMatchObject({
+      qualify: true,
+      approval: "ask",
+      loop: { driftTo: "pre", then: "park" },
+    });
+    expect(phases[2]).toEqual({
+      id: "img",
+      type: "tool",
+      consumes: "book.md",
+      produces: "images.md",
+      commands: ["gen --all", "zip out"],
+      approval: "ask",
+    });
+    expect(phases[3]).toEqual({ id: "v", type: "verify", commands: ["pnpm test"] });
+  });
+
+  it("requires commands and produces on a tool node", () => {
+    const g = phasesToGraph(withTool, agents);
+    expect(validateGraph(g, "x").ok).toBe(true);
+    const bad = { ...g, nodes: g.nodes.map((n) => (n.id === "img" ? { ...n, commands: "" } : n)) };
+    expect(validateGraph(bad, "x")).toEqual({ ok: false, reason: "commands" });
+  });
+});

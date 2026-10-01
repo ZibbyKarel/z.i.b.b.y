@@ -2,7 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import {
   type Agent,
   type ClassifyTaskInput,
-  DEPARTMENTS,
+  type Department,
   type DepartmentId,
   type Employee,
   type MakerRef,
@@ -17,6 +17,7 @@ import {
   isExplicitOnlyAgent,
 } from "@zibby/contracts";
 import { AgentsStorageService } from "../agents/agents.storage.service";
+import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { EmployeesStorageService } from "../employees/employees.storage.service";
 import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
 import { matchProject } from "../projects/project-matcher";
@@ -172,49 +173,6 @@ export const PR_SIZING_RULE =
   "do not size it as a light fix because the description sounds tidy.";
 
 /**
- * F2b — each department's terminal fallback when {@link TaskClassifierService.classifyWithinDepartment}'s
- * stage-2 verdict isn't confident: `"orchestrator"` defers to the global
- * orchestrator (the department's own units are delivery specialists — a
- * low-confidence pick is better self-delegated); `"primary"` dispatches to the
- * department's own first owned unit (registry/file order) instead of escaping
- * the department the operator/switchboard already named. A typed `Record` over
- * the closed `DepartmentId` enum is exhaustiveness discipline — a future
- * department id fails `tsc` here until it's given a policy.
- */
-export const DEPARTMENT_FALLBACK: Record<DepartmentId, "orchestrator" | "primary"> = {
-  // `dev` was once `"orchestrator"` on the reasoning that its units are
-  // delivery SPECIALISTS, so an unsure pick is better self-delegated. That
-  // reasoning is wrong for the work dev actually receives: a delivery item on
-  // a code project. Escaping to the global orchestrator produces a session with
-  // no PR-shaped output, and `RoadmapGateService.reconcileRunning` then kills the
-  // item as "Run finished without producing an artifact" — the exact death this
-  // fallback was supposed to avoid. `"primary"` makes "unsure" mean "run a
-  // pipeline", which is the safe direction.
-  //
-  // NS2 F9 changed what `"primary"` RESOLVES to, not the policy: it used to read
-  // `candidates[0]` (pipelines sorted first, so dev's `delivery` — the most
-  // EXPENSIVE unit it owns), and now resolves via `cheapestPipeline` to the
-  // lowest pipeline rung. Same safety, a fraction of the cost.
-  dev: "primary",
-  rnd: "primary",
-  com: "primary",
-  ops: "primary",
-  sec: "primary",
-  rel: "primary",
-  qa: "primary",
-  // Crewed by F9, so these no longer defer: each owns a `light` pipeline.
-  knw: "primary",
-  per: "primary",
-  // Own no dispatchable units by design and are therefore never seated in the
-  // stage-1 catalog, so stage 2 is unreachable for them and this value is inert.
-  // `inc` IS the Tier-3 surface-and-wait contract rather than a work-doer;
-  // `fin` is a budget/limits service. Kept as `"orchestrator"` so that if
-  // either is ever crewed, the safe default applies until it gets a real policy.
-  inc: "orchestrator",
-  fin: "orchestrator",
-};
-
-/**
  * Classifies a free-text task to a stored agent or pipeline. It builds the
  * candidate catalog from the file-backed stores, asks the primary {@link TaskRouter}
  * (the `claude -p` AI categorizer) to pick a target, and falls back to the
@@ -253,6 +211,8 @@ export class TaskClassifierService {
     private readonly projects: ProjectsStorageService,
     /** D-015: {@link departmentCandidates}'s agent membership (active employees, not `Agent.department`). */
     private readonly employees: EmployeesStorageService,
+    /** D-022: department identity + `fallback` policy come from the store. */
+    private readonly departments: DepartmentsStorageService,
     logger: LoggerService,
   ) {
     this.log = logger.child(TaskClassifierService.name);
@@ -282,7 +242,7 @@ export class TaskClassifierService {
    * The router prompt is steered by a composed `preamble` (the department's
    * mandate + an "owned units" list) so the LLM leg reasons about the mandate,
    * not just bare catalog rows. The terminal fallback for "nothing matched
-   * confidently" is {@link DEPARTMENT_FALLBACK}'s per-department policy — never a
+   * confidently" is `department.fallback`'s per-department policy — never a
    * blanket rule, because a department whose own units are delivery specialists
    * (dev) is better served escaping to the orchestrator than forcing a guess,
    * while most departments are better served staying inside their own mandate.
@@ -311,16 +271,20 @@ export class TaskClassifierService {
     const first = candidates[0];
     if (!first) return null;
 
-    const department = DEPARTMENTS.find((s) => s.id === departmentId);
+    const department = await this.departments.get(departmentId).catch(() => null);
     const displayName = department?.name ?? departmentId;
-    const policy = DEPARTMENT_FALLBACK[departmentId];
+    // F2b/D-022: terminal fallback is `department.fallback`. "primary" = run the
+    // department's own cheapest pipeline (dev must never escape to the orchestrator:
+    // it yields no PR-shaped output and `reconcileRunning` kills the item); an
+    // unknown department defers to the orchestrator.
+    const policy = department?.fallback ?? "orchestrator";
     // F9: `first` is now the cheapest AGENT (ladder order), which is the wrong
     // answer for an unsure verdict — see `cheapestPipeline`.
     const primary = this.cheapestPipeline(candidates) ?? first;
     // A `pr`-constrained catalog holds nothing but PR-capable pipelines, so escaping
     // to the orchestrator would break the very invariant the constraint exists to
     // hold (the orchestrator produces no PR-shaped output — the failure
-    // `DEPARTMENT_FALLBACK.dev`'s own comment documents). The constraint therefore
+    // `fallback` history documents). The constraint therefore
     // overrides a department's `"orchestrator"` policy rather than negotiating with it.
     const fallback =
       policy === "orchestrator" && !constrainedBy
@@ -469,7 +433,7 @@ export class TaskClassifierService {
       this.pipelines.list().catch((): Pipeline[] => []),
       this.employees.list().catch((): Employee[] => []),
     ]);
-    const candidates = this.stage1DepartmentCandidates(pipelines, employees);
+    const candidates = await this.stage1DepartmentCandidates(pipelines, employees);
     const fallbackCandidate = candidates.find((c) => c.id === preferred) ?? candidates[0];
     if (!fallbackCandidate) return null;
     // NS2 F10 — ambiguity is EXPOSED here, unlike at stage 2: the caller
@@ -714,7 +678,7 @@ export class TaskClassifierService {
   }
 
   /**
-   * Build the stage-1 candidate catalog — DEPARTMENTS ONLY (NS2 F9).
+   * Build the stage-1 candidate catalog — departments only (NS2 F9).
    *
    * Before F9 this returned agents + pipelines + departments in one flat list and
    * let a single ranking pass choose between them. That asked the router to
@@ -763,24 +727,27 @@ export class TaskClassifierService {
    * free. Never offered by {@link classifyWithinDepartment} — a department
    * never delegates to another department.
    */
-  private stage1DepartmentCandidates(
+  private async stage1DepartmentCandidates(
     pipelines: readonly Pipeline[],
     employees: readonly Employee[],
-  ): RoutableTarget[] {
+  ): Promise<RoutableTarget[]> {
     const owning = new Set([
       ...pipelines.map((p) => p.department).filter(Boolean),
       ...employees.filter((e) => e.status === "active").map((e) => e.department),
     ]);
-    return DEPARTMENTS.filter((s) => owning.has(s.id)).map((s) => ({
-      kind: "department",
-      id: s.id,
-      name: s.name,
-      // "orbit" (the design's first choice) isn't a DS IconName — "grid" is the
-      // web's own KIND_FALLBACK_GLYPH default for a department target
-      // (`apps/web/features/tasks/task.ts`), reused here instead of inventing one.
-      glyph: "grid",
-      search: s.mandate,
-    }));
+    const departments = await this.departments.list().catch((): Department[] => []);
+    return departments
+      .filter((s) => owning.has(s.id))
+      .map((s) => ({
+        kind: "department",
+        id: s.id,
+        name: s.name,
+        // "orbit" (the design's first choice) isn't a DS IconName — "grid" is the
+        // web's own KIND_FALLBACK_GLYPH default for a department target
+        // (`apps/web/features/tasks/task.ts`), reused here instead of inventing one.
+        glyph: "grid",
+        search: s.mandate,
+      }));
   }
 
   /**
@@ -789,7 +756,7 @@ export class TaskClassifierService {
    * `light` → `standard` → `deep` pipelines.
    *
    * NS2 F9 reversed the old ordering. Pipelines used to be listed first purely
-   * so {@link DEPARTMENT_FALLBACK}'s `"primary"` policy could read `candidates[0]`
+   * so `department.fallback`'s `"primary"` policy could read `candidates[0]`
    * as "the primary owned pipeline". That coupling is gone — the fallback now
    * names its unit explicitly via {@link cheapestPipeline} — which frees the
    * catalog to be ordered the way the router should READ it: cheapest first, so
@@ -825,7 +792,7 @@ export class TaskClassifierService {
    * Deliberately a pipeline and not simply `candidates[0]` (which is now an
    * agent, since F9 orders the scoped catalog cheapest-first). "Unsure" is
    * exactly the state in which a bare agent is the wrong answer: the reason
-   * {@link DEPARTMENT_FALLBACK} exists at all is that dev tasks escaping to the
+   * `department.fallback` exists at all is that dev tasks escaping to the
    * global orchestrator produced sessions with no PR-shaped output, which
    * `RoadmapGateService.reconcileRunning` then killed as "Run finished without
    * producing an artifact". A pipeline keeps review and verification in the

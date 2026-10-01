@@ -159,7 +159,10 @@ export class ChatToolsService {
 
   /** The per-department Czech status answer: state + counts + recent owned activity. */
   private async departmentStatus(id: DepartmentId): Promise<string> {
-    const row: DepartmentWithStatus = await this.departments.get(id);
+    // D-022: the id is a free string from the tool call — check it against the store.
+    const found = await this.departments.get(id).catch(() => null);
+    if (!found) return `Oddělení „${id}“ neexistuje.`;
+    const row: DepartmentWithStatus = found;
     const parts: string[] = [`${row.name} — ${DEPARTMENT_STATE_LABEL[row.state]}.`];
     if (row.tier3Count > 0) {
       parts.push(`Čeká na tebe: ${row.tier3Count} (rozhodnutí ve frontě schválení).`);

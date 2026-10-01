@@ -35,13 +35,17 @@ export const INITIAL_ASSIGNMENT = "task.md";
 export interface GraphNode {
   /** Durable phase id — loop targets reference it; an edited pipeline keeps it. */
   id: string;
-  type: "agent" | "verify";
-  /** Agent id (empty for verify phases). */
+  type: "agent" | "verify" | "tool";
+  /** Agent id (empty for verify/tool phases). */
   agent: string;
   /** Output file this node writes (= the `consumes` of its flow successor). */
   produces: string;
-  /** Verify checks, one command per line ("" = project/default checks). */
+  /** Verify/tool commands, one per line (verify: "" = project/default checks). */
   commands: string;
+  /** Human checkpoint after this phase (`"ask"`); absent = autonomous. */
+  approval?: "ask";
+  /** Agent phase verdict gate — not editable here, preserved on round-trip. */
+  qualify?: boolean;
   model: AgentModel;
   thinking: AgentThinking;
   /**
@@ -74,6 +78,8 @@ export interface ReworkEdge {
   escalate: boolean;
   then: string;
   escalation: PhaseEscalation[];
+  /** Preserved on round-trip (not editable on the canvas). */
+  driftTo?: string;
 }
 
 export interface PipelineGraph {
@@ -107,6 +113,26 @@ export function makeNode(agent: Agent, index: number, x: number, y: number): Gra
   };
 }
 
+/** A fresh verify or tool node (no agent) from the palette. */
+export function makeStepNode(
+  type: "verify" | "tool",
+  index: number,
+  x: number,
+  y: number,
+): GraphNode {
+  return {
+    id: guid("n"),
+    type,
+    agent: "",
+    produces: type === "tool" ? `step-${index}.md` : "",
+    commands: "",
+    model: "sonnet",
+    thinking: "medium",
+    x: clamp(x, 8, CANVAS_W - NODE_W - 8),
+    y: clamp(y, 8, CANVAS_H - NODE_H - 8),
+  };
+}
+
 export const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v));
 
 // ---- phases → graph (auto-layout on open) ---------------------------------
@@ -123,9 +149,12 @@ export function phasesToGraph(initial: Pipeline | undefined, agents: Agent[]): P
   const nodes: GraphNode[] = initial.phases.map((ph, i) => ({
     id: ph.id ?? `phase-${i + 1}`,
     type: ph.type,
-    agent: ph.agent ?? agents[0]?.id ?? "",
-    produces: ph.produces ?? defaultProduces(ph.agent ?? "output", i + 1),
+    agent: ph.type === "agent" ? (ph.agent ?? agents[0]?.id ?? "") : "",
+    produces:
+      ph.produces ?? (ph.type === "verify" ? "" : defaultProduces(ph.agent ?? "output", i + 1)),
     commands: (ph.commands ?? []).join("\n"),
+    ...(ph.approval ? { approval: ph.approval } : {}),
+    ...(ph.qualify ? { qualify: ph.qualify } : {}),
     model: ph.model ?? "sonnet",
     thinking: ph.thinking ?? "medium",
     x: LAYOUT_X0 + i * (NODE_W + GAP_X),
@@ -148,6 +177,7 @@ export function phasesToGraph(initial: Pipeline | undefined, agents: Agent[]): P
         escalate: ph.loop.escalate,
         then: ph.loop.then,
         escalation: ph.loop.escalation ?? [],
+        ...(ph.loop.driftTo ? { driftTo: ph.loop.driftTo } : {}),
       });
     } else {
       // `loop.to: "fail"` (or an unknown target) can't be a rework edge — keep it
@@ -191,6 +221,12 @@ export function orderNodes(graph: PipelineGraph): GraphNode[] {
  * node's incoming flow source (or the assignment file for a chain head). Mirrors
  * the proven id-based projection the linear dialog used.
  */
+const splitCommands = (raw: string): string[] =>
+  raw
+    .split("\n")
+    .map((c) => c.trim())
+    .filter(Boolean);
+
 export function graphToPhases(graph: PipelineGraph, assignment: string): ContractPhase[] {
   const order = orderNodes(graph);
   const hasIncoming = new Set(graph.flow.map((e) => e.to));
@@ -206,6 +242,7 @@ export function graphToPhases(graph: PipelineGraph, assignment: string): Contrac
         escalate: r.escalate,
         then: r.then,
         ...(r.escalation.length > 0 ? { escalation: r.escalation } : {}),
+        ...(r.driftTo ? { driftTo: r.driftTo } : {}),
       };
     }
     return node.looseLoop;
@@ -220,22 +257,32 @@ export function graphToPhases(graph: PipelineGraph, assignment: string): Contrac
     if (!hasIncoming.has(node.id)) handoff = assign;
     const loop = loopOf(node);
 
+    const approval = node.approval ? { approval: node.approval } : {};
     if (node.type === "verify") {
-      const commands = node.commands
-        .split("\n")
-        .map((c) => c.trim())
-        .filter(Boolean);
+      const commands = splitCommands(node.commands);
       return {
         id: node.id,
         type: "verify" as const,
         ...(commands.length > 0 ? { commands } : {}),
         ...(loop ? { loop } : {}),
+        ...approval,
       };
     }
 
     const consumes = handoff;
     const produces = node.produces.trim();
     handoff = produces || handoff;
+    if (node.type === "tool") {
+      return {
+        id: node.id,
+        type: "tool" as const,
+        consumes,
+        produces,
+        commands: splitCommands(node.commands),
+        ...(loop ? { loop } : {}),
+        ...approval,
+      };
+    }
     return {
       id: node.id,
       type: "agent" as const,
@@ -244,7 +291,9 @@ export function graphToPhases(graph: PipelineGraph, assignment: string): Contrac
       produces,
       model: node.model,
       thinking: node.thinking,
+      ...(node.qualify ? { qualify: true } : {}),
       ...(loop ? { loop } : {}),
+      ...approval,
     };
   });
 }
@@ -253,7 +302,7 @@ export function graphToPhases(graph: PipelineGraph, assignment: string): Contrac
 export interface GraphValidity {
   ok: boolean;
   /** i18n key under `forms.pipeline.invalid.*` describing the first problem. */
-  reason?: "name" | "empty" | "agent" | "produces" | "rework";
+  reason?: "name" | "empty" | "agent" | "produces" | "rework" | "commands";
 }
 
 /**
@@ -268,6 +317,10 @@ export function validateGraph(graph: PipelineGraph, name: string): GraphValidity
   for (const n of graph.nodes) {
     if (n.type === "agent") {
       if (!n.agent) return { ok: false, reason: "agent" };
+      if (n.produces.trim().length === 0) return { ok: false, reason: "produces" };
+    }
+    if (n.type === "tool") {
+      if (splitCommands(n.commands).length === 0) return { ok: false, reason: "commands" };
       if (n.produces.trim().length === 0) return { ok: false, reason: "produces" };
     }
   }

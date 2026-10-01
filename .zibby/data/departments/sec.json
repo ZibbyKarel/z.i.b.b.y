@@ -1,0 +1,12 @@
+{
+  "id": "sec",
+  "code": "SEC",
+  "name": "Security",
+  "tagline": "Bezpečnost a dohled",
+  "mandate": "Bezpečnost vůči externímu prostředí — CVE závislostí, úniky tajemství.",
+  "color": "#34c9bd",
+  "division": "operations",
+  "icon": "shield",
+  "fallback": "primary",
+  "tierDefault": null
+}

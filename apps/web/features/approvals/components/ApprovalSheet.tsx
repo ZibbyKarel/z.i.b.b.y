@@ -14,14 +14,14 @@ import {
   TextAreaField,
   Typography,
 } from "@zibby/design-system";
-import { DEPARTMENTS } from "@zibby/contracts";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
+import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { useTaskQuery } from "../../tasks/queries";
-import { HIGH_RISK_TYPES, formatWaited, riskMeta } from "../approval";
+import { HIGH_RISK_TYPES, formatWaited, gateTitleKey, riskMeta } from "../approval";
 import { useApproveMutation, useRejectMutation } from "../mutations";
 import { useApprovalQuery } from "../queries";
 
@@ -51,6 +51,7 @@ export function ApprovalSheet({
   onClose: () => void;
 }) {
   const t = useTranslations("policy.approvals.sheet");
+  const departments = useDepartmentLookup();
   const router = useRouter();
   const { data: approval, isPending, isError, refetch } = useApprovalQuery(approvalId);
   const approve = useApproveMutation();
@@ -66,9 +67,7 @@ export function ApprovalSheet({
   const steps: ChainRouteStripStep[] =
     task?.subtasks.map((s) => ({
       code: (s.department ?? "?").toUpperCase(),
-      name: s.department
-        ? (DEPARTMENTS.find((d) => d.id === s.department)?.name ?? s.department)
-        : "",
+      name: s.department ? departments.name(s.department) : "",
       state: s.state,
     })) ?? [];
 
@@ -78,6 +77,7 @@ export function ApprovalSheet({
     onClose();
   };
 
+  const gateKey = approval ? gateTitleKey(approval) : null;
   const body = !approvalId ? null : isPending ? (
     <QueryLoading />
   ) : isError || !approval ? (
@@ -93,7 +93,8 @@ export function ApprovalSheet({
             </Tag>
           )}
         </Row>
-        <Typography type="h3">{approval.text ?? approval.detail}</Typography>
+        {gateKey && <Typography type="h3">{t(`gate.${gateKey}`)}</Typography>}
+        <Typography type={gateKey ? "text" : "h3"}>{approval.text ?? approval.detail}</Typography>
         <Typography type="note" variant="tertiary">
           {approval.skill} · {t("waited", { waited: formatWaited(approval.requestedAt) })}
         </Typography>

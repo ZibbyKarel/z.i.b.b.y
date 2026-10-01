@@ -154,6 +154,9 @@ export class PipelinesStorageService extends MarkdownEntityStore<Pipeline> {
     // cheapest-first ordering the stage-2 fallback depends on would collapse to a
     // constant instead of failing loudly.
     if (typeof data.complexity === "string") candidate.complexity = data.complexity;
+    // P1-03 per-run spend cap — absent stays absent (uncapped).
+    if (data.budget !== undefined) candidate.budget = data.budget;
+    if (typeof data.project === "string") candidate.project = data.project;
 
     const result = PipelineSchema.safeParse(candidate);
     return result.success ? result.data : null;
@@ -172,6 +175,8 @@ export class PipelinesStorageService extends MarkdownEntityStore<Pipeline> {
     // defaulted, so it is never `undefined` on a parsed entity, and omitting it
     // here would silently strip the rung from disk on any update round-trip.
     data.complexity = pipeline.complexity;
+    if (pipeline.budget !== undefined) data.budget = pipeline.budget;
+    if (pipeline.project !== undefined) data.project = pipeline.project;
     return data;
   }
 

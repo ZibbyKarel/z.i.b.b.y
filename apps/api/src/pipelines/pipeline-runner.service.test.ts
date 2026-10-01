@@ -474,6 +474,19 @@ describe("PipelineRunnerService — stage gates & resume", () => {
       expect(cmd.command).toBe("/bin/sh");
     });
 
+    it("tool: runs its commands in the stage sandbox, even with a project checkout (P1-01)", async () => {
+      process.env.AGENT_RUNNER_MODE = "claude";
+      const cmd = await build(
+        { id: "render", type: "tool", commands: ["product-factory render"], produces: "r.md" },
+        PROJECT,
+      );
+      expect(cmd).toEqual({
+        command: "/bin/sh",
+        args: ["-c", "product-factory render"],
+        spawnCwd: "/sandbox/stage",
+      });
+    });
+
     it("claude: a project-targeted stage with a consumes handoff grants the whole run root (P1-T2)", async () => {
       process.env.AGENT_RUNNER_MODE = "claude";
       const buildClaude = vi.fn(async (opts: { task: string; grantDirs?: readonly string[] }) => ({

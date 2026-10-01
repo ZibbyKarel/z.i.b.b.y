@@ -1,6 +1,8 @@
 import { Controller } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { gateRulesContract } from "@zibby/contracts";
+import { unknownDepartment422 } from "../departments/departments.errors";
+import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { makeErrorMapper } from "../shared/http/error-mapping";
 import { GateRuleNotFoundError, InvalidGateRuleIdError } from "./gate-rules.errors";
 import { GateRulesStorageService } from "./gate-rules.storage.service";
@@ -27,14 +29,22 @@ const errors = makeErrorMapper("Gate rule", {
  */
 @Controller()
 export class GateRulesController {
-  constructor(private readonly store: GateRulesStorageService) {}
+  constructor(
+    private readonly store: GateRulesStorageService,
+    /** D-022: a rule's optional `department` tag must name a stored department. */
+    private readonly departments: DepartmentsStorageService,
+  ) {}
 
   @TsRestHandler(gateRulesContract)
   handler() {
     return tsRestHandler(gateRulesContract, {
       listGateRules: async () => ({ status: 200, body: { rules: await this.store.list() } }),
 
-      createGateRule: async ({ body }) => ({ status: 201, body: await this.store.create(body) }),
+      createGateRule: async ({ body }) => {
+        const missing = await this.departments.firstMissing([body.department]);
+        if (missing) return unknownDepartment422(missing);
+        return { status: 201, body: await this.store.create(body) } as const;
+      },
 
       reorderGateRules: async ({ body: { ids } }) => {
         const rules = await this.store.reorder(ids);
@@ -43,8 +53,11 @@ export class GateRulesController {
         return { status: 200, body: { rules } };
       },
 
-      updateGateRule: ({ params: { id }, body }) =>
-        errors.or404(id, () => this.store.update(id, body)),
+      updateGateRule: async ({ params: { id }, body }) => {
+        const missing = await this.departments.firstMissing([body.department]);
+        if (missing) return unknownDepartment422(missing);
+        return errors.or404(id, () => this.store.update(id, body));
+      },
 
       deleteGateRule: ({ params: { id } }) =>
         errors.or404(id, async () => {

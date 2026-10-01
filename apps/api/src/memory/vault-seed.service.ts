@@ -1,5 +1,5 @@
 import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
-import { DEPARTMENTS } from "@zibby/contracts";
+import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { composeSeedNotes } from "./vault-seed.content";
 import { VaultService } from "./vault.service";
 
@@ -20,7 +20,10 @@ import { VaultService } from "./vault.service";
 export class VaultSeedService implements OnModuleInit {
   private readonly logger = new Logger(VaultSeedService.name);
 
-  constructor(private readonly vault: VaultService) {}
+  constructor(
+    private readonly vault: VaultService,
+    private readonly departments: DepartmentsStorageService,
+  ) {}
 
   async onModuleInit(): Promise<void> {
     try {
@@ -29,7 +32,7 @@ export class VaultSeedService implements OnModuleInit {
         this.logger.debug("vault already has notes — seed skipped (fresh-install only)");
         return;
       }
-      const seeds = composeSeedNotes(DEPARTMENTS);
+      const seeds = composeSeedNotes(await this.departments.list());
       let written = 0;
       for (const note of seeds) {
         try {

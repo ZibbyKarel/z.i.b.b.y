@@ -1,6 +1,5 @@
 "use client";
 
-import { DEPARTMENTS } from "@zibby/contracts";
 import type { DepartmentId, TaskParent, TaskParentState, TaskSource } from "@zibby/contracts";
 import {
   Button,
@@ -20,6 +19,7 @@ import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
+import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { compactAgo } from "../../../utils/time";
@@ -55,6 +55,7 @@ function subtaskRouteSteps(parent: TaskParent): ChainRouteStripStep[] {
  */
 export function TasksListScreen() {
   const t = useTranslations("tasksWork");
+  const departments = useDepartmentLookup();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [now] = useState(() => Date.now());
@@ -204,7 +205,7 @@ export function TasksListScreen() {
             onValueChange={setDepartment}
             options={[
               { value: ALL, label: t("filter.all") },
-              ...DEPARTMENTS.map((d) => ({ value: d.id, label: d.name })),
+              ...departments.list.map((d) => ({ value: d.id, label: d.name })),
             ]}
             value={department}
           />

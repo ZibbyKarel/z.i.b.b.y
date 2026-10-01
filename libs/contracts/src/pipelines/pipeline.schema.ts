@@ -46,9 +46,11 @@ export type PhaseLoop = z.infer<typeof PhaseLoopSchema>;
 /**
  * What a phase executes. `agent` (the default, so every committed `.pipeline.md`
  * parses unchanged) spawns the phase agent; `verify` runs deterministic shell
- * checks (no model, no tokens, no intents) — the "tester" of the delivery loop.
+ * checks in the project checkout (no model, no tokens, no intents) — the "tester"
+ * of the delivery loop; `tool` runs deterministic shell `commands` IN THE STAGE
+ * SANDBOX (consumes → commands → produces) — a transform step between agents.
  */
-export const PipelinePhaseTypeSchema = z.enum(["agent", "verify"]);
+export const PipelinePhaseTypeSchema = z.enum(["agent", "verify", "tool"]);
 export type PipelinePhaseType = z.infer<typeof PipelinePhaseTypeSchema>;
 
 /**
@@ -76,11 +78,18 @@ export const PipelinePhaseSchema = z.object({
   produces: z.string().min(1).optional(),
   model: AgentModelSchema.optional(),
   thinking: AgentThinkingSchema.optional(),
-  /** Verify phases only: shell commands run with `&&` (override project checks). */
+  /** Verify/tool phases: shell commands run with `&&` (verify: override project checks). */
   commands: z.array(z.string().min(1)).max(50).optional(),
   /** Agent phase only: parse a <verdict> from `produces`; non-`pass` takes the back-edge. */
   qualify: z.boolean().optional(),
   loop: PhaseLoopSchema.optional(),
+  /**
+   * P1-02 — an optional human checkpoint: once this phase lands green (its
+   * `produces` written), the run parks (`parkedReason: "gate"`) on a
+   * `pipeline-gate` approval and continues only when the operator approves; a
+   * reject fails the run. Absent (the default) = fully autonomous.
+   */
+  approval: z.enum(["ask"]).optional(),
 });
 export type PipelinePhase = z.infer<typeof PipelinePhaseSchema>;
 
@@ -144,6 +153,20 @@ export const PIPELINE_COMPLEXITY_ORDER: readonly PipelineComplexity[] = [
   "deep",
 ];
 
+/**
+ * P1-03 — a per-run spend cap. Every stage's model cost plus the external cost a
+ * tool reports in `<stageDir>/costs.jsonl` accrues on the run; past `maxCostUsd`
+ * the run parks (`parkedReason: "budget"`) at the next phase boundary on a
+ * `pipeline-gate` approval (approve raises the cap by another `maxCostUsd`).
+ */
+export const PipelineBudgetSchema = z
+  .object({
+    maxCostUsd: z.number().positive(),
+    warnAtPct: z.number().int().min(1).max(100).default(70),
+  })
+  .strict();
+export type PipelineBudget = z.infer<typeof PipelineBudgetSchema>;
+
 /** The plain object form — `update` derives from this (a refined schema can't `.omit`). */
 const PipelineObject = z.object({
   id: AgentIdSchema,
@@ -184,6 +207,15 @@ const PipelineObject = z.object({
    * Defaulted so every pipeline written before F9 still parses.
    */
   complexity: PipelineComplexitySchema.default("standard"),
+  /** P1-03 — optional per-run spend cap (absent = uncapped, as before). */
+  budget: PipelineBudgetSchema.optional(),
+  /**
+   * Default project a run of this pipeline binds to when the caller names none
+   * (an automation, a manual start). The project supplies the stage env + secrets
+   * (e.g. which image provider a tool phase uses) and its checkout as the agent
+   * cwd. An explicit project on the start request still wins.
+   */
+  project: AgentIdSchema.optional(),
 });
 
 /** Shared phase/loop validation (used by the full schema; storage re-validates updates). */
@@ -207,6 +239,29 @@ function refinePipeline(p: z.infer<typeof PipelineObject>, ctx: z.RefinementCtx)
             path: ["phases", i, key],
           });
         }
+      }
+    } else if (ph.type === "tool") {
+      // tool: a deterministic sandbox transform — it must say what it runs and
+      // what it leaves behind, and nothing model-shaped applies.
+      if (!ph.commands?.length)
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'a tool phase requires "commands"',
+          path: ["phases", i, "commands"],
+        });
+      if (ph.produces === undefined)
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'a tool phase requires "produces"',
+          path: ["phases", i, "produces"],
+        });
+      for (const key of ["agent", "model", "thinking"] as const) {
+        if (ph[key] !== undefined)
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `a tool phase must not set "${key}"`,
+            path: ["phases", i, key],
+          });
       }
     } else {
       // verify: deterministic checks — an agent makes no sense here.

@@ -1,5 +1,6 @@
 import {
   type Agent,
+  DEPARTMENT_SEED,
   type DepartmentId,
   type Pipeline,
   type PipelineComplexity,
@@ -10,6 +11,7 @@ import {
 } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
 import type { AgentsStorageService } from "../agents/agents.storage.service";
+import type { DepartmentsStorageService } from "../departments/departments.storage.service";
 import type { EmployeesStorageService } from "../employees/employees.storage.service";
 import type { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
 import type { ProjectsStorageService } from "../projects/projects.storage.service";
@@ -172,6 +174,13 @@ function makeService(opts: {
     new KeywordScorer(),
     projects,
     employees,
+    {
+      list: () => Promise.resolve([...DEPARTMENT_SEED]),
+      get: (id: string) => {
+        const d = DEPARTMENT_SEED.find((x) => x.id === id);
+        return d ? Promise.resolve(d) : Promise.reject(new Error(`no department ${id}`));
+      },
+    } as unknown as DepartmentsStorageService,
     fakeLogger,
   );
 }

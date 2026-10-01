@@ -28,7 +28,7 @@ import type {
   TaskTarget,
 } from "@zibby/contracts";
 import { PIPELINE_COMPLEXITY_ORDER } from "@zibby/contracts";
-import { DEPARTMENTS, ORCHESTRATOR_TARGET } from "@zibby/contracts";
+import { ORCHESTRATOR_TARGET } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import type { AttachmentSetRefProvider } from "./attachment-set-ref-provider";
 import { ATTACHMENT_SET_REF_PROVIDER } from "./attachment-set-ref-provider";
@@ -489,7 +489,7 @@ export class TaskSchedulerService
           title: input.title,
           text: input.text,
           paths: input.paths,
-          target: { kind: "department", id: chain.entry, name: departmentDisplayName(chain.entry) },
+          target: { kind: "department", id: chain.entry, name: chain.entry },
           parentTaskId: parent.id,
           chain: { id: chainId, step: 0 },
           source: "chain",
@@ -596,7 +596,7 @@ export class TaskSchedulerService
    *    to just the department's own roster (never the full catalog, never a
    *    fallback to the orchestrator here — the operator, or the switchboard's
    *    stage-1 verdict, already named the department; `classifyWithinDepartment`'s
-   *    own `DEPARTMENT_FALLBACK` policy decides what "not confident" resolves to).
+   *    own `department.fallback` policy decides what "not confident" resolves to).
    *
    * The resolved target IS the run's "via <department>" attribution: any
    * consumer can already read `Pipeline.department`/`Agent.department`
@@ -755,7 +755,7 @@ export class TaskSchedulerService
     output?: TaskOutput,
   ): Promise<TaskTarget> {
     const resolved = await this.resolveDepartmentTargetOrNull(target, text, paths, output);
-    if (!resolved) throw new DepartmentEmptyRosterError(departmentDisplayName(target.id));
+    if (!resolved) throw new DepartmentEmptyRosterError(target.name || target.id);
     return resolved.target;
   }
 
@@ -2080,15 +2080,6 @@ export class TaskSchedulerService
 /** Display id of a routing target (the orchestrator is synthetic, with no id). */
 function targetIdOf(target: TaskTarget): string {
   return target.kind === "orchestrator" ? "orchestrator" : target.id;
-}
-
-/**
- * A department's mythic display name for {@link DepartmentEmptyRosterError}'s
- * message — falls back to the raw id (never happens with a valid `DepartmentId`,
- * since {@link DEPARTMENTS} is the closed registry it comes from).
- */
-function departmentDisplayName(id: DepartmentId): string {
-  return DEPARTMENTS.find((s) => s.id === id)?.name ?? id;
 }
 
 /**

@@ -1,10 +1,16 @@
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { DEPARTMENT_SEED } from "@zibby/contracts";
 import { afterEach, describe, expect, it } from "vitest";
+import type { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { GroundingService } from "./grounding.service";
 import { VaultSeedService } from "./vault-seed.service";
 import { VaultService } from "./vault.service";
+
+const departments = {
+  list: async () => [...DEPARTMENT_SEED],
+} as unknown as DepartmentsStorageService;
 
 describe("VaultSeedService", () => {
   let dir: string | null = null;
@@ -17,7 +23,7 @@ describe("VaultSeedService", () => {
     dir = await fs.mkdtemp(path.join(os.tmpdir(), "vault-seed-"));
     const vault = new VaultService(dir);
     await vault.onModuleInit();
-    await new VaultSeedService(vault).onModuleInit();
+    await new VaultSeedService(vault, departments).onModuleInit();
 
     const { nodes } = await vault.graph();
     expect(nodes.length).toBe(13);
@@ -43,7 +49,7 @@ describe("VaultSeedService", () => {
     });
     const before = await vault.note("existing-note");
 
-    await new VaultSeedService(vault).onModuleInit();
+    await new VaultSeedService(vault, departments).onModuleInit();
 
     const { nodes } = await vault.graph();
     expect(nodes).toHaveLength(1);
@@ -63,7 +69,7 @@ describe("VaultSeedService", () => {
       return originalCreateNote(input);
     }) as typeof vault.createNote;
 
-    await expect(new VaultSeedService(vault).onModuleInit()).resolves.toBeUndefined();
+    await expect(new VaultSeedService(vault, departments).onModuleInit()).resolves.toBeUndefined();
 
     const { nodes } = await vault.graph();
     // 13 seeds attempted, the first one fails — 12 land.

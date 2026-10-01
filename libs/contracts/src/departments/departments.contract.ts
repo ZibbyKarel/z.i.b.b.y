@@ -3,9 +3,13 @@ import { z } from "zod";
 import { EmptyBodySchema, ErrorSchema } from "../common.schema";
 import { SubtaskSummarySchema } from "../tasks/task-parents.schema";
 import {
+  CreateDepartmentInputSchema,
   DepartmentRosterSchema,
+  DepartmentSchema,
   DepartmentWithStatusSchema,
+  DivisionSchema,
   UnownedEntitySchema,
+  UpdateDepartmentInputSchema,
 } from "./department.schema";
 
 const c = initContract();
@@ -38,6 +42,41 @@ export const departmentsContract = c.router(
       },
       summary:
         "List stored entities (pipelines/chains/agents/integrations) with no department (F1b) — [] once the owner-backfill sweep has run",
+    },
+
+    // Also before `getDepartment`, for the same reason.
+    listDivisions: {
+      method: "GET",
+      path: "/departments/divisions",
+      responses: {
+        200: z.array(DivisionSchema),
+      },
+      summary: "List the divisions departments are grouped under, in org-chart order",
+    },
+
+    createDepartment: {
+      method: "POST",
+      path: "/departments",
+      body: CreateDepartmentInputSchema,
+      responses: {
+        201: DepartmentSchema,
+        409: ErrorSchema,
+        422: ErrorSchema,
+      },
+      summary: "Create a department (D-022) — 409 when the id exists, 422 on an unknown division",
+    },
+
+    updateDepartment: {
+      method: "PATCH",
+      path: "/departments/:id",
+      pathParams: z.object({ id: z.string() }),
+      body: UpdateDepartmentInputSchema,
+      responses: {
+        200: DepartmentSchema,
+        404: ErrorSchema,
+        422: ErrorSchema,
+      },
+      summary: "Update a department's editable fields (id is immutable)",
     },
 
     getDepartment: {

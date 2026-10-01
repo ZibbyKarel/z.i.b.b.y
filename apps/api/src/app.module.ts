@@ -45,6 +45,7 @@ import { SelfKnowledgeModule } from "./self-knowledge/self-knowledge.module";
 import { SkillsModule } from "./skills/skills.module";
 import { SpeechModule } from "./speech/speech.module";
 import { DepartmentsModule } from "./departments/departments.module";
+import { DepartmentsStoreModule } from "./departments/departments-store.module";
 import { SystemModule } from "./system/system.module";
 import { AttachmentSetRefsModule } from "./tasks/attachment-set-refs.module";
 import { TasksModule } from "./tasks/tasks.module";
@@ -71,6 +72,7 @@ import { EmployeesModule } from "./employees/employees.module";
     ProjectsModule,
     CompaniesModule,
     TeamsModule,
+    DepartmentsStoreModule,
     EmployeesModule,
     PipelinesModule,
     GoalsModule,

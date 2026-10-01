@@ -858,8 +858,23 @@
         "empty": "add at least one node",
         "agent": "pick an agent for every node",
         "produces": "add an output file",
-        "rework": "rework must target an earlier node"
-      }
+        "rework": "rework must target an earlier node",
+        "commands": "add at least one command"
+      },
+      "typeTool": "tool (script)",
+      "addVerify": "Add verify",
+      "addTool": "Add tool",
+      "commandsNone": "no commands yet",
+      "stepsTitle": "// steps · settings",
+      "commandsLabel": "Commands",
+      "commandsHintVerify": "One per line. Empty = project default checks.",
+      "commandsHintTool": "One per line, run in the stage sandbox.",
+      "commandsPlaceholder": "pnpm test",
+      "approvalLabel": "Human check after this step",
+      "budgetLabel": "Spend cap (USD)",
+      "budgetHint": "Optional. Empty = no cap.",
+      "projectLabel": "Default project",
+      "projectNone": "— none —"
     },
     "command": {
       "title": "New command",
@@ -1238,7 +1253,13 @@
       "pass": "Approved",
       "gap": "Incomplete",
       "drift": "Off-track"
-    }
+    },
+    "parkedGate": "Waiting for your review",
+    "parkedBudget": "Spend cap reached",
+    "budgetSpent": "Spent {spent} / {cap}",
+    "totalCost": "Total cost {cost}",
+    "bookFolder": "Book folder",
+    "stageExternalCost": "+{cost} external"
   },
   "gates": {
     "title": "Approval rules",
@@ -2057,6 +2078,33 @@
         "save": "Save rule",
         "cancel": "Cancel"
       }
+    },
+    "create": {
+      "title": "New department",
+      "subtitle": "creates a department data file",
+      "submit": "Create department",
+      "idLabel": "Identifier",
+      "idHint": "Lowercase slug, 2–24 characters (e.g. pub)",
+      "codeLabel": "Code",
+      "nameLabel": "Name",
+      "taglineLabel": "Tagline",
+      "mandateLabel": "Mandate",
+      "colorLabel": "Color",
+      "colorHint": "Hex, e.g. #5b8def",
+      "divisionLabel": "Division",
+      "iconLabel": "Icon",
+      "fallbackLabel": "Classifier fallback",
+      "fallbackPrimary": "Primary agent",
+      "fallbackOrchestrator": "Orchestrator",
+      "tierLabel": "Default gate",
+      "tier": {
+        "none": "none",
+        "ask": "ask",
+        "deny": "deny",
+        "allow": "allow",
+        "notify": "notify"
+      },
+      "addButton": "New department"
     }
   },
   "departmentDetail": {
@@ -2403,7 +2451,11 @@
         "confirmDeny": "Confirm deny",
         "approve": "Approve",
         "deny": "Deny",
-        "openTask": "Open task"
+        "openTask": "Open task",
+        "gate": {
+          "stage-approval": "Review step output",
+          "spend-past-cap": "Spend cap reached"
+        }
       }
     },
     "gates": {

@@ -64,10 +64,12 @@ export interface AgentNodeProps {
 const glyphOf = (node: GraphNode, agents: Agent[]): IconName =>
   node.type === "verify"
     ? "shield"
-    : ((agents.find((a) => a.id === node.agent)?.glyph as IconName | undefined) ?? "bot");
+    : node.type === "tool"
+      ? "gear"
+      : ((agents.find((a) => a.id === node.agent)?.glyph as IconName | undefined) ?? "bot");
 
 const avatarOf = (node: GraphNode, agents: Agent[]): string | undefined =>
-  node.type === "verify" ? undefined : agents.find((a) => a.id === node.agent)?.avatar;
+  node.type === "agent" ? agents.find((a) => a.id === node.agent)?.avatar : undefined;
 
 const stop = (e: MouseEvent) => e.stopPropagation();
 
@@ -99,7 +101,8 @@ export function AgentNode({
   onNodeLeave,
 }: AgentNodeProps) {
   const t = useTranslations("forms.pipeline");
-  const label = node.type === "verify" ? t("typeVerify") : node.agent;
+  const label =
+    node.type === "verify" ? t("typeVerify") : node.type === "tool" ? t("typeTool") : node.agent;
   const clickable = readOnly && Boolean(onNodeClick);
 
   const flowTarget = pending?.kind === "flow" && pending.from !== node.id;
@@ -200,7 +203,7 @@ export function AgentNode({
 
       <Stack align="center" direction="row" gap="75">
         <IconTile
-          alt={node.type === "verify" ? undefined : node.agent}
+          alt={node.type === "agent" ? node.agent : undefined}
           glyph={glyphOf(node, agents)}
           size="sm"
           src={avatarOf(node, agents)}
@@ -210,6 +213,7 @@ export function AgentNode({
             {label}
           </Typography>
         </Container>
+        {node.approval === "ask" && <Icon name="checkpoint" size="xs" tone="faint" />}
         {readOnly && attempt !== undefined && (
           <Tag tone="warn">
             {maxAttempts !== undefined ? `${attempt}/${maxAttempts}` : `${attempt}`}
@@ -251,12 +255,13 @@ export function AgentNode({
         </Stack>
       ) : (
         <Typography mono size="2xs" style={{ marginTop: 6 }} type="note" variant="tertiary">
-          {node.commands.split("\n").filter((c) => c.trim()).length || t("checksDefault")}
+          {node.commands.split("\n").filter((c) => c.trim()).length ||
+            (node.type === "tool" ? t("commandsNone") : t("checksDefault"))}
         </Typography>
       )}
 
       {/* Terminal agent node: its output file has no arrow to carry it. */}
-      {node.type === "agent" && !hasOutgoing && (
+      {node.type !== "verify" && !hasOutgoing && (
         <Stack align="center" direction="row" gap="25" style={{ marginTop: 6 }}>
           <Icon name="file" size="xs" tone="faint" />
           {readOnly ? (
@@ -265,7 +270,7 @@ export function AgentNode({
             </Typography>
           ) : (
             <GraphInlineInput
-              aria-label={t("outputFileAria", { agent: node.agent })}
+              aria-label={t("outputFileAria", { agent: label })}
               onChange={(e) => onSetProduces(node.id, e.target.value)}
               onMouseDown={stop}
               style={{ flex: 1 }}

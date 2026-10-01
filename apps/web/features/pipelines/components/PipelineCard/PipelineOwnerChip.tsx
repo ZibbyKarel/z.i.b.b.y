@@ -1,5 +1,6 @@
-import { DEPARTMENTS, type DepartmentId } from "@zibby/contracts";
+import { type DepartmentId } from "@zibby/contracts";
 import { Container, Stack, Typography } from "@zibby/design-system";
+import { useDepartmentLookup } from "../../../departments/useDepartmentLookup";
 
 export enum PipelineOwnerChipTestId {
   Root = "pipeline-owner-chip",
@@ -9,9 +10,6 @@ export enum PipelineOwnerChipTestId {
 export interface PipelineOwnerChipProps {
   department: DepartmentId;
 }
-
-/** Static id → {name, color} lookup — the registry (Phase 80) never changes at runtime. */
-const DEPARTMENT_BY_ID = new Map(DEPARTMENTS.map((s) => [s.id, s] as const));
 
 /**
  * Small owner indicator on a `/pipelines` index card (Phase 85 §3): the owning
@@ -23,7 +21,7 @@ const DEPARTMENT_BY_ID = new Map(DEPARTMENTS.map((s) => [s.id, s] as const));
  * single-card affordance.
  */
 export function PipelineOwnerChip({ department }: PipelineOwnerChipProps) {
-  const dept = DEPARTMENT_BY_ID.get(department);
+  const dept = useDepartmentLookup().get(department);
   if (!dept) return null;
   return (
     <Stack

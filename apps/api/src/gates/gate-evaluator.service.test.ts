@@ -3,6 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { GateRule, GateRuleInput, IntendedAction } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.service";
 import { type AgentPolicyInput, GateEvaluatorService } from "./gate-evaluator.service";
 import { PolicyStorageService } from "./policy.storage.service";
@@ -311,21 +312,28 @@ describe("GateEvaluatorService", () => {
   describe("department bucket (NS2 F3a — three-bucket evaluation)", () => {
     let catalogDir: string;
     let catalog: GateRulesStorageService;
+    let departmentsDir: string;
+    let departments: DepartmentsStorageService;
     let scoped: GateEvaluatorService;
 
     beforeEach(async () => {
       catalogDir = await fs.mkdtemp(path.join(os.tmpdir(), "gate-catalog-"));
       catalog = new GateRulesStorageService(catalogDir);
       await catalog.onModuleInit();
+      departmentsDir = await fs.mkdtemp(path.join(os.tmpdir(), "gate-departments-"));
+      departments = new DepartmentsStorageService(departmentsDir);
+      await departments.onModuleInit();
       scoped = new GateEvaluatorService(
         new PolicyStorageService(dir),
         undefined,
         undefined,
         catalog,
+        departments,
       );
     });
     afterEach(async () => {
       await fs.rm(catalogDir, { recursive: true, force: true });
+      await fs.rm(departmentsDir, { recursive: true, force: true });
     });
 
     it("department ask + floor notify → ask (department hardens the floor)", async () => {
@@ -413,7 +421,13 @@ describe("GateEvaluatorService", () => {
     });
 
     it("no catalog service injected → empty department bucket, tier default still applies", async () => {
-      const bare = new GateEvaluatorService(new PolicyStorageService(dir));
+      const bare = new GateEvaluatorService(
+        new PolicyStorageService(dir),
+        undefined,
+        undefined,
+        undefined,
+        departments,
+      );
       const devRules = await bare.departmentRules("dev");
       expect(devRules).toEqual([]);
       const incidentRules = await bare.departmentRules("inc");

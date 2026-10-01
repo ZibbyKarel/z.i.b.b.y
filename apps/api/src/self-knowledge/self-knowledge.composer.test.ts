@@ -53,6 +53,9 @@ const department: Department = {
     "Orchestrace delivery pipeline: Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor.",
   color: "#f97316",
   division: "engineering",
+  icon: "code",
+  fallback: "primary",
+  tierDefault: null,
 };
 
 const catalogRule: GlobalGateRule = {
@@ -171,6 +174,9 @@ describe("composeSelfKnowledge", () => {
         mandate: "Eskalace incidentů — vlastní podoba Tier-3 kontraktu surface-and-wait.",
         color: "#f59e0b",
         division: "operations",
+        icon: "warn",
+        fallback: "orchestrator",
+        tierDefault: "ask",
       };
       const { markdown, sections } = composeSelfKnowledge(
         baseInput({ departments: [incident, department] }),

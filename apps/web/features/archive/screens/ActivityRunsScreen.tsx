@@ -1,6 +1,5 @@
 "use client";
 
-import { DEPARTMENTS } from "@zibby/contracts";
 import {
   Button,
   Container,
@@ -20,6 +19,8 @@ import { useTranslations } from "next-intl";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { type DepartmentLookup } from "../../departments/departmentLookup";
+import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
@@ -38,13 +39,14 @@ const SEARCH_DEBOUNCE_MS = 300;
 const ALL_STATE = "all";
 
 /** A run's department display name (not the pure `archiveGroups` module — this
- * needs `t()` + the `DEPARTMENTS` registry). */
+ * needs `t()` + the departments registry). */
 function departmentName(
   id: ArchiveDepartmentFilterId,
   t: ReturnType<typeof useTranslations<"archive">>,
+  departments: DepartmentLookup,
 ): string {
   if (id === NO_DEPARTMENT) return t("noDepartment");
-  return DEPARTMENTS.find((d) => d.id === id)?.name ?? id;
+  return departments.name(id);
 }
 
 /** Total wall-clock duration for a finished run, formatted mono — `""` when
@@ -67,6 +69,7 @@ function statusGroupKey(status: RunView["status"]): RunStatusGroupKey | undefine
  */
 export function ActivityRunsScreen() {
   const t = useTranslations("archive");
+  const departments = useDepartmentLookup();
   const tRuns = useTranslations("runs");
   const router = useRouter();
   const ownerMaps = useOwnerDepartmentMaps();
@@ -130,7 +133,10 @@ export function ActivityRunsScreen() {
             {runTitle(row)}
           </Typography>
           <Typography mono truncate size="2xs" type="note" variant="tertiary">
-            {[departmentName(archiveDepartmentFilterId(row, ownerMaps), t), row.project]
+            {[
+              departmentName(archiveDepartmentFilterId(row, ownerMaps), t, departments),
+              row.project,
+            ]
               .filter(Boolean)
               .join(" · ")}
           </Typography>
@@ -194,7 +200,7 @@ export function ActivityRunsScreen() {
             options={[
               { value: "", label: t("filter.all") },
               { value: NO_DEPARTMENT, label: t("noDepartment") },
-              ...DEPARTMENTS.map((d) => ({ value: d.id, label: d.name })),
+              ...departments.list.map((d) => ({ value: d.id, label: d.name })),
             ]}
             value={department}
           />

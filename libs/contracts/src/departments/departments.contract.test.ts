@@ -7,7 +7,6 @@ import {
   DepartmentIdSchema,
   DepartmentSchema,
   DepartmentWithStatusSchema,
-  DivisionIdSchema,
   departmentsContract,
 } from "../index";
 
@@ -47,6 +46,22 @@ describe("departmentsContract", () => {
     expect(departmentsContract.listUnownedEntities.responses).toHaveProperty("200");
   });
 
+  it("D-022: exposes create / update / divisions routes", () => {
+    expect(departmentsContract.createDepartment.method).toBe("POST");
+    expect(departmentsContract.createDepartment.path).toBe("/api/departments");
+    expect(departmentsContract.createDepartment.responses).toHaveProperty("201");
+    expect(departmentsContract.createDepartment.responses).toHaveProperty("409");
+    expect(departmentsContract.createDepartment.responses).toHaveProperty("422");
+    expect(departmentsContract.updateDepartment.method).toBe("PATCH");
+    expect(departmentsContract.updateDepartment.path).toBe("/api/departments/:id");
+    expect(departmentsContract.listDivisions.path).toBe("/api/departments/divisions");
+  });
+
+  it("declares listDivisions before getDepartment so /divisions is not captured by :id", () => {
+    const keys = Object.keys(departmentsContract);
+    expect(keys.indexOf("listDivisions")).toBeLessThan(keys.indexOf("getDepartment"));
+  });
+
   it("NS2 F1c: exposes GET /api/departments/:id/roster with 200 and 404", () => {
     expect(departmentsContract.getRoster.method).toBe("GET");
     expect(departmentsContract.getRoster.path).toBe("/api/departments/:id/roster");
@@ -70,7 +85,7 @@ describe("DEPARTMENTS registry", () => {
   });
 
   it("groups every department under a division, and every division holds at least one", () => {
-    expect(DIVISIONS.map((d) => d.id)).toEqual(DivisionIdSchema.options);
+    expect(DIVISIONS.map((d) => d.id)).toEqual(["engineering", "operations", "business", "office"]);
     for (const division of DIVISIONS) {
       expect(DEPARTMENTS.some((d) => d.division === division.id)).toBe(true);
     }
@@ -86,10 +101,10 @@ describe("DEPARTMENTS registry", () => {
     expect(personal?.color).toMatch(/^#[0-9a-f]{6}$/i);
   });
 
-  it("has unique ids covering the whole DepartmentIdSchema enum", () => {
+  it("has unique ids that all satisfy DepartmentIdSchema", () => {
     const ids = DEPARTMENTS.map((s) => s.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(new Set(ids)).toEqual(new Set(DepartmentIdSchema.options));
+    for (const id of ids) expect(DepartmentIdSchema.safeParse(id).success).toBe(true);
   });
 
   it("every entry is a valid Department (name/tagline/mandate non-empty, color a hex triplet)", () => {

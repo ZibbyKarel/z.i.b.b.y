@@ -1,0 +1,12 @@
+{
+  "id": "fin",
+  "code": "FIN",
+  "name": "Finance",
+  "tagline": "Rozpočty a limity",
+  "mandate": "Rozpočty a limity — stropy útrat, okna spotřeby, správa token-spend a limit-resume.",
+  "color": "#a9c23e",
+  "division": "business",
+  "icon": "dollar",
+  "fallback": "orchestrator",
+  "tierDefault": null
+}

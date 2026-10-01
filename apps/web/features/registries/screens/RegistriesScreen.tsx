@@ -1,7 +1,7 @@
 "use client";
 
 import type { Agent, RegistryBindings } from "@zibby/contracts";
-import { DEPARTMENTS, type DepartmentId } from "@zibby/contracts";
+import { type DepartmentId } from "@zibby/contracts";
 import {
   Button,
   Container,
@@ -18,6 +18,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { PageContainer } from "../../../components/PageContainer/PageContainer";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { slug } from "../../../utils/slug";
@@ -59,8 +60,6 @@ const DEPARTMENT_TAB: Partial<Record<RegistryKindParam, string>> = {
   hooks: "hooks",
 };
 
-const DEPARTMENT_BY_ID = new Map(DEPARTMENTS.map((d) => [d.id, d] as const));
-
 function BoundInCell({
   kind,
   departmentIds,
@@ -68,6 +67,7 @@ function BoundInCell({
   kind: RegistryKindParam;
   departmentIds?: DepartmentId[];
 }) {
+  const departments = useDepartmentLookup();
   const ids = departmentIds ?? [];
   if (ids.length === 0) {
     return (
@@ -80,7 +80,7 @@ function BoundInCell({
   return (
     <Stack wrap direction="row" gap="50">
       {ids.map((id) => {
-        const code = DEPARTMENT_BY_ID.get(id)?.code ?? id;
+        const code = departments.get(id)?.code ?? id;
         const tag = <Tag key={id}>{code}</Tag>;
         return tab ? (
           <Link href={`/org/departments/${id}/${tab}`} key={id}>

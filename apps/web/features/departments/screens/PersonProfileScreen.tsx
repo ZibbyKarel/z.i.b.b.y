@@ -1,6 +1,6 @@
 "use client";
 
-import { DEPARTMENTS, type GateRuleInput } from "@zibby/contracts";
+import { type GateRuleInput } from "@zibby/contracts";
 import {
   AgentGlyph,
   Breadcrumb,
@@ -20,6 +20,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useDepartmentLookup } from "../useDepartmentLookup";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../../components/PageContainer/PageContainer";
@@ -58,6 +59,7 @@ function Profile({
   employeeId: string;
 }) {
   const t = useTranslations("people");
+  const departments = useDepartmentLookup();
   const tc = useTranslations("common");
   const router = useRouter();
   const { data: agent } = useAgentQuery(employee.agentId);
@@ -70,7 +72,7 @@ function Profile({
   const [department, setDepartment] = useState(employee.department);
   const dirty = name.trim() !== employee.name || department !== employee.department;
 
-  const department_ = DEPARTMENTS.find((d) => d.id === employee.department);
+  const department_ = departments.get(employee.department);
   const history = runs.filter((r) => r.owner === employee.agentId).slice(0, 10);
   const tone = STATE_TONE[employee.state] ?? "idle";
 
@@ -184,7 +186,7 @@ function Profile({
                 <SelectField
                   label={t("departmentLabel")}
                   onValueChange={(v) => setDepartment(v as typeof department)}
-                  options={DEPARTMENTS.map((d) => ({ value: d.id, label: d.name }))}
+                  options={departments.list.map((d) => ({ value: d.id, label: d.name }))}
                   value={department}
                 />
                 <Button

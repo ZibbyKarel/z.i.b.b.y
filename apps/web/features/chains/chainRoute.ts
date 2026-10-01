@@ -1,14 +1,6 @@
 import type { Chain } from "@zibby/contracts";
-import { DEPARTMENTS } from "@zibby/contracts";
 import type { ChainRouteStripGate, ChainRouteStripStep } from "@zibby/design-system";
-
-function departmentCode(id: string): string {
-  return DEPARTMENTS.find((d) => d.id === id)?.code ?? id.toUpperCase();
-}
-
-function departmentName(id: string): string {
-  return DEPARTMENTS.find((d) => d.id === id)?.name ?? id;
-}
+import type { DepartmentLookup } from "../departments/departmentLookup";
 
 /**
  * A chain's full stop sequence for `ChainRouteStrip` — the entry department
@@ -16,11 +8,14 @@ function departmentName(id: string): string {
  * the STANDING route, not a live run's per-step progress (see
  * `TaskDetailScreen`'s `stepFor` for the live-run variant).
  */
-export function chainRouteSteps(chain: Pick<Chain, "entry" | "steps">): ChainRouteStripStep[] {
+export function chainRouteSteps(
+  chain: Pick<Chain, "entry" | "steps">,
+  lookup: DepartmentLookup,
+): ChainRouteStripStep[] {
   const departments = [chain.entry, ...chain.steps.map((s) => s.department)];
   return departments.map((id) => ({
-    code: departmentCode(id),
-    name: departmentName(id),
+    code: lookup.code(id),
+    name: lookup.name(id),
     state: "idle",
   }));
 }

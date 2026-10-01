@@ -22,7 +22,7 @@ describe("RegistryBindingsSchema", () => {
 
   it("rejects an unknown department id", () => {
     const parsed = RegistryBindingsSchema.safeParse({
-      skills: { x: ["not-a-department"] },
+      skills: { x: ["Not A Department"] },
       mcp: {},
       hooks: {},
       commands: {},

@@ -200,7 +200,7 @@ describe("pipeline schema", () => {
       id: "delivery",
       phases: [phase("a")],
       instructions: "x",
-      department: "not-a-department",
+      department: "Not A Department",
     });
     expect(result.success).toBe(false);
   });

@@ -179,7 +179,7 @@ describe("agent schemas", () => {
     const parsed = AgentSchema.safeParse({
       id: "a",
       instructions: "i",
-      department: "not-a-department",
+      department: "Not A Department",
     });
     expect(parsed.success).toBe(false);
   });

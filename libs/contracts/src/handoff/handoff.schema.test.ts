@@ -69,7 +69,7 @@ describe("HandoffTargetSchema", () => {
 
   it("rejects a department target with an id outside DepartmentIdSchema", () => {
     expect(
-      HandoffTargetSchema.safeParse({ kind: "department", id: "not-a-department" }).success,
+      HandoffTargetSchema.safeParse({ kind: "department", id: "Not A Department" }).success,
     ).toBe(false);
   });
 });
@@ -92,7 +92,7 @@ describe("HandoffSignalSchema", () => {
   });
 
   it("rejects an unknown `from` department", () => {
-    expect(HandoffSignalSchema.safeParse({ ...SIGNAL, from: "not-a-department" }).success).toBe(
+    expect(HandoffSignalSchema.safeParse({ ...SIGNAL, from: "Not A Department" }).success).toBe(
       false,
     );
   });
@@ -109,7 +109,7 @@ describe("HandoffRuleSchema", () => {
   });
 
   it("rejects an unknown `from` department", () => {
-    expect(HandoffRuleSchema.safeParse({ ...RULE, from: "not-a-department" }).success).toBe(false);
+    expect(HandoffRuleSchema.safeParse({ ...RULE, from: "Not A Department" }).success).toBe(false);
   });
 
   it("rejects a tier outside 1|2|3", () => {
@@ -205,7 +205,7 @@ describe("HandoffSignalKindSchema", () => {
   });
 
   it("rejects an unknown `from` department", () => {
-    expect(HandoffSignalKindSchema.safeParse({ ...KIND, from: "not-a-department" }).success).toBe(
+    expect(HandoffSignalKindSchema.safeParse({ ...KIND, from: "Not A Department" }).success).toBe(
       false,
     );
   });

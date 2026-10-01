@@ -1,4 +1,4 @@
-import { DEPARTMENTS, type GlobalGateRule } from "@zibby/contracts";
+import { type GlobalGateRule } from "@zibby/contracts";
 import type { IconName } from "@zibby/design-system";
 import {
   Button,
@@ -11,7 +11,7 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { DEPARTMENT_GLYPH } from "../../departments/departmentVisuals";
+import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { DECISION_META, MATCHER_ICON } from "../gate";
 import { DecisionBadge, MatcherText, ResolveChips } from "./RuleParts";
 
@@ -73,12 +73,13 @@ export function GlobalRuleCard({
   onDelete,
 }: GlobalRuleCardProps) {
   const t = useTranslations("gates");
+  const departments = useDepartmentLookup();
   const meta = DECISION_META[rule.decision];
   const matcherIcon = MATCHER_ICON[rule.match[0]?.type ?? "action"];
   const total = agents.length + skills.length;
   // NS2 F3a — a tagged rule is load-bearing for its department's runs (a third
   // evaluation bucket), so the card names its owner scope explicitly.
-  const owner = rule.department ? DEPARTMENTS.find((s) => s.id === rule.department) : undefined;
+  const owner = rule.department ? departments.get(rule.department) : undefined;
 
   return (
     // eslint-disable-next-line react/forbid-dom-props
@@ -125,7 +126,7 @@ export function GlobalRuleCard({
                 {owner && (
                   <Tag data-testid={GlobalRuleCardTestId.OwnerTag} tone="accent">
                     <Stack inline align="center" as="span" direction="row" gap="50">
-                      <Icon name={DEPARTMENT_GLYPH[owner.id]} size="xs" />
+                      <Icon name={departments.icon(owner.id)} size="xs" />
                       {owner.name}
                     </Stack>
                   </Tag>

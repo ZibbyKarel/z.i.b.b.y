@@ -9,7 +9,7 @@ import type {
   TaskRouting,
   TaskTarget,
 } from "@zibby/contracts";
-import { DEPARTMENTS, isBlocked } from "@zibby/contracts";
+import { isBlocked } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { ApprovalsService } from "../approvals/approvals.service";
 import { ProjectLocalService } from "../projects/project-local.service";
@@ -1006,10 +1006,10 @@ export class RoadmapGateService {
   }
 }
 
-/** A routing target's operator-facing name — a department's registry name, else its kind. */
+/** A routing target's operator-facing name — a department's `name` (carried on the target), else its kind. */
 function targetLabel(target: TaskTarget): string {
   if (target.kind === "department") {
-    return DEPARTMENTS.find((s) => s.id === target.id)?.name ?? target.id;
+    return target.name || target.id;
   }
   return "id" in target ? target.id : target.kind;
 }

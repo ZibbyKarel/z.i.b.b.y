@@ -262,9 +262,16 @@ function RetryBlock({ attempts, maxRetries, loopTo, escalated }: RetryBlockProps
                 </Typography>
               )}
             </Stack>
-            <Typography mono size="2xs" tone="bad" type="note">
-              {a.verdict ? t(`verdict.${a.verdict}`) : t(`state.${a.status}`)}
-            </Typography>
+            <Stack align="center" direction="row" gap="75">
+              {a.externalCostUsd != null && (
+                <Typography mono size="2xs" type="note" variant="tertiary">
+                  {t("stageExternalCost", { cost: formatCostUsd(a.externalCostUsd) })}
+                </Typography>
+              )}
+              <Typography mono size="2xs" tone="bad" type="note">
+                {a.verdict ? t(`verdict.${a.verdict}`) : t(`state.${a.status}`)}
+              </Typography>
+            </Stack>
           </Stack>
         ))}
         {escalated && (
@@ -355,13 +362,14 @@ export function PipelineStageTimeline({
             const agent = agentId ? agentsById.get(agentId) : undefined;
             const glyph: IconName =
               (agent?.glyph as IconName | undefined) ??
-              (phaseDef?.type === "verify" ? "check" : "bot");
+              (phaseDef?.type === "tool" ? "gear" : phaseDef?.type === "verify" ? "check" : "bot");
             const agentName = agent?.name ?? agentId ?? node.phaseId;
             const running = displayStatus === "running";
 
             const attempts = node.main ? [...node.priorAttempts, node.main] : node.priorAttempts;
             const costs = attempts.map((a) => a.costUsd).filter((c): c is number => c != null);
             const totalCost = costs.length > 0 ? costs.reduce((a, b) => a + b, 0) : undefined;
+            const externalTotal = attempts.reduce((sum, a) => sum + (a.externalCostUsd ?? 0), 0);
 
             const hasLog = !isPlaceholder;
             const key = node.main ? `${node.phaseId}#${node.main.attempt}` : node.phaseId;
@@ -423,6 +431,11 @@ export function PipelineStageTimeline({
                             {totalCost != null && (
                               <Typography mono size="2xs" type="note" variant="tertiary">
                                 {formatCostUsd(totalCost)}
+                              </Typography>
+                            )}
+                            {externalTotal > 0 && (
+                              <Typography mono size="2xs" type="note" variant="tertiary">
+                                {t("stageExternalCost", { cost: formatCostUsd(externalTotal) })}
                               </Typography>
                             )}
                             {node.main?.verdict && (

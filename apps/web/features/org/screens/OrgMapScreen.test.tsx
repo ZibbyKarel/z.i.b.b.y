@@ -25,6 +25,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("../../departments/queries/useDepartmentsQuery", () => ({
+  getDepartmentsQueryKey: () => ["departments"],
   useDepartmentsQuery: () => ({
     data: [
       {
@@ -42,6 +43,17 @@ vi.mock("../../departments/queries/useDepartmentsQuery", () => ({
     ],
   }),
 }));
+
+vi.mock("../../departments/queries/useDivisionsQuery", async () => {
+  const { DIVISION_SEED } = await import("@zibby/contracts");
+  return { useDivisionsQuery: () => ({ data: DIVISION_SEED }) };
+});
+
+vi.mock("../../departments/useDepartmentLookup", async () => {
+  const { DEPARTMENTS } = await import("@zibby/contracts");
+  const { departmentLookup } = await import("../../departments/departmentLookup");
+  return { useDepartmentLookup: () => departmentLookup(DEPARTMENTS) };
+});
 
 vi.mock("../../approvals/queries/useApprovalsQuery", () => ({
   useApprovalsQuery: () => ({ data: [] }),

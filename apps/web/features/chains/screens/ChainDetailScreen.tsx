@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
+import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { chainRouteGates, chainRouteSteps } from "../chainRoute";
 import { ChainEditor } from "../components/ChainEditor";
 import { useDeleteChainMutation, usePutChainMutation } from "../mutations";
@@ -36,6 +37,7 @@ export interface ChainDetailScreenProps {
  */
 export function ChainDetailScreen({ chainId }: ChainDetailScreenProps) {
   const t = useTranslations("chainsWork");
+  const departments = useDepartmentLookup();
   const router = useRouter();
   const { data: chain, isPending, isError, refetch } = useChainQuery(chainId);
   const putChain = usePutChainMutation();
@@ -128,7 +130,7 @@ export function ChainDetailScreen({ chainId }: ChainDetailScreenProps) {
                 <ChainRouteStrip
                   gates={chainRouteGates(chain)}
                   size="full"
-                  steps={chainRouteSteps(chain)}
+                  steps={chainRouteSteps(chain, departments)}
                 />
               )}
             </Panel>

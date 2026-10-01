@@ -7,7 +7,7 @@ import type {
   Pipeline,
   TaskRun,
 } from "@zibby/contracts";
-import { DEFAULT_MANDATE, DEPARTMENTS } from "@zibby/contracts";
+import { DEFAULT_MANDATE, DEPARTMENT_SEED } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
 import type { AgentsStorageService } from "../agents/agents.storage.service";
 import type { ApprovalsService } from "../approvals/approvals.service";
@@ -21,6 +21,7 @@ import type { TaskRunsService } from "../tasks/task-runs.service";
 import { DEPARTMENT_SEEN_EPOCH, type DepartmentSeenStore } from "./department-seen.store";
 import { DepartmentNotFoundError } from "./departments.errors";
 import { DepartmentsService } from "./departments.service";
+import type { DepartmentsStorageService } from "./departments.storage.service";
 
 const AT = "2026-07-08T00:00:00.000Z";
 const LATER = "2026-07-08T01:00:00.000Z";
@@ -99,6 +100,15 @@ function build(opts: {
     }),
   };
 
+  const departmentsStore = {
+    list: vi.fn(async () => [...DEPARTMENT_SEED]),
+    get: vi.fn(async (id: string) => {
+      const department = DEPARTMENT_SEED.find((d) => d.id === id);
+      if (!department) throw new DepartmentNotFoundError(id);
+      return department;
+    }),
+  };
+
   const service = new DepartmentsService(
     pipelinesStore as unknown as PipelinesStorageService,
     taskRuns as unknown as TaskRunsService,
@@ -109,6 +119,7 @@ function build(opts: {
     mandateStore as unknown as MandateStorageService,
     employeesStore as unknown as EmployeesStorageService,
     taskParents as unknown as TaskParentsService,
+    departmentsStore as unknown as DepartmentsStorageService,
   );
   return {
     service,
@@ -584,7 +595,7 @@ describe("DepartmentsService", () => {
 
       // registry-order tiebreak among the untouched `idle` entries.
       const idleIds = idleIndexes.map((i) => ids[i]);
-      const registryIdleOrder = DEPARTMENTS.map((s) => s.id).filter(
+      const registryIdleOrder = DEPARTMENT_SEED.map((s) => s.id).filter(
         (id) => !["inc", "rnd", "dev"].includes(id),
       );
       expect(idleIds).toEqual(registryIdleOrder);
@@ -628,7 +639,7 @@ describe("DepartmentsService", () => {
       const { service } = build({});
       const rows = await service.list();
       expect(rows).toHaveLength(11);
-      expect(rows.map((r) => r.id)).toEqual(DEPARTMENTS.map((s) => s.id));
+      expect(rows.map((r) => r.id)).toEqual(DEPARTMENT_SEED.map((s) => s.id));
       expect(rows.every((r) => r.state === "idle")).toBe(true);
     });
   });

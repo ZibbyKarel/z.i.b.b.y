@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type DepartmentId, DepartmentIdSchema } from "../departments/department.schema";
+import { DepartmentIdSchema } from "../departments/department.schema";
 
 /**
  * Risk is a property of (action, arguments/target, context), not of an entity —
@@ -175,32 +175,6 @@ const GlobalGateRuleBaseSchema = z.object({
    */
   department: DepartmentIdSchema.optional(),
 });
-
-/**
- * NS2 F3a — the static per-department tier default: a catch-all decision appended
- * to a department's gate-rule bucket (as a `{type:"context", context:"*"}` rule)
- * so a department can declare how an otherwise-unmatched action of its own runs is
- * treated. `null` = no catch-all (the run falls through to the agent's own rules
- * and the locked floor exactly as before). Only `inc` is non-null: its mandate
- * IS Tier-3 escalation (surface-and-wait), so every unmatched action of a
- * incident-owned run asks. A typed `Record` over the closed `DepartmentId` enum is
- * exhaustiveness discipline (mirrors F2b's `DEPARTMENT_FALLBACK`) — a future
- * department id fails `tsc` here until it's given a default. Operator-editable
- * defaults are deferred; this table is the v1 data-model home.
- */
-export const DEPARTMENT_TIER_DEFAULT: Record<DepartmentId, Decision | null> = {
-  dev: null,
-  ops: null,
-  sec: null,
-  rel: null,
-  inc: "ask",
-  rnd: null,
-  com: null,
-  qa: null,
-  knw: null,
-  fin: null,
-  per: null,
-};
 
 /** Body accepted by `createGateRule` / `updateGateRule` — the server assigns the `id`. */
 export const GlobalGateRuleInputSchema = GlobalGateRuleBaseSchema.superRefine(refineResolve);

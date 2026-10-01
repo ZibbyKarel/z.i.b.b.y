@@ -1,0 +1,12 @@
+{
+  "id": "rnd",
+  "code": "RND",
+  "name": "R&D",
+  "tagline": "Výzkum a analýza",
+  "mandate": "Výzkumné pipeline, které předávají výsledný artefakt dál.",
+  "color": "#46cf8b",
+  "division": "engineering",
+  "icon": "compass",
+  "fallback": "primary",
+  "tierDefault": null
+}

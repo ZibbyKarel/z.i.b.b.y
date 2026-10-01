@@ -1,10 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import {
   type ClassifyTaskInput,
-  DEPARTMENTS,
+  type Department,
   type RoutingAlternative,
   type TaskRouting,
 } from "@zibby/contracts";
+import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { spawnClaudeCli } from "../shared/spawn-claude-cli";
 import { type RoutableTarget, type TaskRouter, toTaskTarget } from "./task-router";
@@ -124,7 +125,10 @@ function parseAlternative(raw: unknown): RouterAlternative | null {
 export class ClaudeCliRouter implements TaskRouter {
   private readonly log: ScopedLogger;
 
-  constructor(logger: LoggerService) {
+  constructor(
+    private readonly departments: DepartmentsStorageService,
+    logger: LoggerService,
+  ) {
     this.log = logger.child(ClaudeCliRouter.name);
   }
 
@@ -138,7 +142,8 @@ export class ClaudeCliRouter implements TaskRouter {
 
     let raw: string;
     try {
-      raw = await this.runClaude(this.buildPrompt(input, candidates, preamble));
+      const departments = await this.departments.list().catch((): Department[] => []);
+      raw = await this.runClaude(this.buildPrompt(input, candidates, departments, preamble));
     } catch (err) {
       this.log.debug("router CLI call failed", { error: (err as Error).message });
       return null;
@@ -224,6 +229,7 @@ export class ClaudeCliRouter implements TaskRouter {
   private buildPrompt(
     input: ClassifyTaskInput,
     candidates: RoutableTarget[],
+    departments: readonly Department[],
     preamble?: string,
   ): string {
     const catalog = candidates
@@ -234,7 +240,7 @@ export class ClaudeCliRouter implements TaskRouter {
         // id, without the classifier having to thread `code` through the wider
         // RoutableTarget/TaskTarget contract for this one prompt-formatting need.
         if (c.kind === "department") {
-          const department = DEPARTMENTS.find((d) => d.id === c.id);
+          const department = departments.find((d) => d.id === c.id);
           const label = department ? `${c.id} (${department.code}) ${department.name}` : c.id;
           return `department  ${label} | ${c.search}`;
         }

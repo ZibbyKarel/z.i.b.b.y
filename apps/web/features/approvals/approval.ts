@@ -190,3 +190,11 @@ export const SEVERITY: Record<
     label: "vysoká",
   },
 };
+
+/** Title key for a `pipeline-gate` approval (`policy.approvals.sheet.gate.*`), else null. */
+export function gateTitleKey(
+  a: Pick<ContractApproval, "kind" | "action">,
+): "stage-approval" | "spend-past-cap" | null {
+  if (a.kind !== "pipeline-gate") return null;
+  return a.action === "spend-past-cap" ? "spend-past-cap" : "stage-approval";
+}

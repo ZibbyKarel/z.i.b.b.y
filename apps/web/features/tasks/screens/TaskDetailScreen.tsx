@@ -1,6 +1,5 @@
 "use client";
 
-import { DEPARTMENTS } from "@zibby/contracts";
 import type { SubtaskSummary } from "@zibby/contracts";
 import {
   ApprovalCard,
@@ -26,18 +25,22 @@ import { compactAgo } from "../../../utils/time";
 import { useApprovalsQuery, useApproveMutation, useRejectMutation } from "../../approvals";
 import { HIGH_RISK_TYPES, formatWaited } from "../../approvals/approval";
 import { useDepartmentRosterQuery } from "../../departments/queries";
+import { type DepartmentLookup } from "../../departments/departmentLookup";
+import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { RunDetail } from "../../runs/components/RunDetail";
 import { useRunGlyphMap } from "../../runs/queries/useRunsQuery";
 import { useTaskRunQuery } from "../../runs/queries/useTaskRunQuery";
 import { useRunActions } from "../../runs/useRunActions";
 import { useTaskQuery } from "../queries";
 
-function stepFor(subtask: SubtaskSummary, index: number): ChainRouteStripStep {
+function stepFor(
+  subtask: SubtaskSummary,
+  index: number,
+  departments: DepartmentLookup,
+): ChainRouteStripStep {
   return {
     code: (subtask.department ?? "?").toUpperCase(),
-    name: subtask.department
-      ? (DEPARTMENTS.find((d) => d.id === subtask.department)?.name ?? subtask.department)
-      : `Sub ${index + 1}`,
+    name: subtask.department ? departments.name(subtask.department) : `Sub ${index + 1}`,
     state: subtask.state,
   };
 }
@@ -56,6 +59,7 @@ export interface TaskDetailScreenProps {
  */
 export function TaskDetailScreen({ taskId }: TaskDetailScreenProps) {
   const t = useTranslations("tasksWork");
+  const departments = useDepartmentLookup();
   const router = useRouter();
   const pathname = usePathname();
   const [now] = useState(() => Date.now());
@@ -69,7 +73,10 @@ export function TaskDetailScreen({ taskId }: TaskDetailScreenProps) {
 
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  const steps = useMemo(() => (task ? task.subtasks.map((s, i) => stepFor(s, i)) : []), [task]);
+  const steps = useMemo(
+    () => (task ? task.subtasks.map((s, i) => stepFor(s, i, departments)) : []),
+    [task, departments],
+  );
   const selected: SubtaskSummary | undefined = task?.subtasks[selectedIndex];
 
   const selectedRunRef = selected?.runRef ?? (task?.subtasks.length ? undefined : task?.runRef);
@@ -145,8 +152,7 @@ export function TaskDetailScreen({ taskId }: TaskDetailScreenProps) {
                     <StatePill label={t(`state.${selected.state}`)} state={selected.state} />
                     <Typography type="note">
                       {selected.department
-                        ? (DEPARTMENTS.find((d) => d.id === selected.department)?.name ??
-                          selected.department)
+                        ? departments.name(selected.department)
                         : t("detail.unassigned")}
                     </Typography>
                     {selected.step != null && (

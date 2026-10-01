@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Container, IconTile, Pressable, Stack, Tag, Typography } from "@zibby/design-system";
-import { type Category, DEPARTMENTS } from "@zibby/contracts";
+import { type Category } from "@zibby/contracts";
 import {
   type Control,
   Controller,
@@ -12,6 +12,7 @@ import {
   FormSelect,
   FormTextInput,
 } from "@zibby/forms";
+import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { AGENT_GLYPHS, AGENT_TOOLS, MODEL_OPTIONS, THINKING_OPTIONS } from "../../../state/config";
 import type { AgentEditValues } from "./agentEditValues";
 
@@ -44,6 +45,7 @@ export interface AgentEditBasicsProps {
  */
 export function AgentEditBasics({ control, categories }: AgentEditBasicsProps) {
   const t = useTranslations("agents");
+  const departments = useDepartmentLookup();
 
   return (
     <Container padding={["200", "0", "0", "0"]}>
@@ -84,7 +86,7 @@ export function AgentEditBasics({ control, categories }: AgentEditBasicsProps) {
             <FormSelect<string, AgentEditValues>
               label={t("fields.department")}
               name="department"
-              options={DEPARTMENTS.map((s) => ({ value: s.id, label: s.name }))}
+              options={departments.list.map((s) => ({ value: s.id, label: s.name }))}
             />
 
             <Stack direction="row" gap="150">

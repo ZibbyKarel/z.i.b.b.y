@@ -1,7 +1,6 @@
 "use client";
 
 import type { DepartmentId } from "@zibby/contracts";
-import { DEPARTMENTS, DIVISIONS } from "@zibby/contracts";
 import {
   AgentGlyph,
   Button,
@@ -28,7 +27,14 @@ import { useState } from "react";
 import { useAgentsQuery } from "../../agents";
 import { useApprovalsQuery } from "../../approvals/queries";
 import { useHandoffRulesQuery } from "../../handoff/queries";
-import { useDepartmentSubtasksQuery, useDepartmentsQuery } from "../../departments/queries";
+import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
+import {
+  useDepartmentSubtasksQuery,
+  useDepartmentsQuery,
+  useDivisionsQuery,
+} from "../../departments/queries";
+import { NewDepartmentDialog } from "../../departments/components/NewDepartmentDialog";
+import { useCreateDepartmentMutation } from "../../departments/mutations";
 import { useHireEmployeeMutation } from "../../employees/mutations";
 import { useEmployeesQuery } from "../../employees/queries";
 
@@ -40,28 +46,11 @@ export enum OrgMapScreenTestId {
   FocusPanel = "org-map-focus-panel",
   TeamTile = "org-map-team-tile",
   AddEmployeeButton = "org-map-add-employee-button",
+  AddDepartmentButton = "org-map-add-department-button",
 }
 
-/** One column per division. `GridCols` has no fixed-4-with-minimum variant, so
- *  the track list goes through `Grid`'s `style` passthrough (CLAUDE.md's
- *  "no className" rule allows this one seam). Each column keeps a readable
- *  minimum width; on a narrow viewport the row scrolls horizontally in its own
- *  container instead of squeezing the cards (ZB-14). */
-const GRID_DIVISION_COLS = {
-  gridTemplateColumns: `repeat(${DIVISIONS.length}, minmax(160px, 1fr))`,
-};
-
-/** `GRID_DIVISION_COLS`'s own gap (`gap="200"` → 16px, DS.md §4). */
+/** `gap="200"` → 16px (DS.md §4) — the grid's own column gap. */
 const GRID_GAP_PX = 16;
-
-/**
- * The horizontal bus's `left`/`right` inset — the center of the first/last
- * division column, i.e. half a column-and-gap unit in from each edge. With
- * `DIVISIONS.length` columns the row's total gap width is
- * `(length - 1) * GRID_GAP_PX`; halving the remaining track count
- * (`length * 2`) lands the bus on the column centers (DS.md §8).
- */
-const BUS_INSET = `calc((100% - ${(DIVISIONS.length - 1) * GRID_GAP_PX}px) / ${DIVISIONS.length * 2})`;
 
 /**
  * The alert an `OrgNode` shows: an error run beats a pending approval — worse
@@ -87,12 +76,24 @@ function pickAlert(
  */
 export function OrgMapScreen() {
   const t = useTranslations("orgMap");
+  const tDepartments = useTranslations("departments");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const focusId = (searchParams.get("department") ?? undefined) as DepartmentId | undefined;
 
   const { data: departments = [] } = useDepartmentsQuery();
+  const registry = useDepartmentLookup();
+  const { data: divisions = [] } = useDivisionsQuery();
+  // One column per division, each with a readable minimum width (the row scrolls
+  // horizontally on a narrow viewport — ZB-14). `GridCols` has no variant for a
+  // dynamic count, so the track list goes through `Grid`'s `style` passthrough.
+  const gridDivisionCols = {
+    gridTemplateColumns: `repeat(${divisions.length}, minmax(160px, 1fr))`,
+  };
+  // The horizontal bus sits on the first/last column centers: half a
+  // column-and-gap unit in from each edge (DS.md §8).
+  const busInset = `calc((100% - ${Math.max(0, divisions.length - 1) * GRID_GAP_PX}px) / ${divisions.length * 2})`;
   const { data: employees = [] } = useEmployeesQuery({ status: "active" });
   const { data: approvals = [] } = useApprovalsQuery();
   const { data: allHandoffRules = [] } = useHandoffRulesQuery();
@@ -100,6 +101,8 @@ export function OrgMapScreen() {
   const { data: agents = [] } = useAgentsQuery();
   const hire = useHireEmployeeMutation(focusId ?? "");
   const [newAgentId, setNewAgentId] = useState("");
+  const [creatingDepartment, setCreatingDepartment] = useState(false);
+  const createDepartment = useCreateDepartmentMutation();
 
   function setFocus(id: DepartmentId) {
     const next = new URLSearchParams(searchParams.toString());
@@ -122,6 +125,27 @@ export function OrgMapScreen() {
 
   return (
     <Stack data-testid={OrgMapScreenTestId.Root} gap="300">
+      <Stack direction="row" justify="end">
+        <Button
+          data-testid={OrgMapScreenTestId.AddDepartmentButton}
+          icon="plus"
+          intent="primary"
+          onClick={() => setCreatingDepartment(true)}
+          size="sm"
+        >
+          {tDepartments("create.addButton")}
+        </Button>
+      </Stack>
+      {creatingDepartment && (
+        <NewDepartmentDialog
+          divisions={divisions}
+          onClose={() => setCreatingDepartment(false)}
+          onCreate={(body) =>
+            createDepartment.mutate({ body }, { onSuccess: () => setCreatingDepartment(false) })
+          }
+          pending={createDepartment.isPending}
+        />
+      )}
       {/* Map + focus panel sit flush so the selected stub runs into the panel. */}
       <Stack gap="0">
         <Stack align="center" gap="0">
@@ -138,13 +162,10 @@ export function OrgMapScreen() {
            *  inside it so it scrolls together with the nodes it spans. */}
           <Container overflowX="auto" width="100%">
             <Container position="relative">
-              <OrgConnector
-                orientation="horizontal"
-                style={{ left: BUS_INSET, right: BUS_INSET }}
-              />
-              <Grid data-testid={OrgMapScreenTestId.Grid} gap="200" style={GRID_DIVISION_COLS}>
-                {DIVISIONS.map((division) => {
-                  const members = DEPARTMENTS.filter((d) => d.division === division.id);
+              <OrgConnector orientation="horizontal" style={{ left: busInset, right: busInset }} />
+              <Grid data-testid={OrgMapScreenTestId.Grid} gap="200" style={gridDivisionCols}>
+                {divisions.map((division) => {
+                  const members = registry.list.filter((d) => d.division === division.id);
                   const divisionCells: StateTone[] = employees
                     .filter((e) => members.some((d) => d.id === e.department))
                     .map((e) => e.state);

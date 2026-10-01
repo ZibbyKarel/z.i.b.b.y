@@ -1,4 +1,3 @@
-import { DEPARTMENTS } from "@zibby/contracts";
 import {
   Accordion,
   AccordionItem,
@@ -30,6 +29,7 @@ import { API_URL } from "../../../state/api";
 import { formatCostUsd } from "../../../utils/cost";
 import { formatDuration, resumeEta } from "../../../utils/time";
 import { useApprovalsQuery } from "../../approvals";
+import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { RiskBadge } from "../../approvals/components/RiskBadge";
 import { SeverityMeter } from "../../approvals/components/SeverityMeter";
 import { useProjectsQuery } from "../../projects";
@@ -50,6 +50,7 @@ import { PipelineStageTimeline } from "./PipelineStageTimeline";
 import { RunApprovalGate } from "./RunApprovalGate";
 import { RunLogStream } from "./RunLogStream";
 import { RunParkedPanel } from "./RunParkedPanel";
+import { RunPipelineSummary } from "./RunPipelineSummary";
 import { RunPrGatePanel } from "./RunPrGatePanel";
 import { RunStateBadge } from "./RunStateBadge";
 
@@ -394,12 +395,12 @@ export enum ClassificationTracePanelTestId {
  */
 function ClassificationTracePanel({ run }: { run: RunView }) {
   const t = useTranslations("runs");
+  const departments = useDepartmentLookup();
   const classification = run.classification;
   if (!classification) return null;
   const stage1 = toClientTarget(classification.stage1);
   const departmentName = classification.department
-    ? (DEPARTMENTS.find((s) => s.id === classification.department)?.name ??
-      classification.department)
+    ? departments.name(classification.department)
     : null;
   // When stage-1 delegated to a department, the dispatched unit is whatever the
   // run actually resolved to (`processor`); otherwise stage-1's own pick already
@@ -846,6 +847,7 @@ export function RunDetail({
           <>
             {run.status === "paused-limit" && <LimitPausedPanel now={now} run={run} />}
             {run.status === "parked" && run.parked && <RunParkedPanel run={run} />}
+            <RunPipelineSummary owner={run.owner} runId={run.runId} totalCostUsd={run.costUsd} />
             <PipelineStageTimeline
               currentStage={run.currentStage}
               live={run.status === "running"}

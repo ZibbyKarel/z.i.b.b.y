@@ -24,7 +24,7 @@ export const gateRulesContract = c.router(
       method: "POST",
       path: "/gate-rules",
       body: GlobalGateRuleInputSchema,
-      responses: { 201: GlobalGateRuleSchema },
+      responses: { 201: GlobalGateRuleSchema, 422: ErrorSchema },
       summary: "Add a rule to the catalog (appended to the end)",
     },
     reorderGateRules: {
@@ -39,7 +39,7 @@ export const gateRulesContract = c.router(
       path: "/gate-rules/:id",
       pathParams: z.object({ id: GateRuleIdSchema }),
       body: GlobalGateRuleInputSchema,
-      responses: { 200: GlobalGateRuleSchema, 404: ErrorSchema },
+      responses: { 200: GlobalGateRuleSchema, 404: ErrorSchema, 422: ErrorSchema },
       summary: "Edit a catalog rule in place (keeps its id and position)",
     },
     deleteGateRule: {

@@ -31,11 +31,15 @@ function selectPipelines(response: { body: ContractPipeline[] }): Pipeline[] {
       thinking: ph.thinking,
       commands: ph.commands,
       loop: ph.loop,
+      approval: ph.approval,
+      qualify: ph.qualify,
     })),
     outputs: p.outputs,
     avatar: p.avatar,
     department: p.department,
     complexity: p.complexity,
+    budget: p.budget,
+    project: p.project,
   }));
 }
 

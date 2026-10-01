@@ -60,9 +60,9 @@ describe("GlobalGateRule department (Phase 87)", () => {
     if (parsed.success) expect(parsed.data.department).toBeUndefined();
   });
 
-  it("rejects an unknown department id", () => {
+  it("rejects a malformed department id", () => {
     expect(
-      GlobalGateRuleInputSchema.safeParse({ ...base, department: "not-a-department" }).success,
+      GlobalGateRuleInputSchema.safeParse({ ...base, department: "Not A Department" }).success,
     ).toBe(false);
   });
 });

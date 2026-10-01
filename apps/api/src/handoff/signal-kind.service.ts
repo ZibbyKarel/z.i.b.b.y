@@ -1,11 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import {
   type CreateTaskInput,
-  DEPARTMENTS,
   type HandoffSignalKind,
   type HandoffSignalKindInput,
-  type TaskTarget,
 } from "@zibby/contracts";
+import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
 import { HandoffSignalKindStore } from "./handoff-signal-kind.store";
 
@@ -31,6 +30,7 @@ export class SignalKindService {
   constructor(
     private readonly store: HandoffSignalKindStore,
     private readonly taskScheduler: TaskSchedulerService,
+    private readonly departments: DepartmentsStorageService,
   ) {}
 
   list(): Promise<HandoffSignalKind[]> {
@@ -49,12 +49,11 @@ export class SignalKindService {
       text: buildTaskText(signalKind),
       paths: [],
     };
-    const result = await this.taskScheduler.createTask(
-      taskInput,
-      Date.now(),
-      undefined,
-      devTarget(),
-    );
+    const result = await this.taskScheduler.createTask(taskInput, Date.now(), undefined, {
+      kind: "department",
+      id: "dev",
+      name: await this.departments.nameOf("dev"),
+    });
     const buildTaskId = result.task.id;
     await this.store.markBuildTask(signalKind.id, buildTaskId);
     return { signalKind: { ...signalKind, buildTaskId }, buildTaskId };
@@ -67,12 +66,6 @@ export class SignalKindService {
   delete(id: string): Promise<void> {
     return this.store.delete(id);
   }
-}
-
-/** Resolve Dev's display name off the department registry — same lookup `HandoffService.decorateTarget` uses. */
-function devTarget(): TaskTarget {
-  const name = DEPARTMENTS.find((s) => s.id === "dev")?.name ?? "dev";
-  return { kind: "department", id: "dev", name };
 }
 
 /** The build task's Czech instruction body — mirrors the design doc's Slot B3 template. */

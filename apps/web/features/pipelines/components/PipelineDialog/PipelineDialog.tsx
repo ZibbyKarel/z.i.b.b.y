@@ -13,18 +13,23 @@ import {
   Dialog,
   GraphInlineInput,
   IconTile,
+  NumberField,
+  SelectField,
   Stack,
   Typography,
 } from "@zibby/design-system";
+import { useProjectsQuery } from "../../../projects/queries";
 import type { Pipeline } from "../../../../domain";
 import { slug } from "../../../../utils/slug";
 import { AgentPalette } from "./AgentPalette";
 import { PipelineCanvas } from "./PipelineCanvas";
+import { StepSettings } from "./StepSettings";
 import {
   INITIAL_ASSIGNMENT,
   type PipelineGraph,
   graphToPhases,
   makeNode,
+  makeStepNode,
   phasesToGraph,
   validateGraph,
 } from "./pipeline-graph";
@@ -70,6 +75,9 @@ export function PipelineDialog({
   const t = useTranslations();
   const [name, setName] = useState(initial?.name ?? "");
   const [desc, setDesc] = useState(initial?.desc ?? "");
+  const [budget, setBudget] = useState<number | null>(initial?.budget?.maxCostUsd ?? null);
+  const [project, setProject] = useState(initial?.project ?? "");
+  const { data: projects = [] } = useProjectsQuery();
   const [fullscreen, setFullscreen] = useState(false);
   const [graph, setGraph] = useState<PipelineGraph>(() => phasesToGraph(initial, agents));
 
@@ -86,6 +94,12 @@ export function PipelineDialog({
       return { ...g, nodes: [...g.nodes, node] };
     });
   };
+
+  const addStep = (type: "verify" | "tool") =>
+    setGraph((g) => {
+      const i = g.nodes.length;
+      return { ...g, nodes: [...g.nodes, makeStepNode(type, i + 1, 60 + i * 26, 150 + i * 18)] };
+    });
 
   const validity = validateGraph(graph, name);
   const canSubmit = !isPending && validity.ok;
@@ -109,6 +123,8 @@ export function PipelineDialog({
         // the contract's own default — and is graded in the `.pipeline.md`.
         complexity: "standard",
         ...(defaultOwnerDepartment ? { department: defaultOwnerDepartment } : {}),
+        ...(budget ? { budget: { maxCostUsd: budget, warnAtPct: 70 } } : {}),
+        ...(project ? { project } : {}),
       });
       return;
     }
@@ -119,6 +135,12 @@ export function PipelineDialog({
     if (desc.trim() !== (initial.desc ?? "")) patch.desc = desc.trim();
     const initialPhases = graphToPhases(phasesToGraph(initial, agents), assignment);
     if (JSON.stringify(phases) !== JSON.stringify(initialPhases)) patch.phases = phases;
+    // ponytail: the contract can't unset budget/project (no null), so a cleared
+    // field is simply not patched — only set/changed values are sent.
+    if (budget && budget !== initial.budget?.maxCostUsd) {
+      patch.budget = { maxCostUsd: budget, warnAtPct: initial.budget?.warnAtPct ?? 70 };
+    }
+    if (project && project !== (initial.project ?? "")) patch.project = project;
     onSave?.(initial.id, patch);
   };
 
@@ -207,7 +229,28 @@ export function PipelineDialog({
           />
         </Stack>
 
-        {/* split: agent palette + canvas */}
+        {/* run-level settings: spend cap + default project */}
+        <Stack align="start" direction="row" gap="150">
+          <NumberField
+            hint={t("forms.pipeline.budgetHint")}
+            label={t("forms.pipeline.budgetLabel")}
+            min={0}
+            onValueChange={setBudget}
+            step="any"
+            value={budget}
+          />
+          <SelectField
+            label={t("forms.pipeline.projectLabel")}
+            onValueChange={setProject}
+            options={[
+              { value: "", label: t("forms.pipeline.projectNone") },
+              ...projects.map((p) => ({ value: p.id, label: p.name ?? p.id })),
+            ]}
+            value={project}
+          />
+        </Stack>
+
+        {/* split: agent palette + canvas + step settings */}
         <Container
           grow
           minHeight="0"
@@ -218,8 +261,13 @@ export function PipelineDialog({
             overflow: "hidden",
           }}
         >
-          <AgentPalette agents={agents} onAdd={(agentId) => addAgent(agentId)} />
+          <AgentPalette
+            agents={agents}
+            onAdd={(agentId) => addAgent(agentId)}
+            onAddStep={addStep}
+          />
           <PipelineCanvas agents={agents} graph={graph} onAddAgent={addAgent} setGraph={setGraph} />
+          <StepSettings graph={graph} setGraph={setGraph} />
         </Container>
       </Container>
     </Dialog>

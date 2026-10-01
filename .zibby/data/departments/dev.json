@@ -1,0 +1,12 @@
+{
+  "id": "dev",
+  "code": "DEV",
+  "name": "Development",
+  "tagline": "Vývoj a doručení",
+  "mandate": "Orchestrace delivery pipeline: Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor.",
+  "color": "#5b8def",
+  "division": "engineering",
+  "icon": "code",
+  "fallback": "primary",
+  "tierDefault": null
+}

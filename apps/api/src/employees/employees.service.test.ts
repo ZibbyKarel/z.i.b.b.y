@@ -4,6 +4,7 @@ import * as path from "node:path";
 import type { Agent } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { AgentsStorageService } from "../agents/agents.storage.service";
+import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { EmployeeAllocator } from "./employee-allocator";
 import { EmployeeNamesStore } from "./employee-names.store";
 import {
@@ -29,6 +30,7 @@ describe("EmployeesService", () => {
   let employees: EmployeesStorageService;
   let names: EmployeeNamesStore;
   let allocator: EmployeeAllocator;
+  let departmentsDir: string;
   let service: EmployeesService;
 
   beforeEach(async () => {
@@ -37,12 +39,22 @@ describe("EmployeesService", () => {
     employees = new EmployeesStorageService(employeesDir);
     names = new EmployeeNamesStore(namesDir);
     allocator = new EmployeeAllocator(employees);
-    service = new EmployeesService(employees, names, fakeAgents(["koder", "architekt"]), allocator);
+    departmentsDir = await fs.mkdtemp(path.join(os.tmpdir(), "zibby-departments-svc-"));
+    const departments = new DepartmentsStorageService(departmentsDir);
+    await departments.onModuleInit();
+    service = new EmployeesService(
+      employees,
+      names,
+      fakeAgents(["koder", "architekt"]),
+      allocator,
+      departments,
+    );
   });
 
   afterEach(async () => {
     await fs.rm(employeesDir, { recursive: true, force: true });
     await fs.rm(namesDir, { recursive: true, force: true });
+    await fs.rm(departmentsDir, { recursive: true, force: true });
   });
 
   describe("hire()", () => {

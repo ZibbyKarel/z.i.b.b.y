@@ -1,12 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  DEPARTMENTS,
-  DEPARTMENT_TIER_DEFAULT,
-  GateRuleInputSchema,
-  GateRuleSchema,
-  ResolveSchema,
-  gatesContract,
-} from "../index";
+import { GateRuleInputSchema, GateRuleSchema, ResolveSchema, gatesContract } from "../index";
 
 describe("gatesContract", () => {
   it("exposes policy, evaluate, and agent gate routes", () => {
@@ -58,21 +51,6 @@ describe("GateRule schema", () => {
     });
     expect(parsed.success).toBe(true);
     expect(parsed.success && parsed.data.source).toBe("department");
-  });
-});
-
-describe("DEPARTMENT_TIER_DEFAULT (NS2 F3a)", () => {
-  it("covers all 10 departments", () => {
-    expect(Object.keys(DEPARTMENT_TIER_DEFAULT).sort()).toEqual(
-      DEPARTMENTS.map((s) => s.id).sort(),
-    );
-  });
-
-  it("only incident carries a non-null default, and it is ask (Tier-3 escalation mandate)", () => {
-    for (const [id, decision] of Object.entries(DEPARTMENT_TIER_DEFAULT)) {
-      if (id === "inc") expect(decision).toBe("ask");
-      else expect(decision).toBeNull();
-    }
   });
 });
 

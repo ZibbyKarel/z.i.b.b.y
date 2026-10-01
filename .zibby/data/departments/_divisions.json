@@ -1,0 +1,6 @@
+[
+  { "id": "engineering", "name": "Engineering", "order": 0 },
+  { "id": "operations", "name": "Infrastructure & Operations", "order": 1 },
+  { "id": "business", "name": "Business Operations", "order": 2 },
+  { "id": "office", "name": "Office of the CEO", "order": 3 }
+]

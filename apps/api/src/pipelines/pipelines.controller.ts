@@ -1,6 +1,8 @@
 import { Controller } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { pipelinesContract } from "@zibby/contracts";
+import { unknownDepartment422 } from "../departments/departments.errors";
+import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { makeErrorMapper } from "../shared/http/error-mapping";
 import {
   InvalidPipelineError,
@@ -30,20 +32,24 @@ const unprocessable = (message: string) => ({ status: 422 as const, body: { mess
  */
 @Controller()
 export class PipelinesController {
-  constructor(private readonly storage: PipelinesStorageService) {}
+  constructor(
+    private readonly storage: PipelinesStorageService,
+    private readonly departments: DepartmentsStorageService,
+  ) {}
 
   @TsRestHandler(pipelinesContract)
   handler() {
     return tsRestHandler(pipelinesContract, {
-      createPipeline: ({ body }) => {
+      createPipeline: async ({ body }) => {
         // NS2 F9: the mirror of `agents.controller.ts`' create guard. Since F9 the
         // switchboard routes only to departments, and a department offers only its
         // own owned units — so a pipeline created without an owner would be
         // permanently unroutable. Create-only, like the agent guard: pre-F9
         // pipelines are tagged by the owner-backfill sweep, not rejected on read.
-        if (!body.department) {
-          return Promise.resolve(unprocessable("department is required"));
-        }
+        if (!body.department) return unprocessable("department is required");
+        // D-022: departments are data — an owner that doesn't exist is a 422.
+        const missing = await this.departments.firstMissing([body.department]);
+        if (missing) return unknownDepartment422(missing);
         return errors.created(() => this.storage.create(body), invalid);
       },
 
@@ -51,8 +57,11 @@ export class PipelinesController {
 
       getPipeline: ({ params: { id } }) => errors.or404(id, () => this.storage.get(id)),
 
-      updatePipeline: ({ params: { id }, body }) =>
-        errors.or404(id, () => this.storage.update(id, body), invalid),
+      updatePipeline: async ({ params: { id }, body }) => {
+        const missing = await this.departments.firstMissing([body.department]);
+        if (missing) return unknownDepartment422(missing);
+        return errors.or404(id, () => this.storage.update(id, body), invalid);
+      },
 
       deletePipeline: ({ params: { id } }) =>
         errors.or404(id, async () => {

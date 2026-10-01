@@ -172,7 +172,7 @@ describe("CreateTaskInputSchema (Phase 11 explicit target)", () => {
   it("Phase 91: rejects a department target whose id isn't in the closed registry", () => {
     const parsed = CreateTaskInputSchema.safeParse({
       text: "dispatch to the department",
-      target: { kind: "department", id: "not-a-real-department", name: "??" },
+      target: { kind: "department", id: "Not A Department", name: "??" },
     });
     expect(parsed.success).toBe(false);
   });
@@ -438,7 +438,7 @@ describe("ZB-04a — parentTaskId / chain / source / department stamps", () => {
   });
 
   it("rejects an unknown department id", () => {
-    expect(ScheduledTaskSchema.safeParse({ ...base, department: "not-a-department" }).success).toBe(
+    expect(ScheduledTaskSchema.safeParse({ ...base, department: "Not A Department" }).success).toBe(
       false,
     );
   });

@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
+import type { DepartmentsStorageService } from "../departments/departments.storage.service";
 import type { LoggerService } from "../shared/logging/logger.service";
 import { ClaudeCliRouter } from "./claude-cli-router";
 import type { RoutableTarget } from "./task-router";
+
+const fakeDepartments = { list: async () => [] } as unknown as DepartmentsStorageService;
 
 const fakeLogger = {
   child: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }),
@@ -44,7 +47,7 @@ const BASE_VERDICT = {
 };
 
 describe("ClaudeCliRouter.parseVerdict — confidence (NS2 F10)", () => {
-  const router = new TestableRouter(fakeLogger);
+  const router = new TestableRouter(fakeDepartments, fakeLogger);
 
   it("keeps a reported confidence verbatim", () => {
     expect(router.parse(envelope(BASE_VERDICT))?.confidence).toBe(0.9);
@@ -79,7 +82,7 @@ describe("ClaudeCliRouter.parseVerdict — confidence (NS2 F10)", () => {
 });
 
 describe("ClaudeCliRouter.parseVerdict — runnerUp (NS2 F10)", () => {
-  const router = new TestableRouter(fakeLogger);
+  const router = new TestableRouter(fakeDepartments, fakeLogger);
 
   it("parses a complete runner-up", () => {
     const parsed = router.parse(
@@ -111,7 +114,7 @@ describe("ClaudeCliRouter.parseVerdict — runnerUp (NS2 F10)", () => {
 });
 
 describe("ClaudeCliRouter.resolveRunnerUp — catalog validation (NS2 F10)", () => {
-  const router = new TestableRouter(fakeLogger);
+  const router = new TestableRouter(fakeDepartments, fakeLogger);
 
   it("projects a catalog-backed runner-up onto the contract shape", () => {
     const resolved = router.runnerUp(

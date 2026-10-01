@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { DEPARTMENTS } from "@zibby/contracts";
 import {
   Button,
   Chip,
@@ -27,12 +26,9 @@ import { ImportDialog } from "../components/ImportDialog";
 import { NoteEditorDialog } from "../components/NoteEditorDialog";
 import { NoteView } from "../components/NoteView";
 import { QuickCapture } from "../components/QuickCapture";
+import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { groupVaultNodes } from "../groupVault";
 import { useMemoryGraphQuery, useMemorySearchQuery, useNoteQuery } from "../queries";
-
-const DEPARTMENT_NAME: ReadonlyMap<string, string> = new Map(
-  DEPARTMENTS.map((d) => [d.id, d.name] as const),
-);
 
 /**
  * The vault: a left nav grouped by tier → department shelf (O-24), a reader (DS
@@ -41,6 +37,7 @@ const DEPARTMENT_NAME: ReadonlyMap<string, string> = new Map(
  * via `NoteView`'s own top-right Edit → `MarkdownEditor` swap.
  */
 export function VaultScreen() {
+  const departments = useDepartmentLookup();
   const t = useTranslations("knowledge");
   const tm = useTranslations("memory");
   const router = useRouter();
@@ -150,7 +147,7 @@ export function VaultScreen() {
                 {g.shelves.map((shelf) => {
                   const shelfId = shelf.department ?? "general";
                   const shelfLabel = shelf.department
-                    ? (DEPARTMENT_NAME.get(shelf.department) ?? shelf.department)
+                    ? departments.name(shelf.department)
                     : t("vault.shelfGeneral");
                   return (
                     <Stack gap="50" key={`${g.tier}-${shelfId}`}>

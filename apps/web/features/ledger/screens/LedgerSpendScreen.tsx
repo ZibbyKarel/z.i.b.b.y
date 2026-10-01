@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { DEPARTMENTS, type DepartmentId, type GlobalBudget } from "@zibby/contracts";
+import { type DepartmentId, type GlobalBudget } from "@zibby/contracts";
 import {
   BudgetMeter,
   Container,
@@ -14,6 +14,7 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useBudgetConfigQuery, useUpdateBudgetConfigMutation } from "../../budget";
+import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { formatResetIn } from "../../../components/layout/LimitsRings/formatResetIn";
@@ -40,6 +41,7 @@ function stateKey(usedPct: number, warnAt?: number, stopAt?: number): "ok" | "wa
 
 export function LedgerSpendScreen() {
   const t = useTranslations("ledgerSpend");
+  const departments = useDepartmentLookup();
   const limits = useLimitsQuery();
   const config = useBudgetConfigQuery();
   const updateConfig = useUpdateBudgetConfigMutation();
@@ -51,7 +53,10 @@ export function LedgerSpendScreen() {
   const now = new Date();
   const spendToday = totalSpendToday(runs.runs, now);
   const deptSpend = departmentSpendToday(runs.runs, now);
-  const maxDeptSpend = Math.max(0, ...DEPARTMENTS.map((d) => deptSpend.get(d.id)?.spendUsd ?? 0));
+  const maxDeptSpend = Math.max(
+    0,
+    ...departments.list.map((d) => deptSpend.get(d.id)?.spendUsd ?? 0),
+  );
 
   /** Slider→mutation: replace the whole config with one field changed — the API
    *  has no per-field PATCH, `PUT /api/budget/config` always replaces it whole. */
@@ -85,7 +90,7 @@ export function LedgerSpendScreen() {
       width: "xs",
       render: (id) => (
         <Typography mono size="2xs" type="note" variant="tertiary">
-          {DEPARTMENTS.find((d) => d.id === id)?.code ?? id}
+          {departments.code(id)}
         </Typography>
       ),
     },
@@ -93,9 +98,7 @@ export function LedgerSpendScreen() {
       key: "name",
       label: t("column.department"),
       width: "sm",
-      render: (id) => (
-        <Typography type="note">{DEPARTMENTS.find((d) => d.id === id)?.name ?? id}</Typography>
-      ),
+      render: (id) => <Typography type="note">{departments.name(id)}</Typography>,
     },
     {
       key: "bar",
@@ -156,7 +159,7 @@ export function LedgerSpendScreen() {
                 <DataTable
                   columns={columns}
                   getRowKey={(id) => id}
-                  rows={DEPARTMENTS.map((d) => d.id)}
+                  rows={departments.list.map((d) => d.id)}
                 />
               </Stack>
 

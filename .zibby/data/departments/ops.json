@@ -1,0 +1,12 @@
+{
+  "id": "ops",
+  "code": "OPS",
+  "name": "Monitoring & Ops",
+  "tagline": "Provoz a monitoring",
+  "mandate": "Sledování kanálů, kalendáře a CI/CD na pravidelném heartbeatu.",
+  "color": "#f2749e",
+  "division": "operations",
+  "icon": "pulse",
+  "fallback": "primary",
+  "tierDefault": null
+}

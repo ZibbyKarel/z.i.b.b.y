@@ -16,7 +16,7 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { DEPARTMENT_GLYPH } from "../../departments/departmentVisuals";
+import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 
 export enum BriefingCardTestId {
   Root = "briefing-card",
@@ -45,6 +45,7 @@ export const STATE_DOT_TONE: Record<DepartmentState, DotTone> = {
  * imports from the other.
  */
 export function DepartmentLineRow({ line }: { line: BriefingDepartmentLine }) {
+  const departments = useDepartmentLookup();
   const t = useTranslations();
   const parts: string[] = [];
   if (line.tier3Count > 0)
@@ -68,7 +69,7 @@ export function DepartmentLineRow({ line }: { line: BriefingDepartmentLine }) {
           size="75"
           tone={STATE_DOT_TONE[line.state]}
         />
-        <Icon name={DEPARTMENT_GLYPH[line.department]} size="xs" tone="faint" />
+        <Icon name={departments.icon(line.department)} size="xs" tone="faint" />
         <Typography mono size="xs" type="note" variant="secondary">
           {line.name}
         </Typography>

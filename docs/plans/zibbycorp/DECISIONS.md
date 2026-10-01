@@ -543,3 +543,24 @@ an extra LLM hop.
 - The org map draws CEO → COO → a bus over the four divisions → each division's departments
   stacked beneath it. The focused department's drop connector turns `--ink`.
 - A division-level gate bucket or spend cap is out of scope until the operator asks for one.
+
+## D-022 — Departments are data (2026-10-01, operator)
+
+The operator must be able to add a department on demand. This supersedes the closed-enum
+clauses of D-004, D-016 and D-021: the eleven departments are now only the first-boot seed.
+
+- **Storage.** One file per department, `.zibby/data/departments/<id>.json`, plus the
+  single divisions manifest `_divisions.json`. The store seeds from `DEPARTMENT_SEED` only
+  when the directory holds no department file yet; afterwards the stored files always win.
+- **Id.** `DepartmentIdSchema` is `^[a-z][a-z0-9-]{1,23}$`, no longer an enum. The former
+  `DEPARTMENT_GLYPH`, `DEPARTMENT_FALLBACK` and `DEPARTMENT_TIER_DEFAULT` maps became the
+  department's own `icon`, `fallback` and `tierDefault` fields.
+- **Creation is an operator action** — `POST /api/departments`, the *New department* dialog
+  on the org map, or a hand-written file. ZIBBY never creates a department on its own; an
+  agent-factory proposal for one would be a later Tier-3 feature.
+- **Existence checks replace the enum** at the write boundaries (pipeline and agent writes,
+  hiring): an unknown department is a 422, not a schema error.
+- Two departments were added with this decision: `pub` (Publishing: produces sellable digital
+  products, owns the `coloring-book` pipeline) and `dist` (Distribution: editions and
+  marketplace packages, publishes only after operator approval). Both sit in the Business
+  Operations division.

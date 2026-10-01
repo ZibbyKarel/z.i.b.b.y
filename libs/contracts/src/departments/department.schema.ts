@@ -1,82 +1,85 @@
 import { z } from "zod";
 
 /**
- * The eleven departments of ZibbyCorp (D-004). Each has a stable `id` used in
- * code/data, a short org-chart `code` (badge form), an English corporate `name`,
- * and Czech `tagline`/`mandate` copy. Fixed set — ZIBBY doesn't grow a twelfth
- * without a design decision, so this is a closed enum, not a free-form string.
- * Listed in canonical org-chart order: dev, ops, sec, rel, inc, rnd, com, qa,
- * knw, fin, per.
+ * Open set since D-022: departments are data files under
+ * `.zibby/data/departments/`, created on demand (`POST /departments`). The id is
+ * a slug; whether a given id EXISTS is a runtime check against the store, not a
+ * schema fact. {@link DEPARTMENT_SEED} holds the original eleven (D-004), written
+ * to disk once on first boot. Org-chart order: dev, ops, sec, rel, inc, rnd, com,
+ * qa, knw, fin, per.
  */
-export const DepartmentIdSchema = z.enum([
-  "dev",
-  "ops",
-  "sec",
-  "rel",
-  "inc",
-  "rnd",
-  "com",
-  "qa",
-  "knw",
-  "fin",
-  "per",
-]);
+export const DepartmentIdSchema = z.string().regex(/^[a-z][a-z0-9-]{1,23}$/);
 export type DepartmentId = z.infer<typeof DepartmentIdSchema>;
 
 /**
- * D-021 — the divisions the eleven departments are grouped under, so the org
- * reads as COO → division → department like a real large company. A division
- * is a GROUPING only: it owns nothing (no agents, employees, gate bucket,
- * budget or handoff target) — ownership stays on the department id. Listed in
- * org-chart order.
+ * D-021 — divisions group departments so the org reads as COO → division →
+ * department. A division is a GROUPING only: it owns nothing. Stored in
+ * `_divisions.json`, listed by `order`.
  */
-export const DivisionIdSchema = z.enum(["engineering", "operations", "business", "office"]);
+export const DivisionIdSchema = z.string().regex(/^[a-z][a-z0-9-]{1,23}$/);
 export type DivisionId = z.infer<typeof DivisionIdSchema>;
 
-export const DivisionSchema = z.object({
-  id: DivisionIdSchema,
-  name: z.string().min(1),
-});
+export const DivisionSchema = z
+  .object({ id: DivisionIdSchema, name: z.string().min(1), order: z.number().int() })
+  .strict();
 export type Division = z.infer<typeof DivisionSchema>;
 
-export const DIVISIONS: readonly Division[] = [
-  { id: "engineering", name: "Engineering" },
-  { id: "operations", name: "Infrastructure & Operations" },
-  { id: "business", name: "Business Operations" },
-  { id: "office", name: "Office of the CEO" },
+/** Stage-2 classifier terminal fallback (was `DEPARTMENT_FALLBACK`). */
+export const DepartmentFallbackSchema = z.enum(["primary", "orchestrator"]);
+export type DepartmentFallback = z.infer<typeof DepartmentFallbackSchema>;
+
+/** Default gate decision for a department's actions (was `DEPARTMENT_TIER_DEFAULT`). */
+export const DepartmentTierDefaultSchema = z.enum(["ask", "deny", "allow", "notify"]).nullable();
+export type DepartmentTierDefault = z.infer<typeof DepartmentTierDefaultSchema>;
+
+/**
+ * A department: org-chart `code`, English `name`, Czech `tagline`/`mandate`, a
+ * brand `color` (drives the live orb), plus the per-department policy that used
+ * to live in three closed `Record` maps — `icon`, `fallback`, `tierDefault`.
+ * It carries NO portrait (the Velín-D design settles identity on the orb).
+ */
+export const DepartmentSchema = z
+  .object({
+    id: DepartmentIdSchema,
+    code: z.string().regex(/^[A-Z0-9]{2,6}$/),
+    name: z.string().min(1).max(64),
+    tagline: z.string().max(120),
+    mandate: z.string().max(2000),
+    color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+    division: DivisionIdSchema,
+    /** Design-system icon name shown on the org map and chips (was DEPARTMENT_GLYPH). */
+    icon: z.string().min(1).default("folder"),
+    /** Stage-2 classifier terminal fallback (was DEPARTMENT_FALLBACK). */
+    fallback: DepartmentFallbackSchema.default("primary"),
+    /** Default gate decision for this department's actions (was DEPARTMENT_TIER_DEFAULT). */
+    tierDefault: DepartmentTierDefaultSchema.default(null),
+    createdAt: z.string().datetime().optional(),
+  })
+  .strict();
+export type Department = z.infer<typeof DepartmentSchema>;
+
+export const CreateDepartmentInputSchema = DepartmentSchema.omit({ createdAt: true });
+export type CreateDepartmentInput = z.infer<typeof CreateDepartmentInputSchema>;
+
+export const UpdateDepartmentInputSchema = DepartmentSchema.omit({
+  id: true,
+  createdAt: true,
+}).partial();
+export type UpdateDepartmentInput = z.infer<typeof UpdateDepartmentInputSchema>;
+
+/** Seed only — written to `.zibby/data/departments/` on first boot, never read at runtime. */
+export const DIVISION_SEED: readonly Division[] = [
+  { id: "engineering", name: "Engineering", order: 0 },
+  { id: "operations", name: "Infrastructure & Operations", order: 1 },
+  { id: "business", name: "Business Operations", order: 2 },
+  { id: "office", name: "Office of the CEO", order: 3 },
 ];
 
 /**
- * A department's identity: its org-chart `code`, its English corporate `name`,
- * a short Czech tagline, its one-line Czech mandate, and a brand color.
- *
- * A department carries NO portrait. Phase 90 gave each one photographic hero art
- * under `/departments/*.jpg`, but the Velín-D design settles identity on the live
- * orb instead — the same orb on the map and in the detail header, colored by
- * `color` and moving with the department's state. The art was removed (with its
- * `heroImage` field) rather than left dark: two competing identity marks read as
- * two different objects. Recover the files from git history if it ever returns.
+ * Seed only — the original eleven (D-004). Colors are the ZT palette hues
+ * (Velín-D). Written to disk once; the stored file always wins afterwards.
  */
-export const DepartmentSchema = z.object({
-  id: DepartmentIdSchema,
-  code: z.string().min(1),
-  name: z.string().min(1),
-  tagline: z.string().min(1),
-  mandate: z.string().min(1),
-  color: z.string().regex(/^#[0-9a-f]{6}$/i),
-  division: DivisionIdSchema,
-});
-export type Department = z.infer<typeof DepartmentSchema>;
-
-/**
- * The registry — identity only, phase 80. Colors are the ZT palette hues
- * (Velín-D phase 2 alignment): dev `#5b8def`, comms `#56c4d6`, security
- * `#34c9bd`, research `#46cf8b`, release `#e0a83c`, incident `#f4785c`, ops
- * `#f2749e`, arch `#b07cff`, knowledge `#c56fd4`, finance `#a9c23e`, personal
- * `#d9694a`. Each color is the department's whole visual identity — it drives
- * the orb body on the map and its header echo.
- */
-export const DEPARTMENTS: readonly Department[] = [
+export const DEPARTMENT_SEED: readonly Department[] = [
   {
     id: "dev",
     code: "DEV",
@@ -86,6 +89,9 @@ export const DEPARTMENTS: readonly Department[] = [
       "Orchestrace delivery pipeline: Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor.",
     color: "#5b8def",
     division: "engineering",
+    icon: "code",
+    fallback: "primary",
+    tierDefault: null,
   },
   {
     id: "ops",
@@ -95,6 +101,9 @@ export const DEPARTMENTS: readonly Department[] = [
     mandate: "Sledování kanálů, kalendáře a CI/CD na pravidelném heartbeatu.",
     color: "#f2749e",
     division: "operations",
+    icon: "pulse",
+    fallback: "primary",
+    tierDefault: null,
   },
   {
     id: "sec",
@@ -104,6 +113,9 @@ export const DEPARTMENTS: readonly Department[] = [
     mandate: "Bezpečnost vůči externímu prostředí — CVE závislostí, úniky tajemství.",
     color: "#34c9bd",
     division: "operations",
+    icon: "shield",
+    fallback: "primary",
+    tierDefault: null,
   },
   {
     id: "rel",
@@ -113,6 +125,9 @@ export const DEPARTMENTS: readonly Department[] = [
     mandate: "Releasy — příprava, přehled a operátorem schválené sloučení.",
     color: "#e0a83c",
     division: "operations",
+    icon: "checkpoint",
+    fallback: "primary",
+    tierDefault: null,
   },
   {
     id: "inc",
@@ -122,6 +137,9 @@ export const DEPARTMENTS: readonly Department[] = [
     mandate: "Eskalace incidentů — vlastní podoba Tier-3 kontraktu surface-and-wait.",
     color: "#f4785c",
     division: "operations",
+    icon: "warn",
+    fallback: "orchestrator",
+    tierDefault: "ask",
   },
   {
     id: "rnd",
@@ -131,6 +149,9 @@ export const DEPARTMENTS: readonly Department[] = [
     mandate: "Výzkumné pipeline, které předávají výsledný artefakt dál.",
     color: "#46cf8b",
     division: "engineering",
+    icon: "compass",
+    fallback: "primary",
+    tierDefault: null,
   },
   {
     id: "com",
@@ -140,6 +161,9 @@ export const DEPARTMENTS: readonly Department[] = [
     mandate: "Mluví za ZIBBY navenek — reaktivní odpovědi i proaktivní dotazování.",
     color: "#56c4d6",
     division: "business",
+    icon: "link",
+    fallback: "primary",
+    tierDefault: null,
   },
   {
     id: "qa",
@@ -149,6 +173,9 @@ export const DEPARTMENTS: readonly Department[] = [
     mandate: "Proaktivní analýza kvality a architektury codebase, nálezy předává Dev.",
     color: "#b07cff",
     division: "engineering",
+    icon: "search",
+    fallback: "primary",
+    tierDefault: null,
   },
   {
     id: "knw",
@@ -158,6 +185,9 @@ export const DEPARTMENTS: readonly Department[] = [
     mandate: "Správa paměti — vault, grounding, noční destilace a poličky znalostí.",
     color: "#c56fd4",
     division: "business",
+    icon: "brain",
+    fallback: "primary",
+    tierDefault: null,
   },
   {
     id: "fin",
@@ -167,6 +197,9 @@ export const DEPARTMENTS: readonly Department[] = [
     mandate: "Rozpočty a limity — stropy útrat, okna spotřeby, správa token-spend a limit-resume.",
     color: "#a9c23e",
     division: "business",
+    icon: "dollar",
+    fallback: "orchestrator",
+    tierDefault: null,
   },
   {
     id: "per",
@@ -177,8 +210,16 @@ export const DEPARTMENTS: readonly Department[] = [
       "Osobní život operátora — rychlé poznámky, denní agenda, osobní poličky a připomínky, oddělené od práce.",
     color: "#d9694a",
     division: "office",
+    icon: "coffee",
+    fallback: "primary",
+    tierDefault: null,
   },
 ];
+
+/** @deprecated read departments from the API — kept for the web until P0-03. */
+export const DEPARTMENTS: readonly Department[] = DEPARTMENT_SEED;
+/** @deprecated read divisions from the API — kept for the web until P0-03. */
+export const DIVISIONS: readonly Division[] = DIVISION_SEED;
 
 /**
  * A department's current activity, as read by the top-level UI. `idle` idle,

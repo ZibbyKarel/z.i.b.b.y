@@ -36,7 +36,7 @@ describe("ActivityRefsSchema (Law 4: closed)", () => {
     expect(ActivityRefsSchema.safeParse({ department: "dev", forceApprove: "yes" }).success).toBe(
       false,
     );
-    expect(ActivityRefsSchema.safeParse({ department: "not-a-department" }).success).toBe(false);
+    expect(ActivityRefsSchema.safeParse({ department: "Not A Department" }).success).toBe(false);
   });
 });
 

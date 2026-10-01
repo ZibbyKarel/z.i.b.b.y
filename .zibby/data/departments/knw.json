@@ -1,0 +1,12 @@
+{
+  "id": "knw",
+  "code": "KNW",
+  "name": "Knowledge Management",
+  "tagline": "Správa znalostí",
+  "mandate": "Správa paměti — vault, grounding, noční destilace a poličky znalostí.",
+  "color": "#c56fd4",
+  "division": "business",
+  "icon": "brain",
+  "fallback": "primary",
+  "tierDefault": null
+}

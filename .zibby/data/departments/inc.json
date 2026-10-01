@@ -1,0 +1,12 @@
+{
+  "id": "inc",
+  "code": "INC",
+  "name": "Incident Response",
+  "tagline": "Eskalace a řešení incidentů",
+  "mandate": "Eskalace incidentů — vlastní podoba Tier-3 kontraktu surface-and-wait.",
+  "color": "#f4785c",
+  "division": "operations",
+  "icon": "warn",
+  "fallback": "orchestrator",
+  "tierDefault": "ask"
+}

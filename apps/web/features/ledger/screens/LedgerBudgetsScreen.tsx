@@ -3,7 +3,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { DEPARTMENTS, type DepartmentId, type ProjectBudgetStatus } from "@zibby/contracts";
+import { type DepartmentId, type ProjectBudgetStatus } from "@zibby/contracts";
 import {
   BudgetMeter,
   Container,
@@ -14,6 +14,7 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
+import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { useCompaniesQuery } from "../../companies/queries";
@@ -125,6 +126,7 @@ function EntityBudgetCard({
  */
 export function LedgerBudgetsScreen() {
   const t = useTranslations("ledgerBudgets");
+  const departments = useDepartmentLookup();
   const budget = useBudgetQuery();
   const companies = useCompaniesQuery();
   const projects = useProjectsQuery();
@@ -157,7 +159,7 @@ export function LedgerBudgetsScreen() {
       width: "xs",
       render: (id) => (
         <Typography mono size="2xs" type="note" variant="tertiary">
-          {DEPARTMENTS.find((d) => d.id === id)?.code ?? id}
+          {departments.code(id)}
         </Typography>
       ),
     },
@@ -165,9 +167,7 @@ export function LedgerBudgetsScreen() {
       key: "name",
       label: t("column.department"),
       width: "flex",
-      render: (id) => (
-        <Typography type="note">{DEPARTMENTS.find((d) => d.id === id)?.name ?? id}</Typography>
-      ),
+      render: (id) => <Typography type="note">{departments.name(id)}</Typography>,
     },
     {
       key: "runsToday",
@@ -300,7 +300,7 @@ export function LedgerBudgetsScreen() {
               <DataTable
                 columns={columns}
                 getRowKey={(id) => id}
-                rows={DEPARTMENTS.map((d) => d.id)}
+                rows={departments.list.map((d) => d.id)}
               />
             </Stack>
           </>

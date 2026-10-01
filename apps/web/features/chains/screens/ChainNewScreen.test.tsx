@@ -18,7 +18,7 @@ describe("ChainNewScreen", () => {
     hooks.putChain.mockClear();
   });
 
-  it("submits a slugged id derived from the label, with the editor's default dev→qa route", async () => {
+  it("submits a slugged id derived from the label, with the editor's default route (first two departments of the registry: dev→ops)", async () => {
     render(<ChainNewScreen />);
     await userEvent.type(screen.getByLabelText("Název"), "Dev To QA");
     await userEvent.click(screen.getByRole("button", { name: "Vytvořit řetězec" }));
@@ -30,7 +30,7 @@ describe("ChainNewScreen", () => {
           label: "Dev To QA",
           description: "",
           entry: "dev",
-          steps: [{ department: "qa", gate: "auto" }],
+          steps: [{ department: "ops", gate: "auto" }],
           enabled: true,
         },
       },

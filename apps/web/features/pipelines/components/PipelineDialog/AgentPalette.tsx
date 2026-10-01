@@ -16,6 +16,8 @@ export interface AgentPaletteProps {
   agents: Agent[];
   /** Add the agent as a node (palette click — the keyboard/non-drag path). */
   onAdd: (agentId: string) => void;
+  /** Add a deterministic verify/tool step (omitted = no step buttons). */
+  onAddStep?: (type: "verify" | "tool") => void;
   /**
    * Manual dismissal — the inline editor auto-closes the palette after an agent
    * is added, but the operator can also close it without adding one. Omitted in
@@ -36,7 +38,7 @@ const glyphOf = (a: Agent): IconName => (a.glyph as IconName | undefined) ?? "bo
  * click-to-add (a non-drag affordance kept for keyboard / a11y — full canvas
  * keyboard wiring is a known v1 limitation).
  */
-export function AgentPalette({ agents, onAdd, onClose, closeLabel }: AgentPaletteProps) {
+export function AgentPalette({ agents, onAdd, onAddStep, onClose, closeLabel }: AgentPaletteProps) {
   const t = useTranslations("forms.pipeline");
   return (
     <Container
@@ -64,6 +66,30 @@ export function AgentPalette({ agents, onAdd, onClose, closeLabel }: AgentPalett
           <Button aria-label={closeLabel} icon="x" intent="ghost" onClick={onClose} size="sm" />
         )}
       </Stack>
+      {onAddStep && (
+        <Container padding={["0", "100", "100", "100"]}>
+          <Stack direction="row" gap="50">
+            <Button
+              data-testid="palette-step-verify"
+              icon="shield"
+              intent="ghost"
+              onClick={() => onAddStep("verify")}
+              size="sm"
+            >
+              {t("addVerify")}
+            </Button>
+            <Button
+              data-testid="palette-step-tool"
+              icon="gear"
+              intent="ghost"
+              onClick={() => onAddStep("tool")}
+              size="sm"
+            >
+              {t("addTool")}
+            </Button>
+          </Stack>
+        </Container>
+      )}
       <Stack gap="25">
         {agents.map((a) => (
           <Pressable

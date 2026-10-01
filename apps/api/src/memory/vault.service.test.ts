@@ -159,7 +159,7 @@ describe("VaultService write paths", () => {
 
   it("F4b: ownerDepartmentOf reads a valid department, ignores an invalid one, is undefined when absent", async () => {
     expect(ownerDepartmentOf({ department: "dev" })).toBe("dev");
-    expect(ownerDepartmentOf({ department: "not-a-department" })).toBeUndefined();
+    expect(ownerDepartmentOf({ department: "Not A Department" })).toBeUndefined();
     expect(ownerDepartmentOf({})).toBeUndefined();
   });
 

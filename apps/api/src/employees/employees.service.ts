@@ -1,14 +1,13 @@
 import { Injectable } from "@nestjs/common";
 import {
   type CreateEmployeeInput,
-  DEPARTMENTS,
-  type DepartmentId,
   type Employee,
   type EmployeeQuery,
   type EmployeeWithState,
   type UpdateEmployeeInput,
 } from "@zibby/contracts";
 import { AgentsStorageService } from "../agents/agents.storage.service";
+import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { EmployeeAllocator } from "./employee-allocator";
 import { EmployeeNamesStore } from "./employee-names.store";
 import { EmployeeDepartmentNotFoundError, EmployeeLeasedError } from "./employees.errors";
@@ -27,6 +26,8 @@ export class EmployeesService {
     private readonly names: EmployeeNamesStore,
     private readonly agents: AgentsStorageService,
     private readonly allocator: EmployeeAllocator,
+    /** D-022: the department a hire/transfer targets must exist in the store. */
+    private readonly departments: DepartmentsStorageService,
   ) {}
 
   async list(query: EmployeeQuery): Promise<EmployeeWithState[]> {
@@ -44,9 +45,14 @@ export class EmployeesService {
     return this.withState(await this.employees.get(id));
   }
 
+  private async findDepartment(id: string): Promise<{ id: string }> {
+    if (!(await this.departments.exists(id))) throw new EmployeeDepartmentNotFoundError(id);
+    return { id };
+  }
+
   /** Hire one employee of `input.agentId` into `departmentId` (D-015 hire flow). */
   async hire(departmentId: string, input: CreateEmployeeInput): Promise<Employee> {
-    const department = findDepartment(departmentId);
+    const department = await this.findDepartment(departmentId);
     // Surfaces AgentNotFoundError (mapped to 404 by the controller) for an unknown position.
     await this.agents.get(input.agentId);
 
@@ -88,7 +94,7 @@ export class EmployeesService {
     }
 
     if (patch.department && patch.department !== next.department) {
-      findDepartment(patch.department); // throws EmployeeDepartmentNotFoundError
+      await this.findDepartment(patch.department); // throws EmployeeDepartmentNotFoundError
       next = { ...next, department: patch.department };
     }
 
@@ -142,10 +148,4 @@ function positionTitle(agentId: string): string {
     .split("-")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
-}
-
-function findDepartment(id: string): { id: DepartmentId } {
-  const department = DEPARTMENTS.find((d) => d.id === id);
-  if (!department) throw new EmployeeDepartmentNotFoundError(id);
-  return department;
 }

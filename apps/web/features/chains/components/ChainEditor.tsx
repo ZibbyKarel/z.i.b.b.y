@@ -1,7 +1,6 @@
 "use client";
 
 import type { ChainInput, DepartmentId } from "@zibby/contracts";
-import { DEPARTMENTS } from "@zibby/contracts";
 import {
   Button,
   Card,
@@ -16,6 +15,8 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { type DepartmentLookup } from "../../departments/departmentLookup";
+import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 
 /** A chain hop's gate — the two dispositions `ChainStepInputSchema` allows
  *  (O-05: a chain hop never resolves to `"silent"`, unlike a signal rule). */
@@ -28,10 +29,9 @@ interface Stop {
   gate: ChainGate;
 }
 
-const DEFAULT_DEPARTMENTS: readonly DepartmentId[] = ["dev", "qa"];
-
-function defaultStops(): Stop[] {
-  return DEFAULT_DEPARTMENTS.map((department) => ({ department, gate: "auto" as const }));
+/** A new chain starts as the first two departments of the registry. */
+function defaultStops(departments: DepartmentLookup): Stop[] {
+  return departments.list.slice(0, 2).map((d) => ({ department: d.id, gate: "auto" as const }));
 }
 
 /** `Chain`/`ChainInput` → this editor's stop list (entry + every step's department/gate). */
@@ -72,9 +72,12 @@ export interface ChainEditorProps {
  */
 export function ChainEditor({ initial, saving, saveLabel, onCancel, onSave }: ChainEditorProps) {
   const t = useTranslations("chainsWork");
+  const departments = useDepartmentLookup();
   const [label, setLabel] = useState(initial?.label ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
-  const [stops, setStops] = useState<Stop[]>(initial ? chainInputToStops(initial) : defaultStops());
+  const [stops, setStops] = useState<Stop[]>(
+    initial ? chainInputToStops(initial) : defaultStops(departments),
+  );
 
   const canSave = label.trim().length > 0 && stops.length >= 2;
 
@@ -100,7 +103,7 @@ export function ChainEditor({ initial, saving, saveLabel, onCancel, onSave }: Ch
 
   function addStop() {
     const used = new Set(stops.map((s) => s.department));
-    const next = DEPARTMENTS.find((d) => !used.has(d.id))?.id ?? DEPARTMENTS[0]!.id;
+    const next = departments.list.find((d) => !used.has(d.id))?.id ?? departments.list[0]!.id;
     setStops((prev) => [...prev, { department: next, gate: "auto" }]);
   }
 
@@ -158,7 +161,7 @@ export function ChainEditor({ initial, saving, saveLabel, onCancel, onSave }: Ch
                     <SelectField
                       label={t("detail.stepDepartment", { n: index + 1 })}
                       onValueChange={(v) => updateStop(index, { department: v as DepartmentId })}
-                      options={DEPARTMENTS.map((d) => ({ value: d.id, label: d.name }))}
+                      options={departments.list.map((d) => ({ value: d.id, label: d.name }))}
                       value={stop.department}
                     />
                   </Container>

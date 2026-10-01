@@ -209,7 +209,7 @@ describe("F4b: department/tags/aliases retrieval fields", () => {
         id: "x",
         title: "X",
         tier: "knowledge",
-        department: "not-a-department",
+        department: "Not A Department",
       }).success,
     ).toBe(false);
   });
@@ -234,7 +234,7 @@ describe("F4b: department/tags/aliases retrieval fields", () => {
         title: "X",
         frontmatter: {},
         links: [],
-        department: "not-a-department",
+        department: "Not A Department",
       }).success,
     ).toBe(false);
   });

@@ -12,10 +12,7 @@ const agents: Agent[] = [
 ];
 
 const AVATAR_SRC = "data:image/png;base64,avatarbytes";
-const agentsWithAvatar: Agent[] = [
-  { ...agents[0]!, avatar: AVATAR_SRC },
-  agents[1]!,
-];
+const agentsWithAvatar: Agent[] = [{ ...agents[0]!, avatar: AVATAR_SRC }, agents[1]!];
 
 // Two agent nodes with a rework back-edge from the 2nd to the 1st (a loop).
 const looped: PipelineGraph = {
@@ -45,7 +42,15 @@ const looped: PipelineGraph = {
   ],
   flow: [{ id: "e1", from: "writer", to: "tester" }],
   rework: [
-    { id: "w1", from: "tester", to: "writer", maxRetries: 2, escalate: true, then: "park", escalation: [] },
+    {
+      id: "w1",
+      from: "tester",
+      to: "writer",
+      maxRetries: 2,
+      escalate: true,
+      then: "park",
+      escalation: [],
+    },
   ],
 };
 

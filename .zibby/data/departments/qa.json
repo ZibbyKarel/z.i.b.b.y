@@ -1,0 +1,12 @@
+{
+  "id": "qa",
+  "code": "QA",
+  "name": "QA & Architecture",
+  "tagline": "Kvalita a architektura",
+  "mandate": "Proaktivní analýza kvality a architektury codebase, nálezy předává Dev.",
+  "color": "#b07cff",
+  "division": "engineering",
+  "icon": "search",
+  "fallback": "primary",
+  "tierDefault": null
+}

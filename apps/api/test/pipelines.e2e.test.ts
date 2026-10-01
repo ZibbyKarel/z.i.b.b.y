@@ -9,6 +9,7 @@ import { promisify } from "node:util";
 import request from "supertest";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
+import { ApprovalsService } from "../src/approvals/approvals.service";
 import { PipelineRunnerService } from "../src/pipelines/pipeline-runner.service";
 import { defaultEmployeesDir, seedEmployeeFixture } from "./fixtures/employee-fixture";
 
@@ -409,6 +410,184 @@ describe("Pipelines API (e2e)", () => {
     expect(handoff).toContain("output of a");
 
     await fs.rm(projectDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+  });
+
+  it("a tool phase transforms the handoff in its sandbox: red → loop back → green → its produces feeds the next phase (P1-01)", async () => {
+    // First dispatch fails (exit 2) after dropping a run-wide marker; the retry
+    // sees the marker and transforms its consumes into its produces.
+    const once = 'test -f "$ZIBBY_RUN_DIR/once" || { touch "$ZIBBY_RUN_DIR/once"; exit 2; }';
+    await request(app.getHttpServer())
+      .post("/api/pipelines")
+      .send({
+        id: "tooled",
+        phases: [
+          phase("a"),
+          {
+            id: "t",
+            type: "tool",
+            consumes: "t.in",
+            produces: "t.out",
+            commands: [
+              once,
+              "tr a-z A-Z < t.in > t.out",
+              'test "$(cd "$ZIBBY_STAGE_DIR" && pwd -P)" = "$(pwd -P)"',
+            ],
+            loop: { to: "a", maxRetries: 1, escalate: false, then: "fail" },
+          },
+          phase("b"),
+        ],
+        instructions: "agent → tool → agent",
+        department: "dev",
+      })
+      .expect(201);
+
+    // A project with a checkout must NOT pull the tool into the checkout.
+    const start = await app.get(PipelineRunnerService).start("tooled", undefined, "zibby-core");
+    const final = await until(async () => {
+      const res = app.get(PipelineRunnerService).get(start.pipelineRunId);
+      return res.status !== "running" ? res : null;
+    });
+
+    if (final.status !== "done") await dumpRunDiagnostics(start.pipelineRunId);
+    expect(final.status).toBe("done");
+    expect(
+      final.stageRuns.map((s: { phaseId: string; status: string }) => `${s.phaseId}:${s.status}`),
+    ).toEqual(["a:done", "t:error", "a:done", "t:done", "b:done"]);
+    const handoff = await fs.readFile(path.join(final.cwd, "05_b", "b.in"), "utf8");
+    expect(handoff).toContain("OUTPUT OF A");
+  });
+
+  const pendingGate = async (pipelineRunId: string) => {
+    const all = await app.get(ApprovalsService).list("pending");
+    return all.find((a) => a.kind === "pipeline-gate" && a.runId === pipelineRunId) ?? null;
+  };
+
+  it("approval: ask parks durably after the phase; approve continues, reject fails (P1-02)", async () => {
+    await request(app.getHttpServer())
+      .post("/api/pipelines")
+      .send({
+        id: "checkpointed",
+        phases: [phase("a", { approval: "ask" }), phase("b")],
+        instructions: "agent → (human) → agent",
+        department: "dev",
+      })
+      .expect(201);
+    const runner = app.get(PipelineRunnerService);
+
+    const first = await runner.start("checkpointed", undefined, undefined);
+    const parked = await until(async () => {
+      const r = runner.get(first.pipelineRunId);
+      return r.status === "parked" ? r : null;
+    });
+    expect(parked.parkedReason).toBe("gate");
+    expect(parked.stageRuns.map((s: { phaseId: string }) => s.phaseId)).toEqual(["a"]);
+    const approval = await until(() => pendingGate(first.pipelineRunId));
+    expect(approval.action).toBe("stage-approval");
+    await app.get(ApprovalsService).approve(approval.id);
+    const done = await until(async () => {
+      const r = runner.get(first.pipelineRunId);
+      return r.status === "done" ? r : null;
+    });
+    expect(done.stageRuns.map((s: { phaseId: string }) => s.phaseId)).toEqual(["a", "b"]);
+    expect(await pendingGate(first.pipelineRunId)).toBeNull();
+
+    const second = await runner.start("checkpointed", undefined, undefined);
+    const gate2 = await until(() => pendingGate(second.pipelineRunId));
+    await app.get(ApprovalsService).reject(gate2.id);
+    const failed = await until(async () => {
+      const r = runner.get(second.pipelineRunId);
+      return r.status === "failed" ? r : null;
+    });
+    expect(failed.stageRuns.map((s: { phaseId: string }) => s.phaseId)).toEqual(["a"]);
+  });
+
+  it("budget: a tool's costs.jsonl pushes spend past the cap → parks before the next phase; approve raises the cap (P1-03)", async () => {
+    const cost = `echo '{"at":"2026-10-01T00:00:00Z","source":"image","provider":"fal","model":"klein","costUsd":0.4,"durationMs":1}' >> costs.jsonl`;
+    await request(app.getHttpServer())
+      .post("/api/pipelines")
+      .send({
+        id: "capped",
+        budget: { maxCostUsd: 0.5 },
+        phases: [
+          { id: "t1", type: "tool", produces: "t1.out", commands: [cost, "echo one > t1.out"] },
+          { id: "t2", type: "tool", produces: "t2.out", commands: [cost, "echo two > t2.out"] },
+          phase("b"),
+        ],
+        instructions: "tool → tool → agent",
+        department: "dev",
+      })
+      .expect(201);
+    const runner = app.get(PipelineRunnerService);
+    const start = await runner.start("capped", undefined, undefined);
+    const parked = await until(async () => {
+      const r = runner.get(start.pipelineRunId);
+      return r.status === "parked" ? r : null;
+    });
+    expect(parked.parkedReason).toBe("budget");
+    expect(parked.currentStage).toBe("b");
+    expect(parked.stageRuns.map((s: { externalCostUsd?: number }) => s.externalCostUsd)).toEqual([
+      0.4, 0.4,
+    ]);
+    expect(parked.budget?.spentUsd).toBeCloseTo(0.8);
+    expect(parked.budget?.warned).toBe(true);
+    const approval = await until(() => pendingGate(start.pipelineRunId));
+    expect(approval.action).toBe("spend-past-cap");
+    await app.get(ApprovalsService).approve(approval.id);
+    const done = await until(async () => {
+      const r = runner.get(start.pipelineRunId);
+      return r.status === "done" ? r : null;
+    });
+    expect(done.budget?.maxCostUsd).toBeCloseTo(1.3);
+    expect(done.stageRuns.map((s: { phaseId: string }) => s.phaseId)).toEqual(["t1", "t2", "b"]);
+  });
+
+  it("a pipeline's default project feeds its env to a tool phase when the start names none", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "env-proj-"));
+    await request(app.getHttpServer())
+      .post("/api/projects")
+      .send({ id: "env-proj", name: "Env project", path: dir, env: { PF_FLAVOUR: "local" } })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post("/api/pipelines")
+      .send({
+        id: "bound",
+        project: "env-proj",
+        phases: [
+          { id: "t", type: "tool", produces: "t.out", commands: ['echo "$PF_FLAVOUR" > t.out'] },
+        ],
+        instructions: "x",
+        department: "dev",
+      })
+      .expect(201);
+    const runner = app.get(PipelineRunnerService);
+    const start = await runner.start("bound", undefined, undefined);
+    const final = await until(async () => {
+      const r = runner.get(start.pipelineRunId);
+      return r.status !== "running" ? r : null;
+    });
+    expect(final.status).toBe("done");
+    expect((await fs.readFile(path.join(final.cwd, "01_t", "t.out"), "utf8")).trim()).toBe("local");
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  it("422s a pipeline owned by a department that does not exist (D-022)", async () => {
+    await request(app.getHttpServer())
+      .post("/api/pipelines")
+      .send({ id: "ghost-owned", phases: [phase("a")], instructions: "x", department: "ghost" })
+      .expect(422);
+  });
+
+  it("rejects a tool phase without commands or with a model (422/400 at the contract)", async () => {
+    const res = await request(app.getHttpServer())
+      .post("/api/pipelines")
+      .send({
+        id: "badtool",
+        phases: [{ id: "t", type: "tool", produces: "x", model: "sonnet" }],
+        instructions: "x",
+        department: "dev",
+      });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBeLessThan(500);
   });
 
   it("P1-T4 structure smoke: loop + file output — numbered-only tree, own-produces real files, symlinked handoff/context, output/ resolves the canonical artifact", async () => {

@@ -858,8 +858,23 @@
         "empty": "přidej alespoň jeden uzel",
         "agent": "vyber agenta pro každý uzel",
         "produces": "doplň výstupní soubor",
-        "rework": "vrácení musí mířit na dřívější uzel"
-      }
+        "rework": "vrácení musí mířit na dřívější uzel",
+        "commands": "přidejte alespoň jeden příkaz"
+      },
+      "typeTool": "tool (skript)",
+      "addVerify": "Přidat kontrolu",
+      "addTool": "Přidat nástroj",
+      "commandsNone": "zatím žádné příkazy",
+      "stepsTitle": "// kroky · nastavení",
+      "commandsLabel": "Příkazy",
+      "commandsHintVerify": "Jeden na řádek. Prázdné = výchozí kontroly projektu.",
+      "commandsHintTool": "Jeden na řádek, spouští se v sandboxu fáze.",
+      "commandsPlaceholder": "pnpm test",
+      "approvalLabel": "Lidská kontrola po tomto kroku",
+      "budgetLabel": "Limit útraty (USD)",
+      "budgetHint": "Volitelné. Prázdné = bez limitu.",
+      "projectLabel": "Výchozí projekt",
+      "projectNone": "— žádný —"
     },
     "command": {
       "title": "Nový příkaz",
@@ -1238,7 +1253,13 @@
       "pass": "Schváleno",
       "gap": "Chybí část",
       "drift": "Mimo zadání"
-    }
+    },
+    "parkedGate": "Čeká na vaši kontrolu",
+    "parkedBudget": "Dosažen limit útraty",
+    "budgetSpent": "Utraceno {spent} / {cap}",
+    "totalCost": "Celková cena {cost}",
+    "bookFolder": "Složka knihy",
+    "stageExternalCost": "+{cost} externí"
   },
   "gates": {
     "title": "Pravidla schvalování",
@@ -2057,6 +2078,33 @@
         "save": "Uložit pravidlo",
         "cancel": "Zrušit"
       }
+    },
+    "create": {
+      "title": "Nové oddělení",
+      "subtitle": "vytvoří datový soubor oddělení",
+      "submit": "Vytvořit oddělení",
+      "idLabel": "Identifikátor",
+      "idHint": "Malý slug, 2–24 znaků (např. pub)",
+      "codeLabel": "Kód",
+      "nameLabel": "Název",
+      "taglineLabel": "Slogan",
+      "mandateLabel": "Mandát",
+      "colorLabel": "Barva",
+      "colorHint": "Hex, např. #5b8def",
+      "divisionLabel": "Divize",
+      "iconLabel": "Ikona",
+      "fallbackLabel": "Záloha klasifikátoru",
+      "fallbackPrimary": "Primární agent",
+      "fallbackOrchestrator": "Orchestrátor",
+      "tierLabel": "Výchozí brána",
+      "tier": {
+        "none": "žádná",
+        "ask": "ptát se",
+        "deny": "zamítnout",
+        "allow": "povolit",
+        "notify": "oznámit"
+      },
+      "addButton": "Nové oddělení"
     }
   },
   "departmentDetail": {
@@ -2403,7 +2451,11 @@
         "confirmDeny": "Potvrdit zamítnutí",
         "approve": "Schválit",
         "deny": "Zamítnout",
-        "openTask": "Otevřít úkol"
+        "openTask": "Otevřít úkol",
+        "gate": {
+          "stage-approval": "Zkontrolovat výstup kroku",
+          "spend-past-cap": "Dosažen limit útraty"
+        }
       }
     },
     "gates": {

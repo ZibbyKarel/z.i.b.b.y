@@ -9,8 +9,8 @@ import type {
   MatchCondition,
   PolicyViolation,
 } from "@zibby/contracts";
-import { DEPARTMENT_TIER_DEFAULT } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
+import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { DECISION_RANK } from "./decision-rank";
@@ -56,6 +56,9 @@ export class GateEvaluatorService {
     // bucket. Optional so `new GateEvaluatorService(policy)` keeps working in
     // unit tests: absence = an always-empty department bucket, never a crash.
     @Optional() private readonly catalog?: GateRulesStorageService,
+    // D-022 — the department store, the source of each department's `tierDefault`.
+    // Optional like `catalog`: absence = no tier-default catch-all.
+    @Optional() private readonly departments?: DepartmentsStorageService,
   ) {
     this.log = logger?.child(GateEvaluatorService.name);
   }
@@ -97,9 +100,9 @@ export class GateEvaluatorService {
   /**
    * NS2 F3a — the gate-rule bucket of one department: every catalog rule tagged
    * `department === id` (re-sourced `"department"`, never locked — the floor
-   * stays the only locked bucket), plus the department's static tier-default
-   * catch-all (`DEPARTMENT_TIER_DEFAULT`) when it has one. No catalog service
-   * (bare-`new` test path) = an empty catalog, tier default still applies.
+   * stays the only locked bucket), plus the department's tier-default
+   * catch-all (`department.tierDefault`, D-022) when it has one. No catalog service
+   * (bare-`new` test path) = an empty catalog; no department store = no tier default.
    */
   async departmentRules(id: DepartmentId): Promise<GateRule[]> {
     const all = (await this.catalog?.list().catch((): never[] => [])) ?? [];
@@ -113,7 +116,7 @@ export class GateEvaluatorService {
         decision: r.decision,
         resolve: r.resolve,
       }));
-    const tierDefault = DEPARTMENT_TIER_DEFAULT[id];
+    const tierDefault = (await this.departments?.get(id).catch(() => null))?.tierDefault ?? null;
     if (tierDefault !== null) {
       rules.push({
         id: `department-default-${id}`,

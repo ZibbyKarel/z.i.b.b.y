@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { DEPARTMENTS } from "@zibby/contracts";
 import {
   Card,
   Checkbox,
@@ -14,6 +13,8 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { type ArchiveDepartmentFilterId, NO_DEPARTMENT } from "../archiveGroups";
+import { type DepartmentLookup } from "../../departments/departmentLookup";
+import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 
 export enum ArchiveDepartmentFilterTestId {
   Root = "archive-department-filter-root",
@@ -41,7 +42,7 @@ export interface ArchiveDepartmentFilterProps {
  * `Dropdown` multi-select (`libs/design-system/src/components/Dropdown/Dropdown.tsx`)
  * already covers "pick many options with checkboxes", but its `DropdownOption`
  * shape has no per-option colour-dot slot and no trailing-count slot — both of
- * which need the `DEPARTMENTS` registry's domain-shaped data (hex colours, live
+ * which need the departments registry's domain-shaped data (hex colours, live
  * run counts) that a generic DS primitive shouldn't carry for one call site. This
  * mirrors the SKILL.md rule ("decide explicitly: DS, or a domain composite") the
  * same way `PipelineOwnerChip`/`DepartmentDrawer` already do for per-department
@@ -62,6 +63,7 @@ export function ArchiveDepartmentFilter({
   total,
 }: ArchiveDepartmentFilterProps) {
   const t = useTranslations("archive.filter");
+  const departments = useDepartmentLookup();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -82,16 +84,14 @@ export function ArchiveDepartmentFilter({
     selected.length === 0
       ? t("all")
       : selected.length === 1
-        ? departmentLabel(selected[0]!, t)
+        ? departmentLabel(selected[0]!, t, departments)
         : t("multiple", { n: selected.length });
 
   // A small colour-dot preview on the trigger — only when every selected id is a
   // real department (the "bez oddělení" pseudo id has no colour of its own).
   const dotColors =
     selected.length > 0 && selected.length <= 3
-      ? selected
-          .map((id) => DEPARTMENTS.find((s) => s.id === id)?.color)
-          .filter((c): c is string => Boolean(c))
+      ? selected.map((id) => departments.get(id)?.color).filter((c): c is string => Boolean(c))
       : [];
   const showDots = dotColors.length === selected.length && dotColors.length > 0;
 
@@ -165,7 +165,7 @@ export function ArchiveDepartmentFilter({
             </Stack>
           </ListItem>
 
-          {DEPARTMENTS.map((s) => (
+          {departments.list.map((s) => (
             <ListItem
               aria-selected={selected.includes(s.id)}
               key={s.id}
@@ -229,7 +229,8 @@ export function ArchiveDepartmentFilter({
 function departmentLabel(
   id: ArchiveDepartmentFilterId,
   t: ReturnType<typeof useTranslations<"archive.filter">>,
+  departments: DepartmentLookup,
 ): string {
   if (id === NO_DEPARTMENT) return t("noDepartment");
-  return DEPARTMENTS.find((s) => s.id === id)?.name ?? id;
+  return departments.name(id);
 }

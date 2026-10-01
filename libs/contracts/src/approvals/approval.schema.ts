@@ -24,6 +24,11 @@ export const ApprovalRunKindSchema = z.enum([
   // finished); approving it runs the gated push, rejecting it leaves the branch
   // work without a PR. Structural "PR is the gate", system-owned, no agent.
   "pipeline-output",
+  // P1-02/P1-03: a pipeline run parked at a phase boundary — a phase's
+  // `approval: ask` checkpoint (action `stage-approval`) or its spend cap
+  // (action `spend-past-cap`). The runId is the pipelineRunId (no live child);
+  // approving continues the run, rejecting fails it.
+  "pipeline-gate",
   // The directed-task counterpart: a task whose chosen `pr` output is waiting to
   // open the PR from the finished agent/orchestrator run's branch. The runId is the
   // taskId (the durable ScheduledTask record holds the gate state — no live child);

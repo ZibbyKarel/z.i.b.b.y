@@ -1,6 +1,5 @@
 "use client";
 
-import { DEPARTMENTS } from "@zibby/contracts";
 import type { Attachment } from "@zibby/contracts";
 import {
   Button,
@@ -19,6 +18,7 @@ import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { chainRouteGates, chainRouteSteps, useChainsQuery } from "../../chains";
+import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { useProjectsQuery } from "../../projects";
 import { TaskAttachments } from "../components/TaskAttachments";
 import { useClassifyTaskMutation, useCreateTaskMutation } from "../mutations";
@@ -54,12 +54,13 @@ export function NewTaskScreen() {
   const prefillEntry = searchParams.get("entry");
   const { data: projects = [] } = useProjectsQuery();
   const { data: chains = [] } = useChainsQuery();
+  const departments = useDepartmentLookup();
 
   const [title, setTitle] = useState("");
   const [text, setText] = useState(() => searchParams.get("text") ?? "");
   const [projectId, setProjectId] = useState("");
   const [entry, setEntry] = useState<string>(() =>
-    prefillEntry && DEPARTMENTS.some((d) => d.id === prefillEntry) ? prefillEntry : ENTRY_COO,
+    prefillEntry && departments.get(prefillEntry) ? prefillEntry : ENTRY_COO,
   );
   const [chainId, setChainId] = useState<string>(CHAIN_DEFAULT);
   const [attachmentSet, setAttachmentSet] = useState<{
@@ -94,7 +95,7 @@ export function NewTaskScreen() {
 
   const createTask = useCreateTaskMutation();
 
-  const department = DEPARTMENTS.find((d) => d.id === entry);
+  const department = departments.get(entry);
   const chosenTarget = selectedChain
     ? { kind: "chain" as const, id: selectedChain.id, name: selectedChain.label }
     : entry !== ENTRY_COO && department
@@ -162,7 +163,7 @@ export function NewTaskScreen() {
               onValueChange={setEntry}
               options={[
                 { value: ENTRY_COO, label: t("new.entry.coo") },
-                ...DEPARTMENTS.map((d) => ({ value: d.id, label: d.name })),
+                ...departments.list.map((d) => ({ value: d.id, label: d.name })),
               ]}
               value={entry}
             />
@@ -232,7 +233,7 @@ export function NewTaskScreen() {
               <ChainRouteStrip
                 gates={chainRouteGates(selectedChain)}
                 size="compact"
-                steps={chainRouteSteps(selectedChain)}
+                steps={chainRouteSteps(selectedChain, departments)}
               />
             ) : (
               chosenTarget &&

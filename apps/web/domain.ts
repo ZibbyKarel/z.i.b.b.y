@@ -63,21 +63,27 @@ export interface PhaseLoop {
   then: string;
   /** Per-retry model/thinking ladder (rung n → retry n; clamps to the last rung). */
   escalation?: PhaseEscalation[];
+  /** A qualify phase's `drift` verdict routes here instead of `to`. */
+  driftTo?: string;
 }
 
 export interface PipelinePhase {
   /** Phase id from the definition (loop targets reference it); editing needs it. */
   id?: string;
-  /** What the phase executes: an agent session, or deterministic verify checks. */
-  type: "agent" | "verify";
+  /** What the phase executes: an agent session, deterministic verify checks, or a sandbox tool. */
+  type: "agent" | "verify" | "tool";
   agent?: string;
   consumes?: string;
   produces?: string;
   model?: AgentModel;
   thinking?: AgentThinking;
-  /** Verify phases only: shell commands run with `&&` (override project checks). */
+  /** Verify/tool phases: shell commands run with `&&` (verify: override project checks). */
   commands?: string[];
   loop?: PhaseLoop;
+  /** P1-02: park for the operator's review once this phase finishes. */
+  approval?: "ask";
+  /** Agent phase: parse a verdict from `produces`; carried so an edit round-trip keeps it. */
+  qualify?: boolean;
 }
 
 export type PipelineState = "done" | "parked" | "failed" | "running";
@@ -120,6 +126,10 @@ export interface Pipeline {
    * that must not be a compile error in a display-only model.
    */
   complexity?: PipelineComplexity;
+  /** P1-03: optional per-run spend cap. */
+  budget?: { maxCostUsd: number; warnAtPct: number };
+  /** Default project a run binds to (supplies env/secrets). */
+  project?: string;
 }
 
 export type IntegrationStatus = "connected" | "disconnected" | "error";
@@ -153,7 +163,9 @@ export function glyphForAgent(name: string | undefined, agents: Agent[]): IconNa
   return (agents.find((a) => a.name === name)?.glyph as IconName | undefined) ?? "bot";
 }
 
-/** Glyph for a pipeline phase: verify phases get the shield, agents their glyph. */
+/** Glyph for a pipeline phase: verify → shield, tool → gear, agents their glyph. */
 export function glyphForPhase(phase: PipelinePhase, agents: Agent[]): IconName {
-  return phase.type === "verify" ? "shield" : glyphForAgent(phase.agent, agents);
+  if (phase.type === "verify") return "shield";
+  if (phase.type === "tool") return "gear";
+  return glyphForAgent(phase.agent, agents);
 }

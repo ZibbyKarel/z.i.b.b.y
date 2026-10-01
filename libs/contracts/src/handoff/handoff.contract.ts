@@ -41,7 +41,7 @@ export const handoffContract = c.router(
       method: "POST",
       path: "/handoff-rules",
       body: HandoffRuleInputSchema,
-      responses: { 201: HandoffRuleSchema },
+      responses: { 201: HandoffRuleSchema, 422: ErrorSchema },
       summary: "Add an operator-authored handoff rule",
     },
     updateHandoffRule: {
@@ -49,7 +49,7 @@ export const handoffContract = c.router(
       path: "/handoff-rules/:id",
       pathParams: z.object({ id: z.string().min(1) }),
       body: HandoffRuleInputSchema,
-      responses: { 200: HandoffRuleSchema, 404: ErrorSchema },
+      responses: { 200: HandoffRuleSchema, 404: ErrorSchema, 422: ErrorSchema },
       summary: "Edit a handoff rule in place (keeps its id and system flag)",
     },
     deleteHandoffRule: {
@@ -118,7 +118,7 @@ export const handoffContract = c.router(
       path: "/handoff/chains/:id",
       pathParams: z.object({ id: z.string().min(1) }),
       body: ChainInputSchema,
-      responses: { 200: ChainSchema, 400: ErrorSchema },
+      responses: { 200: ChainSchema, 400: ErrorSchema, 422: ErrorSchema },
       summary:
         "Create or replace a chain: atomically rewrites its signal kind AND exactly its own rules",
     },

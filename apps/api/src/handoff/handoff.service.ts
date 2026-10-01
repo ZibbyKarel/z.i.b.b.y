@@ -2,7 +2,6 @@ import { Injectable, type OnModuleInit } from "@nestjs/common";
 import {
   type Chain,
   type CreateTaskInput,
-  DEPARTMENTS,
   HANDOFF_SEVERITY_ORDER,
   type HandoffOutcome,
   type HandoffProposal,
@@ -13,6 +12,7 @@ import {
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service";
+import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
 import { collisionResistantId } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
@@ -49,6 +49,8 @@ export class HandoffService implements OnModuleInit, ResumableRunner {
     private readonly activity: ActivityLogService,
     private readonly pipelines: PipelinesStorageService,
     private readonly chains: ChainsService,
+    /** D-022: department display names come from the store. */
+    private readonly departments: DepartmentsStorageService,
     logger: LoggerService,
   ) {
     this.log = logger.child(HandoffService.name);
@@ -139,7 +141,7 @@ export class HandoffService implements OnModuleInit, ResumableRunner {
     if (rule.tier === 2) {
       void this.activity.record({
         kind: "handoff",
-        summary: `${departmentLabel(signal.from)} → ${targetLabel(rule.to)}: ${signal.title}`,
+        summary: `${await this.departments.nameOf(signal.from)} → ${await this.targetLabel(rule.to)}: ${signal.title}`,
         refs: {
           runRef,
           ...(signal.projectId ? { projectId: signal.projectId } : {}),
@@ -167,7 +169,7 @@ export class HandoffService implements OnModuleInit, ResumableRunner {
       kind: "handoff-proposal",
       skill: signal.from,
       action: "handoff",
-      detail: `${departmentLabel(signal.from)} → ${targetLabel(rule.to)}: ${signal.title}`,
+      detail: `${await this.departments.nameOf(signal.from)} → ${await this.targetLabel(rule.to)}: ${signal.title}`,
       risk: "medium",
       department: signal.from,
     });
@@ -211,20 +213,25 @@ export class HandoffService implements OnModuleInit, ResumableRunner {
   /**
    * Decorate a stored {@link HandoffTarget} (routing identity only) into a full
    * {@link TaskTarget} `createTask` needs (routing identity + display `name`):
-   *  - `department` — looked up in the `DEPARTMENTS` registry; falls back to the raw
-   *    id if somehow absent (defensive only — `DepartmentIdSchema` already closes
-   *    the id space).
+   *  - `department` — looked up in the department store; falls back to the raw
+   *    id if it has since been removed (fail-open, like `pipeline`).
    *  - `pipeline` — looked up in the live pipelines store; falls back to the raw
    *    id if the pipeline was deleted/renamed since the rule was written
    *    (fail-open — a display-name miss should never block a dispatch).
    */
   private async decorateTarget(target: HandoffTarget): Promise<TaskTarget> {
     if (target.kind === "department") {
-      const name = DEPARTMENTS.find((s) => s.id === target.id)?.name ?? target.id;
+      const name = await this.departments.nameOf(target.id);
       return { kind: "department", id: target.id, name };
     }
     const pipeline = await this.pipelines.get(target.id).catch(() => null);
     return { kind: "pipeline", id: target.id, name: pipeline?.name ?? target.id };
+  }
+
+  private targetLabel(target: HandoffTarget): Promise<string> {
+    return target.kind === "department"
+      ? this.departments.nameOf(target.id)
+      : Promise.resolve(target.id);
   }
 
   // ---- ResumableRunner (kind "handoff-proposal") ------------------------------
@@ -259,12 +266,4 @@ function severityGatePasses(rule: HandoffRule, signal: HandoffSignal): boolean {
     HANDOFF_SEVERITY_ORDER.indexOf(signal.severity) >=
     HANDOFF_SEVERITY_ORDER.indexOf(rule.minSeverity)
   );
-}
-
-function departmentLabel(id: string): string {
-  return DEPARTMENTS.find((s) => s.id === id)?.name ?? id;
-}
-
-function targetLabel(target: HandoffTarget): string {
-  return target.kind === "department" ? departmentLabel(target.id) : target.id;
 }

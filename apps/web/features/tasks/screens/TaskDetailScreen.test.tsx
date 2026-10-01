@@ -40,6 +40,7 @@ vi.mock("../../approvals/approval", () => ({
   formatWaited: () => "1m",
 }));
 vi.mock("../../departments/queries", () => ({
+  useDepartmentsQuery: () => ({ data: undefined }),
   useDepartmentRosterQuery: () => ({ data: undefined }),
 }));
 vi.mock("../../runs/queries/useRunsQuery", () => ({

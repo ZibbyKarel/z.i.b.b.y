@@ -17,6 +17,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
+import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { chainRouteGates, chainRouteSteps } from "../chainRoute";
 import { useChainsQuery } from "../queries";
 
@@ -33,6 +34,7 @@ import { useChainsQuery } from "../queries";
  */
 export function ChainsListScreen() {
   const t = useTranslations("chainsWork");
+  const departments = useDepartmentLookup();
   const router = useRouter();
   const { data: chains = [], isPending, isError, refetch } = useChainsQuery();
 
@@ -55,7 +57,11 @@ export function ChainsListScreen() {
       label: t("list.column.route"),
       width: "flex",
       render: (row) => (
-        <ChainRouteStrip gates={chainRouteGates(row)} size="chip" steps={chainRouteSteps(row)} />
+        <ChainRouteStrip
+          gates={chainRouteGates(row)}
+          size="chip"
+          steps={chainRouteSteps(row, departments)}
+        />
       ),
     },
     {

@@ -70,6 +70,8 @@ import { buildVerifyCommand } from "./verify-command";
 export const PIPELINE_RUNS_DIR = "PIPELINE_RUNS_DIR";
 
 const RETENTION_MS = 30 * 60 * 1000;
+/** Repo-root `node_modules/.bin` (anchored like `data-dir.ts`), on every stage's PATH. */
+const REPO_BIN_DIR = path.resolve(__dirname, "..", "..", "..", "..", "node_modules", ".bin");
 const MAX_LISTED = 50;
 const AGGREGATE_FILE = "run.json";
 
@@ -230,6 +232,11 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       resume: (pipelineRunId) => this.resumeOutput(pipelineRunId, "approved"),
       cancel: (pipelineRunId) => void this.resumeOutput(pipelineRunId, "rejected"),
     });
+    // P1-02/P1-03: a run parked at a phase boundary (stage checkpoint or spend cap).
+    this.approvals.register("pipeline-gate", {
+      resume: (pipelineRunId) => this.resumeGate(pipelineRunId, "approved"),
+      cancel: (pipelineRunId) => void this.resumeGate(pipelineRunId, "rejected"),
+    });
     await this.core.init();
     await this.reconstruct();
   }
@@ -281,12 +288,26 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       await this.preflight.assertAvailable();
     }
 
-    const project = await this.resolveProject(projectRef);
+    // A caller-named project wins; else the pipeline's own default binding.
+    const project = await this.resolveProject(projectRef ?? pipeline.project);
 
-    const startedMs = Date.now();
+    // Two starts of the same pipeline in one millisecond would share an id (and a
+    // run folder) — claim the folder exclusively and bump the stamp on a clash.
+    await fs.mkdir(this.dir, { recursive: true });
+    let startedMs = Date.now();
+    for (;;) {
+      const claimed = await fs
+        .mkdir(path.join(this.dir, `${pipelineId}_${startedMs}`))
+        .then(() => !this.runs.has(`${pipelineId}_${startedMs}`))
+        .catch((error: NodeJS.ErrnoException) => {
+          if (error.code === "EEXIST") return false;
+          throw error;
+        });
+      if (claimed) break;
+      startedMs += 1;
+    }
     const pipelineRunId = `${pipelineId}_${startedMs}`;
     const root = path.join(this.dir, pipelineRunId);
-    await fs.mkdir(root, { recursive: true });
     // P1-T3 (Fáze 3): pipeline-level inputs live in a shared, read-only `context/`
     // folder off the run root — every stage symlinks it in (below) so the whole
     // run's inputs are available everywhere without duplicating them into each
@@ -312,6 +333,9 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // A directed task's output choice overrides the definition's `outputs:` for this
       // run (void → [] suppresses even a declared PR). Absent = inherit.
       ...(taskOutput ? { outputsOverride: this.toOutputsOverride(taskOutput, pipeline) } : {}),
+      // P1-03: snapshot the spend cap so a later edit of the pipeline never moves
+      // the goalposts under a run already in flight.
+      ...(pipeline.budget ? { budget: { ...pipeline.budget, spentUsd: 0 } } : {}),
     };
     this.runs.set(pipelineRunId, run);
     await this.writeAggregate(run);
@@ -916,6 +940,27 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
+      // P1-03: the spend cap is checked at the boundary too — after the stage that
+      // crossed it, before the next one spends more. Parks durably on a gate approval.
+      if (run.budget && run.budget.spentUsd > run.budget.maxCostUsd) {
+        const lastPhaseId = run.stageRuns[run.stageRuns.length - 1]?.phaseId ?? phase.id;
+        await this.parkAtGate(run, "budget", {
+          phaseId: lastPhaseId,
+          cursor: phase.id,
+          handoffSource,
+          retries,
+          phaseIds,
+          approval: {
+            skill: pipeline.name ?? pipeline.id,
+            action: "spend-past-cap",
+            detail: `Pipeline "${run.pipelineId}" spent $${run.budget.spentUsd.toFixed(2)} of its $${run.budget.maxCostUsd.toFixed(2)} cap before phase "${phase.id}". Approve to continue with the cap raised by another $${run.budget.maxCostUsd.toFixed(2)}; reject to fail the run.`,
+            risk: "medium",
+            department: pipeline.department,
+          },
+        });
+        return;
+      }
+
       const attempt = (retries.get(phase.id) ?? 0) + 1;
 
       // D-015: an `agent` phase's dispatch is an employee (a hired instance of
@@ -1045,7 +1090,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         run.status = "running";
         delete run.parkedReason;
       }
+      // P1-03: external (non-model) cost the stage reported + the run's running spend.
+      await this.accrueStageCost(run, stageRun, stageCwd);
       run.stageRuns.push(stageRun);
+      this.updateSpend(run);
       await this.writeAggregate(run);
 
       // Phase 45: a `qualify` agent phase that ran clean is graded on the verdict it
@@ -1098,6 +1146,26 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         const idx = order.findIndex((p) => p.id === phase.id);
         cursor = order[idx + 1]?.id ?? null;
         await this.writeProgress(run, phaseIds);
+        // P1-02: an operator checkpoint after this phase — park on the finished
+        // artifact; approve re-enters at `cursor` (or delivers the outputs).
+        if (phase.approval === "ask") {
+          const producesPath = phase.produces ? path.join(stageCwd, phase.produces) : stageCwd;
+          await this.parkAtGate(run, "gate", {
+            phaseId: phase.id,
+            cursor,
+            handoffSource,
+            retries,
+            phaseIds,
+            approval: {
+              skill: pipeline.name ?? pipeline.id,
+              action: "stage-approval",
+              detail: `Pipeline "${run.pipelineId}", phase "${phase.id}" finished — review ${producesPath} and approve to continue (reject fails the run).`,
+              risk: "low",
+              department: pipeline.department,
+            },
+          });
+          return;
+        }
         continue;
       }
 
@@ -1483,6 +1551,157 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * P1-02/P1-03: park the run durably at a phase boundary and raise a
+   * `pipeline-gate` approval keyed by the pipelineRunId. No live child — the
+   * aggregate carries everything {@link resumeGate} needs, so it survives a restart.
+   */
+  private async parkAtGate(
+    run: PipelineRun,
+    reason: "gate" | "budget",
+    at: {
+      phaseId: string;
+      cursor: string | null;
+      handoffSource: string | null;
+      retries: Map<string, number>;
+      phaseIds: string[];
+      approval: {
+        skill: string;
+        action: string;
+        detail: string;
+        risk: "low" | "medium" | "high";
+        department?: DepartmentId;
+      };
+    },
+  ): Promise<void> {
+    run.status = "parked";
+    run.parkedReason = reason;
+    run.pendingGate = { phaseId: at.phaseId, cursor: at.cursor, handoffSource: at.handoffSource };
+    run.currentStage = at.cursor;
+    run.retries = Object.fromEntries(at.retries);
+    await this.writeAggregate(run);
+    await this.writeProgress(run, at.phaseIds);
+    const { department, ...approval } = at.approval;
+    await this.approvals.requestApproval({
+      runId: run.pipelineRunId,
+      kind: "pipeline-gate",
+      ...approval,
+      ...(department ? { department } : {}),
+    });
+    this.log.info("pipeline run parked at a gate", {
+      pipelineRunId: run.pipelineRunId,
+      reason,
+      phase: at.phaseId,
+      next: at.cursor,
+    });
+  }
+
+  /**
+   * Continue (approve) or fail (reject) a run parked by {@link parkAtGate}. A budget
+   * approval raises the cap by another `maxCostUsd` before re-entering. Never throws.
+   */
+  private async resumeGate(
+    pipelineRunId: string,
+    decision: "approved" | "rejected",
+  ): Promise<void> {
+    try {
+      const run = this.runs.get(pipelineRunId) ?? (await this.readAggregate(pipelineRunId));
+      const gate = run?.pendingGate;
+      if (!run || run.status !== "parked" || !gate) {
+        this.log.warn("gate resume skipped (run not gate-parked)", { pipelineRunId, decision });
+        return;
+      }
+      this.runs.set(run.pipelineRunId, run);
+      const pipeline = await this.pipelines.get(run.pipelineId);
+      const phaseIds = pipeline.phases.map((p) => p.id);
+      const reason = run.parkedReason;
+      delete run.parkedReason;
+      delete run.pendingGate;
+      if (decision === "rejected") {
+        run.status = "failed";
+        run.currentStage = null;
+        await this.writeAggregate(run);
+        await this.writeProgress(run, phaseIds);
+        this.log.info("gate rejected — run failed", { pipelineRunId, reason });
+        return;
+      }
+      if (reason === "budget" && run.budget) {
+        run.budget = {
+          ...run.budget,
+          maxCostUsd: run.budget.spentUsd + run.budget.maxCostUsd,
+          warned: false,
+        };
+      }
+      run.status = "running";
+      await this.writeAggregate(run);
+      if (gate.cursor === null) {
+        await this.runOutputs(run, pipeline, 0, phaseIds);
+        return;
+      }
+      const project = await this.projectForRun(run);
+      const retries = new Map(Object.entries(run.retries ?? {}));
+      const traceId = this.trace.getTraceId() ?? randomUUID();
+      void this.trace.run({ traceId, runId: pipelineRunId }, () =>
+        this.drive(run, pipeline, project, {
+          cursor: gate.cursor as string,
+          handoffSource: gate.handoffSource,
+          retries,
+        }),
+      );
+    } catch (error) {
+      this.log.error("gate resume failed", {
+        pipelineRunId,
+        decision,
+        err: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
+   * P1-03: sum the `costUsd` of every line in `<stageDir>/costs.jsonl` (written by
+   * tools that pay for something outside the model, e.g. a cloud image API) onto the
+   * stage record. A missing file is zero; a malformed line is skipped, not fatal.
+   */
+  private async accrueStageCost(
+    run: PipelineRun,
+    stageRun: StageRun,
+    stageCwd: string,
+  ): Promise<void> {
+    const raw = await fs.readFile(path.join(stageCwd, "costs.jsonl"), "utf8").catch(() => "");
+    let sum = 0;
+    for (const line of raw.split("\n")) {
+      if (!line.trim()) continue;
+      try {
+        const cost = (JSON.parse(line) as { costUsd?: unknown }).costUsd;
+        if (typeof cost === "number" && Number.isFinite(cost) && cost > 0) sum += cost;
+      } catch {
+        this.log.warn("skipping malformed costs.jsonl line", {
+          pipelineRunId: run.pipelineRunId,
+          stage: stageRun.dir,
+        });
+      }
+    }
+    if (sum > 0) stageRun.externalCostUsd = sum;
+  }
+
+  /** P1-03: recompute the run's spend; warn once when it crosses `warnAtPct`. */
+  private updateSpend(run: PipelineRun): void {
+    if (!run.budget) return;
+    const spent = run.stageRuns.reduce(
+      (acc, s) => acc + (s.costUsd ?? 0) + (s.externalCostUsd ?? 0),
+      0,
+    );
+    run.budget.spentUsd = spent;
+    if (!run.budget.warned && spent >= (run.budget.maxCostUsd * run.budget.warnAtPct) / 100) {
+      run.budget.warned = true;
+      this.log.warn("pipeline run nearing its spend cap", {
+        pipelineRunId: run.pipelineRunId,
+        spentUsd: spent,
+        maxCostUsd: run.budget.maxCostUsd,
+      });
+    }
+  }
+
+  /**
    * Resume an `output`-parked run after the operator's decision on its PR gate.
    * Approved → run the gated push and continue any later outputs; rejected → leave the
    * branch work without a PR and continue. Either way the run finishes once the
@@ -1705,8 +1924,24 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     // Materialize enabled custom commands into the stage's working tree (worktree
     // for a project run, else the sandbox) so commands resolve; best-effort.
     await this.commandMaterializer.materialize(spawnCwd ?? stageCwd);
-    // Per-project env + secrets injected into this stage's process (Phase D).
-    const env = await this.resolveProjectEnv(project);
+    // Per-project env + secrets injected into this stage's process (Phase D), plus
+    // the run/stage folders (P1-01) so a tool can write run-wide artifacts (e.g. the
+    // `book/` folder) and any stage can find them after a loop re-dispatch. A tool
+    // phase also gets the repo's `node_modules/.bin` first on PATH, so workspace
+    // CLIs (`product-factory`) resolve however the API was started.
+    const env = {
+      ...(await this.resolveProjectEnv(project)),
+      ZIBBY_RUN_DIR: run.cwd,
+      ZIBBY_STAGE_DIR: stageCwd,
+      // Repo bins (e.g. `product-factory`): first for a tool phase; LAST for an agent
+      // stage, so a project checkout's own toolchain is never shadowed.
+      PATH: (phase.type === "tool"
+        ? [REPO_BIN_DIR, process.env.PATH]
+        : [process.env.PATH, REPO_BIN_DIR]
+      )
+        .filter(Boolean)
+        .join(path.delimiter),
+    };
     const rec = await this.core.start({
       kind: "pipeline-stage",
       ownerId: `${run.pipelineRunId}.${phase.id}`,
@@ -1714,7 +1949,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       args,
       cwd: stageCwd,
       ...(spawnCwd ? { spawnCwd } : {}),
-      ...(env ? { env } : {}),
+      env,
       extra: { pipelineRunId: run.pipelineRunId, phaseId: phase.id, attempt },
     });
     // Expose the in-flight child so the detail timeline can tail its log live,
@@ -1956,6 +2191,16 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         spawnCwd,
       });
     }
+    // P1-01: a tool phase is a deterministic transform of the handoff — it runs IN
+    // THE STAGE SANDBOX (its `consumes` symlink and `produces` file live there), never
+    // in the project checkout, and never falls back to project/default checks.
+    if (phase.type === "tool") {
+      return buildVerifyCommand({
+        commands: phase.commands,
+        projectChecks: undefined,
+        spawnCwd: cwd,
+      });
+    }
     if (process.env.AGENT_RUNNER_MODE === "claude") {
       // The phase's agent drives the stage: its instructions become the session
       // system prompt; the task tells it to consume the handoff and produce the
@@ -2120,8 +2365,9 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // fall through and stay resumable by the auto-resume tick.
       // `output` parking (a PR-gate wait after the chain already finished) has no live
       // child either — it is durable like `retries` and survives the restart parked.
-      const approvalParked =
-        run.status === "parked" && run.parkedReason !== "retries" && run.parkedReason !== "output";
+      // `gate`/`budget` (P1-02/03) park at a phase boundary with no child — durable too.
+      const durableParks: (string | undefined)[] = ["retries", "output", "gate", "budget"];
+      const approvalParked = run.status === "parked" && !durableParks.includes(run.parkedReason);
       if ((run.status === "running" && !survivingOrphan) || approvalParked) {
         run = {
           ...run,

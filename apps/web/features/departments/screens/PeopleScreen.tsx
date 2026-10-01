@@ -1,6 +1,6 @@
 "use client";
 
-import { DEPARTMENTS, type DepartmentId, type EmployeeWithState } from "@zibby/contracts";
+import { type DepartmentId, type EmployeeWithState } from "@zibby/contracts";
 import {
   AgentGlyph,
   Button,
@@ -21,6 +21,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { useDepartmentLookup } from "../useDepartmentLookup";
 import { EmptyState } from "../../../components/EmptyState/EmptyState";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
@@ -43,6 +44,7 @@ const ALL = "all";
 
 export function PeopleScreen() {
   const t = useTranslations("people");
+  const departments = useDepartmentLookup();
   const router = useRouter();
   const { data: employees = [], isPending, isError, refetch } = useEmployeesQuery();
   const { isPinned } = usePinToggle();
@@ -86,11 +88,13 @@ export function PeopleScreen() {
         return a.name.localeCompare(b.name);
       });
     }
-    return DEPARTMENTS.filter((d) => byDept.has(d.id)).map((d) => ({
-      department: d,
-      employees: byDept.get(d.id)!,
-    }));
-  }, [filtered, isPinned]);
+    return departments.list
+      .filter((d) => byDept.has(d.id))
+      .map((d) => ({
+        department: d,
+        employees: byDept.get(d.id)!,
+      }));
+  }, [filtered, isPinned, departments]);
 
   const legendItems = (["working", "thinking", "blocked", "error", "done", "idle"] as const).map(
     (s) => ({
@@ -127,7 +131,7 @@ export function PeopleScreen() {
               onValueChange={setDepartment}
               options={[
                 { value: ALL, label: t("allDepartments") },
-                ...DEPARTMENTS.map((d) => ({ value: d.id, label: d.name })),
+                ...departments.list.map((d) => ({ value: d.id, label: d.name })),
               ]}
               value={department}
             />

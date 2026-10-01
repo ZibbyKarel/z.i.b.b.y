@@ -2,13 +2,9 @@ import { Inject, Injectable } from "@nestjs/common";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import * as prettier from "prettier";
-import {
-  DEPARTMENTS,
-  IntegrationKindSchema,
-  type Note,
-  type SelfKnowledge,
-} from "@zibby/contracts";
+import { IntegrationKindSchema, type Note, type SelfKnowledge } from "@zibby/contracts";
 import { AgentsStorageService } from "../agents/agents.storage.service";
+import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.service";
 import { PolicyStorageService } from "../gates/policy.storage.service";
 import { NoteNotFoundError, VaultService } from "../memory/vault.service";
@@ -64,6 +60,7 @@ export class SelfKnowledgeService {
     private readonly policy: PolicyStorageService,
     private readonly vault: VaultService,
     @Inject(GRAPH_REPORT_PATH) private readonly graphReportPath: string,
+    private readonly departments: DepartmentsStorageService,
   ) {}
 
   /**
@@ -96,17 +93,19 @@ export class SelfKnowledgeService {
   }
 
   private async gather(): Promise<SelfKnowledgeComposerInput> {
-    const [agents, pipelines, gateRules, policyFloor, codebaseShape] = await Promise.all([
-      this.agents.list(),
-      this.pipelines.list(),
-      this.gateRules.list(),
-      this.policy.floor(),
-      this.readCodebaseShape(),
-    ]);
+    const [agents, pipelines, gateRules, policyFloor, codebaseShape, departments] =
+      await Promise.all([
+        this.agents.list(),
+        this.pipelines.list(),
+        this.gateRules.list(),
+        this.policy.floor(),
+        this.readCodebaseShape(),
+        this.departments.list(),
+      ]);
     return {
       agents,
       pipelines,
-      departments: [...DEPARTMENTS],
+      departments,
       gateRules,
       policyFloor,
       channelKinds: [...IntegrationKindSchema.options],

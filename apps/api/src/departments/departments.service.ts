@@ -1,12 +1,15 @@
 import { Injectable } from "@nestjs/common";
 import {
-  DEPARTMENTS,
+  type CreateDepartmentInput,
+  type Department,
   type DepartmentId,
   type DepartmentRoster,
   type DepartmentState,
   type DepartmentWithStatus,
+  type Division,
   type SubtaskSummary,
   type UnownedEntity,
+  type UpdateDepartmentInput,
 } from "@zibby/contracts";
 import type { Approval } from "@zibby/contracts";
 import type { TaskRun } from "@zibby/contracts";
@@ -19,7 +22,8 @@ import { PipelinesStorageService } from "../pipelines/pipelines.storage.service"
 import { TaskParentsService } from "../tasks/task-parents.service";
 import { TaskRunsService } from "../tasks/task-runs.service";
 import { DepartmentSeenStore } from "./department-seen.store";
-import { DepartmentNotFoundError } from "./departments.errors";
+import { UnknownDivisionError } from "./departments.errors";
+import { DepartmentsStorageService } from "./departments.storage.service";
 
 /**
  * Precedence when several conditions apply to the SAME department — waiting-on-you
@@ -111,6 +115,8 @@ export class DepartmentsService {
     private readonly employees: EmployeesStorageService,
     /** ZB-04a §5: {@link subtasks} serves off the ONE parent/subtask read model. */
     private readonly taskParents: TaskParentsService,
+    /** D-022: departments are data — every read goes through the store. */
+    private readonly store: DepartmentsStorageService,
   ) {}
 
   /**
@@ -123,8 +129,9 @@ export class DepartmentsService {
    * top-to-bottom, not for the strip's layout.
    */
   async list(): Promise<DepartmentWithStatus[]> {
-    const aggregates = await this.aggregateAll();
-    const rows = DEPARTMENTS.map((department) => withAggregate(department, aggregates));
+    const departments = await this.store.list();
+    const aggregates = await this.aggregateAll(departments);
+    const rows = departments.map((department) => withAggregate(department, aggregates));
     return [...rows].sort((a, b) => {
       const rankDiff = LIST_ORDER_RANK[a.state] - LIST_ORDER_RANK[b.state];
       if (rankDiff !== 0) return rankDiff;
@@ -137,9 +144,36 @@ export class DepartmentsService {
 
   /** A single department by id; throws `DepartmentNotFoundError` for an unknown id. */
   async get(id: string): Promise<DepartmentWithStatus> {
-    const department = this.find(id);
+    const department = await this.find(id);
     const aggregates = await this.aggregateAll();
     return withAggregate(department, aggregates);
+  }
+
+  /** The divisions departments are grouped under, in org-chart order. */
+  listDivisions(): Promise<Division[]> {
+    return this.store.listDivisions();
+  }
+
+  /** D-022: create a department; duplicate id → `DepartmentConflictError`, bad division → `UnknownDivisionError`. */
+  async create(input: CreateDepartmentInput): Promise<Department> {
+    await this.assertDivision(input.division);
+    return this.store.create({ ...input, createdAt: new Date().toISOString() });
+  }
+
+  /** D-022: patch a department (id immutable); unknown id → `DepartmentNotFoundError`. */
+  async update(id: string, patch: UpdateDepartmentInput): Promise<Department> {
+    if (patch.division !== undefined) await this.assertDivision(patch.division);
+    return this.store.update(id, patch);
+  }
+
+  /** Write-boundary guard for other modules: throws `DepartmentNotFoundError` for an unknown id. */
+  assertExists(id: string): Promise<void> {
+    return this.store.assertExists(id);
+  }
+
+  private async assertDivision(id: string): Promise<void> {
+    const divisions = await this.store.listDivisions();
+    if (!divisions.some((d) => d.id === id)) throw new UnknownDivisionError(id);
   }
 
   /**
@@ -149,7 +183,7 @@ export class DepartmentsService {
    * flow, a different acknowledgment model (design doc).
    */
   async markSeen(id: string): Promise<DepartmentWithStatus> {
-    const department = this.find(id);
+    const department = await this.find(id);
     await this.seen.markSeen(department.id);
     return this.get(id);
   }
@@ -189,7 +223,7 @@ export class DepartmentsService {
    * through its employees).
    */
   async roster(id: string): Promise<DepartmentRoster> {
-    const department = this.find(id);
+    const department = await this.find(id);
     const [agents, integrations, mandate, employees] = await Promise.all([
       this.agents.list(),
       this.integrations.list(),
@@ -225,14 +259,12 @@ export class DepartmentsService {
    * `DepartmentNotFoundError` for an unknown id, same as {@link get}.
    */
   async subtasks(id: string): Promise<SubtaskSummary[]> {
-    const department = this.find(id);
+    const department = await this.find(id);
     return this.taskParents.getDepartmentSubtasks(department.id);
   }
 
-  private find(id: string) {
-    const department = DEPARTMENTS.find((s) => s.id === id);
-    if (!department) throw new DepartmentNotFoundError(id);
-    return department;
+  private async find(id: string): Promise<Department> {
+    return this.store.get(id);
   }
 
   /**
@@ -241,7 +273,10 @@ export class DepartmentsService {
    * cheap enough that a single-id fast path would only add complexity, not
    * measurable speed.
    */
-  private async aggregateAll(): Promise<Map<DepartmentId, Aggregate>> {
+  private async aggregateAll(
+    departments?: readonly Department[],
+  ): Promise<Map<DepartmentId, Aggregate>> {
+    const all = departments ?? (await this.store.list());
     const [pipelines, runs, pendingApprovals, agents] = await Promise.all([
       this.pipelines.list(),
       this.taskRuns.listTaskRuns(),
@@ -256,9 +291,7 @@ export class DepartmentsService {
     for (const a of agents) if (a.department) agentOwner.set(a.id, a.department);
 
     const lastSeenById = new Map<DepartmentId, string>(
-      await Promise.all(
-        DEPARTMENTS.map(async (s) => [s.id, await this.seen.seenAt(s.id)] as const),
-      ),
+      await Promise.all(all.map(async (s) => [s.id, await this.seen.seenAt(s.id)] as const)),
     );
 
     const running = new Set<DepartmentId>();
@@ -299,7 +332,7 @@ export class DepartmentsService {
     }
 
     const result = new Map<DepartmentId, Aggregate>();
-    for (const s of DEPARTMENTS) {
+    for (const s of all) {
       const t3 = tier3Count.get(s.id) ?? 0;
       const t2 = tier2Count.get(s.id) ?? 0;
       const errorRunIds = errorRuns.get(s.id) ?? [];
@@ -344,7 +377,7 @@ function attributeApproval(
 }
 
 function withAggregate(
-  department: (typeof DEPARTMENTS)[number],
+  department: Department,
   aggregates: Map<DepartmentId, Aggregate>,
 ): DepartmentWithStatus {
   const aggregate = aggregates.get(department.id) ?? {

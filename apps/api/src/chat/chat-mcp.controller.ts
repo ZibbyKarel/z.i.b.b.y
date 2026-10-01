@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { Controller, Get, Logger, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { DEPARTMENTS, type DepartmentId, type TaskTarget } from "@zibby/contracts";
+import { DepartmentIdSchema, type TaskTarget } from "@zibby/contracts";
 import { z } from "zod";
 import { ChatMcpAuthGuard } from "./chat-mcp-auth.guard";
 import { ChatToolResultRegistry } from "./chat-tool-result.registry";
@@ -246,11 +246,10 @@ export class ChatMcpController {
           'recent activity. Use it when the operator names a department ("co dělá ' +
           'Dev?", "jak je na tom Ops?").',
         inputSchema: {
-          // The id enum is sourced from the DEPARTMENTS registry — never hard-coded.
-          department: z
-            .enum(DEPARTMENTS.map((s) => s.id) as [DepartmentId, ...DepartmentId[]])
-            .optional()
-            .describe("Optional department id to narrow the status to (e.g. 'dev')."),
+          // D-022: departments are data — an open slug here, existence-checked at call time.
+          department: DepartmentIdSchema.optional().describe(
+            "Optional department id to narrow the status to (e.g. 'dev').",
+          ),
         },
       },
       async ({ department }) => text(await this.tools.getStatus(department)),

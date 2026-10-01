@@ -1,9 +1,11 @@
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { DEPARTMENT_SEED } from "@zibby/contracts";
 import * as prettier from "prettier";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { AgentsStorageService } from "../agents/agents.storage.service";
+import type { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.service";
 import { PolicyStorageService } from "../gates/policy.storage.service";
 import { VaultService } from "../memory/vault.service";
@@ -43,6 +45,7 @@ async function makeService(
       policy,
       vault,
       resolvedGraphReportPath,
+      { list: async () => [...DEPARTMENT_SEED] } as unknown as DepartmentsStorageService,
     ),
   };
 }

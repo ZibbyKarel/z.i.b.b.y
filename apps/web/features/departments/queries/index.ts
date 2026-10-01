@@ -5,3 +5,4 @@ export {
   getDepartmentSubtasksQueryKey,
   useDepartmentSubtasksQuery,
 } from "./useDepartmentSubtasksQuery";
+export { getDivisionsQueryKey, useDivisionsQuery } from "./useDivisionsQuery";

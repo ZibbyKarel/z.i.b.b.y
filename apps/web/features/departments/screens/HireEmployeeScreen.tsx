@@ -1,6 +1,6 @@
 "use client";
 
-import { DEPARTMENTS, type DepartmentId } from "@zibby/contracts";
+import { type DepartmentId } from "@zibby/contracts";
 import {
   Button,
   Container,
@@ -13,6 +13,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useDepartmentLookup } from "../useDepartmentLookup";
 import { PageContainer } from "../../../components/PageContainer/PageContainer";
 import { useAgentsQuery } from "../../agents";
 import { useHireEmployeeMutation } from "../../employees";
@@ -29,10 +30,11 @@ export interface HireEmployeeScreenProps {
  */
 export function HireEmployeeScreen({ initialDepartment }: HireEmployeeScreenProps) {
   const t = useTranslations("people");
+  const departments = useDepartmentLookup();
   const router = useRouter();
   const { data: agents = [] } = useAgentsQuery();
   const [department, setDepartment] = useState<DepartmentId>(
-    (initialDepartment as DepartmentId) ?? DEPARTMENTS[0]!.id,
+    (initialDepartment as DepartmentId) ?? departments.list[0]!.id,
   );
   const [agentId, setAgentId] = useState<string>("");
   const [name, setName] = useState("");
@@ -51,7 +53,7 @@ export function HireEmployeeScreen({ initialDepartment }: HireEmployeeScreenProp
                 <SelectField
                   label={t("departmentLabel")}
                   onValueChange={(v) => setDepartment(v as DepartmentId)}
-                  options={DEPARTMENTS.map((d) => ({ value: d.id, label: d.name }))}
+                  options={departments.list.map((d) => ({ value: d.id, label: d.name }))}
                   value={department}
                 />
                 <SelectField

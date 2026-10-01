@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { HandoffRule, HandoffSignal } from "@zibby/contracts";
+import { DEPARTMENT_SEED, type HandoffRule, type HandoffSignal } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HandoffFiredStore } from "./handoff-fired.store";
 import { HandoffProposalStore } from "./handoff-proposal.store";
@@ -142,6 +142,9 @@ describe("HandoffService", () => {
       // ZB-05a — chain lookup only; no test in this file dispatches a real chain
       // hop end to end (that's chain-view.test.ts / the chain e2e spec).
       { get: vi.fn(async () => null) } as never,
+      {
+        nameOf: vi.fn(async (id: string) => DEPARTMENT_SEED.find((d) => d.id === id)?.name ?? id),
+      } as never,
       fakeLogger as never,
     );
   });

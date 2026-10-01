@@ -14,7 +14,7 @@ import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
-import { type DashboardApproval, HIGH_RISK_TYPES, formatWaited } from "../approval";
+import { type DashboardApproval, HIGH_RISK_TYPES, formatWaited, gateTitleKey } from "../approval";
 import { useApproveMutation, useRejectMutation } from "../mutations";
 import { useApprovalHistoryQuery, useApprovalsQuery } from "../queries";
 
@@ -38,21 +38,28 @@ export function ApprovalsScreen() {
       key: "row",
       label: t("queueTitle"),
       width: "flex",
-      render: (a) => (
-        <ApprovalCard
-          agentName={a.skill}
-          density="row"
-          glyphSeed={a.skill}
-          highRisk={a.riskType != null && HIGH_RISK_TYPES.has(a.riskType)}
-          meta={a.kind}
-          onApprove={() => approve.mutate({ params: { id: a.id }, body: {} })}
-          onDeny={() => reject.mutate({ params: { id: a.id }, body: {} })}
-          onOpen={() => openSheet(a.id)}
-          request={a.text ?? a.detail}
-          taskRef={a.runId}
-          waited={formatWaited(a.requestedAt)}
-        />
-      ),
+      render: (a) => {
+        const gateKey = gateTitleKey(a);
+        return (
+          <ApprovalCard
+            agentName={a.skill}
+            density="row"
+            glyphSeed={a.skill}
+            highRisk={a.riskType != null && HIGH_RISK_TYPES.has(a.riskType)}
+            meta={a.kind}
+            onApprove={() => approve.mutate({ params: { id: a.id }, body: {} })}
+            onDeny={() => reject.mutate({ params: { id: a.id }, body: {} })}
+            onOpen={() => openSheet(a.id)}
+            request={
+              gateKey
+                ? `${t(`sheet.gate.${gateKey}`)} — ${a.text ?? a.detail}`
+                : (a.text ?? a.detail)
+            }
+            taskRef={a.runId}
+            waited={formatWaited(a.requestedAt)}
+          />
+        );
+      },
     },
   ];
 

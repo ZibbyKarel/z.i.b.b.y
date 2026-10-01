@@ -12,6 +12,9 @@
 //           PIPELINE_DEMO_GAP_PHASES (qualify phases that emit <verdict>gap</verdict>
 //           once then <verdict>pass</verdict>), PIPELINE_DEMO_DRIFT_PHASES (always
 //           emit <verdict>drift</verdict>) — exercising the Phase 45 qualify back-edge.
+//           PIPELINE_DEMO_FIXTURE_DIR: when <dir>/<phaseId>/<produces> exists it is
+//           copied as the work product (then the verdict tag, if any, is appended) —
+//           lets a demo run feed real artifacts to downstream `tool` phases.
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import * as path from "node:path";
@@ -129,7 +132,12 @@ async function main() {
     } else if (driftPhases.includes(phaseId)) {
       verdict = `\n<verdict>drift</verdict>\n`;
     }
-    await writeFileR(out, `output of ${phaseId} @ ${new Date().toISOString()}\n${verdict}`, "utf8");
+    const fixtureDir = process.env.PIPELINE_DEMO_FIXTURE_DIR;
+    const fixture = fixtureDir
+      ? await readFile(path.join(fixtureDir, phaseId, producesRel), "utf8").catch(() => null)
+      : null;
+    const body = fixture ?? `output of ${phaseId} @ ${new Date().toISOString()}\n`;
+    await writeFileR(out, `${body}${verdict}`, "utf8");
     console.log(`Stage ${phaseId} produced ${producesRel}`);
   }
 

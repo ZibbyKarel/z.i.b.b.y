@@ -1,6 +1,8 @@
 import { Controller } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import { handoffContract } from "@zibby/contracts";
+import { type HandoffRuleInput, handoffContract } from "@zibby/contracts";
+import { unknownDepartment422 } from "../departments/departments.errors";
+import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { makeErrorMapper } from "../shared/http/error-mapping";
 import { ChainInUseError, ChainNotFoundError, InvalidChainInputError } from "./chain.errors";
 import { ChainsService } from "./chains.service";
@@ -15,6 +17,11 @@ const signalKindErrors = makeErrorMapper("Handoff signal kind", {
   missing: [SignalKindNotFoundError],
 });
 const chainErrors = makeErrorMapper("Chain", { missing: [ChainNotFoundError] });
+
+/** Every department a handoff rule body references (`from`, plus a department `to`). */
+function ruleDepartments(rule: HandoffRuleInput): string[] {
+  return [rule.from, ...(rule.to.kind === "department" ? [rule.to.id] : [])];
+}
 
 /**
  * Implements `handoffContract` against the seeded, file-backed rule set AND (B1)
@@ -31,6 +38,8 @@ export class HandoffController {
     private readonly signalKinds: SignalKindService,
     private readonly signalKindStore: HandoffSignalKindStore,
     private readonly chains: ChainsService,
+    /** D-022: department ids in rule/chain bodies are existence-checked here. */
+    private readonly departments: DepartmentsStorageService,
   ) {}
 
   @TsRestHandler(handoffContract)
@@ -44,10 +53,17 @@ export class HandoffController {
         return { status: 200, body: rules.filter((r) => !chainKindIds.has(r.signalKind)) };
       },
 
-      createHandoffRule: async ({ body }) => ({ status: 201, body: await this.rules.create(body) }),
+      createHandoffRule: async ({ body }) => {
+        const missing = await this.departments.firstMissing(ruleDepartments(body));
+        if (missing) return unknownDepartment422(missing);
+        return { status: 201, body: await this.rules.create(body) } as const;
+      },
 
-      updateHandoffRule: ({ params: { id }, body }) =>
-        errors.or404(id, () => this.rules.update(id, body)),
+      updateHandoffRule: async ({ params: { id }, body }) => {
+        const missing = await this.departments.firstMissing(ruleDepartments(body));
+        if (missing) return unknownDepartment422(missing);
+        return errors.or404(id, () => this.rules.update(id, body));
+      },
 
       deleteHandoffRule: ({ params: { id } }) =>
         errors.or404(
@@ -97,6 +113,11 @@ export class HandoffController {
       getChain: ({ params: { id } }) => chainErrors.or404(id, () => this.chains.get(id)),
 
       putChain: async ({ params: { id }, body }) => {
+        const missing = await this.departments.firstMissing([
+          body.entry,
+          ...body.steps.map((s) => s.department),
+        ]);
+        if (missing) return unknownDepartment422(missing);
         try {
           return { status: 200, body: await this.chains.put(id, body) };
         } catch (err) {

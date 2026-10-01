@@ -10,8 +10,8 @@
 **Branch:** `feat/publishing-factory`, worktree `worktrees/publishing-factory`.
 **Wave order:** Wave 1 (P0-01..03 ∥ P1 ∥ P2) → Wave 2 (P0-04 → P4 ∥ P3 ∥ P7-01..02) →
 Wave 3 (P5 → P7-03..04 → P8) → Wave 4, second night (P9 ∥ P10).
-**Last updated:** 2026-10-01 (plan written, nothing started).
-**Resume at:** Wave 1.
+**Last updated:** 2026-10-01 ~21:00 (Wave 1 + P4 done, P3 in progress).
+**Resume at:** wait for P3 agent → commit product-factory + P4 → live smoke (mflux+ollama) → morning checks + PR.
 
 ---
 
@@ -22,25 +22,25 @@ Legend: ⬜ todo · 🟦 in progress · ✅ landed (sha) · ⛔ parked (reason)
 ### Part P0 — Departments become data (D-022)
 | Phase | Title | Status | Commit |
 |---|---|---|---|
-| P0-01 | Contract: open id, department fields, divisions | ⬜ | |
-| P0-02 | API: store, seed, create/update, existence checks | ⬜ | |
-| P0-03 | Web: departments from the query, Create department dialog | ⬜ | |
-| P0-04 | DECISIONS D-022 + `pub` department data | ⬜ | |
+| P0-01 | Contract: open id, department fields, divisions | ✅ | |
+| P0-02 | API: store, seed, create/update, existence checks | ✅ | |
+| P0-03 | Web: departments from the query, Create department dialog | ✅ | |
+| P0-04 | DECISIONS D-022 + `pub` department data | ✅ | |
 
 ### Part P1 — Engine
 | Phase | Title | Status | Commit |
 |---|---|---|---|
-| P1-01 | `tool` phase type | ⬜ | |
-| P1-02 | Stage-level approval | ⬜ | |
-| P1-03 | Per-run cost cap + external cost seam | ⬜ | |
-| P1-04 | Employee pin | ⬜ | |
+| P1-01 | `tool` phase type | ✅ | |
+| P1-02 | Stage-level approval | ✅ | |
+| P1-03 | Per-run cost cap + external cost seam | ✅ (ledger part of E4 deferred) | |
+| P1-04 | Employee pin | ⬜ deferred (not needed for night-1 goal) | |
 
 ### Part P2 — Publishing contracts + toolkit (mock)
 | Phase | Title | Status | Commit |
 |---|---|---|---|
-| P2-01 | Contracts | ⬜ | |
-| P2-02 | CLI: validate-plan, render, preflight, mock provider, pixel QA | ⬜ | |
-| P2-03 | `produce` batch loop | ⬜ | |
+| P2-01 | Contracts | ✅ (Zod schemas live in `libs/product-factory/src/schemas.ts`, not `libs/contracts`) | |
+| P2-02 | CLI: validate-plan, render, preflight, mock provider, pixel QA | ✅ | |
+| P2-03 | `produce` batch loop | ✅ | |
 
 ### Part P3 — Local generation
 | Phase | Title | Status | Commit |
@@ -53,9 +53,9 @@ Legend: ⬜ todo · 🟦 in progress · ✅ landed (sha) · ⛔ parked (reason)
 ### Part P4 — Milestone 1 (mock end-to-end)
 | Phase | Title | Status | Commit |
 |---|---|---|---|
-| P4-01 | Agents, skills, employees | ⬜ | |
-| P4-02 | Pipeline file | ⬜ | |
-| P4-03 | End-to-end test | ⬜ | |
+| P4-01 | Agents, skills, employees | ✅ (skills folded into agent instructions) | |
+| P4-02 | Pipeline file | ✅ | |
+| P4-03 | End-to-end test | ✅ `apps/api/test/coloring-book.e2e.test.ts` | |
 
 ### Part P5 — Chains and sub-pipelines
 | Phase | Title | Status | Commit |
@@ -120,11 +120,29 @@ settings via project env/secrets in UI. P5, P7–P11 are later nights.
 
 ## Defaults applied
 _(Q-number · default taken · where it shows)_
+- Q5 overridden by the operator: install allowed (mflux via uv, Ollama via brew, `qwen3-vl:8b` pulled).
+- Gates: the shipped pipeline has **no** `approval: ask` (operator: default fully autonomous).
+- Editorial QA phase dropped for night 1: plan-check (banned terms, duplicates) + visual audit cover it.
+- `listing-specialist` hired into `pub` (not `dist`): a pipeline leases employees from its own department.
+- Skills folded into agent instructions: the agent schema has no skills field.
 
 ## Data written
 _(path · reason · subphase)_
+- `.zibby/data/departments/*.json` + `_divisions.json` — the 11 seeds + `pub` + `dist` (P0-04). Written as files so the seed-once rule never sees a lone `pub.json`.
+- `.zibby/data/agents/{book-creative-director,book-page-planner,book-illustrator,book-visual-qa,listing-specialist}.md` (P4-01).
+- `.zibby/data/employees/employee_<agent>.json` ×5 in `pub` (Bruno, Ed, Gary, Hugo, Joe) + `employee-names.json` claims (P4-01).
+- `.zibby/data/pipelines/coloring-book.pipeline.md` (P4-02).
+- `.zibby/data/projects/_projects.json` + `_categories.json` — project `publishing`, path `/Users/zibar/Workspace/zibby-publishing` (non-git), env `PF_IMAGE_PROVIDER=mflux`, `PF_VISION_PROVIDER=ollama`.
+- `.zibby/data/automations/coloring-book-twice-weekly.json` — cron `0 2 * * 1,4`, enabled, `theme: auto`.
+- `/Users/zibar/Workspace/zibby-publishing/books.md` — the theme ledger the creative director reads and appends.
 
 ## Execution notes
+- Real CLI verbs differ from PLAN §4.1: `plan check`, `produce`, `reject`, `render`, `preflight`, `finalize`, `doctor`, `bakeoff`.
+- Tool phases run in the stage sandbox with repo `node_modules/.bin` first on PATH; agent stages get it last.
+- Agents spawn in the project path; they read run artifacts via `$ZIBBY_RUN_DIR` (book at `$ZIBBY_RUN_DIR/book`).
+- Run-id collision fix: `start()` claims the run folder exclusively (D-017 flake).
+- mflux warm-up: FLUX.2 klein 4B q4, 1024², 4 steps ≈ 20 s/image, peak MLX memory 17.9 GB — never run ollama vision concurrently.
+- Pre-existing red test: `AppShell renders the header's section nav…` (no shell/header file touched on this branch).
 
 ## Follow-ups found
 

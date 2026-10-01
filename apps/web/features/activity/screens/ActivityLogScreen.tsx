@@ -1,6 +1,6 @@
 "use client";
 
-import { ACTIVITY_GROUPS, DEFAULT_ACTIVITY_VIEW, DEPARTMENTS } from "@zibby/contracts";
+import { ACTIVITY_GROUPS, DEFAULT_ACTIVITY_VIEW } from "@zibby/contracts";
 import type { ActivityEntry, ActivityGroup } from "@zibby/contracts";
 import { ACTIVITY_GROUP_OF } from "@zibby/contracts";
 import {
@@ -15,6 +15,7 @@ import {
 } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
+import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { clockTime } from "../../../utils/time";
@@ -54,6 +55,7 @@ function uniqueRefValues(
  */
 export function ActivityLogScreen() {
   const t = useTranslations();
+  const departments = useDepartmentLookup();
   const locale = useLocale();
 
   const feed = useActivityFeedInfiniteQuery();
@@ -94,9 +96,7 @@ export function ActivityLogScreen() {
   const lines: LogStreamLine[] = [...rows].reverse().map((row) => {
     if (row.type === "entry") {
       const source =
-        (row.entry.refs.department &&
-          (DEPARTMENTS.find((d) => d.id === row.entry.refs.department)?.name ??
-            row.entry.refs.department)) ||
+        (row.entry.refs.department && departments.name(row.entry.refs.department)) ||
         row.entry.refs.agentId ||
         row.entry.refs.taskId ||
         "";
@@ -154,7 +154,7 @@ export function ActivityLogScreen() {
             onValueChange={setDepartment}
             options={[
               { value: ALL, label: t("activityLog.filter.all") },
-              ...DEPARTMENTS.map((d) => ({ value: d.id, label: d.name })),
+              ...departments.list.map((d) => ({ value: d.id, label: d.name })),
             ]}
             value={department}
           />

@@ -70,7 +70,7 @@ describe("approval schema", () => {
     });
 
     it("rejects an id outside the closed department enum", () => {
-      expect(ApprovalSchema.safeParse({ ...base, department: "warp-drive" }).success).toBe(false);
+      expect(ApprovalSchema.safeParse({ ...base, department: "Warp Drive" }).success).toBe(false);
     });
   });
 

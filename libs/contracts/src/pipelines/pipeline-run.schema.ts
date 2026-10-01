@@ -62,6 +62,11 @@ export const StageRunSchema = z.object({
    */
   costUsd: z.number().optional(),
   /**
+   * P1-03 — non-model spend this dispatch reported (image APIs, …): the sum of
+   * `costUsd` over the lines of `<stageDir>/costs.jsonl`. Absent when none.
+   */
+  externalCostUsd: z.number().nonnegative().optional(),
+  /**
    * D-015: the employee (hired instance of `phase.agent`) the `EmployeeAllocator`
    * leased for this dispatch, and its display name at dispatch time. Absent on a
    * `verify` phase (which spawns no agent, so never acquires a lease) and on any
@@ -90,7 +95,17 @@ export type StageRun = z.infer<typeof StageRunSchema>;
  *   resume; the operator hires the missing position (or reassigns one) and
  *   resumes the run, re-entering `drive()` at the same stage.
  */
-export const ParkedReasonSchema = z.enum(["approval", "retries", "limit", "output", "no-employee"]);
+export const ParkedReasonSchema = z.enum([
+  "approval",
+  "retries",
+  "limit",
+  "output",
+  "no-employee",
+  // P1-02: a phase with `approval: ask` finished; durable, `pendingGate` resumes it.
+  "gate",
+  // P1-03: the run's spend passed its cap; durable, `pendingGate` resumes it.
+  "budget",
+]);
 export type ParkedReason = z.infer<typeof ParkedReasonSchema>;
 
 /**
@@ -174,6 +189,30 @@ export const PipelineRunSchema = z.object({
    * output processing from here; durable across restart.
    */
   pendingOutput: z.object({ index: z.number().int().nonnegative() }).optional(),
+  /**
+   * P1-02/P1-03 — present while `parkedReason` is `gate` or `budget`: where the
+   * driver re-enters on approve (`cursor` null = the chain is finished, deliver the
+   * outputs) and the handoff the next phase consumes. No live child → durable.
+   */
+  pendingGate: z
+    .object({
+      phaseId: z.string().min(1),
+      cursor: z.string().nullable(),
+      handoffSource: z.string().nullable(),
+    })
+    .optional(),
+  /**
+   * P1-03 — the run's spend cap snapshot (from `pipeline.budget`) and what it has
+   * spent so far (model + external cost over every finished stage).
+   */
+  budget: z
+    .object({
+      maxCostUsd: z.number().positive(),
+      warnAtPct: z.number().int().min(1).max(100),
+      spentUsd: z.number().nonnegative(),
+      warned: z.boolean().optional(),
+    })
+    .optional(),
   /**
    * Set when a `pr` output opened a PR (now Tier-2 — opened immediately as the run
    * finishes, no gate): the url + the branch's `+/−` line totals. Persisted on the
