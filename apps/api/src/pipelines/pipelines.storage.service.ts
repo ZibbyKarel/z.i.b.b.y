@@ -154,8 +154,9 @@ export class PipelinesStorageService extends MarkdownEntityStore<Pipeline> {
     // cheapest-first ordering the stage-2 fallback depends on would collapse to a
     // constant instead of failing loudly.
     if (typeof data.complexity === "string") candidate.complexity = data.complexity;
-    // P1-03 per-run spend cap — absent stays absent (uncapped).
-    if (data.budget !== undefined) candidate.budget = data.budget;
+    // P1-03 per-run spend cap — absent stays absent (uncapped). A legacy bare number
+    // (`budget: 25`, never read before P1-03) is ignored, not a reason to drop the file.
+    if (typeof data.budget === "object" && data.budget !== null) candidate.budget = data.budget;
     if (typeof data.project === "string") candidate.project = data.project;
 
     const result = PipelineSchema.safeParse(candidate);

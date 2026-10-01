@@ -293,6 +293,15 @@ describe("PipelinesStorageService", () => {
     expect(list.map((p) => p.id)).toEqual(["release"]);
   });
 
+  it("keeps a pipeline whose frontmatter has a legacy bare-number budget", async () => {
+    await service.create(sample);
+    const file = fileFor(dir, "release");
+    const parsed = matter(await fs.readFile(file, "utf8"));
+    await fs.writeFile(file, matter.stringify(parsed.content, { ...parsed.data, budget: 25 }));
+    const p = await service.get("release");
+    expect(p.budget).toBeUndefined();
+  });
+
   /**
    * NS2 F9 regression — the `complexity` rung must survive a full disk
    * round-trip. This caught a real bug: the field is schema-DEFAULTED, so a
