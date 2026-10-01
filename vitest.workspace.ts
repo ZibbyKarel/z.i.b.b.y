@@ -9,6 +9,7 @@ const projects = [
   "./libs/design-system/vitest.config.ts",
   "./libs/forms/vitest.config.ts",
   "./libs/contracts/vitest.config.ts",
+  "./libs/product-factory/vitest.config.ts",
   "./apps/api/vitest.config.ts",
   "./apps/web/vitest.config.ts",
   "./apps/web/vitest.components.config.ts",

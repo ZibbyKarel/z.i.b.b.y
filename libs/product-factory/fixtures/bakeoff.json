@@ -1,0 +1,26 @@
+[
+  {
+    "key": "cat",
+    "prompt": "Children's coloring page: a cute smiling cat sitting next to a ball of yarn"
+  },
+  {
+    "key": "elephant",
+    "prompt": "Children's coloring page: a happy baby elephant holding a balloon"
+  },
+  {
+    "key": "rocket",
+    "prompt": "Children's coloring page: a friendly rocket flying past a smiling moon and three stars"
+  },
+  {
+    "key": "fish",
+    "prompt": "Children's coloring page: a round fish with big eyes swimming among bubbles and seaweed"
+  },
+  {
+    "key": "dino",
+    "prompt": "Children's coloring page: a small friendly dinosaur eating a leaf under a big tree"
+  },
+  {
+    "key": "house",
+    "prompt": "Children's coloring page: a cosy little house with a round door, a chimney and a flower garden"
+  }
+]

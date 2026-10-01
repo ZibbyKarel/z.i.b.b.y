@@ -1,0 +1,15 @@
+{
+  "name": "@zibby/product-factory",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "product-factory": "./bin/product-factory.mjs"
+  },
+  "dependencies": {
+    "@pdf-lib/fontkit": "^1.1.1",
+    "pdf-lib": "^1.17.1",
+    "sharp": "^0.34.5",
+    "zod": "^4.0.0"
+  }
+}

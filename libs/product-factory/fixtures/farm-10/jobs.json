@@ -1,0 +1,47 @@
+{
+  "cover": {
+    "prompt": "Coloring book cover art, thick black outline, white background, a cow, a pig and a hen waving in front of a red barn, no shading"
+  },
+  "jobs": [
+    {
+      "pageNumber": 1,
+      "prompt": "Children's coloring page, thick uniform black outlines, pure white background, no shading, no text: a smiling cow standing in a grassy meadow"
+    },
+    {
+      "pageNumber": 2,
+      "prompt": "Children's coloring page, thick uniform black outlines, pure white background, no shading, no text: a round pig rolling in a muddy puddle"
+    },
+    {
+      "pageNumber": 3,
+      "prompt": "Children's coloring page, thick uniform black outlines, pure white background, no shading, no text: a hen sitting on a nest with three eggs"
+    },
+    {
+      "pageNumber": 4,
+      "prompt": "Children's coloring page, thick uniform black outlines, pure white background, no shading, no text: a woolly sheep next to a wooden fence"
+    },
+    {
+      "pageNumber": 5,
+      "prompt": "Children's coloring page, thick uniform black outlines, pure white background, no shading, no text: a horse trotting beside a red barn"
+    },
+    {
+      "pageNumber": 6,
+      "prompt": "Children's coloring page, thick uniform black outlines, pure white background, no shading, no text: a duck swimming on a small pond with lily pads"
+    },
+    {
+      "pageNumber": 7,
+      "prompt": "Children's coloring page, thick uniform black outlines, pure white background, no shading, no text: a goat climbing on a pile of hay bales"
+    },
+    {
+      "pageNumber": 8,
+      "prompt": "Children's coloring page, thick uniform black outlines, pure white background, no shading, no text: a friendly dog herding two lambs"
+    },
+    {
+      "pageNumber": 9,
+      "prompt": "Children's coloring page, thick uniform black outlines, pure white background, no shading, no text: a rooster crowing on top of a fence post at sunrise"
+    },
+    {
+      "pageNumber": 10,
+      "prompt": "Children's coloring page, thick uniform black outlines, pure white background, no shading, no text: a farmer's tractor with a big wheel parked by a tree"
+    }
+  ]
+}

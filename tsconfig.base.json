@@ -27,5 +27,12 @@
       "@zibby/forms/*": ["libs/forms/src/*"]
     }
   },
-  "exclude": ["node_modules", "dist", ".next", "worktrees", ".claude/worktrees"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".next",
+    "worktrees",
+    ".claude/worktrees",
+    "libs/product-factory"
+  ]
 }

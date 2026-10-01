@@ -15,7 +15,7 @@
     "check:docs-sync": "node tools/docs-sync/check.mjs --scope=staged",
     "check:names": "node tools/check-names.mjs",
     "docs-sync:check": "node tools/docs-sync/check.mjs --scope=worktree",
-    "check:types": "tsc -p tsconfig.base.json --noEmit && tsc -p apps/web/tsconfig.json --noEmit",
+    "check:types": "tsc -p tsconfig.base.json --noEmit && tsc -p apps/web/tsconfig.json --noEmit && tsc -p libs/product-factory/tsconfig.json --noEmit",
     "check:types:incremental": "tsc -p tsconfig.base.json --noEmit --incremental --tsBuildInfoFile .cache/tsc-base.tsbuildinfo && tsc -p apps/web/tsconfig.json --noEmit --incremental --tsBuildInfoFile .cache/tsc-web.tsbuildinfo",
     "check:cycles": "madge --circular apps/web",
     "check:lint": "eslint --fix .",
@@ -58,6 +58,7 @@
     "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
+    "@zibby/product-factory": "workspace:*",
     "@playwright/test": "^1.60.0",
     "@storybook/addon-a11y": "^8.4.7",
     "@storybook/addon-essentials": "^8.4.7",
