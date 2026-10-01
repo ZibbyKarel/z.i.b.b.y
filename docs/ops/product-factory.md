@@ -8,7 +8,7 @@ real image and vision providers, their environment, and the 24 GB memory rules.
 ```bash
 uv tool install mflux            # update: uv tool upgrade mflux
 brew install ollama && brew services start ollama
-ollama pull qwen3-vl:8b          # ~6 GB
+ollama pull qwen3-vl:8b-instruct # ~6 GB (instruct: no thinking mode)
 product-factory doctor           # shows what is usable
 ```
 
@@ -53,7 +53,7 @@ Put them in the project **env** unless marked **secret**.
 | `PF_FAL_PRICE_USD`                                                | `0.005 x megapixels`                       | per-image cost override for `costs.jsonl`                        |
 | `FAL_KEY`                                                         | –                                          | **secret** — fal.ai API key; never logged                        |
 | `OLLAMA_HOST`                                                     | `http://127.0.0.1:11434`                   | Ollama endpoint                                                  |
-| `PF_OLLAMA_MODEL`                                                 | `qwen3-vl:8b`                              | vision model                                                     |
+| `PF_OLLAMA_MODEL`                                                 | `qwen3-vl:8b-instruct`                     | vision model                                                     |
 | `PF_HAIKU_TIMEOUT_MS`                                             | 120000                                     | per-image timeout for the `claude -p` judge                      |
 | `PF_MOCK_FAIL_PAGES`                                              | –                                          | e.g. `3,5`: mock emits a gray image for those pages on attempt 1 |
 | `PF_SINGLE_SIDED`                                                 | `true`                                     | blank back side after each coloring page                         |

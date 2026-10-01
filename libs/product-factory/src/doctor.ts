@@ -55,7 +55,7 @@ export async function doctor(_argv: string[], ctx: Ctx): Promise<number> {
   );
 
   const host = ollamaHost(env);
-  const vmodel = env.PF_OLLAMA_MODEL || "qwen3-vl:8b";
+  const vmodel = env.PF_OLLAMA_MODEL || "qwen3-vl:8b-instruct";
   try {
     const res = await fetch(new URL("/api/tags", host), { signal: AbortSignal.timeout(3000) });
     const body = (await res.json()) as { models?: { name: string }[] };

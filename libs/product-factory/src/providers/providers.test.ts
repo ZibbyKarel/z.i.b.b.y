@@ -137,7 +137,7 @@ describe("ollama", () => {
     expect(v.costUsd).toBe(0);
     const body = JSON.parse(String(f.mock.calls[0]?.[1]?.body));
     expect(body).toMatchObject({
-      model: "qwen3-vl:8b",
+      model: "qwen3-vl:8b-instruct",
       stream: false,
       think: false,
       keep_alive: "10m",
@@ -159,6 +159,12 @@ describe("ollama", () => {
     );
     expect((await createOllamaVisionProvider({}, f).judge(await input())).passed).toBe(true);
   });
+  it("extracts the verdict after a leaked <think> block", async () => {
+    const f = vi.fn<typeof fetch>(async () =>
+      chat('<think>\nchecking {"x":1}\n</think>\n{"passed":true,"issues":[]}'),
+    );
+    expect((await createOllamaVisionProvider({}, f).judge(await input())).passed).toBe(true);
+  });
   it("recovers when the retry is valid", async () => {
     let n = 0;
     const f = vi.fn<typeof fetch>(async () =>
@@ -172,7 +178,7 @@ describe("ollama", () => {
     );
     await createOllamaVisionProvider({}, f).dispose?.();
     expect(JSON.parse(String(f.mock.calls[0]?.[1]?.body))).toEqual({
-      model: "qwen3-vl:8b",
+      model: "qwen3-vl:8b-instruct",
       keep_alive: 0,
     });
     f.mockClear();

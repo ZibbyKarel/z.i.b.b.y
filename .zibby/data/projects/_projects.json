@@ -90,7 +90,7 @@
     "env": {
       "PF_IMAGE_PROVIDER": "mflux",
       "PF_VISION_PROVIDER": "ollama",
-      "PF_OLLAMA_MODEL": "qwen3-vl:8b"
+      "PF_OLLAMA_MODEL": "qwen3-vl:8b-instruct"
     }
   }
 ]
