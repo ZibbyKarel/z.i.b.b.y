@@ -10,5 +10,9 @@
   {
     "name": "Shoptet",
     "glyph": "cart"
+  },
+  {
+    "name": "Publishing",
+    "glyph": "book"
   }
 ]

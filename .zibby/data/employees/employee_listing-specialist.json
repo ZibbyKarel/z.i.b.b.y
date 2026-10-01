@@ -1,0 +1,8 @@
+{
+  "id": "employee_listing-specialist",
+  "name": "Joe",
+  "agentId": "listing-specialist",
+  "department": "pub",
+  "status": "active",
+  "hiredAt": "2026-10-01T20:30:00.000Z"
+}

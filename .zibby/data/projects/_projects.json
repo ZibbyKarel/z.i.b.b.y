@@ -80,5 +80,17 @@
     },
     "companyId": "zibby-corp",
     "gitRemote": "https://github.com/ZibbyKarel/z.i.b.b.y"
+  },
+  {
+    "id": "publishing",
+    "name": "Publishing — coloring books",
+    "path": "/Users/zibar/Workspace/zibby-publishing",
+    "desc": "Workspace of the pub department: children's coloring books. Not a git repo; books land in each run's book/ folder. books.md lists the themes already made.",
+    "category": "Publishing",
+    "env": {
+      "PF_IMAGE_PROVIDER": "mflux",
+      "PF_VISION_PROVIDER": "ollama",
+      "PF_OLLAMA_MODEL": "qwen3-vl:8b"
+    }
   }
 ]

@@ -16,7 +16,8 @@
   },
   {
     "id": "empname_bruno",
-    "name": "Bruno"
+    "name": "Bruno",
+    "employeeId": "employee_book-creative-director"
   },
   {
     "id": "empname_carl",
@@ -45,7 +46,8 @@
   },
   {
     "id": "empname_ed",
-    "name": "Ed"
+    "name": "Ed",
+    "employeeId": "employee_book-page-planner"
   },
   {
     "id": "empname_eric",
@@ -64,7 +66,8 @@
   },
   {
     "id": "empname_gary",
-    "name": "Gary"
+    "name": "Gary",
+    "employeeId": "employee_book-illustrator"
   },
   {
     "id": "empname_gus",
@@ -88,7 +91,8 @@
   },
   {
     "id": "empname_hugo",
-    "name": "Hugo"
+    "name": "Hugo",
+    "employeeId": "employee_book-visual-qa"
   },
   {
     "id": "empname_jerry",
@@ -102,7 +106,8 @@
   },
   {
     "id": "empname_joe",
-    "name": "Joe"
+    "name": "Joe",
+    "employeeId": "employee_listing-specialist"
   },
   {
     "id": "empname_john",

@@ -11,6 +11,7 @@
 **Wave order:** Wave 1 (P0-01..03 ∥ P1 ∥ P2) → Wave 2 (P0-04 → P4 ∥ P3 ∥ P7-01..02) →
 Wave 3 (P5 → P7-03..04 → P8) → Wave 4, second night (P9 ∥ P10).
 **Last updated:** 2026-10-01 ~21:00 (Wave 1 + P4 done, P3 in progress).
+**Hard stop (operator, 2026-10-01):** if not finished by **2026-10-02 10:00**, stop and write the final state + what was not done.
 **Resume at:** wait for P3 agent → commit product-factory + P4 → live smoke (mflux+ollama) → morning checks + PR.
 
 ---
