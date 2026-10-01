@@ -139,6 +139,7 @@ describe("ollama", () => {
     expect(body).toMatchObject({
       model: "qwen3-vl:8b",
       stream: false,
+      think: false,
       keep_alive: "10m",
       options: { temperature: 0 },
     });
@@ -151,6 +152,12 @@ describe("ollama", () => {
     expect(f).toHaveBeenCalledTimes(2);
     expect(v.passed).toBe(false);
     expect(v.issues[0]?.type).toBe("judge-error");
+  });
+  it("falls back to message.thinking when content is empty", async () => {
+    const f = vi.fn<typeof fetch>(async () =>
+      json({ message: { content: "", thinking: JSON.stringify({ passed: true, issues: [] }) } }),
+    );
+    expect((await createOllamaVisionProvider({}, f).judge(await input())).passed).toBe(true);
   });
   it("recovers when the retry is valid", async () => {
     let n = 0;

@@ -40,13 +40,16 @@ export function createOllamaVisionProvider(
       model,
       stream: false,
       format: VERDICT_JSON_SCHEMA,
+      // qwen3-vl thinks by default: the reasoning ate the budget and `content` came back
+      // empty (live run, 2026-10-01). A verdict needs no chain of thought.
+      think: false,
       keep_alive: "10m",
-      options: { temperature: 0 },
+      options: { temperature: 0, num_predict: 768 },
       messages: [{ role: "user", content: prompt, images: [b64] }],
     });
     if (!res.ok) throw new Error(`ollama /api/chat ${res.status}`);
-    const body = (await res.json()) as { message?: { content?: string } };
-    return body.message?.content ?? "";
+    const body = (await res.json()) as { message?: { content?: string; thinking?: string } };
+    return body.message?.content || body.message?.thinking || "";
   }
 
   return {
@@ -56,7 +59,7 @@ export function createOllamaVisionProvider(
       const t0 = performance.now();
       const b64 = (
         await sharp(input.file)
-          .resize(1024, 1024, { fit: "inside", withoutEnlargement: true })
+          .resize(768, 768, { fit: "inside", withoutEnlargement: true })
           .png()
           .toBuffer()
       ).toString("base64");

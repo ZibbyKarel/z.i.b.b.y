@@ -40,7 +40,7 @@ look for what a per-page check cannot see.
 ## Act
 
 - If at most a few pages fail, un-approve them so production redraws them:
-  `product-factory reject 3,7 --reason "<one line why>"` (`0` = cover).
+  `product-factory reject 3,7 --reason "one short line, no < or > characters"` (`0` = cover).
 - Write the file you are told to produce: a short table (page, finding, action) and
   end with exactly one tag: `<verdict>pass</verdict>` when the book is sellable as
   is, or `<verdict>gap</verdict>` when you rejected pages (the illustrator then

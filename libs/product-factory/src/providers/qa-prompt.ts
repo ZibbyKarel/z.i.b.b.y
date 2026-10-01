@@ -38,7 +38,7 @@ Checklist - report an issue for every violation:
 - The image shows the expected subjects (wrong-subject).
 - No text, letters, numbers or watermarks (text-artifact).
 - Nothing touches or is cut off at the page margins (margin-violation).
-- Nothing scary, violent or unsafe for small children (unsafe).
+- Nothing scary or violent: weapons, injury, frightening faces (unsafe). Size or detail problems are never unsafe - use too-complex instead.
 Set passed=true only when there are no issues of severity medium or high.
 Answer with JSON: {"passed": boolean, "issues": [{"type", "severity", "description"}]}.`;
 }
