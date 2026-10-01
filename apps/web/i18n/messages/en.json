@@ -2561,12 +2561,14 @@
     "title": "Global libraries",
     "subtitle": "Departments bind to these in their own tabs.",
     "kinds": {
+      "positions": "Agents",
       "skills": "Skills",
       "mcp": "MCP servers",
       "hooks": "Hooks",
       "commands": "Commands"
     },
     "add": {
+      "positions": "Add agent",
       "skills": "Add skill",
       "mcp": "Add server",
       "hooks": "Add hook",
@@ -2578,6 +2580,7 @@
       "boundIn": "Bound in"
     },
     "metaHeader": {
+      "positions": "Category",
       "skills": "Type",
       "mcp": "Status",
       "hooks": "Event",
@@ -2595,6 +2598,7 @@
     "emptySkills": "No skills yet.",
     "emptyMcp": "No MCP servers yet.",
     "emptyHooks": "No hooks yet.",
-    "emptyCommands": "No commands yet."
+    "emptyCommands": "No commands yet.",
+    "emptyPositions": "No agents yet."
   }
 }

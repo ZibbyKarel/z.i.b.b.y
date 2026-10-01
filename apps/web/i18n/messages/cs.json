@@ -2561,12 +2561,14 @@
     "title": "Globální knihovny",
     "subtitle": "Oddělení se na ně napojují ve vlastních záložkách.",
     "kinds": {
+      "positions": "Agenti",
       "skills": "Skilly",
       "mcp": "MCP servery",
       "hooks": "Hooky",
       "commands": "Příkazy"
     },
     "add": {
+      "positions": "Přidat agenta",
       "skills": "Přidat skill",
       "mcp": "Přidat server",
       "hooks": "Přidat hook",
@@ -2578,6 +2580,7 @@
       "boundIn": "Napojeno na"
     },
     "metaHeader": {
+      "positions": "Kategorie",
       "skills": "Typ",
       "mcp": "Stav",
       "hooks": "Událost",
@@ -2595,6 +2598,7 @@
     "emptySkills": "Zatím žádné skilly.",
     "emptyMcp": "Zatím žádné MCP servery.",
     "emptyHooks": "Zatím žádné hooky.",
-    "emptyCommands": "Zatím žádné příkazy."
+    "emptyCommands": "Zatím žádné příkazy.",
+    "emptyPositions": "Zatím žádní agenti."
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import type { RegistryBindings } from "@zibby/contracts";
+import type { Agent, RegistryBindings } from "@zibby/contracts";
 import { DEPARTMENTS, type DepartmentId } from "@zibby/contracts";
 import {
   Button,
@@ -21,10 +21,14 @@ import { useState } from "react";
 import { PageContainer } from "../../../components/PageContainer/PageContainer";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { slug } from "../../../utils/slug";
+import { NewAgentDialog } from "../../agents/components/NewAgentDialog";
+import { useCreateAgentMutation } from "../../agents/mutations";
+import { useAgentsQuery, useCategoriesQuery } from "../../agents/queries";
 import { AddCommandModal } from "../../commands/components/AddCommandModal/AddCommandModal";
 import { useCreateCommandMutation } from "../../commands/mutations";
 import { useCommandsQuery } from "../../commands/queries";
 import { HookFormDialog } from "../../hooks/components/HookFormDialog";
+import { useEmployeesQuery } from "../../employees/queries";
 import { useCreateHookMutation } from "../../hooks/mutations";
 import { useHooksQuery } from "../../hooks/queries";
 import {
@@ -49,6 +53,7 @@ export interface RegistriesScreenProps {
 /** The department tab a registry kind's "Bound in" tag links to (D-011/O-09) —
  *  `commands` has no dedicated department tab, so its tags render unlinked. */
 const DEPARTMENT_TAB: Partial<Record<RegistryKindParam, string>> = {
+  positions: "team",
   skills: "skills",
   mcp: "integrations",
   hooks: "hooks",
@@ -93,7 +98,8 @@ function BoundInCell({
  * `/system/registries/[kind]` (ZB-11, ROUTE-MAP §1/§3): a `DataTable` per global
  * library kind (skills, mcp, hooks, commands), horizontal `SubNav` to switch
  * kinds, and a "Bound in" column derived from `GET /api/registries/bindings`
- * (O-09 — read-only, no stored binding). Row click navigates to the unchanged
+ * (O-09 — read-only, no stored binding); positions derive theirs from the
+ * employees hired into each department. Row click navigates to the unchanged
  * `/system/registries/<kind>/[id]` detail form; creation reuses each domain's
  * existing create-only dialog (N4d/N4e grammar) unchanged.
  */
@@ -138,6 +144,7 @@ export function RegistriesScreen({ kind, openCreateOnMount }: RegistriesScreenPr
             linkComponent={Link as SubNavLinkComponent}
           />
 
+          {kind === "positions" && <PositionsTable />}
           {kind === "skills" && <SkillsTable bindings={bindings?.skills} />}
           {kind === "mcp" && <McpTable bindings={bindings?.mcp} />}
           {kind === "hooks" && <HooksTable bindings={bindings?.hooks} />}
@@ -145,6 +152,7 @@ export function RegistriesScreen({ kind, openCreateOnMount }: RegistriesScreenPr
         </Stack>
       </PageContainer>
 
+      {creating && kind === "positions" && <CreatePositionDialog onClose={closeCreate} />}
       {creating && kind === "skills" && <CreateSkillDialog onClose={closeCreate} />}
       {creating && kind === "mcp" && <CreateMcpDialog onClose={closeCreate} />}
       {creating && kind === "hooks" && <CreateHookDialog onClose={closeCreate} />}
@@ -156,6 +164,58 @@ export function RegistriesScreen({ kind, openCreateOnMount }: RegistriesScreenPr
 // ---------------------------------------------------------------------------
 // Per-kind tables
 // ---------------------------------------------------------------------------
+
+function PositionsTable() {
+  const t = useTranslations("registries");
+  const query = useAgentsQuery();
+  const { data: employees = [] } = useEmployeesQuery();
+  const rows = query.data ?? [];
+  if (query.isError) return <QueryError onRetry={() => void query.refetch()} />;
+
+  const boundIn = new Map<string, Set<DepartmentId>>();
+  for (const e of employees) {
+    boundIn.set(e.agentId, (boundIn.get(e.agentId) ?? new Set()).add(e.department));
+  }
+
+  const columns: DataTableColumn<Agent>[] = [
+    {
+      key: "name",
+      label: t("columns.name"),
+      width: "lg",
+      render: (a) => a.displayName ?? a.name ?? a.id,
+    },
+    {
+      key: "desc",
+      label: t("columns.description"),
+      width: "flex",
+      render: (a) => a.description ?? a.title ?? "",
+    },
+    {
+      key: "meta",
+      label: t("metaHeader.positions"),
+      width: "sm",
+      render: (a) => a.category ?? "—",
+    },
+    {
+      key: "boundIn",
+      label: t("columns.boundIn"),
+      width: "xl",
+      render: (a) => (
+        <BoundInCell departmentIds={[...(boundIn.get(a.id) ?? [])]} kind="positions" />
+      ),
+    },
+  ];
+  return (
+    <DataTable
+      columns={columns}
+      empty={t("emptyPositions")}
+      getRowKey={(a) => a.id}
+      loading={query.isPending}
+      rowHref={(a) => `/system/registries/positions/${a.id}`}
+      rows={rows}
+    />
+  );
+}
 
 function SkillsTable({ bindings }: { bindings?: Record<string, DepartmentId[]> }) {
   const t = useTranslations("registries");
@@ -314,6 +374,32 @@ function CommandsTable({ bindings }: { bindings?: Record<string, DepartmentId[]>
 // ---------------------------------------------------------------------------
 // Creation dialogs — unchanged forms, reused verbatim from each domain
 // ---------------------------------------------------------------------------
+
+function CreatePositionDialog({ onClose }: { onClose: () => void }) {
+  const router = useRouter();
+  const { data: categories = [] } = useCategoriesQuery();
+  const createAgent = useCreateAgentMutation();
+
+  return (
+    <NewAgentDialog
+      categories={categories}
+      onClose={onClose}
+      onCreate={(d) => {
+        const id = slug(d.name ?? "") || `agent-${Date.now()}`;
+        createAgent.mutate(
+          { body: { ...d, id } },
+          {
+            onSuccess: () => {
+              onClose();
+              router.push(`/system/registries/positions/${id}`);
+            },
+          },
+        );
+      }}
+      pending={createAgent.isPending}
+    />
+  );
+}
 
 function CreateSkillDialog({ onClose }: { onClose: () => void }) {
   const tk = useTranslations();

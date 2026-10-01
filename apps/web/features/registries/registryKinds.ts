@@ -1,5 +1,5 @@
 /**
- * The four global registry kinds (`/system/registries/<kind>`, ZB-11). Lives in
+ * The global registry kinds (`/system/registries/<kind>`, ZB-11). Lives in
  * its own plain (non-`"use client"`) module rather than `RegistriesScreen.tsx`:
  * the owning server page (`app/(company)/system/registries/[kind]/page.tsx`)
  * needs this array at module init to validate the dynamic segment, and a plain
@@ -10,5 +10,5 @@
  * pure constant out of the client component file sidesteps the boundary
  * entirely.
  */
-export const REGISTRY_KINDS = ["skills", "mcp", "hooks", "commands"] as const;
+export const REGISTRY_KINDS = ["positions", "skills", "mcp", "hooks", "commands"] as const;
 export type RegistryKindParam = (typeof REGISTRY_KINDS)[number];

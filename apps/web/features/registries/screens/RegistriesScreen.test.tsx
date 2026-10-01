@@ -56,6 +56,22 @@ vi.mock("../../commands/mutations", () => ({
   useCreateCommandMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
+vi.mock("../../agents/queries", () => ({
+  useAgentsQuery: () => ({
+    data: [{ id: "koder", name: "koder", displayName: "Kevin", category: "dev" }],
+    isPending: false,
+    isError: false,
+  }),
+  useCategoriesQuery: () => ({ data: [{ name: "dev" }] }),
+}));
+vi.mock("../../agents/mutations", () => ({
+  useCreateAgentMutation: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
+vi.mock("../../employees/queries", () => ({
+  useEmployeesQuery: () => ({ data: [{ id: "e1", agentId: "koder", department: "dev" }] }),
+}));
+
 beforeEach(() => {
   push.mockReset();
   replace.mockReset();
@@ -69,6 +85,16 @@ describe("RegistriesScreen — /system/registries/[kind]", () => {
     // Derived from the mocked bindings — department codes render as Tags.
     expect(screen.getByText("DEV")).toBeInTheDocument();
     expect(screen.getByText("QA")).toBeInTheDocument();
+  });
+
+  it("renders the positions (agents) table with Bound in derived from employees", () => {
+    render(<RegistriesScreen kind="positions" />);
+    expect(screen.getByText("Kevin")).toBeInTheDocument();
+    expect(screen.getByText("DEV")).toBeInTheDocument();
+    expect(screen.getByTestId(`${SubNavTestId.Item}-/system/registries/positions`)).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
   it("marks the active kind in the sub-nav", () => {

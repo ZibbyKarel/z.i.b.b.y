@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { DetailScreen as AgentDetailScreen } from "../../../../../../features/agents/DetailScreen";
 import { DetailScreen as CommandDetailScreen } from "../../../../../../features/commands/DetailScreen";
 import { DetailScreen as HookDetailScreen } from "../../../../../../features/hooks/DetailScreen";
 import { DetailScreen as McpDetailScreen } from "../../../../../../features/mcp/DetailScreen";
@@ -24,6 +25,7 @@ export default async function RegistryDetailPage({
 }) {
   const { kind, id } = await params;
   if (!isRegistryKind(kind)) notFound();
+  if (kind === "positions") return <AgentDetailScreen agentId={id} />;
   if (kind === "skills") return <SkillDetailScreen skillId={id} />;
   if (kind === "mcp") return <McpDetailScreen serverId={id} />;
   if (kind === "hooks") return <HookDetailScreen hookId={id} />;
