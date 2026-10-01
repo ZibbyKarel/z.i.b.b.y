@@ -35,9 +35,11 @@ directly):
   positions were staffed by instances.
 - `currentRunId` — the run it's leased to, while `working`/`blocked`.
 - `currentTaskTitle` — best-effort title of that run's task, when known.
-- `position` — `{ id, name, title? }`, the position's display shape
-  (`title` falls back to the agent's `category` — `Agent` has no dedicated
-  title field yet).
+- `position` — `{ id, name, title? }`, the position's display shape.
+  `title` is the job title, humanized from the agent id
+  (`backend-developer` → "Backend Developer") — not the agent's `category`,
+  which names a registry group ("Core Development"), not a position. `Agent`
+  has no dedicated title field yet.
 
 ## Department ownership is an employee fact
 

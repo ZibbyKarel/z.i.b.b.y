@@ -14,7 +14,6 @@ import {
   SegmentedControl,
   SelectField,
   Stack,
-  StatePill,
   Typography,
 } from "@zibby/design-system";
 import type { StateTone } from "@zibby/design-system";
@@ -201,7 +200,6 @@ export function PeopleScreen() {
                             <Typography size="xs" type="note" variant="tertiary">
                               {e.position.title ?? e.position.name}
                             </Typography>
-                            <StatePill label={t(`state.${e.state}`)} state={STATE_TONE[e.state]} />
                           </Stack>
                         </Container>
                       </Card>

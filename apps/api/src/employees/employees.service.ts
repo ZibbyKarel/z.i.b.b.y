@@ -109,8 +109,8 @@ export class EmployeesService {
 
   /**
    * Project an employee to its `EmployeeWithState` shape: the position's display
-   * name/title (best-effort — `title` reads `Agent.category`, see
-   * `EmployeePositionSchema`'s docblock) and a derived state. `state` is scoped to
+   * name/title (the job title is the humanized agent id, e.g. `backend-developer`
+   * → "Backend Developer" — see `EmployeePositionSchema`'s docblock) and a derived state. `state` is scoped to
    * what the allocator's in-memory lease table alone can tell (`working` while
    * leased, `idle` otherwise) — the full O-04 six-state vocabulary (thinking /
    * blocked / error / done) needs the underlying run's own status, which would
@@ -130,10 +130,18 @@ export class EmployeesService {
       position: {
         id: employee.agentId,
         name: agent?.name ?? employee.agentId,
-        ...(agent?.category ? { title: agent.category } : {}),
+        title: positionTitle(employee.agentId),
       },
     };
   }
+}
+
+/** `backend-developer` → "Backend Developer" — the position's job title. */
+function positionTitle(agentId: string): string {
+  return agentId
+    .split("-")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 }
 
 function findDepartment(id: string): { id: DepartmentId } {

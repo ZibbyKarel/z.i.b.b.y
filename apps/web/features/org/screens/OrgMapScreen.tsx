@@ -14,7 +14,6 @@ import {
   Panel,
   Row,
   Stack,
-  StatePill,
   type StateTone,
   Typography,
   ZibbyAvatar,
@@ -221,7 +220,6 @@ export function OrgMapScreen() {
                           <Typography type="labelSm" variant="secondary">
                             {e.position.title ?? e.position.name}
                           </Typography>
-                          <StatePill state={e.state} />
                         </Stack>
                       </Panel>
                     ))}

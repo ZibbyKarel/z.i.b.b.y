@@ -105,11 +105,11 @@ export const EmployeeStateSchema = z.enum([
 export type EmployeeState = z.infer<typeof EmployeeStateSchema>;
 
 /**
- * An employee's position, projected for display: the agent's name and a
- * best-effort "title". `Agent` carries no dedicated `title` field yet (see
- * `docs/plans/zibbycorp/OPEN-QUESTIONS.md` O-03, additive and out of this
- * phase's scope) — `title` is filled from the agent's `category` in the
- * meantime, which is the closest existing "what this position does" label.
+ * An employee's position, projected for display: the agent's name and its job
+ * title within the department. `Agent` carries no dedicated `title` field yet
+ * (see `docs/plans/zibbycorp/OPEN-QUESTIONS.md` O-03) — `title` is the
+ * humanized agent id ("Backend Developer"), not the catalog `category`, which
+ * names a registry group ("Core Development"), not a position.
  */
 export const EmployeePositionSchema = z.object({
   id: AgentIdSchema,
