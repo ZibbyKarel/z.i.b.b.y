@@ -126,14 +126,14 @@ describe("ollama", () => {
   });
   const good = {
     passed: false,
-    issues: [{ type: "gray-area", severity: "high", description: "gray" }],
+    issues: [{ type: "wrong-subject", severity: "high", description: "a dog" }],
   };
   const chat = (content: string): Response => json({ message: { content } });
 
   it("parses a good reply and sends schema, image, keep_alive", async () => {
     const f = vi.fn<typeof fetch>(async () => chat(JSON.stringify(good)));
     const v = await createOllamaVisionProvider({}, f).judge(await input());
-    expect(v.issues[0]?.type).toBe("gray-area");
+    expect(v.issues[0]?.type).toBe("wrong-subject");
     expect(v.costUsd).toBe(0);
     const body = JSON.parse(String(f.mock.calls[0]?.[1]?.body));
     expect(body).toMatchObject({
@@ -145,6 +145,20 @@ describe("ollama", () => {
     });
     expect(body.messages[0].images).toHaveLength(1);
     expect(body.format.required).toContain("passed");
+  });
+  it("drops low and pixel-owned issues and derives passed", async () => {
+    const reply = {
+      passed: false,
+      issues: [
+        { type: "margin-violation", severity: "high", description: "near top" },
+        { type: "text-artifact", severity: "low", description: "no text, fine" },
+      ],
+    };
+    const f = vi.fn<typeof fetch>(async () => chat(JSON.stringify(reply)));
+    expect(await createOllamaVisionProvider({}, f).judge(await input())).toMatchObject({
+      passed: true,
+      issues: [],
+    });
   });
   it("retries once on garbage, then reports judge-error", async () => {
     const f = vi.fn<typeof fetch>(async () => chat("not json"));

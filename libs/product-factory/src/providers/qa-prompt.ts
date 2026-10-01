@@ -31,17 +31,35 @@ export function qaPrompt(input: VisionInput): string {
 Expected subjects: ${input.expectedSubjects.join(", ") || "(unspecified)"}.
 Style guide: ${input.styleGuide}
 
-Checklist - report an issue for every violation:
-- Lines are pure black on a white background (gray-area: any gray fill, shading, gradient or colour).
-- Every shape a toddler would colour is a closed contour (open-contour: gaps in outlines).
-- The page is not too busy (too-complex) and not nearly empty (too-sparse).
-- The image shows the expected subjects (wrong-subject).
-- No text, letters, numbers or watermarks (text-artifact).
-- Nothing touches or is cut off at the page margins (margin-violation).
-- Nothing scary or violent: weapons, injury, frightening faces (unsafe). Size or detail problems are never unsafe - use too-complex instead.
+Pixel checks already measured gray, open outlines and margins - do NOT judge those.
+Report ONLY real violations of these (an empty list when there are none):
+- wrong-subject: a toddler would not recognise the expected subject. A cute, simplified
+  or stylised version IS the subject.
+- text-artifact: visible letters, numbers or watermarks.
+- unsafe: scary or violent content (weapons, injury, frightening faces). Never use it
+  for a subject mismatch or for size or detail problems.
+- too-complex: dozens of tiny regions a toddler cannot colour.
 Set passed=true only when there are no issues of severity medium or high.
 Answer with JSON: {"passed": boolean, "issues": [{"type", "severity", "description"}]}.`;
 }
+
+/** Issue types a vision model judges; the rest are pixel QA's (deterministic). */
+const VISION_OWNED = new Set([
+  "wrong-subject",
+  "text-artifact",
+  "unsafe",
+  "too-complex",
+  "judge-error",
+]);
+
+/**
+ * Small local models list non-issues ("low: no text, fine") and re-judge what pixel QA
+ * measured. Keep only medium+ issues of vision-owned types and derive `passed` from them.
+ */
+export const strictVerdict = (v: { passed: boolean; issues: QaIssue[] }) => {
+  const issues = v.issues.filter((i) => i.severity !== "low" && VISION_OWNED.has(i.type));
+  return { passed: issues.length === 0, issues };
+};
 
 export const judgeError = (description: string): { passed: false; issues: QaIssue[] } => ({
   passed: false,

@@ -1,5 +1,11 @@
 import sharp from "sharp";
-import { VERDICT_JSON_SCHEMA, VerdictSchema, judgeError, qaPrompt } from "./qa-prompt.ts";
+import {
+  VERDICT_JSON_SCHEMA,
+  VerdictSchema,
+  judgeError,
+  qaPrompt,
+  strictVerdict,
+} from "./qa-prompt.ts";
 import type { VisionProvider, VisionVerdict } from "./vision.ts";
 
 export const ollamaHost = (env: NodeJS.ProcessEnv): string => {
@@ -75,7 +81,7 @@ export function createOllamaVisionProvider(
       for (let attempt = 0; attempt < 2 && !result; attempt++) {
         try {
           const parsed = VerdictSchema.safeParse(JSON.parse(await ask(b64, prompt)));
-          if (parsed.success) result = parsed.data;
+          if (parsed.success) result = strictVerdict(parsed.data);
           else err = parsed.error.message;
         } catch (e) {
           err = e instanceof Error ? e.message : String(e);
