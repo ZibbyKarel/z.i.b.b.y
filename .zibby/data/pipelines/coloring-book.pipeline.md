@@ -3,14 +3,14 @@ name: Coloring Book
 phases:
   - id: concept
     type: agent
-    agent: book-creative-director
+    agent: creative-director
     consumes: brief.md
     produces: visual-bible.md
     model: sonnet
     thinking: high
   - id: plan
     type: agent
-    agent: book-page-planner
+    agent: book-editor
     consumes: visual-bible.md
     produces: content-plan.md
     model: sonnet
@@ -28,7 +28,7 @@ phases:
       then: park
   - id: illustrate
     type: agent
-    agent: book-illustrator
+    agent: illustrator
     consumes: plan.json
     produces: jobs.json
     model: sonnet
@@ -46,7 +46,7 @@ phases:
       then: park
   - id: visual-audit
     type: agent
-    agent: book-visual-qa
+    agent: kids-book-qa
     consumes: produce-report.md
     produces: visual-audit.md
     model: sonnet
@@ -104,8 +104,9 @@ budget:
 # Coloring Book
 
 Výrobní linka oddělení **pub**. Vstupem je volný text — popis knížky vlastními slovy, např. „omalovánky pro
-Natálku o tom, jak navštívila farmapark, jednoduché pro tříleté děti“ (jméno dítěte
-= osobní knížka k tisku doma, jinak knížka na prodej);
+Natálku o tom, jak navštívila farmapark, jednoduché pro tříleté děti“ (se jménem
+dítěte vznikne osobní knížka, kde je dítě hlavní postavou — publikuje se stejně jako
+každá jiná);
 výstupem je složka `book/` v adresáři běhu: `interior.pdf`, `cover.pdf`,
 `listing.md`, `README.md` a schválené ilustrace. Po úspěšném běhu se složka
 `book/` navíc zkopíruje do `~/Workspace/zibby-publishing/books/<běh>/`. Nic se nepublikuje — nahrání na
@@ -113,16 +114,16 @@ tržiště dělá operátor ručně.
 
 ## Fáze
 
-1. **concept** (`book-creative-director`) — zadání → `visual-bible.md`: koncept,
+1. **concept** (`creative-director`) — zadání → `visual-bible.md`: koncept,
    věková pravidla, styl čáry, maskot, obálka.
-2. **plan** (`book-page-planner`) — `content-plan.md` s JSON blokem stran.
+2. **plan** (`book-editor`) — `content-plan.md` s JSON blokem stran.
 3. **plan-check** (tool) — `product-factory plan check`: schéma, počet stran,
    duplicitní scény, zakázané značky. Chyba → zpět na **plan** (2×), pak park.
-4. **illustrate** (`book-illustrator`) — `jobs.json`, jen prompty.
+4. **illustrate** (`illustrator`) — `jobs.json`, jen prompty.
 5. **produce** (tool) — generování (mflux lokálně / fal.ai v cloudu / mock),
    prahování, pixel QA, vision QA, opakování. Zablokované strany → zpět na
    **illustrate** (2×), pak park.
-6. **visual-audit** (`book-visual-qa`, qualify) — audit celé knihy; vadné strany
+6. **visual-audit** (`kids-book-qa`, qualify) — audit celé knihy; vadné strany
    vrátí přes `product-factory reject` → **illustrate**; mimo koncept → **concept**.
 7. **render** (tool) — interiér a obálka v PDF, 8.5×11", 300 DPI.
 8. **preflight** (tool) — kontrola KDP (rozměry, DPI, fonty, prázdné strany).

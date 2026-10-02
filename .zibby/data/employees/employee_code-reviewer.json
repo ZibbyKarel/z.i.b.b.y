@@ -2,7 +2,7 @@
   "id": "employee_code-reviewer",
   "name": "Tim",
   "agentId": "code-reviewer",
-  "department": "dev",
+  "department": "qa",
   "status": "active",
   "hiredAt": "2026-09-25T00:32:32.986Z"
 }

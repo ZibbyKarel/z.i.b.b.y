@@ -192,3 +192,9 @@ _(path · reason · subphase)_
     **`done` in 56 min, $3.61 tokens, $0 images**: interior.pdf 49 pp (single-sided),
     cover.pdf with spine 0.11", preflight clean, listing.md, README.md.
 
+
+## 2026-10-02 — org reshuffle
+Positions renamed: book-creative-director → creative-director, book-illustrator →
+illustrator (both new Design dept `des`), book-page-planner → book-editor (pub),
+book-visual-qa → kids-book-qa (qa); listing-specialist → dist. Free-text brief with an
+optional named child (`personalFor`) — a personal book is still published normally.

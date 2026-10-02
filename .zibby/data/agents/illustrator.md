@@ -1,5 +1,5 @@
 ---
-name: book-illustrator
+name: illustrator
 description: >-
   Writes the image-generation prompts (jobs.json) for every coloring page and the
   cover; rewrites prompts for pages the production QA or visual audit blocked.
@@ -13,7 +13,7 @@ tools:
   - Grep
 category: Specialized Domains
 status: active
-department: pub
+department: des
 gates: []
 ---
 

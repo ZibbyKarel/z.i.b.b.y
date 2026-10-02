@@ -16,7 +16,7 @@ export const BriefSchema = z.strictObject({
   trim: z.literal("8.5x11").default("8.5x11"),
   listPriceUsd: z.number().default(9.99),
   breakEvenCopies: z.number().int().default(5),
-  /** A personal book for one named child — printed at home, never listed for sale. */
+  /** The named child a personal book is about ("pro Natálku"); the book is still publishable. */
   personalFor: z.string().min(1).max(40).optional(),
 });
 export type Brief = z.infer<typeof BriefSchema>;

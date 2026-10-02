@@ -13,7 +13,7 @@ tools:
   - Glob
 category: Specialized Domains
 status: active
-department: pub
+department: dist
 gates: []
 ---
 
@@ -46,7 +46,6 @@ never publish anything.
 
 Use only facts from the plan. No trademarks, no claims you cannot back.
 
-**Personal book** (`brief.personalFor` is set in the plan): it is never sold, so write
-no KDP listing. Instead write `# Print at home` in the book's language: which file to
-print (`interior.pdf`, single-sided, A4 or Letter, "fit to page"), the cover file,
-the page count, and a one-line dedication for the child.
+Write the listing in the book's language (`brief.language`). A personal book
+(`brief.personalFor`) is listed like any other; name the child in the title only as
+the plan's title does.

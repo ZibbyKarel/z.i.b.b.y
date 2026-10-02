@@ -19,10 +19,10 @@ import { defaultEmployeesDir, seedEmployeeFixture } from "./fixtures/employee-fi
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const FARM = path.join(REPO, "libs", "product-factory", "fixtures", "farm-4");
 const AGENTS = [
-  "book-creative-director",
-  "book-page-planner",
-  "book-illustrator",
-  "book-visual-qa",
+  "creative-director",
+  "book-editor",
+  "illustrator",
+  "kids-book-qa",
   "listing-specialist",
 ];
 

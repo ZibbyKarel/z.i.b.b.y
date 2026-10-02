@@ -1,0 +1,13 @@
+{
+  "id": "des",
+  "code": "DES",
+  "name": "Design",
+  "tagline": "Koncept, ilustrace a UX",
+  "mandate": "Vizuální koncept, ilustrace a uživatelský výzkum pro produkty ostatních oddělení. Sám nic nepublikuje.",
+  "color": "#f472b6",
+  "division": "business",
+  "icon": "spark",
+  "fallback": "primary",
+  "tierDefault": null,
+  "createdAt": "2026-10-02T08:00:00.000Z"
+}

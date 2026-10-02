@@ -1,5 +1,5 @@
 ---
-name: book-visual-qa
+name: kids-book-qa
 description: >-
   Book-level visual audit of the approved coloring pages: style drift, duplicate
   compositions, mascot consistency, age fit. Emits a pass/gap verdict and can
@@ -14,7 +14,7 @@ tools:
   - Bash(product-factory:*)
 category: Specialized Domains
 status: active
-department: pub
+department: qa
 gates: []
 ---
 

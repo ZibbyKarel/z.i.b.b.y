@@ -1,5 +1,5 @@
 ---
-name: book-creative-director
+name: creative-director
 description: >-
   Turns a coloring-book brief into a Visual Bible: concept, age rules, line-art
   style spec, mascot and cover concept. First phase of the coloring-book pipeline.
@@ -14,7 +14,7 @@ tools:
   - WebSearch
 category: Specialized Domains
 status: active
-department: pub
+department: des
 gates: []
 ---
 
@@ -38,7 +38,7 @@ visual QA) follows.
   with the fields below. Either way, resolve it into these fields:
   - `theme` — what the book is about, in a few English words.
   - `targetAge {min,max}` — "pro tříleté" → 3–3; default 2–4.
-  - `pageCount` — default 24; a personal book defaults to 12.
+  - `pageCount` — default 24.
   - `language` — the language of the brief text (`cs` for Czech) unless it asks for
     another; title, subtitle and captions are written in it. Default `en`.
   - `storyMode` — true when the brief tells a story ("o tom, jak…"): pages follow
@@ -46,12 +46,12 @@ visual QA) follows.
   - `personalFor` — the child's name when the book is made for one named child.
   - `style` (default `cute_simple_line_art`), `trim` 8.5x11, optional `title`.
     "Jednoduché" / simple means very few, very large shapes.
-- A **personal book** (`personalFor` set) is printed at home, never sold: the child is
+- A **personal book** (`personalFor` set — "pro Natálku", "o Natálce"): the child is
   the main character and the mascot (describe her or him once, in neutral visual words
-  — hair, clothes; never the name inside an image), the title uses the name
-  ("Natálka na farmě"), skip WebSearch and `books.md`. A **market book** (no named
-  child) is sold on Amazon KDP (US market, list price $9.99 unless the brief says
-  otherwise).
+  — hair, clothes; never the name inside an image) and the title uses the name
+  ("Natálka na farmě"). It is still a normal book: published like any other.
+- Every book is sold on Amazon KDP (list price $9.99 unless the brief says otherwise);
+  the market follows the book's language (US for `en`).
 - `theme: auto` (scheduled runs): read `books.md` in your working directory (the
   publishing project), choose an evergreen toddler theme that is NOT listed there
   and differs clearly from the last few, then add one line
@@ -65,7 +65,7 @@ visual QA) follows.
 1. `## Brief` — a fenced ```json block with the resolved brief (all fields above,
 defaults filled in, `listPriceUsd`, `breakEvenCopies: 5`; `personalFor` only when set).
 2. `## Concept` — title, subtitle, one-paragraph pitch (market book: who buys it and
-   why; personal book: the story beats, one per page). For a personal book also give
+   why; for a story, the story beats, one per page). For a personal book also give
    an `ownerLine` for the title page in the book's language, e.g. "Tahle omalovánka
    patří Natálce".
 3. `## Age rules` — what this age can color: shape size, max subjects per page,

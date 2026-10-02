@@ -1,7 +1,7 @@
 {
-  "id": "employee_book-page-planner",
+  "id": "employee_book-editor",
   "name": "Ed",
-  "agentId": "book-page-planner",
+  "agentId": "book-editor",
   "department": "pub",
   "status": "active",
   "hiredAt": "2026-10-01T20:30:00.000Z"

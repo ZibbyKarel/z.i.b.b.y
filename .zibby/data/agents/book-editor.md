@@ -1,5 +1,5 @@
 ---
-name: book-page-planner
+name: book-editor
 description: >-
   Writes the coloring-book content plan: N unique scenes in a sensible order with
   subjects, difficulty and an optional caption, as a machine-checked JSON block.
