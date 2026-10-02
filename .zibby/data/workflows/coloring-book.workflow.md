@@ -83,22 +83,24 @@ phases:
     produces: book.md
     commands:
       - product-factory finalize listing.md --report book.md
+desc: >-
+  Autonomní výroba dětské omalovánky: koncept → plán stran → kontrola plánu →
+  prompty → generování a QA obrázků → vizuální audit knihy → PDF (interiér +
+  obálka) → preflight KDP → listing. Výstup: složka `book/` v běhu s PDF.
 outputs:
   - type: file
     from: book.md
     dest: vault
     to: coloring-book-latest
-  - { type: folder, from: book, to: ~/Workspace/zibby-publishing/books }
-desc: >-
-  Autonomní výroba dětské omalovánky: koncept → plán stran → kontrola plánu →
-  prompty → generování a QA obrázků → vizuální audit knihy → PDF (interiér + obálka)
-  → preflight KDP → listing. Výstup: složka `book/` v běhu s PDF.
+  - type: folder
+    from: book
+    to: ~/Books/Coloring
 department: pub
-complexity: deep
-project: publishing
+complexity: standard
 budget:
   maxCostUsd: 15.75
   warnAtPct: 70
+project: publishing
 ---
 
 # Coloring Book

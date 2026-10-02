@@ -1,0 +1,51 @@
+[
+  {
+    "id": "security-cve-critical",
+    "from": "sec",
+    "signalKind": "cve",
+    "minSeverity": "critical",
+    "to": {
+      "kind": "department",
+      "id": "dev"
+    },
+    "tier": 2,
+    "enabled": true,
+    "system": true
+  },
+  {
+    "id": "release-post-merge-red",
+    "from": "rel",
+    "signalKind": "post-merge-red",
+    "to": {
+      "kind": "department",
+      "id": "dev"
+    },
+    "tier": 2,
+    "enabled": true,
+    "system": true
+  },
+  {
+    "id": "arch-architecture",
+    "from": "qa",
+    "signalKind": "*",
+    "to": {
+      "kind": "department",
+      "id": "dev"
+    },
+    "tier": 3,
+    "enabled": true,
+    "system": true
+  },
+  {
+    "id": "research",
+    "from": "rnd",
+    "signalKind": "research-artifact",
+    "to": {
+      "kind": "department",
+      "id": "dev"
+    },
+    "tier": 3,
+    "enabled": true,
+    "system": true
+  }
+]

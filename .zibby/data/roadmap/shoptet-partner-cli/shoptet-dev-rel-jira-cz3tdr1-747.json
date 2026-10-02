@@ -1,0 +1,25 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-747",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "parentId": "shoptet-dev-rel-jira-cz3tdr1-618",
+  "name": "Addon statistics - Invoicing detail screen (statsDetail)",
+  "description": "## Why\n\nThe Invoicing tab (https://teamdotblue.atlassian.net/browse/CZ3TDR1-658) moves the `statsSummary` screen to Partner Portal. Each row there links to a per-addon detail (`statsDetail`), which still lives in the legacy admin React page `ApiPartner?action=statsDetail`. No issue in this epic covers moving it, so the Portal summary would keep linking back to the legacy screen.\n\n## What\n\nMove the `statsDetail` screen to Partner Portal (same approach as the other Addon statistics screens):\n\n- `frontend/apps/admin-web/src/Core/pages/ApiPartner/views/statsDetailView/` (`StatsDetailView.tsx`, `TotalsRow.tsx`, `table.tsx`)\n- backend: `ApiPartnerController` `statsDetail` action and its props (`ApiPartnerStatsDetailProps`), extracted into a service in `cms/packages/PartnerPortal/Application/` that does not read the request\n- guards `checkPartnerStatus()` / `checkDefaultCurrency()` need a Portal-side target instead of the legacy redirects\n\n## Shared pieces\n\n- `utils/statsFormat.ts` and `components/ColumnInfoLegend.tsx` are shared with `statsSummaryView`; reuse whatever CZ3TDR1-658 extracts, do not duplicate.\n- `detailUrl` is built in PHP and hardcoded to the legacy `ApiPartner?action=statsDetail`. Once this screen exists, repoint it to the Portal route (Invoicing tab and this screen).\n\n## Acceptance criteria\n\n- Detail screen is reachable from the Portal Invoicing summary and shows the same data as the legacy one.\n- Summary `detailUrl` no longer points to the legacy page.\n- Legacy `statsDetailView` is removed or left only if still referenced (call out in the PR).",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-747",
+    "externalKey": "CZ3TDR1-747",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-747"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "external",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-01T17:50:26.069Z",
+  "updatedAt": "2026-10-01T17:50:26.069Z",
+  "syncedAt": "2026-10-01T17:50:26.069Z"
+}
