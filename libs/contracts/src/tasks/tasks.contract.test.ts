@@ -443,15 +443,24 @@ describe("ZB-04a — parentTaskId / chain / source / department stamps", () => {
     );
   });
 
-  it("CreateTaskInput accepts parentTaskId/chain/source alongside a chain target", () => {
-    const parsed = CreateTaskInputSchema.safeParse({
-      text: "handle the next hop",
-      parentTaskId: "task_0",
-      chain: { id: "rnd-to-rel", step: 1 },
+  it("CreateTaskInput can no longer create a chain target or a chain/handoff-sourced task", () => {
+    expect(
+      CreateTaskInputSchema.safeParse({
+        text: "handle the next hop",
+        target: { kind: "chain", id: "rnd-to-rel", name: "R&D → Release" },
+      }).success,
+    ).toBe(false);
+    expect(CreateTaskInputSchema.safeParse({ text: "x", source: "handoff" }).success).toBe(false);
+  });
+
+  it("a stored legacy task with a chain target still parses (target reads as absent)", () => {
+    const parsed = ScheduledTaskSchema.safeParse({
+      ...base,
       source: "handoff",
       target: { kind: "chain", id: "rnd-to-rel", name: "R&D → Release" },
     });
     expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.target).toBeUndefined();
   });
 
   it("CreateTaskInput stays valid with none of the new fields (back-compatible)", () => {

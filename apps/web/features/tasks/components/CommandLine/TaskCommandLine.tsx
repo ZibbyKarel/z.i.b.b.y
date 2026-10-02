@@ -218,7 +218,6 @@ export function TaskCommandLine({
     pipeline: t("commandLine.ack.kind.pipeline"),
     goal: t("commandLine.ack.kind.goal"),
     department: t("commandLine.ack.kind.department"),
-    chain: t("commandLine.ack.kind.chain"),
     orchestrator: t("commandLine.ack.kind.orchestrator"),
   };
 

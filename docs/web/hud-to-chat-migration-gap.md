@@ -18,7 +18,6 @@ Zbytek `(dashboard)` group pořád běží ve staré HUD chromě beze změny.
 | companies          | `/companies`, `/[id]`, `/new`                            | ne                                                                                             | list ano (dock); detail/new ne                      |                                                                                                                                                                                   |
 | agents             | `/agents`, `/[id]`                                       | částečně — `RosterTab` „Posádka" (karta → `/agents/[id]`)                                      | list ano (dock) i detail (přes Roster)              |                                                                                                                                                                                   |
 | pipelines          | `/pipelines`, `/[id]`                                    | částečně — `RosterTab` renderuje vlastněné pipeline canvasy inline                             | ne — list `/pipelines` nikde                        |                                                                                                                                                                                   |
-| chains             | `/chains`, `/[id]`                                       | částečně — `RosterTab` karta → `/chains/[id]`                                                  | detail ano; list `/chains` nikde                    |                                                                                                                                                                                   |
 | automations        | `/automations`, `/[id]`                                  | ne                                                                                             | nikde, žádná zmínka                                 |                                                                                                                                                                                   |
 | skills             | `/skills`, `/[id]`                                       | ne                                                                                             | list ano (dock); detail ne                          |                                                                                                                                                                                   |
 | commands           | `/commands`, `/[id]`                                     | ne                                                                                             | list ano (dock); detail ne                          |                                                                                                                                                                                   |
@@ -36,7 +35,7 @@ mají subsystémy (`DepartmentDrawer`).
 
 ## Co v novém designu úplně chybí (žádný náznak nativního povrchu)
 
-- **`/pipelines` a `/chains` jako seznamy** — jen vlastněné položky uvnitř `RosterTab`,
+- **`/pipelines` jako seznam** — jen vlastněné položky uvnitř `RosterTab`,
   žádný „procházet všechny" pohled
 - **`/automations`** — nulová stopa v chatu (žádná dock ikona, žádný drawer tab)
 - **`/hooks`** — stejně, nulová stopa
@@ -54,5 +53,5 @@ musíš najít proklikem uvnitř staré HUD.
 
 **Nejpalčivější mezera:** automations a hooks nemají v Chat UI vůbec žádnou existenci —
 ani ikonu, ani zmínku v žádném z drawer tabů — přestože obě spadají pod vlastnictví
-konkrétních subsystémů (Arch/Release apod.) stejně jako pipelines a chains, které svou
+konkrétních subsystémů (Arch/Release apod.) stejně jako pipelines, které svou
 Roster kartu už dostaly.

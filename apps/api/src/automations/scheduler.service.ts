@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
-import type { Automation } from "@zibby/contracts";
+import type { Automation, Signal } from "@zibby/contracts";
 import { AgentFactoryService } from "../agent-factory/agent-factory.service";
 import { AgentRunnerService } from "../agents/agent-runner.service";
 import { BriefingService } from "../briefing/briefing.service";
@@ -20,6 +20,7 @@ import { TickingWatcherBase } from "../shared/ticking-watcher-base";
 import { SystemConfigStore } from "../system/system-config.store";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
 import { AutomationsStorageService } from "./automations.storage.service";
+import { SignalBusService } from "./signal-bus.service";
 import { matchesCron } from "./cron";
 
 /**
@@ -59,6 +60,7 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
     private readonly postMerge: PostMergeWatchService,
     private readonly watcherHealthRegistry: WatcherHealthRegistry,
     private readonly reviewLearning: ReviewLearningService,
+    private readonly signalBus: SignalBusService,
   ) {
     super();
     this.log = logger.child(SchedulerService.name);
@@ -68,6 +70,9 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
     // Loop interval from the operator-owned system config; `0` disables it (the test
     // default — tests drive `tick()` directly). Re-arm live when the config changes.
     this.arm();
+    // Signal-triggered automations dispatch through this same path (the bus is a leaf
+    // module the producers inject, so it can't depend on the scheduler directly).
+    this.signalBus.registerDispatcher((automation, signal) => this.dispatch(automation, signal));
     this.unsubscribe = this.systemConfig.onChange(() => this.arm());
     // F6c: self-register the heartbeat probe (the base's lastTickAt, stamped on the
     // timer path; the M8 `health()` below keeps its own tick()-stamped field).
@@ -142,9 +147,17 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
     await this.storage.markFired(automation.id, at);
   }
 
-  /** Start the target run via the appropriate runner; return its id reference. */
-  private async dispatch(automation: Automation): Promise<string> {
-    const { target, prompt } = automation;
+  /**
+   * Start the target run via the appropriate runner; return its id reference. A
+   * `signal` (signal-trigger path) appends its title+body to the run's text/prompt
+   * and attributes a `task` target to the signal's project.
+   */
+  private async dispatch(automation: Automation, signal?: Signal): Promise<string> {
+    const { target } = automation;
+    const signalText = signal ? `${signal.title}\n\n${signal.body}` : undefined;
+    const prompt = signalText
+      ? [automation.prompt, signalText].filter(Boolean).join("\n\n")
+      : automation.prompt;
     this.log.info("dispatching automation", { id: automation.id, target: target.type });
     switch (target.type) {
       case "agent": {
@@ -154,7 +167,7 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
       case "pipeline": {
         // Phase 116b: the automation's free-text prompt rides as the pipeline's
         // first-phase input (`PipelineRunnerService.start`'s trailing `input` param)
-        // — the same seam a chain's instructions already use. Absent for every
+        // — the same seam a pipeline's input already uses. Absent for every
         // automation predating a prompt (no behaviour change).
         const run = await this.pipelineRunner.start(
           target.pipelineId,
@@ -209,7 +222,8 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
         // task classifier/orchestrator-fallback decides at fire time.
         const result = await this.taskScheduler.createTask(
           {
-            text: target.text,
+            text: signalText ? `${target.text}\n\n${signalText}` : target.text,
+            ...(signal ? { title: signal.title.slice(0, 200) } : {}),
             target: target.target,
             attachmentSetId: target.attachmentSetId,
             output: target.output,
@@ -217,7 +231,7 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
             source: "automation",
           },
           Date.now(),
-          undefined,
+          signal?.projectId,
           target.target,
           false, // synchronous cron fire — the existing dispatch() contract
         );

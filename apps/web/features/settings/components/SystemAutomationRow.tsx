@@ -56,7 +56,11 @@ export function SystemAutomationRow({
   const name = automation.name ?? automation.id;
 
   const scheduleText =
-    trigger.type === "cron" ? cronLabel(trigger.expr) : trigger.events.join(", ");
+    trigger.type === "cron"
+      ? cronLabel(trigger.expr)
+      : trigger.type === "signal"
+        ? trigger.kind
+        : trigger.events.join(", ");
 
   const next = useMemo(
     () => (trigger.type === "cron" ? nextCronRun(trigger.expr, new Date()) : null),

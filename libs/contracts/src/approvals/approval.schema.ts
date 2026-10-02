@@ -55,14 +55,16 @@ export const ApprovalRunKindSchema = z.enum([
   // the same gate), rejecting leaves the channel at Tier-3. The graduation decision
   // is itself Tier-3 — autonomy widens only on an operator's explicit sign-off.
   "comms-graduation",
-  // Cross-department handoff (design doc
-  // `docs/superpowers/specs/2026-07-22-department-handoff-design.md`, Part A): a
-  // tier-3 `HandoffRule` matched a signal but does not auto-dispatch — the runId is
-  // the parked `HandoffProposal` id. Approving dispatches the parked task via the
-  // rule's resolved target (`createTask(..., target)`, exactly the tier-1/2 dispatch
-  // path); rejecting drops the proposal, no task created. Outbound work dispatch
-  // that wasn't already sanctioned by a tier-1/2 rule → always Tier-3.
+  // LEGACY (read-only): parked by the retired handoff engine. Kept so old approval
+  // history still parses; nothing creates it any more and a pending one resolves as
+  // a logged no-op.
   "handoff-proposal",
+  // A signal-triggered automation with `approval: "ask"` matched a signal but does not
+  // auto-dispatch — the runId is the parked dispatch's id (a `SignalBusService`
+  // pending record). Approving dispatches the automation's target with the signal's
+  // context; rejecting drops the record. Work dispatch not sanctioned by a Tier-2
+  // automation → Tier-3.
+  "automation-dispatch",
   // PR review learning v1: a rule distilled from review comments that has now been
   // seen TWICE on ZIBBY's own PRs. The runId is `<projectId>/<ruleId>`; approving
   // flips it to `active` (from then on it is grounded into every run of that

@@ -15,8 +15,7 @@ export type TaskParentState = z.infer<typeof TaskParentStateSchema>;
 /**
  * One subtask's summary row, as carried on its parent (`TaskParentSchema.subtasks`)
  * and returned bare by `GET /api/departments/:id/subtasks`. `step`/`department`
- * are absent until ZB-05a actually dispatches a chain step — this phase only
- * shapes the read model.
+ * are only set on legacy chain subtasks (the chain feature is retired).
  */
 export const SubtaskSummarySchema = z.object({
   taskId: z.string().min(1),

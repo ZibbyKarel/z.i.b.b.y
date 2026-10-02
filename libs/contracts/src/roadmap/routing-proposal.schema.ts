@@ -8,7 +8,7 @@ import { RoadmapItemIdSchema } from "./roadmap-item.schema";
  * could not tell whose domain an autonomously-released roadmap item belongs to, so
  * instead of guessing it parks this and asks.
  *
- * Same store shape as `HandoffProposal` (one `<id>.json`, write-once / read-once /
+ * Same store shape as other parked payloads (one `<id>.json`, write-once / read-once /
  * removed either way — no `update`), and gated the same way: a
  * `routing-proposal` approval whose `runId` IS this proposal's id, since there is
  * no live child to pause. `RoadmapGateService` writes it; `RoutingProposalService`

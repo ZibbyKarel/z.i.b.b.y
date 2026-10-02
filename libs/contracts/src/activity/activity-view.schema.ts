@@ -47,11 +47,6 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   "pipeline-finished": "pipelines",
   "pipeline-parked": "pipelines",
   "stage-verdict": "pipelines",
-  // N2b: a chain is pipeline composition — its lifecycle reads with the pipelines.
-  "chain-started": "pipelines",
-  "chain-advanced": "pipelines",
-  "chain-parked": "pipelines",
-  "chain-finished": "pipelines",
   "goal-dispatched": "goals",
   "goal-verdict": "goals",
   "goal-parked": "goals",
@@ -79,10 +74,10 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   // group for two kinds.
   "merge-completed": "integrations",
   "post-merge-outcome": "integrations",
-  // Handoff A2: a producer→consumer dispatch report — reads with the other
-  // watcher discoveries (monitor-alert/department-scan/post-merge-outcome) rather
-  // than a new group for one kind.
+  // A signal-triggered automation's dispatch report (and the legacy handoff kind) —
+  // reads with the other watcher discoveries rather than a new group.
   handoff: "integrations",
+  "automation-dispatched": "integrations",
   // Phase 125e: the roadmap gate's own dispatch/outcome entries — reads with the
   // other task-lifecycle entries (task-dispatched/task-outcome) rather than a new
   // group for two kinds.

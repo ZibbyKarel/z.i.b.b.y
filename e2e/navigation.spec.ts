@@ -41,7 +41,7 @@ test("the sub-nav lists the active section's tabs and offers + New task", async 
 
   const subnav = page.getByTestId("subnav-root");
   await expect(subnav).toBeVisible();
-  // `work`'s sub-tabs (PART-B's recipe table): tasks, chains, goals, companies,
+  // `work`'s sub-tabs (PART-B's recipe table): tasks, goals, companies,
   // teams, projects.
   await expect(subnav).toContainText("Tasks");
   await expect(subnav).toContainText("Companies");

@@ -36,19 +36,17 @@ excluding the composite `app.contract.ts` and the shared `common.schema.ts`):
 | `goals/`           | `GoalSchema`, `GoalRunSchema`                                                                                                    | Loop-engine goal definitions + runs                                                                                       |
 | `approvals/`       | `ApprovalSchema`                                                                                                                 | Approval queue                                                                                                            |
 | `artifacts/`       | `ArtifactSchema`                                                                                                                 | Durable artifact provenance registry                                                                                      |
-| `chains/`          | `ChainSchema`                                                                                                                    | Completion-driven task chains                                                                                             |
 | `discovery/`       | `ProposalSchema`                                                                                                                 | Triaged proposal → task flow                                                                                              |
 | `gates/`           | `GateRuleSchema`, `MatchConditionSchema`, `ResolveSchema` (plus the nested `gate-rules.contract.ts` for the global rule catalog) | Gate rules                                                                                                                |
 | `memory/`          | `NoteSchema`, `IndexEntrySchema`, `MemoryGraphSchema`                                                                            | Vault operations                                                                                                          |
 | `machine/`         | machine-action schemas                                                                                                           | Propose-only machine actions + open-maps                                                                                  |
 | `monitors/`        | `MonitorSchema`                                                                                                                  | CI/CD monitor adapters                                                                                                    |
-| `automations/`     | `AutomationSchema`                                                                                                               | Scheduled automations                                                                                                     |
+| `automations/`     | `AutomationSchema`, `SignalSchema`                                                                                               | Scheduled automations                                                                                                     |
 | `integrations/`    | `IntegrationSchema`                                                                                                              | Channel integrations                                                                                                      |
 | `channels/`        | `ChannelItemSchema`                                                                                                              | Inbound channel items                                                                                                     |
 | `mandate/`         | `MandateSchema`                                                                                                                  | Autonomy scope                                                                                                            |
 | `health/`          | `HealthStatusSchema`                                                                                                             | System health status                                                                                                      |
 | `departments/`     | `DepartmentSchema`, `DepartmentWithStatusSchema`                                                                                 | GAIA-style federation registry (8 named departments) + status                                                             |
-| `handoff/`         | `HandoffRuleSchema`, `HandoffSignalSchema`, `HandoffProposalSchema`                                                              | Cross-department handoff rules (see `docs/api/handoff.md`)                                                                |
 | `self/`            | `SelfStatusSchema`, `SelfUpdateResultSchema`                                                                                     | The ZIBBY install repo's own freshness + operator-triggered self-update                                                   |
 | `self-knowledge/`  | `SelfKnowledgeSchema`, `SelfKnowledgeSectionsSchema`                                                                             | The machine-generated self-knowledge snapshot (read-only; regeneration is a CLI concern)                                  |
 | `limits/`          | `LimitsSchema`                                                                                                                   | Budget and rate limits                                                                                                    |
@@ -217,8 +215,6 @@ export const appContract = c.router({
   goals: goalsContract,
   approvals: approvalsContract,
   artifacts: artifactsContract,
-  chains: chainsContract,
-  chainRuns: chainRunsContract,
   discovery: discoveryContract,
   gates: gatesContract,
   gateRules: gateRulesContract,

@@ -3,13 +3,20 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Card, Container, Icon, type Schedule, Stack, Typography } from "@zibby/design-system";
-import type { Automation, AutomationEvent, Trigger } from "@zibby/contracts";
+import type {
+  Automation,
+  AutomationEvent,
+  DepartmentId,
+  SignalSeverity,
+  Trigger,
+} from "@zibby/contracts";
 import { DEFAULT_SCHEDULE, cronToSchedule, scheduleToCron } from "../schedule";
 import { TriggerFields } from "./TriggerFields";
 
 /** Testids for the automation form (the screens + tests select via these). */
 export enum AutomationFormTestId {
   Submit = "automation-form-submit",
+  Approval = "automation-form-approval",
 }
 
 type TriggerType = Trigger["type"];
@@ -29,6 +36,20 @@ export interface AutomationFormState {
   setSchedule: (v: Schedule) => void;
   events: AutomationEvent[];
   setEvents: (v: AutomationEvent[]) => void;
+  /** Signal trigger: the signal kind (a `SIGNAL_KINDS` id or `"*"`); `""` = not picked yet. */
+  signalKind: string;
+  setSignalKind: (v: string) => void;
+  /** Signal trigger: optional producer department; `""` = any. */
+  signalFrom: string;
+  setSignalFrom: (v: string) => void;
+  /** Signal trigger: optional minimum severity; `""` = any. */
+  signalMinSeverity: string;
+  setSignalMinSeverity: (v: string) => void;
+  /** "Approval before dispatch" — only meaningful for a signal trigger. */
+  approval: boolean;
+  setApproval: (v: boolean) => void;
+  /** The `approval` value to persist: `"ask"` on a signal trigger with the switch on, else `"auto"`. */
+  buildApproval: () => "ask" | "auto";
   /** The cron expression the current schedule compiles to. */
   expr: string;
   /** Valid for submit — a cron trigger needs a time (+ weekday/monthly), an event trigger needs ≥1 event. */
@@ -47,6 +68,12 @@ export function useAutomationFormState(automation?: Automation): AutomationFormS
     automation?.trigger.type === "event" ? automation.trigger.events : [],
   );
 
+  const signal = automation?.trigger.type === "signal" ? automation.trigger : undefined;
+  const [signalKind, setSignalKind] = useState(signal?.kind ?? "");
+  const [signalFrom, setSignalFrom] = useState<string>(signal?.from ?? "");
+  const [signalMinSeverity, setSignalMinSeverity] = useState<string>(signal?.minSeverity ?? "");
+  const [approval, setApproval] = useState(automation?.approval === "ask");
+
   const expr = scheduleToCron(schedule);
 
   return {
@@ -56,15 +83,34 @@ export function useAutomationFormState(automation?: Automation): AutomationFormS
     setSchedule,
     events,
     setEvents,
+    signalKind,
+    setSignalKind,
+    signalFrom,
+    setSignalFrom,
+    signalMinSeverity,
+    setSignalMinSeverity,
+    approval,
+    setApproval,
+    buildApproval: () => (triggerType === "signal" && approval ? "ask" : "auto"),
     expr,
     canSave: () => {
       const scheduleOk =
         schedule.time.trim().length > 0 &&
         (schedule.repeat === "monthly" || schedule.weekdays.length > 0);
-      return triggerType === "cron" ? scheduleOk : events.length > 0;
+      if (triggerType === "cron") return scheduleOk;
+      if (triggerType === "event") return events.length > 0;
+      return signalKind.length > 0;
     },
-    buildTrigger: () =>
-      triggerType === "cron" ? { type: "cron", expr } : { type: "event", events },
+    buildTrigger: () => {
+      if (triggerType === "cron") return { type: "cron", expr };
+      if (triggerType === "event") return { type: "event", events };
+      return {
+        type: "signal",
+        kind: signalKind,
+        ...(signalFrom ? { from: signalFrom as DepartmentId } : {}),
+        ...(signalMinSeverity ? { minSeverity: signalMinSeverity as SignalSeverity } : {}),
+      };
+    },
   };
 }
 

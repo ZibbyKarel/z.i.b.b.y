@@ -20,9 +20,6 @@ app/
     ├── automations/
     │   ├── page.tsx        Automations
     │   └── [id]/page.tsx   Automation detail (edit, run-now, delete; N4f)
-    ├── chains/
-    │   ├── page.tsx        Chain catalog
-    │   └── [id]/page.tsx   Chain detail
     ├── commands/
     │   ├── page.tsx        Command catalog
     │   └── [id]/page.tsx   Command detail (edit; N4d — same pattern as skills/[id])
@@ -195,8 +192,8 @@ echo-guarded while any reply is read aloud. The composer offers no attach contro
 because the chat API has no attachment channel. A settled reply's
 **Create task** opens `/work/tasks/new?text=…(&entry=<dept>)`. ⌘/Ctrl+K opens
 the `CommandPaletteHost` (`features/command-palette`), which indexes
-departments, people, tasks, chains, goals, companies, teams, projects,
-pipelines, registries, automations, signals, vault notes, settings and gate
+departments, people, tasks, goals, companies, teams, projects,
+pipelines, registries, automations, vault notes, settings and gate
 sections, plus actions. "Approve next" never quick-approves a high-risk item: it
 opens the approval sheet instead.
 
@@ -282,8 +279,6 @@ features/
 │                   opens the COO dock with an explicit department target
 ├── gates/          Gate rule catalog
 ├── goals/          Loop engine — goal definitions + runs (maker ⇄ verifier)
-├── handoff/        Cross-department handoff rules (inline mad-libs editor in
-│                   the department drawer's "Předávání" tab)
 ├── health/         System health status
 ├── hooks/          Hook catalog
 ├── integrations/   Channel adapters (email, Slack), scoped under a project

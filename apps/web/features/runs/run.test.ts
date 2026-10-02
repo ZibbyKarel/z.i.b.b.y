@@ -105,7 +105,12 @@ describe("findSelectedRun (selection survives pending → dispatched)", () => {
 
   it("selects a pending task by its task id (runId === taskId)", () => {
     // A pending task's feed row is keyed by its own task id; the dialog redirects there.
-    const pending = mkRun({ runId: TASK_ID, kind: "scheduled", status: "pending", taskId: TASK_ID });
+    const pending = mkRun({
+      runId: TASK_ID,
+      kind: "scheduled",
+      status: "pending",
+      taskId: TASK_ID,
+    });
     expect(findSelectedRun([pending], TASK_ID)?.runId).toBe(TASK_ID);
   });
 

@@ -57,16 +57,15 @@ interface BuildOpts {
   execImpl?: ReturnType<typeof vi.fn>;
   vault?: ReturnType<typeof makeVault>;
   findingsDir?: string;
-  evaluate?: ReturnType<typeof vi.fn>;
+  emit?: ReturnType<typeof vi.fn>;
 }
 
 async function build(opts: BuildOpts = {}) {
   const vault = opts.vault ?? makeVault();
   const activity = { record: vi.fn(async () => undefined) };
-  // Fake HandoffService — ArchService now emits a signal per new finding (A3);
-  // the seed rule is tier-3, so `evaluate` returning "none"/"proposed" (never
-  // "dispatched" by the real rule table) is the realistic double here.
-  const handoff = { evaluate: opts.evaluate ?? vi.fn(async () => ({ action: "proposed" })) };
+  // Fake SignalBusService — ArchService emits one `audit-batch` signal per run; the
+  // matching automation is gated (`approval: "ask"`), so no run refs come back.
+  const signalBus = { emit: opts.emit ?? vi.fn(async () => ({ runRefs: [] })) };
   const findingsDir =
     opts.findingsDir ?? (await fs.mkdtemp(path.join(os.tmpdir(), "arch-findings-")));
   const findingsStore = new DepartmentFindingsStore(findingsDir, makeLogger() as never);
@@ -78,12 +77,12 @@ async function build(opts: BuildOpts = {}) {
     vault as never,
     findingsStore,
     activity as never,
-    handoff as never,
+    signalBus as never,
     reportPath,
     makeLogger() as never,
     (opts.execImpl ?? NO_CYCLES) as never,
   );
-  return { service, vault, activity, handoff, findingsDir, findingsStore };
+  return { service, vault, activity, signalBus, findingsDir, findingsStore };
 }
 
 describe("ArchService.audit", () => {
@@ -100,7 +99,7 @@ describe("ArchService.audit", () => {
     const reportPath = path.join(reportDir, "GRAPH_REPORT.md");
     await fs.writeFile(reportPath, SAMPLE_REPORT, "utf8");
 
-    const { service, vault, activity, handoff } = await build({ reportPath });
+    const { service, vault, activity, signalBus } = await build({ reportPath });
     const { findings } = await service.audit(new Date("2026-07-17T00:00:00.000Z"));
 
     // AppShell (40 edges >= 25) is a god-node finding; Button (3 edges) is not.
@@ -115,11 +114,11 @@ describe("ArchService.audit", () => {
     expect(activity.record).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "department-scan" }),
     );
-    // A whole run's new findings are bundled into ONE handoff signal — one
+    // A whole run's new findings are bundled into ONE signal — one
     // approval per audit, not one per finding — no severity, no projectId
     // (only Security's CVEs carry severity).
-    expect(handoff.evaluate).toHaveBeenCalledTimes(1);
-    expect(handoff.evaluate).toHaveBeenCalledWith(
+    expect(signalBus.emit).toHaveBeenCalledTimes(1);
+    expect(signalBus.emit).toHaveBeenCalledWith(
       expect.objectContaining({
         from: "qa",
         kind: "audit-batch",
@@ -127,7 +126,7 @@ describe("ArchService.audit", () => {
         body: expect.stringContaining("AppShell"),
       }),
     );
-    const [signal] = handoff.evaluate.mock.calls[0] as [
+    const [signal] = signalBus.emit.mock.calls[0] as [
       { body: string; severity?: string; projectId?: string },
     ];
     expect(signal.body).toContain("LoggerService");
@@ -168,7 +167,7 @@ describe("ArchService.audit", () => {
     await built1.service.audit(new Date());
 
     const built2 = await build({ reportPath, findingsDir, vault: built1.vault });
-    const { vault, activity, handoff } = built2;
+    const { vault, activity, signalBus } = built2;
     vault.createNote.mockClear();
     vault.updateNote.mockClear();
     vault.updateIndex.mockClear();
@@ -180,7 +179,7 @@ describe("ArchService.audit", () => {
     expect(vault.updateNote).not.toHaveBeenCalled();
     expect(vault.updateIndex).not.toHaveBeenCalled();
     expect(activity.record).not.toHaveBeenCalled();
-    expect(handoff.evaluate).not.toHaveBeenCalled();
+    expect(signalBus.emit).not.toHaveBeenCalled();
   });
 
   it("only the NEW finding since the last snapshot triggers a write; the note lists all current findings", async () => {
@@ -212,8 +211,8 @@ describe("ArchService.audit", () => {
     expect(noteBody).toContain("LoggerService");
     expect(noteBody).toContain("apps/web/a.ts → apps/web/b.ts");
     // Only the NEW finding (the cycle) is handed to the rule engine, as one batch signal.
-    expect(built2.handoff.evaluate).toHaveBeenCalledTimes(1);
-    expect(built2.handoff.evaluate).toHaveBeenCalledWith(
+    expect(built2.signalBus.emit).toHaveBeenCalledTimes(1);
+    expect(built2.signalBus.emit).toHaveBeenCalledWith(
       expect.objectContaining({
         from: "qa",
         kind: "audit-batch",

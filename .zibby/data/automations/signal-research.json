@@ -1,0 +1,13 @@
+{
+  "id": "signal-research",
+  "name": "Výsledek výzkumu → Dev",
+  "trigger": { "type": "signal", "kind": "research-artifact", "from": "rnd" },
+  "target": {
+    "type": "task",
+    "text": "Build on this delivered research.",
+    "target": { "kind": "department", "id": "dev", "name": "dev" }
+  },
+  "approval": "ask",
+  "enabled": true,
+  "system": true
+}

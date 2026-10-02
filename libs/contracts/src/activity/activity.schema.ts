@@ -67,13 +67,6 @@ export const ActivityKindSchema = z.enum([
   // M8 (hardening). A task's dispatch exhausted its retry budget and was dead-lettered —
   // surfaced in the briefing's needs-you so a repeatedly-failing task never fails silently.
   "task-dead-lettered",
-  // N2b (pipeline chaining, Tier 1 — silent + recorded). An operator-authored chain
-  // started, handed an artifact to its next step, parked on a broken/gated handoff,
-  // or reached a terminal state (done/failed — the `status` ref carries which).
-  "chain-started",
-  "chain-advanced",
-  "chain-parked",
-  "chain-finished",
   // Phase 4a (Agent Factory telemetry, Tier 1 — silent + recorded). The task
   // classifier's terminal rule routed a task to the orchestrator because nothing
   // in the catalog matched confidently (never an explicit target override). The
@@ -89,13 +82,13 @@ export const ActivityKindSchema = z.enum([
   // NS2 F7b-2. The merged sha's target-branch CI resolved (green: silent Tier-1;
   // red: a gated fix task dispatched, riding taskId) or the watch window expired.
   "post-merge-outcome",
-  // Handoff A2 (design doc `docs/superpowers/specs/2026-07-22-department-handoff-
-  // design.md`, Part A.2). A Tier-2 `HandoffRule` matched a producer's signal and
-  // dispatched a task to the resolved target — act-then-report, riding `runRef`
-  // (and `department` when the target is a named department). Tier-1 dispatches
-  // silently (no entry); a Tier-3 match instead rides `approval-requested`
-  // (kind `handoff-proposal`) until the operator decides.
+  // LEGACY (read-only): written by the retired handoff engine. Kept so old activity
+  // history still parses; nothing emits it any more (signal-triggered automations
+  // report through `automation-dispatched`).
   "handoff",
+  // A signal-triggered automation dispatched its target (Tier-2, act-then-report) —
+  // rides `runRef` and `automationId`.
+  "automation-dispatched",
   // Phase 125e (roadmap gate, Tier-1 — silent + recorded). The gate released an
   // enqueued item — its dependencies were satisfied (or overridden) — and created
   // its task, riding `taskId`.
@@ -144,6 +137,8 @@ export const ActivityRefsSchema = z
     decision: z.string().optional(),
     status: z.string().optional(),
     noteId: z.string().optional(),
+    /** The automation that produced the entry (`automation-dispatched`). */
+    automationId: z.string().optional(),
     /**
      * Phase 4a (Agent Factory telemetry): the normalized task summary an
      * `orchestrator-fallback` entry carries — the same lowercase/punctuation-

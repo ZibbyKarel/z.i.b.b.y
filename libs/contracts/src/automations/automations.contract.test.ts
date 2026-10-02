@@ -183,6 +183,42 @@ describe("automation schema", () => {
       ).toBe(true);
     });
 
+    it("accepts a signal trigger (kind, optional from + minSeverity) and approval: ask", () => {
+      const parsed = AutomationSchema.safeParse({
+        id: "sig",
+        trigger: { type: "signal", kind: "cve", from: "sec", minSeverity: "critical" },
+        target: { type: "task", text: "fix it" },
+        enabled: true,
+        approval: "ask",
+      });
+      expect(parsed.success).toBe(true);
+      expect(
+        AutomationSchema.safeParse({
+          id: "sig",
+          trigger: { type: "signal", kind: "*" },
+          target: { type: "task", text: "fix it" },
+          enabled: true,
+        }).success,
+      ).toBe(true);
+    });
+
+    it("rejects a signal trigger with an empty kind, malformed department or unknown severity", () => {
+      for (const trigger of [
+        { type: "signal", kind: "" },
+        { type: "signal", kind: "cve", from: "Not A Dept" },
+        { type: "signal", kind: "cve", minSeverity: "meh" },
+      ]) {
+        expect(
+          AutomationSchema.safeParse({
+            id: "x",
+            trigger,
+            target: { type: "task", text: "t" },
+            enabled: true,
+          }).success,
+        ).toBe(false);
+      }
+    });
+
     it("rejects a task target with empty text", () => {
       expect(
         AutomationSchema.safeParse({

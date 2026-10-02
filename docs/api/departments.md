@@ -14,9 +14,9 @@ endpoint behaviour changed. This doc remains accurate. -->
 
 <!-- Reviewed 2026-09-30 (arch-audit approval flood fix): apps/api/src/arch/
 changed this session — `ArchService.audit()` now bundles a run's new findings
-into ONE `handoff-proposal` signal (kind `audit-batch`) instead of emitting one
+into ONE signal (kind `audit-batch`, emitted on the signal bus) instead of one
 signal per finding, so a nightly audit no longer floods the approval queue with
-one item per god node/community/cycle. That's Arch's producer-side handoff
+one item per god node/community/cycle. That's Arch's producer-side signal
 emission, not the department registry's identity/status/roster/endpoints this
 doc describes; "Arch" still just a name/color entry here. This doc remains
 accurate. -->
@@ -90,7 +90,7 @@ its own. D-022 added two departments to the seed: `pub` (Publishing) and `dist`
 
 **Existence checks replace the enum.** The write boundaries that name a department
 — pipeline create/update, agent create, hiring/transfer (employees), and the gate-rule
-and handoff writes — check the store: an unknown department is a **422**
+writes — check the store: an unknown department is a **422**
 `Unknown department "<id>"` (`unknownDepartment422`), not a schema error.
 (`PATCH /api/agents/:id` does not check yet: its contract declares no 422.)
 

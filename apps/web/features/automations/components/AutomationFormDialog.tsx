@@ -50,7 +50,7 @@ export function AutomationFormDialog({ onClose, onCreate }: AutomationFormDialog
     form.triggerType === "cron"
       ? form.schedule.time.trim().length > 0 &&
         (form.schedule.repeat === "monthly" || form.schedule.weekdays.length > 0)
-      : form.events.length > 0;
+      : form.canSave();
 
   const save = (text: string, target?: TaskTarget, attachments?: TaskAttachmentSet) => {
     const name = deriveName(text);
@@ -65,6 +65,7 @@ export function AutomationFormDialog({ onClose, onCreate }: AutomationFormDialog
         attachmentSetId: attachments?.attachmentSetId,
       },
       enabled: true,
+      approval: form.buildApproval(),
     });
     onClose();
   };

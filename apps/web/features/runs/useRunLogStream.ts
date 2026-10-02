@@ -23,9 +23,7 @@ const RUN_LOG_POLL_MS = 1_000;
  * runner. A `null` run id renders nothing.
  */
 export function useRunLogStream(runId: string | null): { text: string; done: boolean } {
-  return useLogTail(
-    runId ? `${API_URL}/api/tasks/runs/${encodeURIComponent(runId)}/logs` : null,
-  );
+  return useLogTail(runId ? `${API_URL}/api/tasks/runs/${encodeURIComponent(runId)}/logs` : null);
 }
 
 /**

@@ -49,9 +49,9 @@ describe("PostMergeWatchService", () => {
   let resolvedProjects: { resolveIntegrations: ReturnType<typeof vi.fn> };
   let credentials: { read: ReturnType<typeof vi.fn> };
   let monitorEvents: { listStatuses: ReturnType<typeof vi.fn> };
-  // Fake HandoffService — PostMergeWatchService no longer dispatches directly
-  // (A3); a red verdict hands a `post-merge-red` signal to `evaluate`.
-  let handoff: { evaluate: ReturnType<typeof vi.fn> };
+  // Fake SignalBusService — a red verdict emits a `post-merge-red` signal; the first
+  // returned run ref becomes the watch's `taskId`.
+  let signalBus: { emit: ReturnType<typeof vi.fn> };
   let activity: { record: ReturnType<typeof vi.fn> };
   let fetchImpl: ReturnType<typeof vi.fn>;
 
@@ -62,7 +62,7 @@ describe("PostMergeWatchService", () => {
       resolvedProjects as never,
       credentials as never,
       monitorEvents as never,
-      handoff as never,
+      signalBus as never,
       activity as never,
       fakeLogger as never,
       fetchImpl as unknown as typeof fetch,
@@ -76,13 +76,7 @@ describe("PostMergeWatchService", () => {
     resolvedProjects = { resolveIntegrations: vi.fn(async () => [GITHUB_INTEGRATION]) };
     credentials = { read: vi.fn(async () => ({ token: "ghp_x" })) };
     monitorEvents = { listStatuses: vi.fn(async () => []) };
-    handoff = {
-      evaluate: vi.fn(async () => ({
-        action: "dispatched",
-        runRef: "task_9",
-        target: { kind: "department", id: "rel" },
-      })),
-    };
+    signalBus = { emit: vi.fn(async () => ({ runRefs: ["task_9"] })) };
     activity = { record: vi.fn(async () => {}) };
     fetchImpl = vi.fn();
   });
@@ -100,7 +94,7 @@ describe("PostMergeWatchService", () => {
 
     expect(result).toEqual({ resolved: 1 });
     expect((await store.get(watch().id)).state).toBe("green");
-    expect(handoff.evaluate).not.toHaveBeenCalled();
+    expect(signalBus.emit).not.toHaveBeenCalled();
     expect(activity.record).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "post-merge-outcome" }),
     );
@@ -115,8 +109,8 @@ describe("PostMergeWatchService", () => {
     const result = await makeService().poll(NOW);
 
     expect(result).toEqual({ resolved: 1 });
-    expect(handoff.evaluate).toHaveBeenCalledTimes(1);
-    expect(handoff.evaluate).toHaveBeenCalledWith(
+    expect(signalBus.emit).toHaveBeenCalledTimes(1);
+    expect(signalBus.emit).toHaveBeenCalledWith(
       expect.objectContaining({
         from: "rel",
         kind: "post-merge-red",
@@ -136,12 +130,12 @@ describe("PostMergeWatchService", () => {
     }
   });
 
-  it("red, but the handoff engine doesn't dispatch (no matching rule): the watch stays watching, no patch", async () => {
+  it("red, but the signal bus doesn't dispatch (no matching automation): the watch stays watching, no patch", async () => {
     await store.putNew(watch());
     fetchImpl.mockResolvedValue(
       jsonResponse(200, { check_runs: [{ status: "completed", conclusion: "failure" }] }),
     );
-    handoff.evaluate.mockResolvedValue({ action: "none" });
+    signalBus.emit.mockResolvedValue({ runRefs: [] });
 
     const result = await makeService().poll(NOW);
 
@@ -162,7 +156,7 @@ describe("PostMergeWatchService", () => {
     const updated = await store.get(watch().id);
     expect(updated.state).toBe("watching");
     expect(updated.attempts).toBe(1);
-    expect(handoff.evaluate).not.toHaveBeenCalled();
+    expect(signalBus.emit).not.toHaveBeenCalled();
   });
 
   it("expiry: now past the deadline → expired, outcome recorded, no task, no fetch", async () => {
@@ -172,7 +166,7 @@ describe("PostMergeWatchService", () => {
 
     expect(result).toEqual({ resolved: 1 });
     expect((await store.get(watch().id)).state).toBe("expired");
-    expect(handoff.evaluate).not.toHaveBeenCalled();
+    expect(signalBus.emit).not.toHaveBeenCalled();
     expect(fetchImpl).not.toHaveBeenCalled();
     expect(activity.record).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "post-merge-outcome" }),
@@ -223,12 +217,12 @@ describe("PostMergeWatchService", () => {
     expect(updated.attempts).toBe(1);
   });
 
-  it("fail-open: handoff.evaluate throwing leaves the watch watching for the next tick's retry", async () => {
+  it("fail-open: signalBus.emit throwing leaves the watch watching for the next tick's retry", async () => {
     await store.putNew(watch());
     fetchImpl.mockResolvedValue(
       jsonResponse(200, { check_runs: [{ status: "completed", conclusion: "failure" }] }),
     );
-    handoff.evaluate.mockRejectedValue(new Error("handoff engine unavailable"));
+    signalBus.emit.mockRejectedValue(new Error("signal bus unavailable"));
 
     const result = await makeService().poll(NOW);
 

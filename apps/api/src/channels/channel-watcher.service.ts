@@ -192,8 +192,8 @@ export class ChannelWatcherService
    * exactly that class of cross-module import. Instead it's resolved lazily via
    * `ModuleRef` (`strict: false` searches the WHOLE app container, not just this
    * module's own imports, so no export/import wiring is needed at all) — the
-   * same escape hatch `PipelineRunnerService` uses to reach `HandoffService`
-   * from a module that doesn't import `HandoffModule`, never `forwardRef`. The
+   * same escape hatch used for any cross-module lookup that must not add a
+   * module import edge, never `forwardRef`. The
    * class reference itself is fetched via a lazy `await import(...)` too, so
    * this file never eagerly `require`s the review-learning module chain at
    * load time (mirrors the `import type` + lazy-value-import split

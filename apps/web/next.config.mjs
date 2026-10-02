@@ -58,23 +58,9 @@ const nextConfig = {
       { source: "/teams/:path*", destination: "/work/teams/:path*", permanent: true },
       { source: "/projects", destination: "/work/projects", permanent: true },
       { source: "/projects/:path*", destination: "/work/projects/:path*", permanent: true },
-      // ZB-08: the signal-kind registry and the ex-settings gates/mandate tabs
-      // moved under Policy → Gates (`?section=`).
-      {
-        source: "/signals",
-        destination: "/policy/gates?section=signals",
-        permanent: true,
-      },
-      {
-        source: "/signals/new",
-        destination: "/policy/gates?section=signals&new=1",
-        permanent: true,
-      },
-      {
-        source: "/signals/:id",
-        destination: "/policy/gates?section=signals&id=:id",
-        permanent: true,
-      },
+      // Signals are triggers of automations now (the signal-kind registry is gone).
+      { source: "/signals", destination: "/automations", permanent: true },
+      { source: "/signals/:path*", destination: "/automations", permanent: true },
       // ZB-11: `/skills` `/mcp` `/hooks` `/commands` (+`/[id]`) moved under the
       // global registries (ROUTE-MAP §2).
       { source: "/skills", destination: "/system/registries/skills", permanent: true },

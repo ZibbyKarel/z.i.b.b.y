@@ -27,7 +27,10 @@ export enum AutomationCardTestId {
   Target = "automation-card-target",
 }
 
-const TRIGGER_GLYPH = { cron: "clock", event: "bolt" } as const satisfies Record<string, IconName>;
+const TRIGGER_GLYPH = { cron: "clock", event: "bolt", signal: "pulse" } as const satisfies Record<
+  string,
+  IconName
+>;
 // `task` isn't in here — its glyph depends on the @-mentioned target's OWN kind
 // (agent/pipeline/none), resolved by `taskGlyph` below, not a static per-type map.
 const TARGET_GLYPH = {
@@ -94,7 +97,11 @@ export function AutomationCard({
   const name = automation.name ?? automation.id;
 
   const scheduleText =
-    trigger.type === "cron" ? cronLabel(trigger.expr) : trigger.events.join(", ");
+    trigger.type === "cron"
+      ? cronLabel(trigger.expr)
+      : trigger.type === "signal"
+        ? trigger.kind
+        : trigger.events.join(", ");
 
   const next = useMemo(
     () => (trigger.type === "cron" ? nextCronRun(trigger.expr, new Date()) : null),
@@ -173,7 +180,13 @@ export function AutomationCard({
           <Stack align="center" direction="row" gap="100">
             <FlowBox
               glyph={TRIGGER_GLYPH[trigger.type]}
-              kind={t(trigger.type === "cron" ? "triggerCron" : "triggerEvent")}
+              kind={t(
+                trigger.type === "cron"
+                  ? "triggerCron"
+                  : trigger.type === "signal"
+                    ? "triggerSignal"
+                    : "triggerEvent",
+              )}
               testid={AutomationCardTestId.Schedule}
               value={scheduleText}
             />

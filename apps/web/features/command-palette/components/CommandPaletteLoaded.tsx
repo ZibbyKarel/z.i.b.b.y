@@ -14,7 +14,6 @@ import { useAppearance } from "../../../state/appearance";
 import { useDepartmentsQuery } from "../../departments/queries";
 import { useEmployeesQuery } from "../../employees/queries";
 import { useTaskParentsInfiniteQuery } from "../../tasks/queries";
-import { useChainsQuery } from "../../chains/queries";
 import { useGoalsQuery } from "../../goals/queries";
 import { useCompaniesQuery } from "../../companies/queries";
 import { useTeamsQuery } from "../../teams/queries";
@@ -25,7 +24,6 @@ import { useMcpServersQuery } from "../../mcp/queries";
 import { useHooksQuery } from "../../hooks/queries";
 import { useCommandsQuery } from "../../commands/queries";
 import { useAutomationsQuery } from "../../automations/queries";
-import { useSignalKindsQuery } from "../../handoff/queries";
 import { useMemorySearchQuery } from "../../knowledge/queries";
 import { buildCommandPaletteIndex } from "../buildIndex";
 import { groupAndFilterEntries } from "../filterEntries";
@@ -67,7 +65,6 @@ export function CommandPaletteLoaded({
   const { data: departments } = useDepartmentsQuery();
   const { data: employees } = useEmployeesQuery();
   const { data: tasks } = useTaskParentsInfiniteQuery({});
-  const { data: chains } = useChainsQuery();
   const { data: goals } = useGoalsQuery();
   const { data: companies } = useCompaniesQuery();
   const { data: teams } = useTeamsQuery();
@@ -78,7 +75,6 @@ export function CommandPaletteLoaded({
   const { data: hooks } = useHooksQuery();
   const { data: commands } = useCommandsQuery();
   const { data: automations } = useAutomationsQuery();
-  const { data: signalKinds } = useSignalKindsQuery();
   const { data: memoryHits, isFetching: memoryLoading } = useMemorySearchQuery(query);
   const { data: approvals } = useApprovalsQuery();
   const approve = useApproveMutation();
@@ -104,7 +100,6 @@ export function CommandPaletteLoaded({
             department: e.department,
           })),
           tasks: (tasks ?? []).map((t) => ({ id: t.id, title: t.title, department: t.department })),
-          chains: (chains ?? []).map((c) => ({ id: c.id, label: c.label })),
           goals: (goals ?? []).map((g) => ({ id: g.id, name: g.name, objective: g.objective })),
           companies: (companies ?? []).map((c) => ({ id: c.id, name: c.name })),
           teams: (teams ?? []).map((t) => ({ id: t.id, name: t.name })),
@@ -119,7 +114,6 @@ export function CommandPaletteLoaded({
           hooks: (hooks ?? []).map((h) => ({ id: h.id, name: h.name, event: h.event })),
           commands: (commands ?? []).map((c) => ({ id: c.id, description: c.description })),
           automations: (automations ?? []).map((a) => ({ id: a.id, name: a.name })),
-          signals: (signalKinds ?? []).map((s) => ({ id: s.id, label: s.label })),
           notes: (memoryHits?.results ?? []).map((hit) => ({
             id: hit.id,
             title: hit.title,
@@ -133,7 +127,6 @@ export function CommandPaletteLoaded({
       departments,
       employees,
       tasks,
-      chains,
       goals,
       companies,
       teams,
@@ -144,7 +137,6 @@ export function CommandPaletteLoaded({
       hooks,
       commands,
       automations,
-      signalKinds,
       memoryHits,
       pendingApprovals.length,
       labels,

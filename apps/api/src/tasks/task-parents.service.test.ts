@@ -110,24 +110,6 @@ describe("TaskParentsService — parent state rolls up over subtasks", () => {
     const page = await service.listParents({});
     expect(page.items[0]?.state).toBe("blocked");
   });
-
-  it("a chain-target parent never resolves to done — falls through to thinking", async () => {
-    const parent = task({
-      id: "p3",
-      status: "dispatched",
-      target: { kind: "chain", id: "c1", name: "Chain" },
-      outcome: { status: "done", summary: "ok", finishedAt: AT },
-    });
-    const kid = task({
-      id: "k3",
-      parentTaskId: "p3",
-      status: "dispatched",
-      outcome: { status: "done", summary: "ok", finishedAt: AT },
-    });
-    const service = build([parent, kid]);
-    const page = await service.listParents({});
-    expect(page.items[0]?.state).toBe("thinking");
-  });
 });
 
 describe("TaskParentsService — listParents filters and pagination", () => {

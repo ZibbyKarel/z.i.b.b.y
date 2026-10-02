@@ -122,16 +122,6 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
   let systemConfig: ReturnType<typeof fakeSystemConfigStore>;
   let attachmentStorage: AttachmentStorageService;
   let activity: { record: ReturnType<typeof vi.fn<(input: ActivityInput) => Promise<void>>> };
-  /**
-   * ZB-05a — `HandoffService` is resolved lazily via `ModuleRef` (see
-   * `TaskSchedulerService`'s own doc comment on the ctor param). No test in this
-   * file exercises a real chain hop end to end (that's
-   * `task-scheduler.chain-dispatch.test.ts`); `resolveChain` defaults to "not
-   * found" so a stray `{ kind: "chain" }` target still resolves deterministically
-   * rather than throwing on an unconfigured double.
-   */
-  let fakeHandoff: { resolveChain: ReturnType<typeof vi.fn>; evaluate: ReturnType<typeof vi.fn> };
-  let fakeModuleRef: { get: ReturnType<typeof vi.fn> };
 
   /** A fixed near-future window-reset epoch the limit guard defers to. */
   const RESET_AT = Date.parse("2026-06-13T04:30:00.000Z");
@@ -216,11 +206,6 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       reject: async () => {},
     };
     fakeGates = { floor: async () => [], evaluate: vi.fn(() => ({ decision: "allow" })) };
-    fakeHandoff = {
-      resolveChain: vi.fn(async () => null),
-      evaluate: vi.fn(async () => ({ action: "none" })),
-    };
-    fakeModuleRef = { get: vi.fn(() => fakeHandoff) };
     // Limits double (Phase 9): headroom by default; a test flips windowExhausted to
     // exercise the limit guard. resolveResumeAt echoes a fixed near-future reset.
     fakeLimits = {
@@ -273,7 +258,6 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       // base/e2e specs, not here.
       { register: () => {} } as never,
       undefined,
-      fakeModuleRef as never,
     );
     service.onModuleInit();
   });
@@ -328,44 +312,6 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     expect(persisted.outcome).toBeUndefined();
     // Pure intent (no target) is exactly what the classifier routes.
     expect(classifier.classify).toHaveBeenCalledTimes(1);
-  });
-
-  describe("ZB-05a — a missing/disabled chain target is a clear error outcome, never a silent no-op", () => {
-    it('persists the parent as a visible "failed" outcome when the chain does not resolve', async () => {
-      // `fakeHandoff.resolveChain` defaults to `null` (see beforeEach) — the
-      // scheduler must not throw (D-019 is superseded): it persists a record the
-      // operator can see, exactly like a held/queued task.
-      const result = await service.createTask({
-        text: "hand this off",
-        target: { kind: "chain", id: "c1", name: "Chain" },
-      });
-      expect(result.outcome).toBe("scheduled");
-      if (result.outcome !== "scheduled") return;
-      expect(result.task.status).toBe("failed");
-      expect(result.task.error).toMatch(/chain/i);
-      expect(result.task.target).toEqual({ kind: "chain", id: "c1", name: "Chain" });
-      const persisted = await storage.get(result.task.id);
-      expect(persisted.status).toBe("failed");
-    });
-
-    it("disabled resolves the same way as missing", async () => {
-      fakeHandoff.resolveChain = vi.fn(async () => ({
-        id: "c1",
-        label: "Chain",
-        description: "A test chain.",
-        entry: "rnd",
-        steps: [],
-        enabled: false,
-      }));
-      const result = await service.createTask({
-        text: "hand this off",
-        target: { kind: "chain", id: "c1", name: "Chain" },
-      });
-      expect(result.outcome).toBe("scheduled");
-      if (result.outcome !== "scheduled") return;
-      expect(result.task.status).toBe("failed");
-      expect(result.task.error).toMatch(/disabled/i);
-    });
   });
 
   describe("Phase 4a — orchestrator-fallback telemetry", () => {
@@ -545,7 +491,6 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       attachmentStorage,
       { register: () => {} } as never,
       [refProvider] as never,
-      fakeModuleRef as never,
     );
 
     const removed = await svcWithProvider.sweepOrphanAttachmentSets(
@@ -1689,13 +1634,6 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
         };
       }),
     };
-    const fakeModuleRef = {
-      get: vi.fn(() => ({
-        resolveChain: vi.fn(async () => null),
-        evaluate: vi.fn(async () => ({ action: "none" })),
-      })),
-    };
-
     service = new TaskSchedulerService(
       storage,
       classifier as never,
@@ -1739,7 +1677,6 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
       // base/e2e specs, not here.
       { register: () => {} } as never,
       undefined,
-      fakeModuleRef as never,
     );
     service.onModuleInit();
   });
@@ -1895,13 +1832,6 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
     };
     const activity = { record: vi.fn(async (_input: ActivityInput) => {}) };
     const attachmentStorage = new AttachmentStorageService();
-    const fakeModuleRef = {
-      get: vi.fn(() => ({
-        resolveChain: vi.fn(async () => null),
-        evaluate: vi.fn(async () => ({ action: "none" })),
-      })),
-    };
-
     service = new TaskSchedulerService(
       storage,
       classifier as never,
@@ -1945,7 +1875,6 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
       // base/e2e specs, not here.
       { register: () => {} } as never,
       undefined,
-      fakeModuleRef as never,
     );
     service.onModuleInit();
     return {
@@ -2302,13 +2231,6 @@ describe("125c — system-wide maxConcurrentRuns cap", () => {
     };
     const activity = { record: vi.fn(async (_input: ActivityInput) => {}) };
     const attachmentStorage = new AttachmentStorageService();
-    const fakeModuleRef = {
-      get: vi.fn(() => ({
-        resolveChain: vi.fn(async () => null),
-        evaluate: vi.fn(async () => ({ action: "none" })),
-      })),
-    };
-
     service = new TaskSchedulerService(
       storage,
       classifier as never,
@@ -2350,7 +2272,6 @@ describe("125c — system-wide maxConcurrentRuns cap", () => {
       attachmentStorage,
       { register: () => {} } as never,
       undefined,
-      fakeModuleRef as never,
     );
     service.onModuleInit();
   }

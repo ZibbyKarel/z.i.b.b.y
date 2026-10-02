@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common";
-import { HandoffModule } from "../handoff/handoff.module";
+import { SignalBusModule } from "../automations/signal-bus.module";
 import { resolveGraphReportPath } from "../self-knowledge/self-knowledge.module";
 import { GRAPH_REPORT_PATH } from "../self-knowledge/self-knowledge.service";
 import { MemoryModule } from "../memory/memory.module";
@@ -15,12 +15,11 @@ import { ArchService } from "./arch.service";
  * resolution) rather than duplicating it — the token is just a string, so
  * providing it again here is independent DI scoping, not a shared instance.
  *
- * A3: also imports `HandoffModule` — every new finding now emits a
- * `HandoffSignal` through `HandoffService` (the wildcard tier-3 seed rule
- * parks a proposal, never dispatches).
+ * Also imports `SignalBusModule` — each audit run's new findings are emitted as one
+ * `audit-batch` signal that signal-triggered automations may pick up.
  */
 @Module({
-  imports: [MemoryModule, DepartmentFindingsModule, HandoffModule],
+  imports: [MemoryModule, DepartmentFindingsModule, SignalBusModule],
   providers: [{ provide: GRAPH_REPORT_PATH, useFactory: resolveGraphReportPath }, ArchService],
   exports: [ArchService],
 })

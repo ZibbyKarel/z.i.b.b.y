@@ -19,14 +19,6 @@ export const SETTINGS_SECTIONS = [
 export type SettingsSectionId = (typeof SETTINGS_SECTIONS)[number];
 
 /** ROUTE-MAP §1's `/policy/gates?section=<s>` tabs — same static posture. */
-export const GATE_SECTIONS = [
-  "floor",
-  "global",
-  "per-project",
-  "per-agent",
-  "handoff",
-  "signals",
-  "mandate",
-] as const;
+export const GATE_SECTIONS = ["floor", "global", "per-project", "per-agent", "mandate"] as const;
 
 export type GateSectionId = (typeof GATE_SECTIONS)[number];

@@ -17,16 +17,8 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("../../agents", () => ({ useAgentsQuery: () => ({ data: [] }) }));
-vi.mock("../../departments/queries", () => ({ useDepartmentsQuery: () => ({ data: [] }) }));
-vi.mock("../../handoff", () => ({ useHandoffRulesQuery: () => ({ data: [] }) }));
-vi.mock("../../handoff/components/HandoffRulesSection", () => ({
-  HandoffRulesSection: () => <div>handoff-rules-section</div>,
-}));
 vi.mock("../../settings/components/MandateSection", () => ({
   MandateSection: () => <div>mandate-section</div>,
-}));
-vi.mock("../../signals/components/SignalsScreen", () => ({
-  SignalsScreen: () => <div>signals-screen</div>,
 }));
 vi.mock("../../projects", () => ({ useProjectsQuery: () => ({ data: [] }) }));
 vi.mock("../components/GateRulesSection", () => ({
@@ -55,10 +47,10 @@ describe("GatesScreen (ZB-08 ?section= router)", () => {
     expect(screen.getByText("global-rules-section (hideFloor=true)")).toBeInTheDocument();
   });
 
-  it("?section=signals renders the moved ex-/signals screen", () => {
+  it("the retired ?section=signals / handoff values fall back to the floor panel", () => {
     searchParams = new URLSearchParams("section=signals");
     render(<GatesScreen />);
-    expect(screen.getByText("signals-screen")).toBeInTheDocument();
+    expect(screen.getByText("system-floor-panel")).toBeInTheDocument();
   });
 
   it("?section=mandate renders the moved ex-settings mandate section", () => {

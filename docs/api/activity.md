@@ -65,10 +65,7 @@ type ActivityKind =
   | "monitor-alert" // a CI/CD monitor ingested a red status
   | "machine-action" // an approved machine action executed (or failed)
   | "task-dead-lettered" // a task's dispatch exhausted its retry budget
-  | "chain-started" // an operator-authored chain started
-  | "chain-advanced" // ...handed an artifact to its next step
-  | "chain-parked" // ...parked on a broken/gated handoff
-  | "chain-finished" // ...reached a terminal state (done/failed)
+  | "automation-dispatched" // a signal-triggered automation dispatched (refs.automationId)
   | "budget-warn" // ZB-10/O-08: account usage crossed a warn (non-blocking) threshold
   | "orchestrator-fallback"; // Fáze 4a: the classifier itself chose the orchestrator (no explicit override)
 ```
@@ -85,9 +82,8 @@ interface ActivityRefs {
   agentId?: string;
   goalRunId?: string;
   goalId?: string;
-  chainRunId?: string;
-  chainId?: string;
   projectId?: string; // project attribution (Phase 8)
+  automationId?: string; // the signal-triggered automation that dispatched
   approvalId?: string;
   integrationId?: string;
   itemId?: string;

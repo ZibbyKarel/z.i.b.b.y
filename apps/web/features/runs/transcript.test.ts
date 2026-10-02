@@ -77,7 +77,10 @@ describe("parseTranscript", () => {
     const segs = parseTranscript(TOOL_WITH_RESULT);
 
     expect(segs.map((s) => s.kind)).toEqual(["tool", "result"]);
-    expect(segs[0]).toEqual({ kind: "tool", text: "Glob /Users/zibby/Workspace/z.i.b.b.y/apps/api" });
+    expect(segs[0]).toEqual({
+      kind: "tool",
+      text: "Glob /Users/zibby/Workspace/z.i.b.b.y/apps/api",
+    });
     const result = segs[1] as { kind: "result"; text: string };
     expect(result.text).toContain("chat-stream-parser.ts");
     expect(result.text).toContain("chat-events.service.ts");

@@ -195,7 +195,11 @@ export function HookFormFields({ form, idLocked = false }: HookFormFieldsProps) 
         value={form.timeout}
       />
 
-      <ToggleField checked={form.enabled} label={t("hooks.enabledLabel")} onChange={form.setEnabled} />
+      <ToggleField
+        checked={form.enabled}
+        label={t("hooks.enabledLabel")}
+        onChange={form.setEnabled}
+      />
     </Stack>
   );
 }

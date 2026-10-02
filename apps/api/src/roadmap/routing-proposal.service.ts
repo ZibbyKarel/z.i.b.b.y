@@ -41,7 +41,7 @@ export class RoutingProposalService implements OnModuleInit, ResumableRunner {
    *
    * The proposal is deleted only AFTER the release call returns: a failure leaves the
    * payload on disk so the same approval can be retried rather than losing the
-   * question entirely (the same posture as `HandoffService.resume`). Never throws —
+   * question entirely (the same posture as `SignalBusService.resume`). Never throws —
    * `ApprovalsService.approve` has already written the decision by the time this runs,
    * so throwing here would only strand that decision.
    */

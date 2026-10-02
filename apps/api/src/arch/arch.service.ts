@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import { Inject, Injectable, Optional } from "@nestjs/common";
-import type { HandoffSignal } from "@zibby/contracts";
+import type { Signal } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
-import { HandoffService } from "../handoff/handoff.service";
+import { SignalBusService } from "../automations/signal-bus.service";
 import { GRAPH_REPORT_PATH } from "../self-knowledge/self-knowledge.service";
 import { parseGraphReport } from "../self-knowledge/graph-report.parser";
 import { exec } from "../shared/git-exec";
@@ -81,12 +81,12 @@ type MadgeCircularOutput = string[][];
  * `parseGraphReport`) plus a madge circular-dependency check (scoped to
  * `apps/web`, matching the existing `check:cycles` script — knip is deferred,
  * not installed). Findings are a vault-note proposal (gap-detector's pattern)
- * filed onto Arch's shelf and read back for the briefing. A3: every NEW
- * finding is ALSO normalized into a {@link HandoffSignal} and handed to the
- * {@link HandoffService} rule engine — the seed `arch-architecture` rule is a
- * wildcard tier-3 rule, so every finding parks an operator-gated proposal
- * rather than dispatching. "Proposes ≠ acts" still holds — it now lives in
- * the rule's tier (data), not in the absence of a dispatch call (code).
+ * filed onto Arch's shelf and read back for the briefing. Each
+ * audit run's NEW findings are ALSO emitted as one `audit-batch` {@link Signal}
+ * on the {@link SignalBusService} — the `signal-arch-audit` system automation
+ * is `approval: "ask"`, so the batch parks an operator-gated approval rather
+ * than dispatching. "Proposes ≠ acts" still holds — it lives in the
+ * automation's `approval` (data), not in the absence of a dispatch call.
  * Fail-open everywhere: a missing report or a failing/absent madge binary
  * both degrade to "that source skipped", never a thrown error out of the
  * scheduler's tick.
@@ -100,7 +100,7 @@ export class ArchService {
     private readonly vault: VaultService,
     private readonly findingsStore: DepartmentFindingsStore,
     private readonly activity: ActivityLogService,
-    private readonly handoff: HandoffService,
+    private readonly signalBus: SignalBusService,
     @Inject(GRAPH_REPORT_PATH) private readonly graphReportPath: string,
     logger: LoggerService,
     @Optional() execImpl?: ExecImpl,
@@ -148,12 +148,12 @@ export class ArchService {
 
     if (newFindings.length > 0) {
       try {
-        // One handoff signal per audit run, not one per finding — the wildcard
-        // tier-3 seed rule parks a single proposal for the whole batch (evaluate
-        // is itself fail-open, but the audit tick must survive regardless).
-        await this.handoff.evaluate(this.toBatchSignal(newFindings, now));
+        // One signal per audit run, not one per finding — the gated automation
+        // parks a single approval for the whole batch (emit is itself fail-open,
+        // but the audit tick must survive regardless).
+        await this.signalBus.emit(this.toBatchSignal(newFindings, now));
       } catch (err) {
-        this.log.warn("arch: handoff evaluate failed — findings stay for retry", {
+        this.log.warn("arch: signal emit failed — findings stay for retry", {
           count: newFindings.length,
           error: String(err),
         });
@@ -163,8 +163,8 @@ export class ArchService {
     return { findings };
   }
 
-  /** Bundle a run's new findings into one handoff signal — one approval per audit run. */
-  private toBatchSignal(findings: ArchFinding[], now: Date): HandoffSignal {
+  /** Bundle a run's new findings into one signal — one approval per audit run. */
+  private toBatchSignal(findings: ArchFinding[], now: Date): Signal {
     const sortedFingerprints = findings.map((f) => f.fingerprint).sort();
     return {
       from: "qa",

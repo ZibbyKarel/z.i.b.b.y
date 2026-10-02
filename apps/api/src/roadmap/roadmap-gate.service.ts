@@ -773,7 +773,7 @@ export class RoadmapGateService {
    * so {@link drain} can skip them instead of re-asking. A scan of a directory that
    * holds one file per OPEN question (each is deleted on approve or reject), read once
    * per drain rather than per item — the same "check before you fire again" shape as
-   * `HandoffFiredStore.hasFired`. Fail-open: an unreadable store yields an empty set,
+   * the signal bus's fired-fingerprint check. Fail-open: an unreadable store yields an empty set,
    * so a broken proposals dir degrades to today's guess-and-dispatch rather than
    * wedging every release.
    */

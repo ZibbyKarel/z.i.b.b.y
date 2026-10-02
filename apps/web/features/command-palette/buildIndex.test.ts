@@ -8,7 +8,6 @@ const LABELS: CommandPaletteLabels = {
     department: "Department",
     person: "Person",
     task: "Task",
-    chain: "Chain",
     goal: "Goal",
     company: "Company",
     team: "Team",
@@ -19,7 +18,6 @@ const LABELS: CommandPaletteLabels = {
     hook: "Hook",
     command: "Command",
     automation: "Automation",
-    signal: "Signal",
     note: "Note",
     setting: "Setting",
     gate: "Gate",
@@ -30,7 +28,6 @@ const LABELS: CommandPaletteLabels = {
     departments: "Departments",
     people: "People",
     tasks: "Tasks",
-    chains: "Chains",
     goals: "Goals",
     companies: "Companies",
     teams: "Teams",
@@ -38,7 +35,6 @@ const LABELS: CommandPaletteLabels = {
     pipelines: "Pipelines",
     registries: "Registries",
     automations: "Automations",
-    signals: "Signals",
     vault: "Vault",
     settings: "Settings",
     gates: "Gates",
@@ -52,7 +48,6 @@ const EMPTY_SOURCES: CommandPaletteSources = {
   departments: [],
   people: [],
   tasks: [],
-  chains: [],
   goals: [],
   companies: [],
   teams: [],
@@ -63,7 +58,6 @@ const EMPTY_SOURCES: CommandPaletteSources = {
   hooks: [],
   commands: [],
   automations: [],
-  signals: [],
   notes: [],
   hasPendingApproval: false,
 };
@@ -157,20 +151,6 @@ describe("buildCommandPaletteIndex", () => {
     );
   });
 
-  it("routes a signal to the policy gates signals section with its id", () => {
-    const entries = buildCommandPaletteIndex(
-      { ...EMPTY_SOURCES, signals: [{ id: "cve", label: "CVE" }] },
-      LABELS,
-    );
-    expect(entries).toContainEqual(
-      expect.objectContaining({
-        id: "cve",
-        group: "signals",
-        href: "/policy/gates?section=signals&id=cve",
-      }),
-    );
-  });
-
   it("routes a vault note by its id, URL-encoded", () => {
     const entries = buildCommandPaletteIndex(
       { ...EMPTY_SOURCES, notes: [{ id: "daily/2026-09-25", title: "Today" }] },
@@ -194,8 +174,8 @@ describe("buildCommandPaletteIndex", () => {
     expect(entries.find((e) => e.id === "automations" && e.group === "settings")?.href).toBe(
       "/system/settings/automations",
     );
-    expect(entries.find((e) => e.id === "signals" && e.group === "gates")?.href).toBe(
-      "/policy/gates?section=signals",
+    expect(entries.find((e) => e.id === "mandate" && e.group === "gates")?.href).toBe(
+      "/policy/gates?section=mandate",
     );
   });
 

@@ -35,7 +35,7 @@ interface Doubles {
   };
   vault: { createNote: ReturnType<typeof vi.fn>; updateNote: ReturnType<typeof vi.fn> };
   artifacts: { record: ReturnType<typeof vi.fn> };
-  handoff: { evaluate: ReturnType<typeof vi.fn> };
+  signalBus: { emit: ReturnType<typeof vi.fn> };
   registered: Map<string, ResumableRunner>;
 }
 
@@ -63,13 +63,9 @@ async function makeService(
   };
   // N2a: the durable artifact registry — a delivered sink writes one record.
   const artifacts = { record: vi.fn(async () => {}) };
-  // A3: fake HandoffService — a Research-owned pipeline's delivery also emits a
-  // research-artifact signal (recordArtifact). Resolved lazily via ModuleRef
-  // (not constructor-injected — see pipeline-runner.service.ts's doc comment),
-  // so the double passed to the constructor below is a ModuleRef whose `.get()`
-  // hands back this same fake, letting assertions still read `d.handoff.evaluate`.
-  const handoff = { evaluate: vi.fn(async () => ({ action: "none" })) };
-  const moduleRef = { get: vi.fn(() => handoff) };
+  // Fake SignalBusService — a Research-owned pipeline's delivery also emits a
+  // research-artifact signal (recordArtifact).
+  const signalBus = { emit: vi.fn(async () => ({ runRefs: [] })) };
   const service = new PipelineRunnerService(
     dir,
     { get: vi.fn(async () => pipeline) } as never,
@@ -101,7 +97,7 @@ async function makeService(
     // `department`, so `drive()` never calls `acquire` — present only to keep
     // the positional constructor aligned.
     { acquire: vi.fn(), release: vi.fn(), isBusy: vi.fn(), busy: vi.fn(() => new Map()) } as never,
-    moduleRef as never,
+    signalBus as never,
   );
   (service as unknown as { core: { init: () => void; shutdown: () => void } }).core = {
     init: vi.fn(),
@@ -109,7 +105,10 @@ async function makeService(
   } as never;
   // Registers the pipeline-output (and pipeline-stage) resumable runners.
   await service.onModuleInit();
-  return { service, d: { pipeline, approvals, workspace, vault, artifacts, handoff, registered } };
+  return {
+    service,
+    d: { pipeline, approvals, workspace, vault, artifacts, signalBus, registered },
+  };
 }
 
 /** Seed a run aggregate plus the on-disk artifacts its phases "produced". */
@@ -218,8 +217,8 @@ describe("PipelineRunnerService — output sinks", () => {
         producedBy: expect.objectContaining({ runRef: RUN_ID, pipelineId: "audit" }),
       }),
     );
-    // A3: a non-Research pipeline (no department) never emits a handoff signal.
-    expect(d.handoff.evaluate).not.toHaveBeenCalled();
+    // A3: a non-Research pipeline (no department) never emits a signal.
+    expect(d.signalBus.emit).not.toHaveBeenCalled();
   });
 
   it("file sink → vault: a FAILED delivery records no artifact", async () => {
@@ -486,8 +485,8 @@ describe("PipelineRunnerService — output sinks", () => {
 
       await runOutputs(service, run, pipeline);
 
-      expect(d.handoff.evaluate).toHaveBeenCalledTimes(1);
-      expect(d.handoff.evaluate).toHaveBeenCalledWith(
+      expect(d.signalBus.emit).toHaveBeenCalledTimes(1);
+      expect(d.signalBus.emit).toHaveBeenCalledWith(
         expect.objectContaining({
           from: "rnd",
           kind: "research-artifact",
@@ -496,7 +495,7 @@ describe("PipelineRunnerService — output sinks", () => {
       );
     });
 
-    it("a non-Research pipeline (department unset) never emits a handoff signal", async () => {
+    it("a non-Research pipeline (department unset) never emits a signal", async () => {
       const pipeline: Pipeline = {
         id: "audit",
         phases: [docPhase],
@@ -511,10 +510,10 @@ describe("PipelineRunnerService — output sinks", () => {
 
       await runOutputs(service, run, pipeline);
 
-      expect(d.handoff.evaluate).not.toHaveBeenCalled();
+      expect(d.signalBus.emit).not.toHaveBeenCalled();
     });
 
-    it("a non-Research department (e.g. dev) never emits a handoff signal either", async () => {
+    it("a non-Research department (e.g. dev) never emits a signal either", async () => {
       const pipeline: Pipeline = {
         id: "dev-build",
         department: "dev",
@@ -530,7 +529,7 @@ describe("PipelineRunnerService — output sinks", () => {
 
       await runOutputs(service, run, pipeline);
 
-      expect(d.handoff.evaluate).not.toHaveBeenCalled();
+      expect(d.signalBus.emit).not.toHaveBeenCalled();
     });
   });
 });

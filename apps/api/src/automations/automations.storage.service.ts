@@ -154,6 +154,59 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
     enabled: true,
     system: true,
   },
+  // Signal-triggered system automations (replace the retired handoff rules). Each hands
+  // the emitting department's finding to Dev as a task; the signal's title+body is
+  // appended to `text` at dispatch. `approval: "ask"` parks a Tier-3 approval first.
+  {
+    id: "signal-cve-critical",
+    name: "Kritická CVE → Dev",
+    trigger: { type: "signal", kind: "cve", from: "sec", minSeverity: "critical" },
+    target: {
+      type: "task",
+      text: "Prepare a fix for this critical vulnerability on its own branch. Do not push or merge — the PR is the gate.",
+      target: { kind: "department", id: "dev", name: "dev" },
+    },
+    enabled: true,
+    system: true,
+  },
+  {
+    id: "signal-post-merge-red",
+    name: "Červené CI po sloučení → Dev",
+    trigger: { type: "signal", kind: "post-merge-red", from: "rel" },
+    target: {
+      type: "task",
+      text: "Investigate the failing CI run and prepare a fix on its own branch. Do not push or merge — the PR is the gate.",
+      target: { kind: "department", id: "dev", name: "dev" },
+    },
+    enabled: true,
+    system: true,
+  },
+  {
+    id: "signal-arch-audit",
+    name: "Nálezy auditu architektury → Dev",
+    trigger: { type: "signal", kind: "*", from: "qa" },
+    target: {
+      type: "task",
+      text: "Review these architecture findings and prepare the worthwhile fixes on their own branch.",
+      target: { kind: "department", id: "dev", name: "dev" },
+    },
+    approval: "ask",
+    enabled: true,
+    system: true,
+  },
+  {
+    id: "signal-research",
+    name: "Výsledek výzkumu → Dev",
+    trigger: { type: "signal", kind: "research-artifact", from: "rnd" },
+    target: {
+      type: "task",
+      text: "Build on this delivered research.",
+      target: { kind: "department", id: "dev", name: "dev" },
+    },
+    approval: "ask",
+    enabled: true,
+    system: true,
+  },
 ];
 
 /** Durable, file-backed persistence for automations — one `<id>.json` each. */

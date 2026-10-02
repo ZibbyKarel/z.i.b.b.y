@@ -2,12 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Grid, Stack, Typography } from "@zibby/design-system";
-import {
-  FormMarkdownEditor,
-  FormTextArea,
-  FormTextInput,
-  FormToggle,
-} from "@zibby/forms";
+import { FormMarkdownEditor, FormTextArea, FormTextInput, FormToggle } from "@zibby/forms";
 
 /** Field names the command form renders — both surfaces type their forms with these. */
 export type CommandFormValues = {
