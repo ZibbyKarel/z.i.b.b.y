@@ -52,13 +52,13 @@ describe("AppShell", () => {
     expect(screen.getByTestId(AppHeaderTestId.ActiveCount)).toHaveTextContent("0");
   });
 
-  it("renders the NEEDS YOU rail with its empty state before approvals load", () => {
+  it("renders the NEEDS YOU and RUNNING rails with their empty states before data loads", () => {
     renderWithProviders(
       <AppShell>
         <div>obsah stránky</div>
       </AppShell>,
     );
-    expect(screen.getByTestId(RailTestId.Root)).toBeInTheDocument();
-    expect(screen.getByTestId(RailTestId.Empty)).toBeInTheDocument();
+    expect(screen.getAllByTestId(RailTestId.Root)).toHaveLength(2);
+    expect(screen.getAllByTestId(RailTestId.Empty)).toHaveLength(2);
   });
 });

@@ -10,6 +10,7 @@ import {
   AppHeader,
   ApprovalCard,
   Button,
+  Container,
   LimitBar,
   Rail,
   Stack,
@@ -29,6 +30,7 @@ import {
   useRejectMutation,
 } from "../../../features/approvals";
 import { ApprovalSheet } from "../../../features/approvals/components/ApprovalSheet";
+import { RunningRail } from "../../../features/runs/components/RunningRail";
 import { HIGH_RISK_TYPES, formatWaited } from "../../../features/approvals/approval";
 import { useLimitsQuery } from "../../../features/limits";
 import { SECTIONS, type SectionId, sectionForPath } from "../../../state/config";
@@ -221,7 +223,16 @@ function AppShellChrome({ children }: { children: ReactNode }) {
           onSearchClick={() => setPaletteOpen(true)}
         />
       }
-      rail={<NeedsYouRail onOpenApproval={approvalSheet.open} />}
+      rail={
+        <Stack direction="col" style={{ height: "100%", minHeight: 0 }}>
+          <Container height="50%" minHeight="0">
+            <NeedsYouRail onOpenApproval={approvalSheet.open} />
+          </Container>
+          <Container height="50%" minHeight="0">
+            <RunningRail />
+          </Container>
+        </Stack>
+      }
       railToggleLabel={tShell("needsYouToggle")}
       skipLinkLabel={t("skipToContent")}
       subnav={<SectionSubNav active={active} />}

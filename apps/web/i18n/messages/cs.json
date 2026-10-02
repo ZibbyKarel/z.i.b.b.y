@@ -2203,7 +2203,11 @@
     "needsYouToggle": "Potřebuje tě",
     "needsYouApprove": "Schválit",
     "needsYouDeny": "Zamítnout",
-    "needsYouOpen": "Otevřít detail schválení pro {agentName}"
+    "needsYouOpen": "Otevřít detail schválení pro {agentName}",
+    "running": "Právě běží",
+    "runningEmpty": "Nic neběží",
+    "runningStop": "Zastavit",
+    "runningRestart": "Spustit znovu"
   },
   "orgMap": {
     "cooAvatarLink": "Zobrazit lidi ve stavu: {state}",

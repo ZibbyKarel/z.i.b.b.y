@@ -2203,7 +2203,11 @@
     "needsYouToggle": "Needs you",
     "needsYouApprove": "Approve",
     "needsYouDeny": "Deny",
-    "needsYouOpen": "Open approval details for {agentName}"
+    "needsYouOpen": "Open approval details for {agentName}",
+    "running": "Running now",
+    "runningEmpty": "Nothing is running",
+    "runningStop": "Stop",
+    "runningRestart": "Restart"
   },
   "orgMap": {
     "cooAvatarLink": "Show people in state: {state}",
