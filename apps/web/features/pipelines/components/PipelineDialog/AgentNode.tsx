@@ -66,7 +66,9 @@ const glyphOf = (node: GraphNode, agents: Agent[]): IconName =>
     ? "shield"
     : node.type === "tool"
       ? "gear"
-      : ((agents.find((a) => a.id === node.agent)?.glyph as IconName | undefined) ?? "bot");
+      : node.type === "pipeline"
+        ? "flow"
+        : ((agents.find((a) => a.id === node.agent)?.glyph as IconName | undefined) ?? "bot");
 
 const avatarOf = (node: GraphNode, agents: Agent[]): string | undefined =>
   node.type === "agent" ? agents.find((a) => a.id === node.agent)?.avatar : undefined;
@@ -102,7 +104,13 @@ export function AgentNode({
 }: AgentNodeProps) {
   const t = useTranslations("forms.pipeline");
   const label =
-    node.type === "verify" ? t("typeVerify") : node.type === "tool" ? t("typeTool") : node.agent;
+    node.type === "verify"
+      ? t("typeVerify")
+      : node.type === "tool"
+        ? t("typeTool")
+        : node.type === "pipeline"
+          ? node.pipeline || t("typePipeline")
+          : node.agent;
   const clickable = readOnly && Boolean(onNodeClick);
 
   const flowTarget = pending?.kind === "flow" && pending.from !== node.id;
@@ -255,8 +263,12 @@ export function AgentNode({
         </Stack>
       ) : (
         <Typography mono size="2xs" style={{ marginTop: 6 }} type="note" variant="tertiary">
-          {node.commands.split("\n").filter((c) => c.trim()).length ||
-            (node.type === "tool" ? t("commandsNone") : t("checksDefault"))}
+          {node.type === "pipeline"
+            ? node.pipeline
+              ? t("typePipeline")
+              : t("pipelineNone")
+            : node.commands.split("\n").filter((c) => c.trim()).length ||
+              (node.type === "tool" ? t("commandsNone") : t("checksDefault"))}
         </Typography>
       )}
 

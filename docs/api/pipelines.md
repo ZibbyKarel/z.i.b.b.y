@@ -339,6 +339,30 @@ project/default checks.
 - A tool that pays for something outside the model (a cloud image API) appends
   `{"costUsd": n}` lines to `<stageDir>/costs.jsonl`; see _Budget_.
 
+### Phase: pipeline (sub-run)
+
+Runs another pipeline as one step: `pipeline: <id>`, with `consumes` and `produces`
+required and `agent`/`model`/`thinking`/`commands` rejected. A phase cannot name its
+own pipeline.
+
+- The child starts with the handoff file's content as its `input`, the parent's
+  workspace, no task, and `parentRunId` set. The parent records `pendingChild` and
+  waits durably.
+- **Budget:** the child shares the parent's cap — it gets at most the parent's remaining
+  spend (`min(own cap, remaining)`), and its total spend becomes the stage's `costUsd`.
+- **Settling:** child `done` → its latest artifact is written to `<stage>/<produces>`
+  and the parent continues; child `failed`/`interrupted` (or done without an artifact)
+  → the stage errors and the normal loop/park/fail rules apply.
+- **Parking:** a child parked (or paused on a limit) parks the parent with
+  `parkedReason: "child"`; the parent un-parks when the child runs again.
+- **Guards:** a cycle in the ancestor chain or a depth over 3 refuses the stage with an
+  error (`sub-run.error.txt` in the stage dir).
+- **Stop:** stopping the parent stops the child; the parent then lands `interrupted`.
+- **Restart:** a parent with `pendingChild` is never failed on boot; it re-settles from
+  the child's persisted state (a missing child counts as failed).
+- Child runs are hidden from the task feed; the parent's stage links to them via
+  `childRunId`.
+
 ### Approval gate (`approval: ask`)
 
 Any phase type may carry `approval: ask` — an operator checkpoint, absent (the default)

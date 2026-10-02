@@ -13,6 +13,8 @@ import {
   Typography,
   stateToneVar,
 } from "@zibby/design-system";
+import Link from "next/link";
+import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { formatCostUsd } from "../../../utils/cost";
@@ -43,6 +45,7 @@ export interface PipelineStageTimelineProps {
 
 export enum PipelineStageTimelineTestId {
   Root = "pipeline-stage-timeline",
+  ChildRunLink = "pipeline-stage-child-link",
   Connector = "pipeline-stage-connector",
   RowToggle = "pipeline-stage-row-toggle",
 }
@@ -362,8 +365,14 @@ export function PipelineStageTimeline({
             const agent = agentId ? agentsById.get(agentId) : undefined;
             const glyph: IconName =
               (agent?.glyph as IconName | undefined) ??
-              (phaseDef?.type === "tool" ? "gear" : phaseDef?.type === "verify" ? "check" : "bot");
-            const agentName = agent?.name ?? agentId ?? node.phaseId;
+              (phaseDef?.type === "tool"
+                ? "gear"
+                : phaseDef?.type === "verify"
+                  ? "check"
+                  : phaseDef?.type === "pipeline"
+                    ? "flow"
+                    : "bot");
+            const agentName = agent?.name ?? agentId ?? phaseDef?.pipeline ?? node.phaseId;
             const running = displayStatus === "running";
 
             const attempts = node.main ? [...node.priorAttempts, node.main] : node.priorAttempts;
@@ -495,6 +504,17 @@ export function PipelineStageTimeline({
                           {produced}
                         </Typography>
                       </Stack>
+                    )}
+
+                    {node.main?.childRunId && (
+                      <Link
+                        data-testid={PipelineStageTimelineTestId.ChildRunLink}
+                        href={`/activity/runs/${encodeURIComponent(node.main.childRunId)}` as Route}
+                      >
+                        <Typography mono size="2xs" tone="accent" type="note">
+                          {t("childRunLink")}
+                        </Typography>
+                      </Link>
                     )}
 
                     {isPlaceholder && (

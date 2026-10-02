@@ -330,4 +330,19 @@ describe("PipelineStageTimeline (36)", () => {
     );
     expect(screen.getByTestId(IconTileTestId.Image)).toHaveAttribute("src", "/avatars/koder.png");
   });
+  it("links a sub-run stage to its child run's detail page", () => {
+    render(
+      timeline({
+        stageRuns: [
+          { phaseId: "sub", runId: "child_1", attempt: 1, status: "done", childRunId: "child_1" },
+          { phaseId: "build", runId: "delivery_1.build_1", attempt: 1, status: "done" },
+        ],
+      }),
+    );
+    expect(screen.getAllByTestId(PipelineStageTimelineTestId.ChildRunLink)).toHaveLength(1);
+    expect(screen.getByTestId(PipelineStageTimelineTestId.ChildRunLink)).toHaveAttribute(
+      "href",
+      "/activity/runs/child_1",
+    );
+  });
 });

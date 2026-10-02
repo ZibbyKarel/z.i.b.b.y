@@ -48,9 +48,11 @@ export type PhaseLoop = z.infer<typeof PhaseLoopSchema>;
  * parses unchanged) spawns the phase agent; `verify` runs deterministic shell
  * checks in the project checkout (no model, no tokens, no intents) — the "tester"
  * of the delivery loop; `tool` runs deterministic shell `commands` IN THE STAGE
- * SANDBOX (consumes → commands → produces) — a transform step between agents.
+ * SANDBOX (consumes → commands → produces) — a transform step between agents;
+ * `pipeline` runs another pipeline as a child run (sub-run): `consumes` is its input,
+ * its latest produced file comes back as `produces`.
  */
-export const PipelinePhaseTypeSchema = z.enum(["agent", "verify", "tool"]);
+export const PipelinePhaseTypeSchema = z.enum(["agent", "verify", "tool", "pipeline"]);
 export type PipelinePhaseType = z.infer<typeof PipelinePhaseTypeSchema>;
 
 /**
@@ -74,6 +76,8 @@ export const PipelinePhaseSchema = z.object({
   id: z.string().min(1),
   type: PipelinePhaseTypeSchema.default("agent"),
   agent: AgentIdSchema.optional(),
+  /** `pipeline` phase only: the id of the pipeline run as the sub-run. */
+  pipeline: z.string().min(1).optional(),
   consumes: z.string().min(1).optional(),
   produces: z.string().min(1).optional(),
   model: AgentModelSchema.optional(),
@@ -290,6 +294,30 @@ function refinePipeline(p: z.infer<typeof PipelineObject>, ctx: z.RefinementCtx)
             path: ["phases", i, key],
           });
       }
+    } else if (ph.type === "pipeline") {
+      // pipeline: a sub-run — it names the child, hands it a file and takes one back.
+      for (const key of ["pipeline", "consumes", "produces"] as const) {
+        if (ph[key] === undefined)
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `a pipeline phase requires "${key}"`,
+            path: ["phases", i, key],
+          });
+      }
+      for (const key of ["agent", "model", "thinking", "commands"] as const) {
+        if (ph[key] !== undefined)
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `a pipeline phase must not set "${key}"`,
+            path: ["phases", i, key],
+          });
+      }
+      if (ph.pipeline !== undefined && ph.pipeline === p.id)
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "a pipeline phase cannot run its own pipeline",
+          path: ["phases", i, "pipeline"],
+        });
     } else {
       // verify: deterministic checks — an agent makes no sense here.
       if (ph.agent !== undefined) {

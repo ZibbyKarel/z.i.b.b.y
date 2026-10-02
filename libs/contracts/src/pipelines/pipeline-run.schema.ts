@@ -74,6 +74,8 @@ export const StageRunSchema = z.object({
    */
   employeeId: z.string().optional(),
   employeeName: z.string().optional(),
+  /** A `pipeline` phase: the child (sub-run) `pipelineRunId` this stage ran. */
+  childRunId: z.string().min(1).optional(),
 });
 export type StageRun = z.infer<typeof StageRunSchema>;
 
@@ -105,6 +107,9 @@ export const ParkedReasonSchema = z.enum([
   "gate",
   // P1-03: the run's spend passed its cap; durable, `pendingGate` resumes it.
   "budget",
+  // A `pipeline` phase's sub-run is parked (or paused); durable, the parent continues
+  // on its own once the child settles (`pendingChild`).
+  "child",
 ]);
 export type ParkedReason = z.infer<typeof ParkedReasonSchema>;
 
@@ -139,6 +144,21 @@ export type ParkedDetail = z.infer<typeof ParkedDetailSchema>;
 export const PipelineRunSchema = z.object({
   pipelineRunId: z.string().min(1),
   pipelineId: AgentIdSchema,
+  /** Set on a sub-run: the parent run whose `pipeline` phase started it. */
+  parentRunId: z.string().min(1).optional(),
+  /**
+   * The parent side of a running sub-run: which phase waits on which child, plus what
+   * the driver needs to re-enter that phase when the child settles (durable).
+   */
+  pendingChild: z
+    .object({
+      phaseId: z.string().min(1),
+      childRunId: z.string().min(1),
+      attempt: z.number().int().min(1),
+      stageDir: z.string().min(1),
+      handoffSource: z.string().nullable(),
+    })
+    .optional(),
   status: PipelineStateSchema,
   /** The task record this run was dispatched from, when it was born from one. */
   taskId: z.string().optional(),

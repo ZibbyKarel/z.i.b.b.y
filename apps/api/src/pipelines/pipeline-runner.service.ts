@@ -76,6 +76,27 @@ const REPO_BIN_DIR = path.resolve(__dirname, "..", "..", "..", "..", "node_modul
 const MAX_LISTED = 50;
 const AGGREGATE_FILE = "run.json";
 
+/** How deep `pipeline` phases may nest sub-runs (parent → child → grandchild …). */
+const MAX_SUB_RUN_DEPTH = 3;
+
+/** Total spend of a run: model + external cost over every stage. */
+function runSpend(run: PipelineRun): number {
+  return run.stageRuns.reduce((sum, s) => sum + (s.costUsd ?? 0) + (s.externalCostUsd ?? 0), 0);
+}
+
+/**
+ * P1-03 snapshot of the spend cap at start. A sub-run shares its parent's cap: it gets
+ * at most the parent's remaining spend, even when its own pipeline is uncapped.
+ */
+function budgetSnapshot(
+  own: Pipeline["budget"],
+  parentRemaining: number | undefined,
+): { budget?: NonNullable<PipelineRun["budget"]> } {
+  if (parentRemaining === undefined) return own ? { budget: { ...own, spentUsd: 0 } } : {};
+  const maxCostUsd = Math.min(own?.maxCostUsd ?? parentRemaining, parentRemaining);
+  return { budget: { maxCostUsd, warnAtPct: own?.warnAtPct ?? 70, spentUsd: 0 } };
+}
+
 // Re-exported so the controller can map it to a 404 without importing the core.
 export { RunNotFoundError } from "../runner/runner-core";
 
@@ -240,6 +261,8 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     });
     await this.core.init();
     await this.reconstruct();
+    // Registered after the sweep so reconstruct's own writes never settle a parent twice.
+    this.events.on("status", (run: PipelineRun) => void this.onChildStatus(run));
   }
 
   async onModuleDestroy(): Promise<void> {
@@ -279,6 +302,11 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
      * existing caller (no behaviour change).
      */
     input?: string,
+    /**
+     * Sub-run: the parent run whose `pipeline` phase starts this one, and the parent's
+     * remaining spend (the child shares the parent's cap — it never gets more).
+     */
+    child?: { parentRunId: string; maxCostUsd?: number },
   ): Promise<PipelineRun> {
     // Throws PipelineNotFoundError / InvalidPipelineIdError when unknown → 404.
     const pipeline = await this.pipelines.get(pipelineId);
@@ -336,7 +364,8 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       ...(taskOutput ? { outputsOverride: this.toOutputsOverride(taskOutput, pipeline) } : {}),
       // P1-03: snapshot the spend cap so a later edit of the pipeline never moves
       // the goalposts under a run already in flight.
-      ...(pipeline.budget ? { budget: { ...pipeline.budget, spentUsd: 0 } } : {}),
+      ...budgetSnapshot(pipeline.budget, child?.maxCostUsd),
+      ...(child ? { parentRunId: child.parentRunId } : {}),
     };
     this.runs.set(pipelineRunId, run);
     await this.writeAggregate(run);
@@ -715,6 +744,18 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
    */
   async stop(pipelineRunId: string): Promise<void> {
     const run = this.runs.get(pipelineRunId);
+    // A parent waiting on a running sub-run stops the child; the child's
+    // `interrupted` re-enters the parent, which then lands `interrupted` too.
+    if (run?.status === "running" && run.pendingChild) {
+      this.stopRequested.add(pipelineRunId);
+      try {
+        await this.stop(run.pendingChild.childRunId);
+      } catch (error) {
+        this.stopRequested.delete(pipelineRunId);
+        throw error;
+      }
+      return;
+    }
     if (!run || run.status !== "running" || !run.currentStageRunId) {
       throw new PipelineRunNotStoppableError(pipelineRunId);
     }
@@ -898,6 +939,8 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       retries: Map<string, number>;
       /** Phase 9.3: resume-context for the FIRST re-driven phase (limit/parked resume). */
       resumeContext?: string;
+      /** The settled stage of the `pipeline` phase at `cursor` (its sub-run finished). */
+      child?: StageRun;
     },
   ): Promise<void> {
     const byId = new Map(pipeline.phases.map((p) => [p.id, p]));
@@ -915,11 +958,16 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     // Phase 9.3: a continuation prefix for the next phase to run — set on a re-driven
     // resume (limit/parked) and on a loop back-edge; consumed once, then cleared.
     let pendingResumeContext: string | null = resume?.resumeContext ?? null;
+    // A sub-run that just settled is recorded first, before any boundary check could
+    // park the run and lose it; consumed by the first iteration only.
+    let settledChild: StageRun | undefined = resume?.child;
 
     while (cursor) {
       const phase = byId.get(cursor);
       if (!phase) break; // defensive; superRefine guarantees targets exist
       run.currentStage = phase.id;
+      const settled = settledChild?.phaseId === phase.id ? settledChild : undefined;
+      settledChild = undefined;
 
       // Phase 9 (boundary pause, decision 3b): before spending a stage, halt if the
       // usage window is exhausted — persist the aggregate `paused-limit` with the
@@ -927,7 +975,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // from this same cursor. Fail-open: a stale/headroom reading just proceeds, and a
       // wrongly-dispatched stage that dies on a limit is caught by the mid-stage path.
       const boundary = await this.limits.windowExhausted();
-      if (boundary.exhausted) {
+      if (!settled && boundary.exhausted) {
         run.status = "paused-limit";
         run.resumeAt = boundary.resumeAt ?? (await this.limits.resolveResumeAt(null));
         run.limitResumeCycles = run.limitResumeCycles ?? 0;
@@ -943,7 +991,7 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
 
       // P1-03: the spend cap is checked at the boundary too — after the stage that
       // crossed it, before the next one spends more. Parks durably on a gate approval.
-      if (run.budget && run.budget.spentUsd > run.budget.maxCostUsd) {
+      if (!settled && run.budget && run.budget.spentUsd > run.budget.maxCostUsd) {
         const lastPhaseId = run.stageRuns[run.stageRuns.length - 1]?.phaseId ?? phase.id;
         await this.parkAtGate(run, "budget", {
           phaseId: lastPhaseId,
@@ -1002,20 +1050,9 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // second run of the same phase gets its own folder instead of overwriting the
       // first. A synthetic escalation marker also occupies a slot, which leaves a
       // gap in the numbering, never a clash.
-      const stageCwd = path.join(run.cwd, this.stageDirName(run.stageRuns.length + 1, phase.id));
-      await fs.mkdir(stageCwd, { recursive: true });
-      // P1-T3 (Fáze 3): every stage gets the run's shared `context/` folder linked
-      // in, relative like the handoff symlink (P1-T2) — pipeline-level inputs are
-      // visible from any stage without copying them into each sandbox. `start()`
-      // creates `context/` unconditionally for every run, so this is unconditional
-      // too; a link left dangling has nothing behind it, same as an unused handoff.
-      await fs
-        .symlink(
-          path.relative(stageCwd, path.join(run.cwd, "context")),
-          path.join(stageCwd, "context"),
-        )
-        .catch(() => {});
-      await this.placeHandoff(handoffSource, stageCwd, phase);
+      const stageDir = settled?.dir ?? this.stageDirName(run.stageRuns.length + 1, phase.id);
+      const stageCwd = path.join(run.cwd, stageDir);
+      if (!settled) await this.prepareStageDir(run, stageCwd, handoffSource, phase);
 
       this.log.info("pipeline phase starting", {
         phase: phase.id,
@@ -1026,22 +1063,41 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       const stageResumeContext = pendingResumeContext ?? undefined;
       pendingResumeContext = null; // consumed by this phase only
       let stageRun: StageRun;
-      try {
-        stageRun = await this.runStage(
-          run,
-          phase,
-          stageCwd,
-          attempt,
-          project,
-          stageResumeContext,
-          delegates,
-          lease,
-        );
-      } finally {
-        // Released on EVERY terminal path (done/error/interrupted/paused-limit) —
-        // `runStage` only returns once `waitForStage` sees one of those, so the
-        // lease never outlives the dispatch it was acquired for.
-        if (lease) this.employees.release(lease);
+      if (phase.type === "pipeline") {
+        // A sub-run: the parent waits durably (`pendingChild`); the driver returns and
+        // re-enters this phase via onChildStatus once the child settles.
+        const refused =
+          settled ??
+          (await this.startChild(
+            run,
+            phase,
+            stageDir,
+            attempt,
+            handoffSource,
+            retries,
+            phaseIds,
+            project,
+          ));
+        if (!refused) return;
+        stageRun = refused;
+      } else {
+        try {
+          stageRun = await this.runStage(
+            run,
+            phase,
+            stageCwd,
+            attempt,
+            project,
+            stageResumeContext,
+            delegates,
+            lease,
+          );
+        } finally {
+          // Released on EVERY terminal path (done/error/interrupted/paused-limit) —
+          // `runStage` only returns once `waitForStage` sees one of those, so the
+          // lease never outlives the dispatch it was acquired for.
+          if (lease) this.employees.release(lease);
+        }
       }
       // The stage has reached a terminal/paused state and (when terminal) is about
       // to be appended to `stageRuns` — its log is readable from there now, so drop
@@ -2177,6 +2233,182 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
+  /**
+   * Build a fresh stage sandbox: the folder, the run's shared `context/` linked in
+   * (P1-T3, relative like the handoff symlink) and the phase's `consumes` handoff.
+   */
+  private async prepareStageDir(
+    run: PipelineRun,
+    stageCwd: string,
+    handoffSource: string | null,
+    phase: PipelinePhase,
+  ): Promise<void> {
+    await fs.mkdir(stageCwd, { recursive: true });
+    await fs
+      .symlink(
+        path.relative(stageCwd, path.join(run.cwd, "context")),
+        path.join(stageCwd, "context"),
+      )
+      .catch(() => {});
+    await this.placeHandoff(handoffSource, stageCwd, phase);
+  }
+
+  /**
+   * Start a `pipeline` phase's sub-run. The child gets the handoff file's content as
+   * its input, the parent's workspace and the parent's remaining spend as its cap.
+   * Returns null once the child is running (the parent now waits on `pendingChild`),
+   * or an `error` stage when the child cannot start (unknown pipeline, cycle, depth).
+   */
+  private async startChild(
+    run: PipelineRun,
+    phase: PipelinePhase,
+    stageDir: string,
+    attempt: number,
+    handoffSource: string | null,
+    retries: Map<string, number>,
+    phaseIds: readonly string[],
+    project: Project | null,
+  ): Promise<StageRun | null> {
+    const fail = async (reason: string): Promise<StageRun> => {
+      this.log.warn("sub-run refused", { phase: phase.id, child: phase.pipeline, reason });
+      await fs
+        .writeFile(path.join(run.cwd, stageDir, "sub-run.error.txt"), reason, "utf8")
+        .catch(() => {});
+      return {
+        phaseId: phase.id,
+        runId: `${run.pipelineRunId}.${phase.id}.sub-run`,
+        attempt,
+        status: "error",
+        dir: stageDir,
+      };
+    };
+    const childId = phase.pipeline;
+    if (!childId) return fail("no child pipeline named");
+    const ancestry = await this.ancestry(run);
+    if (ancestry.includes(childId)) return fail(`cycle: ${[...ancestry, childId].join(" → ")}`);
+    if (ancestry.length > MAX_SUB_RUN_DEPTH)
+      return fail(`sub-runs nest at most ${MAX_SUB_RUN_DEPTH} deep`);
+    const input = handoffSource ? await fs.readFile(handoffSource, "utf8").catch(() => "") : "";
+    let child: PipelineRun;
+    try {
+      child = await this.start(
+        childId,
+        undefined,
+        project?.id,
+        run.matchedTerms,
+        run.workspace,
+        undefined,
+        input,
+        {
+          parentRunId: run.pipelineRunId,
+          ...(run.budget
+            ? { maxCostUsd: Math.max(0, run.budget.maxCostUsd - run.budget.spentUsd) }
+            : {}),
+        },
+      );
+    } catch (error) {
+      return fail(error instanceof Error ? error.message : String(error));
+    }
+    run.pendingChild = {
+      phaseId: phase.id,
+      childRunId: child.pipelineRunId,
+      attempt,
+      stageDir,
+      handoffSource,
+    };
+    run.retries = Object.fromEntries(retries);
+    await this.writeAggregate(run);
+    await this.writeProgress(run, phaseIds);
+    this.log.info("sub-run started", { phase: phase.id, child: child.pipelineRunId });
+    // A child born terminal (e.g. its worktree setup failed) emitted before we waited.
+    if (child.status !== "running") void this.onChildStatus(child);
+    return null;
+  }
+
+  /** Pipeline ids from this run up through its parents (this run first). */
+  private async ancestry(run: PipelineRun): Promise<string[]> {
+    const ids = [run.pipelineId];
+    let parentId = run.parentRunId;
+    while (parentId && ids.length <= MAX_SUB_RUN_DEPTH + 1) {
+      const parent = this.runs.get(parentId) ?? (await this.readAggregate(parentId));
+      if (!parent) break;
+      ids.push(parent.pipelineId);
+      parentId = parent.parentRunId;
+    }
+    return ids;
+  }
+
+  /**
+   * Mirror a sub-run's state onto the parent waiting on it: parked/paused → the parent
+   * parks (`child`), running → it runs again, terminal → the parent's `pipeline` stage
+   * settles (the child's latest artifact becomes its `produces`, the child's spend its
+   * cost) and the driver re-enters that phase.
+   */
+  private async onChildStatus(child: PipelineRun): Promise<void> {
+    if (!child.parentRunId) return;
+    try {
+      const parent =
+        this.runs.get(child.parentRunId) ?? (await this.readAggregate(child.parentRunId));
+      const pending = parent?.pendingChild;
+      if (!parent || !pending || pending.childRunId !== child.pipelineRunId) return;
+      this.runs.set(parent.pipelineRunId, parent);
+      if (child.status === "running") {
+        if (parent.status === "parked" && parent.parkedReason === "child") {
+          parent.status = "running";
+          delete parent.parkedReason;
+          await this.writeAggregate(parent);
+        }
+        return;
+      }
+      if (child.status === "parked" || child.status === "paused-limit") {
+        if (parent.status !== "parked") {
+          parent.status = "parked";
+          parent.parkedReason = "child";
+          await this.writeAggregate(parent);
+        }
+        return;
+      }
+      delete parent.pendingChild; // settle exactly once
+      const pipeline = await this.pipelines.get(parent.pipelineId);
+      const phase = pipeline.phases.find((p) => p.id === pending.phaseId);
+      let status: StageRun["status"] =
+        child.status === "done" ? "done" : child.status === "interrupted" ? "interrupted" : "error";
+      if (status === "done" && phase?.produces) {
+        const artifact = await this.readLatestArtifact(child.pipelineRunId);
+        const dest = this.resolveInside(path.join(parent.cwd, pending.stageDir), phase.produces);
+        if (artifact && dest) await fs.writeFile(dest, artifact.content, "utf8");
+        else status = "error";
+      }
+      const stageRun: StageRun = {
+        phaseId: pending.phaseId,
+        runId: child.pipelineRunId,
+        childRunId: child.pipelineRunId,
+        attempt: pending.attempt,
+        status,
+        dir: pending.stageDir,
+        costUsd: runSpend(child),
+      };
+      parent.status = "running";
+      delete parent.parkedReason;
+      await this.writeAggregate(parent);
+      const project = await this.projectForRun(parent);
+      const traceId = this.trace.getTraceId() ?? randomUUID();
+      void this.trace.run({ traceId, runId: parent.pipelineRunId }, () =>
+        this.drive(parent, pipeline, project, {
+          cursor: pending.phaseId,
+          handoffSource: pending.handoffSource,
+          retries: new Map(Object.entries(parent.retries ?? {})),
+          child: stageRun,
+        }),
+      );
+    } catch (error) {
+      this.log.error("sub-run settle failed", {
+        child: child.pipelineRunId,
+        err: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   /** Write the failed stage's log tail as the handoff context for the retry. */
   private async writeFailureContext(
     run: PipelineRun,
@@ -2419,9 +2651,12 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       // `output` parking (a PR-gate wait after the chain already finished) has no live
       // child either — it is durable like `retries` and survives the restart parked.
       // `gate`/`budget` (P1-02/03) park at a phase boundary with no child — durable too.
-      const durableParks: (string | undefined)[] = ["retries", "output", "gate", "budget"];
+      const durableParks: (string | undefined)[] = ["retries", "output", "gate", "budget", "child"];
       const approvalParked = run.status === "parked" && !durableParks.includes(run.parkedReason);
-      if ((run.status === "running" && !survivingOrphan) || approvalParked) {
+      // A parent waiting on a sub-run has no child process of its own — it is settled
+      // from the child's state right after this sweep.
+      const waitsOnChild = run.pendingChild !== undefined;
+      if ((run.status === "running" && !survivingOrphan && !waitsOnChild) || approvalParked) {
         run = {
           ...run,
           status: "failed",
@@ -2432,6 +2667,23 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         await this.writeAggregate(run);
       }
       this.runs.set(run.pipelineRunId, run);
+    }
+    // Second pass, once every aggregate is loaded: re-sync each waiting parent with
+    // its sub-run (which the sweep above may just have failed). A vanished child
+    // fails the parent's stage like a failed one.
+    for (const run of [...this.runs.values()]) {
+      const pending = run.pendingChild;
+      if (!pending) continue;
+      const child = this.runs.get(pending.childRunId);
+      await this.onChildStatus(
+        child ?? {
+          ...run,
+          pipelineRunId: pending.childRunId,
+          parentRunId: run.pipelineRunId,
+          status: "failed",
+          stageRuns: [],
+        },
+      );
     }
   }
 }

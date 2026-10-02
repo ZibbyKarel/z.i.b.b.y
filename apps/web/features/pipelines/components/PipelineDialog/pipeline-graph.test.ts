@@ -199,6 +199,51 @@ describe("graphToPhases", () => {
     expect(phases[2]).toMatchObject({ id: "a2", consumes: "draft.md" });
   });
 
+  it("round-trips a pipeline (sub-run) step and validates the chosen child", () => {
+    const pipeline: Pipeline = {
+      ...existing,
+      phases: [
+        {
+          id: "a1",
+          type: "agent",
+          agent: "writer",
+          consumes: "task.md",
+          produces: "draft.md",
+          model: "opus",
+          thinking: "high",
+        },
+        {
+          id: "sub",
+          type: "pipeline",
+          pipeline: "child",
+          consumes: "draft.md",
+          produces: "sub.md",
+          approval: "ask",
+        },
+      ],
+    };
+    const graph = phasesToGraph(pipeline, agents);
+    const phases = graphToPhases(graph, "task.md");
+    expect(phases[1]).toEqual({
+      id: "sub",
+      type: "pipeline",
+      pipeline: "child",
+      consumes: "draft.md",
+      produces: "sub.md",
+      approval: "ask",
+    });
+    expect(
+      CreatePipelineSchema.safeParse({ id: "p", phases, instructions: "x", department: "dev" })
+        .success,
+    ).toBe(true);
+    expect(validateGraph(graph, "P").ok).toBe(true);
+    const unset = {
+      ...graph,
+      nodes: graph.nodes.map((n) => (n.type === "pipeline" ? { ...n, pipeline: "" } : n)),
+    };
+    expect(validateGraph(unset, "P")).toEqual({ ok: false, reason: "pipeline" });
+  });
+
   it("preserves a loop.to:'fail' across a round-trip (loose loop, not droppable)", () => {
     const pipeline: Pipeline = {
       ...existing,

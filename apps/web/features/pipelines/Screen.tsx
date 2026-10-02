@@ -40,6 +40,7 @@ import {
   attemptsFromStageRuns,
   graphToPhases,
   makeNode,
+  makeStepNode,
   phasesToGraph,
   validateGraph,
 } from "./components/PipelineDialog/pipeline-graph";
@@ -133,6 +134,13 @@ export function Screen({ selectedId: routeId, basePath = "/pipelines" }: ScreenP
       const i = g.nodes.length;
       const node = makeNode(agent, i + 1, x ?? 60 + i * 26, y ?? 150 + i * 18);
       return { ...g, nodes: [...g.nodes, node] };
+    });
+    setShowPalette(false);
+  };
+  const addStepToEdit = (type: "verify" | "tool" | "pipeline") => {
+    setEditGraph((g) => {
+      const i = g.nodes.length;
+      return { ...g, nodes: [...g.nodes, makeStepNode(type, i + 1, 60 + i * 26, 150 + i * 18)] };
     });
     setShowPalette(false);
   };
@@ -367,6 +375,7 @@ export function Screen({ selectedId: routeId, basePath = "/pipelines" }: ScreenP
                   agents={agents}
                   closeLabel={t("common.close")}
                   onAdd={(agentId) => addAgentToEdit(agentId)}
+                  onAddStep={addStepToEdit}
                   onClose={() => setShowPalette(false)}
                 />
               )}
@@ -378,7 +387,13 @@ export function Screen({ selectedId: routeId, basePath = "/pipelines" }: ScreenP
                 readOnly={!editing}
                 setGraph={editing ? setEditGraph : noop}
               />
-              {editing && <StepSettings graph={editGraph} setGraph={setEditGraph} />}
+              {editing && (
+                <StepSettings
+                  excludePipelineId={selected.id}
+                  graph={editGraph}
+                  setGraph={setEditGraph}
+                />
+              )}
             </Container>
           </Panel>
 

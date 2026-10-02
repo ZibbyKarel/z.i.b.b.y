@@ -80,7 +80,11 @@ export function PipelineCard({
                   <Stack inline align="center" direction="row" gap="50">
                     <Icon name={glyphForPhase(ph, agents)} size="xs" tone="accent" />
                     <Typography mono size="xs" type="note" variant="secondary">
-                      {ph.type === "verify" ? t("verify") : ph.agent}
+                      {ph.type === "verify"
+                        ? t("verify")
+                        : ph.type === "pipeline"
+                          ? ph.pipeline
+                          : ph.agent}
                     </Typography>
                   </Stack>
                   {i < pipeline.phases.length - 1 && <Icon name="arrow" size="xs" tone="faint" />}

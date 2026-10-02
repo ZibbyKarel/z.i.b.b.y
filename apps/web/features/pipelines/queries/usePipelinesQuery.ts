@@ -24,6 +24,7 @@ function selectPipelines(response: { body: ContractPipeline[] }): Pipeline[] {
     phases: p.phases.map((ph) => ({
       id: ph.id,
       type: ph.type,
+      pipeline: ph.pipeline,
       agent: ph.agent,
       consumes: ph.consumes,
       produces: ph.produces,

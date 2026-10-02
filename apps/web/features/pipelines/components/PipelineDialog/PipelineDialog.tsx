@@ -95,7 +95,7 @@ export function PipelineDialog({
     });
   };
 
-  const addStep = (type: "verify" | "tool") =>
+  const addStep = (type: "verify" | "tool" | "pipeline") =>
     setGraph((g) => {
       const i = g.nodes.length;
       return { ...g, nodes: [...g.nodes, makeStepNode(type, i + 1, 60 + i * 26, 150 + i * 18)] };
@@ -267,7 +267,7 @@ export function PipelineDialog({
             onAddStep={addStep}
           />
           <PipelineCanvas agents={agents} graph={graph} onAddAgent={addAgent} setGraph={setGraph} />
-          <StepSettings graph={graph} setGraph={setGraph} />
+          <StepSettings excludePipelineId={initial?.id} graph={graph} setGraph={setGraph} />
         </Container>
       </Container>
     </Dialog>

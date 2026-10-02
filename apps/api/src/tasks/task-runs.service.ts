@@ -362,6 +362,8 @@ export class TaskRunsService {
         if (it.verifier.runRef) childRunIds.add(it.verifier.runRef);
       }
     }
+    // A `pipeline` phase's sub-run is execution detail of its parent run.
+    for (const p of pipelines) if (p.parentRunId) childRunIds.add(p.pipelineRunId);
 
     const runs: TaskRun[] = [
       ...agents.map((r) =>

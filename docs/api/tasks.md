@@ -650,7 +650,9 @@ only ever started by creating a task (`POST /api/tasks`); starting is not part o
 this surface. `TaskRunSchema` is a superset of the feed row plus an optional
 `processor: { kind, id, name }` (the name falls back to the id when the definition
 was deleted). Goal maker/verifier child runs are folded into the feed (not peer
-rows), but stay reachable from the goal's detail view. `TaskRun.department` (ZB-04a) is
+rows), but stay reachable from the goal's detail view. Pipeline sub-runs (a run with
+`parentRunId`, started by a `pipeline` phase) are hidden the same way; the parent's
+stage links to them. `TaskRun.department` (ZB-04a) is
 enriched from the underlying task's `department` field in `enrichRunWithTask` — the same
 value the parent/subtask read model above uses.
 

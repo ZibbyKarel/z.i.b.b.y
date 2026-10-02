@@ -35,7 +35,9 @@ export const INITIAL_ASSIGNMENT = "task.md";
 export interface GraphNode {
   /** Durable phase id — loop targets reference it; an edited pipeline keeps it. */
   id: string;
-  type: "agent" | "verify" | "tool";
+  type: "agent" | "verify" | "tool" | "pipeline";
+  /** `pipeline` step: the child pipeline id this step runs as a sub-run ("" = not chosen yet). */
+  pipeline?: string;
   /** Agent id (empty for verify/tool phases). */
   agent: string;
   /** Output file this node writes (= the `consumes` of its flow successor). */
@@ -113,9 +115,9 @@ export function makeNode(agent: Agent, index: number, x: number, y: number): Gra
   };
 }
 
-/** A fresh verify or tool node (no agent) from the palette. */
+/** A fresh verify, tool or sub-workflow (`pipeline`) node (no agent) from the palette. */
 export function makeStepNode(
-  type: "verify" | "tool",
+  type: "verify" | "tool" | "pipeline",
   index: number,
   x: number,
   y: number,
@@ -124,7 +126,8 @@ export function makeStepNode(
     id: guid("n"),
     type,
     agent: "",
-    produces: type === "tool" ? `step-${index}.md` : "",
+    ...(type === "pipeline" ? { pipeline: "" } : {}),
+    produces: type === "verify" ? "" : `step-${index}.md`,
     commands: "",
     model: "sonnet",
     thinking: "medium",
@@ -149,6 +152,7 @@ export function phasesToGraph(initial: Pipeline | undefined, agents: Agent[]): P
   const nodes: GraphNode[] = initial.phases.map((ph, i) => ({
     id: ph.id ?? `phase-${i + 1}`,
     type: ph.type,
+    ...(ph.type === "pipeline" ? { pipeline: ph.pipeline ?? "" } : {}),
     agent: ph.type === "agent" ? (ph.agent ?? agents[0]?.id ?? "") : "",
     produces:
       ph.produces ?? (ph.type === "verify" ? "" : defaultProduces(ph.agent ?? "output", i + 1)),
@@ -272,6 +276,17 @@ export function graphToPhases(graph: PipelineGraph, assignment: string): Contrac
     const consumes = handoff;
     const produces = node.produces.trim();
     handoff = produces || handoff;
+    if (node.type === "pipeline") {
+      return {
+        id: node.id,
+        type: "pipeline" as const,
+        pipeline: node.pipeline ?? "",
+        consumes,
+        produces,
+        ...(loop ? { loop } : {}),
+        ...approval,
+      };
+    }
     if (node.type === "tool") {
       return {
         id: node.id,
@@ -302,7 +317,7 @@ export function graphToPhases(graph: PipelineGraph, assignment: string): Contrac
 export interface GraphValidity {
   ok: boolean;
   /** i18n key under `forms.pipeline.invalid.*` describing the first problem. */
-  reason?: "name" | "empty" | "agent" | "produces" | "rework" | "commands";
+  reason?: "name" | "empty" | "agent" | "produces" | "rework" | "commands" | "pipeline";
 }
 
 /**
@@ -317,6 +332,10 @@ export function validateGraph(graph: PipelineGraph, name: string): GraphValidity
   for (const n of graph.nodes) {
     if (n.type === "agent") {
       if (!n.agent) return { ok: false, reason: "agent" };
+      if (n.produces.trim().length === 0) return { ok: false, reason: "produces" };
+    }
+    if (n.type === "pipeline") {
+      if (!n.pipeline) return { ok: false, reason: "pipeline" };
       if (n.produces.trim().length === 0) return { ok: false, reason: "produces" };
     }
     if (n.type === "tool") {

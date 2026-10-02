@@ -247,6 +247,37 @@ describe("pipeline schema", () => {
   });
 });
 
+describe("pipeline phase type `pipeline` (sub-run)", () => {
+  const sub = (extra: Record<string, unknown> = {}) => ({
+    id: "sub",
+    type: "pipeline",
+    pipeline: "child",
+    consumes: "in.md",
+    produces: "out.md",
+    ...extra,
+  });
+  const parse = (ph: Record<string, unknown>, id = "parent") =>
+    PipelineSchema.safeParse({ id, phases: [ph], instructions: "x" });
+
+  it("accepts a valid pipeline phase", () => {
+    expect(parse(sub()).success).toBe(true);
+  });
+
+  it.each(["pipeline", "consumes", "produces"])("rejects a pipeline phase missing %s", (key) => {
+    const ph: Record<string, unknown> = sub();
+    delete ph[key];
+    expect(parse(ph).success).toBe(false);
+  });
+
+  it("rejects an agent on a pipeline phase", () => {
+    expect(parse(sub({ agent: "writer" })).success).toBe(false);
+  });
+
+  it("rejects a pipeline phase that runs its own pipeline", () => {
+    expect(parse(sub({ pipeline: "parent" })).success).toBe(false);
+  });
+});
+
 describe("pipeline run schema", () => {
   it("aggregates stage runs with a pipeline state", () => {
     const parsed = PipelineRunSchema.safeParse({

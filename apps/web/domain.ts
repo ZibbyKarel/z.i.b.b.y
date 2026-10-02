@@ -71,7 +71,9 @@ export interface PipelinePhase {
   /** Phase id from the definition (loop targets reference it); editing needs it. */
   id?: string;
   /** What the phase executes: an agent session, deterministic verify checks, or a sandbox tool. */
-  type: "agent" | "verify" | "tool";
+  type: "agent" | "verify" | "tool" | "pipeline";
+  /** `pipeline` phase: the id of the child pipeline run as a sub-run. */
+  pipeline?: string;
   agent?: string;
   consumes?: string;
   produces?: string;
@@ -168,5 +170,6 @@ export function glyphForAgent(name: string | undefined, agents: Agent[]): IconNa
 export function glyphForPhase(phase: PipelinePhase, agents: Agent[]): IconName {
   if (phase.type === "verify") return "shield";
   if (phase.type === "tool") return "gear";
+  if (phase.type === "pipeline") return "flow";
   return glyphForAgent(phase.agent, agents);
 }

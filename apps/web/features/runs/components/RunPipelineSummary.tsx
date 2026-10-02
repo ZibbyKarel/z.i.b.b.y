@@ -16,6 +16,12 @@ export interface RunPipelineSummaryProps {
   totalCostUsd?: number;
 }
 
+const PARKED_LABEL = {
+  gate: "parkedGate",
+  budget: "parkedBudget",
+  child: "parkedChild",
+} as const;
+
 /**
  * Run-level facts the unified task row doesn't carry: the spend cap progress
  * (`spent / cap`), why a gate/budget park is waiting, and — for a book pipeline —
@@ -32,16 +38,16 @@ export function RunPipelineSummary({ runId, owner, totalCostUsd }: RunPipelineSu
     ?.phases.some((ph) => ph.produces === "book.md");
 
   const reason =
-    run?.parkedReason === "gate" || run?.parkedReason === "budget" ? run.parkedReason : null;
+    run?.parkedReason === "gate" || run?.parkedReason === "budget" || run?.parkedReason === "child"
+      ? run.parkedReason
+      : null;
   const budget = run?.budget;
   if (!reason && !budget && !(writesBook && run?.cwd) && totalCostUsd == null) return null;
 
   return (
     <Panel data-testid="run-pipeline-summary" padding="250">
       <Stack gap="150">
-        {reason && (
-          <Alert severity="warn">{t(reason === "gate" ? "parkedGate" : "parkedBudget")}</Alert>
-        )}
+        {reason && <Alert severity="warn">{t(PARKED_LABEL[reason])}</Alert>}
         {budget ? (
           <Typography mono size="xs" type="note" variant="secondary">
             {t("budgetSpent", {
