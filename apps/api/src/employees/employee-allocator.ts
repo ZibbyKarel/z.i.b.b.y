@@ -56,12 +56,17 @@ export class EmployeeAllocator {
    * slot is both free AND this call's turn in the FIFO queue has come. Rejects
    * with {@link NoEmployeeError} when the department owns no active employee of
    * that position at all — a park condition, never queued.
+   *
+   * A department with no such employee borrows one from the department that has
+   * it (a workflow spans departments — the illustrator sits in Design, not in
+   * Publishing); the lease then carries the employee's own department.
    */
-  acquire(
-    department: DepartmentId,
+  async acquire(
+    requested: DepartmentId,
     agentId: string,
     ctx: AcquireContext = {},
   ): Promise<EmployeeLease> {
+    const department = await this.owningDepartment(requested, agentId);
     const key = keyOf(department, agentId);
     const prev = this.chains.get(key) ?? Promise.resolve();
     const run = prev.then(
@@ -75,6 +80,14 @@ export class EmployeeAllocator {
       run.catch(() => {}),
     );
     return run;
+  }
+
+  /** `requested` when it holds the position, else the first department that does. */
+  private async owningDepartment(requested: DepartmentId, agentId: string): Promise<DepartmentId> {
+    if ((await this.employees.listActiveByPosition(requested, agentId)).length > 0)
+      return requested;
+    const elsewhere = await this.employees.listActiveByPositionAnyDepartment(agentId);
+    return elsewhere[0]?.department ?? requested;
   }
 
   /** Release a held lease and wake the longest-waiting queued caller for its key, if any. */

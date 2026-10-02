@@ -162,9 +162,13 @@ An `agent`-type workflow phase's dispatch **is** leasing an employee — a
 hired instance of `phase.agent` (the position), leased from the **workflow's
 own** department (`WorkflowRunnerService`, around the stage-dispatch loop):
 
+- A workflow spans departments: when its own department has no employee of the
+  position, `EmployeeAllocator.acquire` borrows one from the first department
+  that has it (e.g. the Publishing book workflow leases the illustrator from
+  Design). The lease carries the employee's own department.
 - The lease is acquired **before** the stage's sandbox directory is created,
   so a park never leaves a half-built stage folder behind.
-- On `NoEmployeeError` (the department owns no employee of that position at
+- On `NoEmployeeError` (no department owns an employee of that position at
   all), the run **parks**: `status: "parked"`, `parkedReason: "no-employee"`
   (a new member of `ParkedReasonSchema`, alongside `approval` / `retries` /
   `limit` / `output`), `currentStage` set to the phase that couldn't

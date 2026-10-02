@@ -130,6 +130,17 @@ describe("EmployeeAllocator", () => {
     expect(rnd.employeeId).toBe("e-rnd");
   });
 
+  it("borrows the position from another department when the requested one has none", async () => {
+    await store.create(employee("e-des", "illustrator", "des"));
+    const lease = await allocator.acquire("pub", "illustrator");
+    expect(lease).toMatchObject({ employeeId: "e-des", department: "des" });
+    // The borrowed employee is busy for everyone; release frees it under its own department.
+    const waiting = allocator.acquire("des", "illustrator");
+    expect(await stillPending(waiting)).toBe(true);
+    allocator.release(lease);
+    await expect(waiting).resolves.toMatchObject({ employeeId: "e-des" });
+  });
+
   it("release() on an unheld employee id is a harmless no-op (no waiters to wake)", () => {
     expect(() =>
       allocator.release({
