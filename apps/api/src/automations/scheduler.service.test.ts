@@ -1,4 +1,4 @@
-import type { Automation } from "@zibby/contracts";
+import type { Automation, Signal } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { SchedulerService } from "./scheduler.service";
@@ -116,7 +116,13 @@ function makeService(opts: {
   arch?: { audit: ReturnType<typeof vi.fn> };
   postMergeWatch?: { poll: ReturnType<typeof vi.fn> };
   reviewLearning?: { learn: ReturnType<typeof vi.fn> };
-}): { service: SchedulerService; storage: { markFired: ReturnType<typeof vi.fn> } } {
+}): {
+  service: SchedulerService;
+  storage: { markFired: ReturnType<typeof vi.fn> };
+  /** The dispatcher the service registered on the signal bus (after `onModuleInit`). */
+  registered: () => ((automation: Automation, signal: Signal) => Promise<string>) | undefined;
+} {
+  let registered: ((automation: Automation, signal: Signal) => Promise<string>) | undefined;
   const storage = {
     list: async () => [opts.automation],
     get: async (id: string) => {
@@ -149,8 +155,14 @@ function makeService(opts: {
     (opts.reviewLearning ?? {
       learn: vi.fn(async () => ({ observations: 0, proposed: 0 })),
     }) as never,
+    // Signal bus double — captures the dispatcher the scheduler registers on init.
+    {
+      registerDispatcher: (fn: typeof registered) => {
+        registered = fn;
+      },
+    } as never,
   );
-  return { service, storage };
+  return { service, storage, registered: () => registered };
 }
 
 describe("SchedulerService — dispatch (Phase 4b: agent-factory case)", () => {
@@ -249,6 +261,41 @@ describe("SchedulerService — dispatch (Phase 116b: task target)", () => {
       false,
     );
     expect(ref).toBe("writer_1_1");
+  });
+
+  it("a signal dispatch appends the signal's title+body to the task text and passes its project", async () => {
+    const createTask = vi.fn(async () => ({
+      outcome: "dispatched" as const,
+      runRef: "dev_1",
+      target: { kind: "department" as const, id: "dev", name: "dev" },
+      task: { id: "task_3" },
+    }));
+    const { service, registered } = makeService({
+      automation: taskAutomation({ target: { type: "task", text: "fix it" } }),
+      taskScheduler: { createTask },
+    });
+    service.onModuleInit();
+    const dispatch = registered();
+    expect(dispatch).toBeDefined();
+
+    const ref = await dispatch?.(taskAutomation({ target: { type: "task", text: "fix it" } }), {
+      from: "sec",
+      kind: "cve",
+      title: "CVE in foo",
+      body: "details",
+      fingerprint: "fp",
+      projectId: "acme",
+    });
+
+    expect(ref).toBe("dev_1");
+    expect(createTask).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "fix it\n\nCVE in foo\n\ndetails", title: "CVE in foo" }),
+      expect.any(Number),
+      "acme",
+      undefined,
+      false,
+    );
+    service.onModuleDestroy();
   });
 
   it("forwards an explicit @-mentioned target and bypasses classification", async () => {

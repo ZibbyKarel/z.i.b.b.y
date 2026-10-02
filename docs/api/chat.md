@@ -101,7 +101,7 @@ turn, not just one.
 
 - `attachmentSetId?: string` — the id returned by the upload above.
 - `mentions?: ChatMentionTarget[]` — 0–8 units, restricted to `agent` /
-  `department` / `pipeline` (never `goal`/`chain`/`orchestrator` — the same
+  `department` / `pipeline` (never `goal`/`orchestrator` — the same
   explicit-only-kinds restriction as everywhere else). The legacy single
   `target` is still accepted; the server normalises
   `mentions = mentions ?? (target ? [target] : [])`

@@ -262,7 +262,11 @@ export function McpServerFormFields({
         value={form.authToken}
       />
 
-      <ToggleField checked={form.enabled} label={t("mcp.enabledLabel")} onChange={form.setEnabled} />
+      <ToggleField
+        checked={form.enabled}
+        label={t("mcp.enabledLabel")}
+        onChange={form.setEnabled}
+      />
     </Stack>
   );
 }

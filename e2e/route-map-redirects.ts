@@ -44,16 +44,15 @@ export const ROUTE_MAP_REDIRECTS: ReadonlyArray<[from: string, to: string]> = [
   ["/hooks", "/system/registries/hooks"],
   ["/commands", "/system/registries/commands"],
   ["/settings", "/system/settings/general"],
+  // Signals became automation triggers.
+  ["/signals", "/automations"],
+  ["/signals/new", "/automations"],
 ];
 
-// ZB-08: the signal-kind registry and the ex-settings gates/mandate tabs moved
-// under Policy → Gates (`?section=`). Destinations carry a query string, so
+// ZB-08: the ex-settings gates/mandate tabs moved under Policy → Gates (`?section=`). Destinations carry a query string, so
 // these use an exact-URL assertion instead of the ROUTE-MAP table's
 // end-anchored regex (a literal `?` there would be read as a regex quantifier).
 export const QUERY_REDIRECTS: ReadonlyArray<[from: string, to: string]> = [
-  ["/signals", "/policy/gates?section=signals"],
-  ["/signals/new", "/policy/gates?section=signals&new=1"],
-  ["/signals/abc", "/policy/gates?section=signals&id=abc"],
   ["/settings?tab=gates", "/policy/gates"],
   ["/settings?tab=mandate", "/policy/gates?section=mandate"],
   // ZB-11: the remaining `/settings?tab=` values move to their own

@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { IsoDateTimeSchema } from "../common.schema";
 import { AgentIdSchema } from "../agents/agent.schema";
+import { DepartmentIdSchema } from "../departments/department.schema";
+import { SignalSeveritySchema } from "./signal.schema";
 import { TaskOutputSchema, TaskTargetSchema } from "../tasks/task.schema";
 
 /**
@@ -30,6 +32,18 @@ export type AutomationEvent = z.infer<typeof AutomationEventSchema>;
 export const TriggerSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("cron"), expr: z.string().min(1) }),
   z.object({ type: z.literal("event"), events: z.array(AutomationEventSchema).min(1) }),
+  /**
+   * A signal emitted by a department on the signal bus (`SignalBusService`): `kind`
+   * matches exactly, or `"*"` for any kind; `from` (when set) must be the emitting
+   * department; `minSeverity` gates severity-bearing signals (a signal without a
+   * severity passes). Dedupes per (automation, signal fingerprint).
+   */
+  z.object({
+    type: z.literal("signal"),
+    kind: z.string().min(1),
+    from: DepartmentIdSchema.optional(),
+    minSeverity: SignalSeveritySchema.optional(),
+  }),
 ]);
 export type Trigger = z.infer<typeof TriggerSchema>;
 
@@ -101,7 +115,7 @@ export const TargetSchema = z.discriminatedUnion("type", [
     /** The typed prompt — forwarded as the task's free-text (`CreateTaskInput.text`). */
     text: z.string().min(1),
     /**
-     * Optional @-mentioned run target (agent/pipeline/department/goal/chain/…).
+     * Optional @-mentioned run target (agent/pipeline/department/goal/…).
      * Absent = the task classifier/orchestrator-fallback decides at fire time,
      * exactly like an unrouted task from the dialog.
      */
@@ -109,7 +123,7 @@ export const TargetSchema = z.discriminatedUnion("type", [
     /**
      * Files uploaded into the automation's context (a tasks attachment-set id, see
      * `AttachmentSchema`). Fed to the run for agent/orchestrator/goal targets;
-     * pipeline/chain/department targets cannot carry attachments yet (pre-existing
+     * pipeline/department targets cannot carry attachments yet (pre-existing
      * runner gap — same limitation an ordinary task has today).
      */
     attachmentSetId: z.string().optional(),
@@ -139,6 +153,13 @@ export const AutomationSchema = z.object({
    */
   prompt: z.string().optional(),
   enabled: z.boolean(),
+  /**
+   * Tier 3 gate for a `signal`-triggered automation: `"ask"` parks an
+   * `automation-dispatch` approval and only dispatches once the operator approves.
+   * Absent or `"auto"` = dispatch immediately (Tier 2, act then report). `"auto"` exists so
+   * a partial update can switch the gate off again (an omitted field cannot clear one).
+   */
+  approval: z.enum(["ask", "auto"]).optional(),
   /**
    * Server-owned: a system automation is seeded by ZIBBY and cannot be deleted; only
    * its schedule (`trigger`) and `enabled` state may be edited. It is never settable

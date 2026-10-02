@@ -11,8 +11,9 @@ event. ZIBBY's scheduling — not cron for commands, but cron for intents.
 interface Automation {
   id: string;
   name?: string;
-  trigger: CronTrigger | EventTrigger;
+  trigger: CronTrigger | EventTrigger | SignalTrigger;
   target: AutomationTarget;
+  approval?: "ask"; // Tier 3: park an `automation-dispatch` approval before dispatching
   prompt?: string; // free-text steering forwarded to whatever the target runs
   enabled: boolean;
   system: boolean; // server-owned: cannot be deleted, only its schedule is editable
@@ -37,7 +38,19 @@ interface EventTrigger {
   type: "event";
   events: string[]; // closed catalog, e.g. "git.push", "pr.opened", "run.failed"
 }
+
+// Signal trigger — fires when a department emits a matching signal (see Signal bus)
+interface SignalTrigger {
+  type: "signal";
+  kind: string; // exact signal kind, or "*" for any
+  from?: DepartmentId; // only signals emitted by this department
+  minSeverity?: "low" | "moderate" | "high" | "critical";
+}
 ```
+
+The optional top-level `approval: "ask"` is a Tier-3 gate: instead of dispatching,
+the automation parks an `automation-dispatch` approval and dispatches only once
+the operator approves.
 
 Cron expressions are evaluated in `Europe/Prague` (hard-coded in the matcher,
 not configurable per automation). The event catalog is closed — see
@@ -94,7 +107,7 @@ interface ReviewLearnTarget {
 interface PromptAutomationTarget {
   type: "task";
   text: string; // the typed prompt — forwarded as the task's free-text
-  target?: RunTarget; // optional @-mentioned run target (agent/pipeline/department/goal/chain/…);
+  target?: RunTarget; // optional @-mentioned run target (agent/pipeline/department/goal/…);
   // absent = the task classifier/orchestrator-fallback decides at fire time
   attachmentSetId?: string; // uploaded files (a tasks attachment-set id)
   output?: TaskOutput; // chosen terminal output (pr / file / void)
@@ -103,7 +116,7 @@ interface PromptAutomationTarget {
 ```
 
 `RunTarget` here is `TaskTarget` from `libs/contracts/src/tasks/task.schema.ts` (the
-same discriminated union a New Task uses: `agent` / `pipeline` / `goal` / `chain` /
+same discriminated union a New Task uses: `agent` / `pipeline` / `goal` /
 `department` / `orchestrator`); `TaskOutput` is that same file's terminal-output
 schema (`pr` / `file` / `void`).
 
@@ -120,7 +133,7 @@ schema (`pr` / `file` / `void`).
 > present it bypasses classification (an explicit override); when absent the
 > classifier/orchestrator-fallback picks a destination at fire time. As with an
 > ordinary task, attachments only flow to an agent/orchestrator/goal
-> destination — a pipeline/chain/department target carries neither (a
+> destination — a pipeline/department target carries neither (a
 > pre-existing runner gap, not new to automations). An attachment set
 > referenced by a `task`-target automation is exempted from the tasks
 > attachment-sweep's 24h TTL (it never becomes a `ScheduledTask` — and thus
@@ -151,6 +164,7 @@ when the config changes.
      5-field expression against `now` in `Europe/Prague`; a run won't double-fire
      within the same wall-clock minute (idempotence via `lastFiredAt`).
    - Event: fired only via the manual `trigger` path today (no event bus yet).
+   - Signal: never due on a tick — fired only by the [signal bus](#signal-bus).
 3. When due, dispatches the target:
    - `pipeline` → `PipelineRunnerService.start(pipelineId, …, input: prompt)`
    - `agent` → `AgentRunnerService.start(...)`
@@ -205,16 +219,23 @@ agent. Such automations have `system: true`:
   page.
 
 Definitions live in the `SYSTEM_AUTOMATIONS` constant
-(`apps/api/src/automations/automations.storage.service.ts`). Today it seeds six:
+(`apps/api/src/automations/automations.storage.service.ts`). Today it seeds ten:
 
-| id (data file)     | target.type       | default schedule | enabled |
-| ------------------ | ----------------- | ---------------- | ------- |
-| `morning-briefing` | `briefing`        | `0 7 * * *`      | yes     |
-| `memory-distill`   | `memory-distill`  | `0 3 * * *`      | yes     |
-| `nightly-patterns` | `pattern-extract` | `0 23 * * *`     | yes     |
-| `gap-detect`       | `gap-detect`      | `0 23 * * *`     | no      |
-| `agent-factory`    | `agent-factory`   | `0 4 * * 1`      | no      |
-| `review-learn`     | `review-learn`    | `15 3 * * *`     | no      |
+| id (data file)          | target.type       | default schedule                                         | enabled |
+| ----------------------- | ----------------- | -------------------------------------------------------- | ------- |
+| `morning-briefing`      | `briefing`        | `0 7 * * *`                                              | yes     |
+| `memory-distill`        | `memory-distill`  | `0 3 * * *`                                              | yes     |
+| `nightly-patterns`      | `pattern-extract` | `0 23 * * *`                                             | yes     |
+| `gap-detect`            | `gap-detect`      | `0 23 * * *`                                             | no      |
+| `agent-factory`         | `agent-factory`   | `0 4 * * 1`                                              | no      |
+| `review-learn`          | `review-learn`    | `15 3 * * *`                                             | no      |
+| `signal-cve-critical`   | `task` (dev)      | signal `cve` from `sec`, `minSeverity: critical`         | yes     |
+| `signal-post-merge-red` | `task` (dev)      | signal `post-merge-red` from `rel`                       | yes     |
+| `signal-arch-audit`     | `task` (dev)      | signal `*` from `qa`, `approval: "ask"`                  | yes     |
+| `signal-research`       | `task` (dev)      | signal `research-artifact` from `rnd`, `approval: "ask"` | yes     |
+
+The four `signal-*` automations replaced the removed handoff rules. Each is a
+`task` target at department `dev`; see [Signal bus](#signal-bus).
 
 ### Memory distillation (`memory-distill`)
 
@@ -256,6 +277,31 @@ The point worth holding onto: this automation **proposes, it never activates**.
 A PR comment is text an outsider wrote (Law 4), so nothing it says can change how
 ZIBBY behaves until the operator approves the parked approval. That is what makes
 running it unattended safe.
+
+## Signal bus
+
+**File:** `apps/api/src/automations/signal-bus.service.ts` (leaf module
+`SignalBusModule`). `SignalBusService.emit(signal)` is called by:
+
+| Emitter                  | kinds               | from  |
+| ------------------------ | ------------------- | ----- |
+| Security                 | `cve`, `secret`     | `sec` |
+| Arch                     | `audit-batch`       | `qa`  |
+| Release post-merge watch | `post-merge-red`    | `rel` |
+| Pipeline runner          | `research-artifact` | `rnd` |
+
+`emit` finds enabled automations with a matching `signal` trigger (kind exact or
+`*`, `from`, `minSeverity` against `SIGNAL_SEVERITY_ORDER`), then per match:
+
+1. dedupes per `(automationId, fingerprint)` in
+   `.zibby/data/automations-fired/<automationId>.json`;
+2. appends the signal title + body to the target's `text` / `prompt`; `task`
+   targets also receive the signal's `projectId`;
+3. dispatches through `SchedulerService.dispatch` — or, when `approval: "ask"`,
+   parks an `automation-dispatch` approval first;
+4. records activity kind `automation-dispatched` (`refs.automationId`).
+
+`emit` **never throws** — a failing emitter must not break its caller.
 
 ## Autonomy boundary
 

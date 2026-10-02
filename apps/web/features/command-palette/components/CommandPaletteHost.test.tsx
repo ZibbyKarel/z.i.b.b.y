@@ -34,7 +34,6 @@ vi.mock("../../employees/queries", () => ({
 vi.mock("../../tasks/queries", () => ({
   useTaskParentsInfiniteQuery: () => ({ data: [] }),
 }));
-vi.mock("../../chains/queries", () => ({ useChainsQuery: () => ({ data: [] }) }));
 vi.mock("../../goals/queries", () => ({ useGoalsQuery: () => ({ data: [] }) }));
 vi.mock("../../companies/queries", () => ({ useCompaniesQuery: () => ({ data: [] }) }));
 vi.mock("../../teams/queries", () => ({ useTeamsQuery: () => ({ data: [] }) }));
@@ -45,7 +44,6 @@ vi.mock("../../mcp/queries", () => ({ useMcpServersQuery: () => ({ data: [] }) }
 vi.mock("../../hooks/queries", () => ({ useHooksQuery: () => ({ data: [] }) }));
 vi.mock("../../commands/queries", () => ({ useCommandsQuery: () => ({ data: [] }) }));
 vi.mock("../../automations/queries", () => ({ useAutomationsQuery: () => ({ data: [] }) }));
-vi.mock("../../handoff/queries", () => ({ useSignalKindsQuery: () => ({ data: [] }) }));
 vi.mock("../../knowledge/queries", () => ({
   useMemorySearchQuery: () => ({ data: undefined, isFetching: false }),
 }));

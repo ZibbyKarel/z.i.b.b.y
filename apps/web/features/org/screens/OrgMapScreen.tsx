@@ -26,7 +26,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useAgentsQuery } from "../../agents";
 import { useApprovalsQuery } from "../../approvals/queries";
-import { useHandoffRulesQuery } from "../../handoff/queries";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import {
   useDepartmentSubtasksQuery,
@@ -71,7 +70,7 @@ function pickAlert(
 
 /**
  * ZB-02 — the ORG map: CEO → COO → divisions (D-021) → 11 department nodes, plus a `?department=<id>` panel
- * (department roster, open subtasks, handoff IN/OUT). PART-B.md ZB-02 / ROUTE-MAP.md
+ * (department roster, open subtasks). PART-B.md ZB-02 / ROUTE-MAP.md
  * §1 ORG / D-014 / D-015 / O-04.
  */
 export function OrgMapScreen() {
@@ -96,7 +95,6 @@ export function OrgMapScreen() {
   const busInset = `calc((100% - ${Math.max(0, divisions.length - 1) * GRID_GAP_PX}px) / ${divisions.length * 2})`;
   const { data: employees = [] } = useEmployeesQuery({ status: "active" });
   const { data: approvals = [] } = useApprovalsQuery();
-  const { data: allHandoffRules = [] } = useHandoffRulesQuery();
   const { data: focusSubtasks = [] } = useDepartmentSubtasksQuery(focusId);
   const { data: agents = [] } = useAgentsQuery();
   const hire = useHireEmployeeMutation(focusId ?? "");
@@ -119,9 +117,6 @@ export function OrgMapScreen() {
   const focusEmployees = employees.filter((e) => e.department === focusId);
   // An agent counts as allocated once any active employee holds its position.
   const freeAgents = agents.filter((a) => !employees.some((e) => e.agentId === a.id));
-  const focusHandoff = allHandoffRules.filter(
-    (r) => r.from === focusId || (r.to.kind === "department" && r.to.id === focusId),
-  );
 
   return (
     <Stack data-testid={OrgMapScreenTestId.Root} gap="300">
@@ -320,25 +315,6 @@ export function OrgMapScreen() {
                           {s.taskId}
                         </Typography>
                       </Row>
-                    ))}
-                  </Stack>
-                )}
-              </Stack>
-
-              <Stack gap="100">
-                <Typography tracking="wider" type="labelSm" variant="secondary">
-                  {t("focus.handoffTitle")}
-                </Typography>
-                {focusHandoff.length === 0 ? (
-                  <EmptyState body={t("focus.handoffEmpty")} title={t("focus.handoffEmptyTitle")} />
-                ) : (
-                  <Stack gap="50">
-                    {focusHandoff.map((r) => (
-                      <Typography key={r.id} type="labelSm" variant="secondary">
-                        {r.from === focusDepartment.id
-                          ? t("focus.out", { kind: r.signalKind })
-                          : t("focus.in", { kind: r.signalKind })}
-                      </Typography>
                     ))}
                   </Stack>
                 )}

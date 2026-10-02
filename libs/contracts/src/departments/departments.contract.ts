@@ -138,7 +138,7 @@ export const departmentsContract = c.router(
         404: ErrorSchema,
       },
       summary:
-        "This department's subtasks (ZB-03's Subtasks tab — empty until ZB-05a dispatches any)",
+        "This department's subtasks (ZB-03's Subtasks tab — empty unless legacy chain subtasks exist)",
     },
   },
   {

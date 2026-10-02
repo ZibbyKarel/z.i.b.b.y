@@ -22,7 +22,7 @@ operator's explicit sign-off before continuing. It survives an API restart —
 | `routing-proposal` | NS2 F10 — the switchboard couldn't tell whose domain an autonomously-released roadmap item belongs to (runId = the parked `RoutingProposal` id; approving releases the item to the parked `pick` as an explicit target, rejecting returns it to the operator). See `docs/api/roadmap.md`. |
 
 > This table predates several kinds (`agent-proposal`, `comms-graduation`,
-> `handoff-proposal`, `review-rule`); `ApprovalRunKindSchema` in
+> `automation-dispatch`, `review-rule`; the legacy `handoff-proposal` still parses read-only); `ApprovalRunKindSchema` in
 > `libs/contracts/src/approvals/approval.schema.ts` is the complete list.
 
 ### Approvals are binary — there is no pick-one-of-N

@@ -86,7 +86,9 @@ function AutomationEditor({ automation }: { automation: Automation }) {
   const subtitle =
     automation.trigger.type === "cron"
       ? cronLabel(automation.trigger.expr)
-      : automation.trigger.events.join(" · ");
+      : automation.trigger.type === "signal"
+        ? automation.trigger.kind
+        : automation.trigger.events.join(" · ");
 
   // System AND the legacy schedule-only fallback both persist ONLY the trigger —
   // the target/name (system: server-owned; legacy: no picker to edit it with) never
@@ -116,6 +118,7 @@ function AutomationEditor({ automation }: { automation: Automation }) {
           attachmentSetId: attachments?.attachmentSetId ?? target.attachmentSetId,
         },
         enabled: automation.enabled,
+        approval: form.buildApproval(),
       },
     });
   };

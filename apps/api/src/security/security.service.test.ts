@@ -63,7 +63,7 @@ interface BuildOpts {
   fetchImpl?: typeof fetch;
   localPath?: string | null;
   vault?: ReturnType<typeof makeVault>;
-  evaluate?: ReturnType<typeof vi.fn>;
+  emit?: ReturnType<typeof vi.fn>;
   findingsDir?: string;
 }
 
@@ -83,9 +83,9 @@ async function build(opts: BuildOpts) {
         : { present: true, isGitRepo: true, resolvedPath: opts.localPath },
   };
   const vault = opts.vault ?? makeVault();
-  // Fake HandoffService — SecurityService no longer dispatches directly (A3); it
-  // normalizes each finding into a HandoffSignal and hands it to `evaluate`.
-  const handoff = { evaluate: opts.evaluate ?? vi.fn(async () => ({ action: "none" })) };
+  // Fake SignalBusService — SecurityService normalizes each finding into a Signal
+  // and emits it.
+  const signalBus = { emit: opts.emit ?? vi.fn(async () => ({ runRefs: [] })) };
   const activity = { record: vi.fn(async () => undefined) };
   const findingsDir =
     opts.findingsDir ?? (await fs.mkdtemp(path.join(os.tmpdir(), "security-findings-")));
@@ -97,13 +97,13 @@ async function build(opts: BuildOpts) {
     credentials as never,
     projectLocal as never,
     vault as never,
-    handoff as never,
+    signalBus as never,
     activity as never,
     findingsStore,
     makeLogger() as never,
     opts.fetchImpl,
   );
-  return { service, vault, handoff, activity, findingsDir, findingsStore };
+  return { service, vault, signalBus, activity, findingsDir, findingsStore };
 }
 
 describe("SecurityService.scan", () => {
@@ -118,7 +118,7 @@ describe("SecurityService.scan", () => {
     const fetchImpl = vi.fn(async () =>
       jsonResponse(200, [dependabotAlert({ security_advisory: { severity: "high" } })]),
     ) as unknown as typeof fetch;
-    const { service, vault, activity, handoff } = await build({ fetchImpl });
+    const { service, vault, activity, signalBus } = await build({ fetchImpl });
 
     const { findings } = await service.scan(new Date("2026-07-17T00:00:00.000Z"));
 
@@ -133,9 +133,9 @@ describe("SecurityService.scan", () => {
       expect.objectContaining({ kind: "department-scan" }),
     );
     // Every finding is normalized and handed to the rule engine — a high CVE
-    // maps to a non-critical handoff severity (the seed rule then gates it out).
-    expect(handoff.evaluate).toHaveBeenCalledTimes(1);
-    expect(handoff.evaluate).toHaveBeenCalledWith(
+    // maps to a non-critical signal severity (the automation then gates it out).
+    expect(signalBus.emit).toHaveBeenCalledTimes(1);
+    expect(signalBus.emit).toHaveBeenCalledWith(
       expect.objectContaining({ from: "sec", kind: "cve", severity: "high" }),
     );
   });
@@ -144,12 +144,12 @@ describe("SecurityService.scan", () => {
     const fetchImpl = vi.fn(async () =>
       jsonResponse(200, [dependabotAlert({ security_advisory: { severity: "critical" } })]),
     ) as unknown as typeof fetch;
-    const { service, handoff } = await build({ fetchImpl });
+    const { service, signalBus } = await build({ fetchImpl });
 
     await service.scan(new Date());
 
-    expect(handoff.evaluate).toHaveBeenCalledTimes(1);
-    const [signal] = handoff.evaluate.mock.calls[0] as unknown as [
+    expect(signalBus.emit).toHaveBeenCalledTimes(1);
+    const [signal] = signalBus.emit.mock.calls[0] as unknown as [
       { severity: string; kind: string; title: string; body: string },
     ];
     expect(signal.kind).toBe("cve");
@@ -159,15 +159,15 @@ describe("SecurityService.scan", () => {
     expect(signal.body).toContain("PR");
   });
 
-  it("a moderate CVE maps to a non-critical handoff severity", async () => {
+  it("a moderate CVE maps to a non-critical signal severity", async () => {
     const fetchImpl = vi.fn(async () =>
       jsonResponse(200, [dependabotAlert({ security_advisory: { severity: "moderate" } })]),
     ) as unknown as typeof fetch;
-    const { service, handoff } = await build({ fetchImpl });
+    const { service, signalBus } = await build({ fetchImpl });
 
     await service.scan(new Date());
 
-    expect(handoff.evaluate).toHaveBeenCalledWith(
+    expect(signalBus.emit).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "cve", severity: "moderate" }),
     );
   });
@@ -176,11 +176,11 @@ describe("SecurityService.scan", () => {
     const fetchImpl = vi.fn(async () =>
       jsonResponse(200, [dependabotAlert({ security_advisory: { severity: "unknown" } })]),
     ) as unknown as typeof fetch;
-    const { service, handoff } = await build({ fetchImpl });
+    const { service, signalBus } = await build({ fetchImpl });
 
     await service.scan(new Date());
 
-    expect(handoff.evaluate).toHaveBeenCalledWith(
+    expect(signalBus.emit).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "cve", severity: "low" }),
     );
   });
@@ -192,7 +192,7 @@ describe("SecurityService.scan", () => {
     await fs.writeFile(path.join(root, "config.env"), `AWS_KEY=${secret}\n`, "utf8");
 
     const fetchImpl = vi.fn(async () => jsonResponse(200, [])) as unknown as typeof fetch;
-    const { service, vault, handoff } = await build({ fetchImpl, localPath: root });
+    const { service, vault, signalBus } = await build({ fetchImpl, localPath: root });
 
     const { findings } = await service.scan(new Date());
 
@@ -210,11 +210,11 @@ describe("SecurityService.scan", () => {
       expect(call[0].body).not.toContain(secret);
     }
 
-    // The secret is still normalized into a handoff signal (kind "secret", no
+    // The secret is still normalized into a signal (kind "secret", no
     // severity) — it matches no seed rule so it never dispatches — but the
     // signal itself must NEVER carry the matched secret text.
-    expect(handoff.evaluate).toHaveBeenCalledTimes(1);
-    const [signal] = handoff.evaluate.mock.calls[0] as unknown as [
+    expect(signalBus.emit).toHaveBeenCalledTimes(1);
+    const [signal] = signalBus.emit.mock.calls[0] as unknown as [
       { kind: string; severity?: string; title: string; body: string },
     ];
     expect(signal.kind).toBe("secret");
@@ -242,7 +242,7 @@ describe("SecurityService.scan", () => {
     await built1.service.scan(new Date());
 
     const built2 = await build({ fetchImpl, findingsDir, vault: built1.vault });
-    const { vault, handoff, activity } = built2;
+    const { vault, signalBus, activity } = built2;
     vault.createNote.mockClear();
     vault.updateNote.mockClear();
     vault.updateIndex.mockClear();
@@ -254,7 +254,7 @@ describe("SecurityService.scan", () => {
     expect(vault.updateNote).not.toHaveBeenCalled();
     expect(vault.updateIndex).not.toHaveBeenCalled();
     expect(activity.record).not.toHaveBeenCalled();
-    expect(handoff.evaluate).not.toHaveBeenCalled();
+    expect(signalBus.emit).not.toHaveBeenCalled();
   });
 
   it("fails open: a 403 from Dependabot is skipped without throwing", async () => {
@@ -273,14 +273,14 @@ describe("SecurityService.scan", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it("fails open: a throwing handoff evaluate is logged, the scan still completes", async () => {
+  it("fails open: a throwing signal emit is logged, the scan still completes", async () => {
     const fetchImpl = vi.fn(async () =>
       jsonResponse(200, [dependabotAlert({ security_advisory: { severity: "critical" } })]),
     ) as unknown as typeof fetch;
-    const evaluate = vi.fn(async () => {
-      throw new Error("handoff engine unavailable");
+    const emit = vi.fn(async () => {
+      throw new Error("signal bus unavailable");
     });
-    const { service } = await build({ fetchImpl, evaluate });
+    const { service } = await build({ fetchImpl, emit });
 
     const { findings } = await service.scan(new Date());
     expect(findings).toHaveLength(1);

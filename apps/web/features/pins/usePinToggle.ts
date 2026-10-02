@@ -11,8 +11,7 @@ export function usePinToggle() {
   const { data: pins = [] } = usePinsQuery();
   const setPins = useSetPinsMutation();
 
-  const isPinned = (kind: PinKind, id: string) =>
-    pins.some((p) => p.kind === kind && p.id === id);
+  const isPinned = (kind: PinKind, id: string) => pins.some((p) => p.kind === kind && p.id === id);
 
   const toggle = (kind: PinKind, id: string) => {
     const key = `${kind}:${id}`;

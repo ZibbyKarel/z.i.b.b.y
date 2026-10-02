@@ -72,7 +72,7 @@ export const OrchestratorTaskTargetSchema = z.object({
 
 /**
  * Phase 91 — a named department as a routing destination (the `@`-mention /
- * "dispatch to Comms" case). Like goal/chain it is EXPLICIT-ONLY: the top-level
+ * "dispatch to Comms" case). Like goal it is EXPLICIT-ONLY: the top-level
  * `TaskClassifierService` never emits this kind (scope guard — see
  * `docs/plans/phase-91-department-dispatch.md`). It never reaches a stored run
  * record either — `TaskSchedulerService` resolves it to a concrete
@@ -88,42 +88,33 @@ export const DepartmentTaskTargetSchema = z.object({
 });
 
 /**
- * ZB-04a / D-005 — a named chain (an ordered handoff route between
- * departments) as a routing destination. `id` names the chain's signal kind
- * (see `HandoffSignalKindSchema.chain` in ZB-05a); like department it is
- * EXPLICIT-ONLY, and the SAME structural scope guard applies: the classifier's
- * stage-1 candidate builder (`TaskClassifierService.buildCandidates` /
- * `RoutableTarget` in `task-router.ts`) never widens to include this kind, so
- * `toTaskTarget`'s exhaustive switch stays total without a `"chain"` case —
- * the classifier cannot emit one even by omission.
- *
- * ZB-04a adds ONLY this schema member plus the `parentTaskId`/`chain` stamps
- * below — chains do not run yet. `TaskSchedulerService.createTask` rejects a
- * `{ kind: "chain" }` target outright (see `ChainNotImplementedError`) rather
- * than silently no-op (D-019); ZB-05a is what makes this kind dispatchable.
- */
-export const ChainTaskTargetSchema = z.object({
-  kind: z.literal("chain"),
-  id: AgentIdSchema,
-  ...taskTargetDisplayShape,
-});
-
-/**
  * A destination for a free-text task: a stored agent, a stored pipeline, a
- * named department (Phase 91, explicit-only), a named chain (ZB-04a schema
- * only — explicit-only, not yet dispatchable, see {@link ChainTaskTargetSchema}),
- * or the orchestrator fallback.
+ * named department (Phase 91, explicit-only), or the orchestrator fallback.
+ * (The retired `chain` kind is dropped from STORED tasks by
+ * {@link StoredTaskTargetSchema}; it can no longer be created.)
  */
 export const TaskTargetSchema = z.discriminatedUnion("kind", [
   AgentTaskTargetSchema,
   PipelineTaskTargetSchema,
   GoalTaskTargetSchema,
   DepartmentTaskTargetSchema,
-  ChainTaskTargetSchema,
   OrchestratorTaskTargetSchema,
 ]);
 export type TaskTarget = z.infer<typeof TaskTargetSchema>;
 export type TaskTargetKind = TaskTarget["kind"];
+
+/**
+ * The target of a PERSISTED task: like {@link TaskTargetSchema}, but a legacy
+ * `{ kind: "chain" }` target (written before chains were removed) reads as absent
+ * instead of failing the whole record — history must never break a list endpoint.
+ */
+export const StoredTaskTargetSchema = z.preprocess(
+  (value) =>
+    typeof value === "object" && value !== null && (value as { kind?: unknown }).kind === "chain"
+      ? undefined
+      : value,
+  TaskTargetSchema.optional(),
+);
 
 /** A target that references a stored definition (has an `id`) — what the routers rank. */
 export type CatalogTaskTarget = Extract<TaskTarget, { kind: "agent" | "pipeline" }>;
@@ -494,11 +485,10 @@ export type ScheduledTaskStatus = z.infer<typeof ScheduledTaskStatusSchema>;
  *                    default when nothing else names a source).
  *  - `department` — an explicit `@department` target (`rawTarget.kind ===
  *                    "department"` in `TaskSchedulerService.createTask`).
- *  - `chain`      — a subtask dispatched by `HandoffService.dispatchTask` WITH
- *                    chain context. Reserved for ZB-05a — nothing sets it yet.
+ *  - `chain`      — LEGACY (read-only): a subtask of the retired chain feature.
  *  - `channel`    — `ChannelTriageFlowService`'s Tier-1 dispatch.
  *  - `automation` — the automations `SchedulerService`'s `task` job kind.
- *  - `handoff`    — `HandoffService.dispatchTask`, absent chain context.
+ *  - `handoff`    — LEGACY (read-only): the retired handoff engine's dispatch.
  */
 export const TaskSourceSchema = z.enum([
   "operator",
@@ -603,31 +593,14 @@ export const ScheduledTaskSchema = z.object({
    */
   roadmapItemLabel: z.string().max(512).optional(),
   /**
-   * ZB-04a / D-005 — the parent task this one is a subtask of (a chain step
-   * dispatched by `HandoffService.dispatchTask`, ZB-05a). Absent on every
-   * top-level task — the `GET /api/tasks/parents` read model's own filter for
-   * "top-level" IS `parentTaskId == null`. Schema-only here: nothing produces
-   * a subtask yet (ZB-05a walks the chain), but the field is additive/optional
-   * so a later phase's writer needs no migration.
+   * LEGACY (read-only): the parent of a subtask created by the retired chain feature.
+   * Nothing creates subtasks any more, but old task files keep these fields and they
+   * must keep parsing; the `GET /api/tasks/parents` read model still groups by it.
    */
   parentTaskId: z.string().optional(),
-  /**
-   * ZB-04a / D-005 — this subtask's position on its chain: the chain's own id
-   * (the handoff signal kind, `HandoffSignalKindSchema.chain`) and its 0-based
-   * step. Set alongside {@link parentTaskId} by `HandoffService.dispatchTask`
-   * once ZB-05a threads chain context through — schema-only here, same as
-   * `parentTaskId`.
-   */
+  /** LEGACY (read-only): the retired chain's `{id, step}` stamp on a subtask. */
   chain: z.object({ id: z.string().min(1), step: z.number().int().nonnegative() }).optional(),
-  /**
-   * ZB-05a / D-005 — set on the PARENT (never on a subtask) once the chain's
-   * completion emitter (`TaskSchedulerService`'s `emitChainStep`, via
-   * `HandoffService.evaluate`) finds no further hop to dispatch. The read
-   * model's "chain ended" bucket (`TaskParentsService.deriveParentState`) was
-   * schema-only for this ZB-04a and always read as "no chain to end" for a
-   * non-chain parent; a real chain parent now flips to `done` only once every
-   * subtask is done AND this is set — never on a subtask still mid-route.
-   */
+  /** LEGACY (read-only): stamped on a retired chain's parent when its route ended. */
   chainEndedAt: IsoDateTimeSchema.optional(),
   /**
    * O-18 — who/what created this task (see {@link TaskSourceSchema}). Stamped by
@@ -666,7 +639,7 @@ export const ScheduledTaskSchema = z.object({
   /** Set on `held`: the `spend-past-cap` approval gating the override. */
   approvalId: z.string().optional(),
   /** Set once dispatched: the classifier's chosen target. */
-  target: TaskTargetSchema.optional(),
+  target: StoredTaskTargetSchema,
   /**
    * F2c — set once dispatched via the undirected classify path: the switchboard's
    * stage-1 verdict trace (see {@link ClassificationTraceSchema}). Absent for an
@@ -790,36 +763,12 @@ export const CreateTaskInputSchema = z.object({
    */
   toolGrants: z.array(z.string()).optional(),
   /**
-   * ZB-04a / D-005 — carried by a server-side subtask dispatch
-   * (`HandoffService.dispatchTask`, ZB-05a): the parent task's id and this
-   * subtask's `{id, step}` on the chain. Both ride straight onto the persisted
-   * {@link ScheduledTaskSchema.parentTaskId} / `.chain`. Never set by the New
-   * Task dialog — there is no UI for it yet, and a stray client-supplied value
-   * only mislabels the read model (Law 4 doesn't strictly apply here the way it
-   * does to `roadmapItemId`, since a wrong parent link is attribution, not an
-   * authorization bypass — but the same discipline is kept: only the ZB-05a
-   * caller sets it).
-   */
-  parentTaskId: z.string().optional(),
-  chain: z.object({ id: z.string().min(1), step: z.number().int().nonnegative() }).optional(),
-  /**
    * O-18 — the creator's own source stamp (see {@link TaskSourceSchema}). Set by
-   * the three server-side creators this phase wires (channel triage,
-   * automations, handoff); absent from every operator-facing caller, which
+   * the server-side creators (channel triage, automations); absent from every operator-facing caller, which
    * `TaskSchedulerService.createTask` then resolves itself (`operator`, or
    * `department` for an explicit `@department` target).
    */
-  source: TaskSourceSchema.optional(),
-  /**
-   * ZB-05a / D-005 — carried by `HandoffService.dispatchTask` when a chain hop's
-   * completed step delivered an artifact: threaded into a PIPELINE target's
-   * `PipelineRunnerService.start` `input` param (N2b) so the next hop's first
-   * phase opens on the upstream artifact. Ephemeral (dispatch-time only, like
-   * `routingText`) — not persisted onto {@link ScheduledTaskSchema}, so a
-   * re-dispatch never needs to recover it (a chain step never re-dispatches —
-   * it is always created via the synchronous immediate path).
-   */
-  artifactRef: z.string().min(1).optional(),
+  source: TaskSourceSchema.exclude(["chain", "handoff"]).optional(),
 });
 export type CreateTaskInput = z.infer<typeof CreateTaskInputSchema>;
 

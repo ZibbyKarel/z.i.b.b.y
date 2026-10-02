@@ -19,7 +19,12 @@ describe("CompanyCard", () => {
   it("shows the people count badge when the company has a roster", () => {
     render(
       <CompanyCard
-        company={company({ people: [{ name: "Jana", role: "PM" }, { name: "Petr", role: "Dev" }] })}
+        company={company({
+          people: [
+            { name: "Jana", role: "PM" },
+            { name: "Petr", role: "Dev" },
+          ],
+        })}
       />,
     );
     expect(screen.getByText("2 osoby")).toBeInTheDocument();

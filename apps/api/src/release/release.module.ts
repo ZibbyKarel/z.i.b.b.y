@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common";
-import { HandoffModule } from "../handoff/handoff.module";
+import { SignalBusModule } from "../automations/signal-bus.module";
 import { IntegrationsModule } from "../integrations/integrations.module";
 import { MonitorsModule } from "../monitors/monitors.module";
 import { ProjectsModule } from "../projects/projects.module";
@@ -21,9 +21,8 @@ import { PostMergeWatchService } from "./post-merge-watch.service";
  * "already-know-the-outcome" shortcut). None of these import `ReleaseModule` back.
  *
  * A3: `TasksModule` dropped — `PostMergeWatchService` no longer dispatches the
- * red-verdict fix task directly; it hands a `post-merge-red` signal to
- * `HandoffModule`'s rule engine instead (which carries `TaskSchedulerService`
- * itself for the actual dispatch).
+ * red-verdict fix task directly; it emits a `post-merge-red` signal on
+ * the signal bus (`SignalBusModule`) instead, where automations pick it up.
  */
 @Module({
   imports: [
@@ -32,7 +31,7 @@ import { PostMergeWatchService } from "./post-merge-watch.service";
     IntegrationsModule,
     MergeWatchModule,
     MonitorsModule,
-    HandoffModule,
+    SignalBusModule,
   ],
   controllers: [ReleaseController],
   providers: [ReleaseService, PostMergeWatchService],

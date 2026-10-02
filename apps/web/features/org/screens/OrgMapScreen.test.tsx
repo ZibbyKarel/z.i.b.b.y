@@ -59,21 +59,6 @@ vi.mock("../../approvals/queries/useApprovalsQuery", () => ({
   useApprovalsQuery: () => ({ data: [] }),
 }));
 
-vi.mock("../../handoff/queries/useHandoffRulesQuery", () => ({
-  useHandoffRulesQuery: () => ({
-    data: [
-      {
-        id: "r1",
-        from: "dev",
-        signalKind: "post-merge-red",
-        to: { kind: "department", id: "rel" },
-        tier: 2,
-        enabled: true,
-      },
-    ],
-  }),
-}));
-
 vi.mock("../../employees/queries/useEmployeesQuery", () => ({
   useEmployeesQuery: () => ({
     data: [
@@ -135,13 +120,12 @@ describe("OrgMapScreen", () => {
     expect(screen.queryByTestId(OrgMapScreenTestId.FocusPanel)).not.toBeInTheDocument();
   });
 
-  it("shows the focus panel with the department's team, subtasks and handoff rows for ?department=<id>", () => {
+  it("shows the focus panel with the department's team and subtasks for ?department=<id>", () => {
     focusParam = "dev";
     render(<OrgMapScreen />);
     const panel = screen.getByTestId(OrgMapScreenTestId.FocusPanel);
     expect(panel).toHaveTextContent("Kessler");
     expect(panel).toHaveTextContent("TSK-1");
-    expect(panel).toHaveTextContent("post-merge-red");
   });
 
   it("groups the departments under the four divisions", () => {

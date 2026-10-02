@@ -26,8 +26,6 @@ import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../../components/PageContainer/PageContainer";
 import { useChat } from "../../chat";
 import { useEmployeesQuery } from "../../employees";
-import { HandoffRulesSection } from "../../handoff/components/HandoffRulesSection";
-import { useHandoffRulesQuery } from "../../handoff/queries";
 import { usePipelinesQuery } from "../../pipelines";
 import { DEPARTMENT_TABS, type DepartmentTab } from "../departmentTabs";
 import { useDepartmentQuery, useDepartmentSubtasksQuery } from "../queries";
@@ -132,9 +130,6 @@ export function DepartmentScreen({ departmentId, tab }: DepartmentScreenProps) {
           )}
           {tab === "pipelines" && (
             <PipelinesTab departmentId={departmentId} pipelines={pipelines} />
-          )}
-          {tab === "handoff" && (
-            <HandoffTab departmentId={department.id} departmentName={department.name} />
           )}
           {tab === "skills" && <RegistryLinkTab kind="skills" />}
           {tab === "integrations" && <RegistryLinkTab kind="mcp" />}
@@ -292,32 +287,6 @@ function PipelinesTab({
           </Card>
         </Link>
       ))}
-    </Stack>
-  );
-}
-
-function HandoffTab({
-  departmentId,
-  departmentName,
-}: {
-  departmentId: DepartmentId;
-  departmentName: string;
-}) {
-  const t = useTranslations("departmentDetail");
-  const { data: rules = [] } = useHandoffRulesQuery();
-  const outgoing = rules.filter((r) => r.from === departmentId);
-  return (
-    <Stack gap="200">
-      <HandoffRulesSection
-        departmentName={departmentName}
-        fromDepartmentId={departmentId}
-        rules={outgoing}
-      />
-      <Link href={`/policy/gates?section=handoff&department=${departmentId}` as Route}>
-        <Button icon="link" intent="ghost" size="sm">
-          {t("handoff.manageLink")}
-        </Button>
-      </Link>
     </Stack>
   );
 }

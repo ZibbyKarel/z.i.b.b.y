@@ -1,7 +1,6 @@
 "use client";
 
 import type { AnchorHTMLAttributes, ReactNode } from "react";
-import type { DepartmentId } from "@zibby/contracts";
 import {
   Container,
   DataTable,
@@ -17,16 +16,12 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAgentsQuery } from "../../agents";
-import { useDepartmentsQuery } from "../../departments/queries";
-import { HandoffRulesSection } from "../../handoff/components/HandoffRulesSection";
-import { useHandoffRulesQuery } from "../../handoff";
 import { MandateSection } from "../../settings/components/MandateSection";
-import { SignalsScreen } from "../../signals/components/SignalsScreen";
 import { useProjectsQuery } from "../../projects";
 import { GateRulesSection } from "../components/GateRulesSection";
 import { SystemFloorPanel } from "../components/SystemFloorPanel";
 
-const SECTIONS = ["floor", "global", "project", "agent", "handoff", "signals", "mandate"] as const;
+const SECTIONS = ["floor", "global", "project", "agent", "mandate"] as const;
 type Section = (typeof SECTIONS)[number];
 
 function asSection(value: string | null): Section {
@@ -48,9 +43,7 @@ interface AgentRuleRow {
 
 /**
  * `/policy/gates` — the gate-rule surfaces unified behind a `?section=` SubNav
- * (ZB-08): floor, global rules, per-project, per-agent (links out), handoff
- * (department mad-libs editor, chains excluded by the existing
- * `includeChains=false` default), signals (ex-`/signals`, moved) and mandate
+ * (ZB-08): floor, global rules, per-project, per-agent (links out) and mandate
  * (ex-settings `MandateSection`, moved).
  */
 export function GatesScreen() {
@@ -86,8 +79,6 @@ function SectionBody({ section }: { section: Section }): ReactNode {
   if (section === "global") return <GateRulesSection hideFloor />;
   if (section === "project") return <ProjectRulesSection />;
   if (section === "agent") return <AgentRulesList />;
-  if (section === "handoff") return <HandoffSection />;
-  if (section === "signals") return <SignalsScreen />;
   if (section === "mandate") return <MandateSection />;
   return null;
 }
@@ -156,42 +147,5 @@ function AgentRulesList() {
       rowHref={(r) => `/org/people/${r.id}`}
       rows={rows}
     />
-  );
-}
-
-function HandoffSection() {
-  const t = useTranslations("policy.gates");
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { data: departments = [] } = useDepartmentsQuery();
-  const { data: rules = [] } = useHandoffRulesQuery();
-
-  const departmentId = (searchParams.get("department") ?? departments[0]?.id ?? "") as DepartmentId;
-  const department = departments.find((d) => d.id === departmentId);
-
-  const setDepartment = (next: string) => {
-    const params = new URLSearchParams(searchParams);
-    params.set("department", next);
-    router.replace(`/policy/gates?${params.toString()}` as Route);
-  };
-
-  if (!department) return <EmptyState body="—" title={t("sections.handoff")} />;
-
-  const outgoing = rules.filter((r) => r.from === departmentId);
-
-  return (
-    <Stack gap="200">
-      <SegmentedControl
-        ariaLabel={t("departmentFilter")}
-        items={departments.map((d) => ({ value: d.id, label: d.code.toUpperCase() }))}
-        onChange={setDepartment}
-        value={departmentId}
-      />
-      <HandoffRulesSection
-        departmentName={department.name}
-        fromDepartmentId={departmentId}
-        rules={outgoing}
-      />
-    </Stack>
   );
 }

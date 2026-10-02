@@ -30,7 +30,7 @@ true })`).
 
 Every entity store built on `EntityFileStore` (agents, pipelines, goals, tasks,
 approvals, artifacts, channels, integrations, projects, companies, skills,
-commands, mcp, hooks, gate-rules, automations, chains, monitors, …) also honors
+commands, mcp, hooks, gate-rules, automations, monitors, …) also honors
 its own `<NAME>_DIR` (or `_FILE` for singletons) override, following the same
 pattern as `VAULT_DIR`/`BUDGET_LEDGER_DIR` above — all default to a subpath
 under `ZIBBY_DATA_DIR`. These per-store overrides exist mainly for test

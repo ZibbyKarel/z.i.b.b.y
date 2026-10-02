@@ -6,11 +6,19 @@ import {
   type SchedulePickerLabels,
   SegmentPickerField,
   SelectField,
+  ToggleField,
 } from "@zibby/design-system";
-import { AUTOMATION_EVENTS, type AutomationEvent, type Trigger } from "@zibby/contracts";
+import {
+  AUTOMATION_EVENTS,
+  type AutomationEvent,
+  SIGNAL_KINDS,
+  SIGNAL_SEVERITY_ORDER,
+  type Trigger,
+} from "@zibby/contracts";
+import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { dayName, dayNameShort } from "../schedule";
 import { useCronLabel } from "../useCronLabel";
-import type { AutomationFormState } from "./AutomationFormFields";
+import { type AutomationFormState, AutomationFormTestId } from "./AutomationFormFields";
 
 type TriggerType = Trigger["type"];
 
@@ -37,6 +45,7 @@ export function TriggerFields({ form, isSystem = false }: TriggerFieldsProps) {
   const t = useTranslations("automations");
   const locale = useLocale();
   const cronLabel = useCronLabel();
+  const departments = useDepartmentLookup();
 
   // The closed event catalog → multi-select options (the value IS the label: these are
   // self-descriptive signal ids the operator picks from, not free text).
@@ -70,6 +79,7 @@ export function TriggerFields({ form, isSystem = false }: TriggerFieldsProps) {
           options={[
             { value: "cron", label: t("triggerCron") },
             { value: "event", label: t("triggerEvent") },
+            { value: "signal", label: t("triggerSignal") },
           ]}
           value={form.triggerType}
         />
@@ -82,6 +92,46 @@ export function TriggerFields({ form, isSystem = false }: TriggerFieldsProps) {
           onValueChange={form.setSchedule}
           value={form.schedule}
         />
+      ) : form.triggerType === "signal" ? (
+        <>
+          <SelectField
+            hint={t("signalKindHint")}
+            label={t("signalKindLabel")}
+            onValueChange={form.setSignalKind}
+            options={[
+              { value: "*", label: t("signalKindAny") },
+              ...SIGNAL_KINDS.map((k) => ({ value: k.id, label: k.label })),
+            ]}
+            value={form.signalKind}
+          />
+          <SelectField
+            label={t("signalFromLabel")}
+            onValueChange={form.setSignalFrom}
+            options={[
+              { value: "", label: t("signalFromAny") },
+              ...departments.list.map((d) => ({ value: d.id, label: d.name })),
+            ]}
+            value={form.signalFrom}
+          />
+          <SelectField
+            label={t("signalMinSeverityLabel")}
+            onValueChange={form.setSignalMinSeverity}
+            options={[
+              { value: "", label: t("signalSeverityAny") },
+              ...SIGNAL_SEVERITY_ORDER.map((s) => ({ value: s, label: s })),
+            ]}
+            value={form.signalMinSeverity}
+          />
+          {!isSystem && (
+            <ToggleField
+              checked={form.approval}
+              data-testid={AutomationFormTestId.Approval}
+              hint={t("approvalHint")}
+              label={t("approvalLabel")}
+              onChange={form.setApproval}
+            />
+          )}
+        </>
       ) : (
         <SelectField<AutomationEvent>
           multi

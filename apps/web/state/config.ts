@@ -53,7 +53,6 @@ export const SECTIONS = [
     href: "/work/tasks" as Route,
     tabs: [
       { id: "tasks", href: "/work/tasks" as Route },
-      { id: "chains", href: "/work/chains" as Route },
       { id: "goals", href: "/work/goals" as Route },
       { id: "companies", href: "/work/companies" as Route },
       { id: "teams", href: "/work/teams" as Route },
@@ -137,7 +136,6 @@ const PATH_SECTION: readonly (readonly [prefix: string, section: SectionId])[] =
   ["/activity", "activity"],
   ["/archiv", "activity"],
   ["/runs", "activity"],
-  ["/signals", "policy"],
   ["/memory", "knowledge"],
   ["/knowledge", "knowledge"],
   ["/ledger", "ledger"],

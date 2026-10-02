@@ -2,9 +2,9 @@ import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Injectable, Optional } from "@nestjs/common";
-import type { HandoffSeverity, HandoffSignal, Project } from "@zibby/contracts";
+import type { Project, Signal, SignalSeverity } from "@zibby/contracts";
 import { CredentialsStore } from "../integrations/credentials.store";
-import { HandoffService } from "../handoff/handoff.service";
+import { SignalBusService } from "../automations/signal-bus.service";
 import { departmentShelfId } from "../memory/department-shelf";
 import { VaultService } from "../memory/vault.service";
 import { resolveGithubToken } from "../projects/project-pr.service";
@@ -106,12 +106,12 @@ function sha1(input: string): string {
 }
 
 /**
- * GitHub Dependabot severities → the handoff ladder. Behavior-critical: an
+ * GitHub Dependabot severities → the signal severity ladder. Behavior-critical: an
  * unknown/absent severity falls back to `"low"` (never `"critical"`), so the
- * seed rule's `minSeverity: "critical"` keeps rejecting it — preserving
- * today's exact dispatch set (only `severity === "critical"` fires).
+ * `signal-cve-critical` automation's `minSeverity: "critical"` keeps rejecting it —
+ * only `severity === "critical"` fires.
  */
-const SEVERITY_MAP: Record<string, HandoffSeverity> = {
+const SEVERITY_MAP: Record<string, SignalSeverity> = {
   low: "low",
   moderate: "moderate",
   high: "high",
@@ -136,12 +136,11 @@ function toFindingLine(finding: SecurityFinding): string {
  * uses) plus a bounded secret-pattern scan over the local clone. Findings are
  * a vault-note proposal (gap-detector's pattern) filed onto Security's shelf
  * and read back for the briefing; every NEW finding is ALSO normalized into a
- * {@link HandoffSignal} and routed through the {@link HandoffService} rule
- * engine (A3) — a critical CVE still ends up dispatching a gated fix task
- * through the ordinary scheduler (it still ends at the PR gate, same as every
- * other autonomous fix), now because the seed rule's `minSeverity: "critical"`
- * says so, not a hard-coded `if`; a secret finding matches no seed rule and
- * never dispatches. Fail-open everywhere: a missing github link, a
+ * {@link Signal} and emitted on the {@link SignalBusService} — a critical CVE
+ * dispatches a gated fix task through the ordinary scheduler (it still ends at
+ * the PR gate, same as every other autonomous fix) because the
+ * `signal-cve-critical` system automation says so; a secret finding matches no
+ * seeded automation and never dispatches. Fail-open everywhere: a missing github link, a
  * 403/404/429 from Dependabot, or a project with no local clone all read as
  * "nothing to show", never a thrown error out of the scheduler's tick.
  */
@@ -156,7 +155,7 @@ export class SecurityService {
     private readonly credentials: CredentialsStore,
     private readonly projectLocal: ProjectLocalService,
     private readonly vault: VaultService,
-    private readonly handoff: HandoffService,
+    private readonly signalBus: SignalBusService,
     private readonly activity: ActivityLogService,
     private readonly findingsStore: DepartmentFindingsStore,
     logger: LoggerService,
@@ -218,15 +217,14 @@ export class SecurityService {
 
     for (const finding of newFindings) {
       try {
-        // The handoff engine decides tier/dispatch from the rule table — a secret
-        // signal matches no seed rule (`{ action: "none" }`), same as today; a
-        // non-critical CVE is gated out by the seed rule's `minSeverity: "critical"`.
-        await this.handoff.evaluate(this.toSignal(finding));
+        // The matching automations decide tier/dispatch — a secret signal matches no
+        // seeded automation; a non-critical CVE is gated out by `minSeverity: "critical"`.
+        await this.signalBus.emit(this.toSignal(finding));
       } catch (err) {
-        // Belt-and-suspenders: `evaluate` is itself fail-open and never throws, but
-        // the scan tick must survive regardless. A failed handoff leaves the
+        // Belt-and-suspenders: `emit` is itself fail-open and never throws, but
+        // the scan tick must survive regardless. A failed emit leaves the
         // finding in the note; the next scan retries it (same fingerprint).
-        this.log.warn("security: handoff evaluate failed — finding stays for retry", {
+        this.log.warn("security: signal emit failed — finding stays for retry", {
           fingerprint: finding.fingerprint,
           error: String(err),
         });
@@ -237,12 +235,12 @@ export class SecurityService {
   }
 
   /**
-   * Normalize one finding into the handoff engine's signal shape. CVE text is
+   * Normalize one finding into a bus {@link Signal}. CVE text is
    * the exact title/body the old hard-coded dispatch built (Behavior preserved:
    * only the tier/rule table now decides whether it fires). A secret finding's
    * body is `toFindingLine` — NEVER the matched secret value.
    */
-  private toSignal(f: SecurityFinding): HandoffSignal {
+  private toSignal(f: SecurityFinding): Signal {
     if (f.kind === "cve") {
       return {
         from: "sec",

@@ -15,7 +15,6 @@ export const DEPARTMENT_TABS = [
   "team",
   "subtasks",
   "pipelines",
-  "handoff",
   "skills",
   "integrations",
   "automations",

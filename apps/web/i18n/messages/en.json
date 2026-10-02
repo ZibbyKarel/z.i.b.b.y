@@ -18,7 +18,6 @@
     "mcp": "MCP servers",
     "commands": "Commands",
     "hooks": "Hooks",
-    "signals": "Signals",
     "org": "Org",
     "work": "Work",
     "activity": "Activity",
@@ -33,7 +32,6 @@
       },
       "work": {
         "tasks": "Tasks",
-        "chains": "Chains",
         "goals": "Goals",
         "companies": "Companies",
         "teams": "Teams",
@@ -232,7 +230,6 @@
           "pipeline": "pipeline",
           "goal": "goal loop",
           "department": "department",
-          "chain": "chain",
           "orchestrator": "orchestrator",
           "loop": "goal loop",
           "auto": "auto-classify"
@@ -384,64 +381,16 @@
         "brief": "Brief",
         "briefPlaceholder": "Context, links, what done looks like",
         "entry": "Entry",
-        "project": "Project",
-        "chain": "Chain"
+        "project": "Project"
       },
       "entry": {
         "coo": "COO (auto-classify)"
-      },
-      "chain": {
-        "none": "None",
-        "projectDefault": "Project default ({label})"
       },
       "cancel": "Cancel",
       "submit": "Create task",
       "routePreviewHeader": "Route preview",
       "routeSuggest": "ZIBBY will hand this to {target}",
       "routeIdle": "Describe the task to see the route."
-    }
-  },
-  "chainsWork": {
-    "eyebrow": "WORK",
-    "list": {
-      "title": "Chain library",
-      "newAction": "New chain",
-      "column": {
-        "name": "Name",
-        "route": "Route",
-        "enabled": "Enabled",
-        "inFlight": "In flight"
-      },
-      "enabledYes": "Enabled",
-      "enabledNo": "Disabled",
-      "emptyTitle": "No chains yet",
-      "emptyBody": "No handoff chain has been authored yet."
-    },
-    "detail": {
-      "back": "← Back to chains",
-      "editAction": "Edit",
-      "saveAction": "Save",
-      "cancelAction": "Cancel",
-      "deleteAction": "Delete",
-      "deleteConfirmAction": "Confirm delete",
-      "labelField": "Label",
-      "labelPlaceholder": "e.g. Dev to QA handoff",
-      "descriptionField": "Description",
-      "descriptionPlaceholder": "What this chain is for",
-      "stepsHeader": "Route",
-      "stepDepartment": "Stop {n}",
-      "gateAria": "Hop {n} gate",
-      "moveLeftAria": "Move earlier",
-      "moveRightAria": "Move later",
-      "removeStepAria": "Remove stop",
-      "addStep": "+ Add department",
-      "enabledField": "Enabled",
-      "noRouteTitle": "No route",
-      "noRouteBody": "This chain has no resolvable steps."
-    },
-    "new": {
-      "title": "New chain",
-      "submit": "Create chain"
     }
   },
   "search": {
@@ -1440,9 +1389,6 @@
       "prOpenModeHint": "The PR always opens immediately (Tier-2, no gate) — this only chooses its state on open. Never changes the merge gate.",
       "prOpenModeReady": "Ready",
       "prOpenModeDraft": "Draft",
-      "defaultChain": "Default chain",
-      "defaultChainHint": "New Task pre-selects this chain for the project (O-23) unless overridden explicitly.",
-      "defaultChainNone": "No default chain",
       "category": "Category",
       "categoryNone": "No category",
       "desc": "Description",
@@ -1784,7 +1730,17 @@
       "monthly": "Monthly on day {day} at {time}"
     },
     "deleteTitle": "Delete automation?",
-    "deleteBody": "Really delete automation {name}? This cannot be undone."
+    "deleteBody": "Really delete automation {name}? This cannot be undone.",
+    "triggerSignal": "Signal",
+    "signalKindLabel": "Signal",
+    "signalKindHint": "Fires when a department emits this signal.",
+    "signalKindAny": "Any signal (*)",
+    "signalFromLabel": "From department",
+    "signalFromAny": "Any department",
+    "signalMinSeverityLabel": "Minimum severity",
+    "signalSeverityAny": "Any severity",
+    "approvalLabel": "Approval before dispatch",
+    "approvalHint": "Park the run behind an approval instead of dispatching immediately."
   },
   "hooks": {
     "title": "Hooks",
@@ -1806,63 +1762,6 @@
     "detailPanel": "Hook configuration",
     "deleteTitle": "Delete hook?",
     "deleteBody": "Really delete hook {name}? This cannot be undone."
-  },
-  "signals": {
-    "title": "Signals",
-    "countSummary": "{count, plural, =0 {no signals} one {# signal} other {# signals}} · handoff signal-kind registry, grouped by producer",
-    "newSignal": "New signal",
-    "openSignalAria": "Open signal {label}",
-    "emptyTitle": "No signals yet",
-    "emptyDescription": "The handoff signal-kind registry is empty — built-in kinds are seeded server-side, so this state shouldn't happen.",
-    "yes": "Yes",
-    "no": "No",
-    "status": {
-      "builtin": "builtin",
-      "pending": "awaiting producer",
-      "active": "active"
-    },
-    "detail": {
-      "panelTitle": "Signal",
-      "slug": "ID",
-      "producer": "Producer",
-      "status": "Status",
-      "severityBearing": "Carries severity",
-      "systemNote": "System — built-in, not editable",
-      "descriptionTitle": "Description",
-      "buildTaskTitle": "Build task",
-      "buildTaskLink": "View task",
-      "notFoundTitle": "Signal not found",
-      "notFoundDescription": "This signal kind doesn't exist in the registry — it may have been deleted, or the link is stale.",
-      "editAction": "Edit",
-      "deleteAction": "Delete",
-      "deleteTitle": "Delete signal?",
-      "deleteBody": "Really delete the signal “{label}”? This action cannot be undone.",
-      "deletedToast": "Signal deleted."
-    },
-    "create": {
-      "title": "New signal",
-      "panelTitle": "Signal registration",
-      "editPanelTitle": "Edit signal",
-      "cancel": "Cancel",
-      "submit": "Create signal",
-      "editSubmit": "Save signal",
-      "error": "Creating the signal failed — please try again.",
-      "editError": "Saving the signal failed — please try again.",
-      "successToast": "Signal registered — build task {buildTaskId} is running.",
-      "editSuccessToast": "Signal saved.",
-      "idFixedLabel": "ID (fixed)",
-      "fields": {
-        "producer": "Producer",
-        "label": "Label",
-        "labelPlaceholder": "e.g. Certificate expiring",
-        "description": "Description / when it fires",
-        "descriptionHint": "What the signal means and under what circumstances the producer emits it.",
-        "descriptionPlaceholder": "Describe when this signal occurs…",
-        "severityBearing": "Carries severity",
-        "severityBearingHint": "Enable if the signal carries a severity level (low/moderate/high/critical).",
-        "slugPreviewLabel": "id (approx.)"
-      }
-    }
   },
   "mcp": {
     "title": "MCP servers",
@@ -2042,70 +1941,6 @@
       },
       "emptyTitle": "This department doesn't own a pipeline yet"
     },
-    "handoff": {
-      "sentencePrefix": "When {subject} produces",
-      "severityPrefix": "≥",
-      "targetPrefix": "→ hand off to",
-      "tierPrefix": "as",
-      "tierName": {
-        "1": "automatic",
-        "2": "notify only",
-        "3": "awaiting approval"
-      },
-      "systemBadge": "system",
-      "toggleLabel": "Active",
-      "edit": "Edit",
-      "delete": "Delete",
-      "addRule": "Add rule",
-      "emptyTitle": "No outgoing rules yet",
-      "emptyDescription": "This department doesn't have a handoff rule of its own yet. Add the first one below.",
-      "deleteTitle": "Delete handoff rule?",
-      "deleteBody": "Really delete this handoff rule? This action can't be undone.",
-      "severity": {
-        "low": "low",
-        "moderate": "moderate",
-        "high": "high",
-        "critical": "critical"
-      },
-      "signalKind": {
-        "cve": "Vulnerability (CVE)",
-        "secret": "Leaked secret",
-        "post-merge-red": "Red CI after merge",
-        "god-node": "Graph god-node",
-        "community": "Graph community",
-        "cycle": "Dependency cycle",
-        "research-artifact": "Research artifact",
-        "pendingBadge": "awaiting producer"
-      },
-      "signalKindDesc": {
-        "cve": "A vulnerability found in a project dependency.",
-        "secret": "A secret key or password leaked in code.",
-        "post-merge-red": "CI failed after a PR was merged.",
-        "god-node": "A highly connected node in the code graph.",
-        "community": "A newly detected community in the graph.",
-        "cycle": "A cyclic dependency between modules.",
-        "research-artifact": "A completed research artifact."
-      },
-      "editor": {
-        "severityPrefix": "with severity",
-        "anySignal": "Any signal (∗)",
-        "anySeverity": "any",
-        "targetKindDepartment": "department",
-        "targetKindPipeline": "pipeline",
-        "tierClause": {
-          "1": "automatically",
-          "2": "and tell me",
-          "3": "once I approve"
-        },
-        "signalKindAria": "Signal kind",
-        "newSignal": "+ new signal",
-        "severityAria": "Min. severity",
-        "targetAria": "Handoff target",
-        "tierAria": "Handoff tier",
-        "save": "Save rule",
-        "cancel": "Cancel"
-      }
-    },
     "create": {
       "title": "New department",
       "subtitle": "creates a department data file",
@@ -2146,7 +1981,6 @@
       "team": "Team",
       "subtasks": "Subtasks",
       "pipelines": "Pipelines",
-      "handoff": "Handoff",
       "skills": "Skills",
       "integrations": "Integrations",
       "automations": "Automations",
@@ -2179,9 +2013,6 @@
     "pipelines": {
       "emptyTitle": "No pipelines yet",
       "emptyDescription": "This department doesn't own a pipeline yet."
-    },
-    "handoff": {
-      "manageLink": "Manage handoff rules →"
     },
     "registryLink": "Manage in registry →",
     "registryDescription": "This list is managed in the global registry, not per department.",
@@ -2387,9 +2218,6 @@
       "subtasksTitle": "Open subtasks",
       "subtasksEmptyTitle": "No subtasks",
       "subtasksEmpty": "No open subtasks in this department.",
-      "handoffTitle": "Handoffs · IN / OUT",
-      "handoffEmptyTitle": "Nothing moving",
-      "handoffEmpty": "Nothing moving in or out of this department.",
       "out": "→ OUT · {kind}",
       "in": "→ IN · {kind}",
       "addLabel": "Add employee",
@@ -2492,8 +2320,6 @@
         "global": "Global rules",
         "project": "Per project",
         "agent": "Per agent",
-        "handoff": "Handoff",
-        "signals": "Signals",
         "mandate": "Mandate"
       },
       "projectPicker": "Project",
@@ -2578,7 +2404,6 @@
       "department": "Department",
       "person": "Person",
       "task": "Task",
-      "chain": "Chain",
       "goal": "Goal",
       "company": "Company",
       "team": "Team",
@@ -2589,7 +2414,6 @@
       "hook": "Hook",
       "command": "Command",
       "automation": "Automation",
-      "signal": "Signal",
       "note": "Note",
       "setting": "Setting",
       "gate": "Gate",
@@ -2600,7 +2424,6 @@
       "departments": "Departments",
       "people": "People",
       "tasks": "Tasks",
-      "chains": "Chains",
       "goals": "Goals",
       "companies": "Companies",
       "teams": "Teams",
@@ -2608,7 +2431,6 @@
       "pipelines": "Pipelines",
       "registries": "Registries",
       "automations": "Automations",
-      "signals": "Signals",
       "vault": "Vault",
       "settings": "Settings",
       "gates": "Gates"
@@ -2628,8 +2450,6 @@
       "global": "Global rules",
       "per-project": "Per-project",
       "per-agent": "Per-agent",
-      "handoff": "Handoff rules",
-      "signals": "Signals",
       "mandate": "Mandate"
     },
     "actions": {

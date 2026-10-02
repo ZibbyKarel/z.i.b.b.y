@@ -49,6 +49,13 @@ describe("AutomationCard — system automations", () => {
   });
 });
 
+describe("AutomationCard — signal trigger", () => {
+  it("renders the signal kind as the trigger value", () => {
+    renderCard({ trigger: { type: "signal", kind: "cve", from: "sec" } });
+    expect(screen.getByTestId(AutomationCardTestId.Schedule)).toHaveTextContent("cve");
+  });
+});
+
 describe("AutomationCard — target rendering", () => {
   it("renders the memory-distill target with its label", () => {
     renderCard({ target: { type: "memory-distill" }, system: true });

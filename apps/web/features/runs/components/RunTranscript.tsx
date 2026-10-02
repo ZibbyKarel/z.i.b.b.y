@@ -1,6 +1,14 @@
 "use client";
 
-import { type CSSProperties, type ReactNode, memo, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  type ReactNode,
+  memo,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   type CodeBlockHeight,
   Container,
@@ -106,18 +114,18 @@ export function RunTranscript({
         <Stack gap="100">
           {groups.map((group: TranscriptGroup, i) =>
             group.kind === "toolCall" ? (
-              <ToolCallSegment key={i} result={group.result} toggleLabel={toggleLabel} tool={group.tool} />
+              <ToolCallSegment
+                key={i}
+                result={group.result}
+                toggleLabel={toggleLabel}
+                tool={group.tool}
+              />
             ) : (
               <Segment key={i} seg={group} />
             ),
           )}
           {live && (
-            <Typography
-              mono
-              data-testid={RunTranscriptTestId.Caret}
-              tone="accent"
-              type="note"
-            >
+            <Typography mono data-testid={RunTranscriptTestId.Caret} tone="accent" type="note">
               ▍
             </Typography>
           )}

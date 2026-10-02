@@ -98,7 +98,10 @@ export function NewAgentDialog({ categories, onClose, onCreate, pending }: NewAg
         open={editingRule === null}
         title={
           <Stack align="center" direction="row" gap="150">
-            <IconTile glyph={((watchedGlyph as IconName | undefined) || "bot") ?? "bot"} size="md" />
+            <IconTile
+              glyph={((watchedGlyph as IconName | undefined) || "bot") ?? "bot"}
+              size="md"
+            />
             <Container grow minW0>
               <Typography mono truncate size="xl" type="note" weight="bold">
                 {t("newAgent")}

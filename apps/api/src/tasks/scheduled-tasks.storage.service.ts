@@ -15,20 +15,12 @@ import { EntityFileStore, collisionResistantId } from "../shared/file-storage";
 type CreateTaskInputWithAttachments = CreateTaskInput & { attachments?: Attachment[] };
 
 /**
- * ZB-04a — the provenance fields every persisted-shape builder below carries
- * straight from the create input: `source` (O-18, resolved by the caller —
- * `TaskSchedulerService.createTask` — before any of these run) and
- * `parentTaskId`/`chain` (D-005, schema-only until ZB-05a dispatches a chain
- * step, but persisted here so a hand-built fixture round-trips them).
+ * The provenance field every persisted-shape builder below carries straight from the
+ * create input: `source` (O-18, resolved by the caller — `TaskSchedulerService.createTask`
+ * — before any of these run).
  */
-function provenanceFields(
-  input: CreateTaskInputWithAttachments,
-): Pick<ScheduledTask, "source" | "parentTaskId" | "chain"> {
-  return {
-    ...(input.source ? { source: input.source } : {}),
-    ...(input.parentTaskId ? { parentTaskId: input.parentTaskId } : {}),
-    ...(input.chain ? { chain: input.chain } : {}),
-  };
+function provenanceFields(input: CreateTaskInputWithAttachments): Pick<ScheduledTask, "source"> {
+  return input.source ? { source: input.source } : {};
 }
 
 export const TASKS_DIR = "TASKS_DIR";
@@ -188,77 +180,6 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
     };
     await this.writeEntity(task);
     return task;
-  }
-
-  /**
-   * ZB-05a / D-005 — persist a chain's PARENT task: no run of its own (`runRef`
-   * absent) — its state is derived from its subtasks (`TaskParentsService`). Status
-   * `"dispatched"` (no outcome yet) reads as `"working"` there until the last hop
-   * finishes AND `markChainEnded` stamps `chainEndedAt`.
-   */
-  async createChainParent(
-    id: string,
-    input: CreateTaskInputWithAttachments,
-    projectId: string | undefined,
-    now: number,
-    target: TaskTarget,
-  ): Promise<ScheduledTask> {
-    const task: ScheduledTask = {
-      id,
-      title: input.title ?? "",
-      text: input.text,
-      paths: input.paths ?? [],
-      toolGrants: input.toolGrants ?? [],
-      attachments: input.attachments ?? [],
-      scheduledAt: now,
-      status: "dispatched",
-      createdAt: new Date(now).toISOString(),
-      target,
-      ...(projectId ? { projectId } : {}),
-      ...provenanceFields(input),
-    };
-    await this.writeEntity(task);
-    return task;
-  }
-
-  /**
-   * ZB-05a / D-005 — a chain target that has nothing to dispatch (missing or
-   * disabled): persisted straight to `failed` with `reason` as the visible error —
-   * never a silent no-op (Law 5).
-   */
-  async createChainParentFailed(
-    id: string,
-    input: CreateTaskInputWithAttachments,
-    projectId: string | undefined,
-    now: number,
-    target: TaskTarget,
-    reason: string,
-  ): Promise<ScheduledTask> {
-    const task: ScheduledTask = {
-      id,
-      title: input.title ?? "",
-      text: input.text,
-      paths: input.paths ?? [],
-      toolGrants: input.toolGrants ?? [],
-      attachments: input.attachments ?? [],
-      scheduledAt: now,
-      status: "failed",
-      createdAt: new Date(now).toISOString(),
-      error: reason,
-      target,
-      ...(projectId ? { projectId } : {}),
-      ...provenanceFields(input),
-    };
-    await this.writeEntity(task);
-    return task;
-  }
-
-  /** ZB-05a — stamp the chain-ended marker on a chain's parent task. */
-  async markChainEnded(id: string): Promise<ScheduledTask> {
-    return this.updateEntity(id, (existing) => ({
-      ...existing,
-      chainEndedAt: new Date().toISOString(),
-    }));
   }
 
   /**

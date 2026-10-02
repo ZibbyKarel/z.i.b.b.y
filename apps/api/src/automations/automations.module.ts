@@ -13,6 +13,7 @@ import { SelfKnowledgeModule } from "../self-knowledge/self-knowledge.module";
 import { SecurityModule } from "../security/security.module";
 import { dataDir } from "../shared/data-dir";
 import { TasksModule } from "../tasks/tasks.module";
+import { SignalBusModule } from "./signal-bus.module";
 import { AUTOMATIONS_DIR, AutomationsStorageService } from "./automations.storage.service";
 import { AutomationsController } from "./automations.controller";
 import { SchedulerService } from "./scheduler.service";
@@ -63,6 +64,7 @@ export function resolveAutomationsDir(): string {
     ReviewLearningModule,
     SelfKnowledgeModule,
     SecurityModule,
+    SignalBusModule,
     TasksModule,
   ],
   controllers: [AutomationsController],

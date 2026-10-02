@@ -9,7 +9,6 @@ export interface CommandPaletteSources {
   departments: Array<{ id: string; name: string }>;
   people: Array<{ id: string; name: string; department?: string }>;
   tasks: Array<{ id: string; title: string; department?: string }>;
-  chains: Array<{ id: string; label: string }>;
   goals: Array<{ id: string; name?: string; objective: string }>;
   companies: Array<{ id: string; name: string }>;
   teams: Array<{ id: string; name: string }>;
@@ -22,7 +21,6 @@ export interface CommandPaletteSources {
   hooks: Array<{ id: string; name?: string; event: string }>;
   commands: Array<{ id: string; description?: string }>;
   automations: Array<{ id: string; name?: string }>;
-  signals: Array<{ id: string; label: string }>;
   notes: Array<{ id: string; title: string; snippet?: string }>;
   /** Whether a pending approval exists to hand "Approve next" a target — the
    * action row is omitted entirely when there is nothing to approve. */
@@ -95,16 +93,6 @@ export function buildCommandPaletteIndex(
       label: t.title,
       meta: t.department,
       href: `/work/tasks/${t.id}` as Route,
-    });
-  }
-
-  for (const c of sources.chains) {
-    entries.push({
-      id: c.id,
-      group: "chains",
-      kind: "chain",
-      label: c.label,
-      href: `/work/chains/${c.id}` as Route,
     });
   }
 
@@ -209,16 +197,6 @@ export function buildCommandPaletteIndex(
       // (PART-B §3) is ZB-11's to define; the global list is the closest
       // resolvable target today.
       href: "/system/settings/automations" as Route,
-    });
-  }
-
-  for (const s of sources.signals) {
-    entries.push({
-      id: s.id,
-      group: "signals",
-      kind: "signal",
-      label: s.label,
-      href: `/policy/gates?section=signals&id=${s.id}` as Route,
     });
   }
 

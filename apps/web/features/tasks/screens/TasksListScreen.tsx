@@ -28,14 +28,7 @@ import { useProjectsQuery } from "../../projects";
 import { useTaskParentsInfiniteQuery } from "../queries";
 
 const TASK_STATES: readonly TaskParentState[] = ["thinking", "working", "blocked", "error", "done"];
-const TASK_SOURCES: readonly TaskSource[] = [
-  "operator",
-  "department",
-  "chain",
-  "channel",
-  "automation",
-  "handoff",
-];
+const TASK_SOURCES: readonly TaskSource[] = ["operator", "department", "channel", "automation"];
 
 const ALL = "";
 

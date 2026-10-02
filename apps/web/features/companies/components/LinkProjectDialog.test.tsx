@@ -33,9 +33,7 @@ describe("LinkProjectDialog", () => {
     render(<LinkProjectDialog companyId="acme" onClose={onClose} />);
 
     await userEvent.click(screen.getByTestId(DropdownTestId.Trigger));
-    const optionLabels = screen
-      .getAllByTestId(DropdownTestId.Option)
-      .map((el) => el.textContent);
+    const optionLabels = screen.getAllByTestId(DropdownTestId.Option).map((el) => el.textContent);
 
     expect(optionLabels).toContain("Other Co Project");
     expect(optionLabels).toContain("Solo Project");

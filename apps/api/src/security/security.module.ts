@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common";
-import { HandoffModule } from "../handoff/handoff.module";
+import { SignalBusModule } from "../automations/signal-bus.module";
 import { IntegrationsModule } from "../integrations/integrations.module";
 import { MemoryModule } from "../memory/memory.module";
 import { ProjectsModule } from "../projects/projects.module";
@@ -14,8 +14,7 @@ import { SecurityService } from "./security.service";
  * cycle risk, same position as `gap-detect`/`self-knowledge`.
  *
  * A3: `TasksModule` dropped — Security no longer dispatches directly; every
- * finding routes through `HandoffModule`'s rule engine instead (which itself
- * carries the `TaskSchedulerService` dependency for the actual dispatch).
+ * finding routes through the signal bus instead (the scheduler dispatches the matching automations).
  */
 @Module({
   imports: [
@@ -23,7 +22,7 @@ import { SecurityService } from "./security.service";
     ResolvedProjectModule,
     IntegrationsModule,
     MemoryModule,
-    HandoffModule,
+    SignalBusModule,
     DepartmentFindingsModule,
   ],
   providers: [SecurityService],

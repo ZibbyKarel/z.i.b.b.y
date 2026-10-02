@@ -18,7 +18,6 @@
     "mcp": "MCP servery",
     "commands": "Příkazy",
     "hooks": "Hooky",
-    "signals": "Signály",
     "org": "Org",
     "work": "Práce",
     "activity": "Aktivita",
@@ -33,7 +32,6 @@
       },
       "work": {
         "tasks": "Úkoly",
-        "chains": "Řetězce",
         "goals": "Cíle",
         "companies": "Firmy",
         "teams": "Týmy",
@@ -232,7 +230,6 @@
           "pipeline": "pipeline",
           "goal": "goal loop",
           "department": "oddělení",
-          "chain": "řetězec",
           "orchestrator": "orchestrátor",
           "loop": "goal loop",
           "auto": "auto-klasifikace"
@@ -384,64 +381,16 @@
         "brief": "Zadání",
         "briefPlaceholder": "Kontext, odkazy, jak vypadá hotovo",
         "entry": "Vstup",
-        "project": "Projekt",
-        "chain": "Řetězec"
+        "project": "Projekt"
       },
       "entry": {
         "coo": "COO (automatická klasifikace)"
-      },
-      "chain": {
-        "none": "Žádný",
-        "projectDefault": "Výchozí pro projekt ({label})"
       },
       "cancel": "Zrušit",
       "submit": "Vytvořit úkol",
       "routePreviewHeader": "Náhled trasy",
       "routeSuggest": "ZIBBY toto předá: {target}",
       "routeIdle": "Popište úkol pro zobrazení trasy."
-    }
-  },
-  "chainsWork": {
-    "eyebrow": "PRÁCE",
-    "list": {
-      "title": "Knihovna řetězců",
-      "newAction": "Nový řetězec",
-      "column": {
-        "name": "Název",
-        "route": "Trasa",
-        "enabled": "Zapnuto",
-        "inFlight": "Právě běží"
-      },
-      "enabledYes": "Zapnuto",
-      "enabledNo": "Vypnuto",
-      "emptyTitle": "Zatím žádné řetězce",
-      "emptyBody": "Zatím nebyl vytvořen žádný řetězec předávání."
-    },
-    "detail": {
-      "back": "← Zpět na řetězce",
-      "editAction": "Upravit",
-      "saveAction": "Uložit",
-      "cancelAction": "Zrušit",
-      "deleteAction": "Smazat",
-      "deleteConfirmAction": "Potvrdit smazání",
-      "labelField": "Název",
-      "labelPlaceholder": "např. Předání z Dev do QA",
-      "descriptionField": "Popis",
-      "descriptionPlaceholder": "K čemu tento řetězec slouží",
-      "stepsHeader": "Trasa",
-      "stepDepartment": "Zastávka {n}",
-      "gateAria": "Brána kroku {n}",
-      "moveLeftAria": "Posunout dříve",
-      "moveRightAria": "Posunout později",
-      "removeStepAria": "Odebrat zastávku",
-      "addStep": "+ Přidat oddělení",
-      "enabledField": "Zapnuto",
-      "noRouteTitle": "Žádná trasa",
-      "noRouteBody": "Tento řetězec nemá žádné rozřešitelné kroky."
-    },
-    "new": {
-      "title": "Nový řetězec",
-      "submit": "Vytvořit řetězec"
     }
   },
   "search": {
@@ -1440,9 +1389,6 @@
       "prOpenModeHint": "PR se otevírá vždy hned (Tier-2, bez schvalování) — tady jen volíš jeho stav při otevření. Nikdy nemění merge gate.",
       "prOpenModeReady": "Připravené",
       "prOpenModeDraft": "Koncept",
-      "defaultChain": "Výchozí řetězec",
-      "defaultChainHint": "Nový úkol pro tento projekt tento řetězec přednastaví (O-23), pokud ho ručně nepřepíšeš.",
-      "defaultChainNone": "Bez výchozího řetězce",
       "category": "Kategorie",
       "categoryNone": "Bez kategorie",
       "desc": "Popis",
@@ -1784,7 +1730,17 @@
       "monthly": "Měsíčně {day}. v {time}"
     },
     "deleteTitle": "Smazat automatizaci?",
-    "deleteBody": "Opravdu smazat automatizaci {name}? Tuto akci nelze vrátit."
+    "deleteBody": "Opravdu smazat automatizaci {name}? Tuto akci nelze vrátit.",
+    "triggerSignal": "Signál",
+    "signalKindLabel": "Signál",
+    "signalKindHint": "Spustí se, když oddělení vyšle tento signál.",
+    "signalKindAny": "Jakýkoli signál (*)",
+    "signalFromLabel": "Z oddělení",
+    "signalFromAny": "Jakékoli oddělení",
+    "signalMinSeverityLabel": "Minimální závažnost",
+    "signalSeverityAny": "Jakákoli závažnost",
+    "approvalLabel": "Schválení před spuštěním",
+    "approvalHint": "Místo okamžitého spuštění nechá běh čekat na schválení."
   },
   "hooks": {
     "title": "Hooky",
@@ -1806,63 +1762,6 @@
     "detailPanel": "Konfigurace hooku",
     "deleteTitle": "Smazat hook?",
     "deleteBody": "Opravdu smazat hook {name}? Tuto akci nelze vrátit."
-  },
-  "signals": {
-    "title": "Signály",
-    "countSummary": "{count, plural, =0 {žádné signály} one {# signál} few {# signály} other {# signálů}} · registr typů handoff signálů podle producenta",
-    "newSignal": "Nový signál",
-    "openSignalAria": "Otevřít signál {label}",
-    "emptyTitle": "Zatím žádné signály",
-    "emptyDescription": "Registr typů handoff signálů je prázdný — vestavěné typy se seedují na serveru, takže tenhle stav by neměl nastat.",
-    "yes": "Ano",
-    "no": "Ne",
-    "status": {
-      "builtin": "vestavěný",
-      "pending": "čeká na producenta",
-      "active": "aktivní"
-    },
-    "detail": {
-      "panelTitle": "Signál",
-      "slug": "ID",
-      "producer": "Producent",
-      "status": "Stav",
-      "severityBearing": "Nese závažnost",
-      "systemNote": "Systémový — vestavěný, needitovatelný",
-      "descriptionTitle": "Popis",
-      "buildTaskTitle": "Build task",
-      "buildTaskLink": "Zobrazit task",
-      "notFoundTitle": "Signál nenalezen",
-      "notFoundDescription": "Tenhle typ signálu v registru neexistuje — možná byl smazán, nebo je odkaz zastaralý.",
-      "editAction": "Upravit",
-      "deleteAction": "Smazat",
-      "deleteTitle": "Smazat signál?",
-      "deleteBody": "Opravdu smazat signál „{label}“? Tuto akci nelze vrátit.",
-      "deletedToast": "Signál smazán."
-    },
-    "create": {
-      "title": "Nový signál",
-      "panelTitle": "Registrace signálu",
-      "editPanelTitle": "Úprava signálu",
-      "cancel": "Zrušit",
-      "submit": "Vytvořit signál",
-      "editSubmit": "Uložit signál",
-      "error": "Vytvoření signálu se nepovedlo — zkuste to prosím znovu.",
-      "editError": "Uložení signálu se nepovedlo — zkuste to prosím znovu.",
-      "successToast": "Signál zaregistrován — build task {buildTaskId} běží.",
-      "editSuccessToast": "Signál uložen.",
-      "idFixedLabel": "ID (pevné)",
-      "fields": {
-        "producer": "Producent",
-        "label": "Název",
-        "labelPlaceholder": "např. Prošlý certifikát",
-        "description": "Popis / kdy se spustí",
-        "descriptionHint": "K čemu signál slouží a za jakých okolností ho producent vyprodukuje.",
-        "descriptionPlaceholder": "Popište, kdy tento signál nastane…",
-        "severityBearing": "Nese závažnost",
-        "severityBearingHint": "Zapněte, pokud signál nese úroveň závažnosti (low/moderate/high/critical).",
-        "slugPreviewLabel": "id (přibližně)"
-      }
-    }
   },
   "mcp": {
     "title": "MCP servery",
@@ -2042,70 +1941,6 @@
       },
       "emptyTitle": "Tohle oddělení si zatím nevlastní žádnou pipeline"
     },
-    "handoff": {
-      "sentencePrefix": "Když {subject} vyprodukuje",
-      "severityPrefix": "≥",
-      "targetPrefix": "→ předat",
-      "tierPrefix": "jako",
-      "tierName": {
-        "1": "automaticky",
-        "2": "jen oznámit",
-        "3": "čeká na schválení"
-      },
-      "systemBadge": "systémové",
-      "toggleLabel": "Aktivní",
-      "edit": "Upravit",
-      "delete": "Smazat",
-      "addRule": "Přidat pravidlo",
-      "emptyTitle": "Zatím žádná odchozí pravidla",
-      "emptyDescription": "Toto oddělení zatím nemá žádné vlastní pravidlo předávání. Přidej první níže.",
-      "deleteTitle": "Smazat pravidlo předávání?",
-      "deleteBody": "Opravdu smazat toto pravidlo předávání? Tuto akci nelze vrátit.",
-      "severity": {
-        "low": "nízká",
-        "moderate": "střední",
-        "high": "vysoká",
-        "critical": "kritická"
-      },
-      "signalKind": {
-        "cve": "Zranitelnost (CVE)",
-        "secret": "Únik tajného klíče",
-        "post-merge-red": "Červené CI po merge",
-        "god-node": "Uzel-bůh v grafu",
-        "community": "Komunita v grafu",
-        "cycle": "Cyklus závislostí",
-        "research-artifact": "Výsledek rešerše",
-        "pendingBadge": "čeká na producenta"
-      },
-      "signalKindDesc": {
-        "cve": "Zranitelnost nalezená v závislosti projektu.",
-        "secret": "Tajný klíč nebo heslo uniklé v kódu.",
-        "post-merge-red": "CI selhalo po sloučení PR.",
-        "god-node": "Vysoce propojený uzel v grafu kódu.",
-        "community": "Nově detekovaná komunita v grafu.",
-        "cycle": "Cyklická závislost mezi moduly.",
-        "research-artifact": "Dokončený rešeršní artefakt."
-      },
-      "editor": {
-        "severityPrefix": "se závažností",
-        "anySignal": "Jakýkoli signál (∗)",
-        "anySeverity": "jakoukoli",
-        "targetKindDepartment": "oddělení",
-        "targetKindPipeline": "pipeline",
-        "tierClause": {
-          "1": "automaticky",
-          "2": "a dá mi vědět",
-          "3": "až to schválím"
-        },
-        "signalKindAria": "Druh signálu",
-        "newSignal": "+ nový signál",
-        "severityAria": "Minimální závažnost",
-        "targetAria": "Cíl předání",
-        "tierAria": "Způsob předání",
-        "save": "Uložit pravidlo",
-        "cancel": "Zrušit"
-      }
-    },
     "create": {
       "title": "Nové oddělení",
       "subtitle": "vytvoří datový soubor oddělení",
@@ -2146,7 +1981,6 @@
       "team": "Tým",
       "subtasks": "Podúkoly",
       "pipelines": "Pipeline",
-      "handoff": "Předání",
       "skills": "Dovednosti",
       "integrations": "Integrace",
       "automations": "Automatizace",
@@ -2179,9 +2013,6 @@
     "pipelines": {
       "emptyTitle": "Zatím žádné pipeline",
       "emptyDescription": "Toto oddělení zatím nevlastní žádnou pipeline."
-    },
-    "handoff": {
-      "manageLink": "Spravovat pravidla předání →"
     },
     "registryLink": "Spravovat v registru →",
     "registryDescription": "Tento seznam se spravuje v globálním registru, ne po odděleních.",
@@ -2387,9 +2218,6 @@
       "subtasksTitle": "Otevřené podúkoly",
       "subtasksEmptyTitle": "Žádné podúkoly",
       "subtasksEmpty": "V tomto oddělení nejsou žádné otevřené podúkoly.",
-      "handoffTitle": "Předávání · IN / OUT",
-      "handoffEmptyTitle": "Nic se nepředává",
-      "handoffEmpty": "Do tohoto oddělení ani z něj se nic nepředává.",
       "out": "→ VEN · {kind}",
       "in": "→ DOVNITŘ · {kind}",
       "addLabel": "Přidat zaměstnance",
@@ -2492,8 +2320,6 @@
         "global": "Globální pravidla",
         "project": "Podle projektu",
         "agent": "Podle agenta",
-        "handoff": "Předávání",
-        "signals": "Signály",
         "mandate": "Mandát"
       },
       "projectPicker": "Projekt",
@@ -2578,7 +2404,6 @@
       "department": "Oddělení",
       "person": "Osoba",
       "task": "Úkol",
-      "chain": "Řetězec",
       "goal": "Cíl",
       "company": "Firma",
       "team": "Tým",
@@ -2589,7 +2414,6 @@
       "hook": "Hook",
       "command": "Příkaz",
       "automation": "Automatizace",
-      "signal": "Signál",
       "note": "Poznámka",
       "setting": "Nastavení",
       "gate": "Brána",
@@ -2600,7 +2424,6 @@
       "departments": "Oddělení",
       "people": "Lidé",
       "tasks": "Úkoly",
-      "chains": "Řetězce",
       "goals": "Cíle",
       "companies": "Firmy",
       "teams": "Týmy",
@@ -2608,7 +2431,6 @@
       "pipelines": "Pipelines",
       "registries": "Registry",
       "automations": "Automatizace",
-      "signals": "Signály",
       "vault": "Trezor",
       "settings": "Nastavení",
       "gates": "Brány"
@@ -2628,8 +2450,6 @@
       "global": "Globální pravidla",
       "per-project": "Podle projektu",
       "per-agent": "Podle agenta",
-      "handoff": "Pravidla předávání",
-      "signals": "Signály",
       "mandate": "Mandát"
     },
     "actions": {

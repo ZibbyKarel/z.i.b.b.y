@@ -1,0 +1,13 @@
+{
+  "id": "signal-arch-audit",
+  "name": "Nálezy auditu architektury → Dev",
+  "trigger": { "type": "signal", "kind": "*", "from": "qa" },
+  "target": {
+    "type": "task",
+    "text": "Review these architecture findings and prepare the worthwhile fixes on their own branch.",
+    "target": { "kind": "department", "id": "dev", "name": "dev" }
+  },
+  "approval": "ask",
+  "enabled": true,
+  "system": true
+}

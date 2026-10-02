@@ -39,8 +39,7 @@ ts-rest models.
 
 The run-status scopes are exhaustively `agent-runs` / `pipeline-runs` / `goal-runs`.
 (A `chain-runs` scope existed while the `chains` feature did; it was removed with
-that feature — chains are superseded by the handoff rule engine, see
-`docs/api/handoff.md`.)
+that feature.)
 
 Every event is tagged with a `scope` field the client switches on. Per the
 controller's own doc comment:

@@ -48,9 +48,8 @@ graphify-out/
 .zibby/data/budget-ledger
 .zibby/data/subsystem-seen.json
 .zibby/data/artifacts
-# Handoff: rules.json reseeds from the in-code SYSTEM_HANDOFF_RULES (code is the
-# source of truth); proposals/ + fired/ are runtime. All regenerable, none versioned.
-.zibby/data/handoff
+# Signal bus runtime state (fired fingerprints + parked dispatches) — regenerable.
+.zibby/data/automations-fired
 .zibby/data/research-digest.json
 .zibby/data/mcp-credentials
 .zibby/data/project-secrets

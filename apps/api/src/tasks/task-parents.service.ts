@@ -49,17 +49,9 @@ function toSubtaskSummary(task: ScheduledTask): SubtaskSummary {
 /**
  * PART-B.md ZB-04a §5's derivation table, generalised over an explicit
  * `entries` list rather than literally "subtasks": when `parent` has no
- * children yet (every real task today — ZB-05a is what starts producing
- * subtasks), the parent's OWN state is the sole entry, so an ordinary
+ * children yet (every real task today — nothing creates subtasks any more), the parent's OWN state is the sole entry, so an ordinary
  * non-chain task still derives a sensible top-level state instead of being
  * vacuously `thinking` forever.
- *
- * ZB-05a — "chain ended": a non-chain parent (`target?.kind !== "chain"`)
- * trivially counts as "ended", there is no chain to end. A real chain parent
- * only counts as ended once `HandoffService.evaluate` finds no further hop
- * to dispatch and stamps `chainEndedAt` (`TaskSchedulerService.markChainEnded`)
- * — until then "all subtasks done" falls through to `thinking`, read as "the
- * last hop finished, the next hasn't been dispatched (or evaluated) yet".
  */
 function deriveParentState(
   parent: ScheduledTask,
@@ -70,8 +62,7 @@ function deriveParentState(
   if (states.includes("error")) return "error";
   if (states.includes("blocked")) return "blocked";
   if (states.includes("working")) return "working";
-  const chainEnded = parent.target?.kind !== "chain" || parent.chainEndedAt != null;
-  if (chainEnded && states.every((s) => s === "done")) return "done";
+  if (states.every((s) => s === "done")) return "done";
   return "thinking";
 }
 

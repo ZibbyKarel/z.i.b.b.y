@@ -255,7 +255,7 @@ export class DepartmentsService {
   /**
    * ZB-04a §5 — this department's subtasks (ZB-03's Subtasks tab): every
    * `GET /api/tasks/parents` subtask row stamped `department === id`, empty
-   * until ZB-05a actually dispatches a chain step. Throws
+   * unless legacy chain subtasks exist on disk. Throws
    * `DepartmentNotFoundError` for an unknown id, same as {@link get}.
    */
   async subtasks(id: string): Promise<SubtaskSummary[]> {
