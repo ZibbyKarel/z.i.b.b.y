@@ -821,6 +821,36 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
       expect(failure).toContain('Phase "review" failed');
     });
 
+    it("a stage killed by API shutdown takes no retry/park path", async () => {
+      const run = h.runs.get(WORKFLOW_RUN_ID);
+      if (!run) throw new Error("missing run");
+      const svc = h.service as unknown as { runStage: unknown; shuttingDown: boolean };
+      // build done; review is killed mid-flight by the shutdown.
+      const runStage = vi.fn(
+        async (_run: unknown, phase: { id: string }, _cwd: string, attempt: number) => {
+          if (phase.id === "review") svc.shuttingDown = true;
+          return {
+            phaseId: phase.id,
+            runId: `${WORKFLOW_RUN_ID}.${phase.id}`,
+            attempt,
+            status: phase.id === "review" ? "interrupted" : "done",
+          };
+        },
+      );
+      svc.runStage = runStage;
+
+      await (
+        h.service as unknown as {
+          drive(run: WorkflowRun, workflow: unknown): Promise<void>;
+        }
+      ).drive(run, parkedWorkflow);
+
+      expect(runStage).toHaveBeenCalledTimes(2);
+      // Without the guard the exhausted review loop would park the run.
+      expect(run.status).not.toBe("parked");
+      expect(run.stageRuns.at(-1)?.status).toBe("interrupted");
+    });
+
     it("resumeParked injects the note, resets the counter and re-enters at loop.to", async () => {
       const run = h.runs.get(WORKFLOW_RUN_ID);
       if (!run) throw new Error("missing run");

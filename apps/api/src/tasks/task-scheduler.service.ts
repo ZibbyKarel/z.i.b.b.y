@@ -1456,6 +1456,8 @@ export class TaskSchedulerService
     if (target.kind === "workflow") {
       // Task 8: attachments are intentionally NOT passed to a workflow target in v1 —
       // the workflow runner has no attachments seam yet (documented deferred gap).
+      // The task's text is the workflow's first-phase input (its `consumes`, e.g. a
+      // brief) — without it every stage runs blind to what the operator asked for.
       const run = await this.workflowRunner.start(
         target.id,
         taskId,
@@ -1463,6 +1465,7 @@ export class TaskSchedulerService
         matchedTerms,
         undefined,
         output,
+        text,
       );
       return { runRef: run.workflowRunId, target, classification };
     }

@@ -147,6 +147,12 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
    * lands the aggregate `interrupted` instead of taking its normal retry/park path.
    */
   private readonly stopRequested = new Set<string>();
+  /**
+   * Set once the API is shutting down: `core.shutdown()` kills every live stage
+   * child, and without this the driver would read that kill as a stage failure and
+   * spend a retry spawning the loop target — which dies with the process moments later.
+   */
+  private shuttingDown = false;
   private readonly log: ScopedLogger;
   /**
    * Push channel for aggregate transitions. Unlike agent runs (whose lifecycle the
@@ -252,6 +258,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
+    this.shuttingDown = true;
     await this.core.shutdown();
   }
 
@@ -1093,6 +1100,14 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       // Phase 43: an operator-requested stop killed this stage's child — land the
       // aggregate `interrupted` right here, before any retry/park/limit logic runs,
       // so a stopped run never respawns a retry attempt or drops into a pause.
+      // Shutdown killed the stage: record it and stop driving — the boot
+      // reconciliation settles the aggregate, no retry is spent on a dying process.
+      if (this.shuttingDown) {
+        run.stageRuns.push(stageRun);
+        await this.writeAggregate(run);
+        return;
+      }
+
       if (this.stopRequested.delete(run.workflowRunId)) {
         run.stageRuns.push(stageRun);
         run.status = "interrupted";

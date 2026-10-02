@@ -522,6 +522,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       [],
       undefined,
       undefined,
+      expect.any(String),
     );
     expect(result.task.target).toEqual({ kind: "workflow", id: "release", name: "Release" });
   });
@@ -645,6 +646,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       [],
       undefined,
       undefined,
+      expect.any(String),
     );
 
     workflowListener?.(
@@ -953,6 +955,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         [],
         undefined,
         undefined,
+        expect.any(String),
       );
       // The resolved target IS a concrete workflow target — a department target
       // never reaches persistence (its "via <department>" attribution rides on the
@@ -1000,6 +1003,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         [],
         undefined,
         undefined,
+        expect.any(String),
       );
     });
 
@@ -1036,6 +1040,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         [],
         undefined,
         undefined,
+        expect.any(String),
       );
     });
 
@@ -1226,6 +1231,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         [],
         undefined,
         { type: "pr" },
+        expect.any(String),
       );
     });
 
@@ -1283,6 +1289,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         [],
         undefined,
         { type: "pr" },
+        expect.any(String),
       );
     });
 
@@ -1422,6 +1429,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         [],
         undefined,
         undefined,
+        expect.any(String),
       );
       expect(result.task.target).toEqual({
         kind: "workflow",
