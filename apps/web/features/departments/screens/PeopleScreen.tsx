@@ -8,7 +8,6 @@ import {
   Container,
   FilterBar,
   Grid,
-  Legend,
   SearchInput,
   SectionLabel,
   SegmentedControl,
@@ -18,7 +17,8 @@ import {
 } from "@zibby/design-system";
 import type { StateTone } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { useRouter, useSearchParams } from "next/navigation";
+import type { Route } from "next";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { EmployeeSheet } from "../components/EmployeeSheet";
 import { useDepartmentLookup } from "../useDepartmentLookup";
@@ -46,13 +46,22 @@ export function PeopleScreen() {
   const t = useTranslations("people");
   const departments = useDepartmentLookup();
   const router = useRouter();
-  // `?state=` / `?department=` preset the filters (the org map's Zibby avatar links here).
+  // `?state=` is the state filter itself (the org map's Zibby avatar links here);
+  // `?department=` only presets the department filter.
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const state = searchParams.get("state") ?? ALL;
+  function setState(next: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === ALL) params.delete("state");
+    else params.set("state", next);
+    const query = params.toString();
+    router.replace((query ? `${pathname}?${query}` : pathname) as Route);
+  }
   const { data: employees = [], isPending, isError, refetch } = useEmployeesQuery();
   const { isPinned } = usePinToggle();
 
   const [department, setDepartment] = useState<string>(searchParams.get("department") ?? ALL);
-  const [state, setState] = useState<string>(searchParams.get("state") ?? ALL);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [role, setRole] = useState<string>(ALL);
   const [search, setSearch] = useState("");
@@ -63,19 +72,23 @@ export function PeopleScreen() {
     return [...set].sort();
   }, [employees]);
 
-  const filtered = useMemo(() => {
+  // Every filter but state — the state options count over this set.
+  const matching = useMemo(() => {
     const q = search.trim().toLowerCase();
     return employees.filter((e) => {
       if (e.status !== "active") return false;
       if (department !== ALL && e.department !== department) return false;
-      if (state !== ALL && e.state !== state) return false;
       const roleLabel = e.position.title ?? e.position.name;
       if (role !== ALL && roleLabel !== role) return false;
       if (q && !e.name.toLowerCase().includes(q) && !roleLabel.toLowerCase().includes(q))
         return false;
       return true;
     });
-  }, [employees, department, state, role, search]);
+  }, [employees, department, role, search]);
+  const filtered = useMemo(
+    () => (state === ALL ? matching : matching.filter((e) => e.state === state)),
+    [matching, state],
+  );
 
   const grouped = useMemo(() => {
     const byDept = new Map<DepartmentId, EmployeeWithState[]>();
@@ -98,14 +111,6 @@ export function PeopleScreen() {
         employees: byDept.get(d.id)!,
       }));
   }, [filtered, isPinned, departments]);
-
-  const legendItems = (["working", "thinking", "blocked", "error", "done", "idle"] as const).map(
-    (s) => ({
-      state: STATE_TONE[s],
-      label: t(`state.${s}`),
-      count: filtered.filter((e) => e.state === s).length,
-    }),
-  );
 
   if (isPending) return <QueryLoading />;
   if (isError) return <QueryError onRetry={() => void refetch()} />;
@@ -147,7 +152,11 @@ export function PeopleScreen() {
                 items={[
                   { value: ALL, label: t("allStates") },
                   ...(["working", "thinking", "blocked", "error", "done", "idle"] as const).map(
-                    (s) => ({ value: s, label: t(`state.${s}`) }),
+                    (s) => {
+                      const count = matching.filter((e) => e.state === s).length;
+                      const label = t(`state.${s}`);
+                      return { value: s, label: count > 0 ? `${label} (${count})` : label };
+                    },
                   ),
                 ]}
                 onChange={setState}
@@ -170,8 +179,6 @@ export function PeopleScreen() {
               value={search}
             />
           </FilterBar>
-
-          <Legend items={legendItems} />
 
           {grouped.length === 0 ? (
             <EmptyState
