@@ -147,7 +147,7 @@ function Segment({ seg }: { seg: TranscriptSegment }) {
           data-testid={RunTranscriptTestId.System}
           size="2xs"
           type="note"
-          variant="tertiary"
+          variant="secondary"
         >
           ▶ {seg.text}
         </Typography>
@@ -160,7 +160,7 @@ function Segment({ seg }: { seg: TranscriptSegment }) {
           size="2xs"
           style={preWrapItalic}
           type="note"
-          variant="tertiary"
+          variant="secondary"
         >
           💭 {seg.text}
         </Typography>
@@ -171,7 +171,7 @@ function Segment({ seg }: { seg: TranscriptSegment }) {
           <Typography mono size="2xs" tone="accent" type="note">
             ●
           </Typography>
-          <Typography mono size="2xs" style={preWrap} type="note" variant="secondary">
+          <Typography mono size="2xs" style={preWrap} type="note" variant="primary">
             {seg.text}
           </Typography>
         </Stack>
@@ -184,7 +184,7 @@ function Segment({ seg }: { seg: TranscriptSegment }) {
           size="2xs"
           style={preWrap}
           type="note"
-          variant="tertiary"
+          variant="secondary"
         >
           {seg.text}
         </Typography>
@@ -196,7 +196,7 @@ function Segment({ seg }: { seg: TranscriptSegment }) {
           data-testid={RunTranscriptTestId.Footer}
           size="2xs"
           type="note"
-          variant="tertiary"
+          variant="secondary"
         >
           ─── {seg.text}
         </Typography>
@@ -227,7 +227,7 @@ function ToolCallSegment({ tool, result, toggleLabel }: ToolCallSegmentProps) {
         <Typography mono size="2xs" tone="accent" type="note">
           ●
         </Typography>
-        <Typography mono size="2xs" style={preWrap} type="note" variant="secondary">
+        <Typography mono size="2xs" style={preWrap} type="note" variant="primary">
           {tool}
         </Typography>
       </Stack>
@@ -255,7 +255,7 @@ function ToolCallSegment({ tool, result, toggleLabel }: ToolCallSegmentProps) {
           <Typography mono size="2xs" tone="accent" type="note">
             ●
           </Typography>
-          <Typography mono size="2xs" style={preWrap} type="note" variant="secondary">
+          <Typography mono size="2xs" style={preWrap} type="note" variant="primary">
             {tool}
           </Typography>
         </Stack>
@@ -267,7 +267,7 @@ function ToolCallSegment({ tool, result, toggleLabel }: ToolCallSegmentProps) {
           size="2xs"
           style={preWrap}
           type="note"
-          variant="tertiary"
+          variant="secondary"
         >
           {result}
         </Typography>

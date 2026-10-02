@@ -76,7 +76,19 @@ export function parseTranscript(text: string): TranscriptSegment[] {
     resultBuf = null;
   };
 
-  for (const line of text.split("\n")) {
+  for (const raw of text.split("\n")) {
+    // A bare `\r` is a terminal redraw (tqdm/progress bars from a non-claude stage
+    // CLI): only the text after the last one is what a terminal would show. Such a
+    // line is tool output, not agent prose — render its final state as a raw mono row.
+    const crlf = raw.replace(/\r+$/, "");
+    const cr = crlf.lastIndexOf("\r");
+    const line = cr === -1 ? crlf : crlf.slice(cr + 1);
+    if (cr !== -1 && !resultBuf) {
+      flushText();
+      if (line.trim()) segments.push({ kind: "result", text: line });
+      continue;
+    }
+
     // Inside a result block, fold 5-space continuation lines; anything else ends it.
     if (resultBuf) {
       if (RESULT_CONTINUATION.test(line)) {

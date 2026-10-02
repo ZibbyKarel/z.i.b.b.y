@@ -33,7 +33,10 @@ import {
   useDivisionsQuery,
 } from "../../departments/queries";
 import { NewDepartmentDialog } from "../../departments/components/NewDepartmentDialog";
-import { useCreateDepartmentMutation } from "../../departments/mutations";
+import {
+  useCreateDepartmentMutation,
+  useMarkDepartmentSeenMutation,
+} from "../../departments/mutations";
 import { useHireEmployeeMutation } from "../../employees/mutations";
 import { useEmployeesQuery } from "../../employees/queries";
 import { useRunsQuery } from "../../runs";
@@ -51,6 +54,7 @@ export enum OrgMapScreenTestId {
   AddEmployeeButton = "org-map-add-employee-button",
   AddDepartmentButton = "org-map-add-department-button",
   FailedRun = "org-map-failed-run",
+  DismissFailedRunsButton = "org-map-dismiss-failed-runs-button",
 }
 
 /** Zibby's state → the `/activity/runs` state group it reads as (idle → no filter). */
@@ -116,6 +120,7 @@ export function OrgMapScreen() {
   const [newAgentId, setNewAgentId] = useState("");
   const [creatingDepartment, setCreatingDepartment] = useState(false);
   const createDepartment = useCreateDepartmentMutation();
+  const markSeen = useMarkDepartmentSeenMutation();
 
   function setFocus(id: DepartmentId) {
     const next = new URLSearchParams(searchParams.toString());
@@ -340,9 +345,23 @@ export function OrgMapScreen() {
 
               {focusFailedRuns.length > 0 && (
                 <Stack gap="100">
-                  <Typography tracking="wider" type="labelSm" variant="secondary">
-                    {t("focus.failedRunsTitle")}
-                  </Typography>
+                  <Row gap="100" justify="between">
+                    <Typography tracking="wider" type="labelSm" variant="secondary">
+                      {t("focus.failedRunsTitle")}
+                    </Typography>
+                    {/* Failures count only since the department was last seen —
+                        acknowledging them clears the department's (and Zibby's) error. */}
+                    <Button
+                      data-testid={OrgMapScreenTestId.DismissFailedRunsButton}
+                      disabled={markSeen.isPending}
+                      icon="check"
+                      intent="ghost"
+                      onClick={() => markSeen.mutate({ params: { id: focusId ?? "" }, body: {} })}
+                      size="sm"
+                    >
+                      {t("focus.dismissFailedRuns")}
+                    </Button>
+                  </Row>
                   <Stack gap="50">
                     {focusFailedRuns.map((r) => {
                       const id = typeof r === "string" ? r : r.runId;

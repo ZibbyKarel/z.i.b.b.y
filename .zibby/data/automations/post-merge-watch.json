@@ -1,1 +1,1 @@
-{"id":"post-merge-watch","name":"Sledování po sloučení","trigger":{"type":"cron","expr":"*/10 * * * *"},"target":{"type":"post-merge-watch"},"enabled":true,"system":true,"lastFiredAt":"2026-10-02T12:10:33.893Z"}
+{"id":"post-merge-watch","name":"Sledování po sloučení","trigger":{"type":"cron","expr":"*/10 * * * *"},"target":{"type":"post-merge-watch"},"enabled":true,"system":true,"lastFiredAt":"2026-10-02T13:10:57.278Z"}

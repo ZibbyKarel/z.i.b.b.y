@@ -138,12 +138,16 @@ export function Markdown({ source, escapeHtml = false, variant = "default" }: Ma
     );
   }
   return (
-    <div data-color-mode="dark" data-testid={MarkdownTestId.Root} style={themeVars}>
+    <div data-color-mode="dark" data-testid={MarkdownTestId.Root}>
+      {/* The vars go on the renderer's own root: the library's
+          `[data-color-mode*=dark] .wmde-markdown` rule re-declares the primer
+          palette there, so vars set on the wrapper are shadowed (light-grey
+          text on the light theme). */}
       <MDEditor.Markdown
         components={testIdComponents}
         remarkPlugins={escapeHtml ? ESCAPE_HTML_PLUGINS : undefined}
         source={source}
-        style={{ background: "transparent" }}
+        style={{ ...themeVars, background: "transparent" }}
       />
     </div>
   );

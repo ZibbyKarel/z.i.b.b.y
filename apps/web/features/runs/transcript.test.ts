@@ -73,6 +73,16 @@ describe("parseTranscript", () => {
     expect(raw).not.toContain("rate_limit_info");
   });
 
+  it("collapses a \\r progress-bar redraw to its final state as a raw row", () => {
+    const segs = parseTranscript(
+      "\r  0%|  | 0/4\r 50%|█  | 2/4\r100%|██| 4/4\r\nproduce: 6/6 approved\n",
+    );
+    expect(segs).toEqual([
+      { kind: "result", text: "100%|██| 4/4" },
+      { kind: "text", markdown: "produce: 6/6 approved" },
+    ]);
+  });
+
   it("groups a multi-line ⎿ result into a single result segment", () => {
     const segs = parseTranscript(TOOL_WITH_RESULT);
 

@@ -2223,6 +2223,7 @@
       "teamEmptyTitle": "No one borrowed right now",
       "teamEmpty": "The department borrows from the pool when a subtask starts.",
       "failedRunsTitle": "Failed runs",
+      "dismissFailedRuns": "Dismiss",
       "subtasksTitle": "Open subtasks",
       "subtasksEmptyTitle": "No subtasks",
       "subtasksEmpty": "No open subtasks in this department.",

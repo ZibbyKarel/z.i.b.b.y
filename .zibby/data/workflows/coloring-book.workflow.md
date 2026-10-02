@@ -94,7 +94,7 @@ outputs:
     to: coloring-book-latest
   - type: folder
     from: book
-    to: ~/Books/Coloring
+    to: ~/Documents/Books/Coloring
 department: pub
 complexity: standard
 budget:

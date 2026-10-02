@@ -101,10 +101,17 @@ vi.mock("../../employees/mutations", () => ({
   useHireEmployeeMutation: () => ({ mutate: hireMutate, isPending: false }),
 }));
 
+const markSeenMutate = vi.fn();
+vi.mock("../../departments/mutations", () => ({
+  useCreateDepartmentMutation: () => ({ mutate: vi.fn(), isPending: false }),
+  useMarkDepartmentSeenMutation: () => ({ mutate: markSeenMutate, isPending: false }),
+}));
+
 describe("OrgMapScreen", () => {
   beforeEach(() => {
     push.mockReset();
     hireMutate.mockReset();
+    markSeenMutate.mockReset();
     focusParam = "";
   });
 
@@ -141,6 +148,13 @@ describe("OrgMapScreen", () => {
     const row = screen.getByTestId(OrgMapScreenTestId.FailedRun);
     expect(row).toHaveTextContent("Broken patch");
     expect(row).toHaveAttribute("href", "/activity/runs/r_fail");
+  });
+
+  it("dismissing the failed runs marks the focused department seen", () => {
+    focusParam = "dev";
+    render(<OrgMapScreen />);
+    fireEvent.click(screen.getByTestId(OrgMapScreenTestId.DismissFailedRunsButton));
+    expect(markSeenMutate).toHaveBeenCalledWith({ params: { id: "dev" }, body: {} });
   });
 
   it("shows no focus panel without ?department=", () => {
