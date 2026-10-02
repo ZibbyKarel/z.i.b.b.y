@@ -20,13 +20,16 @@ import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { EmptyState } from "../../../components/EmptyState/EmptyState";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../../components/PageContainer/PageContainer";
 import { useChat } from "../../chat";
 import { useEmployeesQuery } from "../../employees";
-import { useWorkflowsQuery } from "../../workflows";
+import { useAgentsQuery } from "../../agents";
+import { useCreateWorkflowMutation, useWorkflowsQuery } from "../../workflows";
+import { NewWorkflowDialog } from "../../workflows/components/NewWorkflowDialog/NewWorkflowDialog";
 import { DEPARTMENT_TABS, type DepartmentTab } from "../departmentTabs";
 import { useDepartmentQuery, useDepartmentSubtasksQuery } from "../queries";
 
@@ -258,18 +261,46 @@ function WorkflowsTab({
   workflows: ReturnType<typeof useWorkflowsQuery>["data"];
 }) {
   const t = useTranslations("departmentDetail");
+  const tWorkflows = useTranslations("workflows");
+  const router = useRouter();
+  const [adding, setAdding] = useState(false);
+  const { data: agents = [] } = useAgentsQuery();
+  const createWorkflow = useCreateWorkflowMutation();
   const list = workflows ?? [];
-  if (list.length === 0) {
-    return (
-      <EmptyState
-        description={t("workflows.emptyDescription")}
-        glyph="flow"
-        title={t("workflows.emptyTitle")}
-      />
-    );
-  }
   return (
     <Stack gap="150">
+      <Stack direction="row" justify="between">
+        <Typography type="labelSm">{t("tabs.workflows")}</Typography>
+        <Button icon="plus" intent="primary" onClick={() => setAdding(true)} size="sm">
+          {tWorkflows("addWorkflow")}
+        </Button>
+      </Stack>
+      {adding && (
+        <NewWorkflowDialog
+          agents={agents}
+          defaultOwnerDepartment={departmentId as DepartmentId}
+          isPending={createWorkflow.isPending}
+          onClose={() => setAdding(false)}
+          onCreate={(body) =>
+            createWorkflow.mutate(
+              { body },
+              {
+                onSuccess: () => {
+                  setAdding(false);
+                  router.push(`/org/departments/${departmentId}/workflows/${body.id}` as Route);
+                },
+              },
+            )
+          }
+        />
+      )}
+      {list.length === 0 && (
+        <EmptyState
+          description={t("workflows.emptyDescription")}
+          glyph="flow"
+          title={t("workflows.emptyTitle")}
+        />
+      )}
       {list.map((p) => (
         <Link href={`/org/departments/${departmentId}/workflows/${p.id}`} key={p.id}>
           <Card interactive radius="sm">
