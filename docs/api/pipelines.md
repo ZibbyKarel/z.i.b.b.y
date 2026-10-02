@@ -74,6 +74,9 @@ phases:
 outputs: # what happens to the finished work (delivery sinks)
   - type: pr # opens a PR from docs.md (gated — "the PR is the gate")
     from: docs.md
+  - type: folder # copies <run dir>/book/ to ~/Workspace/zibby-publishing/books/<runId>/
+    from: book
+    to: ~/Workspace/zibby-publishing/books
   - type: file # writes review.md into the project (on a zibby/* branch)
     from: review.md
     dest: project
@@ -146,18 +149,19 @@ output-side counterpart of the `verify` phase). A pipeline can have more than
 one (open a PR _and_ write a report). Each sink draws from `from` — a
 relative path some phase `produces`.
 
-| `type` | Fields               | What it does                                                                                                                                                                                                             |
-| ------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `pr`   | `from`               | Composes a PR from `from` (Markdown `# title` + body) and opens it via `git push && gh pr create`. **Always parks for approval** — the PR is the gate, enforced structurally by the system (Law 3), not by agent config. |
-| `file` | `from`, `dest`, `to` | Copies `from` to `to` — into the project worktree (`dest: project`, on a `zibby/*` branch) or as a vault note (`dest: vault`, a durable second-brain record for pipelines whose result is information, not code).        |
+| `type`   | Fields               | What it does                                                                                                                                                                                                                                                                                                                                                                   |
+| -------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pr`     | `from`               | Composes a PR from `from` (Markdown `# title` + body) and opens it via `git push && gh pr create`. **Always parks for approval** — the PR is the gate, enforced structurally by the system (Law 3), not by agent config.                                                                                                                                                       |
+| `folder` | `from`, `to`         | Copies the run folder `<run dir>/<from>` (relative, no `..`; **not** a handoff file, so no phase has to `produce` it) recursively into `<to>/<pipelineRunId>/`. `to` is an absolute path or `~/…` (expanded to the home dir); parents are created. A missing source is logged and skipped. Recorded as a `project-file` run artifact whose locator is the delivered directory. |
+| `file`   | `from`, `dest`, `to` | Copies `from` to `to` — into the project worktree (`dest: project`, on a `zibby/*` branch) or as a vault note (`dest: vault`, a durable second-brain record for pipelines whose result is information, not code).                                                                                                                                                              |
 
 A `pr` sink parks the aggregate with `parkedReason: "output"` (durable across
 a restart — the phase loop has already finished, no live child), writes
 `pr-draft.md` + `diffstat.txt` as the decision surface, and opens an approval
 of `kind: "pipeline-output"` (runId = pipelineRunId). Approval → the system
 runs the gated push and the run finishes `done`; rejection → the work stays
-on the branch without a PR (the run is still `done`). `file` sinks are Tier-1
-and run immediately.
+on the branch without a PR (the run is still `done`). `file` and `folder` sinks
+are Tier-1 and run immediately.
 
 **Per-run override.** When the pipeline is the target of a directed task that
 carries its own `output` (the New Task dialog — see

@@ -94,7 +94,8 @@ export type PipelineState = "done" | "parked" | "failed" | "running";
  */
 export type PipelineOutput =
   | { type: "pr"; from: string }
-  | { type: "file"; from: string; dest: "project" | "vault"; to: string };
+  | { type: "file"; from: string; dest: "project" | "vault"; to: string }
+  | { type: "folder"; from: string; to: string };
 
 export interface Pipeline {
   id: string;

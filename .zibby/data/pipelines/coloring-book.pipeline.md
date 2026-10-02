@@ -88,6 +88,7 @@ outputs:
     from: book.md
     dest: vault
     to: coloring-book-latest
+  - { type: folder, from: book, to: ~/Workspace/zibby-publishing/books }
 desc: >-
   Autonomní výroba dětské omalovánky: koncept → plán stran → kontrola plánu →
   prompty → generování a QA obrázků → vizuální audit knihy → PDF (interiér + obálka)
@@ -104,7 +105,8 @@ budget:
 
 Výrobní linka oddělení **pub**. Vstupem je krátké zadání (téma, věk, počet stran);
 výstupem je složka `book/` v adresáři běhu: `interior.pdf`, `cover.pdf`,
-`listing.md`, `README.md` a schválené ilustrace. Nic se nepublikuje — nahrání na
+`listing.md`, `README.md` a schválené ilustrace. Po úspěšném běhu se složka
+`book/` navíc zkopíruje do `~/Workspace/zibby-publishing/books/<běh>/`. Nic se nepublikuje — nahrání na
 tržiště dělá operátor ručně.
 
 ## Fáze

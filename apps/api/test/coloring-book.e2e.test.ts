@@ -31,6 +31,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 describe("coloring-book pipeline (e2e, mock providers)", () => {
   let app: INestApplication;
   const dirs: string[] = [];
+  let booksDir = "";
   const tmp = async (p: string) => {
     const d = await fs.mkdtemp(path.join(os.tmpdir(), p));
     dirs.push(d);
@@ -70,10 +71,15 @@ describe("coloring-book pipeline (e2e, mock providers)", () => {
     );
     process.env.PIPELINE_DEMO_FIXTURE_DIR = fixtures;
 
-    await fs.copyFile(
+    // Redirect the folder sink away from the real ~/Workspace/zibby-publishing.
+    booksDir = await tmp("cb-books-");
+    const pipelineMd = await fs.readFile(
       path.join(REPO, ".zibby", "data", "pipelines", "coloring-book.pipeline.md"),
-      path.join(pipelinesDir, "coloring-book.pipeline.md"),
+      "utf8",
     );
+    const redirected = pipelineMd.replace("~/Workspace/zibby-publishing/books", booksDir);
+    expect(redirected).not.toBe(pipelineMd);
+    await fs.writeFile(path.join(pipelinesDir, "coloring-book.pipeline.md"), redirected);
     for (const agentId of AGENTS)
       await seedEmployeeFixture(defaultEmployeesDir(), {
         id: `employee_${agentId}`,
@@ -153,6 +159,10 @@ describe("coloring-book pipeline (e2e, mock providers)", () => {
     const book = path.join(run.cwd, "book");
     for (const f of ["interior.pdf", "cover.pdf", "listing.md", "README.md", "plan.json"])
       expect((await fs.stat(path.join(book, f))).size).toBeGreaterThan(0);
+    // folder sink: book/ copied to <booksDir>/<pipelineRunId>/
+    const delivered = path.join(booksDir, run.pipelineRunId);
+    for (const f of ["interior.pdf", "cover.pdf", "listing.md"])
+      expect((await fs.stat(path.join(delivered, f))).size).toBeGreaterThan(0);
     expect(await fs.readFile(path.join(run.cwd, "01_concept", "brief.md"), "utf8")).toContain(
       "farm animals",
     );

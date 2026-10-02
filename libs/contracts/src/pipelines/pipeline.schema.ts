@@ -107,6 +107,10 @@ export type PipelinePhase = z.infer<typeof PipelinePhaseSchema>;
  * - `file`: copy `from` to `to` — into the project worktree (`dest: project`, rides
  *   the run's `zibby/*` branch) or as a vault note (`dest: vault`, a durable
  *   second-brain artifact for pipelines whose result is information, not code).
+ * - `folder`: copy a whole folder of the run (`from` is relative to the run dir,
+ *   e.g. `book` — a run-wide artifact, not a phase handoff) into the local
+ *   directory `to` (absolute or `~/…`), as `<to>/<pipelineRunId>/`. For products
+ *   whose result is a set of files (a book: PDFs + images), not code or a note.
  */
 export const PipelinePrOutputSchema = z.object({
   type: z.literal("pr"),
@@ -123,9 +127,32 @@ export const PipelineFileOutputSchema = z.object({
 });
 export type PipelineFileOutput = z.infer<typeof PipelineFileOutputSchema>;
 
+/** A run-relative folder name: no absolute path, no `..` segment. */
+const RunRelativeDirSchema = z
+  .string()
+  .min(1)
+  .refine((v) => !v.startsWith("/") && !v.split(/[\\/]/).includes(".."), {
+    message: "from must be a folder inside the run dir (relative, no ..)",
+  });
+
+export const PipelineFolderOutputSchema = z.object({
+  type: z.literal("folder"),
+  /** Folder relative to the run dir, e.g. `book`. */
+  from: RunRelativeDirSchema,
+  /** Local target directory, absolute or `~/…`; each run lands in `<to>/<pipelineRunId>/`. */
+  to: z
+    .string()
+    .min(1)
+    .refine((v) => v.startsWith("/") || v.startsWith("~/"), {
+      message: "to must be an absolute path or start with ~/",
+    }),
+});
+export type PipelineFolderOutput = z.infer<typeof PipelineFolderOutputSchema>;
+
 export const PipelineOutputSchema = z.discriminatedUnion("type", [
   PipelinePrOutputSchema,
   PipelineFileOutputSchema,
+  PipelineFolderOutputSchema,
 ]);
 export type PipelineOutput = z.infer<typeof PipelineOutputSchema>;
 
@@ -312,9 +339,10 @@ function refinePipeline(p: z.infer<typeof PipelineObject>, ctx: z.RefinementCtx)
   });
   // An output sink draws from a phase artifact — its `from` must be something a
   // phase actually `produces`, or it would read an empty handoff at delivery time.
+  // A `folder` sink reads a run-wide folder (e.g. `book/`), not a handoff file.
   const produced = new Set(p.phases.map((ph) => ph.produces).filter(Boolean));
   p.outputs.forEach((out, i) => {
-    if (!produced.has(out.from)) {
+    if (out.type !== "folder" && !produced.has(out.from)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: `output.from "${out.from}" is not produced by any phase`,

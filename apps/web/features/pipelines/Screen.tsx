@@ -14,7 +14,7 @@ import {
   TextInputField,
   Typography,
 } from "@zibby/design-system";
-import { AVATAR_MAX, type UpdatePipelineInput } from "@zibby/contracts";
+import { AVATAR_MAX, type PipelineOutput, type UpdatePipelineInput } from "@zibby/contracts";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -28,6 +28,8 @@ import { toastBus } from "../../components/Toaster/toastBus";
 import { useAgentsQuery } from "../agents";
 import { PinButton } from "../pins";
 import { useNewTask } from "../tasks";
+import { OutputsEditor, outputsValid } from "./components/OutputsEditor/OutputsEditor";
+import { StepSettings } from "./components/PipelineDialog/StepSettings";
 import { AgentPalette } from "./components/PipelineDialog/AgentPalette";
 import { NewPipelineDialog } from "./components/NewPipelineDialog/NewPipelineDialog";
 import { PipelineCard } from "./components/PipelineCard/PipelineCard";
@@ -98,6 +100,7 @@ export function Screen({ selectedId: routeId, basePath = "/pipelines" }: ScreenP
   const [editGraph, setEditGraph] = useState<PipelineGraph>(() => phasesToGraph(selected, agents));
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
+  const [editOutputs, setEditOutputs] = useState<PipelineOutput[]>([]);
   const [showPalette, setShowPalette] = useState(false);
 
   // Attempt counters on the chain while the selected pipeline has a live run
@@ -115,6 +118,7 @@ export function Screen({ selectedId: routeId, basePath = "/pipelines" }: ScreenP
     setEditGraph(phasesToGraph(selected, agents));
     setEditName(selected.name);
     setEditDesc(selected.desc);
+    setEditOutputs(selected.outputs);
     setShowPalette(false);
     setEditingId(selected.id);
   };
@@ -133,7 +137,7 @@ export function Screen({ selectedId: routeId, basePath = "/pipelines" }: ScreenP
     setShowPalette(false);
   };
   const editValidity = validateGraph(editGraph, editName);
-  const canSaveEdit = !updatePipeline.isPending && editValidity.ok;
+  const canSaveEdit = !updatePipeline.isPending && editValidity.ok && outputsValid(editOutputs);
   const saveEdit = () => {
     if (!selected || !canSaveEdit) return;
     const assignment = selected.phases[0]?.consumes ?? INITIAL_ASSIGNMENT;
@@ -145,6 +149,8 @@ export function Screen({ selectedId: routeId, basePath = "/pipelines" }: ScreenP
     if (trimmedDesc !== selected.desc) patch.desc = trimmedDesc;
     const initialPhases = graphToPhases(phasesToGraph(selected, agents), assignment);
     if (JSON.stringify(phases) !== JSON.stringify(initialPhases)) patch.phases = phases;
+    if (JSON.stringify(editOutputs) !== JSON.stringify(selected.outputs))
+      patch.outputs = editOutputs;
     updatePipeline.mutate(
       { params: { id: selected.id }, body: patch },
       {
@@ -316,13 +322,17 @@ export function Screen({ selectedId: routeId, basePath = "/pipelines" }: ScreenP
                   )}
                 </Stack>
               </Stack>
-              <Divider />
-              <Stack align="center" direction="row" gap="100">
-                <Icon name="branch" size="md" tone="dim" />
-                <Typography mono size="caption" type="note" variant="secondary">
-                  {t("pipelines.branchNote")}
-                </Typography>
-              </Stack>
+              {selected.outputs.some((o) => o.type === "pr") && (
+                <>
+                  <Divider />
+                  <Stack align="center" direction="row" gap="100">
+                    <Icon name="branch" size="md" tone="dim" />
+                    <Typography mono size="caption" type="note" variant="secondary">
+                      {t("pipelines.branchNote")}
+                    </Typography>
+                  </Stack>
+                </>
+              )}
             </Stack>
           </Panel>
 
@@ -368,32 +378,57 @@ export function Screen({ selectedId: routeId, basePath = "/pipelines" }: ScreenP
                 readOnly={!editing}
                 setGraph={editing ? setEditGraph : noop}
               />
+              {editing && <StepSettings graph={editGraph} setGraph={setEditGraph} />}
             </Container>
           </Panel>
 
-          {selected.outputs.length > 0 && (
+          {(editing || selected.outputs.length > 0) && (
             <Panel header={t("pipelines.outputsTitle")} padding="250">
-              <Stack gap="100">
-                {selected.outputs.map((o, i) => (
-                  <Stack align="center" direction="row" gap="100" key={`${o.type}-${o.from}-${i}`}>
-                    <Icon
-                      name={o.type === "pr" ? "branch" : o.dest === "vault" ? "brain" : "file"}
-                      size="md"
-                      tone="dim"
-                    />
-                    <Typography size="caption" type="note" variant="secondary">
-                      {o.type === "pr"
-                        ? t("pipelines.outputPr", { from: o.from })
-                        : t(
-                            o.dest === "vault"
-                              ? "pipelines.outputFileVault"
-                              : "pipelines.outputFileProject",
-                            { from: o.from, to: o.to },
-                          )}
-                    </Typography>
-                  </Stack>
-                ))}
-              </Stack>
+              {editing ? (
+                <OutputsEditor
+                  onChange={setEditOutputs}
+                  outputs={editOutputs}
+                  produces={editGraph.nodes.map((n) => n.produces).filter(Boolean)}
+                />
+              ) : (
+                <Stack gap="100">
+                  {selected.outputs.map((o, i) => (
+                    <Stack
+                      align="center"
+                      data-testid={`output-${i}`}
+                      direction="row"
+                      gap="100"
+                      key={`${o.type}-${o.from}-${i}`}
+                    >
+                      <Icon
+                        name={
+                          o.type === "pr"
+                            ? "branch"
+                            : o.type === "folder"
+                              ? "doc"
+                              : o.dest === "vault"
+                                ? "brain"
+                                : "file"
+                        }
+                        size="md"
+                        tone="dim"
+                      />
+                      <Typography size="caption" type="note" variant="secondary">
+                        {o.type === "pr"
+                          ? t("pipelines.outputPr", { from: o.from })
+                          : o.type === "folder"
+                            ? t("pipelines.outputFolder", { from: o.from, to: o.to })
+                            : t(
+                                o.dest === "vault"
+                                  ? "pipelines.outputFileVault"
+                                  : "pipelines.outputFileProject",
+                                { from: o.from, to: o.to },
+                              )}
+                      </Typography>
+                    </Stack>
+                  ))}
+                </Stack>
+              )}
             </Panel>
           )}
         </Stack>

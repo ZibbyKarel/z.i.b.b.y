@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { promises as fs } from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
@@ -1274,6 +1275,10 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
         await this.openPrOutput(run, pipeline, output);
         continue;
       }
+      if (output.type === "folder") {
+        await this.deliverFolderOutput(run, output);
+        continue;
+      }
       await this.deliverFileOutput(run, pipeline, output);
     }
     run.status = "done";
@@ -1453,6 +1458,53 @@ export class PipelineRunnerService implements OnModuleInit, OnModuleDestroy {
       to: output.to,
     });
     await this.recordArtifact(run, "project-file", output.from, output.to);
+  }
+
+  /**
+   * Deliver a `folder` output: copy `<run.cwd>/<from>` recursively into
+   * `<to>/<pipelineRunId>/` (`~` expands to the home dir). Soft like every sink.
+   */
+  private async deliverFolderOutput(
+    run: PipelineRun,
+    output: Extract<PipelineOutput, { type: "folder" }>,
+  ): Promise<void> {
+    const src = this.resolveInside(run.cwd, output.from);
+    if (!src) {
+      this.log.warn("folder output skipped — source escapes the run dir", {
+        pipelineRunId: run.pipelineRunId,
+        from: output.from,
+      });
+      return;
+    }
+    const isDir = await fs
+      .stat(src)
+      .then((s) => s.isDirectory())
+      .catch(() => false);
+    if (!isDir) {
+      this.log.warn("folder output skipped — source folder missing", {
+        pipelineRunId: run.pipelineRunId,
+        from: output.from,
+      });
+      return;
+    }
+    const base =
+      output.to === "~" || output.to.startsWith("~/")
+        ? path.join(os.homedir(), output.to.slice(1))
+        : output.to;
+    const dest = path.join(base, run.pipelineRunId);
+    try {
+      await fs.mkdir(dest, { recursive: true });
+      await fs.cp(src, dest, { recursive: true });
+    } catch (error) {
+      this.log.warn("folder output failed (soft)", {
+        pipelineRunId: run.pipelineRunId,
+        to: dest,
+        err: error instanceof Error ? error.message : String(error),
+      });
+      return;
+    }
+    this.log.info("folder output delivered", { pipelineRunId: run.pipelineRunId, to: dest });
+    await this.recordArtifact(run, "project-file", output.from, dest);
   }
 
   /**

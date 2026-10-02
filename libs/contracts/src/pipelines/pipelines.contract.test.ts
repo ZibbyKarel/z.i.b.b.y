@@ -109,6 +109,19 @@ describe("pipeline schema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts a folder sink without any phase producing it; rejects bad from/to", () => {
+    const parse = (out: Record<string, string>) =>
+      PipelineSchema.safeParse({
+        id: "release",
+        phases: [phase("a")],
+        outputs: [{ type: "folder", ...out }],
+        instructions: "x",
+      }).success;
+    expect(parse({ from: "book", to: "~/books" })).toBe(true);
+    expect(parse({ from: "../x", to: "~/books" })).toBe(false);
+    expect(parse({ from: "book", to: "relative/dir" })).toBe(false);
+  });
+
   it("rejects an output.from that no phase produces (superRefine)", () => {
     const result = PipelineSchema.safeParse({
       id: "release",

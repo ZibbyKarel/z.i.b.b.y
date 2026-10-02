@@ -743,7 +743,26 @@
     "uploadImage": "Nahrát obrázek",
     "removeImage": "Odebrat obrázek",
     "uploadPipelineAvatar": "Nahraj obrázek orchestrace",
-    "avatarTooLarge": "Obrázek je příliš velký (max ~200 KB)."
+    "avatarTooLarge": "Obrázek je příliš velký (max ~200 KB).",
+    "outputType": "Typ výstupu",
+    "outputTypeOption": {
+      "pr": "Pull request",
+      "file": "Soubor",
+      "folder": "Složka"
+    },
+    "outputFrom": "Zdroj (artefakt)",
+    "outputFolderFrom": "Složka běhu",
+    "outputFolderFromError": "Relativní cesta bez „..“",
+    "outputDest": "Cíl",
+    "outputDestOption": {
+      "project": "Projekt",
+      "vault": "Paměť"
+    },
+    "outputTo": "Cesta",
+    "outputFolderToError": "Absolutní cesta nebo začíná ~/",
+    "outputRemove": "Odebrat",
+    "outputAdd": "Přidat výstup",
+    "outputFolder": "zkopíruje složku {from} do {to}/[běh]"
   },
   "phase": {
     "modelTitle": "model (override per-run)",

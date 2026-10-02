@@ -743,7 +743,26 @@
     "uploadImage": "Upload image",
     "removeImage": "Remove image",
     "uploadPipelineAvatar": "Upload pipeline image",
-    "avatarTooLarge": "Image is too large (max ~200 KB)."
+    "avatarTooLarge": "Image is too large (max ~200 KB).",
+    "outputType": "Output type",
+    "outputTypeOption": {
+      "pr": "Pull request",
+      "file": "File",
+      "folder": "Folder"
+    },
+    "outputFrom": "Source (artifact)",
+    "outputFolderFrom": "Run folder",
+    "outputFolderFromError": "Relative path without \"..\"",
+    "outputDest": "Destination",
+    "outputDestOption": {
+      "project": "Project",
+      "vault": "Memory"
+    },
+    "outputTo": "Path",
+    "outputFolderToError": "Absolute path or starts with ~/",
+    "outputRemove": "Remove",
+    "outputAdd": "Add output",
+    "outputFolder": "copies folder {from} to {to}/[run]"
   },
   "phase": {
     "modelTitle": "model (override per-run)",
