@@ -56,7 +56,7 @@ export interface ScreenProps {
   /** Pre-selected workflow id from the [id] route segment. */
   selectedId?: string;
   /**
-   * ZB-03 — the list/detail route prefix. Defaults to `/workflows`; a
+   * ZB-03 — the list/detail route prefix. Defaults to `/work/workflows`; a
    * department's Workflows tab hosts this same screen at
    * `/org/departments/[id]/workflows` so its editor opens under the
    * department instead of the global catalog.
@@ -77,7 +77,7 @@ const noop = () => {};
  * here: it must point at `/workflows` on the detail route (never loop back to
  * itself) and at `/chat` on the list route.
  */
-export function Screen({ selectedId: routeId, basePath = "/workflows" }: ScreenProps) {
+export function Screen({ selectedId: routeId, basePath = "/work/workflows" }: ScreenProps) {
   const t = useTranslations();
   const workflowsQuery = useWorkflowsQuery();
   const workflows = workflowsQuery.data ?? [];

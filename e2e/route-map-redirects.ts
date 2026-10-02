@@ -22,9 +22,9 @@ export const ROUTE_MAP_REDIRECTS: ReadonlyArray<[from: string, to: string]> = [
   // data) and are left uncovered here — this table only fits static pairs
   // (the sweep covers them separately, with its own seeded ids).
   ["/agents", "/org/people"],
-  ["/workflows", "/org"],
+  ["/workflows", "/work/workflows"],
   // The pre-rename URL (pipeline → workflow) still resolves, via the permanent redirect.
-  ["/pipelines", "/org"],
+  ["/pipelines", "/work/workflows"],
   // ZB-07: the activity screens ship — `/archiv`/`/runs` land on the runs list,
   // `/activity` on its default `log` tab.
   ["/archiv", "/activity/runs"],

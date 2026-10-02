@@ -137,14 +137,13 @@ export function buildCommandPaletteIndex(
   }
 
   for (const p of sources.workflows) {
-    if (!p.department) continue;
     entries.push({
       id: p.id,
       group: "workflows",
       kind: "workflow",
       label: p.name,
       meta: p.department,
-      href: `/org/departments/${p.department}/workflows/${p.id}` as Route,
+      href: `/work/workflows/${p.id}` as Route,
     });
   }
 

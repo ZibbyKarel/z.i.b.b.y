@@ -54,6 +54,7 @@ export const SECTIONS = [
     tabs: [
       { id: "tasks", href: "/work/tasks" as Route },
       { id: "goals", href: "/work/goals" as Route },
+      { id: "workflows", href: "/work/workflows" as Route },
       { id: "companies", href: "/work/companies" as Route },
       { id: "teams", href: "/work/teams" as Route },
       { id: "projects", href: "/work/projects" as Route },
@@ -123,7 +124,7 @@ export type SectionId = (typeof SECTIONS)[number]["id"];
  */
 const PATH_SECTION: readonly (readonly [prefix: string, section: SectionId])[] = [
   ["/agents", "org"],
-  ["/workflows", "org"],
+  ["/workflows", "work"],
   ["/automations", "org"],
   ["/chat", "org"],
   // ZB-03 (D-015/D-009): the employee directory + department pages (org) and

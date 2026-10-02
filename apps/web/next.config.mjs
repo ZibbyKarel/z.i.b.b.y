@@ -36,8 +36,7 @@ const nextConfig = {
   async redirects() {
     // ZB-03 (D-009): the first two ROUTE-MAP §2 targets to ship — `/agents`
     // (now the employee directory, D-015) and its detail (now a position in
-    // the registry). `/workflows(/[id])` are page-level redirects instead
-    // (server-side department lookup), not static rewrites.
+    // the registry).
     return [
       // ZB-13: `/chat` → `/org` (ZB-02) — the chat engine is now the shell-global
       // COO dock (ZB-01/ZB-12). No query params to preserve, so this is a plain
@@ -59,7 +58,8 @@ const nextConfig = {
       { source: "/projects", destination: "/work/projects", permanent: true },
       { source: "/projects/:path*", destination: "/work/projects/:path*", permanent: true },
       // Pipeline → Workflow rename: the old pipeline URLs keep working.
-      { source: "/pipelines/:path*", destination: "/workflows/:path*", permanent: true },
+      { source: "/pipelines/:path*", destination: "/work/workflows/:path*", permanent: true },
+      { source: "/workflows/:path*", destination: "/work/workflows/:path*", permanent: true },
       {
         source: "/org/departments/:id/pipelines/:path*",
         destination: "/org/departments/:id/workflows/:path*",

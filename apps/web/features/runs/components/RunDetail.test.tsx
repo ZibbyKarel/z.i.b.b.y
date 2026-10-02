@@ -463,7 +463,7 @@ describe("RunDetail — worker name links to its detail (Phase 63)", () => {
   it("links the workflow owner meta cell to its own detail page", async () => {
     renderDetail(); // default workflowRun: kind "workflow", owner "delivery"
     await userEvent.click(screen.getByTestId("run-owner-link"));
-    expect(push).toHaveBeenCalledWith("/workflows/delivery");
+    expect(push).toHaveBeenCalledWith("/work/workflows/delivery");
   });
 });
 

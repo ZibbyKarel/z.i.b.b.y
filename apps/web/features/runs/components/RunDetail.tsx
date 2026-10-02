@@ -657,7 +657,9 @@ export function RunDetail({
       <MetaCell
         key="owner"
         label={run.kind === "workflow" ? t("metaWorkflow") : t("metaTarget")}
-        onClick={run.kind === "workflow" ? () => router.push(`/workflows/${owner}`) : undefined}
+        onClick={
+          run.kind === "workflow" ? () => router.push(`/work/workflows/${owner}`) : undefined
+        }
         testId={run.kind === "workflow" ? "run-owner-link" : undefined}
         tone={run.kind === "workflow" ? "accent" : undefined}
         value={owner}

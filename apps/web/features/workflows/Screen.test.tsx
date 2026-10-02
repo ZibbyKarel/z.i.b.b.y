@@ -106,11 +106,14 @@ describe("workflows Screen — page header (F5)", () => {
     expect(screen.getByRole("button", { name: "Přidat workflow" })).toBeInTheDocument();
   });
 
-  it("detail route: title is the workflow's name, breadcrumb back goes to /workflows, no Add action", () => {
+  it("detail route: title is the workflow's name, breadcrumb back goes to /work/workflows, no Add action", () => {
     hooks.workflows = { data: [WORKFLOW], isPending: false, isError: false, refetch: vi.fn() };
     render(<Screen selectedId="build-feature" />);
     expect(screen.getByRole("heading", { name: WORKFLOW.name })).toBeInTheDocument();
-    expect(screen.getByTestId(`${BreadcrumbTestId.Item}-0`)).toHaveAttribute("href", "/workflows");
+    expect(screen.getByTestId(`${BreadcrumbTestId.Item}-0`)).toHaveAttribute(
+      "href",
+      "/work/workflows",
+    );
     expect(screen.queryByRole("button", { name: "Přidat workflow" })).not.toBeInTheDocument();
   });
 });

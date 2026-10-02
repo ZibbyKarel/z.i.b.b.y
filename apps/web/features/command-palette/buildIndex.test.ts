@@ -111,7 +111,7 @@ describe("buildCommandPaletteIndex", () => {
     );
   });
 
-  it("skips a workflow with no owning department (the route has no unresolved form)", () => {
+  it("routes every workflow, owned or not, to Work → Workflows", () => {
     const entries = buildCommandPaletteIndex(
       {
         ...EMPTY_SOURCES,
@@ -122,8 +122,8 @@ describe("buildCommandPaletteIndex", () => {
       },
       LABELS,
     );
-    const ids = entries.filter((e) => e.group === "workflows").map((e) => e.id);
-    expect(ids).toEqual(["p1"]);
+    const hrefs = entries.filter((e) => e.group === "workflows").map((e) => e.href);
+    expect(hrefs).toEqual(["/work/workflows/no-dept", "/work/workflows/p1"]);
   });
 
   it("groups every registry kind under the single registries bucket", () => {
