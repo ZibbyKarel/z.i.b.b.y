@@ -175,7 +175,17 @@ export function Screen({ selectedId: routeId, basePath = "/work/workflows" }: Sc
       agents={agents}
       isPending={createWorkflow.isPending}
       onClose={() => setAdding(false)}
-      onCreate={(body) => createWorkflow.mutate({ body }, { onSuccess: () => setAdding(false) })}
+      onCreate={(body) =>
+        createWorkflow.mutate(
+          { body },
+          {
+            onSuccess: () => {
+              setAdding(false);
+              router.push(`${basePath}/${body.id}` as Route);
+            },
+          },
+        )
+      }
     />
   );
 
@@ -474,11 +484,9 @@ export function Screen({ selectedId: routeId, basePath = "/work/workflows" }: Sc
                 </Typography>
               )}
             </Stack>
-            {!routeId && (
-              <Button icon="plus" intent="primary" onClick={() => setAdding(true)}>
-                {t("workflows.addWorkflow")}
-              </Button>
-            )}
+            <Button icon="plus" intent="primary" onClick={() => setAdding(true)}>
+              {t("workflows.addWorkflow")}
+            </Button>
           </Stack>
 
           {body}
