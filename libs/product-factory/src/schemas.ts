@@ -16,6 +16,8 @@ export const BriefSchema = z.strictObject({
   trim: z.literal("8.5x11").default("8.5x11"),
   listPriceUsd: z.number().default(9.99),
   breakEvenCopies: z.number().int().default(5),
+  /** A personal book for one named child — printed at home, never listed for sale. */
+  personalFor: z.string().min(1).max(40).optional(),
 });
 export type Brief = z.infer<typeof BriefSchema>;
 
@@ -32,6 +34,8 @@ export const PlanSchema = z.strictObject({
   brief: BriefSchema,
   title: z.string(),
   subtitle: z.string().optional(),
+  /** Title-page line in the brief's language (e.g. "Tahle omalovánka patří Natálce"). */
+  ownerLine: z.string().max(80).optional(),
   /** Visual rules the illustrator must follow. */
   styleGuide: z.string().max(2000),
   cover: z.strictObject({ scene: z.string() }),

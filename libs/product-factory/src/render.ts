@@ -8,6 +8,7 @@ import type { PDFFont, PDFPage } from "pdf-lib";
 import { bookDirOf, nn, readJson, writeJson } from "./ctx.ts";
 import type { Ctx } from "./ctx.ts";
 import { PlanSchema } from "./schemas.ts";
+import type { Plan } from "./schemas.ts";
 
 export const PT = 72;
 export const PAGE_W_PT = 8.5 * PT;
@@ -42,6 +43,16 @@ export const coverSizeIn = (
 };
 
 /** Keep only glyphs the embedded font has (Noto latin subset); strip diacritics as a fallback. */
+/** Default title-page owner line per brief language. */
+const OWNER_LINE: Record<Plan["brief"]["language"], string> = {
+  en: "This book belongs to:",
+  de: "Dieses Buch gehört:",
+  fr: "Ce livre appartient à :",
+  es: "Este libro pertenece a:",
+  it: "Questo libro appartiene a:",
+  cs: "Tahle omalovánka patří:",
+};
+
 function makeSafe(font: PDFFont, warnings: Set<string>) {
   const set = new Set(font.getCharacterSet());
   return (text: string): string => {
@@ -142,7 +153,7 @@ export async function render(argv: string[], ctx: Ctx): Promise<number> {
   centered(
     title,
     font,
-    [safe("This book belongs to: ____________________")],
+    [safe(plan.ownerLine ?? `${OWNER_LINE[plan.brief.language]} ____________________`)],
     16,
     PAGE_W_PT / 2,
     160,

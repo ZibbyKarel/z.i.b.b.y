@@ -103,7 +103,9 @@ budget:
 
 # Coloring Book
 
-Výrobní linka oddělení **pub**. Vstupem je krátké zadání (téma, věk, počet stran);
+Výrobní linka oddělení **pub**. Vstupem je volný text — popis knížky vlastními slovy, např. „omalovánky pro
+Natálku o tom, jak navštívila farmapark, jednoduché pro tříleté děti“ (jméno dítěte
+= osobní knížka k tisku doma, jinak knížka na prodej);
 výstupem je složka `book/` v adresáři běhu: `interior.pdf`, `cover.pdf`,
 `listing.md`, `README.md` a schválené ilustrace. Po úspěšném běhu se složka
 `book/` navíc zkopíruje do `~/Workspace/zibby-publishing/books/<běh>/`. Nic se nepublikuje — nahrání na

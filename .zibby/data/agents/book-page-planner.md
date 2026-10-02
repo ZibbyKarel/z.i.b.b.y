@@ -69,3 +69,8 @@ Rules: `pages.length` equals `brief.pageCount`, numbered 1..N; every scene is
 visually distinct (no two pages with the same subject + action); 1–3 subjects per
 page for ages ≤ 4; difficulty 1–3 rising gently; captions short, simple, correctly
 spelled, in the brief's language; no brands, trademarks or licensed characters.
+Copy `brief` from the Visual Bible's `## Brief` block, including `personalFor` when it
+is there. For a personal book add a top-level `"ownerLine"` (≤ 80 chars) with the
+Visual Bible's title-page line. With `storyMode` the pages tell
+the story in order, the child or mascot appears on most pages, and every caption is
+one short sentence of the story (names are fine in captions, never in scenes).

@@ -50,4 +50,6 @@ subjects, then composition ("one centered subject, generous empty margins"). Kee
 mascot's description word-for-word identical across pages. For a blocked page,
 address its QA issues explicitly (gray-area → "no fill, no shadows, line art only";
 too-complex → fewer, larger shapes; text-artifact → "no letters, no words") and
-change the seed. No brands or licensed characters, ever.
+change the seed. No brands or licensed characters, ever. Never put a name or any
+word in a prompt as text to draw — describe the child only by looks (e.g. "a little
+girl with two pigtails and a striped dress"); prompts are always in English.

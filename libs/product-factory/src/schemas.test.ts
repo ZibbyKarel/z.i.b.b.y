@@ -17,6 +17,17 @@ describe("schemas", () => {
       breakEvenCopies: 5,
     });
   });
+  it("accepts a personal brief for a named child", () => {
+    const b = BriefSchema.parse({
+      theme: "farm park visit",
+      targetAge: { min: 3, max: 3 },
+      pageCount: 12,
+      language: "cs",
+      storyMode: true,
+      personalFor: "Natálka",
+    });
+    expect(b.personalFor).toBe("Natálka");
+  });
   it("rejects min > max age and unknown keys", () => {
     expect(
       BriefSchema.safeParse({ theme: "x", targetAge: { min: 5, max: 3 }, pageCount: 24 }).success,
