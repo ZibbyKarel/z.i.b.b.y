@@ -68,7 +68,7 @@ running → done
 ### Log polling and streaming (unified surface)
 
 ```
-GET  /api/tasks/runs                       unified feed (agent/pipeline/goal/scheduled)
+GET  /api/tasks/runs                       unified feed (agent/workflow/goal/scheduled)
 GET  /api/tasks/runs/:runId                run detail (status, pct, …)
 GET  /api/tasks/runs/:runId/logs?offset=   log chunk from an offset (bytes)
 GET  /api/tasks/runs/:runId/logs/stream    SSE tail (falls back to the offset-poll above)
@@ -86,7 +86,7 @@ the owning runner.
 **File:** `apps/api/src/runner/runner-core.ts` (~51 KB)
 
 `RunnerCore` is the universal spawn engine shared by agents, skills, and
-pipeline stages.
+workflow stages.
 
 ### What RunnerCore does
 
@@ -109,7 +109,7 @@ interface KindStrategy<R extends BaseRun> {
 }
 ```
 
-Kinds: `"agent"` | `"skill"` | `"pipeline-stage"`
+Kinds: `"agent"` | `"skill"` | `"workflow-stage"`
 
 ### spawnCwd vs. cwd
 
@@ -145,7 +145,7 @@ A thin wrapper over `RunnerCore` for agent-kind runs:
 
 **File:** `apps/api/src/runner/claude-run-command.service.ts` — lives in the
 shared `ClaudeRunModule` (`runner/claude-run.module.ts`), which the three
-runners (agents, skills, pipeline stages) all import, rather than being nested
+runners (agents, skills, workflow stages) all import, rather than being nested
 under the agents module. Assembles the `claude` CLI command line:
 
 ```bash
@@ -184,7 +184,7 @@ under it:
 - **Curated catalog.** The full agent library isn't serialized into
   `--agents` (ZIBBY seeds 160+ of them — that alone overflows `ARG_MAX` →
   `spawn E2BIG`). `buildCatalog` selects the relevant subset: the caller's
-  `delegates` (a pipeline sends its phases' agents) + ZIBBY's operational core
+  `delegates` (a workflow sends its phases' agents) + ZIBBY's operational core
   (`CORE_DELEGATE_IDS`), deduplicated and capped at `MAX_CATALOG_AGENTS` (16).
   A small library (≤ cap, no `delegates`) passes through unchanged.
   `--allowedTools` narrows to this subset's tools (correctly — there's no
@@ -215,8 +215,8 @@ acquired (see `docs/api/employees.md` → "Wiring: single-agent task dispatch"),
 
 Both are **absent** when the run used D-017's unleased fallback (the
 position's agent has no hired employee anywhere — the task still dispatches
-directly, never a park) or predates the lease concept. A pipeline stage's
+directly, never a park) or predates the lease concept. A workflow stage's
 `AgentRun` carries the same two fields, set from the stage's own lease — see
-[pipelines.md](./pipelines.md) → "Wiring: pipeline stage dispatch".
+[workflows.md](./workflows.md) → "Wiring: workflow stage dispatch".
 
 <!-- Last reviewed 2026-09-24 (ZibbyCorp rename): module code changed only by the subsystem → department rename; this doc has no subsystem references. -->

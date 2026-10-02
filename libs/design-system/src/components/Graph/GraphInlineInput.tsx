@@ -12,7 +12,7 @@ const variantClass: Record<GraphInlineInputVariant, string> = {
   // A value floating directly on the canvas: no chrome of its own (an edge's
   // hand-off filename, a node's output-file field) — accent, monospace text.
   ghost: "border-none bg-transparent font-mono text-[10px] text-accent",
-  // A bordered, background-filled text box — the pipeline dialog's name/
+  // A bordered, background-filled text box — the workflow dialog's name/
   // description fields sitting in its non-canvas top bar.
   field: cn(
     "rounded-sm border border-border bg-[var(--color-background-deep)] px-2.5 py-1.5",
@@ -25,7 +25,7 @@ export interface GraphInlineInputProps extends Omit<
   "className" | "size"
 > {
   variant?: GraphInlineInputVariant;
-  /** `field` variant only: bolder, slightly larger text — the pipeline
+  /** `field` variant only: bolder, slightly larger text — the workflow
    *  dialog's name field vs. its plain-weight description field. */
   weight?: "normal" | "bold";
   /** Native `size` attribute (character-count width) — ghost variant's
@@ -35,9 +35,9 @@ export interface GraphInlineInputProps extends Omit<
 }
 
 /**
- * The pipeline canvas's unlabeled inline text inputs (`components/Graph/`,
+ * The workflow canvas's unlabeled inline text inputs (`components/Graph/`,
  * ZA-07): a node's output-file field, an edge's hand-off filename, and the
- * pipeline dialog's name/description fields. Two variants share one focus
+ * workflow dialog's name/description fields. Two variants share one focus
  * ring and one home for the Tailwind classes apps/web is no longer allowed
  * to author itself (D-007) — the canvas positioning/coloring around them
  * stays in `apps/web` via `Container`'s `style` passthrough (a DS prop, not a

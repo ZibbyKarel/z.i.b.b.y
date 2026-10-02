@@ -8,7 +8,7 @@ import { DepartmentsStorageService } from "../departments/departments.storage.se
 import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.service";
 import { PolicyStorageService } from "../gates/policy.storage.service";
 import { NoteNotFoundError, VaultService } from "../memory/vault.service";
-import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
+import { WorkflowsStorageService } from "../workflows/workflows.storage.service";
 import {
   type SelfKnowledgeComposerInput,
   composeSelfKnowledge,
@@ -31,9 +31,9 @@ export const GRAPH_REPORT_PATH = "GRAPH_REPORT_PATH";
 
 /**
  * Composes, persists and drift-checks the self-knowledge note (Fáze 1). Reads
- * the same read-through stores the rest of the app reads (agents/pipelines
+ * the same read-through stores the rest of the app reads (agents/workflows
  * hot-reload already works — see `docs/plans/phase-06.md` Zjištění 2), so a newly
- * added `.md` agent or pipeline is reflected the next time this composes,
+ * added `.md` agent or workflow is reflected the next time this composes,
  * without a restart.
  *
  * Channel kinds are NOT read from a live adapter registry — `AdapterRegistry`
@@ -55,7 +55,7 @@ export const GRAPH_REPORT_PATH = "GRAPH_REPORT_PATH";
 export class SelfKnowledgeService {
   constructor(
     private readonly agents: AgentsStorageService,
-    private readonly pipelines: PipelinesStorageService,
+    private readonly workflows: WorkflowsStorageService,
     private readonly gateRules: GateRulesStorageService,
     private readonly policy: PolicyStorageService,
     private readonly vault: VaultService,
@@ -93,10 +93,10 @@ export class SelfKnowledgeService {
   }
 
   private async gather(): Promise<SelfKnowledgeComposerInput> {
-    const [agents, pipelines, gateRules, policyFloor, codebaseShape, departments] =
+    const [agents, workflows, gateRules, policyFloor, codebaseShape, departments] =
       await Promise.all([
         this.agents.list(),
-        this.pipelines.list(),
+        this.workflows.list(),
         this.gateRules.list(),
         this.policy.floor(),
         this.readCodebaseShape(),
@@ -104,7 +104,7 @@ export class SelfKnowledgeService {
       ]);
     return {
       agents,
-      pipelines,
+      workflows,
       departments,
       gateRules,
       policyFloor,

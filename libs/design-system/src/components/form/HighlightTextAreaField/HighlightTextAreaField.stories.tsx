@@ -38,7 +38,7 @@ export const Overview: Story = {
     const mentionHighlights = [
       { start: 0, end: 8, tone: "accent" as const }, // @Builder — agent
       { start: 16, end: 31 }, // ~/zibby/backlog — untoned path
-      { start: 40, end: 49, tone: "push" as const }, // @Delivery — pipeline
+      { start: 40, end: 49, tone: "push" as const }, // @Delivery — workflow
       { start: 58, end: 68, tone: "dim" as const }, // @report.md — unresolved file
     ];
     return (
@@ -58,7 +58,7 @@ export const Overview: Story = {
         />
         <HighlightTextAreaField
           highlights={mentionHighlights}
-          hint="agent = accent · pipeline = push · soubor/neznámé = dim"
+          hint="agent = accent · workflow = push · soubor/neznámé = dim"
           label="Toned @mentions"
           onChange={(e) => setMentionText(e.target.value)}
           value={mentionText}

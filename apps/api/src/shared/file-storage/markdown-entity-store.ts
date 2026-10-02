@@ -2,7 +2,7 @@ import matter from "gray-matter";
 import { EntityFileStore } from "./entity-file-store";
 
 /**
- * Base for the Markdown-backed stores (agents, skills, pipelines): one file per
+ * Base for the Markdown-backed stores (agents, skills, workflows): one file per
  * entity whose YAML frontmatter carries the structured config and whose body is
  * the free-text `instructions`. Adds the gray-matter scaffold on top of
  * {@link EntityFileStore} so a subclass only declares the field mapping:

@@ -30,7 +30,7 @@ export interface GraphIconButtonProps extends Omit<
 }
 
 /**
- * The pipeline canvas's tiny icon/glyph buttons (`components/Graph/`, ZA-07):
+ * The workflow canvas's tiny icon/glyph buttons (`components/Graph/`, ZA-07):
  * an edge's disconnect "x" and the rework arc's retry-count stepper. See
  * {@link GraphInlineInput}'s doc comment for why these live in the design
  * system rather than as inline `apps/web` Tailwind (D-007).

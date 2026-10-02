@@ -55,7 +55,7 @@ describe("renderGoalProgress", () => {
     const iterations: GoalRun["iterations"] = [
       {
         index: 0,
-        makerKind: "pipeline",
+        makerKind: "workflow",
         verifier: { kind: "checks", satisfied: false, output: "red" },
         startedAt: new Date().toISOString(),
         status: "failed",

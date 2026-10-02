@@ -2,14 +2,14 @@ import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/com
 import { AgentRunnerService } from "../agents/agent-runner.service";
 import { WatcherHealthRegistry } from "../health/watcher-health.registry";
 import { LimitsService } from "../limits/limits.service";
-import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
+import { WorkflowRunnerService } from "../workflows/workflow-runner.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TickingWatcherBase } from "../shared/ticking-watcher-base";
 import { SystemConfigStore } from "../system/system-config.store";
 
 /** A limit-paused run the scan considers, normalized across the two runner kinds. */
 interface PausedEntry {
-  kind: "agent" | "pipeline";
+  kind: "agent" | "workflow";
   runId: string;
   resumeAt: number | null | undefined;
   cycles: number;
@@ -29,7 +29,7 @@ interface PausedEntry {
  *   the remaining due runs are left for the next tick rather than flapping.
  * - **Bounded cycles** (decision 6): a run that keeps becoming due without ever
  *   getting headroom (a genuine flap) burns one cycle per such attempt; past
- *   the operator-owned `limitResumeMax` it is parked (pipelines, operator-resumable)
+ *   the operator-owned `limitResumeMax` it is parked (workflows, operator-resumable)
  *   or failed with a readable reason (agent runs, which have no parked state).
  *
  * The heartbeat mirrors the other daemons: `systemConfig.limitResumeTickMs` (default
@@ -53,7 +53,7 @@ export class LimitResumeService
   constructor(
     private readonly limits: LimitsService,
     private readonly agentRunner: AgentRunnerService,
-    private readonly pipelineRunner: PipelineRunnerService,
+    private readonly workflowRunner: WorkflowRunnerService,
     private readonly systemConfig: SystemConfigStore,
     private readonly watcherHealthRegistry: WatcherHealthRegistry,
     logger: LoggerService,
@@ -108,7 +108,7 @@ export class LimitResumeService
     for (const entry of due) {
       if (this.inflight.has(entry.runId)) continue;
 
-      // Cap reached → park (pipelines) / fail (agent runs); no headroom needed.
+      // Cap reached → park (workflows) / fail (agent runs); no headroom needed.
       if (entry.cycles >= max) {
         await this.guard(entry.runId, () => this.parkCapped(entry));
         continue;
@@ -144,10 +144,10 @@ export class LimitResumeService
           cycles: r.limitResumeCycles ?? 0,
         }),
       ),
-      ...this.pipelineRunner.listLimitPaused().map(
+      ...this.workflowRunner.listLimitPaused().map(
         (r): PausedEntry => ({
-          kind: "pipeline",
-          runId: r.pipelineRunId,
+          kind: "workflow",
+          runId: r.workflowRunId,
           resumeAt: r.resumeAt,
           cycles: r.limitResumeCycles ?? 0,
         }),
@@ -160,7 +160,7 @@ export class LimitResumeService
 
   private async resumeOne(entry: PausedEntry): Promise<void> {
     if (entry.kind === "agent") await this.agentRunner.resumeLimitPaused(entry.runId);
-    else await this.pipelineRunner.resumeLimitPaused(entry.runId);
+    else await this.workflowRunner.resumeLimitPaused(entry.runId);
   }
 
   private async parkCapped(entry: PausedEntry): Promise<void> {
@@ -170,7 +170,7 @@ export class LimitResumeService
         `usage limit flapped ${entry.cycles} time(s) — failed for review`,
       );
     } else {
-      await this.pipelineRunner.parkLimitFlapped(entry.runId);
+      await this.workflowRunner.parkLimitFlapped(entry.runId);
     }
     this.log.warn("limit-paused run capped", {
       runId: entry.runId,

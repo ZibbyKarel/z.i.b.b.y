@@ -218,7 +218,7 @@ export class ProjectPrService {
    * route below — it is never called from any scheduler, monitor, or autonomous
    * runner.** Merging is a Tier-3, "surface and wait" action (CLAUDE.md): the
    * web UI gates every call behind a mandatory confirm dialog, and the Law
-   * "Never: Auto-merge" means no watcher/pipeline in this codebase may invoke
+   * "Never: Auto-merge" means no watcher/workflow in this codebase may invoke
    * this method on the project's behalf.
    */
   async merge(

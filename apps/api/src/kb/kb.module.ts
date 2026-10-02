@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
 import { AgentsModule } from "../agents/agents.module";
-import { PipelinesModule } from "../pipelines/pipelines.module";
+import { WorkflowsModule } from "../workflows/workflows.module";
 import { ProjectsModule } from "../projects/projects.module";
 import { ResolvedProjectModule } from "../projects/resolved-project.module";
 import { TeamsModule } from "../teams/teams.module";
@@ -14,7 +14,7 @@ import { KbScopeService } from "./kb-scope.service";
  * The `zibby-kb` MCP server (team-scoped, read-only knowledge-base search/read) —
  * see `docs/api/teams.md` for the full endpoint doc. `KbScopeService` needs
  * `TeamsModule`/`ProjectsModule`/`ResolvedProjectModule` (project → team → KB
- * resolution) plus `AgentsModule`/`PipelinesModule` (run → project resolution).
+ * resolution) plus `AgentsModule`/`WorkflowsModule` (run → project resolution).
  *
  * `KbMcpAuthService` (the two per-boot bearer tokens, fix round 1's F3) lives
  * in the separate, LEAF `KbAuthModule` — see that module's doc for why: this
@@ -32,7 +32,7 @@ import { KbScopeService } from "./kb-scope.service";
     ProjectsModule,
     ResolvedProjectModule,
     AgentsModule,
-    PipelinesModule,
+    WorkflowsModule,
     KbAuthModule,
   ],
   controllers: [KbMcpController],

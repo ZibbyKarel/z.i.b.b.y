@@ -62,7 +62,9 @@ graphify-out/
 # Phase 73: uploaded avatar image bytes live outside the (committed) .md
 # frontmatter — binary, regenerable from an upload, never versioned.
 .zibby/data/agents/assets/
-.zibby/data/pipelines/assets/
+.zibby/data/workflows/assets/
+# pipeline → workflow data-migration marker (per machine; see apps/api/src/shared/migrations)
+.zibby/data/.workflow-rename.done
 .zibby/data/projects/assets/
 
 .!zibby/data/agents

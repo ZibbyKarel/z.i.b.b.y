@@ -51,7 +51,7 @@ omits `id` and makes every other field optional (a PATCH body).
 A fresh install starts empty; the manifest is created on the first `create`.
 
 - `list()` drops schema-invalid entries rather than failing the whole listing
-  (mirrors the agent/pipeline/project listings), and backfills missing
+  (mirrors the agent/workflow/project listings), and backfills missing
   `people[].id`s via the shared `backfillPersonIds` helper (same Phase 69
   migration decision `ProjectPersonSchema` documents).
 - **Deleting a company that still has projects pointing at it is allowed — no

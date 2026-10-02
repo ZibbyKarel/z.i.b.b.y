@@ -11,8 +11,8 @@ operator's explicit sign-off before continuing. It survives an API restart —
 | Kind               | When it is created                                                                                                                                                                                                                                                                        |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `agent`            | A gate rule resolved to `ask` mid-run for an agent                                                                                                                                                                                                                                        |
-| `pipeline-stage`   | A gate inside a pipeline stage resolved to `ask`                                                                                                                                                                                                                                          |
-| `pipeline-output`  | A pipeline's `pr` output sink is waiting for sign-off before it opens the PR (runId = the pipelineRunId itself; no live child — a system-owned, agent-less gate)                                                                                                                          |
+| `workflow-stage`   | A gate inside a workflow stage resolved to `ask`                                                                                                                                                                                                                                          |
+| `workflow-output`  | A workflow's `pr` output sink is waiting for sign-off before it opens the PR (runId = the workflowRunId itself; no live child — a system-owned, agent-less gate)                                                                                                                          |
 | `task-output`      | A directed task with a chosen `pr` output is waiting to open the PR from the finished agent/orchestrator run's branch (runId = the taskId; the durable `ScheduledTask` record holds the gate state, no live child)                                                                        |
 | `channel`          | ZIBBY prepared a reply draft to a message (Tier 3)                                                                                                                                                                                                                                        |
 | `task`             | A task exceeded its budget cap (`spend-past-cap`)                                                                                                                                                                                                                                         |
@@ -72,8 +72,8 @@ the paused work is entirely the concern of the runner that registered for that
 `kind` (see `ResumableRunner` below).
 
 `department` (NS2 F3c) is optional and additive: it is stamped at
-`requestApproval` time by the RUN-PATH callers only — the pipeline runner from
-`pipeline.department`, the agent runner from `agent.department` (absent
+`requestApproval` time by the RUN-PATH callers only — the workflow runner from
+`workflow.department`, the agent runner from `agent.department` (absent
 for the synthetic orchestrator). The other call sites (machine, jira-issue,
 channel, budget-task, agent-proposal) omit it — a system-owned gate with no
 acting unit never invents an owner. It is pure attribution for the queue's
@@ -112,8 +112,8 @@ interface ResumableRunner {
 }
 ```
 
-Registrations today: `agent` → `AgentRunnerService`, `pipeline-stage` /
-`pipeline-output` → `PipelineRunnerService`, `task` → `TaskSchedulerService`,
+Registrations today: `agent` → `AgentRunnerService`, `workflow-stage` /
+`workflow-output` → `WorkflowRunnerService`, `task` → `TaskSchedulerService`,
 `task-output` → `TaskOutputService`, `proposed-task` → `ProposedTaskFlowService`,
 `channel` → `ChannelTriageFlowService`, `jira-issue` → `JiraIssueFlowService`,
 `machine` → `MachineService`.

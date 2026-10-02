@@ -7,7 +7,7 @@ import { taskRunsRootKey } from "../queries/keys";
  * success. Phase 49: for an errored/interrupted AGENT run this RE-RUNS it — the
  * response body is the NEW run (with `--resume` when a session id was captured,
  * else a fresh run of the same task), so the caller navigates to `body.runId`.
- * (The parked pipeline/goal resume returns the same run, resumed in place.)
+ * (The parked workflow/goal resume returns the same run, resumed in place.)
  */
 export function useResumeTaskRunMutation() {
   const qc = useQueryClient();

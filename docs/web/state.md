@@ -155,7 +155,7 @@ similar. No global store for UI state.
 `GET /api/events` endpoint and turns each event into a targeted query
 invalidation, rather than polling:
 
-- Merges five scopes into one stream: `agent-runs`, `pipeline-runs`,
+- Merges five scopes into one stream: `agent-runs`, `workflow-runs`,
   `goal-runs`, `channel-items`, `activity`
 - Each event is a thin signal (`{ scope, runId, status }` or, for the
   activity scope, `{ scope: "channel-items"/"activity", ... }` with the full

@@ -225,7 +225,7 @@ export class RunnerCore<R extends BaseRun> {
   }
 
   /**
-   * Subscribe to append notifications across ALL runs this core owns. A pipeline
+   * Subscribe to append notifications across ALL runs this core owns. A workflow
    * stage tail needs this: the tailed attempt can change mid-stream (a retry swaps
    * `currentStageRunId`), so the subscriber filters by the *currently resolved*
    * attempt on each signal instead of pinning one run id at subscribe time.
@@ -655,7 +655,7 @@ export class RunnerCore<R extends BaseRun> {
 
   /**
    * Phase 9 — drop a stale `paused-limit` run to `interrupted` without respawning:
-   * used when a higher-level resume path re-drives the work fresh (a pipeline
+   * used when a higher-level resume path re-drives the work fresh (a workflow
    * re-enters its phase with resume-context), so the old paused record must not be
    * re-detected by the resume scan or resurrected after a restart. Clears the stashed
    * spec; leaves the sandbox (its handoff/marker files) untouched.
@@ -919,9 +919,7 @@ export class RunnerCore<R extends BaseRun> {
     if (!line.startsWith("{") || !line.includes('"session_id"')) return null;
     try {
       const evt = JSON.parse(line);
-      return evt?.type === "system" &&
-        evt?.subtype === "init" &&
-        typeof evt.session_id === "string"
+      return evt?.type === "system" && evt?.subtype === "init" && typeof evt.session_id === "string"
         ? evt.session_id
         : null;
     } catch {
@@ -998,7 +996,7 @@ export class RunnerCore<R extends BaseRun> {
       // Layer 2: a usage-limit signal in the output busts the limits cache (once) and
       // — Phase 9 — is stashed so {@link finalize} can classify a child that dies on
       // it as `paused-limit` rather than `error`. Run detection whenever either
-      // consumer is wired (the pipeline runner now wires onLimitHit too).
+      // consumer is wired (the workflow runner now wires onLimitHit too).
       if (!limitSeen && (this.onLimitHit || this.resolveResumeAt)) {
         const { hit, resetsAt } = detectLimit(text);
         if (hit) {

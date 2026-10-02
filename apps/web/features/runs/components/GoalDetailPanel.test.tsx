@@ -17,16 +17,16 @@ const { useRunLogMock } = vi.hoisted(() => ({
 }));
 vi.mock("../useRunLog", () => ({ useRunLog: useRunLogMock }));
 
-// Phase 29: a pipeline-maker iteration fetches the maker run (usePipelineRunQuery) and
+// Phase 29: a workflow-maker iteration fetches the maker run (useWorkflowRunQuery) and
 // renders its stage timeline. Stub both — the timeline itself is unit-tested separately;
 // here we only assert the goal panel wires the right maker run id into it.
-const { pipelineRunMock } = vi.hoisted(() => ({
-  pipelineRunMock: vi.fn(() => ({ data: undefined as unknown })),
+const { workflowRunMock } = vi.hoisted(() => ({
+  workflowRunMock: vi.fn(() => ({ data: undefined as unknown })),
 }));
-vi.mock("../../pipelines/queries", () => ({ usePipelineRunQuery: pipelineRunMock }));
-vi.mock("./PipelineStageTimeline", () => ({
-  PipelineStageTimeline: (p: { pipelineRunId: string; owner: string }) => (
-    <div data-testid="stage-timeline">{`${p.pipelineRunId}:${p.owner}`}</div>
+vi.mock("../../workflows/queries", () => ({ useWorkflowRunQuery: workflowRunMock }));
+vi.mock("./WorkflowStageTimeline", () => ({
+  WorkflowStageTimeline: (p: { workflowRunId: string; owner: string }) => (
+    <div data-testid="stage-timeline">{`${p.workflowRunId}:${p.owner}`}</div>
   ),
 }));
 
@@ -37,7 +37,7 @@ vi.mock("../../goals/queries", () => ({
       {
         id: "g1",
         objective: "do it",
-        maker: { kind: "pipeline", id: "delivery" },
+        maker: { kind: "workflow", id: "delivery" },
         verifier: { kind: "checks" },
         maxIterations: 5,
         budget: { dailyRuns: 2 },
@@ -50,7 +50,7 @@ vi.mock("../../goals/queries", () => ({
 const ISO = (msAgo: number) => new Date(Date.now() - msAgo).toISOString();
 const iter = (index: number, msAgo: number) => ({
   index,
-  makerKind: "pipeline" as const,
+  makerKind: "workflow" as const,
   verifier: { kind: "checks" as const, satisfied: false, output: `verdict ${index}` },
   startedAt: ISO(msAgo),
   status: "done" as const,
@@ -103,8 +103,8 @@ describe("GoalDetailPanel (14.1)", () => {
 
   it("shows each iteration's maker kind in the timeline (kind lives in the detail)", () => {
     render(<GoalDetailPanel run={parkedGoal("iterations")} />);
-    // Both iterations are pipeline makers → the kind label appears per row.
-    expect(screen.getAllByText("pipeline").length).toBe(2);
+    // Both iterations are workflow makers → the kind label appears per row.
+    expect(screen.getAllByText("workflow").length).toBe(2);
   });
 
   it("renders no budget bar when no matching goal/budget is found", () => {
@@ -118,8 +118,8 @@ describe("GoalDetailPanel (14.1)", () => {
 describe("GoalDetailPanel (27) — open the folded child run log", () => {
   beforeEach(() => {
     useRunLogMock.mockClear();
-    pipelineRunMock.mockClear();
-    pipelineRunMock.mockReturnValue({ data: undefined });
+    workflowRunMock.mockClear();
+    workflowRunMock.mockReturnValue({ data: undefined });
   });
 
   // A running goal (no parked panel, so the only buttons are the per-row log toggles).
@@ -166,9 +166,9 @@ describe("GoalDetailPanel (27) — open the folded child run log", () => {
     expect(screen.getByText("verdikt")).toBeInTheDocument();
   });
 
-  it("opens the pipeline maker's stage timeline (not a note) when expanded", async () => {
-    pipelineRunMock.mockReturnValue({
-      // usePipelineRunQuery now returns a unified TaskRun: `owner` is the pipeline id.
+  it("opens the workflow maker's stage timeline (not a note) when expanded", async () => {
+    workflowRunMock.mockReturnValue({
+      // useWorkflowRunQuery now returns a unified TaskRun: `owner` is the workflow id.
       data: {
         runId: "delivery_run_0",
         owner: "delivery",
@@ -179,7 +179,7 @@ describe("GoalDetailPanel (27) — open the folded child run log", () => {
     });
     const pipeIter = {
       index: 0,
-      makerKind: "pipeline" as const,
+      makerKind: "workflow" as const,
       makerRunRef: "delivery_run_0",
       verifier: { kind: "checks" as const, satisfied: true, output: "" },
       startedAt: ISO(10_000),
@@ -187,9 +187,9 @@ describe("GoalDetailPanel (27) — open the folded child run log", () => {
     };
     render(<GoalDetailPanel run={running([pipeIter] as RunView["iterations"])} />);
     await userEvent.click(logToggles()[0]!);
-    // The maker run id + its pipeline definition id are wired into the timeline.
+    // The maker run id + its workflow definition id are wired into the timeline.
     expect(screen.getByTestId("stage-timeline")).toHaveTextContent("delivery_run_0:delivery");
-    // A pipeline maker mounts no agent-log stream.
+    // A workflow maker mounts no agent-log stream.
     expect(useRunLogMock).not.toHaveBeenCalled();
   });
 

@@ -5,7 +5,7 @@ import { EmployeesModule } from "../employees/employees.module";
 import { IntegrationsModule } from "../integrations/integrations.module";
 import { MandateModule } from "../mandate/mandate.module";
 import { dataDir } from "../shared/data-dir";
-import { PipelinesModule } from "../pipelines/pipelines.module";
+import { WorkflowsModule } from "../workflows/workflows.module";
 import { TasksModule } from "../tasks/tasks.module";
 import { OwnerBackfillService } from "./owner-backfill.service";
 import { DEPARTMENT_SEEN_FILE, DepartmentSeenStore } from "./department-seen.store";
@@ -20,14 +20,14 @@ export function resolveDepartmentSeenFile(): string {
 /**
  * The department-federation registry endpoint (design doc
  * `docs/superpowers/specs/2026-07-08-department-federation-design.md`). Phase 82
- * wires the real aggregation: pipelines storage for `department`
+ * wires the real aggregation: workflows storage for `department`
  * attribution, the unified task-runs feed (`TasksModule`) for run state, and
  * `ApprovalsModule` for pending Tier-3 items — read-only over all three, no
  * domain logic duplicated.
  */
 @Module({
   imports: [
-    PipelinesModule,
+    WorkflowsModule,
     ApprovalsModule,
     TasksModule,
     AgentsModule,

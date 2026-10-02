@@ -82,8 +82,8 @@ describe("RunDetail — Resume an errored agent run (Phase 49)", () => {
     expect(await openResumeItem()).not.toBeInTheDocument();
   });
 
-  it("does not offer the row for an errored pipeline run (agent-only in v1)", async () => {
-    renderRun({ ...erroredAgentRun, kind: "pipeline", logBase: null }, () => {});
+  it("does not offer the row for an errored workflow run (agent-only in v1)", async () => {
+    renderRun({ ...erroredAgentRun, kind: "workflow", logBase: null }, () => {});
     expect(await openResumeItem()).not.toBeInTheDocument();
   });
 

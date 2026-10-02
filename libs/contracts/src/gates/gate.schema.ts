@@ -167,7 +167,7 @@ const GlobalGateRuleBaseSchema = z.object({
    * filter/auto-tag lens; NS2 F3a made it LOAD-BEARING). A tagged rule is loaded
    * by the gate evaluator as a third "department" bucket — between the acting
    * agent's own rules and the locked system floor — for runs of units OWNED by
-   * that department (`agent.department` / `pipeline.department`), and
+   * that department (`agent.department` / `workflow.department`), and
    * only for those runs. Tagging a rule therefore CAN change what a run of that
    * department decides (strictest-of-buckets, so it can only tighten — never
    * weaken the floor). Absent is legitimate — untagged rules stay global/unowned

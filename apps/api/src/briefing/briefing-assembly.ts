@@ -10,8 +10,8 @@ import type {
   ChannelItem,
   CiStatus,
   GoalRun,
-  PipelineRun,
   ScheduledTask,
+  WorkflowRun,
 } from "@zibby/contracts";
 
 /** The raw inputs the briefing is assembled from — all gathered before this runs. */
@@ -20,10 +20,10 @@ export interface BriefingInput {
   since: string;
   /** Pending approvals (Tier-3 decisions waiting). */
   approvals: Approval[];
-  /** Parked pipeline runs (status === "parked"). */
-  parkedRuns: PipelineRun[];
-  /** Phase 9: pipeline runs currently paused on the usage limit (status "paused-limit"). */
-  pausedLimitRuns?: PipelineRun[];
+  /** Parked workflow runs (status === "parked"). */
+  parkedRuns: WorkflowRun[];
+  /** Phase 9: workflow runs currently paused on the usage limit (status "paused-limit"). */
+  pausedLimitRuns?: WorkflowRun[];
   /** Phase 10: goal runs in flight (running / paused-limit) and parked (needs-you). */
   goalRuns?: GoalRun[];
   /** Channel items still in flight (state new or triaged). */
@@ -74,7 +74,7 @@ const DID_KINDS = new Set<ActivityEntry["kind"]>([
   "task-outcome",
   "channel-reply",
   "run-finished",
-  "pipeline-finished",
+  "workflow-finished",
   "approval-approved",
 ]);
 
@@ -218,7 +218,7 @@ export function buildEngagements(
 
 function buildNeedsYou(
   approvals: Approval[],
-  parkedRuns: PipelineRun[],
+  parkedRuns: WorkflowRun[],
   goalRuns: GoalRun[],
   deadLetteredTasks: ScheduledTask[],
   ciStatuses: CiStatus[],
@@ -232,10 +232,10 @@ function buildNeedsYou(
   }));
   const fromParked: BriefingNeedsYouItem[] = parkedRuns.map((r) => ({
     kind: "parked",
-    id: r.pipelineRunId,
-    summary: `pipeline ${r.pipelineId} parked${r.parkedReason ? ` (${r.parkedReason})` : ""}`,
+    id: r.workflowRunId,
+    summary: `workflow ${r.workflowId} parked${r.parkedReason ? ` (${r.parkedReason})` : ""}`,
     at: r.startedAt,
-    refs: { runRef: r.pipelineRunId, pipelineId: r.pipelineId, status: "parked" },
+    refs: { runRef: r.workflowRunId, workflowId: r.workflowId, status: "parked" },
   }));
   // Phase 10: a parked goal (bounded effort exhausted) is a Tier-3 decision too —
   // it rides the same `parked` notification, no new kind (decision 11).
@@ -303,7 +303,7 @@ function buildDidForYou(activity: ActivityEntry[]): BriefingDidItem[] {
 
 function buildWatching(
   channelItems: ChannelItem[],
-  pausedLimitRuns: PipelineRun[],
+  pausedLimitRuns: WorkflowRun[],
   goalRuns: GoalRun[],
 ): BriefingWatchItem[] {
   const byIntegration = new Map<string, { newItems: number; lastReceivedAt?: string }>();
@@ -325,8 +325,8 @@ function buildWatching(
   // something that needs the operator — it auto-resumes. Sorted by soonest resume.
   const paused: BriefingWatchItem[] = pausedLimitRuns
     .map((r) => ({
-      runRef: r.pipelineRunId,
-      summary: `pipeline ${r.pipelineId} paused on the usage limit`,
+      runRef: r.workflowRunId,
+      summary: `workflow ${r.workflowId} paused on the usage limit`,
       resumeAt: r.resumeAt ?? null,
     }))
     .sort((a, b) => (a.resumeAt ?? Infinity) - (b.resumeAt ?? Infinity));
@@ -347,7 +347,7 @@ function buildWatching(
 }
 
 function isFinished(e: ActivityEntry): boolean {
-  return e.kind === "run-finished" || e.kind === "pipeline-finished";
+  return e.kind === "run-finished" || e.kind === "workflow-finished";
 }
 
 function isFailed(e: ActivityEntry): boolean {

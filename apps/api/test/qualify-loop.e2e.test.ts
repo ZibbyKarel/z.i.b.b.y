@@ -7,7 +7,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { ActivityEntry } from "@zibby/contracts";
 import { AppModule } from "../src/app.module";
-import { PipelineRunnerService } from "../src/pipelines/pipeline-runner.service";
+import { WorkflowRunnerService } from "../src/workflows/workflow-runner.service";
 import { defaultEmployeesDir, seedEmployeeFixture } from "./fixtures/employee-fixture";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -39,23 +39,23 @@ const phase = (id: string, extra: Record<string, unknown> = {}) => ({
  */
 describe("Qualify loop (e2e)", () => {
   let app: INestApplication;
-  let pipelinesDir: string;
+  let workflowsDir: string;
   let runsDir: string;
   let activityDir: string;
 
   beforeAll(async () => {
-    pipelinesDir = await fs.mkdtemp(path.join(os.tmpdir(), "qualify-pipes-e2e-"));
+    workflowsDir = await fs.mkdtemp(path.join(os.tmpdir(), "qualify-pipes-e2e-"));
     runsDir = await fs.mkdtemp(path.join(os.tmpdir(), "qualify-runs-e2e-"));
     activityDir = await fs.mkdtemp(path.join(os.tmpdir(), "qualify-activity-e2e-"));
-    process.env.PIPELINES_DIR = pipelinesDir;
-    process.env.PIPELINE_RUNS_DIR = runsDir;
+    process.env.WORKFLOWS_DIR = workflowsDir;
+    process.env.WORKFLOW_RUNS_DIR = runsDir;
     process.env.ACTIVITY_DIR = activityDir;
     // Demo mode (vitest.setup already defaults it; pin explicitly — the committed
     // .env forces claude locally) + the qualify GAP lever for the review phase.
     process.env.AGENT_RUNNER_MODE = "demo";
     process.env.AGENT_DEMO_STEPS = "2";
     process.env.AGENT_DEMO_DELAY_MS = "30";
-    process.env.PIPELINE_DEMO_GAP_PHASES = "review";
+    process.env.WORKFLOW_DEMO_GAP_PHASES = "review";
 
     // D-017: no AGENTS_DIR override here — this suite never registers a real
     // Agent either — so `phase()`'s bare "writer" id needs an employee seeded
@@ -73,16 +73,16 @@ describe("Qualify loop (e2e)", () => {
 
   afterAll(async () => {
     await app.close();
-    await fs.rm(pipelinesDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+    await fs.rm(workflowsDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     await fs.rm(runsDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     await fs.rm(activityDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     for (const k of [
-      "PIPELINES_DIR",
-      "PIPELINE_RUNS_DIR",
+      "WORKFLOWS_DIR",
+      "WORKFLOW_RUNS_DIR",
       "ACTIVITY_DIR",
       "AGENT_DEMO_STEPS",
       "AGENT_DEMO_DELAY_MS",
-      "PIPELINE_DEMO_GAP_PHASES",
+      "WORKFLOW_DEMO_GAP_PHASES",
     ]) {
       delete process.env[k];
     }
@@ -90,7 +90,7 @@ describe("Qualify loop (e2e)", () => {
 
   it("gap loops back to fixing, pass advances; the verdicts surface on the stage + activity", async () => {
     await request(app.getHttpServer())
-      .post("/api/pipelines")
+      .post("/api/workflows")
       .send({
         id: "qualified",
         phases: [
@@ -106,11 +106,11 @@ describe("Qualify loop (e2e)", () => {
       })
       .expect(201);
 
-    const start = await app.get(PipelineRunnerService).start("qualified", undefined, undefined);
-    const { pipelineRunId } = start;
+    const start = await app.get(WorkflowRunnerService).start("qualified", undefined, undefined);
+    const { workflowRunId } = start;
 
     const final = await until(async () => {
-      const res = app.get(PipelineRunnerService).get(pipelineRunId);
+      const res = app.get(WorkflowRunnerService).get(workflowRunId);
       return res.status !== "running" ? res : null;
     });
 
@@ -125,11 +125,11 @@ describe("Qualify loop (e2e)", () => {
     // It looped back through `a` (the fix-in-place target) and finished at `z`.
     expect(final.stageRuns.some((s) => s.phaseId === "z")).toBe(true);
 
-    // The verdict survives the PipelineRun → TaskRun mapping the web actually reads
-    // (the stage timeline consumes TaskRun, not the raw PipelineRun) — so the chip
+    // The verdict survives the WorkflowRun → TaskRun mapping the web actually reads
+    // (the stage timeline consumes TaskRun, not the raw WorkflowRun) — so the chip
     // is not a no-op in production.
     const view = await request(app.getHttpServer())
-      .get(`/api/tasks/runs/${pipelineRunId}`)
+      .get(`/api/tasks/runs/${workflowRunId}`)
       .expect(200);
     const viewReviews = (
       view.body.stageRuns as Array<{ phaseId: string; verdict?: string }>

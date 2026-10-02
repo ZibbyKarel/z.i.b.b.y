@@ -15,7 +15,7 @@ export const Overview: Story = {
   render: () => {
     function Demo() {
       const [file, setFile] = useState("report.md");
-      const [name, setName] = useState("Nová pipeline");
+      const [name, setName] = useState("Nová workflow");
       return (
         <div className="flex flex-col gap-4">
           <GraphInlineInput
@@ -25,16 +25,16 @@ export const Overview: Story = {
             value={file}
           />
           <GraphInlineInput
-            aria-label="Pipeline name"
+            aria-label="Workflow name"
             onChange={(e) => setName(e.target.value)}
             value={name}
             variant="field"
             weight="bold"
           />
           <GraphInlineInput
-            aria-label="Pipeline description"
+            aria-label="Workflow description"
             onChange={() => {}}
-            value="Popis pipeline"
+            value="Popis workflow"
             variant="field"
           />
         </div>

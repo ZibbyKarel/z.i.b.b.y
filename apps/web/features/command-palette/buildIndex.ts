@@ -13,9 +13,9 @@ export interface CommandPaletteSources {
   companies: Array<{ id: string; name: string }>;
   teams: Array<{ id: string; name: string }>;
   projects: Array<{ id: string; name: string }>;
-  /** Only pipelines with a known owning department are indexed — the route
-   * (`/org/departments/<dept>/pipelines/<id>`) has no "unknown department" form. */
-  pipelines: Array<{ id: string; name: string; department?: string }>;
+  /** Only workflows with a known owning department are indexed — the route
+   * (`/org/departments/<dept>/workflows/<id>`) has no "unknown department" form. */
+  workflows: Array<{ id: string; name: string; department?: string }>;
   skills: Array<{ id: string; name: string }>;
   mcpServers: Array<{ id: string; name?: string }>;
   hooks: Array<{ id: string; name?: string; event: string }>;
@@ -136,15 +136,15 @@ export function buildCommandPaletteIndex(
     });
   }
 
-  for (const p of sources.pipelines) {
+  for (const p of sources.workflows) {
     if (!p.department) continue;
     entries.push({
       id: p.id,
-      group: "pipelines",
-      kind: "pipeline",
+      group: "workflows",
+      kind: "workflow",
       label: p.name,
       meta: p.department,
-      href: `/org/departments/${p.department}/pipelines/${p.id}` as Route,
+      href: `/org/departments/${p.department}/workflows/${p.id}` as Route,
     });
   }
 

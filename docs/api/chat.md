@@ -51,7 +51,7 @@ claude -p <msg> [--resume <sid>] \
   it.)
 - **`--tools ""`** turns off every built-in tool (Bash/Write/Edit/…). ZIBBY
   chat is a conversational butler, not a coding agent — it may only act through
-  the `zibby` MCP tools (`create_task` delegates the work to a pipeline).
+  the `zibby` MCP tools (`create_task` delegates the work to a workflow).
   Without this, the model tries to build the app itself via Bash/Write instead
   of dispatching. (Verified with a live eval.)
 - The model is overridable via `ZIBBY_CHAT_MODEL` (default `sonnet`).
@@ -94,14 +94,14 @@ it only ever returns a 405.
 
 The dock's composer reuses the existing task-attachment upload
 (`POST /api/tasks/attachments`) — there is no second upload path — and its
-`@`-mention picker can now assign SEVERAL agents/pipelines/departments in one
+`@`-mention picker can now assign SEVERAL agents/workflows/departments in one
 turn, not just one.
 
 **Contract.** Both fields on `SendChatMessageBody` are additive/`.optional()`:
 
 - `attachmentSetId?: string` — the id returned by the upload above.
 - `mentions?: ChatMentionTarget[]` — 0–8 units, restricted to `agent` /
-  `department` / `pipeline` (never `goal`/`orchestrator` — the same
+  `department` / `workflow` (never `goal`/`orchestrator` — the same
   explicit-only-kinds restriction as everywhere else). The legacy single
   `target` is still accepted; the server normalises
   `mentions = mentions ?? (target ? [target] : [])`
@@ -212,7 +212,7 @@ in ZB-13 — see `docs/web/overview.md`'s ZB-12/ZB-13 notes.
   "Chat with" button opens it with an explicit department target (O-20).
 - D-020: the composer's attach control is back (`showAttach`, the same upload
   hook/drag-and-drop as New task), and `CommandLine` runs in its opt-in
-  `multipleTargets` mode here — each `@`-picked agent/pipeline/department
+  `multipleTargets` mode here — each `@`-picked agent/workflow/department
   becomes its own removable chip, and submit passes the whole list as
   `mentions`. The dock's O-20 department scope, when set, is used as the
   turn's sole mention whenever the composer's own picked list is empty

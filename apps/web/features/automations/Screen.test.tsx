@@ -46,14 +46,14 @@ vi.mock("./queries", () => ({
   }),
 }));
 vi.mock("../agents/queries", () => ({ useAgentsQuery: () => ({ data: [] }) }));
-vi.mock("../pipelines/queries", () => ({ usePipelinesQuery: () => ({ data: [] }) }));
+vi.mock("../workflows/queries", () => ({ useWorkflowsQuery: () => ({ data: [] }) }));
 vi.mock("./mutations", () => ({
   useCreateAutomationMutation: () => ({ mutate: create, isPending: false }),
   useUpdateAutomationMutation: () => ({ mutate: update, isPending: false }),
   useTriggerAutomationMutation: () => ({ mutate: trigger, isPending: false }),
 }));
 // The create dialog (Phase 116d) renders the REAL `CommandLine` (not a stub) so
-// the "@-mention an agent/pipeline, attach files, Naplánovat saves" flow is
+// the "@-mention an agent/workflow, attach files, Naplánovat saves" flow is
 // tested end-to-end — mirrors ChatScreen.test.tsx's own mocking pattern for the
 // same component: stub every query/mutation CommandLine reads so mounting it
 // never hits the network, but let the component itself run for real.

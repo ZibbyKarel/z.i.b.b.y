@@ -31,7 +31,7 @@ import { MemoryModule } from "./memory/memory.module";
 import { RunRecorderModule } from "./memory/run-recorder.module";
 import { MachineModule } from "./machine/machine.module";
 import { MonitorsModule } from "./monitors/monitors.module";
-import { PipelinesModule } from "./pipelines/pipelines.module";
+import { WorkflowsModule } from "./workflows/workflows.module";
 import { ProjectsModule } from "./projects/projects.module";
 import { RegistriesModule } from "./registries/registries.module";
 import { ReviewLearningModule } from "./review-learning/review-learning.module";
@@ -73,7 +73,7 @@ import { EmployeesModule } from "./employees/employees.module";
     TeamsModule,
     DepartmentsStoreModule,
     EmployeesModule,
-    PipelinesModule,
+    WorkflowsModule,
     GoalsModule,
     ApprovalsModule,
     ArtifactsModule,

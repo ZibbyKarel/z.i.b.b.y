@@ -19,7 +19,7 @@ export enum HighlightTextAreaFieldTestId {
 /**
  * The mark palette a highlighted span can be tinted — beyond the default (accent,
  * untoned) look: `accent` (interactive/live — e.g. an `@agent` mention), `push` (the
- * purple risk-category tone — e.g. an `@pipeline` mention), `dim` (a muted, neutral
+ * purple risk-category tone — e.g. an `@workflow` mention), `dim` (a muted, neutral
  * span — e.g. an unresolved `@file` mention). Omitting `tone` keeps the original
  * single-style mark (`bg-accent/20`, no ring) byte-identical for existing callers.
  */

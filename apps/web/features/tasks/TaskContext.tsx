@@ -22,8 +22,8 @@ interface TaskStore {
    * Open the New Task dialog. An optional `initialText` seeds the description field
    * — an external trigger fills the one field, then the operator confirms the
    * inferred plan behind the same gate. An optional
-   * `initialTarget` locks the destination (e.g. "Run pipeline" pre-chooses a
-   * pipeline), bypassing classification. An optional `initialContext` carries a
+   * `initialTarget` locks the destination (e.g. "Run workflow" pre-chooses a
+   * workflow), bypassing classification. An optional `initialContext` carries a
    * prior run's output into the new task — shown as a read-only "context added"
    * panel and folded into the dispatched text ("Continue in a new task").
    */
@@ -81,7 +81,7 @@ export function NewTaskProvider({ children }: { children: ReactNode }) {
     <TaskContext.Provider value={value}>
       {children}
       {/* Keyed on the seed + locked target so re-opening with a new transcript or a
-          different pipeline re-seeds the field (the composer initializes from the
+          different workflow re-seeds the field (the composer initializes from the
           props on mount). */}
       {isOpen && (
         <NewTaskDialog

@@ -22,7 +22,7 @@ function formatGeneratedAt(iso: string): string {
 }
 
 /**
- * Read-only panel for the Fáze 1 self-knowledge note (agents, pipelines, gate
+ * Read-only panel for the Fáze 1 self-knowledge note (agents, workflows, gate
  * rules, channels). ZIBBY generates and stores this note itself
  * (`pnpm self-knowledge:generate`) — this panel only ever displays it, the same
  * "files are source of truth, UI is a view" posture as the rest of the app. The
@@ -84,7 +84,7 @@ export function SelfKnowledgeSection() {
         >
           {t("selfKnowledge.sections", {
             agents: sections.agents,
-            pipelines: sections.pipelines,
+            workflows: sections.workflows,
             gateRules: sections.gateRules,
             channels: sections.channels,
           })}

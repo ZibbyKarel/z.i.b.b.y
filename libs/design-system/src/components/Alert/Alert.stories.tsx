@@ -21,7 +21,7 @@ export const Overview: Story = {
         </Typography>
         <div className="flex flex-col gap-3">
           <Alert severity="info" title="Info">
-            Pipeline byl naplánován.
+            Workflow byl naplánován.
           </Alert>
           <Alert severity="ok" title="Hotovo">
             Skill byl úspěšně nasazen.

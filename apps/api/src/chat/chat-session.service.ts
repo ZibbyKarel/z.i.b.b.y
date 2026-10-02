@@ -39,7 +39,7 @@ const TURN_TIMEOUT_MS = 120_000;
  *  narrows the legacy, broader `SendChatMessageBody.target` before folding it into
  *  `mentions`, which the contract types strictly. */
 function isChatMentionTarget(target: TaskTarget): target is ChatMentionTarget {
-  return target.kind === "agent" || target.kind === "pipeline" || target.kind === "department";
+  return target.kind === "agent" || target.kind === "workflow" || target.kind === "department";
 }
 
 /**
@@ -209,7 +209,7 @@ export class ChatSessionService {
       "",
       // Disable ALL built-in tools (Bash/Write/Edit/…). ZIBBY chat is a conversational
       // butler, not a coding agent: its only way to ACT is the `zibby` MCP tools
-      // (create_task delegates real work to the pipeline). Without this the model
+      // (create_task delegates real work to the workflow). Without this the model
       // tries to build things itself with Bash/Write instead of dispatching a task.
       "--tools",
       "",

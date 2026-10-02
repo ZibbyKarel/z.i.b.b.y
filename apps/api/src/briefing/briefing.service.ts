@@ -19,7 +19,7 @@ import { ArchService } from "../arch/arch.service";
 import { ReleaseService } from "../release/release.service";
 import { MergeWatchStore } from "../release/merge-watch.store";
 import { MonitorEventStore } from "../monitors/monitor-event.store";
-import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
+import { WorkflowRunnerService } from "../workflows/workflow-runner.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { SelfKnowledgeService } from "../self-knowledge/self-knowledge.service";
 import { SecurityService } from "../security/security.service";
@@ -97,7 +97,7 @@ export class BriefingService {
 
   constructor(
     private readonly approvals: ApprovalsService,
-    private readonly pipelines: PipelineRunnerService,
+    private readonly workflows: WorkflowRunnerService,
     private readonly goals: GoalRunnerService,
     private readonly channels: ChannelItemStore,
     private readonly activity: ActivityLogService,
@@ -159,7 +159,7 @@ export class BriefingService {
       selfKnowledgeDrift,
     ] = await Promise.all([
       this.approvals.list("pending"),
-      this.pipelines.listAll(),
+      this.workflows.listAll(),
       this.goals.listAll(),
       this.channels.list(),
       this.activity.readSince(since, now),

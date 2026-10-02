@@ -2,7 +2,7 @@
 
 **Fáze 1, extended Fáze 10** (`docs/plans/phase-06.md`,
 `docs/plans/phase-10-graphify-self-knowledge.md`). ZIBBY composes a
-machine-generated Markdown snapshot of its own agents, pipelines, gate rules,
+machine-generated Markdown snapshot of its own agents, workflows, gate rules,
 channels and (Fáze 10) codebase shape, persists it as one vault note, and can
 detect when that note has **drifted** from a fresh compose — the underlying
 catalog changed since the note was last written/committed. This is the engine
@@ -20,7 +20,7 @@ behind the `check:self-knowledge` pre-commit/CI gate.
 | Controller | `apps/api/src/self-knowledge/self-knowledge.controller.ts`     | implements `selfKnowledgeContract`                                        |
 | CLI logic  | `apps/api/src/self-knowledge/generate-cli.ts`                  | `runSelfKnowledgeCli` — boots `AppModule` headless, `--check` vs generate |
 | CLI entry  | `tools/self-knowledge/generate.ts`                             | thin wrapper (no bare-specifier imports — see Gotchas)                    |
-| Module     | `apps/api/src/self-knowledge/self-knowledge.module.ts`         | imports Agents/Pipelines/GateRules/Gates/Memory                           |
+| Module     | `apps/api/src/self-knowledge/self-knowledge.module.ts`         | imports Agents/Workflows/GateRules/Gates/Memory                           |
 
 ## What it tracks
 
@@ -31,9 +31,9 @@ is operator-owned and untouched by a merge. Block order = render order:
 1. **META** — generation timestamp only. Deliberately **excluded** from drift
    comparison (it differs every run by design, not a meaningful signal).
 2. **AGENTS** — every agent, sorted by id: `name (\`id\`) — desc`.
-3. **PIPELINES** — every pipeline, sorted by id, with its phase count.
+3. **WORKFLOWS** — every workflow, sorted by id, with its phase count.
    Reviewed 2026-07-30 (NS2 F9): the phase count is still the only rendered
-   field — `renderPipelines` reads `pipeline.phases.length` and nothing else, so
+   field — `renderWorkflows` reads `workflow.phases.length` and nothing else, so
    F9's `complexity` rung is deliberately **not** in this block. It is a
    within-department routing input (`EFFORT_RULE`), not part of ZIBBY's
    self-description, and rendering it would add a drift trigger for a value the
@@ -98,7 +98,7 @@ Both invoke `tools/self-knowledge/generate.ts` through
 `runSelfKnowledgeCli` (`apps/api/src/self-knowledge/generate-cli.ts`) boots the
 **same `AppModule`** the server does via `NestFactory.createApplicationContext`
 (no HTTP listener, `logger: false`), so it reads the exact same
-agents/pipelines/gate-rules/policy/vault the running API would — no separate
+agents/workflows/gate-rules/policy/vault the running API would — no separate
 code path to drift from the server itself.
 
 - **Default mode** — `service.write()`: compose, create-or-merge the vault

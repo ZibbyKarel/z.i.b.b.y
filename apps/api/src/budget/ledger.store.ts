@@ -24,7 +24,7 @@ export interface LedgerEntry {
   projectId?: string;
   taskId?: string;
   runRef: string;
-  /** The routed target kind ("agent" | "pipeline" | "orchestrator"). */
+  /** The routed target kind ("agent" | "workflow" | "orchestrator"). */
   kind: string;
   /** "dispatch" (the default — absent on every line before Phase 12) or "cost". */
   type?: "dispatch" | "cost";

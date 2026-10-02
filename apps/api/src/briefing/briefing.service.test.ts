@@ -69,7 +69,7 @@ describe("BriefingService", () => {
     briefer = { headline: vi.fn().mockResolvedValue(null) }; // VITEST-style: fall back
 
     const approvals = { list: vi.fn().mockResolvedValue([]) };
-    const pipelines = { listAll: vi.fn().mockResolvedValue([]) };
+    const workflows = { listAll: vi.fn().mockResolvedValue([]) };
     const goals = { listAll: vi.fn().mockResolvedValue([]) };
     channels = { list: vi.fn().mockResolvedValue([]) };
     const activity = { readSince: vi.fn().mockResolvedValue([]), record };
@@ -102,7 +102,7 @@ describe("BriefingService", () => {
 
     service = new BriefingService(
       approvals as never,
-      pipelines as never,
+      workflows as never,
       goals as never,
       channels as never,
       activity as never,

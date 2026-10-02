@@ -1,7 +1,7 @@
 /**
  * Static dashboard configuration — navigation, option lists and icon/tool
  * picker inventories. No domain content or default values live here: skills,
- * integrations, agents and pipelines all start empty and are created by the
+ * integrations, agents and workflows all start empty and are created by the
  * user (see store.tsx). Files are the source of truth.
  */
 import type { IconName, SelectOption } from "@zibby/design-system";
@@ -123,7 +123,7 @@ export type SectionId = (typeof SECTIONS)[number]["id"];
  */
 const PATH_SECTION: readonly (readonly [prefix: string, section: SectionId])[] = [
   ["/agents", "org"],
-  ["/pipelines", "org"],
+  ["/workflows", "org"],
   ["/automations", "org"],
   ["/chat", "org"],
   // ZB-03 (D-015/D-009): the employee directory + department pages (org) and

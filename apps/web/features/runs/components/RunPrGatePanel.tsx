@@ -5,8 +5,8 @@ import { useTranslations } from "next-intl";
 import { useRunArtifactQuery } from "../queries/useRunArtifactQuery";
 
 export interface RunPrGatePanelProps {
-  /** The pipeline run id whose PR gate is pending (artifacts are run-scoped). */
-  pipelineRunId: string;
+  /** The workflow run id whose PR gate is pending (artifacts are run-scoped). */
+  workflowRunId: string;
   /** Panel title — defaults to the gate label; a completed run passes its own. */
   title?: string;
 }
@@ -15,14 +15,14 @@ export interface RunPrGatePanelProps {
  * The PR-gate decision surface (Phase 3.3): show what is about to be published — the
  * `pr-draft.md` title/body and the branch's `diffstat.txt`. Above the approval panel
  * for a parked run (the Tier-3 decision is made against the real change, not a bare
- * "open a PR?" prompt); also reused on a COMPLETED pipeline run as its produced output
+ * "open a PR?" prompt); also reused on a COMPLETED workflow run as its produced output
  * (the artifacts persist on disk). A missing artifact (404) simply omits its block,
  * and an empty panel renders nothing.
  */
-export function RunPrGatePanel({ pipelineRunId, title }: RunPrGatePanelProps) {
+export function RunPrGatePanel({ workflowRunId, title }: RunPrGatePanelProps) {
   const t = useTranslations("runs");
-  const { data: draft } = useRunArtifactQuery(pipelineRunId, "pr-draft.md");
-  const { data: diffstat } = useRunArtifactQuery(pipelineRunId, "diffstat.txt");
+  const { data: draft } = useRunArtifactQuery(workflowRunId, "pr-draft.md");
+  const { data: diffstat } = useRunArtifactQuery(workflowRunId, "diffstat.txt");
 
   if (!draft?.content && !diffstat?.content) return null;
 

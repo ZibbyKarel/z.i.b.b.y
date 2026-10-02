@@ -38,7 +38,7 @@ const badgeRows = [
       ◇ medium
     </Tag>,
     <Tag key="usage" tone="accent">
-      <Icon name="flow" size="xs" /> 3 pipelines
+      <Icon name="flow" size="xs" /> 3 workflows
     </Tag>,
   ],
   [

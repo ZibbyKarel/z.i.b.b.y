@@ -3,7 +3,7 @@
 # lint staged files via lint-staged, an incremental typecheck when staged files
 # include TS/TSX, and the Self-Knowledge drift gate (Fáze 1 —
 # docs/plans/phase-06.md), which refuses a commit whose
-# agents/pipelines/gate-rules/channels drifted from the committed self-knowledge
+# agents/workflows/gate-rules/channels drifted from the committed self-knowledge
 # vault note, and the docs-sync coverage gate (tools/docs-sync/), which refuses a
 # commit that touches a brand-new apps/api/src module with no docs/api/*.md
 # mapping at all. None of these run repo-wide checks (full lint/test/build) — those

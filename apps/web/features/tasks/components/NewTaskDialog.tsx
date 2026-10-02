@@ -27,8 +27,8 @@ export interface NewTaskDialogProps {
   initialText?: string;
   /**
    * Pre-select a destination in CommandLine's inline `@` picker. Used when the operator
-   * picks the processor up front — e.g. "Run pipeline" opens the dialog with that
-   * pipeline already assigned. Classification still runs (the normal flow), the chosen
+   * picks the processor up front — e.g. "Run workflow" opens the dialog with that
+   * workflow already assigned. Classification still runs (the normal flow), the chosen
    * target heads the preview, and the operator can change it — it is a pre-fill, not a
    * lock.
    */
@@ -47,7 +47,7 @@ export interface NewTaskDialogProps {
  * growable input. The operator says what they want; a debounced classify shows a
  * compact "ZIBBY will…" {@link PlanPreview} — the *how* (single dispatch vs a
  * synthesized loop) is inferred, not chosen on a form. Assigning a destination is done
- * inline (typing `@Name` in the description opens CommandLine's own agent/pipeline
+ * inline (typing `@Name` in the description opens CommandLine's own agent/workflow
  * search — there is no separate override picker); a synthesized Loop still gets its own
  * {@link LoopComposer} editor, entered through the SAME run control CommandLine renders
  * (its label switches to "Run loop"). File/folder paths referenced in the description
@@ -98,7 +98,7 @@ export function NewTaskDialog({
   }, [text, selectedProject]);
 
   // Declared BEFORE the classify so the chosen sink can constrain it: a `pr` output
-  // admits only PR-capable pipelines, so the picker must never offer a unit the
+  // admits only PR-capable workflows, so the picker must never offer a unit the
   // dispatch would then refuse (`ClassifyTaskInput.output`).
   const output = useTaskOutput();
 
@@ -112,7 +112,7 @@ export function NewTaskDialog({
   // An explicit `@`-mention pick always wins over the live classify verdict. Computed
   // directly here rather than through the hook's `chosenKey`/`allTargets` (which stays
   // scoped to `activeRouting.candidates`) because the mention picker reaches the WHOLE
-  // agent/pipeline catalog — unlike the old "Předat" override select, it is never
+  // agent/workflow catalog — unlike the old "Předat" override select, it is never
   // limited to what the classifier itself ranked.
   const previewRouting: TaskRouting | null = target
     ? {

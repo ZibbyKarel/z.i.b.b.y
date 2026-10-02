@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
-import type { AgentRun, KnowledgeBaseSource, PipelineRun, Project } from "@zibby/contracts";
+import type { AgentRun, KnowledgeBaseSource, Project, WorkflowRun } from "@zibby/contracts";
 import { AgentRunnerService } from "../agents/agent-runner.service";
-import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
+import { WorkflowRunnerService } from "../workflows/workflow-runner.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ResolvedProjectService } from "../projects/resolved-project.service";
 import { TeamsStorageService } from "../teams/teams.storage.service";
@@ -19,7 +19,7 @@ export interface KbRoot {
  *
  * ## The asymmetry (deliberate — read before touching either method)
  *
- * A **project-scoped run** (agent or pipeline) reaches ONLY its own team's KB:
+ * A **project-scoped run** (agent or workflow) reaches ONLY its own team's KB:
  * `runId → run record → projectId → knowledgeBaseFor → [root]`. No team, a
  * team with no KB, an unknown run id, or an absent runId all fail closed to
  * `[]`. The constraint here exists to bound what an AUTONOMOUS run can reach —
@@ -60,7 +60,7 @@ export interface KbRoot {
  * whatever project that agent last ran under. The remainder after the
  * boundary must additionally be a SINGLE numeric segment (`_${pid}`, never
  * `_${startedMs}_${pid}`) for the match to count. Exact equality is also
- * supported: for a PIPELINE run the header IS `pipelineRunId` outright, and
+ * supported: for a WORKFLOW run the header IS `workflowRunId` outright, and
  * a completed agent run may in principle match exactly too.
  *
  * ## Record → project is a by-reference lookup, not a stored id
@@ -69,14 +69,14 @@ export interface KbRoot {
  * only `project` — the free-form label the caller passed to `startRun`
  * (an id or a display name) — so it is resolved the same by-id-then-by-name
  * way `AgentRunnerService`'s own (private) `resolveProject` does. A
- * `PipelineRun` carries only `projectPath` (absolute path), resolved the same
- * by-path way `PipelineRunnerService`'s own (private) `projectForRun` does.
+ * `WorkflowRun` carries only `projectPath` (absolute path), resolved the same
+ * by-path way `WorkflowRunnerService`'s own (private) `projectForRun` does.
  * This is fidelity to what the records actually hold, not an invented
  * fallback — this service does not have access to those private methods, and
  * would need the identical lookup even if it did.
  *
  * Caveat this implies, stated plainly: this is NOT a "fails closed at worst"
- * lookup. Neither `AgentRun` nor `PipelineRun` persists a canonical
+ * lookup. Neither `AgentRun` nor `WorkflowRun` persists a canonical
  * `projectId` — resolution is a query-time lookup by free-form label/path,
  * redone on every call. If the referenced project is deleted and a new one is
  * registered reusing the same id or name (or the same `projectPath`), the
@@ -95,7 +95,7 @@ export class KbScopeService {
     private readonly projects: ProjectsStorageService,
     private readonly resolvedProjects: ResolvedProjectService,
     private readonly agentRunner: AgentRunnerService,
-    private readonly pipelineRunner: PipelineRunnerService,
+    private readonly workflowRunner: WorkflowRunnerService,
   ) {}
 
   /**
@@ -131,15 +131,15 @@ export class KbScopeService {
     });
   }
 
-  /** Resolve a run id (agent prefix-match, or pipeline/agent exact-match) to its project. */
+  /** Resolve a run id (agent prefix-match, or workflow/agent exact-match) to its project. */
   private async projectForRun(runId: string): Promise<Project | null> {
     const agentRuns = await this.agentRunner.listAll().catch((): AgentRun[] => []);
     const agentMatch = agentRuns.find((r) => matchesAgentRunId(r.runId, runId));
     if (agentMatch) return this.resolveByRef(agentMatch.project);
 
-    const pipelineRuns = await this.pipelineRunner.listAll().catch((): PipelineRun[] => []);
-    const pipelineMatch = pipelineRuns.find((r) => r.pipelineRunId === runId);
-    if (pipelineMatch) return this.resolveByPath(pipelineMatch.projectPath);
+    const workflowRuns = await this.workflowRunner.listAll().catch((): WorkflowRun[] => []);
+    const workflowMatch = workflowRuns.find((r) => r.workflowRunId === runId);
+    if (workflowMatch) return this.resolveByPath(workflowMatch.projectPath);
 
     return null;
   }
@@ -153,7 +153,7 @@ export class KbScopeService {
     return all.find((p) => p.name === ref) ?? null;
   }
 
-  /** By absolute path — mirrors `PipelineRunnerService`'s private `projectForRun`. */
+  /** By absolute path — mirrors `WorkflowRunnerService`'s private `projectForRun`. */
   private async resolveByPath(projectPath: string | undefined): Promise<Project | null> {
     if (!projectPath) return null;
     const all = await this.projects.list().catch((): Project[] => []);

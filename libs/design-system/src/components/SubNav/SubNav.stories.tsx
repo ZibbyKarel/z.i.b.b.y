@@ -5,7 +5,7 @@ import { Button } from "../Button/Button";
 const items = [
   { href: "/departments/dev/overview", label: "Overview", active: true },
   { href: "/departments/dev/team", label: "Team", active: false },
-  { href: "/departments/dev/pipelines", label: "Pipelines", active: false },
+  { href: "/departments/dev/workflows", label: "Workflows", active: false },
   { href: "/departments/dev/integrations", label: "Integrations", active: false },
 ];
 

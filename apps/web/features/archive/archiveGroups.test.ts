@@ -20,7 +20,7 @@ function run(overrides: Partial<RunView> = {}): RunView {
 }
 
 function maps(overrides: Partial<OwnerDepartmentMaps> = {}): OwnerDepartmentMaps {
-  return { pipelineDepartment: new Map(), ...overrides };
+  return { workflowDepartment: new Map(), ...overrides };
 }
 
 describe("archiveDepartmentFilterId / D8 join", () => {
@@ -34,16 +34,16 @@ describe("archiveDepartmentFilterId / D8 join", () => {
     expect(id).toBe(NO_DEPARTMENT);
   });
 
-  it("returns the tagged department for a pipeline run", () => {
+  it("returns the tagged department for a workflow run", () => {
     const id = archiveDepartmentFilterId(
-      run({ kind: "pipeline", owner: "delivery" }),
-      maps({ pipelineDepartment: new Map([["delivery", "dev"]]) }),
+      run({ kind: "workflow", owner: "delivery" }),
+      maps({ workflowDepartment: new Map([["delivery", "dev"]]) }),
     );
     expect(id).toBe("dev");
   });
 
-  it("returns NO_DEPARTMENT for an untagged pipeline owner", () => {
-    const id = archiveDepartmentFilterId(run({ kind: "pipeline", owner: "untagged" }), maps());
+  it("returns NO_DEPARTMENT for an untagged workflow owner", () => {
+    const id = archiveDepartmentFilterId(run({ kind: "workflow", owner: "untagged" }), maps());
     expect(id).toBe(NO_DEPARTMENT);
   });
 });

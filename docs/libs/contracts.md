@@ -32,7 +32,7 @@ excluding the composite `app.contract.ts` and the shared `common.schema.ts`):
 | `projects/`        | `ProjectSchema`                                                                                                                  | Projects                                                                                                                  |
 | `companies/`       | `CompanySchema`                                                                                                                  | Company registry CRUD — the super-entity above `Project`                                                                  |
 | `teams/`           | `TeamSchema`, `KnowledgeBaseSourceSchema`                                                                                        | Team CRUD — the layer between `Company` and `Project` that owns a read-only knowledge base; see `docs/api/teams.md`       |
-| `pipelines/`       | `PipelineSchema`, `PipelineRunSchema`, `StageVerdictSchema`                                                                      | Pipeline CRUD + runs                                                                                                      |
+| `workflows/`       | `WorkflowSchema`, `WorkflowRunSchema`, `StageVerdictSchema`                                                                      | Workflow CRUD + runs                                                                                                      |
 | `goals/`           | `GoalSchema`, `GoalRunSchema`                                                                                                    | Loop-engine goal definitions + runs                                                                                       |
 | `approvals/`       | `ApprovalSchema`                                                                                                                 | Approval queue                                                                                                            |
 | `artifacts/`       | `ArtifactSchema`                                                                                                                 | Durable artifact provenance registry                                                                                      |
@@ -71,7 +71,7 @@ const ErrorSchema = z.object({ message: z.string() });
 // ISO 8601 date-time, used for every timestamp field across the contracts
 const IsoDateTimeSchema = z.string().datetime();
 
-// Shared run lifecycle, across every run kind (agent, skill, pipeline stage).
+// Shared run lifecycle, across every run kind (agent, skill, workflow stage).
 // `awaiting-approval` and `paused-limit` are both *safe paused states with no
 // live child* — each survives a restart unchanged rather than being
 // reconciled to `interrupted`.
@@ -181,7 +181,7 @@ const { data } = apiClient.agents.listAgents.useQuery({
 ## ID regex conventions
 
 ```typescript
-// Agent, pipeline, skill id
+// Agent, workflow, skill id
 const AGENT_ID_REGEX = /^[a-zA-Z0-9._-]+$/;
 
 // Note id (vault)
@@ -210,8 +210,8 @@ export const appContract = c.router({
   projectCategories: projectCategoriesContract,
   companies: companiesContract,
   teams: teamsContract,
-  pipelines: pipelinesContract,
-  pipelineRuns: pipelineRunsContract, // now just GET /pipelines/runs (catalog liveness)
+  workflows: workflowsContract,
+  workflowRuns: workflowRunsContract, // now just GET /workflows/runs (catalog liveness)
   goals: goalsContract,
   approvals: approvalsContract,
   artifacts: artifactsContract,
@@ -251,7 +251,7 @@ Used to generate OpenAPI documentation in `main.ts`.
 > detail, logs, stop, resume, delete, artifacts) were removed. A run is
 > started only via a task (`POST /api/tasks`), and every operation on a run
 > lives on `taskRunsContract` under `/api/tasks/runs/*`. `agentRunsContract`
-> and `pipelineRunsContract` only keep their liveness listings; the former
+> and `workflowRunsContract` only keep their liveness listings; the former
 > `goalRunsContract` was removed entirely — goal runs share the task-run
-> surface. The run **schemas** (`AgentRunSchema`, `PipelineRunSchema`,
+> surface. The run **schemas** (`AgentRunSchema`, `WorkflowRunSchema`,
 > `GoalRunSchema`) remain and are shared via `task-run.schema`.

@@ -154,7 +154,7 @@ export class TasksController {
         if (!routing) {
           return {
             status: 422,
-            body: { message: "No agents or pipelines available to route to" },
+            body: { message: "No agents or workflows available to route to" },
           };
         }
         return { status: 200, body: routing };

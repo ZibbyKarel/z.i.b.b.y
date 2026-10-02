@@ -1,18 +1,18 @@
 import { Controller, type MessageEvent, Sse } from "@nestjs/common";
-import type { AgentRun, GoalRun, PipelineRun } from "@zibby/contracts";
+import type { AgentRun, GoalRun, WorkflowRun } from "@zibby/contracts";
 import { type Observable, map, merge } from "rxjs";
 import { ActivityEventsService } from "../activity/activity-events.service";
 import { AgentRunnerService } from "../agents/agent-runner.service";
 import { ChannelEventsService } from "../channels/channel-events.service";
 import { GoalRunnerService } from "../goals/goal-runner.service";
-import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
+import { WorkflowRunnerService } from "../workflows/workflow-runner.service";
 import { fromRunStatus, heartbeats } from "../shared/sse/sse";
 
 /**
  * The single multiplexed status channel. One `EventSource` per client carries
- * every agent-run and pipeline-run transition, replacing the dashboard's
+ * every agent-run and workflow-run transition, replacing the dashboard's
  * continuous polling of the running list, the all-runs history (both 2s) and the
- * pipeline aggregate (1s). Events are a thin invalidation signal — the client
+ * workflow aggregate (1s). Events are a thin invalidation signal — the client
  * refetches the matching query off them — so the list endpoints remain the single
  * source of truth and the server only speaks on a real transition. A merged
  * heartbeat keeps the connection alive through idle periods.
@@ -21,7 +21,7 @@ import { fromRunStatus, heartbeats } from "../shared/sse/sse";
 export class EventsController {
   constructor(
     private readonly agents: AgentRunnerService,
-    private readonly pipelines: PipelineRunnerService,
+    private readonly workflows: WorkflowRunnerService,
     private readonly goals: GoalRunnerService,
     private readonly channels: ChannelEventsService,
     private readonly activity: ActivityEventsService,
@@ -35,10 +35,10 @@ export class EventsController {
         (listener) => this.agents.onRunStatus(listener),
         (run) => ({ runId: run.runId, status: run.status }),
       ),
-      fromRunStatus<PipelineRun>(
-        "pipeline-runs",
-        (listener) => this.pipelines.onRunStatus(listener),
-        (run) => ({ runId: run.pipelineRunId, status: run.status }),
+      fromRunStatus<WorkflowRun>(
+        "workflow-runs",
+        (listener) => this.workflows.onRunStatus(listener),
+        (run) => ({ runId: run.workflowRunId, status: run.status }),
       ),
       // Phase 10: goal-run transitions — the web feed invalidates the goal-runs
       // query off this scope (unknown-scope tolerant, like the others).

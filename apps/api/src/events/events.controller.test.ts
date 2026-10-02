@@ -1,11 +1,11 @@
 import type { MessageEvent } from "@nestjs/common";
-import type { AgentRun, GoalRun, PipelineRun } from "@zibby/contracts";
+import type { AgentRun, GoalRun, WorkflowRun } from "@zibby/contracts";
 import { describe, expect, it } from "vitest";
 import { ActivityEventsService } from "../activity/activity-events.service";
 import type { AgentRunnerService } from "../agents/agent-runner.service";
 import { ChannelEventsService } from "../channels/channel-events.service";
 import type { GoalRunnerService } from "../goals/goal-runner.service";
-import type { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
+import type { WorkflowRunnerService } from "../workflows/workflow-runner.service";
 import { EventsController } from "./events.controller";
 
 /** A bare `onRunStatus` stub — the only surface the controller reads off any runner. */
@@ -23,14 +23,14 @@ function fakeRunner<T>() {
 }
 
 describe("EventsController — merged `/api/events` SSE", () => {
-  it("carries agent/pipeline/goal transitions in the merged stream", () => {
+  it("carries agent/workflow/goal transitions in the merged stream", () => {
     const agents = fakeRunner<AgentRun>();
-    const pipelines = fakeRunner<PipelineRun>();
+    const workflows = fakeRunner<WorkflowRun>();
     const goals = fakeRunner<GoalRun>();
 
     const controller = new EventsController(
       agents as unknown as AgentRunnerService,
-      pipelines as unknown as PipelineRunnerService,
+      workflows as unknown as WorkflowRunnerService,
       goals as unknown as GoalRunnerService,
       new ChannelEventsService(),
       new ActivityEventsService(),
@@ -39,12 +39,12 @@ describe("EventsController — merged `/api/events` SSE", () => {
     const events: MessageEvent[] = [];
     const sub = controller.events().subscribe((e) => events.push(e));
 
-    pipelines.emit({ pipelineRunId: "delivery_1", status: "running" } as PipelineRun);
+    workflows.emit({ workflowRunId: "delivery_1", status: "running" } as WorkflowRun);
     goals.emit({ goalRunId: "ship-it_1", status: "running" } as GoalRun);
 
     const parsed = events.map((e) => JSON.parse(String(e.data)));
     expect(parsed).toContainEqual({
-      scope: "pipeline-runs",
+      scope: "workflow-runs",
       runId: "delivery_1",
       status: "running",
     });

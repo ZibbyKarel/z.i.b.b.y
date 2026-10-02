@@ -20,7 +20,7 @@ const sample: CreateAutomationInput = {
   id: "nightly",
   name: "Nightly digest",
   trigger: { type: "cron", expr: "0 9 * * *" },
-  target: { type: "pipeline", pipelineId: "digest" },
+  target: { type: "workflow", workflowId: "digest" },
   enabled: true,
 };
 /** What create() persists: the input plus the server-owned `system: false`. */
@@ -99,7 +99,7 @@ describe("AutomationsStorageService", () => {
       target: {
         type: "task",
         text: "audit the repo for stale deps",
-        target: { kind: "pipeline", id: "code-audit", name: "Code audit" },
+        target: { kind: "workflow", id: "code-audit", name: "Code audit" },
         attachmentSetId: "set_abc123",
         output: { type: "pr" },
         toolGrants: ["web_search"],

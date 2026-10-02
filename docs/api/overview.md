@@ -33,7 +33,7 @@ Imports in `AppModule`, in the order they're registered:
 | `SkillsModule`            | `skills/skills.module`                 | Skill CRUD                                                                                                                                                                                                               |
 | `ProjectsModule`          | `projects/projects.module`             | Projects, categories, matching                                                                                                                                                                                           |
 | `CompaniesModule`         | `companies/companies.module`           | Company registry CRUD (client/org records)                                                                                                                                                                               |
-| `PipelinesModule`         | `pipelines/pipelines.module`           | Pipeline CRUD + orchestration                                                                                                                                                                                            |
+| `WorkflowsModule`         | `workflows/workflows.module`           | Workflow CRUD + orchestration                                                                                                                                                                                            |
 | `GoalsModule`             | `goals/goals.module`                   | Goal loop engine (maker/verifier cycle)                                                                                                                                                                                  |
 | `ApprovalsModule`         | `approvals/approvals.module`           | Approvals (all kinds)                                                                                                                                                                                                    |
 | `ArtifactsModule`         | `artifacts/artifacts.module`           | Durable artifact provenance registry                                                                                                                                                                                     |
@@ -51,11 +51,11 @@ Imports in `AppModule`, in the order they're registered:
 | `ChannelsModule`          | `channels/channels.module`             | Heartbeat watcher, triage, channel item store                                                                                                                                                                            |
 | `MachineModule`           | `machine/machine.module`               | Controlling the machine directly (file ops), gated behind the approval floor                                                                                                                                             |
 | `MonitorsModule`          | `monitors/monitors.module`             | CI/CD monitor adapters (GitHub CI) + alert dispatch                                                                                                                                                                      |
-| `DiscoveryModule`         | `discovery/discovery.module`           | Proposals inbox: parks a candidate behind an approval, dispatches on approval (Phase 116a: the triage scan that produced candidates is gone — the operator targets a pipeline directly instead)                          |
+| `DiscoveryModule`         | `discovery/discovery.module`           | Proposals inbox: parks a candidate behind an approval, dispatches on approval (Phase 116a: the triage scan that produced candidates is gone — the operator targets a workflow directly instead)                          |
 | `HealthModule`            | `health/health.module`                 | Health check endpoint                                                                                                                                                                                                    |
 | `DepartmentsModule`       | `departments/departments.module`       | Department-federation registry (Dev/Ops/Security/Release/Incident/Research/Comms/Arch) + status                                                                                                                          |
 | `SelfModule`              | `self/self.module`                     | Is the ZIBBY install repo itself up to date (top-bar freshness)                                                                                                                                                          |
-| `SelfKnowledgeModule`     | `self-knowledge/self-knowledge.module` | Composes the self-knowledge note from agents, pipelines, gate rules, the vault, and graphify's `GRAPH_REPORT.md`                                                                                                         |
+| `SelfKnowledgeModule`     | `self-knowledge/self-knowledge.module` | Composes the self-knowledge note from agents, workflows, gate rules, the vault, and graphify's `GRAPH_REPORT.md`                                                                                                         |
 | `LimitsModule`            | `limits/limits.module`                 | Rate-limit reading, budget display                                                                                                                                                                                       |
 | `LimitResumeModule`       | `limits-resume/limit-resume.module`    | Resumes runs paused on a rate limit                                                                                                                                                                                      |
 | `EventsModule`            | `events/events.module`                 | Single multiplexed SSE endpoint (`GET /api/events`)                                                                                                                                                                      |
@@ -67,7 +67,7 @@ Imports in `AppModule`, in the order they're registered:
 
 `ConfigModule.forRoot({ isGlobal: true })` (from `@nestjs/config`) loads `.env` and is registered first, ahead of these 41.
 
-Two smaller modules are not registered at the app root because they're shared submodules imported by their consumers instead of standalone features: `GatesModule` (`gates/gates.module` — the pure gate-evaluation engine + locked `POLICY.md` floor, imported by `AgentsModule`, `ChannelsModule`, `PipelinesModule`, `TasksModule`) and `ClaudeRunModule` (`runner/claude-run.module` — the `claude -p` command builder shared by all three runners).
+Two smaller modules are not registered at the app root because they're shared submodules imported by their consumers instead of standalone features: `GatesModule` (`gates/gates.module` — the pure gate-evaluation engine + locked `POLICY.md` floor, imported by `AgentsModule`, `ChannelsModule`, `WorkflowsModule`, `TasksModule`) and `ClaudeRunModule` (`runner/claude-run.module` — the `claude -p` command builder shared by all three runners).
 
 ## Shared infrastructure (shared/)
 
@@ -97,7 +97,7 @@ Test: `.zibby/data-test/` (switch via `ZIBBY_DATA_DIR=.zibby/data-test`)
 ```
 data/
 ├── agents/              agent definitions (.md) + runs/<agentId>/<runId>/
-├── pipelines/           pipeline definitions (.pipeline.md) + runs/
+├── workflows/           workflow definitions (.workflow.md) + runs/
 ├── skills/              skill definitions (.SKILL.md)
 ├── projects/            project JSON records
 ├── approvals/           approval JSON records
@@ -160,4 +160,4 @@ pnpm seed           # seed data/
 pnpm seed:test      # seed data-test/
 ```
 
-The `apps/api/scripts/seed.mjs` script creates baseline agents, pipelines, and projects.
+The `apps/api/scripts/seed.mjs` script creates baseline agents, workflows, and projects.

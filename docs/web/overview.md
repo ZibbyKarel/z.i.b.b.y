@@ -34,9 +34,9 @@ app/
     │   └── [id]/page.tsx   MCP server detail
     ├── memory/page.tsx     Vault browser
     ├── overview/page.tsx   Overview (briefing + activity)
-    ├── pipelines/
-    │   ├── page.tsx        Pipeline list
-    │   └── [id]/page.tsx   Pipeline detail + run history
+    ├── workflows/
+    │   ├── page.tsx        Workflow list
+    │   └── [id]/page.tsx   Workflow detail + run history
     ├── projects/
     │   ├── page.tsx        Project portfolio
     │   ├── new/page.tsx    Create project
@@ -193,7 +193,7 @@ because the chat API has no attachment channel. A settled reply's
 **Create task** opens `/work/tasks/new?text=…(&entry=<dept>)`. ⌘/Ctrl+K opens
 the `CommandPaletteHost` (`features/command-palette`), which indexes
 departments, people, tasks, goals, companies, teams, projects,
-pipelines, registries, automations, vault notes, settings and gate
+workflows, registries, automations, vault notes, settings and gate
 sections, plus actions. "Approve next" never quick-approves a high-risk item: it
 opens the approval sheet instead.
 
@@ -289,14 +289,14 @@ features/
 ├── notifications/  In-app notifications
 ├── overview/       Briefing + activity feed
 ├── pins/           Quick-launch pins
-├── pipelines/      Pipeline editor + history
+├── workflows/      Workflow editor + history
 ├── projects/       Project portfolio
 ├── registries/     ZB-11 — `/system/registries/[kind]` (skills/mcp/hooks/commands):
 │                   a `DataTable` per kind with a derived "Bound in" department
 │                   column (`GET /api/registries/bindings`, O-09); detail/new pages
 │                   reuse each domain's own unchanged create dialog + edit form
 ├── release/       Release department surfaces (merge queue card)
-├── research/       Research pipeline surfacing
+├── research/       Research workflow surfacing
 ├── roadmap/        Per-project delivery backlog (phase 125) — the global
 │                   external-level mapping table now lives at
 │                   `/system/settings/general` (ZB-11); the project board lands
@@ -344,7 +344,7 @@ graph into every consumer and reintroduce cycles (exactly like the DS
 `CodeBlock ↔ index` case).
 
 **Intentional narrow deep imports are kept:** dependency-free files holding
-cache keys (`agents`/`pipelines`/`runs` `queries/keys.ts`) and the SSE fan-out
+cache keys (`agents`/`workflows`/`runs` `queries/keys.ts`) and the SSE fan-out
 in `runs/runEvents.tsx`. They exist specifically to stay cycle-safe, so they're
 imported directly rather than through the barrel.
 
@@ -365,7 +365,7 @@ madge.)
 
 - **Route features** (have a `Screen.tsx` + a segment under `(dashboard)/`):
   agents, automations, commands, companies, gates, hooks, mcp, memory,
-  overview, pipelines, projects, runs, settings, skills, teams (`gates` is
+  overview, workflows, projects, runs, settings, skills, teams (`gates` is
   route-only, with no nav item).
 - **Shared services** (no `Screen`, consumed by other features / mounted in
   chrome): approvals, chat, goals, health, integrations, limits, notifications,

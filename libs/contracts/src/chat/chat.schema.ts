@@ -4,21 +4,21 @@ import {
   AgentTaskTargetSchema,
   AttachmentSchema,
   DepartmentTaskTargetSchema,
-  PipelineTaskTargetSchema,
   TaskTargetSchema,
+  WorkflowTaskTargetSchema,
 } from "../tasks/task.schema";
 import { TeamIdSchema } from "../teams/team.schema";
 
 /**
  * D-020 — the restricted subset of {@link TaskTargetSchema} a chat `@mention` may
- * name: a real, dispatchable agent/pipeline, or a named department — never a goal,
+ * name: a real, dispatchable agent/workflow, or a named department — never a goal,
  * a chain, or the synthetic orchestrator (none of those are something the operator
  * "addresses" in a turn the way they address a unit that can pick up work).
  */
 export const ChatMentionTargetSchema = z.discriminatedUnion("kind", [
   AgentTaskTargetSchema,
   DepartmentTaskTargetSchema,
-  PipelineTaskTargetSchema,
+  WorkflowTaskTargetSchema,
 ]);
 export type ChatMentionTarget = z.infer<typeof ChatMentionTargetSchema>;
 

@@ -46,18 +46,18 @@ import {
   runTitle,
 } from "../run";
 import { GoalDetailPanel } from "./GoalDetailPanel";
-import { PipelineStageTimeline } from "./PipelineStageTimeline";
+import { WorkflowStageTimeline } from "./WorkflowStageTimeline";
 import { RunApprovalGate } from "./RunApprovalGate";
 import { RunLogStream } from "./RunLogStream";
 import { RunParkedPanel } from "./RunParkedPanel";
-import { RunPipelineSummary } from "./RunPipelineSummary";
+import { RunWorkflowSummary } from "./RunWorkflowSummary";
 import { RunPrGatePanel } from "./RunPrGatePanel";
 import { RunStateBadge } from "./RunStateBadge";
 
 export interface RunDetailProps {
   run: RunView;
   glyph: IconName;
-  /** The assigned agent/pipeline's avatar, shown in the header in place of the
+  /** The assigned agent/workflow's avatar, shown in the header in place of the
    * glyph (which is the fallback when this is absent) — Phase 48. */
   avatar?: string;
   now: number;
@@ -73,7 +73,7 @@ export interface RunDetailProps {
 
 /**
  * The "paused on a usage limit" notice — a pause, not a failure (Phase 9). Shared by
- * agent, pipeline, and goal runs (it was three inline copies); shows the reset ETA and,
+ * agent, workflow, and goal runs (it was three inline copies); shows the reset ETA and,
  * when present, how many auto-resume cycles have been spent.
  */
 function LimitPausedPanel({ run, now }: { run: RunView; now: number }) {
@@ -115,7 +115,7 @@ function MetaCell({
   /** Bumps the value's size so it reads as the standout figure of the strip (the cost). */
   emphasize?: boolean;
   /** Phase 63: when present, the value becomes a real, keyboard-focusable link to the
-   * owning entity's detail page (a pipeline's own MetaCell) — absent for kinds/labels
+   * owning entity's detail page (a workflow's own MetaCell) — absent for kinds/labels
    * that have no detail route, which stay plain text. */
   onClick?: () => void;
   testId?: string;
@@ -246,9 +246,9 @@ function PrOutputCard({
 
 /**
  * A completed task's produced output. Three shapes, by what the task produced:
- *  - a PR (agent OR pipeline, `prOutput` set) → just the PR link + the coloured `+/−`
+ *  - a PR (agent OR workflow, `prOutput` set) → just the PR link + the coloured `+/−`
  *    branch line totals (no draft, no diffstat, no phase log) — the {@link PrOutputCard};
- *  - a `file`-output pipeline run → its named artifact, rendered as markdown/code;
+ *  - a `file`-output workflow run → its named artifact, rendered as markdown/code;
  *  - an agent/orchestrator `file` reference → `taskOutcomeSummary`.
  * Non-PR shapes also offer "continue" (seed a fresh task with the output folded in).
  * Renders nothing when there is no surfaced output.
@@ -258,31 +258,31 @@ function RunOutputPanel({ run }: { run: RunView }) {
   const { open: openNewTask } = useNewTask();
 
   const summary = run.taskOutcomeSummary;
-  // A PR output (agent or pipeline) short-circuits to the compact card below; skip the
+  // A PR output (agent or workflow) short-circuits to the compact card below; skip the
   // artifact fetches (there is no draft/diffstat to show for it anymore).
   const isPrOutput = !!run.prOutput;
-  // A pipeline run's own artifacts (below) are its output — the agent-shaped branch
+  // A workflow run's own artifacts (below) are its output — the agent-shaped branch
   // (a generic `taskOutcomeSummary` string like "5 stages, done") must never apply to
   // one, even when its artifact hasn't arrived yet (P2-T2 bugfix).
   const agentOutput =
     !isPrOutput &&
     run.status === "done" &&
-    run.kind !== "pipeline" &&
+    run.kind !== "workflow" &&
     !!summary &&
     (run.taskOutputKind === "pr" || run.taskOutputKind === "file");
-  const pipelineDone = !isPrOutput && run.status === "done" && run.kind === "pipeline";
+  const workflowDone = !isPrOutput && run.status === "done" && run.kind === "workflow";
 
-  // A legacy pipeline PR (no `prOutput`) still surfaces its `pr-draft.md` here; a new PR
+  // A legacy workflow PR (no `prOutput`) still surfaces its `pr-draft.md` here; a new PR
   // never fetches it. Same query key as RunPrGatePanel, so the cache is shared.
-  const { data: prDraft } = useRunArtifactQuery(run.runId, "pr-draft.md", pipelineDone);
-  // A `file`-output pipeline run's named artifact (P2-T1's `outputArtifactName`) — no
+  const { data: prDraft } = useRunArtifactQuery(run.runId, "pr-draft.md", workflowDone);
+  // A `file`-output workflow run's named artifact (P2-T1's `outputArtifactName`) — no
   // `pr-draft.md` is written for that shape, so this is the only way its output surfaces.
   const { data: fileArtifact } = useRunArtifactQuery(
     run.runId,
     run.outputArtifactName ?? "",
-    pipelineDone && !!run.outputArtifactName,
+    workflowDone && !!run.outputArtifactName,
   );
-  const pipelineOutput = pipelineDone && !!(prDraft?.content || fileArtifact?.content);
+  const workflowOutput = workflowDone && !!(prDraft?.content || fileArtifact?.content);
 
   // A PR output (Tier-2, opened immediately): just the link and the coloured line
   // totals — nothing duplicated from the phase log or a draft.
@@ -290,7 +290,7 @@ function RunOutputPanel({ run }: { run: RunView }) {
     return <PrOutputCard prOutput={run.prOutput} title={t("producedOutputTitle")} />;
   }
 
-  if (!agentOutput && !pipelineOutput) return null;
+  if (!agentOutput && !workflowOutput) return null;
 
   const rawOutput = agentOutput
     ? (summary ?? "")
@@ -318,12 +318,12 @@ function RunOutputPanel({ run }: { run: RunView }) {
     </Button>
   );
 
-  // Pipeline with a PR draft: the artifact view IS the openable output (incl. the
+  // Workflow with a PR draft: the artifact view IS the openable output (incl. the
   // diffstat); "continue" sits beneath it.
   if (prDraft?.content) {
     return (
       <Stack gap="100">
-        <RunPrGatePanel pipelineRunId={run.runId} title={t("producedOutputTitle")} />
+        <RunPrGatePanel title={t("producedOutputTitle")} workflowRunId={run.runId} />
         <Stack align="center" direction="row" gap="100">
           {continueButton}
         </Stack>
@@ -331,7 +331,7 @@ function RunOutputPanel({ run }: { run: RunView }) {
     );
   }
 
-  // Pipeline with a `file`-output artifact: no `RunPrGatePanel` (there is no diffstat,
+  // Workflow with a `file`-output artifact: no `RunPrGatePanel` (there is no diffstat,
   // no PR draft) — a lighter block with the same skeleton showing the artifact content.
   // The produced artifact is normally a markdown doc (a research report, an audit) —
   // rendered formatted via the DS Markdown viewer; a clearly non-markdown code file
@@ -485,7 +485,7 @@ function RunInputSection({ run }: { run: RunView }) {
 }
 
 /**
- * Run detail: one header + meta strip, then the live log (or, for pipelines, a
+ * Run detail: one header + meta strip, then the live log (or, for workflows, a
  * link out). A run paused on the approval gate folds the approval into this same
  * header (severity + risk type + request meta — there is no second header), shows
  * the decision panel with the action summary and Potvrdit/Smazat footer, and
@@ -580,13 +580,13 @@ export function RunDetail({
 
   const headline = runTitle(run);
 
-  // A pipeline run's `prompt` is only the "fáze: X" progress string, which the stage
+  // A workflow run's `prompt` is only the "fáze: X" progress string, which the stage
   // timeline below already shows — so the header subtitle is the prompt for the other
-  // kinds (an agent's prompt), suppressed for pipelines.
+  // kinds (an agent's prompt), suppressed for workflows.
   const subtitle =
-    run.kind === "pipeline" ? "" : run.prompt && run.prompt !== headline ? run.prompt : "";
+    run.kind === "workflow" ? "" : run.prompt && run.prompt !== headline ? run.prompt : "";
 
-  // Pipeline runs render their own stage timeline (below); this is the log for the
+  // Workflow runs render their own stage timeline (below); this is the log for the
   // kinds that have a single one (agent/skill) or a scheduled task's note.
   const logPanel = run.logBase ? (
     <RunLogStream
@@ -650,16 +650,16 @@ export function RunDetail({
     />,
   );
   if (run.owner && run.kind !== "agent") {
-    // Phase 63: a pipeline's own name is a link to its detail page (a real, focusable
+    // Phase 63: a workflow's own name is a link to its detail page (a real, focusable
     // route) — goal/chain/orchestrator owners have no detail route, so they stay plain.
     const owner = run.owner;
     metaItems.push(
       <MetaCell
         key="owner"
-        label={run.kind === "pipeline" ? t("metaPipeline") : t("metaTarget")}
-        onClick={run.kind === "pipeline" ? () => router.push(`/pipelines/${owner}`) : undefined}
-        testId={run.kind === "pipeline" ? "run-owner-link" : undefined}
-        tone={run.kind === "pipeline" ? "accent" : undefined}
+        label={run.kind === "workflow" ? t("metaWorkflow") : t("metaTarget")}
+        onClick={run.kind === "workflow" ? () => router.push(`/workflows/${owner}`) : undefined}
+        testId={run.kind === "workflow" ? "run-owner-link" : undefined}
+        tone={run.kind === "workflow" ? "accent" : undefined}
         value={owner}
       />,
     );
@@ -711,7 +711,7 @@ export function RunDetail({
   return (
     <>
       <Stack gap="200">
-        {/* Phase 53: the assigned agent/pipeline avatar is rendered like the DS
+        {/* Phase 53: the assigned agent/workflow avatar is rendered like the DS
             EntityHero — a background band (object-cover fill + gradient scrim, glyph
             fallback when absent) — with the whole run header laid over it. The Card
             keeps the state tone/HUD brackets and clips the image to the panel radius;
@@ -823,11 +823,11 @@ export function RunDetail({
 
         {approval ? (
           <>
-            {/* A pipeline run parked on the PR gate shows what's about to be published
+            {/* A workflow run parked on the PR gate shows what's about to be published
               (the draft + diffstat) above the generic confirm/discard panel. */}
-            {run.kind === "pipeline" &&
+            {run.kind === "workflow" &&
               (approval.action === "pr.open" || approval.action === "git.push") && (
-                <RunPrGatePanel pipelineRunId={run.runId} />
+                <RunPrGatePanel workflowRunId={run.runId} />
               )}
             <RunApprovalGate approval={approval} />
             <Accordion>
@@ -841,20 +841,20 @@ export function RunDetail({
             {run.status === "paused-limit" && <LimitPausedPanel now={now} run={run} />}
             <GoalDetailPanel run={run} />
           </>
-        ) : run.kind === "pipeline" ? (
-          // Phase 28: a pipeline run's surface IS its stage timeline (each phase's log is
+        ) : run.kind === "workflow" ? (
+          // Phase 28: a workflow run's surface IS its stage timeline (each phase's log is
           // openable). A paused-limit / retries-parked run shows its notice above it.
           <>
             {run.status === "paused-limit" && <LimitPausedPanel now={now} run={run} />}
             {run.status === "parked" && run.parked && <RunParkedPanel run={run} />}
-            <RunPipelineSummary owner={run.owner} runId={run.runId} totalCostUsd={run.costUsd} />
-            <PipelineStageTimeline
+            <RunWorkflowSummary owner={run.owner} runId={run.runId} totalCostUsd={run.costUsd} />
+            <WorkflowStageTimeline
               currentStage={run.currentStage}
               live={run.status === "running"}
               owner={run.owner}
               parked={run.parked}
-              pipelineRunId={run.runId}
               stageRuns={run.stageRuns}
+              workflowRunId={run.runId}
             />
           </>
         ) : run.status === "paused-limit" ? (

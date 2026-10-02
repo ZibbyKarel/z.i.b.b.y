@@ -22,7 +22,7 @@ export interface TaskTerminalDelivery {
 }
 
 /**
- * The directed-task counterpart of the pipeline `outputs:` sink — what happens to an
+ * The directed-task counterpart of the workflow `outputs:` sink — what happens to an
  * agent/orchestrator task's finished work, when the operator chose a `pr` or `file`
  * output in the New Task dialog. Deterministic and system-owned (no agent, no tokens).
  *
@@ -103,7 +103,7 @@ export class TaskOutputService implements OnModuleInit {
     output: Extract<TaskOutput, { type: "file" }>,
     summary: string,
   ): Promise<void> {
-    // A task carries no `from` artifact (unlike a pipeline handoff), so the content is
+    // A task carries no `from` artifact (unlike a workflow handoff), so the content is
     // the run's summary — the most faithful thing available without an agent contract.
     const content = summary.trim() ? `${summary}\n` : "";
     if (output.dest === "vault") {

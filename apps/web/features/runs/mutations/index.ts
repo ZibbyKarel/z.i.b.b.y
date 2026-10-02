@@ -1,6 +1,6 @@
 export { useStopTaskRunMutation } from "./useStopTaskRunMutation";
 export { useDeleteAgentRunMutation } from "./useDeleteAgentRunMutation";
-export { useDeletePipelineRunMutation } from "./useDeletePipelineRunMutation";
-export { useResumePipelineRunMutation } from "./useResumePipelineRunMutation";
+export { useDeleteWorkflowRunMutation } from "./useDeleteWorkflowRunMutation";
+export { useResumeWorkflowRunMutation } from "./useResumeWorkflowRunMutation";
 export { useResumeTaskRunMutation } from "./useResumeTaskRunMutation";
 export { useAssignRunProjectMutation } from "./useAssignRunProjectMutation";

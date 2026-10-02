@@ -1,0 +1,412 @@
+import { describe, expect, it } from "vitest";
+import { type Agent, CreateWorkflowSchema } from "@zibby/contracts";
+import type { Workflow } from "../../../../domain";
+import {
+  INITIAL_ASSIGNMENT,
+  type WorkflowGraph,
+  attemptsFromStageRuns,
+  graphToPhases,
+  isUpstreamRework,
+  orderNodes,
+  phasesToGraph,
+  validateGraph,
+} from "./workflow-graph";
+
+const agents: Agent[] = [
+  {
+    id: "writer",
+    name: "Writer",
+    glyph: "edit",
+    model: "opus",
+    thinking: "high",
+    instructions: "w",
+  },
+  { id: "tester", name: "Tester", glyph: "flask", instructions: "t" },
+];
+
+const existing: Workflow = {
+  id: "delivery",
+  name: "Delivery",
+  lastRun: "—",
+  lastState: "done",
+  desc: "build → verify",
+  file: "f",
+  outputs: [],
+  phases: [
+    {
+      id: "koder",
+      type: "agent",
+      agent: "writer",
+      consumes: "task.md",
+      produces: "implementation.md",
+      model: "sonnet",
+      thinking: "medium",
+    },
+    {
+      id: "verify",
+      type: "verify",
+      commands: ["pnpm test"],
+      loop: { to: "koder", maxRetries: 2, escalate: true, then: "fail" },
+    },
+  ],
+};
+
+/** A two-node agent→agent graph used by several cases. */
+function chainGraph(): WorkflowGraph {
+  return {
+    nodes: [
+      {
+        id: "a",
+        type: "agent",
+        agent: "writer",
+        produces: "a.md",
+        commands: "",
+        model: "opus",
+        thinking: "high",
+        x: 0,
+        y: 0,
+      },
+      {
+        id: "b",
+        type: "agent",
+        agent: "tester",
+        produces: "b.md",
+        commands: "",
+        model: "sonnet",
+        thinking: "low",
+        x: 300,
+        y: 0,
+      },
+    ],
+    flow: [{ id: "e1", from: "a", to: "b" }],
+    rework: [],
+  };
+}
+
+describe("phasesToGraph (auto-layout)", () => {
+  it("returns an empty graph for a new workflow", () => {
+    expect(phasesToGraph(undefined, agents)).toEqual({ nodes: [], flow: [], rework: [] });
+  });
+
+  it("lays nodes left-to-right, one flow edge per consecutive pair", () => {
+    const g = phasesToGraph(existing, agents);
+    expect(g.nodes.map((n) => n.id)).toEqual(["koder", "verify"]);
+    expect(g.nodes[0]!.x).toBeLessThan(g.nodes[1]!.x);
+    expect(g.flow).toEqual([expect.objectContaining({ from: "koder", to: "verify" })]);
+  });
+
+  it("turns a phase loop into a rework edge to the loop.to phase", () => {
+    const g = phasesToGraph(existing, agents);
+    expect(g.rework).toHaveLength(1);
+    expect(g.rework[0]).toMatchObject({
+      from: "verify",
+      to: "koder",
+      maxRetries: 2,
+      escalate: true,
+      then: "fail",
+    });
+  });
+});
+
+describe("orderNodes", () => {
+  it("walks the flow chain from the head", () => {
+    expect(orderNodes(chainGraph()).map((n) => n.id)).toEqual(["a", "b"]);
+  });
+
+  it("appends orphan nodes (no incoming/outgoing) deterministically", () => {
+    const g = chainGraph();
+    g.nodes.push({
+      id: "orphan",
+      type: "agent",
+      agent: "tester",
+      produces: "o.md",
+      commands: "",
+      model: "opus",
+      thinking: "high",
+      x: 0,
+      y: 0,
+    });
+    expect(orderNodes(g).map((n) => n.id)).toEqual(["a", "b", "orphan"]);
+  });
+});
+
+describe("graphToPhases", () => {
+  it("threads consumes from the previous node's produces; head consumes the assignment", () => {
+    const phases = graphToPhases(chainGraph(), INITIAL_ASSIGNMENT);
+    expect(phases[0]).toMatchObject({ id: "a", consumes: "task.md", produces: "a.md" });
+    expect(phases[1]).toMatchObject({ id: "b", consumes: "a.md", produces: "b.md" });
+  });
+
+  it("round-trips an existing workflow back to a schema-valid, equivalent phases[]", () => {
+    const g = phasesToGraph(existing, agents);
+    const phases = graphToPhases(g, existing.phases[0]!.consumes!);
+    expect(phases[0]).toMatchObject({
+      id: "koder",
+      agent: "writer",
+      consumes: "task.md",
+      produces: "implementation.md",
+    });
+    expect(phases[1]).toMatchObject({
+      id: "verify",
+      type: "verify",
+      commands: ["pnpm test"],
+      loop: { to: "koder", maxRetries: 2, escalate: true, then: "fail" },
+    });
+    const input = {
+      id: "delivery",
+      name: "Delivery",
+      desc: "d",
+      instructions: "d",
+      outputs: [],
+      phases,
+    };
+    expect(CreateWorkflowSchema.safeParse(input).success).toBe(true);
+  });
+
+  it("emits commands only when present and omits loop when there is no rework", () => {
+    const phases = graphToPhases(chainGraph(), INITIAL_ASSIGNMENT);
+    expect(phases[0]).not.toHaveProperty("loop");
+    expect(phases[1]).not.toHaveProperty("loop");
+  });
+
+  it("threads consumes THROUGH a mid-chain verify (agent→verify→agent)", () => {
+    const workflow: Workflow = {
+      ...existing,
+      phases: [
+        {
+          id: "a1",
+          type: "agent",
+          agent: "writer",
+          consumes: "task.md",
+          produces: "draft.md",
+          model: "opus",
+          thinking: "high",
+        },
+        { id: "v", type: "verify", commands: ["pnpm test"] },
+        {
+          id: "a2",
+          type: "agent",
+          agent: "tester",
+          consumes: "draft.md",
+          produces: "final.md",
+          model: "sonnet",
+          thinking: "low",
+        },
+      ],
+    };
+    const phases = graphToPhases(phasesToGraph(workflow, agents), "task.md");
+    // The post-verify agent still consumes the pre-verify agent's output.
+    expect(phases[2]).toMatchObject({ id: "a2", consumes: "draft.md" });
+  });
+
+  it("round-trips a workflow (sub-run) step and validates the chosen child", () => {
+    const workflow: Workflow = {
+      ...existing,
+      phases: [
+        {
+          id: "a1",
+          type: "agent",
+          agent: "writer",
+          consumes: "task.md",
+          produces: "draft.md",
+          model: "opus",
+          thinking: "high",
+        },
+        {
+          id: "sub",
+          type: "workflow",
+          workflow: "child",
+          consumes: "draft.md",
+          produces: "sub.md",
+          approval: "ask",
+        },
+      ],
+    };
+    const graph = phasesToGraph(workflow, agents);
+    const phases = graphToPhases(graph, "task.md");
+    expect(phases[1]).toEqual({
+      id: "sub",
+      type: "workflow",
+      workflow: "child",
+      consumes: "draft.md",
+      produces: "sub.md",
+      approval: "ask",
+    });
+    expect(
+      CreateWorkflowSchema.safeParse({ id: "p", phases, instructions: "x", department: "dev" })
+        .success,
+    ).toBe(true);
+    expect(validateGraph(graph, "P").ok).toBe(true);
+    const unset = {
+      ...graph,
+      nodes: graph.nodes.map((n) => (n.type === "workflow" ? { ...n, workflow: "" } : n)),
+    };
+    expect(validateGraph(unset, "P")).toEqual({ ok: false, reason: "workflow" });
+  });
+
+  it("preserves a loop.to:'fail' across a round-trip (loose loop, not droppable)", () => {
+    const workflow: Workflow = {
+      ...existing,
+      phases: [
+        {
+          id: "a1",
+          type: "agent",
+          agent: "writer",
+          consumes: "task.md",
+          produces: "draft.md",
+          model: "opus",
+          thinking: "high",
+        },
+        {
+          id: "v",
+          type: "verify",
+          commands: ["pnpm test"],
+          loop: { to: "fail", maxRetries: 1, escalate: false, then: "fail" },
+        },
+      ],
+    };
+    const phases = graphToPhases(phasesToGraph(workflow, agents), "task.md");
+    expect(phases[1]?.loop).toEqual({ to: "fail", maxRetries: 1, escalate: false, then: "fail" });
+  });
+});
+
+describe("validateGraph", () => {
+  it("rejects an empty name", () => {
+    expect(validateGraph(chainGraph(), "  ")).toEqual({ ok: false, reason: "name" });
+  });
+
+  it("rejects an empty canvas", () => {
+    expect(validateGraph({ nodes: [], flow: [], rework: [] }, "X")).toEqual({
+      ok: false,
+      reason: "empty",
+    });
+  });
+
+  it("rejects an agent node with no produces", () => {
+    const g = chainGraph();
+    g.nodes[1]!.produces = "";
+    expect(validateGraph(g, "X")).toEqual({ ok: false, reason: "produces" });
+  });
+
+  it("accepts a valid upstream rework", () => {
+    const g = chainGraph();
+    g.rework.push({
+      id: "w1",
+      from: "b",
+      to: "a",
+      maxRetries: 3,
+      escalate: true,
+      then: "park",
+      escalation: [],
+    });
+    expect(validateGraph(g, "X")).toEqual({ ok: true });
+  });
+
+  it("rejects a forward (downstream) rework target", () => {
+    const g = chainGraph();
+    g.rework.push({
+      id: "w1",
+      from: "a",
+      to: "b",
+      maxRetries: 3,
+      escalate: true,
+      then: "park",
+      escalation: [],
+    });
+    expect(validateGraph(g, "X")).toEqual({ ok: false, reason: "rework" });
+  });
+});
+
+describe("isUpstreamRework", () => {
+  it("is true only when the target is earlier in the flow order", () => {
+    const g = chainGraph();
+    expect(isUpstreamRework(g, "b", "a")).toBe(true);
+    expect(isUpstreamRework(g, "a", "b")).toBe(false);
+    expect(isUpstreamRework(g, "a", "a")).toBe(false);
+  });
+});
+
+describe("attemptsFromStageRuns", () => {
+  it("tallies runs per phase, ignoring escalation markers", () => {
+    const counts = attemptsFromStageRuns([
+      { phaseId: "koder", runId: "r1" },
+      { phaseId: "koder", runId: "r2" },
+      { phaseId: "koder", runId: "r2.escalated" },
+      { phaseId: "verify", runId: "r3" },
+    ]);
+    expect(counts).toEqual({ koder: 2, verify: 1 });
+  });
+
+  it("is empty for no runs", () => {
+    expect(attemptsFromStageRuns([])).toEqual({});
+  });
+});
+
+describe("tool + approval round-trip", () => {
+  const withTool: Workflow = {
+    ...existing,
+    phases: [
+      {
+        id: "pre",
+        type: "agent",
+        agent: "writer",
+        consumes: "task.md",
+        produces: "outline.md",
+        model: "sonnet",
+        thinking: "medium",
+      },
+      {
+        id: "w",
+        type: "agent",
+        agent: "writer",
+        consumes: "outline.md",
+        produces: "book.md",
+        model: "sonnet",
+        thinking: "medium",
+        qualify: true,
+        approval: "ask",
+        loop: {
+          to: "pre",
+          maxRetries: 1,
+          escalate: false,
+          then: "park",
+          driftTo: "pre",
+        },
+      },
+      {
+        id: "img",
+        type: "tool",
+        consumes: "book.md",
+        produces: "images.md",
+        commands: ["gen --all", "zip out"],
+        approval: "ask",
+      },
+      { id: "v", type: "verify", commands: ["pnpm test"] },
+    ],
+  };
+
+  it("keeps type, commands, produces, consumes, approval, qualify and driftTo", () => {
+    const phases = graphToPhases(phasesToGraph(withTool, agents), INITIAL_ASSIGNMENT);
+    expect(phases[1]).toMatchObject({
+      qualify: true,
+      approval: "ask",
+      loop: { driftTo: "pre", then: "park" },
+    });
+    expect(phases[2]).toEqual({
+      id: "img",
+      type: "tool",
+      consumes: "book.md",
+      produces: "images.md",
+      commands: ["gen --all", "zip out"],
+      approval: "ask",
+    });
+    expect(phases[3]).toEqual({ id: "v", type: "verify", commands: ["pnpm test"] });
+  });
+
+  it("requires commands and produces on a tool node", () => {
+    const g = phasesToGraph(withTool, agents);
+    expect(validateGraph(g, "x").ok).toBe(true);
+    const bad = { ...g, nodes: g.nodes.map((n) => (n.id === "img" ? { ...n, commands: "" } : n)) };
+    expect(validateGraph(bad, "x")).toEqual({ ok: false, reason: "commands" });
+  });
+});

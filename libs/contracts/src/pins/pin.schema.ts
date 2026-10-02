@@ -3,11 +3,11 @@ import { z } from "zod";
 /** Co lze připnout na Overview — katalogové entity s vlastní detail stránkou.
  *  `employee` (D-015, ZB-03): pinning targets the hired instance, not the
  *  position, so it sorts a specific person first on `/org/people`. */
-export const PinKindSchema = z.enum(["agent", "pipeline", "employee"]);
+export const PinKindSchema = z.enum(["agent", "workflow", "employee"]);
 export type PinKind = z.infer<typeof PinKindSchema>;
 
 /** Jedno připnutí: druh entity + její id. Žádné jméno/glyph — ty se dočtou
- *  live z katalogu (agent/pipeline/chain), takže přejmenování entity se
+ *  live z katalogu (agent/workflow/chain), takže přejmenování entity se
  *  v panelu projeví hned, bez zvláštní synchronizace. */
 export const PinSchema = z.object({
   kind: PinKindSchema,

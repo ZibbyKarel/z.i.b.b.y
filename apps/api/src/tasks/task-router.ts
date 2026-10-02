@@ -1,9 +1,9 @@
 import type {
   CatalogTaskTarget,
   ClassifyTaskInput,
-  PipelineComplexity,
   TaskRouting,
   TaskTarget,
+  WorkflowComplexity,
 } from "@zibby/contracts";
 
 /** A named department as a rankable stage-1 verdict (F2a — see {@link RoutableTarget}). */
@@ -11,11 +11,11 @@ type DepartmentTaskTarget = Extract<TaskTarget, { kind: "department" }>;
 
 /**
  * A routable destination: a {@link CatalogTaskTarget} (a stored agent or
- * pipeline) or — as of F2a — a named {@link DepartmentTaskTarget} (a whole
+ * workflow) or — as of F2a — a named {@link DepartmentTaskTarget} (a whole
  * delegation, resolved to a concrete unit by stage-2 downstream). Never the
  * synthetic orchestrator, which is the classifier's terminal fallback, not a
  * ranked candidate. Plus the free-text catalog blob (`search`) used to score
- * and describe it (name, id, category, description / pipeline desc + phase
+ * and describe it (name, id, category, description / workflow desc + phase
  * agents / department mandate). The contract response carries only the plain
  * target, so {@link toTaskTarget} strips the internal `search`.
  */
@@ -23,15 +23,15 @@ export type RoutableTarget = (CatalogTaskTarget | DepartmentTaskTarget) & {
   search: string;
   /**
    * NS2 F9 — the candidate's rung on its department's complexity ladder, present
-   * only on `kind: "pipeline"` candidates. Agents are the rung BELOW `light` and
+   * only on `kind: "workflow"` candidates. Agents are the rung BELOW `light` and
    * carry no value; department candidates (stage 1) have no rung at all, because
    * the ladder is a within-department ordering.
    */
-  complexity?: PipelineComplexity;
+  complexity?: WorkflowComplexity;
   /**
    * Can this candidate carry work to a PR-shaped code change on its own?
    *
-   * True only for a pipeline that DECLARES a `pr` sink in its `outputs:` block —
+   * True only for a workflow that DECLARES a `pr` sink in its `outputs:` block —
    * the unit's own statement that it ends in an opened PR, which is a stronger and
    * far more stable signal than inspecting the tool lists of the agents in its
    * phases. Read by `TaskClassifierService.constrainByOutput` to enforce
@@ -40,7 +40,7 @@ export type RoutableTarget = (CatalogTaskTarget | DepartmentTaskTarget) & {
    * Deliberately absent (falsy) on every AGENT candidate, and that is the whole
    * point rather than an omission: a task that must produce a PR is never routed to
    * a lone agent. The rung that looks like "one implementer agent" already exists as
-   * a pipeline — dev's `quick-fix` (light: a single `fullstack-developer` phase
+   * a workflow — dev's `quick-fix` (light: a single `fullstack-developer` phase
    * plus a declared `pr` output) — so the invariant costs no expressiveness while
    * keeping review, verification and a real sink in the path.
    */
@@ -62,8 +62,8 @@ export function toTaskTarget(candidate: RoutableTarget): CatalogTaskTarget | Dep
       return { kind: "department", id: candidate.id, name, glyph, avatar, category };
     case "agent":
       return { kind: "agent", id: candidate.id, name, glyph, avatar, category };
-    case "pipeline":
-      return { kind: "pipeline", id: candidate.id, name, glyph, avatar, category };
+    case "workflow":
+      return { kind: "workflow", id: candidate.id, name, glyph, avatar, category };
   }
 }
 

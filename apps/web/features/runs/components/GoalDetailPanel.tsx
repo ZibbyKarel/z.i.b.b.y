@@ -13,9 +13,9 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useGoalsQuery, useResumeGoalRunMutation } from "../../goals";
-import { usePipelineRunQuery } from "../../pipelines";
+import { useWorkflowRunQuery } from "../../workflows";
 import type { RunView } from "../run";
-import { PipelineStageTimeline } from "./PipelineStageTimeline";
+import { WorkflowStageTimeline } from "./WorkflowStageTimeline";
 import { RunLogStream } from "./RunLogStream";
 
 export interface GoalDetailPanelProps {
@@ -26,7 +26,7 @@ export interface GoalDetailPanelProps {
  * The goal-loop detail surface (Phase 10.4): a cost bar (iterations-used /
  * maxIterations — the goal's only cost currency), a per-iteration timeline (maker
  * status + verifier verdict), and, when the goal is parked, the resume-with-note
- * panel (the same UX as a parked pipeline run, distinct endpoint).
+ * panel (the same UX as a parked workflow run, distinct endpoint).
  */
 export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
   const t = useTranslations("runs");
@@ -39,12 +39,12 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
   const [openLog, setOpenLog] = useState<number | null>(null);
 
   const iterations = run.iterations ?? [];
-  // Phase 29: when the *open* iteration's maker is a pipeline, fetch that maker run's
+  // Phase 29: when the *open* iteration's maker is a workflow, fetch that maker run's
   // aggregate so its stage timeline can render inline (one query — only the open row).
   const openIter = iterations.find((it) => it.index === openLog);
-  const openMakerPipelineId =
-    openIter?.makerKind === "pipeline" ? (openIter.makerRunRef ?? null) : null;
-  const { data: makerPipeline } = usePipelineRunQuery(openMakerPipelineId);
+  const openMakerWorkflowId =
+    openIter?.makerKind === "workflow" ? (openIter.makerRunRef ?? null) : null;
+  const { data: makerWorkflow } = useWorkflowRunQuery(openMakerWorkflowId);
   const goal = goals.find((g) => g.id === run.goalId);
   const maxIterations = goal?.maxIterations ?? iterations.length;
   const used = iterations.length;
@@ -121,7 +121,7 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
                       <Typography mono size="xs" type="note" variant="secondary" weight="semibold">
                         {t("goalIteration", { n: it.index + 1 })}
                       </Typography>
-                      {/* The execution kind of this iteration's maker (agent vs pipeline)
+                      {/* The execution kind of this iteration's maker (agent vs workflow)
                           — "what it runs as" lives in the task detail, not a 2nd feed card. */}
                       <Stack align="center" direction="row" gap="50">
                         <Icon
@@ -186,17 +186,17 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
                             runId={it.makerRunRef}
                           />
                         </Stack>
-                      ) : it.makerKind === "pipeline" && it.makerRunRef ? (
-                        // Phase 29: the pipeline maker's own stage timeline, inline (its
+                      ) : it.makerKind === "workflow" && it.makerRunRef ? (
+                        // Phase 29: the workflow maker's own stage timeline, inline (its
                         // child run was folded out of the feed in Phase 26).
-                        makerPipeline ? (
-                          <PipelineStageTimeline
-                            currentStage={makerPipeline.currentStage}
-                            live={makerPipeline.status === "running"}
-                            owner={makerPipeline.owner}
-                            parked={makerPipeline.parked}
-                            pipelineRunId={it.makerRunRef}
-                            stageRuns={makerPipeline.stageRuns}
+                        makerWorkflow ? (
+                          <WorkflowStageTimeline
+                            currentStage={makerWorkflow.currentStage}
+                            live={makerWorkflow.status === "running"}
+                            owner={makerWorkflow.owner}
+                            parked={makerWorkflow.parked}
+                            stageRuns={makerWorkflow.stageRuns}
+                            workflowRunId={it.makerRunRef}
                           />
                         ) : (
                           <Typography mono size="2xs" type="note" variant="tertiary">

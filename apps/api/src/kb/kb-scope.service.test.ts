@@ -1,4 +1,4 @@
-import type { AgentRun, KnowledgeBaseSource, PipelineRun, Project, Team } from "@zibby/contracts";
+import type { AgentRun, KnowledgeBaseSource, Project, Team, WorkflowRun } from "@zibby/contracts";
 import { describe, expect, it } from "vitest";
 import { KbScopeService } from "./kb-scope.service";
 
@@ -40,10 +40,10 @@ const agentRun = (over: Partial<AgentRun> & Pick<AgentRun, "runId" | "project">)
   ...over,
 });
 
-const pipelineRun = (
-  over: Partial<PipelineRun> & Pick<PipelineRun, "pipelineRunId">,
-): PipelineRun => ({
-  pipelineId: "release",
+const workflowRun = (
+  over: Partial<WorkflowRun> & Pick<WorkflowRun, "workflowRunId">,
+): WorkflowRun => ({
+  workflowId: "release",
   status: "done",
   currentStage: null,
   stageRuns: [],
@@ -56,7 +56,7 @@ interface Fixtures {
   teams?: Team[];
   projects?: Project[];
   agentRuns?: AgentRun[];
-  pipelineRuns?: PipelineRun[];
+  workflowRuns?: WorkflowRun[];
   /**
    * Per-projectId override for the `resolvedProjects.knowledgeBaseFor` fake.
    * Deliberately NOT derived from `team.knowledgeBase` — a test that wants to
@@ -78,7 +78,7 @@ function build(fx: Fixtures = {}) {
   const teams = fx.teams ?? [];
   const projects = fx.projects ?? [];
   const agentRuns = fx.agentRuns ?? [];
-  const pipelineRuns = fx.pipelineRuns ?? [];
+  const workflowRuns = fx.workflowRuns ?? [];
   const kbOverrides = fx.kbOverrides ?? {};
 
   const teamsStore = {
@@ -109,14 +109,14 @@ function build(fx: Fixtures = {}) {
     },
   };
   const agentRunner = { listAll: async () => agentRuns };
-  const pipelineRunner = { listAll: async () => pipelineRuns };
+  const workflowRunner = { listAll: async () => workflowRuns };
 
   return new KbScopeService(
     teamsStore as never,
     projectsStore as never,
     resolvedProjects as never,
     agentRunner as never,
-    pipelineRunner as never,
+    workflowRunner as never,
   );
 }
 
@@ -261,11 +261,11 @@ describe("KbScopeService", () => {
       expect(await scope.rootsForRun("architekt")).toEqual([]);
     });
 
-    it("resolves a pipeline run by EXACT match: the header IS the pipelineRunId", async () => {
+    it("resolves a workflow run by EXACT match: the header IS the workflowRunId", async () => {
       const scope = build({
         teams: [{ ...team({ id: "devrel", name: "DevRel" }), knowledgeBase: source("/kb/devrel") }],
         projects: [project({ id: "proj-devrel-path", teamId: "devrel", path: "/repos/devrel" })],
-        pipelineRuns: [pipelineRun({ pipelineRunId: "release_1", projectPath: "/repos/devrel" })],
+        workflowRuns: [workflowRun({ workflowRunId: "release_1", projectPath: "/repos/devrel" })],
       });
       const roots = await scope.rootsForRun("release_1");
       expect(roots.map((r) => r.teamId)).toEqual(["devrel"]);

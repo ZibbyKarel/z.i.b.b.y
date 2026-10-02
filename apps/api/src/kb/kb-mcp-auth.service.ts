@@ -57,7 +57,7 @@ export class KbMcpAuthService {
   private readonly runToken = randomBytes(32).toString("hex");
   private readonly chatToken = randomBytes(32).toString("hex");
 
-  /** This boot's bearer token for an agent/pipeline run's `--mcp-config`
+  /** This boot's bearer token for an agent/workflow run's `--mcp-config`
    * header — the ONLY token that can ever resolve via `rootsForRun`. */
   get runBearerToken(): string {
     return this.runToken;

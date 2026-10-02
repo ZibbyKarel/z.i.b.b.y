@@ -24,7 +24,7 @@
  *        guessing;
  *      - any other non-literal first argument (a ternary — `t(cond ? "a" :
  *        "b")`, see `ChatMessage`'s `ReadAloudButton` — or a lookup-table
- *        indirection — `t(STATE_LABEL_KEY[state])`, see `PipelineCard`) has
+ *        indirection — `t(STATE_LABEL_KEY[state])`, see `WorkflowCard`) has
  *        every string literal found anywhere inside it marked used; if the
  *        expression contains no literal at all (a pure lookup), the *entire
  *        namespace* is protected instead of guessing.

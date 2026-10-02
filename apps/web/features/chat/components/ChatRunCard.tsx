@@ -12,8 +12,8 @@ import {
   Typography,
 } from "@zibby/design-system";
 import type { TaskTarget } from "@zibby/contracts";
-import { usePipelineRunQuery } from "../../pipelines";
-import { PipelineStageTimeline } from "../../runs/components/PipelineStageTimeline";
+import { useWorkflowRunQuery } from "../../workflows";
+import { WorkflowStageTimeline } from "../../runs/components/WorkflowStageTimeline";
 import { RunStateBadge } from "../../runs/components/RunStateBadge";
 import type { RunView } from "../../runs/run";
 import { TargetIdentity } from "./TargetIdentity";
@@ -37,7 +37,7 @@ export enum ChatRunCardTestId {
 }
 
 /**
- * Compact progress caption for the collapsed header: a pipeline shows the phase
+ * Compact progress caption for the collapsed header: a workflow shows the phase
  * currently executing plus how many of its recorded stage runs are done. An
  * agent run (no stages) has no progress line — its `RunStateBadge` is the
  * whole story.
@@ -53,8 +53,8 @@ function runProgress(run: RunView): string | null {
 }
 
 /**
- * The expanded detail: a pipeline run shows its stage timeline
- * ({@link PipelineStageTimeline}) — the same component the runs screen itself
+ * The expanded detail: a workflow run shows its stage timeline
+ * ({@link WorkflowStageTimeline}) — the same component the runs screen itself
  * uses (Fáze 14.3, Rozhodnutí 5), so there is no parallel log/timeline
  * rendering to keep in sync. An agent run has none and shows no detail (the
  * runs page, not the chat card, is where its log lives).
@@ -62,13 +62,13 @@ function runProgress(run: RunView): string | null {
 function runDetail(run: RunView, runRef: string) {
   if (run.stageRuns) {
     return (
-      <PipelineStageTimeline
+      <WorkflowStageTimeline
         currentStage={run.currentStage}
         live={run.status === "running"}
         owner={run.owner}
         parked={run.parked}
-        pipelineRunId={runRef}
         stageRuns={run.stageRuns}
+        workflowRunId={runRef}
       />
     );
   }
@@ -78,8 +78,8 @@ function runDetail(run: RunView, runRef: string) {
 /**
  * The inline "living" run card a dispatched tool event upgrades to once its
  * `runRef` is known (Fáze 14.3). Reuses the runs screen's own presentational
- * components and its `usePipelineRunQuery(runRef)` — one query serves the agent,
- * pipeline AND chain shape alike, since they're all the same unified `TaskRun`
+ * components and its `useWorkflowRunQuery(runRef)` — one query serves the agent,
+ * workflow AND chain shape alike, since they're all the same unified `TaskRun`
  * aggregate (Rozhodnutí 5). Freshness rides the shared `RunEventsProvider`
  * invalidation bus (Fáze 14.4) plus that query's own 1s fallback poll — this
  * component does not read the chat SSE stream at all (Rozhodnutí 6).
@@ -93,7 +93,7 @@ export function ChatRunCard({ runRef, target }: ChatRunCardProps) {
   const t = useTranslations("chat.runCard");
   const tRuns = useTranslations("runs");
   const [expanded, setExpanded] = useState(false);
-  const { data: run } = usePipelineRunQuery(runRef);
+  const { data: run } = useWorkflowRunQuery(runRef);
 
   const openRunLink = (
     <Link

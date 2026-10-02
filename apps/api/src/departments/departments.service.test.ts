@@ -4,8 +4,8 @@ import type {
   Employee,
   Integration,
   Mandate,
-  Pipeline,
   TaskRun,
+  Workflow,
 } from "@zibby/contracts";
 import { DEFAULT_MANDATE, DEPARTMENT_SEED } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
@@ -14,7 +14,7 @@ import type { ApprovalsService } from "../approvals/approvals.service";
 import type { EmployeesStorageService } from "../employees/employees.storage.service";
 import type { IntegrationsStorageService } from "../integrations/integrations.storage.service";
 import type { MandateStorageService } from "../mandate/mandate.storage.service";
-import type { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
+import type { WorkflowsStorageService } from "../workflows/workflows.storage.service";
 import type { SubtaskSummary } from "@zibby/contracts";
 import type { TaskParentsService } from "../tasks/task-parents.service";
 import type { TaskRunsService } from "../tasks/task-runs.service";
@@ -26,7 +26,7 @@ import type { DepartmentsStorageService } from "./departments.storage.service";
 const AT = "2026-07-08T00:00:00.000Z";
 const LATER = "2026-07-08T01:00:00.000Z";
 
-function pipelineFixture(id: string, department?: Pipeline["department"]): Pipeline {
+function workflowFixture(id: string, department?: Workflow["department"]): Workflow {
   return {
     id,
     phases: [{ id: "p0", type: "verify" }],
@@ -35,7 +35,7 @@ function pipelineFixture(id: string, department?: Pipeline["department"]): Pipel
     // NS2 F9 — schema-defaulted, so non-optional on a parsed entity.
     complexity: "standard",
     ...(department ? { department } : {}),
-  } as Pipeline;
+  } as Workflow;
 }
 
 function taskRunFixture(
@@ -68,7 +68,7 @@ function approvalFixture(
 
 /** Builds a `DepartmentsService` over hand-rolled fakes of its five injected domain services + the seen store. */
 function build(opts: {
-  pipelines?: Pipeline[];
+  workflows?: Workflow[];
   runs?: TaskRun[];
   pendingApprovals?: Approval[];
   seenAt?: Record<string, string>;
@@ -80,7 +80,7 @@ function build(opts: {
   /** ZB-04a §5: `subtasks()`'s backing read model. */
   departmentSubtasks?: SubtaskSummary[];
 }) {
-  const pipelinesStore = { list: vi.fn(async () => opts.pipelines ?? []) };
+  const workflowsStore = { list: vi.fn(async () => opts.workflows ?? []) };
   const taskRuns = { listTaskRuns: vi.fn(async () => opts.runs ?? []) };
   const approvals = { list: vi.fn(async () => opts.pendingApprovals ?? []) };
   const agentsStore = { list: vi.fn(async () => opts.agents ?? []) };
@@ -110,7 +110,7 @@ function build(opts: {
   };
 
   const service = new DepartmentsService(
-    pipelinesStore as unknown as PipelinesStorageService,
+    workflowsStore as unknown as WorkflowsStorageService,
     taskRuns as unknown as TaskRunsService,
     approvals as unknown as ApprovalsService,
     seenStore as unknown as DepartmentSeenStore,
@@ -123,7 +123,7 @@ function build(opts: {
   );
   return {
     service,
-    pipelinesStore,
+    workflowsStore,
     taskRuns,
     approvals,
     seenStore,
@@ -137,13 +137,13 @@ function build(opts: {
 
 describe("DepartmentsService", () => {
   describe("get() — attribution", () => {
-    it("a running run on an owned pipeline reads as running", async () => {
+    it("a running run on an owned workflow reads as running", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "dev")],
+        workflows: [workflowFixture("delivery", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "delivery",
             status: "running",
           }),
@@ -153,32 +153,32 @@ describe("DepartmentsService", () => {
       expect(dev).toMatchObject({ state: "running", tier2Count: 0, tier3Count: 0 });
     });
 
-    it("a pending pipeline-output approval attributes to the owning department as waiting", async () => {
+    it("a pending workflow-output approval attributes to the owning department as waiting", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "dev")],
+        workflows: [workflowFixture("delivery", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "delivery",
             status: "awaiting-approval",
           }),
         ],
         pendingApprovals: [
-          approvalFixture({ id: "appr-1", runId: "delivery_1", kind: "pipeline-output" }),
+          approvalFixture({ id: "appr-1", runId: "delivery_1", kind: "workflow-output" }),
         ],
       });
       const dev = await service.get("dev");
       expect(dev).toMatchObject({ state: "waiting", tier3Count: 1 });
     });
 
-    it("a pending pipeline-stage approval (stage-run-id prefix) attributes the same way", async () => {
+    it("a pending workflow-stage approval (stage-run-id prefix) attributes the same way", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "dev")],
+        workflows: [workflowFixture("delivery", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "delivery",
             status: "awaiting-approval",
           }),
@@ -187,7 +187,7 @@ describe("DepartmentsService", () => {
           approvalFixture({
             id: "appr-1",
             runId: "delivery_1.04_koder_p9",
-            kind: "pipeline-stage",
+            kind: "workflow-stage",
           }),
         ],
       });
@@ -197,23 +197,23 @@ describe("DepartmentsService", () => {
 
     it("precedence: waiting wins even while another owned run is running", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "dev"), pipelineFixture("release", "dev")],
+        workflows: [workflowFixture("delivery", "dev"), workflowFixture("release", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "delivery",
             status: "running",
           }),
           taskRunFixture({
             runId: "release_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "release",
             status: "awaiting-approval",
           }),
         ],
         pendingApprovals: [
-          approvalFixture({ id: "appr-1", runId: "release_1", kind: "pipeline-output" }),
+          approvalFixture({ id: "appr-1", runId: "release_1", kind: "workflow-output" }),
         ],
       });
       const dev = await service.get("dev");
@@ -223,11 +223,11 @@ describe("DepartmentsService", () => {
 
     it("a completed owned run after lastSeenAt reads as report with a count", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "dev")],
+        workflows: [workflowFixture("delivery", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "delivery",
             status: "done",
             startedAt: LATER,
@@ -240,11 +240,11 @@ describe("DepartmentsService", () => {
 
     it("an errored owned run after lastSeenAt reads as error with its own count, not report", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "dev")],
+        workflows: [workflowFixture("delivery", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "delivery",
             status: "error",
             startedAt: LATER,
@@ -257,18 +257,18 @@ describe("DepartmentsService", () => {
 
     it("lists the run ids behind errorCount, and an empty list when there are none", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "dev")],
+        workflows: [workflowFixture("delivery", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "delivery",
             status: "error",
             startedAt: LATER,
           }),
           taskRunFixture({
             runId: "delivery_2",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "delivery",
             status: "done",
             startedAt: LATER,
@@ -283,18 +283,18 @@ describe("DepartmentsService", () => {
 
     it("a done AND an errored owned run after lastSeenAt both count, error wins the headline state", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "dev"), pipelineFixture("release", "dev")],
+        workflows: [workflowFixture("delivery", "dev"), workflowFixture("release", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "delivery",
             status: "done",
             startedAt: LATER,
           }),
           taskRunFixture({
             runId: "release_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "release",
             status: "error",
             startedAt: LATER,
@@ -307,17 +307,17 @@ describe("DepartmentsService", () => {
 
     it("precedence: error outranks a still-running owned run", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "dev"), pipelineFixture("release", "dev")],
+        workflows: [workflowFixture("delivery", "dev"), workflowFixture("release", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "delivery",
             status: "running",
           }),
           taskRunFixture({
             runId: "release_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "release",
             status: "error",
             startedAt: LATER,
@@ -330,24 +330,24 @@ describe("DepartmentsService", () => {
 
     it("precedence: waiting still outranks error", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "dev"), pipelineFixture("release", "dev")],
+        workflows: [workflowFixture("delivery", "dev"), workflowFixture("release", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "delivery",
             status: "awaiting-approval",
           }),
           taskRunFixture({
             runId: "release_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "release",
             status: "error",
             startedAt: LATER,
           }),
         ],
         pendingApprovals: [
-          approvalFixture({ id: "appr-1", runId: "delivery_1", kind: "pipeline-output" }),
+          approvalFixture({ id: "appr-1", runId: "delivery_1", kind: "workflow-output" }),
         ],
       });
       const dev = await service.get("dev");
@@ -356,11 +356,11 @@ describe("DepartmentsService", () => {
 
     it("a completed run BEFORE lastSeenAt does not count", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "dev")],
+        workflows: [workflowFixture("delivery", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "delivery",
             status: "done",
             startedAt: AT,
@@ -385,9 +385,9 @@ describe("DepartmentsService", () => {
   });
 
   describe("unattributable exclusion", () => {
-    it("an approval whose kind carries no pipeline (e.g. channel/task) is excluded without error", async () => {
+    it("an approval whose kind carries no workflow (e.g. channel/task) is excluded without error", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "dev")],
+        workflows: [workflowFixture("delivery", "dev")],
         pendingApprovals: [
           approvalFixture({ id: "appr-1", runId: "integration_1/item_2", kind: "channel" }),
           approvalFixture({ id: "appr-2", runId: "task_9", kind: "task" }),
@@ -397,13 +397,13 @@ describe("DepartmentsService", () => {
       expect(dev).toMatchObject({ state: "idle", tier3Count: 0 });
     });
 
-    it("a run on an unowned pipeline never surfaces for any department", async () => {
+    it("a run on an unowned workflow never surfaces for any department", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("orphan")],
+        workflows: [workflowFixture("orphan")],
         runs: [
           taskRunFixture({
             runId: "orphan_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "orphan",
             status: "running",
           }),
@@ -415,7 +415,7 @@ describe("DepartmentsService", () => {
 
     it("an agent-kind run whose agent has no department never attributes", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "dev")],
+        workflows: [workflowFixture("delivery", "dev")],
         agents: [{ id: "koder", instructions: "x" } as Agent],
         runs: [
           taskRunFixture({ runId: "koder_1", kind: "agent", owner: "koder", status: "running" }),
@@ -427,7 +427,7 @@ describe("DepartmentsService", () => {
 
     it("a goal-kind run never attributes (D16 — goal runs are deliberately unattributed)", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "dev")],
+        workflows: [workflowFixture("delivery", "dev")],
         agents: [{ id: "koder", department: "dev", instructions: "x" } as Agent],
         runs: [
           taskRunFixture({ runId: "goal_1", kind: "goal", owner: "koder", status: "running" }),
@@ -467,14 +467,14 @@ describe("DepartmentsService", () => {
       expect(dev).toMatchObject({ state: "report", tier2Count: 1 });
     });
 
-    it("agent and pipeline runs owned by the same department both count", async () => {
+    it("agent and workflow runs owned by the same department both count", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "dev")],
+        workflows: [workflowFixture("delivery", "dev")],
         agents: [{ id: "koder", department: "dev", instructions: "x" } as Agent],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "delivery",
             status: "done",
             startedAt: LATER,
@@ -496,11 +496,11 @@ describe("DepartmentsService", () => {
   describe("markSeen", () => {
     it("resets tier2Count to 0 and the state falls back to idle once seen", async () => {
       const { service, seenStore } = build({
-        pipelines: [pipelineFixture("delivery", "dev")],
+        workflows: [workflowFixture("delivery", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "delivery",
             status: "done",
             startedAt: LATER,
@@ -516,18 +516,18 @@ describe("DepartmentsService", () => {
 
     it("falls back to running (not idle) when a run is still active after being seen", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "dev")],
+        workflows: [workflowFixture("delivery", "dev")],
         runs: [
           taskRunFixture({
             runId: "delivery_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "delivery",
             status: "done",
             startedAt: LATER,
           }),
           taskRunFixture({
             runId: "delivery_2",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "delivery",
             status: "running",
           }),
@@ -546,23 +546,23 @@ describe("DepartmentsService", () => {
   describe("list() — severity ordering", () => {
     it("sorts waiting first, then report, then running, then idle; registry order is the stable tiebreak", async () => {
       const { service } = build({
-        pipelines: [
-          pipelineFixture("p-incident", "inc"),
-          pipelineFixture("p-research", "rnd"),
-          pipelineFixture("p-dev", "dev"),
+        workflows: [
+          workflowFixture("p-incident", "inc"),
+          workflowFixture("p-research", "rnd"),
+          workflowFixture("p-dev", "dev"),
         ],
         runs: [
           // dev: running → running
           taskRunFixture({
             runId: "p-dev_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "p-dev",
             status: "running",
           }),
           // research: completed after lastSeenAt → report
           taskRunFixture({
             runId: "p-research_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "p-research",
             status: "done",
             startedAt: LATER,
@@ -570,13 +570,13 @@ describe("DepartmentsService", () => {
           // incident: awaiting-approval, attributed below → waiting
           taskRunFixture({
             runId: "p-incident_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "p-incident",
             status: "awaiting-approval",
           }),
         ],
         pendingApprovals: [
-          approvalFixture({ id: "appr-1", runId: "p-incident_1", kind: "pipeline-output" }),
+          approvalFixture({ id: "appr-1", runId: "p-incident_1", kind: "workflow-output" }),
         ],
       });
       const rows = await service.list();
@@ -603,31 +603,31 @@ describe("DepartmentsService", () => {
 
     it("within waiting, higher tier3Count sorts first", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("p-incident", "inc"), pipelineFixture("p-security", "sec")],
+        workflows: [workflowFixture("p-incident", "inc"), workflowFixture("p-security", "sec")],
         runs: [
           taskRunFixture({
             runId: "p-incident_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "p-incident",
             status: "awaiting-approval",
           }),
           taskRunFixture({
             runId: "p-security_1",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "p-security",
             status: "awaiting-approval",
           }),
           taskRunFixture({
             runId: "p-security_2",
-            kind: "pipeline",
+            kind: "workflow",
             owner: "p-security",
             status: "awaiting-approval",
           }),
         ],
         pendingApprovals: [
-          approvalFixture({ id: "appr-1", runId: "p-incident_1", kind: "pipeline-output" }),
-          approvalFixture({ id: "appr-2", runId: "p-security_1", kind: "pipeline-output" }),
-          approvalFixture({ id: "appr-3", runId: "p-security_2", kind: "pipeline-output" }),
+          approvalFixture({ id: "appr-1", runId: "p-incident_1", kind: "workflow-output" }),
+          approvalFixture({ id: "appr-2", runId: "p-security_1", kind: "workflow-output" }),
+          approvalFixture({ id: "appr-3", runId: "p-security_2", kind: "workflow-output" }),
         ],
       });
       const rows = await service.list();
@@ -645,9 +645,9 @@ describe("DepartmentsService", () => {
   });
 
   describe("listUnowned() — NS2 F1b", () => {
-    it("returns [] when every pipeline/agent is owned (integrations are never reported)", async () => {
+    it("returns [] when every workflow/agent is owned (integrations are never reported)", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("delivery", "dev")],
+        workflows: [workflowFixture("delivery", "dev")],
         agents: [{ id: "architect", department: "dev", instructions: "x" } as Agent],
         // An integration with no owner tag is NOT an ownership gap — membership is
         // derived, so it never appears in the unowned report.
@@ -666,9 +666,9 @@ describe("DepartmentsService", () => {
       expect(await service.listUnowned()).toEqual([]);
     });
 
-    it("lists every unowned pipeline/agent by kind + id (never an integration)", async () => {
+    it("lists every unowned workflow/agent by kind + id (never an integration)", async () => {
       const { service } = build({
-        pipelines: [pipelineFixture("orphan-pipeline")],
+        workflows: [workflowFixture("orphan-workflow")],
         agents: [{ id: "orphan-agent", instructions: "x" } as Agent],
         integrations: [
           {
@@ -685,7 +685,7 @@ describe("DepartmentsService", () => {
       const unowned = await service.listUnowned();
       expect(unowned).toEqual(
         expect.arrayContaining([
-          { kind: "pipeline", id: "orphan-pipeline" },
+          { kind: "workflow", id: "orphan-workflow" },
           { kind: "agent", id: "orphan-agent" },
         ]),
       );

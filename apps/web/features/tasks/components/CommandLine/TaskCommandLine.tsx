@@ -215,7 +215,7 @@ export function TaskCommandLine({
 
   const ackKindLabel: Record<TaskTargetKind, string> = {
     agent: t("commandLine.ack.kind.agent"),
-    pipeline: t("commandLine.ack.kind.pipeline"),
+    workflow: t("commandLine.ack.kind.workflow"),
     goal: t("commandLine.ack.kind.goal"),
     department: t("commandLine.ack.kind.department"),
     orchestrator: t("commandLine.ack.kind.orchestrator"),

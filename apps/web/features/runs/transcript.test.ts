@@ -3,7 +3,7 @@ import { groupTranscript, parseTranscript } from "./transcript";
 
 /**
  * Golden fixtures lifted verbatim from real run logs under
- * `apps/api/data/{agents,pipelines}/runs/` — drift insurance against the
+ * `apps/api/data/{agents,workflows}/runs/` — drift insurance against the
  * server-side formatter (`claude-stream-format.ts`) and this client re-parser
  * diverging. Each block is a faithful excerpt of a captured transcript.
  */
@@ -41,7 +41,7 @@ const HR_THEN_FOOTER = [
   "─── done in 32.8s",
 ].join("\n");
 
-// apps/api/data/pipelines/runs/…koder_…log — a rate_limit JSON line sits BETWEEN
+// apps/api/data/workflows/runs/…koder_…log — a rate_limit JSON line sits BETWEEN
 // the `● Read` tool call and its `⎿` result. Dropping it must not break folding.
 const DROP_BETWEEN_TOOL_AND_RESULT = [
   "● Read /Users/zibby/Workspace/z.i.b.b.y/apps/api/data/.../plan.md",

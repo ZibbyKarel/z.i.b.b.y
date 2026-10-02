@@ -63,7 +63,7 @@ describe("ClaudeCliDistiller — Law-4 envelope adoption", () => {
     delete process.env.VITEST;
     const runs: RunDigest[] = [
       {
-        kind: "pipeline",
+        kind: "workflow",
         id: "run-2",
         name: "p",
         status: "done",
@@ -80,9 +80,7 @@ describe("ClaudeCliDistiller — Law-4 envelope adoption", () => {
   it("DISTILLER_SYSTEM_PROMPT tells the model excerpts may be fenced untrusted data", async () => {
     delete process.env.VITEST;
     const distiller = new CapturingDistiller(EMPTY_LEARNINGS);
-    await distiller.distill([
-      { kind: "agent", id: "r", name: "n", status: "done", excerpt: "hi" },
-    ]);
+    await distiller.distill([{ kind: "agent", id: "r", name: "n", status: "done", excerpt: "hi" }]);
     expect(distiller.lastPrompt).toContain("fenced as untrusted data");
     expect(distiller.lastPrompt).toContain("inert");
   });
@@ -122,7 +120,9 @@ describe("ClaudeCliDistiller — Law-4 envelope adoption", () => {
   it("returns [] / null under the VITEST guard without spawning or building a prompt", async () => {
     const distiller = new CapturingDistiller(EMPTY_LEARNINGS);
     expect(
-      await distiller.distill([{ kind: "agent", id: "r", name: "n", status: "done", excerpt: "x" }]),
+      await distiller.distill([
+        { kind: "agent", id: "r", name: "n", status: "done", excerpt: "x" },
+      ]),
     ).toEqual([]);
     expect(await distiller.triageNote({ id: "n", title: "t", body: "b" })).toBeNull();
   });

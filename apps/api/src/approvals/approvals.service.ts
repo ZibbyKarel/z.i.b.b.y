@@ -29,7 +29,7 @@ export interface RequestApprovalInput {
   risk: Approval["risk"];
   /**
    * NS2 F3c — the acting unit's owning department. Only run-path callers supply
-   * it (pipeline-runner from `pipeline.department`, agent-runner from
+   * it (workflow-runner from `workflow.department`, agent-runner from
    * `agent.department`); every other call site omits it — an approval with
    * no acting unit never invents an owner.
    */

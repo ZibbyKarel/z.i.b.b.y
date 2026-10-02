@@ -3,10 +3,10 @@ import type { ZodType } from "zod";
 /**
  * Which kind of thing a run executes. A single {@link RunnerCore} serves all
  * kinds; the discriminator lets per-entity wrappers (agent / skill /
- * pipeline-stage) project their own contract shape on top of the shared
+ * workflow-stage) project their own contract shape on top of the shared
  * machinery instead of duplicating spawn/log/sidecar/restart logic N times.
  */
-export type RunKind = "agent" | "skill" | "pipeline-stage";
+export type RunKind = "agent" | "skill" | "workflow-stage";
 
 /**
  * The lifecycle states a run can be in. Mirrors the agent-run contract enum;
@@ -73,7 +73,7 @@ export interface RunSpec {
   kind: RunKind;
   /**
    * Base component of the run id and (by convention) the sandbox folder name —
-   * `agentId`, `skillId`, or `${pipelineRunId}.${phaseId}`. Must be filename-safe.
+   * `agentId`, `skillId`, or `${workflowRunId}.${phaseId}`. Must be filename-safe.
    */
   ownerId: string;
   command: string;
@@ -82,7 +82,7 @@ export interface RunSpec {
   cwd: string;
   /**
    * Optional working directory the child SPAWNS in, when it differs from the
-   * sandbox `cwd` (a claude stage of a project-targeted pipeline run spawns
+   * sandbox `cwd` (a claude stage of a project-targeted workflow run spawns
    * inside the project checkout so its real CLAUDE.md/.claude context loads).
    * Logs, sidecar and the intent coordination dir stay anchored to `cwd`.
    */

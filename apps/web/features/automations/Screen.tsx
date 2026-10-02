@@ -12,7 +12,7 @@ import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
 import { useAgentsQuery } from "../agents/queries";
-import { usePipelinesQuery } from "../pipelines/queries";
+import { useWorkflowsQuery } from "../workflows/queries";
 import { AutomationCard } from "./components/AutomationCard";
 import { AutomationFormDialog } from "./components/AutomationFormDialog";
 import {
@@ -30,7 +30,7 @@ export function Screen() {
   // operator's own automations only.
   const automations = (automationsQuery.data ?? []).filter((a) => !a.system);
   const { data: agents = [] } = useAgentsQuery();
-  const { data: pipelines = [] } = usePipelinesQuery();
+  const { data: workflows = [] } = useWorkflowsQuery();
   const create = useCreateAutomationMutation();
   const update = useUpdateAutomationMutation();
   const trigger = useTriggerAutomationMutation();
@@ -43,9 +43,9 @@ export function Screen() {
       const agent = agents.find((a) => a.id === target.agentId);
       return { name: agent?.name ?? target.agentId, glyph: (agent?.glyph as IconName) ?? "bot" };
     }
-    if (target.type === "pipeline") {
-      const pipeline = pipelines.find((p) => p.id === target.pipelineId);
-      return { name: pipeline?.name ?? target.pipelineId, glyph: "flow" };
+    if (target.type === "workflow") {
+      const workflow = workflows.find((p) => p.id === target.workflowId);
+      return { name: workflow?.name ?? target.workflowId, glyph: "flow" };
     }
     if (target.type === "memory-distill") return { glyph: "brain" };
     if (target.type === "self-knowledge") return { glyph: "brain" };
@@ -53,7 +53,7 @@ export function Screen() {
     if (target.type === "arch-audit") return { glyph: "code" };
     if (target.type === "task") {
       const kind = target.target?.kind;
-      const glyph: IconName = kind === "agent" ? "bot" : kind === "pipeline" ? "flow" : "spark";
+      const glyph: IconName = kind === "agent" ? "bot" : kind === "workflow" ? "flow" : "spark";
       return { name: target.target?.name ?? t("targetTask"), glyph };
     }
     return { glyph: "spark" };

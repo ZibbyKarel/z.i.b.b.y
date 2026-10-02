@@ -2,7 +2,7 @@ import { type Agent, ORCHESTRATOR_ID, ORCHESTRATOR_TARGET } from "@zibby/contrac
 
 /**
  * The synthetic agent behind `kind: "orchestrator"` task routing — the terminal
- * fallback the classifier picks when no stored agent/pipeline matches. It is NOT
+ * fallback the classifier picks when no stored agent/workflow matches. It is NOT
  * stored in the agents directory (it must never appear in the routable catalog or
  * the dashboard's agent list); it exists only so the orchestrator run can reuse
  * the whole agent-run machinery unchanged:
@@ -28,7 +28,7 @@ export const ORCHESTRATOR_AGENT: Agent = {
   tools: ["read", "write", "bash", "web"],
   instructions: [
     "You are the task orchestrator — the universal fallback for tasks that did not",
-    "match any specialised agent or pipeline. Your job is to make sure the task gets",
+    "match any specialised agent or workflow. Your job is to make sure the task gets",
     "DONE, never to bounce it back.",
     "",
     "How to work:",

@@ -4,8 +4,8 @@ import type {
   GateRule,
   GlobalGateRule,
   MatchCondition,
-  Pipeline,
   SelfKnowledgeSections,
+  Workflow,
 } from "@zibby/contracts";
 import { escapeAutoBoundaryMarkers } from "../shared/text/escape-md-markers";
 import type { ParsedGraphReport } from "./graph-report.parser";
@@ -29,7 +29,7 @@ import type { ParsedGraphReport } from "./graph-report.parser";
 const BLOCK_KEYS = [
   "META",
   "AGENTS",
-  "PIPELINES",
+  "WORKFLOWS",
   "DEPARTMENTS",
   "GATES",
   "CHANNELS",
@@ -40,7 +40,7 @@ type BlockKey = (typeof BLOCK_KEYS)[number];
 /** Inputs the composer needs — one plain snapshot of the current catalog state. */
 export interface SelfKnowledgeComposerInput {
   agents: Agent[];
-  pipelines: Pipeline[];
+  workflows: Workflow[];
   /** Static department identities (`@zibby/contracts` `DEPARTMENTS`) — name + mandate
    *  only, NEVER live state/tier2Count/tier3Count (decision 3, phase-105 master plan). */
   departments: Department[];
@@ -146,18 +146,18 @@ function renderAgents(agents: Agent[]): string {
   return lines.join("\n");
 }
 
-function renderPipelines(pipelines: Pipeline[]): string {
-  const sorted = [...pipelines].sort(ascendingById);
-  const lines = [`## Pipelines (${sorted.length})`];
+function renderWorkflows(workflows: Workflow[]): string {
+  const sorted = [...workflows].sort(ascendingById);
+  const lines = [`## Workflows (${sorted.length})`];
   if (sorted.length === 0) {
-    lines.push("_No pipelines registered yet._");
+    lines.push("_No workflows registered yet._");
   } else {
-    for (const pipeline of sorted) {
-      const name = pipeline.name ? escapeAutoBoundaryMarkers(pipeline.name) : pipeline.name;
+    for (const workflow of sorted) {
+      const name = workflow.name ? escapeAutoBoundaryMarkers(workflow.name) : workflow.name;
       const label =
-        name && name !== pipeline.id ? `${name} (\`${pipeline.id}\`)` : `\`${pipeline.id}\``;
-      const desc = pipeline.desc ? ` — ${escapeAutoBoundaryMarkers(pipeline.desc)}` : "";
-      const phaseCount = pipeline.phases.length;
+        name && name !== workflow.id ? `${name} (\`${workflow.id}\`)` : `\`${workflow.id}\``;
+      const desc = workflow.desc ? ` — ${escapeAutoBoundaryMarkers(workflow.desc)}` : "";
+      const phaseCount = workflow.phases.length;
       lines.push(`- ${label}${desc} (${phaseCount} phase${phaseCount === 1 ? "" : "s"})`);
     }
   }
@@ -277,7 +277,7 @@ export function composeSelfKnowledge(input: SelfKnowledgeComposerInput): Compose
   const codebaseShape = input.codebaseShape ?? null;
   const sections: SelfKnowledgeSections = {
     agents: input.agents.length,
-    pipelines: input.pipelines.length,
+    workflows: input.workflows.length,
     gateRules: input.policyFloor.length + input.gateRules.length,
     channels: input.channelKinds.length,
     departments: input.departments.length,
@@ -291,7 +291,7 @@ export function composeSelfKnowledge(input: SelfKnowledgeComposerInput): Compose
   const blocks: Record<BlockKey, string> = {
     META: renderMeta(generatedAt),
     AGENTS: renderAgents(input.agents),
-    PIPELINES: renderPipelines(input.pipelines),
+    WORKFLOWS: renderWorkflows(input.workflows),
     DEPARTMENTS: renderDepartments(input.departments),
     GATES: renderGates(input.policyFloor, input.gateRules),
     CHANNELS: renderChannels(input.channelKinds),
@@ -340,7 +340,7 @@ export function mergeAutoBlocks(existing: string, generated: string): string {
 
 /**
  * Whether `existing`'s AUTO blocks differ from `generated`'s — the underlying
- * catalog (agents/pipelines/gate rules/channels) changed since the note was last
+ * catalog (agents/workflows/gate rules/channels) changed since the note was last
  * written. The `META` block (just the generation timestamp) is deliberately
  * excluded: it always differs, and is not itself meaningful drift. A block
  * missing from `existing` counts as drift (an operator deleted it, or it is a

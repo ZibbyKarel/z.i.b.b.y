@@ -434,7 +434,7 @@ describe("GroundingService.compose", () => {
         id: SELF_KNOWLEDGE_ID,
         tier: "knowledge",
         title: "Self-Knowledge",
-        body: "Agents, pipelines, gates, channels.",
+        body: "Agents, workflows, gates, channels.",
       });
       await vault.createNote({
         id: "billing-moc",
@@ -480,7 +480,7 @@ describe("GroundingService.compose", () => {
         id: SELF_KNOWLEDGE_ID,
         tier: "knowledge",
         title: "Self-Knowledge",
-        body: "Agents, pipelines, gates, channels.",
+        body: "Agents, workflows, gates, channels.",
       });
       await vault.createNote({
         id: "department-dev-moc",

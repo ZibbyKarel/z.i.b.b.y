@@ -10,7 +10,7 @@ remains accurate. -->
 briefing/`get_status` chat response caused by Release's unbounded, fully
 sequential PR enrichment. `merge`/`getPr`/`isMerged` are untouched. -->
 
-The catalog of target directories agents, skills and pipelines run against.
+The catalog of target directories agents, skills and workflows run against.
 A project is a **registry entry** (`_projects.json`), not files of its own —
 deleting a project removes only the registry record, never the files it
 points at on the host. The module also owns everything that hangs off a
@@ -50,7 +50,7 @@ company-merged "effective" context.
                                 // back to <cloneRoot>/<id> when absent
   desc?: string;
   category?: string;
-  checks?: string[];           // pipeline verify-phase commands, joined with &&
+  checks?: string[];           // workflow verify-phase commands, joined with &&
   budget?: ProjectBudget;      // run-count + USD caps, per day/week/month + concurrency
   env?: Record<string, string>;// NON-secret env injected into this project's runs
   hasSecrets?: boolean;        // computed at read time from ProjectSecretsStore
@@ -128,7 +128,7 @@ side effect only.
   check the schema already enforces) immediately before the **only production
   call site** of `WorkspaceService.clone()`.
 - `resolveForRun(project)` (Phase 77) — what a run dispatch (agent/goal/
-  pipeline) should actually use on this machine: present → use it; absent with
+  workflow) should actually use on this machine: present → use it; absent with
   a `gitRemote` → clone then use it; absent with no remote but `path` is an
   ordinary (non-git) folder → use it directly, no worktree (the pre-Phase-76
   posture); none of the above → throws `ProjectLocalUnresolvedError` rather
@@ -295,7 +295,7 @@ without pulling in the whole projects module.
   `docs/api/companies.md`.
 - **`integrations`** — merged by kind into effective context; PR merge reads a
   resolved github integration's token via `CredentialsStore`.
-- **`runner`/`agents`/`pipelines`/`goals`** — `ProjectLocalService.resolveForRun`
+- **`runner`/`agents`/`workflows`/`goals`** — `ProjectLocalService.resolveForRun`
   is the seam every run dispatch calls to get a real, on-this-machine path
   before spawning; see `docs/api/runner.md`.
 - **`tasks`** — `matchProject` is the attribution step feeding budget/queue/

@@ -94,7 +94,7 @@ export class ProjectLocalService {
   }
 
   /**
-   * Phase 77 — resolve the path a RUN (agent/goal/pipeline dispatch) should use
+   * Phase 77 — resolve the path a RUN (agent/goal/workflow dispatch) should use
    * for `project` on THIS machine, cloning into `cloneRoot` when absent and a
    * `gitRemote` is configured. Returns:
    *

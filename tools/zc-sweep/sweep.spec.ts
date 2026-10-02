@@ -21,7 +21,7 @@ const SCREENSHOT_DIR = path.resolve(".playwright-mcp/zc");
 
 type SweepIds = {
   departmentId: string;
-  departmentPipelineId: string;
+  departmentWorkflowId: string;
   employeeId: string | null;
   chainId: string;
   goalId: string;
@@ -37,7 +37,7 @@ type SweepIds = {
   hookId: string;
   commandId: string;
   redirectAgentId: string;
-  redirectPipelineId: string;
+  redirectWorkflowId: string;
 };
 
 // `ids` is read from disk in `beforeAll`, which runs AFTER every `test()` call
@@ -77,10 +77,10 @@ function routes(): RouteCase[] {
     { slug: "org-map-focus", path: () => `/org?focus=${dep}` },
     { slug: "org-department-team", path: () => `/org/departments/${dep}/team` },
     { slug: "org-department-subtasks", path: () => `/org/departments/${dep}/subtasks` },
-    { slug: "org-department-pipelines", path: () => `/org/departments/${dep}/pipelines` },
+    { slug: "org-department-workflows", path: () => `/org/departments/${dep}/workflows` },
     {
-      slug: "org-department-pipeline-detail",
-      path: (i) => `/org/departments/${dep}/pipelines/${i?.departmentPipelineId ?? "demo-pipe"}`,
+      slug: "org-department-workflow-detail",
+      path: (i) => `/org/departments/${dep}/workflows/${i?.departmentWorkflowId ?? "demo-pipe"}`,
     },
     { slug: "org-department-handoff", path: () => `/org/departments/${dep}/handoff` },
     { slug: "org-department-skills", path: () => `/org/departments/${dep}/skills` },
@@ -208,7 +208,7 @@ function routes(): RouteCase[] {
 /** Every §2 redirect worth a screenshot of the LANDED page (not just the URL —
  * `redirects.spec.ts`/§2 QUERY_REDIRECTS already assert the URL half). Static
  * pairs come straight from `redirects.spec.ts`; the two id-dependent ones
- * (`/agents/:id`, `/pipelines/:id`) are ROUTE-MAP §2 rows that table
+ * (`/agents/:id`, `/workflows/:id`) are ROUTE-MAP §2 rows that table
  * deliberately excludes as "left uncovered — this table only fits static
  * pairs" — covered here instead, with the sweep's own seeded ids.
  */
@@ -219,8 +219,8 @@ function redirectRoutes(): RouteCase[] {
       path: (i) => `/agents/${i?.redirectAgentId ?? "gated-agent"}`,
     },
     {
-      slug: "redirect-pipelines-id",
-      path: (i) => `/pipelines/${i?.redirectPipelineId ?? "demo-pipe"}`,
+      slug: "redirect-workflows-id",
+      path: (i) => `/workflows/${i?.redirectWorkflowId ?? "demo-pipe"}`,
     },
   ];
   const staticRedirects: RouteCase[] = [...ROUTE_MAP_REDIRECTS, ...QUERY_REDIRECTS].map(

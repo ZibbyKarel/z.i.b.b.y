@@ -17,15 +17,15 @@ _Generated: 2026-09-24T18:31:39.613Z_
 
 - Agent 007 (`agent-007`) — Testovací agent — v zadané složce vytvoří soubor a hlásí progress. Nespálí žádné tokeny.
 - Architekt (`architect`) — Navrhne řešení a rozepíše plán do design.md
-- Architekt (`architekt`) — Rozpadne zadání na realizovatelný plán: kroky, dotčené soubory, rizika a kontrakt změn pro Kodéra (delivery pipeline, fáze 1).
+- Architekt (`architekt`) — Rozpadne zadání na realizovatelný plán: kroky, dotčené soubory, rizika a kontrakt změn pro Kodéra (delivery workflow, fáze 1).
 - Kronikář (`chronicler`) — Vede deník a sumarizuje týden z poznámek
-- Code-Review (`code-review`) — Oponentura implementace: korektnost, regrese, konvence projektu. Selhání vrací práci Kodérovi s kontextem (delivery pipeline, fáze 3).
+- Code-Review (`code-review`) — Oponentura implementace: korektnost, regrese, konvence projektu. Selhání vrací práci Kodérovi s kontextem (delivery workflow, fáze 3).
 - Kodér (`coder`) — Implementuje podle design.md v izolované branchi
 - Kurátor (`curator`) — Třídí a popisuje média v knihovně
 - Dokumentátor (`doc`) — Sepíše README a changelog z výsledné branche
-- Dokumentátor (`dokumentator`) — Z hotové a ověřené změny sepíše changelog a poznámky pro PR (delivery pipeline, závěrečná fáze).
-- Kodér (`koder`) — Implementuje plán v cílovém projektu a sepíše shrnutí změn pro review (delivery pipeline, fáze 2; cíl zpětné smyčky).
-- PR autor (`pr-autor`) — Z ověřené, zdokumentované změny složí PR (titulek + tělo do pr-draft.md), pak otevře PR přes gated push (delivery pipeline, brána).
+- Dokumentátor (`dokumentator`) — Z hotové a ověřené změny sepíše changelog a poznámky pro PR (delivery workflow, závěrečná fáze).
+- Kodér (`koder`) — Implementuje plán v cílovém projektu a sepíše shrnutí změn pro review (delivery workflow, fáze 2; cíl zpětné smyčky).
+- PR autor (`pr-autor`) — Z ověřené, zdokumentované změny složí PR (titulek + tělo do pr-draft.md), pak otevře PR přes gated push (delivery workflow, brána).
 - `research-analyst` — Use this agent when you need comprehensive research across multiple sources with synthesis of findings into actionable insights, trend identification, and detailed reporting.
 - Researcher (`researcher`) — Sbírá zdroje a syntetizuje poznámky do vaultu
 - Reviewer (`reviewer`) — Pre-review diffu před návrhem na push
@@ -33,16 +33,16 @@ _Generated: 2026-09-24T18:31:39.613Z_
 - Tester (`tester`) — Spustí testy, vrací report a vrací práci zpět
 <!-- AUTO:AGENTS:END -->
 
-<!-- AUTO:PIPELINES:START -->
+<!-- AUTO:WORKFLOWS:START -->
 
-## Pipelines (5)
+## Workflows (5)
 
 - Build Feature (`build-feature`) — Spec → implementace → testy → docs, se zpětnou smyčkou u Testera. (4 phases)
 - Delivery (`delivery`) — Postav, oprav nebo implementuj feature či bug v projektu — build, fix, implement a feature or bug; deliver, postavit, opravit, implementovat, dodat, rozbitý test, failing test. (6 phases)
 - Media tidy (`media-tidy`) — Stáhne a srovná média na Holly. (2 phases)
 - Nightly Research (`nightly-research`) — Researcher nasbírá zdroje, Architekt je zsyntetizuje do poznámky. (2 phases)
 - PR Guard (`pr-guard`) — Reviewer projde diff a připraví push k tvému schválení. (1 phase)
-<!-- AUTO:PIPELINES:END -->
+<!-- AUTO:WORKFLOWS:END -->
 
 <!-- AUTO:GATES:START -->
 
@@ -100,7 +100,7 @@ _graphify-out is missing — run `/graphify` to generate it._
 ## Departments (11)
 
 - Communications (`com`) — Mluví za ZIBBY navenek — reaktivní odpovědi i proaktivní dotazování.
-- Development (`dev`) — Orchestrace delivery pipeline: Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor.
+- Development (`dev`) — Orchestrace delivery workflow: Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor.
 - Finance (`fin`) — Rozpočty a limity — stropy útrat, okna spotřeby, správa token-spend a limit-resume.
 - Incident Response (`inc`) — Eskalace incidentů — vlastní podoba Tier-3 kontraktu surface-and-wait.
 - Knowledge Management (`knw`) — Správa paměti — vault, grounding, noční destilace a poličky znalostí.
@@ -108,6 +108,6 @@ _graphify-out is missing — run `/graphify` to generate it._
 - Personal Office (`per`) — Osobní život operátora — rychlé poznámky, denní agenda, osobní poličky a připomínky, oddělené od práce.
 - QA & Architecture (`qa`) — Proaktivní analýza kvality a architektury codebase, nálezy předává Dev.
 - Release Management (`rel`) — Releasy — příprava, přehled a operátorem schválené sloučení.
-- R&D (`rnd`) — Výzkumné pipeline, které předávají výsledný artefakt dál.
+- R&D (`rnd`) — Výzkumné workflow, které předávají výsledný artefakt dál.
 - Security (`sec`) — Bezpečnost vůči externímu prostředí — CVE závislostí, úniky tajemství.
 <!-- AUTO:DEPARTMENTS:END -->

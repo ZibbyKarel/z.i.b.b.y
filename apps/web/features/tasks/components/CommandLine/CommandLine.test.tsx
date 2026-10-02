@@ -36,15 +36,15 @@ vi.mock("../../../agents/queries/useAgentsQuery", () => ({
   }),
   getAgentsQueryKey: () => ["agents"],
 }));
-vi.mock("../../../pipelines/queries/usePipelinesQuery", () => ({
-  usePipelinesQuery: () => ({
+vi.mock("../../../workflows/queries/useWorkflowsQuery", () => ({
+  useWorkflowsQuery: () => ({
     data: [{ id: "delivery", name: "Delivery", department: "dev" }],
   }),
-  getPipelinesQueryKey: () => ["pipelines"],
+  getWorkflowsQueryKey: () => ["workflows"],
 }));
-// Phase 91: two departments in the registry — only "dev" owns a pipeline (see the
-// pipelines mock above), "ops" owns none — so the mention catalog roster-filter
-// (≥1 owned pipeline) has something real to exclude.
+// Phase 91: two departments in the registry — only "dev" owns a workflow (see the
+// workflows mock above), "ops" owns none — so the mention catalog roster-filter
+// (≥1 owned workflow) has something real to exclude.
 vi.mock("../../../departments/queries/useDepartmentsQuery", () => ({
   useDepartmentsQuery: () => ({
     data: [
@@ -118,7 +118,7 @@ describe("CommandLine (Phase 118d generic composer)", () => {
         screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`),
       ).toBeInTheDocument();
       expect(
-        screen.queryByTestId(`${CommandLineTestId.MentionItem}-pipeline-delivery`),
+        screen.queryByTestId(`${CommandLineTestId.MentionItem}-workflow-delivery`),
       ).not.toBeInTheDocument();
 
       await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`));
@@ -178,13 +178,13 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       render(<CommandLine onSubmit={onSubmit} />);
       const input = screen.getByTestId(CommandLineTestId.Input);
       await user.type(input, "@Deliv");
-      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-pipeline-delivery`));
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-workflow-delivery`));
       await user.type(input, "spusť to");
 
       await user.click(screen.getByTestId(CommandLineTestId.Send));
       expect(onSubmit).toHaveBeenCalledWith(
         "@Delivery spusť to",
-        { kind: "pipeline", id: "delivery", name: "Delivery", glyph: "flow" },
+        { kind: "workflow", id: "delivery", name: "Delivery", glyph: "flow" },
         undefined,
       );
     });
@@ -223,13 +223,13 @@ describe("CommandLine (Phase 118d generic composer)", () => {
   });
 
   describe("Phase 91 — department @-mentions (roster-only, explicit target)", () => {
-    it("lists a roster-bearing department (≥1 owned pipeline) as a colored-dot row, never a capability-less one", async () => {
+    it("lists a roster-bearing department (≥1 owned workflow) as a colored-dot row, never a capability-less one", async () => {
       const user = userEvent.setup();
       render(<CommandLine onSubmit={vi.fn()} />);
       const input = screen.getByTestId(CommandLineTestId.Input);
       await user.type(input, "@");
 
-      // "dev" owns the "delivery" pipeline (mocked above) — it's dispatchable,
+      // "dev" owns the "delivery" workflow (mocked above) — it's dispatchable,
       // so it belongs in the picker.
       expect(
         screen.getByTestId(`${CommandLineTestId.MentionItem}-department-dev`),
@@ -241,12 +241,12 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       ).not.toBeInTheDocument();
 
       // The icon is a colored dot (the department's own brand color), not the usual
-      // agent/pipeline Tag+glyph chip.
+      // agent/workflow Tag+glyph chip.
       const dot = screen.getByTestId(`${CommandLineTestId.MentionItem}-department-dev-dot`);
       expect(dot).toHaveStyle({ background: "#f97316" });
     });
 
-    it("filters the department row by query exactly like agents/pipelines", async () => {
+    it("filters the department row by query exactly like agents/workflows", async () => {
       const user = userEvent.setup();
       render(<CommandLine onSubmit={vi.fn()} />);
       const input = screen.getByTestId(CommandLineTestId.Input);
@@ -305,7 +305,7 @@ describe("CommandLine (Phase 118d generic composer)", () => {
 
       const teamRow = screen.getByTestId(`${CommandLineTestId.MentionItem}-team-devrel`);
       const agentRow = screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`);
-      const pipelineRow = screen.getByTestId(`${CommandLineTestId.MentionItem}-pipeline-delivery`);
+      const workflowRow = screen.getByTestId(`${CommandLineTestId.MentionItem}-workflow-delivery`);
 
       // Tone: no longer the plain "neutral" a department's non-Tag dot row implies,
       // and not either routing row's own tone — asserted on the rendered variant
@@ -322,9 +322,9 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       // for the same row before this fix) with either routing row's icon.
       const teamIconMarkup = within(teamRow).getByTestId(TagTestId.Icon).innerHTML;
       const agentIconMarkup = within(agentRow).getByTestId(TagTestId.Icon).innerHTML;
-      const pipelineIconMarkup = within(pipelineRow).getByTestId(TagTestId.Icon).innerHTML;
+      const workflowIconMarkup = within(workflowRow).getByTestId(TagTestId.Icon).innerHTML;
       expect(teamIconMarkup).not.toBe(agentIconMarkup);
-      expect(teamIconMarkup).not.toBe(pipelineIconMarkup);
+      expect(teamIconMarkup).not.toBe(workflowIconMarkup);
     });
 
     it("picking a team inserts the inline @Name and calls onTeamChange with its id — onTargetChange never fires", async () => {
@@ -613,13 +613,13 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       // `allowTeamMentions` fix round: the hint's wording must track what THIS
       // render actually offers — with the prop left at its (opt-in) default, no
       // team row is offered, so the hint must not claim one either.
-      expect(screen.getByText(/hledá agenty, pipeliny a oddělení/)).toBeInTheDocument();
-      expect(screen.queryByText(/hledá agenty, pipeliny, oddělení a týmy/)).not.toBeInTheDocument();
+      expect(screen.getByText(/hledá agenty, workflow a oddělení/)).toBeInTheDocument();
+      expect(screen.queryByText(/hledá agenty, workflow, oddělení a týmy/)).not.toBeInTheDocument();
     });
 
     it("the chrome hint includes teams once `allowTeamMentions` is explicitly on — Fix round 2", () => {
       render(<CommandLine allowTeamMentions onSubmit={vi.fn()} />);
-      expect(screen.getByText(/hledá agenty, pipeliny, oddělení a týmy/)).toBeInTheDocument();
+      expect(screen.getByText(/hledá agenty, workflow, oddělení a týmy/)).toBeInTheDocument();
     });
 
     it("renders a bare input with no panel chrome when chrome={false}", () => {
@@ -661,7 +661,7 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       expect(marks.map((m) => m.textContent).join("")).toContain("/tmp/scratch/widget");
     });
 
-    it("tints @mentions by resolved type — a known agent accent, a known pipeline push, an unresolved token dim", () => {
+    it("tints @mentions by resolved type — a known agent accent, a known workflow push, an unresolved token dim", () => {
       render(<CommandLine onSubmit={vi.fn()} />);
       // A single `change` (rather than typing character-by-character) — typing a
       // literal `@` triggers the mention picker, which steals focus to its own

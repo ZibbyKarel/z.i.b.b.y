@@ -83,7 +83,7 @@ const AUTONOMY_ACTIONS = [
   "summarize",
   "investigate",
   "draft",
-  "run_pipeline",
+  "run_workflow",
   "post_status",
   "send_email",
   "pr.open",

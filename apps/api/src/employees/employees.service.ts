@@ -120,7 +120,7 @@ export class EmployeesService {
    * what the allocator's in-memory lease table alone can tell (`working` while
    * leased, `idle` otherwise) — the full O-04 six-state vocabulary (thinking /
    * blocked / error / done) needs the underlying run's own status, which would
-   * pull AgentRunnerService/PipelineRunnerService into this module; left for a
+   * pull AgentRunnerService/WorkflowRunnerService into this module; left for a
    * follow-up (documented in the ZE-01 report) rather than widening this phase's
    * dependency graph.
    */

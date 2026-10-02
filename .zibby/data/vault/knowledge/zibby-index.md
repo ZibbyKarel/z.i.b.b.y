@@ -13,12 +13,12 @@ not vector search: descriptive notes joined by `[[wiki-links]]`.
 
 ## Subsystémy
 
-- [[department-dev-moc]] — Orchestrace delivery pipeline: Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor.
+- [[department-dev-moc]] — Orchestrace delivery workflow: Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor.
 - [[department-ops-moc]] — Sledování kanálů, kalendáře a CI/CD na srdečním tepu.
 - [[department-sec-moc]] — Bezpečnost vůči externímu prostředí — CVE závislostí, úniky tajemství.
 - [[department-rel-moc]] — Releasy — příprava, přehled a operátorem schválené sloučení.
 - [[department-inc-moc]] — Eskalace incidentů — vlastní podoba Tier-3 kontraktu surface-and-wait.
-- [[department-rnd-moc]] — Výzkumné pipeline, které předávají výsledný artefakt dál.
+- [[department-rnd-moc]] — Výzkumné workflow, které předávají výsledný artefakt dál.
 - [[department-com-moc]] — Mluví za ZIBBY navenek — reaktivní odpovědi i proaktivní dotazování.
 - [[department-qa-moc]] — Proaktivní analýza kvality a architektury codebase, nálezy předává Development.
 - [[department-knw-moc]] — Správa paměti — vault, grounding, noční destilace a poličky znalostí.

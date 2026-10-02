@@ -6,8 +6,8 @@ import type { Note } from "@zibby/contracts";
 import type { AgentRunnerService } from "../agents/agent-runner.service";
 import type { AgentsStorageService } from "../agents/agents.storage.service";
 import type { GoalRunnerService } from "../goals/goal-runner.service";
-import type { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
-import type { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
+import type { WorkflowRunnerService } from "../workflows/workflow-runner.service";
+import type { WorkflowsStorageService } from "../workflows/workflows.storage.service";
 import type { ProjectsStorageService } from "../projects/projects.storage.service";
 import type { ChatTranscriptStore } from "../chat/chat-transcript.store";
 import type { ClaudeCliDistiller, Learning, NoteTriage } from "./claude-cli-distiller";
@@ -88,7 +88,7 @@ function makeVault(opts: { similarTo?: Record<string, string>; raw?: Note[] } = 
 
 function makeService(over: {
   vault: ReturnType<typeof makeVault>;
-  pipelines?: Partial<PipelineRunnerService>;
+  workflows?: Partial<WorkflowRunnerService>;
   agents?: Partial<AgentRunnerService>;
   goals?: Partial<GoalRunnerService>;
   projects?: Partial<ProjectsStorageService>;
@@ -100,7 +100,7 @@ function makeService(over: {
     | ((note: { id: string; title: string; body: string }) => Promise<NoteTriage | null>);
   importer?: Partial<MemoryImportService>;
   agentsStore?: Partial<AgentsStorageService>;
-  pipelinesStore?: Partial<PipelinesStorageService>;
+  workflowsStore?: Partial<WorkflowsStorageService>;
 }) {
   const triageImpl =
     typeof over.triage === "function" ? over.triage : async () => over.triage ?? null;
@@ -128,28 +128,28 @@ function makeService(over: {
     ingestQueue: async () => 0,
   }) as unknown as MemoryImportService;
   // Default owner-lookup doubles: no entity found → no owner (correction #4 fixtures
-  // opt in via `agentsStore`/`pipelinesStore`).
+  // opt in via `agentsStore`/`workflowsStore`).
   const agentsStore = (over.agentsStore ?? {
     get: async () => {
       throw new Error("no such agent");
     },
   }) as unknown as AgentsStorageService;
-  const pipelinesStore = (over.pipelinesStore ?? {
+  const workflowsStore = (over.workflowsStore ?? {
     get: async () => {
-      throw new Error("no such pipeline");
+      throw new Error("no such workflow");
     },
-  }) as unknown as PipelinesStorageService;
+  }) as unknown as WorkflowsStorageService;
   return new MemoryDistillerService(
     over.vault as unknown as VaultService,
     distiller,
     (over.agents ?? { listAll: async () => [] }) as unknown as AgentRunnerService,
-    (over.pipelines ?? { listAll: async () => [] }) as unknown as PipelineRunnerService,
+    (over.workflows ?? { listAll: async () => [] }) as unknown as WorkflowRunnerService,
     (over.goals ?? { listAll: async () => [] }) as unknown as GoalRunnerService,
     projects as ProjectsStorageService,
     chat as ChatTranscriptStore,
     importer,
     agentsStore,
-    pipelinesStore,
+    workflowsStore,
   );
 }
 
@@ -165,7 +165,7 @@ describe("MemoryDistillerService", () => {
     await fs.rm(dir, { recursive: true, force: true });
   });
 
-  it("distils a terminal pipeline run into a digest note linked from its project MOC", async () => {
+  it("distils a terminal workflow run into a digest note linked from its project MOC", async () => {
     const vault = makeVault();
     const service = makeService({
       vault,
@@ -177,18 +177,18 @@ describe("MemoryDistillerService", () => {
           tags: ["pnpm"],
         },
       ],
-      pipelines: {
+      workflows: {
         listAll: async () => [
           {
             status: "done",
-            pipelineRunId: "p1",
-            pipelineId: "delivery",
+            workflowRunId: "p1",
+            workflowId: "delivery",
             cwd: dir,
             projectPath: "/proj",
           },
         ],
         readLatestArtifact: async () => ({ name: "docs.md", content: "Changed X for Y." }),
-      } as unknown as PipelineRunnerService,
+      } as unknown as WorkflowRunnerService,
       projects: {
         list: async () => [{ id: "proj", path: "/proj", name: "Proj" }],
         get: async () => {
@@ -212,23 +212,23 @@ describe("MemoryDistillerService", () => {
   });
 
   it("is idempotent: a marked run is not distilled again", async () => {
-    const pipelines = {
+    const workflows = {
       listAll: async () => [
         {
           status: "done",
-          pipelineRunId: "p1",
-          pipelineId: "delivery",
+          workflowRunId: "p1",
+          workflowId: "delivery",
           cwd: dir,
           projectPath: undefined,
         },
       ],
       readLatestArtifact: async () => ({ name: "docs.md", content: "x" }),
-    } as unknown as PipelineRunnerService;
+    } as unknown as WorkflowRunnerService;
 
     const first = makeService({
       vault: makeVault(),
       learnings: [{ title: "t", body: "b", type: "fact", tags: [] }],
-      pipelines,
+      workflows,
     });
     expect(await first.distill(now)).toBe("memory-distill:1");
 
@@ -236,7 +236,7 @@ describe("MemoryDistillerService", () => {
     const second = makeService({
       vault: secondVault,
       learnings: [{ title: "t", body: "b", type: "fact", tags: [] }],
-      pipelines,
+      workflows,
     });
     expect(await second.distill(now)).toBe("memory-distill:0");
     expect(secondVault.createNote).not.toHaveBeenCalled();
@@ -247,12 +247,12 @@ describe("MemoryDistillerService", () => {
     const service = makeService({
       vault,
       learnings: [{ title: "t", body: "b", type: "fact", tags: [] }],
-      pipelines: {
+      workflows: {
         listAll: async () => [
-          { status: "running", pipelineRunId: "p1", pipelineId: "delivery", cwd: dir },
+          { status: "running", workflowRunId: "p1", workflowId: "delivery", cwd: dir },
         ],
         readLatestArtifact: async () => null,
-      } as unknown as PipelineRunnerService,
+      } as unknown as WorkflowRunnerService,
     });
 
     expect(await service.distill(now)).toBe("memory-distill:0");
@@ -265,12 +265,12 @@ describe("MemoryDistillerService", () => {
     const service = makeService({
       vault,
       learnings: [],
-      pipelines: {
+      workflows: {
         listAll: async () => [
-          { status: "done", pipelineRunId: "p1", pipelineId: "delivery", cwd: dir },
+          { status: "done", workflowRunId: "p1", workflowId: "delivery", cwd: dir },
         ],
         readLatestArtifact: async () => ({ name: "docs.md", content: "x" }),
-      } as unknown as PipelineRunnerService,
+      } as unknown as WorkflowRunnerService,
     });
 
     expect(await service.distill(now)).toBe("memory-distill:1");
@@ -347,11 +347,11 @@ describe("MemoryDistillerService", () => {
     const vault = makeVault();
     const service = makeService({
       vault,
-      pipelines: {
+      workflows: {
         listAll: async () => {
           throw new Error("disk gone");
         },
-      } as unknown as PipelineRunnerService,
+      } as unknown as WorkflowRunnerService,
     });
     expect(await service.distill(now)).toBe("memory-distill:0");
   });
@@ -363,18 +363,18 @@ describe("MemoryDistillerService", () => {
     const service = makeService({
       vault,
       learnings: [{ title: "t", body: "b", type: "fact", tags: [] }],
-      pipelines: {
+      workflows: {
         listAll: async () => [
           {
             status: "done",
-            pipelineRunId: "p1",
-            pipelineId: "delivery",
+            workflowRunId: "p1",
+            workflowId: "delivery",
             cwd: dir,
             projectPath: "/proj",
           },
         ],
         readLatestArtifact: async () => ({ name: "docs.md", content: "x" }),
-      } as unknown as PipelineRunnerService,
+      } as unknown as WorkflowRunnerService,
       projects: {
         list: async () => [{ id: "proj", path: "/proj", name: "Proj" }],
         get: async () => {
@@ -569,22 +569,22 @@ describe("MemoryDistillerService — import ingest front-phase (phase 112)", () 
     expect(vault.updates[0]?.id).toBe("halda-survives");
   });
 
-  it("F4a: a run owned by a research-owned pipeline files a digest AND auto-creates research's shelf", async () => {
-    const pipelineCwd = await fs.mkdtemp(path.join(os.tmpdir(), "distiller-pipeline-"));
+  it("F4a: a run owned by a research-owned workflow files a digest AND auto-creates research's shelf", async () => {
+    const workflowCwd = await fs.mkdtemp(path.join(os.tmpdir(), "distiller-workflow-"));
     try {
       const vault = makeVault();
       const service = makeService({
         vault,
         learnings: [{ title: "t", body: "b", type: "fact", tags: [] }],
-        pipelines: {
+        workflows: {
           listAll: async () => [
-            { status: "done", pipelineRunId: "p1", pipelineId: "research", cwd: pipelineCwd },
+            { status: "done", workflowRunId: "p1", workflowId: "research", cwd: workflowCwd },
           ],
           readLatestArtifact: async () => null,
-        } as unknown as PipelineRunnerService,
-        pipelinesStore: {
+        } as unknown as WorkflowRunnerService,
+        workflowsStore: {
           get: async () => ({ department: "rnd" }),
-        } as unknown as PipelinesStorageService,
+        } as unknown as WorkflowsStorageService,
       });
 
       const ref = await service.distill(now);
@@ -595,25 +595,25 @@ describe("MemoryDistillerService — import ingest front-phase (phase 112)", () 
         target: "distilled-2026-07-10",
       });
     } finally {
-      await fs.rm(pipelineCwd, { recursive: true, force: true });
+      await fs.rm(workflowCwd, { recursive: true, force: true });
     }
   });
 
-  it("F4a: a mixed batch (research pipeline + dev agent + unowned goal) links exactly two shelves", async () => {
+  it("F4a: a mixed batch (research workflow + dev agent + unowned goal) links exactly two shelves", async () => {
     const vault = makeVault();
-    const pipelineCwd = await fs.mkdtemp(path.join(os.tmpdir(), "distiller-pipeline-"));
+    const workflowCwd = await fs.mkdtemp(path.join(os.tmpdir(), "distiller-workflow-"));
     const agentCwd = await fs.mkdtemp(path.join(os.tmpdir(), "distiller-agent-"));
     const goalCwd = await fs.mkdtemp(path.join(os.tmpdir(), "distiller-goal-"));
     try {
       const service = makeService({
         vault,
         learnings: [{ title: "t", body: "b", type: "fact", tags: [] }],
-        pipelines: {
+        workflows: {
           listAll: async () => [
-            { status: "done", pipelineRunId: "p1", pipelineId: "research", cwd: pipelineCwd },
+            { status: "done", workflowRunId: "p1", workflowId: "research", cwd: workflowCwd },
           ],
           readLatestArtifact: async () => null,
-        } as unknown as PipelineRunnerService,
+        } as unknown as WorkflowRunnerService,
         agents: {
           listAll: async () => [
             { status: "done", runId: "a1", agentId: "coder", cwd: agentCwd, project: "" },
@@ -633,9 +633,9 @@ describe("MemoryDistillerService — import ingest front-phase (phase 112)", () 
             },
           ],
         } as unknown as GoalRunnerService,
-        pipelinesStore: {
+        workflowsStore: {
           get: async () => ({ department: "rnd" }),
-        } as unknown as PipelinesStorageService,
+        } as unknown as WorkflowsStorageService,
         agentsStore: {
           get: async () => ({ department: "dev" }),
         } as unknown as AgentsStorageService,
@@ -655,14 +655,14 @@ describe("MemoryDistillerService — import ingest front-phase (phase 112)", () 
         target: "distilled-2026-07-10",
       });
     } finally {
-      await fs.rm(pipelineCwd, { recursive: true, force: true });
+      await fs.rm(workflowCwd, { recursive: true, force: true });
       await fs.rm(agentCwd, { recursive: true, force: true });
       await fs.rm(goalCwd, { recursive: true, force: true });
     }
   });
 
   it("F4a: a shelf-link write failure is logged but the digest is still filed", async () => {
-    const pipelineCwd = await fs.mkdtemp(path.join(os.tmpdir(), "distiller-pipeline-"));
+    const workflowCwd = await fs.mkdtemp(path.join(os.tmpdir(), "distiller-workflow-"));
     const vault = makeVault();
     const originalUpdateIndex = vault.updateIndex;
     vault.updateIndex = vi.fn(async (moc: string, target: string) => {
@@ -674,15 +674,15 @@ describe("MemoryDistillerService — import ingest front-phase (phase 112)", () 
       const service = makeService({
         vault,
         learnings: [{ title: "t", body: "b", type: "fact", tags: [] }],
-        pipelines: {
+        workflows: {
           listAll: async () => [
-            { status: "done", pipelineRunId: "p1", pipelineId: "research", cwd: pipelineCwd },
+            { status: "done", workflowRunId: "p1", workflowId: "research", cwd: workflowCwd },
           ],
           readLatestArtifact: async () => null,
-        } as unknown as PipelineRunnerService,
-        pipelinesStore: {
+        } as unknown as WorkflowRunnerService,
+        workflowsStore: {
           get: async () => ({ department: "rnd" }),
-        } as unknown as PipelinesStorageService,
+        } as unknown as WorkflowsStorageService,
       });
 
       const ref = await service.distill(now);
@@ -692,7 +692,7 @@ describe("MemoryDistillerService — import ingest front-phase (phase 112)", () 
       expect(vault.indexed.some((i) => i.moc.startsWith("department-"))).toBe(false);
     } finally {
       warn.mockRestore();
-      await fs.rm(pipelineCwd, { recursive: true, force: true });
+      await fs.rm(workflowCwd, { recursive: true, force: true });
     }
   });
 });

@@ -41,8 +41,8 @@ vi.mock("./mutations", () => ({
   useUpdateAgentMutation: () => ({ mutate: hooks.update, isPending: false }),
   useDeleteAgentMutation: () => ({ mutate: hooks.del, isPending: false }),
 }));
-vi.mock("../pipelines", () => ({
-  usePipelinesQuery: () => ({
+vi.mock("../workflows", () => ({
+  useWorkflowsQuery: () => ({
     data: [{ id: "delivery", name: "Delivery", phases: [{ id: "p1", agent: "Kodér" }] }],
   }),
 }));
@@ -68,7 +68,7 @@ describe("agents DetailScreen (N4c grammar)", () => {
     expect(screen.getByRole("button", { name: "Smazat" })).toBeInTheDocument();
     // Phase 04: a pin toggle sits in the action row next to Run.
     expect(screen.getByRole("button", { name: "Připnout" })).toBeInTheDocument();
-    // The backing file is honest in the header, and the used-by panel lists pipelines.
+    // The backing file is honest in the header, and the used-by panel lists workflows.
     expect(screen.getByText("~/zibby/agents/koder.agent.md")).toBeInTheDocument();
     expect(screen.getByText(/Delivery/)).toBeInTheDocument();
   });

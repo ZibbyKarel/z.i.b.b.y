@@ -10,7 +10,7 @@ export function resolveDepartmentFindingsDir(): string {
 /**
  * NS2 F5a — the shared snapshot-store leaf module, imported by `SecurityModule`
  * and `ArchModule` (F5c). Deliberately NOT folded into `DepartmentsModule` — that
- * module imports Pipelines/Chains/Approvals/Tasks/Agents/Integrations, and
+ * module imports Workflows/Chains/Approvals/Tasks/Agents/Integrations, and
  * neither Security nor Arch needs any of that; a plain leaf module keeps both
  * chairs' dependency graphs small (no cycle risk either way).
  */

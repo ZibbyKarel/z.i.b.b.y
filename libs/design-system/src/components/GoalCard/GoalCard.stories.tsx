@@ -47,7 +47,7 @@ export const Overview: Story = {
       />
       <GoalCard
         eyebrow="refactor-auth · AUTH-SVC"
-        makerLabel="rnd-pipeline"
+        makerLabel="rnd-workflow"
         max={8}
         onOpen={() => {}}
         state="done"

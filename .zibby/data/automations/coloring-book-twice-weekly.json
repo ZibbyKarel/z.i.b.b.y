@@ -2,7 +2,7 @@
   "id": "coloring-book-twice-weekly",
   "name": "Omalovánka 2× týdně",
   "trigger": { "type": "cron", "expr": "0 2 * * 1,4" },
-  "target": { "type": "pipeline", "pipelineId": "coloring-book" },
+  "target": { "type": "workflow", "workflowId": "coloring-book" },
   "prompt": "theme: auto\ntargetAge: { min: 2, max: 4 }\npageCount: 24\nstyle: cute_simple_line_art\nlanguage: en\nlistPriceUsd: 9.99\n\nPick a fresh evergreen theme for toddlers that is not yet listed in books.md in your working directory, then append it there.",
   "enabled": true,
   "system": false

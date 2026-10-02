@@ -75,13 +75,13 @@ If no rule matches → the default is `"allow"`.
 
 #### How each match-condition type works
 
-| Type        | What it checks                        | Example                                                                  |
-| ----------- | -------------------------------------- | ------------------------------------------------------------------------ |
-| `tool`      | Exact match on tool/skill              | `{ type: "tool", tool: "bash" }`                                         |
+| Type        | What it checks                          | Example                                                                  |
+| ----------- | --------------------------------------- | ------------------------------------------------------------------------ |
+| `tool`      | Exact match on tool/skill               | `{ type: "tool", tool: "bash" }`                                         |
 | `action`    | Exact match on action + optional branch | `{ type: "action", action: "git.force_push", branch: "main" }`           |
-| `scope`     | Prefix wildcard on scope               | `{ type: "scope", scope: "feature/*" }`                                  |
-| `context`   | Agent id, or the `"*"` catch-all       | `{ type: "context", context: "*" }`                                      |
-| `threshold` | Numeric comparison on `action.metrics` | `{ type: "threshold", metric: "purchase.amount", op: "gt", value: 500 }` |
+| `scope`     | Prefix wildcard on scope                | `{ type: "scope", scope: "feature/*" }`                                  |
+| `context`   | Agent id, or the `"*"` catch-all        | `{ type: "context", context: "*" }`                                      |
+| `threshold` | Numeric comparison on `action.metrics`  | `{ type: "threshold", metric: "purchase.amount", op: "gt", value: 500 }` |
 
 All conditions within one rule must hold **simultaneously** (AND). Conditions across rules are OR'd (it's enough for one rule to fully match).
 
@@ -203,20 +203,20 @@ For a real `claude -p` run doing destructive or publishing work, the equivalent 
 
 A mid-run pause (`awaiting-approval` with a live blocked run) **does not survive a backend restart** — the
 run is a child of the API process and dies with it, and no spawn spec is stashed for it. On `init()`, such a run
-is reconciled to `interrupted` (the distinction: `awaiting-approval` _with_ a stashed spec is a pipeline-stage
+is reconciled to `interrupted` (the distinction: `awaiting-approval` _with_ a stashed spec is a workflow-stage
 pause at the spawn boundary, which does survive and can be resumed; _without_ a spec, it's a dead mid-run pause → `interrupted`).
 
 ---
 
 ## Key files
 
-| File                                                        | What it does                                                                              |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| `apps/api/src/gates/gate-evaluator.service.ts`               | The whole evaluation engine — `rulesForAgent`, `evaluate`, `matches`, `validateHardenOnly` |
-| `apps/api/src/gates/policy.storage.service.ts`                | Reads the locked floor from `POLICY.md`                                                    |
-| `apps/api/src/agents/agent-runner.service.ts`                 | `onIntent()` — calls the evaluator mid-run, branches to ask/deny/allow                     |
-| `apps/api/src/runner/claude-approval-hook.mjs`                | `PreToolUse` hook for real `claude -p` runs: classifies gated Bash commands, writes `intent-request.json`, blocks on `intent-decision.json` |
-| `apps/api/src/runner/runner-core.ts`                          | `watchIntentRequest()` (real runs) / `wire()` (demo, test) intent parsing; `allowIntent`/`denyIntent`/`holdForApproval`; `resume`/`cancel` |
-| `apps/api/src/approvals/approvals.service.ts`                 | Creates the `Approval` entity; routes `approve`/`reject` to `resume`/`cancel`              |
-| `libs/contracts/src/gates/gate.schema.ts`                     | Types: `GateRule`, `MatchCondition`, `Decision`, `IntendedAction`                          |
-| `apps/web/features/approvals/queries/useApprovalsQuery.ts`    | UI: live via the SSE events stream, falling back to a 60 s poll when the stream isn't connected |
+| File                                                       | What it does                                                                                                                                |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api/src/gates/gate-evaluator.service.ts`             | The whole evaluation engine — `rulesForAgent`, `evaluate`, `matches`, `validateHardenOnly`                                                  |
+| `apps/api/src/gates/policy.storage.service.ts`             | Reads the locked floor from `POLICY.md`                                                                                                     |
+| `apps/api/src/agents/agent-runner.service.ts`              | `onIntent()` — calls the evaluator mid-run, branches to ask/deny/allow                                                                      |
+| `apps/api/src/runner/claude-approval-hook.mjs`             | `PreToolUse` hook for real `claude -p` runs: classifies gated Bash commands, writes `intent-request.json`, blocks on `intent-decision.json` |
+| `apps/api/src/runner/runner-core.ts`                       | `watchIntentRequest()` (real runs) / `wire()` (demo, test) intent parsing; `allowIntent`/`denyIntent`/`holdForApproval`; `resume`/`cancel`  |
+| `apps/api/src/approvals/approvals.service.ts`              | Creates the `Approval` entity; routes `approve`/`reject` to `resume`/`cancel`                                                               |
+| `libs/contracts/src/gates/gate.schema.ts`                  | Types: `GateRule`, `MatchCondition`, `Decision`, `IntendedAction`                                                                           |
+| `apps/web/features/approvals/queries/useApprovalsQuery.ts` | UI: live via the SSE events stream, falling back to a 60 s poll when the stream isn't connected                                             |

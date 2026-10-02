@@ -135,7 +135,7 @@ describe("ApprovalsService", () => {
       const tagged = new ApprovalsService(storage, undefined, activity as never);
       const created = await tagged.requestApproval({
         runId: "pipe-run-1.p0_koder",
-        kind: "pipeline-stage",
+        kind: "workflow-stage",
         skill: "Kodér",
         action: "git.push",
         detail: "push the fix branch",

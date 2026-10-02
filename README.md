@@ -30,7 +30,7 @@ New machine, or something feels off? `pnpm check:deps` checks node/pnpm/git are 
 and reports on `gh`/`claude`/playwright (each optional — see below), printing the exact
 install command for anything missing (`scripts/check-deps.sh`).
 
-First run has no data — seed the demo catalog (agents, pipelines, automations, …) once:
+First run has no data — seed the demo catalog (agents, workflows, automations, …) once:
 
 ```bash
 node apps/api/scripts/seed.mjs   # writes into .zibby/data (stop the API first)
@@ -45,11 +45,11 @@ node apps/api/scripts/seed.mjs   # writes into .zibby/data (stop the API first)
 Optional, feature-specific (each degrades gracefully when absent — `pnpm check:deps` tells
 you exactly which is missing and how to fix it):
 
-| Tool                                    | Needed for                                                        |
-| ---------------------------------------- | ------------------------------------------------------------------ |
-| [`gh`](https://cli.github.com) (authed) | Top-bar open-PR panel (`SelfFreshness`)                            |
-| [`claude`](https://claude.com/claude-code) CLI | Real agent/pipeline runs, chat, triage, briefing (`AGENT_RUNNER_MODE=claude`) — not needed for the default demo mode |
-| Playwright chromium browser             | `pnpm e2e` (`pnpm exec playwright install chromium`)                |
+| Tool                                           | Needed for                                                                                                           |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| [`gh`](https://cli.github.com) (authed)        | Top-bar open-PR panel (`SelfFreshness`)                                                                              |
+| [`claude`](https://claude.com/claude-code) CLI | Real agent/workflow runs, chat, triage, briefing (`AGENT_RUNNER_MODE=claude`) — not needed for the default demo mode |
+| Playwright chromium browser                    | `pnpm e2e` (`pnpm exec playwright install chromium`)                                                                 |
 
 > **pnpm is the canonical package manager** for this monorepo (it uses the
 > `workspace:` protocol and `pnpm-lock.yaml`). Use `pnpm`, not `npm`.
@@ -58,8 +58,8 @@ you exactly which is missing and how to fix it):
 pnpm install
 ```
 
-| Command           | What it does                                            |
-| ----------------- | ------------------------------------------------------- |
+| Command            | What it does                                            |
+| ------------------ | ------------------------------------------------------- |
 | `pnpm check:deps`  | Check external CLI dependencies are installed           |
 | `pnpm web:dev`     | Start the web app at http://localhost:3000              |
 | `pnpm web:build`   | Production build of the web app                         |
@@ -107,9 +107,9 @@ Override the port with `PORT=<n>`.
 
 ## Real mode runbook
 
-Agent runs always spawn a real `claude -p` session. Pipelines additionally support a
+Agent runs always spawn a real `claude -p` session. Workflows additionally support a
 deterministic **demo mode** (the default), which is the test/e2e seam — stages run a
-token-free demo script instead of claude. Real mode for pipelines:
+token-free demo script instead of claude. Real mode for workflows:
 
 ```bash
 AGENT_RUNNER_MODE=claude pnpm api:dev
@@ -171,8 +171,8 @@ Copy `apps/api/.env.example` → `apps/api/.env` and `apps/web/.env.example` →
 
 ### Data storage
 
-| Variable         | Default         | Description                                                                                                                                                                                                                                                         |
-| ---------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Variable         | Default       | Description                                                                                                                                                                                                                                                         |
+| ---------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ZIBBY_DATA_DIR` | `.zibby/data` | Root for all file-backed stores. Relative paths resolve from the repo root. Every `*_DIR` variable below can still override an individual store on top of this. The `:test` scripts (`api:dev:test`, `api:start:test`, `seed:test`) set this to `.zibby/data-test`. |
 
 Individual store directories default to the corresponding subfolder of `ZIBBY_DATA_DIR` but can each be overridden independently:
@@ -183,8 +183,8 @@ Individual store directories default to the corresponding subfolder of `ZIBBY_DA
 | `AGENT_RUNS_DIR`    | `agents/runs`                          |
 | `SKILLS_DIR`        | `skills`                               |
 | `SKILL_RUNS_DIR`    | `skills/runs`                          |
-| `PIPELINES_DIR`     | `pipelines`                            |
-| `PIPELINE_RUNS_DIR` | `pipelines/runs`                       |
+| `WORKFLOWS_DIR`     | `workflows`                            |
+| `WORKFLOW_RUNS_DIR` | `workflows/runs`                       |
 | `APPROVALS_DIR`     | `approvals`                            |
 | `AUTOMATIONS_DIR`   | `automations`                          |
 | `PROJECTS_DIR`      | `projects`                             |
@@ -210,9 +210,9 @@ ZIBBY only appends episodic lines and links learned notes.
 | `AGENT_DEMO_STEPS`           | `25`                         | Number of steps emitted by a demo agent/skill run.                                                                                             |
 | `AGENT_DEMO_DELAY_MS`        | `1000`                       | Delay in milliseconds between demo steps.                                                                                                      |
 | `AGENT_DEMO_SCRIPT`          | _(bundled `demo-task.mjs`)_  | Path to a custom demo-task script used for agent and skill runs.                                                                               |
-| `PIPELINE_DEMO_STAGE_SCRIPT` | _(bundled `demo-stage.mjs`)_ | Path to a custom demo-stage script used for pipeline runs.                                                                                     |
-| `PIPELINE_DEMO_FAIL_PHASES`  | _(empty)_                    | Comma-separated phase IDs that should fail during demo runs — useful for testing failure paths.                                                |
-| `PIPELINE_DEMO_EMIT_LEARNED` | _(empty)_                    | Phase ID whose demo stage also writes a deterministic `learned.md` next to its produces file — exercises the memory recorder's delivery trace. |
+| `WORKFLOW_DEMO_STAGE_SCRIPT` | _(bundled `demo-stage.mjs`)_ | Path to a custom demo-stage script used for workflow runs.                                                                                     |
+| `WORKFLOW_DEMO_FAIL_PHASES`  | _(empty)_                    | Comma-separated phase IDs that should fail during demo runs — useful for testing failure paths.                                                |
+| `WORKFLOW_DEMO_EMIT_LEARNED` | _(empty)_                    | Phase ID whose demo stage also writes a deterministic `learned.md` next to its produces file — exercises the memory recorder's delivery trace. |
 
 ### Scheduler
 

@@ -33,7 +33,7 @@ function deriveName(text: string): string {
  * nothing else; Phase 116d redesign): the operator picks a schedule/trigger
  * (via {@link TriggerFields}) and then types the instruction straight into
  * {@link CommandLine} — which already knows how to `@`-mention an agent or
- * pipeline and attach files. There is NO dialog-owned submit button: the
+ * workflow and attach files. There is NO dialog-owned submit button: the
  * CommandLine's own send action (label overridden to "Naplánovat"/"Schedule")
  * both derives the automation's name from the typed text and persists it,
  * via `onSubmit`'s send-delegation mode.

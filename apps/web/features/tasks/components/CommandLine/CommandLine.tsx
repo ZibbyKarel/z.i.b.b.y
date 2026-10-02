@@ -29,7 +29,7 @@ import type {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAgentsQuery } from "../../../agents";
-import { usePipelinesQuery } from "../../../pipelines";
+import { useWorkflowsQuery } from "../../../workflows";
 import { useDepartmentsQuery } from "../../../departments/queries/useDepartmentsQuery";
 import { useTeamsQuery } from "../../../teams";
 import { useUploadTaskAttachmentsMutation } from "../../mutations/useUploadTaskAttachmentsMutation";
@@ -125,7 +125,7 @@ export interface CommandLineProps {
    * (`AutomationFormDialog`, the `DetailScreen` task-edit surface) — passes `false`
    * explicitly rather than relying on the default, per the rule below: a team tagged
    * on a task doesn't reach a run yet (needs new
-   * fields on `PipelineRunSchema`/`GoalRunSchema`/`ScheduledTaskSchema` — see
+   * fields on `WorkflowRunSchema`/`GoalRunSchema`/`ScheduledTaskSchema` — see
    * `docs/api/teams.md`), so offering the mention there would promise a scope that
    * silently does nothing. The default is opt-in (not opt-out) precisely so a
    * FUTURE caller that forgets this prop is safe by default, rather than silently
@@ -133,7 +133,7 @@ export interface CommandLineProps {
    */
   allowTeamMentions?: boolean;
   /**
-   * D-020 — opt-in: the `@`-mention picker assigns SEVERAL agents/pipelines/
+   * D-020 — opt-in: the `@`-mention picker assigns SEVERAL agents/workflows/
    * departments instead of one, each rendered as its own removable chip; `target`/
    * `onTargetChange`/`initialTarget` fall out of use in this mode (a picked routing
    * unit goes onto `mentions` instead — see `onSubmit`'s 4th argument) though
@@ -223,11 +223,11 @@ interface Mention {
  * (glyph/tone by `kind`) and build the `TaskTarget` it resolves to on pick.
  * `color` is set only for a `department` row — the mention list's rendering swaps
  * the usual `Tag` glyph for a dot tinted with the department's own brand color
- * (Phase 91), matching `PipelineOwnerChip`'s established "colored dot" pattern.
+ * (Phase 91), matching `WorkflowOwnerChip`'s established "colored dot" pattern.
  * A `team` row (Task 8) resolves to NO `TaskTarget` at all — picking it sets
  * the draft's team tag instead (see `pickMentionResult`'s branch). */
 interface MentionResult {
-  kind: "agent" | "pipeline" | "department" | "team";
+  kind: "agent" | "workflow" | "department" | "team";
   id: string;
   name: string;
   glyph: IconName;
@@ -239,7 +239,7 @@ const MAX_MENTION_TARGETS = 8;
 
 /** D-020 — the only kinds `multipleTargets` mode's mention picker ever produces
  *  (mirrors `ChatMentionTarget` in `@zibby/contracts`) — every member has `id`. */
-type MultiMentionTarget = Extract<TaskTarget, { kind: "agent" | "pipeline" | "department" }>;
+type MultiMentionTarget = Extract<TaskTarget, { kind: "agent" | "workflow" | "department" }>;
 
 /** Matches an in-progress `@query` immediately before the caret — an `@` followed
  * by word/`.`/`-` characters, anchored at the caret (`$`). Ported verbatim from
@@ -281,12 +281,12 @@ function computeRows(text: string, min: number, max: number): number {
 const MENTION_RE = /@\S+/g;
 
 /** Per-type highlight tone for a detected `@token`: a known agent name resolves
- * `accent`, a known pipeline name resolves `push` (the risk-category purple), and
+ * `accent`, a known workflow name resolves `push` (the risk-category purple), and
  * anything else (a dropped file, an unresolved name) resolves `dim`. */
 function mentionRanges(
   text: string,
   agentNames: ReadonlySet<string>,
-  pipelineNames: ReadonlySet<string>,
+  workflowNames: ReadonlySet<string>,
 ): HighlightRange[] {
   const ranges: HighlightRange[] = [];
   for (const match of text.matchAll(MENTION_RE)) {
@@ -294,7 +294,7 @@ function mentionRanges(
     const token = match[0].slice(1).toLowerCase();
     const tone: HighlightTone = agentNames.has(token)
       ? "accent"
-      : pipelineNames.has(token)
+      : workflowNames.has(token)
         ? "push"
         : "dim";
     ranges.push({ start: match.index, end: match.index + match[0].length, tone });
@@ -414,7 +414,7 @@ const CONTROLS_INSET = "8px";
  * The generic draft composer (Phase 26; restyled to the velin-b command bar in Phase
  * 31a; stripped of all task-launch machinery in Phase 118d): one growable input that
  * owns ONLY the draft — free-text description, an inline `@` search to assign an
- * agent/pipeline/department target, a `+`/pin button (and drag-and-drop) to attach
+ * agent/workflow/department target, a `+`/pin button (and drag-and-drop) to attach
  * files, highlights (path + `@token` tones), and suggestion chips — firing `onSubmit`
  * on Enter or the trailing action. Composed entirely from DS primitives plus the
  * reused {@link HighlightTextAreaField} and the `@`-mention picker ported from
@@ -510,7 +510,7 @@ export function CommandLine({
   const pendingCursorRef = useRef<number | null>(null);
 
   const { data: agents = [] } = useAgentsQuery();
-  const { data: pipelines = [] } = usePipelinesQuery();
+  const { data: workflows = [] } = useWorkflowsQuery();
   const { data: departments = [] } = useDepartmentsQuery();
   const { data: teams = [] } = useTeamsQuery();
 
@@ -592,13 +592,13 @@ export function CommandLine({
     () => new Set(agents.map((a) => (a.name ?? a.id).toLowerCase())),
     [agents],
   );
-  const pipelineNames = useMemo(
-    () => new Set(pipelines.map((p) => p.name.toLowerCase())),
-    [pipelines],
+  const workflowNames = useMemo(
+    () => new Set(workflows.map((p) => p.name.toLowerCase())),
+    [workflows],
   );
   const mentionHighlights = useMemo(
-    () => mentionRanges(text, agentNames, pipelineNames),
-    [text, agentNames, pipelineNames],
+    () => mentionRanges(text, agentNames, workflowNames),
+    [text, agentNames, workflowNames],
   );
   const highlights = useMemo(
     () => [...pathHighlights, ...mentionHighlights],
@@ -782,13 +782,13 @@ export function CommandLine({
       // see `toApiTarget`'s doc comment in `task.ts` for why a unioned-kind
       // construction stops being assignable once there are enough branches. A
       // department row's `id` is cast to `DepartmentId`: `MentionResult.id` is a plain
-      // `string` (shared with agent/pipeline rows), but for a `kind: "department"` row
+      // `string` (shared with agent/workflow rows), but for a `kind: "department"` row
       // it always came from `useDepartmentsQuery()`'s own `DepartmentId`-typed id.
       const picked: TaskTarget =
         result.kind === "agent"
           ? { kind: "agent", id: result.id, name: result.name, glyph: result.glyph }
-          : result.kind === "pipeline"
-            ? { kind: "pipeline", id: result.id, name: result.name, glyph: result.glyph }
+          : result.kind === "workflow"
+            ? { kind: "workflow", id: result.id, name: result.name, glyph: result.glyph }
             : {
                 kind: "department",
                 id: result.id as DepartmentId,
@@ -797,7 +797,7 @@ export function CommandLine({
               };
       if (multipleTargets) {
         // D-020 — append (deduplicated by kind+id), up to the contract's cap of 8.
-        // `picked` is always agent/pipeline/department in this branch (the switch
+        // `picked` is always agent/workflow/department in this branch (the switch
         // above never produces anything else) — see `MultiMentionTarget`.
         const asMulti = picked as MultiMentionTarget;
         setMentionTargets((prev) => {
@@ -875,19 +875,19 @@ export function CommandLine({
     notifyDraftChange(next);
   }
 
-  // The inline dropdown's rows — agents then pipelines, filtered live by the
+  // The inline dropdown's rows — agents then workflows, filtered live by the
   // in-progress query. Capped only as a runaway guard (50) — a real catalog
   // easily exceeds the old 6-row cap, and MenuSurface's own `scroll` +
   // `maxHeight` clamp (see `mentionMenuStyle`) is what keeps the panel itself
   // from growing past the viewport, so the list is scrollable rather than cut
   // off (ported from the velin-b reference's `mentionResults`).
-  // Phase 91: only departments with at least one owned pipeline are dispatchable —
+  // Phase 91: only departments with at least one owned workflow are dispatchable —
   // a capability-less department would only ever hit the 0-owned validation reject,
-  // so it stays out of the picker entirely (mirrors an empty agent/pipeline catalog
+  // so it stays out of the picker entirely (mirrors an empty agent/workflow catalog
   // never appearing either).
   const rosterDepartmentIds = useMemo(
-    () => new Set(pipelines.flatMap((p) => (p.department ? [p.department] : []))),
-    [pipelines],
+    () => new Set(workflows.flatMap((p) => (p.department ? [p.department] : []))),
+    [workflows],
   );
   const rosterDepartments = useMemo(
     () => departments.filter((s) => rosterDepartmentIds.has(s.id)),
@@ -904,10 +904,10 @@ export function CommandLine({
         name: a.name ?? a.id,
         glyph: (a.glyph as IconName | undefined) ?? "bot",
       }));
-    const pipelineHits: MentionResult[] = pipelines
+    const workflowHits: MentionResult[] = workflows
       .filter((p) => matchesQuery(mention.query, p.name, p.id))
       .map((p) => ({
-        kind: "pipeline" as const,
+        kind: "workflow" as const,
         id: p.id,
         name: p.name,
         glyph: "flow" as IconName,
@@ -940,8 +940,8 @@ export function CommandLine({
             glyph: "brain" as IconName,
           }))
       : [];
-    return [...agentHits, ...pipelineHits, ...departmentHits, ...teamHits].slice(0, 50);
-  }, [mention, agents, pipelines, rosterDepartments, teams, allowTeamMentions]);
+    return [...agentHits, ...workflowHits, ...departmentHits, ...teamHits].slice(0, 50);
+  }, [mention, agents, workflows, rosterDepartments, teams, allowTeamMentions]);
   // Clamp at read time so a result list that shrank between renders never
   // leaves the keyboard highlight out of range.
   const activeMentionIndex =
@@ -1188,7 +1188,7 @@ export function CommandLine({
                               tone={
                                 result.kind === "agent"
                                   ? "accent"
-                                  : result.kind === "pipeline"
+                                  : result.kind === "workflow"
                                     ? "push"
                                     : // Fix round 2: a team row is the ONLY remaining
                                       // kind reaching this branch (department renders its

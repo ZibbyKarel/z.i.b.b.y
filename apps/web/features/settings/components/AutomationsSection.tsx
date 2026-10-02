@@ -15,7 +15,7 @@ import { SystemAutomationRow } from "./SystemAutomationRow";
 /**
  * `target.type` values a description exists for — the allowlist a target's type is
  * checked against before building an i18n key, so an unknown/future target type (or
- * `pipeline`/`agent`, which aren't system-automation targets) never reaches `t()` and
+ * `workflow`/`agent`, which aren't system-automation targets) never reaches `t()` and
  * next-intl never throws on a missing message.
  */
 const DESCRIBABLE_TARGET_TYPES = [

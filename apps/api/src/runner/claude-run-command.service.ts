@@ -70,7 +70,7 @@ export interface ClaudeRunOptions {
    * inlines every entry's full instruction body into a SINGLE argv string, so passing
    * the whole agent LIBRARY (every stored agent) overflows the OS argv limit once the
    * library grows past a few hundred KB — the run dies with `spawn E2BIG` before
-   * `claude` ever starts. The caller curates the relevant set (a pipeline passes its
+   * `claude` ever starts. The caller curates the relevant set (a workflow passes its
    * own stage agents); ZIBBY's operational core ({@link CORE_DELEGATE_IDS}) is always
    * folded in, and the result is capped at {@link MAX_CATALOG_AGENTS}. Omit it for a
    * small/standalone run — a library at or under the cap is passed through unchanged.

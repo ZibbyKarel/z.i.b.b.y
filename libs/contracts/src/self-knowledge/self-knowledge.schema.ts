@@ -7,7 +7,7 @@ import { IsoDateTimeSchema } from "../common.schema";
  */
 export const SelfKnowledgeSectionsSchema = z.object({
   agents: z.number().int().nonnegative(),
-  pipelines: z.number().int().nonnegative(),
+  workflows: z.number().int().nonnegative(),
   /** System floor rules + the global gate-rule catalog, combined. */
   gateRules: z.number().int().nonnegative(),
   channels: z.number().int().nonnegative(),
@@ -33,7 +33,7 @@ export type SelfKnowledgeSections = z.infer<typeof SelfKnowledgeSectionsSchema>;
 
 /**
  * The machine-generated self-knowledge payload (Fáze 1): a Markdown snapshot of
- * ZIBBY's own agents/pipelines/gate rules/channels, plus whether the vault note
+ * ZIBBY's own agents/workflows/gate rules/channels, plus whether the vault note
  * has drifted from what a fresh compose would produce right now. `markdown` is
  * the full note body (AUTO blocks + any operator content already merged);
  * `drift` compares only the AUTO blocks (the `META` timestamp block is excluded

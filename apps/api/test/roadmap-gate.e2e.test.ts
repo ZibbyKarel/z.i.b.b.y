@@ -10,7 +10,7 @@ import { seedEmployeeFixture } from "./fixtures/employee-fixture";
 
 /**
  * 125e — the play/override/restart/resume routes + the dependency gate, exercised
- * end to end. `AGENTS_DIR`/`PIPELINES_DIR` are fresh+empty so a play always routes
+ * end to end. `AGENTS_DIR`/`WORKFLOWS_DIR` are fresh+empty so a play always routes
  * to the orchestrator deterministically (same posture as `tasks.e2e.test.ts`'s
  * "unmatched task" case) — this test is about the GATE's own wiring (lifecycle
  * transitions, status codes, dependency ordering), not classification.
@@ -21,7 +21,7 @@ describe("Roadmap gate API (e2e)", () => {
   let projectsDir: string;
   let agentsDir: string;
   let employeesDir: string;
-  let pipelinesDir: string;
+  let workflowsDir: string;
   let tasksDir: string;
   let projectPath: string;
   const projectId = "acme";
@@ -35,7 +35,7 @@ describe("Roadmap gate API (e2e)", () => {
     // agent ids don't exist in THIS suite's isolated catalog), which seats "dev"
     // at stage 1 with zero owned units once ownership is employee-based.
     employeesDir = await fs.mkdtemp(path.join(os.tmpdir(), "roadmap-gate-e2e-employees-"));
-    pipelinesDir = await fs.mkdtemp(path.join(os.tmpdir(), "roadmap-gate-e2e-pipelines-"));
+    workflowsDir = await fs.mkdtemp(path.join(os.tmpdir(), "roadmap-gate-e2e-workflows-"));
     tasksDir = await fs.mkdtemp(path.join(os.tmpdir(), "roadmap-gate-e2e-tasks-"));
     // A real (but non-git) directory — `ProjectLocalService.resolveForRun` degrades
     // to sandbox-only for a non-git path, so dispatch never needs a real remote.
@@ -44,7 +44,7 @@ describe("Roadmap gate API (e2e)", () => {
     process.env.PROJECTS_DIR = projectsDir;
     process.env.AGENTS_DIR = agentsDir;
     process.env.EMPLOYEES_DIR = employeesDir;
-    process.env.PIPELINES_DIR = pipelinesDir;
+    process.env.WORKFLOWS_DIR = workflowsDir;
     process.env.TASKS_DIR = tasksDir;
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
@@ -107,7 +107,7 @@ describe("Roadmap gate API (e2e)", () => {
       projectsDir,
       agentsDir,
       employeesDir,
-      pipelinesDir,
+      workflowsDir,
       tasksDir,
       projectPath,
     ]) {
@@ -118,7 +118,7 @@ describe("Roadmap gate API (e2e)", () => {
       "PROJECTS_DIR",
       "AGENTS_DIR",
       "EMPLOYEES_DIR",
-      "PIPELINES_DIR",
+      "WORKFLOWS_DIR",
       "TASKS_DIR",
     ]) {
       delete process.env[k];

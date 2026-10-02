@@ -6,7 +6,7 @@
     "gates": "Approval rules",
     "skills": "Skills",
     "agents": "Agents",
-    "pipelines": "Pipelines",
+    "workflows": "Workflows",
     "integrations": "Integrations",
     "automations": "Automations",
     "memory": "Memory",
@@ -221,13 +221,13 @@
       "dropHint": "Drop here — added as an @file in the text",
       "chrome": {
         "label": "Say what you need · plain language",
-        "hint": "@ searches agents, pipelines, departments and teams · drag a file, or use the paperclip",
-        "hintNoTeams": "@ searches agents, pipelines and departments · drag a file, or use the paperclip"
+        "hint": "@ searches agents, workflows, departments and teams · drag a file, or use the paperclip",
+        "hintNoTeams": "@ searches agents, workflows and departments · drag a file, or use the paperclip"
       },
       "ack": {
         "kind": {
           "agent": "agent",
-          "pipeline": "pipeline",
+          "workflow": "workflow",
           "goal": "goal loop",
           "department": "department",
           "orchestrator": "orchestrator",
@@ -250,12 +250,12 @@
       },
       "makerKind": {
         "agent": "agent",
-        "pipeline": "pipeline"
+        "workflow": "workflow"
       },
       "maker": {
         "label": "Maker",
-        "hint": "The agent or pipeline that does the work each iteration.",
-        "placeholder": "Pick an agent or pipeline…"
+        "hint": "The agent or workflow that does the work each iteration.",
+        "placeholder": "Pick an agent or workflow…"
       },
       "verifier": {
         "label": "Verifier",
@@ -298,7 +298,7 @@
     "title": "Maker ⇄ verifier loops",
     "subtitle": "A goal repeats until the verifier passes or the run budget runs out.",
     "emptyTitle": "No goals yet",
-    "emptyBody": "Create a goal from a maker (agent or pipeline) and a verifier to start a loop.",
+    "emptyBody": "Create a goal from a maker (agent or workflow) and a verifier to start a loop.",
     "noProject": "—",
     "resume": "Resume",
     "stop": "Stop",
@@ -408,7 +408,7 @@
   },
   "loading": {
     "tagline": "Intelligent Automation Platform",
-    "orchestrator": "Mounting pipeline orchestrator…",
+    "orchestrator": "Mounting workflow orchestrator…",
     "knowledge": "Syncing knowledge base…",
     "gates": "Calibrating gate rules…",
     "ready": "System ready."
@@ -459,8 +459,8 @@
       "agents": {
         "label": "Add agent"
       },
-      "pipelines": {
-        "label": "Add pipeline"
+      "workflows": {
+        "label": "Add workflow"
       }
     },
     "liveLog": "Live log"
@@ -484,15 +484,15 @@
     "loadErrorDescription": "The API connection failed — your agents are fine, they're just not reachable right now. Check the connection and try again.",
     "retry": "Try again",
     "emptyTitle": "No agents yet",
-    "emptyDescription": "Agents are .agent.md definition files — model, thinking level, and tools. You compose agents into pipelines in the Pipelines section.",
+    "emptyDescription": "Agents are .agent.md definition files — model, thinking level, and tools. You compose agents into workflows in the Workflows section.",
     "emptyHint": "// creates ~/zibby/agents/'<name>'.agent.md",
     "title": "Agents",
-    "countSummary": "{count, plural, =0 {no agents} one {# agent} other {# agents}} · shared pool for pipelines",
+    "countSummary": "{count, plural, =0 {no agents} one {# agent} other {# agents}} · shared pool for workflows",
     "run": "Run",
     "openAria": "Open {name}",
-    "pipelineUsage": "{count} pipeline",
-    "usedInPipelines": "Used in pipelines",
-    "notInPipeline": "Not in any pipeline yet — free to use.",
+    "workflowUsage": "{count} workflow",
+    "usedInWorkflows": "Used in workflows",
+    "notInWorkflow": "Not in any workflow yet — free to use.",
     "phaseCount": "{count, plural, one {# phase} other {# phases}}",
     "allowedTools": "Allowed tools",
     "tabBasics": "Basics",
@@ -669,15 +669,15 @@
       "dismiss": "Dismiss"
     }
   },
-  "pipelines": {
-    "addPipeline": "Add pipeline",
+  "workflows": {
+    "addWorkflow": "Add workflow",
     "verify": "verify",
-    "runPipeline": "Run pipeline",
-    "title": "Pipelines",
-    "countSummary": "{count, plural, =0 {no pipelines} one {# pipeline} other {# pipelines}} · multi-agent delivery chains",
-    "emptyTitle": "No pipelines yet",
-    "emptyDescription": "Pipelines chain agents together via files. Add the first one and compose the phases in the editor.",
-    "emptyHint": "// creates ~/zibby/pipelines/'<name>'.pipeline.md",
+    "runWorkflow": "Run workflow",
+    "title": "Workflows",
+    "countSummary": "{count, plural, =0 {no workflows} one {# workflow} other {# workflows}} · multi-agent delivery chains",
+    "emptyTitle": "No workflows yet",
+    "emptyDescription": "Workflows chain agents together via files. Add the first one and compose the phases in the editor.",
+    "emptyHint": "// creates ~/zibby/workflows/'<name>'.workflow.md",
     "branchNote": "output → isolated branch · PR for morning review",
     "chainTitle": "phase chain · files = handoff",
     "outputsTitle": "output · what happens to the finished work",
@@ -691,7 +691,7 @@
     "stateRunning": "running",
     "uploadImage": "Upload image",
     "removeImage": "Remove image",
-    "uploadPipelineAvatar": "Upload pipeline image",
+    "uploadWorkflowAvatar": "Upload workflow image",
     "avatarTooLarge": "Image is too large (max ~200 KB).",
     "outputType": "Output type",
     "outputTypeOption": {
@@ -738,7 +738,7 @@
     "originAgentFactory": "Agent Factory",
     "openSource": "Open source ↗"
   },
-  "pipelineRun": {
+  "workflowRun": {
     "title": "Run · {name}",
     "subtitle": "{count} phases · multi-agent background run"
   },
@@ -784,18 +784,18 @@
       "subtitle": "creates .agent.md with a definition (model, thinking, tools)",
       "submitLabel": "Create agent"
     },
-    "pipeline": {
-      "title": "New pipeline",
-      "subtitle": "creates .pipeline.md · chain agents via handoff files",
-      "submitLabel": "Create pipeline",
-      "nameLabel": "Pipeline name",
+    "workflow": {
+      "title": "New workflow",
+      "subtitle": "creates .workflow.md · chain agents via handoff files",
+      "submitLabel": "Create workflow",
+      "nameLabel": "Workflow name",
       "namePlaceholder": "e.g. Build Feature",
       "descLabel": "Description",
-      "descPlaceholder": "What the pipeline does…",
+      "descPlaceholder": "What the workflow does…",
       "handoffHint": "written by this agent · the next agent picks it up as its assignment",
       "addStep": "Add agent",
       "noAgents": "Create an agent first — the chain needs at least one.",
-      "editTitle": "Edit pipeline",
+      "editTitle": "Edit workflow",
       "saveLabel": "Save changes",
       "typeVerify": "verify (checks)",
       "paletteTitle": "// agents · pool",
@@ -828,16 +828,16 @@
         "produces": "add an output file",
         "rework": "rework must target an earlier node",
         "commands": "add at least one command",
-        "pipeline": "pick a workflow for every workflow step"
+        "workflow": "pick a workflow for every workflow step"
       },
       "typeTool": "tool (script)",
       "addVerify": "Add verify",
       "addTool": "Add tool",
-      "typePipeline": "workflow (sub-run)",
-      "addPipeline": "Add workflow",
-      "pipelineLabel": "Workflow to run",
-      "pipelinePlaceholder": "Choose a workflow…",
-      "pipelineNone": "no workflow chosen",
+      "typeWorkflow": "workflow (sub-run)",
+      "addWorkflow": "Add workflow",
+      "workflowLabel": "Workflow to run",
+      "workflowPlaceholder": "Choose a workflow…",
+      "workflowNone": "no workflow chosen",
       "commandsNone": "no commands yet",
       "stepsTitle": "// steps · settings",
       "commandsLabel": "Commands",
@@ -876,7 +876,7 @@
   "defaults": {
     "skill": "New skill",
     "agent": "New agent",
-    "pipeline": "New pipeline",
+    "workflow": "New workflow",
     "command": "New command"
   },
   "runLog": {
@@ -981,11 +981,11 @@
     },
     "selfKnowledge": {
       "title": "Self-Knowledge",
-      "hint": "A machine-generated note of what ZIBBY knows about itself — agents, pipelines, gate rules, channels. Produced by `pnpm self-knowledge:generate`; this is a read-only preview. The same note is also visible in Memory as an ordinary vault note.",
+      "hint": "A machine-generated note of what ZIBBY knows about itself — agents, workflows, gate rules, channels. Produced by `pnpm self-knowledge:generate`; this is a read-only preview. The same note is also visible in Memory as an ordinary vault note.",
       "upToDate": "Up to date",
       "drift": "Drifted — run pnpm self-knowledge:generate",
       "generatedAt": "Generated: {time}",
-      "sections": "{agents} agents · {pipelines} pipelines · {gateRules} gate rules · {channels} channels"
+      "sections": "{agents} agents · {workflows} workflows · {gateRules} gate rules · {channels} channels"
     },
     "preferences": "Preferences",
     "language": "Interface language",
@@ -1043,7 +1043,7 @@
       "groups": {
         "tasks": "Tasks",
         "runs": "Runs",
-        "pipelines": "Pipelines",
+        "workflows": "Workflows",
         "goals": "Goals",
         "approvals": "Approvals",
         "channels": "Channels",
@@ -1116,7 +1116,7 @@
     "metaStarted": "started",
     "metaScheduled": "fires",
     "metaTarget": "target",
-    "metaPipeline": "pipeline",
+    "metaWorkflow": "workflow",
     "metaCost": "cost",
     "metaDuration": "run duration",
     "metaAgent": "agent",
@@ -1162,7 +1162,7 @@
     },
     "kind": {
       "agent": "skill",
-      "pipeline": "pipeline",
+      "workflow": "workflow",
       "goal": "goal",
       "scheduled": "scheduled task"
     },
@@ -1206,7 +1206,7 @@
     },
     "goalMakerKind": {
       "agent": "agent",
-      "pipeline": "pipeline"
+      "workflow": "workflow"
     },
     "goalOpenLog": "log",
     "togglePhaseLog": "show or hide this phase's log",
@@ -1407,7 +1407,7 @@
       "budgetWeeklyCostCapUsd": "$ / week",
       "budgetMonthlyCostCapUsd": "$ / month",
       "checks": "Verify checks",
-      "checksHint": "Shell commands the pipeline verify phase runs in this project, one per line (joined with &&). Blank → the shared default checks.",
+      "checksHint": "Shell commands the workflow verify phase runs in this project, one per line (joined with &&). Blank → the shared default checks.",
       "env": "Environment variables",
       "envHint": "Non-secret env vars injected into the project’s runs.",
       "envAdd": "Add variable",
@@ -1666,7 +1666,7 @@
     "cronSection": "Time triggers · cron",
     "eventSection": "Event triggers · event",
     "emptyTitle": "No automations yet",
-    "emptyDescription": "Wire a cron schedule or an event to an agent, pipeline, or briefing — and ZIBBY starts working on its own. Every external-effect action still passes the approval gate.",
+    "emptyDescription": "Wire a cron schedule or an event to an agent, workflow, or briefing — and ZIBBY starts working on its own. Every external-effect action still passes the approval gate.",
     "active": "active",
     "off": "off",
     "edit": "Edit",
@@ -1680,7 +1680,7 @@
     "triggerCron": "cron",
     "triggerEvent": "event",
     "targetAgent": "agent",
-    "targetPipeline": "pipeline",
+    "targetWorkflow": "workflow",
     "targetBriefing": "briefing",
     "targetMemoryDistill": "Memory distillation",
     "targetPatternExtract": "Pattern extraction",
@@ -1703,7 +1703,7 @@
     "eventPlaceholder": "Select events…",
     "eventRemove": "Remove event",
     "scheduleAction": "Schedule",
-    "commandLinePlaceholder": "Describe what the automation should do — @mention an agent or pipeline, attach files…",
+    "commandLinePlaceholder": "Describe what the automation should do — @mention an agent or workflow, attach files…",
     "cancel": "Cancel",
     "close": "Close",
     "create": "Create automation",
@@ -1828,12 +1828,12 @@
       "send": "Send"
     },
     "mention": {
-      "ariaLabel": "Search agents and pipelines to mention",
+      "ariaLabel": "Search agents and workflows to mention",
       "empty": "Nothing found",
       "removeAria": "Remove {name}",
       "sections": {
         "agents": "Agents",
-        "pipelines": "Pipelines"
+        "workflows": "Workflows"
       }
     },
     "runCard": {
@@ -1855,7 +1855,7 @@
       "empty": "Nothing found",
       "kind": {
         "agent": "Agent",
-        "pipeline": "Pipeline",
+        "workflow": "Workflow",
         "department": "Department",
         "task": "Task",
         "memory": "Memory",
@@ -1924,7 +1924,7 @@
       }
     },
     "roster": {
-      "emptyTitle": "No pipeline yet"
+      "emptyTitle": "No workflow yet"
     },
     "aktivita": {
       "emptyTitle": "No activity yet"
@@ -1939,7 +1939,7 @@
       "kind": {
         "pr": "PR"
       },
-      "emptyTitle": "This department doesn't own a pipeline yet"
+      "emptyTitle": "This department doesn't own a workflow yet"
     },
     "create": {
       "title": "New department",
@@ -1980,7 +1980,7 @@
     "tabs": {
       "team": "Team",
       "subtasks": "Subtasks",
-      "pipelines": "Pipelines",
+      "workflows": "Workflows",
       "skills": "Skills",
       "integrations": "Integrations",
       "automations": "Automations",
@@ -2010,9 +2010,9 @@
       "colStep": "Step",
       "colState": "State"
     },
-    "pipelines": {
-      "emptyTitle": "No pipelines yet",
-      "emptyDescription": "This department doesn't own a pipeline yet."
+    "workflows": {
+      "emptyTitle": "No workflows yet",
+      "emptyDescription": "This department doesn't own a workflow yet."
     },
     "registryLink": "Manage in registry →",
     "registryDescription": "This list is managed in the global registry, not per department.",
@@ -2408,7 +2408,7 @@
       "company": "Company",
       "team": "Team",
       "project": "Project",
-      "pipeline": "Pipeline",
+      "workflow": "Workflow",
       "skill": "Skill",
       "mcp": "MCP server",
       "hook": "Hook",
@@ -2428,7 +2428,7 @@
       "companies": "Companies",
       "teams": "Teams",
       "projects": "Projects",
-      "pipelines": "Pipelines",
+      "workflows": "Workflows",
       "registries": "Registries",
       "automations": "Automations",
       "vault": "Vault",

@@ -10,7 +10,7 @@ export interface PinButtonProps {
   id: string;
 }
 
-/** Top-right pin/unpin toggle for an agent/pipeline/chain detail page —
+/** Top-right pin/unpin toggle for an agent/workflow/chain detail page —
  *  same action-row position as Run/Edit/Delete on every detail screen. */
 export function PinButton({ kind, id }: PinButtonProps) {
   const t = useTranslations("pins");

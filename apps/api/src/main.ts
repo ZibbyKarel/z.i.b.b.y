@@ -15,17 +15,19 @@ import {
   healthContract,
   limitsContract,
   memoryContract,
-  pipelineRunsContract,
-  pipelinesContract,
   registriesContract,
   roadmapContract,
   selfKnowledgeContract,
   skillsContract,
   tasksContract,
+  workflowRunsContract,
+  workflowsContract,
 } from "@zibby/contracts";
 import * as swaggerUi from "swagger-ui-express";
 import { AppModule } from "./app.module";
+import { resolveDataRoot } from "./shared/data-dir";
 import { LoggerService } from "./shared/logging/logger.service";
+import { migrateWorkflowRename } from "./shared/migrations/workflow-rename";
 
 // Compose the resource contracts into one router purely for documentation. Each
 // child already carries its own `/api` prefix, so the parent adds none — paths
@@ -35,8 +37,8 @@ const apiContract = initContract().router({
   agentRuns: agentRunsContract,
   categories: categoriesContract,
   skills: skillsContract,
-  pipelines: pipelinesContract,
-  pipelineRuns: pipelineRunsContract,
+  workflows: workflowsContract,
+  workflowRuns: workflowRunsContract,
   approvals: approvalsContract,
   gates: gatesContract,
   memory: memoryContract,
@@ -50,6 +52,13 @@ const apiContract = initContract().router({
 });
 
 async function bootstrap(): Promise<void> {
+  // The pipeline → workflow rename moved/rewrote persisted data: migrate once,
+  // BEFORE any module reads the data root (idempotent; a failure must not stop boot).
+  await migrateWorkflowRename(resolveDataRoot(), (m) => new Logger("Migration").log(m)).catch(
+    (err: unknown) =>
+      new Logger("Migration").error(`workflow-rename migration failed: ${String(err)}`),
+  );
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Raise the JSON body limit above the Express default (100 kb): entity avatars /

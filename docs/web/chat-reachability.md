@@ -30,16 +30,16 @@ without leaving the design).
 | Companies   | `/companies`   | `/companies/[id]`, `/companies/new`                                              | ✅ "Firmy"        | list header's Add action → `/companies/new`                                                                                                       |
 | Projects    | `/projects`    | `/projects/[id]`, `/projects/new`, `/projects/[id]/integrations/[integrationId]` | ✅ "Projekty"     | list header's Add action → `/projects/new`; project's own integrations panel → nested integration detail                                          |
 | Agents      | `/agents`      | `/agents/[id]`                                                                   | ✅ "Agenti"       | department drawer **RosterTab** card → `/agents/[id]`; ⌘K palette agent pick → **dialog**, no route change                                        |
-| Pipelines   | `/pipelines`   | `/pipelines/[id]`                                                                | ✅ "Orchestrace"  | department drawer **RosterTab** renders owned pipelines inline (canvas, no navigation) + "Přidat pipeline"; ⌘K palette pipeline pick → **dialog** |
+| Workflows   | `/workflows`   | `/workflows/[id]`                                                                | ✅ "Orchestrace"  | department drawer **RosterTab** renders owned workflows inline (canvas, no navigation) + "Přidat workflow"; ⌘K palette workflow pick → **dialog** |
 | Skills      | `/skills`      | `/skills/[id]`                                                                   | ✅ "Skilly"       | —                                                                                                                                                 |
 | Commands    | `/commands`    | `/commands/[id]`                                                                 | ✅ "Příkazy"      | —                                                                                                                                                 |
 | MCP servers | `/mcp`         | `/mcp/[id]`                                                                      | ✅ "MCP servery"  | —                                                                                                                                                 |
 | Hooks       | `/hooks`       | `/hooks/[id]`                                                                    | ✅ "Hooky"        | —                                                                                                                                                 |
 | Automations | `/automations` | `/automations/[id]`                                                              | ✅ "Automatizace" | —                                                                                                                                                 |
 
-Live-verified one full hop: dock "Orchestrace" → `/pipelines` (8 pipelines
+Live-verified one full hop: dock "Orchestrace" → `/workflows` (8 workflows
 listed) → clicked the "Content Campaign" row → landed on
-`/pipelines/content-campaign`. The other nine pairs were confirmed at the code
+`/workflows/content-campaign`. The other nine pairs were confirmed at the code
 level (`router.push(`/<section>/${id}`)` wired to each list's row-select
 callback) rather than clicked individually — same recipe, same DS list
 pattern, all mechanical F3–F6 conversions per `docs/hud2chat/PROGRESS.md`.
@@ -83,7 +83,7 @@ suggests:
    right now. With zero pending approvals, ⌘K's gates section has zero items,
    so there is nothing to click — confirmed live by opening the palette and
    searching (empty query shows nothing at all pre-existing behaviour; typing
-   a query that matches agents/pipelines/memory shows those sections, but no
+   a query that matches agents/workflows/memory shows those sections, but no
    "gates" section ever appeared, because no approval matched and none exist).
 
 So in the **current, idle-demo state of this environment**, there is no click

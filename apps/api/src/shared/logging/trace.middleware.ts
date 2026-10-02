@@ -15,7 +15,7 @@ export const TRACE_HEADER = "x-trace-id";
  *
  * Applied for every route by {@link LoggingModule}'s `configure`, so it runs for
  * both the production bootstrap and the e2e test harness (which never executes
- * `main.ts`), ahead of the rest of the Nest pipeline — interceptors and the
+ * `main.ts`), ahead of the rest of the Nest workflow — interceptors and the
  * exception filter included.
  */
 export function createTraceMiddleware(trace: TraceContextService) {

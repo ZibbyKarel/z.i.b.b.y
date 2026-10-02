@@ -64,7 +64,7 @@ vi.mock("./mutations", () => ({
 // component: stub every query/mutation it reads so mounting never hits the
 // network, but let the component itself run for real.
 vi.mock("../agents/queries", () => ({ useAgentsQuery: () => ({ data: [] }) }));
-vi.mock("../pipelines/queries", () => ({ usePipelinesQuery: () => ({ data: [] }) }));
+vi.mock("../workflows/queries", () => ({ useWorkflowsQuery: () => ({ data: [] }) }));
 vi.mock("../departments/queries/useDepartmentsQuery", () => ({
   useDepartmentsQuery: () => ({ data: [] }),
   getDepartmentsQueryKey: () => ["departments"],

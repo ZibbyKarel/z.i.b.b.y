@@ -6,7 +6,7 @@ import { AgentRunnerService } from "../agents/agent-runner.service";
 import { BriefingService } from "../briefing/briefing.service";
 import { MemoryDistillerService } from "../memory/memory-distiller.service";
 import { PatternExtractorService } from "../patterns/pattern-extractor.service";
-import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
+import { WorkflowRunnerService } from "../workflows/workflow-runner.service";
 import { GapDetectorService } from "../gaps/gap-detector.service";
 import { WatcherHealthRegistry } from "../health/watcher-health.registry";
 import { ArchService } from "../arch/arch.service";
@@ -44,7 +44,7 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
   constructor(
     private readonly storage: AutomationsStorageService,
     private readonly agentRunner: AgentRunnerService,
-    private readonly pipelineRunner: PipelineRunnerService,
+    private readonly workflowRunner: WorkflowRunnerService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
     private readonly briefing: BriefingService,
@@ -164,13 +164,13 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
         const run = await this.agentRunner.start(target.agentId, prompt ?? "", "automation");
         return run.runId;
       }
-      case "pipeline": {
-        // Phase 116b: the automation's free-text prompt rides as the pipeline's
-        // first-phase input (`PipelineRunnerService.start`'s trailing `input` param)
-        // — the same seam a pipeline's input already uses. Absent for every
+      case "workflow": {
+        // Phase 116b: the automation's free-text prompt rides as the workflow's
+        // first-phase input (`WorkflowRunnerService.start`'s trailing `input` param)
+        // — the same seam a workflow's input already uses. Absent for every
         // automation predating a prompt (no behaviour change).
-        const run = await this.pipelineRunner.start(
-          target.pipelineId,
+        const run = await this.workflowRunner.start(
+          target.workflowId,
           undefined,
           undefined,
           undefined,
@@ -178,7 +178,7 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
           undefined,
           prompt,
         );
-        return run.pipelineRunId;
+        return run.workflowRunId;
       }
       case "briefing": {
         // Deterministic assembly, not a claude run — dispatch straight to the
@@ -214,7 +214,7 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
       }
       case "task": {
         // Phase 116b — the "prompt automation": fire through the EXISTING task
-        // pipeline exactly like the New Task dialog, reusing classification, the
+        // workflow exactly like the New Task dialog, reusing classification, the
         // orchestrator fallback, attribution, the budget/limit/concurrency guard,
         // the approval gate, attachment feeding and toolGrants. `target.target`
         // (an @-mentioned run target) is threaded BOTH into the input and as the

@@ -1,4 +1,4 @@
-import type { Agent, Department, GateRule, GlobalGateRule, Pipeline } from "@zibby/contracts";
+import type { Agent, Department, GateRule, GlobalGateRule, Workflow } from "@zibby/contracts";
 import { describe, expect, it } from "vitest";
 import {
   type SelfKnowledgeComposerInput,
@@ -14,7 +14,7 @@ const agent: Agent = {
   instructions: "Be precise.",
 };
 
-const pipeline: Pipeline = {
+const workflow: Workflow = {
   id: "build-app",
   name: "Build App",
   desc: "The delivery loop.",
@@ -50,7 +50,7 @@ const department: Department = {
   name: "Dev",
   tagline: "Kovárna doručení",
   mandate:
-    "Orchestrace delivery pipeline: Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor.",
+    "Orchestrace delivery workflow: Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor.",
   color: "#f97316",
   division: "engineering",
   icon: "code",
@@ -71,7 +71,7 @@ function baseInput(
 ): SelfKnowledgeComposerInput {
   return {
     agents: [agent],
-    pipelines: [pipeline],
+    workflows: [workflow],
     departments: [department],
     gateRules: [catalogRule],
     policyFloor: [floorRule],
@@ -86,7 +86,7 @@ describe("composeSelfKnowledge", () => {
     const { sections } = composeSelfKnowledge(baseInput());
     expect(sections).toEqual({
       agents: 1,
-      pipelines: 1,
+      workflows: 1,
       gateRules: 2,
       channels: 2,
       departments: 1,
@@ -99,7 +99,7 @@ describe("composeSelfKnowledge", () => {
     for (const key of [
       "META",
       "AGENTS",
-      "PIPELINES",
+      "WORKFLOWS",
       "DEPARTMENTS",
       "GATES",
       "CHANNELS",
@@ -110,12 +110,12 @@ describe("composeSelfKnowledge", () => {
     }
   });
 
-  it("includes agent/pipeline/department/gate/channel content in their respective blocks", () => {
+  it("includes agent/workflow/department/gate/channel content in their respective blocks", () => {
     const { markdown } = composeSelfKnowledge(baseInput());
     expect(markdown).toContain("koder");
     expect(markdown).toContain("build-app");
     expect(markdown).toContain("Dev");
-    expect(markdown).toContain("Orchestrace delivery pipeline");
+    expect(markdown).toContain("Orchestrace delivery workflow");
     expect(markdown).toContain("git.push");
     expect(markdown).toContain("Merge PR");
     expect(markdown).toContain("slack");
@@ -138,7 +138,7 @@ describe("composeSelfKnowledge", () => {
     const { markdown } = composeSelfKnowledge(
       baseInput({
         agents: [],
-        pipelines: [],
+        workflows: [],
         departments: [],
         gateRules: [],
         policyFloor: [],
@@ -146,7 +146,7 @@ describe("composeSelfKnowledge", () => {
       }),
     );
     expect(markdown).toContain("No agents registered yet");
-    expect(markdown).toContain("No pipelines registered yet");
+    expect(markdown).toContain("No workflows registered yet");
     expect(markdown).toContain("No departments registered yet");
     expect(markdown).toContain("No channel adapters registered");
   });
@@ -184,7 +184,7 @@ describe("composeSelfKnowledge", () => {
 
       expect(markdown).toContain("## Departments (2)");
       expect(markdown).toContain("Dev");
-      expect(markdown).toContain("Orchestrace delivery pipeline");
+      expect(markdown).toContain("Orchestrace delivery workflow");
       expect(markdown).toContain("Incident");
       expect(markdown).toContain("Eskalace incidentů");
       // Static identity only — no live status fields anywhere in the block.
@@ -293,10 +293,10 @@ describe("AUTO-boundary-marker defanging (MD injection)", () => {
     expect(markdown).toContain("Trailing --› arrow");
   });
 
-  it("defangs a forged AUTO block marker inside a pipeline name/desc", () => {
+  it("defangs a forged AUTO block marker inside a workflow name/desc", () => {
     const { markdown } = composeSelfKnowledge(
       baseInput({
-        pipelines: [{ ...pipeline, name: forgedName, desc: bareArrow }],
+        workflows: [{ ...workflow, name: forgedName, desc: bareArrow }],
       }),
     );
     expect(countOccurrences(markdown, "<!-- AUTO:GATES:END -->")).toBe(1);
@@ -335,7 +335,7 @@ describe("AUTO-boundary-marker defanging (MD injection)", () => {
     // A poisoned "generated" snapshot: an agent name carrying a forged
     // AUTO:GATES:END marker. Because the escaper runs at render time, the
     // forged text is already defanged inside `generated` — this proves the
-    // full pipeline (compose → merge → extract) stays correct end-to-end,
+    // full workflow (compose → merge → extract) stays correct end-to-end,
     // not just that the raw string looks defanged in isolation.
     const generated = composeSelfKnowledge(
       baseInput({
@@ -412,10 +412,10 @@ describe("mergeAutoBlocks", () => {
       "_No agents registered yet._",
       "<!-- AUTO:AGENTS:END -->",
       "",
-      "<!-- AUTO:PIPELINES:START -->",
-      "## Pipelines (0)",
-      "_No pipelines registered yet._",
-      "<!-- AUTO:PIPELINES:END -->",
+      "<!-- AUTO:WORKFLOWS:START -->",
+      "## Workflows (0)",
+      "_No workflows registered yet._",
+      "<!-- AUTO:WORKFLOWS:END -->",
       "",
       "<!-- AUTO:GATES:START -->",
       "## Gate rules (0)",

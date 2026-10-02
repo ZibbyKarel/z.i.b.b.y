@@ -15,8 +15,8 @@ import { SkillsStorageService } from "../skills/skills.storage.service";
 import { recallMemory } from "./recall.helper";
 import { VaultService } from "./vault.service";
 
-/** The catalogs `list_entities` can enumerate — every non-agent/pipeline entity
- * kind (agents/pipelines are already baked into self-knowledge; see decision 2
+/** The catalogs `list_entities` can enumerate — every non-agent/workflow entity
+ * kind (agents/workflows are already baked into self-knowledge; see decision 2
  * of the phase-105 master plan). */
 const ENTITY_KINDS = [
   "skills",

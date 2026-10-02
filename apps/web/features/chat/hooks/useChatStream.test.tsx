@@ -79,7 +79,7 @@ describe("useChatStream", () => {
           name: "create_task",
           status: "ok",
           callId: "toolu_1",
-          summary: "Spustil jsem úkol — pipeline Delivery.",
+          summary: "Spustil jsem úkol — workflow Delivery.",
           href: "/archiv?run=delivery_1",
           runRef: "delivery_1",
           taskId: "task-9",

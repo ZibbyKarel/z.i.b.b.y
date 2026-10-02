@@ -4,7 +4,7 @@ import { AgentsModule } from "../agents/agents.module";
 import { GateRulesModule } from "../gate-rules/gate-rules.module";
 import { GatesModule } from "../gates/gates.module";
 import { MemoryModule } from "../memory/memory.module";
-import { PipelinesModule } from "../pipelines/pipelines.module";
+import { WorkflowsModule } from "../workflows/workflows.module";
 import { GRAPH_REPORT_PATH, SelfKnowledgeService } from "./self-knowledge.service";
 import { SelfKnowledgeController } from "./self-knowledge.controller";
 
@@ -30,15 +30,18 @@ export function resolveGraphReportPath(): string {
 
 /**
  * Self-Knowledge (Fáze 1, extended in Fáze 10). Reads across four existing
- * resources (agents, pipelines, gate rules + the locked policy floor, the
+ * resources (agents, workflows, gate rules + the locked policy floor, the
  * vault) rather than owning any storage of its own — the note it produces is
  * stored as an ordinary vault note via `MemoryModule`'s `VaultService`. Fáze 10
  * adds a sixth input read straight off disk: graphify's `GRAPH_REPORT.md`.
  */
 @Module({
-  imports: [AgentsModule, PipelinesModule, GateRulesModule, GatesModule, MemoryModule],
+  imports: [AgentsModule, WorkflowsModule, GateRulesModule, GatesModule, MemoryModule],
   controllers: [SelfKnowledgeController],
-  providers: [{ provide: GRAPH_REPORT_PATH, useFactory: resolveGraphReportPath }, SelfKnowledgeService],
+  providers: [
+    { provide: GRAPH_REPORT_PATH, useFactory: resolveGraphReportPath },
+    SelfKnowledgeService,
+  ],
   exports: [SelfKnowledgeService],
 })
 export class SelfKnowledgeModule {}

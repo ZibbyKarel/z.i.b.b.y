@@ -15,7 +15,7 @@ const API = "http://localhost:3333";
  * never appears in `/chat`'s task gutter or any `RunDetail`, and (per
  * `apps/api/src/departments/departments.service.ts`'s own docblock) it has no owning
  * department either, so it never lights up the status pill's "waiting" flyout —
- * that trigger only counts approvals attributable to an owned pipeline/chain run.
+ * that trigger only counts approvals attributable to an owned workflow/chain run.
  * **A channel approval currently has no UI surface to decide it from at all** — a
  * regression this deletion phase surfaces rather than causes (flagged in the F8d
  * report). Approving it here goes straight at the REST endpoint

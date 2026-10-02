@@ -9,7 +9,7 @@ import { GoalsStorageService } from "./goals.storage.service";
 const sampleInput = {
   id: "ship-feature",
   objective: "Ship feature Y green",
-  maker: { kind: "pipeline" as const, id: "delivery" },
+  maker: { kind: "workflow" as const, id: "delivery" },
   verifier: { kind: "checks" as const, commands: ["pnpm test"] },
   maxIterations: 4,
   instructions: "Iterate until the checks pass.",
@@ -34,13 +34,13 @@ describe("GoalsStorageService", () => {
   it("writes a .goal.md file with maker/verifier/maxIterations in frontmatter", async () => {
     const goal = await service.create(sampleInput);
     expect(goal.name).toBe("ship-feature");
-    expect(goal.maker).toEqual({ kind: "pipeline", id: "delivery" });
+    expect(goal.maker).toEqual({ kind: "workflow", id: "delivery" });
 
     const raw = await fs.readFile(fileFor(dir, "ship-feature"), "utf8");
     const parsed = matter(raw);
     expect(parsed.data.objective).toBe("Ship feature Y green");
     expect(parsed.data.maxIterations).toBe(4);
-    expect(parsed.data.maker).toEqual({ kind: "pipeline", id: "delivery" });
+    expect(parsed.data.maker).toEqual({ kind: "workflow", id: "delivery" });
     expect(parsed.data.verifier).toEqual({ kind: "checks", commands: ["pnpm test"] });
     expect(parsed.content.trim()).toBe("Iterate until the checks pass.");
   });

@@ -116,7 +116,7 @@ export class ProjectsStorageService {
     // as `hasCompanyId` above).
     const hasTeamId = "teamId" in patch;
     // `logo: null` is the explicit "clear the logo" signal (Phase 113, parity
-    // with agents/pipelines' `avatar: null`) — distinct from an absent `logo`
+    // with agents/workflows' `avatar: null`) — distinct from an absent `logo`
     // key, which leaves the current value alone.
     const hasLogo = "logo" in patch;
     const { companyId, teamId, logo, ...rest } = patch;
@@ -165,7 +165,7 @@ export class ProjectsStorageService {
    * untouched, and drop any stale asset the write is replacing (a clear or a
    * switch to a bundled logo). The entity returned to the *caller* of `create`/
    * `update` always keeps the full data URI — only this disk copy differs
-   * (Phase 113, mirrors the agents/pipelines `AvatarAssetStore` pattern).
+   * (Phase 113, mirrors the agents/workflows `AvatarAssetStore` pattern).
    */
   private async toDiskProject(project: Project): Promise<Project> {
     if (typeof project.logo === "string") {

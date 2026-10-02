@@ -58,7 +58,7 @@ export function intersectToolGrants(
  * Spawns agents as child processes and tracks their runs durably. A thin wrapper
  * over the shared {@link RunnerCore}: this class owns the Nest DI surface and the
  * agent-specific command building and existence check, while spawn/log/sidecar/
- * restart machinery lives once in the core (shared with skills and pipeline
+ * restart machinery lives once in the core (shared with skills and workflow
  * stages).
  *
  * Every run spawns a real `claude -p` session: the agent's instructions become the
@@ -189,7 +189,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     /**
      * D-017: the employee leased for this run by the caller (dispatch happens at
      * the TASK level — `TaskSchedulerService` — never inside this service, to
-     * avoid a double-acquire against pipelines, which lease per-stage). Absent
+     * avoid a double-acquire against workflows, which lease per-stage). Absent
      * when D-017's "no employee anywhere" unleased fallback applied.
      */
     employee?: { employeeId: string; employeeName: string },
@@ -452,7 +452,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * Resolve a run's free-form `project` reference against the registry — by id
-   * first, then by exact name (same rule as the pipeline runner). Unknown / absent
+   * first, then by exact name (same rule as the workflow runner). Unknown / absent
    * → null (the run is sandbox-only, no worktree); never throws.
    */
   private async resolveProject(projectRef: string): Promise<Project | null> {

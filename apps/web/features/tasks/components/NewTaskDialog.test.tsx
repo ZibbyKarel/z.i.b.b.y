@@ -27,7 +27,7 @@ vi.mock("next/navigation", () => ({
 
 const CANDIDATES = [
   { kind: "agent", id: "koder", name: "Kodér" },
-  { kind: "pipeline", id: "delivery", name: "Delivery" },
+  { kind: "workflow", id: "delivery", name: "Delivery" },
 ];
 
 function resolvePaths(paths: string[] | undefined) {
@@ -55,7 +55,7 @@ function apiRouting(
       mode: "loop",
       proposedGoal: {
         objective: text,
-        maker: { kind: "pipeline", id: "delivery" },
+        maker: { kind: "workflow", id: "delivery" },
         verifier: { kind: "checks" },
         maxIterations: 6,
         instructions: text,
@@ -191,11 +191,11 @@ vi.mock("../../agents/queries/useAgentsQuery", () => ({
   // key at module load, so the mock must provide it.
   getAgentsQueryKey: () => ["agents"],
 }));
-vi.mock("../../pipelines/queries/usePipelinesQuery", () => ({
-  usePipelinesQuery: () => ({ data: [{ id: "delivery", name: "Delivery" }] }),
-  // useCreate/UpdatePipelineMutation (via the pipelines/mutations barrel) read this
+vi.mock("../../workflows/queries/useWorkflowsQuery", () => ({
+  useWorkflowsQuery: () => ({ data: [{ id: "delivery", name: "Delivery" }] }),
+  // useCreate/UpdateWorkflowMutation (via the workflows/mutations barrel) read this
   // key at module load, so the mock must provide it.
-  getPipelinesQueryKey: () => ["pipelines"],
+  getWorkflowsQueryKey: () => ["workflows"],
 }));
 
 const RESET_AT = Date.now() + 3 * 60 * 60 * 1000;
@@ -348,7 +348,7 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
 
     expect(createGoal).toHaveBeenCalledTimes(1);
     const goalBody = createGoal.mock.calls[0]?.[0].body as Record<string, unknown>;
-    expect(goalBody.maker).toEqual({ kind: "pipeline", id: "delivery" });
+    expect(goalBody.maker).toEqual({ kind: "workflow", id: "delivery" });
     expect(goalBody.verifier).toEqual({ kind: "checks" });
     expect(goalBody.maxIterations).toBe(6);
 
@@ -377,7 +377,7 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
     const goalBody = createGoal.mock.calls[0]?.[0].body as Record<string, unknown>;
     expect(goalBody.maxIterations).toBe(9);
     // Unedited fields round-trip losslessly from the proposal.
-    expect(goalBody.maker).toEqual({ kind: "pipeline", id: "delivery" });
+    expect(goalBody.maker).toEqual({ kind: "workflow", id: "delivery" });
     expect(goalBody.verifier).toEqual({ kind: "checks" });
   });
 
@@ -479,31 +479,31 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("pre-assigns a pipeline via initialTarget and dispatches straight to it", async () => {
+  it("pre-assigns a workflow via initialTarget and dispatches straight to it", async () => {
     const onClose = vi.fn();
     const user = userEvent.setup();
     render(
       <NewTaskDialog
-        initialTarget={{ kind: "pipeline", id: "delivery", name: "Delivery", glyph: "flow" }}
+        initialTarget={{ kind: "workflow", id: "delivery", name: "Delivery", glyph: "flow" }}
         onClose={onClose}
       />,
     );
-    // It's the standard composer (not a locked mode) with the pipeline pre-assigned: the
+    // It's the standard composer (not a locked mode) with the workflow pre-assigned: the
     // CommandLine seeds the target as an inline `@Delivery` mention (no top chip — Phase 59).
     expect(screen.getByRole("dialog", { name: "NOVÝ TASK" })).toBeInTheDocument();
     expect(screen.getByTestId<HTMLTextAreaElement>(CommandLineTestId.Input).value).toContain(
       "@Delivery",
     );
 
-    await user.type(screen.getByLabelText(/Zadání/), "spusť delivery pipelinu");
+    await user.type(screen.getByLabelText(/Zadání/), "spusť delivery workflow");
     // Classification still runs (the normal flow, debounced) — it populates the preview.
     await waitFor(() => expect(classify).toHaveBeenCalled());
 
-    // Submitting as-is dispatches straight to the pre-assigned pipeline.
+    // Submitting as-is dispatches straight to the pre-assigned workflow.
     await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
     expect(createTask).toHaveBeenCalledTimes(1);
     expect(createTask.mock.calls[0]?.[0].body.target).toEqual({
-      kind: "pipeline",
+      kind: "workflow",
       id: "delivery",
       name: "Delivery",
       glyph: "flow",
@@ -512,17 +512,17 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("lets the operator switch the pre-assigned pipeline to another target before dispatch", async () => {
+  it("lets the operator switch the pre-assigned workflow to another target before dispatch", async () => {
     const user = userEvent.setup();
     render(
       <NewTaskDialog
-        initialTarget={{ kind: "pipeline", id: "delivery", name: "Delivery", glyph: "flow" }}
+        initialTarget={{ kind: "workflow", id: "delivery", name: "Delivery", glyph: "flow" }}
         onClose={() => {}}
       />,
     );
-    await user.type(screen.getByLabelText(/Zadání/), " spusť delivery pipelinu");
+    await user.type(screen.getByLabelText(/Zadání/), " spusť delivery workflow");
 
-    // Clear the pre-assigned pipeline by removing its inline `@Delivery` mention (the
+    // Clear the pre-assigned workflow by removing its inline `@Delivery` mention (the
     // top chip is gone — Phase 59), then @-mention the agent instead — the pre-fill is
     // changeable, not a lock. Clearing the text drops the reconciled target.
     await user.clear(screen.getByTestId(CommandLineTestId.Input));
@@ -533,21 +533,21 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
     expect(createTask.mock.calls[0]?.[0].body.target?.id).toBe("koder");
   });
 
-  it("carries a chosen output into a pre-assigned pipeline dispatch", async () => {
+  it("carries a chosen output into a pre-assigned workflow dispatch", async () => {
     const user = userEvent.setup();
     render(
       <NewTaskDialog
-        initialTarget={{ kind: "pipeline", id: "delivery", name: "Delivery", glyph: "flow" }}
+        initialTarget={{ kind: "workflow", id: "delivery", name: "Delivery", glyph: "flow" }}
         onClose={() => {}}
       />,
     );
-    await user.type(screen.getByLabelText(/Zadání/), "spusť delivery pipelinu");
+    await user.type(screen.getByLabelText(/Zadání/), "spusť delivery workflow");
 
     await user.click(screen.getByLabelText("Výstup úkolu"));
     await user.click(await screen.findByRole("option", { name: "Otevřít PR" }));
     await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
 
-    expect(createTask.mock.calls[0]?.[0].body.target?.kind).toBe("pipeline");
+    expect(createTask.mock.calls[0]?.[0].body.target?.kind).toBe("workflow");
     expect(createTask.mock.calls[0]?.[0].body.output).toEqual({ type: "pr" });
   });
 

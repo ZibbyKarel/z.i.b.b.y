@@ -228,7 +228,7 @@ export const ProjectSchema = z.object({
   desc: z.string().optional(),
   category: z.string().optional(),
   /**
-   * Shell commands a pipeline verify phase runs against this project (in
+   * Shell commands a workflow verify phase runs against this project (in
    * `path`), joined with `&&`. Absent → the shared default checks apply.
    */
   checks: z.array(z.string().min(1)).optional(),
@@ -258,7 +258,7 @@ export const ProjectSchema = z.object({
    * Optional custom logo, shown on the project card in place of the default
    * glyph (the glyph remains the fallback when absent, or when the image fails
    * to load): either an uploaded `data:image/*;base64,…` URI or a `/`-rooted
-   * path to a bundled static asset — same `AvatarSchema` agents/pipelines use
+   * path to a bundled static asset — same `AvatarSchema` agents/workflows use
    * (Phase 113). On disk the bytes are externalized to
    * `assets/<id>.<ext>` (`ProjectsStorageService`/`AvatarAssetStore`); the wire
    * value here is always the full data URI or `/`-path, never the bare ref.
@@ -327,7 +327,7 @@ export type CreateProjectInput = z.infer<typeof CreateProjectSchema>;
  * "unset this field" is otherwise inexpressible for an already-linked project —
  * `null` is the explicit "unlink the company" signal the storage layer acts on,
  * while `undefined`/absent still means "leave the current link alone". `logo` is
- * likewise re-widened to accept `null` (Phase 113, parity with agents/pipelines'
+ * likewise re-widened to accept `null` (Phase 113, parity with agents/workflows'
  * `avatar`) as the explicit "clear the logo" signal.
  */
 export const UpdateProjectSchema = ProjectSchema.omit({ id: true, hasSecrets: true })

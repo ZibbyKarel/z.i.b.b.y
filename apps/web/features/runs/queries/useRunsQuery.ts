@@ -103,25 +103,25 @@ export function useRunGlyphMap(): Map<string, IconName> {
 }
 
 /**
- * Build the owner-id → avatar map from the agent + pipeline catalogs (Phase 48 —
+ * Build the owner-id → avatar map from the agent + workflow catalogs (Phase 48 —
  * the run-detail header shows the assigned entity's avatar, with the glyph as the
- * fallback). Only agents and pipelines carry an `avatar` in their schemas, so they
+ * fallback). Only agents and workflows carry an `avatar` in their schemas, so they
  * are the only sources here; skills have no avatar field. Reuses the same query keys
- * as the glyph/pipeline catalogs so it shares their cache (no extra fetch).
+ * as the glyph/workflow catalogs so it shares their cache (no extra fetch).
  */
 export function useRunAvatarMap(): Map<string, string> {
   const agents = apiClient.agents.listAgents.useQuery({
     queryKey: ["agents"],
     select: selectApiResponseBody,
   });
-  const pipelines = apiClient.pipelines.listPipelines.useQuery({
-    queryKey: ["pipelines"],
+  const workflows = apiClient.workflows.listWorkflows.useQuery({
+    queryKey: ["workflows"],
     select: selectApiResponseBody,
   });
   return useMemo(() => {
     const map = new Map<string, string>();
     for (const a of agents.data ?? []) if (a.avatar) map.set(a.id, a.avatar);
-    for (const p of pipelines.data ?? []) if (p.avatar) map.set(p.id, p.avatar);
+    for (const p of workflows.data ?? []) if (p.avatar) map.set(p.id, p.avatar);
     return map;
-  }, [agents.data, pipelines.data]);
+  }, [agents.data, workflows.data]);
 }

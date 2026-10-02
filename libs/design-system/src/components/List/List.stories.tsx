@@ -7,7 +7,7 @@ const navItems: NavItem[] = [
   { id: "overview", label: "Přehled", glyph: "grid" },
   { id: "skills", label: "Skilly", glyph: "spark" },
   { id: "agents", label: "Agenti", glyph: "bot" },
-  { id: "pipelines", label: "Orchestrace", glyph: "flow" },
+  { id: "workflows", label: "Orchestrace", glyph: "flow" },
   { id: "integrations", label: "Integrace", glyph: "plug" },
   { id: "automations", label: "Automatizace", glyph: "clock" },
   { id: "memory", label: "Paměť", glyph: "brain" },

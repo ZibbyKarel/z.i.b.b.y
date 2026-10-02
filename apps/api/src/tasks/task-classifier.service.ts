@@ -7,19 +7,19 @@ import {
   type Employee,
   type MakerRef,
   ORCHESTRATOR_TARGET,
-  PIPELINE_COMPLEXITY_ORDER,
-  type Pipeline,
   type ProposedGoal,
   type ResolvedPath,
   type TaskRouting,
   TaskRoutingSchema,
   type TaskTarget,
+  WORKFLOW_COMPLEXITY_ORDER,
+  type Workflow,
   isExplicitOnlyAgent,
 } from "@zibby/contracts";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { EmployeesStorageService } from "../employees/employees.storage.service";
-import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
+import { WorkflowsStorageService } from "../workflows/workflows.storage.service";
 import { matchProject } from "../projects/project-matcher";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
@@ -28,7 +28,7 @@ import { type RoutableTarget, TASK_ROUTER, type TaskRouter, toTaskTarget } from 
 
 /**
  * Keyword-scorer confidence below which the verdict is not trusted to name a
- * specific agent/pipeline and the task routes to the orchestrator instead. The
+ * specific agent/workflow and the task routes to the orchestrator instead. The
  * scorer reports 0.22 for a zero-term match and ≥ 0.55 from the first matched
  * term, so 0.5 separates "guessed the top catalog entry" from "actually matched".
  */
@@ -115,15 +115,15 @@ export const DEFAULT_GOAL_ITERATIONS = 6;
  * Neither the router's system prompt nor the keyword scorer has any notion of
  * how big a change is, so without a stated policy the unit choice rests entirely
  * on an LLM reading a few descriptions. Every department now owns both specialist
- * agents and a graded set of pipelines, so the policy has to name the rungs.
+ * agents and a graded set of workflows, so the policy has to name the rungs.
  *
- * NS2 F9 turned this from a binary (agent vs. pipeline) into the four-rung
- * ladder the `complexity` field carries, because "pipeline" stopped being one
+ * NS2 F9 turned this from a binary (agent vs. workflow) into the four-rung
+ * ladder the `complexity` field carries, because "workflow" stopped being one
  * thing the moment a department owned a `light` and a `deep` one.
  *
  * Kept as prose in the preamble rather than as a new contract field on purpose:
  * the preamble is already the one place per-department routing policy lives, and
- * the ordering it describes IS data (`PIPELINE_COMPLEXITY_ORDER`) — only the
+ * the ordering it describes IS data (`WORKFLOW_COMPLEXITY_ORDER`) — only the
  * wording is prose.
  */
 export const EFFORT_RULE =
@@ -131,19 +131,19 @@ export const EFFORT_RULE =
   "CHEAPEST rung that can do it safely. The rungs, cheapest first: " +
   "(1) a single owned AGENT — a narrow, single-surface change: one file, one " +
   "component, a rename, a copy fix, a small bug, a lookup, a single reply. " +
-  "(2) a LIGHT pipeline — still narrow, but it wants a second pair of eyes or a " +
+  "(2) a LIGHT workflow — still narrow, but it wants a second pair of eyes or a " +
   "deterministic check. " +
-  "(3) a STANDARD pipeline — ordinary work needing review and verification. " +
-  "(4) a DEEP pipeline — multi-surface work, or work that genuinely needs " +
+  "(3) a STANDARD workflow — ordinary work needing review and verification. " +
+  "(4) a DEEP workflow — multi-surface work, or work that genuinely needs " +
   "design, review, tests and docs to be safe. " +
-  "Each unit below is labelled with its rung. Do not run a deep pipeline for a " +
+  "Each unit below is labelled with its rung. Do not run a deep workflow for a " +
   "one-line change; do not hand multi-surface work to a lone agent.";
 
 /**
  * The stage-2 preamble rule that REPLACES {@link EFFORT_RULE} when the task carries
  * a required `pr` sink ({@link ClassifyTaskInput.output}).
  *
- * The catalog has already been filtered to PR-capable pipelines by
+ * The catalog has already been filtered to PR-capable workflows by
  * {@link TaskClassifierService.constrainByOutput}, so the remaining question is not
  * "which unit" but "how big is this" — and the prompt should say exactly that.
  * {@link EFFORT_RULE}'s wording would be actively misleading here: its rung (1) is
@@ -152,28 +152,28 @@ export const EFFORT_RULE =
  * That rung-1 pull is what produced the failure this exists to close. Every
  * JIRA-imported roadmap item is "implement this → PR", yet `EFFORT_RULE` invited a
  * small model to read a narrow-sounding ticket and hand it to one agent; nothing in
- * the pipeline-vs-agent decision knew that a PR was mandatory, so the cheapest rung
- * always looked admissible. Sizing among three pipelines is also a far easier
+ * the workflow-vs-agent decision knew that a PR was mandatory, so the cheapest rung
+ * always looked admissible. Sizing among three workflows is also a far easier
  * question than ranking fourteen mixed units, and its worst case is bounded: pick
  * `patch` where `delivery` was warranted and the work still lands as a PR.
  */
 export const PR_SIZING_RULE =
   "ROUTING RULE: this task MUST end in a pull request, so every unit below is a " +
-  "pipeline that opens one. Do NOT ask which kind of unit fits — ask only how BIG " +
+  "workflow that opens one. Do NOT ask which kind of unit fits — ask only how BIG " +
   "the change is, and pick the CHEAPEST rung that can do it safely. The rungs, " +
   "cheapest first: " +
-  "(1) a LIGHT pipeline — one narrow surface: a rename, a copy or constant change, " +
+  "(1) a LIGHT workflow — one narrow surface: a rename, a copy or constant change, " +
   "a small obvious bug, one file. " +
-  "(2) a STANDARD pipeline — ordinary work needing review and green checks, but no " +
+  "(2) a STANDARD workflow — ordinary work needing review and green checks, but no " +
   "architecture or docs: one refactor, one new endpoint, one component. " +
-  "(3) a DEEP pipeline — multi-surface work, new scaffolding or tooling, anything " +
+  "(3) a DEEP workflow — multi-surface work, new scaffolding or tooling, anything " +
   "that genuinely needs design, review, tests and docs to be safe. " +
   "Each unit below is labelled with its rung. Setting up a project skeleton, a " +
   "build/release toolchain, or proving out a mechanism end-to-end is DEEP work — " +
   "do not size it as a light fix because the description sounds tidy.";
 
 /**
- * Classifies a free-text task to a stored agent or pipeline. It builds the
+ * Classifies a free-text task to a stored agent or workflow. It builds the
  * candidate catalog from the file-backed stores, asks the primary {@link TaskRouter}
  * (the `claude -p` AI categorizer) to pick a target, and falls back to the
  * deterministic {@link KeywordScorer} whenever the router is unavailable, times
@@ -205,7 +205,7 @@ export class TaskClassifierService {
 
   constructor(
     private readonly agents: AgentsStorageService,
-    private readonly pipelines: PipelinesStorageService,
+    private readonly workflows: WorkflowsStorageService,
     @Inject(TASK_ROUTER) private readonly router: TaskRouter,
     private readonly fallback: KeywordScorer,
     private readonly projects: ProjectsStorageService,
@@ -234,7 +234,7 @@ export class TaskClassifierService {
    * Phase 91 / F2b — classify a task within ONE department's owned roster: the
    * design doc's "recursive scoped routing", the same {@link route}/{@link isCoherent}
    * machinery reused with a candidate catalog restricted to the department's OWN
-   * pipelines + active agents (never the full catalog, never another department).
+   * workflows + active agents (never the full catalog, never another department).
    * Called only for the 2+-owned-units case; the caller
    * (`TaskSchedulerService.resolveDepartmentTargetOrNull`) resolves 0/1 owned
    * units itself without a classify round-trip.
@@ -247,21 +247,21 @@ export class TaskClassifierService {
    * (dev) is better served escaping to the orchestrator than forcing a guess,
    * while most departments are better served staying inside their own mandate.
    *
-   * Returns `null` only when the department owns zero live pipelines/agents
+   * Returns `null` only when the department owns zero live workflows/agents
    * (defensive — the caller never invokes this with an empty roster).
    */
   async classifyWithinDepartment(
     input: ClassifyTaskInput,
     departmentId: DepartmentId,
   ): Promise<TaskRouting | null> {
-    const [allPipelines, allAgents, ownedPositionIds] = await Promise.all([
-      this.pipelines.list().catch((): Pipeline[] => []),
+    const [allWorkflows, allAgents, ownedPositionIds] = await Promise.all([
+      this.workflows.list().catch((): Workflow[] => []),
       this.agents.listActive().catch((): Agent[] => []),
       this.ownedPositionIds(departmentId),
     ]);
     const owned = this.departmentCandidates(
       departmentId,
-      allPipelines,
+      allWorkflows,
       allAgents,
       ownedPositionIds,
     );
@@ -274,14 +274,14 @@ export class TaskClassifierService {
     const department = await this.departments.get(departmentId).catch(() => null);
     const displayName = department?.name ?? departmentId;
     // F2b/D-022: terminal fallback is `department.fallback`. "primary" = run the
-    // department's own cheapest pipeline (dev must never escape to the orchestrator:
+    // department's own cheapest workflow (dev must never escape to the orchestrator:
     // it yields no PR-shaped output and `reconcileRunning` kills the item); an
     // unknown department defers to the orchestrator.
     const policy = department?.fallback ?? "orchestrator";
     // F9: `first` is now the cheapest AGENT (ladder order), which is the wrong
-    // answer for an unsure verdict — see `cheapestPipeline`.
-    const primary = this.cheapestPipeline(candidates) ?? first;
-    // A `pr`-constrained catalog holds nothing but PR-capable pipelines, so escaping
+    // answer for an unsure verdict — see `cheapestWorkflow`.
+    const primary = this.cheapestWorkflow(candidates) ?? first;
+    // A `pr`-constrained catalog holds nothing but PR-capable workflows, so escaping
     // to the orchestrator would break the very invariant the constraint exists to
     // hold (the orchestrator produces no PR-shaped output — the failure
     // `fallback` history documents). The constraint therefore
@@ -294,7 +294,7 @@ export class TaskClassifierService {
           }
         : {
             target: toTaskTarget(primary),
-            reason: `No unit matched confidently — routed to ${displayName}'s cheapest owned pipeline.`,
+            reason: `No unit matched confidently — routed to ${displayName}'s cheapest owned workflow.`,
           };
 
     const base = await this.route(input, candidates, {
@@ -307,7 +307,7 @@ export class TaskClassifierService {
     });
     // NS2 F10 — stage 2 deliberately does NOT ask. The asymmetry is about what a
     // wrong pick costs: at stage 1 it is a whole wrong department, here it is one run
-    // of `cheapestPipeline` inside a department the operator (or stage 1) already
+    // of `cheapestWorkflow` inside a department the operator (or stage 1) already
     // named. That is a bounded, recoverable cost, and stopping to ask about it would
     // put a decision in front of the operator for every narrow ticket. So the flag is
     // stripped rather than forwarded — a stage-2 verdict never reads as "unresolved"
@@ -319,12 +319,12 @@ export class TaskClassifierService {
    * F2b — the router preamble for a scoped stage-2 call: the department's Czech
    * mandate plus a `name — desc` line per owned unit, so the LLM leg reasons
    * about the mandate rather than bare catalog rows. `search` already carries
-   * the unit's full routable blob (name + id + desc/category, or the pipeline's
+   * the unit's full routable blob (name + id + desc/category, or the workflow's
    * phase agents) — reused here rather than re-fetching `desc` separately.
    *
    * {@link EFFORT_RULE} is appended because this preamble is the ONE place a
    * per-department routing policy legitimately lives: nothing else in the
-   * pipeline-vs-agent decision has any notion of how BIG a change is, so
+   * workflow-vs-agent decision has any notion of how BIG a change is, so
    * without it the choice is the LLM's unguided reading of two descriptions.
    */
   /**
@@ -332,8 +332,8 @@ export class TaskClassifierService {
    * catalog — the structural half of the fix, and the reason this is a filter over
    * candidates rather than another sentence in a prompt.
    *
-   * A `pr` sink keeps only PR-capable pipelines ({@link RoutableTarget.deliversPr}).
-   * Everything else — every agent, and any pipeline that declares no `pr` output —
+   * A `pr` sink keeps only PR-capable workflows ({@link RoutableTarget.deliversPr}).
+   * Everything else — every agent, and any workflow that declares no `pr` output —
    * is removed before ranking, so no leg can pick it: not the LLM router, not the
    * keyword scorer, not the terminal fallback. Approval-first is wired into the
    * floor and not into an agent's config (Law 1); capability is enforced the same
@@ -343,11 +343,11 @@ export class TaskClassifierService {
    * `file`/`void` sinks constrain nothing: a vault note or an explicitly empty
    * result is something any unit can produce, so those keep the full roster.
    *
-   * **Never empties the catalog.** A department that owns no PR-capable pipeline
+   * **Never empties the catalog.** A department that owns no PR-capable workflow
    * yields the unfiltered roster plus a `warn`, because a department that cannot
    * honour the sink is a roster gap for the operator to fix — degrading to "route it
    * somewhere and let the run fail" is strictly worse than routing it the old way
-   * and saying so in the log. Only dev, personal and knowledge own a PR pipeline today,
+   * and saying so in the log. Only dev, personal and knowledge own a PR workflow today,
    * so this branch is reachable in practice.
    */
   private constrainByOutput(
@@ -356,15 +356,15 @@ export class TaskClassifierService {
     departmentId: DepartmentId,
   ): { candidates: RoutableTarget[]; constrainedBy?: "pr-output" } {
     if (output?.type !== "pr") return { candidates: [...candidates] };
-    const prCapable = candidates.filter((c) => c.kind === "pipeline" && c.deliversPr);
+    const prCapable = candidates.filter((c) => c.kind === "workflow" && c.deliversPr);
     if (prCapable.length === 0) {
-      this.log.warn("task requires a PR but the department owns no PR-capable pipeline", {
+      this.log.warn("task requires a PR but the department owns no PR-capable workflow", {
         department: departmentId,
         ownedUnits: candidates.length,
       });
       return { candidates: [...candidates] };
     }
-    this.log.info("stage-2 catalog constrained to PR-capable pipelines", {
+    this.log.info("stage-2 catalog constrained to PR-capable workflows", {
       department: departmentId,
       from: candidates.length,
       to: prCapable.length,
@@ -379,16 +379,16 @@ export class TaskClassifierService {
     prConstrained = false,
   ): string {
     // F9: each line carries its ladder rung, so EFFORT_RULE's "(1) agent …
-    // (4) deep pipeline" wording has something concrete to bind to. An agent has
+    // (4) deep workflow" wording has something concrete to bind to. An agent has
     // no `complexity` — it IS rung 1, so it is labelled as such rather than left
     // blank, which would read as "unknown" instead of "cheapest".
     const unitLines = units
       .map((u) => {
-        const rung = u.kind === "pipeline" ? `${u.complexity} pipeline` : "single agent";
+        const rung = u.kind === "workflow" ? `${u.complexity} workflow` : "single agent";
         return `- [${rung}] ${u.name} — ${u.search}`;
       })
       .join("\n");
-    // A pr-constrained catalog is a SIZING question over pipelines, so it gets
+    // A pr-constrained catalog is a SIZING question over workflows, so it gets
     // `PR_SIZING_RULE` instead — `EFFORT_RULE`'s rung (1) is "a single owned AGENT",
     // which no longer exists in the list and would only pull toward a unit that
     // cannot honour the sink.
@@ -402,16 +402,16 @@ export class TaskClassifierService {
    * "whose domain is this?". The department then picks its own unit
    * ({@link classifyWithinDepartment}, reached via
    * `TaskSchedulerService.resolveDepartmentTarget`), so a small change can land
-   * on a single owned agent instead of a whole delivery pipeline.
+   * on a single owned agent instead of a whole delivery workflow.
    *
    * Used by `RoadmapGateService.release()`. It differs from {@link classify}
    * in three ways that matter:
    *
-   *  - **The catalog is department-only.** Concrete agents/pipelines are never
+   *  - **The catalog is department-only.** Concrete agents/workflows are never
    *    offered, so the verdict can't skip the department layer.
    *  - **Every candidate is SEATED by construction.**
    *    {@link stage1DepartmentCandidates} only emits departments owning ≥1
-   *    pipeline or active agent, so the returned target can never trip
+   *    workflow or active agent, so the returned target can never trip
    *    `DepartmentEmptyRosterError` downstream — the one real hazard of routing
    *    this way (7 of the 11 departments own nothing today).
    *  - **No {@link enrich}.** Loop synthesis and tool-grant proposals belong to
@@ -429,11 +429,11 @@ export class TaskClassifierService {
     input: ClassifyTaskInput,
     preferred?: DepartmentId,
   ): Promise<TaskRouting | null> {
-    const [pipelines, employees] = await Promise.all([
-      this.pipelines.list().catch((): Pipeline[] => []),
+    const [workflows, employees] = await Promise.all([
+      this.workflows.list().catch((): Workflow[] => []),
       this.employees.list().catch((): Employee[] => []),
     ]);
-    const candidates = await this.stage1DepartmentCandidates(pipelines, employees);
+    const candidates = await this.stage1DepartmentCandidates(workflows, employees);
     const fallbackCandidate = candidates.find((c) => c.id === preferred) ?? candidates[0];
     if (!fallbackCandidate) return null;
     // NS2 F10 — ambiguity is EXPOSED here, unlike at stage 2: the caller
@@ -469,7 +469,7 @@ export class TaskClassifierService {
   ): Promise<RouteResult> {
     const fallbackTarget = opts.fallback ?? {
       target: ORCHESTRATOR_TARGET,
-      reason: "No agent or pipeline matched confidently — the orchestrator will handle it.",
+      reason: "No agent or workflow matched confidently — the orchestrator will handle it.",
     };
     try {
       const routed = await this.router.route(input, candidates, opts.preamble);
@@ -578,7 +578,7 @@ export class TaskClassifierService {
    * no extra latency/cost per classify call) while still being useful — most
    * `optionalTools` ids read as `snake_case` words (`recall_memory`,
    * `list_entities`) that plausibly appear in a task description verbatim.
-   * Only an agent target is considered; a pipeline/goal/orchestrator pick (no
+   * Only an agent target is considered; a workflow/goal/orchestrator pick (no
    * agent definition to read `optionalTools` off) always proposes `[]`.
    */
   private async proposeToolGrants(target: TaskTarget, text: string): Promise<string[]> {
@@ -601,7 +601,7 @@ export class TaskClassifierService {
    * verifier defaults to project `checks` (no `commands` → the goal runner resolves
    * the project's checks then `DEFAULT_VERIFY_CHECKS`); objective/instructions are
    * the operator's text verbatim (Law 4 — data, never a command). Returns `null` when
-   * no concrete maker can be resolved (an orchestrator pick with no pipeline to
+   * no concrete maker can be resolved (an orchestrator pick with no workflow to
    * iterate), so the caller falls back to `mode: "single"` rather than minting a
    * bogus maker.
    */
@@ -622,49 +622,49 @@ export class TaskClassifierService {
   }
 
   /**
-   * A loop needs a CONCRETE agent/pipeline maker — a department can't be iterated.
+   * A loop needs a CONCRETE agent/workflow maker — a department can't be iterated.
    *
-   * A routed agent/pipeline target is used directly (still reachable via an
+   * A routed agent/workflow target is used directly (still reachable via an
    * explicit target, and from `classifyWithinDepartment`'s enriched stage-2
    * verdict). NS2 F9 added the `department` branch: stage 1 now emits nothing but
-   * department and orchestrator picks, and the stage-1 catalog holds no pipelines
+   * department and orchestrator picks, and the stage-1 catalog holds no workflows
    * to scan, so a looped task would otherwise have silently lost its goal
    * proposal and degraded to `mode: "single"`. Resolve it the same way stage 2
-   * would: the department's cheapest owned pipeline.
+   * would: the department's cheapest owned workflow.
    *
-   * An orchestrator pick keeps the pre-F9 behaviour — any pipeline from the
+   * An orchestrator pick keeps the pre-F9 behaviour — any workflow from the
    * catalog, preferring one that reads as "delivery" — but since F9's stage-1
-   * catalog carries no pipelines, that path now reads the store directly.
-   * No pipeline anywhere → `null` (no loop).
+   * catalog carries no workflows, that path now reads the store directly.
+   * No workflow anywhere → `null` (no loop).
    */
   private async resolveMaker(
     target: TaskTarget,
     candidates: RoutableTarget[],
   ): Promise<MakerRef | null> {
-    if (target.kind === "agent" || target.kind === "pipeline") {
+    if (target.kind === "agent" || target.kind === "workflow") {
       return { kind: target.kind, id: target.id };
     }
 
-    // Stage 2 hands over a catalog that already holds the right pipelines (its
+    // Stage 2 hands over a catalog that already holds the right workflows (its
     // candidates ARE one department's owned units); stage 1's holds none, so read
     // the store rather than silently degrade to no loop.
-    const inCatalog = candidates.filter((c) => c.kind === "pipeline");
+    const inCatalog = candidates.filter((c) => c.kind === "workflow");
     const stored =
-      inCatalog.length > 0 ? null : await this.pipelines.list().catch((): Pipeline[] => []);
+      inCatalog.length > 0 ? null : await this.workflows.list().catch((): Workflow[] => []);
 
     if (target.kind === "department") {
-      // `pipelineCandidates` sorts cheapest-first, so [0] is the cheapest rung.
+      // `workflowCandidates` sorts cheapest-first, so [0] is the cheapest rung.
       const owned =
         stored === null
           ? inCatalog
-          : this.pipelineCandidates(stored.filter((p) => p.department === target.id));
+          : this.workflowCandidates(stored.filter((p) => p.department === target.id));
       const cheapest = owned[0];
-      return cheapest ? { kind: "pipeline", id: cheapest.id } : null;
+      return cheapest ? { kind: "workflow", id: cheapest.id } : null;
     }
 
-    const pipelines = stored === null ? inCatalog : this.pipelineCandidates(stored);
-    const preferred = pipelines.find((p) => /deliver/i.test(`${p.id} ${p.name}`)) ?? pipelines[0];
-    return preferred ? { kind: "pipeline", id: preferred.id } : null;
+    const workflows = stored === null ? inCatalog : this.workflowCandidates(stored);
+    const preferred = workflows.find((p) => /deliver/i.test(`${p.id} ${p.name}`)) ?? workflows[0];
+    return preferred ? { kind: "workflow", id: preferred.id } : null;
   }
 
   /** Resolve each detected path to its containing project (read-only attribution, Law 4). */
@@ -680,7 +680,7 @@ export class TaskClassifierService {
   /**
    * Build the stage-1 candidate catalog — departments only (NS2 F9).
    *
-   * Before F9 this returned agents + pipelines + departments in one flat list and
+   * Before F9 this returned agents + workflows + departments in one flat list and
    * let a single ranking pass choose between them. That asked the router to
    * compare units at two different levels of abstraction: `code-reviewer` (an
    * agent) against `Dev` (the department that owns that very agent). They are
@@ -688,7 +688,7 @@ export class TaskClassifierService {
    * two winners produced materially different runs. A direct agent pick also
    * skipped {@link EFFORT_RULE} entirely, since the size policy only ever
    * reaches the scoped stage-2 preamble; that is how a one-line fix could draw
-   * the full five-phase `delivery` pipeline with nothing asking whether the
+   * the full five-phase `delivery` workflow with nothing asking whether the
    * hammer fit.
    *
    * Stage 1 now asks exactly one question — "whose domain is this?" — which is
@@ -697,7 +697,7 @@ export class TaskClassifierService {
    * department that owns the units ({@link classifyWithinDepartment}), where the
    * ladder is described and the roster is small enough to rank well.
    *
-   * A consequence worth naming: an agent or pipeline with no `department` is
+   * A consequence worth naming: an agent or workflow with no `department` is
    * now structurally unroutable — no department lists it, and the classifier can
    * emit nothing else. That is the enforcement behind F9's "no free units", and
    * it is why the create paths 422 without an owner.
@@ -707,19 +707,19 @@ export class TaskClassifierService {
     // hired into it seats no department), not `Agent.department` — an agent
     // record can still carry the field (schema back-compat / pre-migration
     // fixtures), but it must never seat a department on its own.
-    const [pipelines, employees] = await Promise.all([
-      this.pipelines.list().catch((): Pipeline[] => []),
+    const [workflows, employees] = await Promise.all([
+      this.workflows.list().catch((): Workflow[] => []),
       this.employees.list().catch((): Employee[] => []),
     ]);
 
-    return this.stage1DepartmentCandidates(pipelines, employees);
+    return this.stage1DepartmentCandidates(workflows, employees);
   }
 
   /**
-   * F2a/F2b — one stage-1 candidate per department that owns ≥1 pipeline OR ≥1
+   * F2a/F2b — one stage-1 candidate per department that owns ≥1 workflow OR ≥1
    * active employee (D-015: employee, not raw `Agent.department` — see
    * {@link buildCandidates}), so the top-level switchboard can emit a
-   * whole-delegation verdict alongside its agent/pipeline picks. Departments
+   * whole-delegation verdict alongside its agent/workflow picks. Departments
    * owning nothing yet (knowledge/finance, until F4/F5) are excluded — offering
    * them invites a verdict that immediately unwinds at stage-2's empty-roster
    * check (wasted tokens, a misleading trace). `search` is the department's
@@ -728,11 +728,11 @@ export class TaskClassifierService {
    * never delegates to another department.
    */
   private async stage1DepartmentCandidates(
-    pipelines: readonly Pipeline[],
+    workflows: readonly Workflow[],
     employees: readonly Employee[],
   ): Promise<RoutableTarget[]> {
     const owning = new Set([
-      ...pipelines.map((p) => p.department).filter(Boolean),
+      ...workflows.map((p) => p.department).filter(Boolean),
       ...employees.filter((e) => e.status === "active").map((e) => e.department),
     ]);
     const departments = await this.departments.list().catch((): Department[] => []);
@@ -752,27 +752,27 @@ export class TaskClassifierService {
 
   /**
    * F2b — the stage-2 catalog for ONE department: its owned ACTIVE agents + its
-   * owned pipelines, in LADDER ORDER (cheapest rung first): agents, then
-   * `light` → `standard` → `deep` pipelines.
+   * owned workflows, in LADDER ORDER (cheapest rung first): agents, then
+   * `light` → `standard` → `deep` workflows.
    *
-   * NS2 F9 reversed the old ordering. Pipelines used to be listed first purely
+   * NS2 F9 reversed the old ordering. Workflows used to be listed first purely
    * so `department.fallback`'s `"primary"` policy could read `candidates[0]`
-   * as "the primary owned pipeline". That coupling is gone — the fallback now
-   * names its unit explicitly via {@link cheapestPipeline} — which frees the
+   * as "the primary owned workflow". That coupling is gone — the fallback now
+   * names its unit explicitly via {@link cheapestWorkflow} — which frees the
    * catalog to be ordered the way the router should READ it: cheapest first, so
    * the list itself reinforces {@link EFFORT_RULE}'s "prefer the cheapest rung
    * that can do it safely".
    */
   private departmentCandidates(
     departmentId: DepartmentId,
-    pipelines: readonly Pipeline[],
+    workflows: readonly Workflow[],
     agents: readonly Agent[],
     /** D-015: the position ids ({@link ownedPositionIds}) an active employee holds here. */
     ownedPositionIds: ReadonlySet<string>,
   ): RoutableTarget[] {
-    const ownedPipelines = pipelines.filter((p) => p.department === departmentId);
+    const ownedWorkflows = workflows.filter((p) => p.department === departmentId);
     const ownedAgents = agents.filter((a) => ownedPositionIds.has(a.id));
-    return [...this.agentCandidates(ownedAgents), ...this.pipelineCandidates(ownedPipelines)];
+    return [...this.agentCandidates(ownedAgents), ...this.workflowCandidates(ownedWorkflows)];
   }
 
   /** D-015: the set of agent (position) ids with at least one active employee in `departmentId`. */
@@ -786,26 +786,26 @@ export class TaskClassifierService {
   }
 
   /**
-   * The department's cheapest owned PIPELINE — the `"primary"` fallback unit for
+   * The department's cheapest owned WORKFLOW — the `"primary"` fallback unit for
    * a low-confidence stage-2 verdict.
    *
-   * Deliberately a pipeline and not simply `candidates[0]` (which is now an
+   * Deliberately a workflow and not simply `candidates[0]` (which is now an
    * agent, since F9 orders the scoped catalog cheapest-first). "Unsure" is
    * exactly the state in which a bare agent is the wrong answer: the reason
    * `department.fallback` exists at all is that dev tasks escaping to the
    * global orchestrator produced sessions with no PR-shaped output, which
    * `RoadmapGateService.reconcileRunning` then killed as "Run finished without
-   * producing an artifact". A pipeline keeps review and verification in the
+   * producing an artifact". A workflow keeps review and verification in the
    * path; picking the CHEAPEST one keeps the old behaviour's safety without its
    * cost (pre-F9 this resolved to dev's `delivery` — the most expensive unit
-   * it owns — simply because that was the only pipeline in the list).
+   * it owns — simply because that was the only workflow in the list).
    *
    * Falls back to the first candidate of any kind when the department owns no
-   * pipeline at all (knowledge/personal today own a single light one; a future
+   * workflow at all (knowledge/personal today own a single light one; a future
    * agents-only department would land here).
    */
-  private cheapestPipeline(candidates: readonly RoutableTarget[]): RoutableTarget | undefined {
-    return candidates.find((c) => c.kind === "pipeline") ?? candidates[0];
+  private cheapestWorkflow(candidates: readonly RoutableTarget[]): RoutableTarget | undefined {
+    return candidates.find((c) => c.kind === "workflow") ?? candidates[0];
   }
 
   /**
@@ -837,35 +837,35 @@ export class TaskClassifierService {
   }
 
   /**
-   * Project stored pipelines onto the rankable candidate shape, sorted onto the
+   * Project stored workflows onto the rankable candidate shape, sorted onto the
    * complexity ladder (cheapest rung first). Used only by
    * {@link departmentCandidates} since F9 made stage 1 department-only, but kept as
-   * its own projection so a pipeline candidate's `search`/`glyph` shape is
+   * its own projection so a workflow candidate's `search`/`glyph` shape is
    * computed in exactly one place.
    *
    * `complexity` rides along so {@link buildDepartmentPreamble} can label each
-   * unit with its rung and {@link cheapestPipeline} can resolve the fallback
+   * unit with its rung and {@link cheapestWorkflow} can resolve the fallback
    * without re-reading the stored entities.
    */
-  private pipelineCandidates(pipelines: readonly Pipeline[]): RoutableTarget[] {
-    return pipelines
+  private workflowCandidates(workflows: readonly Workflow[]): RoutableTarget[] {
+    return workflows
       .map((p) => ({
-        kind: "pipeline" as const,
+        kind: "workflow" as const,
         id: p.id,
         name: p.name ?? p.id,
         glyph: "flow",
         avatar: p.avatar,
         complexity: p.complexity,
-        // The pipeline's own declaration that it ends in an opened PR — see
+        // The workflow's own declaration that it ends in an opened PR — see
         // `RoutableTarget.deliversPr`.
         deliversPr: p.outputs.some((o) => o.type === "pr"),
-        // A pipeline's desc carries most of the routable signal; the phase agents add a few terms.
+        // A workflow's desc carries most of the routable signal; the phase agents add a few terms.
         search: [p.name, p.id, p.desc, ...p.phases.map((ph) => ph.agent)].filter(Boolean).join(" "),
       }))
       .sort(
         (a, b) =>
-          PIPELINE_COMPLEXITY_ORDER.indexOf(a.complexity) -
-          PIPELINE_COMPLEXITY_ORDER.indexOf(b.complexity),
+          WORKFLOW_COMPLEXITY_ORDER.indexOf(a.complexity) -
+          WORKFLOW_COMPLEXITY_ORDER.indexOf(b.complexity),
       );
   }
 
@@ -879,7 +879,7 @@ export class TaskClassifierService {
     // classifier must never route to one (the same posture as orchestrator —
     // this is also the scope-guard belt to the `candidates.some(...)` check
     // below, which already rejects it structurally since neither
-    // `buildCandidates` nor `pipelineCandidates` ever emits a `kind: "goal"`
+    // `buildCandidates` nor `workflowCandidates` ever emits a `kind: "goal"`
     // entry). F2a: `department` is REMOVED from this rejection list — the top-level
     // catalog now legitimately offers department candidates (`stage1DepartmentCandidates`),
     // so a seated department verdict is coherent; `classifyWithinDepartment`'s own
@@ -887,7 +887,7 @@ export class TaskClassifierService {
     if (target.kind === "orchestrator" || target.kind === "goal") {
       return false;
     }
-    // NS2 F9: an `agent`/`pipeline` verdict is now rejected STRUCTURALLY at stage 1
+    // NS2 F9: an `agent`/`workflow` verdict is now rejected STRUCTURALLY at stage 1
     // by the check below — `buildCandidates` emits departments only, so no concrete
     // unit can match. No explicit rejection is added for them, because the same
     // check is what ACCEPTS them on the scoped stage-2 path, where the catalog is

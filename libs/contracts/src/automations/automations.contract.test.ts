@@ -71,12 +71,12 @@ describe("automation schema — NS2 F7b-2 post-merge-watch target", () => {
 });
 
 describe("automation schema", () => {
-  it("accepts a cron→pipeline and an event→agent automation", () => {
+  it("accepts a cron→workflow and an event→agent automation", () => {
     expect(
       AutomationSchema.safeParse({
         id: "nightly",
         trigger: { type: "cron", expr: "0 3 * * *" },
-        target: { type: "pipeline", pipelineId: "release" },
+        target: { type: "workflow", workflowId: "release" },
         enabled: true,
       }).success,
     ).toBe(true);
@@ -110,7 +110,7 @@ describe("automation schema", () => {
     ).toBe(false);
   });
 
-  it("accepts a briefing target (no agent/pipeline picker)", () => {
+  it("accepts a briefing target (no agent/workflow picker)", () => {
     expect(
       AutomationSchema.safeParse({
         id: "morning-briefing",
@@ -173,7 +173,7 @@ describe("automation schema", () => {
           target: {
             type: "task",
             text: "audit the repo for stale deps",
-            target: { kind: "pipeline", id: "code-audit", name: "Code audit" },
+            target: { kind: "workflow", id: "code-audit", name: "Code audit" },
             attachmentSetId: "set_abc123",
             output: { type: "pr" },
             toolGrants: ["web_search"],

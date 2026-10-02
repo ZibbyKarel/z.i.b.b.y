@@ -43,11 +43,11 @@ A department is real only when **removing it would break behavior, not just a sc
 Every department must fulfil six duties. This is the definition of done for the
 federation — any orb that cannot check all six is still scenery:
 
-1. **Ownership is data.** Agents, pipelines, chains, channels, and monitors carry an
+1. **Ownership is data.** Agents, workflows, chains, channels, and monitors carry an
    `department` tag in the contract. The roster is stored, never derived at
    render time. Every dispatchable unit has exactly one owner.
 2. **A dispatch brain.** When work enters its domain, the department decides which of
-   its own pipelines or agents runs — with its own mandate-derived routing prompt and
+   its own workflows or agents runs — with its own mandate-derived routing prompt and
    its own fallback policy. The global classifier only picks the department; the
    department picks the unit. An explicit operator target still overrides everything.
 3. **An autonomy policy.** Each department layers its own gate rules and tier defaults
@@ -83,7 +83,7 @@ a new chair is charter work, never an ad-hoc grouping.
 - **Incident Response — Maják v noci.** Owns escalation: the shape and priority of everything
   Tier-3, the approvals queue, the "needs you" section of the briefing. _Exists as a
   global queue; becomes the curator of the operator's attention._
-- **R&D — Zvěd na cestách.** Owns research pipelines and artifact handoff chains
+- **R&D — Zvěd na cestách.** Owns research workflows and artifact handoff chains
   ("research overnight → build from it"). _Machinery built (chains, artifact
   registry); needs its chair and its shelf._
 - **Release Management — Dirigent vydání.** Owns release readiness: the merge queue, CI state per

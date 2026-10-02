@@ -51,7 +51,7 @@ describe("Activity log (e2e)", () => {
   beforeAll(async () => {
     for (const key of [
       "AGENTS_DIR",
-      "PIPELINES_DIR",
+      "WORKFLOWS_DIR",
       "AGENT_RUNS_DIR",
       "TASKS_DIR",
       "APPROVALS_DIR",
@@ -105,7 +105,7 @@ describe("Activity log (e2e)", () => {
     for (const d of Object.values(dirs)) await fs.rm(d, { recursive: true, force: true });
     for (const k of [
       "AGENTS_DIR",
-      "PIPELINES_DIR",
+      "WORKFLOWS_DIR",
       "AGENT_RUNS_DIR",
       "TASKS_DIR",
       "APPROVALS_DIR",

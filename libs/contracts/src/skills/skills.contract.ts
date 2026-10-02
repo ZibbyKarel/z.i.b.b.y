@@ -62,4 +62,4 @@ export type SkillsContract = typeof skillsContract;
 
 // A skill is not an autonomous executable — it's a capability an agent invokes
 // from its delegatable catalog, so there is no standalone "skill run" contract.
-// (Contrast `agentRunsContract`/`pipelineRunsContract`, which are real runners.)
+// (Contrast `agentRunsContract`/`workflowRunsContract`, which are real runners.)

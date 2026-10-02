@@ -36,7 +36,7 @@ export interface ArchiveRowProps {
  * The active row's hue tint and the dot's glow are dynamic per-instance
  * colours DS's sealed `Card`/`Container` carry no token for — forwarded
  * through their `style` passthrough, the same sanctioned pattern as
- * `PipelineOwnerChip` and `DepartmentDrawer`'s `headerBandStyle`.
+ * `WorkflowOwnerChip` and `DepartmentDrawer`'s `headerBandStyle`.
  */
 export function ArchiveRow({
   run,

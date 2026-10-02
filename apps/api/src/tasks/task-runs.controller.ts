@@ -2,7 +2,7 @@ import { Controller } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { taskRunsContract } from "@zibby/contracts";
 import { GoalRunNotParkedError } from "../goals/goals.errors";
-import { RunNotRetriesParkedError } from "../pipelines/pipeline-runner.service";
+import { RunNotRetriesParkedError } from "../workflows/workflow-runner.service";
 import {
   TaskRunNotFoundError,
   TaskRunNotResumableError,

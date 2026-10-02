@@ -91,17 +91,17 @@ describe("extractKeyUsages", () => {
   });
 
   it("protects the whole namespace when the argument is a lookup-table indirection", () => {
-    // Real pattern (`PipelineCard`): `t(STATE_LABEL_KEY[state])` — the actual
+    // Real pattern (`WorkflowCard`): `t(STATE_LABEL_KEY[state])` — the actual
     // key can't be known statically at all.
-    const source = `const t = useTranslations("pipelines");\nt(STATE_LABEL_KEY[state]);`;
+    const source = `const t = useTranslations("workflows");\nt(STATE_LABEL_KEY[state]);`;
     const usage = extractKeyUsages(source, extractTranslatorBindings(source));
-    expect(usage.protectedNamespaces.has("pipelines")).toBe(true);
+    expect(usage.protectedNamespaces.has("workflows")).toBe(true);
   });
 
   it("does not treat a zero-argument call as a usage", () => {
-    const source = `const t = useTranslations("pipelines");\nt();`;
+    const source = `const t = useTranslations("workflows");\nt();`;
     const usage = extractKeyUsages(source, extractTranslatorBindings(source));
-    expect(usage.protectedNamespaces.has("pipelines")).toBe(false);
+    expect(usage.protectedNamespaces.has("workflows")).toBe(false);
   });
 
   it("protects the whole namespace when a template has no static prefix", () => {

@@ -15,7 +15,7 @@ export function prNumberFromUrl(url: string): number | null {
  * system already records that, so nothing has to be guessed from a GitHub author
  * login (the operator's token opens both ZIBBY's PRs and their own):
  *
- * - the artifact registry (`kind: "pr"`), written by a pipeline's terminal PR sink
+ * - the artifact registry (`kind: "pr"`), written by a workflow's terminal PR sink
  * - a directed task's `outcome.pr`, written by the task scheduler
  *
  * Read-only and local — no network.

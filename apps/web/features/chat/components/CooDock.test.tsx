@@ -17,9 +17,9 @@ vi.mock("../../agents/queries/useAgentsQuery", () => ({
   useAgentsQuery: () => ({ data: [] }),
   getAgentsQueryKey: () => ["agents"],
 }));
-vi.mock("../../pipelines/queries/usePipelinesQuery", () => ({
-  usePipelinesQuery: () => ({ data: [] }),
-  getPipelinesQueryKey: () => ["pipelines"],
+vi.mock("../../workflows/queries/useWorkflowsQuery", () => ({
+  useWorkflowsQuery: () => ({ data: [] }),
+  getWorkflowsQueryKey: () => ["workflows"],
 }));
 vi.mock("../../departments/queries/useDepartmentsQuery", () => ({
   useDepartmentsQuery: () => ({ data: [] }),

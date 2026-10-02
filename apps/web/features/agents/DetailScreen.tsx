@@ -26,7 +26,7 @@ import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { RuleModal } from "../gates/components/RuleModal";
 import { PinButton } from "../pins";
-import { usePipelinesQuery } from "../pipelines";
+import { useWorkflowsQuery } from "../workflows";
 import { useNewTask } from "../tasks";
 import { agentFile } from "./agentDraft";
 import { AgentEditBasics } from "./components/AgentEditBasics";
@@ -72,7 +72,7 @@ function AgentEditor({ agent }: { agent: Agent }) {
   const tk = useTranslations();
   const router = useRouter();
   const { data: categories = [] } = useCategoriesQuery();
-  const { data: pipelines = [] } = usePipelinesQuery();
+  const { data: workflows = [] } = useWorkflowsQuery();
   const updateAgent = useUpdateAgentMutation();
   const deleteAgent = useDeleteAgentMutation();
   const { open: openNewTask } = useNewTask();
@@ -82,7 +82,7 @@ function AgentEditor({ agent }: { agent: Agent }) {
   const [editingRule, setEditingRule] = useState<number | "new" | null>(null);
 
   const name = agent.name ?? agent.id;
-  const usedBy = pipelines.filter((p) => p.phases.some((ph) => ph.agent === agent.name));
+  const usedBy = workflows.filter((p) => p.phases.some((ph) => ph.agent === agent.name));
 
   const { renderForm, submit, form } = useFormControls<AgentEditValues>({
     defaultValues: toFormValues(agent),
@@ -209,10 +209,10 @@ function AgentEditor({ agent }: { agent: Agent }) {
             />
           </Panel>
 
-          <Panel header={t("usedInPipelines")} padding="200">
+          <Panel header={t("usedInWorkflows")} padding="200">
             {usedBy.length === 0 ? (
               <Typography size="sm" type="note" variant="tertiary">
-                {t("notInPipeline")}
+                {t("notInWorkflow")}
               </Typography>
             ) : (
               <Stack wrap direction="row" gap="100">

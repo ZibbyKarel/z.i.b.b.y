@@ -168,7 +168,7 @@ class KbScopeService {
 }
 ```
 
-**The asymmetry (deliberate).** A project-scoped agent/pipeline run reaches
+**The asymmetry (deliberate).** A project-scoped agent/workflow run reaches
 ONLY its own team's KB (`runId → run record → projectId → knowledgeBaseFor →
 [root]`) — no team, a team with no KB, an unknown run id, or an absent runId
 all fail closed to `[]`. A chat turn has the _operator_ as its principal and
@@ -181,12 +181,12 @@ team → empty, silently killing "let it follow from the conversation".
 couldn't otherwise reach yields `[]`, never that team's root.
 
 **Resolving a run id to a project is by reference, not a stored id.** Neither
-`AgentRun` nor `PipelineRun` persists a canonical `projectId`. An agent run
+`AgentRun` nor `WorkflowRun` persists a canonical `projectId`. An agent run
 carries only `project` (the free-form label passed to `startRun` — an id or a
 display name), resolved by id-then-name exactly like
-`AgentRunnerService`'s own private `resolveProject`. A pipeline run carries
+`AgentRunnerService`'s own private `resolveProject`. A workflow run carries
 only `projectPath` (absolute path), resolved by path exactly like
-`PipelineRunnerService`'s own private `projectForRun`. This means scope
+`WorkflowRunnerService`'s own private `projectForRun`. This means scope
 resolution is a query-time lookup, redone on every call, NOT a "fails closed
 at worst" one: if the referenced project is deleted and a new one is
 registered reusing the same id/name (or the same `projectPath`), the SAME run
@@ -215,8 +215,8 @@ contain no further `_`, the separator itself (`_${pid}`, never
 bare-agent-id truncation. The rule is shape-based rather than all-digit on
 purpose: `RunnerCore.createPending` mints a `_p${hex}` suffix instead of a bare
 pid, and an all-digit rule would silently drop such a run's KB scope — failing
-closed, but for no reason. A pipeline run's header IS its
-`pipelineRunId`, resolved by exact match (also supported for a completed
+closed, but for no reason. A workflow run's header IS its
+`workflowRunId`, resolved by exact match (also supported for a completed
 agent run, in principle).
 
 ## The `zibby-kb` MCP endpoint (`apps/api/src/kb/kb-mcp.controller.ts`)
@@ -359,7 +359,7 @@ accepts a well-formed team id — it is the seam a later branch builds on — bu
 nothing on the task path sets it any more, and nothing on the API reads it: a
 task's dispatched run has no field to carry an explicit team tag through to
 its KB scope. Wiring one through needs a new field on each of three persisted
-schemas that don't have one today — `PipelineRunSchema`, `GoalRunSchema`, and
+schemas that don't have one today — `WorkflowRunSchema`, `GoalRunSchema`, and
 `ScheduledTaskSchema` (a task itself, the earliest point the tag would
 otherwise die) — plus the `rootsForRun` resolution above extended to prefer
 that explicit tag over the project's own team. That's deferred, deliberately,

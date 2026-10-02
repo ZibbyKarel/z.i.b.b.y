@@ -3,7 +3,7 @@ import { AgentIdSchema } from "../agents/agent.schema";
 import { IsoDateTimeSchema, WorkspaceSchema } from "../common.schema";
 
 /**
- * Lifecycle of a whole goal run — a deliberate clone of {@link PipelineStateSchema}
+ * Lifecycle of a whole goal run — a deliberate clone of {@link WorkflowStateSchema}
  * semantics so the web `FeedStatus` mapping and `paused-limit`/`parked` handling
  * are reused, not reinvented: `running` while iterating, `done`/`failed` at the
  * end, `parked` when bounded effort is exhausted (iterations/budget/limit) and the
@@ -24,7 +24,7 @@ export const GoalStateSchema = z.enum([
 export type GoalState = z.infer<typeof GoalStateSchema>;
 
 /**
- * Why a goal is `parked` — its own enum so it never pollutes the pipeline's
+ * Why a goal is `parked` — its own enum so it never pollutes the workflow's
  * {@link ParkedReasonSchema}:
  * - `iterations`: the maxIterations fuse blew (the loop ran out of attempts).
  * - `budget`: a per-iteration budget check went over-cap mid-goal.
@@ -62,8 +62,8 @@ export type GoalIterationStatus = z.infer<typeof GoalIterationStatusSchema>;
  */
 export const GoalIterationSchema = z.object({
   index: z.number().int().nonnegative(),
-  makerKind: z.enum(["agent", "pipeline"]),
-  /** The underlying agent-run / pipeline-run id the maker dispatched as. */
+  makerKind: z.enum(["agent", "workflow"]),
+  /** The underlying agent-run / workflow-run id the maker dispatched as. */
   makerRunRef: z.string().optional(),
   verifier: z.object({
     kind: z.enum(["checks", "claude"]),
@@ -92,7 +92,7 @@ export const GoalParkedDetailSchema = z.object({
 export type GoalParkedDetail = z.infer<typeof GoalParkedDetailSchema>;
 
 /**
- * A run of a goal: the outer-loop aggregate, modeled on {@link PipelineRunSchema}
+ * A run of a goal: the outer-loop aggregate, modeled on {@link WorkflowRunSchema}
  * with `iterations[]` replacing `stageRuns[]`. Written to `<runRoot>/run.json` on
  * every transition and rebuilt by `reconstruct()` on init, so the loop survives a
  * restart and continues at `currentIteration` (continuation, not restart).
@@ -131,7 +131,7 @@ export const GoalRunSchema = z.object({
 });
 export type GoalRun = z.infer<typeof GoalRunSchema>;
 
-/** Body accepted by `startGoalRun` (mirror of StartPipelineRunSchema + agent run fields). */
+/** Body accepted by `startGoalRun` (mirror of StartWorkflowRunSchema + agent run fields). */
 export const StartGoalRunSchema = z.object({
   project: z.string().optional(),
   files: z.array(z.string()).optional(),

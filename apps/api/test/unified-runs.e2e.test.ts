@@ -28,22 +28,22 @@ describe("Unified run surface (Phase D guard)", () => {
     const http = () => app.getHttpServer();
     // Direct-start routes are gone (you start a run only via POST /api/tasks).
     await request(http()).post("/api/agents/whoever/run").send({ prompt: "x" }).expect(404);
-    await request(http()).post("/api/pipelines/whatever/run").send({ project: "" }).expect(404);
+    await request(http()).post("/api/workflows/whatever/run").send({ project: "" }).expect(404);
     await request(http()).post("/api/goals/whichever/run").send({}).expect(404);
     // Run-history / list routes are gone (the unified feed replaces them).
     await request(http()).get("/api/agents/runs").expect(404);
-    await request(http()).get("/api/pipelines/run-history").expect(404);
+    await request(http()).get("/api/workflows/run-history").expect(404);
     await request(http()).get("/api/goals/run-history").expect(404);
     // Per-kind run lifecycle routes are gone (they live on /api/tasks/runs now).
     await request(http()).get("/api/agents/runs/nope/logs").expect(404);
-    await request(http()).post("/api/pipelines/runs/nope/resume").send({}).expect(404);
+    await request(http()).post("/api/workflows/runs/nope/resume").send({}).expect(404);
   });
 
   it("keeps the catalog-liveness reads (the only per-kind run endpoints that survive)", async () => {
     const running = await request(app.getHttpServer()).get("/api/agents/running").expect(200);
     expect(Array.isArray(running.body)).toBe(true);
-    const pipelineRuns = await request(app.getHttpServer()).get("/api/pipelines/runs").expect(200);
-    expect(Array.isArray(pipelineRuns.body)).toBe(true);
+    const workflowRuns = await request(app.getHttpServer()).get("/api/workflows/runs").expect(200);
+    expect(Array.isArray(workflowRuns.body)).toBe(true);
   });
 
   it("serves the unified feed at /api/tasks/runs", async () => {

@@ -132,7 +132,7 @@ except `incident → ask` (its mandate IS Tier-3 surface-and-wait), appended as 
 `{type: "context", context: "*"}` rule. The bucket applies **only** to runs of
 units owned by that department — the acting department derives from the owned unit
 (`agent.department` for a non-orchestrator agent run,
-`pipeline.department` for a pipeline stage), never from the task
+`workflow.department` for a workflow stage), never from the task
 classification. Out of scope by decision: `evaluateForOrchestrator` (the
 orchestrator is synthetic/unowned) and the floor-only call sites
 (agent-proposal, task-scheduler budget guard). There is no write-time 422 for a

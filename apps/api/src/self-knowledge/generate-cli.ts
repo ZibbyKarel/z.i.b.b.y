@@ -28,7 +28,7 @@ function pinRelativeDataDir(): void {
  * a file living outside `apps/api` (see the CLI wrapper for the full story).
  *
  * Boots the same `AppModule` the server does via `createApplicationContext` (no
- * HTTP listener), so it reads the exact same agents/pipelines/gate-rules/policy/
+ * HTTP listener), so it reads the exact same agents/workflows/gate-rules/policy/
  * vault the running API would.
  *
  * Two modes:

@@ -15,7 +15,7 @@ const FAKE_CLAUDE = path.resolve(
 
 const ENV_KEYS = [
   "AGENTS_DIR",
-  "PIPELINES_DIR",
+  "WORKFLOWS_DIR",
   "AGENT_RUNS_DIR",
   "TASKS_DIR",
   "PROJECTS_DIR",
@@ -60,7 +60,7 @@ describe("Budget API (e2e)", () => {
   beforeAll(async () => {
     for (const key of [
       "agents",
-      "pipelines",
+      "workflows",
       "runs",
       "tasks",
       "projects",
@@ -71,7 +71,7 @@ describe("Budget API (e2e)", () => {
       dirs[key] = await fs.mkdtemp(path.join(os.tmpdir(), `budget-${key}-`));
     }
     process.env.AGENTS_DIR = dirs.agents;
-    process.env.PIPELINES_DIR = dirs.pipelines;
+    process.env.WORKFLOWS_DIR = dirs.workflows;
     process.env.AGENT_RUNS_DIR = dirs.runs;
     process.env.TASKS_DIR = dirs.tasks;
     process.env.PROJECTS_DIR = dirs.projects;

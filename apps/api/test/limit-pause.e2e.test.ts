@@ -9,7 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
 import { LimitResumeService } from "../src/limits-resume/limit-resume.service";
 import { LimitsService } from "../src/limits/limits.service";
-import { PipelineRunnerService } from "../src/pipelines/pipeline-runner.service";
+import { WorkflowRunnerService } from "../src/workflows/workflow-runner.service";
 import { defaultEmployeesDir, seedEmployeeFixture } from "./fixtures/employee-fixture";
 
 /** Token-free `claude` stand-in so agent-run dispatch passes preflight (demo path). */
@@ -68,7 +68,7 @@ describe("Usage-limit pause / auto-resume (e2e)", () => {
   }
 
   beforeAll(async () => {
-    for (const k of ["pipelines", "runs", "projects", "vault", "tasks", "agents"]) {
+    for (const k of ["workflows", "runs", "projects", "vault", "tasks", "agents"]) {
       dirs[k] = await fs.mkdtemp(path.join(os.tmpdir(), `limit-${k}-`));
     }
     configDir = await fs.mkdtemp(path.join(os.tmpdir(), "limit-config-"));
@@ -77,14 +77,14 @@ describe("Usage-limit pause / auto-resume (e2e)", () => {
     // override an already-set var, so this wins. Stages run via the token-free demo path.
     process.env.AGENT_RUNNER_MODE = "demo";
     process.env.CLAUDE_CONFIG_DIR = configDir;
-    process.env.PIPELINES_DIR = dirs.pipelines;
-    process.env.PIPELINE_RUNS_DIR = dirs.runs;
+    process.env.WORKFLOWS_DIR = dirs.workflows;
+    process.env.WORKFLOW_RUNS_DIR = dirs.runs;
     process.env.PROJECTS_DIR = dirs.projects;
     process.env.VAULT_DIR = dirs.vault;
     process.env.TASKS_DIR = dirs.tasks;
     process.env.AGENTS_DIR = dirs.agents;
     // Agent runs (task dispatch) are always claude-shaped and preflight; point them at
-    // the fake CLI so a dispatch succeeds without a real session (pipeline stages stay
+    // the fake CLI so a dispatch succeeds without a real session (workflow stages stay
     // on the demo path via AGENT_RUNNER_MODE=demo).
     process.env.CLAUDE_BIN = FAKE_CLAUDE;
     process.env.FAKE_CLAUDE_STEPS = "1";
@@ -115,23 +115,23 @@ describe("Usage-limit pause / auto-resume (e2e)", () => {
       "FAKE_CLAUDE_STEPS",
       "FAKE_CLAUDE_DELAY_MS",
       "CLAUDE_CONFIG_DIR",
-      "PIPELINES_DIR",
-      "PIPELINE_RUNS_DIR",
+      "WORKFLOWS_DIR",
+      "WORKFLOW_RUNS_DIR",
       "PROJECTS_DIR",
       "VAULT_DIR",
       "TASKS_DIR",
       "AGENTS_DIR",
       "AGENT_DEMO_STEPS",
       "AGENT_DEMO_DELAY_MS",
-      "PIPELINE_DEMO_LIMIT_PHASES",
+      "WORKFLOW_DEMO_LIMIT_PHASES",
     ]) {
       delete process.env[k];
     }
   });
 
-  it("pauses a pipeline mid-stage on a usage limit, then auto-resumes it to done without burning retries", async () => {
+  it("pauses a workflow mid-stage on a usage limit, then auto-resumes it to done without burning retries", async () => {
     await request(app.getHttpServer())
-      .post("/api/pipelines")
+      .post("/api/workflows")
       .send({
         id: "limitpipe",
         phases: [phase("a"), phase("koder"), phase("c")],
@@ -141,15 +141,15 @@ describe("Usage-limit pause / auto-resume (e2e)", () => {
       .expect(201);
 
     // The koder stage emits the usage-limit line + exits on its FIRST attempt only.
-    process.env.PIPELINE_DEMO_LIMIT_PHASES = "koder";
+    process.env.WORKFLOW_DEMO_LIMIT_PHASES = "koder";
     try {
-      const pipelines = app.get(PipelineRunnerService);
-      const start = await pipelines.start("limitpipe", undefined, undefined);
-      const runId: string = start.pipelineRunId;
+      const workflows = app.get(WorkflowRunnerService);
+      const start = await workflows.start("limitpipe", undefined, undefined);
+      const runId: string = start.workflowRunId;
 
       // It halts at koder as `paused-limit`, with a resumeAt and an UNTOUCHED retry map.
       const paused = await until(async () => {
-        const res = pipelines.get(runId);
+        const res = workflows.get(runId);
         return res.status === "paused-limit" ? res : null;
       });
       expect(paused.currentStage).toBe("koder");
@@ -162,10 +162,10 @@ describe("Usage-limit pause / auto-resume (e2e)", () => {
       const limitResume = app.get(LimitResumeService);
       const done = await until(async () => {
         await limitResume.tick(new Date());
-        const res = pipelines.get(runId);
+        const res = workflows.get(runId);
         return res.status === "done" ? res : null;
       });
-      // It finished at the same pipeline, having auto-resumed at least once.
+      // It finished at the same workflow, having auto-resumed at least once.
       expect(done.status).toBe("done");
       expect(done.limitResumeCycles ?? 0).toBeGreaterThanOrEqual(1);
 
@@ -180,7 +180,7 @@ describe("Usage-limit pause / auto-resume (e2e)", () => {
       expect(kinds).toContain("run-paused-limit");
       expect(kinds).toContain("run-resumed-limit");
     } finally {
-      delete process.env.PIPELINE_DEMO_LIMIT_PHASES;
+      delete process.env.WORKFLOW_DEMO_LIMIT_PHASES;
     }
   });
 
@@ -234,7 +234,7 @@ describe("Usage-limit pause survives a restart (e2e)", () => {
   }
 
   beforeAll(async () => {
-    for (const k of ["pipelines", "runs", "projects", "vault", "agents"]) {
+    for (const k of ["workflows", "runs", "projects", "vault", "agents"]) {
       dirs[k] = await fs.mkdtemp(path.join(os.tmpdir(), `limitr-${k}-`));
     }
     configDir = await fs.mkdtemp(path.join(os.tmpdir(), "limitr-config-"));
@@ -243,8 +243,8 @@ describe("Usage-limit pause survives a restart (e2e)", () => {
     // override an already-set var, so this wins. Stages run via the token-free demo path.
     process.env.AGENT_RUNNER_MODE = "demo";
     process.env.CLAUDE_CONFIG_DIR = configDir;
-    process.env.PIPELINES_DIR = dirs.pipelines;
-    process.env.PIPELINE_RUNS_DIR = dirs.runs;
+    process.env.WORKFLOWS_DIR = dirs.workflows;
+    process.env.WORKFLOW_RUNS_DIR = dirs.runs;
     process.env.PROJECTS_DIR = dirs.projects;
     process.env.VAULT_DIR = dirs.vault;
     process.env.AGENTS_DIR = dirs.agents;
@@ -258,8 +258,8 @@ describe("Usage-limit pause survives a restart (e2e)", () => {
     for (const k of [
       "AGENT_RUNNER_MODE",
       "CLAUDE_CONFIG_DIR",
-      "PIPELINES_DIR",
-      "PIPELINE_RUNS_DIR",
+      "WORKFLOWS_DIR",
+      "WORKFLOW_RUNS_DIR",
       "PROJECTS_DIR",
       "VAULT_DIR",
       "AGENTS_DIR",
@@ -277,7 +277,7 @@ describe("Usage-limit pause survives a restart (e2e)", () => {
     let runId: string;
     try {
       await request(app1.getHttpServer())
-        .post("/api/pipelines")
+        .post("/api/workflows")
         .send({
           id: "boundarypipe",
           phases: [phase("a"), phase("b")],
@@ -286,11 +286,11 @@ describe("Usage-limit pause survives a restart (e2e)", () => {
         })
         .expect(201);
       const start = await app1
-        .get(PipelineRunnerService)
+        .get(WorkflowRunnerService)
         .start("boundarypipe", undefined, undefined);
-      runId = start.pipelineRunId;
+      runId = start.workflowRunId;
       await until(async () => {
-        const res = app1.get(PipelineRunnerService).get(runId);
+        const res = app1.get(WorkflowRunnerService).get(runId);
         return res.status === "paused-limit" ? res : null;
       });
     } finally {
@@ -300,7 +300,7 @@ describe("Usage-limit pause survives a restart (e2e)", () => {
     // A fresh backend rebuilds the aggregate from disk; the pause survives unchanged.
     const app2 = await boot();
     try {
-      const res = app2.get(PipelineRunnerService).get(runId);
+      const res = app2.get(WorkflowRunnerService).get(runId);
       expect(res.status).toBe("paused-limit");
     } finally {
       await app2.close();

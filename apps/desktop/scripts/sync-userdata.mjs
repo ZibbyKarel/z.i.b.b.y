@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Syncs this repo's .zibby/data into the installed ZIBBY.app's userData data
-// directory, so the desktop app sees the same agents/pipelines/vault/etc. as
+// directory, so the desktop app sees the same agents/workflows/vault/etc. as
 // the dev environment without a full desktop:build + reinstall. One-way,
 // additive only (no rsync --delete) — never removes anything the running
 // app created on its own since the last sync (e.g. new run history), and

@@ -37,7 +37,7 @@ describe("activityIcon", () => {
   it("maps kinds to glyph buckets", () => {
     expect(activityIcon("task-created")).toBe("run");
     expect(activityIcon("run-started")).toBe("run");
-    expect(activityIcon("pipeline-parked")).toBe("wait");
+    expect(activityIcon("workflow-parked")).toBe("wait");
     expect(activityIcon("approval-requested")).toBe("wait");
     expect(activityIcon("gate-decision")).toBe("wait");
     expect(activityIcon("run-finished")).toBe("ok");

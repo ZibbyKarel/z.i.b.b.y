@@ -12,8 +12,8 @@ export default meta;
 type Story = StoryObj<typeof ChainRouteStrip>;
 
 const STEPS: ChainRouteStripStep[] = [
-  { code: "DEV", name: "Add SSO to the client portal", state: "done", pipeline: "Delivery" },
-  { code: "QA", name: "Verify the SSO flow", state: "working", pipeline: "Test", selected: true },
+  { code: "DEV", name: "Add SSO to the client portal", state: "done", workflow: "Delivery" },
+  { code: "QA", name: "Verify the SSO flow", state: "working", workflow: "Test", selected: true },
   { code: "REL", name: "Ship the release", state: "idle" },
 ];
 

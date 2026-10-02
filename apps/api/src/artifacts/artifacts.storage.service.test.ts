@@ -15,7 +15,7 @@ const record = (over: Partial<ArtifactRecord>): ArtifactRecord => ({
   kind: "vault-note",
   locator: "audit-note",
   from: "docs.md",
-  producedBy: { runRef: "delivery_1", pipelineId: "delivery" },
+  producedBy: { runRef: "delivery_1", workflowId: "delivery" },
   createdAt: "2026-07-01T10:00:00.000Z",
   ...over,
 });
@@ -40,7 +40,7 @@ describe("ArtifactsStorageService", () => {
         id: "delivery_2_pr_docs-md",
         kind: "pr",
         locator: "https://example.test/pr/2",
-        producedBy: { runRef: "delivery_2", pipelineId: "delivery" },
+        producedBy: { runRef: "delivery_2", workflowId: "delivery" },
         createdAt: "2026-07-01T11:00:00.000Z",
       }),
     );
@@ -61,21 +61,21 @@ describe("ArtifactsStorageService", () => {
     expect(all[0]?.locator).toBe("audit-note-v2");
   });
 
-  it("filters by projectId and pipelineId", async () => {
+  it("filters by projectId and workflowId", async () => {
     await store.record(
-      record({ producedBy: { runRef: "r1", pipelineId: "research", projectId: "acme" } }),
+      record({ producedBy: { runRef: "r1", workflowId: "research", projectId: "acme" } }),
     );
     await store.record(
       record({
         id: "r2_pr_x",
         createdAt: "2026-07-01T12:00:00.000Z",
-        producedBy: { runRef: "r2", pipelineId: "delivery", projectId: "beta" },
+        producedBy: { runRef: "r2", workflowId: "delivery", projectId: "beta" },
       }),
     );
 
     expect(await store.listFiltered({ projectId: "acme" })).toHaveLength(1);
-    expect(await store.listFiltered({ pipelineId: "delivery" })).toHaveLength(1);
-    expect(await store.listFiltered({ projectId: "acme", pipelineId: "delivery" })).toHaveLength(0);
+    expect(await store.listFiltered({ workflowId: "delivery" })).toHaveLength(1);
+    expect(await store.listFiltered({ projectId: "acme", workflowId: "delivery" })).toHaveLength(0);
     expect(await store.listFiltered({})).toHaveLength(2);
   });
 

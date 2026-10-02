@@ -2,7 +2,7 @@
 
 > Phase 10.3, trimmed in Phase 116a. The deterministic triage scan that used to
 > produce candidates (`DiscoveryTriageService`, the `discovery` automation target)
-> is retired — the operator now targets a pipeline like `code-audit` directly for
+> is retired — the operator now targets a workflow like `code-audit` directly for
 > that kind of sweep instead. What remains is the **proposals inbox**: a candidate
 > can still be persisted (e.g. by a future scanner, or seeded directly) and parked
 > behind an approval. **Proposed ≠ dispatched:** nothing here calls `createTask`
@@ -10,14 +10,14 @@
 
 ## Pieces
 
-| Piece              | File                                                       | Role                                                                                     |
-| ------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| Schema              | `libs/contracts/src/discovery/proposal.schema.ts`           | `SuggestedTarget`, the closed (`.strict()`) `Candidate`, `ProposalState`, `Proposal`      |
-| Contract            | `libs/contracts/src/discovery/discovery.contract.ts`        | `discoveryContract` — the read-only `/api/discovery/proposals` router                     |
-| Proposal storage    | `apps/api/src/discovery/proposals.storage.service.ts`       | `ProposalsStorageService` — file-backed `<id>.json` per proposal                          |
-| Dispatch flow       | `apps/api/src/discovery/proposed-task-flow.service.ts`      | `ProposedTaskFlowService` — the `proposed-task` approval's `ResumableRunner`              |
-| Controller          | `apps/api/src/discovery/discovery.controller.ts`            | Implements the contract; read-only                                                        |
-| Module              | `apps/api/src/discovery/discovery.module.ts`                | Wires storage + flow + controller                                                        |
+| Piece            | File                                                   | Role                                                                                 |
+| ---------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| Schema           | `libs/contracts/src/discovery/proposal.schema.ts`      | `SuggestedTarget`, the closed (`.strict()`) `Candidate`, `ProposalState`, `Proposal` |
+| Contract         | `libs/contracts/src/discovery/discovery.contract.ts`   | `discoveryContract` — the read-only `/api/discovery/proposals` router                |
+| Proposal storage | `apps/api/src/discovery/proposals.storage.service.ts`  | `ProposalsStorageService` — file-backed `<id>.json` per proposal                     |
+| Dispatch flow    | `apps/api/src/discovery/proposed-task-flow.service.ts` | `ProposedTaskFlowService` — the `proposed-task` approval's `ResumableRunner`         |
+| Controller       | `apps/api/src/discovery/discovery.controller.ts`       | Implements the contract; read-only                                                   |
+| Module           | `apps/api/src/discovery/discovery.module.ts`           | Wires storage + flow + controller                                                    |
 
 ## The candidate schema — the security spine
 
@@ -47,7 +47,7 @@ above) and, once it exists:
 3. **On approval** (`ProposedTaskFlowService.resume(proposalId)`): the
    proposal's `suggestedTarget` (if any) is converted to a `TaskTarget` — an
    `orchestrator` suggestion needs no id; a stored-definition kind
-   (`agent`/`pipeline`/`goal`) with no id degrades to classification rather
+   (`agent`/`workflow`/`goal`) with no id degrades to classification rather
    than dispatching a malformed target — and the candidate's `text`/`title`
    go through the **normal** `TaskSchedulerService.createTask` path, so a
    discovery-sourced task gets the same budget/concurrency/outcome handling

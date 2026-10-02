@@ -32,10 +32,10 @@ const TRIGGER_GLYPH = { cron: "clock", event: "bolt", signal: "pulse" } as const
   IconName
 >;
 // `task` isn't in here — its glyph depends on the @-mentioned target's OWN kind
-// (agent/pipeline/none), resolved by `taskGlyph` below, not a static per-type map.
+// (agent/workflow/none), resolved by `taskGlyph` below, not a static per-type map.
 const TARGET_GLYPH = {
   agent: "bot",
-  pipeline: "flow",
+  workflow: "flow",
   briefing: "spark",
   "memory-distill": "brain",
   "pattern-extract": "pulse",
@@ -57,16 +57,16 @@ const TARGET_GLYPH = {
 
 /** A `task` automation's glyph mirrors its @-mentioned run target (Screen.tsx's
  *  own `resolveTarget` computes the same thing when it CAN resolve a stored
- *  agent/pipeline's real glyph; this is the fallback for when no `targetGlyph`
+ *  agent/workflow's real glyph; this is the fallback for when no `targetGlyph`
  *  prop is supplied — e.g. this card rendered standalone). */
 function taskGlyph(target: Extract<Target, { type: "task" }>): IconName {
   const kind = target.target?.kind;
-  return kind === "agent" ? "bot" : kind === "pipeline" ? "flow" : "spark";
+  return kind === "agent" ? "bot" : kind === "workflow" ? "flow" : "spark";
 }
 
 export interface AutomationCardProps {
   automation: Automation;
-  /** Resolved display name for the target (agent / pipeline); falls back to id. */
+  /** Resolved display name for the target (agent / workflow); falls back to id. */
   targetName?: string;
   /** Resolved icon for the target; falls back to a per-kind default. */
   targetGlyph?: IconName;
@@ -277,13 +277,13 @@ function FlowBox({
   );
 }
 
-/** Display id for an agent/pipeline target (used when no resolved name is supplied);
+/** Display id for an agent/workflow target (used when no resolved name is supplied);
  *  every other target type resolves its display text before ever reaching this. */
 function targetIdOf(target: Target): string {
   return target.type === "agent"
     ? target.agentId
-    : target.type === "pipeline"
-      ? target.pipelineId
+    : target.type === "workflow"
+      ? target.workflowId
       : "";
 }
 
@@ -292,7 +292,7 @@ function targetKindKey(
   type: Target["type"],
 ):
   | "targetAgent"
-  | "targetPipeline"
+  | "targetWorkflow"
   | "targetTask"
   | "targetBriefing"
   | "targetMemoryDistill"
@@ -307,8 +307,8 @@ function targetKindKey(
   switch (type) {
     case "agent":
       return "targetAgent";
-    case "pipeline":
-      return "targetPipeline";
+    case "workflow":
+      return "targetWorkflow";
     case "task":
       return "targetTask";
     case "briefing":

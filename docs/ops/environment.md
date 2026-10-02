@@ -28,7 +28,7 @@ true })`).
 | `HEAP_SNAPSHOT_ON_SIGUSR2` | _(unset)_                            | `1` = write a heap snapshot on `SIGUSR2` (`main.ts`), for diagnosing memory growth in the running API process                                                       |
 | `HTTP_SHUTDOWN_GRACE_MS`   | `250`                                | How long an open connection may drain on SIGTERM before it is destroyed (`HttpConnectionReaper`) — see _Shutdown_ below                                             |
 
-Every entity store built on `EntityFileStore` (agents, pipelines, goals, tasks,
+Every entity store built on `EntityFileStore` (agents, workflows, goals, tasks,
 approvals, artifacts, channels, integrations, projects, companies, skills,
 commands, mcp, hooks, gate-rules, automations, monitors, …) also honors
 its own `<NAME>_DIR` (or `_FILE` for singletons) override, following the same
@@ -76,7 +76,7 @@ text-to-speech daemon over HTTP, not an in-process library:
 ### Test/demo-only variables
 
 Not used in production; seeded by test setup or the demo `AGENT_RUNNER_MODE`
-stage script (`pipelines/demo-stage.mjs`) — listed here so a grep hit doesn't
+stage script (`workflows/demo-stage.mjs`) — listed here so a grep hit doesn't
 look like an undocumented mystery var:
 
 | Variable                                                                                          | Used by                                                                                                                                                                             |
@@ -86,11 +86,11 @@ look like an undocumented mystery var:
 | `MONITOR_POLL_RETRIES`                                                                            | Monitor watcher tests — overrides retry count                                                                                                                                       |
 | `ZIBBY_TEST_SECRET`                                                                               | `runner-core.test.ts` — asserts spawned processes inherit the parent env                                                                                                            |
 | `AGENT_DEMO_STEPS` / `AGENT_DEMO_DELAY_MS`                                                        | Demo stage script — synthetic step count/delay for `AGENT_RUNNER_MODE=demo` runs                                                                                                    |
-| `PIPELINE_DEMO_FAIL_PHASES` / `_LIMIT_PHASES` / `_GAP_PHASES` / `_DRIFT_PHASES` / `_EMIT_LEARNED` | Demo stage script — comma-separated phase ids that simulate failure/limit-pause/gap-verdict/drift/learned-note-emission, for exercising pipeline states without a real `claude` run |
-| `PIPELINE_DEMO_STAGE_SCRIPT`                                                                      | Overrides the demo stage script path itself                                                                                                                                         |
+| `WORKFLOW_DEMO_FAIL_PHASES` / `_LIMIT_PHASES` / `_GAP_PHASES` / `_DRIFT_PHASES` / `_EMIT_LEARNED` | Demo stage script — comma-separated phase ids that simulate failure/limit-pause/gap-verdict/drift/learned-note-emission, for exercising workflow states without a real `claude` run |
+| `WORKFLOW_DEMO_STAGE_SCRIPT`                                                                      | Overrides the demo stage script path itself                                                                                                                                         |
 
 The `PATH` used to launch the API **must** include the dir holding `claude` —
-agent and pipeline runs shell out to it.
+agent and workflow runs shell out to it.
 
 ## Budgets & caps
 

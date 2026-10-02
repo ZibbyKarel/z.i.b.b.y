@@ -6,7 +6,7 @@ import { Injectable } from "@nestjs/common";
  *
  * - `traceId` — one HTTP request (assigned by the trace middleware, the first
  *   thing that runs when a request arrives).
- * - `runId` — one agent / pipeline run. Background work (the run watcher, a
+ * - `runId` — one agent / workflow run. Background work (the run watcher, a
  *   mid-run approval gate, a scheduler tick) executes *after* the request that
  *   started it has returned, so it has no live request context; it re-enters a
  *   fresh store keyed by the run's id, carrying the originating `traceId` along

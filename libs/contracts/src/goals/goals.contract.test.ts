@@ -11,7 +11,7 @@ import {
 const baseGoal = {
   id: "ship-feature",
   objective: "Ship feature Y green",
-  maker: { kind: "pipeline" as const, id: "delivery" },
+  maker: { kind: "workflow" as const, id: "delivery" },
   verifier: { kind: "checks" as const },
   maxIterations: 5,
   instructions: "Keep iterating until the checks pass.",
@@ -45,7 +45,7 @@ describe("GoalSchema", () => {
     expect(GoalSchema.safeParse({ ...baseGoal, maxIterations: 0 }).success).toBe(false);
   });
 
-  it("rejects a maker kind that is not agent or pipeline", () => {
+  it("rejects a maker kind that is not agent or workflow", () => {
     expect(GoalSchema.safeParse({ ...baseGoal, maker: { kind: "goal", id: "x" } }).success).toBe(
       false,
     );
@@ -80,7 +80,7 @@ describe("GoalRunSchema", () => {
       iterations: [
         {
           index: 0,
-          makerKind: "pipeline",
+          makerKind: "workflow",
           makerRunRef: "delivery_1",
           verifier: { kind: "checks", satisfied: false, output: "1 failing" },
           startedAt: new Date().toISOString(),
@@ -115,9 +115,9 @@ describe("TaskTargetSchema with goal arm", () => {
     expect(TaskTargetSchema.safeParse(target).success).toBe(true);
   });
 
-  it("still round-trips the agent / pipeline / orchestrator arms", () => {
+  it("still round-trips the agent / workflow / orchestrator arms", () => {
     expect(TaskTargetSchema.safeParse({ kind: "agent", id: "a", name: "A" }).success).toBe(true);
-    expect(TaskTargetSchema.safeParse({ kind: "pipeline", id: "p", name: "P" }).success).toBe(true);
+    expect(TaskTargetSchema.safeParse({ kind: "workflow", id: "p", name: "P" }).success).toBe(true);
     expect(TaskTargetSchema.safeParse({ kind: "orchestrator", name: "Orchestrator" }).success).toBe(
       true,
     );

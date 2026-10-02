@@ -53,7 +53,7 @@ read for ownership anywhere new employee-aware code touches**:
 - `TaskClassifierService` (`stage1DepartmentCandidates`, used by both the full
   classifier's `buildCandidates()` and `classifyDepartment()` for the roadmap
   gate) — a department is a routable stage-1 candidate when it owns a
-  pipeline (`Pipeline.department`) OR has at least one active employee.
+  workflow (`Workflow.department`) OR has at least one active employee.
 - `TaskSchedulerService` (single-agent dispatch department resolution) —
   same employee-based rule.
 - `EmployeeAllocator` / `EmployeesStorageService.listActiveByPosition(...)` —
@@ -64,8 +64,8 @@ read for ownership anywhere new employee-aware code touches**:
 `running`/`report`/`error` aggregation behind `list()`/`get()`'s headline
 `state`) still attributes an _agent-kind run_ to a department via
 `Agent.department` — it was left alone as an out-of-scope corner of this
-phase, not an oversight. Pipeline-kind runs already attribute via
-`Pipeline.department`, unaffected.
+phase, not an oversight. Workflow-kind runs already attribute via
+`Workflow.department`, unaffected.
 
 Practical effect: an agent record with a stale/absent `department` field is
 now harmless — hiring an employee for it into a department is what actually
@@ -135,7 +135,7 @@ doesn't:
 ## `EmployeeAllocator` — the lease broker
 
 `EmployeeAllocator` (`apps/api/src/employees/employee-allocator.ts`) is the
-in-memory broker between a pipeline stage / single-agent dispatch and the
+in-memory broker between a workflow stage / single-agent dispatch and the
 department's hired employees. Entirely in-memory — a lease does not survive
 an API restart; boot re-dispatch re-acquires it, mirroring the
 retries/limit-park machinery's own restart posture.
@@ -156,11 +156,11 @@ retries/limit-park machinery's own restart posture.
   snapshot of every held lease (`employeeId -> runId | undefined`) used by
   D-017's any-department fallback to prefer a currently-free candidate.
 
-## Wiring: pipeline stage dispatch
+## Wiring: workflow stage dispatch
 
-An `agent`-type pipeline phase's dispatch **is** leasing an employee — a
-hired instance of `phase.agent` (the position), leased from the **pipeline's
-own** department (`PipelineRunnerService`, around the stage-dispatch loop):
+An `agent`-type workflow phase's dispatch **is** leasing an employee — a
+hired instance of `phase.agent` (the position), leased from the **workflow's
+own** department (`WorkflowRunnerService`, around the stage-dispatch loop):
 
 - The lease is acquired **before** the stage's sandbox directory is created,
   so a park never leaves a half-built stage folder behind.
@@ -198,7 +198,7 @@ D-017 lease **ladder**, run once per dispatched single-agent task run:
    first candidate (which then queues FIFO behind whoever holds it) when none
    are free.
 3. **Unleased fallback.** Returns `undefined` only when the position has **no**
-   employee **anywhere** — this is never a park (parking is a pipelines-only
+   employee **anywhere** — this is never a park (parking is a workflows-only
    concept); the task still dispatches directly, unleased. This is the
    concrete mechanism behind the DNA law "a described task is always
    executed" — a described task never silently no-ops just because nobody
@@ -206,7 +206,7 @@ D-017 lease **ladder**, run once per dispatched single-agent task run:
 
 The acquired lease (if any) is tracked per in-flight run
 (`employeeLeases: Map<runId, EmployeeLease>`) and released on that run's
-terminal transition, same release discipline as the pipeline path.
+terminal transition, same release discipline as the workflow path.
 
 ## Run attribution
 

@@ -6,7 +6,7 @@ import { RunParkedPanel } from "./RunParkedPanel";
 
 const mutate = vi.fn();
 vi.mock("../mutations", () => ({
-  useResumePipelineRunMutation: () => ({ mutate, isPending: false }),
+  useResumeWorkflowRunMutation: () => ({ mutate, isPending: false }),
 }));
 vi.mock("../queries/useStageRunLogQuery", () => ({
   useStageRunLogQuery: () => ({
@@ -16,7 +16,7 @@ vi.mock("../queries/useStageRunLogQuery", () => ({
 
 const parkedRun: RunView = {
   runId: "delivery_1780000000000",
-  kind: "pipeline",
+  kind: "workflow",
   owner: "delivery",
   status: "parked",
   pct: null,

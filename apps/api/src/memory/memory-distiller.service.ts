@@ -6,14 +6,14 @@ import type {
   GoalRun,
   Note,
   NoteType,
-  PipelineRun,
   Project,
+  WorkflowRun,
 } from "@zibby/contracts";
 import { AgentRunnerService } from "../agents/agent-runner.service";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { GoalRunnerService } from "../goals/goal-runner.service";
-import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
-import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
+import { WorkflowRunnerService } from "../workflows/workflow-runner.service";
+import { WorkflowsStorageService } from "../workflows/workflows.storage.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ChatTranscriptStore } from "../chat/chat-transcript.store";
 import { fileExists, writeFileAtomic } from "../shared/file-storage/file-utils";
@@ -56,7 +56,7 @@ const EXCERPT_LIMIT = 1200;
 const MAX_RUNS_PER_PASS = 30;
 
 const TERMINAL_AGENT = new Set<AgentRun["status"]>(["done", "error", "interrupted"]);
-const TERMINAL_PIPELINE = new Set<PipelineRun["status"]>(["done", "failed"]);
+const TERMINAL_WORKFLOW = new Set<WorkflowRun["status"]>(["done", "failed"]);
 const TERMINAL_GOAL = new Set<GoalRun["status"]>(["done", "failed"]);
 
 interface Candidate {
@@ -64,8 +64,8 @@ interface Candidate {
   projectId: string | null;
   summary: RunDigest;
   /**
-   * The owning department (F4a), resolved from the run's agent/pipeline
-   * `department`. `null` when the run has no owner (unowned agent/pipeline)
+   * The owning department (F4a), resolved from the run's agent/workflow
+   * `department`. `null` when the run has no owner (unowned agent/workflow)
    * or no owner path exists at all (goal/chat/raw-note candidates — correction
    * #4: those reference no owned entity in F1).
    */
@@ -85,7 +85,7 @@ interface Candidate {
 
 /**
  * Nightly memory distillation (the system-owned "learn from every run"). Agents
- * stay memory-blind: this sweeps the terminal pipeline/agent/goal runs that haven't
+ * stay memory-blind: this sweeps the terminal workflow/agent/goal runs that haven't
  * been distilled yet, has a cheap model extract DURABLE learnings, and files them as
  * one digest knowledge note linked from each contributing project MOC. It is the
  * output-side mirror of grounding — the system reads learnings OUT just as grounding
@@ -103,13 +103,13 @@ export class MemoryDistillerService {
     private readonly vault: VaultService,
     private readonly distiller: ClaudeCliDistiller,
     private readonly agents: AgentRunnerService,
-    private readonly pipelines: PipelineRunnerService,
+    private readonly workflows: WorkflowRunnerService,
     private readonly goals: GoalRunnerService,
     private readonly projects: ProjectsStorageService,
     private readonly chat: ChatTranscriptStore,
     private readonly importer: MemoryImportService,
     private readonly agentsStore: AgentsStorageService,
-    private readonly pipelinesStore: PipelinesStorageService,
+    private readonly workflowsStore: WorkflowsStorageService,
   ) {}
 
   /**
@@ -194,13 +194,13 @@ export class MemoryDistillerService {
       out.push({ cwd, projectId, departmentId, summary: await build() });
     };
 
-    for (const run of await this.pipelines.listAll().catch((): PipelineRun[] => [])) {
-      if (!TERMINAL_PIPELINE.has(run.status)) continue;
+    for (const run of await this.workflows.listAll().catch((): WorkflowRun[] => [])) {
+      if (!TERMINAL_WORKFLOW.has(run.status)) continue;
       const projectId = await this.byPath(run.projectPath);
       const departmentId =
-        (await this.pipelinesStore.get(run.pipelineId).catch(() => null))?.department ?? null;
+        (await this.workflowsStore.get(run.workflowId).catch(() => null))?.department ?? null;
       await consider(run.cwd, projectId, departmentId, () =>
-        this.summarizePipeline(run, projectId),
+        this.summarizeWorkflow(run, projectId),
       );
     }
     for (const run of await this.agents.listAll().catch((): AgentRun[] => [])) {
@@ -269,16 +269,16 @@ export class MemoryDistillerService {
     return out;
   }
 
-  private async summarizePipeline(run: PipelineRun, projectId: string | null): Promise<RunDigest> {
-    // No fixed artifact-name list: `readLatestArtifact` walks the PIPELINE'S OWN
+  private async summarizeWorkflow(run: WorkflowRun, projectId: string | null): Promise<RunDigest> {
+    // No fixed artifact-name list: `readLatestArtifact` walks the WORKFLOW'S OWN
     // phases (reverse order) so a non-delivery shape — research, audit, whatever
-    // a future pipeline produces — is distilled too, not just the delivery loop.
-    const artifact = await this.pipelines.readLatestArtifact(run.pipelineRunId).catch(() => null);
+    // a future workflow produces — is distilled too, not just the delivery loop.
+    const artifact = await this.workflows.readLatestArtifact(run.workflowRunId).catch(() => null);
     const excerpt = artifact?.content.slice(0, EXCERPT_LIMIT) ?? "";
     return {
-      kind: "pipeline",
-      id: run.pipelineRunId,
-      name: run.pipelineId,
+      kind: "workflow",
+      id: run.workflowRunId,
+      name: run.workflowId,
       status: run.status,
       ...(projectId ? { project: projectId } : {}),
       excerpt,

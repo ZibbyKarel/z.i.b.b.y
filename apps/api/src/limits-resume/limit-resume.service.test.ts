@@ -14,8 +14,8 @@ const FUTURE = NOW + 60_000;
 function makeService(over: {
   readiness?: { stale: boolean; hasHeadroom: boolean };
   agentPaused?: Array<{ runId: string; resumeAt: number | null; limitResumeCycles?: number }>;
-  pipelinePaused?: Array<{
-    pipelineRunId: string;
+  workflowPaused?: Array<{
+    workflowRunId: string;
     resumeAt: number | null;
     limitResumeCycles?: number;
   }>;
@@ -28,59 +28,59 @@ function makeService(over: {
     resumeLimitPaused: vi.fn(async () => {}),
     failLimitFlapped: vi.fn(async () => {}),
   };
-  const pipelineRunner = {
-    listLimitPaused: vi.fn(() => over.pipelinePaused ?? []),
+  const workflowRunner = {
+    listLimitPaused: vi.fn(() => over.workflowPaused ?? []),
     resumeLimitPaused: vi.fn(async () => {}),
     parkLimitFlapped: vi.fn(async () => {}),
   };
   const service = new LimitResumeService(
     limits as never,
     agentRunner as never,
-    pipelineRunner as never,
+    workflowRunner as never,
     fakeSystemConfigStore(),
     // F6c watcher-health registry double — registration is exercised in the
     // base/e2e specs, not here.
     { register: () => {} } as never,
     fakeLogger as never,
   );
-  return { service, limits, agentRunner, pipelineRunner };
+  return { service, limits, agentRunner, workflowRunner };
 }
 
 describe("LimitResumeService", () => {
   it("skips a run whose resumeAt has not yet passed", async () => {
-    const { service, agentRunner, pipelineRunner } = makeService({
-      pipelinePaused: [{ pipelineRunId: "p1", resumeAt: FUTURE }],
+    const { service, agentRunner, workflowRunner } = makeService({
+      workflowPaused: [{ workflowRunId: "p1", resumeAt: FUTURE }],
     });
     await service.tick(new Date(NOW));
-    expect(pipelineRunner.resumeLimitPaused).not.toHaveBeenCalled();
+    expect(workflowRunner.resumeLimitPaused).not.toHaveBeenCalled();
     expect(agentRunner.resumeLimitPaused).not.toHaveBeenCalled();
   });
 
   it("resumes a due run when the window has headroom", async () => {
-    const { service, pipelineRunner } = makeService({
+    const { service, workflowRunner } = makeService({
       readiness: { stale: false, hasHeadroom: true },
-      pipelinePaused: [{ pipelineRunId: "p1", resumeAt: PAST, limitResumeCycles: 0 }],
+      workflowPaused: [{ workflowRunId: "p1", resumeAt: PAST, limitResumeCycles: 0 }],
     });
     await service.tick(new Date(NOW));
-    expect(pipelineRunner.resumeLimitPaused).toHaveBeenCalledWith("p1");
+    expect(workflowRunner.resumeLimitPaused).toHaveBeenCalledWith("p1");
   });
 
   it("skips the whole tick when the snapshot is stale (fail-closed)", async () => {
-    const { service, pipelineRunner } = makeService({
+    const { service, workflowRunner } = makeService({
       readiness: { stale: true, hasHeadroom: false },
-      pipelinePaused: [{ pipelineRunId: "p1", resumeAt: PAST }],
+      workflowPaused: [{ workflowRunId: "p1", resumeAt: PAST }],
     });
     await service.tick(new Date(NOW));
-    expect(pipelineRunner.resumeLimitPaused).not.toHaveBeenCalled();
+    expect(workflowRunner.resumeLimitPaused).not.toHaveBeenCalled();
   });
 
-  it("parks a pipeline run that has flapped past the cycle cap", async () => {
-    const { service, pipelineRunner } = makeService({
-      pipelinePaused: [{ pipelineRunId: "p1", resumeAt: PAST, limitResumeCycles: 3 }],
+  it("parks a workflow run that has flapped past the cycle cap", async () => {
+    const { service, workflowRunner } = makeService({
+      workflowPaused: [{ workflowRunId: "p1", resumeAt: PAST, limitResumeCycles: 3 }],
     });
     await service.tick(new Date(NOW));
-    expect(pipelineRunner.parkLimitFlapped).toHaveBeenCalledWith("p1");
-    expect(pipelineRunner.resumeLimitPaused).not.toHaveBeenCalled();
+    expect(workflowRunner.parkLimitFlapped).toHaveBeenCalledWith("p1");
+    expect(workflowRunner.resumeLimitPaused).not.toHaveBeenCalled();
   });
 
   it("fails an agent run that has flapped past the cycle cap (no parked state)", async () => {
@@ -95,10 +95,10 @@ describe("LimitResumeService", () => {
   });
 
   it("resumes oldest-first and skips the rest once a sibling consumes the window (herd guard)", async () => {
-    const { service, limits, pipelineRunner } = makeService({
-      pipelinePaused: [
-        { pipelineRunId: "younger", resumeAt: PAST + 1000, limitResumeCycles: 0 },
-        { pipelineRunId: "older", resumeAt: PAST, limitResumeCycles: 0 },
+    const { service, limits, workflowRunner } = makeService({
+      workflowPaused: [
+        { workflowRunId: "younger", resumeAt: PAST + 1000, limitResumeCycles: 0 },
+        { workflowRunId: "older", resumeAt: PAST, limitResumeCycles: 0 },
       ],
     });
     // Headroom for the first resume, then the window is consumed (no headroom).
@@ -107,24 +107,24 @@ describe("LimitResumeService", () => {
       .mockResolvedValue({ stale: false, hasHeadroom: false });
     await service.tick(new Date(NOW));
     // Oldest (smallest resumeAt) resumes; the younger one is left for the next tick.
-    expect(pipelineRunner.resumeLimitPaused).toHaveBeenCalledTimes(1);
-    expect(pipelineRunner.resumeLimitPaused).toHaveBeenCalledWith("older");
+    expect(workflowRunner.resumeLimitPaused).toHaveBeenCalledTimes(1);
+    expect(workflowRunner.resumeLimitPaused).toHaveBeenCalledWith("older");
   });
 
   it("attempts a lone due run even with no headroom (a flap that burns one cycle)", async () => {
-    const { service, pipelineRunner } = makeService({
+    const { service, workflowRunner } = makeService({
       readiness: { stale: false, hasHeadroom: false },
-      pipelinePaused: [{ pipelineRunId: "p1", resumeAt: PAST, limitResumeCycles: 1 }],
+      workflowPaused: [{ workflowRunId: "p1", resumeAt: PAST, limitResumeCycles: 1 }],
     });
     await service.tick(new Date(NOW));
     // No sibling resumed, so the genuine-flap path still attempts it (re-pauses at the
     // boundary, burning a cycle toward the cap) rather than waiting forever.
-    expect(pipelineRunner.resumeLimitPaused).toHaveBeenCalledWith("p1");
+    expect(workflowRunner.resumeLimitPaused).toHaveBeenCalledWith("p1");
   });
 
   it("T7 — two rapid timer-driven firings run tick() once (TickingWatcherBase guard)", async () => {
     const { service } = makeService({
-      pipelinePaused: [{ pipelineRunId: "p1", resumeAt: PAST, limitResumeCycles: 0 }],
+      workflowPaused: [{ workflowRunId: "p1", resumeAt: PAST, limitResumeCycles: 0 }],
     });
     let resolveFirst: () => void = () => {};
     const deferred = new Promise<void>((resolve) => {

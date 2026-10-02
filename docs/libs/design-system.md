@@ -193,7 +193,7 @@ a cron string is the app's job (`apps/web/features/automations/schedule.ts`:
 | `Chip`           | Interactive chip (`closable` → an × + `onClose`)                                                                                                                                                            |
 | `Kbd`            | Keyboard shortcut                                                                                                                                                                                           |
 | `Divider`        | Horizontal/vertical divider                                                                                                                                                                                 |
-| `EntityHero`     | Profile-style hero band for an agent/pipeline/company: avatar image (or glyph fallback) filling a band, with name/meta/desc overlaid at the bottom; optionally `editable` (click/drag-drop upload + remove) |
+| `EntityHero`     | Profile-style hero band for an agent/workflow/company: avatar image (or glyph fallback) filling a band, with name/meta/desc overlaid at the bottom; optionally `editable` (click/drag-drop upload + remove) |
 
 ### Icon
 

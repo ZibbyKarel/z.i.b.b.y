@@ -16,7 +16,7 @@ describe("Self-Knowledge API (e2e)", () => {
     // Pin the graph report to an absent path so the composed note is deterministic
     // regardless of whether a machine-local `graphify-out/GRAPH_REPORT.md` happens to
     // exist (it does in dev, never in CI). The committed fixture note tracks the
-    // fixture *catalog* (agents/pipelines/gate-rules/channels) — not the volatile,
+    // fixture *catalog* (agents/workflows/gate-rules/channels) — not the volatile,
     // machine-local codebase-shape section — so the drift check must ignore it too.
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(GRAPH_REPORT_PATH)
@@ -42,11 +42,11 @@ describe("Self-Knowledge API (e2e)", () => {
     expect(typeof res.body.drift).toBe("boolean");
     expect(res.body.sections).toMatchObject({
       agents: expect.any(Number),
-      pipelines: expect.any(Number),
+      workflows: expect.any(Number),
       gateRules: expect.any(Number),
       channels: expect.any(Number),
     });
-    // The data-test fixtures seed at least one agent/pipeline/gate rule.
+    // The data-test fixtures seed at least one agent/workflow/gate rule.
     expect(res.body.sections.agents).toBeGreaterThan(0);
     expect(res.body.sections.channels).toBeGreaterThan(0);
   });

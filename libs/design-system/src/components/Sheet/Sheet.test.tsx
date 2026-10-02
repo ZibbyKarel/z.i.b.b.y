@@ -33,8 +33,8 @@ describe("Sheet", () => {
   });
 
   it("gives the sheet an accessible name from the title", () => {
-    render(<Sheet open title="Pipeline editor" />);
-    expect(screen.getByTestId(SheetTestId.Root)).toHaveAccessibleName("Pipeline editor");
+    render(<Sheet open title="Workflow editor" />);
+    expect(screen.getByTestId(SheetTestId.Root)).toHaveAccessibleName("Workflow editor");
   });
 
   it("lets an explicit ariaLabel override the title-derived name", () => {

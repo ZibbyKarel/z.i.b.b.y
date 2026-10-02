@@ -9,7 +9,7 @@ import { TaskOutputService } from "./task-output.service";
 
 /**
  * The directed-task output gate: an agent/orchestrator task's `file`/`pr` sink. The
- * pipeline route reuses the pipeline runner's own gate (covered there); this is the
+ * workflow route reuses the workflow runner's own gate (covered there); this is the
  * scheduler-layer counterpart for runs that have no durable park of their own.
  */
 describe("TaskOutputService", () => {

@@ -10,7 +10,7 @@ function entry(id: string, kind: ActivityEntry["kind"], at: string): ActivityEnt
 const ALL_VISIBLE: ActivityView = {
   tasks: "visible",
   runs: "visible",
-  pipelines: "visible",
+  workflows: "visible",
   goals: "visible",
   approvals: "visible",
   channels: "visible",

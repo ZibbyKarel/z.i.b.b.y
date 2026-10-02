@@ -23,17 +23,17 @@ describe("usePinToggle", () => {
     const { result } = renderHook(() => usePinToggle());
     expect(result.current.isPinned("agent", "researcher")).toBe(true);
     expect(result.current.isPinned("agent", "other")).toBe(false);
-    expect(result.current.isPinned("pipeline", "researcher")).toBe(false);
+    expect(result.current.isPinned("workflow", "researcher")).toBe(false);
   });
 
   it("toggling an unpinned target appends it to the mutated list", () => {
     hooks.pins = [{ kind: "agent", id: "researcher" }];
     const { result } = renderHook(() => usePinToggle());
-    result.current.toggle("pipeline", "delivery");
+    result.current.toggle("workflow", "delivery");
     expect(hooks.mutate).toHaveBeenCalledWith({
       body: [
         { kind: "agent", id: "researcher" },
-        { kind: "pipeline", id: "delivery" },
+        { kind: "workflow", id: "delivery" },
       ],
     });
   });
@@ -41,12 +41,12 @@ describe("usePinToggle", () => {
   it("toggling a pinned target removes it from the mutated list", () => {
     hooks.pins = [
       { kind: "agent", id: "researcher" },
-      { kind: "pipeline", id: "research-then-build" },
+      { kind: "workflow", id: "research-then-build" },
     ];
     const { result } = renderHook(() => usePinToggle());
     result.current.toggle("agent", "researcher");
     expect(hooks.mutate).toHaveBeenCalledWith({
-      body: [{ kind: "pipeline", id: "research-then-build" }],
+      body: [{ kind: "workflow", id: "research-then-build" }],
     });
   });
 });

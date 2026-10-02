@@ -38,7 +38,7 @@ vi.mock("../../goals/queries", () => ({ useGoalsQuery: () => ({ data: [] }) }));
 vi.mock("../../companies/queries", () => ({ useCompaniesQuery: () => ({ data: [] }) }));
 vi.mock("../../teams/queries", () => ({ useTeamsQuery: () => ({ data: [] }) }));
 vi.mock("../../projects/queries", () => ({ useProjectsQuery: () => ({ data: [] }) }));
-vi.mock("../../pipelines/queries", () => ({ usePipelinesQuery: () => ({ data: [] }) }));
+vi.mock("../../workflows/queries", () => ({ useWorkflowsQuery: () => ({ data: [] }) }));
 vi.mock("../../skills/queries", () => ({ useSkillsQuery: () => ({ data: [] }) }));
 vi.mock("../../mcp/queries", () => ({ useMcpServersQuery: () => ({ data: [] }) }));
 vi.mock("../../hooks/queries", () => ({ useHooksQuery: () => ({ data: [] }) }));

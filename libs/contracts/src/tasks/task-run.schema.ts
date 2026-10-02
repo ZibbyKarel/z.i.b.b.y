@@ -8,9 +8,9 @@ import { RunArtifactSchema, RunStatusSchema } from "../common.schema";
 import { DepartmentIdSchema } from "../departments/department.schema";
 import {
   ParkedDetailSchema,
-  PipelineCheckpointSchema,
   StageRunSchema,
-} from "../pipelines/pipeline-run.schema";
+  WorkflowCheckpointSchema,
+} from "../workflows/workflow-run.schema";
 import { AttachmentSchema, ClassificationTraceSchema, PrOutputSchema } from "./task.schema";
 
 /**
@@ -18,7 +18,7 @@ import { AttachmentSchema, ClassificationTraceSchema, PrOutputSchema } from "./t
  * dispatched yet (it has no run behind it — its `runId` is the task id), the other
  * three are the live/finished run kinds.
  */
-export const RunKindSchema = z.enum(["agent", "pipeline", "goal", "scheduled"]);
+export const RunKindSchema = z.enum(["agent", "workflow", "goal", "scheduled"]);
 export type RunKind = z.infer<typeof RunKindSchema>;
 
 /**
@@ -43,14 +43,14 @@ export const TaskRunStatusSchema = z.enum([
 export type TaskRunStatus = z.infer<typeof TaskRunStatusSchema>;
 
 /**
- * The processor handling a task: which kind (agent / pipeline / goal), the stored
+ * The processor handling a task: which kind (agent / workflow / goal), the stored
  * definition `id`, and the human `name`. The operator model is "task is the entity,
  * the processor is metadata" — this is that metadata. Absent on a not-yet-dispatched
  * scheduled task whose target the classifier will pick later. `name` falls back to the
  * id when the definition was deleted (mirrors the web `runGlyph` catalog-miss handling).
  */
 export const ProcessorSchema = z.object({
-  kind: z.enum(["agent", "pipeline", "goal"]),
+  kind: z.enum(["agent", "workflow", "goal"]),
   id: z.string().min(1),
   name: z.string().min(1),
 });
@@ -58,21 +58,21 @@ export type Processor = z.infer<typeof ProcessorSchema>;
 
 /**
  * One row of the unified task feed — the server-side promotion of the web `RunView`.
- * A task is the entity that runs; the agent/pipeline/goal that processes it is the
+ * A task is the entity that runs; the agent/workflow/goal that processes it is the
  * `processor`. The merge (per-kind run lists + still-waiting scheduled tasks, with a
  * goal's maker/verifier child runs folded out) lives in the API now, not the client.
  *
  * Carries every kind-specific optional the detail surfaces need: agent `pct`/`prompt`,
- * pipeline `stageRuns`/`currentStage`/`parked`/`checkpoints`, goal `iterations`/
+ * workflow `stageRuns`/`currentStage`/`parked`/`checkpoints`, goal `iterations`/
  * `goalParked`. Most are optional and present only for the relevant kind.
  */
 export const TaskRunSchema = z.object({
   runId: z.string().min(1),
   kind: RunKindSchema,
-  /** The routed agent/pipeline/goal id — `""` for a not-yet-dispatched scheduled task. */
+  /** The routed agent/workflow/goal id — `""` for a not-yet-dispatched scheduled task. */
   owner: z.string(),
   status: TaskRunStatusSchema,
-  /** 0–100 for agent runs; null for pipeline/goal runs and scheduled tasks. */
+  /** 0–100 for agent runs; null for workflow/goal runs and scheduled tasks. */
   pct: z.number().nullable(),
   /** Short human task name from the New Task dialog; `""` when absent. */
   title: z.string(),
@@ -128,11 +128,11 @@ export const TaskRunSchema = z.object({
    */
   prOutput: PrOutputSchema.optional(),
   /**
-   * Enriched from pipeline run: name of the artifact delivered as `file` output
-   * (see `PipelineOutput`), for frontend preview.
+   * Enriched from workflow run: name of the artifact delivered as `file` output
+   * (see `WorkflowOutput`), for frontend preview.
    */
   outputArtifactName: z.string().optional(),
-  /** Retries-parked pipeline runs: the parked surface (phase, attempts, note). */
+  /** Retries-parked workflow runs: the parked surface (phase, attempts, note). */
   parked: ParkedDetailSchema.optional(),
   /** The engagement a task is attributed to (Phase 8) — drives the queued caption. */
   projectId: z.string().optional(),
@@ -156,17 +156,17 @@ export const TaskRunSchema = z.object({
   limitResumeCycles: z.number().int().nonnegative().optional(),
   /** Phase 9: a window-deferred scheduled task (`deferredReason === "limit"`). */
   deferredLimit: z.boolean().optional(),
-  /** Phase 9.3: checkpoint commits the runner made on the run branch (pipeline runs). */
-  checkpoints: z.array(PipelineCheckpointSchema).optional(),
+  /** Phase 9.3: checkpoint commits the runner made on the run branch (workflow runs). */
+  checkpoints: z.array(WorkflowCheckpointSchema).optional(),
   /**
    * Souhrnná cena běhu (odhad USD): pro agent běh přímo z `AgentRun.costUsd`,
-   * pro pipeline běh součet `stageRuns[].costUsd`. Absent = žádná data (starý
+   * pro workflow běh součet `stageRuns[].costUsd`. Absent = žádná data (starý
    * běh před touhle featurou), ne nula.
    */
   costUsd: z.number().optional(),
-  /** Phase 28 (pipeline runs): the per-phase stage runs, for the detail's stage timeline. */
+  /** Phase 28 (workflow runs): the per-phase stage runs, for the detail's stage timeline. */
   stageRuns: z.array(StageRunSchema).optional(),
-  /** Pipeline runs: the phase currently executing, for the timeline's live stage row. */
+  /** Workflow runs: the phase currently executing, for the timeline's live stage row. */
   currentStage: z.string().nullable().optional(),
   /** Phase 10 (goal runs): the goal definition id, for the detail's maxIterations lookup. */
   goalId: z.string().optional(),
@@ -197,7 +197,7 @@ export type TaskRun = z.infer<typeof TaskRunSchema>;
 
 /**
  * One whitelisted task-run artifact: its name and text content. The unified
- * counterpart of the per-kind `PipelineRunArtifact` / `GoalRunArtifact` — the owning
+ * counterpart of the per-kind `WorkflowRunArtifact` / `GoalRunArtifact` — the owning
  * runner still enforces its own allowlist server-side, so `name` is a plain string here.
  */
 export const TaskRunArtifactSchema = RunArtifactSchema;
@@ -222,7 +222,7 @@ export type AssignTaskRunProjectInput = z.infer<typeof AssignTaskRunProjectSchem
 
 /**
  * Pseudo department id for a run with no department attribution — an agent/goal run
- * (no department concept applies at all) or a pipeline run whose owner isn't tagged.
+ * (no department concept applies at all) or a workflow run whose owner isn't tagged.
  * Shared between the API (which filters/counts archived runs by department) and the
  * web (which renders the "bez oddělení" bucket) so both sides match the exact
  * same security instead of each declaring their own literal.

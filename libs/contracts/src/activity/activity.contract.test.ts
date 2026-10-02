@@ -59,7 +59,7 @@ describe("ActivityEntrySchema", () => {
         ...base,
         kind: "stage-verdict",
         summary: 'qualify "review" → gap',
-        refs: { pipelineId: "delivery", status: "gap" },
+        refs: { workflowId: "delivery", status: "gap" },
       }).success,
     ).toBe(true);
     expect(ActivityKindSchema.options).toContain("stage-verdict");

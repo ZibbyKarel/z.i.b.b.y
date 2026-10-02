@@ -14,7 +14,7 @@ import { RunStateBadge } from "./RunStateBadge";
 
 export interface TaskCardProps {
   run: RunView;
-  /** Glyph of the routed agent/pipeline (or the kind fallback). */
+  /** Glyph of the routed agent/workflow (or the kind fallback). */
   glyph: IconName;
   selected: boolean;
   stateLabel: string;
@@ -26,7 +26,7 @@ export interface TaskCardProps {
 
 /**
  * One row in the task feed (master list). Task-first: what the user asked for is
- * the headline; the routed agent/pipeline is only a glyph tile. The left edge is
+ * the headline; the routed agent/workflow is only a glyph tile. The left edge is
  * a solid accent bar in the run's state color (matte — only a running/awaiting-approval
  * card additionally glows via `tone`+`living`); a state-tinted progress bar sits
  * between the task-origin line and the state chip.
@@ -46,7 +46,7 @@ export function TaskCard({
   const headline = runTitle(run);
   const tone = runStateTone(run.status);
   // Agent runs carry a live `pct`; a done run of any kind reads as complete.
-  // Pipeline/goal runs otherwise have no run-level percentage (only their stage
+  // Workflow/goal runs otherwise have no run-level percentage (only their stage
   // timeline does) — the bar is honestly omitted rather than a fabricated guess.
   const pct = run.status === "done" ? 100 : (run.pct ?? null);
   // The task-origin line is only worth a row when it adds something the

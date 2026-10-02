@@ -1,7 +1,7 @@
 import { useCancelScheduledTaskMutation } from "../tasks";
 import {
   useDeleteAgentRunMutation,
-  useDeletePipelineRunMutation,
+  useDeleteWorkflowRunMutation,
   useResumeTaskRunMutation,
   useStopTaskRunMutation,
 } from "./mutations";
@@ -37,7 +37,7 @@ export function useRunActions(
   const stopRun = useStopTaskRunMutation();
   const resumeRun = useResumeTaskRunMutation();
   const deleteAgent = useDeleteAgentRunMutation();
-  const deletePipeline = useDeletePipelineRunMutation();
+  const deleteWorkflow = useDeleteWorkflowRunMutation();
   const cancelTask = useCancelScheduledTaskMutation();
 
   const stop = (run: RunView) => {
@@ -55,7 +55,7 @@ export function useRunActions(
   const remove = (runId: string, kind: string) => {
     onRemoved();
     if (kind === "agent") deleteAgent.mutate({ params: { runId } });
-    else if (kind === "pipeline") deletePipeline.mutate({ params: { runId } });
+    else if (kind === "workflow") deleteWorkflow.mutate({ params: { runId } });
     else if (kind === "scheduled") cancelTask.mutate({ params: { id: runId } });
   };
 
@@ -65,6 +65,6 @@ export function useRunActions(
     resume,
     resuming: resumeRun.isPending,
     remove,
-    deleting: deleteAgent.isPending || deletePipeline.isPending || cancelTask.isPending,
+    deleting: deleteAgent.isPending || deleteWorkflow.isPending || cancelTask.isPending,
   };
 }

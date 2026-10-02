@@ -23,7 +23,7 @@ my channels and handle what you can."
 - [API overview](./api/overview.md) — NestJS bootstrapping, modules, configuration
 - [Agents & Runs](./api/agents-runs.md) — agent definitions, dispatching runs, `RunnerCore`
 - [Runner](./api/runner.md) — the shared process-spawn engine: process lifecycle, the `claude -p` command builder, mid-run approval-gate wiring
-- [Pipeline orchestration](./api/pipelines.md) — phases, loops, escalation, parking
+- [Workflow orchestration](./api/workflows.md) — phases, loops, escalation, parking
 - [Goals](./api/goals.md) — the generalized delivery loop (maker ⇄ verifier), self-development's loop engine
 - [Task scheduling](./api/tasks.md) — deferred tasks, routing, budget guard
 - [Gate policy engine](./api/gates.md) — the system floor, rules, decisions

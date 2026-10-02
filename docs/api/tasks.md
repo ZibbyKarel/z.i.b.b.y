@@ -62,7 +62,7 @@ Body: {
   attachmentSetId?: string    # a previously-uploaded attachment set (POST /api/tasks/attachments)
   scheduledAt?: number         # epoch ms; absent or in the past → immediate dispatch
   output?: TaskOutput          # what happens to the finished work (PR / file / void).
-                               # Absent = inherit (a pipeline target keeps its own
+                               # Absent = inherit (a workflow target keeps its own
                                # outputs:, an agent/orchestrator target delivers
                                # nothing). See "Task output" below.
   target?: TaskTarget          # Phase 11: a pre-chosen target that skips classification
@@ -134,27 +134,27 @@ source rather than one agent id at a time.
 The classifier finds the best target for the task's text, in up to two stages:
 
 1. **Stage 1 — the switchboard. DEPARTMENTS ONLY (NS2 F9).** The catalog is exactly
-   one coarse `department` candidate per department that owns ≥1 pipeline or active
+   one coarse `department` candidate per department that owns ≥1 workflow or active
    agent (`department`) — `stage1DepartmentCandidates`, and nothing else. A
    department candidate's `search` is its Czech mandate, so mandate-term overlap
    ranks it in the keyword-scorer leg too.
 
    Stage 1 asks exactly one question: **"whose domain is this?"** Concrete agents
-   and pipelines are no longer offered here.
+   and workflows are no longer offered here.
 
-   > **Changed in F9.** Stage 1 used to list every active agent and every pipeline
+   > **Changed in F9.** Stage 1 used to list every active agent and every workflow
    > _alongside_ the department candidates, and let one ranking pass choose between
    > them. That asked the router to compare units at two different levels of
    > abstraction — `code-reviewer` (an agent) against `Dev` (the department that
    > owns that very agent). They are not peers: one contains the other, so
    > whichever won was arbitrary, and the two winners produced materially
-   > different runs. A direct agent/pipeline pick also skipped the size policy
+   > different runs. A direct agent/workflow pick also skipped the size policy
    > entirely, since `EFFORT_RULE` only ever reaches the scoped stage-2 preamble —
    > which is how a one-line fix could draw the full five-phase `delivery`
-   > pipeline with nothing asking whether the hammer fit.
+   > workflow with nothing asking whether the hammer fit.
    >
    > The knock-on effect is the enforcement behind F9's "no free units": an agent
-   > or pipeline with **no `department` is unroutable by construction**,
+   > or workflow with **no `department` is unroutable by construction**,
    > because no catalog contains it and the classifier can emit nothing else.
 
 2. Keyword scoring — counts word overlap between the task text and each candidate's
@@ -165,9 +165,9 @@ The classifier finds the best target for the task's text, in up to two stages:
    ```typescript
    {
      // stage 1 emits only "department" | "orchestrator" since F9;
-     // "agent" / "pipeline" come from the scoped stage-2 pass or an explicit target
-     target: "agent" | "pipeline" | "department" | "orchestrator"
-     id?: string        // agent/pipeline/department id (the orchestrator has none)
+     // "agent" / "workflow" come from the scoped stage-2 pass or an explicit target
+     target: "agent" | "workflow" | "department" | "orchestrator"
+     id?: string        // agent/workflow/department id (the orchestrator has none)
      confidence: number // 0–1
      reason: string     // why this target
      runnerUp: { target, confidence, reason } | null  // NS2 F10
@@ -212,7 +212,7 @@ threshold does, a mid-scale default turns a parse gap into a routing decision.
 | Caller                                                  | On ambiguous                                                                                                                  |
 | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `classify()` — the interactive preview                  | Carries the flag to the wire. The preview + manual picker _is_ the intervention; no gate.                                     |
-| `classifyWithinDepartment()` — stage 2                  | **Strips it and guesses.** Bounded cost: one `cheapestPipeline` run inside a named department.                                |
+| `classifyWithinDepartment()` — stage 2                  | **Strips it and guesses.** Bounded cost: one `cheapestWorkflow` run inside a named department.                                |
 | `classifyDepartment()` — the autonomous roadmap release | **Exposes it.** A wrong pick is a whole wrong department and nobody sees a preview → Tier-3 park (see `docs/api/roadmap.md`). |
 
 `POST /api/tasks/classify` returns this **raw stage-1 verdict** — a `department`
@@ -261,11 +261,11 @@ picks the unit."_
 
 Three differences from `classify` that carry weight:
 
-- **The catalog is department-only** — concrete agents/pipelines are never offered, so
+- **The catalog is department-only** — concrete agents/workflows are never offered, so
   the verdict cannot skip the department layer. A router verdict naming a concrete unit
   fails `isCoherent` (it isn't in this catalog) and falls through.
 - **Every candidate is SEATED by construction.** `stage1DepartmentCandidates` only emits
-  departments owning ≥1 pipeline or active agent, so the returned target can never trip
+  departments owning ≥1 workflow or active agent, so the returned target can never trip
   `DepartmentEmptyRosterError` downstream — the one real hazard of routing this way,
   since 7 of the 11 departments own nothing today.
 - **No `enrich`** — no loop synthesis, no tool-grant proposal. Those belong to the
@@ -287,26 +287,26 @@ target — either the switchboard's own stage-1 pick, or an operator's explicit
 `@`-mention — `TaskSchedulerService` resolves it to a concrete unit before starting a
 run, via `resolveDepartmentTargetOrNull` / `resolveDepartmentTarget`:
 
-- **0 owned units** (no pipeline or active agent with that `department`) — the
+- **0 owned units** (no workflow or active agent with that `department`) — the
   undirected switchboard path falls back to the orchestrator (soft, like any other
   low-confidence verdict); the explicit `@mention` path instead throws
   `DepartmentEmptyRosterError` (a clear Czech message) → HTTP 422 — a mandate without
   capability shouldn't pretend to execute.
-- **1 owned unit** → dispatches straight to it (pipeline before agent); the scoped
+- **1 owned unit** → dispatches straight to it (workflow before agent); the scoped
   classifier is never called.
 - **2+ owned units** → `classifyWithinDepartment(input, departmentId)` — the same
   router/keyword-scorer machinery reused with the catalog restricted to that
-  department's own pipelines + active agents (never another department), and the LLM
+  department's own workflows + active agents (never another department), and the LLM
   router prompt gets an extra `preamble` (the department's mandate + an "owned units"
   list, each line labelled with its ladder rung, + `EFFORT_RULE`) so it reasons about
   the mandate, not bare catalog rows. A low-confidence stage-2 verdict resolves per
   `DEPARTMENT_FALLBACK[departmentId]`: `"orchestrator"` (defer to the global
   orchestrator) or `"primary"` (stay inside the department, dispatch its **cheapest
-  owned pipeline**) — a typed `Record` over the closed `DepartmentId` enum, so a new
+  owned workflow**) — a typed `Record` over the closed `DepartmentId` enum, so a new
   department id fails `tsc` until it's given a policy.
 
 Both counts above are counts of **eligible** units, not owned ones — the required-sink
-constraint below is applied first, so a roster of one agent + one PR pipeline is a
+constraint below is applied first, so a roster of one agent + one PR workflow is a
 1-eligible resolution (no classify round-trip) rather than a 2-owned ranking.
 
 #### A required `pr` sink is a hard constraint, not a hint
@@ -316,7 +316,7 @@ constraint below is applied first, so a roster of one agent + one PR pipeline is
 
 | `output`               | Stage-2 catalog                                           |
 | ---------------------- | --------------------------------------------------------- |
-| `{ type: "pr" }`       | **only pipelines that declare a `pr` sink** in `outputs:` |
+| `{ type: "pr" }`       | **only workflows that declare a `pr` sink** in `outputs:` |
 | `{ type: "file" }`     | unchanged — any unit can write a note                     |
 | `{ type: "void" }`     | unchanged                                                 |
 | absent (unconstrained) | unchanged — the full owned roster                         |
@@ -330,7 +330,7 @@ agent's config), applied to capability.
 
 **Every agent is dropped, and that is deliberate rather than an omission.** A task that
 must produce a PR is never routed to a lone agent. The rung that looks like "one
-implementer agent" already exists as a pipeline — dev's `quick-fix` (`light`: a single
+implementer agent" already exists as a workflow — dev's `quick-fix` (`light`: a single
 `fullstack-developer` phase plus a declared `pr` output) — so the invariant costs no
 expressiveness while keeping review, verification and a real sink in the path. The
 motivating misroute landed on `documentation-engineer`, an agent whose tool list has no
@@ -342,41 +342,41 @@ Two consequences worth naming:
   `EFFORT_RULE`, because the latter's rung (1) is "a single owned AGENT" — misleading
   wording once no agents remain, and the rung-1 pull is what invited a small model to
   hand a narrow-sounding ticket to one agent. The question becomes purely _how big is
-  this_, over three pipelines instead of a dozen mixed units, with a bounded worst case:
+  this_, over three workflows instead of a dozen mixed units, with a bounded worst case:
   pick `patch` where `delivery` was warranted and the work still lands as a PR.
 - **It overrides `DEPARTMENT_FALLBACK`'s `"orchestrator"` policy.** Escaping to the
   orchestrator would break the very invariant the constraint holds (no PR-shaped
   output → `reconcileRunning` kills the item), so a constrained fallback always names
-  the cheapest eligible pipeline.
+  the cheapest eligible workflow.
 
-If a department owns **no** PR-capable pipeline, the filter keeps the full roster and
+If a department owns **no** PR-capable workflow, the filter keeps the full roster and
 `warn`s instead of emptying the catalog: that is a roster gap for the operator to fix,
 and routing it the old way while saying so beats routing it nowhere. Only dev, personal
-and knowledge own a PR pipeline today.
+and knowledge own a PR workflow today.
 
 `TaskSchedulerService.resolveDepartmentTargetOrNull` mirrors this rule for the direct
 (non-classifying) resolution paths, so a 1-eligible dispatch and the scoped classifier
 never disagree about what counts as eligible.
 
-**This is where "a small change shouldn't run the whole pipeline" is decided** — and
+**This is where "a small change shouldn't run the whole workflow" is decided** — and
 since NS2 F9 it is the ONLY place a concrete unit is chosen, for every department
 rather than just dev. Every seated department now owns specialist agents plus a
-graded set of pipelines, so `EFFORT_RULE` (`task-classifier.service.ts`) describes a
-**four-rung ladder** instead of a binary agent-vs-pipeline rule:
+graded set of workflows, so `EFFORT_RULE` (`task-classifier.service.ts`) describes a
+**four-rung ladder** instead of a binary agent-vs-workflow rule:
 
 1. a single owned **agent** — narrow, single-surface: one file, a rename, a copy fix,
    a small bug, a lookup, a single reply
-2. a **`light`** pipeline — still narrow, but wants a second pair of eyes or a check
-3. a **`standard`** pipeline — ordinary work needing review and verification
-4. a **`deep`** pipeline — multi-surface, or genuinely needs design + review + tests +
+2. a **`light`** workflow — still narrow, but wants a second pair of eyes or a check
+3. a **`standard`** workflow — ordinary work needing review and verification
+4. a **`deep`** workflow — multi-surface, or genuinely needs design + review + tests +
    docs
 
 The rule says "prefer the cheapest rung that can do it safely", and the scoped catalog
-is ordered cheapest-first (agents, then pipelines by `complexity`) so the list itself
+is ordered cheapest-first (agents, then workflows by `complexity`) so the list itself
 reinforces it. The wording stays prose in the preamble rather than a contract field —
 the preamble is already the one place per-department routing policy lives — but the
-_ordering_ it describes is data (`PIPELINE_COMPLEXITY_ORDER`, see
-[pipelines.md](./pipelines.md)).
+_ordering_ it describes is data (`WORKFLOW_COMPLEXITY_ORDER`, see
+[workflows.md](./workflows.md)).
 
 **`DEPARTMENT_FALLBACK.dev` is `"primary"`, not `"orchestrator"`.** It used to be
 `"orchestrator"`, on the reasoning that dev's units are delivery _specialists_ so an
@@ -384,25 +384,25 @@ unsure pick was better self-delegated. That is wrong for the work dev actually
 receives: escaping to the global orchestrator yields a session with no PR-shaped
 output, and `RoadmapGateService.reconcileRunning` then kills the item as _"Run finished
 without producing an artifact"_ — the very failure the fallback was meant to avoid.
-`"primary"` makes "unsure" mean "run a pipeline", which is the safe direction.
+`"primary"` makes "unsure" mean "run a workflow", which is the safe direction.
 
 > **What `"primary"` resolves to changed in F9.** It used to read `candidates[0]`,
-> which — with pipelines sorted first — was dev's `delivery`, the most _expensive_
+> which — with workflows sorted first — was dev's `delivery`, the most _expensive_
 > unit it owns. Now that the catalog is ordered cheapest-first, `candidates[0]` is an
 > agent, which is precisely the wrong answer for an unsure verdict (a bare agent is
 > what produced the artifact-less runs above). So the fallback stops reading list
-> order at all and names its unit explicitly via `cheapestPipeline()`: the lowest
-> _pipeline_ rung. Same safety, a fraction of the cost — and the fallback is no longer
+> order at all and names its unit explicitly via `cheapestWorkflow()`: the lowest
+> _workflow_ rung. Same safety, a fraction of the cost — and the fallback is no longer
 > coupled to catalog ordering, which is what made it safe to reorder the catalog for
 > the router's benefit.
 
-`knw` and `per` became `"primary"` in F9 (each now owns a `light` pipeline).
+`knw` and `per` became `"primary"` in F9 (each now owns a `light` workflow).
 `inc` and `ledger` are `"orchestrator"` but the value is **inert**: they own no
 dispatchable units by design, so they are never seated at stage 1 and stage 2 is
 unreachable for them.
 
 The resolved target IS the run's "via `<department>`" attribution — any consumer can
-already read `Pipeline.department` / `Agent.department` off the dispatched id,
+already read `Workflow.department` / `Agent.department` off the dispatched id,
 so no extra run-level field is needed for that. The verdict itself is separately
 persisted as the task's `ClassificationTrace` and enriched onto the run
 (`TaskRun.classification`, read-only) so `RunDetail` can show "why this was routed
@@ -430,7 +430,7 @@ tie with the runner-up) — but nothing said so, and diagnosing it meant reverse
 that arithmetic by hand. `route()` now also `warn`s when the router was unusable.
 
 `rankedCandidates: 1` is the honest distinction between _"the router picked delivery"_ and
-_"delivery was the only PR-capable pipeline dev owns"_.
+_"delivery was the only PR-capable workflow dev owns"_.
 
 `stage2` was previously discarded outright: `resolveDepartmentTargetOrNull` returned
 `routing?.target ?? primary`, dropping the reason, the confidence and the leg of the
@@ -510,8 +510,8 @@ setInterval(() => tick(), systemConfig.current().taskTickMs);
 | Target         | Dispatcher                                                                                                                                    |
 | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `agent`        | `AgentRunnerService.startRun(agentId, { prompt, project })`                                                                                   |
-| `pipeline`     | `PipelineRunnerService.startRun(pipelineId, { prompt, project })`                                                                             |
-| `department`   | Resolved to a concrete `agent`/`pipeline` target first (stage 2, see above), then dispatched like any other — never reaches a runner directly |
+| `workflow`     | `WorkflowRunnerService.startRun(workflowId, { prompt, project })`                                                                             |
+| `department`   | Resolved to a concrete `agent`/`workflow` target first (stage 2, see above), then dispatched like any other — never reaches a runner directly |
 | `orchestrator` | `AgentRunnerService.startRun(ORCHESTRATOR_ID, { prompt })`                                                                                    |
 
 After dispatch, `runRef` is written back to the task record.
@@ -532,10 +532,10 @@ order:
    preferring a currently-free one.
 3. **Unleased fallback** — when the position has **no** employee anywhere,
    the task still dispatches directly, unleased — this is never a park
-   (parking is a pipelines-only concept for `agent` dispatch); it is the
+   (parking is a workflows-only concept for `agent` dispatch); it is the
    concrete mechanism behind "a described task is always executed". The
    lease (if any) is released on the run's terminal transition, same
-   discipline as the pipeline path.
+   discipline as the workflow path.
 
 `employeeId`/`employeeName` land on the dispatched run's `AgentRun.extra`
 when a lease was acquired — see [agents-runs.md](./agents-runs.md) →
@@ -546,7 +546,7 @@ when a lease was acquired — see [agents-runs.md](./agents-runs.md) →
 The daemon watches the run's terminal state:
 
 - `AgentRun.status: done | error | interrupted` → the task gets `outcome: { status, summary }`
-- `PipelineRun.status: done | failed` → the same
+- `WorkflowRun.status: done | failed` → the same
 - `summary` is truncated to `SUMMARY_MAX_CHARS = 200` characters
 
 ## API endpoints
@@ -627,31 +627,31 @@ override endpoint.
 
 ## The unified run surface (`/api/tasks/runs`)
 
-A task is the entity that runs; the processor (agent / pipeline / goal) is metadata.
+A task is the entity that runs; the processor (agent / workflow / goal) is metadata.
 Every operation on a run lives under one surface — no per-kind run routes. A run is
 only ever started by creating a task (`POST /api/tasks`); starting is not part of
 this surface. `TaskRunSchema` is a superset of the feed row plus an optional
 `processor: { kind, id, name }` (the name falls back to the id when the definition
 was deleted). Goal maker/verifier child runs are folded into the feed (not peer
-rows), but stay reachable from the goal's detail view. Pipeline sub-runs (a run with
-`parentRunId`, started by a `pipeline` phase) are hidden the same way; the parent's
+rows), but stay reachable from the goal's detail view. Workflow sub-runs (a run with
+`parentRunId`, started by a `workflow` phase) are hidden the same way; the parent's
 stage links to them. `TaskRun.department` (ZB-04a) is
 enriched from the underlying task's `department` field in `enrichRunWithTask` — the same
 value the parent/subtask read model above uses.
 
 ```
-GET    /api/tasks/runs                                       the unified feed (newest-first; agent/pipeline/goal/scheduled)
+GET    /api/tasks/runs                                       the unified feed (newest-first; agent/workflow/goal/scheduled)
 GET    /api/tasks/runs/archive                                the `/archiv` page's feed: cursor-paginated, search/department-
                                                                 filtered, archived-only (below)
 GET    /api/tasks/runs/archive/counts                          per-department archive counts (search-scoped) + the unsearched total
 GET    /api/tasks/runs/:runId                                a single run's detail
 GET    /api/tasks/runs/:runId/logs?offset=                   log chunk from a byte offset
 GET    /api/tasks/runs/:runId/logs/stream                    SSE tail (falls back to the offset-poll above)
-GET    /api/tasks/runs/:runId/stages/:phaseId/logs?offset=    one pipeline stage's log
-GET    /api/tasks/runs/:runId/stages/:phaseId/logs/stream     SSE tail for a pipeline stage's log
+GET    /api/tasks/runs/:runId/stages/:phaseId/logs?offset=    one workflow stage's log
+GET    /api/tasks/runs/:runId/stages/:phaseId/logs/stream     SSE tail for a workflow stage's log
 GET    /api/tasks/runs/:runId/artifacts/:name                a whitelisted artifact (pr-draft.md, verdict.txt, …)
 POST   /api/tasks/runs/:runId/stop                            stop a running run
-POST   /api/tasks/runs/:runId/resume                          resume a parked pipeline/goal run (with a note), or re-run an
+POST   /api/tasks/runs/:runId/resume                          resume a parked workflow/goal run (with a note), or re-run an
                                                                 errored/interrupted agent run (with `--resume` if a session id
                                                                 was captured, else a fresh run of the same task)
 DELETE /api/tasks/runs/:runId                                  delete a run and its artifacts
@@ -673,8 +673,8 @@ Both `/logs/stream` endpoints live outside the ts-rest contract as raw NestJS `@
 routes (ts-rest doesn't model event streams) — the concrete implementation of the
 "SSE for live streams, polling for state" DNA rule. The resolver looks up `runId` and
 dispatches to the owning runner. The only per-kind run endpoints left are the catalog
-liveness routes `GET /api/agents/running` and `GET /api/pipelines/runs` (badges/counts
-in the catalog) — see [agents-runs.md](./agents-runs.md) and [pipelines.md](./pipelines.md).
+liveness routes `GET /api/agents/running` and `GET /api/workflows/runs` (badges/counts
+in the catalog) — see [agents-runs.md](./agents-runs.md) and [workflows.md](./workflows.md).
 
 ### The archive feed (`/api/tasks/runs/archive`)
 
@@ -689,7 +689,7 @@ separate archive store.
 GET /api/tasks/runs/archive?search=&departments=&before=&limit=
   search       free text, matched against a run's display title and project
   departments   comma-separated department ids, or "none" for runs with no department
-               attribution (an agent/goal run, or a pipeline whose owner isn't
+               attribution (an agent/goal run, or a workflow whose owner isn't
                tagged) — omitted/empty means "all departments"
   before       opaque `<startedAt>|<runId>` cursor from the previous page's
                `nextCursor` — keyset pagination, not offset-based
@@ -709,16 +709,16 @@ GET /api/tasks/runs/archive/counts?search=
 ## Task output (`output`)
 
 In the New Task dialog, the operator chooses **what happens to the finished work** —
-the counterpart to a pipeline's `outputs:` block. It's deterministic and owned by the
+the counterpart to a workflow's `outputs:` block. It's deterministic and owned by the
 system (no agent, no tokens). `TaskOutput` is a discriminated union:
 
 | `type` | Fields       | What it does                                                                                                                                            |
 | ------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `pr`   | —            | Opens a PR from the finished run's branch. **Tier-2 (act-then-report): opened immediately, no approval gate** — the north-star's "open a PR for a fix". |
 | `file` | `dest`, `to` | Writes the run's result (a summary) to a file — into the project's worktree (`dest: project`) or as a vault note (`dest: vault`). Tier-1, immediate.    |
-| `void` | —            | Explicitly no output (also suppresses a pipeline-declared `pr`).                                                                                        |
+| `void` | —            | Explicitly no output (also suppresses a workflow-declared `pr`).                                                                                        |
 
-**A missing field means inherit, not void.** For a pipeline target, its own
+**A missing field means inherit, not void.** For a workflow target, its own
 `outputs:` apply; for an agent/orchestrator target, nothing is delivered (today's
 behavior). "Didn't choose" and "chose void" are two different states.
 
@@ -729,9 +729,9 @@ is the one outbound git step ZIBBY takes autonomously.
 
 **Two paths, one behaviour.**
 
-- **Pipeline target** — `output` is passed to the runner as a per-run override of the
-  declared `outputs:` (stored as `PipelineRun.outputsOverride`; `void` → `[]`). A `pr`
-  sink opens the PR immediately in `runOutputs` and records `PipelineRun.prOutput`
+- **Workflow target** — `output` is passed to the runner as a per-run override of the
+  declared `outputs:` (stored as `WorkflowRun.outputsOverride`; `void` → `[]`). A `pr`
+  sink opens the PR immediately in `runOutputs` and records `WorkflowRun.prOutput`
   (`{ url, additions, deletions }`).
 - **Agent / orchestrator target** — the sink lives at the task level
   (`TaskOutputService`). When the run ends `done`:
@@ -744,13 +744,13 @@ is the one outbound git step ZIBBY takes autonomously.
     link and the coloured `+/−` totals. A failed push is a soft no-op (the work stays
     committed on the branch); no commits or no worktree → a soft no-op too.
 
-_(A `task-output`/`pipeline-output` approval resolver is retained only to drain any run
+_(A `task-output`/`workflow-output` approval resolver is retained only to drain any run
 parked on disk from before this change; new PR outputs never park.)_
 
 ## Phase 11 — unified assignment (loop shape + path scoping)
 
 Classification stays **free of side effects**, and the catalog still only routes to
-agent/pipeline/orchestrator (an `isCoherent` `goal` target is still excluded). But
+agent/workflow/orchestrator (an `isCoherent` `goal` target is still excluded). But
 `TaskRouting` now carries three additional, backward-compatible fields (an old client
 ignores them):
 
@@ -764,12 +764,12 @@ ignores them):
 ```
 
 - **Loop detection (two paths).** The LLM router may return `loop: true` (an
-  annotation on its own agent/pipeline pick), or the deterministic
+  annotation on its own agent/workflow pick), or the deterministic
   `detectLoopCue(text)` (cs+en, diacritic-folded) finds a cue like "until it passes"
   or "keep retrying". When either fires and there is a concrete maker, the classifier
   assembles a `proposedGoal` (`synthesizeGoal`): `objective`/`instructions` = the raw
-  task text (Law 4 — data, not a command), `maker` = the chosen agent/pipeline
-  (orchestrator → the first pipeline in the catalog, otherwise `mode` falls back to
+  task text (Law 4 — data, not a command), `maker` = the chosen agent/workflow
+  (orchestrator → the first workflow in the catalog, otherwise `mode` falls back to
   `single`), `verifier: { kind: "checks" }` (the project's default checks),
   `maxIterations = DEFAULT_GOAL_ITERATIONS`. **Nothing is written** — the `.goal.md`
   is only created on submit from the web (`createGoal` → `startGoalRun`; for a

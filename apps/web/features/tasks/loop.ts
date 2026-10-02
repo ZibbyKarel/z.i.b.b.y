@@ -1,8 +1,8 @@
 import type { CreateGoalInput, ProposedGoal } from "@zibby/contracts";
 import { slug } from "../../utils/slug";
 
-/** The two kinds of work a loop iteration can run — an agent or a whole pipeline. */
-export type MakerKind = "agent" | "pipeline";
+/** The two kinds of work a loop iteration can run — an agent or a whole workflow. */
+export type MakerKind = "agent" | "workflow";
 
 /** How a loop iteration is judged "done": shell checks, or a Claude reviewer agent. */
 export type VerifierKind = "checks" | "claude";
@@ -67,7 +67,7 @@ export function decodeMaker(value: string): { kind: MakerKind; id: string } | nu
   if (sep <= 0) return null;
   const kind = value.slice(0, sep);
   const id = value.slice(sep + 1);
-  if ((kind !== "agent" && kind !== "pipeline") || id.length === 0) return null;
+  if ((kind !== "agent" && kind !== "workflow") || id.length === 0) return null;
   return { kind, id };
 }
 

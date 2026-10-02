@@ -7,7 +7,7 @@ import { ArchiveRow, ArchiveRowTestId } from "./ArchiveRow";
 function run(overrides: Partial<RunView> = {}): RunView {
   return {
     runId: "r_1",
-    kind: "pipeline",
+    kind: "workflow",
     owner: "delivery",
     status: "done",
     pct: null,

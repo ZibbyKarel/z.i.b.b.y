@@ -1,14 +1,14 @@
 # Runner (the shared process-spawn engine)
 
 `apps/api/src/runner/` is the execution core every run kind spawns through:
-agent runs, pipeline stage runs, goal-loop runs, and skill runs. It owns
+agent runs, workflow stage runs, goal-loop runs, and skill runs. It owns
 **process lifecycle** (spawn, output capture, restart survival, cancellation),
 the **`claude -p` command builder**, and the **mid-run approval-gate wiring**.
-It does not know about agents, pipelines, or goals as concepts — those live in
+It does not know about agents, workflows, or goals as concepts — those live in
 their own modules and each instantiate their own `RunnerCore`, passing in a
 kind-specific `KindStrategy`. For orchestration-level detail (how an agent run
-is dispatched, how a pipeline phase retries/escalates/parks), see
-`docs/api/agents-runs.md` and `docs/api/pipelines.md` — this doc stays
+is dispatched, how a workflow phase retries/escalates/parks), see
+`docs/api/agents-runs.md` and `docs/api/workflows.md` — this doc stays
 focused on what happens _inside_ the spawned process and its supervision.
 
 ## Pieces
@@ -29,7 +29,7 @@ focused on what happens _inside_ the spawned process and its supervision.
 ## `RunnerCore<R>` — the shared engine
 
 A **plain class, not a Nest provider** — deliberately: per-kind wrappers
-(`AgentRunnerService`, `PipelineRunnerService`, ...) own the DI surface and
+(`AgentRunnerService`, `WorkflowRunnerService`, ...) own the DI surface and
 instantiate their own `new RunnerCore(dir, strategy, ...)`, so liveness/
 restart/approval logic lives in exactly one place while each caller keeps its
 own runs directory and its own callback wiring (limit-hit, intent handling,
@@ -51,7 +51,7 @@ new RunnerCore(
 
 `AgentRunnerService` wires all of them (limits cache busting, the gate
 evaluator as the intent handler, `formatClaudeStreamLine`, `LimitsService`-backed
-resume resolution); `PipelineRunnerService` wires a subset. A demo/test runner
+resume resolution); `WorkflowRunnerService` wires a subset. A demo/test runner
 can omit every optional arg.
 
 ### `KindStrategy<R>` — the per-kind seam
@@ -265,7 +265,7 @@ Key assembled pieces:
   in from the credentials store; spilled to a `0o600` sandbox file
   (`.zibby-mcp-config.json`) rather than inline JSON when a sandbox dir is
   available, since it carries live credentials. When `runId` is set (both
-  `AgentRunnerService` and `PipelineRunnerService` thread their run's own
+  `AgentRunnerService` and `WorkflowRunnerService` thread their run's own
   pre-spawn id in), an `X-Zibby-Run-Id` header is added to every http/sse
   server whose `url` resolves to a **loopback host**
   (`localhost`/`127.0.0.1`/`[::1]`) — i.e. ZIBBY's own in-process MCP
@@ -346,11 +346,11 @@ Four callers each own their own `RunnerCore` instance and runs directory:
 
 - **`agents`** (`apps/api/src/agents/agent-runner.service.ts`) — the primary
   consumer; wires every optional callback. See `docs/api/agents-runs.md`.
-- **`pipelines`** (`apps/api/src/pipelines/pipeline-runner.service.ts`) —
-  one stage attempt per spawn. See `docs/api/pipelines.md`.
+- **`workflows`** (`apps/api/src/workflows/workflow-runner.service.ts`) —
+  one stage attempt per spawn. See `docs/api/workflows.md`.
 - **`goals`** (`apps/api/src/goals/goal-runner.service.ts`) — imports
   `RunNotFoundError`/`isAlive`/`killGroup` directly rather than instantiating
-  its own core (delegates the actual spawn to the pipeline/agent runner it
+  its own core (delegates the actual spawn to the workflow/agent runner it
   drives).
 - **`tasks`** (`apps/api/src/tasks/task-runs.service.ts`) — references the
   shared process-governance guarantees (pgid kill, `interrupted` landing) in

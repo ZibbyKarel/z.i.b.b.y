@@ -79,7 +79,7 @@ opened, rather than guessing from a GitHub author login (the operator's own toke
 opens both ZIBBY's PRs and the operator's own, so the login can't disambiguate):
 
 - the artifact registry (`ArtifactsStorageService.listFiltered({ projectId })`),
-  `kind === "pr"` records written by a pipeline's terminal PR sink
+  `kind === "pr"` records written by a workflow's terminal PR sink
 - directed tasks (`ScheduledTasksStorageService.list()`) whose `outcome.pr.url` was
   written back by the task scheduler
 

@@ -47,7 +47,7 @@ export const Overview: Story = {
         </Typography>
         <Card>
           <CardHeader>Potvrzení</CardHeader>
-          <CardContent>Opravdu chcete smazat tento pipeline?</CardContent>
+          <CardContent>Opravdu chcete smazat tento workflow?</CardContent>
           <CardActions>
             <Button intent="ghost">Zrušit</Button>
             <Button icon="x" intent="danger">
@@ -79,8 +79,8 @@ export const Overview: Story = {
       </div>
       <div className="flex flex-col gap-2">
         <Typography mono type="subtitle" variant="tertiary">
-          edge (matte left accent bar — a runs-feed task card&apos;s state at a
-          glance; independent of tone/living, never glows)
+          edge (matte left accent bar — a runs-feed task card&apos;s state at a glance; independent
+          of tone/living, never glows)
         </Typography>
         <div className="flex flex-col gap-2 w-64">
           <Card edge="run">

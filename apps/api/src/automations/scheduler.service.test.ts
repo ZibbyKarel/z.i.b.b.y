@@ -20,12 +20,12 @@ function agentFactoryAutomation(over: Partial<Automation> = {}): Automation {
   };
 }
 
-function pipelineAutomation(over: Partial<Automation> = {}): Automation {
+function workflowAutomation(over: Partial<Automation> = {}): Automation {
   return {
-    id: "nightly-pipeline",
-    name: "Nightly pipeline",
+    id: "nightly-workflow",
+    name: "Nightly workflow",
     trigger: { type: "cron", expr: "0 3 * * *" },
-    target: { type: "pipeline", pipelineId: "release" },
+    target: { type: "workflow", workflowId: "release" },
     enabled: true,
     system: false,
     ...over,
@@ -109,7 +109,7 @@ function reviewLearnAutomation(over: Partial<Automation> = {}): Automation {
 function makeService(opts: {
   automation: Automation;
   detect?: ReturnType<typeof vi.fn>;
-  pipelineRunner?: { start: ReturnType<typeof vi.fn> };
+  workflowRunner?: { start: ReturnType<typeof vi.fn> };
   taskScheduler?: { createTask: ReturnType<typeof vi.fn> };
   selfKnowledge?: { check: ReturnType<typeof vi.fn>; write: ReturnType<typeof vi.fn> };
   security?: { scan: ReturnType<typeof vi.fn> };
@@ -135,7 +135,7 @@ function makeService(opts: {
   const service = new SchedulerService(
     storage as never,
     noRunner as never,
-    (opts.pipelineRunner ?? noRunner) as never,
+    (opts.workflowRunner ?? noRunner) as never,
     fakeLogger as never,
     fakeTrace as never,
     { generate: vi.fn() } as never,
@@ -186,15 +186,15 @@ describe("SchedulerService — dispatch (Phase 4b: agent-factory case)", () => {
   });
 });
 
-describe("SchedulerService — dispatch (Phase 116b: pipeline prompt forwarding)", () => {
-  it("forwards the automation's prompt into PipelineRunnerService.start's input param", async () => {
-    const start = vi.fn(async () => ({ pipelineRunId: "release_1" }));
+describe("SchedulerService — dispatch (Phase 116b: workflow prompt forwarding)", () => {
+  it("forwards the automation's prompt into WorkflowRunnerService.start's input param", async () => {
+    const start = vi.fn(async () => ({ workflowRunId: "release_1" }));
     const { service } = makeService({
-      automation: pipelineAutomation({ prompt: "focus on regressions" }),
-      pipelineRunner: { start },
+      automation: workflowAutomation({ prompt: "focus on regressions" }),
+      workflowRunner: { start },
     });
 
-    const ref = await service.trigger("nightly-pipeline");
+    const ref = await service.trigger("nightly-workflow");
 
     expect(start).toHaveBeenCalledWith(
       "release",
@@ -209,13 +209,13 @@ describe("SchedulerService — dispatch (Phase 116b: pipeline prompt forwarding)
   });
 
   it("forwards undefined when the automation carries no prompt (no behaviour change)", async () => {
-    const start = vi.fn(async () => ({ pipelineRunId: "release_2" }));
+    const start = vi.fn(async () => ({ workflowRunId: "release_2" }));
     const { service } = makeService({
-      automation: pipelineAutomation(),
-      pipelineRunner: { start },
+      automation: workflowAutomation(),
+      workflowRunner: { start },
     });
 
-    await service.trigger("nightly-pipeline");
+    await service.trigger("nightly-workflow");
 
     expect(start).toHaveBeenCalledWith(
       "release",
@@ -299,7 +299,7 @@ describe("SchedulerService — dispatch (Phase 116b: task target)", () => {
   });
 
   it("forwards an explicit @-mentioned target and bypasses classification", async () => {
-    const explicitTarget = { kind: "pipeline" as const, id: "code-audit", name: "Code audit" };
+    const explicitTarget = { kind: "workflow" as const, id: "code-audit", name: "Code audit" };
     const createTask = vi.fn(async () => ({
       outcome: "dispatched" as const,
       runRef: "code-audit_1",

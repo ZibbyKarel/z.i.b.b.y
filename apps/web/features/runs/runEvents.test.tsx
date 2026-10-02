@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type MockInstance, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { installEventSourceMock } from "../../test/eventSourceMock";
 import { getApprovalsQueryKey } from "../approvals/queries/keys";
-import { getPipelineRunQueryKey } from "../pipelines/queries/keys";
+import { getWorkflowRunQueryKey } from "../workflows/queries/keys";
 import { getCiStatusQueryKey } from "../projects/queries/keys";
 
 // `API_URL` gates the provider (no URL → no stream); pin it so the EventSource opens.
@@ -63,18 +63,18 @@ describe("RunEventsProvider — SSE-driven invalidation (N1)", () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: getApprovalsQueryKey() });
   });
 
-  it("an agent-runs event with a runId invalidates the single-run aggregate too (Fáze 14.4 — the chat run card reads it for agent runs, not just pipeline)", () => {
+  it("an agent-runs event with a runId invalidates the single-run aggregate too (Fáze 14.4 — the chat run card reads it for agent runs, not just workflow)", () => {
     act(() => {
       mock.last().emit({ scope: "agent-runs", runId: "writer_1", status: "running" });
     });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: getPipelineRunQueryKey("writer_1") });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: getWorkflowRunQueryKey("writer_1") });
   });
 
-  it("a pipeline-runs event refreshes the single-run aggregate", () => {
+  it("a workflow-runs event refreshes the single-run aggregate", () => {
     act(() => {
-      mock.last().emit({ scope: "pipeline-runs", runId: "delivery_1", status: "done" });
+      mock.last().emit({ scope: "workflow-runs", runId: "delivery_1", status: "done" });
     });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: getPipelineRunQueryKey("delivery_1") });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: getWorkflowRunQueryKey("delivery_1") });
   });
 
   // Phase 89: the plain subscribe API the department web's particle layer rides.
@@ -83,10 +83,10 @@ describe("RunEventsProvider — SSE-driven invalidation (N1)", () => {
       const listener = vi.fn();
       const unsubscribe = onRunEvent(listener);
       act(() => {
-        mock.last().emit({ scope: "pipeline-runs", runId: "delivery_1", status: "running" });
+        mock.last().emit({ scope: "workflow-runs", runId: "delivery_1", status: "running" });
       });
       expect(listener).toHaveBeenCalledWith({
-        scope: "pipeline-runs",
+        scope: "workflow-runs",
         runId: "delivery_1",
         status: "running",
       });
@@ -108,7 +108,7 @@ describe("RunEventsProvider — SSE-driven invalidation (N1)", () => {
       const unsubscribe = onRunEvent(listener);
       unsubscribe();
       act(() => {
-        mock.last().emit({ scope: "pipeline-runs", runId: "delivery_1", status: "done" });
+        mock.last().emit({ scope: "workflow-runs", runId: "delivery_1", status: "done" });
       });
       expect(listener).not.toHaveBeenCalled();
     });
@@ -116,9 +116,9 @@ describe("RunEventsProvider — SSE-driven invalidation (N1)", () => {
     it("subscribing does not change the provider's own invalidation behavior (no regression)", () => {
       const unsubscribe = onRunEvent(vi.fn());
       act(() => {
-        mock.last().emit({ scope: "pipeline-runs", runId: "delivery_1", status: "done" });
+        mock.last().emit({ scope: "workflow-runs", runId: "delivery_1", status: "done" });
       });
-      expect(invalidate).toHaveBeenCalledWith({ queryKey: getPipelineRunQueryKey("delivery_1") });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: getWorkflowRunQueryKey("delivery_1") });
       unsubscribe();
     });
 

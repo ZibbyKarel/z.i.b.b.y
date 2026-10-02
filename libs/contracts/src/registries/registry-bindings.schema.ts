@@ -9,7 +9,7 @@ export type RegistryKind = z.infer<typeof RegistryKindSchema>;
  * A registry item's "Bound in" department list, keyed by item id.
  *
  * O-09 — derived, read-only, no new FK: a registry item is "bound in" the
- * departments whose agents (or pipelines, transitively via their agent) use it.
+ * departments whose agents (or workflows, transitively via their agent) use it.
  * `mcp` bindings are read directly off each active agent's `tools` /
  * `optionalTools` grants (an `mcp__<id>__*` / bare `<id>` entry). `skills`,
  * `hooks` and `commands` carry no per-agent reference at all today — the runner

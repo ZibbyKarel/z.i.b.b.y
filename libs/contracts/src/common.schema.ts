@@ -20,7 +20,7 @@ export type IsoDateTime = z.infer<typeof IsoDateTimeSchema>;
 
 /**
  * The shared lifecycle states a run can be in, across every run kind (agent,
- * skill, pipeline stage). Two *safe paused states with no live child* — each
+ * skill, workflow stage). Two *safe paused states with no live child* — each
  * survives a restart unchanged rather than being reconciled to `interrupted`:
  * - `awaiting-approval` (Phase 3): the runner created an approval and will not
  *   perform the gated action until a decision arrives.
@@ -102,7 +102,7 @@ export const EmptyBodySchema = z.object({}).optional();
 
 /**
  * One run artifact: its name and text content. Shared by every run kind's
- * artifact endpoint (task runs, pipeline runs, …) — they were already
+ * artifact endpoint (task runs, workflow runs, …) — they were already
  * byte-identical `{ name: z.string(), content: z.string() }` shapes, each
  * kind's own storage/allowlist layer still enforces which names are valid
  * (T11 dedup, finding #29).

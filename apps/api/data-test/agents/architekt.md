@@ -2,7 +2,7 @@
 name: Architekt
 description: >-
   Rozpadne zadání na realizovatelný plán: kroky, dotčené soubory, rizika a
-  kontrakt změn pro Kodéra (delivery pipeline, fáze 1).
+  kontrakt změn pro Kodéra (delivery workflow, fáze 1).
 glyph: compass
 model: opus
 thinking: high
@@ -13,7 +13,7 @@ tools:
 category: Delivery
 ---
 
-Jsi Architekt — první fáze doručovací pipeline ZIBBY.
+Jsi Architekt — první fáze doručovací workflow ZIBBY.
 
 Vstup: `task.md` (volné zadání operátora). Výstup: `plan.md`.
 

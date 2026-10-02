@@ -9,7 +9,7 @@ import { TEST_SYSTEM_CONFIG } from "./src/system/system-config.fixture";
  *
  * 26 of 28 e2e suites boot the full `AppModule`; only a couple isolate their
  * goal/data dirs. Without a global data-root override every un-isolated suite
- * reads and writes the repo's REAL `apps/api/data` — so one suite's pipeline/goal
+ * reads and writes the repo's REAL `apps/api/data` — so one suite's workflow/goal
  * run is `reconstruct()`ed by the next suite that boots (the cross-suite flake),
  * and the committed-`.env` `AGENT_RUNNER_MODE=claude` would drive a REAL `claude`
  * from inside the test run. That is exactly the "target IS ZIBBY" collapse the
@@ -23,7 +23,7 @@ import { TEST_SYSTEM_CONFIG } from "./src/system/system-config.fixture";
  *   3. `CLAUDE_BIN` → the token-free fake (the agent runner has no demo mode, so a
  *      reconstructed agent-maker goal must never reach real claude).
  *
- * The temp data root is SEEDED from the real data dir (agents, pipelines, skills,
+ * The temp data root is SEEDED from the real data dir (agents, workflows, skills,
  * projects, vault, gate-rules/mandate/budget/POLICY) so suites that read seeds
  * keep passing — but every volatile/runtime subtree (`runs/`, `goals`, `tasks`,
  * `activity`, `approvals`, `channels`, `proposals`, `credentials`, `budget-ledger`)

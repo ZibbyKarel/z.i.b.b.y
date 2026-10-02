@@ -144,7 +144,7 @@ export default async function globalSetup(): Promise<void> {
 
   const ids = {
     departmentId: "dev",
-    departmentPipelineId: "demo-pipe",
+    departmentWorkflowId: "demo-pipe",
     employeeId: employee?.id ?? null,
     chainId: "sweep-chain",
     goalId: "sweep-goal",
@@ -160,7 +160,7 @@ export default async function globalSetup(): Promise<void> {
     hookId: "sweep-hook",
     commandId: "sweep-command",
     redirectAgentId: "gated-agent",
-    redirectPipelineId: "demo-pipe",
+    redirectWorkflowId: "demo-pipe",
   };
   await fs.writeFile(path.resolve(".e2e-data/zc-sweep-ids.json"), JSON.stringify(ids, null, 2));
 }
