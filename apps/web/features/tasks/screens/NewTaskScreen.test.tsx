@@ -1,6 +1,8 @@
 import { fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen } from "../../../test/render";
+import { CommandLineTestId } from "../components/CommandLine/CommandLine";
 import { NewTaskScreen } from "./NewTaskScreen";
 
 const push = vi.fn();
@@ -13,6 +15,11 @@ vi.mock("next/navigation", () => ({
 vi.mock("../../projects", () => ({ useProjectsQuery: () => ({ data: [] }) }));
 vi.mock("../components/TaskAttachments", () => ({
   TaskAttachments: () => null,
+}));
+
+vi.mock("../../agents/queries/useAgentsQuery", () => ({
+  useAgentsQuery: () => ({ data: [{ id: "koder", name: "Kodér", instructions: "x" }] }),
+  getAgentsQueryKey: () => ["agents"],
 }));
 
 const classifyMutate = vi.fn();
@@ -78,5 +85,22 @@ describe("NewTaskScreen (ZB-04b)", () => {
     fireEvent.click(screen.getByText("Vytvořit úkol"));
     const body = createMutate.mock.calls[0]?.[0]?.body as { target?: { kind: string } };
     expect(body.target?.kind).not.toBe("department");
+  });
+
+  it("sends an @-mentioned agent as the explicit target", async () => {
+    const user = userEvent.setup();
+    render(<NewTaskScreen />);
+    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
+    await user.type(screen.getByTestId(CommandLineTestId.Input), "fix it @Kod");
+    await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-koder`));
+    fireEvent.click(screen.getByText("Vytvořit úkol"));
+    expect(createMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({
+          target: expect.objectContaining({ kind: "agent", id: "koder" }),
+        }),
+      }),
+      expect.anything(),
+    );
   });
 });

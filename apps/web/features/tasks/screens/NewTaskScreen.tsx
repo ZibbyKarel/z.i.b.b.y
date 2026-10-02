@@ -5,7 +5,6 @@ import {
   Button,
   ChainRouteStrip,
   Container,
-  HighlightTextAreaField,
   IconTile,
   Panel,
   SelectField,
@@ -19,9 +18,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { useProjectsQuery } from "../../projects";
+import { CommandLine } from "../components/CommandLine/CommandLine";
 import { TaskAttachments } from "../components/TaskAttachments";
 import { useClassifyTaskMutation, useCreateTaskMutation } from "../mutations";
-import { extractPathRanges, extractPaths, toClientTarget } from "../task";
+import { type TaskTarget, extractPaths, toApiTarget, toClientTarget } from "../task";
 
 const ENTRY_COO = "coo";
 
@@ -44,7 +44,11 @@ export function NewTaskScreen() {
   const departments = useDepartmentLookup();
 
   const [title, setTitle] = useState("");
-  const [text, setText] = useState(() => searchParams.get("text") ?? "");
+  const [initialText] = useState(() => searchParams.get("text") ?? "");
+  const [text, setText] = useState(initialText);
+  // An `@`-mention picked in the brief is an explicit target — it wins over the
+  // entry select and skips classification, like the dialog's composer.
+  const [mentionTarget, setMentionTarget] = useState<TaskTarget | undefined>();
   const [projectId, setProjectId] = useState("");
   const [entry, setEntry] = useState<string>(() =>
     prefillEntry && departments.get(prefillEntry) ? prefillEntry : ENTRY_COO,
@@ -66,24 +70,22 @@ export function NewTaskScreen() {
 
   const classify = useClassifyTaskMutation();
   useEffect(() => {
-    if (entry !== ENTRY_COO || text.trim().length <= 2) return;
+    if (mentionTarget || entry !== ENTRY_COO || text.trim().length <= 2) return;
     const handle = setTimeout(() => classify.mutate({ body: { text, paths } }), 350);
     return () => clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- classify is a stable mutation ref
-  }, [entry, text, paths]);
+  }, [mentionTarget, entry, text, paths]);
 
   const createTask = useCreateTaskMutation();
 
   const department = departments.get(entry);
-  const chosenTarget =
-    entry !== ENTRY_COO && department
+  const chosenTarget = mentionTarget
+    ? toApiTarget(mentionTarget)
+    : entry !== ENTRY_COO && department
       ? { kind: "department" as const, id: department.id, name: department.name }
       : undefined;
   const previewTarget = chosenTarget
-    ? {
-        name: department?.name ?? entry,
-        glyph: department ? "compass" : undefined,
-      }
+    ? { name: chosenTarget.name }
     : classify.data
       ? toClientTarget(classify.data.body.target)
       : null;
@@ -126,13 +128,18 @@ export function NewTaskScreen() {
             value={title}
           />
 
-          <HighlightTextAreaField
-            highlights={extractPathRanges(text).map((r) => ({ start: r.start, end: r.end }))}
+          <CommandLine
+            chrome={false}
+            initialText={initialText}
             label={t("new.field.brief")}
-            onChange={(e) => setText(e.target.value)}
+            onSubmit={submit}
+            onTargetChange={setMentionTarget}
+            onTextChange={setText}
             placeholder={t("new.field.briefPlaceholder")}
+            renderTrailing={() => null}
+            resetOnSubmit={false}
             rows={6}
-            value={text}
+            showAttach={false}
           />
 
           <Stack wrap direction="row" gap="150">
@@ -183,7 +190,7 @@ export function NewTaskScreen() {
                   : t("new.routeIdle")}
               </Typography>
             </Stack>
-            {chosenTarget && department && (
+            {!mentionTarget && chosenTarget && department && (
               <ChainRouteStrip
                 size="compact"
                 steps={[{ code: department.code, name: department.name, state: "thinking" }]}

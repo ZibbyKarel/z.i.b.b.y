@@ -171,10 +171,17 @@ export class TaskRunsService {
    * A single run by id — searched in the **unfolded** set, so a goal's folded
    * maker/verifier child run is still reachable (the goal detail fetches it by ref).
    * Resolves historical on-disk runs (the per-kind `listAll()` merge disk + memory).
+   * A task id also resolves — to the newest run that task dispatched — because a
+   * still-scheduled task's feed row carries the task id as its `runId`, so a link
+   * taken before dispatch must keep working once the task has become a real run.
    */
   async getTaskRun(runId: string): Promise<TaskRun> {
     const { runs } = await this.collect();
-    const found = runs.find((r) => r.runId === runId);
+    const found =
+      runs.find((r) => r.runId === runId) ??
+      runs
+        .filter((r) => r.taskId === runId)
+        .sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0];
     if (!found) throw new TaskRunNotFoundError(runId);
     return found;
   }

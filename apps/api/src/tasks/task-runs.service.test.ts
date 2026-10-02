@@ -190,6 +190,12 @@ describe("TaskRunsService", () => {
       expect(child.runId).toBe("koder_2");
     });
 
+    it("resolves a dispatched task's id to the run it spawned", async () => {
+      const { service } = build();
+      const run = await service.getTaskRun("task1");
+      expect(run.runId).toBe("researcher_1");
+    });
+
     it("sorts newest-first", async () => {
       const { service } = build();
       const feed = await service.listTaskRuns();
