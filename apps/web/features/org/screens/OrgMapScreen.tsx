@@ -36,6 +36,7 @@ import { NewDepartmentDialog } from "../../departments/components/NewDepartmentD
 import { useCreateDepartmentMutation } from "../../departments/mutations";
 import { useHireEmployeeMutation } from "../../employees/mutations";
 import { useEmployeesQuery } from "../../employees/queries";
+import { aggregateZibbyState } from "../state/aggregateZibbyState";
 
 export enum OrgMapScreenTestId {
   Root = "org-map-screen-root",
@@ -111,7 +112,15 @@ export function OrgMapScreen() {
   }
 
   const cooRuns = departments.reduce((sum, d) => sum + d.tier2Count + d.tier3Count, 0);
-  const cooState: StateTone = cooRuns > 0 ? "working" : "idle";
+  const ownState: StateTone = cooRuns > 0 ? "working" : "idle";
+  // Zibby mirrors the most urgent agent state: any employee's state, a department
+  // with unseen failed runs (error) or pending approvals (blocked) — worse wins.
+  const cooState = aggregateZibbyState(ownState, [
+    ...employees.map((e) => e.state),
+    ...departments.map((d): StateTone => (d.errorCount > 0 ? "error" : "idle")),
+    ...departments.map((d): StateTone => (d.tier3Count > 0 ? "blocked" : "idle")),
+    ...approvals.map((): StateTone => "blocked"),
+  ]);
 
   const focusDepartment = departments.find((d) => d.id === focusId);
   const focusEmployees = employees.filter((e) => e.department === focusId);

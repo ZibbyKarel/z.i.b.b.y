@@ -512,6 +512,24 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
     expect(onClose).toHaveBeenCalled();
   });
 
+  it("keeps a pre-assigned multi-word workflow target after typing, and dispatches to it", async () => {
+    const user = userEvent.setup();
+    const target = {
+      kind: "workflow",
+      id: "coloring-book",
+      name: "Coloring Book",
+      glyph: "flow",
+    } as const;
+    render(<NewTaskDialog initialTarget={target} onClose={vi.fn()} />);
+
+    await user.type(screen.getByTestId(CommandLineTestId.Input), "vytvoř omalovánky o dinosaurech");
+    await waitFor(() => expect(classify).toHaveBeenCalled());
+    await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
+
+    expect(createTask).toHaveBeenCalledTimes(1);
+    expect(createTask.mock.calls[0]?.[0].body.target).toEqual(target);
+  });
+
   it("lets the operator switch the pre-assigned workflow to another target before dispatch", async () => {
     const user = userEvent.setup();
     render(

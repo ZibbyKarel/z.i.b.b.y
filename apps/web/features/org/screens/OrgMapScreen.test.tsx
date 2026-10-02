@@ -115,6 +115,11 @@ describe("OrgMapScreen", () => {
     expect(avatar).toHaveAccessibleName("Zibby · COO");
   });
 
+  it("mirrors the worst agent state on the Zibby avatar (failed run beats working)", () => {
+    render(<OrgMapScreen />);
+    expect(screen.getByTestId(ZibbyAvatarTestId.Root)).toHaveAttribute("data-state", "error");
+  });
+
   it("shows no focus panel without ?department=", () => {
     render(<OrgMapScreen />);
     expect(screen.queryByTestId(OrgMapScreenTestId.FocusPanel)).not.toBeInTheDocument();

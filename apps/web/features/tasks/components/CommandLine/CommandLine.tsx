@@ -308,9 +308,13 @@ function mentionRanges(
  * definition of "still referenced" (see the target-clearing effect in
  * `handleChange`). */
 function hasMentionFor(text: string, name: string): boolean {
-  const needle = name.toLowerCase();
-  for (const match of text.matchAll(MENTION_RE)) {
-    if (match[0].slice(1).toLowerCase() === needle) return true;
+  // A picked name may contain spaces ("Coloring Book"), which `MENTION_RE`'s `@\S+`
+  // would cut at the first one — so match the literal `@name` followed by a non-word
+  // boundary instead, or the target is wrongly dropped on the very next keystroke.
+  const needle = `@${name}`.toLowerCase();
+  const hay = text.toLowerCase();
+  for (let i = hay.indexOf(needle); i !== -1; i = hay.indexOf(needle, i + 1)) {
+    if (!/[\p{L}\p{N}_-]/u.test(hay.charAt(i + needle.length))) return true;
   }
   return false;
 }
