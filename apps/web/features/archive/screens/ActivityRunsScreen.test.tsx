@@ -6,7 +6,13 @@ import { renderWithProviders as render, screen } from "../../../test/render";
 import { ActivityRunsScreen } from "./ActivityRunsScreen";
 
 const push = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+const replace = vi.fn();
+let stateParam = "";
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push, replace }),
+  usePathname: () => "/activity/runs",
+  useSearchParams: () => new URLSearchParams(stateParam ? { state: stateParam } : {}),
+}));
 
 const { hooks } = vi.hoisted(() => ({
   hooks: {
@@ -66,6 +72,8 @@ describe("ActivityRunsScreen (ZB-07)", () => {
     hooks.total = 0;
     hooks.counts = {};
     push.mockClear();
+    replace.mockClear();
+    stateParam = "";
     fetchNextPage.mockClear();
   });
 
@@ -93,6 +101,18 @@ describe("ActivityRunsScreen (ZB-07)", () => {
     hooks.total = 2;
     render(<ActivityRunsScreen />);
     expect(screen.getByText("Ship the release")).toBeInTheDocument();
+    expect(screen.getByText("Broken run")).toBeInTheDocument();
+  });
+
+  it("presets the state filter from ?state=", () => {
+    stateParam = "error";
+    hooks.items = [
+      run({ runId: "r_done", status: "done" }),
+      run({ runId: "r_err", status: "error", title: "Broken run" }),
+    ];
+    hooks.total = 2;
+    render(<ActivityRunsScreen />);
+    expect(screen.queryByText("Ship the release")).toBeNull();
     expect(screen.getByText("Broken run")).toBeInTheDocument();
   });
 });

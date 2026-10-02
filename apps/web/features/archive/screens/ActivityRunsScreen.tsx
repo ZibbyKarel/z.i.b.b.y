@@ -17,7 +17,7 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import type { Route } from "next";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { type DepartmentLookup } from "../../departments/departmentLookup";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
@@ -77,7 +77,19 @@ export function ActivityRunsScreen() {
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
   const [department, setDepartment] = useState<ArchiveDepartmentFilterId | "">("");
-  const [state, setState] = useState<RunStatusGroupKey | typeof ALL_STATE>(ALL_STATE);
+  // The state filter lives in `?state=<group>` (the org map's Zibby avatar links here).
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const stateParam = searchParams.get("state");
+  const state: RunStatusGroupKey | typeof ALL_STATE =
+    RUN_STATUS_GROUPS.find((g) => g.key === stateParam)?.key ?? ALL_STATE;
+  function setState(next: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === ALL_STATE) params.delete("state");
+    else params.set("state", next);
+    const qs = params.toString();
+    router.replace((qs ? `${pathname}?${qs}` : pathname) as Route);
+  }
 
   const departmentFilter = department ? [department] : [];
   const {
@@ -207,7 +219,7 @@ export function ActivityRunsScreen() {
           <SegmentedControl
             ariaLabel={t("column.state")}
             items={stateItems}
-            onChange={(v) => setState(v as RunStatusGroupKey | typeof ALL_STATE)}
+            onChange={setState}
             value={state}
           />
         </FilterBar>

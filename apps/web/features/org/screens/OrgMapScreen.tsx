@@ -36,6 +36,9 @@ import { NewDepartmentDialog } from "../../departments/components/NewDepartmentD
 import { useCreateDepartmentMutation } from "../../departments/mutations";
 import { useHireEmployeeMutation } from "../../employees/mutations";
 import { useEmployeesQuery } from "../../employees/queries";
+import { useRunsQuery } from "../../runs";
+import { runTitle } from "../../runs/run";
+import type { RunStatusGroupKey } from "../../runs/statusGroups";
 import { aggregateZibbyState } from "../state/aggregateZibbyState";
 
 export enum OrgMapScreenTestId {
@@ -47,7 +50,18 @@ export enum OrgMapScreenTestId {
   TeamTile = "org-map-team-tile",
   AddEmployeeButton = "org-map-add-employee-button",
   AddDepartmentButton = "org-map-add-department-button",
+  FailedRun = "org-map-failed-run",
 }
+
+/** Zibby's state → the `/activity/runs` state group it reads as (idle → no filter). */
+const RUN_GROUP: Record<StateTone, RunStatusGroupKey | undefined> = {
+  working: "running",
+  thinking: "running",
+  blocked: "waiting",
+  error: "error",
+  done: "done",
+  idle: undefined,
+};
 
 /** `gap="200"` → 16px (DS.md §4) — the grid's own column gap. */
 const GRID_GAP_PX = 16;
@@ -122,7 +136,20 @@ export function OrgMapScreen() {
     ...approvals.map((): StateTone => "blocked"),
   ]);
 
+  // The avatar opens the People roster when some employee is in Zibby's state;
+  // otherwise the state comes from runs/approvals, so it opens the runs archive.
+  const cooGroup = RUN_GROUP[cooState];
+  const cooHref = employees.some((e) => e.state === cooState)
+    ? `/org/people?state=${cooState}`
+    : cooGroup
+      ? `/activity/runs?state=${cooGroup}`
+      : "/activity/runs";
+
   const focusDepartment = departments.find((d) => d.id === focusId);
+  const { runs } = useRunsQuery();
+  const focusFailedRuns = (focusDepartment?.errorRunIds ?? []).map(
+    (id) => runs.find((r) => r.runId === id) ?? id,
+  );
   const focusEmployees = employees.filter((e) => e.department === focusId);
   // An agent counts as allocated once any active employee holds its position.
   const freeAgents = agents.filter((a) => !employees.some((e) => e.agentId === a.id));
@@ -158,7 +185,7 @@ export function OrgMapScreen() {
             <Link
               aria-label={t("cooAvatarLink", { state: cooState })}
               data-testid={OrgMapScreenTestId.CooNode}
-              href={`/org/people?state=${cooState}` as Route}
+              href={cooHref as Route}
             >
               <ZibbyAvatar label={t("cooAvatarLabel")} size={112} state={cooState} />
             </Link>
@@ -310,6 +337,33 @@ export function OrgMapScreen() {
                   </Grid>
                 )}
               </Stack>
+
+              {focusFailedRuns.length > 0 && (
+                <Stack gap="100">
+                  <Typography tracking="wider" type="labelSm" variant="secondary">
+                    {t("focus.failedRunsTitle")}
+                  </Typography>
+                  <Stack gap="50">
+                    {focusFailedRuns.map((r) => {
+                      const id = typeof r === "string" ? r : r.runId;
+                      return (
+                        <Link
+                          data-testid={OrgMapScreenTestId.FailedRun}
+                          href={`/activity/runs/${id}` as Route}
+                          key={id}
+                        >
+                          <Row gap="100">
+                            <CellStrip cells={["error"]} />
+                            <Typography type="labelSm" variant="secondary">
+                              {typeof r === "string" ? r : runTitle(r)}
+                            </Typography>
+                          </Row>
+                        </Link>
+                      );
+                    })}
+                  </Stack>
+                </Stack>
+              )}
 
               <Stack gap="100">
                 <Typography tracking="wider" type="labelSm" variant="secondary">

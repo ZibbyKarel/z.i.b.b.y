@@ -39,6 +39,7 @@ vi.mock("../../departments/queries/useDepartmentsQuery", () => ({
         tier2Count: 0,
         tier3Count: 0,
         errorCount: 1,
+        errorRunIds: ["r_fail"],
       },
     ],
   }),
@@ -89,6 +90,12 @@ vi.mock("../../agents", () => ({
   }),
 }));
 
+vi.mock("../../runs", () => ({
+  useRunsQuery: () => ({
+    runs: [{ runId: "r_fail", kind: "workflow", owner: "patch", title: "Broken patch" }],
+  }),
+}));
+
 const hireMutate = vi.fn();
 vi.mock("../../employees/mutations", () => ({
   useHireEmployeeMutation: () => ({ mutate: hireMutate, isPending: false }),
@@ -120,12 +127,20 @@ describe("OrgMapScreen", () => {
     expect(screen.getByTestId(ZibbyAvatarTestId.Root)).toHaveAttribute("data-state", "error");
   });
 
-  it("links the Zibby avatar to the People roster filtered by its state", () => {
+  it("links an error Zibby with no employee in error to the runs archive filtered to errors", () => {
     render(<OrgMapScreen />);
     expect(screen.getByTestId(OrgMapScreenTestId.CooNode)).toHaveAttribute(
       "href",
-      "/org/people?state=error",
+      "/activity/runs?state=error",
     );
+  });
+
+  it("lists the focused department's failed runs, linked to their detail", () => {
+    focusParam = "dev";
+    render(<OrgMapScreen />);
+    const row = screen.getByTestId(OrgMapScreenTestId.FailedRun);
+    expect(row).toHaveTextContent("Broken patch");
+    expect(row).toHaveAttribute("href", "/activity/runs/r_fail");
   });
 
   it("shows no focus panel without ?department=", () => {
