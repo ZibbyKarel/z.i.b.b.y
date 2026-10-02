@@ -18,9 +18,9 @@ import {
 } from "@zibby/design-system";
 import type { StateTone } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
+import { EmployeeSheet } from "../components/EmployeeSheet";
 import { useDepartmentLookup } from "../useDepartmentLookup";
 import { EmptyState } from "../../../components/EmptyState/EmptyState";
 import { QueryError } from "../../../components/LoadError/QueryError";
@@ -46,11 +46,14 @@ export function PeopleScreen() {
   const t = useTranslations("people");
   const departments = useDepartmentLookup();
   const router = useRouter();
+  // `?state=` / `?department=` preset the filters (the org map's Zibby avatar links here).
+  const searchParams = useSearchParams();
   const { data: employees = [], isPending, isError, refetch } = useEmployeesQuery();
   const { isPinned } = usePinToggle();
 
-  const [department, setDepartment] = useState<string>(ALL);
-  const [state, setState] = useState<string>(ALL);
+  const [department, setDepartment] = useState<string>(searchParams.get("department") ?? ALL);
+  const [state, setState] = useState<string>(searchParams.get("state") ?? ALL);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [role, setRole] = useState<string>(ALL);
   const [search, setSearch] = useState("");
 
@@ -192,28 +195,36 @@ export function PeopleScreen() {
                 </SectionLabel>
                 <Grid cols={1} gap="150" lg={5} sm={3}>
                   {list.map((e) => (
-                    <Link href={`/org/people/${e.id}`} key={e.id}>
-                      <Card interactive radius="sm">
-                        <Container padding="200">
-                          <Stack align="center" gap="100">
-                            <AgentGlyph seed={e.agentId} size={48} state={STATE_TONE[e.state]} />
-                            <Typography truncate type="labelSm">
-                              {isPinned("employee", e.id) ? "★ " : ""}
-                              {e.name}
-                            </Typography>
-                            <Typography size="xs" type="note" variant="tertiary">
-                              {e.position.title ?? e.position.name}
-                            </Typography>
-                          </Stack>
-                        </Container>
-                      </Card>
-                    </Link>
+                    <Card
+                      interactive
+                      as="button"
+                      key={e.id}
+                      onClick={() => setSelectedId(e.id)}
+                      radius="sm"
+                    >
+                      <Container padding="200">
+                        <Stack align="center" gap="100">
+                          <AgentGlyph seed={e.agentId} size={48} state={STATE_TONE[e.state]} />
+                          <Typography truncate type="labelSm">
+                            {isPinned("employee", e.id) ? "★ " : ""}
+                            {e.name}
+                          </Typography>
+                          <Typography size="xs" type="note" variant="tertiary">
+                            {e.position.title ?? e.position.name}
+                          </Typography>
+                        </Stack>
+                      </Container>
+                    </Card>
                   ))}
                 </Grid>
               </Container>
             ))
           )}
         </Stack>
+        <EmployeeSheet
+          employee={employees.find((e) => e.id === selectedId) ?? null}
+          onClose={() => setSelectedId(null)}
+        />
       </PageContainer>
     </Container>
   );

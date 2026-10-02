@@ -120,6 +120,14 @@ describe("OrgMapScreen", () => {
     expect(screen.getByTestId(ZibbyAvatarTestId.Root)).toHaveAttribute("data-state", "error");
   });
 
+  it("links the Zibby avatar to the People roster filtered by its state", () => {
+    render(<OrgMapScreen />);
+    expect(screen.getByTestId(OrgMapScreenTestId.CooNode)).toHaveAttribute(
+      "href",
+      "/org/people?state=error",
+    );
+  });
+
   it("shows no focus panel without ?department=", () => {
     render(<OrgMapScreen />);
     expect(screen.queryByTestId(OrgMapScreenTestId.FocusPanel)).not.toBeInTheDocument();

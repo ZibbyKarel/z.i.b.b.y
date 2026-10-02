@@ -30,6 +30,7 @@ export enum SheetTestId {
   Root = "sheet-root",
   Header = "sheet-header",
   Title = "sheet-title",
+  HeaderActions = "sheet-header-actions",
   CloseButton = "sheet-close-button",
   Body = "sheet-body",
   Footer = "sheet-footer",
@@ -42,6 +43,8 @@ export interface SheetProps {
   width?: SheetWidth;
   title?: ReactNode;
   footer?: ReactNode;
+  /** Header actions, top-right before the close button (e.g. an Edit link). */
+  headerActions?: ReactNode;
   /** Accessible name override (use when `title` is non-string content). */
   ariaLabel?: string;
   /** Accessible label for the header close button. */
@@ -65,6 +68,7 @@ export function Sheet({
   width = "md",
   title,
   footer,
+  headerActions,
   ariaLabel,
   closeLabel = "Close panel",
   children,
@@ -160,6 +164,14 @@ export function Sheet({
             >
               {title}
             </Typography>
+            {headerActions && (
+              <div
+                className="flex shrink-0 items-center gap-2"
+                data-testid={SheetTestId.HeaderActions}
+              >
+                {headerActions}
+              </div>
+            )}
             {onClose && (
               <Button
                 aria-label={closeLabel}

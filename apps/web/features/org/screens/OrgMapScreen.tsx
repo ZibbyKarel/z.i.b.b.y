@@ -154,9 +154,14 @@ export function OrgMapScreen() {
       <Stack gap="0">
         <Stack align="center" gap="0">
           <Stack align="center" gap="100">
-            <Container data-testid={OrgMapScreenTestId.CooNode}>
+            {/* The avatar opens the People roster pre-filtered to the state it mirrors. */}
+            <Link
+              aria-label={t("cooAvatarLink", { state: cooState })}
+              data-testid={OrgMapScreenTestId.CooNode}
+              href={`/org/people?state=${cooState}` as Route}
+            >
               <ZibbyAvatar label={t("cooAvatarLabel")} size={112} state={cooState} />
-            </Container>
+            </Link>
           </Stack>
 
           {/* The COO trunk — joins the COO avatar to the department bus below. */}

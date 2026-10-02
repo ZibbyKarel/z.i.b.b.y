@@ -2058,6 +2058,7 @@
     "historyRun": "Běh",
     "historyState": "Stav",
     "historyStarted": "Spuštěno",
+    "tasks": "Úkoly",
     "historyEmpty": "Zatím žádné běhy"
   },
   "pins": {
@@ -2205,6 +2206,7 @@
     "needsYouOpen": "Otevřít detail schválení pro {agentName}"
   },
   "orgMap": {
+    "cooAvatarLink": "Zobrazit lidi ve stavu: {state}",
     "cooAvatarLabel": "Zibby · COO",
     "alert": {
       "errors": "{count, plural, one {# chyba} few {# chyby} other {# chyb}}",

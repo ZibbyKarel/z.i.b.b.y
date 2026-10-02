@@ -2058,6 +2058,7 @@
     "historyRun": "Run",
     "historyState": "State",
     "historyStarted": "Started",
+    "tasks": "Tasks",
     "historyEmpty": "No runs yet"
   },
   "pins": {
@@ -2205,6 +2206,7 @@
     "needsYouOpen": "Open approval details for {agentName}"
   },
   "orgMap": {
+    "cooAvatarLink": "Show people in state: {state}",
     "cooAvatarLabel": "Zibby · COO",
     "alert": {
       "errors": "{count, plural, one {# error} other {# errors}}",

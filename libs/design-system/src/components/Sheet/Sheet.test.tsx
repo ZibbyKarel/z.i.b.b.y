@@ -27,6 +27,15 @@ describe("Sheet", () => {
     expect(screen.getByTestId(SheetTestId.Body)).toHaveTextContent("Detail content");
   });
 
+  it("renders header actions next to the title", () => {
+    render(
+      <Sheet open headerActions={<button type="button">Edit</button>} title="Detail">
+        Body
+      </Sheet>,
+    );
+    expect(screen.getByTestId(SheetTestId.HeaderActions)).toHaveTextContent("Edit");
+  });
+
   it("renders the footer slot", () => {
     render(<Sheet open footer={<button>Approve</button>} />);
     expect(screen.getByTestId(SheetTestId.Footer)).toHaveTextContent("Approve");
