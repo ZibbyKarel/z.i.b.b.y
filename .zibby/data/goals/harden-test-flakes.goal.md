@@ -2,7 +2,7 @@
 name: harden-test-flakes
 objective: Drive the api e2e suite to a reliable green across repeated runs.
 maker:
-  kind: pipeline
+  kind: workflow
   id: delivery
 verifier:
   kind: checks

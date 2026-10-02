@@ -52,7 +52,7 @@ export interface AutomationDetailScreenProps {
  * - **task** (the "prompt automation" shape, Phase 116b): the SAME
  *   `CommandLine` surface the create dialog uses, seeded from the stored spec —
  *   its own send action IS the save, so there is no top-right Save here.
- * - anything else (a legacy `agent`/`pipeline`/`briefing` target predating
+ * - anything else (a legacy `agent`/`workflow`/`briefing` target predating
  *   `task`): a minimal schedule-only fallback so the page never crashes,
  *   without rebuilding the retired target/prompt pickers.
  * Every action sits top-right: Run now (the trigger mutation) and Delete

@@ -18,7 +18,7 @@ z.i.b.b.y/
 
 Package manager: **pnpm** (workspace: protocol, pnpm-lock.yaml v9). Never `npm` or `yarn`.
 
-`apps/api/src` today holds ~37 feature modules (agents, pipelines, goals, tasks,
+`apps/api/src` today holds ~37 feature modules (agents, workflows, goals, tasks,
 channels, chat, machine, approvals, gates, gate-rules, mandate, budget, limits,
 limits-resume, integrations, credentials via integrations, memory, activity,
 activity-view, automations, monitors, discovery, briefing, artifacts, projects, system,
@@ -73,7 +73,7 @@ by tests and worktrees to isolate their data root).
 | Data                   | Format                      | Location                                             |
 | ---------------------- | --------------------------- | ---------------------------------------------------- |
 | Agent definitions      | Markdown + YAML frontmatter | `.zibby/data/agents/<id>.md`                         |
-| Pipeline definitions   | Markdown + YAML frontmatter | `.zibby/data/pipelines/<id>.pipeline.md`             |
+| Workflow definitions   | Markdown + YAML frontmatter | `.zibby/data/workflows/<id>.workflow.md`             |
 | Run records (sidecar)  | JSON                        | `.zibby/data/agents/<id>/runs/<runId>/sidecar.json`  |
 | Run logs               | plaintext                   | `.zibby/data/agents/<id>/runs/<runId>/run.log`       |
 | Approvals              | JSON                        | `.zibby/data/approvals/<id>.json`                    |
@@ -95,9 +95,9 @@ by tests and worktrees to isolate their data root).
 ```
 TaskSchedulerService   ← a scheduled / immediate task
 AgentRunnerService     ← runs a single agent
-PipelineRunnerService  ← orchestrates pipeline phases
-GoalRunnerService      ← maker/verifier iteration loop, built on Agent+PipelineRunner
-    ↓ agent + pipeline runs
+WorkflowRunnerService  ← orchestrates workflow phases
+GoalRunnerService      ← maker/verifier iteration loop, built on Agent+WorkflowRunner
+    ↓ agent + workflow runs
 RunnerCore             ← universal spawn engine
     ↓
 child_process.spawn()  ← claude CLI (or another command)
@@ -106,11 +106,11 @@ Log file + sidecar JSON
 ```
 
 `RunnerCore` (`apps/api/src/runner/runner-core.ts`) is the central spawn engine — the
-agent runner, skill runner, and pipeline stage runner are thin wrappers around it with
+agent runner, skill runner, and workflow stage runner are thin wrappers around it with
 their own `KindStrategy` (how to build the sidecar record and how to validate it on
 restart). `GoalRunnerService` sits one layer above: a goal
-iterates a maker (agent or pipeline) followed by a verifier pipeline. Task dispatch can
-route to any of the three processor kinds — `agent`, `pipeline`, `goal`.
+iterates a maker (agent or workflow) followed by a verifier workflow. Task dispatch can
+route to any of the three processor kinds — `agent`, `workflow`, `goal`.
 
 ## The autonomous loop (two modes)
 
@@ -120,13 +120,13 @@ route to any of the three processor kinds — `agent`, `pipeline`, `goal`.
 Operator submits a task (UI / API)
   → TaskSchedulerService.createTask()
   → Classification (TaskClassifierService) → routing target
-  → Dispatch → AgentRunnerService, PipelineRunnerService, or GoalRunnerService
+  → Dispatch → AgentRunnerService, WorkflowRunnerService, or GoalRunnerService
   → Gate evaluation (before every intended action)
   → Result written back to the task record
   → Activity log
 ```
 
-An explicit target (operator names a specific agent/pipeline/goal) skips
+An explicit target (operator names a specific agent/workflow/goal) skips
 classification entirely — naming is a hard override.
 
 ### Autonomous

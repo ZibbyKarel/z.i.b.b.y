@@ -6,8 +6,8 @@
     "event": "pr.opened"
   },
   "target": {
-    "type": "pipeline",
-    "pipelineId": "pr-guard"
+    "type": "workflow",
+    "workflowId": "pr-guard"
   },
   "enabled": false
 }

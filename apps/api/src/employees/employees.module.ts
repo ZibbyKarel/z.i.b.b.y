@@ -27,9 +27,9 @@ export function resolveEmployeeNamesDir(): string {
  * D-015 — employees, the name pool, and the `EmployeeAllocator` broker.
  * `AgentsModule` is imported so hire/roster reads can resolve a position's
  * display name/category (and validate `agentId` exists on hire). Deliberately a
- * leaf module otherwise: nothing here imports `PipelinesModule`/`TasksModule`/
+ * leaf module otherwise: nothing here imports `WorkflowsModule`/`TasksModule`/
  * `DepartmentsModule`, so any of THEM can import `EmployeesModule` (as
- * `PipelinesModule`, `TasksModule` and `DepartmentsModule` all do) without
+ * `WorkflowsModule`, `TasksModule` and `DepartmentsModule` all do) without
  * closing a cycle.
  */
 @Module({

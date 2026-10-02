@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { AgentRun, PipelineRun, Project } from "@zibby/contracts";
+import type { AgentRun, Project, WorkflowRun } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RunRecorderService } from "./run-recorder.service";
 import { VaultService } from "./vault.service";
@@ -57,17 +57,17 @@ describe("RunRecorderService", () => {
       ...over,
     }) as AgentRun;
 
-  const pipelineRun = (over: Partial<PipelineRun> = {}): PipelineRun =>
+  const workflowRun = (over: Partial<WorkflowRun> = {}): WorkflowRun =>
     ({
-      pipelineRunId: "delivery_123",
-      pipelineId: "delivery",
+      workflowRunId: "delivery_123",
+      workflowId: "delivery",
       status: "done",
       currentStage: null,
       stageRuns: [{ phaseId: "a", runId: "r", attempt: 0, status: "done" }],
       startedAt: "2026-06-12T00:00:00.000Z",
       cwd: runCwd,
       ...over,
-    }) as PipelineRun;
+    }) as WorkflowRun;
 
   const noProjects = {
     get: vi.fn(async () => {
@@ -76,48 +76,48 @@ describe("RunRecorderService", () => {
     list: vi.fn(async () => []),
   };
 
-  /** Default agent/pipeline storage doubles: no entity found → no owner (unowned run). */
+  /** Default agent/workflow storage doubles: no entity found → no owner (unowned run). */
   const noAgentsStore = {
     get: vi.fn(async () => {
       throw new Error("no such agent");
     }),
   };
-  const noPipelinesStore = {
+  const noWorkflowsStore = {
     get: vi.fn(async () => {
-      throw new Error("no such pipeline");
+      throw new Error("no such workflow");
     }),
   };
 
   function build(opts: {
     agent: ReturnType<typeof makeRunner<AgentRun>>;
-    pipeline: ReturnType<typeof makeRunner<PipelineRun>>;
+    workflow: ReturnType<typeof makeRunner<WorkflowRun>>;
     projects?: { get: (id: string) => Promise<Project>; list: () => Promise<Project[]> };
     readArtifact?: (id: string, name: string) => Promise<{ name: string; content: string } | null>;
     agentList?: () => AgentRun[];
-    pipelineList?: () => PipelineRun[];
+    workflowList?: () => WorkflowRun[];
     agentsStore?: { get: (id: string) => Promise<{ department?: string }> };
-    pipelinesStore?: { get: (id: string) => Promise<{ department?: string }> };
+    workflowsStore?: { get: (id: string) => Promise<{ department?: string }> };
   }): RunRecorderService {
     const agentRunner = { ...opts.agent, listRunning: opts.agentList ?? (() => []) };
-    const pipelineRunner = {
-      ...opts.pipeline,
-      list: opts.pipelineList ?? (() => []),
+    const workflowRunner = {
+      ...opts.workflow,
+      list: opts.workflowList ?? (() => []),
       readArtifact: opts.readArtifact ?? (async () => null),
     };
     return new RunRecorderService(
       vault,
       agentRunner as never,
-      pipelineRunner as never,
+      workflowRunner as never,
       (opts.projects ?? noProjects) as never,
       (opts.agentsStore ?? noAgentsStore) as never,
-      (opts.pipelinesStore ?? noPipelinesStore) as never,
+      (opts.workflowsStore ?? noWorkflowsStore) as never,
     );
   }
 
   it("records one daily line for a terminal agent run", async () => {
     const agent = makeRunner<AgentRun>();
-    const pipeline = makeRunner<PipelineRun>();
-    const svc = build({ agent, pipeline });
+    const workflow = makeRunner<WorkflowRun>();
+    const svc = build({ agent, workflow });
     svc.onModuleInit();
     agent.emit(agentRun());
     await vi.waitFor(async () => expect(await readDaily()).toContain("coder_123"));
@@ -127,8 +127,8 @@ describe("RunRecorderService", () => {
 
   it("never double-records the same run (marker)", async () => {
     const agent = makeRunner<AgentRun>();
-    const pipeline = makeRunner<PipelineRun>();
-    const svc = build({ agent, pipeline });
+    const workflow = makeRunner<WorkflowRun>();
+    const svc = build({ agent, workflow });
     svc.onModuleInit();
     agent.emit(agentRun());
     await vi.waitFor(async () => expect(await readDaily()).toContain("coder_123"));
@@ -141,31 +141,31 @@ describe("RunRecorderService", () => {
 
   it("ignores non-terminal statuses", async () => {
     const agent = makeRunner<AgentRun>();
-    const pipeline = makeRunner<PipelineRun>();
-    const svc = build({ agent, pipeline });
+    const workflow = makeRunner<WorkflowRun>();
+    const svc = build({ agent, workflow });
     svc.onModuleInit();
     agent.emit(agentRun({ status: "running" }));
-    pipeline.emit(pipelineRun({ status: "parked" }));
+    workflow.emit(workflowRun({ status: "parked" }));
     await new Promise((r) => setTimeout(r, 30));
     expect(await readDaily()).toBe("");
   });
 
   it("bootstrap sweep records a pre-existing terminal run", async () => {
     const agent = makeRunner<AgentRun>();
-    const pipeline = makeRunner<PipelineRun>();
-    const svc = build({ agent, pipeline, agentList: () => [agentRun({ runId: "swept_9" })] });
+    const workflow = makeRunner<WorkflowRun>();
+    const svc = build({ agent, workflow, agentList: () => [agentRun({ runId: "swept_9" })] });
     await svc.onApplicationBootstrap();
     expect(await readDaily()).toContain("swept_9");
   });
 
-  it("records a successful pipeline with a daily line carrying the project link but NO learned backlink", async () => {
+  it("records a successful workflow with a daily line carrying the project link but NO learned backlink", async () => {
     const project: Project = { id: "acme", name: "ACME", path: "/repos/acme" };
     const agent = makeRunner<AgentRun>();
-    const pipeline = makeRunner<PipelineRun>();
+    const workflow = makeRunner<WorkflowRun>();
     const readArtifact = vi.fn(async () => ({ name: "learned.md", content: "x" }));
     const svc = build({
       agent,
-      pipeline,
+      workflow,
       projects: {
         get: async () => {
           throw new Error();
@@ -175,11 +175,11 @@ describe("RunRecorderService", () => {
       readArtifact,
     });
     svc.onModuleInit();
-    pipeline.emit(pipelineRun({ projectPath: "/repos/acme" }));
+    workflow.emit(workflowRun({ projectPath: "/repos/acme" }));
     await vi.waitFor(async () => expect(await readDaily()).toContain("delivery_123"));
 
     const daily = await readDaily();
-    expect(daily).toMatch(/pipeline delivery_123 \(delivery\) → done/);
+    expect(daily).toMatch(/workflow delivery_123 \(delivery\) → done/);
     expect(daily).toContain("[[acme]]");
     // fileLearned was retired (binding decision 5) — no learned.md read, no backlink, no note.
     expect(readArtifact).not.toHaveBeenCalled();
@@ -187,15 +187,15 @@ describe("RunRecorderService", () => {
     await expect(vault.note("learned-delivery_123")).rejects.toThrow();
   });
 
-  it("records a failed pipeline as a daily line only (no learned note)", async () => {
+  it("records a failed workflow as a daily line only (no learned note)", async () => {
     const agent = makeRunner<AgentRun>();
-    const pipeline = makeRunner<PipelineRun>();
+    const workflow = makeRunner<WorkflowRun>();
     const readArtifact = vi.fn(async () => ({ name: "learned.md", content: "x" }));
-    const svc = build({ agent, pipeline, readArtifact });
+    const svc = build({ agent, workflow, readArtifact });
     svc.onModuleInit();
-    pipeline.emit(pipelineRun({ status: "failed" }));
+    workflow.emit(workflowRun({ status: "failed" }));
     await vi.waitFor(async () => expect(await readDaily()).toContain("delivery_123"));
-    expect(await readDaily()).toMatch(/pipeline delivery_123 \(delivery\) → failed/);
+    expect(await readDaily()).toMatch(/workflow delivery_123 \(delivery\) → failed/);
     // A failed run never reaches the learned-note path.
     expect(readArtifact).not.toHaveBeenCalled();
     await expect(vault.note("learned-delivery_123")).rejects.toThrow();
@@ -203,10 +203,10 @@ describe("RunRecorderService", () => {
 
   it("F4a: an owned agent run's daily line links its department's shelf", async () => {
     const agent = makeRunner<AgentRun>();
-    const pipeline = makeRunner<PipelineRun>();
+    const workflow = makeRunner<WorkflowRun>();
     const svc = build({
       agent,
-      pipeline,
+      workflow,
       agentsStore: { get: async () => ({ department: "dev" }) },
     });
     svc.onModuleInit();
@@ -218,10 +218,10 @@ describe("RunRecorderService", () => {
 
   it("F4a: an unowned agent run's daily line is unchanged (today's exact line)", async () => {
     const agent = makeRunner<AgentRun>();
-    const pipeline = makeRunner<PipelineRun>();
+    const workflow = makeRunner<WorkflowRun>();
     const svc = build({
       agent,
-      pipeline,
+      workflow,
       agentsStore: { get: async () => ({}) },
     });
     svc.onModuleInit();
@@ -234,8 +234,8 @@ describe("RunRecorderService", () => {
 
   it("F4a: a storage lookup failure still writes the daily line (fail-open)", async () => {
     const agent = makeRunner<AgentRun>();
-    const pipeline = makeRunner<PipelineRun>();
-    const svc = build({ agent, pipeline }); // default agentsStore throws on get()
+    const workflow = makeRunner<WorkflowRun>();
+    const svc = build({ agent, workflow }); // default agentsStore throws on get()
     svc.onModuleInit();
     agent.emit(agentRun());
     await vi.waitFor(async () => expect(await readDaily()).toContain("coder_123"));
@@ -244,16 +244,16 @@ describe("RunRecorderService", () => {
     expect(daily).not.toContain("department-");
   });
 
-  it("F4a: an owned pipeline run's daily line links its department's shelf", async () => {
+  it("F4a: an owned workflow run's daily line links its department's shelf", async () => {
     const agent = makeRunner<AgentRun>();
-    const pipeline = makeRunner<PipelineRun>();
+    const workflow = makeRunner<WorkflowRun>();
     const svc = build({
       agent,
-      pipeline,
-      pipelinesStore: { get: async () => ({ department: "rnd" }) },
+      workflow,
+      workflowsStore: { get: async () => ({ department: "rnd" }) },
     });
     svc.onModuleInit();
-    pipeline.emit(pipelineRun());
+    workflow.emit(workflowRun());
     await vi.waitFor(async () => expect(await readDaily()).toContain("delivery_123"));
     const daily = await readDaily();
     expect(daily).toContain("[[department-rnd-moc|rnd]]");

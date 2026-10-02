@@ -28,7 +28,7 @@ const subnav = (
     items={[
       { href: "/dev/overview", label: "Overview", active: true },
       { href: "/dev/team", label: "Team" },
-      { href: "/dev/pipelines", label: "Pipelines" },
+      { href: "/dev/workflows", label: "Workflows" },
     ]}
   />
 );

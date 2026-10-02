@@ -1,6 +1,6 @@
 # @zibby/product-factory
 
-Deterministic CLI behind the `tool` phases of the coloring-book pipeline. Runs on plain Node 24
+Deterministic CLI behind the `tool` phases of the coloring-book workflow. Runs on plain Node 24
 (native TypeScript type stripping — erasable syntax only, `.ts` import extensions).
 
 ```

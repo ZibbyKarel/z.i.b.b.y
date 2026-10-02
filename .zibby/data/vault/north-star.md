@@ -20,7 +20,7 @@ ZIBBY is a **single-operator agentic OS**. Not a chatbot. Not a dashboard. A sec
 
 **One operator. One vault. One identity. 150+ specialized agents as tools.**
 
-The operator speaks in natural language. ZIBBY decides what to do, who to delegate to, and when to ask. When the operator instead names a specific pipeline or agent, ZIBBY runs exactly that — no second-guessing.
+The operator speaks in natural language. ZIBBY decides what to do, who to delegate to, and when to ask. When the operator instead names a specific workflow or agent, ZIBBY runs exactly that — no second-guessing.
 
 The concrete ambition: **ZIBBY stands in for the operator as the engineer on a delivery team.** It handles the company's communication (Slack, email), keeps the calendar, watches and fixes reported bugs, monitors the CI/CD pipelines on GitHub, and leaves a clean seam for the next monitor to plug in (Sentry, later). Everything with a human at the gate.
 
@@ -38,7 +38,7 @@ ZIBBY monitors Slack, email, and the project's CI/CD. A bug report arrives — Z
 
 ### Evening
 
-The operator says: _"Go through the backlog and implement the highest-impact items."_ ZIBBY figures out the rest — which agents, which pipeline, how many iterations. Or the operator chains work by hand: _"Run research on topic X overnight, then build an app from the result."_ ZIBBY runs the first pipeline, hands its artifact to the second, and reports back when done or when it needs a decision.
+The operator says: _"Go through the backlog and implement the highest-impact items."_ ZIBBY figures out the rest — which agents, which workflow, how many iterations. Or the operator chains work by hand: _"Run research on topic X overnight, then build an app from the result."_ ZIBBY runs the first workflow, hands its artifact to the second, and reports back when done or when it needs a decision.
 
 ### Night
 
@@ -50,7 +50,7 @@ ZIBBY consolidates what it learned. Patterns from approvals, answers to question
 
 - **Executes work** — code, emails, tasks, research, analysis
 - **Monitors channels** — Slack, email, Jira, GitHub, **calendar**, and **CI/CD status** — per active project
-- **Runs & chains pipelines** — a single pipeline against a stated task, or several pipelines linked so one's output artifact feeds the next
+- **Runs & chains workflows** — a single workflow against a stated task, or several workflows linked so one's output artifact feeds the next
 - **Remembers** — vault is the source of truth, everything is on disk
 - **Learns** — from every approval signal, every answer, every run
 - **Proposes** — new automation rules, new capabilities, app ideas, priorities
@@ -77,13 +77,13 @@ above.
 
 ---
 
-## Pipelines & Artifacts
+## Workflows & Artifacts
 
-A pipeline is an ordered chain of phases. It has always passed artifacts **within** itself — one phase produces a file, the next consumes it. ZIBBY lifts that same idea **between** pipelines.
+A workflow is an ordered chain of phases. It has always passed artifacts **within** itself — one phase produces a file, the next consumes it. ZIBBY lifts that same idea **between** workflows.
 
-- **Every pipeline yields a durable artifact** — a document in the vault, a git branch, a PR — recorded on disk, not thrown away when the run ends.
-- **An artifact can be the input to another pipeline or agent.** _"Research topic X overnight"_ produces a research document; _"build an app from it"_ takes that document as its brief. The operator composes the chain; ZIBBY runs it end to end.
-- **Composition is the operator's to author.** Assembling agents into a pipeline, and pipelines into a chain, is deliberate design work the operator controls — distinct from the run-time dispatch below.
+- **Every workflow yields a durable artifact** — a document in the vault, a git branch, a PR — recorded on disk, not thrown away when the run ends.
+- **An artifact can be the input to another workflow or agent.** _"Research topic X overnight"_ produces a research document; _"build an app from it"_ takes that document as its brief. The operator composes the chain; ZIBBY runs it end to end.
+- **Composition is the operator's to author.** Assembling agents into a workflow, and workflows into a chain, is deliberate design work the operator controls — distinct from the run-time dispatch below.
 
 ---
 
@@ -91,8 +91,8 @@ A pipeline is an ordered chain of phases. It has always passed artifacts **withi
 
 150+ agents are specialized instruments. They are never picked for their character — only for the job. There are exactly two ways work is dispatched:
 
-- **Pure intent** — the operator states a goal with no target. The classifier routes it to an agent, a pipeline, or the general orchestrator. The operator never has to know the roster.
-- **Explicit target** — the operator names a specific pipeline or agent. This is a **hard override: the classifier is skipped entirely** and exactly the chosen unit runs against the given task.
+- **Pure intent** — the operator states a goal with no target. The classifier routes it to an agent, a workflow, or the general orchestrator. The operator never has to know the roster.
+- **Explicit target** — the operator names a specific workflow or agent. This is a **hard override: the classifier is skipped entirely** and exactly the chosen unit runs against the given task.
 
 Categories: dev · communication · research · memory · ops · self-improvement
 
@@ -174,7 +174,7 @@ These principles apply to every phase, every feature, every PR:
 - **Approval-first** — hardcoded at the dispatch layer, not a per-agent setting
 - **Index-first memory** — MOC files, atomic notes, no ChromaDB-style dependencies
 - **SSE for live streams, polling for state** — logs, the activity feed, and run-events stream over SSE (real-time where it matters); only `health` and `limits` poll
-- **Explicit target overrides the classifier** — naming a pipeline/agent skips routing; pure intent is what gets routed
+- **Explicit target overrides the classifier** — naming a workflow/agent skips routing; pure intent is what gets routed
 - **One interaction grammar** — same affordance, same place, on every screen; card-click navigates, dialogs create/confirm
 - **Per-project gate floor** — rules can only be hardened per project, never relaxed
 - **Single operator** — depth over breadth, one vault, one identity

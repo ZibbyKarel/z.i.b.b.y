@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { AgentRun, PipelineRun } from "@zibby/contracts";
+import type { AgentRun, WorkflowRun } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ActivityInput } from "../activity/activity-log.service";
 import type { BudgetCheck } from "../budget/budget.service";
@@ -37,10 +37,10 @@ function agentRun(over: Partial<AgentRun>): AgentRun {
   };
 }
 
-function pipelineRun(over: Partial<PipelineRun>): PipelineRun {
+function workflowRun(over: Partial<WorkflowRun>): WorkflowRun {
   return {
-    pipelineRunId: "release_1",
-    pipelineId: "release",
+    workflowRunId: "release_1",
+    workflowId: "release",
     status: "running",
     currentStage: null,
     stageRuns: [],
@@ -54,7 +54,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
   let dir: string;
   let storage: ScheduledTasksStorageService;
   let agentListener: ((run: AgentRun) => void) | undefined;
-  let pipelineListener: ((run: PipelineRun) => void) | undefined;
+  let workflowListener: ((run: WorkflowRun) => void) | undefined;
   let agentRunner: {
     start: ReturnType<typeof vi.fn>;
     startOrchestrator: ReturnType<typeof vi.fn>;
@@ -62,15 +62,15 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     get: ReturnType<typeof vi.fn>;
     readLog: ReturnType<typeof vi.fn>;
   };
-  let pipelineRunner: {
+  let workflowRunner: {
     start: ReturnType<typeof vi.fn>;
     onRunStatus: ReturnType<typeof vi.fn>;
     get: ReturnType<typeof vi.fn>;
   };
-  /** Phase 91: the pipeline definition store, for department-target resolution
+  /** Phase 91: the workflow definition store, for department-target resolution
    *  (`department` lookup). Empty by default — no test in this file dispatches
    *  a department target; `task-scheduler.department-dispatch.test.ts` covers those. */
-  let pipelinesStore: { list: ReturnType<typeof vi.fn> };
+  let workflowsStore: { list: ReturnType<typeof vi.fn> };
   /** F2b — {@link TaskSchedulerService}'s owned-agents lookup for department resolution. */
   let agentsStore: { listActive: ReturnType<typeof vi.fn> };
   /**
@@ -146,15 +146,15 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         done: true,
       })),
     };
-    pipelineRunner = {
-      start: vi.fn(async () => pipelineRun({})),
-      onRunStatus: vi.fn((l: (run: PipelineRun) => void) => {
-        pipelineListener = l;
+    workflowRunner = {
+      start: vi.fn(async () => workflowRun({})),
+      onRunStatus: vi.fn((l: (run: WorkflowRun) => void) => {
+        workflowListener = l;
         return () => {};
       }),
-      get: vi.fn(() => pipelineRun({})),
+      get: vi.fn(() => workflowRun({})),
     };
-    pipelinesStore = { list: vi.fn(async () => []) };
+    workflowsStore = { list: vi.fn(async () => []) };
     agentsStore = { listActive: vi.fn(async () => []) };
     employeesStore = {
       list: vi.fn(async () => []),
@@ -218,8 +218,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       storage,
       classifier as never,
       agentRunner as never,
-      pipelineRunner as never,
-      pipelinesStore as never,
+      workflowRunner as never,
+      workflowsStore as never,
       agentsStore as never,
       // D-017: no fixture in this file gives a task a department context AND an
       // agent-position lease scenario worth asserting on the allocator itself
@@ -320,7 +320,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       classifier.classify = vi.fn(async () => ({
         target: { kind: "orchestrator", name: "Orchestrator", glyph: "compass" },
         confidence: 0,
-        reason: "No agent or pipeline matched confidently",
+        reason: "No agent or workflow matched confidently",
         matchedTerms: ["deploy", "staging"],
         candidates: [],
       }));
@@ -355,7 +355,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       ).toBe(false);
     });
 
-    it("does not record a fallback when the classifier routes to a real agent/pipeline", async () => {
+    it("does not record a fallback when the classifier routes to a real agent/workflow", async () => {
       classifier.classify = vi.fn(async () => ({
         target: { kind: "agent", id: "writer", name: "Writer" },
         confidence: 0.9,
@@ -448,8 +448,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       storage,
       classifier as never,
       agentRunner as never,
-      pipelineRunner as never,
-      pipelinesStore as never,
+      workflowRunner as never,
+      workflowsStore as never,
       agentsStore as never,
       // D-017: no fixture in this file gives a task a department context AND an
       // agent-position lease scenario worth asserting on the allocator itself
@@ -504,18 +504,18 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
   });
 
   it("an explicit target on the wire bypasses the classifier entirely (DNA: explicit target overrides)", async () => {
-    // N1: naming a pipeline/agent is a hard override — the named unit runs and the
+    // N1: naming a workflow/agent is a hard override — the named unit runs and the
     // classifier is never consulted, so an explicit run is fully deterministic.
     const result = await service.createTask({
       text: "run exactly this",
       title: "Direct",
-      target: { kind: "pipeline", id: "release", name: "Release" },
+      target: { kind: "workflow", id: "release", name: "Release" },
     });
     expect(result.outcome).toBe("dispatched");
     if (result.outcome !== "dispatched") return;
 
     expect(classifier.classify).not.toHaveBeenCalled();
-    expect(pipelineRunner.start).toHaveBeenCalledWith(
+    expect(workflowRunner.start).toHaveBeenCalledWith(
       "release",
       result.task.id,
       undefined,
@@ -523,7 +523,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       undefined,
       undefined,
     );
-    expect(result.task.target).toEqual({ kind: "pipeline", id: "release", name: "Release" });
+    expect(result.task.target).toEqual({ kind: "workflow", id: "release", name: "Release" });
   });
 
   it("background path: returns a pending task immediately, then dispatches off the response path", async () => {
@@ -580,7 +580,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     await vi.waitFor(async () => {
       const task = await storage.get(result.task.id);
       expect(task.status).toBe("failed");
-      expect(task.error).toContain("No agents or pipelines");
+      expect(task.error).toContain("No agents or workflows");
     });
     expect(agentRunner.start).not.toHaveBeenCalled();
   });
@@ -628,17 +628,17 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     });
   });
 
-  it("maps a failed pipeline to error with the stage tally as summary", async () => {
+  it("maps a failed workflow to error with the stage tally as summary", async () => {
     classifier.classify.mockResolvedValue({
-      target: { kind: "pipeline", id: "release", name: "Release" },
+      target: { kind: "workflow", id: "release", name: "Release" },
       confidence: 0.9,
       reason: "match",
       matchedTerms: [],
-      candidates: [{ kind: "pipeline", id: "release", name: "Release" }],
+      candidates: [{ kind: "workflow", id: "release", name: "Release" }],
     });
     const result = await service.createTask({ text: "ship it" });
     if (result.outcome !== "dispatched") throw new Error("expected dispatched");
-    expect(pipelineRunner.start).toHaveBeenCalledWith(
+    expect(workflowRunner.start).toHaveBeenCalledWith(
       "release",
       result.task.id,
       undefined,
@@ -647,8 +647,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       undefined,
     );
 
-    pipelineListener?.(
-      pipelineRun({
+    workflowListener?.(
+      workflowRun({
         status: "failed",
         taskId: result.task.id,
         stageRuns: [
@@ -823,18 +823,18 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     expect(fakeBudget.recordCost).not.toHaveBeenCalled();
   });
 
-  it("writes a cost line summed from stage costs on a terminal pipeline run", async () => {
+  it("writes a cost line summed from stage costs on a terminal workflow run", async () => {
     const id = storage.newId();
     await storage.createDispatched(
       id,
       { text: "ship it" },
       "release_1",
-      { kind: "pipeline", id: "release", name: "Release" },
+      { kind: "workflow", id: "release", name: "Release" },
       Date.now(),
       "alpha",
     );
-    pipelineListener?.(
-      pipelineRun({
+    workflowListener?.(
+      workflowRun({
         status: "done",
         taskId: id,
         stageRuns: [
@@ -857,23 +857,23 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       projectId: "alpha",
       taskId: id,
       runRef: "release_1",
-      kind: "pipeline",
+      kind: "workflow",
     });
     expect(call.costUsd).toBeCloseTo(0.35, 10);
   });
 
-  it("does not write a cost line when no stage of the pipeline run carries costUsd", async () => {
+  it("does not write a cost line when no stage of the workflow run carries costUsd", async () => {
     const id = storage.newId();
     await storage.createDispatched(
       id,
       { text: "ship it" },
       "release_1",
-      { kind: "pipeline", id: "release", name: "Release" },
+      { kind: "workflow", id: "release", name: "Release" },
       Date.now(),
       "alpha",
     );
-    pipelineListener?.(
-      pipelineRun({
+    workflowListener?.(
+      workflowRun({
         status: "done",
         taskId: id,
         stageRuns: [{ phaseId: "a", runId: "r.a", attempt: 1, status: "done" }],
@@ -919,10 +919,10 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     expect(call.metrics).toBeUndefined();
   });
 
-  describe("Phase 91 — department dispatch (0/1/N owned pipelines)", () => {
-    /** A minimal pipeline definition fixture — only the fields the resolver reads. */
-    function pipelineDef(id: string, name: string) {
-      // `outputs` mirrors `PipelineSchema`'s `default([])` and declares a `pr` sink —
+  describe("Phase 91 — department dispatch (0/1/N owned workflows)", () => {
+    /** A minimal workflow definition fixture — only the fields the resolver reads. */
+    function workflowDef(id: string, name: string) {
+      // `outputs` mirrors `WorkflowSchema`'s `default([])` and declares a `pr` sink —
       // the resolver reads it to decide which units may serve a task that must open a
       // PR, and a fixture omitting it reached the resolver as `undefined`.
       return {
@@ -935,8 +935,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       };
     }
 
-    it("1 owned pipeline → direct dispatch, the classifier is NEVER called", async () => {
-      pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery")]);
+    it("1 owned workflow → direct dispatch, the classifier is NEVER called", async () => {
+      workflowsStore.list.mockResolvedValue([workflowDef("delivery", "Delivery")]);
       const result = await service.createTask({
         text: "ship it",
         title: "Ship",
@@ -946,7 +946,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       if (result.outcome !== "dispatched") return;
       expect(classifier.classify).not.toHaveBeenCalled();
       expect(classifier.classifyWithinDepartment).not.toHaveBeenCalled();
-      expect(pipelineRunner.start).toHaveBeenCalledWith(
+      expect(workflowRunner.start).toHaveBeenCalledWith(
         "delivery",
         result.task.id,
         undefined,
@@ -954,11 +954,11 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         undefined,
         undefined,
       );
-      // The resolved target IS a concrete pipeline target — a department target
+      // The resolved target IS a concrete workflow target — a department target
       // never reaches persistence (its "via <department>" attribution rides on the
-      // dispatched pipeline's own `department`, not a new run-level field).
+      // dispatched workflow's own `department`, not a new run-level field).
       expect(result.task.target).toEqual({
-        kind: "pipeline",
+        kind: "workflow",
         id: "delivery",
         name: "Delivery",
         glyph: "flow",
@@ -966,13 +966,13 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       });
     });
 
-    it("N owned pipelines → the classifier IS called, restricted to just the owned catalog", async () => {
-      pipelinesStore.list.mockResolvedValue([
-        pipelineDef("delivery", "Delivery"),
-        pipelineDef("build-feature", "Build Feature"),
+    it("N owned workflows → the classifier IS called, restricted to just the owned catalog", async () => {
+      workflowsStore.list.mockResolvedValue([
+        workflowDef("delivery", "Delivery"),
+        workflowDef("build-feature", "Build Feature"),
       ]);
       classifier.classifyWithinDepartment.mockResolvedValue({
-        target: { kind: "pipeline", id: "build-feature", name: "Build Feature" },
+        target: { kind: "workflow", id: "build-feature", name: "Build Feature" },
         confidence: 0.9,
         reason: "matched",
         matchedTerms: [],
@@ -993,7 +993,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         { text: "spec out the new feature", paths: [] },
         "dev",
       );
-      expect(pipelineRunner.start).toHaveBeenCalledWith(
+      expect(workflowRunner.start).toHaveBeenCalledWith(
         "build-feature",
         result.task.id,
         undefined,
@@ -1004,18 +1004,18 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     });
 
     it("low-confidence N-owned verdict still lands INSIDE the department, never the orchestrator (asserted via the classifier stub's own contract)", async () => {
-      pipelinesStore.list.mockResolvedValue([
-        pipelineDef("delivery", "Delivery"),
-        pipelineDef("build-feature", "Build Feature"),
+      workflowsStore.list.mockResolvedValue([
+        workflowDef("delivery", "Delivery"),
+        workflowDef("build-feature", "Build Feature"),
       ]);
       // classifyWithinDepartment itself is responsible for the never-orchestrator
       // fallback rule (see task-classifier.service.test.ts's "low-confidence
       // fallback" case) — here we only assert the scheduler faithfully dispatches
-      // whatever concrete pipeline target the scoped classify hands back.
+      // whatever concrete workflow target the scoped classify hands back.
       classifier.classifyWithinDepartment.mockResolvedValue({
-        target: { kind: "pipeline", id: "delivery", name: "Delivery" },
+        target: { kind: "workflow", id: "delivery", name: "Delivery" },
         confidence: 0,
-        reason: "no confident match — first owned pipeline",
+        reason: "no confident match — first owned workflow",
         matchedTerms: [],
         candidates: [],
         mode: "single",
@@ -1029,7 +1029,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       });
       expect(result.outcome).toBe("dispatched");
       if (result.outcome !== "dispatched") return;
-      expect(pipelineRunner.start).toHaveBeenCalledWith(
+      expect(workflowRunner.start).toHaveBeenCalledWith(
         "delivery",
         result.task.id,
         undefined,
@@ -1039,18 +1039,18 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       );
     });
 
-    it("0 owned pipelines → rejects immediately with a clear Czech message — no task, no run, classifier never touched", async () => {
-      pipelinesStore.list.mockResolvedValue([]);
+    it("0 owned workflows → rejects immediately with a clear Czech message — no task, no run, classifier never touched", async () => {
+      workflowsStore.list.mockResolvedValue([]);
       await expect(
         service.createTask({
           text: "do anything",
           title: "T",
           target: { kind: "department", id: "dev", name: "Dev" },
         }),
-      ).rejects.toThrow(/Dev.*nemá žádnou pipeline/);
+      ).rejects.toThrow(/Dev.*nemá žádnou workflow/);
       expect(classifier.classify).not.toHaveBeenCalled();
       expect(classifier.classifyWithinDepartment).not.toHaveBeenCalled();
-      expect(pipelineRunner.start).not.toHaveBeenCalled();
+      expect(workflowRunner.start).not.toHaveBeenCalled();
       expect(agentRunner.start).not.toHaveBeenCalled();
       expect(agentRunner.startOrchestrator).not.toHaveBeenCalled();
     });
@@ -1059,7 +1059,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       // Belt-and-braces on top of the first test above: the scope guard's whole
       // point is that naming a department is a hard override, structurally
       // incapable of falling through to the undirected top-level classify().
-      pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery")]);
+      workflowsStore.list.mockResolvedValue([workflowDef("delivery", "Delivery")]);
       await service.createTask({
         text: "ship it",
         title: "Ship",
@@ -1069,10 +1069,10 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     });
   });
 
-  describe("F2b — owned agents widen the roster (pipelines + active agents)", () => {
-    /** A minimal pipeline definition fixture — only the fields the resolver reads. */
-    function pipelineDef(id: string, name: string) {
-      // `outputs` mirrors `PipelineSchema`'s `default([])` and declares a `pr` sink —
+  describe("F2b — owned agents widen the roster (workflows + active agents)", () => {
+    /** A minimal workflow definition fixture — only the fields the resolver reads. */
+    function workflowDef(id: string, name: string) {
+      // `outputs` mirrors `WorkflowSchema`'s `default([])` and declares a `pr` sink —
       // the resolver reads it to decide which units may serve a task that must open a
       // PR, and a fixture omitting it reached the resolver as `undefined`.
       return {
@@ -1104,8 +1104,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       };
     }
 
-    it("1 owned agent, 0 owned pipelines → direct dispatch to the agent, the classifier is NEVER called", async () => {
-      pipelinesStore.list.mockResolvedValue([]);
+    it("1 owned agent, 0 owned workflows → direct dispatch to the agent, the classifier is NEVER called", async () => {
+      workflowsStore.list.mockResolvedValue([]);
       agentsStore.listActive.mockResolvedValue([agentDef("coder", "Coder")]);
       employeesStore.list.mockResolvedValue([employeeDef("coder")]);
       const result = await service.createTask({
@@ -1131,8 +1131,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       );
     });
 
-    it("1 owned pipeline + 1 owned agent (2 units) → classifyWithinDepartment is invoked, restricted to the owned catalog", async () => {
-      pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery")]);
+    it("1 owned workflow + 1 owned agent (2 units) → classifyWithinDepartment is invoked, restricted to the owned catalog", async () => {
+      workflowsStore.list.mockResolvedValue([workflowDef("delivery", "Delivery")]);
       agentsStore.listActive.mockResolvedValue([agentDef("coder", "Coder")]);
       employeesStore.list.mockResolvedValue([employeeDef("coder")]);
       classifier.classifyWithinDepartment.mockResolvedValue({
@@ -1178,8 +1178,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
    * to open a PR could still resolve to an agent that cannot open one — the misroute
    * that put a pnpm/Turborepo monorepo skeleton on `documentation-engineer`.
    */
-  describe("a required PR sink makes department resolution a pipeline-only sizing choice", () => {
-    function pipelineDef(id: string, name: string, deliversPr = true, complexity = "standard") {
+  describe("a required PR sink makes department resolution a workflow-only sizing choice", () => {
+    function workflowDef(id: string, name: string, deliversPr = true, complexity = "standard") {
       return {
         id,
         name,
@@ -1205,10 +1205,10 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       };
     }
 
-    it("resolves to the sole PR-capable pipeline WITHOUT classifying, even though the roster has 2 units", async () => {
-      // One agent + one PR pipeline is 2 owned units, so the old rule would classify.
+    it("resolves to the sole PR-capable workflow WITHOUT classifying, even though the roster has 2 units", async () => {
+      // One agent + one PR workflow is 2 owned units, so the old rule would classify.
       // The constraint leaves exactly one eligible unit, so there is nothing to ask.
-      pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery")]);
+      workflowsStore.list.mockResolvedValue([workflowDef("delivery", "Delivery")]);
       agentsStore.listActive.mockResolvedValue([agentDef("documentation-engineer", "Docs")]);
       const result = await service.createTask({
         text: "Monorepo & CLI skeleton — set up pnpm workspaces + Turborepo",
@@ -1219,7 +1219,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       expect(result.outcome).toBe("dispatched");
       expect(classifier.classifyWithinDepartment).not.toHaveBeenCalled();
       expect(agentRunner.start).not.toHaveBeenCalled();
-      expect(pipelineRunner.start).toHaveBeenCalledWith(
+      expect(workflowRunner.start).toHaveBeenCalledWith(
         "delivery",
         expect.any(String),
         undefined,
@@ -1230,13 +1230,13 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     });
 
     it("passes the sink into classifyWithinDepartment when 2+ units stay eligible", async () => {
-      pipelinesStore.list.mockResolvedValue([
-        pipelineDef("quick-fix", "Quick Fix", true, "light"),
-        pipelineDef("delivery", "Delivery", true, "deep"),
+      workflowsStore.list.mockResolvedValue([
+        workflowDef("quick-fix", "Quick Fix", true, "light"),
+        workflowDef("delivery", "Delivery", true, "deep"),
       ]);
       agentsStore.listActive.mockResolvedValue([agentDef("documentation-engineer", "Docs")]);
       classifier.classifyWithinDepartment.mockResolvedValue({
-        target: { kind: "pipeline", id: "delivery", name: "Delivery" },
+        target: { kind: "workflow", id: "delivery", name: "Delivery" },
         confidence: 0.9,
         reason: "multi-surface scaffolding",
         matchedTerms: [],
@@ -1261,12 +1261,12 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       );
     });
 
-    it("ignores a pipeline that declares no PR sink when picking the fallback unit", async () => {
+    it("ignores a workflow that declares no PR sink when picking the fallback unit", async () => {
       // `notes` is the CHEAPEST rung, so the unconstrained rule would name it. It
       // declares no `pr` output, so it is not eligible and `delivery` is the answer.
-      pipelinesStore.list.mockResolvedValue([
-        pipelineDef("notes", "Notes", false, "light"),
-        pipelineDef("delivery", "Delivery", true, "deep"),
+      workflowsStore.list.mockResolvedValue([
+        workflowDef("notes", "Notes", false, "light"),
+        workflowDef("delivery", "Delivery", true, "deep"),
       ]);
       agentsStore.listActive.mockResolvedValue([]);
       await service.createTask({
@@ -1276,7 +1276,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         output: { type: "pr" },
       });
       expect(classifier.classifyWithinDepartment).not.toHaveBeenCalled();
-      expect(pipelineRunner.start).toHaveBeenCalledWith(
+      expect(workflowRunner.start).toHaveBeenCalledWith(
         "delivery",
         expect.any(String),
         undefined,
@@ -1289,13 +1289,13 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     it("routes stage 2 on routingText, never on the framed text the run receives", async () => {
       // The roadmap gate's `text` carries a trust-boundary footer for the ACTOR; stage 2
       // must rank the item's own words instead, or the framing lands back in the haystack.
-      pipelinesStore.list.mockResolvedValue([
-        pipelineDef("quick-fix", "Quick Fix", true, "light"),
-        pipelineDef("delivery", "Delivery", true, "deep"),
+      workflowsStore.list.mockResolvedValue([
+        workflowDef("quick-fix", "Quick Fix", true, "light"),
+        workflowDef("delivery", "Delivery", true, "deep"),
       ]);
       agentsStore.listActive.mockResolvedValue([]);
       classifier.classifyWithinDepartment.mockResolvedValue({
-        target: { kind: "pipeline", id: "delivery", name: "Delivery" },
+        target: { kind: "workflow", id: "delivery", name: "Delivery" },
         confidence: 0.9,
         reason: "deep",
         matchedTerms: [],
@@ -1321,9 +1321,9 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       // The half of the trace that used to be discarded: `resolveDepartmentTargetOrNull`
       // returned `routing?.target ?? primary`, so the decision that picks the RUNNING
       // unit left no record — which is what made the original misroute undiagnosable.
-      pipelinesStore.list.mockResolvedValue([
-        pipelineDef("quick-fix", "Quick Fix", true, "light"),
-        pipelineDef("delivery", "Delivery", true, "deep"),
+      workflowsStore.list.mockResolvedValue([
+        workflowDef("quick-fix", "Quick Fix", true, "light"),
+        workflowDef("delivery", "Delivery", true, "deep"),
       ]);
       agentsStore.listActive.mockResolvedValue([agentDef("documentation-engineer", "Docs")]);
       classifier.classify.mockResolvedValue({
@@ -1338,13 +1338,13 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         leg: "router",
       });
       classifier.classifyWithinDepartment.mockResolvedValue({
-        target: { kind: "pipeline", id: "delivery", name: "Delivery" },
+        target: { kind: "workflow", id: "delivery", name: "Delivery" },
         confidence: 0.86,
         reason: "multi-surface scaffolding",
         matchedTerms: [],
         candidates: [
-          { kind: "pipeline", id: "quick-fix", name: "Quick Fix" },
-          { kind: "pipeline", id: "delivery", name: "Delivery" },
+          { kind: "workflow", id: "quick-fix", name: "Quick Fix" },
+          { kind: "workflow", id: "delivery", name: "Delivery" },
         ],
         mode: "single",
         proposedGoal: null,
@@ -1362,7 +1362,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         department: "dev",
         leg: "router",
         stage2: {
-          target: { kind: "pipeline", id: "delivery" },
+          target: { kind: "workflow", id: "delivery" },
           confidence: 0.86,
           reason: "multi-surface scaffolding",
           leg: "scorer",
@@ -1373,7 +1373,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     });
 
     it("without a PR sink the agent is still reachable — the constraint is what changes the outcome", async () => {
-      pipelinesStore.list.mockResolvedValue([]);
+      workflowsStore.list.mockResolvedValue([]);
       agentsStore.listActive.mockResolvedValue([agentDef("documentation-engineer", "Docs")]);
       employeesStore.list.mockResolvedValue([employeeDef("documentation-engineer")]);
       const result = await service.createTask({
@@ -1387,9 +1387,9 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
   });
 
   describe("F2a — switchboard department verdicts (soft stage-2 in dispatch(), never a hard error)", () => {
-    /** A minimal pipeline definition fixture — only the fields the resolver reads. */
-    function pipelineDef(id: string, name: string, department = "dev") {
-      // See the `pipelineDef` above on why `outputs` has to be present.
+    /** A minimal workflow definition fixture — only the fields the resolver reads. */
+    function workflowDef(id: string, name: string, department = "dev") {
+      // See the `workflowDef` above on why `outputs` has to be present.
       return {
         id,
         name,
@@ -1400,8 +1400,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       };
     }
 
-    it("non-empty roster: an undirected department verdict resolves to the owned pipeline and dispatches to it", async () => {
-      pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery")]);
+    it("non-empty roster: an undirected department verdict resolves to the owned workflow and dispatches to it", async () => {
+      workflowsStore.list.mockResolvedValue([workflowDef("delivery", "Delivery")]);
       classifier.classify.mockResolvedValue({
         target: { kind: "department", id: "dev", name: "Dev" },
         confidence: 0.8,
@@ -1409,13 +1409,13 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         matchedTerms: [],
         candidates: [],
       });
-      const result = await service.createTask({ text: "ship the delivery pipeline" });
+      const result = await service.createTask({ text: "ship the delivery workflow" });
       expect(result.outcome).toBe("dispatched");
       if (result.outcome !== "dispatched") return;
-      // A non-empty roster with exactly one owned pipeline resolves directly — the
+      // A non-empty roster with exactly one owned workflow resolves directly — the
       // scoped classifier is never called (mirrors the explicit-path 1-owned case).
       expect(classifier.classifyWithinDepartment).not.toHaveBeenCalled();
-      expect(pipelineRunner.start).toHaveBeenCalledWith(
+      expect(workflowRunner.start).toHaveBeenCalledWith(
         "delivery",
         result.task.id,
         undefined,
@@ -1424,7 +1424,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         undefined,
       );
       expect(result.task.target).toEqual({
-        kind: "pipeline",
+        kind: "workflow",
         id: "delivery",
         name: "Delivery",
         glyph: "flow",
@@ -1433,7 +1433,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     });
 
     it("empty roster: falls back to the orchestrator (soft — never a 422/thrown error), persists ORCHESTRATOR_TARGET, and records orchestrator-fallback", async () => {
-      pipelinesStore.list.mockResolvedValue([]); // dev owns nothing right now
+      workflowsStore.list.mockResolvedValue([]); // dev owns nothing right now
       classifier.classify.mockResolvedValue({
         target: { kind: "department", id: "dev", name: "Dev" },
         confidence: 0.6,
@@ -1446,7 +1446,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       if (result.outcome !== "dispatched") return;
       expect(classifier.classifyWithinDepartment).not.toHaveBeenCalled();
       expect(agentRunner.startOrchestrator).toHaveBeenCalled();
-      expect(pipelineRunner.start).not.toHaveBeenCalled();
+      expect(workflowRunner.start).not.toHaveBeenCalled();
       // The soft fallback persists the honest terminal target — never the raw
       // department verdict (that would be a lie: the department never ran anything).
       expect(result.task.target).toEqual({
@@ -1461,9 +1461,9 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
   });
 
   describe("F2c — classification trace persists + activity carries department", () => {
-    /** A minimal pipeline definition fixture — only the fields the resolver reads. */
-    function pipelineDef(id: string, name: string, department = "dev") {
-      // See the `pipelineDef` above on why `outputs` has to be present.
+    /** A minimal workflow definition fixture — only the fields the resolver reads. */
+    function workflowDef(id: string, name: string, department = "dev") {
+      // See the `workflowDef` above on why `outputs` has to be present.
       return {
         id,
         name,
@@ -1474,8 +1474,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       };
     }
 
-    it("an undirected department verdict persists the full two-stage trace: stage1 is the raw department verdict, department is set, and the final target is the resolved concrete pipeline", async () => {
-      pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery")]);
+    it("an undirected department verdict persists the full two-stage trace: stage1 is the raw department verdict, department is set, and the final target is the resolved concrete workflow", async () => {
+      workflowsStore.list.mockResolvedValue([workflowDef("delivery", "Delivery")]);
       classifier.classify.mockResolvedValue({
         target: { kind: "department", id: "dev", name: "Dev" },
         confidence: 0.8,
@@ -1483,7 +1483,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         matchedTerms: ["ship"],
         candidates: [],
       });
-      const result = await service.createTask({ text: "ship the delivery pipeline" });
+      const result = await service.createTask({ text: "ship the delivery workflow" });
       expect(result.outcome).toBe("dispatched");
       if (result.outcome !== "dispatched") return;
       expect(result.task.classification?.stage1).toEqual({
@@ -1494,7 +1494,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       expect(result.task.classification?.department).toBe("dev");
       expect(result.task.classification?.confidence).toBe(0.8);
       expect(result.task.classification?.matchedTerms).toEqual(["ship"]);
-      expect(result.task.target?.kind).toBe("pipeline");
+      expect(result.task.target?.kind).toBe("workflow");
       expect(activity.record).toHaveBeenCalledWith(
         expect.objectContaining({
           kind: "task-dispatched",
@@ -1503,20 +1503,20 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       );
     });
 
-    it("a directly-classified pipeline target (no department delegation) persists a trace with NO department field, and the activity's department falls back to a guarded store read of the unit's own ownership", async () => {
-      pipelinesStore.list.mockResolvedValue([pipelineDef("delivery", "Delivery", "dev")]);
+    it("a directly-classified workflow target (no department delegation) persists a trace with NO department field, and the activity's department falls back to a guarded store read of the unit's own ownership", async () => {
+      workflowsStore.list.mockResolvedValue([workflowDef("delivery", "Delivery", "dev")]);
       classifier.classify.mockResolvedValue({
-        target: { kind: "pipeline", id: "delivery", name: "Delivery" },
+        target: { kind: "workflow", id: "delivery", name: "Delivery" },
         confidence: 0.9,
         reason: "matched",
         matchedTerms: ["ship"],
         candidates: [],
       });
-      const result = await service.createTask({ text: "ship the delivery pipeline" });
+      const result = await service.createTask({ text: "ship the delivery workflow" });
       expect(result.outcome).toBe("dispatched");
       if (result.outcome !== "dispatched") return;
       expect(result.task.classification?.stage1).toEqual({
-        kind: "pipeline",
+        kind: "workflow",
         id: "delivery",
         name: "Delivery",
       });
@@ -1569,12 +1569,12 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
         done: true,
       })),
     };
-    const pipelineRunner = {
-      start: vi.fn(async () => pipelineRun({})),
+    const workflowRunner = {
+      start: vi.fn(async () => workflowRun({})),
       onRunStatus: vi.fn(() => () => {}),
-      get: vi.fn(() => pipelineRun({})),
+      get: vi.fn(() => workflowRun({})),
     };
-    const pipelinesStore = { list: vi.fn(async () => []) };
+    const workflowsStore = { list: vi.fn(async () => []) };
     const agentsStore = { listActive: vi.fn(async () => []) };
     const goalRunner = {
       start: vi.fn(async () => ({ goalRunId: "goal_1" })),
@@ -1638,8 +1638,8 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
       storage,
       classifier as never,
       agentRunner as never,
-      pipelineRunner as never,
-      pipelinesStore as never,
+      workflowRunner as never,
+      workflowsStore as never,
       agentsStore as never,
       // D-017: no fixture in this file gives a task a department context AND an
       // agent-position lease scenario worth asserting on the allocator itself
@@ -1760,12 +1760,12 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
     resumeRunner: (taskId: string) => void;
     onRunStatusListener: () => ((run: AgentRun) => void) | undefined;
   } {
-    const pipelineRunner = {
-      start: vi.fn(async () => pipelineRun({})),
+    const workflowRunner = {
+      start: vi.fn(async () => workflowRun({})),
       onRunStatus: vi.fn(() => () => {}),
-      get: vi.fn(() => pipelineRun({})),
+      get: vi.fn(() => workflowRun({})),
     };
-    const pipelinesStore = { list: vi.fn(async () => []) };
+    const workflowsStore = { list: vi.fn(async () => []) };
     const agentsStore = { listActive: vi.fn(async () => []) };
     const goalRunner = {
       start: vi.fn(async () => ({ goalRunId: "goal_1" })),
@@ -1836,8 +1836,8 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
       storage,
       classifier as never,
       agentRunner as never,
-      pipelineRunner as never,
-      pipelinesStore as never,
+      workflowRunner as never,
+      workflowsStore as never,
       agentsStore as never,
       // D-017: no fixture in this file gives a task a department context AND an
       // agent-position lease scenario worth asserting on the allocator itself
@@ -2172,12 +2172,12 @@ describe("125c — system-wide maxConcurrentRuns cap", () => {
   }): void {
     const { project } = opts;
     const catalog = opts.projects ?? (project ? [project] : []);
-    const pipelineRunner = {
-      start: vi.fn(async () => pipelineRun({})),
+    const workflowRunner = {
+      start: vi.fn(async () => workflowRun({})),
       onRunStatus: vi.fn(() => () => {}),
-      get: vi.fn(() => pipelineRun({})),
+      get: vi.fn(() => workflowRun({})),
     };
-    const pipelinesStore = { list: vi.fn(async () => []) };
+    const workflowsStore = { list: vi.fn(async () => []) };
     const agentsStore = { listActive: vi.fn(async () => []) };
     const goalRunner = {
       start: vi.fn(async () => ({ goalRunId: "goal_1" })),
@@ -2235,8 +2235,8 @@ describe("125c — system-wide maxConcurrentRuns cap", () => {
       storage,
       classifier as never,
       agentRunner as never,
-      pipelineRunner as never,
-      pipelinesStore as never,
+      workflowRunner as never,
+      workflowsStore as never,
       agentsStore as never,
       // D-017: no fixture in this file gives a task a department context AND an
       // agent-position lease scenario worth asserting on the allocator itself

@@ -86,7 +86,7 @@ export const DEPARTMENT_SEED: readonly Department[] = [
     name: "Development",
     tagline: "Vývoj a doručení",
     mandate:
-      "Orchestrace delivery pipeline: Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor.",
+      "Orchestrace delivery workflow: Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor.",
     color: "#5b8def",
     division: "engineering",
     icon: "code",
@@ -146,7 +146,7 @@ export const DEPARTMENT_SEED: readonly Department[] = [
     code: "RND",
     name: "R&D",
     tagline: "Výzkum a analýza",
-    mandate: "Výzkumné pipeline, které předávají výsledný artefakt dál.",
+    mandate: "Výzkumné workflow, které předávají výsledný artefakt dál.",
     color: "#46cf8b",
     division: "engineering",
     icon: "compass",
@@ -225,7 +225,7 @@ export const DIVISIONS: readonly Division[] = DIVISION_SEED;
  * A department's current activity, as read by the top-level UI. `idle` idle,
  * `running` actively working (Tier 1, quiet), `report` has a Tier-2 report ready,
  * `waiting` needs a Tier-3 decision. Phase 80 always serves `idle`; real
- * aggregation across running pipelines/goals/approvals lands in phase 82.
+ * aggregation across running workflows/goals/approvals lands in phase 82.
  */
 export const DepartmentStateSchema = z.enum(["idle", "running", "report", "waiting", "error"]);
 export type DepartmentState = z.infer<typeof DepartmentStateSchema>;
@@ -248,13 +248,13 @@ export const DepartmentWithStatusSchema = DepartmentSchema.extend({
 export type DepartmentWithStatus = z.infer<typeof DepartmentWithStatusSchema>;
 
 /**
- * The kind of stored entity that can carry an `department`. Pipelines/chains
+ * The kind of stored entity that can carry an `department`. Workflows/chains
  * have carried it since Phase 81; agents gained it in NS2 F1a. Integrations do
  * NOT carry it: an integration's department membership is DERIVED, not stored —
  * ops listens to every integration, comms replies through the reply-enabled
  * ones (per the mandate). See {@link DepartmentRosterSchema}.
  */
-export const OwnableEntityKindSchema = z.enum(["pipeline", "agent"]);
+export const OwnableEntityKindSchema = z.enum(["workflow", "agent"]);
 export type OwnableEntityKind = z.infer<typeof OwnableEntityKindSchema>;
 
 /**
@@ -292,7 +292,7 @@ export type RosterIntegrationRef = z.infer<typeof RosterIntegrationRefSchema>;
  * every integration; comms (the outward voice) lists the reply-enabled ones
  * (`mandate.reply`); every other department lists none. `monitors` is the subset
  * of that department's `integrations` that are GitHub integrations with a `ci`
- * stream — there is no standalone monitor entity. Pipelines/chains are NOT part
+ * stream — there is no standalone monitor entity. Workflows/chains are NOT part
  * of this shape — the roster tab already sources those client-side (the canvas).
  */
 export const DepartmentRosterSchema = z.object({

@@ -24,7 +24,7 @@ export const GOALS_DIR = "GOALS_DIR";
  * File-backed persistence for goals: one `<id>.goal.md` per goal. The frontmatter
  * carries the structured config (`name`, `desc`, `objective`, `maker`, `verifier`,
  * `maxIterations`, `budget`) and the Markdown body is `instructions`. Same
- * guarantees as the agents/pipelines stores — atomic writes, defense-in-depth id
+ * guarantees as the agents/workflows stores — atomic writes, defense-in-depth id
  * guards, tolerant listing. A structurally-broken `maker`/`verifier` makes the
  * goal corrupt (it can't loop without them) rather than silently dropping it.
  */

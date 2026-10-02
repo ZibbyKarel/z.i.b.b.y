@@ -7,7 +7,7 @@ import { expect, test } from "@playwright/test";
  * classifier override, prefilled via `?entry=`), the parent task is created, and
  * it appears in `/work/tasks`.
  *
- * NOT covered here, and why: a department's pipeline actually running the task
+ * NOT covered here, and why: a department's workflow actually running the task
  * needs a real `claude` agent run, and this sandbox has no working `claude` CLI.
  * Signal-driven follow-up work is an automation concern now (see
  * `docs/api/automations.md`). This spec asserts only what is deterministic from

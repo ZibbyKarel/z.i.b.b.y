@@ -1,6 +1,6 @@
 # Budget (Phase 8.1, dollar caps Phase 12)
 
-The budget guard decides whether a dispatch (an agent run, a pipeline run, or one
+The budget guard decides whether a dispatch (an agent run, a workflow run, or one
 goal iteration) is allowed to start. It is **fail-closed**: an unreadable ledger or
 usage snapshot reads as "spend position unknown" and is treated as over-cap (hold +
 approval), never as "assume fine." This is the one place in ZIBBY where fail-open
@@ -38,7 +38,7 @@ engagement's `dailyRuns`/`weeklyRuns`/`monthlyRuns`/`maxConcurrent`/
 
 ### The dispatch-time check
 
-Every dispatch path (agent run, pipeline run, one goal iteration) calls
+Every dispatch path (agent run, workflow run, one goal iteration) calls
 `BudgetService.check(projectId, now)` before starting:
 
 1. **Global account ceiling first**, regardless of project — read `budget.json`
@@ -95,24 +95,24 @@ fail-closed rather than silently under-count.
 ### Recording a cost line (Phase 12)
 
 Once a dispatched run reaches a terminal state with a known price, `task-scheduler.
-service.ts`'s `reconcileOutcome` (via `writeAgentOutcome`/`writePipelineOutcome`) awaits
+service.ts`'s `reconcileOutcome` (via `writeAgentOutcome`/`writeWorkflowOutcome`) awaits
 `BudgetService.recordCost(entry, now)` best-effort — a write failure is logged, never
 thrown, so it can't crash the outcome write-back. This appends a `type: "cost"` line
 (`{ at, projectId, taskId?, runRef, kind, costUsd }`) to the SAME ledger file the
 dispatch lines live in; `BudgetLedgerStore.countDaily`/`countWeekly`/`countMonthly`
 skip `type: "cost"` lines so the run-count caps are unaffected, while the new
-`sumCostDaily`/`sumCostWeekly`/`sumCostMonthly` read only them. A pipeline run's cost
+`sumCostDaily`/`sumCostWeekly`/`sumCostMonthly` read only them. A workflow run's cost
 is the sum of its stage costs (`sumStageCosts`, shared with `task-runs.service.ts`'s
 `TaskRun.costUsd` projection); a goal or chain run carries no aggregate `costUsd` today,
 so no cost line is written directly on their outcomes — a goal's own maker runs are
-themselves agent/pipeline runs whose outcomes record cost individually.
+themselves agent/workflow runs whose outcomes record cost individually.
 
 ### Live concurrency
 
 `countRunning(projectId)` counts top-level runs currently holding a concurrency slot
 for a project — agent runs in `running`/`awaiting-approval`/`paused-limit` labelled
-with the project, and pipeline runs in `running`/`paused-limit` whose `projectPath`
-matches. Pipeline **stage** runs live inside the pipeline runner's own core and are
+with the project, and workflow runs in `running`/`paused-limit` whose `projectPath`
+matches. Workflow **stage** runs live inside the workflow runner's own core and are
 never counted separately (no double-counting). A run `paused-limit` on the usage
 window still holds its slot — releasing it early would let a queued task and the
 auto-resumed run both start at once when the window resets.

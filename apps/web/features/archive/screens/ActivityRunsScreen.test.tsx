@@ -41,7 +41,7 @@ vi.mock("../queries", () => ({
   }),
 }));
 vi.mock("../../departments/useOwnerDepartment", () => ({
-  useOwnerDepartmentMaps: () => ({ pipelineDepartment: new Map() }),
+  useOwnerDepartmentMaps: () => ({ workflowDepartment: new Map() }),
   runDepartmentId: () => undefined,
 }));
 

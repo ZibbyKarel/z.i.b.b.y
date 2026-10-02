@@ -17,7 +17,7 @@ ts-rest models.
 | Piece        | File                                       | Role                                                                                                                |
 | ------------ | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
 | Controller   | `apps/api/src/events/events.controller.ts` | the `@Sse("api/events")` handler; merges every scope's `Observable<MessageEvent>`                                   |
-| Module       | `apps/api/src/events/events.module.ts`     | imports `AgentsModule`, `PipelinesModule`, `GoalsModule`, `ChannelsModule` for their exported runner/event services |
+| Module       | `apps/api/src/events/events.module.ts`     | imports `AgentsModule`, `WorkflowsModule`, `GoalsModule`, `ChannelsModule` for their exported runner/event services |
 | SSE plumbing | `apps/api/src/shared/sse/sse.ts`           | `fromRunStatus()` (run-status → SSE event), `heartbeats()` (keep-alive ping)                                        |
 
 ## Flow
@@ -26,7 +26,7 @@ ts-rest models.
 
 - **`agent-runs`** — via `fromRunStatus` over `AgentRunnerService.onRunStatus`,
   projecting `{ runId, status }`.
-- **`pipeline-runs`** — same shape, over `PipelineRunnerService.onRunStatus`.
+- **`workflow-runs`** — same shape, over `WorkflowRunnerService.onRunStatus`.
 - **`goal-runs`** — same shape, over `GoalRunnerService.onRunStatus` (added for the
   goal loop engine).
 - **`channel-items`** — over `ChannelEventsService.stream()`, projecting
@@ -37,7 +37,7 @@ ts-rest models.
 - A merged **heartbeat** (`heartbeats()`) so the connection survives idle periods
   through intermediary proxies.
 
-The run-status scopes are exhaustively `agent-runs` / `pipeline-runs` / `goal-runs`.
+The run-status scopes are exhaustively `agent-runs` / `workflow-runs` / `goal-runs`.
 (A `chain-runs` scope existed while the `chains` feature did; it was removed with
 that feature.)
 
@@ -59,5 +59,5 @@ without a client-side migration.
 
 - `GET /api/events` — one long-lived `EventSource` connection, replacing what used
   to be several independent polling loops (the running-list poll, the all-runs
-  history poll, and the pipeline aggregate poll). Not part of the ts-rest contract
+  history poll, and the workflow aggregate poll). Not part of the ts-rest contract
   — call it directly as an `EventSource`, not through the generated client.

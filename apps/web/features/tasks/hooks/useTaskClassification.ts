@@ -12,12 +12,12 @@ const CLASSIFY_DEBOUNCE_MS = 350;
 export interface UseTaskClassificationArgs {
   text: string;
   paths: string[];
-  /** A pre-selected destination ("Run pipeline") — always present in the picker. */
+  /** A pre-selected destination ("Run workflow") — always present in the picker. */
   initialTarget?: TaskTarget;
   /**
    * The operator's chosen terminal sink, forwarded to the classifier because it
    * CONSTRAINS which units are eligible (a `pr` sink admits only PR-capable
-   * pipelines — see `ClassifyTaskInput.output`). Without it the preview would rank a
+   * workflows — see `ClassifyTaskInput.output`). Without it the preview would rank a
    * roster the dispatch then refuses, so the picker would offer targets that cannot
    * run — the preview and the dispatch must never drift.
    */
@@ -62,8 +62,8 @@ export function useTaskClassification({
   const [seededKey, setSeededKey] = useState<string | null>(null);
   /**
    * The chosen single-dispatch target, as a {@link targetKey}. "" = auto (let the
-   * classifier decide). Seeded from `initialTarget` so "Run pipeline" pre-selects the
-   * pipeline; the operator can switch it to another candidate or back to auto.
+   * classifier decide). Seeded from `initialTarget` so "Run workflow" pre-selects the
+   * workflow; the operator can switch it to another candidate or back to auto.
    */
   const [chosenKey, setChosenKey] = useState<string>(initialTarget ? targetKey(initialTarget) : "");
 
@@ -134,7 +134,7 @@ export function useTaskClassification({
   const isLoop = !chosenTarget && activeRouting?.mode === "loop";
 
   // The "ZIBBY will…" preview reflects the *effective* target: an explicit pick (the
-  // pre-selected pipeline or a chosen candidate) shown as a one-shot dispatch; else
+  // pre-selected workflow or a chosen candidate) shown as a one-shot dispatch; else
   // the live classify verdict as-is. So the preview and the dispatch never drift.
   const previewRouting: TaskRouting | null = chosenTarget
     ? {

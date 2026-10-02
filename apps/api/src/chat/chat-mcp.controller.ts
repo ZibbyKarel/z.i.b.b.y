@@ -39,7 +39,7 @@ function errorText(value: string): {
   return { content: [{ type: "text", text: value }], isError: true };
 }
 
-/** Every `TaskTarget` a chat `@mention` can carry (agent/department/pipeline, per
+/** Every `TaskTarget` a chat `@mention` can carry (agent/department/workflow, per
  *  `ChatMentionTargetSchema`) has an `id`; the synthetic orchestrator does not — this
  *  narrows safely instead of asserting. */
 function mentionId(target: TaskTarget): string | undefined {
@@ -192,7 +192,7 @@ export class ChatMcpController {
             .string()
             .optional()
             .describe(
-              "The id of the @mentioned unit (agent/department/pipeline) this call is FOR — " +
+              "The id of the @mentioned unit (agent/department/workflow) this call is FOR — " +
                 "required when the operator addressed several units this turn, optional " +
                 "(and, if given, must match) when they addressed exactly one, and unused when " +
                 "they addressed none.",

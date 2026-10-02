@@ -9,7 +9,7 @@ import type { DepartmentsStorageService } from "../departments/departments.stora
 import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.service";
 import { PolicyStorageService } from "../gates/policy.storage.service";
 import { VaultService } from "../memory/vault.service";
-import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
+import { WorkflowsStorageService } from "../workflows/workflows.storage.service";
 import { SELF_KNOWLEDGE_NOTE_ID, SelfKnowledgeService } from "./self-knowledge.service";
 
 /**
@@ -25,8 +25,8 @@ async function makeService(
 
   const agents = new AgentsStorageService(path.join(dir, "agents"));
   await agents.onModuleInit();
-  const pipelines = new PipelinesStorageService(path.join(dir, "pipelines"));
-  await pipelines.onModuleInit();
+  const workflows = new WorkflowsStorageService(path.join(dir, "workflows"));
+  await workflows.onModuleInit();
   const gateRules = new GateRulesStorageService(path.join(dir, "gate-rules"));
   await gateRules.onModuleInit();
   const policy = new PolicyStorageService(path.join(dir, "policy"));
@@ -40,7 +40,7 @@ async function makeService(
     dir,
     service: new SelfKnowledgeService(
       agents,
-      pipelines,
+      workflows,
       gateRules,
       policy,
       vault,
@@ -63,7 +63,7 @@ describe("SelfKnowledgeService", () => {
   });
 
   describe("compose", () => {
-    it("reflects the live agents/pipelines/gate-rules/policy catalog", async () => {
+    it("reflects the live agents/workflows/gate-rules/policy catalog", async () => {
       await new AgentsStorageService(path.join(dir, "agents")).create({
         id: "koder",
         instructions: "Write code.",

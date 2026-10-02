@@ -73,11 +73,11 @@ describe("toClientRouting (Phase 11 fields)", () => {
   it("carries mode / proposedGoal / paths through to the client shape", () => {
     const loop: ApiTaskRouting = {
       ...base,
-      target: { kind: "pipeline", id: "delivery", name: "Delivery" },
+      target: { kind: "workflow", id: "delivery", name: "Delivery" },
       mode: "loop",
       proposedGoal: {
         objective: "go until green",
-        maker: { kind: "pipeline", id: "delivery" },
+        maker: { kind: "workflow", id: "delivery" },
         verifier: { kind: "checks" },
         maxIterations: 6,
         instructions: "go until green",
@@ -86,7 +86,7 @@ describe("toClientRouting (Phase 11 fields)", () => {
     };
     const r = toClientRouting(loop);
     expect(r.mode).toBe("loop");
-    expect(r.proposedGoal?.maker).toEqual({ kind: "pipeline", id: "delivery" });
+    expect(r.proposedGoal?.maker).toEqual({ kind: "workflow", id: "delivery" });
     expect(r.paths[0]?.project?.name).toBe("Alpha");
   });
 

@@ -31,9 +31,9 @@ describe("PinButton", () => {
 
   it("labels a pinned target 'Odepnout' and toggles it on click", async () => {
     hooks.isPinned.mockReturnValue(true);
-    render(<PinButton id="delivery" kind="pipeline" />);
+    render(<PinButton id="delivery" kind="workflow" />);
     expect(screen.getByText("Odepnout")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button"));
-    expect(hooks.toggle).toHaveBeenCalledWith("pipeline", "delivery");
+    expect(hooks.toggle).toHaveBeenCalledWith("workflow", "delivery");
   });
 });

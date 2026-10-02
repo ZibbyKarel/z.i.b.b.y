@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, CodeBlock, Panel, Stack, TextAreaField, Typography } from "@zibby/design-system";
-import { useResumePipelineRunMutation } from "../mutations";
+import { useResumeWorkflowRunMutation } from "../mutations";
 import { useStageRunLogQuery } from "../queries/useStageRunLogQuery";
 import type { RunView } from "../run";
 
@@ -15,14 +15,14 @@ export interface RunParkedPanelProps {
 }
 
 /**
- * The resume surface of a retries-parked pipeline run: the failed phase's log
+ * The resume surface of a retries-parked workflow run: the failed phase's log
  * tail (why it parked), a note field, and the Resume action — the note is
  * appended to the failure context the retried phase receives as its handoff.
  */
 export function RunParkedPanel({ run }: RunParkedPanelProps) {
   const t = useTranslations("runs");
   const [note, setNote] = useState("");
-  const resume = useResumePipelineRunMutation();
+  const resume = useResumeWorkflowRunMutation();
   const parked = run.parked;
   const { data: log } = useStageRunLogQuery(run.runId, parked?.phaseId);
 

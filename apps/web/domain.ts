@@ -3,7 +3,7 @@ import type {
   AgentModel,
   AgentThinking,
   DepartmentId,
-  PipelineComplexity,
+  WorkflowComplexity,
 } from "@zibby/contracts";
 import type { IconName } from "@zibby/design-system";
 import type { MessageKey } from "./i18n/keys";
@@ -47,7 +47,7 @@ export interface AgentSdkCredit {
   usedPct: number;
   renew: MessageKey;
   byAgent: Array<[name: string, dollars: number]>;
-  byPipeline: Array<[name: string, dollars: number]>;
+  byWorkflow: Array<[name: string, dollars: number]>;
   trend: number[];
 }
 
@@ -67,13 +67,13 @@ export interface PhaseLoop {
   driftTo?: string;
 }
 
-export interface PipelinePhase {
+export interface WorkflowPhase {
   /** Phase id from the definition (loop targets reference it); editing needs it. */
   id?: string;
   /** What the phase executes: an agent session, deterministic verify checks, or a sandbox tool. */
-  type: "agent" | "verify" | "tool" | "pipeline";
-  /** `pipeline` phase: the id of the child pipeline run as a sub-run. */
-  pipeline?: string;
+  type: "agent" | "verify" | "tool" | "workflow";
+  /** `workflow` phase: the id of the child workflow run as a sub-run. */
+  workflow?: string;
   agent?: string;
   consumes?: string;
   produces?: string;
@@ -88,47 +88,47 @@ export interface PipelinePhase {
   qualify?: boolean;
 }
 
-export type PipelineState = "done" | "parked" | "failed" | "running";
+export type WorkflowState = "done" | "parked" | "failed" | "running";
 
 /**
- * A pipeline's terminal delivery sink (the config that replaced the `pr-autor`
+ * A workflow's terminal delivery sink (the config that replaced the `pr-autor`
  * agent): open a PR, or write a produced artifact into the project or the vault.
  */
-export type PipelineOutput =
+export type WorkflowOutput =
   | { type: "pr"; from: string }
   | { type: "file"; from: string; dest: "project" | "vault"; to: string }
   | { type: "folder"; from: string; to: string };
 
-export interface Pipeline {
+export interface Workflow {
   id: string;
   name: string;
   lastRun: string;
-  lastState: PipelineState;
+  lastState: WorkflowState;
   desc: string;
   file: string;
-  phases: PipelinePhase[];
+  phases: WorkflowPhase[];
   /** Delivery sinks run after the chain finishes green (empty = chain ends silently). */
-  outputs: PipelineOutput[];
+  outputs: WorkflowOutput[];
   /** Optional avatar image (data URI or `/avatars/*.png` path) shown in place of the glyph. */
   avatar?: string;
   /**
    * Optional attribution to a department of the federation (Phase 81 contract field) —
-   * which of the eight departments "owns" this pipeline for its Roster tab (Phase 85).
-   * Absent is a legitimate state: not every pipeline has an owner yet.
+   * which of the eight departments "owns" this workflow for its Roster tab (Phase 85).
+   * Absent is a legitimate state: not every workflow has an owner yet.
    */
   department?: DepartmentId;
   /**
-   * NS2 F9 — the pipeline's rung on its owning department's complexity ladder.
+   * NS2 F9 — the workflow's rung on its owning department's complexity ladder.
    * Carried (not rendered) so a client-side duplicate preserves the rung instead
    * of silently resetting it to the contract's `"standard"` default; the rung is
-   * authored in the `.pipeline.md`, like `outputs`.
+   * authored in the `.workflow.md`, like `outputs`.
    *
    * Optional HERE while non-optional on the contract entity: the query mapper
    * always supplies it, so `undefined` only ever means "a locally constructed
-   * pipeline that predates the ladder" (the mock store, a test fixture) — and
+   * workflow that predates the ladder" (the mock store, a test fixture) — and
    * that must not be a compile error in a display-only model.
    */
-  complexity?: PipelineComplexity;
+  complexity?: WorkflowComplexity;
   /** P1-03: optional per-run spend cap. */
   budget?: { maxCostUsd: number; warnAtPct: number };
   /** Default project a run binds to (supplies env/secrets). */
@@ -157,7 +157,7 @@ export interface BriefingItem {
 export interface SystemStatus {
   host: string;
   awake: boolean;
-  pipelines: number;
+  workflows: number;
   skills: number;
 }
 
@@ -166,10 +166,10 @@ export function glyphForAgent(name: string | undefined, agents: Agent[]): IconNa
   return (agents.find((a) => a.name === name)?.glyph as IconName | undefined) ?? "bot";
 }
 
-/** Glyph for a pipeline phase: verify → shield, tool → gear, agents their glyph. */
-export function glyphForPhase(phase: PipelinePhase, agents: Agent[]): IconName {
+/** Glyph for a workflow phase: verify → shield, tool → gear, agents their glyph. */
+export function glyphForPhase(phase: WorkflowPhase, agents: Agent[]): IconName {
   if (phase.type === "verify") return "shield";
   if (phase.type === "tool") return "gear";
-  if (phase.type === "pipeline") return "flow";
+  if (phase.type === "workflow") return "flow";
   return glyphForAgent(phase.agent, agents);
 }

@@ -7,7 +7,7 @@ import { GatesModule } from "../gates/gates.module";
 import { GoalsModule } from "../goals/goals.module";
 import { LimitsModule } from "../limits/limits.module";
 import { MemoryModule } from "../memory/memory.module";
-import { PipelinesModule } from "../pipelines/pipelines.module";
+import { WorkflowsModule } from "../workflows/workflows.module";
 import { ProjectsModule } from "../projects/projects.module";
 import { ResolvedProjectModule } from "../projects/resolved-project.module";
 import { WorkspaceModule } from "../workspace/workspace.module";
@@ -27,7 +27,7 @@ import { TaskSchedulerService } from "./task-scheduler.service";
 import { TasksController } from "./tasks.controller";
 
 /**
- * Task routing + the deferred-task scheduler. Reuses the agents and pipelines
+ * Task routing + the deferred-task scheduler. Reuses the agents and workflows
  * stores (imported for their catalog) and their runner services (to dispatch a
  * task — immediately or when a scheduled one comes due). ProjectsModule + BudgetModule
  * back Phase 8's project attribution and the budget/concurrency guard; the
@@ -41,7 +41,7 @@ import { TasksController } from "./tasks.controller";
   imports: [
     AgentsModule,
     EmployeesModule,
-    PipelinesModule,
+    WorkflowsModule,
     GoalsModule,
     ProjectsModule,
     ResolvedProjectModule,

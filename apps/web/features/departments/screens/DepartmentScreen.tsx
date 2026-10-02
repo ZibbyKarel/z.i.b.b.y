@@ -8,11 +8,11 @@ import {
   DataTable,
   Tabs as DsTabs,
   MetricStrip,
-  PipelineStepStrip,
   Stack,
   Tab,
   TabList,
   Typography,
+  WorkflowStepStrip,
 } from "@zibby/design-system";
 import type { StateTone, SubNavLinkComponent } from "@zibby/design-system";
 import type { DepartmentId } from "@zibby/contracts";
@@ -26,7 +26,7 @@ import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../../components/PageContainer/PageContainer";
 import { useChat } from "../../chat";
 import { useEmployeesQuery } from "../../employees";
-import { usePipelinesQuery } from "../../pipelines";
+import { useWorkflowsQuery } from "../../workflows";
 import { DEPARTMENT_TABS, type DepartmentTab } from "../departmentTabs";
 import { useDepartmentQuery, useDepartmentSubtasksQuery } from "../queries";
 
@@ -53,7 +53,7 @@ export function DepartmentScreen({ departmentId, tab }: DepartmentScreenProps) {
     status: "active",
   });
   const subtasksQuery = useDepartmentSubtasksQuery(departmentId);
-  const pipelinesQuery = usePipelinesQuery();
+  const workflowsQuery = useWorkflowsQuery();
 
   if (departmentQuery.isError) return <QueryError onRetry={() => void departmentQuery.refetch()} />;
   if (departmentQuery.isPending || !departmentQuery.data) return <QueryLoading />;
@@ -62,7 +62,7 @@ export function DepartmentScreen({ departmentId, tab }: DepartmentScreenProps) {
   const employees = employeesQuery.data ?? [];
   const subtasks = subtasksQuery.data ?? [];
   const openSubtasks = subtasks.filter((s) => s.state !== "done").length;
-  const pipelines = (pipelinesQuery.data ?? []).filter((p) => p.department === departmentId);
+  const workflows = (workflowsQuery.data ?? []).filter((p) => p.department === departmentId);
 
   const kpis = [
     { label: t("kpiOpenSubtasks"), value: openSubtasks },
@@ -128,8 +128,8 @@ export function DepartmentScreen({ departmentId, tab }: DepartmentScreenProps) {
           {tab === "subtasks" && (
             <SubtasksTab loading={subtasksQuery.isPending} subtasks={subtasks} />
           )}
-          {tab === "pipelines" && (
-            <PipelinesTab departmentId={departmentId} pipelines={pipelines} />
+          {tab === "workflows" && (
+            <WorkflowsTab departmentId={departmentId} workflows={workflows} />
           )}
           {tab === "skills" && <RegistryLinkTab kind="skills" />}
           {tab === "integrations" && <RegistryLinkTab kind="mcp" />}
@@ -250,33 +250,33 @@ function SubtasksTab({
   );
 }
 
-function PipelinesTab({
+function WorkflowsTab({
   departmentId,
-  pipelines,
+  workflows,
 }: {
   departmentId: string;
-  pipelines: ReturnType<typeof usePipelinesQuery>["data"];
+  workflows: ReturnType<typeof useWorkflowsQuery>["data"];
 }) {
   const t = useTranslations("departmentDetail");
-  const list = pipelines ?? [];
+  const list = workflows ?? [];
   if (list.length === 0) {
     return (
       <EmptyState
-        description={t("pipelines.emptyDescription")}
+        description={t("workflows.emptyDescription")}
         glyph="flow"
-        title={t("pipelines.emptyTitle")}
+        title={t("workflows.emptyTitle")}
       />
     );
   }
   return (
     <Stack gap="150">
       {list.map((p) => (
-        <Link href={`/org/departments/${departmentId}/pipelines/${p.id}`} key={p.id}>
+        <Link href={`/org/departments/${departmentId}/workflows/${p.id}`} key={p.id}>
           <Card interactive radius="sm">
             <Container padding="200">
               <Stack gap="100">
                 <Typography type="labelSm">{p.name}</Typography>
-                <PipelineStepStrip
+                <WorkflowStepStrip
                   phases={p.phases.map((ph) => ({
                     label: ph.agent ?? ph.id ?? "?",
                     state: "idle" as StateTone,

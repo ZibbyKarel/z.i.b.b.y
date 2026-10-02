@@ -102,7 +102,7 @@ above (a re-sync never touches either).
 
 `runs[].outcome` is `"running" | "awaiting-merge" | "done" | "failed"` — a
 tight enum distinct from `RunStatusSchema` (which describes an agent/skill/
-pipeline run in general). It only describes a run record's own point of view
+workflow run in general). It only describes a run record's own point of view
 and deliberately excludes `todo`/`enqueued`/`archived`, which describe the
 **item** before/after a run exists, never a run itself.
 
@@ -506,26 +506,26 @@ release()
             → { kind: "department", id }            # seated by construction
   └─ createTask(…, text, routingText, output, explicitTarget: that department)
        └─ resolveDepartmentTarget → classifyWithinDepartment  # reads routingText + output
-            → a PR-capable pipeline (quick-fix | patch | delivery), never a lone agent
+            → a PR-capable workflow (quick-fix | patch | delivery), never a lone agent
   └─ setRoadmapRef(taskId, item)                   # the reverse edge
   └─ setClassification(taskId, stage-1 trace)      # so RunDetail can still say "why here"
 ```
 
 **Why it changed.** The original Phase-125 decision was `explicitTarget: undefined` —
 "the classifier picks the target". That predates the F2 federation work, and it meant a
-roadmap item was ranked against the FULL catalog of every agent + pipeline. Two
+roadmap item was ranked against the FULL catalog of every agent + workflow. Two
 consequences, both observed: the `roadmap-decomposer` won ordinary roadmap tasks on the
 gate's own footer wording (see [The artifact](#the-artifact)), and every item that did
 route to delivery paid for Architekt → Kodér ⇄ Review → Tester → Dokumentátor whether
 it needed all five phases or not. Routing to the department instead lets dev make the
-pipeline-vs-agent call with its own mandate and `EFFORT_RULE` in the prompt.
+workflow-vs-agent call with its own mandate and `EFFORT_RULE` in the prompt.
 
 **What that change then exposed.** Letting dev choose freely also let it choose a lone
 agent, and for an imported issue that is never right: ~all of them are "implement this →
 PR", and an agent run has no review, no verification and — for most dev agents, which
 carry no `Bash` — no way to build or commit at all. The required-sink constraint makes
 that structural rather than a matter of how a small model reads two descriptions: a `pr`
-sink narrows stage 2 to dev's PR-capable pipelines, so the remaining question is only
+sink narrows stage 2 to dev's PR-capable workflows, so the remaining question is only
 _how big is this_ (`quick-fix` / `patch` / `delivery`). Cheap items still land cheaply —
 `quick-fix` IS the "one implementer agent" rung, with a PR sink attached.
 
@@ -551,7 +551,7 @@ place — it only ever emits a catalog id.
 
 **`DEFAULT_ROADMAP_DEPARTMENT` = `dev`** — the not-confident fallback only. A roadmap
 item is by construction delivery work on a code project, and dev is the only
-department owning both a pipeline and specialist agents. `classifyDepartment` may still
+department owning both a workflow and specialist agents. `classifyDepartment` may still
 pick any other seated department when the text genuinely matches its mandate (a
 research-shaped item → research). If a project ever needs a different default, this is the
 constant to promote to a `RoadmapConfig` field.
@@ -716,7 +716,7 @@ Both require `lifecycle === "failed"` (409 otherwise):
   `runs[]` as history; a new entry is appended once the gate releases it
   again.
 - **`resume`** — reuses `TaskRunsService.resume`, the SAME unified resume
-  machinery the run detail already exposes (Phase 49: a parked pipeline/goal
+  machinery the run detail already exposes (Phase 49: a parked workflow/goal
   resumes in place; an errored/interrupted agent run re-runs with
   `--resume <sessionId>` when one was captured). Updates the item's LAST
   `runs[]` entry in place (new `runRef`, `outcome: "running"`, fresh
@@ -887,7 +887,7 @@ footer (`buildRoadmapTaskText`), which is dense with epic/roadmap wording, so th
 out-scored every real delivery target on the keyword leg. The run then correctly answered
 `[]` (not an epic to decompose), produced neither a PR nor a file, and `reconcileRunning`
 marked the item `failed` with _"Run finished without producing an artifact (no PR or file
-output)."_ — the item never reached a delivery pipeline at all.
+output)."_ — the item never reached a delivery workflow at all.
 
 Its terminal output is a structured artifact — `DecompositionArtifactSchema`
 (`libs/contracts/src/roadmap/decomposition-artifact.schema.ts`), an array (max 200) of
@@ -1070,7 +1070,7 @@ every literal that omits it.
 `ROADMAP_DIR` defaults to `dataDir("roadmap")`, i.e. it follows `ZIBBY_DATA_DIR`.
 Booting the API with `ZIBBY_DATA_DIR` pointed at a **committed** fixture root
 (`apps/api/data-test`) is not read-only: the app seeds `automations/*.json` and
-reserializes the fixture agents/pipelines as YAML on write. Use a throwaway root
+reserializes the fixture agents/workflows as YAML on write. Use a throwaway root
 (`ZIBBY_DATA_DIR=.zibby/data-test`) when you just want a server to poke at, and
 check `git status` afterwards — otherwise fixture churn ends up in your diff.
 

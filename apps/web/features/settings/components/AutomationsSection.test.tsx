@@ -71,7 +71,7 @@ describe("AutomationsSection", () => {
 
   it("renders no description for an unknown target type, without throwing", () => {
     query.automations = [
-      { ...systemAutomation, id: "weird", target: { type: "pipeline", pipelineId: "koder" } },
+      { ...systemAutomation, id: "weird", target: { type: "workflow", workflowId: "koder" } },
     ];
     expect(() => render(<AutomationsSection />)).not.toThrow();
     expect(screen.queryByTestId(SystemAutomationRowTestId.Description)).not.toBeInTheDocument();

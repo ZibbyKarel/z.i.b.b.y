@@ -25,16 +25,16 @@ describe("PinsStore", () => {
     const store = new PinsStore(file);
     await store.write([
       { kind: "agent", id: "researcher" },
-      { kind: "pipeline", id: "delivery" },
+      { kind: "workflow", id: "delivery" },
     ]);
     expect(await store.read()).toEqual([
       { kind: "agent", id: "researcher" },
-      { kind: "pipeline", id: "delivery" },
+      { kind: "workflow", id: "delivery" },
     ]);
     // A fresh store over the same file sees the persisted pins (restart survival).
     expect(await new PinsStore(file).read()).toEqual([
       { kind: "agent", id: "researcher" },
-      { kind: "pipeline", id: "delivery" },
+      { kind: "workflow", id: "delivery" },
     ]);
   });
 
@@ -42,7 +42,7 @@ describe("PinsStore", () => {
     const store = new PinsStore(file);
     await store.write([
       { kind: "agent", id: "researcher" },
-      { kind: "pipeline", id: "research-then-build" },
+      { kind: "workflow", id: "research-then-build" },
       { kind: "agent", id: "researcher" },
     ]);
     const pins = await store.read();

@@ -16,8 +16,8 @@ async function activateMenuItem(id: string) {
 // before the mutation fires. Kept in its own file (not RunDetail.test.tsx) since a
 // concurrent session has unrelated WIP in that file (cost/duration metadata).
 vi.mock("../../approvals/queries", () => ({ useApprovalsQuery: () => ({ data: [] }) }));
-vi.mock("./PipelineStageTimeline", () => ({
-  PipelineStageTimeline: () => <div data-testid="stage-timeline" />,
+vi.mock("./WorkflowStageTimeline", () => ({
+  WorkflowStageTimeline: () => <div data-testid="stage-timeline" />,
 }));
 vi.mock("../../tasks/TaskContext", () => ({
   useNewTask: () => ({ open: vi.fn(), close: vi.fn(), isOpen: false }),
@@ -25,7 +25,7 @@ vi.mock("../../tasks/TaskContext", () => ({
 vi.mock("../queries/useRunArtifactQuery", () => ({
   useRunArtifactQuery: () => ({ data: undefined }),
 }));
-vi.mock("../../pipelines", () => ({ usePipelineRunQuery: () => ({ data: undefined }) }));
+vi.mock("../../workflows", () => ({ useWorkflowRunQuery: () => ({ data: undefined }) }));
 
 const runningRun: RunView = {
   runId: "koder_1",

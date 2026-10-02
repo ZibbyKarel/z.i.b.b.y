@@ -45,7 +45,7 @@ export interface ArchiveDepartmentFilterProps {
  * which need the departments registry's domain-shaped data (hex colours, live
  * run counts) that a generic DS primitive shouldn't carry for one call site. This
  * mirrors the SKILL.md rule ("decide explicitly: DS, or a domain composite") the
- * same way `PipelineOwnerChip`/`DepartmentDrawer` already do for per-department
+ * same way `WorkflowOwnerChip`/`DepartmentDrawer` already do for per-department
  * colour.
  *
  * Every DS piece here IS reused, though: `Card as="button"` for the trigger (bakes

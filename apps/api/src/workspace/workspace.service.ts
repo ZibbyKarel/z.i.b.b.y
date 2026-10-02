@@ -24,7 +24,7 @@ export class WorkspaceSetupError extends Error {
 }
 
 /**
- * Sanitize a free-form slug source (pipeline id / agent id / task title) into the
+ * Sanitize a free-form slug source (workflow id / agent id / task title) into the
  * trailing segment of a `zibby/<runId>-<slug>` branch name: lowercase, only
  * `[a-z0-9-]`, collapsed dash runs, trimmed, capped. Empty input → `run` so the
  * branch is always well-formed. A pure exported helper (unit-tested directly).
@@ -300,13 +300,13 @@ export class WorkspaceService {
    * Open the run's PR: `git push -u origin <branch>` then `gh pr create`, run in
    * `cwd`. This is the outward, Tier-3 action the deleted `pr-autor` agent used to
    * perform — now a system step a `pr` output runs, but ONLY after the operator
-   * approved the gate (`pipeline-output` / `task-output`; the runner never calls this
+   * approved the gate (`workflow-output` / `task-output`; the runner never calls this
    * before approval). The title/body come from the gate's draft.
    *
    * `branch` may be passed explicitly — a task-output gate captures it at terminal and
    * pushes from the REPO dir, because a worktree's commits live in the shared object
    * store and the branch ref outlives `git worktree remove` (commit ≠ push). When
-   * omitted (the pipeline path, `cwd` is the live worktree) it is derived from
+   * omitted (the workflow path, `cwd` is the live worktree) it is derived from
    * `cwd`'s current branch. Returns the PR url on success, null on any failure (a
    * failed open surfaces as a soft error, not a crash — the branch work is committed
    * and safe).
@@ -320,7 +320,7 @@ export class WorkspaceService {
     cwd: string;
     branch?: string;
     title: string;
-    /** PR body source: a file (`--body-file`, the pipeline path) or an inline string. */
+    /** PR body source: a file (`--body-file`, the workflow path) or an inline string. */
     bodyFile?: string;
     body?: string;
     draft?: boolean;

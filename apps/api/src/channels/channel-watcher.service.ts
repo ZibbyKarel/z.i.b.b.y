@@ -197,7 +197,7 @@ export class ChannelWatcherService
    * class reference itself is fetched via a lazy `await import(...)` too, so
    * this file never eagerly `require`s the review-learning module chain at
    * load time (mirrors the `import type` + lazy-value-import split
-   * `pipeline-runner.service.ts` uses for the same reason).
+   * `workflow-runner.service.ts` uses for the same reason).
    *
    * Fail-open: ANY failure here — the locator throws, the provider isn't up
    * yet, the project genuinely has no PRs — returns an empty array rather than

@@ -11,7 +11,7 @@ import { DepartmentIdSchema } from "../departments/department.schema";
  */
 export const ApprovalRunKindSchema = z.enum([
   "agent",
-  "pipeline-stage",
+  "workflow-stage",
   "channel",
   "task",
   // Phase 10.3 (producer removed in NS2 F0a — discovery module deleted, scanner
@@ -19,16 +19,16 @@ export const ApprovalRunKindSchema = z.enum([
   // `proposed-task` approval re-parses on read but is now unresolvable (no
   // handler dispatches it) — a logged no-op if one is ever approved/rejected.
   "proposed-task",
-  // A pipeline-level `pr` output sink awaiting sign-off before it opens the PR.
-  // The runId is the pipelineRunId itself (no live child — the chain already
+  // A workflow-level `pr` output sink awaiting sign-off before it opens the PR.
+  // The runId is the workflowRunId itself (no live child — the chain already
   // finished); approving it runs the gated push, rejecting it leaves the branch
   // work without a PR. Structural "PR is the gate", system-owned, no agent.
-  "pipeline-output",
-  // P1-02/P1-03: a pipeline run parked at a phase boundary — a phase's
+  "workflow-output",
+  // P1-02/P1-03: a workflow run parked at a phase boundary — a phase's
   // `approval: ask` checkpoint (action `stage-approval`) or its spend cap
-  // (action `spend-past-cap`). The runId is the pipelineRunId (no live child);
+  // (action `spend-past-cap`). The runId is the workflowRunId (no live child);
   // approving continues the run, rejecting fails it.
-  "pipeline-gate",
+  "workflow-gate",
   // The directed-task counterpart: a task whose chosen `pr` output is waiting to
   // open the PR from the finished agent/orchestrator run's branch. The runId is the
   // taskId (the durable ScheduledTask record holds the gate state — no live child);
@@ -112,7 +112,7 @@ export const ApprovalSchema = z.object({
   decidedAt: IsoDateTimeSchema.optional(),
   /**
    * NS2 F3c — the owning department of the ACTING unit that raised this approval
-   * (the pipeline's / agent's `department`), stamped at request time by the
+   * (the workflow's / agent's `department`), stamped at request time by the
    * run-path callers only. Optional and additive: system-owned gates with no
    * acting unit (machine, jira-issue, channel, budget-task, agent-proposal)
    * never invent an owner, and every pre-existing approval re-parses untouched.

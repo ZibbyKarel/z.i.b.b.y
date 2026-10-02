@@ -3,12 +3,12 @@ import { AgentIdSchema, AgentModelSchema, AgentThinkingSchema } from "../agents/
 import { ProjectBudgetSchema } from "../projects/project.schema";
 
 /**
- * The maker a goal iterates: an existing stored agent OR pipeline, dispatched
+ * The maker a goal iterates: an existing stored agent OR workflow, dispatched
  * through the same runner seam everything else uses (Phase 10 is thin glue — the
- * maker is NOT a new run kind). `id` is the agent/pipeline definition id.
+ * maker is NOT a new run kind). `id` is the agent/workflow definition id.
  */
 export const MakerRefSchema = z.object({
-  kind: z.enum(["agent", "pipeline"]),
+  kind: z.enum(["agent", "workflow"]),
   id: AgentIdSchema,
 });
 export type MakerRef = z.infer<typeof MakerRefSchema>;
@@ -21,7 +21,7 @@ export type MakerRef = z.infer<typeof MakerRefSchema>;
  *   GOALS the runner refuses to fall through to the full-repo `DEFAULT_VERIFY_CHECKS`
  *   and to run with cwd inside the repo — a `checks` verifier with neither commands
  *   nor a project's checks (or no worktree/project to run in) parks the goal with
- *   `verifier-scope` (Phase 12.1/12.2). The pipeline verify stage is unaffected.
+ *   `verifier-scope` (Phase 12.1/12.2). The workflow verify stage is unaffected.
  * - `claude`: a fresh agent run on its own (cheaper) model, handed the maker's
  *   diff/output, that returns a verdict. A separate spawn with no shared session
  *   (no session resume exists — decision 8).
@@ -62,8 +62,8 @@ const GoalObject = z.object({
 /**
  * A goal definition — the outer loop's recipe — stored as a `.goal.md` file
  * (frontmatter carries `maker`/`verifier`/`maxIterations`/`budget`, the Markdown
- * body is `instructions`). A parallel to a pipeline definition, not a new dispatch
- * path: the maker it names is an existing agent or pipeline.
+ * body is `instructions`). A parallel to a workflow definition, not a new dispatch
+ * path: the maker it names is an existing agent or workflow.
  */
 export const GoalSchema = GoalObject;
 export type Goal = z.infer<typeof GoalSchema>;

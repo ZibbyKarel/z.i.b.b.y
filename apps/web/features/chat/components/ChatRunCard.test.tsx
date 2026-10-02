@@ -5,18 +5,18 @@ import type { RunView } from "../../runs/run";
 import { ChatRunCard, ChatRunCardTestId } from "./ChatRunCard";
 
 // The card reads the same unified aggregate the runs screen does; stub it so each
-// test controls exactly what shape (agent/pipeline) comes back.
-const { pipelineRunMock } = vi.hoisted(() => ({
-  pipelineRunMock: vi.fn((_runRef: string | null) => ({ data: undefined as RunView | undefined })),
+// test controls exactly what shape (agent/workflow) comes back.
+const { workflowRunMock } = vi.hoisted(() => ({
+  workflowRunMock: vi.fn((_runRef: string | null) => ({ data: undefined as RunView | undefined })),
 }));
-vi.mock("../../pipelines", () => ({ usePipelineRunQuery: pipelineRunMock }));
+vi.mock("../../workflows", () => ({ useWorkflowRunQuery: workflowRunMock }));
 
 // The expanded detail delegates to the runs screen's own timeline/steps
 // components — both are unit-tested separately, so stub them here and assert only
 // that ChatRunCard picks the right one with the right props.
-vi.mock("../../runs/components/PipelineStageTimeline", () => ({
-  PipelineStageTimeline: (p: { pipelineRunId: string; owner: string }) => (
-    <div data-testid="stage-timeline">{`${p.pipelineRunId}:${p.owner}`}</div>
+vi.mock("../../runs/components/WorkflowStageTimeline", () => ({
+  WorkflowStageTimeline: (p: { workflowRunId: string; owner: string }) => (
+    <div data-testid="stage-timeline">{`${p.workflowRunId}:${p.owner}`}</div>
   ),
 }));
 
@@ -35,18 +35,18 @@ const baseRun: RunView = {
 
 describe("ChatRunCard (14.3)", () => {
   beforeEach(() => {
-    pipelineRunMock.mockReset();
+    workflowRunMock.mockReset();
   });
 
   it("shows a compact loading row while the run aggregate hasn't arrived yet", () => {
-    pipelineRunMock.mockReturnValue({ data: undefined });
+    workflowRunMock.mockReturnValue({ data: undefined });
     render(<ChatRunCard runRef="delivery_1" />);
     expect(screen.getByTestId(ChatRunCardTestId.Loading)).toBeInTheDocument();
     expect(screen.queryByTestId(ChatRunCardTestId.Header)).not.toBeInTheDocument();
   });
 
   it("renders collapsed by default: state badge + link, no detail", () => {
-    pipelineRunMock.mockReturnValue({ data: baseRun });
+    workflowRunMock.mockReturnValue({ data: baseRun });
     render(<ChatRunCard runRef="delivery_1" />);
     expect(screen.getByTestId(ChatRunCardTestId.Header)).toHaveTextContent("běží");
     expect(screen.getByTestId(ChatRunCardTestId.Link)).toHaveAttribute(
@@ -57,17 +57,17 @@ describe("ChatRunCard (14.3)", () => {
   });
 
   it("an agent run (no stages/steps) shows no progress caption and no detail on expand", async () => {
-    pipelineRunMock.mockReturnValue({ data: baseRun });
+    workflowRunMock.mockReturnValue({ data: baseRun });
     const user = userEvent.setup();
     render(<ChatRunCard runRef="delivery_1" />);
     await user.click(screen.getByTestId(ChatRunCardTestId.Toggle));
     expect(screen.queryByTestId(ChatRunCardTestId.Detail)).not.toBeInTheDocument();
   });
 
-  it("a pipeline run shows the current stage + done/total progress, and expands into the stage timeline", async () => {
+  it("a workflow run shows the current stage + done/total progress, and expands into the stage timeline", async () => {
     const run: RunView = {
       ...baseRun,
-      kind: "pipeline",
+      kind: "workflow",
       owner: "delivery",
       currentStage: "verify",
       stageRuns: [
@@ -75,7 +75,7 @@ describe("ChatRunCard (14.3)", () => {
         { phaseId: "verify", runId: "delivery_1.verify_1", attempt: 1, status: "running" },
       ],
     };
-    pipelineRunMock.mockReturnValue({ data: run });
+    workflowRunMock.mockReturnValue({ data: run });
     const user = userEvent.setup();
     render(<ChatRunCard runRef="delivery_1" />);
 
@@ -88,10 +88,10 @@ describe("ChatRunCard (14.3)", () => {
   });
 
   it("clicking the run link does not expand the card (stopPropagation)", async () => {
-    pipelineRunMock.mockReturnValue({
+    workflowRunMock.mockReturnValue({
       data: {
         ...baseRun,
-        kind: "pipeline",
+        kind: "workflow",
         owner: "delivery",
         stageRuns: [{ phaseId: "build", runId: "delivery_1.build_1", attempt: 1, status: "done" }],
       },
@@ -103,11 +103,11 @@ describe("ChatRunCard (14.3)", () => {
   });
 
   it("renders the routing target's identity chip in the header when one is given", () => {
-    pipelineRunMock.mockReturnValue({ data: baseRun });
+    workflowRunMock.mockReturnValue({ data: baseRun });
     render(
       <ChatRunCard
         runRef="delivery_1"
-        target={{ kind: "pipeline", id: "delivery", name: "Delivery", glyph: "flow" }}
+        target={{ kind: "workflow", id: "delivery", name: "Delivery", glyph: "flow" }}
       />,
     );
     expect(screen.getByTestId(ChatRunCardTestId.Header)).toHaveTextContent("Delivery");

@@ -63,9 +63,9 @@ manual `trigger` path.
 ### Target
 
 ```typescript
-interface PipelineTarget {
-  type: "pipeline";
-  pipelineId: string;
+interface WorkflowTarget {
+  type: "workflow";
+  workflowId: string;
 }
 
 interface AgentTarget {
@@ -107,7 +107,7 @@ interface ReviewLearnTarget {
 interface PromptAutomationTarget {
   type: "task";
   text: string; // the typed prompt — forwarded as the task's free-text
-  target?: RunTarget; // optional @-mentioned run target (agent/pipeline/department/goal/…);
+  target?: RunTarget; // optional @-mentioned run target (agent/workflow/department/goal/…);
   // absent = the task classifier/orchestrator-fallback decides at fire time
   attachmentSetId?: string; // uploaded files (a tasks attachment-set id)
   output?: TaskOutput; // chosen terminal output (pr / file / void)
@@ -116,16 +116,16 @@ interface PromptAutomationTarget {
 ```
 
 `RunTarget` here is `TaskTarget` from `libs/contracts/src/tasks/task.schema.ts` (the
-same discriminated union a New Task uses: `agent` / `pipeline` / `goal` /
+same discriminated union a New Task uses: `agent` / `workflow` / `goal` /
 `department` / `orchestrator`); `TaskOutput` is that same file's terminal-output
 schema (`pr` / `file` / `void`).
 
 > Phase 116a retired the `discovery`, `research-digest` and `app-ideas` targets —
 > that work is now an ordinary prompt automation targeting the `code-audit` or
-> `research` pipeline directly, rather than dedicated system machinery.
+> `research` workflow directly, rather than dedicated system machinery.
 
 > Phase 116b added the `task` target — the general "prompt automation" shape.
-> On fire it dispatches through the EXISTING task pipeline
+> On fire it dispatches through the EXISTING task workflow
 > (`TaskSchedulerService.createTask`), reusing classification, the orchestrator
 > fallback, project attribution, the budget/limit/concurrency guard, the
 > approval gate, attachment feeding and `toolGrants` — exactly like a task
@@ -133,7 +133,7 @@ schema (`pr` / `file` / `void`).
 > present it bypasses classification (an explicit override); when absent the
 > classifier/orchestrator-fallback picks a destination at fire time. As with an
 > ordinary task, attachments only flow to an agent/orchestrator/goal
-> destination — a pipeline/department target carries neither (a
+> destination — a workflow/department target carries neither (a
 > pre-existing runner gap, not new to automations). An attachment set
 > referenced by a `task`-target automation is exempted from the tasks
 > attachment-sweep's 24h TTL (it never becomes a `ScheduledTask` — and thus
@@ -142,8 +142,8 @@ schema (`pr` / `file` / `void`).
 
 `prompt` is a top-level, optional field (not per-target): free-text steering
 forwarded to whatever the automation runs — the agent's prompt, the research
-focus, the briefing voice, or (Phase 116b) the legacy `pipeline` target's
-first-phase input (`PipelineRunnerService.start`'s `input` param). A `task`
+focus, the briefing voice, or (Phase 116b) the legacy `workflow` target's
+first-phase input (`WorkflowRunnerService.start`'s `input` param). A `task`
 target ignores the top-level `prompt` — its own `text` field is the prompt.
 
 ## SchedulerService
@@ -166,7 +166,7 @@ when the config changes.
    - Event: fired only via the manual `trigger` path today (no event bus yet).
    - Signal: never due on a tick — fired only by the [signal bus](#signal-bus).
 3. When due, dispatches the target:
-   - `pipeline` → `PipelineRunnerService.start(pipelineId, …, input: prompt)`
+   - `workflow` → `WorkflowRunnerService.start(workflowId, …, input: prompt)`
    - `agent` → `AgentRunnerService.start(...)`
    - `briefing` → `BriefingService.generate(...)`
    - `memory-distill` → `MemoryDistillerService.distill()`
@@ -246,7 +246,7 @@ way grounding writes context _in_).
 
 `MemoryDistillerService.distill()` (`apps/api/src/memory/memory-distiller.service.ts`):
 
-1. Walks terminal pipeline/agent/goal runs that haven't been distilled yet
+1. Walks terminal workflow/agent/goal runs that haven't been distilled yet
    (a `memory-distilled.json` marker in the run's `cwd`; capped at
    `MAX_RUNS_PER_PASS` per pass — the remainder rolls to the next night, nothing
    is lost);
@@ -288,7 +288,7 @@ running it unattended safe.
 | Security                 | `cve`, `secret`     | `sec` |
 | Arch                     | `audit-batch`       | `qa`  |
 | Release post-merge watch | `post-merge-red`    | `rel` |
-| Pipeline runner          | `research-artifact` | `rnd` |
+| Workflow runner          | `research-artifact` | `rnd` |
 
 `emit` finds enabled automations with a matching `signal` trigger (kind exact or
 `*`, `from`, `minSeverity` against `SIGNAL_SEVERITY_ORDER`), then per match:
@@ -331,8 +331,8 @@ trigger:
   type: cron
   expr: "0 9 * * 1" # every Monday at 09:00
 target:
-  type: pipeline
-  pipelineId: status-report
+  type: workflow
+  workflowId: status-report
 prompt: "Generate the weekly status report for the past week."
 
 # Review a PR after a push
@@ -348,7 +348,7 @@ target:
 prompt: "Review the latest push and add comments to the PR."
 
 # Prompt automation (Phase 116b): a full task spec, dispatched through the
-# normal task pipeline — classification decides the destination since no
+# normal task workflow — classification decides the destination since no
 # explicit `target` is given.
 id: nightly-audit
 name: Nightly dependency audit

@@ -6,7 +6,7 @@ import { SignalBusService } from "./signal-bus.service";
 import { SIGNAL_BUS_DIR, SignalBusStore } from "./signal-bus.store";
 
 /**
- * The signal bus — a leaf module the producers (Security/Arch/Release/Pipelines)
+ * The signal bus — a leaf module the producers (Security/Arch/Release/Workflows)
  * import to `emit` a signal. It reads automations through its own
  * `AutomationsStorageService` instance (same read-through file store `MemoryModule`
  * already mirrors) rather than importing `AutomationsModule`, which imports the

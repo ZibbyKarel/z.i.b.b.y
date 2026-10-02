@@ -114,7 +114,7 @@ export type RoadmapItemLifecycle = z.infer<typeof RoadmapItemLifecycleSchema>;
 
 /**
  * One run's outcome as recorded on the item, distinct from `RunStatusSchema`
- * (which describes an agent/skill/pipeline run in general). Kept intentionally
+ * (which describes an agent/skill/workflow run in general). Kept intentionally
  * tight — only the four states a roadmap run can actually be in from the
  * item's point of view: `running` (the task the gate created hasn't finished
  * yet), `awaiting-merge` (it finished and produced a PR artifact, not yet
@@ -127,7 +127,7 @@ export const RoadmapRunOutcomeSchema = z.enum(["running", "awaiting-merge", "don
 export type RoadmapRunOutcome = z.infer<typeof RoadmapRunOutcomeSchema>;
 
 /**
- * One dispatch of a roadmap item to the task pipeline (Phase 125e writes
+ * One dispatch of a roadmap item to the task workflow (Phase 125e writes
  * these; the shape lands now per D-005). `runRef` is the run id once the task
  * starts running (a `ScheduledTask` may be created before its run exists);
  * `prNumber`/`prUrl` are set once the terminal PR artifact lands;

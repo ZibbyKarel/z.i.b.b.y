@@ -45,9 +45,9 @@ backend/vault/integrations/scheduler). Never touch or reuse it for this resource
 | Store        | `apps/api/src/departments/departments.storage.service.ts`                  | `DepartmentsStorageService` — one `.zibby/data/departments/<id>.json` per department + `_divisions.json`; seed-once; `exists()` / `firstMissing()` / `assertExists()` write-boundary guards                                                                                             |
 | Errors       | `apps/api/src/departments/departments.errors.ts`                           | `DepartmentNotFoundError`, `DepartmentConflictError` (409), `InvalidDepartmentIdError`, `UnknownDivisionError` (422), and the `unknownDepartment422()` helper write boundaries return                                                                                                   |
 | Seen store   | `apps/api/src/departments/department-seen.store.ts`                        | `DepartmentSeenStore` — `.zibby/data/department-seen.json`, `{ [id]: IsoDateTime }`, missing file/key = epoch, atomic writes                                                                                                                                                            |
-| Service      | `apps/api/src/departments/departments.service.ts`                          | `DepartmentsService.list()` / `.get(id)` / `.markSeen(id)` — real aggregation over pipelines/agents/runs/approvals (phase 82; agents added in 126g)                                                                                                                                     |
+| Service      | `apps/api/src/departments/departments.service.ts`                          | `DepartmentsService.list()` / `.get(id)` / `.markSeen(id)` — real aggregation over workflows/agents/runs/approvals (phase 82; agents added in 126g)                                                                                                                                     |
 | Controller   | `apps/api/src/departments/departments.controller.ts`                       | implements `departmentsContract` via the shared `makeErrorMapper` 404 pattern                                                                                                                                                                                                           |
-| Module       | `apps/api/src/departments/departments.module.ts`                           | imports `PipelinesModule`, `ApprovalsModule`, `TasksModule` (for `TaskRunsService`), `AgentsModule`, `IntegrationsModule`, and `MandateModule` (the roster's derived integration set reads the mandate) — registered in `app.module.ts`                                                 |
+| Module       | `apps/api/src/departments/departments.module.ts`                           | imports `WorkflowsModule`, `ApprovalsModule`, `TasksModule` (for `TaskRunsService`), `AgentsModule`, `IntegrationsModule`, and `MandateModule` (the roster's derived integration set reads the mandate) — registered in `app.module.ts`                                                 |
 | Web query    | `apps/web/features/departments/queries/useDepartmentsQuery.ts`             | `refetchInterval` ~15s, `select: selectApiResponseBody`, same posture as `useHealthQuery`/`useSelfStatusQuery`                                                                                                                                                                          |
 | Web mutation | `apps/web/features/departments/mutations/useMarkDepartmentSeenMutation.ts` | `makeInvalidatingMutation` over `markDepartmentSeen`, invalidates the departments query key — called when the operator opens a department's drawer (phase 84)                                                                                                                           |
 
@@ -89,7 +89,7 @@ its own. D-022 added two departments to the seed: `pub` (Publishing) and `dist`
 (Distribution), both in the Business Operations division.
 
 **Existence checks replace the enum.** The write boundaries that name a department
-— pipeline create/update, agent create, hiring/transfer (employees), and the gate-rule
+— workflow create/update, agent create, hiring/transfer (employees), and the gate-rule
 writes — check the store: an unknown department is a **422**
 `Unknown department "<id>"` (`unknownDepartment422`), not a schema error.
 (`PATCH /api/agents/:id` does not check yet: its contract declares no 422.)
@@ -116,30 +116,30 @@ not a tweak.
 `DepartmentWithStatusSchema` extends the identity schema with
 `{ state, tier2Count, tier3Count, errorCount }`, where `DepartmentStateSchema` is
 `"idle" | "running" | "report" | "waiting" | "error"`. `DepartmentsService`
-computes this per department, read-only over the pipelines store
+computes this per department, read-only over the workflows store
 (`department`, phase 81), the **agents** store (same field — phase 126g), the
 unified task-runs feed (`TaskRunsService.listTaskRuns()`), and `ApprovalsService`
 — it duplicates no run/approval semantics, only reads and correlates:
 
-- **`running`** — an owned pipeline **or an owned agent** has a currently-`running`
+- **`running`** — an owned workflow **or an owned agent** has a currently-`running`
   run. Agent-kind runs were excluded until phase 126g, which is why a department
   could look idle while its agent was mid-run; roughly half of dispatched runs are
   agent-kind, so this was the common case, not an edge one.
 - **`waiting`** (+ `tier3Count`) — pending approvals attributable to an owned
-  **pipeline** run. This half stays pipeline-only: attribution mirrors the web's
+  **workflow** run. This half stays workflow-only: attribution mirrors the web's
   `approvalForRun` (`apps/web/features/runs/run.ts`), whose two matchable kinds
-  (`pipeline-output`, `pipeline-stage`) are both pipeline-shaped — a
-  `pipeline-output` approval's `runId` IS the pipeline run id (exact match); a
-  `pipeline-stage` approval's `runId` is the STAGE run id, prefixed with the
-  pipeline run id (`${pipelineRunId}.${phaseId}_…`, prefix match). Every other
+  (`workflow-output`, `workflow-stage`) are both workflow-shaped — a
+  `workflow-output` approval's `runId` IS the workflow run id (exact match); a
+  `workflow-stage` approval's `runId` is the STAGE run id, prefixed with the
+  workflow run id (`${workflowRunId}.${phaseId}_…`, prefix match). Every other
   approval kind (`agent`, `channel`, `task`, `proposed-task`, `task-output`,
-  `jira-issue`, `machine`, `agent-proposal`) has no pipeline to attribute through
+  `jira-issue`, `machine`, `agent-proposal`) has no workflow to attribute through
   and is silently excluded — the global approvals surface still shows it; this is
   a lens, not the source of truth.
-- **`report`** (+ `tier2Count`) / **`error`** (+ `errorCount`) — owned pipeline
+- **`report`** (+ `tier2Count`) / **`error`** (+ `errorCount`) — owned workflow
   **or agent** runs that went terminal after the department's `lastSeenAt`
   (`DepartmentSeenStore`), split by outcome: `done` counts toward `tier2Count`,
-  `error` toward `errorCount`, never both. `PipelineRun` carries no completion
+  `error` toward `errorCount`, never both. `WorkflowRun` carries no completion
   timestamp of its own, so this reads the best available signal: the backing
   task's `taskOutcomeFinishedAt` when the run was dispatched from one, else the
   run's own `startedAt`.
@@ -158,24 +158,24 @@ nothing else. It now decides **whether a unit can be dispatched at all.**
 
 The task classifier's stage 1 routes only to departments ("whose domain is this?"),
 and a department's stage-2 catalog offers only units it owns. So an agent or
-pipeline with no owner is **unroutable by construction** — no catalog contains it
+workflow with no owner is **unroutable by construction** — no catalog contains it
 and the classifier can emit nothing else. Ownership stopped being metadata and
 became the wiring.
 
 Two consequences worth knowing:
 
 - **Both create endpoints 422 without an owner** (`POST /api/agents`,
-  `POST /api/pipelines`). The field stays `.optional()` in the schemas so that a
+  `POST /api/workflows`). The field stays `.optional()` in the schemas so that a
   file which somehow lost its owner is still _readable_ and therefore reportable
   via `GET /api/departments/unowned` — a required field would make it vanish
   silently from a tolerant listing instead.
 - **Only seated departments appear in the stage-1 catalog.** A department owning
-  zero pipelines and zero active agents is excluded, because offering it invites a
+  zero workflows and zero active agents is excluded, because offering it invites a
   verdict that immediately unwinds at stage 2's empty-roster check. **incident** and
   **ledger** are unseated _by design_ — incident IS the Tier-3 surface-and-wait
   contract rather than a work-doer, and ledger is a budget/limits service — so no
   free-text task is ever "for incident". The other nine each carry a crew and a
-  complexity ladder (see `docs/api/pipelines.md` → _the ladder rung_).
+  complexity ladder (see `docs/api/workflows.md` → _the ladder rung_).
 
 ## Roster is an employee fact, not a stored agent tag (D-015, ZE-01)
 
@@ -192,15 +192,15 @@ through who's hired where. See `docs/api/employees.md` for the full model
 The task classifier's stage-1 seating (`stage1DepartmentCandidates`, used by
 both `classify()`'s full catalog and `classifyDepartment()` for the roadmap
 gate — see [tasks.md](./tasks.md) → _Classification_) follows the same rule:
-a department is a routable stage-1 candidate when it owns ≥1 pipeline
-(`Pipeline.department`) **or** has ≥1 active employee, never from
+a department is a routable stage-1 candidate when it owns ≥1 workflow
+(`Workflow.department`) **or** has ≥1 active employee, never from
 `Agent.department` directly.
 
 **One deliberate, scoped gap:** `aggregateAll()` (the `running`/`report`/
 `error` aggregation behind `list()`/`get()`'s headline `state`, described
 below) still attributes an **agent-kind run** to a department via the raw
 `Agent.department` field — left alone as out-of-scope for this phase.
-Pipeline-kind run attribution (via `Pipeline.department`) is unaffected.
+Workflow-kind run attribution (via `Workflow.department`) is unaffected.
 
 ## Roster (`GET /api/departments/:id/roster`)
 
@@ -217,7 +217,7 @@ carry no owner tag:
 
 `monitors` is the subset of that set that are GitHub integrations with a `ci`
 stream (there is no standalone monitor entity). `listUnowned()`
-(`GET /api/departments/unowned`) reports only unowned pipelines/agents — never
+(`GET /api/departments/unowned`) reports only unowned workflows/agents — never
 integrations, whose membership is derived and so can never be "missing".
 
 ## Seen-state (`DepartmentSeenStore`)

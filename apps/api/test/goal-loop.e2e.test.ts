@@ -54,8 +54,8 @@ describe.skip("Goal loop API (e2e, demo maker)", () => {
   let app: INestApplication;
   let goalsDir: string;
   let goalRunsDir: string;
-  let pipelinesDir: string;
-  let pipelineRunsDir: string;
+  let workflowsDir: string;
+  let workflowRunsDir: string;
   let projectsDir: string;
   let tasksDir: string;
   let vaultDir: string;
@@ -70,7 +70,7 @@ describe.skip("Goal loop API (e2e, demo maker)", () => {
       .send({
         id,
         objective: `Satisfy ${id}`,
-        maker: { kind: "pipeline", id: "delivery" },
+        maker: { kind: "workflow", id: "delivery" },
         verifier: { kind: "checks", commands: [`node ${COUNTING_CHECK} ${marker} ${failTimes}`] },
         maxIterations,
         instructions: "Iterate until the check passes.",
@@ -118,8 +118,8 @@ describe.skip("Goal loop API (e2e, demo maker)", () => {
     writeSystemConfig({ goalAutoResume: autoResume });
     process.env.GOALS_DIR = goalsDir;
     process.env.GOAL_RUNS_DIR = goalRunsDir;
-    process.env.PIPELINES_DIR = pipelinesDir;
-    process.env.PIPELINE_RUNS_DIR = pipelineRunsDir;
+    process.env.WORKFLOWS_DIR = workflowsDir;
+    process.env.WORKFLOW_RUNS_DIR = workflowRunsDir;
     process.env.PROJECTS_DIR = projectsDir;
     process.env.TASKS_DIR = tasksDir;
     process.env.VAULT_DIR = vaultDir;
@@ -135,8 +135,8 @@ describe.skip("Goal loop API (e2e, demo maker)", () => {
   beforeAll(async () => {
     goalsDir = await fs.mkdtemp(path.join(os.tmpdir(), "goals-e2e-"));
     goalRunsDir = await fs.mkdtemp(path.join(os.tmpdir(), "goal-runs-e2e-"));
-    pipelinesDir = await fs.mkdtemp(path.join(os.tmpdir(), "goal-pipelines-e2e-"));
-    pipelineRunsDir = await fs.mkdtemp(path.join(os.tmpdir(), "goal-pipeline-runs-e2e-"));
+    workflowsDir = await fs.mkdtemp(path.join(os.tmpdir(), "goal-workflows-e2e-"));
+    workflowRunsDir = await fs.mkdtemp(path.join(os.tmpdir(), "goal-workflow-runs-e2e-"));
     projectsDir = await fs.mkdtemp(path.join(os.tmpdir(), "goal-projects-e2e-"));
     tasksDir = await fs.mkdtemp(path.join(os.tmpdir(), "goal-tasks-e2e-"));
     vaultDir = await fs.mkdtemp(path.join(os.tmpdir(), "goal-vault-e2e-"));
@@ -150,7 +150,7 @@ describe.skip("Goal loop API (e2e, demo maker)", () => {
       .send({ id: "proj", name: "proj", path: projectPath })
       .expect(201);
     await request(app.getHttpServer())
-      .post("/api/pipelines")
+      .post("/api/workflows")
       .send({
         id: "delivery",
         phases: [agentPhase("build")],
@@ -165,8 +165,8 @@ describe.skip("Goal loop API (e2e, demo maker)", () => {
     for (const d of [
       goalsDir,
       goalRunsDir,
-      pipelinesDir,
-      pipelineRunsDir,
+      workflowsDir,
+      workflowRunsDir,
       projectsDir,
       tasksDir,
       vaultDir,
@@ -178,8 +178,8 @@ describe.skip("Goal loop API (e2e, demo maker)", () => {
     for (const k of [
       "GOALS_DIR",
       "GOAL_RUNS_DIR",
-      "PIPELINES_DIR",
-      "PIPELINE_RUNS_DIR",
+      "WORKFLOWS_DIR",
+      "WORKFLOW_RUNS_DIR",
       "PROJECTS_DIR",
       "TASKS_DIR",
       "VAULT_DIR",
@@ -251,7 +251,7 @@ describe.skip("Goal loop API (e2e, demo maker)", () => {
       .send({
         id: "noscope",
         objective: "Satisfy noscope",
-        maker: { kind: "pipeline", id: "delivery" },
+        maker: { kind: "workflow", id: "delivery" },
         verifier: { kind: "checks" },
         maxIterations: 3,
         instructions: "Should never run — no verifier scope.",
@@ -275,7 +275,7 @@ describe.skip("Goal loop API (e2e, demo maker)", () => {
       .send({
         id: "nocwd",
         objective: "Satisfy nocwd",
-        maker: { kind: "pipeline", id: "delivery" },
+        maker: { kind: "workflow", id: "delivery" },
         verifier: { kind: "checks", commands: ["true"] },
         maxIterations: 3,
         instructions: "Scoped, but nowhere safe to run.",
@@ -301,7 +301,7 @@ describe.skip("Goal loop API (e2e, demo maker)", () => {
       .send({
         id: "budgeted",
         objective: "Satisfy budgeted",
-        maker: { kind: "pipeline", id: "delivery" },
+        maker: { kind: "workflow", id: "delivery" },
         verifier: { kind: "checks", commands: [`node ${COUNTING_CHECK} ${marker} 9`] },
         maxIterations: 5,
         budget: { dailyRuns: 1 },
@@ -340,7 +340,7 @@ describe.skip("Goal loop API (e2e, demo maker)", () => {
       .send({
         id: "selfdev",
         objective: "Improve the subject repo",
-        maker: { kind: "pipeline", id: "delivery" },
+        maker: { kind: "workflow", id: "delivery" },
         verifier: { kind: "checks" }, // no commands → scoped to subject.checks = ["true"]
         maxIterations: 2,
         instructions: "iterate",
@@ -415,8 +415,8 @@ describe.skip("Goal loop API (e2e, demo maker)", () => {
     expect(["done", "error"]).toContain(outcome?.status);
   });
 
-  it("skips the goal verifier when the pipeline maker already passed an equivalent verify phase (12.6)", async () => {
-    // A project whose checks trivially pass; a pipeline maker = agent → verify(project
+  it("skips the goal verifier when the workflow maker already passed an equivalent verify phase (12.6)", async () => {
+    // A project whose checks trivially pass; a workflow maker = agent → verify(project
     // checks); a goal whose checks verifier (no commands) would run the SAME checks.
     const vproj = await fs.mkdtemp(path.join(os.tmpdir(), "goal-vproj-"));
     await initGitRepo(vproj);
@@ -425,7 +425,7 @@ describe.skip("Goal loop API (e2e, demo maker)", () => {
       .send({ id: "vproj", name: "vproj", path: vproj, checks: ["true"] })
       .expect(201);
     await request(app.getHttpServer())
-      .post("/api/pipelines")
+      .post("/api/workflows")
       .send({
         id: "vpipe",
         phases: [agentPhase("build"), { id: "v", type: "verify" }],
@@ -438,7 +438,7 @@ describe.skip("Goal loop API (e2e, demo maker)", () => {
       .send({
         id: "doubleverify",
         objective: "Satisfy doubleverify",
-        maker: { kind: "pipeline", id: "vpipe" },
+        maker: { kind: "workflow", id: "vpipe" },
         verifier: { kind: "checks" }, // no commands → resolves to vproj.checks = ["true"]
         maxIterations: 2,
         instructions: "iterate",
@@ -456,7 +456,7 @@ describe.skip("Goal loop API (e2e, demo maker)", () => {
     expect(final.iterations[0]!.verifier.output).toMatch(/skipped a redundant re-run/);
 
     await fs.rm(vproj, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
-  }, 90_000); // (13.5) real pipeline dispatch under CI's contended runners can clear the default test timeout
+  }, 90_000); // (13.5) real workflow dispatch under CI's contended runners can clear the default test timeout
 
   it("default boot gate (Law 3): restart parks the goal awaiting-resume — no auto-dispatch", async () => {
     // A looping goal (fails 5×, 10 iterations) is reliably still running when we kill

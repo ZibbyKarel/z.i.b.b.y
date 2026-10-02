@@ -7,9 +7,9 @@ const c = initContract();
 
 /**
  * Artifacts (N2a): READ-ONLY access to the durable artifact registry. Records are
- * born only inside the API process — the pipeline delivery sinks write one at
+ * born only inside the API process — the workflow delivery sinks write one at
  * delivery time — so a client can never fake provenance. The N2 chain primitive
- * and the run/pipeline detail surfaces read through this route.
+ * and the run/workflow detail surfaces read through this route.
  */
 export const artifactsContract = c.router(
   {

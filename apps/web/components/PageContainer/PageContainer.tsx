@@ -8,7 +8,7 @@ export interface PageContainerProps {
 
 /**
  * Centered, max-width page column shared by the single-column dashboard screens
- * (skills, integrations, agents, the pipelines empty state). Replaces the
+ * (skills, integrations, agents, the workflows empty state). Replaces the
  * repeated `<Container maxWidth="1400px" style={{ marginInline: "auto" }}>`.
  */
 export function PageContainer({ stretch, children }: PageContainerProps) {

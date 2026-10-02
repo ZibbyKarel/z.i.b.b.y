@@ -1,0 +1,32 @@
+import { expect, test } from "@playwright/test";
+
+/**
+ * Throughline: open the seeded workflow and enter its inline editor. Editing is now
+ * in place on the detail page (the old "Edit workflow" modal was removed) — clicking
+ * "Edit" swaps the read-only phase-chain canvas for the editable one plus the
+ * name/description fields. Loop authoring (a back-edge with `then: park`) is a drag
+ * on that canvas; loop *execution* and the retry visualization are covered by the
+ * fast API e2e. Here it's the detail → authoring-surface UI path.
+ *
+ * ZB-06/ZB-13: `/workflows/[id]` now redirects to `/org/departments/<dept>/workflows/<id>`
+ * (ROUTE-MAP §2) — the seeded "Demo Pipe" is owned by the `dev` department (see
+ * `workflow-run.spec.ts`'s note), so this goes straight there.
+ */
+test("open a workflow and enter its inline editor", async ({ page }) => {
+  await page.goto("/org/departments/dev/workflows/demo-pipe");
+
+  // The detail renders the read-only phase-chain canvas.
+  await expect(page.getByText(/phase chain/)).toBeVisible();
+
+  // "Edit" enters inline edit mode: the pre-filled name field and Save appear.
+  await page.getByRole("button", { name: "Edit" }).click();
+  const nameField = page.getByLabel("Workflow name");
+  await expect(nameField).toBeVisible();
+  await expect(nameField).toHaveValue("Demo Pipe");
+  await expect(page.getByRole("button", { name: "Save" })).toBeVisible();
+
+  // Cancel returns to the read-only detail. No mutation, so a re-run against a
+  // reused server is idempotent.
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("button", { name: "Edit" })).toBeVisible();
+});

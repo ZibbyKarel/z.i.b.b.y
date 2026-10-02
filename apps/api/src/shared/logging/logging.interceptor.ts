@@ -57,7 +57,7 @@ export class LoggingInterceptor implements NestInterceptor {
     const url = req.originalUrl || req.url;
     const startedAt = Date.now();
     const skipBody = isSkippedBodyRoute(url);
-    // Reads are polled hard (run/pipeline progress every few hundred ms); logging
+    // Reads are polled hard (run/workflow progress every few hundred ms); logging
     // each at `info` would bury the signal. State-changing calls are the ones worth
     // seeing by default → `info`; reads drop to `debug` (raise LOG_LEVEL to see them).
     const level: "info" | "debug" = method === "GET" || method === "HEAD" ? "debug" : "info";

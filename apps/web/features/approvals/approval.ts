@@ -25,7 +25,7 @@ export type RiskType = "platba" | "mazani" | "push" | "odeslani";
  */
 export const HIGH_RISK_TYPES: ReadonlySet<RiskType> = new Set(["platba", "mazani"]);
 
-export type ApprovalActorKind = "skill" | "agent" | "pipeline";
+export type ApprovalActorKind = "skill" | "agent" | "workflow";
 
 /** Structured preview of the exact action an agent is about to take. */
 export type ApprovalPreview =
@@ -191,10 +191,10 @@ export const SEVERITY: Record<
   },
 };
 
-/** Title key for a `pipeline-gate` approval (`policy.approvals.sheet.gate.*`), else null. */
+/** Title key for a `workflow-gate` approval (`policy.approvals.sheet.gate.*`), else null. */
 export function gateTitleKey(
   a: Pick<ContractApproval, "kind" | "action">,
 ): "stage-approval" | "spend-past-cap" | null {
-  if (a.kind !== "pipeline-gate") return null;
+  if (a.kind !== "workflow-gate") return null;
   return a.action === "spend-past-cap" ? "spend-past-cap" : "stage-approval";
 }

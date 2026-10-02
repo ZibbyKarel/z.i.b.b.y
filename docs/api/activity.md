@@ -39,9 +39,9 @@ type ActivityKind =
   | "task-queued"
   | "run-started"
   | "run-finished"
-  | "pipeline-started"
-  | "pipeline-finished"
-  | "pipeline-parked"
+  | "workflow-started"
+  | "workflow-finished"
+  | "workflow-parked"
   | "stage-verdict" // a qualify-gate phase verdict (pass/gap/drift)
   | "run-paused-limit" // a run halted on the subscription usage limit
   | "run-resumed-limit" // ...and auto-resumed when the window reset
@@ -78,7 +78,7 @@ No free text — a new kind is added explicitly to the schema.
 interface ActivityRefs {
   taskId?: string;
   runRef?: string;
-  pipelineId?: string;
+  workflowId?: string;
   agentId?: string;
   goalRunId?: string;
   goalId?: string;
@@ -151,7 +151,7 @@ format.
 
 An operator-owned document (twin of `mandate.json`) controls how the activity
 log is rendered in the right rail (the live log). Every **group** of kinds
-(`tasks · runs · pipelines · goals · approvals · channels · integrations ·
+(`tasks · runs · workflows · goals · approvals · channels · integrations ·
 briefing`) has a mode: `visible` (each entry shown individually),
 `grouped` (merged into one row with a count), or `hidden` (left out of the log
 entirely). The kind → group map and defaults live in

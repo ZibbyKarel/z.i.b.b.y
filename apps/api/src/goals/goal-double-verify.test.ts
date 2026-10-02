@@ -1,32 +1,32 @@
 import { describe, expect, it } from "vitest";
 import type { Goal, Project } from "@zibby/contracts";
 import type { LoggerService } from "../shared/logging/logger.service";
-import type { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
+import type { WorkflowRunnerService } from "../workflows/workflow-runner.service";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { GoalRunnerService } from "./goal-runner.service";
 
 /**
  * Phase 12.6 — `makerAlreadyVerified` returns a synthesized satisfied verdict ONLY
- * when a pipeline maker provably ran the SAME checks the goal's checks verifier would
+ * when a workflow maker provably ran the SAME checks the goal's checks verifier would
  * (the `verifyCommands` marker, set by the runner from real execution). Everything
  * else → null (verify normally). This is the pure decision; the e2e covers wiring.
  */
-function makeService(pipelineRun: { verifyCommands?: string[] } | "throw"): GoalRunnerService {
+function makeService(workflowRun: { verifyCommands?: string[] } | "throw"): GoalRunnerService {
   const noop = () => {};
   const logger = {
     child: () => ({ info: noop, warn: noop, error: noop }),
   } as unknown as LoggerService;
-  const pipelineRunner = {
+  const workflowRunner = {
     get: () => {
-      if (pipelineRun === "throw") throw new Error("not found");
-      return pipelineRun;
+      if (workflowRun === "throw") throw new Error("not found");
+      return workflowRun;
     },
-  } as unknown as PipelineRunnerService;
+  } as unknown as WorkflowRunnerService;
   return new GoalRunnerService(
     "/tmp/goal-double-verify-test",
     null as never, // goals
     null as never, // agentRunner
-    pipelineRunner,
+    workflowRunner,
     null as never, // projects
     null as never, // workspace
     null as never, // budget
@@ -49,7 +49,7 @@ function goal(over: Partial<Goal> = {}): Goal {
   return {
     id: "g",
     objective: "do it",
-    maker: { kind: "pipeline", id: "delivery" },
+    maker: { kind: "workflow", id: "delivery" },
     verifier: { kind: "checks" },
     maxIterations: 3,
     instructions: "iterate",
@@ -66,7 +66,7 @@ function call(svc: GoalRunnerService, g: Goal, project: Project | null, status: 
 }
 
 describe("makerAlreadyVerified (12.6)", () => {
-  it("skips when a pipeline maker ran the same project checks (verifier has no commands)", () => {
+  it("skips when a workflow maker ran the same project checks (verifier has no commands)", () => {
     const svc = makeService({ verifyCommands: ["pnpm --filter app test"] });
     const verdict = call(svc, goal(), PROJECT, "done") as {
       satisfied: boolean;
@@ -94,7 +94,7 @@ describe("makerAlreadyVerified (12.6)", () => {
     expect(call(svc, g, PROJECT, "done")).toBeNull();
   });
 
-  it("verifies normally for a non-pipeline maker", () => {
+  it("verifies normally for a non-workflow maker", () => {
     const svc = makeService({ verifyCommands: ["pnpm --filter app test"] });
     const g = goal({ maker: { kind: "agent", id: "koder" } });
     expect(call(svc, g, PROJECT, "done")).toBeNull();
@@ -105,7 +105,7 @@ describe("makerAlreadyVerified (12.6)", () => {
     expect(call(svc, goal(), PROJECT, "failed")).toBeNull();
   });
 
-  it("verifies normally when the maker pipeline ran no verify phase (no marker)", () => {
+  it("verifies normally when the maker workflow ran no verify phase (no marker)", () => {
     const svc = makeService({}); // no verifyCommands
     expect(call(svc, goal(), PROJECT, "done")).toBeNull();
   });

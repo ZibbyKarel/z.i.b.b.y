@@ -23,10 +23,10 @@ const calmBriefing: Briefing = {
 // A tool event carrying `runRef` upgrades the flat row into `ChatRunCard` (Fáze
 // 14.3) — that card is unit-tested on its own; here it's enough to stub its data
 // source and assert ChatMessage picked the card over the flat row.
-const { pipelineRunMock } = vi.hoisted(() => ({
-  pipelineRunMock: vi.fn(() => ({ data: undefined as unknown })),
+const { workflowRunMock } = vi.hoisted(() => ({
+  workflowRunMock: vi.fn(() => ({ data: undefined as unknown })),
 }));
-vi.mock("../../pipelines", () => ({ usePipelineRunQuery: pipelineRunMock }));
+vi.mock("../../workflows", () => ({ useWorkflowRunQuery: workflowRunMock }));
 
 // The read-aloud button (Phase 120) is exercised at the mutation/player-hook
 // boundary — mirrors `DepartmentDrawer.test.tsx`'s pattern of mocking a
@@ -107,10 +107,10 @@ describe("ChatMessage", () => {
   });
 
   it("upgrades a tool event with a known runRef into the live ChatRunCard (Fáze 14.3)", () => {
-    pipelineRunMock.mockReturnValue({
+    workflowRunMock.mockReturnValue({
       data: {
         runId: "delivery_1",
-        kind: "pipeline",
+        kind: "workflow",
         owner: "delivery",
         status: "running",
         pct: null,
@@ -129,9 +129,9 @@ describe("ChatMessage", () => {
           {
             name: "create_task",
             status: "ok",
-            summary: "Spustil jsem úkol — pipeline Delivery.",
+            summary: "Spustil jsem úkol — workflow Delivery.",
             href: "/archiv?run=delivery_1",
-            target: { kind: "pipeline", id: "delivery", name: "Delivery", glyph: "flow" },
+            target: { kind: "workflow", id: "delivery", name: "Delivery", glyph: "flow" },
             runRef: "delivery_1",
             taskId: "task-9",
           },
@@ -156,8 +156,8 @@ describe("ChatMessage", () => {
           {
             name: "create_task",
             status: "started",
-            summary: "Spouštím pipeline Delivery.",
-            target: { kind: "pipeline", id: "delivery", name: "Delivery", glyph: "flow" },
+            summary: "Spouštím workflow Delivery.",
+            target: { kind: "workflow", id: "delivery", name: "Delivery", glyph: "flow" },
           },
         ]}
       />,

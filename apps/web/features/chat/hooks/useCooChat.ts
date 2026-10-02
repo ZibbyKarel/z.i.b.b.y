@@ -11,10 +11,10 @@ import { type ChatStreamState, type CompletedTurn, useChatStream } from "./useCh
 import { type VoiceMode, useVoiceMode } from "./useVoiceMode";
 
 /** D-020 — every kind `CommandLine`'s `multipleTargets` mention picker ever
- *  produces (agent/pipeline/department, mirrors `ChatMentionTargetSchema`) — the
+ *  produces (agent/workflow/department, mirrors `ChatMentionTargetSchema`) — the
  *  runtime shape `send`'s `mentions` argument always carries. */
 function isMentionTarget(target: TaskTarget): target is ChatMentionTarget {
-  return target.kind === "agent" || target.kind === "pipeline" || target.kind === "department";
+  return target.kind === "agent" || target.kind === "workflow" || target.kind === "department";
 }
 
 export interface CooChat {
@@ -144,7 +144,7 @@ export function useCooChat(): CooChat {
       // D-020: an empty/absent mentions list falls back to the dock's explicit
       // scope (O-20) as the sole mention — mirrors the old single-`target`
       // fallback, just generalised to a list. `CommandLine`'s picker only ever
-      // produces agent/pipeline/department targets, so this narrows safely.
+      // produces agent/workflow/department targets, so this narrows safely.
       const effectiveMentions = (
         mentions && mentions.length > 0 ? mentions : dockTarget ? [dockTarget] : []
       ).filter(isMentionTarget);

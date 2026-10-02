@@ -15,7 +15,7 @@
     "community-Community 7",
     "community-Community 8",
     "community-Community 9",
-    "godnode-PipelineRunnerService",
+    "godnode-WorkflowRunnerService",
     "godnode-TaskSchedulerService",
     "godnode-dataDir()",
     "godnode-ensureDir()",

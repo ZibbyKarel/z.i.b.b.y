@@ -30,8 +30,8 @@ export const Overview: Story = {
             </Button>
           </>
         }
-        description="Pipeline a veškerá jeho data budou trvale odstraněna."
-        title="Smazat pipeline"
+        description="Workflow a veškerá jeho data budou trvale odstraněna."
+        title="Smazat workflow"
       >
         <DialogBody>
           <p>Agent zpracovává 3 fronty a čeká na schválení.</p>
@@ -47,7 +47,7 @@ export const Overview: Story = {
             </Button>
           </>
         }
-        title="Editor pipeline"
+        title="Editor workflow"
         width="full"
       >
         <DialogBody>
@@ -68,7 +68,7 @@ export const Overview: Story = {
             </Button>
           </>
         }
-        title="Editor pipeline (fullscreen)"
+        title="Editor workflow (fullscreen)"
         width="full"
       >
         <DialogBody>

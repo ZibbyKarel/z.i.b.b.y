@@ -69,15 +69,15 @@ export default async function globalSetup(): Promise<void> {
     })
     .catch(() => {});
 
-  // A two-phase pipeline to open + run. NS2 F9: `POST /api/pipelines` 422s
-  // without an `department` (an unowned pipeline is structurally unroutable),
+  // A two-phase workflow to open + run. NS2 F9: `POST /api/workflows` 422s
+  // without an `department` (an unowned workflow is structurally unroutable),
   // so the fixture has to name one.
   await ctx
-    .post("/api/pipelines", {
+    .post("/api/workflows", {
       data: {
         id: "demo-pipe",
         name: "Demo Pipe",
-        instructions: "demo pipeline",
+        instructions: "demo workflow",
         department: "dev",
         phases: [
           {

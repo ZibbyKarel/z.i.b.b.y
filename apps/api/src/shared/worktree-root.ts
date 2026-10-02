@@ -6,7 +6,7 @@ import * as path from "node:path";
  * Phase 12.7 — the base directory for run worktrees, deliberately OUTSIDE the repo
  * and the data tree.
  *
- * Goal/pipeline/agent worktrees were cut at `path.join(<runDir>, "worktree")` under
+ * Goal/workflow/agent worktrees were cut at `path.join(<runDir>, "worktree")` under
  * each runner's `*_RUNS_DIR` — i.e. inside `apps/api/data` (the watched/linted/tested
  * tree). So the dev watcher and a verifier's own `pnpm test` traversed them, the
  * builder edited files under its own feet, and a test's `fs.rm(runsDir)` raced the

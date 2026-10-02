@@ -36,7 +36,7 @@ describe("ChatMessageSchema backward compatibility (F8a — the `briefing` field
   const realAssistantLine =
     '{"id":"msg_1783429915455_cc47aa","role":"assistant","text":"Ahoj! Jak se dnes máš? Co pro tebe můžu udělat?","at":"2026-07-07T13:11:49.031Z"}';
   const realToolEventLine =
-    '{"id":"msg_1783361336923_4a34df","role":"assistant","text":"Hotovo, pane — poslal jsem to do práce. Hello World pro Test Projekt teď jede přes Delivery pipeline (běh `delivery_1783361331762`). Výstupy jako obvykle projdou schvalovací branou, takže se na to mrkněte v běhech, až bude hotovo.","at":"2026-07-06T18:08:26.710Z","toolEvents":[{"name":"create_task","status":"ok","callId":"toolu_01AjeamiYhSG6HHQxzD3waDH","summary":"Spustil jsem úkol — pipeline Delivery.","href":"/runs?run=delivery_1783361331762","target":{"kind":"pipeline","id":"delivery","name":"Delivery","glyph":"flow"},"runRef":"delivery_1783361331762","taskId":"task_1783361322706_1b5101"}]}';
+    '{"id":"msg_1783361336923_4a34df","role":"assistant","text":"Hotovo, pane — poslal jsem to do práce. Hello World pro Test Projekt teď jede přes Delivery workflow (běh `delivery_1783361331762`). Výstupy jako obvykle projdou schvalovací branou, takže se na to mrkněte v běhech, až bude hotovo.","at":"2026-07-06T18:08:26.710Z","toolEvents":[{"name":"create_task","status":"ok","callId":"toolu_01AjeamiYhSG6HHQxzD3waDH","summary":"Spustil jsem úkol — workflow Delivery.","href":"/runs?run=delivery_1783361331762","target":{"kind":"workflow","id":"delivery","name":"Delivery","glyph":"flow"},"runRef":"delivery_1783361331762","taskId":"task_1783361322706_1b5101"}]}';
 
   it("still parses a real pre-existing user turn (no toolEvents, no briefing)", () => {
     const parsed = ChatMessageSchema.safeParse(JSON.parse(realPlainLine));
@@ -116,10 +116,10 @@ describe("SendChatMessageBodySchema.teamId (Task 8 — tag a team on a chat turn
 describe("D-020 — chat mentions + attachments", () => {
   const agent = { kind: "agent" as const, id: "builder", name: "Builder" };
   const department = { kind: "department" as const, id: "dev", name: "Dev" };
-  const pipeline = { kind: "pipeline" as const, id: "delivery", name: "Delivery" };
+  const workflow = { kind: "workflow" as const, id: "delivery", name: "Delivery" };
 
   describe("ChatMentionTargetSchema", () => {
-    it.each([agent, department, pipeline])("accepts a %s mention", (target) => {
+    it.each([agent, department, workflow])("accepts a %s mention", (target) => {
       expect(ChatMentionTargetSchema.safeParse(target).success).toBe(true);
     });
 

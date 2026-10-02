@@ -7,12 +7,12 @@ import { fileURLToPath } from "node:url";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
-import { PipelineRunnerService } from "../src/pipelines/pipeline-runner.service";
+import { WorkflowRunnerService } from "../src/workflows/workflow-runner.service";
 import { defaultEmployeesDir, seedEmployeeFixture } from "./fixtures/employee-fixture";
 
 /**
- * P4-03 — the shipped `coloring-book` pipeline end to end, token-free: agent phases
- * run the demo stage fed by PIPELINE_DEMO_FIXTURE_DIR, tool phases run the REAL
+ * P4-03 — the shipped `coloring-book` workflow end to end, token-free: agent phases
+ * run the demo stage fed by WORKFLOW_DEMO_FIXTURE_DIR, tool phases run the REAL
  * `product-factory` CLI with the mock image/vision providers. Ends with a book
  * folder holding interior.pdf + cover.pdf.
  */
@@ -28,7 +28,7 @@ const AGENTS = [
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-describe("coloring-book pipeline (e2e, mock providers)", () => {
+describe("coloring-book workflow (e2e, mock providers)", () => {
   let app: INestApplication;
   const dirs: string[] = [];
   let booksDir = "";
@@ -39,9 +39,9 @@ describe("coloring-book pipeline (e2e, mock providers)", () => {
   };
 
   beforeAll(async () => {
-    const pipelinesDir = await tmp("cb-pipelines-");
-    process.env.PIPELINES_DIR = pipelinesDir;
-    process.env.PIPELINE_RUNS_DIR = await tmp("cb-runs-");
+    const workflowsDir = await tmp("cb-workflows-");
+    process.env.WORKFLOWS_DIR = workflowsDir;
+    process.env.WORKFLOW_RUNS_DIR = await tmp("cb-runs-");
     process.env.PROJECTS_DIR = await tmp("cb-projects-");
     process.env.VAULT_DIR = await tmp("cb-vault-");
     process.env.AGENT_DEMO_STEPS = "1";
@@ -69,17 +69,17 @@ describe("coloring-book pipeline (e2e, mock providers)", () => {
       "listing.md",
       "# Listing — Amazon KDP paperback\n\n## Title\nHappy Farm Friends\n",
     );
-    process.env.PIPELINE_DEMO_FIXTURE_DIR = fixtures;
+    process.env.WORKFLOW_DEMO_FIXTURE_DIR = fixtures;
 
     // Redirect the folder sink away from the real ~/Workspace/zibby-publishing.
     booksDir = await tmp("cb-books-");
-    const pipelineMd = await fs.readFile(
-      path.join(REPO, ".zibby", "data", "pipelines", "coloring-book.pipeline.md"),
+    const workflowMd = await fs.readFile(
+      path.join(REPO, ".zibby", "data", "workflows", "coloring-book.workflow.md"),
       "utf8",
     );
-    const redirected = pipelineMd.replace("~/Workspace/zibby-publishing/books", booksDir);
-    expect(redirected).not.toBe(pipelineMd);
-    await fs.writeFile(path.join(pipelinesDir, "coloring-book.pipeline.md"), redirected);
+    const redirected = workflowMd.replace("~/Workspace/zibby-publishing/books", booksDir);
+    expect(redirected).not.toBe(workflowMd);
+    await fs.writeFile(path.join(workflowsDir, "coloring-book.workflow.md"), redirected);
     for (const agentId of AGENTS)
       await seedEmployeeFixture(defaultEmployeesDir(), {
         id: `employee_${agentId}`,
@@ -121,12 +121,12 @@ describe("coloring-book pipeline (e2e, mock providers)", () => {
 
   afterAll(async () => {
     await app?.close();
-    delete process.env.PIPELINE_DEMO_FIXTURE_DIR;
+    delete process.env.WORKFLOW_DEMO_FIXTURE_DIR;
     for (const d of dirs) await fs.rm(d, { recursive: true, force: true, maxRetries: 5 });
   });
 
   it("runs brief → book folder with interior.pdf and cover.pdf", { timeout: 120_000 }, async () => {
-    const runner = app.get(PipelineRunnerService);
+    const runner = app.get(WorkflowRunnerService);
     const brief = "theme: farm animals\ntargetAge: {min: 2, max: 4}\npageCount: 4\n";
     const start = await runner.start(
       "coloring-book",
@@ -137,10 +137,10 @@ describe("coloring-book pipeline (e2e, mock providers)", () => {
       undefined,
       brief,
     );
-    let run = runner.get(start.pipelineRunId);
+    let run = runner.get(start.workflowRunId);
     for (let t = Date.now(); run.status === "running" && Date.now() - t < 110_000; ) {
       await sleep(100);
-      run = runner.get(start.pipelineRunId);
+      run = runner.get(start.workflowRunId);
     }
     const trail = run.stageRuns.map((s) => `${s.phaseId}:${s.status}`);
     expect({ status: run.status, trail }).toMatchObject({ status: "done" });
@@ -159,8 +159,8 @@ describe("coloring-book pipeline (e2e, mock providers)", () => {
     const book = path.join(run.cwd, "book");
     for (const f of ["interior.pdf", "cover.pdf", "listing.md", "README.md", "plan.json"])
       expect((await fs.stat(path.join(book, f))).size).toBeGreaterThan(0);
-    // folder sink: book/ copied to <booksDir>/<pipelineRunId>/
-    const delivered = path.join(booksDir, run.pipelineRunId);
+    // folder sink: book/ copied to <booksDir>/<workflowRunId>/
+    const delivered = path.join(booksDir, run.workflowRunId);
     for (const f of ["interior.pdf", "cover.pdf", "listing.md"])
       expect((await fs.stat(path.join(delivered, f))).size).toBeGreaterThan(0);
     expect(await fs.readFile(path.join(run.cwd, "01_concept", "brief.md"), "utf8")).toContain(

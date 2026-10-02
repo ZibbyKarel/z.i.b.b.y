@@ -33,8 +33,8 @@ import { RoutingProposalStore } from "./routing-proposal.store";
  * The department a roadmap release falls back to when the switchboard can't tell
  * whose domain an item belongs to. Dev, because a roadmap item is by
  * construction delivery work on a code project — and because dev is the only
- * department that owns both a delivery pipeline and specialist agents, so it is
- * the one that can actually make the "small change vs. full pipeline" call.
+ * department that owns both a delivery workflow and specialist agents, so it is
+ * the one that can actually make the "small change vs. full workflow" call.
  *
  * Only a FALLBACK: `TaskClassifierService.classifyDepartment` still gets to pick
  * any seated department, so a research- or content-shaped item can legitimately
@@ -257,7 +257,7 @@ export class RoadmapGateService {
   /**
    * Resume a `failed` item's LAST run in place, reusing `TaskRunsService.resume` —
    * the same unified resume machinery the run detail already exposes (a parked
-   * pipeline/goal resumes; an errored/interrupted agent run re-runs with
+   * workflow/goal resumes; an errored/interrupted agent run re-runs with
    * `--resume <sessionId>` when one was captured). Chosen over "restart" when the
    * run itself is resumable because it is strictly cheaper (continues the same
    * session/branch instead of starting over) — the operator gets both options on a
@@ -842,7 +842,7 @@ export class RoadmapGateService {
    * federation work). The practical difference: a narrow roadmap item can now
    * land on a single owned agent — dev's `fullstack-developer`, say — instead
    * of paying for Architekt → Kodér ⇄ Review → Tester → Dokumentátor, because
-   * that pipeline-vs-agent call is made INSIDE dev with dev's mandate and
+   * that workflow-vs-agent call is made INSIDE dev with dev's mandate and
    * `EFFORT_RULE` in the prompt.
    *
    * {@link DEFAULT_ROADMAP_DEPARTMENT} is nominated as the not-confident

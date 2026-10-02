@@ -59,7 +59,7 @@ export const REVIEW_LEARN_AUTOMATION_ID = "review-learn";
  * only rescheduled. Memory distillation is the canonical one: agents stay
  * memory-blind, and learning-from-runs runs here as infrastructure. (Phase 116a:
  * `discovery`/`research-digest`/`app-ideas` were retired — the operator now
- * targets the `code-audit`/`research` pipelines directly for that work instead.)
+ * targets the `code-audit`/`research` workflows directly for that work instead.)
  */
 export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
   {

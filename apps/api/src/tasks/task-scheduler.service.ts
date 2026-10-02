@@ -17,15 +17,15 @@ import type {
   DepartmentId,
   Employee,
   GoalRun,
-  Pipeline,
-  PipelineRun,
   Project,
   ScheduledTask,
   TaskOutcome,
   TaskOutput,
   TaskTarget,
+  Workflow,
+  WorkflowRun,
 } from "@zibby/contracts";
-import { PIPELINE_COMPLEXITY_ORDER } from "@zibby/contracts";
+import { WORKFLOW_COMPLEXITY_ORDER } from "@zibby/contracts";
 import { ORCHESTRATOR_TARGET } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import type { AttachmentSetRefProvider } from "./attachment-set-ref-provider";
@@ -41,8 +41,8 @@ import { GateEvaluatorService } from "../gates/gate-evaluator.service";
 import { WatcherHealthRegistry } from "../health/watcher-health.registry";
 import { LimitsService } from "../limits/limits.service";
 import { GoalRunnerService } from "../goals/goal-runner.service";
-import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
-import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
+import { WorkflowRunnerService } from "../workflows/workflow-runner.service";
+import { WorkflowsStorageService } from "../workflows/workflows.storage.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { matchProject } from "../projects/project-matcher";
 import { ResolvedProjectService } from "../projects/resolved-project.service";
@@ -72,14 +72,14 @@ interface DepartmentResolution {
 /** Thrown when there is nothing to route to (empty catalog) → the controller maps it to 422. */
 export class EmptyCatalogError extends Error {
   constructor() {
-    super("No agents or pipelines available to route to");
+    super("No agents or workflows available to route to");
     this.name = "EmptyCatalogError";
   }
 }
 
 /**
  * Phase 91 — thrown when a task explicitly targets a department with ZERO owned
- * pipelines. A described task must never silently no-op (Law 5), and a mandate
+ * workflows. A described task must never silently no-op (Law 5), and a mandate
  * without capability shouldn't pretend to execute (deliberate v1 floor: this does
  * NOT fall back to the orchestrator) — so it surfaces as a clear, immediate,
  * Czech-language validation rejection instead. The controller maps it to 422,
@@ -87,7 +87,7 @@ export class EmptyCatalogError extends Error {
  */
 export class DepartmentEmptyRosterError extends Error {
   constructor(departmentName: string) {
-    super(`Oddělení ${departmentName} zatím nemá žádnou pipeline.`);
+    super(`Oddělení ${departmentName} zatím nemá žádnou workflow.`);
     this.name = "DepartmentEmptyRosterError";
   }
 }
@@ -108,8 +108,8 @@ const ATTACHMENT_TTL_MS = 24 * 60 * 60 * 1000;
 
 /** Agent run statuses that free a concurrency slot. */
 const TERMINAL_AGENT = new Set<AgentRun["status"]>(["done", "error", "interrupted"]);
-/** Pipeline run statuses that free a concurrency slot. */
-const TERMINAL_PIPELINE = new Set<PipelineRun["status"]>(["done", "failed"]);
+/** Workflow run statuses that free a concurrency slot. */
+const TERMINAL_WORKFLOW = new Set<WorkflowRun["status"]>(["done", "failed"]);
 /** Goal run statuses that free a concurrency slot (Phase 10). */
 const TERMINAL_GOAL = new Set<GoalRun["status"]>(["done", "failed"]);
 
@@ -160,9 +160,9 @@ export class TaskSchedulerService
     private readonly storage: ScheduledTasksStorageService,
     private readonly classifier: TaskClassifierService,
     private readonly agentRunner: AgentRunnerService,
-    private readonly pipelineRunner: PipelineRunnerService,
-    private readonly pipelinesStore: PipelinesStorageService,
-    /** F2b — for {@link resolveDepartmentTargetOrNull}'s owned-roster count (pipelines + agents). */
+    private readonly workflowRunner: WorkflowRunnerService,
+    private readonly workflowsStore: WorkflowsStorageService,
+    /** F2b — for {@link resolveDepartmentTargetOrNull}'s owned-roster count (workflows + agents). */
     private readonly agentsStore: AgentsStorageService,
     /** D-017: the single-agent dispatch lease/release path (see {@link employeeLeases}). */
     private readonly employeeAllocator: EmployeeAllocator,
@@ -217,9 +217,9 @@ export class TaskSchedulerService
           }
         }
       }),
-      this.pipelineRunner.onRunStatus((run) => {
-        if (run.taskId) void this.writePipelineOutcome(run.taskId, run);
-        if (TERMINAL_PIPELINE.has(run.status)) void this.drainQueues();
+      this.workflowRunner.onRunStatus((run) => {
+        if (run.taskId) void this.writeWorkflowOutcome(run.taskId, run);
+        if (TERMINAL_WORKFLOW.has(run.status)) void this.drainQueues();
       }),
       this.goalRunner.onRunStatus((run) => {
         if (run.taskId) void this.writeGoalOutcome(run.taskId, run);
@@ -320,7 +320,7 @@ export class TaskSchedulerService
     trustedProjectId?: string,
     /**
      * Phase 10: a pre-chosen target that bypasses classification (an approved
-     * proposed-task whose suggested target is a goal/agent/pipeline). The immediate
+     * proposed-task whose suggested target is a goal/agent/workflow). The immediate
      * dispatch path routes straight to it; absent → classify as before.
      */
     explicitTarget?: TaskTarget,
@@ -352,7 +352,7 @@ export class TaskSchedulerService
     // scheduled loop's goal). A server-side `explicitTarget` arg (proposed-task
     // resume) still wins when both are present.
     const rawTarget = explicitTarget ?? input.target;
-    // Phase 91: an explicit department target is resolved to a concrete pipeline
+    // Phase 91: an explicit department target is resolved to a concrete workflow
     // target HERE — before either persistence path below (scheduled or immediate)
     // — so a 0-owned rejection is a clean validation error, never a task record
     // that later fails on dispatch. See `resolveDepartmentTarget`.
@@ -416,9 +416,9 @@ export class TaskSchedulerService
   }
 
   /**
-   * Phase 91 / F2a / F2b — resolve a department target to a concrete pipeline or
+   * Phase 91 / F2a / F2b — resolve a department target to a concrete workflow or
    * agent target (the design doc's 0/1/N-owned-unit rule, widened in F2b from
-   * pipelines-only to pipelines + owned active agents):
+   * workflows-only to workflows + owned active agents):
    *  - **0 owned** → `null` — no capability to delegate to.
    *  - **1 owned** → dispatches straight to it; the classifier is never called.
    *  - **2+ owned** → `TaskClassifierService.classifyWithinDepartment`, restricted
@@ -428,7 +428,7 @@ export class TaskSchedulerService
    *    own `department.fallback` policy decides what "not confident" resolves to).
    *
    * The resolved target IS the run's "via <department>" attribution: any
-   * consumer can already read `Pipeline.department`/`Agent.department`
+   * consumer can already read `Workflow.department`/`Agent.department`
    * (Phase 81 / F1a) off the dispatched id, so this adds no new run-level field.
    *
    * Two callers choose differently on `null` — see {@link resolveDepartmentTarget}
@@ -450,7 +450,7 @@ export class TaskSchedulerService
     paths: string[],
     /**
      * The task's required sink, when it has one. A `pr` sink makes this resolution a
-     * SIZING choice over the department's PR-capable pipelines instead of a free pick
+     * SIZING choice over the department's PR-capable workflows instead of a free pick
      * over its whole roster — mirroring `TaskClassifierService.constrainByOutput`, so
      * a direct dispatch and the scoped classifier agree on what is even eligible.
      * Without it a roadmap item that must open a PR could resolve to an agent that
@@ -458,12 +458,12 @@ export class TaskSchedulerService
      */
     output?: TaskOutput,
   ): Promise<DepartmentResolution | null> {
-    const [allPipelines, allAgents, employees] = await Promise.all([
-      this.pipelinesStore.list().catch((): Pipeline[] => []),
+    const [allWorkflows, allAgents, employees] = await Promise.all([
+      this.workflowsStore.list().catch((): Workflow[] => []),
       this.agentsStore.listActive().catch((): Agent[] => []),
       this.employeesStore.list().catch((): Employee[] => []),
     ]);
-    const ownedPipelines = allPipelines.filter((p) => p.department === target.id);
+    const ownedWorkflows = allWorkflows.filter((p) => p.department === target.id);
     // D-015: an agent (a position) is "owned" by this department IFF it has at
     // least one active employee here — `Agent.department` is no longer read.
     const ownedPositionIds = new Set(
@@ -472,42 +472,42 @@ export class TaskSchedulerService
         .map((e) => e.agentId),
     );
     const ownedAgents = allAgents.filter((a) => ownedPositionIds.has(a.id));
-    const totalOwned = ownedPipelines.length + ownedAgents.length;
+    const totalOwned = ownedWorkflows.length + ownedAgents.length;
     if (totalOwned === 0) return null;
     // Same rule, same reason as the classifier's own filter: a task that must end in a
-    // PR is eligible only for pipelines that DECLARE a `pr` sink — never a lone agent.
+    // PR is eligible only for workflows that DECLARE a `pr` sink — never a lone agent.
     // Falls back to the full roster (and warns) when the department owns no such
-    // pipeline, because "route it somewhere and let the run fail" is strictly worse
+    // workflow, because "route it somewhere and let the run fail" is strictly worse
     // than routing it the old way and saying so.
-    const prCapable = ownedPipelines.filter((p) => p.outputs.some((o) => o.type === "pr"));
+    const prCapable = ownedWorkflows.filter((p) => p.outputs.some((o) => o.type === "pr"));
     const prConstrained = output?.type === "pr" && prCapable.length > 0;
     if (output?.type === "pr" && prCapable.length === 0) {
-      this.log.warn("task requires a PR but the department owns no PR-capable pipeline", {
+      this.log.warn("task requires a PR but the department owns no PR-capable workflow", {
         department: target.id,
         ownedUnits: totalOwned,
       });
     }
-    const eligiblePipelines = prConstrained ? prCapable : ownedPipelines;
+    const eligibleWorkflows = prConstrained ? prCapable : ownedWorkflows;
     const eligibleCount = prConstrained ? prCapable.length : totalOwned;
-    // Cheapest PIPELINE first, else the sole agent — deliberately the same rule as
-    // `TaskClassifierService.cheapestPipeline`, so a direct dispatch agrees with
+    // Cheapest WORKFLOW first, else the sole agent — deliberately the same rule as
+    // `TaskClassifierService.cheapestWorkflow`, so a direct dispatch agrees with
     // what the scoped classifier would have chosen as its `"primary"` fallback.
     //
-    // NS2 F9 note: this used to be plain `ownedPipelines[0]` and a comment claiming
-    // it mirrored `departmentCandidates`' pipelines-first ordering. F9 reversed that
-    // ordering (agents first, then pipelines by rung) AND moved the fallback off
+    // NS2 F9 note: this used to be plain `ownedWorkflows[0]` and a comment claiming
+    // it mirrored `departmentCandidates`' workflows-first ordering. F9 reversed that
+    // ordering (agents first, then workflows by rung) AND moved the fallback off
     // list order onto the ladder, which left this reading FILE order — so a
-    // department whose directory happens to list a `deep` pipeline before its
+    // department whose directory happens to list a `deep` workflow before its
     // `light` one would dispatch the expensive rung here while the classifier
     // picked the cheap one. Sorting by the ladder restores the agreement the
     // comment only claimed.
-    const cheapestPipeline = [...eligiblePipelines].sort(
+    const cheapestWorkflow = [...eligibleWorkflows].sort(
       (a, b) =>
-        PIPELINE_COMPLEXITY_ORDER.indexOf(a.complexity) -
-        PIPELINE_COMPLEXITY_ORDER.indexOf(b.complexity),
+        WORKFLOW_COMPLEXITY_ORDER.indexOf(a.complexity) -
+        WORKFLOW_COMPLEXITY_ORDER.indexOf(b.complexity),
     )[0];
-    const primary = cheapestPipeline
-      ? pipelineTaskTarget(cheapestPipeline)
+    const primary = cheapestWorkflow
+      ? workflowTaskTarget(cheapestWorkflow)
       : agentTaskTarget(ownedAgents[0]!);
     // One eligible unit → it IS the answer; classifying a single-entry catalog would
     // spend a round-trip to be told what the constraint already decided.
@@ -573,7 +573,7 @@ export class TaskSchedulerService
    * The EXPLICIT-target wrapper around {@link resolveDepartmentTargetOrNull}:
    * called once, up front, by {@link createTask} before any persistence, for an
    * `@`-mentioned department target. A mandate without capability shouldn't
-   * pretend to execute (deliberate v1 floor) — 0 owned pipelines rejects
+   * pretend to execute (deliberate v1 floor) — 0 owned workflows rejects
    * immediately with {@link DepartmentEmptyRosterError}, a clear Czech validation
    * message, rather than silently falling back to the orchestrator.
    */
@@ -1008,7 +1008,7 @@ export class TaskSchedulerService
             await this.failPending(
               task.id,
               projectId,
-              "No agents or pipelines available to route to",
+              "No agents or workflows available to route to",
             );
             return;
           }
@@ -1119,7 +1119,7 @@ export class TaskSchedulerService
       task.toolGrants,
     );
     if (!dispatched) {
-      await this.storage.markFailed(task.id, "No agents or pipelines available to route to");
+      await this.storage.markFailed(task.id, "No agents or workflows available to route to");
       this.log.warn("task failed: empty catalog", { id: task.id });
       return "failed";
     }
@@ -1327,8 +1327,8 @@ export class TaskSchedulerService
      */
     explicitTarget?: TaskTarget,
     /**
-     * The task's chosen terminal output. Threaded into a pipeline route here (it
-     * overrides the pipeline's declared `outputs:` for this run). For an
+     * The task's chosen terminal output. Threaded into a workflow route here (it
+     * overrides the workflow's declared `outputs:` for this run). For an
      * agent/orchestrator route the gate fires post-run from the task record, so it is
      * not needed at dispatch.
      */
@@ -1384,7 +1384,7 @@ export class TaskSchedulerService
       // F2a — the switchboard may now emit a whole-department verdict (never the
       // explicit `@mention` path above, which is already resolved by `createTask`
       // before `dispatch` is ever called). Soft stage-2: resolve to a concrete
-      // pipeline, or — an empty roster — fall through to the orchestrator exactly
+      // workflow, or — an empty roster — fall through to the orchestrator exactly
       // like any other "nothing matched confidently" verdict (the terminal block
       // below, unchanged, already records `orchestrator-fallback` for a
       // non-explicit target and starts the orchestrator).
@@ -1408,7 +1408,7 @@ export class TaskSchedulerService
     }
     if (target.kind === "agent") {
       // D-017: acquire BEFORE spawning — never inside `AgentRunnerService` (a
-      // pipeline stage also spawns an agent run, and leases per-stage itself; a
+      // workflow stage also spawns an agent run, and leases per-stage itself; a
       // second acquire in the runner would double-lease). See
       // `acquireEmployeeForDispatch` for the department-known/any-department/
       // unleased ladder.
@@ -1453,10 +1453,10 @@ export class TaskSchedulerService
       if (lease) this.employeeLeases.set(run.runId, lease);
       return { runRef: run.runId, target, classification };
     }
-    if (target.kind === "pipeline") {
-      // Task 8: attachments are intentionally NOT passed to a pipeline target in v1 —
-      // the pipeline runner has no attachments seam yet (documented deferred gap).
-      const run = await this.pipelineRunner.start(
+    if (target.kind === "workflow") {
+      // Task 8: attachments are intentionally NOT passed to a workflow target in v1 —
+      // the workflow runner has no attachments seam yet (documented deferred gap).
+      const run = await this.workflowRunner.start(
         target.id,
         taskId,
         projectId,
@@ -1464,7 +1464,7 @@ export class TaskSchedulerService
         undefined,
         output,
       );
-      return { runRef: run.pipelineRunId, target, classification };
+      return { runRef: run.workflowRunId, target, classification };
     }
     if (target.kind === "goal") {
       // Phase 10: route a goal-targeted task through the outer-loop runner. It flows
@@ -1518,7 +1518,7 @@ export class TaskSchedulerService
    * currently-FREE one when one exists, else the first, which then queues FIFO
    * behind whoever holds it). Returns `undefined` only when the position has no
    * employee anywhere — the D-017 unleashed fallback ("a described task is always
-   * executed"), never a park (that's pipelines only).
+   * executed"), never a park (that's workflows only).
    */
   private async acquireEmployeeForDispatch(
     agentId: string,
@@ -1617,7 +1617,7 @@ export class TaskSchedulerService
    * F2c — best-effort owning department for a dispatched activity entry: the
    * classification trace's own `department` when stage-1 delegated (cheapest,
    * already in hand); otherwise a guarded store read of the dispatched unit's
-   * own `department` (a pipeline/agent target only — nothing else carries
+   * own `department` (a workflow/agent target only — nothing else carries
    * one). Never throws — attribution only (Law 4), so a store failure just
    * omits the ref rather than blocking the activity record.
    */
@@ -1627,9 +1627,9 @@ export class TaskSchedulerService
   }): Promise<DepartmentId | undefined> {
     if (dispatched.classification?.department) return dispatched.classification.department;
     const { target } = dispatched;
-    if (target.kind === "pipeline") {
-      const pipelines = await this.pipelinesStore.list().catch((): Pipeline[] => []);
-      return pipelines.find((p) => p.id === target.id)?.department;
+    if (target.kind === "workflow") {
+      const workflows = await this.workflowsStore.list().catch((): Workflow[] => []);
+      return workflows.find((p) => p.id === target.id)?.department;
     }
     if (target.kind === "agent") {
       const agents = await this.agentsStore.listActive().catch((): Agent[] => []);
@@ -1694,8 +1694,8 @@ export class TaskSchedulerService
   private async reconcileOutcome(task: ScheduledTask): Promise<void> {
     if (!task.runRef || task.outcome) return;
     try {
-      if (task.target?.kind === "pipeline") {
-        await this.writePipelineOutcome(task.id, this.pipelineRunner.get(task.runRef));
+      if (task.target?.kind === "workflow") {
+        await this.writeWorkflowOutcome(task.id, this.workflowRunner.get(task.runRef));
       } else if (task.target?.kind === "goal") {
         await this.writeGoalOutcome(task.id, this.goalRunner.get(task.runRef));
       } else {
@@ -1761,7 +1761,7 @@ export class TaskSchedulerService
     });
   }
 
-  private async writePipelineOutcome(taskId: string, run: PipelineRun): Promise<void> {
+  private async writeWorkflowOutcome(taskId: string, run: WorkflowRun): Promise<void> {
     if (run.status !== "done" && run.status !== "failed") return;
     const outcome: TaskOutcome = {
       status: run.status === "done" ? "done" : "error",
@@ -1775,7 +1775,7 @@ export class TaskSchedulerService
     };
     // Finding #7: same `onRunStatus`-fast-path-vs-`reconcileOutcome` race as
     // `writeAgentOutcome` — see the lock comment there. This writer doesn't open a PR
-    // itself (the pipeline runner already did, before this method ever runs), so the
+    // itself (the workflow runner already did, before this method ever runs), so the
     // race here is lower-harm (a duplicate activity line / lost-update on which run's
     // summary wins), but all four `writeXOutcome` writers lock the same way for
     // consistency.
@@ -1784,7 +1784,7 @@ export class TaskSchedulerService
         const task = await this.storage.writeOutcome(taskId, outcome);
         this.log.info("task outcome written", {
           taskId,
-          runRef: run.pipelineRunId,
+          runRef: run.workflowRunId,
           status: run.status,
         });
         void this.activity.record({
@@ -1792,7 +1792,7 @@ export class TaskSchedulerService
           summary: `task ${outcome.status}: ${outcome.summary}`,
           refs: {
             taskId,
-            runRef: run.pipelineRunId,
+            runRef: run.workflowRunId,
             status: outcome.status,
             ...(task.projectId ? { projectId: task.projectId } : {}),
           },
@@ -1800,8 +1800,8 @@ export class TaskSchedulerService
         await this.recordRunCost(
           task.projectId,
           taskId,
-          run.pipelineRunId,
-          "pipeline",
+          run.workflowRunId,
+          "workflow",
           sumStageCosts(run.stageRuns),
         );
       } catch (error) {
@@ -1843,7 +1843,7 @@ export class TaskSchedulerService
         // Phase 12: no cost line here — `GoalRunSchema` carries no top-level `costUsd`
         // (only its per-iteration makers do, tracked by `goal-runner.service.ts`'s own
         // `recordDispatch`, dispatch-only). Cost lines currently flow only from the
-        // agent/pipeline outcome paths above.
+        // agent/workflow outcome paths above.
       } catch (error) {
         this.log.debug("task outcome write skipped", {
           taskId,
@@ -1885,18 +1885,18 @@ function targetIdOf(target: TaskTarget): string {
 }
 
 /**
- * Project a stored pipeline definition onto the routing-target shape — Phase 91's
+ * Project a stored workflow definition onto the routing-target shape — Phase 91's
  * 1-owned direct-dispatch path (mirrors `TaskClassifierService`'s own candidate
  * projection, minus the internal `search` blob this call site has no use for).
  */
-function pipelineTaskTarget(p: Pipeline): TaskTarget {
-  return { kind: "pipeline", id: p.id, name: p.name ?? p.id, glyph: "flow", avatar: p.avatar };
+function workflowTaskTarget(p: Workflow): TaskTarget {
+  return { kind: "workflow", id: p.id, name: p.name ?? p.id, glyph: "flow", avatar: p.avatar };
 }
 
 /**
- * F2b — the agent counterpart of {@link pipelineTaskTarget}: project a stored
+ * F2b — the agent counterpart of {@link workflowTaskTarget}: project a stored
  * agent definition onto the routing-target shape for the 1-owned direct-dispatch
- * path (a department that owns exactly one agent and no pipeline).
+ * path (a department that owns exactly one agent and no workflow).
  */
 function agentTaskTarget(a: Agent): TaskTarget {
   return {
@@ -1908,12 +1908,12 @@ function agentTaskTarget(a: Agent): TaskTarget {
   };
 }
 
-/** The activity ref the target contributes (agentId / pipelineId), if any. */
+/** The activity ref the target contributes (agentId / workflowId), if any. */
 function refForTarget(target: TaskTarget): {
   agentId?: string;
-  pipelineId?: string;
+  workflowId?: string;
 } {
   if (target.kind === "agent") return { agentId: target.id };
-  if (target.kind === "pipeline") return { pipelineId: target.id };
+  if (target.kind === "workflow") return { workflowId: target.id };
   return {};
 }

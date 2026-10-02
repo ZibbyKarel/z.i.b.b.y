@@ -3,7 +3,7 @@ import type { TaskTarget } from "@zibby/contracts";
 import { ChatToolResultRegistry } from "./chat-tool-result.registry";
 
 const AGENT_TARGET: TaskTarget = { kind: "agent", id: "builder", name: "Builder" };
-const PIPELINE_TARGET: TaskTarget = { kind: "pipeline", id: "delivery", name: "Delivery" };
+const WORKFLOW_TARGET: TaskTarget = { kind: "workflow", id: "delivery", name: "Delivery" };
 
 describe("ChatToolResultRegistry", () => {
   describe("create_task result queue", () => {
@@ -27,7 +27,7 @@ describe("ChatToolResultRegistry", () => {
     it("drains multiple queued results in arrival order", () => {
       const registry = new ChatToolResultRegistry();
       registry.pushCreateTaskResult("c1", { taskId: "t1", target: AGENT_TARGET });
-      registry.pushCreateTaskResult("c1", { taskId: "t2", target: PIPELINE_TARGET });
+      registry.pushCreateTaskResult("c1", { taskId: "t2", target: WORKFLOW_TARGET });
       expect(registry.drainCreateTaskResult("c1")?.taskId).toBe("t1");
       expect(registry.drainCreateTaskResult("c1")?.taskId).toBe("t2");
       expect(registry.drainCreateTaskResult("c1")).toBeUndefined();
@@ -58,7 +58,7 @@ describe("ChatToolResultRegistry", () => {
       const received: string[] = [];
       registry.onCreateTaskResult("c1", (result) => received.push(result.taskId));
       registry.pushCreateTaskResult("c1", { taskId: "t1", target: AGENT_TARGET });
-      registry.pushCreateTaskResult("c1", { taskId: "t2", target: PIPELINE_TARGET });
+      registry.pushCreateTaskResult("c1", { taskId: "t2", target: WORKFLOW_TARGET });
 
       expect(received).toEqual(["t1", "t2"]);
     });
@@ -89,7 +89,7 @@ describe("ChatToolResultRegistry", () => {
       registry.onCreateTaskResult("c1", (result) => c1.push(result.taskId));
       registry.onCreateTaskResult("c2", (result) => c2.push(result.taskId));
       registry.pushCreateTaskResult("c1", { taskId: "t1", target: AGENT_TARGET });
-      registry.pushCreateTaskResult("c2", { taskId: "t2", target: PIPELINE_TARGET });
+      registry.pushCreateTaskResult("c2", { taskId: "t2", target: WORKFLOW_TARGET });
 
       expect(c1).toEqual(["t1"]);
       expect(c2).toEqual(["t2"]);
@@ -131,12 +131,12 @@ describe("ChatToolResultRegistry", () => {
     it("keeps separate conversations' targets independent", () => {
       const registry = new ChatToolResultRegistry();
       registry.setExplicitTarget("c1", AGENT_TARGET);
-      registry.setExplicitTarget("c2", PIPELINE_TARGET);
+      registry.setExplicitTarget("c2", WORKFLOW_TARGET);
       expect(registry.getExplicitTarget("c1")).toEqual(AGENT_TARGET);
-      expect(registry.getExplicitTarget("c2")).toEqual(PIPELINE_TARGET);
+      expect(registry.getExplicitTarget("c2")).toEqual(WORKFLOW_TARGET);
       registry.clearExplicitTarget("c1");
       expect(registry.getExplicitTarget("c1")).toBeUndefined();
-      expect(registry.getExplicitTarget("c2")).toEqual(PIPELINE_TARGET);
+      expect(registry.getExplicitTarget("c2")).toEqual(WORKFLOW_TARGET);
     });
   });
 
@@ -148,9 +148,9 @@ describe("ChatToolResultRegistry", () => {
 
     it("holds a set mentions list and keeps returning it on repeated reads (non-destructive)", () => {
       const registry = new ChatToolResultRegistry();
-      registry.setMentions("c1", [AGENT_TARGET, PIPELINE_TARGET]);
-      expect(registry.getMentions("c1")).toEqual([AGENT_TARGET, PIPELINE_TARGET]);
-      expect(registry.getMentions("c1")).toEqual([AGENT_TARGET, PIPELINE_TARGET]);
+      registry.setMentions("c1", [AGENT_TARGET, WORKFLOW_TARGET]);
+      expect(registry.getMentions("c1")).toEqual([AGENT_TARGET, WORKFLOW_TARGET]);
+      expect(registry.getMentions("c1")).toEqual([AGENT_TARGET, WORKFLOW_TARGET]);
     });
 
     it("clears the mentions so a later read sees an empty list", () => {
@@ -163,9 +163,9 @@ describe("ChatToolResultRegistry", () => {
     it("keeps separate conversations' mentions independent", () => {
       const registry = new ChatToolResultRegistry();
       registry.setMentions("c1", [AGENT_TARGET]);
-      registry.setMentions("c2", [PIPELINE_TARGET]);
+      registry.setMentions("c2", [WORKFLOW_TARGET]);
       expect(registry.getMentions("c1")).toEqual([AGENT_TARGET]);
-      expect(registry.getMentions("c2")).toEqual([PIPELINE_TARGET]);
+      expect(registry.getMentions("c2")).toEqual([WORKFLOW_TARGET]);
     });
   });
 

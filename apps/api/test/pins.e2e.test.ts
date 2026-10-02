@@ -49,7 +49,7 @@ describe("Pins API (e2e)", () => {
 
     const pins = [
       { kind: "agent", id: "researcher" },
-      { kind: "pipeline", id: "research-then-build" },
+      { kind: "workflow", id: "research-then-build" },
     ];
     const put = await request(app.getHttpServer()).put("/api/pins").send(pins);
     expect(put.status).toBe(200);
@@ -66,10 +66,10 @@ describe("Pins API (e2e)", () => {
     const res = await request(app.getHttpServer())
       .put("/api/pins")
       .send([
-        { kind: "pipeline", id: "delivery" },
-        { kind: "pipeline", id: "delivery" },
+        { kind: "workflow", id: "delivery" },
+        { kind: "workflow", id: "delivery" },
       ]);
     expect(res.status).toBe(200);
-    expect(res.body).toEqual([{ kind: "pipeline", id: "delivery" }]);
+    expect(res.body).toEqual([{ kind: "workflow", id: "delivery" }]);
   });
 });

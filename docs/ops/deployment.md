@@ -10,11 +10,11 @@ the morning briefing still accounts for everything.
 
 ## Components
 
-| Process        | What                                             | How                                                                |
-| -------------- | ------------------------------------------------ | ------------------------------------------------------------------- |
-| **API**        | The butler — runs, scheduler, channels, briefing | `pnpm api:start` (`ts-node src/main.ts`), launchd `com.zibby.api`   |
-| Web (optional) | The dashboard view                               | `pnpm web:build` → `pnpm web:start`, optional own plist             |
-| Backup         | Vault git commit + data rsync                    | `apps/api/scripts/backup.sh`, launchd `com.zibby.backup`            |
+| Process        | What                                             | How                                                               |
+| -------------- | ------------------------------------------------ | ----------------------------------------------------------------- |
+| **API**        | The butler — runs, scheduler, channels, briefing | `pnpm api:start` (`ts-node src/main.ts`), launchd `com.zibby.api` |
+| Web (optional) | The dashboard view                               | `pnpm web:build` → `pnpm web:start`, optional own plist           |
+| Backup         | Vault git commit + data rsync                    | `apps/api/scripts/backup.sh`, launchd `com.zibby.backup`          |
 
 There is **no build step** for the API — `pnpm api:start` runs `pnpm --filter
 @zibby/api serve`, which is `ts-node -P tsconfig.json src/main.ts`: the compiled
@@ -31,7 +31,7 @@ restart on crash.
 
 1. Edit the plist and fill in the machine-specific values (marked `⟨…⟩`): the
    absolute repo root, the absolute `pnpm` path (`which pnpm`), and a `PATH` that
-   includes the dir holding the `claude` binary (agent and pipeline runs shell out
+   includes the dir holding the `claude` binary (agent and workflow runs shell out
    to it) plus node/pnpm:
 
    ```xml
@@ -91,15 +91,15 @@ launchctl kickstart -k gui/$UID/com.zibby.api
 
 ### Plist keys
 
-| Key                   | Value                    | Meaning                                                     |
-| --------------------- | ------------------------ | ------------------------------------------------------------ |
-| `RunAtLoad`           | `true`                   | Starts automatically once bootstrapped                      |
-| `KeepAlive`           | `true`                   | Restarts on crash                                            |
-| `ThrottleInterval`    | `10`                     | 10s backoff between restarts                                 |
-| `PORT`                | `3333`                   | API port                                                     |
-| `LOG_LEVEL`           | `info`                   | Log level                                                    |
-| `CORS_ORIGIN`         | `http://localhost:3000`  | Allowed origin                                               |
-| `ZIBBY_WORKTREE_ROOT` | `⟨~/.zibby/worktrees⟩`  | **Phase 12.7** — run worktrees outside the repo/data tree    |
+| Key                   | Value                   | Meaning                                                   |
+| --------------------- | ----------------------- | --------------------------------------------------------- |
+| `RunAtLoad`           | `true`                  | Starts automatically once bootstrapped                    |
+| `KeepAlive`           | `true`                  | Restarts on crash                                         |
+| `ThrottleInterval`    | `10`                    | 10s backoff between restarts                              |
+| `PORT`                | `3333`                  | API port                                                  |
+| `LOG_LEVEL`           | `info`                  | Log level                                                 |
+| `CORS_ORIGIN`         | `http://localhost:3000` | Allowed origin                                            |
+| `ZIBBY_WORKTREE_ROOT` | `⟨~/.zibby/worktrees⟩`  | **Phase 12.7** — run worktrees outside the repo/data tree |
 
 `GOAL_AUTO_RESUME` is **not** a plist environment key anymore — see the next
 section.
@@ -113,10 +113,10 @@ editable from `/settings` — see `docs/ops/environment.md`). Installing this da
 `goalAutoResume` on there is legitimate (the one place auto-resume belongs — Phase
 12.4 otherwise gates it behind Tier 3). Restart semantics (`reconstruct()`):
 
-| `goalAutoResume`       | Behavior after restart                                                                                    |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `goalAutoResume`       | Behavior after restart                                                                                                  |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `true` (daemon)        | Rehydrates the registry **and** re-drives `running`/`paused-limit` goals (continuation, not a restart — Phase 9.3/12.4) |
-| `false` (attended dev) | Rehydrates the registry, but parks live goals `awaiting-resume` — waits for the operator (Law 3)             |
+| `false` (attended dev) | Rehydrates the registry, but parks live goals `awaiting-resume` — waits for the operator (Law 3)                        |
 
 **Self-development:** if this daemon is meant to drive the loop against **its own**
 repo, follow [`self-development.md`](./self-development.md) — builder ≠ subject

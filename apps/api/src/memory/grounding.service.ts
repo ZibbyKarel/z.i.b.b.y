@@ -10,7 +10,7 @@ export const NORTH_STAR_ID = "north-star";
 
 /**
  * Fixed id of the machine-generated self-knowledge note (Fáze 1 — agents,
- * pipelines, gate rules, channels). Always grounded second, right after the
+ * workflows, gate rules, channels). Always grounded second, right after the
  * North Star, so every run carries current core knowledge about ZIBBY itself —
  * the same always-loaded pattern as the North Star, no new composition point.
  */

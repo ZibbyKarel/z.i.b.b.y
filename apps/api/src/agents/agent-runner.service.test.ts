@@ -100,7 +100,9 @@ describe("AgentRunnerService.buildCommand attachments", () => {
 });
 
 describe("intersectToolGrants (Phase 108 ceiling enforcement)", () => {
-  const agentWithCeiling = { optionalTools: ["recall_memory", "list_entities"] } as unknown as Agent;
+  const agentWithCeiling = {
+    optionalTools: ["recall_memory", "list_entities"],
+  } as unknown as Agent;
 
   it("keeps a grant that's inside the agent's optionalTools ceiling", () => {
     expect(intersectToolGrants(["recall_memory"], agentWithCeiling)).toEqual(["recall_memory"]);
@@ -345,7 +347,7 @@ describe("AgentRunnerService.evaluateIntent (Fáze 2b — orchestrator strictest
  * Fáze 2c fixation: a run dispatched through the task-classifier's orchestrator
  * fallback (`ORCHESTRATOR_TARGET` → `startOrchestrator` → `agentId: ORCHESTRATOR_ID`,
  * see `task-scheduler.service.ts`) must go through the exact same `evaluateIntent`
- * gate path as any explicitly-named agent run — not a pipeline-only or bypassed
+ * gate path as any explicitly-named agent run — not a workflow-only or bypassed
  * path. This is exactly the orchestrator branch above; asserted once more here,
  * directly against `ORCHESTRATOR_ID`, as the named regression for that routing.
  */

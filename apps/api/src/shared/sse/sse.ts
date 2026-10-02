@@ -4,7 +4,7 @@ import { Observable } from "rxjs";
 
 /**
  * SSE plumbing shared by the streaming endpoints. The frontend used to poll runs
- * (every 2s), the pipeline aggregate (1s) and each open log (1s); with several
+ * (every 2s), the workflow aggregate (1s) and each open log (1s); with several
  * parallel runs that multiplied into a steady stream of mostly-empty requests.
  * These helpers turn the runner's push events into long-lived `Observable`s the
  * `@Sse()` handlers return — the server now speaks only when something actually
@@ -138,7 +138,7 @@ export function streamRunLog(
 /** The shape every run-status event carries on the unified `/api/events` channel. */
 export interface RunStatusEvent {
   /** Which client query family to refetch. */
-  scope: "agent-runs" | "pipeline-runs" | "goal-runs" | "chain-runs";
+  scope: "agent-runs" | "workflow-runs" | "goal-runs" | "chain-runs";
   runId: string;
   status: string;
 }

@@ -9,7 +9,7 @@ import { ProjectsStorageService } from "./projects.storage.service";
 const DONE_KINDS = new Set([
   "task-outcome",
   "run-finished",
-  "pipeline-finished",
+  "workflow-finished",
   "channel-reply",
   "approval-approved",
   "approval-rejected",
@@ -20,7 +20,7 @@ const DONE_KINDS = new Set([
 const BLOCKED_KINDS = new Set([
   "approval-requested",
   "channel-approval",
-  "pipeline-parked",
+  "workflow-parked",
   "goal-parked",
   "task-held",
 ]);
@@ -29,7 +29,7 @@ const BLOCKED_KINDS = new Set([
 const PROGRESS_KINDS = new Set([
   "task-dispatched",
   "run-started",
-  "pipeline-started",
+  "workflow-started",
   "goal-dispatched",
   "channel-triage",
 ]);

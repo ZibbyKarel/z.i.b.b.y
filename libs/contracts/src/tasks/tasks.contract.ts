@@ -19,10 +19,10 @@ const c = initContract();
 
 /**
  * Task routing contract. A single side-effect-free endpoint: it classifies a
- * free-text task to a stored agent or pipeline and returns the verdict — it does
+ * free-text task to a stored agent or workflow and returns the verdict — it does
  * NOT start a run. The approval-first flow keeps dispatch a separate, explicit
  * step (the web client calls the existing `agentRuns.startRun` /
- * `pipelineRuns.startPipelineRun` only when the user confirms).
+ * `workflowRuns.startWorkflowRun` only when the user confirms).
  *
  * The backend has a deterministic keyword fallback behind the LLM router, so the
  * only non-200 is `422` (the catalog is empty — there is nothing to route to).
@@ -43,7 +43,7 @@ export const tasksContract = c.router(
         422: ErrorSchema,
       },
       summary:
-        "Classify a free-text task to a stored agent or pipeline (no side effects — does NOT start a run)",
+        "Classify a free-text task to a stored agent or workflow (no side effects — does NOT start a run)",
     },
 
     createTask: {

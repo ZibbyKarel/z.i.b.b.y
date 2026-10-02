@@ -17,7 +17,7 @@ export const Overview: Story = {
       <Stat icon="pulse" label="běžící agenti" tone="accent" value="02" />
       <Stat icon="shield" label="schválení" tone="bad" value="01" />
       <Stat icon="dollar" label="agent sdk kredit" tone="warn" value="$128" />
-      <Stat icon="flow" label="pipeline" tone="neutral" value="04" />
+      <Stat icon="flow" label="workflow" tone="neutral" value="04" />
     </div>
   ),
 };

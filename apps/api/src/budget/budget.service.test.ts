@@ -1,4 +1,4 @@
-import type { AgentRun, Limits, PipelineRun, Project } from "@zibby/contracts";
+import type { AgentRun, Limits, Project, WorkflowRun } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
 import { BudgetService } from "./budget.service";
 
@@ -31,7 +31,7 @@ interface Deps {
   project?: Project | null;
   limitsSnapshot?: () => Promise<Limits>;
   agentRuns?: AgentRun[];
-  pipelineRuns?: PipelineRun[];
+  workflowRuns?: WorkflowRun[];
   /** Phase 70: override the effective budget the resolver returns (default: echoes `project.budget`). */
   resolveBudget?: (project: Project) => Promise<Project["budget"]>;
   /** O-08: capture `activity.record` calls; defaults to a no-op spy. */
@@ -59,7 +59,7 @@ function build(deps: Deps = {}): BudgetService {
   };
   const limitsService = { snapshot: deps.limitsSnapshot ?? (async () => limits()) };
   const agentRunner = { listRunning: () => deps.agentRuns ?? [] };
-  const pipelineRunner = { list: () => deps.pipelineRuns ?? [] };
+  const workflowRunner = { list: () => deps.workflowRuns ?? [] };
   const tasks = { list: async () => [] };
   // Phase 70: with no `resolveBudget` override, the fake just echoes `project.budget`
   // through (no company in play), matching BudgetService's pre-Phase-70 direct-access
@@ -75,7 +75,7 @@ function build(deps: Deps = {}): BudgetService {
     resolved as never,
     limitsService as never,
     agentRunner as never,
-    pipelineRunner as never,
+    workflowRunner as never,
     tasks as never,
     activity as never,
     fakeLogger as never,
@@ -360,9 +360,9 @@ describe("BudgetService.countRunning", () => {
     logFile: "/t.log",
     ...over,
   });
-  const pipeline = (over: Partial<PipelineRun>): PipelineRun => ({
-    pipelineRunId: "p1",
-    pipelineId: "rel",
+  const workflow = (over: Partial<WorkflowRun>): WorkflowRun => ({
+    workflowRunId: "p1",
+    workflowId: "rel",
     status: "running",
     currentStage: null,
     stageRuns: [],
@@ -372,11 +372,11 @@ describe("BudgetService.countRunning", () => {
     ...over,
   });
 
-  it("counts running agent runs + running pipeline runs for the project", async () => {
+  it("counts running agent runs + running workflow runs for the project", async () => {
     const svc = build({
       project: project({ maxConcurrent: 2 }),
       agentRuns: [agent({ runId: "a1" }), agent({ runId: "a2", status: "done" })],
-      pipelineRuns: [pipeline({ pipelineRunId: "p1" })],
+      workflowRuns: [workflow({ workflowRunId: "p1" })],
     });
     expect(await svc.countRunning("alpha")).toBe(2); // a1 (running) + p1; a2 done excluded
   });
@@ -385,7 +385,7 @@ describe("BudgetService.countRunning", () => {
     const svc = build({
       project: project({ maxConcurrent: 2 }),
       agentRuns: [agent({ project: "beta" })],
-      pipelineRuns: [pipeline({ projectPath: "/work/beta" })],
+      workflowRuns: [workflow({ projectPath: "/work/beta" })],
     });
     expect(await svc.countRunning("alpha")).toBe(0);
   });
@@ -423,9 +423,9 @@ describe("BudgetService.countRunningGlobal (125c)", () => {
     logFile: "/t.log",
     ...over,
   });
-  const pipeline = (over: Partial<PipelineRun>): PipelineRun => ({
-    pipelineRunId: "p1",
-    pipelineId: "rel",
+  const workflow = (over: Partial<WorkflowRun>): WorkflowRun => ({
+    workflowRunId: "p1",
+    workflowId: "rel",
     status: "running",
     currentStage: null,
     stageRuns: [],
@@ -441,7 +441,7 @@ describe("BudgetService.countRunningGlobal (125c)", () => {
         agent({ runId: "a1", project: "alpha" }),
         agent({ runId: "a2", project: "beta" }),
       ],
-      pipelineRuns: [pipeline({ pipelineRunId: "p1", projectPath: "/work/gamma" })],
+      workflowRuns: [workflow({ workflowRunId: "p1", projectPath: "/work/gamma" })],
     });
     expect(await svc.countRunningGlobal()).toBe(3);
   });
@@ -453,10 +453,10 @@ describe("BudgetService.countRunningGlobal (125c)", () => {
     expect(await svc.countRunningGlobal()).toBe(1);
   });
 
-  it("counts paused-limit agent and pipeline runs — a paused run still owns its slot", async () => {
+  it("counts paused-limit agent and workflow runs — a paused run still owns its slot", async () => {
     const svc = build({
       agentRuns: [agent({ status: "paused-limit" })],
-      pipelineRuns: [pipeline({ status: "paused-limit" })],
+      workflowRuns: [workflow({ status: "paused-limit" })],
     });
     expect(await svc.countRunningGlobal()).toBe(2);
   });
@@ -477,8 +477,8 @@ describe("BudgetService.countRunningGlobal (125c)", () => {
     expect(await svc.countRunningGlobal()).toBe(0);
   });
 
-  it("ignores a terminal (failed) pipeline run", async () => {
-    const svc = build({ pipelineRuns: [pipeline({ status: "failed" })] });
+  it("ignores a terminal (failed) workflow run", async () => {
+    const svc = build({ workflowRuns: [workflow({ status: "failed" })] });
     expect(await svc.countRunningGlobal()).toBe(0);
   });
 

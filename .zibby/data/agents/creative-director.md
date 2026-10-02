@@ -2,7 +2,7 @@
 name: creative-director
 description: >-
   Turns a coloring-book brief into a Visual Bible: concept, age rules, line-art
-  style spec, mascot and cover concept. First phase of the coloring-book pipeline.
+  style spec, mascot and cover concept. First phase of the coloring-book workflow.
 glyph: doc
 model: sonnet
 thinking: high

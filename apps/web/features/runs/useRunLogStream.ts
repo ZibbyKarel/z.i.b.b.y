@@ -27,19 +27,19 @@ export function useRunLogStream(runId: string | null): { text: string; done: boo
 }
 
 /**
- * Tail one pipeline stage's log over SSE (`…/stages/:phaseId/logs/stream`), with
+ * Tail one workflow stage's log over SSE (`…/stages/:phaseId/logs/stream`), with
  * the same offset-poll fallback as {@link useRunLogStream} — the push replacement
  * for the stage timeline's 1s interval refetch (DNA: a log is a live stream). The
  * backend re-resolves the tailed attempt per chunk, so a retry mid-phase keeps
  * streaming. A `null` phase renders nothing.
  */
 export function useStageRunLogStream(
-  pipelineRunId: string,
+  workflowRunId: string,
   phaseId: string | null,
 ): { text: string; done: boolean } {
   return useLogTail(
     phaseId
-      ? `${API_URL}/api/tasks/runs/${encodeURIComponent(pipelineRunId)}/stages/${encodeURIComponent(phaseId)}/logs`
+      ? `${API_URL}/api/tasks/runs/${encodeURIComponent(workflowRunId)}/stages/${encodeURIComponent(phaseId)}/logs`
       : null,
   );
 }

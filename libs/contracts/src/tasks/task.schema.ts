@@ -40,17 +40,17 @@ export const AgentTaskTargetSchema = z.object({
   ...taskTargetDisplayShape,
 });
 
-/** A stored pipeline as a routing destination. */
-export const PipelineTaskTargetSchema = z.object({
-  kind: z.literal("pipeline"),
+/** A stored workflow as a routing destination. */
+export const WorkflowTaskTargetSchema = z.object({
+  kind: z.literal("workflow"),
   id: AgentIdSchema,
   ...taskTargetDisplayShape,
 });
 
 /**
- * A stored goal as a routing destination (Phase 10). Like a pipeline it references
+ * A stored goal as a routing destination (Phase 10). Like a workflow it references
  * a stored definition (`id`), but it is NEVER auto-classified — the classifier only
- * routes to agent/pipeline/orchestrator. A goal-targeted task is created explicitly
+ * routes to agent/workflow/orchestrator. A goal-targeted task is created explicitly
  * (the goals contract) or by approving a `proposed-task`.
  */
 export const GoalTaskTargetSchema = z.object({
@@ -76,10 +76,10 @@ export const OrchestratorTaskTargetSchema = z.object({
  * `TaskClassifierService` never emits this kind (scope guard — see
  * `docs/plans/phase-91-department-dispatch.md`). It never reaches a stored run
  * record either — `TaskSchedulerService` resolves it to a concrete
- * `{ kind: "pipeline" }` target (the department's one owned pipeline, or the
+ * `{ kind: "workflow" }` target (the department's one owned workflow, or the
  * scoped classifier's pick among several) before dispatch, so a run's "via
- * <department>" attribution rides for free on the dispatched pipeline's own
- * `Pipeline.department` (Phase 81) — no new run-level field needed.
+ * <department>" attribution rides for free on the dispatched workflow's own
+ * `Workflow.department` (Phase 81) — no new run-level field needed.
  */
 export const DepartmentTaskTargetSchema = z.object({
   kind: z.literal("department"),
@@ -88,14 +88,14 @@ export const DepartmentTaskTargetSchema = z.object({
 });
 
 /**
- * A destination for a free-text task: a stored agent, a stored pipeline, a
+ * A destination for a free-text task: a stored agent, a stored workflow, a
  * named department (Phase 91, explicit-only), or the orchestrator fallback.
  * (The retired `chain` kind is dropped from STORED tasks by
  * {@link StoredTaskTargetSchema}; it can no longer be created.)
  */
 export const TaskTargetSchema = z.discriminatedUnion("kind", [
   AgentTaskTargetSchema,
-  PipelineTaskTargetSchema,
+  WorkflowTaskTargetSchema,
   GoalTaskTargetSchema,
   DepartmentTaskTargetSchema,
   OrchestratorTaskTargetSchema,
@@ -117,7 +117,7 @@ export const StoredTaskTargetSchema = z.preprocess(
 );
 
 /** A target that references a stored definition (has an `id`) — what the routers rank. */
-export type CatalogTaskTarget = Extract<TaskTarget, { kind: "agent" | "pipeline" }>;
+export type CatalogTaskTarget = Extract<TaskTarget, { kind: "agent" | "workflow" }>;
 
 /**
  * Reserved owner id orchestrator runs carry as their `agentId` in the run feed.
@@ -165,8 +165,8 @@ export function isExplicitOnlyAgent(id: string): boolean {
 
 /**
  * What happens to a task's finished work — the operator's per-task choice in the
- * New Task dialog, the directed-task counterpart of a pipeline's `outputs:` block.
- * Like the pipeline sinks it is deterministic and system-owned (no agent, no
+ * New Task dialog, the directed-task counterpart of a workflow's `outputs:` block.
+ * Like the workflow sinks it is deterministic and system-owned (no agent, no
  * tokens); unlike them a task has no named `from` artifact, so the source is
  * implicit: a `pr` pushes the run's worktree branch, a `file` writes the run's
  * summary to the chosen destination.
@@ -176,11 +176,11 @@ export function isExplicitOnlyAgent(id: string): boolean {
  *             totals land on the outcome's {@link PrOutputSchema}.
  *  - `file` — write the result to a path in the project worktree (`dest: project`)
  *             or as a vault note (`dest: vault`). Tier-1, runs immediately.
- *  - `void` — explicitly produce no output (suppresses even a pipeline's own
+ *  - `void` — explicitly produce no output (suppresses even a workflow's own
  *             declared `pr` output for this run).
  *
  * ABSENT on a task (the field is `optional`) means *inherit*, NOT void: a
- * pipeline-routed task falls back to the pipeline's declared `outputs:`, an
+ * workflow-routed task falls back to the workflow's declared `outputs:`, an
  * agent/orchestrator task to today's behaviour (no terminal delivery). "Didn't
  * choose" and "chose void" are two distinct states.
  *
@@ -211,8 +211,8 @@ export const ClassifyTaskInputSchema = z.object({
    * The sink the finished work MUST land in, when the caller already knows it —
    * and therefore a hard constraint on which units may be ranked at all, not a
    * hint. `{ type: "pr" }` means "this task has to end in a PR-shaped code
-   * change", which only a department's PR-capable pipeline can honour; see
-   * `TaskClassifierService.prCapablePipelines`.
+   * change", which only a department's PR-capable workflow can honour; see
+   * `TaskClassifierService.prCapableWorkflows`.
    *
    * The motivating failure: a JIRA-imported roadmap item is by construction
    * "implement this → PR", the roadmap gate already stamps `output: {type:"pr"}`
@@ -232,10 +232,10 @@ export type ClassifyTaskInput = z.infer<typeof ClassifyTaskInputSchema>;
 
 /**
  * Phase 11: how a classified task should EXECUTE. `single` is the default
- * agent/pipeline/orchestrator dispatch; `loop` means the task asked to
+ * agent/workflow/orchestrator dispatch; `loop` means the task asked to
  * iterate-until-satisfied and the classifier synthesized a goal proposal. `mode`
  * is an orthogonal overlay on the routing — the `target` always stays the maker
- * (agent/pipeline/orchestrator); a synthesized loop has no stored goal id yet, so
+ * (agent/workflow/orchestrator); a synthesized loop has no stored goal id yet, so
  * it is NEVER a `target.kind: "goal"` at classify time (goal targets require a
  * persisted `.goal.md`). Persistence happens only on submit.
  */
@@ -375,7 +375,7 @@ export type TaskRouting = z.infer<typeof TaskRoutingSchema>;
  * (the terminal unit that actually ran already lives on `ScheduledTask.target`/
  * `TaskRun.target`, so this is the "why", not a second target). `department` is
  * set only when stage-1 delegated to a department (a stage-2 `classifyWithinDepartment`
- * call happened); absent when stage-1 already named a concrete agent/pipeline.
+ * call happened); absent when stage-1 already named a concrete agent/workflow.
  * Optional/additive on both `ScheduledTask` and `TaskRun` — an old-shaped record
  * still parses with no trace, and the explicit `@mention` path never writes one
  * (nothing was actually classified).
@@ -415,7 +415,7 @@ export const ClassificationTraceSchema = z.object({
        * How many candidates stage 2 actually ranked, AFTER any constraint filter.
        * A `1` here says the choice was forced by the constraint rather than won on
        * merit — the difference between "the router picked delivery" and "delivery
-       * was the only PR-capable pipeline dev owns".
+       * was the only PR-capable workflow dev owns".
        */
       rankedCandidates: z.number().int().min(0),
       /**
@@ -515,7 +515,7 @@ export type PrOutput = z.infer<typeof PrOutputSchema>;
 
 /**
  * How a task's dispatched run ended: a terminal verdict plus a short, readable
- * summary (an agent run's last log line, or a pipeline's stage tally).
+ * summary (an agent run's last log line, or a workflow's stage tally).
  */
 export const TaskOutcomeSchema = z.object({
   status: z.enum(["done", "error"]),
@@ -648,7 +648,7 @@ export const ScheduledTaskSchema = z.object({
   classification: ClassificationTraceSchema.optional(),
   /**
    * The operator's chosen terminal output (the dialog selector). Absent = inherit
-   * (pipeline → its own `outputs:`, agent/orchestrator → none). Carried so the
+   * (workflow → its own `outputs:`, agent/orchestrator → none). Carried so the
    * dispatch and the terminal-state output gate both see the same choice.
    */
   output: TaskOutputSchema.optional(),
@@ -676,13 +676,13 @@ export const ScheduledTaskSchema = z.object({
       body: z.string(),
     })
     .optional(),
-  /** Set once dispatched: the started agent-run / pipeline-run id. */
+  /** Set once dispatched: the started agent-run / workflow-run id. */
   runRef: z.string().optional(),
   /** Set on `failed`: a short reason. */
   error: z.string().optional(),
   /**
    * Written back once the dispatched run reaches a terminal state. `status` is
-   * the run's verdict (`interrupted` and a failed pipeline both map to `error`);
+   * the run's verdict (`interrupted` and a failed workflow both map to `error`);
    * the task-level `status` enum is untouched — `failed` keeps meaning the
    * DISPATCH failed, while a dispatched run that errored lands here.
    */
@@ -737,7 +737,7 @@ export const CreateTaskInputSchema = z.object({
   /**
    * Task 8: the operator's explicit team tag, carried alongside (never inside)
    * `target` — deliberately NOT a `TaskTarget` variant. `target` answers WHO runs
-   * this (agent/pipeline/goal/department/orchestrator); `teamId` is INTENDED to
+   * this (agent/workflow/goal/department/orchestrator); `teamId` is INTENDED to
    * answer WHAT it can see, by wiring the `zibby-kb` MCP server's
    * team-knowledge-base scope the same way a chat turn's tagged team does.
    *
@@ -749,7 +749,7 @@ export const CreateTaskInputSchema = z.object({
    * through to `KbScopeService.rootsForRun`. Wiring it needs a new field on each
    * of three persisted schemas that don't have one today —
    * `ScheduledTaskSchema` (this task itself, the earliest point the tag would
-   * otherwise die), `PipelineRunSchema`, and `GoalRunSchema` — plus
+   * otherwise die), `WorkflowRunSchema`, and `GoalRunSchema` — plus
    * `rootsForRun` extended to prefer that explicit tag over the project's own
    * team. That work is deliberately deferred to a later branch.
    */

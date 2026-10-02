@@ -1,4 +1,4 @@
-import { type DepartmentId, NO_DEPARTMENT, type Pipeline, type TaskRun } from "@zibby/contracts";
+import { type DepartmentId, NO_DEPARTMENT, type TaskRun, type Workflow } from "@zibby/contracts";
 
 /**
  * States that read as settled — finished, or otherwise done progressing on its own.
@@ -27,7 +27,7 @@ export function isArchived(status: TaskRun["status"]): boolean {
 export function runTitle(
   run: Pick<TaskRun, "kind" | "title" | "taskTitle" | "prompt" | "owner">,
 ): string {
-  if (run.kind === "pipeline") return run.title || run.taskTitle || run.owner;
+  if (run.kind === "workflow") return run.title || run.taskTitle || run.owner;
   return run.title || run.taskTitle || run.prompt || run.owner;
 }
 
@@ -45,22 +45,22 @@ export function matchesArchiveSearch(
 /**
  * The department a single run is attributed to, or `null` when it has none — mirrors
  * `apps/web/features/departments/useOwnerDepartment.ts#runDepartmentId` (D8): only a
- * `pipeline` run ever carries a department (from its owning definition's
+ * `workflow` run ever carries a department (from its owning definition's
  * `department`); an `agent`/`goal`/`scheduled` run has no department concept at all.
  */
 export function runDepartmentId(
   run: Pick<TaskRun, "kind" | "owner">,
-  pipelineDefsById: ReadonlyMap<string, Pipeline>,
+  workflowDefsById: ReadonlyMap<string, Workflow>,
 ): DepartmentId | null {
-  if (run.kind !== "pipeline") return null;
-  return pipelineDefsById.get(run.owner)?.department ?? null;
+  if (run.kind !== "workflow") return null;
+  return workflowDefsById.get(run.owner)?.department ?? null;
 }
 
 /** `runDepartmentId(...)`, folding `null` into the explicit {@link NO_DEPARTMENT} bucket
  * (D8 — never silently dropped) for filtering/counting purposes. */
 export function archiveDepartmentId(
   run: Pick<TaskRun, "kind" | "owner">,
-  pipelineDefsById: ReadonlyMap<string, Pipeline>,
+  workflowDefsById: ReadonlyMap<string, Workflow>,
 ): DepartmentId | typeof NO_DEPARTMENT {
-  return runDepartmentId(run, pipelineDefsById) ?? NO_DEPARTMENT;
+  return runDepartmentId(run, workflowDefsById) ?? NO_DEPARTMENT;
 }

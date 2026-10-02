@@ -18,7 +18,7 @@ import { ApprovalsService } from "../approvals/approvals.service";
 import { EmployeesStorageService } from "../employees/employees.storage.service";
 import { IntegrationsStorageService } from "../integrations/integrations.storage.service";
 import { MandateStorageService } from "../mandate/mandate.storage.service";
-import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
+import { WorkflowsStorageService } from "../workflows/workflows.storage.service";
 import { TaskParentsService } from "../tasks/task-parents.service";
 import { TaskRunsService } from "../tasks/task-runs.service";
 import { DepartmentSeenStore } from "./department-seen.store";
@@ -60,34 +60,34 @@ interface Aggregate {
   errorRunIds: string[];
 }
 
-/** A pipeline run owned by a department, kept around for the approval-attribution pass. */
-interface OwnedPipelineRun {
+/** A workflow run owned by a department, kept around for the approval-attribution pass. */
+interface OwnedWorkflowRun {
   runId: string;
   owner: DepartmentId;
 }
 
 /**
  * Phase 82 — real aggregation, replacing the phase-80 stub. A thin layer over
- * EXISTING domain services (pipelines storage for `department`
+ * EXISTING domain services (workflows storage for `department`
  * attribution, the unified task-runs feed for run state, the approvals service
  * for pending Tier-3 items) — it duplicates no run/approval semantics, only
  * reads and correlates.
  *
  * Per department, in precedence order `waiting > running > report > idle`:
- * - `running`: an owned pipeline OR an owned agent (Phase 126g — `Agent.department`,
+ * - `running`: an owned workflow OR an owned agent (Phase 126g — `Agent.department`,
  *   the same field the roster already reads) has a currently-`running` run.
  * - `waiting` (+ `tier3Count`): pending approvals attributable to an owned
- *   pipeline's run. Attribution mirrors the web's `approvalForRun` matching
- *   (`apps/web/features/runs/run.ts`) — a `pipeline-output` approval's `runId`
- *   IS the pipeline run id; a `pipeline-stage` approval's `runId` is the STAGE
- *   run id, prefixed with the pipeline run id (`${pipelineRunId}.${phaseId}_…`).
+ *   workflow's run. Attribution mirrors the web's `approvalForRun` matching
+ *   (`apps/web/features/runs/run.ts`) — a `workflow-output` approval's `runId`
+ *   IS the workflow run id; a `workflow-stage` approval's `runId` is the STAGE
+ *   run id, prefixed with the workflow run id (`${workflowRunId}.${phaseId}_…`).
  *   Every other approval kind (`agent`, `channel`, `task`, `proposed-task`,
- *   `task-output`, `jira-issue`, `machine`, `agent-proposal`) has no pipeline to
+ *   `task-output`, `jira-issue`, `machine`, `agent-proposal`) has no workflow to
  *   attribute through and is silently excluded — no data loss, the global
  *   approvals surface still shows it; this is a lens.
- * - `report` (+ `tier2Count`): owned pipeline OR agent runs that went terminal
+ * - `report` (+ `tier2Count`): owned workflow OR agent runs that went terminal
  *   (`done` or `error`) after the department's `lastSeenAt` (`DepartmentSeenStore`).
- *   `PipelineRun` carries no completion timestamp of its own,
+ *   `WorkflowRun` carries no completion timestamp of its own,
  *   so this uses the best available signal: the backing task's
  *   `taskOutcomeFinishedAt` when the run was dispatched from one, else the
  *   run's own `startedAt` (close enough for a coarse "since last visit" read —
@@ -104,7 +104,7 @@ interface OwnedPipelineRun {
 @Injectable()
 export class DepartmentsService {
   constructor(
-    private readonly pipelines: PipelinesStorageService,
+    private readonly workflows: WorkflowsStorageService,
     private readonly taskRuns: TaskRunsService,
     private readonly approvals: ApprovalsService,
     private readonly seen: DepartmentSeenStore,
@@ -189,7 +189,7 @@ export class DepartmentsService {
   }
 
   /**
-   * NS2 F1b — every stored pipeline/agent that still has no `department`. A
+   * NS2 F1b — every stored workflow/agent that still has no `department`. A
    * report list, not a health signal (the health read-model is a closed infra
    * enum — not the place for an ownership gap): the owner-backfill sweep runs
    * once at boot, so this is `[]` in steady state and only surfaces a NEWLY
@@ -197,11 +197,11 @@ export class DepartmentsService {
    * membership is derived, not stored, so there is no ownership gap to report.
    */
   async listUnowned(): Promise<UnownedEntity[]> {
-    const [pipelines, agents] = await Promise.all([this.pipelines.list(), this.agents.list()]);
+    const [workflows, agents] = await Promise.all([this.workflows.list(), this.agents.list()]);
     return [
-      ...pipelines
+      ...workflows
         .filter((p) => !p.department)
-        .map((p) => ({ kind: "pipeline" as const, id: p.id })),
+        .map((p) => ({ kind: "workflow" as const, id: p.id })),
       ...agents.filter((a) => !a.department).map((a) => ({ kind: "agent" as const, id: a.id })),
     ];
   }
@@ -214,7 +214,7 @@ export class DepartmentsService {
    * every other department sees none. `monitors` is the subset of that set that
    * are GitHub integrations with a `ci` stream — there is no standalone monitor
    * entity. Throws `DepartmentNotFoundError` for an unknown id, same as
-   * {@link get}. Pipelines are deliberately excluded — the roster tab's canvas
+   * {@link get}. Workflows are deliberately excluded — the roster tab's canvas
    * already sources those client-side.
    *
    * D-015: an agent (a position) belongs to the department IFF it currently has
@@ -277,15 +277,15 @@ export class DepartmentsService {
     departments?: readonly Department[],
   ): Promise<Map<DepartmentId, Aggregate>> {
     const all = departments ?? (await this.store.list());
-    const [pipelines, runs, pendingApprovals, agents] = await Promise.all([
-      this.pipelines.list(),
+    const [workflows, runs, pendingApprovals, agents] = await Promise.all([
+      this.workflows.list(),
       this.taskRuns.listTaskRuns(),
       this.approvals.list("pending"),
       this.agents.list(),
     ]);
 
-    const pipelineOwner = new Map<string, DepartmentId>();
-    for (const p of pipelines) if (p.department) pipelineOwner.set(p.id, p.department);
+    const workflowOwner = new Map<string, DepartmentId>();
+    for (const p of workflows) if (p.department) workflowOwner.set(p.id, p.department);
 
     const agentOwner = new Map<string, DepartmentId>();
     for (const a of agents) if (a.department) agentOwner.set(a.id, a.department);
@@ -297,17 +297,17 @@ export class DepartmentsService {
     const running = new Set<DepartmentId>();
     const tier2Count = new Map<DepartmentId, number>();
     const errorRuns = new Map<DepartmentId, string[]>();
-    const ownedPipelineRuns: OwnedPipelineRun[] = [];
+    const ownedWorkflowRuns: OwnedWorkflowRun[] = [];
 
     for (const run of runs) {
       const owner =
-        run.kind === "pipeline"
-          ? pipelineOwner.get(run.owner)
+        run.kind === "workflow"
+          ? workflowOwner.get(run.owner)
           : run.kind === "agent"
             ? agentOwner.get(run.owner)
             : undefined;
       if (!owner) continue;
-      if (run.kind === "pipeline") ownedPipelineRuns.push({ runId: run.runId, owner });
+      if (run.kind === "workflow") ownedWorkflowRuns.push({ runId: run.runId, owner });
 
       if (run.status === "running") running.add(owner);
 
@@ -326,7 +326,7 @@ export class DepartmentsService {
 
     const tier3Count = new Map<DepartmentId, number>();
     for (const approval of pendingApprovals) {
-      const owner = attributeApproval(approval, ownedPipelineRuns);
+      const owner = attributeApproval(approval, ownedWorkflowRuns);
       if (!owner) continue;
       tier3Count.set(owner, (tier3Count.get(owner) ?? 0) + 1);
     }
@@ -359,18 +359,18 @@ function completionSignal(run: TaskRun): string {
 }
 
 /**
- * The owned pipeline run a pending approval belongs to, or `undefined` when it
- * doesn't attribute to any owned pipeline. Mirrors `approvalForRun`
- * (`apps/web/features/runs/run.ts`): a `pipeline-output` approval's `runId` IS
- * the pipeline run id (exact match); a `pipeline-stage` approval's `runId` is
- * the stage run id, which is the pipeline run id plus a `.<phaseId>_…` suffix
+ * The owned workflow run a pending approval belongs to, or `undefined` when it
+ * doesn't attribute to any owned workflow. Mirrors `approvalForRun`
+ * (`apps/web/features/runs/run.ts`): a `workflow-output` approval's `runId` IS
+ * the workflow run id (exact match); a `workflow-stage` approval's `runId` is
+ * the stage run id, which is the workflow run id plus a `.<phaseId>_…` suffix
  * (prefix match).
  */
 function attributeApproval(
   approval: Pick<Approval, "runId">,
-  ownedPipelineRuns: readonly OwnedPipelineRun[],
+  ownedWorkflowRuns: readonly OwnedWorkflowRun[],
 ): DepartmentId | undefined {
-  const match = ownedPipelineRuns.find(
+  const match = ownedWorkflowRuns.find(
     (r) => approval.runId === r.runId || approval.runId.startsWith(`${r.runId}.`),
   );
   return match?.owner;

@@ -2,7 +2,7 @@
 name: PR autor
 description: >-
   Z ověřené, zdokumentované změny složí PR (titulek + tělo do pr-draft.md), pak
-  otevře PR přes gated push (delivery pipeline, brána).
+  otevře PR přes gated push (delivery workflow, brána).
 glyph: branch
 model: sonnet
 thinking: medium
@@ -15,7 +15,7 @@ tools:
 category: Delivery
 ---
 
-Jsi PR autor — závěrečná, **schvalovaná** fáze doručovací pipeline ZIBBY. Běžíš
+Jsi PR autor — závěrečná, **schvalovaná** fáze doručovací workflow ZIBBY. Běžíš
 až po zelených kontrolách (verify) a zdokumentování (dokumentator), na vyhrazené
 větvi `zibby/*` se zacommitovanou prací Kodéra.
 

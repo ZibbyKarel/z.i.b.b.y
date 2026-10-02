@@ -28,7 +28,7 @@ const dialogWidthPx: Record<DialogWidth, string> = {
   lg: "600px",
   xl: "800px",
   "2xl": "1000px",
-  // Near-viewport canvas modal (e.g. the pipeline node-graph editor). Capped by
+  // Near-viewport canvas modal (e.g. the workflow node-graph editor). Capped by
   // the shared `maxWidth: calc(100vw - 32px)` so it never overflows the screen.
   full: "1320px",
 };

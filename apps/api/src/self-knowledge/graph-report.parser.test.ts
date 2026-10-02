@@ -26,14 +26,14 @@ const REALISTIC_SAMPLE = `# Graph Report - z.i.b.b.y  (2026-07-05)
 3. \`t\` - 132 edges
 4. \`apiClient\` - 128 edges
 5. \`selectApiResponseBody()\` - 108 edges
-6. \`PipelineRunnerService\` - 92 edges
+6. \`WorkflowRunnerService\` - 92 edges
 7. \`LoggerService\` - 91 edges
 8. \`Container()\` - 91 edges
 9. \`renderWithProviders()\` - 87 edges
 10. \`ScopedLogger\` - 83 edges
 
 ## Surprising Connections (you probably didn't know these)
-- \`Doubles\` --references--> \`PipelineRun\`  [EXTRACTED]
+- \`Doubles\` --references--> \`WorkflowRun\`  [EXTRACTED]
 
 ## Import Cycles
 - None detected.
@@ -68,7 +68,7 @@ describe("parseGraphReport", () => {
       { name: "t", degree: 132 },
       { name: "apiClient", degree: 128 },
       { name: "selectApiResponseBody()", degree: 108 },
-      { name: "PipelineRunnerService", degree: 92 },
+      { name: "WorkflowRunnerService", degree: 92 },
       { name: "LoggerService", degree: 91 },
       { name: "Container()", degree: 91 },
       { name: "renderWithProviders()", degree: 87 },

@@ -18,7 +18,7 @@ export interface UseTaskOutput {
 }
 
 /**
- * The terminal-output selector for a single dispatch: "" = inherit (a pipeline keeps
+ * The terminal-output selector for a single dispatch: "" = inherit (a workflow keeps
  * its own outputs, an agent delivers nothing), or an explicit PR / file / void. A
  * `file` with no name yet projects to nothing and blocks submit, so the choice is
  * never silently dropped.

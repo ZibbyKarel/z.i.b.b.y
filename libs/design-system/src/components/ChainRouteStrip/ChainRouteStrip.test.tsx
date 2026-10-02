@@ -5,8 +5,8 @@ import { ChainRouteStrip, ChainRouteStripTestId } from "./ChainRouteStrip";
 import type { ChainRouteStripGate, ChainRouteStripStep } from "./ChainRouteStrip";
 
 const STEPS: ChainRouteStripStep[] = [
-  { code: "DEV", name: "Ship the feature", state: "done", pipeline: "Delivery" },
-  { code: "QA", name: "Verify it", state: "working", pipeline: "Test" },
+  { code: "DEV", name: "Ship the feature", state: "done", workflow: "Delivery" },
+  { code: "QA", name: "Verify it", state: "working", workflow: "Test" },
   { code: "REL", name: "Release it", state: "idle" },
 ];
 

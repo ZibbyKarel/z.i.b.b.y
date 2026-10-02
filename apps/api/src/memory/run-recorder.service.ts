@@ -6,11 +6,11 @@ import {
   type OnModuleDestroy,
   type OnModuleInit,
 } from "@nestjs/common";
-import type { AgentRun, PipelineRun, Project } from "@zibby/contracts";
+import type { AgentRun, Project, WorkflowRun } from "@zibby/contracts";
 import { AgentRunnerService } from "../agents/agent-runner.service";
 import { AgentsStorageService } from "../agents/agents.storage.service";
-import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
-import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
+import { WorkflowRunnerService } from "../workflows/workflow-runner.service";
+import { WorkflowsStorageService } from "../workflows/workflows.storage.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { fileExists, writeFileAtomic } from "../shared/file-storage/file-utils";
 import { shelfDailyLink } from "./department-shelf";
@@ -21,8 +21,8 @@ const MARKER = "memory-recorded.json";
 
 /** Agent run statuses that are terminal (the run is finished and won't change). */
 const TERMINAL_AGENT = new Set<AgentRun["status"]>(["done", "error", "interrupted"]);
-/** Pipeline run statuses that are terminal. `parked` is a pause, not an end. */
-const TERMINAL_PIPELINE = new Set<PipelineRun["status"]>(["done", "failed"]);
+/** Workflow run statuses that are terminal. `parked` is a pause, not an end. */
+const TERMINAL_WORKFLOW = new Set<WorkflowRun["status"]>(["done", "failed"]);
 
 /**
  * Writes a durable trace of every finished run into the vault's episodic `daily/`
@@ -32,8 +32,8 @@ const TERMINAL_PIPELINE = new Set<PipelineRun["status"]>(["done", "failed"]);
  * restart is rebuilt from disk WITHOUT re-emitting its terminal status, so the
  * subscription alone would miss it).
  *
- * Lives in its own module above Memory/Agents/Pipelines: grounding makes
- * Agents/Pipelines → Memory an edge, so the recorder (which needs the reverse) can
+ * Lives in its own module above Memory/Agents/Workflows: grounding makes
+ * Agents/Workflows → Memory an edge, so the recorder (which needs the reverse) can
  * never live inside MemoryModule without a DI cycle.
  *
  * Idempotency is at-most-once: a marker file is written into the run's cwd BEFORE
@@ -48,10 +48,10 @@ export class RunRecorderService implements OnModuleInit, OnApplicationBootstrap,
   constructor(
     private readonly vault: VaultService,
     private readonly agentRunner: AgentRunnerService,
-    private readonly pipelineRunner: PipelineRunnerService,
+    private readonly workflowRunner: WorkflowRunnerService,
     private readonly projects: ProjectsStorageService,
     private readonly agentsStore: AgentsStorageService,
-    private readonly pipelinesStore: PipelinesStorageService,
+    private readonly workflowsStore: WorkflowsStorageService,
   ) {}
 
   onModuleInit(): void {
@@ -59,8 +59,8 @@ export class RunRecorderService implements OnModuleInit, OnApplicationBootstrap,
       this.agentRunner.onRunStatus((run) => {
         if (TERMINAL_AGENT.has(run.status)) void this.recordAgent(run);
       }),
-      this.pipelineRunner.onRunStatus((run) => {
-        if (TERMINAL_PIPELINE.has(run.status)) void this.recordPipeline(run);
+      this.workflowRunner.onRunStatus((run) => {
+        if (TERMINAL_WORKFLOW.has(run.status)) void this.recordWorkflow(run);
       }),
     );
   }
@@ -74,8 +74,8 @@ export class RunRecorderService implements OnModuleInit, OnApplicationBootstrap,
     for (const run of this.agentRunner.listRunning()) {
       if (TERMINAL_AGENT.has(run.status)) await this.recordAgent(run);
     }
-    for (const run of this.pipelineRunner.list()) {
-      if (TERMINAL_PIPELINE.has(run.status)) await this.recordPipeline(run);
+    for (const run of this.workflowRunner.list()) {
+      if (TERMINAL_WORKFLOW.has(run.status)) await this.recordWorkflow(run);
     }
   }
 
@@ -115,19 +115,19 @@ export class RunRecorderService implements OnModuleInit, OnApplicationBootstrap,
     }
   }
 
-  private async recordPipeline(run: PipelineRun): Promise<void> {
+  private async recordWorkflow(run: WorkflowRun): Promise<void> {
     if (!(await this.claim(run.cwd))) return;
     try {
       const projectId = await this.resolveProjectByPath(run.projectPath);
       const suffix = projectId ? ` · [[${projectId}]]` : "";
       const stages = run.stageRuns.length;
-      const owner = (await this.pipelinesStore.get(run.pipelineId).catch(() => null))?.department;
+      const owner = (await this.workflowsStore.get(run.workflowId).catch(() => null))?.department;
       const shelf = owner ? ` · ${shelfDailyLink(owner)}` : "";
       await this.vault.appendDaily(
-        `pipeline ${run.pipelineRunId} (${run.pipelineId}) → ${run.status} · ${stages} stages${suffix}${shelf}`,
+        `workflow ${run.workflowRunId} (${run.workflowId}) → ${run.status} · ${stages} stages${suffix}${shelf}`,
       );
     } catch (error) {
-      this.logger.warn(`failed to record pipeline run ${run.pipelineRunId}: ${String(error)}`);
+      this.logger.warn(`failed to record workflow run ${run.workflowRunId}: ${String(error)}`);
     }
   }
 

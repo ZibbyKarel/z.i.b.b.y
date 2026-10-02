@@ -22,11 +22,11 @@ vi.mock("../../../agents/queries/useAgentsQuery", () => ({
   useAgentsQuery: () => ({ data: [{ id: "builder", name: "Builder", glyph: "hammer" }] }),
   getAgentsQueryKey: () => ["agents"],
 }));
-vi.mock("../../../pipelines/queries/usePipelinesQuery", () => ({
-  usePipelinesQuery: () => ({
+vi.mock("../../../workflows/queries/useWorkflowsQuery", () => ({
+  useWorkflowsQuery: () => ({
     data: [{ id: "delivery", name: "Delivery", department: "dev" }],
   }),
-  getPipelinesQueryKey: () => ["pipelines"],
+  getWorkflowsQueryKey: () => ["workflows"],
 }));
 vi.mock("../../../departments/queries/useDepartmentsQuery", () => ({
   useDepartmentsQuery: () => ({ data: [] }),
@@ -258,7 +258,7 @@ describe("TaskCommandLine (Phase 118b task-launch container)", () => {
 
   it("shows the no-teams composer hint — Task 9b: the chrome hint must not claim a mention source this path doesn't offer", () => {
     render(<TaskCommandLine />);
-    expect(screen.getByText(/hledá agenty, pipeliny a oddělení ·/)).toBeInTheDocument();
+    expect(screen.getByText(/hledá agenty, workflow a oddělení ·/)).toBeInTheDocument();
     expect(screen.queryByText(/a týmy/)).not.toBeInTheDocument();
   });
 
@@ -316,7 +316,7 @@ describe("TaskCommandLine (Phase 118b task-launch container)", () => {
         isLoop
         loop={{
           objective: "fix it",
-          maker: "pipeline:delivery",
+          maker: "workflow:delivery",
           verifierKind: "checks",
           commands: "",
           reviewer: "",

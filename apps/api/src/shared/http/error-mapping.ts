@@ -15,7 +15,7 @@ export interface ErrorMapperOptions {
  *   const errors = makeErrorMapper("Agent", { missing: [...], conflict: [...] })
  *   getAgent: ({ params: { id } }) => errors.or404(id, () => storage.get(id))
  *
- * Resource-specific cases (a 422 on invalid pipeline, a 409 on an already-decided
+ * Resource-specific cases (a 422 on invalid workflow, a 409 on an already-decided
  * approval) plug in via the optional `extra` callback, which gets first look at the
  * error and keeps the return type inferred for the contract.
  */

@@ -7,7 +7,7 @@ const VALID = {
   kind: "vault-note",
   locator: "audit-note",
   from: "docs.md",
-  producedBy: { runRef: "delivery_1", pipelineId: "delivery" },
+  producedBy: { runRef: "delivery_1", workflowId: "delivery" },
   createdAt: "2026-07-01T10:00:00.000Z",
 };
 
@@ -32,7 +32,7 @@ describe("artifact.schema", () => {
   it("list query: both filters optional, empty strings rejected", () => {
     expect(ArtifactListQuerySchema.parse({})).toEqual({});
     expect(ArtifactListQuerySchema.parse({ projectId: "acme" })).toEqual({ projectId: "acme" });
-    expect(ArtifactListQuerySchema.safeParse({ pipelineId: "" }).success).toBe(false);
+    expect(ArtifactListQuerySchema.safeParse({ workflowId: "" }).success).toBe(false);
   });
 });
 

@@ -6,9 +6,9 @@ import { useTranslations } from "next-intl";
 
 /**
  * Generic runtime badges — the model and thinking-level tags shared by agents and
- * pipeline phases (both carry the same `model`/`thinking` runtime knobs). Domain-neutral
+ * workflow phases (both carry the same `model`/`thinking` runtime knobs). Domain-neutral
  * and feature-neutral: they live here, not inside either feature, so agents don't have to
- * reach into the pipelines canvas for them.
+ * reach into the workflows canvas for them.
  */
 
 /** Per-run model badge (opus / sonnet / haiku …). */

@@ -271,8 +271,8 @@ export function describeTarget(target: TaskTarget): string {
   switch (target.kind) {
     case "agent":
       return `agent ${target.name}`;
-    case "pipeline":
-      return `pipeline ${target.name}`;
+    case "workflow":
+      return `workflow ${target.name}`;
     case "goal":
       return `cíl ${target.name}`;
     case "department":

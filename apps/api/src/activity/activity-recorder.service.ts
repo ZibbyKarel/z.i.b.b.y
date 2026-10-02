@@ -1,13 +1,13 @@
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
-import type { ActivityEntry, AgentRun, PipelineRun } from "@zibby/contracts";
+import type { ActivityEntry, AgentRun, WorkflowRun } from "@zibby/contracts";
 import { AgentRunnerService } from "../agents/agent-runner.service";
-import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
+import { WorkflowRunnerService } from "../workflows/workflow-runner.service";
 import { ActivityLogService } from "./activity-log.service";
 
 /**
  * Records run transitions into the activity log (Phase 6.1) — the
  * {@link RunRecorderService} twin: it consumes both runners, so it sits a level
- * ABOVE Agents/Pipelines (a recorder inside either would close a DI cycle), and
+ * ABOVE Agents/Workflows (a recorder inside either would close a DI cycle), and
  * subscribes `onRunStatus` so the runner internals stay untouched.
  *
  * Dedup is in-memory and best-effort (decision 4): a `Map<runRef, kind>` records
@@ -24,14 +24,14 @@ export class ActivityRecorderService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly agentRunner: AgentRunnerService,
-    private readonly pipelineRunner: PipelineRunnerService,
+    private readonly workflowRunner: WorkflowRunnerService,
     private readonly activity: ActivityLogService,
   ) {}
 
   onModuleInit(): void {
     this.unsubscribers.push(
       this.agentRunner.onRunStatus((run) => this.onAgent(run)),
-      this.pipelineRunner.onRunStatus((run) => this.onPipeline(run)),
+      this.workflowRunner.onRunStatus((run) => this.onWorkflow(run)),
     );
   }
 
@@ -64,26 +64,26 @@ export class ActivityRecorderService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  private onPipeline(run: PipelineRun): void {
-    const prev = this.seen.get(run.pipelineRunId);
+  private onWorkflow(run: WorkflowRun): void {
+    const prev = this.seen.get(run.workflowRunId);
     const kind: ActivityEntry["kind"] | null =
       run.status === "paused-limit"
         ? "run-paused-limit"
         : run.status === "running"
           ? prev === "run-paused-limit"
             ? "run-resumed-limit"
-            : "pipeline-started"
+            : "workflow-started"
           : run.status === "parked"
-            ? "pipeline-parked"
-            : isTerminalPipeline(run.status)
-              ? "pipeline-finished"
+            ? "workflow-parked"
+            : isTerminalWorkflow(run.status)
+              ? "workflow-finished"
               : null;
-    if (!kind || !this.changed(run.pipelineRunId, kind)) return;
+    if (!kind || !this.changed(run.workflowRunId, kind)) return;
     const tail = run.status === "parked" && run.parkedReason ? ` (${run.parkedReason})` : "";
     void this.activity.record({
       kind,
-      summary: summaryFor(kind, `pipeline ${run.pipelineId}`, `${run.status}${tail}`),
-      refs: { runRef: run.pipelineRunId, pipelineId: run.pipelineId, status: run.status },
+      summary: summaryFor(kind, `workflow ${run.workflowId}`, `${run.status}${tail}`),
+      refs: { runRef: run.workflowRunId, workflowId: run.workflowId, status: run.status },
     });
   }
 
@@ -95,11 +95,11 @@ export class ActivityRecorderService implements OnModuleInit, OnModuleDestroy {
   }
 }
 
-/** The single human sentence each recorded kind renders (subject = "agent X" / "pipeline Y"). */
+/** The single human sentence each recorded kind renders (subject = "agent X" / "workflow Y"). */
 function summaryFor(kind: ActivityEntry["kind"], subject: string, status: string): string {
   switch (kind) {
     case "run-started":
-    case "pipeline-started":
+    case "workflow-started":
       return `${subject} started`;
     case "run-paused-limit":
       return `${subject} paused on the usage limit`;
@@ -114,6 +114,6 @@ function isTerminalAgent(status: AgentRun["status"]): boolean {
   return status === "done" || status === "error" || status === "interrupted";
 }
 
-function isTerminalPipeline(status: PipelineRun["status"]): boolean {
+function isTerminalWorkflow(status: WorkflowRun["status"]): boolean {
   return status === "done" || status === "failed";
 }

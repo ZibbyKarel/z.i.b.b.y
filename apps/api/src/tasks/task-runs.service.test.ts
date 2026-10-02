@@ -3,10 +3,10 @@ import type {
   AgentRun,
   Goal,
   GoalRun,
-  Pipeline,
-  PipelineRun,
   Project,
   ScheduledTask,
+  Workflow,
+  WorkflowRun,
 } from "@zibby/contracts";
 import { NO_DEPARTMENT } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
@@ -15,9 +15,9 @@ import type { AgentsStorageService } from "../agents/agents.storage.service";
 import type { GoalRunnerService } from "../goals/goal-runner.service";
 import { GoalRunNotStoppableError } from "../goals/goals.errors";
 import type { GoalsStorageService } from "../goals/goals.storage.service";
-import { PipelineRunNotStoppableError } from "../pipelines/pipeline-runner.service";
-import type { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
-import type { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
+import { WorkflowRunNotStoppableError } from "../workflows/workflow-runner.service";
+import type { WorkflowRunnerService } from "../workflows/workflow-runner.service";
+import type { WorkflowsStorageService } from "../workflows/workflows.storage.service";
 import type { ProjectsStorageService } from "../projects/projects.storage.service";
 import type { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
 import {
@@ -55,15 +55,15 @@ const makerChild: AgentRun = {
   startedAt: "2026-06-16T00:01:00.000Z",
 };
 
-const pipeP: PipelineRun = {
-  pipelineRunId: "delivery_3",
-  pipelineId: "delivery",
+const pipeP: WorkflowRun = {
+  workflowRunId: "delivery_3",
+  workflowId: "delivery",
   status: "running",
   taskId: undefined,
   currentStage: "kodér",
   stageRuns: [],
   startedAt: "2026-06-16T00:02:00.000Z",
-  // `cwd` is the run's own per-phase sandbox root (named `${pipelineId}_${startedMs}`,
+  // `cwd` is the run's own per-phase sandbox root (named `${workflowId}_${startedMs}`,
   // mirroring production) — never the display project. `projectPath` is the resolved
   // target project's path, which the display label must be derived from instead.
   cwd: "/tmp/delivery_3",
@@ -103,7 +103,7 @@ const scheduledS: ScheduledTask = {
 };
 
 const agentDef = { id: "researcher", name: "Researcher" } as Agent;
-const pipelineDef = { id: "delivery", name: "Delivery Pipeline" } as Pipeline;
+const workflowDef = { id: "delivery", name: "Delivery Workflow" } as Workflow;
 // goal definition intentionally absent → processor.name must fall back to the id
 
 function build() {
@@ -118,10 +118,10 @@ function build() {
     stop: vi.fn((id: string) => ({ ...agentA, runId: id, status: "interrupted" })),
     delete: vi.fn(async () => {}),
   };
-  const pipelineRunner = {
+  const workflowRunner = {
     listAll: vi.fn(async () => [pipeP]),
     get: vi.fn((id: string) => {
-      if (id !== pipeP.pipelineRunId) throw new Error("not found");
+      if (id !== pipeP.workflowRunId) throw new Error("not found");
       return pipeP;
     }),
     readStageLog: vi.fn(async () => ({ content: "stage", nextOffset: 5, done: false })),
@@ -143,17 +143,17 @@ function build() {
     delete: vi.fn(async () => {}),
   };
   const agentsStore = { list: vi.fn(async () => [agentDef]) };
-  const pipelinesStore = { list: vi.fn(async () => [pipelineDef]) };
+  const workflowsStore = { list: vi.fn(async () => [workflowDef]) };
   const goalsStore = { list: vi.fn(async () => [] as Goal[]) };
   const projectsStore = { list: vi.fn(async () => [acmeProject]) };
   const scheduled = { list: vi.fn(async () => [scheduledS]) };
 
   const service = new TaskRunsService(
     agentRunner as unknown as AgentRunnerService,
-    pipelineRunner as unknown as PipelineRunnerService,
+    workflowRunner as unknown as WorkflowRunnerService,
     goalRunner as unknown as GoalRunnerService,
     agentsStore as unknown as AgentsStorageService,
-    pipelinesStore as unknown as PipelinesStorageService,
+    workflowsStore as unknown as WorkflowsStorageService,
     goalsStore as unknown as GoalsStorageService,
     projectsStore as unknown as ProjectsStorageService,
     scheduled as unknown as ScheduledTasksStorageService,
@@ -161,9 +161,9 @@ function build() {
   return {
     service,
     agentRunner,
-    pipelineRunner,
+    workflowRunner,
     goalRunner,
-    pipelinesStore,
+    workflowsStore,
     projectsStore,
     scheduled,
   };
@@ -198,10 +198,10 @@ describe("TaskRunsService", () => {
     });
   });
 
-  describe("pipelineRunToView — outputArtifactName (P2-T1)", () => {
+  describe("workflowRunToView — outputArtifactName (P2-T1)", () => {
     it("appears when outputsOverride contains a file output, carrying its `from`", async () => {
-      const { service, pipelineRunner } = build();
-      pipelineRunner.listAll.mockResolvedValue([
+      const { service, workflowRunner } = build();
+      workflowRunner.listAll.mockResolvedValue([
         {
           ...pipeP,
           outputsOverride: [
@@ -209,42 +209,42 @@ describe("TaskRunsService", () => {
           ],
         },
       ]);
-      const run = await service.getTaskRun(pipeP.pipelineRunId);
+      const run = await service.getTaskRun(pipeP.workflowRunId);
       expect(run.outputArtifactName).toBe("custom-report.md");
     });
 
     it("is absent when outputsOverride has no file output", async () => {
-      const { service, pipelineRunner } = build();
-      pipelineRunner.listAll.mockResolvedValue([
+      const { service, workflowRunner } = build();
+      workflowRunner.listAll.mockResolvedValue([
         { ...pipeP, outputsOverride: [{ type: "pr", from: "pr-draft.md" }] },
       ]);
-      const run = await service.getTaskRun(pipeP.pipelineRunId);
+      const run = await service.getTaskRun(pipeP.workflowRunId);
       expect(run.outputArtifactName).toBeUndefined();
     });
 
-    it("is absent when outputsOverride is undefined and the pipeline definition has no file output", async () => {
+    it("is absent when outputsOverride is undefined and the workflow definition has no file output", async () => {
       const { service } = build();
-      const run = await service.getTaskRun(pipeP.pipelineRunId);
+      const run = await service.getTaskRun(pipeP.workflowRunId);
       expect(run.outputArtifactName).toBeUndefined();
     });
 
-    it("falls back to the pipeline definition's own `outputs:` when the run has no outputsOverride", async () => {
-      const { service, pipelinesStore } = build();
-      pipelinesStore.list.mockResolvedValue([
+    it("falls back to the workflow definition's own `outputs:` when the run has no outputsOverride", async () => {
+      const { service, workflowsStore } = build();
+      workflowsStore.list.mockResolvedValue([
         {
-          ...pipelineDef,
+          ...workflowDef,
           outputs: [{ type: "file", from: "audit-report.md", dest: "vault", to: "report" }],
         },
       ]);
-      const run = await service.getTaskRun(pipeP.pipelineRunId);
+      const run = await service.getTaskRun(pipeP.workflowRunId);
       expect(run.outputArtifactName).toBe("audit-report.md");
     });
   });
 
   describe("costUsd projection (Phase 03)", () => {
-    it("sums the stage costs of a pipeline run", async () => {
-      const { service, pipelineRunner } = build();
-      pipelineRunner.listAll.mockResolvedValue([
+    it("sums the stage costs of a workflow run", async () => {
+      const { service, workflowRunner } = build();
+      workflowRunner.listAll.mockResolvedValue([
         {
           ...pipeP,
           stageRuns: [
@@ -253,13 +253,13 @@ describe("TaskRunsService", () => {
           ],
         },
       ]);
-      const run = await service.getTaskRun(pipeP.pipelineRunId);
+      const run = await service.getTaskRun(pipeP.workflowRunId);
       expect(run.costUsd).toBeCloseTo(0.35, 10);
     });
 
     it("sums only stages that carry a cost (no NaN from a costless stage)", async () => {
-      const { service, pipelineRunner } = build();
-      pipelineRunner.listAll.mockResolvedValue([
+      const { service, workflowRunner } = build();
+      workflowRunner.listAll.mockResolvedValue([
         {
           ...pipeP,
           stageRuns: [
@@ -268,19 +268,19 @@ describe("TaskRunsService", () => {
           ],
         },
       ]);
-      const run = await service.getTaskRun(pipeP.pipelineRunId);
+      const run = await service.getTaskRun(pipeP.workflowRunId);
       expect(run.costUsd).toBeCloseTo(0.2, 10);
     });
 
     it("is absent when no stage carries a cost (old run — not $0.00)", async () => {
-      const { service, pipelineRunner } = build();
-      pipelineRunner.listAll.mockResolvedValue([
+      const { service, workflowRunner } = build();
+      workflowRunner.listAll.mockResolvedValue([
         {
           ...pipeP,
           stageRuns: [{ phaseId: "a", runId: "a_1", attempt: 1, status: "done" }],
         },
       ]);
-      const run = await service.getTaskRun(pipeP.pipelineRunId);
+      const run = await service.getTaskRun(pipeP.workflowRunId);
       expect(run.costUsd).toBeUndefined();
     });
 
@@ -297,12 +297,12 @@ describe("TaskRunsService", () => {
       const { service } = build();
       const feed = await service.listTaskRuns();
       const agent = feed.find((r) => r.runId === "researcher_1");
-      const pipeline = feed.find((r) => r.runId === "delivery_3");
+      const workflow = feed.find((r) => r.runId === "delivery_3");
       expect(agent?.processor).toEqual({ kind: "agent", id: "researcher", name: "Researcher" });
-      expect(pipeline?.processor).toEqual({
-        kind: "pipeline",
+      expect(workflow?.processor).toEqual({
+        kind: "workflow",
         id: "delivery",
-        name: "Delivery Pipeline",
+        name: "Delivery Workflow",
       });
     });
 
@@ -425,9 +425,9 @@ describe("TaskRunsService", () => {
   });
 
   describe("project display label (regression: was showing the run's own sandbox id)", () => {
-    it("resolves a pipeline run's project from its resolved projectPath, not its sandbox cwd", async () => {
+    it("resolves a workflow run's project from its resolved projectPath, not its sandbox cwd", async () => {
       const { service } = build();
-      const run = await service.getTaskRun(pipeP.pipelineRunId);
+      const run = await service.getTaskRun(pipeP.workflowRunId);
       // `cwd` is "/tmp/delivery_3" (the sandbox root, named after the run itself) —
       // the display label must never equal that; it resolves via `projectPath` instead.
       expect(run.project).toBe("Acme Corp");
@@ -437,11 +437,11 @@ describe("TaskRunsService", () => {
     it("falls back to the resolved path's basename when the project isn't registered", async () => {
       const { service, projectsStore } = build();
       projectsStore.list.mockResolvedValue([]);
-      const run = await service.getTaskRun(pipeP.pipelineRunId);
+      const run = await service.getTaskRun(pipeP.workflowRunId);
       expect(run.project).toBe("acme");
     });
 
-    it("shows no project for a pipeline/goal run with no resolved projectPath", async () => {
+    it("shows no project for a workflow/goal run with no resolved projectPath", async () => {
       const { service } = build();
       const run = await service.getTaskRun(goalG.goalRunId);
       expect(run.project).toBe("");
@@ -455,23 +455,23 @@ describe("TaskRunsService", () => {
     });
 
     it("the owning task's projectId wins over the kind-specific project label when both resolve", async () => {
-      const { service, scheduled, pipelineRunner } = build();
-      // A pipeline run resolved to a *different*, unregistered filesystem path than
+      const { service, scheduled, workflowRunner } = build();
+      // A workflow run resolved to a *different*, unregistered filesystem path than
       // the task's own engagement — the path-based fallback would read "other", but
       // the task's projectId is the authoritative display source and must win.
-      pipelineRunner.listAll.mockResolvedValue([
+      workflowRunner.listAll.mockResolvedValue([
         { ...pipeP, taskId: "task-pipe", projectPath: "/repos/other" },
       ]);
       scheduled.list.mockResolvedValue([
         { ...scheduledS, id: "task-pipe", status: "dispatched", projectId: "acme" },
       ]);
-      const run = await service.getTaskRun(pipeP.pipelineRunId);
+      const run = await service.getTaskRun(pipeP.workflowRunId);
       expect(run.project).toBe("Acme Corp");
     });
 
     // BUG: a roadmap release that hit the concurrency cap persists `queued` with
     // `projectId` correctly set (`TaskSchedulerService.createTask` → `storage.createQueued`
-    // does thread it through), but `scheduledTaskToView` — unlike the agent/pipeline/goal
+    // does thread it through), but `scheduledTaskToView` — unlike the agent/workflow/goal
     // view builders — is never passed through `resolveProjectDisplay`, so its `project`
     // display label stays the hardcoded `""` even though `projectId` resolves to a real,
     // registered project. The web reads `run.project` (not `projectId`) for the card
@@ -531,19 +531,19 @@ describe("TaskRunsService", () => {
       expect(agentRunner.readLog).toHaveBeenCalledWith("researcher_1", 0);
     });
 
-    it("routes stage logs to the pipeline runner", async () => {
-      const { service, pipelineRunner } = build();
+    it("routes stage logs to the workflow runner", async () => {
+      const { service, workflowRunner } = build();
       await service.getStageLog("delivery_3", "kodér", 0);
-      expect(pipelineRunner.readStageLog).toHaveBeenCalledWith("delivery_3", "kodér", 0);
+      expect(workflowRunner.readStageLog).toHaveBeenCalledWith("delivery_3", "kodér", 0);
     });
 
-    it("routes stage-log append subscriptions to the pipeline runner (SSE tail wake signal)", () => {
-      const { service, pipelineRunner } = build();
+    it("routes stage-log append subscriptions to the workflow runner (SSE tail wake signal)", () => {
+      const { service, workflowRunner } = build();
       const listener = () => {};
       const unsub = () => {};
-      pipelineRunner.onStageLogAppend.mockReturnValue(unsub);
+      workflowRunner.onStageLogAppend.mockReturnValue(unsub);
       expect(service.onStageLogAppend("delivery_3", "kodér", listener)).toBe(unsub);
-      expect(pipelineRunner.onStageLogAppend).toHaveBeenCalledWith("delivery_3", "kodér", listener);
+      expect(workflowRunner.onStageLogAppend).toHaveBeenCalledWith("delivery_3", "kodér", listener);
     });
 
     it("routes artifacts to the goal runner for a goal run", async () => {
@@ -553,37 +553,37 @@ describe("TaskRunsService", () => {
       expect(artifact).toEqual({ name: "verdict.txt", content: "ok" });
     });
 
-    it("stops an agent, pipeline, or goal run via its own runner", async () => {
-      const { service, agentRunner, pipelineRunner, goalRunner } = build();
+    it("stops an agent, workflow, or goal run via its own runner", async () => {
+      const { service, agentRunner, workflowRunner, goalRunner } = build();
       await service.stop("researcher_1");
       expect(agentRunner.stop).toHaveBeenCalledWith("researcher_1");
       await service.stop("delivery_3");
-      expect(pipelineRunner.stop).toHaveBeenCalledWith("delivery_3");
+      expect(workflowRunner.stop).toHaveBeenCalledWith("delivery_3");
       await service.stop("ship-it_4");
       expect(goalRunner.stop).toHaveBeenCalledWith("ship-it_4");
     });
 
-    it("normalizes a pipeline/goal runner's own 'not stoppable' error to the unified one", async () => {
-      const { service, pipelineRunner, goalRunner } = build();
-      pipelineRunner.stop.mockRejectedValueOnce(new PipelineRunNotStoppableError("delivery_3"));
+    it("normalizes a workflow/goal runner's own 'not stoppable' error to the unified one", async () => {
+      const { service, workflowRunner, goalRunner } = build();
+      workflowRunner.stop.mockRejectedValueOnce(new WorkflowRunNotStoppableError("delivery_3"));
       await expect(service.stop("delivery_3")).rejects.toBeInstanceOf(TaskRunNotStoppableError);
       goalRunner.stop.mockRejectedValueOnce(new GoalRunNotStoppableError("ship-it_4"));
       await expect(service.stop("ship-it_4")).rejects.toBeInstanceOf(TaskRunNotStoppableError);
     });
 
-    it("resumes pipeline/goal runs, refuses to resume an agent run", async () => {
-      const { service, pipelineRunner, goalRunner } = build();
+    it("resumes workflow/goal runs, refuses to resume an agent run", async () => {
+      const { service, workflowRunner, goalRunner } = build();
       await service.resume("delivery_3", "go");
-      expect(pipelineRunner.resumeParked).toHaveBeenCalledWith("delivery_3", "go");
+      expect(workflowRunner.resumeParked).toHaveBeenCalledWith("delivery_3", "go");
       await service.resume("ship-it_4", "again");
       expect(goalRunner.resumeParked).toHaveBeenCalledWith("ship-it_4", "again");
       await expect(service.resume("researcher_1")).rejects.toBeInstanceOf(TaskRunNotResumableError);
     });
 
     it("deletes via the owning runner", async () => {
-      const { service, pipelineRunner } = build();
+      const { service, workflowRunner } = build();
       await service.delete("delivery_3");
-      expect(pipelineRunner.delete).toHaveBeenCalledWith("delivery_3");
+      expect(workflowRunner.delete).toHaveBeenCalledWith("delivery_3");
     });
   });
 
@@ -626,15 +626,15 @@ describe("TaskRunsService", () => {
       startedAt: "2026-06-14T00:00:00.000Z",
     };
 
-    const devPipelineDef = {
+    const devWorkflowDef = {
       id: "dev-deploy",
       name: "Dev Deploy",
       department: "dev",
-    } as Pipeline;
-    const devRun: PipelineRun = {
+    } as Workflow;
+    const devRun: WorkflowRun = {
       ...pipeP,
-      pipelineRunId: "dev_1",
-      pipelineId: "dev-deploy",
+      workflowRunId: "dev_1",
+      workflowId: "dev-deploy",
       status: "done",
       startedAt: "2026-06-15T00:00:00.000Z",
     };
@@ -677,11 +677,11 @@ describe("TaskRunsService", () => {
       expect(page.items.map((r) => r.runId)).toEqual(["a_done_1"]);
     });
 
-    it("filters by department — a pipeline run's department, or the explicit 'none' bucket", async () => {
-      const { service, agentRunner, pipelineRunner, pipelinesStore } = build();
+    it("filters by department — a workflow run's department, or the explicit 'none' bucket", async () => {
+      const { service, agentRunner, workflowRunner, workflowsStore } = build();
       agentRunner.listAll.mockResolvedValue([doneA]);
-      pipelineRunner.listAll.mockResolvedValue([devRun]);
-      pipelinesStore.list.mockResolvedValue([devPipelineDef]);
+      workflowRunner.listAll.mockResolvedValue([devRun]);
+      workflowsStore.list.mockResolvedValue([devWorkflowDef]);
 
       const devOnly = await service.listArchivedTaskRuns({ departments: ["dev"] });
       expect(devOnly.items.map((r) => r.runId)).toEqual(["dev_1"]);
@@ -694,10 +694,10 @@ describe("TaskRunsService", () => {
     });
 
     it("counts archived runs per department (search-scoped) plus the unsearched total", async () => {
-      const { service, agentRunner, pipelineRunner, pipelinesStore } = build();
+      const { service, agentRunner, workflowRunner, workflowsStore } = build();
       agentRunner.listAll.mockResolvedValue([doneA, runningA]);
-      pipelineRunner.listAll.mockResolvedValue([devRun]);
-      pipelinesStore.list.mockResolvedValue([devPipelineDef]);
+      workflowRunner.listAll.mockResolvedValue([devRun]);
+      workflowsStore.list.mockResolvedValue([devWorkflowDef]);
 
       const counts = await service.getArchiveCounts({});
       expect(counts.total).toBe(2);
@@ -705,10 +705,10 @@ describe("TaskRunsService", () => {
     });
 
     it("counts stay search-scoped while total ignores search entirely", async () => {
-      const { service, agentRunner, pipelineRunner, pipelinesStore } = build();
+      const { service, agentRunner, workflowRunner, workflowsStore } = build();
       agentRunner.listAll.mockResolvedValue([doneA]);
-      pipelineRunner.listAll.mockResolvedValue([devRun]);
-      pipelinesStore.list.mockResolvedValue([devPipelineDef]);
+      workflowRunner.listAll.mockResolvedValue([devRun]);
+      workflowsStore.list.mockResolvedValue([devWorkflowDef]);
 
       const counts = await service.getArchiveCounts({ search: "nothing-matches-this" });
       expect(counts.counts).toEqual({});

@@ -18,7 +18,7 @@ import { useGoalsQuery } from "../../goals/queries";
 import { useCompaniesQuery } from "../../companies/queries";
 import { useTeamsQuery } from "../../teams/queries";
 import { useProjectsQuery } from "../../projects/queries";
-import { usePipelinesQuery } from "../../pipelines/queries";
+import { useWorkflowsQuery } from "../../workflows/queries";
 import { useSkillsQuery } from "../../skills/queries";
 import { useMcpServersQuery } from "../../mcp/queries";
 import { useHooksQuery } from "../../hooks/queries";
@@ -69,7 +69,7 @@ export function CommandPaletteLoaded({
   const { data: companies } = useCompaniesQuery();
   const { data: teams } = useTeamsQuery();
   const { data: projects } = useProjectsQuery();
-  const { data: pipelines } = usePipelinesQuery();
+  const { data: workflows } = useWorkflowsQuery();
   const { data: skills } = useSkillsQuery();
   const { data: mcpServers } = useMcpServersQuery();
   const { data: hooks } = useHooksQuery();
@@ -104,7 +104,7 @@ export function CommandPaletteLoaded({
           companies: (companies ?? []).map((c) => ({ id: c.id, name: c.name })),
           teams: (teams ?? []).map((t) => ({ id: t.id, name: t.name })),
           projects: (projects ?? []).map((p) => ({ id: p.id, name: p.name })),
-          pipelines: (pipelines ?? []).map((p) => ({
+          workflows: (workflows ?? []).map((p) => ({
             id: p.id,
             name: p.name,
             department: p.department,
@@ -131,7 +131,7 @@ export function CommandPaletteLoaded({
       companies,
       teams,
       projects,
-      pipelines,
+      workflows,
       skills,
       mcpServers,
       hooks,

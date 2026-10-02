@@ -2,7 +2,7 @@ import { Controller, Headers, type MessageEvent, Param, Req, Sse } from "@nestjs
 import type { Request } from "express";
 import type { Observable } from "rxjs";
 import { AgentRunnerService, RunNotFoundError } from "../agents/agent-runner.service";
-import { PipelineRunNotFoundError } from "../pipelines/pipeline-runner.service";
+import { WorkflowRunNotFoundError } from "../workflows/workflow-runner.service";
 import { type WriteGate, streamRunLog } from "../shared/sse/sse";
 import { TaskRunNotFoundError, TaskRunsService } from "./task-runs.service";
 
@@ -12,7 +12,7 @@ import { TaskRunNotFoundError, TaskRunsService } from "./task-runs.service";
  * on a distinct `…/logs/stream` path, so it never collides with the contract's
  * `…/logs` poll endpoint (the graceful fallback when a proxy/browser can't do SSE).
  *
- * Only agent (and goal-child agent) runs have a single tailable log; pipeline runs
+ * Only agent (and goal-child agent) runs have a single tailable log; workflow runs
  * use per-stage logs. An unknown/non-agent run id ends the stream cleanly (the agent
  * runner's `RunNotFoundError` maps to a done chunk) rather than erroring it, so the
  * browser doesn't reconnect-loop against a run that will never produce bytes.
@@ -46,11 +46,11 @@ export class TaskRunLogsController {
   }
 
   /**
-   * SSE tail for one pipeline stage's log — the push replacement for the stage
+   * SSE tail for one workflow stage's log — the push replacement for the stage
    * timeline's 1s offset poll (the contract's `…/stages/:phaseId/logs` endpoint
    * stays as the graceful fallback). The read path re-resolves the tailed attempt
    * on every chunk (live `currentStageRunId`, else the last attempt of the phase),
-   * so the stream follows a retry without reconnecting. An unknown/non-pipeline
+   * so the stream follows a retry without reconnecting. An unknown/non-workflow
    * run or a phase with no attempt yet ends the stream cleanly (done chunk), so
    * the browser doesn't reconnect-loop against a log that will never exist.
    */
@@ -66,7 +66,7 @@ export class TaskRunLogsController {
       startOffset,
       (offset) =>
         this.taskRuns.getStageLog(runId, phaseId, offset).catch((error) => {
-          if (error instanceof TaskRunNotFoundError || error instanceof PipelineRunNotFoundError) {
+          if (error instanceof TaskRunNotFoundError || error instanceof WorkflowRunNotFoundError) {
             return { content: "", nextOffset: offset, done: true };
           }
           throw error;

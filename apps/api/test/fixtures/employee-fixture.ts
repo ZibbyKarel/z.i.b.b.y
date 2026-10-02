@@ -4,7 +4,7 @@ import type { DepartmentId, Employee } from "@zibby/contracts";
 
 /**
  * D-015/D-017 test helper: writes an `Employee` record straight to disk, so an
- * e2e pipeline/task fixture that dispatches a bare placeholder agent id (one
+ * e2e workflow/task fixture that dispatches a bare placeholder agent id (one
  * never registered as a real `Agent`, e.g. `"writer"`) still has someone to
  * lease. Bypasses the hire HTTP flow on purpose — `POST /api/employees` (via
  * `EmployeesService.hire`) validates the position against a real, registered

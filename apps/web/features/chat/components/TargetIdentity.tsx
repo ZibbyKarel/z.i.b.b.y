@@ -7,7 +7,7 @@ export enum TargetIdentityTestId {
 }
 
 /** The orchestrator has no `glyph` in its display shape today — fall back to its
- * compass; a stored agent/pipeline/goal/chain target falls back to a generic bot. */
+ * compass; a stored agent/workflow/goal/chain target falls back to a generic bot. */
 export function targetGlyph(target: TaskTarget): IconName {
   if (target.kind === "orchestrator") return "compass";
   return (target.glyph as IconName | undefined) ?? "bot";

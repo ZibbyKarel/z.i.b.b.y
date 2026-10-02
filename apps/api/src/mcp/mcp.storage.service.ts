@@ -88,7 +88,7 @@ export class McpServersStorageService extends EntityFileStore<McpServer> {
    *
    * **The RUN token, never the chat token** (fix round 1, F3): this row is
    * what `ClaudeRunCommandService.buildMcpConfig` folds into every agent/
-   * pipeline run's `--mcp-config`, so it must carry the token that resolves
+   * workflow run's `--mcp-config`, so it must carry the token that resolves
    * to `KbScopeService.rootsForRun` — the path that fails CLOSED without a
    * live run id. The chat token is never written here, and is not reachable
    * through `GET /api/mcp-servers` either way (see below).

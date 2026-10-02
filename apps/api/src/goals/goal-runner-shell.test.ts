@@ -19,7 +19,7 @@ function makeService(goalVerifyTimeoutMs = 200): GoalRunnerService {
     "/tmp/goal-runner-shell-test",
     null as never, // goals
     null as never, // agentRunner
-    null as never, // pipelineRunner
+    null as never, // workflowRunner
     null as never, // projects
     null as never, // workspace
     null as never, // budget
@@ -91,7 +91,7 @@ describe("GoalRunnerService verifier shell governance (12.3)", () => {
     };
     await (
       svc as unknown as { onDriveError: (r: unknown, e: unknown) => Promise<void> }
-    ).onDriveError(run, new Error("PipelineNotFoundError"));
+    ).onDriveError(run, new Error("WorkflowNotFoundError"));
     expect(run.status).toBe("failed");
     expect(run.currentIteration).toBeNull();
   });

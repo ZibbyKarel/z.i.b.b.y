@@ -24,7 +24,7 @@ Every file is `<id>.md` with YAML frontmatter:
 ```markdown
 ---
 title: Delivery Loop — model decision
-tags: [architect, pipeline]
+tags: [architect, workflow]
 created: 2026-06-01
 ---
 
@@ -172,7 +172,7 @@ writes context _into_ a run, the distiller reads insights _out_ of it; the agent
 never knows any of this memory exists (learning is NOT an agent capability). It's
 driven by the nightly [`memory-distill` system automation](./automations.md#memory-distillation-memory-distill).
 
-`MemoryDistillerService.distill()` walks terminal pipeline/agent/goal runs, a cheap
+`MemoryDistillerService.distill()` walks terminal workflow/agent/goal runs, a cheap
 model (haiku, fail-open) extracts durable insights from them, and saves them as one
 nightly digest `distilled-<date>` in `knowledge/`, linked from the affected projects'
 MOCs. Idempotent via a `memory-distilled.json` marker in the run's `cwd`. See the

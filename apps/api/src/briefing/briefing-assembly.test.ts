@@ -3,8 +3,8 @@ import type {
   ActivityEntry,
   Approval,
   ChannelItem,
-  PipelineRun,
   ScheduledTask,
+  WorkflowRun,
 } from "@zibby/contracts";
 import {
   assembleBriefing,
@@ -30,10 +30,10 @@ const approval = (over: Partial<Approval>): Approval => ({
   ...over,
 });
 
-const parked = (over: Partial<PipelineRun>): PipelineRun =>
+const parked = (over: Partial<WorkflowRun>): WorkflowRun =>
   ({
-    pipelineRunId: "p1",
-    pipelineId: "release",
+    workflowRunId: "p1",
+    workflowId: "release",
     status: "parked",
     parkedReason: "retries",
     startedAt: "2026-06-12T05:00:00.000Z",
@@ -41,7 +41,7 @@ const parked = (over: Partial<PipelineRun>): PipelineRun =>
     currentStage: null,
     cwd: "/tmp/p1",
     ...over,
-  }) as unknown as PipelineRun;
+  }) as unknown as WorkflowRun;
 
 const channelItem = (over: Partial<ChannelItem>): ChannelItem =>
   ({
@@ -76,7 +76,7 @@ describe("assembleBriefing", () => {
       activity: [
         entry({ kind: "task-outcome", summary: "task done", refs: { status: "done" } }),
         entry({ kind: "run-finished", summary: "run ok", refs: { status: "done" } }),
-        entry({ kind: "pipeline-finished", summary: "pipe failed", refs: { status: "failed" } }),
+        entry({ kind: "workflow-finished", summary: "pipe failed", refs: { status: "failed" } }),
         entry({ kind: "channel-reply", summary: "replied" }),
         entry({ kind: "gate-decision", summary: "gate ask" }), // not a did-kind
       ],
@@ -88,7 +88,7 @@ describe("assembleBriefing", () => {
       expect.arrayContaining([
         "task-outcome",
         "run-finished",
-        "pipeline-finished",
+        "workflow-finished",
         "channel-reply",
       ]),
     );
@@ -97,7 +97,7 @@ describe("assembleBriefing", () => {
       { integrationId: "team", newItems: 1, lastReceivedAt: "2026-06-12T06:00:00.000Z" },
     ]);
     expect(briefing.counts).toEqual({
-      runsFinished: 1, // run-finished done (pipeline-finished failed counts as failed)
+      runsFinished: 1, // run-finished done (workflow-finished failed counts as failed)
       runsFailed: 1,
       parked: 1,
       approvalsPending: 2,
@@ -149,7 +149,7 @@ describe("assembleBriefing", () => {
       approvals: [],
       parkedRuns: [],
       pausedLimitRuns: [
-        parked({ pipelineRunId: "p9", pipelineId: "delivery", status: "paused-limit", resumeAt }),
+        parked({ workflowRunId: "p9", workflowId: "delivery", status: "paused-limit", resumeAt }),
       ],
       channelItems: [channelItem({})],
       activity: [],
@@ -159,12 +159,12 @@ describe("assembleBriefing", () => {
     // The channel watch item AND the run-pause watch item share the array.
     expect(briefing.watching).toContainEqual({
       runRef: "p9",
-      summary: "pipeline delivery paused on the usage limit",
+      summary: "workflow delivery paused on the usage limit",
       resumeAt,
     });
     // The markdown surfaces the pause line with its resume time.
     const md = renderBriefingMarkdown(briefing);
-    expect(md).toContain("pipeline delivery paused on the usage limit, resumes");
+    expect(md).toContain("workflow delivery paused on the usage limit, resumes");
   });
 
   it("N4b: a red CI status is a needs-you STATE line; a green one surfaces nothing", () => {

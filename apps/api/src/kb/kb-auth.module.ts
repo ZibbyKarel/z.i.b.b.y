@@ -9,7 +9,7 @@ import { KbMcpAuthService } from "./kb-mcp-auth.service";
  * without creating an ES-module-level import cycle:
  *
  * `KbModule` imports `TeamsModule`/`ProjectsModule`/`ResolvedProjectModule`/
- * `AgentsModule`/`PipelinesModule`, and `ProjectsModule` transitively imports
+ * `AgentsModule`/`WorkflowsModule`, and `ProjectsModule` transitively imports
  * `MemoryModule`, which imports `McpModule` — so `McpModule` importing the
  * FULL `KbModule` (as an earlier version of this fix did) closed a ring:
  * `KbModule → ProjectsModule → MemoryModule → McpModule → KbModule`. That

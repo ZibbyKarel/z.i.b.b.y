@@ -1,11 +1,11 @@
 import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import { AgentsStorageService } from "../agents/agents.storage.service";
-import { PipelinesStorageService } from "../pipelines/pipelines.storage.service";
-import { agentOwnersFromPipelines, pipelineOwnerSeed } from "./owner-seed";
+import { WorkflowsStorageService } from "../workflows/workflows.storage.service";
+import { agentOwnersFromWorkflows, workflowOwnerSeed } from "./owner-seed";
 
 /**
  * NS2 F1b — one-shot, idempotent startup backfill that tags every pre-F1
- * pipeline / agent with its `department`, mirroring the proven
+ * workflow / agent with its `department`, mirroring the proven
  * `sweepInlineAvatars` sweep pattern (`agents.storage.service.ts`): a
  * per-entity try/catch, atomic writes via each store's own `update`, never
  * fatal to boot. Idempotent by construction — an already-owned entity is
@@ -23,33 +23,33 @@ export class OwnerBackfillService implements OnModuleInit {
   private readonly logger = new Logger(OwnerBackfillService.name);
 
   constructor(
-    private readonly pipelines: PipelinesStorageService,
+    private readonly workflows: WorkflowsStorageService,
     private readonly agents: AgentsStorageService,
   ) {}
 
   async onModuleInit(): Promise<void> {
-    await this.backfillPipelines();
+    await this.backfillWorkflows();
     await this.backfillAgents();
   }
 
-  private async backfillPipelines(): Promise<void> {
-    const all = await this.pipelines.list();
-    for (const pipeline of all) {
-      if (pipeline.department) continue;
-      const owner = pipelineOwnerSeed(pipeline.id);
+  private async backfillWorkflows(): Promise<void> {
+    const all = await this.workflows.list();
+    for (const workflow of all) {
+      if (workflow.department) continue;
+      const owner = workflowOwnerSeed(workflow.id);
       if (!owner) continue;
-      await this.tag("pipeline", pipeline.id, () =>
-        this.pipelines.update(pipeline.id, { department: owner }),
+      await this.tag("workflow", workflow.id, () =>
+        this.workflows.update(workflow.id, { department: owner }),
       );
     }
   }
 
   private async backfillAgents(): Promise<void> {
-    const [allAgents, allPipelines] = await Promise.all([
+    const [allAgents, allWorkflows] = await Promise.all([
       this.agents.list(),
-      this.pipelines.list(),
+      this.workflows.list(),
     ]);
-    const owners = agentOwnersFromPipelines(allPipelines);
+    const owners = agentOwnersFromWorkflows(allWorkflows);
     for (const agent of allAgents) {
       if (agent.department) continue;
       const owner = owners.get(agent.id);

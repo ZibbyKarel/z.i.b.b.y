@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { AgentRun, PipelineRun } from "@zibby/contracts";
+import type { AgentRun, WorkflowRun } from "@zibby/contracts";
 import { ActivityRecorderService } from "./activity-recorder.service";
 
 /** A fake runner that lets a test drive its onRunStatus listener directly. */
@@ -19,21 +19,21 @@ function makeRunner<T>() {
 const agentRun = (status: AgentRun["status"]): AgentRun =>
   ({ runId: "a1", agentId: "writer", status, title: "T" }) as AgentRun;
 
-const pipelineRun = (status: PipelineRun["status"], parkedReason?: string): PipelineRun =>
-  ({ pipelineRunId: "p1", pipelineId: "release", status, parkedReason }) as PipelineRun;
+const workflowRun = (status: WorkflowRun["status"], parkedReason?: string): WorkflowRun =>
+  ({ workflowRunId: "p1", workflowId: "release", status, parkedReason }) as WorkflowRun;
 
 describe("ActivityRecorderService", () => {
   function setup() {
     const agent = makeRunner<AgentRun>();
-    const pipeline = makeRunner<PipelineRun>();
+    const workflow = makeRunner<WorkflowRun>();
     const record = vi.fn().mockResolvedValue(undefined);
     const service = new ActivityRecorderService(
       agent as never,
-      pipeline as never,
+      workflow as never,
       { record } as never,
     );
     service.onModuleInit();
-    return { agent, pipeline, record, service };
+    return { agent, workflow, record, service };
   }
 
   it("records run-started then run-finished for an agent run", () => {
@@ -53,15 +53,15 @@ describe("ActivityRecorderService", () => {
     expect(record.mock.calls.map((c) => c[0].kind)).toEqual(["run-started", "run-finished"]);
   });
 
-  it("maps pipeline running → parked → finished", () => {
-    const { pipeline, record } = setup();
-    pipeline.emit(pipelineRun("running"));
-    pipeline.emit(pipelineRun("parked", "retries"));
-    pipeline.emit(pipelineRun("done"));
+  it("maps workflow running → parked → finished", () => {
+    const { workflow, record } = setup();
+    workflow.emit(workflowRun("running"));
+    workflow.emit(workflowRun("parked", "retries"));
+    workflow.emit(workflowRun("done"));
     expect(record.mock.calls.map((c) => c[0].kind)).toEqual([
-      "pipeline-started",
-      "pipeline-parked",
-      "pipeline-finished",
+      "workflow-started",
+      "workflow-parked",
+      "workflow-finished",
     ]);
     // The parked entry carries the run ref + status for traceability.
     const parked = record.mock.calls[1]![0];

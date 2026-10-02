@@ -95,7 +95,7 @@ describe("TaskRoutingSchema", () => {
       mode: "loop" as const,
       proposedGoal: {
         objective: "fix the failing test until it's green",
-        maker: { kind: "pipeline", id: "delivery" },
+        maker: { kind: "workflow", id: "delivery" },
         verifier: { kind: "checks" },
         maxIterations: 6,
         instructions: "fix the failing test until it's green",
@@ -109,7 +109,7 @@ describe("TaskRoutingSchema", () => {
     expect(parsed.success).toBe(true);
     if (!parsed.success) return;
     expect(parsed.data.mode).toBe("loop");
-    expect(parsed.data.proposedGoal?.maker).toEqual({ kind: "pipeline", id: "delivery" });
+    expect(parsed.data.proposedGoal?.maker).toEqual({ kind: "workflow", id: "delivery" });
     expect(parsed.data.paths[0]?.project?.name).toBe("Alpha");
     expect(parsed.data.paths[1]?.project).toBeNull();
   });
@@ -329,7 +329,7 @@ describe("ClassificationTraceSchema (F2c)", () => {
   it("parses on ScheduledTask when stage-1 delegated to a department", () => {
     const parsed = ScheduledTaskSchema.safeParse({
       ...base,
-      target: { kind: "pipeline", id: "delivery", name: "Delivery" },
+      target: { kind: "workflow", id: "delivery", name: "Delivery" },
       classification: {
         stage1: { kind: "department", id: "dev", name: "Dev" },
         confidence: 0.8,

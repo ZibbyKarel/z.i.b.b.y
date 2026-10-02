@@ -55,7 +55,7 @@ export interface SheetProps {
  * trap/Escape/overlay-stack wiring (mirrors {@link Dialog}'s internals almost
  * verbatim). Deliberately NOT a `Dialog`: a Sheet is anchored to an edge and
  * hosts detail/editing for an object the operator is still looking at
- * (approval detail, pipeline editing) — `Dialog` stays reserved for
+ * (approval detail, workflow editing) — `Dialog` stays reserved for
  * create/confirm (I-5).
  */
 export function Sheet({

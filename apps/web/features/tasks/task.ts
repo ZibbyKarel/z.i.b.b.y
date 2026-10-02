@@ -59,11 +59,11 @@ export function basename(path: string): string {
 }
 
 /**
- * A destination for a task — an agent, pipeline, goal, a named department
+ * A destination for a task — an agent, workflow, goal, a named department
  * (Phase 91, explicit-only — never emitted by the top-level classifier), or the
  * orchestrator fallback.
  */
-export type TaskTargetKind = "agent" | "pipeline" | "goal" | "department" | "orchestrator";
+export type TaskTargetKind = "agent" | "workflow" | "goal" | "department" | "orchestrator";
 
 /** A stable key for a target, used to pre-select and dedupe entries in the picker. */
 export function targetKey(target: TaskTarget): string {
@@ -89,8 +89,8 @@ export function toApiTarget(target: TaskTarget) {
       return { kind: "orchestrator" as const, name, glyph, category };
     case "agent":
       return { kind: "agent" as const, id: target.id, name, glyph, category };
-    case "pipeline":
-      return { kind: "pipeline" as const, id: target.id, name, glyph, category };
+    case "workflow":
+      return { kind: "workflow" as const, id: target.id, name, glyph, category };
     case "goal":
       return { kind: "goal" as const, id: target.id, name, glyph, category };
     case "department":
@@ -107,7 +107,7 @@ interface TaskTargetDisplay {
 }
 
 /**
- * Mirrors the contract's discriminated union: agents/pipelines/goals carry
+ * Mirrors the contract's discriminated union: agents/workflows/goals carry
  * the filesystem-safe `id` of their stored definition, a department (Phase 91)
  * carries the closed `DepartmentId` enum, and the orchestrator is synthetic (no
  * stored definition, no id) and exists in the UI purely as a name + glyph.
@@ -123,7 +123,7 @@ interface TaskTargetDisplay {
 export type TaskTarget = TaskTargetDisplay &
   (
     | { kind: "agent"; id: string }
-    | { kind: "pipeline"; id: string }
+    | { kind: "workflow"; id: string }
     | { kind: "goal"; id: string }
     | { kind: "department"; id: DepartmentId }
     | { kind: "orchestrator" }
@@ -186,7 +186,7 @@ export interface TaskRouting {
  */
 const KIND_FALLBACK_GLYPH: Record<TaskTargetKind, IconName> = {
   agent: "bot",
-  pipeline: "flow",
+  workflow: "flow",
   goal: "retry",
   department: "grid",
   orchestrator: "compass",
@@ -207,8 +207,8 @@ export function toClientTarget(target: ApiTaskTarget): TaskTarget {
       return { kind: "orchestrator", ...display };
     case "agent":
       return { kind: "agent", id: target.id, ...display };
-    case "pipeline":
-      return { kind: "pipeline", id: target.id, ...display };
+    case "workflow":
+      return { kind: "workflow", id: target.id, ...display };
     case "goal":
       return { kind: "goal", id: target.id, ...display };
     case "department":

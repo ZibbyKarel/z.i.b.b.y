@@ -98,7 +98,7 @@ describe("mergeToolEvent", () => {
       name: "create_task",
       status: "ok",
       callId: "a",
-      summary: "Spustil jsem úkol — pipeline Delivery.",
+      summary: "Spustil jsem úkol — workflow Delivery.",
       href: "/archiv?run=r1",
     };
 
@@ -369,7 +369,7 @@ describe("ChatSessionService", () => {
 
   it("enriches create_task via a registry push that arrives AFTER the tool_use line was parsed — the ordering fix", async () => {
     const toolResults = new ChatToolResultRegistry();
-    const target: TaskTarget = { kind: "pipeline", id: "delivery", name: "Delivery" };
+    const target: TaskTarget = { kind: "workflow", id: "delivery", name: "Delivery" };
     const svc = new TestSession(
       store,
       events,
@@ -562,7 +562,7 @@ describe("ChatSessionService", () => {
   describe("D-020 — mentions + attachments", () => {
     const agent: TaskTarget = { kind: "agent", id: "builder", name: "Builder" };
     const dept: TaskTarget = { kind: "department", id: "dev", name: "Dev" };
-    const pipeline: TaskTarget = { kind: "pipeline", id: "delivery", name: "Delivery" };
+    const workflow: TaskTarget = { kind: "workflow", id: "delivery", name: "Delivery" };
 
     it("normalises mentions ?? (target ? [target] : []) and persists mentions on the user message", async () => {
       const svc = new TestSession(store, events, [
@@ -598,7 +598,7 @@ describe("ChatSessionService", () => {
         line({ type: "result", is_error: false, result: "ok" }),
       ]);
       const result = await svc.sendMessage(
-        { conversationId: "c-mention-3", text: "rozděl to", mentions: [agent, pipeline] },
+        { conversationId: "c-mention-3", text: "rozděl to", mentions: [agent, workflow] },
         NOW,
       );
       await settled(result.turnId);

@@ -231,8 +231,8 @@ describe("ChatToolsService", () => {
           {
             id: "a1",
             at: "2026-07-17T08:00:00.000Z",
-            kind: "pipeline-finished",
-            summary: "delivery pipeline finished",
+            kind: "workflow-finished",
+            summary: "delivery workflow finished",
             refs: { department: "dev" },
           },
           {
@@ -253,7 +253,7 @@ describe("ChatToolsService", () => {
         expect(out).toContain("čeká na tvé rozhodnutí");
         expect(out).toContain("Čeká na tebe: 2");
         expect(out).toContain("K reportu od tvé poslední návštěvy: 1");
-        expect(out).toContain("delivery pipeline finished");
+        expect(out).toContain("delivery workflow finished");
         expect(out).not.toContain("ops CI sweep done"); // other owners filtered out
       });
 

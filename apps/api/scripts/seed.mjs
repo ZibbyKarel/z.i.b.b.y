@@ -1,7 +1,7 @@
 // ZIBBY velín — demo seed.
 //
 // The whole `.zibby/data/` dir is gitignored, so mock data can't be committed.
-// This script writes a full set of demo skills / agents / pipelines / automations /
+// This script writes a full set of demo skills / agents / workflows / automations /
 // memory-vault / approvals / runs into the API's data dir so every screen is
 // populated when you run the app. It mirrors the Claude Design handoff
 // (`ZIBBY velín`, data.jsx / data-extra.jsx) mapped onto the real contracts.
@@ -179,7 +179,7 @@ const SKILLS = [
     desc: "Diagnostikuje padající CI",
     tools: ["read", "bash", "git"],
     risk: "medium",
-    when: "Když spadne pipeline a nevíš proč.",
+    when: "Když spadne workflow a nevíš proč.",
   },
   {
     id: "standup-gen",
@@ -503,7 +503,7 @@ async function seedAgents() {
   await writeFile(
     dir("agents", "agent-007.md"),
     md(
-      "You are Agent 007, a token-free test agent used to exercise the run pipeline end to end. In the working folder you are given, create a small marker file and report progress as you go.",
+      "You are Agent 007, a token-free test agent used to exercise the run workflow end to end. In the working folder you are given, create a small marker file and report progress as you go.",
       demo,
     ),
   );
@@ -527,19 +527,19 @@ async function seedAgents() {
   return { count: AGENTS.length + 1, cats };
 }
 
-// ------------------------------------------------------------- pipelines ----
+// ------------------------------------------------------------- workflows ----
 // Contract phase.agent = agent id (design uses display name); phases need ids;
 // loop.then must be an existing phase id or "fail" (design's "park_for_review" → "fail").
 //
 // `owner` → `department`, `complexity` → the F9 ladder rung. Both are mandatory
 // here for the same reason as on an agent: the switchboard routes only to departments
-// and grades within one, so an unowned or ungraded pipeline is unroutable. Rungs are
-// graded by phase count and cost per `PipelineComplexitySchema` — `light` (2–3 cheap
+// and grades within one, so an unowned or ungraded workflow is unroutable. Rungs are
+// graded by phase count and cost per `WorkflowComplexitySchema` — `light` (2–3 cheap
 // phases), `standard` (3–4 with review + verification), `deep` (4–6 with loops and
 // escalation). Every `phases[].agent` below is an agent THIS script also seeds; a
-// phase agent may belong to another department than the pipeline's owner (ownership
+// phase agent may belong to another department than the workflow's owner (ownership
 // governs dispatch and the roster, not which agents a chain composes).
-const PIPELINES = [
+const WORKFLOWS = [
   {
     id: "build-feature",
     name: "Build Feature",
@@ -588,7 +588,7 @@ const PIPELINES = [
     name: "Nightly Research",
     desc: "Researcher nasbírá zdroje, Architekt je zsyntetizuje do poznámky.",
     owner: "rnd",
-    // 2 phases, no loop — the cheapest rung that is still a pipeline.
+    // 2 phases, no loop — the cheapest rung that is still a workflow.
     complexity: "light",
     phases: [
       {
@@ -656,8 +656,8 @@ const PIPELINES = [
   },
 ];
 
-async function seedPipelines() {
-  for (const p of PIPELINES) {
+async function seedWorkflows() {
+  for (const p of WORKFLOWS) {
     const fm = {
       name: p.name,
       phases: p.phases,
@@ -666,9 +666,9 @@ async function seedPipelines() {
       complexity: p.complexity,
     };
     const body = `# ${p.name}\n\n${p.desc}\n\n## Fáze\n${p.phases.map((ph, i) => `${i + 1}. **${ph.agent}** — \`${ph.consumes}\` → \`${ph.produces}\``).join("\n")}`;
-    await writeFile(dir("pipelines", `${p.id}.pipeline.md`), md(body, fm));
+    await writeFile(dir("workflows", `${p.id}.workflow.md`), md(body, fm));
   }
-  return PIPELINES.length;
+  return WORKFLOWS.length;
 }
 
 // --------------------------------------------------------------- projects ----
@@ -744,7 +744,7 @@ const AUTOMATIONS = [
     id: "au-research",
     name: "Noční research",
     trigger: { type: "cron", expr: "40 2 * * *" },
-    target: { type: "pipeline", pipelineId: "nightly-research" },
+    target: { type: "workflow", workflowId: "nightly-research" },
     enabled: true,
     lastFiredAt: iso(8 * 60 * MIN),
   },
@@ -776,7 +776,7 @@ const AUTOMATIONS = [
     id: "au-pr",
     name: "Hlídač PR",
     trigger: { type: "event", events: ["pr.opened"] },
-    target: { type: "pipeline", pipelineId: "pr-guard" },
+    target: { type: "workflow", workflowId: "pr-guard" },
     enabled: false,
   },
   // Phase 10.3: discovery triage — scans for work and proposes tasks behind the gate.
@@ -799,19 +799,19 @@ async function seedAutomations() {
 
 // --------------------------------------------------------------- goals ----
 // Phase 10: a goal definition — the outer loop's recipe. The maker is an existing
-// agent/pipeline; the verifier here is the project's deterministic checks. Stored
+// agent/workflow; the verifier here is the project's deterministic checks. Stored
 // as `<id>.goal.md` (frontmatter carries maker/verifier/maxIterations).
 const GOALS = [
   {
     id: "ship-auth-feature",
     name: "Ship the auth feature green",
-    desc: "Iterate the build-feature pipeline until the auth-svc checks pass.",
+    desc: "Iterate the build-feature workflow until the auth-svc checks pass.",
     objective: "Implement the new login flow in auth-svc and get all checks green.",
-    maker: { kind: "pipeline", id: "build-feature" },
+    maker: { kind: "workflow", id: "build-feature" },
     verifier: { kind: "checks" },
     maxIterations: 5,
     instructions:
-      "Drive the build-feature pipeline toward green checks. Each iteration, address what the verifier flagged last time; do not re-do already-committed work.",
+      "Drive the build-feature workflow toward green checks. Each iteration, address what the verifier flagged last time; do not re-do already-committed work.",
   },
 ];
 
@@ -871,7 +871,7 @@ const NOTES = [
   {
     path: "knowledge/git-workflow.md",
     title: "Git workflow",
-    body: "# Git workflow\n\nAgenti pracují v izolovaných branchích. Push origin = riziková akce → approval.\n\nPipeline [[zibby-architektura]] parkuje PR k ranní review.",
+    body: "# Git workflow\n\nAgenti pracují v izolovaných branchích. Push origin = riziková akce → approval.\n\nWorkflow [[zibby-architektura]] parkuje PR k ranní review.",
   },
   {
     path: "knowledge/media-pipeline.md",
@@ -987,7 +987,7 @@ async function seedRunsAndApprovals() {
     {
       skillId: "pr-prereview",
       actor: "PR Guard",
-      actorKind: "pipeline",
+      actorKind: "workflow",
       glyph: "flow",
       action: "git push origin feat/api-rate-limit",
       riskType: "push",
@@ -1136,7 +1136,7 @@ async function seedRunsAndApprovals() {
       status: "done",
       pct: 100,
       ageMin: 5,
-      prompt: "Proč padá pipeline na main?",
+      prompt: "Proč padá workflow na main?",
       project: "auth-svc",
       log: [
         "00:00 spuštěn skill ci-doctor · projekt auth-svc",
@@ -1246,7 +1246,7 @@ async function main() {
   const skills = await seedSkills();
   const agents = await seedAgents();
   const projects = await seedProjects();
-  const pipelines = await seedPipelines();
+  const workflows = await seedWorkflows();
   const goals = await seedGoals();
   const automations = await seedAutomations();
   const notes = await seedVault();
@@ -1259,7 +1259,7 @@ async function main() {
   console.log(
     `  projects      ${projects.count ? projects.count : "registry left as it was"} · ${cats(projects.cats)}`,
   );
-  console.log(`  pipelines     ${pipelines}`);
+  console.log(`  workflows     ${workflows}`);
   console.log(`  goals         ${goals}`);
   console.log(`  automations   ${automations}`);
   console.log(`  vault notes   ${notes}`);

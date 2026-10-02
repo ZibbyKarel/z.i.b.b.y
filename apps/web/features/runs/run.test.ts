@@ -27,21 +27,21 @@ describe("approvalForRun", () => {
     expect(approvalForRun(queue, run())?.id).toBe("appr-writer_123_42");
   });
 
-  it("matches a pipeline run's stage approval by prefix", () => {
-    // Stage run ids are `${pipelineRunId}.${phaseId}_${ts}_${pid}`.
-    const queue = [approval("release_1780000000000.build_1780000000123_77", "pipeline-stage")];
-    const found = approvalForRun(queue, run({ runId: "release_1780000000000", kind: "pipeline" }));
+  it("matches a workflow run's stage approval by prefix", () => {
+    // Stage run ids are `${workflowRunId}.${phaseId}_${ts}_${pid}`.
+    const queue = [approval("release_1780000000000.build_1780000000123_77", "workflow-stage")];
+    const found = approvalForRun(queue, run({ runId: "release_1780000000000", kind: "workflow" }));
     expect(found?.id).toBe("appr-release_1780000000000.build_1780000000123_77");
   });
 
-  it("does not prefix-match a sibling pipeline run id", () => {
+  it("does not prefix-match a sibling workflow run id", () => {
     // "release_1" must not match a stage of "release_12" — the dot is required.
-    const queue = [approval("release_12.build_3_4", "pipeline-stage")];
-    expect(approvalForRun(queue, run({ runId: "release_1", kind: "pipeline" }))).toBeUndefined();
+    const queue = [approval("release_12.build_3_4", "workflow-stage")];
+    expect(approvalForRun(queue, run({ runId: "release_1", kind: "workflow" }))).toBeUndefined();
   });
 
   it("does not prefix-match for agent runs", () => {
-    const queue = [approval("writer_123_42.x", "pipeline-stage")];
+    const queue = [approval("writer_123_42.x", "workflow-stage")];
     expect(approvalForRun(queue, run())).toBeUndefined();
   });
 
@@ -71,7 +71,7 @@ describe("approvalForRun", () => {
 /** A minimal feed row (the server merge is unit-tested in apps/api task-runs.service.test). */
 const mkRun = (over: Partial<RunView> = {}): RunView => ({
   runId: "delivery_1",
-  kind: "pipeline",
+  kind: "workflow",
   owner: "delivery",
   status: "running",
   pct: null,
@@ -84,14 +84,14 @@ const mkRun = (over: Partial<RunView> = {}): RunView => ({
 });
 
 describe("runTitle (task name, not the phase)", () => {
-  it("titles a task-dispatched pipeline run with the task name, not 'fáze: X'", () => {
-    // A pipeline run's prompt is the "fáze: X" progress string; once enriched with
+  it("titles a task-dispatched workflow run with the task name, not 'fáze: X'", () => {
+    // A workflow run's prompt is the "fáze: X" progress string; once enriched with
     // its originating task, the headline must be the task's own name.
     const v = mkRun({ prompt: "fáze: write", taskTitle: "Fix the login bug" });
     expect(runTitle(v)).toBe("Fix the login bug");
   });
 
-  it("falls a task-less pipeline run back to its pipeline id, never the phase", () => {
+  it("falls a task-less workflow run back to its workflow id, never the phase", () => {
     expect(runTitle(mkRun({ prompt: "fáze: write" }))).toBe("delivery");
   });
 

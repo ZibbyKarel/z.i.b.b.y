@@ -9,7 +9,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useMemo } from "react";
 import { useAgentsQuery } from "../../agents";
-import { usePipelinesQuery } from "../../pipelines";
+import { useWorkflowsQuery } from "../../workflows";
 import { type LoopFormState, type VerifierKind, encodeMaker } from "../loop";
 
 export interface LoopComposerProps {
@@ -25,7 +25,7 @@ export interface LoopComposerProps {
 export function LoopComposer({ state, onChange }: LoopComposerProps) {
   const t = useTranslations("tasks");
   const { data: agents } = useAgentsQuery();
-  const { data: pipelines } = usePipelinesQuery();
+  const { data: workflows } = useWorkflowsQuery();
 
   const makerOptions = useMemo(() => {
     const agentOpts = (agents ?? []).map((a) => ({
@@ -33,13 +33,13 @@ export function LoopComposer({ state, onChange }: LoopComposerProps) {
       label: a.name ?? a.id,
       code: t("loop.makerKind.agent"),
     }));
-    const pipelineOpts = (pipelines ?? []).map((p) => ({
-      value: encodeMaker("pipeline", p.id),
+    const workflowOpts = (workflows ?? []).map((p) => ({
+      value: encodeMaker("workflow", p.id),
       label: p.name,
-      code: t("loop.makerKind.pipeline"),
+      code: t("loop.makerKind.workflow"),
     }));
-    return [{ value: "", label: t("loop.maker.placeholder") }, ...agentOpts, ...pipelineOpts];
-  }, [agents, pipelines, t]);
+    return [{ value: "", label: t("loop.maker.placeholder") }, ...agentOpts, ...workflowOpts];
+  }, [agents, workflows, t]);
 
   const reviewerOptions = useMemo(
     () => [

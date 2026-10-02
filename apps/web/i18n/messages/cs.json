@@ -6,7 +6,7 @@
     "gates": "Pravidla schvalování",
     "skills": "Skilly",
     "agents": "Agenti",
-    "pipelines": "Orchestrace",
+    "workflows": "Workflow",
     "integrations": "Integrace",
     "automations": "Automatizace",
     "memory": "Paměť",
@@ -221,13 +221,13 @@
       "dropHint": "Pustit sem — přidá se jako @soubor do textu",
       "chrome": {
         "label": "Zadej směr · přirozeným jazykem",
-        "hint": "@ hledá agenty, pipeliny, oddělení a týmy · přetáhni soubor, nebo použij sponku",
-        "hintNoTeams": "@ hledá agenty, pipeliny a oddělení · přetáhni soubor, nebo použij sponku"
+        "hint": "@ hledá agenty, workflow, oddělení a týmy · přetáhni soubor, nebo použij sponku",
+        "hintNoTeams": "@ hledá agenty, workflow a oddělení · přetáhni soubor, nebo použij sponku"
       },
       "ack": {
         "kind": {
           "agent": "agent",
-          "pipeline": "pipeline",
+          "workflow": "workflow",
           "goal": "goal loop",
           "department": "oddělení",
           "orchestrator": "orchestrátor",
@@ -250,12 +250,12 @@
       },
       "makerKind": {
         "agent": "agent",
-        "pipeline": "pipeline"
+        "workflow": "workflow"
       },
       "maker": {
         "label": "Vykonavatel",
-        "hint": "Agent nebo pipeline, která v každé iteraci odvádí práci.",
-        "placeholder": "Vyber agenta nebo pipeline…"
+        "hint": "Agent nebo workflow, které v každé iteraci odvádí práci.",
+        "placeholder": "Vyber agenta nebo workflow…"
       },
       "verifier": {
         "label": "Ověření",
@@ -298,7 +298,7 @@
     "title": "Smyčky tvůrce ⇄ ověřovatel",
     "subtitle": "Cíl se opakuje, dokud ověřovatel neprojde nebo nedojde rozpočet běhů.",
     "emptyTitle": "Zatím žádné cíle",
-    "emptyBody": "Vytvořte cíl z tvůrce (agent nebo pipeline) a ověřovatele a spusťte smyčku.",
+    "emptyBody": "Vytvořte cíl z tvůrce (agent nebo workflow) a ověřovatele a spusťte smyčku.",
     "noProject": "—",
     "resume": "Pokračovat",
     "stop": "Zastavit",
@@ -408,7 +408,7 @@
   },
   "loading": {
     "tagline": "Inteligentní automatizační platforma",
-    "orchestrator": "Připojuji orchestrátor pipeline…",
+    "orchestrator": "Připojuji orchestrátor workflow…",
     "knowledge": "Synchronizuji znalostní bázi…",
     "gates": "Kalibruji schvalovací pravidla…",
     "ready": "Systém připraven."
@@ -459,8 +459,8 @@
       "agents": {
         "label": "Přidej agenta"
       },
-      "pipelines": {
-        "label": "Přidej pipeline"
+      "workflows": {
+        "label": "Přidej workflow"
       }
     },
     "liveLog": "Živý log"
@@ -484,15 +484,15 @@
     "loadErrorDescription": "Spojení s API selhalo — tvoji agenti jsou v pořádku, jen je teď nevidím. Zkontroluj připojení a zkus to znovu.",
     "retry": "Zkusit znovu",
     "emptyTitle": "Zatím žádní agenti",
-    "emptyDescription": "Agenti jsou definiční soubory .agent.md — model, thinking level a nástroje. Z agentů pak skládáš pipeline v Orchestraci.",
+    "emptyDescription": "Agenti jsou definiční soubory .agent.md — model, thinking level a nástroje. Z agentů pak skládáš workflow v sekci Workflow.",
     "emptyHint": "// vytvoří ~/zibby/agents/'<název>'.agent.md",
     "title": "Agenti",
-    "countSummary": "{count, plural, =0 {žádní agenti} one {# agent} few {# agenti} other {# agentů}} · sdílený pool pro pipeline",
+    "countSummary": "{count, plural, =0 {žádní agenti} one {# agent} few {# agenti} other {# agentů}} · sdílený pool pro workflow",
     "run": "Spustit",
     "openAria": "Otevřít {name}",
-    "pipelineUsage": "{count} pipeline",
-    "usedInPipelines": "Použito v pipeline",
-    "notInPipeline": "Zatím v žádné pipeline — volný k použití.",
+    "workflowUsage": "{count} workflow",
+    "usedInWorkflows": "Použito v workflow",
+    "notInWorkflow": "Zatím v žádném workflow — volný k použití.",
     "phaseCount": "{count, plural, one {# fáze} few {# fáze} other {# fází}}",
     "allowedTools": "Povolené nástroje",
     "tabBasics": "Základy",
@@ -669,15 +669,15 @@
       "dismiss": "Vyřídit"
     }
   },
-  "pipelines": {
-    "addPipeline": "Přidat pipeline",
+  "workflows": {
+    "addWorkflow": "Přidat workflow",
     "verify": "verify",
-    "runPipeline": "Spustit pipeline",
-    "title": "Pipelines",
-    "countSummary": "{count, plural, =0 {žádné pipeline} one {# pipeline} few {# pipeline} other {# pipeline}} · více­agentní dodací řetězce",
-    "emptyTitle": "Zatím žádné pipeline",
-    "emptyDescription": "Pipeline řetězí agenty přes soubory. Přidej první a fáze pak poskládáš v editoru.",
-    "emptyHint": "// vytvoří ~/zibby/pipelines/'<název>'.pipeline.md",
+    "runWorkflow": "Spustit workflow",
+    "title": "Workflow",
+    "countSummary": "{count, plural, =0 {žádné workflow} one {# workflow} few {# workflow} other {# workflow}} · více­agentní dodací řetězce",
+    "emptyTitle": "Zatím žádné workflow",
+    "emptyDescription": "Workflow řetězí agenty přes soubory. Přidej první a fáze pak poskládáš v editoru.",
+    "emptyHint": "// vytvoří ~/zibby/workflows/'<název>'.workflow.md",
     "branchNote": "výstup → izolovaná branch · PR k ranní review",
     "chainTitle": "zřetězení fází · soubory = předání",
     "outputsTitle": "výstup · co se stane s hotovou prací",
@@ -691,7 +691,7 @@
     "stateRunning": "běží",
     "uploadImage": "Nahrát obrázek",
     "removeImage": "Odebrat obrázek",
-    "uploadPipelineAvatar": "Nahraj obrázek orchestrace",
+    "uploadWorkflowAvatar": "Nahraj obrázek workflow",
     "avatarTooLarge": "Obrázek je příliš velký (max ~200 KB).",
     "outputType": "Typ výstupu",
     "outputTypeOption": {
@@ -738,7 +738,7 @@
     "originAgentFactory": "Agent Factory",
     "openSource": "Otevřít zdroj ↗"
   },
-  "pipelineRun": {
+  "workflowRun": {
     "title": "Spustit · {name}",
     "subtitle": "{count} fází · víceagentní běh na pozadí"
   },
@@ -784,18 +784,18 @@
       "subtitle": "vytvoří .agent.md s definicí (model, thinking, nástroje)",
       "submitLabel": "Vytvořit agenta"
     },
-    "pipeline": {
-      "title": "Nová pipeline",
-      "subtitle": "vytvoří .pipeline.md · zřetěz agenty přes předávací soubory",
-      "submitLabel": "Vytvořit pipeline",
-      "nameLabel": "Název pipeline",
+    "workflow": {
+      "title": "Nové workflow",
+      "subtitle": "vytvoří .workflow.md · zřetěz agenty přes předávací soubory",
+      "submitLabel": "Vytvořit workflow",
+      "nameLabel": "Název workflow",
       "namePlaceholder": "např. Build Feature",
       "descLabel": "Popis",
-      "descPlaceholder": "Co pipeline dělá…",
+      "descPlaceholder": "Co workflow dělá…",
       "handoffHint": "zapíše tenhle agent · další agent si ho vezme jako zadání",
       "addStep": "Přidat agenta",
       "noAgents": "Nejdřív vytvoř agenta — řetěz potřebuje aspoň jednoho.",
-      "editTitle": "Upravit pipeline",
+      "editTitle": "Upravit workflow",
       "saveLabel": "Uložit změny",
       "typeVerify": "verify (kontroly)",
       "paletteTitle": "// agenti · pool",
@@ -828,16 +828,16 @@
         "produces": "doplň výstupní soubor",
         "rework": "vrácení musí mířit na dřívější uzel",
         "commands": "přidejte alespoň jeden příkaz",
-        "pipeline": "vyberte workflow pro každý krok workflow"
+        "workflow": "vyberte workflow pro každý krok workflow"
       },
       "typeTool": "tool (skript)",
       "addVerify": "Přidat kontrolu",
       "addTool": "Přidat nástroj",
-      "typePipeline": "workflow (podběh)",
-      "addPipeline": "Přidat Workflow",
-      "pipelineLabel": "Spouštěné workflow",
-      "pipelinePlaceholder": "Vyberte workflow…",
-      "pipelineNone": "není vybrané workflow",
+      "typeWorkflow": "workflow (podběh)",
+      "addWorkflow": "Přidat workflow",
+      "workflowLabel": "Spouštěné workflow",
+      "workflowPlaceholder": "Vyberte workflow…",
+      "workflowNone": "není vybrané workflow",
       "commandsNone": "zatím žádné příkazy",
       "stepsTitle": "// kroky · nastavení",
       "commandsLabel": "Příkazy",
@@ -876,7 +876,7 @@
   "defaults": {
     "skill": "Nový skill",
     "agent": "Nový agent",
-    "pipeline": "Nová pipeline",
+    "workflow": "Nové workflow",
     "command": "Nový příkaz"
   },
   "runLog": {
@@ -981,11 +981,11 @@
     },
     "selfKnowledge": {
       "title": "Self-Knowledge",
-      "hint": "Strojově generovaná poznámka o tom, co ZIBBY o sobě ví — agenti, pipeliny, gate pravidla, kanály. Vytváří se příkazem `pnpm self-knowledge:generate`; tady je jen náhled pro čtení. Stejná poznámka je vidět i v Paměti jako běžná vault poznámka.",
+      "hint": "Strojově generovaná poznámka o tom, co ZIBBY o sobě ví — agenti, workflow, gate pravidla, kanály. Vytváří se příkazem `pnpm self-knowledge:generate`; tady je jen náhled pro čtení. Stejná poznámka je vidět i v Paměti jako běžná vault poznámka.",
       "upToDate": "Aktuální",
       "drift": "Neaktuální — spusť pnpm self-knowledge:generate",
       "generatedAt": "Vygenerováno: {time}",
-      "sections": "{agents} agentů · {pipelines} pipeline · {gateRules} gate pravidel · {channels} kanálů"
+      "sections": "{agents} agentů · {workflows} workflow · {gateRules} gate pravidel · {channels} kanálů"
     },
     "preferences": "Předvolby",
     "language": "Jazyk rozhraní",
@@ -1043,7 +1043,7 @@
       "groups": {
         "tasks": "Úkoly",
         "runs": "Běhy",
-        "pipelines": "Pipeline",
+        "workflows": "Workflow",
         "goals": "Cíle",
         "approvals": "Schválení",
         "channels": "Kanály",
@@ -1116,7 +1116,7 @@
     "metaStarted": "spuštěno",
     "metaScheduled": "spustí se",
     "metaTarget": "cíl",
-    "metaPipeline": "pipelina",
+    "metaWorkflow": "workflow",
     "metaCost": "cena",
     "metaDuration": "délka běhu",
     "metaAgent": "agent",
@@ -1162,7 +1162,7 @@
     },
     "kind": {
       "agent": "skill",
-      "pipeline": "pipeline",
+      "workflow": "workflow",
       "goal": "cíl",
       "scheduled": "naplánovaný task"
     },
@@ -1206,7 +1206,7 @@
     },
     "goalMakerKind": {
       "agent": "agent",
-      "pipeline": "pipeline"
+      "workflow": "workflow"
     },
     "goalOpenLog": "log",
     "togglePhaseLog": "zobrazit nebo skrýt log této fáze",
@@ -1407,7 +1407,7 @@
       "budgetWeeklyCostCapUsd": "$ / týden",
       "budgetMonthlyCostCapUsd": "$ / měsíc",
       "checks": "Verifikační kontroly",
-      "checksHint": "Shell příkazy, které verify fáze pipeline spustí v tomto projektu, jeden na řádek (spojené přes &&). Prázdné → sdílené výchozí kontroly.",
+      "checksHint": "Shell příkazy, které verify fáze workflow spustí v tomto projektu, jeden na řádek (spojené přes &&). Prázdné → sdílené výchozí kontroly.",
       "env": "Proměnné prostředí",
       "envHint": "Ne-tajné env proměnné vkládané do běhů projektu.",
       "envAdd": "Přidat proměnnou",
@@ -1666,7 +1666,7 @@
     "cronSection": "Časové triggery · cron",
     "eventSection": "Událostní triggery · event",
     "emptyTitle": "Žádné automatizace",
-    "emptyDescription": "Napoj cron nebo událost na agenta, pipeline nebo briefing — a ZIBBY začne pracovat sám. Každá akce s vnějším efektem stejně projde frontou schválení.",
+    "emptyDescription": "Napoj cron nebo událost na agenta, workflow nebo briefing — a ZIBBY začne pracovat sám. Každá akce s vnějším efektem stejně projde frontou schválení.",
     "active": "aktivní",
     "off": "vypnuto",
     "edit": "Upravit",
@@ -1680,7 +1680,7 @@
     "triggerCron": "cron",
     "triggerEvent": "event",
     "targetAgent": "agent",
-    "targetPipeline": "pipeline",
+    "targetWorkflow": "workflow",
     "targetBriefing": "briefing",
     "targetMemoryDistill": "Destilace paměti",
     "targetPatternExtract": "Extrakce vzorů",
@@ -1703,7 +1703,7 @@
     "eventPlaceholder": "Vyber události…",
     "eventRemove": "Odebrat událost",
     "scheduleAction": "Naplánovat",
-    "commandLinePlaceholder": "Napiš, co má automatizace dělat — @zmiň agenta či pipelinu, přidej soubory…",
+    "commandLinePlaceholder": "Napiš, co má automatizace dělat — @zmiň agenta či workflow, přidej soubory…",
     "cancel": "Zrušit",
     "close": "Zavřít",
     "create": "Vytvořit automatizaci",
@@ -1828,12 +1828,12 @@
       "send": "Odeslat"
     },
     "mention": {
-      "ariaLabel": "Vyhledat agenta nebo pipeline k oslovení",
+      "ariaLabel": "Vyhledat agenta nebo workflow k oslovení",
       "empty": "Nic nenalezeno",
       "removeAria": "Odebrat {name}",
       "sections": {
         "agents": "Agenti",
-        "pipelines": "Pipelines"
+        "workflows": "Workflow"
       }
     },
     "runCard": {
@@ -1855,7 +1855,7 @@
       "empty": "Nic nenalezeno",
       "kind": {
         "agent": "Agent",
-        "pipeline": "Pipeline",
+        "workflow": "Workflow",
         "department": "Oddělení",
         "task": "Úloha",
         "memory": "Paměť",
@@ -1924,7 +1924,7 @@
       }
     },
     "roster": {
-      "emptyTitle": "Zatím žádná pipeline"
+      "emptyTitle": "Zatím žádné workflow"
     },
     "aktivita": {
       "emptyTitle": "Zatím žádná aktivita"
@@ -1939,7 +1939,7 @@
       "kind": {
         "pr": "PR"
       },
-      "emptyTitle": "Tohle oddělení si zatím nevlastní žádnou pipeline"
+      "emptyTitle": "Tohle oddělení si zatím nevlastní žádné workflow"
     },
     "create": {
       "title": "Nové oddělení",
@@ -1980,7 +1980,7 @@
     "tabs": {
       "team": "Tým",
       "subtasks": "Podúkoly",
-      "pipelines": "Pipeline",
+      "workflows": "Workflow",
       "skills": "Dovednosti",
       "integrations": "Integrace",
       "automations": "Automatizace",
@@ -2010,9 +2010,9 @@
       "colStep": "Krok",
       "colState": "Stav"
     },
-    "pipelines": {
-      "emptyTitle": "Zatím žádné pipeline",
-      "emptyDescription": "Toto oddělení zatím nevlastní žádnou pipeline."
+    "workflows": {
+      "emptyTitle": "Zatím žádné workflow",
+      "emptyDescription": "Toto oddělení zatím nevlastní žádné workflow."
     },
     "registryLink": "Spravovat v registru →",
     "registryDescription": "Tento seznam se spravuje v globálním registru, ne po odděleních.",
@@ -2408,7 +2408,7 @@
       "company": "Firma",
       "team": "Tým",
       "project": "Projekt",
-      "pipeline": "Pipeline",
+      "workflow": "Workflow",
       "skill": "Dovednost",
       "mcp": "MCP server",
       "hook": "Hook",
@@ -2428,7 +2428,7 @@
       "companies": "Firmy",
       "teams": "Týmy",
       "projects": "Projekty",
-      "pipelines": "Pipelines",
+      "workflows": "Workflow",
       "registries": "Registry",
       "automations": "Automatizace",
       "vault": "Trezor",

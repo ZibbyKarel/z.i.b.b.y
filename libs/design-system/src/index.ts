@@ -459,13 +459,13 @@ export type {
 } from "./components/ChainRouteStrip/ChainRouteStrip";
 
 export {
-  PipelineStepStrip,
-  PipelineStepStripTestId,
-} from "./components/PipelineStepStrip/PipelineStepStrip";
+  WorkflowStepStrip,
+  WorkflowStepStripTestId,
+} from "./components/WorkflowStepStrip/WorkflowStepStrip";
 export type {
-  PipelineStepStripPhase,
-  PipelineStepStripProps,
-} from "./components/PipelineStepStrip/PipelineStepStrip";
+  WorkflowStepStripPhase,
+  WorkflowStepStripProps,
+} from "./components/WorkflowStepStrip/WorkflowStepStrip";
 
 export { GateToggle, GateToggleTestId } from "./components/GateToggle/GateToggle";
 export type { GateMode, GateToggleProps } from "./components/GateToggle/GateToggle";

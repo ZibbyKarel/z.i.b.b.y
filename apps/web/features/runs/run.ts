@@ -3,7 +3,7 @@ import type { DotTone, IconName, LegacyStateTone, TagTone } from "@zibby/design-
 
 /**
  * The Runs screen is a task feed: what the user asked for is the headline, the
- * agent/pipeline/goal that processes it is metadata (`processor`). The merge that
+ * agent/workflow/goal that processes it is metadata (`processor`). The merge that
  * used to live here (the per-kind run lists + still-waiting scheduled tasks, with a
  * goal's child runs folded out) now runs server-side — this file is types + the
  * pure presentation helpers the feed/detail render with.
@@ -18,7 +18,7 @@ export type RunView = TaskRun;
 export type { RunKind };
 
 /** Feed status: the shared run states plus the not-yet-fired `scheduled`, the
- * retries-parked `parked` (approval-parked pipelines keep reading as
+ * retries-parked `parked` (approval-parked workflows keep reading as
  * `awaiting-approval` — that mapping is load-bearing for the approvals gate), and
  * Phase 8's pre-dispatch budget holds `held` (over a cap, behind an approval) and
  * `queued` (waiting for a concurrency slot). Aliased to the contract's `TaskRunStatus`. */
@@ -43,7 +43,7 @@ export function findSelectedRun(list: readonly RunView[], selId: string | null):
  * 43 — `stopTaskRun` generalized past agent-only). A `scheduled` row has no run
  * behind it yet — nothing to interrupt.
  */
-const STOPPABLE_KINDS = new Set<RunKind>(["agent", "pipeline", "goal"]);
+const STOPPABLE_KINDS = new Set<RunKind>(["agent", "workflow", "goal"]);
 
 /** Whether the Stop action applies to `run` at all — a stoppable kind, currently running. */
 export function isStoppableRun(run: Pick<RunView, "kind" | "status">): boolean {
@@ -63,12 +63,12 @@ export function isResumableRun(run: Pick<RunView, "kind" | "status">): boolean {
 /**
  * Task-first display name: the explicit task title, else (for runs born from a
  * task) the task's own name, else the run's prompt, else the routed target id.
- * A pipeline run's `prompt` is the "fáze: X" progress string — a subtitle, never
- * a headline — so a pipeline falls straight to its pipeline id when it has no
+ * A workflow run's `prompt` is the "fáze: X" progress string — a subtitle, never
+ * a headline — so a workflow falls straight to its workflow id when it has no
  * task name, rather than showing the current phase where the task name belongs.
  */
 export function runTitle(run: RunView): string {
-  if (run.kind === "pipeline") return run.title || run.taskTitle || run.owner;
+  if (run.kind === "workflow") return run.title || run.taskTitle || run.owner;
   return run.title || run.taskTitle || run.prompt || run.owner;
 }
 
@@ -116,8 +116,8 @@ export function isMarkdownFilename(name: string | undefined): boolean {
 
 /**
  * The pending approval that belongs to a run waiting on the gate. Agent runs
- * match exactly; a pipeline run's approval is keyed by the STAGE run id
- * (`${pipelineRunId}.${phaseId}_…`), so pipeline rows match on the prefix.
+ * match exactly; a workflow run's approval is keyed by the STAGE run id
+ * (`${workflowRunId}.${phaseId}_…`), so workflow rows match on the prefix.
  * A Phase-8 budget-`held` task names its spend-past-cap override approval directly
  * (`approvalId`), so the held task's detail can surface — and decide — the same
  * override that lives in the approvals queue, rather than the operator hunting for it.
@@ -135,7 +135,7 @@ export function approvalForRun<A extends Pick<Approval, "id" | "runId">>(
   if (run.status !== "awaiting-approval") return undefined;
   return queue.find(
     (a) =>
-      a.runId === run.runId || (run.kind === "pipeline" && a.runId.startsWith(`${run.runId}.`)),
+      a.runId === run.runId || (run.kind === "workflow" && a.runId.startsWith(`${run.runId}.`)),
   );
 }
 
@@ -254,7 +254,7 @@ export function runStateTone(status: FeedStatus): LegacyStateTone | undefined {
 
 const KIND_GLYPH: Record<RunKind, IconName> = {
   agent: "bot",
-  pipeline: "flow",
+  workflow: "flow",
   goal: "retry",
   scheduled: "clock",
 };
@@ -265,7 +265,7 @@ export function runGlyph(run: RunView, glyphById: Map<string, IconName>): IconNa
 }
 
 /**
- * Resolve a run's assigned-entity avatar (agent/pipeline) from the catalog, keyed by
+ * Resolve a run's assigned-entity avatar (agent/workflow) from the catalog, keyed by
  * `run.owner`. Returns `undefined` when the owner has no avatar — the run-detail
  * header then falls back to the {@link runGlyph} glyph (Phase 48).
  */

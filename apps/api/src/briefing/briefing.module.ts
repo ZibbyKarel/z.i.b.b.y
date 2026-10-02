@@ -8,7 +8,7 @@ import { ReleaseModule } from "../release/release.module";
 import { MergeWatchModule } from "../release/merge-watch.module";
 import { MemoryModule } from "../memory/memory.module";
 import { MonitorsModule } from "../monitors/monitors.module";
-import { PipelinesModule } from "../pipelines/pipelines.module";
+import { WorkflowsModule } from "../workflows/workflows.module";
 import { ProjectsModule } from "../projects/projects.module";
 import { SelfKnowledgeModule } from "../self-knowledge/self-knowledge.module";
 import { SecurityModule } from "../security/security.module";
@@ -20,7 +20,7 @@ import { ClaudeCliBriefer } from "./claude-cli-briefer";
 
 /**
  * The briefing (Phase 6.2). Sits ABOVE the stores it reads — Approvals (pending
- * decisions), Pipelines (parked runs), Channels (the item store, which that module
+ * decisions), Workflows (parked runs), Channels (the item store, which that module
  * exports) and Memory (vault persistence); the activity log is global. It must
  * NEVER import AutomationsModule — AutomationsModule imports THIS for the briefing
  * target, so the reverse edge would be a cycle.
@@ -28,7 +28,7 @@ import { ClaudeCliBriefer } from "./claude-cli-briefer";
 @Module({
   imports: [
     ApprovalsModule,
-    PipelinesModule,
+    WorkflowsModule,
     GoalsModule,
     ChannelsModule,
     MemoryModule,

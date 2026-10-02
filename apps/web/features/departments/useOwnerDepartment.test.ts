@@ -1,16 +1,16 @@
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Pipeline } from "../../domain";
+import type { Workflow } from "../../domain";
 import type { RunView } from "../runs/run";
 import { runDepartmentId, useOwnerDepartmentMaps } from "./useOwnerDepartment";
 
 const hooks = vi.hoisted(() => ({
-  pipelines: [] as Pipeline[],
+  workflows: [] as Workflow[],
 }));
 
-vi.mock("../pipelines", () => ({ usePipelinesQuery: () => ({ data: hooks.pipelines }) }));
+vi.mock("../workflows", () => ({ useWorkflowsQuery: () => ({ data: hooks.workflows }) }));
 
-function pipelineFixture(overrides: Partial<Pipeline> = {}): Pipeline {
+function workflowFixture(overrides: Partial<Workflow> = {}): Workflow {
   return {
     id: "delivery",
     name: "Delivery",
@@ -27,7 +27,7 @@ function pipelineFixture(overrides: Partial<Pipeline> = {}): Pipeline {
 function runFixture(overrides: Partial<RunView> = {}): RunView {
   return {
     runId: "run-1",
-    kind: "pipeline",
+    kind: "workflow",
     owner: "delivery",
     status: "running",
     pct: null,
@@ -42,14 +42,14 @@ function runFixture(overrides: Partial<RunView> = {}): RunView {
 
 describe("useOwnerDepartment", () => {
   beforeEach(() => {
-    hooks.pipelines = [];
+    hooks.workflows = [];
   });
 
-  it("joins a pipeline run to its owning pipeline's department", () => {
-    hooks.pipelines = [pipelineFixture({ id: "delivery", department: "dev" })];
+  it("joins a workflow run to its owning workflow's department", () => {
+    hooks.workflows = [workflowFixture({ id: "delivery", department: "dev" })];
     const { result } = renderHook(() => useOwnerDepartmentMaps());
 
-    const run = runFixture({ kind: "pipeline", owner: "delivery" });
+    const run = runFixture({ kind: "workflow", owner: "delivery" });
     expect(runDepartmentId(run, result.current)).toBe("dev");
   });
 
@@ -65,15 +65,15 @@ describe("useOwnerDepartment", () => {
     expect(runDepartmentId(run, result.current)).toBeNull();
   });
 
-  it("returns null (not a crash) for a pipeline run whose owner is untagged or unknown", () => {
-    hooks.pipelines = [pipelineFixture({ id: "untagged" })];
+  it("returns null (not a crash) for a workflow run whose owner is untagged or unknown", () => {
+    hooks.workflows = [workflowFixture({ id: "untagged" })];
     const { result } = renderHook(() => useOwnerDepartmentMaps());
 
     expect(
-      runDepartmentId(runFixture({ kind: "pipeline", owner: "untagged" }), result.current),
+      runDepartmentId(runFixture({ kind: "workflow", owner: "untagged" }), result.current),
     ).toBeNull();
     expect(
-      runDepartmentId(runFixture({ kind: "pipeline", owner: "does-not-exist" }), result.current),
+      runDepartmentId(runFixture({ kind: "workflow", owner: "does-not-exist" }), result.current),
     ).toBeNull();
   });
 });

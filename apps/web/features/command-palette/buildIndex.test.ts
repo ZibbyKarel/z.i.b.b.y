@@ -12,7 +12,7 @@ const LABELS: CommandPaletteLabels = {
     company: "Company",
     team: "Team",
     project: "Project",
-    pipeline: "Pipeline",
+    workflow: "Workflow",
     skill: "Skill",
     mcp: "MCP server",
     hook: "Hook",
@@ -32,7 +32,7 @@ const LABELS: CommandPaletteLabels = {
     companies: "Companies",
     teams: "Teams",
     projects: "Projects",
-    pipelines: "Pipelines",
+    workflows: "Workflows",
     registries: "Registries",
     automations: "Automations",
     vault: "Vault",
@@ -52,7 +52,7 @@ const EMPTY_SOURCES: CommandPaletteSources = {
   companies: [],
   teams: [],
   projects: [],
-  pipelines: [],
+  workflows: [],
   skills: [],
   mcpServers: [],
   hooks: [],
@@ -111,18 +111,18 @@ describe("buildCommandPaletteIndex", () => {
     );
   });
 
-  it("skips a pipeline with no owning department (the route has no unresolved form)", () => {
+  it("skips a workflow with no owning department (the route has no unresolved form)", () => {
     const entries = buildCommandPaletteIndex(
       {
         ...EMPTY_SOURCES,
-        pipelines: [
+        workflows: [
           { id: "no-dept", name: "Orphan" },
           { id: "p1", name: "Delivery", department: "dev" },
         ],
       },
       LABELS,
     );
-    const ids = entries.filter((e) => e.group === "pipelines").map((e) => e.id);
+    const ids = entries.filter((e) => e.group === "workflows").map((e) => e.id);
     expect(ids).toEqual(["p1"]);
   });
 

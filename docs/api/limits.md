@@ -11,14 +11,14 @@ back on its own, and how close is the window to tripping again."
 
 ### Pieces
 
-| Piece         | File                                         | Role                                                                                     |
-| ------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Contract      | `libs/contracts/src/limits/limits.contract.ts` | `limitsContract` — the `/api/limits` router                                              |
-| Schema        | `libs/contracts/src/limits/limits.schema.ts`   | `LimitWindow` (`usedPct`, `resetsAt`), `Limits` (`rolling`, `weekly`, `capturedAt`, `stale`) |
-| Service       | `apps/api/src/limits/limits.service.ts`        | `LimitsService` — cache + fallback orchestration, `buildLimits` (pure)                   |
-| Live fetch    | `apps/api/src/limits/usage-fetcher.ts`         | `UsageFetcher` — reads the authoritative headers off a live, minimal `/v1/messages` call |
-| Status-line   | `apps/api/src/limits/rate-limits.reader.ts`    | `RateLimitsReader` — fallback: parses the status-line's captured `rate-limits.json`      |
-| Controller    | `apps/api/src/limits/limits.controller.ts`     | Implements the contract                                                                  |
+| Piece       | File                                           | Role                                                                                         |
+| ----------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Contract    | `libs/contracts/src/limits/limits.contract.ts` | `limitsContract` — the `/api/limits` router                                                  |
+| Schema      | `libs/contracts/src/limits/limits.schema.ts`   | `LimitWindow` (`usedPct`, `resetsAt`), `Limits` (`rolling`, `weekly`, `capturedAt`, `stale`) |
+| Service     | `apps/api/src/limits/limits.service.ts`        | `LimitsService` — cache + fallback orchestration, `buildLimits` (pure)                       |
+| Live fetch  | `apps/api/src/limits/usage-fetcher.ts`         | `UsageFetcher` — reads the authoritative headers off a live, minimal `/v1/messages` call     |
+| Status-line | `apps/api/src/limits/rate-limits.reader.ts`    | `RateLimitsReader` — fallback: parses the status-line's captured `rate-limits.json`          |
+| Controller  | `apps/api/src/limits/limits.controller.ts`     | Implements the contract                                                                      |
 
 ### Flow
 
@@ -68,10 +68,10 @@ back on its own, and how close is the window to tripping again."
 
 ### Pieces
 
-| Piece   | File                                                | Role                                                                                   |
-| ------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
-| Service | `apps/api/src/limits-resume/limit-resume.service.ts`   | `LimitResumeService` — ticks, scans both runners' `paused-limit` registries, resumes/parks |
-| Module  | `apps/api/src/limits-resume/limit-resume.module.ts`    | Sits above the agent/pipeline runners (imports both), so it can't close a DI cycle       |
+| Piece   | File                                                 | Role                                                                                       |
+| ------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Service | `apps/api/src/limits-resume/limit-resume.service.ts` | `LimitResumeService` — ticks, scans both runners' `paused-limit` registries, resumes/parks |
+| Module  | `apps/api/src/limits-resume/limit-resume.module.ts`  | Sits above the agent/workflow runners (imports both), so it can't close a DI cycle         |
 
 No controller, no contract — purely a background daemon (Phase 9.2).
 
@@ -83,7 +83,7 @@ No controller, no contract — purely a background daemon (Phase 9.2).
    live on `systemConfig.onChange`.
 2. **`tick(now)`** collects every `paused-limit` run from
    `AgentRunnerService.listLimitPaused()` and
-   `PipelineRunnerService.listLimitPaused()`, keeps the ones whose `resumeAt`
+   `WorkflowRunnerService.listLimitPaused()`, keeps the ones whose `resumeAt`
    has passed, and processes them **oldest `resumeAt` first**.
 3. For each due run: if it has already hit `systemConfig.limitResumeMax`
    resume cycles, it is parked/failed outright (no headroom check needed —
@@ -92,14 +92,14 @@ No controller, no contract — purely a background daemon (Phase 9.2).
      remaining tick**, not just this run: never resume anything on a lagging
      capture.
    - **Thundering-herd guard** — once one run has been resumed this tick, a
-     sibling with no headroom is left for the *next* tick rather than
+     sibling with no headroom is left for the _next_ tick rather than
      attempted (and burns no cycle). A due run with no headroom when nothing
      else has resumed yet this tick IS attempted — a genuine flap re-pauses
      immediately at the runner's own boundary check, which is what advances
      its cycle count toward the cap.
 4. **Resume:** `AgentRunnerService.resumeLimitPaused` /
-   `PipelineRunnerService.resumeLimitPaused`.
-5. **Cap reached → park/fail:** a pipeline run is parked (operator-resumable);
+   `WorkflowRunnerService.resumeLimitPaused`.
+5. **Cap reached → park/fail:** a workflow run is parked (operator-resumable);
    an agent run has no parked state, so it fails with a readable
    `"usage limit flapped N time(s) — failed for review"` message.
 6. Every step runs under an in-flight guard (`this.inflight`) so a restart

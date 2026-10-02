@@ -41,7 +41,7 @@ export const departmentsContract = c.router(
         200: z.array(UnownedEntitySchema),
       },
       summary:
-        "List stored entities (pipelines/chains/agents/integrations) with no department (F1b) — [] once the owner-backfill sweep has run",
+        "List stored entities (workflows/chains/agents/integrations) with no department (F1b) — [] once the owner-backfill sweep has run",
     },
 
     // Also before `getDepartment`, for the same reason.

@@ -11,7 +11,7 @@ const GITHUB_API = "https://api.github.com";
 /** Workflow-run conclusions that read as "the build is red". */
 const RED_CONCLUSIONS = new Set(["failure", "timed_out", "startup_failure"]);
 
-interface WorkflowRun {
+interface GithubWorkflowRun {
   id?: number;
   run_attempt?: number;
   name?: string;
@@ -43,10 +43,7 @@ export class GithubCiMonitor implements MonitorAdapter {
   constructor(private readonly fetchImpl: typeof fetch = fetch) {}
 
   wants(integration: Integration): boolean {
-    return (
-      integration.config.kind === "github" &&
-      integration.config.streams.includes("ci")
-    );
+    return integration.config.kind === "github" && integration.config.streams.includes("ci");
   }
 
   async poll(
@@ -59,15 +56,14 @@ export class GithubCiMonitor implements MonitorAdapter {
     if (!token) throw new Error("no github token configured");
     const { repo } = integration.config;
 
-    const res = await this.fetchImpl(
-      `${GITHUB_API}/repos/${repo}/actions/runs?per_page=50`,
-      { headers: { authorization: `Bearer ${token}`, accept: "application/vnd.github+json" } },
-    );
+    const res = await this.fetchImpl(`${GITHUB_API}/repos/${repo}/actions/runs?per_page=50`, {
+      headers: { authorization: `Bearer ${token}`, accept: "application/vnd.github+json" },
+    });
     if (res.status === 429 || res.status === 403) {
       throw new Error(`github rate limited (HTTP ${res.status})`);
     }
     if (!res.ok) throw new Error(`github workflow runs: HTTP ${res.status}`);
-    const body = (await res.json()) as { workflow_runs?: WorkflowRun[] };
+    const body = (await res.json()) as { workflow_runs?: GithubWorkflowRun[] };
     const runs = Array.isArray(body.workflow_runs) ? body.workflow_runs : [];
 
     const events: MonitorAlert[] = [];
@@ -107,15 +103,15 @@ export class GithubCiMonitor implements MonitorAdapter {
  * newest decisive run sets the state; `sinceAt` walks the consecutive same-state
  * streak (newest-first input) to its oldest run — "red since HH:MM".
  */
-function computeStatus(runs: WorkflowRun[]): MonitorStatusSnapshot | undefined {
-  const stateOf = (run: WorkflowRun): "red" | "green" | null => {
+function computeStatus(runs: GithubWorkflowRun[]): MonitorStatusSnapshot | undefined {
+  const stateOf = (run: GithubWorkflowRun): "red" | "green" | null => {
     if (run.status !== "completed") return null;
     if (RED_CONCLUSIONS.has(run.conclusion ?? "")) return "red";
     return run.conclusion === "success" ? "green" : null;
   };
   const decisive = runs
     .map((run) => ({ run, state: stateOf(run) }))
-    .filter((d): d is { run: WorkflowRun; state: "red" | "green" } => d.state !== null);
+    .filter((d): d is { run: GithubWorkflowRun; state: "red" | "green" } => d.state !== null);
   const newest = decisive[0];
   if (!newest) return undefined;
   let oldestInStreak = newest.run;
@@ -123,7 +119,7 @@ function computeStatus(runs: WorkflowRun[]): MonitorStatusSnapshot | undefined {
     if (d.state !== newest.state) break;
     oldestInStreak = d.run;
   }
-  const at = (run: WorkflowRun): string =>
+  const at = (run: GithubWorkflowRun): string =>
     new Date(run.updated_at ?? run.created_at ?? 0).toISOString();
   return {
     state: newest.state,

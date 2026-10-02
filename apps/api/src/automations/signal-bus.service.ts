@@ -20,7 +20,7 @@ export type SignalDispatcher = (automation: Automation, signal: Signal) => Promi
  *
  * The actual dispatch is the scheduler's (`SchedulerService.dispatch`); it registers
  * itself via {@link registerDispatcher} so this service stays a leaf the producers
- * (Security/Arch/Release/Pipelines) can inject without a module cycle.
+ * (Security/Arch/Release/Workflows) can inject without a module cycle.
  */
 @Injectable()
 export class SignalBusService implements OnModuleInit, ResumableRunner {

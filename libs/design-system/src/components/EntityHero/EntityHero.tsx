@@ -108,7 +108,7 @@ function readAsDataUri(file: File, onUpload?: (v: string) => void) {
 }
 
 /**
- * Profile-style hero for an agent or pipeline: the avatar fills a band with the
+ * Profile-style hero for an agent or workflow: the avatar fills a band with the
  * name/meta/desc overlaid at the bottom and dissolving into the panel below.
  * When `editable`, it uploads (click or drag-drop) a file and emits a data URI;
  * the caller enforces any size cap. Falls back to `glyph` when the image is

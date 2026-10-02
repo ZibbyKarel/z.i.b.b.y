@@ -41,8 +41,8 @@ files — auditable, and yours.
 ## Two modes
 
 **Directed.** The operator describes a task; ZIBBY classifies and dispatches it to an
-agent, a pipeline, or — when nothing matches — a general orchestrator that just does
-the work. When the operator instead names a specific pipeline or agent, that naming is
+agent, a workflow, or — when nothing matches — a general orchestrator that just does
+the work. When the operator instead names a specific workflow or agent, that naming is
 a **hard override — the classifier is skipped and exactly that unit runs.** A described
 task is _always_ executed; there is no silent no-op.
 
@@ -64,12 +64,12 @@ is what separates _generating code_ from _delivering working code_.
 
 ---
 
-## Pipelines & artifacts
+## Workflows & artifacts
 
-Agents compose into **pipelines**; pipelines chain into larger flows. Every pipeline
+Agents compose into **workflows**; workflows chain into larger flows. Every workflow
 yields a **durable artifact** — a document in the vault, a git branch, a PR — recorded
 on disk, not discarded when the run ends. An artifact can feed the next unit: _"research
-topic X overnight, then build an app from the result"_ runs the first pipeline and hands
+topic X overnight, then build an app from the result"_ runs the first workflow and hands
 its artifact to the second. Composition is the operator's to author; dispatch is ZIBBY's
 to route.
 
@@ -83,7 +83,7 @@ to route.
 
 Autonomy is **tiered**. The tier — not the channel — decides how ZIBBY acts.
 
-- **Tier 1 — Act silently.** Read, analyze, draft, run the pipeline on its own branch,
+- **Tier 1 — Act silently.** Read, analyze, draft, run the workflow on its own branch,
   test, investigate, prepare a fix. Logged, not announced.
 - **Tier 2 — Act, then report.** Reply to routine questions it can answer with
   confidence; open a PR for a fix; post a requested status update. Always surfaced in
@@ -142,7 +142,7 @@ Applies to every phase, feature, and PR:
 - **Contract-first** — the ts-rest contract in `libs/contracts` comes before implementation.
 - **SSE for live streams, polling for state** — logs, the activity feed, and run-events
   stream over SSE; only `health` and `limits` poll.
-- **Explicit target overrides the classifier** — naming a pipeline/agent skips routing;
+- **Explicit target overrides the classifier** — naming a workflow/agent skips routing;
   pure intent is what gets routed.
 - **One interaction grammar** — the same affordance sits in the same place on every
   screen: edit is top-right, a card-click navigates to a detail page, dialogs are for
@@ -246,10 +246,10 @@ App Router route group `(dashboard)`.
   `usePathname()`, wraps `MainLayout` with nav/rail/voice/task slots, and mounts
   `CatalogProvider` + `VoiceProvider` + `NewTaskProvider`
 - Each page = `page.tsx` in its own segment. Dashboard segments: `agents`, `automations`,
-  `commands`, `gates`, `hooks`, `mcp`, `memory`, `overview`, `pipelines`, `projects`,
+  `commands`, `gates`, `hooks`, `mcp`, `memory`, `overview`, `workflows`, `projects`,
   `runs`, `settings`, `skills`. There is no standalone `integrations` segment — integrations
   live on the owning project's detail page.
-- `/pipelines/[id]` — pipeline detail
+- `/workflows/[id]` — workflow detail
 
 ---
 

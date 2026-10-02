@@ -16,12 +16,14 @@ export const ROUTE_MAP_REDIRECTS: ReadonlyArray<[from: string, to: string]> = [
   ["/", "/org"],
   ["/chat", "/org"],
   // ZB-03 (D-015): the employee directory and position registry replace the
-  // old `/agents` catalog; the old pipeline catalog has no single pipeline to
+  // old `/agents` catalog; the old workflow catalog has no single workflow to
   // resolve, so it goes straight to the org map. `/agents/:id` and
-  // `/pipelines/:id` are id-dependent (server-side lookup against seeded
+  // `/workflows/:id` are id-dependent (server-side lookup against seeded
   // data) and are left uncovered here — this table only fits static pairs
   // (the sweep covers them separately, with its own seeded ids).
   ["/agents", "/org/people"],
+  ["/workflows", "/org"],
+  // The pre-rename URL (pipeline → workflow) still resolves, via the permanent redirect.
   ["/pipelines", "/org"],
   // ZB-07: the activity screens ship — `/archiv`/`/runs` land on the runs list,
   // `/activity` on its default `log` tab.

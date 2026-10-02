@@ -1,0 +1,1461 @@
+import type { INestApplication } from "@nestjs/common";
+import { Test } from "@nestjs/testing";
+import { execFile } from "node:child_process";
+import { promises as fs } from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
+import request from "supertest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { AppModule } from "../src/app.module";
+import { ApprovalsService } from "../src/approvals/approvals.service";
+import { WorkflowRunnerService } from "../src/workflows/workflow-runner.service";
+import { defaultEmployeesDir, seedEmployeeFixture } from "./fixtures/employee-fixture";
+
+/** Token-free stand-in for the real `claude` CLI (see fixtures/fake-claude.mjs). */
+const FAKE_CLAUDE = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "fixtures/fake-claude.mjs",
+);
+/** Check script that fails on its first invocation, then passes (see fixtures/flaky-check.mjs). */
+const FLAKY_CHECK = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "fixtures/flaky-check.mjs",
+);
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+// Generous default (Phase 13.4): demo workflow runs are timing-sensitive, and under
+// full-suite CPU load a run that normally finishes in <1s can be starved for seconds —
+// a tight poll window is the demo-timeout flake. Stays under the 30s testTimeout.
+async function until<T>(fn: () => Promise<T>, timeoutMs = 25000): Promise<NonNullable<T>> {
+  const start = Date.now();
+  for (;;) {
+    const result = await fn();
+    if (result) return result as NonNullable<T>;
+    if (Date.now() - start > timeoutMs) throw new Error("until: timed out");
+    await sleep(40);
+  }
+}
+
+const phase = (id: string, extra: Record<string, unknown> = {}) => ({
+  id,
+  agent: "writer",
+  consumes: `${id}.in`,
+  produces: `${id}.out`,
+  model: "sonnet",
+  thinking: "medium",
+  ...extra,
+});
+
+describe("Workflows API (e2e)", () => {
+  let app: INestApplication;
+  let workflowsDir: string;
+  let runsDir: string;
+  let projectsDir: string;
+  let vaultDir: string;
+
+  async function boot(): Promise<INestApplication> {
+    process.env.WORKFLOWS_DIR = workflowsDir;
+    process.env.WORKFLOW_RUNS_DIR = runsDir;
+    process.env.PROJECTS_DIR = projectsDir;
+    process.env.VAULT_DIR = vaultDir;
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const fresh = moduleRef.createNestApplication();
+    await fresh.init();
+    return fresh;
+  }
+
+  // Dump everything knowable about a stuck run to stderr, so a CI-only flake is
+  // diagnosable from the workflow log (no live debugger, no reproduction on dev).
+  // Prints the live aggregate (status/currentStage/retries/parkedReason + every
+  // stageRun's phase/attempt/status/verdict) and tails each stage child's `.log`
+  // (RunnerCore writes `<runsDir>/<stageRunId>.log`; those survive until an explicit
+  // delete, so terminal AND in-flight attempts are readable). Never throws — a
+  // diagnostic must not mask the original failure.
+  async function dumpRunDiagnostics(workflowRunId: string): Promise<void> {
+    try {
+      const res = app.get(WorkflowRunnerService).get(workflowRunId);
+      console.error(
+        `\n===== WORKFLOW RUN DIAGNOSTIC (${workflowRunId}) =====\n` +
+          JSON.stringify(
+            {
+              status: res.status,
+              currentStage: res.currentStage,
+              currentStageRunId: res.currentStageRunId,
+              parkedReason: res.parkedReason,
+              parked: res.parked,
+              retries: res.retries,
+              cwd: res.cwd,
+              stageRuns: res.stageRuns.map((s) => ({
+                phaseId: s.phaseId,
+                runId: s.runId,
+                attempt: s.attempt,
+                status: s.status,
+                verdict: s.verdict,
+                dir: s.dir,
+              })),
+            },
+            null,
+            2,
+          ),
+      );
+      const ids = new Set<string>();
+      for (const s of res.stageRuns) ids.add(s.runId);
+      if (res.currentStageRunId) ids.add(res.currentStageRunId);
+      for (const id of ids) {
+        const logFile = path.join(runsDir, `${id}.log`);
+        const txt = await fs.readFile(logFile, "utf8").catch((e) => `<no log: ${e?.code ?? e}>`);
+        console.error(`\n----- stage log ${id} -----\n${txt}`);
+      }
+      console.error(`===== END DIAGNOSTIC (${workflowRunId}) =====\n`);
+    } catch (e) {
+      console.error("dumpRunDiagnostics failed:", e);
+    }
+  }
+
+  beforeAll(async () => {
+    workflowsDir = await fs.mkdtemp(path.join(os.tmpdir(), "workflows-e2e-"));
+    runsDir = await fs.mkdtemp(path.join(os.tmpdir(), "workflow-runs-e2e-"));
+    projectsDir = await fs.mkdtemp(path.join(os.tmpdir(), "workflow-projects-e2e-"));
+    // Isolate the vault so the run recorder (Phase 4) writes here, not the dev vault.
+    vaultDir = await fs.mkdtemp(path.join(os.tmpdir(), "workflow-vault-e2e-"));
+    process.env.AGENT_DEMO_STEPS = "2";
+    process.env.AGENT_DEMO_DELAY_MS = "30";
+    // D-017: this describe block never overrides AGENTS_DIR — it never registers
+    // a real Agent either — so `phase()`'s bare "writer" id needs an employee
+    // seeded directly into the shared per-file data root, or every stage parks
+    // `no-employee` instead of dispatching.
+    await seedEmployeeFixture(defaultEmployeesDir(), {
+      id: "employee_writer",
+      agentId: "writer",
+      department: "dev",
+    });
+    app = await boot();
+  });
+
+  afterAll(async () => {
+    await app.close();
+    await fs.rm(workflowsDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+    await fs.rm(runsDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+    await fs.rm(projectsDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+    await fs.rm(vaultDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+    for (const k of [
+      "WORKFLOWS_DIR",
+      "WORKFLOW_RUNS_DIR",
+      "PROJECTS_DIR",
+      "VAULT_DIR",
+      "AGENT_DEMO_STEPS",
+      "AGENT_DEMO_DELAY_MS",
+      "WORKFLOW_DEMO_FAIL_PHASES",
+      "WORKFLOW_DEMO_GAP_PHASES",
+      "WORKFLOW_DEMO_EMIT_LEARNED",
+    ]) {
+      delete process.env[k];
+    }
+  });
+
+  afterEach(() => {
+    delete process.env.WORKFLOW_DEMO_FAIL_PHASES;
+    delete process.env.WORKFLOW_DEMO_GAP_PHASES;
+  });
+
+  it("creates a workflow; a dangling loop target is rejected (400 at the contract, 422 on update)", async () => {
+    await request(app.getHttpServer())
+      .post("/api/workflows")
+      .send({
+        id: "release",
+        phases: [phase("a"), phase("b")],
+        instructions: "ship",
+        department: "dev",
+      })
+      .expect(201);
+
+    // On create the body is validated by the contract's superRefine → 400.
+    await request(app.getHttpServer())
+      .post("/api/workflows")
+      .send({
+        id: "broken",
+        phases: [
+          phase("only", { loop: { to: "ghost", maxRetries: 1, escalate: false, then: "fail" } }),
+        ],
+        instructions: "x",
+        department: "dev",
+      })
+      .expect(400);
+
+    // The partial update body has no refine, so a dangling loop reaches storage
+    // validation and surfaces as 422.
+    await request(app.getHttpServer())
+      .patch("/api/workflows/release")
+      .send({
+        phases: [
+          phase("a", { loop: { to: "ghost", maxRetries: 1, escalate: false, then: "fail" } }),
+        ],
+      })
+      .expect(422);
+  });
+
+  /**
+   * NS2 F9 — the write-path half of the "no free units" invariant, mirroring
+   * `agents.controller.ts`' pre-existing guard. The structural half is that stage 1
+   * emits only departments and a department offers only what it owns, so an unowned
+   * workflow is unroutable by construction; this 422 is what stops one being
+   * created in the first place. Deliberately NOT enforced by making the schema
+   * field required — the entity store's listing is tolerant, so a required field
+   * would turn a hand-edited file that lost its owner into a silent disappearance
+   * and would break `OwnerBackfillService`'s healing path.
+   */
+  it("422s a create with no department — an unowned workflow would be unroutable", async () => {
+    const res = await request(app.getHttpServer())
+      .post("/api/workflows")
+      .send({ id: "ownerless", phases: [phase("a")], instructions: "ship" });
+    expect(res.status).toBe(422);
+    expect(res.body.message).toContain("department");
+
+    // Nothing was written — the guard runs before storage.
+    await request(app.getHttpServer()).get("/api/workflows/ownerless").expect(404);
+
+    // The same body WITH an owner is accepted, so the 422 is about the owner and
+    // nothing else in the payload.
+    await request(app.getHttpServer())
+      .post("/api/workflows")
+      .send({
+        id: "ownerless",
+        phases: [phase("a")],
+        instructions: "ship",
+        department: "dev",
+      })
+      .expect(201);
+    await request(app.getHttpServer()).delete("/api/workflows/ownerless").expect(200);
+  });
+
+  it("runs a two-phase workflow and hands off the produces file from A to B", async () => {
+    const workflows = app.get(WorkflowRunnerService);
+    const start = await workflows.start("release", undefined, "zibby-core");
+    const { workflowRunId, status } = start;
+    expect(status).toBe("running");
+
+    const final = await until(async () => {
+      const res = workflows.get(workflowRunId);
+      return res.status !== "running" ? res : null;
+    });
+
+    expect(final.status).toBe("done");
+    expect(final.stageRuns.map((s: { phaseId: string }) => s.phaseId)).toEqual(["a", "b"]);
+
+    // The handoff: A's produces (a.out) was copied into B's cwd as B's consumes
+    // (b.in). Stage sandboxes are numbered in dispatch order (P1-T1).
+    const handoff = await fs.readFile(path.join(final.cwd, "02_b", "b.in"), "utf8");
+    expect(handoff).toContain("output of a");
+  });
+
+  it("records a delivery as a daily line with the project backlink, but NO learned.md knowledge note (Phase 108 retired fileLearned)", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const project = await request(app.getHttpServer())
+      .post("/api/projects")
+      .send({
+        id: "learn-proj",
+        name: "Learn project",
+        path: await fs.mkdtemp(path.join(os.tmpdir(), "learn-proj-")),
+      })
+      .expect(201);
+    const projectId: string = project.body.id;
+
+    await request(app.getHttpServer())
+      .post("/api/workflows")
+      .send({
+        id: "learnpipe",
+        phases: [phase("doc")],
+        instructions: "deliver",
+        department: "dev",
+      })
+      .expect(201);
+
+    // The stage still emits a learned.md artifact (a Dokumentátor phase can produce
+    // one) — Phase 108 retired only `RunRecorderService.fileLearned`'s promotion of
+    // it into a vault knowledge note; the nightly `MemoryDistillerService` is now the
+    // sole write path for run-derived learnings (see docs/plans/phase-105-…, item 5).
+    process.env.WORKFLOW_DEMO_EMIT_LEARNED = "doc";
+    let workflowRunId: string;
+    try {
+      const start = await app.get(WorkflowRunnerService).start("learnpipe", undefined, projectId);
+      workflowRunId = start.workflowRunId;
+      await until(async () => {
+        const res = app.get(WorkflowRunnerService).get(workflowRunId);
+        return res.status === "done" ? res : null;
+      });
+    } finally {
+      delete process.env.WORKFLOW_DEMO_EMIT_LEARNED;
+    }
+
+    const learnedId = `learned-${workflowRunId}`;
+    // The recorder runs async on terminal status — wait for the daily line.
+    const daily = await until(async () => {
+      const res = await request(app.getHttpServer()).get(`/api/memory/note/${today}`);
+      if (res.status !== 200) return null;
+      return res.body.body?.includes(workflowRunId) ? res.body : null;
+    });
+    expect(daily.body).toContain(`workflow ${workflowRunId} (learnpipe) → done`);
+    expect(daily.body).toContain(`[[${projectId}]]`);
+    // No learned-note backlink was ever written.
+    expect(daily.body).not.toContain(`[[${learnedId}]]`);
+
+    // No learned note was filed, and the project MOC carries no backlink to it.
+    await request(app.getHttpServer()).get(`/api/memory/note/${learnedId}`).expect(404);
+    const moc = await request(app.getHttpServer()).get(`/api/memory/note/${projectId}`).expect(200);
+    expect(moc.body.links).not.toContain(learnedId);
+
+    // The graph never gained a learned-note node or a MOC→learned edge.
+    const graph = await request(app.getHttpServer()).get("/api/memory/graph").expect(200);
+    expect(graph.body.nodes.map((n: { id: string }) => n.id)).not.toContain(learnedId);
+    expect(graph.body.edges).not.toContainEqual({ from: projectId, to: learnedId });
+
+    // Restart-shaped dedup: a fresh app over the same data dir sweeps terminal runs
+    // on bootstrap, but the marker means it never writes a second daily line.
+    const app2 = await boot();
+    try {
+      const after = await request(app2.getHttpServer())
+        .get(`/api/memory/note/${today}`)
+        .expect(200);
+      const lines = after.body.body.split(`workflow ${workflowRunId} (`).length - 1;
+      expect(lines).toBe(1);
+    } finally {
+      await app2.close();
+    }
+  });
+
+  it("respects the maxRetries fuse: B fails, loops back to A, then fails the run", async () => {
+    // B fails on every attempt. With maxRetries=1 it runs once + one retry = twice,
+    // then escalates and (then: 'fail') fails the run — never infinitely.
+    process.env.WORKFLOW_DEMO_FAIL_PHASES = "b";
+    await request(app.getHttpServer())
+      .post("/api/workflows")
+      .send({
+        id: "looped",
+        phases: [
+          phase("a"),
+          phase("b", { loop: { to: "a", maxRetries: 1, escalate: true, then: "fail" } }),
+        ],
+        instructions: "loop",
+        department: "dev",
+      })
+      .expect(201);
+
+    const start = await app.get(WorkflowRunnerService).start("looped", undefined, undefined);
+    const { workflowRunId } = start;
+
+    const final = await until(async () => {
+      const res = app.get(WorkflowRunnerService).get(workflowRunId);
+      return res.status !== "running" ? res : null;
+    });
+
+    expect(final.status).toBe("failed");
+    const bAttempts = final.stageRuns.filter((s: { phaseId: string }) => s.phaseId === "b").length;
+    // One initial + exactly one retry (maxRetries=1). The escalation marker may add
+    // a synthetic 'b' entry, so bound it rather than demanding an exact count.
+    expect(bAttempts).toBeGreaterThanOrEqual(2);
+    expect(bAttempts).toBeLessThanOrEqual(3);
+    // A re-ran because of the back-edge.
+    const aAttempts = final.stageRuns.filter((s: { phaseId: string }) => s.phaseId === "a").length;
+    expect(aAttempts).toBeGreaterThanOrEqual(2);
+  });
+
+  it("a verify phase runs the project checks: red → loop back → green → done", async () => {
+    const projectDir = await fs.mkdtemp(path.join(os.tmpdir(), "verify-proj-"));
+    const marker = path.join(projectDir, "fixed.marker");
+    const check = `${JSON.stringify(process.execPath)} ${JSON.stringify(FLAKY_CHECK)} ${JSON.stringify(marker)}`;
+
+    await request(app.getHttpServer())
+      .post("/api/projects")
+      .send({ id: "verify-proj", name: "Verify project", path: projectDir, checks: [check] })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post("/api/workflows")
+      .send({
+        id: "verified",
+        phases: [
+          phase("a"),
+          {
+            id: "v",
+            type: "verify",
+            loop: { to: "a", maxRetries: 1, escalate: false, then: "fail" },
+          },
+          phase("b"),
+        ],
+        instructions: "agent → verify → agent",
+        department: "dev",
+      })
+      .expect(201);
+
+    const start = await app.get(WorkflowRunnerService).start("verified", undefined, "verify-proj");
+    expect(start.projectPath).toBe(projectDir);
+    const { workflowRunId } = start;
+
+    const final = await until(async () => {
+      const res = app.get(WorkflowRunnerService).get(workflowRunId);
+      return res.status !== "running" ? res : null;
+    });
+
+    expect(final.status).toBe("done");
+    // First verify ran red (creating the marker), looped back to `a`, then green.
+    expect(
+      final.stageRuns.map((s: { phaseId: string; status: string }) => `${s.phaseId}:${s.status}`),
+    ).toEqual(["a:done", "v:error", "a:done", "v:done", "b:done"]);
+
+    // Handoff passthrough: verify transforms nothing, so `b` still consumed `a`'s
+    // output. Five dispatches ran before it (a, v, a, v), so `b` is the fifth folder.
+    const handoff = await fs.readFile(path.join(final.cwd, "05_b", "b.in"), "utf8");
+    expect(handoff).toContain("output of a");
+
+    await fs.rm(projectDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+  });
+
+  it("a tool phase transforms the handoff in its sandbox: red → loop back → green → its produces feeds the next phase (P1-01)", async () => {
+    // First dispatch fails (exit 2) after dropping a run-wide marker; the retry
+    // sees the marker and transforms its consumes into its produces.
+    const once = 'test -f "$ZIBBY_RUN_DIR/once" || { touch "$ZIBBY_RUN_DIR/once"; exit 2; }';
+    await request(app.getHttpServer())
+      .post("/api/workflows")
+      .send({
+        id: "tooled",
+        phases: [
+          phase("a"),
+          {
+            id: "t",
+            type: "tool",
+            consumes: "t.in",
+            produces: "t.out",
+            commands: [
+              once,
+              "tr a-z A-Z < t.in > t.out",
+              'test "$(cd "$ZIBBY_STAGE_DIR" && pwd -P)" = "$(pwd -P)"',
+            ],
+            loop: { to: "a", maxRetries: 1, escalate: false, then: "fail" },
+          },
+          phase("b"),
+        ],
+        instructions: "agent → tool → agent",
+        department: "dev",
+      })
+      .expect(201);
+
+    // A project with a checkout must NOT pull the tool into the checkout.
+    const start = await app.get(WorkflowRunnerService).start("tooled", undefined, "zibby-core");
+    const final = await until(async () => {
+      const res = app.get(WorkflowRunnerService).get(start.workflowRunId);
+      return res.status !== "running" ? res : null;
+    });
+
+    if (final.status !== "done") await dumpRunDiagnostics(start.workflowRunId);
+    expect(final.status).toBe("done");
+    expect(
+      final.stageRuns.map((s: { phaseId: string; status: string }) => `${s.phaseId}:${s.status}`),
+    ).toEqual(["a:done", "t:error", "a:done", "t:done", "b:done"]);
+    const handoff = await fs.readFile(path.join(final.cwd, "05_b", "b.in"), "utf8");
+    expect(handoff).toContain("OUTPUT OF A");
+  });
+
+  const pendingGate = async (workflowRunId: string) => {
+    const all = await app.get(ApprovalsService).list("pending");
+    return all.find((a) => a.kind === "workflow-gate" && a.runId === workflowRunId) ?? null;
+  };
+
+  it("approval: ask parks durably after the phase; approve continues, reject fails (P1-02)", async () => {
+    await request(app.getHttpServer())
+      .post("/api/workflows")
+      .send({
+        id: "checkpointed",
+        phases: [phase("a", { approval: "ask" }), phase("b")],
+        instructions: "agent → (human) → agent",
+        department: "dev",
+      })
+      .expect(201);
+    const runner = app.get(WorkflowRunnerService);
+
+    const first = await runner.start("checkpointed", undefined, undefined);
+    const parked = await until(async () => {
+      const r = runner.get(first.workflowRunId);
+      return r.status === "parked" ? r : null;
+    });
+    expect(parked.parkedReason).toBe("gate");
+    expect(parked.stageRuns.map((s: { phaseId: string }) => s.phaseId)).toEqual(["a"]);
+    const approval = await until(() => pendingGate(first.workflowRunId));
+    expect(approval.action).toBe("stage-approval");
+    await app.get(ApprovalsService).approve(approval.id);
+    const done = await until(async () => {
+      const r = runner.get(first.workflowRunId);
+      return r.status === "done" ? r : null;
+    });
+    expect(done.stageRuns.map((s: { phaseId: string }) => s.phaseId)).toEqual(["a", "b"]);
+    expect(await pendingGate(first.workflowRunId)).toBeNull();
+
+    const second = await runner.start("checkpointed", undefined, undefined);
+    const gate2 = await until(() => pendingGate(second.workflowRunId));
+    await app.get(ApprovalsService).reject(gate2.id);
+    const failed = await until(async () => {
+      const r = runner.get(second.workflowRunId);
+      return r.status === "failed" ? r : null;
+    });
+    expect(failed.stageRuns.map((s: { phaseId: string }) => s.phaseId)).toEqual(["a"]);
+  });
+
+  it("budget: a tool's costs.jsonl pushes spend past the cap → parks before the next phase; approve raises the cap (P1-03)", async () => {
+    const cost = `echo '{"at":"2026-10-01T00:00:00Z","source":"image","provider":"fal","model":"klein","costUsd":0.4,"durationMs":1}' >> costs.jsonl`;
+    await request(app.getHttpServer())
+      .post("/api/workflows")
+      .send({
+        id: "capped",
+        budget: { maxCostUsd: 0.5 },
+        phases: [
+          { id: "t1", type: "tool", produces: "t1.out", commands: [cost, "echo one > t1.out"] },
+          { id: "t2", type: "tool", produces: "t2.out", commands: [cost, "echo two > t2.out"] },
+          phase("b"),
+        ],
+        instructions: "tool → tool → agent",
+        department: "dev",
+      })
+      .expect(201);
+    const runner = app.get(WorkflowRunnerService);
+    const start = await runner.start("capped", undefined, undefined);
+    const parked = await until(async () => {
+      const r = runner.get(start.workflowRunId);
+      return r.status === "parked" ? r : null;
+    });
+    expect(parked.parkedReason).toBe("budget");
+    expect(parked.currentStage).toBe("b");
+    expect(parked.stageRuns.map((s: { externalCostUsd?: number }) => s.externalCostUsd)).toEqual([
+      0.4, 0.4,
+    ]);
+    expect(parked.budget?.spentUsd).toBeCloseTo(0.8);
+    expect(parked.budget?.warned).toBe(true);
+    const approval = await until(() => pendingGate(start.workflowRunId));
+    expect(approval.action).toBe("spend-past-cap");
+    await app.get(ApprovalsService).approve(approval.id);
+    const done = await until(async () => {
+      const r = runner.get(start.workflowRunId);
+      return r.status === "done" ? r : null;
+    });
+    expect(done.budget?.maxCostUsd).toBeCloseTo(1.3);
+    expect(done.stageRuns.map((s: { phaseId: string }) => s.phaseId)).toEqual(["t1", "t2", "b"]);
+  });
+
+  it("a workflow's default project feeds its env to a tool phase when the start names none", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "env-proj-"));
+    await request(app.getHttpServer())
+      .post("/api/projects")
+      .send({ id: "env-proj", name: "Env project", path: dir, env: { PF_FLAVOUR: "local" } })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post("/api/workflows")
+      .send({
+        id: "bound",
+        project: "env-proj",
+        phases: [
+          { id: "t", type: "tool", produces: "t.out", commands: ['echo "$PF_FLAVOUR" > t.out'] },
+        ],
+        instructions: "x",
+        department: "dev",
+      })
+      .expect(201);
+    const runner = app.get(WorkflowRunnerService);
+    const start = await runner.start("bound", undefined, undefined);
+    const final = await until(async () => {
+      const r = runner.get(start.workflowRunId);
+      return r.status !== "running" ? r : null;
+    });
+    expect(final.status).toBe("done");
+    expect((await fs.readFile(path.join(final.cwd, "01_t", "t.out"), "utf8")).trim()).toBe("local");
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  it("422s a workflow owned by a department that does not exist (D-022)", async () => {
+    await request(app.getHttpServer())
+      .post("/api/workflows")
+      .send({ id: "ghost-owned", phases: [phase("a")], instructions: "x", department: "ghost" })
+      .expect(422);
+  });
+
+  it("rejects a tool phase without commands or with a model (422/400 at the contract)", async () => {
+    const res = await request(app.getHttpServer())
+      .post("/api/workflows")
+      .send({
+        id: "badtool",
+        phases: [{ id: "t", type: "tool", produces: "x", model: "sonnet" }],
+        instructions: "x",
+        department: "dev",
+      });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBeLessThan(500);
+  });
+
+  it("P1-T4 structure smoke: loop + file output — numbered-only tree, own-produces real files, symlinked handoff/context, output/ resolves the canonical artifact", async () => {
+    // review is a qualify phase that gaps once (demo GAP lever) then passes, so the
+    // chain genuinely loops back to developer before finishing — the same shape as
+    // the plan's deferred manual code-audit smoke, at demo-mode determinism.
+    process.env.WORKFLOW_DEMO_GAP_PHASES = "review";
+    await request(app.getHttpServer())
+      .post("/api/workflows")
+      .send({
+        id: "structure-smoke",
+        phases: [
+          phase("developer"),
+          {
+            id: "review",
+            agent: "writer",
+            consumes: "developer.out",
+            produces: "review.out",
+            model: "sonnet",
+            thinking: "medium",
+            qualify: true,
+            loop: { to: "developer", maxRetries: 1, escalate: false, then: "park" },
+          },
+          phase("finish", { consumes: "review.out", produces: "final.out" }),
+        ],
+        outputs: [{ type: "file", from: "final.out", dest: "vault", to: "structure-smoke-note" }],
+        instructions: "structure smoke",
+        department: "dev",
+      })
+      .expect(201);
+
+    const workflows = app.get(WorkflowRunnerService);
+    const start = await workflows.start(
+      "structure-smoke",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      "chain input for structure smoke",
+    );
+    const { workflowRunId } = start;
+
+    const final = await until(async () => {
+      const res = workflows.get(workflowRunId);
+      return res.status !== "running" ? res : null;
+    });
+    expect(final.status).toBe("done");
+
+    // developer → review(gap) → developer(retry) → review(pass) → finish: five
+    // dispatches, numbered in call order — no flat `developer`/`review`/`finish`
+    // folders alongside them (the audit's original complaint).
+    const stageDirs = ["01_developer", "02_review", "03_developer", "04_review", "05_finish"];
+    const entries = await fs.readdir(final.cwd, { withFileTypes: true });
+    const dirNames = entries
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name)
+      .sort();
+    expect(dirNames).toEqual([...stageDirs, "context", "output"].sort());
+
+    // Each stage folder holds its OWN produces file as a real file — not a
+    // byte-duplicated copy of a previous phase's output.
+    for (const [d, file] of [
+      ["01_developer", "developer.out"],
+      ["03_developer", "developer.out"],
+      ["04_review", "review.out"],
+      ["05_finish", "final.out"],
+    ] as const) {
+      const st = await fs.lstat(path.join(final.cwd, d, file));
+      expect(st.isSymbolicLink()).toBe(false);
+      expect(st.isFile()).toBe(true);
+    }
+
+    // Consumed input is a symlink into the producing phase's LATEST folder, not a
+    // duplicate — reading it returns the exact same bytes as the source.
+    const consumesLink = path.join(final.cwd, "04_review", "developer.out");
+    expect((await fs.lstat(consumesLink)).isSymbolicLink()).toBe(true);
+    expect(await fs.readFile(consumesLink, "utf8")).toBe(
+      await fs.readFile(path.join(final.cwd, "03_developer", "developer.out"), "utf8"),
+    );
+
+    // context/ holds the workflow-level input; every stage sees it via a symlink.
+    const contextInput = path.join(final.cwd, "context", "input.md");
+    expect(await fs.readFile(contextInput, "utf8")).toBe("chain input for structure smoke");
+    for (const d of stageDirs) {
+      const ctxLink = path.join(final.cwd, d, "context");
+      expect((await fs.lstat(ctxLink)).isSymbolicLink()).toBe(true);
+      expect(await fs.readFile(path.join(ctxLink, "input.md"), "utf8")).toBe(
+        "chain input for structure smoke",
+      );
+    }
+
+    // output/<name> is the canonical delivery source — a symlink resolving to the
+    // last phase's real produces file.
+    const outputLink = path.join(final.cwd, "output", "final.out");
+    expect((await fs.lstat(outputLink)).isSymbolicLink()).toBe(true);
+    expect(await fs.readFile(outputLink, "utf8")).toBe(
+      await fs.readFile(path.join(final.cwd, "05_finish", "final.out"), "utf8"),
+    );
+  });
+
+  it("retries exhaustion with then:'park' parks the run; resume-with-note completes it", async () => {
+    process.env.WORKFLOW_DEMO_FAIL_PHASES = "b";
+    await request(app.getHttpServer())
+      .post("/api/workflows")
+      .send({
+        id: "parking",
+        phases: [
+          phase("a"),
+          phase("b", { loop: { to: "a", maxRetries: 0, escalate: true, then: "park" } }),
+        ],
+        instructions: "park on exhaustion",
+        department: "dev",
+      })
+      .expect(201);
+
+    const start = await app.get(WorkflowRunnerService).start("parking", undefined, undefined);
+    const { workflowRunId } = start;
+
+    // b fails, maxRetries 0 → immediately exhausted → durable parking.
+    const parked = await until(async () => {
+      const res = app.get(WorkflowRunnerService).get(workflowRunId);
+      return res.status === "parked" ? res : null;
+    });
+    expect(parked.parkedReason).toBe("retries");
+    expect(parked.parked).toMatchObject({ phaseId: "b", attempts: 1 });
+
+    // A premature resume of a non-parked run 409s (sanity: wrong id state).
+    delete process.env.WORKFLOW_DEMO_FAIL_PHASES;
+    const resumed = await request(app.getHttpServer())
+      .post(`/api/tasks/runs/${workflowRunId}/resume`)
+      .send({ note: "zelená cesta — tentokrát to projde" })
+      .expect(200);
+    expect(resumed.body.status).toBe("running");
+
+    const final = await until(async () => {
+      const res = app.get(WorkflowRunnerService).get(workflowRunId);
+      return res.status !== "running" ? res : null;
+    });
+    expect(final.status).toBe("done");
+    // The note landed next to the run for the audit trail.
+    const note = await fs.readFile(path.join(final.cwd, "b.note.md"), "utf8");
+    expect(note).toContain("zelená cesta");
+
+    // Resuming a finished run is refused.
+    await request(app.getHttpServer())
+      .post(`/api/tasks/runs/${workflowRunId}/resume`)
+      .send({})
+      .expect(409);
+  });
+
+  it("a git project gets a worktree on a zibby/* branch; delete prunes it, keeps the branch", async () => {
+    const { execFile } = await import("node:child_process");
+    const { promisify } = await import("node:util");
+    const exec = promisify(execFile);
+    const git = async (cwd: string, ...args: string[]) =>
+      (await exec("git", args, { cwd })).stdout.trim();
+
+    const repo = await fs.mkdtemp(path.join(os.tmpdir(), "pipe-git-repo-"));
+    await git(repo, "init", "-b", "main");
+    await git(repo, "config", "user.email", "t@zibby.local");
+    await git(repo, "config", "user.name", "T");
+    await fs.writeFile(path.join(repo, "README.md"), "# fixture\n", "utf8");
+    await git(repo, "add", "-A");
+    await git(repo, "commit", "-m", "initial");
+    const mainBefore = await git(repo, "rev-parse", "HEAD");
+
+    await request(app.getHttpServer())
+      .post("/api/projects")
+      .send({ id: "git-proj", name: "Git project", path: repo, checks: ["true"] })
+      .expect(201);
+
+    const start = await app.get(WorkflowRunnerService).start("release", undefined, "git-proj");
+    const { workflowRunId, workspace } = start as {
+      workflowRunId: string;
+      workspace?: { branch: string; path: string; baseRef: string };
+    };
+    expect(workspace?.branch).toBe(`zibby/${workflowRunId}-release`);
+    expect(workspace?.baseRef).toBe(mainBefore);
+    // The branch + worktree exist; the operator's main HEAD is untouched.
+    expect(await git(repo, "branch", "--list", workspace!.branch)).toContain(workspace!.branch);
+    expect(await git(repo, "rev-parse", "HEAD")).toBe(mainBefore);
+
+    const final = await until(async () => {
+      const res = app.get(WorkflowRunnerService).get(workflowRunId);
+      return res.status !== "running" ? res : null;
+    });
+    expect(final.status).toBe("done");
+    expect(final.workspace?.branch).toBe(workspace!.branch);
+
+    // Delete prunes the worktree but keeps the branch.
+    await request(app.getHttpServer()).delete(`/api/tasks/runs/${workflowRunId}`).expect(200);
+    expect(await git(repo, "worktree", "list")).not.toContain(workspace!.path);
+    expect(await git(repo, "branch", "--list", workspace!.branch)).toContain(workspace!.branch);
+
+    await fs.rm(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+  });
+
+  it("a retries-parked run survives a restart still parked (and resumable)", async () => {
+    const runId = "parking_1780000000002";
+    const root = path.join(runsDir, runId);
+    await fs.mkdir(root, { recursive: true });
+    const failureFile = path.join(root, "b.failure.txt");
+    await fs.writeFile(failureFile, 'Phase "b" failed (attempt 1).', "utf8");
+    await fs.writeFile(
+      path.join(root, "run.json"),
+      JSON.stringify({
+        workflowRunId: runId,
+        workflowId: "parking",
+        status: "parked",
+        parkedReason: "retries",
+        parked: { phaseId: "b", attempts: 1, failureFile },
+        retries: { b: 0 },
+        currentStage: "b",
+        stageRuns: [],
+        startedAt: new Date().toISOString(),
+        cwd: root,
+      }),
+      "utf8",
+    );
+
+    const app2 = await boot();
+    const res = app2.get(WorkflowRunnerService).get(runId);
+    expect(res.status).toBe("parked");
+    expect(res.parkedReason).toBe("retries");
+    await app2.close();
+  });
+
+  it("an output-parked run (PR gate) survives a restart still parked", async () => {
+    const runId = "output_1780000000003";
+    const root = path.join(runsDir, runId);
+    await fs.mkdir(root, { recursive: true });
+    await fs.writeFile(
+      path.join(root, "run.json"),
+      JSON.stringify({
+        workflowRunId: runId,
+        workflowId: "delivery",
+        status: "parked",
+        parkedReason: "output",
+        pendingOutput: { index: 0 },
+        currentStage: null,
+        stageRuns: [],
+        startedAt: new Date().toISOString(),
+        cwd: root,
+      }),
+      "utf8",
+    );
+
+    // Unlike an approval-parked stage (no live child → reconciled to failed), an
+    // output park is durable: the chain already finished, so it stays parked.
+    const app2 = await boot();
+    const res = app2.get(WorkflowRunnerService).get(runId);
+    expect(res.status).toBe("parked");
+    expect(res.parkedReason).toBe("output");
+    expect(res.pendingOutput).toEqual({ index: 0 });
+    await app2.close();
+  });
+
+  describe("seeded delivery workflow", () => {
+    const DELIVERY_SEED = path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      "../data-test/workflows/delivery.workflow.md",
+    );
+
+    beforeAll(async () => {
+      await fs.copyFile(DELIVERY_SEED, path.join(workflowsDir, "delivery.workflow.md"));
+    });
+
+    it(
+      "runs the chain through verify + the qualify review, finishing done",
+      async () => {
+        // This workflow declares no `outputs:`, so a green chain finishes `done` directly
+        // (the `pr` sink behaviour is covered by workflow-runner.outputs.test.ts). A project
+        // with a trivially-passing check lets the deterministic `verify` phase go green; the
+        // GAP lever makes the qualify `review` return gap once (loop back to Kodér) then pass.
+        process.env.WORKFLOW_DEMO_GAP_PHASES = "review";
+        const projectDir = await fs.mkdtemp(path.join(os.tmpdir(), "delivery-proj-"));
+        await request(app.getHttpServer())
+          .post("/api/projects")
+          .send({
+            id: "delivery-proj",
+            name: "Delivery project",
+            path: projectDir,
+            checks: ["true"],
+          })
+          .expect(201);
+
+        const start = await app
+          .get(WorkflowRunnerService)
+          .start("delivery", undefined, "delivery-proj");
+        const { workflowRunId } = start as { workflowRunId: string };
+
+        // architekt → koder → review (qualify) → verify → dokumentator → pr-autor,
+        // green → done (the current seed: verify IS the deterministic Tester; the old
+        // n-9 test-automator phase no longer exists). Poll to any TERMINAL state, not
+        // just `done`: a spurious park (e.g. a stage child that died on transient CI
+        // load) then fails fast with the real status instead of burning the whole
+        // window on an opaque `until: timed out`. The 50s budget stays under this
+        // test's 60s override so a merely-slow-under-load chain still has headroom.
+        let done: ReturnType<WorkflowRunnerService["get"]>;
+        try {
+          done = await until(async () => {
+            const res = app.get(WorkflowRunnerService).get(workflowRunId);
+            return res.status !== "running" ? res : null;
+          }, 50000);
+        } catch (err) {
+          // Last-resort diagnostic (Phase 111 part B): this chain flakes ONLY in CI
+          // (slower box, higher FS/CPU contention) and has never reproduced on dev.
+          // When the poll gives up, dump the live run state + every stage child's log
+          // so the CI output (plain `pnpm run test`, no rtk filter) reveals which
+          // phase is stuck, its attempt/verdict, and what the demo-stage child printed
+          // before it hung or crashed — instead of an opaque "until: timed out".
+          await dumpRunDiagnostics(workflowRunId);
+          throw err;
+        }
+        expect(done.status).toBe("done");
+
+        // The full handoff chain exists in the run tree (verify produces nothing).
+        // Sandboxes are numbered in dispatch order; the gap loop re-ran koder and
+        // review, so their LATEST folders are 04/05 (03_review holds the gap attempt).
+        for (const [dir, file] of [
+          ["01_architekt", "plan.md"],
+          ["04_koder", "implementation.md"],
+          ["05_review", "review.md"],
+          ["07_dokumentator", "docs.md"],
+          ["08_pr-autor", "pr-draft.md"],
+        ] as const) {
+          await fs.access(path.join(done.cwd, dir, file));
+        }
+        // The qualify review looped once on gap, then passed.
+        const reviews = done.stageRuns.filter((s) => s.phaseId === "review");
+        expect(reviews.map((s) => s.verdict)).toEqual(["gap", "pass"]);
+
+        await fs.rm(projectDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+      },
+      1 * 60 * 1000, // 1 minute
+    );
+
+    it("a persistently failing review exhausts its retries and parks", async () => {
+      // verify passes (trivial project check) so the run reaches review; review then
+      // fails on every attempt and exhausts its loop → durable park at review.
+      process.env.WORKFLOW_DEMO_FAIL_PHASES = "review";
+      const projectDir = await fs.mkdtemp(path.join(os.tmpdir(), "delivery-proj-park-"));
+      await request(app.getHttpServer())
+        .post("/api/projects")
+        .send({
+          id: "delivery-proj-park",
+          name: "Delivery park",
+          path: projectDir,
+          checks: ["true"],
+        })
+        .expect(201);
+
+      const start = await app
+        .get(WorkflowRunnerService)
+        .start("delivery", undefined, "delivery-proj-park");
+      const { workflowRunId } = start as { workflowRunId: string };
+
+      const parked = await until(async () => {
+        const res = app.get(WorkflowRunnerService).get(workflowRunId);
+        return res.status === "parked" ? res : null;
+      });
+      expect(parked.parkedReason).toBe("retries");
+      expect(parked.parked).toMatchObject({ phaseId: "review", attempts: 4 });
+
+      await fs.rm(projectDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+    }, 15_000);
+  });
+
+  it("reconciles a workflow run left 'running' at restart to 'failed'", async () => {
+    const runId = "ghost_1780000000000";
+    const root = path.join(runsDir, runId);
+    await fs.mkdir(root, { recursive: true });
+    await fs.writeFile(
+      path.join(root, "run.json"),
+      JSON.stringify({
+        workflowRunId: runId,
+        workflowId: "release",
+        status: "running",
+        currentStage: "a",
+        stageRuns: [],
+        startedAt: new Date().toISOString(),
+        cwd: root,
+      }),
+      "utf8",
+    );
+
+    const app2 = await boot();
+    const res = app2.get(WorkflowRunnerService).get(runId);
+    expect(res.status).toBe("failed");
+    expect(res.currentStage).toBeNull();
+    await app2.close();
+  });
+
+  describe("D-017 — the employee allocator (park vs. queued wait)", () => {
+    it("parks 'no-employee' when the workflow's department owns no employee of the stage's position", async () => {
+      await request(app.getHttpServer())
+        .post("/api/workflows")
+        .send({
+          id: "unstaffed",
+          phases: [phase("only", { agent: "ghost-writer" })],
+          instructions: "nobody hired for this position",
+          department: "dev",
+        })
+        .expect(201);
+
+      const start = await app.get(WorkflowRunnerService).start("unstaffed", undefined, undefined);
+      const { workflowRunId } = start as { workflowRunId: string };
+
+      const parked = await until(async () => {
+        const res = app.get(WorkflowRunnerService).get(workflowRunId);
+        return res.status === "parked" ? res : null;
+      });
+      expect(parked.parkedReason).toBe("no-employee");
+      expect(parked.currentStage).toBe("only");
+      // Nothing dispatched — no sandbox, no stageRuns entry, for the position with
+      // nobody in it.
+      expect(parked.stageRuns).toHaveLength(0);
+    });
+
+    it("a single shared employee serves two concurrent runs sequentially — the second QUEUES (never parks) behind the first, then dispatches once released", async () => {
+      // The "writer"/"dev" position has exactly ONE employee (seeded in this
+      // describe block's `beforeAll`) — two runs of a one-phase workflow on that
+      // same position contend for it.
+      await request(app.getHttpServer())
+        .post("/api/workflows")
+        .send({
+          id: "shared-position",
+          phases: [phase("only")],
+          instructions: "one employee, two runs",
+          department: "dev",
+        })
+        .expect(201);
+
+      const runner = app.get(WorkflowRunnerService);
+      const a = (await runner.start("shared-position", undefined, undefined)) as {
+        workflowRunId: string;
+      };
+      const b = (await runner.start("shared-position", undefined, undefined)) as {
+        workflowRunId: string;
+      };
+
+      // A gets the employee and dispatches its stage.
+      await until(async () => {
+        const res = runner.get(a.workflowRunId);
+        return res.stageRuns.length > 0 ? res : null;
+      });
+      // B is still queued behind the same employee — running (not parked), but
+      // nothing has dispatched for it yet.
+      const bWhileQueued = runner.get(b.workflowRunId);
+      expect(bWhileQueued.status).toBe("running");
+      expect(bWhileQueued.stageRuns).toHaveLength(0);
+
+      const doneA = await until(async () => {
+        const res = runner.get(a.workflowRunId);
+        return res.status !== "running" ? res : null;
+      });
+      expect(doneA.status).toBe("done");
+
+      // Released on A's terminal status — B now gets the SAME employee and finishes.
+      const doneB = await until(async () => {
+        const res = runner.get(b.workflowRunId);
+        return res.status !== "running" ? res : null;
+      });
+      expect(doneB.status).toBe("done");
+      expect(doneB.parkedReason).toBeUndefined();
+    });
+  });
+});
+
+describe("Workflow stage gates (claude mode, e2e)", () => {
+  let app: INestApplication;
+  let dirs: string[];
+
+  /** An INTENT the gated agent's `ask` rule matches. */
+  const DELETE_INTENT = JSON.stringify({ action: "delete" });
+
+  async function boot(): Promise<INestApplication> {
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const fresh = moduleRef.createNestApplication();
+    await fresh.init();
+    return fresh;
+  }
+
+  beforeAll(async () => {
+    const make = (label: string) => fs.mkdtemp(path.join(os.tmpdir(), `pipe-gate-${label}-`));
+    const [workflowsDir, runsDir, agentsDir, agentRunsDir, approvalsDir, policyDir] =
+      await Promise.all([make("p"), make("r"), make("a"), make("ar"), make("appr"), make("pol")]);
+    dirs = [workflowsDir, runsDir, agentsDir, agentRunsDir, approvalsDir, policyDir];
+    process.env.WORKFLOWS_DIR = workflowsDir;
+    process.env.WORKFLOW_RUNS_DIR = runsDir;
+    process.env.AGENTS_DIR = agentsDir;
+    process.env.AGENT_RUNS_DIR = agentRunsDir;
+    process.env.APPROVALS_DIR = approvalsDir;
+    process.env.POLICY_DIR = policyDir;
+    // Exercise the production claude stage branch with the token-free stub; its
+    // intent-request.json is the real Variant B trigger the core watches for.
+    process.env.AGENT_RUNNER_MODE = "claude";
+    process.env.CLAUDE_BIN = FAKE_CLAUDE;
+    process.env.FAKE_CLAUDE_STEPS = "4";
+    process.env.FAKE_CLAUDE_DELAY_MS = "40";
+    process.env.FAKE_CLAUDE_INTENT = DELETE_INTENT;
+    // D-017: AGENTS_DIR is isolated above, but not EMPLOYEES_DIR — this block's
+    // employees still resolve to the shared per-file data root, so seed one
+    // there for the "gated-writer" position this block registers below.
+    await seedEmployeeFixture(defaultEmployeesDir(), {
+      id: "employee_gated-writer",
+      agentId: "gated-writer",
+      department: "dev",
+    });
+    app = await boot();
+
+    // The phase agent: deletes pause for a human; everything else is free.
+    await request(app.getHttpServer())
+      .post("/api/agents")
+      .send({
+        id: "gated-writer",
+        name: "Gated writer",
+        instructions: "writes, deletes behind the gate",
+        risk: "high",
+        department: "dev",
+        gates: [
+          {
+            match: [{ type: "action", action: "delete" }],
+            decision: "ask",
+            resolve: { type: "human" },
+          },
+        ],
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post("/api/workflows")
+      .send({
+        id: "gated",
+        phases: [
+          {
+            id: "write",
+            agent: "gated-writer",
+            consumes: "task.md",
+            produces: "out.md",
+            model: "sonnet",
+            thinking: "medium",
+          },
+        ],
+        instructions: "gated workflow",
+        department: "dev",
+      })
+      .expect(201);
+  });
+
+  afterAll(async () => {
+    await app.close();
+    for (const d of dirs)
+      await fs.rm(d, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+    for (const k of [
+      "WORKFLOWS_DIR",
+      "WORKFLOW_RUNS_DIR",
+      "AGENTS_DIR",
+      "AGENT_RUNS_DIR",
+      "APPROVALS_DIR",
+      "POLICY_DIR",
+      "AGENT_RUNNER_MODE",
+      "CLAUDE_BIN",
+      "FAKE_CLAUDE_STEPS",
+      "FAKE_CLAUDE_DELAY_MS",
+      "FAKE_CLAUDE_INTENT",
+    ]) {
+      delete process.env[k];
+    }
+  });
+
+  const runStatus = async (workflowRunId: string) =>
+    app.get(WorkflowRunnerService).get(workflowRunId) as {
+      status: string;
+      stageRuns: { status: string }[];
+    };
+
+  const pendingStageApproval = async (workflowRunId: string) => {
+    const res = await request(app.getHttpServer())
+      .get("/api/approvals")
+      .query({ status: "pending" })
+      .expect(200);
+    return res.body.find(
+      (a: { runId: string; kind: string }) =>
+        a.kind === "workflow-stage" && a.runId.startsWith(`${workflowRunId}.`),
+    ) as { id: string; runId: string } | undefined;
+  };
+
+  it("parks on a gated stage intent, then approve releases the SAME child to done", async () => {
+    const start = await app.get(WorkflowRunnerService).start("gated", undefined, undefined);
+    const { workflowRunId } = start as { workflowRunId: string };
+
+    // The stage announces the delete → aggregate parks + a stage approval appears.
+    await until(async () => ((await runStatus(workflowRunId)).status === "parked" ? true : null));
+    const approval = await until(() => pendingStageApproval(workflowRunId));
+
+    await request(app.getHttpServer()).post(`/api/approvals/${approval.id}/approve`).expect(200);
+
+    // The blocked child proceeds (no respawn) and the run finishes.
+    const final = await until(async () => {
+      const run = await runStatus(workflowRunId);
+      return run.status !== "running" && run.status !== "parked" ? run : null;
+    });
+    expect(final.status).toBe("done");
+    expect(final.stageRuns.map((s) => s.status)).toEqual(["done"]);
+  });
+
+  it("reject aborts the gated stage and fails the run", async () => {
+    const start = await app.get(WorkflowRunnerService).start("gated", undefined, undefined);
+    const { workflowRunId } = start as { workflowRunId: string };
+
+    await until(async () => ((await runStatus(workflowRunId)).status === "parked" ? true : null));
+    const approval = await until(() => pendingStageApproval(workflowRunId));
+
+    await request(app.getHttpServer()).post(`/api/approvals/${approval.id}/reject`).expect(200);
+
+    const final = await until(async () => {
+      const run = await runStatus(workflowRunId);
+      return run.status !== "running" && run.status !== "parked" ? run : null;
+    });
+    expect(final.status).toBe("failed");
+    expect(final.stageRuns.map((s) => s.status)).toEqual(["interrupted"]);
+  });
+
+  it("reconciles a run left 'parked' at restart to 'failed' (its child died with the API)", async () => {
+    const runId = "gated_1780000000001";
+    const root = path.join(process.env.WORKFLOW_RUNS_DIR as string, runId);
+    await fs.mkdir(root, { recursive: true });
+    await fs.writeFile(
+      path.join(root, "run.json"),
+      JSON.stringify({
+        workflowRunId: runId,
+        workflowId: "gated",
+        status: "parked",
+        currentStage: "write",
+        stageRuns: [],
+        startedAt: new Date().toISOString(),
+        cwd: root,
+      }),
+      "utf8",
+    );
+
+    const app2 = await boot();
+    const res = app2.get(WorkflowRunnerService).get(runId);
+    expect(res.status).toBe("failed");
+    expect(res.currentStage).toBeNull();
+    await app2.close();
+  });
+});
+
+describe("PR gate on a git project (claude mode, e2e)", () => {
+  const BIN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "fixtures/bin");
+  let app: INestApplication;
+  let dirs: string[];
+  let repo: string;
+  let bare: string;
+  let ghLog: string;
+
+  async function boot(): Promise<INestApplication> {
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const fresh = moduleRef.createNestApplication();
+    await fresh.init();
+    return fresh;
+  }
+
+  const exec = promisify(execFile);
+  const git = async (cwd: string, ...args: string[]) =>
+    (await exec("git", args, { cwd })).stdout.trim();
+
+  beforeAll(async () => {
+    const make = (l: string) => fs.mkdtemp(path.join(os.tmpdir(), `prgate-${l}-`));
+    const [p, r, a, ar, appr, pol, proj] = await Promise.all([
+      make("p"),
+      make("r"),
+      make("a"),
+      make("ar"),
+      make("appr"),
+      make("pol"),
+      make("proj"),
+    ]);
+    dirs = [p, r, a, ar, appr, pol, proj];
+    repo = await make("repo");
+    bare = await make("bare");
+    ghLog = path.join(await make("gh"), "gh-invocations.json");
+
+    // A git fixture project with a bare `origin` so `git push` succeeds locally.
+    await git(repo, "init", "-b", "main");
+    await git(repo, "config", "user.email", "t@zibby.local");
+    await git(repo, "config", "user.name", "T");
+    await fs.writeFile(path.join(repo, "README.md"), "# fixture\n", "utf8");
+    await git(repo, "add", "-A");
+    await git(repo, "commit", "-m", "initial");
+    await exec("git", ["init", "--bare", bare]);
+    await git(repo, "remote", "add", "origin", bare);
+    // Push the initial commit so `origin/main` actually exists before the workflow
+    // runs: `createWorktree` fetches `origin` and cuts from `origin/<default>` (only
+    // degrading to local HEAD when the fetch itself fails, e.g. offline) — a bare
+    // remote with zero refs makes the later `git rev-parse origin/main` fail, which
+    // is not the "offline" case the graceful fallback covers. A real registered
+    // project's origin always already has its default branch pushed.
+    await git(repo, "push", "-u", "origin", "main");
+
+    process.env.WORKFLOWS_DIR = p;
+    process.env.WORKFLOW_RUNS_DIR = r;
+    process.env.AGENTS_DIR = a;
+    process.env.AGENT_RUNS_DIR = ar;
+    process.env.APPROVALS_DIR = appr;
+    process.env.POLICY_DIR = pol;
+    process.env.PROJECTS_DIR = proj;
+    process.env.AGENT_RUNNER_MODE = "claude";
+    process.env.CLAUDE_BIN = FAKE_CLAUDE;
+    process.env.FAKE_CLAUDE_STEPS = "4";
+    process.env.FAKE_CLAUDE_DELAY_MS = "30";
+    // Land a commit on the branch (so the diffstat has content), write the PR draft
+    // into the stage sandbox, announce pr.open, and on allow run the gated chain
+    // (push to the bare origin + the `gh` shim, which records the invocation).
+    process.env.FAKE_CLAUDE_COMMIT = "1";
+    process.env.FAKE_CLAUDE_PRODUCE = "pr-draft.md";
+    process.env.FAKE_CLAUDE_PRODUCE_BODY = "# Add feature\n\n## Změny\n- feature.txt\n";
+    process.env.FAKE_CLAUDE_INTENT = JSON.stringify({ action: "pr.open" });
+    process.env.FAKE_CLAUDE_PATH_PREPEND = BIN;
+    process.env.GH_INVOCATIONS_FILE = ghLog;
+    process.env.FAKE_CLAUDE_EXEC_CMD =
+      'git push -u origin "$(git branch --show-current)" && gh pr create --title "Add feature" --body-file pr-draft.md';
+
+    // D-017: AGENTS_DIR is isolated above, but not EMPLOYEES_DIR — seed one for
+    // the "pr-writer" position this block registers below.
+    await seedEmployeeFixture(defaultEmployeesDir(), {
+      id: "employee_pr-writer",
+      agentId: "pr-writer",
+      department: "dev",
+    });
+    app = await boot();
+
+    await request(app.getHttpServer())
+      .post("/api/agents")
+      .send({
+        id: "pr-writer",
+        name: "PR writer",
+        instructions: "opens PRs",
+        risk: "medium",
+        department: "dev",
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post("/api/projects")
+      .send({ id: "pr-proj", name: "PR project", path: repo, checks: ["true"] })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post("/api/workflows")
+      .send({
+        id: "prgate",
+        phases: [
+          {
+            id: "write",
+            agent: "pr-writer",
+            consumes: "task.md",
+            produces: "pr-draft.md",
+            model: "sonnet",
+            thinking: "medium",
+          },
+        ],
+        instructions: "single PR-gate phase",
+        department: "dev",
+      })
+      .expect(201);
+  });
+
+  afterAll(async () => {
+    await app.close();
+    for (const d of [...dirs, repo, bare, path.dirname(ghLog)]) {
+      await fs.rm(d, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+    }
+    for (const k of [
+      "WORKFLOWS_DIR",
+      "WORKFLOW_RUNS_DIR",
+      "AGENTS_DIR",
+      "AGENT_RUNS_DIR",
+      "APPROVALS_DIR",
+      "POLICY_DIR",
+      "PROJECTS_DIR",
+      "AGENT_RUNNER_MODE",
+      "CLAUDE_BIN",
+      "FAKE_CLAUDE_STEPS",
+      "FAKE_CLAUDE_DELAY_MS",
+      "FAKE_CLAUDE_COMMIT",
+      "FAKE_CLAUDE_PRODUCE",
+      "FAKE_CLAUDE_PRODUCE_BODY",
+      "FAKE_CLAUDE_INTENT",
+      "FAKE_CLAUDE_PATH_PREPEND",
+      "GH_INVOCATIONS_FILE",
+      "FAKE_CLAUDE_EXEC_CMD",
+    ]) {
+      delete process.env[k];
+    }
+  });
+
+  const runStatus = async (id: string) =>
+    app.get(WorkflowRunnerService).get(id) as { status: string };
+  const pendingStageApproval = async (id: string) => {
+    const res = await request(app.getHttpServer())
+      .get("/api/approvals")
+      .query({ status: "pending" })
+      .expect(200);
+    return res.body.find(
+      (a: { runId: string; kind: string }) =>
+        a.kind === "workflow-stage" && a.runId.startsWith(`${id}.`),
+    ) as { id: string; action: string } | undefined;
+  };
+  const ghInvocations = async () => {
+    const raw = await fs.readFile(ghLog, "utf8").catch(() => "");
+    return raw
+      .split("\n")
+      .filter(Boolean)
+      .map((l) => JSON.parse(l) as string[]);
+  };
+
+  it("runs pr.open autonomously (Tier-2, no gate): executes push + gh, run done", async () => {
+    await fs.rm(ghLog, { force: true });
+    const start = await app.get(WorkflowRunnerService).start("prgate", undefined, "pr-proj");
+    const { workflowRunId } = start as { workflowRunId: string };
+
+    // pr.open is off the floor → the stage runs the push + gh create WITHOUT holding.
+    const final = await until(async () => {
+      const s = (await runStatus(workflowRunId)).status;
+      return s !== "running" && s !== "parked" ? s : null;
+    });
+    expect(final).toBe("done");
+
+    // No stage approval was ever raised for pr.open — nothing waited on a human.
+    expect(await pendingStageApproval(workflowRunId)).toBeUndefined();
+
+    // The exact `gh pr create` invocation landed, and the branch reached origin.
+    const calls = await ghInvocations();
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toEqual([
+      "pr",
+      "create",
+      "--title",
+      "Add feature",
+      "--body-file",
+      "pr-draft.md",
+    ]);
+    expect(await git(bare, "branch", "--list")).toContain("zibby/");
+
+    // The PR draft is still served by the allowlisted artifact endpoint.
+    const draft = await request(app.getHttpServer())
+      .get(`/api/tasks/runs/${workflowRunId}/artifacts/pr-draft.md`)
+      .expect(200);
+    expect(draft.body.content).toContain("Add feature");
+  });
+
+  it("404s an artifact not on the allowlist (no generic file browser)", async () => {
+    const start = await app.get(WorkflowRunnerService).start("prgate", undefined, "pr-proj");
+    const { workflowRunId } = start as { workflowRunId: string };
+    // The run completes autonomously now (no park) — wait for it to settle.
+    await until(async () => {
+      const s = (await runStatus(workflowRunId)).status;
+      return s !== "running" && s !== "parked" ? true : null;
+    });
+
+    await request(app.getHttpServer())
+      .get(`/api/tasks/runs/${workflowRunId}/artifacts/secrets.env`)
+      .expect(404);
+    // A traversal attempt is just an off-allowlist name → 404, never escapes.
+    await request(app.getHttpServer())
+      .get(`/api/tasks/runs/${workflowRunId}/artifacts/${encodeURIComponent("../../run.json")}`)
+      .expect(404);
+  });
+});

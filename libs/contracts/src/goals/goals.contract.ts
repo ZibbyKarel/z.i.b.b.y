@@ -17,7 +17,7 @@ export const GoalRunArtifactSchema = z.object({
 });
 export type GoalRunArtifact = z.infer<typeof GoalRunArtifactSchema>;
 
-/** CRUD over goal definitions (`.goal.md` files). Mirrors `agentsContract`/`pipelinesContract`. */
+/** CRUD over goal definitions (`.goal.md` files). Mirrors `agentsContract`/`workflowsContract`. */
 export const goalsContract = c.router(
   {
     createGoal: {

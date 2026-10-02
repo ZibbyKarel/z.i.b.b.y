@@ -6,8 +6,8 @@
     "expr": "40 2 * * *"
   },
   "target": {
-    "type": "pipeline",
-    "pipelineId": "nightly-research"
+    "type": "workflow",
+    "workflowId": "nightly-research"
   },
   "enabled": true,
   "lastFiredAt": "2026-06-03T22:57:27.162Z"

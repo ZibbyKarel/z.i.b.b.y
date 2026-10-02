@@ -11,7 +11,7 @@ export interface ChainRouteStripStep {
   code: string;
   name: string;
   state: StateTone;
-  pipeline?: string;
+  workflow?: string;
   selected?: boolean;
 }
 
@@ -197,9 +197,9 @@ function CompactStep({
         <Typography data-testid={ChainRouteStripTestId.StepCode} tracking="wider" type="labelSm">
           Sub {index + 1} · {step.code}
         </Typography>
-        {step.pipeline && (
+        {step.workflow && (
           <Typography tracking="wider" type="labelSm" variant="secondary">
-            {step.pipeline}
+            {step.workflow}
           </Typography>
         )}
       </div>
@@ -242,9 +242,9 @@ function FullStep({
       <Typography data-testid={ChainRouteStripTestId.StepName} type="body" weight="medium">
         {step.name}
       </Typography>
-      {step.pipeline && (
+      {step.workflow && (
         <Typography type="caption" variant="secondary">
-          Pipeline {step.pipeline}
+          Workflow {step.workflow}
         </Typography>
       )}
     </Tag>

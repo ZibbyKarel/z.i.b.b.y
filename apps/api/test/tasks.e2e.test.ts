@@ -8,7 +8,7 @@ import request from "supertest";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
 import { GoalRunnerService } from "../src/goals/goal-runner.service";
-import { PipelineRunnerService } from "../src/pipelines/pipeline-runner.service";
+import { WorkflowRunnerService } from "../src/workflows/workflow-runner.service";
 import { isAlive } from "../src/runner/runner-core";
 import { TaskSchedulerService } from "../src/tasks/task-scheduler.service";
 import { seedEmployeeFixture } from "./fixtures/employee-fixture";
@@ -32,7 +32,7 @@ describe("Tasks API (e2e)", () => {
   let app: INestApplication;
   let agentsDir: string;
   let employeesDir: string;
-  let pipelinesDir: string;
+  let workflowsDir: string;
   let runsDir: string;
   let tasksDir: string;
   let projectsDir: string;
@@ -44,13 +44,13 @@ describe("Tasks API (e2e)", () => {
     // root's migrated `dev` employees, which seats "dev" independent of
     // whatever this file's own `seedCatalog()`/ad-hoc agents actually hire.
     employeesDir = await fs.mkdtemp(path.join(os.tmpdir(), "tasks-employees-e2e-"));
-    pipelinesDir = await fs.mkdtemp(path.join(os.tmpdir(), "tasks-pipelines-e2e-"));
+    workflowsDir = await fs.mkdtemp(path.join(os.tmpdir(), "tasks-workflows-e2e-"));
     runsDir = await fs.mkdtemp(path.join(os.tmpdir(), "tasks-runs-e2e-"));
     tasksDir = await fs.mkdtemp(path.join(os.tmpdir(), "tasks-scheduled-e2e-"));
     projectsDir = await fs.mkdtemp(path.join(os.tmpdir(), "tasks-projects-e2e-"));
     process.env.AGENTS_DIR = agentsDir;
     process.env.EMPLOYEES_DIR = employeesDir;
-    process.env.PIPELINES_DIR = pipelinesDir;
+    process.env.WORKFLOWS_DIR = workflowsDir;
     process.env.AGENT_RUNS_DIR = runsDir;
     process.env.TASKS_DIR = tasksDir;
     process.env.PROJECTS_DIR = projectsDir;
@@ -65,7 +65,7 @@ describe("Tasks API (e2e)", () => {
   });
 
   afterEach(async () => {
-    for (const dir of [agentsDir, employeesDir, pipelinesDir, tasksDir, projectsDir]) {
+    for (const dir of [agentsDir, employeesDir, workflowsDir, tasksDir, projectsDir]) {
       for (const entry of await fs.readdir(dir)) {
         await fs.rm(path.join(dir, entry), { force: true });
       }
@@ -74,13 +74,13 @@ describe("Tasks API (e2e)", () => {
 
   afterAll(async () => {
     await app.close();
-    for (const dir of [agentsDir, employeesDir, pipelinesDir, runsDir, tasksDir, projectsDir]) {
+    for (const dir of [agentsDir, employeesDir, workflowsDir, runsDir, tasksDir, projectsDir]) {
       await fs.rm(dir, { recursive: true, force: true });
     }
     for (const k of [
       "AGENTS_DIR",
       "EMPLOYEES_DIR",
-      "PIPELINES_DIR",
+      "WORKFLOWS_DIR",
       "AGENT_RUNS_DIR",
       "TASKS_DIR",
       "PROJECTS_DIR",
@@ -143,7 +143,7 @@ describe("Tasks API (e2e)", () => {
       department: "dev",
     });
     await request(app.getHttpServer())
-      .post("/api/pipelines")
+      .post("/api/workflows")
       .send({
         id: "build-feature",
         name: "Build Feature",
@@ -159,8 +159,8 @@ describe("Tasks API (e2e)", () => {
           },
         ],
         instructions: "Postav feature.",
-        // NS2 F9: `POST /api/pipelines` 422s without an owner (an unowned
-        // pipeline would be structurally unroutable).
+        // NS2 F9: `POST /api/workflows` 422s without an owner (an unowned
+        // workflow would be structurally unroutable).
         department: "dev",
       })
       .expect(201);
@@ -343,7 +343,7 @@ describe("Tasks API (e2e)", () => {
     expect(res.status).toBe(201);
     expect(res.body.outcome).toBe("pending");
     const task = await untilTaskStatus(res.body.task.id, "failed");
-    expect(task.error).toContain("No agents or pipelines");
+    expect(task.error).toContain("No agents or workflows");
   });
 
   it("an immediate task is persisted, its run carries the taskId, and the outcome lands as done", async () => {
@@ -408,7 +408,7 @@ describe("Tasks API (e2e)", () => {
       expect(res.body.mode).toBe("loop");
       expect(res.body.proposedGoal).toBeTruthy();
       expect(res.body.proposedGoal.verifier).toEqual({ kind: "checks" });
-      expect(["agent", "pipeline"]).toContain(res.body.proposedGoal.maker.kind);
+      expect(["agent", "workflow"]).toContain(res.body.proposedGoal.maker.kind);
       // The target stays the maker — never a synthesized goal target (Decision 1).
       expect(res.body.target.kind).not.toBe("goal");
     });
@@ -522,11 +522,11 @@ describe("Tasks API (e2e)", () => {
     });
   });
 
-  // ── Phase 43 — stop a running task (agent/pipeline/goal) ───────────────────
+  // ── Phase 43 — stop a running task (agent/workflow/goal) ───────────────────
   describe("Phase 43 — stop a running task", () => {
     // The committed `apps/api/.env` defaults `AGENT_DEMO_STEPS=25` /
-    // `AGENT_DEMO_DELAY_MS=1000` (a human-watchable demo pace, ~25s) — a pipeline
-    // stage's demo child (apps/api/src/pipelines/demo-stage.mjs) reads these, NOT
+    // `AGENT_DEMO_DELAY_MS=1000` (a human-watchable demo pace, ~25s) — a workflow
+    // stage's demo child (apps/api/src/workflows/demo-stage.mjs) reads these, NOT
     // `FAKE_CLAUDE_*` (that governs the agent runner's `claude` stand-in, used by
     // a goal's agent maker below). Fast values here so "runs to done" tests don't
     // wait out the real demo pace; restored after every test in the block.
@@ -537,31 +537,31 @@ describe("Tasks API (e2e)", () => {
       process.env.FAKE_CLAUDE_DELAY_MS = "30";
     });
 
-    it("stops a running pipeline run: it lands interrupted and its stage process is reaped", async () => {
+    it("stops a running workflow run: it lands interrupted and its stage process is reaped", async () => {
       await seedCatalog();
       // Slow enough that the stage is still mid-flight when we call stop.
       process.env.AGENT_DEMO_STEPS = "20";
       process.env.AGENT_DEMO_DELAY_MS = "150";
 
-      const pipelines = app.get(PipelineRunnerService);
-      const start = await pipelines.start("build-feature", undefined, "");
+      const workflows = app.get(WorkflowRunnerService);
+      const start = await workflows.start("build-feature", undefined, "");
       expect(start.status).toBe("running");
 
       // Wait for the stage child to actually spawn before stopping it.
       await until(async () => {
-        const rec = pipelines.get(start.pipelineRunId);
+        const rec = workflows.get(start.workflowRunId);
         return rec.currentStageRunId ? rec : null;
       });
-      const stageRunId = pipelines.get(start.pipelineRunId).currentStageRunId as string;
+      const stageRunId = workflows.get(start.workflowRunId).currentStageRunId as string;
 
       await request(app.getHttpServer())
-        .post(`/api/tasks/runs/${start.pipelineRunId}/stop`)
+        .post(`/api/tasks/runs/${start.workflowRunId}/stop`)
         .expect(200);
 
       // The kill's exit reconciles asynchronously through the driver's own await.
       const stopped = await until(async () => {
         const res = await request(app.getHttpServer()).get(
-          `/api/tasks/runs/${start.pipelineRunId}`,
+          `/api/tasks/runs/${start.workflowRunId}`,
         );
         return res.body.status === "interrupted" ? res.body : null;
       });
@@ -575,22 +575,22 @@ describe("Tasks API (e2e)", () => {
 
       // A second stop on an already-interrupted run has nothing left to kill.
       await request(app.getHttpServer())
-        .post(`/api/tasks/runs/${start.pipelineRunId}/stop`)
+        .post(`/api/tasks/runs/${start.workflowRunId}/stop`)
         .expect(409);
     });
 
-    it("409s stopping a pipeline run that isn't currently running", async () => {
+    it("409s stopping a workflow run that isn't currently running", async () => {
       await seedCatalog();
-      const pipelines = app.get(PipelineRunnerService);
-      const start = await pipelines.start("build-feature", undefined, "");
+      const workflows = app.get(WorkflowRunnerService);
+      const start = await workflows.start("build-feature", undefined, "");
       const done = await until(async () => {
-        const rec = pipelines.get(start.pipelineRunId);
+        const rec = workflows.get(start.workflowRunId);
         return rec.status !== "running" ? rec : null;
       });
       expect(done.status).toBe("done");
 
       await request(app.getHttpServer())
-        .post(`/api/tasks/runs/${start.pipelineRunId}/stop`)
+        .post(`/api/tasks/runs/${start.workflowRunId}/stop`)
         .expect(409);
     });
 

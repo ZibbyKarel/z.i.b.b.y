@@ -49,16 +49,16 @@ export type Trigger = z.infer<typeof TriggerSchema>;
 
 /**
  * What an automation runs when it fires. A skill can't be a target: it isn't an
- * autonomous executable — only agents and pipelines are real runners. The
+ * autonomous executable — only agents and workflows are real runners. The
  * `briefing` target (Phase 6.2) is deterministic assembly, not a claude run:
  * routing it through a runner would burn tokens to produce worse output, so the
  * scheduler dispatches it straight to the briefing service.
  */
 export const TargetSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("pipeline"), pipelineId: AgentIdSchema }),
+  z.object({ type: z.literal("workflow"), workflowId: AgentIdSchema }),
   z.object({ type: z.literal("agent"), agentId: AgentIdSchema }),
   z.object({ type: z.literal("briefing") }),
-  // Memory distillation: nightly sweep of terminal pipeline/agent/goal runs, a cheap
+  // Memory distillation: nightly sweep of terminal workflow/agent/goal runs, a cheap
   // model (haiku) extracts durable learnings into the vault. Agents stay memory-blind;
   // learning is a SYSTEM capability — this is the canonical system automation. The
   // scheduler dispatches it straight to the memory-distiller service.
@@ -72,7 +72,7 @@ export const TargetSchema = z.discriminatedUnion("type", [
   // briefing. Deterministic; proposes ≠ acts (never creates an automation itself).
   z.object({ type: z.literal("gap-detect") }),
   // Self-knowledge refresh (F4c): a nightly deterministic re-compose + AUTO-block
-  // merge write of the self-knowledge vault note (agents/pipelines/gate rules/
+  // merge write of the self-knowledge vault note (agents/workflows/gate rules/
   // channels) — not a claude run. The scheduler dispatches it straight to
   // `SelfKnowledgeService`, same non-runner posture as `briefing`/`memory-distill`.
   z.object({ type: z.literal("self-knowledge") }),
@@ -103,19 +103,19 @@ export const TargetSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("review-learn") }),
   /**
    * Phase 116b — the "prompt automation" shape: a full task spec that fires through
-   * the EXISTING task pipeline (`TaskSchedulerService.createTask`) exactly like the
+   * the EXISTING task workflow (`TaskSchedulerService.createTask`) exactly like the
    * New Task dialog — reusing classification, the orchestrator fallback, project
    * attribution, the budget/limit/concurrency guard, the approval gate, attachment
    * feeding and `toolGrants`. This replaces the retired `discovery`/`research-digest`/
    * `app-ideas` targets (Phase 116a): instead of a bespoke deterministic service, the
-   * operator points a `task` automation at whatever pipeline/agent it should drive.
+   * operator points a `task` automation at whatever workflow/agent it should drive.
    */
   z.object({
     type: z.literal("task"),
     /** The typed prompt — forwarded as the task's free-text (`CreateTaskInput.text`). */
     text: z.string().min(1),
     /**
-     * Optional @-mentioned run target (agent/pipeline/department/goal/…).
+     * Optional @-mentioned run target (agent/workflow/department/goal/…).
      * Absent = the task classifier/orchestrator-fallback decides at fire time,
      * exactly like an unrouted task from the dialog.
      */
@@ -123,7 +123,7 @@ export const TargetSchema = z.discriminatedUnion("type", [
     /**
      * Files uploaded into the automation's context (a tasks attachment-set id, see
      * `AttachmentSchema`). Fed to the run for agent/orchestrator/goal targets;
-     * pipeline/department targets cannot carry attachments yet (pre-existing
+     * workflow/department targets cannot carry attachments yet (pre-existing
      * runner gap — same limitation an ordinary task has today).
      */
     attachmentSetId: z.string().optional(),

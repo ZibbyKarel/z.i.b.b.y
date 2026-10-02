@@ -29,10 +29,10 @@ describe("encodeMaker / decodeMaker", () => {
     });
   });
 
-  it("round-trips a pipeline maker whose id contains the separator", () => {
+  it("round-trips a workflow maker whose id contains the separator", () => {
     // Only the first colon splits kind from id — ids may themselves contain ':'.
-    expect(decodeMaker(encodeMaker("pipeline", "deliver:web"))).toEqual({
-      kind: "pipeline",
+    expect(decodeMaker(encodeMaker("workflow", "deliver:web"))).toEqual({
+      kind: "workflow",
       id: "deliver:web",
     });
   });

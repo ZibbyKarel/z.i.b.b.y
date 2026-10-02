@@ -10,7 +10,7 @@ import { getActivityQueryKey } from "../activity/queries/useActivityQuery";
 import { prependActivityEntry } from "../activity/queries/useActivityFeedInfiniteQuery";
 import { getBriefingQueryKey } from "../briefing/queries/useBriefingQuery";
 import { getChannelItemsQueryKey } from "../integrations/queries/useChannelItemsQuery";
-import { getPipelineRunQueryKey } from "../pipelines/queries/keys";
+import { getWorkflowRunQueryKey } from "../workflows/queries/keys";
 import { getScheduledTasksQueryKey } from "../tasks/queries/useScheduledTasksQuery";
 import { API_URL } from "../../state/api";
 import { taskRunsRootKey } from "./queries/keys";
@@ -24,7 +24,7 @@ import { taskRunsRootKey } from "./queries/keys";
  * {@link onRunEvent} without re-declaring the shape.
  */
 export interface RunStatusEvent {
-  scope: "agent-runs" | "pipeline-runs" | "goal-runs" | "channel-items" | "activity";
+  scope: "agent-runs" | "workflow-runs" | "goal-runs" | "channel-items" | "activity";
   runId?: string;
   status?: string;
   /** Activity-scope only: the recorded kind (drives the briefing refetch). */
@@ -70,7 +70,7 @@ export function useRunEventsConnected(): boolean {
 /**
  * Opens one `EventSource` to the API's multiplexed status channel and turns each
  * run transition into a targeted query invalidation — replacing the per-view
- * polling of the running list, the all-runs history (both 2s) and the pipeline
+ * polling of the running list, the all-runs history (both 2s) and the workflow
  * aggregate (1s). The channel is just a signal ("this family changed, refetch"),
  * keeping the list endpoints the single source of truth. EventSource handles
  * reconnection (resuming via `Last-Event-ID`); we only track connectivity so the
@@ -116,16 +116,16 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
           void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
         }
         // Fáze 14.4: the chat's inline run card (Fáze 14.3) reads the single-run
-        // aggregate (`usePipelineRunQuery`) for agent runs too, not only pipeline/
+        // aggregate (`useWorkflowRunQuery`) for agent runs too, not only workflow/
         // chain runs — without invalidating it here the card would only ever
         // update off that query's 1s fallback poll instead of this push.
         if (parsed.runId) {
-          void qc.invalidateQueries({ queryKey: getPipelineRunQueryKey(parsed.runId) });
+          void qc.invalidateQueries({ queryKey: getWorkflowRunQueryKey(parsed.runId) });
         }
-      } else if (parsed.scope === "pipeline-runs" && parsed.runId) {
+      } else if (parsed.scope === "workflow-runs" && parsed.runId) {
         void qc.invalidateQueries({ queryKey: taskRunsRootKey });
-        // The single-run aggregate (a goal's pipeline maker timeline) is keyed by id.
-        void qc.invalidateQueries({ queryKey: getPipelineRunQueryKey(parsed.runId) });
+        // The single-run aggregate (a goal's workflow maker timeline) is keyed by id.
+        void qc.invalidateQueries({ queryKey: getWorkflowRunQueryKey(parsed.runId) });
         void qc.invalidateQueries({ queryKey: getBudgetQueryKey() });
         if (parsed.status === "parked") {
           void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });

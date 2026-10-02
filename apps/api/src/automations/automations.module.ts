@@ -7,7 +7,7 @@ import { ArchModule } from "../arch/arch.module";
 import { ReleaseModule } from "../release/release.module";
 import { MemoryDistillerModule } from "../memory/memory-distiller.module";
 import { PatternsModule } from "../patterns/patterns.module";
-import { PipelinesModule } from "../pipelines/pipelines.module";
+import { WorkflowsModule } from "../workflows/workflows.module";
 import { ReviewLearningModule } from "../review-learning/review-learning.module";
 import { SelfKnowledgeModule } from "../self-knowledge/self-knowledge.module";
 import { SecurityModule } from "../security/security.module";
@@ -25,7 +25,7 @@ export function resolveAutomationsDir(): string {
 
 /**
  * Automations + the scheduler daemon. Imports the runner modules so the scheduler
- * can start agent/pipeline runs on a trigger (those modules export their runner
+ * can start agent/workflow runs on a trigger (those modules export their runner
  * services). No cycle — the runner modules don't depend on this one. Discovery and
  * Research are no longer imported here (Phase 116a): the scheduler dropped their
  * targets, and both modules are registered directly in `app.module.ts` so their
@@ -35,7 +35,7 @@ export function resolveAutomationsDir(): string {
  * `attachment-set-refs.module.ts` for how the reverse reference the sweep needs is
  * wired without one). F4c: also imports `SelfKnowledgeModule` so the `self-knowledge`
  * target can dispatch straight to `SelfKnowledgeService` — no cycle, `SelfKnowledgeModule`
- * only imports Agents/Pipelines/GateRules/Gates/Memory, none of which import this module.
+ * only imports Agents/Workflows/GateRules/Gates/Memory, none of which import this module.
  * NS2 F5a: also imports `SecurityModule` (a leaf, same position as `GapsModule`) so the
  * `security-scan` target can dispatch to `SecurityService.scan`. NS2 F5c: also imports
  * `ArchModule` (same leaf position) so the `arch-audit` target can dispatch to
@@ -60,7 +60,7 @@ export function resolveAutomationsDir(): string {
     ReleaseModule,
     MemoryDistillerModule,
     PatternsModule,
-    PipelinesModule,
+    WorkflowsModule,
     ReviewLearningModule,
     SelfKnowledgeModule,
     SecurityModule,

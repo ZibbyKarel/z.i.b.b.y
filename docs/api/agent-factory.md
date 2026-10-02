@@ -23,7 +23,7 @@ applied to the classifier's escape hatch instead.
 
 Recorded by `apps/api/src/tasks/task-scheduler.service.ts` (around
 `kind: "orchestrator-fallback"`): whenever the task classifier can't
-confidently match a specific agent/pipeline for an **implicit** dispatch (no
+confidently match a specific agent/workflow for an **implicit** dispatch (no
 explicit `@-mentioned` target — an explicit target is a deliberate operator
 choice and never counts toward the tally), it records an activity entry
 carrying `refs: { normalizedSummary, terms }` — the normalized task summary

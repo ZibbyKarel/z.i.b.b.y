@@ -42,7 +42,7 @@ export class ProjectAlreadyClonedError extends Error {
  * Phase 77 — raised by `ProjectLocalService.resolveForRun` when a run's project
  * has no local clone on THIS machine (neither at its canonical `path` nor a
  * prior `cloneRoot` clone, nor even a plain non-git folder at `path`) and no
- * `gitRemote` to clone from. Run dispatch (agent/goal/pipeline) fails clearly on
+ * `gitRemote` to clone from. Run dispatch (agent/goal/workflow) fails clearly on
  * this rather than spawning into a directory that may not exist — the
  * operator's fix is either setting a git remote on the project or cloning it
  * onto this machine manually.

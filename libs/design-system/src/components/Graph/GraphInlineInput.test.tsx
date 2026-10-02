@@ -21,7 +21,7 @@ describe("GraphInlineInput", () => {
   it("renders the field variant with bold weight", () => {
     render(
       <GraphInlineInput
-        aria-label="Pipeline name"
+        aria-label="Workflow name"
         onChange={() => {}}
         value="Deploy"
         variant="field"

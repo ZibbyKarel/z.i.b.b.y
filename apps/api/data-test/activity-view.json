@@ -1,7 +1,7 @@
 {
   "tasks": "visible",
   "runs": "visible",
-  "pipelines": "visible",
+  "workflows": "visible",
   "goals": "visible",
   "approvals": "visible",
   "channels": "grouped",

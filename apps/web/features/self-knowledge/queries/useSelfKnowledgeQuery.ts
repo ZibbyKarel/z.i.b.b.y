@@ -8,7 +8,7 @@ export function getSelfKnowledgeQueryKey() {
 
 /**
  * Loads the machine-generated self-knowledge snapshot (Fáze 1 — agents,
- * pipelines, gate rules, channels) for the read-only settings panel. Returns the
+ * workflows, gate rules, channels) for the read-only settings panel. Returns the
  * TanStack query result directly; `select` unwraps the ts-rest envelope so
  * `data` is the `SelfKnowledge` body.
  */

@@ -20,12 +20,15 @@ import {
 import { ActivityLogService } from "../activity/activity-log.service";
 import { AgentRunnerService, type RunAttachments } from "../agents/agent-runner.service";
 import { BudgetService } from "../budget/budget.service";
-import { PipelineRunNotStoppableError, PipelineRunnerService } from "../pipelines/pipeline-runner.service";
+import {
+  WorkflowRunNotStoppableError,
+  WorkflowRunnerService,
+} from "../workflows/workflow-runner.service";
 import { ProjectLocalService } from "../projects/project-local.service";
 import { ProjectLocalUnresolvedError } from "../projects/projects.errors";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
-import { buildResumeContext } from "../pipelines/resume-context";
-import { buildVerifyCommand } from "../pipelines/verify-command";
+import { buildResumeContext } from "../workflows/resume-context";
+import { buildVerifyCommand } from "../workflows/verify-command";
 import { RunNotFoundError, isAlive, killGroup } from "../runner/runner-core";
 import { prepareWorktreeDir } from "../shared/worktree-root";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
@@ -132,16 +135,16 @@ const SHELL_TIMEOUT_CODE = 124;
 
 /**
  * The outer loop engine. A goal run iterates a *maker* (an existing agent or
- * pipeline, dispatched through its own runner untouched) against a *verifier*
+ * workflow, dispatched through its own runner untouched) against a *verifier*
  * (Phase 10.2), persisting every iteration to disk and parking when bounded
  * effort is exhausted. The goal owns ONE worktree per run; iterations accumulate
  * commits on its branch.
  *
  * This is deliberately thin glue over delivered machinery: the maker dispatch
- * reuses {@link AgentRunnerService.start} / {@link PipelineRunnerService.start}
+ * reuses {@link AgentRunnerService.start} / {@link WorkflowRunnerService.start}
  * verbatim (so demo mode stays the e2e seam and the mid-run approval gate applies
  * unchanged inside every iteration), and the aggregate is the
- * {@link PipelineRunnerService} pattern with `iterations[]` replacing `stageRuns[]`.
+ * {@link WorkflowRunnerService} pattern with `iterations[]` replacing `stageRuns[]`.
  */
 @Injectable()
 export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
@@ -166,7 +169,7 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
     @Inject(GOAL_RUNS_DIR) dir: string,
     private readonly goals: GoalsStorageService,
     private readonly agentRunner: AgentRunnerService,
-    private readonly pipelineRunner: PipelineRunnerService,
+    private readonly workflowRunner: WorkflowRunnerService,
     private readonly projects: ProjectsStorageService,
     private readonly workspace: WorkspaceService,
     private readonly budget: BudgetService,
@@ -268,7 +271,10 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
           await this.writeAggregate(run);
         }
       } catch (error) {
-        if (!(error instanceof WorkspaceSetupError) && !(error instanceof ProjectLocalUnresolvedError)) {
+        if (
+          !(error instanceof WorkspaceSetupError) &&
+          !(error instanceof ProjectLocalUnresolvedError)
+        ) {
           throw error;
         }
         run.status = "failed";
@@ -305,7 +311,7 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
    *
    *   loop:
    *     budget.check → over-cap? park (budget)                       [8.1]
-   *     dispatch maker (agent|pipeline .start, cwd = worktree)       [inner loop]
+   *     dispatch maker (agent|workflow .start, cwd = worktree)       [inner loop]
    *     wait for maker terminal                                      [9.1 shape in 10.4]
    *     run verifier (deterministic checks ± claude pass)            [10.2]
    *     decideStop:
@@ -379,7 +385,14 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
         iteration.makerRunRef = makerRunRef;
         await this.writeAggregate(run);
       } else {
-        makerRunRef = await this.dispatchMaker(run, goal, project, files, resumeContext, attachments);
+        makerRunRef = await this.dispatchMaker(
+          run,
+          goal,
+          project,
+          files,
+          resumeContext,
+          attachments,
+        );
         iteration.makerRunRef = makerRunRef;
         await this.writeAggregate(run);
         await this.recordDispatch(run, project, makerRunRef);
@@ -406,7 +419,7 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      // Phase 12.6: a pipeline maker that passed its OWN deterministic verify phase
+      // Phase 12.6: a workflow maker that passed its OWN deterministic verify phase
       // already ran the very checks the goal's checks verifier would — skip the
       // redundant second suite. Otherwise verify normally.
       const verdict =
@@ -499,11 +512,11 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
    * Count this iteration's maker run against the project ledger (decision 6).
    * Phase 12: this writes a dispatch line only, never a cost line — a goal's own
    * completion isn't tracked here as a single terminal-state point the way
-   * `task-scheduler.service.ts`'s `reconcileOutcome` observes agent/pipeline runs, and
+   * `task-scheduler.service.ts`'s `reconcileOutcome` observes agent/workflow runs, and
    * `GoalRunSchema` carries no aggregate `costUsd` to write anyway. Cost lines for a
    * goal dispatched through a `ScheduledTask` still flow from the scheduler's
-   * `writeAgentOutcome`/`writePipelineOutcome` — each iteration's own maker run is
-   * itself an agent or pipeline run with its own outcome.
+   * `writeAgentOutcome`/`writeWorkflowOutcome` — each iteration's own maker run is
+   * itself an agent or workflow run with its own outcome.
    */
   private async recordDispatch(
     run: GoalRun,
@@ -573,9 +586,9 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Phase 12.6 — eliminate double verification. The delivery pipeline maker already
+   * Phase 12.6 — eliminate double verification. The delivery workflow maker already
    * runs its OWN `verify` phase (the runner records the exact commands it executed on
-   * the pipeline run's `verifyCommands` — a real-execution marker, never an agent
+   * the workflow run's `verifyCommands` — a real-execution marker, never an agent
    * claim). When the goal's verifier is a `checks` verifier that would resolve to the
    * SAME commands, re-running them is pure waste — return a synthesized satisfied
    * verdict instead. Anything not provably identical (a `claude` verifier, different
@@ -587,11 +600,11 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
     makerStatus: GoalIterationStatus,
     makerRunRef: string,
   ): VerifierVerdict | null {
-    if (goal.maker.kind !== "pipeline" || makerStatus !== "done") return null;
+    if (goal.maker.kind !== "workflow" || makerStatus !== "done") return null;
     if (goal.verifier.kind !== "checks") return null;
     let verifiedWith: string[] | undefined;
     try {
-      verifiedWith = this.pipelineRunner.get(makerRunRef).verifyCommands;
+      verifiedWith = this.workflowRunner.get(makerRunRef).verifyCommands;
     } catch {
       return null; // maker run already pruned — verify normally
     }
@@ -599,7 +612,7 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
     const goalChecks = goal.verifier.commands ?? project?.checks;
     if (!goalChecks?.length) return null;
     if (JSON.stringify(goalChecks) !== JSON.stringify(verifiedWith)) return null;
-    this.log.info("goal verifier skipped — maker pipeline already verified (12.6)", {
+    this.log.info("goal verifier skipped — maker workflow already verified (12.6)", {
       goalId: goal.id,
       commands: verifiedWith,
     });
@@ -607,7 +620,7 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
       kind: "checks",
       satisfied: true,
       output:
-        "satisfied by the maker pipeline's own verify phase (12.6: skipped a redundant re-run)",
+        "satisfied by the maker workflow's own verify phase (12.6: skipped a redundant re-run)",
     };
   }
 
@@ -745,7 +758,7 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
   /**
    * Assemble the resume-context for the next/resumed iteration: the goal progress,
    * the branch's checkpoint commits, the last verifier output (as `failureTail`),
-   * and an optional operator note. Reuses the pipeline's pure {@link buildResumeContext}.
+   * and an optional operator note. Reuses the workflow's pure {@link buildResumeContext}.
    */
   private async composeResumeContext(
     run: GoalRun,
@@ -773,7 +786,7 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
     project: Project | null,
     files: string[],
     resumeContext?: string,
-    /** Task 8: forwarded to an agent maker's run (pipeline maker has no seam — v1 gap). */
+    /** Task 8: forwarded to an agent maker's run (workflow maker has no seam — v1 gap). */
     attachments?: RunAttachments,
   ): Promise<string> {
     const prompt = this.makerPrompt(run, goal, resumeContext);
@@ -792,18 +805,18 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
       );
       return r.runId;
     }
-    const r = await this.pipelineRunner.start(
+    const r = await this.workflowRunner.start(
       goal.maker.id,
       run.taskId,
       projectRef,
       run.matchedTerms,
       run.workspace,
     );
-    return r.pipelineRunId;
+    return r.workflowRunId;
   }
 
   /**
-   * The prompt handed to an agent maker (pipeline makers run their own phases). A
+   * The prompt handed to an agent maker (workflow makers run their own phases). A
    * continuation iteration prepends the resume-context so the maker knows what the
    * verifier flagged last time — the Tester→Kodér feedback shape, generalized.
    */
@@ -827,13 +840,13 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
    * Decision 9: a maker that pauses on the usage limit does NOT burn the iteration.
    * The goal REFLECTS the pause — `run.status = "paused-limit"` with the maker's
    * `resumeAt` for visibility — and keeps polling. The maker's own Phase 9.2
-   * auto-resume (its agent/pipeline registry is already scanned) respawns it; when
+   * auto-resume (its agent/workflow registry is already scanned) respawns it; when
    * it resumes the goal flips back to `running` and the SAME iteration completes.
    * No re-dispatch here, so there is no double-spawn with the maker's own resume.
    */
   protected async waitForMaker(
     run: GoalRun,
-    kind: "agent" | "pipeline",
+    kind: "agent" | "workflow",
     runRef: string,
   ): Promise<GoalIterationStatus> {
     let reflectingPause = false;
@@ -867,20 +880,20 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** The maker run's current status, or null if the run is unknown (swept/gone). */
-  private makerStatus(kind: "agent" | "pipeline", runRef: string): string | null {
+  private makerStatus(kind: "agent" | "workflow", runRef: string): string | null {
     try {
       return kind === "agent"
         ? this.agentRunner.get(runRef).status
-        : this.pipelineRunner.get(runRef).status;
+        : this.workflowRunner.get(runRef).status;
     } catch {
       return null;
     }
   }
 
   /** The maker run's `resumeAt` (the usage-window reset epoch), copied up for the goal. */
-  private makerResumeAt(kind: "agent" | "pipeline", runRef: string): number | null {
+  private makerResumeAt(kind: "agent" | "workflow", runRef: string): number | null {
     try {
-      const run = kind === "agent" ? this.agentRunner.get(runRef) : this.pipelineRunner.get(runRef);
+      const run = kind === "agent" ? this.agentRunner.get(runRef) : this.workflowRunner.get(runRef);
       return run.resumeAt ?? null;
     } catch {
       return null;
@@ -901,7 +914,7 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
   /**
    * Resume a parked goal run with an operator note (decision 4). Re-enters `drive()`
    * at the parked iteration index with a resume-context composed from the parked
-   * verdict + the note (the same operator surface as a pipeline park — identical UX,
+   * verdict + the note (the same operator surface as a workflow park — identical UX,
    * distinct endpoint because the run types differ). Throws
    * {@link GoalRunNotParkedError} (→ 409) for any non-parked state.
    */
@@ -983,13 +996,13 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
   /**
    * Phase 43 — stop a running goal run: kill the current iteration's live maker
    * (through its own runner's `stop`, reusing the same {@link RunnerCore.cancel}
-   * governance the agent/pipeline stop already use) and flag the run so `drive()`
+   * governance the agent/workflow stop already use) and flag the run so `drive()`
    * lands it `interrupted` on the maker's next terminal turn, instead of running the
    * verifier or dispatching a further iteration. Only a `running` goal with a
    * dispatched current-iteration maker owns a process to kill — anything else
    * (parked, paused-limit, no maker yet) throws {@link GoalRunNotStoppableError}.
    * Fires the kill and returns immediately; the kill's exit reconciles
-   * asynchronously (mirrors the agent/pipeline stop's own timing).
+   * asynchronously (mirrors the agent/workflow stop's own timing).
    */
   async stop(goalRunId: string): Promise<void> {
     const run = this.runs.get(goalRunId);
@@ -1000,10 +1013,10 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
     this.stopRequested.add(goalRunId);
     try {
       if (iteration.makerKind === "agent") this.agentRunner.stop(makerRunRef);
-      else await this.pipelineRunner.stop(makerRunRef);
+      else await this.workflowRunner.stop(makerRunRef);
     } catch (error) {
       this.stopRequested.delete(goalRunId);
-      throw error instanceof RunNotFoundError || error instanceof PipelineRunNotStoppableError
+      throw error instanceof RunNotFoundError || error instanceof WorkflowRunNotStoppableError
         ? new GoalRunNotStoppableError(goalRunId)
         : error;
     }
@@ -1125,7 +1138,7 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * A fire-and-forget `drive()` rejected (e.g. a dispatch-time PipelineNotFoundError):
+   * A fire-and-forget `drive()` rejected (e.g. a dispatch-time WorkflowNotFoundError):
    * mark the run failed and log, so it never becomes an unhandled promise rejection.
    */
   private async onDriveError(run: GoalRun, err: unknown): Promise<void> {

@@ -17,9 +17,9 @@ export const ActivityKindSchema = z.enum([
   "task-queued",
   "run-started",
   "run-finished",
-  "pipeline-started",
-  "pipeline-finished",
-  "pipeline-parked",
+  "workflow-started",
+  "workflow-finished",
+  "workflow-parked",
   // Phase 45 (qualify gate, Tier 1 — silent + recorded). A `qualify` agent phase's
   // parsed verdict (pass/gap/drift): pass advances, gap/drift loop the work back. The
   // briefing reads the eventual run finish; the verdict surfaces on the stage timeline.
@@ -123,7 +123,7 @@ export const ActivityRefsSchema = z
   .object({
     taskId: z.string().optional(),
     runRef: z.string().optional(),
-    pipelineId: z.string().optional(),
+    workflowId: z.string().optional(),
     agentId: z.string().optional(),
     /** Phase 10: the goal run and goal definition a goal-loop entry is attributed to. */
     goalRunId: z.string().optional(),
@@ -149,7 +149,7 @@ export const ActivityRefsSchema = z
     /** Comma-joined classifier-matched terms carried alongside `normalizedSummary`. */
     terms: z.string().optional(),
     /**
-     * F2c: the department that owns the dispatched unit (its `Pipeline`/`Agent`
+     * F2c: the department that owns the dispatched unit (its `Workflow`/`Agent`
      * `department`), stamped on a dispatch entry when known — best-effort
      * attribution, not authorization (Law 4). Absent when the target is
      * unattributed (e.g. the orchestrator fallback) or the store read failed.

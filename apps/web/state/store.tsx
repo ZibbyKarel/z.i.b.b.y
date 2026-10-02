@@ -1,13 +1,13 @@
 "use client";
 
 import { type ReactNode, createContext, useCallback, useContext, useMemo, useState } from "react";
-import type { Pipeline, Skill } from "../domain";
+import type { Skill, Workflow } from "../domain";
 import { slug } from "../utils/slug";
 import type { EntityFormValues } from "../components/EntityFormModal/EntityFormModal";
 
 /**
  * In-memory catalog store for the entities that have no backend yet — skills and
- * pipelines. The system starts completely empty; the user creates each one through
+ * workflows. The system starts completely empty; the user creates each one through
  * the UI and these actions append to client state so the dashboard stays
  * interactive. Agents and integrations are NOT here: both are persisted by the API
  * and read through their `features/<domain>/queries` hooks (the TanStack cache is
@@ -15,19 +15,19 @@ import type { EntityFormValues } from "../components/EntityFormModal/EntityFormM
  */
 interface CatalogState {
   skills: Skill[];
-  pipelines: Pipeline[];
+  workflows: Workflow[];
 }
 
 interface CatalogStore extends CatalogState {
   addSkill: (values: EntityFormValues, fallbackDesc: string) => void;
-  addPipeline: (values: EntityFormValues, fallbackDesc: string) => void;
+  addWorkflow: (values: EntityFormValues, fallbackDesc: string) => void;
 }
 
 const CatalogContext = createContext<CatalogStore | null>(null);
 
 const EMPTY: CatalogState = {
   skills: [],
-  pipelines: [],
+  workflows: [],
 };
 
 export function CatalogProvider({ children }: { children: ReactNode }) {
@@ -50,19 +50,19 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const addPipeline = useCallback((values: EntityFormValues, fallbackDesc: string) => {
+  const addWorkflow = useCallback((values: EntityFormValues, fallbackDesc: string) => {
     const id = slug(values.name ?? "", "novy");
     setState((s) => ({
       ...s,
-      pipelines: [
-        ...s.pipelines,
+      workflows: [
+        ...s.workflows,
         {
-          id: `${id}-${s.pipelines.length}`,
+          id: `${id}-${s.workflows.length}`,
           name: values.name?.trim() || id,
           lastRun: "—",
           lastState: "done",
           desc: values.desc?.trim() || fallbackDesc,
-          file: `~/zibby/pipelines/${id}.pipeline.md`,
+          file: `~/zibby/workflows/${id}.workflow.md`,
           phases: [
             {
               type: "agent" as const,
@@ -83,9 +83,9 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     () => ({
       ...state,
       addSkill,
-      addPipeline,
+      addWorkflow,
     }),
-    [state, addSkill, addPipeline],
+    [state, addSkill, addWorkflow],
   );
 
   return <CatalogContext.Provider value={value}>{children}</CatalogContext.Provider>;

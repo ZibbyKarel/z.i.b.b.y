@@ -61,7 +61,7 @@ export function ApprovalSheet({
 
   // Best-effort parent chain: most gated runs ARE (or belong to) a task, whose
   // `subtasks` — when present — are this approval's chain route. A non-task
-  // `runId` (e.g. a bare pipeline run) 404s quietly and the strip is omitted.
+  // `runId` (e.g. a bare workflow run) 404s quietly and the strip is omitted.
   const taskQuery = useTaskQuery(approval?.runId ?? "");
   const task = taskQuery.data;
   const steps: ChainRouteStripStep[] =

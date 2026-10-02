@@ -4,8 +4,8 @@
 > Dokumentátor**" — a goal is the loop's outer shell, iterating a _maker_ against a
 > _verifier_ until the verifier is satisfied or bounded effort runs out.
 
-A **goal** is the 4th `TaskTarget` kind (alongside `agent`, `pipeline`, `orchestrator`):
-a stored `.goal.md` recipe naming a maker (an existing agent or pipeline, dispatched
+A **goal** is the 4th `TaskTarget` kind (alongside `agent`, `workflow`, `orchestrator`):
+a stored `.goal.md` recipe naming a maker (an existing agent or workflow, dispatched
 through its own runner **unchanged**) and a verifier (a deterministic `checks` shell or
 a fresh `claude` judge run). `GoalRunnerService` is the outer loop that dispatches the
 maker, runs the verifier, and either finishes, parks for the operator, or feeds the
@@ -28,7 +28,7 @@ thin glue over delivered machinery — no new dispatch path, no new session mode
 ## Endpoints (`/api/goals`)
 
 `goalsContract` covers only the **goal definition** (the recipe), mirroring
-`agentsContract`/`pipelinesContract`:
+`agentsContract`/`workflowsContract`:
 
 - `POST /goals` — create a goal (`409` on id conflict, `422` on a structurally invalid
   maker/verifier).
@@ -77,7 +77,7 @@ immediately; `drive()` runs the loop in the background.
    iteration `startedAt` timestamps against `goal.budget.dailyRuns`/`weeklyRuns`).
    Either over-cap parks with reason `budget`, before the maker ever dispatches.
 3. **Dispatch the maker** — `dispatchMaker` calls `AgentRunnerService.start` or
-   `PipelineRunnerService.start` verbatim (with the run's worktree as cwd), so the
+   `WorkflowRunnerService.start` verbatim (with the run's worktree as cwd), so the
    inner runner's own mid-run approval gate and usage-limit handling apply unchanged.
 4. **Wait for the maker** (`waitForMaker`) — polls the maker run to a terminal state.
    A maker that pauses on the usage limit does **not** burn the iteration: the goal
@@ -90,14 +90,14 @@ immediately; `drive()` runs the loop in the background.
    escalates to SIGKILL after a grace period, a capped rolling output tail); satisfied
    on exit 0. A `claude` verifier is a **fresh** agent run on its own model with no
    shared session, satisfied when it completes. **Phase 12.6 shortcut:** if the maker
-   was a pipeline that already ran its own deterministic verify phase with the exact
+   was a workflow that already ran its own deterministic verify phase with the exact
    same commands the goal's `checks` verifier would run, the runner synthesizes a
    satisfied verdict instead of re-running the suite.
 6. **Decide** (`decideStop`, pure): satisfied → checkpoint the worktree (a local,
    ungated, never-pushed commit) and finish `done`. Not satisfied and this was the
    last allowed attempt (`maxIterations`) → park with reason `iterations`. Otherwise
    → compose the next iteration's resume-context from the verdict output
-   (`buildResumeContext`, shared with the pipeline resume path) and continue.
+   (`buildResumeContext`, shared with the workflow resume path) and continue.
 
 Every transition is persisted to `<runRoot>/run.json` (the aggregate) so the loop
 survives an API restart.
@@ -105,8 +105,8 @@ survives an API restart.
 ### Storage format
 
 A goal definition is one `<id>.goal.md` file (`GoalsStorageService`, extending the
-same `MarkdownEntityStore` agents/pipelines use): YAML frontmatter carries `name`,
-`desc`, `objective`, `maker` (`{kind: "agent"|"pipeline", id}`), `verifier`
+same `MarkdownEntityStore` agents/workflows use): YAML frontmatter carries `name`,
+`desc`, `objective`, `maker` (`{kind: "agent"|"workflow", id}`), `verifier`
 (`{kind: "checks", commands?}` or `{kind: "claude", agent, model?, thinking?}`),
 `maxIterations`, an optional `budget`, and an optional `projectId` (O-16 — the
 project the goal is scoped to; the `/work/goals` screens show it, a goal may stand
@@ -116,7 +116,7 @@ maker/verifier is treated as corrupt (`CorruptGoalFileError`) rather than silent
 dropped, since it cannot loop without them.
 
 A goal _run_ is the JSON aggregate at `<GOAL_RUNS_DIR>/<goalRunId>/run.json`
-(`GoalRunSchema`) — a clone of the pipeline run's shape with `iterations[]` in place
+(`GoalRunSchema`) — a clone of the workflow run's shape with `iterations[]` in place
 of `stageRuns[]`. Each `GoalIteration` records its maker's run ref, the verifier
 verdict (`kind`, `satisfied`, `output`), and status. Restart rebuilds the whole
 registry from these files (`reconstruct()`); a `running`/`paused-limit` goal is

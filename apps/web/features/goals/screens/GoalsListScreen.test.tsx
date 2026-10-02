@@ -12,7 +12,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 const goal: Goal = {
   id: "ship-feature",
   objective: "Ship feature Y green",
-  maker: { kind: "pipeline", id: "delivery" },
+  maker: { kind: "workflow", id: "delivery" },
   verifier: { kind: "checks" },
   maxIterations: 10,
   instructions: "Keep going.",

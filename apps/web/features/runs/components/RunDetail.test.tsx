@@ -12,7 +12,7 @@ import {
 import type { RunView } from "../run";
 import { RunDetail } from "./RunDetail";
 
-// Phase 63: the header's worker name (agent/pipeline) navigates to its own detail
+// Phase 63: the header's worker name (agent/workflow) navigates to its own detail
 // page — a local mock (overriding the global next/navigation stub in
 // vitest.setup.tsx) so tests can assert the exact path `push` was called with.
 const push = vi.fn();
@@ -21,10 +21,10 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 // No run is on the approval gate in these cases — an empty queue keeps the header
 // in its plain (no severity/risk) form.
 vi.mock("../../approvals/queries", () => ({ useApprovalsQuery: () => ({ data: [] }) }));
-// A pipeline run's body is the stage timeline; stub it so this test focuses on the
+// A workflow run's body is the stage timeline; stub it so this test focuses on the
 // header + meta strip (the timeline has its own test).
-vi.mock("./PipelineStageTimeline", () => ({
-  PipelineStageTimeline: () => <div data-testid="stage-timeline" />,
+vi.mock("./WorkflowStageTimeline", () => ({
+  WorkflowStageTimeline: () => <div data-testid="stage-timeline" />,
 }));
 // The output panel's "continue in a new task" reads the New Task provider; these
 // header/meta tests render RunDetail in isolation, so stub it with a shared spy.
@@ -32,7 +32,7 @@ const { openNewTask } = vi.hoisted(() => ({ openNewTask: vi.fn() }));
 vi.mock("../../tasks/TaskContext", () => ({
   useNewTask: () => ({ open: openNewTask, close: vi.fn(), isOpen: false }),
 }));
-// The pipeline output panel reads the run's pr-draft (or, for a file output, its
+// The workflow output panel reads the run's pr-draft (or, for a file output, its
 // named artifact) — keyed by `runId:name` so a run only "has" the artifact its test
 // scenario actually gives it (mirroring a real 404 for the artifact that wasn't
 // written), and none when the query is gated off.
@@ -47,7 +47,7 @@ vi.mock("../queries/useRunArtifactQuery", () => ({
     return { data: enabled && content ? { name, content } : undefined };
   },
 }));
-vi.mock("../../pipelines", () => ({ usePipelineRunQuery: () => ({ data: undefined }) }));
+vi.mock("../../workflows", () => ({ useWorkflowRunQuery: () => ({ data: undefined }) }));
 // The Phase 24 Part D "Projekt" control reads the project registry and
 // its own assign mutation; an empty registry keeps it a no-op for every test here
 // that doesn't specifically exercise it.
@@ -68,14 +68,14 @@ vi.mock("../../../state/api", async (importOriginal) => ({
 }));
 
 const LONG_DESC =
-  "Refaktoruj detail běhu pipeliny tak, aby nezobrazoval název úkolu dvakrát, " +
-  "ukázal přiřazenou pipelinu a přidal sbalitelný popis úkolu s tlačítkem zobrazit " +
+  "Refaktoruj detail běhu workflow tak, aby nezobrazoval název úkolu dvakrát, " +
+  "ukázal přiřazenou workflow a přidal sbalitelný popis úkolu s tlačítkem zobrazit " +
   "více; po rozbalení nabídni zobrazit méně a dej pozor na zachování všech ostatních " +
   "informací v hlavičce běhu i v časové ose jednotlivých fází.";
 
-const pipelineRun: RunView = {
+const workflowRun: RunView = {
   runId: "delivery_42",
-  kind: "pipeline",
+  kind: "workflow",
   owner: "delivery",
   status: "running",
   pct: null,
@@ -89,7 +89,7 @@ const pipelineRun: RunView = {
   stageRuns: [],
 };
 
-const renderDetail = (run: RunView = pipelineRun) =>
+const renderDetail = (run: RunView = workflowRun) =>
   render(
     <RunDetail
       deleting={false}
@@ -102,15 +102,15 @@ const renderDetail = (run: RunView = pipelineRun) =>
     />,
   );
 
-describe("RunDetail — pipeline header", () => {
+describe("RunDetail — workflow header", () => {
   it("shows the task name once (headline only, not repeated as a meta cell)", () => {
     renderDetail();
     expect(screen.getAllByText("Oprav detail běhu")).toHaveLength(1);
   });
 
-  it("surfaces the assigned pipeline and drops the redundant type cell", () => {
+  it("surfaces the assigned workflow and drops the redundant type cell", () => {
     renderDetail();
-    expect(screen.getByText("pipelina")).toBeInTheDocument();
+    expect(screen.getByText("workflow")).toBeInTheDocument();
     expect(screen.getByText("delivery")).toBeInTheDocument();
     // "typ" (kind) cell is gone — kind still reads in the mono id line, not a cell.
     expect(screen.queryByText("typ")).not.toBeInTheDocument();
@@ -135,7 +135,7 @@ describe("RunDetail — pipeline header", () => {
 
   it('shows the task\'s attachments read-only (no remove button) inside the expanded "Vstup" section', async () => {
     renderDetail({
-      ...pipelineRun,
+      ...workflowRun,
       attachments: [
         { name: "spec.pdf", size: 100 },
         { name: "data.csv", size: 200 },
@@ -151,7 +151,7 @@ describe("RunDetail — pipeline header", () => {
 
   it("shows open links to the serve URL when the run carries an attachmentSetId (Phase 65)", async () => {
     renderDetail({
-      ...pipelineRun,
+      ...workflowRun,
       attachmentSetId: "set_abc",
       attachments: [
         { name: "spec.pdf", size: 100 },
@@ -175,7 +175,7 @@ describe("RunDetail — pipeline header", () => {
 
   it("keeps the read-only attachments list when the run has no attachmentSetId", async () => {
     renderDetail({
-      ...pipelineRun,
+      ...workflowRun,
       attachments: [{ name: "spec.pdf", size: 100 }],
     });
     await userEvent.click(screen.getByText("Vstup"));
@@ -184,12 +184,12 @@ describe("RunDetail — pipeline header", () => {
   });
 
   it('renders no "Vstup" section when the run has neither task text nor attachments', () => {
-    renderDetail({ ...pipelineRun, taskText: undefined });
+    renderDetail({ ...workflowRun, taskText: undefined });
     expect(screen.queryByRole("button", { name: /Vstup/ })).not.toBeInTheDocument();
   });
 
   it("shows a formatted cost meta cell when costUsd is set", () => {
-    renderDetail({ ...pipelineRun, costUsd: 0.2934669 });
+    renderDetail({ ...workflowRun, costUsd: 0.2934669 });
     expect(screen.getByText("cena")).toBeInTheDocument();
     expect(screen.getByText("$0.29")).toBeInTheDocument();
   });
@@ -201,8 +201,8 @@ describe("RunDetail — pipeline header", () => {
 
   it("carries the written-back task outcome on the task meta cell when the title differs from the headline", () => {
     renderDetail({
-      ...pipelineRun,
-      title: "Pipeline run headline",
+      ...workflowRun,
+      title: "Workflow run headline",
       taskTitle: "Oprav rozbitý test",
       taskOutcome: "done",
     });
@@ -211,7 +211,7 @@ describe("RunDetail — pipeline header", () => {
 
   it("shows the total run duration once the task outcome carries a finish time", () => {
     renderDetail({
-      ...pipelineRun,
+      ...workflowRun,
       startedAt: new Date("2026-06-14T10:00:00Z").toISOString(),
       taskOutcomeFinishedAt: new Date("2026-06-14T10:03:12Z").toISOString(),
     });
@@ -235,7 +235,7 @@ describe("RunDetail — header avatar (Phase 48 → 53: stretched EntityHero bac
         now={Date.parse("2026-06-14T10:05:00Z")}
         onDelete={() => {}}
         onStop={() => {}}
-        run={pipelineRun}
+        run={workflowRun}
         stopping={false}
       />,
     );
@@ -262,7 +262,7 @@ describe("RunDetail — header avatar (Phase 48 → 53: stretched EntityHero bac
         now={Date.parse("2026-06-14T10:05:00Z")}
         onDelete={onDelete}
         onStop={() => {}}
-        run={{ ...pipelineRun, status: "done" }}
+        run={{ ...workflowRun, status: "done" }}
         stopping={false}
       />,
     );
@@ -363,9 +363,9 @@ describe("RunDetail — task output", () => {
     expect(screen.queryByTestId("continue-task")).not.toBeInTheDocument();
   });
 
-  it("surfaces a done pipeline run's PR draft as its output and offers continue", async () => {
+  it("surfaces a done workflow run's PR draft as its output and offers continue", async () => {
     openNewTask.mockClear();
-    renderDetail({ ...pipelineRun, status: "done", taskOutcome: "done" });
+    renderDetail({ ...workflowRun, status: "done", taskOutcome: "done" });
     // The produced PR draft (artifact) is shown as the output.
     expect(screen.getByText(/Add login fix/)).toBeInTheDocument();
     await userEvent.click(screen.getByTestId("continue-task"));
@@ -376,10 +376,10 @@ describe("RunDetail — task output", () => {
     );
   });
 
-  it("surfaces a done pipeline run's markdown file output as formatted markdown, not a code block (Phase 41)", async () => {
+  it("surfaces a done workflow run's markdown file output as formatted markdown, not a code block (Phase 41)", async () => {
     openNewTask.mockClear();
     renderDetail({
-      ...pipelineRun,
+      ...workflowRun,
       runId: "delivery_file_43",
       status: "done",
       taskOutcome: "done",
@@ -397,7 +397,7 @@ describe("RunDetail — task output", () => {
       undefined,
       expect.stringContaining("Audit report"),
     );
-    // Never the generic "N stages, done" pipeline summary.
+    // Never the generic "N stages, done" workflow summary.
     expect(openNewTask).not.toHaveBeenCalledWith(
       undefined,
       undefined,
@@ -407,7 +407,7 @@ describe("RunDetail — task output", () => {
 
   it("keeps a non-markdown file output (e.g. .json) in a code block, not the markdown viewer (Phase 41)", () => {
     renderDetail({
-      ...pipelineRun,
+      ...workflowRun,
       runId: "delivery_file_45",
       status: "done",
       taskOutcome: "done",
@@ -418,15 +418,15 @@ describe("RunDetail — task output", () => {
     expect(screen.queryByTestId(MarkdownTestId.Root)).not.toBeInTheDocument();
   });
 
-  it("renders nothing for a done pipeline file-output run whose artifact hasn't arrived (never falls into the agent-shaped branch)", () => {
+  it("renders nothing for a done workflow file-output run whose artifact hasn't arrived (never falls into the agent-shaped branch)", () => {
     renderDetail({
-      ...pipelineRun,
+      ...workflowRun,
       runId: "delivery_file_44",
       status: "done",
       taskOutcome: "done",
       taskOutputKind: "file",
       outputArtifactName: "missing-report.md",
-      // A generic pipeline outcome string — if the agent-shaped branch's guard were
+      // A generic workflow outcome string — if the agent-shaped branch's guard were
       // missing, this would render as a bogus "continue" context.
       taskOutcomeSummary: "5 stages, done",
     });
@@ -460,10 +460,10 @@ describe("RunDetail — worker name links to its detail (Phase 63)", () => {
     expect(push).toHaveBeenCalledWith("/agents/writer");
   });
 
-  it("links the pipeline owner meta cell to its own detail page", async () => {
-    renderDetail(); // default pipelineRun: kind "pipeline", owner "delivery"
+  it("links the workflow owner meta cell to its own detail page", async () => {
+    renderDetail(); // default workflowRun: kind "workflow", owner "delivery"
     await userEvent.click(screen.getByTestId("run-owner-link"));
-    expect(push).toHaveBeenCalledWith("/pipelines/delivery");
+    expect(push).toHaveBeenCalledWith("/workflows/delivery");
   });
 });
 
@@ -489,7 +489,7 @@ describe("RunDetail — assign to project (Phase 24 Part D)", () => {
   });
 
   it("shows the project meta cell (not the assign control) once the run carries a projectId", () => {
-    renderDetail({ ...pipelineRun, project: "Acme", projectId: "alpha" });
+    renderDetail({ ...workflowRun, project: "Acme", projectId: "alpha" });
     expect(screen.getByText("projekt")).toBeInTheDocument();
     expect(screen.getByText("Acme")).toBeInTheDocument();
     expect(screen.queryByText("Projekt")).not.toBeInTheDocument();
@@ -503,7 +503,7 @@ describe("RunDetail — assign to project (Phase 24 Part D)", () => {
     expect(alpha).toBeDefined();
     if (alpha) await userEvent.click(alpha);
     expect(assignMutate).toHaveBeenCalledWith({
-      params: { runId: pipelineRun.runId },
+      params: { runId: workflowRun.runId },
       body: { projectId: "alpha" },
     });
   });
@@ -512,14 +512,14 @@ describe("RunDetail — assign to project (Phase 24 Part D)", () => {
 describe("RunDetail — started time is absolute, not relative (Phase 67 item A)", () => {
   it("shows the started meta cell as an absolute formatted date/time, not a relative 'před …' string", () => {
     const startedAt = new Date("2026-06-14T10:00:00Z").toISOString();
-    renderDetail({ ...pipelineRun, startedAt });
+    renderDetail({ ...workflowRun, startedAt });
     expect(screen.getByText(new Date(startedAt).toLocaleString("cs"))).toBeInTheDocument();
     expect(screen.queryByText(/^před /)).not.toBeInTheDocument();
   });
 
   it("keeps a scheduled run's future time in the relative 'in Xm' form (unchanged)", () => {
     renderDetail({
-      ...pipelineRun,
+      ...workflowRun,
       status: "scheduled",
       startedAt: new Date("2026-06-14T10:10:00Z").toISOString(),
     });
@@ -530,7 +530,7 @@ describe("RunDetail — started time is absolute, not relative (Phase 67 item A)
 describe("RunDetail — classification trace (F2c)", () => {
   it("renders the switchboard trace, department hop, and confidence when the run carries one", () => {
     renderDetail({
-      ...pipelineRun,
+      ...workflowRun,
       classification: {
         stage1: { kind: "department", id: "dev", name: "Dev" },
         confidence: 0.82,
@@ -545,7 +545,7 @@ describe("RunDetail — classification trace (F2c)", () => {
   });
 
   it("renders nothing when the run carries no classification trace", () => {
-    renderDetail(pipelineRun);
+    renderDetail(workflowRun);
     expect(screen.queryByTestId("classification-trace")).not.toBeInTheDocument();
   });
 });
@@ -556,7 +556,7 @@ describe("RunDetail — project meta cell links to project detail (Phase 67 item
   });
 
   it("links the project meta cell to its detail page when the run carries a projectId", async () => {
-    renderDetail({ ...pipelineRun, project: "Acme", projectId: "alpha" });
+    renderDetail({ ...workflowRun, project: "Acme", projectId: "alpha" });
     await userEvent.click(screen.getByTestId("run-project-link"));
     expect(push).toHaveBeenCalledWith("/work/projects/alpha");
   });
@@ -575,7 +575,7 @@ describe("RunDetail — roadmap issue meta cell (the run -> issue half of the li
 
   it("links to the owning issue's dialog on the project's roadmap tab", async () => {
     renderDetail({
-      ...pipelineRun,
+      ...workflowRun,
       projectId: "alpha",
       roadmapItemId: "alpha-jira-cz3tdr1-524",
       roadmapItemLabel: "CZ3TDR1-524",
@@ -586,7 +586,7 @@ describe("RunDetail — roadmap issue meta cell (the run -> issue half of the li
 
   it("falls back to the raw item id when no label was snapshotted", () => {
     renderDetail({
-      ...pipelineRun,
+      ...workflowRun,
       projectId: "alpha",
       roadmapItemId: "alpha-jira-cz3tdr1-524",
     });
@@ -594,12 +594,12 @@ describe("RunDetail — roadmap issue meta cell (the run -> issue half of the li
   });
 
   it("renders nothing for a run that didn't come from a roadmap", () => {
-    renderDetail({ ...pipelineRun, projectId: "alpha" });
+    renderDetail({ ...workflowRun, projectId: "alpha" });
     expect(screen.queryByTestId("run-roadmap-item-link")).not.toBeInTheDocument();
   });
 
   it("renders nothing without a projectId — there would be no roadmap page to open", () => {
-    renderDetail({ ...pipelineRun, roadmapItemId: "alpha-jira-cz3tdr1-524" });
+    renderDetail({ ...workflowRun, roadmapItemId: "alpha-jira-cz3tdr1-524" });
     expect(screen.queryByTestId("run-roadmap-item-link")).not.toBeInTheDocument();
   });
 });

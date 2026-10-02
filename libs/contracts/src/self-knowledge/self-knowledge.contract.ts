@@ -18,7 +18,7 @@ export const selfKnowledgeContract = c.router(
         200: SelfKnowledgeSchema,
       },
       summary:
-        "Machine-generated self-knowledge snapshot (agents, pipelines, gate rules, channels)",
+        "Machine-generated self-knowledge snapshot (agents, workflows, gate rules, channels)",
     },
   },
   {

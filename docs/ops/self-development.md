@@ -30,11 +30,11 @@ Builder and subject **must not share** either a working tree or a `ZIBBY_DATA_DI
 When the target == ZIBBY, three things collapse into one — Phase 12 pulled each of
 them apart:
 
-| Identity       | Collapse                                                                                 | Fix                                                                                                 |
-| -------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| **Process**    | the verifier's `pnpm test` boots a second `AppModule` → `reconstruct()` → re-dispatches the same goal | 12.1/12.2 (scope the verifier, never full-repo), 12.4 (gate boot re-dispatch), 12.5 (e2e isolation)   |
-| **Filesystem** | the worktree + artifacts land inside the watched/tested tree                               | 12.7 (worktrees outside the repo, via `ZIBBY_WORKTREE_ROOT`)                                          |
-| **Resources**  | no timeout/kill/cap/reaping → N copies eat RAM                                              | 12.3 (timeout + detached pgid + cap + reaping), 12.9 (await reaping on shutdown), 8.1 (budget)         |
+| Identity       | Collapse                                                                                              | Fix                                                                                                 |
+| -------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| **Process**    | the verifier's `pnpm test` boots a second `AppModule` → `reconstruct()` → re-dispatches the same goal | 12.1/12.2 (scope the verifier, never full-repo), 12.4 (gate boot re-dispatch), 12.5 (e2e isolation) |
+| **Filesystem** | the worktree + artifacts land inside the watched/tested tree                                          | 12.7 (worktrees outside the repo, via `ZIBBY_WORKTREE_ROOT`)                                        |
+| **Resources**  | no timeout/kill/cap/reaping → N copies eat RAM                                                        | 12.3 (timeout + detached pgid + cap + reaping), 12.9 (await reaping on shutdown), 8.1 (budget)      |
 
 ## Resource governance as a dimension of the autonomy contract
 
@@ -88,7 +88,7 @@ git clone <zibby-remote> /var/zibby/subject
 #    → register the project { path: "/var/zibby/subject", checks: ["pnpm --filter X test"] }
 #    (NEVER leave checks empty — that falls back to the full-repo default, and 12.1 parks it)
 
-# 3) Goal: maker = delivery pipeline, verifier scoped to the subject; run it through
+# 3) Goal: maker = delivery workflow, verifier scoped to the subject; run it through
 #    the gate.
 #    OS ceiling (recommended): run the whole builder process in a container/cgroup
 #    with a memory+cpu cap.

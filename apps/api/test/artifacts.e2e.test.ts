@@ -10,7 +10,7 @@ import { ArtifactsStorageService } from "../src/artifacts/artifacts.storage.serv
 
 /**
  * N2a — the durable artifact registry over HTTP. Read-only: records are seeded
- * through the storage service (the same seam the pipeline delivery sinks use);
+ * through the storage service (the same seam the workflow delivery sinks use);
  * the contract exposes only list + get.
  */
 describe("Artifacts API (e2e)", () => {
@@ -30,7 +30,7 @@ describe("Artifacts API (e2e)", () => {
       kind: "vault-note",
       locator: "research/topic-x",
       from: "report.md",
-      producedBy: { runRef: "research_1", pipelineId: "nightly-research", projectId: "acme" },
+      producedBy: { runRef: "research_1", workflowId: "nightly-research", projectId: "acme" },
       createdAt: "2026-07-01T08:00:00.000Z",
     });
     await store.record({
@@ -38,7 +38,7 @@ describe("Artifacts API (e2e)", () => {
       kind: "pr",
       locator: "https://example.test/pr/7",
       from: "docs.md",
-      producedBy: { runRef: "delivery_2", pipelineId: "delivery" },
+      producedBy: { runRef: "delivery_2", workflowId: "delivery" },
       createdAt: "2026-07-01T09:00:00.000Z",
     });
   });
@@ -57,17 +57,17 @@ describe("Artifacts API (e2e)", () => {
     ]);
   });
 
-  it("filters by projectId / pipelineId", async () => {
+  it("filters by projectId / workflowId", async () => {
     const byProject = await request(app.getHttpServer())
       .get("/api/artifacts?projectId=acme")
       .expect(200);
     expect(byProject.body).toHaveLength(1);
-    expect(byProject.body[0].producedBy.pipelineId).toBe("nightly-research");
+    expect(byProject.body[0].producedBy.workflowId).toBe("nightly-research");
 
-    const byPipeline = await request(app.getHttpServer())
-      .get("/api/artifacts?pipelineId=delivery")
+    const byWorkflow = await request(app.getHttpServer())
+      .get("/api/artifacts?workflowId=delivery")
       .expect(200);
-    expect(byPipeline.body.map((r: { kind: string }) => r.kind)).toEqual(["pr"]);
+    expect(byWorkflow.body.map((r: { kind: string }) => r.kind)).toEqual(["pr"]);
   });
 
   it("gets one record by id; unknown id → 404", async () => {

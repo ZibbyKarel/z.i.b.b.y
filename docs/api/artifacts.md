@@ -1,15 +1,15 @@
 # Artifacts (durable artifact registry)
 
-> Root `CLAUDE.md`, "Pipelines & artifacts": _"Every pipeline yields a durable
+> Root `CLAUDE.md`, "Workflows & artifacts": _"Every workflow yields a durable
 > artifact — a document in the vault, a git branch, a PR — recorded on disk,
 > not discarded when the run ends."_
 
 The artifacts module (N2a) is the concrete storage/API behind that principle:
 one plain-JSON provenance record per delivered output, written by the
-pipeline delivery sinks at the moment they deliver. It is what makes "where did
+workflow delivery sinks at the moment they deliver. It is what makes "where did
 this file/PR come from?" always answerable (root `CLAUDE.md`'s Law 5 — always
 answerable). It also backed the retired chains feature (N2b), which bound a
-downstream pipeline's input to an upstream run's output long after that run had
+downstream workflow's input to an upstream run's output long after that run had
 been evicted from memory; that consumer is gone, but the provenance registry it
 relied on remains.
 
@@ -31,10 +31,10 @@ An `ArtifactRecord` is:
   id: string;           // `<runRef>_<kind>_<slug(from)>` — stable per (run, sink kind, handoff name)
   kind: "vault-note" | "project-file" | "pr";
   locator: string;      // kind-dependent address: note id, project-relative path, or PR URL
-  from: string;         // the phase handoff name the sink drew from (the pipeline's `produces`)
+  from: string;         // the phase handoff name the sink drew from (the workflow's `produces`)
   producedBy: {
-    runRef: string;      // the producing pipeline run's id
-    pipelineId: string;
+    runRef: string;      // the producing workflow run's id
+    workflowId: string;
     taskId?: string;
     projectId?: string;
   };
@@ -50,9 +50,9 @@ handoff name keep distinct records (the kind is part of the id).
 
 ## Flow
 
-1. A pipeline run reaches a terminal output (a `file` delivery to the
+1. A workflow run reaches a terminal output (a `file` delivery to the
    project, a vault-note write, or a `pr` open) inside
-   `apps/api/src/pipelines/pipeline-runner.service.ts`.
+   `apps/api/src/workflows/workflow-runner.service.ts`.
 2. The runner's private `recordArtifact(run, kind, from, locator)` builds the
    record (resolving the run's project id, when the project isn't
    `"unregistered"`) and calls `ArtifactsStorageService.record()`.
@@ -60,20 +60,20 @@ handoff name keep distinct records (the kind is part of the id).
    and swallowed — the delivery itself (the file/PR/note) has already landed
    and must not be undone or reported as failed just because the provenance
    write hiccuped.
-4. `ArtifactsStorageService.listFiltered({ projectId?, pipelineId? })` is the
+4. `ArtifactsStorageService.listFiltered({ projectId?, workflowId? })` is the
    read path: newest-first (`compare` sorts by `createdAt` descending),
-   optionally scoped to a project and/or pipeline. (The retired chains feature
+   optionally scoped to a project and/or workflow. (The retired chains feature
    read the full unfiltered list to resolve a chain's upstream binding; that
    consumer is gone, the read path remains.)
 
 ## Endpoints (`/api/artifacts`)
 
 - `GET /artifacts` — list records, newest-first, filtered by optional
-  `projectId` / `pipelineId` query params.
+  `projectId` / `workflowId` query params.
 - `GET /artifacts/:id` — one record by id; `404` for unknown, corrupt, or
   malformed ids (all read as "not found" — never a 500).
 
 **Read-only on purpose.** Records are born only inside the API process — the
-pipeline delivery sinks are the only writer — so there is deliberately no
+workflow delivery sinks are the only writer — so there is deliberately no
 `POST`/`PUT` here: a client can never fake provenance for a run that didn't
 actually happen.

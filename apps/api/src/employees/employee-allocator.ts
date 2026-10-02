@@ -23,7 +23,7 @@ function keyOf(department: DepartmentId, agentId: string): string {
 }
 
 /**
- * D-015 — the in-memory broker between a pipeline stage / single-agent dispatch
+ * D-015 — the in-memory broker between a workflow stage / single-agent dispatch
  * and the department's hired employees. `acquire` leases a FREE active employee
  * of `agentId` (the position) inside `department`; when every matching employee
  * is busy it waits FIFO (queued behind any earlier caller for the SAME

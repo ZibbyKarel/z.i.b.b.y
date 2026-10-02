@@ -5,12 +5,12 @@ import { ModelBadge, ThinkBadge } from "../../../components/RuntimeBadges/Runtim
 
 export interface AgentCardProps {
   agent: Agent;
-  /** How many pipelines reference this agent (drives the usage chip). */
-  pipelineCount?: number;
+  /** How many workflows reference this agent (drives the usage chip). */
+  workflowCount?: number;
   onClick?: (agent: Agent) => void;
 }
 
-export function AgentCard({ agent, pipelineCount = 0, onClick }: AgentCardProps) {
+export function AgentCard({ agent, workflowCount = 0, onClick }: AgentCardProps) {
   const t = useTranslations("agents");
   const name = agent.name ?? agent.id;
   const tools = agent.tools ?? [];
@@ -22,9 +22,9 @@ export function AgentCard({ agent, pipelineCount = 0, onClick }: AgentCardProps)
         [
           <ModelBadge key="model" model={agent.model ?? "sonnet"} />,
           <ThinkBadge key="think" level={agent.thinking ?? "medium"} />,
-          pipelineCount > 0 ? (
+          workflowCount > 0 ? (
             <Tag key="usage" tone="accent">
-              <Icon name="flow" size="xs" /> {t("pipelineUsage", { count: pipelineCount })}
+              <Icon name="flow" size="xs" /> {t("workflowUsage", { count: workflowCount })}
             </Tag>
           ) : null,
         ],

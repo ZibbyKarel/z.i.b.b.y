@@ -15,15 +15,15 @@ const SINGLE: TaskRouting = {
 };
 
 const LOOP: TaskRouting = {
-  target: { kind: "pipeline", id: "delivery", name: "Delivery", glyph: "flow" },
+  target: { kind: "workflow", id: "delivery", name: "Delivery", glyph: "flow" },
   confidence: 0.85,
   reason: "loop reason",
   matchedTerms: [],
-  candidates: [{ kind: "pipeline", id: "delivery", name: "Delivery", glyph: "flow" }],
+  candidates: [{ kind: "workflow", id: "delivery", name: "Delivery", glyph: "flow" }],
   mode: "loop",
   proposedGoal: {
     objective: "keep going until green",
-    maker: { kind: "pipeline", id: "delivery" },
+    maker: { kind: "workflow", id: "delivery" },
     verifier: { kind: "checks" },
     maxIterations: 6,
     instructions: "keep going until green",

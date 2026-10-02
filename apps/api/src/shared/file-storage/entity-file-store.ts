@@ -29,7 +29,7 @@ import {
 export abstract class EntityFileStore<T> {
   protected readonly dir: string;
 
-  /** File suffix, e.g. `.md`, `.pipeline.md`, `.json`. */
+  /** File suffix, e.g. `.md`, `.workflow.md`, `.json`. */
   protected abstract readonly fileExt: string;
   /** Allowed-id pattern; the path-containment check is applied on top. */
   protected abstract readonly idRegex: RegExp;

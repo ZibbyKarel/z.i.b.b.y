@@ -22,16 +22,16 @@ const MAX_TASK_CHARS = 4000;
  */
 const ROUTER_SYSTEM_PROMPT = [
   "You are a task router for an agentic OS. Given a task description and a catalog",
-  "of available agents, pipelines and departments, choose the SINGLE best target to handle it.",
+  "of available agents, workflows and departments, choose the SINGLE best target to handle it.",
   "",
   "Reply with ONLY a JSON object, no prose and no code fences:",
-  '{"targetKind":"agent"|"pipeline"|"department","targetId":string,"confidence":number,"reason":string,"matchedTerms":string[],"loop":boolean,"objective":string,"runnerUp":{"targetKind":string,"targetId":string,"confidence":number,"reason":string}|null}',
+  '{"targetKind":"agent"|"workflow"|"department","targetId":string,"confidence":number,"reason":string,"matchedTerms":string[],"loop":boolean,"objective":string,"runnerUp":{"targetKind":string,"targetId":string,"confidence":number,"reason":string}|null}',
   "",
   "- targetId MUST be one of the ids in the catalog — never invent one.",
   '- A "department" row is a whole delegation, not a specific unit: pick it when the task',
-  "  clearly fits that department's mandate but no single agent/pipeline in the catalog is",
+  "  clearly fits that department's mandate but no single agent/workflow in the catalog is",
   "  obviously the best fit — the task is then routed again INSIDE that department to pick",
-  "  the specific pipeline or agent. Prefer a concrete agent/pipeline whenever one matches",
+  "  the specific workflow or agent. Prefer a concrete agent/workflow whenever one matches",
   "  well; only fall back to a department row for the broader, mandate-level match.",
   "- confidence is your calibrated 0..1 belief the choice is correct.",
   "- reason is one short sentence a human can read.",
@@ -46,7 +46,7 @@ const ROUTER_SYSTEM_PROMPT = [
 ].join("\n");
 
 interface RouterVerdict {
-  targetKind: "agent" | "pipeline" | "department";
+  targetKind: "agent" | "workflow" | "department";
   targetId: string;
   confidence: number;
   reason: string;
@@ -103,7 +103,7 @@ function parseAlternative(raw: unknown): RouterAlternative | null {
 
 /**
  * The AI categorizer: runs a one-shot headless `claude -p` "router" that picks a
- * target from the stored catalog. Consistent with how agent/pipeline runs already
+ * target from the stored catalog. Consistent with how agent/workflow runs already
  * spawn `claude` (Max subscription, no API key) — but this is a short, captured
  * call rather than a streamed, sandboxed run.
  *
@@ -286,7 +286,7 @@ export class ClaudeCliRouter implements TaskRouter {
     const kind = obj.targetKind;
     const id = obj.targetId;
     if (
-      (kind !== "agent" && kind !== "pipeline" && kind !== "department") ||
+      (kind !== "agent" && kind !== "workflow" && kind !== "department") ||
       typeof id !== "string" ||
       id.length === 0
     ) {

@@ -3,7 +3,7 @@ import type { BudgetStatus, GlobalBudget, Limits, ProjectBudgetStatus } from "@z
 import { AgentRunnerService } from "../agents/agent-runner.service";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { LimitsService } from "../limits/limits.service";
-import { PipelineRunnerService } from "../pipelines/pipeline-runner.service";
+import { WorkflowRunnerService } from "../workflows/workflow-runner.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ResolvedProjectService } from "../projects/resolved-project.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
@@ -80,7 +80,7 @@ export class BudgetService {
     private readonly resolved: ResolvedProjectService,
     private readonly limits: LimitsService,
     private readonly agentRunner: AgentRunnerService,
-    private readonly pipelineRunner: PipelineRunnerService,
+    private readonly workflowRunner: WorkflowRunnerService,
     private readonly tasks: ScheduledTasksStorageService,
     private readonly activity: ActivityLogService,
     logger: LoggerService,
@@ -288,8 +288,8 @@ export class BudgetService {
   /**
    * Top-level runs currently consuming a concurrency slot for `projectId`. Counts
    * agent runs (running / awaiting-approval / paused-limit) labelled with the project
-   * and pipeline runs (running / paused-limit) whose `projectPath` is the project's
-   * path — pipeline STAGE runs live in the pipeline runner's own core and never reach
+   * and workflow runs (running / paused-limit) whose `projectPath` is the project's
+   * path — workflow STAGE runs live in the workflow runner's own core and never reach
    * these registries, so they are not double-counted (the watch-out).
    *
    * Phase 9: a `paused-limit` run still owns its slot — releasing it would let the
@@ -307,7 +307,7 @@ export class BudgetService {
         run.status === "paused-limit";
       if (active && labels.has(run.project)) n += 1;
     }
-    for (const run of this.pipelineRunner.list()) {
+    for (const run of this.workflowRunner.list()) {
       const active = run.status === "running" || run.status === "paused-limit";
       if (active && run.projectPath === project.path) n += 1;
     }
@@ -318,7 +318,7 @@ export class BudgetService {
    * Top-level runs currently consuming a concurrency slot SYSTEM-WIDE (125c) —
    * the same two registries and the same status predicates as {@link countRunning},
    * just without the project resolution or label filter: agent runs (running /
-   * awaiting-approval / paused-limit) and pipeline runs (running / paused-limit),
+   * awaiting-approval / paused-limit) and workflow runs (running / paused-limit),
    * across every project AND every unattributed run.
    *
    * D-007: goal runs stay uncounted here too, deliberately — a global counter
@@ -338,7 +338,7 @@ export class BudgetService {
         run.status === "paused-limit";
       if (active) n += 1;
     }
-    for (const run of this.pipelineRunner.list()) {
+    for (const run of this.workflowRunner.list()) {
       const active = run.status === "running" || run.status === "paused-limit";
       if (active) n += 1;
     }

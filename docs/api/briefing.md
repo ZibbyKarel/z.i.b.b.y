@@ -41,7 +41,7 @@ of `generate`:
 1. Read the **since-cursor** — the `generatedAt` of the last briefing, persisted at
    `last-briefing.json` under the activity dir. A missing or garbage cursor falls
    back to the start of the current day (first boot, or a deleted cursor file).
-2. Gather, in parallel: pending approvals, all pipeline runs and all goal runs
+2. Gather, in parallel: pending approvals, all workflow runs and all goal runs
    (filtered down to parked / in-flight), in-flight channel items
    (`new`/`needs-draft`/`triaged` — an item awaiting reply research carries no
    approval, so it is something ZIBBY is watching, never a needs-you decision),
@@ -57,14 +57,14 @@ of `generate`:
    drops the `departments` section, a failed limits read only drops Ledger's note).
 3. Hand all of it to `assembleBriefing` (the pure function in
    `briefing-assembly.ts`), which builds five sections:
-   - **`needsYou`** — pending approvals, parked pipeline/goal runs, dead-lettered
+   - **`needsYou`** — pending approvals, parked workflow/goal runs, dead-lettered
      tasks, and red-CI state lines, newest first. A currently-red CI is a _state_
      line (present while red, gone once green) rather than a one-time alert — the
      one-time notification is a separate monitor alert (`docs/api/monitors.md`).
    - **`didForYou`** — the last 10 activity entries of kinds that count as "ZIBBY
      did this for you" (`task-outcome`, `channel-reply`, `run-finished`,
-     `pipeline-finished`, `approval-approved`).
-   - **`watching`** — channel integrations with new items, pipeline runs paused on
+     `workflow-finished`, `approval-approved`).
+   - **`watching`** — channel integrations with new items, workflow runs paused on
      the usage limit, and in-flight/paused goal runs — things ZIBBY is doing or
      tracking, not decisions waiting on the operator.
    - **`engagements`** — one row per project with waiting tasks or attributable

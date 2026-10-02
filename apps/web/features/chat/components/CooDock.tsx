@@ -44,7 +44,7 @@ function targetLabel(target: TaskTarget): string {
  *   generalised to a list); a per-turn `@`-mention picked in the composer still
  *   wins outright, exactly as before.
  * - **Composer (D-020):** the existing `CommandLine`, with `multipleTargets` on —
- *   each `@`-picked agent/pipeline/department becomes its own removable chip
+ *   each `@`-picked agent/workflow/department becomes its own removable chip
  *   IN THE COMPOSER (independent of the dock-level target chip above), and the
  *   attach control is back (the same upload hook/drag-and-drop as New task): the
  *   chat send contract now carries `mentions` + `attachmentSetId`, so there's no

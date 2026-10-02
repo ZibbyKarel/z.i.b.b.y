@@ -41,9 +41,9 @@ export function artifactRecordId(runRef: string, kind: ArtifactKind, from: strin
 
 /**
  * The durable artifact registry (N2a) — one plain-JSON provenance record per
- * delivered output, written by the pipeline delivery sinks at delivery time.
+ * delivered output, written by the workflow delivery sinks at delivery time.
  * Files are the source of truth: the registry is what lets a chain (N2b) bind a
- * downstream pipeline's input to an upstream run's output long after that run is
+ * downstream workflow's input to an upstream run's output long after that run is
  * evicted from memory, and what makes "where did this file/PR come from?" always
  * answerable (Law 5).
  */
@@ -86,13 +86,13 @@ export class ArtifactsStorageService extends EntityFileStore<ArtifactRecord> {
     await this.writeEntity(record);
   }
 
-  /** List records newest-first, optionally scoped to a project and/or pipeline. */
+  /** List records newest-first, optionally scoped to a project and/or workflow. */
   async listFiltered(query: ArtifactListQuery = {}): Promise<ArtifactRecord[]> {
     const all = await this.list();
     return all.filter(
       (r) =>
         (!query.projectId || r.producedBy.projectId === query.projectId) &&
-        (!query.pipelineId || r.producedBy.pipelineId === query.pipelineId),
+        (!query.workflowId || r.producedBy.workflowId === query.workflowId),
     );
   }
 }
