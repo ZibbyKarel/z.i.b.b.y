@@ -70,8 +70,11 @@ export function ApprovalsScreen() {
       label: t("columns.decision"),
       width: "sm",
       render: (a) => (
-        <Tag uppercase tone={a.status === "rejected" ? "bad" : "ok"}>
-          {t(`decision.${a.status === "rejected" ? "rejected" : "approved"}`)}
+        <Tag
+          uppercase
+          tone={a.status === "rejected" ? "bad" : a.status === "revised" ? "warn" : "ok"}
+        >
+          {t(`decision.${a.status === "pending" ? "approved" : a.status}`)}
         </Tag>
       ),
     },

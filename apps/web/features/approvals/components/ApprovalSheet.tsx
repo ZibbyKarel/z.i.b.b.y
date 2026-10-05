@@ -24,7 +24,7 @@ import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { useTaskQuery } from "../../tasks/queries";
 import { HIGH_RISK_TYPES, formatWaited, gateTitleKey } from "../approval";
-import { useApproveMutation, useRejectMutation } from "../mutations";
+import { useApproveMutation, useRejectMutation, useReviseMutation } from "../mutations";
 import { useApprovalQuery } from "../queries";
 
 /** Maps this feature's `DiffHunk` (approval.ts) into the DS `DiffView`'s own shape. */
@@ -43,7 +43,8 @@ function toDsHunks(hunks: { h: string; lines: [kind: "add" | "del" | "ctx", text
  * `AppShell` and driven purely by the search param so the rail's "→" and any
  * other deep link can open it over any page. Single-click approve everywhere
  * (D-014/O-13 overrides the spec's HoldButton-if-high-risk) — `highRisk` is
- * shown only as a `Tag` marker.
+ * shown only as a `Tag` marker. A workflow stage checkpoint also offers "request
+ * changes": a required note sends the step back to re-run instead of failing the run.
  */
 export function ApprovalSheet({
   approvalId,
@@ -59,8 +60,10 @@ export function ApprovalSheet({
   const { data: approval, isPending, isError, refetch } = useApprovalQuery(approvalId);
   const approve = useApproveMutation();
   const reject = useRejectMutation();
+  const revise = useReviseMutation();
   const [reason, setReason] = useState("");
-  const [denying, setDenying] = useState(false);
+  // Which note the footer is collecting: a deny reason or a change request.
+  const [mode, setMode] = useState<"deny" | "revise" | null>(null);
 
   // Best-effort parent chain: most gated runs ARE (or belong to) a task, whose
   // `subtasks` — when present — are this approval's chain route. A non-task
@@ -76,7 +79,7 @@ export function ApprovalSheet({
 
   const close = () => {
     setReason("");
-    setDenying(false);
+    setMode(null);
     onClose();
   };
 
@@ -145,10 +148,10 @@ export function ApprovalSheet({
         </Stack>
       )}
 
-      {denying && (
+      {mode && (
         <TextAreaField
-          hint={t("reasonHint")}
-          label={t("reasonLabel")}
+          hint={t(mode === "revise" ? "reviseHint" : "reasonHint")}
+          label={t(mode === "revise" ? "reviseLabel" : "reasonLabel")}
           onChange={(e) => setReason(e.target.value)}
           value={reason}
         />
@@ -156,31 +159,48 @@ export function ApprovalSheet({
     </Stack>
   );
 
-  const footer = !approval ? null : denying ? (
+  const footer = !approval ? null : mode ? (
     <Row gap="100">
       <Button
         block
         intent="secondary"
         onClick={() => {
-          setDenying(false);
+          setMode(null);
           setReason("");
         }}
       >
         {t("cancel")}
       </Button>
-      <Button
-        block
-        intent="primary"
-        loading={reject.isPending}
-        onClick={() =>
-          reject.mutate(
-            { params: { id: approval.id }, body: reason ? { reason } : {} },
-            { onSuccess: close },
-          )
-        }
-      >
-        {t("confirmDeny")}
-      </Button>
+      {mode === "revise" ? (
+        <Button
+          block
+          disabled={!reason.trim()}
+          intent="primary"
+          loading={revise.isPending}
+          onClick={() =>
+            revise.mutate(
+              { params: { id: approval.id }, body: { note: reason.trim() } },
+              { onSuccess: close },
+            )
+          }
+        >
+          {t("confirmRevise")}
+        </Button>
+      ) : (
+        <Button
+          block
+          intent="primary"
+          loading={reject.isPending}
+          onClick={() =>
+            reject.mutate(
+              { params: { id: approval.id }, body: reason ? { reason } : {} },
+              { onSuccess: close },
+            )
+          }
+        >
+          {t("confirmDeny")}
+        </Button>
+      )}
     </Row>
   ) : (
     <Row gap="100">
@@ -194,7 +214,12 @@ export function ApprovalSheet({
       >
         {t("approve")}
       </Button>
-      <Button block intent="secondary" onClick={() => setDenying(true)}>
+      {gateKey === "stage-approval" && (
+        <Button block intent="secondary" onClick={() => setMode("revise")}>
+          {t("revise")}
+        </Button>
+      )}
+      <Button block intent="secondary" onClick={() => setMode("deny")}>
         {t("deny")}
       </Button>
       <Button

@@ -221,7 +221,6 @@ export function AgentNode({
             {label}
           </Typography>
         </Container>
-        {node.approval === "ask" && <Icon name="checkpoint" size="xs" tone="faint" />}
         {readOnly && attempt !== undefined && (
           <Tag tone="warn">
             {maxAttempts !== undefined ? `${attempt}/${maxAttempts}` : `${attempt}`}
@@ -290,6 +289,15 @@ export function AgentNode({
             />
           )}
         </Stack>
+      )}
+
+      {/* Human checkpoint: pinned on the node's top edge so it reads at a glance. */}
+      {node.approval === "ask" && (
+        <Container left="8px" position="absolute" top="-10px">
+          <Tag icon="checkpoint" title={t("approvalTagTitle")} tone="warn">
+            {t("approvalTag")}
+          </Tag>
+        </Container>
       )}
 
       {port("in")}

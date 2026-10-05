@@ -31,6 +31,7 @@ const { hooks } = vi.hoisted(() => ({
     task: { data: undefined },
     approve: vi.fn(),
     reject: vi.fn(),
+    revise: vi.fn(),
   },
 }));
 
@@ -38,6 +39,7 @@ vi.mock("../queries", () => ({ useApprovalQuery: () => hooks.approval }));
 vi.mock("../mutations", () => ({
   useApproveMutation: () => ({ mutate: hooks.approve, isPending: false }),
   useRejectMutation: () => ({ mutate: hooks.reject, isPending: false }),
+  useReviseMutation: () => ({ mutate: hooks.revise, isPending: false }),
 }));
 vi.mock("../../tasks/queries", () => ({ useTaskQuery: () => hooks.task }));
 
@@ -74,6 +76,30 @@ describe("ApprovalSheet (ZB-08 / D-014)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Potvrdit zamítnutí" }));
     expect(hooks.reject).toHaveBeenCalledWith(
       { params: { id: "appr-1" }, body: { reason: "Not scoped for this sprint" } },
+      { onSuccess: expect.any(Function) },
+    );
+  });
+
+  it("hides request-changes on a non-checkpoint approval", async () => {
+    render(<ApprovalSheet approvalId="appr-1" onClose={onClose} />);
+    expect(screen.queryByRole("button", { name: "Připomínky" })).toBeNull();
+  });
+
+  it("request changes on a stage checkpoint requires a note, then revises", async () => {
+    hooks.approval = {
+      data: { ...APPROVAL, kind: "workflow-gate", action: "stage-approval" },
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    };
+    render(<ApprovalSheet approvalId="appr-1" onClose={onClose} />);
+    await userEvent.click(screen.getByRole("button", { name: "Připomínky" }));
+    const confirm = screen.getByRole("button", { name: "Vrátit k úpravě" });
+    expect(confirm).toBeDisabled();
+    await userEvent.type(screen.getByLabelText("Co upravit"), "přegeneruj stranu 7");
+    await userEvent.click(confirm);
+    expect(hooks.revise).toHaveBeenCalledWith(
+      { params: { id: "appr-1" }, body: { note: "přegeneruj stranu 7" } },
       { onSuccess: expect.any(Function) },
     );
   });

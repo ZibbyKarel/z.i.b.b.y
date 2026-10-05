@@ -55,6 +55,14 @@ re-audit: check **only the pages listed there** (they were just redrawn); every 
 page was kept by an earlier pass and stays kept, so the audit converges. A page already
 rejected twice is kept unless it is still blocking — then say so plainly in the table.
 
+## Operator review
+
+If your context has an **Operator note**, the operator reviewed the finished book and
+sent it back. The note is authoritative and overrides the severity rules and the
+re-audit scope above: un-approve exactly the pages it names (even ones you would
+keep, and even past the one-third limit), use the note's wording in `--reason`, and
+end with `<verdict>gap</verdict>`. Change nothing the note does not ask for.
+
 ## Act
 
 - If at most a few pages are blocking, un-approve them so production redraws them:

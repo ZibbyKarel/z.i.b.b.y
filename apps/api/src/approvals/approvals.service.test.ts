@@ -2,7 +2,11 @@ import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApprovalAlreadyDecidedError, ApprovalNotFoundError } from "./approvals.errors";
+import {
+  ApprovalAlreadyDecidedError,
+  ApprovalNotFoundError,
+  ApprovalNotRevisableError,
+} from "./approvals.errors";
 import { ApprovalsService } from "./approvals.service";
 import { ApprovalsStorageService } from "./approvals.storage.service";
 
@@ -49,6 +53,29 @@ describe("ApprovalsService", () => {
     expect(decided.decidedAt).toBeTruthy();
     expect(resume).toHaveBeenCalledWith("agent-007_1_p0");
     expect(cancel).not.toHaveBeenCalled();
+  });
+
+  it("revise routes the note to the runner and only works on a stage checkpoint", async () => {
+    const revise = vi.fn();
+    service.register("workflow-gate", { resume: vi.fn(), cancel: vi.fn(), revise });
+    const gate = (action: string) =>
+      service.requestApproval({
+        runId: "wf_1",
+        kind: "workflow-gate",
+        skill: "Coloring Book",
+        action,
+        detail: "review",
+        risk: "low",
+      });
+
+    const cap = await gate("spend-past-cap");
+    await expect(service.revise(cap.id, "nope")).rejects.toBeInstanceOf(ApprovalNotRevisableError);
+    expect((await service.get(cap.id)).status).toBe("pending");
+
+    const stage = await gate("stage-approval");
+    const decided = await service.revise(stage.id, "redo page 7");
+    expect(decided).toMatchObject({ status: "revised", reason: "redo page 7" });
+    expect(revise).toHaveBeenCalledWith("wf_1", "redo page 7");
   });
 
   it("reject cancels the run and a second decision is rejected", async () => {

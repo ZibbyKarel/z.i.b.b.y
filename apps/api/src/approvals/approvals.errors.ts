@@ -21,3 +21,11 @@ export class InvalidApprovalIdError extends Error {
     this.name = "InvalidApprovalIdError";
   }
 }
+
+/** Raised when "request changes" targets an approval that is not a stage checkpoint. */
+export class ApprovalNotRevisableError extends Error {
+  constructor(public readonly id: string) {
+    super(`Approval "${id}" cannot be sent back for changes`);
+    this.name = "ApprovalNotRevisableError";
+  }
+}

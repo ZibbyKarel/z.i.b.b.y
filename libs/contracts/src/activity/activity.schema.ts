@@ -41,6 +41,7 @@ export const ActivityKindSchema = z.enum([
   "approval-requested",
   "approval-approved",
   "approval-rejected",
+  "approval-revised",
   "gate-decision",
   "channel-item",
   "channel-triage",

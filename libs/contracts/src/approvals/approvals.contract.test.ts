@@ -24,6 +24,16 @@ describe("approvalsContract", () => {
   });
 });
 
+describe("reviseApproval", () => {
+  it("posts a required, non-blank note to /api/approvals/:id/revise", () => {
+    expect(approvalsContract.reviseApproval.path).toBe("/api/approvals/:id/revise");
+    const body = approvalsContract.reviseApproval.body;
+    expect(body.safeParse({ note: "redo page 7" }).success).toBe(true);
+    expect(body.safeParse({ note: "   " }).success).toBe(false);
+    expect(body.safeParse({}).success).toBe(false);
+  });
+});
+
 describe("approval schema", () => {
   const base = {
     id: "agent_1_ab",

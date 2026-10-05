@@ -85,8 +85,12 @@ export const ApprovalRunKindSchema = z.enum([
 ]);
 export type ApprovalRunKind = z.infer<typeof ApprovalRunKindSchema>;
 
-/** Lifecycle of an approval: created `pending`, then a human decides. */
-export const ApprovalStatusSchema = z.enum(["pending", "approved", "rejected"]);
+/**
+ * Lifecycle of an approval: created `pending`, then a human decides. `revised` =
+ * "request changes" on a workflow stage checkpoint: the run is neither continued
+ * nor failed — the gated phase re-runs with the operator's note (kept in `reason`).
+ */
+export const ApprovalStatusSchema = z.enum(["pending", "approved", "rejected", "revised"]);
 export type ApprovalStatus = z.infer<typeof ApprovalStatusSchema>;
 
 /**
@@ -130,9 +134,10 @@ export const ApprovalSchema = z.object({
   sourceUrl: z.string().optional(),
   /**
    * ZB-08/O-12 — an optional operator note on a rejection, shown in the
-   * Policy history table. Additive: only `reject` ever sets it, and an older
-   * decided approval re-parses with it simply absent.
+   * Policy history table; on a `revised` decision it is the (required) change
+   * request fed back into the run. An older decided approval re-parses with it
+   * simply absent.
    */
-  reason: z.string().min(1).max(500).optional(),
+  reason: z.string().min(1).max(4000).optional(),
 });
 export type Approval = z.infer<typeof ApprovalSchema>;

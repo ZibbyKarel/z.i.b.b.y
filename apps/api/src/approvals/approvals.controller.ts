@@ -5,6 +5,7 @@ import { makeErrorMapper } from "../shared/http/error-mapping";
 import {
   ApprovalAlreadyDecidedError,
   ApprovalNotFoundError,
+  ApprovalNotRevisableError,
   InvalidApprovalIdError,
 } from "./approvals.errors";
 import { ApprovalsService } from "./approvals.service";
@@ -13,9 +14,9 @@ const errors = makeErrorMapper("Approval", {
   missing: [ApprovalNotFoundError, InvalidApprovalIdError],
 });
 
-/** Deciding an already-decided approval → 409. */
+/** Deciding an already-decided (or revising a non-checkpoint) approval → 409. */
 const decided = (error: unknown) =>
-  error instanceof ApprovalAlreadyDecidedError
+  error instanceof ApprovalAlreadyDecidedError || error instanceof ApprovalNotRevisableError
     ? ({ status: 409, body: { message: error.message } } as const)
     : undefined;
 
@@ -42,6 +43,9 @@ export class ApprovalsController {
 
       rejectApproval: ({ params: { id }, body }) =>
         errors.or404(id, () => this.approvals.reject(id, body?.reason), decided),
+
+      reviseApproval: ({ params: { id }, body }) =>
+        errors.or404(id, () => this.approvals.revise(id, body.note), decided),
     });
   }
 }

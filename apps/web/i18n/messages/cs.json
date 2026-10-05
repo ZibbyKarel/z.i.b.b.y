@@ -846,6 +846,8 @@
       "commandsHintTool": "Jeden na řádek, spouští se v sandboxu fáze.",
       "commandsPlaceholder": "pnpm test",
       "approvalLabel": "Lidská kontrola po tomto kroku",
+      "approvalTag": "kontrola",
+      "approvalTagTitle": "Po tomto kroku se běh zastaví a čeká na tvou kontrolu.",
       "budgetLabel": "Limit útraty (USD)",
       "budgetHint": "Volitelné. Prázdné = bez limitu.",
       "projectLabel": "Výchozí projekt",
@@ -2296,7 +2298,8 @@
       },
       "decision": {
         "approved": "Schváleno",
-        "rejected": "Zamítnuto"
+        "rejected": "Zamítnuto",
+        "revised": "Vráceno k úpravě"
       },
       "sheet": {
         "title": "Schválení",
@@ -2312,6 +2315,10 @@
         "reasonHint": "Zobrazí se v historii schválení.",
         "cancel": "Zrušit",
         "confirmDeny": "Potvrdit zamítnutí",
+        "revise": "Připomínky",
+        "reviseLabel": "Co upravit",
+        "reviseHint": "Krok se spustí znovu s touto poznámkou a pak se ti vrátí ke kontrole. Např. „přegeneruj stranu 7, maskot má jinou tvář“.",
+        "confirmRevise": "Vrátit k úpravě",
         "approve": "Schválit",
         "deny": "Zamítnout",
         "openTask": "Otevřít úkol",

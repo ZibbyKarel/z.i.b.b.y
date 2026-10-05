@@ -3,7 +3,7 @@ import type { Approval, ApprovalRunKind, DepartmentId } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { withPathLock } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
-import { ApprovalAlreadyDecidedError } from "./approvals.errors";
+import { ApprovalAlreadyDecidedError, ApprovalNotRevisableError } from "./approvals.errors";
 import { ApprovalsStorageService } from "./approvals.storage.service";
 
 /**
@@ -17,6 +17,8 @@ export interface ResumableRunner {
   resume(runId: string): Promise<void> | void;
   /** Terminate a rejected run without performing its action. */
   cancel(runId: string): void;
+  /** Optional: re-run the gated step with the operator's change request. */
+  revise?(runId: string, note: string): Promise<void> | void;
 }
 
 /** Inputs a runner supplies when it pauses a run on the approval gate. */
@@ -143,6 +145,27 @@ export class ApprovalsService {
   }
 
   /**
+   * "Request changes": send a workflow stage checkpoint back for rework. Only a
+   * `stage-approval` gate is revisable (a spend cap has nothing to rework); the
+   * check runs before `decide`, so a refused revise leaves the approval pending.
+   */
+  async revise(id: string, note: string): Promise<Approval> {
+    const pending = await this.storage.get(id);
+    const runner = this.runners.get(pending.kind);
+    if (pending.action !== "stage-approval" || !runner?.revise) {
+      throw new ApprovalNotRevisableError(id);
+    }
+    const approval = await this.decide(id, "revised", note);
+    this.log?.info("approval revised; re-running gated step", {
+      id,
+      runId: approval.runId,
+      kind: approval.kind,
+    });
+    await runner.revise(approval.runId, note);
+    return approval;
+  }
+
+  /**
    * Resolve any pending approval that belongs to `runId` as rejected, WITHOUT
    * routing the decision back to the runner. Called by a runner that is deleting
    * the run itself (the run is already being torn down), so the queue doesn't keep
@@ -183,7 +206,11 @@ export class ApprovalsService {
    * `ApprovalAlreadyDecidedError`, so it never reaches its runner call. Not
    * reentrant — this is the only call site, and it never re-enters the lock.
    */
-  private decide(id: string, status: "approved" | "rejected", reason?: string): Promise<Approval> {
+  private decide(
+    id: string,
+    status: Exclude<Approval["status"], "pending">,
+    reason?: string,
+  ): Promise<Approval> {
     return withPathLock(`approval:${id}`, async () => {
       const approval = await this.storage.get(id);
       if (approval.status !== "pending") throw new ApprovalAlreadyDecidedError(id);
@@ -194,7 +221,7 @@ export class ApprovalsService {
         ...(reason ? { reason } : {}),
       };
       void this.activity?.record({
-        kind: status === "approved" ? "approval-approved" : "approval-rejected",
+        kind: `approval-${status}`,
         summary: `approval ${status}: ${approval.skill} · ${approval.action}`,
         refs: { approvalId: id, runRef: approval.runId, decision: status, status: approval.kind },
       });

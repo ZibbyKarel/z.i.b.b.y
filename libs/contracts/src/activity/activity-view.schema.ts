@@ -53,6 +53,7 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   "approval-requested": "approvals",
   "approval-approved": "approvals",
   "approval-rejected": "approvals",
+  "approval-revised": "approvals",
   "gate-decision": "approvals",
   "channel-item": "channels",
   "channel-triage": "channels",

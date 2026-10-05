@@ -46,6 +46,16 @@ export const approvalsContract = c.router(
       responses: { 200: ApprovalSchema, 404: ErrorSchema, 409: ErrorSchema },
       summary: "Reject a pending approval (terminates the gated run, no action taken)",
     },
+    reviseApproval: {
+      method: "POST",
+      path: "/approvals/:id/revise",
+      pathParams: ApprovalIdParam,
+      // "Request changes" on a workflow stage checkpoint: the gated phase re-runs
+      // with the note as operator guidance, then parks at the same gate again.
+      body: z.object({ note: z.string().trim().min(1).max(4000) }),
+      responses: { 200: ApprovalSchema, 404: ErrorSchema, 409: ErrorSchema },
+      summary: "Send a pending stage checkpoint back for rework with an operator note",
+    },
   },
   { pathPrefix: "/api", strictStatusCodes: true },
 );

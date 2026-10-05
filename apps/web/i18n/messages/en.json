@@ -846,6 +846,8 @@
       "commandsHintTool": "One per line, run in the stage sandbox.",
       "commandsPlaceholder": "pnpm test",
       "approvalLabel": "Human check after this step",
+      "approvalTag": "review",
+      "approvalTagTitle": "The run stops after this step and waits for your review.",
       "budgetLabel": "Spend cap (USD)",
       "budgetHint": "Optional. Empty = no cap.",
       "projectLabel": "Default project",
@@ -2296,7 +2298,8 @@
       },
       "decision": {
         "approved": "Approved",
-        "rejected": "Rejected"
+        "rejected": "Rejected",
+        "revised": "Changes requested"
       },
       "sheet": {
         "title": "Approval",
@@ -2312,6 +2315,10 @@
         "reasonHint": "Shown in the approval history.",
         "cancel": "Cancel",
         "confirmDeny": "Confirm deny",
+        "revise": "Request changes",
+        "reviseLabel": "What to change",
+        "reviseHint": "The step re-runs with this note, then comes back to you for review. E.g. \"regenerate page 7, the mascot's face is off\".",
+        "confirmRevise": "Send back",
         "approve": "Approve",
         "deny": "Deny",
         "openTask": "Open task",

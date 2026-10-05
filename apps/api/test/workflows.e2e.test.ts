@@ -499,6 +499,28 @@ describe("Workflows API (e2e)", () => {
       return r.status === "failed" ? r : null;
     });
     expect(failed.stageRuns.map((s: { phaseId: string }) => s.phaseId)).toEqual(["a"]);
+
+    // Request changes: the gated phase re-runs with the note, then parks at the same gate.
+    const third = await runner.start("checkpointed", undefined, undefined);
+    const gate3 = await until(() => pendingGate(third.workflowRunId));
+    const revised = await app.get(ApprovalsService).revise(gate3.id, "redo page 7");
+    expect(revised.status).toBe("revised");
+    expect(revised.reason).toBe("redo page 7");
+    const gate4 = await until(async () => {
+      const g = await pendingGate(third.workflowRunId);
+      return g && g.id !== gate3.id ? g : null;
+    });
+    const reparked = runner.get(third.workflowRunId);
+    expect(reparked.parkedReason).toBe("gate");
+    expect(reparked.stageRuns.map((s: { phaseId: string }) => s.phaseId)).toEqual(["a", "a"]);
+    expect(await fs.readFile(path.join(reparked.cwd, "a.note.md"), "utf8")).toContain(
+      "redo page 7",
+    );
+    await app.get(ApprovalsService).approve(gate4.id);
+    await until(async () => {
+      const r = runner.get(third.workflowRunId);
+      return r.status === "done" ? r : null;
+    });
   });
 
   it("budget: a tool's costs.jsonl pushes spend past the cap → parks before the next phase; approve raises the cap (P1-03)", async () => {

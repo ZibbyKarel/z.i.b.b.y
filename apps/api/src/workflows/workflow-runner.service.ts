@@ -250,6 +250,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     this.approvals.register("workflow-gate", {
       resume: (workflowRunId) => this.resumeGate(workflowRunId, "approved"),
       cancel: (workflowRunId) => void this.resumeGate(workflowRunId, "rejected"),
+      revise: (workflowRunId, note) => this.resumeGate(workflowRunId, "revised", note),
     });
     await this.core.init();
     await this.reconstruct();
@@ -1676,11 +1677,15 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * Continue (approve) or fail (reject) a run parked by {@link parkAtGate}. A budget
-   * approval raises the cap by another `maxCostUsd` before re-entering. Never throws.
+   * approval raises the cap by another `maxCostUsd` before re-entering. `revised`
+   * ("request changes" on a stage checkpoint) re-runs the gated phase itself with
+   * the operator's note as its resume-context — the phase lands green again and
+   * parks at the same gate, so the operator reviews the reworked output. Never throws.
    */
   private async resumeGate(
     workflowRunId: string,
-    decision: "approved" | "rejected",
+    decision: "approved" | "rejected" | "revised",
+    note?: string,
   ): Promise<void> {
     try {
       const run = this.runs.get(workflowRunId) ?? (await this.readAggregate(workflowRunId));
@@ -1701,6 +1706,37 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         await this.writeAggregate(run);
         await this.writeProgress(run, phaseIds);
         this.log.info("gate rejected — run failed", { workflowRunId, reason });
+        return;
+      }
+      if (decision === "revised" && reason === "gate") {
+        // Durable trace of the change request next to the run (files are truth).
+        await fs
+          .appendFile(
+            path.join(run.cwd, `${gate.phaseId}.note.md`),
+            `${(note ?? "").trim()}\n\n`,
+            "utf8",
+          )
+          .catch(() => {});
+        const retries = new Map(Object.entries(run.retries ?? {}));
+        // An operator-requested rework is not a failed attempt — give the phase's
+        // own loop a fresh budget so its qualify back-edge can still fire.
+        retries.set(gate.phaseId, 0);
+        run.status = "running";
+        run.currentStage = gate.phaseId;
+        await this.writeAggregate(run);
+        const project = await this.projectForRun(run);
+        const resumeContext = await this.composeResumeContext(run, phaseIds, {
+          note: `${(note ?? "").trim()}\n\nThe operator reviewed your previous output and sent it back with the change request above. It is authoritative: apply exactly what it asks.`,
+        });
+        const traceId = this.trace.getTraceId() ?? randomUUID();
+        void this.trace.run({ traceId, runId: workflowRunId }, () =>
+          this.drive(run, workflow, project, {
+            cursor: gate.phaseId,
+            handoffSource: this.recomputeHandoff(run, workflow, gate.phaseId),
+            retries,
+            resumeContext,
+          }),
+        );
         return;
       }
       if (reason === "budget" && run.budget) {
