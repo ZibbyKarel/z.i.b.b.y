@@ -374,7 +374,11 @@ meaning fully autonomous. Once the phase lands green (`produces` written):
    `runId` = workflowRunId, carrying the workflow's department) tells the operator to
    review the produced file;
 3. **approve** re-enters the driver at the next phase (or delivers the outputs when the
-   chain is finished); **reject** fails the run (`status: "failed"`).
+   chain is finished); **reject** fails the run (`status: "failed"`); **request changes**
+   (`POST /api/approvals/:id/revise` with a note) re-runs the gated phase itself with the
+   note as its resume-context ("Operator note"), resets that phase's retry counter, and
+   appends the note to `<phaseId>.note.md` in the run folder — the phase lands green and
+   parks at the same gate again for another review.
 
 ### Budget (`budget`)
 

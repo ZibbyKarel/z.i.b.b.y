@@ -58,12 +58,12 @@ interface Approval {
   action: string; // the intent (e.g. "git.push", "spend-past-cap")
   detail: string; // human-readable description
   risk: "low" | "medium" | "high";
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "revised";
   requestedAt: string; // ISO datetime
   decidedAt?: string; // ISO datetime
   department?: DepartmentId; // NS2 F3c — the acting unit's owning department
   sourceUrl?: string; // Phase 127 — link to the item's origin (Jira/GitHub/Slack)
-  reason?: string; // ZB-08/O-12 — an optional operator note on a rejection
+  reason?: string; // ZB-08/O-12 — operator note on a rejection; the change request on `revised`
 }
 ```
 
@@ -109,6 +109,7 @@ knows how to resume or cancel that kind of paused work:
 interface ResumableRunner {
   resume(runId: string): Promise<void> | void; // spawn the approved, previously-paused run
   cancel(runId: string): void; // terminate a rejected run without performing its action
+  revise?(runId: string, note: string): Promise<void> | void; // only `workflow-gate`: re-run the gated step
 }
 ```
 
@@ -165,6 +166,10 @@ POST /api/approvals/:id/approve  approve (resumes the gated run) — 404 | 409
 POST /api/approvals/:id/reject   reject (terminates the gated run, no action taken) — 404 | 409
                                   body: { reason?: string } — ZB-08/O-12, an optional operator note
                                   shown in the Policy → Approvals history table
+POST /api/approvals/:id/revise   request changes on a `stage-approval` workflow checkpoint — 404 | 409
+                                  body: { note: string } (required); status → `revised`, the gated
+                                  phase re-runs with the note and parks at the same gate again.
+                                  Any other approval (incl. `spend-past-cap`) → 409, stays pending
 ```
 
 A client can never create an Approval directly — only the server (a runner or
