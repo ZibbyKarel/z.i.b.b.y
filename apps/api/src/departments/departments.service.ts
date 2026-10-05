@@ -7,6 +7,7 @@ import {
   type DepartmentState,
   type DepartmentWithStatus,
   type Division,
+  type FailedRunNotification,
   type SubtaskSummary,
   type UnownedEntity,
   type UpdateDepartmentInput,
@@ -22,6 +23,7 @@ import { WorkflowsStorageService } from "../workflows/workflows.storage.service"
 import { TaskParentsService } from "../tasks/task-parents.service";
 import { TaskRunsService } from "../tasks/task-runs.service";
 import { DepartmentSeenStore } from "./department-seen.store";
+import { type RunReadState, RunReadStore } from "./run-read.store";
 import { UnknownDivisionError } from "./departments.errors";
 import { DepartmentsStorageService } from "./departments.storage.service";
 
@@ -117,7 +119,52 @@ export class DepartmentsService {
     private readonly taskParents: TaskParentsService,
     /** D-022: departments are data — every read goes through the store. */
     private readonly store: DepartmentsStorageService,
+    /** The notification bell's read state — a failed run counts as an error until read. */
+    private readonly runRead: RunReadStore,
   ) {}
+
+  /** The bell: every unread failed run, newest first, with its owning department. */
+  async notifications(): Promise<FailedRunNotification[]> {
+    const [runs, read, owners] = await Promise.all([
+      this.taskRuns.listTaskRuns(),
+      this.runRead.state(),
+      this.owners(),
+    ]);
+    return runs
+      .filter((run) => isUnreadFailure(run, read))
+      .map((run) => {
+        const department = owners(run);
+        return {
+          runId: run.runId,
+          title: run.taskTitle || run.title || run.owner,
+          ...(department ? { department } : {}),
+          failedAt: completionSignal(run),
+        };
+      })
+      .sort((a, b) => b.failedAt.localeCompare(a.failedAt));
+  }
+
+  /** Mark `runIds` read — or, when omitted, every currently unread failure. */
+  async markRead(runIds?: readonly string[]): Promise<FailedRunNotification[]> {
+    const ids = runIds ?? (await this.notifications()).map((n) => n.runId);
+    await this.runRead.markRead(ids);
+    return this.notifications();
+  }
+
+  /** Resolves a run to the department owning its workflow/agent, if any. */
+  private async owners(): Promise<(run: TaskRun) => DepartmentId | undefined> {
+    const [workflows, agents] = await Promise.all([this.workflows.list(), this.agents.list()]);
+    const workflowOwner = new Map<string, DepartmentId>();
+    for (const p of workflows) if (p.department) workflowOwner.set(p.id, p.department);
+    const agentOwner = new Map<string, DepartmentId>();
+    for (const a of agents) if (a.department) agentOwner.set(a.id, a.department);
+    return (run) =>
+      run.kind === "workflow"
+        ? workflowOwner.get(run.owner)
+        : run.kind === "agent"
+          ? agentOwner.get(run.owner)
+          : undefined;
+  }
 
   /**
    * All eight departments with real status, sorted for LISTS/BRIEFINGS: `waiting`
@@ -277,18 +324,12 @@ export class DepartmentsService {
     departments?: readonly Department[],
   ): Promise<Map<DepartmentId, Aggregate>> {
     const all = departments ?? (await this.store.list());
-    const [workflows, runs, pendingApprovals, agents] = await Promise.all([
-      this.workflows.list(),
+    const [runs, pendingApprovals, ownerOf, read] = await Promise.all([
       this.taskRuns.listTaskRuns(),
       this.approvals.list("pending"),
-      this.agents.list(),
+      this.owners(),
+      this.runRead.state(),
     ]);
-
-    const workflowOwner = new Map<string, DepartmentId>();
-    for (const p of workflows) if (p.department) workflowOwner.set(p.id, p.department);
-
-    const agentOwner = new Map<string, DepartmentId>();
-    for (const a of agents) if (a.department) agentOwner.set(a.id, a.department);
 
     const lastSeenById = new Map<DepartmentId, string>(
       await Promise.all(all.map(async (s) => [s.id, await this.seen.seenAt(s.id)] as const)),
@@ -300,26 +341,18 @@ export class DepartmentsService {
     const ownedWorkflowRuns: OwnedWorkflowRun[] = [];
 
     for (const run of runs) {
-      const owner =
-        run.kind === "workflow"
-          ? workflowOwner.get(run.owner)
-          : run.kind === "agent"
-            ? agentOwner.get(run.owner)
-            : undefined;
+      const owner = ownerOf(run);
       if (!owner) continue;
       if (run.kind === "workflow") ownedWorkflowRuns.push({ runId: run.runId, owner });
 
       if (run.status === "running") running.add(owner);
 
-      if (run.status === "done" || run.status === "error") {
-        const completedAt = completionSignal(run);
+      if (isUnreadFailure(run, read)) {
+        errorRuns.set(owner, [...(errorRuns.get(owner) ?? []), run.runId]);
+      } else if (run.status === "done") {
         const lastSeen = lastSeenById.get(owner);
-        if (lastSeen !== undefined && completedAt > lastSeen) {
-          if (run.status === "error") {
-            errorRuns.set(owner, [...(errorRuns.get(owner) ?? []), run.runId]);
-          } else {
-            tier2Count.set(owner, (tier2Count.get(owner) ?? 0) + 1);
-          }
+        if (lastSeen !== undefined && completionSignal(run) > lastSeen) {
+          tier2Count.set(owner, (tier2Count.get(owner) ?? 0) + 1);
         }
       }
     }
@@ -351,6 +384,15 @@ export class DepartmentsService {
     }
     return result;
   }
+}
+
+/** A failed run the operator has not read yet (the bell / a department's `errorCount`). */
+function isUnreadFailure(run: TaskRun, read: RunReadState): boolean {
+  return (
+    run.status === "error" &&
+    !read.readIds.has(run.runId) &&
+    completionSignal(run) > read.readBefore
+  );
 }
 
 /** Best-available completion signal for a terminal run — see the class doc for why. */

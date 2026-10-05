@@ -130,6 +130,7 @@ describe("ArchService.audit", () => {
       { body: string; severity?: string; projectId?: string },
     ];
     expect(signal.body).toContain("LoggerService");
+    expect(signal.body).toContain("Audit kvality vlastního kódu ZIBBY");
     expect(signal.severity).toBeUndefined();
     expect(signal.projectId).toBeUndefined();
   });

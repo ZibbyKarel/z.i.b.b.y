@@ -106,7 +106,7 @@ export const departmentsContract = c.router(
         404: ErrorSchema,
       },
       summary:
-        "Acknowledge a department's Tier-2 reports and failed runs — resets its report/error window and returns the refreshed entry",
+        "Acknowledge a department's Tier-2 reports — resets its report window and returns the refreshed entry (failed runs are read via /notifications)",
     },
 
     getRoster: {

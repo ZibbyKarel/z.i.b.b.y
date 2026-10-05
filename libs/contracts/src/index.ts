@@ -58,6 +58,8 @@ export * from "./health/health.contract";
 export * from "./departments/department.schema";
 export * from "./departments/departments.contract";
 export * from "./departments/department-findings.schema";
+export * from "./notifications/notification.schema";
+export * from "./notifications/notifications.contract";
 export * from "./self/self.schema";
 export * from "./self/self.contract";
 export * from "./self-knowledge/self-knowledge.schema";

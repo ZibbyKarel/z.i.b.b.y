@@ -92,7 +92,13 @@ describe("SignalBusService", () => {
     expect(approvals.requestApproval).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "automation-dispatch", risk: "medium" }),
     );
-    const pendingId = (approvals.requestApproval.mock.calls[0] as [{ runId: string }])[0].runId;
+    const [parked] = approvals.requestApproval.mock.calls[0] as [{ runId: string; detail: string }];
+    // The approval carries the signal's full body and what approving starts.
+    expect(JSON.parse(parked.detail)).toMatchObject({
+      consequence: expect.stringContaining("Po schválení"),
+      preview: { kind: "message", body: signal.body },
+    });
+    const pendingId = parked.runId;
 
     await bus.resume(pendingId);
     expect(dispatch).toHaveBeenCalledTimes(1);

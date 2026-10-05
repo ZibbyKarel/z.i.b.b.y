@@ -4,8 +4,10 @@ import {
   Button,
   ChainRouteStrip,
   type ChainRouteStripStep,
+  Container,
   DiffView,
   type DiffHunk as DsDiffHunk,
+  Markdown,
   MetricStrip,
   Row,
   Sheet,
@@ -21,7 +23,7 @@ import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { useTaskQuery } from "../../tasks/queries";
-import { HIGH_RISK_TYPES, formatWaited, gateTitleKey, riskMeta } from "../approval";
+import { HIGH_RISK_TYPES, formatWaited, gateTitleKey } from "../approval";
 import { useApproveMutation, useRejectMutation } from "../mutations";
 import { useApprovalQuery } from "../queries";
 
@@ -51,6 +53,7 @@ export function ApprovalSheet({
   onClose: () => void;
 }) {
   const t = useTranslations("policy.approvals.sheet");
+  const tApprovals = useTranslations("approvals");
   const departments = useDepartmentLookup();
   const router = useRouter();
   const { data: approval, isPending, isError, refetch } = useApprovalQuery(approvalId);
@@ -106,11 +109,19 @@ export function ApprovalSheet({
           { label: t("metric.action"), value: approval.action },
           {
             label: t("metric.severity"),
-            value: riskMeta(approval.riskType).label,
+            value: tApprovals(`severity.${approval.risk}`),
           },
           { label: t("metric.department"), value: approval.department ?? "—" },
         ]}
       />
+
+      {approval.consequence && <Typography type="text">{approval.consequence}</Typography>}
+
+      {approval.preview?.kind === "message" && (
+        <Container maxHeight="50vh" overflow="auto">
+          <Markdown escapeHtml source={approval.preview.body} />
+        </Container>
+      )}
 
       {approval.preview?.kind === "diff" && (
         <DiffView

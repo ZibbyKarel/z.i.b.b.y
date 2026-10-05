@@ -50,6 +50,7 @@ import { expand } from "./expand";
 import { collapse } from "./collapse";
 import { help } from "./help";
 import { chat } from "./chat";
+import { bell } from "./bell";
 
 /** Every glyph available in the dashboard icon set. */
 export const iconNames = [
@@ -103,6 +104,7 @@ export const iconNames = [
   "collapse",
   "help",
   "chat",
+  "bell",
 ] as const;
 
 export type IconName = (typeof iconNames)[number];
@@ -159,4 +161,5 @@ export const paths: Record<IconName, ReactNode> = {
   collapse,
   help,
   chat,
+  bell,
 };

@@ -3,10 +3,9 @@ import { makeInvalidatingMutation } from "../../../state/makeInvalidatingMutatio
 import { getDepartmentsQueryKey } from "../queries/useDepartmentsQuery";
 
 /**
- * Acknowledge a department's Tier-2 reports and failed runs (`POST
- * /api/departments/:id/seen`) — the ORG map's focus panel calls this from its
- * failed-runs "dismiss", which clears the department's (and Zibby's) `error`.
- * Tier-3 (`waiting`) items are untouched (they resolve only through approvals).
+ * Acknowledge a department's Tier-2 reports (`POST /api/departments/:id/seen`) —
+ * resets its `report` window. Failed runs are read through the notification bell
+ * instead; Tier-3 (`waiting`) items resolve only through approvals.
  */
 export const useMarkDepartmentSeenMutation = makeInvalidatingMutation(
   apiClient.departments.markDepartmentSeen.useMutation,

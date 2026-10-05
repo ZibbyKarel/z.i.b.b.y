@@ -72,6 +72,30 @@ function toFindingLine(finding: ArchFinding): string {
   return `circular dependency: ${finding.members.join(" → ")}`;
 }
 
+/** What each finding kind means, for an operator reading the approval. */
+const KIND_EXPLAINED: Record<ArchFinding["kind"], string> = {
+  "god-node":
+    "god node — symbol s neobvykle mnoha vazbami v grafu závislostí; změna v něm se rozleje do celé aplikace",
+  community:
+    "oversized community — příliš velký shluk provázaných souborů, hranice modulů se rozmazávají",
+  cycle:
+    "circular dependency — moduly, které se navzájem importují; jde je rozplést a je to opravitelné",
+};
+
+/** The batch signal's body: scope, per-kind counts with a one-line meaning, then every finding. */
+function batchBody(findings: ArchFinding[]): string {
+  const counts = new Map<ArchFinding["kind"], number>();
+  for (const f of findings) counts.set(f.kind, (counts.get(f.kind) ?? 0) + 1);
+  return [
+    "Audit kvality vlastního kódu ZIBBY (tento repozitář) — graphify graf závislostí + madge.",
+    "",
+    ...[...counts].map(([kind, n]) => `- ${n}× ${KIND_EXPLAINED[kind]}`),
+    "",
+    "Nálezy:",
+    ...findings.map((f) => `- ${toFindingLine(f)}`),
+  ].join("\n");
+}
+
 /** Tolerant shape of `madge --circular --json`'s output: an array of cycle chains. */
 type MadgeCircularOutput = string[][];
 
@@ -170,7 +194,7 @@ export class ArchService {
       from: "qa",
       kind: "audit-batch",
       title: `Arch: ${findings.length} nových nálezů kvality`,
-      body: findings.map((f) => `- ${toFindingLine(f)}`).join("\n"),
+      body: batchBody(findings),
       fingerprint: `archbatch-${now.toISOString().slice(0, 10)}-${sha1(sortedFingerprints.join("|"))}`,
     };
   }

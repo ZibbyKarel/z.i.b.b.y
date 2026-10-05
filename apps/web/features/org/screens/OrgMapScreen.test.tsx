@@ -56,8 +56,9 @@ vi.mock("../../departments/useDepartmentLookup", async () => {
   return { useDepartmentLookup: () => departmentLookup(DEPARTMENTS) };
 });
 
+let approvals: { id: string }[] = [];
 vi.mock("../../approvals/queries/useApprovalsQuery", () => ({
-  useApprovalsQuery: () => ({ data: [] }),
+  useApprovalsQuery: () => ({ data: approvals }),
 }));
 
 vi.mock("../../employees/queries/useEmployeesQuery", () => ({
@@ -101,17 +102,22 @@ vi.mock("../../employees/mutations", () => ({
   useHireEmployeeMutation: () => ({ mutate: hireMutate, isPending: false }),
 }));
 
-const markSeenMutate = vi.fn();
 vi.mock("../../departments/mutations", () => ({
   useCreateDepartmentMutation: () => ({ mutate: vi.fn(), isPending: false }),
-  useMarkDepartmentSeenMutation: () => ({ mutate: markSeenMutate, isPending: false }),
+}));
+
+let notifications: { runId: string; title: string; failedAt: string }[] = [];
+vi.mock("../../notifications", () => ({
+  NOTIFICATIONS_PARAM: "notifications",
+  useNotificationsQuery: () => ({ data: notifications }),
 }));
 
 describe("OrgMapScreen", () => {
   beforeEach(() => {
     push.mockReset();
     hireMutate.mockReset();
-    markSeenMutate.mockReset();
+    approvals = [];
+    notifications = [{ runId: "r_fail", title: "Broken patch", failedAt: "2026-10-01T00:00:00Z" }];
     focusParam = "";
   });
 
@@ -134,12 +140,29 @@ describe("OrgMapScreen", () => {
     expect(screen.getByTestId(ZibbyAvatarTestId.Root)).toHaveAttribute("data-state", "error");
   });
 
-  it("links an error Zibby with no employee in error to the runs archive filtered to errors", () => {
+  it("links an error Zibby with no employee in error to the notification bell", () => {
     render(<OrgMapScreen />);
     expect(screen.getByTestId(OrgMapScreenTestId.CooNode)).toHaveAttribute(
       "href",
-      "/activity/runs?state=error",
+      "/org?notifications=open",
     );
+  });
+
+  it("links a blocked Zibby waiting on an approval to the approvals queue", () => {
+    notifications = [];
+    approvals = [{ id: "a1" }];
+    render(<OrgMapScreen />);
+    expect(screen.getByTestId(ZibbyAvatarTestId.Root)).toHaveAttribute("data-state", "blocked");
+    expect(screen.getByTestId(OrgMapScreenTestId.CooNode)).toHaveAttribute(
+      "href",
+      "/policy/approvals",
+    );
+  });
+
+  it("drops Zibby out of error once every failure is read", () => {
+    notifications = [];
+    render(<OrgMapScreen />);
+    expect(screen.getByTestId(ZibbyAvatarTestId.Root)).not.toHaveAttribute("data-state", "error");
   });
 
   it("lists the focused department's failed runs, linked to their detail", () => {
@@ -148,13 +171,6 @@ describe("OrgMapScreen", () => {
     const row = screen.getByTestId(OrgMapScreenTestId.FailedRun);
     expect(row).toHaveTextContent("Broken patch");
     expect(row).toHaveAttribute("href", "/activity/runs/r_fail");
-  });
-
-  it("dismissing the failed runs marks the focused department seen", () => {
-    focusParam = "dev";
-    render(<OrgMapScreen />);
-    fireEvent.click(screen.getByTestId(OrgMapScreenTestId.DismissFailedRunsButton));
-    expect(markSeenMutate).toHaveBeenCalledWith({ params: { id: "dev" }, body: {} });
   });
 
   it("shows no focus panel without ?department=", () => {

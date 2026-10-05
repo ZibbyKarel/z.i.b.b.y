@@ -234,8 +234,8 @@ export type DepartmentState = z.infer<typeof DepartmentStateSchema>;
  * A department's identity plus its live status: `state` plus how many Tier-2
  * (act-then-report) and Tier-3 (surface-and-wait) items are outstanding, plus
  * how many owned runs failed. `tier2Count` counts only SUCCESSFUL (`done`)
- * terminal runs since last seen — a failed run counts toward `errorCount`
- * instead, never both. `errorRunIds` names the runs behind `errorCount`, so a
+ * terminal runs since last seen; `errorCount` counts failed runs not yet read
+ * in the notification bell (`/notifications`), never both. `errorRunIds` names the runs behind `errorCount`, so a
  * client can show what actually failed.
  */
 export const DepartmentWithStatusSchema = DepartmentSchema.extend({

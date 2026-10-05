@@ -7,6 +7,30 @@ import { LoggerService, type ScopedLogger } from "../shared/logging/logger.servi
 import { AutomationsStorageService } from "./automations.storage.service";
 import { SignalBusStore } from "./signal-bus.store";
 
+/**
+ * The parked approval's `detail`, packed as the web's enrichment JSON
+ * (`apps/web/features/approvals/approval.ts` `parseApprovalDetail`): what fired,
+ * what approving will start, and the signal's full body as the preview — so the
+ * operator can decide without digging for the source.
+ */
+function approvalDetail(automation: Automation, signal: Signal): string {
+  const t = automation.target;
+  const what =
+    t.type === "task"
+      ? `vznikne úkol${t.target ? ` pro ${t.target.name}` : ""}: „${t.text}“`
+      : t.type === "workflow"
+        ? `spustí se workflow ${t.workflowId}`
+        : t.type === "agent"
+          ? `spustí se agent ${t.agentId}`
+          : `spustí se ${t.type}`;
+  const project = signal.projectId ? ` Projekt: ${signal.projectId}.` : "";
+  return JSON.stringify({
+    summary: `${automation.name ?? automation.id}: ${signal.title}`,
+    consequence: `Po schválení ${what}${project}`,
+    preview: { kind: "message", to: signal.from, subject: signal.title, body: signal.body },
+  });
+}
+
 /** Starts an automation's target for a signal; returns a run reference. */
 export type SignalDispatcher = (automation: Automation, signal: Signal) => Promise<string>;
 
@@ -93,7 +117,7 @@ export class SignalBusService implements OnModuleInit, ResumableRunner {
         kind: "automation-dispatch",
         skill: signal.from,
         action: "automation-dispatch",
-        detail: `${automation.name ?? automation.id}: ${signal.title}`,
+        detail: approvalDetail(automation, signal),
         risk: "medium",
         department: signal.from,
       });

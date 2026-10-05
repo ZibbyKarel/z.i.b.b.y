@@ -19,6 +19,7 @@ import type { SubtaskSummary } from "@zibby/contracts";
 import type { TaskParentsService } from "../tasks/task-parents.service";
 import type { TaskRunsService } from "../tasks/task-runs.service";
 import { DEPARTMENT_SEEN_EPOCH, type DepartmentSeenStore } from "./department-seen.store";
+import type { RunReadStore } from "./run-read.store";
 import { DepartmentNotFoundError } from "./departments.errors";
 import { DepartmentsService } from "./departments.service";
 import type { DepartmentsStorageService } from "./departments.storage.service";
@@ -72,6 +73,8 @@ function build(opts: {
   runs?: TaskRun[];
   pendingApprovals?: Approval[];
   seenAt?: Record<string, string>;
+  /** Failed runs the operator already read in the bell. */
+  readIds?: string[];
   agents?: Agent[];
   integrations?: Integration[];
   mandate?: Mandate;
@@ -100,6 +103,14 @@ function build(opts: {
     }),
   };
 
+  const readIds = new Set(opts.readIds ?? []);
+  const runRead = {
+    state: vi.fn(async () => ({ readBefore: DEPARTMENT_SEEN_EPOCH, readIds: new Set(readIds) })),
+    markRead: vi.fn(async (ids: readonly string[]) => {
+      for (const id of ids) readIds.add(id);
+    }),
+  };
+
   const departmentsStore = {
     list: vi.fn(async () => [...DEPARTMENT_SEED]),
     get: vi.fn(async (id: string) => {
@@ -120,9 +131,11 @@ function build(opts: {
     employeesStore as unknown as EmployeesStorageService,
     taskParents as unknown as TaskParentsService,
     departmentsStore as unknown as DepartmentsStorageService,
+    runRead as unknown as RunReadStore,
   );
   return {
     service,
+    runRead,
     workflowsStore,
     taskRuns,
     approvals,
@@ -253,6 +266,24 @@ describe("DepartmentsService", () => {
       });
       const dev = await service.get("dev");
       expect(dev).toMatchObject({ state: "error", tier2Count: 0, errorCount: 1 });
+    });
+
+    it("a failed run the operator read in the bell no longer counts as an error", async () => {
+      const { service } = build({
+        workflows: [workflowFixture("delivery", "dev")],
+        runs: [
+          taskRunFixture({
+            runId: "delivery_1",
+            kind: "workflow",
+            owner: "delivery",
+            status: "error",
+            startedAt: LATER,
+          }),
+        ],
+        readIds: ["delivery_1"],
+      });
+      const dev = await service.get("dev");
+      expect(dev).toMatchObject({ state: "idle", errorCount: 0, tier2Count: 0 });
     });
 
     it("lists the run ids behind errorCount, and an empty list when there are none", async () => {
@@ -830,5 +861,45 @@ describe("DepartmentsService", () => {
       const { service } = build({});
       await expect(service.subtasks("nope")).rejects.toThrow(DepartmentNotFoundError);
     });
+  });
+});
+
+describe("DepartmentsService notifications", () => {
+  const failed = (runId: string, owner: string, startedAt: string) =>
+    taskRunFixture({ runId, kind: "workflow", owner, status: "error", startedAt });
+
+  it("lists unread failed runs newest first, with their department", async () => {
+    const { service } = build({
+      workflows: [workflowFixture("delivery", "dev")],
+      runs: [
+        failed("delivery_1", "delivery", AT),
+        failed("delivery_2", "delivery", LATER),
+        failed("orphan_1", "orphan", LATER),
+        taskRunFixture({ runId: "ok_1", kind: "workflow", owner: "delivery", status: "done" }),
+      ],
+      readIds: ["delivery_1"],
+    });
+    const items = await service.notifications();
+    expect(items.map((n) => n.runId).sort()).toEqual(["delivery_2", "orphan_1"]);
+    expect(items.find((n) => n.runId === "delivery_2")?.department).toBe("dev");
+    expect(items.find((n) => n.runId === "orphan_1")?.department).toBeUndefined();
+  });
+
+  it("markRead() with no ids marks every unread failure read", async () => {
+    const { service, runRead } = build({
+      workflows: [workflowFixture("delivery", "dev")],
+      runs: [failed("delivery_1", "delivery", AT), failed("delivery_2", "delivery", LATER)],
+    });
+    expect(await service.markRead()).toEqual([]);
+    expect(runRead.markRead).toHaveBeenCalledWith(["delivery_2", "delivery_1"]);
+  });
+
+  it("markRead(ids) leaves the other failures unread", async () => {
+    const { service } = build({
+      workflows: [workflowFixture("delivery", "dev")],
+      runs: [failed("delivery_1", "delivery", AT), failed("delivery_2", "delivery", LATER)],
+    });
+    const left = await service.markRead(["delivery_2"]);
+    expect(left.map((n) => n.runId)).toEqual(["delivery_1"]);
   });
 });

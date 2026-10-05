@@ -17,6 +17,7 @@ const ISOLATED_ENV_VARS = [
   "INTEGRATION_STATE_DIR",
   "CREDENTIALS_DIR",
   "DEPARTMENTS_DIR",
+  "RUN_READ_FILE",
 ] as const;
 
 async function boot(): Promise<{ app: INestApplication; dir: string }> {
@@ -36,6 +37,7 @@ async function boot(): Promise<{ app: INestApplication; dir: string }> {
   process.env.CREDENTIALS_DIR = path.join(dir, "credentials");
   // D-022: an empty dir proves the store seeds itself on first boot.
   process.env.DEPARTMENTS_DIR = path.join(dir, "departments");
+  process.env.RUN_READ_FILE = path.join(dir, "run-read.json");
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
   const app = moduleRef.createNestApplication();
   await app.init();
@@ -92,6 +94,15 @@ describe("Departments API (e2e)", () => {
     const res = await request(app.getHttpServer()).post("/api/departments/dev/seen").send({});
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ id: "dev", state: "idle", tier2Count: 0, tier3Count: 0 });
+  });
+
+  it("GET /api/notifications is empty on a fresh install; POST /api/notifications/read marks all", async () => {
+    const list = await request(app.getHttpServer()).get("/api/notifications");
+    expect(list.status).toBe(200);
+    expect(list.body).toEqual([]);
+    const read = await request(app.getHttpServer()).post("/api/notifications/read").send({});
+    expect(read.status).toBe(200);
+    expect(read.body).toEqual([]);
   });
 
   it("POST /api/departments/:id/seen 404s on an unknown id", async () => {

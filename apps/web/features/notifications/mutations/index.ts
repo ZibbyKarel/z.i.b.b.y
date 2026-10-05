@@ -1,0 +1,1 @@
+export { useMarkNotificationsReadMutation } from "./useMarkNotificationsReadMutation";

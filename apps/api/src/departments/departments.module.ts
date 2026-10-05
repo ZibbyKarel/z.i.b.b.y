@@ -11,10 +11,17 @@ import { OwnerBackfillService } from "./owner-backfill.service";
 import { DEPARTMENT_SEEN_FILE, DepartmentSeenStore } from "./department-seen.store";
 import { DepartmentsController } from "./departments.controller";
 import { DepartmentsService } from "./departments.service";
+import { NotificationsController } from "./notifications.controller";
+import { RUN_READ_FILE, RunReadStore } from "./run-read.store";
 
 /** Default seen-state file, anchored to the data root: `.zibby/data/department-seen.json`. */
 export function resolveDepartmentSeenFile(): string {
   return process.env.DEPARTMENT_SEEN_FILE ?? dataDir("department-seen.json");
+}
+
+/** The bell's read state: `.zibby/data/run-read.json`. */
+export function resolveRunReadFile(): string {
+  return process.env.RUN_READ_FILE ?? dataDir("run-read.json");
 }
 
 /**
@@ -35,10 +42,12 @@ export function resolveDepartmentSeenFile(): string {
     IntegrationsModule,
     MandateModule,
   ],
-  controllers: [DepartmentsController],
+  controllers: [DepartmentsController, NotificationsController],
   providers: [
     { provide: DEPARTMENT_SEEN_FILE, useFactory: resolveDepartmentSeenFile },
     DepartmentSeenStore,
+    { provide: RUN_READ_FILE, useFactory: resolveRunReadFile },
+    RunReadStore,
     DepartmentsService,
     // NS2 F1b: one-shot startup backfill (`OnModuleInit`) — constructor-injects
     // the three owning stores, so Nest orders its init after each store's own

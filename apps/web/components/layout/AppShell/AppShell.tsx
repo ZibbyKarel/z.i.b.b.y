@@ -33,6 +33,7 @@ import { ApprovalSheet } from "../../../features/approvals/components/ApprovalSh
 import { RunningRail } from "../../../features/runs/components/RunningRail";
 import { HIGH_RISK_TYPES, formatWaited } from "../../../features/approvals/approval";
 import { useLimitsQuery } from "../../../features/limits";
+import { NotificationBell } from "../../../features/notifications";
 import { SECTIONS, type SectionId, sectionForPath } from "../../../state/config";
 
 /** Sets (or clears) the shell's `?approval=` search param over whatever page
@@ -220,6 +221,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
           limits={trailing.limits}
           linkComponent={NavLink}
           nav={<SectionNav active={active} />}
+          notifications={<NotificationBell />}
           onSearchClick={() => setPaletteOpen(true)}
         />
       }

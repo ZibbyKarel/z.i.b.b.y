@@ -2223,7 +2223,6 @@
       "teamEmptyTitle": "Nikdo si teď nepůjčuje",
       "teamEmpty": "Oddělení si zaměstnance půjčuje z fondu, jakmile začne podúkol.",
       "failedRunsTitle": "Chybné běhy",
-      "dismissFailedRuns": "Označit jako viděné",
       "subtasksTitle": "Otevřené podúkoly",
       "subtasksEmptyTitle": "Žádné podúkoly",
       "subtasksEmpty": "V tomto oddělení nejsou žádné otevřené podúkoly.",
@@ -2511,5 +2510,13 @@
     "emptyHooks": "Zatím žádné hooky.",
     "emptyCommands": "Zatím žádné příkazy.",
     "emptyPositions": "Zatím žádní agenti."
+  },
+  "notifications": {
+    "title": "Notifikace",
+    "bellLabel": "Notifikace ({count})",
+    "emptyTitle": "Vše přečteno",
+    "empty": "Žádné nepřečtené chybné běhy.",
+    "markRead": "Označit jako přečtené",
+    "markAllRead": "Označit vše jako přečtené"
   }
 }

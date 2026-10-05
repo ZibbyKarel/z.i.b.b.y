@@ -25,6 +25,12 @@ describe("AppHeader", () => {
     expect(screen.queryByTestId(AppHeaderTestId.ActiveCount)).toBeNull();
     expect(screen.queryByTestId(AppHeaderTestId.Limits)).toBeNull();
     expect(screen.queryByTestId(AppHeaderTestId.Search)).toBeNull();
+    expect(screen.queryByTestId(AppHeaderTestId.Notifications)).toBeNull();
+  });
+
+  it("renders the notifications slot when provided", () => {
+    render(<AppHeader notifications={<button type="button">Bell</button>} />);
+    expect(screen.getByTestId(AppHeaderTestId.Notifications)).toHaveTextContent("Bell");
   });
 
   it("renders the operator/activeCount/limits slots when provided", () => {

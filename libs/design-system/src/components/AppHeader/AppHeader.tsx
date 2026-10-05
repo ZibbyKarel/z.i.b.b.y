@@ -15,6 +15,7 @@ export enum AppHeaderTestId {
   Operator = "app-header-operator",
   ActiveCount = "app-header-active-count",
   Limits = "app-header-limits",
+  Notifications = "app-header-notifications",
   Search = "app-header-search",
   SearchShortcut = "app-header-search-shortcut",
 }
@@ -34,6 +35,8 @@ export interface AppHeaderProps {
   activeCount?: ReactNode;
   /** 5H / WEEK usage readout slot (a `LimitBar` pair), trailing cluster. */
   limits?: ReactNode;
+  /** Notification bell slot, trailing cluster just before search. */
+  notifications?: ReactNode;
   /** Search trigger label — the control itself is built in and always shows
    *  `⌘K`. Omit `onSearchClick` to not render the trigger at all. */
   searchLabel?: string;
@@ -62,6 +65,7 @@ export function AppHeader({
   operator,
   activeCount,
   limits,
+  notifications,
   searchLabel = "Search",
   onSearchClick,
   linkComponent,
@@ -105,6 +109,7 @@ export function AppHeader({
         {operator && <span data-testid={AppHeaderTestId.Operator}>{operator}</span>}
         {activeCount && <span data-testid={AppHeaderTestId.ActiveCount}>{activeCount}</span>}
         {limits && <span data-testid={AppHeaderTestId.Limits}>{limits}</span>}
+        {notifications && <span data-testid={AppHeaderTestId.Notifications}>{notifications}</span>}
 
         {onSearchClick && (
           <button

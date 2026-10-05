@@ -33,11 +33,9 @@ import {
   useDivisionsQuery,
 } from "../../departments/queries";
 import { NewDepartmentDialog } from "../../departments/components/NewDepartmentDialog";
-import {
-  useCreateDepartmentMutation,
-  useMarkDepartmentSeenMutation,
-} from "../../departments/mutations";
+import { useCreateDepartmentMutation } from "../../departments/mutations";
 import { useHireEmployeeMutation } from "../../employees/mutations";
+import { NOTIFICATIONS_PARAM, useNotificationsQuery } from "../../notifications";
 import { useEmployeesQuery } from "../../employees/queries";
 import { useRunsQuery } from "../../runs";
 import { runTitle } from "../../runs/run";
@@ -54,7 +52,6 @@ export enum OrgMapScreenTestId {
   AddEmployeeButton = "org-map-add-employee-button",
   AddDepartmentButton = "org-map-add-department-button",
   FailedRun = "org-map-failed-run",
-  DismissFailedRunsButton = "org-map-dismiss-failed-runs-button",
 }
 
 /** Zibby's state → the `/activity/runs` state group it reads as (idle → no filter). */
@@ -114,13 +111,13 @@ export function OrgMapScreen() {
   const busInset = `calc((100% - ${Math.max(0, divisions.length - 1) * GRID_GAP_PX}px) / ${divisions.length * 2})`;
   const { data: employees = [] } = useEmployeesQuery({ status: "active" });
   const { data: approvals = [] } = useApprovalsQuery();
+  const { data: notifications = [] } = useNotificationsQuery();
   const { data: focusSubtasks = [] } = useDepartmentSubtasksQuery(focusId);
   const { data: agents = [] } = useAgentsQuery();
   const hire = useHireEmployeeMutation(focusId ?? "");
   const [newAgentId, setNewAgentId] = useState("");
   const [creatingDepartment, setCreatingDepartment] = useState(false);
   const createDepartment = useCreateDepartmentMutation();
-  const markSeen = useMarkDepartmentSeenMutation();
 
   function setFocus(id: DepartmentId) {
     const next = new URLSearchParams(searchParams.toString());
@@ -132,23 +129,28 @@ export function OrgMapScreen() {
 
   const cooRuns = departments.reduce((sum, d) => sum + d.tier2Count + d.tier3Count, 0);
   const ownState: StateTone = cooRuns > 0 ? "working" : "idle";
-  // Zibby mirrors the most urgent agent state: any employee's state, a department
-  // with unseen failed runs (error) or pending approvals (blocked) — worse wins.
+  // Zibby mirrors the most urgent agent state: any employee's state, an unread
+  // failed run in the bell (error) or a pending approval (blocked) — worse wins.
   const cooState = aggregateZibbyState(ownState, [
     ...employees.map((e) => e.state),
-    ...departments.map((d): StateTone => (d.errorCount > 0 ? "error" : "idle")),
+    ...(notifications.length > 0 ? (["error"] as const) : []),
     ...departments.map((d): StateTone => (d.tier3Count > 0 ? "blocked" : "idle")),
     ...approvals.map((): StateTone => "blocked"),
   ]);
 
-  // The avatar opens the People roster when some employee is in Zibby's state;
-  // otherwise the state comes from runs/approvals, so it opens the runs archive.
+  // The avatar opens whatever put Zibby in its state: the People roster when an
+  // employee is in it, the bell for unread failures, the approvals queue for a
+  // pending approval, else the runs archive filtered to that state.
   const cooGroup = RUN_GROUP[cooState];
   const cooHref = employees.some((e) => e.state === cooState)
     ? `/org/people?state=${cooState}`
-    : cooGroup
-      ? `/activity/runs?state=${cooGroup}`
-      : "/activity/runs";
+    : cooState === "error"
+      ? `${pathname}?${NOTIFICATIONS_PARAM}=open`
+      : cooState === "blocked" && approvals.length > 0
+        ? "/policy/approvals"
+        : cooGroup
+          ? `/activity/runs?state=${cooGroup}`
+          : "/activity/runs";
 
   const focusDepartment = departments.find((d) => d.id === focusId);
   const { runs } = useRunsQuery();
@@ -345,23 +347,9 @@ export function OrgMapScreen() {
 
               {focusFailedRuns.length > 0 && (
                 <Stack gap="100">
-                  <Row gap="100" justify="between">
-                    <Typography tracking="wider" type="labelSm" variant="secondary">
-                      {t("focus.failedRunsTitle")}
-                    </Typography>
-                    {/* Failures count only since the department was last seen —
-                        acknowledging them clears the department's (and Zibby's) error. */}
-                    <Button
-                      data-testid={OrgMapScreenTestId.DismissFailedRunsButton}
-                      disabled={markSeen.isPending}
-                      icon="check"
-                      intent="ghost"
-                      onClick={() => markSeen.mutate({ params: { id: focusId ?? "" }, body: {} })}
-                      size="sm"
-                    >
-                      {t("focus.dismissFailedRuns")}
-                    </Button>
-                  </Row>
+                  <Typography tracking="wider" type="labelSm" variant="secondary">
+                    {t("focus.failedRunsTitle")}
+                  </Typography>
                   <Stack gap="50">
                     {focusFailedRuns.map((r) => {
                       const id = typeof r === "string" ? r : r.runId;
