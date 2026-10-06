@@ -12,6 +12,8 @@ import {
   Button,
   Container,
   LimitBar,
+  MenuButton,
+  type MenuButtonEntry,
   Rail,
   Stack,
   SubNav,
@@ -34,7 +36,33 @@ import { RunningRail } from "../../../features/runs/components/RunningRail";
 import { HIGH_RISK_TYPES, formatWaited } from "../../../features/approvals/approval";
 import { useLimitsQuery } from "../../../features/limits";
 import { NotificationBell } from "../../../features/notifications";
+import {
+  PinPageDialog,
+  PinnedRail,
+  SubnavPinButton,
+  type SubnavPinEntityKind,
+  pinHrefFor,
+  usePagePins,
+} from "../../../features/pins";
 import { SECTIONS, type SectionId, sectionForPath } from "../../../state/config";
+
+/** Top nav sections, minus `system` (spec step 1) — its own route group keeps
+ *  working via `sectionForPath`/`SECTIONS` (the sub-nav still shows its tabs);
+ *  it just never gets a clickable top tab, and `/system/*` highlights nothing
+ *  up there (`Tabs` tolerates a `value` matching no rendered `Tab`). */
+const NAV_SECTIONS = SECTIONS.filter((section) => section.id !== "system");
+
+/** `/work/<kind>/<id>` (and its sub-tabs) — a company/project/team detail
+ *  page, never its `/new` creation screen (spec step 5). */
+function matchEntityDetail(
+  pathname: string,
+): { kind: SubnavPinEntityKind; id: string; href: string } | null {
+  const match = /^\/work\/(companies|projects|teams)\/([^/]+)/.exec(pathname);
+  if (!match) return null;
+  const [, kind, id] = match as unknown as [string, SubnavPinEntityKind, string];
+  if (!id || id === "new") return null;
+  return { kind, id, href: `/work/${kind}/${id}` };
+}
 
 /** Sets (or clears) the shell's `?approval=` search param over whatever page
  *  is mounted — the ZB-08 sheet reads it directly, so opening it never
@@ -90,7 +118,7 @@ function SectionNav({ active }: { active: SectionId }) {
       variant="mono"
     >
       <TabList>
-        {SECTIONS.map((section) => (
+        {NAV_SECTIONS.map((section) => (
           <Tab key={section.id} value={section.id}>
             {t(section.id)}
           </Tab>
@@ -111,20 +139,34 @@ function SectionSubNav({ active }: { active: SectionId }) {
     label: t(`subtab.${section.id}.${tab.id}` as Parameters<typeof t>[0]),
     active: tab.href === pathname,
   }));
+  const entity = matchEntityDetail(pathname);
   return (
     <SubNav
       actions={
-        // ZB-04b: "+ NEW TASK" opens the dedicated `/work/tasks/new` page
-        // (the classify-driven dialog stays reachable via the `N` shortcut and
-        // the other call sites that seed it with an initial target/context).
-        <Button
-          icon="plus"
-          intent="primary"
-          onClick={() => router.push("/work/tasks/new" as Route)}
-          size="sm"
-        >
-          {tShell("newTask")}
-        </Button>
+        <>
+          {/* Spec step 5: a company/project/team detail page (never /new) gets
+           *  a "+ PIN"/"PINNED" toggle before "+ NEW TASK". */}
+          {entity && (
+            <SubnavPinButton
+              href={entity.href}
+              id={entity.id}
+              key={entity.href}
+              kind={entity.kind}
+            />
+          )}
+          {/* ZB-04b: "+ NEW TASK" opens the dedicated `/work/tasks/new` page
+           *  (the classify-driven dialog stays reachable via the `N` shortcut
+           *  and the other call sites that seed it with an initial
+           *  target/context). */}
+          <Button
+            icon="plus"
+            intent="primary"
+            onClick={() => router.push("/work/tasks/new" as Route)}
+            size="sm"
+          >
+            {tShell("newTask")}
+          </Button>
+        </>
       }
       items={items}
       linkComponent={NavLink}
@@ -202,15 +244,51 @@ function NeedsYouRail({ onOpenApproval }: { onOpenApproval: (id: string) => void
   );
 }
 
+/** The ⋮ overflow menu (`AppHeader`'s `menu` slot, spec step 2) — the page-pin
+ *  toggle (opens `PinPageDialog` to pin, unpins immediately), then SETTINGS/
+ *  REGISTRIES (today's System sub-tab hrefs, `SECTIONS` — the top tab is gone
+ *  but these routes still work, spec step 1). */
+function useHeaderMenu(currentHref: string, onPinRequested: () => void): MenuButtonEntry[] {
+  const t = useTranslations("shell");
+  const { isPagePinned, unpinPage } = usePagePins();
+  const pinned = isPagePinned(currentHref);
+  const system = SECTIONS.find((s) => s.id === "system");
+  const settingsHref = system?.tabs.find((tab) => tab.id === "settings")?.href ?? system?.href;
+  const registriesHref = system?.tabs.find((tab) => tab.id === "registries")?.href ?? system?.href;
+
+  return [
+    pinned
+      ? {
+          id: "pin",
+          label: t("menuUnpin"),
+          trailing: "●",
+          onSelect: () => unpinPage(currentHref),
+        }
+      : { id: "pin", label: t("menuPin"), trailing: "+", onSelect: onPinRequested },
+    { id: "divider-1", divider: true },
+    ...(settingsHref
+      ? [{ id: "settings", label: t("menuSettings"), trailing: "⚙", href: settingsHref }]
+      : []),
+    ...(registriesHref
+      ? [{ id: "registries", label: t("menuRegistries"), href: registriesHref }]
+      : []),
+  ];
+}
+
 function AppShellChrome({ children }: { children: ReactNode }) {
   const t = useTranslations("common");
   const tShell = useTranslations("shell");
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const active = sectionForPath(pathname);
   const trailing = useHeaderTrailing();
   const approvalSheet = useApprovalSheetParam();
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [pinDialogOpen, setPinDialogOpen] = useState(false);
   useCommandPaletteHotkey(() => setPaletteOpen((o) => !o));
+
+  const currentHref = pinHrefFor(pathname, searchParams.toString());
+  const menuItems = useHeaderMenu(currentHref, () => setPinDialogOpen(true));
 
   return (
     <AppFrame
@@ -220,6 +298,14 @@ function AppShellChrome({ children }: { children: ReactNode }) {
           homeHref="/org"
           limits={trailing.limits}
           linkComponent={NavLink}
+          menu={
+            <MenuButton
+              ariaLabel={tShell("menuAriaLabel")}
+              items={menuItems}
+              linkComponent={NavLink}
+              variant="bordered"
+            />
+          }
           nav={<SectionNav active={active} />}
           notifications={<NotificationBell />}
           onSearchClick={() => setPaletteOpen(true)}
@@ -227,11 +313,18 @@ function AppShellChrome({ children }: { children: ReactNode }) {
       }
       rail={
         <Stack direction="col" style={{ height: "100%", minHeight: 0 }}>
-          <Container height="50%" minHeight="0">
-            <NeedsYouRail onOpenApproval={approvalSheet.open} />
+          <Container shrink={false}>
+            <PinnedRail currentHref={currentHref} />
           </Container>
-          <Container height="50%" minHeight="0">
-            <RunningRail />
+          <Container grow minHeight="0">
+            <Stack direction="col" style={{ height: "100%", minHeight: 0 }}>
+              <Container height="50%" minHeight="0">
+                <NeedsYouRail onOpenApproval={approvalSheet.open} />
+              </Container>
+              <Container height="50%" minHeight="0">
+                <RunningRail />
+              </Container>
+            </Stack>
           </Container>
         </Stack>
       }
@@ -246,6 +339,9 @@ function AppShellChrome({ children }: { children: ReactNode }) {
         onOpenChange={setPaletteOpen}
         open={paletteOpen}
       />
+      {pinDialogOpen && (
+        <PinPageDialog href={currentHref} onClose={() => setPinDialogOpen(false)} />
+      )}
     </AppFrame>
   );
 }

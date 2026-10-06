@@ -2066,7 +2066,13 @@
   "pins": {
     "pin": "Připnout",
     "unpin": "Odepnout",
-    "run": "Spustit"
+    "pinnedLabel": "Připnuto",
+    "run": "Spustit",
+    "dialog": {
+      "title": "Připnout stránku",
+      "nameLabel": "Jméno",
+      "submit": "Připnout"
+    }
   },
   "archive": {
     "title": "Archiv úloh",
@@ -2209,7 +2215,16 @@
     "running": "Právě běží",
     "runningEmpty": "Nic neběží",
     "runningStop": "Zastavit",
-    "runningRestart": "Spustit znovu"
+    "runningRestart": "Spustit znovu",
+    "menuAriaLabel": "Více",
+    "menuPin": "Připnout stránku",
+    "menuUnpin": "Odepnout stránku",
+    "menuSettings": "Nastavení",
+    "menuRegistries": "Registry",
+    "pinnedTitle": "Připnuto · {count}",
+    "pinnedEmpty": "Připni libovolnou stránku z menu ⋮.",
+    "pinnedKindPage": "Stránka",
+    "pinnedUnpinAria": "Odepnout {name}"
   },
   "orgMap": {
     "cooAvatarLink": "Zobrazit lidi ve stavu: {state}",

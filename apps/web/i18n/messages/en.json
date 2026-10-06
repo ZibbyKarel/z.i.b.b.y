@@ -2066,7 +2066,13 @@
   "pins": {
     "pin": "Pin",
     "unpin": "Unpin",
-    "run": "Run"
+    "pinnedLabel": "Pinned",
+    "run": "Run",
+    "dialog": {
+      "title": "Pin page",
+      "nameLabel": "Name",
+      "submit": "Pin"
+    }
   },
   "archive": {
     "title": "Task archive",
@@ -2209,7 +2215,16 @@
     "running": "Running now",
     "runningEmpty": "Nothing is running",
     "runningStop": "Stop",
-    "runningRestart": "Restart"
+    "runningRestart": "Restart",
+    "menuAriaLabel": "More",
+    "menuPin": "Pin page",
+    "menuUnpin": "Unpin page",
+    "menuSettings": "Settings",
+    "menuRegistries": "Registries",
+    "pinnedTitle": "Pinned · {count}",
+    "pinnedEmpty": "Pin any page from the ⋮ menu.",
+    "pinnedKindPage": "Page",
+    "pinnedUnpinAria": "Unpin {name}"
   },
   "orgMap": {
     "cooAvatarLink": "Show people in state: {state}",
