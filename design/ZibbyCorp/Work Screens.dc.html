@@ -417,7 +417,7 @@ class Component extends DCLogic {
     if (out.isCompanies) {
       const st = this.state, mut = fn => { fn(); Z.emit(); this.forceUpdate(); };
       const cid = parts[2] || st.co || (Z.companies[0] || {}).id, c = Z.Co(cid) || Z.companies[0];
-      const pick = id => { this.setState({ co: id, coBudget: null, confirmDel: false }); if (parts[2]) go('work/companies'); };
+      const pick = id => { this.setState({ co: id, coBudget: null, confirmDel: false }); go('work/companies/' + id); };
       const openOf = x => Z.tasks.filter(t => x.projectIds.includes(t.project) && Z.taskState(t) !== 'done');
       out.coCount = pad(Z.companies.length);
       out.companies = Z.companies.map(x => { const o = openOf(x), hot = o.find(t => ['error','blocked'].includes(Z.taskState(t)));
@@ -436,7 +436,7 @@ class Component extends DCLogic {
           metrics: [{ k: 'PROJECTS', v: pad(c.projectIds.length) }, { k: 'OPEN TASKS', v: pad(open.length) }, { k: 'SPEND TO DATE', v: '$' + spend.toFixed(2) }, { k: 'MONTH CAP', v: '$' + c.budget.monthly }],
           projCount: pad(c.projectIds.length), noProjects: !c.projectIds.length,
           projects: c.projectIds.map(id => Z.projects.find(p => p.id === id)).filter(Boolean).map(p => ({ ...p, gateU: p.gate.toUpperCase(), open: pad(Z.tasks.filter(t => t.project === p.id && Z.taskState(t) !== 'done').length),
-            onOpen: () => { this.setState({ proj: p.id }); go('work/projects'); }, onUnlink: () => mut(() => { c.projectIds = c.projectIds.filter(x => x !== p.id); }) })),
+            onOpen: () => go('work/projects/' + p.id), onUnlink: () => mut(() => { c.projectIds = c.projectIds.filter(x => x !== p.id); }) })),
           linkOpts: Z.projects.filter(p => !c.projectIds.includes(p.id)).map(p => ({ v: p.id, l: p.id + (Z.coOf(p.id) ? ' · move from ' + coName(p.id) : ' · internal') })),
           onLink: e => { const v = e.target.value; if (!v) return; mut(() => { Z.companies.forEach(x => { x.projectIds = x.projectIds.filter(id => id !== v); }); c.projectIds.push(v); }); },
           addProject: () => { const id = st.npId.replace(/^-|-$/g, ''); if (!id || Z.projects.some(p => p.id === id)) return; mut(() => { Z.projects.push({ id, repo: st.npRepo.trim() || c.id + '/' + id, branch: 'main', chain: 'feature', gate: 'standard', cap: Math.round(c.budget.daily), desc: 'New project for ' + c.name }); c.projectIds.push(id); }); this.setState({ npId: '', npRepo: '' }); },
@@ -453,8 +453,8 @@ class Component extends DCLogic {
     }
 
     if (out.isProjects) {
-      const p = Z.projects.find(x => x.id === this.state.proj) || Z.projects[0];
-      out.projects = Z.projects.map(x => ({ ...x, coName: coName(x.id) || 'Internal', coInk: coName(x.id) ? 'var(--ink)' : 'var(--ink3)', gateU: x.gate.toUpperCase(), open: pad(Z.tasks.filter(t => t.project === x.id && Z.taskState(t) !== 'done').length), bg: x.id === p.id ? 'var(--panel2)' : 'transparent', onClick: () => this.setState({ proj: x.id }) }));
+      const p = Z.projects.find(x => x.id === (parts[2] || this.state.proj)) || Z.projects[0];
+      out.projects = Z.projects.map(x => ({ ...x, coName: coName(x.id) || 'Internal', coInk: coName(x.id) ? 'var(--ink)' : 'var(--ink3)', gateU: x.gate.toUpperCase(), open: pad(Z.tasks.filter(t => t.project === x.id && Z.taskState(t) !== 'done').length), bg: x.id === p.id ? 'var(--panel2)' : 'transparent', onClick: () => { this.setState({ proj: x.id }); go('work/projects/' + x.id); } }));
       out.chainSel = Z.chains.map(c => ({ v: c.id, l: c.name }));
       out.coSel = [{ v: '', l: 'Internal · no company' }].concat(Z.companies.map(c => ({ v: c.id, l: c.name })));
       const pco = Z.coOf(p.id);

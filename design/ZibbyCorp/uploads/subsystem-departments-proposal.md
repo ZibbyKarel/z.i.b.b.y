@@ -40,19 +40,19 @@ stroje mimo repo (N5, nejnižší priorita).
 
 ## Návrh oddělení
 
-| Oddělení                 | Náhrada za | Co dělá                                                                                                                                |
-| ------------------------ | ---------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| **Development**          | Forge      | Dostane implementační úkol, sám si ho naplánuje podle priorit, spawne Architekta → Kodéra ⇄ Review ⇄ Testera → Dokumentátora, vrátí PR |
-| **Monitoring/Ops**       | Puls       | Nonstop sleduje Slack/e-mail/Jira/GitHub/kalendář a CI na heartbeatu, hlásí co se děje                                                 |
-| **Security**             | Sentinel   | CVE závislostí, úniky tajemství, hlídá hranici vůči vnějšímu světu                                                                     |
-| **Release Management**   | Maestro    | Připravuje release, přehled changelogu, čeká na operátorovo schválení mergu                                                            |
-| **Incident Response**    | Beacon     | Eskaluje kritické věci — Tier-3 surface-and-wait, když je něco naléhavé                                                                |
-| **R&D/Research**         | Scout      | Výzkumné úkoly, výsledek předá dál jako artefakt do dalšího oddělení                                                                   |
-| **Communications/PR**    | Herald     | Mluví za ZIBBY navenek — odpovídá na dotazy, sám se ptá, když něco chybí                                                               |
-| **QA/Architecture**      | Loom       | Proaktivně skenuje kvalitu a architekturu kódu, nálezy předává Developmentu                                                            |
-| **Knowledge Management** | Codex      | Vede vault, groundnutí, noční destilaci paměti                                                                                         |
-| **Finance**              | Ledger     | Rozpočty, stropy útrat, token-spend limity                                                                                             |
-| **Personal Office**      | Hearth     | Osobní život operátora, oddělené od práce                                                                                              |
+| Oddělení | Náhrada za | Co dělá |
+|---|---|---|
+| **Development** | Forge | Dostane implementační úkol, sám si ho naplánuje podle priorit, spawne Architekta → Kodéra ⇄ Review ⇄ Testera → Dokumentátora, vrátí PR |
+| **Monitoring/Ops** | Puls | Nonstop sleduje Slack/e-mail/Jira/GitHub/kalendář a CI na heartbeatu, hlásí co se děje |
+| **Security** | Sentinel | CVE závislostí, úniky tajemství, hlídá hranici vůči vnějšímu světu |
+| **Release Management** | Maestro | Připravuje release, přehled changelogu, čeká na operátorovo schválení mergu |
+| **Incident Response** | Beacon | Eskaluje kritické věci — Tier-3 surface-and-wait, když je něco naléhavé |
+| **R&D/Research** | Scout | Výzkumné úkoly, výsledek předá dál jako artefakt do dalšího oddělení |
+| **Communications/PR** | Herald | Mluví za ZIBBY navenek — odpovídá na dotazy, sám se ptá, když něco chybí |
+| **QA/Architecture** | Loom | Proaktivně skenuje kvalitu a architekturu kódu, nálezy předává Developmentu |
+| **Knowledge Management** | Codex | Vede vault, groundnutí, noční destilaci paměti |
+| **Finance** | Ledger | Rozpočty, stropy útrat, token-spend limity |
+| **Personal Office** | Hearth | Osobní život operátora, oddělené od práce |
 
 ## Doporučení
 

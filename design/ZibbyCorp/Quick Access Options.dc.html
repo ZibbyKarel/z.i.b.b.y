@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap">
+<style>html,body{margin:0;background:#F3F4F2}a{color:#111312}a:hover{color:#50544F}</style>
+</helmet>
+<section data-screen-label="Turn 1 — Quick access placement" style="--bg:#F3F4F2;--panel:#FAFAF8;--panel2:#EDEEEB;--line:#D9DBD6;--line2:#BFC2BC;--ink:#111312;--ink2:#50544F;--ink3:#8A8E88;--grid:rgba(17,19,18,.05);--s-work:oklch(0.6 0.14 160);--s-block:oklch(0.7 0.15 70);font-family:'Geist',system-ui,sans-serif;color:var(--ink);padding:64px;display:flex;flex-direction:column;gap:32px;background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px, transparent 1px),linear-gradient(90deg, var(--grid) 1px, transparent 1px);background-size:24px 24px">
+  <div style="display:flex;flex-direction:column;gap:8px;max-width:760px">
+    <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">01 — QUICK ACCESS · PLACEMENT</span>
+    <span style="font-size:32px;font-weight:500;letter-spacing:-.02em;line-height:1.1">Where pinned links could live</span>
+    <span style="font-size:14px;line-height:1.45;color:var(--ink2);text-wrap:pretty">Four placements for pinning companies, projects and teams. Each pin is a name and a type code, nothing more. Every entity page gets the same PIN toggle next to its breadcrumb (shown in <a href="#1b">1b</a>).</span>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:56px">
+
+    <!-- 1a -->
+    <div id="1a" style="display:flex;flex-direction:column;gap:14px;width:1000px;flex:none">
+      <div style="display:flex;align-items:center;gap:12px"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;font-weight:600;background:var(--ink);color:var(--panel);padding:4px 8px">1A</span><span style="font-size:18px;font-weight:500">Pin bar under the header</span></div>
+      <span style="font-size:13px;line-height:1.4;color:var(--ink2);max-width:720px;text-wrap:pretty">A 32px strip across the full width, like a bookmarks bar. Always visible, one click from anywhere. Costs a little vertical space; overflow folds into a MORE menu. Drag to reorder.</span>
+      <div style="width:1000px;height:600px;border:1px solid var(--ink);background:var(--bg);display:grid;grid-template-rows:44px 32px minmax(0,1fr);overflow:hidden">
+        <div style="display:flex;align-items:center;gap:16px;padding:0 14px;background:var(--panel);border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em">
+          <span style="font-size:11px;letter-spacing:.18em;font-weight:600">ZIBBYCORP</span>
+          <div style="display:flex;gap:14px;color:var(--ink3)"><span style="color:var(--ink)">ORG</span><span>WORK</span><span>ACTIVITY</span><span>POLICY</span><span>KNOWLEDGE</span><span>LEDGER</span></div>
+          <span style="margin-left:auto;border:1px solid var(--line2);padding:4px 8px;color:var(--ink2)">SEARCH ⌘K</span>
+        </div>
+        <div style="display:flex;align-items:stretch;background:var(--panel);border-bottom:1px solid var(--ink);padding:0 8px;font-size:12px;position:relative;white-space:nowrap;overflow:hidden">
+          <span style="display:flex;align-items:center;padding:0 10px 0 6px;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.14em;color:var(--ink3);border-right:1px solid var(--line);margin-right:4px">PINNED</span>
+          <span style="display:flex;align-items:center;gap:6px;padding:0 10px;white-space:nowrap;border-right:1px solid var(--line)"><span style="font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--ink3)">CO</span>Acme Corp</span>
+          <span style="display:flex;align-items:center;gap:6px;padding:0 10px;white-space:nowrap;border-right:1px solid var(--line);background:var(--panel2);box-shadow:inset 0 -1px 0 var(--ink)"><span style="font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--ink3)">PRJ</span>api</span>
+          <span style="display:flex;align-items:center;gap:6px;padding:0 10px;white-space:nowrap;border-right:1px solid var(--line)"><span style="font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--ink3)">PRJ</span>client-portal</span>
+          <span style="display:flex;align-items:center;gap:6px;padding:0 10px;white-space:nowrap;border-right:1px solid var(--line)"><span style="font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--ink3)">TEAM</span>Development</span>
+          <span style="display:flex;align-items:center;gap:6px;padding:0 10px;white-space:nowrap;border-right:1px solid var(--line)"><span style="font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--ink3)">CO</span>Northwind Traders</span>
+          <span style="display:flex;align-items:center;padding:0 10px;white-space:nowrap;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.12em;color:var(--ink3)">+ PIN CURRENT</span>
+          <span style="margin-left:auto;display:flex;align-items:center;padding:0 8px;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.12em;color:var(--ink2)">MORE 02 ▾</span>
+        </div>
+        <div style="display:grid;grid-template-columns:220px minmax(0,1fr);min-height:0">
+          <div style="background:var(--panel);border-right:1px solid var(--line);padding:14px 10px;display:flex;flex-direction:column;gap:8px"><span style="font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.14em;color:var(--ink3);padding:0 4px">NEEDS YOU</span><div style="height:92px;border:1px solid var(--line);background:var(--bg)"></div><div style="height:92px;border:1px solid var(--line);background:var(--bg)"></div></div>
+          <div style="padding:18px;display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:120px;gap:8px;align-content:start"><div style="border:1px solid var(--line);background:var(--panel)"></div><div style="border:1px solid var(--line);background:var(--panel)"></div><div style="border:1px solid var(--line);background:var(--panel)"></div><div style="border:1px solid var(--line);background:var(--panel)"></div><div style="border:1px solid var(--line);background:var(--panel)"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1b -->
+    <div id="1b" style="display:flex;flex-direction:column;gap:14px;width:1000px;flex:none">
+      <div style="display:flex;align-items:center;gap:12px"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;font-weight:600;background:var(--ink);color:var(--panel);padding:4px 8px">1B</span><span style="font-size:18px;font-weight:500">Pinned section in the left rail</span></div>
+      <span style="font-size:13px;line-height:1.4;color:var(--ink2);max-width:720px;text-wrap:pretty">A compact list at the top of the existing rail, above NEEDS YOU. No new chrome. Collapsible so approvals get the full height when needed. Right side shows the PIN toggle on an entity page.</span>
+      <div style="width:1000px;height:600px;border:1px solid var(--ink);background:var(--bg);display:grid;grid-template-rows:44px minmax(0,1fr);overflow:hidden">
+        <div style="display:flex;align-items:center;gap:16px;padding:0 14px;background:var(--panel);border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em">
+          <span style="font-size:11px;letter-spacing:.18em;font-weight:600">ZIBBYCORP</span>
+          <div style="display:flex;gap:14px;color:var(--ink3)"><span>ORG</span><span style="color:var(--ink)">WORK</span><span>ACTIVITY</span><span>POLICY</span><span>KNOWLEDGE</span><span>LEDGER</span></div>
+          <span style="margin-left:auto;border:1px solid var(--line2);padding:4px 8px;color:var(--ink2)">SEARCH ⌘K</span>
+        </div>
+        <div style="display:grid;grid-template-columns:220px minmax(0,1fr);min-height:0">
+          <div style="background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column">
+            <div style="display:flex;flex-direction:column;border-bottom:1px solid var(--line);padding:12px 0 8px">
+              <div style="display:flex;justify-content:space-between;padding:0 14px 6px;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.14em;color:var(--ink3)"><span>PINNED · 05</span><span>▾</span></div>
+              <div style="display:grid;grid-template-columns:34px minmax(0,1fr);gap:8px;align-items:center;padding:6px 14px;background:var(--panel2);box-shadow:inset 2px 0 0 var(--ink)"><span style="font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--ink3)">CO</span><span style="font-size:12px;font-weight:500">Acme Corp</span></div>
+              <div style="display:grid;grid-template-columns:34px minmax(0,1fr);gap:8px;align-items:center;padding:6px 14px"><span style="font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--ink3)">CO</span><span style="font-size:12px">Northwind Traders</span></div>
+              <div style="display:grid;grid-template-columns:34px minmax(0,1fr);gap:8px;align-items:center;padding:6px 14px"><span style="font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--ink3)">PRJ</span><span style="font-size:12px">api</span></div>
+              <div style="display:grid;grid-template-columns:34px minmax(0,1fr);gap:8px;align-items:center;padding:6px 14px"><span style="font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--ink3)">PRJ</span><span style="font-size:12px">client-portal</span></div>
+              <div style="display:grid;grid-template-columns:34px minmax(0,1fr);gap:8px;align-items:center;padding:6px 14px"><span style="font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--ink3)">TEAM</span><span style="font-size:12px">Development</span></div>
+            </div>
+            <div style="padding:12px 10px;display:flex;flex-direction:column;gap:8px"><span style="font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.14em;color:var(--ink3);padding:0 4px">NEEDS YOU · 03</span><div style="height:88px;border:1px solid var(--line);background:var(--bg)"></div><div style="height:88px;border:1px solid var(--line);background:var(--bg)"></div></div>
+          </div>
+          <div style="display:grid;grid-template-rows:36px minmax(0,1fr);min-height:0">
+            <div style="display:flex;align-items:stretch;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.14em;color:var(--ink3)">
+              <span style="display:flex;align-items:center;padding-right:12px;border-right:1px solid var(--line)">WORK</span>
+              <span style="display:flex;align-items:center;padding:0 10px">TASKS</span><span style="display:flex;align-items:center;padding:0 10px;color:var(--ink);box-shadow:inset 0 -1px 0 var(--ink)">COMPANIES</span><span style="display:flex;align-items:center;padding:0 10px">PROJECTS</span>
+              <span style="display:flex;align-items:center;gap:6px;padding:0 10px;white-space:nowrap;color:var(--ink)"><span style="color:var(--ink3)">/</span>ACME CORP</span>
+              <span style="display:flex;align-items:center;margin:7px 0;padding:0 9px;background:var(--ink);color:var(--panel)">PINNED</span>
+            </div>
+            <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+              <span style="font-size:24px;font-weight:500;letter-spacing:-.01em">Acme Corp</span>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:110px;gap:8px"><div style="border:1px solid var(--line);background:var(--panel)"></div><div style="border:1px solid var(--line);background:var(--panel)"></div><div style="border:1px solid var(--line);background:var(--panel)"></div><div style="border:1px solid var(--line);background:var(--panel);grid-column:span 2"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1c -->
+    <div id="1c" style="display:flex;flex-direction:column;gap:14px;width:1000px;flex:none">
+      <div style="display:flex;align-items:center;gap:12px"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;font-weight:600;background:var(--ink);color:var(--panel);padding:4px 8px">1C</span><span style="font-size:18px;font-weight:500">Slim dock on the far left</span></div>
+      <span style="font-size:13px;line-height:1.4;color:var(--ink2);max-width:720px;text-wrap:pretty">A 48px column of monogram tiles, grouped by type with hairline dividers. Takes almost no space and fits many pins; the name appears on hover. Needs short, distinct monograms to stay readable.</span>
+      <div style="width:1000px;height:600px;border:1px solid var(--ink);background:var(--bg);display:grid;grid-template-rows:44px minmax(0,1fr);overflow:hidden">
+        <div style="display:flex;align-items:center;gap:16px;padding:0 14px;background:var(--panel);border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em">
+          <span style="font-size:11px;letter-spacing:.18em;font-weight:600">ZIBBYCORP</span>
+          <div style="display:flex;gap:14px;color:var(--ink3)"><span>ORG</span><span style="color:var(--ink)">WORK</span><span>ACTIVITY</span><span>POLICY</span><span>KNOWLEDGE</span><span>LEDGER</span></div>
+          <span style="margin-left:auto;border:1px solid var(--line2);padding:4px 8px;color:var(--ink2)">SEARCH ⌘K</span>
+        </div>
+        <div style="display:grid;grid-template-columns:48px 220px minmax(0,1fr);min-height:0">
+          <div style="background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.06em;font-weight:500">
+            <span style="font-size:8px;letter-spacing:.12em;color:var(--ink3);font-weight:400">CO</span>
+            <div style="position:relative;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--ink);background:var(--panel2)">AC
+              <div style="position:absolute;left:40px;top:3px;white-space:nowrap;display:flex;gap:8px;align-items:center;background:var(--ink);color:var(--panel);padding:5px 9px;font-size:10px;letter-spacing:.12em;z-index:2"><span>ACME CORP</span><span style="opacity:.6">⌘1</span></div>
+            </div>
+            <div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line2)">NW</div>
+            <div style="width:28px;height:1px;background:var(--line);margin:4px 0"></div>
+            <span style="font-size:8px;letter-spacing:.12em;color:var(--ink3);font-weight:400">PRJ</span>
+            <div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line2)">API</div>
+            <div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line2)">CP</div>
+            <div style="width:28px;height:1px;background:var(--line);margin:4px 0"></div>
+            <span style="font-size:8px;letter-spacing:.12em;color:var(--ink3);font-weight:400">TEAM</span>
+            <div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line2)">DEV</div>
+            <div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line2)">SEC</div>
+            <div style="margin-top:auto;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px dashed var(--line2);color:var(--ink3)">+</div>
+          </div>
+          <div style="background:var(--panel);border-right:1px solid var(--line);padding:14px 10px;display:flex;flex-direction:column;gap:8px"><span style="font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.14em;color:var(--ink3);padding:0 4px">NEEDS YOU</span><div style="height:92px;border:1px solid var(--line);background:var(--bg)"></div><div style="height:92px;border:1px solid var(--line);background:var(--bg)"></div></div>
+          <div style="padding:18px;display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:120px;gap:8px;align-content:start"><div style="border:1px solid var(--line);background:var(--panel)"></div><div style="border:1px solid var(--line);background:var(--panel)"></div><div style="border:1px solid var(--line);background:var(--panel)"></div><div style="border:1px solid var(--line);background:var(--panel)"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1d -->
+    <div id="1d" style="display:flex;flex-direction:column;gap:14px;width:1000px;flex:none">
+      <div style="display:flex;align-items:center;gap:12px"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;font-weight:600;background:var(--ink);color:var(--panel);padding:4px 8px">1D</span><span style="font-size:18px;font-weight:500">PINNED menu in the header + ⌘K</span></div>
+      <span style="font-size:13px;line-height:1.4;color:var(--ink2);max-width:720px;text-wrap:pretty">A header button next to SEARCH opens a grouped popover. Zero layout cost, keyboard-first: ⌘1–9 jump straight to a pin, and pins also sit at the top of the ⌘K palette. Always one extra click with the mouse.</span>
+      <div style="width:1000px;height:600px;border:1px solid var(--ink);background:var(--bg);display:grid;grid-template-rows:44px minmax(0,1fr);overflow:hidden;position:relative">
+        <div style="display:flex;align-items:center;gap:16px;padding:0 14px;background:var(--panel);border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em">
+          <span style="font-size:11px;letter-spacing:.18em;font-weight:600">ZIBBYCORP</span>
+          <div style="display:flex;gap:14px;color:var(--ink3)"><span style="color:var(--ink)">ORG</span><span>WORK</span><span>ACTIVITY</span><span>POLICY</span><span>KNOWLEDGE</span><span>LEDGER</span></div>
+          <span style="margin-left:auto;border:1px solid var(--ink);background:var(--panel2);padding:4px 8px;color:var(--ink)">PINNED 06 ▾</span>
+          <span style="border:1px solid var(--line2);padding:4px 8px;color:var(--ink2)">SEARCH ⌘K</span>
+        </div>
+        <div style="display:grid;grid-template-columns:220px minmax(0,1fr);min-height:0">
+          <div style="background:var(--panel);border-right:1px solid var(--line);padding:14px 10px;display:flex;flex-direction:column;gap:8px"><span style="font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.14em;color:var(--ink3);padding:0 4px">NEEDS YOU</span><div style="height:92px;border:1px solid var(--line);background:var(--bg)"></div><div style="height:92px;border:1px solid var(--line);background:var(--bg)"></div></div>
+          <div style="padding:18px;display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:120px;gap:8px;align-content:start"><div style="border:1px solid var(--line);background:var(--panel)"></div><div style="border:1px solid var(--line);background:var(--panel)"></div><div style="border:1px solid var(--line);background:var(--panel)"></div><div style="border:1px solid var(--line);background:var(--panel)"></div><div style="border:1px solid var(--line);background:var(--panel)"></div></div>
+        </div>
+        <div style="position:absolute;top:40px;right:108px;width:280px;background:var(--panel);border:1px solid var(--ink);display:flex;flex-direction:column;padding:6px 0;z-index:2">
+          <div style="position:absolute;top:-1px;left:-1px;width:8px;height:8px;border-top:1px solid var(--ink);border-left:1px solid var(--ink)"></div>
+          <span style="padding:8px 12px 4px;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.14em;color:var(--ink3)">COMPANIES</span>
+          <div style="display:flex;justify-content:space-between;padding:6px 12px;font-size:12px;background:var(--panel2)"><span>Acme Corp</span><span style="font-family:'Geist Mono',monospace;font-size:9px;color:var(--ink3)">⌘1</span></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 12px;font-size:12px"><span>Northwind Traders</span><span style="font-family:'Geist Mono',monospace;font-size:9px;color:var(--ink3)">⌘2</span></div>
+          <span style="padding:10px 12px 4px;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.14em;color:var(--ink3);border-top:1px solid var(--line);margin-top:4px">PROJECTS</span>
+          <div style="display:flex;justify-content:space-between;padding:6px 12px;font-size:12px"><span>api</span><span style="font-family:'Geist Mono',monospace;font-size:9px;color:var(--ink3)">⌘3</span></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 12px;font-size:12px"><span>client-portal</span><span style="font-family:'Geist Mono',monospace;font-size:9px;color:var(--ink3)">⌘4</span></div>
+          <span style="padding:10px 12px 4px;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.14em;color:var(--ink3);border-top:1px solid var(--line);margin-top:4px">TEAMS</span>
+          <div style="display:flex;justify-content:space-between;padding:6px 12px;font-size:12px"><span>Development</span><span style="font-family:'Geist Mono',monospace;font-size:9px;color:var(--ink3)">⌘5</span></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 12px;font-size:12px"><span>Security</span><span style="font-family:'Geist Mono',monospace;font-size:9px;color:var(--ink3)">⌘6</span></div>
+          <div style="display:flex;justify-content:space-between;padding:9px 12px 5px;margin-top:4px;border-top:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.12em;color:var(--ink2)"><span>+ PIN CURRENT PAGE</span><span>EDIT</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

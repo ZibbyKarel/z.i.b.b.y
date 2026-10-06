@@ -21,20 +21,45 @@
         <button onClick="{{ n.onClick }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:6px;padding:0 10px;box-sizing:border-box;height:100%;border-bottom:1px solid {{ n.line }};color:{{ n.color }}">{{ n.label }}</button>
       </sc-for>
     </nav>
-    <div style="margin-left:auto;display:flex;align-items:center;gap:12px;white-space:nowrap;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--ink2)">
-      
+    <div style="flex:1;display:flex;justify-content:center;min-width:0">
+      <button onClick="{{ openPalette }}" style="all:unset;cursor:pointer;box-sizing:border-box;width:340px;max-width:100%;height:32px;display:flex;align-items:center;justify-content:space-between;gap:14px;border:1px solid var(--line2);background:var(--bg);padding:0 12px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--ink2)" style-hover="border-color:var(--ink)"><span>SEARCH</span><span style="color:var(--ink3)">⌘K</span></button>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;white-space:nowrap;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--ink2)">
       <button onClick="{{ goSpend }}" title="Claude Code usage limits" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:5px"><span style="display:grid;grid-template-columns:44px 96px 30px;gap:8px;align-items:center;font-size:10px;letter-spacing:.12em"><span>5H</span><span style="height:2px;background:var(--line);display:block"><span style="display:block;height:2px;width:{{ sub5h }};background:var(--ink)"></span></span><span style="color:var(--ink);text-align:right;font-variant-numeric:tabular-nums">{{ sub5h }}</span></span><span style="display:grid;grid-template-columns:44px 96px 30px;gap:8px;align-items:center;font-size:10px;letter-spacing:.12em"><span>WEEK</span><span style="height:2px;background:var(--line);display:block"><span style="display:block;height:2px;width:{{ subWeek }};background:var(--ink)"></span></span><span style="color:var(--ink);text-align:right;font-variant-numeric:tabular-nums">{{ subWeek }}</span></span></button>
-      
-      
-      <button onClick="{{ openPalette }}" style="all:unset;cursor:pointer;display:flex;gap:14px;border:1px solid var(--line2);padding:6px 10px"><span>SEARCH</span><span style="color:var(--ink3)">⌘K</span></button>
-      <button onClick="{{ goSystem }}" style="all:unset;cursor:pointer;border:1px solid {{ sysLine }};padding:5px 9px;color:var(--ink)">⚙</button>
-      
+      <div style="position:relative">
+        <button onClick="{{ toggleMenu }}" title="More" style="all:unset;cursor:pointer;box-sizing:border-box;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid {{ menuLine }};background:{{ menuBg }};color:var(--ink);font-size:16px;line-height:1" style-hover="border-color:var(--ink)">⋮</button>
+        <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ closeMenu }}" style="position:fixed;inset:0;z-index:40"></div>
+          <div style="position:absolute;top:38px;right:0;z-index:41;width:220px;background:var(--panel);border:1px solid var(--ink);display:flex;flex-direction:column;padding:4px 0">
+            <button onClick="{{ menuPin }}" style="all:unset;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;color:var(--ink)" style-hover="background:var(--panel2)"><span>{{ menuPinLabel }}</span><span style="color:var(--ink3)">{{ menuPinMark }}</span></button>
+            <div style="height:1px;background:var(--line);margin:4px 0"></div>
+            <button onClick="{{ menuSettings }}" style="all:unset;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;color:var(--ink)" style-hover="background:var(--panel2)"><span>SETTINGS</span><span style="color:var(--ink3)">⚙</span></button>
+          </div>
+        </sc-if>
+      </div>
     </div>
   </header>
 
   <div style="display:grid;grid-template-columns:280px minmax(0,1fr);min-height:0">
     <aside data-screen-label="Needs you rail" style="border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0">
-      <div style="padding:20px 20px 12px;display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)"><span>NEEDS YOU</span></div>
+      <div data-screen-label="Pinned" style="display:flex;flex-direction:column;border-bottom:1px solid var(--line);padding:16px 0 10px;flex:none">
+        <button onClick="{{ togglePins }}" style="all:unset;cursor:pointer;display:flex;justify-content:space-between;padding:0 20px 8px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)" style-hover="color:var(--ink)"><span>PINNED · {{ pinCount }}</span><span>{{ pinsCaret }}</span></button>
+        <sc-if value="{{ pinsOpen }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;max-height:260px;overflow-y:auto">
+            <sc-for list="{{ pins }}" as="pn" hint-placeholder-count="4">
+              <div style="display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:8px;align-items:center;padding:0 12px 0 20px;background:{{ pn.bg }};box-shadow:{{ pn.bar }}" style-hover="background:var(--panel2)">
+                <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink3)">{{ pn.kind }}</span>
+                <button onClick="{{ pn.onOpen }}" style="all:unset;cursor:pointer;padding:7px 0;font-size:13px;font-weight:{{ pn.weight }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ pn.name }}</button>
+                <button onClick="{{ pn.onUnpin }}" title="Unpin" style="all:unset;cursor:pointer;padding:4px 6px;font-family:'Geist Mono',monospace;font-size:10px;color:var(--ink3)" style-hover="color:var(--ink)">×</button>
+              </div>
+            </sc-for>
+            <sc-if value="{{ noPins }}" hint-placeholder-val="{{ false }}">
+              <div style="margin:0 12px;border:1px dashed var(--line2);padding:10px 12px;font-size:12px;line-height:1.4;color:var(--ink2)">Pin a company, project or team from its page.</div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+      <div style="padding:16px 20px 12px;display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)"><span>NEEDS YOU</span></div>
       <div style="display:flex;flex-direction:column;gap:10px;padding:0 12px 12px;overflow-y:auto;min-height:0">
         <sc-for list="{{ approvals }}" as="p" hint-placeholder-count="4">
           <div style="border:1px solid var(--line2);padding:12px;display:flex;flex-direction:column;gap:10px;background:var(--bg)">
@@ -70,6 +95,9 @@
         </sc-for>
         <sc-if value="{{ crumb }}" hint-placeholder-val="{{ false }}">
           <span style="display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--ink)"><span style="color:var(--ink3)">/</span>{{ crumb }}</span>
+        </sc-if>
+        <sc-if value="{{ canPin }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ togglePin }}" style="all:unset;cursor:pointer;margin:9px 0;display:flex;align-items:center;padding:0 10px;border:1px solid {{ pinLine }};background:{{ pinBg }};color:{{ pinInk }}">{{ pinLabel }}</button>
         </sc-if>
         <button onClick="{{ goNew }}" style="all:unset;cursor:pointer;margin:8px 0 8px auto;display:flex;align-items:center;padding:0 12px;background:var(--ink);color:var(--panel)">+ NEW TASK</button>
       </div>
@@ -168,7 +196,22 @@
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
   state = { ready: !!(window.ZB && window.ZC), route: (location.hash.slice(1) || localStorage.getItem('zc-route') || 'org/map'), now: '', theme: localStorage.getItem('zb-dash-theme') || 'light',
-    dockOpen: false, draft: '', msgs: null, listening: false, sheet: null, denyMode: false, reason: '', palOpen: false, q: '', palIdx: 0, tick: 0 };
+    dockOpen: false, draft: '', msgs: null, listening: false, sheet: null, denyMode: false, reason: '', palOpen: false, q: '', palIdx: 0, tick: 0, menuOpen: false,
+    pins: JSON.parse(localStorage.getItem('zc-pins') || 'null') || [{ t: 'co', id: 'acme' }, { t: 'prj', id: 'api' }, { t: 'team', id: 'dev' }], pinsOpen: localStorage.getItem('zc-pins-open') !== '0' };
+  setPins = pins => { localStorage.setItem('zc-pins', JSON.stringify(pins)); this.setState({ pins }); };
+  PIN = {
+    co: { kind: 'CO', crumb: 'COMPANY', name: id => (window.ZC.Co(id) || {}).name, to: id => 'work/companies/' + id },
+    prj: { kind: 'PRJ', crumb: 'PROJECT', name: id => (window.ZC.projects.find(p => p.id === id) || {}).id, to: id => 'work/projects/' + id },
+    team: { kind: 'TEAM', crumb: 'TEAM', name: id => (window.ZC.D(id) || {}).name, to: id => 'org/dept/' + id + '/team' },
+    url: { kind: 'URL', crumb: 'PAGE', name: id => id, to: id => id }
+  };
+  entityOf(parts) {
+    const Z = window.ZC;
+    if (parts[0] === 'work' && parts[1] === 'companies') return { t: 'co', id: parts[2] || (Z.companies[0] || {}).id };
+    if (parts[0] === 'work' && parts[1] === 'projects') return { t: 'prj', id: parts[2] || (Z.projects[0] || {}).id };
+    if (parts[0] === 'org' && parts[1] === 'dept' && parts[2]) return { t: 'team', id: parts[2] };
+    return null;
+  }
   rootRef = React.createRef(); chatRef = React.createRef(); palRef = React.createRef();
   THEMES = {
     light: { '--bg':'#F3F4F2','--panel':'#FAFAF8','--panel2':'#EDEEEB','--line':'#D9DBD6','--line2':'#BFC2BC','--ink':'#111312','--ink2':'#50544F','--ink3':'#8A8E88','--grid':'rgba(17,19,18,.05)','--gw':'0px','--s-work':'oklch(0.6 0.14 160)','--s-think':'oklch(0.58 0.14 250)','--s-block':'oklch(0.7 0.15 70)','--s-err':'oklch(0.58 0.2 25)','--s-done':'oklch(0.56 0.15 300)','--s-idle':'#A9ADA7' },
@@ -194,7 +237,7 @@ class Component extends DCLogic {
     window.addEventListener('hashchange', this.onHash);
     this.onKey = e => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); this.openPal(); }
-      else if (e.key === 'Escape') this.setState({ palOpen: false, sheet: null });
+      else if (e.key === 'Escape') this.setState({ palOpen: false, sheet: null, menuOpen: false });
     };
     window.addEventListener('keydown', this.onKey);
   }
@@ -207,6 +250,16 @@ class Component extends DCLogic {
     this._lastMsgs = s.msgs; this._lastDock = s.dockOpen; this._lastPal = s.palOpen;
   }
   componentWillUnmount() { clearInterval(this.t); clearInterval(this.p); clearTimeout(this.vt); window.removeEventListener('keydown', this.onKey); window.removeEventListener('hashchange', this.onHash); this.unsub && this.unsub(); }
+  menuVals(ent, entName, isPinned, crumb) {
+    const route = this.state.route, target = ent && entName ? ent : { t: 'url', id: route };
+    const on = this.state.pins.some(p => p.t === target.t && p.id === target.id);
+    const label = target.t === 'url' ? (crumb || route).toString() : null;
+    return { menuOpen: this.state.menuOpen, menuBg: this.state.menuOpen ? 'var(--panel2)' : 'transparent', menuLine: this.state.menuOpen ? 'var(--ink)' : 'var(--line2)',
+      toggleMenu: () => this.setState(s => ({ menuOpen: !s.menuOpen })), closeMenu: () => this.setState({ menuOpen: false }),
+      menuPinLabel: on ? 'UNPIN PAGE' : 'PIN PAGE', menuPinMark: on ? '●' : '+',
+      menuPin: () => { this.setPins(on ? this.state.pins.filter(p => !(p.t === target.t && p.id === target.id)) : this.state.pins.concat([label ? { ...target, label } : target])); this.setState({ menuOpen: false }); },
+      menuSettings: () => { this.setState({ menuOpen: false }); this.go('system/settings'); } };
+  }
   openPal = () => this.setState({ palOpen: true, q: '', palIdx: 0 });
   openApproval = (id, deny) => this.setState({ sheet: id, denyMode: !!deny, reason: '' });
   quickApprove(a) { if (a.kind === 'QUESTION') return this.openApproval(a.id); window.ZC.resolve(a.id, 'APPROVED'); }
@@ -242,7 +295,7 @@ class Component extends DCLogic {
   }
   renderVals() {
     const Z = window.ZC, B = window.ZB;
-    if (!Z || !B) return { rootRef: this.rootRef, chatRef: this.chatRef, palRef: this.palRef, nav: [], approvals: [], legend: [], subnav: [], msgs: [], palItems: [], sh: { diff: [], route: [], metrics: [] } };
+    if (!Z || !B) return { rootRef: this.rootRef, chatRef: this.chatRef, palRef: this.palRef, nav: [], approvals: [], legend: [], pins: [], subnav: [], msgs: [], palItems: [], sh: { diff: [], route: [], metrics: [] } };
     const pad = Z.pad, G = (a, size, glow) => B.glyph(React, { seed: a.name, state: a.state, size, glow });
     const parts = this.state.route.split('/'), sec = this.SECTIONS[parts[0]] ? parts[0] : 'org', sub = parts[1];
     const nav = ['org','work','activity','policy','knowledge','ledger'].map(k => ({ label: this.SECTIONS[k][0], badge: k === 'policy' && Z.approvals.length ? pad(Z.approvals.length) : '', line: k === sec ? 'var(--ink)' : 'transparent', color: k === sec ? 'var(--ink)' : 'var(--ink3)', onClick: () => this.go(k + '/' + this.SECTIONS[k][1][0][0]) }));
@@ -253,6 +306,17 @@ class Component extends DCLogic {
     if (sub === 'chat') crumb = 'DIRECT LINE · ' + (Z.D(parts[2]) || {}).code;
     if (sub === 'task') crumb = 'TASK · ' + parts[2];
     if (sub === 'new') crumb = 'NEW TASK';
+    const ent = this.entityOf(parts), entName = ent && this.PIN[ent.t].name(ent.id);
+    const isPinned = !!ent && this.state.pins.some(p => p.t === ent.t && p.id === ent.id);
+    if (ent && ent.t !== 'team' && entName) crumb = this.PIN[ent.t].crumb + ' · ' + entName.toUpperCase();
+    const pins = this.state.pins.filter(p => this.PIN[p.t] && this.PIN[p.t].name(p.id)).map(p => { const on = ent && ent.t === p.t && ent.id === p.id;
+      return { kind: this.PIN[p.t].kind, name: p.label || this.PIN[p.t].name(p.id), bg: on ? 'var(--panel2)' : 'transparent', bar: on ? 'inset 2px 0 0 var(--ink)' : 'none', weight: on ? 500 : 400,
+        onOpen: () => this.go(this.PIN[p.t].to(p.id)), onUnpin: () => this.setPins(this.state.pins.filter(x => x !== p)) }; });
+    const pinVals = { pins, pinCount: pad(pins.length), noPins: !pins.length, pinsOpen: this.state.pinsOpen, pinsCaret: this.state.pinsOpen ? '▾' : '▸',
+      togglePins: () => { localStorage.setItem('zc-pins-open', this.state.pinsOpen ? '0' : '1'); this.setState(s => ({ pinsOpen: !s.pinsOpen })); },
+      canPin: !!(ent && entName), pinLabel: isPinned ? 'PINNED' : '+ PIN', pinBg: isPinned ? 'var(--ink)' : 'transparent', pinInk: isPinned ? 'var(--panel)' : 'var(--ink2)', pinLine: isPinned ? 'var(--ink)' : 'var(--line2)',
+      ...this.menuVals(ent, entName, isPinned, crumb),
+      togglePin: () => this.setPins(isPinned ? this.state.pins.filter(p => !(p.t === ent.t && p.id === ent.id)) : this.state.pins.concat([ent])) };
     const active = Z.agents.filter(a => a.state === 'working' || a.state === 'thinking').length;
     const counts = {}; B.ORDER.forEach(k => counts[k] = Z.agents.filter(a => a.state === k).length);
     const approvals = Z.approvals.map(p => { const a = Z.A(p.agent); const t = p.task && Z.Tk(p.task);
@@ -276,18 +340,19 @@ class Component extends DCLogic {
     }
     const palItems = this.state.palOpen ? this.palList().map((x, i) => ({ ...x, bg: i === this.state.palIdx ? 'var(--panel2)' : 'transparent', onClick: () => this.go(x.to) })) : [];
     return {
+      ...pinVals,
       rootRef: this.rootRef, chatRef: this.chatRef, palRef: this.palRef, tick: this.state.tick, route: this.state.route, go: this.go, openApproval: this.openApproval,
       theme: this.state.theme, setThemeFn: this.setTheme, setLight: () => this.setTheme('light'), setDark: () => this.setTheme('dark'),
       lightBg: dk ? 'transparent' : 'var(--ink)', lightInk: dk ? 'var(--ink3)' : 'var(--panel)', darkBg: dk ? 'var(--ink)' : 'transparent', darkInk: dk ? 'var(--panel)' : 'var(--ink3)',
       nav, subnav, crumb, sectionU: this.SECTIONS[sec][0], sysLine: sec === 'system' ? 'var(--ink)' : 'var(--line2)',
       isOrg: sec === 'org', isWork: sec === 'work', isActivity: sec === 'activity', isPolicy: sec === 'policy', isKnowledge: sec === 'knowledge', isLedger: sec === 'ledger', isSystem: sec === 'system',
       goHome: () => this.go('org/map'), goSystem: () => this.go('system/settings'), goBudgets: () => this.go('ledger/budgets'), goSpend: () => this.go('ledger/spend'), sub5h: Z.spend.sub5h + '%', subWeek: Z.spend.subWeek + '%', goNew: () => this.go('work/new'),
-      logoGlyph: B.glyph(React, { seed: 'Zibby', state: 'idle', size: 22 }), liveDot: B.dot(React, 'working', 7),
+      logoGlyph: (B.zibbyFavicon(Z.approvals.length ? 'blocked' : 'working'), B.zibby(React, { state: 'idle', size: 24, anim: false })), liveDot: B.dot(React, 'working', 7),
       activeStr: pad(active), concStr: pad(Z.settings.concurrency), dayPct: Math.round(Z.budget.day[0] / Z.budget.day[1] * 100) + '%', clock: this.state.now || B.clock(),
       approvals, apCount: pad(Z.approvals.length), noApprovals: Z.approvals.length === 0, poolStr: pad(Z.agents.length),
       legend: B.ORDER.map(k => ({ labelU: B.S[k].label.toUpperCase(), n: pad(counts[k]), dot: B.dot(React, k, 8) })),
       dockOpen: this.state.dockOpen, toggleDock: () => this.setState(s => ({ dockOpen: !s.dockOpen })), openDock: () => this.setState({ dockOpen: true }),
-      cooGlyph: G(Z.coo, 30, true), cooSmall: B.glyph(React, { seed: 'Zibby', state: this.state.listening ? 'thinking' : 'working', size: 20, glow: false }), msgs,
+      cooGlyph: B.zibby(React, { state: 'working', size: 32 }), cooSmall: B.zibby(React, { state: this.state.listening ? 'thinking' : 'working', size: 22 }), msgs,
       draft: this.state.draft, onDraft: e => this.setState({ draft: e.target.value }), onDraftKey: e => { if (e.key === 'Enter') this.sendText(this.state.draft); },
       send: () => this.sendText(this.state.draft), placeholder: this.state.listening ? 'Listening…' : 'Ask Zibby or describe a task', toggleVoice: this.toggleVoice, voiceViz: bars, voiceLabel: this.state.listening ? 'STOP' : 'VOICE',
       sheetOpen: !!ap, sh, reason: this.state.reason, onReason: e => this.setState({ reason: e.target.value }), stop: e => e.stopPropagation(), closeSheet: () => this.setState({ sheet: null }),

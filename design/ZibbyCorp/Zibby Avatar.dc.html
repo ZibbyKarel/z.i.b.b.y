@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap">
+<style>html,body{margin:0;background:#F3F4F2}a{color:#111312}a:hover{color:#50544F}
+@keyframes av-bob{0%{transform:translateY(0)}50%{transform:translateY(-.5px)}}
+@keyframes av-hop{0%,45%,100%{transform:translateY(0)}15%{transform:translateY(-1px)}30%{transform:translateY(-.5px)}}
+@keyframes av-shake{0%{transform:translateX(0)}25%{transform:translateX(-.4px)}50%{transform:translateX(0)}75%{transform:translateX(.4px)}}
+@keyframes av-blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}
+@keyframes av-live{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes av-pulse{0%{opacity:1}50%{opacity:.1}}
+@keyframes av-think{0%,100%{opacity:.25}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}</style>
+</helmet>
+<div style="--bg:#F3F4F2;--panel:#FAFAF8;--panel2:#EDEEEB;--line:#D9DBD6;--line2:#BFC2BC;--ink:#111312;--ink2:#50544F;--ink3:#8A8E88;--grid:rgba(17,19,18,.05);--s-work:oklch(0.6 0.14 160);--s-think:oklch(0.58 0.14 250);--s-block:oklch(0.7 0.15 70);--s-err:oklch(0.58 0.2 25);--s-done:oklch(0.56 0.15 300);--s-idle:#A9ADA7;min-height:100vh;background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px;color:var(--ink);font-family:'Geist',system-ui,sans-serif;padding:48px 40px;box-sizing:border-box">
+<section data-screen-label="Avatar variants" style="display:flex;flex-direction:column;gap:28px">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:760px">
+    <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">01 — COO AVATAR · ZIBBY</span>
+    <h1 style="margin:0;font-size:32px;line-height:1.1;font-weight:500;letter-spacing:-.02em">Zibby, the system mark</h1>
+    <p style="margin:0;font-size:14px;line-height:1.45;color:var(--ink2);text-wrap:pretty">Six 16×16 pixel characters, each drawn on the same grid as the favicon so it stays crisp at 16px. Ink body, paper eyes, one accent pixel group that carries the live state of the whole system — the favicon turns amber when something needs you.</p>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start">
+    <sc-for list="{{ variants }}" as="v" hint-placeholder-count="6">
+      <div id="{{ v.id }}" style="width:540px;background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line)">
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.1em;background:var(--ink);color:var(--panel);padding:3px 7px">{{ v.id }}</span>
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.14em">{{ v.name }}</span>
+          <span style="flex:1"></span>
+          <button onClick="{{ v.use }}" style="{{ v.btnStyle }}">{{ v.btnLabel }}</button>
+        </div>
+        <div style="position:relative;height:300px;margin:12px;background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:12px 12px;display:grid;place-items:center">
+          <div style="position:absolute;top:-1px;left:-1px;width:10px;height:10px;border-top:1px solid var(--ink);border-left:1px solid var(--ink)"></div>
+          <div style="position:absolute;top:-1px;right:-1px;width:10px;height:10px;border-top:1px solid var(--ink);border-right:1px solid var(--ink)"></div>
+          <div style="position:absolute;bottom:-1px;left:-1px;width:10px;height:10px;border-bottom:1px solid var(--ink);border-left:1px solid var(--ink)"></div>
+          <div style="position:absolute;bottom:-1px;right:-1px;width:10px;height:10px;border-bottom:1px solid var(--ink);border-right:1px solid var(--ink)"></div>
+          {{ v.hero }}
+          <span style="position:absolute;left:12px;bottom:10px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">16 × 16 · {{ v.stateU }}</span>
+        </div>
+        <p style="margin:0;padding:0 16px 14px;font-size:13px;line-height:1.4;color:var(--ink2);text-wrap:pretty">{{ v.line }}</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line)">
+          <div style="display:flex;align-items:flex-end;justify-content:space-around;gap:8px;padding:16px 12px;border-right:1px solid var(--line)">
+            <sc-for list="{{ v.light }}" as="s" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;align-items:center;gap:6px">{{ s.el }}<span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ s.n }}</span></div></sc-for>
+          </div>
+          <div style="--bg:#0A0B0B;--panel:#101211;--line:#232725;--line2:#343936;--ink:#ECEFEA;--ink2:#A2A8A2;--ink3:#666C67;--s-work:oklch(0.82 0.17 160);--s-think:oklch(0.78 0.13 245);--s-block:oklch(0.84 0.15 80);--s-err:oklch(0.7 0.2 25);--s-done:oklch(0.78 0.14 300);--s-idle:#4A504B;background:var(--panel);display:flex;align-items:flex-end;justify-content:space-around;gap:8px;padding:16px 12px">
+            <sc-for list="{{ v.dark }}" as="s" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;align-items:center;gap:6px">{{ s.el }}<span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ s.n }}</span></div></sc-for>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));border-top:1px solid var(--line)">
+          <sc-for list="{{ v.states }}" as="s" hint-placeholder-count="6"><div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 0 12px;box-shadow:0 0 0 .5px var(--line)">{{ s.el }}<span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ s.n }}</span></div></sc-for>
+        </div>
+        <div style="display:flex;gap:8px;padding:12px;border-top:1px solid var(--line);background:var(--panel2)">
+          <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--panel);border:1px solid var(--line2);flex:1;min-width:0">{{ v.tab }}<span style="font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">ZibbyCorp — Org map</span><span style="color:var(--ink3);font-size:12px">×</span></div>
+          <div style="--panel:#101211;--ink:#ECEFEA;--ink3:#666C67;--line2:#343936;--s-work:oklch(0.82 0.17 160);--s-think:oklch(0.78 0.13 245);--s-block:oklch(0.84 0.15 80);--s-err:oklch(0.7 0.2 25);--s-done:oklch(0.78 0.14 300);--s-idle:#4A504B;display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--panel);color:var(--ink);border:1px solid var(--line2);flex:1;min-width:0">{{ v.tabDark }}<span style="font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">ZibbyCorp — Org map</span><span style="color:var(--ink3);font-size:12px">×</span></div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;working&quot;,&quot;thinking&quot;,&quot;blocked&quot;,&quot;error&quot;,&quot;done&quot;,&quot;idle&quot;],&quot;default&quot;:&quot;working&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Avatar&quot;},&quot;animate&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Avatar&quot;}}">
+const MIR = r => r + r.split('').reverse().join('');
+const VARS = [
+  { id:'1a', name:'ORCHESTRATOR', mirror:true, line:'A squat conductor with arms spread wide and a single antenna. The closest to a classic mascot — reads as a character first, a logo second.',
+    rows:['........','.......s','.......#','...#####','..######','..###oo#','..###oo#','########','..######','..######','...#####','...##..#','...##..#'] },
+  { id:'1b', name:'HUB', mirror:true, line:'Three antenna nodes join into one head — the org tree feeding its COO. The mouth is a progress bar that carries the live state.',
+    rows:['..s....s','..#....#','..######','....####','..######','.#######','.##oo###','.##oo###','.#######','.###ssss','.#######','..######','..#....#'] },
+  { id:'1c', name:'VISOR', mirror:true, line:'A monolith with a lit visor. The status band is wide enough to read as color even at 16px, which makes it the strongest favicon signal.',
+    rows:['...#####','..######','..######','..#sssss','..#sooss','..#sssss','..######','..######','..######','...#####','...##...'] },
+  { id:'1d', name:'MONOGRAM', mirror:false, line:'The Z cut into a block with two feet. Works as a wordmark companion and an app icon; less personality, most brand.',
+    rows:['..############..','..############..','..##ssssssss##..','..##ssssssss##..','..#######sss##..','..######sss###..','..#####sss####..','..####sss#####..','..##ssssssss##..','..##ssssssss##..','..############..','..############..','...##......##...'] },
+  { id:'1e', name:'MANY HANDS', mirror:true, line:'A round-headed creature with seven legs — one being that runs many agents. Soft, friendly, very recognisable in silhouette.',
+    rows:['....####','...#####','..######','..#oo###','..#oo###','..######','..#####s','..######','.#######','.#.#.#.#','.#.#.#.#','#..#..#.'] },
+  { id:'1f', name:'IN FOCUS', mirror:true, line:'A compact face held in the system\u2019s corner brackets. Ties the mark directly to the UI\u2019s focus framing; the brackets stay still while the face moves.',
+    rows:['bbb.....','b.......','b.......','....####','...#####','...#oo##','...#oo##','...#####','...##sss','...#####','....####','b.......','b.......','bbb.....'] }
+];
+const SC = { working:'var(--s-work)', thinking:'var(--s-think)', blocked:'var(--s-block)', error:'var(--s-err)', done:'var(--s-done)', idle:'var(--s-idle)' };
+const FAV = { working:'oklch(0.6 0.14 160)', thinking:'oklch(0.58 0.14 250)', blocked:'oklch(0.7 0.15 70)', error:'oklch(0.58 0.2 25)', done:'oklch(0.56 0.15 300)', idle:'#A9ADA7' };
+const ORDER = ['working','thinking','blocked','error','done','idle'];
+const grid = v => v.mirror ? v.rows.map(MIR) : v.rows;
+
+class Component extends DCLogic {
+  state = { fav: '1a' };
+  componentDidMount() { this.setFav(); }
+  componentDidUpdate() { this.setFav(); }
+  setFav() {
+    const v = VARS.find(x => x.id === this.state.fav), st = this.props.state ?? 'working', key = v.id + st;
+    if (this._fk === key) return; this._fk = key;
+    const c = document.createElement('canvas'); c.width = c.height = 32; const x = c.getContext('2d');
+    const g = grid(v), H = g.length, W = g[0].length, ox = (16 - W) / 2, oy = Math.floor((16 - H) / 2);
+    g.forEach((r, y) => [...r].forEach((ch, i) => {
+      const f = ch === '#' || ch === 'b' ? '#111312' : ch === 'o' ? '#FAFAF8' : ch === 's' ? FAV[st] : null;
+      if (f) { x.fillStyle = f; x.fillRect((i + ox) * 2, (y + oy) * 2, 2, 2); }
+    }));
+    let l = document.querySelector('link[rel="icon"]'); if (!l) { l = document.createElement('link'); l.rel = 'icon'; document.head.appendChild(l); }
+    l.href = c.toDataURL('image/png');
+  }
+  glyph(v, size, state, anim) {
+    const h = React.createElement, g = grid(v), H = g.length, W = g[0].length, ox = (16 - W) / 2, oy = Math.floor((16 - H) / 2), c = SC[state];
+    const b = [], e = [], a = [], k = [];
+    g.forEach((r, y) => [...r].forEach((ch, x) => {
+      const p = { key: x + '_' + y, x: x + ox, y: y + oy, width: 1.02, height: 1.02 };
+      if (ch === '#') b.push(h('rect', p)); else if (ch === 'o') e.push(h('rect', p)); else if (ch === 's') a.push(h('rect', p)); else if (ch === 'b') k.push(h('rect', p));
+    }));
+    const body = anim ? { working: 'av-bob .5s steps(1,end) infinite', thinking: 'av-bob 2.4s steps(1,end) infinite', idle: 'av-bob 3s steps(1,end) infinite', done: 'av-hop 1.6s steps(1,end) infinite', error: 'av-shake .32s steps(1,end) infinite', blocked: 'none' }[state] : 'none';
+    const acc = anim ? { working: 'av-live 1.4s ease-in-out infinite', thinking: 'av-think 1.2s ease-in-out infinite', blocked: 'av-pulse 1s steps(1,end) infinite', error: 'av-pulse .4s steps(1,end) infinite', done: 'none', idle: 'none' }[state] : 'none';
+    const blink = anim && ['working', 'thinking', 'idle'].includes(state);
+    return h('svg', { viewBox: '0 0 16 16', width: size, height: size, shapeRendering: 'crispEdges', style: { display: 'block', overflow: 'visible', flexShrink: 0 } },
+      h('g', { style: { fill: 'var(--ink)' } }, k),
+      h('g', { style: { animation: body } },
+        h('g', { style: { fill: 'var(--ink)' } }, b),
+        h('g', { style: { fill: state === 'error' ? c : 'var(--panel)', transformBox: 'fill-box', transformOrigin: 'center', animation: blink ? 'av-blink 4s infinite' : 'none' } }, e),
+        h('g', { style: { fill: c, animation: acc } }, a)));
+  }
+  renderVals() {
+    const st = this.props.state ?? 'working', an = this.props.animate ?? true;
+    const sizes = [96, 48, 32, 16];
+    return {
+      variants: VARS.map(v => {
+        const on = this.state.fav === v.id;
+        return {
+          id: v.id, name: v.name, line: v.line, stateU: st.toUpperCase(),
+          hero: this.glyph(v, 192, st, an),
+          light: sizes.map(s => ({ n: String(s), el: this.glyph(v, s, st, an && s >= 32) })),
+          dark: sizes.map(s => ({ n: String(s), el: this.glyph(v, s, st, an && s >= 32) })),
+          states: ORDER.map(s => ({ n: s.toUpperCase().slice(0, 5), el: this.glyph(v, 40, s, an) })),
+          tab: this.glyph(v, 16, st, false), tabDark: this.glyph(v, 16, st, false),
+          use: () => this.setState({ fav: v.id }),
+          btnLabel: on ? 'ACTIVE FAVICON' : 'USE AS FAVICON →',
+          btnStyle: on
+            ? { all: 'unset', cursor: 'pointer', fontFamily: "'Geist Mono',monospace", fontSize: 10, letterSpacing: '.12em', padding: '6px 10px', background: 'var(--ink)', color: 'var(--panel)' }
+            : { all: 'unset', cursor: 'pointer', fontFamily: "'Geist Mono',monospace", fontSize: 10, letterSpacing: '.12em', padding: '5px 9px', border: '1px solid var(--line2)', color: 'var(--ink2)' }
+        };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

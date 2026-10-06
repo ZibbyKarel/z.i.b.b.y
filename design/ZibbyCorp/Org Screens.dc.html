@@ -13,16 +13,8 @@
   <div data-screen-label="Org map" style="display:flex;flex-direction:column;gap:22px">
     <div style="display:flex;align-items:baseline;gap:16px"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">01 — ORG MAP</span><h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">ZibbyCorp</h1><span style="margin-left:auto;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--ink2)">{{ mapMeta }}</span></div>
     <div style="display:flex;flex-direction:column;align-items:center">
-      <div style="position:relative;display:flex;align-items:center;gap:14px;padding:10px 18px 10px 10px;border:1px solid var(--line2);background:var(--panel)">
-        <div style="position:absolute;top:-1px;left:-1px;width:8px;height:8px;border-top:1px solid var(--ink);border-left:1px solid var(--ink)"></div>
-        <div style="position:absolute;top:-1px;right:-1px;width:8px;height:8px;border-top:1px solid var(--ink);border-right:1px solid var(--ink)"></div>
-        <div style="position:absolute;bottom:-1px;left:-1px;width:8px;height:8px;border-bottom:1px solid var(--ink);border-left:1px solid var(--ink)"></div>
-        <div style="position:absolute;bottom:-1px;right:-1px;width:8px;height:8px;border-bottom:1px solid var(--ink);border-right:1px solid var(--ink)"></div>
-        <div style="width:50px;height:50px;display:grid;place-items:center;background:var(--panel2)">{{ cooGlyph }}</div>
-        <div style="display:flex;flex-direction:column;gap:3px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">COO · ROOT</span><span style="font-size:16px;font-weight:500">Zibby</span><span style="font-size:12px;color:var(--ink2)">Routes, classifies, chats</span></div>
-        <div style="margin-left:22px;display:flex;align-items:center;gap:7px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2)">{{ workDot }}{{ cooMeta }}</div>
-      </div>
-      <div style="width:1px;height:22px;background:var(--line2)"></div>
+      <div title="Zibby · COO" style="display:block">{{ cooGlyph }}</div>
+      <div style="width:1px;height:18px;background:var(--line2)"></div>
     </div>
     <div style="position:relative;display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:8px;margin-top:-22px">
       <div style="position:absolute;top:0;height:1px;background:var(--line2);left:calc((100% - 80px) / 22);right:calc((100% - 80px) / 22)"></div>
@@ -285,7 +277,7 @@ class Component extends DCLogic {
       const n = ag.filter(act).length; return n ? { u: pad(n) + ' ACTIVE', k: 'working' } : { u: subs.length ? 'QUEUED' : 'QUIET', k: 'idle' }; };
 
     if (out.isMap) {
-      out.cooGlyph = G(Z.coo, 38, true); out.workDot = B.dot(React, 'working', 7);
+      out.cooGlyph = B.zibby(React, { state: 'working', size: 112 }); out.workDot = B.dot(React, 'working', 7);
       out.cooMeta = pad(Z.tasks.filter(t => Z.taskState(t) !== 'done').length) + ' TASKS ROUTED';
       out.mapMeta = '11 DEPARTMENTS · ' + pad(Z.agents.length) + ' AGENTS IN POOL';
       const selId = (Z.D(this.state.selDept) && this.state.selDept) || (Z.depts.find(d => deptAgents(d.id).some(act)) || Z.depts[0]).id;
