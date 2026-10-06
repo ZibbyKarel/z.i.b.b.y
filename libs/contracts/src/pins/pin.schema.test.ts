@@ -24,6 +24,16 @@ describe("PinSchema — page pin", () => {
     expect(result.success).toBe(false);
   });
 
+  it("rejects a protocol-relative href (//evil.host)", () => {
+    const result = PinSchema.safeParse({ kind: "page", id: "//evil.host", label: "Evil" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a backslash-leading href (/\\evil.host — browsers normalize it like //)", () => {
+    const result = PinSchema.safeParse({ kind: "page", id: "/\\evil.host", label: "Evil" });
+    expect(result.success).toBe(false);
+  });
+
   it("rejects an empty or whitespace-only label", () => {
     expect(PinSchema.safeParse({ kind: "page", id: "/org/people", label: "" }).success).toBe(false);
     expect(PinSchema.safeParse({ kind: "page", id: "/org/people", label: "   " }).success).toBe(
