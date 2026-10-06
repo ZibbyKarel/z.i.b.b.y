@@ -22,6 +22,7 @@ import { stop } from "./stop";
 import { plus } from "./plus";
 import { chevron } from "./chevron";
 import { dots } from "./dots";
+import { dotsVertical } from "./dotsVertical";
 import { file } from "./file";
 import { shield } from "./shield";
 import { search } from "./search";
@@ -76,6 +77,7 @@ export const iconNames = [
   "plus",
   "chevron",
   "dots",
+  "dotsVertical",
   "file",
   "shield",
   "search",
@@ -133,6 +135,7 @@ export const paths: Record<IconName, ReactNode> = {
   plus,
   chevron,
   dots,
+  dotsVertical,
   file,
   shield,
   search,

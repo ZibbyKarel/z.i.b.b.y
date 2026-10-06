@@ -18,6 +18,7 @@ export enum AppHeaderTestId {
   Notifications = "app-header-notifications",
   Search = "app-header-search",
   SearchShortcut = "app-header-search-shortcut",
+  Menu = "app-header-menu",
 }
 
 export interface AppHeaderProps {
@@ -27,7 +28,8 @@ export interface AppHeaderProps {
   homeHref?: string;
   /** Accessible name for the brand mark link (only used when `homeHref` is set). */
   homeLabel?: string;
-  /** Section navigation — the app composes a `Tabs variant="mono"`. */
+  /** Section navigation — the app composes a `Tabs variant="mono"`. Auto
+   *  width (never grows) — the center search region absorbs the rest. */
   nav?: ReactNode;
   /** Operator identity slot, trailing cluster. */
   operator?: ReactNode;
@@ -35,10 +37,15 @@ export interface AppHeaderProps {
   activeCount?: ReactNode;
   /** 5H / WEEK usage readout slot (a `LimitBar` pair), trailing cluster. */
   limits?: ReactNode;
-  /** Notification bell slot, trailing cluster just before search. */
+  /** Notification bell slot, trailing cluster. */
   notifications?: ReactNode;
+  /** ⋮ overflow menu slot (an `app`-composed `MenuButton variant="bordered"`),
+   *  trailing cluster — last. Carries page-pin + settings/registries actions. */
+  menu?: ReactNode;
   /** Search trigger label — the control itself is built in and always shows
-   *  `⌘K`. Omit `onSearchClick` to not render the trigger at all. */
+   *  `⌘K`. Omit `onSearchClick` to not render the trigger at all — the
+   *  center region still reserves its space either way, so the layout never
+   *  shifts when a screen opts out of search. */
   searchLabel?: string;
   onSearchClick?: () => void;
   /** Overrides the rendered anchor for `homeHref` — pass the app's
@@ -50,12 +57,14 @@ export interface AppHeaderProps {
 /**
  * DS.md §5/§8 app shell top bar — a fixed `LAYOUT.headerHeight` (56px) band,
  * `--panel` background, a bottom hairline. Leading brand mark (linking home,
- * ZB-01) + section nav, trailing operator/active-count/usage/search cluster.
- * Every trailing slot the app owns is an opaque `ReactNode` (domain-neutral,
- * no `next/link` import here) except the search trigger, which `AppHeader`
- * renders itself so every screen gets the identical `⌘K` affordance for free
- * (DS.md §8 "Search trigger"). The settings link lives in the org's system
- * section nav instead — a dedicated top-bar gear was redundant.
+ * ZB-01) + auto-width section nav, a centered search trigger (`flex:1`
+ * region, ZB-06), and a trailing operator/active-count/usage/notifications/⋮
+ * cluster. Every trailing slot the app owns is an opaque `ReactNode`
+ * (domain-neutral, no `next/link` import here) except the search trigger,
+ * which `AppHeader` renders itself so every screen gets the identical `⌘K`
+ * affordance for free (DS.md §8 "Search trigger"). Settings/Registries now
+ * live in the `menu` slot's ⋮ overflow (an app-composed `MenuButton
+ * variant="bordered"`) instead of a dedicated top-bar control.
  */
 export function AppHeader({
   wordmark,
@@ -66,6 +75,7 @@ export function AppHeader({
   activeCount,
   limits,
   notifications,
+  menu,
   searchLabel = "Search",
   onSearchClick,
   linkComponent,
@@ -101,23 +111,19 @@ export function AppHeader({
         )}
       </div>
 
-      <Container grow minW0 data-testid={AppHeaderTestId.Nav} height="100%">
+      <Container data-testid={AppHeaderTestId.Nav} height="100%" shrink={false}>
         {nav}
       </Container>
 
-      <Row align="center" gap="150" shrink={false}>
-        {operator && <span data-testid={AppHeaderTestId.Operator}>{operator}</span>}
-        {activeCount && <span data-testid={AppHeaderTestId.ActiveCount}>{activeCount}</span>}
-        {limits && <span data-testid={AppHeaderTestId.Limits}>{limits}</span>}
-        {notifications && <span data-testid={AppHeaderTestId.Notifications}>{notifications}</span>}
-
+      <Container grow minW0 style={{ display: "flex", justifyContent: "center" }}>
         {onSearchClick && (
           <button
             aria-label={searchLabel}
             className={cn(
-              "inline-flex items-center gap-3.5 border border-line-2 px-[10px] py-[6px]",
+              "inline-flex h-8 w-[340px] max-w-full items-center justify-between gap-3.5",
+              "border border-line-2 bg-background px-3",
               "font-mono text-[11px] uppercase tracking-wider text-ink-2 transition-colors",
-              "hover:border-ink hover:text-ink",
+              "hover:border-ink",
               focusRing,
             )}
             data-testid={AppHeaderTestId.Search}
@@ -130,6 +136,14 @@ export function AppHeader({
             </span>
           </button>
         )}
+      </Container>
+
+      <Row align="center" gap="150" shrink={false}>
+        {operator && <span data-testid={AppHeaderTestId.Operator}>{operator}</span>}
+        {activeCount && <span data-testid={AppHeaderTestId.ActiveCount}>{activeCount}</span>}
+        {limits && <span data-testid={AppHeaderTestId.Limits}>{limits}</span>}
+        {notifications && <span data-testid={AppHeaderTestId.Notifications}>{notifications}</span>}
+        {menu && <span data-testid={AppHeaderTestId.Menu}>{menu}</span>}
       </Row>
     </Row>
   );

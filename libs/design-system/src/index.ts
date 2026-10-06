@@ -363,7 +363,12 @@ export type {
 } from "./components/DropDownButton/DropDownButton";
 
 export { MenuButton, MenuButtonTestId } from "./components/MenuButton/MenuButton";
-export type { MenuButtonItem, MenuButtonProps } from "./components/MenuButton/MenuButton";
+export type {
+  MenuButtonDivider,
+  MenuButtonEntry,
+  MenuButtonItem,
+  MenuButtonProps,
+} from "./components/MenuButton/MenuButton";
 
 export {
   List,

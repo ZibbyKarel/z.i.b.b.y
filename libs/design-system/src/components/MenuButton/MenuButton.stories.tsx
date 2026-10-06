@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Typography } from "../Typography/Typography";
-import { MenuButton, type MenuButtonItem } from "./MenuButton";
+import { MenuButton, type MenuButtonEntry, type MenuButtonItem } from "./MenuButton";
 
 const ACTION_ITEMS: MenuButtonItem[] = [
   { id: "resume", label: "Pokračovat", icon: "run", onSelect: () => {} },
@@ -14,6 +14,16 @@ const ACTION_ITEMS: MenuButtonItem[] = [
     disabled: true,
     onSelect: () => {},
   },
+];
+
+// AppHeader's ⋮ overflow menu (ZB-06): a bordered trigger, mono-uppercase
+// label-left/trailing-mark-right rows, a divider between groups, and
+// SETTINGS/REGISTRIES rendered as real links.
+const OVERFLOW_ENTRIES: MenuButtonEntry[] = [
+  { id: "pin", label: "Pin page", trailing: "+", onSelect: () => {} },
+  { id: "d1", divider: true },
+  { id: "settings", label: "Settings", trailing: "⚙", href: "/system/settings" },
+  { id: "registries", label: "Registries", trailing: "→", href: "/system/registries" },
 ];
 
 const meta: Meta<typeof MenuButton> = {
@@ -61,6 +71,15 @@ export const Overview: Story = {
         <Typography type="label">disabled trigger</Typography>
         <div className="flex flex-wrap items-center gap-3">
           <MenuButton disabled ariaLabel="Akce běhu" items={ACTION_ITEMS} />
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <Typography type="label">
+          variant=&quot;bordered&quot; (AppHeader ⋮ overflow menu) — trailing marks, divider, href
+          rows
+        </Typography>
+        <div className="flex flex-wrap items-center gap-3">
+          <MenuButton ariaLabel="More" items={OVERFLOW_ENTRIES} variant="bordered" />
         </div>
       </div>
     </div>

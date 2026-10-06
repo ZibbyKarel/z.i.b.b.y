@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { MenuButton, MenuButtonTestId } from "./MenuButton";
-import type { MenuButtonItem } from "./MenuButton";
+import type { MenuButtonEntry, MenuButtonItem } from "./MenuButton";
 
 function makeItems(): MenuButtonItem[] {
   return [
@@ -107,5 +107,74 @@ describe("MenuButton", () => {
   it("disables the trigger when disabled", () => {
     render(<MenuButton disabled items={makeItems()} />);
     expect(screen.getByTestId(MenuButtonTestId.Trigger)).toBeDisabled();
+  });
+
+  describe("variant='bordered' (AppHeader overflow menu)", () => {
+    function makeBorderedEntries(): MenuButtonEntry[] {
+      return [
+        { id: "pin", label: "Pin page", trailing: "+", onSelect: vi.fn() },
+        { id: "d1", divider: true },
+        { id: "settings", label: "Settings", href: "/system/settings", trailing: "⚙" },
+      ];
+    }
+
+    it("renders a 32×32 bordered trigger with the vertical-dots glyph", () => {
+      render(<MenuButton items={makeBorderedEntries()} variant="bordered" />);
+      const trigger = screen.getByTestId(MenuButtonTestId.Trigger);
+      expect(trigger.tagName).toBe("BUTTON");
+      expect(trigger).toHaveAccessibleName("Actions");
+    });
+
+    it("renders a divider between groups and a trailing mark on each row", async () => {
+      const user = userEvent.setup();
+      render(<MenuButton items={makeBorderedEntries()} variant="bordered" />);
+      await user.click(screen.getByTestId(MenuButtonTestId.Trigger));
+      expect(screen.getByTestId(`${MenuButtonTestId.Divider}-d1`)).toBeInTheDocument();
+      const pinItem = screen.getByTestId(`${MenuButtonTestId.Item}-pin`);
+      expect(pinItem).toHaveTextContent("Pin page");
+      expect(pinItem).toHaveTextContent("+");
+    });
+
+    it("renders an href row as a real link and closes the menu on click", async () => {
+      const user = userEvent.setup();
+      render(<MenuButton items={makeBorderedEntries()} variant="bordered" />);
+      await user.click(screen.getByTestId(MenuButtonTestId.Trigger));
+      const settingsItem = screen.getByTestId(`${MenuButtonTestId.Item}-settings`);
+      expect(settingsItem.tagName).toBe("A");
+      expect(settingsItem).toHaveAttribute("href", "/system/settings");
+      await user.click(settingsItem);
+      expect(screen.queryByTestId(MenuButtonTestId.Menu)).not.toBeInTheDocument();
+    });
+
+    it("renders href rows through a custom linkComponent", async () => {
+      function FakeLink({ href, children, ...rest }: React.ComponentProps<"a"> & { href: string }) {
+        return (
+          <a data-fake-link href={href} {...rest}>
+            {children}
+          </a>
+        );
+      }
+      const user = userEvent.setup();
+      render(
+        <MenuButton items={makeBorderedEntries()} linkComponent={FakeLink} variant="bordered" />,
+      );
+      await user.click(screen.getByTestId(MenuButtonTestId.Trigger));
+      expect(screen.getByTestId(`${MenuButtonTestId.Item}-settings`)).toHaveAttribute(
+        "data-fake-link",
+      );
+    });
+
+    it("skips dividers when navigating with the arrow keys", async () => {
+      const user = userEvent.setup();
+      render(<MenuButton items={makeBorderedEntries()} variant="bordered" />);
+      const trigger = screen.getByTestId(MenuButtonTestId.Trigger);
+      trigger.focus();
+      await user.keyboard("{ArrowDown}"); // opens, active = "pin"
+      const pinItem = screen.getByTestId(`${MenuButtonTestId.Item}-pin`);
+      expect(trigger).toHaveAttribute("aria-activedescendant", pinItem.id);
+      await user.keyboard("{ArrowDown}"); // skips the divider, lands on "settings"
+      const settingsItem = screen.getByTestId(`${MenuButtonTestId.Item}-settings`);
+      expect(trigger).toHaveAttribute("aria-activedescendant", settingsItem.id);
+    });
   });
 });

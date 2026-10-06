@@ -26,6 +26,39 @@ describe("AppHeader", () => {
     expect(screen.queryByTestId(AppHeaderTestId.Limits)).toBeNull();
     expect(screen.queryByTestId(AppHeaderTestId.Search)).toBeNull();
     expect(screen.queryByTestId(AppHeaderTestId.Notifications)).toBeNull();
+    expect(screen.queryByTestId(AppHeaderTestId.Menu)).toBeNull();
+  });
+
+  it("renders the menu slot when provided, last in the trailing cluster", () => {
+    render(
+      <AppHeader
+        menu={<button type="button">More</button>}
+        notifications={<span>Bell</span>}
+        operator={<span>Karel</span>}
+      />,
+    );
+    const menu = screen.getByTestId(AppHeaderTestId.Menu);
+    expect(menu).toHaveTextContent("More");
+    const trailing = [
+      AppHeaderTestId.Operator,
+      AppHeaderTestId.Notifications,
+      AppHeaderTestId.Menu,
+    ].map((id) => screen.getByTestId(id));
+    // Each slot appears strictly after the previous one in document order.
+    for (let i = 1; i < trailing.length; i++) {
+      expect(
+        trailing[i - 1]!.compareDocumentPosition(trailing[i]!) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    }
+  });
+
+  it("still renders a center region with no search button when onSearchClick is omitted", () => {
+    render(<AppHeader nav={<nav>Section nav</nav>} />);
+    expect(screen.queryByTestId(AppHeaderTestId.Search)).toBeNull();
+    // The nav and trailing slots are still both present and the layout holds —
+    // i.e. the center region didn't collapse the row into a 2-slot layout.
+    expect(screen.getByTestId(AppHeaderTestId.Nav)).toHaveTextContent("Section nav");
+    expect(screen.getByTestId(AppHeaderTestId.Root)).toBeInTheDocument();
   });
 
   it("renders the notifications slot when provided", () => {

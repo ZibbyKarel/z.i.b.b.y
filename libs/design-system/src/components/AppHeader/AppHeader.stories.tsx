@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { AppHeader } from "./AppHeader";
 import { Tab, TabList, Tabs } from "../Tabs/Tabs";
 import { LimitBar } from "../LimitBar/LimitBar";
+import { MenuButton } from "../MenuButton/MenuButton";
 import { Typography } from "../Typography/Typography";
 
 const nav = (
@@ -13,6 +14,19 @@ const nav = (
       <Tab value="policy">Policy</Tab>
     </TabList>
   </Tabs>
+);
+
+const overflowMenu = (
+  <MenuButton
+    ariaLabel="More"
+    items={[
+      { id: "pin", label: "Pin page", trailing: "+", onSelect: () => {} },
+      { id: "d1", divider: true },
+      { id: "settings", label: "Settings", trailing: "⚙", href: "/system/settings" },
+      { id: "registries", label: "Registries", trailing: "→", href: "/system/registries" },
+    ]}
+    variant="bordered"
+  />
 );
 
 const meta: Meta<typeof AppHeader> = {
@@ -37,6 +51,7 @@ export const Overview: Story = {
             <LimitBar label="WEEK" max={100} value={62} />
           </div>
         }
+        menu={overflowMenu}
         nav={nav}
         onSearchClick={() => {}}
         operator={<Typography type="labelSm">Karel</Typography>}
@@ -46,5 +61,5 @@ export const Overview: Story = {
 };
 
 export const Playground: Story = {
-  args: { homeHref: "/org", nav, onSearchClick: () => {} },
+  args: { homeHref: "/org", menu: overflowMenu, nav, onSearchClick: () => {} },
 };
