@@ -72,4 +72,28 @@ describe("Pins API (e2e)", () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual([{ kind: "workflow", id: "delivery" }]);
   });
+
+  it("persists a page pin and reads it back", async () => {
+    const pins = [{ kind: "page", id: "/org/people", label: "People" }];
+    const put = await request(app.getHttpServer()).put("/api/pins").send(pins);
+    expect(put.status).toBe(200);
+    expect(put.body).toEqual(pins);
+
+    const get = await request(app.getHttpServer()).get("/api/pins");
+    expect(get.body).toEqual(pins);
+  });
+
+  it("rejects a page pin whose id doesn't start with /", async () => {
+    const res = await request(app.getHttpServer())
+      .put("/api/pins")
+      .send([{ kind: "page", id: "org/people", label: "People" }]);
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects a page pin with a label past the max length", async () => {
+    const res = await request(app.getHttpServer())
+      .put("/api/pins")
+      .send([{ kind: "page", id: "/org/people", label: "x".repeat(81) }]);
+    expect(res.status).toBe(400);
+  });
 });

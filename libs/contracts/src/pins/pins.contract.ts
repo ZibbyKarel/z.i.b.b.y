@@ -4,7 +4,8 @@ import { PinsSchema } from "./pin.schema";
 const c = initContract();
 
 /**
- * Připnuté agenty/pipeliny/řetězce pro Overview "Panel rychlého spuštění".
+ * Připnuté cíle — katalogové entity (agent/workflow/employee) pro Overview
+ * "Panel rychlého spuštění", i libovolné stránky (sidebar "Pinned").
  * Jeden malý operátorem vlastněný seznam, file-backed — stejná pozice jako
  * `systemContract`. `getPins` čte efektivní seznam (prázdné pole, když
  * soubor neexistuje); `putPins` nahrazuje celý seznam (add/remove/reorder

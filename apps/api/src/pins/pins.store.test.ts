@@ -55,4 +55,44 @@ describe("PinsStore", () => {
     const store = new PinsStore(file);
     expect(await store.read()).toEqual([]);
   });
+
+  it("persists a page pin alongside entity pins and reads it back", async () => {
+    const store = new PinsStore(file);
+    await store.write([
+      { kind: "agent", id: "researcher" },
+      { kind: "page", id: "/org/people", label: "People" },
+    ]);
+    expect(await store.read()).toEqual([
+      { kind: "agent", id: "researcher" },
+      { kind: "page", id: "/org/people", label: "People" },
+    ]);
+    // A fresh store over the same file sees the persisted page pin (restart survival).
+    expect(await new PinsStore(file).read()).toEqual([
+      { kind: "agent", id: "researcher" },
+      { kind: "page", id: "/org/people", label: "People" },
+    ]);
+  });
+
+  it("dedupes a page pin by href on write — last label wins", async () => {
+    const store = new PinsStore(file);
+    await store.write([
+      { kind: "page", id: "/org/people", label: "People" },
+      { kind: "page", id: "/org/people", label: "People (renamed)" },
+    ]);
+    expect(await store.read()).toEqual([
+      { kind: "page", id: "/org/people", label: "People (renamed)" },
+    ]);
+  });
+
+  it("rejects a page pin whose id doesn't start with /", async () => {
+    const store = new PinsStore(file);
+    await expect(
+      store.write([{ kind: "page", id: "org/people", label: "People" }]),
+    ).rejects.toThrow();
+  });
+
+  it("rejects a page pin with an empty label", async () => {
+    const store = new PinsStore(file);
+    await expect(store.write([{ kind: "page", id: "/org/people", label: "" }])).rejects.toThrow();
+  });
 });

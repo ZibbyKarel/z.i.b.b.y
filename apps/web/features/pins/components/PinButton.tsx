@@ -1,12 +1,12 @@
 "use client";
 
-import type { PinKind } from "@zibby/contracts";
+import type { EntityPinKind } from "@zibby/contracts";
 import { Button } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { usePinToggle } from "../usePinToggle";
 
 export interface PinButtonProps {
-  kind: PinKind;
+  kind: EntityPinKind;
   id: string;
 }
 
