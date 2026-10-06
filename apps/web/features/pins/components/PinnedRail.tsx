@@ -1,10 +1,24 @@
 "use client";
 
-import { useLayoutEffect, useEffect as useReactEffect, useState } from "react";
+import {
+  type AnchorHTMLAttributes,
+  useLayoutEffect,
+  useEffect as useReactEffect,
+  useState,
+} from "react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Card, CardContent, Container, Icon, Rail, Stack, Typography } from "@zibby/design-system";
+import {
+  Button,
+  Card,
+  CardContent,
+  Container,
+  Rail,
+  Stack,
+  TextLink,
+  Typography,
+} from "@zibby/design-system";
 import { usePagePins } from "../usePagePins";
 
 export enum PinnedRailTestId {
@@ -48,6 +62,16 @@ function writeStoredOpen(open: boolean): void {
     // Storage unavailable (private mode, disabled) — the choice still
     // applies for the rest of this session.
   }
+}
+
+/** Adapts `next/link`'s `Link` (which types `href` as `Route | UrlObject`) to
+ *  `TextLink`'s router-agnostic `linkComponent` contract (`href: string`) —
+ *  same seam as `AppShell`'s own `NavLink`. */
+function NavLink({
+  href,
+  ...rest
+}: { href: string } & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href">) {
+  return <Link href={href as Route} {...rest} />;
 }
 
 export interface PinnedRailProps {
@@ -107,41 +131,54 @@ export function PinnedRail({ currentHref }: PinnedRailProps) {
         : pagePins.map((pin) => {
             const active = pin.id === currentHref;
             return (
-              <Stack
-                align="center"
+              // Design line 50's row: `38px minmax(0,1fr) auto` grid, `padding:
+              // 0 12px 0 20px` — the kind column is widened to 56px here (DS
+              // Container.width, not an arbitrary CSS grid template) because
+              // "STRÁNKA" (cs) doesn't fit the mock's English-sized 38px; the
+              // flex equivalent (fixed-width + grow/minW0 + auto-trailing
+              // Button) reproduces the same three tracks via DS primitives.
+              <Container
                 data-testid={PinnedRailTestId.Row}
-                direction="row"
-                gap="100"
                 key={pin.id}
+                padding={["0", "150", "0", "250"]}
                 style={{
                   background: active ? "var(--color-panel-2)" : undefined,
                   boxShadow: active ? "inset 2px 0 0 var(--color-ink)" : undefined,
                 }}
               >
-                <Typography data-testid={PinnedRailTestId.Kind} type="labelSm" variant="tertiary">
-                  {t("pinnedKindPage")}
-                </Typography>
-                <Container grow minW0 padding={["100", "0"]}>
-                  <Link
-                    data-testid={PinnedRailTestId.Link}
-                    href={pin.id as Route}
-                    style={{ textDecoration: "none" }}
-                  >
-                    <Typography truncate type="note" weight={active ? "medium" : "normal"}>
-                      {pin.label}
+                <Stack align="center" direction="row" gap="100">
+                  <Container shrink={false} width="56px">
+                    <Typography
+                      truncate
+                      data-testid={PinnedRailTestId.Kind}
+                      type="labelSm"
+                      variant="tertiary"
+                    >
+                      {t("pinnedKindPage")}
                     </Typography>
-                  </Link>
-                </Container>
-                <button
-                  aria-label={t("pinnedUnpinAria", { name: pin.label })}
-                  data-testid={PinnedRailTestId.Unpin}
-                  onClick={() => unpinPage(pin.id)}
-                  title={t("pinnedUnpinAria", { name: pin.label })}
-                  type="button"
-                >
-                  <Icon name="x" size="xs" tone="faint" />
-                </button>
-              </Stack>
+                  </Container>
+                  <Container grow minW0>
+                    <TextLink
+                      truncate
+                      data-testid={PinnedRailTestId.Link}
+                      href={pin.id}
+                      linkComponent={NavLink}
+                    >
+                      <Typography truncate type="note" weight={active ? "medium" : "normal"}>
+                        {pin.label}
+                      </Typography>
+                    </TextLink>
+                  </Container>
+                  <Button
+                    aria-label={t("pinnedUnpinAria", { name: pin.label })}
+                    data-testid={PinnedRailTestId.Unpin}
+                    icon="x"
+                    intent="ghost"
+                    onClick={() => unpinPage(pin.id)}
+                    size="sm"
+                  />
+                </Stack>
+              </Container>
             );
           })}
     </Rail>

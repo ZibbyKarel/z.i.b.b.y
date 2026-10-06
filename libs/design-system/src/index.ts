@@ -420,6 +420,9 @@ export type { ContactRowProps } from "./components/ContactRow/ContactRow";
 export { Breadcrumb, BreadcrumbTestId } from "./components/Breadcrumb/Breadcrumb";
 export type { BreadcrumbItem, BreadcrumbProps } from "./components/Breadcrumb/Breadcrumb";
 
+export { TextLink, TextLinkTestId } from "./components/TextLink/TextLink";
+export type { TextLinkProps } from "./components/TextLink/TextLink";
+
 // ---------------------------------------------------------------------------
 // Data & layout (ZA-04)
 // ---------------------------------------------------------------------------
