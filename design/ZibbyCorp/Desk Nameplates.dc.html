@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap">
+<script src="./zibby.js"></script>
+<style>html,body{margin:0;background:#F3F4F2}a{color:#111312}a:hover{color:#50544F}</style>
+</helmet>
+<section style="--bg:#F3F4F2;--panel:#FAFAF8;--panel2:#EDEEEB;--line:#D9DBD6;--line2:#BFC2BC;--ink:#111312;--ink2:#50544F;--ink3:#8A8E88;--grid:rgba(17,19,18,.05);--s-work:oklch(0.6 0.14 160);--s-think:oklch(0.58 0.14 250);--s-block:oklch(0.7 0.15 70);--s-err:oklch(0.58 0.2 25);--s-done:oklch(0.56 0.15 300);--s-idle:#A9ADA7;padding:40px;font-family:'Geist',system-ui,sans-serif;color:var(--ink);background:var(--bg);display:flex;flex-direction:column;gap:28px;width:1240px;box-sizing:border-box">
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">FLOORPLAN · DESK NAMEPLATE</span>
+    <span style="font-size:22px;font-weight:500">Jméno na stole, ne pod ním</span>
+    <span style="font-size:13px;color:var(--ink2)">Každá varianta: 2× náhled (Stuart · thinking, Bob · blocked, Kevin · idle) a vedle 1× skutečná velikost.</span>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px">
+
+    <div id="1a" style="border:1px solid var(--line2);background:var(--panel);display:flex;flex-direction:column">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:baseline"><span style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.12em;background:var(--ink);color:var(--panel);padding:2px 6px">1A</span><span style="font-size:14px;font-weight:500">Přední lišta</span><span style="font-size:12px;color:var(--ink3)">tmavá lišta na hraně stolu</span></div>
+      <div style="padding:18px 14px;display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 14px;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px">
+        <sc-for list="{{ agents }}" as="a" hint-placeholder-count="6">
+          <div style="{{ a.cell }}">
+            <div style="position:absolute;left:8px;top:34px;width:56px;height:22px;box-sizing:border-box;background:var(--panel2);border:1px solid var(--line2)"></div>
+            <div style="position:absolute;left:24px;top:37px;width:24px;height:4px;background:var(--ink2)"></div>
+            <div style="position:absolute;left:28px;top:46px;width:16px;height:5px;box-sizing:border-box;border:1px solid var(--line2);background:var(--panel)"></div>
+            <div style="{{ a.glyphStyle }}">{{ a.glyph }}</div>
+            <div style="{{ a.iconStyle }}">{{ a.icon }}</div>
+            <div style="position:absolute;left:8px;top:51px;width:56px;height:11px;box-sizing:border-box;background:var(--ink);color:var(--panel);display:flex;align-items:center;justify-content:center;gap:3px;font-family:'Geist Mono',monospace;font-size:8px;font-weight:500;letter-spacing:.1em"><span style="width:4px;height:4px;background:{{ a.c }}"></span>{{ a.nameU }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div id="1b" style="border:1px solid var(--line2);background:var(--panel);display:flex;flex-direction:column">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:baseline"><span style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.12em;background:var(--ink);color:var(--panel);padding:2px 6px">1B</span><span style="font-size:14px;font-weight:500">Stojánek</span><span style="font-size:12px;color:var(--ink3)">klasická cedulka na stole</span></div>
+      <div style="padding:18px 14px;display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 14px;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px">
+        <sc-for list="{{ agents }}" as="a" hint-placeholder-count="6">
+          <div style="{{ a.cell }}">
+            <div style="position:absolute;left:8px;top:34px;width:56px;height:22px;box-sizing:border-box;background:var(--panel2);border:1px solid var(--line2)"></div>
+            <div style="position:absolute;left:24px;top:37px;width:24px;height:4px;background:var(--ink2)"></div>
+            <div style="{{ a.glyphStyle }}">{{ a.glyph }}</div>
+            <div style="{{ a.iconStyle }}">{{ a.icon }}</div>
+            <div style="position:absolute;left:14px;top:43px;width:44px;height:11px;background:var(--ink)"></div>
+            <div style="position:absolute;left:15px;top:44px;width:42px;height:9px;background:var(--panel);clip-path:polygon(8% 0,92% 0,100% 100%,0 100%);display:flex;align-items:center;justify-content:center;gap:3px;font-family:'Geist Mono',monospace;font-size:7.5px;font-weight:600;letter-spacing:.08em"><span style="width:3px;height:3px;background:{{ a.c }}"></span>{{ a.nameU }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div id="1c" style="border:1px solid var(--line2);background:var(--panel);display:flex;flex-direction:column">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:baseline"><span style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.12em;background:var(--ink);color:var(--panel);padding:2px 6px">1C</span><span style="font-size:14px;font-weight:500">Monitor</span><span style="font-size:12px;color:var(--ink3)">jméno svítí na displeji</span></div>
+      <div style="padding:18px 14px;display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 14px;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px">
+        <sc-for list="{{ agents }}" as="a" hint-placeholder-count="6">
+          <div style="{{ a.cell }}">
+            <div style="position:absolute;left:8px;top:34px;width:56px;height:22px;box-sizing:border-box;background:var(--panel2);border:1px solid var(--line2)"></div>
+            <div style="{{ a.glyphStyle }}">{{ a.glyph }}</div>
+            <div style="{{ a.iconStyle }}">{{ a.icon }}</div>
+            <div style="position:absolute;left:14px;top:38px;width:44px;height:12px;box-sizing:border-box;background:var(--ink);border:1px solid var(--ink2);display:flex;align-items:center;justify-content:center;gap:3px;color:var(--panel);font-family:'Geist Mono',monospace;font-size:7.5px;font-weight:500;letter-spacing:.08em"><span style="width:3px;height:3px;background:{{ a.c }}"></span>{{ a.nameU }}</div>
+            <div style="position:absolute;left:32px;top:50px;width:8px;height:3px;background:var(--ink2)"></div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div id="1d" style="border:1px solid var(--line2);background:var(--panel);display:flex;flex-direction:column">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:baseline"><span style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.12em;background:var(--ink);color:var(--panel);padding:2px 6px">1D</span><span style="font-size:14px;font-weight:500">Vytištěno na stole</span><span style="font-size:12px;color:var(--ink3)">text přímo na desce, bez cedulky</span></div>
+      <div style="padding:18px 14px;display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 14px;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px">
+        <sc-for list="{{ agents }}" as="a" hint-placeholder-count="6">
+          <div style="{{ a.cell }}">
+            <div style="position:absolute;left:8px;top:34px;width:56px;height:22px;box-sizing:border-box;background:var(--panel2);border:1px solid var(--line2)"></div>
+            <div style="position:absolute;left:24px;top:36px;width:24px;height:4px;background:var(--ink2)"></div>
+            <div style="{{ a.glyphStyle }}">{{ a.glyph }}</div>
+            <div style="{{ a.iconStyle }}">{{ a.icon }}</div>
+            <div style="position:absolute;left:9px;top:43px;width:54px;height:12px;display:flex;align-items:center;justify-content:center;gap:3px;font-family:'Geist Mono',monospace;font-size:8.5px;font-weight:600;letter-spacing:.14em;color:var(--ink)"><span style="width:4px;height:4px;background:{{ a.c }}"></span>{{ a.nameU }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div id="1e" style="border:1px solid var(--line2);background:var(--panel);display:flex;flex-direction:column">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:baseline"><span style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.12em;background:var(--ink);color:var(--panel);padding:2px 6px">1E</span><span style="font-size:14px;font-weight:500">Dvouřádková cedulka</span><span style="font-size:12px;color:var(--ink3)">ID nad jménem</span></div>
+      <div style="padding:18px 14px;display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 14px;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px">
+        <sc-for list="{{ agents }}" as="a" hint-placeholder-count="6">
+          <div style="{{ a.cell }}">
+            <div style="position:absolute;left:8px;top:34px;width:56px;height:22px;box-sizing:border-box;background:var(--panel2);border:1px solid var(--line2)"></div>
+            <div style="position:absolute;left:24px;top:37px;width:24px;height:4px;background:var(--ink2)"></div>
+            <div style="{{ a.glyphStyle }}">{{ a.glyph }}</div>
+            <div style="{{ a.iconStyle }}">{{ a.icon }}</div>
+            <div style="position:absolute;left:16px;top:42px;width:40px;height:19px;box-sizing:border-box;background:var(--panel);border:1px solid var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px">
+              <span style="font-family:'Geist Mono',monospace;font-size:5.5px;letter-spacing:.1em;color:var(--ink3);line-height:1">{{ a.id }}</span>
+              <span style="display:flex;align-items:center;gap:2px;font-family:'Geist Mono',monospace;font-size:7.5px;font-weight:600;letter-spacing:.08em;line-height:1"><span style="width:3px;height:3px;background:{{ a.c }}"></span>{{ a.nameU }}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div id="1f" style="border:1px solid var(--line2);background:var(--panel);display:flex;flex-direction:column">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:baseline"><span style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.12em;background:var(--ink);color:var(--panel);padding:2px 6px">1F</span><span style="font-size:14px;font-weight:500">Visačka</span><span style="font-size:12px;color:var(--ink3)">karta přilepená k hraně stolu</span></div>
+      <div style="padding:18px 14px;display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 14px;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px">
+        <sc-for list="{{ agents }}" as="a" hint-placeholder-count="6">
+          <div style="{{ a.cell }}">
+            <div style="position:absolute;left:8px;top:34px;width:56px;height:22px;box-sizing:border-box;background:var(--panel2);border:1px solid var(--line2)"></div>
+            <div style="position:absolute;left:28px;top:37px;width:16px;height:5px;box-sizing:border-box;border:1px solid var(--line2);background:var(--panel)"></div>
+            <div style="position:absolute;left:24px;top:47px;width:24px;height:4px;background:var(--ink2)"></div>
+            <div style="{{ a.glyphStyle }}">{{ a.glyph }}</div>
+            <div style="{{ a.iconStyle }}">{{ a.icon }}</div>
+            <div style="position:absolute;left:8px;top:53px;width:56px;height:16px;box-sizing:border-box;background:var(--panel);border:1px solid var(--ink);display:flex;align-items:center;gap:4px;padding:0 4px">
+              <span style="width:5px;height:5px;background:{{ a.c }};flex-shrink:0"></span>
+              <span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-family:'Geist Mono',monospace;font-size:7.5px;font-weight:600;letter-spacing:.08em;line-height:1">{{ a.nameU }}</span><span style="font-family:'Geist Mono',monospace;font-size:5px;letter-spacing:.08em;color:var(--ink3);line-height:1;white-space:nowrap;overflow:hidden">{{ a.roleU }}</span></span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const Z = window.ZB, R = React;
+    if (!Z) return { agents: [] };
+    const ST = { error: ['!', 'var(--s-err)'], blocked: ['?', 'var(--s-block)'], done: ['✓', 'var(--s-done)'] };
+    const src = [['Stuart', 'Coder', 'DEV-01', 'thinking'], ['Bob', 'Coder', 'DEV-02', 'blocked'], ['Kevin', 'Architect', 'DEV-08', 'idle']];
+    const agents = [];
+    [2, 1].forEach(z => src.forEach(([n, role, id, state]) => {
+      const st = ST[state];
+      agents.push({
+        cell: `position:relative;width:72px;height:66px;zoom:${z};flex-shrink:0`,
+        glyphStyle: 'position:absolute;left:22px;top:4px', glyph: Z.glyph(R, { seed: n, state, size: 28, glow: false }),
+        iconStyle: st ? `position:absolute;left:46px;top:-1px;width:13px;height:13px;background:${st[1]};color:var(--panel);display:grid;place-items:center;font-family:'Geist Mono',monospace;font-size:10px;font-weight:600;line-height:1` : 'display:none',
+        icon: st ? st[0] : '', c: Z.S[state].c, nameU: n.toUpperCase(), roleU: role.toUpperCase(), id
+      });
+    }));
+    return { agents };
+  }
+}
+</script>
+</body>
+</html>

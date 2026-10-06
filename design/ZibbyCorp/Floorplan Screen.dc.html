@@ -45,11 +45,11 @@
             <div onMouseEnter="{{ d.enter }}" onMouseLeave="{{ d.leave }}" style="{{ d.cellStyle }}">
               <div style="{{ d.pulse }}"></div>
               <div style="position:absolute;left:8px;top:34px;width:56px;height:22px;box-sizing:border-box;background:var(--panel2);border:1px solid var(--line2)"></div>
-              <div style="position:absolute;left:24px;top:37px;width:24px;height:4px;background:var(--ink2)"></div>
-              <div style="position:absolute;left:28px;top:46px;width:16px;height:5px;box-sizing:border-box;border:1px solid var(--line2);background:var(--panel)"></div>
+              <div style="position:absolute;left:28px;top:37px;width:16px;height:5px;box-sizing:border-box;border:1px solid var(--line2);background:var(--panel)"></div>
+              <div style="position:absolute;left:24px;top:47px;width:24px;height:4px;background:var(--ink2)"></div>
               <div style="{{ d.glyphStyle }}">{{ d.glyph }}</div>
               <div style="{{ d.iconStyle }}">{{ d.icon }}</div>
-              <div style="position:absolute;left:0;right:0;top:62px;display:flex;align-items:center;justify-content:center;gap:4px;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--ink2)">{{ d.dot }}<span>{{ d.nameU }}</span></div>
+              <div style="position:absolute;left:8px;top:53px;width:56px;height:16px;box-sizing:border-box;background:var(--panel);border:1px solid var(--ink);display:flex;align-items:center;gap:4px;padding:0 4px"><span style="display:flex;flex-shrink:0">{{ d.dot }}</span><span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-family:'Geist Mono',monospace;font-size:7.5px;font-weight:600;letter-spacing:.08em;line-height:1">{{ d.nameU }}</span><span style="font-family:'Geist Mono',monospace;font-size:5px;letter-spacing:.08em;color:var(--ink3);line-height:1;white-space:nowrap;overflow:hidden">{{ d.roleU }}</span></span></div>
             </div>
           </sc-for>
         </div>
@@ -270,7 +270,7 @@ class Component extends DCLogic {
             pulse: live ? `position:absolute;left:2px;top:30px;width:68px;height:30px;box-sizing:border-box;border:1px solid ${S[a.state].c};animation:zb-ring ${a.state === 'error' ? .8 : 1.2}s ease-out infinite` : 'display:none',
             glyphStyle: `position:absolute;left:22px;top:4px;opacity:${isAway ? .18 : 1}`, glyph: Z.glyph(R, { seed: a.name, state: a.state, size: 28, glow: false }),
             iconStyle: st ? `position:absolute;left:46px;top:-1px;width:13px;height:13px;background:${st[1]};color:var(--panel);display:${isAway ? 'none' : 'grid'};place-items:center;font-family:'Geist Mono',monospace;font-size:10px;font-weight:600;line-height:1` : 'display:none',
-            icon: st ? st[0] : '', dot: Z.dot(R, a.state, 5), nameU: a.name.toUpperCase(), enter: this.enter(a.id), leave: this.leave
+            icon: st ? st[0] : '', dot: Z.dot(R, a.state, 5), nameU: a.name.toUpperCase(), roleU: a.role.toUpperCase(), enter: this.enter(a.id), leave: this.leave
           };
         })
       };

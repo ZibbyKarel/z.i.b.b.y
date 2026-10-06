@@ -3,13 +3,30 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<template id="__bundler_thumbnail" data-bg-color="#F3F4F2"><svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg"><rect x="200" y="150" width="360" height="220" fill="#FAFAF8" stroke="#111312" stroke-width="12"/><rect x="640" y="150" width="360" height="220" fill="#FAFAF8" stroke="#111312" stroke-width="12"/><rect x="200" y="430" width="800" height="220" fill="#FAFAF8" stroke="#111312" stroke-width="12"/></svg></template>
 <script src="./support.js"></script>
 </head>
 <body>
 <x-dc>
-
-<div data-screen-label="Floorplan" style="width:100%;height:calc(100vh - 170px);min-height:520px;box-sizing:border-box;border:1px solid var(--line2);background:var(--bg);color:var(--ink);font-family:'Geist',system-ui,sans-serif;display:grid;grid-template-rows:minmax(0,1fr);grid-template-columns:minmax(0,1fr);overflow:hidden;position:relative">
-  <div ref="{{ setVp }}" onMouseDown="{{ onDown }}" data-screen-label="Floorplan canvas" style="position:relative;overflow:hidden;cursor:grab;background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px;user-select:none">
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap">
+<script src="./zibby.js"></script>
+<style>html,body{margin:0;overflow:hidden;background:#F3F4F2}a{color:#111312}a:hover{color:#50544F}@media (prefers-reduced-motion:reduce){*{animation:none!important}}</style>
+</helmet>
+<div style="--bg:#F3F4F2;--panel:#FAFAF8;--panel2:#EDEEEB;--line:#D9DBD6;--line2:#BFC2BC;--ink:#111312;--ink2:#50544F;--ink3:#8A8E88;--grid:rgba(17,19,18,.05);--gw:0px;--dot-r:0;--s-work:oklch(0.6 0.14 160);--s-think:oklch(0.58 0.14 250);--s-block:oklch(0.7 0.15 70);--s-err:oklch(0.58 0.2 25);--s-done:oklch(0.56 0.15 300);--s-idle:#A9ADA7;width:100%;height:100vh;box-sizing:border-box;background:var(--bg);color:var(--ink);font-family:'Geist',system-ui,sans-serif;display:grid;grid-template-rows:56px minmax(0,1fr);grid-template-columns:minmax(0,1fr);overflow:hidden">
+  <header data-screen-label="Header" style="min-width:0;overflow:hidden;white-space:nowrap;display:flex;align-items:center;gap:36px;padding:0 24px;border-bottom:1px solid var(--line);background:var(--panel);z-index:20">
+    <div style="display:flex;align-items:center;gap:10px">{{ logo }}<span style="font-family:'Geist Mono',monospace;font-size:13px;letter-spacing:.18em;font-weight:600">ZIBBYCORP</span></div>
+    <nav style="display:flex;height:100%;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em">
+      <span style="display:flex;align-items:center;padding:0 14px;border-bottom:1px solid var(--ink);color:var(--ink)">ORG · FLOORPLAN</span>
+      <span style="display:flex;align-items:center;padding:0 14px;color:var(--ink3)">TASKS</span>
+      <span style="display:flex;align-items:center;padding:0 14px;color:var(--ink3)">ACTIVITY</span>
+      <span style="display:flex;align-items:center;padding:0 14px;color:var(--ink3)">LEDGER</span>
+    </nav>
+    <div style="margin-left:auto;min-width:0;white-space:nowrap;display:flex;align-items:center;gap:18px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2)">
+      <span>{{ total }} AGENTS · {{ deptCount }} DEPT</span>
+    </div>
+  </header>
+  <div ref="{{ setVp }}" onMouseDown="{{ onDown }}" data-screen-label="Floorplan" style="position:relative;overflow:hidden;cursor:grab;background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px;user-select:none">
     <div style="{{ worldStyle }}">
       <div style="{{ spineStyle }}"><div style="position:absolute;left:27px;top:12px;bottom:12px;width:2px;background-image:repeating-linear-gradient(to bottom,var(--line2) 0 8px,transparent 8px 20px)"></div></div>
       <sc-for list="{{ corrs }}" as="c" hint-placeholder-count="2"><div style="{{ c.style }}"><div style="{{ c.line }}"></div></div></sc-for>
@@ -17,7 +34,7 @@
         <div onMouseEnter="{{ lobby.enter }}" onMouseLeave="{{ lobby.leave }}" style="position:absolute;left:50%;top:50%;width:84px;height:84px;margin:-42px 0 0 -42px;display:grid;place-items:center;cursor:default">{{ lobby.zibby }}</div>
       </div>
       <sc-for list="{{ rooms }}" as="r" hint-placeholder-count="14">
-        <div data-screen-label="{{ r.name }}" onClick="{{ r.onClick }}" style="{{ r.boxStyle }}">
+        <div data-screen-label="{{ r.name }}" style="{{ r.boxStyle }}">
           <div style="{{ r.doorStyle }}"></div>
           <div style="position:absolute;left:12px;right:12px;top:0;height:26px;display:flex;align-items:center;gap:8px">
             <span style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.12em">{{ r.code }}</span>
@@ -26,7 +43,7 @@
             <span style="display:flex;gap:3px"><sc-for list="{{ r.strip }}" as="s" hint-placeholder-count="3"><span style="{{ s.style }}"></span></sc-for></span>
           </div>
           <sc-for list="{{ r.desks }}" as="d" hint-placeholder-count="3">
-            <div onClick="{{ d.onClick }}" onMouseEnter="{{ d.enter }}" onMouseLeave="{{ d.leave }}" style="{{ d.cellStyle }}">
+            <div onMouseEnter="{{ d.enter }}" onMouseLeave="{{ d.leave }}" style="{{ d.cellStyle }}">
               <div style="{{ d.pulse }}"></div>
               <div style="position:absolute;left:8px;top:34px;width:56px;height:22px;box-sizing:border-box;background:var(--panel2);border:1px solid var(--line2)"></div>
               <div style="position:absolute;left:28px;top:37px;width:16px;height:5px;box-sizing:border-box;border:1px solid var(--line2);background:var(--panel)"></div>
@@ -40,7 +57,7 @@
       </sc-for>
       <sc-for list="{{ runners }}" as="u" hint-placeholder-count="0">
         <div style="{{ u.style }}">
-          <div onClick="{{ u.onClick }}" onMouseEnter="{{ u.enter }}" onMouseLeave="{{ u.leave }}" style="position:absolute;left:-18px;top:-38px;width:36px;height:46px;cursor:default">
+          <div onMouseEnter="{{ u.enter }}" onMouseLeave="{{ u.leave }}" style="position:absolute;left:-18px;top:-38px;width:36px;height:46px;cursor:default">
             <div style="{{ u.packetStyle }}"><span style="width:5px;height:5px;background:var(--ink);flex-shrink:0"></span>{{ u.label }}</div>
             <div style="position:absolute;left:4px;top:16px">{{ u.glyph }}</div>
           </div>
@@ -98,7 +115,7 @@
   </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;route&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;go&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(r:string)=>void&quot;},&quot;tick&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;number&quot;},&quot;runners&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Floor&quot;},&quot;simulate&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Floor&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;runners&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Floor&quot;},&quot;simulate&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Floor&quot;}}">
 class Component extends DCLogic {
   state = { t: Date.now(), tx: 0, ty: 0, k: 0.5, hover: null, ready: false };
   vp = null;
@@ -199,10 +216,10 @@ class Component extends DCLogic {
   zoomIn = () => this.zoomAt(1.25, this.vp.clientWidth / 2, this.vp.clientHeight / 2);
   zoomOut = () => this.zoomAt(0.8, this.vp.clientWidth / 2, this.vp.clientHeight / 2);
   onDown = e => {
-    if (e.button !== 0) return; this.moved = false; const s = { x: e.clientX, y: e.clientY, tx: this.state.tx, ty: this.state.ty };
-    const mv = ev => { if (Math.abs(ev.clientX - s.x) + Math.abs(ev.clientY - s.y) > 4) this.moved = true; }; const mv2 = ev => this.setState({ tx: s.tx + ev.clientX - s.x, ty: s.ty + ev.clientY - s.y, hover: null });
-    const up = () => { window.removeEventListener('mouseup', up); };
-    const mvv = ev => { mv(ev); mv2(ev); }; window.addEventListener('mousemove', mvv); const up2 = () => { window.removeEventListener('mousemove', mvv); }; window.addEventListener('mouseup', up2);
+    if (e.button !== 0) return; const s = { x: e.clientX, y: e.clientY, tx: this.state.tx, ty: this.state.ty };
+    const mv = ev => this.setState({ tx: s.tx + ev.clientX - s.x, ty: s.ty + ev.clientY - s.y, hover: null });
+    const up = () => { window.removeEventListener('mousemove', mv); window.removeEventListener('mouseup', up); };
+    window.addEventListener('mousemove', mv); window.addEventListener('mouseup', up);
   };
   mmClick = e => {
     const r = e.currentTarget.getBoundingClientRect(), s = this.mmScale(), wx = (e.clientX - r.left) / s, wy = (e.clientY - r.top) / s, k = this.state.k;
@@ -211,12 +228,9 @@ class Component extends DCLogic {
   mmScale() { return Math.min(150 / this.L.W, 300 / this.L.H); }
   enter(id) { return e => { const r = e.currentTarget.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight; let x = r.right + 10; if (x + 310 > vw) x = r.left - 310; this.setState({ hover: { id, x: Math.max(8, x), y: Math.max(64, Math.min(vh - 420, r.top - 40)) } }); }; }
   leave = () => this.setState({ hover: null });
-  goRoom = r => e => { if (this.moved) return; const Z = window.ZC; if (this.props.go && Z && Z.D(r.did)) this.props.go('org/dept/' + r.did + '/team'); };
-  goAgent = a => e => { e.stopPropagation(); if (this.moved) return; const Z = window.ZC, z = Z && Z.byName(a.name); if (this.props.go && z) this.props.go('org/agent/' + z.id); };
-  syncZC() { const Z = window.ZC; if (!Z || !this.agents) return; this.agents.forEach(a => { const z = Z.byName(a.name); if (z && z.state && z.state !== a.state) { a.state = z.state; a.t0 = Date.now(); if (z.now) a.now = z.now; } }); }
 
   step = () => {
-    if (this.props.simulate !== true || !this.agents) return;
+    if (this.props.simulate === false || !this.agents) return;
     this.agents.forEach(a => { if (a.state === 'working' && a.task) a.prog = Math.min(100, a.prog + 2); else if (a.state === 'thinking') a.prog = Math.min(100, a.prog + 1); });
     for (let i = 0; i < 2; i++) {
       const a = this.agents[Math.floor(Math.random() * this.agents.length)], r = Math.random(), s = a.state; let n = s;
@@ -235,19 +249,18 @@ class Component extends DCLogic {
   };
 
   renderVals() {
-    this.syncZC();
     const Z = window.ZB, R = React, empty = { ready: false, legend: [], corrs: [], rooms: [], runners: [], hasPop: false, pop: {}, lobby: { zibby: null, dot: null, stateU: '', style: '', wallL: '', wallR: '' }, mm: { rooms: [], dots: [] }, setVp: this.setVp, onDown: this.onDown, stop: this.stop, total: '00', deptCount: '00', zoomPct: '', worldStyle: '', spineStyle: '', logo: null, fitAll: this.fit, zoomIn: () => {}, zoomOut: () => {}, mmClick: () => {} };
     if (!Z || !this.L) return empty;
     const S = Z.S, { rooms, W, H, spineX, SW, CW, CH, corrs, yEnd } = this.L, { tx, ty, k, hover } = this.state, now = this.state.t, pad = n => String(n).padStart(2, '0');
     const fmt = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return pad(Math.floor(s / 60)) + ':' + pad(s % 60); };
-    const showRun = this.props.runners === true;
+    const showRun = this.props.runners !== false;
     const frames = showRun ? this.paths.map(p => ({ p, f: this.runnerFrame(p, now / 1000) })) : [];
     const away = new Set(frames.filter(x => x.f).map(x => x.p.a.name));
     const ST = { error: ['!', 'var(--s-err)'], blocked: ['?', 'var(--s-block)'], done: ['✓', 'var(--s-done)'] };
     const mk = (l, t, w, h, x) => ({ style: `position:absolute;left:${l}px;top:${t}px;width:${w}px;height:${h}px;box-sizing:border-box;${x || ''}` });
     const roomsOut = rooms.map(r => {
       return {
-        name: r.name, code: r.code, onClick: this.goRoom(r),
+        name: r.name, code: r.code,
         boxStyle: `position:absolute;left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px;box-sizing:border-box;border:2px solid var(--ink);background:${r.zone === 'ops' ? 'var(--bg)' : 'var(--panel)'};${r.zone === 'per' ? 'border-style:dashed;' : ''}`,
         doorStyle: `position:absolute;left:50%;margin-left:-22px;width:44px;height:2px;${r.door === 'D' ? 'bottom' : 'top'}:-2px;background:var(--panel2);z-index:2`,
         strip: r.ag.map(a => ({ style: `width:7px;height:7px;background:${S[a.state].c}` })),
@@ -258,7 +271,7 @@ class Component extends DCLogic {
             pulse: live ? `position:absolute;left:2px;top:30px;width:68px;height:30px;box-sizing:border-box;border:1px solid ${S[a.state].c};animation:zb-ring ${a.state === 'error' ? .8 : 1.2}s ease-out infinite` : 'display:none',
             glyphStyle: `position:absolute;left:22px;top:4px;opacity:${isAway ? .18 : 1}`, glyph: Z.glyph(R, { seed: a.name, state: a.state, size: 28, glow: false }),
             iconStyle: st ? `position:absolute;left:46px;top:-1px;width:13px;height:13px;background:${st[1]};color:var(--panel);display:${isAway ? 'none' : 'grid'};place-items:center;font-family:'Geist Mono',monospace;font-size:10px;font-weight:600;line-height:1` : 'display:none',
-            icon: st ? st[0] : '', dot: Z.dot(R, a.state, 5), nameU: a.name.toUpperCase(), roleU: a.role.toUpperCase(), enter: this.enter(a.id), leave: this.leave, onClick: this.goAgent(a)
+            icon: st ? st[0] : '', dot: Z.dot(R, a.state, 5), nameU: a.name.toUpperCase(), roleU: a.role.toUpperCase(), enter: this.enter(a.id), leave: this.leave
           };
         })
       };
@@ -266,7 +279,7 @@ class Component extends DCLogic {
     const runners = frames.map(({ p, f }) => ({
       style: f ? `position:absolute;left:${f.pos[0].toFixed(1)}px;top:${f.pos[1].toFixed(1)}px;width:0;height:0;z-index:6;transition:left .12s linear,top .12s linear` : 'display:none',
       packetStyle: f && f.carry ? `position:absolute;left:18px;top:0;transform:translateX(-50%);display:flex;align-items:center;gap:4px;white-space:nowrap;background:var(--panel);border:1px solid var(--ink);padding:1px 5px;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.08em` : 'display:none',
-      label: p.label, glyph: Z.glyph(R, { seed: p.a.name, state: p.a.state, size: 28, glow: false }), enter: this.enter(p.a.id), leave: this.leave, onClick: this.goAgent(p.a)
+      label: p.label, glyph: Z.glyph(R, { seed: p.a.name, state: p.a.state, size: 28, glow: false }), enter: this.enter(p.a.id), leave: this.leave
     }));
     const cnt = {}; Z.ORDER.forEach(s => cnt[s] = 0); this.agents.forEach(a => cnt[a.state]++);
     const s = this.mmScale(), mmW = Math.round(W * s), mmH = Math.round(H * s), vw = this.vp ? this.vp.clientWidth : 1000, vh = this.vp ? this.vp.clientHeight : 800;
