@@ -1,8 +1,11 @@
 ---
-title: "Development — polička"
+title: Development — polička
 department: dev
 type: fact
-tags: [department, dev, moc]
+tags:
+  - department
+  - dev
+  - moc
 ---
 
 Development owns the delivery loop: Architekt → Kodér ⇄ Code-Review → Tester →
@@ -13,3 +16,6 @@ code. Mostly built.
 ## Poznatky
 
 [[zibby-index]] · [[north-star-2]]
+- [[distilled-2026-10-03]] — Destilace — 2026-10-03
+- [[distilled-2026-10-04]] — Destilace — 2026-10-04
+- [[distilled-2026-10-05]] — Destilace — 2026-10-05

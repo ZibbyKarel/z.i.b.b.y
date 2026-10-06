@@ -1,1 +1,1 @@
-{"id":"nightly-patterns","name":"Extrakce vzorů","trigger":{"type":"cron","expr":"0 23 * * *"},"target":{"type":"pattern-extract"},"enabled":true,"system":true,"lastFiredAt":"2026-09-29T21:00:27.603Z"}
+{"id":"nightly-patterns","name":"Extrakce vzorů","trigger":{"type":"cron","expr":"0 23 * * *"},"target":{"type":"pattern-extract"},"enabled":true,"system":true,"lastFiredAt":"2026-10-05T21:00:01.334Z"}

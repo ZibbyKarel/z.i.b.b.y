@@ -16,4 +16,5 @@ tooling already exists in the repo.
 ## Poznatky
 
 [[zibby-index]] · [[north-star-2]]
-- [[suggestions/quality-findings]] — Audit kvality — 2026-09-30
+- [[suggestions/quality-findings]] — Audit kvality — 2026-10-03
+

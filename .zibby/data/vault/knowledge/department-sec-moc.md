@@ -1,8 +1,11 @@
 ---
-title: "Security — polička"
+title: Security — polička
 department: sec
 type: fact
-tags: [department, security, moc]
+tags:
+  - department
+  - security
+  - moc
 ---
 
 Security owns security posture: dependency CVE audits, secret-leak scans on
@@ -12,3 +15,4 @@ of the border) — an empty chair today, but a design decision with a name.
 ## Poznatky
 
 [[zibby-index]] · [[north-star-2]]
+- [[suggestions/security-findings]] — Bezpečnostní nálezy — 2026-10-05

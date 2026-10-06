@@ -1,1 +1,1 @@
-{"id":"memory-distill","name":"Destilace paměti","trigger":{"type":"cron","expr":"0 3 * * *"},"target":{"type":"memory-distill"},"enabled":true,"system":true,"lastFiredAt":"2026-09-30T01:00:28.012Z"}
+{"id":"memory-distill","name":"Destilace paměti","trigger":{"type":"cron","expr":"0 3 * * *"},"target":{"type":"memory-distill"},"enabled":true,"system":true,"lastFiredAt":"2026-10-06T01:00:01.838Z"}

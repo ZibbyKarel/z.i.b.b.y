@@ -36,3 +36,6 @@
 30. [x] Názvy stránek - je to mess. Pomalu každá stránka má jiný design nadpisů. Příkladem třeba stránky "system/settings/general" a "system/registries/skills" a "/ledger/budgets" a "work/tasks". Sjednoť design všech názvů na všech stránkách. Dokonce na "work/projects/kzphoto" je i breadcrumb navigace tu sem snad nikde jinde neviděl. Drobečkovou navigaci bych udělal tak, že bych za submenu (tedy na stránce Práce tam kde jsou úkoly, řetězce, cíle, firmy, týmy a projekty) dal do stejného řádku za lomítko. Tzn na stránce kzphoto projektu by bylo v submenu zvýrazněno "Projekty " a za lomítkem pak " KZPHOTO" pokud bych se zanoři leště hlouběji tak tam bude KZPHOTO / INTEGRACE
 31. [ ] přestaly se u projektů zobrazovat loga
 32. [ ] Zrušit nastavení "počet paralelně běžících úloh" — posun úlohy v lifecycle řídí jen dostupnost volného zaměstnance pro další fázi (živá firma), místo stropu pojistka stroje na pracující agenty. Viz [docs/plans/zibbycorp/staffing-driven-capacity.md](docs/plans/zibbycorp/staffing-driven-capacity.md)
+33. [ ] stránka aktivita/běhy sloupeček - stav v tabulce musí vypadat stejně jako na stráce /work/tasks
+34. [ ] v top baru bude ikonka špendlíku, která když na ní kliknu, připne aktuální stránku do panelu rychlého přístupu
+35. [ ] stránka /work/tasks musí ukládat filtry do url a brát z ní defaultní hodnoty při přístupu na stránku

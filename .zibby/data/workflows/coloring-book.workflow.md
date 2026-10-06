@@ -58,6 +58,7 @@ phases:
       escalate: false
       then: park
       driftTo: concept
+    approval: ask
   - id: render
     type: tool
     consumes: visual-audit.md
@@ -87,14 +88,6 @@ desc: >-
   Autonomní výroba dětské omalovánky: koncept → plán stran → kontrola plánu →
   prompty → generování a QA obrázků → vizuální audit knihy → PDF (interiér +
   obálka) → preflight KDP → listing. Výstup: složka `book/` v běhu s PDF.
-outputs:
-  - type: file
-    from: book.md
-    dest: vault
-    to: coloring-book-latest
-  - type: folder
-    from: book
-    to: ~/Documents/Books/Coloring
 department: pub
 complexity: standard
 budget:
