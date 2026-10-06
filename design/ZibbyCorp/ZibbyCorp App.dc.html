@@ -114,11 +114,11 @@
       <div data-screen-label="COO dock" style="position:absolute;right:20px;bottom:16px;width:420px;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--ink);z-index:5">
         <sc-if value="{{ dockOpen }}" hint-placeholder-val="{{ false }}">
           <div style="display:flex;flex-direction:column;height:440px;border-bottom:1px solid var(--line)">
-            <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)">{{ cooGlyph }}<div style="display:flex;flex-direction:column;gap:2px;flex:1"><span style="font-size:14px;font-weight:500">Zibby</span><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">COO · ROUTES, CLASSIFIES, CHATS</span></div><button onClick="{{ toggleDock }}" style="all:unset;cursor:pointer;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2);border:1px solid var(--line2);padding:5px 8px">CLOSE</button></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)"><div style="flex:1"></div><button onClick="{{ newChat }}" style="all:unset;cursor:pointer;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--panel);background:var(--ink);padding:6px 9px;border:1px solid var(--ink)">+ NEW CHAT</button><button onClick="{{ toggleDock }}" style="all:unset;cursor:pointer;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2);border:1px solid var(--line2);padding:5px 8px">CLOSE</button></div>
             <div ref="{{ chatRef }}" style="flex:1;min-height:0;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px">
               <sc-for list="{{ msgs }}" as="m" hint-placeholder-count="3">
                 <sc-if value="{{ m.you }}">
-                  <div style="align-self:flex-end;max-width:80%;background:var(--ink);color:var(--panel);padding:9px 11px;font-size:13px;line-height:1.4">{{ m.text }}</div>
+                  <div style="align-self:flex-end;max-width:80%;background:var(--ink);color:var(--panel);padding:9px 11px;font-size:13px;line-height:1.4;white-space:pre-line">{{ m.text }}</div>
                 </sc-if>
                 <sc-if value="{{ m.coo }}">
                   <div style="align-self:flex-start;max-width:86%;display:flex;flex-direction:column;gap:8px;border:1px solid var(--line2);background:var(--bg);padding:9px 11px">
@@ -130,11 +130,16 @@
             </div>
           </div>
         </sc-if>
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 8px 8px 12px">
-          <button onClick="{{ toggleDock }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:8px">{{ cooSmall }}<span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink2)">COO</span></button>
-          <input value="{{ draft }}" onChange="{{ onDraft }}" onKeyDown="{{ onDraftKey }}" onFocus="{{ openDock }}" placeholder="{{ placeholder }}" style="flex:1;min-width:0;height:32px;box-sizing:border-box;border:1px solid var(--line2);background:var(--bg);padding:0 10px;font-size:13px;outline:none">
-          <button onClick="{{ toggleVoice }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:6px;height:32px;box-sizing:border-box;padding:0 10px;border:1px solid var(--line2);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2)">{{ voiceViz }}<span>{{ voiceLabel }}</span></button>
-          <button onClick="{{ send }}" style="all:unset;cursor:pointer;height:32px;box-sizing:border-box;padding:0 12px;display:flex;align-items:center;background:var(--ink);color:var(--panel);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">SEND</button>
+        <sc-if value="{{ hasAttach }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-wrap:wrap;gap:6px;padding:8px 8px 0 8px"><sc-for list="{{ attach }}" as="a" hint-placeholder-count="0"><span style="display:flex;align-items:center;gap:6px;border:1px solid var(--line2);background:var(--bg);padding:3px 4px 3px 8px;font-family:'Geist Mono',monospace;font-size:10px;color:var(--ink2);max-width:180px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.name }}</span><button onClick="{{ a.remove }}" style="all:unset;cursor:pointer;padding:0 4px;color:var(--ink3)">×</button></span></sc-for></div></sc-if>
+        <div style="display:flex;align-items:center;gap:8px;padding:8px">
+          <input type="file" multiple ref="{{ fileRef }}" onChange="{{ onFiles }}" style="display:none">
+          <div style="flex:1;min-width:0;display:flex;align-items:center;height:34px;box-sizing:border-box;border:1px solid var(--line2);background:var(--bg)">
+            <button onClick="{{ pickFile }}" title="Attach file" style="all:unset;cursor:pointer;display:flex;align-items:center;justify-content:center;width:34px;height:32px;color:var(--ink2)">{{ clipIcon }}</button>
+            <input value="{{ draft }}" onChange="{{ onDraft }}" onKeyDown="{{ onDraftKey }}" onFocus="{{ openDock }}" placeholder="{{ placeholder }}" style="flex:1;min-width:0;height:32px;box-sizing:border-box;border:0;background:transparent;padding:0 4px;font-size:13px;outline:none">
+            <button onClick="{{ toggleVoice }}" title="Voice" style="all:unset;cursor:pointer;display:flex;align-items:center;justify-content:center;width:34px;height:32px;color:var(--ink2)">{{ voiceViz }}</button>
+          </div>
+          <button onClick="{{ send }}" style="all:unset;cursor:pointer;height:34px;box-sizing:border-box;padding:0 12px;display:flex;align-items:center;background:var(--ink);color:var(--panel);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">SEND</button>
+        </div>
         </div>
       </div>
     </main>
@@ -196,7 +201,7 @@
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
   state = { ready: !!(window.ZB && window.ZC), route: (location.hash.slice(1) || localStorage.getItem('zc-route') || 'org/map'), now: '', theme: localStorage.getItem('zb-dash-theme') || 'light',
-    dockOpen: false, draft: '', msgs: null, listening: false, sheet: null, denyMode: false, reason: '', palOpen: false, q: '', palIdx: 0, tick: 0, menuOpen: false,
+    dockOpen: false, attach: [], draft: '', msgs: null, listening: false, sheet: null, denyMode: false, reason: '', palOpen: false, q: '', palIdx: 0, tick: 0, menuOpen: false,
     pins: JSON.parse(localStorage.getItem('zc-pins') || 'null') || [{ t: 'co', id: 'acme' }, { t: 'prj', id: 'api' }, { t: 'team', id: 'dev' }], pinsOpen: localStorage.getItem('zc-pins-open') !== '0' };
   setPins = pins => { localStorage.setItem('zc-pins', JSON.stringify(pins)); this.setState({ pins }); };
   PIN = {
@@ -264,17 +269,20 @@ class Component extends DCLogic {
   openApproval = (id, deny) => this.setState({ sheet: id, denyMode: !!deny, reason: '' });
   quickApprove(a) { if (a.kind === 'QUESTION') return this.openApproval(a.id); window.ZC.resolve(a.id, 'APPROVED'); }
   sendText(text) {
-    const Z = window.ZC; text = (text || '').trim(); if (!text) return;
+    const Z = window.ZC; text = (text || '').trim(); const at = this.state.attach; if (!text && !at.length) return; if (!text) text = 'Attached files'; const files = at.map(f => f.name).join(', ');
     const chain = Z.classify(text), c = Z.C(chain);
     const route = c.route.map(d => Z.D(d).name).join(' → ');
-    const msgs = (this.state.msgs || Z.chat.coo.map(([w, t]) => ({ w, t }))).concat([{ w: 'you', t: text }, { w: 'coo', t: 'Classified as ' + c.name + ': ' + route + '. Create it as a parent task?', chain, title: text }]);
-    this.setState({ msgs, draft: '', dockOpen: true, listening: false });
+    const msgs = (this.state.msgs || Z.chat.coo.map(([w, t]) => ({ w, t }))).concat([{ w: 'you', t: text + (files ? '\n+ ' + files : '') }, { w: 'coo', t: 'Classified as ' + c.name + ': ' + route + '. Create it as a parent task?', chain, title: text }]);
+    this.setState({ msgs, draft: '', attach: [], dockOpen: true, listening: false });
   }
   createFrom(m, i) {
     const Z = window.ZC; const t = Z.createTask({ title: m.title, chain: m.chain, source: 'COO chat', picked: 'auto' });
     const msgs = this.state.msgs.slice(); msgs[i] = Object.assign({}, m, { done: true }); msgs.push({ w: 'coo', t: 'Created ' + t.id + ' and handed the first subtask to ' + Z.D(t.subs[0].dept).name + '.' });
     this.setState({ msgs }); this.go('work/task/' + t.id);
   }
+  fileRef = React.createRef();
+  newChat = () => { clearTimeout(this.vt); this.setState({ msgs: [{ w: 'coo', t: 'New chat. What should we work on?' }], draft: '', attach: [], listening: false, dockOpen: true }); };
+  onFiles = e => { const fs = Array.from(e.target.files || []).map(f => ({ name: f.name })); e.target.value = ''; this.setState(s => ({ attach: s.attach.concat(fs), dockOpen: true })); };
   toggleVoice = () => {
     if (this.state.listening) { clearTimeout(this.vt); return this.setState({ listening: false }); }
     this.setState({ listening: true, dockOpen: true, draft: '' });
@@ -325,7 +333,9 @@ class Component extends DCLogic {
     const dk = this.state.theme === 'dark';
     const baseMsgs = this.state.msgs || Z.chat.coo.map(([w, t]) => ({ w, t }));
     const msgs = baseMsgs.map((m, i) => ({ text: m.t, you: m.w === 'you', coo: m.w !== 'you', act: m.chain && !m.done ? 'CREATE TASK' : '', onAct: () => this.createFrom(m, i), onAlt: () => this.go('work/new') }));
-    const bars = this.state.listening ? React.createElement('span', { style: { display: 'flex', alignItems: 'center', gap: 2, height: 12 } }, [0, 1, 2, 3].map(i => React.createElement('span', { key: i, style: { width: 2, height: 12, background: 'var(--s-work)', animation: `zc-bar .7s ease-in-out ${i * .12}s infinite` } }))) : React.createElement('span', { style: { width: 7, height: 7, border: '1px solid var(--ink2)', borderRadius: '50%' } });
+    const bars = this.state.listening ? React.createElement('span', { style: { display: 'flex', alignItems: 'center', gap: 2, height: 12 } }, [0, 1, 2, 3].map(i => React.createElement('span', { key: i, style: { width: 2, height: 12, background: 'var(--s-work)', animation: `zc-bar .7s ease-in-out ${i * .12}s infinite` } }))) : React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'square' }, React.createElement('rect', { x: 9, y: 3, width: 6, height: 11 }), React.createElement('path', { d: 'M5 11a7 7 0 0 0 14 0M12 18v3' }));
+    const clipIcon = React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'square' }, React.createElement('path', { d: 'M20 11.5l-8 8a5 5 0 0 1-7-7l9-9a3.5 3.5 0 0 1 5 5l-9 9a2 2 0 0 1-3-3l8-8' }));
+    const attach = this.state.attach.map((f, i) => ({ name: f.name, remove: () => this.setState(s => ({ attach: s.attach.filter((_, j) => j !== i) })) }));
     // sheet
     const ap = this.state.sheet && Z.approvals.find(a => a.id === this.state.sheet);
     let sh = { diff: [], route: [], metrics: [] };
@@ -354,7 +364,7 @@ class Component extends DCLogic {
       dockOpen: this.state.dockOpen, toggleDock: () => this.setState(s => ({ dockOpen: !s.dockOpen })), openDock: () => this.setState({ dockOpen: true }),
       cooGlyph: B.zibby(React, { state: 'working', size: 32 }), cooSmall: B.zibby(React, { state: this.state.listening ? 'thinking' : 'working', size: 22 }), msgs,
       draft: this.state.draft, onDraft: e => this.setState({ draft: e.target.value }), onDraftKey: e => { if (e.key === 'Enter') this.sendText(this.state.draft); },
-      send: () => this.sendText(this.state.draft), placeholder: this.state.listening ? 'Listening…' : 'Ask Zibby or describe a task', toggleVoice: this.toggleVoice, voiceViz: bars, voiceLabel: this.state.listening ? 'STOP' : 'VOICE',
+      send: () => this.sendText(this.state.draft), placeholder: this.state.listening ? 'Listening…' : 'Ask Zibby or describe a task', toggleVoice: this.toggleVoice, voiceViz: bars, clipIcon, attach, hasAttach: attach.length > 0, fileRef: this.fileRef, pickFile: () => this.fileRef.current && this.fileRef.current.click(), onFiles: this.onFiles, newChat: this.newChat, voiceLabel: this.state.listening ? 'STOP' : 'VOICE',
       sheetOpen: !!ap, sh, reason: this.state.reason, onReason: e => this.setState({ reason: e.target.value }), stop: e => e.stopPropagation(), closeSheet: () => this.setState({ sheet: null }),
       errDot: B.dot(React, 'error', 7), denyLabel: this.state.denyMode ? 'CONFIRM DENY' : 'DENY',
       sheetApprove: () => { Z.resolve(ap.id, ap.kind === 'QUESTION' ? 'ANSWERED' : 'APPROVED', ap.kind === 'QUESTION' ? this.state.reason : ''); this.setState({ sheet: null }); },

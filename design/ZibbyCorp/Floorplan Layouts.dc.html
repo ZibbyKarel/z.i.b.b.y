@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Geist+Mono:wght@400;500;600&display=swap">
+<style>body{margin:0;background:#F3F4F2}a{color:#111312}a:hover{color:#50544F}</style>
+</helmet>
+<section style="padding:40px 40px 8px;font-family:'Geist',sans-serif;color:#111312;background-color:#F3F4F2;background-image:linear-gradient(rgba(17,19,18,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(17,19,18,.05) 1px,transparent 1px);background-size:24px 24px">
+<div style="font:400 11px 'Geist Mono';letter-spacing:.14em;color:#8A8E88">02 — DYNAMICKÝ PŮDORYS · {{ count }} ODDĚLENÍ</div>
+<div style="font:500 28px/1.1 'Geist';letter-spacing:-.02em;margin:6px 0 4px">Půdorys se generuje z počtu oddělení</div>
+<div style="font:400 13px 'Geist';color:#50544F;max-width:760px;margin-bottom:24px;text-wrap:pretty">Žádné pevné křídlo. Místnosti se skládají algoritmem: pořadí = zóny (ENG → OPS → BIZ → PER), šířka/výška ∝ počet agentů, chodby vznikají mezerami. Změň počet oddělení v Tweaks (6–14) a plán se přepočítá. Distribution, Publishing a Design jsem zařadil do BIZ.</div>
+<div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+<sc-for list="{{ layouts2 }}" as="L" hint-placeholder-count="3">
+<div id="{{ L.id }}" style="width:{{ L.cw }}px;background:#FAFAF8;border:1px solid #BFC2BC;padding:16px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box">
+<div style="display:flex;justify-content:space-between;align-items:baseline;flex-shrink:0;gap:12px"><div style="font:600 11px 'Geist Mono';letter-spacing:.14em;background:#111312;color:#FAFAF8;padding:3px 8px">{{ L.id }}</div><div style="font:500 16px 'Geist';white-space:nowrap">{{ L.name }}</div></div>
+<div style="flex-shrink:0;position:relative;width:{{ L.w }}px;height:{{ L.h }}px;background:#F3F4F2;border:1px solid #111312;background-image:linear-gradient(rgba(17,19,18,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(17,19,18,.06) 1px,transparent 1px);background-size:12px 12px">
+<sc-for list="{{ L.extras }}" as="X" hint-placeholder-count="0"><div style="{{ X.style }}">{{ X.label }}</div></sc-for>
+<sc-for list="{{ L.rooms }}" as="R" hint-placeholder-count="14"><div style="{{ R.style }}"><span style="font:600 10px 'Geist Mono';letter-spacing:.1em">{{ R.code }}</span><span style="font:400 9px 'Geist Mono';color:#8A8E88">{{ R.meta }}</span></div></sc-for>
+</div>
+<div style="font:400 13px/1.45 'Geist';color:#50544F;text-wrap:pretty">{{ L.desc }}</div>
+<div style="display:flex;gap:16px;font:400 10px 'Geist Mono';letter-spacing:.1em;color:#50544F"><span>+ {{ L.pro }}</span><span>− {{ L.con }}</span></div>
+</div>
+</sc-for>
+</div>
+</section>
+<section style="padding:40px;font-family:'Geist',sans-serif;color:#111312;background-color:#F3F4F2;background-image:linear-gradient(rgba(17,19,18,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(17,19,18,.05) 1px,transparent 1px);background-size:24px 24px;min-height:100vh">
+<div style="font:400 11px 'Geist Mono';letter-spacing:.14em;color:#8A8E88">01 — PŮVODNÍ KOLO (PEVNÝ POČET 11) · FLOORPLAN · ROZLOŽENÍ BUDOVY</div>
+<div style="font:500 28px/1.1 'Geist';letter-spacing:-.02em;margin:6px 0 4px">Čtyři varianty půdorysu</div>
+<div style="font:400 13px 'Geist';color:#50544F;max-width:720px;margin-bottom:24px;text-wrap:pretty">Velikost místnosti = počet agentů. Zóny: ENG · OPS · BIZ · PER. Vyber jednu (nebo kombinaci), pak postavím plný design s pan/zoom a minimapou.</div>
+<div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+<sc-for list="{{ layouts }}" as="L" hint-placeholder-count="4">
+<div id="{{ L.id }}" style="width:520px;background:#FAFAF8;border:1px solid #BFC2BC;padding:16px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:baseline;flex-shrink:0;gap:12px"><div style="font:600 11px 'Geist Mono';letter-spacing:.14em;background:#111312;color:#FAFAF8;padding:3px 8px">{{ L.id }}</div><div style="font:500 16px 'Geist';white-space:nowrap">{{ L.name }}</div></div>
+<div style="flex-shrink:0;position:relative;width:480px;height:320px;background:#F3F4F2;border:1px solid #111312;background-image:linear-gradient(rgba(17,19,18,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(17,19,18,.06) 1px,transparent 1px);background-size:12px 12px">
+<sc-for list="{{ L.extras }}" as="X" hint-placeholder-count="0">
+<div style="{{ X.style }}">{{ X.label }}</div>
+</sc-for>
+<sc-for list="{{ L.rooms }}" as="R" hint-placeholder-count="11">
+<div style="{{ R.style }}"><span style="font:600 10px 'Geist Mono';letter-spacing:.12em">{{ R.code }}</span><span style="font:400 9px 'Geist Mono';letter-spacing:.1em;color:#8A8E88">{{ R.meta }}</span></div>
+</sc-for>
+</div>
+<div style="font:400 13px/1.45 'Geist';color:#50544F;text-wrap:pretty">{{ L.desc }}</div>
+<div style="display:flex;gap:16px;font:400 10px 'Geist Mono';letter-spacing:.1em;color:#50544F"><span>+ {{ L.pro }}</span><span>− {{ L.con }}</span></div>
+</div>
+</sc-for>
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;deptCount&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:14,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:6,&quot;max&quot;:14,&quot;step&quot;:1}}">
+class Component extends DCLogic {
+  renderVals() {
+    const N = { DEV:9, QA:4, SEC:3, REL:3, RND:4, OPS:3, INC:4, COM:3, FIN:2, KNW:3, PER:2 };
+    const Z = { DEV:'ENG', QA:'ENG', SEC:'ENG', REL:'ENG', RND:'ENG', OPS:'OPS', INC:'OPS', COM:'BIZ', FIN:'BIZ', KNW:'BIZ', PER:'PER' };
+    const room = ([c, x, y, w, h]) => c === 'LOBBY'
+      ? { code: 'LOBBY', meta: 'COO', style: `position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;box-sizing:border-box;border:2px solid #111312;background:#EDEEEB;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px` }
+      : { code: c, meta: Z[c] + ' · ' + String(N[c]).padStart(2, '0'), style: `position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;box-sizing:border-box;border:1px solid #111312;background:${Z[c] === 'ENG' ? '#FAFAF8' : Z[c] === 'OPS' ? '#EDEEEB' : Z[c] === 'BIZ' ? '#FAFAF8' : '#F3F4F2'};${Z[c] === 'PER' ? 'border-style:dashed;' : ''}padding:6px 8px;display:flex;flex-direction:column;justify-content:space-between` };
+    const lab = (t, x, y) => ({ label: t, style: `position:absolute;left:${x}px;top:${y}px;font:400 9px 'Geist Mono';letter-spacing:.14em;color:#8A8E88` });
+    const layouts = [
+      { id: '1a', name: 'Centrální hala', desc: 'Lobby s COO uprostřed, oddělení kolem dokola. Všechno je na dohled, kratké trasy přes halu.', pro: 'souměrný přehled', con: 'trasy jdou přes střed',
+        rooms: [['RND',10,10,90,100],['DEV',112,10,170,100],['SEC',294,10,80,100],['QA',386,10,84,100],['REL',10,122,100,76],['LOBBY',190,125,100,70],['OPS',302,122,56,76],['INC',370,122,100,76],['KNW',10,210,110,100],['COM',132,210,110,100],['FIN',254,210,120,100],['PER',386,210,84,100]].map(room), extras: [] },
+      { id: '1b', name: 'Hlavní chodba', desc: 'Dlouhá páteřní chodba, nahoře inženýrství, dole provoz a byznys. Jako kancelářská budova.', pro: 'jasné čtení zón, dlouhá trasa = viditelný tok', con: 'vzdálená oddělení na koncích',
+        rooms: [['KNW',10,10,74,115],['RND',92,10,68,115],['DEV',168,10,132,115],['SEC',308,10,52,115],['QA',368,10,52,115],['REL',428,10,42,115],['LOBBY',10,135,70,50],['INC',92,195,68,115],['OPS',168,195,82,115],['COM',258,195,82,115],['FIN',348,195,122,115],['PER',10,195,74,115]].map(room), extras: [lab('CHODBA →',100,156)] },
+      { id: '1c', name: 'Atrium s nádvořím', desc: 'Okružní chodba kolem vnitřního atria (květiny, kávovar). Lobby jako vchod dole.', pro: 'každé oddělení má dva sousedy', con: 'atrium zabírá místo',
+        rooms: [['RND',10,10,110,80],['DEV',132,10,216,80],['QA',360,10,110,80],['REL',10,102,148,58],['INC',10,172,148,46],['OPS',322,102,148,58],['COM',322,172,148,46],['SEC',10,230,80,80],['KNW',100,230,76,80],['LOBBY',188,240,104,70],['FIN',304,230,84,80],['PER',400,230,70,80]].map(room),
+        extras: [{ label: 'ATRIUM', style: "position:absolute;left:170px;top:100px;width:140px;height:120px;box-sizing:border-box;border:1px dashed #BFC2BC;display:flex;align-items:center;justify-content:center;font:400 9px 'Geist Mono';letter-spacing:.14em;color:#8A8E88" }] },
+      { id: '1d', name: 'Dvě křídla', desc: 'Inženýrské křídlo vlevo, ops + byznys vpravo, mezi nimi lobby dole. Personal stranou.', pro: 'ENG pohromadě, PER oddělen', con: 'ENG ↔ BIZ přes lobby',
+        rooms: [['DEV',10,10,150,120],['RND',172,10,78,120],['SEC',10,142,70,58],['QA',92,142,70,58],['REL',174,142,76,58],['OPS',290,10,86,90],['INC',388,10,82,90],['COM',290,112,86,88],['KNW',388,112,82,88],['PER',10,220,128,90],['LOBBY',150,230,180,80],['FIN',342,220,128,90]].map(room), extras: [] }
+    ];
+    const ORDER = ['DEV','RND','QA','SEC','REL','OPS','INC','COM','KNW','FIN','DIS','PUB','DSN','PER'];
+    const N2 = Object.assign({}, N, { DIS:3, PUB:3, DSN:3 });
+    const Z2 = Object.assign({}, Z, { DIS:'BIZ', PUB:'BIZ', DSN:'BIZ' });
+    const cnt = Math.max(6, Math.min(14, Math.round(this.props.deptCount ?? 14)));
+    const items = cnt >= 14 ? ORDER : ORDER.slice(0, cnt - 1).concat('PER');
+    const wt = c => c === 'LOBBY' ? 5 : (N2[c] || 3) + 3;
+    const r2 = ([c, x, y, w, h]) => { const o = room([c, x, y, w, h]); if (c !== 'LOBBY') { o.meta = String(N2[c]).padStart(2, '0'); const z = Z2[c]; o.style = o.style.replace(/background:[^;]+;/, 'background:' + (z === 'OPS' ? '#EDEEEB' : z === 'PER' ? '#F3F4F2' : '#FAFAF8') + ';'); } else o.meta = 'COO'; return o; };
+    const row = (its, x, y, W, H, g) => { const t = its.reduce((s, c) => s + wt(c), 0), av = W - g * (its.length - 1); let cx = x; return its.map(c => { const w = av * wt(c) / t; const r = [c, Math.round(cx), y, Math.round(w), H]; cx += w + g; return r; }); };
+    const col = (its, x, y, W, H, g) => { const t = its.reduce((s, c) => s + wt(c), 0), av = H - g * (its.length - 1); let cy = y; return its.map(c => { const h = av * wt(c) / t; const r = [c, x, Math.round(cy), W, Math.round(h)]; cy += h + g; return r; }); };
+    const W = 640, H = 400, g = 10;
+    const nn = items.length, T = 96, S = 112;
+    const top = Math.round(nn * 0.32), bot = Math.round(nn * 0.32), left = Math.floor((nn - top - bot) / 2), right = nn - top - bot - left;
+    const iT = items.slice(0, top), iR = items.slice(top, top + right), iB = items.slice(top + right, top + right + bot).reverse(), iL = items.slice(top + right + bot).reverse();
+    const sideH = H - 2 * T - 2 * g;
+    const A = [].concat(row(iT, 0, 0, W, T, g), col(iR, W - S, T + g, S, sideH, g), row(iB, 0, H - T, W, T, g), col(iL, 0, T + g, S, sideH, g));
+    const hx = (iL.length ? S + g : 0) + g, hx2 = W - (iR.length ? S + g : 0) - g, hy = T + 2 * g, hy2 = H - T - 2 * g;
+    A.push(['LOBBY', Math.round((hx + hx2) / 2 - 90), Math.round((hy + hy2) / 2 - 45), 180, 90]);
+    const half = items.reduce((s, c) => s + wt(c), 0) / 2; let cum = 0, split = 0; items.forEach((c, i) => { if (cum < half) split = i + 1; cum += wt(c); });
+    const rh = (H - 36 - 2 * g) / 2, LW = 80;
+    const B = [['LOBBY', 0, H / 2 - 40, LW, 80]].concat(row(items.slice(0, split), LW + g, 0, W - LW - g, rh, g), row(items.slice(split), LW + g, H - rh, W - LW - g, rh, g));
+    const withL = items.slice(); withL.splice(Math.floor(nn / 2), 0, 'LOBBY');
+    const k = Math.max(2, Math.round(Math.sqrt(withL.length / 1.8))), tot = withL.reduce((s, c) => s + wt(c), 0), rows = Array.from({ length: k }, () => []); let cc = 0;
+    withL.forEach(c => { const ri = Math.min(k - 1, Math.floor((cc + wt(c) / 2) / (tot / k))); rows[ri].push(c); cc += wt(c); });
+    const g2 = 18, rowH = (H - (k - 1) * g2) / k;
+    const C = []; rows.forEach((rw, i) => C.push(...row(rw, 0, Math.round(i * (rowH + g2)), W, Math.round(rowH), 8)));
+    const dash = (x, y, w, h, t) => ({ label: t, style: `position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;box-sizing:border-box;border:1px dashed #BFC2BC;display:flex;align-items:center;justify-content:center;font:400 9px 'Geist Mono';letter-spacing:.14em;color:#8A8E88` });
+    const layouts2 = [
+      { id: '2a', name: 'Hala + prstenec', cw: 680, w: W, h: H, rooms: A.map(r2), extras: [dash(hx, hy, hx2 - hx, hy2 - hy, '')], desc: 'Oddělení se rozdělí po obvodu po směru hodinových ručiček (zóny drží u sebe), uprostřed hala s COO. Pro víc oddělení se zmenšují místnosti, hala zůstává.', pro: 'všechno na dohled, středem běhají spolupráce', con: 'při 14+ jsou boční místnosti úzké', extras2: 0 },
+      { id: '2b', name: 'Páteřní chodba', cw: 680, w: W, h: H, rooms: B.map(r2), extras: [{ label: 'CHODBA →', style: "position:absolute;left:96px;top:" + (H / 2 - 6) + "px;font:400 9px 'Geist Mono';letter-spacing:.14em;color:#8A8E88" }], desc: 'Dvě řady místností podél jedné chodby, lobby na začátku. Přidané oddělení jen prodlouží řady (zúží šířky).', pro: 'nejjednodušší škálování, čitelné zóny', con: 'koncová oddělení jsou daleko od lobby' },
+      { id: '2c', name: 'Řady s uličkami', cw: 680, w: W, h: H, rooms: C.map(r2), extras: [], desc: 'Místnosti se zalamují do ' + k + ' řad s chodbami mezi nimi, lobby je v prostřední řadě. Počet řad roste s počtem oddělení.', pro: 'škáluje na desítky oddělení, pravidelná mřížka', con: 'méně „budova", více mřížka' }
+    ];
+    return { layouts, layouts2, count: String(cnt).padStart(2, '0') };
+  }
+}
+</script>
+</body>
+</html>

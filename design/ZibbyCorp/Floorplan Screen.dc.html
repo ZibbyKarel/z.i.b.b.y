@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap">
+<script src="./zibby.js"></script>
+<style>html,body{margin:0;overflow:hidden;background:#F3F4F2}a{color:#111312}a:hover{color:#50544F}@media (prefers-reduced-motion:reduce){*{animation:none!important}}</style>
+</helmet>
+<div style="--bg:#F3F4F2;--panel:#FAFAF8;--panel2:#EDEEEB;--line:#D9DBD6;--line2:#BFC2BC;--ink:#111312;--ink2:#50544F;--ink3:#8A8E88;--grid:rgba(17,19,18,.05);--gw:0px;--dot-r:0;--s-work:oklch(0.6 0.14 160);--s-think:oklch(0.58 0.14 250);--s-block:oklch(0.7 0.15 70);--s-err:oklch(0.58 0.2 25);--s-done:oklch(0.56 0.15 300);--s-idle:#A9ADA7;width:100%;height:100vh;box-sizing:border-box;background:var(--bg);color:var(--ink);font-family:'Geist',system-ui,sans-serif;display:grid;grid-template-rows:56px minmax(0,1fr);grid-template-columns:minmax(0,1fr);overflow:hidden">
+  <header data-screen-label="Header" style="min-width:0;overflow:hidden;white-space:nowrap;display:flex;align-items:center;gap:36px;padding:0 24px;border-bottom:1px solid var(--line);background:var(--panel);z-index:20">
+    <div style="display:flex;align-items:center;gap:10px">{{ logo }}<span style="font-family:'Geist Mono',monospace;font-size:13px;letter-spacing:.18em;font-weight:600">ZIBBYCORP</span></div>
+    <nav style="display:flex;height:100%;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em">
+      <span style="display:flex;align-items:center;padding:0 14px;border-bottom:1px solid var(--ink);color:var(--ink)">ORG · FLOORPLAN</span>
+      <span style="display:flex;align-items:center;padding:0 14px;color:var(--ink3)">TASKS</span>
+      <span style="display:flex;align-items:center;padding:0 14px;color:var(--ink3)">ACTIVITY</span>
+      <span style="display:flex;align-items:center;padding:0 14px;color:var(--ink3)">LEDGER</span>
+    </nav>
+    <div style="margin-left:auto;min-width:0;white-space:nowrap;display:flex;align-items:center;gap:18px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2)">
+      <span>{{ total }} AGENTS · {{ deptCount }} DEPT</span>
+    </div>
+  </header>
+  <div ref="{{ setVp }}" onMouseDown="{{ onDown }}" data-screen-label="Floorplan" style="position:relative;overflow:hidden;cursor:grab;background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px;user-select:none">
+    <div style="{{ worldStyle }}">
+      <div style="{{ spineStyle }}"><div style="position:absolute;left:27px;top:12px;bottom:12px;width:2px;background-image:repeating-linear-gradient(to bottom,var(--line2) 0 8px,transparent 8px 20px)"></div></div>
+      <sc-for list="{{ corrs }}" as="c" hint-placeholder-count="2"><div style="{{ c.style }}"><div style="{{ c.line }}"></div></div></sc-for>
+      <div style="{{ lobby.style }}">
+        <div onMouseEnter="{{ lobby.enter }}" onMouseLeave="{{ lobby.leave }}" style="position:absolute;left:50%;top:50%;width:84px;height:84px;margin:-42px 0 0 -42px;display:grid;place-items:center;cursor:default">{{ lobby.zibby }}</div>
+      </div>
+      <sc-for list="{{ rooms }}" as="r" hint-placeholder-count="14">
+        <div data-screen-label="{{ r.name }}" style="{{ r.boxStyle }}">
+          <div style="{{ r.doorStyle }}"></div>
+          <div style="position:absolute;left:12px;right:12px;top:0;height:26px;display:flex;align-items:center;gap:8px">
+            <span style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.12em">{{ r.code }}</span>
+            <span style="font-size:12px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">{{ r.name }}</span>
+            <span style="flex:1"></span>
+            <span style="display:flex;gap:3px"><sc-for list="{{ r.strip }}" as="s" hint-placeholder-count="3"><span style="{{ s.style }}"></span></sc-for></span>
+          </div>
+          <sc-for list="{{ r.desks }}" as="d" hint-placeholder-count="3">
+            <div onMouseEnter="{{ d.enter }}" onMouseLeave="{{ d.leave }}" style="{{ d.cellStyle }}">
+              <div style="{{ d.pulse }}"></div>
+              <div style="position:absolute;left:8px;top:34px;width:56px;height:22px;box-sizing:border-box;background:var(--panel2);border:1px solid var(--line2)"></div>
+              <div style="position:absolute;left:24px;top:37px;width:24px;height:4px;background:var(--ink2)"></div>
+              <div style="position:absolute;left:28px;top:46px;width:16px;height:5px;box-sizing:border-box;border:1px solid var(--line2);background:var(--panel)"></div>
+              <div style="{{ d.glyphStyle }}">{{ d.glyph }}</div>
+              <div style="{{ d.iconStyle }}">{{ d.icon }}</div>
+              <div style="position:absolute;left:0;right:0;top:62px;display:flex;align-items:center;justify-content:center;gap:4px;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--ink2)">{{ d.dot }}<span>{{ d.nameU }}</span></div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+      <sc-for list="{{ runners }}" as="u" hint-placeholder-count="0">
+        <div style="{{ u.style }}">
+          <div onMouseEnter="{{ u.enter }}" onMouseLeave="{{ u.leave }}" style="position:absolute;left:-18px;top:-38px;width:36px;height:46px;cursor:default">
+            <div style="{{ u.packetStyle }}"><span style="width:5px;height:5px;background:var(--ink);flex-shrink:0"></span>{{ u.label }}</div>
+            <div style="position:absolute;left:4px;top:16px">{{ u.glyph }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    <div onMouseDown="{{ stop }}" style="position:absolute;left:16px;bottom:16px;display:flex;align-items:center;gap:0;background:var(--panel);border:1px solid var(--line2);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;cursor:default">
+      <span onClick="{{ zoomOut }}" style="padding:8px 12px;cursor:pointer;border-right:1px solid var(--line2)">−</span>
+      <span style="padding:8px 12px;min-width:44px;text-align:center;color:var(--ink2)">{{ zoomPct }}</span>
+      <span onClick="{{ zoomIn }}" style="padding:8px 12px;cursor:pointer;border-left:1px solid var(--line2)">+</span>
+      <span onClick="{{ fitAll }}" style="padding:8px 12px;cursor:pointer;border-left:1px solid var(--line2);background:var(--ink);color:var(--panel)">FIT</span>
+      <span style="padding:8px 12px;color:var(--ink3);border-left:1px solid var(--line2)">WHEEL ZOOM · DRAG PAN</span>
+    </div>
+    <div onMouseDown="{{ stop }}" onClick="{{ mmClick }}" style="{{ mm.style }}">
+      <sc-for list="{{ mm.rooms }}" as="m" hint-placeholder-count="14"><div style="{{ m.style }}"></div></sc-for>
+      <sc-for list="{{ mm.dots }}" as="m" hint-placeholder-count="0"><div style="{{ m.style }}"></div></sc-for>
+      <div style="{{ mm.view }}"></div>
+      <span style="position:absolute;left:6px;top:-18px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">MAP</span>
+    </div>
+  </div>
+  <sc-if value="{{ hasPop }}" hint-placeholder-val="{{ false }}">
+    <div style="{{ pop.style }}">
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line)">
+        {{ pop.glyph }}
+        <div style="display:flex;flex-direction:column;gap:3px;min-width:0;flex:1">
+          <span style="font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.12em">{{ pop.nameU }}</span>
+          <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink3)">{{ pop.meta }}</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-bottom:1px solid var(--line);background:var(--panel2)">
+        <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em">{{ pop.dot }}<span>{{ pop.stateU }}</span></div>
+        <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2)">IN STATE {{ pop.since }}</span>
+      </div>
+      <div style="padding:12px 14px;display:flex;flex-direction:column;gap:7px;border-bottom:1px solid var(--line)">
+        <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">01 — WORKING ON</span>
+        <span style="font-size:14px;line-height:1.35;text-wrap:pretty">{{ pop.now }}</span>
+        <sc-if value="{{ pop.hasTask }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <div style="height:2px;background:var(--line)"><div style="{{ pop.barStyle }}"></div></div>
+            <div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)"><span>{{ pop.task }} · {{ pop.step }}</span><span>{{ pop.prog }}%</span></div>
+          </div>
+        </sc-if>
+      </div>
+      <sc-if value="{{ pop.hasHelp }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:12px 14px;display:flex;flex-direction:column;gap:6px;border-bottom:1px solid var(--line)">
+          <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">02 — NEEDS HELP</span>
+          <span style="font-size:13px;line-height:1.4;text-wrap:pretty">{{ pop.help }}</span>
+        </div>
+      </sc-if>
+      <div style="padding:12px 14px;display:flex;flex-direction:column;gap:6px">
+        <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">{{ pop.logLabel }}</span>
+        <sc-for list="{{ pop.log }}" as="g" hint-placeholder-count="3"><div style="display:flex;gap:10px;font-family:'Geist Mono',monospace;font-size:11px;line-height:1.4"><span style="color:var(--ink3);flex-shrink:0">{{ g.t }}</span><span style="{{ g.style }}">{{ g.text }}</span></div></sc-for>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;runners&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Floor&quot;},&quot;simulate&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Floor&quot;}}">
+class Component extends DCLogic {
+  state = { t: Date.now(), tx: 0, ty: 0, k: 0.5, hover: null, ready: false };
+  vp = null;
+  setVp = el => { this.vp = el; };
+  stop = e => e.stopPropagation();
+
+  DEPTS = [['dev','DEV','Development','eng'],['rnd','RND','R&D','eng'],['qa','QA','QA & Architecture','eng'],['sec','SEC','Security','eng'],['rel','REL','Release Management','eng'],['ops','OPS','Monitoring & Ops','ops'],['inc','INC','Incident Response','ops'],['com','COM','Communications','biz'],['knw','KNW','Knowledge Management','biz'],['fin','FIN','Finance','biz'],['dis','DIS','Distribution','biz'],['pub','PUB','Publishing','biz'],['dsn','DSN','Design','biz'],['per','PER','Personal Office','per']];
+  ZONES = { eng: 'ENGINEERING', ops: 'OPERATIONS', biz: 'BUSINESS', per: 'PERSONAL' };
+  // [name, role, state, task, now, minutesInState, progress, help]
+  DATA = {
+    dev: [['Stuart','Coder','thinking','TSK-0142','Addressing review comments on PR #318',3,62,''],['Bob','Coder','blocked','TSK-0143','Fixing flaky checkout test',4,80,'Needs your approval to push fix/checkout-flake to origin'],['Dave','Reviewer','working','TSK-0142','Reviewing PR #318 · 14 files',6,45,''],['Tim','Tester','working','TSK-0144','Running auth test suite · 88/140',9,63,''],['Mark','Documenter','blocked','TSK-0150','Documenting dark mode settings',2,90,'Handoff of PR #322 to Release Management awaits your approval'],['Jorge','Coder','done','TSK-0144','Bumped jsonwebtoken to 9.0.3',5,100,''],['Ken','Coder','error','TSK-0148','Fixing findings in services/orders',1,35,'Needs Incident Response to release the worktree on services/orders'],['Kevin','Architect','idle','','Waiting for next assignment',12,0,''],['Walt','Coder','working','TSK-0151','Refactoring pagination in the order service',7,28,''],['Ira','Coder','thinking','TSK-0145','Planning dedupe for webhook retries',2,15,'']],
+    rnd: [['Otto','Researcher','thinking','TSK-0146','Comparing pgvector, Qdrant and LanceDB',7,61,''],['Mel','Summarizer','working','TSK-0150','Condensing 9 sources into a brief',3,40,''],['Nina','Researcher','idle','','Waiting for next assignment',20,0,'']],
+    qa: [['Paul','Auditor','done','TSK-0148','Filed 14 findings in api',9,100,''],['Quinn','Tester','working','TSK-0152','Linting client-portal',4,52,''],['Rita','Architect','thinking','TSK-0153','Reviewing module boundaries in api',6,30,'']],
+    sec: [['Carl','Scanner','working','TSK-0154','Scanning forks for leaked secrets',8,70,''],['Vera','Assessor','done','TSK-0144','CVE-2026-3141 assessment filed',14,100,'']],
+    rel: [['Lance','Changelog Writer','done','TSK-0147','Wrote CHANGELOG.md for api 2.14',11,100,''],['Phil','Release Manager','idle','','Waiting for PR #322 handoff',19,0,'']],
+    ops: [['Ray','Watcher','working','','Heartbeat · inbox, calendar, CI',1,0,''],['Omar','Watcher','working','','Watching the CI queue',2,0,''],['Sven','Triager','thinking','TSK-0155','Classifying 3 inbound mails',1,20,'']],
+    inc: [['Sid','Triager','working','TSK-0145','Correlating 5xx with deploy api@2.14.0',1,55,''],['Gus','Incident Commander','working','TSK-0145','Leading the /v2/orders 5xx investigation',1,48,''],['Hugo','Summarizer','thinking','TSK-0145','Drafting the incident timeline',3,25,'']],
+    com: [['Larry','Writer','blocked','TSK-0147','Drafting the 2.14 announcement',11,70,'Needs the public release date for api 2.14'],['Cleo','Writer','working','TSK-0156','Drafting the 2.14 blog post',5,38,'']],
+    knw: [['Hank','Librarian','working','TSK-0157','Indexing 12 new vault notes',4,66,''],['Abe','Distiller','idle','','Waiting for tonight\'s distillation',33,0,'']],
+    fin: [['Earl','Accountant','blocked','','Reviewing SDK credit usage',26,90,'Awaiting your decision on raising the SDK credit cap'],['Fay','Accountant','working','TSK-0139','Reconciling Q3 spend',9,57,'']],
+    dis: [['Dex','Distributor','working','TSK-0141','Pushing api@2.14.0 to npm and Docker registries',3,72,''],['Mina','Distributor','error','TSK-0141','Publishing the Docker image',2,60,'Needs a new npm access token']],
+    pub: [['Pia','Publisher','working','TSK-0147','Publishing the changelog to the docs site',2,44,''],['Remy','Editor','thinking','TSK-0156','Proofreading the release post',6,50,'']],
+    dsn: [['Dora','Designer','working','TSK-0150','Dark mode settings mockups',8,68,''],['Finn','Designer','done','TSK-0158','Exported icon set v2',12,100,''],['Gil','Design Systems','blocked','TSK-0159','Naming color tokens',5,40,'Needs a decision on the token naming scheme']],
+    per: [['Ned','Assistant','working','TSK-0149','Comparing dentist slots for next week',6,58,''],['Opal','Assistant','idle','','Waiting for next assignment',45,0,'']]
+  };
+  ERR = { Ken: { msg: 'Worktree conflict on services/orders', log: ['git worktree add → conflict', 'Retry 1 → conflict', 'Retry 2 → conflict · escalated'] }, Mina: { msg: 'Registry publish failed: 403', log: ['docker push → 403 Forbidden', 'Retry 1 → 403', 'Token expired · escalated'] } };
+  RUNNERS = [['Mark','rel','PR #322',70,0],['Gus','dev','5xx report',64,22],['Mel','dev','research.md',76,41],['Lance','com','CHANGELOG.md',68,12],['Paul','dev','findings.md',80,55],['Vera','dev','cve-assessment',72,31],['Dex','pub','api@2.14.0',66,8],['Pia','com','changelog.html',74,48],['Otto','knw','notes.md',78,60]];
+  EQ = { dev:['coffee','plant','board','printer'], ops:['server','server','coffee'], fin:['vault','plant','printer'], inc:['board','coffee','board'], dis:['server','printer'], per:['plant','coffee','plant'] };
+  EQ_DEF = [['plant','coffee','board'],['board','printer','plant'],['coffee','plant','printer'],['plant','board','coffee']];
+
+  init() {
+    this.agents = []; const id = {};
+    this.DEPTS.forEach(([did, code]) => (this.DATA[did] || []).forEach((r, i) => {
+      const a = { id: code + '-' + String(i + 1).padStart(2, '0'), name: r[0], role: r[1], state: r[2], task: r[3], now: r[4], t0: Date.now() - r[5] * 60000 - 11000, prog: r[6], help: r[7], dept: did, code, err: this.ERR[r[0]] || null };
+      this.agents.push(a); id[a.name] = a;
+    }));
+    this.coo = { id: 'COO', name: 'Zibby', role: 'Chief Operating Officer', state: 'working', task: '', now: 'Routing 11 tasks across 14 departments', t0: Date.now() - 41 * 60000, prog: 0, help: '', dept: null, code: 'COO', err: null };
+    this.byName = id;
+    const CW = 72, CH = 76, PX = 12, HEAD = 26, SW = 56, CORR = 44, GAP = 10, M = 40;
+    const info = {};
+    this.DEPTS.forEach(([did, code, name, zone]) => {
+      const ag = this.agents.filter(a => a.dept === did), n = ag.length, cols = Math.max(2, Math.min(5, n)), rows = Math.ceil(n / cols);
+      info[did] = { did, code, name, zone, ag, n, cols, rows, base: Math.max(150, cols * CW + 2 * PX), h: HEAD + rows * CH + PX };
+    });
+    const LAYOUT = [{ door: 'D', L: ['dev'], R: ['com', 'knw', 'fin'] }, { door: 'U', L: ['rnd', 'qa'], R: ['dis', 'pub', 'dsn'] }, { door: 'U', L: ['sec', 'rel', 'per'], R: ['ops', 'inc'] }];
+    const sumW = l => l.reduce((s, d) => s + info[d].base, 0) + GAP * (l.length - 1);
+    const SIDE = Math.max(...LAYOUT.flatMap(r => [sumW(r.L), sumW(r.R)]));
+    const W = 2 * SIDE + SW + 2 * M, spineX = W / 2, Y1 = 210;
+    const rowH = LAYOUT.map(r => Math.max(...r.L.concat(r.R).map(d => info[d].h)));
+    const cAy = Y1 + rowH[0], y2 = cAy + CORR, cBy = y2 + rowH[1], y3 = cBy + CORR;
+    const rowY = [Y1, y2, y3], corrY = [cAy + CORR / 2, cAy + CORR / 2, cBy + CORR / 2], rooms = [];
+    LAYOUT.forEach((row, ri) => ['L', 'R'].forEach(side => {
+      const list = row[side], extra = SIDE - sumW(list), tb = list.reduce((s, d) => s + info[d].base, 0);
+      let x = side === 'L' ? spineX - SW / 2 - SIDE : spineX + SW / 2;
+      list.forEach(d => {
+        const r = info[d]; r.w = r.base + extra * r.base / tb; r.x = x; x += r.w + GAP; r.side = side; r.door = row.door;
+        r.y = ri === 0 ? Y1 + rowH[0] - r.h : rowY[ri]; r.corrY = corrY[ri]; r.doorX = r.x + r.w / 2;
+        const gx0 = (r.w - r.cols * CW) / 2;
+        r.desks = r.ag.map((a, j) => ({ a, x: gx0 + (j % r.cols) * CW, y: HEAD + Math.floor(j / r.cols) * CH }));
+        r.desks.forEach(dk => { dk.a.wx = r.x + dk.x; dk.a.wy = r.y + dk.y; dk.a.room = r; });
+        rooms.push(r);
+      });
+    }));
+    const yEnd = y3 + rowH[2], H = yEnd + M;
+    const corrs = [cAy, cBy].map(y => ({ style: `position:absolute;left:${spineX - SIDE - SW / 2}px;top:${y}px;width:${2 * SIDE + SW}px;height:${CORR}px;background:var(--panel2)`, line: `position:absolute;left:12px;right:12px;top:${CORR / 2 - 1}px;height:2px;background-image:repeating-linear-gradient(to right,var(--line2) 0 8px,transparent 8px 20px)` }));
+    this.L = { rooms, W, H, spineX, SW, CW, CH, PX, HEAD, corrs, yEnd };
+    this.paths = this.RUNNERS.map(([nm, to, label, cyc, off]) => {
+      const a = id[nm], A = a.room, B = rooms.find(r => r.did === to), dsk = A.desks.find(d => d.a === a);
+      const ax = A.x + dsk.x + 36, ay = A.y + dsk.y + 26;
+      const pts = A.corrY === B.corrY ? [[ax, ay], [A.doorX, ay], [A.doorX, A.corrY], [B.doorX, A.corrY]] : [[ax, ay], [A.doorX, ay], [A.doorX, A.corrY], [spineX, A.corrY], [spineX, B.corrY], [B.doorX, B.corrY]];
+            const cl = [0]; for (let i = 1; i < pts.length; i++) cl.push(cl[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+      return { a, label, cyc, off, pts, cl, len: cl[cl.length - 1] };
+    });
+  }
+  along(p, d) { d = Math.max(0, Math.min(p.len, d)); let i = 1; while (i < p.cl.length - 1 && p.cl[i] < d) i++; const t = (d - p.cl[i - 1]) / ((p.cl[i] - p.cl[i - 1]) || 1); return [p.pts[i - 1][0] + (p.pts[i][0] - p.pts[i - 1][0]) * t, p.pts[i - 1][1] + (p.pts[i][1] - p.pts[i - 1][1]) * t]; }
+  runnerFrame(p, now) {
+    const SP = 150, out = p.len / SP, dw = 4.5, l = (now + p.off) % p.cyc;
+    if (l < out) return { pos: this.along(p, l * SP), carry: true };
+    if (l < out + dw) return { pos: p.pts[p.pts.length - 1], carry: true };
+    if (l < 2 * out + dw) return { pos: this.along(p, (2 * out + dw - l) * SP), carry: false };
+    return null;
+  }
+
+  componentDidMount() {
+    this.poll = setInterval(() => {
+      if (!window.ZB || !this.vp) return; clearInterval(this.poll);
+      this.init(); this.vp.addEventListener('wheel', this.onWheel, { passive: false }); window.addEventListener('resize', this.fit);
+      this.fit(); this.setState({ ready: true });
+      this.timer = setInterval(() => this.setState({ t: Date.now() }), 120);
+      this.sim = setInterval(this.step, 4500);
+    }, 50);
+  }
+  componentWillUnmount() { clearInterval(this.poll); clearInterval(this.timer); clearInterval(this.sim); window.removeEventListener('resize', this.fit); }
+
+  fit = () => { const v = this.vp; if (!v || !this.L) return; const k = Math.max(0.35, Math.min(v.clientWidth / this.L.W, v.clientHeight / this.L.H) * 0.97); this.setState({ k, tx: (v.clientWidth - this.L.W * k) / 2, ty: Math.min(8, (v.clientHeight - this.L.H * k) / 2) }); };
+  zoomAt(f, cx, cy) { const { k, tx, ty } = this.state, nk = Math.max(0.2, Math.min(2.5, k * f)), r = nk / k; this.setState({ k: nk, tx: cx - (cx - tx) * r, ty: cy - (cy - ty) * r }); }
+  onWheel = e => { e.preventDefault(); const r = this.vp.getBoundingClientRect(); this.zoomAt(Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top); this.setState({ hover: null }); };
+  zoomIn = () => this.zoomAt(1.25, this.vp.clientWidth / 2, this.vp.clientHeight / 2);
+  zoomOut = () => this.zoomAt(0.8, this.vp.clientWidth / 2, this.vp.clientHeight / 2);
+  onDown = e => {
+    if (e.button !== 0) return; const s = { x: e.clientX, y: e.clientY, tx: this.state.tx, ty: this.state.ty };
+    const mv = ev => this.setState({ tx: s.tx + ev.clientX - s.x, ty: s.ty + ev.clientY - s.y, hover: null });
+    const up = () => { window.removeEventListener('mousemove', mv); window.removeEventListener('mouseup', up); };
+    window.addEventListener('mousemove', mv); window.addEventListener('mouseup', up);
+  };
+  mmClick = e => {
+    const r = e.currentTarget.getBoundingClientRect(), s = this.mmScale(), wx = (e.clientX - r.left) / s, wy = (e.clientY - r.top) / s, k = this.state.k;
+    this.setState({ tx: this.vp.clientWidth / 2 - wx * k, ty: this.vp.clientHeight / 2 - wy * k });
+  };
+  mmScale() { return Math.min(150 / this.L.W, 300 / this.L.H); }
+  enter(id) { return e => { const r = e.currentTarget.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight; let x = r.right + 10; if (x + 310 > vw) x = r.left - 310; this.setState({ hover: { id, x: Math.max(8, x), y: Math.max(64, Math.min(vh - 420, r.top - 40)) } }); }; }
+  leave = () => this.setState({ hover: null });
+
+  step = () => {
+    if (this.props.simulate === false || !this.agents) return;
+    this.agents.forEach(a => { if (a.state === 'working' && a.task) a.prog = Math.min(100, a.prog + 2); else if (a.state === 'thinking') a.prog = Math.min(100, a.prog + 1); });
+    for (let i = 0; i < 2; i++) {
+      const a = this.agents[Math.floor(Math.random() * this.agents.length)], r = Math.random(), s = a.state; let n = s;
+      if (s === 'working') n = a.prog >= 100 ? 'done' : r < .18 ? 'thinking' : r < .25 ? 'blocked' : s;
+      else if (s === 'thinking') n = r < .6 ? 'working' : s;
+      else if (s === 'blocked') n = r < .5 ? 'working' : s;
+      else if (s === 'error') n = r < .2 ? 'thinking' : s;
+      else if (s === 'done') n = r < .5 ? 'idle' : s;
+      else if (s === 'idle') n = r < .4 ? 'working' : s;
+      if (n === s) continue;
+      a.state = n; a.t0 = Date.now();
+      if (n === 'done') a.prog = 100;
+      if (s === 'idle') { a.prog = 5; a.now = 'Picked up a new task'; a.task = a.task || 'TSK-0160'; }
+      if (n === 'blocked' && !a.help) a.help = 'Waiting for your approval to continue';
+    }
+  };
+
+  renderVals() {
+    const Z = window.ZB, R = React, empty = { ready: false, legend: [], corrs: [], rooms: [], runners: [], hasPop: false, pop: {}, lobby: { zibby: null, dot: null, stateU: '', style: '', wallL: '', wallR: '' }, mm: { rooms: [], dots: [] }, setVp: this.setVp, onDown: this.onDown, stop: this.stop, total: '00', deptCount: '00', zoomPct: '', worldStyle: '', spineStyle: '', logo: null, fitAll: this.fit, zoomIn: () => {}, zoomOut: () => {}, mmClick: () => {} };
+    if (!Z || !this.L) return empty;
+    const S = Z.S, { rooms, W, H, spineX, SW, CW, CH, corrs, yEnd } = this.L, { tx, ty, k, hover } = this.state, now = this.state.t, pad = n => String(n).padStart(2, '0');
+    const fmt = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return pad(Math.floor(s / 60)) + ':' + pad(s % 60); };
+    const showRun = this.props.runners !== false;
+    const frames = showRun ? this.paths.map(p => ({ p, f: this.runnerFrame(p, now / 1000) })) : [];
+    const away = new Set(frames.filter(x => x.f).map(x => x.p.a.name));
+    const ST = { error: ['!', 'var(--s-err)'], blocked: ['?', 'var(--s-block)'], done: ['✓', 'var(--s-done)'] };
+    const mk = (l, t, w, h, x) => ({ style: `position:absolute;left:${l}px;top:${t}px;width:${w}px;height:${h}px;box-sizing:border-box;${x || ''}` });
+    const roomsOut = rooms.map(r => {
+      return {
+        name: r.name, code: r.code,
+        boxStyle: `position:absolute;left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px;box-sizing:border-box;border:2px solid var(--ink);background:${r.zone === 'ops' ? 'var(--bg)' : 'var(--panel)'};${r.zone === 'per' ? 'border-style:dashed;' : ''}`,
+        doorStyle: `position:absolute;left:50%;margin-left:-22px;width:44px;height:2px;${r.door === 'D' ? 'bottom' : 'top'}:-2px;background:var(--panel2);z-index:2`,
+        strip: r.ag.map(a => ({ style: `width:7px;height:7px;background:${S[a.state].c}` })),
+        desks: r.desks.map(({ a, x, y }) => {
+          const st = ST[a.state], isAway = away.has(a.name), live = a.state === 'error' || a.state === 'blocked';
+          return {
+            cellStyle: `position:absolute;left:${x}px;top:${y}px;width:${CW}px;height:${CH}px;cursor:default`,
+            pulse: live ? `position:absolute;left:2px;top:30px;width:68px;height:30px;box-sizing:border-box;border:1px solid ${S[a.state].c};animation:zb-ring ${a.state === 'error' ? .8 : 1.2}s ease-out infinite` : 'display:none',
+            glyphStyle: `position:absolute;left:22px;top:4px;opacity:${isAway ? .18 : 1}`, glyph: Z.glyph(R, { seed: a.name, state: a.state, size: 28, glow: false }),
+            iconStyle: st ? `position:absolute;left:46px;top:-1px;width:13px;height:13px;background:${st[1]};color:var(--panel);display:${isAway ? 'none' : 'grid'};place-items:center;font-family:'Geist Mono',monospace;font-size:10px;font-weight:600;line-height:1` : 'display:none',
+            icon: st ? st[0] : '', dot: Z.dot(R, a.state, 5), nameU: a.name.toUpperCase(), enter: this.enter(a.id), leave: this.leave
+          };
+        })
+      };
+    });
+    const runners = frames.map(({ p, f }) => ({
+      style: f ? `position:absolute;left:${f.pos[0].toFixed(1)}px;top:${f.pos[1].toFixed(1)}px;width:0;height:0;z-index:6;transition:left .12s linear,top .12s linear` : 'display:none',
+      packetStyle: f && f.carry ? `position:absolute;left:18px;top:0;transform:translateX(-50%);display:flex;align-items:center;gap:4px;white-space:nowrap;background:var(--panel);border:1px solid var(--ink);padding:1px 5px;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.08em` : 'display:none',
+      label: p.label, glyph: Z.glyph(R, { seed: p.a.name, state: p.a.state, size: 28, glow: false }), enter: this.enter(p.a.id), leave: this.leave
+    }));
+    const cnt = {}; Z.ORDER.forEach(s => cnt[s] = 0); this.agents.forEach(a => cnt[a.state]++);
+    const s = this.mmScale(), mmW = Math.round(W * s), mmH = Math.round(H * s), vw = this.vp ? this.vp.clientWidth : 1000, vh = this.vp ? this.vp.clientHeight : 800;
+    const mm = {
+      style: `position:absolute;right:16px;bottom:16px;width:${mmW}px;height:${mmH}px;background:var(--panel);border:1px solid var(--ink);cursor:pointer`,
+      rooms: rooms.map(r => ({ style: `position:absolute;left:${r.x * s}px;top:${r.y * s}px;width:${r.w * s}px;height:${r.h * s}px;box-sizing:border-box;border:1px solid var(--ink3);background:var(--panel2)` })).concat([{ style: `position:absolute;left:${(spineX - 100 * 1.5) * s}px;top:${24 * s}px;width:${300 * s}px;height:${170 * s}px;box-sizing:border-box;border:1px solid var(--ink)` }]),
+      dots: this.agents.map(a => ({ style: `position:absolute;left:${(a.wx + 42) * s - 1.5}px;top:${(a.wy + 20) * s - 1.5}px;width:3px;height:3px;background:${S[a.state].c}` })),
+      view: `position:absolute;left:${-tx / k * s}px;top:${-ty / k * s}px;width:${vw / k * s}px;height:${vh / k * s}px;box-sizing:border-box;border:1px solid var(--ink);pointer-events:none`
+    };
+    const coo = this.coo;
+    const lobby = {
+      style: `position:absolute;left:${spineX - 60}px;top:50px;width:120px;height:120px`,
+      wallL: `position:absolute;left:-2px;bottom:0;width:${180 - SW / 2}px;height:2px;margin-left:0;background:var(--ink);bottom:-2px`, wallR: `position:absolute;right:-2px;bottom:-2px;width:${180 - SW / 2}px;height:2px;background:var(--ink)`,
+      zibby: Z.zibby(R, { state: coo.state, size: 64 }), dot: Z.dot(R, coo.state, 7), stateU: S[coo.state].label.toUpperCase(), enter: this.enter('COO'), leave: this.leave
+    };
+    let pop = {}, hasPop = false;
+    if (hover) {
+      const a = hover.id === 'COO' ? coo : this.agents.find(x => x.id === hover.id);
+      if (a) {
+        hasPop = true; const err = a.state === 'error' && a.err, hasTask = !!a.task && (a.state === 'working' || a.state === 'thinking' || a.state === 'blocked' || a.state === 'error'), since = fmt(now - a.t0);
+        const ctx = ['Loaded context · 24 items', 'Picked up ' + (a.task || 'standing orders')];
+        const log = err ? a.err.log.map((t, i, arr) => ({ t: '−' + pad((arr.length - 1 - i) * 1) + ':' + pad(12 + (arr.length - i) * 7), text: t, style: i === arr.length - 1 ? 'color:var(--ink)' : 'color:var(--ink2)' }))
+          : [{ t: '−00:' + pad(8 + (Math.floor(now / 1000) % 5)), text: a.now, style: 'color:var(--ink)' }, { t: '−01:' + pad(30), text: ctx[0], style: 'color:var(--ink2)' }, { t: '−02:' + pad(44), text: ctx[1], style: 'color:var(--ink2)' }];
+        pop = {
+          style: `position:fixed;left:${hover.x}px;top:${hover.y}px;width:300px;background:var(--panel);border:1px solid var(--ink);z-index:50;pointer-events:none`,
+          glyph: a === coo ? Z.zibby(R, { state: a.state, size: 38 }) : Z.glyph(R, { seed: a.name, state: a.state, size: 38, glow: false }),
+          nameU: a.name.toUpperCase(), meta: a.id + ' · ' + a.role.toUpperCase(), dot: Z.dot(R, a.state, 8), stateU: S[a.state].label.toUpperCase(), since,
+          now: err ? err.msg : a.now, hasTask, task: a.task, prog: a.prog, step: 'STEP ' + Math.max(1, Math.round(a.prog / 100 * 6)) + '/6', barStyle: `height:2px;width:${a.prog}%;background:${S[a.state].c}`,
+          hasHelp: !!a.help && (a.state === 'blocked' || a.state === 'error'), help: a.help, logLabel: err ? '03 — ERROR LOG' : (a.help && a.state === 'blocked' ? '03 — LAST ACTIVITY' : '02 — LAST ACTIVITY'), log
+        };
+        if (!pop.hasHelp) pop.logLabel = '02 — ' + (err ? 'ERROR LOG' : 'LAST ACTIVITY');
+      }
+    }
+    return {
+      ready: true, setVp: this.setVp, onDown: this.onDown, stop: this.stop, fitAll: this.fit, zoomIn: this.zoomIn, zoomOut: this.zoomOut, mmClick: this.mmClick,
+      logo: Z.zibby(R, { state: 'working', size: 26, anim: false }),
+      legend: Z.ORDER.map(st => ({ labelU: S[st].label.toUpperCase(), n: pad(cnt[st]), dot: Z.dot(R, st, 8) })),
+      total: pad(this.agents.length), deptCount: pad(rooms.length), zoomPct: Math.round(k * 100) + '%',
+      worldStyle: `position:absolute;left:0;top:0;width:${W}px;height:${H}px;transform:translate(${tx}px,${ty}px) scale(${k});transform-origin:0 0`,
+      spineStyle: `position:absolute;left:${spineX - SW / 2}px;top:190px;width:${SW}px;height:${yEnd - 190}px;background:var(--panel2);border-left:1px solid var(--line2);border-right:1px solid var(--line2)`,
+      lobby, corrs, rooms: roomsOut, runners, mm, hasPop, pop
+    };
+  }
+}
+</script>
+</body>
+</html>
