@@ -3,7 +3,7 @@ import { hashSeed, seededRandom } from "../../utils/seededRandom";
 import { type StateTone, stateToneVar } from "../../stateTone";
 
 /** The DS.md §7 sanctioned SVG sizes — no arbitrary px (sealed sizing). */
-export type GlyphSize = 18 | 22 | 30 | 48 | 128;
+export type GlyphSize = 18 | 22 | 28 | 30 | 38 | 48 | 128;
 
 export enum AgentGlyphTestId {
   Root = "agent-glyph-root",

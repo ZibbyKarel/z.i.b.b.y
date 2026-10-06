@@ -29,6 +29,23 @@ describe("AppFrame", () => {
     expect(screen.queryByTestId(AppFrameTestId.Dock)).toBeNull();
   });
 
+  it("caps and scrolls main by default, drops both when fullBleed", () => {
+    const { rerender } = render(<AppFrame header={<div>Header</div>}>Content</AppFrame>);
+    const main = screen.getByTestId(AppFrameTestId.Main);
+    expect(main.className).toContain("overflow-y-auto");
+    expect((main.firstElementChild as HTMLElement).style.maxWidth).not.toBe("");
+    expect(main.firstElementChild?.className).not.toContain("h-full");
+    rerender(
+      <AppFrame fullBleed header={<div>Header</div>}>
+        Content
+      </AppFrame>,
+    );
+    expect(main.className).toContain("overflow-hidden");
+    expect(main.className).not.toContain("overflow-y-auto");
+    expect((main.firstElementChild as HTMLElement).style.maxWidth).toBe("");
+    expect(main.firstElementChild?.className).toContain("h-full");
+  });
+
   it("renders the dock slot", () => {
     render(
       <AppFrame dock={<div>The dock</div>} header={<div>Header</div>}>

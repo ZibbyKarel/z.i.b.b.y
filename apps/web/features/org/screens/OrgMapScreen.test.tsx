@@ -1,46 +1,36 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  AgentGlyphTestId,
-  DropdownTestId,
-  OrgConnectorTestId,
-  OrgNodeTestId,
-  ZibbyAvatarTestId,
-} from "@zibby/design-system";
-import { fireEvent, renderWithProviders as render, screen, within } from "../../../test/render";
+import { OrgFloorplanTestId, ZibbyAvatarTestId } from "@zibby/design-system";
+import { fireEvent, renderWithProviders as render, screen } from "../../../test/render";
 import { OrgMapScreen, OrgMapScreenTestId } from "./OrgMapScreen";
 
 const push = vi.fn();
-/** The `?department=` param the mocked URL reports — set per test, same pattern as
- *  `Screen.test.tsx`'s `searchTab`. */
-let focusParam = "";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
   usePathname: () => "/org",
-  useSearchParams: () => {
-    const params = new URLSearchParams();
-    if (focusParam) params.set("department", focusParam);
-    return params;
-  },
 }));
+
+const department = (id: string, code: string, name: string, division: string) => ({
+  id,
+  code,
+  name,
+  division,
+  tagline: "",
+  mandate: "",
+  color: "#5b8def",
+  state: "idle",
+  tier2Count: 0,
+  tier3Count: 0,
+  errorCount: 0,
+  errorRunIds: [],
+});
 
 vi.mock("../../departments/queries/useDepartmentsQuery", () => ({
   getDepartmentsQueryKey: () => ["departments"],
   useDepartmentsQuery: () => ({
     data: [
-      {
-        id: "dev",
-        code: "DEV",
-        name: "Development",
-        tagline: "",
-        mandate: "",
-        color: "#5b8def",
-        state: "idle",
-        tier2Count: 0,
-        tier3Count: 0,
-        errorCount: 1,
-        errorRunIds: ["r_fail"],
-      },
+      department("dev", "DEV", "Development", "engineering"),
+      department("per", "PER", "Personal Office", "office"),
     ],
   }),
 }));
@@ -48,12 +38,6 @@ vi.mock("../../departments/queries/useDepartmentsQuery", () => ({
 vi.mock("../../departments/queries/useDivisionsQuery", async () => {
   const { DIVISION_SEED } = await import("@zibby/contracts");
   return { useDivisionsQuery: () => ({ data: DIVISION_SEED }) };
-});
-
-vi.mock("../../departments/useDepartmentLookup", async () => {
-  const { DEPARTMENTS } = await import("@zibby/contracts");
-  const { departmentLookup } = await import("../../departments/departmentLookup");
-  return { useDepartmentLookup: () => departmentLookup(DEPARTMENTS) };
 });
 
 let approvals: { id: string }[] = [];
@@ -72,34 +56,11 @@ vi.mock("../../employees/queries/useEmployeesQuery", () => ({
         status: "active",
         hiredAt: "2026-01-01T00:00:00.000Z",
         state: "working",
+        currentTaskTitle: "Fix the checkout test",
         position: { id: "koder", name: "Kodér", title: "Coder" },
       },
     ],
   }),
-}));
-
-vi.mock("../../departments/queries/useDepartmentSubtasksQuery", () => ({
-  useDepartmentSubtasksQuery: () => ({ data: [{ taskId: "TSK-1", state: "working" }] }),
-}));
-
-vi.mock("../../agents", () => ({
-  useAgentsQuery: () => ({
-    data: [
-      { id: "koder", name: "Kodér" },
-      { id: "tester", name: "Tester" },
-    ],
-  }),
-}));
-
-vi.mock("../../runs", () => ({
-  useRunsQuery: () => ({
-    runs: [{ runId: "r_fail", kind: "workflow", owner: "patch", title: "Broken patch" }],
-  }),
-}));
-
-const hireMutate = vi.fn();
-vi.mock("../../employees/mutations", () => ({
-  useHireEmployeeMutation: () => ({ mutate: hireMutate, isPending: false }),
 }));
 
 vi.mock("../../departments/mutations", () => ({
@@ -115,48 +76,93 @@ vi.mock("../../notifications", () => ({
 describe("OrgMapScreen", () => {
   beforeEach(() => {
     push.mockReset();
-    hireMutate.mockReset();
     approvals = [];
     notifications = [{ runId: "r_fail", title: "Broken patch", failedAt: "2026-10-01T00:00:00Z" }];
-    focusParam = "";
   });
 
-  it("renders all 11 canonical department nodes", () => {
+  it("fills the height of its parent so the floorplan can go full-bleed", () => {
     render(<OrgMapScreen />);
-    expect(screen.getAllByTestId(OrgNodeTestId.Root)).toHaveLength(11);
+    expect(screen.getByTestId(OrgMapScreenTestId.Root).style.height).toBe("100%");
   });
 
-  it("shows the COO as the Zibby avatar", () => {
+  it("renders a room per department with an accessible name", () => {
     render(<OrgMapScreen />);
-    const avatar = within(screen.getByTestId(OrgMapScreenTestId.CooNode)).getByTestId(
-      ZibbyAvatarTestId.Root,
+    const dev = screen.getByTestId(`${OrgFloorplanTestId.Room}-dev`);
+    expect(dev).toHaveRole("button");
+    expect(dev).toHaveAccessibleName("DEV · Development, 1 agent");
+    expect(screen.getByTestId(`${OrgFloorplanTestId.Room}-per`)).toHaveAccessibleName(
+      "PER · Personal Office, 0 agentů",
     );
-    expect(avatar).toHaveRole("img");
-    expect(avatar).toHaveAccessibleName("Zibby · COO");
   });
 
-  it("mirrors the worst agent state on the Zibby avatar (failed run beats working)", () => {
+  it("maps the office division to the dashed personal room", () => {
+    render(<OrgMapScreen />);
+    expect(screen.getByTestId(`${OrgFloorplanTestId.Room}-per`).className).toContain(
+      "border-dashed",
+    );
+  });
+
+  it("renders a desk for each active employee, and none for an empty department", () => {
+    render(<OrgMapScreen />);
+    expect(screen.getByTestId(`${OrgFloorplanTestId.Desk}-e1`)).toBeInTheDocument();
+    expect(screen.getByTestId(`${OrgFloorplanTestId.RoomStrip}-per`).children).toHaveLength(0);
+  });
+
+  it("navigates to the person when a desk is clicked, not to the department", () => {
+    render(<OrgMapScreen />);
+    fireEvent.click(screen.getByTestId(`${OrgFloorplanTestId.Desk}-e1`));
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith("/org/people/e1");
+  });
+
+  it("navigates to the department when a room is clicked", () => {
+    render(<OrgMapScreen />);
+    fireEvent.click(screen.getByTestId(`${OrgFloorplanTestId.Room}-dev`));
+    expect(push).toHaveBeenCalledWith("/org/departments/dev");
+  });
+
+  it("shows the employee's role and current task in the hover popover", () => {
+    render(<OrgMapScreen />);
+    fireEvent.mouseEnter(screen.getByTestId(`${OrgFloorplanTestId.Desk}-e1`));
+    expect(screen.getByTestId(OrgFloorplanTestId.PopoverName)).toHaveTextContent("Kessler");
+    expect(screen.getByTestId(OrgFloorplanTestId.PopoverMeta)).toHaveTextContent("DEV-01 · Coder");
+    expect(screen.getByTestId(OrgFloorplanTestId.PopoverTask)).toHaveTextContent(
+      "Fix the checkout test",
+    );
+  });
+
+  it("shows the COO in the lobby as the Zibby avatar", () => {
+    render(<OrgMapScreen />);
+    const coo = screen.getByTestId(OrgFloorplanTestId.Coo);
+    expect(coo).toHaveRole("button");
+    expect(screen.getByTestId(ZibbyAvatarTestId.Root)).toHaveAccessibleName("Zibby · COO");
+  });
+
+  it("mirrors the worst agent state on Zibby (failed run beats working)", () => {
     render(<OrgMapScreen />);
     expect(screen.getByTestId(ZibbyAvatarTestId.Root)).toHaveAttribute("data-state", "error");
   });
 
-  it("links an error Zibby with no employee in error to the notification bell", () => {
+  it("sends an error Zibby with no employee in error to the notification bell", () => {
     render(<OrgMapScreen />);
-    expect(screen.getByTestId(OrgMapScreenTestId.CooNode)).toHaveAttribute(
-      "href",
-      "/org?notifications=open",
-    );
+    fireEvent.click(screen.getByTestId(OrgFloorplanTestId.Coo));
+    expect(push).toHaveBeenCalledWith("/org?notifications=open");
   });
 
-  it("links a blocked Zibby waiting on an approval to the approvals queue", () => {
+  it("sends a blocked Zibby waiting on an approval to the approvals queue", () => {
     notifications = [];
     approvals = [{ id: "a1" }];
     render(<OrgMapScreen />);
     expect(screen.getByTestId(ZibbyAvatarTestId.Root)).toHaveAttribute("data-state", "blocked");
-    expect(screen.getByTestId(OrgMapScreenTestId.CooNode)).toHaveAttribute(
-      "href",
-      "/policy/approvals",
-    );
+    fireEvent.click(screen.getByTestId(OrgFloorplanTestId.Coo));
+    expect(push).toHaveBeenCalledWith("/policy/approvals");
+  });
+
+  it("sends Zibby to the People roster when an employee is in its state", () => {
+    notifications = [];
+    render(<OrgMapScreen />);
+    fireEvent.click(screen.getByTestId(OrgFloorplanTestId.Coo));
+    expect(push).toHaveBeenCalledWith("/org/people?state=working");
   });
 
   it("drops Zibby out of error once every failure is read", () => {
@@ -165,87 +171,9 @@ describe("OrgMapScreen", () => {
     expect(screen.getByTestId(ZibbyAvatarTestId.Root)).not.toHaveAttribute("data-state", "error");
   });
 
-  it("lists the focused department's failed runs, linked to their detail", () => {
-    focusParam = "dev";
+  it("keeps the add-department button and no longer renders the old tree or focus panel", () => {
     render(<OrgMapScreen />);
-    const row = screen.getByTestId(OrgMapScreenTestId.FailedRun);
-    expect(row).toHaveTextContent("Broken patch");
-    expect(row).toHaveAttribute("href", "/activity/runs/r_fail");
-  });
-
-  it("shows no focus panel without ?department=", () => {
-    render(<OrgMapScreen />);
-    expect(screen.queryByTestId(OrgMapScreenTestId.FocusPanel)).not.toBeInTheDocument();
-  });
-
-  it("shows the focus panel with the department's team and subtasks for ?department=<id>", () => {
-    focusParam = "dev";
-    render(<OrgMapScreen />);
-    const panel = screen.getByTestId(OrgMapScreenTestId.FocusPanel);
-    expect(panel).toHaveTextContent("Kessler");
-    expect(panel).toHaveTextContent("TSK-1");
-  });
-
-  it("groups the departments under the four divisions", () => {
-    render(<OrgMapScreen />);
-    const divisions = screen.getAllByTestId(OrgMapScreenTestId.Division);
-    expect(divisions).toHaveLength(4);
-    expect(divisions[0]).toHaveTextContent("Engineering");
-  });
-
-  it("joins the COO trunk, the division bus, each division and each node with a connector", () => {
-    render(<OrgMapScreen />);
-    // 1 COO trunk + 1 bus + 1 drop per division + 1 drop per department node.
-    expect(screen.getAllByTestId(OrgConnectorTestId.Root)).toHaveLength(2 + 4 + 11);
-  });
-
-  it("turns only the focused department's drop connector --ink", () => {
-    focusParam = "dev";
-    render(<OrgMapScreen />);
-    const active = screen
-      .getAllByTestId(OrgConnectorTestId.Root)
-      .filter((el) => el.className.includes("bg-ink"));
-    expect(active).toHaveLength(1);
-  });
-
-  it("renders no AgentGlyph with no focus panel open — the COO is the Zibby avatar", () => {
-    render(<OrgMapScreen />);
-    expect(screen.queryAllByTestId(AgentGlyphTestId.Root)).toHaveLength(0);
-  });
-
-  it("renders an AgentGlyph for each focus-panel team tile", () => {
-    focusParam = "dev";
-    render(<OrgMapScreen />);
-    expect(screen.getAllByTestId(AgentGlyphTestId.Root)).toHaveLength(1);
-  });
-
-  it("links each team tile to its agent's registry detail", () => {
-    focusParam = "dev";
-    render(<OrgMapScreen />);
-    expect(screen.getByTestId(OrgMapScreenTestId.TeamTile)).toHaveAttribute(
-      "href",
-      "/system/registries/positions/koder",
-    );
-  });
-
-  it("puts the clicked department into the ?department= param", () => {
-    render(<OrgMapScreen />);
-    fireEvent.click(screen.getAllByTestId(OrgNodeTestId.Root)[0]!);
-    expect(push).toHaveBeenCalledWith("/org?department=dev");
-  });
-
-  it("offers only agents no department holds yet, and hires the picked one into the focus department", () => {
-    focusParam = "dev";
-    render(<OrgMapScreen />);
-    fireEvent.click(screen.getByTestId(DropdownTestId.Trigger));
-    const options = screen.getAllByTestId(DropdownTestId.Option);
-    expect(options).toHaveLength(1);
-    expect(options[0]).toHaveTextContent("Tester");
-    fireEvent.click(options[0]!);
-    fireEvent.click(screen.getByTestId(OrgMapScreenTestId.AddEmployeeButton));
-    expect(hireMutate).toHaveBeenCalledWith(
-      { params: { id: "dev" }, body: { agentId: "tester" } },
-      expect.anything(),
-    );
+    expect(screen.getByTestId(OrgMapScreenTestId.AddDepartmentButton)).toBeInTheDocument();
+    expect(screen.queryByText("OTEVŘÍT ODDĚLENÍ →")).not.toBeInTheDocument();
   });
 });

@@ -293,6 +293,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   return (
     <AppFrame
       dock={<CooDock />}
+      fullBleed={pathname === "/org"}
       header={
         <AppHeader
           homeHref="/org"

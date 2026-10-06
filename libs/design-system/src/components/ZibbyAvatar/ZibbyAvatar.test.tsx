@@ -30,6 +30,11 @@ describe("ZibbyAvatar", () => {
     expect(svg).toHaveAttribute("height", "112");
   });
 
+  it("renders at the 128 lobby size", () => {
+    render(<ZibbyAvatar size={128} state="idle" />);
+    expect(screen.getByTestId(ZibbyAvatarTestId.Root)).toHaveAttribute("width", "128");
+  });
+
   it("is decorative without a label and an img with one", () => {
     const { unmount } = render(<ZibbyAvatar state="working" />);
     expect(screen.getByTestId(ZibbyAvatarTestId.Root)).toHaveAttribute("aria-hidden", "true");

@@ -2229,25 +2229,24 @@
   "orgMap": {
     "cooAvatarLink": "Zobrazit lidi ve stavu: {state}",
     "cooAvatarLabel": "Zibby · COO",
-    "alert": {
-      "errors": "{count, plural, one {# chyba} few {# chyby} other {# chyb}}",
-      "approvals": "{count, plural, one {# schválení čeká} few {# schválení čekají} other {# schválení čeká}}"
+    "roomAria": "{code} · {name}, {count, plural, one {# agent} few {# agenti} other {# agentů}}",
+    "state": {
+      "working": "Pracuje",
+      "thinking": "Přemýšlí",
+      "blocked": "Blokováno",
+      "error": "Chyba",
+      "done": "Hotovo",
+      "idle": "Nečinný"
     },
-    "focus": {
-      "eyebrow": "02 — ODDĚLENÍ · {code}",
-      "openDepartment": "OTEVŘÍT ODDĚLENÍ →",
-      "teamTitle": "Tým",
-      "teamEmptyTitle": "Nikdo si teď nepůjčuje",
-      "teamEmpty": "Oddělení si zaměstnance půjčuje z fondu, jakmile začne podúkol.",
-      "failedRunsTitle": "Chybné běhy",
-      "subtasksTitle": "Otevřené podúkoly",
-      "subtasksEmptyTitle": "Žádné podúkoly",
-      "subtasksEmpty": "V tomto oddělení nejsou žádné otevřené podúkoly.",
-      "out": "→ VEN · {kind}",
-      "in": "→ DOVNITŘ · {kind}",
-      "addLabel": "Přidat zaměstnance",
-      "add": "Přidat",
-      "noFreeAgents": "Všichni agenti už jsou v nějakém oddělení."
+    "controls": {
+      "zoomOut": "Oddálit",
+      "zoomIn": "Přiblížit",
+      "zoomLevel": "Úroveň přiblížení",
+      "fill": "Vyplnit",
+      "minimap": "Mapa"
+    },
+    "popover": {
+      "workingOn": "Pracuje na"
     }
   },
   "activityLog": {

@@ -81,3 +81,15 @@ export const Playground: Story = {
     </div>
   ),
 };
+
+export const FullBleed: Story = {
+  render: () => (
+    <div className="h-[720px] w-full">
+      <AppFrame fullBleed header={header} rail={rail} subnav={subnav}>
+        <div className="h-full bg-panel-2 p-6">
+          <Typography type="h2">Full-bleed canvas</Typography>
+        </div>
+      </AppFrame>
+    </div>
+  ),
+};

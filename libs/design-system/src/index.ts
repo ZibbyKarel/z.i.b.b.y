@@ -505,6 +505,20 @@ export type { ConfirmDeleteButtonProps } from "./components/ConfirmDeleteButton/
 
 export { OrgNode, OrgNodeTestId } from "./components/OrgNode/OrgNode";
 export type { OrgNodeProps } from "./components/OrgNode/OrgNode";
+export { OrgFloorplan, OrgFloorplanTestId } from "./components/OrgFloorplan/OrgFloorplan";
+export type {
+  OrgFloorplanAgent,
+  OrgFloorplanCoo,
+  OrgFloorplanLabels,
+  OrgFloorplanProps,
+  OrgFloorplanRoom,
+  OrgFloorplanZone,
+} from "./components/OrgFloorplan/OrgFloorplan";
+export {
+  DEFAULT_FLOORPLAN_ROWS,
+  layoutFloorplan,
+  type FloorplanRowSpec,
+} from "./components/OrgFloorplan/layoutFloorplan";
 
 export { OrgConnector, OrgConnectorTestId } from "./components/OrgConnector/OrgConnector";
 export type { OrgConnectorProps } from "./components/OrgConnector/OrgConnector";

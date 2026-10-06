@@ -1,57 +1,29 @@
 "use client";
 
-import type { DepartmentId } from "@zibby/contracts";
 import {
-  AgentGlyph,
   Button,
-  Card,
-  CellStrip,
-  Container,
-  EmptyState,
-  Grid,
-  OrgConnector,
-  OrgNode,
-  Panel,
-  Row,
-  SelectField,
+  OrgFloorplan,
+  type OrgFloorplanRoom,
+  type OrgFloorplanZone,
   Stack,
   type StateTone,
-  Typography,
-  ZibbyAvatar,
 } from "@zibby/design-system";
-import Link from "next/link";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
-import { useAgentsQuery } from "../../agents";
+import { usePathname, useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 import { useApprovalsQuery } from "../../approvals/queries";
-import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
-import {
-  useDepartmentSubtasksQuery,
-  useDepartmentsQuery,
-  useDivisionsQuery,
-} from "../../departments/queries";
 import { NewDepartmentDialog } from "../../departments/components/NewDepartmentDialog";
 import { useCreateDepartmentMutation } from "../../departments/mutations";
-import { useHireEmployeeMutation } from "../../employees/mutations";
-import { NOTIFICATIONS_PARAM, useNotificationsQuery } from "../../notifications";
+import { useDepartmentsQuery, useDivisionsQuery } from "../../departments/queries";
 import { useEmployeesQuery } from "../../employees/queries";
-import { useRunsQuery } from "../../runs";
-import { runTitle } from "../../runs/run";
+import { NOTIFICATIONS_PARAM, useNotificationsQuery } from "../../notifications";
 import type { RunStatusGroupKey } from "../../runs/statusGroups";
 import { aggregateZibbyState } from "../state/aggregateZibbyState";
 
 export enum OrgMapScreenTestId {
   Root = "org-map-screen-root",
-  CooNode = "org-map-coo-node",
-  Grid = "org-map-grid",
-  Division = "org-map-division",
-  FocusPanel = "org-map-focus-panel",
-  TeamTile = "org-map-team-tile",
-  AddEmployeeButton = "org-map-add-employee-button",
   AddDepartmentButton = "org-map-add-department-button",
-  FailedRun = "org-map-failed-run",
 }
 
 /** Zibby's state → the `/activity/runs` state group it reads as (idle → no filter). */
@@ -64,68 +36,60 @@ const RUN_GROUP: Record<StateTone, RunStatusGroupKey | undefined> = {
   idle: undefined,
 };
 
-/** `gap="200"` → 16px (DS.md §4) — the grid's own column gap. */
-const GRID_GAP_PX = 16;
+/** Division → floorplan zone (the room's tint / border). Unknown divisions read as business. */
+const ZONE_BY_DIVISION: Record<string, OrgFloorplanZone> = {
+  engineering: "eng",
+  operations: "ops",
+  business: "biz",
+  office: "per",
+};
+
+const STATES: readonly StateTone[] = ["working", "thinking", "blocked", "error", "done", "idle"];
 
 /**
- * The alert an `OrgNode` shows: an error run beats a pending approval — worse
- * always wins so the map's one alert slot per department surfaces the most
- * urgent thing (PART-B.md ZB-02).
- */
-function pickAlert(
-  errorCount: number,
-  approvalCount: number,
-  t: ReturnType<typeof useTranslations<"orgMap">>,
-): { state: StateTone; label: string } | undefined {
-  if (errorCount > 0) return { state: "error", label: t("alert.errors", { count: errorCount }) };
-  if (approvalCount > 0) {
-    return { state: "blocked", label: t("alert.approvals", { count: approvalCount }) };
-  }
-  return undefined;
-}
-
-/**
- * ZB-02 — the ORG map: CEO → COO → divisions (D-021) → 11 department nodes, plus a `?department=<id>` panel
- * (department roster, open subtasks). PART-B.md ZB-02 / ROUTE-MAP.md
- * §1 ORG / D-014 / D-015 / O-04.
+ * ZB-02 — the ORG map as an office floorplan: each department a room, each active
+ * employee a desk, Zibby (COO) in the lobby. Pan/zoom/minimap live in the DS
+ * `OrgFloorplan`; this screen feeds it from the departments / employees queries and
+ * routes room → department, desk → person, Zibby → whatever put it in its state.
  */
 export function OrgMapScreen() {
   const t = useTranslations("orgMap");
   const tDepartments = useTranslations("departments");
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const focusId = (searchParams.get("department") ?? undefined) as DepartmentId | undefined;
 
   const { data: departments = [] } = useDepartmentsQuery();
-  const registry = useDepartmentLookup();
   const { data: divisions = [] } = useDivisionsQuery();
-  // One column per division, each with a readable minimum width (the row scrolls
-  // horizontally on a narrow viewport — ZB-14). `GridCols` has no variant for a
-  // dynamic count, so the track list goes through `Grid`'s `style` passthrough.
-  const gridDivisionCols = {
-    gridTemplateColumns: `repeat(${divisions.length}, minmax(160px, 1fr))`,
-  };
-  // The horizontal bus sits on the first/last column centers: half a
-  // column-and-gap unit in from each edge (DS.md §8).
-  const busInset = `calc((100% - ${Math.max(0, divisions.length - 1) * GRID_GAP_PX}px) / ${divisions.length * 2})`;
   const { data: employees = [] } = useEmployeesQuery({ status: "active" });
   const { data: approvals = [] } = useApprovalsQuery();
   const { data: notifications = [] } = useNotificationsQuery();
-  const { data: focusSubtasks = [] } = useDepartmentSubtasksQuery(focusId);
-  const { data: agents = [] } = useAgentsQuery();
-  const hire = useHireEmployeeMutation(focusId ?? "");
-  const [newAgentId, setNewAgentId] = useState("");
   const [creatingDepartment, setCreatingDepartment] = useState(false);
   const createDepartment = useCreateDepartmentMutation();
 
-  function setFocus(id: DepartmentId) {
-    const next = new URLSearchParams(searchParams.toString());
-    if (focusId === id) next.delete("department");
-    else next.set("department", id);
-    const query = next.toString();
-    router.push((query ? `${pathname}?${query}` : pathname) as Route);
-  }
+  const rooms = useMemo<OrgFloorplanRoom[]>(
+    () =>
+      departments.map((d) => {
+        const agents = employees
+          .filter((e) => e.department === d.id)
+          .map((e, i) => ({
+            id: e.id,
+            code: `${d.code}-${String(i + 1).padStart(2, "0")}`,
+            name: e.name,
+            role: e.position.title ?? e.position.name,
+            state: e.state,
+            task: e.currentTaskTitle,
+          }));
+        return {
+          id: d.id,
+          code: d.code,
+          name: d.name,
+          zone: ZONE_BY_DIVISION[d.division] ?? "biz",
+          agents,
+          ariaLabel: t("roomAria", { code: d.code, name: d.name, count: agents.length }),
+        };
+      }),
+    [departments, employees, t],
+  );
 
   const cooRuns = departments.reduce((sum, d) => sum + d.tier2Count + d.tier3Count, 0);
   const ownState: StateTone = cooRuns > 0 ? "working" : "idle";
@@ -138,7 +102,7 @@ export function OrgMapScreen() {
     ...approvals.map((): StateTone => "blocked"),
   ]);
 
-  // The avatar opens whatever put Zibby in its state: the People roster when an
+  // The lobby opens whatever put Zibby in its state: the People roster when an
   // employee is in it, the bell for unread failures, the approvals queue for a
   // pending approval, else the runs archive filtered to that state.
   const cooGroup = RUN_GROUP[cooState];
@@ -152,28 +116,13 @@ export function OrgMapScreen() {
           ? `/activity/runs?state=${cooGroup}`
           : "/activity/runs";
 
-  const focusDepartment = departments.find((d) => d.id === focusId);
-  const { runs } = useRunsQuery();
-  const focusFailedRuns = (focusDepartment?.errorRunIds ?? []).map(
-    (id) => runs.find((r) => r.runId === id) ?? id,
+  const stateLabels = useMemo(
+    () => Object.fromEntries(STATES.map((s) => [s, t(`state.${s}`)])) as Record<StateTone, string>,
+    [t],
   );
-  const focusEmployees = employees.filter((e) => e.department === focusId);
-  // An agent counts as allocated once any active employee holds its position.
-  const freeAgents = agents.filter((a) => !employees.some((e) => e.agentId === a.id));
 
   return (
-    <Stack data-testid={OrgMapScreenTestId.Root} gap="300">
-      <Stack direction="row" justify="end">
-        <Button
-          data-testid={OrgMapScreenTestId.AddDepartmentButton}
-          icon="plus"
-          intent="primary"
-          onClick={() => setCreatingDepartment(true)}
-          size="sm"
-        >
-          {tDepartments("create.addButton")}
-        </Button>
-      </Stack>
+    <Stack data-testid={OrgMapScreenTestId.Root} gap="300" style={{ height: "100%" }}>
       {creatingDepartment && (
         <NewDepartmentDialog
           divisions={divisions}
@@ -184,220 +133,37 @@ export function OrgMapScreen() {
           pending={createDepartment.isPending}
         />
       )}
-      {/* Map + focus panel sit flush so the selected stub runs into the panel. */}
-      <Stack gap="0">
-        <Stack align="center" gap="0">
-          <Stack align="center" gap="100">
-            {/* The avatar opens the People roster pre-filtered to the state it mirrors. */}
-            <Link
-              aria-label={t("cooAvatarLink", { state: cooState })}
-              data-testid={OrgMapScreenTestId.CooNode}
-              href={cooHref as Route}
-            >
-              <ZibbyAvatar label={t("cooAvatarLabel")} size={112} state={cooState} />
-            </Link>
-          </Stack>
-
-          {/* The COO trunk — joins the COO avatar to the department bus below. */}
-          <OrgConnector length={18} orientation="vertical" />
-
-          {/* Only the division row scrolls on a narrow viewport; the bus lives
-           *  inside it so it scrolls together with the nodes it spans. */}
-          <Container overflowX="auto" width="100%">
-            <Container position="relative">
-              <OrgConnector orientation="horizontal" style={{ left: busInset, right: busInset }} />
-              <Grid data-testid={OrgMapScreenTestId.Grid} gap="200" style={gridDivisionCols}>
-                {divisions.map((division) => {
-                  const members = registry.list.filter((d) => d.division === division.id);
-                  const divisionCells: StateTone[] = employees
-                    .filter((e) => members.some((d) => d.id === e.department))
-                    .map((e) => e.state);
-                  return (
-                    <Stack align="center" gap="0" key={division.id}>
-                      <OrgConnector length={18} orientation="vertical" />
-                      <Container width="100%">
-                        <Panel data-testid={OrgMapScreenTestId.Division} padding="100">
-                          <Stack gap="50">
-                            <Typography tracking="wider" type="labelSm" variant="secondary">
-                              {division.name}
-                            </Typography>
-                            <CellStrip cells={divisionCells} />
-                          </Stack>
-                        </Panel>
-                      </Container>
-                      {members.map((dept) => {
-                        const status = departments.find((d) => d.id === dept.id);
-                        const cells: StateTone[] = employees
-                          .filter((e) => e.department === dept.id)
-                          .map((e) => e.state);
-                        const approvalCount = approvals.filter(
-                          (a) => a.department === dept.id,
-                        ).length;
-                        const isFocused = focusId === dept.id;
-                        return (
-                          <Container key={dept.id} width="100%">
-                            <Stack align="center" gap="0">
-                              {/* The drop from the division — --ink on the focused department. */}
-                              <OrgConnector active={isFocused} length={18} orientation="vertical" />
-                              <OrgNode
-                                alert={pickAlert(status?.errorCount ?? 0, approvalCount, t)}
-                                cells={cells}
-                                code={dept.code}
-                                name={dept.name}
-                                onClick={() => setFocus(dept.id)}
-                                selected={isFocused}
-                              />
-                            </Stack>
-                          </Container>
-                        );
-                      })}
-                    </Stack>
-                  );
-                })}
-              </Grid>
-            </Container>
-          </Container>
-        </Stack>
-
-        {focusDepartment && (
-          <Panel
-            borderTone="ink"
-            data-testid={OrgMapScreenTestId.FocusPanel}
-            header={
-              <Typography tracking="wider" type="labelSm">
-                {t("focus.eyebrow", { code: focusDepartment.code })}
-              </Typography>
-            }
-            headerEnd={
-              <Link href={`/org/departments/${focusDepartment.id}` as Route}>
-                <Button intent="secondary" size="sm">
-                  {t("focus.openDepartment")}
-                </Button>
-              </Link>
-            }
-            padding="200"
+      <OrgFloorplan
+        actions={
+          <Button
+            data-testid={OrgMapScreenTestId.AddDepartmentButton}
+            icon="plus"
+            intent="primary"
+            onClick={() => setCreatingDepartment(true)}
+            size="sm"
           >
-            <Stack gap="300">
-              <Stack gap="100">
-                <Typography tracking="wider" type="labelSm" variant="secondary">
-                  {t("focus.teamTitle")}
-                </Typography>
-                {freeAgents.length === 0 ? (
-                  <Typography type="labelSm" variant="tertiary">
-                    {t("focus.noFreeAgents")}
-                  </Typography>
-                ) : (
-                  <Stack align="end" direction="row" gap="100">
-                    <Container grow>
-                      <SelectField
-                        label={t("focus.addLabel")}
-                        onValueChange={setNewAgentId}
-                        options={freeAgents.map((a) => ({
-                          value: a.id,
-                          label: a.displayName ?? a.name ?? a.id,
-                        }))}
-                        value={newAgentId}
-                      />
-                    </Container>
-                    <Button
-                      data-testid={OrgMapScreenTestId.AddEmployeeButton}
-                      disabled={!newAgentId || hire.isPending}
-                      icon="plus"
-                      intent="primary"
-                      loading={hire.isPending}
-                      onClick={() =>
-                        hire.mutate(
-                          { params: { id: focusDepartment.id }, body: { agentId: newAgentId } },
-                          { onSuccess: () => setNewAgentId("") },
-                        )
-                      }
-                    >
-                      {t("focus.add")}
-                    </Button>
-                  </Stack>
-                )}
-                {focusEmployees.length === 0 ? (
-                  <EmptyState body={t("focus.teamEmpty")} title={t("focus.teamEmptyTitle")} />
-                ) : (
-                  <Grid cols={2} gap="100" lg={4} sm={3}>
-                    {focusEmployees.map((e) => (
-                      <Link
-                        data-testid={OrgMapScreenTestId.TeamTile}
-                        href={`/system/registries/positions/${e.agentId}` as Route}
-                        key={e.id}
-                      >
-                        <Card interactive radius="sm">
-                          <Container padding="100">
-                            <Stack align="center" gap="50">
-                              <AgentGlyph seed={e.agentId} size={48} state={e.state} />
-                              <Typography type="body" weight="medium">
-                                {e.name}
-                              </Typography>
-                              <Typography type="labelSm" variant="secondary">
-                                {e.position.title ?? e.position.name}
-                              </Typography>
-                            </Stack>
-                          </Container>
-                        </Card>
-                      </Link>
-                    ))}
-                  </Grid>
-                )}
-              </Stack>
-
-              {focusFailedRuns.length > 0 && (
-                <Stack gap="100">
-                  <Typography tracking="wider" type="labelSm" variant="secondary">
-                    {t("focus.failedRunsTitle")}
-                  </Typography>
-                  <Stack gap="50">
-                    {focusFailedRuns.map((r) => {
-                      const id = typeof r === "string" ? r : r.runId;
-                      return (
-                        <Link
-                          data-testid={OrgMapScreenTestId.FailedRun}
-                          href={`/activity/runs/${id}` as Route}
-                          key={id}
-                        >
-                          <Row gap="100">
-                            <CellStrip cells={["error"]} />
-                            <Typography type="labelSm" variant="secondary">
-                              {typeof r === "string" ? r : runTitle(r)}
-                            </Typography>
-                          </Row>
-                        </Link>
-                      );
-                    })}
-                  </Stack>
-                </Stack>
-              )}
-
-              <Stack gap="100">
-                <Typography tracking="wider" type="labelSm" variant="secondary">
-                  {t("focus.subtasksTitle")}
-                </Typography>
-                {focusSubtasks.length === 0 ? (
-                  <EmptyState
-                    body={t("focus.subtasksEmpty")}
-                    title={t("focus.subtasksEmptyTitle")}
-                  />
-                ) : (
-                  <Stack gap="50">
-                    {focusSubtasks.map((s) => (
-                      <Row gap="100" key={s.taskId}>
-                        <CellStrip cells={[s.state]} />
-                        <Typography type="labelSm" variant="secondary">
-                          {s.taskId}
-                        </Typography>
-                      </Row>
-                    ))}
-                  </Stack>
-                )}
-              </Stack>
-            </Stack>
-          </Panel>
-        )}
-      </Stack>
+            {tDepartments("create.addButton")}
+          </Button>
+        }
+        coo={{
+          state: cooState,
+          label: t("cooAvatarLabel"),
+          ariaLabel: t("cooAvatarLink", { state: stateLabels[cooState] }),
+        }}
+        labels={{
+          zoomOut: t("controls.zoomOut"),
+          zoomIn: t("controls.zoomIn"),
+          zoomLevel: t("controls.zoomLevel"),
+          fill: t("controls.fill"),
+          minimap: t("controls.minimap"),
+          workingOn: t("popover.workingOn"),
+        }}
+        onAgentClick={(_roomId, employeeId) => router.push(`/org/people/${employeeId}` as Route)}
+        onCooClick={() => router.push(cooHref as Route)}
+        onRoomClick={(id) => router.push(`/org/departments/${id}` as Route)}
+        rooms={rooms}
+        stateLabels={stateLabels}
+      />
     </Stack>
   );
 }

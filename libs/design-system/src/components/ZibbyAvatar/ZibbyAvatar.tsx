@@ -2,8 +2,9 @@ import type { Ref } from "react";
 import { type StateTone, stateToneVar } from "../../stateTone";
 
 /** The sanctioned render sizes (sealed sizing) — 16 is the favicon grid 1:1,
- *  112 the org-map hero (`design/ZibbyCorp/Org Screens.dc.html`). */
-export type ZibbyAvatarSize = 16 | 24 | 32 | 112;
+ *  112 the org-map hero (`design/ZibbyCorp/Org Screens.dc.html`),
+ *  128 the org-map floorplan lobby. */
+export type ZibbyAvatarSize = 16 | 24 | 32 | 38 | 64 | 112 | 128;
 
 export enum ZibbyAvatarTestId {
   Root = "zibby-avatar-root",
@@ -47,9 +48,7 @@ interface Cell {
 
 function cellsOf(ch: string): Cell[] {
   return ZIBBY_AVATAR_ROWS.flatMap((row, y) =>
-    [...row].flatMap((c, x) =>
-      c === ch ? [{ key: `${ch}${x}_${y}`, x, y: y + ROW_OFFSET }] : [],
-    ),
+    [...row].flatMap((c, x) => (c === ch ? [{ key: `${ch}${x}_${y}`, x, y: y + ROW_OFFSET }] : [])),
   );
 }
 
@@ -78,9 +77,7 @@ const ACCENT_ANIMATION: Record<StateTone, string> = {
 const BLINKS: ReadonlySet<StateTone> = new Set(["working", "thinking", "idle"]);
 
 function Pixels({ cells }: { cells: Cell[] }) {
-  return cells.map(({ key, x, y }) => (
-    <rect height={1.02} key={key} width={1.02} x={x} y={y} />
-  ));
+  return cells.map(({ key, x, y }) => <rect height={1.02} key={key} width={1.02} x={x} y={y} />);
 }
 
 export interface ZibbyAvatarProps {

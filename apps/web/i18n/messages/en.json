@@ -2229,25 +2229,24 @@
   "orgMap": {
     "cooAvatarLink": "Show people in state: {state}",
     "cooAvatarLabel": "Zibby · COO",
-    "alert": {
-      "errors": "{count, plural, one {# error} other {# errors}}",
-      "approvals": "{count, plural, one {# approval waiting} other {# approvals waiting}}"
+    "roomAria": "{code} · {name}, {count, plural, one {# agent} other {# agents}}",
+    "state": {
+      "working": "Working",
+      "thinking": "Thinking",
+      "blocked": "Blocked",
+      "error": "Error",
+      "done": "Done",
+      "idle": "Idle"
     },
-    "focus": {
-      "eyebrow": "02 — DEPARTMENT · {code}",
-      "openDepartment": "OPEN DEPARTMENT →",
-      "teamTitle": "Team",
-      "teamEmptyTitle": "No one borrowed right now",
-      "teamEmpty": "The department borrows from the pool when a subtask starts.",
-      "failedRunsTitle": "Failed runs",
-      "subtasksTitle": "Open subtasks",
-      "subtasksEmptyTitle": "No subtasks",
-      "subtasksEmpty": "No open subtasks in this department.",
-      "out": "→ OUT · {kind}",
-      "in": "→ IN · {kind}",
-      "addLabel": "Add employee",
-      "add": "Add",
-      "noFreeAgents": "Every agent is already in a department."
+    "controls": {
+      "zoomOut": "Zoom out",
+      "zoomIn": "Zoom in",
+      "zoomLevel": "Zoom level",
+      "fill": "Fill",
+      "minimap": "Map"
+    },
+    "popover": {
+      "workingOn": "Working on"
     }
   },
   "activityLog": {

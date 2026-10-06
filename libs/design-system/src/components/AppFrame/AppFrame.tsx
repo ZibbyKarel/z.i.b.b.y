@@ -39,6 +39,10 @@ export interface AppFrameProps {
   /** The `ChatDock`, floated bottom-right over the content. */
   dock?: ReactNode;
   children: ReactNode;
+  /** Opt-in full-bleed mode for pages that own their own pan/zoom canvas: drops the
+   *  `docMaxWidth` cap, gives the content wrapper the full height of `<main>`, and
+   *  stops `<main>` from scrolling. Default `false` leaves every other page unchanged. */
+  fullBleed?: boolean;
   skipLinkLabel?: string;
   /** Accessible label for the mobile rail-drawer toggle (also its visible
    *  text — DS.md ZA-06 calls for a labelled button, not an icon-only one). */
@@ -61,6 +65,7 @@ export function AppFrame({
   rail,
   dock,
   children,
+  fullBleed = false,
   skipLinkLabel = "Skip to main content",
   railToggleLabel = "Needs you",
   ref,
@@ -170,7 +175,10 @@ export function AppFrame({
           )}
 
           <main
-            className="min-h-0 min-w-0 overflow-x-auto overflow-y-auto"
+            className={cn(
+              "min-h-0 min-w-0",
+              fullBleed ? "overflow-hidden" : "overflow-x-auto overflow-y-auto",
+            )}
             data-testid={AppFrameTestId.Main}
             id={APP_FRAME_MAIN_CONTENT_ID}
             style={{
@@ -181,7 +189,10 @@ export function AppFrame({
             }}
             tabIndex={-1}
           >
-            <div className="mx-auto w-full" style={{ maxWidth: LAYOUT.docMaxWidth }}>
+            <div
+              className={cn("mx-auto w-full", fullBleed && "h-full")}
+              style={fullBleed ? undefined : { maxWidth: LAYOUT.docMaxWidth }}
+            >
               {children}
             </div>
           </main>
