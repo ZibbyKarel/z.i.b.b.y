@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Rail } from "./Rail";
 import { AgentGlyph } from "../AgentGlyph/AgentGlyph";
@@ -28,6 +29,24 @@ export default meta;
 
 type Story = StoryObj<typeof Rail>;
 
+function CollapsibleDemo() {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="flex h-[420px] w-[280px] flex-col border border-line">
+      <Rail
+        collapsible
+        maxHeight="160px"
+        onToggle={() => setOpen((o) => !o)}
+        open={open}
+        title="Pinned · 02"
+      >
+        <ApprovalRow name="Kevin" />
+        <ApprovalRow name="Stuart" />
+      </Rail>
+    </div>
+  );
+}
+
 export const Overview: Story = {
   render: () => (
     <div className="flex gap-8">
@@ -40,6 +59,7 @@ export const Overview: Story = {
       <div className="h-[420px] w-[280px] border border-line">
         <Rail empty="Nothing is waiting for you. Agents continue on their own until a gate fires." />
       </div>
+      <CollapsibleDemo />
     </div>
   ),
 };
