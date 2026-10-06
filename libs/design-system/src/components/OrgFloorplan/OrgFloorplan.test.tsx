@@ -98,6 +98,14 @@ describe("OrgFloorplan", () => {
     expect(screen.queryByTestId(`${OrgFloorplanTestId.DeskRing}-a1`)).not.toBeInTheDocument();
   });
 
+  it("puts name and role on the desk nameplate, role only when given", () => {
+    render(<OrgFloorplan coo={COO} rooms={ROOMS} />);
+    const withRole = screen.getByTestId(`${OrgFloorplanTestId.DeskTag}-a1`);
+    expect(withRole).toHaveTextContent("Stuart");
+    expect(withRole).toHaveTextContent("Coder");
+    expect(screen.getByTestId(`${OrgFloorplanTestId.DeskTag}-a2`)).toHaveTextContent(/^Ken$/);
+  });
+
   it("clicking a desk opens the agent only; clicking the room opens the room", () => {
     const onRoomClick = vi.fn();
     const onAgentClick = vi.fn();

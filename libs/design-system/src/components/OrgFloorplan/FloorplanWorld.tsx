@@ -111,8 +111,8 @@ function Desk({ room, agent, x, y, stateLabels, onAgent, onHover }: DeskProps) {
         />
       )}
       <div className="absolute left-[8px] top-[34px] box-border h-[22px] w-[56px] border border-line-2 bg-panel-2" />
-      <div className="absolute left-[24px] top-[37px] h-[4px] w-[24px] bg-ink-2" />
-      <div className="absolute left-[28px] top-[46px] box-border h-[5px] w-[16px] border border-line-2 bg-panel" />
+      <div className="absolute left-[28px] top-[37px] box-border h-[5px] w-[16px] border border-line-2 bg-panel" />
+      <div className="absolute left-[24px] top-[47px] h-[4px] w-[24px] bg-ink-2" />
       <div className="absolute left-[22px] top-[4px]">
         <AgentGlyph glow={false} seed={agent.id} size={28} state={agent.state} />
       </div>
@@ -126,9 +126,24 @@ function Desk({ room, agent, x, y, stateLabels, onAgent, onHover }: DeskProps) {
           {badge}
         </div>
       )}
-      <div className="absolute inset-x-0 top-[62px] flex items-center justify-center gap-[4px] font-mono text-[9px] uppercase tracking-[0.1em] text-ink-2">
-        <StateDot px={5} state={agent.state} />
-        <span className="max-w-[56px] truncate">{agent.name}</span>
+      {/* Nameplate clipped to the desk's front edge: state dot, name, role. */}
+      <div
+        className="absolute left-[8px] top-[53px] box-border flex h-[16px] w-[56px] items-center gap-[4px] border border-ink bg-panel px-[4px] font-mono uppercase"
+        data-testid={`${OrgFloorplanTestId.DeskTag}-${agent.id}`}
+      >
+        <span className="flex shrink-0">
+          <StateDot px={5} state={agent.state} />
+        </span>
+        <span className="flex min-w-0 flex-col gap-[1px]">
+          <span className="truncate text-[7.5px] font-semibold leading-none tracking-[0.08em]">
+            {agent.name}
+          </span>
+          {agent.role && (
+            <span className="truncate text-[5px] leading-none tracking-[0.08em] text-ink-3">
+              {agent.role}
+            </span>
+          )}
+        </span>
       </div>
     </div>
   );

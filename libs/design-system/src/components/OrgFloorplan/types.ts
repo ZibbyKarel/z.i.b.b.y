@@ -17,6 +17,8 @@ export enum OrgFloorplanTestId {
   DeskBadge = "org-floorplan-desk-badge",
   /** suffixed `-<agentId>` */
   DeskRing = "org-floorplan-desk-ring",
+  /** suffixed `-<agentId>` — the nameplate under the desk (state dot, name, role) */
+  DeskTag = "org-floorplan-desk-tag",
   Controls = "org-floorplan-controls",
   Actions = "org-floorplan-actions",
   ZoomOut = "org-floorplan-zoom-out",
@@ -41,7 +43,7 @@ export interface OrgFloorplanAgent {
   name: string;
   /** Display id (e.g. `DEV-01`) for the popover meta and default aria label; falls back to `id`. */
   code?: string;
-  /** Shown after the id in the popover head (`ID · ROLE`). */
+  /** Job title — on the desk nameplate under the name, and after the id in the popover head (`ID · ROLE`). */
   role?: string;
   state: StateTone;
   /** What the agent is working on right now; the popover section is skipped without it. */
