@@ -156,7 +156,8 @@ retries/limit-park machinery's own restart posture.
   re-established by re-drive after a restart, not recomputed from disk.
 - `tryAcquire(department, agentId, ctx)` — like `acquire` but never waits:
   `null` when everyone is busy or a line already exists. Used by the task
-  scheduler's staffing gate for single-agent / orchestrator dispatch.
+  scheduler's staffing gate for single-agent dispatch (an orchestrator task
+  takes only a fuse slot, no lease).
 - `canStaffNow(department, agentId)` — read-only probe, reserves nothing: would a
   lease be granted right now? `true` when no employee exists anywhere (the
   runner parks `no-employee`; the task must not wait for a hire). Used for

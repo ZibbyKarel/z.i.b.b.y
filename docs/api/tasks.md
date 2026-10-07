@@ -15,8 +15,8 @@ scheduled    ← created with a future scheduledAt
     ↓
 queued       ← no capacity right now: the machine fuse (`maxWorkingAgents`) is full,
                  or no employee for the task's first stage is free (no approval;
-                 `waitingForStaff` names the department/position). Ordered by
-                 progress -> project round-robin -> FIFO.
+                 `waitingForStaff` names the department/position). Drained by
+                 project round-robin -> oldest first.
 held         ← spend exceeded the budget cap (waits for approval to release)
 pending      ← interactive path (dialog): accepted, classification + spawn run IN THE BACKGROUND
     ↓
@@ -467,8 +467,8 @@ There is **no** project or system "parallel runs" cap any more (`maxConcurrent` 
 company, in two parts (design: `docs/plans/zibbycorp/staffing-driven-capacity.md`):
 
 1. **Staffing.** A task leaves the queue only when an employee for its first stage is
-   free. A single-agent / orchestrator task leases one via
-   `EmployeeAllocator.tryAcquire` (see [employees.md](./employees.md)); a workflow task
+   free. A single-agent task leases one via
+   `EmployeeAllocator.tryAcquire` (an orchestrator task takes no lease, only a fuse slot) (see [employees.md](./employees.md)); a workflow task
    is only _checked_ with `canStaffNow` (the workflow runner leases per stage). No
    employee anywhere -> the task still runs (single-agent: unleashed, D-017; workflow:
    the runner parks `no-employee`, the briefing proposes a hire).
@@ -485,14 +485,16 @@ task also persists its resolved `target` / `classification`, so a drain does not
 re-classify it. Waiting is a field, not a lifecycle status.
 
 On every terminal run, fuse release, lease release or hire (`rosterChanged`) the
-scheduler calls `drainQueues()`: queued tasks are tried oldest-first, ranked
-progress -> project round-robin -> FIFO. The priority tier is a no-op until tasks carry a
+scheduler calls `drainQueues()`: queued tasks are tried by project round-robin, then
+oldest first. Progress ranking (furthest stage first) applies to the allocator and fuse
+waiters, not to the queue drain; the priority tier is a no-op until tasks carry a
 priority. A drain hands out at most one workflow per first-stage position per pass
 (the dispatch check reserves nothing). Grant ordering is in-memory (`GrantQueue`) and
 re-established by the re-drive after a restart rather than recomputed from disk.
 
-`withCapacityLock` serializes the read-then-dispatch window so two concurrent creates
-cannot both pass the gate.
+`withCapacityLock` (per project) serializes the budget read-then-dispatch window so two
+concurrent creates cannot both pass the budget check; staffing and the fuse are atomic in
+the allocator / fuse themselves.
 
 `budgetApproved: Set<string>` in memory — task ids that were released past the cap;
 a drain skips the budget check for these once, then removes them from the set.
