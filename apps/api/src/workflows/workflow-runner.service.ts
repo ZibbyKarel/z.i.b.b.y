@@ -1012,8 +1012,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       // `phase.agent`, the position), leased from the workflow's OWN department.
       // Acquiring here — before the sandbox exists — means a `no-employee` park
       // never leaves a half-built stage folder behind. When every matching employee
-      // is busy the stage waits RANKED (progress → priority → project round-robin →
-      // FIFO) behind other waiters on the same department+position; the run stays
+      // is busy the stage waits RANKED (progress → project round-robin → FIFO)
+      // behind other waiters on the same department+position; the run stays
       // `running` with `waitingForStaff` on disk for the whole wait (decision 7).
       // The lease comes BEFORE the machine-fuse slot taken right before `runStage`,
       // so a staff wait holds nothing. A `verify` phase spawns no agent, so it never
@@ -1040,7 +1040,11 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
             await this.writeAggregate(run);
           }
         } catch (error) {
-          if (!(error instanceof NoEmployeeError)) throw error;
+          if (!(error instanceof NoEmployeeError)) {
+            // A throw after the grant (the clear-and-write) must not leak the lease.
+            if (lease) this.employees.release(lease);
+            throw error;
+          }
           run.waitingForStaff = undefined;
           run.status = "parked";
           run.parkedReason = "no-employee";
@@ -1065,7 +1069,14 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       // gap in the numbering, never a clash.
       const stageDir = settled?.dir ?? this.stageDirName(run.stageRuns.length + 1, phase.id);
       const stageCwd = path.join(run.cwd, stageDir);
-      if (!settled) await this.prepareStageDir(run, stageCwd, handoffSource, phase);
+      if (!settled) {
+        try {
+          await this.prepareStageDir(run, stageCwd, handoffSource, phase);
+        } catch (error) {
+          if (lease) this.employees.release(lease); // not yet under runStage's finally
+          throw error;
+        }
+      }
 
       this.log.info("workflow phase starting", {
         phase: phase.id,
@@ -2708,6 +2719,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
           currentStage: null,
           parkedReason: undefined,
           parked: undefined,
+          waitingForStaff: undefined,
         };
         await this.writeAggregate(run);
       }

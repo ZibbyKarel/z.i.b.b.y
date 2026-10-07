@@ -11,6 +11,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResumableRunner } from "../approvals/approvals.service";
 import { ProjectLocalUnresolvedError } from "../projects/projects.errors";
+import { NoEmployeeError } from "../employees/employees.errors";
 import { RunNotFoundError } from "../runner/runner-core";
 import { WorkingAgentsFuse } from "../employees/working-agents-fuse";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
@@ -675,6 +676,12 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
         status: "running",
         currentStage: "build",
         currentStageRunId: stageRunId,
+        // A run that was waiting for staff when the API died must not keep the marker.
+        waitingForStaff: {
+          department: "engineering",
+          agentId: "writer",
+          since: new Date().toISOString(),
+        },
         stageRuns: [],
         startedAt: new Date().toISOString(),
         cwd: root,
@@ -690,6 +697,7 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
     const run = h.service.get(ghostId);
     expect(run.status).toBe("failed");
     expect(run.currentStage).toBeNull();
+    expect(run.waitingForStaff).toBeUndefined();
   });
 
   it("reconstruct fails a running aggregate with no currentStageRunId (nothing to check, safe default)", async () => {
@@ -1522,6 +1530,60 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
       expect((await readAggregate(run)).waitingForStaff).toBeUndefined();
       expect(h.core.start).toHaveBeenCalledTimes(1);
       expect(employees.release).toHaveBeenCalledWith(lease);
+    });
+
+    it("parks no-employee and clears waitingForStaff when the position vanishes mid-wait", async () => {
+      const run = h.runs.get(WORKFLOW_RUN_ID);
+      if (!run) throw new Error("missing run");
+      swap("employees", {
+        tryAcquire: vi.fn(async () => null),
+        acquire: vi.fn(async () => {
+          throw new NoEmployeeError("engineering", "writer");
+        }),
+        release: vi.fn(),
+      });
+
+      await drive(run);
+      const onDisk = await readAggregate(run);
+      expect(onDisk.status).toBe("parked");
+      expect(onDisk.parkedReason).toBe("no-employee");
+      expect(onDisk.waitingForStaff).toBeUndefined();
+      expect(h.core.start).not.toHaveBeenCalled();
+    });
+
+    it("releases the lease when preparing the stage folder throws", async () => {
+      const run = h.runs.get(WORKFLOW_RUN_ID);
+      if (!run) throw new Error("missing run");
+      const employees = {
+        tryAcquire: vi.fn(async () => lease),
+        acquire: vi.fn(),
+        release: vi.fn(),
+      };
+      swap("employees", employees);
+      vi.spyOn(
+        h.service as unknown as { prepareStageDir(): Promise<void> },
+        "prepareStageDir",
+      ).mockRejectedValue(new Error("disk full"));
+
+      await expect(drive(run)).rejects.toThrow("disk full");
+      expect(employees.release).toHaveBeenCalledWith(lease);
+    });
+
+    it("progressOf keeps the furthest reached phase across a loop-back", () => {
+      const progressOf = (r: WorkflowRun, ids: string[], id: string) =>
+        (
+          h.service as unknown as {
+            progressOf(r: WorkflowRun, ids: readonly string[], id: string): number;
+          }
+        ).progressOf(r, ids, id);
+      const ids = ["koder", "review", "tester", "docs"];
+      const run = { stageRuns: [] } as unknown as WorkflowRun;
+      expect(progressOf(run, ids, "koder")).toBe(0.25);
+      // Reached tester, looped back to koder: progress stays at tester's 3/4.
+      const looped = {
+        stageRuns: [{ phaseId: "koder" }, { phaseId: "review" }, { phaseId: "tester" }],
+      } as unknown as WorkflowRun;
+      expect(progressOf(looped, ids, "koder")).toBe(0.75);
     });
 
     it("waits for a machine-fuse slot before spawning and frees it when the stage ends", async () => {
