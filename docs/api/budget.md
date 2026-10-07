@@ -29,7 +29,7 @@ would be wrong.
 
 There is deliberately **no write path for per-project caps** here — those live on the
 project record itself (`PATCH /projects/:id`), the single source of truth for an
-engagement's `dailyRuns`/`weeklyRuns`/`monthlyRuns`/`maxConcurrent`/
+engagement's `dailyRuns`/`weeklyRuns`/`monthlyRuns`/
 `dailyCostCapUsd`/`weeklyCostCapUsd`/`monthlyCostCapUsd`. See
 `docs/ops/environment.md`'s budgets & caps section for the full field reference and
 `pauseAtRollingPct`/`pauseAtWeeklyPct` semantics.
@@ -109,26 +109,18 @@ themselves agent/workflow runs whose outcomes record cost individually.
 
 ### Live concurrency
 
-`countRunning(projectId)` counts top-level runs currently holding a concurrency slot
-for a project — agent runs in `running`/`awaiting-approval`/`paused-limit` labelled
+`countRunning(projectId)` counts top-level runs currently active for a project — agent runs in `running`/`awaiting-approval`/`paused-limit` labelled
 with the project, and workflow runs in `running`/`paused-limit` whose `projectPath`
 matches. Workflow **stage** runs live inside the workflow runner's own core and are
 never counted separately (no double-counting). A run `paused-limit` on the usage
 window still holds its slot — releasing it early would let a queued task and the
 auto-resumed run both start at once when the window resets.
 
-`countRunningGlobal()` (Phase 125c) is the system-wide counterpart, backing the
-`maxConcurrentRuns` ceiling in the runtime system config. It applies the **identical**
-status predicates over the **identical** two registries, minus the project resolution
-and label filters — so it counts every active run across all projects plus the
-unattributed ones.
+There is no longer a global counterpart or a `maxConcurrent` cap (removed with the
+staffing-driven capacity change): concurrency is limited by staffing and the machine
+fuse, see [tasks.md](./tasks.md).
 
-Goal runs are counted by **neither** function. That is deliberate: the scheduler does
-treat a terminal goal run as slot-freeing (it triggers `drainQueues()`), so the
-counters under-report while goal runs are in flight. Making only the global counter
-count them would let the same workload behave differently under the two caps — a
-divergence that only appears under load. Consistency was chosen over completeness;
-closing the gap in both counters at once is tracked in `TODO.md`.
+Goal runs are not counted by `countRunning` (the readout's `running` figure).
 
 ### The status readout
 
@@ -138,8 +130,7 @@ same way as `check()`, via `ResolvedProjectService.resolveBudget(project)` (Phas
 company defaults merged under the project's own overrides) — `daily`/`weekly`/
 `monthly` (`{ used, cap? }`), the Phase-12 `dailyCost`/`weeklyCost`/`monthlyCost`
 (`{ spentUsd, capUsd? }` — `spentUsd` always reported, `capUsd` only when the project
-set a dollar cap on that window), `running` (from `countRunning`), `maxConcurrent` (if
-set), and `queued`/`held` task counts. Projects that resolve to no budget at all (no
+set a dollar cap on that window), `running` (from `countRunning`), and `queued`/`held` task counts. Projects that resolve to no budget at all (no
 company defaults, no project override) don't appear in the readout.
 
 ### Company-level budget inheritance (Phase 70)

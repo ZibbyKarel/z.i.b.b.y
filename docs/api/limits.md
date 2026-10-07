@@ -110,8 +110,8 @@ No controller, no contract — purely a background daemon (Phase 9.2).
 
 `limitResumeTickMs` and `limitResumeMax` are runtime `system-config.json`
 keys — see `../ops/environment.md` for the full key table and defaults rather
-than duplicating it here. The per-project `dailyRuns` / `weeklyRuns` /
-`maxConcurrent` budget caps this daemon interacts with (a resumed run still
+than duplicating it here. The per-project `dailyRuns` / `weeklyRuns`
+budget caps this daemon interacts with (a resumed run still
 has to clear the budget guard) are documented in `./budget.md`.
 
 ## Endpoints

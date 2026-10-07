@@ -266,8 +266,7 @@ until it's been green for a while.
 
 The Phase 8 exit proof, run by hand:
 
-1. Seed two fixture projects with budgets — project A `dailyRuns: 2`,
-   `maxConcurrent: 1`.
+1. Seed two fixture projects with budgets — project A `dailyRuns: 2`.
 2. Queue four tasks across A and B, plus a fake-channel bug report naming project B.
 3. Run the API under launchd; `kill -9` it once mid-evening — `KeepAlive` restarts
    it.

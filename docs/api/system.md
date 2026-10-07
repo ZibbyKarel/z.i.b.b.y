@@ -39,24 +39,16 @@ system-config section — link there rather than duplicating the table here.
    in-memory copy, and calls every subscriber registered via `onChange()`.
    The schedulers use this to re-arm their interval timers immediately —
    most knobs (tick intervals, `limitResumeMax`, `goalVerifyTimeoutMs`,
-   `maxConcurrentRuns`, `chatPersona`) take effect live, with one exception:
+   `maxWorkingAgents`, `chatPersona`) take effect live, with one exception:
    `goalAutoResume` is only read at boot, so it applies on the _next_ start,
    not immediately.
-   - `maxConcurrentRuns` (Phase 125c) is the system-wide ceiling on
-     concurrently running tasks — the single answer to "how many things may be
-     implemented at once", covering manually dispatched work, roadmap releases
-     and auto-pickup alike. It defaults to **`3`**; `null` (uncapped, the
-     original 125c default) is still selectable by clearing the field. The
-     default changed when roadmap auto-pickup landed: a roadmap-only cap was
-     built alongside it and then removed, because two knobs that both read as
-     "how many at once" are indistinguishable in `/settings` and can only
-     disagree — so the roadmap gate releases everything unblocked and this cap
-     is what actually throttles. Nullable rather than optional because
-     `SystemConfigSchema` is `.strict()` and every field needs a default;
-     `null` reads as "no override", mirroring `ttsVoice`. The scheduler reads
-     it at use time (never caches it in a field), which is what makes a save
-     apply to the very next dispatch. Enforcement lives in
-     `TaskSchedulerService` — see [tasks.md](./tasks.md).
+   - `maxWorkingAgents` is the machine fuse: the most task-system agents
+     (single-agent / orchestrator runs, workflow agent stages) working at once. It
+     defaults to **`3`** and is always set (never `null`). It replaced the removed
+     `maxConcurrentRuns`: a legacy `maxConcurrentRuns` value migrates to it on read
+     (`null` -> the default `3`). The fuse reads it live, so a save (or a raised cap)
+     admits waiters immediately. Headcount, not this number, is the real throttle — see
+     [tasks.md](./tasks.md) and [employees.md](./employees.md).
    - `roadmapTickMs` (Phase 125h) is `RoadmapTickService`'s heartbeat —
      `60_000` by default, `0` disables, re-arms live via `onChange()` like the
      other `*TickMs` knobs. Each tick re-syncs every project whose roadmap

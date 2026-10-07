@@ -13,9 +13,10 @@ scheduled    ← created with a future scheduledAt
     ↓
   tick()     ← daemon runs once per configured interval
     ↓
-queued       ← project hit maxConcurrent, OR the system-wide maxConcurrentRuns
-                 ceiling is full (FIFO, no approval). A task queued by the
-                 global cap need not belong to any project.
+queued       ← no capacity right now: the machine fuse (`maxWorkingAgents`) is full,
+                 or no employee for the task's first stage is free (no approval;
+                 `waitingForStaff` names the department/position). Ordered by
+                 progress -> project round-robin -> FIFO.
 held         ← spend exceeded the budget cap (waits for approval to release)
 pending      ← interactive path (dialog): accepted, classification + spawn run IN THE BACKGROUND
     ↓
@@ -459,34 +460,39 @@ Before every dispatch (immediate or from the scheduler):
    - Once approved, the task re-enters dispatch (the budget check is skipped once for
      this id)
 
-## Concurrency guard
+## Staffing gate and machine fuse
 
-Two ceilings apply. Every project has a `maxConcurrent` (how many of its runs may be
-active at once), and the runtime system config has a system-wide `maxConcurrentRuns`
-(Phase 125c; `null` = uncapped, the historical behaviour).
+There is **no** project or system "parallel runs" cap any more (`maxConcurrent` and
+`maxConcurrentRuns` were removed). Whether a task starts is decided by capacity in the
+company, in two parts (design: `docs/plans/zibbycorp/staffing-driven-capacity.md`):
 
-1. `capacityStatus(project)` resolves which ceiling is blocking, returning
-   `"ok" | "project" | "global"`. The **global** cap is checked first — before the
-   `project == null` short-circuit — so an unattributed task is gated exactly like an
-   attributed one, even though it has no project budget to check. It reads the knob
-   live via `systemConfig.current()`, so a `/settings` save applies to the very next
-   dispatch attempt.
-2. `countRunning(projectId)` / `countRunningGlobal()` — the two counters behind those
-   ceilings (see [budget.md](./budget.md)).
-3. At either limit → the task moves to the **queued** state (no approval needed). There
-   is no separate status or queue for the global cap.
-4. On every terminal run → `drainQueues()` — moves the oldest queued task of each
-   project into dispatch. Queued tasks are grouped by `projectId`, with **`undefined`
-   as its own bucket** so a task queued by the global cap without an attributed
-   project is still drained. A `"project"` result skips to the next project's bucket;
-   a `"global"` result stops the whole drain, since nothing can dispatch anywhere.
+1. **Staffing.** A task leaves the queue only when an employee for its first stage is
+   free. A single-agent / orchestrator task leases one via
+   `EmployeeAllocator.tryAcquire` (see [employees.md](./employees.md)); a workflow task
+   is only _checked_ with `canStaffNow` (the workflow runner leases per stage). No
+   employee anywhere -> the task still runs (single-agent: unleashed, D-017; workflow:
+   the runner parks `no-employee`, the briefing proposes a hire).
+2. **The machine fuse.** `WorkingAgentsFuse` caps how many task-system agents work at
+   once (`maxWorkingAgents`, default `3`, live-read). A single-agent / orchestrator run
+   holds a slot for its whole lifetime (including `awaiting-approval` /
+   `paused-limit`, where it also keeps its lease); a workflow agent stage holds one per
+   stage. Goal-loop iterations, chat and channel-triage agents are not counted. The fuse
+   is in-memory: runs that survive an API restart are not counted.
+
+If either is missing the task moves to **queued** (no approval) and `waitingForStaff`
+is persisted on the task (workflow runs: on the run, which stays `running`). The queued
+task also persists its resolved `target` / `classification`, so a drain does not
+re-classify it. Waiting is a field, not a lifecycle status.
+
+On every terminal run, fuse release, lease release or hire (`rosterChanged`) the
+scheduler calls `drainQueues()`: queued tasks are tried oldest-first, ranked
+progress -> project round-robin -> FIFO. The priority tier is a no-op until tasks carry a
+priority. A drain hands out at most one workflow per first-stage position per pass
+(the dispatch check reserves nothing). Grant ordering is in-memory (`GrantQueue`) and
+re-established by the re-drive after a restart rather than recomputed from disk.
 
 `withCapacityLock` serializes the read-then-dispatch window so two concurrent creates
-can't both pass the gate. When a global cap is configured it wraps the per-project
-lock — **always global-outer, project-inner**, so there is no lock-order inversion and
-every dispatch contends on the global count exactly once. With `maxConcurrentRuns:
-null` no global lock is taken at all and the behaviour is exactly as it was before
-125c.
+cannot both pass the gate.
 
 `budgetApproved: Set<string>` in memory — task ids that were released past the cap;
 a drain skips the budget check for these once, then removes them from the set.
@@ -788,6 +794,6 @@ ignores them):
 | ----------------- | ------------------------------------- |
 | `task-created`    | A task was created                    |
 | `task-dispatched` | A task was handed to a runner         |
-| `task-queued`     | A task was queued (maxConcurrent)     |
+| `task-queued`     | A task was queued (no capacity)       |
 | `task-held`       | A task was parked for budget approval |
 | `task-outcome`    | A run finished, outcome written back  |

@@ -96,12 +96,12 @@ agent and workflow runs shell out to it.
 
 Per-engagement budgets live on the project record (`PATCH /projects/:id`, or the
 project editor in the dashboard): `dailyRuns` / `weeklyRuns` / `monthlyRuns`
-(run-count caps per Europe/Prague window) and `maxConcurrent`, plus (Phase 12)
+(run-count caps per Europe/Prague window), plus (Phase 12)
 `dailyCostCapUsd` / `weeklyCostCapUsd` / `monthlyCostCapUsd` — the same windows,
 priced off finished runs' `costUsd` instead of a run count. Over either kind of cap, a
 new task is **held** behind a Tier-3 `spend-past-cap` approval (Law 3: no autonomous
-spend past budget); at `maxConcurrent` it is **queued** (no approval) and drains when
-a run of that project finishes. The global account ceiling (`data/budget.json` →
+spend past budget); with no free employee / fuse room it is **queued** (no approval; see
+`docs/api/tasks.md`). The global account ceiling (`data/budget.json` →
 `pauseAtRollingPct` / `pauseAtWeeklyPct`) holds **every** dispatch once account
 utilization crosses it. See `docs/api/budget.md` for the full check/ledger flow.
 
@@ -133,7 +133,7 @@ applies on the next boot.
 | `goalVerifyTimeoutMs` | `600000` | **Phase 12.3** — wall-clock deadline for a goal's `checks` verifier shell (then `SIGTERM`→`SIGKILL`)                                                                                                                                                                              |
 | `goalAutoResume`      | `false`  | **Phase 12.4** — `true` = on boot, auto-re-drive `running`/`paused-limit` goals (the unattended launchd daemon). Default: park `awaiting-resume` (Law 3)                                                                                                                          |
 | `chatPersona`         | `jarvis` | The chat butler's personality (`jarvis`/`concise`/`formal`) — changes tone only, never the dispatch governor. Read per turn, set in `/settings`                                                                                                                                   |
-| `maxConcurrentRuns`   | `3`      | **Phase 125c** — system-wide ceiling on concurrently running tasks: the one "how many at once" knob, covering manual dispatch, roadmap releases and auto-pickup alike. Over the cap → the existing `queued` status. Clear it (`null`) for uncapped                                |
+| `maxWorkingAgents`    | `3`      | Machine fuse — most task-system agents working at once (single-agent runs, workflow agent stages). Over it → `queued`. Replaces the removed `maxConcurrentRuns` (legacy value migrates; `null` → `3`)                                                                             |
 | `roadmapTickMs`       | `60000`  | **Phase 125h** — roadmap auto-sync + gate-poll heartbeat (`0` = disabled). Re-syncs `autoSync: true` projects; polls `awaiting-merge` items' PR state for every project regardless of `autoSync` (the release-signal poll); then auto-picks-up work for `autoPlay: true` projects |
 
 In tests, `vitest.setup.ts` seeds this file (ticks at `0`) via `SYSTEM_CONFIG_FILE`;
