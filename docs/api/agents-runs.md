@@ -28,7 +28,13 @@ gates: # custom gate rules (inline)
       type: human
 gateRuleIds: # references into the global catalog
   - push-to-main
+plugins: # Claude Code plugin dirs (optional), one --plugin-dir each
+  - /abs/path/to/pinned-plugin
 ```
+
+`plugins` is how a run gets a plugin at all: runs spawn with
+`--setting-sources ""`, so nothing from `~/.claude/plugins` loads ambiently
+(see `docs/api/runner.md`). Merged with the project's `plugins` (agent's first).
 
 The body of the `.md` file is the system prompt passed to the claude CLI.
 
@@ -171,9 +177,10 @@ Two neighboring services in the same module round out the run-assembly seam:
   a claude-shaped run while it fails (503 `ClaudeUnavailableError`), so a typed
   task never produces a dead run record when the CLI is missing or broken.
 - **`CommandMaterializerService`** (`runner/command-materializer.service.ts`) —
-  writes the enabled custom-command catalog into `<targetDir>/.claude/commands/`
-  before a run starts (Claude Code only discovers slash commands on disk).
-  Best-effort and fail-open; a materialization hiccup never blocks the run.
+  writes the enabled custom-command catalog as a ZIBBY-owned plugin at
+  `<run sandbox>/zibby-commands/` (manifest `.claude-plugin/plugin.json`, name
+  `zibby`) before a run starts; it is passed via `--plugin-dir` and nothing is
+  written into the client worktree. Best-effort and fail-open; a materialization hiccup never blocks the run.
 
 ### argv limits (spawn E2BIG)
 

@@ -10,17 +10,17 @@ is `runner-core.ts`.
 
 Custom Claude Code slash commands (`/<id>`) that downloaded skills/agents rely on
 (e.g. `plan-orchestrate` references `/orchestrate`). Claude Code discovers
-commands **only from files** (`.claude/commands/*.md` in the cwd) — there is no
-`--commands` flag.
+commands only from files, and runs spawn with `--setting-sources ""`, so ZIBBY
+ships them as a plugin.
 
 - **Store:** `commands.storage.service.ts` (Markdown `<id>.md`, kebab-case
   frontmatter `description`/`argument-hint`/`allowed-tools`/`model`/
   `disable-model-invocation` + body).
-- **Injection:** `command-materializer.service.ts` writes enabled commands into
-  `<spawnCwd>/.claude/commands/<id>.md` (the worktree for a project run, else the
-  sandbox). Per-run isolation (each run has its own cwd). Fail-open. Pollution
-  guard: an existing file (a project's or user's own command) **wins** — the
-  materialized copy is added to `.git/info/exclude` so the agent can't commit it.
+- **Injection:** `command-materializer.service.ts` writes enabled commands as a
+  ZIBBY-owned plugin at `<run sandbox>/zibby-commands/` (manifest
+  `.claude-plugin/plugin.json`, name `zibby`), passed via `--plugin-dir`. They
+  appear as `/zibby:<id>` and the Skill tool resolves a bare `/<id>`. Nothing is
+  written into the client worktree. Per-run isolation. Fail-open.
 - **allowedTools:** `Skill` is in the base allow-list so the model can invoke
   materialized commands. Confirmed in `claude-run-command.service.ts` —
   `Skill` (not `SlashCommand`) is the tool name the model uses to call a

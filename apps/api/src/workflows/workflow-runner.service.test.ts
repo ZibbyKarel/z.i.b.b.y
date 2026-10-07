@@ -565,6 +565,38 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
       expect(opts.grantDirs).toEqual(["/sandbox"]);
     });
 
+    it("claude: plugin dirs are agent, project, then ZIBBY's commands plugin; the checkout is the context dir", async () => {
+      process.env.AGENT_RUNNER_MODE = "claude";
+      const buildClaude = vi.fn(async () => ({ command: "claude", args: [] as string[] }));
+      (h.service as unknown as { claude: unknown }).claude = { buildClaudeCommand: buildClaude };
+      (h.service as unknown as { agents: unknown }).agents = {
+        get: vi.fn(async () => ({ id: "writer", instructions: "write", plugins: ["/p/agent"] })),
+      };
+      // buildStageCommand's 11th parameter is the materialized plugin dir.
+      await (
+        h.service as unknown as {
+          buildStageCommand(...a: unknown[]): Promise<unknown>;
+        }
+      ).buildStageCommand(
+        agentPhase(),
+        "/sandbox/stage",
+        { ...PROJECT, plugins: ["/p/project"] },
+        null,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        "/sandbox/zibby-commands",
+      );
+      const opts = buildClaude.mock.calls[0] as unknown as [
+        { pluginDirs: string[]; contextDir?: string },
+      ];
+      expect(opts[0].pluginDirs).toEqual(["/p/agent", "/p/project", "/sandbox/zibby-commands"]);
+      expect(opts[0].contextDir).toBe("/srv/checkouts/demo");
+    });
+
     it("claude: a first phase with no consumes keeps the narrow own-sandbox grant (project) / no grant (sandbox-only)", async () => {
       process.env.AGENT_RUNNER_MODE = "claude";
       const buildClaude = vi.fn(async (opts: { task: string; grantDirs?: readonly string[] }) => ({

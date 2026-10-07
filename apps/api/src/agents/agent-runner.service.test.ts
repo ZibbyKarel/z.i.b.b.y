@@ -55,7 +55,35 @@ type BuildCommand = (
   attachments?: { dir: string; names: string[] },
   resumeSessionId?: string,
   toolGrants?: string[],
+  runId?: string,
+  extraPluginDirs?: readonly string[],
+  contextDir?: string,
 ) => Promise<{ command: string; args: string[] }>;
+
+describe("AgentRunnerService.buildCommand plugins", () => {
+  it("emits --plugin-dir for the agent's plugins, then the extras, and --add-dir for the context dir", async () => {
+    const runner = makeRunner();
+    const sandbox = mkdtempSync(join(tmpdir(), "zibby-agent-runner-"));
+    const built = await (runner as unknown as { buildCommand: BuildCommand }).buildCommand(
+      { ...agentFixture, plugins: ["/p/agent"] },
+      "do the thing",
+      [],
+      "",
+      sandbox,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      ["/p/project", "/sandbox/zibby-commands"],
+      "/work/tree",
+    );
+    const joined = built.args.join(" ");
+    expect(joined).toContain(
+      "--plugin-dir /p/agent --plugin-dir /p/project --plugin-dir /sandbox/zibby-commands",
+    );
+    expect(joined).toContain("--add-dir /work/tree");
+  });
+});
 
 describe("AgentRunnerService.buildCommand attachments", () => {
   it("grants the attachments dir and lists filenames without making it the operate target", async () => {

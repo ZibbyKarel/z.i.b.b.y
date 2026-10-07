@@ -23,7 +23,7 @@ focused on what happens _inside_ the spawned process and its supervision.
 | Tool mapping         | `apps/api/src/runner/claude-tools.ts`                 | internal tool tokens (`read`/`write`/`bash`/...) → Claude tool/rule strings              |
 | Stream formatting    | `apps/api/src/runner/claude-stream-format.ts`         | flattens `stream-json` events into readable log lines                                    |
 | Limit detection      | `apps/api/src/runner/detect-limit.ts`                 | pure regex scan for usage-limit/rate-limit signals in output                             |
-| Command materializer | `apps/api/src/runner/command-materializer.service.ts` | writes enabled custom slash commands into a run's `.claude/commands/`                    |
+| Command materializer | `apps/api/src/runner/command-materializer.service.ts` | materializes enabled custom slash commands as a `zibby` plugin in the run sandbox        |
 | Module               | `apps/api/src/runner/claude-run.module.ts`            | provides `ClaudeRunCommandService`/`ClaudePreflightService`/`CommandMaterializerService` |
 
 ## `RunnerCore<R>` — the shared engine
@@ -78,10 +78,11 @@ This is the only place a wrapper injects its own fields (`agentId`, `prompt`,
 - `cwd: spec.spawnCwd ?? spec.cwd` — the sandbox `cwd` is where logs/sidecar/
   intent coordination live; `spawnCwd` (when set) is where the process
   actually runs — used when a project-targeted stage spawns inside the real
-  project checkout so its own `CLAUDE.md`/`.claude` context loads.
-- `env: { ...process.env, ...spec.env, [INTENT_DIR_ENV]: spec.cwd }` — the
-  intent-dir pin (`ZIBBY_INTENT_DIR`) is applied **after** `spec.env` so a
-  project's own env can never override it.
+  project checkout. Only its `CLAUDE.md` loads (see **`--setting-sources`**);
+  its `.claude/` settings, hooks, skills and commands do not.
+- `env: { ...process.env, CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD: "1", ...spec.env, [INTENT_DIR_ENV]: spec.cwd }`
+  — a project env can override the CLAUDE.md var, but the intent-dir pin
+  (`ZIBBY_INTENT_DIR`) is applied **last** so it can never be overridden.
 - The run id is `${ownerId}_${startedMs}_${pid}`; the log file is
   `<dir>/<runId>.log` (append mode); the sidecar is `<dir>/<runId>.json`.
 - The child's `exit`/`error` listeners are wired **synchronously, before any
@@ -256,6 +257,29 @@ Key assembled pieces:
   `--permission-mode dontAsk`, allow rules are **session-wide**, so a
   delegated worker needs its tools on the session list or its calls are denied
   regardless of its own declared tools.
+- **`--setting-sources ""`** (isolation) — on every run and every one-shot
+  (router, task-namer, briefer, memory distiller, triager, review-comment
+  distiller, reply-draft researcher via `spawnClaudeCli`'s
+  `ISOLATED_SETTING_SOURCES`, prepended unless the caller passes its own; the
+  product-factory haiku vision QA, `libs/product-factory/src/providers/haiku.ts`,
+  passes the `--setting-sources ""` literal through its own `proc.ts` runner
+  instead); chat already did (`docs/api/chat.md`). Not loaded: the
+  user's `~/.claude` settings, plugins, skills and SessionStart hooks, and the
+  target repo's `.claude/settings.json` hooks, skills and commands — so a run
+  no longer depends on unpinned ambient state or a client repo's hooks. Still
+  loaded: the `--settings` approval hook (verified it fires), every
+  `--plugin-dir`, and the target repo's `CLAUDE.md` via `--add-dir <spawnCwd>`
+  (`contextDir`) plus `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1` set by
+  `RunnerCore`. That env var makes the CLI load `CLAUDE.md` from EVERY
+  `--add-dir` (contextDir, operator `files` grants, the attachments dir, a
+  workflow run-root grant) — passive text only; their `.claude/` settings,
+  hooks and skills never load.
+- **`--plugin-dir`** — the only way a plugin reaches a run. One flag per entry,
+  in order: the agent's `plugins[]`, then the project's `plugins[]`, then ZIBBY's
+  own `zibby` commands plugin. Entries are absolute paths (a missing one is
+  silently ignored by the CLI);
+  ZIBBY vendors no third-party plugin tree. The args are persisted in the run
+  spec, so the loaded plugins are the trace and approval-resume replays them.
 - **`--settings`** — the locked approval-hook `PreToolUse` group is always
   **first**, `matcher: "Bash|Task"`; any custom hook whose matcher could catch
   `Bash`/`Task` (empty, `*`, or containing either token) is dropped at merge
@@ -332,13 +356,14 @@ when the CLI is missing/unauthenticated. Backs the `claude` field of
 
 ## `CommandMaterializerService`
 
-Writes every **enabled** custom slash command into
-`<targetDir>/.claude/commands/<id>.md` before a run spawns — Claude Code only
-discovers custom commands on the filesystem (no `--commands` flag). Pollution
-guard: a command file is written only if the target tree doesn't already have
-one of that name (project/user command wins), and `.claude/commands/` is added
-to the run tree's git exclude so an agent can't accidentally commit it.
-Fail-open throughout — a materialization hiccup never blocks the run.
+Writes every **enabled** custom slash command into a ZIBBY-owned Claude Code
+plugin, `<sandbox>/zibby-commands/` (manifest name `zibby`, commands in
+`commands/<id>.md`), which the run loads via `--plugin-dir`. Needed because
+`--setting-sources ""` stops the CLI discovering `<cwd>/.claude/commands`.
+Commands are namespaced `/zibby:<id>`; the Skill tool still resolves a bare
+`/<id>`. Nothing is written into the worktree or the client repo. Returns
+`null` (writes nothing) when no command is enabled. Fail-open throughout — a
+materialization hiccup never blocks the run.
 
 ## Wired into the rest of the system
 

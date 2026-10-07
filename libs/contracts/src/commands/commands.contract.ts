@@ -15,8 +15,8 @@ const IdParam = z.object({ id: CommandIdSchema });
 /**
  * CRUD over custom Claude Code slash commands (`/<id>`). Mirrors `skillsContract`;
  * the backend implements it via `@ts-rest/nest` against a file-backed Markdown
- * storage service. The enabled commands are materialized into every run's
- * `.claude/commands/` by the runner so downloaded skills/agents that depend on a
+ * storage service. The enabled commands are materialized into a per-run ZIBBY plugin
+ * (`--plugin-dir`) by the runner so downloaded skills/agents that depend on a
  * command can resolve it.
  */
 export const commandsContract = c.router(

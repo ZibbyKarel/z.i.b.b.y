@@ -62,6 +62,14 @@ export const AgentSchema = z.object({
   tools: z.array(z.string()).optional(),
   /** The ceiling of tool/MCP ids grantable per-run (see docblock above). */
   optionalTools: z.array(z.string()).optional(),
+  /**
+   * Claude Code plugin directories this agent's runs load (`--plugin-dir`, one per
+   * entry; absolute paths).
+   * Runs spawn with `--setting-sources ""`, so nothing from ~/.claude/plugins loads
+   * ambiently — declare a pinned copy here to get a plugin back. Merged with the
+   * project's `plugins` (agent's first).
+   */
+  plugins: z.array(z.string().min(1)).optional(),
   category: z.string().max(64).optional(),
   /**
    * Approval gate flag. `risk` is a display hint. The `gates` policy engine is the

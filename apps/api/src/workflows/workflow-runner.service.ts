@@ -2091,6 +2091,14 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     // can attach its knowledge shelf. Fail-open — a missing/renamed workflow
     // must never block the stage.
     const department = (await this.workflows.get(run.workflowId).catch(() => null))?.department;
+    // Materialize enabled custom commands as a ZIBBY-owned plugin in the stage's
+    // sandbox (never the client worktree), loaded via `--plugin-dir`; best-effort
+    // (a falsy result → no plugin). Only claude agent stages load it — verify/tool
+    // phases never spawn claude, and a tool's artifacts must not sweep it up.
+    const commandsPlugin =
+      phase.type !== "verify" && phase.type !== "tool" && process.env.AGENT_RUNNER_MODE === "claude"
+        ? await this.commandMaterializer.materialize(stageCwd)
+        : null;
     const { command, args, spawnCwd } = await this.buildStageCommand(
       phase,
       stageCwd,
@@ -2102,10 +2110,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       delegates,
       department,
       run.workflowRunId,
+      commandsPlugin,
     );
-    // Materialize enabled custom commands into the stage's working tree (worktree
-    // for a project run, else the sandbox) so commands resolve; best-effort.
-    await this.commandMaterializer.materialize(spawnCwd ?? stageCwd);
     // Per-project env + secrets injected into this stage's process (Phase D), plus
     // the run/stage folders (P1-01) so a tool can write run-wide artifacts (e.g. the
     // `book/` folder) and any stage can find them after a loop re-dispatch. A tool
@@ -2535,6 +2541,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
      * the `X-Zibby-Run-Id` header to ZIBBY's own in-process MCP servers.
      */
     workflowRunId?: string,
+    /** ZIBBY's per-run commands plugin dir (from the materializer), if any. */
+    commandsPluginDir?: string | null,
   ): Promise<{ command: string; args: string[]; spawnCwd?: string }> {
     const spawnCwd = worktreePath ?? project?.path;
     // Verify phases are deterministic shell checks — identical in demo and
@@ -2568,7 +2576,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       if (!phase.agent) throw new Error(`Agent phase "${phase.id}" carries no agent`);
       const agent = await this.agents.get(phase.agent);
       // Handoff paths are passed ABSOLUTE: with a project resolved the session
-      // spawns inside the checkout (its real CLAUDE.md/.claude context loads),
+      // spawns inside the checkout (only its CLAUDE.md loads, via `contextDir`),
       // so anything sandbox-relative would silently resolve against the repo.
       const consumesAbs = phase.consumes ? path.join(cwd, phase.consumes) : null;
       const producesAbs = phase.produces ? path.join(cwd, phase.produces) : null;
@@ -2615,6 +2623,12 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         ...(delegates ? { delegates } : {}),
         ...(workflowRunId ? { runId: workflowRunId } : {}),
         systemPromptDir: cwd,
+        pluginDirs: [
+          ...(agent.plugins ?? []),
+          ...(project?.plugins ?? []),
+          ...(commandsPluginDir ? [commandsPluginDir] : []),
+        ],
+        ...(spawnCwd ? { contextDir: spawnCwd } : {}),
         // Spawn in stream-json mode so the stage log captures the agent's whole
         // run (thinking + tool calls), flattened by the core's formatLine — not
         // just claude's final message. Mirrors the agent runner.

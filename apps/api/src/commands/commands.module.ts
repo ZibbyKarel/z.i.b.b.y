@@ -10,7 +10,7 @@ export function resolveCommandsDir(): string {
 
 /**
  * Custom Claude Code slash commands: a file-backed catalog whose enabled entries
- * the runner materializes into each run's `.claude/commands/`. The storage service
+ * the runner materializes into a per-run ZIBBY plugin (`--plugin-dir`). The storage service
  * is exported so other modules can reuse it; the runner owns its own instance (via
  * {@link ClaudeRunModule}) to stay cycle-free.
  */

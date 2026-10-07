@@ -346,18 +346,6 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       matchedTerms,
       department: agent.department,
     });
-    const { command, args, catalogAgentIds } = await this.buildCommand(
-      agent,
-      prompt,
-      grantDirs,
-      grounding,
-      cwd,
-      attachments,
-      resumeSessionId,
-      finalGrants,
-      runId,
-    );
-
     // Phase 3.1: a resolvable git project gets a dedicated worktree under the run
     // sandbox; the session spawns there (its first `spawnCwd` ever) so its commits
     // land on the run's own `zibby/*` branch. The sandbox stays the intent/artifact
@@ -403,10 +391,25 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       }
     }
 
-    // Materialize the enabled custom commands into the run's working tree so a
-    // skill/agent that depends on `/<id>` can resolve it. Writes into the spawn cwd
-    // (the worktree for a project run, else the sandbox); best-effort/fail-open.
-    await this.commandMaterializer.materialize(spawnCwd ?? cwd);
+    // Materialize the enabled custom commands as a ZIBBY-owned plugin in the run's
+    // sandbox (never the client worktree) so a skill/agent that depends on `/<id>`
+    // can resolve it; loaded via `--plugin-dir`. Best-effort/fail-open (null → none).
+    const commandsPlugin = await this.commandMaterializer.materialize(cwd);
+    // Built after the worktree block so the spawn cwd can ride `--add-dir` as the
+    // run's context dir (its CLAUDE.md loads even under `--setting-sources ""`).
+    const { command, args, catalogAgentIds } = await this.buildCommand(
+      agent,
+      prompt,
+      grantDirs,
+      grounding,
+      cwd,
+      attachments,
+      resumeSessionId,
+      finalGrants,
+      runId,
+      [...(resolved?.plugins ?? []), ...(commandsPlugin ? [commandsPlugin] : [])],
+      spawnCwd,
+    );
     // Per-project env + secrets injected into this run's process (Phase D).
     const env = await this.resolveProjectEnv(resolved);
 
@@ -759,6 +762,13 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
      * the `X-Zibby-Run-Id` header to ZIBBY's own in-process MCP servers.
      */
     runId?: string,
+    /**
+     * Extra `--plugin-dir`s appended after the agent's own `plugins` (the project's
+     * `plugins`, then ZIBBY's per-run commands plugin).
+     */
+    extraPluginDirs: readonly string[] = [],
+    /** The run's spawn cwd, granted as the context dir (`--add-dir`). */
+    contextDir?: string,
   ): Promise<{ command: string; args: string[]; catalogAgentIds: string[] }> {
     // The work directory (the run's `files`, if any) stays the "operate on" target;
     // the attachments dir is reference material, never the thing to act on.
@@ -778,6 +788,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
         : operate;
     const task = manifest.trim();
     const grants = attachDir ? [...grantDirs, attachDir] : grantDirs;
+    const pluginDirs = [...(agent.plugins ?? []), ...extraPluginDirs];
     return this.claude.buildClaudeCommand({
       instructions: agent.instructions,
       task,
@@ -793,6 +804,8 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       // Phase 49: re-run of an errored/interrupted run continues its captured session.
       ...(resumeSessionId ? { resumeSessionId } : {}),
       ...(runId ? { runId } : {}),
+      ...(pluginDirs.length ? { pluginDirs } : {}),
+      ...(contextDir ? { contextDir } : {}),
       // Spill the system prompt into the run's sandbox so it rides
       // --append-system-prompt-file, keeping argv off the OS limit (spawn E2BIG). A
       // standalone agent run passes no `delegates`, so its catalog folds down to

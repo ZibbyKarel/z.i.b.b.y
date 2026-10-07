@@ -842,4 +842,43 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
       delete process.env.CLAUDE_BIN;
     }
   });
+
+  it('isolates the run from ambient settings with --setting-sources ""', async () => {
+    const { args } = await makeService([CODER], []).buildClaudeCommand({
+      instructions: "x",
+      task: "do it",
+    });
+    expect(flagValue(args, "--setting-sources")).toBe("");
+    // the approval-hook floor still rides --settings
+    const settings = JSON.parse(flagValue(args, "--settings") ?? "{}");
+    expect(settings.hooks?.PreToolUse).toHaveLength(1);
+  });
+
+  it("passes each declared plugin dir as its own --plugin-dir, in order", async () => {
+    const { args } = await makeService([CODER], []).buildClaudeCommand({
+      instructions: "x",
+      task: "do it",
+      pluginDirs: ["/opt/plugins/a", "/opt/plugins/b"],
+    });
+    const dirs = args.flatMap((a, i) => (a === "--plugin-dir" ? [args[i + 1]] : []));
+    expect(dirs).toEqual(["/opt/plugins/a", "/opt/plugins/b"]);
+  });
+
+  it("grants contextDir via --add-dir so its CLAUDE.md loads", async () => {
+    const { args } = await makeService([CODER], []).buildClaudeCommand({
+      instructions: "x",
+      task: "do it",
+      contextDir: "/repo/worktree",
+    });
+    const added = args.flatMap((a, i) => (a === "--add-dir" ? [args[i + 1]] : []));
+    expect(added).toContain("/repo/worktree");
+  });
+
+  it("emits no --plugin-dir when none are declared", async () => {
+    const { args } = await makeService([CODER], []).buildClaudeCommand({
+      instructions: "x",
+      task: "do it",
+    });
+    expect(args).not.toContain("--plugin-dir");
+  });
 });

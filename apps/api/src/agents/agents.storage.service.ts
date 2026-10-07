@@ -173,6 +173,12 @@ export class AgentsStorageService extends MarkdownEntityStore<Agent> {
         .filter((t) => t.length > 0);
       if (tools.length > 0) candidate.tools = tools;
     }
+    if (
+      Array.isArray(data.plugins) &&
+      data.plugins.every((p) => typeof p === "string" && p.length > 0)
+    ) {
+      candidate.plugins = data.plugins;
+    }
     if (AgentModelSchema.safeParse(data.model).success) candidate.model = data.model;
     if (AgentThinkingSchema.safeParse(data.thinking).success) candidate.thinking = data.thinking;
     if (typeof data.requires_approval === "boolean")
@@ -199,6 +205,7 @@ export class AgentsStorageService extends MarkdownEntityStore<Agent> {
     if (agent.model !== undefined) data.model = agent.model;
     if (agent.thinking !== undefined) data.thinking = agent.thinking;
     if (agent.tools !== undefined) data.tools = agent.tools;
+    if (agent.plugins !== undefined) data.plugins = agent.plugins;
     if (agent.category !== undefined) data.category = agent.category;
     if (agent.requires_approval !== undefined) data.requires_approval = agent.requires_approval;
     if (agent.risk !== undefined) data.risk = agent.risk;

@@ -50,6 +50,8 @@ export function createHaikuVisionProvider(
           "--permission-mode",
           "dontAsk",
           "--no-session-persistence",
+          "--setting-sources",
+          "",
           "--add-dir",
           path.dirname(input.file),
         ],

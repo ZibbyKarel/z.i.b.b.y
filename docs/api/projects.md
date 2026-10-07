@@ -53,6 +53,7 @@ company-merged "effective" context.
   checks?: string[];           // workflow verify-phase commands, joined with &&
   budget?: ProjectBudget;      // run-count + USD caps, per day/week/month + concurrency
   env?: Record<string, string>;// NON-secret env injected into this project's runs
+  plugins?: string[];          // Claude Code plugin dirs, one `--plugin-dir` per entry (after the agent's)
   hasSecrets?: boolean;        // computed at read time from ProjectSecretsStore
   logo?: Avatar;                // data URI or bundled /-path; externalized on disk
   identity?: { people?: ProjectPerson[] };

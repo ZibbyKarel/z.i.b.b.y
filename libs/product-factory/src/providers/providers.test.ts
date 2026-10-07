@@ -224,6 +224,7 @@ describe("haiku", () => {
     expect(v).toMatchObject({ passed: true, costUsd: 0.0042 });
     const args = run.mock.calls[0]?.[1] ?? [];
     expect(args).toContain("haiku");
+    expect(args[args.indexOf("--setting-sources") + 1]).toBe("");
     expect(args).not.toContain("--dangerously-skip-permissions");
     expect(run.mock.calls[0]?.[2]?.stdin).toContain("/x/a.png");
   });
