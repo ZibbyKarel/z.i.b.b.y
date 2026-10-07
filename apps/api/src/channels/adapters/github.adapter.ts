@@ -57,9 +57,13 @@ export class GitHubChannelAdapter implements ChannelAdapter {
 
   /**
    * The operator's teams in the repo owner's org as `org/slug`, via `GET /user/teams`
-   * (needs `read:org`). Cached per integration for TEAMS_TTL_MS — teams change rarely
-   * and a failure must not re-log every tick. Any failure resolves to `[]` plus a note:
-   * the poll degrades to personal-only rather than failing.
+   * (needs `read:org`). Two failure shapes:
+   * - scope-shaped (401, 404, or a 403 that is not a rate limit): the token lacks
+   *   `read:org` — resolves to `[]` plus a note and is cached for TEAMS_TTL_MS, so the
+   *   poll degrades to personal-only without re-logging every tick.
+   * - everything else (429, rate-limit 403, 5xx, network error): THROWS and is not
+   *   cached, so the whole poll fails and the watcher's retry/backoff handles it like
+   *   any other GitHub call — the cursor does not advance, nothing is skipped.
    * ponytail: first page (100 teams) only; paginate if an operator ever exceeds it.
    */
   private async teamsFor(
@@ -67,26 +71,32 @@ export class GitHubChannelAdapter implements ChannelAdapter {
     repo: string,
     creds: CredentialsInput,
   ): Promise<{ teams: string[]; note?: string }> {
-    const cached = this.teamsCache.get(integration.id);
-    if (cached && Date.now() - cached.at < TEAMS_TTL_MS) return { teams: cached.teams };
     const repoOwner = repo.split("/")[0] ?? "";
     const owner = repoOwner.toLowerCase();
-    let teams: string[] = [];
-    let note: string | undefined;
-    try {
-      const res = await this.fetchImpl(`${GITHUB_API}/user/teams?per_page=100`, {
-        headers: this.headers(creds),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const body = (await res.json()) as { slug?: string; organization?: { login?: string } }[];
-      teams = body.flatMap((t) =>
-        t.slug && t.organization?.login?.toLowerCase() === owner ? [`${repoOwner}/${t.slug}`] : [],
-      );
-    } catch (err) {
-      note = `github team scope unavailable for ${integration.id} (${(err as Error).message}; token needs read:org) — polling personal scope only`;
+    const key = `${integration.id}:${owner}`;
+    const cached = this.teamsCache.get(key);
+    if (cached && Date.now() - cached.at < TEAMS_TTL_MS) return { teams: cached.teams };
+    const res = await this.fetchImpl(`${GITHUB_API}/user/teams?per_page=100`, {
+      headers: this.headers(creds),
+    });
+    const rateLimited =
+      res.status === 429 ||
+      (res.status === 403 && res.headers.get("x-ratelimit-remaining") === "0");
+    if (rateLimited) throw new Error(`github rate limited (HTTP ${res.status})`);
+    if (res.status === 401 || res.status === 403 || res.status === 404) {
+      this.teamsCache.set(key, { at: Date.now(), teams: [] });
+      return {
+        teams: [],
+        note: `github team scope unavailable for ${integration.id} (HTTP ${res.status}; token needs read:org) — polling personal scope only`,
+      };
     }
-    this.teamsCache.set(integration.id, { at: Date.now(), teams });
-    return { teams, note };
+    if (!res.ok) throw new Error(`github /user/teams: HTTP ${res.status}`);
+    const body = (await res.json()) as { slug?: string; organization?: { login?: string } }[];
+    const teams = body.flatMap((t) =>
+      t.slug && t.organization?.login?.toLowerCase() === owner ? [`${repoOwner}/${t.slug}`] : [],
+    );
+    this.teamsCache.set(key, { at: Date.now(), teams });
+    return { teams };
   }
 
   private headers(creds: CredentialsInput): Record<string, string> {
@@ -228,6 +238,8 @@ export class GitHubChannelAdapter implements ChannelAdapter {
       ? await this.teamsFor(integration, repo, creds)
       : { teams: [] as string[], note: undefined };
     const teamScoped: GitHubIssue[] = [];
+    // ponytail: two sequential Search calls per team per poll (Search API ~30/min);
+    // batch/OR the legs if an operator has many teams.
     for (const team of teams) {
       // Two legs per team, never a wider one: a pending review request to the team,
       // and an explicit @org/team mention. "Everything the team can see" is out of scope.

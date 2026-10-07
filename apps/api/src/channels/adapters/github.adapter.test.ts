@@ -376,22 +376,55 @@ describe("GitHubChannelAdapter", () => {
       );
       expect(items.map((i) => i.id)).toEqual(["gh-acme-app-issue-1"]);
       expect(calls.some((c) => c.includes("team"))).toBe(true); // only the /user/teams probe
+      expect(calls.some((c) => c.includes("mentions:octocat"))).toBe(true);
       expect(calls.filter((c) => c.includes("team:") || c.includes("team-review"))).toEqual([]);
       expect(notes?.[0]).toMatch(/read:org/);
     });
 
-    it("falls back when the /user/teams request itself throws", async () => {
+    it("rejects (not cached) when the /user/teams request itself throws", async () => {
+      let broken = true;
+      const calls: string[] = [];
       const impl = vi.fn(async (url: string) => {
-        if (url.includes("/user/teams")) throw new Error("ECONNRESET");
+        calls.push(url);
+        if (url.includes("/user/teams")) {
+          if (broken) throw new Error("ECONNRESET");
+          return json([]);
+        }
         return json({ items: [] });
       }) as unknown as typeof fetch;
-      const { items, notes } = await new GitHubChannelAdapter(impl).poll(
-        withTeams,
-        { token: "ghp" },
-        "2026-06-17T08:00:00.000Z",
-      );
-      expect(items).toEqual([]);
-      expect(notes?.[0]).toMatch(/ECONNRESET/);
+      const adapter = new GitHubChannelAdapter(impl);
+      await expect(
+        adapter.poll(withTeams, { token: "ghp" }, "2026-06-17T08:00:00.000Z"),
+      ).rejects.toThrow(/ECONNRESET/);
+      broken = false;
+      await adapter.poll(withTeams, { token: "ghp" }, "2026-06-17T08:00:00.000Z");
+      expect(calls.filter((c) => c.includes("/user/teams")).length).toBe(2);
+    });
+
+    it("rejects on a 5xx from /user/teams", async () => {
+      const { impl } = teamFetch({}, 502);
+      await expect(
+        new GitHubChannelAdapter(impl).poll(
+          withTeams,
+          { token: "ghp" },
+          "2026-06-17T08:00:00.000Z",
+        ),
+      ).rejects.toThrow(/HTTP 502/);
+    });
+
+    it("rejects on a rate-limited 403 (x-ratelimit-remaining: 0)", async () => {
+      const impl = vi.fn(async (url: string) =>
+        url.includes("/user/teams")
+          ? new Response("{}", { status: 403, headers: { "x-ratelimit-remaining": "0" } })
+          : json({ items: [] }),
+      ) as unknown as typeof fetch;
+      await expect(
+        new GitHubChannelAdapter(impl).poll(
+          withTeams,
+          { token: "ghp" },
+          "2026-06-17T08:00:00.000Z",
+        ),
+      ).rejects.toThrow(/rate limited/);
     });
 
     it("caches team discovery: one /user/teams call and one note across polls", async () => {
