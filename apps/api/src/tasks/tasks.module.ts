@@ -33,9 +33,10 @@ import { TasksController } from "./tasks.controller";
  * back Phase 8's project attribution and the budget/concurrency guard; the
  * scheduled-tasks store is its own module so BudgetModule can share it cycle-free.
  * The primary router is the `claude -p` AI categorizer; the keyword scorer is the
- * always-available fallback. Phase 70: also imports ResolvedProjectModule so the
- * scheduler's `atCapacity` concurrency guard reads a project's EFFECTIVE
- * (company-merged) `maxConcurrent`, not its raw `budget` field.
+ * always-available fallback. Concurrency is decided by free employees plus the
+ * `maxWorkingAgents` machine fuse (EmployeesModule), not by any project cap.
+ * ResolvedProjectModule is still imported (the scheduler injects it; unused since
+ * the per-project cap went away — removed with `budget.maxConcurrent`).
  */
 @Module({
   imports: [
