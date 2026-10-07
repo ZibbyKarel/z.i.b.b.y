@@ -112,4 +112,25 @@ describe("IntegrationFormFields — github kind", () => {
       username: "octocat",
     });
   });
+
+  it("buildCreate() adds includeTeams: true when the team toggle is on", async () => {
+    const onSubmit = vi.fn();
+    render(<IntegrationFormDialog onClose={vi.fn()} onCreate={onSubmit} projectId="acme-app" />);
+    await selectGithub();
+
+    await userEvent.type(screen.getByTestId("integration-id"), "acme-github");
+    await userEvent.type(screen.getByTestId(IntegrationFormTestId.GithubRepo), "acme/repo");
+    await userEvent.type(screen.getByTestId(IntegrationFormTestId.GithubUsername), "octocat");
+    await userEvent.click(screen.getByTestId(IntegrationFormTestId.GithubIncludeTeams));
+    await userEvent.click(screen.getByTestId(IntegrationFormTestId.Submit));
+
+    const draft = onSubmit.mock.calls[0]![0];
+    expect(draft.create.config).toEqual({
+      kind: "github",
+      repo: "acme/repo",
+      streams: ["issues", "pulls"],
+      username: "octocat",
+      includeTeams: true,
+    });
+  });
 });

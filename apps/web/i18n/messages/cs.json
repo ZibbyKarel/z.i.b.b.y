@@ -587,6 +587,8 @@
     "githubStreamPulls": "Sledovat pull requesty",
     "githubUsername": "Tvůj GitHub username",
     "githubUsernameHint": "Omezí synchronizaci na issues/PR přiřazené tomuto uživateli",
+    "githubIncludeTeams": "Sledovat i moje týmy",
+    "githubIncludeTeamsHint": "Přidá PR s review požadovaným po tvých týmech a explicitní zmínky @org/team. Token potřebuje scope read:org.",
     "calendarId": "ID kalendáře",
     "calendarIdHint": "Kalendář ke sledování; 'primary' nebo adresa kalendáře sdíleného se service accountem",
     "calendarLookahead": "Výhled (dny)",

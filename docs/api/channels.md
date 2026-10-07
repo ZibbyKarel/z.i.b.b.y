@@ -175,21 +175,28 @@ worth reading if every row is a real answer awaiting a yes. Binds every channel.
 
 **What gets ingested — and what deliberately doesn't.** On a repo the operator works
 on professionally, "everything touching me" is far too much: the inbox filled with
-threads the operator was never addressed in. Since phase 126a the adapter ingests the
-union of exactly two sets, and nothing else:
+threads the operator was never addressed in. The adapter ingests the union of the
+sets below, and nothing else:
 
-1. **Threads that explicitly @-mention the operator** — one search,
-   `q=repo:{repo} is:open mentions:{username}`, incremental via the cursor.
-2. **PRs ZIBBY itself opened** — read directly by number.
+1. **Threads that explicitly @-mention the operator** — `q=repo:{repo} is:open mentions:{username}`,
+   incremental via the cursor.
+2. **Issues/PRs assigned to the operator** — `assignee:{username}`. Dropped in phase 126a
+   as too leaky, then restored by the operator.
+3. **PRs ZIBBY itself opened** — read directly by number.
+4. **Opt-in `includeTeams`** — two more search legs per team,
+   `team-review-requested:{org}/{slug}` and `team:{org}/{slug}` (an explicit `@org/team`
+   mention), for the operator's teams in the repo owner's org only. Teams are discovered
+   via `GET /user/teams`, which needs the token's `read:org` scope and is cached for an
+   hour. If the token lacks the scope the poll stays personal-only and the watcher logs
+   a warn; a transient failure fails the poll so it retries.
 
-`assignee:{username}` was **removed**. It was the leak: it pulled in anything assigned
-to the operator regardless of who opened it or whether they were addressed. Note that
-`RoadmapSourceService` is not a channel and answers a different question: with a Jira
+Never a team's whole visible activity. `RoadmapSourceService` is not a channel and
+answers a different question: with a Jira
 `projectKey` it imports the whole project backlog (so it can see work already started
 elsewhere and keep ZIBBY off it); GitHub import and a key-less Jira stay
 `assignee:`-scoped. Do not "fix" it to match this adapter.
 
-Set 2 does **not** use `author:{username}`. ZIBBY opens PRs with the operator's
+Set 3 does **not** use `author:{username}`. ZIBBY opens PRs with the operator's
 credentials, so `author:` cannot tell a ZIBBY PR from one the operator opened by hand.
 The authoritative answer is ZIBBY's own record — `ZibbyPrLocator.numbersFor(projectId)`,
 which unions the artifact registry (kind `pr`) with directed tasks' `outcome.pr.url`,
@@ -199,7 +206,7 @@ for storage itself.
 
 - Cursor = the most recent `updated_at`; id = `gh-<repo>-<issue|pr>-<n>`,
   `externalRef.messageId` = the number
-- Both sets are deduped by issue number, then filtered by `streams`
+- All sets are deduped by issue number, then filtered by `streams`
 - Send: a comment (`/repos/{repo}/issues/{n}/comments`)
 - `listAll()` (`/repos/{owner}/{name}/issues?since=cursor`, no scoping) survives only
   for a config with no `username` — which `GitHubConfigSchema` no longer permits. It is
