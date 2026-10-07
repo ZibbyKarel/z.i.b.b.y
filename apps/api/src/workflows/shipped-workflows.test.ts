@@ -96,4 +96,34 @@ describe("shipped workflow definitions", () => {
       }
     });
   });
+
+  describe("research — a skeptic grades the conclusions before they leave R&D", () => {
+    it("ends with a qualify refute phase that attacks the synthesized report", () => {
+      const phases = readWorkflow("research").phases;
+      const refute = phases.find((p) => p.id === "refute");
+      expect(refute).toBeDefined();
+      expect(phases.at(-1)?.id).toBe("refute");
+      expect(refute?.agent).toBe("research-skeptic");
+      expect(refute?.consumes).toBe("report.md");
+      expect(refute?.produces).toBe("refuted.md");
+      expect(refute?.qualify).toBe(true);
+      // gap → the synthesis overreaches, rewrite it; drift → the evidence base itself
+      // is one-sided, go back to collecting sources.
+      expect(refute?.loop?.to).toBe("synthesize");
+      expect(refute?.loop?.driftTo).toBe("scan");
+      expect(refute?.loop?.then).toBe("park");
+      expect(refute?.loop?.maxRetries).toBeGreaterThan(0);
+    });
+
+    it("has a hired R&D employee for the skeptic, so the stage never parks on NoEmployeeError", () => {
+      const file = path.join(WORKFLOWS_DIR, "../employees/employee_research-skeptic.json");
+      const employee = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
+      expect(employee).toMatchObject({
+        agentId: "research-skeptic",
+        department: "rnd",
+        status: "active",
+      });
+      expect(fs.existsSync(path.join(WORKFLOWS_DIR, "../agents/research-skeptic.md"))).toBe(true);
+    });
+  });
 });
