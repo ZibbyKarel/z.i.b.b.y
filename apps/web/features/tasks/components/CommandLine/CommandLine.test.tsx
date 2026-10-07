@@ -277,6 +277,16 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       );
     });
 
+    it("a typed @Name only resolves at a word boundary — an email-like a@Name never does", () => {
+      const onTargetChange = vi.fn();
+      render(<CommandLine onSubmit={vi.fn()} onTargetChange={onTargetChange} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+
+      fireEvent.change(input, { target: { value: "me@Builder now" } });
+
+      expect(onTargetChange).not.toHaveBeenCalled();
+    });
+
     it("a typed unrelated @Name never replaces a picked target", async () => {
       const onTargetChange = vi.fn();
       const user = userEvent.setup();

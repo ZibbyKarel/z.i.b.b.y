@@ -347,9 +347,12 @@ export function mentionRanges(
 function hasMentionFor(text: string, trigger: Trigger, name: string): boolean {
   // A picked name may contain spaces ("Coloring Book"), so match the literal
   // `<trigger>name` followed by a non-name char rather than cutting at whitespace.
+  // The trigger itself must open the text or follow whitespace (as in
+  // `TRIGGER_START_RE`), so an email-like `me@Builder` never counts.
   const needle = `${trigger}${name}`.toLowerCase();
   const hay = text.toLowerCase();
   for (let i = hay.indexOf(needle); i !== -1; i = hay.indexOf(needle, i + 1)) {
+    if (i > 0 && !/\s/.test(hay.charAt(i - 1))) continue;
     if (!NAME_CHAR_RE.test(hay.charAt(i + needle.length))) return true;
   }
   return false;
