@@ -7,6 +7,9 @@ import {
   TaskTargetSchema,
   WorkflowTaskTargetSchema,
 } from "../tasks/task.schema";
+import { CompanyIdSchema } from "../companies/company.schema";
+import { ProjectIdSchema } from "../projects/project.schema";
+import { SkillIdSchema } from "../skills/skill.schema";
 import { TeamIdSchema } from "../teams/team.schema";
 
 /**
@@ -159,6 +162,20 @@ export const SendChatMessageBodySchema = z.object({
    * that has a knowledge base (`KbScopeService.rootsForChat(undefined)`).
    */
   teamId: TeamIdSchema.optional(),
+  /**
+   * TODO 13 — the `#`-tagged project for THIS turn. Resolved server-side
+   * (unknown → 404 before anything is written); named in the turn's system prompt,
+   * and its `teamId` becomes the `zibby-kb` ceiling when no `teamId` is tagged.
+   */
+  projectId: ProjectIdSchema.optional(),
+  /** TODO 13 — the `#`-tagged company for THIS turn; resolved and named in the prompt. */
+  companyId: CompanyIdSchema.optional(),
+  /**
+   * TODO 13 (ports PR #69) — the `/`-picked skill. Its instructions are appended to
+   * `--append-system-prompt` after the governor (a chat turn runs `--tools ""`, so the
+   * prompt is the only mechanism). Unknown → 404 before anything is written.
+   */
+  skillId: SkillIdSchema.optional(),
 });
 export type SendChatMessageBody = z.infer<typeof SendChatMessageBodySchema>;
 
