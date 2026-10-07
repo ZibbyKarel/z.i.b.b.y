@@ -6,7 +6,6 @@ import * as path from "node:path";
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import {
   type ArtifactKind,
-  DEFAULT_VERIFY_CHECKS,
   type DepartmentId,
   type IntendedAction,
   type PhaseEscalation,
@@ -55,7 +54,7 @@ import { type WorkflowStageRecord, workflowStageStrategy } from "./workflow-stag
 import { renderProgress } from "./progress";
 import { buildResumeContext } from "./resume-context";
 import { parseStageVerdict } from "./stage-verdict";
-import { buildVerifyCommand } from "./verify-command";
+import { buildVerifyCommand, resolveVerifyChecks } from "./verify-command";
 
 /** DI token carrying the absolute path of the directory that holds workflow run artifacts. */
 export const WORKFLOW_RUNS_DIR = "WORKFLOW_RUNS_DIR";
@@ -1153,6 +1152,25 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       await this.accrueStageCost(run, stageRun, stageCwd);
       run.stageRuns.push(stageRun);
       this.updateSpend(run);
+      // A finished verify phase leaves runner-captured evidence (real exit code + the
+      // HEAD it checked) — the dev → rel PR gate in openPrOutput reads it, fail-closed.
+      if (phase.type === "verify" && (stageRun.status === "done" || stageRun.status === "error")) {
+        const sha = run.workspace
+          ? await this.workspace.headSha(run.workspace.path).catch(() => undefined)
+          : undefined;
+        run.verifyEvidence = {
+          phaseId: phase.id,
+          stageRunId: stageRun.runId,
+          commands: resolveVerifyChecks({
+            commands: phase.commands,
+            projectChecks: project?.checks,
+          }),
+          exitCode: this.core.get(stageRun.runId)?.exitCode ?? null,
+          ...(sha ? { sha } : {}),
+          cleanCheckout: phase.checkout === "clean" && !!run.workspace,
+          at: new Date().toISOString(),
+        };
+      }
       await this.writeAggregate(run);
 
       // Phase 45: a `qualify` agent phase that ran clean is graded on the verdict it
@@ -1180,7 +1198,10 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         // from real execution, not an agent claim) so a goal maker can skip an identical
         // second verification (goal-runner.makerAlreadyVerified).
         if (phase.type === "verify") {
-          run.verifyCommands = phase.commands ?? project?.checks ?? [...DEFAULT_VERIFY_CHECKS];
+          run.verifyCommands = resolveVerifyChecks({
+            commands: phase.commands,
+            projectChecks: project?.checks,
+          });
         }
         // Phase 9.3: checkpoint the green phase on the run branch (worktree only;
         // a clean tree / non-git run → no-op). Records the sha on the aggregate.
@@ -1330,7 +1351,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       const output = outputs[i];
       if (!output) continue;
       if (output.type === "pr") {
-        await this.openPrOutput(run, workflow, output);
+        if (!(await this.openPrOutput(run, workflow, output)))
+          return this.failBlockedPr(run, phaseIds);
         continue;
       }
       if (output.type === "folder") {
@@ -1842,7 +1864,10 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       delete run.pendingOutput;
       await this.writeAggregate(run);
       if (decision === "approved" && output?.type === "pr") {
-        await this.openPrOutput(run, workflow, output);
+        if (!(await this.openPrOutput(run, workflow, output))) {
+          await this.failBlockedPr(run, phaseIds);
+          return;
+        }
       } else {
         this.log.info("PR output declined — branch work left without a PR", { workflowRunId });
       }
@@ -1856,12 +1881,39 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /** Execute an approved `pr` output: write the PR draft and run the gated push. */
+  /** A PR hop blocked by the verify gate fails the run; later outputs are not delivered. */
+  private async failBlockedPr(run: WorkflowRun, phaseIds: string[]): Promise<void> {
+    run.status = "failed";
+    run.currentStage = null;
+    await this.writeAggregate(run);
+    await this.writeProgress(run, phaseIds);
+    this.log.info("workflow run finished", { status: run.status, stages: run.stageRuns.length });
+  }
+
+  /**
+   * The dev → rel hop: a `dev`-owned run with a worktree opens its PR only on green
+   * verify evidence for the exact HEAD being pushed. Returns the block reason, or
+   * null when the hop may proceed (fail-closed: an unreadable HEAD blocks).
+   */
+  private async verifyGateBlock(run: WorkflowRun, workflow: Workflow): Promise<string | null> {
+    if (workflow.department !== "dev" || !run.workspace) return null;
+    const head = await this.workspace.headSha(run.workspace.path).catch(() => undefined);
+    const ev = run.verifyEvidence;
+    if (!ev) return "no verify evidence";
+    if (ev.exitCode !== 0) return `verify exited ${ev.exitCode}`;
+    if (!ev.sha || ev.sha !== head) return `HEAD ${head} is not the verified ${ev.sha}`;
+    return null;
+  }
+
+  /**
+   * Execute an approved `pr` output: write the PR draft and run the gated push.
+   * Returns false when the verify gate blocked the hop (the caller fails the run).
+   */
   private async openPrOutput(
     run: WorkflowRun,
     workflow: Workflow,
     output: Extract<WorkflowOutput, { type: "pr" }>,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const source = await this.resolveOutputSource(run, workflow, output.from);
     const content = source ? await fs.readFile(source, "utf8").catch(() => "") : "";
     const { title } = this.parsePrMarkdown(content);
@@ -1874,7 +1926,17 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       this.log.warn("PR output approved but run has no worktree; nothing pushed", {
         workflowRunId: run.workflowRunId,
       });
-      return;
+      return true;
+    }
+    const blocked = await this.verifyGateBlock(run, workflow);
+    if (blocked) {
+      run.prBlockedReason = blocked;
+      this.log.warn("PR output blocked by the verify gate", {
+        workflowRunId: run.workflowRunId,
+        reason: blocked,
+      });
+      await this.writeAggregate(run);
+      return false;
     }
     // NS2 F0b — per-project draft PR mode; a project-less run (no match on
     // `projectForRun`) stays `"ready"`, same as an absent `prOpenMode`.
@@ -1902,6 +1964,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         workflowRunId: run.workflowRunId,
       });
     }
+    return true;
   }
 
   /**
@@ -2480,6 +2543,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         commands: phase.commands,
         projectChecks: project?.checks,
         spawnCwd,
+        // A clean checkout needs a run branch to check out — only with a worktree.
+        cleanCheckout: phase.checkout === "clean" && worktreePath !== undefined,
       });
     }
     // P1-01: a tool phase is a deterministic transform of the handoff — it runs IN

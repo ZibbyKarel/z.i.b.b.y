@@ -447,6 +447,30 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
       delete process.env.AGENT_RUNNER_MODE;
     });
 
+    const buildIn = (phase: WorkflowPhase, worktreePath?: string) =>
+      (
+        h.service as unknown as {
+          buildStageCommand(
+            phase: WorkflowPhase,
+            cwd: string,
+            project: Project | null,
+            escalation: null,
+            worktreePath?: string,
+          ): Promise<{ command: string; args: string[]; spawnCwd?: string }>;
+        }
+      ).buildStageCommand(phase, "/sandbox/stage", PROJECT, null, worktreePath);
+
+    it("verify: checkout clean + a worktree runs the checks in a detached clean checkout", async () => {
+      const cmd = await buildIn(verifyPhase({ checkout: "clean" }), "/wt/run");
+      expect(cmd.args[1]).toContain("worktree add --detach");
+      expect(cmd.spawnCwd).toBe("/wt/run");
+    });
+
+    it("verify: checkout clean without a worktree stays in-place", async () => {
+      const cmd = await buildIn(verifyPhase({ checkout: "clean" }));
+      expect(cmd.args).toEqual(["-c", "pnpm check:one && pnpm check:two"]);
+    });
+
     it("verify: a phase-level commands override wins", async () => {
       const cmd = await build(verifyPhase({ commands: ["make test"] }), PROJECT);
       expect(cmd).toEqual({

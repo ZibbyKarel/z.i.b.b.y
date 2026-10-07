@@ -32,6 +32,7 @@ interface Doubles {
     diffstat: ReturnType<typeof vi.fn>;
     openPr: ReturnType<typeof vi.fn>;
     removeWorktree: ReturnType<typeof vi.fn>;
+    headSha: ReturnType<typeof vi.fn>;
   };
   vault: { createNote: ReturnType<typeof vi.fn>; updateNote: ReturnType<typeof vi.fn> };
   artifacts: { record: ReturnType<typeof vi.fn> };
@@ -56,6 +57,7 @@ async function makeService(
     diffstat: vi.fn(async () => "DIFFSTAT"),
     diffStats: vi.fn(async () => ({ additions: 7, deletions: 2 })),
     openPr: vi.fn(async () => ({ url: "https://example.test/pr/1" })),
+    headSha: vi.fn(async () => "abc"),
   };
   const vault = {
     createNote: vi.fn(async () => ({})),
@@ -530,6 +532,75 @@ describe("WorkflowRunnerService — output sinks", () => {
       await runOutputs(service, run, workflow);
 
       expect(d.signalBus.emit).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("dev → rel PR gate (verify evidence)", () => {
+    const devWorkflow = (department?: "dev"): Workflow => ({
+      id: "delivery",
+      phases: [docPhase],
+      outputs: [{ type: "pr", from: "docs.md" }],
+      instructions: "x",
+      complexity: "standard",
+      ...(department ? { department } : {}),
+    });
+    const evidence = (exitCode: number | null, sha?: string): WorkflowRun["verifyEvidence"] => ({
+      phaseId: "verify",
+      stageRunId: "s1",
+      commands: ["pnpm test"],
+      exitCode,
+      ...(sha ? { sha } : {}),
+      cleanCheckout: true,
+      at: new Date().toISOString(),
+    });
+    async function setup(workflow: Workflow, ev?: WorkflowRun["verifyEvidence"]) {
+      const wt = path.join(dir, "worktree");
+      await fs.mkdir(wt, { recursive: true });
+      const { service, d } = await makeService(dir, workflow);
+      const run = await seedRun(
+        service,
+        dir,
+        workflow,
+        { a: { phaseId: "dok", file: "docs.md", content: "# Feature\n" } },
+        wt,
+      );
+      if (ev) run.verifyEvidence = ev;
+      await runOutputs(service, run, workflow);
+      return { run, d };
+    }
+
+    it("blocks a dev PR with no verify evidence — run failed, reason recorded", async () => {
+      const { run, d } = await setup(devWorkflow("dev"));
+      expect(d.workspace.openPr).not.toHaveBeenCalled();
+      expect(run.status).toBe("failed");
+      expect(run.prBlockedReason).toBe("no verify evidence");
+    });
+
+    it("opens the dev PR on green evidence for the current HEAD — run done", async () => {
+      const { run, d } = await setup(devWorkflow("dev"), evidence(0, "abc"));
+      expect(d.workspace.openPr).toHaveBeenCalled();
+      expect(run.status).toBe("done");
+      expect(run.prBlockedReason).toBeUndefined();
+    });
+
+    it("blocks when HEAD moved past the verified sha", async () => {
+      const { run, d } = await setup(devWorkflow("dev"), evidence(0, "old"));
+      expect(d.workspace.openPr).not.toHaveBeenCalled();
+      expect(run.status).toBe("failed");
+      expect(run.prBlockedReason).toBe("HEAD abc is not the verified old");
+    });
+
+    it("blocks when verify exited non-zero", async () => {
+      const { run, d } = await setup(devWorkflow("dev"), evidence(1, "abc"));
+      expect(d.workspace.openPr).not.toHaveBeenCalled();
+      expect(run.status).toBe("failed");
+      expect(run.prBlockedReason).toBe("verify exited 1");
+    });
+
+    it("leaves a department-less workflow ungated", async () => {
+      const { run, d } = await setup(devWorkflow());
+      expect(d.workspace.openPr).toHaveBeenCalled();
+      expect(run.status).toBe("done");
     });
   });
 });

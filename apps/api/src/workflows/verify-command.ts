@@ -7,14 +7,7 @@ export interface VerifyCommand {
   spawnCwd?: string;
 }
 
-/**
- * Assemble the deterministic verify command shared by the workflow verify stage
- * (Phase 2.1) AND the goal `checks` verifier (Phase 10.2). The check list resolves
- * `commands` (explicit override) → `projectChecks` (the project's own checks) →
- * {@link DEFAULT_VERIFY_CHECKS}, joined with `&&` under one `/bin/sh -c`. Exit 0 →
- * satisfied; non-zero → not. Extracted into one place so a project that overrides
- * its `checks` behaves identically whether run inside a workflow or a goal.
- */
+/** The check list: `commands` (explicit override) → `projectChecks` → {@link DEFAULT_VERIFY_CHECKS}. */
 export function resolveVerifyChecks(opts: {
   commands?: string[];
   projectChecks?: string[];
@@ -45,6 +38,13 @@ git -C "$src" worktree remove --force "$co" >/dev/null 2>&1 || { rm -rf "$co"; g
 exit $code`;
 }
 
+/**
+ * Assemble the deterministic verify command shared by the workflow verify stage
+ * (Phase 2.1) AND the goal `checks` verifier (Phase 10.2). The {@link resolveVerifyChecks}
+ * list is joined with `&&` under one `/bin/sh -c`. Exit 0 →
+ * satisfied; non-zero → not. Extracted into one place so a project that overrides
+ * its `checks` behaves identically whether run inside a workflow or a goal.
+ */
 export function buildVerifyCommand(opts: {
   commands?: string[];
   projectChecks?: string[];

@@ -427,7 +427,10 @@ describe("verify evidence contract", () => {
     });
 
   it("accepts checkout: clean on a verify phase", () => {
-    expect(wf({ checkout: "clean" }).success).toBe(true);
+    const result = wf({ checkout: "clean" });
+    expect(result.success).toBe(true);
+    // Zod strips unknown keys — success alone would not prove the field survived.
+    expect(result.data?.phases[1]?.checkout).toBe("clean");
   });
 
   it("rejects checkout on an agent phase", () => {

@@ -403,6 +403,15 @@ describe("Workflows API (e2e)", () => {
     expect(
       final.stageRuns.map((s: { phaseId: string; status: string }) => `${s.phaseId}:${s.status}`),
     ).toEqual(["a:done", "v:error", "a:done", "v:done", "b:done"]);
+    // The green verify left runner-captured evidence (real exit code, no worktree →
+    // no sha, in-place); it overwrote the red attempt's evidence.
+    expect(final.verifyEvidence).toMatchObject({
+      phaseId: "v",
+      commands: [check],
+      exitCode: 0,
+      cleanCheckout: false,
+    });
+    expect(final.verifyEvidence?.sha).toBeUndefined();
 
     // Handoff passthrough: verify transforms nothing, so `b` still consumed `a`'s
     // output. Five dispatches ran before it (a, v, a, v), so `b` is the fifth folder.

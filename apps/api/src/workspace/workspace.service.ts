@@ -203,6 +203,15 @@ export class WorkspaceService {
     }
   }
 
+  /** The worktree's full HEAD sha (`git rev-parse HEAD`). Throws on a non-git dir. */
+  async headSha(worktreePath: string): Promise<string> {
+    const { stdout } = await exec("git", ["rev-parse", "HEAD"], {
+      cwd: worktreePath,
+      timeout: GIT_TIMEOUT_MS,
+    });
+    return stdout.trim();
+  }
+
   /**
    * Remove a run's worktree and prune its `.git/worktrees/*` metadata. Tolerant:
    * an already-removed worktree dir (e.g. the sandbox rm ran first) still has its

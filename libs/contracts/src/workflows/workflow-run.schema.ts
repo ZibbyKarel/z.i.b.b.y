@@ -137,10 +137,6 @@ export const ParkedDetailSchema = z.object({
 });
 export type ParkedDetail = z.infer<typeof ParkedDetailSchema>;
 
-/**
- * A run of a workflow: the aggregate of its per-phase stage runs, the phase
- * currently executing, and an overall status mapped to {@link WorkflowStateSchema}.
- */
 /** Runner-captured result of a verify dispatch — real execution, never an agent claim. */
 export const VerifyEvidenceSchema = z.object({
   phaseId: z.string().min(1),
@@ -155,6 +151,10 @@ export const VerifyEvidenceSchema = z.object({
 });
 export type VerifyEvidence = z.infer<typeof VerifyEvidenceSchema>;
 
+/**
+ * A run of a workflow: the aggregate of its per-phase stage runs, the phase
+ * currently executing, and an overall status mapped to {@link WorkflowStateSchema}.
+ */
 export const WorkflowRunSchema = z.object({
   workflowRunId: z.string().min(1),
   workflowId: AgentIdSchema,
