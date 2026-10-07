@@ -40,6 +40,8 @@ export interface BaseRun {
   logFile: string;
   /** Phase 6: process-group id for liveness probing; absent until then. */
   pgid?: number;
+  /** The child process's exit code, captured on exit; null when killed by a signal. Absent while running. */
+  exitCode?: number | null;
   /**
    * Phase 9: when `status` is `paused-limit`, the epoch ms the usage window is
    * expected to reset (null when unknown). The core sets it at classification time

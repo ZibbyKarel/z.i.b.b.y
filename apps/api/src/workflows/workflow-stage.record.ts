@@ -17,6 +17,7 @@ export const WorkflowStageRecordSchema = z.object({
   pid: z.number().int(),
   logFile: z.string(),
   pgid: z.number().int().optional(),
+  exitCode: z.number().int().nullable().optional(),
   // Phase 9: the core stamps these when a stage child dies on a usage limit, so the
   // paused-limit stage record round-trips them across a restart (the aggregate copies
   // `resumeAt` up; the resume path drives off the aggregate, not the stage).
