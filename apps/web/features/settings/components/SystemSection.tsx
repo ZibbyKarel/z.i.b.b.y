@@ -24,7 +24,7 @@ export enum SystemSectionTestId {
   LimitResumeTick = "system-limit-resume-tick",
   RoadmapTick = "system-roadmap-tick",
   LimitResumeMax = "system-limit-resume-max",
-  MaxConcurrentRuns = "system-max-concurrent-runs",
+  MaxWorkingAgents = "system-max-working-agents",
   GoalVerifyTimeout = "system-goal-verify-timeout",
   GoalAutoResume = "system-goal-auto-resume",
   Save = "system-save",
@@ -58,9 +58,7 @@ function SystemEditor({ config }: { config: SystemConfig }) {
   );
   const [roadmapTickMs, setRoadmapTickMs] = useState<number | null>(config.roadmapTickMs);
   const [limitResumeMax, setLimitResumeMax] = useState<number | null>(config.limitResumeMax);
-  const [maxConcurrentRuns, setMaxConcurrentRuns] = useState<number | null>(
-    config.maxConcurrentRuns,
-  );
+  const [maxWorkingAgents, setMaxWorkingAgents] = useState<number | null>(config.maxWorkingAgents);
   const [goalVerifyTimeoutMs, setGoalVerifyTimeoutMs] = useState<number | null>(
     config.goalVerifyTimeoutMs,
   );
@@ -70,13 +68,6 @@ function SystemEditor({ config }: { config: SystemConfig }) {
   const tick = (value: number | null) => Math.max(0, Math.floor(value ?? 0));
   /** Coerce a possibly-cleared positive knob to `>= min` (empty/low → min). */
   const positive = (value: number | null, min: number) => Math.max(min, Math.floor(value ?? min));
-  /**
-   * Coerce a possibly-cleared NULLABLE positive knob — unlike {@link positive}, a
-   * cleared field is a real `null` ("no cap"), never coerced to `min`; only a
-   * present, too-low value gets clamped up.
-   */
-  const positiveNullable = (value: number | null, min: number): number | null =>
-    value == null ? null : Math.max(min, Math.floor(value));
 
   const save = () =>
     setConfig.mutate({
@@ -88,7 +79,7 @@ function SystemEditor({ config }: { config: SystemConfig }) {
         limitResumeTickMs: tick(limitResumeTickMs),
         roadmapTickMs: tick(roadmapTickMs),
         limitResumeMax: positive(limitResumeMax, 1),
-        maxConcurrentRuns: positiveNullable(maxConcurrentRuns, 1),
+        maxWorkingAgents: positive(maxWorkingAgents, 1),
         goalVerifyTimeoutMs: positive(goalVerifyTimeoutMs, 1),
         goalAutoResume,
         // Not edited here — passed through so a runtime save can't reset the operator's
@@ -164,12 +155,12 @@ function SystemEditor({ config }: { config: SystemConfig }) {
           value={limitResumeMax}
         />
         <NumberField
-          data-testid={SystemSectionTestId.MaxConcurrentRuns}
-          hint={t("runtime.maxConcurrentRunsHint")}
-          label={t("runtime.maxConcurrentRuns")}
+          data-testid={SystemSectionTestId.MaxWorkingAgents}
+          hint={t("runtime.maxWorkingAgentsHint")}
+          label={t("runtime.maxWorkingAgents")}
           min={1}
-          onValueChange={setMaxConcurrentRuns}
-          value={maxConcurrentRuns}
+          onValueChange={setMaxWorkingAgents}
+          value={maxWorkingAgents}
         />
         <DurationField
           data-testid={SystemSectionTestId.GoalVerifyTimeout}

@@ -508,9 +508,9 @@ describe("RoadmapGateService", () => {
   });
 
   describe("the gate does not throttle", () => {
-    // Guards against reintroducing a roadmap-only concurrency cap. Limiting how
-    // much runs at once is `TaskSchedulerService.maxConcurrentRuns`' job, and it
-    // does it downstream of the release, on the tasks these releases create.
+    // Guards against reintroducing a roadmap-only concurrency cap. How much
+    // actually runs is decided by free employees (+ the machine fuse) in
+    // `TaskSchedulerService`, downstream of the release, on the tasks it creates.
     it("releases EVERY unblocked item, however many, and never parks one for capacity", async () => {
       await store.put(
         item({

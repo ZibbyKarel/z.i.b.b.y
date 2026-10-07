@@ -12,7 +12,7 @@ const DEFAULTS: SystemConfig = {
   limitResumeTickMs: 60000,
   roadmapTickMs: 60000,
   limitResumeMax: 3,
-  maxConcurrentRuns: null,
+  maxWorkingAgents: 3,
   goalVerifyTimeoutMs: 600000,
   goalAutoResume: false,
   chatPersona: "jarvis",
@@ -95,39 +95,34 @@ describe("SystemSection", () => {
     expect(minutes).toHaveValue(30);
   });
 
-  describe("maxConcurrentRuns (125c) — nullable knob", () => {
-    it("renders empty when the loaded config has no global cap (null)", () => {
+  describe("maxWorkingAgents — the machine fuse", () => {
+    it("seeds the control from the loaded fuse (default 3)", () => {
       render(<SystemSection />);
-      expect(screen.getByTestId(SystemSectionTestId.MaxConcurrentRuns)).toHaveValue(null);
+      expect(screen.getByTestId(SystemSectionTestId.MaxWorkingAgents)).toHaveValue(3);
     });
 
-    it("seeds the control from a loaded numeric cap", () => {
-      config = { ...DEFAULTS, maxConcurrentRuns: 4 };
-      render(<SystemSection />);
-      expect(screen.getByTestId(SystemSectionTestId.MaxConcurrentRuns)).toHaveValue(4);
-    });
-
-    it("Save round-trips a set cap unchanged", async () => {
-      config = { ...DEFAULTS, maxConcurrentRuns: 4 };
+    it("Save round-trips a set fuse unchanged", async () => {
+      config = { ...DEFAULTS, maxWorkingAgents: 4 };
       render(<SystemSection />);
       await userEvent.click(screen.getByTestId(SystemSectionTestId.Save));
-      expect(setConfig).toHaveBeenCalledWith({ body: { ...DEFAULTS, maxConcurrentRuns: 4 } });
+      expect(setConfig).toHaveBeenCalledWith({ body: { ...DEFAULTS, maxWorkingAgents: 4 } });
     });
 
-    it("Save PUTs a newly-typed cap", async () => {
+    it("Save PUTs a newly-typed fuse", async () => {
       render(<SystemSection />);
-      const field = screen.getByTestId(SystemSectionTestId.MaxConcurrentRuns);
+      const field = screen.getByTestId(SystemSectionTestId.MaxWorkingAgents);
+      await userEvent.clear(field);
       await userEvent.type(field, "8");
       await userEvent.click(screen.getByTestId(SystemSectionTestId.Save));
-      expect(setConfig).toHaveBeenCalledWith({ body: { ...DEFAULTS, maxConcurrentRuns: 8 } });
+      expect(setConfig).toHaveBeenCalledWith({ body: { ...DEFAULTS, maxWorkingAgents: 8 } });
     });
 
-    it("clearing a set cap round-trips as null (no cap), never coerced to the min", async () => {
-      config = { ...DEFAULTS, maxConcurrentRuns: 4 };
+    it("a cleared fuse is clamped to the minimum of 1 — the fuse always exists", async () => {
+      config = { ...DEFAULTS, maxWorkingAgents: 4 };
       render(<SystemSection />);
-      await userEvent.clear(screen.getByTestId(SystemSectionTestId.MaxConcurrentRuns));
+      await userEvent.clear(screen.getByTestId(SystemSectionTestId.MaxWorkingAgents));
       await userEvent.click(screen.getByTestId(SystemSectionTestId.Save));
-      expect(setConfig).toHaveBeenCalledWith({ body: { ...DEFAULTS, maxConcurrentRuns: null } });
+      expect(setConfig).toHaveBeenCalledWith({ body: { ...DEFAULTS, maxWorkingAgents: 1 } });
     });
   });
 });

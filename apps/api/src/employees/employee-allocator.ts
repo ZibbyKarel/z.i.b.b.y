@@ -82,6 +82,23 @@ export class EmployeeAllocator {
   }
 
   /**
+   * Would a lease for this position be granted right now? A read-only probe the task
+   * scheduler uses before dispatching a workflow (it reserves nothing — the runner
+   * leases per stage). No employee anywhere → `true`: the runner parks `no-employee`
+   * (decision 6), so the task must not sit queued for a hire. Through the admission
+   * gate, so the answer reflects every in-flight acquire.
+   */
+  async canStaffNow(requested: DepartmentId, agentId: string): Promise<boolean> {
+    return this.serialized(async () => {
+      const department = await this.owningDepartment(requested, agentId);
+      const roster = await this.employees.listActiveByPosition(department, agentId);
+      if (roster.length === 0) return true;
+      if ((this.queues.get(keyOf(department, agentId))?.size ?? 0) > 0) return false;
+      return roster.some((e) => !this.leased.has(e.id));
+    });
+  }
+
+  /**
    * Admission is serialized in call order: each call's roster read + decision runs
    * after the previous one's, so FIFO follows arrival order, not file-read latency.
    * ponytail: one global gate; per-(department, agent) gates if roster reads ever get slow.

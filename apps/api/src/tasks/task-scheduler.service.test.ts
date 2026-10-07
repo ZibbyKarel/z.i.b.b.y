@@ -1,11 +1,13 @@
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { AgentRun, WorkflowRun } from "@zibby/contracts";
+import type { AgentRun, Employee, TaskTarget, WorkflowRun } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ActivityInput } from "../activity/activity-log.service";
 import type { BudgetCheck } from "../budget/budget.service";
+import { EmployeeAllocator } from "../employees/employee-allocator";
 import { NoEmployeeError } from "../employees/employees.errors";
+import { WorkingAgentsFuse } from "../employees/working-agents-fuse";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { AttachmentStorageService } from "./attachment-storage.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
@@ -75,7 +77,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
   let agentsStore: { listActive: ReturnType<typeof vi.fn> };
   /**
    * D-015/D-017 — the employees store double: `resolveDepartmentTargetOrNull`'s
-   * OWNERSHIP read (`list`) plus `acquireEmployeeForDispatch`'s any-department
+   * OWNERSHIP read (`list`) plus `tryLeaseForDispatch`'s any-department
    * fallback (`listActiveByPositionAnyDepartment`). Empty by default (no employee
    * anywhere → every existing dispatch stays unleased); F2b tests that need an
    * owned agent set `.list` to a matching employee fixture.
@@ -100,7 +102,6 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
   };
   let fakeBudget: {
     check: ReturnType<typeof vi.fn<(projectId?: string, now?: Date) => Promise<BudgetCheck>>>;
-    countRunning: () => Promise<number>;
     recordDispatch: () => Promise<void>;
     recordCost: ReturnType<
       typeof vi.fn<
@@ -196,7 +197,6 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     };
     fakeBudget = {
       check: vi.fn(async () => ({ ok: true }) as BudgetCheck),
-      countRunning: async () => 0,
       recordDispatch: async () => {},
       recordCost: vi.fn(async () => {}),
     };
@@ -232,10 +232,16 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
           throw new NoEmployeeError("dev", "unused");
         }),
         release: vi.fn(),
+        tryAcquire: vi.fn(async () => {
+          throw new NoEmployeeError("dev", "unused");
+        }),
+        canStaffNow: vi.fn(async () => true),
+        onFreed: vi.fn(() => () => {}),
         isBusy: vi.fn(() => false),
         busy: vi.fn(() => new Map()),
       } as never,
       employeesStore as never,
+      new WorkingAgentsFuse(fakeSystemConfigStore()),
       goalRunner as never,
       fakeLogger as never,
       fakeTrace as never,
@@ -462,10 +468,16 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
           throw new NoEmployeeError("dev", "unused");
         }),
         release: vi.fn(),
+        tryAcquire: vi.fn(async () => {
+          throw new NoEmployeeError("dev", "unused");
+        }),
+        canStaffNow: vi.fn(async () => true),
+        onFreed: vi.fn(() => () => {}),
         isBusy: vi.fn(() => false),
         busy: vi.fn(() => new Map()),
       } as never,
       employeesStore as never,
+      new WorkingAgentsFuse(fakeSystemConfigStore()),
       goalRunner as never,
       fakeLogger as never,
       fakeTrace as never,
@@ -1610,7 +1622,6 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
     const fakeResolved = { resolveBudget: async (p: { budget?: unknown }) => p.budget };
     const fakeBudget = {
       check: vi.fn(async () => ({ ok: true }) as BudgetCheck),
-      countRunning: async () => 0,
       recordDispatch: async () => {},
       recordCost: vi.fn(async () => {}),
     };
@@ -1660,6 +1671,11 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
           throw new NoEmployeeError("dev", "unused");
         }),
         release: vi.fn(),
+        tryAcquire: vi.fn(async () => {
+          throw new NoEmployeeError("dev", "unused");
+        }),
+        canStaffNow: vi.fn(async () => true),
+        onFreed: vi.fn(() => () => {}),
         isBusy: vi.fn(() => false),
         busy: vi.fn(() => new Map()),
       } as never,
@@ -1667,6 +1683,7 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
         list: vi.fn(async () => []),
         listActiveByPositionAnyDepartment: vi.fn(async () => []),
       } as never,
+      new WorkingAgentsFuse(fakeSystemConfigStore()),
       goalRunner as never,
       fakeLogger as never,
       fakeTrace as never,
@@ -1729,7 +1746,7 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
   });
 });
 
-describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8) and the budget check→record race (#9)", () => {
+describe("Task 3c — project-capacity lock closes the budget check→record race (#9); the machine fuse cannot be raced (#8)", () => {
   let dir: string;
   let storage: ScheduledTasksStorageService;
   let service: TaskSchedulerService;
@@ -1740,28 +1757,22 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
     get: ReturnType<typeof vi.fn>;
     readLog: ReturnType<typeof vi.fn>;
   };
-  /** Runs currently "in flight" per the fake `agentRunner` — drives the fake `countRunning`. */
-  let inFlight: number;
 
   const PROJECT_ID = "proj_1";
   const RESET_AT = Date.parse("2026-06-13T04:30:00.000Z");
 
   /**
-   * Builds a scheduler wired to a single project (or none). `agentRunner.start`
-   * marks the run "in flight" the moment it is CALLED (mirroring the real
-   * `AgentRunnerService`: the process is spawned synchronously, before the promise
-   * settles), then resolves one tick later (`setImmediate`) — a real, non-instant
-   * async gap, wide enough that the PRE-FIX (unlocked) code reliably lets two
-   * concurrent creates both read the stale "under cap" snapshot and both dispatch
-   * under `Promise.all`, without needing any manually-controlled deferred/release
-   * choreography in the test itself.
+   * Builds a scheduler wired to a single project (or none), with a machine fuse of
+   * `maxWorkingAgents`. `agentRunner.start` resolves one tick later (`setImmediate`)
+   * — a real, non-instant async gap, wide enough that an unserialized check→record
+   * would let two concurrent creates both read a stale snapshot under `Promise.all`.
    */
   function makeService(
     project: { id: string; name: string; budget?: Record<string, unknown> } | null,
+    maxWorkingAgents = 1000,
   ): {
     fakeBudget: {
       check: ReturnType<typeof vi.fn>;
-      countRunning: ReturnType<typeof vi.fn>;
       recordDispatch: ReturnType<typeof vi.fn>;
       recordCost: ReturnType<typeof vi.fn>;
     };
@@ -1784,7 +1795,6 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
     let onRunStatusListener: ((run: AgentRun) => void) | undefined;
     agentRunner = {
       start: vi.fn(async () => {
-        inFlight += 1;
         await new Promise<void>((resolve) => setImmediate(resolve));
         runId += 1;
         return agentRun({ runId: `writer_${runId}` });
@@ -1819,7 +1829,6 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
     const fakeResolved = { resolveBudget: async (p: { budget?: unknown }) => p.budget };
     const fakeBudget = {
       check: vi.fn(async () => ({ ok: true }) as BudgetCheck),
-      countRunning: vi.fn(async () => inFlight),
       recordDispatch: vi.fn(async () => {}),
       recordCost: vi.fn(async () => {}),
     };
@@ -1858,6 +1867,11 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
           throw new NoEmployeeError("dev", "unused");
         }),
         release: vi.fn(),
+        tryAcquire: vi.fn(async () => {
+          throw new NoEmployeeError("dev", "unused");
+        }),
+        canStaffNow: vi.fn(async () => true),
+        onFreed: vi.fn(() => () => {}),
         isBusy: vi.fn(() => false),
         busy: vi.fn(() => new Map()),
       } as never,
@@ -1865,6 +1879,7 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
         list: vi.fn(async () => []),
         listActiveByPositionAnyDepartment: vi.fn(async () => []),
       } as never,
+      new WorkingAgentsFuse(fakeSystemConfigStore({ maxWorkingAgents })),
       goalRunner as never,
       fakeLogger as never,
       fakeTrace as never,
@@ -1896,7 +1911,6 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
     dir = await fs.mkdtemp(path.join(os.tmpdir(), "task-sched-capacity-"));
     storage = new ScheduledTasksStorageService(dir);
     await storage.onModuleInit();
-    inFlight = 0;
   });
 
   afterEach(async () => {
@@ -1904,8 +1918,8 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
     await fs.rm(dir, { recursive: true, force: true });
   });
 
-  it("maxConcurrent TOCTOU (#8): two concurrent background creates for a maxConcurrent=1 project dispatch exactly one, queue the other", async () => {
-    makeService({ id: PROJECT_ID, name: "Proj", budget: { maxConcurrent: 1 } });
+  it("fuse TOCTOU (#8): two concurrent background creates under a fuse of 1 dispatch exactly one, queue the other", async () => {
+    makeService({ id: PROJECT_ID, name: "Proj" }, 1);
 
     const [a, b] = await Promise.all([
       service.createTask({ text: "do A", title: "A" }, undefined, PROJECT_ID, undefined, true),
@@ -1924,8 +1938,8 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
     expect(agentRunner.start).toHaveBeenCalledTimes(1);
   });
 
-  it("maxConcurrent TOCTOU (#8): two concurrent SYNCHRONOUS creates for a maxConcurrent=1 project dispatch exactly one, queue the other", async () => {
-    makeService({ id: PROJECT_ID, name: "Proj", budget: { maxConcurrent: 1 } });
+  it("fuse TOCTOU (#8): two concurrent SYNCHRONOUS creates under a fuse of 1 dispatch exactly one, queue the other", async () => {
+    makeService({ id: PROJECT_ID, name: "Proj" }, 1);
 
     const [a, b] = await Promise.all([
       service.createTask({ text: "do A", title: "A" }, undefined, PROJECT_ID),
@@ -1942,14 +1956,7 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
   it("budget check→record race (#9): N concurrent background creates against a daily cap of M dispatch exactly M and record exactly M ledger lines, holding the rest", async () => {
     const DAILY_CAP = 2;
     const N = 4;
-    const { fakeBudget } = makeService({
-      id: PROJECT_ID,
-      name: "Proj",
-      // maxConcurrent deliberately HIGHER than the daily cap (and higher than N) so
-      // this test exercises ONLY the ledger race, not the concurrency-slot race
-      // (#8's own test above already covers that).
-      budget: { maxConcurrent: 10 },
-    });
+    const { fakeBudget } = makeService({ id: PROJECT_ID, name: "Proj" });
     let dailyCount = 0;
     fakeBudget.check.mockImplementation(async (projectId?: string) => {
       if (projectId === PROJECT_ID && dailyCount >= DAILY_CAP) {
@@ -2004,20 +2011,15 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
   // (drainQueues), which the mandatory tests above do exercise indirectly via
   // guardExisting. See task-3c-report.md for the full writeup.
 
-  it("tick heartbeat path (finding #1): tick's dispatch of a due scheduled task racing dispatchPending's dispatch of a pending task, both for a maxConcurrent=1 project, dispatch exactly one and queue the other", async () => {
-    const { fakeBudget } = makeService({
-      id: PROJECT_ID,
-      name: "Proj",
-      budget: { maxConcurrent: 1 },
-    });
-    const project = { id: PROJECT_ID, name: "Proj", budget: { maxConcurrent: 1 } };
+  it("tick heartbeat path (finding #1): tick's dispatch of a due scheduled task racing dispatchPending's dispatch of a pending task, both under a fuse of 1, dispatch exactly one and queue the other", async () => {
+    const { fakeBudget } = makeService({ id: PROJECT_ID, name: "Proj" }, 1);
+    const project = { id: PROJECT_ID, name: "Proj" };
     const now = Date.now();
 
     // Task A: a due scheduled task for `tick` to fire. `storage.list()` is stubbed
     // to resolve it WITHOUT a real fs round-trip — the two race participants below
     // (tick's own attemptDispatch and a direct dispatchPending call) are otherwise
-    // symmetric chains of fast fakes ending in the same `atCapacity`/`countRunning`
-    // check, exactly like the two already-passing "two concurrent creates" tests
+    // symmetric chains of fast fakes ending in the same staffing check, exactly like the two already-passing "two concurrent creates" tests
     // above; without stubbing `list()`, tick's one genuine disk read is enough
     // asymmetric latency to reliably let dispatchPending finish first and never
     // actually overlap the check, producing a false-negative green.
@@ -2046,7 +2048,7 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
     // capacity check first and finish before `tick` ever got there, never actually
     // overlapping it regardless of the fix under test. `budget.check` is the first
     // step BOTH paths' `guardExisting` shares: rendezvous there so both reach the
-    // `atCapacity`/`countRunning` read at the same moment, reproducing the exact race
+    // staffing check at the same moment, reproducing the exact race
     // window findings #8/#9 are about. Pre-fix (unlocked) both `check` calls arrive
     // concurrently and pair up instantly. Post-fix, the lock fully serializes the two
     // callers — only one is ever in `guardExisting` at a time — so a lone arrival
@@ -2085,13 +2087,13 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
       const statuses = [a.status, b.status].sort();
       expect(statuses).toEqual(["dispatched", "queued"]);
     });
-    // The finding's own proof: with a cap of 1, exactly one real dispatch may ever
+    // The finding's own proof: with a fuse of 1, exactly one real dispatch may ever
     // happen across the tick fire and the racing dispatchPending call.
     expect(agentRunner.start).toHaveBeenCalledTimes(1);
   });
 
   it("T7 — two overlapping timer-driven ticks: the second is skipped while the first is in flight, so a due task is dispatched exactly once", async () => {
-    // No maxConcurrent here — this regression is about TickingWatcherBase's
+    // No fuse cap here — this regression is about TickingWatcherBase's
     // skip-if-in-flight guard on the timer-driven path itself (two `setInterval`
     // firings racing each other), not the T3c project-capacity lock exercised by
     // the test above. Before the guard, two independently-stale `storage.list()`
@@ -2134,7 +2136,7 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
     });
     // The regression's own proof: exactly one real dispatch for the one due task,
     // even though two ticks "fired". (The separately-tracked uncapped-project
-    // double-dispatch gap in `guardExisting`/`atCapacity` — see task-7-scope.md
+    // double-dispatch gap in `guardExisting` — see task-7-scope.md
     // §"task-scheduler nuance" — is a different call-path race and stays out of
     // scope for this guard; it isn't exercised here because only one `tick()` body
     // ever runs concurrently now.)
@@ -2142,10 +2144,14 @@ describe("Task 3c — project-capacity lock closes the maxConcurrent TOCTOU (#8)
   });
 });
 
-describe("125c — system-wide maxConcurrentRuns cap", () => {
+describe("staffing-driven capacity", () => {
   let dir: string;
   let storage: ScheduledTasksStorageService;
   let service: TaskSchedulerService;
+  let fuse: WorkingAgentsFuse;
+  let allocator: EmployeeAllocator;
+  let employees: Employee[];
+  let agentListener: ((run: AgentRun) => void) | undefined;
   let agentRunner: {
     start: ReturnType<typeof vi.fn>;
     startOrchestrator: ReturnType<typeof vi.fn>;
@@ -2153,131 +2159,113 @@ describe("125c — system-wide maxConcurrentRuns cap", () => {
     get: ReturnType<typeof vi.fn>;
     readLog: ReturnType<typeof vi.fn>;
   };
-  let fakeBudget: {
-    check: ReturnType<typeof vi.fn>;
-    countRunning: ReturnType<typeof vi.fn>;
-    countRunningGlobal: ReturnType<typeof vi.fn>;
-    recordDispatch: ReturnType<typeof vi.fn>;
-    recordCost: ReturnType<typeof vi.fn>;
+  let workflowRunner: {
+    start: ReturnType<typeof vi.fn>;
+    onRunStatus: ReturnType<typeof vi.fn>;
+    get: ReturnType<typeof vi.fn>;
+  };
+  let classifier: {
+    classify: ReturnType<typeof vi.fn>;
+    classifyWithinDepartment: ReturnType<typeof vi.fn>;
   };
 
-  const RESET_AT = Date.parse("2026-06-13T04:30:00.000Z");
+  const PROJECTS = [
+    { id: "proj_A", name: "A" },
+    { id: "proj_B", name: "B" },
+  ];
+  const RELEASE: TaskTarget = { kind: "workflow", id: "release", name: "Release" };
+  const hire = (id: string, agentId = "koder", department = "dev"): Employee => ({
+    id,
+    name: id,
+    agentId,
+    department,
+    status: "active",
+    hiredAt: "2026-01-01T00:00:00.000Z",
+  });
 
-  /**
-   * Builds a scheduler with a controllable global running count
-   * (`fakeBudget.countRunningGlobal`, set per test) and either a matched project
-   * or none (`project: null` → an unattributed task, no project in the catalog to
-   * match against). `maxConcurrentRuns` seeds the system config (`null`/omitted
-   * leaves the schema default — uncapped, today's behaviour). `projects` seeds a
-   * MULTI-project catalog (the cross-project race regression) — when given, it
-   * wins over `project`, which stays for the single/no-project shape every other
-   * test in this block uses.
-   */
-  function makeService(opts: {
-    project: { id: string; name: string; budget?: Record<string, unknown> } | null;
-    maxConcurrentRuns: number | null;
-    projects?: Array<{ id: string; name: string; budget?: Record<string, unknown> }>;
-  }): void {
-    const { project } = opts;
-    const catalog = opts.projects ?? (project ? [project] : []);
-    const workflowRunner = {
+  /** A scheduler over a REAL fuse + allocator (backed by the in-memory `employees` roster). */
+  function makeService(maxWorkingAgents = 1000): void {
+    const employeesStore = {
+      list: async () => employees,
+      listActiveByPosition: async (department: string, agentId: string) =>
+        employees.filter((e) => e.department === department && e.agentId === agentId),
+      listActiveByPositionAnyDepartment: async (agentId: string) =>
+        employees.filter((e) => e.agentId === agentId),
+    };
+    allocator = new EmployeeAllocator(employeesStore as never);
+    fuse = new WorkingAgentsFuse(fakeSystemConfigStore({ maxWorkingAgents }));
+    let runSeq = 0;
+    agentRunner = {
+      start: vi.fn(async () => agentRun({ runId: `koder_${++runSeq}`, agentId: "koder" })),
+      startOrchestrator: vi.fn(async () => agentRun({ agentId: "orchestrator" })),
+      onRunStatus: vi.fn((l: (run: AgentRun) => void) => {
+        agentListener = l;
+        return () => {};
+      }),
+      get: vi.fn(() => agentRun({})),
+      readLog: vi.fn(async () => ({ content: "", nextOffset: 0, done: true })),
+    };
+    workflowRunner = {
       start: vi.fn(async () => workflowRun({})),
       onRunStatus: vi.fn(() => () => {}),
       get: vi.fn(() => workflowRun({})),
     };
-    const workflowsStore = { list: vi.fn(async () => []) };
-    const agentsStore = { listActive: vi.fn(async () => []) };
-    const goalRunner = {
-      start: vi.fn(async () => ({ goalRunId: "goal_1" })),
-      onRunStatus: vi.fn(() => () => {}),
-      get: vi.fn(() => ({ goalRunId: "goal_1", status: "done", iterations: [] })),
-    };
-    agentRunner = {
-      start: vi.fn(async () => agentRun({})),
-      startOrchestrator: vi.fn(async () => agentRun({ agentId: "orchestrator" })),
-      onRunStatus: vi.fn(() => () => {}),
-      get: vi.fn(() => agentRun({})),
-      readLog: vi.fn(async () => ({ content: "", nextOffset: 0, done: true })),
-    };
-    const classifier = {
+    classifier = {
       classify: vi.fn(async () => ({
-        target: { kind: "agent", id: "writer", name: "Writer" },
+        target: { kind: "agent", id: "koder", name: "Koder" },
         confidence: 0.9,
         reason: "match",
         matchedTerms: [],
-        candidates: [{ kind: "agent", id: "writer", name: "Writer" }],
+        candidates: [{ kind: "agent", id: "koder", name: "Koder" }],
       })),
       classifyWithinDepartment: vi.fn(async () => {
         throw new Error("not exercised by this describe block");
       }),
     };
     const fakeProjects = {
-      list: async () => catalog,
+      list: async () => PROJECTS,
       get: async (id: string) => {
-        const found = catalog.find((p) => p.id === id);
+        const found = PROJECTS.find((p) => p.id === id);
         if (!found) throw new Error("no project");
         return found;
       },
     };
-    const fakeResolved = { resolveBudget: async (p: { budget?: unknown }) => p.budget };
-    fakeBudget = {
-      check: vi.fn(async () => ({ ok: true }) as BudgetCheck),
-      countRunning: vi.fn(async () => 0),
-      countRunningGlobal: vi.fn(async () => 0),
-      recordDispatch: vi.fn(async () => {}),
-      recordCost: vi.fn(async () => {}),
-    };
-    const fakeApprovals = {
-      register: vi.fn(),
-      requestApproval: async () => ({ id: "appr_1" }),
-      reject: async () => {},
-    };
-    const fakeGates = { floor: async () => [], evaluate: vi.fn(() => ({ decision: "allow" })) };
-    const fakeLimits = {
-      windowExhausted: vi.fn(async () => ({ exhausted: false, resumeAt: null })),
-      resolveResumeAt: vi.fn(async () => RESET_AT),
-    };
-    const activity = { record: vi.fn(async (_input: ActivityInput) => {}) };
-    const attachmentStorage = new AttachmentStorageService();
     service = new TaskSchedulerService(
       storage,
       classifier as never,
       agentRunner as never,
       workflowRunner as never,
-      workflowsStore as never,
-      agentsStore as never,
-      // D-017: no fixture in this file gives a task a department context AND an
-      // agent-position lease scenario worth asserting on the allocator itself
-      // (that lives in employee-allocator.test.ts / employees-dispatch tests) —
-      // acquire always misses (falls through to the any-department ladder,
-      // itself empty by default) so every existing call keeps its unleased
-      // (pre-D-017) `agentRunner.start` argument list.
       {
-        acquire: vi.fn(async () => {
-          throw new NoEmployeeError("dev", "unused");
-        }),
-        release: vi.fn(),
-        isBusy: vi.fn(() => false),
-        busy: vi.fn(() => new Map()),
+        list: async () => [
+          { id: "release", department: "dev", phases: [{ id: "code", agent: "koder" }] },
+        ],
       } as never,
+      { listActive: async () => [] } as never,
+      allocator,
+      employeesStore as never,
+      fuse,
       {
-        list: vi.fn(async () => []),
-        listActiveByPositionAnyDepartment: vi.fn(async () => []),
+        start: vi.fn(async () => ({ goalRunId: "goal_1" })),
+        onRunStatus: vi.fn(() => () => {}),
+        get: vi.fn(),
       } as never,
-      goalRunner as never,
       fakeLogger as never,
       fakeTrace as never,
-      activity as never,
+      { record: vi.fn(async () => {}) } as never,
       fakeProjects as never,
-      fakeResolved as never,
-      fakeBudget as never,
-      fakeApprovals as never,
-      fakeGates as never,
-      fakeLimits as never,
+      { resolveBudget: async () => undefined } as never,
+      {
+        check: vi.fn(async () => ({ ok: true }) as BudgetCheck),
+        recordDispatch: vi.fn(async () => {}),
+        recordCost: vi.fn(async () => {}),
+      } as never,
+      { register: vi.fn(), requestApproval: async () => ({ id: "appr_1" }) } as never,
+      { floor: async () => [], evaluate: vi.fn() } as never,
+      { windowExhausted: vi.fn(async () => ({ exhausted: false, resumeAt: null })) } as never,
       { handleTerminal: async () => null } as never,
-      fakeSystemConfigStore({ maxConcurrentRuns: opts.maxConcurrentRuns }),
+      fakeSystemConfigStore(),
       { name: async () => null } as never,
-      attachmentStorage,
+      new AttachmentStorageService(),
       { register: () => {} } as never,
       undefined,
     );
@@ -2285,9 +2273,11 @@ describe("125c — system-wide maxConcurrentRuns cap", () => {
   }
 
   beforeEach(async () => {
-    dir = await fs.mkdtemp(path.join(os.tmpdir(), "task-sched-global-cap-"));
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "task-sched-staffing-"));
     storage = new ScheduledTasksStorageService(dir);
     await storage.onModuleInit();
+    employees = [];
+    agentListener = undefined;
   });
 
   afterEach(async () => {
@@ -2295,128 +2285,87 @@ describe("125c — system-wide maxConcurrentRuns cap", () => {
     await fs.rm(dir, { recursive: true, force: true });
   });
 
-  /** Reach the private queue-drain sweep the way every terminal-run subscription does. */
-  const drain = () => (service as unknown as { drainQueues(): Promise<void> }).drainQueues();
+  it("(a) fuse 1: the second task queues with its target; the run's end dispatches it without re-classifying", async () => {
+    makeService(1);
+    const first = await service.createTask({ text: "do A", title: "A" }, undefined, "proj_A");
+    const second = await service.createTask({ text: "do B", title: "B" }, undefined, "proj_B");
+    expect(first.outcome).toBe("dispatched");
+    if (second.outcome !== "scheduled") throw new Error(`expected queued, got ${second.outcome}`);
+    expect(second.task.status).toBe("queued");
+    expect(second.task.target).toMatchObject({ kind: "agent", id: "koder" });
+    expect(second.task.waitingForStaff).toBeUndefined(); // waiting for the fuse, not staff
+    expect(classifier.classify).toHaveBeenCalledTimes(2);
 
-  it("over the global cap: an unattributed synchronous create is queued, never dispatched", async () => {
-    makeService({ project: null, maxConcurrentRuns: 1 });
-    fakeBudget.countRunningGlobal.mockResolvedValue(1); // already at the cap
-
-    const result = await service.createTask({ text: "do the thing", title: "Thing" });
-    expect(result.outcome).toBe("scheduled");
-    if (result.outcome !== "scheduled") return;
-    expect(result.task.status).toBe("queued");
-    expect(result.task.projectId).toBeUndefined();
-    expect(agentRunner.start).not.toHaveBeenCalled();
+    if (first.outcome !== "dispatched") throw new Error("unreachable");
+    agentListener?.(agentRun({ runId: first.runRef, status: "done" }));
+    await vi.waitFor(async () => {
+      expect((await storage.get(second.task.id)).status).toBe("dispatched");
+    });
+    expect(classifier.classify).toHaveBeenCalledTimes(2); // the persisted target was reused
+    expect(agentRunner.start).toHaveBeenCalledTimes(2);
+    expect(fuse.inUse()).toBe(1);
   });
 
-  it("over the global cap: an ATTRIBUTED create is queued too — the global cap gates every project, not only unscoped ones", async () => {
-    makeService({ project: { id: "proj_1", name: "Proj" }, maxConcurrentRuns: 1 });
-    fakeBudget.countRunningGlobal.mockResolvedValue(1);
+  it("(b) the only employee busy: the task queues waitingForStaff; the lease release drains it", async () => {
+    employees = [hire("e1")];
+    makeService();
+    const first = await service.createTask({ text: "do A", title: "A" });
+    expect(first.outcome).toBe("dispatched");
+    expect(allocator.isBusy("e1")).toBe(true);
 
+    const second = await service.createTask({ text: "do B", title: "B" });
+    if (second.outcome !== "scheduled") throw new Error(`expected queued, got ${second.outcome}`);
+    expect(second.task.waitingForStaff).toEqual({ department: "dev", agentId: "koder" });
+    expect(fuse.inUse()).toBe(1); // the queued task gave its fuse slot back
+
+    if (first.outcome !== "dispatched") throw new Error("unreachable");
+    agentListener?.(agentRun({ runId: first.runRef, status: "done" }));
+    await vi.waitFor(async () => {
+      const task = await storage.get(second.task.id);
+      expect(task.status).toBe("dispatched");
+      expect(task.waitingForStaff).toBeUndefined();
+    });
+    expect(allocator.isBusy("e1")).toBe(true); // now leased to the second run
+  });
+
+  it("(c) a spawn that throws gives back the fuse slot and the lease", async () => {
+    employees = [hire("e1")];
+    makeService(1);
+    agentRunner.start.mockRejectedValueOnce(new Error("preflight failed"));
+    await expect(service.createTask({ text: "do A", title: "A" })).rejects.toThrow("preflight");
+    expect(fuse.inUse()).toBe(0);
+    expect(allocator.isBusy("e1")).toBe(false);
+  });
+
+  it("(d) a workflow whose first-stage employee is busy queues and starts nothing", async () => {
+    employees = [hire("e1")];
+    makeService();
+    const held = await allocator.tryAcquire("dev", "koder");
     const result = await service.createTask(
-      { text: "do the thing", title: "Thing" },
+      { text: "ship it", title: "Ship" },
       undefined,
-      "proj_1",
+      undefined,
+      RELEASE,
     );
-    expect(result.outcome).toBe("scheduled");
-    if (result.outcome !== "scheduled") return;
+    if (result.outcome !== "scheduled") throw new Error(`expected queued, got ${result.outcome}`);
     expect(result.task.status).toBe("queued");
-    expect(agentRunner.start).not.toHaveBeenCalled();
+    expect(result.task.waitingForStaff).toEqual({ department: "dev", agentId: "koder" });
+    expect(workflowRunner.start).not.toHaveBeenCalled();
+    expect(fuse.inUse()).toBe(0); // a workflow dispatch only checks, never reserves
+
+    allocator.release(held!);
+    await vi.waitFor(async () => {
+      expect((await storage.get(result.task.id)).status).toBe("dispatched");
+    });
+    expect(workflowRunner.start).toHaveBeenCalledTimes(1);
   });
 
-  it("a freed global slot: drainQueues() dispatches a queued, UNATTRIBUTED task (the D-008 regression)", async () => {
-    makeService({ project: null, maxConcurrentRuns: 1 });
-    fakeBudget.countRunningGlobal.mockResolvedValue(1);
-    const queued = await service.createTask({ text: "do the thing", title: "Thing" });
-    expect(queued.outcome).toBe("scheduled");
-    if (queued.outcome !== "scheduled") return;
-    expect(queued.task.status).toBe("queued");
-    expect(queued.task.projectId).toBeUndefined();
-
-    // A slot frees up — the global count drops back under the cap. Pre-fix, the
-    // `t.status === "queued" && t.projectId` filter dropped this exact task (no
-    // `projectId`) from the drain scan, so it would sit `queued` forever.
-    fakeBudget.countRunningGlobal.mockResolvedValue(0);
-    await drain();
-
-    const after = await storage.get(queued.task.id);
-    expect(after.status).toBe("dispatched");
-    expect(agentRunner.start).toHaveBeenCalledTimes(1);
-  });
-
-  it("null cap (default): today's behaviour is unchanged even under heavy global usage", async () => {
-    makeService({ project: null, maxConcurrentRuns: null });
-    fakeBudget.countRunningGlobal.mockResolvedValue(1000); // would fail any cap, but there is none
-
-    const result = await service.createTask({ text: "do the thing", title: "Thing" });
+  it("(e) no employee anywhere: the agent runs unleashed (D-017) and still holds a fuse slot", async () => {
+    makeService();
+    const result = await service.createTask({ text: "do A", title: "A" });
     expect(result.outcome).toBe("dispatched");
     expect(agentRunner.start).toHaveBeenCalledTimes(1);
-  });
-
-  it("REGRESSION (defect 1): no global cap (null) never serializes unscoped dispatches — 'today's behaviour' stays free", async () => {
-    makeService({ project: null, maxConcurrentRuns: null });
-    // Real, non-instant async gap around the dispatch itself (mirrors the real
-    // AgentRunnerService: the process is spawned, then the promise settles a
-    // tick later) — wide enough that a wrongly-serialized pair would never
-    // overlap, without needing to inspect `withPathLock` internals.
-    let concurrent = 0;
-    let peakConcurrent = 0;
-    agentRunner.start.mockImplementation(async () => {
-      concurrent += 1;
-      peakConcurrent = Math.max(peakConcurrent, concurrent);
-      await new Promise<void>((resolve) => setImmediate(resolve));
-      concurrent -= 1;
-      return agentRun({});
-    });
-
-    await Promise.all([
-      service.createTask({ text: "do A", title: "A" }),
-      service.createTask({ text: "do B", title: "B" }),
-    ]);
-
-    expect(agentRunner.start).toHaveBeenCalledTimes(2);
-    // The regression's own proof: both dispatches were in flight AT THE SAME
-    // TIME. Pre-fix, `withCapacityLock` acquired a fixed `"global-capacity"` key
-    // for every unscoped call regardless of whether a cap was even set, so the
-    // second call's entire dispatch would wait for the first's to fully settle
-    // — `peakConcurrent` would never reach 2.
-    expect(peakConcurrent).toBe(2);
-  });
-
-  it("REGRESSION (defect 2): global cap=1, two concurrent creates for DIFFERENT projects still dispatch exactly one and queue the other", async () => {
-    makeService({
-      project: null,
-      maxConcurrentRuns: 1,
-      projects: [
-        { id: "proj_A", name: "A" },
-        { id: "proj_B", name: "B" },
-      ],
-    });
-    // A real running count, driven by the fake dispatch itself — proves the
-    // SECOND create's capacity check actually observes the FIRST's completed
-    // dispatch, rather than both reading a stale "0 running" snapshot.
-    let running = 0;
-    agentRunner.start.mockImplementation(async () => {
-      running += 1;
-      return agentRun({ runId: `writer_${running}` });
-    });
-    fakeBudget.countRunningGlobal.mockImplementation(async () => running);
-
-    const [a, b] = await Promise.all([
-      service.createTask({ text: "do A", title: "A" }, undefined, "proj_A"),
-      service.createTask({ text: "do B", title: "B" }, undefined, "proj_B"),
-    ]);
-
-    const outcomes = [a.outcome, b.outcome].sort();
-    expect(outcomes).toEqual(["dispatched", "scheduled"]);
-    const scheduled = a.outcome === "scheduled" ? a : b;
-    if (scheduled.outcome !== "scheduled") throw new Error("unreachable");
-    expect(scheduled.task.status).toBe("queued");
-    // The finding's own proof: a per-project lock alone can't see this — two
-    // DIFFERENT projects take two different `project-capacity:*` keys, so
-    // without a shared global acquisition both would pass the gate and both
-    // dispatch, exceeding the cap of 1.
-    expect(agentRunner.start).toHaveBeenCalledTimes(1);
+    expect(agentRunner.start.mock.calls[0]).toHaveLength(10); // no employee argument
+    expect(fuse.inUse()).toBe(1);
   });
 });

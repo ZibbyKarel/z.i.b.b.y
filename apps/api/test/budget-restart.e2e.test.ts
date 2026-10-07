@@ -7,6 +7,8 @@ import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
+import { WorkingAgentsFuse } from "../src/employees/working-agents-fuse";
+import { SystemConfigStore } from "../src/system/system-config.store";
 
 const FAKE_CLAUDE = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -102,7 +104,7 @@ describe("Budget restart (e2e)", () => {
       instructions: "Write code.",
       department: "dev",
     });
-    // alpha: dailyRuns 1 drives the HOLD path. beta: maxConcurrent 1 only, so the
+    // alpha: dailyRuns 1 drives the HOLD path. beta has no budget, so the machine-fuse
     // QUEUE path is exercised without the daily cap interfering.
     await request(server())
       .post("/api/projects")
@@ -112,14 +114,11 @@ describe("Budget restart (e2e)", () => {
         path: dirs.projects,
         budget: { dailyRuns: 1 },
       });
-    await request(server())
-      .post("/api/projects")
-      .send({
-        id: "beta",
-        name: "Beta",
-        path: dirs.projects,
-        budget: { maxConcurrent: 1 },
-      });
+    await request(server()).post("/api/projects").send({
+      id: "beta",
+      name: "Beta",
+      path: dirs.projects,
+    });
   });
 
   afterAll(async () => {
@@ -167,8 +166,15 @@ describe("Budget restart (e2e)", () => {
   });
 
   it("a queued task drains on the bootstrap sweep after its blocking run is gone", async () => {
-    // beta caps concurrency at 1 (no daily cap): the blocker takes the slot, running
-    // (dispatch lands in the background — wait for it so the next task queues).
+    // Size the machine fuse so the blocker takes its LAST slot (runs left over from the
+    // previous test may still hold some). Persisted, so the rebooted app reads it too.
+    const store = app.get(SystemConfigStore);
+    await store.write({
+      ...store.current(),
+      maxWorkingAgents: app.get(WorkingAgentsFuse).inUse() + 1,
+    });
+    // The blocker takes the slot, running (dispatch lands in the background — wait for
+    // it so the next task queues).
     const blocker = await request(server()).post("/api/tasks").send({ text: "beta blocker run" });
     const blockerTask = await poll(
       () => taskById(blocker.body.task.id as string),
@@ -187,7 +193,7 @@ describe("Budget restart (e2e)", () => {
     );
     expect(queuedTask?.status).toBe("queued");
 
-    // Reboot: the blocker's child dies with the API → on bootstrap the slot is free,
+    // Reboot: the blocker's child dies with the API → on bootstrap the fuse is empty,
     // and the queue-drain sweep dispatches the waiting task.
     await reboot();
     const after = await poll(

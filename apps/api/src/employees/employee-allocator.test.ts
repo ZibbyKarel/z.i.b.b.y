@@ -251,4 +251,18 @@ describe("EmployeeAllocator", () => {
     expect(freed).toBe(1);
     expect(allocator.isBusy("e1")).toBe(false);
   });
+
+  it("canStaffNow: free → true; leased or queued line → false; no employee anywhere → true", async () => {
+    expect(await allocator.canStaffNow("dev", "koder")).toBe(true); // nobody hired: runner parks
+    await store.create(employee("e1", "koder", "dev"));
+    expect(await allocator.canStaffNow("dev", "koder")).toBe(true);
+    // Not issued after the acquire resolves: the probe must see the in-flight admission.
+    const held = allocator.acquire("dev", "koder");
+    expect(await allocator.canStaffNow("dev", "koder")).toBe(false);
+    const waiting = allocator.acquire("dev", "koder");
+    allocator.release(await held); // hands e1 to the waiter
+    expect(await allocator.canStaffNow("qa", "koder")).toBe(false); // borrowed department, still busy
+    allocator.release(await waiting);
+    expect(await allocator.canStaffNow("dev", "koder")).toBe(true);
+  });
 });

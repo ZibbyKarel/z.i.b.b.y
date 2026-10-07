@@ -77,10 +77,9 @@ export function parsePrNumberFromUrl(url: string): number | undefined {
  * from `@zibby/contracts`, never reimplemented). It asks one question only — "are
  * this item's dependencies done" — and answers it for as many items as qualify.
  *
- * **Concurrency is deliberately NOT this gate's job.** A roadmap-only cap was tried
- * and removed: "how many roadmap items may run" and 125c's `maxConcurrentRuns` are
- * the same question asked twice, and two such numbers in `/settings` can only
- * confuse or disagree. `TaskSchedulerService.createTask` owns it — it decides
+ * **Concurrency is deliberately NOT this gate's job.** The gate releases everything
+ * unblocked; how much actually runs is decided by free employees in each department
+ * (+ the `maxWorkingAgents` machine fuse). `TaskSchedulerService.createTask` owns it — it decides
  * whether a release dispatches immediately or gets `queued`/held, and it is what
  * keeps an `autoPlay` project from starting a whole twenty-task epic at once. Either
  * way the roadmap item is `running` the moment its task exists; the task's own
@@ -534,9 +533,9 @@ export class RoadmapGateService {
    * operator's `play` and an in-flight `onMerge`) can never both decide to release
    * the same item.
    *
-   * No throttle here on purpose — see the class docblock: `TaskSchedulerService`'s
-   * `maxConcurrentRuns` is the one concurrency ceiling, and it applies to the tasks
-   * these releases create.
+   * No throttle here on purpose — see the class docblock: how much actually runs
+   * is decided by free employees (+ the machine fuse) in `TaskSchedulerService`, on
+   * the tasks these releases create.
    */
   private async drain(projectId: string): Promise<void> {
     return withPathLock(`roadmap-gate:${projectId}`, async () => {

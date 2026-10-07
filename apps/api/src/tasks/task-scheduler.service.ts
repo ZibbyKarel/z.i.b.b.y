@@ -37,6 +37,7 @@ import { type BudgetOverMetrics, BudgetService } from "../budget/budget.service"
 import { EmployeeAllocator, type EmployeeLease } from "../employees/employee-allocator";
 import { NoEmployeeError } from "../employees/employees.errors";
 import { EmployeesStorageService } from "../employees/employees.storage.service";
+import { type FuseSlot, WorkingAgentsFuse } from "../employees/working-agents-fuse";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
 import { WatcherHealthRegistry } from "../health/watcher-health.registry";
 import { LimitsService } from "../limits/limits.service";
@@ -46,7 +47,7 @@ import { WorkflowsStorageService } from "../workflows/workflows.storage.service"
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { matchProject } from "../projects/project-matcher";
 import { ResolvedProjectService } from "../projects/resolved-project.service";
-import { withPathLock } from "../shared/file-storage";
+import { outsideLocks, withPathLock } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { normalizeSummary } from "../shared/text/normalize-summary";
 import { TraceContextService } from "../shared/logging/trace-context.service";
@@ -62,6 +63,29 @@ import { taskTargetId } from "./task-target";
 
 /** A create input with its attachment set resolved once (Task 6 — resolve, then thread). */
 type CreateTaskInputResolved = CreateTaskInput & { attachments: Attachment[] };
+
+/** A dispatch that started a run. */
+type Dispatched = { runRef: string; target: TaskTarget; classification?: ClassificationTrace };
+/** The position a queued task waits for a free employee of. */
+type StaffWait = { department: DepartmentId; agentId: string };
+/** {@link TaskSchedulerService.tryLeaseForDispatch}'s answer. */
+type StaffLease = { lease: EmployeeLease } | { busy: StaffWait } | { unleashed: true };
+/**
+ * A dispatch that resolved its target but could not start it yet (staffing-driven
+ * capacity): no machine-fuse slot, or — with `waitingForStaff` — no free employee for
+ * its first stage. The caller persists it `queued` with the target, so the next
+ * attempt dispatches straight to it without re-classifying.
+ */
+type QueuedDispatch = {
+  queued: true;
+  target: TaskTarget;
+  classification?: ClassificationTrace;
+  waitingForStaff?: StaffWait;
+};
+
+function isQueued(x: Dispatched | QueuedDispatch): x is QueuedDispatch {
+  return "queued" in x;
+}
 
 /** See {@link TaskSchedulerService.resolveDepartmentTargetOrNull}. */
 interface DepartmentResolution {
@@ -122,10 +146,14 @@ const TERMINAL_GOAL = new Set<GoalRun["status"]>(["done", "failed"]);
  *
  * Phase 8: before any immediate or fired dispatch, the task is attributed to an
  * engagement ({@link matchProject}, deterministic + token-free) and run through the
- * budget/concurrency guard ({@link attemptDispatch}). Over a budget cap → the task is
- * HELD behind a Tier-3 `spend-past-cap` approval (Law 3: no autonomous spend past
- * budget). At a project's `maxConcurrent` → the task is QUEUED (FIFO bookkeeping, no
- * approval) and drained when one of that project's runs reaches a terminal state.
+ * budget guard ({@link attemptDispatch}). Over a budget cap → the task is HELD behind
+ * a Tier-3 `spend-past-cap` approval (Law 3: no autonomous spend past budget).
+ *
+ * Staffing-driven capacity (docs/plans/zibbycorp/staffing-driven-capacity.md): there
+ * is no "how many tasks at once" cap. A task is QUEUED (no approval) only when it
+ * cannot start NOW — no free employee for its first stage (`waitingForStaff`), or no
+ * {@link WorkingAgentsFuse} slot. The queue drains when an employee or a fuse slot
+ * frees up: round-robin across projects, FIFO inside one.
  *
  * The heartbeat mirrors the automations {@link SchedulerService}: a tick of 0 (the
  * test default) disables the loop so tests drive {@link tick} directly.
@@ -155,6 +183,13 @@ export class TaskSchedulerService
    * position an employee holds).
    */
   private readonly employeeLeases = new Map<string, EmployeeLease>();
+  /**
+   * The machine-fuse slot each in-flight single-agent / orchestrator run holds, keyed
+   * by `runId` — taken in {@link dispatch}, released on the run's terminal status
+   * (after its lease). Goal runs take none (a lifetime slot would deadlock with the
+   * goal's own workflow stages); workflow stages take theirs in the workflow runner.
+   */
+  private readonly fuseSlots = new Map<string, FuseSlot>();
 
   constructor(
     private readonly storage: ScheduledTasksStorageService,
@@ -167,6 +202,8 @@ export class TaskSchedulerService
     /** D-017: the single-agent dispatch lease/release path (see {@link employeeLeases}). */
     private readonly employeeAllocator: EmployeeAllocator,
     private readonly employeesStore: EmployeesStorageService,
+    /** Staffing-driven capacity: the machine fuse every agent dispatch takes a slot from. */
+    private readonly fuse: WorkingAgentsFuse,
     private readonly goalRunner: GoalRunnerService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
@@ -206,25 +243,29 @@ export class TaskSchedulerService
       this.agentRunner.onRunStatus((run) => {
         if (run.taskId) void this.writeAgentOutcome(run.taskId, run);
         if (TERMINAL_AGENT.has(run.status)) {
-          void this.drainQueues();
           // D-017: release this run's leased employee (if any) back to the
-          // allocator's FIFO queue — the next queued acquire() for the same
-          // department+position wakes.
+          // allocator — the best waiting acquire() for the same position wakes —
+          // THEN its fuse slot. Either release notifies `onFreed` → drain.
           const lease = this.employeeLeases.get(run.runId);
           if (lease) {
             this.employeeAllocator.release(lease);
             this.employeeLeases.delete(run.runId);
           }
+          this.fuseSlots.get(run.runId)?.();
+          this.fuseSlots.delete(run.runId);
+          this.requestDrain();
         }
       }),
       this.workflowRunner.onRunStatus((run) => {
         if (run.taskId) void this.writeWorkflowOutcome(run.taskId, run);
-        if (TERMINAL_WORKFLOW.has(run.status)) void this.drainQueues();
+        if (TERMINAL_WORKFLOW.has(run.status)) this.requestDrain();
       }),
       this.goalRunner.onRunStatus((run) => {
         if (run.taskId) void this.writeGoalOutcome(run.taskId, run);
-        if (TERMINAL_GOAL.has(run.status)) void this.drainQueues();
+        if (TERMINAL_GOAL.has(run.status)) this.requestDrain();
       }),
+      this.fuse.onFreed(() => this.requestDrain()),
+      this.employeeAllocator.onFreed(() => this.requestDrain()),
     );
 
     // The kind-"task" runner: a held task's `spend-past-cap` approval resumes it
@@ -724,47 +765,14 @@ export class TaskSchedulerService
   }
 
   /**
-   * Run `fn` exclusively for `projectId` (findings #8/#9 — the maxConcurrent TOCTOU
-   * and the budget check→record race live in the same code region: `budget.check` →
-   * `atCapacity` → the real `dispatch` → `recordLedger`, unserialized, let two
+   * Run `fn` exclusively for `projectId` (finding #9 — the budget check→record race:
+   * `budget.check` → the real `dispatch` → `recordLedger`, unserialized, let two
    * concurrent creates for the same project both pass the gate and both dispatch,
-   * exceeding `maxConcurrent` and over-recording the ledger past its cap — a Law-3
-   * violation). `project-capacity:${projectId}` is a NEW key, disjoint from the
-   * `task:${id}` outcome-writer lock and the global `scheduler:drain` sweep lock.
-   *
-   * 125c (D-008 point 3): the system-wide `maxConcurrentRuns` cap makes EVERY
-   * dispatch — scoped or not — contend on the same global count, not just a
-   * project's own `maxConcurrent`. Two defects a first pass got wrong, both
-   * fixed by the shape below:
-   *
-   *  - A per-project lock alone is not enough: two concurrent dispatches for
-   *    TWO DIFFERENT projects take two different `project-capacity:*` keys —
-   *    no mutual exclusion between them — so both can read the global count
-   *    under the cap and both dispatch, exceeding `maxConcurrentRuns` exactly
-   *    the way the project-scoped TOCTOU this lock exists for. The global
-   *    acquisition must be OUTER, wrapping the (optional) per-project one, so
-   *    every dispatch — any project, or none — is serialized against every
-   *    other one while a global cap is in effect.
-   *  - The global lock must be SKIPPED ENTIRELY when there is no cap
-   *    (`maxConcurrentRuns == null`, the schema default): `null` means "no
-   *    global cap — today's behaviour" per the master plan, and today's
-   *    behaviour is an unscoped dispatch running free, not serialized behind a
-   *    process-wide mutex. Read live via `systemConfig.current()` (never
-   *    cached) — same posture as `capacityStatus`'s own read — so a `/settings`
-   *    save that clears the cap stops contending immediately, not just for the
-   *    next boot.
-   *
-   * INVARIANT — ordering is always global-outer, project-inner: acquire
-   * `global-capacity` (when set) FIRST, then `project-capacity:${projectId}`
-   * (when scoped). A future edit to this method must keep that ONE fixed
-   * ordering rather than acquiring the two keys in different sequences on
-   * different paths — this method is every caller's only entry point to both
-   * locks, so as long as it stays internally consistent, no two chains can
-   * ever hold one of these keys while waiting on the other in opposite order
-   * (the precondition for a lock-order deadlock). Every call site below
-   * already `await`s (never detaches) its `withCapacityLock` call, so neither
-   * key is ever re-entered from inside its own held section (see
-   * `withPathLock`'s reentrancy CONTRACT).
+   * over-recording the ledger past its cap — a Law-3 violation).
+   * `project-capacity:${projectId}` is disjoint from the `task:${id}` outcome-writer
+   * lock and the global `scheduler:drain` sweep lock. An unattributed dispatch has no
+   * project budget, so it runs unlocked. Staffing (employees + the machine fuse) needs
+   * no lock here: both are granted synchronously in-process, never check-then-act.
    *
    * Every real spend path for a project is guarded by this SAME key (Task 3c fix —
    * the set is now complete):
@@ -784,17 +792,12 @@ export class TaskSchedulerService
    *    called from inside an already-held section for the same key.
    */
   private withCapacityLock<T>(projectId: string | undefined, fn: () => Promise<T>): Promise<T> {
-    const scoped = projectId ? () => withPathLock(`project-capacity:${projectId}`, fn) : fn;
-    // Read live (never cached) — a `/settings` save that sets or clears the cap
-    // must change whether this contends starting with the very next dispatch.
-    return this.systemConfig.current().maxConcurrentRuns == null
-      ? scoped()
-      : withPathLock("global-capacity", scoped);
+    return projectId ? withPathLock(`project-capacity:${projectId}`, fn) : fn();
   }
 
   /**
-   * The shared budget+capacity guard: over budget → hold behind approval; at
-   * capacity → queue. Both persist + surface as `outcome: "scheduled"`. Returns
+   * The shared budget guard: over budget → hold behind approval (persisted, surfaced
+   * as `outcome: "scheduled"`). Returns
    * `{ ok: true }` to let the caller proceed to an actual dispatch. Callers run this
    * INSIDE {@link withCapacityLock} — see {@link attemptCreate}.
    */
@@ -811,11 +814,6 @@ export class TaskSchedulerService
       const held = await this.holdForApproval(task, project, check.detail, check.metrics);
       return { ok: false, result: { outcome: "scheduled", task: held } };
     }
-    if (await this.atCapacity(project)) {
-      const task = await this.storage.createQueued(taskId, input, projectId, now);
-      this.recordQueued(task, project);
-      return { ok: false, result: { outcome: "scheduled", task } };
-    }
     return { ok: true };
   }
 
@@ -824,8 +822,7 @@ export class TaskSchedulerService
    * dispatch — returning the client-facing {@link CreateTaskResult}. A held/queued
    * task surfaces as `outcome: "scheduled"` (a parked task the feed renders by status).
    *
-   * Findings #8 (High, maxConcurrent TOCTOU) / #9 (Critical, budget check→record
-   * race): the synchronous branch runs its ENTIRE guard+dispatch as one normal
+   * Finding #9 (Critical, budget check→record race): the synchronous branch runs its ENTIRE guard+dispatch as one normal
    * `await`ed call under `project-capacity:${projectId}` ({@link attemptCreateSync}) —
    * simple, since this branch already blocks the HTTP response on the dispatch, so
    * serializing it fully against siblings adds no NEW latency cost.
@@ -836,7 +833,7 @@ export class TaskSchedulerService
    * dispatch — the classify+Haiku+spawn chain the whole `background` path exists to
    * get off the response path). So the gate and the real dispatch run as TWO
    * separate `project-capacity` acquisitions:
-   *  1. The gate ({@link guardCapacity}) — held/queued still returns fast, exactly as
+   *  1. The gate ({@link guardCapacity}) — held still returns fast, exactly as
    *     before. A pass persists the task `pending` and returns immediately.
    *  2. `dispatchPending`, kicked off as a bare `void this.dispatchPending(...)` from
    *     THIS (unlocked) continuation. {@link dispatchPending} SELF-WRAPS its own
@@ -853,12 +850,13 @@ export class TaskSchedulerService
    *     path) rides the exact same self-wrap "for free" (Task 3c fix, finding #2).
    *
    * Between (1) and (2) a sibling create can race in and ALSO pass its own gate
-   * check (neither has dispatched yet, so `atCapacity`/`budget.check` both still read
-   * "under cap"). `dispatchPending` closes this gap itself: it re-verifies budget +
-   * capacity ({@link guardExisting}) immediately before the real dispatch, now
-   * properly serialized (same lock, FIFO) against every other real dispatch for the
-   * project — a task that loses this recheck flips `pending → held/queued` instead
-   * of also dispatching.
+   * check (neither has dispatched yet, so `budget.check` still reads "under cap").
+   * `dispatchPending` closes this gap itself: it re-verifies the budget
+   * ({@link guardExisting}) immediately before the real dispatch, now properly
+   * serialized (same lock, FIFO) against every other real dispatch for the project —
+   * a task that loses this recheck flips `pending → held` instead of also
+   * dispatching. A dispatch that finds no free employee / fuse slot flips it
+   * `pending → queued`.
    */
   private async attemptCreate(
     taskId: string,
@@ -941,6 +939,11 @@ export class TaskSchedulerService
       input.toolGrants,
     );
     if (!dispatched) throw new EmptyCatalogError();
+    if (isQueued(dispatched)) {
+      const task = await this.storage.createQueued(taskId, input, projectId, now, dispatched);
+      this.recordQueued(task, project);
+      return { outcome: "scheduled", task };
+    }
     const task = await this.persistDispatched(taskId, input, dispatched, projectId, now);
     void this.reconcileOutcome(task);
     return { outcome: "dispatched", runRef: dispatched.runRef, target: dispatched.target, task };
@@ -1012,6 +1015,10 @@ export class TaskSchedulerService
             );
             return;
           }
+          if (isQueued(dispatched)) {
+            this.recordQueued(await this.storage.markQueued(task.id, dispatched), project);
+            return;
+          }
           await this.recordLedger(task.id, projectId, dispatched);
           const department = await this.ownerDepartmentOf(dispatched);
           const updated = await this.storage.markDispatched(
@@ -1052,9 +1059,8 @@ export class TaskSchedulerService
   }
 
   /**
-   * Budget+capacity guard for an ALREADY-PERSISTED task — marks it held/queued IN
-   * PLACE (`storage.markHeld`/`markQueued`) rather than creating a new held/queued
-   * record ({@link guardCapacity} does that, for a task not yet persisted). Shared by
+   * Budget guard for an ALREADY-PERSISTED task — marks it held IN PLACE
+   * (`storage.markHeld`) rather than creating a new held record ({@link guardCapacity} does that, for a task not yet persisted). Shared by
    * {@link attemptDispatch} (the tick/drain/release paths) and `dispatchPending`'s
    * pre-dispatch recheck (findings #8/#9 — see {@link attemptCreate}'s doc comment).
    */
@@ -1063,7 +1069,7 @@ export class TaskSchedulerService
     project: Project | null,
     at: Date,
     skipBudget: boolean,
-  ): Promise<"ok" | "held" | "queued"> {
+  ): Promise<"ok" | "held"> {
     if (!skipBudget) {
       const check = await this.budget.check(task.projectId, at);
       if (!check.ok) {
@@ -1072,19 +1078,14 @@ export class TaskSchedulerService
         return "held";
       }
     }
-    if (await this.atCapacity(project)) {
-      await this.storage.markQueued(task.id);
-      this.recordQueued(task, project);
-      return "queued";
-    }
     return "ok";
   }
 
   /**
    * The guard for an EXISTING task record (the tick fire path, the queue drain, and
    * the release path). Returns the resulting state. `skipBudget` is the release-once
-   * bypass — an operator-approved overage skips the budget check but still honors
-   * concurrency. Records the budget ledger line on every actual dispatch.
+   * bypass — an operator-approved overage skips the budget check but still waits
+   * for staff / a fuse slot. Records the budget ledger line on every actual dispatch.
    */
   private async attemptDispatch(
     task: ScheduledTask,
@@ -1104,8 +1105,9 @@ export class TaskSchedulerService
     }
     const guard = await this.guardExisting(task, project, at, opts.skipBudget);
     if (guard !== "ok") return guard;
-    // Phase 10: a task that already carries a target (e.g. a goal, never classifiable)
-    // re-dispatches to it; otherwise classify as before.
+    // Phase 10: a task that already carries a target (e.g. a goal, never classifiable,
+    // or a task queued for staff/fuse after its classification) re-dispatches to it;
+    // otherwise classify as before.
     const dispatched = await this.dispatch(
       task.text,
       task.paths,
@@ -1117,11 +1119,16 @@ export class TaskSchedulerService
       task.attachmentSetId,
       task.attachments,
       task.toolGrants,
+      task.classification,
     );
     if (!dispatched) {
       await this.storage.markFailed(task.id, "No agents or workflows available to route to");
       this.log.warn("task failed: empty catalog", { id: task.id });
       return "failed";
+    }
+    if (isQueued(dispatched)) {
+      this.recordQueued(await this.storage.markQueued(task.id, dispatched), project);
+      return "queued";
     }
     await this.recordLedger(task.id, task.projectId, dispatched);
     const department = await this.ownerDepartmentOf(dispatched);
@@ -1141,46 +1148,6 @@ export class TaskSchedulerService
       projectId: task.projectId,
     });
     return "dispatched";
-  }
-
-  /**
-   * True when dispatch is blocked for `project` — either the system-wide cap
-   * (125c) or that project's own `maxConcurrent`. See {@link capacityStatus} for
-   * the reason breakdown `drainQueues` needs.
-   */
-  private async atCapacity(project: Project | null): Promise<boolean> {
-    return (await this.capacityStatus(project)) !== "ok";
-  }
-
-  /**
-   * 125c / D-008 point 1: the system-wide `maxConcurrentRuns` cap is checked
-   * FIRST, BEFORE the `project == null` short-circuit below — an unattributed
-   * task must be gated by the global cap exactly like an attributed one, even
-   * though it has no project budget of its own to check. Read live via
-   * `systemConfig.current()` (never cached in a field) so a `/settings` save
-   * applies to the very next dispatch attempt, no restart needed.
-   *
-   * Phase 70: the per-project branch reads the EFFECTIVE (company-merged)
-   * budget via `ResolvedProjectService`, not the raw `project.budget` — a
-   * company-set `maxConcurrent` now caps every linked project's concurrency
-   * too, unless the project overrides it itself. A company-less project (or a
-   * dangling `companyId`) resolves to its own raw budget, unchanged.
-   *
-   * Returns which cap is actually blocking dispatch — `drainQueues` uses this
-   * (rather than the plain boolean {@link atCapacity}) to tell "nothing can
-   * dispatch ANYWHERE right now" (`"global"`, stop draining entirely) from
-   * "this one project's queue is full" (`"project"`, move on to the next
-   * project's queue).
-   */
-  private async capacityStatus(project: Project | null): Promise<"ok" | "project" | "global"> {
-    const globalMax = this.systemConfig.current().maxConcurrentRuns;
-    if (globalMax != null && (await this.budget.countRunningGlobal()) >= globalMax) {
-      return "global";
-    }
-    if (project == null) return "ok";
-    const max = (await this.resolved.resolveBudget(project))?.maxConcurrent;
-    if (max == null) return "ok";
-    return (await this.budget.countRunning(project.id)) >= max ? "project" : "ok";
   }
 
   /** Park a held task behind a `spend-past-cap` approval; returns the stamped task. */
@@ -1248,63 +1215,64 @@ export class TaskSchedulerService
   }
 
   /**
-   * Drain every project's concurrency queue: for each project with queued tasks,
-   * dispatch the oldest first while a slot is free. A normal queued task re-runs the
-   * full guard (budget first — it can become held if the budget filled meanwhile); a
-   * released (budget-approved) task skips only the budget check.
-   *
-   * 125c / D-008 point 2: the `queued` filter used to require `t.projectId`, so a
-   * task queued by the (then nonexistent) global cap with NO attributed project
-   * would sit `queued` forever — nothing ever re-checked it. The filter now keeps
-   * every queued task regardless of attribution, grouped by `projectId`
-   * (`undefined` is its own bucket — every unscoped queued task, project `null`).
-   * `capacityStatus` tells this loop WHY a task can't dispatch: a full per-project
-   * cap (`"project"`) only blocks that one project's bucket, so the loop moves on
-   * to the next; a full global cap (`"global"`) blocks every bucket, so the whole
-   * drain stops right there instead of re-reading the same global count once per
-   * remaining project.
+   * Fire-and-forget {@link drainQueues} from a listener that may run INSIDE a held
+   * lock (a fuse slot released mid-drain notifies `onFreed` synchronously) — started
+   * outside every lock so it queues behind `scheduler:drain` instead of re-entering
+   * it inline (file-lock.ts CONTRACT).
+   */
+  private requestDrain(): void {
+    outsideLocks(() => void this.drainQueues());
+  }
+
+  /**
+   * Drain the staffing queue: dispatch queued tasks while the machine fuse has room,
+   * round-robin across projects (each project's 1st task, then each project's 2nd, …),
+   * FIFO inside one. A task waiting for an employee is skipped (left untouched) while
+   * its position is still fully busy, so a busy position never blocks other tasks. A
+   * normal queued task re-runs the full guard (budget first — it can become held if
+   * the budget filled meanwhile); a released (budget-approved) task skips only the
+   * budget check.
    */
   private drainQueues(): Promise<void> {
-    // Serialize all drains: many terminal events fire near-simultaneously, and two
+    // Serialize all drains: many release events fire near-simultaneously, and two
     // overlapping drains would both read the same task as `queued` and dispatch it
     // twice (a TOCTOU double-dispatch). The lock makes each drain see the prior
     // drain's markDispatched, so a queued task is dispatched exactly once.
     return withPathLock("scheduler:drain", async () => {
       const queued = (await this.storage.list().catch((): ScheduledTask[] => []))
         .filter((t) => t.status === "queued")
-        .sort((a, b) => a.createdAt.localeCompare(b.createdAt)); // FIFO
-      if (queued.length === 0) return;
-      const byProject = new Map<string | undefined, ScheduledTask[]>();
-      for (const task of queued) {
-        const list = byProject.get(task.projectId) ?? [];
-        list.push(task);
-        byProject.set(task.projectId, list);
-      }
-      for (const [projectId, list] of byProject) {
-        const project = projectId
-          ? await this.projects.get(projectId).catch((): Project | null => null)
-          : null;
-        for (const task of list) {
-          const status = await this.capacityStatus(project);
-          if (status === "global") return; // nothing can dispatch anywhere right now
-          if (status === "project") break; // no slot free for this project
-          // Re-read: a concurrent cancel may have moved it on already.
-          const fresh = await this.storage.get(task.id).catch((): ScheduledTask | null => null);
-          if (!fresh || fresh.status !== "queued") continue;
-          // Finding #8 (A.2): nest the per-project `project-capacity` lock inside the
-          // global `scheduler:drain` sweep lock — different keys, ordinary nesting —
-          // so a drain's dispatch is serialized against a concurrent `attemptCreate`
-          // or `releaseHeld` for the same project, not just against other drains.
-          // 125c: the unscoped bucket (`projectId === undefined`) nests the
-          // `global-capacity` lock the same way — same shape, different key.
-          await this.trace.run({ traceId: randomUUID() }, () =>
-            this.withCapacityLock(projectId, () =>
-              this.attemptDispatch(fresh, project, Date.now(), {
-                skipBudget: this.budgetApproved.has(fresh.id),
-              }),
-            ),
-          );
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      const seen = new Map<string | undefined, number>();
+      const ordered = queued
+        .map((task) => {
+          const turn = seen.get(task.projectId) ?? 0;
+          seen.set(task.projectId, turn + 1);
+          return { task, turn };
+        })
+        .sort((a, b) => a.turn - b.turn || a.task.createdAt.localeCompare(b.task.createdAt));
+      for (const { task } of ordered) {
+        if (!this.fuse.hasRoom()) return; // nothing can start anywhere right now
+        // Re-read: a concurrent cancel may have moved it on already.
+        const fresh = await this.storage.get(task.id).catch((): ScheduledTask | null => null);
+        if (!fresh || fresh.status !== "queued") continue;
+        const wait = fresh.waitingForStaff;
+        if (wait && !(await this.employeeAllocator.canStaffNow(wait.department, wait.agentId))) {
+          continue;
         }
+        const project = fresh.projectId
+          ? await this.projects.get(fresh.projectId).catch((): Project | null => null)
+          : null;
+        // Finding #8 (A.2): nest the per-project `project-capacity` lock inside the
+        // global `scheduler:drain` sweep lock — different keys, ordinary nesting — so
+        // a drain's dispatch is serialized against a concurrent `attemptCreate` or
+        // `releaseHeld` for the same project, not just against other drains.
+        await this.trace.run({ traceId: randomUUID() }, () =>
+          this.withCapacityLock(fresh.projectId, () =>
+            this.attemptDispatch(fresh, project, Date.now(), {
+              skipBudget: this.budgetApproved.has(fresh.id),
+            }),
+          ),
+        );
       }
     });
   }
@@ -1350,7 +1318,13 @@ export class TaskSchedulerService
      * runner (never trusted blindly — see `AgentRunnerService.launch`).
      */
     toolGrants?: string[],
-  ): Promise<{ runRef: string; target: TaskTarget; classification?: ClassificationTrace } | null> {
+    /**
+     * The trace a previous attempt classified this task with (a task queued for staff
+     * or a fuse slot persists its target + trace). Used with `explicitTarget` so the
+     * re-dispatch keeps its department and memory terms without re-classifying.
+     */
+    priorClassification?: ClassificationTrace,
+  ): Promise<Dispatched | QueuedDispatch | null> {
     // Build the run-attachments reference ONCE: an absolute dir (from storage) plus
     // the filenames, or undefined when the task carries no attachment set.
     const runAttachments: RunAttachments | undefined = attachmentSetId
@@ -1366,7 +1340,8 @@ export class TaskSchedulerService
     let classification: ClassificationTrace | undefined;
     if (explicitTarget) {
       target = explicitTarget;
-      matchedTerms = [];
+      classification = priorClassification;
+      matchedTerms = priorClassification?.matchedTerms ?? [];
     } else {
       // `output` rides into the classify so the required sink constrains stage 2 the
       // same way it does on the explicit/roadmap path (`createTask`) — one rule, both
@@ -1407,12 +1382,24 @@ export class TaskSchedulerService
       };
     }
     if (target.kind === "agent") {
-      // D-017: acquire BEFORE spawning — never inside `AgentRunnerService` (a
-      // workflow stage also spawns an agent run, and leases per-stage itself; a
-      // second acquire in the runner would double-lease). See
-      // `acquireEmployeeForDispatch` for the department-known/any-department/
-      // unleased ladder.
-      const lease = await this.acquireEmployeeForDispatch(target.id, classification?.department);
+      // Staffing gate, BEFORE any spawn: a fuse slot, then an employee (D-017 —
+      // never leased inside `AgentRunnerService`, since a workflow stage also spawns
+      // an agent run and leases per stage itself). Both are held until the run's
+      // terminal status. See `tryLeaseForDispatch` for the lease ladder.
+      const slot = this.fuse.tryTake({ projectId });
+      if (!slot) return { queued: true, target, classification };
+      let staff: StaffLease;
+      try {
+        staff = await this.tryLeaseForDispatch(target.id, classification?.department, projectId);
+      } catch (error) {
+        slot();
+        throw error;
+      }
+      if ("busy" in staff) {
+        slot();
+        return { queued: true, target, classification, waitingForStaff: staff.busy };
+      }
+      const lease = "lease" in staff ? staff.lease : undefined;
       let run: AgentRun;
       try {
         // A conditional call (not a trailing `lease ? {...} : undefined` arg) so an
@@ -1448,12 +1435,18 @@ export class TaskSchedulerService
         // The spawn itself failed (e.g. preflight) — the run never entered the
         // registry, so it will never reach the terminal `onRunStatus` release path.
         if (lease) this.employeeAllocator.release(lease);
+        slot();
         throw error;
       }
       if (lease) this.employeeLeases.set(run.runId, lease);
+      this.fuseSlots.set(run.runId, slot);
       return { runRef: run.runId, target, classification };
     }
     if (target.kind === "workflow") {
+      // Check (never reserve) fuse room + a free employee for the first agent stage:
+      // the workflow runner takes lease + fuse slot per stage itself.
+      const wait = await this.workflowStaffing(target.id);
+      if (wait) return { queued: true, target, classification, ...wait };
       // Task 8: attachments are intentionally NOT passed to a workflow target in v1 —
       // the workflow runner has no attachments seam yet (documented deferred gap).
       // The task's text is the workflow's first-phase input (its `consumes`, e.g. a
@@ -1471,8 +1464,9 @@ export class TaskSchedulerService
     }
     if (target.kind === "goal") {
       // Phase 10: route a goal-targeted task through the outer-loop runner. It flows
-      // the projectId/taskId through so the goal counts toward concurrency + writes
-      // its outcome back exactly like any other dispatched run.
+      // the projectId/taskId through so the goal writes its outcome back exactly like
+      // any other dispatched run. Not fuse-gated: a lifetime slot would deadlock with
+      // the goal's own workflow stages, which take theirs per stage.
       const run = await this.goalRunner.start(
         target.id,
         text,
@@ -1499,55 +1493,88 @@ export class TaskSchedulerService
       });
     }
     // Terminal fallback: the orchestrator session self-delegates to the right
-    // subagent(s) or does the task directly — a task never no-ops. It carries the
-    // projectId too so an orchestrator-dispatched task counts toward concurrency.
-    const run = await this.agentRunner.startOrchestrator(
-      text,
-      paths,
-      title,
-      taskId,
-      matchedTerms,
-      projectId ?? "",
-      runAttachments,
-    );
+    // subagent(s) or does the task directly — a task never no-ops. It holds a fuse
+    // slot (no lease: the orchestrator is no position an employee holds).
+    const slot = this.fuse.tryTake({ projectId });
+    if (!slot) return { queued: true, target, classification };
+    let run: AgentRun;
+    try {
+      run = await this.agentRunner.startOrchestrator(
+        text,
+        paths,
+        title,
+        taskId,
+        matchedTerms,
+        projectId ?? "",
+        runAttachments,
+      );
+    } catch (error) {
+      slot();
+      throw error;
+    }
+    this.fuseSlots.set(run.runId, slot);
     return { runRef: run.runId, target, classification };
   }
 
   /**
-   * D-017: the single-agent-run lease ladder. A department already known (the
-   * task's own classification traced a department verdict) leases from THAT
-   * department first; failing that — or when no department is known at all —
-   * falls back to any department that currently employs the position (picking a
-   * currently-FREE one when one exists, else the first, which then queues FIFO
-   * behind whoever holds it). Returns `undefined` only when the position has no
-   * employee anywhere — the D-017 unleashed fallback ("a described task is always
-   * executed"), never a park (that's workflows only).
+   * D-017: the single-agent-run lease ladder, non-blocking. A department already known
+   * (the task's own classification traced a department verdict) leases from THAT
+   * department first; failing that — or when no department is known at all — any
+   * department that currently employs the position. `busy` when every such employee is
+   * leased (the task queues with `waitingForStaff`); `unleashed` only when the
+   * position has no employee anywhere — D-017's "a described task is always executed"
+   * fallback, never a park (that's workflows only).
    */
-  private async acquireEmployeeForDispatch(
+  private async tryLeaseForDispatch(
     agentId: string,
     department: DepartmentId | undefined,
-  ): Promise<EmployeeLease | undefined> {
+    projectId: string | undefined,
+  ): Promise<StaffLease> {
+    const ctx = { rank: { projectId } };
     if (department) {
       try {
-        return await this.employeeAllocator.acquire(department, agentId);
+        const lease = await this.employeeAllocator.tryAcquire(department, agentId, ctx);
+        return lease ? { lease } : { busy: { department, agentId } };
       } catch (error) {
         if (!(error instanceof NoEmployeeError)) throw error;
-        // Fall through — the task's own department has no one in this position;
-        // try any department that does.
+        // Fall through — try any department that employs the position.
       }
     }
     const candidates = await this.employeesStore.listActiveByPositionAnyDepartment(agentId);
-    const busy = this.employeeAllocator.busy();
-    const pick = candidates.find((e) => !busy.has(e.id)) ?? candidates[0];
-    if (!pick) return undefined;
-    return this.employeeAllocator.acquire(pick.department, agentId);
+    if (candidates.length === 0) return { unleashed: true };
+    for (const dept of new Set(candidates.map((e) => e.department))) {
+      try {
+        const lease = await this.employeeAllocator.tryAcquire(dept, agentId, ctx);
+        if (lease) return { lease };
+      } catch (error) {
+        if (!(error instanceof NoEmployeeError)) throw error;
+      }
+    }
+    return { busy: { department: candidates[0]!.department, agentId } };
+  }
+
+  /**
+   * Can a workflow start right now? `null` = yes; otherwise why it must queue: no fuse
+   * room (`{}`), or its first agent stage's position fully busy (`waitingForStaff`).
+   * A probe only — nothing is taken; the workflow runner leases per stage.
+   */
+  private async workflowStaffing(
+    workflowId: string,
+  ): Promise<{ waitingForStaff?: StaffWait } | null> {
+    if (!this.fuse.hasRoom()) return {};
+    const workflows = await this.workflowsStore.list().catch((): Workflow[] => []);
+    const workflow = workflows.find((w) => w.id === workflowId);
+    const agentId = workflow?.phases.find((ph) => ph.agent)?.agent;
+    if (!workflow?.department || !agentId) return null;
+    const free = await this.employeeAllocator.canStaffNow(workflow.department, agentId);
+    return free ? null : { waitingForStaff: { department: workflow.department, agentId } };
   }
 
   /** Persist an immediately-dispatched task + its activity (the create path). */
   private async persistDispatched(
     taskId: string,
     input: CreateTaskInputResolved,
-    dispatched: { runRef: string; target: TaskTarget; classification?: ClassificationTrace },
+    dispatched: Dispatched,
     projectId: string | undefined,
     now: number,
   ): Promise<ScheduledTask> {
@@ -1642,12 +1669,16 @@ export class TaskSchedulerService
   }
 
   private recordQueued(task: ScheduledTask, project: Project | null): void {
+    const wait = task.waitingForStaff;
+    const reason = wait
+      ? `waiting for a free ${wait.agentId} in ${wait.department}`
+      : "waiting for a machine-fuse slot";
     void this.activity.record({
       kind: "task-queued",
-      summary: `task queued — waiting for a slot${project ? ` in ${project.name}` : ""}`,
+      summary: `task queued — ${reason}${project ? ` (${project.name})` : ""}`,
       refs: { taskId: task.id, ...(task.projectId ? { projectId: task.projectId } : {}) },
     });
-    this.log.info("task queued", { id: task.id, projectId: task.projectId });
+    this.log.info("task queued", { id: task.id, projectId: task.projectId, waitingForStaff: wait });
   }
 
   /**

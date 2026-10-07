@@ -55,23 +55,15 @@ export const SystemConfigSchema = z
      */
     ttsVoice: z.string().min(1).nullable().default(null),
     /**
-     * System-wide ceiling on concurrently running tasks (125c) — checked
-     * alongside a project's own `maxConcurrent` (`ProjectBudget`), never
-     * instead of it. This is THE concurrency knob: "how many things may be
-     * implemented at once". Roadmap auto-pickup deliberately has none of its
-     * own — the gate enqueues and releases everything unblocked, and this cap
-     * is what decides how many of those releases actually run vs. sit
-     * `queued`. A second, roadmap-only cap was tried and removed: two numbers
-     * that both read as "how many at once" are indistinguishable in
-     * `/settings` and can only disagree.
-     *
-     * Defaults to `3` rather than `null`. `null` (uncapped) is still allowed —
-     * clearing the field in `/settings?tab=runtime` restores it — but it is a
-     * poor default now that a single `autoPlay` toggle can release a whole
-     * twenty-task epic at once. Read live (never cached) by
-     * `TaskSchedulerService.atCapacity`.
+     * Machine fuse (staffing-driven capacity, decision 2): the ceiling on concurrently
+     * WORKING agents started by the task system — every single-agent / orchestrator task
+     * run and every workflow agent stage, leased or not. A run waiting for an employee, an
+     * approval or a usage window holds no slot. NOT a "how many tasks at once" knob —
+     * that is decided by headcount per department. Read live (never cached) by
+     * `WorkingAgentsFuse`. Migrated from the removed `maxConcurrentRuns` on read
+     * (`SystemConfigStore`).
      */
-    maxConcurrentRuns: z.number().int().positive().nullable().default(3),
+    maxWorkingAgents: z.number().int().positive().default(3),
     /**
      * Roadmap auto-sync + gate-poll heartbeat (ms, 125h) — each tick re-syncs
      * every project whose roadmap config has `autoSync: true`

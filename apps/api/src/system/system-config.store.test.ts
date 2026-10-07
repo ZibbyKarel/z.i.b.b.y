@@ -38,6 +38,20 @@ describe("SystemConfigStore", () => {
     expect(store.current().limitResumeMax).toBe(3);
   });
 
+  it("migrates a legacy maxConcurrentRuns into the maxWorkingAgents fuse", async () => {
+    await fs.writeFile(file, JSON.stringify({ taskTickMs: 5, maxConcurrentRuns: 7 }));
+    const store = new SystemConfigStore(file);
+    expect(store.current().maxWorkingAgents).toBe(7);
+    expect(store.current().taskTickMs).toBe(5);
+  });
+
+  it("a legacy uncapped maxConcurrentRuns (null) takes the fuse default", async () => {
+    await fs.writeFile(file, JSON.stringify({ maxConcurrentRuns: null, taskTickMs: 5 }));
+    const store = new SystemConfigStore(file);
+    expect(store.current().maxWorkingAgents).toBe(3);
+    expect(store.current().taskTickMs).toBe(5);
+  });
+
   it("falls back to defaults on a garbage file", async () => {
     await fs.writeFile(file, "{ not json");
     const store = new SystemConfigStore(file);
