@@ -78,6 +78,7 @@ describe("AgentsStorageService", () => {
         model: "opus" as const,
         thinking: "high" as const,
         tools: ["read", "write"],
+        plugins: ["/plugins/pinned"],
         category: "writing",
         instructions: "Polish the prose.",
       };
@@ -115,9 +116,7 @@ describe("AgentsStorageService", () => {
       const parsed = matter(raw);
       expect(parsed.data.avatar).toBe("assets/with-uploaded-avatar.png");
 
-      const assetBytes = await fs.readFile(
-        path.join(dir, "assets", "with-uploaded-avatar.png"),
-      );
+      const assetBytes = await fs.readFile(path.join(dir, "assets", "with-uploaded-avatar.png"));
       expect(assetBytes.toString("utf8")).toBe("hello world");
 
       // get() inlines the asset back to the same data URI.
@@ -133,9 +132,7 @@ describe("AgentsStorageService", () => {
       });
       const parsed = matter(await fs.readFile(fileFor(dir, "bundled-avatar"), "utf8"));
       expect(parsed.data.avatar).toBe("/avatars/architect.png");
-      await expect(
-        fs.access(path.join(dir, "assets", "bundled-avatar.png")),
-      ).rejects.toBeTruthy();
+      await expect(fs.access(path.join(dir, "assets", "bundled-avatar.png"))).rejects.toBeTruthy();
     });
 
     it("drops a single out-of-range field instead of discarding the agent", async () => {

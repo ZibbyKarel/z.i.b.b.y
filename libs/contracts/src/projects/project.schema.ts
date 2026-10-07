@@ -248,6 +248,14 @@ export const ProjectSchema = z.object({
    */
   env: z.record(z.string(), z.string()).optional(),
   /**
+   * Claude Code plugin directories this project's runs load (`--plugin-dir`, one per
+   * entry; absolute paths — a relative one resolves against the run's spawn cwd).
+   * Runs spawn with `--setting-sources ""`, so nothing from ~/.claude/plugins loads
+   * ambiently — declare a pinned copy here to get a plugin back. Merged after the
+   * agent's `plugins`.
+   */
+  plugins: z.array(z.string().min(1)).optional(),
+  /**
    * Computed at read time: whether a secrets file exists. Optional (not defaulted)
    * so the many synthetic `Project` literals across the codebase need not set it;
    * the controller always layers the real value onto wire responses.
