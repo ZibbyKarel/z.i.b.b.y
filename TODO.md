@@ -6,13 +6,10 @@
 4. [ ] na githubu musím mít možnost sledovat nejen mentions a přiřazení PRs/Issues mojí osoby ale zároveň i týmů, ve kterém jsem v rámci githubu přiřazen. Držet strop "mine and mentions": jen review-requests na moje týmy a explicitní @org/team zmínky, ne vše, co tým vidí.
 5. [ ] Research skeptik: přidat refutační fázi do research chainu (rnd → knw), která aktivně hledá protiargumenty a slabá místa závěrů. Volitelně (jen webové projekty) QA krok s ui-ux-tester (Playwright), který proklikne user journeys a edge cases a z nálezů založí úkoly.
 6. [ ] Ověřit, že review fáze má qualify: true (verdikt reviewera se čte, ne jen exit code) i v pipelinách nových ZibbyCorp oddělení, nejen v delivery.pipeline.md (původní fix main@549e74b1).
-7. [ ] TopBar: chyba systému musí jít rozbalit a zobrazit její obsah stejně jako fronta "Čeká na mě" (původní StatusPill fix main@cbf1dd36 v novém designu zanikl).
-8. [ ] (odloženo) Inbox do běžícího runu — stdin je ignore (runner-core.ts:397). Soubory v sandboxu, které runner načte na začátku každé fáze: přeprioritizovat nebo zastavit, nikdy neoslabit gate ani zvrátit zamítnutí revize. Dělat až když stop + poznámka + resume reálně nestačí.
-
-9. [ ] přestaly se u projektů zobrazovat loga
-10. [ ] Zrušit nastavení "počet paralelně běžících úloh" — posun úlohy v lifecycle řídí jen dostupnost volného zaměstnance pro další fázi (živá firma), místo stropu pojistka stroje na pracující agenty. Viz [docs/plans/zibbycorp/staffing-driven-capacity.md](docs/plans/zibbycorp/staffing-driven-capacity.md)
-11. [ ] stránka aktivita/běhy sloupeček - stav v tabulce musí vypadat stejně jako na stráce /work/tasks
-12. [ ] v top baru bude ikonka špendlíku, která když na ní kliknu, připne aktuální stránku do panelu rychlého přístupu
-13. [ ] stránka /work/tasks musí ukládat filtry do url a brát z ní defaultní hodnoty při přístupu na stránku
-14. [ ] description přidávání nového tasku - pokud napíšu @Coloring Book celé toto označení pipeline by mělo být tagem místo toho je tag jen první část před mezerou zároveň pokud je označena pipeline nebo konkrétní agent tak input cíle se musí nastavit nasprávnou hodnotu
-15. [ ] zapracuj PR https://github.com/ZibbyKarel/z.i.b.b.y/pull/69 do nového designu. (Jeslti rebase bude stačit nebo to napíšeš znova nechám na tobě). Než se PR zamergovalo tak jsme změnili původního JARVIS-like Zibbyho na ZibbyCorp. Mapování v ZibbyCorp: "@" = zaměstnanec / oddělení, "#" = firma / tým, "/" = skill
+7. [ ] (odloženo) Inbox do běžícího runu — stdin je ignore (runner-core.ts:397). Soubory v sandboxu, které runner načte na začátku každé fáze: přeprioritizovat nebo zastavit, nikdy neoslabit gate ani zvrátit zamítnutí revize. Dělat až když stop + poznámka + resume reálně nestačí.
+8. [ ] Zrušit nastavení "počet paralelně běžících úloh" — posun úlohy v lifecycle řídí jen dostupnost volného zaměstnance pro další fázi (živá firma), místo stropu pojistka stroje na pracující agenty. Viz [docs/plans/zibbycorp/staffing-driven-capacity.md](docs/plans/zibbycorp/staffing-driven-capacity.md)
+9. [ ] stránka aktivita/běhy sloupeček - stav v tabulce musí vypadat stejně jako na stráce /work/tasks
+10. [ ] v top baru bude ikonka špendlíku, která když na ní kliknu, připne aktuální stránku do panelu rychlého přístupu
+11. [ ] stránka /work/tasks musí ukládat filtry do url a brát z ní defaultní hodnoty při přístupu na stránku
+12. [ ] description přidávání nového tasku - pokud napíšu @Coloring Book celé toto označení pipeline by mělo být tagem místo toho je tag jen první část před mezerou zároveň pokud je označena pipeline nebo konkrétní agent tak input cíle se musí nastavit nasprávnou hodnotu
+13. [ ] zapracuj PR https://github.com/ZibbyKarel/z.i.b.b.y/pull/69 do nového designu. (Jeslti rebase bude stačit nebo to napíšeš znova nechám na tobě). Než se PR zamergovalo tak jsme změnili původního JARVIS-like Zibbyho na ZibbyCorp. Mapování v ZibbyCorp: "@" = zaměstnanec / oddělení / workflow, "#" = firma / tým / projekt, "/" = skill
