@@ -29,6 +29,7 @@ import { ApprovalsService } from "../approvals/approvals.service";
 import { SignalBusService } from "../automations/signal-bus.service";
 import { ArtifactsStorageService, artifactRecordId } from "../artifacts/artifacts.storage.service";
 import { EmployeeAllocator, type EmployeeLease } from "../employees/employee-allocator";
+import { type FuseSlot, WorkingAgentsFuse } from "../employees/working-agents-fuse";
 import { NoEmployeeError } from "../employees/employees.errors";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
 import { GroundingService } from "../memory/grounding.service";
@@ -182,6 +183,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly artifacts: ArtifactsStorageService,
     private readonly projectLocal: ProjectLocalService,
     private readonly employees: EmployeeAllocator,
+    private readonly fuse: WorkingAgentsFuse,
     // Research deliveries are emitted as `research-artifact` signals (a leaf module).
     private readonly signalBus: SignalBusService,
   ) {
@@ -1008,20 +1010,41 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       // D-015: an `agent` phase's dispatch is an employee (a hired instance of
       // `phase.agent`, the position), leased from the workflow's OWN department.
       // Acquiring here — before the sandbox exists — means a `no-employee` park
-      // never leaves a half-built stage folder behind. `acquire` itself blocks
-      // (FIFO, queued behind any earlier stage/run waiting on the SAME
-      // department+position) while every matching employee is busy — the "queued"
-      // wait the design calls for; `run.currentStage` above already reflects the
-      // phase the run is waiting to dispatch. A `verify` phase spawns no agent, so
-      // it never acquires (`phase.agent` is absent for it).
+      // never leaves a half-built stage folder behind. When every matching employee
+      // is busy the stage waits RANKED (progress → project round-robin → FIFO)
+      // behind other waiters on the same department+position; the run stays
+      // `running` with `waitingForStaff` on disk for the whole wait (decision 7).
+      // The lease comes BEFORE the machine-fuse slot taken right before `runStage`,
+      // so a staff wait holds nothing. A `verify` phase spawns no agent, so it never
+      // acquires (`phase.agent` is absent for it).
+      const rank = {
+        progress: this.progressOf(run, phaseIds, phase.id),
+        projectId: project?.id,
+      };
       let lease: EmployeeLease | undefined;
       if (phase.agent && workflow.department) {
         try {
-          lease = await this.employees.acquire(workflow.department, phase.agent, {
-            runId: run.workflowRunId,
-          });
+          const ctx = { runId: run.workflowRunId, rank };
+          lease =
+            (await this.employees.tryAcquire(workflow.department, phase.agent, ctx)) ?? undefined;
+          if (!lease) {
+            run.waitingForStaff = {
+              department: workflow.department,
+              agentId: phase.agent,
+              since: new Date().toISOString(),
+            };
+            await this.writeAggregate(run);
+            lease = await this.employees.acquire(workflow.department, phase.agent, ctx);
+            run.waitingForStaff = undefined;
+            await this.writeAggregate(run);
+          }
         } catch (error) {
-          if (!(error instanceof NoEmployeeError)) throw error;
+          if (!(error instanceof NoEmployeeError)) {
+            // A throw after the grant (the clear-and-write) must not leak the lease.
+            if (lease) this.employees.release(lease);
+            throw error;
+          }
+          run.waitingForStaff = undefined;
           run.status = "parked";
           run.parkedReason = "no-employee";
           run.currentStage = phase.id;
@@ -1045,7 +1068,14 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       // gap in the numbering, never a clash.
       const stageDir = settled?.dir ?? this.stageDirName(run.stageRuns.length + 1, phase.id);
       const stageCwd = path.join(run.cwd, stageDir);
-      if (!settled) await this.prepareStageDir(run, stageCwd, handoffSource, phase);
+      if (!settled) {
+        try {
+          await this.prepareStageDir(run, stageCwd, handoffSource, phase);
+        } catch (error) {
+          if (lease) this.employees.release(lease); // not yet under runStage's finally
+          throw error;
+        }
+      }
 
       this.log.info("workflow phase starting", {
         phase: phase.id,
@@ -1074,7 +1104,11 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         if (!refused) return;
         stageRun = refused;
       } else {
+        // Machine fuse (decision 2): a slot per spawned agent process, taken after the
+        // lease (a fuse wait briefly holds the employee) and released after it.
+        let slot: FuseSlot | undefined;
         try {
+          if (phase.agent) slot = await this.fuse.take(rank);
           stageRun = await this.runStage(
             run,
             phase,
@@ -1088,8 +1122,9 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         } finally {
           // Released on EVERY terminal path (done/error/interrupted/paused-limit) —
           // `runStage` only returns once `waitForStage` sees one of those, so the
-          // lease never outlives the dispatch it was acquired for.
+          // lease never outlives the dispatch it was acquired for. Lease first, then slot.
           if (lease) this.employees.release(lease);
+          slot?.();
         }
       }
       // The stage has reached a terminal/paused state and (when terminal) is about
@@ -2004,6 +2039,18 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     await this.writeAggregate(run);
   }
 
+  /**
+   * Grant-ordering progress (decision 5): the furthest phase this run ever reached,
+   * over the phase count — a loop-back (review → koder) keeps its reached progress.
+   */
+  private progressOf(run: WorkflowRun, phaseIds: readonly string[], phaseId: string): number {
+    const reached = Math.max(
+      phaseIds.indexOf(phaseId),
+      ...run.stageRuns.map((s) => phaseIds.indexOf(s.phaseId)),
+    );
+    return (reached + 1) / phaseIds.length;
+  }
+
   /** Rewrite `<run cwd>/PROGRESS.md` from the aggregate (pure {@link renderProgress}). */
   private async writeProgress(run: WorkflowRun, phaseIds: readonly string[]): Promise<void> {
     await fs
@@ -2755,6 +2802,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
           currentStage: null,
           parkedReason: undefined,
           parked: undefined,
+          waitingForStaff: undefined,
         };
         await this.writeAggregate(run);
       }

@@ -5,6 +5,8 @@ import type { Workflow, WorkflowRun } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResumableRunner } from "../approvals/approvals.service";
 import { DuplicateNoteError } from "../memory/vault.service";
+import { WorkingAgentsFuse } from "../employees/working-agents-fuse";
+import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { WorkflowRunnerService } from "./workflow-runner.service";
 
 /**
@@ -99,6 +101,8 @@ async function makeService(
     // `department`, so `drive()` never calls `acquire` — present only to keep
     // the positional constructor aligned.
     { acquire: vi.fn(), release: vi.fn(), isBusy: vi.fn(), busy: vi.fn(() => new Map()) } as never,
+    // Machine fuse (staffing-driven capacity): a real one, effectively uncapped.
+    new WorkingAgentsFuse(fakeSystemConfigStore()),
     signalBus as never,
   );
   (service as unknown as { core: { init: () => void; shutdown: () => void } }).core = {

@@ -11,7 +11,10 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResumableRunner } from "../approvals/approvals.service";
 import { ProjectLocalUnresolvedError } from "../projects/projects.errors";
+import { NoEmployeeError } from "../employees/employees.errors";
 import { RunNotFoundError } from "../runner/runner-core";
+import { WorkingAgentsFuse } from "../employees/working-agents-fuse";
+import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { WorkflowRunnerService } from "./workflow-runner.service";
 
 /** Minimal logger double matching the LoggerService surface the service uses. */
@@ -143,6 +146,8 @@ async function makeHarness(dir: string): Promise<Harness> {
     // `department`, so `drive()` never calls `acquire` — present only to keep
     // the positional constructor aligned.
     { acquire: vi.fn(), release: vi.fn(), isBusy: vi.fn(), busy: vi.fn(() => new Map()) } as never,
+    // Machine fuse (staffing-driven capacity): a real one, effectively uncapped.
+    new WorkingAgentsFuse(fakeSystemConfigStore()),
     // A3: fake ModuleRef — HandoffService is resolved lazily (not constructor-
     // injected, see workflow-runner.service.ts's doc comment), so the double here
     // is a ModuleRef whose `.get()` hands back a fake HandoffService. This
@@ -727,6 +732,12 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
         status: "running",
         currentStage: "build",
         currentStageRunId: stageRunId,
+        // A run that was waiting for staff when the API died must not keep the marker.
+        waitingForStaff: {
+          department: "engineering",
+          agentId: "writer",
+          since: new Date().toISOString(),
+        },
         stageRuns: [],
         startedAt: new Date().toISOString(),
         cwd: root,
@@ -742,6 +753,7 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
     const run = h.service.get(ghostId);
     expect(run.status).toBe("failed");
     expect(run.currentStage).toBeNull();
+    expect(run.waitingForStaff).toBeUndefined();
   });
 
   it("reconstruct fails a running aggregate with no currentStageRunId (nothing to check, safe default)", async () => {
@@ -1498,6 +1510,161 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
         const artifact = await h.service.readLatestArtifact(WORKFLOW_RUN_ID);
         expect(artifact).toBeNull();
       });
+    });
+  });
+
+  describe("staffing-driven capacity — ranked staff wait + machine fuse", () => {
+    const staffedWorkflow = {
+      id: "release",
+      department: "engineering",
+      phases: [
+        {
+          id: "build",
+          type: "agent",
+          agent: "writer",
+          consumes: "in.md",
+          produces: "out.md",
+          model: "sonnet",
+          thinking: "medium",
+        },
+      ],
+      instructions: "ship",
+    };
+    const lease = {
+      employeeId: "emp-1",
+      employeeName: "Ada",
+      department: "engineering",
+      agentId: "writer",
+    };
+
+    const drive = (run: WorkflowRun) =>
+      (h.service as unknown as { drive(r: WorkflowRun, p: unknown): Promise<void> }).drive(
+        run,
+        staffedWorkflow,
+      );
+    const swap = (field: "employees" | "fuse", value: unknown) => {
+      (h.service as unknown as Record<string, unknown>)[field] = value;
+    };
+    const readAggregate = async (run: WorkflowRun): Promise<WorkflowRun> =>
+      JSON.parse(await fs.readFile(path.join(run.cwd, "run.json"), "utf8")) as WorkflowRun;
+
+    beforeEach(() => {
+      h.core.start.mockImplementation(async (spec: { ownerId: string }) => ({
+        runId: `${spec.ownerId}_0`,
+      }));
+      h.core.get.mockImplementation((runId: string) => ({ runId, status: "done" }));
+    });
+
+    it("writes waitingForStaff while the position is busy and clears it once leased", async () => {
+      const run = h.runs.get(WORKFLOW_RUN_ID);
+      if (!run) throw new Error("missing run");
+      let grant: (l: typeof lease) => void = () => {};
+      const employees = {
+        tryAcquire: vi.fn(async () => null),
+        acquire: vi.fn(() => new Promise<typeof lease>((resolve) => (grant = resolve))),
+        release: vi.fn(),
+      };
+      swap("employees", employees);
+
+      const driving = drive(run);
+      await vi.waitFor(() => expect(employees.acquire).toHaveBeenCalled());
+      const waiting = await readAggregate(run);
+      expect(waiting.status).toBe("running");
+      expect(waiting.waitingForStaff).toEqual({
+        department: "engineering",
+        agentId: "writer",
+        since: expect.any(String),
+      });
+      expect(employees.acquire).toHaveBeenCalledWith("engineering", "writer", {
+        runId: WORKFLOW_RUN_ID,
+        rank: { progress: 1, projectId: undefined },
+      });
+      expect(h.core.start).not.toHaveBeenCalled();
+
+      grant(lease);
+      await driving;
+      expect((await readAggregate(run)).waitingForStaff).toBeUndefined();
+      expect(h.core.start).toHaveBeenCalledTimes(1);
+      expect(employees.release).toHaveBeenCalledWith(lease);
+    });
+
+    it("parks no-employee and clears waitingForStaff when the position vanishes mid-wait", async () => {
+      const run = h.runs.get(WORKFLOW_RUN_ID);
+      if (!run) throw new Error("missing run");
+      swap("employees", {
+        tryAcquire: vi.fn(async () => null),
+        acquire: vi.fn(async () => {
+          throw new NoEmployeeError("engineering", "writer");
+        }),
+        release: vi.fn(),
+      });
+
+      await drive(run);
+      const onDisk = await readAggregate(run);
+      expect(onDisk.status).toBe("parked");
+      expect(onDisk.parkedReason).toBe("no-employee");
+      expect(onDisk.waitingForStaff).toBeUndefined();
+      expect(h.core.start).not.toHaveBeenCalled();
+    });
+
+    it("releases the lease when preparing the stage folder throws", async () => {
+      const run = h.runs.get(WORKFLOW_RUN_ID);
+      if (!run) throw new Error("missing run");
+      const employees = {
+        tryAcquire: vi.fn(async () => lease),
+        acquire: vi.fn(),
+        release: vi.fn(),
+      };
+      swap("employees", employees);
+      vi.spyOn(
+        h.service as unknown as { prepareStageDir(): Promise<void> },
+        "prepareStageDir",
+      ).mockRejectedValue(new Error("disk full"));
+
+      await expect(drive(run)).rejects.toThrow("disk full");
+      expect(employees.release).toHaveBeenCalledWith(lease);
+    });
+
+    it("progressOf keeps the furthest reached phase across a loop-back", () => {
+      const progressOf = (r: WorkflowRun, ids: string[], id: string) =>
+        (
+          h.service as unknown as {
+            progressOf(r: WorkflowRun, ids: readonly string[], id: string): number;
+          }
+        ).progressOf(r, ids, id);
+      const ids = ["koder", "review", "tester", "docs"];
+      const run = { stageRuns: [] } as unknown as WorkflowRun;
+      expect(progressOf(run, ids, "koder")).toBe(0.25);
+      // Reached tester, looped back to koder: progress stays at tester's 3/4.
+      const looped = {
+        stageRuns: [{ phaseId: "koder" }, { phaseId: "review" }, { phaseId: "tester" }],
+      } as unknown as WorkflowRun;
+      expect(progressOf(looped, ids, "koder")).toBe(0.75);
+    });
+
+    it("waits for a machine-fuse slot before spawning and frees it when the stage ends", async () => {
+      const run = h.runs.get(WORKFLOW_RUN_ID);
+      if (!run) throw new Error("missing run");
+      swap("employees", {
+        tryAcquire: vi.fn(async () => lease),
+        acquire: vi.fn(),
+        release: vi.fn(),
+      });
+      const fuse = new WorkingAgentsFuse(fakeSystemConfigStore({ maxWorkingAgents: 1 }));
+      swap("fuse", fuse);
+      const external = fuse.tryTake();
+      if (!external) throw new Error("fuse should have room");
+
+      const driving = drive(run);
+      await new Promise((r) => setTimeout(r, 20));
+      expect(h.core.start).not.toHaveBeenCalled();
+
+      external(); // the stage is granted the slot...
+      const externalAgain = fuse.take(); // ...so the external holder now queues behind it
+      await driving;
+      expect(h.core.start).toHaveBeenCalledTimes(1);
+      await externalAgain;
+      expect(fuse.inUse()).toBe(1);
     });
   });
 

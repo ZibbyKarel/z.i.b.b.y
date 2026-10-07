@@ -421,14 +421,11 @@ reimplemented. A drain is locked per project (`withPathLock`, key
 in-flight `onMerge`, say) can never both decide to release the same item.
 
 **Concurrency is deliberately NOT this gate's job.** A drain releases every
-unblocked item it finds, however many that is. A roadmap-only cap
-(`maxConcurrentRoadmapRuns`) was built and then removed: "how many roadmap
-items may run at once" and 125c's `maxConcurrentRuns` are the same question
-asked twice, and two such numbers in `/settings?tab=runtime` are
-indistinguishable to the operator and can only disagree. The single ceiling is
-`maxConcurrentRuns` (now defaulting to `3` rather than `null`, precisely
-because one `autoPlay` toggle can release a whole twenty-task epic), enforced
-by `TaskSchedulerService.atCapacity` on the tasks these releases create.
+unblocked item it finds, however many that is. How many actually execute is decided
+downstream by capacity: a released task queues until an employee for its first stage is
+free and the machine fuse (`maxWorkingAgents`) has room — see
+[tasks.md](./tasks.md). (A roadmap-only cap and the system-wide `maxConcurrentRuns` were
+both removed.)
 
 The visible consequence: a released item is `running` the moment its
 `ScheduledTask` exists, even while the scheduler holds that task `queued`. So a
@@ -785,7 +782,7 @@ For an opted-in project, one pass does two things:
 
 - **`playBulk` every unblocked `todo` task.** Everything eligible is picked up at
   once — pickup itself is not rationed. How many of those tasks actually _execute_
-  is `maxConcurrentRuns`' business (see the gate section above): the one ceiling,
+  is capacity's business (see the gate section above): staffing and the machine fuse,
   applied downstream by the scheduler.
   Items already `enqueued`/`running`/`awaiting-merge`/`done` are untouched, and so
   are `failed` ones — auto-restarting a failure is how you get a token-burning loop

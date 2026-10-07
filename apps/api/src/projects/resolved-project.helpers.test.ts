@@ -87,14 +87,13 @@ describe("mergePeople", () => {
 });
 
 describe("mergeBudget", () => {
-  const companyBudget: ProjectBudget = { dailyRuns: 10, weeklyRuns: 50, maxConcurrent: 2 };
+  const companyBudget: ProjectBudget = { dailyRuns: 10, weeklyRuns: 50 };
 
   it("field-level merge: project fields win, unset fields inherit the company default", () => {
     const projectBudget: ProjectBudget = { dailyRuns: 3 };
     expect(mergeBudget(companyBudget, projectBudget)).toEqual({
       dailyRuns: 3,
       weeklyRuns: 50,
-      maxConcurrent: 2,
     });
   });
 
@@ -103,7 +102,6 @@ describe("mergeBudget", () => {
     expect(mergeBudget(companyBudget, projectBudget)).toEqual({
       dailyRuns: 10,
       weeklyRuns: 50,
-      maxConcurrent: 2,
       monthlyCostCapUsd: 100,
     });
   });

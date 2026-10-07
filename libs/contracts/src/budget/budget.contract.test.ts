@@ -53,10 +53,13 @@ describe("GlobalBudgetSchema", () => {
 });
 
 describe("ProjectBudgetSchema", () => {
-  it("accepts positive int run counts + concurrency", () => {
-    expect(
-      ProjectBudgetSchema.safeParse({ dailyRuns: 2, weeklyRuns: 10, maxConcurrent: 1 }).success,
-    ).toBe(true);
+  it("accepts positive int run counts", () => {
+    expect(ProjectBudgetSchema.safeParse({ dailyRuns: 2, weeklyRuns: 10 }).success).toBe(true);
+  });
+
+  it("accepts a legacy maxConcurrent and drops it on read", () => {
+    const parsed = ProjectBudgetSchema.parse({ dailyRuns: 2, maxConcurrent: 1 });
+    expect(JSON.parse(JSON.stringify(parsed))).toEqual({ dailyRuns: 2 });
   });
 
   it("accepts a partial budget (only one axis set)", () => {
@@ -65,7 +68,6 @@ describe("ProjectBudgetSchema", () => {
 
   it("rejects a zero or negative cap", () => {
     expect(ProjectBudgetSchema.safeParse({ dailyRuns: 0 }).success).toBe(false);
-    expect(ProjectBudgetSchema.safeParse({ maxConcurrent: -1 }).success).toBe(false);
   });
 
   it("rejects a non-integer cap", () => {
@@ -128,7 +130,6 @@ describe("BudgetStatusSchema", () => {
           daily: { used: 1, cap: 2 },
           weekly: { used: 3 },
           running: 1,
-          maxConcurrent: 1,
           queued: 1,
           held: 0,
         },

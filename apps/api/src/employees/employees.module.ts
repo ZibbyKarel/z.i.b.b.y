@@ -7,6 +7,7 @@ import { EmployeeNamesController } from "./employee-names.controller";
 import { EmployeesController } from "./employees.controller";
 import { EmployeesService } from "./employees.service";
 import { EMPLOYEES_DIR, EmployeesStorageService } from "./employees.storage.service";
+import { WorkingAgentsFuse } from "./working-agents-fuse";
 
 /** Default employees dir, anchored to `apps/api/data/employees` like agents/skills. */
 export function resolveEmployeesDir(): string {
@@ -24,7 +25,8 @@ export function resolveEmployeeNamesDir(): string {
 }
 
 /**
- * D-015 — employees, the name pool, and the `EmployeeAllocator` broker.
+ * D-015 — employees, the name pool, the `EmployeeAllocator` broker and the
+ * `WorkingAgentsFuse` machine fuse (SystemConfigStore is global — no import).
  * `AgentsModule` is imported so hire/roster reads can resolve a position's
  * display name/category (and validate `agentId` exists on hire). Deliberately a
  * leaf module otherwise: nothing here imports `WorkflowsModule`/`TasksModule`/
@@ -41,8 +43,15 @@ export function resolveEmployeeNamesDir(): string {
     EmployeesStorageService,
     EmployeeNamesStore,
     EmployeeAllocator,
+    WorkingAgentsFuse,
     EmployeesService,
   ],
-  exports: [EmployeesStorageService, EmployeeNamesStore, EmployeeAllocator, EmployeesService],
+  exports: [
+    EmployeesStorageService,
+    EmployeeNamesStore,
+    EmployeeAllocator,
+    WorkingAgentsFuse,
+    EmployeesService,
+  ],
 })
 export class EmployeesModule {}

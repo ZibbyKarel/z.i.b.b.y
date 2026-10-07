@@ -150,11 +150,39 @@ retries/limit-park machinery's own restart posture.
   block each other. Rejects immediately with `NoEmployeeError` when the
   department owns **no** active employee of that position at all — this is a
   park condition, never a queue.
-- `release(lease)` — frees the employee and wakes the longest-waiting queued
-  caller for its key, if any.
+  Waiters are **ranked** (in-memory `GrantQueue`, `grant-order.ts`): progress
+  (furthest stage reached / phases) -> project round-robin -> FIFO; the
+  priority tier is a no-op until tasks carry a priority. Ordering is
+  re-established by re-drive after a restart, not recomputed from disk.
+- `tryAcquire(department, agentId, ctx)` — like `acquire` but never waits:
+  `null` when everyone is busy or a line already exists. Used by the task
+  scheduler's staffing gate for single-agent dispatch (an orchestrator task
+  takes only a fuse slot, no lease).
+- `canStaffNow(department, agentId)` — read-only probe, reserves nothing: would a
+  lease be granted right now? `true` when no employee exists anywhere (the
+  runner parks `no-employee`; the task must not wait for a hire). Used for
+  workflow dispatch, whose runner leases per stage.
+- `release(lease)` — frees the employee and hands them to the best-ranked
+  waiter for the key, if any; then fires `onFreed` listeners.
+- `onFreed(listener)` — "someone is free" subscription (returns an unsubscribe);
+  the task scheduler uses it to drain its staff-waiting queue.
+- `rosterChanged(department, agentId)` — call after a hire / re-activation: hands
+  the new employee to waiters and fires `onFreed`.
 - `isBusy(employeeId)` / `busy()` — the fire-while-leased 409 guard, and a
   snapshot of every held lease (`employeeId -> runId | undefined`) used by
   D-017's any-department fallback to prefer a currently-free candidate.
+
+## `WorkingAgentsFuse` — the machine fuse
+
+`WorkingAgentsFuse` (`apps/api/src/employees/working-agents-fuse.ts`) caps how many
+task-system agents work at once (`maxWorkingAgents` in the system config, read live).
+`tryTake(rank)` / `take(rank)` (ranked wait, same `GrantQueue` order) return a slot
+function whose call releases it (idempotent); `hasRoom()`, `inUse()` and `onFreed()`
+(room exists after a release or a cap raise) mirror the allocator. Counted: single-agent
+/ orchestrator task runs for their whole lifetime (including `awaiting-approval` /
+`paused-limit`) and workflow agent stages, one slot per stage. Not counted: goal-loop
+iterations, chat, channel triage. In-memory — runs surviving an API restart are not
+counted. See [tasks.md](./tasks.md).
 
 ## Wiring: workflow stage dispatch
 

@@ -165,9 +165,7 @@ export type UpdateProjectProfileInput = z.infer<typeof UpdateProjectProfileSchem
 /**
  * Per-engagement budget (Phase 8.1, dollar caps added Phase 12). The unit is
  * **run-count per window** OR **USD per window** — both axes optional and
- * independent, a project may set either, both, or neither. `maxConcurrent` is the
- * parallelism cap (8.2) — at capacity new dispatches QUEUE, they are not rejected.
- * Every field optional (absent = unlimited on that axis); `.strict()` so an unknown
+ * independent, a project may set either, both, or neither. Every field optional (absent = unlimited on that axis); `.strict()` so an unknown
  * key can never smuggle a fifth knob in. Windows are calendar day / ISO week /
  * calendar month in Europe/Prague (the scheduler's cron timezone).
  */
@@ -178,7 +176,15 @@ export const ProjectBudgetSchema = z
     // M7: the north-star's "monthly cap" — same run-count unit as daily/weekly,
     // cut on the Europe/Prague calendar month.
     monthlyRuns: z.number().int().positive().optional(),
-    maxConcurrent: z.number().int().positive().optional(),
+    /**
+     * Removed (staffing-driven capacity): per-engagement concurrency is decided by free
+     * employees + project round-robin now. A legacy value is accepted and DROPPED on read
+     * (the schema stays `.strict()` for every other key) and disappears on the next write.
+     */
+    maxConcurrent: z
+      .unknown()
+      .transform(() => undefined)
+      .optional(),
     /**
      * Phase 12: dollar caps, same windows as the run-count caps above but priced
      * off the accumulated `costUsd` of finished runs (`BudgetLedgerStore`'s `"cost"`

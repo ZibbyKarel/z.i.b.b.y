@@ -359,7 +359,7 @@ describe("project schema", () => {
         id: "alpha",
         name: "Alpha",
         path: "~/Projects/alpha",
-        budget: { dailyRuns: 2, weeklyRuns: 10, maxConcurrent: 1 },
+        budget: { dailyRuns: 2, weeklyRuns: 10 },
       }).success,
     ).toBe(true);
   });

@@ -71,3 +71,13 @@ export function withPathLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
   });
   return run;
 }
+
+/**
+ * Run `fn` with NO lock held — the escape hatch for the CONTRACT above. A listener
+ * that may fire synchronously from inside a held section (e.g. a slot released mid-
+ * drain notifying "room freed") and kicks off fire-and-forget work that locks a key
+ * must start that work here, so it queues behind the holder instead of running inline.
+ */
+export function outsideLocks<T>(fn: () => T): T {
+  return heldKeys.exit(fn);
+}

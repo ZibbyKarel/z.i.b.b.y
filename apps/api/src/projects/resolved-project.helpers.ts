@@ -64,7 +64,7 @@ export function mergePeople(
 /**
  * Field-level budget merge (Phase 68 decision 3): every field the project set wins;
  * every field it left unset inherits the company's default. Not all-or-nothing —
- * a project with only `maxConcurrent` set still inherits the company's cost caps.
+ * a project with only `dailyRuns` set still inherits the company's cost caps.
  * `undefined` + `undefined` → `undefined` (no budget at all, same as today for a
  * company-less project with no budget of its own).
  */

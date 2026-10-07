@@ -445,7 +445,8 @@ export type SchedulePreset = z.infer<typeof SchedulePresetSchema>;
  *
  * Phase 8 adds two pre-dispatch holds for the per-engagement budget guard:
  * `held` (over a budget cap — parked behind a Tier-3 `spend-past-cap` approval)
- * and `queued` (at a project's `maxConcurrent` — FIFO bookkeeping, no approval).
+ * and `queued` (waiting for a free employee for its first stage or a machine-fuse
+ * slot — no approval).
  * Both release into `dispatched` once cleared; both are cancellable.
  */
 export const ScheduledTaskStatusSchema = z.enum([
@@ -640,6 +641,10 @@ export const ScheduledTaskSchema = z.object({
   approvalId: z.string().optional(),
   /** Set once dispatched: the classifier's chosen target. */
   target: StoredTaskTargetSchema,
+  /** Set while `queued` for a free employee of this position (staffing-driven capacity); absent when queued for a fuse slot. */
+  waitingForStaff: z
+    .object({ department: DepartmentIdSchema, agentId: z.string().min(1) })
+    .optional(),
   /**
    * F2c — set once dispatched via the undirected classify path: the switchboard's
    * stage-1 verdict trace (see {@link ClassificationTraceSchema}). Absent for an

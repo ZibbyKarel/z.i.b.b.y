@@ -286,7 +286,7 @@ export class BudgetService {
   }
 
   /**
-   * Top-level runs currently consuming a concurrency slot for `projectId`. Counts
+   * Top-level runs currently in flight for `projectId` (feeds only the readout's `running`). Counts
    * agent runs (running / awaiting-approval / paused-limit) labelled with the project
    * and workflow runs (running / paused-limit) whose `projectPath` is the project's
    * path — workflow STAGE runs live in the workflow runner's own core and never reach
@@ -310,37 +310,6 @@ export class BudgetService {
     for (const run of this.workflowRunner.list()) {
       const active = run.status === "running" || run.status === "paused-limit";
       if (active && run.projectPath === project.path) n += 1;
-    }
-    return n;
-  }
-
-  /**
-   * Top-level runs currently consuming a concurrency slot SYSTEM-WIDE (125c) —
-   * the same two registries and the same status predicates as {@link countRunning},
-   * just without the project resolution or label filter: agent runs (running /
-   * awaiting-approval / paused-limit) and workflow runs (running / paused-limit),
-   * across every project AND every unattributed run.
-   *
-   * D-007: goal runs stay uncounted here too, deliberately — a global counter
-   * that diverged from the per-project one (e.g. by counting goal runs the
-   * project counter ignores) would make the identical workload behave
-   * differently under the two caps, a bug that only shows up under load and is
-   * miserable to diagnose. Consistency with `countRunning` beats completeness;
-   * the resulting under-count while goal runs are in flight is a tracked
-   * follow-up, not a bug to fix here.
-   */
-  async countRunningGlobal(): Promise<number> {
-    let n = 0;
-    for (const run of this.agentRunner.listRunning()) {
-      const active =
-        run.status === "running" ||
-        run.status === "awaiting-approval" ||
-        run.status === "paused-limit";
-      if (active) n += 1;
-    }
-    for (const run of this.workflowRunner.list()) {
-      const active = run.status === "running" || run.status === "paused-limit";
-      if (active) n += 1;
     }
     return n;
   }
@@ -413,7 +382,6 @@ export class BudgetService {
           ...(budget.monthlyCostCapUsd != null ? { capUsd: budget.monthlyCostCapUsd } : {}),
         },
         running,
-        ...(budget.maxConcurrent != null ? { maxConcurrent: budget.maxConcurrent } : {}),
         queued: queuedByProject.get(project.id) ?? 0,
         held: heldByProject.get(project.id) ?? 0,
       });

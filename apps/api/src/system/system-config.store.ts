@@ -7,6 +7,21 @@ import { ensureDir, safeJson, writeFileAtomic } from "../shared/file-storage";
 /** DI token carrying the absolute path of the system config file. */
 export const SYSTEM_CONFIG_FILE = "SYSTEM_CONFIG_FILE";
 
+/**
+ * Staffing-driven capacity: `maxConcurrentRuns` (whole runs at once) was replaced by
+ * the `maxWorkingAgents` machine fuse. The schema is `.strict()`, so a file still
+ * carrying the old key would otherwise fail to parse and drop EVERY knob back to its
+ * default. Same number, new meaning; a legacy `null` (uncapped) takes the default —
+ * the fuse always exists. The file is rewritten in the new shape on the next save.
+ */
+export function migrateLegacySystemConfig(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object" || !("maxConcurrentRuns" in raw)) return raw;
+  const { maxConcurrentRuns, ...rest } = raw as Record<string, unknown>;
+  return typeof maxConcurrentRuns === "number" && !("maxWorkingAgents" in rest)
+    ? { ...rest, maxWorkingAgents: maxConcurrentRuns }
+    : rest;
+}
+
 /** A subscriber notified after the config changes; returns an unsubscribe. */
 export type SystemConfigListener = (config: SystemConfig) => void;
 
@@ -44,7 +59,7 @@ export class SystemConfigStore {
     } catch {
       return SystemConfigSchema.parse({});
     }
-    const parsed = SystemConfigSchema.safeParse(safeJson(raw));
+    const parsed = SystemConfigSchema.safeParse(migrateLegacySystemConfig(safeJson(raw)));
     return parsed.success ? parsed.data : SystemConfigSchema.parse({});
   }
 

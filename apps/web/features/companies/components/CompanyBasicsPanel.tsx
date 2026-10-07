@@ -13,7 +13,6 @@ export interface CompanyBasicsBody {
     dailyRuns?: number;
     weeklyRuns?: number;
     monthlyRuns?: number;
-    maxConcurrent?: number;
     dailyCostCapUsd?: number;
     weeklyCostCapUsd?: number;
     monthlyCostCapUsd?: number;
@@ -49,7 +48,6 @@ type CompanyEditValues = {
   budgetDailyRuns: string;
   budgetWeeklyRuns: string;
   budgetMonthlyRuns: string;
-  budgetMaxConcurrent: string;
   budgetDailyCostCapUsd: string;
   budgetWeeklyCostCapUsd: string;
   budgetMonthlyCostCapUsd: string;
@@ -81,8 +79,6 @@ export function CompanyBasicsPanel({
         company?.budget?.weeklyRuns != null ? String(company.budget.weeklyRuns) : "",
       budgetMonthlyRuns:
         company?.budget?.monthlyRuns != null ? String(company.budget.monthlyRuns) : "",
-      budgetMaxConcurrent:
-        company?.budget?.maxConcurrent != null ? String(company.budget.maxConcurrent) : "",
       budgetDailyCostCapUsd:
         company?.budget?.dailyCostCapUsd != null ? String(company.budget.dailyCostCapUsd) : "",
       budgetWeeklyCostCapUsd:
@@ -94,7 +90,6 @@ export function CompanyBasicsPanel({
       const dailyRuns = toPositiveInt(values.budgetDailyRuns);
       const weeklyRuns = toPositiveInt(values.budgetWeeklyRuns);
       const monthlyRuns = toPositiveInt(values.budgetMonthlyRuns);
-      const maxConcurrent = toPositiveInt(values.budgetMaxConcurrent);
       const dailyCostCapUsd = toPositiveFloat(values.budgetDailyCostCapUsd);
       const weeklyCostCapUsd = toPositiveFloat(values.budgetWeeklyCostCapUsd);
       const monthlyCostCapUsd = toPositiveFloat(values.budgetMonthlyCostCapUsd);
@@ -102,7 +97,6 @@ export function CompanyBasicsPanel({
         dailyRuns != null ||
         weeklyRuns != null ||
         monthlyRuns != null ||
-        maxConcurrent != null ||
         dailyCostCapUsd != null ||
         weeklyCostCapUsd != null ||
         monthlyCostCapUsd != null
@@ -110,7 +104,6 @@ export function CompanyBasicsPanel({
               ...(dailyRuns != null ? { dailyRuns } : {}),
               ...(weeklyRuns != null ? { weeklyRuns } : {}),
               ...(monthlyRuns != null ? { monthlyRuns } : {}),
-              ...(maxConcurrent != null ? { maxConcurrent } : {}),
               ...(dailyCostCapUsd != null ? { dailyCostCapUsd } : {}),
               ...(weeklyCostCapUsd != null ? { weeklyCostCapUsd } : {}),
               ...(monthlyCostCapUsd != null ? { monthlyCostCapUsd } : {}),
@@ -188,12 +181,6 @@ export function CompanyBasicsPanel({
               inputMode="numeric"
               label={t("fields.budgetMonthlyRuns")}
               name="budgetMonthlyRuns"
-              placeholder="—"
-            />
-            <FormTextInput<CompanyEditValues>
-              inputMode="numeric"
-              label={t("fields.budgetMaxConcurrent")}
-              name="budgetMaxConcurrent"
               placeholder="—"
             />
           </Stack>

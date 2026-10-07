@@ -8,6 +8,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AgentRunnerService } from "../src/agents/agent-runner.service";
 import { AppModule } from "../src/app.module";
+import { writeSystemConfig } from "../src/system/system-config.fixture";
 
 const FAKE_CLAUDE = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -31,9 +32,9 @@ const ENV_KEYS = [
 
 /**
  * Phase 8.2 engagement isolation & parallelism, end to end (the roadmap's stress
- * test). Project A caps `maxConcurrent: 1`; firing two tasks at A and one at B in
- * quick succession queues A's second task (no approval), runs B immediately, and
- * drains A's queue the moment A's first run reaches a terminal state. Each run keeps
+ * test). The machine fuse allows 2 working agents (staffing-driven capacity);
+ * firing A1 and B1 fills it, so A2 queues (no approval) and drains the moment A1
+ * reaches a terminal state. Each run keeps
  * its own run dir; the ledger and activity attribute every line to the right project.
  */
 describe("Parallel engagements (e2e)", () => {
@@ -99,6 +100,7 @@ describe("Parallel engagements (e2e)", () => {
     // task is posted (queue trigger), short enough to keep the test snappy.
     process.env.FAKE_CLAUDE_STEPS = "6";
     process.env.FAKE_CLAUDE_DELAY_MS = "90";
+    writeSystemConfig({ maxWorkingAgents: 2 });
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
@@ -118,7 +120,8 @@ describe("Parallel engagements (e2e)", () => {
         id: "alpha",
         name: "Alpha",
         path: dirs.pa,
-        budget: { maxConcurrent: 1 },
+        // A generous cap only so the budget readout carries a row for the project.
+        budget: { dailyRuns: 10 },
       });
     await request(server())
       .post("/api/projects")
@@ -126,7 +129,8 @@ describe("Parallel engagements (e2e)", () => {
         id: "beta",
         name: "Beta",
         path: dirs.pb,
-        budget: { maxConcurrent: 5 },
+        // A generous cap only so the budget readout carries a row for the project.
+        budget: { dailyRuns: 10 },
       });
   });
 
@@ -136,17 +140,23 @@ describe("Parallel engagements (e2e)", () => {
     for (const k of ENV_KEYS) delete process.env[k];
   });
 
-  it("queues A's second task at maxConcurrent, runs B immediately, and drains the queue on terminal", async () => {
-    // A's first task dispatches (occupies A's single slot). POST returns `pending`
-    // (background dispatch) — wait for the record to land before the next create.
+  it("queues a task once the machine fuse is full and drains the queue on terminal", async () => {
+    // A1 and B1 dispatch and fill the fuse of 2. POST returns `pending` (background
+    // dispatch) — wait for each record to land before the next create.
     const a1 = await request(server()).post("/api/tasks").send({ text: "alpha first job" });
     const a1Task = await poll(
       () => taskById(a1.body.task.id as string),
       (t) => t?.status === "dispatched",
     );
     expect(a1Task?.projectId).toBe("alpha");
+    const b1 = await request(server()).post("/api/tasks").send({ text: "beta first job" });
+    const b1Task = await poll(
+      () => taskById(b1.body.task.id as string),
+      (t) => t?.status === "dispatched",
+    );
+    expect(b1Task?.projectId).toBe("beta");
 
-    // A's second task — A is at capacity → queued (FIFO, no approval).
+    // A's second task — the fuse is full → queued (no approval).
     const a2 = await request(server()).post("/api/tasks").send({ text: "alpha second job" });
     const a2Id = a2.body.task.id as string;
     const a2Task = await poll(
@@ -156,18 +166,10 @@ describe("Parallel engagements (e2e)", () => {
     expect(a2Task?.status).toBe("queued");
     expect(a2Task?.projectId).toBe("alpha");
 
-    // B's task runs immediately — a different engagement, its own slot.
-    const b1 = await request(server()).post("/api/tasks").send({ text: "beta first job" });
-    const b1Task = await poll(
-      () => taskById(b1.body.task.id as string),
-      (t) => t?.status === "dispatched",
-    );
-    expect(b1Task?.projectId).toBe("beta");
-
     // The budget readout shows A with one queued task.
     expect((await budgetRow("alpha"))?.queued).toBe(1);
 
-    // A's first run reaches a terminal state → the queue drains → A2 dispatches.
+    // A1 (or B1) reaches a terminal state → the fuse frees → the queue drains → A2 dispatches.
     const drained = await poll(
       () => taskById(a2Id),
       (t) => t?.status === "dispatched",

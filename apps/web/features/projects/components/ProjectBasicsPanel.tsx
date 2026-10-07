@@ -39,7 +39,6 @@ export interface ProjectBasicsBody {
     dailyRuns?: number;
     weeklyRuns?: number;
     monthlyRuns?: number;
-    maxConcurrent?: number;
     /** Phase 12: dollar caps, same windows as the run-count caps above. */
     dailyCostCapUsd?: number;
     weeklyCostCapUsd?: number;
@@ -86,7 +85,6 @@ type ProjectEditValues = {
   budgetDailyRuns: string;
   budgetWeeklyRuns: string;
   budgetMonthlyRuns: string;
-  budgetMaxConcurrent: string;
   budgetDailyCostCapUsd: string;
   budgetWeeklyCostCapUsd: string;
   budgetMonthlyCostCapUsd: string;
@@ -159,8 +157,6 @@ export function ProjectBasicsPanel({
         project?.budget?.weeklyRuns != null ? String(project.budget.weeklyRuns) : "",
       budgetMonthlyRuns:
         project?.budget?.monthlyRuns != null ? String(project.budget.monthlyRuns) : "",
-      budgetMaxConcurrent:
-        project?.budget?.maxConcurrent != null ? String(project.budget.maxConcurrent) : "",
       budgetDailyCostCapUsd:
         project?.budget?.dailyCostCapUsd != null ? String(project.budget.dailyCostCapUsd) : "",
       budgetWeeklyCostCapUsd:
@@ -172,7 +168,6 @@ export function ProjectBasicsPanel({
       const dailyRuns = toPositiveInt(values.budgetDailyRuns);
       const weeklyRuns = toPositiveInt(values.budgetWeeklyRuns);
       const monthlyRuns = toPositiveInt(values.budgetMonthlyRuns);
-      const maxConcurrent = toPositiveInt(values.budgetMaxConcurrent);
       const dailyCostCapUsd = toPositiveFloat(values.budgetDailyCostCapUsd);
       const weeklyCostCapUsd = toPositiveFloat(values.budgetWeeklyCostCapUsd);
       const monthlyCostCapUsd = toPositiveFloat(values.budgetMonthlyCostCapUsd);
@@ -180,7 +175,6 @@ export function ProjectBasicsPanel({
         dailyRuns != null ||
         weeklyRuns != null ||
         monthlyRuns != null ||
-        maxConcurrent != null ||
         dailyCostCapUsd != null ||
         weeklyCostCapUsd != null ||
         monthlyCostCapUsd != null
@@ -188,7 +182,6 @@ export function ProjectBasicsPanel({
               ...(dailyRuns != null ? { dailyRuns } : {}),
               ...(weeklyRuns != null ? { weeklyRuns } : {}),
               ...(monthlyRuns != null ? { monthlyRuns } : {}),
-              ...(maxConcurrent != null ? { maxConcurrent } : {}),
               ...(dailyCostCapUsd != null ? { dailyCostCapUsd } : {}),
               ...(weeklyCostCapUsd != null ? { weeklyCostCapUsd } : {}),
               ...(monthlyCostCapUsd != null ? { monthlyCostCapUsd } : {}),
@@ -351,12 +344,6 @@ export function ProjectBasicsPanel({
               inputMode="numeric"
               label={t("fields.budgetMonthlyRuns")}
               name="budgetMonthlyRuns"
-              placeholder="—"
-            />
-            <FormTextInput<ProjectEditValues>
-              inputMode="numeric"
-              label={t("fields.budgetMaxConcurrent")}
-              name="budgetMaxConcurrent"
               placeholder="—"
             />
           </Stack>

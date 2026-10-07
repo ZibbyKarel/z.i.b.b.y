@@ -15,6 +15,25 @@ import { EntityFileStore, collisionResistantId } from "../shared/file-storage";
 type CreateTaskInputWithAttachments = CreateTaskInput & { attachments?: Attachment[] };
 
 /**
+ * What a `queued` task remembers about its pending dispatch (staffing-driven capacity):
+ * the resolved `target` + `classification` so the next attempt dispatches straight to
+ * it without re-classifying, and `waitingForStaff` when the wait is for an employee.
+ */
+export interface QueuedExtra {
+  target?: TaskTarget;
+  classification?: ClassificationTrace;
+  waitingForStaff?: NonNullable<ScheduledTask["waitingForStaff"]>;
+}
+
+function queuedFields(extra: QueuedExtra): Partial<ScheduledTask> {
+  return {
+    ...(extra.target ? { target: extra.target } : {}),
+    ...(extra.classification ? { classification: extra.classification } : {}),
+    ...(extra.waitingForStaff ? { waitingForStaff: extra.waitingForStaff } : {}),
+  };
+}
+
+/**
  * The provenance field every persisted-shape builder below carries straight from the
  * create input: `source` (O-18, resolved by the caller — `TaskSchedulerService.createTask`
  * — before any of these run).
@@ -234,14 +253,18 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
     return this.updateEntity(id, (existing) => ({ ...existing, classification }));
   }
 
-  /** Persist a task queued behind a project's concurrency cap (Phase 8.2). */
+  /** Persist a task queued for a free employee or a machine-fuse slot (staffing-driven capacity). */
   async createQueued(
     id: string,
     input: CreateTaskInputWithAttachments,
     projectId: string | undefined,
     now: number,
+    extra: QueuedExtra = {},
   ): Promise<ScheduledTask> {
-    const task = this.parkedTask(id, input, "queued", projectId, now);
+    const task = {
+      ...this.parkedTask(id, input, "queued", projectId, now),
+      ...queuedFields(extra),
+    };
     await this.writeEntity(task);
     return task;
   }
@@ -285,23 +308,35 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
    * Deferral is cheap (no spawn, no token), so this is unbounded.
    */
   async markDeferredLimit(id: string, resumeAt: number): Promise<ScheduledTask> {
-    return this.updateEntity(id, (existing) => ({
-      ...existing,
-      status: "scheduled",
-      scheduledAt: resumeAt,
-      deferredReason: "limit",
-      limitDeferrals: (existing.limitDeferrals ?? 0) + 1,
-    }));
+    return this.updateEntity(id, (existing) =>
+      withoutStaffWait({
+        ...existing,
+        status: "scheduled",
+        scheduledAt: resumeAt,
+        deferredReason: "limit",
+        limitDeferrals: (existing.limitDeferrals ?? 0) + 1,
+      }),
+    );
   }
 
   /** Move an existing task to `held` with a reason (the tick fire path). */
   async markHeld(id: string, heldReason: string): Promise<ScheduledTask> {
-    return this.updateEntity(id, (existing) => ({ ...existing, status: "held", heldReason }));
+    return this.updateEntity(id, (existing) =>
+      withoutStaffWait({
+        ...existing,
+        status: "held",
+        heldReason,
+      }),
+    );
   }
 
   /** Move an existing task to `queued` (the tick / release-at-capacity paths). */
-  async markQueued(id: string): Promise<ScheduledTask> {
-    return this.updateEntity(id, (existing) => ({ ...existing, status: "queued" }));
+  async markQueued(id: string, extra: QueuedExtra = {}): Promise<ScheduledTask> {
+    return this.updateEntity(id, (existing) => {
+      const merged: ScheduledTask = { ...existing, status: "queued", ...queuedFields(extra) };
+      if (!extra.waitingForStaff) delete merged.waitingForStaff;
+      return merged;
+    });
   }
 
   /** Stamp the `spend-past-cap` approval onto a held task. */
@@ -420,14 +455,18 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
     /** ZB-04a / O-06 — the dispatched unit's owning department (see `ownerDepartmentOf`). */
     department?: DepartmentId,
   ): Promise<ScheduledTask> {
-    return this.updateEntity(id, (existing) => ({
-      ...existing,
-      status: "dispatched",
-      runRef,
-      target,
-      ...(classification ? { classification } : {}),
-      ...(department ? { department } : {}),
-    }));
+    return this.updateEntity(id, (existing) => {
+      const merged: ScheduledTask = {
+        ...existing,
+        status: "dispatched",
+        runRef,
+        target,
+        ...(classification ? { classification } : {}),
+        ...(department ? { department } : {}),
+      };
+      delete merged.waitingForStaff;
+      return merged;
+    });
   }
 
   /**
@@ -526,4 +565,11 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
   protected invalidId(id: string): Error {
     return new InvalidScheduledTaskIdError(id);
   }
+}
+
+/** A task that leaves `queued` no longer waits for staff (the drain only reads queued tasks). */
+function withoutStaffWait(task: ScheduledTask): ScheduledTask {
+  const next = { ...task };
+  delete next.waitingForStaff;
+  return next;
 }

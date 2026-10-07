@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { withPathLock } from "./file-lock";
+import { outsideLocks, withPathLock } from "./file-lock";
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
@@ -136,5 +136,21 @@ describe("withPathLock", () => {
       });
       expect(log).toEqual(["1", "2", "3"]);
     }, 2000);
+  });
+
+  it("outsideLocks: same-key work started inside a held section queues instead of running inline", async () => {
+    const log: string[] = [];
+    let inner: Promise<void> = Promise.resolve();
+    await withPathLock("k", async () => {
+      inner = outsideLocks(() =>
+        withPathLock("k", async () => {
+          log.push("inner");
+        }),
+      );
+      await tick();
+      log.push("outer:end");
+    });
+    await inner;
+    expect(log).toEqual(["outer:end", "inner"]);
   });
 });
