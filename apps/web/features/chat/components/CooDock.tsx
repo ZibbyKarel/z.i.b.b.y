@@ -6,7 +6,7 @@ import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
-import { CommandLine } from "../../tasks/components/CommandLine/CommandLine";
+import { CommandLine, type ScopeKind } from "../../tasks/components/CommandLine/CommandLine";
 import { useChat } from "../ChatContext";
 import { useCooChat } from "../hooks/useCooChat";
 import { ChatTranscript } from "./ChatTranscript";
@@ -22,6 +22,9 @@ export enum CooDockTestId {
 
 /** Composer auto-grows up to this many lines, then scrolls. */
 const COMPOSER_MAX_ROWS = 4;
+
+/** `#` offers every scope kind the chat send body carries. */
+const CHAT_SCOPE_KINDS: readonly ScopeKind[] = ["project", "team", "company"];
 
 /** The one-line collapsed preview is cut here (the DS also truncates visually). */
 const LATEST_LINE_MAX_CHARS = 160;
@@ -48,14 +51,15 @@ function targetLabel(target: TaskTarget): string {
  *   IN THE COMPOSER (independent of the dock-level target chip above), and the
  *   attach control is back (the same upload hook/drag-and-drop as New task): the
  *   chat send contract now carries `mentions` + `attachmentSetId`, so there's no
- *   longer anything to silently drop.
+ *   longer anything to silently drop. `#` tags a company/team/project and `/`
+ *   picks a skill for the turn (`setScope`/`setSkillId`, one-turn).
  * - **CREATE TASK** on a settled reply → `/work/tasks/new` prefilled with it.
  */
 export function CooDock() {
   const t = useTranslations("chat");
   const router = useRouter();
   const { dockOpen, setDockOpen, dockTarget, setDockTarget, messages, newChat } = useChat();
-  const { stream, thinking, send, setTeamId, voice } = useCooChat();
+  const { stream, thinking, send, setScope, setSkillId, voice } = useCooChat();
 
   const createTask = useCallback(
     (text: string) => {
@@ -116,7 +120,7 @@ export function CooDock() {
     <Stack align="stretch" direction="col" gap="100">
       {voice.active && <VoiceStatusStrip interim={voice.interim} listening={voice.listening} />}
       <CommandLine
-        allowTeamMentions
+        allowSkillMentions
         frameless
         hideLabel
         multipleTargets
@@ -129,10 +133,11 @@ export function CooDock() {
           voice.supported && <VoiceToggleButton active={voice.active} onToggle={voice.toggle} />
         }
         maxRows={COMPOSER_MAX_ROWS}
+        onScopeChange={setScope}
+        onSkillChange={setSkillId}
         onSubmit={(text, _target, submittedAttachments, mentions) =>
           send(text, mentions, submittedAttachments)
         }
-        onTeamChange={setTeamId}
         placeholder={t("composer.placeholder")}
         renderTrailing={({ canSubmit, submit }) => (
           <Button
@@ -145,6 +150,7 @@ export function CooDock() {
             size="sm"
           />
         )}
+        scopeKinds={CHAT_SCOPE_KINDS}
       />
     </Stack>
   );

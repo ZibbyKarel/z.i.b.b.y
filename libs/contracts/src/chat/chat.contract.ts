@@ -1,5 +1,6 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
+import { ErrorSchema } from "../common.schema";
 import {
   ChatTranscriptSchema,
   SendChatMessageBodySchema,
@@ -23,7 +24,7 @@ export const chatContract = c.router(
       method: "POST",
       path: "/chat/messages",
       body: SendChatMessageBodySchema,
-      responses: { 201: SendChatMessageResultSchema },
+      responses: { 201: SendChatMessageResultSchema, 404: ErrorSchema },
       summary: "Append a turn and start a streaming assistant response",
     },
     getTranscript: {

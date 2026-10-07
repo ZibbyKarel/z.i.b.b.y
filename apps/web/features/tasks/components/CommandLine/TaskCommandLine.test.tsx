@@ -256,10 +256,13 @@ describe("TaskCommandLine (Phase 118b task-launch container)", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows the no-teams composer hint — Task 9b: the chrome hint must not claim a mention source this path doesn't offer", () => {
+  it("shows the @ + # projects + files composer hint — never the / skills trigger this path doesn't offer", () => {
     render(<TaskCommandLine />);
-    expect(screen.getByText(/hledá agenty, workflow a oddělení ·/)).toBeInTheDocument();
-    expect(screen.queryByText(/a týmy/)).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "@ zaměstnanci, oddělení, workflow · # projekty · přetáhni soubor, nebo použij sponku",
+      ),
+    ).toBeInTheDocument();
   });
 
   it('omits teamId entirely — not "", not null — when no team is picked', async () => {
@@ -288,6 +291,27 @@ describe("TaskCommandLine (Phase 118b task-launch container)", () => {
     await user.type(screen.getByTestId(CommandLineTestId.Input), "zkontroluj zálohy");
     await user.click(screen.getByTestId(DropDownButtonTestId.Primary));
     expect(createTask.mock.calls[0]?.[0].body.paths).toContain("/Users/zibby/Projects/alpha");
+  });
+
+  it("# lists projects only and picking one sets the per-task project; / opens no menu", async () => {
+    const onProjectChange = vi.fn();
+    const user = userEvent.setup();
+    render(<TaskCommandLine onProjectChange={onProjectChange} />);
+    const input = screen.getByTestId(CommandLineTestId.Input);
+
+    await user.type(input, "/");
+    expect(screen.queryByTestId(CommandLineTestId.MentionMenu)).not.toBeInTheDocument();
+    await user.clear(input);
+
+    await user.type(input, "#");
+    expect(
+      screen.getByTestId(`${CommandLineTestId.MentionItem}-project-alpha`),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId(`${CommandLineTestId.MentionItem}-team-devrel`),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-project-alpha`));
+    expect(onProjectChange).toHaveBeenCalledWith("alpha");
   });
 
   it("keeps the run control disabled for a loop whose form is still incomplete", () => {

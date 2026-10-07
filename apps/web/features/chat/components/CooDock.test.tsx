@@ -31,7 +31,19 @@ const uploadMutateAsync = vi
 vi.mock("../../tasks/mutations/useUploadTaskAttachmentsMutation", () => ({
   useUploadTaskAttachmentsMutation: () => ({ mutateAsync: uploadMutateAsync, isPending: false }),
 }));
-vi.mock("../../teams", () => ({ useTeamsQuery: () => ({ data: [] }) }));
+vi.mock("../../teams", () => ({
+  useTeamsQuery: () => ({ data: [{ id: "devrel", name: "DevRel" }] }),
+}));
+vi.mock("../../companies", () => ({
+  useCompaniesQuery: () => ({ data: [{ id: "acme", name: "Acme Corp" }] }),
+}));
+vi.mock("../../projects", () => ({
+  useProjectsQuery: () => ({ data: [{ id: "zibby", name: "Zibby Web" }] }),
+}));
+vi.mock("../../skills", () => ({
+  useSkillsQuery: () => ({ data: [{ id: "tdd", name: "Test Driven", glyph: "spark" }] }),
+}));
+vi.mock("../../employees", () => ({ useEmployeesQuery: () => ({ data: [] }) }));
 vi.mock("../../system", () => ({ useSystemConfigQuery: () => ({ data: undefined }) }));
 
 const transcriptState: {
@@ -145,6 +157,39 @@ describe("CooDock (ZB-12)", () => {
       mentions?: Array<{ kind: string; id: string }>;
     };
     expect(body.mentions).toEqual([expect.objectContaining({ kind: "department", id: "dev" })]);
+  });
+
+  it("# tags a team/project/company and / a skill onto the send body — one turn only", async () => {
+    renderDock();
+    const user = userEvent.setup();
+    const input = screen.getByTestId(CommandLineTestId.Input);
+    for (const [trigger, item] of [
+      ["#", "team-devrel"],
+      ["#", "project-zibby"],
+      ["#", "company-acme"],
+      ["/", "skill-tdd"],
+    ] as const) {
+      await user.type(input, trigger);
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-${item}`));
+    }
+    await user.type(input, "go");
+    await user.click(screen.getByTestId(CooDockTestId.Send));
+    expect(sendMutate).toHaveBeenCalledTimes(1);
+    expect(sendMutate.mock.calls[0]?.[0]?.body).toEqual(
+      expect.objectContaining({
+        teamId: "devrel",
+        projectId: "zibby",
+        companyId: "acme",
+        skillId: "tdd",
+      }),
+    );
+
+    await typeAndSend("again");
+    expect(sendMutate).toHaveBeenCalledTimes(2);
+    const second = sendMutate.mock.calls[1]?.[0]?.body as Record<string, unknown>;
+    for (const key of ["teamId", "projectId", "companyId", "skillId"]) {
+      expect(second).not.toHaveProperty(key);
+    }
   });
 
   it("forwards the uploaded attachmentSetId (D-020)", async () => {

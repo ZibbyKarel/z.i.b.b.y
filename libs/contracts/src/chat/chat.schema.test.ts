@@ -204,3 +204,25 @@ describe("D-020 — chat mentions + attachments", () => {
     });
   });
 });
+
+describe("SendChatMessageBodySchema — # and / tags (TODO 13)", () => {
+  it("accepts skillId, projectId and companyId", () => {
+    const parsed = SendChatMessageBodySchema.parse({
+      text: "hi",
+      skillId: "plan-orchestrate",
+      projectId: "shoptet",
+      companyId: "acme",
+      teamId: "devrel",
+    });
+    expect(parsed).toMatchObject({
+      skillId: "plan-orchestrate",
+      projectId: "shoptet",
+      companyId: "acme",
+    });
+  });
+  it.each(["skillId", "projectId", "companyId"])("rejects an unsafe %s", (key) => {
+    expect(SendChatMessageBodySchema.safeParse({ text: "hi", [key]: "../etc" }).success).toBe(
+      false,
+    );
+  });
+});

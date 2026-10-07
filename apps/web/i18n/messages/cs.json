@@ -222,8 +222,17 @@
       "dropHint": "Pustit sem — přidá se jako @soubor do textu",
       "chrome": {
         "label": "Zadej směr · přirozeným jazykem",
-        "hint": "@ hledá agenty, workflow, oddělení a týmy · přetáhni soubor, nebo použij sponku",
-        "hintNoTeams": "@ hledá agenty, workflow a oddělení · přetáhni soubor, nebo použij sponku"
+        "hintParts": {
+          "at": "@ zaměstnanci, oddělení, workflow",
+          "hash": "# {kinds}",
+          "slash": "/ skilly",
+          "files": "přetáhni soubor, nebo použij sponku"
+        },
+        "scopeKind": {
+          "company": "firmy",
+          "team": "týmy",
+          "project": "projekty"
+        }
       },
       "ack": {
         "kind": {
@@ -1833,7 +1842,7 @@
       "send": "Odeslat"
     },
     "mention": {
-      "ariaLabel": "Vyhledat agenta nebo workflow k oslovení",
+      "ariaLabel": "Návrhy k označení",
       "empty": "Nic nenalezeno",
       "removeAria": "Odebrat {name}",
       "sections": {

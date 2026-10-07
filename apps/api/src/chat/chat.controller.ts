@@ -2,6 +2,10 @@ import { Controller, type MessageEvent, Query, Sse } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { chatContract } from "@zibby/contracts";
 import { type Observable, filter, map } from "rxjs";
+import { CompanyNotFoundError } from "../companies/companies.errors";
+import { ProjectNotFoundError } from "../projects/projects.errors";
+import { InvalidSkillIdError, SkillNotFoundError } from "../skills/skills.errors";
+import { TeamNotFoundError } from "../teams/teams.errors";
 import { ChatEventsService } from "./chat-events.service";
 import { ChatSessionService } from "./chat-session.service";
 import { ChatTranscriptStore } from "./chat-transcript.store";
@@ -24,10 +28,23 @@ export class ChatController {
   @TsRestHandler(chatContract)
   handler() {
     return tsRestHandler(chatContract, {
-      sendMessage: async ({ body }) => ({
-        status: 201,
-        body: await this.session.sendMessage(body),
-      }),
+      sendMessage: async ({ body }) => {
+        try {
+          return { status: 201 as const, body: await this.session.sendMessage(body) };
+        } catch (error) {
+          // TODO 13: an unknown #project / #company / #team / /skill tag is a 404, not a 500.
+          if (
+            error instanceof SkillNotFoundError ||
+            error instanceof InvalidSkillIdError ||
+            error instanceof ProjectNotFoundError ||
+            error instanceof CompanyNotFoundError ||
+            error instanceof TeamNotFoundError
+          ) {
+            return { status: 404 as const, body: { message: error.message } };
+          }
+          throw error;
+        }
+      },
       getTranscript: async ({ query }) => {
         // No explicit id → ensure (create if absent) the single active conversation,
         // so the response always carries a real conversationId. The chat overlay opens
