@@ -265,4 +265,20 @@ describe("EmployeeAllocator", () => {
     allocator.release(await waiting);
     expect(await allocator.canStaffNow("dev", "koder")).toBe(true);
   });
+
+  it("rosterChanged fires onFreed when a hire leaves someone free (scheduler-queued tasks drain)", async () => {
+    await store.create(employee("e1", "koder", "dev"));
+    const held = await allocator.acquire("dev", "koder");
+    const waiting = allocator.acquire("dev", "koder"); // an allocator waiter takes the 1st hire
+    let freed = 0;
+    allocator.onFreed(() => freed++);
+    await store.create(employee("e2", "koder", "dev"));
+    await allocator.rosterChanged("dev", "koder");
+    await expect(waiting).resolves.toMatchObject({ employeeId: "e2" });
+    expect(freed).toBe(0); // everyone leased — nothing to announce
+    await store.create(employee("e3", "koder", "dev"));
+    await allocator.rosterChanged("dev", "koder"); // no waiter at all
+    expect(freed).toBe(1);
+    allocator.release(held);
+  });
 });

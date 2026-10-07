@@ -10,10 +10,15 @@ export type FuseSlot = () => void;
  * at most `systemConfig.maxWorkingAgents` agents started by the task system work at
  * once — a single-agent / orchestrator task run holds a slot for its lifetime, a
  * workflow agent stage holds one per stage. Goal-loop iterations, chat and
- * channel-triage agents are not task work and are not counted. A run waiting for an
- * employee, an approval or a usage window holds no slot. Waiters are granted in the
- * shared {@link GrantQueue} order; the cap is read live, so a raised cap admits
- * waiters immediately.
+ * channel-triage agents are not task work and are not counted. A queued task holds no
+ * slot; a single-agent / orchestrator run holds its slot until a terminal status,
+ * including `awaiting-approval` / `paused-limit`. Waiters are granted in the shared
+ * {@link GrantQueue} order; the cap is read live, so a raised cap admits waiters
+ * immediately.
+ *
+ * ponytail: in-memory count — a run that survives an API restart is not counted until
+ * it ends, so the fuse can briefly over-admit after a reboot; rebuild `held` from the
+ * runners' live registries at boot if that ever matters.
  */
 @Injectable()
 export class WorkingAgentsFuse implements OnModuleDestroy {

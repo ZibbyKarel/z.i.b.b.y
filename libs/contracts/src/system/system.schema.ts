@@ -57,8 +57,10 @@ export const SystemConfigSchema = z
     /**
      * Machine fuse (staffing-driven capacity, decision 2): the ceiling on concurrently
      * WORKING agents started by the task system — every single-agent / orchestrator task
-     * run and every workflow agent stage, leased or not. A run waiting for an employee, an
-     * approval or a usage window holds no slot. NOT a "how many tasks at once" knob —
+     * run and every workflow agent stage, leased or not. A queued task (waiting for an
+     * employee or a slot) holds none; a single-agent / orchestrator run holds its slot
+     * until a terminal status, including `awaiting-approval` / `paused-limit`. In-memory:
+     * a run that survives an API restart is not counted until it ends. NOT a "how many tasks at once" knob —
      * that is decided by headcount per department. Read live (never cached) by
      * `WorkingAgentsFuse`. Migrated from the removed `maxConcurrentRuns` on read
      * (`SystemConfigStore`).

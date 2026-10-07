@@ -308,18 +308,26 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
    * Deferral is cheap (no spawn, no token), so this is unbounded.
    */
   async markDeferredLimit(id: string, resumeAt: number): Promise<ScheduledTask> {
-    return this.updateEntity(id, (existing) => ({
-      ...existing,
-      status: "scheduled",
-      scheduledAt: resumeAt,
-      deferredReason: "limit",
-      limitDeferrals: (existing.limitDeferrals ?? 0) + 1,
-    }));
+    return this.updateEntity(id, (existing) =>
+      withoutStaffWait({
+        ...existing,
+        status: "scheduled",
+        scheduledAt: resumeAt,
+        deferredReason: "limit",
+        limitDeferrals: (existing.limitDeferrals ?? 0) + 1,
+      }),
+    );
   }
 
   /** Move an existing task to `held` with a reason (the tick fire path). */
   async markHeld(id: string, heldReason: string): Promise<ScheduledTask> {
-    return this.updateEntity(id, (existing) => ({ ...existing, status: "held", heldReason }));
+    return this.updateEntity(id, (existing) =>
+      withoutStaffWait({
+        ...existing,
+        status: "held",
+        heldReason,
+      }),
+    );
   }
 
   /** Move an existing task to `queued` (the tick / release-at-capacity paths). */
@@ -557,4 +565,11 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
   protected invalidId(id: string): Error {
     return new InvalidScheduledTaskIdError(id);
   }
+}
+
+/** A task that leaves `queued` no longer waits for staff (the drain only reads queued tasks). */
+function withoutStaffWait(task: ScheduledTask): ScheduledTask {
+  const next = { ...task };
+  delete next.waitingForStaff;
+  return next;
 }

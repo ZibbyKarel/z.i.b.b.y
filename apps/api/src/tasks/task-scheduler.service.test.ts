@@ -2368,4 +2368,35 @@ describe("staffing-driven capacity", () => {
     expect(agentRunner.start.mock.calls[0]).toHaveLength(10); // no employee argument
     expect(fuse.inUse()).toBe(1);
   });
+
+  it("(f) a run already terminal when start() resolves releases its slot + lease at once", async () => {
+    employees = [hire("e1")];
+    makeService(1);
+    // The fast-failing child emitted `error` during start()'s sidecar await — before
+    // the scheduler had recorded anything for the terminal handler to release.
+    agentRunner.start.mockResolvedValueOnce(agentRun({ runId: "koder_fast", status: "error" }));
+    agentRunner.get.mockReturnValueOnce(agentRun({ runId: "koder_fast", status: "error" }));
+    const result = await service.createTask({ text: "do A", title: "A" });
+    expect(result.outcome).toBe("dispatched");
+    expect(fuse.inUse()).toBe(0);
+    expect(allocator.isBusy("e1")).toBe(false);
+  });
+
+  it("(g) one free employee, two queued workflows with the same first stage: one drain dispatches one", async () => {
+    employees = [hire("e1")];
+    makeService();
+    const held = await allocator.tryAcquire("dev", "koder");
+    const create = () =>
+      service.createTask({ text: "ship it", title: "Ship" }, undefined, undefined, RELEASE);
+    const a = await create();
+    const b = await create();
+    if (a.outcome !== "scheduled" || b.outcome !== "scheduled") throw new Error("expected queued");
+
+    allocator.release(held!); // onFreed → one drain pass
+    await vi.waitFor(() => expect(workflowRunner.start).toHaveBeenCalledTimes(1));
+    await new Promise((r) => setTimeout(r, 20)); // let the pass finish
+    expect(workflowRunner.start).toHaveBeenCalledTimes(1);
+    const statuses = [(await storage.get(a.task.id)).status, (await storage.get(b.task.id)).status];
+    expect(statuses.sort()).toEqual(["dispatched", "queued"]);
+  });
 });

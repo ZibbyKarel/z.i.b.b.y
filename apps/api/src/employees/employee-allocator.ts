@@ -156,15 +156,18 @@ export class EmployeeAllocator {
     for (const listener of this.freedListeners) listener();
   }
 
-  /** A hire (or re-activation) may have made someone free — hand them to waiters. */
+  /**
+   * A hire (or re-activation) may have made someone free — hand them to waiters, then
+   * fire `onFreed` if someone is still free (the task scheduler's staff-waiting queue
+   * is not an allocator waiter, so it only learns of the hire this way).
+   */
   async rosterChanged(department: DepartmentId, agentId: string): Promise<void> {
     // Through the admission gate, so an in-flight acquire has decided (taken or enqueued) first.
     await this.serialized(async () => {
       const queue = this.queues.get(keyOf(department, agentId));
-      if (!queue || queue.size === 0) return;
       const roster = await this.employees.listActiveByPosition(department, agentId);
       for (const e of roster) {
-        if (queue.size === 0) break;
+        if (!queue || queue.size === 0) break;
         if (this.leased.has(e.id)) continue;
         const next = queue.shift()!;
         this.leased.set(e.id, next.ctx.runId);
@@ -175,6 +178,9 @@ export class EmployeeAllocator {
           agentId,
           runId: next.ctx.runId,
         });
+      }
+      if (roster.some((e) => !this.leased.has(e.id))) {
+        for (const listener of this.freedListeners) listener();
       }
     });
   }

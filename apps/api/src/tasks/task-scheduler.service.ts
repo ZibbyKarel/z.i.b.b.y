@@ -190,6 +190,8 @@ export class TaskSchedulerService
    * goal's own workflow stages); workflow stages take theirs in the workflow runner.
    */
   private readonly fuseSlots = new Map<string, FuseSlot>();
+  /** A drain is queued behind `scheduler:drain` but not started — see {@link requestDrain}. */
+  private drainRequested = false;
 
   constructor(
     private readonly storage: ScheduledTasksStorageService,
@@ -727,6 +729,9 @@ export class TaskSchedulerService
       });
     }
     void this.sweepOrphanAttachmentSets(now.getTime());
+    // Safety net: a missed release event (or a drain pass that skipped a workflow)
+    // never strands a queued task for longer than one heartbeat.
+    this.requestDrain();
     return fired;
   }
 
@@ -1221,6 +1226,10 @@ export class TaskSchedulerService
    * it inline (file-lock.ts CONTRACT).
    */
   private requestDrain(): void {
+    // Coalesce: one drain already queued (not yet started) will see whatever this
+    // request would have — a run end fires lease-release, fuse-release and terminal.
+    if (this.drainRequested) return;
+    this.drainRequested = true;
     outsideLocks(() => void this.drainQueues());
   }
 
@@ -1239,6 +1248,7 @@ export class TaskSchedulerService
     // twice (a TOCTOU double-dispatch). The lock makes each drain see the prior
     // drain's markDispatched, so a queued task is dispatched exactly once.
     return withPathLock("scheduler:drain", async () => {
+      this.drainRequested = false; // started: a request from here on queues another pass
       const queued = (await this.storage.list().catch((): ScheduledTask[] => []))
         .filter((t) => t.status === "queued")
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
@@ -1250,6 +1260,11 @@ export class TaskSchedulerService
           return { task, turn };
         })
         .sort((a, b) => a.turn - b.turn || a.task.createdAt.localeCompare(b.task.createdAt));
+      // A workflow probe reserves nothing (the runner leases per stage later), so two
+      // queued workflows with the same first stage would both pass it in one pass.
+      // ponytail: one workflow per first-stage position per pass, even when several
+      // employees are free; the rest wait for the next drain (any release / tick).
+      const handedOut = new Set<string>();
       for (const { task } of ordered) {
         if (!this.fuse.hasRoom()) return; // nothing can start anywhere right now
         // Re-read: a concurrent cancel may have moved it on already.
@@ -1259,6 +1274,10 @@ export class TaskSchedulerService
         if (wait && !(await this.employeeAllocator.canStaffNow(wait.department, wait.agentId))) {
           continue;
         }
+        const stage =
+          fresh.target?.kind === "workflow" ? await this.firstStage(fresh.target.id) : null;
+        const stageKey = stage && `${stage.department}::${stage.agentId}`;
+        if (stageKey && handedOut.has(stageKey)) continue;
         const project = fresh.projectId
           ? await this.projects.get(fresh.projectId).catch((): Project | null => null)
           : null;
@@ -1266,13 +1285,14 @@ export class TaskSchedulerService
         // global `scheduler:drain` sweep lock — different keys, ordinary nesting — so
         // a drain's dispatch is serialized against a concurrent `attemptCreate` or
         // `releaseHeld` for the same project, not just against other drains.
-        await this.trace.run({ traceId: randomUUID() }, () =>
+        const result = await this.trace.run({ traceId: randomUUID() }, () =>
           this.withCapacityLock(fresh.projectId, () =>
             this.attemptDispatch(fresh, project, Date.now(), {
               skipBudget: this.budgetApproved.has(fresh.id),
             }),
           ),
         );
+        if (stageKey && result === "dispatched") handedOut.add(stageKey);
       }
     });
   }
@@ -1438,8 +1458,7 @@ export class TaskSchedulerService
         slot();
         throw error;
       }
-      if (lease) this.employeeLeases.set(run.runId, lease);
-      this.fuseSlots.set(run.runId, slot);
+      this.holdUntilTerminal(run, slot, lease);
       return { runRef: run.runId, target, classification };
     }
     if (target.kind === "workflow") {
@@ -1512,8 +1531,30 @@ export class TaskSchedulerService
       slot();
       throw error;
     }
-    this.fuseSlots.set(run.runId, slot);
+    this.holdUntilTerminal(run, slot);
     return { runRef: run.runId, target, classification };
+  }
+
+  /**
+   * Record a started run's fuse slot (+ lease) for release on its terminal status —
+   * unless the run ALREADY ended: a fast-failing child can emit its terminal status
+   * while `start()` is still awaiting (RunnerCore's sidecar write), so the
+   * `onRunStatus` release found nothing. Then release both now instead of leaking them.
+   */
+  private holdUntilTerminal(run: AgentRun, slot: FuseSlot, lease?: EmployeeLease): void {
+    let status = run.status;
+    try {
+      status = this.agentRunner.get(run.runId).status; // the live registry status
+    } catch {
+      // Not in the registry (already evicted) — the returned snapshot is all we have.
+    }
+    if (TERMINAL_AGENT.has(status)) {
+      if (lease) this.employeeAllocator.release(lease);
+      slot();
+      return;
+    }
+    if (lease) this.employeeLeases.set(run.runId, lease);
+    this.fuseSlots.set(run.runId, slot);
   }
 
   /**
@@ -1562,12 +1603,18 @@ export class TaskSchedulerService
     workflowId: string,
   ): Promise<{ waitingForStaff?: StaffWait } | null> {
     if (!this.fuse.hasRoom()) return {};
+    const stage = await this.firstStage(workflowId);
+    if (!stage) return null;
+    const free = await this.employeeAllocator.canStaffNow(stage.department, stage.agentId);
+    return free ? null : { waitingForStaff: stage };
+  }
+
+  /** A workflow's first agent stage as `(department, position)`, or null when it has none. */
+  private async firstStage(workflowId: string): Promise<StaffWait | null> {
     const workflows = await this.workflowsStore.list().catch((): Workflow[] => []);
     const workflow = workflows.find((w) => w.id === workflowId);
     const agentId = workflow?.phases.find((ph) => ph.agent)?.agent;
-    if (!workflow?.department || !agentId) return null;
-    const free = await this.employeeAllocator.canStaffNow(workflow.department, agentId);
-    return free ? null : { waitingForStaff: { department: workflow.department, agentId } };
+    return workflow?.department && agentId ? { department: workflow.department, agentId } : null;
   }
 
   /** Persist an immediately-dispatched task + its activity (the create path). */
