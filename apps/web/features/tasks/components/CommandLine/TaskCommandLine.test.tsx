@@ -256,10 +256,11 @@ describe("TaskCommandLine (Phase 118b task-launch container)", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows the no-teams composer hint — Task 9b: the chrome hint must not claim a mention source this path doesn't offer", () => {
+  it("shows only the @ + files composer hint — the chrome hint must not claim a trigger this path doesn't offer", () => {
     render(<TaskCommandLine />);
-    expect(screen.getByText(/hledá agenty, workflow a oddělení ·/)).toBeInTheDocument();
-    expect(screen.queryByText(/a týmy/)).not.toBeInTheDocument();
+    expect(
+      screen.getByText("@ zaměstnanci, oddělení, workflow · přetáhni soubor, nebo použij sponku"),
+    ).toBeInTheDocument();
   });
 
   it('omits teamId entirely — not "", not null — when no team is picked', async () => {

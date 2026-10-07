@@ -222,8 +222,17 @@
       "dropHint": "Drop here — added as an @file in the text",
       "chrome": {
         "label": "Say what you need · plain language",
-        "hint": "@ searches agents, workflows, departments and teams · drag a file, or use the paperclip",
-        "hintNoTeams": "@ searches agents, workflows and departments · drag a file, or use the paperclip"
+        "hintParts": {
+          "at": "@ employees, departments, workflows",
+          "hash": "# {kinds}",
+          "slash": "/ skills",
+          "files": "drag a file, or use the paperclip"
+        },
+        "scopeKind": {
+          "company": "companies",
+          "team": "teams",
+          "project": "projects"
+        }
       },
       "ack": {
         "kind": {
@@ -1833,7 +1842,7 @@
       "send": "Send"
     },
     "mention": {
-      "ariaLabel": "Search agents and workflows to mention",
+      "ariaLabel": "Mention suggestions",
       "empty": "Nothing found",
       "removeAria": "Remove {name}",
       "sections": {

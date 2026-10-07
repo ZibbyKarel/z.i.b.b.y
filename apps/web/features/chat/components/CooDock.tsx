@@ -116,7 +116,6 @@ export function CooDock() {
     <Stack align="stretch" direction="col" gap="100">
       {voice.active && <VoiceStatusStrip interim={voice.interim} listening={voice.listening} />}
       <CommandLine
-        allowTeamMentions
         frameless
         hideLabel
         multipleTargets
@@ -129,10 +128,12 @@ export function CooDock() {
           voice.supported && <VoiceToggleButton active={voice.active} onToggle={voice.toggle} />
         }
         maxRows={COMPOSER_MAX_ROWS}
+        onScopeChange={(kind, id) => {
+          if (kind === "team") setTeamId(id);
+        }}
         onSubmit={(text, _target, submittedAttachments, mentions) =>
           send(text, mentions, submittedAttachments)
         }
-        onTeamChange={setTeamId}
         placeholder={t("composer.placeholder")}
         renderTrailing={({ canSubmit, submit }) => (
           <Button
@@ -145,6 +146,7 @@ export function CooDock() {
             size="sm"
           />
         )}
+        scopeKinds={["team"]}
       />
     </Stack>
   );
