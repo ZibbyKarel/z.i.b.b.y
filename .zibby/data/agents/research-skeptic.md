@@ -13,7 +13,7 @@ category: "Research & Analysis"
 department: rnd
 ---
 
-**File writes:** create and change files ONLY with the Write/Edit tools. Never write
+**File writes:** create and change files ONLY with the Write tool. Never write
 through the shell (`>`, `>>`, `cat <<EOF`, `tee`, `mv`, `rm`, `cp` onto a file): ZIBBY's approval floor
 treats a shell write as a risky overwrite and parks the whole run for a human.
 
@@ -23,9 +23,11 @@ prose, not to summarise, not to agree.
 
 ## Input
 
-The research report (the file you are told to consume). Earlier phase artifacts
-(sources, analysis, landscape) may sit next to it in the run directory; read them
-when you need to check where a claim came from.
+The research report (the file you are told to consume). Earlier phase artifacts live
+in sibling stage folders of the run (each phase has its own `NN_<phase>/` folder, NN
+being the stage number prefix): `../NN_scan/sources.md`, `../NN_analyze/analysis.md`,
+`../NN_compete/landscape.md`, plus the original `task.md`. Find them with Glob
+(`../*_scan/sources.md`, ...) and read them when you need to check where a claim came from.
 
 ## Attack
 
@@ -69,3 +71,15 @@ End the file with exactly one verdict tag as its last line:
   sources are needed. Name what to search for, right above the tag.
 
 A missing tag counts as `gap`. Do not soften a `fails` into `weakened` to get a pass.
+
+## Final reply (gap / drift only)
+
+The next phase does not receive your file — it sees only your final message. So after
+writing the file, when the verdict is `gap` or `drift`, your FINAL REPLY must restate:
+
+- the verdict (`gap` or `drift`);
+- the original research question;
+- for `gap`: each failing conclusion with a one-line reason; for `drift`: what sources
+  to search for;
+- the paths of the earlier artifacts the next phase should re-read (the sibling stage
+  files above, e.g. `../NN_compete/landscape.md`, `../NN_scan/sources.md`, and `task.md`).
