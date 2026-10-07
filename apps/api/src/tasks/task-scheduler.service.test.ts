@@ -189,12 +189,6 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         throw new Error("no project");
       },
     };
-    // Phase 70: no company in any of these tests — the resolver degrades to the
-    // project's own raw budget, so this fake just echoes `project.budget` through,
-    // matching TaskSchedulerService's pre-Phase-70 direct-access behavior exactly.
-    const fakeResolved = {
-      resolveBudget: async (p: { budget?: unknown }) => p.budget,
-    };
     fakeBudget = {
       check: vi.fn(async () => ({ ok: true }) as BudgetCheck),
       recordDispatch: async () => {},
@@ -247,7 +241,6 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       fakeTrace as never,
       activity as never,
       fakeProjects as never,
-      fakeResolved as never,
       fakeBudget as never,
       fakeApprovals as never,
       fakeGates as never,
@@ -488,7 +481,6 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
           throw new Error("no project");
         },
       } as never,
-      { resolveBudget: async () => undefined } as never,
       fakeBudget as never,
       {
         register: vi.fn(),
@@ -1619,7 +1611,6 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
         throw new Error("no project");
       },
     };
-    const fakeResolved = { resolveBudget: async (p: { budget?: unknown }) => p.budget };
     const fakeBudget = {
       check: vi.fn(async () => ({ ok: true }) as BudgetCheck),
       recordDispatch: async () => {},
@@ -1689,7 +1680,6 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
       fakeTrace as never,
       activity as never,
       fakeProjects as never,
-      fakeResolved as never,
       fakeBudget as never,
       fakeApprovals as never,
       fakeGates as never,
@@ -1826,7 +1816,6 @@ describe("Task 3c — project-capacity lock closes the budget check→record rac
         return project;
       },
     };
-    const fakeResolved = { resolveBudget: async (p: { budget?: unknown }) => p.budget };
     const fakeBudget = {
       check: vi.fn(async () => ({ ok: true }) as BudgetCheck),
       recordDispatch: vi.fn(async () => {}),
@@ -1885,7 +1874,6 @@ describe("Task 3c — project-capacity lock closes the budget check→record rac
       fakeTrace as never,
       activity as never,
       fakeProjects as never,
-      fakeResolved as never,
       fakeBudget as never,
       fakeApprovals as never,
       fakeGates as never,
@@ -2253,7 +2241,6 @@ describe("staffing-driven capacity", () => {
       fakeTrace as never,
       { record: vi.fn(async () => {}) } as never,
       fakeProjects as never,
-      { resolveBudget: async () => undefined } as never,
       {
         check: vi.fn(async () => ({ ok: true }) as BudgetCheck),
         recordDispatch: vi.fn(async () => {}),

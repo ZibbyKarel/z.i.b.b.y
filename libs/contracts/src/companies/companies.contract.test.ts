@@ -54,7 +54,7 @@ describe("company schema", () => {
         { id: "jane-doe", name: "Jane Doe", role: "CTO", vip: true },
         { name: "No Id Yet", role: "PM" },
       ],
-      budget: { dailyRuns: 5, maxConcurrent: 2 },
+      budget: { dailyRuns: 5 },
     };
     expect(CompanySchema.parse(input)).toEqual(input);
   });

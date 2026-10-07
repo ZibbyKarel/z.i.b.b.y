@@ -62,7 +62,6 @@ export const ProjectBudgetStatusSchema = z.object({
   monthlyCost: CostWindowUsageSchema.optional(),
   /** Top-level runs currently in flight for this project. */
   running: z.number().int().nonnegative(),
-  maxConcurrent: z.number().int().positive().optional(),
   /** Tasks waiting for a concurrency slot. */
   queued: z.number().int().nonnegative(),
   /** Tasks held over a budget cap, awaiting a spend-past-cap approval. */

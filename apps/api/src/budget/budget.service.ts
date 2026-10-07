@@ -286,7 +286,7 @@ export class BudgetService {
   }
 
   /**
-   * Top-level runs currently consuming a concurrency slot for `projectId`. Counts
+   * Top-level runs currently in flight for `projectId` (feeds only the readout's `running`). Counts
    * agent runs (running / awaiting-approval / paused-limit) labelled with the project
    * and workflow runs (running / paused-limit) whose `projectPath` is the project's
    * path — workflow STAGE runs live in the workflow runner's own core and never reach
@@ -382,7 +382,6 @@ export class BudgetService {
           ...(budget.monthlyCostCapUsd != null ? { capUsd: budget.monthlyCostCapUsd } : {}),
         },
         running,
-        ...(budget.maxConcurrent != null ? { maxConcurrent: budget.maxConcurrent } : {}),
         queued: queuedByProject.get(project.id) ?? 0,
         held: heldByProject.get(project.id) ?? 0,
       });

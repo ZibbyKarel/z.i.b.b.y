@@ -46,7 +46,6 @@ import { WorkflowRunnerService } from "../workflows/workflow-runner.service";
 import { WorkflowsStorageService } from "../workflows/workflows.storage.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { matchProject } from "../projects/project-matcher";
-import { ResolvedProjectService } from "../projects/resolved-project.service";
 import { outsideLocks, withPathLock } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { normalizeSummary } from "../shared/text/normalize-summary";
@@ -211,7 +210,6 @@ export class TaskSchedulerService
     private readonly trace: TraceContextService,
     private readonly activity: ActivityLogService,
     private readonly projects: ProjectsStorageService,
-    private readonly resolved: ResolvedProjectService,
     private readonly budget: BudgetService,
     private readonly approvals: ApprovalsService,
     private readonly gates: GateEvaluatorService,

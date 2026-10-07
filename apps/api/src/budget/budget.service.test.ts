@@ -374,7 +374,7 @@ describe("BudgetService.countRunning", () => {
 
   it("counts running agent runs + running workflow runs for the project", async () => {
     const svc = build({
-      project: project({ maxConcurrent: 2 }),
+      project: project({}),
       agentRuns: [agent({ runId: "a1" }), agent({ runId: "a2", status: "done" })],
       workflowRuns: [workflow({ workflowRunId: "p1" })],
     });
@@ -383,7 +383,7 @@ describe("BudgetService.countRunning", () => {
 
   it("excludes runs labelled with a different project", async () => {
     const svc = build({
-      project: project({ maxConcurrent: 2 }),
+      project: project({}),
       agentRuns: [agent({ project: "beta" })],
       workflowRuns: [workflow({ projectPath: "/work/beta" })],
     });
@@ -392,7 +392,7 @@ describe("BudgetService.countRunning", () => {
 
   it("counts an awaiting-approval agent run as occupying a slot", async () => {
     const svc = build({
-      project: project({ maxConcurrent: 1 }),
+      project: project({}),
       agentRuns: [agent({ status: "awaiting-approval" })],
     });
     expect(await svc.countRunning("alpha")).toBe(1);
@@ -400,7 +400,7 @@ describe("BudgetService.countRunning", () => {
 
   it("counts a paused-limit run as still occupying a slot", async () => {
     const svc = build({
-      project: project({ maxConcurrent: 1 }),
+      project: project({}),
       agentRuns: [agent({ status: "paused-limit" })],
     });
     expect(await svc.countRunning("alpha")).toBe(1);
