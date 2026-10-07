@@ -242,6 +242,64 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       expect(input).toHaveValue("");
       expect(onTargetChange).toHaveBeenLastCalledWith(undefined);
     });
+
+    it("a typed (not picked) known @Name resolves the target; deleting it clears it", () => {
+      fx.data.workflows = [{ id: "coloring-book", name: "Coloring Book", department: "dev" }];
+      const onTargetChange = vi.fn();
+      render(<CommandLine onSubmit={vi.fn()} onTargetChange={onTargetChange} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+
+      fireEvent.change(input, { target: { value: "run @Coloring Book now" } });
+      expect(onTargetChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ kind: "workflow", id: "coloring-book", name: "Coloring Book" }),
+      );
+
+      fireEvent.change(input, { target: { value: "run now" } });
+      expect(onTargetChange).toHaveBeenLastCalledWith(undefined);
+    });
+
+    it("a typed @Name resolves to the LONGEST known name, upgrading a shorter prefix", () => {
+      fx.data.workflows = [
+        { id: "coloring", name: "Coloring", department: "dev" },
+        { id: "coloring-book", name: "Coloring Book", department: "dev" },
+      ];
+      const onTargetChange = vi.fn();
+      render(<CommandLine onSubmit={vi.fn()} onTargetChange={onTargetChange} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+
+      fireEvent.change(input, { target: { value: "@Coloring" } });
+      expect(onTargetChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ kind: "workflow", id: "coloring" }),
+      );
+      fireEvent.change(input, { target: { value: "@Coloring Book" } });
+      expect(onTargetChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ kind: "workflow", id: "coloring-book", name: "Coloring Book" }),
+      );
+    });
+
+    it("a typed @Name only resolves at a word boundary — an email-like a@Name never does", () => {
+      const onTargetChange = vi.fn();
+      render(<CommandLine onSubmit={vi.fn()} onTargetChange={onTargetChange} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+
+      fireEvent.change(input, { target: { value: "me@Builder now" } });
+
+      expect(onTargetChange).not.toHaveBeenCalled();
+    });
+
+    it("a typed unrelated @Name never replaces a picked target", async () => {
+      const onTargetChange = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine onSubmit={vi.fn()} onTargetChange={onTargetChange} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "@Bui");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-builder`));
+      onTargetChange.mockClear();
+
+      fireEvent.change(input, { target: { value: "@Builder and @Delivery" } });
+
+      expect(onTargetChange).not.toHaveBeenCalled();
+    });
   });
 
   describe("Phase 91 — department @-mentions (roster-only, explicit target)", () => {

@@ -347,9 +347,12 @@ export function mentionRanges(
 function hasMentionFor(text: string, trigger: Trigger, name: string): boolean {
   // A picked name may contain spaces ("Coloring Book"), so match the literal
   // `<trigger>name` followed by a non-name char rather than cutting at whitespace.
+  // The trigger itself must open the text or follow whitespace (as in
+  // `TRIGGER_START_RE`), so an email-like `me@Builder` never counts.
   const needle = `${trigger}${name}`.toLowerCase();
   const hay = text.toLowerCase();
   for (let i = hay.indexOf(needle); i !== -1; i = hay.indexOf(needle, i + 1)) {
+    if (i > 0 && !/\s/.test(hay.charAt(i - 1))) continue;
     if (!NAME_CHAR_RE.test(hay.charAt(i + needle.length))) return true;
   }
   return false;
@@ -781,9 +784,30 @@ export function CommandLine({
     // target once its mention is deleted.
     if (multipleTargets) {
       setMentionTargets((prev) => prev.filter((t) => hasMentionFor(nextValue, "@", t.name)));
-    } else if (target && !hasMentionFor(nextValue, "@", target.name)) {
-      setTarget(undefined);
-      onTargetChange?.(undefined);
+    } else {
+      // A known `@Name` TYPED in full (not picked) resolves the target too — the
+      // longest matching name wins. It is adopted only with no surviving target, or
+      // as a longer extension of it ("@Coloring" → "@Coloring Book"), so a picked
+      // target is never swapped for an unrelated typed name.
+      const kept = target && hasMentionFor(nextValue, "@", target.name) ? target : undefined;
+      const typed = atCandidates
+        .flat()
+        .filter((r) => hasMentionFor(nextValue, "@", r.name))
+        .reduce<MentionResult | undefined>(
+          (best, r) => (!best || r.name.length > best.name.length ? r : best),
+          undefined,
+        );
+      const adopt =
+        typed &&
+        (!kept ||
+          (typed.name.length > kept.name.length &&
+            typed.name.toLowerCase().startsWith(kept.name.toLowerCase())))
+          ? toPickedTarget(typed)
+          : kept;
+      if (adopt !== target) {
+        setTarget(adopt);
+        onTargetChange?.(adopt);
+      }
     }
     // `#` scope tags and the `/` skill reconcile the SAME way — their token deleted
     // out of the text clears them, independent of whatever happens to `target`.
@@ -858,6 +882,30 @@ export function CommandLine({
     }
   }
 
+  /** An `@` row → its `TaskTarget` (shared by a picked row and a typed `@Name`).
+   *  A per-kind switch (not a generic `{ kind: result.kind, ... }` object) so each
+   *  branch's literal `kind` matches `TaskTarget`'s properly-distributed union —
+   *  see `toApiTarget`'s doc comment in `task.ts` for why a unioned-kind
+   *  construction stops being assignable once there are enough branches. A
+   *  department row's `id` is cast to `DepartmentId`: `MentionResult.id` is a plain
+   *  `string` (shared with agent/workflow rows), but for a `kind: "department"` row
+   *  it always came from `useDepartmentsQuery()`'s own `DepartmentId`-typed id. */
+  function toPickedTarget(result: MentionResult): TaskTarget {
+    return result.kind === "agent"
+      ? { kind: "agent", id: result.id, name: result.name, glyph: result.glyph }
+      : result.kind === "employee"
+        ? // An employee holds a position — it dispatches to that position's agent.
+          { kind: "agent", id: result.agentId, name: result.name, glyph: "bot" }
+        : result.kind === "workflow"
+          ? { kind: "workflow", id: result.id, name: result.name, glyph: result.glyph }
+          : {
+              kind: "department",
+              id: result.id as DepartmentId,
+              name: result.name,
+              glyph: result.glyph,
+            };
+  }
+
   function pickMentionResult(result: MentionResult) {
     if (!mention) return;
     const mentionText = `${mention.trigger}${result.name} `;
@@ -878,27 +926,7 @@ export function CommandLine({
       setSkill({ id: result.id, name: result.name });
       onSkillChange?.(result.id);
     } else {
-      // A per-kind switch (not a generic `{ kind: result.kind, ... }` object) so each
-      // branch's literal `kind` matches `TaskTarget`'s properly-distributed union —
-      // see `toApiTarget`'s doc comment in `task.ts` for why a unioned-kind
-      // construction stops being assignable once there are enough branches. A
-      // department row's `id` is cast to `DepartmentId`: `MentionResult.id` is a plain
-      // `string` (shared with agent/workflow rows), but for a `kind: "department"` row
-      // it always came from `useDepartmentsQuery()`'s own `DepartmentId`-typed id.
-      const picked: TaskTarget =
-        result.kind === "agent"
-          ? { kind: "agent", id: result.id, name: result.name, glyph: result.glyph }
-          : result.kind === "employee"
-            ? // An employee holds a position — it dispatches to that position's agent.
-              { kind: "agent", id: result.agentId, name: result.name, glyph: "bot" }
-            : result.kind === "workflow"
-              ? { kind: "workflow", id: result.id, name: result.name, glyph: result.glyph }
-              : {
-                  kind: "department",
-                  id: result.id as DepartmentId,
-                  name: result.name,
-                  glyph: result.glyph,
-                };
+      const picked = toPickedTarget(result);
       if (multipleTargets) {
         // D-020 — append (deduplicated by kind+id), up to the contract's cap of 8.
         // `picked` is always agent/workflow/department in this branch (the switch
@@ -998,6 +1026,42 @@ export function CommandLine({
     [departments, rosterDepartmentIds],
   );
 
+  // Every `@` row, unfiltered and grouped per kind in display order — the picker
+  // filters it by the in-progress query, `handleChange` resolves a typed `@Name` in it.
+  const atCandidates = useMemo<MentionResult[][]>(() => {
+    const employeeRows: MentionResult[] = employees.map((e) => ({
+      kind: "employee" as const,
+      id: e.id,
+      name: e.name,
+      glyph: "bot" as IconName,
+      agentId: e.agentId,
+    }));
+    const departmentRows: MentionResult[] = rosterDepartments.map((s) => ({
+      kind: "department" as const,
+      id: s.id,
+      name: s.name,
+      glyph: "grid" as IconName,
+      color: s.color,
+    }));
+    const workflowRows: MentionResult[] = workflows.map((p) => ({
+      kind: "workflow" as const,
+      id: p.id,
+      name: p.name,
+      glyph: "flow" as IconName,
+    }));
+    // An agent an active employee holds is already reachable through that employee.
+    const held = new Set(employees.map((e) => e.agentId));
+    const freeAgentRows: MentionResult[] = agents
+      .filter((a) => !held.has(a.id))
+      .map((a) => ({
+        kind: "agent" as const,
+        id: a.id,
+        name: a.name ?? a.id,
+        glyph: (a.glyph as IconName | undefined) ?? "bot",
+      }));
+    return [employeeRows, departmentRows, workflowRows, freeAgentRows];
+  }, [agents, employees, workflows, rosterDepartments]);
+
   const mentionResults = useMemo<MentionResult[]>(() => {
     if (!mention) return [];
     const q = mention.query;
@@ -1020,47 +1084,10 @@ export function CommandLine({
         .map((sk) => ({ kind: "skill" as const, id: sk.id, name: sk.name, glyph: sk.glyph }))
         .slice(0, 50);
     }
-    const agentHits: MentionResult[] = agents
-      .filter((a) => matchesQuery(q, a.name ?? a.id, a.id))
-      .map((a) => ({
-        kind: "agent" as const,
-        id: a.id,
-        name: a.name ?? a.id,
-        glyph: (a.glyph as IconName | undefined) ?? "bot",
-      }));
-    const employeeHits: MentionResult[] = employees
-      .filter((e) => matchesQuery(q, e.name, e.id))
-      .map((e) => ({
-        kind: "employee" as const,
-        id: e.id,
-        name: e.name,
-        glyph: "bot" as IconName,
-        agentId: e.agentId,
-      }));
-    const workflowHits: MentionResult[] = workflows
-      .filter((p) => matchesQuery(q, p.name, p.id))
-      .map((p) => ({
-        kind: "workflow" as const,
-        id: p.id,
-        name: p.name,
-        glyph: "flow" as IconName,
-      }));
-    const departmentHits: MentionResult[] = rosterDepartments
-      .filter((s) => matchesQuery(q, s.name, s.id))
-      .map((s) => ({
-        kind: "department" as const,
-        id: s.id,
-        name: s.name,
-        glyph: "grid" as IconName,
-        color: s.color,
-      }));
-    // An agent an active employee holds is already reachable through that employee.
-    const held = new Set(employees.map((e) => e.agentId));
-    const freeAgentHits = agentHits.filter((a) => !held.has(a.id));
-    return [employeeHits, departmentHits, workflowHits, freeAgentHits]
-      .flatMap((rows) => rows.slice(0, perKind))
+    return atCandidates
+      .flatMap((rows) => rows.filter((r) => matchesQuery(q, r.name, r.id)).slice(0, perKind))
       .slice(0, 50);
-  }, [mention, agents, employees, workflows, rosterDepartments, scopeKinds, scopeSources, skills]);
+  }, [mention, atCandidates, scopeKinds, scopeSources, skills]);
   // Clamp at read time so a result list that shrank between renders never
   // leaves the keyboard highlight out of range.
   const activeMentionIndex =

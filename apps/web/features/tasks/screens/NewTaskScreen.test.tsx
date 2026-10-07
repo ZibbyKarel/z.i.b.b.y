@@ -24,6 +24,18 @@ vi.mock("../../agents/queries/useAgentsQuery", () => ({
   getAgentsQueryKey: () => ["agents"],
 }));
 
+vi.mock("../../workflows", () => ({
+  useWorkflowsQuery: () => ({
+    // Owned by "dev" so the Development department is @-taggable (roster-only).
+    data: [{ id: "coloring-book", name: "Coloring Book", phases: [], department: "dev" }],
+  }),
+}));
+// The real seed for both the entry select (useDepartmentLookup) and the @ picker.
+vi.mock("../../departments/queries/useDepartmentsQuery", async () => {
+  const { DEPARTMENTS } = await import("@zibby/contracts");
+  return { useDepartmentsQuery: () => ({ data: DEPARTMENTS }) };
+});
+
 const classifyMutate = vi.fn();
 const createMutate = vi.fn();
 vi.mock("../mutations", () => ({
@@ -116,5 +128,98 @@ describe("NewTaskScreen (ZB-04b)", () => {
     const body = createMutate.mock.calls[0]?.[0]?.body as { paths: string[]; target?: unknown };
     expect(body.paths).toContain("/work/zibby");
     expect(body.target).toBeUndefined();
+  });
+
+  it("an @-picked multi-word workflow sets the target select and is sent as the workflow target", async () => {
+    const user = userEvent.setup();
+    render(<NewTaskScreen />);
+    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
+    await user.type(screen.getByTestId(CommandLineTestId.Input), "make one @Color");
+    await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-workflow-coloring-book`));
+    expect(screen.getByTestId(CommandLineTestId.Input)).toHaveValue("make one @Coloring Book ");
+    expect(screen.getByLabelText("Vstup")).toHaveTextContent("Coloring Book");
+    fireEvent.click(screen.getByText("Vytvořit úkol"));
+    expect(createMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({
+          target: expect.objectContaining({
+            kind: "workflow",
+            id: "coloring-book",
+            name: "Coloring Book",
+          }),
+        }),
+      }),
+      expect.anything(),
+    );
+  });
+
+  it("a typed (not picked) @Coloring Book sets the target select and is sent as the workflow target", () => {
+    render(<NewTaskScreen />);
+    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
+    fireEvent.change(screen.getByTestId(CommandLineTestId.Input), {
+      target: { value: "make one @Coloring Book " },
+    });
+    expect(screen.getByLabelText("Vstup")).toHaveTextContent("Coloring Book");
+    fireEvent.click(screen.getByText("Vytvořit úkol"));
+    const body = createMutate.mock.calls[0]?.[0]?.body as { target?: unknown };
+    expect(body.target).toMatchObject({ kind: "workflow", id: "coloring-book" });
+  });
+
+  it("deleting the @-tag reverts the target select to the entry and drops the target", async () => {
+    const user = userEvent.setup();
+    render(<NewTaskScreen />);
+    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
+    await user.type(screen.getByTestId(CommandLineTestId.Input), "go @Kod");
+    await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-koder`));
+    expect(screen.getByLabelText("Vstup")).toHaveTextContent("Kodér");
+    fireEvent.change(screen.getByTestId(CommandLineTestId.Input), { target: { value: "go " } });
+    expect(screen.getByLabelText("Vstup")).toHaveTextContent("COO");
+    fireEvent.click(screen.getByText("Vytvořit úkol"));
+    const body = createMutate.mock.calls[0]?.[0]?.body as { target?: unknown };
+    expect(body.target).toBeUndefined();
+  });
+
+  it("a department @-tag lands the select on that department's existing option", async () => {
+    const user = userEvent.setup();
+    render(<NewTaskScreen />);
+    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
+    await user.type(screen.getByTestId(CommandLineTestId.Input), "go @Devel");
+    await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-department-dev`));
+    expect(screen.getByLabelText("Vstup")).toHaveTextContent("Development");
+    fireEvent.click(screen.getByText("Vytvořit úkol"));
+    const body = createMutate.mock.calls[0]?.[0]?.body as { target?: unknown };
+    expect(body.target).toMatchObject({ kind: "department", id: "dev" });
+  });
+
+  it("deleting an @-tag reverts the select to a manually picked entry, not the COO", async () => {
+    const user = userEvent.setup();
+    render(<NewTaskScreen />);
+    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
+    await user.click(screen.getByLabelText("Vstup"));
+    await user.click(screen.getByRole("option", { name: /dev/i }));
+    expect(screen.getByLabelText("Vstup")).toHaveTextContent("Development");
+
+    await user.type(screen.getByTestId(CommandLineTestId.Input), "go @Kod");
+    await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-koder`));
+    expect(screen.getByLabelText("Vstup")).toHaveTextContent("Kodér");
+
+    fireEvent.change(screen.getByTestId(CommandLineTestId.Input), { target: { value: "go " } });
+    expect(screen.getByLabelText("Vstup")).toHaveTextContent("Development");
+    fireEvent.click(screen.getByText("Vytvořit úkol"));
+    const body = createMutate.mock.calls[0]?.[0]?.body as { target?: unknown };
+    expect(body.target).toMatchObject({ kind: "department", id: "dev" });
+  });
+
+  it("a manual entry pick overrides an active @-tag", async () => {
+    const user = userEvent.setup();
+    render(<NewTaskScreen />);
+    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
+    await user.type(screen.getByTestId(CommandLineTestId.Input), "go @Kod");
+    await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-koder`));
+    await user.click(screen.getByLabelText("Vstup"));
+    await user.click(screen.getByRole("option", { name: /dev/i }));
+    fireEvent.click(screen.getByText("Vytvořit úkol"));
+    const body = createMutate.mock.calls[0]?.[0]?.body as { target?: unknown };
+    expect(body.target).toMatchObject({ kind: "department", id: "dev" });
   });
 });

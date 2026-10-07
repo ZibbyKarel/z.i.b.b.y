@@ -22,7 +22,7 @@ import { CommandLine } from "../components/CommandLine/CommandLine";
 import { TASK_SCOPE_KINDS } from "../components/CommandLine/TaskCommandLine";
 import { TaskAttachments } from "../components/TaskAttachments";
 import { useClassifyTaskMutation, useCreateTaskMutation } from "../mutations";
-import { type TaskTarget, extractPaths, toApiTarget, toClientTarget } from "../task";
+import { type TaskTarget, extractPaths, targetKey, toApiTarget, toClientTarget } from "../task";
 
 const ENTRY_COO = "coo";
 
@@ -47,8 +47,9 @@ export function NewTaskScreen() {
   const [title, setTitle] = useState("");
   const [initialText] = useState(() => searchParams.get("text") ?? "");
   const [text, setText] = useState(initialText);
-  // An `@`-mention picked in the brief is an explicit target — it wins over the
-  // entry select and skips classification, like the dialog's composer.
+  // An `@`-mention in the brief (picked or typed) is an explicit target — it wins
+  // over the entry select until the operator picks an entry manually, and skips
+  // classification, like the dialog's composer.
   const [mentionTarget, setMentionTarget] = useState<TaskTarget | undefined>();
   const [projectId, setProjectId] = useState("");
   const [entry, setEntry] = useState<string>(() =>
@@ -111,6 +112,19 @@ export function NewTaskScreen() {
     );
   }
 
+  // The @-tag IS the target while present — the select mirrors it (a department
+  // tag lands on its existing option; agent/workflow get one injected option) and
+  // falls back to the manual entry once the tag is edited out (like #project).
+  const mentionOption =
+    mentionTarget && mentionTarget.kind !== "department"
+      ? { value: targetKey(mentionTarget), label: mentionTarget.name }
+      : undefined;
+  const entryValue = !mentionTarget
+    ? entry
+    : mentionTarget.kind === "department"
+      ? mentionTarget.id
+      : targetKey(mentionTarget);
+
   return (
     <Container padding={["300", "350"]}>
       <Stack wrap direction="row" gap="300">
@@ -150,12 +164,18 @@ export function NewTaskScreen() {
           <Stack wrap direction="row" gap="150">
             <SelectField
               label={t("new.field.entry")}
-              onValueChange={setEntry}
+              onValueChange={(value) => {
+                // A manual pick overrides the @-tag (explicit choice wins over the mention).
+                if (mentionOption && value === mentionOption.value) return;
+                setMentionTarget(undefined);
+                setEntry(value);
+              }}
               options={[
                 { value: ENTRY_COO, label: t("new.entry.coo") },
                 ...departments.list.map((d) => ({ value: d.id, label: d.name })),
+                ...(mentionOption ? [mentionOption] : []),
               ]}
-              value={entry}
+              value={entryValue}
             />
             <SelectField
               label={t("new.field.project")}
