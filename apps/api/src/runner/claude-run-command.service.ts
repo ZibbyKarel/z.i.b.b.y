@@ -6,6 +6,7 @@ import { AgentsStorageService } from "../agents/agents.storage.service";
 import { HooksStorageService } from "../hooks/hooks.storage.service";
 import { McpCredentialsStore } from "../mcp/mcp-credentials.store";
 import { ENTITY_MCP_SERVER_ID, McpServersStorageService } from "../mcp/mcp.storage.service";
+import { ISOLATED_SETTING_SOURCES } from "../shared/spawn-claude-cli";
 import { SkillsStorageService } from "../skills/skills.storage.service";
 import { mapTools, toSubagentTools } from "./claude-tools";
 
@@ -28,6 +29,20 @@ export interface ClaudeRunOptions {
    * artifacts stay in the sandbox and the target only receives the real effect.
    */
   grantDirs?: readonly string[];
+  /**
+   * Plugin directories to load (`--plugin-dir`, one per entry). Runs spawn with
+   * `--setting-sources ""`, so NO ambient user/project plugin loads — this is the only
+   * way a plugin reaches a run, and it is declared on disk (agent/project `plugins[]`,
+   * plus ZIBBY's own materialized commands plugin). Persisted in the run's args = trace.
+   */
+  pluginDirs?: readonly string[];
+  /**
+   * The repo the session spawns in (worktree / project checkout). Granted via
+   * `--add-dir` so its `CLAUDE.md` still loads under `--setting-sources ""`
+   * (RunnerCore sets `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1`); the repo's
+   * `.claude/` settings, hooks, skills and commands do NOT load.
+   */
+  contextDir?: string;
   /**
    * Emit the full transcript as `--output-format stream-json` (one JSON event per
    * line) instead of default text mode, which prints only the final message. The
@@ -411,6 +426,9 @@ const THINKING_TO_EFFORT: Record<NonNullable<Agent["thinking"]>, string> = {
  * `--permission-mode dontAsk` + `--allowedTools` mapped from the entity's `tools`.
  * This runs under the Max subscription with no extra API/classifier cost.
  *
+ * Every run is isolated from ambient settings (`--setting-sources ""`): only declared
+ * `--plugin-dir`s and the `--add-dir` context repo's CLAUDE.md reach the session.
+ *
  * Args are built up-front and persisted in the run spec, so the approval→resume
  * path replays them unchanged — gated runs spawn with the same catalog.
  */
@@ -467,6 +485,9 @@ export class ClaudeRunCommandService {
     const args = [
       "-p",
       withExecutionDirective(opts.task.trim() ? opts.task : KICKOFF_FALLBACK),
+      // Isolation: no ambient user/project settings — otherwise the operator's superpowers
+      // preamble fights OPERATING_CONTRACT and a client repo's hooks run in a dontAsk run.
+      ...ISOLATED_SETTING_SOURCES,
       "--permission-mode",
       "dontAsk",
       "--allowedTools",
@@ -494,6 +515,8 @@ export class ClaudeRunCommandService {
     if (opts.streamTranscript) args.push("--output-format", "stream-json", "--verbose");
     // Grant access to dirs outside the sandbox (e.g. the Cleaner's target).
     for (const dir of opts.grantDirs ?? []) args.push("--add-dir", dir);
+    if (opts.contextDir) args.push("--add-dir", opts.contextDir);
+    for (const dir of opts.pluginDirs ?? []) args.push("--plugin-dir", dir);
     // Phase 49: continue a captured session (re-run of an errored/interrupted run)
     // instead of a cold start — the conversation history carries the prior context.
     if (opts.resumeSessionId) args.push("--resume", opts.resumeSessionId);

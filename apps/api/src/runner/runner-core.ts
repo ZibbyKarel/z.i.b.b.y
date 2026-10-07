@@ -404,7 +404,14 @@ export class RunnerCore<R extends BaseRun> {
       // coordination-dir pin is applied AFTER spec.env so a project can never
       // override it (the hook must write its request where {@link watchIntentRequest}
       // watches — not into whatever `--add-dir` target the destructive command runs in).
-      env: { ...process.env, ...spec.env, [INTENT_DIR_ENV]: spec.cwd },
+      env: {
+        ...process.env,
+        // Runs spawn with --setting-sources "" (no project source), so the target
+        // repo's CLAUDE.md only loads as an --add-dir (see ClaudeRunOptions.contextDir).
+        CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD: "1",
+        ...spec.env,
+        [INTENT_DIR_ENV]: spec.cwd,
+      },
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -494,7 +501,14 @@ export class RunnerCore<R extends BaseRun> {
     const child = spawn(spec.command, spec.args, {
       cwd: spec.spawnCwd ?? spec.cwd,
       // Same per-run env + coordination-dir pin as the initial spawn (see {@link start}).
-      env: { ...process.env, ...spec.env, [INTENT_DIR_ENV]: spec.cwd },
+      env: {
+        ...process.env,
+        // Runs spawn with --setting-sources "" (no project source), so the target
+        // repo's CLAUDE.md only loads as an --add-dir (see ClaudeRunOptions.contextDir).
+        CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD: "1",
+        ...spec.env,
+        [INTENT_DIR_ENV]: spec.cwd,
+      },
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
     });
