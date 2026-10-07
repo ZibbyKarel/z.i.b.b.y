@@ -1,0 +1,10 @@
+{
+  "id": "playwright",
+  "name": "Playwright",
+  "desc": "Headless browser automation (navigate, click, type, accessibility snapshot, screenshot, console/network) via @playwright/mcp — ui-ux-tester drives web projects through it in the web-qa workflow.",
+  "type": "stdio",
+  "command": "npx",
+  "args": ["-y", "@playwright/mcp@0.0.83", "--headless"],
+  "enabled": true,
+  "grantOnly": true
+}
