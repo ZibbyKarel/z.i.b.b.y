@@ -101,6 +101,25 @@ export function unmetRequirement(
   return null;
 }
 
+/**
+ * Departments whose delivered artifacts are handed on as a signal (A3, TODO 13).
+ * Every other owner emits nothing. `title`/`ask` shape the dispatched task text.
+ */
+const ARTIFACT_SIGNALS: Partial<
+  Record<DepartmentId, { kind: string; title: string; ask: string }>
+> = {
+  rnd: {
+    kind: "research-artifact",
+    title: "Research: research artifact",
+    ask: "Build on this research.",
+  },
+  qa: {
+    kind: "qa-findings",
+    title: "QA: findings",
+    ask: "Reproduce and fix the confirmed defects.",
+  },
+};
+
 // Re-exported so the controller can map it to a 404 without importing the core.
 export { RunNotFoundError } from "../runner/runner-core";
 
@@ -198,7 +217,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly projectLocal: ProjectLocalService,
     private readonly employees: EmployeeAllocator,
     private readonly fuse: WorkingAgentsFuse,
-    // Research deliveries are emitted as `research-artifact` signals (a leaf module).
+    // R&D/QA deliveries are emitted as signals (a leaf module).
     private readonly signalBus: SignalBusService,
   ) {
     this.dir = path.resolve(dir);
@@ -1656,10 +1675,10 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
    * write error is logged and the delivery stands. Stable id ⇒ an idempotent
    * re-delivery replaces its record instead of duplicating it.
    *
-   * A3: when the owning workflow is Research-owned, ALSO hands a `research-artifact`
-   * signal to the handoff rule engine — same best-effort contract, a signal
-   * emission must never fail an already-green delivery. Every non-Research
-   * workflow is completely unaffected (gated on `department === "rnd"`).
+   * A3 / TODO 13: when the owning department is in {@link ARTIFACT_SIGNALS}
+   * (`rnd` → `research-artifact`, `qa` → `qa-findings`), ALSO hands a signal to the
+   * signal bus — same best-effort contract, an emission must never fail an
+   * already-green delivery. Every other owner is completely unaffected.
    */
   private async recordArtifact(
     run: WorkflowRun,
@@ -1693,20 +1712,21 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       });
 
     const owner = (await this.workflows.get(run.workflowId).catch(() => null))?.department;
-    if (owner === "rnd") {
+    const signal = owner ? ARTIFACT_SIGNALS[owner] : undefined;
+    if (owner && signal) {
       try {
         await this.signalBus.emit({
-          from: "rnd",
-          kind: "research-artifact",
+          from: owner,
+          kind: signal.kind,
           ...(projectId ? { projectId } : {}),
-          title: `Research: research artifact ${from}`,
-          body: `Delivered ${kind} ${locator}. Build on this research.`,
+          title: `${signal.title} ${from}`,
+          body: `Delivered ${kind} ${locator}. ${signal.ask}`,
           fingerprint: artifactId,
         });
       } catch (error) {
         // `emit` is itself fail-open, but a signal emission must NEVER fail an
         // already-green delivery — same contract as the artifact record above.
-        this.log.warn("research signal failed (soft) — delivery stands", {
+        this.log.warn("artifact signal failed (soft) — delivery stands", {
           workflowRunId: run.workflowRunId,
           from,
           err: error instanceof Error ? error.message : String(error),

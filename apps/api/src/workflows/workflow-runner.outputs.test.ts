@@ -501,6 +501,53 @@ describe("WorkflowRunnerService — output sinks", () => {
       );
     });
 
+    it("TODO 13: a QA-owned workflow's delivered artifact emits a qa-findings signal", async () => {
+      const workflow: Workflow = {
+        id: "web-qa",
+        department: "qa",
+        phases: [docPhase],
+        outputs: [{ type: "file", from: "docs.md", dest: "vault", to: "web-qa-findings" }],
+        instructions: "x",
+        complexity: "standard",
+      };
+      const { service, d } = await makeService(dir, workflow);
+      const run = await seedRun(service, dir, workflow, {
+        a: { phaseId: "dok", file: "docs.md", content: "# Web QA findings\n\n## F1" },
+      });
+
+      await runOutputs(service, run, workflow);
+
+      expect(d.signalBus.emit).toHaveBeenCalledTimes(1);
+      expect(d.signalBus.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          from: "qa",
+          kind: "qa-findings",
+          fingerprint: `${RUN_ID}_vault-note_docs-md`,
+        }),
+      );
+    });
+
+    it("TODO 13: a throwing signal emit never fails the already-green QA delivery", async () => {
+      const workflow: Workflow = {
+        id: "web-qa",
+        department: "qa",
+        phases: [docPhase],
+        outputs: [{ type: "file", from: "docs.md", dest: "vault", to: "web-qa-findings" }],
+        instructions: "x",
+        complexity: "standard",
+      };
+      const { service, d } = await makeService(dir, workflow);
+      d.signalBus.emit.mockRejectedValueOnce(new Error("bus down"));
+      const run = await seedRun(service, dir, workflow, {
+        a: { phaseId: "dok", file: "docs.md", content: "body" },
+      });
+
+      await runOutputs(service, run, workflow);
+
+      expect(d.vault.createNote).toHaveBeenCalled();
+      expect(run.status).toBe("done");
+    });
+
     it("a non-Research workflow (department unset) never emits a signal", async () => {
       const workflow: Workflow = {
         id: "audit",
