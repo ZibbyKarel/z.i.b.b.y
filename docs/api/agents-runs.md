@@ -28,7 +28,13 @@ gates: # custom gate rules (inline)
       type: human
 gateRuleIds: # references into the global catalog
   - push-to-main
+plugins: # Claude Code plugin dirs (optional), one --plugin-dir each
+  - /abs/path/to/pinned-plugin
 ```
+
+`plugins` is how a run gets a plugin at all: runs spawn with
+`--setting-sources ""`, so nothing from `~/.claude/plugins` loads ambiently
+(see `docs/api/runner.md`). Merged with the project's `plugins` (agent's first).
 
 The body of the `.md` file is the system prompt passed to the claude CLI.
 
