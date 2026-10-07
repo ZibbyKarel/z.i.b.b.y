@@ -231,14 +231,15 @@ interface Mention {
  * is the employee id (testid), `agentId` is what it dispatches to. A `#` row
  * ({@link ScopeKind}) or a `skill` row resolves to NO `TaskTarget` at all — it sets
  * a scope/skill tag instead (see `pickMentionResult`). */
-interface MentionResult {
-  kind: "agent" | "employee" | "workflow" | "department" | ScopeKind | "skill";
+interface MentionRow {
   id: string;
   name: string;
   glyph: IconName;
   color?: string;
-  agentId?: string;
 }
+type MentionResult =
+  | (MentionRow & { kind: "agent" | "workflow" | "department" | ScopeKind | "skill" })
+  | (MentionRow & { kind: "employee"; agentId: string });
 
 const NO_SCOPE_KINDS: readonly ScopeKind[] = [];
 const SCOPE_GLYPH: Record<ScopeKind, IconName> = {
@@ -837,7 +838,9 @@ export function CommandLine({
           pickMentionResult(active);
           return;
         }
-        // Zero results — nothing to pick, so Enter falls through to the submit below.
+        // Zero results — nothing to pick: close the empty panel, then Enter falls
+        // through to the submit below (keyup skips Enter, so nothing else would close it).
+        closeMention();
       }
       if (e.key === "Escape") {
         // Also stop native bubbling: an enclosing Dialog closes itself on a
@@ -887,7 +890,7 @@ export function CommandLine({
           ? { kind: "agent", id: result.id, name: result.name, glyph: result.glyph }
           : result.kind === "employee"
             ? // An employee holds a position — it dispatches to that position's agent.
-              { kind: "agent", id: result.agentId ?? result.id, name: result.name, glyph: "bot" }
+              { kind: "agent", id: result.agentId, name: result.name, glyph: "bot" }
             : result.kind === "workflow"
               ? { kind: "workflow", id: result.id, name: result.name, glyph: result.glyph }
               : {

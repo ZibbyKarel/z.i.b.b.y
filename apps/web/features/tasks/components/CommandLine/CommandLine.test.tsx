@@ -398,6 +398,17 @@ describe("CommandLine (Phase 118d generic composer)", () => {
 
       await user.keyboard("{Enter}");
       expect(onSubmit).toHaveBeenCalledWith("/zzz", undefined, undefined);
+      expect(screen.queryByTestId(CommandLineTestId.MentionMenu)).toBeNull();
+    });
+
+    it("closes the empty picker on Enter-submit even when the draft is kept (resetOnSubmit={false})", async () => {
+      const onSubmit = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine allowSkillMentions onSubmit={onSubmit} resetOnSubmit={false} />);
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "/zzz");
+      await user.keyboard("{Enter}");
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+      expect(screen.queryByTestId(CommandLineTestId.MentionMenu)).toBeNull();
     });
   });
 
