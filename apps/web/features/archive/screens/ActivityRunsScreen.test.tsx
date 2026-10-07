@@ -1,6 +1,6 @@
-import { DataTableTestId } from "@zibby/design-system";
+import { DataTableTestId, StatePillTestId } from "@zibby/design-system";
 import type { RunView } from "../../runs/run";
-import { fireEvent } from "@testing-library/react";
+import { fireEvent, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen } from "../../../test/render";
 import { ActivityRunsScreen } from "./ActivityRunsScreen";
@@ -75,6 +75,14 @@ describe("ActivityRunsScreen (ZB-07)", () => {
     replace.mockClear();
     stateParam = "";
     fetchNextPage.mockClear();
+  });
+
+  it("renders the state column as the StatePill /work/tasks uses", () => {
+    hooks.items = [run({ status: "error" })];
+    hooks.total = 1;
+    render(<ActivityRunsScreen />);
+    const pill = screen.getByTestId(StatePillTestId.Root);
+    expect(within(pill).getByTestId(StatePillTestId.Label)).toHaveTextContent("Chyba");
   });
 
   it("renders the archived runs table", () => {

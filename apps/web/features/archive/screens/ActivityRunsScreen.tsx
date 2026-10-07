@@ -7,12 +7,12 @@ import {
   type DataTableColumn,
   EmptyState,
   FilterBar,
-  Icon,
   SearchInput,
   SegmentedControl,
   type SegmentedControlItem,
   SelectField,
   Stack,
+  StatePill,
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
@@ -57,8 +57,12 @@ function durationLabel(run: RunView): string {
 }
 
 /** Which `RUN_STATUS_GROUPS` bucket (if any) a run's status belongs to. */
+function statusGroup(status: RunView["status"]) {
+  return RUN_STATUS_GROUPS.find((g) => g.statuses.includes(status));
+}
+
 function statusGroupKey(status: RunView["status"]): RunStatusGroupKey | undefined {
-  return RUN_STATUS_GROUPS.find((g) => g.statuses.includes(status))?.key;
+  return statusGroup(status)?.key;
 }
 
 /**
@@ -159,17 +163,15 @@ export function ActivityRunsScreen() {
       key: "state",
       label: t("column.state"),
       width: "sm",
-      render: (row) => (
-        <Stack align="center" direction="row" gap="75">
-          <Icon name="run" size="xs" />
-          <Typography size="sm" type="note" variant="secondary">
-            {(() => {
-              const key = statusGroupKey(row.status);
-              return key ? tRuns(`group.${key}`) : row.status;
-            })()}
-          </Typography>
-        </Stack>
-      ),
+      render: (row) => {
+        const group = statusGroup(row.status);
+        return (
+          <StatePill
+            label={group ? tRuns(`group.${group.key}`) : row.status}
+            state={group?.state ?? "idle"}
+          />
+        );
+      },
     },
     {
       key: "duration",
