@@ -4,7 +4,7 @@ import { parseGoalVerdict } from "./goal-verdict";
 /**
  * A goal `claude` verifier is graded on the verdict it writes, not on its exit code.
  * This is the parser for that verdict: the same `<verdict>…</verdict>` tag grammar
- * the pipeline's `parseStageVerdict` uses, mapped onto the goal domain's binary
+ * the workflow's `parseStageVerdict` uses, mapped onto the goal domain's binary
  * pass/fail. `null` means "no ruling found" — the caller fails closed on it.
  */
 describe("parseGoalVerdict", () => {
@@ -21,7 +21,7 @@ describe("parseGoalVerdict", () => {
     expect(parseGoalVerdict("<Verdict>\n\tFAIL\n</Verdict>")).toBe("fail");
   });
 
-  it("maps the pipeline vocabulary gap and drift onto fail", () => {
+  it("maps the workflow vocabulary gap and drift onto fail", () => {
     expect(parseGoalVerdict("<verdict>gap</verdict>")).toBe("fail");
     expect(parseGoalVerdict("<verdict>drift</verdict>")).toBe("fail");
   });

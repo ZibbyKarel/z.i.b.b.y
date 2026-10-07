@@ -5,7 +5,7 @@ export type GoalVerdict = "pass" | "fail";
 const VERDICT_WORDS: Record<string, GoalVerdict> = {
   pass: "pass",
   fail: "fail",
-  // A judge agent may reach for the pipeline's vocabulary (`parseStageVerdict`).
+  // A judge agent may reach for the workflow's vocabulary (`parseStageVerdict`).
   // Neither of those is a pass, so both reduce to "fail" here.
   gap: "fail",
   drift: "fail",
@@ -13,10 +13,10 @@ const VERDICT_WORDS: Record<string, GoalVerdict> = {
 
 /**
  * Extract a `<verdict>pass|fail|gap|drift</verdict>` tag from a goal `claude`
- * verifier's log. Deliberately the same tag grammar as the pipeline's
- * {@link import("../pipelines/stage-verdict").parseStageVerdict} — one convention
+ * verifier's log. Deliberately the same tag grammar as the workflow's
+ * {@link import("../workflows/stage-verdict").parseStageVerdict} — one convention
  * across the codebase — but mapped onto the goal domain's binary pass/fail, because
- * a goal verdict picks a boolean, not a pipeline back-edge.
+ * a goal verdict picks a boolean, not a workflow back-edge.
  *
  * Case-insensitive and whitespace-tolerant. Uses the **literal LAST** tag: the final
  * `<verdict>…</verdict>` in the text determines the verdict, and an unrecognised word
