@@ -24,6 +24,12 @@ vi.mock("../../agents/queries/useAgentsQuery", () => ({
   getAgentsQueryKey: () => ["agents"],
 }));
 
+vi.mock("../../workflows", () => ({
+  useWorkflowsQuery: () => ({
+    data: [{ id: "coloring-book", name: "Coloring Book", phases: [] }],
+  }),
+}));
+
 const classifyMutate = vi.fn();
 const createMutate = vi.fn();
 vi.mock("../mutations", () => ({
@@ -116,5 +122,55 @@ describe("NewTaskScreen (ZB-04b)", () => {
     const body = createMutate.mock.calls[0]?.[0]?.body as { paths: string[]; target?: unknown };
     expect(body.paths).toContain("/work/zibby");
     expect(body.target).toBeUndefined();
+  });
+
+  it("@Coloring Book (multi-word workflow) sets the target select and is sent as the workflow target", async () => {
+    const user = userEvent.setup();
+    render(<NewTaskScreen />);
+    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
+    await user.type(screen.getByTestId(CommandLineTestId.Input), "make one @Color");
+    await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-workflow-coloring-book`));
+    expect(screen.getByTestId(CommandLineTestId.Input)).toHaveValue("make one @Coloring Book ");
+    expect(screen.getByLabelText("Vstup")).toHaveTextContent("Coloring Book");
+    fireEvent.click(screen.getByText("Vytvořit úkol"));
+    expect(createMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({
+          target: expect.objectContaining({
+            kind: "workflow",
+            id: "coloring-book",
+            name: "Coloring Book",
+          }),
+        }),
+      }),
+      expect.anything(),
+    );
+  });
+
+  it("deleting the @-tag reverts the target select to the entry and drops the target", async () => {
+    const user = userEvent.setup();
+    render(<NewTaskScreen />);
+    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
+    await user.type(screen.getByTestId(CommandLineTestId.Input), "go @Kod");
+    await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-koder`));
+    expect(screen.getByLabelText("Vstup")).toHaveTextContent("Kodér");
+    fireEvent.change(screen.getByTestId(CommandLineTestId.Input), { target: { value: "go " } });
+    expect(screen.getByLabelText("Vstup")).toHaveTextContent("COO");
+    fireEvent.click(screen.getByText("Vytvořit úkol"));
+    const body = createMutate.mock.calls[0]?.[0]?.body as { target?: unknown };
+    expect(body.target).toBeUndefined();
+  });
+
+  it("a manual entry pick overrides an active @-tag", async () => {
+    const user = userEvent.setup();
+    render(<NewTaskScreen />);
+    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
+    await user.type(screen.getByTestId(CommandLineTestId.Input), "go @Kod");
+    await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-koder`));
+    await user.click(screen.getByLabelText("Vstup"));
+    await user.click(screen.getByRole("option", { name: /dev/i }));
+    fireEvent.click(screen.getByText("Vytvořit úkol"));
+    const body = createMutate.mock.calls[0]?.[0]?.body as { target?: unknown };
+    expect(body.target).toMatchObject({ kind: "department", id: "dev" });
   });
 });
