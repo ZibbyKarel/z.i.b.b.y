@@ -11,7 +11,10 @@ import {
   type SendChatMessageResult,
   type TaskTarget,
 } from "@zibby/contracts";
+import { CompaniesStorageService } from "../companies/companies.storage.service";
 import { KbMcpAuthService } from "../kb/kb-mcp-auth.service";
+import { ProjectsStorageService } from "../projects/projects.storage.service";
+import { SkillsStorageService } from "../skills/skills.storage.service";
 import { collisionResistantId, ensureDir } from "../shared/file-storage";
 import { SystemConfigStore } from "../system/system-config.store";
 import { AttachmentStorageService } from "../tasks/attachment-storage.service";
@@ -30,6 +33,13 @@ export interface ClaudeProcess {
   on(event: "close", cb: (code: number | null) => void): void;
   on(event: "error", cb: (err: Error) => void): void;
   kill(signal?: NodeJS.Signals): boolean;
+}
+
+/** TODO 13 — the resolved `#project` / `#company` / `/skill` tags of one turn. */
+export interface ChatTurnTags {
+  skill?: { name: string; instructions: string };
+  project?: { id: string; name: string; path?: string };
+  company?: { id: string; name: string };
 }
 
 /** Hard ceiling on one turn; a stuck `claude` is killed and the turn ends in error. */
@@ -101,6 +111,10 @@ export class ChatSessionService {
     // disk (for the prompt's inline text section) — the same store the task
     // composer's upload already writes to (no second upload path).
     private readonly attachmentStorage: AttachmentStorageService,
+    // TODO 13: resolve the `/skill`, `#project` and `#company` tags of a turn.
+    private readonly skills: SkillsStorageService,
+    private readonly projects: ProjectsStorageService,
+    private readonly companies: CompaniesStorageService,
   ) {}
 
   /**
@@ -120,6 +134,23 @@ export class ChatSessionService {
     body: SendChatMessageBody,
     now: Date = new Date(),
   ): Promise<SendChatMessageResult> {
+    // TODO 13: resolve every tag BEFORE anything is written — an unknown id must fail
+    // the request (404 in ChatController) without minting a conversation or leaving an
+    // orphan user turn.
+    const [skill, project, company] = await Promise.all([
+      body.skillId ? this.skills.get(body.skillId) : undefined,
+      body.projectId ? this.projects.get(body.projectId) : undefined,
+      body.companyId ? this.companies.get(body.companyId) : undefined,
+    ]);
+    const tags: ChatTurnTags = {
+      ...(skill
+        ? { skill: { name: skill.name ?? skill.id, instructions: skill.instructions } }
+        : {}),
+      ...(project ? { project: { id: project.id, name: project.name, path: project.path } } : {}),
+      ...(company ? { company: { id: company.id, name: company.name } } : {}),
+    };
+    // A tagged project scopes the KB to its own team unless a team is tagged explicitly.
+    const teamId = body.teamId ?? project?.teamId;
     const conversationId = await this.store.ensureConversation(body.conversationId, now);
     const mentions: ChatMentionTarget[] =
       body.mentions ?? (body.target && isChatMentionTarget(body.target) ? [body.target] : []);
@@ -152,7 +183,7 @@ export class ChatSessionService {
     // `now` is passed explicitly as `undefined` so `runTurn` keeps minting its OWN
     // fresh timestamp (unchanged behaviour) while `body.teamId` threads through as
     // the turn's KB scope tag — Task 8, mirrors how `conversationId` already threads.
-    void this.runTurn(conversationId, turnId, body.text, undefined, body.teamId).catch((error) => {
+    void this.runTurn(conversationId, turnId, body.text, undefined, teamId, tags).catch((error) => {
       this.logger.error(`chat turn ${turnId} failed: ${String(error)}`);
       this.events.emit({ conversationId, turnId, type: "error", message: "Něco se pokazilo." });
     });
@@ -168,6 +199,7 @@ export class ChatSessionService {
     sessionId: string | null,
     conversationId: string,
     teamId?: string,
+    tags?: ChatTurnTags,
   ): Promise<string[]> {
     const mentions = this.toolResults.getMentions(conversationId);
     const persona = buildChatPrompt(this.systemConfig.current().chatPersona);
@@ -201,7 +233,24 @@ export class ChatSessionService {
           )
         : undefined;
 
-    const prompt = [persona, mentionLine, attachmentSection].filter(Boolean).join("\n\n");
+    const scopeParts = [
+      tags?.company ? `firmu "${tags.company.name}" (id: ${tags.company.id})` : undefined,
+      tags?.project
+        ? `projekt "${tags.project.name}" (id: ${tags.project.id}${tags.project.path ? `, cesta: ${tags.project.path}` : ""})`
+        : undefined,
+    ].filter(Boolean);
+    const scopeLine =
+      scopeParts.length > 0
+        ? `Operátor tuto zprávu vztáhl k: ${scopeParts.join(", ")} (#tag). Odpovídej v jeho kontextu; ` +
+          "pokud zavoláš create_task pro projekt, předej jeho cestu v argumentu paths."
+        : undefined;
+    const skillSection = tags?.skill
+      ? `Operátor pro tuto zprávu vybral skill "${tags.skill.name}" (/skill). Řiď se jeho instrukcemi — ` +
+        `doplňují pravidla výše, nikdy je nenahrazují:\n\n${tags.skill.instructions}`
+      : undefined;
+    const prompt = [persona, mentionLine, scopeLine, attachmentSection, skillSection]
+      .filter(Boolean)
+      .join("\n\n");
     const args = [
       "-p",
       text,
@@ -338,9 +387,12 @@ export class ChatSessionService {
     // through into `buildArgs` → `toolArgs` → `kbMcpUrl` — the same explicit-parameter
     // threading `conversationId` already gets, not new registry state.
     teamId?: string,
+    tags?: ChatTurnTags,
   ): Promise<void> {
     const sessionId = await this.store.getSessionId(conversationId);
-    const proc = this.createProcess(await this.buildArgs(text, sessionId, conversationId, teamId));
+    const proc = this.createProcess(
+      await this.buildArgs(text, sessionId, conversationId, teamId, tags),
+    );
 
     let accumulated = "";
     let capturedSession: string | null = null;

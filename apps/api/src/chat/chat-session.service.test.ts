@@ -5,7 +5,13 @@ import * as path from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ChatPersona, ChatToolEvent, TaskTarget } from "@zibby/contracts";
+import { CompanyNotFoundError } from "../companies/companies.errors";
+import type { CompaniesStorageService } from "../companies/companies.storage.service";
 import { KbMcpAuthService } from "../kb/kb-mcp-auth.service";
+import { ProjectNotFoundError } from "../projects/projects.errors";
+import type { ProjectsStorageService } from "../projects/projects.storage.service";
+import { SkillNotFoundError } from "../skills/skills.errors";
+import type { SkillsStorageService } from "../skills/skills.storage.service";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { AttachmentStorageService } from "../tasks/attachment-storage.service";
 import { CHAT_GOVERNOR_PROMPT, CHAT_PERSONAS } from "./chat-persona";
@@ -53,6 +59,22 @@ class TestSession extends ChatSessionService {
     // D-020: a fresh in-memory store by default — a test asserting attachment
     // handling constructs its own and pre-seeds it (see the "attachments" block).
     attachmentStorage: AttachmentStorageService = new AttachmentStorageService(),
+    // TODO 13: tag resolvers — by default every id is unknown.
+    skills: Pick<SkillsStorageService, "get"> = {
+      get: async (id) => {
+        throw new SkillNotFoundError(id);
+      },
+    },
+    projects: Pick<ProjectsStorageService, "get"> = {
+      get: async (id) => {
+        throw new ProjectNotFoundError(id);
+      },
+    },
+    companies: Pick<CompaniesStorageService, "get"> = {
+      get: async (id) => {
+        throw new CompanyNotFoundError(id);
+      },
+    },
   ) {
     super(
       store,
@@ -63,6 +85,9 @@ class TestSession extends ChatSessionService {
       chatDir,
       kbMcpAuth,
       attachmentStorage,
+      skills as SkillsStorageService,
+      projects as ProjectsStorageService,
+      companies as CompaniesStorageService,
     );
   }
   protected createProcess(args: string[]): ClaudeProcess {
@@ -727,6 +752,91 @@ describe("ChatSessionService", () => {
       const configPath = args[args.indexOf("--mcp-config") + 1] ?? "";
       const stat = await fs.stat(configPath);
       expect(stat.mode & 0o777).toBe(0o600);
+    });
+  });
+  describe("TODO 13 — # and / tags", () => {
+    const skills = {
+      get: async () => ({ id: "review", name: "Review", instructions: "Check every diff twice." }),
+    } as unknown as Pick<SkillsStorageService, "get">;
+    const projects = {
+      get: async (id: string) => {
+        if (id !== "shop") throw new ProjectNotFoundError(id);
+        return { id: "shop", name: "Shop", path: "/w/shop", teamId: "devrel" };
+      },
+    } as unknown as Pick<ProjectsStorageService, "get">;
+    const companies = {
+      get: async (id: string) => {
+        if (id !== "acme") throw new CompanyNotFoundError(id);
+        return { id: "acme", name: "Acme" };
+      },
+    } as unknown as Pick<CompaniesStorageService, "get">;
+
+    const make = () =>
+      new TestSession(
+        store,
+        events,
+        [],
+        "jarvis",
+        undefined,
+        undefined,
+        dir,
+        undefined,
+        undefined,
+        skills,
+        projects,
+        companies,
+      );
+    const promptOf = (svc: TestSession): string =>
+      svc.lastArgs[svc.lastArgs.indexOf("--append-system-prompt") + 1] ?? "";
+    const kbUrlOf = async (svc: TestSession): Promise<string> => {
+      const configPath = svc.lastArgs[svc.lastArgs.indexOf("--mcp-config") + 1] ?? "";
+      return JSON.parse(await fs.readFile(configPath, "utf8")).mcpServers["zibby-kb"].url;
+    };
+
+    it("appends a /-picked skill's instructions after the governor", async () => {
+      const svc = make();
+      const result = await svc.sendMessage({ text: "go", skillId: "review" }, NOW);
+      await settled(result.turnId);
+      const prompt = promptOf(svc);
+      expect(prompt.indexOf(CHAT_GOVERNOR_PROMPT.slice(0, 40))).toBeGreaterThanOrEqual(0);
+      expect(prompt.indexOf(CHAT_GOVERNOR_PROMPT.slice(0, 40))).toBeLessThan(
+        prompt.indexOf("Check every diff twice."),
+      );
+      expect(prompt).toContain('skill "Review"');
+    });
+
+    it("names a #-tagged project and company and scopes the KB to the project's team", async () => {
+      const svc = make();
+      const result = await svc.sendMessage(
+        { text: "go", projectId: "shop", companyId: "acme" },
+        NOW,
+      );
+      await settled(result.turnId);
+      const prompt = promptOf(svc);
+      expect(prompt).toContain('projekt "Shop"');
+      expect(prompt).toContain("/w/shop");
+      expect(prompt).toContain('firmu "Acme"');
+      expect(await kbUrlOf(svc)).toMatch(/\?teamId=devrel$/);
+    });
+
+    it("an explicit teamId still wins over the project's team", async () => {
+      const svc = make();
+      const result = await svc.sendMessage(
+        { text: "go", projectId: "shop", teamId: "platform" },
+        NOW,
+      );
+      await settled(result.turnId);
+      expect(await kbUrlOf(svc)).toMatch(/\?teamId=platform$/);
+    });
+
+    it.each([
+      ["skillId", "nope"],
+      ["projectId", "nope"],
+      ["companyId", "nope"],
+    ])("rejects an unknown %s before writing anything", async (key, value) => {
+      const svc = new TestSession(store, events, []);
+      await expect(svc.sendMessage({ text: "go", [key]: value }, NOW)).rejects.toThrow();
+      expect(await store.listConversationIds()).toEqual([]);
     });
   });
 });

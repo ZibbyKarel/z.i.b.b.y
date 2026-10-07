@@ -1,9 +1,12 @@
 import { Module } from "@nestjs/common";
 import { MachineModule } from "../machine/machine.module";
 import { BriefingModule } from "../briefing/briefing.module";
+import { CompaniesModule } from "../companies/companies.module";
 import { KbModule } from "../kb/kb.module";
 import { MemoryModule } from "../memory/memory.module";
 import { DepartmentsModule } from "../departments/departments.module";
+import { ProjectsModule } from "../projects/projects.module";
+import { SkillsModule } from "../skills/skills.module";
 import { TasksModule } from "../tasks/tasks.module";
 import { dataDir } from "../shared/data-dir";
 import { ChatController } from "./chat.controller";
@@ -41,7 +44,19 @@ export function resolveChatDir(): string {
 @Module({
   // DepartmentsModule (NS2 F3c) feeds the per-department `get_status` lens — a
   // one-directional edge (departments never imports chat).
-  imports: [TasksModule, MemoryModule, BriefingModule, MachineModule, DepartmentsModule, KbModule],
+  // TODO 13: Skills/Projects/Companies resolve a turn's `/skill`, `#project`, `#company`
+  // tags (one-directional edges; none import chat).
+  imports: [
+    TasksModule,
+    MemoryModule,
+    BriefingModule,
+    MachineModule,
+    DepartmentsModule,
+    KbModule,
+    SkillsModule,
+    ProjectsModule,
+    CompaniesModule,
+  ],
   controllers: [ChatController, ChatMcpController],
   providers: [
     { provide: CHAT_DIR, useFactory: resolveChatDir },
