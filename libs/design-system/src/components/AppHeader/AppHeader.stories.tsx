@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { AppHeader } from "./AppHeader";
-import { Button } from "../Button/Button";
 import { Tab, TabList, Tabs } from "../Tabs/Tabs";
 import { LimitBar } from "../LimitBar/LimitBar";
 import { MenuButton } from "../MenuButton/MenuButton";
@@ -56,7 +55,6 @@ export const Overview: Story = {
         nav={nav}
         onSearchClick={() => {}}
         operator={<Typography type="labelSm">Karel</Typography>}
-        pin={<Button aria-label="Pin this page" icon="pin" intent="ghost" size="sm" />}
       />
     </div>
   ),

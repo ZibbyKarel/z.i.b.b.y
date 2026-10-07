@@ -12,4 +12,3 @@ export {
   SubnavPinButtonTestId,
   type SubnavPinEntityKind,
 } from "./components/SubnavPinButton";
-export { HeaderPinButton, HeaderPinButtonTestId } from "./components/HeaderPinButton";

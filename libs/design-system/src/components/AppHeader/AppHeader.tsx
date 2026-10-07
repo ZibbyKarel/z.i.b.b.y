@@ -15,7 +15,6 @@ export enum AppHeaderTestId {
   Operator = "app-header-operator",
   ActiveCount = "app-header-active-count",
   Limits = "app-header-limits",
-  Pin = "app-header-pin",
   Notifications = "app-header-notifications",
   Search = "app-header-search",
   SearchShortcut = "app-header-search-shortcut",
@@ -38,9 +37,6 @@ export interface AppHeaderProps {
   activeCount?: ReactNode;
   /** 5H / WEEK usage readout slot (a `LimitBar` pair), trailing cluster. */
   limits?: ReactNode;
-  /** Current-page pin toggle slot (an app-composed icon `Button`), trailing
-   *  cluster — between the usage readout and the notification bell. */
-  pin?: ReactNode;
   /** Notification bell slot, trailing cluster. */
   notifications?: ReactNode;
   /** ⋮ overflow menu slot (an `app`-composed `MenuButton variant="bordered"`),
@@ -62,7 +58,7 @@ export interface AppHeaderProps {
  * DS.md §5/§8 app shell top bar — a fixed `LAYOUT.headerHeight` (56px) band,
  * `--panel` background, a bottom hairline. Leading brand mark (linking home,
  * ZB-01) + auto-width section nav, a centered search trigger (`flex:1`
- * region, ZB-06), and a trailing operator/active-count/usage/pin/notifications/⋮
+ * region, ZB-06), and a trailing operator/active-count/usage/notifications/⋮
  * cluster. Every trailing slot the app owns is an opaque `ReactNode`
  * (domain-neutral, no `next/link` import here) except the search trigger,
  * which `AppHeader` renders itself so every screen gets the identical `⌘K`
@@ -78,7 +74,6 @@ export function AppHeader({
   operator,
   activeCount,
   limits,
-  pin,
   notifications,
   menu,
   searchLabel = "Search",
@@ -147,7 +142,6 @@ export function AppHeader({
         {operator && <span data-testid={AppHeaderTestId.Operator}>{operator}</span>}
         {activeCount && <span data-testid={AppHeaderTestId.ActiveCount}>{activeCount}</span>}
         {limits && <span data-testid={AppHeaderTestId.Limits}>{limits}</span>}
-        {pin && <span data-testid={AppHeaderTestId.Pin}>{pin}</span>}
         {notifications && <span data-testid={AppHeaderTestId.Notifications}>{notifications}</span>}
         {menu && <span data-testid={AppHeaderTestId.Menu}>{menu}</span>}
       </Row>

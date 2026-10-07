@@ -2066,8 +2066,6 @@
     "historyEmpty": "No runs yet"
   },
   "pins": {
-    "headerPin": "Pin this page to quick access",
-    "headerUnpin": "Unpin this page from quick access",
     "pin": "Pin",
     "unpin": "Unpin",
     "pinnedLabel": "Pinned",
