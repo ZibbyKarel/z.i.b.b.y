@@ -14,6 +14,7 @@ desc: "Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor"
 department: dev # required on create (422 without it) — see below
 complexity: deep # the ladder rung: light | standard | deep
 project: my-app # optional default project binding (see below)
+requires: [web] # optional precondition on the run's project (see "Preconditions")
 budget: # optional per-run spend cap (see "Budget")
   maxCostUsd: 5
   warnAtPct: 70 # default 70
@@ -139,6 +140,20 @@ reordered.
 > schema defaults the field, a missing copy would not fail — every workflow would
 > just read as `"standard"` and the ladder would collapse to a constant.
 
+### Preconditions (`requires`)
+
+`requires: [web]` (the only value today) makes the workflow **web-only**: the run's
+project must carry `web: { url }` (an http(s) base URL, see `docs/api/projects.md`).
+`WorkflowRunnerService.start()` checks it right after the run aggregate is first
+written — before any worktree, stage or agent. An unmet requirement (no project,
+an unresolvable project ref, or a project without `web.url`) ends the run
+immediately as `failed` with `failedReason` recorded on `run.json`. For a project
+with `web.url`, every agent stage of a workflow that declares `requires: ["web"]`
+names that base URL in its task; other workflows on the same project never see it.
+
+> `requires` is round-tripped explicitly by `WorkflowsStorageService`
+> (`fromFrontmatter` / `toFrontmatter`); a missing copy would silently drop the gate.
+
 ### Outputs (`outputs`) — delivery sinks
 
 What happens to finished work is **not done by any agent** (it used to be a
@@ -234,6 +249,7 @@ Run fields added by the gates and the budget:
 | `pendingGate`              | `parkedReason` is `gate` or `budget` | `{ phaseId, cursor, handoffSource }` — where the driver re-enters on approve (`cursor: null` = chain finished, deliver the outputs) |
 | `budget`                   | the workflow declares a `budget`     | `{ maxCostUsd, warnAtPct, spentUsd, warned? }` — snapshot of the cap plus spend so far                                              |
 | `StageRun.externalCostUsd` | a stage reported non-model spend     | sum of `costUsd` over the lines of `<stageDir>/costs.jsonl`; absent when none                                                       |
+| `failedReason`             | the run was refused before any work  | e.g. `requires a web project, but the run has no project` — set with `status: "failed"`                                             |
 
 ### Log polling (unified surface)
 

@@ -275,4 +275,21 @@ describe("AutomationsStorageService", () => {
     );
     expect((await service.get(POST_MERGE_WATCH_AUTOMATION_ID)).system).toBe(true);
   });
+
+  it("TODO 13: seeds signal-qa-findings — qa-findings from qa → a dev task behind approval", async () => {
+    const seeded = await service.get("signal-qa-findings");
+    expect(seeded.system).toBe(true);
+    expect(seeded.enabled).toBe(true);
+    expect(seeded.approval).toBe("ask");
+    expect(seeded.trigger).toEqual({ type: "signal", kind: "qa-findings", from: "qa" });
+    expect(seeded.target).toMatchObject({
+      type: "task",
+      target: { kind: "department", id: "dev", name: "dev" },
+    });
+  });
+
+  it("TODO 13: signal-arch-audit matches only audit-batch, so QA findings get QA text", async () => {
+    const arch = await service.get("signal-arch-audit");
+    expect(arch.trigger).toEqual({ type: "signal", kind: "audit-batch", from: "qa" });
+  });
 });

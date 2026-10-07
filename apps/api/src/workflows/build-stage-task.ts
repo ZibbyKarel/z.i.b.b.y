@@ -13,8 +13,10 @@ export function buildStageTask(opts: {
   qualify?: boolean;
   /** The run root (`$ZIBBY_RUN_DIR`) — spelled out so an agent without Bash can still reach earlier artifacts. */
   runDirAbs?: string;
+  /** TODO 13: the run project's `web.url` — the address a browser-driving agent tests. */
+  webUrl?: string;
 }): string {
-  const { phaseId, consumesAbs, producesAbs, qualify, runDirAbs } = opts;
+  const { phaseId, consumesAbs, producesAbs, qualify, runDirAbs, webUrl } = opts;
   return [
     `Proveď fázi workflow "${phaseId}".`,
     consumesAbs
@@ -26,6 +28,7 @@ export function buildStageTask(opts: {
       ? `Složka celého běhu ($ZIBBY_RUN_DIR) je "${runDirAbs}" — výstupy dřívějších fází ` +
         "najdeš v jejích podsložkách."
       : "",
+    webUrl ? `Testovaný web (base URL): "${webUrl}" — testuj jen tuto adresu.` : "",
     qualify
       ? "Na úplný konec výstupu zapiš svůj verdikt přesně jedním tagem: " +
         "<verdict>pass</verdict> (práce splňuje zadání), " +

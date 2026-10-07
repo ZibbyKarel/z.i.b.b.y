@@ -184,10 +184,25 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
   {
     id: "signal-arch-audit",
     name: "Nálezy auditu architektury → Dev",
-    trigger: { type: "signal", kind: "*", from: "qa" },
+    trigger: { type: "signal", kind: "audit-batch", from: "qa" },
     target: {
       type: "task",
       text: "Review these architecture findings and prepare the worthwhile fixes on their own branch.",
+      target: { kind: "department", id: "dev", name: "dev" },
+    },
+    approval: "ask",
+    enabled: true,
+    system: true,
+  },
+  {
+    // TODO 13 — a QA-owned workflow's delivered findings (e.g. web-qa's
+    // qa-findings.md) → a Dev task. Parks a Tier-3 approval first.
+    id: "signal-qa-findings",
+    name: "Nálezy QA → Dev",
+    trigger: { type: "signal", kind: "qa-findings", from: "qa" },
+    target: {
+      type: "task",
+      text: "Review these QA findings, reproduce each one, and prepare fixes for the confirmed defects on their own branch. Do not push or merge — the PR is the gate.",
       target: { kind: "department", id: "dev", name: "dev" },
     },
     approval: "ask",

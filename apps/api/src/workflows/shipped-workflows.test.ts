@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import { describe, expect, it } from "vitest";
-import { WorkflowSchema } from "@zibby/contracts";
+import { McpServerSchema, WorkflowSchema } from "@zibby/contracts";
 
 /**
  * The workflow definitions ZIBBY actually ships live as markdown on disk, outside
@@ -174,6 +174,66 @@ describe("shipped workflow definitions", () => {
         status: "active",
       });
       expect(fs.existsSync(path.join(WORKFLOWS_DIR, "../agents/research-skeptic.md"))).toBe(true);
+    });
+  });
+
+  describe("web-qa — a web-only QA pass whose findings reach Dev", () => {
+    it("is QA-owned, web-only, and a single ui-ux-tester phase producing qa-findings.md", () => {
+      const wf = readWorkflow("web-qa");
+      expect(wf.department).toBe("qa");
+      expect(wf.requires).toEqual(["web"]);
+      expect(wf.phases).toHaveLength(1);
+      expect(wf.phases[0]).toMatchObject({
+        type: "agent",
+        agent: "ui-ux-tester",
+        produces: "qa-findings.md",
+      });
+    });
+
+    it("declares a file output so the findings are a durable artifact", () => {
+      expect(readWorkflow("web-qa").outputs).toContainEqual(
+        expect.objectContaining({ type: "file", from: "qa-findings.md", dest: "vault" }),
+      );
+    });
+
+    it("is never QA's cheapest rung — a low-confidence qa task must not fall back to it", () => {
+      // The stage-2 fallback dispatches the department's cheapest workflow; a web-only
+      // fallback would fail every non-web project's task.
+      expect(readWorkflow("web-qa").complexity).not.toBe("light");
+    });
+
+    it("has a hired QA employee for ui-ux-tester, so the stage never parks on NoEmployeeError", () => {
+      const file = path.join(WORKFLOWS_DIR, "../employees/employee_ui-ux-tester.json");
+      const employee = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
+      expect(employee).toMatchObject({
+        agentId: "ui-ux-tester",
+        department: "qa",
+        status: "active",
+      });
+    });
+
+    it("grants ui-ux-tester the shipped Playwright MCP server (and no longer Chrome MCP)", () => {
+      const agent = matter(
+        fs.readFileSync(path.join(WORKFLOWS_DIR, "../agents/ui-ux-tester.md"), "utf8"),
+      );
+      const tools = agent.data.tools as string[];
+      expect(tools).toContain("mcp__playwright__*");
+      expect(tools).not.toContain("chrome-mcp");
+      expect(agent.content).toContain("Playwright");
+      expect(agent.content).not.toContain("Chrome MCP");
+
+      const server = McpServerSchema.parse(
+        JSON.parse(
+          fs.readFileSync(path.join(WORKFLOWS_DIR, "../mcp-servers/playwright.json"), "utf8"),
+        ),
+      );
+      expect(server).toMatchObject({
+        id: "playwright",
+        type: "stdio",
+        enabled: true,
+        grantOnly: true,
+      });
+      expect(server.args?.some((a) => a.startsWith("@playwright/mcp"))).toBe(true);
     });
   });
 });

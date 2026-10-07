@@ -249,6 +249,12 @@ const WorkflowObject = z.object({
    * cwd. An explicit project on the start request still wins.
    */
   project: AgentIdSchema.optional(),
+  /**
+   * TODO 13 — a precondition on the run's project, checked by the runner before
+   * any phase spawns. `"web"` = the project must carry `web.url`; unmet → the
+   * run ends `failed` with `failedReason`, no agent started. Absent = no check.
+   */
+  requires: z.array(z.enum(["web"])).optional(),
 });
 
 /** Shared phase/loop validation (used by the full schema; storage re-validates updates). */

@@ -474,3 +474,41 @@ describe("verify evidence contract", () => {
     }
   });
 });
+
+describe("workflow requires (TODO 13 — web-only precondition)", () => {
+  const wf = (extra: Record<string, unknown> = {}) => ({
+    id: "web-qa",
+    phases: [phase("a")],
+    instructions: "x",
+    ...extra,
+  });
+
+  it("is optional — absent stays absent (every existing workflow parses unchanged)", () => {
+    const parsed = WorkflowSchema.parse(wf());
+    expect(parsed.requires).toBeUndefined();
+  });
+
+  it('accepts requires: ["web"]', () => {
+    expect(WorkflowSchema.parse(wf({ requires: ["web"] })).requires).toEqual(["web"]);
+  });
+
+  it("rejects an unknown requirement (closed vocabulary)", () => {
+    expect(WorkflowSchema.safeParse(wf({ requires: ["mobile"] })).success).toBe(false);
+  });
+});
+
+describe("WorkflowRun.failedReason (TODO 13)", () => {
+  it("carries the recorded reason of a refused run", () => {
+    const parsed = WorkflowRunSchema.parse({
+      workflowRunId: "web-qa_1",
+      workflowId: "web-qa",
+      status: "failed",
+      currentStage: null,
+      stageRuns: [],
+      startedAt: new Date().toISOString(),
+      cwd: "/runs/web-qa_1",
+      failedReason: "requires a web project, but the run has no project",
+    });
+    expect(parsed.failedReason).toContain("web project");
+  });
+});

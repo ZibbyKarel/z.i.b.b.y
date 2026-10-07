@@ -300,6 +300,8 @@ export const WorkflowRunSchema = z.object({
   verifyEvidence: VerifyEvidenceSchema.optional(),
   /** Why the dev → rel PR hop refused to open (e.g. missing/failed verify evidence). */
   prBlockedReason: z.string().optional(),
+  /** Why the run ended `failed` before doing any work (e.g. an unmet `requires`). */
+  failedReason: z.string().optional(),
 });
 export type WorkflowRun = z.infer<typeof WorkflowRunSchema>;
 

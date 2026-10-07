@@ -87,6 +87,52 @@ function budgetSnapshot(
   return { budget: { maxCostUsd, warnAtPct: own?.warnAtPct ?? 70, spentUsd: 0 } };
 }
 
+/**
+ * TODO 13 — the workflow-level precondition on the run's project. Returns the
+ * human-readable reason the run must not start, or null when it may.
+ */
+export function unmetRequirement(
+  workflow: Pick<Workflow, "requires">,
+  project: Pick<Project, "id" | "web"> | null,
+): string | null {
+  if (!workflow.requires?.includes("web")) return null;
+  if (!project) return "requires a web project, but the run has no project";
+  if (!project.web) return `requires a web project, but project "${project.id}" has no web.url`;
+  return null;
+}
+
+/**
+ * The web project's base URL for a stage — only a workflow that declares
+ * `requires: ["web"]` is browser-driven, so no other workflow sees it.
+ */
+export function stageWebUrl(
+  workflow: Pick<Workflow, "requires"> | null,
+  project: Pick<Project, "id" | "web"> | null,
+): string | undefined {
+  return workflow?.requires?.includes("web") ? project?.web?.url : undefined;
+}
+
+/**
+ * Departments whose delivered artifacts are handed on as a signal (A3, TODO 13).
+ * Every other owner emits nothing. `title`/`ask` shape the dispatched task text.
+ */
+const ARTIFACT_SIGNALS: Partial<
+  Record<DepartmentId, { kind: string; title: string; ask: string; copyLabel: string }>
+> = {
+  rnd: {
+    kind: "research-artifact",
+    title: "Research: research artifact",
+    ask: "Build on this research.",
+    copyLabel: "Research (this run)",
+  },
+  qa: {
+    kind: "qa-findings",
+    title: "QA: findings",
+    ask: "Reproduce and fix the confirmed defects.",
+    copyLabel: "Findings (this run)",
+  },
+};
+
 // Re-exported so the controller can map it to a 404 without importing the core.
 export { RunNotFoundError } from "../runner/runner-core";
 
@@ -184,7 +230,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly projectLocal: ProjectLocalService,
     private readonly employees: EmployeeAllocator,
     private readonly fuse: WorkingAgentsFuse,
-    // Research deliveries are emitted as `research-artifact` signals (a leaf module).
+    // R&D/QA deliveries are emitted as signals (a leaf module).
     private readonly signalBus: SignalBusService,
   ) {
     this.dir = path.resolve(dir);
@@ -364,6 +410,18 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     };
     this.runs.set(workflowRunId, run);
     await this.writeAggregate(run);
+
+    // TODO 13: an unmet `requires` ends the run here — before any worktree, stage
+    // or agent — with the reason recorded on the aggregate (never a silent no-op).
+    const unmet = unmetRequirement(workflow, project);
+    if (unmet) {
+      run.status = "failed";
+      run.currentStage = null;
+      run.failedReason = unmet;
+      await this.writeAggregate(run);
+      this.log.warn("workflow run refused: unmet requirement", { workflowRunId, reason: unmet });
+      return run;
+    }
 
     // Phase 3.1: a git project gets a dedicated worktree under the run dir so every
     // stage works on the run's own `zibby/*` branch (the operator's checkout is
@@ -1630,10 +1688,10 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
    * write error is logged and the delivery stands. Stable id ⇒ an idempotent
    * re-delivery replaces its record instead of duplicating it.
    *
-   * A3: when the owning workflow is Research-owned, ALSO hands a `research-artifact`
-   * signal to the handoff rule engine — same best-effort contract, a signal
-   * emission must never fail an already-green delivery. Every non-Research
-   * workflow is completely unaffected (gated on `department === "rnd"`).
+   * A3 / TODO 13: when the owning department is in {@link ARTIFACT_SIGNALS}
+   * (`rnd` → `research-artifact`, `qa` → `qa-findings`), ALSO hands a signal to the
+   * signal bus — same best-effort contract, an emission must never fail an
+   * already-green delivery. Every other owner is completely unaffected.
    */
   private async recordArtifact(
     run: WorkflowRun,
@@ -1667,20 +1725,23 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       });
 
     const owner = (await this.workflows.get(run.workflowId).catch(() => null))?.department;
-    if (owner === "rnd") {
+    const signal = owner ? ARTIFACT_SIGNALS[owner] : undefined;
+    if (owner && signal) {
       try {
         await this.signalBus.emit({
-          from: "rnd",
-          kind: "research-artifact",
+          from: owner,
+          kind: signal.kind,
           ...(projectId ? { projectId } : {}),
-          title: `Research: research artifact ${from}`,
-          body: `Delivered ${kind} ${locator}. Build on this research.`,
+          title: `${signal.title} ${from}`,
+          // The locator (e.g. a vault note) may be shared and overwritten by a later run;
+          // the run-local copy is immutable, so a parked approval always resolves to THIS run.
+          body: `Delivered ${kind} ${locator}. ${signal.copyLabel}: ${path.join(run.cwd, "output", from)}. ${signal.ask}`,
           fingerprint: artifactId,
         });
       } catch (error) {
         // `emit` is itself fail-open, but a signal emission must NEVER fail an
         // already-green delivery — same contract as the artifact record above.
-        this.log.warn("research signal failed (soft) — delivery stands", {
+        this.log.warn("artifact signal failed (soft) — delivery stands", {
           workflowRunId: run.workflowRunId,
           from,
           err: error instanceof Error ? error.message : String(error),
@@ -2137,7 +2198,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     // F4a: resolve the workflow's owning department once per stage so grounding
     // can attach its knowledge shelf. Fail-open — a missing/renamed workflow
     // must never block the stage.
-    const department = (await this.workflows.get(run.workflowId).catch(() => null))?.department;
+    const stageWorkflow = await this.workflows.get(run.workflowId).catch(() => null);
+    const department = stageWorkflow?.department;
     // Materialize enabled custom commands as a ZIBBY-owned plugin in the stage's
     // sandbox (never the client worktree), loaded via `--plugin-dir`; best-effort
     // (a falsy result → no plugin). Only claude agent stages load it — verify/tool
@@ -2158,6 +2220,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       department,
       run.workflowRunId,
       commandsPlugin,
+      stageWebUrl(stageWorkflow, project),
     );
     // Per-project env + secrets injected into this stage's process (Phase D), plus
     // the run/stage folders (P1-01) so a tool can write run-wide artifacts (e.g. the
@@ -2590,6 +2653,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     workflowRunId?: string,
     /** ZIBBY's per-run commands plugin dir (from the materializer), if any. */
     commandsPluginDir?: string | null,
+    /** The web base URL — set only for a workflow that `requires` web ({@link stageWebUrl}). */
+    webUrl?: string,
   ): Promise<{ command: string; args: string[]; spawnCwd?: string }> {
     const spawnCwd = worktreePath ?? project?.path;
     // Verify phases are deterministic shell checks — identical in demo and
@@ -2633,6 +2698,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         producesAbs,
         qualify: phase.qualify,
         runDirAbs: path.dirname(cwd),
+        ...(webUrl ? { webUrl } : {}),
       });
       // Memory grounding (Phase 4): per-stage so each phase's agent gets the North
       // Star + relevant MOCs + the project note. Fail-open ("" on any error).

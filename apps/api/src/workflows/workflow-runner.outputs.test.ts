@@ -7,7 +7,7 @@ import type { ResumableRunner } from "../approvals/approvals.service";
 import { DuplicateNoteError } from "../memory/vault.service";
 import { WorkingAgentsFuse } from "../employees/working-agents-fuse";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
-import { WorkflowRunnerService } from "./workflow-runner.service";
+import { WorkflowRunnerService, stageWebUrl, unmetRequirement } from "./workflow-runner.service";
 
 /**
  * Workflow-level output sinks (the delivery config that replaced the `pr-autor`
@@ -501,6 +501,73 @@ describe("WorkflowRunnerService — output sinks", () => {
       );
     });
 
+    it("TODO 13: a QA-owned workflow's delivered artifact emits a qa-findings signal", async () => {
+      const workflow: Workflow = {
+        id: "web-qa",
+        department: "qa",
+        phases: [docPhase],
+        outputs: [{ type: "file", from: "docs.md", dest: "vault", to: "web-qa-findings" }],
+        instructions: "x",
+        complexity: "standard",
+      };
+      const { service, d } = await makeService(dir, workflow);
+      const run = await seedRun(service, dir, workflow, {
+        a: { phaseId: "dok", file: "docs.md", content: "# Web QA findings\n\n## F1" },
+      });
+
+      await runOutputs(service, run, workflow);
+
+      expect(d.signalBus.emit).toHaveBeenCalledTimes(1);
+      expect(d.signalBus.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          from: "qa",
+          kind: "qa-findings",
+          fingerprint: `${RUN_ID}_vault-note_docs-md`,
+        }),
+      );
+    });
+
+    it("the artifact signal body carries the immutable run-local copy path, not just the shared locator", async () => {
+      const workflow: Workflow = {
+        id: "web-qa",
+        department: "qa",
+        phases: [docPhase],
+        outputs: [{ type: "file", from: "docs.md", dest: "vault", to: "web-qa-findings" }],
+        instructions: "x",
+        complexity: "standard",
+      };
+      const { service, d } = await makeService(dir, workflow);
+      const run = await seedRun(service, dir, workflow, {
+        a: { phaseId: "dok", file: "docs.md", content: "# F" },
+      });
+
+      await runOutputs(service, run, workflow);
+
+      const body = (d.signalBus.emit.mock.calls[0]?.[0] as { body: string }).body;
+      expect(body).toContain(`Findings (this run): ${path.join(run.cwd, "output", "docs.md")}`);
+    });
+
+    it("TODO 13: a throwing signal emit never fails the already-green QA delivery", async () => {
+      const workflow: Workflow = {
+        id: "web-qa",
+        department: "qa",
+        phases: [docPhase],
+        outputs: [{ type: "file", from: "docs.md", dest: "vault", to: "web-qa-findings" }],
+        instructions: "x",
+        complexity: "standard",
+      };
+      const { service, d } = await makeService(dir, workflow);
+      d.signalBus.emit.mockRejectedValueOnce(new Error("bus down"));
+      const run = await seedRun(service, dir, workflow, {
+        a: { phaseId: "dok", file: "docs.md", content: "body" },
+      });
+
+      await runOutputs(service, run, workflow);
+
+      expect(d.vault.createNote).toHaveBeenCalled();
+      expect(run.status).toBe("done");
+    });
+
     it("a non-Research workflow (department unset) never emits a signal", async () => {
       const workflow: Workflow = {
         id: "audit",
@@ -631,5 +698,81 @@ describe("WorkflowRunnerService — output sinks", () => {
       expect(d.workspace.openPr).toHaveBeenCalled();
       expect(run.status).toBe("done");
     });
+  });
+});
+
+describe("TODO 13 — requires: web precondition", () => {
+  let dir: string;
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "pipe-requires-"));
+  });
+  afterEach(async () => {
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  const webQa: Workflow = {
+    id: "web-qa",
+    department: "qa",
+    requires: ["web"],
+    phases: [docPhase],
+    outputs: [],
+    instructions: "x",
+    complexity: "standard",
+  };
+
+  it("unmetRequirement: no requires → never blocks, even without a project", () => {
+    expect(unmetRequirement({}, null)).toBeNull();
+  });
+
+  it("unmetRequirement: requires web → blocks no project and a project without web.url", () => {
+    expect(unmetRequirement(webQa, null)).toBe(
+      "requires a web project, but the run has no project",
+    );
+    expect(unmetRequirement(webQa, { id: "api-only" })).toBe(
+      'requires a web project, but project "api-only" has no web.url',
+    );
+  });
+
+  it("unmetRequirement: requires web → passes a project with web.url", () => {
+    expect(
+      unmetRequirement(webQa, { id: "shop", web: { url: "https://shop.example.com" } }),
+    ).toBeNull();
+  });
+
+  it("stageWebUrl: only a workflow that requires web gets the project's URL", () => {
+    const shop = { id: "shop", web: { url: "https://shop.example.com/" } };
+    expect(stageWebUrl(webQa, shop)).toBe("https://shop.example.com/");
+    expect(stageWebUrl({}, shop)).toBeUndefined();
+    expect(stageWebUrl(webQa, { id: "api-only" })).toBeUndefined();
+    expect(stageWebUrl(webQa, null)).toBeUndefined();
+  });
+
+  it("start() on a project without web ends failed with the reason recorded", async () => {
+    const { service } = await makeService(dir, webQa);
+    (service as unknown as { projects: unknown }).projects = {
+      get: vi.fn(async () => ({ id: "api-only", name: "A", path: dir })),
+      list: vi.fn(async () => []),
+    };
+
+    const run = await service.start("web-qa", undefined, "api-only");
+
+    expect(run.status).toBe("failed");
+    expect(run.failedReason).toBe('requires a web project, but project "api-only" has no web.url');
+  });
+
+  it("start() without a (resolvable) project ends failed with the reason recorded, no stage", async () => {
+    const { service } = await makeService(dir, webQa);
+
+    // "typo-project" does not resolve (the projects double returns null) → no project.
+    const run = await service.start("web-qa", undefined, "typo-project");
+
+    expect(run.status).toBe("failed");
+    expect(run.currentStage).toBeNull();
+    expect(run.failedReason).toBe("requires a web project, but the run has no project");
+    expect(run.stageRuns).toEqual([]);
+    const onDisk = JSON.parse(
+      await fs.readFile(path.join(dir, run.workflowRunId, "run.json"), "utf8"),
+    ) as WorkflowRun;
+    expect(onDisk).toMatchObject({ status: "failed", failedReason: run.failedReason });
   });
 });

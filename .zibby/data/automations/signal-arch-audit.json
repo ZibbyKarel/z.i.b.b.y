@@ -1,7 +1,7 @@
 {
   "id": "signal-arch-audit",
   "name": "Nálezy auditu architektury → Dev",
-  "trigger": { "type": "signal", "kind": "*", "from": "qa" },
+  "trigger": { "type": "signal", "kind": "audit-batch", "from": "qa" },
   "target": {
     "type": "task",
     "text": "Review these architecture findings and prepare the worthwhile fixes on their own branch.",
