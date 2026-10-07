@@ -22,6 +22,7 @@ phases:
     produces: validation.md
     model: sonnet
     thinking: medium
+    qualify: true
     loop:
       to: audit
       maxRetries: 2
@@ -81,7 +82,9 @@ kde má mandát, a **nikdy nic nemění v běžícím prostředí**.
    fáze to zapíše a nález nechá jako nerozhodnutý.
 3. **validate** — `exploits.md` → `validation.md`: oponentura celého souboru —
    zahodí falešné pozitivy a vrátí běh na **audit**, když je pokrytí děravé nebo
-   důkazy nedrží (2× s eskalací sonnet/high → opus/high), pak park. Tohle je
+   důkazy nedrží. Je to **brána** (`qualify`): jen `pass` pustí nálezy dál, `gap`
+   / `drift` / chybějící verdikt vrací na **audit** (2× s eskalací sonnet/high →
+   opus/high), pak park. Tohle je
    ta pojistka, která odděluje audit od seznamu tipů.
 4. **compliance** — `validation.md` → `compliance.md`: mapování potvrzených
    nálezů na povinnosti (GDPR, retence, logování, zpracovatelské role) a na

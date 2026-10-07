@@ -22,6 +22,7 @@ phases:
     produces: final.md
     model: sonnet
     thinking: medium
+    qualify: true
     loop:
       to: write
       maxRetries: 2
@@ -43,5 +44,6 @@ strategie. **Text → SEO → redakce.** Skilly `article-writing` a `seo` jsou r
 
 1. **write** — `task.md` → `draft.md`: napiš obsah dle zadání a brand voice.
 2. **seo** — `draft.md` → `seo.md`: klíčová slova, nadpisy, meta, čitelnost.
-3. **edit** — `seo.md` → `final.md`: redakce a fakt-check; slabý draft → smyčka na
-   **write** (2×, eskalace), pak park.
+3. **edit** — `seo.md` → `final.md`: redakce a fakt-check. Je to **brána**
+   (`qualify`): `pass` = hotový text; slabý draft (`gap`/`drift`, i chybějící
+   verdikt) → smyčka na **write** (2×, eskalace), pak park.
