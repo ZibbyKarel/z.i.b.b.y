@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import type { DepartmentId, Employee } from "@zibby/contracts";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EmployeeAllocator } from "./employee-allocator";
 import { NoEmployeeError } from "./employees.errors";
 import { EmployeesStorageService } from "./employees.storage.service";
@@ -23,9 +23,6 @@ async function stillPending(p: Promise<unknown>): Promise<boolean> {
   return result === PENDING;
 }
 
-/** Let in-flight acquires finish their (file-backed) roster read and enqueue, so arrival order is deterministic. */
-const settle = () => new Promise((r) => setTimeout(r, 50));
-
 describe("EmployeeAllocator", () => {
   let dir: string;
   let store: EmployeesStorageService;
@@ -36,6 +33,9 @@ describe("EmployeeAllocator", () => {
     store = new EmployeesStorageService(dir);
     allocator = new EmployeeAllocator(store);
   });
+
+  /** Barrier: admission is serialized, so once this no-op call returns every earlier acquire has decided. */
+  const settle = () => allocator.tryAcquire("dev", "no-such-position").catch(() => null);
 
   afterEach(async () => {
     await fs.rm(dir, { recursive: true, force: true });
@@ -216,18 +216,29 @@ describe("EmployeeAllocator", () => {
     await store.create(employee("e1", "koder", "dev"));
     await allocator.acquire("dev", "koder");
     const waiting = allocator.acquire("dev", "koder");
-    await settle();
+    expect(await stillPending(waiting)).toBe(true);
     await store.create(employee("e2", "koder", "dev"));
     await allocator.rosterChanged("dev", "koder");
     await expect(waiting).resolves.toMatchObject({ employeeId: "e2" });
   });
 
-  it("a release in the same tick as acquire (before it enqueues) still resolves the acquire", async () => {
+  it("a release landing between acquire's roster read and its enqueue still resolves it", async () => {
     await store.create(employee("e1", "koder", "dev"));
     const held = await allocator.acquire("dev", "koder");
+    const realList = store.listActiveByPosition.bind(store);
+    let open!: () => void;
+    const gate = new Promise<void>((r) => (open = r));
+    const spy = vi.spyOn(store, "listActiveByPosition").mockImplementation(async (...args) => {
+      const roster = await realList(...args);
+      await gate; // the read is "in flight" until we say so
+      return roster;
+    });
     const waiting = allocator.acquire("dev", "koder", { runId: "w" });
-    allocator.release(held);
+    await new Promise((r) => setTimeout(r, 20));
+    allocator.release(held); // lands while the waiter's read is pending
+    open();
     await expect(waiting).resolves.toMatchObject({ employeeId: "e1", runId: "w" });
+    spy.mockRestore();
   });
 
   it("a double release is a no-op (onFreed fires once)", async () => {

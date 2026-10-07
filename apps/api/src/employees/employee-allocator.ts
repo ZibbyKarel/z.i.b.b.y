@@ -141,22 +141,25 @@ export class EmployeeAllocator {
 
   /** A hire (or re-activation) may have made someone free — hand them to waiters. */
   async rosterChanged(department: DepartmentId, agentId: string): Promise<void> {
-    const queue = this.queues.get(keyOf(department, agentId));
-    if (!queue || queue.size === 0) return;
-    const roster = await this.employees.listActiveByPosition(department, agentId);
-    for (const e of roster) {
-      if (queue.size === 0) break;
-      if (this.leased.has(e.id)) continue;
-      const next = queue.shift()!;
-      this.leased.set(e.id, next.ctx.runId);
-      next.resolve({
-        employeeId: e.id,
-        employeeName: e.name,
-        department,
-        agentId,
-        runId: next.ctx.runId,
-      });
-    }
+    // Through the admission gate, so an in-flight acquire has decided (taken or enqueued) first.
+    await this.serialized(async () => {
+      const queue = this.queues.get(keyOf(department, agentId));
+      if (!queue || queue.size === 0) return;
+      const roster = await this.employees.listActiveByPosition(department, agentId);
+      for (const e of roster) {
+        if (queue.size === 0) break;
+        if (this.leased.has(e.id)) continue;
+        const next = queue.shift()!;
+        this.leased.set(e.id, next.ctx.runId);
+        next.resolve({
+          employeeId: e.id,
+          employeeName: e.name,
+          department,
+          agentId,
+          runId: next.ctx.runId,
+        });
+      }
+    });
   }
 
   /** Subscribe to "an employee became free with nobody waiting"; returns the unsubscribe. */
