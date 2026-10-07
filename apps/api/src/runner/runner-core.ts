@@ -1072,6 +1072,7 @@ export class RunnerCore<R extends BaseRun> {
     };
     child.on("error", () => finalize("error"));
     child.on("exit", (code) => {
+      run.exitCode = code;
       // A run torn down on purpose (denied / rejected mid-run intent) exits non-zero
       // but its terminal state is `interrupted`, not `error`.
       if (handle.interrupting) return finalize("interrupted");

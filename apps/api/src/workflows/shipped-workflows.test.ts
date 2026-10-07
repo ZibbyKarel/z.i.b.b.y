@@ -177,3 +177,27 @@ describe("shipped workflow definitions", () => {
     });
   });
 });
+
+describe("shipped dev workflows — verify phase gates the PR", () => {
+  it("delivery ends with a clean-checkout verify that loops back to the coder", () => {
+    const phases = readWorkflow("delivery").phases;
+    const last = phases[phases.length - 1];
+    expect(last).toMatchObject({
+      id: "verify",
+      type: "verify",
+      checkout: "clean",
+      loop: { to: "koder", then: "park" },
+    });
+  });
+
+  it("every shipped dev workflow with a pr output has a verify phase, and it runs last", () => {
+    for (const id of shippedIds()) {
+      const wf = readWorkflow(id);
+      if (wf.department !== "dev" || !wf.outputs?.some((o) => o.type === "pr")) continue;
+      const phases = wf.phases;
+      expect(phases[phases.length - 1]?.type, `${id}: verify must be the last phase`).toBe(
+        "verify",
+      );
+    }
+  });
+});

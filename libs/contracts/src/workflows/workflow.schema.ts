@@ -84,6 +84,8 @@ export const WorkflowPhaseSchema = z.object({
   thinking: AgentThinkingSchema.optional(),
   /** Verify/tool phases: shell commands run with `&&` (verify: override project checks). */
   commands: z.array(z.string().min(1)).max(50).optional(),
+  /** Verify phase only: `clean` runs the checks in a fresh checkout of the run branch's HEAD. */
+  checkout: z.enum(["clean"]).optional(),
   /** Agent phase only: parse a <verdict> from `produces`; non-`pass` takes the back-edge. */
   qualify: z.boolean().optional(),
   loop: PhaseLoopSchema.optional(),
@@ -261,6 +263,12 @@ function refineWorkflow(p: z.infer<typeof WorkflowObject>, ctx: z.RefinementCtx)
     });
   }
   p.phases.forEach((ph, i) => {
+    if (ph.checkout !== undefined && ph.type !== "verify")
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "checkout is for verify phases only",
+        path: ["phases", i, "checkout"],
+      });
     if (ph.type === "agent") {
       for (const key of ["agent", "model", "thinking", "consumes", "produces"] as const) {
         if (ph[key] === undefined) {

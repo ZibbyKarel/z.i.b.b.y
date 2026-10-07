@@ -137,6 +137,20 @@ export const ParkedDetailSchema = z.object({
 });
 export type ParkedDetail = z.infer<typeof ParkedDetailSchema>;
 
+/** Runner-captured result of a verify dispatch — real execution, never an agent claim. */
+export const VerifyEvidenceSchema = z.object({
+  phaseId: z.string().min(1),
+  stageRunId: z.string().min(1),
+  commands: z.array(z.string()),
+  /** The check process's exit code; null when it never exited normally (spawn error / signal). */
+  exitCode: z.number().int().nullable(),
+  /** Full sha of the run branch HEAD the checks ran against (worktree runs only). */
+  sha: z.string().min(1).optional(),
+  cleanCheckout: z.boolean(),
+  at: IsoDateTimeSchema,
+});
+export type VerifyEvidence = z.infer<typeof VerifyEvidenceSchema>;
+
 /**
  * A run of a workflow: the aggregate of its per-phase stage runs, the phase
  * currently executing, and an overall status mapped to {@link WorkflowStateSchema}.
@@ -270,6 +284,10 @@ export const WorkflowRunSchema = z.object({
    * if the workflow has no verify phase or none passed.
    */
   verifyCommands: z.array(z.string()).optional(),
+  /** Runner-captured evidence of the latest verify dispatch (exit code, sha, clean checkout). */
+  verifyEvidence: VerifyEvidenceSchema.optional(),
+  /** Why the dev → rel PR hop refused to open (e.g. missing/failed verify evidence). */
+  prBlockedReason: z.string().optional(),
 });
 export type WorkflowRun = z.infer<typeof WorkflowRunSchema>;
 
