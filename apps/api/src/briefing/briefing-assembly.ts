@@ -233,7 +233,11 @@ function buildNeedsYou(
   const fromParked: BriefingNeedsYouItem[] = parkedRuns.map((r) => ({
     kind: "parked",
     id: r.workflowRunId,
-    summary: `workflow ${r.workflowId} parked${r.parkedReason ? ` (${r.parkedReason})` : ""}`,
+    // Decision 6: a missing position is a hiring nudge — headcount is the operator's call.
+    summary:
+      r.parkedReason === "no-employee"
+        ? `workflow ${r.workflowId} parked (no-employee) — hire for stage ${r.currentStage}`
+        : `workflow ${r.workflowId} parked${r.parkedReason ? ` (${r.parkedReason})` : ""}`,
     at: r.startedAt,
     refs: { runRef: r.workflowRunId, workflowId: r.workflowId, status: "parked" },
   }));

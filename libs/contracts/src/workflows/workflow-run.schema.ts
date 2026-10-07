@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AgentIdSchema } from "../agents/agent.schema";
+import { DepartmentIdSchema } from "../departments/department.schema";
 import { IsoDateTimeSchema, RunStatusSchema, WorkspaceSchema } from "../common.schema";
 import { PrOutputSchema } from "../tasks/task.schema";
 import { WorkflowOutputSchema } from "./workflow.schema";
@@ -164,6 +165,17 @@ export const WorkflowRunSchema = z.object({
   taskId: z.string().optional(),
   /** Phase id currently executing, or null once the run has finished. */
   currentStage: z.string().nullable(),
+  /**
+   * Staffing-driven capacity (decision 7): set while the run's current stage waits for a
+   * free employee of this position; cleared when one is leased. The run stays `running`.
+   */
+  waitingForStaff: z
+    .object({
+      department: DepartmentIdSchema,
+      agentId: z.string().min(1),
+      since: IsoDateTimeSchema,
+    })
+    .optional(),
   /**
    * The RunnerCore run id of the stage currently executing — set when a stage
    * spawns, cleared when it goes terminal (or the run ends). Lets the detail's

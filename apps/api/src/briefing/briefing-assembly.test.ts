@@ -107,6 +107,20 @@ describe("assembleBriefing", () => {
     expect(briefing.needsYou[0]!.id).toBe("ap2");
   });
 
+  it("a no-employee park proposes a hire for the waiting stage (decision 6)", () => {
+    const briefing = assembleBriefing({
+      now: NOW,
+      since: SINCE,
+      approvals: [],
+      parkedRuns: [parked({ parkedReason: "no-employee", currentStage: "qa" })],
+      channelItems: [],
+      activity: [],
+    });
+    expect(briefing.needsYou[0]!.summary).toBe(
+      "workflow release parked (no-employee) — hire for stage qa",
+    );
+  });
+
   it("M8: a dead-lettered task surfaces in needsYou (parked kind) so it never fails silently", () => {
     const briefing = assembleBriefing({
       now: NOW,
