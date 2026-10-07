@@ -58,7 +58,7 @@ export class GitHubChannelAdapter implements ChannelAdapter {
   /**
    * The operator's teams in the repo owner's org as `org/slug`, via `GET /user/teams`
    * (needs `read:org`). Two failure shapes:
-   * - scope-shaped (401, 404, or a 403 that is not a rate limit): the token lacks
+   * - scope-shaped (401, 404, or a 403 that is not a primary/secondary rate limit): the token lacks
    *   `read:org` — resolves to `[]` plus a note and is cached for TEAMS_TTL_MS, so the
    *   poll degrades to personal-only without re-logging every tick.
    * - everything else (429, rate-limit 403, 5xx, network error): THROWS and is not
@@ -81,7 +81,8 @@ export class GitHubChannelAdapter implements ChannelAdapter {
     });
     const rateLimited =
       res.status === 429 ||
-      (res.status === 403 && res.headers.get("x-ratelimit-remaining") === "0");
+      (res.status === 403 &&
+        (res.headers.get("x-ratelimit-remaining") === "0" || res.headers.has("retry-after")));
     if (rateLimited) throw new Error(`github rate limited (HTTP ${res.status})`);
     if (res.status === 401 || res.status === 403 || res.status === 404) {
       this.teamsCache.set(key, { at: Date.now(), teams: [] });
@@ -96,7 +97,12 @@ export class GitHubChannelAdapter implements ChannelAdapter {
       t.slug && t.organization?.login?.toLowerCase() === owner ? [`${repoOwner}/${t.slug}`] : [],
     );
     this.teamsCache.set(key, { at: Date.now(), teams });
-    return { teams };
+    return {
+      teams,
+      note: teams.length
+        ? undefined
+        : `github team scope for ${integration.id}: no teams in ${owner} visible to this token — polling personal scope only`,
+    };
   }
 
   private headers(creds: CredentialsInput): Record<string, string> {
@@ -228,15 +234,16 @@ export class GitHubChannelAdapter implements ChannelAdapter {
       return { items: [], cursor: new Date().toISOString() };
     }
 
+    // Discovery first: if it throws, no Search quota has been spent on this attempt.
+    const { teams, note } = includeTeams
+      ? await this.teamsFor(integration, repo, creds)
+      : { teams: [] as string[], note: undefined };
     const scoped = username
       ? [
           ...(await this.searchScoped(repo, `mentions:${username}`, cursor, creds)),
           ...(await this.searchScoped(repo, `assignee:${username}`, cursor, creds)),
         ]
       : await this.listAll(repo, cursor, creds);
-    const { teams, note } = includeTeams
-      ? await this.teamsFor(integration, repo, creds)
-      : { teams: [] as string[], note: undefined };
     const teamScoped: GitHubIssue[] = [];
     // ponytail: two sequential Search calls per team per poll (Search API ~30/min);
     // batch/OR the legs if an operator has many teams.

@@ -375,7 +375,6 @@ describe("GitHubChannelAdapter", () => {
         "2026-06-17T08:00:00.000Z",
       );
       expect(items.map((i) => i.id)).toEqual(["gh-acme-app-issue-1"]);
-      expect(calls.some((c) => c.includes("team"))).toBe(true); // only the /user/teams probe
       expect(calls.some((c) => c.includes("mentions:octocat"))).toBe(true);
       expect(calls.filter((c) => c.includes("team:") || c.includes("team-review"))).toEqual([]);
       expect(notes?.[0]).toMatch(/read:org/);
@@ -434,6 +433,30 @@ describe("GitHubChannelAdapter", () => {
       const second = await adapter.poll(withTeams, { token: "ghp" }, "2026-06-17T08:00:00.000Z");
       expect(calls.filter((c) => c.includes("/user/teams")).length).toBe(1);
       expect(first.notes).toHaveLength(1);
+      expect(second.notes).toBeUndefined();
+    });
+
+    it("rejects on a secondary rate limit (403 with retry-after)", async () => {
+      const impl = vi.fn(async (url: string) =>
+        url.includes("/user/teams")
+          ? new Response("{}", { status: 403, headers: { "retry-after": "60" } })
+          : json({ items: [] }),
+      ) as unknown as typeof fetch;
+      await expect(
+        new GitHubChannelAdapter(impl).poll(
+          withTeams,
+          { token: "ghp" },
+          "2026-06-17T08:00:00.000Z",
+        ),
+      ).rejects.toThrow(/rate limited/);
+    });
+
+    it("notes once (cached) when no teams in the owner's org are visible", async () => {
+      const { impl } = teamFetch([{ slug: "other", organization: { login: "elsewhere" } }]);
+      const adapter = new GitHubChannelAdapter(impl);
+      const first = await adapter.poll(withTeams, { token: "ghp" }, "2026-06-17T08:00:00.000Z");
+      const second = await adapter.poll(withTeams, { token: "ghp" }, "2026-06-17T08:00:00.000Z");
+      expect(first.notes?.[0]).toMatch(/no teams in acme/);
       expect(second.notes).toBeUndefined();
     });
 
