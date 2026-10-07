@@ -34,6 +34,11 @@ export interface PollResult {
   items: InboundMessage[];
   /** Opaque per-integration cursor to persist; passed back on the next poll. */
   cursor: string | undefined;
+  /**
+   * Operator-relevant degradations of this poll that did not fail it (e.g. GitHub
+   * team discovery unavailable → personal scope only). The watcher logs each at warn.
+   */
+  notes?: string[];
 }
 
 /**

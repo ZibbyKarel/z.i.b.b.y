@@ -78,7 +78,10 @@ export type JiraConfig = z.infer<typeof JiraConfigSchema>;
  * into the N3 CI monitor (workflow-run status alerts, not messages; the channel
  * adapter ignores it). Defaults to the conversational pair. `username` (required,
  * the operator's GitHub handle) scopes polling and roadmap sync to items that
- * mention or are assigned to that user via the Search API. `.strict()`.
+ * mention or are assigned to that user via the Search API. `includeTeams` (opt-in)
+ * also ingests PRs whose review is requested from one of the operator's teams in the
+ * repo's org and items that `@org/team`-mention such a team (needs `read:org` on the
+ * token; without it polling stays personal-only). `.strict()`.
  */
 export const GitHubConfigSchema = z
   .object({
@@ -86,6 +89,7 @@ export const GitHubConfigSchema = z
     repo: z.string().regex(/^[^/]+\/[^/]+$/, "repo must be 'owner/name'"),
     streams: z.array(z.enum(["issues", "pulls", "ci"])).default(["issues", "pulls"]),
     username: z.string().min(1),
+    includeTeams: z.boolean().optional(),
   })
   .strict();
 export type GitHubConfig = z.infer<typeof GitHubConfigSchema>;

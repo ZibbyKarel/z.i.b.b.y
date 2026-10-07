@@ -246,19 +246,21 @@ export class ChannelWatcherService
     // M8: retry a transient poll failure with exponential backoff before giving up.
     // Only the network read retries; item persistence below is idempotent (dedup-by-id)
     // and stays outside the retry. Exhaustion rethrows to tick's catch (the DLQ boundary).
-    const { items, cursor: nextCursor } = await withRetry(
-      () => adapter.poll(integration, creds, cursor, ctx),
-      {
-        retries: intEnv("CHANNEL_POLL_RETRIES", 2),
-        baseMs: intEnv("CHANNEL_POLL_BACKOFF_MS", 250),
-        onRetry: (attempt, error) =>
-          this.log.debug("integration poll retry", {
-            id: integration.id,
-            attempt,
-            error: error instanceof Error ? error.message : String(error),
-          }),
-      },
-    );
+    const {
+      items,
+      cursor: nextCursor,
+      notes,
+    } = await withRetry(() => adapter.poll(integration, creds, cursor, ctx), {
+      retries: intEnv("CHANNEL_POLL_RETRIES", 2),
+      baseMs: intEnv("CHANNEL_POLL_BACKOFF_MS", 250),
+      onRetry: (attempt, error) =>
+        this.log.debug("integration poll retry", {
+          id: integration.id,
+          attempt,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+    });
+    for (const note of notes ?? []) this.log.warn(note, { id: integration.id });
 
     const ingested: string[] = [];
     for (const msg of items) {

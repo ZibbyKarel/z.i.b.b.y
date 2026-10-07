@@ -8,6 +8,7 @@ import type {
 import type { ChannelAdapter, InboundMessage, PollContext, PollResult } from "./adapter";
 
 const GITHUB_API = "https://api.github.com";
+const TEAMS_TTL_MS = 60 * 60 * 1000;
 
 interface GitHubIssue {
   number?: number;
@@ -38,8 +39,10 @@ function tokenOf(creds: CredentialsInput): string | null {
  * later instruction — phase-126a had dropped it on the reasoning that "assigned to
  * me at work" ≠ "concerns ZIBBY"
  * (`docs/plans/phase-126a-github-question-scope.md`), which the operator has since
- * overruled: an issue assigned to them is theirs to see. No fourth set exists —
- * nothing outside this union may be ingested. A fresh integration (no
+ * overruled: an issue assigned to them is theirs to see. With `includeTeams`, two team
+ * legs per operator team in the repo owner's org join the union
+ * (`team-review-requested:` and `team:` — an explicit `@org/team` mention); nothing
+ * outside this union may be ingested. A fresh integration (no
  * persisted cursor) seeds the cursor to "now" and ingests nothing on that first poll —
  * every later poll fetches only what changed since the last sync, never a full
  * backfill (same contract as the email adapter). No method sleeps on a rate limit; a
@@ -48,7 +51,59 @@ function tokenOf(creds: CredentialsInput): string | null {
 export class GitHubChannelAdapter implements ChannelAdapter {
   readonly kind = "github" as const;
 
+  private readonly teamsCache = new Map<string, { at: number; teams: string[] }>();
+
   constructor(private readonly fetchImpl: typeof fetch = fetch) {}
+
+  /**
+   * The operator's teams in the repo owner's org as `org/slug`, via `GET /user/teams`
+   * (needs `read:org`). Two failure shapes:
+   * - scope-shaped (401, 404, or a 403 that is not a primary/secondary rate limit): the token lacks
+   *   `read:org` — resolves to `[]` plus a note and is cached for TEAMS_TTL_MS, so the
+   *   poll degrades to personal-only without re-logging every tick.
+   * - everything else (429, rate-limit 403, 5xx, network error): THROWS and is not
+   *   cached, so the whole poll fails and the watcher's retry/backoff handles it like
+   *   any other GitHub call — the cursor does not advance, nothing is skipped.
+   * ponytail: first page (100 teams) only; paginate if an operator ever exceeds it.
+   */
+  private async teamsFor(
+    integration: Integration,
+    repo: string,
+    creds: CredentialsInput,
+  ): Promise<{ teams: string[]; note?: string }> {
+    const repoOwner = repo.split("/")[0] ?? "";
+    const owner = repoOwner.toLowerCase();
+    const key = `${integration.id}:${owner}`;
+    const cached = this.teamsCache.get(key);
+    if (cached && Date.now() - cached.at < TEAMS_TTL_MS) return { teams: cached.teams };
+    const res = await this.fetchImpl(`${GITHUB_API}/user/teams?per_page=100`, {
+      headers: this.headers(creds),
+    });
+    const rateLimited =
+      res.status === 429 ||
+      (res.status === 403 &&
+        (res.headers.get("x-ratelimit-remaining") === "0" || res.headers.has("retry-after")));
+    if (rateLimited) throw new Error(`github rate limited (HTTP ${res.status})`);
+    if (res.status === 401 || res.status === 403 || res.status === 404) {
+      this.teamsCache.set(key, { at: Date.now(), teams: [] });
+      return {
+        teams: [],
+        note: `github team scope unavailable for ${integration.id} (HTTP ${res.status}; token needs read:org) — polling personal scope only`,
+      };
+    }
+    if (!res.ok) throw new Error(`github /user/teams: HTTP ${res.status}`);
+    const body = (await res.json()) as { slug?: string; organization?: { login?: string } }[];
+    const teams = body.flatMap((t) =>
+      t.slug && t.organization?.login?.toLowerCase() === owner ? [`${repoOwner}/${t.slug}`] : [],
+    );
+    this.teamsCache.set(key, { at: Date.now(), teams });
+    return {
+      teams,
+      note: teams.length
+        ? undefined
+        : `github team scope for ${integration.id}: no teams in ${owner} visible to this token — polling personal scope only`,
+    };
+  }
 
   private headers(creds: CredentialsInput): Record<string, string> {
     const token = tokenOf(creds);
@@ -169,7 +224,7 @@ export class GitHubChannelAdapter implements ChannelAdapter {
     ctx?: PollContext,
   ): Promise<PollResult> {
     if (integration.config.kind !== "github") throw new Error("not a github integration");
-    const { repo, streams, username } = integration.config;
+    const { repo, streams, username, includeTeams } = integration.config;
 
     // First enable (no persisted cursor): seed it to "now" and ingest nothing, so a
     // fresh integration never backfills the repo's full issue/PR history — the same
@@ -179,12 +234,27 @@ export class GitHubChannelAdapter implements ChannelAdapter {
       return { items: [], cursor: new Date().toISOString() };
     }
 
+    // Discovery first: if it throws, no Search quota has been spent on this attempt.
+    const { teams, note } = includeTeams
+      ? await this.teamsFor(integration, repo, creds)
+      : { teams: [] as string[], note: undefined };
     const scoped = username
       ? [
           ...(await this.searchScoped(repo, `mentions:${username}`, cursor, creds)),
           ...(await this.searchScoped(repo, `assignee:${username}`, cursor, creds)),
         ]
       : await this.listAll(repo, cursor, creds);
+    const teamScoped: GitHubIssue[] = [];
+    // ponytail: two sequential Search calls per team per poll (Search API ~30/min);
+    // batch/OR the legs if an operator has many teams.
+    for (const team of teams) {
+      // Two legs per team, never a wider one: a pending review request to the team,
+      // and an explicit @org/team mention. "Everything the team can see" is out of scope.
+      teamScoped.push(
+        ...(await this.searchScoped(repo, `team-review-requested:${team}`, cursor, creds)),
+      );
+      teamScoped.push(...(await this.searchScoped(repo, `team:${team}`, cursor, creds)));
+    }
     const zibbyNumbers = ctx?.zibbyPrNumbers ?? [];
     const zibbyPrs = zibbyNumbers.length
       ? await this.fetchZibbyPrs(repo, zibbyNumbers, cursor, creds)
@@ -194,7 +264,7 @@ export class GitHubChannelAdapter implements ChannelAdapter {
     // mentioned-me and assigned-to-me (or a ZIBBY PR that mentions the operator)
     // ingests exactly once.
     const byNumber = new Map<number, GitHubIssue>();
-    for (const issue of [...scoped, ...zibbyPrs]) {
+    for (const issue of [...scoped, ...teamScoped, ...zibbyPrs]) {
       if (issue.number !== undefined) byNumber.set(issue.number, issue);
     }
     const issues = [...byNumber.values()].sort((a, b) =>
@@ -221,7 +291,7 @@ export class GitHubChannelAdapter implements ChannelAdapter {
       });
       if (newest === undefined || updated > newest) newest = updated;
     }
-    return { items, cursor: newest };
+    return { items, cursor: newest, ...(note ? { notes: [note] } : {}) };
   }
 
   async send(

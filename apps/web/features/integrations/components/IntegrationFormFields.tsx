@@ -41,6 +41,7 @@ export enum IntegrationFormTestId {
   GithubStreamIssues = "integration-github-stream-issues",
   GithubStreamPulls = "integration-github-stream-pulls",
   GithubUsername = "integration-github-username",
+  GithubIncludeTeams = "integration-github-include-teams",
   CalendarId = "integration-calendar-id",
   CalendarLookahead = "integration-calendar-lookahead",
   SentryOrg = "integration-sentry-org",
@@ -100,6 +101,8 @@ export interface IntegrationFormState {
   setStreamPulls: (v: boolean) => void;
   githubUsername: string;
   setGithubUsername: (v: string) => void;
+  githubIncludeTeams: boolean;
+  setGithubIncludeTeams: (v: boolean) => void;
   calendarId: string;
   setCalendarId: (v: string) => void;
   lookaheadDays: string;
@@ -158,6 +161,7 @@ export function useIntegrationFormState(
     githubCfg ? githubCfg.streams.includes("pulls") : true,
   );
   const [githubUsername, setGithubUsername] = useState(githubCfg?.username ?? "");
+  const [githubIncludeTeams, setGithubIncludeTeams] = useState(githubCfg?.includeTeams ?? false);
   const [calendarId, setCalendarId] = useState(calendarCfg?.calendarId ?? "");
   const [lookaheadDays, setLookaheadDays] = useState(String(calendarCfg?.lookaheadDays ?? 14));
   const [sentryOrg, setSentryOrg] = useState(sentryCfg?.org ?? "");
@@ -205,6 +209,7 @@ export function useIntegrationFormState(
           repo: repo.trim(),
           streams,
           username: githubUsername.trim(),
+          ...(githubIncludeTeams ? { includeTeams: true } : {}),
         };
       }
       case "calendar":
@@ -288,6 +293,8 @@ export function useIntegrationFormState(
     setStreamPulls,
     githubUsername,
     setGithubUsername,
+    githubIncludeTeams,
+    setGithubIncludeTeams,
     calendarId,
     setCalendarId,
     lookaheadDays,
@@ -540,6 +547,13 @@ export function IntegrationFormFields({
             onChange={(e) => form.setGithubUsername(e.target.value)}
             placeholder="octocat"
             value={form.githubUsername}
+          />
+          <ToggleField
+            checked={form.githubIncludeTeams}
+            data-testid={IntegrationFormTestId.GithubIncludeTeams}
+            hint={t("integrations.githubIncludeTeamsHint")}
+            label={t("integrations.githubIncludeTeams")}
+            onChange={form.setGithubIncludeTeams}
           />
         </>
       )}
