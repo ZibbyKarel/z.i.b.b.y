@@ -41,4 +41,5 @@ export const SIGNAL_KINDS = [
   { id: "post-merge-red", label: "Post-merge CI went red (Release)" },
   { id: "audit-batch", label: "New architecture audit findings (Arch)" },
   { id: "research-artifact", label: "Research artifact delivered (R&D)" },
+  { id: "qa-findings", label: "QA findings delivered (QA)" },
 ] as const;

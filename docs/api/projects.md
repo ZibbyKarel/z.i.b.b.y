@@ -61,6 +61,7 @@ company-merged "effective" context.
   daily_rhythm?: ProjectDailyRhythm;
   companyId?: string;           // Phase 68 link — see resolved-project.service.ts
   gitRemote?: string;           // Phase 76 clone source, validated (see below)
+  web?: { url: string };        // TODO 13 web-project marker; http(s) only — gates `requires: ["web"]` workflows
 }
 ```
 

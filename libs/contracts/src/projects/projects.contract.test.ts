@@ -464,3 +464,33 @@ describe("ProjectPersonSchema (Phase 68 id migration)", () => {
     );
   });
 });
+
+describe("Project.web (TODO 13 — web-project marker)", () => {
+  const base = { id: "shop", name: "Shop", path: "~/shop" };
+
+  it("is absent on an ordinary project (non-web projects unchanged)", () => {
+    expect(ProjectSchema.parse(base).web).toBeUndefined();
+  });
+
+  it("accepts an http(s) base URL", () => {
+    expect(ProjectSchema.parse({ ...base, web: { url: "https://shop.example.com" } }).web).toEqual({
+      url: "https://shop.example.com",
+    });
+    expect(
+      ProjectSchema.safeParse({ ...base, web: { url: "http://localhost:3000" } }).success,
+    ).toBe(true);
+  });
+
+  it("rejects a non-URL and a non-http(s) scheme the browser agent must never open", () => {
+    for (const url of ["shop", "file:///etc/passwd", "javascript:alert(1)", "ftp://x.test"]) {
+      expect(ProjectSchema.safeParse({ ...base, web: { url } }).success, url).toBe(false);
+    }
+    expect(ProjectSchema.safeParse({ ...base, web: {} }).success).toBe(false);
+  });
+
+  it("flows through CreateProjectSchema and UpdateProjectSchema", () => {
+    const web = { url: "https://shop.example.com" };
+    expect(CreateProjectSchema.safeParse({ ...base, web }).success).toBe(true);
+    expect(UpdateProjectSchema.parse({ web }).web).toEqual(web);
+  });
+});

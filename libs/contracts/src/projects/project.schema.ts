@@ -245,6 +245,20 @@ export const ProjectSchema = z.object({
    * the merge gate.
    */
   prOpenMode: PrOpenModeSchema.optional(),
+  /**
+   * TODO 13 — marks this as a WEB project and carries what a browser-driving
+   * agent needs to reach it. A workflow with `requires: ["web"]` refuses to run
+   * against a project without it. http(s) only: the URL is handed to a
+   * Playwright session, which must never be pointed at `file://` / `javascript:`.
+   */
+  web: z
+    .object({
+      url: z
+        .string()
+        .url()
+        .refine((u) => /^https?:\/\//i.test(u), { message: "web.url must be http(s)" }),
+    })
+    .optional(),
   /** Per-engagement run-count budget + concurrency cap (Phase 8.1). */
   budget: ProjectBudgetSchema.optional(),
   /**
