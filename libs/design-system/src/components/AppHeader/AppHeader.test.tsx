@@ -128,4 +128,21 @@ describe("AppHeader", () => {
     render(<AppHeader />);
     expect(screen.getByTestId(AppHeaderTestId.Root)).toHaveRole("banner");
   });
+
+  it("renders the pin slot before notifications in the trailing cluster", () => {
+    render(
+      <AppHeader notifications={<span>Bell</span>} pin={<button type="button">Pin</button>} />,
+    );
+    const pin = screen.getByTestId(AppHeaderTestId.Pin);
+    expect(pin).toHaveTextContent("Pin");
+    expect(
+      pin.compareDocumentPosition(screen.getByTestId(AppHeaderTestId.Notifications)) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("omits the pin slot when not provided", () => {
+    render(<AppHeader />);
+    expect(screen.queryByTestId(AppHeaderTestId.Pin)).toBeNull();
+  });
 });

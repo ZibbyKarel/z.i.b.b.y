@@ -2066,6 +2066,8 @@
     "historyEmpty": "Zatím žádné běhy"
   },
   "pins": {
+    "headerPin": "Připnout stránku do rychlého přístupu",
+    "headerUnpin": "Odepnout stránku z rychlého přístupu",
     "pin": "Připnout",
     "unpin": "Odepnout",
     "pinnedLabel": "Připnuto",
