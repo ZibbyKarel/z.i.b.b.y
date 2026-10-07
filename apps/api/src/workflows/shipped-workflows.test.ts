@@ -63,6 +63,56 @@ describe("shipped workflow definitions", () => {
     expect(() => readWorkflow(id)).not.toThrow();
   });
 
+  describe("every shipped workflow — a judging phase with a back-edge is a gate", () => {
+    // An agent phase with a `loop` but no `qualify` only takes its back-edge on a
+    // non-zero exit: whatever the reviewer/editor/validator concluded is never read.
+    // That is the bug the delivery fix (549e74b1) closed for one workflow; this pins
+    // it for all of them. A looped agent phase that is a PRODUCER (its loop is a plain
+    // retry-on-failure, not a judgement) must be listed here with the reason.
+    const EXIT_CODE_LOOPS = new Map<string, string>([
+      ["research/synthesize", "producer; its report is graded downstream by `refute`"],
+    ]);
+
+    const agentPhases = () =>
+      shippedIds().flatMap((id) =>
+        readWorkflow(id)
+          .phases.filter((p) => p.type === "agent")
+          .map((p) => ({ key: `${id}/${p.id}`, phase: p })),
+      );
+
+    it("grades every looped agent phase unless it is an allowlisted producer", () => {
+      const ungraded = agentPhases()
+        .filter(({ key, phase }) => phase.loop && !phase.qualify && !EXIT_CODE_LOOPS.has(key))
+        .map(({ key }) => key);
+      expect(ungraded, "looped agent phases whose verdict is never read").toEqual([]);
+    });
+
+    it("grades every phase named review", () => {
+      const ungraded = agentPhases()
+        .filter(({ phase }) => phase.id === "review" && !phase.qualify)
+        .map(({ key }) => key);
+      expect(ungraded).toEqual([]);
+    });
+
+    it("makes every qualify phase produce the artifact it is graded on", () => {
+      // The runner reads the verdict tag out of `produces`; without one it fails
+      // closed to `gap` on every attempt.
+      const blind = agentPhases()
+        .filter(({ phase }) => phase.qualify && !phase.produces)
+        .map(({ key }) => key);
+      expect(blind).toEqual([]);
+    });
+
+    it("keeps the producer allowlist honest — no stale or since-graded entries", () => {
+      const live = new Map(agentPhases().map(({ key, phase }) => [key, phase]));
+      for (const key of EXIT_CODE_LOOPS.keys()) {
+        const phase = live.get(key);
+        expect(phase?.loop, `${key} no longer exists or no longer loops`).toBeDefined();
+        expect(phase?.qualify, `${key} is graded now — drop it from the allowlist`).toBeFalsy();
+      }
+    });
+  });
+
   describe("delivery — the judging phases are gates, not exit-code checks", () => {
     it("grades the code reviewer's verdict, routing drift back to the architect", () => {
       const review = readWorkflow("delivery").phases.find((p) => p.id === "review");

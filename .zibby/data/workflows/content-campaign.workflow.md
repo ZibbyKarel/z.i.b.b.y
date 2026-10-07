@@ -36,8 +36,10 @@ phases:
     produces: campaign.md
     model: sonnet
     thinking: medium
+    qualify: true
     loop:
       to: write
+      driftTo: strategy
       maxRetries: 2
       escalate: true
       then: park
@@ -59,7 +61,9 @@ Marketingová linka: **průzkum → strategie → text → SEO → redakce**. Op
 2. **strategy** — `research.md` → `strategy.md`: pozicování, pilíře sdělení, kanály.
 3. **write** — `strategy.md` → `draft.md`: koncept obsahu dle strategie a brand voice.
 4. **seo** — `draft.md` → `seo.md`: klíčová slova, struktura, meta, interní prolinkování.
-5. **edit** — `seo.md` → `campaign.md`: redakční kontrola; slabý draft vrací smyčka
-   zpět na **write** (2× s eskalací), pak park.
+5. **edit** — `seo.md` → `campaign.md`: redakční kontrola. Je to **brána**
+   (`qualify`): `pass` = hotová kampaň; `gap` (slabý draft) vrací na **write**,
+   `drift` (text míjí strategii) až na **strategy**; chybějící verdikt = `gap`.
+   2× s eskalací, pak park.
 
 Publikace je Tier-3: kampaň se připraví až k bráně, odeslání schvaluje operátor.

@@ -15,6 +15,7 @@ phases:
     produces: review.md
     model: sonnet
     thinking: medium
+    qualify: true
     loop:
       to: code
       maxRetries: 2
@@ -68,8 +69,10 @@ plnou dokumentaci — to je `delivery`.
    spustí kontroly repa; `verify` je pak nezávislé potvrzení, ne první kontakt
    s testy.
 2. **review** — `implementation.md` → `review.md`: oponentura korektnosti,
-   čitelnosti a rizik. Selhání vrací práci na **code** s kontextem, eskalace
-   zvedá model/thinking (sonnet/high → opus/high), vyčerpání → park.
+   čitelnosti a rizik. Je to **brána** (`qualify`): `pass` pustí práci dál, `gap`
+   i `drift` ji vrátí na **code** s kontextem verdiktu; chybějící verdikt = `gap`
+   (fail-closed). Eskalace zvedá model/thinking (sonnet/high → opus/high),
+   vyčerpání → park.
 3. **verify** — deterministické kontroly projektu (lint, typecheck, testy), bez
    modelu a bez tokenů. Červená vrací práci na **code** (2× s eskalací), pak
    park. `commands` neuvádíme, takže se dědí kontroly projektu.
