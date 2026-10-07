@@ -5,6 +5,7 @@ import { type Observable, filter, map } from "rxjs";
 import { CompanyNotFoundError } from "../companies/companies.errors";
 import { ProjectNotFoundError } from "../projects/projects.errors";
 import { InvalidSkillIdError, SkillNotFoundError } from "../skills/skills.errors";
+import { TeamNotFoundError } from "../teams/teams.errors";
 import { ChatEventsService } from "./chat-events.service";
 import { ChatSessionService } from "./chat-session.service";
 import { ChatTranscriptStore } from "./chat-transcript.store";
@@ -31,12 +32,13 @@ export class ChatController {
         try {
           return { status: 201 as const, body: await this.session.sendMessage(body) };
         } catch (error) {
-          // TODO 13: an unknown #project / #company / /skill tag is a 404, not a 500.
+          // TODO 13: an unknown #project / #company / #team / /skill tag is a 404, not a 500.
           if (
             error instanceof SkillNotFoundError ||
             error instanceof InvalidSkillIdError ||
             error instanceof ProjectNotFoundError ||
-            error instanceof CompanyNotFoundError
+            error instanceof CompanyNotFoundError ||
+            error instanceof TeamNotFoundError
           ) {
             return { status: 404 as const, body: { message: error.message } };
           }

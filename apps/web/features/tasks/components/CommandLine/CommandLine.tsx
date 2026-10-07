@@ -1001,11 +1001,15 @@ export function CommandLine({
   const mentionResults = useMemo<MentionResult[]>(() => {
     if (!mention) return [];
     const q = mention.query;
+    // An empty query caps EACH kind so a big catalog of one kind never crowds the
+    // others out of the overall 50-row list; a typed query narrows enough already.
+    const perKind = q ? 50 : 12;
     if (mention.trigger === "#") {
       return scopeKinds
         .flatMap((kind) =>
           scopeSources[kind]
             .filter((src) => matchesQuery(q, src.name, src.id))
+            .slice(0, perKind)
             .map((src) => ({ kind, id: src.id, name: src.name, glyph: SCOPE_GLYPH[kind] })),
         )
         .slice(0, 50);
@@ -1050,7 +1054,12 @@ export function CommandLine({
         glyph: "grid" as IconName,
         color: s.color,
       }));
-    return [...agentHits, ...employeeHits, ...workflowHits, ...departmentHits].slice(0, 50);
+    // An agent an active employee holds is already reachable through that employee.
+    const held = new Set(employees.map((e) => e.agentId));
+    const freeAgentHits = agentHits.filter((a) => !held.has(a.id));
+    return [employeeHits, departmentHits, workflowHits, freeAgentHits]
+      .flatMap((rows) => rows.slice(0, perKind))
+      .slice(0, 50);
   }, [mention, agents, employees, workflows, rosterDepartments, scopeKinds, scopeSources, skills]);
   // Clamp at read time so a result list that shrank between renders never
   // leaves the keyboard highlight out of range.

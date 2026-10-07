@@ -31,7 +31,7 @@ import { CommandLine, type ScopeKind } from "./CommandLine";
 
 /** A task reaches a run only through its project; a company/team tag would be
  *  inert on the task path (see `CreateTaskInputSchema.teamId`'s docblock). */
-const TASK_SCOPE_KINDS: readonly ScopeKind[] = ["project"];
+export const TASK_SCOPE_KINDS: readonly ScopeKind[] = ["project"];
 
 export enum TaskCommandLineTestId {
   Root = "task-command-line-root",

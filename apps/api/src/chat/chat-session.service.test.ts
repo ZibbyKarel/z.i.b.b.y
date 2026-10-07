@@ -11,6 +11,8 @@ import { KbMcpAuthService } from "../kb/kb-mcp-auth.service";
 import { ProjectNotFoundError } from "../projects/projects.errors";
 import type { ProjectsStorageService } from "../projects/projects.storage.service";
 import { SkillNotFoundError } from "../skills/skills.errors";
+import { TeamNotFoundError } from "../teams/teams.errors";
+import type { TeamsStorageService } from "../teams/teams.storage.service";
 import type { SkillsStorageService } from "../skills/skills.storage.service";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { AttachmentStorageService } from "../tasks/attachment-storage.service";
@@ -75,6 +77,13 @@ class TestSession extends ChatSessionService {
         throw new CompanyNotFoundError(id);
       },
     },
+    // Teams the legacy KB-scope tests tag; any other id is unknown.
+    teams: Pick<TeamsStorageService, "get"> = {
+      get: async (id) => {
+        if (id === "devrel" || id === "platform") return { id, name: id };
+        throw new TeamNotFoundError(id);
+      },
+    },
   ) {
     super(
       store,
@@ -88,6 +97,7 @@ class TestSession extends ChatSessionService {
       skills as SkillsStorageService,
       projects as ProjectsStorageService,
       companies as CompaniesStorageService,
+      teams as TeamsStorageService,
     );
   }
   protected createProcess(args: string[]): ClaudeProcess {
@@ -830,12 +840,15 @@ describe("ChatSessionService", () => {
     });
 
     it.each([
-      ["skillId", "nope"],
-      ["projectId", "nope"],
-      ["companyId", "nope"],
-    ])("rejects an unknown %s before writing anything", async (key, value) => {
+      ["skillId", "nope", SkillNotFoundError],
+      ["projectId", "nope", ProjectNotFoundError],
+      ["companyId", "nope", CompanyNotFoundError],
+      ["teamId", "nope", TeamNotFoundError],
+    ])("rejects an unknown %s before writing anything", async (key, value, errorClass) => {
       const svc = new TestSession(store, events, []);
-      await expect(svc.sendMessage({ text: "go", [key]: value }, NOW)).rejects.toThrow();
+      await expect(svc.sendMessage({ text: "go", [key]: value }, NOW)).rejects.toBeInstanceOf(
+        errorClass,
+      );
       expect(await store.listConversationIds()).toEqual([]);
     });
   });

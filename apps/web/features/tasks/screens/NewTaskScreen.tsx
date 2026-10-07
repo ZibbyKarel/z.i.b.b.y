@@ -18,7 +18,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { useProjectsQuery } from "../../projects";
-import { CommandLine, type ScopeKind } from "../components/CommandLine/CommandLine";
+import { CommandLine } from "../components/CommandLine/CommandLine";
+import { TASK_SCOPE_KINDS } from "../components/CommandLine/TaskCommandLine";
 import { TaskAttachments } from "../components/TaskAttachments";
 import { useClassifyTaskMutation, useCreateTaskMutation } from "../mutations";
 import { type TaskTarget, extractPaths, toApiTarget, toClientTarget } from "../task";
@@ -31,10 +32,7 @@ const ENTRY_COO = "coo";
  * hard override this deliverable calls for: COO auto-classifies, an explicit
  * department bypasses classification entirely (`TaskTargetSchema`'s
  * `{kind:"department"}`, DNA "explicit target overrides the classifier").
- * */
-/** A task reaches a run only through its project; a company/team tag would be inert. */
-const TASK_SCOPE_KINDS: readonly ScopeKind[] = ["project"];
-
+ */
 export function NewTaskScreen() {
   const t = useTranslations("tasksWork");
   const router = useRouter();

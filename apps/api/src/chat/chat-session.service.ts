@@ -17,6 +17,7 @@ import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { SkillsStorageService } from "../skills/skills.storage.service";
 import { collisionResistantId, ensureDir } from "../shared/file-storage";
 import { SystemConfigStore } from "../system/system-config.store";
+import { TeamsStorageService } from "../teams/teams.storage.service";
 import { AttachmentStorageService } from "../tasks/attachment-storage.service";
 import { buildAttachmentPromptSection } from "./chat-attachment-prompt";
 import { ChatEventsService } from "./chat-events.service";
@@ -115,6 +116,8 @@ export class ChatSessionService {
     private readonly skills: SkillsStorageService,
     private readonly projects: ProjectsStorageService,
     private readonly companies: CompaniesStorageService,
+    // Resolves a `#team` tag so an unknown teamId 404s like the other tags.
+    private readonly teams: TeamsStorageService,
   ) {}
 
   /**
@@ -141,6 +144,7 @@ export class ChatSessionService {
       body.skillId ? this.skills.get(body.skillId) : undefined,
       body.projectId ? this.projects.get(body.projectId) : undefined,
       body.companyId ? this.companies.get(body.companyId) : undefined,
+      body.teamId ? this.teams.get(body.teamId) : undefined,
     ]);
     const tags: ChatTurnTags = {
       ...(skill

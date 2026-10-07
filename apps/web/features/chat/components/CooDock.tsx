@@ -24,7 +24,7 @@ export enum CooDockTestId {
 const COMPOSER_MAX_ROWS = 4;
 
 /** `#` offers every scope kind the chat send body carries. */
-const CHAT_SCOPE_KINDS: readonly ScopeKind[] = ["company", "team", "project"];
+const CHAT_SCOPE_KINDS: readonly ScopeKind[] = ["project", "team", "company"];
 
 /** The one-line collapsed preview is cut here (the DS also truncates visually). */
 const LATEST_LINE_MAX_CHARS = 160;

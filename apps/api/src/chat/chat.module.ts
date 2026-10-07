@@ -8,6 +8,7 @@ import { DepartmentsModule } from "../departments/departments.module";
 import { ProjectsModule } from "../projects/projects.module";
 import { SkillsModule } from "../skills/skills.module";
 import { TasksModule } from "../tasks/tasks.module";
+import { TeamsModule } from "../teams/teams.module";
 import { dataDir } from "../shared/data-dir";
 import { ChatController } from "./chat.controller";
 import { ChatEventsService } from "./chat-events.service";
@@ -44,7 +45,8 @@ export function resolveChatDir(): string {
 @Module({
   // DepartmentsModule (NS2 F3c) feeds the per-department `get_status` lens — a
   // one-directional edge (departments never imports chat).
-  // TODO 13: Skills/Projects/Companies resolve a turn's `/skill`, `#project`, `#company`
+  // TODO 13: Skills/Projects/Companies/Teams resolve a turn's `/skill`, `#project`,
+  // `#company`, `#team`
   // tags (one-directional edges; none import chat).
   imports: [
     TasksModule,
@@ -56,6 +58,7 @@ export function resolveChatDir(): string {
     SkillsModule,
     ProjectsModule,
     CompaniesModule,
+    TeamsModule,
   ],
   controllers: [ChatController, ChatMcpController],
   providers: [

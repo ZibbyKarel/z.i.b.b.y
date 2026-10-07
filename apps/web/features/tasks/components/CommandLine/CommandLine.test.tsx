@@ -1,5 +1,5 @@
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   FilePreviewTestId,
   HighlightTextAreaFieldTestId,
@@ -26,31 +26,38 @@ const markPattern = new RegExp(`^${HighlightTextAreaFieldTestId.Mark}-`);
  * classification ack row); those moved to `TaskCommandLine` (`TaskCommandLine.test.tsx`
  * owns their coverage now). `onSubmit` is REQUIRED — every render below supplies one.
  */
-vi.mock("../../../agents/queries/useAgentsQuery", () => ({
-  useAgentsQuery: () => ({
-    data: [
+// The `@` catalogs live in one hoisted, mutable fixture so a test can grow them
+// (see the per-kind cap test); `afterEach` restores the defaults.
+const fx = vi.hoisted(() => {
+  const defaults = () => ({
+    // "pm" is held by the active employee below, so it never lists on its own.
+    agents: [
       { id: "builder", name: "Builder", glyph: "hammer" },
       { id: "koder", name: "Kodér" },
-    ],
-  }),
-  getAgentsQueryKey: () => ["agents"],
-}));
-vi.mock("../../../workflows/queries/useWorkflowsQuery", () => ({
-  useWorkflowsQuery: () => ({
-    data: [{ id: "delivery", name: "Delivery", department: "dev" }],
-  }),
-  getWorkflowsQueryKey: () => ["workflows"],
-}));
-// Phase 91: two departments in the registry — only "dev" owns a workflow (see the
-// workflows mock above), "ops" owns none — so the mention catalog roster-filter
-// (≥1 owned workflow) has something real to exclude.
-vi.mock("../../../departments/queries/useDepartmentsQuery", () => ({
-  useDepartmentsQuery: () => ({
-    data: [
+      { id: "pm", name: "PM" },
+    ] as { id: string; name: string; glyph?: string }[],
+    workflows: [{ id: "delivery", name: "Delivery", department: "dev" }],
+    // Phase 91: only "dev" owns a workflow, "ops" owns none — so the roster filter
+    // (≥1 owned workflow) has something real to exclude.
+    departments: [
       { id: "dev", name: "Dev", color: "#f97316", state: "idle", tier2Count: 0, tier3Count: 0 },
       { id: "ops", name: "Ops", color: "#14b8a6", state: "idle", tier2Count: 0, tier3Count: 0 },
     ],
-  }),
+    // An `@` employee holds the "pm" position — picking it dispatches to that agent.
+    employees: [{ id: "emp-ada", name: "Ada Lovelace", agentId: "pm", status: "active" }],
+  });
+  return { defaults, data: defaults() };
+});
+vi.mock("../../../agents/queries/useAgentsQuery", () => ({
+  useAgentsQuery: () => ({ data: fx.data.agents }),
+  getAgentsQueryKey: () => ["agents"],
+}));
+vi.mock("../../../workflows/queries/useWorkflowsQuery", () => ({
+  useWorkflowsQuery: () => ({ data: fx.data.workflows }),
+  getWorkflowsQueryKey: () => ["workflows"],
+}));
+vi.mock("../../../departments/queries/useDepartmentsQuery", () => ({
+  useDepartmentsQuery: () => ({ data: fx.data.departments }),
 }));
 // `#` sources (tags, never dispatch targets) and the `/` skill catalog.
 vi.mock("../../../teams", () => ({
@@ -65,11 +72,8 @@ vi.mock("../../../projects", () => ({
 vi.mock("../../../skills", () => ({
   useSkillsQuery: () => ({ data: [{ id: "tdd", name: "Test Driven", glyph: "spark" }] }),
 }));
-// An `@` employee holds the "builder" position — picking it dispatches to that agent.
 vi.mock("../../../employees", () => ({
-  useEmployeesQuery: () => ({
-    data: [{ id: "emp-ada", name: "Ada Lovelace", agentId: "builder", status: "active" }],
-  }),
+  useEmployeesQuery: () => ({ data: fx.data.employees }),
 }));
 
 const uploadMutateAsync = vi.fn().mockResolvedValue({
@@ -88,6 +92,9 @@ const RETIRED_TARGET_CHIP_TESTID = "command-line-target-chip";
 describe("CommandLine (Phase 118d generic composer)", () => {
   beforeEach(() => {
     uploadMutateAsync.mockClear();
+  });
+  afterEach(() => {
+    fx.data = fx.defaults();
   });
 
   it("does not submit on an empty description", async () => {
@@ -159,11 +166,12 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       await user.type(input, "@");
       expect(input).toHaveFocus();
 
-      // Results order: Builder, Kodér, Delivery — ArrowDown once lands on Kodér.
+      // Results order: Ada Lovelace (employee), Dev (department), Delivery, Builder,
+      // Kodér — ArrowDown once lands on Dev.
       await user.keyboard("{ArrowDown}{Enter}");
 
       expect(input).toHaveFocus();
-      expect(input).toHaveValue("@Kodér ");
+      expect(input).toHaveValue("@Dev ");
       expect(screen.queryByTestId(CommandLineTestId.MentionMenu)).not.toBeInTheDocument();
     });
 
@@ -354,8 +362,49 @@ describe("CommandLine (Phase 118d generic composer)", () => {
 
       expect(input).toHaveValue("@Ada Lovelace ");
       expect(onTargetChange).toHaveBeenLastCalledWith(
-        expect.objectContaining({ kind: "agent", id: "builder", name: "Ada Lovelace" }),
+        expect.objectContaining({ kind: "agent", id: "pm", name: "Ada Lovelace" }),
       );
+    });
+
+    it("an empty @ query shows every kind even when each has >12 entries, and never lists a held agent separately", async () => {
+      const many = <T,>(make: (i: number) => T) => Array.from({ length: 20 }, (_, i) => make(i));
+      fx.data.employees = many((i) => ({
+        id: `emp-${i}`,
+        name: `Employee ${i}`,
+        agentId: `held-${i}`,
+        status: "active",
+      }));
+      fx.data.departments = many((i) => ({
+        id: `dep-${i}`,
+        name: `Department ${i}`,
+        color: "#f97316",
+        state: "idle",
+        tier2Count: 0,
+        tier3Count: 0,
+      }));
+      fx.data.workflows = many((i) => ({
+        id: `wf-${i}`,
+        name: `Workflow ${i}`,
+        department: `dep-${i}`,
+      }));
+      fx.data.agents = [
+        ...many((i) => ({ id: `held-${i}`, name: `Held ${i}` })),
+        ...many((i) => ({ id: `free-${i}`, name: `Free ${i}` })),
+      ];
+      const user = userEvent.setup();
+      render(<CommandLine onSubmit={vi.fn()} />);
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "@");
+
+      for (const id of ["employee-emp-0", "department-dep-0", "workflow-wf-0", "agent-free-0"]) {
+        expect(screen.getByTestId(`${CommandLineTestId.MentionItem}-${id}`)).toBeInTheDocument();
+      }
+      expect(
+        screen.queryByTestId(`${CommandLineTestId.MentionItem}-agent-held-0`),
+      ).not.toBeInTheDocument();
+      // 12 per kind on an empty query.
+      expect(
+        screen.queryByTestId(`${CommandLineTestId.MentionItem}-employee-emp-12`),
+      ).not.toBeInTheDocument();
     });
 
     it("opens no / picker unless allowSkillMentions is set", async () => {
