@@ -87,6 +87,20 @@ function budgetSnapshot(
   return { budget: { maxCostUsd, warnAtPct: own?.warnAtPct ?? 70, spentUsd: 0 } };
 }
 
+/**
+ * TODO 13 — the workflow-level precondition on the run's project. Returns the
+ * human-readable reason the run must not start, or null when it may.
+ */
+export function unmetRequirement(
+  workflow: Pick<Workflow, "requires">,
+  project: Pick<Project, "id" | "web"> | null,
+): string | null {
+  if (!workflow.requires?.includes("web")) return null;
+  if (!project) return "requires a web project, but the run has no project";
+  if (!project.web) return `requires a web project, but project "${project.id}" has no web.url`;
+  return null;
+}
+
 // Re-exported so the controller can map it to a 404 without importing the core.
 export { RunNotFoundError } from "../runner/runner-core";
 
@@ -364,6 +378,18 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     };
     this.runs.set(workflowRunId, run);
     await this.writeAggregate(run);
+
+    // TODO 13: an unmet `requires` ends the run here — before any worktree, stage
+    // or agent — with the reason recorded on the aggregate (never a silent no-op).
+    const unmet = unmetRequirement(workflow, project);
+    if (unmet) {
+      run.status = "failed";
+      run.currentStage = null;
+      run.failedReason = unmet;
+      await this.writeAggregate(run);
+      this.log.warn("workflow run refused: unmet requirement", { workflowRunId, reason: unmet });
+      return run;
+    }
 
     // Phase 3.1: a git project gets a dedicated worktree under the run dir so every
     // stage works on the run's own `zibby/*` branch (the operator's checkout is
@@ -2633,6 +2659,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         producesAbs,
         qualify: phase.qualify,
         runDirAbs: path.dirname(cwd),
+        ...(project?.web ? { webUrl: project.web.url } : {}),
       });
       // Memory grounding (Phase 4): per-stage so each phase's agent gets the North
       // Star + relevant MOCs + the project note. Fail-open ("" on any error).

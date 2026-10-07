@@ -44,4 +44,20 @@ describe("buildStageTask", () => {
     });
     expect(task).toContain('($ZIBBY_RUN_DIR) je "/runs/r1"');
   });
+
+  it("names the web project's base URL when given (TODO 13)", () => {
+    const task = buildStageTask({
+      phaseId: "explore",
+      consumesAbs: null,
+      producesAbs: "/run/explore/qa-findings.md",
+      webUrl: "https://shop.example.com",
+    });
+    expect(task).toContain('Testovaný web (base URL): "https://shop.example.com"');
+  });
+
+  it("adds no web line without a webUrl", () => {
+    expect(buildStageTask({ phaseId: "x", consumesAbs: null, producesAbs: null })).not.toContain(
+      "Testovaný web",
+    );
+  });
 });

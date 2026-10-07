@@ -7,7 +7,7 @@ import type { ResumableRunner } from "../approvals/approvals.service";
 import { DuplicateNoteError } from "../memory/vault.service";
 import { WorkingAgentsFuse } from "../employees/working-agents-fuse";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
-import { WorkflowRunnerService } from "./workflow-runner.service";
+import { WorkflowRunnerService, unmetRequirement } from "./workflow-runner.service";
 
 /**
  * Workflow-level output sinks (the delivery config that replaced the `pr-autor`
@@ -631,5 +631,60 @@ describe("WorkflowRunnerService — output sinks", () => {
       expect(d.workspace.openPr).toHaveBeenCalled();
       expect(run.status).toBe("done");
     });
+  });
+});
+
+describe("TODO 13 — requires: web precondition", () => {
+  let dir: string;
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "pipe-requires-"));
+  });
+  afterEach(async () => {
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  const webQa: Workflow = {
+    id: "web-qa",
+    department: "qa",
+    requires: ["web"],
+    phases: [docPhase],
+    outputs: [],
+    instructions: "x",
+    complexity: "standard",
+  };
+
+  it("unmetRequirement: no requires → never blocks, even without a project", () => {
+    expect(unmetRequirement({}, null)).toBeNull();
+  });
+
+  it("unmetRequirement: requires web → blocks no project and a project without web.url", () => {
+    expect(unmetRequirement(webQa, null)).toBe(
+      "requires a web project, but the run has no project",
+    );
+    expect(unmetRequirement(webQa, { id: "api-only" })).toBe(
+      'requires a web project, but project "api-only" has no web.url',
+    );
+  });
+
+  it("unmetRequirement: requires web → passes a project with web.url", () => {
+    expect(
+      unmetRequirement(webQa, { id: "shop", web: { url: "https://shop.example.com" } }),
+    ).toBeNull();
+  });
+
+  it("start() without a (resolvable) project ends failed with the reason recorded, no stage", async () => {
+    const { service } = await makeService(dir, webQa);
+
+    // "typo-project" does not resolve (the projects double returns null) → no project.
+    const run = await service.start("web-qa", undefined, "typo-project");
+
+    expect(run.status).toBe("failed");
+    expect(run.currentStage).toBeNull();
+    expect(run.failedReason).toBe("requires a web project, but the run has no project");
+    expect(run.stageRuns).toEqual([]);
+    const onDisk = JSON.parse(
+      await fs.readFile(path.join(dir, run.workflowRunId, "run.json"), "utf8"),
+    ) as WorkflowRun;
+    expect(onDisk).toMatchObject({ status: "failed", failedReason: run.failedReason });
   });
 });
