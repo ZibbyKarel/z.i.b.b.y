@@ -9,7 +9,7 @@ import {
   TabsTestId,
 } from "@zibby/design-system";
 import { renderWithProviders, screen } from "../../../test/render";
-import { PinPageDialogTestId } from "../../../features/pins";
+import { HeaderPinButtonTestId, PinPageDialogTestId } from "../../../features/pins";
 import { AppShell } from "./AppShell";
 
 // ZB-01: `AppShell` is rebuilt over the ZibbyCorp DS `AppFrame` — a header
@@ -88,5 +88,17 @@ describe("AppShell", () => {
     );
     expect(screen.getAllByTestId(RailTestId.Root)).toHaveLength(3);
     expect(screen.getAllByTestId(RailTestId.Empty)).toHaveLength(3);
+  });
+
+  it("renders the current-page pin icon in the header", () => {
+    renderWithProviders(
+      <AppShell>
+        <div>obsah stránky</div>
+      </AppShell>,
+    );
+    expect(screen.getByTestId(AppHeaderTestId.Pin)).toBeInTheDocument();
+    expect(screen.getByTestId(HeaderPinButtonTestId.Button)).toHaveAccessibleName(
+      "Připnout stránku do rychlého přístupu",
+    );
   });
 });

@@ -37,6 +37,7 @@ import { HIGH_RISK_TYPES, formatWaited } from "../../../features/approvals/appro
 import { useLimitsQuery } from "../../../features/limits";
 import { NotificationBell } from "../../../features/notifications";
 import {
+  HeaderPinButton,
   PinPageDialog,
   PinnedRail,
   SubnavPinButton,
@@ -310,6 +311,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
           nav={<SectionNav active={active} />}
           notifications={<NotificationBell />}
           onSearchClick={() => setPaletteOpen(true)}
+          pin={<HeaderPinButton href={currentHref} />}
         />
       }
       rail={
