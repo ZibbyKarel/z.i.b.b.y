@@ -219,7 +219,7 @@ agent. Such automations have `system: true`:
   page.
 
 Definitions live in the `SYSTEM_AUTOMATIONS` constant
-(`apps/api/src/automations/automations.storage.service.ts`). Today it seeds ten:
+(`apps/api/src/automations/automations.storage.service.ts`). Today it seeds eleven:
 
 | id (data file)          | target.type       | default schedule                                         | enabled |
 | ----------------------- | ----------------- | -------------------------------------------------------- | ------- |
@@ -231,10 +231,11 @@ Definitions live in the `SYSTEM_AUTOMATIONS` constant
 | `review-learn`          | `review-learn`    | `15 3 * * *`                                             | no      |
 | `signal-cve-critical`   | `task` (dev)      | signal `cve` from `sec`, `minSeverity: critical`         | yes     |
 | `signal-post-merge-red` | `task` (dev)      | signal `post-merge-red` from `rel`                       | yes     |
-| `signal-arch-audit`     | `task` (dev)      | signal `*` from `qa`, `approval: "ask"`                  | yes     |
+| `signal-arch-audit`     | `task` (dev)      | signal `audit-batch` from `qa`, `approval: "ask"`        | yes     |
+| `signal-qa-findings`    | `task` (dev)      | signal `qa-findings` from `qa`, `approval: "ask"`        | yes     |
 | `signal-research`       | `task` (dev)      | signal `research-artifact` from `rnd`, `approval: "ask"` | yes     |
 
-The four `signal-*` automations replaced the removed handoff rules. Each is a
+The `signal-*` automations (four of them replaced the removed handoff rules; `signal-qa-findings` came with the web-qa workflow). Each is a
 `task` target at department `dev`; see [Signal bus](#signal-bus).
 
 ### Memory distillation (`memory-distill`)
@@ -283,12 +284,14 @@ running it unattended safe.
 **File:** `apps/api/src/automations/signal-bus.service.ts` (leaf module
 `SignalBusModule`). `SignalBusService.emit(signal)` is called by:
 
-| Emitter                  | kinds               | from  |
-| ------------------------ | ------------------- | ----- |
-| Security                 | `cve`, `secret`     | `sec` |
-| Arch                     | `audit-batch`       | `qa`  |
-| Release post-merge watch | `post-merge-red`    | `rel` |
-| Workflow runner          | `research-artifact` | `rnd` |
+| Emitter                  | kinds                              | from        |
+| ------------------------ | ---------------------------------- | ----------- |
+| Security                 | `cve`, `secret`                    | `sec`       |
+| Arch                     | `audit-batch`                      | `qa`        |
+| Release post-merge watch | `post-merge-red`                   | `rel`       |
+| Workflow runner          | `research-artifact`, `qa-findings` | `rnd`, `qa` |
+
+The workflow runner emits on a delivered output of an `rnd`-owned (`research-artifact`) or `qa`-owned (`qa-findings`) workflow; fingerprint = the artifact record id.
 
 `emit` finds enabled automations with a matching `signal` trigger (kind exact or
 `*`, `from`, `minSeverity` against `SIGNAL_SEVERITY_ORDER`), then per match:
