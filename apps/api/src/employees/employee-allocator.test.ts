@@ -23,6 +23,9 @@ async function stillPending(p: Promise<unknown>): Promise<boolean> {
   return result === PENDING;
 }
 
+/** Let in-flight acquires finish their (file-backed) roster read and enqueue, so arrival order is deterministic. */
+const settle = () => new Promise((r) => setTimeout(r, 50));
+
 describe("EmployeeAllocator", () => {
   let dir: string;
   let store: EmployeesStorageService;
@@ -87,10 +90,12 @@ describe("EmployeeAllocator", () => {
       order.push("run_2");
       return l;
     });
+    await settle();
     const third = allocator.acquire("dev", "koder", { runId: "run_3" }).then((l) => {
       order.push("run_3");
       return l;
     });
+    await settle();
 
     allocator.release(first);
     const secondLease = await second;
@@ -150,5 +155,70 @@ describe("EmployeeAllocator", () => {
         agentId: "koder",
       }),
     ).not.toThrow();
+  });
+
+  it("tryAcquire returns null when the only employee is leased, and when a waiter is queued", async () => {
+    await store.create(employee("e1", "koder", "dev"));
+    const lease = await allocator.tryAcquire("dev", "koder");
+    expect(lease?.employeeId).toBe("e1");
+    expect(await allocator.tryAcquire("dev", "koder")).toBeNull();
+    const waiting = allocator.acquire("dev", "koder");
+    expect(await stillPending(waiting)).toBe(true);
+    // Free it via hand-off to the waiter; with a line present a newcomer still gets null.
+    const waiting2 = allocator.acquire("dev", "koder");
+    await stillPending(waiting2);
+    allocator.release(lease!);
+    await waiting;
+    expect(await allocator.tryAcquire("dev", "koder")).toBeNull();
+  });
+
+  it("tryAcquire returns null for a free employee while a waiter is queued (never cuts the line)", async () => {
+    await store.create(employee("e1", "koder", "dev"));
+    const held = await allocator.acquire("dev", "koder");
+    const waiting = allocator.acquire("dev", "koder");
+    await stillPending(waiting);
+    await store.create(employee("e2", "koder", "dev"));
+    expect(await allocator.tryAcquire("dev", "koder")).toBeNull();
+    allocator.release(held);
+    await waiting;
+  });
+
+  it("release hands the employee to the highest-progress waiter, not the earliest", async () => {
+    await store.create(employee("e1", "koder", "dev"));
+    const held = await allocator.acquire("dev", "koder");
+    const early = allocator.acquire("dev", "koder", { runId: "early", rank: { progress: 0.1 } });
+    await settle();
+    const late = allocator.acquire("dev", "koder", { runId: "late", rank: { progress: 0.9 } });
+    await settle();
+    allocator.release(held);
+    await expect(late).resolves.toMatchObject({ employeeId: "e1", runId: "late" });
+    expect(await stillPending(early)).toBe(true);
+  });
+
+  it("onFreed fires on a release with no waiter, not on a hand-off", async () => {
+    await store.create(employee("e1", "koder", "dev"));
+    let freed = 0;
+    const off = allocator.onFreed(() => freed++);
+    const held = await allocator.acquire("dev", "koder");
+    const waiting = allocator.acquire("dev", "koder");
+    await settle();
+    allocator.release(held);
+    expect(freed).toBe(0);
+    allocator.release(await waiting);
+    expect(freed).toBe(1);
+    off();
+    const again = await allocator.acquire("dev", "koder");
+    allocator.release(again);
+    expect(freed).toBe(1);
+  });
+
+  it("rosterChanged after a hire resolves a waiting acquire", async () => {
+    await store.create(employee("e1", "koder", "dev"));
+    await allocator.acquire("dev", "koder");
+    const waiting = allocator.acquire("dev", "koder");
+    expect(await stillPending(waiting)).toBe(true);
+    await store.create(employee("e2", "koder", "dev"));
+    await allocator.rosterChanged("dev", "koder");
+    await expect(waiting).resolves.toMatchObject({ employeeId: "e2" });
   });
 });

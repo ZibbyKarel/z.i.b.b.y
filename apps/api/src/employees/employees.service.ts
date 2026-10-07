@@ -72,6 +72,7 @@ export class EmployeesService {
       await this.names.releaseByEmployeeId(id).catch(() => {});
       throw error;
     }
+    void this.allocator.rosterChanged(employee.department, employee.agentId);
     return employee;
   }
 
