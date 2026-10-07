@@ -3,7 +3,7 @@ import { AgentIdSchema } from "../agents/agent.schema";
 
 /**
  * A command's `id` IS the slash-command name (`/<id>`). It doubles as the on-disk
- * file name and the materialized `<id>.md` under a run's `.claude/commands/`, so it
+ * file name and the materialized `<id>.md` inside ZIBBY's per-run commands plugin, so it
  * reuses the agent id rules (filename-safe, no traversal).
  */
 export const CommandIdSchema = AgentIdSchema;
@@ -11,9 +11,10 @@ export const CommandIdSchema = AgentIdSchema;
 /**
  * A custom Claude Code slash command (managed from the UI). On disk: one `<id>.md`
  * file with YAML frontmatter plus a Markdown body — exactly the Claude Code command
- * format. The runner MATERIALIZES every enabled command into each run's
- * `.claude/commands/` (the only way to make `/orchestrate`-style commands that
- * downloaded skills/agents depend on resolve — there is no `--commands` flag). The
+ * format. The runner MATERIALIZES every enabled command into a ZIBBY-owned plugin
+ * (`<run sandbox>/zibby-commands`, name `zibby`) passed via `--plugin-dir`, so they
+ * resolve as `/zibby:<id>` (and the Skill tool resolves a bare `/<id>`) for the
+ * downloaded skills/agents that depend on them. The
  * frontmatter keys are kebab-case to match Claude Code (`argument-hint`,
  * `allowed-tools`, `disable-model-invocation`); `enabled` is ZIBBY-internal and is
  * stripped from the materialized file. `instructions` is the command body (with

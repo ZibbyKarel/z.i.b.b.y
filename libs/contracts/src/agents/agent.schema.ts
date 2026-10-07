@@ -64,7 +64,7 @@ export const AgentSchema = z.object({
   optionalTools: z.array(z.string()).optional(),
   /**
    * Claude Code plugin directories this agent's runs load (`--plugin-dir`, one per
-   * entry; absolute paths — a relative one resolves against the run's spawn cwd).
+   * entry; absolute paths).
    * Runs spawn with `--setting-sources ""`, so nothing from ~/.claude/plugins loads
    * ambiently — declare a pinned copy here to get a plugin back. Merged with the
    * project's `plugins` (agent's first).

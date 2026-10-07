@@ -2026,8 +2026,12 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     const department = (await this.workflows.get(run.workflowId).catch(() => null))?.department;
     // Materialize enabled custom commands as a ZIBBY-owned plugin in the stage's
     // sandbox (never the client worktree), loaded via `--plugin-dir`; best-effort
-    // (a falsy result → no plugin).
-    const commandsPlugin = await this.commandMaterializer.materialize(stageCwd);
+    // (a falsy result → no plugin). Only claude agent stages load it — verify/tool
+    // phases never spawn claude, and a tool's artifacts must not sweep it up.
+    const commandsPlugin =
+      phase.type !== "verify" && phase.type !== "tool" && process.env.AGENT_RUNNER_MODE === "claude"
+        ? await this.commandMaterializer.materialize(stageCwd)
+        : null;
     const { command, args, spawnCwd } = await this.buildStageCommand(
       phase,
       stageCwd,

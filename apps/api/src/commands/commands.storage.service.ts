@@ -21,7 +21,7 @@ export const COMMANDS_DIR = "COMMANDS_DIR";
  * File-backed persistence for commands: one Markdown command file per command,
  * named `<id>.md`, inside a configurable data directory — the same Claude Code
  * command format (kebab-case frontmatter + Markdown body) the runner materializes
- * into a run's `.claude/commands/`. Same shape and guarantees as
+ * into a per-run ZIBBY plugin's `commands/`. Same shape and guarantees as
  * {@link SkillsStorageService}; there is intentionally no database.
  */
 @Injectable()

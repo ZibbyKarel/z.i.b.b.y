@@ -80,9 +80,9 @@ This is the only place a wrapper injects its own fields (`agentId`, `prompt`,
   actually runs — used when a project-targeted stage spawns inside the real
   project checkout. Only its `CLAUDE.md` loads (see **`--setting-sources`**);
   its `.claude/` settings, hooks, skills and commands do not.
-- `env: { ...process.env, ...spec.env, [INTENT_DIR_ENV]: spec.cwd }` — the
-  intent-dir pin (`ZIBBY_INTENT_DIR`) is applied **after** `spec.env` so a
-  project's own env can never override it.
+- `env: { ...process.env, CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD: "1", ...spec.env, [INTENT_DIR_ENV]: spec.cwd }`
+  — a project env can override the CLAUDE.md var, but the intent-dir pin
+  (`ZIBBY_INTENT_DIR`) is applied **last** so it can never be overridden.
 - The run id is `${ownerId}_${startedMs}_${pid}`; the log file is
   `<dir>/<runId>.log` (append mode); the sidecar is `<dir>/<runId>.json`.
 - The child's `exit`/`error` listeners are wired **synchronously, before any
@@ -259,20 +259,25 @@ Key assembled pieces:
   regardless of its own declared tools.
 - **`--setting-sources ""`** (isolation) — on every run and every one-shot
   (router, task-namer, briefer, memory distiller, triager, review-comment
-  distiller, reply-draft researcher, product-factory haiku vision QA via
-  `spawnClaudeCli`'s `ISOLATED_SETTING_SOURCES`, prepended unless the caller
-  passes its own); chat already did (`docs/api/chat.md`). Not loaded: the
+  distiller, reply-draft researcher via `spawnClaudeCli`'s
+  `ISOLATED_SETTING_SOURCES`, prepended unless the caller passes its own; the
+  product-factory haiku vision QA, `libs/product-factory/src/providers/haiku.ts`,
+  passes the `--setting-sources ""` literal through its own `proc.ts` runner
+  instead); chat already did (`docs/api/chat.md`). Not loaded: the
   user's `~/.claude` settings, plugins, skills and SessionStart hooks, and the
   target repo's `.claude/settings.json` hooks, skills and commands — so a run
   no longer depends on unpinned ambient state or a client repo's hooks. Still
   loaded: the `--settings` approval hook (verified it fires), every
   `--plugin-dir`, and the target repo's `CLAUDE.md` via `--add-dir <spawnCwd>`
   (`contextDir`) plus `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1` set by
-  `RunnerCore`.
+  `RunnerCore`. That env var makes the CLI load `CLAUDE.md` from EVERY
+  `--add-dir` (contextDir, operator `files` grants, the attachments dir, a
+  workflow run-root grant) — passive text only; their `.claude/` settings,
+  hooks and skills never load.
 - **`--plugin-dir`** — the only way a plugin reaches a run. One flag per entry,
   in order: the agent's `plugins[]`, then the project's `plugins[]`, then ZIBBY's
-  own `zibby` commands plugin. Entries are paths (absolute; a relative one
-  resolves against the spawn cwd, a missing one is silently ignored by the CLI);
+  own `zibby` commands plugin. Entries are absolute paths (a missing one is
+  silently ignored by the CLI);
   ZIBBY vendors no third-party plugin tree. The args are persisted in the run
   spec, so the loaded plugins are the trace and approval-resume replays them.
 - **`--settings`** — the locked approval-hook `PreToolUse` group is always
