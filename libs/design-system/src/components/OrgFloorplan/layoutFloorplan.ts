@@ -74,7 +74,7 @@ export interface FloorplanLayout {
   W: number;
   H: number;
   spineX: number;
-  /** widest row-side width; every side is stretched to it */
+  /** widest row-side width; sets the world width (rooms are not stretched to it) */
   side: number;
   /** y of each horizontal corridor's top edge */
   corridors: number[];
@@ -146,11 +146,10 @@ export function layoutFloorplan(
   const out: PlacedRoom[] = [];
   rows.forEach((row, ri) =>
     row.sides.forEach((list, si) => {
-      const extra = side - sideWidth(list);
-      const totalBase = sumBase(list);
-      let x = si === 0 ? spineX - SW / 2 - side : spineX + SW / 2;
+      // Rooms keep their natural width (no stretching); both sides hug the spine.
+      let x = si === 0 ? spineX - SW / 2 - sideWidth(list) : spineX + SW / 2;
       for (const r of list) {
-        const w = r.base + (extra * r.base) / totalBase;
+        const w = r.base;
         const y = ri === 0 ? ROWS_TOP + (rowH[0] ?? 0) - r.h : (rowY[ri] ?? ROWS_TOP);
         const gx0 = (w - r.cols * CW) / 2;
         out.push({

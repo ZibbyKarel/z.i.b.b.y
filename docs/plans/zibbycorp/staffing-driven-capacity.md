@@ -59,7 +59,7 @@ coarser brake on top of it and refines how leases are granted.
 ## Out of scope
 
 Parallel stages inside one run (e.g. frontend + backend coding at once —
-fan-out / join in the pipeline DSL). Separate decision; see TODO item 6.
+fan-out / join in the pipeline DSL). Separate decision — deliberately not planned; headcount-driven parallelism across tasks covers it.
 
 ## Known touch points
 

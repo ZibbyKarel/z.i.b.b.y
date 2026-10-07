@@ -27,16 +27,18 @@ describe("layoutFloorplan", () => {
     expect(sec.cols).toBe(2);
   });
 
-  it("stretches rooms so every row-side is as wide as the widest, and W = 2*SIDE+SW+2*M", () => {
+  it("sizes rooms by agent count only (no stretching), hugging the spine; W = 2*SIDE+SW+2*M", () => {
     const l = layoutFloorplan(rooms({ dev: 10, com: 1, knw: 1, fin: 1, rnd: 1 }));
-    // widest side = com+knw+fin (3*168 + 2 gaps, 2-col floor = 524); dev (524) stretches to it
+    // widest side = com+knw+fin (3*168 + 2 gaps, 2-col floor = 524)
     expect(l.side).toBe(524);
     expect(l.W).toBe(2 * 524 + SW + 2 * M);
-    const right = ["com", "knw", "fin"].map((id) => get(l, id));
-    const width = right.reduce((s, r) => s + r.w, 0) + GAP * 2;
-    expect(width).toBeCloseTo(524);
-    expect(get(l, "rnd").w).toBeCloseTo(524);
-    expect(get(l, "dev").x).toBe(l.spineX - SW / 2 - 524);
+    expect(get(l, "rnd").w).toBe(168);
+    expect(get(l, "dev").w).toBe(5 * 72 + 24);
+    // left side ends at the spine
+    const rnd = get(l, "rnd");
+    expect(rnd.x + rnd.w).toBe(l.spineX - SW / 2);
+    expect(get(l, "com").x).toBe(l.spineX + SW / 2);
+    expect(get(l, "knw").x).toBe(get(l, "com").x + 168 + GAP);
   });
 
   it("appends unknown ids to the row-side with the smallest summed base width", () => {
