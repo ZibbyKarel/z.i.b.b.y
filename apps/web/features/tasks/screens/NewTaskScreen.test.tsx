@@ -12,7 +12,9 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => searchParams,
 }));
 
-vi.mock("../../projects", () => ({ useProjectsQuery: () => ({ data: [] }) }));
+vi.mock("../../projects", () => ({
+  useProjectsQuery: () => ({ data: [{ id: "zibby", name: "Zibby Web", path: "/work/zibby" }] }),
+}));
 vi.mock("../components/TaskAttachments", () => ({
   TaskAttachments: () => null,
 }));
@@ -102,5 +104,17 @@ describe("NewTaskScreen (ZB-04b)", () => {
       }),
       expect.anything(),
     );
+  });
+
+  it("takes a #-picked project as the task's project (its path joins the dispatched paths)", async () => {
+    const user = userEvent.setup();
+    render(<NewTaskScreen />);
+    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
+    await user.type(screen.getByTestId(CommandLineTestId.Input), "fix it #Zib");
+    await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-project-zibby`));
+    fireEvent.click(screen.getByText("Vytvořit úkol"));
+    const body = createMutate.mock.calls[0]?.[0]?.body as { paths: string[]; target?: unknown };
+    expect(body.paths).toContain("/work/zibby");
+    expect(body.target).toBeUndefined();
   });
 });

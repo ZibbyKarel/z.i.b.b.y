@@ -2,6 +2,7 @@
 
 import type { ChatMentionTarget, TaskTarget } from "@zibby/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { ScopeKind } from "../../tasks/components/CommandLine/CommandLine";
 import type { TaskAttachmentSet } from "../../tasks/components/TaskAttachments";
 import { useChat } from "../ChatContext";
 import { useSendChatMessageMutation } from "../mutations/useSendChatMessageMutation";
@@ -30,8 +31,10 @@ export interface CooChat {
    * rides as `attachmentSetId`.
    */
   send: (text: string, mentions?: TaskTarget[], attachments?: TaskAttachmentSet) => void;
-  /** The team tagged via the composer's `@`-mention (Task 8) — a KB scope, not a target. */
-  setTeamId: (teamId: string | undefined) => void;
+  /** The composer's `#`-tagged team/project/company — a scope for the turn, not a target. */
+  setScope: (kind: ScopeKind, id: string | undefined) => void;
+  /** The composer's `/`-picked skill for the turn. */
+  setSkillId: (skillId: string | undefined) => void;
   /** Hands-free dictation over `useSpeechRecognition` (O-22). */
   voice: VoiceMode;
 }
@@ -133,10 +136,22 @@ export function useCooChat(): CooChat {
   const sendMessage = useSendChatMessageMutation();
   const thinking = sendMessage.isPending || stream.streaming;
 
-  // The team tag is not part of `CommandLine.onSubmit`'s signature, so it rides
-  // in its own state; `CommandLine` clears it after submit (resetOnSubmit), so a
-  // team tagged on one turn doesn't leak onto the next.
-  const [teamId, setTeamId] = useState<string | undefined>(undefined);
+  // The `#`/`/` tags are not part of `CommandLine.onSubmit`'s signature, so they
+  // ride in their own state, cleared after every send (see `send`).
+  const [tags, setTags] = useState<{
+    teamId?: string;
+    projectId?: string;
+    companyId?: string;
+    skillId?: string;
+  }>({});
+  const setScope = useCallback(
+    (kind: ScopeKind, id: string | undefined) => setTags((p) => ({ ...p, [`${kind}Id`]: id })),
+    [],
+  );
+  const setSkillId = useCallback(
+    (id: string | undefined) => setTags((p) => ({ ...p, skillId: id })),
+    [],
+  );
 
   const send = useCallback(
     (text: string, mentions?: TaskTarget[], attachments?: TaskAttachmentSet) => {
@@ -158,16 +173,22 @@ export function useCooChat(): CooChat {
           text,
           ...(effectiveMentions.length > 0 ? { mentions: effectiveMentions } : {}),
           ...(attachments?.attachmentSetId ? { attachmentSetId: attachments.attachmentSetId } : {}),
-          ...(teamId ? { teamId } : {}),
+          ...(tags.teamId ? { teamId: tags.teamId } : {}),
+          ...(tags.projectId ? { projectId: tags.projectId } : {}),
+          ...(tags.companyId ? { companyId: tags.companyId } : {}),
+          ...(tags.skillId ? { skillId: tags.skillId } : {}),
         },
       });
+      // Tags are one-turn; this also stops them leaking onto a dictated turn, which
+      // bypasses the composer's own reset (ported from PR #69).
+      setTags({});
     },
-    [conversationId, dockTarget, setMessages, sendMessage, teamId],
+    [conversationId, dockTarget, setMessages, sendMessage, tags],
   );
 
   const speaking = useAnyAudioPlaying();
   const sendDictated = useCallback((text: string) => send(text), [send]);
   const voice = useVoiceMode({ onSend: sendDictated, suspended: thinking || speaking });
 
-  return { stream, thinking, send, setTeamId, voice };
+  return { stream, thinking, send, setScope, setSkillId, voice };
 }

@@ -27,7 +27,11 @@ import {
 } from "../../task";
 import { ScheduledConfirmation } from "../ScheduledConfirmation";
 import type { TaskAttachmentSet } from "../TaskAttachments";
-import { CommandLine } from "./CommandLine";
+import { CommandLine, type ScopeKind } from "./CommandLine";
+
+/** A task reaches a run only through its project; a company/team tag would be
+ *  inert on the task path (see `CreateTaskInputSchema.teamId`'s docblock). */
+const TASK_SCOPE_KINDS: readonly ScopeKind[] = ["project"];
 
 export enum TaskCommandLineTestId {
   Root = "task-command-line-root",
@@ -340,6 +344,9 @@ export function TaskCommandLine({
         onAttachmentsChange={handleAttachmentsChange}
         onDraftChange={onDraftChange}
         onInjectedTargetConsumed={onInjectedTargetConsumed}
+        onScopeChange={(kind, id) => {
+          if (kind === "project") handleProjectChange(id ?? null);
+        }}
         onSubmit={() => dispatch(null)}
         onTargetChange={handleTargetChange}
         onTextChange={handleTextChange}
@@ -347,6 +354,7 @@ export function TaskCommandLine({
         renderTrailing={renderTrailingControl}
         resetOnSubmit={false}
         rows={rows}
+        scopeKinds={TASK_SCOPE_KINDS}
         showAttach={showAttach}
         submitLabel={submitLabel}
         suggestions={suggestions}

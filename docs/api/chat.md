@@ -12,10 +12,30 @@ of the conversation.
 
 | Method       | Path                                   | Description                                                                                                                                                                                                                               |
 | ------------ | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST`       | `/api/chat/messages`                   | Adds the operator's turn and starts the streaming reply. Body `{ conversationId?, text, mentions?, attachmentSetId?, target?, teamId? }` → `{ conversationId, turnId }` (returns immediately; tokens arrive over SSE).                    |
+| `POST`       | `/api/chat/messages`                   | Adds the operator's turn and starts the streaming reply. Body: see [Send body](#send-body) → `{ conversationId, turnId }` (returns immediately; tokens arrive over SSE).                                                                  |
 | `GET`        | `/api/chat/transcript?conversationId=` | Plain read of the conversation transcript (`{ conversationId, sessionId, messages }`). Without `conversationId` → the active thread.                                                                                                      |
 | `GET`        | `/api/chat/stream?conversationId=`     | **SSE** (raw `@Sse()`, outside ts-rest) — live tokens. Each `data` is a JSON `ChatTurnEvent`.                                                                                                                                             |
 | `POST`/`GET` | `/api/chat/mcp`                        | In-process **MCP server** (Streamable HTTP) exposing ZIBBY's tools. Called by the spawned `claude` process, not the frontend — gated by `ChatMcpAuthGuard` (see below); `GET` is an unguarded 405 (no server-initiated streaming needed). |
+
+### Send body
+
+`POST /api/chat/messages` — every field except `text` is optional.
+
+| Field             | Meaning                                                                                                             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `conversationId`  | Thread to continue; omitted → a new one.                                                                            |
+| `text`            | The operator's turn.                                                                                                |
+| `mentions`        | 0-8 `@`-addressed `agent` / `department` / `workflow` units (the composer's `@` resolves an employee to its agent). |
+| `target`          | Legacy single mention; normalised to `mentions` server-side.                                                        |
+| `attachmentSetId` | Set id from `POST /api/tasks/attachments`.                                                                          |
+| `teamId`          | `#`-tagged team: the `zibby-kb` knowledge-base ceiling for the turn.                                                |
+| `projectId`       | `#`-tagged project: named in the turn's system prompt; its team becomes the KB ceiling when no `teamId` is tagged.  |
+| `companyId`       | `#`-tagged company: named in the turn's system prompt.                                                              |
+| `skillId`         | `/`-picked skill: its instructions are appended to the system prompt after the governor.                            |
+
+An unknown `teamId` / `projectId` / `companyId` / `skillId` → **404**, before
+anything is written. The tags are one-turn: the web composer clears them after
+every send (`useCooChat`).
 
 ### `ChatTurnEvent` (SSE payload)
 

@@ -18,7 +18,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { useProjectsQuery } from "../../projects";
-import { CommandLine } from "../components/CommandLine/CommandLine";
+import { CommandLine, type ScopeKind } from "../components/CommandLine/CommandLine";
 import { TaskAttachments } from "../components/TaskAttachments";
 import { useClassifyTaskMutation, useCreateTaskMutation } from "../mutations";
 import { type TaskTarget, extractPaths, toApiTarget, toClientTarget } from "../task";
@@ -32,6 +32,9 @@ const ENTRY_COO = "coo";
  * department bypasses classification entirely (`TaskTargetSchema`'s
  * `{kind:"department"}`, DNA "explicit target overrides the classifier").
  * */
+/** A task reaches a run only through its project; a company/team tag would be inert. */
+const TASK_SCOPE_KINDS: readonly ScopeKind[] = ["project"];
+
 export function NewTaskScreen() {
   const t = useTranslations("tasksWork");
   const router = useRouter();
@@ -132,6 +135,9 @@ export function NewTaskScreen() {
             chrome={false}
             initialText={initialText}
             label={t("new.field.brief")}
+            onScopeChange={(kind, id) => {
+              if (kind === "project") setProjectId(id ?? "");
+            }}
             onSubmit={submit}
             onTargetChange={setMentionTarget}
             onTextChange={setText}
@@ -139,6 +145,7 @@ export function NewTaskScreen() {
             renderTrailing={() => null}
             resetOnSubmit={false}
             rows={6}
+            scopeKinds={TASK_SCOPE_KINDS}
             showAttach={false}
           />
 
