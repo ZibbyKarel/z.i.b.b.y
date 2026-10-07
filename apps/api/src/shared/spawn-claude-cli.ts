@@ -10,8 +10,20 @@ const logger = new Logger("spawnClaudeCli");
  */
 const DEFAULT_MAX_OUTPUT_CHARS = 1_000_000;
 
+/**
+ * Every one-shot runs isolated: `--setting-sources ""` loads NO user/project/local
+ * settings — so no ambient ~/.claude plugins/skills/SessionStart hooks and none of a
+ * client repo's `.claude/` leak into a headless call (Law 2/5: behaviour depends only
+ * on what ZIBBY passes). Same mechanism the chat engine uses. `--settings`/`--plugin-dir`
+ * flags still apply.
+ */
+export const ISOLATED_SETTING_SOURCES = ["--setting-sources", ""] as const;
+
 export interface SpawnClaudeCliOptions {
-  /** Full `claude` CLI argv, e.g. `["-p", prompt, "--output-format", "json", "--model", "haiku"]`. */
+  /**
+   * `claude` CLI argv, e.g. `["-p", prompt, "--output-format", "json", "--model", "haiku"]`.
+   * `--setting-sources ""` is prepended unless the argv already carries `--setting-sources`.
+   */
   args: string[];
   /** Milliseconds before the child is killed and the call rejects with a timeout error. */
   timeoutMs: number;
@@ -48,8 +60,12 @@ export interface SpawnClaudeCliOptions {
 export function spawnClaudeCli(opts: SpawnClaudeCliOptions): Promise<string> {
   const maxChars = opts.maxOutputBytes ?? DEFAULT_MAX_OUTPUT_CHARS;
 
+  const args = opts.args.includes("--setting-sources")
+    ? opts.args
+    : [...ISOLATED_SETTING_SOURCES, ...opts.args];
+
   return new Promise((resolve, reject) => {
-    const child = spawn(process.env.CLAUDE_BIN ?? "claude", opts.args, {
+    const child = spawn(process.env.CLAUDE_BIN ?? "claude", args, {
       stdio: ["ignore", "pipe", "pipe"],
       ...(opts.cwd ? { cwd: opts.cwd } : {}),
     });

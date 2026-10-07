@@ -48,9 +48,23 @@ describe("spawnClaudeCli", () => {
     child.stdout.emit("data", Buffer.from('{"result":"ok"}'));
     child.emit("exit", 0);
     await expect(promise).resolves.toBe('{"result":"ok"}');
-    expect(spawnMock).toHaveBeenCalledWith("claude", ["-p", "hi"], {
+    expect(spawnMock).toHaveBeenCalledWith("claude", ["--setting-sources", "", "-p", "hi"], {
       stdio: ["ignore", "pipe", "pipe"],
     });
+  });
+
+  it("does not duplicate --setting-sources when the caller already passes it", async () => {
+    const child = nextSpawn();
+    const promise = spawnClaudeCli({
+      args: ["-p", "hi", "--setting-sources", "project"],
+      timeoutMs: 8000,
+      label: "test",
+    });
+    child.emit("exit", 0);
+    await promise;
+    const args = spawnMock.mock.calls[0]?.[1] as string[];
+    expect(args.filter((a) => a === "--setting-sources")).toHaveLength(1);
+    expect(args[args.indexOf("--setting-sources") + 1]).toBe("project");
   });
 
   it("caps stdout accumulation at maxOutputBytes and logs the cap once (head-truncated)", async () => {
@@ -130,6 +144,10 @@ describe("spawnClaudeCli", () => {
     const promise = spawnClaudeCli({ args: ["-p", "hi"], timeoutMs: 8000, label: "test" });
     child.emit("exit", 0);
     await promise;
-    expect(spawnMock).toHaveBeenCalledWith("/opt/custom/claude", ["-p", "hi"], expect.anything());
+    expect(spawnMock).toHaveBeenCalledWith(
+      "/opt/custom/claude",
+      ["--setting-sources", "", "-p", "hi"],
+      expect.anything(),
+    );
   });
 });
