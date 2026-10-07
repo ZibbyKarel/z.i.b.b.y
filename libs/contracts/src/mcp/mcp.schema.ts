@@ -36,6 +36,8 @@ export const McpServerSchema = z.object({
   url: z.string().url().optional(),
   headers: z.record(z.string(), z.string()).optional(),
   enabled: z.boolean().default(true),
+  /** Inject only into runs whose agent `tools`/`toolGrants` reference this server (heavy servers like Playwright). */
+  grantOnly: z.boolean().optional(),
   /** Computed at read time: whether a credentials file exists. Never persisted. */
   hasCredentials: z.boolean().default(false),
 });
@@ -58,6 +60,8 @@ export const CreateMcpServerSchema = z
     url: z.string().url().optional(),
     headers: z.record(z.string(), z.string()).optional(),
     enabled: z.boolean().optional(),
+    /** Inject only into runs whose agent `tools`/`toolGrants` reference this server (heavy servers like Playwright). */
+    grantOnly: z.boolean().optional(),
   })
   .superRefine((val, ctx) => {
     if (val.type === "stdio" && !val.command) {

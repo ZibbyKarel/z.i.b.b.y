@@ -35,7 +35,8 @@ wired in).
   - gitignored `mcp-credentials.store.ts` (write-only `{ env?, headers?, authToken? }`,
     never read back or logged; the entity carries only the `hasCredentials` flag).
 - **Injection:** `buildMcpConfig()` merges enabled servers + secrets into
-  `--mcp-config <json>`.
+  `--mcp-config <json>`. A `grantOnly: true` server is injected only into runs whose
+  `tools`/`toolGrants` reference it (heavy servers such as Playwright).
 - **allowedTools:** each enabled server adds `mcp__<id>__*` (otherwise `dontAsk`
   would deny the MCP tool call; the bare `mcp__<id>` does not match).
 

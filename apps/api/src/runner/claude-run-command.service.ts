@@ -454,11 +454,19 @@ export class ClaudeRunCommandService {
      */
     catalogAgentIds: string[];
   }> {
-    // Enabled MCP servers are injected into every run: their tools widen the
+    // Enabled MCP servers are injected into every run — except grantOnly ones, which
+    // ride only runs whose tools/toolGrants reference them. Their tools widen the
     // session allow-list (see buildCatalog) and their connection config rides
     // `--mcp-config`. A listing failure degrades to no MCP (never blocks the run).
+    const granted = [...(opts.tools ?? []), ...(opts.toolGrants ?? [])];
     const mcpServers = (await this.mcp.list().catch((): McpServer[] => [])).filter(
-      (server) => server.enabled,
+      (server) =>
+        server.enabled &&
+        (!server.grantOnly ||
+          granted.some(
+            (t) =>
+              t === server.id || t === `mcp__${server.id}` || t.startsWith(`mcp__${server.id}__`),
+          )),
     );
     const { catalog, allowedTools, catalogAgentIds } = await this.buildCatalog(
       opts.tools,

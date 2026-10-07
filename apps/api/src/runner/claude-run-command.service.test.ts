@@ -617,6 +617,42 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     expect(allowedToolsOf(args).some((t) => t.startsWith("mcp__"))).toBe(false);
   });
 
+  it("injects a grantOnly MCP server only into runs whose tools grant it", async () => {
+    const pw: McpServer = {
+      id: "playwright",
+      type: "stdio",
+      command: "npx",
+      args: ["-y", "@playwright/mcp@0.0.83", "--headless"],
+      enabled: true,
+      grantOnly: true,
+      hasCredentials: false,
+    };
+    const svc = makeService([CODER], [], { mcpServers: [pw] });
+
+    const ungranted = await svc.buildClaudeCommand({
+      instructions: "x",
+      task: "t",
+      tools: CODER.tools,
+    });
+    expect(ungranted.args).not.toContain("--mcp-config");
+    expect(allowedToolsOf(ungranted.args)).not.toContain("mcp__playwright__*");
+
+    const granted = await svc.buildClaudeCommand({
+      instructions: "x",
+      task: "t",
+      tools: [...(CODER.tools ?? []), "mcp__playwright__*"],
+    });
+    const cfg = JSON.parse(flagValue(granted.args, "--mcp-config") ?? "{}");
+    expect(cfg.mcpServers.playwright).toMatchObject({ type: "stdio", command: "npx" });
+
+    const viaGrant = await svc.buildClaudeCommand({
+      instructions: "x",
+      task: "t",
+      toolGrants: ["playwright"],
+    });
+    expect(viaGrant.args).toContain("--mcp-config");
+  });
+
   it("carries the run id as a header on ZIBBY's own in-process MCP servers", async () => {
     const server: McpServer = {
       id: "zibby-kb",
