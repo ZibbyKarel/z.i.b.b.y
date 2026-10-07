@@ -1,5 +1,5 @@
 import type { TaskRunStatus } from "@zibby/contracts";
-import type { IconName, StatTone } from "@zibby/design-system";
+import type { IconName, StatTone, StateTone } from "@zibby/design-system";
 
 /**
  * The eleven run states folded into five operator-facing buckets — the shared
@@ -24,19 +24,28 @@ export interface RunStatusGroup {
   /** Tile tone when the bucket is non-empty; empty buckets render `neutral`. */
   tone: StatTone;
   icon: IconName;
+  /** Canonical state tone — the same vocabulary `/work/tasks` renders as a `StatePill`. */
+  state: StateTone;
 }
 
 export const RUN_STATUS_GROUPS: readonly RunStatusGroup[] = [
-  { key: "running", statuses: ["running"], tone: "accent", icon: "run" },
+  { key: "running", statuses: ["running"], tone: "accent", icon: "run", state: "working" },
   {
     key: "waiting",
     statuses: ["queued", "scheduled", "pending", "held", "awaiting-approval"],
     tone: "warn",
     icon: "wait",
+    state: "thinking",
   },
-  { key: "done", statuses: ["done"], tone: "ok", icon: "ok" },
-  { key: "error", statuses: ["error", "interrupted", "paused-limit"], tone: "bad", icon: "warn" },
-  { key: "parked", statuses: ["parked"], tone: "warn", icon: "pause" },
+  { key: "done", statuses: ["done"], tone: "ok", icon: "ok", state: "done" },
+  {
+    key: "error",
+    statuses: ["error", "interrupted", "paused-limit"],
+    tone: "bad",
+    icon: "warn",
+    state: "error",
+  },
+  { key: "parked", statuses: ["parked"], tone: "warn", icon: "pause", state: "blocked" },
 ];
 
 /** The `?filter=` value that reproduces a bucket on the runs screen. */

@@ -17,4 +17,14 @@ describe("RUN_STATUS_GROUPS", () => {
       "queued,scheduled,pending,held,awaiting-approval",
     );
   });
+
+  it("maps each bucket onto the canonical StateTone /work/tasks uses", () => {
+    expect(Object.fromEntries(RUN_STATUS_GROUPS.map((g) => [g.key, g.state]))).toEqual({
+      running: "working",
+      waiting: "thinking",
+      done: "done",
+      error: "error",
+      parked: "blocked",
+    });
+  });
 });
