@@ -1,14 +1,17 @@
-import { DataTableTestId } from "@zibby/design-system";
+import { DataTableTestId, DropdownTestId, FilterBarTestId } from "@zibby/design-system";
 import type { TaskParent } from "@zibby/contracts";
 import { fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen } from "../../../test/render";
 import { TasksListScreen } from "./TasksListScreen";
 
 const push = vi.fn();
+const replace = vi.fn();
 const { navState } = vi.hoisted(() => ({ navState: { search: "" } }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push }),
+  useRouter: () => ({ push, replace }),
+  usePathname: () => "/work/tasks",
   useSearchParams: () => new URLSearchParams(navState.search),
 }));
 
@@ -17,6 +20,7 @@ const { hooks } = vi.hoisted(() => ({
     parents: [] as TaskParent[],
     isPending: false,
     isError: false,
+    companies: [] as { id: string; name: string }[],
   },
 }));
 const fetchNextPage = vi.fn();
@@ -34,7 +38,7 @@ const useTaskParentsInfiniteQuery = vi.fn(() => ({
 vi.mock("../queries", () => ({
   useTaskParentsInfiniteQuery: (...args: unknown[]) => useTaskParentsInfiniteQuery(...(args as [])),
 }));
-vi.mock("../../companies", () => ({ useCompaniesQuery: () => ({ data: [] }) }));
+vi.mock("../../companies", () => ({ useCompaniesQuery: () => ({ data: hooks.companies }) }));
 vi.mock("../../projects", () => ({ useProjectsQuery: () => ({ data: [] }) }));
 
 function parent(overrides: Partial<TaskParent> = {}): TaskParent {
@@ -54,7 +58,9 @@ describe("TasksListScreen (ZB-04b)", () => {
     hooks.parents = [];
     hooks.isPending = false;
     hooks.isError = false;
+    hooks.companies = [];
     push.mockClear();
+    replace.mockClear();
     fetchNextPage.mockClear();
     navState.search = "";
     useTaskParentsInfiniteQuery.mockClear();
@@ -86,5 +92,42 @@ describe("TasksListScreen (ZB-04b)", () => {
     expect(useTaskParentsInfiniteQuery).toHaveBeenCalledWith(
       expect.objectContaining({ company: "co-1" }),
     );
+  });
+
+  it("initializes every filter from the URL, ignoring invalid enum values", () => {
+    navState.search = "company=co-1&project=p-1&department=eng&state=blocked&source=nope";
+    render(<TasksListScreen />);
+    expect(useTaskParentsInfiniteQuery).toHaveBeenLastCalledWith({
+      company: "co-1",
+      project: "p-1",
+      department: "eng",
+      state: "blocked",
+      source: undefined,
+    });
+  });
+
+  it("writes a changed filter to the URL with replace, keeping other params", async () => {
+    navState.search = "foo=1";
+    render(<TasksListScreen />);
+    // triggers: company, project, department, state, source; options: All, thinking, working, blocked, error, done
+    await userEvent.click(screen.getAllByTestId(DropdownTestId.Trigger)[3]!);
+    await userEvent.click(screen.getAllByTestId(DropdownTestId.Option)[5]!);
+    expect(replace).toHaveBeenCalledWith("/work/tasks?foo=1&state=done");
+  });
+
+  it("changing company clears project in the URL", async () => {
+    navState.search = "project=p-1";
+    hooks.companies = [{ id: "co-1", name: "Acme" }];
+    render(<TasksListScreen />);
+    await userEvent.click(screen.getAllByTestId(DropdownTestId.Trigger)[0]!);
+    await userEvent.click(screen.getAllByTestId(DropdownTestId.Option)[1]!);
+    expect(replace).toHaveBeenCalledWith("/work/tasks?company=co-1");
+  });
+
+  it("clear filters drops every filter param", async () => {
+    navState.search = "state=done&source=channel";
+    render(<TasksListScreen />);
+    await userEvent.click(screen.getByTestId(FilterBarTestId.Clear));
+    expect(replace).toHaveBeenCalledWith("/work/tasks");
   });
 });

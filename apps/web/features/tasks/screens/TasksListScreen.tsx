@@ -17,7 +17,7 @@ import {
 } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { QueryError } from "../../../components/LoadError/QueryError";
@@ -26,9 +26,14 @@ import { compactAgo } from "../../../utils/time";
 import { useCompaniesQuery } from "../../companies";
 import { useProjectsQuery } from "../../projects";
 import { useTaskParentsInfiniteQuery } from "../queries";
-
-const TASK_STATES: readonly TaskParentState[] = ["thinking", "working", "blocked", "error", "done"];
-const TASK_SOURCES: readonly TaskSource[] = ["operator", "department", "channel", "automation"];
+import {
+  EMPTY_TASK_LIST_FILTERS,
+  TASK_SOURCES,
+  TASK_STATES,
+  type TaskListFilters,
+  parseTaskListFilters,
+  writeTaskListFilters,
+} from "./tasksListFilters";
 
 const ALL = "";
 
@@ -53,14 +58,15 @@ export function TasksListScreen() {
   const searchParams = useSearchParams();
   const [now] = useState(() => Date.now());
 
-  // `?company=<id>` (e.g. from the Companies detail's "All tasks" link) seeds the
-  // initial filter — read once via the lazy initializer, then behaves as normal
-  // local filter state (it does not resync if the URL changes underfoot).
-  const [company, setCompany] = useState<string>(() => searchParams.get("company") ?? ALL);
-  const [project, setProject] = useState<string>(ALL);
-  const [department, setDepartment] = useState<string>(ALL);
-  const [state, setState] = useState<string>(ALL);
-  const [source, setSource] = useState<string>(ALL);
+  // Every filter lives in the URL (`?company=&project=&department=&state=&source=`),
+  // so the list is shareable and survives reload/back.
+  const pathname = usePathname();
+  const filters = parseTaskListFilters(searchParams);
+  const { company, project, department, state, source } = filters;
+  const setFilters = (patch: Partial<TaskListFilters>) => {
+    const qs = writeTaskListFilters(searchParams, { ...filters, ...patch }).toString();
+    router.replace((qs ? `${pathname}?${qs}` : pathname) as Route);
+  };
 
   const { data: companies = [] } = useCompaniesQuery();
   const { data: projects = [] } = useProjectsQuery();
@@ -81,18 +87,12 @@ export function TasksListScreen() {
     company: company || undefined,
     project: project || undefined,
     department: (department || undefined) as DepartmentId | undefined,
-    state: (state || undefined) as TaskParentState | undefined,
-    source: (source || undefined) as TaskSource | undefined,
+    state: state || undefined,
+    source: source || undefined,
   });
 
   const hasFilters = Boolean(company || project || department || state || source);
-  const clearFilters = () => {
-    setCompany(ALL);
-    setProject(ALL);
-    setDepartment(ALL);
-    setState(ALL);
-    setSource(ALL);
-  };
+  const clearFilters = () => setFilters(EMPTY_TASK_LIST_FILTERS);
 
   const columns: DataTableColumn<TaskParent>[] = [
     {
@@ -174,10 +174,7 @@ export function TasksListScreen() {
         <FilterBar onClear={hasFilters ? clearFilters : undefined}>
           <SelectField
             label={t("filter.company")}
-            onValueChange={(v) => {
-              setCompany(v);
-              setProject(ALL);
-            }}
+            onValueChange={(v) => setFilters({ company: v, project: ALL })}
             options={[
               { value: ALL, label: t("filter.all") },
               ...companies.map((c) => ({ value: c.id, label: c.name })),
@@ -186,7 +183,7 @@ export function TasksListScreen() {
           />
           <SelectField
             label={t("filter.project")}
-            onValueChange={setProject}
+            onValueChange={(v) => setFilters({ project: v })}
             options={[
               { value: ALL, label: t("filter.all") },
               ...projectOptions.map((p) => ({ value: p.id, label: p.name })),
@@ -195,7 +192,7 @@ export function TasksListScreen() {
           />
           <SelectField
             label={t("filter.department")}
-            onValueChange={setDepartment}
+            onValueChange={(v) => setFilters({ department: v })}
             options={[
               { value: ALL, label: t("filter.all") },
               ...departments.list.map((d) => ({ value: d.id, label: d.name })),
@@ -204,7 +201,7 @@ export function TasksListScreen() {
           />
           <SelectField
             label={t("filter.state")}
-            onValueChange={setState}
+            onValueChange={(v) => setFilters({ state: v as TaskParentState | "" })}
             options={[
               { value: ALL, label: t("filter.all") },
               ...TASK_STATES.map((s) => ({ value: s, label: t(`state.${s}`) })),
@@ -213,7 +210,7 @@ export function TasksListScreen() {
           />
           <SelectField
             label={t("filter.source")}
-            onValueChange={setSource}
+            onValueChange={(v) => setFilters({ source: v as TaskSource | "" })}
             options={[
               { value: ALL, label: t("filter.all") },
               ...TASK_SOURCES.map((s) => ({ value: s, label: t(`source.${s}`) })),
