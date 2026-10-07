@@ -124,7 +124,7 @@ describe("NewTaskScreen (ZB-04b)", () => {
     expect(body.target).toBeUndefined();
   });
 
-  it("@Coloring Book (multi-word workflow) sets the target select and is sent as the workflow target", async () => {
+  it("an @-picked multi-word workflow sets the target select and is sent as the workflow target", async () => {
     const user = userEvent.setup();
     render(<NewTaskScreen />);
     fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
@@ -145,6 +145,18 @@ describe("NewTaskScreen (ZB-04b)", () => {
       }),
       expect.anything(),
     );
+  });
+
+  it("a typed (not picked) @Coloring Book sets the target select and is sent as the workflow target", () => {
+    render(<NewTaskScreen />);
+    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
+    fireEvent.change(screen.getByTestId(CommandLineTestId.Input), {
+      target: { value: "make one @Coloring Book " },
+    });
+    expect(screen.getByLabelText("Vstup")).toHaveTextContent("Coloring Book");
+    fireEvent.click(screen.getByText("Vytvořit úkol"));
+    const body = createMutate.mock.calls[0]?.[0]?.body as { target?: unknown };
+    expect(body.target).toMatchObject({ kind: "workflow", id: "coloring-book" });
   });
 
   it("deleting the @-tag reverts the target select to the entry and drops the target", async () => {

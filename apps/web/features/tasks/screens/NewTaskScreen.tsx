@@ -47,8 +47,9 @@ export function NewTaskScreen() {
   const [title, setTitle] = useState("");
   const [initialText] = useState(() => searchParams.get("text") ?? "");
   const [text, setText] = useState(initialText);
-  // An `@`-mention picked in the brief is an explicit target — it wins over the
-  // entry select and skips classification, like the dialog's composer.
+  // An `@`-mention in the brief (picked or typed) is an explicit target — it wins
+  // over the entry select until the operator picks an entry manually, and skips
+  // classification, like the dialog's composer.
   const [mentionTarget, setMentionTarget] = useState<TaskTarget | undefined>();
   const [projectId, setProjectId] = useState("");
   const [entry, setEntry] = useState<string>(() =>
