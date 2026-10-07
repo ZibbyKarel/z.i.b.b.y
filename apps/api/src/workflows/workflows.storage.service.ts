@@ -158,6 +158,9 @@ export class WorkflowsStorageService extends MarkdownEntityStore<Workflow> {
     // (`budget: 25`, never read before P1-03) is ignored, not a reason to drop the file.
     if (typeof data.budget === "object" && data.budget !== null) candidate.budget = data.budget;
     if (typeof data.project === "string") candidate.project = data.project;
+    // TODO 13 precondition — MUST be copied: a dropped `requires` would let a
+    // web-only workflow run against any project, silently.
+    if (Array.isArray(data.requires)) candidate.requires = data.requires;
 
     const result = WorkflowSchema.safeParse(candidate);
     return result.success ? result.data : null;
@@ -178,6 +181,7 @@ export class WorkflowsStorageService extends MarkdownEntityStore<Workflow> {
     data.complexity = workflow.complexity;
     if (workflow.budget !== undefined) data.budget = workflow.budget;
     if (workflow.project !== undefined) data.project = workflow.project;
+    if (workflow.requires !== undefined) data.requires = workflow.requires;
     return data;
   }
 

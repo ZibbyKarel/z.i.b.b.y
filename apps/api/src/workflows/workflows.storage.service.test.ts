@@ -157,6 +157,23 @@ describe("WorkflowsStorageService", () => {
     expect(read.department).toBeUndefined();
   });
 
+  it("TODO 13: round-trips requires through frontmatter, and an update never strips it", async () => {
+    await service.create({ ...sample, id: "web-qa", requires: ["web"] });
+    const parsed = matter(await fs.readFile(fileFor(dir, "web-qa"), "utf8"));
+    expect(parsed.data.requires).toEqual(["web"]);
+    expect((await service.get("web-qa")).requires).toEqual(["web"]);
+
+    await service.update("web-qa", { desc: "edited" });
+    expect((await service.get("web-qa")).requires).toEqual(["web"]);
+  });
+
+  it("TODO 13: a workflow without requires writes no requires key", async () => {
+    await service.create(sample);
+    const parsed = matter(await fs.readFile(fileFor(dir, "release"), "utf8"));
+    expect(parsed.data).not.toHaveProperty("requires");
+    expect((await service.get("release")).requires).toBeUndefined();
+  });
+
   describe("avatar asset externalization (Phase 73)", () => {
     const dataUri = "data:image/png;base64,aGVsbG8gd29ybGQ="; // "hello world"
 
