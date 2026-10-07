@@ -590,6 +590,31 @@ describe("WorkflowRunnerService — output sinks", () => {
       expect(run.prBlockedReason).toBe("HEAD abc is not the verified old");
     });
 
+    it("blocks when the evidence carries no sha", async () => {
+      const { run, d } = await setup(devWorkflow("dev"), evidence(0));
+      expect(d.workspace.openPr).not.toHaveBeenCalled();
+      expect(run.prBlockedReason).toBe("verify evidence has no sha");
+    });
+
+    it("blocks when HEAD cannot be read", async () => {
+      const wt = path.join(dir, "worktree");
+      await fs.mkdir(wt, { recursive: true });
+      const workflow = devWorkflow("dev");
+      const { service, d } = await makeService(dir, workflow);
+      d.workspace.headSha.mockRejectedValue(new Error("boom"));
+      const run = await seedRun(
+        service,
+        dir,
+        workflow,
+        { a: { phaseId: "dok", file: "docs.md", content: "# Feature\n" } },
+        wt,
+      );
+      run.verifyEvidence = evidence(0, "abc");
+      await runOutputs(service, run, workflow);
+      expect(d.workspace.openPr).not.toHaveBeenCalled();
+      expect(run.prBlockedReason).toBe("HEAD unreadable");
+    });
+
     it("blocks when verify exited non-zero", async () => {
       const { run, d } = await setup(devWorkflow("dev"), evidence(1, "abc"));
       expect(d.workspace.openPr).not.toHaveBeenCalled();

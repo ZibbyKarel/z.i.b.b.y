@@ -1209,7 +1209,9 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         // line) and commits the WORKTREE, a separate tree from this stage's sandbox —
         // it never writes the produces file, so ordering the chmod after it is safe
         // either way; kept after regardless, per the plan's conservative default.
-        await this.checkpointPhase(run, phase, stageCwd, attempt);
+        // Not after `verify`: checks transform nothing, and committing files they left
+        // behind would move HEAD past the verified sha and block the PR.
+        if (phase.type !== "verify") await this.checkpointPhase(run, phase, stageCwd, attempt);
         // P1-T2: the produces file is now final for this dispatch — make it read-only
         // so a later phase can't corrupt it retroactively through the symlink handoff
         // (each retry/loop dispatch gets its own fresh numbered folder, so this never
@@ -1901,7 +1903,9 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     const ev = run.verifyEvidence;
     if (!ev) return "no verify evidence";
     if (ev.exitCode !== 0) return `verify exited ${ev.exitCode}`;
-    if (!ev.sha || ev.sha !== head) return `HEAD ${head} is not the verified ${ev.sha}`;
+    if (!head) return "HEAD unreadable";
+    if (!ev.sha) return "verify evidence has no sha";
+    if (ev.sha !== head) return `HEAD ${head} is not the verified ${ev.sha}`;
     return null;
   }
 

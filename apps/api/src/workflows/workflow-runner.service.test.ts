@@ -1790,4 +1790,47 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
       expect(workspaceDouble().createWorktree).not.toHaveBeenCalled();
     });
   });
+
+  describe("verify phase is not checkpointed", () => {
+    it("never commits after a green verify phase (HEAD must stay the verified sha)", async () => {
+      const svc = h.service as unknown as {
+        runStage: unknown;
+        projects: { get: ReturnType<typeof vi.fn> };
+        workspace: {
+          headSha: unknown;
+          createWorktree: ReturnType<typeof vi.fn>;
+          checkpoint: ReturnType<typeof vi.fn>;
+        };
+        workflows: { get: ReturnType<typeof vi.fn> };
+        projectLocal: { resolveForRun: ReturnType<typeof vi.fn> };
+      };
+      svc.workspace.headSha = vi.fn(async () => "abc");
+      svc.workflows.get.mockResolvedValue({
+        id: "release",
+        phases: [{ id: "verify", type: "verify" }],
+        instructions: "ship",
+      });
+      svc.projects.get.mockResolvedValue({ id: "proj-1", name: "P", path: "/repo/p" });
+      svc.projectLocal.resolveForRun = vi
+        .fn()
+        .mockResolvedValue({ path: "/repo/p", isGitRepo: true });
+      svc.workspace.createWorktree.mockResolvedValue({
+        branch: "zibby/x",
+        path: "/wt/x",
+        baseRef: "abc123",
+      });
+      svc.runStage = vi.fn(async (_r: unknown, p: { id: string }, _c: string, attempt: number) => ({
+        phaseId: p.id,
+        runId: `${WORKFLOW_RUN_ID}.${p.id}_${attempt}`,
+        attempt,
+        status: "done" as const,
+      }));
+
+      const run = await h.service.start("release", undefined, "proj-1");
+      await vi.waitFor(() => expect(run.status).toBe("done"));
+
+      expect(run.workspace?.path).toBe("/wt/x"); // guard: the worktree path was exercised
+      expect(svc.workspace.checkpoint).not.toHaveBeenCalled();
+    });
+  });
 });

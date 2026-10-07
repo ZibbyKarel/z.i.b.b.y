@@ -317,6 +317,24 @@ Deterministic commands — no agent, no tokens, no intents:
 2. Exit code 0 = pass, anything else = fail.
 3. Command logs are appended to the workflow run log.
 
+**`checkout: clean`** runs the checks in a detached, throwaway checkout of the run
+branch's committed HEAD (worktree runs only), so untracked or uncommitted leftovers
+cannot make a red tree look green. A green `verify` phase is never checkpointed:
+checks transform nothing, and a commit would move HEAD past the verified sha.
+
+**Evidence.** After every finished `verify` phase the runner records
+`WorkflowRun.verifyEvidence` (`phaseId`, `stageRunId`, `commands`, real `exitCode`,
+the worktree `sha` it checked, `cleanCheckout`, `at`) — runner-captured, not an agent
+claim.
+
+**Dev PR gate.** A `department: dev` workflow with a worktree opens its `pr` output
+(the dev → rel hop) only if `verifyEvidence.exitCode === 0` and `verifyEvidence.sha`
+equals the worktree HEAD at push time. Otherwise the run fails and
+`WorkflowRun.prBlockedReason` says why: `no verify evidence`, `verify exited <code>`,
+`HEAD unreadable`, `verify evidence has no sha`, or `HEAD <head> is not the verified
+<sha>`. The shipped `delivery` workflow ends with a clean-checkout `verify` that loops
+back to the coder.
+
 ### Phase: tool
 
 A deterministic **transform** between agents — no model, no tokens, no intents.

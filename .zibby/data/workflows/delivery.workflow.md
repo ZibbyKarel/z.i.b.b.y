@@ -60,6 +60,14 @@ phases:
     produces: docs.md
     model: sonnet
     thinking: low
+  - id: verify
+    type: verify
+    checkout: clean
+    loop:
+      to: koder
+      maxRetries: 2
+      escalate: true
+      then: park
 outputs:
   - type: pr
     from: docs.md
@@ -74,9 +82,10 @@ complexity: deep
 
 # Delivery
 
-Doručovací smyčka ZIBBY: **Architekt → Kodér ⇄ Code-Review ⇄ Testy → Dokumentátor**.
+Doručovací smyčka ZIBBY: **Architekt → Kodér ⇄ Code-Review ⇄ Testy → Dokumentátor → Verify**.
 Kodér si kontroly projektu (lint/typecheck/testy) spouští sám, než předá práci — ale
-jeho slovo není poslední: **review i n-9 jsou hodnotící brány** (`qualify`). Runner
+jeho slovo není poslední: poslední slovo má **deterministická fáze verify v čistém
+checkoutu** větve. Cestou jsou navíc **review i n-9 hodnotící brány** (`qualify`). Runner
 si z jejich výstupu přečte verdikt (`<verdict>pass|gap|drift</verdict>`) a podle něj
 rozhodne, ne podle exit kódu procesu. Chybějící tag se počítá jako `gap` —
 fail-closed. Ohraničený stavový automat: opakuje s eskalací, a místo mlácení hlavou
@@ -100,6 +109,10 @@ o zeď zaparkuje pro lidskou poznámku.
    poslední kontrolou před PR.
 5. **dokumentator** — `test-automator.md` → `docs.md`: changelog a poznámky pro PR
    (`docs.md` má tvar `# titulek` + tělo — to je vstup pro PR výstup).
+6. **verify** — deterministické kontroly projektu (bez modelu a bez tokenů) v
+   **čistém checkoutu** větve (`checkout: clean`), takže výsledek nezávisí na tom, co
+   po sobě nechal pracovní strom. Skutečný exit kód a SHA zapíše runner jako důkaz
+   (`verifyEvidence`). Červená vrací práci **Kodérovi** (2× s eskalací), pak park.
 
 ## Výstup
 
@@ -108,7 +121,9 @@ na úrovni workflow (`outputs`). Tato workflow má jeden výstup `type: pr`: sys
 z `docs.md` složí titulek + tělo a otevře PR jediným gated řetězcem
 `git push -u origin <branch> && gh pr create …`. Push i otevření PR jsou Tier-3:
 běh zaparkuje na schválení. **PR je brána** — vše před ním se už stalo na větvi
-`zibby/*`, a bránu vynucuje systém, ne dobrá vůle agenta.
+`zibby/*`, a bránu vynucuje systém, ne dobrá vůle agenta. Hop dev → rel navíc otevře PR jen se
+zeleným důkazem z verify pro aktuální HEAD (`verifyEvidence.exitCode === 0` a
+`sha` = HEAD při pushi); jinak běh selže s `prBlockedReason`.
 
 Handoff je vždy jeden soubor; selhání předává ocas logu jako kontext dalšímu
 pokusu (plus případnou poznámku operátora po resume).

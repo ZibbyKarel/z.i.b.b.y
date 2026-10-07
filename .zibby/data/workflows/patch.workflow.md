@@ -25,13 +25,6 @@ phases:
           thinking: high
         - model: opus
           thinking: high
-  - id: verify
-    type: verify
-    loop:
-      to: code
-      maxRetries: 2
-      escalate: true
-      then: park
   - id: notes
     type: agent
     agent: documentation-engineer
@@ -39,12 +32,19 @@ phases:
     produces: docs.md
     model: haiku
     thinking: low
+  - id: verify
+    type: verify
+    loop:
+      to: code
+      maxRetries: 2
+      escalate: true
+      then: park
 outputs:
   - type: pr
     from: docs.md
 desc: >-
-  Běžná změna v kódu s review a ověřením: implementace → oponentura → kontroly →
-  poznámky k PR. Pro práci, která potřebuje druhý pohled a zelené testy, ale ne
+  Běžná změna v kódu s review a ověřením: implementace → oponentura → poznámky k
+  PR → kontroly. Pro práci, která potřebuje druhý pohled a zelené testy, ale ne
   návrh architektury ani dokumentaci — refaktor jedné komponenty, nový endpoint
   do existujícího resource, oprava bugu se skutečnou příčinou, doplnění
   validace, úprava chování napříč dvěma či třemi soubory. Patch, běžná změna,
@@ -57,7 +57,7 @@ complexity: standard
 
 # Patch
 
-Prostřední příčka forge: **kód → review ⇄ kód → verify → poznámky**. Má
+Prostřední příčka forge: **kód → review ⇄ kód → poznámky → verify**. Má
 oponenturu i deterministické kontroly, ale nekupuje si fázi architekta ani
 plnou dokumentaci — to je `delivery`.
 
@@ -70,11 +70,11 @@ plnou dokumentaci — to je `delivery`.
 2. **review** — `implementation.md` → `review.md`: oponentura korektnosti,
    čitelnosti a rizik. Selhání vrací práci na **code** s kontextem, eskalace
    zvedá model/thinking (sonnet/high → opus/high), vyčerpání → park.
-3. **verify** — deterministické kontroly projektu (lint, typecheck, testy), bez
+3. **notes** — `review.md` → `docs.md`: changelog a poznámky pro PR. `docs.md` má
+   tvar `# titulek` + tělo — to je vstup pro PR výstup.
+4. **verify** — deterministické kontroly projektu (lint, typecheck, testy), bez
    modelu a bez tokenů. Červená vrací práci na **code** (2× s eskalací), pak
    park. `commands` neuvádíme, takže se dědí kontroly projektu.
-4. **notes** — `review.md` → `docs.md`: changelog a poznámky pro PR. `docs.md` má
-   tvar `# titulek` + tělo — to je vstup pro PR výstup.
 
 ## Výstup
 
