@@ -45,6 +45,7 @@ export class EmployeeAllocator {
   /** employeeId -> the run id it is leased to (or undefined when the caller gave none). */
   private readonly leased = new Map<string, string | undefined>();
   private readonly queues = new Map<string, GrantQueue<Waiter>>();
+  private gate: Promise<unknown> = Promise.resolve();
   private readonly freedListeners = new Set<() => void>();
 
   constructor(private readonly employees: EmployeesStorageService) {}
@@ -61,12 +62,12 @@ export class EmployeeAllocator {
     agentId: string,
     ctx: AcquireContext = {},
   ): Promise<EmployeeLease> {
-    const department = await this.owningDepartment(requested, agentId);
-    const lease = await this.tryLease(department, agentId, ctx);
-    if (lease) return lease;
-    return new Promise<EmployeeLease>((resolve) =>
-      this.queueFor(keyOf(department, agentId)).enqueue(ctx.rank ?? {}, { ctx, resolve }),
-    );
+    return new Promise<EmployeeLease>((resolve, reject) => {
+      this.serialized(async () => {
+        const department = await this.owningDepartment(requested, agentId);
+        return this.lease(department, agentId, ctx, { ctx, resolve });
+      }).then((lease) => lease && resolve(lease), reject);
+    });
   }
 
   /** Like {@link acquire} but never waits: null when busy or a line already exists. */
@@ -75,22 +76,42 @@ export class EmployeeAllocator {
     agentId: string,
     ctx: AcquireContext = {},
   ): Promise<EmployeeLease | null> {
-    return this.tryLease(await this.owningDepartment(requested, agentId), agentId, ctx);
+    return this.serialized(async () =>
+      this.lease(await this.owningDepartment(requested, agentId), agentId, ctx),
+    );
   }
 
-  /** One roster read, then a synchronous check-and-take (no await in between => atomic). */
-  private async tryLease(
+  /**
+   * Admission is serialized in call order: each call's roster read + decision runs
+   * after the previous one's, so FIFO follows arrival order, not file-read latency.
+   * ponytail: one global gate; per-(department, agent) gates if roster reads ever get slow.
+   */
+  private serialized<T>(step: () => Promise<T>): Promise<T> {
+    const run = this.gate.then(step);
+    this.gate = run.catch(() => {});
+    return run;
+  }
+
+  /**
+   * One roster read, then a synchronous section (no await) that either takes a free
+   * employee or, when `waiter` is given, enqueues the waiter — so a release cannot
+   * slip in between "nothing free" and "waiting" and strand the waiter.
+   */
+  private async lease(
     department: DepartmentId,
     agentId: string,
     ctx: AcquireContext,
+    waiter?: Waiter,
   ): Promise<EmployeeLease | null> {
     const roster = await this.employees.listActiveByPosition(department, agentId);
     if (roster.length === 0) throw new NoEmployeeError(department, agentId);
-    const queue = this.queues.get(keyOf(department, agentId));
-    if (queue && queue.size > 0) return null; // never cut the line
-    const free = roster.find((e) => !this.leased.has(e.id));
-    if (!free) return null;
-    queue?.noteGrant(ctx.rank?.projectId);
+    const queue = this.queueFor(keyOf(department, agentId));
+    const free = queue.size > 0 ? undefined : roster.find((e) => !this.leased.has(e.id)); // never cut the line
+    if (!free) {
+      if (waiter) queue.enqueue(ctx.rank ?? {}, waiter);
+      return null;
+    }
+    queue.noteGrant(ctx.rank?.projectId);
     this.leased.set(free.id, ctx.runId);
     return { employeeId: free.id, employeeName: free.name, department, agentId, runId: ctx.runId };
   }
@@ -105,6 +126,7 @@ export class EmployeeAllocator {
 
   /** Release a lease: hand it straight to the best waiter, else free it and notify `onFreed`. */
   release(lease: EmployeeLease): void {
+    if (!this.leased.has(lease.employeeId)) return; // double or ghost release
     const next = this.queues.get(keyOf(lease.department, lease.agentId))?.shift();
     if (next) {
       // Direct hand-off: the employee never becomes free, so nobody can snipe it

@@ -90,12 +90,10 @@ describe("EmployeeAllocator", () => {
       order.push("run_2");
       return l;
     });
-    await settle();
     const third = allocator.acquire("dev", "koder", { runId: "run_3" }).then((l) => {
       order.push("run_3");
       return l;
     });
-    await settle();
 
     allocator.release(first);
     const secondLease = await second;
@@ -166,10 +164,12 @@ describe("EmployeeAllocator", () => {
     expect(await stillPending(waiting)).toBe(true);
     // Free it via hand-off to the waiter; with a line present a newcomer still gets null.
     const waiting2 = allocator.acquire("dev", "koder");
-    await stillPending(waiting2);
+    expect(await stillPending(waiting2)).toBe(true);
     allocator.release(lease!);
-    await waiting;
+    const handed = await waiting;
     expect(await allocator.tryAcquire("dev", "koder")).toBeNull();
+    allocator.release(handed);
+    allocator.release(await waiting2);
   });
 
   it("tryAcquire returns null for a free employee while a waiter is queued (never cuts the line)", async () => {
@@ -216,9 +216,28 @@ describe("EmployeeAllocator", () => {
     await store.create(employee("e1", "koder", "dev"));
     await allocator.acquire("dev", "koder");
     const waiting = allocator.acquire("dev", "koder");
-    expect(await stillPending(waiting)).toBe(true);
+    await settle();
     await store.create(employee("e2", "koder", "dev"));
     await allocator.rosterChanged("dev", "koder");
     await expect(waiting).resolves.toMatchObject({ employeeId: "e2" });
+  });
+
+  it("a release in the same tick as acquire (before it enqueues) still resolves the acquire", async () => {
+    await store.create(employee("e1", "koder", "dev"));
+    const held = await allocator.acquire("dev", "koder");
+    const waiting = allocator.acquire("dev", "koder", { runId: "w" });
+    allocator.release(held);
+    await expect(waiting).resolves.toMatchObject({ employeeId: "e1", runId: "w" });
+  });
+
+  it("a double release is a no-op (onFreed fires once)", async () => {
+    await store.create(employee("e1", "koder", "dev"));
+    let freed = 0;
+    allocator.onFreed(() => freed++);
+    const held = await allocator.acquire("dev", "koder");
+    allocator.release(held);
+    allocator.release(held);
+    expect(freed).toBe(1);
+    expect(allocator.isBusy("e1")).toBe(false);
   });
 });
