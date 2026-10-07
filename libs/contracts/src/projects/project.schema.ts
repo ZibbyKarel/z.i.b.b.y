@@ -256,7 +256,13 @@ export const ProjectSchema = z.object({
       url: z
         .string()
         .url()
-        .refine((u) => /^https?:\/\//i.test(u), { message: "web.url must be http(s)" }),
+        .refine((u) => /^https?:\/\//i.test(u), { message: "web.url must be http(s)" })
+        // No credentials in the URL; and re-serialise so quotes/whitespace/newlines are
+        // percent-encoded — this string lands verbatim in the agent prompt.
+        .refine((u) => !URL.canParse(u) || (!new URL(u).username && !new URL(u).password), {
+          message: "web.url must not contain credentials",
+        })
+        .transform((u) => new URL(u).href),
     })
     .optional(),
   /** Per-engagement run-count budget + concurrency cap (Phase 8.1). */

@@ -148,7 +148,8 @@ project must carry `web: { url }` (an http(s) base URL, see `docs/api/projects.m
 written — before any worktree, stage or agent. An unmet requirement (no project,
 an unresolvable project ref, or a project without `web.url`) ends the run
 immediately as `failed` with `failedReason` recorded on `run.json`. For a project
-with `web.url`, every agent stage's task names that base URL.
+with `web.url`, every agent stage of a workflow that declares `requires: ["web"]`
+names that base URL in its task; other workflows on the same project never see it.
 
 > `requires` is round-tripped explicitly by `WorkflowsStorageService`
 > (`fromFrontmatter` / `toFrontmatter`); a missing copy would silently drop the gate.

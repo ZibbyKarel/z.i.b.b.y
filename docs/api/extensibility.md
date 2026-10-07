@@ -28,7 +28,7 @@ ships them as a plugin.
 
 ## MCP servers (`/api/mcp-servers`)
 
-Connected MCP servers injected into **every** run (the root `.mcp.json` is NOT
+Connected MCP servers injected into **every** run (except `grantOnly` servers, which ride only runs that grant them; the root `.mcp.json` is NOT
 wired in).
 
 - **Store:** `mcp.storage.service.ts` (`{ id, type: stdio|http|sse, command?/args?/url?/headers?, enabled }`)

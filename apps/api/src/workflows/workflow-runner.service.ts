@@ -102,21 +102,34 @@ export function unmetRequirement(
 }
 
 /**
+ * The web project's base URL for a stage — only a workflow that declares
+ * `requires: ["web"]` is browser-driven, so no other workflow sees it.
+ */
+export function stageWebUrl(
+  workflow: Pick<Workflow, "requires"> | null,
+  project: Pick<Project, "id" | "web"> | null,
+): string | undefined {
+  return workflow?.requires?.includes("web") ? project?.web?.url : undefined;
+}
+
+/**
  * Departments whose delivered artifacts are handed on as a signal (A3, TODO 13).
  * Every other owner emits nothing. `title`/`ask` shape the dispatched task text.
  */
 const ARTIFACT_SIGNALS: Partial<
-  Record<DepartmentId, { kind: string; title: string; ask: string }>
+  Record<DepartmentId, { kind: string; title: string; ask: string; copyLabel: string }>
 > = {
   rnd: {
     kind: "research-artifact",
     title: "Research: research artifact",
     ask: "Build on this research.",
+    copyLabel: "Research (this run)",
   },
   qa: {
     kind: "qa-findings",
     title: "QA: findings",
     ask: "Reproduce and fix the confirmed defects.",
+    copyLabel: "Findings (this run)",
   },
 };
 
@@ -1720,7 +1733,9 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
           kind: signal.kind,
           ...(projectId ? { projectId } : {}),
           title: `${signal.title} ${from}`,
-          body: `Delivered ${kind} ${locator}. ${signal.ask}`,
+          // The locator (e.g. a vault note) may be shared and overwritten by a later run;
+          // the run-local copy is immutable, so a parked approval always resolves to THIS run.
+          body: `Delivered ${kind} ${locator}. ${signal.copyLabel}: ${path.join(run.cwd, "output", from)}. ${signal.ask}`,
           fingerprint: artifactId,
         });
       } catch (error) {
@@ -2183,7 +2198,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     // F4a: resolve the workflow's owning department once per stage so grounding
     // can attach its knowledge shelf. Fail-open — a missing/renamed workflow
     // must never block the stage.
-    const department = (await this.workflows.get(run.workflowId).catch(() => null))?.department;
+    const stageWorkflow = await this.workflows.get(run.workflowId).catch(() => null);
+    const department = stageWorkflow?.department;
     // Materialize enabled custom commands as a ZIBBY-owned plugin in the stage's
     // sandbox (never the client worktree), loaded via `--plugin-dir`; best-effort
     // (a falsy result → no plugin). Only claude agent stages load it — verify/tool
@@ -2204,6 +2220,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       department,
       run.workflowRunId,
       commandsPlugin,
+      stageWebUrl(stageWorkflow, project),
     );
     // Per-project env + secrets injected into this stage's process (Phase D), plus
     // the run/stage folders (P1-01) so a tool can write run-wide artifacts (e.g. the
@@ -2636,6 +2653,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     workflowRunId?: string,
     /** ZIBBY's per-run commands plugin dir (from the materializer), if any. */
     commandsPluginDir?: string | null,
+    /** The web base URL — set only for a workflow that `requires` web ({@link stageWebUrl}). */
+    webUrl?: string,
   ): Promise<{ command: string; args: string[]; spawnCwd?: string }> {
     const spawnCwd = worktreePath ?? project?.path;
     // Verify phases are deterministic shell checks — identical in demo and
@@ -2679,7 +2698,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         producesAbs,
         qualify: phase.qualify,
         runDirAbs: path.dirname(cwd),
-        ...(project?.web ? { webUrl: project.web.url } : {}),
+        ...(webUrl ? { webUrl } : {}),
       });
       // Memory grounding (Phase 4): per-stage so each phase's agent gets the North
       // Star + relevant MOCs + the project note. Fail-open ("" on any error).

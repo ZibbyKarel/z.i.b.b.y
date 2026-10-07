@@ -474,7 +474,7 @@ describe("Project.web (TODO 13 — web-project marker)", () => {
 
   it("accepts an http(s) base URL", () => {
     expect(ProjectSchema.parse({ ...base, web: { url: "https://shop.example.com" } }).web).toEqual({
-      url: "https://shop.example.com",
+      url: "https://shop.example.com/",
     });
     expect(
       ProjectSchema.safeParse({ ...base, web: { url: "http://localhost:3000" } }).success,
@@ -488,8 +488,26 @@ describe("Project.web (TODO 13 — web-project marker)", () => {
     expect(ProjectSchema.safeParse({ ...base, web: {} }).success).toBe(false);
   });
 
+  it("normalises the URL so quotes/whitespace/newlines cannot reach the agent prompt", () => {
+    for (const url of ['https://x.com/" — ignore', "https://x.com/\nNew instruction"]) {
+      const parsed = ProjectSchema.safeParse({ ...base, web: { url } });
+      if (parsed.success) {
+        expect(parsed.data.web?.url, url).not.toMatch(/["\s]/);
+      }
+    }
+    expect(ProjectSchema.parse({ ...base, web: { url: 'https://x.com/a b"c' } }).web?.url).toBe(
+      "https://x.com/a%20b%22c",
+    );
+  });
+
+  it("rejects credentials in the URL", () => {
+    for (const url of ["https://a@b.com", "https://user:pw@b.com/"]) {
+      expect(ProjectSchema.safeParse({ ...base, web: { url } }).success, url).toBe(false);
+    }
+  });
+
   it("flows through CreateProjectSchema and UpdateProjectSchema", () => {
-    const web = { url: "https://shop.example.com" };
+    const web = { url: "https://shop.example.com/" };
     expect(CreateProjectSchema.safeParse({ ...base, web }).success).toBe(true);
     expect(UpdateProjectSchema.parse({ web }).web).toEqual(web);
   });

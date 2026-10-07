@@ -235,8 +235,9 @@ Definitions live in the `SYSTEM_AUTOMATIONS` constant
 | `signal-qa-findings`    | `task` (dev)      | signal `qa-findings` from `qa`, `approval: "ask"`        | yes     |
 | `signal-research`       | `task` (dev)      | signal `research-artifact` from `rnd`, `approval: "ask"` | yes     |
 
-The `signal-*` automations (four of them replaced the removed handoff rules; `signal-qa-findings` came with the web-qa workflow). Each is a
-`task` target at department `dev`; see [Signal bus](#signal-bus).
+The `signal-*` automations are each a `task` target at department `dev`. Four
+replaced the removed handoff rules; `signal-qa-findings` came with the web-qa
+workflow. See [Signal bus](#signal-bus).
 
 ### Memory distillation (`memory-distill`)
 
