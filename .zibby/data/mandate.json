@@ -3,5 +3,9 @@
     "dispatch": true,
     "reply": false
   },
-  "channels": {}
+  "channels": {
+    "cms4-jira": {
+      "dispatch": false
+    }
+  }
 }

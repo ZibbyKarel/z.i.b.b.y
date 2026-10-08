@@ -4,6 +4,6 @@
 // would drag the whole view graph into every consumer and risk cycles).
 export * from "./queries";
 export * from "./mutations";
-export { RunEventsProvider, useRunEventsConnected } from "./runEvents";
+export { RunEventsProvider, useApiUnreachable, useRunEventsConnected } from "./runEvents";
 export { useRunLogStream } from "./useRunLogStream";
 export { useRunLog } from "./useRunLog";

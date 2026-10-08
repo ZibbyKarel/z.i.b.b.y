@@ -73,9 +73,13 @@ vi.mock("../../notifications", () => ({
   useNotificationsQuery: () => ({ data: notifications }),
 }));
 
+let apiDown = false;
+vi.mock("../../runs/runEvents", () => ({ useApiUnreachable: () => apiDown }));
+
 describe("OrgMapScreen", () => {
   beforeEach(() => {
     push.mockReset();
+    apiDown = false;
     approvals = [];
     notifications = [{ runId: "r_fail", title: "Broken patch", failedAt: "2026-10-01T00:00:00Z" }];
   });
@@ -128,6 +132,18 @@ describe("OrgMapScreen", () => {
     expect(screen.getByTestId(OrgFloorplanTestId.PopoverMeta)).toHaveTextContent("DEV-01 · Coder");
     expect(screen.getByTestId(OrgFloorplanTestId.PopoverTask)).toHaveTextContent(
       "Fix the checkout test",
+    );
+  });
+
+  it("puts Zibby in error with an 'api nedostupné' bubble while the API is down", () => {
+    render(<OrgMapScreen />);
+    expect(screen.queryByTestId(OrgFloorplanTestId.CooSpeech)).not.toBeInTheDocument();
+    apiDown = true;
+    render(<OrgMapScreen />);
+    expect(screen.getByTestId(OrgFloorplanTestId.CooSpeech)).toHaveTextContent("api nedostupné");
+    expect(screen.getAllByTestId(ZibbyAvatarTestId.Root).at(-1)).toHaveAttribute(
+      "data-state",
+      "error",
     );
   });
 

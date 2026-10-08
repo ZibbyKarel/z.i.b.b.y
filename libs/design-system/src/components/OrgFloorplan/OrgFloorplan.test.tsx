@@ -49,6 +49,14 @@ describe("OrgFloorplan", () => {
     expect(mini.className).not.toContain("right-");
   });
 
+  it("renders the COO speech bubble only when given a line", () => {
+    const { rerender } = render(<OrgFloorplan coo={COO} rooms={ROOMS} />);
+    expect(screen.queryByTestId(OrgFloorplanTestId.CooSpeech)).not.toBeInTheDocument();
+    rerender(<OrgFloorplan coo={{ ...COO, speech: "api down" }} rooms={ROOMS} />);
+    expect(screen.getByTestId(OrgFloorplanTestId.CooSpeech)).toHaveTextContent("api down");
+    expect(screen.getByTestId(OrgFloorplanTestId.CooSpeech)).toHaveRole("status");
+  });
+
   it("renders a room per department and a desk per agent", () => {
     render(<OrgFloorplan coo={COO} rooms={ROOMS} />);
     expect(room("dev")).toHaveRole("button");

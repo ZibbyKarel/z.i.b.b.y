@@ -279,6 +279,18 @@ export const FloorplanWorld = memo(function FloorplanWorld({
         >
           <ZibbyAvatar label={coo.label} size={128} state={coo.state} />
         </div>
+        {coo.speech && (
+          <div
+            className="pointer-events-none absolute bottom-[calc(50%+78px)] left-1/2 -translate-x-1/2 whitespace-nowrap border border-ink bg-panel px-[12px] py-[7px] font-mono text-[12px] uppercase tracking-[0.12em]"
+            data-testid={OrgFloorplanTestId.CooSpeech}
+            role="status"
+            style={{ color: stateToneVar[coo.state] }}
+          >
+            {coo.speech}
+            {/* The tail — a rotated square straddling the bubble's bottom edge. */}
+            <span className="absolute left-1/2 top-full -ml-[5px] -mt-[5px] h-[10px] w-[10px] rotate-45 border-b border-r border-ink bg-panel" />
+          </div>
+        )}
       </div>
       {layout.rooms.map((placed) => {
         const room = roomById.get(placed.id);

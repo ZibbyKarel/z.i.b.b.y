@@ -16,11 +16,11 @@
   "attachments": [],
   "dependsOn": [],
   "dependsOnFromSource": [],
-  "lifecycle": "enqueued",
+  "lifecycle": "archived",
   "enqueuedAt": "2026-09-24T06:59:48.744Z",
   "runs": [],
   "syncNotes": [],
   "createdAt": "2026-09-24T06:59:47.372Z",
-  "updatedAt": "2026-10-06T14:56:04.172Z",
-  "syncedAt": "2026-10-06T14:56:04.172Z"
+  "updatedAt": "2026-10-07T15:00:37.527Z",
+  "syncedAt": "2026-10-07T15:00:37.527Z"
 }

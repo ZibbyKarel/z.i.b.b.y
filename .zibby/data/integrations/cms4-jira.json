@@ -1,0 +1,1 @@
+{"id":"cms4-jira","kind":"jira","projectId":"cms4","name":"Jira","enabled":true,"config":{"kind":"jira","baseUrl":"https://teamdotblue.atlassian.net","email":"zibar@shoptet.cz","projectKey":"CZ3TDR1"}}

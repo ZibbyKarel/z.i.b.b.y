@@ -61,10 +61,22 @@ export function onRunEvent(listener: RunEventListener): () => void {
  * proxy, or mid-reconnect) they fall back to their original self-gating polls, so
  * the dashboard degrades gracefully instead of going stale.
  */
-const RunEventsContext = createContext<boolean>(false);
+type RunEventsStatus = "connecting" | "open" | "down";
+
+const RunEventsContext = createContext<RunEventsStatus>("connecting");
 
 export function useRunEventsConnected(): boolean {
-  return useContext(RunEventsContext);
+  return useContext(RunEventsContext) === "open";
+}
+
+/**
+ * Whether the API is unreachable — the `/api/events` stream errored and hasn't
+ * reopened since. Unlike {@link useRunEventsConnected} the initial handshake does
+ * NOT count as down, so a page load doesn't flash an error. EventSource keeps
+ * retrying on its own; the first successful reopen clears it.
+ */
+export function useApiUnreachable(): boolean {
+  return useContext(RunEventsContext) === "down";
 }
 
 /**
@@ -78,14 +90,14 @@ export function useRunEventsConnected(): boolean {
  */
 export function RunEventsProvider({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
-  const [connected, setConnected] = useState(false);
+  const [status, setStatus] = useState<RunEventsStatus>("connecting");
 
   useEffect(() => {
     if (!API_URL || typeof EventSource === "undefined") return;
     const source = new EventSource(`${API_URL}/api/events`);
 
-    source.onopen = () => setConnected(true);
-    source.onerror = () => setConnected(false);
+    source.onopen = () => setStatus("open");
+    source.onerror = () => setStatus("down");
     source.onmessage = (event) => {
       let parsed: RunStatusEvent;
       try {
@@ -174,9 +186,9 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
 
     return () => {
       source.close();
-      setConnected(false);
+      setStatus("connecting");
     };
   }, [qc]);
 
-  return <RunEventsContext.Provider value={connected}>{children}</RunEventsContext.Provider>;
+  return <RunEventsContext.Provider value={status}>{children}</RunEventsContext.Provider>;
 }

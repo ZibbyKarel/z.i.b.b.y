@@ -18,6 +18,7 @@ import { useCreateDepartmentMutation } from "../../departments/mutations";
 import { useDepartmentsQuery, useDivisionsQuery } from "../../departments/queries";
 import { useEmployeesQuery } from "../../employees/queries";
 import { NOTIFICATIONS_PARAM, useNotificationsQuery } from "../../notifications";
+import { useApiUnreachable } from "../../runs/runEvents";
 import type { RunStatusGroupKey } from "../../runs/statusGroups";
 import { aggregateZibbyState } from "../state/aggregateZibbyState";
 
@@ -95,12 +96,16 @@ export function OrgMapScreen() {
   const ownState: StateTone = cooRuns > 0 ? "working" : "idle";
   // Zibby mirrors the most urgent agent state: any employee's state, an unread
   // failed run in the bell (error) or a pending approval (blocked) — worse wins.
-  const cooState = aggregateZibbyState(ownState, [
-    ...employees.map((e) => e.state),
-    ...(notifications.length > 0 ? (["error"] as const) : []),
-    ...departments.map((d): StateTone => (d.tier3Count > 0 ? "blocked" : "idle")),
-    ...approvals.map((): StateTone => "blocked"),
-  ]);
+  const apiDown = useApiUnreachable();
+  // API unreachable trumps everything — the queries above are just empty then.
+  const cooState: StateTone = apiDown
+    ? "error"
+    : aggregateZibbyState(ownState, [
+        ...employees.map((e) => e.state),
+        ...(notifications.length > 0 ? (["error"] as const) : []),
+        ...departments.map((d): StateTone => (d.tier3Count > 0 ? "blocked" : "idle")),
+        ...approvals.map((): StateTone => "blocked"),
+      ]);
 
   // The lobby opens whatever put Zibby in its state: the People roster when an
   // employee is in it, the bell for unread failures, the approvals queue for a
@@ -148,6 +153,7 @@ export function OrgMapScreen() {
         coo={{
           state: cooState,
           label: t("cooAvatarLabel"),
+          speech: apiDown ? t("apiUnreachable") : undefined,
           ariaLabel: t("cooAvatarLink", { state: stateLabels[cooState] }),
         }}
         labels={{

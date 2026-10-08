@@ -7,6 +7,8 @@ export enum OrgFloorplanTestId {
   Spine = "org-floorplan-spine",
   Corridor = "org-floorplan-corridor",
   Coo = "org-floorplan-coo",
+  /** the speech bubble above the COO avatar */
+  CooSpeech = "org-floorplan-coo-speech",
   /** suffixed `-<roomId>` */
   Room = "org-floorplan-room",
   /** suffixed `-<roomId>` */
@@ -71,6 +73,8 @@ export interface OrgFloorplanCoo {
   /** Popover role, default `Chief Operating Officer`. */
   role?: string;
   task?: string;
+  /** A line Zibby "says" — rendered in a speech bubble above the lobby avatar. */
+  speech?: string;
   /** Overrides `label` as the accessible name of the lobby button. */
   ariaLabel?: string;
 }
