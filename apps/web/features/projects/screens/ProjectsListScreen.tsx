@@ -107,12 +107,7 @@ export function ProjectsListScreen() {
       <PageContainer>
         <Stack gap="200">
           <Stack wrap align="baseline" direction="row" gap="150" justify="between">
-            <Stack wrap align="baseline" direction="row" gap="150">
-              <Typography mono size="2xs" tracking="wider" type="note" variant="tertiary">
-                {t("eyebrow")}
-              </Typography>
-              <Typography type="h1">{t("title")}</Typography>
-            </Stack>
+            <Typography type="h1">{t("title")}</Typography>
             <Stack direction="row" gap="100">
               <Button icon="plus" intent="ghost" onClick={() => setAddingCategory(true)}>
                 {t("addCategory")}

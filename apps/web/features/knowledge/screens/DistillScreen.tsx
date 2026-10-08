@@ -98,12 +98,7 @@ export function DistillScreen() {
     <Container padding={["300", "350"]}>
       <PageContainer stretch>
         <Stack gap="250">
-          <Stack gap="50">
-            <Typography type="title">{t("distill.title")}</Typography>
-            <Typography size="sm" type="note" variant="secondary">
-              {t("distill.subtitle")}
-            </Typography>
-          </Stack>
+          <Typography type="title">{t("distill.title")}</Typography>
 
           {automations.length === 0 ? (
             <Panel header={t("distill.log")} padding="300">

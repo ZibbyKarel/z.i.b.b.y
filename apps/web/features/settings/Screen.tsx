@@ -129,12 +129,7 @@ export function SettingsScreen({ section }: SettingsScreenProps) {
     <Container padding={["300", "350"]}>
       <PageContainer>
         <Stack direction="col" gap="250">
-          <Stack align="baseline" direction="row" gap="150">
-            <Typography mono size="sm" type="note" variant="tertiary">
-              {t("eyebrow")}
-            </Typography>
-            <Typography type="title">{t("title")}</Typography>
-          </Stack>
+          <Typography type="title">{t("title")}</Typography>
 
           <Grid gap="300" sidebar="left">
             <Container shrink={false}>

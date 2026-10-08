@@ -114,15 +114,10 @@ export function TaskDetailScreen({ taskId }: TaskDetailScreenProps) {
     );
   }
 
-  const displayId = `TSK-${task.id.slice(-4).toUpperCase()}`;
-
   return (
     <Container padding={["300", "350"]}>
       <Stack gap="200">
         <Stack gap="50">
-          <Typography mono size="2xs" tracking="wider" type="note" variant="tertiary">
-            {displayId} · {t(`source.${task.source ?? "operator"}`)}
-          </Typography>
           <Typography type="h1">{task.title || task.text.slice(0, 120)}</Typography>
           {task.title && (
             <Typography type="text" variant="secondary">

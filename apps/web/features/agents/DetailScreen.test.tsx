@@ -68,8 +68,8 @@ describe("agents DetailScreen (N4c grammar)", () => {
     expect(screen.getByRole("button", { name: "Smazat" })).toBeInTheDocument();
     // Phase 04: a pin toggle sits in the action row next to Run.
     expect(screen.getByRole("button", { name: "Připnout" })).toBeInTheDocument();
-    // The backing file is honest in the header, and the used-by panel lists workflows.
-    expect(screen.getByText("~/zibby/agents/koder.agent.md")).toBeInTheDocument();
+    // The header carries no file-path subtitle; the used-by panel lists workflows.
+    expect(screen.queryByText("~/zibby/agents/koder.agent.md")).toBeNull();
     expect(screen.getByText(/Delivery/)).toBeInTheDocument();
   });
 

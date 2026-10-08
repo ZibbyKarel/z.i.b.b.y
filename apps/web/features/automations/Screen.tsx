@@ -93,7 +93,6 @@ export function Screen() {
 
   const cronAutomations = automations.filter((a) => a.trigger.type === "cron");
   const eventAutomations = automations.filter((a) => a.trigger.type === "event");
-  const activeCount = automations.filter((a) => a.enabled).length;
 
   // Honest load states (Phase 18.2): a pending/failed automations fetch must never
   // read as an empty workspace (see Collection's own docstring for the same rule).
@@ -158,12 +157,7 @@ export function Screen() {
       <PageContainer>
         <Stack gap="250">
           <Stack wrap align="center" direction="row" gap="150" justify="between">
-            <Stack gap="25">
-              <Typography type="h1">{t("title")}</Typography>
-              <Typography mono size="xs" type="note" variant="tertiary">
-                {t("summary", { active: activeCount, total: automations.length })}
-              </Typography>
-            </Stack>
+            <Typography type="h1">{t("title")}</Typography>
             <Button icon="plus" intent="primary" onClick={() => setCreating(true)}>
               {t("addAutomation")}
             </Button>

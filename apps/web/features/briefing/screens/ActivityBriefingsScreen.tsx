@@ -30,12 +30,7 @@ export function ActivityBriefingsScreen() {
     <Container padding={["300", "350"]}>
       <Stack gap="200">
         <Stack wrap align="center" direction="row" gap="150" justify="between">
-          <Stack wrap align="baseline" direction="row" gap="150">
-            <Typography mono size="2xs" tracking="wider" type="note" variant="tertiary">
-              {t("activityBriefings.eyebrow")}
-            </Typography>
-            <Typography type="h1">{t("activityBriefings.title")}</Typography>
-          </Stack>
+          <Typography type="h1">{t("activityBriefings.title")}</Typography>
           <Button disabled={generate.isPending} onClick={() => generate.mutate({ body: {} })}>
             {generate.isPending
               ? t("overview.briefingGenerate")

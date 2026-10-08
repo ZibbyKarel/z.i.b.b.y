@@ -129,12 +129,7 @@ export function NewTaskScreen() {
     <Container padding={["300", "350"]}>
       <Stack wrap direction="row" gap="300">
         <Stack gap="200" style={{ flex: "1 1 480px", minWidth: 0 }}>
-          <Stack gap="50">
-            <Typography mono size="2xs" tracking="wider" type="note" variant="tertiary">
-              {t("eyebrow")}
-            </Typography>
-            <Typography type="h1">{t("new.title")}</Typography>
-          </Stack>
+          <Typography type="h1">{t("new.title")}</Typography>
 
           <TextInputField
             label={t("new.field.title")}

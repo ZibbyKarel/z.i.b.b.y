@@ -9,7 +9,6 @@ import {
   SegmentedControl,
   Stack,
   SubNav,
-  Typography,
 } from "@zibby/design-system";
 import type { Route } from "next";
 import Link from "next/link";
@@ -60,12 +59,6 @@ export function GatesScreen() {
   return (
     <Container padding={["300", "350"]}>
       <Stack gap="200">
-        <Stack wrap align="baseline" direction="row" gap="150">
-          <Typography mono size="2xs" tracking="wider" type="note" variant="tertiary">
-            {t("title")}
-          </Typography>
-        </Stack>
-
         <SubNav items={items} linkComponent={NavLink} />
 
         <SectionBody section={section} />

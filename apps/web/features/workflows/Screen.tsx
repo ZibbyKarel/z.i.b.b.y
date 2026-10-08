@@ -71,7 +71,7 @@ const noop = () => {};
  * The `/workflows` and `/workflows/[id]` routes share this one Screen (F5,
  * docs/plans/hud2chat-F5-orchestration.md): `routeId` (the `[id]` route
  * segment, absent on the list route) drives the immersive header's title,
- * subtitle, actions and `backHref` — NOT `selected`, which always falls back
+ * actions and `backHref` — NOT `selected`, which always falls back
  * to `list[0]` for the master/detail preview even on the plain list route.
  * Getting `backHref` right for both states is the single most likely defect
  * here: it must point at `/workflows` on the detail route (never loop back to
@@ -462,7 +462,6 @@ export function Screen({ selectedId: routeId, basePath = "/work/workflows" }: Sc
   );
 
   const title = routeId ? (selected?.name ?? selected?.id ?? routeId) : t("workflows.title");
-  const subtitle = routeId ? selected?.file : t("workflows.countSummary", { count: list.length });
 
   return (
     <Container padding={["300", "350"]}>
@@ -476,14 +475,7 @@ export function Screen({ selectedId: routeId, basePath = "/work/workflows" }: Sc
           )}
 
           <Stack wrap align="center" direction="row" gap="150" justify="between">
-            <Stack gap="25">
-              <Typography type="h1">{title}</Typography>
-              {subtitle && (
-                <Typography mono size="xs" type="note" variant="tertiary">
-                  {subtitle}
-                </Typography>
-              )}
-            </Stack>
+            <Typography type="h1">{title}</Typography>
             <Button icon="plus" intent="primary" onClick={() => setAdding(true)}>
               {t("workflows.addWorkflow")}
             </Button>

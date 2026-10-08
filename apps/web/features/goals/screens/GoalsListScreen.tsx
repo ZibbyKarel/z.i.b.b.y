@@ -44,15 +44,7 @@ export function GoalsListScreen() {
   return (
     <Container padding={["300", "350"]}>
       <Stack gap="200">
-        <Stack wrap align="baseline" direction="row" gap="150">
-          <Typography mono size="2xs" tracking="wider" type="note" variant="tertiary">
-            {t("eyebrow")}
-          </Typography>
-          <Typography type="h1">{t("title")}</Typography>
-          <Typography size="sm" type="note" variant="secondary">
-            {t("subtitle")}
-          </Typography>
-        </Stack>
+        <Typography type="h1">{t("title")}</Typography>
 
         {goalsQuery.isPending || runsPending ? (
           <QueryLoading />

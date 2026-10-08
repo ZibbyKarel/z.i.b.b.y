@@ -117,14 +117,7 @@ function CommandEditor({ command }: { command: Command }) {
           />
 
           <Stack wrap align="center" direction="row" gap="150" justify="between">
-            <Stack gap="25">
-              <Typography type="h1">{name}</Typography>
-              {command["argument-hint"] && (
-                <Typography mono size="xs" type="note" variant="tertiary">
-                  {command["argument-hint"]}
-                </Typography>
-              )}
-            </Stack>
+            <Typography type="h1">{name}</Typography>
             <Stack align="center" direction="row" gap="100">
               <Button
                 data-testid={CommandDetailScreenTestId.Delete}

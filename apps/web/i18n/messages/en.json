@@ -118,7 +118,6 @@
     },
     "distill": {
       "title": "Distillation",
-      "subtitle": "Every night at 02:00, Knowledge Management folds the day into the vault.",
       "runNow": "Run now",
       "running": "Running…",
       "lastRun": "Last run: {ago}",
@@ -304,9 +303,7 @@
     }
   },
   "goals": {
-    "eyebrow": "WORK — GOALS",
     "title": "Maker ⇄ verifier loops",
-    "subtitle": "A goal repeats until the verifier passes or the run budget runs out.",
     "emptyTitle": "No goals yet",
     "emptyBody": "Create a goal from a maker (agent or workflow) and a verifier to start a loop.",
     "noProject": "—",
@@ -326,7 +323,6 @@
     }
   },
   "tasksWork": {
-    "eyebrow": "WORK",
     "state": {
       "thinking": "Thinking",
       "working": "Working",
@@ -686,7 +682,6 @@
     "verify": "verify",
     "runWorkflow": "Run workflow",
     "title": "Workflows",
-    "countSummary": "{count, plural, =0 {no workflows} one {# workflow} other {# workflows}} · multi-agent delivery chains",
     "emptyTitle": "No workflows yet",
     "emptyDescription": "Workflows chain agents together via files. Add the first one and compose the phases in the editor.",
     "emptyHint": "// creates ~/zibby/workflows/'<name>'.workflow.md",
@@ -1017,7 +1012,6 @@
       "disabled": "Disabled"
     },
     "footer": "ZIBBY — Zestful Intuitive Brainy Butler for You",
-    "eyebrow": "SYSTEM — SETTINGS",
     "subnav": {
       "ariaLabel": "Settings sections",
       "general": "General",
@@ -1341,7 +1335,6 @@
     "resolveCheck": "Check"
   },
   "projects": {
-    "eyebrow": "WORK — PROJECTS",
     "title": "Projects",
     "switcherLabel": "Active project",
     "switcherNoProject": "No project",
@@ -1534,7 +1527,6 @@
     }
   },
   "companies": {
-    "eyebrow": "WORK — COMPANIES",
     "title": "Companies",
     "countSummary": "{count, plural, =0 {no companies} one {# company} other {# companies}} · the super-entity above projects",
     "addCompany": "Add company",
@@ -1608,7 +1600,6 @@
     }
   },
   "teams": {
-    "eyebrow": "WORK — TEAMS",
     "title": "Teams",
     "countSummary": "{count, plural, =0 {no teams} one {# team} other {# teams}} · the knowledge-base owner between a company and a project",
     "addTeam": "Add team",
@@ -1669,7 +1660,6 @@
   },
   "automations": {
     "title": "Automations",
-    "summary": "{active} active · {total} total · results land in the morning briefing",
     "autonomyNote": "This is where autonomy begins — a trigger starts a run unprompted. Every external-effect action still stops at the approval gate.",
     "addAutomation": "Add automation",
     "cronSection": "Time triggers · cron",
@@ -2096,7 +2086,6 @@
     "emptyTitle": "The archive is still empty",
     "emptyDescription": "Once ZIBBY finishes something, it will show up here.",
     "selectHint": "Select a task on the left to see its detail.",
-    "eyebrow": "ACTIVITY",
     "column": {
       "task": "Task",
       "state": "State",
@@ -2263,7 +2252,6 @@
     }
   },
   "activityLog": {
-    "eyebrow": "ACTIVITY",
     "title": "Live log",
     "empty": "Nothing matches yet. New events appear as they stream in.",
     "pause": "Pause",
@@ -2281,7 +2269,6 @@
     }
   },
   "activityInbox": {
-    "eyebrow": "ACTIVITY",
     "title": "Inbox",
     "emptyTitle": "No messages yet",
     "emptyBody": "Once something arrives from a connected channel, it shows up here.",
@@ -2295,7 +2282,6 @@
     }
   },
   "activityBriefings": {
-    "eyebrow": "ACTIVITY",
     "title": "Briefing",
     "generateNow": "Generate now",
     "generatedAt": "Generated {at}",
@@ -2309,7 +2295,6 @@
   },
   "policy": {
     "approvals": {
-      "title": "Policy — Approvals",
       "queueTitle": "Queue",
       "queueEmpty": "The queue is empty.",
       "historyTitle": "History",
@@ -2378,7 +2363,6 @@
       }
     },
     "gates": {
-      "title": "Policy — Gates",
       "sections": {
         "floor": "Floor",
         "global": "Global rules",
@@ -2394,16 +2378,13 @@
     },
     "patterns": {
       "title": "Policy — Learned patterns",
-      "subtitle": "Built from your past approvals. Nothing changes until you accept.",
       "accepted": "Now a rule",
       "empty": "No learned patterns yet.",
       "evidenceCount": "{n} / {of}"
     }
   },
   "ledgerBudgets": {
-    "eyebrow": "LEDGER — BUDGETS",
     "title": "Budgets",
-    "subtitle": "Run caps across the account, its companies, and their projects.",
     "meta": {
       "day": "Today",
       "week": "This week",
@@ -2432,7 +2413,6 @@
     "otherWindowsCaption": "week {week} · month {month}"
   },
   "ledgerSpend": {
-    "eyebrow": "LEDGER — SPEND",
     "title": "${amount} spent today",
     "state": {
       "ok": "OK",
@@ -2523,9 +2503,7 @@
     }
   },
   "registries": {
-    "eyebrow": "SYSTEM — REGISTRIES",
     "title": "Global libraries",
-    "subtitle": "Departments bind to these in their own tabs.",
     "kinds": {
       "positions": "Agents",
       "skills": "Skills",

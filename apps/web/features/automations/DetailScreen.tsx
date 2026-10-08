@@ -31,7 +31,6 @@ import {
   useUpdateAutomationMutation,
 } from "./mutations";
 import { useAutomationQuery } from "./queries";
-import { useCronLabel } from "./useCronLabel";
 
 export enum AutomationDetailScreenTestId {
   Save = "automation-detail-save",
@@ -72,7 +71,6 @@ function AutomationEditor({ automation }: { automation: Automation }) {
   const t = useTranslations("automations");
   const tk = useTranslations();
   const router = useRouter();
-  const cronLabel = useCronLabel();
   const updateAutomation = useUpdateAutomationMutation();
   const deleteAutomation = useDeleteAutomationMutation();
   const triggerAutomation = useTriggerAutomationMutation();
@@ -83,13 +81,6 @@ function AutomationEditor({ automation }: { automation: Automation }) {
   const target = automation.target;
   const isTask = target.type === "task";
   const name = automation.name ?? automation.id;
-  const subtitle =
-    automation.trigger.type === "cron"
-      ? cronLabel(automation.trigger.expr)
-      : automation.trigger.type === "signal"
-        ? automation.trigger.kind
-        : automation.trigger.events.join(" · ");
-
   // System AND the legacy schedule-only fallback both persist ONLY the trigger —
   // the target/name (system: server-owned; legacy: no picker to edit it with) never
   // moves through this path.
@@ -133,12 +124,7 @@ function AutomationEditor({ automation }: { automation: Automation }) {
           />
 
           <Stack wrap align="center" direction="row" gap="150" justify="between">
-            <Stack gap="25">
-              <Typography type="h1">{name}</Typography>
-              <Typography mono size="xs" type="note" variant="tertiary">
-                {subtitle}
-              </Typography>
-            </Stack>
+            <Typography type="h1">{name}</Typography>
             <Stack align="center" direction="row" gap="100">
               <Button
                 data-testid={AutomationDetailScreenTestId.Run}

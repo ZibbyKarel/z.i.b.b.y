@@ -47,9 +47,9 @@ describe("skills DetailScreen (N4d grammar)", () => {
     hooks.skill = { data: SKILL, isPending: false, isError: false, refetch: vi.fn() };
   });
 
-  it("shows the backing file and the top-right actions by accessible name", () => {
+  it("shows the top-right actions by accessible name and no file-path subtitle", () => {
     render(<DetailScreen skillId="deploy" />);
-    expect(screen.getByText("~/zibby/skills/deploy/SKILL.md")).toBeInTheDocument();
+    expect(screen.queryByText("~/zibby/skills/deploy/SKILL.md")).toBeNull();
     expect(screen.getByRole("button", { name: "Uložit" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Smazat" })).toBeInTheDocument();
   });

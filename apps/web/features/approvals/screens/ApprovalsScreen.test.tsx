@@ -60,6 +60,12 @@ describe("ApprovalsScreen (ZB-08)", () => {
     hooks.history = { data: [DECIDED], isPending: false };
   });
 
+  it("renders no eyebrow note above the h1", () => {
+    render(<ApprovalsScreen />);
+    expect(screen.queryByText("Policy — Approvals")).toBeNull();
+    expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
+  });
+
   it("single-click approves a queued item — no hold confirmation (D-014)", async () => {
     render(<ApprovalsScreen />);
     await userEvent.click(screen.getByRole("button", { name: "Approve" }));

@@ -1,7 +1,7 @@
 "use client";
 
 import type { StateTone } from "@zibby/design-system";
-import { Container, EmptyState, PatternCard, Stack, Typography } from "@zibby/design-system";
+import { Container, EmptyState, PatternCard, Stack } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
@@ -66,15 +66,6 @@ export function PatternsScreen() {
   return (
     <Container padding={["300", "350"]}>
       <Stack gap="200">
-        <Stack gap="50">
-          <Typography mono size="2xs" tracking="wider" type="note" variant="tertiary">
-            {t("title")}
-          </Typography>
-          <Typography type="note" variant="secondary">
-            {t("subtitle")}
-          </Typography>
-        </Stack>
-
         {rulesQuery.isPending ? (
           <QueryLoading />
         ) : rulesQuery.isError ? (

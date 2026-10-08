@@ -120,12 +120,7 @@ function AgentEditor({ agent }: { agent: Agent }) {
           />
 
           <Stack wrap align="center" direction="row" gap="150" justify="between">
-            <Stack gap="25">
-              <Typography type="h1">{name}</Typography>
-              <Typography mono size="xs" type="note" variant="tertiary">
-                {agentFile(agent.id)}
-              </Typography>
-            </Stack>
+            <Typography type="h1">{name}</Typography>
             <Stack align="center" direction="row" gap="100">
               <Button
                 data-testid={AgentDetailScreenTestId.Run}

@@ -580,12 +580,6 @@ export function RunDetail({
 
   const headline = runTitle(run);
 
-  // A workflow run's `prompt` is only the "fáze: X" progress string, which the stage
-  // timeline below already shows — so the header subtitle is the prompt for the other
-  // kinds (an agent's prompt), suppressed for workflows.
-  const subtitle =
-    run.kind === "workflow" ? "" : run.prompt && run.prompt !== headline ? run.prompt : "";
-
   // Workflow runs render their own stage timeline (below); this is the log for the
   // kinds that have a single one (agent/skill) or a scheduled task's note.
   const logPanel = run.logBase ? (
@@ -739,11 +733,6 @@ export function RunDetail({
                           status={run.status}
                         />
                       </Stack>
-                      {subtitle && (
-                        <Typography leading="snug" size="sm" type="text" variant="secondary">
-                          {subtitle}
-                        </Typography>
-                      )}
                       {/* id · kind · agent X (v-runs.png) — the routed agent's name folds
                       into this one meta line instead of a second, separate chip. Phase 63:
                       the agent's name is a link to its own detail page (its display name

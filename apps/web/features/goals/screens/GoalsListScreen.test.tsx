@@ -63,6 +63,15 @@ beforeEach(() => {
 });
 
 describe("GoalsListScreen (ZB-06)", () => {
+  it("renders only the h1 — no page eyebrow or subtitle", () => {
+    render(<GoalsListScreen />);
+    expect(screen.queryByText("WORK — GOALS")).toBeNull();
+    expect(
+      screen.queryByText("A goal repeats until the verifier passes or the run budget runs out."),
+    ).toBeNull();
+    expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
+  });
+
   it("renders a GoalCard per goal, with the project name in the eyebrow", () => {
     hooks.goals = [goal];
     render(<GoalsListScreen />);

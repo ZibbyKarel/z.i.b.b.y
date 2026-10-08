@@ -111,8 +111,6 @@ function IntegrationEditor({
     );
   };
 
-  const subtitle = `${integration.kind} · ${integration.id}`;
-
   return (
     <Container padding={["300", "350"]}>
       <PageContainer>
@@ -123,12 +121,7 @@ function IntegrationEditor({
           />
 
           <Stack wrap align="center" direction="row" gap="150" justify="between">
-            <Stack gap="25">
-              <Typography type="h1">{name}</Typography>
-              <Typography mono size="xs" type="note" variant="tertiary">
-                {subtitle}
-              </Typography>
-            </Stack>
+            <Typography type="h1">{name}</Typography>
             <Stack align="center" direction="row" gap="100">
               <Button
                 data-testid={IntegrationDetailScreenTestId.Test}

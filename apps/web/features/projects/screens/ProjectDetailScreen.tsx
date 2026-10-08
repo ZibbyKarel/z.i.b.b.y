@@ -557,14 +557,7 @@ export function ProjectDetailScreen({ projectId, tab = "overview" }: ProjectDeta
           />
 
           <Stack wrap align="center" direction="row" gap="150" justify="between">
-            <Stack gap="25">
-              <Typography type="h1">{isNew ? tp("newProject") : (project?.name ?? "")}</Typography>
-              {!isNew && project?.path && (
-                <Typography mono size="xs" type="note" variant="tertiary">
-                  {project.path}
-                </Typography>
-              )}
-            </Stack>
+            <Typography type="h1">{isNew ? tp("newProject") : (project?.name ?? "")}</Typography>
             <Stack align="center" direction="row" gap="100">
               {showClonedFromCloneRoot && (
                 <Tag data-testid="cloned-from-clone-root" tone="neutral">

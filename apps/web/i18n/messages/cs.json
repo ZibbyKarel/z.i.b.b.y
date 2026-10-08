@@ -118,7 +118,6 @@
     },
     "distill": {
       "title": "Destilace",
-      "subtitle": "Každou noc ve 02:00 Knowledge Management prochází den do vaultu.",
       "runNow": "Spustit hned",
       "running": "Běží…",
       "lastRun": "Poslední běh: {ago}",
@@ -304,9 +303,7 @@
     }
   },
   "goals": {
-    "eyebrow": "PRÁCE — CÍLE",
     "title": "Smyčky tvůrce ⇄ ověřovatel",
-    "subtitle": "Cíl se opakuje, dokud ověřovatel neprojde nebo nedojde rozpočet běhů.",
     "emptyTitle": "Zatím žádné cíle",
     "emptyBody": "Vytvořte cíl z tvůrce (agent nebo workflow) a ověřovatele a spusťte smyčku.",
     "noProject": "—",
@@ -326,7 +323,6 @@
     }
   },
   "tasksWork": {
-    "eyebrow": "PRÁCE",
     "state": {
       "thinking": "Přemýšlí",
       "working": "Pracuje",
@@ -686,7 +682,6 @@
     "verify": "verify",
     "runWorkflow": "Spustit workflow",
     "title": "Workflow",
-    "countSummary": "{count, plural, =0 {žádné workflow} one {# workflow} few {# workflow} other {# workflow}} · více­agentní dodací řetězce",
     "emptyTitle": "Zatím žádné workflow",
     "emptyDescription": "Workflow řetězí agenty přes soubory. Přidej první a fáze pak poskládáš v editoru.",
     "emptyHint": "// vytvoří ~/zibby/workflows/'<název>'.workflow.md",
@@ -1017,7 +1012,6 @@
       "disabled": "Vypnutý"
     },
     "footer": "ZIBBY — Zestful Intuitive Brainy Butler for You",
-    "eyebrow": "SYSTÉM — NASTAVENÍ",
     "subnav": {
       "ariaLabel": "Sekce nastavení",
       "general": "Obecné",
@@ -1341,7 +1335,6 @@
     "resolveCheck": "Kontrola"
   },
   "projects": {
-    "eyebrow": "PRÁCE — PROJEKTY",
     "title": "Projekty",
     "switcherLabel": "Aktivní projekt",
     "switcherNoProject": "Bez projektu",
@@ -1534,7 +1527,6 @@
     }
   },
   "companies": {
-    "eyebrow": "PRÁCE — FIRMY",
     "title": "Firmy",
     "countSummary": "{count, plural, =0 {žádné firmy} one {# firma} few {# firmy} other {# firem}} · nadřazená entita nad projekty",
     "addCompany": "Přidat firmu",
@@ -1608,7 +1600,6 @@
     }
   },
   "teams": {
-    "eyebrow": "PRÁCE — TÝMY",
     "title": "Týmy",
     "countSummary": "{count, plural, =0 {žádné týmy} one {# tým} few {# týmy} other {# týmů}} · vlastník znalostní báze mezi firmou a projektem",
     "addTeam": "Přidat tým",
@@ -1669,7 +1660,6 @@
   },
   "automations": {
     "title": "Automatizace",
-    "summary": "{active} aktivních · {total} celkem · výsledky se objeví v ranním brífinku",
     "autonomyNote": "Tady vzniká autonomie — trigger spustí běh bez vyzvání. Každá akce s vnějším efektem se ale zastaví na frontě schválení.",
     "addAutomation": "Nová automatizace",
     "cronSection": "Časové triggery · cron",
@@ -2096,7 +2086,6 @@
     "emptyTitle": "Archiv je zatím prázdný",
     "emptyDescription": "Jakmile ZIBBY něco dokončí, objeví se to tady.",
     "selectHint": "Vyber úlohu vlevo pro zobrazení detailu.",
-    "eyebrow": "AKTIVITA",
     "column": {
       "task": "Úkol",
       "state": "Stav",
@@ -2263,7 +2252,6 @@
     }
   },
   "activityLog": {
-    "eyebrow": "AKTIVITA",
     "title": "Živý log",
     "empty": "Zatím nic neodpovídá. Nové události se objeví, jak přibudou.",
     "pause": "Pozastavit",
@@ -2281,7 +2269,6 @@
     }
   },
   "activityInbox": {
-    "eyebrow": "AKTIVITA",
     "title": "Příchozí zprávy",
     "emptyTitle": "Zatím žádné zprávy",
     "emptyBody": "Jakmile něco dorazí z připojených kanálů, objeví se to tady.",
@@ -2295,7 +2282,6 @@
     }
   },
   "activityBriefings": {
-    "eyebrow": "AKTIVITA",
     "title": "Briefing",
     "generateNow": "Vygenerovat teď",
     "generatedAt": "Vygenerováno {at}",
@@ -2309,7 +2295,6 @@
   },
   "policy": {
     "approvals": {
-      "title": "Politika — Schválení",
       "queueTitle": "Fronta",
       "queueEmpty": "Fronta je prázdná.",
       "historyTitle": "Historie",
@@ -2378,7 +2363,6 @@
       }
     },
     "gates": {
-      "title": "Politika — Pravidla",
       "sections": {
         "floor": "Podlaha",
         "global": "Globální pravidla",
@@ -2394,16 +2378,13 @@
     },
     "patterns": {
       "title": "Politika — Naučené vzory",
-      "subtitle": "Postaveno na tvých minulých schváleních. Nic se nezmění, dokud to nepřijmeš.",
       "accepted": "Teď je to pravidlo",
       "empty": "Zatím žádné naučené vzory.",
       "evidenceCount": "{n} / {of}"
     }
   },
   "ledgerBudgets": {
-    "eyebrow": "ÚČETNICTVÍ — ROZPOČTY",
     "title": "Rozpočty",
-    "subtitle": "Limity běhů napříč účtem, firmami a jejich projekty.",
     "meta": {
       "day": "Dnes",
       "week": "Tento týden",
@@ -2432,7 +2413,6 @@
     "otherWindowsCaption": "týden {week} · měsíc {month}"
   },
   "ledgerSpend": {
-    "eyebrow": "ÚČETNICTVÍ — ÚTRATA",
     "title": "${amount} utraceno dnes",
     "state": {
       "ok": "OK",
@@ -2523,9 +2503,7 @@
     }
   },
   "registries": {
-    "eyebrow": "SYSTÉM — REGISTRY",
     "title": "Globální knihovny",
-    "subtitle": "Oddělení se na ně napojují ve vlastních záložkách.",
     "kinds": {
       "positions": "Agenti",
       "skills": "Skilly",

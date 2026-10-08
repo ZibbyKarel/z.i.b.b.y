@@ -121,15 +121,7 @@ export function RegistriesScreen({ kind, openCreateOnMount }: RegistriesScreenPr
       <PageContainer>
         <Stack gap="250">
           <Stack align="baseline" direction="row" gap="150" justify="between">
-            <Stack gap="50">
-              <Typography mono size="sm" type="note" variant="tertiary">
-                {t("eyebrow")}
-              </Typography>
-              <Typography type="title">{t("title")}</Typography>
-              <Typography type="note" variant="secondary">
-                {t("subtitle")}
-              </Typography>
-            </Stack>
+            <Typography type="title">{t("title")}</Typography>
             <Button icon="plus" intent="primary" onClick={() => setCreating(true)}>
               {t(`add.${kind}`)}
             </Button>

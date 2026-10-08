@@ -77,8 +77,6 @@ function McpServerEditor({ server }: { server: McpServer }) {
     );
   };
 
-  const subtitle = server.type === "stdio" ? server.command : server.url;
-
   return (
     <Container padding={["300", "350"]}>
       <PageContainer>
@@ -92,14 +90,7 @@ function McpServerEditor({ server }: { server: McpServer }) {
           />
 
           <Stack wrap align="center" direction="row" gap="150" justify="between">
-            <Stack gap="25">
-              <Typography type="h1">{name}</Typography>
-              {subtitle && (
-                <Typography mono size="xs" type="note" variant="tertiary">
-                  {subtitle}
-                </Typography>
-              )}
-            </Stack>
+            <Typography type="h1">{name}</Typography>
             <Stack align="center" direction="row" gap="100">
               <Button
                 data-testid={McpDetailScreenTestId.Delete}
