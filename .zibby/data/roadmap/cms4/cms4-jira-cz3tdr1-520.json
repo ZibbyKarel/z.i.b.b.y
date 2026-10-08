@@ -1,0 +1,28 @@
+{
+  "id": "cms4-jira-cz3tdr1-520",
+  "projectId": "cms4",
+  "level": "epic",
+  "name": "Shoptet addon CLI - Greenfield - Foundation",
+  "description": "Part of the \"Shoptet Partner CLI — Greenfield Rebuild\" initiative (label: shoptet-cli-greenfield).\n\nScaffold + static checks, no platform dependency, no auth, no network beyond npm. Useful on its own but not yet the full MVP — partners have no dev loop until Phase 2.\n\nScope per cli-greenfield.md §13 Phase 1:\n\n- Shared lint packages (@shoptet/stylelint-config, @shoptet/eslint-config) + @shoptet/datalayer knowledge pack (§8)\n- shoptet init — scaffold, editor-agnostic configs, committed shoptet.config.json/shoptet.lock, gitignored .shoptet/ (§5.7, §10)\n- shoptet validate — severity policy (deterministic=error, snapshot-derived=warning) (§8)\n- shoptet refresh + shoptet update / config autoupdate — knowledge bundle refresh and CLI self-update (§9)\n- shoptet doctor — environment sanity, target-shop reporting, resolved-config provenance (§9)",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-520",
+    "externalKey": "CZ3TDR1-520",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-520"
+  },
+  "externalLevel": "Epic",
+  "attachments": [],
+  "dependsOn": [
+    "cms4-jira-cz3tdr1-519"
+  ],
+  "dependsOnFromSource": [
+    "cms4-jira-cz3tdr1-519"
+  ],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:08.371Z",
+  "updatedAt": "2026-10-08T11:04:08.371Z",
+  "syncedAt": "2026-10-08T11:04:08.371Z"
+}

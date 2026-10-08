@@ -1,0 +1,25 @@
+{
+  "id": "cms4-jira-cz3tdr1-527",
+  "projectId": "cms4",
+  "level": "task",
+  "parentId": "cms4-jira-cz3tdr1-519",
+  "name": "Feasibility spike: prove the dev-loop mechanism on a real shop",
+  "description": "Gate deliverable, not shippable product code. On a real shop, prove: HTML interception (text/html only), marker-anchored byte-splice injection, same-origin dev-asset serving, session survival across cookies/redirects/session-sensitive routes (cart/checkout/account), and correct detection/reporting of which version is being rendered.\n\nRecord real response headers, cookie flags, redirect chains, and any bot/WAF behavior encountered — this becomes the first fixture corpus for §12.\n\nThe Phase 2 (MVP dev-loop) design is not committed until this passes. If it fails, scope changes here, cheaply, rather than after Phase 2 is built.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-527",
+    "externalKey": "CZ3TDR1-527",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-527"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:08.377Z",
+  "updatedAt": "2026-10-08T11:04:08.377Z",
+  "syncedAt": "2026-10-08T11:04:08.377Z"
+}

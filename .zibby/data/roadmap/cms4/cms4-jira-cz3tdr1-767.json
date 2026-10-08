@@ -1,0 +1,24 @@
+{
+  "id": "cms4-jira-cz3tdr1-767",
+  "projectId": "cms4",
+  "level": "task",
+  "name": "Console server actions: return expected failures as values, so operators see them in a production build",
+  "description": "Raised in the re-review of PR #78 (CZ3TDR1-739).\n\n## The problem\n\nEvery server action in the addon-reviewer console reports a failure by **throwing**, and the client shows `e.message` in a toast. Examples: `apps/console/app/ops/rerun-button.tsx` and the shared `apps/console/app/review/[id]/use-run.ts`; 11 client files follow the same pattern. There are 27 `throw new Error` in `lib/actions.ts`, `lib/admin-actions.ts` and `lib/guards.ts` alone.\n\nIn a production build, Next does not pass a thrown Server Action error through to the client: the error handler (`next/dist/server/app-render/create-error-handler.js`) keeps only a digest, and the client gets a generic message. The console runs the standalone build with `NODE_ENV=production` (see `apps/console/lib/actor.ts`). So in production the operator does not see any of the advice these guards were written to give, for example:\n\n- `assertHeadNotStale`: \"the PR has moved on, use Re-review\"\n- `assertCanRequeue`, `assertRequeueSafeToReset`, the admin guards\n- the PR lock's wait ceiling: Postgres's raw `canceling statement due to lock timeout` (SQLSTATE `55P03`; `packages/db/src/pr-lock.ts` docblock around `:125` says it gives no advice)\n\n**Caveat:** this is read from the Next source, not measured. The first step is to trigger one guard on a production build and confirm what the toast shows.\n\n## What is wanted\n\nExpected failures come back as a value (e.g. `{ ok: false, message }`) and the client toasts that; only unexpected errors throw. One shared shape and one client helper, not per-action patches.\n\nTwo cases carried over from #78 that are easy to lose:\n\n- **Lock timeout** (`55P03`) in `requeueReviewAction` should read like \"Another job is working on this PR, try again in a minute\", not the raw Postgres text.\n- **Requeue compensation** in `requeueReviewAction` (`apps/console/lib/actions.ts`, the `catch` after `enqueue`): after compensating it rethrows the raw send error. The operator should be told the outcome: either \"moved back to Failed\", or, in the stand-down case (a worker already picked the row up), **no error at all**, because the requeue actually happened. Today that case toasts a failure for a requeue that went through.\n\nBoth spots carry `TODO(CZ3TDR1-767)` in the code (added in #78).\n\n**Done when:** a guard's message, the lock-timeout message and both requeue-compensation outcomes are visible in the toast **on a production build**, and the TODOs pointing here are gone.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-767",
+    "externalKey": "CZ3TDR1-767",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-767"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:08.588Z",
+  "updatedAt": "2026-10-08T11:04:08.588Z",
+  "syncedAt": "2026-10-08T11:04:08.588Z"
+}

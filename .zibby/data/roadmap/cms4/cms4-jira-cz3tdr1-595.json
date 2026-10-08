@@ -1,0 +1,25 @@
+{
+  "id": "cms4-jira-cz3tdr1-595",
+  "projectId": "cms4",
+  "level": "task",
+  "parentId": "cms4-jira-cz3tdr1-576",
+  "name": "Add language switcher (CS/EN)",
+  "description": "~~Add a UI language toggle and persist the user's choice.~~\n\n~~Externalize all UI strings (labels, buttons, empty states, toasts)~~\n\n~~Language toggle + persistence~~\n\nDecide whether AI-generated comment language follows the UI language (currently Czech) - English",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-595",
+    "externalKey": "CZ3TDR1-595",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-595"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:08.426Z",
+  "updatedAt": "2026-10-08T11:04:08.426Z",
+  "syncedAt": "2026-10-08T11:04:08.426Z"
+}

@@ -1,0 +1,25 @@
+{
+  "id": "cms4-jira-cz3tdr1-753",
+  "projectId": "cms4",
+  "level": "task",
+  "parentId": "cms4-jira-cz3tdr1-614",
+  "name": "[Portal] Design: References",
+  "description": "Placeholder for design work from the design roadmap (Q4 2026 – Q1 2027).\n\n- **Estimate:** 24 h\n- **Planned:** 24. 11. – 3. 12. 2026\n- Estimate scope is still being validated.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-753",
+    "externalKey": "CZ3TDR1-753",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-753"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:08.574Z",
+  "updatedAt": "2026-10-08T11:04:08.574Z",
+  "syncedAt": "2026-10-08T11:04:08.574Z"
+}

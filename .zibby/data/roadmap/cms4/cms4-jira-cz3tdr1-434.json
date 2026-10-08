@@ -1,0 +1,25 @@
+{
+  "id": "cms4-jira-cz3tdr1-434",
+  "projectId": "cms4",
+  "level": "task",
+  "parentId": "cms4-jira-cz3tdr1-6",
+  "name": "Clarity implementation",
+  "description": "Implement Clarity tool to gather information about users' behaviour.\n\nMore info has Pavla Radkova.\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/32354](https://github.com/shoptet/cms4/issues/32354)_\n_Created on GitHub by @pavelhusa on 2026-03-02 12:24 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-434",
+    "externalKey": "CZ3TDR1-434",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-434"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:07.886Z",
+  "updatedAt": "2026-10-08T11:04:07.886Z",
+  "syncedAt": "2026-10-08T11:04:07.886Z"
+}

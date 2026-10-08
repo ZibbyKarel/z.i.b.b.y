@@ -1,0 +1,25 @@
+{
+  "id": "cms4-jira-cz3tdr1-524",
+  "projectId": "cms4",
+  "level": "task",
+  "parentId": "cms4-jira-cz3tdr1-519",
+  "name": "Monorepo &amp; CLI skeleton",
+  "description": "Set up pnpm workspaces + Turborepo + Stricli + tsdown. Establish the package layout per cli-greenfield.md §5.5: packages/cli, packages/dev-engine, packages/manifest, packages/validator, packages/create, packages/stylelint-config, packages/eslint-config, packages/test-fixtures, apps/deploy-service (placeholder only, not implemented yet).\n\nSet up Changesets + strict SemVer discipline + npm provenance (OIDC) per §4 — a prerequisite for auto-update being safe later.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-524",
+    "externalKey": "CZ3TDR1-524",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-524"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:08.375Z",
+  "updatedAt": "2026-10-08T11:04:08.375Z",
+  "syncedAt": "2026-10-08T11:04:08.375Z"
+}

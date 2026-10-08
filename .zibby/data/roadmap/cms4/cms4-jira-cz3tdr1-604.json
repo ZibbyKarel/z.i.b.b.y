@@ -1,0 +1,25 @@
+{
+  "id": "cms4-jira-cz3tdr1-604",
+  "projectId": "cms4",
+  "level": "task",
+  "parentId": "cms4-jira-cz3tdr1-576",
+  "name": "AI comments: rendering improvements",
+  "description": "Audit and improve \"suggestion\" block layout\n\nRender short code as inline \n\ncode\n\n, not in quotation marks\n\nHide the \"Propose as rule\" button",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-604",
+    "externalKey": "CZ3TDR1-604",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-604"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:08.436Z",
+  "updatedAt": "2026-10-08T11:04:08.436Z",
+  "syncedAt": "2026-10-08T11:04:08.436Z"
+}

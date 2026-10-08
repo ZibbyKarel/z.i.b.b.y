@@ -1,0 +1,25 @@
+{
+  "id": "cms4-jira-cz3tdr1-552",
+  "projectId": "cms4",
+  "level": "task",
+  "parentId": "cms4-jira-cz3tdr1-543",
+  "name": "Feasibility: Invoicing",
+  "description": "Part of the business dashboard. Covers both affiliate commissions and add-on revenue.\n\nh2. Scope in PRD\n\n- Central place where a partner finds an overview of invoices — both issued by them and issued to them\n- Partner can submit commission calculation inputs directly in the portal\n- Each add-on retains its unique form link; the portal is the centralised entry point for accessing and submitting these forms\n- Submitted data feeds the existing invoicing process in Salesforce\n- Reduces dependency on email for routine monthly invoicing submissions\n\nh2. To analyse\n\n- Where invoices live today and whether they can be read per partner (Salesforce, accounting system)\n- Whether the portal only links out to existing forms or actually replaces them\n- Write path into the existing Salesforce invoicing process\n- Legal/accounting constraints on displaying and storing invoice documents\n- Dependency on Affiliate program and Addons — business commission data\n\nh2. Output\n\nSystems involved, integration gaps, T-shirt size, blockers, MVP / later / out-of-scope recommendation.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-552",
+    "externalKey": "CZ3TDR1-552",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-552"
+  },
+  "externalLevel": "Analysis",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:08.392Z",
+  "updatedAt": "2026-10-08T11:04:08.392Z",
+  "syncedAt": "2026-10-08T11:04:08.392Z"
+}

@@ -1,0 +1,25 @@
+{
+  "id": "cms4-jira-cz3tdr1-269",
+  "projectId": "cms4",
+  "level": "task",
+  "parentId": "cms4-jira-cz3tdr1-6",
+  "name": "Documentation sustainability - Slab articles",
+  "description": "# Context\n\nAlthought, inside each content page, there is a frontmatter that should be aligned with the content all the time. There should be a document adressing responsibilities, and further documentation modification, feedback loop, etc.\n\n# Task\n\nCreate a Slab article, that will contain\n\n- ☐ Description of Docusaurus location ([https://github.com/shoptet/microsites/tree/main/developers.shoptet.com](https://github.com/shoptet/microsites/tree/main/developers.shoptet.com)), Vercel hosting, responsibilities\n- ☐ Feedback loop, how to process feedback from docusaurus into modification and new content\n- ☐ Video content [https://shoptet.slab.com/posts/jak-vytvorit-screencast-navod-na-developers-portal-2v70lgsi](https://shoptet.slab.com/posts/jak-vytvorit-screencast-navod-na-developers-portal-2v70lgsi)\n- ☐ Adding FE and API news\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/10859](https://github.com/shoptet/cms4/issues/10859)_\n_Created on GitHub by @pavelhusa on 2024-12-16 10:48 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-269",
+    "externalKey": "CZ3TDR1-269",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-269"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:06.970Z",
+  "updatedAt": "2026-10-08T11:04:06.970Z",
+  "syncedAt": "2026-10-08T11:04:06.970Z"
+}

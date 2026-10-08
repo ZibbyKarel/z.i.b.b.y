@@ -1,0 +1,25 @@
+{
+  "id": "cms4-jira-cz3tdr1-598",
+  "projectId": "cms4",
+  "level": "task",
+  "parentId": "cms4-jira-cz3tdr1-576",
+  "name": "Users & roles — PR assignment",
+  "description": "Extend the claim mechanism into explicit assignment: assign a PR to a reviewer, show and filter by assignee, define roles beyond the current admin/reviewer split.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-598",
+    "externalKey": "CZ3TDR1-598",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-598"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "external",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:08.429Z",
+  "updatedAt": "2026-10-08T11:04:08.429Z",
+  "syncedAt": "2026-10-08T11:04:08.429Z"
+}

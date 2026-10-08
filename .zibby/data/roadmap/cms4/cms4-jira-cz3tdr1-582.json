@@ -1,0 +1,30 @@
+{
+  "id": "cms4-jira-cz3tdr1-582",
+  "projectId": "cms4",
+  "level": "task",
+  "parentId": "cms4-jira-cz3tdr1-639",
+  "name": "Add basic pages & forms for partnerPortal",
+  "description": "- Add partner edit/create form\n- Add partner texts edit/create/form\n- Add pages",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-582",
+    "externalKey": "CZ3TDR1-582",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-582"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "external",
+  "runs": [],
+  "syncNotes": [],
+  "linkedPr": {
+    "number": 43630,
+    "url": "https://github.com/shoptet/cms4/pull/43630",
+    "title": "CZ3TDR1-582: Add partnerPortal basic forms"
+  },
+  "createdAt": "2026-10-08T11:04:08.411Z",
+  "updatedAt": "2026-10-08T11:04:08.411Z",
+  "syncedAt": "2026-10-08T11:04:08.411Z"
+}

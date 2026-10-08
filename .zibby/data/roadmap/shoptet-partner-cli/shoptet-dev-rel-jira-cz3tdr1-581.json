@@ -3,7 +3,7 @@
   "projectId": "shoptet-partner-cli",
   "level": "task",
   "parentId": "shoptet-dev-rel-jira-cz3tdr1-614",
-  "name": "Add partnerPortal to the CRM",
+  "name": "ARCHIVE: Add partnerPortal to the CRM",
   "description": "- Add `partnerPortal` to the CRM menu\n- Add list of partners\n- Add dummy page for detail form of partner",
   "source": {
     "kind": "jira",
@@ -16,10 +16,10 @@
   "attachments": [],
   "dependsOn": [],
   "dependsOnFromSource": [],
-  "lifecycle": "external",
+  "lifecycle": "todo",
   "runs": [],
   "syncNotes": [],
   "createdAt": "2026-09-24T06:59:47.250Z",
-  "updatedAt": "2026-10-08T06:27:47.919Z",
-  "syncedAt": "2026-10-08T06:27:47.919Z"
+  "updatedAt": "2026-10-08T12:46:03.638Z",
+  "syncedAt": "2026-10-08T12:46:03.638Z"
 }

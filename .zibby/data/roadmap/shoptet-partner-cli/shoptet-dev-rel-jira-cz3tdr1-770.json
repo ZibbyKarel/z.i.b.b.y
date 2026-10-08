@@ -1,0 +1,24 @@
+{
+  "id": "shoptet-dev-rel-jira-cz3tdr1-770",
+  "projectId": "shoptet-partner-cli",
+  "level": "task",
+  "name": "A timed-out engine call leaves its container running",
+  "description": "Raised by Tomáš in the review of PR #84 (CZ3TDR1-735). Pre-existing and true of every engine queue, not introduced by that PR.\n\n## The mechanism\n\n`runEngineCli` (`packages/runner/src/engine-sandbox.ts`) runs `docker run --rm …` through execa with `timeout: engineTimeoutMs()` and `killSignal: \"SIGKILL\"`, and passes an optional `signal`. When either fires, execa kills the `docker run` client process, not the container. A SIGKILL cannot be proxied to the container, and the engine path sets no `--name` (`EngineSandboxSpec.containerName` exists, but only the dynamic probe passes one, in `dynamic-test.ts`) and runs no `docker kill` afterwards. So the call returns a timeout to the handler while the container keeps running — and keeps calling the provider — until the engine CLI inside it exits on its own. `--rm` removes it only then.\n\n## What it costs\n\nHandler-side timing is correct: the call returns at the timeout, so the job's own bookkeeping (and #84's verifier deadline) holds. What does not hold is any claim about spend or container count: a provider outage or a hung CLI leaves orphaned containers billing in the background, and the \"a timed-out call costs one call's worth\" reading in the comments is true of handler time, not of container lifetime. The same applies to an aborted call once `job.signal` is passed through.\n\n## Fix (to decide)\n\nGive every engine container a name (`containerName` already exists on the spec) and, when execa reports a timeout or an abort, `docker kill` it by that name before rethrowing. Then correct the comments that equate \"the call was killed\" with \"the container stopped\" (`reconcile-findings.ts` near `VERIFIER_RESERVE_MS`, the reconcile queue comment in `apps/worker/src/index.ts`).\n\n**Done when:** a timed-out or aborted engine call leaves no container running, a test pins the kill on both paths, and no comment claims the timeout stops the container unless it does.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "shoptet-dev-rel-jira",
+    "externalId": "CZ3TDR1-770",
+    "externalKey": "CZ3TDR1-770",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-770"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T12:46:03.754Z",
+  "updatedAt": "2026-10-08T12:46:03.754Z",
+  "syncedAt": "2026-10-08T12:46:03.754Z"
+}

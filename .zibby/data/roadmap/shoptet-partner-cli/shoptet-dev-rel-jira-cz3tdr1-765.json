@@ -14,16 +14,12 @@
   },
   "externalLevel": "Task",
   "attachments": [],
-  "dependsOn": [
-    "shoptet-dev-rel-jira-cz3tdr1-763"
-  ],
-  "dependsOnFromSource": [
-    "shoptet-dev-rel-jira-cz3tdr1-763"
-  ],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
   "lifecycle": "todo",
   "runs": [],
   "syncNotes": [],
   "createdAt": "2026-10-07T15:00:37.461Z",
-  "updatedAt": "2026-10-08T06:27:48.039Z",
-  "syncedAt": "2026-10-08T06:27:48.039Z"
+  "updatedAt": "2026-10-08T12:46:03.751Z",
+  "syncedAt": "2026-10-08T12:46:03.751Z"
 }

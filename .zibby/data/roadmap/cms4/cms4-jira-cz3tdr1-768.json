@@ -1,0 +1,25 @@
+{
+  "id": "cms4-jira-cz3tdr1-768",
+  "projectId": "cms4",
+  "level": "task",
+  "parentId": "cms4-jira-cz3tdr1-647",
+  "name": "[Addon Check] Galerie+",
+  "description": "**Partner kontakt:** Tomáš Hlad · E-mail: [info@tomashlad.eu](mailto:info@tomashlad.eu) · Telefon: +420 776 207 147 · IČO: 07587813 · Společnost: techka s.r.o.\n\n## Shoptet CRM\n\nAddon detail: [Rozšíření pro Galerii – ID 3173](https://crm.shoptet.cz/admin/sluzby-detail/?id=3173)\n\nAPI Partner / addon: [Tomáš Hlad – ID 157572](https://crm.shoptet.cz/admin/sluzby-api/?id=157572&action=addons)\n\n---\n\n## Short description – function & benefits\n\nDoplněk **Rozšíření pro Galerii**, dříve označovaný jako **Galerie+**, rozšiřuje zobrazení fotogalerií na e-shopu.\n\n- Zobrazuje popisky fotografií v galerii na detailu produktu i v obsahových částech e-shopu.\n- Nabízí vlastní administraci pro výběr z několika stylů zobrazení galerie.\n- Umožňuje kombinovat změnu vzhledu galerie se zobrazením popisků fotografií.\n\nPopis vychází ze schváleného záměru v CRM; konkrétní rozsah implementace je potřeba ověřit při testování.\n\n## Základní chování a nastavení\n\nPodle zadání má doplněk vlastní administraci s výběrem stylu galerie. Podrobný checklist ani popis výchozího nastavení zatím nejsou k dispozici\n\n## **Addons repo**",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-768",
+    "externalKey": "CZ3TDR1-768",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-768"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:08.590Z",
+  "updatedAt": "2026-10-08T11:04:08.590Z",
+  "syncedAt": "2026-10-08T11:04:08.590Z"
+}

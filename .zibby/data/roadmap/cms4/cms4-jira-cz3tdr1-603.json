@@ -1,0 +1,25 @@
+{
+  "id": "cms4-jira-cz3tdr1-603",
+  "projectId": "cms4",
+  "level": "task",
+  "parentId": "cms4-jira-cz3tdr1-576",
+  "name": "AI comments: concise and detailed variant",
+  "description": "Either generate both variants up front, or add a generate/regenerate button for the alternative style.\n\nDecide approach\n\nImplement",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-603",
+    "externalKey": "CZ3TDR1-603",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-603"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:08.435Z",
+  "updatedAt": "2026-10-08T11:04:08.435Z",
+  "syncedAt": "2026-10-08T11:04:08.435Z"
+}

@@ -1,0 +1,24 @@
+{
+  "id": "cms4-jira-cz3tdr1-734",
+  "projectId": "cms4",
+  "level": "task",
+  "name": "Addon starter",
+  "description": "### Description\n\nOn [https://developers.shoptet.com/api/documentation/addon-settings-in-shoptet-administration/](https://developers.shoptet.com/api/documentation/addon-settings-in-shoptet-administration/) we have some guidance how start working on your own addon. But dummy iframe there is far from outdated.\n\nWe need to replace this Lorem ipsum document with something with nice DX. Ideally some minimalistic public starter repository.\n\nPrepare Shoptet addon starter public repository and link it here.\n\n### Team\n\n🤖 Admin\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/19655](https://github.com/shoptet/cms4/issues/19655)_\n_Created on GitHub by @michalnvk on 2025-06-19 19:57 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-734",
+    "externalKey": "CZ3TDR1-734",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-734"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:04.792Z",
+  "updatedAt": "2026-10-08T11:04:04.792Z",
+  "syncedAt": "2026-10-08T11:04:04.792Z"
+}

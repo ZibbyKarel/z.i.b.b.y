@@ -1,0 +1,25 @@
+{
+  "id": "cms4-jira-cz3tdr1-756",
+  "projectId": "cms4",
+  "level": "task",
+  "parentId": "cms4-jira-cz3tdr1-614",
+  "name": "[Portal] Design: Incorporate usability testing feedback – round 1",
+  "description": "Placeholder for design work from the design roadmap (Q4 2026 – Q1 2027).\n\n- **Estimate:** 30 h\n- **Planned:** 18. 1. – 1. 2. 2027\n- End of the mandatory design scope.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-756",
+    "externalKey": "CZ3TDR1-756",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-756"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:08.577Z",
+  "updatedAt": "2026-10-08T11:04:08.577Z",
+  "syncedAt": "2026-10-08T11:04:08.577Z"
+}

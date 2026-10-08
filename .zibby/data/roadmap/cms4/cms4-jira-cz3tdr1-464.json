@@ -1,0 +1,24 @@
+{
+  "id": "cms4-jira-cz3tdr1-464",
+  "projectId": "cms4",
+  "level": "task",
+  "name": "Webpack entry point",
+  "description": "Imported scripts instead of multiple entries\nTBU\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/39479](https://github.com/shoptet/cms4/issues/39479)_\n_Created on GitHub by @shoptet-addon-reviewer on 2026-06-08 07:58 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-464",
+    "externalKey": "CZ3TDR1-464",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-464"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:07.890Z",
+  "updatedAt": "2026-10-08T11:04:07.890Z",
+  "syncedAt": "2026-10-08T11:04:07.890Z"
+}

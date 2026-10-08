@@ -1,0 +1,32 @@
+{
+  "id": "cms4-jira-cz3tdr1-266",
+  "projectId": "cms4",
+  "level": "task",
+  "parentId": "cms4-jira-cz3tdr1-6",
+  "name": "Sidebar component",
+  "description": "# Context\n\nWe are creating a shared Docusaurus theme for the Developers' portal. Figma is [here](https://www.figma.com/design/ZmSsc8dVmzloTI8jVFN1ur/Docusaurus?node-id=160-7121&t=h0iszn2LPRqYVW2J-1).\n\n# Task\n\nCurrently, a delimiter is implemented, but the menu items don't support icons. Also, there is a default arrow when expanding the items.\n\n- ☐ implement menu icon\n- ☐ assign icons to each section (in coop with @hudak-filip)\n- ☐ customize delimiter and expand arrow\n\nSee: [https://www.figma.com/design/ZmSsc8dVmzloTI8jVFN1ur/Docusaurus?node-id=125-4250&t=IQDSLDjQBWfwBle2-4](https://www.figma.com/design/ZmSsc8dVmzloTI8jVFN1ur/Docusaurus?node-id=125-4250&t=IQDSLDjQBWfwBle2-4)\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/10508](https://github.com/shoptet/cms4/issues/10508)_\n_Created on GitHub by @pavelhusa on 2024-12-10 12:37 UTC_\n_GitHub assignee: @pavelhusa_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-266",
+    "externalKey": "CZ3TDR1-266",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-266"
+  },
+  "externalLevel": "Task",
+  "attachmentSetId": "set_muzfics6_b7f53072",
+  "attachments": [
+    {
+      "name": "554dcb6afdc5d22f.png",
+      "size": 224080,
+      "mediaType": "image/png"
+    }
+  ],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:06.967Z",
+  "updatedAt": "2026-10-08T11:04:06.967Z",
+  "syncedAt": "2026-10-08T11:04:06.967Z"
+}

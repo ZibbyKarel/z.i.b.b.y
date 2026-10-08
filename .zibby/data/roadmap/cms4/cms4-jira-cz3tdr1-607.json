@@ -1,0 +1,25 @@
+{
+  "id": "cms4-jira-cz3tdr1-607",
+  "projectId": "cms4",
+  "level": "task",
+  "parentId": "cms4-jira-cz3tdr1-576",
+  "name": "Admin: rules list improvements",
+  "description": "Per-rule action buttons (edit, disable, …)\n\nClarify what \"version\" means — explain in the UI or remove",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-607",
+    "externalKey": "CZ3TDR1-607",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-607"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:08.441Z",
+  "updatedAt": "2026-10-08T11:04:08.441Z",
+  "syncedAt": "2026-10-08T11:04:08.441Z"
+}

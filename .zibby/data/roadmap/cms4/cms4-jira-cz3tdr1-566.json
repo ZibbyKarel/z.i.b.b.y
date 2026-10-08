@@ -1,0 +1,30 @@
+{
+  "id": "cms4-jira-cz3tdr1-566",
+  "projectId": "cms4",
+  "level": "task",
+  "parentId": "cms4-jira-cz3tdr1-618",
+  "name": "PartnerServiceAdd React rewrite: Testovaci instalace (Test installation) tab",
+  "description": "## Why?\n\nThis is how a partner installs their addon on a test shop and issues an API token before submitting for approval. It has no form fields of its own but it is the entry point to the `PartnerServiceInstall` modal, so the modal wiring is the real work.\n\n## What?\n\nPort `sub/ServiceDetail/TestInstallation.tpl` to React as a read-only table plus action links, remove the external-tab bridge entry and delete the legacy partial. Wire the `PartnerServiceInstall` modal (test install and token creation) and the link into the `PartnerServiceEndpoints` modal.\n\n## Acceptance Criteria\n\n- Installation table renders the same columns, states and empty state as the legacy tab\n- `PartnerServiceInstall` modal opens, creates a test installation and issues a token exactly as before; its controller is not modified beyond the Inertia bridge\n- Link into the `PartnerServiceEndpoints` modal works\n- Tab visibility gate unchanged (edit mode only)\n- Every `data-testid` from `TestInstallation.tpl` preserved verbatim, no hardcoded strings\n- `TestInstallation.tpl` deleted and its bridge entry removed\n- `make check-fast`, `make lint`, `make fe-test` green\n\n## Resources\n\n- Legacy: `admin/controllers/templates/sub/ServiceDetail/TestInstallation.tpl:12,49,65`, `admin/controllers/PartnerServiceInstallController.php`\n- `cms/packages/Connectors/Model/ApiPartner.php` (`getApiAccessTokens`), `cms/packages/Miscellaneous/Helper/Partners.php`\n- Data: `st_api.token`, `st_api.service_endpoint_token`, `st_api.service_endpoint_group_token`",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-566",
+    "externalKey": "CZ3TDR1-566",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-566"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "external",
+  "runs": [],
+  "syncNotes": [],
+  "linkedPr": {
+    "number": 44306,
+    "url": "https://github.com/shoptet/cms4/pull/44306",
+    "title": "CZ3TDR1-566: Rewrite the PartnerServiceAdd Test installation tab to React"
+  },
+  "createdAt": "2026-10-08T11:04:08.399Z",
+  "updatedAt": "2026-10-08T11:04:08.399Z",
+  "syncedAt": "2026-10-08T11:04:08.399Z"
+}

@@ -1,0 +1,25 @@
+{
+  "id": "cms4-jira-cz3tdr1-335",
+  "projectId": "cms4",
+  "level": "task",
+  "parentId": "cms4-jira-cz3tdr1-6",
+  "name": "Docusaurus - add PHP syntax highlighting",
+  "description": "# Context\n\nAdd syntax highlighting support for the PHP language in documentation generated using Docusaurus, specifically for the {{ }}``php` code block.\n\n[https://docusaurus.io/docs/markdown-features/code-blocks#supported-languages](https://docusaurus.io/docs/markdown-features/code-blocks#supported-languages) \n\n# Task\n\n- ☐ Implement PHP highlighting\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/15269](https://github.com/shoptet/cms4/issues/15269)_\n_Created on GitHub by @havlicekl on 2025-03-25 13:36 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-335",
+    "externalKey": "CZ3TDR1-335",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-335"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:07.872Z",
+  "updatedAt": "2026-10-08T11:04:07.872Z",
+  "syncedAt": "2026-10-08T11:04:07.872Z"
+}

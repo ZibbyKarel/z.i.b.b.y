@@ -1,0 +1,29 @@
+{
+  "id": "cms4-jira-cz3tdr1-525",
+  "projectId": "cms4",
+  "level": "task",
+  "parentId": "cms4-jira-cz3tdr1-519",
+  "name": "Core CLI infrastructure (envelope, errors, config resolver)",
+  "description": "Build cli/src/lib/output.ts: the --json envelope (ok/schemaVersion/error/meta), structured errors, exit codes, and the message catalog (keys from the first string, default en, cs shipped; codes stay English forever).\n\nBuild cli/src/lib/config.ts: the three-scope config resolver per §5.7 — machine config (env-paths dir, mode 0600), committed project config (shoptet.config.json + shoptet.lock), gitignored derived cache (.shoptet/) — with precedence flags > env > project config > machine config > defaults. This is needed by auto-update immediately and by every later command, so it cannot be retrofitted.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-525",
+    "externalKey": "CZ3TDR1-525",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-525"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [
+    "cms4-jira-cz3tdr1-524"
+  ],
+  "dependsOnFromSource": [
+    "cms4-jira-cz3tdr1-524"
+  ],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:08.375Z",
+  "updatedAt": "2026-10-08T11:04:08.375Z",
+  "syncedAt": "2026-10-08T11:04:08.375Z"
+}

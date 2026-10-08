@@ -1,0 +1,25 @@
+{
+  "id": "cms4-jira-cz3tdr1-601",
+  "projectId": "cms4",
+  "level": "task",
+  "parentId": "cms4-jira-cz3tdr1-576",
+  "name": "Unify finding categories across the app (Blocker / Warning / Tip) + our icons",
+  "description": "One taxonomy everywhere (inbox, PR detail, release preview, history). Note: DB/engine uses `error/warning/info`.\n\nTaxonomy decision + mapping to existing severities\n\nSingle source of truth in the UI token layer + rollout across views",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-601",
+    "externalKey": "CZ3TDR1-601",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-601"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:08.432Z",
+  "updatedAt": "2026-10-08T11:04:08.432Z",
+  "syncedAt": "2026-10-08T11:04:08.432Z"
+}

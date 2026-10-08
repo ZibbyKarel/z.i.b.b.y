@@ -1,0 +1,29 @@
+{
+  "id": "cms4-jira-cz3tdr1-534",
+  "projectId": "cms4",
+  "level": "task",
+  "parentId": "cms4-jira-cz3tdr1-521",
+  "name": "dev-engine: injection, hot reload &amp; feedback",
+  "description": "Mount dev assets under a reserved same-origin path (/__shoptet-dev/entry.js, /__shoptet-dev/events, …) so a default script-src 'self' / connect-src 'self' policy works.\n\nMarker-anchored byte-splice injection on the buffered HTML: find the comment marker, insert the <script>/<link> and hot-reload client, leave every other byte untouched — no HTML parser involved.\n\nSSE hot reload (EventSource) served same-origin, client injected before </head>; full reload fallback when the bundle changes.\n\nReadable error overlay replacing the raw webpack dump.\n\nRendered-version assertion: detect and report the Shopify-style bug class of \"you believe you're testing your code and you're not\" (session/cookie desync causing the live version to render instead of the partner's code) — the overlay always states which version is being rendered.\n\nNon-blocking production-shop warning: warn when the target shop looks like production, without blocking (enforcement is Phase 4, out of scope here).\n\nReference: cli-greenfield.md §5.1.1.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-534",
+    "externalKey": "CZ3TDR1-534",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-534"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [
+    "cms4-jira-cz3tdr1-533"
+  ],
+  "dependsOnFromSource": [
+    "cms4-jira-cz3tdr1-533"
+  ],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:08.381Z",
+  "updatedAt": "2026-10-08T11:04:08.381Z",
+  "syncedAt": "2026-10-08T11:04:08.381Z"
+}

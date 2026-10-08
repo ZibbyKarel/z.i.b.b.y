@@ -1,0 +1,25 @@
+{
+  "id": "cms4-jira-cz3tdr1-610",
+  "projectId": "cms4",
+  "level": "task",
+  "parentId": "cms4-jira-cz3tdr1-576",
+  "name": "Logging",
+  "description": "Review current logging and define gaps: retention, correlation IDs, error alerting, admin-visible action log.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-610",
+    "externalKey": "CZ3TDR1-610",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-610"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:08.444Z",
+  "updatedAt": "2026-10-08T11:04:08.444Z",
+  "syncedAt": "2026-10-08T11:04:08.444Z"
+}

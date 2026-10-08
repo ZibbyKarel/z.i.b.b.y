@@ -1,0 +1,24 @@
+{
+  "id": "cms4-jira-cz3tdr1-647",
+  "projectId": "cms4",
+  "level": "epic",
+  "name": "Addon check BAU",
+  "description": "An umbrella task for addons review.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-647",
+    "externalKey": "CZ3TDR1-647",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-647"
+  },
+  "externalLevel": "Epic",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:08.492Z",
+  "updatedAt": "2026-10-08T11:04:08.492Z",
+  "syncedAt": "2026-10-08T11:04:08.492Z"
+}

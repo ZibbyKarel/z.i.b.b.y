@@ -16,10 +16,10 @@
   "attachments": [],
   "dependsOn": [],
   "dependsOnFromSource": [],
-  "lifecycle": "external",
+  "lifecycle": "done",
   "runs": [],
   "syncNotes": [],
   "createdAt": "2026-09-24T06:59:47.264Z",
-  "updatedAt": "2026-10-08T06:27:47.941Z",
-  "syncedAt": "2026-10-08T06:27:47.941Z"
+  "updatedAt": "2026-10-08T12:46:03.660Z",
+  "syncedAt": "2026-10-08T12:46:03.660Z"
 }

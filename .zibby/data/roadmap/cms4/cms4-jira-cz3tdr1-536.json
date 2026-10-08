@@ -1,0 +1,29 @@
+{
+  "id": "cms4-jira-cz3tdr1-536",
+  "projectId": "cms4",
+  "level": "task",
+  "parentId": "cms4-jira-cz3tdr1-521",
+  "name": "`shoptet build` command",
+  "description": "Production build command: minification, correct output filenames (fixes the documented mismatch — markup.header.min.html vs the actually-produced markups.header.html), and every scaffolded entry actually gets bundled (fixes the legacy bug where src/orderFinale was silently never bundled because webpack hardcoded ['footer','header','index']).\n\nOutput must be deployable via the existing legacy SFTP/GitHub-App path unchanged.\n\nReference: cli-greenfield.md §2.6, §10.",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-536",
+    "externalKey": "CZ3TDR1-536",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-536"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [
+    "cms4-jira-cz3tdr1-524"
+  ],
+  "dependsOnFromSource": [
+    "cms4-jira-cz3tdr1-524"
+  ],
+  "lifecycle": "done",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:08.383Z",
+  "updatedAt": "2026-10-08T11:04:08.383Z",
+  "syncedAt": "2026-10-08T11:04:08.383Z"
+}

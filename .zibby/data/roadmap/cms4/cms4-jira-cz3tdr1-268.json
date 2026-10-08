@@ -1,0 +1,24 @@
+{
+  "id": "cms4-jira-cz3tdr1-268",
+  "projectId": "cms4",
+  "level": "task",
+  "name": "Clean-up of stable classnames and IDs endpoint",
+  "description": "> JIRA issue: [https://shoptet.atlassian.net/browse/FRONTEND-1979](https://shoptet.atlassian.net/browse/FRONTEND-1979)\n\nSP: 3\n\n---\n\n### Context\n\nHere: [https://developers.shoptet.com/stabilni-tridy-a-id](https://developers.shoptet.com/stabilni-tridy-a-id) is the declared endpoint that returns stable Classnames and IDs in our frontstore. This is obviously not maintained and outdated. \n\n### Task\n\nClean the controller and remove the post - both in silence.\n\nRef: [http://www.shoptet.cz/action/ShoptetFrontendDevelopers/getCrucialIdsAndClasses/](http://www.shoptet.cz/action/ShoptetFrontendDevelopers/getCrucialIdsAndClasses/)\n\n[https://github.com/shoptet/cms4/blob/bb6b36a30b2199beb02dc03d39284e5115aca326/cms/templates/docs/crucialIdsAndClasses.json](https://github.com/shoptet/cms4/blob/bb6b36a30b2199beb02dc03d39284e5115aca326/cms/templates/docs/crucialIdsAndClasses.json#L1)\n[https://github.com/shoptet/cms4/blob/92427a52dc1cfd816b9bb3e11e69e7cd3f130078/scripts/controllers/ShoptetFrontendDevelopers.php](https://github.com/shoptet/cms4/blob/92427a52dc1cfd816b9bb3e11e69e7cd3f130078/scripts/controllers/ShoptetFrontendDevelopers.php#L3)\n[https://github.com/shoptet/cms4/blob/947b520dd20c3aa052871fc9f0bf86254d342f08/cms/packages/ClassLoading/ControllerClassMapper.php#L11](https://github.com/shoptet/cms4/blob/947b520dd20c3aa052871fc9f0bf86254d342f08/cms/packages/ClassLoading/ControllerClassMapper.php#L11)\n\n_Migrated from __[https://github.com/shoptet/cms4/issues/10574](https://github.com/shoptet/cms4/issues/10574)_\n_Created on GitHub by @denischripak on 2024-12-11 14:26 UTC_",
+  "source": {
+    "kind": "jira",
+    "integrationId": "cms4-jira",
+    "externalId": "CZ3TDR1-268",
+    "externalKey": "CZ3TDR1-268",
+    "url": "https://teamdotblue.atlassian.net/browse/CZ3TDR1-268"
+  },
+  "externalLevel": "Task",
+  "attachments": [],
+  "dependsOn": [],
+  "dependsOnFromSource": [],
+  "lifecycle": "todo",
+  "runs": [],
+  "syncNotes": [],
+  "createdAt": "2026-10-08T11:04:06.970Z",
+  "updatedAt": "2026-10-08T11:04:06.970Z",
+  "syncedAt": "2026-10-08T11:04:06.970Z"
+}
