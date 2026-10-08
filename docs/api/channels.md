@@ -169,7 +169,10 @@ worth reading if every row is a real answer awaiting a yes. Binds every channel.
 - Bug reports detected on any channel can also be auto-filed as a Jira issue
   (`ChannelTriageFlowService.maybeFileJiraBug`) — best-effort against the
   operator's first enabled Jira integration, and still Tier-3-safe: it only
-  calls `propose`, never creates directly.
+  calls `propose`, never creates directly. It is skipped for Jira items and for
+  text that already names a Jira key (`<projectKey>-<n>`) — no duplicates. The
+  approval's `detail` is an enrichment envelope whose `message` preview carries
+  the full issue description, so the operator sees what they approve.
 
 ### GitHub adapter
 
@@ -296,6 +299,8 @@ done — deciding earlier would let Tier 2 fire with nothing to send.
 
 ### Stage 1 — `handle(item)`
 
+0. A GitHub **pull request** skips triage entirely and is noted `handled` — a PR
+   is an artifact of work described elsewhere, never a bug/question/request.
 1. Classify the item (actionable / informational / spam / question)
 2. Attribute it to a project, apply the project autonomy policy (VIP escalation,
    `respond_as: draft_only`) — both fold into the verdict's `tier`

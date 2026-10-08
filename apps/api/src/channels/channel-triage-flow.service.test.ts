@@ -209,6 +209,39 @@ describe("ChannelTriageFlowService", () => {
     expect(jiraPropose).not.toHaveBeenCalled();
   });
 
+  it("does not file a Jira issue when the bug already names a Jira key", async () => {
+    const jiraPropose = vi.fn(async () => ({ id: "x" }));
+    const flow = makeFlow({
+      verdict: bug,
+      jiraPropose,
+      jiraIntegrations: [{ id: "acme-jira", kind: "jira", enabled: true }],
+    });
+    await flow.handle(item({ text: "ACME-42: login throws an Exception" }));
+    expect(jiraPropose).not.toHaveBeenCalled();
+  });
+
+  it("notes a GitHub pull request without triage, dispatch or Jira filing", async () => {
+    const jiraPropose = vi.fn(async () => ({ id: "x" }));
+    const flow = makeFlow({
+      verdict: bug,
+      jiraPropose,
+      jiraIntegrations: [{ id: "acme-jira", kind: "jira", enabled: true }],
+    });
+    const pr = item({
+      id: "gh-acme-app-pr-7",
+      kind: "github",
+      externalRef: { channel: "acme/app", messageId: "7" },
+      url: "https://github.com/acme/app/pull/7",
+      text: "#7 Fix Exception in login",
+    });
+    const out = await flow.handle(pr);
+    expect(out.state).toBe("handled");
+    expect(out.triage).toBeUndefined();
+    expect(createTask).not.toHaveBeenCalled();
+    expect(requestApproval).not.toHaveBeenCalled();
+    expect(jiraPropose).not.toHaveBeenCalled();
+  });
+
   it("does not file a Jira issue for a non-bug verdict", async () => {
     const jiraPropose = vi.fn(async () => ({ id: "x" }));
     const flow = makeFlow({

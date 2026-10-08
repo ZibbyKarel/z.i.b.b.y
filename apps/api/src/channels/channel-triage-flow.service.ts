@@ -41,6 +41,11 @@ const CHANNEL_REPLY_ACTION = "channel-reply";
 /** Strength ordering, mirroring the gate evaluator — a higher rank is stricter. */
 const DECISION_RANK: Record<Decision, number> = { allow: 0, notify: 1, ask: 2, deny: 3 };
 
+/** A GitHub pull request (the adapter stamps PRs with a `/pull/<n>` url). */
+function isPullRequest(item: ChannelItem): boolean {
+  return item.kind === "github" && /\/pull\/\d+$/.test(item.url ?? "");
+}
+
 /**
  * The tier executor (the heart of 5.3) AND the kind-"channel" {@link ResumableRunner}.
  * For each `new` item it triages, records the verdict, and acts by tier within the
@@ -124,6 +129,14 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
       const integrations = await this.integrations.list().catch(() => []);
       const jira = integrations.find((i) => i.enabled && i.kind === "jira");
       if (!jira) return;
+      // Already tracked in Jira (a Jira item, or text naming an issue key) — filing
+      // again would only duplicate it.
+      const projectKey = jira.config?.kind === "jira" ? jira.config.projectKey : undefined;
+      const keyRe = projectKey ? new RegExp(`\\b${projectKey}-\\d+\\b`) : /\b[A-Z][A-Z0-9]+-\d+\b/;
+      if (item.kind === "jira" || keyRe.test(item.text)) {
+        this.log.info("bug already tracked in Jira, not filing", { itemId: item.id });
+        return;
+      }
       const summary = item.text.length > 120 ? `${item.text.slice(0, 119)}…` : item.text;
       await this.jiraFlow.propose({
         integrationId: jira.id,
@@ -141,6 +154,15 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
 
   /** Triage a `new` item and act by tier; returns the transitioned item. */
   async handle(item: ChannelItem): Promise<ChannelItem> {
+    // A pull request is an artifact of work described elsewhere (a Jira or GitHub
+    // issue) — never a bug report, question or request in itself. Note it without
+    // triage: no dispatch, no Jira filing, no reply draft.
+    if (isPullRequest(item)) {
+      const noted: ChannelItem = { ...item, state: "handled" };
+      await this.store.update(noted);
+      this.log.info("pull request noted without triage", { itemId: item.id });
+      return noted;
+    }
     const mandate = await this.mandate.read();
     const { verdict, degraded } = await this.triage.triageDetailed(
       item.text,

@@ -58,12 +58,23 @@ export class JiraIssueFlowService implements OnModuleInit, ResumableRunner {
       throw new Error(`integration ${req.integrationId} is not a jira integration`);
     const runId = randomUUID();
     this.pending.set(runId, req);
+    const target = integration.config.projectKey ?? req.integrationId;
     const approval = await this.approvals.requestApproval({
       runId,
       kind: "jira-issue",
       skill: "channels",
       action: "jira.create_issue",
-      detail: `Create Jira issue in ${integration.config.projectKey ?? req.integrationId}: ${req.summary}`,
+      // Enrichment envelope (see web `parseApprovalDetail`): the summary is the
+      // headline, the preview carries the full issue the operator is approving.
+      detail: JSON.stringify({
+        summary: `Create Jira issue in ${target}: ${req.summary}`,
+        preview: {
+          kind: "message",
+          to: target,
+          subject: req.summary,
+          body: req.description ?? "",
+        },
+      }),
       risk: "low",
     });
     this.log.info("jira issue parked for approval", {

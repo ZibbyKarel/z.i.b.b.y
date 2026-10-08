@@ -64,6 +64,24 @@ describe("JiraIssueFlowService", () => {
     expect(adapter.createIssue).not.toHaveBeenCalled(); // gated — nothing created on propose
   });
 
+  it("propose carries the full description in the approval preview", async () => {
+    const { svc, approvals } = build();
+    await svc.propose({
+      integrationId: "acme-jira",
+      summary: "Login crash",
+      description: "full stack",
+    });
+    const detail = JSON.parse(
+      (approvals.requestApproval.mock.calls[0]![0] as unknown as { detail: string }).detail,
+    );
+    expect(detail.summary).toContain("Login crash");
+    expect(detail.preview).toMatchObject({
+      kind: "message",
+      subject: "Login crash",
+      body: "full stack",
+    });
+  });
+
   it("rejects a non-jira integration", async () => {
     const slack: Integration = {
       ...jiraIntegration,
