@@ -2,7 +2,7 @@ import { renderWithProviders as render, screen } from "../../test/render";
 import { act } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { Toaster } from "./Toaster";
+import { Toaster, ToasterTestId } from "./Toaster";
 import { toastBus } from "./toastBus";
 
 const ERROR_CS = "Akce se nepovedla — změna se neuložila. Zkus to prosím znovu.";
@@ -21,5 +21,13 @@ describe("Toaster (43) — surfaces mutation errors", () => {
     // The toast's only button is the alert's close (X).
     await userEvent.click(screen.getByRole("button"));
     expect(screen.queryByText(ERROR_CS)).not.toBeInTheDocument();
+  });
+
+  it("is anchored top-right, not bottom", () => {
+    render(<Toaster />);
+    act(() => toastBus.emit());
+    const root = screen.getByTestId(ToasterTestId.Root);
+    expect(root.style.top).toBe("1rem");
+    expect(root.style.bottom).toBe("");
   });
 });

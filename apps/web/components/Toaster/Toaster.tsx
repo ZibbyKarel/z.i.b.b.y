@@ -14,7 +14,7 @@ export enum ToasterTestId {
 /**
  * App-wide toast surface (mounted once in `Providers`). Subscribes to the `toastBus`,
  * which the `QueryClient`'s `MutationCache` `onError` emits to — so a failed write
- * (delete / create / toggle / approve …) is never silent. Fixed bottom-right; each toast
+ * (delete / create / toggle / approve …) is never silent. Fixed top-right; each toast
  * auto-dismisses and can be closed.
  */
 export function Toaster() {
@@ -35,16 +35,20 @@ export function Toaster() {
   if (toasts.length === 0) return null;
 
   return (
-    // Fixed viewport overlay: `position` is a typed Container prop; the bottom/right/z
+    // Fixed viewport overlay: `position` is a typed Container prop; the top/right/z
     // offsets go through Container's `style` passthrough (a component, so no DOM-props lint).
     <Container
       data-testid={ToasterTestId.Root}
       position="fixed"
-      style={{ bottom: "1rem", right: "1rem", zIndex: 1000, maxWidth: "min(90vw, 24rem)" }}
+      style={{ top: "1rem", right: "1rem", zIndex: 1000, maxWidth: "min(90vw, 24rem)" }}
     >
       <Stack gap="100">
         {toasts.map((toast) => (
-          <Alert key={toast.id} onClose={() => dismiss(toast.id)} severity={toast.severity ?? "error"}>
+          <Alert
+            key={toast.id}
+            onClose={() => dismiss(toast.id)}
+            severity={toast.severity ?? "error"}
+          >
             {toast.message ?? t("mutationError")}
           </Alert>
         ))}
