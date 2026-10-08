@@ -130,6 +130,7 @@ const PATH_SECTION: readonly (readonly [prefix: string, section: SectionId])[] =
   // ZB-03 (D-015/D-009): the employee directory + department pages (org) and
   // the moved position registry (system).
   ["/org", "org"],
+  ["/policy", "policy"],
   ["/system", "system"],
   // ZB-06: goals/companies/teams/projects moved under /work/*; the bare
   // top-level prefixes are kept as redirect targets only (D-009), not routes.
