@@ -1,4 +1,4 @@
-import type { Approval as ContractApproval } from "@zibby/contracts";
+import type { Approval as ContractApproval, ScheduledTask } from "@zibby/contracts";
 import type { IconName, LegacyStateTone, TagTone } from "@zibby/design-system";
 
 /**
@@ -190,6 +190,108 @@ export const SEVERITY: Record<
     label: "vysoká",
   },
 };
+
+/** What raised an approval — always shown on the sheet (`policy.approvals.sheet.origin.*`). */
+export type ApprovalOrigin =
+  | "operator"
+  | "department"
+  | "channel"
+  | "automation"
+  | "roadmap"
+  | "workflow"
+  | "agent"
+  | "pr-review"
+  | "agent-factory"
+  | "comms"
+  | "chat"
+  | "system";
+
+export interface ApprovalOriginInfo {
+  origin: ApprovalOrigin;
+  /** In-app page of the gated item, when it has one. */
+  href?: string;
+  /** External origin (GitHub PR/issue, Jira, Slack) — `Approval.sourceUrl`. */
+  url?: string;
+}
+
+/**
+ * Where an approval came from and where to look at it. Derived from `kind` +
+ * `runId` (the approval contract carries no origin field); a task-backed kind
+ * refines it with the task's own `source` stamp / roadmap provenance.
+ */
+export function approvalOrigin(
+  a: Pick<ContractApproval, "kind" | "runId" | "sourceUrl" | "detail">,
+  task?: Pick<ScheduledTask, "source" | "roadmapItemId">,
+): ApprovalOriginInfo {
+  const url = a.sourceUrl ? { url: a.sourceUrl } : {};
+  const run = `/activity/runs/${encodeURIComponent(a.runId)}`;
+  switch (a.kind) {
+    case "task":
+    case "task-output": {
+      const s = task?.source;
+      const origin: ApprovalOrigin = task?.roadmapItemId
+        ? "roadmap"
+        : s === "department" || s === "channel" || s === "automation"
+          ? s
+          : s === "chain" || s === "handoff"
+            ? "system"
+            : "operator";
+      return { origin, href: `/work/tasks/${encodeURIComponent(a.runId)}`, ...url };
+    }
+    case "agent":
+      return { origin: "agent", href: run, ...url };
+    case "workflow-stage":
+    case "workflow-gate":
+    case "workflow-output":
+      return { origin: "workflow", href: run, ...url };
+    case "channel":
+      return { origin: "channel", href: "/activity/inbox", ...url };
+    case "comms-graduation":
+      return { origin: "comms", href: "/activity/inbox", ...url };
+    // Triage stamps the inbound item's url and titles the issue "Bug from <integration>:"
+    // (the prefix also covers url-less items and approvals predating the stamp);
+    // anything else was filed by hand.
+    case "jira-issue":
+      return {
+        origin: a.sourceUrl || /: Bug from /.test(a.detail) ? "channel" : "operator",
+        ...url,
+      };
+    case "automation-dispatch":
+      return { origin: "automation", href: "/automations", ...url };
+    case "agent-proposal":
+      return {
+        origin: "agent-factory",
+        href: `/system/registries/positions/${encodeURIComponent(a.runId)}`,
+        ...url,
+      };
+    case "review-rule": {
+      const projectId = a.runId.split("/")[0] ?? "";
+      return {
+        origin: "pr-review",
+        href: `/work/projects/${encodeURIComponent(projectId)}`,
+        ...url,
+      };
+    }
+    case "routing-proposal":
+      return { origin: "roadmap", ...url };
+    case "machine":
+      return { origin: "chat", ...url };
+    case "proposed-task":
+    case "handoff-proposal":
+      return { origin: "system", ...url };
+  }
+}
+
+/** Link label for an external source url (`policy.approvals.sheet.sourceLink.*`). */
+export function sourceLinkKind(
+  url: string,
+): "github-pr" | "github-issue" | "jira" | "slack" | "link" {
+  if (/github\.com\/.+\/pull\/\d+/.test(url)) return "github-pr";
+  if (/github\.com\/.+\/issues\/\d+/.test(url)) return "github-issue";
+  if (/atlassian\.net|\/browse\/[A-Z][A-Z0-9]+-\d+/.test(url)) return "jira";
+  if (/slack\.com/.test(url)) return "slack";
+  return "link";
+}
 
 /** Title key for a `workflow-gate` approval (`policy.approvals.sheet.gate.*`), else null. */
 export function gateTitleKey(

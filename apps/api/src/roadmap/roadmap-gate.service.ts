@@ -752,6 +752,7 @@ export class RoadmapGateService {
       detail: routingQuestion(item.name, routing),
       risk: "medium",
       ...(routing.target.kind === "department" ? { department: routing.target.id } : {}),
+      ...(item.source.url ? { sourceUrl: item.source.url } : {}),
     });
     this.log.info("roadmap release parked for a routing decision", {
       projectId: item.projectId,

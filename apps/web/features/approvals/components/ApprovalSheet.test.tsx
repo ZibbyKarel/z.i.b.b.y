@@ -80,6 +80,39 @@ describe("ApprovalSheet (ZB-08 / D-014)", () => {
     );
   });
 
+  it("shows the full plain-text detail and the source with its external link", () => {
+    const text =
+      "Draft reply:\nThanks!\n\nIn reply to:\nA very long original message …and its tail";
+    hooks.approval = {
+      data: {
+        ...APPROVAL,
+        kind: "channel",
+        runId: "gh/1",
+        detail: text,
+        text,
+        sourceUrl: "https://github.com/o/r/issues/7",
+      },
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    };
+    render(<ApprovalSheet approvalId="appr-1" onClose={onClose} />);
+    expect(screen.getByText(/…and its tail/)).toBeInTheDocument();
+    expect(screen.getByText("Kanál")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /GitHub issue/ })).toHaveAttribute(
+      "href",
+      "https://github.com/o/r/issues/7",
+    );
+  });
+
+  it("opens the in-app source page without pushing the old page back", async () => {
+    push.mockClear();
+    render(<ApprovalSheet approvalId="appr-1" onClose={onClose} />);
+    await userEvent.click(screen.getByRole("button", { name: "Otevřít v ZIBBY" }));
+    expect(push).toHaveBeenCalledWith("/activity/runs/run-1");
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("hides request-changes on a non-checkpoint approval", async () => {
     render(<ApprovalSheet approvalId="appr-1" onClose={onClose} />);
     expect(screen.queryByRole("button", { name: "Připomínky" })).toBeNull();

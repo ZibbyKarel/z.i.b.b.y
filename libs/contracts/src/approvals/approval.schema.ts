@@ -126,10 +126,11 @@ export const ApprovalSchema = z.object({
   department: DepartmentIdSchema.optional(),
   /**
    * Phase 127 — a link back to where this approval's gated item actually lives
-   * (a Jira issue, a GitHub issue/PR, a Slack message). Only the "channel"
-   * run-path caller (the Tier-3 draft-reply gate) has a source to attribute,
-   * copied from the originating `ChannelItem.url`; every other kind omits it,
-   * and a pre-existing approval re-parses untouched.
+   * (a Jira issue, a GitHub issue/PR, a Slack message). Stamped by the callers
+   * that have an external origin: "channel" and triage-filed "jira-issue" (the
+   * `ChannelItem.url`), "review-rule" (the latest PR it was seen on) and
+   * "routing-proposal" (the roadmap item's `source.url`). Every other kind is
+   * linked in-app from its `kind` + `runId`; a pre-existing approval re-parses untouched.
    */
   sourceUrl: z.string().optional(),
   /**

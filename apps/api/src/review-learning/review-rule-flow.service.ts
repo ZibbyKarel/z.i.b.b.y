@@ -76,6 +76,8 @@ export class ReviewRuleFlowService implements OnModuleInit, ResumableRunner {
 
   /** Park the Tier-3 approval for a rule that has now been seen twice. */
   async propose(projectId: string, rule: ReviewRule): Promise<void> {
+    // The latest PR whose review comment promoted the rule.
+    const sourceUrl = rule.occurrences.at(-1)?.prUrl;
     await this.approvals.requestApproval({
       runId: reviewRuleRunId(projectId, rule.id),
       kind: "review-rule",
@@ -83,6 +85,7 @@ export class ReviewRuleFlowService implements OnModuleInit, ResumableRunner {
       action: ADOPT_ACTION,
       detail: JSON.stringify(buildEnrichment(projectId, rule)),
       risk: "low",
+      ...(sourceUrl ? { sourceUrl } : {}),
     });
     this.log.info("review rule parked for approval", { projectId, ruleId: rule.id });
   }

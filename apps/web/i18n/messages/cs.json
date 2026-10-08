@@ -2244,6 +2244,7 @@
     "pinnedUnpinAria": "Odepnout {name}"
   },
   "orgMap": {
+    "apiUnreachable": "api nedostupné",
     "cooAvatarLink": "Zobrazit lidi ve stavu: {state}",
     "cooAvatarLabel": "Zibby · COO",
     "roomAria": "{code} · {name}, {count, plural, one {# agent} few {# agenti} other {# agentů}}",
@@ -2352,10 +2353,32 @@
         "confirmRevise": "Vrátit k úpravě",
         "approve": "Schválit",
         "deny": "Zamítnout",
-        "openTask": "Otevřít úkol",
         "gate": {
           "stage-approval": "Zkontrolovat výstup kroku",
           "spend-past-cap": "Dosažen limit útraty"
+        },
+        "sourceTitle": "Zdroj",
+        "openInZibby": "Otevřít v ZIBBY",
+        "origin": {
+          "operator": "Ručně (ty)",
+          "department": "Oddělení",
+          "channel": "Kanál",
+          "automation": "Automatizace",
+          "roadmap": "Roadmapa",
+          "workflow": "Workflow běh",
+          "agent": "Běh agenta",
+          "pr-review": "PR review",
+          "agent-factory": "Agent Factory",
+          "comms": "Komunikace",
+          "chat": "Chat",
+          "system": "Systém"
+        },
+        "sourceLink": {
+          "github-pr": "GitHub PR",
+          "github-issue": "GitHub issue",
+          "jira": "Jira issue",
+          "slack": "Zpráva ve Slacku",
+          "link": "Otevřít zdroj"
         }
       }
     },

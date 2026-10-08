@@ -142,6 +142,7 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
         integrationId: jira.id,
         summary: `Bug from ${item.integrationId}: ${summary}`,
         description: `Reported via ${item.kind} (${item.integrationId})${item.from ? ` by ${item.from}` : ""}:\n\n${item.text}`,
+        ...(item.url ? { sourceUrl: item.url } : {}),
       });
       this.log.info("bug report filed as a gated Jira issue", { itemId: item.id, jira: jira.id });
     } catch (err) {

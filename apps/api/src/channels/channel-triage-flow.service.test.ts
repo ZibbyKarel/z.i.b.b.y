@@ -196,9 +196,14 @@ describe("ChannelTriageFlowService", () => {
       jiraPropose,
       jiraIntegrations: [{ id: "acme-jira", kind: "jira", enabled: true }],
     });
-    await flow.handle(item({ text: "login crashes on submit" }));
+    await flow.handle(
+      item({ text: "login crashes on submit", url: "https://github.com/acme/app/issues/9" }),
+    );
     expect(jiraPropose).toHaveBeenCalledTimes(1);
-    expect(jiraPropose.mock.calls[0]![0]).toMatchObject({ integrationId: "acme-jira" });
+    expect(jiraPropose.mock.calls[0]![0]).toMatchObject({
+      integrationId: "acme-jira",
+      sourceUrl: "https://github.com/acme/app/issues/9",
+    });
     expect(jiraPropose.mock.calls[0]![0].summary).toContain("login crashes");
   });
 

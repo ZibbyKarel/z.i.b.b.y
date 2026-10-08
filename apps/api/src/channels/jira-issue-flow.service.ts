@@ -13,6 +13,8 @@ export interface JiraIssueRequest {
   summary: string;
   description?: string;
   projectKey?: string;
+  /** The inbound item this issue was filed from (triage only) — stamped on the approval. */
+  sourceUrl?: string;
 }
 
 /**
@@ -76,6 +78,7 @@ export class JiraIssueFlowService implements OnModuleInit, ResumableRunner {
         },
       }),
       risk: "low",
+      ...(req.sourceUrl ? { sourceUrl: req.sourceUrl } : {}),
     });
     this.log.info("jira issue parked for approval", {
       integrationId: req.integrationId,

@@ -16,6 +16,7 @@ import {
   TextAreaField,
   Typography,
 } from "@zibby/design-system";
+import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -23,7 +24,14 @@ import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { useTaskQuery } from "../../tasks/queries";
-import { HIGH_RISK_TYPES, formatWaited, gateTitleKey } from "../approval";
+import {
+  HIGH_RISK_TYPES,
+  approvalOrigin,
+  formatWaited,
+  gateTitleKey,
+  sourceLinkKind,
+} from "../approval";
+import { ApprovalPreview } from "./ApprovalPreview";
 import { useApproveMutation, useRejectMutation, useReviseMutation } from "../mutations";
 import { useApprovalQuery } from "../queries";
 
@@ -83,7 +91,16 @@ export function ApprovalSheet({
     onClose();
   };
 
+  // Leaving the page drops `?approval=` with it — calling `onClose` here would
+  // push the old pathname back over the navigation.
+  const navigate = (href: string) => {
+    setReason("");
+    setMode(null);
+    router.push(href as Route);
+  };
+
   const gateKey = approval ? gateTitleKey(approval) : null;
+  const origin = approval ? approvalOrigin(approval, task) : null;
   const body = !approvalId ? null : isPending ? (
     <QueryLoading />
   ) : isError || !approval ? (
@@ -100,11 +117,43 @@ export function ApprovalSheet({
           )}
         </Row>
         {gateKey && <Typography type="h3">{t(`gate.${gateKey}`)}</Typography>}
-        <Typography type={gateKey ? "text" : "h3"}>{approval.text ?? approval.detail}</Typography>
+        {approval.text == null && <Typography type="h3">{approval.detail}</Typography>}
         <Typography type="note" variant="tertiary">
           {approval.skill} · {t("waited", { waited: formatWaited(approval.requestedAt) })}
         </Typography>
       </Stack>
+
+      {origin && (
+        <Stack gap="50">
+          <Typography tracking="wider" type="labelSm" variant="tertiary">
+            {t("sourceTitle")}
+          </Typography>
+          <Row wrap gap="150">
+            <Tag tone="neutral">{t(`origin.${origin.origin}`)}</Tag>
+            {origin.url && (
+              <a href={origin.url} rel="noopener noreferrer" target="_blank">
+                <Typography size="sm" tone="accent" type="text">
+                  {t(`sourceLink.${sourceLinkKind(origin.url)}`)} ↗
+                </Typography>
+              </a>
+            )}
+            {origin.href && (
+              <Button intent="ghost" onClick={() => navigate(origin.href ?? "")} size="sm">
+                {t("openInZibby")}
+              </Button>
+            )}
+          </Row>
+        </Stack>
+      )}
+
+      {/* Plain-text detail is the whole description — shown in full, line breaks kept. */}
+      {approval.text != null && (
+        <Container maxHeight="50vh" overflow="auto">
+          <Typography leading="relaxed" style={{ whiteSpace: "pre-wrap" }} type="text">
+            {approval.text}
+          </Typography>
+        </Container>
+      )}
 
       <MetricStrip
         columns={3}
@@ -136,6 +185,18 @@ export function ApprovalSheet({
             deletions: approval.preview.hunks.flatMap((h) => h.lines).filter((l) => l[0] === "del")
               .length,
           }}
+        />
+      )}
+
+      {(approval.preview?.kind === "command" || approval.preview?.kind === "cart") && (
+        <ApprovalPreview
+          labels={{
+            cart: tApprovals("previewCart"),
+            total: tApprovals("previewTotal"),
+            targets: tApprovals("previewTargets"),
+            sendTo: tApprovals("previewSendTo"),
+          }}
+          preview={approval.preview}
         />
       )}
 
@@ -221,15 +282,6 @@ export function ApprovalSheet({
       )}
       <Button block intent="secondary" onClick={() => setMode("deny")}>
         {t("deny")}
-      </Button>
-      <Button
-        intent="ghost"
-        onClick={() => {
-          router.push(`/work/tasks/${approval.runId}`);
-          close();
-        }}
-      >
-        {t("openTask")}
       </Button>
     </Row>
   );

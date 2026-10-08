@@ -82,6 +82,18 @@ describe("JiraIssueFlowService", () => {
     });
   });
 
+  it("propose stamps the originating item's url on the approval", async () => {
+    const { svc, approvals } = build();
+    await svc.propose({
+      integrationId: "acme-jira",
+      summary: "Login crash",
+      sourceUrl: "https://github.com/acme/app/issues/9",
+    });
+    expect(approvals.requestApproval.mock.calls[0]![0]).toMatchObject({
+      sourceUrl: "https://github.com/acme/app/issues/9",
+    });
+  });
+
   it("rejects a non-jira integration", async () => {
     const slack: Integration = {
       ...jiraIntegration,

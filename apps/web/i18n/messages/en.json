@@ -2244,6 +2244,7 @@
     "pinnedUnpinAria": "Unpin {name}"
   },
   "orgMap": {
+    "apiUnreachable": "API unreachable",
     "cooAvatarLink": "Show people in state: {state}",
     "cooAvatarLabel": "Zibby · COO",
     "roomAria": "{code} · {name}, {count, plural, one {# agent} other {# agents}}",
@@ -2352,10 +2353,32 @@
         "confirmRevise": "Send back",
         "approve": "Approve",
         "deny": "Deny",
-        "openTask": "Open task",
         "gate": {
           "stage-approval": "Review step output",
           "spend-past-cap": "Spend cap reached"
+        },
+        "sourceTitle": "Source",
+        "openInZibby": "Open in ZIBBY",
+        "origin": {
+          "operator": "Manual (you)",
+          "department": "Department",
+          "channel": "Channel",
+          "automation": "Automation",
+          "roadmap": "Roadmap",
+          "workflow": "Workflow run",
+          "agent": "Agent run",
+          "pr-review": "PR review",
+          "agent-factory": "Agent Factory",
+          "comms": "Comms",
+          "chat": "Chat",
+          "system": "System"
+        },
+        "sourceLink": {
+          "github-pr": "GitHub PR",
+          "github-issue": "GitHub issue",
+          "jira": "Jira issue",
+          "slack": "Slack message",
+          "link": "Open source"
         }
       }
     },

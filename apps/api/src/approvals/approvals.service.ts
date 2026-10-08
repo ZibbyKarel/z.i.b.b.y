@@ -38,8 +38,8 @@ export interface RequestApprovalInput {
   department?: DepartmentId;
   /**
    * Phase 127 — a link back to the gated item's origin (Jira/GitHub/Slack).
-   * Only `ChannelTriageFlowService.parkForApproval` supplies it, copied from
-   * the originating `ChannelItem.url`; every other call site omits it.
+   * Supplied by the callers with an external origin (channel reply, triage-filed
+   * Jira issue, review rule, routing proposal) — see `ApprovalSchema.sourceUrl`.
    */
   sourceUrl?: string;
 }
