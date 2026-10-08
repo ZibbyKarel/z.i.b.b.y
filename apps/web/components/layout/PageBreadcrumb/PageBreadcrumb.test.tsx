@@ -5,11 +5,11 @@ import { PageBreadcrumb, PageBreadcrumbSlotProvider } from "./PageBreadcrumb";
 
 const items = [{ label: "Projects", href: "/work/projects" }, { label: "CMS4" }];
 
-function setup(activeHref: string, crumbs = items) {
+function setup(activeHref: string | string[], crumbs = items) {
   const slot = document.createElement("div");
   document.body.appendChild(slot);
   const view = render(
-    <PageBreadcrumbSlotProvider activeHref={activeHref} element={slot}>
+    <PageBreadcrumbSlotProvider activeHrefs={[activeHref].flat()} element={slot}>
       <div data-testid="inline">
         <PageBreadcrumb items={crumbs} />
       </div>
@@ -41,5 +41,23 @@ describe("PageBreadcrumb", () => {
   it("renders nothing when the only crumb is dropped", () => {
     const { slot } = setup("/work/projects", [items[0]!]);
     expect(slot).toBeEmptyDOMElement();
+  });
+
+  it("drops a first crumb equal to the tab's match prefix", () => {
+    const { slot } = setup(
+      ["/system/registries/skills", "/system/registries"],
+      [{ label: "Registries", href: "/system/registries" }, { label: "Hooks" }],
+    );
+    expect(within(slot).queryByText("Registries")).toBeNull();
+    expect(within(slot).getByText("Hooks")).toBeInTheDocument();
+  });
+
+  it("renders nothing (no inline flash) in the shell until the slot element is set", () => {
+    render(
+      <PageBreadcrumbSlotProvider activeHrefs={[]} element={null}>
+        <PageBreadcrumb items={items} />
+      </PageBreadcrumbSlotProvider>,
+    );
+    expect(screen.queryByTestId(BreadcrumbTestId.Root)).toBeNull();
   });
 });

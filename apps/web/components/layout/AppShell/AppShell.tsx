@@ -46,7 +46,7 @@ import {
 } from "../../../features/pins";
 import { PageBreadcrumbSlotProvider } from "../PageBreadcrumb";
 import { useDockState } from "./useDockState";
-import { SECTIONS, type SectionId, sectionForPath } from "../../../state/config";
+import { SECTIONS, type SectionId, type SubTabConfig, sectionForPath } from "../../../state/config";
 
 /** Top nav sections, minus `system` (spec step 1) — its own route group keeps
  *  working via `sectionForPath`/`SECTIONS` (the sub-nav still shows its tabs);
@@ -130,19 +130,31 @@ function SectionNav({ active }: { active: SectionId }) {
   );
 }
 
-/** The sub-nav tab owning `pathname`: the longest `href` it equals or prefixes
- *  (so a detail page like `/work/projects/x` keeps `/work/projects` active). */
-function activeSubNavHref(tabs: readonly { href: string }[], pathname: string): string | null {
-  let best: string | null = null;
-  for (const { href } of tabs) {
+/** The sub-nav tab owning `pathname`: the longest `matchPrefix ?? href` it equals
+ *  or prefixes (so a detail page like `/work/projects/x` keeps `/work/projects`
+ *  active). Returns the tab and the prefix that matched. */
+function activeSubNavTab<T extends { href: string; matchPrefix?: string }>(
+  tabs: readonly T[],
+  pathname: string,
+): { tab: T; prefix: string } | null {
+  let best: { tab: T; prefix: string } | null = null;
+  for (const tab of tabs) {
+    const prefix = tab.matchPrefix ?? tab.href;
     if (
-      (pathname === href || pathname.startsWith(`${href}/`)) &&
-      href.length > (best?.length ?? -1)
+      (pathname === prefix || pathname.startsWith(`${prefix}/`)) &&
+      prefix.length > (best?.prefix.length ?? -1)
     ) {
-      best = href;
+      best = { tab, prefix };
     }
   }
   return best;
+}
+
+function activeSubNavHref(
+  tabs: readonly { href: string; matchPrefix?: string }[],
+  pathname: string,
+): string | null {
+  return activeSubNavTab(tabs, pathname)?.tab.href ?? null;
 }
 
 function SectionSubNav({
@@ -312,10 +324,12 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
   const [crumbSlot, setCrumbSlot] = useState<HTMLElement | null>(null);
-  const activeSubHref = activeSubNavHref(
+  const activeTab = activeSubNavTab<SubTabConfig>(
     SECTIONS.find((s) => s.id === active)?.tabs ?? [],
     pathname,
   );
+  // A first crumb equal to the tab's href or its prefix just repeats the tab.
+  const activeSubHrefs = activeTab ? [activeTab.tab.href, activeTab.prefix] : [];
   useCommandPaletteHotkey(() => setPaletteOpen((o) => !o));
 
   const currentHref = pinHrefFor(pathname, searchParams.toString());
@@ -325,7 +339,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   const liveCount = useLiveRuns().length;
 
   return (
-    <PageBreadcrumbSlotProvider activeHref={activeSubHref} element={crumbSlot}>
+    <PageBreadcrumbSlotProvider activeHrefs={activeSubHrefs} element={crumbSlot}>
       <AppFrame
         dock={<CooDock />}
         fullBleed={pathname === "/org"}

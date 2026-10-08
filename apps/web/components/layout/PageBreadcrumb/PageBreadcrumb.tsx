@@ -6,18 +6,21 @@ import { Breadcrumb, type BreadcrumbProps } from "@zibby/design-system";
 
 interface Slot {
   element: HTMLElement | null;
-  activeHref: string | null;
+  /** Hrefs of the active sub-menu tab (its href and/or match prefix). */
+  activeHrefs: readonly string[];
+  /** True under the shell's provider: render nothing until `element` is set. */
+  inShell: boolean;
 }
 
-const SlotContext = createContext<Slot>({ element: null, activeHref: null });
+const SlotContext = createContext<Slot>({ element: null, activeHrefs: [], inShell: false });
 
 /** Provides the shell's sub-menu trail slot; `PageBreadcrumb` portals into it. */
 export function PageBreadcrumbSlotProvider({
   element,
-  activeHref,
+  activeHrefs,
   children,
-}: Slot & { children: ReactNode }) {
-  return <SlotContext value={{ element, activeHref }}>{children}</SlotContext>;
+}: Omit<Slot, "inShell"> & { children: ReactNode }) {
+  return <SlotContext value={{ element, activeHrefs, inShell: true }}>{children}</SlotContext>;
 }
 
 /**
@@ -26,9 +29,10 @@ export function PageBreadcrumbSlotProvider({
  * renders inline.
  */
 export function PageBreadcrumb({ items, ...rest }: BreadcrumbProps) {
-  const { element, activeHref } = useContext(SlotContext);
-  if (!element) return <Breadcrumb items={items} {...rest} />;
-  const trail = items[0]?.href && items[0].href === activeHref ? items.slice(1) : items;
+  const { element, activeHrefs, inShell } = useContext(SlotContext);
+  if (!element) return inShell ? null : <Breadcrumb items={items} {...rest} />;
+  const first = items[0]?.href;
+  const trail = first && activeHrefs.includes(first) ? items.slice(1) : items;
   if (trail.length === 0) return null;
   return createPortal(<Breadcrumb leadingSeparator items={trail} {...rest} />, element);
 }

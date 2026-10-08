@@ -136,4 +136,24 @@ describe("AppShell", () => {
       mockPath = "/chat";
     }
   });
+
+  it.each([
+    ["/system/registries/hooks/foo", "/system/registries/skills"],
+    ["/system/settings/appearance", "/system/settings/general"],
+  ])("highlights the owning sub-tab for %s", (path, tabHref) => {
+    mockPath = path;
+    try {
+      renderWithProviders(
+        <AppShell>
+          <div />
+        </AppShell>,
+      );
+      expect(screen.getByTestId(`${SubNavTestId.Item}-${tabHref}`)).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
+    } finally {
+      mockPath = "/chat";
+    }
+  });
 });

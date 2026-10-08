@@ -16,6 +16,9 @@ import type { Route } from "next";
 export interface SubTabConfig {
   id: string;
   href: Route;
+  /** Path prefix owning this tab when `href` is only its first sub-page
+   *  (e.g. registries → `/system/registries`); defaults to `href`. */
+  matchPrefix?: string;
 }
 
 export interface SectionConfig {
@@ -107,8 +110,16 @@ export const SECTIONS = [
     glyph: "gear",
     href: "/system/settings/general" as Route,
     tabs: [
-      { id: "settings", href: "/system/settings/general" as Route },
-      { id: "registries", href: "/system/registries/skills" as Route },
+      {
+        id: "settings",
+        href: "/system/settings/general" as Route,
+        matchPrefix: "/system/settings",
+      },
+      {
+        id: "registries",
+        href: "/system/registries/skills" as Route,
+        matchPrefix: "/system/registries",
+      },
     ],
   },
 ] as const satisfies readonly SectionConfig[];
