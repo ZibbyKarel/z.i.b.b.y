@@ -7,6 +7,7 @@ export enum SubNavTestId {
   List = "subnav-list",
   Item = "subnav-item",
   Actions = "subnav-actions",
+  Trail = "subnav-trail",
 }
 
 export interface SubNavItem {
@@ -38,6 +39,8 @@ export interface SubNavProps {
    * a cramped horizontal scroller on desktop.
    */
   orientation?: "horizontal" | "responsive";
+  /** Slot right after the link list (e.g. a breadcrumb continuing the active item). */
+  trail?: ReactNode;
 }
 
 const itemClass = (active: boolean, responsive: boolean) =>
@@ -61,9 +64,42 @@ const itemClass = (active: boolean, responsive: boolean) =>
  * `orientation="responsive"` (ZB-11) keeps the same strip on narrow viewports
  * and reflows into a left-hand vertical column at `lg:` — see {@link SubNavProps}.
  */
-export function SubNav({ items, actions, linkComponent, orientation = "horizontal" }: SubNavProps) {
+export function SubNav({
+  items,
+  actions,
+  linkComponent,
+  orientation = "horizontal",
+  trail,
+}: SubNavProps) {
   const Link = linkComponent ?? "a";
   const responsive = orientation === "responsive";
+  const nav = (
+    <nav
+      className={cn(
+        "flex items-stretch gap-0",
+        responsive &&
+          "overflow-x-auto border-b border-border lg:flex-col lg:overflow-visible lg:border-b-0 lg:border-r",
+      )}
+      data-testid={SubNavTestId.List}
+    >
+      {items.map((item) => (
+        <Link
+          aria-current={item.active ? "page" : undefined}
+          className={itemClass(Boolean(item.active), responsive)}
+          data-testid={`${SubNavTestId.Item}-${item.href}`}
+          href={item.href}
+          key={item.href}
+        >
+          {item.label}
+        </Link>
+      ))}
+    </nav>
+  );
+  const trailEl = trail ? (
+    <div className="flex min-w-0 items-center pr-3" data-testid={SubNavTestId.Trail}>
+      {trail}
+    </div>
+  ) : null;
   return (
     <div
       className={cn(
@@ -78,26 +114,14 @@ export function SubNav({ items, actions, linkComponent, orientation = "horizonta
       // a no-op when an ancestor gives no height (e.g. Storybook in isolation).
       style={{ height: "100%" }}
     >
-      <nav
-        className={cn(
-          "flex items-stretch gap-0",
-          responsive &&
-            "overflow-x-auto border-b border-border lg:flex-col lg:overflow-visible lg:border-b-0 lg:border-r",
-        )}
-        data-testid={SubNavTestId.List}
-      >
-        {items.map((item) => (
-          <Link
-            aria-current={item.active ? "page" : undefined}
-            className={itemClass(Boolean(item.active), responsive)}
-            data-testid={`${SubNavTestId.Item}-${item.href}`}
-            href={item.href}
-            key={item.href}
-          >
-            {item.label}
-          </Link>
-        ))}
-      </nav>
+      {trail ? (
+        <div className="flex min-w-0 items-stretch">
+          {nav}
+          {trailEl}
+        </div>
+      ) : (
+        nav
+      )}
       {actions && (
         <div
           className={cn("flex items-center gap-2 px-3", responsive && "py-2")}

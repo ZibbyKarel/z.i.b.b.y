@@ -66,4 +66,12 @@ describe("Breadcrumb", () => {
     render(<Breadcrumb items={items} linkComponent={FakeLink} />);
     expect(screen.getByTestId(`${BreadcrumbTestId.Item}-0`)).toHaveAttribute("data-fake-link");
   });
+
+  it("renders a leading separator only when asked", () => {
+    const { unmount } = render(<Breadcrumb leadingSeparator items={[{ label: "A" }]} />);
+    expect(screen.getByTestId(`${BreadcrumbTestId.Separator}-0`)).toBeInTheDocument();
+    unmount();
+    render(<Breadcrumb items={[{ label: "A" }]} />);
+    expect(screen.queryByTestId(`${BreadcrumbTestId.Separator}-0`)).not.toBeInTheDocument();
+  });
 });

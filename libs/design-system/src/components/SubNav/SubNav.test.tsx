@@ -74,4 +74,19 @@ describe("SubNav", () => {
     const link = screen.getByTestId(`${SubNavTestId.Item}-/departments/dev/overview`);
     expect(link).toHaveAttribute("data-fake-link");
   });
+
+  it("renders the trail slot between the list and the actions", () => {
+    render(<SubNav actions={<span>a</span>} items={items} trail={<span>t</span>} />);
+    const trail = screen.getByTestId(SubNavTestId.Trail);
+    expect(trail).toHaveTextContent("t");
+    const follows = (a: Element, b: Element) =>
+      Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(follows(screen.getByTestId(SubNavTestId.List), trail)).toBe(true);
+    expect(follows(trail, screen.getByTestId(SubNavTestId.Actions))).toBe(true);
+  });
+
+  it("renders no trail element without a trail", () => {
+    render(<SubNav items={items} />);
+    expect(screen.queryByTestId(SubNavTestId.Trail)).not.toBeInTheDocument();
+  });
 });

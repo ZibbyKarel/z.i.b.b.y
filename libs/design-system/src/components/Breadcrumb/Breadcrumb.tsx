@@ -21,6 +21,9 @@ export interface BreadcrumbProps {
   /** Overrides the rendered anchor for items with an `href` — pass the app's
    *  `next/link` `Link` to get client-side navigation. Defaults to a plain `<a>`. */
   linkComponent?: SubNavLinkComponent;
+  /** Renders a `/` before the first crumb — for a trail that continues after
+   *  another element (e.g. the active item in a {@link SubNav} row). */
+  leadingSeparator?: boolean;
 }
 
 /**
@@ -29,7 +32,7 @@ export interface BreadcrumbProps {
  * (through the overridable `linkComponent`, same contract as {@link SubNav});
  * an item without `href` (or the trailing crumb) renders as plain text.
  */
-export function Breadcrumb({ items, linkComponent }: BreadcrumbProps) {
+export function Breadcrumb({ items, linkComponent, leadingSeparator }: BreadcrumbProps) {
   const Link = linkComponent ?? "a";
   const lastIndex = items.length - 1;
   return (
@@ -44,7 +47,7 @@ export function Breadcrumb({ items, linkComponent }: BreadcrumbProps) {
         const isLast = index === lastIndex;
         return (
           <Fragment key={`${item.label}-${index}`}>
-            {index > 0 && (
+            {(index > 0 || leadingSeparator) && (
               <Typography
                 aria-hidden="true"
                 data-testid={`${BreadcrumbTestId.Separator}-${index}`}
