@@ -1,13 +1,1 @@
-{
-  "id": "signal-qa-findings",
-  "name": "Nálezy QA → Dev",
-  "trigger": { "type": "signal", "kind": "qa-findings", "from": "qa" },
-  "target": {
-    "type": "task",
-    "text": "Review these QA findings, reproduce each one, and prepare fixes for the confirmed defects on their own branch. Do not push or merge — the PR is the gate.",
-    "target": { "kind": "department", "id": "dev", "name": "dev" }
-  },
-  "approval": "ask",
-  "enabled": true,
-  "system": true
-}
+{"id":"signal-qa-findings","name":"Nálezy QA → Dev","trigger":{"type":"signal","kind":"qa-findings","from":"qa"},"target":{"type":"task","text":"Review these QA findings, reproduce each one, and prepare fixes for the confirmed defects on their own branch. Do not push or merge — the PR is the gate.","target":{"kind":"department","id":"dev","name":"dev"}},"enabled":false,"approval":"ask","system":true}

@@ -7,3 +7,4 @@
 5. [ ] breadcrumb navigace se přesune do řádku se submenu tzn na stránce work/projects/cms4/integrations bude v menu označená položka "práce", v submenu položka "projekty" a za ní "/ CMS4 / Integrace"
 6. [ ] Self-API MCP: ZIBBY ovládá vlastní API z chatu (nedestruktivní operace nad úkoly, workflows, firmami, týmy, projekty, automatizacemi, integracemi, běhovými parametry a kořenem klonů) — plán docs/superpowers/plans/2026-10-08-self-api-mcp.md
 7. [ ] v top baru bude přepínátko na light/dark mode (nějaká ikonka měsíček / sluníčko)
+8. [ ] content stránek musí být roztažen na 100%. Například roadmap stránka pak získá spoustu místa pro sloupečky

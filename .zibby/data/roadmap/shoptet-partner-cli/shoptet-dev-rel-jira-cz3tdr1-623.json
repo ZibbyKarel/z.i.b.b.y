@@ -17,19 +17,9 @@
   "dependsOn": [],
   "dependsOnFromSource": [],
   "lifecycle": "done",
-  "enqueuedAt": "2026-09-01T18:32:50.521Z",
-  "runs": [
-    {
-      "taskId": "task_1788287586616_13c95c",
-      "runRef": "patch_1788287586631",
-      "startedAt": "2026-09-01T18:33:10.231Z",
-      "finishedAt": "2026-09-01T18:34:05.093Z",
-      "outcome": "failed"
-    }
-  ],
-  "lastFailureReason": "1 stages, failed",
+  "runs": [],
   "syncNotes": [],
-  "createdAt": "2026-09-01T18:32:49.350Z",
-  "updatedAt": "2026-10-08T12:46:03.667Z",
-  "syncedAt": "2026-10-08T12:46:03.667Z"
+  "createdAt": "2026-10-08T13:33:10.519Z",
+  "updatedAt": "2026-10-08T13:33:10.519Z",
+  "syncedAt": "2026-10-08T13:33:10.519Z"
 }

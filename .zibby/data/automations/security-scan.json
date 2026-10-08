@@ -1,1 +1,1 @@
-{"id":"security-scan","name":"Bezpečnostní hlídka","trigger":{"type":"cron","expr":"0 5 * * 1"},"target":{"type":"security-scan"},"enabled":true,"system":true,"lastFiredAt":"2026-10-05T03:00:33.193Z"}
+{"id":"security-scan","name":"Bezpečnostní hlídka","trigger":{"type":"cron","expr":"0 5 * * 1"},"target":{"type":"security-scan"},"enabled":false,"system":true,"lastFiredAt":"2026-10-05T03:00:33.193Z"}

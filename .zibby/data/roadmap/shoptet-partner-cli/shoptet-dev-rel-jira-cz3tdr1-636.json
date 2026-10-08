@@ -16,20 +16,10 @@
   "attachments": [],
   "dependsOn": [],
   "dependsOnFromSource": [],
-  "lifecycle": "failed",
-  "enqueuedAt": "2026-09-24T05:20:05.655Z",
-  "runs": [
-    {
-      "taskId": "task_1790227221780_8860e8",
-      "runRef": "delivery_1790227221788",
-      "startedAt": "2026-09-24T05:20:23.785Z",
-      "finishedAt": "2026-09-24T05:22:05.282Z",
-      "outcome": "failed"
-    }
-  ],
-  "lastFailureReason": "1 stages, failed",
+  "lifecycle": "todo",
+  "runs": [],
   "syncNotes": [],
-  "createdAt": "2026-09-24T05:20:04.314Z",
-  "updatedAt": "2026-10-08T12:46:03.676Z",
-  "syncedAt": "2026-10-08T12:46:03.676Z"
+  "createdAt": "2026-10-08T13:33:10.520Z",
+  "updatedAt": "2026-10-08T13:33:10.520Z",
+  "syncedAt": "2026-10-08T13:33:10.520Z"
 }
