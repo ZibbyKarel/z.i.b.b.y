@@ -186,7 +186,7 @@ export function Tab({ value, children, ref, ...rest }: TabProps) {
       {...rest}
       aria-selected={isActive}
       className={cn(
-        "bg-transparent border-none cursor-pointer -mb-px",
+        "bg-transparent border-0 cursor-pointer -mb-px",
         "transition-[color,border-color]",
         focusRingInset,
         variant === "mono"
