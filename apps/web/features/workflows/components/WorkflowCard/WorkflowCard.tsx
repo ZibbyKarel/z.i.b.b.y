@@ -2,31 +2,8 @@ import type { Agent } from "@zibby/contracts";
 import { Card, Container, Divider, Icon, IconTile, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { Fragment } from "react";
-import { type Workflow, type WorkflowState, glyphForPhase } from "../../../../domain";
-import { RunStateBadge } from "../../../runs/components/RunStateBadge";
-import { type FeedStatus } from "../../../runs/run";
+import { type Workflow, glyphForPhase } from "../../../../domain";
 import { WorkflowOwnerChip } from "./WorkflowOwnerChip";
-
-/**
- * Workflow states map onto the canonical run-state tone/glyph (`RUN_STATE` in
- * `features/runs/run.ts`, via {@link RunStateBadge}) — one shared source of
- * tone/pulse so this can't re-diverge from the runs feed's coloring (that
- * divergence is why phase 42 deleted the old forked `stateMeta` map). The
- * label itself keeps its own workflow-specific Czech phrasing (`stateDone` /
- * `stateParked` / `stateFailed` / `stateRunning`).
- */
-const WORKFLOW_STATE_TO_FEED_STATUS: Record<WorkflowState, FeedStatus> = {
-  done: "done",
-  parked: "parked",
-  failed: "error",
-  running: "running",
-};
-const WORKFLOW_STATE_LABEL_KEY = {
-  done: "stateDone",
-  parked: "stateParked",
-  failed: "stateFailed",
-  running: "stateRunning",
-} as const satisfies Record<WorkflowState, string>;
 
 export interface WorkflowCardProps {
   showPhases?: boolean;
@@ -36,7 +13,7 @@ export interface WorkflowCardProps {
   onSelect: (id: string) => void;
 }
 
-/** Master-list card for a workflow: name, state, phase chips + last run. */
+/** Master-list card for a workflow: name, phase chips + owner. */
 export function WorkflowCard({
   workflow,
   showPhases,
@@ -58,15 +35,9 @@ export function WorkflowCard({
           <Stack align="start" direction="row" gap="150">
             <IconTile alt={workflow.name} glyph="flow" size="md" src={workflow.avatar} />
             <Stack gap="75">
-              <Stack align="center" direction="row" gap="100" justify="between">
-                <Typography mono size="md" type="note" weight="bold">
-                  {workflow.name}
-                </Typography>
-                <RunStateBadge
-                  label={t(WORKFLOW_STATE_LABEL_KEY[workflow.lastState])}
-                  status={WORKFLOW_STATE_TO_FEED_STATUS[workflow.lastState]}
-                />
-              </Stack>
+              <Typography mono size="md" type="note" weight="bold">
+                {workflow.name}
+              </Typography>
               <Typography leading="snug" size="caption" type="note" variant="secondary">
                 {workflow.desc}
               </Typography>
@@ -99,9 +70,6 @@ export function WorkflowCard({
             ) : (
               <span />
             )}
-            <Typography mono size="xs" type="note" variant="tertiary">
-              {t("cardLastRun", { lastRun: workflow.lastRun })}
-            </Typography>
           </Stack>
         </Stack>
       </Container>

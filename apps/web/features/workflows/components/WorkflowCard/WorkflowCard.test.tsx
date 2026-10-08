@@ -40,13 +40,13 @@ const workflow: Workflow = {
 };
 
 describe("WorkflowCard", () => {
-  it("renders name, state label and last run", () => {
+  it("renders the name but neither a state label nor a last-run line", () => {
     render(
       <WorkflowCard agents={agents} onSelect={() => {}} selected={false} workflow={workflow} />,
     );
     expect(screen.getByText("Build Feature")).toBeInTheDocument();
-    expect(screen.getByText("zaparkováno")).toBeInTheDocument();
-    expect(screen.getByText(/dnes 03:12/)).toBeInTheDocument();
+    expect(screen.queryByText("zaparkováno")).toBeNull();
+    expect(screen.queryByText(/dnes 03:12/)).toBeNull();
   });
 
   it("selects on click", async () => {
