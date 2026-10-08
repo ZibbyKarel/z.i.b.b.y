@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Breadcrumb,
   Button,
   Container,
   EntityHero,
@@ -16,6 +15,7 @@ import {
   Tag,
   Typography,
 } from "@zibby/design-system";
+import { PageBreadcrumb } from "../../components/layout/PageBreadcrumb";
 import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import type { Agent, GateRuleInput } from "@zibby/contracts";
 import { AVATAR_MAX } from "@zibby/contracts";
@@ -114,7 +114,7 @@ function AgentEditor({ agent }: { agent: Agent }) {
     <Container padding={["300", "350"]}>
       <PageContainer>
         <Stack gap="250">
-          <Breadcrumb
+          <PageBreadcrumb
             items={[{ label: t("title"), href: "/system/registries/positions" }, { label: name }]}
             linkComponent={Link as SubNavLinkComponent}
           />

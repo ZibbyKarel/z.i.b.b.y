@@ -7,7 +7,6 @@ import Link from "next/link";
 import type { Route } from "next";
 import type { ProjectPerson } from "@zibby/contracts";
 import {
-  Breadcrumb,
   Button,
   ConfirmDeleteButton,
   ContactRow,
@@ -22,6 +21,7 @@ import {
   TextInputField,
   Typography,
 } from "@zibby/design-system";
+import { PageBreadcrumb } from "../../../components/layout/PageBreadcrumb";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { slug } from "../../../utils/slug";
@@ -135,7 +135,7 @@ export function CompanyDetailScreen({ companyId }: CompanyDetailScreenProps) {
   return (
     <Container padding={["300", "350"]}>
       <Stack gap="250">
-        <Breadcrumb
+        <PageBreadcrumb
           items={[
             { label: t("title"), href: "/work/companies" },
             { label: isNew ? t("newCompany") : (company?.name ?? "") },

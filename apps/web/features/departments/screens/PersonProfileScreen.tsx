@@ -3,7 +3,6 @@
 import { type GateRuleInput } from "@zibby/contracts";
 import {
   AgentGlyph,
-  Breadcrumb,
   Button,
   Container,
   DataTable,
@@ -15,6 +14,7 @@ import {
   TextInputField,
   Typography,
 } from "@zibby/design-system";
+import { PageBreadcrumb } from "../../../components/layout/PageBreadcrumb";
 import type { StateTone, SubNavLinkComponent } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -80,7 +80,7 @@ function Profile({
     <Container padding={["300", "350"]}>
       <PageContainer>
         <Stack gap="250">
-          <Breadcrumb
+          <PageBreadcrumb
             items={[
               { label: t("breadcrumbPeople"), href: "/org/people" },
               { label: employee.name },

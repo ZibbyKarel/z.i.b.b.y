@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Breadcrumb,
   Button,
   Container,
   Panel,
@@ -14,6 +13,7 @@ import {
   type SubNavLinkComponent,
   Typography,
 } from "@zibby/design-system";
+import { PageBreadcrumb } from "../../components/layout/PageBreadcrumb";
 import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import type { Hook } from "@zibby/contracts";
 import { QueryError } from "../../components/LoadError/QueryError";
@@ -62,7 +62,7 @@ function HookEditor({ hook }: { hook: Hook }) {
     <Container padding={["300", "350"]}>
       <PageContainer>
         <Stack gap="250">
-          <Breadcrumb
+          <PageBreadcrumb
             items={[
               { label: t("registries.title"), href: "/system/registries/hooks" as Route },
               { label: name },

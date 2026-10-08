@@ -7,7 +7,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Alert,
-  Breadcrumb,
   Button,
   Container,
   Panel,
@@ -15,6 +14,7 @@ import {
   type SubNavLinkComponent,
   Typography,
 } from "@zibby/design-system";
+import { PageBreadcrumb } from "../../components/layout/PageBreadcrumb";
 import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import type { Integration } from "@zibby/contracts";
 import { QueryError } from "../../components/LoadError/QueryError";
@@ -115,7 +115,7 @@ function IntegrationEditor({
     <Container padding={["300", "350"]}>
       <PageContainer>
         <Stack gap="250">
-          <Breadcrumb
+          <PageBreadcrumb
             items={[{ label: t("projects.integrations.title"), href: backHref }, { label: name }]}
             linkComponent={Link as SubNavLinkComponent}
           />

@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Breadcrumb,
   Button,
   Container,
   Divider,
@@ -14,6 +13,7 @@ import {
   TextInputField,
   Typography,
 } from "@zibby/design-system";
+import { PageBreadcrumb } from "../../components/layout/PageBreadcrumb";
 import { AVATAR_MAX, type UpdateWorkflowInput, type WorkflowOutput } from "@zibby/contracts";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
@@ -468,7 +468,7 @@ export function Screen({ selectedId: routeId, basePath = "/work/workflows" }: Sc
       <PageContainer>
         <Stack gap="250">
           {routeId && (
-            <Breadcrumb
+            <PageBreadcrumb
               items={[{ label: t("workflows.title"), href: basePath as Route }, { label: title }]}
               linkComponent={Link as SubNavLinkComponent}
             />

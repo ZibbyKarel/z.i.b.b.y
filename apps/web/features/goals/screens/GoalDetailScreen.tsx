@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import {
-  Breadcrumb,
   Container,
   EmptyState,
   Stack,
@@ -14,6 +13,7 @@ import {
   Tag,
   Typography,
 } from "@zibby/design-system";
+import { PageBreadcrumb } from "../../../components/layout/PageBreadcrumb";
 import type { TaskRun } from "@zibby/contracts";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
@@ -60,7 +60,7 @@ export function GoalDetailScreen({ goalId }: GoalDetailScreenProps) {
   return (
     <Container padding={["300", "350"]}>
       <Stack gap="200">
-        <Breadcrumb
+        <PageBreadcrumb
           items={[{ label: t("title"), href: "/work/goals" }, { label: goal.id }]}
           linkComponent={Link as SubNavLinkComponent}
         />

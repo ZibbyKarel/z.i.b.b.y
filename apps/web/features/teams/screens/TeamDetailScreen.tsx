@@ -7,7 +7,6 @@ import Link from "next/link";
 import type { Route } from "next";
 import type { KnowledgeBaseSource } from "@zibby/contracts";
 import {
-  Breadcrumb,
   Button,
   ConfirmDeleteButton,
   Container,
@@ -20,6 +19,7 @@ import {
   type SubNavLinkComponent,
   Typography,
 } from "@zibby/design-system";
+import { PageBreadcrumb } from "../../../components/layout/PageBreadcrumb";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { slug } from "../../../utils/slug";
@@ -104,7 +104,7 @@ export function TeamDetailScreen({ teamId }: TeamDetailScreenProps) {
   return (
     <Container padding={["300", "350"]}>
       <Stack gap="250">
-        <Breadcrumb
+        <PageBreadcrumb
           items={[
             { label: t("title"), href: "/work/teams" },
             { label: isNew ? t("newTeam") : (team?.name ?? "") },

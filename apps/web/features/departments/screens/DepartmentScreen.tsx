@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Breadcrumb,
   Button,
   Card,
   Container,
@@ -14,6 +13,7 @@ import {
   Typography,
   WorkflowStepStrip,
 } from "@zibby/design-system";
+import { PageBreadcrumb } from "../../../components/layout/PageBreadcrumb";
 import type { StateTone, SubNavLinkComponent } from "@zibby/design-system";
 import type { DepartmentId } from "@zibby/contracts";
 import type { Route } from "next";
@@ -78,7 +78,7 @@ export function DepartmentScreen({ departmentId, tab }: DepartmentScreenProps) {
     <Container padding={["300", "350"]}>
       <PageContainer>
         <Stack gap="250">
-          <Breadcrumb
+          <PageBreadcrumb
             items={[{ label: t("breadcrumbOrg"), href: "/org" }, { label: department.name }]}
             linkComponent={Link as SubNavLinkComponent}
           />

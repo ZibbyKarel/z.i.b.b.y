@@ -3,7 +3,6 @@
 import type { ProjectAutonomyPolicy, ProjectDailyRhythm, ProjectPerson } from "@zibby/contracts";
 import {
   Alert,
-  Breadcrumb,
   Button,
   CodeBlock,
   Container,
@@ -21,6 +20,7 @@ import {
   Tooltip,
   Typography,
 } from "@zibby/design-system";
+import { PageBreadcrumb } from "../../../components/layout/PageBreadcrumb";
 import type { SubNavLinkComponent } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -548,10 +548,13 @@ export function ProjectDetailScreen({ projectId, tab = "overview" }: ProjectDeta
     <Container padding={["300", "350"]}>
       <PageContainer>
         <Stack gap="250">
-          <Breadcrumb
+          <PageBreadcrumb
             items={[
               { label: tp("title"), href: "/work/projects" },
-              { label: isNew ? tp("newProject") : (project?.name ?? "") },
+              isNew || tab === "overview"
+                ? { label: isNew ? tp("newProject") : (project?.name ?? "") }
+                : { label: project?.name ?? "", href: `/work/projects/${id}` },
+              ...(isNew || tab === "overview" ? [] : [{ label: t(`tabs.${tab}`) }]),
             ]}
             linkComponent={Link as SubNavLinkComponent}
           />
