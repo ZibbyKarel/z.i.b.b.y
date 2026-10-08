@@ -1,5 +1,5 @@
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   APP_FRAME_MAIN_CONTENT_ID,
   ActivityDockTestId,
@@ -7,11 +7,19 @@ import {
   AppHeaderTestId,
   MenuButtonTestId,
   RailTestId,
+  SubNavTestId,
   TabsTestId,
 } from "@zibby/design-system";
 import { renderWithProviders, screen } from "../../../test/render";
 import { PinPageDialogTestId } from "../../../features/pins";
 import { AppShell } from "./AppShell";
+
+let mockPath = "/chat";
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn(), prefetch: vi.fn() }),
+  usePathname: () => mockPath,
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 // ZB-01: `AppShell` is rebuilt over the ZibbyCorp DS `AppFrame` — a header
 // (section nav, ⋮ menu, limits), the PINNED/"NEEDS YOU"/RUNNING rails and the
@@ -102,5 +110,30 @@ describe("AppShell", () => {
     expect(screen.getAllByTestId(RailTestId.Root)).toHaveLength(2);
     await userEvent.click(buttons[2]!);
     expect(screen.queryByTestId(ActivityDockTestId.Body)).toBeNull();
+  });
+
+  it.each([
+    ["/work/projects/cms4/integrations", "/work/projects"],
+    ["/work/tasks", "/work/tasks"],
+  ])("marks the owning sub-nav tab current on %s", (path, href) => {
+    mockPath = path;
+    try {
+      renderWithProviders(
+        <AppShell>
+          <div>obsah stránky</div>
+        </AppShell>,
+      );
+      expect(screen.getByTestId(`${SubNavTestId.Item}-${href}`)).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
+      expect(
+        screen
+          .getAllByTestId(new RegExp(`^${SubNavTestId.Item}-`))
+          .filter((el) => el.getAttribute("aria-current") === "page"),
+      ).toHaveLength(1);
+    } finally {
+      mockPath = "/chat";
+    }
   });
 });

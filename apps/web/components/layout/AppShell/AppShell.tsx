@@ -44,6 +44,7 @@ import {
   pinHrefFor,
   usePagePins,
 } from "../../../features/pins";
+import { PageBreadcrumbSlotProvider } from "../PageBreadcrumb";
 import { useDockState } from "./useDockState";
 import { SECTIONS, type SectionId, sectionForPath } from "../../../state/config";
 
@@ -129,16 +130,39 @@ function SectionNav({ active }: { active: SectionId }) {
   );
 }
 
-function SectionSubNav({ active }: { active: SectionId }) {
+/** The sub-nav tab owning `pathname`: the longest `href` it equals or prefixes
+ *  (so a detail page like `/work/projects/x` keeps `/work/projects` active). */
+function activeSubNavHref(tabs: readonly { href: string }[], pathname: string): string | null {
+  let best: string | null = null;
+  for (const { href } of tabs) {
+    if (
+      (pathname === href || pathname.startsWith(`${href}/`)) &&
+      href.length > (best?.length ?? -1)
+    ) {
+      best = href;
+    }
+  }
+  return best;
+}
+
+function SectionSubNav({
+  active,
+  trail,
+}: {
+  active: SectionId;
+  /** The page-breadcrumb portal target, rendered after the tabs. */
+  trail: ReactNode;
+}) {
   const t = useTranslations("nav");
   const tShell = useTranslations("shell");
   const pathname = usePathname();
   const router = useRouter();
   const section = SECTIONS.find((s) => s.id === active) ?? SECTIONS[0];
+  const activeHref = activeSubNavHref(section.tabs, pathname);
   const items = section.tabs.map((tab) => ({
     href: tab.href,
     label: t(`subtab.${section.id}.${tab.id}` as Parameters<typeof t>[0]),
-    active: tab.href === pathname,
+    active: tab.href === activeHref,
   }));
   const entity = matchEntityDetail(pathname);
   return (
@@ -171,6 +195,7 @@ function SectionSubNav({ active }: { active: SectionId }) {
       }
       items={items}
       linkComponent={NavLink}
+      trail={trail}
     />
   );
 }
@@ -286,6 +311,11 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   const approvalSheet = useApprovalSheetParam();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
+  const [crumbSlot, setCrumbSlot] = useState<HTMLElement | null>(null);
+  const activeSubHref = activeSubNavHref(
+    SECTIONS.find((s) => s.id === active)?.tabs ?? [],
+    pathname,
+  );
   useCommandPaletteHotkey(() => setPaletteOpen((o) => !o));
 
   const currentHref = pinHrefFor(pathname, searchParams.toString());
@@ -295,70 +325,72 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   const liveCount = useLiveRuns().length;
 
   return (
-    <AppFrame
-      dock={<CooDock />}
-      fullBleed={pathname === "/org"}
-      header={
-        <AppHeader
-          homeHref="/org"
-          limits={trailing.limits}
-          linkComponent={NavLink}
-          menu={
-            <MenuButton
-              ariaLabel={tShell("menuAriaLabel")}
-              items={menuItems}
-              linkComponent={NavLink}
-              variant="bordered"
-            />
-          }
-          nav={<SectionNav active={active} />}
-          notifications={<NotificationBell />}
-          onSearchClick={() => setPaletteOpen(true)}
+    <PageBreadcrumbSlotProvider activeHref={activeSubHref} element={crumbSlot}>
+      <AppFrame
+        dock={<CooDock />}
+        fullBleed={pathname === "/org"}
+        header={
+          <AppHeader
+            homeHref="/org"
+            limits={trailing.limits}
+            linkComponent={NavLink}
+            menu={
+              <MenuButton
+                ariaLabel={tShell("menuAriaLabel")}
+                items={menuItems}
+                linkComponent={NavLink}
+                variant="bordered"
+              />
+            }
+            nav={<SectionNav active={active} />}
+            notifications={<NotificationBell />}
+            onSearchClick={() => setPaletteOpen(true)}
+          />
+        }
+        rail={
+          <ActivityDock
+            activeId={dockActive}
+            ariaLabel={tShell("dockAria")}
+            items={[
+              {
+                id: "pinned",
+                icon: "pin",
+                label: tShell("dockPinned"),
+                body: <PinnedRail currentHref={currentHref} />,
+              },
+              {
+                id: "needs-you",
+                icon: "shield",
+                label: tShell("dockNeedsYou"),
+                badge: approvals?.length,
+                body: <NeedsYouRail onOpenApproval={approvalSheet.open} />,
+              },
+              {
+                id: "tasks",
+                icon: "pulse",
+                label: tShell("dockTasks"),
+                badge: liveCount,
+                body: <TasksDockPanel />,
+              },
+            ]}
+            onActiveChange={setDockActive}
+          />
+        }
+        skipLinkLabel={t("skipToContent")}
+        subnav={<SectionSubNav active={active} trail={<div ref={setCrumbSlot} />} />}
+      >
+        {children}
+        <ApprovalSheet approvalId={approvalSheet.approvalId} onClose={approvalSheet.close} />
+        <CommandPaletteHost
+          onOpenApproval={approvalSheet.open}
+          onOpenChange={setPaletteOpen}
+          open={paletteOpen}
         />
-      }
-      rail={
-        <ActivityDock
-          activeId={dockActive}
-          ariaLabel={tShell("dockAria")}
-          items={[
-            {
-              id: "pinned",
-              icon: "pin",
-              label: tShell("dockPinned"),
-              body: <PinnedRail currentHref={currentHref} />,
-            },
-            {
-              id: "needs-you",
-              icon: "shield",
-              label: tShell("dockNeedsYou"),
-              badge: approvals?.length,
-              body: <NeedsYouRail onOpenApproval={approvalSheet.open} />,
-            },
-            {
-              id: "tasks",
-              icon: "pulse",
-              label: tShell("dockTasks"),
-              badge: liveCount,
-              body: <TasksDockPanel />,
-            },
-          ]}
-          onActiveChange={setDockActive}
-        />
-      }
-      skipLinkLabel={t("skipToContent")}
-      subnav={<SectionSubNav active={active} />}
-    >
-      {children}
-      <ApprovalSheet approvalId={approvalSheet.approvalId} onClose={approvalSheet.close} />
-      <CommandPaletteHost
-        onOpenApproval={approvalSheet.open}
-        onOpenChange={setPaletteOpen}
-        open={paletteOpen}
-      />
-      {pinDialogOpen && (
-        <PinPageDialog href={currentHref} onClose={() => setPinDialogOpen(false)} />
-      )}
-    </AppFrame>
+        {pinDialogOpen && (
+          <PinPageDialog href={currentHref} onClose={() => setPinDialogOpen(false)} />
+        )}
+      </AppFrame>
+    </PageBreadcrumbSlotProvider>
   );
 }
 
