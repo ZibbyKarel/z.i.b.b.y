@@ -13,6 +13,7 @@ const DEFAULTS: SystemConfig = {
   roadmapTickMs: 60000,
   limitResumeMax: 3,
   maxWorkingAgents: 3,
+  dockDoneTasksLimit: 20,
   goalVerifyTimeoutMs: 600000,
   goalAutoResume: false,
   chatPersona: "jarvis",

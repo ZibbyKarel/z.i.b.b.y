@@ -52,6 +52,7 @@ test("the sub-nav lists the active section's tabs and offers + New task", async 
 
 test("the NEEDS YOU rail renders on every section", async ({ page }) => {
   await page.goto("/org");
-  await expect(page.getByTestId("rail-root")).toBeVisible();
+  await page.getByRole("button", { name: /^(Potřebuje tě|Needs you)/ }).click();
+  await expect(page.getByTestId("rail-root").first()).toBeVisible();
   await expect(page.getByTestId("rail-header")).toContainText("Needs you");
 });

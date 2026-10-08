@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { AppFrame } from "./AppFrame";
 import { AppHeader } from "../AppHeader/AppHeader";
 import { ChatDock } from "../ChatDock/ChatDock";
-import { Rail } from "../Rail/Rail";
+import { ActivityDock } from "../ActivityDock/ActivityDock";
 import { SubNav } from "../SubNav/SubNav";
 import { Tab, TabList, Tabs } from "../Tabs/Tabs";
 import { Typography } from "../Typography/Typography";
@@ -34,11 +34,23 @@ const subnav = (
 );
 
 const rail = (
-  <Rail count={1}>
-    <div className="border border-line-2 bg-background p-3">
-      <Typography type="bodySm">Kevin wants to push to main.</Typography>
-    </div>
-  </Rail>
+  <ActivityDock
+    activeId="needs-you"
+    items={[
+      {
+        id: "needs-you",
+        icon: "bell",
+        label: "Needs you",
+        badge: 1,
+        body: (
+          <div className="border border-line-2 bg-background p-3">
+            <Typography type="bodySm">Kevin wants to push to main.</Typography>
+          </div>
+        ),
+      },
+    ]}
+    onActiveChange={() => {}}
+  />
 );
 
 const composer = (

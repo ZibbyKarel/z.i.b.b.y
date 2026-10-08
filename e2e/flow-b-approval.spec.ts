@@ -67,6 +67,11 @@ test("an approval is denied with a reason from the sheet, and the denial is reco
 
   // The NEEDS YOU rail, on any page.
   await page.goto("/org");
+  // The activity dock starts collapsed: open the "Needs you" panel first.
+  await page
+    .getByTestId("activity-dock-button")
+    .and(page.getByRole("button", { name: /^(Potřebuje tě|Needs you)/ }))
+    .click();
   const card = page
     .getByTestId("approval-card-root")
     .filter({ has: page.getByTestId("approval-card-name").getByText(agentName) });

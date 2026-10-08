@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import {
   APP_FRAME_MAIN_CONTENT_ID,
+  ActivityDockTestId,
   AppFrameTestId,
   AppHeaderTestId,
   MenuButtonTestId,
@@ -80,13 +81,26 @@ describe("AppShell", () => {
     expect(screen.getByTestId(PinPageDialogTestId.Name)).toBeInTheDocument();
   });
 
-  it("renders PINNED above NEEDS YOU and RUNNING, all with their empty states before data loads", () => {
+  it("collapses the dock by default; each icon opens its panel, a second click closes it", async () => {
     renderWithProviders(
       <AppShell>
         <div>obsah stránky</div>
       </AppShell>,
     );
-    expect(screen.getAllByTestId(RailTestId.Root)).toHaveLength(3);
-    expect(screen.getAllByTestId(RailTestId.Empty)).toHaveLength(3);
+    expect(screen.queryByTestId(ActivityDockTestId.Body)).toBeNull();
+    const buttons = screen.getAllByTestId(ActivityDockTestId.Button);
+    expect(buttons).toHaveLength(3);
+    // No data in this harness: no badges.
+    expect(screen.queryAllByTestId(ActivityDockTestId.Badge)).toHaveLength(0);
+
+    await userEvent.click(buttons[0]!);
+    expect(screen.getAllByTestId(RailTestId.Root)).toHaveLength(1);
+    await userEvent.click(buttons[1]!);
+    expect(screen.getAllByTestId(RailTestId.Root)).toHaveLength(1);
+    expect(screen.getAllByTestId(RailTestId.Empty)).toHaveLength(1);
+    await userEvent.click(buttons[2]!);
+    expect(screen.getAllByTestId(RailTestId.Root)).toHaveLength(2);
+    await userEvent.click(buttons[2]!);
+    expect(screen.queryByTestId(ActivityDockTestId.Body)).toBeNull();
   });
 });

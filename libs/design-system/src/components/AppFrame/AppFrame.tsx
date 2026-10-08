@@ -1,17 +1,13 @@
 "use client";
 import type { ReactNode, Ref } from "react";
-import { useId, useState } from "react";
 import { LAYOUT } from "../../tokens";
 import { cn } from "../../utils/cn";
-import { focusRingInset } from "../../utils/focus";
 
 export enum AppFrameTestId {
   Root = "app-frame-root",
   SkipLink = "app-frame-skip-link",
   Header = "app-frame-header",
   Body = "app-frame-body",
-  RailToggle = "app-frame-rail-toggle",
-  RailBackdrop = "app-frame-rail-backdrop",
   Rail = "app-frame-rail",
   SubNav = "app-frame-subnav",
   Main = "app-frame-main",
@@ -33,8 +29,8 @@ export interface AppFrameProps {
   /** The section `SubNav` strip, rendered above the page content, right of
    *  the rail. */
   subnav?: ReactNode;
-  /** The `Rail` ("NEEDS YOU"). Below 1024px it collapses into a toggleable
-   *  drawer instead of a static column. */
+  /** The left rail (the `ActivityDock`), rendered inline in a content-sized
+   *  column at every width — the child decides its own width. */
   rail?: ReactNode;
   /** The `ChatDock`, floated bottom-right over the content. */
   dock?: ReactNode;
@@ -44,18 +40,15 @@ export interface AppFrameProps {
    *  stops `<main>` from scrolling. Default `false` leaves every other page unchanged. */
   fullBleed?: boolean;
   skipLinkLabel?: string;
-  /** Accessible label for the mobile rail-drawer toggle (also its visible
-   *  text — DS.md ZA-06 calls for a labelled button, not an icon-only one). */
-  railToggleLabel?: string;
   ref?: Ref<HTMLDivElement>;
 }
 
 /**
  * The ZibbyCorp app shell — DS.md §5's grid: a 56px header row over a
- * `280px | 1fr` body (rail + main), content capped at `LAYOUT.docMaxWidth`
- * with the 24px grid background. Below 1024px the rail becomes a slide-in
- * drawer behind a labelled toggle button; at 390px nothing overflows
- * horizontally. A skip link (jumping straight to the `<main>` landmark) is
+ * `auto | 1fr` body (rail + main) — the rail column is as wide as its child
+ * (the `ActivityDock`: 50px bar, plus its body when open) — content capped at
+ * `LAYOUT.docMaxWidth` with the 24px grid background. At 390px nothing
+ * overflows horizontally. A skip link (jumping straight to the `<main>` landmark) is
  * built in — this replaces the app's standalone `SkipLink` mount once wired
  * (ZA-07).
  */
@@ -67,12 +60,8 @@ export function AppFrame({
   children,
   fullBleed = false,
   skipLinkLabel = "Skip to main content",
-  railToggleLabel = "Needs you",
   ref,
 }: AppFrameProps) {
-  const railId = useId();
-  const [railOpen, setRailOpen] = useState(false);
-
   return (
     <div
       className="grid h-full w-full overflow-x-hidden bg-background"
@@ -106,7 +95,7 @@ export function AppFrame({
       </div>
 
       <div
-        className="grid min-h-0 grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)]"
+        className={cn("grid min-h-0", rail ? "grid-cols-[auto_minmax(0,1fr)]" : "grid-cols-1")}
         data-testid={AppFrameTestId.Body}
         // Without an explicit row track, an auto-sized grid row grows to the
         // rail's/main's full content height (CSS grid's auto-row sizing uses
@@ -116,61 +105,22 @@ export function AppFrame({
         style={{ gridTemplateRows: "minmax(0,1fr)" }}
       >
         {rail && (
-          <>
-            {railOpen && (
-              <div
-                aria-hidden="true"
-                className="fixed inset-0 z-30 bg-[var(--color-overlay)] lg:hidden"
-                data-testid={AppFrameTestId.RailBackdrop}
-                onClick={() => setRailOpen(false)}
-              />
-            )}
-            <div
-              className={cn(
-                "fixed bottom-0 left-0 z-40 w-[280px] -translate-x-full border-r border-line",
-                "bg-panel transition-transform duration-200",
-                "lg:static lg:z-auto lg:h-full lg:w-auto lg:translate-x-0",
-                railOpen && "translate-x-0",
-              )}
-              data-testid={AppFrameTestId.Rail}
-              id={railId}
-              style={{ top: LAYOUT.headerHeight }}
-            >
-              {rail}
-            </div>
-          </>
+          <div className="relative h-full min-h-0" data-testid={AppFrameTestId.Rail}>
+            {rail}
+          </div>
         )}
 
         <div
           className="relative grid min-h-0 min-w-0"
           style={{ gridTemplateRows: "min-content minmax(0,1fr)" }}
         >
-          {(subnav || rail) && (
-            <div className="flex min-w-0 items-stretch" style={{ height: LAYOUT.subNavHeight }}>
-              {/* Below `lg` the rail is a drawer; its toggle leads the subnav row
-                  (in flow, so it never covers the subnav tabs or the COO dock). */}
-              {rail && (
-                <button
-                  aria-controls={railId}
-                  aria-expanded={railOpen}
-                  aria-label={railToggleLabel}
-                  className={cn(
-                    "shrink-0 border-r border-b border-line bg-panel px-2.5",
-                    "font-mono text-[10px] uppercase tracking-wider text-ink-2 lg:hidden",
-                    focusRingInset,
-                  )}
-                  data-testid={AppFrameTestId.RailToggle}
-                  onClick={() => setRailOpen((v) => !v)}
-                  type="button"
-                >
-                  {railToggleLabel}
-                </button>
-              )}
-              {subnav && (
-                <div className="min-w-0 flex-1 overflow-x-auto" data-testid={AppFrameTestId.SubNav}>
-                  {subnav}
-                </div>
-              )}
+          {subnav && (
+            <div
+              className="min-w-0 overflow-x-auto"
+              data-testid={AppFrameTestId.SubNav}
+              style={{ height: LAYOUT.subNavHeight }}
+            >
+              {subnav}
             </div>
           )}
 

@@ -36,6 +36,7 @@ describe("SystemConfigStore", () => {
     expect(store.current().goalAutoResume).toBe(true);
     // Unspecified keys fall back to schema defaults.
     expect(store.current().limitResumeMax).toBe(3);
+    expect(store.current().dockDoneTasksLimit).toBe(20);
   });
 
   it("migrates a legacy maxConcurrentRuns into the maxWorkingAgents fuse", async () => {

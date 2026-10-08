@@ -542,6 +542,9 @@ export type { AppFrameProps } from "./components/AppFrame/AppFrame";
 export { AppHeader, AppHeaderTestId } from "./components/AppHeader/AppHeader";
 export type { AppHeaderProps } from "./components/AppHeader/AppHeader";
 
+export { ActivityDock, ActivityDockTestId } from "./components/ActivityDock/ActivityDock";
+export type { ActivityDockItem, ActivityDockProps } from "./components/ActivityDock/ActivityDock";
+
 export { Rail, RailTestId } from "./components/Rail/Rail";
 export type { RailProps } from "./components/Rail/Rail";
 

@@ -49,6 +49,10 @@ system-config section — link there rather than duplicating the table here.
      (`null` -> the default `3`). The fuse reads it live, so a save (or a raised cap)
      admits waiters immediately. Headcount, not this number, is the real throttle — see
      [tasks.md](./tasks.md) and [employees.md](./employees.md).
+   - `dockDoneTasksLimit` (1–100, default `20`) is UI-only: how many of the
+     newest archived runs the web shell's activity dock lists under "Hotové"
+     (read via `GET /tasks/runs/archive?limit=N`). The API stores it, nothing
+     server-side reads it; a stored file without the key reads back as `20`.
    - `roadmapTickMs` (Phase 125h) is `RoadmapTickService`'s heartbeat —
      `60_000` by default, `0` disables, re-arms live via `onChange()` like the
      other `*TickMs` knobs. Each tick re-syncs every project whose roadmap

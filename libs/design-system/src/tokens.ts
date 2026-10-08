@@ -69,6 +69,7 @@ export const LAYOUT = {
   headerHeight: 56,
   subNavHeight: 44,
   railWidthLeft: 280,
+  dockBarWidth: 50,
   railWidthRight: 400,
   docMaxWidth: 1320,
   gridSize: 24,

@@ -79,6 +79,11 @@ export const SystemConfigSchema = z
      */
     roadmapTickMs: z.number().int().min(0).default(60_000),
     /**
+     * Activity Dock: how many finished (done/failed) tasks the dock's "Hotové" list
+     * shows. Editable from `/settings` (runtime section); default 20.
+     */
+    dockDoneTasksLimit: z.number().int().min(1).max(100).default(20),
+    /**
      * O-21: the ZibbyCorp header's "CEO" identity and brand name. Both additive and
      * optional (no default here — an absent value reads as `undefined`, not a
      * schema-picked string) because the real default is presentation-layer: the

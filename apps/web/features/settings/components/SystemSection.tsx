@@ -25,6 +25,7 @@ export enum SystemSectionTestId {
   RoadmapTick = "system-roadmap-tick",
   LimitResumeMax = "system-limit-resume-max",
   MaxWorkingAgents = "system-max-working-agents",
+  DockDoneTasksLimit = "system-dock-done-tasks-limit",
   GoalVerifyTimeout = "system-goal-verify-timeout",
   GoalAutoResume = "system-goal-auto-resume",
   Save = "system-save",
@@ -59,6 +60,9 @@ function SystemEditor({ config }: { config: SystemConfig }) {
   const [roadmapTickMs, setRoadmapTickMs] = useState<number | null>(config.roadmapTickMs);
   const [limitResumeMax, setLimitResumeMax] = useState<number | null>(config.limitResumeMax);
   const [maxWorkingAgents, setMaxWorkingAgents] = useState<number | null>(config.maxWorkingAgents);
+  const [dockDoneTasksLimit, setDockDoneTasksLimit] = useState<number | null>(
+    config.dockDoneTasksLimit,
+  );
   const [goalVerifyTimeoutMs, setGoalVerifyTimeoutMs] = useState<number | null>(
     config.goalVerifyTimeoutMs,
   );
@@ -80,6 +84,7 @@ function SystemEditor({ config }: { config: SystemConfig }) {
         roadmapTickMs: tick(roadmapTickMs),
         limitResumeMax: positive(limitResumeMax, 1),
         maxWorkingAgents: positive(maxWorkingAgents, 1),
+        dockDoneTasksLimit: Math.min(100, positive(dockDoneTasksLimit, 1)),
         goalVerifyTimeoutMs: positive(goalVerifyTimeoutMs, 1),
         goalAutoResume,
         // Not edited here — passed through so a runtime save can't reset the operator's
@@ -161,6 +166,15 @@ function SystemEditor({ config }: { config: SystemConfig }) {
           min={1}
           onValueChange={setMaxWorkingAgents}
           value={maxWorkingAgents}
+        />
+        <NumberField
+          data-testid={SystemSectionTestId.DockDoneTasksLimit}
+          hint={t("runtime.dockDoneTasksLimitHint")}
+          label={t("runtime.dockDoneTasksLimit")}
+          max={100}
+          min={1}
+          onValueChange={setDockDoneTasksLimit}
+          value={dockDoneTasksLimit}
         />
         <DurationField
           data-testid={SystemSectionTestId.GoalVerifyTimeout}

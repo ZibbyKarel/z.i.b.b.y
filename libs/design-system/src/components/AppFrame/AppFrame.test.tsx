@@ -1,5 +1,4 @@
 import { screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { render } from "../../utils/testRender";
 import { APP_FRAME_MAIN_CONTENT_ID, AppFrame, AppFrameTestId } from "./AppFrame";
@@ -25,7 +24,6 @@ describe("AppFrame", () => {
     render(<AppFrame header={<div>Header</div>}>Content</AppFrame>);
     expect(screen.queryByTestId(AppFrameTestId.SubNav)).toBeNull();
     expect(screen.queryByTestId(AppFrameTestId.Rail)).toBeNull();
-    expect(screen.queryByTestId(AppFrameTestId.RailToggle)).toBeNull();
     expect(screen.queryByTestId(AppFrameTestId.Dock)).toBeNull();
   });
 
@@ -79,33 +77,17 @@ describe("AppFrame", () => {
     expect(screen.getByTestId(AppFrameTestId.SkipLink)).toHaveTextContent("Přeskočit na obsah");
   });
 
-  it("renders a labelled mobile rail toggle that opens and closes the drawer", async () => {
-    const user = userEvent.setup();
-    render(
-      <AppFrame header={<div>Header</div>} rail={<div>Rail content</div>}>
+  it("sizes the body grid to a content-sized rail column only when a rail is present", () => {
+    const { rerender } = render(
+      <AppFrame header={<div>Header</div>} rail={<div>Rail</div>}>
         Content
       </AppFrame>,
     );
-    const toggle = screen.getByTestId(AppFrameTestId.RailToggle);
-    expect(toggle).toHaveAccessibleName("Needs you");
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByTestId(AppFrameTestId.RailBackdrop)).toBeNull();
-
-    await user.click(toggle);
-    expect(toggle).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByTestId(AppFrameTestId.RailBackdrop)).toBeInTheDocument();
-
-    await user.click(screen.getByTestId(AppFrameTestId.RailBackdrop));
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
-  });
-
-  it("uses a custom railToggleLabel", () => {
-    render(
-      <AppFrame header={<div>Header</div>} rail={<div>Rail</div>} railToggleLabel="Approvals">
-        Content
-      </AppFrame>,
+    expect(screen.getByTestId(AppFrameTestId.Body).className).toContain(
+      "grid-cols-[auto_minmax(0,1fr)]",
     );
-    expect(screen.getByTestId(AppFrameTestId.RailToggle)).toHaveAccessibleName("Approvals");
+    rerender(<AppFrame header={<div>Header</div>}>Content</AppFrame>);
+    expect(screen.getByTestId(AppFrameTestId.Body).className).toContain("grid-cols-1");
   });
 
   it("pins its single column to minmax(0,1fr) so a wide header can never widen the frame", () => {

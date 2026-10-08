@@ -6,11 +6,11 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
+  ActivityDock,
   AppFrame,
   AppHeader,
   ApprovalCard,
   Button,
-  Container,
   LimitBar,
   MenuButton,
   type MenuButtonEntry,
@@ -32,7 +32,7 @@ import {
   useRejectMutation,
 } from "../../../features/approvals";
 import { ApprovalSheet } from "../../../features/approvals/components/ApprovalSheet";
-import { RunningRail } from "../../../features/runs/components/RunningRail";
+import { TasksDockPanel, useLiveRuns } from "../../../features/runs/components/TasksDockPanel";
 import { HIGH_RISK_TYPES, formatWaited } from "../../../features/approvals/approval";
 import { useLimitsQuery } from "../../../features/limits";
 import { NotificationBell } from "../../../features/notifications";
@@ -44,6 +44,7 @@ import {
   pinHrefFor,
   usePagePins,
 } from "../../../features/pins";
+import { useDockState } from "./useDockState";
 import { SECTIONS, type SectionId, sectionForPath } from "../../../state/config";
 
 /** Top nav sections, minus `system` (spec step 1) — its own route group keeps
@@ -289,6 +290,9 @@ function AppShellChrome({ children }: { children: ReactNode }) {
 
   const currentHref = pinHrefFor(pathname, searchParams.toString());
   const menuItems = useHeaderMenu(currentHref, () => setPinDialogOpen(true));
+  const [dockActive, setDockActive] = useDockState();
+  const { data: approvals } = useApprovalsQuery();
+  const liveCount = useLiveRuns().length;
 
   return (
     <AppFrame
@@ -313,23 +317,34 @@ function AppShellChrome({ children }: { children: ReactNode }) {
         />
       }
       rail={
-        <Stack direction="col" style={{ height: "100%", minHeight: 0 }}>
-          <Container shrink={false}>
-            <PinnedRail currentHref={currentHref} />
-          </Container>
-          <Container grow minHeight="0">
-            <Stack direction="col" style={{ height: "100%", minHeight: 0 }}>
-              <Container height="50%" minHeight="0">
-                <NeedsYouRail onOpenApproval={approvalSheet.open} />
-              </Container>
-              <Container height="50%" minHeight="0">
-                <RunningRail />
-              </Container>
-            </Stack>
-          </Container>
-        </Stack>
+        <ActivityDock
+          activeId={dockActive}
+          ariaLabel={tShell("dockAria")}
+          items={[
+            {
+              id: "pinned",
+              icon: "pin",
+              label: tShell("dockPinned"),
+              body: <PinnedRail currentHref={currentHref} />,
+            },
+            {
+              id: "needs-you",
+              icon: "shield",
+              label: tShell("dockNeedsYou"),
+              badge: approvals?.length,
+              body: <NeedsYouRail onOpenApproval={approvalSheet.open} />,
+            },
+            {
+              id: "tasks",
+              icon: "pulse",
+              label: tShell("dockTasks"),
+              badge: liveCount,
+              body: <TasksDockPanel />,
+            },
+          ]}
+          onActiveChange={setDockActive}
+        />
       }
-      railToggleLabel={tShell("needsYouToggle")}
       skipLinkLabel={t("skipToContent")}
       subnav={<SectionSubNav active={active} />}
     >

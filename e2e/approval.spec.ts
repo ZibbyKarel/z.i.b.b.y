@@ -14,6 +14,12 @@ import { expect, test } from "@playwright/test";
 test("confirm a pending approval from the NEEDS YOU rail", async ({ page }) => {
   await page.goto("/org");
 
+  // The activity dock starts collapsed: open the "Needs you" panel first.
+  await page
+    .getByTestId("activity-dock-button")
+    .and(page.getByRole("button", { name: /^(Potřebuje tě|Needs you)/ }))
+    .click();
+
   // The seeded gated run is the only pending approval owned by "Gated Agent"
   // (`e2e/global-setup.ts`'s agent id is "gated-agent", its display `name` —
   // the approval's `skill` field, `ApprovalCard`'s `agentName` — is "Gated
