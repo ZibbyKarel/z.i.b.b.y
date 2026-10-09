@@ -23,7 +23,7 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { CatalogProvider } from "../../../state/store";
-import { NewTaskProvider } from "../../../features/tasks";
+import { NEW_TASK_PAGE_HREF, NewTaskProvider, useNewTaskPageHotkey } from "../../../features/tasks";
 import { ChatProvider, CooDock } from "../../../features/chat";
 import { CommandPaletteHost, useCommandPaletteHotkey } from "../../../features/command-palette";
 import {
@@ -48,6 +48,10 @@ import { PageBreadcrumbSlotProvider } from "../PageBreadcrumb";
 import { ThemeToggle } from "../ThemeToggle/ThemeToggle";
 import { useDockState } from "./useDockState";
 import { SECTIONS, type SectionId, type SubTabConfig, sectionForPath } from "../../../state/config";
+
+export enum AppShellTestId {
+  NewTask = "app-shell-new-task",
+}
 
 /** Top nav sections, minus `system` (spec step 1) — its own route group keeps
  *  working via `sectionForPath`/`SECTIONS` (the sub-nav still shows its tabs);
@@ -193,17 +197,19 @@ function SectionSubNav({
             />
           )}
           {/* ZB-04b: "+ NEW TASK" opens the dedicated `/work/tasks/new` page
-           *  (the classify-driven dialog stays reachable via the `N` shortcut
-           *  and the other call sites that seed it with an initial
-           *  target/context). */}
-          <Button
-            icon="plus"
-            intent="primary"
-            onClick={() => router.push("/work/tasks/new" as Route)}
-            size="sm"
-          >
-            {tShell("newTask")}
-          </Button>
+           *  (Option+N does the same from anywhere; the classify-driven dialog
+           *  stays reachable via the `N` shortcut). Hidden on that page itself. */}
+          {pathname !== NEW_TASK_PAGE_HREF && (
+            <Button
+              data-testid={AppShellTestId.NewTask}
+              icon="plus"
+              intent="primary"
+              onClick={() => router.push(NEW_TASK_PAGE_HREF as Route)}
+              size="sm"
+            >
+              {tShell("newTask")}
+            </Button>
+          )}
         </>
       }
       items={items}
@@ -332,6 +338,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   // A first crumb equal to the tab's href or its prefix just repeats the tab.
   const activeSubHrefs = activeTab ? [activeTab.tab.href, activeTab.prefix] : [];
   useCommandPaletteHotkey(() => setPaletteOpen((o) => !o));
+  useNewTaskPageHotkey();
 
   const currentHref = pinHrefFor(pathname, searchParams.toString());
   const menuItems = useHeaderMenu(currentHref, () => setPinDialogOpen(true));

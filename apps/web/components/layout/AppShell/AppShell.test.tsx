@@ -12,7 +12,7 @@ import {
 } from "@zibby/design-system";
 import { renderWithProviders, screen } from "../../../test/render";
 import { PinPageDialogTestId } from "../../../features/pins";
-import { AppShell } from "./AppShell";
+import { AppShell, AppShellTestId } from "./AppShell";
 
 let mockPath = "/chat";
 vi.mock("next/navigation", () => ({
@@ -161,6 +161,27 @@ describe("AppShell", () => {
         "aria-current",
         "page",
       );
+    } finally {
+      mockPath = "/chat";
+    }
+  });
+
+  it("shows the sub-nav New task button except on the new-task page itself", () => {
+    const { unmount } = renderWithProviders(
+      <AppShell>
+        <div />
+      </AppShell>,
+    );
+    expect(screen.getByTestId(AppShellTestId.NewTask)).toHaveAccessibleName("Nový úkol");
+    unmount();
+    mockPath = "/work/tasks/new";
+    try {
+      renderWithProviders(
+        <AppShell>
+          <div />
+        </AppShell>,
+      );
+      expect(screen.queryByTestId(AppShellTestId.NewTask)).toBeNull();
     } finally {
       mockPath = "/chat";
     }
