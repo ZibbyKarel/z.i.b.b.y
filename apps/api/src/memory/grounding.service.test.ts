@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import type { ModuleRef } from "@nestjs/core";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   GroundingService,
@@ -687,5 +688,98 @@ describe("review rules grounding", () => {
     expect(block).toContain("North Star");
     expect(block).not.toContain(GLOBAL_RULES_BODY);
     expect(block).not.toContain("Primitivy ber z libs/design-system.");
+  });
+});
+
+describe("GroundingService — team knowledge base", () => {
+  const kbDirs: string[] = [];
+  afterEach(async () => {
+    await Promise.all(kbDirs.splice(0).map((d) => fs.rm(d, { recursive: true, force: true })));
+  });
+
+  async function setup(
+    files: Record<string, string>,
+    opts: { hasKb?: boolean; vaultFiles?: Record<string, string> } = {},
+  ): Promise<{ grounding: GroundingService; kb: string }> {
+    const kb = await fs.mkdtemp(path.join(os.tmpdir(), "teamkb-"));
+    kbDirs.push(kb);
+    for (const [rel, text] of Object.entries(files)) {
+      await fs.mkdir(path.dirname(path.join(kb, rel)), { recursive: true });
+      await fs.writeFile(path.join(kb, rel), text);
+    }
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "grounding-"));
+    kbDirs.push(dir);
+    for (const [rel, text] of Object.entries(opts.vaultFiles ?? {})) {
+      await fs.mkdir(path.dirname(path.join(dir, rel)), { recursive: true });
+      await fs.writeFile(path.join(dir, rel), text);
+    }
+    const vault = new VaultService(dir);
+    await vault.onModuleInit();
+    const ref = {
+      get: () => ({
+        knowledgeBaseFor: async () =>
+          opts.hasKb === false ? null : { kind: "vault", path: kb, readOnly: true },
+      }),
+    } as unknown as ModuleRef;
+    return { grounding: new GroundingService(vault, ref), kb };
+  }
+
+  it("grounds team-context + INDEX, enveloped, with the tool hint", async () => {
+    const { grounding } = await setup({
+      "team-context.md": "# Team\nWe ship the portal.",
+      "wiki/INDEX.md": "# Index\n- [[portal]]",
+    });
+    const out = await grounding.compose({ task: "x", projectId: "p1" });
+    expect(out).toContain("### Team knowledge base (");
+    expect(out).toContain("We ship the portal.");
+    expect(out).toContain("untrusted inbound channel data");
+    expect(out).toContain("search_team_kb");
+  });
+
+  it("omits missing, empty and heading-only files", async () => {
+    const { grounding } = await setup({ "team-context.md": "# Team\n\n", "wiki/INDEX.md": "" });
+    expect(await grounding.compose({ task: "x", projectId: "p1" })).not.toContain("Team knowledge");
+  });
+
+  it("is skipped for personal runs and projects without a KB", async () => {
+    const { grounding } = await setup({ "team-context.md": "real content" });
+    expect(
+      await grounding.compose({ task: "x", projectId: "p1", domain: "personal" }),
+    ).not.toContain("real content");
+    const none = await setup({ "team-context.md": "real content" }, { hasKb: false });
+    expect(await none.grounding.compose({ task: "x", projectId: "p1" })).not.toContain(
+      "real content",
+    );
+  });
+
+  it("refuses symlinked files and symlinked directories", async () => {
+    const { grounding, kb } = await setup({});
+    const outside = await fs.mkdtemp(path.join(os.tmpdir(), "outside-"));
+    kbDirs.push(outside);
+    await fs.writeFile(path.join(outside, "secret.md"), "SECRET");
+    await fs.mkdir(path.join(outside, "wiki"));
+    await fs.writeFile(path.join(outside, "wiki", "INDEX.md"), "SECRET");
+    await fs.symlink(path.join(outside, "secret.md"), path.join(kb, "team-context.md"));
+    await fs.symlink(path.join(outside, "wiki"), path.join(kb, "wiki"));
+    expect(await grounding.compose({ task: "x", projectId: "p1" })).not.toContain("SECRET");
+  });
+
+  it("drops the KB section whole (never a cut-open envelope) when the block budget is spent", async () => {
+    const big = "x".repeat(1500);
+    const { grounding } = await setup(
+      { "team-context.md": `# Team\nKB-MARKER ${big}`, "wiki/INDEX.md": `# Index\n${big}` },
+      {
+        vaultFiles: {
+          "north-star.md": `---\ntitle: North Star\n---\n${big}`,
+          "knowledge/self-knowledge.md": `---\ntitle: Self\n---\n${big}`,
+          "review-rules.md": `---\ntitle: Rules\n---\n${big}`,
+          "projects/p1.md": `---\ntitle: P1\ntype: project\n---\n${big}`,
+        },
+      },
+    );
+    const out = await grounding.compose({ task: "x", projectId: "p1" });
+    expect(out).toContain("North Star");
+    expect(out).not.toContain("KB-MARKER");
+    expect((out.match(/<<<zibby-data-[0-9a-f]+>>>/g) ?? []).length % 2).toBe(0);
   });
 });

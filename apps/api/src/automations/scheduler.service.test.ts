@@ -161,6 +161,7 @@ function makeService(opts: {
         registered = fn;
       },
     } as never,
+    { run: vi.fn(async () => ({ brokenLinks: 0, orphans: 0, stale: 0 })) } as never,
   );
   return { service, storage, registered: () => registered };
 }

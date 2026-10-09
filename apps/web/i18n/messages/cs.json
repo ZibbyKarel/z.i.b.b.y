@@ -51,6 +51,7 @@
       },
       "knowledge": {
         "vault": "Trezor",
+        "graph": "Graf",
         "distill": "Destilace"
       },
       "ledger": {
@@ -110,6 +111,16 @@
     }
   },
   "knowledge": {
+    "graph": {
+      "title": "Graf znalostí",
+      "sourceLabel": "Zdroj",
+      "sourceVault": "ZibbyCorp",
+      "graphLabel": "Graf znalostí",
+      "emptyTitle": "Není co zobrazit",
+      "emptyDescription": "Tento zdroj zatím nemá žádné propojené poznámky.",
+      "path": "Cesta",
+      "clear": "Zavřít"
+    },
     "vault": {
       "title": "Trezor",
       "shelfGeneral": "Obecné",
@@ -1686,6 +1697,7 @@
     "targetGapDetect": "Detekce mezer",
     "targetAgentFactory": "Továrna agentů",
     "targetSelfKnowledge": "Obnova sebeznalosti",
+    "targetVaultLint": "Lint vaultu",
     "targetSentinelScan": "Bezpečnostní hlídka",
     "targetLoomAudit": "Audit kvality",
     "targetPostMergeWatch": "Hlídka po sloučení",

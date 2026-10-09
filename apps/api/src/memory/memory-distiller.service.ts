@@ -17,7 +17,7 @@ import { WorkflowsStorageService } from "../workflows/workflows.storage.service"
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ChatTranscriptStore } from "../chat/chat-transcript.store";
 import { fileExists, writeFileAtomic } from "../shared/file-storage/file-utils";
-import { ClaudeCliDistiller, type Learning, type RunDigest } from "./claude-cli-distiller";
+import { ClaudeCliDistiller, type Learning, type RunDigest, capTags } from "./claude-cli-distiller";
 import { MemoryImportService } from "./memory-import.service";
 import { departmentShelfId } from "./department-shelf";
 import {
@@ -28,11 +28,11 @@ import {
 } from "./vault.service";
 
 /**
- * Union of unique tags across a batch of learnings (Fáze 3), sorted for a stable
+ * Union of unique tags across a batch of learnings (Fáze 3), capped to 8 (first seen) and sorted for a stable
  * digest note. Exported for unit testing.
  */
 export function mergeLearningTags(learnings: Learning[]): string[] {
-  return [...new Set(learnings.flatMap((l) => l.tags))].sort();
+  return capTags(learnings.flatMap((l) => l.tags)).sort();
 }
 
 /**

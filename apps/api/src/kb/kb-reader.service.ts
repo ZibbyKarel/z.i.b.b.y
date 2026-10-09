@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Injectable } from "@nestjs/common";
-import type { KnowledgeBaseSource } from "@zibby/contracts";
+import type { KnowledgeBaseSource, MemoryGraph } from "@zibby/contracts";
 import matter from "gray-matter";
 import { tokenize } from "../tasks/keyword-scorer";
 
@@ -29,6 +29,8 @@ export interface KbNote {
 export const KB_SNIPPET_MAX_CHARS = 500;
 /** Note-body budget (chars) for `read()` — one huge note can't flood a run. */
 export const KB_BODY_MAX_CHARS = 4000;
+/** Label budget (chars) for a graph node title. */
+export const KB_GRAPH_LABEL_MAX_CHARS = 120;
 /** Appended to a body truncated at {@link KB_BODY_MAX_CHARS} — a visible marker. */
 const TRUNCATION_MARKER = "\n\n…[truncated]";
 
@@ -154,6 +156,40 @@ export class KbReaderService {
     const found = notes.find((n) => n.id === noteId && !n.isVtt);
     if (!found) return null;
     return { path: found.relPath, title: found.title, body: this.capBody(found.body) };
+  }
+
+  /**
+   * The wiki-link graph of the KB's markdown notes (`.vtt` transcripts are not
+   * nodes). Node id = repo-relative path (unique), label = title capped at
+   * {@link KB_GRAPH_LABEL_MAX_CHARS}. A `[[target]]` resolves by basename id or
+   * by extensionless relative path; unresolved/self links are dropped.
+   * Same containment/symlink chokepoint as every other read here.
+   */
+  async graph(source: KnowledgeBaseSource): Promise<MemoryGraph> {
+    // Templates (`_templates/`) are scaffolding, not knowledge — keep them off the graph.
+    const notes = (await this.scan(source)).filter(
+      (n) => !n.isVtt && !n.relPath.startsWith("_templates/"),
+    );
+    const byTarget = new Map<string, string>();
+    for (const n of notes) {
+      byTarget.set(n.relPath.replace(/\.md$/, ""), n.relPath);
+      if (!byTarget.has(n.id)) byTarget.set(n.id, n.relPath);
+    }
+    const edges: MemoryGraph["edges"] = [];
+    for (const n of notes) {
+      for (const link of n.links) {
+        const to = byTarget.get(link);
+        if (to && to !== n.relPath) edges.push({ from: n.relPath, to });
+      }
+    }
+    return {
+      nodes: notes.map((n) => ({
+        id: n.relPath,
+        label: n.title.slice(0, KB_GRAPH_LABEL_MAX_CHARS),
+        tier: "knowledge" as const,
+      })),
+      edges,
+    };
   }
 
   /** Score one note against tokenized query `terms`. Higher is more relevant. */

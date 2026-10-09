@@ -93,6 +93,7 @@ export const SECTIONS = [
     href: "/knowledge/vault",
     tabs: [
       { id: "vault", href: "/knowledge/vault" },
+      { id: "graph", href: "/knowledge/graph" },
       { id: "distill", href: "/knowledge/distill" },
     ],
   },

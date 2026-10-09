@@ -5,6 +5,7 @@ import { BriefingModule } from "../briefing/briefing.module";
 import { GapsModule } from "../gaps/gaps.module";
 import { ArchModule } from "../arch/arch.module";
 import { ReleaseModule } from "../release/release.module";
+import { MemoryModule } from "../memory/memory.module";
 import { MemoryDistillerModule } from "../memory/memory-distiller.module";
 import { PatternsModule } from "../patterns/patterns.module";
 import { WorkflowsModule } from "../workflows/workflows.module";
@@ -59,6 +60,7 @@ export function resolveAutomationsDir(): string {
     ArchModule,
     ReleaseModule,
     MemoryDistillerModule,
+    MemoryModule,
     PatternsModule,
     WorkflowsModule,
     ReviewLearningModule,

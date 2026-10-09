@@ -334,8 +334,8 @@ describe("F8: domain (personal-note isolation)", () => {
 });
 
 describe("NoteTypeSchema", () => {
-  it("accepts exactly the four durable-note kinds", () => {
-    for (const type of ["decision", "preference", "fact", "pattern"]) {
+  it("accepts exactly the durable-note kinds", () => {
+    for (const type of ["decision", "preference", "fact", "pattern", "vision", "project"]) {
       expect(NoteTypeSchema.safeParse(type).success).toBe(true);
     }
     expect(NoteTypeSchema.safeParse("todo").success).toBe(false);

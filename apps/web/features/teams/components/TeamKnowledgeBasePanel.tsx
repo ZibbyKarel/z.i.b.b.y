@@ -26,7 +26,8 @@ type KnowledgeBaseEditValues = {
 
 /**
  * The team's read-only knowledge-base editor (Stage A of the team-knowledge-base
- * plan — nothing reads the KB yet, this only lets the operator attach one). The
+ * plan — this lets the operator attach one; it is read by the `zibby-kb` MCP
+ * server (apps/api/src/kb/) and is being added to run grounding). The
  * union has one member today (`kind: "vault"`), so this panel offers only that
  * shape; a later `kind: "confluence"` member must not disturb this form.
  *

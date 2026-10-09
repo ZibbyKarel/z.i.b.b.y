@@ -1,0 +1,8 @@
+{
+  "id": "vault-lint",
+  "name": "Lint vaultu",
+  "trigger": { "type": "cron", "expr": "30 3 * * *" },
+  "target": { "type": "vault-lint" },
+  "enabled": true,
+  "system": true
+}

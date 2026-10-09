@@ -76,6 +76,9 @@ export const TargetSchema = z.discriminatedUnion("type", [
   // channels) — not a claude run. The scheduler dispatches it straight to
   // `SelfKnowledgeService`, same non-runner posture as `briefing`/`memory-distill`.
   z.object({ type: z.literal("self-knowledge") }),
+  // Vault lint: nightly report-only pass over the vault (broken links, orphans,
+  // stale notes, tag bloat) written to `knowledge/vault-lint.md`. Deterministic.
+  z.object({ type: z.literal("vault-lint") }),
   // Agent Factory (Phase 4b): scan recurring `orchestrator-fallback` activity for a
   // missing specialist, draft a deterministic candidate agent `.md`, and park it
   // behind an `agent-proposal` approval. Deterministic; proposes ≠ activates (only

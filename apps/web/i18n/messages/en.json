@@ -51,6 +51,7 @@
       },
       "knowledge": {
         "vault": "Vault",
+        "graph": "Graph",
         "distill": "Distill"
       },
       "ledger": {
@@ -110,6 +111,16 @@
     }
   },
   "knowledge": {
+    "graph": {
+      "title": "Knowledge graph",
+      "sourceLabel": "Source",
+      "sourceVault": "ZibbyCorp",
+      "graphLabel": "Knowledge graph",
+      "emptyTitle": "Nothing to show",
+      "emptyDescription": "This source has no linked notes yet.",
+      "path": "Path",
+      "clear": "Close"
+    },
     "vault": {
       "title": "Vault",
       "shelfGeneral": "General",
@@ -1686,6 +1697,7 @@
     "targetGapDetect": "Gap detection",
     "targetAgentFactory": "Agent factory",
     "targetSelfKnowledge": "Self-knowledge refresh",
+    "targetVaultLint": "Vault lint",
     "targetSentinelScan": "Security watch",
     "targetLoomAudit": "Quality audit",
     "targetPostMergeWatch": "Post-merge watch",

@@ -24,6 +24,14 @@ export interface RunDigest {
   excerpt: string;
 }
 
+/** Max tags kept on a distilled note — the model sometimes emits ~50. */
+export const MAX_TAGS = 8;
+
+/** Dedupe, keep the first {@link MAX_TAGS}. */
+export function capTags(tags: string[]): string[] {
+  return [...new Set(tags)].slice(0, MAX_TAGS);
+}
+
 /**
  * One durable learning the model extracted from the batch. `type`/`tags` (Fáze 3
  * typed memory) are Zod-validated with a fallback (`.catch()`) rather than
@@ -41,7 +49,7 @@ const LearningSchema = z.object({
   title: z.string().min(1).max(160),
   body: z.string().min(1).max(1500),
   type: NoteTypeSchema.catch("fact"),
-  tags: z.array(z.string()).catch([]),
+  tags: z.array(z.string()).catch([]).transform(capTags),
 });
 const DistillSchema = z.object({ learnings: z.array(LearningSchema).max(12) }).strict();
 
@@ -65,7 +73,7 @@ const NoteTriageSchema = z
     title: z.string().min(1).max(160),
     body: z.string().min(1).max(3000),
     type: NoteTypeSchema.optional().catch(undefined),
-    tags: z.array(z.string()).catch([]),
+    tags: z.array(z.string()).catch([]).transform(capTags),
   })
   .strict();
 

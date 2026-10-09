@@ -194,7 +194,7 @@ export class EntityMcpController {
           query: z.string().describe("What to look up in memory."),
         },
       },
-      async ({ query }) => text(await recallMemory(this.vault, query)),
+      async ({ query }) => text(await recallMemory(this.vault, query, { globalWorkOnly: true })),
     );
 
     return server;

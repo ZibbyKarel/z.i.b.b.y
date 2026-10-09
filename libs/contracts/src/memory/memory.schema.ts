@@ -19,12 +19,19 @@ export const NoteDomainSchema = z.literal("personal");
 export type NoteDomain = z.infer<typeof NoteDomainSchema>;
 
 /**
- * The four durable-note kinds (Fáze 3 typed memory). A pure classification of
+ * The durable-note kinds (Fáze 3 typed memory; `vision`/`project` are the North Star and project profile notes). A pure classification of
  * what a note IS, orthogonal to its tier (where it lives): a `decision` can sit
  * in `knowledge/` just as easily as a `fact`. Kept a closed, small enum — free-form
  * categorization already exists via `tags`.
  */
-export const NoteTypeSchema = z.enum(["decision", "preference", "fact", "pattern"]);
+export const NoteTypeSchema = z.enum([
+  "decision",
+  "preference",
+  "fact",
+  "pattern",
+  "vision",
+  "project",
+]);
 export type NoteType = z.infer<typeof NoteTypeSchema>;
 
 /**

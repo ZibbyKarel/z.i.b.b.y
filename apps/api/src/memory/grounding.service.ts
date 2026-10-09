@@ -1,4 +1,7 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, Optional } from "@nestjs/common";
+import { ModuleRef } from "@nestjs/core";
+import { ResolvedProjectService } from "../projects/resolved-project.service";
+import { composeTeamKbSection } from "./team-kb-grounding";
 import type { DepartmentId, IndexEntry, Note, NoteDomain } from "@zibby/contracts";
 import { tokenize } from "../tasks/keyword-scorer";
 import { GLOBAL_REVIEW_RULES_ID, reviewRulesIdFor } from "./review-rules-note";
@@ -156,12 +159,19 @@ function truncate(text: string, max: number): string {
 export class GroundingService {
   private readonly logger = new Logger(GroundingService.name);
 
-  constructor(private readonly vault: VaultService) {}
+  /**
+   * `ModuleRef` (not a ResolvedProjectService injection) avoids the
+   * projects <-> memory module cycle: the service is looked up lazily, globally.
+   */
+  constructor(
+    private readonly vault: VaultService,
+    @Optional() private readonly moduleRef?: ModuleRef,
+  ) {}
 
   async compose(input: GroundingInput): Promise<string> {
     try {
       const terms = input.matchedTerms?.length ? input.matchedTerms : tokenize(input.task);
-      const sections: Array<{ title: string; body: string }> = [];
+      const sections: Array<{ title: string; body: string; raw?: boolean }> = [];
       const seen = new Set<string>();
 
       const add = async (id: string): Promise<Note | null> => {
@@ -218,6 +228,13 @@ export class GroundingService {
       // project note (index-first — no vectors, reuses the same scan cache).
       for (const id of selectLinkedNotes(terms, mocs, visible, seen)) await add(id);
       if (input.projectId) await add(input.projectId);
+      // Last, and only when it fits whole: a tail-truncated KB section would cut its
+      // untrusted-data envelope open (Law 4). North-star etc. keep priority.
+      const kb = await this.teamKbSection(input);
+      if (kb) {
+        const withKb = [...sections, { ...kb, raw: true }];
+        if (this.renderUntruncated(withKb).length <= BLOCK_BUDGET) sections.push(withKb.at(-1)!);
+      }
 
       if (sections.length === 0) return "";
       return this.render(sections);
@@ -227,11 +244,35 @@ export class GroundingService {
     }
   }
 
-  private render(sections: Array<{ title: string; body: string }>): string {
+  /** Team KB section for a work run on a team-linked project; fail-open `null`. */
+  private async teamKbSection(
+    input: GroundingInput,
+  ): Promise<{ title: string; body: string } | null> {
+    if (!input.projectId || input.domain === "personal" || !this.moduleRef) return null;
+    try {
+      const resolved = this.moduleRef.get(ResolvedProjectService, { strict: false });
+      const source = await resolved.knowledgeBaseFor(input.projectId);
+      return source ? await composeTeamKbSection(source) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private renderUntruncated(
+    sections: Array<{ title: string; body: string; raw?: boolean }>,
+  ): string {
     const parts = ["## Grounding (vault)", ""];
     for (const s of sections) {
-      parts.push(`### ${s.title}`, truncate(s.body.trim(), NOTE_BUDGET), "");
+      parts.push(
+        `### ${s.title}`,
+        s.raw ? s.body.trim() : truncate(s.body.trim(), NOTE_BUDGET),
+        "",
+      );
     }
-    return truncate(parts.join("\n").trimEnd(), BLOCK_BUDGET);
+    return parts.join("\n").trimEnd();
+  }
+
+  private render(sections: Array<{ title: string; body: string; raw?: boolean }>): string {
+    return truncate(this.renderUntruncated(sections), BLOCK_BUDGET);
   }
 }

@@ -1,5 +1,6 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
+import { MemoryGraphSchema } from "../memory/memory.schema";
 import { ErrorSchema } from "../common.schema";
 import { CreateTeamSchema, TeamIdSchema, TeamSchema, UpdateTeamSchema } from "./team.schema";
 
@@ -43,6 +44,14 @@ export const teamsContract = c.router(
       pathParams: z.object({ id: TeamIdSchema }),
       responses: { 200: TeamSchema, 404: ErrorSchema },
       summary: "Get a single team by id",
+    },
+    getTeamKbGraph: {
+      method: "GET",
+      path: "/teams/:id/kb/graph",
+      pathParams: z.object({ id: TeamIdSchema }),
+      responses: { 200: MemoryGraphSchema, 404: ErrorSchema },
+      summary:
+        "Read-only wiki-link graph of the team's knowledge base (same shape as GET /memory/graph); 404 when the team or its KB is missing",
     },
     updateTeam: {
       method: "PATCH",

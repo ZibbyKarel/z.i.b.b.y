@@ -44,6 +44,7 @@ const TARGET_GLYPH = {
   // F4c: no dedicated "eye"/"scan" glyph exists in the DS icon set — "brain" is
   // pre-approved as the fallback (reused from `memory-distill`, same memory domain).
   "self-knowledge": "brain",
+  "vault-lint": "brain",
   // NS2 F5a — Security's scheduled security watch: the DS "shield" glyph.
   "security-scan": "shield",
   // NS2 F5c — Arch's nightly quality audit: the DS "code" glyph.
@@ -131,17 +132,19 @@ export function AutomationCard({
         ? t("targetMemoryDistill")
         : target.type === "self-knowledge"
           ? t("targetSelfKnowledge")
-          : target.type === "security-scan"
-            ? t("targetSentinelScan")
-            : target.type === "arch-audit"
-              ? t("targetLoomAudit")
-              : target.type === "post-merge-watch"
-                ? t("targetPostMergeWatch")
-                : target.type === "review-learn"
-                  ? t("targetReviewLearn")
-                  : target.type === "task"
-                    ? (targetName ?? target.target?.name ?? t("targetTask"))
-                    : (targetName ?? targetIdOf(target));
+          : target.type === "vault-lint"
+            ? t("targetVaultLint")
+            : target.type === "security-scan"
+              ? t("targetSentinelScan")
+              : target.type === "arch-audit"
+                ? t("targetLoomAudit")
+                : target.type === "post-merge-watch"
+                  ? t("targetPostMergeWatch")
+                  : target.type === "review-learn"
+                    ? t("targetReviewLearn")
+                    : target.type === "task"
+                      ? (targetName ?? target.target?.name ?? t("targetTask"))
+                      : (targetName ?? targetIdOf(target));
 
   return (
     <Card background="surface" data-testid={AutomationCardTestId.Root}>
@@ -300,6 +303,7 @@ function targetKindKey(
   | "targetGapDetect"
   | "targetAgentFactory"
   | "targetSelfKnowledge"
+  | "targetVaultLint"
   | "targetSentinelScan"
   | "targetLoomAudit"
   | "targetPostMergeWatch"
@@ -323,6 +327,8 @@ function targetKindKey(
       return "targetAgentFactory";
     case "self-knowledge":
       return "targetSelfKnowledge";
+    case "vault-lint":
+      return "targetVaultLint";
     case "security-scan":
       return "targetSentinelScan";
     case "arch-audit":

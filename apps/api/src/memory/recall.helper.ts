@@ -5,6 +5,16 @@ import type { VaultService } from "./vault.service";
 /** Cap on how many memory hits a recall surfaces — signal, not the whole vault. */
 export const MAX_RECALL_HITS = 5;
 
+/** Which hits a recall may surface — absent means the operator's own, unscoped recall. */
+export interface RecallScope {
+  /**
+   * Run-facing recall (the `zibby-entities` MCP any run is granted): only global
+   * work notes — no project-owned note (M7, project isolation) and no personal
+   * note (F8, domain isolation). The run's own project notes are already grounded.
+   */
+  globalWorkOnly?: boolean;
+}
+
 /**
  * Search the Obsidian vault and render the top few hits compactly (title +
  * snippet), in Czech — the shared implementation behind the `recall_memory`
@@ -14,9 +24,18 @@ export const MAX_RECALL_HITS = 5;
  * is vault-note content — which can include raw/imported notes (external files)
  * or distilled model output — so it is enveloped (Law 4) before it enters the
  * returned string; `title`/`tier` are vault-controlled metadata and stay bare.
+ * Chat recall stays unscoped: the operator is the principal (F8 decision).
  */
-export async function recallMemory(vault: VaultService, query: string): Promise<string> {
-  const hits: SearchHit[] = await vault.search(query);
+export async function recallMemory(
+  vault: VaultService,
+  query: string,
+  scope: RecallScope = {},
+): Promise<string> {
+  // ponytail: run-facing recall drops ALL project notes; resolve X-Zibby-Run-Id → project
+  // (KbScopeService.projectForRun) if runs need their own project's notes via recall.
+  const hits: SearchHit[] = (await vault.search(query)).filter(
+    (h) => !scope.globalWorkOnly || (!h.project && h.domain !== "personal"),
+  );
   if (hits.length === 0) {
     return `V paměti jsem nic k „${query}" nenašel.`;
   }

@@ -26,7 +26,8 @@ describe("VaultSeedService", () => {
     await new VaultSeedService(vault, departments).onModuleInit();
 
     const { nodes } = await vault.graph();
-    expect(nodes.length).toBe(13);
+    // 13 seeds + the vault-log note the writes create.
+    expect(nodes.length).toBe(14);
     expect(nodes.map((n) => n.id)).toContain("north-star");
     expect(nodes.map((n) => n.id)).toContain("zibby-index");
     expect(nodes.map((n) => n.id)).toContain("department-dev-moc");
@@ -52,7 +53,8 @@ describe("VaultSeedService", () => {
     await new VaultSeedService(vault, departments).onModuleInit();
 
     const { nodes } = await vault.graph();
-    expect(nodes).toHaveLength(1);
+    // existing-note + the vault-log its creation produced; no seeds.
+    expect(nodes).toHaveLength(2);
     const after = await vault.note("existing-note");
     expect(after).toEqual(before);
   });
@@ -72,7 +74,7 @@ describe("VaultSeedService", () => {
     await expect(new VaultSeedService(vault, departments).onModuleInit()).resolves.toBeUndefined();
 
     const { nodes } = await vault.graph();
-    // 13 seeds attempted, the first one fails — 12 land.
-    expect(nodes.length).toBe(12);
+    // 13 seeds attempted, the first one fails — 12 land (+ the vault-log note).
+    expect(nodes.length).toBe(13);
   });
 });

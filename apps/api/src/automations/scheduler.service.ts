@@ -4,6 +4,7 @@ import type { Automation, Signal } from "@zibby/contracts";
 import { AgentFactoryService } from "../agent-factory/agent-factory.service";
 import { AgentRunnerService } from "../agents/agent-runner.service";
 import { BriefingService } from "../briefing/briefing.service";
+import { VaultLintService } from "../memory/vault-lint.service";
 import { MemoryDistillerService } from "../memory/memory-distiller.service";
 import { PatternExtractorService } from "../patterns/pattern-extractor.service";
 import { WorkflowRunnerService } from "../workflows/workflow-runner.service";
@@ -61,6 +62,7 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
     private readonly watcherHealthRegistry: WatcherHealthRegistry,
     private readonly reviewLearning: ReviewLearningService,
     private readonly signalBus: SignalBusService,
+    private readonly vaultLint: VaultLintService,
   ) {
     super();
     this.log = logger.child(SchedulerService.name);
@@ -251,6 +253,16 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
         } catch (error) {
           this.log.warn("self-knowledge refresh failed", { error: String(error) });
           return "self-knowledge:error";
+        }
+      }
+      case "vault-lint": {
+        // Nightly report-only vault lint → knowledge/vault-lint.md. Fail-open.
+        try {
+          const r = await this.vaultLint.run();
+          return `vault-lint:${r.brokenLinks}/${r.orphans}/${r.stale}`;
+        } catch (error) {
+          this.log.warn("vault lint failed", { error: String(error) });
+          return "vault-lint:error";
         }
       }
       case "security-scan": {

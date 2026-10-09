@@ -76,6 +76,19 @@ describe("KbReaderService", () => {
     expect(path.isAbsolute(hits[0]?.path ?? "")).toBe(false);
   });
 
+  it("builds a wiki-link graph of markdown notes only (no vtt, no outside files)", async () => {
+    const g = await reader.graph(source);
+    const ids = g.nodes.map((n) => n.id).sort();
+    expect(ids).toEqual([
+      "team-context.md",
+      "wiki/INDEX.md",
+      "wiki/notes/huge.md",
+      "wiki/notes/partner-portal.md",
+    ]);
+    expect(g.nodes.every((n) => n.tier === "knowledge")).toBe(true);
+    expect(g.edges).toEqual([{ from: "wiki/INDEX.md", to: "wiki/notes/partner-portal.md" }]);
+  });
+
   it("returns nothing for a query that matches nothing", async () => {
     expect(await reader.search(source, "zzzz-nothing")).toEqual([]);
   });

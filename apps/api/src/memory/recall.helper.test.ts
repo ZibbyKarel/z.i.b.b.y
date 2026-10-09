@@ -59,3 +59,29 @@ describe("recallMemory — Law-4 envelope adoption", () => {
     expect(out).not.toContain("note-7");
   });
 });
+
+describe("recallMemory — run-scope isolation", () => {
+  const hits: SearchHit[] = [
+    { id: "g", title: "global note", tier: "knowledge", snippet: "g" },
+    { id: "p", title: "project note", tier: "memory", snippet: "p", project: "acme" },
+    { id: "h", title: "personal note", tier: "memory", snippet: "h", domain: "personal" },
+  ];
+
+  it("unscoped (operator chat) keeps every hit", async () => {
+    const out = await recallMemory(fakeVault(hits), "q");
+    expect(out).toContain("project note");
+    expect(out).toContain("personal note");
+  });
+
+  it("globalWorkOnly drops project-owned and personal notes before capping", async () => {
+    const out = await recallMemory(fakeVault(hits), "q", { globalWorkOnly: true });
+    expect(out).toContain("global note");
+    expect(out).not.toContain("project note");
+    expect(out).not.toContain("personal note");
+  });
+
+  it("globalWorkOnly with only filtered hits reports nothing found", async () => {
+    const out = await recallMemory(fakeVault(hits.slice(1)), "q", { globalWorkOnly: true });
+    expect(out).toBe('V paměti jsem nic k „q" nenašel.');
+  });
+});

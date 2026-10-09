@@ -44,6 +44,8 @@ export class SystemAutomationError extends Error {
 export const MEMORY_DISTILL_AUTOMATION_ID = "memory-distill";
 /** Stable id of the nightly self-knowledge-refresh system automation (F4c). */
 export const SELF_KNOWLEDGE_AUTOMATION_ID = "self-knowledge-refresh";
+/** Stable id of the nightly vault-lint system automation. */
+export const VAULT_LINT_AUTOMATION_ID = "vault-lint";
 /** Stable id of the weekly Security security-scan system automation (F5a). */
 export const SECURITY_SCAN_AUTOMATION_ID = "security-scan";
 /** Stable id of the nightly Arch quality-audit system automation (F5c). */
@@ -119,6 +121,14 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
     // 3:30 — after the 3:00 distill, before the 7:00 briefing.
     trigger: { type: "cron", expr: "30 3 * * *" },
     target: { type: "self-knowledge" },
+    enabled: true,
+    system: true,
+  },
+  {
+    id: VAULT_LINT_AUTOMATION_ID,
+    name: "Lint vaultu",
+    trigger: { type: "cron", expr: "30 3 * * *" },
+    target: { type: "vault-lint" },
     enabled: true,
     system: true,
   },

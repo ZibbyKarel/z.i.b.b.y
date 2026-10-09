@@ -81,16 +81,8 @@
       ]
     },
     "autonomy_policy": {
-      "can_do_alone": [
-        "reply",
-        "create_task",
-        "summarize"
-      ],
-      "always_ask": [
-        "merge",
-        "deploy",
-        "delete"
-      ],
+      "can_do_alone": ["reply", "create_task", "summarize"],
+      "always_ask": ["merge", "deploy", "delete"],
       "vip_escalation": false,
       "respond_as": "autonomous"
     },
@@ -101,5 +93,15 @@
     },
     "companyId": "zibby-corp",
     "gitRemote": "https://github.com/ZibbyKarel/z.i.b.b.y"
+  },
+  {
+    "id": "devrel-knowledgebase",
+    "name": "DevRel knowledge base",
+    "desc": "The DevRel team's knowledge base (LLM-wiki style markdown repo with its own AGENTS.md). Target project for the team-kb-ingest workflow; changes land only as PRs.",
+    "category": "Shoptet",
+    "companyId": "shoptet",
+    "teamId": "devrel",
+    "path": "/Users/zibar/Workspace/devrel-knowledgebase",
+    "gitRemote": "git@github.com:shoptet/devrel-knowledgebase.git"
   }
 ]

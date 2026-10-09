@@ -56,6 +56,33 @@ describe("Teams API (e2e)", () => {
     await request(app.getHttpServer()).get(`${BASE}/devrel`).expect(404);
   });
 
+  it("serves a read-only KB graph for a team with a knowledge base, 404 otherwise", async () => {
+    const kb = await fs.mkdtemp(path.join(os.tmpdir(), "teams-e2e-kb-"));
+    await fs.writeFile(path.join(kb, "a.md"), "---\ntitle: A\n---\nsee [[b]]\n");
+    await fs.writeFile(path.join(kb, "b.md"), "B body\n");
+    const http = app.getHttpServer();
+    await request(http)
+      .post(BASE)
+      .send({
+        id: "kbteam",
+        name: "KB",
+        desc: "d",
+        knowledgeBase: { kind: "vault", path: kb, readOnly: true },
+      })
+      .expect(201);
+    await request(http).post(BASE).send({ id: "nokb", name: "No", desc: "d" }).expect(201);
+
+    const ok = await request(http).get(`${BASE}/kbteam/kb/graph`).expect(200);
+    expect(ok.body.nodes.map((n: { id: string }) => n.id).sort()).toEqual(["a.md", "b.md"]);
+    expect(ok.body.edges).toEqual([{ from: "a.md", to: "b.md" }]);
+    await request(http).get(`${BASE}/nokb/kb/graph`).expect(404);
+    await request(http).get(`${BASE}/ghost/kb/graph`).expect(404);
+
+    await request(http).delete(`${BASE}/kbteam`).expect(200);
+    await request(http).delete(`${BASE}/nokb`).expect(200);
+    await fs.rm(kb, { recursive: true, force: true });
+  });
+
   it("rejects a duplicate id (409) and an invalid body (400)", async () => {
     await request(app.getHttpServer()).post(BASE).send(team).expect(201);
     await request(app.getHttpServer()).post(BASE).send(team).expect(409);

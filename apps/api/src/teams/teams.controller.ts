@@ -2,6 +2,7 @@ import { Controller } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { teamsContract } from "@zibby/contracts";
 import { makeErrorMapper } from "../shared/http/error-mapping";
+import { KbReaderService } from "../kb/kb-reader.service";
 import { TeamConflictError, TeamNotFoundError } from "./teams.errors";
 import { TeamsStorageService } from "./teams.storage.service";
 
@@ -18,7 +19,10 @@ const errors = makeErrorMapper("Team", {
  */
 @Controller()
 export class TeamsController {
-  constructor(private readonly storage: TeamsStorageService) {}
+  constructor(
+    private readonly storage: TeamsStorageService,
+    private readonly kbReader: KbReaderService,
+  ) {}
 
   @TsRestHandler(teamsContract)
   handler() {
@@ -33,6 +37,17 @@ export class TeamsController {
       }),
 
       getTeam: ({ params: { id } }) => errors.or404(id, () => this.storage.get(id)),
+
+      getTeamKbGraph: async ({ params: { id } }) => {
+        const team = await this.storage.get(id).catch((e: unknown) => {
+          if (errors.isMissing(e)) return null;
+          throw e;
+        });
+        if (!team?.knowledgeBase) {
+          return { status: 404 as const, body: { message: `Team "${id}" has no knowledge base` } };
+        }
+        return { status: 200 as const, body: await this.kbReader.graph(team.knowledgeBase) };
+      },
 
       updateTeam: ({ params: { id }, body }) =>
         errors.or404(id, () => this.storage.update(id, body)),

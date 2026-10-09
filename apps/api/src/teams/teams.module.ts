@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { KbReaderService } from "../kb/kb-reader.service";
 import { dataDir } from "../shared/data-dir";
 import { TeamsController } from "./teams.controller";
 import { TEAMS_DIR, TeamsStorageService } from "./teams.storage.service";
@@ -15,7 +16,11 @@ export function resolveTeamsDir(): string {
 
 @Module({
   controllers: [TeamsController],
-  providers: [{ provide: TEAMS_DIR, useFactory: resolveTeamsDir }, TeamsStorageService],
+  providers: [
+    { provide: TEAMS_DIR, useFactory: resolveTeamsDir },
+    TeamsStorageService,
+    KbReaderService,
+  ],
   exports: [TeamsStorageService],
 })
 export class TeamsModule {}

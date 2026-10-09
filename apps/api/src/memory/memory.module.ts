@@ -21,15 +21,14 @@ import { GroundingService } from "./grounding.service";
 import { MemoryController } from "./memory.controller";
 import { MemoryImportService } from "./memory-import.service";
 import { VaultSeedService } from "./vault-seed.service";
+import { VaultLintService } from "./vault-lint.service";
 import { VAULT_DIR, VaultService } from "./vault.service";
 
 /**
- * Default vault dir, anchored to `apps/api/data/vault`. This repo's committed
- * `VAULT_DIR` already carries seed notes (north-star, the root MOC, all ten
- * department shelves); only the episodic `daily/` subdir is gitignored. Real
- * operation points `VAULT_DIR` at the operator's Obsidian vault — a genuinely
- * fresh/empty one is seeded on boot by `VaultSeedService` (F4c), so first-run
- * grounding is never empty.
+ * Default vault dir: `$VAULT_DIR` if set, else `dataDir("vault")` (i.e.
+ * `.zibby/data/vault`). Real operation points `VAULT_DIR` at the operator's
+ * Obsidian vault — a genuinely fresh/empty one is seeded on boot by
+ * `VaultSeedService` (F4c), so first-run grounding is never empty.
  */
 export function resolveVaultDir(): string {
   return process.env.VAULT_DIR ?? dataDir("vault");
@@ -57,6 +56,7 @@ export function resolveVaultDir(): string {
   providers: [
     { provide: VAULT_DIR, useFactory: resolveVaultDir },
     VaultService,
+    VaultLintService,
     MemoryImportService,
     GroundingService,
     // Fresh-install seeding (F4c) — MemoryModule only, see VaultSeedService's doc.
@@ -80,6 +80,6 @@ export function resolveVaultDir(): string {
     },
     AutomationsStorageService,
   ],
-  exports: [VaultService, MemoryImportService, GroundingService],
+  exports: [VaultService, VaultLintService, MemoryImportService, GroundingService],
 })
 export class MemoryModule {}

@@ -11,11 +11,14 @@ Overridable via the `VAULT_DIR` env var.
 
 ## Three tiers
 
-| Tier        | Folder             | Purpose                                               |
-| ----------- | ------------------ | ----------------------------------------------------- |
-| `memory`    | `vault/memory/`    | Durable knowledge — facts, decisions, project context |
-| `daily`     | `vault/daily/`     | Daily log — append-only record of what happened       |
-| `knowledge` | `vault/knowledge/` | Thematic notes — deeper-dive documents                |
+| Tier        | Folder                                                    | Purpose                                               |
+| ----------- | --------------------------------------------------------- | ----------------------------------------------------- |
+| `memory`    | vault root (and any non-tier subfolder, e.g. `projects/`) | Durable knowledge — facts, decisions, project context |
+| `daily`     | `vault/daily/`                                            | Daily log — append-only record of what happened       |
+| `knowledge` | `vault/knowledge/`                                        | Thematic notes — deeper-dive documents                |
+
+The tier is derived from the top-level folder (`tierOf`); anything outside `daily/` and
+`knowledge/` is `memory`.
 
 ## Note format
 
@@ -26,6 +29,7 @@ Every file is `<id>.md` with YAML frontmatter:
 title: Delivery Loop — model decision
 tags: [architect, workflow]
 created: 2026-06-01
+updated: 2026-06-02
 ---
 
 # Delivery Loop — model decision
@@ -34,6 +38,10 @@ We decided to use Opus for the Architect and the Coder ...
 
 See also [[zibby-north-star]], [[project-xy]].
 ```
+
+Every write (create, patch, append) stamps `updated: YYYY-MM-DD` into the frontmatter
+`knowledge/vault-log.md` is an append-only change log of vault
+writes.
 
 ### Note ID rules
 
@@ -96,7 +104,7 @@ so a title hit ranks above a body hit.
 GET /api/memory/graph
 ```
 
-Returns `{ nodes: Note[], edges: { source, target }[] }` for a force-directed
+Returns `{ nodes, edges: { from, to }[] }` for a force-directed
 visualization.
 
 ### The daily note
@@ -145,7 +153,14 @@ Called at the start of every run (fail-open — a vault outage never blocks a ru
    isolation and F8 domain isolation, then up to `EXPANSION_LIMIT` notes reached
    by 1-hop wikilink expansion from what is already grounded (F4b)
 6. When the run carries a `projectId`, loads that project's own note
-7. Returns the combined markdown context → passed to the agent as `--append-system-prompt`
+7. Team knowledge base (work runs only): when the project's team has a
+   `knowledgeBase`, its `team-context.md` and `wiki/INDEX.md` (each capped at 1500
+   chars, enveloped — Law 4, read in place, symlinks/escapes refused; template-only
+   files skipped) become a `### Team knowledge base (<kb folder>)` section, plus a hint
+   to use `search_team_kb` / `read_team_kb_note`. Added last and only if it fits the
+   block budget whole, so truncation never cuts an envelope open
+   (`team-kb-grounding.ts`)
+8. Returns the combined markdown context → passed to the agent as `--append-system-prompt`
 
 Budgets: each note's body is truncated at `NOTE_BUDGET` (2000 chars) and the whole
 block at `BLOCK_BUDGET` (8000) — both cut the tail, which is why the order above is
@@ -155,12 +170,12 @@ load-bearing.
 
 **File:** `apps/api/src/memory/run-recorder.module.ts` and `run-recorder.service.ts`
 
-When a run finishes (terminal state):
-
-1. Writes a `<!-- run:<runId> -->` marker to the daily note (idempotent — repeated
-   writes are safe)
-2. Appends an outcome summary (1–2 sentences on what the run did / why it failed)
-3. Updates relevant indexes (if the run produced new context)
+When an agent or workflow run reaches a terminal state (also swept on bootstrap for
+runs that ended across a restart), the recorder appends **one line** to today's daily
+note: run id, agent/workflow, title, status, plus `[[project]]` and (for an owned run)
+`[[department-<id>-moc|id]]` links. It is at-most-once: `memory-recorded.json` is
+written into the run's cwd before the vault write, so a crash can lose a line but never
+duplicate one. It writes no run marker comment and does not update indexes.
 
 ## MemoryDistillerModule
 
@@ -181,6 +196,21 @@ automations doc for details.
 > Note: the earlier per-agent `learned.md` (where a documentation agent wrote its own
 > memory) has been removed — memory is now collected by the system, not from an
 > agent's own description.
+
+## Vault lint
+
+A nightly `vault-lint` system automation (03:30) writes the report-only
+`knowledge/vault-lint.md`: broken links, orphans, stale notes (>90d) and tag bloat. It
+never edits other notes. Orphans exclude `daily/`, North Star, self-knowledge, MOCs and
+the machine notes; `vault-log` and `vault-lint` are scanned as link-less so they don't
+mask orphans. Service: `vault-lint.service.ts`.
+
+## Graph sources (web `/knowledge/graph`)
+
+The graph view switches between the vault (`GET /api/memory/graph`) and a team knowledge
+base (`GET /api/teams/:id/kb/graph`, same `{nodes, edges}` shape, 404 without a KB). The
+team graph is read-only, built by `KbReaderService.graph` from resolved `[[wikilinks]]`;
+`.vtt` transcripts and `_templates/` are not nodes.
 
 ## Bulk import (Phase 112)
 
@@ -225,6 +255,12 @@ lives in exactly one place: it searches the vault, renders the top few hits (tit
 snippet, Czech), and envelopes each snippet via `envelopeInbound` (Law 4) before it
 enters the returned string, since a hit's snippet can be raw/imported or distilled
 content.
+
+Scope: the chat `recall_memory` is unscoped (the operator is the principal, F8). The
+entity-directory `recall_memory`, which any run is granted, passes
+`{ globalWorkOnly: true }` — project-owned and `domain: personal` notes are dropped
+before capping, so a run in project A can never recall project B's (or personal)
+notes. A run's own project notes reach it through grounding instead.
 
 ## Cross-project isolation (M7)
 

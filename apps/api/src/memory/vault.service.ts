@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
-import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import {
   type CreateNoteInput,
   type DepartmentId,
@@ -195,6 +195,23 @@ function humanizeId(id: string): string {
     .trim()
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
+
+/** Note ids whose own writes are never logged (the log itself and the lint report). */
+const UNLOGGED_IDS = new Set(["vault-log", "vault-lint"]);
+const VAULT_LOG_ID = "vault-log";
+/** Regenerated machine notes — logging them would churn the log on every refresh/commit. */
+const NOT_LOGGED_IDS = new Set([...UNLOGGED_IDS, "self-knowledge"]);
+
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+/** Local `YYYY-MM-DD` for `d`. */
+export function localDate(d = new Date()): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+type VaultOp = "create" | "update" | "append" | "index";
 
 interface RawNote {
   id: string;
@@ -422,9 +439,11 @@ export class VaultService implements OnModuleInit {
     if (input.type !== undefined) data.type = input.type;
     if (input.tags !== undefined) data.tags = input.tags;
     if (raw !== undefined) data.raw = raw;
+    data.updated = localDate();
     await fs.mkdir(path.dirname(file), { recursive: true });
     await writeFileAtomic(file, matter.stringify(input.body, data));
     this.cache = null;
+    await this.logChange("create", input.id, tier);
     return this.note(input.id);
   }
 
@@ -479,9 +498,11 @@ export class VaultService implements OnModuleInit {
     if (patch.frontmatter) Object.assign(data, patch.frontmatter);
     if (patch.title !== undefined) data.title = patch.title;
     if (patch.raw !== undefined) data.raw = patch.raw;
+    data.updated = localDate();
     const body = patch.body !== undefined ? patch.body : parsed.content;
     await writeFileAtomic(abs, matter.stringify(body, data));
     this.cache = null;
+    await this.logChange("update", id, found.tier);
     return this.note(id);
   }
 
@@ -492,8 +513,9 @@ export class VaultService implements OnModuleInit {
     const abs = path.join(this.dir, found.path);
     const parsed = matter(await fs.readFile(abs, "utf8"));
     const body = `${parsed.content.replace(/\s+$/, "")}\n\n${text}\n`;
-    await writeFileAtomic(abs, matter.stringify(body, parsed.data));
+    await writeFileAtomic(abs, matter.stringify(body, { ...parsed.data, updated: localDate() }));
     this.cache = null;
+    await this.logChange("append", id, found.tier);
     return this.note(id);
   }
 
@@ -535,10 +557,61 @@ export class VaultService implements OnModuleInit {
         while (newLines.length > 0 && newLines[newLines.length - 1]?.trim() === "") newLines.pop();
         newLines.push(desired);
       }
-      await writeFileAtomic(abs, matter.stringify(`${newLines.join("\n")}\n`, parsed.data));
+      await writeFileAtomic(
+        abs,
+        matter.stringify(`${newLines.join("\n")}\n`, { ...parsed.data, updated: localDate() }),
+      );
       this.cache = null;
+      await this.logChange("index", mocId, moc.tier);
       return this.note(mocId);
     });
+  }
+
+  /**
+   * Append one `- YYYY-MM-DD HH:MM | <op> | [[id]]` line to `knowledge/vault-log.md`
+   * (created on first use). Serialized on one path lock; the log and the lint report
+   * never log themselves, and `daily/` notes are skipped (already a journal).
+   */
+  private async logChange(op: VaultOp, id: string, tier: MemoryTier): Promise<void> {
+    if (tier === "daily" || NOT_LOGGED_IDS.has(id)) return;
+    const now = new Date();
+    const line = `- ${localDate(now)} ${pad2(now.getHours())}:${pad2(now.getMinutes())} | ${op} | [[${id}]]\n`;
+    const file = path.join(this.dir, "knowledge", `${VAULT_LOG_ID}.md`);
+    // Fail-open: the note write already succeeded; a log hiccup must not fail it.
+    await withPathLock(`note:${VAULT_LOG_ID}`, async () => {
+      await fs.mkdir(path.dirname(file), { recursive: true });
+      const exists = await fs.stat(file).then(
+        () => true,
+        () => false,
+      );
+      if (!exists) {
+        await fs.writeFile(
+          file,
+          matter.stringify("", { title: "Vault change log", tags: ["log"] }),
+          "utf8",
+        );
+      }
+      await fs.appendFile(file, line, "utf8");
+    }).catch((e: unknown) => {
+      new Logger(VaultService.name).warn(`vault-log append failed: ${String(e)}`);
+    });
+    this.cache = null;
+  }
+
+  /** Every note in the vault (backlinks computed), for read-only analysis such as lint. */
+  async allNotes(): Promise<Note[]> {
+    const notes = await this.scan();
+    return notes.map((found) => ({
+      id: found.id,
+      path: found.path,
+      tier: found.tier,
+      title: found.title,
+      frontmatter: found.frontmatter,
+      links: found.links,
+      backlinks: notes.filter((n) => n.links.includes(found.id)).map((n) => n.id),
+      body: found.body,
+      ...typedFieldsOf(found.frontmatter),
+    }));
   }
 
   /** Scan the vault for `.md` files, parsed and cached briefly. */
@@ -565,7 +638,8 @@ export class VaultService implements OnModuleInit {
         tier,
         title,
         frontmatter: data,
-        links: this.extractLinks(parsed.content),
+        // Machine notes link to everything; counting that would erase all orphans/backlinks.
+        links: UNLOGGED_IDS.has(id) ? [] : this.extractLinks(parsed.content),
         body: parsed.content.trim(),
       });
     }

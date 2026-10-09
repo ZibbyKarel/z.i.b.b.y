@@ -707,6 +707,14 @@ describe("mergeLearningTags / mergeLearningType", () => {
     ).toEqual(["a", "b", "c"]);
   });
 
+  it("mergeLearningTags: dedupes and caps to 8 tags, keeping the first seen", () => {
+    const tags = Array.from({ length: 50 }, (_, i) => `t${String(i).padStart(2, "0")}`);
+    const merged = mergeLearningTags([
+      { title: "a", body: "a", type: "fact", tags: [...tags, "t00"] },
+    ]);
+    expect(merged).toEqual(tags.slice(0, 8));
+  });
+
   it("mergeLearningTags: empty batch yields an empty list", () => {
     expect(mergeLearningTags([])).toEqual([]);
   });
