@@ -1,8 +1,1 @@
-{
-  "id": "vault-lint",
-  "name": "Lint vaultu",
-  "trigger": { "type": "cron", "expr": "30 3 * * *" },
-  "target": { "type": "vault-lint" },
-  "enabled": true,
-  "system": true
-}
+{"id":"vault-lint","name":"Lint vaultu","trigger":{"type":"cron","expr":"30 3 * * *"},"target":{"type":"vault-lint"},"enabled":true,"system":true,"lastFiredAt":"2026-10-09T11:07:53.806Z"}
