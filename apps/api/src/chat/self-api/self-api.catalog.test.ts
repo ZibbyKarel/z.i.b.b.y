@@ -55,17 +55,7 @@ describe("buildSelfApiCatalog", () => {
     }
     expect(catalog.get("projects.updateProject")?.allowKeys).not.toContain("gitRemote");
     expect(catalog.get("projects.updateProject")?.allowKeys).not.toContain("path");
-    expect(catalog.get("system.putConfig")?.denyPaths).toEqual(
-      expect.arrayContaining([
-        "goalAutoResume",
-        "limitResumeMax",
-        "automationTickMs",
-        "roadmapTickMs",
-      ]),
-    );
-    expect(catalog.get("system.putConfig")?.denyPaths).toEqual(
-      expect.arrayContaining(["channelTickMs", "monitorTickMs", "taskTickMs"]),
-    );
+    expect(catalog.get("system.putConfig")?.denyPaths).toBeUndefined();
     expect(catalog.get("integrations.updateIntegration")?.allowKeys).toEqual([
       "name",
       "enabled",

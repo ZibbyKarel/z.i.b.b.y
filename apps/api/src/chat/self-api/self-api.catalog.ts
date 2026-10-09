@@ -183,20 +183,8 @@ export const SELF_API_ALLOWLIST: SelfApiAllowlist = {
   system: {
     getConfig: "read",
     // Whole-document PUT: the executor merges the chat's partial body onto the current config
-    // (omitted keys keep their value) and checks denyPaths on the partial body, so these stay
-    // untouched. The scheduler, auto-resume and tick switches are operator-only.
-    putConfig: {
-      tier: "write",
-      denyPaths: [
-        "goalAutoResume",
-        "limitResumeMax",
-        "automationTickMs",
-        "roadmapTickMs",
-        "channelTickMs",
-        "monitorTickMs",
-        "taskTickMs",
-      ],
-    },
+    // (omitted keys keep their value). Every runtime switch is chat-writable (operator, 2026-10-09).
+    putConfig: "write",
   },
   machine: { getMachineConfig: "read", updateMachineConfig: "write" },
 };

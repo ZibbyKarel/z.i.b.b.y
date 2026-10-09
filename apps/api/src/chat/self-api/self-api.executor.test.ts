@@ -301,32 +301,12 @@ describe("SelfApiExecutor", () => {
       expect(fn).not.toHaveBeenCalled();
     });
 
-    it("rejects a denied tick key (channelTickMs)", async () => {
+    it("allows runtime switches (channelTickMs) and merges onto current config", async () => {
+      stub("system.getConfig", async () => ({ status: 200, body: { maxWorkingAgents: 3 } }));
       const put = stub("system.putConfig", async () => ({ status: 200, body: {} }));
-      const res = await exec.call("system.putConfig", { body: { channelTickMs: 1 } });
-      expect(res.ok).toBe(false);
-      expect(res.text).toContain("channelTickMs");
-      expect(put).not.toHaveBeenCalled();
-    });
-
-    it("keeps operator-set denied system keys on merge", async () => {
-      stub("system.getConfig", async () => ({
-        status: 200,
-        body: { roadmapTickMs: 0, maxWorkingAgents: 3 },
-      }));
-      const put = stub("system.putConfig", async () => ({ status: 200, body: {} }));
-      await exec.call("system.putConfig", { body: { maxWorkingAgents: 5 } });
-      expect(put).toHaveBeenCalledWith({ body: { roadmapTickMs: 0, maxWorkingAgents: 5 } });
-    });
-
-    it("rejects a denied system key with no GET and no PUT", async () => {
-      const get = stub("system.getConfig", async () => ({ status: 200, body: {} }));
-      const put = stub("system.putConfig", async () => ({ status: 200, body: {} }));
-      const res = await exec.call("system.putConfig", { body: { roadmapTickMs: 60000 } });
-      expect(res.ok).toBe(false);
-      expect(res.text).toContain("roadmapTickMs");
-      expect(get).not.toHaveBeenCalled();
-      expect(put).not.toHaveBeenCalled();
+      const res = await exec.call("system.putConfig", { body: { channelTickMs: 0 } });
+      expect(res.ok).toBe(true);
+      expect(put).toHaveBeenCalledWith({ body: { maxWorkingAgents: 3, channelTickMs: 0 } });
     });
 
     it("keeps a self-hosted sentry baseUrl when only minLevel is patched", async () => {
