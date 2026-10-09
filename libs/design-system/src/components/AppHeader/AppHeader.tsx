@@ -15,6 +15,7 @@ export enum AppHeaderTestId {
   Operator = "app-header-operator",
   ActiveCount = "app-header-active-count",
   Limits = "app-header-limits",
+  ThemeToggle = "app-header-theme-toggle",
   Notifications = "app-header-notifications",
   Search = "app-header-search",
   SearchShortcut = "app-header-search-shortcut",
@@ -37,6 +38,9 @@ export interface AppHeaderProps {
   activeCount?: ReactNode;
   /** 5H / WEEK usage readout slot (a `LimitBar` pair), trailing cluster. */
   limits?: ReactNode;
+  /** Light/dark toggle slot (an app-composed icon `Button`), trailing cluster —
+   *  just before the notification bell. */
+  themeToggle?: ReactNode;
   /** Notification bell slot, trailing cluster. */
   notifications?: ReactNode;
   /** ⋮ overflow menu slot (an `app`-composed `MenuButton variant="bordered"`),
@@ -74,6 +78,7 @@ export function AppHeader({
   operator,
   activeCount,
   limits,
+  themeToggle,
   notifications,
   menu,
   searchLabel = "Search",
@@ -142,6 +147,7 @@ export function AppHeader({
         {operator && <span data-testid={AppHeaderTestId.Operator}>{operator}</span>}
         {activeCount && <span data-testid={AppHeaderTestId.ActiveCount}>{activeCount}</span>}
         {limits && <span data-testid={AppHeaderTestId.Limits}>{limits}</span>}
+        {themeToggle && <span data-testid={AppHeaderTestId.ThemeToggle}>{themeToggle}</span>}
         {notifications && <span data-testid={AppHeaderTestId.Notifications}>{notifications}</span>}
         {menu && <span data-testid={AppHeaderTestId.Menu}>{menu}</span>}
       </Row>

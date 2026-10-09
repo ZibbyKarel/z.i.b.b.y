@@ -61,6 +61,11 @@ describe("AppHeader", () => {
     expect(screen.getByTestId(AppHeaderTestId.Root)).toBeInTheDocument();
   });
 
+  it("renders the themeToggle slot when provided", () => {
+    render(<AppHeader themeToggle={<button type="button">Theme</button>} />);
+    expect(screen.getByTestId(AppHeaderTestId.ThemeToggle)).toHaveTextContent("Theme");
+  });
+
   it("renders the notifications slot when provided", () => {
     render(<AppHeader notifications={<button type="button">Bell</button>} />);
     expect(screen.getByTestId(AppHeaderTestId.Notifications)).toHaveTextContent("Bell");

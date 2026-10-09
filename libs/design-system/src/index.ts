@@ -60,7 +60,7 @@ export type {
 } from "./DesignSystemContext/DesignSystemProvider";
 export { ThemeScript, ThemeScriptTestId } from "./DesignSystemContext/ThemeScript";
 export type { ThemeScriptProps } from "./DesignSystemContext/ThemeScript";
-export { useSpacing, useTokens } from "./DesignSystemContext/hooks";
+export { useResolvedTheme, useSpacing, useTokens } from "./DesignSystemContext/hooks";
 export { useOverlayStack } from "./hooks/useOverlayStack";
 export type { OverlayStackHandle } from "./hooks/useOverlayStack";
 

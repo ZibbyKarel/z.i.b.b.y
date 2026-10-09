@@ -38,6 +38,7 @@ import { pause } from "./pause";
 import { retry } from "./retry";
 import { checkpoint } from "./checkpoint";
 import { moon } from "./moon";
+import { sun } from "./sun";
 import { coffee } from "./coffee";
 import { link } from "./link";
 import { warn } from "./warn";
@@ -93,6 +94,7 @@ export const iconNames = [
   "retry",
   "checkpoint",
   "moon",
+  "sun",
   "coffee",
   "link",
   "warn",
@@ -151,6 +153,7 @@ export const paths: Record<IconName, ReactNode> = {
   retry,
   checkpoint,
   moon,
+  sun,
   coffee,
   link,
   warn,

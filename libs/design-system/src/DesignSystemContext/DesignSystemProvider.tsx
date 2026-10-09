@@ -26,6 +26,10 @@ export const THEME_STORAGE_KEY = "zibby-theme";
 export type ResolvedTheme = "light" | "dark";
 export type ThemeChoice = ResolvedTheme | "system";
 
+/** The provider's resolved `light`/`dark` (what is actually on screen, `system`
+ *  already resolved) — read via `useResolvedTheme()`. */
+export const DesignSystemResolvedThemeContext = createContext<ResolvedTheme | null>(null);
+
 function resolveSystemTheme(): ResolvedTheme {
   if (typeof window === "undefined" || !window.matchMedia) return "dark";
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
@@ -120,9 +124,11 @@ export function DesignSystemProvider({
 
   return (
     <DesignSystemTokenContext.Provider value={merged}>
-      <div className={classes} data-theme={resolvedTheme} style={rootStyle}>
-        {children}
-      </div>
+      <DesignSystemResolvedThemeContext.Provider value={resolvedTheme}>
+        <div className={classes} data-theme={resolvedTheme} style={rootStyle}>
+          {children}
+        </div>
+      </DesignSystemResolvedThemeContext.Provider>
     </DesignSystemTokenContext.Provider>
   );
 }

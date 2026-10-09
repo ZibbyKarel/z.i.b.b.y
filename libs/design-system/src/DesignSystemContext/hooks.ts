@@ -1,6 +1,10 @@
 import { useContext } from "react";
 import { type Spacing, type Theme, spacingValues } from "../tokens";
-import { DesignSystemTokenContext } from "./DesignSystemProvider";
+import {
+  DesignSystemResolvedThemeContext,
+  DesignSystemTokenContext,
+  type ResolvedTheme,
+} from "./DesignSystemProvider";
 import { defaultDarkTokens } from "./themeRegistry";
 
 /**
@@ -17,4 +21,10 @@ export function useTokens(): Theme {
 /** Returns the resolved px value for a spacing token. */
 export function useSpacing(token: Spacing): string {
   return spacingValues[token];
+}
+
+/** The theme actually on screen (`system` already resolved). Fallback: `dark`,
+ *  matching `useTokens()`'s outside-provider default. */
+export function useResolvedTheme(): ResolvedTheme {
+  return useContext(DesignSystemResolvedThemeContext) ?? "dark";
 }
