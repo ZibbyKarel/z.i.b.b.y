@@ -8,4 +8,4 @@
 6. [x] Self-API MCP: ZIBBY ovládá vlastní API z chatu (nedestruktivní operace nad úkoly, workflows, firmami, týmy, projekty, automatizacemi, integracemi, běhovými parametry a kořenem klonů) — plán docs/superpowers/plans/2026-10-08-self-api-mcp.md (main@e466b62)
 7. [x] v top baru bude přepínátko na light/dark mode (nějaká ikonka měsíček / sluníčko) (main@4362cad)
 8. [x] content stránek musí být roztažen na 100%. Například roadmap stránka pak získá spoustu místa pro sloupečky (main@bb191c6)
-9. [ ] přidáme klávesovou zkratku option+n která kdekoliv přesměruje uživatele na stránku nového úkolu. zároveň na stránce nového úkolu nebudeme zobrazovat tlačítko "nový úkol"
+9. [x] přidáme klávesovou zkratku option+n která kdekoliv přesměruje uživatele na stránku nového úkolu. zároveň na stránce nového úkolu nebudeme zobrazovat tlačítko "nový úkol" (main@070368b)
