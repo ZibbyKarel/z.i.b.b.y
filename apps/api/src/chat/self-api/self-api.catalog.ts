@@ -16,11 +16,33 @@ export interface SelfApiOperation {
   summary: string;
   /** `:param` names parsed from {@link path}, in order. */
   pathParams: readonly string[];
+  /** Body keys the call may set (top level). Unset = unrestricted. Enforced by the executor. */
+  allowKeys?: readonly string[];
+  /** Dot paths (e.g. `config.baseUrl`) the body must not contain. Enforced by the executor. */
+  denyPaths?: readonly string[];
   /** The route's raw zod schemas (or ts-rest plain types) for `api_describe_operation`. */
   schemas: { query?: unknown; body?: unknown };
 }
 
-export type SelfApiAllowlist = Readonly<Record<string, Readonly<Record<string, SelfApiTier>>>>;
+/** A bare tier, or a tier plus a body policy (Law 1: route names alone can be bypassed via body fields). */
+export type SelfApiEntry =
+  | SelfApiTier
+  | { tier: SelfApiTier; allowKeys?: readonly string[]; denyPaths?: readonly string[] };
+
+export type SelfApiAllowlist = Readonly<Record<string, Readonly<Record<string, SelfApiEntry>>>>;
+
+/** Presentation / ownership keys of a project the chat may edit — never policy, budget, commands, env, plugins. */
+const PROJECT_SAFE_KEYS = [
+  "name",
+  "desc",
+  "category",
+  "web",
+  "logo",
+  "identity",
+  "daily_rhythm",
+  "companyId",
+  "teamId",
+] as const;
 
 /**
  * Everything the chat may do to ZIBBY's own API. Explicit on purpose: a new endpoint
@@ -30,6 +52,7 @@ export type SelfApiAllowlist = Readonly<Record<string, Readonly<Record<string, S
  */
 export const SELF_API_ALLOWLIST: SelfApiAllowlist = {
   tasks: {
+    // POST but read tier: side-effect free, only costs model tokens.
     classifyTask: "read",
     listScheduledTasks: "read",
     getTaskParents: "read",
@@ -48,16 +71,18 @@ export const SELF_API_ALLOWLIST: SelfApiAllowlist = {
   workflows: {
     listWorkflows: "read",
     getWorkflow: "read",
-    createWorkflow: "write",
-    updateWorkflow: "write",
+    // No createWorkflow: a new workflow's phases carry approval gates and shell commands.
+    // Metadata only; phases/outputs/instructions/budget stay out of the chat's reach.
+    updateWorkflow: { tier: "write", allowKeys: ["name", "avatar", "desc", "department"] },
   },
   workflowRuns: { listWorkflowRuns: "read" },
   companies: {
     listCompanies: "read",
     searchCompanies: "read",
     getCompany: "read",
-    createCompany: "write",
-    updateCompany: "write",
+    // `budget` (spend caps) is operator-only.
+    createCompany: { tier: "write", allowKeys: ["id", "name", "desc", "people"] },
+    updateCompany: { tier: "write", allowKeys: ["name", "desc", "people"] },
   },
   teams: {
     listTeams: "read",
@@ -75,25 +100,44 @@ export const SELF_API_ALLOWLIST: SelfApiAllowlist = {
     getResolvedProject: "read",
     getProjectLocalState: "read",
     getProjectPrs: "read",
-    createProject: "write",
-    updateProject: "write",
+    // Not allowed: autonomy_policy, budget, checks (shell), env, plugins, prOpenMode.
+    createProject: { tier: "write", allowKeys: ["id", "path", "gitRemote", ...PROJECT_SAFE_KEYS] },
+    updateProject: { tier: "write", allowKeys: PROJECT_SAFE_KEYS },
     cloneProject: "write",
   },
   automations: {
     listAutomations: "read",
     searchAutomations: "read",
     getAutomation: "read",
-    createAutomation: "write",
-    updateAutomation: "write",
+    // Trigger/target stay editable; the approval mode and tool grants are the gate's.
+    createAutomation: { tier: "write", denyPaths: ["approval", "target.toolGrants"] },
+    updateAutomation: { tier: "write", denyPaths: ["approval", "target.toolGrants"] },
   },
   integrations: {
     listIntegrations: "read",
     getIntegration: "read",
     createIntegration: "write",
-    updateIntegration: "write",
+    // Hosts/ports: repointing them would send the stored credential to another endpoint.
+    updateIntegration: {
+      tier: "write",
+      denyPaths: [
+        "config.baseUrl",
+        "config.imapHost",
+        "config.imapPort",
+        "config.smtpHost",
+        "config.smtpPort",
+      ],
+    },
     testIntegration: "write",
   },
-  system: { getConfig: "read", putConfig: "write" },
+  system: {
+    getConfig: "read",
+    // Whole-document PUT, but the scheduler, auto-resume and tick switches are operator-only.
+    putConfig: {
+      tier: "write",
+      denyPaths: ["goalAutoResume", "limitResumeMax", "automationTickMs", "roadmapTickMs"],
+    },
+  },
   machine: { getMachineConfig: "read", updateMachineConfig: "write" },
 };
 
@@ -142,6 +186,29 @@ function isRouteShape(value: unknown): value is RouteShape {
   return typeof v.method === "string" && typeof v.path === "string";
 }
 
+/** Collect every object shape reachable by unwrapping optional/pipe/union wrappers. */
+function objectShapes(schema: unknown, depth = 0): Record<string, unknown>[] {
+  if (typeof schema !== "object" || schema === null || depth > 8) return [];
+  const s = schema as { shape?: unknown; _def?: Record<string, unknown> };
+  if (typeof s.shape === "object" && s.shape !== null) return [s.shape as Record<string, unknown>];
+  const def = s._def ?? {};
+  const next: unknown[] = [def.innerType, def.in, def.schema, def.element];
+  if (Array.isArray(def.options)) next.push(...def.options);
+  return next.flatMap((n) => objectShapes(n, depth + 1));
+}
+
+/** Throw unless every dot path exists in at least one variant of the body schema. */
+function assertPathsExist(name: string, body: unknown, paths: readonly string[], what: string) {
+  for (const path of paths) {
+    let level: unknown[] = [body];
+    for (const seg of path.split(".")) {
+      level = level.flatMap((l) => objectShapes(l).flatMap((sh) => (seg in sh ? [sh[seg]] : [])));
+      if (level.length === 0)
+        throw new Error(`self-api: ${name} ${what} "${path}" is not in its body`);
+    }
+  }
+}
+
 /** Resolve the allowlist against the contract; throws on any denied/unknown/DELETE entry. */
 export function buildSelfApiCatalog(
   contract: Record<string, unknown> = appContract,
@@ -149,7 +216,14 @@ export function buildSelfApiCatalog(
 ): ReadonlyMap<string, SelfApiOperation> {
   const out = new Map<string, SelfApiOperation>();
   for (const [router, routes] of Object.entries(allow)) {
-    for (const [route, tier] of Object.entries(routes)) {
+    for (const [route, entry] of Object.entries(routes)) {
+      const {
+        tier,
+        allowKeys,
+        denyPaths,
+      }: Exclude<SelfApiEntry, SelfApiTier> & {
+        tier: SelfApiTier;
+      } = typeof entry === "string" ? { tier: entry } : entry;
       const name = `${router}.${route}`;
       if (DENIED_ROUTERS.has(router) || DENIED_ROUTES.has(name)) {
         throw new Error(`self-api: ${name} is denied (Law 1 floor) and cannot be allowlisted`);
@@ -161,11 +235,15 @@ export function buildSelfApiCatalog(
           : undefined;
       if (!isRouteShape(def)) throw new Error(`self-api: unknown route ${name}`);
       if (def.method === "DELETE") throw new Error(`self-api: ${name} is a DELETE route`);
+      if (allowKeys) assertPathsExist(name, def.body, allowKeys, "allowKeys entry");
+      if (denyPaths) assertPathsExist(name, def.body, denyPaths, "denyPaths entry");
       out.set(name, {
         name,
         router,
         route,
         tier,
+        ...(allowKeys && { allowKeys }),
+        ...(denyPaths && { denyPaths }),
         method: def.method,
         path: def.path,
         summary: def.summary ?? name,

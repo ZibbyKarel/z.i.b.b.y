@@ -26,7 +26,7 @@ describe("buildSelfApiCatalog", () => {
     expect(catalog.get("projects.getProject")?.pathParams).toEqual(["id"]);
   });
 
-  it("never exposes credentials, the autonomy profile, merges, triggers or the gate", () => {
+  it("never exposes credentials, merges, triggers or the gate by route name", () => {
     for (const name of [
       "integrations.setCredentials",
       "projects.setProjectSecrets",
@@ -36,12 +36,52 @@ describe("buildSelfApiCatalog", () => {
       "automations.triggerAutomation",
       "taskRuns.stopTaskRun",
       "projects.deleteProject",
+      "workflows.createWorkflow",
     ]) {
       expect(catalog.has(name)).toBe(false);
     }
     for (const op of catalog.values()) {
       expect(["gates", "gateRules", "mandate", "budget", "approvals"]).not.toContain(op.router);
     }
+  });
+
+  it("restricts body fields so a write route cannot reach the autonomy profile, gates or scheduler", () => {
+    for (const route of ["updateProject", "createProject"]) {
+      const keys = catalog.get(`projects.${route}`)?.allowKeys;
+      expect(keys).toBeDefined();
+      for (const bad of ["autonomy_policy", "budget", "checks", "env", "plugins", "prOpenMode"]) {
+        expect(keys).not.toContain(bad);
+      }
+    }
+    expect(catalog.get("projects.updateProject")?.allowKeys).not.toContain("gitRemote");
+    expect(catalog.get("projects.updateProject")?.allowKeys).not.toContain("path");
+    expect(catalog.get("system.putConfig")?.denyPaths).toEqual(
+      expect.arrayContaining([
+        "goalAutoResume",
+        "limitResumeMax",
+        "automationTickMs",
+        "roadmapTickMs",
+      ]),
+    );
+    expect(catalog.get("integrations.updateIntegration")?.denyPaths).toEqual(
+      expect.arrayContaining(["config.baseUrl", "config.imapHost", "config.smtpHost"]),
+    );
+    expect(catalog.get("workflows.updateWorkflow")?.allowKeys).not.toContain("phases");
+    expect(catalog.get("companies.updateCompany")?.allowKeys).not.toContain("budget");
+    expect(catalog.get("automations.updateAutomation")?.denyPaths).toContain("approval");
+  });
+
+  it("throws at build time on an allowKeys or denyPaths typo", () => {
+    expect(() =>
+      buildSelfApiCatalog(undefined, {
+        teams: { updateTeam: { tier: "write", allowKeys: ["nme"] } },
+      }),
+    ).toThrow(/allowKeys/);
+    expect(() =>
+      buildSelfApiCatalog(undefined, {
+        integrations: { updateIntegration: { tier: "write", denyPaths: ["config.baseUrll"] } },
+      }),
+    ).toThrow(/denyPaths/);
   });
 
   it("throws at build time when the allowlist names a denied route", () => {
