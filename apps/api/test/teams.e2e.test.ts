@@ -87,6 +87,97 @@ describe("Teams API (e2e)", () => {
     await fs.rm(kb, { recursive: true, force: true });
   });
 
+  it("browses a team KB read-only: list, open note, 404s, no escape", async () => {
+    const kb = await fs.mkdtemp(path.join(os.tmpdir(), "teams-e2e-kb-browse-"));
+    const outside = path.join(path.dirname(kb), `outside-${path.basename(kb)}.md`);
+    await fs.writeFile(outside, "secret");
+    await fs.mkdir(path.join(kb, "wiki"), { recursive: true });
+    await fs.mkdir(path.join(kb, "_templates"), { recursive: true });
+    await fs.writeFile(path.join(kb, "wiki", "a.md"), "---\ntitle: Alpha\n---\nsee [[b]]\n");
+    await fs.writeFile(path.join(kb, "wiki", "b.md"), "B body\n");
+    await fs.writeFile(path.join(kb, "_templates", "t.md"), "tpl");
+    await fs.writeFile(path.join(kb, "talk.vtt"), "WEBVTT");
+    const http = app.getHttpServer();
+    await request(http)
+      .post(BASE)
+      .send({
+        id: "browse",
+        name: "B",
+        desc: "d",
+        knowledgeBase: { kind: "vault", path: kb, readOnly: true },
+      })
+      .expect(201);
+    await request(http).post(BASE).send({ id: "plain", name: "P", desc: "d" }).expect(201);
+
+    const list = await request(http).get(`${BASE}/browse/kb/notes`).expect(200);
+    expect(list.body).toEqual([
+      { id: "wiki/a.md", title: "Alpha", folder: "wiki" },
+      { id: "wiki/b.md", title: "b", folder: "wiki" },
+    ]);
+
+    const note = await request(http).get(`${BASE}/browse/kb/note`).query({ path: "wiki/a.md" });
+    expect(note.status).toBe(200);
+    expect(note.body).toEqual({ id: "wiki/a.md", title: "Alpha", body: "see [[b]]", links: ["b"] });
+
+    for (const bad of [
+      "wiki/missing.md",
+      "../" + path.basename(outside),
+      outside,
+      "_templates/t.md",
+      "talk.vtt",
+    ]) {
+      await request(http).get(`${BASE}/browse/kb/note`).query({ path: bad }).expect(404);
+    }
+    for (const url of ["notes", "ingest"]) {
+      await request(http).get(`${BASE}/plain/kb/${url}`).expect(404);
+      await request(http).get(`${BASE}/ghost/kb/${url}`).expect(404);
+    }
+    await request(http).get(`${BASE}/plain/kb/note`).query({ path: "x.md" }).expect(404);
+    await request(http).get(`${BASE}/browse/kb/note`).expect(400);
+
+    await request(http).delete(`${BASE}/browse`).expect(200);
+    await request(http).delete(`${BASE}/plain`).expect(200);
+    await fs.rm(kb, { recursive: true, force: true });
+    await fs.rm(outside, { force: true });
+  });
+
+  it("reports ingest status: log tail, and the project registered at the KB path (or null)", async () => {
+    const kb = await fs.mkdtemp(path.join(os.tmpdir(), "teams-e2e-kb-ingest-"));
+    await fs.mkdir(path.join(kb, "_meta"), { recursive: true });
+    const entries = Array.from({ length: 25 }, (_, i) => `- entry ${i + 1}`);
+    await fs.writeFile(path.join(kb, "_meta", "log.md"), `# Log\n\n${entries.join("\n")}\n`);
+    const http = app.getHttpServer();
+    await request(http)
+      .post(BASE)
+      .send({
+        id: "ingest",
+        name: "I",
+        desc: "d",
+        knowledgeBase: { kind: "vault", path: kb, readOnly: true },
+      })
+      .expect(201);
+
+    const without = await request(http).get(`${BASE}/ingest/kb/ingest`).expect(200);
+    expect(without.body.projectId).toBeNull();
+    expect(without.body.log).toHaveLength(20);
+    expect(without.body.log[19]).toEqual({ line: "- entry 25" });
+
+    // A project registered via a symlinked spelling of the same directory still matches.
+    const link = `${kb}-link`;
+    await fs.symlink(kb, link);
+    await request(http)
+      .post(PROJECTS_BASE)
+      .send({ id: "ingest-kb", name: "ingest-kb", path: link, teamId: "ingest" })
+      .expect(201);
+    const withProject = await request(http).get(`${BASE}/ingest/kb/ingest`).expect(200);
+    expect(withProject.body.projectId).toBe("ingest-kb");
+
+    await request(http).delete(`${PROJECTS_BASE}/ingest-kb`).expect(200);
+    await request(http).delete(`${BASE}/ingest`).expect(200);
+    await fs.rm(link, { force: true });
+    await fs.rm(kb, { recursive: true, force: true });
+  });
+
   it("rejects a duplicate id (409) and an invalid body (400)", async () => {
     await request(app.getHttpServer()).post(BASE).send(team).expect(201);
     await request(app.getHttpServer()).post(BASE).send(team).expect(409);

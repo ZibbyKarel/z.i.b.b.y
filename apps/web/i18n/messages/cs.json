@@ -113,24 +113,19 @@
   "knowledge": {
     "graph": {
       "title": "Graf znalostí",
-      "sourceLabel": "Zdroj",
-      "sourceVault": "ZibbyCorp",
       "graphLabel": "Graf znalostí",
       "emptyTitle": "Není co zobrazit",
-      "emptyDescription": "Tento zdroj zatím nemá žádné propojené poznámky.",
-      "path": "Cesta",
-      "clear": "Zavřít",
-      "sync": "Synchronizovat KB",
-      "syncing": "Synchronizuji…",
-      "syncCurrent": "Aktuální ({sha})",
-      "syncPulled": "Staženo {before} → {after}",
-      "syncFailed": "Synchronizace selhala"
+      "emptyDescription": "Tento zdroj zatím nemá žádné propojené poznámky."
     },
     "vault": {
       "title": "Trezor",
       "shelfGeneral": "Obecné",
       "usedBy": "Odkazuje sem",
-      "usedByEmpty": "Žádná poznámka sem neodkazuje."
+      "usedByEmpty": "Žádná poznámka sem neodkazuje.",
+      "teamReadOnly": "Týmová znalostní báze (jen pro čtení)",
+      "rootFolder": "Kořen",
+      "emptyTeam": "Tato znalostní báze zatím nemá žádné poznámky.",
+      "noteError": "Poznámku se nepodařilo načíst."
     },
     "distill": {
       "title": "Destilace",
@@ -144,7 +139,29 @@
       "metricsUnavailable": "Strukturované metriky (přečtené poznámky, přidané odkazy, mezery) se dnes nikam neukládají — vidíš jen výstupní referenci posledního běhu.",
       "selfModel": {
         "title": "Self-model"
+      },
+      "ingest": {
+        "title": "Ingest týmové KB",
+        "description": "Nové zdroje kompiluje do wiki workflow team-kb-ingest; výsledkem je pull request do repozitáře KB.",
+        "run": "Spustit ingest",
+        "running": "Spouštím…",
+        "runText": "tým {team}: zpracuj všechny nové zdroje",
+        "log": "_meta/log.md (poslední záznamy)",
+        "logEmpty": "Log ingestu je prázdný.",
+        "noProjectTitle": "Pro tuto KB není registrovaný projekt",
+        "noProjectDescription": "Zaregistruj repozitář KB jako projekt (jeho path musí být checkout KB), aby na něm mohl ingest workflow běžet. Viz docs/workflows/team-kb-ingest.md.",
+        "runsLink": "Poslední běhy",
+        "workflowName": "Team KB Ingest"
       }
+    },
+    "source": {
+      "label": "Zdroj",
+      "vault": "ZibbyCorp",
+      "sync": "Synchronizovat KB",
+      "syncing": "Synchronizuji…",
+      "syncCurrent": "Aktuální ({sha})",
+      "syncPulled": "Staženo {before} → {after}",
+      "syncFailed": "Synchronizace selhala"
     }
   },
   "common": {

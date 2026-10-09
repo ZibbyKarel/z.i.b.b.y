@@ -2,7 +2,15 @@ import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { MemoryGraphSchema } from "../memory/memory.schema";
 import { EmptyBodySchema, ErrorSchema } from "../common.schema";
-import { CreateTeamSchema, TeamIdSchema, TeamSchema, UpdateTeamSchema } from "./team.schema";
+import {
+  CreateTeamSchema,
+  TeamIdSchema,
+  TeamKbIngestSchema,
+  TeamKbNoteSchema,
+  TeamKbNoteSummarySchema,
+  TeamSchema,
+  UpdateTeamSchema,
+} from "./team.schema";
 
 const c = initContract();
 
@@ -52,6 +60,31 @@ export const teamsContract = c.router(
       responses: { 200: MemoryGraphSchema, 404: ErrorSchema },
       summary:
         "Read-only wiki-link graph of the team's knowledge base (same shape as GET /memory/graph); 404 when the team or its KB is missing",
+    },
+    listTeamKbNotes: {
+      method: "GET",
+      path: "/teams/:id/kb/notes",
+      pathParams: z.object({ id: TeamIdSchema }),
+      responses: { 200: z.array(TeamKbNoteSummarySchema), 404: ErrorSchema },
+      summary:
+        "Markdown notes of the team's knowledge base (no .vtt, no _templates/); 404 when the team or its KB is missing",
+    },
+    getTeamKbNote: {
+      method: "GET",
+      path: "/teams/:id/kb/note",
+      pathParams: z.object({ id: TeamIdSchema }),
+      query: z.object({ path: z.string().min(1) }),
+      responses: { 200: TeamKbNoteSchema, 404: ErrorSchema },
+      summary:
+        "One KB note by repo-relative path (capped body + wikilink targets); 404 for a missing team/KB/note or an escaping path",
+    },
+    getTeamKbIngest: {
+      method: "GET",
+      path: "/teams/:id/kb/ingest",
+      pathParams: z.object({ id: TeamIdSchema }),
+      responses: { 200: TeamKbIngestSchema, 404: ErrorSchema },
+      summary:
+        "Ingest status: the project registered at the KB path (or null) and the last 20 lines of _meta/log.md; 404 when the team or its KB is missing",
     },
     syncTeamKb: {
       method: "POST",

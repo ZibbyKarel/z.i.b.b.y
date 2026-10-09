@@ -205,12 +205,23 @@ never edits other notes. Orphans exclude `daily/`, North Star, self-knowledge, M
 the machine notes; `vault-log` and `vault-lint` are scanned as link-less so they don't
 mask orphans. Service: `vault-lint.service.ts`.
 
-## Graph sources (web `/knowledge/graph`)
+## Knowledge sources (web `/knowledge/*`)
 
-The graph view switches between the vault (`GET /api/memory/graph`) and a team knowledge
-base (`GET /api/teams/:id/kb/graph`, same `{nodes, edges}` shape, 404 without a KB). The
-team graph is read-only, built by `KbReaderService.graph` from resolved `[[wikilinks]]`;
-`.vtt` transcripts and `_templates/` are not nodes.
+All three Knowledge pages (Trezor `/knowledge/vault`, Graf `/knowledge/graph`, Destilace
+`/knowledge/distill`) share one source bar: a switcher ZibbyCorp / team KBs and, for a team,
+the "Sync KB" button (`POST /api/teams/:id/kb/sync`). The selection (`vault` | `team:<id>`) is
+held by `KnowledgeSourceProvider` in `app/(company)/knowledge/layout.tsx`, so it survives tab
+switches; it is initialised from `?source=` and the param is re-applied on every page (tab links
+drop the query string). An unknown team or one without a KB falls back to the vault.
+
+| Page      | Vault source                                    | Team source (read-only)                                                                                                                                                                           |
+| --------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Trezor    | tier/shelf nav, edit, capture, import, new note | `GET /teams/:id/kb/notes` nav grouped by folder + filter, `GET /teams/:id/kb/note?path=` rendered read-only                                                                                       |
+| Graf      | `GET /api/memory/graph` + tier filter           | `GET /api/teams/:id/kb/graph`; a node opens the note in the Trezor (`?source=team:<id>&note=<relPath>`)                                                                                           |
+| Destilace | distillation automations + self-model           | `GET /teams/:id/kb/ingest` log + "Run ingest" (starts `team-kb-ingest` on the KB project through `POST /api/tasks`); no registered project -> empty state, see `docs/workflows/team-kb-ingest.md` |
+
+The team graph is built by `KbReaderService.graph` from resolved `[[wikilinks]]`; `.vtt`
+transcripts and `_templates/` are not nodes and not listed notes.
 
 ## Bulk import (Phase 112)
 

@@ -89,11 +89,27 @@ GET    /teams/search?q=   free-text search (id, name, desc) — declared
 GET    /teams/:id         get one team
 GET    /teams/:id/kb/graph read-only wiki-link graph of the team KB (same shape
                           as GET /memory/graph; 404 if no team or no KB)
+GET    /teams/:id/kb/notes  markdown notes of the team KB, [{ id: relPath, title, folder }]
+                          (no .vtt, no _templates/); 404 if no team or no KB
+GET    /teams/:id/kb/note?path=<relPath>  one note { id, title, body, links }
+                          (body capped like the MCP read; `..`/absolute/unknown path -> 404)
+GET    /teams/:id/kb/ingest { projectId | null, log: [{ line }] } — the registered
+                          project whose realpath equals the KB path, and the last 20
+                          non-empty lines of `_meta/log.md` (each capped at 300 chars)
 POST   /teams/:id/kb/sync  fast-forward the team KB git clone (`git pull --ff-only`);
                           200 { updated, before, after }, 404 no team/KB, 409 pull failed
 PATCH  /teams/:id         partial update
 DELETE /teams/:id         delete (allowed with linked projects — no cascade)
 ```
+
+The three read endpoints are served by `KbReaderService.notes/readPath/tailLines`, which
+only ever MATCH a requested path against the walk-validated entries (same containment +
+symlink refusal as every other KB read) — nothing is resolved on disk from user input.
+`kb/ingest` looks the project up through a `ProjectsStorageService` that `TeamsModule`
+re-provides over the same `PROJECTS_DIR` (importing `ProjectsModule` would cycle through
+`ResolvedProjectModule`). The UI starts the `team-kb-ingest` workflow on that project via
+the existing `POST /api/tasks` (explicit workflow target + the project path); no extra
+run endpoint exists. A team KB stays read-only for ZIBBY (Law 1).
 
 `POST /teams/:id/kb/sync` (`TeamKbSyncService`) is operator-triggered and the
 only write the app does to a KB checkout: `git pull --ff-only` (no shell, 60 s

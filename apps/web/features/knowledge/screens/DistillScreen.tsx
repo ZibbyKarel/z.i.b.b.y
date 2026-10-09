@@ -21,6 +21,9 @@ import { useCronLabel } from "../../automations/useCronLabel";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../../components/PageContainer/PageContainer";
+import { TeamKbIngest } from "../components/TeamKbIngest";
+import { useKnowledgeSource } from "../context";
+import { KnowledgeSourceBar } from "../components/KnowledgeSourceBar";
 import { SelfKnowledgeSection } from "../components/SelfKnowledgeSection";
 
 /** The two department-owned (KNW) distillation automation targets this screen covers. */
@@ -43,6 +46,26 @@ interface RunLogLine {
 }
 
 export function DistillScreen() {
+  const t = useTranslations("knowledge");
+  const { teamId } = useKnowledgeSource();
+  if (teamId === null) return <LocalDistill />;
+  return (
+    <Container padding={["300", "350"]}>
+      <PageContainer>
+        <Stack gap="250">
+          <Stack wrap align="end" direction="row" gap="150" justify="between">
+            <Typography type="title">{t("distill.title")}</Typography>
+            <KnowledgeSourceBar />
+          </Stack>
+          <TeamKbIngest teamId={teamId} />
+        </Stack>
+      </PageContainer>
+    </Container>
+  );
+}
+
+/** The ZibbyCorp vault's distillation automations (memory-distill, gap-detect). */
+function LocalDistill() {
   const t = useTranslations("knowledge");
   const ta = useTranslations("settings");
   const locale = useLocale();
@@ -75,32 +98,20 @@ export function DistillScreen() {
     );
   };
 
-  if (automationsQuery.isPending) {
-    return (
-      <Container padding={["300", "350"]}>
-        <PageContainer>
-          <QueryLoading />
-        </PageContainer>
-      </Container>
-    );
-  }
-  if (automationsQuery.isError) {
-    return (
-      <Container padding={["300", "350"]}>
-        <PageContainer>
-          <QueryError onRetry={() => void automationsQuery.refetch()} />
-        </PageContainer>
-      </Container>
-    );
-  }
-
   return (
     <Container padding={["300", "350"]}>
       <PageContainer>
         <Stack gap="250">
-          <Typography type="title">{t("distill.title")}</Typography>
+          <Stack wrap align="end" direction="row" gap="150" justify="between">
+            <Typography type="title">{t("distill.title")}</Typography>
+            <KnowledgeSourceBar />
+          </Stack>
 
-          {automations.length === 0 ? (
+          {automationsQuery.isPending ? (
+            <QueryLoading />
+          ) : automationsQuery.isError ? (
+            <QueryError onRetry={() => void automationsQuery.refetch()} />
+          ) : automations.length === 0 ? (
             <Panel header={t("distill.log")} padding="300">
               <Typography size="sm" type="note" variant="tertiary">
                 {t("distill.noAutomations")}

@@ -22,13 +22,16 @@ import { EmptyState } from "../../../components/EmptyState/EmptyState";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../../components/PageContainer/PageContainer";
+import { KnowledgeSourceBar } from "../components/KnowledgeSourceBar";
 import { ImportDialog } from "../components/ImportDialog";
 import { NoteEditorDialog } from "../components/NoteEditorDialog";
 import { NoteView } from "../components/NoteView";
 import { QuickCapture } from "../components/QuickCapture";
+import { TeamKbVault } from "../components/TeamKbVault";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { groupVaultNodes } from "../groupVault";
 import { useMemoryGraphQuery, useMemorySearchQuery, useNoteQuery } from "../queries";
+import { useKnowledgeSource } from "../context";
 
 /**
  * The vault: a left nav grouped by tier → department shelf (O-24), a reader (DS
@@ -37,6 +40,34 @@ import { useMemoryGraphQuery, useMemorySearchQuery, useNoteQuery } from "../quer
  * via `NoteView`'s own top-right Edit → `MarkdownEditor` swap.
  */
 export function VaultScreen() {
+  const { teamId } = useKnowledgeSource();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const t = useTranslations("knowledge");
+
+  if (teamId === null) return <LocalVault />;
+  const select = (path: string) => {
+    const next = new URLSearchParams(searchParams.toString());
+    next.set("note", path);
+    router.replace(`/knowledge/vault?${next.toString()}` as Route, { scroll: false });
+  };
+  return (
+    <Container padding={["300", "350"]}>
+      <PageContainer>
+        <Stack gap="250">
+          <Stack wrap align="end" direction="row" gap="150" justify="between">
+            <Typography type="title">{t("vault.title")}</Typography>
+            <KnowledgeSourceBar />
+          </Stack>
+          <TeamKbVault onSelect={select} selected={searchParams.get("note")} teamId={teamId} />
+        </Stack>
+      </PageContainer>
+    </Container>
+  );
+}
+
+/** The ZibbyCorp vault: tier → shelf nav, editable notes, capture / import / create. */
+function LocalVault() {
   const departments = useDepartmentLookup();
   const t = useTranslations("knowledge");
   const tm = useTranslations("memory");
@@ -98,25 +129,6 @@ export function VaultScreen() {
       </Button>
     </Stack>
   );
-
-  if (graphQuery.isPending) {
-    return (
-      <Container padding={["300", "350"]}>
-        <PageContainer>
-          <QueryLoading />
-        </PageContainer>
-      </Container>
-    );
-  }
-  if (graphQuery.isError) {
-    return (
-      <Container padding={["300", "350"]}>
-        <PageContainer>
-          <QueryError onRetry={() => void graphQuery.refetch()} />
-        </PageContainer>
-      </Container>
-    );
-  }
 
   const nav = (
     <Panel header={t("vault.title")} padding="150">
@@ -199,7 +211,10 @@ export function VaultScreen() {
         <Stack gap="250">
           <Stack wrap align="end" direction="row" gap="150" justify="between">
             <Typography type="title">{t("vault.title")}</Typography>
-            {actions}
+            <Stack wrap align="end" direction="row" gap="150">
+              {actions}
+              <KnowledgeSourceBar />
+            </Stack>
           </Stack>
 
           {quickCapturing && (
@@ -211,13 +226,19 @@ export function VaultScreen() {
             </Panel>
           )}
 
-          <Grid align="start" gap="200" sidebar="right">
-            <Grid align="start" gap="200" sidebar="left">
-              {nav}
-              <NoteView note={note} onSelect={select} />
+          {graphQuery.isPending ? (
+            <QueryLoading />
+          ) : graphQuery.isError ? (
+            <QueryError onRetry={() => void graphQuery.refetch()} />
+          ) : (
+            <Grid align="start" gap="200" sidebar="right">
+              <Grid align="start" gap="200" sidebar="left">
+                {nav}
+                <NoteView note={note} onSelect={select} />
+              </Grid>
+              {usedBy}
             </Grid>
-            {usedBy}
-          </Grid>
+          )}
         </Stack>
       </PageContainer>
 

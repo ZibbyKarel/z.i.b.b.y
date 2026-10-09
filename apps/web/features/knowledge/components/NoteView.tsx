@@ -33,6 +33,8 @@ export interface NoteViewProps {
   note: Note | undefined;
   /** Navigate to a linked/backlinked note (index-first traversal). */
   onSelect: (id: string) => void;
+  /** Hide the Edit action — used for a team KB, which ZIBBY only reads (Law 1). */
+  readOnly?: boolean;
 }
 
 /** A row of clickable wiki-link chips — the index-first navigation affordance. */
@@ -66,7 +68,7 @@ function LinkChips({
  * Markdown editor and Save/Cancel take the header slot. Id and tier stay
  * immutable (there is no move op).
  */
-export function NoteView({ note, onSelect }: NoteViewProps) {
+export function NoteView({ note, onSelect, readOnly = false }: NoteViewProps) {
   const t = useTranslations("memory");
   const tk = useTranslations();
   const updateNote = useUpdateNoteMutation();
@@ -90,40 +92,41 @@ export function NoteView({ note, onSelect }: NoteViewProps) {
     );
   };
 
-  const action = note ? (
-    editing ? (
-      <Stack align="center" direction="row" gap="100">
+  const action =
+    note && !readOnly ? (
+      editing ? (
+        <Stack align="center" direction="row" gap="100">
+          <Button
+            data-testid={NoteViewTestId.Cancel}
+            intent="ghost"
+            onClick={() => setEditing(false)}
+            size="sm"
+          >
+            {tk("common.cancel")}
+          </Button>
+          <Button
+            data-testid={NoteViewTestId.Save}
+            icon="check"
+            intent="primary"
+            loading={updateNote.isPending}
+            onClick={save}
+            size="sm"
+          >
+            {t("save")}
+          </Button>
+        </Stack>
+      ) : (
         <Button
-          data-testid={NoteViewTestId.Cancel}
+          data-testid={NoteViewTestId.Edit}
+          icon="edit"
           intent="ghost"
-          onClick={() => setEditing(false)}
+          onClick={startEdit}
           size="sm"
         >
-          {tk("common.cancel")}
+          {t("editNote")}
         </Button>
-        <Button
-          data-testid={NoteViewTestId.Save}
-          icon="check"
-          intent="primary"
-          loading={updateNote.isPending}
-          onClick={save}
-          size="sm"
-        >
-          {t("save")}
-        </Button>
-      </Stack>
-    ) : (
-      <Button
-        data-testid={NoteViewTestId.Edit}
-        icon="edit"
-        intent="ghost"
-        onClick={startEdit}
-        size="sm"
-      >
-        {t("editNote")}
-      </Button>
-    )
-  ) : undefined;
+      )
+    ) : undefined;
 
   return (
     <Panel header={note?.title ?? t("noteFallback")} headerEnd={action} padding="250">

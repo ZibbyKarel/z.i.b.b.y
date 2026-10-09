@@ -81,3 +81,33 @@ export const UpdateTeamSchema = TeamSchema.omit({ id: true }).partial().extend({
   knowledgeBase: KnowledgeBaseSourceSchema.optional().nullable(),
 });
 export type UpdateTeamInput = z.infer<typeof UpdateTeamSchema>;
+
+/** One markdown note of a team's read-only knowledge base (`GET /teams/:id/kb/notes`). */
+export const TeamKbNoteSummarySchema = z.object({
+  /** Repo-relative path, forward-slash-joined — the note's unique id. */
+  id: z.string(),
+  title: z.string(),
+  /** Top-level folder of the note ("" for a note at the KB root). */
+  folder: z.string(),
+});
+export type TeamKbNoteSummary = z.infer<typeof TeamKbNoteSummarySchema>;
+
+/** One note's capped body plus its raw `[[wikilink]]` targets (`GET /teams/:id/kb/note`). */
+export const TeamKbNoteSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  body: z.string(),
+  links: z.array(z.string()),
+});
+export type TeamKbNote = z.infer<typeof TeamKbNoteSchema>;
+
+/**
+ * Ingest status of a team KB (`GET /teams/:id/kb/ingest`): the registered project
+ * whose path IS the KB repo (the `team-kb-ingest` workflow runs on it; null when none)
+ * and the tail of the KB's own `_meta/log.md`.
+ */
+export const TeamKbIngestSchema = z.object({
+  projectId: z.string().nullable(),
+  log: z.array(z.object({ line: z.string() })),
+});
+export type TeamKbIngest = z.infer<typeof TeamKbIngestSchema>;

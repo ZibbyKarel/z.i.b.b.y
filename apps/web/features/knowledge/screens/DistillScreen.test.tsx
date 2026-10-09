@@ -1,8 +1,38 @@
+import { fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen } from "../../../test/render";
 import { DistillScreen } from "./DistillScreen";
 
 const mutate = vi.fn();
+const createTask = vi.fn();
+const push = vi.fn();
+let teamId: string | null = null;
+let ingestData: { projectId: string | null; log: { line: string }[] } = {
+  projectId: "devrel-kb",
+  log: [{ line: "- 2026-10-01 ingested A" }, { line: "- 2026-10-02 ingested B" }],
+};
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("../context", () => ({
+  VAULT_SOURCE: "vault",
+  TEAM_SOURCE_PREFIX: "team:",
+  useKnowledgeSource: () => ({
+    source: teamId ? `team:${teamId}` : "vault",
+    teamId,
+    isVault: teamId === null,
+    kbTeams: [{ id: "devrel", name: "DevRel" }],
+    setSource: vi.fn(),
+  }),
+}));
+vi.mock("../queries/useTeamKbIngestQuery", () => ({
+  useTeamKbIngestQuery: () => ({ isPending: false, isError: false, data: ingestData }),
+}));
+vi.mock("../../projects/queries", () => ({
+  useProjectsQuery: () => ({ data: [{ id: "devrel-kb", name: "KB", path: "/kb/devrel" }] }),
+}));
+vi.mock("../../tasks/mutations", () => ({
+  useCreateTaskMutation: () => ({ mutate: createTask, isPending: false }),
+}));
 
 vi.mock("../../automations/queries/useAutomationsQuery", () => ({
   getAutomationsQueryKey: () => ["automations"],
@@ -68,5 +98,50 @@ describe("DistillScreen", () => {
   it("hosts the self-model (self-knowledge) section", () => {
     render(<DistillScreen />);
     expect(screen.getByTestId("self-knowledge-stub")).toBeInTheDocument();
+  });
+
+  it("vault source shows the switcher but no sync button", () => {
+    teamId = null;
+    render(<DistillScreen />);
+    expect(screen.getByRole("radiogroup", { name: /zdroj/i }) ?? true).toBeTruthy();
+    expect(screen.queryByTestId("knowledge-sync")).toBeNull();
+  });
+
+  describe("team source", () => {
+    it("shows the ingest log and the sync button, not the automations", () => {
+      teamId = "devrel";
+      render(<DistillScreen />);
+      expect(screen.getByTestId("distill-ingest-log")).toHaveTextContent("ingested A");
+      expect(screen.getByTestId("distill-ingest-log")).toHaveTextContent("ingested B");
+      expect(screen.getByTestId("knowledge-sync")).toBeInTheDocument();
+      expect(screen.queryByTestId("distill-run-now")).toBeNull();
+      expect(screen.queryByTestId("self-knowledge-stub")).toBeNull();
+    });
+
+    it("starts team-kb-ingest on the KB project through the create-task mutation", () => {
+      teamId = "devrel";
+      render(<DistillScreen />);
+      fireEvent.click(screen.getByTestId("distill-ingest-run"));
+      expect(createTask).toHaveBeenCalledWith(
+        {
+          body: expect.objectContaining({
+            paths: ["/kb/devrel"],
+            target: expect.objectContaining({ kind: "workflow", id: "team-kb-ingest" }),
+          }),
+        },
+        expect.objectContaining({ onSuccess: expect.any(Function) }),
+      );
+    });
+
+    it("without a registered project: explanatory empty state and no run button", () => {
+      teamId = "devrel";
+      ingestData = { projectId: null, log: [] };
+      render(<DistillScreen />);
+      expect(screen.getByTestId("distill-ingest-no-project")).toHaveTextContent(
+        /team-kb-ingest\.md/,
+      );
+      expect(screen.queryByTestId("distill-ingest-run")).toBeNull();
+      teamId = null;
+    });
   });
 });

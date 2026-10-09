@@ -25,6 +25,24 @@ export interface KbNote {
   readonly body: string;
 }
 
+/** One markdown note in the read-only browser list. */
+export interface KbNoteSummary {
+  readonly id: string;
+  readonly title: string;
+  readonly folder: string;
+}
+
+/** One note opened by repo-relative path: capped body plus raw wikilink targets. */
+export interface KbNoteView {
+  readonly id: string;
+  readonly title: string;
+  readonly body: string;
+  readonly links: string[];
+}
+
+/** Per-line budget (chars) for {@link KbReaderService.tailLines}. */
+export const KB_LINE_MAX_CHARS = 300;
+
 /** Snippet budget (chars) — a search hit never floods a prompt. */
 export const KB_SNIPPET_MAX_CHARS = 500;
 /** Note-body budget (chars) for `read()` — one huge note can't flood a run. */
@@ -159,6 +177,71 @@ export class KbReaderService {
   }
 
   /**
+   * Markdown notes for the read-only KB browser: `.vtt` transcripts and
+   * `_templates/` are excluded (same filter as {@link graph}). `id` is the
+   * repo-relative path, `folder` its top-level directory ("" at the root).
+   */
+  async notes(source: KnowledgeBaseSource): Promise<KbNoteSummary[]> {
+    return (await this.browsable(source)).map((n) => ({
+      id: n.relPath,
+      title: n.title,
+      folder: n.relPath.includes("/") ? (n.relPath.split("/")[0] ?? "") : "",
+    }));
+  }
+
+  /**
+   * One note by repo-relative path — the browser's open-note call. Goes through
+   * the same walk-validated scan as every other read (containment + symlink
+   * refusal), so the path is only ever MATCHED against walked entries, never
+   * resolved on disk: `..`, absolute paths, templates, `.vtt` and symlinks all
+   * simply don't match and yield null.
+   */
+  async readPath(source: KnowledgeBaseSource, relPath: string): Promise<KbNoteView | null> {
+    const found = await this.findByPath(source, relPath);
+    if (!found) return null;
+    return {
+      id: found.relPath,
+      title: found.title,
+      body: this.capBody(found.body),
+      links: found.links,
+    };
+  }
+
+  /**
+   * The last `count` non-empty, non-heading, non-comment lines of a note (uncapped by the body budget — a
+   * log's newest entries are at its END), each trimmed and capped at
+   * {@link KB_LINE_MAX_CHARS}. [] when the note is missing.
+   */
+  async tailLines(source: KnowledgeBaseSource, relPath: string, count: number): Promise<string[]> {
+    const found = await this.findByPath(source, relPath);
+    if (!found) return [];
+    return (
+      found.body
+        .split("\n")
+        .map((l) => l.trim())
+        // Headings and HTML comments are the log's preamble, not entries.
+        .filter((l) => l.length > 0 && !l.startsWith("#") && !l.startsWith("<!--"))
+        .slice(-Math.max(0, count))
+        .map((l) => l.slice(0, KB_LINE_MAX_CHARS))
+    );
+  }
+
+  private async browsable(source: KnowledgeBaseSource): Promise<ScannedNote[]> {
+    return (await this.scan(source)).filter(
+      (n) => !n.isVtt && !n.relPath.startsWith("_templates/"),
+    );
+  }
+
+  private async findByPath(
+    source: KnowledgeBaseSource,
+    relPath: string,
+  ): Promise<ScannedNote | null> {
+    // Cheap pre-filter; the real guarantee is that only walked entries can match.
+    if (path.isAbsolute(relPath) || relPath.split(/[\\/]/).includes("..")) return null;
+    return (await this.browsable(source)).find((n) => n.relPath === relPath) ?? null;
+  }
+
+  /**
    * The wiki-link graph of the KB's markdown notes (`.vtt` transcripts are not
    * nodes). Node id = repo-relative path (unique), label = title capped at
    * {@link KB_GRAPH_LABEL_MAX_CHARS}. A `[[target]]` resolves by basename id or
@@ -167,9 +250,7 @@ export class KbReaderService {
    */
   async graph(source: KnowledgeBaseSource): Promise<MemoryGraph> {
     // Templates (`_templates/`) are scaffolding, not knowledge — keep them off the graph.
-    const notes = (await this.scan(source)).filter(
-      (n) => !n.isVtt && !n.relPath.startsWith("_templates/"),
-    );
+    const notes = await this.browsable(source);
     const byTarget = new Map<string, string>();
     for (const n of notes) {
       byTarget.set(n.relPath.replace(/\.md$/, ""), n.relPath);

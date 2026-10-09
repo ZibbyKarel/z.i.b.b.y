@@ -113,24 +113,19 @@
   "knowledge": {
     "graph": {
       "title": "Knowledge graph",
-      "sourceLabel": "Source",
-      "sourceVault": "ZibbyCorp",
       "graphLabel": "Knowledge graph",
       "emptyTitle": "Nothing to show",
-      "emptyDescription": "This source has no linked notes yet.",
-      "path": "Path",
-      "clear": "Close",
-      "sync": "Sync KB",
-      "syncing": "Syncing…",
-      "syncCurrent": "Up to date ({sha})",
-      "syncPulled": "Pulled {before} → {after}",
-      "syncFailed": "Sync failed"
+      "emptyDescription": "This source has no linked notes yet."
     },
     "vault": {
       "title": "Vault",
       "shelfGeneral": "General",
       "usedBy": "Used by",
-      "usedByEmpty": "No note links here."
+      "usedByEmpty": "No note links here.",
+      "teamReadOnly": "Read-only team knowledge base",
+      "rootFolder": "Root",
+      "emptyTeam": "This knowledge base has no notes yet.",
+      "noteError": "Could not load this note."
     },
     "distill": {
       "title": "Distillation",
@@ -144,7 +139,29 @@
       "metricsUnavailable": "Structured metrics (notes read, links added, gaps) aren't persisted today — you only see the last run's outcome reference.",
       "selfModel": {
         "title": "Self-model"
+      },
+      "ingest": {
+        "title": "Team KB ingest",
+        "description": "New sources are compiled into the wiki by the team-kb-ingest workflow; the result is a pull request to the KB repo.",
+        "run": "Run ingest",
+        "running": "Starting…",
+        "runText": "team {team}: ingest all new sources",
+        "log": "_meta/log.md (last entries)",
+        "logEmpty": "The ingest log is empty.",
+        "noProjectTitle": "No project registered for this KB",
+        "noProjectDescription": "Register the KB repository as a project (its path must be the KB checkout) so the ingest workflow can run on it. See docs/workflows/team-kb-ingest.md.",
+        "runsLink": "Recent runs",
+        "workflowName": "Team KB Ingest"
       }
+    },
+    "source": {
+      "label": "Source",
+      "vault": "ZibbyCorp",
+      "sync": "Sync KB",
+      "syncing": "Syncing…",
+      "syncCurrent": "Up to date ({sha})",
+      "syncPulled": "Pulled {before} → {after}",
+      "syncFailed": "Sync failed"
     }
   },
   "common": {

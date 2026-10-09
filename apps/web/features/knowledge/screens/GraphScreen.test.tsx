@@ -9,12 +9,6 @@ let source: string | null = null;
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, replace }),
-  usePathname: () => "/knowledge/graph",
-  useSearchParams: () => {
-    const params = new URLSearchParams();
-    if (source) params.set("source", source);
-    return params;
-  },
 }));
 
 const query = (data: unknown) => ({ isPending: false, isError: false, fetchStatus: "idle", data });
@@ -27,25 +21,25 @@ const vault = {
 };
 const kb = { nodes: [{ id: "wiki/a.md", label: "Alpha", tier: "knowledge" }], edges: [] };
 
-const mutate = vi.fn();
-let syncState: Record<string, unknown> = {};
 vi.mock("../mutations", () => ({
-  useSyncTeamKbMutation: () => ({ mutate, reset: vi.fn(), isPending: false, ...syncState }),
+  useSyncTeamKbMutation: () => ({ mutate: vi.fn(), reset: vi.fn(), isPending: false }),
+}));
+vi.mock("../context", () => ({
+  VAULT_SOURCE: "vault",
+  TEAM_SOURCE_PREFIX: "team:",
+  useKnowledgeSource: () => ({
+    source: source ?? "vault",
+    teamId: source ? source.slice(5) : null,
+    isVault: source === null,
+    kbTeams: [{ id: "devrel", name: "DevRel" }],
+    setSource: vi.fn(),
+  }),
 }));
 
 vi.mock("../queries", () => ({
   useMemoryGraphQuery: () => query(vault),
   useTeamKbGraphQuery: (id: string | null) => query(id ? kb : undefined),
 }));
-vi.mock("../../teams/queries", () => ({
-  useTeamsQuery: () => ({
-    data: [
-      { id: "devrel", name: "DevRel", knowledgeBase: { kind: "vault", path: "/x" } },
-      { id: "nokb", name: "NoKb" },
-    ],
-  }),
-}));
-
 describe("GraphScreen", () => {
   it("vault: filters by tier and opens a note on node click", () => {
     source = null;
@@ -57,44 +51,17 @@ describe("GraphScreen", () => {
     expect(push).toHaveBeenCalledWith("/knowledge/vault?note=k1");
   });
 
-  it("team source: shows the KB graph read-only (path, no tier chips) and lists only KB teams", () => {
+  it("team source: no tier chips; a node click opens that note in the Trezor for the same team", () => {
     source = "team:devrel";
     render(<GraphScreen />);
     expect(screen.queryByTestId("graph-tier-all")).toBeNull();
-    expect(screen.queryByText("NoKb")).toBeNull();
     fireEvent.click(screen.getByTestId("memory-node-wiki/a.md"));
-    expect(screen.getByText(/wiki\/a\.md/)).toBeInTheDocument();
-    expect(push).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenLastCalledWith("/knowledge/vault?source=team%3Adevrel&note=wiki%2Fa.md");
   });
 
-  it("sync button: hidden for vault, visible for a team and calls the mutation", () => {
-    source = null;
-    const { unmount } = render(<GraphScreen />);
-    expect(screen.queryByTestId("graph-sync")).toBeNull();
-    unmount();
+  it("renders the shared source bar", () => {
     source = "team:devrel";
     render(<GraphScreen />);
-    fireEvent.click(screen.getByTestId("graph-sync"));
-    expect(mutate).toHaveBeenCalledWith({ params: { id: "devrel" }, body: undefined });
-  });
-
-  it("sync: disabled while pending, shows result or the server error", () => {
-    source = "team:devrel";
-    syncState = { isPending: true };
-    const a = render(<GraphScreen />);
-    expect(screen.getByTestId("graph-sync")).toBeDisabled();
-    a.unmount();
-
-    syncState = {
-      data: { status: 200, body: { updated: true, before: "abc123", after: "def456" } },
-    };
-    const b = render(<GraphScreen />);
-    expect(screen.getByTestId("graph-sync-result")).toHaveTextContent(/abc123.*def456/);
-    b.unmount();
-
-    syncState = { isError: true, error: { status: 409, body: { message: "diverged" } } };
-    render(<GraphScreen />);
-    expect(screen.getByTestId("graph-sync-result")).toHaveTextContent("diverged");
-    syncState = {};
+    expect(screen.getByTestId("knowledge-sync")).toBeInTheDocument();
   });
 });
