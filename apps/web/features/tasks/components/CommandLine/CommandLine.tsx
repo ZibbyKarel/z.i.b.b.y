@@ -27,7 +27,7 @@ import type {
   MouseEvent,
   ReactNode,
 } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAgentsQuery } from "../../../agents";
 import { useWorkflowsQuery } from "../../../workflows";
@@ -97,6 +97,9 @@ export interface CommandLineProps {
   /** An extra guard from the caller (e.g. an incomplete "write to a file" output
    *  choice) that blocks the submit control regardless of the text guard. */
   disabled?: boolean;
+  /** Blocks only the submit (Enter / trailing control) while the input stays
+   *  editable — the chat dock keeps typing/dictation live while a turn is in flight. */
+  submitDisabled?: boolean;
   /**
    * Wrap the input in the full velin-b panel chrome — an elevated `Panel` with a
    * header row (a spark/accent icon + "Zadej směr…" label, and a right-aligned
@@ -497,6 +500,7 @@ export function CommandLine({
   initialText,
   initialTarget,
   disabled = false,
+  submitDisabled = false,
   chrome = true,
   suggestions,
   onTextChange,
@@ -575,6 +579,26 @@ export function CommandLine({
   const pendingSuggestionRef = useRef(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Soft-wrapped line count — `computeRows` only sees hard newlines, so a long
+  // typed/dictated line would never grow the box. Measured at one row so the
+  // reading isn't inflated by the current height; jsdom (no layout) reports 0.
+  const [wrapRows, setWrapRows] = useState(1);
+  useLayoutEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const style = getComputedStyle(ta);
+    const lineHeight = parseFloat(style.lineHeight);
+    if (!lineHeight) return;
+    const prevRows = ta.rows;
+    ta.rows = 1;
+    const content =
+      ta.scrollHeight -
+      parseFloat(style.paddingTop || "0") -
+      parseFloat(style.paddingBottom || "0");
+    ta.rows = prevRows;
+    setWrapRows(Math.max(1, Math.round(content / lineHeight)));
+  }, [text]);
+  const visibleRows = Math.min(maxRows, Math.max(computeRows(text, rows, maxRows), wrapRows));
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pendingCursorRef = useRef<number | null>(null);
 
@@ -691,7 +715,14 @@ export function CommandLine({
     if (!injectedText) return;
     notifyDraftChange(text);
     onInjectedTextConsumed?.();
-    textareaRef.current?.focus();
+    // Caret + scroll to the end, so the newest dictated words stay in view
+    // once the box hits `maxRows` and starts scrolling.
+    const ta = textareaRef.current;
+    if (ta) {
+      ta.focus();
+      ta.setSelectionRange(ta.value.length, ta.value.length);
+      ta.scrollTop = ta.scrollHeight;
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [injectedText]);
 
@@ -732,7 +763,7 @@ export function CommandLine({
 
   // The send-delegation guard — the only one left now that task-launch (loop /
   // 2-char classify minimum) moved to `TaskCommandLine`.
-  const canRun = !disabled && text.trim().length > 0;
+  const canRun = !disabled && !submitDisabled && text.trim().length > 0;
 
   /** The only dispatch path this component owns: guard, trim, fire `onSubmit`, then
    * reset the draft unless the caller opted out via `resetOnSubmit={false}`. Every
@@ -1280,7 +1311,7 @@ export function CommandLine({
                 onKeyUp={handleMentionKeyUp}
                 placeholder={placeholder ?? t("commandLine.placeholder")}
                 ref={textareaRef}
-                rows={computeRows(text, rows, maxRows)}
+                rows={visibleRows}
                 value={text}
               />
             </InputFrame>
@@ -1304,7 +1335,7 @@ export function CommandLine({
             onKeyUp={handleMentionKeyUp}
             placeholder={placeholder ?? t("commandLine.placeholder")}
             ref={textareaRef}
-            rows={computeRows(text, rows, maxRows)}
+            rows={visibleRows}
             // Reserve a bottom strip so the caret/text never slides under the overlaid
             // controls — grown when files are attached to also clear their tile row
             // (a DS style passthrough for the genuinely-layout value).

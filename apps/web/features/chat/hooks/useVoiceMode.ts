@@ -36,6 +36,8 @@ export interface VoiceMode {
   /** In-progress transcript for the status strip. */
   interim: string;
   toggle: () => void;
+  /** Switches voice mode off (no-op when already off) — e.g. the dock closing. */
+  off: () => void;
 }
 
 /**
@@ -97,5 +99,7 @@ export function useVoiceMode({ onFinal, suspended = false }: UseVoiceModeOptions
     setActive((v) => !v);
   }, []);
 
-  return { supported, active, listening, interim, toggle };
+  const off = useCallback(() => setActive(false), []);
+
+  return { supported, active, listening, interim, toggle, off };
 }

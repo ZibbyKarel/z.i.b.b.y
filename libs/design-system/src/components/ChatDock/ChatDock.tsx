@@ -51,7 +51,7 @@ export function ChatDock({
   composer,
   targetChip,
   onNewChat,
-  newChatLabel = "New chat",
+  newChatLabel = "Clear",
   closeLabel = "Close",
   scrollKey,
   ref,
@@ -70,6 +70,17 @@ export function ChatDock({
     const el = messagesRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [scrollKey, isOpen]);
+
+  // Esc closes an open dock from anywhere. A nested control that consumes Esc
+  // itself (the composer's mention picker) prevents default / stops propagation.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !e.defaultPrevented) setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
   return (
     <div
@@ -90,7 +101,6 @@ export function ChatDock({
             {onNewChat && (
               <Button
                 data-testid={ChatDockTestId.NewChatButton}
-                icon="plus"
                 intent="primary"
                 onClick={onNewChat}
                 size="sm"
@@ -99,13 +109,14 @@ export function ChatDock({
               </Button>
             )}
             <Button
+              aria-label={closeLabel}
               data-testid={ChatDockTestId.CloseButton}
+              icon="x"
               intent="secondary"
               onClick={() => setOpen(false)}
               size="sm"
-            >
-              {closeLabel}
-            </Button>
+              title={closeLabel}
+            />
           </div>
           <div
             className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto p-3.5"
@@ -120,7 +131,11 @@ export function ChatDock({
       <div
         className="flex flex-col p-2"
         data-testid={ChatDockTestId.Footer}
+        // Focus opens it; so does a click into an already-focused input (after Esc).
         onFocusCapture={() => {
+          if (!isOpen) setOpen(true);
+        }}
+        onPointerDownCapture={() => {
           if (!isOpen) setOpen(true);
         }}
       >

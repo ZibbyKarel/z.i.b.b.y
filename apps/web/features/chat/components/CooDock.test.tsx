@@ -78,6 +78,7 @@ const voiceState = {
   listening: false,
   interim: "",
   toggle: vi.fn(),
+  off: vi.fn(),
 };
 const voiceOptions: { suspended?: boolean; onFinal: (text: string) => void }[] = [];
 vi.mock("../hooks/useVoiceMode", () => ({
@@ -261,6 +262,14 @@ describe("CooDock (ZB-12)", () => {
     renderDock({ department: true });
     await user.click(screen.getByTestId(ChatMessageTestId.CreateTaskButton));
     expect(push).toHaveBeenCalledWith("/work/tasks/new?text=Fix+it&entry=dev");
+  });
+
+  it("switches the mic off when the dock closes (CLOSE or Esc)", async () => {
+    renderDock();
+    voiceState.off.mockClear();
+    await userEvent.setup().keyboard("{Escape}");
+    expect(screen.queryByTestId(ChatDockTestId.Transcript)).not.toBeInTheDocument();
+    expect(voiceState.off).toHaveBeenCalled();
   });
 
   it("keeps the mic idle-gated: voice is not suspended while idle", () => {

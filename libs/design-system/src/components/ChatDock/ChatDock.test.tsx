@@ -34,6 +34,14 @@ describe("ChatDock", () => {
     expect(screen.queryByTestId(ChatDockTestId.Transcript)).toBeNull();
   });
 
+  it("close is an icon button with an accessible name; Esc closes an open dock", async () => {
+    const user = userEvent.setup();
+    render(<ChatDock defaultOpen closeLabel="Zavřít" composer={composer} />);
+    expect(screen.getByTestId(ChatDockTestId.CloseButton)).toHaveAccessibleName("Zavřít");
+    await user.keyboard("{Escape}");
+    expect(screen.queryByTestId(ChatDockTestId.Transcript)).toBeNull();
+  });
+
   it("omits the new chat button without onNewChat", () => {
     render(<ChatDock defaultOpen composer={composer} />);
     expect(screen.queryByTestId(ChatDockTestId.NewChatButton)).toBeNull();

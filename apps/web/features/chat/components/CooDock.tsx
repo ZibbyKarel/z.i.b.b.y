@@ -5,7 +5,7 @@ import { Button, ChatBubble, ChatDock, Chip, Stack } from "@zibby/design-system"
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { CommandLine, type ScopeKind } from "../../tasks/components/CommandLine/CommandLine";
 import { useChat } from "../ChatContext";
 import { useCooChat } from "../hooks/useCooChat";
@@ -20,7 +20,7 @@ export enum CooDockTestId {
 }
 
 /** Composer auto-grows up to this many lines, then scrolls. */
-const COMPOSER_MAX_ROWS = 4;
+const COMPOSER_MAX_ROWS = 6;
 
 /** `#` offers every scope kind the chat send body carries. */
 const CHAT_SCOPE_KINDS: readonly ScopeKind[] = ["project", "team", "company"];
@@ -57,6 +57,12 @@ export function CooDock() {
   const { dockOpen, setDockOpen, dockTarget, setDockTarget, messages, newChat } = useChat();
   const { stream, thinking, send, setScope, setSkillId, voice, dictated, consumeDictated } =
     useCooChat();
+
+  // Closing the dock (CLOSE, Esc) switches the mic off.
+  const voiceOff = voice.off;
+  useEffect(() => {
+    if (!dockOpen) voiceOff();
+  }, [dockOpen, voiceOff]);
 
   const createTask = useCallback(
     (text: string) => {
@@ -111,7 +117,6 @@ export function CooDock() {
         showAttach
         attachIcon="paperclip"
         chrome={false}
-        disabled={thinking}
         injectedText={dictated}
         label={t("composer.label")}
         leadingActions={
@@ -126,9 +131,9 @@ export function CooDock() {
           send(text, mentions, submittedAttachments);
         }}
         placeholder={voice.listening ? t("composer.listening") : t("composer.placeholder")}
-        // Always filled per the design — an empty draft is ignored by `submit`
-        // itself, so the button only greys out while a turn is in flight.
         renderTrailing={({ submit }) => (
+          // Always filled per the design — an empty draft is ignored by `submit`
+          // itself, so the button only greys out while a turn is in flight.
           <Button
             data-testid={CooDockTestId.Send}
             disabled={thinking}
@@ -140,6 +145,7 @@ export function CooDock() {
           </Button>
         )}
         scopeKinds={CHAT_SCOPE_KINDS}
+        submitDisabled={thinking}
       />
     </Stack>
   );

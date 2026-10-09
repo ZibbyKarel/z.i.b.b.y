@@ -61,7 +61,7 @@ export interface CooChat {
  *
  * Voice (O-22): dictation only — a finalized utterance is appended to the
  * composer draft (`dictated`), and the operator sends it with Enter. The mic
- * is disarmed while a turn is in flight (idle gating) and while any reply is
+ * stays live while a turn is in flight and is disarmed only while a reply is
  * being read aloud (echo guard: the mic must never transcribe ZIBBY's own voice).
  */
 export function useCooChat(): CooChat {
@@ -199,7 +199,9 @@ export function useCooChat(): CooChat {
     [],
   );
   const consumeDictated = useCallback(() => setDictated(undefined), []);
-  const voice = useVoiceMode({ onFinal: appendDictated, suspended: thinking || speaking });
+  // Only the echo guard suspends the mic — dictating the next message while a
+  // turn is in flight is allowed (the composer just can't submit until it settles).
+  const voice = useVoiceMode({ onFinal: appendDictated, suspended: speaking });
 
   return { stream, thinking, send, setScope, setSkillId, voice, dictated, consumeDictated };
 }
