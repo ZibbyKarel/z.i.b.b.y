@@ -37,6 +37,11 @@ export interface CooChat {
   setSkillId: (skillId: string | undefined) => void;
   /** Hands-free dictation over `useSpeechRecognition` (O-22). */
   voice: VoiceMode;
+  /** Dictated text not yet appended to the composer (fed to `CommandLine`'s
+   *  `injectedText`); `undefined` once consumed. */
+  dictated: string | undefined;
+  /** Clears {@link CooChat.dictated} once the composer has appended it. */
+  consumeDictated: () => void;
 }
 
 /**
@@ -54,7 +59,8 @@ export interface CooChat {
  * ref makes the seed one-shot so it never clobbers live or optimistic turns
  * already in state.
  *
- * Voice (O-22): dictation only — a finalized utterance is sent verbatim. The mic
+ * Voice (O-22): dictation only — a finalized utterance is appended to the
+ * composer draft (`dictated`), and the operator sends it with Enter. The mic
  * is disarmed while a turn is in flight (idle gating) and while any reply is
  * being read aloud (echo guard: the mic must never transcribe ZIBBY's own voice).
  */
@@ -179,16 +185,21 @@ export function useCooChat(): CooChat {
           ...(tags.skillId ? { skillId: tags.skillId } : {}),
         },
       });
-      // Tags are one-turn; this also stops them leaking onto a dictated turn, which
-      // bypasses the composer's own reset (ported from PR #69).
+      // Tags are one-turn (ported from PR #69).
       setTags({});
     },
     [conversationId, dockTarget, setMessages, sendMessage, tags],
   );
 
   const speaking = useAnyAudioPlaying();
-  const sendDictated = useCallback((text: string) => send(text), [send]);
-  const voice = useVoiceMode({ onSend: sendDictated, suspended: thinking || speaking });
+  // Chunks finalized before the composer consumed the previous one accumulate.
+  const [dictated, setDictated] = useState<string | undefined>(undefined);
+  const appendDictated = useCallback(
+    (chunk: string) => setDictated((prev) => (prev ? `${prev} ${chunk}` : chunk)),
+    [],
+  );
+  const consumeDictated = useCallback(() => setDictated(undefined), []);
+  const voice = useVoiceMode({ onFinal: appendDictated, suspended: thinking || speaking });
 
-  return { stream, thinking, send, setScope, setSkillId, voice };
+  return { stream, thinking, send, setScope, setSkillId, voice, dictated, consumeDictated };
 }

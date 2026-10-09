@@ -12,9 +12,9 @@ function localeToLang(locale: string): string {
 }
 
 export interface UseVoiceModeOptions {
-  /** A finalized utterance is a chat message — sent verbatim, bypassing the
-   * composer (Decision 1). */
-  onSend: (text: string) => void;
+  /** A finalized utterance — dictation, handed to the caller (the COO dock
+   * appends it to the composer draft; Enter sends it). */
+  onFinal: (text: string) => void;
   /** Turn-taking gate (Phase 119d / Decision 7). While `true`, voice mode stays
    * ON but the mic is DISARMED — the conversation isn't idle (a turn is in
    * flight or a reply is speaking) or the operator took over via a manual
@@ -42,7 +42,7 @@ export interface VoiceMode {
  * ChatScreen-local, ephemeral voice-mode state (Decision 2) over
  * {@link useSpeechRecognition}. Toggling on arms the mic; toggling off — or
  * unmounting (leaving `/chat`) — disarms it. A finalized utterance is handed to
- * `onSend` as a chat message. Any surfaced recognition fault drops voice mode
+ * `onFinal` (the caller decides what dictation does). Any surfaced recognition fault drops voice mode
  * and surfaces a toast — never silent.
  *
  * Turn-taking (Phase 119d / Decision 7): the mic is armed only when voice mode
@@ -52,7 +52,7 @@ export interface VoiceMode {
  * (`active && !suspended`) so there is no ping-pong between competing effects; the
  * mic re-arms on the state transition, never a timer.
  */
-export function useVoiceMode({ onSend, suspended = false }: UseVoiceModeOptions): VoiceMode {
+export function useVoiceMode({ onFinal, suspended = false }: UseVoiceModeOptions): VoiceMode {
   const locale = useLocale();
   const t = useTranslations("chat");
   const [active, setActive] = useState(false);
@@ -60,9 +60,9 @@ export function useVoiceMode({ onSend, suspended = false }: UseVoiceModeOptions)
   const handleFinal = useCallback(
     (text: string) => {
       const trimmed = text.trim();
-      if (trimmed) onSend(trimmed);
+      if (trimmed) onFinal(trimmed);
     },
-    [onSend],
+    [onFinal],
   );
 
   const handleError = useCallback(

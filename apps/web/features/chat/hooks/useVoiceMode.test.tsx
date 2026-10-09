@@ -34,7 +34,7 @@ describe("useVoiceMode", () => {
   });
 
   it("reports support and starts inactive", () => {
-    const { result } = renderHook(() => useVoiceMode({ onSend: vi.fn() }), { wrapper });
+    const { result } = renderHook(() => useVoiceMode({ onFinal: vi.fn() }), { wrapper });
     expect(result.current.supported).toBe(true);
     expect(result.current.active).toBe(false);
     expect(result.current.listening).toBe(false);
@@ -42,12 +42,12 @@ describe("useVoiceMode", () => {
 
   it("reports no support when the browser lacks the API", () => {
     uninstallSpeechRecognition();
-    const { result } = renderHook(() => useVoiceMode({ onSend: vi.fn() }), { wrapper });
+    const { result } = renderHook(() => useVoiceMode({ onFinal: vi.fn() }), { wrapper });
     expect(result.current.supported).toBe(false);
   });
 
   it("toggling on arms the mic; toggling off stops it without re-arming", () => {
-    const { result } = renderHook(() => useVoiceMode({ onSend: vi.fn() }), { wrapper });
+    const { result } = renderHook(() => useVoiceMode({ onFinal: vi.fn() }), { wrapper });
 
     act(() => result.current.toggle());
     expect(result.current.active).toBe(true);
@@ -63,17 +63,17 @@ describe("useVoiceMode", () => {
   });
 
   it("sends a finalized utterance as a chat message, trimmed", () => {
-    const onSend = vi.fn();
-    const { result } = renderHook(() => useVoiceMode({ onSend }), { wrapper });
+    const onFinal = vi.fn();
+    const { result } = renderHook(() => useVoiceMode({ onFinal }), { wrapper });
 
     act(() => result.current.toggle());
     act(() => latestRecognition().emitResult([{ transcript: "  spusť build  ", isFinal: true }]));
 
-    expect(onSend).toHaveBeenCalledWith("spusť build");
+    expect(onFinal).toHaveBeenCalledWith("spusť build");
   });
 
   it("drops voice mode and toasts the mic-denied copy when the browser blocks the mic", () => {
-    const { result } = renderHook(() => useVoiceMode({ onSend: vi.fn() }), { wrapper });
+    const { result } = renderHook(() => useVoiceMode({ onFinal: vi.fn() }), { wrapper });
 
     act(() => result.current.toggle());
     expect(result.current.active).toBe(true);
@@ -89,7 +89,7 @@ describe("useVoiceMode", () => {
   });
 
   it("drops voice mode and toasts the generic voice-fault copy on other faults", () => {
-    const { result } = renderHook(() => useVoiceMode({ onSend: vi.fn() }), { wrapper });
+    const { result } = renderHook(() => useVoiceMode({ onFinal: vi.fn() }), { wrapper });
 
     act(() => result.current.toggle());
     act(() => latestRecognition().emitError("network"));
@@ -104,7 +104,7 @@ describe("useVoiceMode", () => {
   describe("turn-taking suspension (Phase 119d)", () => {
     it("disarms the mic while suspended and re-arms when it clears, staying on throughout", () => {
       const { result, rerender } = renderHook(
-        ({ suspended }) => useVoiceMode({ onSend: vi.fn(), suspended }),
+        ({ suspended }) => useVoiceMode({ onFinal: vi.fn(), suspended }),
         { wrapper, initialProps: { suspended: false } },
       );
 
@@ -130,7 +130,7 @@ describe("useVoiceMode", () => {
 
     it("never arms while suspended, even after toggling voice mode on", () => {
       const { result } = renderHook(
-        ({ suspended }) => useVoiceMode({ onSend: vi.fn(), suspended }),
+        ({ suspended }) => useVoiceMode({ onFinal: vi.fn(), suspended }),
         { wrapper, initialProps: { suspended: true } },
       );
 
@@ -144,7 +144,7 @@ describe("useVoiceMode", () => {
   });
 
   it("stops the mic when it unmounts (leaving /chat)", () => {
-    const { result, unmount } = renderHook(() => useVoiceMode({ onSend: vi.fn() }), { wrapper });
+    const { result, unmount } = renderHook(() => useVoiceMode({ onFinal: vi.fn() }), { wrapper });
     act(() => result.current.toggle());
     const rec = latestRecognition();
     expect(rec.started).toBe(true);

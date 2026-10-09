@@ -55,7 +55,8 @@ export function CooDock() {
   const t = useTranslations("chat");
   const router = useRouter();
   const { dockOpen, setDockOpen, dockTarget, setDockTarget, messages, newChat } = useChat();
-  const { stream, thinking, send, setScope, setSkillId, voice } = useCooChat();
+  const { stream, thinking, send, setScope, setSkillId, voice, dictated, consumeDictated } =
+    useCooChat();
 
   const createTask = useCallback(
     (text: string) => {
@@ -111,11 +112,13 @@ export function CooDock() {
         attachIcon="paperclip"
         chrome={false}
         disabled={thinking}
+        injectedText={dictated}
         label={t("composer.label")}
         leadingActions={
           voice.supported && <VoiceToggleButton active={voice.active} onToggle={voice.toggle} />
         }
         maxRows={COMPOSER_MAX_ROWS}
+        onInjectedTextConsumed={consumeDictated}
         onScopeChange={setScope}
         onSkillChange={setSkillId}
         onSubmit={(text, _target, submittedAttachments, mentions) => {

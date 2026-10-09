@@ -185,6 +185,15 @@ export interface CommandLineProps {
   /** Fired once `injectedTarget` above has been applied. */
   onInjectedTargetConsumed?: () => void;
   /**
+   * Text produced OUTSIDE the textarea — the chat dock's speech-to-text — appended
+   * to the draft (space-separated) and focused, so Enter sends it. One-shot like
+   * `injectedTarget`: `onInjectedTextConsumed` fires right after so the parent
+   * clears it.
+   */
+  injectedText?: string;
+  /** Fired once `injectedText` above has been applied. */
+  onInjectedTextConsumed?: () => void;
+  /**
    * Show the `+`/attach affordance (and the drag-and-drop file overlay). Default
    * `true`. Chat passes `false`: the chat message API has no attachment channel
    * yet, so the affordance would silently be ignored rather than hidden.
@@ -503,6 +512,8 @@ export function CommandLine({
   onDraftChange,
   injectedTarget,
   onInjectedTargetConsumed,
+  injectedText,
+  onInjectedTextConsumed,
   showAttach = true,
   submitLabel,
   leadingActions,
@@ -546,6 +557,7 @@ export function CommandLine({
   // picked again after a round-trip through `undefined` once consumed) can be
   // told apart from a re-render with the same one — ported from `ChatComposer`.
   const [prevInjectedTarget, setPrevInjectedTarget] = useState(injectedTarget);
+  const [prevInjectedText, setPrevInjectedText] = useState(injectedText);
 
   // The in-progress `@query` under the caret (or `null`) — drives the inline
   // dropdown directly; there is no separate "open" flag, `mention` IS the open
@@ -651,6 +663,17 @@ export function CommandLine({
     }
   }
 
+  // Same pattern for dictated text — appended to whatever is already typed.
+  if (injectedText !== prevInjectedText) {
+    setPrevInjectedText(injectedText);
+    if (injectedText) {
+      const next =
+        text.length > 0 ? `${text}${text.endsWith(" ") ? "" : " "}${injectedText}` : injectedText;
+      setText(next);
+      onTextChange?.(next);
+    }
+  }
+
   // The two side effects of an injection — telling the parent it's been applied
   // and handing focus back — DO belong in a real effect (an external callback + an
   // imperative DOM call, not this component's own state). Reads `text` at the
@@ -663,6 +686,14 @@ export function CommandLine({
     textareaRef.current?.focus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [injectedTarget]);
+
+  useEffect(() => {
+    if (!injectedText) return;
+    notifyDraftChange(text);
+    onInjectedTextConsumed?.();
+    textareaRef.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [injectedText]);
 
   const pathHighlights = useMemo(() => extractPathRanges(text), [text]);
 

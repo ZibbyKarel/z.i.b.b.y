@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
 import { ChatDockTestId, ChipTestId, TypingDotsTestId } from "@zibby/design-system";
 import { useEffect } from "react";
-import { renderWithProviders, screen, within } from "../../../test/render";
+import { act, renderWithProviders, screen, within } from "../../../test/render";
 import { CommandLineTestId } from "../../tasks/components/CommandLine/CommandLine";
 import { ChatProvider, useChat } from "../ChatContext";
 import { ChatMessageTestId } from "./ChatMessage";
@@ -79,9 +79,9 @@ const voiceState = {
   interim: "",
   toggle: vi.fn(),
 };
-const voiceOptions: { suspended?: boolean }[] = [];
+const voiceOptions: { suspended?: boolean; onFinal: (text: string) => void }[] = [];
 vi.mock("../hooks/useVoiceMode", () => ({
-  useVoiceMode: (opts: { suspended?: boolean }) => {
+  useVoiceMode: (opts: { suspended?: boolean; onFinal: (text: string) => void }) => {
     voiceOptions.push(opts);
     return voiceState;
   },
@@ -147,6 +147,19 @@ describe("CooDock (ZB-12)", () => {
     expect(body.conversationId).toEqual(expect.stringMatching(/^conv_/));
     expect(body).not.toHaveProperty("mentions");
     expect(body).not.toHaveProperty("target");
+  });
+
+  it("appends dictation to the composer and sends it only on Enter", async () => {
+    renderDock();
+    const onFinal = voiceOptions.at(-1)?.onFinal;
+    act(() => onFinal?.("Ahoj"));
+    act(() => onFinal?.("světe"));
+    const input = screen.getByTestId(CommandLineTestId.Input);
+    expect(input).toHaveValue("Ahoj světe");
+    expect(sendMutate).not.toHaveBeenCalled();
+    await userEvent.setup().type(input, "{Enter}");
+    expect(sendMutate).toHaveBeenCalledTimes(1);
+    expect((sendMutate.mock.calls[0]?.[0]?.body as { text: string }).text).toBe("Ahoj světe");
   });
 
   it("sends the dock's department scope as the turn's sole mention (O-20 / D-020)", async () => {
