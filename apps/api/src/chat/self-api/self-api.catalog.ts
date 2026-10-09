@@ -20,6 +20,8 @@ export interface SelfApiOperation {
   allowKeys?: readonly string[];
   /** Dot paths (e.g. `config.baseUrl`) the body must not contain. Enforced by the executor. */
   denyPaths?: readonly string[];
+  /** Top-level body keys the executor sets/overwrites before the call. Validated against the body schema at build time. */
+  forceBody?: Readonly<Record<string, unknown>>;
   /** The route's raw zod schemas (or ts-rest plain types) for `api_describe_operation`. */
   schemas: { query?: unknown; body?: unknown };
 }
@@ -27,11 +29,16 @@ export interface SelfApiOperation {
 /** A bare tier, or a tier plus a body policy (Law 1: route names alone can be bypassed via body fields). */
 export type SelfApiEntry =
   | SelfApiTier
-  | { tier: SelfApiTier; allowKeys?: readonly string[]; denyPaths?: readonly string[] };
+  | {
+      tier: SelfApiTier;
+      allowKeys?: readonly string[];
+      denyPaths?: readonly string[];
+      forceBody?: Readonly<Record<string, unknown>>;
+    };
 
 export type SelfApiAllowlist = Readonly<Record<string, Readonly<Record<string, SelfApiEntry>>>>;
 
-/** Presentation / ownership keys of a project the chat may edit — never policy, budget, commands, env, plugins. */
+/** Presentation keys of a project the chat may edit (companyId is create-only: unlinking drops the company budget) — never policy, budget, commands, env, plugins. */
 const PROJECT_SAFE_KEYS = [
   "name",
   "desc",
@@ -40,7 +47,6 @@ const PROJECT_SAFE_KEYS = [
   "logo",
   "identity",
   "daily_rhythm",
-  "companyId",
   "teamId",
 ] as const;
 
@@ -81,8 +87,16 @@ export const SELF_API_ALLOWLIST: SelfApiAllowlist = {
     searchCompanies: "read",
     getCompany: "read",
     // `budget` (spend caps) is operator-only.
-    createCompany: { tier: "write", allowKeys: ["id", "name", "desc", "people"] },
-    updateCompany: { tier: "write", allowKeys: ["name", "desc", "people"] },
+    createCompany: {
+      tier: "write",
+      allowKeys: ["id", "name", "desc", "people"],
+      denyPaths: ["people.vip"],
+    },
+    updateCompany: {
+      tier: "write",
+      allowKeys: ["name", "desc", "people"],
+      denyPaths: ["people.vip"],
+    },
   },
   teams: {
     listTeams: "read",
@@ -101,17 +115,35 @@ export const SELF_API_ALLOWLIST: SelfApiAllowlist = {
     getProjectLocalState: "read",
     getProjectPrs: "read",
     // Not allowed: autonomy_policy, budget, checks (shell), env, plugins, prOpenMode.
-    createProject: { tier: "write", allowKeys: ["id", "path", "gitRemote", ...PROJECT_SAFE_KEYS] },
-    updateProject: { tier: "write", allowKeys: PROJECT_SAFE_KEYS },
+    createProject: {
+      tier: "write",
+      allowKeys: ["id", "path", "gitRemote", "companyId", ...PROJECT_SAFE_KEYS],
+      denyPaths: ["identity.people.vip"],
+    },
+    updateProject: {
+      tier: "write",
+      allowKeys: PROJECT_SAFE_KEYS,
+      // `vip` forces Tier-3 escalation, so it is the operator's to set.
+      denyPaths: ["identity.people.vip"],
+    },
     cloneProject: "write",
   },
   automations: {
     listAutomations: "read",
     searchAutomations: "read",
     getAutomation: "read",
-    // Trigger/target stay editable; the approval mode and tool grants are the gate's.
-    createAutomation: { tier: "write", denyPaths: ["approval", "target.toolGrants"] },
-    updateAutomation: { tier: "write", denyPaths: ["approval", "target.toolGrants"] },
+    // Trigger/target stay editable. Signal triggers dispatch at once unless approval is "ask",
+    // so the executor forces it; tool grants are the gate's.
+    createAutomation: {
+      tier: "write",
+      forceBody: { approval: "ask" },
+      denyPaths: ["target.toolGrants"],
+    },
+    updateAutomation: {
+      tier: "write",
+      forceBody: { approval: "ask" },
+      denyPaths: ["target.toolGrants"],
+    },
   },
   integrations: {
     listIntegrations: "read",
@@ -132,7 +164,9 @@ export const SELF_API_ALLOWLIST: SelfApiAllowlist = {
   },
   system: {
     getConfig: "read",
-    // Whole-document PUT, but the scheduler, auto-resume and tick switches are operator-only.
+    // Whole-document PUT: the executor merges the chat's partial body onto the current config
+    // (omitted keys keep their value) and checks denyPaths on the partial body, so these stay
+    // untouched. The scheduler, auto-resume and tick switches are operator-only.
     putConfig: {
       tier: "write",
       denyPaths: ["goalAutoResume", "limitResumeMax", "automationTickMs", "roadmapTickMs"],
@@ -209,6 +243,20 @@ function assertPathsExist(name: string, body: unknown, paths: readonly string[],
   }
 }
 
+/** Throw unless every forceBody key exists in the body and its value parses against that field. */
+function assertForceBody(name: string, body: unknown, force: Readonly<Record<string, unknown>>) {
+  const shapes = objectShapes(body);
+  for (const [key, value] of Object.entries(force)) {
+    const fields = shapes.flatMap((sh) => (key in sh ? [sh[key]] : []));
+    const ok = fields.some((f) => {
+      const parse = (f as { safeParse?: (v: unknown) => { success: boolean } }).safeParse;
+      return typeof parse === "function" && parse.call(f, value).success;
+    });
+    if (!ok)
+      throw new Error(`self-api: ${name} forceBody "${key}" is not a valid body field value`);
+  }
+}
+
 /** Resolve the allowlist against the contract; throws on any denied/unknown/DELETE entry. */
 export function buildSelfApiCatalog(
   contract: Record<string, unknown> = appContract,
@@ -221,6 +269,7 @@ export function buildSelfApiCatalog(
         tier,
         allowKeys,
         denyPaths,
+        forceBody,
       }: Exclude<SelfApiEntry, SelfApiTier> & {
         tier: SelfApiTier;
       } = typeof entry === "string" ? { tier: entry } : entry;
@@ -236,6 +285,7 @@ export function buildSelfApiCatalog(
       if (!isRouteShape(def)) throw new Error(`self-api: unknown route ${name}`);
       if (def.method === "DELETE") throw new Error(`self-api: ${name} is a DELETE route`);
       if (allowKeys) assertPathsExist(name, def.body, allowKeys, "allowKeys entry");
+      if (forceBody) assertForceBody(name, def.body, forceBody);
       if (denyPaths) assertPathsExist(name, def.body, denyPaths, "denyPaths entry");
       out.set(name, {
         name,
@@ -244,6 +294,7 @@ export function buildSelfApiCatalog(
         tier,
         ...(allowKeys && { allowKeys }),
         ...(denyPaths && { denyPaths }),
+        ...(forceBody && { forceBody }),
         method: def.method,
         path: def.path,
         summary: def.summary ?? name,

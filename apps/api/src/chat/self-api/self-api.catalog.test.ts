@@ -68,7 +68,38 @@ describe("buildSelfApiCatalog", () => {
     );
     expect(catalog.get("workflows.updateWorkflow")?.allowKeys).not.toContain("phases");
     expect(catalog.get("companies.updateCompany")?.allowKeys).not.toContain("budget");
-    expect(catalog.get("automations.updateAutomation")?.denyPaths).toContain("approval");
+    for (const route of ["createAutomation", "updateAutomation"]) {
+      const op = catalog.get(`automations.${route}`);
+      expect(op?.forceBody).toEqual({ approval: "ask" });
+      expect(op?.denyPaths).not.toContain("approval");
+      expect(op?.denyPaths).toContain("target.toolGrants");
+    }
+    for (const route of ["createProject", "updateProject"]) {
+      expect(catalog.get(`projects.${route}`)?.denyPaths).toContain("identity.people.vip");
+    }
+    for (const route of ["createCompany", "updateCompany"]) {
+      expect(catalog.get(`companies.${route}`)?.denyPaths).toContain("people.vip");
+    }
+    expect(catalog.get("projects.updateProject")?.allowKeys).not.toContain("companyId");
+    expect(catalog.get("projects.createProject")?.allowKeys).toContain("companyId");
+  });
+
+  it("walks array elements when validating denyPaths and validates forceBody", () => {
+    expect(() =>
+      buildSelfApiCatalog(undefined, {
+        companies: { updateCompany: { tier: "write", denyPaths: ["people.vipp"] } },
+      }),
+    ).toThrow(/denyPaths/);
+    expect(() =>
+      buildSelfApiCatalog(undefined, {
+        automations: { updateAutomation: { tier: "write", forceBody: { aproval: "ask" } } },
+      }),
+    ).toThrow(/forceBody/);
+    expect(() =>
+      buildSelfApiCatalog(undefined, {
+        automations: { updateAutomation: { tier: "write", forceBody: { approval: "nope" } } },
+      }),
+    ).toThrow(/forceBody/);
   });
 
   it("throws at build time on an allowKeys or denyPaths typo", () => {
