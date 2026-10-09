@@ -96,7 +96,7 @@ export function DistillScreen() {
 
   return (
     <Container padding={["300", "350"]}>
-      <PageContainer stretch>
+      <PageContainer>
         <Stack gap="250">
           <Typography type="title">{t("distill.title")}</Typography>
 

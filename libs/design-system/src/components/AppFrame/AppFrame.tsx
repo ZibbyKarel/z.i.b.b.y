@@ -35,9 +35,9 @@ export interface AppFrameProps {
   /** The `ChatDock`, floated bottom-right over the content. */
   dock?: ReactNode;
   children: ReactNode;
-  /** Opt-in full-bleed mode for pages that own their own pan/zoom canvas: drops the
-   *  `docMaxWidth` cap, gives the content wrapper the full height of `<main>`, and
-   *  stops `<main>` from scrolling. Default `false` leaves every other page unchanged. */
+  /** Opt-in full-bleed mode for pages that own their own pan/zoom canvas: gives
+   *  the content wrapper the full height of `<main>` and stops `<main>` from scrolling.
+   *  Default `false` leaves every other page unchanged. */
   fullBleed?: boolean;
   skipLinkLabel?: string;
   ref?: Ref<HTMLDivElement>;
@@ -46,8 +46,8 @@ export interface AppFrameProps {
 /**
  * The ZibbyCorp app shell — DS.md §5's grid: a 56px header row over a
  * `auto | 1fr` body (rail + main) — the rail column is as wide as its child
- * (the `ActivityDock`: 50px bar, plus its body when open) — content capped at
- * `LAYOUT.docMaxWidth` with the 24px grid background. At 390px nothing
+ * (the `ActivityDock`: 50px bar, plus its body when open) — content spanning the
+ * full width over the 24px grid background. At 390px nothing
  * overflows horizontally. A skip link (jumping straight to the `<main>` landmark) is
  * built in — this replaces the app's standalone `SkipLink` mount once wired
  * (ZA-07).
@@ -139,12 +139,7 @@ export function AppFrame({
             }}
             tabIndex={-1}
           >
-            <div
-              className={cn("mx-auto w-full", fullBleed && "h-full")}
-              style={fullBleed ? undefined : { maxWidth: LAYOUT.docMaxWidth }}
-            >
-              {children}
-            </div>
+            <div className={cn("w-full", fullBleed && "h-full")}>{children}</div>
           </main>
 
           {dock && (

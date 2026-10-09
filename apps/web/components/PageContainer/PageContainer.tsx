@@ -2,22 +2,14 @@ import { Container } from "@zibby/design-system";
 import type { ReactNode } from "react";
 
 export interface PageContainerProps {
-  stretch?: boolean;
   children: ReactNode;
 }
 
 /**
- * Centered, max-width page column shared by the single-column dashboard screens
- * (skills, integrations, agents, the workflows empty state). Replaces the
- * repeated `<Container maxWidth="1400px" style={{ marginInline: "auto" }}>`.
+ * Full-width page column shared by the single-column dashboard screens
+ * (skills, integrations, agents, knowledge, the workflows empty state). Page
+ * content always spans the whole available width (TODO 8) — no max-width cap.
  */
-export function PageContainer({ stretch, children }: PageContainerProps) {
-  return (
-    <Container
-      {...(stretch ? { width: "100%" } : { maxWidth: "1400px" })}
-      style={{ marginInline: "auto" }}
-    >
-      {children}
-    </Container>
-  );
+export function PageContainer({ children }: PageContainerProps) {
+  return <Container width="100%">{children}</Container>;
 }

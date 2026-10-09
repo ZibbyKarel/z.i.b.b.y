@@ -195,7 +195,7 @@ export function VaultScreen() {
 
   return (
     <Container padding={["300", "350"]}>
-      <PageContainer stretch>
+      <PageContainer>
         <Stack gap="250">
           <Stack wrap align="end" direction="row" gap="150" justify="between">
             <Typography type="title">{t("vault.title")}</Typography>

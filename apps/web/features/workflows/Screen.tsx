@@ -205,7 +205,7 @@ export function Screen({ selectedId: routeId, basePath = "/work/workflows" }: Sc
       title={t("workflows.emptyTitle")}
     />
   ) : (
-    <Grid center align="start" gap="250" maxWidth="1400px" sidebar="left">
+    <Grid center align="start" gap="250" sidebar="left">
       <Stack gap="150">
         {list.map((p) => (
           <WorkflowCard

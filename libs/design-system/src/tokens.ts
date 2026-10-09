@@ -71,7 +71,6 @@ export const LAYOUT = {
   railWidthLeft: 280,
   dockBarWidth: 50,
   railWidthRight: 400,
-  docMaxWidth: 1320,
   gridSize: 24,
   gridSizeSm: 8,
 } as const;

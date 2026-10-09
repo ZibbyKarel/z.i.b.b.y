@@ -8,13 +8,10 @@ describe("PageContainer", () => {
     expect(screen.getByText("obsah")).toBeInTheDocument();
   });
 
-  it("applies the default reading-column max width", () => {
+  it("always spans the full available width, with no max-width cap", () => {
     render(<PageContainer>x</PageContainer>);
-    expect(screen.getByText("x")).toHaveStyle({ maxWidth: "1400px" });
-  });
-
-  it("stretches to full width when stretch is set", () => {
-    render(<PageContainer stretch>y</PageContainer>);
-    expect(screen.getByText("y")).toHaveStyle({ width: "100%" });
+    const el = screen.getByText("x");
+    expect(el).toHaveStyle({ width: "100%" });
+    expect(el.style.maxWidth).toBe("");
   });
 });

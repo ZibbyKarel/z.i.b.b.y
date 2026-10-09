@@ -27,12 +27,14 @@ describe("AppFrame", () => {
     expect(screen.queryByTestId(AppFrameTestId.Dock)).toBeNull();
   });
 
-  it("caps and scrolls main by default, drops both when fullBleed", () => {
+  it("never caps content width; scrolls main by default, full-height + no scroll when fullBleed", () => {
     const { rerender } = render(<AppFrame header={<div>Header</div>}>Content</AppFrame>);
     const main = screen.getByTestId(AppFrameTestId.Main);
+    const wrapper = main.firstElementChild as HTMLElement;
     expect(main.className).toContain("overflow-y-auto");
-    expect((main.firstElementChild as HTMLElement).style.maxWidth).not.toBe("");
-    expect(main.firstElementChild?.className).not.toContain("h-full");
+    expect(wrapper.style.maxWidth).toBe("");
+    expect(wrapper.className).toContain("w-full");
+    expect(wrapper.className).not.toContain("h-full");
     rerender(
       <AppFrame fullBleed header={<div>Header</div>}>
         Content

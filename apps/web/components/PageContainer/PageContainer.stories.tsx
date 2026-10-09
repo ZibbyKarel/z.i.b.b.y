@@ -17,7 +17,7 @@ export const Default: Story = {
       <Card background="panel" radius="sm">
         <Container padding="300">
           <Typography type="note" variant="secondary">
-            Vycentrovaný sloupec s maximální šířkou 1400px — sdílený obal stránek dashboardu.
+            Celošířkový sloupec — sdílený obal stránek dashboardu.
           </Typography>
         </Container>
       </Card>
