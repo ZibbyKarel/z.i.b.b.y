@@ -1,10 +1,14 @@
+import { type AddressInfo } from "node:net";
+import { createServer } from "node:http";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ActivityLogService } from "../../activity/activity-log.service";
 import {
   MAX_RESULT_CHARS,
+  READ_DATA_PREFIX,
   type SelfApiClient,
   SelfApiExecutor,
   type SelfApiRouteCall,
+  createLoopbackSelfApiClient,
 } from "./self-api.executor";
 
 const record = vi.fn();
@@ -59,7 +63,87 @@ describe("SelfApiExecutor", () => {
     const res = await exec.call("projects.getProject", { params: { id: "cms4" } });
     expect(res.ok).toBe(true);
     expect(res.text).toContain('"cms4"');
+    expect(res.text.startsWith(READ_DATA_PREFIX)).toBe(true);
     expect(record).not.toHaveBeenCalled();
+  });
+
+  it("does not mark write results as DATA", async () => {
+    stub("teams.createTeam", async () => ({ status: 201, body: {} }));
+    const res = await exec.call("teams.createTeam", { body: { id: "t" } });
+    expect(res.text.startsWith("HTTP 201")).toBe(true);
+  });
+
+  it("records params.runId as the runRef activity ref", async () => {
+    stub("taskRuns.assignTaskRunProject", async () => ({ status: 200, body: {} }));
+    await exec.call("taskRuns.assignTaskRunProject", {
+      params: { runId: "run_1" },
+      body: { projectId: "p" },
+    });
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        refs: { action: "taskRuns.assignTaskRunProject", runRef: "run_1" },
+      }),
+    );
+  });
+
+  describe("path params", () => {
+    it.each([
+      ["../x"],
+      ["a/b"],
+      ["a?b"],
+      ["a#b"],
+      ["%2e%2e"],
+      [".."],
+      ["."],
+      ["../../approvals/X/approve?"],
+    ])("rejects id %j without calling the API", async (id) => {
+      const fn = stub("projects.getProject", async () => ({ status: 200, body: {} }));
+      const res = await exec.call("projects.getProject", { params: { id } });
+      expect(res).toEqual({ ok: false, text: "Neplatné parametry cesty." });
+      expect(fn).not.toHaveBeenCalled();
+      expect(record).not.toHaveBeenCalled();
+    });
+
+    it("rejects a missing path param", async () => {
+      const fn = stub("projects.getProject", async () => ({ status: 200, body: {} }));
+      const res = await exec.call("projects.getProject", {});
+      expect(res.ok).toBe(false);
+      expect(fn).not.toHaveBeenCalled();
+    });
+
+    it("rejects an extra path param", async () => {
+      const fn = stub("projects.listProjects", async () => ({ status: 200, body: [] }));
+      const res = await exec.call("projects.listProjects", { params: { id: "x" } });
+      expect(res.ok).toBe(false);
+      expect(fn).not.toHaveBeenCalled();
+    });
+
+    it("blocks traversal through the real loopback client; a valid id hits exactly its path", async () => {
+      const urls: string[] = [];
+      const server = createServer((req, res) => {
+        urls.push(req.url ?? "");
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ id: "cms4" }));
+      });
+      await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+      try {
+        const { port } = server.address() as AddressInfo;
+        const real = new SelfApiExecutor(
+          createLoopbackSelfApiClient(`http://127.0.0.1:${port}`),
+          activity,
+        );
+        const bad = await real.call("projects.getProject", {
+          params: { id: "../../approvals/X/approve?" },
+        });
+        expect(bad.ok).toBe(false);
+        expect(urls).toEqual([]);
+        const good = await real.call("projects.getProject", { params: { id: "cms4" } });
+        expect(good.ok).toBe(true);
+        expect(urls).toEqual(["/api/projects/cms4"]);
+      } finally {
+        await new Promise((r) => server.close(r));
+      }
+    });
   });
 
   const jiraCurrent = {
@@ -185,13 +269,44 @@ describe("SelfApiExecutor", () => {
       expect(fn).toHaveBeenCalledTimes(1);
     });
 
-    it("overwrites forceBody keys (approval auto -> ask)", async () => {
+    it("overwrites forceBody keys (approval auto -> ask, enabled -> false)", async () => {
       const fn = stub("automations.createAutomation", async () => ({ status: 200, body: {} }));
       const res = await exec.call("automations.createAutomation", {
-        body: { name: "n", approval: "auto" },
+        body: { name: "n", approval: "auto", enabled: true },
       });
       expect(res.ok).toBe(true);
-      expect(fn).toHaveBeenCalledWith({ body: { name: "n", approval: "ask" } });
+      expect(fn).toHaveBeenCalledWith({ body: { name: "n", approval: "ask", enabled: false } });
+    });
+
+    it("forces updateAutomation disabled too", async () => {
+      const fn = stub("automations.updateAutomation", async () => ({ status: 200, body: {} }));
+      await exec.call("automations.updateAutomation", {
+        params: { id: "a" },
+        body: { enabled: true },
+      });
+      expect(fn).toHaveBeenCalledWith({
+        params: { id: "a" },
+        body: { enabled: false, approval: "ask" },
+      });
+    });
+
+    it("rejects updateIntegration projectId (outside allowKeys)", async () => {
+      const fn = stub("integrations.updateIntegration", async () => ({ status: 200, body: {} }));
+      const res = await exec.call("integrations.updateIntegration", {
+        params: { id: "i" },
+        body: { projectId: "other" },
+      });
+      expect(res.ok).toBe(false);
+      expect(res.text).toContain("projectId");
+      expect(fn).not.toHaveBeenCalled();
+    });
+
+    it("rejects a denied tick key (channelTickMs)", async () => {
+      const put = stub("system.putConfig", async () => ({ status: 200, body: {} }));
+      const res = await exec.call("system.putConfig", { body: { channelTickMs: 1 } });
+      expect(res.ok).toBe(false);
+      expect(res.text).toContain("channelTickMs");
+      expect(put).not.toHaveBeenCalled();
     });
 
     it("keeps operator-set denied system keys on merge", async () => {

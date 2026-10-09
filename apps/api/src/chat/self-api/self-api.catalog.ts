@@ -143,15 +143,17 @@ export const SELF_API_ALLOWLIST: SelfApiAllowlist = {
     searchAutomations: "read",
     getAutomation: "read",
     // Trigger/target stay editable. Signal triggers dispatch at once unless approval is "ask",
-    // so the executor forces it; tool grants are the gate's.
+    // and the cron scheduler ignores approval entirely — so the executor forces "ask" AND
+    // disabled: a chat-touched automation stays off until the operator enables it in the UI.
+    // Tool grants are the gate's.
     createAutomation: {
       tier: "write",
-      forceBody: { approval: "ask" },
+      forceBody: { approval: "ask", enabled: false },
       denyPaths: ["target.toolGrants"],
     },
     updateAutomation: {
       tier: "write",
-      forceBody: { approval: "ask" },
+      forceBody: { approval: "ask", enabled: false },
       denyPaths: ["target.toolGrants"],
     },
   },
@@ -161,8 +163,10 @@ export const SELF_API_ALLOWLIST: SelfApiAllowlist = {
     createIntegration: "write",
     // Hosts/ports: repointing them would send the stored credential to another endpoint.
     // `config` is replaced whole on update, so it is merged onto the current one.
+    // Ownership (projectId/companyId) is operator-only: re-owning moves the credential.
     updateIntegration: {
       tier: "write",
+      allowKeys: ["name", "enabled", "config"],
       mergeOnto: ["config"],
       currentOp: "integrations.getIntegration",
       denyPaths: [
@@ -183,7 +187,15 @@ export const SELF_API_ALLOWLIST: SelfApiAllowlist = {
     // untouched. The scheduler, auto-resume and tick switches are operator-only.
     putConfig: {
       tier: "write",
-      denyPaths: ["goalAutoResume", "limitResumeMax", "automationTickMs", "roadmapTickMs"],
+      denyPaths: [
+        "goalAutoResume",
+        "limitResumeMax",
+        "automationTickMs",
+        "roadmapTickMs",
+        "channelTickMs",
+        "monitorTickMs",
+        "taskTickMs",
+      ],
     },
   },
   machine: { getMachineConfig: "read", updateMachineConfig: "write" },

@@ -63,6 +63,14 @@ describe("buildSelfApiCatalog", () => {
         "roadmapTickMs",
       ]),
     );
+    expect(catalog.get("system.putConfig")?.denyPaths).toEqual(
+      expect.arrayContaining(["channelTickMs", "monitorTickMs", "taskTickMs"]),
+    );
+    expect(catalog.get("integrations.updateIntegration")?.allowKeys).toEqual([
+      "name",
+      "enabled",
+      "config",
+    ]);
     expect(catalog.get("integrations.updateIntegration")?.denyPaths).toEqual(
       expect.arrayContaining(["config.baseUrl", "config.imapHost", "config.smtpHost"]),
     );
@@ -70,7 +78,7 @@ describe("buildSelfApiCatalog", () => {
     expect(catalog.get("companies.updateCompany")?.allowKeys).not.toContain("budget");
     for (const route of ["createAutomation", "updateAutomation"]) {
       const op = catalog.get(`automations.${route}`);
-      expect(op?.forceBody).toEqual({ approval: "ask" });
+      expect(op?.forceBody).toEqual({ approval: "ask", enabled: false });
       expect(op?.denyPaths).not.toContain("approval");
       expect(op?.denyPaths).toContain("target.toolGrants");
     }
