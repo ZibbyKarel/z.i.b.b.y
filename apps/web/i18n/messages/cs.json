@@ -1823,7 +1823,8 @@
     },
     "composer": {
       "label": "Zpráva",
-      "placeholder": "Napište ZIBBY… (Enter odešle, Shift+Enter nový řádek)",
+      "placeholder": "Zeptej se Zibbyho nebo popiš úkol",
+      "listening": "Poslouchám…",
       "send": "Odeslat"
     },
     "mention": {

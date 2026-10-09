@@ -550,6 +550,11 @@ export type { RailProps } from "./components/Rail/Rail";
 
 export { ChatDock, ChatDockTestId } from "./components/ChatDock/ChatDock";
 export type { ChatDockProps } from "./components/ChatDock/ChatDock";
+export { ChatBubble, ChatBubbleTestId } from "./components/ChatBubble/ChatBubble";
+export type { ChatBubbleProps } from "./components/ChatBubble/ChatBubble";
+export { InputFrame, InputFrameTestId } from "./components/InputFrame/InputFrame";
+export type { InputFrameProps } from "./components/InputFrame/InputFrame";
+export { VoiceBars, VoiceBarsTestId } from "./components/VoiceBars/VoiceBars";
 
 export {
   Splash,

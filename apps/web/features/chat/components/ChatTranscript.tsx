@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl";
-import { Card, Container, Stack, TypingDots } from "@zibby/design-system";
+import { ChatBubble, Stack, TypingDots } from "@zibby/design-system";
 import type { ChatMessage as ChatMessageType, ChatToolEvent } from "@zibby/contracts";
 import { ChatMessage } from "./ChatMessage";
 
@@ -51,7 +51,7 @@ export function ChatTranscript({
   if (messages.length === 0 && !hasLive && !isThinking) return null;
 
   return (
-    <Stack data-testid={ChatTranscriptTestId.Root} direction="col" gap="200">
+    <Stack data-testid={ChatTranscriptTestId.Root} direction="col" gap="125">
       {messages.map((message) => (
         <ChatMessage
           attachments={message.attachments}
@@ -83,11 +83,9 @@ export function ChatTranscript({
           direction="col"
           gap="75"
         >
-          <Card background="raised" radius="lg">
-            <Container padding={["100", "150"]}>
-              <TypingDots label={t("streaming")} />
-            </Container>
-          </Card>
+          <ChatBubble author="coo">
+            <TypingDots label={t("streaming")} />
+          </ChatBubble>
         </Stack>
       )}
     </Stack>

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
   Button,
-  Card,
+  ChatBubble,
   Container,
   FilePreview,
   Icon,
@@ -187,6 +187,9 @@ export function ChatMessage({
 }: ChatMessageProps) {
   const t = useTranslations("chat");
   const isUser = role === "user";
+  // Manual read-aloud (Phase 120) + CREATE TASK — only on a settled assistant turn,
+  // never the live-streaming bubble (its text isn't final yet) or a user turn.
+  const showActions = !isUser && !streaming && text.trim().length > 0;
 
   return (
     <Stack
@@ -201,58 +204,70 @@ export function ChatMessage({
         // card is the transcript-native rendering of its rows/counters.
         <BriefingMessageCard briefing={briefing} />
       ) : (
-        <Card
-          background={isUser ? "accent" : "raised"}
-          data-testid={isUser ? ChatMessageTestId.UserBubble : ChatMessageTestId.AssistantBubble}
-          radius="lg"
-        >
-          <Container maxWidth="68ch" padding={["100", "150"]}>
-            {isUser ? (
-              // The operator's own turn is plain text — render it verbatim, plus
-              // (D-020) the units they addressed and any files they attached.
-              <Stack direction="col" gap="75">
-                <Typography data-testid={ChatMessageTestId.Text} type="text">
-                  {text}
-                </Typography>
-                {mentions && mentions.length > 0 && (
-                  <Container data-testid={ChatMessageTestId.Mentions}>
-                    <TargetIdentity targets={mentions} />
-                  </Container>
-                )}
-                {attachments && attachments.length > 0 && (
-                  <Stack data-testid={ChatMessageTestId.Attachments} direction="col" gap="50">
-                    {attachments.map((file) => (
-                      <FilePreview
-                        key={file.name}
-                        mediaType={file.mediaType}
-                        name={file.name}
-                        size={file.size}
-                      />
-                    ))}
-                  </Stack>
-                )}
-              </Stack>
-            ) : (
-              // ZIBBY's turn is GitHub-flavoured markdown — format it. The live cursor
-              // is a sibling, never part of the markdown string (so a half-typed `**`
-              // can't break the parse).
+        <ChatBubble
+          actions={
+            showActions && (
               <>
-                <Markdown source={text} variant="prose" />
-                {streaming && (
-                  <Typography
-                    aria-label={t("streaming")}
-                    as="span"
-                    data-testid={ChatMessageTestId.StreamingCursor}
-                    type="text"
-                    variant="tertiary"
+                {onCreateTask && (
+                  <Button
+                    data-testid={ChatMessageTestId.CreateTaskButton}
+                    intent="primary"
+                    onClick={() => onCreateTask(text)}
+                    size="sm"
                   >
-                    {" █"}
-                  </Typography>
+                    {t("createTask")}
+                  </Button>
                 )}
+                <ReadAloudButton text={text} />
               </>
-            )}
-          </Container>
-        </Card>
+            )
+          }
+          author={isUser ? "you" : "coo"}
+          data-testid={isUser ? ChatMessageTestId.UserBubble : ChatMessageTestId.AssistantBubble}
+        >
+          {isUser ? (
+            // The operator's own turn is plain text — render it verbatim, plus
+            // (D-020) the units they addressed and any files they attached.
+            <Stack direction="col" gap="75">
+              <span data-testid={ChatMessageTestId.Text}>{text}</span>
+              {mentions && mentions.length > 0 && (
+                <Container data-testid={ChatMessageTestId.Mentions}>
+                  <TargetIdentity targets={mentions} />
+                </Container>
+              )}
+              {attachments && attachments.length > 0 && (
+                <Stack data-testid={ChatMessageTestId.Attachments} direction="col" gap="50">
+                  {attachments.map((file) => (
+                    <FilePreview
+                      key={file.name}
+                      mediaType={file.mediaType}
+                      name={file.name}
+                      size={file.size}
+                    />
+                  ))}
+                </Stack>
+              )}
+            </Stack>
+          ) : (
+            // ZIBBY's turn is GitHub-flavoured markdown — format it. The live cursor
+            // is a sibling, never part of the markdown string (so a half-typed `**`
+            // can't break the parse).
+            <>
+              <Markdown source={text} variant="prose" />
+              {streaming && (
+                <Typography
+                  aria-label={t("streaming")}
+                  as="span"
+                  data-testid={ChatMessageTestId.StreamingCursor}
+                  type="text"
+                  variant="tertiary"
+                >
+                  {" █"}
+                </Typography>
+              )}
+            </>
+          )}
+        </ChatBubble>
       )}
 
       {toolEvents && toolEvents.length > 0 && (
@@ -260,26 +275,6 @@ export function ChatMessage({
           {toolEvents.map((event, i) => (
             <ToolEventRow event={event} key={`${event.name}-${i}`} />
           ))}
-        </Stack>
-      )}
-
-      {/* Manual read-aloud (Phase 120) — only on a settled assistant turn, never
-          the live-streaming bubble (its text isn't final yet), a user turn, or a
-          briefing card (structured rows, not prose — nothing sensible to read). */}
-      {!isUser && !streaming && !briefing && text.trim().length > 0 && (
-        <Stack align="center" direction="row" gap="50">
-          <ReadAloudButton text={text} />
-          {onCreateTask && (
-            <Button
-              data-testid={ChatMessageTestId.CreateTaskButton}
-              icon="plus"
-              intent="ghost"
-              onClick={() => onCreateTask(text)}
-              size="sm"
-            >
-              {t("createTask")}
-            </Button>
-          )}
         </Stack>
       )}
     </Stack>

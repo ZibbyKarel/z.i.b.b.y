@@ -1823,7 +1823,8 @@
     },
     "composer": {
       "label": "Message",
-      "placeholder": "Message ZIBBY… (Enter to send, Shift+Enter for a newline)",
+      "placeholder": "Ask Zibby or describe a task",
+      "listening": "Listening…",
       "send": "Send"
     },
     "mention": {

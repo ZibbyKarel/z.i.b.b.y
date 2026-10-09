@@ -197,7 +197,7 @@ describe("CooDock (ZB-12)", () => {
     renderDock();
     const file = new File(["hi"], "a.txt", { type: "text/plain" });
     await user.upload(screen.getByTestId(CommandLineTestId.FileInput), file);
-    await screen.findByText("a.txt");
+    await screen.findByTestId(`${CommandLineTestId.FileTile}-a.txt`);
     await typeAndSend("zkontroluj přílohu");
     const body = sendMutate.mock.calls[0]?.[0]?.body as { attachmentSetId?: string };
     expect(body.attachmentSetId).toBe("set_1");

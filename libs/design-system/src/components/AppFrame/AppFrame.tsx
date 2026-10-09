@@ -139,11 +139,13 @@ export function AppFrame({
             }}
             tabIndex={-1}
           >
-            <div className={cn("w-full", fullBleed && "h-full")}>{children}</div>
+            <div className={cn("w-full", fullBleed && "h-full", dock && !fullBleed && "pb-[72px]")}>
+              {children}
+            </div>
           </main>
 
           {dock && (
-            <div className="pointer-events-none absolute inset-0 z-20 flex items-end justify-end p-5">
+            <div className="pointer-events-none absolute inset-0 z-20 flex items-end justify-end pr-5 pb-4">
               <div className="pointer-events-auto" data-testid={AppFrameTestId.Dock}>
                 {dock}
               </div>

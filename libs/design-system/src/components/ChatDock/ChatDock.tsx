@@ -1,22 +1,16 @@
 "use client";
 import type { ReactNode, Ref } from "react";
-import { useState } from "react";
-import { cn } from "../../utils/cn";
-import { focusRing } from "../../utils/focus";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "../Button/Button";
-import { Icon } from "../Icon/Icon";
-import { Typography } from "../Typography/Typography";
 
 export enum ChatDockTestId {
   Root = "chat-dock-root",
   Transcript = "chat-dock-transcript",
   Header = "chat-dock-header",
+  NewChatButton = "chat-dock-new-chat-button",
   CloseButton = "chat-dock-close-button",
   Messages = "chat-dock-messages",
-  LatestLine = "chat-dock-latest-line",
   Footer = "chat-dock-footer",
-  Toggle = "chat-dock-toggle",
-  ToggleIcon = "chat-dock-toggle-icon",
   TargetChip = "chat-dock-target-chip",
   Composer = "chat-dock-composer",
 }
@@ -27,31 +21,27 @@ export interface ChatDockProps {
   /** Initial state when uncontrolled. */
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
-  /** Message list — a `LogStream`-like transcript, only rendered when open. */
+  /** Message list — only rendered when open. */
   transcript?: ReactNode;
-  /** The composer row — a render slot (`TextArea` + attach + mic + send); the
-   *  engine wiring lands in ZB-12, `ChatDock` only positions it. */
+  /** The composer bar — a render slot (input frame + send); `ChatDock` only positions it. */
   composer: ReactNode;
   /** DS App mock O-20's target chip, e.g. "→ Dept: dev". */
   targetChip?: ReactNode;
-  /** A one-line preview of the latest message, shown above the composer only
-   *  while collapsed. */
-  latestLine?: string;
-  /** Accessible name for the open/close toggle. */
-  toggleLabel?: string;
+  /** Shows a "+ New chat" header button when provided. */
+  onNewChat?: () => void;
+  newChatLabel?: string;
   closeLabel?: string;
+  /** Any change scrolls the message list to the bottom (also on open). */
+  scrollKey?: unknown;
   ref?: Ref<HTMLDivElement>;
 }
 
 /**
  * DS.md §8's "COO dock" — a fixed-width panel `AppFrame`'s `dock` slot floats
- * bottom-right over the main content. Presentational only: the transcript,
- * composer and target chip are all slots the app fills in; `ChatDock` owns
- * only the open/collapsed choreography and the always-visible bottom bar
- * (toggle, latest-line preview, target chip, composer).
- *
- * Identity chrome (avatar, agent name, role label) is deliberately absent for
- * now — just the text row — until that visual is designed.
+ * bottom-right over the main content. Collapsed it is only the bottom bar
+ * (target chip + composer); focusing anything in the bar opens the 440px
+ * conversation pane above it (header with NEW CHAT / CLOSE, scrolling messages).
+ * Presentational only: transcript, composer and target chip are slots.
  */
 export function ChatDock({
   open,
@@ -60,17 +50,26 @@ export function ChatDock({
   transcript,
   composer,
   targetChip,
-  latestLine,
-  toggleLabel = "Chat",
+  onNewChat,
+  newChatLabel = "New chat",
   closeLabel = "Close",
+  scrollKey,
   ref,
 }: ChatDockProps) {
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const isOpen = open ?? internalOpen;
+  const messagesRef = useRef<HTMLDivElement>(null);
   const setOpen = (next: boolean) => {
     setInternalOpen(next);
     onOpenChange?.(next);
   };
+
+  // scrollKey is a trigger-only dependency.
+
+  useEffect(() => {
+    const el = messagesRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [scrollKey, isOpen]);
 
   return (
     <div
@@ -84,9 +83,21 @@ export function ChatDock({
           data-testid={ChatDockTestId.Transcript}
         >
           <div
-            className="flex items-center justify-end border-b border-line px-3.5 py-3"
+            className="flex items-center gap-2.5 border-b border-line px-3.5 py-3"
             data-testid={ChatDockTestId.Header}
           >
+            <div className="flex-1" />
+            {onNewChat && (
+              <Button
+                data-testid={ChatDockTestId.NewChatButton}
+                icon="plus"
+                intent="primary"
+                onClick={onNewChat}
+                size="sm"
+              >
+                {newChatLabel}
+              </Button>
+            )}
             <Button
               data-testid={ChatDockTestId.CloseButton}
               intent="secondary"
@@ -97,54 +108,28 @@ export function ChatDock({
             </Button>
           </div>
           <div
-            className="min-h-0 flex-1 overflow-y-auto p-3.5"
+            className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto p-3.5"
             data-testid={ChatDockTestId.Messages}
+            ref={messagesRef}
           >
             {transcript}
           </div>
         </div>
       )}
 
-      {!isOpen && latestLine && (
-        <div className="border-b border-line px-3.5 py-2.5" data-testid={ChatDockTestId.LatestLine}>
-          <Typography truncate type="bodySm" variant="secondary">
-            {latestLine}
-          </Typography>
-        </div>
-      )}
-
-      <div className="flex items-center gap-2.5 p-2 pl-3" data-testid={ChatDockTestId.Footer}>
-        <button
-          aria-expanded={isOpen}
-          aria-label={toggleLabel}
-          className={cn(
-            "inline-flex shrink-0 items-center justify-center p-1 text-foreground-dim",
-            focusRing,
-          )}
-          data-testid={ChatDockTestId.Toggle}
-          onClick={() => setOpen(!isOpen)}
-          type="button"
-        >
-          <span
-            className={cn(
-              "inline-flex transition-transform duration-150",
-              isOpen ? "rotate-90" : "-rotate-90",
-            )}
-            data-testid={ChatDockTestId.ToggleIcon}
-          >
-            <Icon name="chevron" />
+      <div
+        className="flex flex-col p-2"
+        data-testid={ChatDockTestId.Footer}
+        onFocusCapture={() => {
+          if (!isOpen) setOpen(true);
+        }}
+      >
+        {targetChip && (
+          <span className="pb-2" data-testid={ChatDockTestId.TargetChip}>
+            {targetChip}
           </span>
-        </button>
-
-        {targetChip && <span data-testid={ChatDockTestId.TargetChip}>{targetChip}</span>}
-
-        {/* The composer's own frame — `CommandLine`'s `frameless` prop drops its
-         *  usual border/background on the assumption the host supplies one; this
-         *  is that surface (DS.md §6, sharp corners, no `Card` chrome). */}
-        <div
-          className="min-w-0 flex-1 border border-border-strong bg-background"
-          data-testid={ChatDockTestId.Composer}
-        >
+        )}
+        <div className="min-w-0" data-testid={ChatDockTestId.Composer}>
           {composer}
         </div>
       </div>

@@ -1,21 +1,21 @@
 import { useTranslations } from "next-intl";
-import { Button } from "@zibby/design-system";
+import { Button, VoiceBars } from "@zibby/design-system";
 
 export enum VoiceToggleButtonTestId {
   Root = "chat-voice-toggle",
 }
 
 export interface VoiceToggleButtonProps {
-  /** Whether voice mode is currently on (fills the button). */
+  /** Whether voice mode is currently on (shows the listening bars). */
   active: boolean;
   onToggle: () => void;
 }
 
 /**
- * The top-bar voice-mode switch (Phase 119a). A mic {@link Button} — filled
- * (`primary`) while listening, quiet (`ghost`) when off — that flips voice mode.
- * ChatScreen renders it ONLY when STT is supported (an unlabeled dead control
- * would break the interaction grammar), so there is no disabled state here.
+ * The voice-mode switch (Phase 119a). A quiet icon {@link Button} — the mic glyph
+ * when off, the animated listening {@link VoiceBars} while on. ChatScreen/the dock
+ * render it ONLY when STT is supported (an unlabeled dead control would break the
+ * interaction grammar), so there is no disabled state here.
  */
 export function VoiceToggleButton({ active, onToggle }: VoiceToggleButtonProps) {
   const t = useTranslations("chat");
@@ -26,11 +26,13 @@ export function VoiceToggleButton({ active, onToggle }: VoiceToggleButtonProps) 
       aria-label={label}
       aria-pressed={active}
       data-testid={VoiceToggleButtonTestId.Root}
-      icon="mic"
-      intent={active ? "primary" : "ghost"}
+      icon={active ? undefined : "mic"}
+      intent="ghost"
       onClick={onToggle}
       size="sm"
       title={label}
-    />
+    >
+      {active && <VoiceBars />}
+    </Button>
   );
 }

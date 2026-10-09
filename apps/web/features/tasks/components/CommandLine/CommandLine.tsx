@@ -11,6 +11,7 @@ import {
   type HighlightTone,
   Icon,
   type IconName,
+  InputFrame,
   MenuSurface,
   Panel,
   Stack,
@@ -209,6 +210,12 @@ export interface CommandLineProps {
    * trailing control). Omit to keep today's default trailing control unchanged.
    */
   renderTrailing?: (api: { canSubmit: boolean; submit: () => void }) => ReactNode;
+  /**
+   * The chat dock's one-line bar: attach | input | `leadingActions` inside a DS
+   * {@link InputFrame}, the trailing control outside it, and attached files as a
+   * chip row ABOVE the bar. Default `false` — today's layout, unchanged.
+   */
+  inline?: boolean;
 }
 
 /** The trigger table: `@` = who runs it (agent/employee/department/workflow), `#` =
@@ -500,6 +507,7 @@ export function CommandLine({
   submitLabel,
   leadingActions,
   renderTrailing,
+  inline = false,
 }: CommandLineProps) {
   const t = useTranslations("tasks");
   const tMention = useTranslations("chat.mention");
@@ -1121,6 +1129,21 @@ export function CommandLine({
 
   const openFilePicker = () => fileInputRef.current?.click();
 
+  const trailing = renderTrailing ? (
+    renderTrailing({ canSubmit: canRun, submit })
+  ) : (
+    <Button
+      data-testid={CommandLineTestId.Send}
+      disabled={!canRun}
+      icon="arrow"
+      intent="primary"
+      onClick={submit}
+      size="sm"
+    >
+      {submitLabel ?? t("commandLine.send")}
+    </Button>
+  );
+
   const inputArea = (
     <Container
       data-testid={CommandLineTestId.Box}
@@ -1175,101 +1198,148 @@ export function CommandLine({
         />
       )}
 
-      <Container position="relative">
-        <HighlightTextAreaField
-          autoFocus
-          data-testid={CommandLineTestId.Input}
-          disabled={disabled}
-          frameless={frameless}
-          hideLabel={hideLabel}
-          highlights={highlights}
-          label={label ?? t("commandLine.label")}
-          onBlur={closeMention}
-          onChange={handleChange}
-          onClick={handleMentionClick}
-          onKeyDown={handleKeyDown}
-          onKeyUp={handleMentionKeyUp}
-          placeholder={placeholder ?? t("commandLine.placeholder")}
-          ref={textareaRef}
-          rows={computeRows(text, rows, maxRows)}
-          // Reserve a bottom strip so the caret/text never slides under the overlaid
-          // controls — grown when files are attached to also clear their tile row
-          // (a DS style passthrough for the genuinely-layout value).
-          style={{
-            paddingBottom:
-              attachments.files.length > 0
-                ? CONTROLS_RESERVED_BOTTOM_WITH_FILES
-                : CONTROLS_RESERVED_BOTTOM,
-          }}
-          value={text}
-        />
-
-        {/* Attached files — a wrapping row of compact tiles sitting INSIDE the input,
-            just above the attach button (never the old full-width stack below the box). */}
-        {attachments.files.length > 0 && (
-          <Container
-            bottom={CONTROLS_RESERVED_BOTTOM}
-            left={CONTROLS_INSET}
-            position="absolute"
-            right={CONTROLS_INSET}
-            zIndex={10}
-          >
-            <Stack wrap direction="row" gap="50">
+      {inline ? (
+        <Stack direction="col" gap="75">
+          {attachments.files.length > 0 && (
+            <Stack wrap direction="row" gap="75">
               {attachments.files.map((file) => (
-                <Container
+                <Chip
+                  closable
+                  closeLabel={t("attachments.remove")}
                   data-testid={`${CommandLineTestId.FileTile}-${file.name}`}
                   key={file.name}
-                  maxWidth="12rem"
+                  onClose={() => handleRemoveFile(file.name)}
                 >
-                  <FilePreview
-                    mediaType={file.mediaType}
-                    name={file.name}
-                    onRemove={() => handleRemoveFile(file.name)}
-                    size={file.size}
-                  />
-                </Container>
+                  <Container as="span" maxWidth="160px">
+                    <Typography mono truncate as="span" size="xs" type="note">
+                      {file.name}
+                    </Typography>
+                  </Container>
+                </Chip>
               ))}
             </Stack>
-          </Container>
-        )}
+          )}
+          <Stack align="center" direction="row" gap="100">
+            <InputFrame
+              end={leadingActions}
+              start={
+                showAttach && (
+                  <Button
+                    aria-label={t("commandLine.attachAria")}
+                    data-testid={CommandLineTestId.Attach}
+                    icon={attachIcon}
+                    intent="ghost"
+                    onClick={openFilePicker}
+                    size="sm"
+                  />
+                )
+              }
+            >
+              <HighlightTextAreaField
+                data-testid={CommandLineTestId.Input}
+                disabled={disabled}
+                frameless={frameless}
+                hideLabel={hideLabel}
+                highlights={highlights}
+                label={label ?? t("commandLine.label")}
+                onBlur={closeMention}
+                onChange={handleChange}
+                onClick={handleMentionClick}
+                onKeyDown={handleKeyDown}
+                onKeyUp={handleMentionKeyUp}
+                placeholder={placeholder ?? t("commandLine.placeholder")}
+                ref={textareaRef}
+                rows={computeRows(text, rows, maxRows)}
+                value={text}
+              />
+            </InputFrame>
+            {trailing}
+          </Stack>
+        </Stack>
+      ) : (
+        <Container position="relative">
+          <HighlightTextAreaField
+            autoFocus
+            data-testid={CommandLineTestId.Input}
+            disabled={disabled}
+            frameless={frameless}
+            hideLabel={hideLabel}
+            highlights={highlights}
+            label={label ?? t("commandLine.label")}
+            onBlur={closeMention}
+            onChange={handleChange}
+            onClick={handleMentionClick}
+            onKeyDown={handleKeyDown}
+            onKeyUp={handleMentionKeyUp}
+            placeholder={placeholder ?? t("commandLine.placeholder")}
+            ref={textareaRef}
+            rows={computeRows(text, rows, maxRows)}
+            // Reserve a bottom strip so the caret/text never slides under the overlaid
+            // controls — grown when files are attached to also clear their tile row
+            // (a DS style passthrough for the genuinely-layout value).
+            style={{
+              paddingBottom:
+                attachments.files.length > 0
+                  ? CONTROLS_RESERVED_BOTTOM_WITH_FILES
+                  : CONTROLS_RESERVED_BOTTOM,
+            }}
+            value={text}
+          />
 
-        {/* Attach + `leadingActions` — pinned bottom-left INSIDE the input, over the
+          {/* Attached files — a wrapping row of compact tiles sitting INSIDE the input,
+            just above the attach button (never the old full-width stack below the box). */}
+          {attachments.files.length > 0 && (
+            <Container
+              bottom={CONTROLS_RESERVED_BOTTOM}
+              left={CONTROLS_INSET}
+              position="absolute"
+              right={CONTROLS_INSET}
+              zIndex={10}
+            >
+              <Stack wrap direction="row" gap="50">
+                {attachments.files.map((file) => (
+                  <Container
+                    data-testid={`${CommandLineTestId.FileTile}-${file.name}`}
+                    key={file.name}
+                    maxWidth="12rem"
+                  >
+                    <FilePreview
+                      mediaType={file.mediaType}
+                      name={file.name}
+                      onRemove={() => handleRemoveFile(file.name)}
+                      size={file.size}
+                    />
+                  </Container>
+                ))}
+              </Stack>
+            </Container>
+          )}
+
+          {/* Attach + `leadingActions` — pinned bottom-left INSIDE the input, over the
             reserved strip. `TaskCommandLine` injects its own project selector here
             (Phase 118d) — this component no longer knows what a "project" is. */}
-        <Container bottom={CONTROLS_INSET} left={CONTROLS_INSET} position="absolute" zIndex={10}>
-          <Stack align="center" direction="row" gap="50">
-            {showAttach && (
-              <Button
-                aria-label={t("commandLine.attachAria")}
-                data-testid={CommandLineTestId.Attach}
-                icon={attachIcon}
-                intent="ghost"
-                onClick={openFilePicker}
-                size="sm"
-              />
-            )}
-            {leadingActions}
-          </Stack>
-        </Container>
+          <Container bottom={CONTROLS_INSET} left={CONTROLS_INSET} position="absolute" zIndex={10}>
+            <Stack align="center" direction="row" gap="50">
+              {showAttach && (
+                <Button
+                  aria-label={t("commandLine.attachAria")}
+                  data-testid={CommandLineTestId.Attach}
+                  icon={attachIcon}
+                  intent="ghost"
+                  onClick={openFilePicker}
+                  size="sm"
+                />
+              )}
+              {leadingActions}
+            </Stack>
+          </Container>
 
-        {/* Send — pinned bottom-right INSIDE the input, over the reserved strip. */}
-        <Container bottom={CONTROLS_INSET} position="absolute" right={CONTROLS_INSET} zIndex={10}>
-          {renderTrailing ? (
-            renderTrailing({ canSubmit: canRun, submit })
-          ) : (
-            <Button
-              data-testid={CommandLineTestId.Send}
-              disabled={!canRun}
-              icon="arrow"
-              intent="primary"
-              onClick={submit}
-              size="sm"
-            >
-              {submitLabel ?? t("commandLine.send")}
-            </Button>
-          )}
+          {/* Send — pinned bottom-right INSIDE the input, over the reserved strip. */}
+          <Container bottom={CONTROLS_INSET} position="absolute" right={CONTROLS_INSET} zIndex={10}>
+            {trailing}
+          </Container>
         </Container>
-      </Container>
+      )}
 
       {/* The mention panel is portaled to body (escaping the wrapper's overflow/z clip)
           and positioned `fixed` at the caret rect, flipping above when needed. */}

@@ -4,77 +4,52 @@ import { describe, expect, it, vi } from "vitest";
 import { render } from "../../utils/testRender";
 import { ChatDock, ChatDockTestId } from "./ChatDock";
 
-describe("ChatDock", () => {
-  it("renders collapsed by default, hiding the transcript", () => {
-    render(<ChatDock composer={<input aria-label="Message" />} />);
-    expect(screen.queryByTestId(ChatDockTestId.Transcript)).toBeNull();
-    expect(screen.getByTestId(ChatDockTestId.Toggle)).toHaveAttribute("aria-expanded", "false");
-  });
+const composer = <input aria-label="Message" />;
 
-  it("renders the composer slot regardless of open state", () => {
-    render(<ChatDock composer={<input aria-label="Message" />} />);
+describe("ChatDock", () => {
+  it("renders collapsed by default: only the bar, no transcript", () => {
+    render(<ChatDock composer={composer} />);
+    expect(screen.queryByTestId(ChatDockTestId.Transcript)).toBeNull();
     expect(screen.getByTestId(ChatDockTestId.Composer)).toContainElement(
       screen.getByLabelText("Message"),
     );
   });
 
-  it("expands on toggle click (uncontrolled)", async () => {
+  it("opens when anything in the footer takes focus (uncontrolled)", async () => {
     const user = userEvent.setup();
-    render(<ChatDock composer={<input aria-label="Message" />} transcript={<div>Hi there</div>} />);
-    await user.click(screen.getByTestId(ChatDockTestId.Toggle));
+    render(<ChatDock composer={composer} transcript={<div>Hi there</div>} />);
+    await user.click(screen.getByLabelText("Message"));
     expect(screen.getByTestId(ChatDockTestId.Transcript)).toHaveTextContent("Hi there");
-    expect(screen.getByTestId(ChatDockTestId.Toggle)).toHaveAttribute("aria-expanded", "true");
   });
 
-  it("closes via the header close button", async () => {
+  it("header has new chat + close; close closes", async () => {
     const user = userEvent.setup();
+    const onNewChat = vi.fn();
     render(
-      <ChatDock
-        defaultOpen
-        composer={<input aria-label="Message" />}
-        transcript={<div>Hi there</div>}
-      />,
+      <ChatDock defaultOpen composer={composer} onNewChat={onNewChat} transcript={<div>Hi</div>} />,
     );
-    expect(screen.getByTestId(ChatDockTestId.Transcript)).toBeInTheDocument();
+    await user.click(screen.getByTestId(ChatDockTestId.NewChatButton));
+    expect(onNewChat).toHaveBeenCalledTimes(1);
     await user.click(screen.getByTestId(ChatDockTestId.CloseButton));
     expect(screen.queryByTestId(ChatDockTestId.Transcript)).toBeNull();
+  });
+
+  it("omits the new chat button without onNewChat", () => {
+    render(<ChatDock defaultOpen composer={composer} />);
+    expect(screen.queryByTestId(ChatDockTestId.NewChatButton)).toBeNull();
   });
 
   it("is controlled via open + onOpenChange", async () => {
     const onOpenChange = vi.fn();
     const user = userEvent.setup();
-    render(
-      <ChatDock
-        composer={<input aria-label="Message" />}
-        onOpenChange={onOpenChange}
-        open={false}
-      />,
-    );
-    await user.click(screen.getByTestId(ChatDockTestId.Toggle));
+    render(<ChatDock composer={composer} onOpenChange={onOpenChange} open={false} />);
+    await user.click(screen.getByLabelText("Message"));
     expect(onOpenChange).toHaveBeenCalledWith(true);
-    // Controlled: stays collapsed until the parent flips `open`.
     expect(screen.queryByTestId(ChatDockTestId.Transcript)).toBeNull();
   });
 
-  it("shows the latest-line preview only while collapsed", () => {
-    const { rerender } = render(
-      <ChatDock composer={<input aria-label="Message" />} latestLine="On it." open={false} />,
-    );
-    expect(screen.getByTestId(ChatDockTestId.LatestLine)).toHaveTextContent("On it.");
-    rerender(<ChatDock open composer={<input aria-label="Message" />} latestLine="On it." />);
-    expect(screen.queryByTestId(ChatDockTestId.LatestLine)).toBeNull();
-  });
-
   it("renders the target chip slot when provided", () => {
-    render(
-      <ChatDock composer={<input aria-label="Message" />} targetChip={<span>Dept: dev</span>} />,
-    );
+    render(<ChatDock composer={composer} targetChip={<span>Dept: dev</span>} />);
     expect(screen.getByTestId(ChatDockTestId.TargetChip)).toHaveTextContent("Dept: dev");
-  });
-
-  it("renders just the toggle and composer row, with no identity chrome", () => {
-    render(<ChatDock composer={<input aria-label="Message" />} />);
-    expect(screen.getByTestId(ChatDockTestId.Toggle)).toHaveAccessibleName("Chat");
-    expect(screen.getByTestId(ChatDockTestId.Toggle)).not.toHaveTextContent(/./);
   });
 });

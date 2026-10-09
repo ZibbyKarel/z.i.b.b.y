@@ -1,7 +1,7 @@
 "use client";
 
 import type { TaskTarget } from "@zibby/contracts";
-import { Button, ChatDock, Chip, Row, Stack, Typography } from "@zibby/design-system";
+import { Button, ChatBubble, ChatDock, Chip, Stack } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -15,7 +15,6 @@ import { VoiceToggleButton } from "./VoiceToggleButton";
 
 export enum CooDockTestId {
   Send = "coo-dock-send",
-  NewChat = "coo-dock-new-chat",
   Empty = "coo-dock-empty",
   TargetChip = "coo-dock-target-chip",
 }
@@ -25,9 +24,6 @@ const COMPOSER_MAX_ROWS = 4;
 
 /** `#` offers every scope kind the chat send body carries. */
 const CHAT_SCOPE_KINDS: readonly ScopeKind[] = ["project", "team", "company"];
-
-/** The one-line collapsed preview is cut here (the DS also truncates visually). */
-const LATEST_LINE_MAX_CHARS = 160;
 
 function targetLabel(target: TaskTarget): string {
   if (target.name) return target.name;
@@ -70,9 +66,6 @@ export function CooDock() {
     [dockTarget, router],
   );
 
-  const last = messages.at(-1);
-  const latestLine = last ? last.text.slice(0, LATEST_LINE_MAX_CHARS) : undefined;
-
   // No chip for the COO default (O-20) — it's the obvious fallback with
   // nothing to disambiguate; only an explicit non-COO target earns the chip.
   const targetChip = dockTarget ? (
@@ -89,40 +82,30 @@ export function CooDock() {
 
   const transcript =
     messages.length === 0 && !stream.streaming ? (
-      <Typography data-testid={CooDockTestId.Empty} type="note" variant="tertiary">
+      <ChatBubble author="coo" data-testid={CooDockTestId.Empty}>
         {t("dock.empty")}
-      </Typography>
+      </ChatBubble>
     ) : (
-      <Stack direction="col" gap="150">
-        <Row justify="end">
-          <Button
-            data-testid={CooDockTestId.NewChat}
-            icon="trash"
-            intent="ghost"
-            onClick={newChat}
-            size="sm"
-          >
-            {t("newChat")}
-          </Button>
-        </Row>
-        <ChatTranscript
-          liveText={stream.text}
-          liveToolEvents={stream.toolEvents}
-          messages={messages}
-          onCreateTask={createTask}
-          streaming={stream.streaming}
-          thinking={thinking}
-        />
-      </Stack>
+      <ChatTranscript
+        liveText={stream.text}
+        liveToolEvents={stream.toolEvents}
+        messages={messages}
+        onCreateTask={createTask}
+        streaming={stream.streaming}
+        thinking={thinking}
+      />
     );
 
   const composer = (
     <Stack align="stretch" direction="col" gap="100">
-      {voice.active && <VoiceStatusStrip interim={voice.interim} listening={voice.listening} />}
+      {voice.active && voice.interim && (
+        <VoiceStatusStrip interim={voice.interim} listening={voice.listening} />
+      )}
       <CommandLine
         allowSkillMentions
         frameless
         hideLabel
+        inline
         multipleTargets
         showAttach
         attachIcon="paperclip"
@@ -135,20 +118,23 @@ export function CooDock() {
         maxRows={COMPOSER_MAX_ROWS}
         onScopeChange={setScope}
         onSkillChange={setSkillId}
-        onSubmit={(text, _target, submittedAttachments, mentions) =>
-          send(text, mentions, submittedAttachments)
-        }
-        placeholder={t("composer.placeholder")}
-        renderTrailing={({ canSubmit, submit }) => (
+        onSubmit={(text, _target, submittedAttachments, mentions) => {
+          setDockOpen(true);
+          send(text, mentions, submittedAttachments);
+        }}
+        placeholder={voice.listening ? t("composer.listening") : t("composer.placeholder")}
+        // Always filled per the design — an empty draft is ignored by `submit`
+        // itself, so the button only greys out while a turn is in flight.
+        renderTrailing={({ submit }) => (
           <Button
-            aria-label={t("composer.send")}
             data-testid={CooDockTestId.Send}
-            disabled={!canSubmit}
-            icon="arrow"
+            disabled={thinking}
             intent="primary"
             onClick={submit}
             size="sm"
-          />
+          >
+            {t("composer.send")}
+          </Button>
         )}
         scopeKinds={CHAT_SCOPE_KINDS}
       />
@@ -159,11 +145,12 @@ export function CooDock() {
     <ChatDock
       closeLabel={t("close")}
       composer={composer}
-      latestLine={latestLine}
+      newChatLabel={t("newChat")}
+      onNewChat={newChat}
       onOpenChange={setDockOpen}
       open={dockOpen}
+      scrollKey={`${messages.length}:${stream.text.length}:${thinking}`}
       targetChip={targetChip}
-      toggleLabel={t("dock.toggle")}
       transcript={transcript}
     />
   );

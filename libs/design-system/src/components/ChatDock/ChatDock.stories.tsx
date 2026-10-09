@@ -35,12 +35,8 @@ export const Overview: Story = {
   render: () => (
     <div className="flex flex-wrap items-end gap-8">
       <ChatDock composer={composer} />
-      <ChatDock defaultOpen composer={composer} transcript={transcript} />
-      <ChatDock
-        composer={composer}
-        latestLine="On it — I’ll ping you when checks pass."
-        targetChip={<Chip>Dept: dev</Chip>}
-      />
+      <ChatDock defaultOpen composer={composer} onNewChat={() => {}} transcript={transcript} />
+      <ChatDock composer={composer} targetChip={<Chip>Dept: dev</Chip>} />
     </div>
   ),
 };

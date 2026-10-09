@@ -197,6 +197,8 @@
    * above, which existing HUD call sites still use. */
   --animate-zb-live: zb-live 1.4s ease-in-out infinite;
   --animate-zb-pulse: zb-pulse 1s steps(1, end) infinite;
+  /* Voice-listening bars (`VoiceBars`) — keyframe lives in the reduced-motion guard. */
+  --animate-zb-bar: zb-bar 0.7s ease-in-out infinite;
   --animate-spinner: zt-spin 0.7s linear infinite;
   /* Idle "floating on water" drift for otherwise-static cards — amplitude
    * capped at 3px, translateY only (no opacity/shadow — that's zt-live's job). */
@@ -820,6 +822,15 @@
     }
     50% {
       transform: translateY(-1px);
+    }
+  }
+  @keyframes zb-bar {
+    0%,
+    100% {
+      transform: scaleY(0.35);
+    }
+    50% {
+      transform: scaleY(1);
     }
   }
   @keyframes zb-blink {
