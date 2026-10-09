@@ -3,6 +3,7 @@ import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { teamsContract } from "@zibby/contracts";
 import { makeErrorMapper } from "../shared/http/error-mapping";
 import { KbReaderService } from "../kb/kb-reader.service";
+import { TeamKbSyncError, TeamKbSyncService } from "./team-kb-sync.service";
 import { TeamConflictError, TeamNotFoundError } from "./teams.errors";
 import { TeamsStorageService } from "./teams.storage.service";
 
@@ -22,6 +23,7 @@ export class TeamsController {
   constructor(
     private readonly storage: TeamsStorageService,
     private readonly kbReader: KbReaderService,
+    private readonly kbSync: TeamKbSyncService,
   ) {}
 
   @TsRestHandler(teamsContract)
@@ -47,6 +49,24 @@ export class TeamsController {
           return { status: 404 as const, body: { message: `Team "${id}" has no knowledge base` } };
         }
         return { status: 200 as const, body: await this.kbReader.graph(team.knowledgeBase) };
+      },
+
+      syncTeamKb: async ({ params: { id } }) => {
+        const team = await this.storage.get(id).catch((e: unknown) => {
+          if (errors.isMissing(e)) return null;
+          throw e;
+        });
+        if (!team?.knowledgeBase) {
+          return { status: 404 as const, body: { message: `Team "${id}" has no knowledge base` } };
+        }
+        try {
+          return { status: 200 as const, body: await this.kbSync.sync(team.knowledgeBase.path) };
+        } catch (e) {
+          if (e instanceof TeamKbSyncError) {
+            return { status: 409 as const, body: { message: e.message } };
+          }
+          throw e;
+        }
       },
 
       updateTeam: ({ params: { id }, body }) =>

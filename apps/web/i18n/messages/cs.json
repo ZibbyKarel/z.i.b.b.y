@@ -119,7 +119,12 @@
       "emptyTitle": "Není co zobrazit",
       "emptyDescription": "Tento zdroj zatím nemá žádné propojené poznámky.",
       "path": "Cesta",
-      "clear": "Zavřít"
+      "clear": "Zavřít",
+      "sync": "Synchronizovat KB",
+      "syncing": "Synchronizuji…",
+      "syncCurrent": "Aktuální ({sha})",
+      "syncPulled": "Staženo {before} → {after}",
+      "syncFailed": "Synchronizace selhala"
     },
     "vault": {
       "title": "Trezor",

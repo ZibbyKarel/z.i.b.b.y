@@ -1,7 +1,7 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { MemoryGraphSchema } from "../memory/memory.schema";
-import { ErrorSchema } from "../common.schema";
+import { EmptyBodySchema, ErrorSchema } from "../common.schema";
 import { CreateTeamSchema, TeamIdSchema, TeamSchema, UpdateTeamSchema } from "./team.schema";
 
 const c = initContract();
@@ -52,6 +52,24 @@ export const teamsContract = c.router(
       responses: { 200: MemoryGraphSchema, 404: ErrorSchema },
       summary:
         "Read-only wiki-link graph of the team's knowledge base (same shape as GET /memory/graph); 404 when the team or its KB is missing",
+    },
+    syncTeamKb: {
+      method: "POST",
+      path: "/teams/:id/kb/sync",
+      pathParams: z.object({ id: TeamIdSchema }),
+      body: EmptyBodySchema,
+      responses: {
+        200: z.object({
+          updated: z.boolean(),
+          before: z.string(),
+          after: z.string(),
+          message: z.string().optional(),
+        }),
+        404: ErrorSchema,
+        409: ErrorSchema,
+      },
+      summary:
+        "Fast-forward the team's KB git clone (git pull --ff-only); 404 when the team or its KB is missing, 409 when the pull fails",
     },
     updateTeam: {
       method: "PATCH",

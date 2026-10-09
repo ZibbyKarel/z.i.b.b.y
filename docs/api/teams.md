@@ -89,9 +89,18 @@ GET    /teams/search?q=   free-text search (id, name, desc) — declared
 GET    /teams/:id         get one team
 GET    /teams/:id/kb/graph read-only wiki-link graph of the team KB (same shape
                           as GET /memory/graph; 404 if no team or no KB)
+POST   /teams/:id/kb/sync  fast-forward the team KB git clone (`git pull --ff-only`);
+                          200 { updated, before, after }, 404 no team/KB, 409 pull failed
 PATCH  /teams/:id         partial update
 DELETE /teams/:id         delete (allowed with linked projects — no cascade)
 ```
+
+`POST /teams/:id/kb/sync` (`TeamKbSyncService`) is operator-triggered and the
+only write the app does to a KB checkout: `git pull --ff-only` (no shell, 60 s
+timeout, `GIT_TERMINAL_PROMPT=0`). It never creates commits or overwrites local
+changes — git itself refuses when incoming changes touch dirty files — and any
+failure (not a repo, diverged, network) maps to 409 with git's trimmed stderr.
+`readOnly` means ZIBBY never authors into the KB; a ff pull only syncs it.
 
 `TeamsController` mirrors `CompaniesController` in shape: `deleteTeam` reads
 the team first (`storage.get(id)`) so a 404 surfaces before any side effect,

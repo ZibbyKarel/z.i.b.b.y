@@ -27,6 +27,12 @@ const vault = {
 };
 const kb = { nodes: [{ id: "wiki/a.md", label: "Alpha", tier: "knowledge" }], edges: [] };
 
+const mutate = vi.fn();
+let syncState: Record<string, unknown> = {};
+vi.mock("../mutations", () => ({
+  useSyncTeamKbMutation: () => ({ mutate, reset: vi.fn(), isPending: false, ...syncState }),
+}));
+
 vi.mock("../queries", () => ({
   useMemoryGraphQuery: () => query(vault),
   useTeamKbGraphQuery: (id: string | null) => query(id ? kb : undefined),
@@ -59,5 +65,36 @@ describe("GraphScreen", () => {
     fireEvent.click(screen.getByTestId("memory-node-wiki/a.md"));
     expect(screen.getByText(/wiki\/a\.md/)).toBeInTheDocument();
     expect(push).toHaveBeenCalledTimes(1);
+  });
+
+  it("sync button: hidden for vault, visible for a team and calls the mutation", () => {
+    source = null;
+    const { unmount } = render(<GraphScreen />);
+    expect(screen.queryByTestId("graph-sync")).toBeNull();
+    unmount();
+    source = "team:devrel";
+    render(<GraphScreen />);
+    fireEvent.click(screen.getByTestId("graph-sync"));
+    expect(mutate).toHaveBeenCalledWith({ params: { id: "devrel" }, body: undefined });
+  });
+
+  it("sync: disabled while pending, shows result or the server error", () => {
+    source = "team:devrel";
+    syncState = { isPending: true };
+    const a = render(<GraphScreen />);
+    expect(screen.getByTestId("graph-sync")).toBeDisabled();
+    a.unmount();
+
+    syncState = {
+      data: { status: 200, body: { updated: true, before: "abc123", after: "def456" } },
+    };
+    const b = render(<GraphScreen />);
+    expect(screen.getByTestId("graph-sync-result")).toHaveTextContent(/abc123.*def456/);
+    b.unmount();
+
+    syncState = { isError: true, error: { status: 409, body: { message: "diverged" } } };
+    render(<GraphScreen />);
+    expect(screen.getByTestId("graph-sync-result")).toHaveTextContent("diverged");
+    syncState = {};
   });
 });

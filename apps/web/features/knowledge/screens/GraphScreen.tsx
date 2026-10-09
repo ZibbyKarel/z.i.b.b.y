@@ -19,6 +19,7 @@ import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../../components/PageContainer/PageContainer";
 import { useTeamsQuery } from "../../teams/queries";
+import { useSyncTeamKbMutation } from "../mutations";
 import { MemoryGraph } from "../components/MemoryGraph";
 import { type TierFilter, filterGraphByTier } from "../filterGraph";
 import { useMemoryGraphQuery, useTeamKbGraphQuery } from "../queries";
@@ -45,6 +46,19 @@ export function GraphScreen() {
   const teamId = rawSource.startsWith(TEAM_PREFIX) ? rawSource.slice(TEAM_PREFIX.length) : null;
   const isVault = teamId === null;
 
+  const sync = useSyncTeamKbMutation();
+  const syncText = (() => {
+    if (sync.isError) {
+      const err = sync.error;
+      return "status" in err && err.status === 409 ? err.body.message : t("graph.syncFailed");
+    }
+    const r = sync.data?.status === 200 ? sync.data.body : null;
+    if (!r) return null;
+    return r.updated
+      ? t("graph.syncPulled", { before: r.before, after: r.after })
+      : t("graph.syncCurrent", { sha: r.after });
+  })();
+
   const [tier, setTier] = useState<TierFilter>("all");
   const [picked, setPicked] = useState<string | null>(null);
 
@@ -61,6 +75,7 @@ export function GraphScreen() {
 
   const setSource = (value: string) => {
     setPicked(null);
+    sync.reset();
     router.replace(`${pathname}?source=${encodeURIComponent(value)}` as Route);
   };
   const onSelect = (id: string) => {
@@ -100,13 +115,41 @@ export function GraphScreen() {
         <Stack gap="250">
           <Stack wrap align="end" direction="row" gap="150" justify="between">
             <Typography type="title">{t("graph.title")}</Typography>
-            <SegmentedControl
-              ariaLabel={t("graph.sourceLabel")}
-              items={sources}
-              onChange={setSource}
-              value={isVault ? VAULT : rawSource}
-            />
+            <Stack wrap align="center" direction="row" gap="150">
+              <SegmentedControl
+                ariaLabel={t("graph.sourceLabel")}
+                items={sources}
+                onChange={setSource}
+                value={isVault ? VAULT : rawSource}
+              />
+              {teamId !== null && (
+                <Button
+                  data-testid="graph-sync"
+                  disabled={sync.isPending}
+                  icon="retry"
+                  intent="secondary"
+                  loading={sync.isPending}
+                  onClick={() => sync.mutate({ params: { id: teamId }, body: undefined })}
+                  size="sm"
+                >
+                  {sync.isPending ? t("graph.syncing") : t("graph.sync")}
+                </Button>
+              )}
+            </Stack>
           </Stack>
+
+          {teamId !== null && syncText && (
+            <Typography
+              mono
+              data-testid="graph-sync-result"
+              role="status"
+              size="sm"
+              type="note"
+              variant="tertiary"
+            >
+              {syncText}
+            </Typography>
+          )}
 
           {isVault && (
             <Stack wrap direction="row" gap="100">

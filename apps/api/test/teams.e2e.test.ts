@@ -77,6 +77,10 @@ describe("Teams API (e2e)", () => {
     expect(ok.body.edges).toEqual([{ from: "a.md", to: "b.md" }]);
     await request(http).get(`${BASE}/nokb/kb/graph`).expect(404);
     await request(http).get(`${BASE}/ghost/kb/graph`).expect(404);
+    await request(http).post(`${BASE}/nokb/kb/sync`).expect(404);
+    await request(http).post(`${BASE}/ghost/kb/sync`).expect(404);
+    // KB dir exists but is not a git repo → 409.
+    await request(http).post(`${BASE}/kbteam/kb/sync`).expect(409);
 
     await request(http).delete(`${BASE}/kbteam`).expect(200);
     await request(http).delete(`${BASE}/nokb`).expect(200);

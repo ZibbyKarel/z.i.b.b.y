@@ -119,7 +119,12 @@
       "emptyTitle": "Nothing to show",
       "emptyDescription": "This source has no linked notes yet.",
       "path": "Path",
-      "clear": "Close"
+      "clear": "Close",
+      "sync": "Sync KB",
+      "syncing": "Syncing…",
+      "syncCurrent": "Up to date ({sha})",
+      "syncPulled": "Pulled {before} → {after}",
+      "syncFailed": "Sync failed"
     },
     "vault": {
       "title": "Vault",
