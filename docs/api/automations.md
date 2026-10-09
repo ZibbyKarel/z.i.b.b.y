@@ -261,6 +261,14 @@ way grounding writes context _in_).
    beats a lost learning). `distill()` **never throws** — a scheduler tick must
    not break on it.
 
+### Vault lint (`vault-lint`)
+
+Default cron `30 3 * * *`, on by default (no model, no network).
+`VaultLintService.run()` (`apps/api/src/memory/vault-lint.service.ts`) rewrites the
+report-only note `knowledge/vault-lint.md` — broken wikilinks, orphans, stale notes
+(`updated` > 90 days), missing `updated`, notes with > 15 tags — and never edits any
+other note. Fail-open; returns `vault-lint:<broken>/<orphans>/<stale>`.
+
 ### Review learning (`review-learn`)
 
 Default cron `15 3 * * *` — after the 3:00 distill, before the 3:30

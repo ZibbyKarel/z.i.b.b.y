@@ -87,6 +87,8 @@ GET    /teams             list all teams
 GET    /teams/search?q=   free-text search (id, name, desc) — declared
                           BEFORE getTeam so it isn't captured by :id
 GET    /teams/:id         get one team
+GET    /teams/:id/kb/graph read-only wiki-link graph of the team KB (same shape
+                          as GET /memory/graph; 404 if no team or no KB)
 PATCH  /teams/:id         partial update
 DELETE /teams/:id         delete (allowed with linked projects — no cascade)
 ```
@@ -395,6 +397,15 @@ storage instances and the guard always agree on the same token pair.
   team") the same read-time way it already does for `companyId`, and
   `KbScopeService.rootsForRun` depends on it directly (`project.teamId` → the
   team's KB). See `docs/api/projects.md`.
+- **`memory` grounding** — a work run on a team-linked project grounds the KB's
+  `team-context.md` + `wiki/INDEX.md` (`apps/api/src/memory/team-kb-grounding.ts`,
+  see `docs/api/memory.md`).
+- **`teams` graph** — `TeamsModule` provides its own stateless `KbReaderService`
+  for `getTeamKbGraph` (importing `KbModule` would cycle: `KbModule` imports
+  `TeamsModule`). `.vtt` and `_templates/` are not graph nodes.
+- **Writing a KB** — only the `team-kb-ingest` workflow, as a PR to the KB repo
+  registered as a project (`docs/workflows/team-kb-ingest.md`). `readOnly: true`
+  stays structural for every in-process reader.
 
 ## Gotchas
 
