@@ -45,6 +45,7 @@ import {
   usePagePins,
 } from "../../../features/pins";
 import { PageBreadcrumbSlotProvider } from "../PageBreadcrumb";
+import { ThemeToggle } from "../ThemeToggle/ThemeToggle";
 import { useDockState } from "./useDockState";
 import { SECTIONS, type SectionId, type SubTabConfig, sectionForPath } from "../../../state/config";
 
@@ -359,6 +360,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
             nav={<SectionNav active={active} />}
             notifications={<NotificationBell />}
             onSearchClick={() => setPaletteOpen(true)}
+            themeToggle={<ThemeToggle />}
           />
         }
         rail={

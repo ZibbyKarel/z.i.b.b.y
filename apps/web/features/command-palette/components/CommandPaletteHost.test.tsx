@@ -22,7 +22,8 @@ vi.mock("../../approvals", () => ({
   useApprovalsQuery: () => ({ data: hooks.approvals }),
   useApproveMutation: () => ({ mutate: hooks.approve }),
 }));
-vi.mock("../../../state/appearance", () => ({
+vi.mock("../../../state/appearance", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../state/appearance")>()),
   useAppearance: () => ({ theme: hooks.theme, setTheme: hooks.setTheme }),
 }));
 vi.mock("../../departments/queries", () => ({

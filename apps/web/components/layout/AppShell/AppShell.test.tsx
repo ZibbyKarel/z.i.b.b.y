@@ -68,6 +68,15 @@ describe("AppShell", () => {
     expect(screen.queryByTestId(AppHeaderTestId.ActiveCount)).toBeNull();
   });
 
+  it("renders the light/dark toggle in the header", () => {
+    renderWithProviders(
+      <AppShell>
+        <div>obsah stránky</div>
+      </AppShell>,
+    );
+    expect(screen.getByTestId(AppHeaderTestId.ThemeToggle)).toBeInTheDocument();
+  });
+
   it("renders the ⋮ overflow menu in the header", () => {
     renderWithProviders(
       <AppShell>

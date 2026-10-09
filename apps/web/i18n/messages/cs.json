@@ -2218,6 +2218,8 @@
     "runningStop": "Zastavit",
     "runningRestart": "Spustit znovu",
     "menuAriaLabel": "Více",
+    "themeToDark": "Přepnout na tmavý režim",
+    "themeToLight": "Přepnout na světlý režim",
     "menuPin": "Připnout stránku",
     "menuUnpin": "Odepnout stránku",
     "menuSettings": "Nastavení",

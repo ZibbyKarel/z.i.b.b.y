@@ -2218,6 +2218,8 @@
     "runningStop": "Stop",
     "runningRestart": "Restart",
     "menuAriaLabel": "More",
+    "themeToDark": "Switch to dark mode",
+    "themeToLight": "Switch to light mode",
     "menuPin": "Pin page",
     "menuUnpin": "Unpin page",
     "menuSettings": "Settings",
