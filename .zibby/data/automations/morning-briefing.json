@@ -1,1 +1,1 @@
-{"id":"morning-briefing","name":"Ranní briefing","trigger":{"type":"cron","expr":"0 7 * * *"},"target":{"type":"briefing"},"enabled":true,"system":true,"lastFiredAt":"2026-10-08T05:00:36.467Z"}
+{"id":"morning-briefing","name":"Ranní briefing","trigger":{"type":"cron","expr":"0 7 * * *"},"target":{"type":"briefing"},"enabled":true,"system":true,"lastFiredAt":"2026-10-09T05:00:16.634Z"}
