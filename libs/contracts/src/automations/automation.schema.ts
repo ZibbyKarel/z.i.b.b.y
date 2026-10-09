@@ -146,6 +146,11 @@ export type Target = z.infer<typeof TargetSchema>;
 export const AutomationSchema = z.object({
   id: AgentIdSchema,
   name: z.string().min(1).optional(),
+  /**
+   * One or two sentences on what the automation does, shown on its card. Server-owned
+   * (seeded + re-asserted on boot, like `name`) for a system automation.
+   */
+  description: z.string().min(1).optional(),
   trigger: TriggerSchema,
   target: TargetSchema,
   /**

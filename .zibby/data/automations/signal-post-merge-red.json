@@ -1,1 +1,13 @@
-{"id":"signal-post-merge-red","name":"Červené CI po sloučení → Dev","trigger":{"type":"signal","kind":"post-merge-red","from":"rel"},"target":{"type":"task","text":"Investigate the failing CI run and prepare a fix on its own branch. Do not push or merge — the PR is the gate.","target":{"kind":"department","id":"dev","name":"dev"}},"enabled":false,"system":true}
+{
+  "id": "signal-post-merge-red",
+  "name": "Červené CI po sloučení → Dev",
+  "trigger": { "type": "signal", "kind": "post-merge-red", "from": "rel" },
+  "target": {
+    "type": "task",
+    "text": "Investigate the failing CI run and prepare a fix on its own branch. Do not push or merge — the PR is the gate.",
+    "target": { "kind": "department", "id": "dev", "name": "dev" }
+  },
+  "enabled": false,
+  "system": true,
+  "description": "Když CI po sloučení zčervená, předá to Devu jako task na prošetření a opravu."
+}

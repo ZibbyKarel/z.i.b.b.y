@@ -1,1 +1,10 @@
-{"id":"self-knowledge-refresh","name":"Obnova sebeznalosti","trigger":{"type":"cron","expr":"30 3 * * *"},"target":{"type":"self-knowledge"},"enabled":false,"system":true,"lastFiredAt":"2026-10-06T01:30:01.888Z"}
+{
+  "id": "self-knowledge-refresh",
+  "name": "Obnova sebeznalosti",
+  "trigger": { "type": "cron", "expr": "30 3 * * *" },
+  "target": { "type": "self-knowledge" },
+  "enabled": false,
+  "system": true,
+  "lastFiredAt": "2026-10-06T01:30:01.888Z",
+  "description": "Každou noc přegeneruje vault poznámku o sobě samém — agenty, workflow, pravidla gate a kanály."
+}

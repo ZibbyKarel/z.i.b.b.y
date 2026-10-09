@@ -179,6 +179,12 @@ export function AutomationCard({
             </Stack>
           </Stack>
 
+          {automation.description ? (
+            <Typography leading="snug" size="caption" type="note" variant="secondary">
+              {automation.description}
+            </Typography>
+          ) : null}
+
           {/* trigger → target flow */}
           <Stack align="center" direction="row" gap="100">
             <FlowBox

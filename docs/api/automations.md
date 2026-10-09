@@ -146,6 +146,10 @@ focus, the briefing voice, or (Phase 116b) the legacy `workflow` target's
 first-phase input (`WorkflowRunnerService.start`'s `input` param). A `task`
 target ignores the top-level `prompt` — its own `text` field is the prompt.
 
+`description` is an optional one- or two-sentence summary of what the
+automation does, shown on its card. Every system automation is seeded with one
+(server-owned, like `name`); an operator automation may set it via create/PATCH.
+
 ## SchedulerService
 
 **File:** `apps/api/src/automations/scheduler.service.ts`
@@ -207,13 +211,14 @@ agent. Such automations have `system: true`:
 - **Cannot be deleted** — `DELETE /api/automations/:id` returns `409`.
 - **Only the schedule and enabled state can be edited** — `PATCH` accepts a
   `trigger` change and/or an `enabled` toggle; any other change (`target`,
-  `name`, `prompt`) returns `409`.
+  `name`, `description`, `prompt`) returns `409`.
 - **Seeded and self-healed on boot** — `AutomationsStorageService.onModuleInit`
-  creates any missing ones and re-asserts `system`/`target`/`name` on existing
+  creates any missing ones and re-asserts `system`/`target`/`name`/`description` on existing
   ones, while preserving the operator's `trigger`, `enabled`, and `lastFiredAt`
   from disk.
-- **Surfaced in Settings, not the Automations page** — the web app lists
-  system automations under Settings → Automations (with the enable/disable
+- **Surfaced on System → Automations, not the Automations page** — the web app
+  lists system automations at `/system/automations`, two columns on wide screens
+  (with the enable/disable
   toggle live there); the `/automations` page only shows operator-created ones.
   Rescheduling a system automation still opens its `/automations/:id` detail
   page.

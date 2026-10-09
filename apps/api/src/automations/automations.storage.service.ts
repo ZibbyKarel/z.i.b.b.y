@@ -67,6 +67,8 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
   {
     id: "morning-briefing",
     name: "Ranní briefing",
+    description:
+      "Každé ráno sestaví briefing z aktivit, běhů a paměti a doručí ho do Tasků — co se stalo a co čeká na tebe.",
     trigger: { type: "cron", expr: "0 7 * * *" },
     target: { type: "briefing" },
     enabled: true,
@@ -75,6 +77,8 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
   {
     id: MEMORY_DISTILL_AUTOMATION_ID,
     name: "Destilace paměti",
+    description:
+      "Noční průchod dokončenými běhy — levný model z nich vydestiluje trvalé poznatky do vaultu.",
     trigger: { type: "cron", expr: "0 3 * * *" },
     target: { type: "memory-distill" },
     enabled: true,
@@ -83,6 +87,8 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
   {
     id: "nightly-patterns",
     name: "Extrakce vzorů",
+    description:
+      "Projde 30 dní schvalovacích rozhodnutí, najde opakované vzory a navrhne z nich pravidla do vaultu pro briefing.",
     trigger: { type: "cron", expr: "0 23 * * *" },
     target: { type: "pattern-extract" },
     enabled: true,
@@ -91,6 +97,8 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
   {
     id: "gap-detect",
     name: "Návrhy na automatizaci",
+    description:
+      "Sleduje opakovaně zadávané ruční tasky a navrhne, co by šlo automatizovat. Sám nic nevytváří.",
     trigger: { type: "cron", expr: "0 23 * * *" },
     target: { type: "gap-detect" },
     enabled: false,
@@ -99,6 +107,8 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
   {
     id: REVIEW_LEARN_AUTOMATION_ID,
     name: "Učení z review",
+    description:
+      "Stáhne review komentáře z PR, které ZIBBY otevřel, a vydestiluje z nich kandidátní pravidla; při druhém výskytu je předloží ke schválení.",
     // 3:15 — after the 3:00 distill, before the 3:30 self-knowledge refresh.
     trigger: { type: "cron", expr: "15 3 * * *" },
     target: { type: "review-learn" },
@@ -110,6 +120,8 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
   {
     id: "agent-factory",
     name: "Továrna agentů",
+    description:
+      "Hledá opakované běhy přes orchestrator-fallback, kde chybí specialista, a navrhne nového agenta (čeká na schválení).",
     trigger: { type: "cron", expr: "0 4 * * 1" },
     target: { type: "agent-factory" },
     enabled: false,
@@ -118,6 +130,8 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
   {
     id: SELF_KNOWLEDGE_AUTOMATION_ID,
     name: "Obnova sebeznalosti",
+    description:
+      "Každou noc přegeneruje vault poznámku o sobě samém — agenty, workflow, pravidla gate a kanály.",
     // 3:30 — after the 3:00 distill, before the 7:00 briefing.
     trigger: { type: "cron", expr: "30 3 * * *" },
     target: { type: "self-knowledge" },
@@ -127,6 +141,8 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
   {
     id: VAULT_LINT_AUTOMATION_ID,
     name: "Lint vaultu",
+    description:
+      "Noční kontrola vaultu: rozbité odkazy, osiřelé a zastaralé poznámky, bujení tagů. Jen report, nic nemění.",
     trigger: { type: "cron", expr: "30 3 * * *" },
     target: { type: "vault-lint" },
     enabled: true,
@@ -138,6 +154,8 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
     // so waking it by default makes the chair real without risk.
     id: SECURITY_SCAN_AUTOMATION_ID,
     name: "Bezpečnostní hlídka",
+    description:
+      "Týdně projde Dependabot alerty a hledá úniky secretů v repozitářích projektů; na kritickou CVE připraví opravu přes gate.",
     trigger: { type: "cron", expr: "0 5 * * 1" },
     target: { type: "security-scan" },
     enabled: true,
@@ -148,6 +166,8 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
     // reasoning as Security above): fail-open no-op on a green system.
     id: ARCH_AUDIT_AUTOMATION_ID,
     name: "Noční audit kvality",
+    description:
+      "Noční audit kódu ZIBBY: změny god-nodů a komunit v grafu a cyklické závislosti. Nálezy jdou do vaultu a briefingu.",
     trigger: { type: "cron", expr: "0 2 * * *" },
     target: { type: "arch-audit" },
     enabled: true,
@@ -159,6 +179,8 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
     // deadline and per-watch try/catch, so a huge backlog degrades gracefully.
     id: POST_MERGE_WATCH_AUTOMATION_ID,
     name: "Sledování po sloučení",
+    description:
+      "Každých 10 minut zkontroluje CI na cílové větvi po merge, který ZIBBY provedl; při červené připraví opravu.",
     trigger: { type: "cron", expr: "*/10 * * * *" },
     target: { type: "post-merge-watch" },
     enabled: true,
@@ -170,6 +192,8 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
   {
     id: "signal-cve-critical",
     name: "Kritická CVE → Dev",
+    description:
+      "Když Security nahlásí kritickou CVE, předá ji Devu jako task na opravu ve vlastní větvi.",
     trigger: { type: "signal", kind: "cve", from: "sec", minSeverity: "critical" },
     target: {
       type: "task",
@@ -182,6 +206,7 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
   {
     id: "signal-post-merge-red",
     name: "Červené CI po sloučení → Dev",
+    description: "Když CI po sloučení zčervená, předá to Devu jako task na prošetření a opravu.",
     trigger: { type: "signal", kind: "post-merge-red", from: "rel" },
     target: {
       type: "task",
@@ -194,6 +219,7 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
   {
     id: "signal-arch-audit",
     name: "Nálezy auditu architektury → Dev",
+    description: "Předá nálezy auditu architektury Devu k opravě — až po tvém schválení.",
     trigger: { type: "signal", kind: "audit-batch", from: "qa" },
     target: {
       type: "task",
@@ -209,6 +235,7 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
     // qa-findings.md) → a Dev task. Parks a Tier-3 approval first.
     id: "signal-qa-findings",
     name: "Nálezy QA → Dev",
+    description: "Předá nálezy QA Devu, aby je reprodukoval a opravil — až po tvém schválení.",
     trigger: { type: "signal", kind: "qa-findings", from: "qa" },
     target: {
       type: "task",
@@ -222,6 +249,7 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
   {
     id: "signal-research",
     name: "Výsledek výzkumu → Dev",
+    description: "Předá dokončený výzkum z R&D Devu, aby na něm stavěl — až po tvém schválení.",
     trigger: { type: "signal", kind: "research-artifact", from: "rnd" },
     target: {
       type: "task",
@@ -251,7 +279,7 @@ export class AutomationsStorageService extends EntityFileStore<Automation> {
 
   /**
    * Ensure every system automation exists, self-healing on each boot: create the
-   * ones missing, and re-assert the server-owned fields (`system`, `target`, `name`)
+   * ones missing, and re-assert the server-owned fields (`system`, `target`, `name`, `description`)
    * on the ones present — while preserving the operator's `trigger`, `enabled` and
    * `lastFiredAt` from disk (those are theirs to keep across restarts).
    */
@@ -267,7 +295,13 @@ export class AutomationsStorageService extends EntityFileStore<Automation> {
         await this.writeEntity({ ...def });
         continue;
       }
-      const healed: Automation = { ...existing, name: def.name, target: def.target, system: true };
+      const healed: Automation = {
+        ...existing,
+        name: def.name,
+        description: def.description,
+        target: def.target,
+        system: true,
+      };
       if (this.serialize(existing) !== this.serialize(healed)) await this.writeEntity(healed);
     }
   }

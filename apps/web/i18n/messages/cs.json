@@ -60,6 +60,7 @@
       },
       "system": {
         "settings": "Nastavení",
+        "automations": "Automatizace",
         "registries": "Registry"
       }
     }

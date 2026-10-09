@@ -15,7 +15,6 @@ export const SETTINGS_SECTIONS = [
   "appearance",
   "coo",
   "activity",
-  "automations",
   "runtime",
   "machine",
   "status",

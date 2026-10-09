@@ -116,6 +116,7 @@ export const SECTIONS = [
         href: "/system/settings/general" as Route,
         matchPrefix: "/system/settings",
       },
+      { id: "automations", href: "/system/automations" as Route },
       {
         id: "registries",
         href: "/system/registries/skills" as Route,

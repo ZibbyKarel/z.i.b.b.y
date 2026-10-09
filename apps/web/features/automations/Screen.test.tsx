@@ -186,7 +186,7 @@ describe("Automations Screen — system automations moved to Settings", () => {
     query.isError = false;
   });
 
-  it("excludes system automations from this page — they live in Settings → Automations now", () => {
+  it("excludes system automations from this page — they live in System → Automations now", () => {
     render(<Screen />);
     expect(screen.getByText("Ranní standup")).toBeInTheDocument();
     expect(screen.queryByText("Destilace paměti")).not.toBeInTheDocument();

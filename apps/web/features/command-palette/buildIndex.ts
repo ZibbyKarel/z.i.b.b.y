@@ -195,7 +195,7 @@ export function buildCommandPaletteIndex(
       // No per-automation deep link yet — the owning-department mapping
       // (PART-B §3) is ZB-11's to define; the global list is the closest
       // resolvable target today.
-      href: "/system/settings/automations" as Route,
+      href: "/system/automations" as Route,
     });
   }
 

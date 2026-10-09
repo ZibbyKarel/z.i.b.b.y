@@ -8,6 +8,7 @@ const systemAutomation: Automation = {
   id: "memory-distill",
   name: "Destilace paměti",
   trigger: { type: "cron", expr: "0 3 * * *" },
+  description: "Noční průchod dokončenými běhy.",
   target: { type: "memory-distill" },
   enabled: true,
   system: true,
@@ -62,18 +63,16 @@ describe("AutomationsSection", () => {
     expect(screen.queryByText("Ranní standup")).not.toBeInTheDocument();
   });
 
-  it("shows a description resolved from the automation's target type", () => {
+  it("shows the automation's own description", () => {
     render(<AutomationsSection />);
     expect(screen.getByTestId(SystemAutomationRowTestId.Description)).toHaveTextContent(
-      "Noční průchod dokončenými běhy — levný model vydestiluje trvalé poznatky do vaultu.",
+      "Noční průchod dokončenými běhy.",
     );
   });
 
-  it("renders no description for an unknown target type, without throwing", () => {
-    query.automations = [
-      { ...systemAutomation, id: "weird", target: { type: "workflow", workflowId: "koder" } },
-    ];
-    expect(() => render(<AutomationsSection />)).not.toThrow();
+  it("renders no description when the automation has none", () => {
+    query.automations = [{ ...systemAutomation, description: undefined }];
+    render(<AutomationsSection />);
     expect(screen.queryByTestId(SystemAutomationRowTestId.Description)).not.toBeInTheDocument();
   });
 

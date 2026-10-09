@@ -4,5 +4,6 @@
   "trigger": { "type": "cron", "expr": "15 3 * * *" },
   "target": { "type": "review-learn" },
   "enabled": false,
-  "system": true
+  "system": true,
+  "description": "Stáhne review komentáře z PR, které ZIBBY otevřel, a vydestiluje z nich kandidátní pravidla; při druhém výskytu je předloží ke schválení."
 }

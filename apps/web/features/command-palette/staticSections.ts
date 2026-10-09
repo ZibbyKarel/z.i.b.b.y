@@ -7,7 +7,6 @@
  */
 export const SETTINGS_SECTIONS = [
   "general",
-  "automations",
   "coo",
   "activity",
   "runtime",

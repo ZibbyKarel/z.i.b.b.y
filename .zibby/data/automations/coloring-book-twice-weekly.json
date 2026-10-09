@@ -1,1 +1,11 @@
-{"id":"coloring-book-twice-weekly","name":"Omalovánka 2× týdně","trigger":{"type":"cron","expr":"0 2 * * 1,4"},"target":{"type":"workflow","workflowId":"coloring-book"},"prompt":"theme: auto\ntargetAge: { min: 2, max: 4 }\npageCount: 24\nstyle: cute_simple_line_art\nlanguage: en\nlistPriceUsd: 9.99\n\nPick a fresh evergreen theme for toddlers that is not yet listed in books.md in your working directory, then append it there.","enabled":true,"system":false,"lastFiredAt":"2026-10-05T00:00:32.867Z"}
+{
+  "id": "coloring-book-twice-weekly",
+  "name": "Omalovánka 2× týdně",
+  "trigger": { "type": "cron", "expr": "0 2 * * 1,4" },
+  "target": { "type": "workflow", "workflowId": "coloring-book" },
+  "prompt": "theme: auto\ntargetAge: { min: 2, max: 4 }\npageCount: 24\nstyle: cute_simple_line_art\nlanguage: en\nlistPriceUsd: 9.99\n\nPick a fresh evergreen theme for toddlers that is not yet listed in books.md in your working directory, then append it there.",
+  "enabled": true,
+  "system": false,
+  "lastFiredAt": "2026-10-05T00:00:32.867Z",
+  "description": "Dvakrát týdně (po a čt ve 2:00) spustí workflow coloring-book — vybere nové evergreen téma pro batolata a připraví 24stránkovou omalovánku k publikaci."
+}

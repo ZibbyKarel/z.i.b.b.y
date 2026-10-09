@@ -1,1 +1,9 @@
-{"id":"gap-detect","name":"Návrhy na automatizaci","trigger":{"type":"cron","expr":"0 23 * * *"},"target":{"type":"gap-detect"},"enabled":false,"system":true}
+{
+  "id": "gap-detect",
+  "name": "Návrhy na automatizaci",
+  "trigger": { "type": "cron", "expr": "0 23 * * *" },
+  "target": { "type": "gap-detect" },
+  "enabled": false,
+  "system": true,
+  "description": "Sleduje opakovaně zadávané ruční tasky a navrhne, co by šlo automatizovat. Sám nic nevytváří."
+}

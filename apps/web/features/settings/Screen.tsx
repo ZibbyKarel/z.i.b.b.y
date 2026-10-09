@@ -23,7 +23,6 @@ import { useHealthQuery } from "../health";
 import { LevelMappingSection } from "../roadmap/components/LevelMappingSection";
 import { ActivitySection } from "./components/ActivitySection";
 import { AppearanceSection } from "./components/AppearanceSection";
-import { AutomationsSection } from "./components/AutomationsSection";
 import { ChatSection } from "./components/ChatSection";
 import { MachineSection } from "./components/MachineSection";
 import { SystemSection } from "./components/SystemSection";
@@ -101,7 +100,8 @@ export interface SettingsScreenProps {
 /**
  * `/system/settings/[section]` (ZB-11, ROUTE-MAP §3) — the settings sections
  * router. Each former `/settings?tab=` is now its own route; the "gates" and
- * "mandate" tabs already moved to `/policy/gates` (ZB-08), "selfKnowledge" to
+ * "mandate" tabs already moved to `/policy/gates` (ZB-08), "automations" to its own `/system/automations`
+ * page, "selfKnowledge" to
  * `/knowledge/distill` (ZB-09), and the per-project "tasks" level mapping to
  * `/work/projects/[id]/roadmap` (ZB-06) — only the GLOBAL DEFAULT level mapping
  * stays here, under `general`.
@@ -185,7 +185,6 @@ export function SettingsScreen({ section }: SettingsScreenProps) {
               {section === "appearance" && <AppearanceSection />}
               {section === "coo" && <ChatSection />}
               {section === "activity" && <ActivitySection />}
-              {section === "automations" && <AutomationsSection />}
               {section === "runtime" && <SystemSection />}
               {section === "machine" && <MachineSection />}
 

@@ -1,1 +1,9 @@
-{"id":"agent-factory","name":"Továrna agentů","trigger":{"type":"cron","expr":"0 4 * * 1"},"target":{"type":"agent-factory"},"enabled":false,"system":true}
+{
+  "id": "agent-factory",
+  "name": "Továrna agentů",
+  "trigger": { "type": "cron", "expr": "0 4 * * 1" },
+  "target": { "type": "agent-factory" },
+  "enabled": false,
+  "system": true,
+  "description": "Hledá opakované běhy přes orchestrator-fallback, kde chybí specialista, a navrhne nového agenta (čeká na schválení)."
+}

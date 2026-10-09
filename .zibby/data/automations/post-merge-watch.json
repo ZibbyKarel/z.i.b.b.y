@@ -1,1 +1,10 @@
-{"id":"post-merge-watch","name":"Sledování po sloučení","trigger":{"type":"cron","expr":"*/10 * * * *"},"target":{"type":"post-merge-watch"},"enabled":false,"system":true,"lastFiredAt":"2026-10-08T13:00:21.592Z"}
+{
+  "id": "post-merge-watch",
+  "name": "Sledování po sloučení",
+  "trigger": { "type": "cron", "expr": "*/10 * * * *" },
+  "target": { "type": "post-merge-watch" },
+  "enabled": false,
+  "system": true,
+  "lastFiredAt": "2026-10-08T13:00:21.592Z",
+  "description": "Každých 10 minut zkontroluje CI na cílové větvi po merge, který ZIBBY provedl; při červené připraví opravu."
+}

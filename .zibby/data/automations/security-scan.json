@@ -1,1 +1,10 @@
-{"id":"security-scan","name":"Bezpečnostní hlídka","trigger":{"type":"cron","expr":"0 5 * * 1"},"target":{"type":"security-scan"},"enabled":false,"system":true,"lastFiredAt":"2026-10-05T03:00:33.193Z"}
+{
+  "id": "security-scan",
+  "name": "Bezpečnostní hlídka",
+  "trigger": { "type": "cron", "expr": "0 5 * * 1" },
+  "target": { "type": "security-scan" },
+  "enabled": false,
+  "system": true,
+  "lastFiredAt": "2026-10-05T03:00:33.193Z",
+  "description": "Týdně projde Dependabot alerty a hledá úniky secretů v repozitářích projektů; na kritickou CVE připraví opravu přes gate."
+}

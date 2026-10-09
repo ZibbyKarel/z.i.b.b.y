@@ -60,6 +60,7 @@
       },
       "system": {
         "settings": "Settings",
+        "automations": "Automations",
         "registries": "Registries"
       }
     }

@@ -172,6 +172,19 @@ describe("AutomationsStorageService", () => {
     expect(healed.trigger).toEqual({ type: "cron", expr: "15 4 * * *" });
   });
 
+  it("seeds a description on every system automation and re-asserts it on re-init", async () => {
+    for (const a of (await service.list()).filter((x) => x.system)) {
+      expect(a.description, a.id).toBeTruthy();
+    }
+    const file = fileFor(dir, MEMORY_DISTILL_AUTOMATION_ID);
+    const onDisk = JSON.parse(await fs.readFile(file, "utf8"));
+    await fs.writeFile(file, JSON.stringify({ ...onDisk, description: undefined }), "utf8");
+
+    await new AutomationsStorageService(dir).onModuleInit();
+
+    expect((await service.get(MEMORY_DISTILL_AUTOMATION_ID)).description).toBe(onDisk.description);
+  });
+
   it("F4c: seeds the self-knowledge-refresh system automation on init", async () => {
     const seeded = await service.get(SELF_KNOWLEDGE_AUTOMATION_ID);
     expect(seeded.system).toBe(true);

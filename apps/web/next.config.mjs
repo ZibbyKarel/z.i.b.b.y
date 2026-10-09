@@ -78,6 +78,12 @@ const nextConfig = {
       { source: "/hooks/:id", destination: "/system/registries/hooks/:id", permanent: true },
       { source: "/commands", destination: "/system/registries/commands", permanent: true },
       { source: "/commands/:id", destination: "/system/registries/commands/:id", permanent: true },
+      // System automations moved out of settings to their own System tab.
+      {
+        source: "/system/settings/automations",
+        destination: "/system/automations",
+        permanent: true,
+      },
       // ZB-13: every `/settings(?tab=)` case (ROUTE-MAP §3) moved to a
       // page-level redirect (`app/(company)/settings/page.tsx`) instead of a
       // static `has: query` rule here — Next.js's `redirects()` forwards an

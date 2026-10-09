@@ -171,15 +171,15 @@ describe("buildCommandPaletteIndex", () => {
     const gateIds = entries.filter((e) => e.group === "gates").map((e) => e.id);
     expect(settingsIds).toEqual([...SETTINGS_SECTIONS]);
     expect(gateIds).toEqual([...GATE_SECTIONS]);
-    expect(entries.find((e) => e.id === "automations" && e.group === "settings")?.href).toBe(
-      "/system/settings/automations",
+    expect(entries.find((e) => e.id === "general" && e.group === "settings")?.href).toBe(
+      "/system/settings/general",
     );
     expect(entries.find((e) => e.id === "mandate" && e.group === "gates")?.href).toBe(
       "/policy/gates?section=mandate",
     );
   });
 
-  it("routes every automation to the global automations settings page (no per-department mapping yet)", () => {
+  it("routes every automation to the global system automations page (no per-department mapping yet)", () => {
     const entries = buildCommandPaletteIndex(
       { ...EMPTY_SOURCES, automations: [{ id: "security-scan", name: "Security scan" }] },
       LABELS,
@@ -188,7 +188,7 @@ describe("buildCommandPaletteIndex", () => {
       expect.objectContaining({
         id: "security-scan",
         group: "automations",
-        href: "/system/settings/automations",
+        href: "/system/automations",
       }),
     );
   });

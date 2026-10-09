@@ -1,1 +1,10 @@
-{"id":"vault-lint","name":"Lint vaultu","trigger":{"type":"cron","expr":"30 3 * * *"},"target":{"type":"vault-lint"},"enabled":true,"system":true,"lastFiredAt":"2026-10-09T11:07:53.806Z"}
+{
+  "id": "vault-lint",
+  "name": "Lint vaultu",
+  "trigger": { "type": "cron", "expr": "30 3 * * *" },
+  "target": { "type": "vault-lint" },
+  "enabled": true,
+  "system": true,
+  "lastFiredAt": "2026-10-09T11:07:53.806Z",
+  "description": "Noční kontrola vaultu: rozbité odkazy, osiřelé a zastaralé poznámky, bujení tagů. Jen report, nic nemění."
+}
