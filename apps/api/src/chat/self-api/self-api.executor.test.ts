@@ -1,0 +1,202 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ActivityLogService } from "../../activity/activity-log.service";
+import {
+  MAX_RESULT_CHARS,
+  type SelfApiClient,
+  SelfApiExecutor,
+  type SelfApiRouteCall,
+} from "./self-api.executor";
+
+const record = vi.fn();
+const activity = { record } as unknown as ActivityLogService;
+const routes = new Map<string, SelfApiRouteCall>();
+const client: SelfApiClient = (router, route) => routes.get(`${router}.${route}`);
+
+function stub(name: string, impl: SelfApiRouteCall) {
+  const fn = vi.fn(impl);
+  routes.set(name, fn);
+  return fn;
+}
+
+describe("SelfApiExecutor", () => {
+  let exec: SelfApiExecutor;
+  beforeEach(() => {
+    routes.clear();
+    record.mockReset();
+    exec = new SelfApiExecutor(client, activity);
+  });
+
+  it("lists operations with their tier", () => {
+    const text = exec.list();
+    expect(text).toContain("integrations.updateIntegration");
+    expect(text).toContain("[write]");
+    expect(text).not.toContain("setCredentials");
+  });
+
+  it("describes an operation with its method, path and body JSON schema", () => {
+    const res = exec.describe("integrations.updateIntegration");
+    expect(res.ok).toBe(true);
+    expect(res.text).toContain("PATCH /api/integrations/:id");
+    expect(res.text).toContain('"body"');
+  });
+
+  it("describes the body policy up front", () => {
+    const res = exec.describe("automations.createAutomation");
+    expect(res.text).toContain('"denyPaths"');
+    expect(res.text).toContain("target.toolGrants");
+    expect(res.text).toContain('"forceBody"');
+    expect(exec.describe("projects.updateProject").text).toContain('"allowKeys"');
+  });
+
+  it("rejects an unknown or denied operation without calling the API", async () => {
+    const res = await exec.call("integrations.setCredentials", {});
+    expect(res.ok).toBe(false);
+    expect(res.text).toContain("api_list_operations");
+  });
+
+  it("runs a read silently (no activity)", async () => {
+    stub("projects.getProject", async () => ({ status: 200, body: { id: "cms4" } }));
+    const res = await exec.call("projects.getProject", { params: { id: "cms4" } });
+    expect(res.ok).toBe(true);
+    expect(res.text).toContain('"cms4"');
+    expect(record).not.toHaveBeenCalled();
+  });
+
+  it("records a successful write as self-api-write with refs", async () => {
+    const fn = stub("integrations.updateIntegration", async () => ({ status: 200, body: {} }));
+    const res = await exec.call("integrations.updateIntegration", {
+      params: { id: "cms4-jira" },
+      body: { config: { kind: "jira", projectKey: "NEW" } },
+    });
+    expect(res.ok).toBe(true);
+    expect(fn).toHaveBeenCalledWith({
+      params: { id: "cms4-jira" },
+      body: { config: { kind: "jira", projectKey: "NEW" } },
+    });
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "self-api-write",
+        refs: { action: "integrations.updateIntegration", integrationId: "cms4-jira" },
+      }),
+    );
+  });
+
+  it("does NOT record a failed write and surfaces the status", async () => {
+    stub("projects.updateProject", async () => ({ status: 400, body: { message: "bad" } }));
+    const res = await exec.call("projects.updateProject", { params: { id: "x" }, body: {} });
+    expect(res.ok).toBe(false);
+    expect(res.text).toContain("HTTP 400");
+    expect(record).not.toHaveBeenCalled();
+  });
+
+  it("merges a partial system config onto the current one before PUT", async () => {
+    stub("system.getConfig", async () => ({
+      status: 200,
+      body: { taskTickMs: 30000, maxWorkingAgents: 3 },
+    }));
+    const put = stub("system.putConfig", async () => ({ status: 200, body: {} }));
+    await exec.call("system.putConfig", { body: { maxWorkingAgents: 5 } });
+    expect(put).toHaveBeenCalledWith({ body: { taskTickMs: 30000, maxWorkingAgents: 5 } });
+  });
+
+  it("defaults a missing body to {} for non-GET routes", async () => {
+    const fn = stub("integrations.testIntegration", async () => ({ status: 200, body: {} }));
+    await exec.call("integrations.testIntegration", { params: { id: "cms4-jira" } });
+    expect(fn).toHaveBeenCalledWith({ params: { id: "cms4-jira" }, body: {} });
+  });
+
+  it("truncates huge results", async () => {
+    stub("taskRuns.getTaskRunLogs", async () => ({
+      status: 200,
+      body: "x".repeat(MAX_RESULT_CHARS * 2),
+    }));
+    const res = await exec.call("taskRuns.getTaskRunLogs", { params: { runId: "r" } });
+    expect(res.text.length).toBeLessThan(MAX_RESULT_CHARS + 200);
+    expect(res.text).toContain("zkráceno");
+  });
+
+  it("turns a thrown fetch into an error result", async () => {
+    stub("projects.listProjects", async () => {
+      throw new Error("ECONNREFUSED");
+    });
+    const res = await exec.call("projects.listProjects", {});
+    expect(res.ok).toBe(false);
+    expect(res.text).toContain("ECONNREFUSED");
+  });
+
+  describe("body policy", () => {
+    it("rejects a key outside allowKeys without calling the API", async () => {
+      const fn = stub("projects.updateProject", async () => ({ status: 200, body: {} }));
+      const res = await exec.call("projects.updateProject", {
+        params: { id: "x" },
+        body: { name: "ok", autonomy_policy: {} },
+      });
+      expect(res.ok).toBe(false);
+      expect(res.text).toContain("autonomy_policy");
+      expect(res.text).toContain("UI");
+      expect(fn).not.toHaveBeenCalled();
+      expect(record).not.toHaveBeenCalled();
+    });
+
+    it("rejects a denied path found through an array", async () => {
+      const fn = stub("projects.updateProject", async () => ({ status: 200, body: {} }));
+      const res = await exec.call("projects.updateProject", {
+        params: { id: "x" },
+        body: { identity: { people: [{ name: "a" }, { vip: false }] } },
+      });
+      expect(res.ok).toBe(false);
+      expect(res.text).toContain("identity.people.vip");
+      expect(fn).not.toHaveBeenCalled();
+    });
+
+    it("rejects a denied nested path (config.baseUrl)", async () => {
+      const fn = stub("integrations.updateIntegration", async () => ({ status: 200, body: {} }));
+      const res = await exec.call("integrations.updateIntegration", {
+        params: { id: "i" },
+        body: { config: { kind: "jira", baseUrl: "https://evil.example" } },
+      });
+      expect(res.ok).toBe(false);
+      expect(res.text).toContain("config.baseUrl");
+      expect(fn).not.toHaveBeenCalled();
+    });
+
+    it("allows changing only config.projectKey", async () => {
+      const fn = stub("integrations.updateIntegration", async () => ({ status: 200, body: {} }));
+      const res = await exec.call("integrations.updateIntegration", {
+        params: { id: "cms4-jira" },
+        body: { config: { kind: "jira", projectKey: "CMS" } },
+      });
+      expect(res.ok).toBe(true);
+      expect(fn).toHaveBeenCalledTimes(1);
+    });
+
+    it("overwrites forceBody keys (approval auto -> ask)", async () => {
+      const fn = stub("automations.createAutomation", async () => ({ status: 200, body: {} }));
+      const res = await exec.call("automations.createAutomation", {
+        body: { name: "n", approval: "auto" },
+      });
+      expect(res.ok).toBe(true);
+      expect(fn).toHaveBeenCalledWith({ body: { name: "n", approval: "ask" } });
+    });
+
+    it("keeps operator-set denied system keys on merge", async () => {
+      stub("system.getConfig", async () => ({
+        status: 200,
+        body: { roadmapTickMs: 0, maxWorkingAgents: 3 },
+      }));
+      const put = stub("system.putConfig", async () => ({ status: 200, body: {} }));
+      await exec.call("system.putConfig", { body: { maxWorkingAgents: 5 } });
+      expect(put).toHaveBeenCalledWith({ body: { roadmapTickMs: 0, maxWorkingAgents: 5 } });
+    });
+
+    it("rejects a denied system key with no GET and no PUT", async () => {
+      const get = stub("system.getConfig", async () => ({ status: 200, body: {} }));
+      const put = stub("system.putConfig", async () => ({ status: 200, body: {} }));
+      const res = await exec.call("system.putConfig", { body: { roadmapTickMs: 60000 } });
+      expect(res.ok).toBe(false);
+      expect(res.text).toContain("roadmapTickMs");
+      expect(get).not.toHaveBeenCalled();
+      expect(put).not.toHaveBeenCalled();
+    });
+  });
+});
