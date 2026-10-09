@@ -18,6 +18,11 @@ import { ChatMcpController } from "./chat-mcp.controller";
 import { ChatSessionService } from "./chat-session.service";
 import { ChatToolResultRegistry } from "./chat-tool-result.registry";
 import { ChatToolsService } from "./chat-tools.service";
+import {
+  SELF_API_CLIENT,
+  SelfApiExecutor,
+  createLoopbackSelfApiClient,
+} from "./self-api/self-api.executor";
 import { CHAT_DIR, ChatTranscriptStore } from "./chat-transcript.store";
 
 /** Default chat dir, anchored to `apps/api/data/chat` (gitignored), overridable by env. */
@@ -72,6 +77,8 @@ export function resolveChatDir(): string {
     // the guard (verifies) and ChatSessionService (propagates to the spawned CLI).
     ChatMcpAuthService,
     ChatMcpAuthGuard,
+    SelfApiExecutor,
+    { provide: SELF_API_CLIENT, useFactory: () => createLoopbackSelfApiClient() },
   ],
   exports: [ChatSessionService, ChatTranscriptStore],
 })

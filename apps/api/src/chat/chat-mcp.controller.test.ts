@@ -11,10 +11,14 @@ import { ChatMcpAuthService } from "./chat-mcp-auth.service";
 import { ChatMcpController } from "./chat-mcp.controller";
 import { ChatToolResultRegistry } from "./chat-tool-result.registry";
 import { ChatToolsService } from "./chat-tools.service";
+import { SelfApiExecutor } from "./self-api/self-api.executor";
 
 const getStatus = vi.fn<() => Promise<string>>();
 const recallMemory = vi.fn<(query: string) => Promise<string>>();
 const createTask = vi.fn();
+const selfApiList = vi.fn<() => string>();
+const selfApiDescribe = vi.fn();
+const selfApiCall = vi.fn();
 const proposeRename = vi.fn();
 const proposeOpenMaps = vi.fn();
 const proposeOpenFolder = vi.fn();
@@ -48,6 +52,10 @@ describe("POST /api/chat/mcp — ChatMcpAuthGuard", () => {
             proposeOpenFolder,
             capturePersonalNote,
           },
+        },
+        {
+          provide: SelfApiExecutor,
+          useValue: { list: selfApiList, describe: selfApiDescribe, call: selfApiCall },
         },
         ChatToolResultRegistry,
         ChatMcpAuthService,
@@ -127,6 +135,9 @@ describe("POST /api/chat/mcp — ChatMcpAuthGuard", () => {
 
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
+      "api_call",
+      "api_describe_operation",
+      "api_list_operations",
       "capture_note",
       "create_task",
       "get_status",
@@ -256,6 +267,41 @@ describe("POST /api/chat/mcp — ChatMcpAuthGuard", () => {
         expect.objectContaining({ attachmentSetId: "set_9" }),
       );
       await client.close();
+    });
+  });
+
+  describe("self-api tools", () => {
+    async function connect() {
+      const transport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/api/chat/mcp`), {
+        requestInit: { headers: { Authorization: `Bearer ${auth.bearerToken}` } },
+      });
+      const client = new Client({ name: "chat-mcp-test-client", version: "1.0.0" });
+      await client.connect(transport);
+      return client;
+    }
+
+    it("api_call forwards to the executor and maps a failure to isError", async () => {
+      selfApiCall.mockResolvedValueOnce({ ok: false, text: "HTTP 400\n{}" });
+      const mcpClient = await connect();
+      const res = await mcpClient.callTool({
+        name: "api_call",
+        arguments: { operation: "projects.updateProject", params: { id: "x" }, body: {} },
+      });
+      expect(selfApiCall).toHaveBeenCalledWith("projects.updateProject", {
+        params: { id: "x" },
+        body: {},
+      });
+      expect(res.isError).toBe(true);
+    });
+
+    it("api_call returns a success as plain text", async () => {
+      selfApiCall.mockResolvedValueOnce({ ok: true, text: "HTTP 200\n{}" });
+      const mcpClient = await connect();
+      const res = await mcpClient.callTool({
+        name: "api_call",
+        arguments: { operation: "projects.listProjects" },
+      });
+      expect(res.isError).toBeFalsy();
     });
   });
 });
