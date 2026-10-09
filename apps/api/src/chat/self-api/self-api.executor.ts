@@ -121,7 +121,7 @@ export class SelfApiExecutor {
       };
     }
     try {
-      const body = await this.bodyFor(op, args.body);
+      const body = await this.bodyFor(op, args.body, args.params);
       const res = await route({
         ...(args.params ? { params: args.params } : {}),
         ...(args.query ? { query: args.query } : {}),
@@ -129,11 +129,16 @@ export class SelfApiExecutor {
       });
       const ok = res.status >= 200 && res.status < 300;
       if (ok && op.tier === "write") {
-        await this.activity.record({
-          kind: "self-api-write",
-          summary: `Změna konfigurace: ${op.summary}`,
-          refs: { action: op.name, ...this.refsFor(op, args.params) },
-        });
+        // The write already happened: a failing activity log must not turn it into a retry.
+        try {
+          await this.activity.record({
+            kind: "self-api-write",
+            summary: `Změna konfigurace: ${op.summary}`,
+            refs: { action: op.name, ...this.refsFor(op, args.params) },
+          });
+        } catch {
+          // best effort
+        }
       }
       return { ok, text: truncate(`HTTP ${res.status}\n${JSON.stringify(res.body, null, 2)}`) };
     } catch (error) {
@@ -155,21 +160,49 @@ export class SelfApiExecutor {
   }
 
   /** GET carries no body; other methods default to `{}` (EmptyBodySchema routes) with
-   *  `forceBody` keys overwritten. `system.putConfig` replaces the whole document, so a
-   *  partial edit is merged onto the current config first — otherwise every unsent field
-   *  would reset to default. */
-  private async bodyFor(op: SelfApiOperation, body: unknown): Promise<unknown> {
+   *  `forceBody` keys overwritten. The update services replace nested objects whole, so
+   *  `mergeOnto` keys are shallow-merged onto the current entity first, and
+   *  `system.putConfig` (a whole-document PUT) onto the current config — otherwise every
+   *  unsent field would reset. */
+  private async bodyFor(
+    op: SelfApiOperation,
+    body: unknown,
+    params: Record<string, string> | undefined,
+  ): Promise<unknown> {
     if (op.method === "GET") return undefined;
-    if (op.name !== "system.putConfig") {
-      if (!op.forceBody) return body ?? {};
-      return { ...(isPlainObject(body) ? body : {}), ...op.forceBody };
+    const chat = isPlainObject(body) ? body : undefined;
+    if (op.name === "system.putConfig") {
+      if (!chat) throw new Error("tělo musí být objekt s částečnou konfigurací");
+      const current = await this.current("system.getConfig", {});
+      return { ...current, ...chat, ...op.forceBody };
     }
-    const get = this.client("system", "getConfig");
-    const current = get ? await get({}) : undefined;
-    if (!current || current.status !== 200 || !isPlainObject(current.body)) {
-      throw new Error("nepodařilo se načíst aktuální system config");
+    if (!op.forceBody && !op.mergeOnto) return body ?? {};
+    const out: Record<string, unknown> = { ...chat, ...op.forceBody };
+    if (op.currentOp && op.mergeOnto) {
+      const current = await this.current(op.currentOp, params ?? {});
+      for (const key of op.mergeOnto) {
+        const patch = chat?.[key];
+        if (isPlainObject(patch)) {
+          const base = current[key];
+          out[key] = { ...(isPlainObject(base) ? base : {}), ...patch };
+        }
+      }
     }
-    return { ...current.body, ...(isPlainObject(body) ? body : {}) };
+    return out;
+  }
+
+  /** Fetch the current entity through a catalog read op; throws (=> no write) on any failure. */
+  private async current(
+    opName: string,
+    params: Record<string, string>,
+  ): Promise<Record<string, unknown>> {
+    const [router = "", route = ""] = opName.split(".");
+    const get = this.client(router, route);
+    const res = get ? await get({ params }) : undefined;
+    if (!res || res.status < 200 || res.status >= 300 || !isPlainObject(res.body)) {
+      throw new Error(`nepodařilo se načíst aktuální stav (${opName})`);
+    }
+    return res.body;
   }
 
   private refsFor(

@@ -22,6 +22,10 @@ export interface SelfApiOperation {
   denyPaths?: readonly string[];
   /** Top-level body keys the executor sets/overwrites before the call. Validated against the body schema at build time. */
   forceBody?: Readonly<Record<string, unknown>>;
+  /** Top-level body keys the executor shallow-merges onto the current value (from {@link currentOp}) — the update services replace them whole. */
+  mergeOnto?: readonly string[];
+  /** Read op (same router, same path params) returning the current entity for {@link mergeOnto}. */
+  currentOp?: string;
   /** The route's raw zod schemas (or ts-rest plain types) for `api_describe_operation`. */
   schemas: { query?: unknown; body?: unknown };
 }
@@ -34,6 +38,8 @@ export type SelfApiEntry =
       allowKeys?: readonly string[];
       denyPaths?: readonly string[];
       forceBody?: Readonly<Record<string, unknown>>;
+      mergeOnto?: readonly string[];
+      currentOp?: string;
     };
 
 export type SelfApiAllowlist = Readonly<Record<string, Readonly<Record<string, SelfApiEntry>>>>;
@@ -95,7 +101,8 @@ export const SELF_API_ALLOWLIST: SelfApiAllowlist = {
     updateCompany: {
       tier: "write",
       allowKeys: ["name", "desc", "people"],
-      denyPaths: ["people.vip"],
+      // `people` is replaced whole on update, so an edit would wipe vip flags: operator-only.
+      denyPaths: ["people"],
     },
   },
   teams: {
@@ -123,8 +130,11 @@ export const SELF_API_ALLOWLIST: SelfApiAllowlist = {
     updateProject: {
       tier: "write",
       allowKeys: PROJECT_SAFE_KEYS,
-      // `vip` forces Tier-3 escalation, so it is the operator's to set.
-      denyPaths: ["identity.people.vip"],
+      // `identity` is replaced whole on update: merged onto the current one, and `people`
+      // (whose `vip` flag forces Tier-3 escalation) stays the operator's.
+      denyPaths: ["identity.people"],
+      mergeOnto: ["identity"],
+      currentOp: "projects.getProject",
     },
     cloneProject: "write",
   },
@@ -150,9 +160,13 @@ export const SELF_API_ALLOWLIST: SelfApiAllowlist = {
     getIntegration: "read",
     createIntegration: "write",
     // Hosts/ports: repointing them would send the stored credential to another endpoint.
+    // `config` is replaced whole on update, so it is merged onto the current one.
     updateIntegration: {
       tier: "write",
+      mergeOnto: ["config"],
+      currentOp: "integrations.getIntegration",
       denyPaths: [
+        "config.kind",
         "config.baseUrl",
         "config.imapHost",
         "config.imapPort",
@@ -270,6 +284,8 @@ export function buildSelfApiCatalog(
         allowKeys,
         denyPaths,
         forceBody,
+        mergeOnto,
+        currentOp,
       }: Exclude<SelfApiEntry, SelfApiTier> & {
         tier: SelfApiTier;
       } = typeof entry === "string" ? { tier: entry } : entry;
@@ -287,6 +303,10 @@ export function buildSelfApiCatalog(
       if (allowKeys) assertPathsExist(name, def.body, allowKeys, "allowKeys entry");
       if (forceBody) assertForceBody(name, def.body, forceBody);
       if (denyPaths) assertPathsExist(name, def.body, denyPaths, "denyPaths entry");
+      if (mergeOnto) {
+        if (!currentOp) throw new Error(`self-api: ${name} mergeOnto requires currentOp`);
+        assertPathsExist(name, def.body, mergeOnto, "mergeOnto entry");
+      }
       out.set(name, {
         name,
         router,
@@ -295,12 +315,23 @@ export function buildSelfApiCatalog(
         ...(allowKeys && { allowKeys }),
         ...(denyPaths && { denyPaths }),
         ...(forceBody && { forceBody }),
+        ...(mergeOnto && { mergeOnto }),
+        ...(currentOp && { currentOp }),
         method: def.method,
         path: def.path,
         summary: def.summary ?? name,
         pathParams: [...def.path.matchAll(/:(\w+)/g)].flatMap((m) => (m[1] ? [m[1]] : [])),
         schemas: { query: def.query, body: def.body },
       });
+    }
+  }
+  for (const op of out.values()) {
+    if (!op.currentOp) continue;
+    const cur = out.get(op.currentOp);
+    if (!cur || cur.tier !== "read" || cur.router !== op.router) {
+      throw new Error(
+        `self-api: ${op.name} currentOp "${op.currentOp}" is not a read op on ${op.router}`,
+      );
     }
   }
   return out;

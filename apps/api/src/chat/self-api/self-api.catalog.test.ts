@@ -74,12 +74,10 @@ describe("buildSelfApiCatalog", () => {
       expect(op?.denyPaths).not.toContain("approval");
       expect(op?.denyPaths).toContain("target.toolGrants");
     }
-    for (const route of ["createProject", "updateProject"]) {
-      expect(catalog.get(`projects.${route}`)?.denyPaths).toContain("identity.people.vip");
-    }
-    for (const route of ["createCompany", "updateCompany"]) {
-      expect(catalog.get(`companies.${route}`)?.denyPaths).toContain("people.vip");
-    }
+    expect(catalog.get("projects.createProject")?.denyPaths).toContain("identity.people.vip");
+    expect(catalog.get("projects.updateProject")?.denyPaths).toContain("identity.people");
+    expect(catalog.get("companies.createCompany")?.denyPaths).toContain("people.vip");
+    expect(catalog.get("companies.updateCompany")?.denyPaths).toContain("people");
     expect(catalog.get("projects.updateProject")?.allowKeys).not.toContain("companyId");
     expect(catalog.get("projects.createProject")?.allowKeys).toContain("companyId");
   });
@@ -129,5 +127,32 @@ describe("buildSelfApiCatalog", () => {
       /DELETE/,
     );
     expect(() => buildSelfApiCatalog(undefined, { teams: { nope: "read" } })).toThrow(/unknown/);
+  });
+
+  it("validates mergeOnto / currentOp at build time", () => {
+    const u = { tier: "write", mergeOnto: ["config"] } as const;
+    expect(() =>
+      buildSelfApiCatalog(undefined, { integrations: { updateIntegration: u } }),
+    ).toThrow(/requires currentOp/);
+    expect(() =>
+      buildSelfApiCatalog(undefined, {
+        integrations: {
+          updateIntegration: { ...u, currentOp: "integrations.updateIntegration" },
+        },
+      }),
+    ).toThrow(/currentOp/);
+    expect(() =>
+      buildSelfApiCatalog(undefined, {
+        integrations: {
+          getIntegration: "read",
+          updateIntegration: {
+            ...u,
+            mergeOnto: ["nope"],
+            currentOp: "integrations.getIntegration",
+          },
+        },
+      }),
+    ).toThrow(/mergeOnto/);
+    expect(catalog.get("projects.updateProject")?.mergeOnto).toEqual(["identity"]);
   });
 });

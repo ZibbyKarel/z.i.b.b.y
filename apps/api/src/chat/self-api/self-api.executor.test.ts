@@ -62,16 +62,29 @@ describe("SelfApiExecutor", () => {
     expect(record).not.toHaveBeenCalled();
   });
 
+  const jiraCurrent = {
+    id: "cms4-jira",
+    config: { kind: "jira", baseUrl: "https://j.example", email: "a@b.c", projectKey: "OLD" },
+  };
+
   it("records a successful write as self-api-write with refs", async () => {
+    stub("integrations.getIntegration", async () => ({ status: 200, body: jiraCurrent }));
     const fn = stub("integrations.updateIntegration", async () => ({ status: 200, body: {} }));
     const res = await exec.call("integrations.updateIntegration", {
       params: { id: "cms4-jira" },
-      body: { config: { kind: "jira", projectKey: "NEW" } },
+      body: { config: { projectKey: "NEW" } },
     });
     expect(res.ok).toBe(true);
     expect(fn).toHaveBeenCalledWith({
       params: { id: "cms4-jira" },
-      body: { config: { kind: "jira", projectKey: "NEW" } },
+      body: {
+        config: {
+          kind: "jira",
+          baseUrl: "https://j.example",
+          email: "a@b.c",
+          projectKey: "NEW",
+        },
+      },
     });
     expect(record).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -82,6 +95,7 @@ describe("SelfApiExecutor", () => {
   });
 
   it("does NOT record a failed write and surfaces the status", async () => {
+    stub("projects.getProject", async () => ({ status: 200, body: { id: "x" } }));
     stub("projects.updateProject", async () => ({ status: 400, body: { message: "bad" } }));
     const res = await exec.call("projects.updateProject", { params: { id: "x" }, body: {} });
     expect(res.ok).toBe(false);
@@ -145,7 +159,7 @@ describe("SelfApiExecutor", () => {
         body: { identity: { people: [{ name: "a" }, { vip: false }] } },
       });
       expect(res.ok).toBe(false);
-      expect(res.text).toContain("identity.people.vip");
+      expect(res.text).toContain("identity.people");
       expect(fn).not.toHaveBeenCalled();
     });
 
@@ -161,10 +175,11 @@ describe("SelfApiExecutor", () => {
     });
 
     it("allows changing only config.projectKey", async () => {
+      stub("integrations.getIntegration", async () => ({ status: 200, body: jiraCurrent }));
       const fn = stub("integrations.updateIntegration", async () => ({ status: 200, body: {} }));
       const res = await exec.call("integrations.updateIntegration", {
         params: { id: "cms4-jira" },
-        body: { config: { kind: "jira", projectKey: "CMS" } },
+        body: { config: { projectKey: "CMS" } },
       });
       expect(res.ok).toBe(true);
       expect(fn).toHaveBeenCalledTimes(1);
@@ -197,6 +212,107 @@ describe("SelfApiExecutor", () => {
       expect(res.text).toContain("roadmapTickMs");
       expect(get).not.toHaveBeenCalled();
       expect(put).not.toHaveBeenCalled();
+    });
+
+    it("keeps a self-hosted sentry baseUrl when only minLevel is patched", async () => {
+      stub("integrations.getIntegration", async () => ({
+        status: 200,
+        body: {
+          config: { kind: "sentry", org: "o", project: "p", baseUrl: "https://s.example" },
+        },
+      }));
+      const fn = stub("integrations.updateIntegration", async () => ({ status: 200, body: {} }));
+      await exec.call("integrations.updateIntegration", {
+        params: { id: "s" },
+        body: { config: { minLevel: "warning" } },
+      });
+      expect(fn).toHaveBeenCalledWith({
+        params: { id: "s" },
+        body: {
+          config: {
+            kind: "sentry",
+            org: "o",
+            project: "p",
+            baseUrl: "https://s.example",
+            minLevel: "warning",
+          },
+        },
+      });
+    });
+
+    it("rejects config.kind", async () => {
+      const fn = stub("integrations.updateIntegration", async () => ({ status: 200, body: {} }));
+      const res = await exec.call("integrations.updateIntegration", {
+        params: { id: "i" },
+        body: { config: { kind: "sentry" } },
+      });
+      expect(res.ok).toBe(false);
+      expect(res.text).toContain("config.kind");
+      expect(fn).not.toHaveBeenCalled();
+    });
+
+    it("rejects updateProject identity.people", async () => {
+      const fn = stub("projects.updateProject", async () => ({ status: 200, body: {} }));
+      const res = await exec.call("projects.updateProject", {
+        params: { id: "x" },
+        body: { identity: { people: [{ name: "a", role: "r" }] } },
+      });
+      expect(res.ok).toBe(false);
+      expect(res.text).toContain("identity.people");
+      expect(fn).not.toHaveBeenCalled();
+    });
+
+    it("merges identity onto the current one, keeping people with vip", async () => {
+      const people = [{ name: "a", role: "r", vip: true }];
+      stub("projects.getProject", async () => ({ status: 200, body: { identity: { people } } }));
+      const fn = stub("projects.updateProject", async () => ({ status: 200, body: {} }));
+      await exec.call("projects.updateProject", {
+        params: { id: "x" },
+        body: { name: "n", identity: { note: "hi" } },
+      });
+      expect(fn).toHaveBeenCalledWith({
+        params: { id: "x" },
+        body: { name: "n", identity: { people, note: "hi" } },
+      });
+    });
+
+    it("rejects updateCompany people", async () => {
+      const fn = stub("companies.updateCompany", async () => ({ status: 200, body: {} }));
+      const res = await exec.call("companies.updateCompany", {
+        params: { id: "c" },
+        body: { people: [{ name: "a" }] },
+      });
+      expect(res.ok).toBe(false);
+      expect(fn).not.toHaveBeenCalled();
+    });
+
+    it("does not write when the current entity cannot be loaded", async () => {
+      stub("integrations.getIntegration", async () => ({ status: 404, body: {} }));
+      const fn = stub("integrations.updateIntegration", async () => ({ status: 200, body: {} }));
+      const res = await exec.call("integrations.updateIntegration", {
+        params: { id: "i" },
+        body: { config: { projectKey: "X" } },
+      });
+      expect(res.ok).toBe(false);
+      expect(fn).not.toHaveBeenCalled();
+      expect(record).not.toHaveBeenCalled();
+    });
+
+    it("still reports ok when the activity log throws after a successful write", async () => {
+      record.mockRejectedValueOnce(new Error("disk full"));
+      stub("teams.createTeam", async () => ({ status: 201, body: {} }));
+      const res = await exec.call("teams.createTeam", { body: { id: "t" } });
+      expect(res.ok).toBe(true);
+    });
+
+    it("rejects a non-object putConfig body without reading or writing", async () => {
+      const get = stub("system.getConfig", async () => ({ status: 200, body: { a: 1 } }));
+      const put = stub("system.putConfig", async () => ({ status: 200, body: {} }));
+      const res = await exec.call("system.putConfig", { body: "nope" });
+      expect(res.ok).toBe(false);
+      expect(get).not.toHaveBeenCalled();
+      expect(put).not.toHaveBeenCalled();
+      expect(record).not.toHaveBeenCalled();
     });
   });
 });
