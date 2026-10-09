@@ -14,6 +14,7 @@ const { hooks } = vi.hoisted(() => ({
     approvals: [] as Array<{ id: string; requestedAt: string; riskType?: string }>,
     approve: vi.fn(),
     theme: "light" as "light" | "dark" | "system",
+    resolved: "light" as "light" | "dark",
     setTheme: vi.fn(),
   },
 }));
@@ -25,6 +26,10 @@ vi.mock("../../approvals", () => ({
 vi.mock("../../../state/appearance", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../state/appearance")>()),
   useAppearance: () => ({ theme: hooks.theme, setTheme: hooks.setTheme }),
+}));
+vi.mock("@zibby/design-system", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@zibby/design-system")>()),
+  useResolvedTheme: () => hooks.resolved,
 }));
 vi.mock("../../departments/queries", () => ({
   useDepartmentsQuery: () => ({ data: [{ id: "dev", name: "Development" }] }),
@@ -107,8 +112,9 @@ describe("CommandPaletteHost", () => {
     expect(push).toHaveBeenCalledWith("/work/tasks/new");
   });
 
-  it("'Toggle theme' flips light/dark via the live appearance setter", async () => {
-    hooks.theme = "light";
+  it("'Toggle theme' flips the resolved theme (system on a light OS → dark)", async () => {
+    hooks.theme = "system";
+    hooks.resolved = "light";
     const user = userEvent.setup();
     renderWithProviders(<Harness open />);
 

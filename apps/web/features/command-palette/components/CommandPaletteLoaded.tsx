@@ -7,6 +7,7 @@ import {
   CommandPalette,
   type CommandPaletteGroup,
   type CommandPaletteItem,
+  useResolvedTheme,
 } from "@zibby/design-system";
 import { useApprovalsQuery, useApproveMutation } from "../../approvals";
 import { HIGH_RISK_TYPES } from "../../approvals/approval";
@@ -60,7 +61,9 @@ export function CommandPaletteLoaded({
 }: CommandPaletteLoadedProps) {
   const router = useRouter();
   const labels = useCommandPaletteLabels();
-  const { theme, setTheme } = useAppearance();
+  const { setTheme } = useAppearance();
+  // Flip what is on screen, not the raw choice — `system` resolves via the OS.
+  const resolvedTheme = useResolvedTheme();
 
   const { data: departments } = useDepartmentsQuery();
   const { data: employees } = useEmployeesQuery();
@@ -174,7 +177,7 @@ export function CommandPaletteLoaded({
               // the first press, mirroring the common command-palette
               // convention (the full 3-way picker lives in
               // `/system/settings/appearance`).
-              setTheme(theme === "light" ? "dark" : "light");
+              setTheme(resolvedTheme === "light" ? "dark" : "light");
               return;
             }
             if (entry.href) router.push(entry.href);
@@ -182,7 +185,17 @@ export function CommandPaletteLoaded({
         }),
       ),
     }));
-  }, [entries, query, labels, router, oldestApproval, approve, onOpenApproval, theme, setTheme]);
+  }, [
+    entries,
+    query,
+    labels,
+    router,
+    oldestApproval,
+    approve,
+    onOpenApproval,
+    resolvedTheme,
+    setTheme,
+  ]);
 
   return (
     <CommandPalette
