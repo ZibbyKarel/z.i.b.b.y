@@ -76,6 +76,7 @@ const DID_KINDS = new Set<ActivityEntry["kind"]>([
   "run-finished",
   "workflow-finished",
   "approval-approved",
+  "self-api-write",
 ]);
 
 /** Max "did for you" lines surfaced (the rest are still in the activity feed). */

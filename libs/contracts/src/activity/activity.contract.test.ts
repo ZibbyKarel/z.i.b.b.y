@@ -93,6 +93,16 @@ describe("ActivityEntrySchema", () => {
     expect(ActivityKindSchema.options).toContain("post-merge-outcome");
   });
 
+  it("accepts the self-api-write kind (chat self-API Tier-2 write)", () => {
+    expect(
+      ActivityEntrySchema.safeParse({
+        ...base,
+        kind: "self-api-write",
+        refs: { action: "integrations.updateIntegration", integrationId: "cms4-jira" },
+      }).success,
+    ).toBe(true);
+  });
+
   it("enumerates the whole accountability vocabulary", () => {
     expect(ActivityKindSchema.options).toContain("gate-decision");
     expect(ActivityKindSchema.options).toContain("briefing-generated");

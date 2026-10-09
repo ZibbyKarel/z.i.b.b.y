@@ -58,6 +58,10 @@ export const ActivityKindSchema = z.enum([
   // M8 (hardening). An integration poll exhausted its retry/backoff budget — surfaced
   // (not just stamped as lastError) so a persistently failing channel never fails silently.
   "integration-retry-exhausted",
+  // Self-API (chat MCP, Tier 2 — act, then report). The operator asked the chat to
+  // change ZIBBY's own config (project, integration, workflow, system config, …) and
+  // the allowlisted non-destructive write succeeded. `refs.action` = `<router>.<route>`.
+  "self-api-write",
   // N3 (CI/CD monitoring, Tier 1/2). A monitor ingested a status alert (a red CI run)
   // and dispatched the investigation task riding its `taskId` ref — act-then-report:
   // the fix run surfaces on the runs feed and, when parked at the PR gate, in needs-you.

@@ -63,6 +63,8 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   "channel-noted": "channels",
   "channel-needs-attention": "channels",
   "integration-retry-exhausted": "integrations",
+  // Self-API config writes read with the operator-dispatched work.
+  "self-api-write": "tasks",
   // N3: a monitor alert rides the integration that watches the source (same PAT/config).
   "monitor-alert": "integrations",
   // NS2 F5a/F5c: Security/Arch's scheduled-scan finding — reads with the other
