@@ -133,14 +133,15 @@ export const taskRunsContract = c.router(
       responses: {
         200: TaskRunSchema,
         404: ErrorSchema,
-        // The run's kind/state has no resume: a running run, or an agent run that
-        // has not ended in error/interrupted, or a workflow/goal run that isn't parked.
+        // The run's kind/state has no resume: a running/done run, a workflow/goal run
+        // that is neither parked nor errored/interrupted, or one with no backing task.
         409: ErrorSchema,
       },
       summary:
         "Resume a run: a parked workflow/goal run (with an operator note), or re-run an " +
         "errored/interrupted agent run (returns the NEW run — with --resume when a session " +
-        "id was captured, else a fresh run of the same task)",
+        "id was captured, else a fresh run of the same task), or re-run an errored/interrupted " +
+        "workflow/goal run as a NEW task with the original task's inputs (returns its view)",
     },
 
     deleteTaskRun: {

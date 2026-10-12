@@ -546,7 +546,7 @@ export function RunDetail({
     ? Date.parse(run.taskOutcomeFinishedAt) - Date.parse(run.startedAt)
     : undefined;
 
-  // Phase 61: the header's Stop/Resume/Delete buttons collapse behind a single
+  // Phase 61: the header's Stop/Delete buttons collapse behind a single
   // kebab MenuButton — same guards as the inline buttons they replace, built
   // conditionally so an inapplicable action never shows a row.
   const actionItems: MenuButtonItem[] = [];
@@ -558,15 +558,6 @@ export function RunDetail({
       danger: true,
       disabled: stopping,
       onSelect: () => setConfirmKind("stop"),
-    });
-  }
-  if (onResume && isResumableRun(run)) {
-    actionItems.push({
-      id: "resume",
-      label: run.sessionId ? t("resumeContinue") : t("resumeFresh"),
-      icon: "run",
-      disabled: resuming,
-      onSelect: onResume,
     });
   }
   actionItems.push({
@@ -778,7 +769,23 @@ export function RunDetail({
                       // Phase 61: Stop/Resume/Delete collapse behind a single kebab
                       // menu — the inline buttons this replaced are now rows in
                       // `actionItems`, built above with the same guards.
-                      <MenuButton ariaLabel={t("actionsMenuLabel")} items={actionItems} />
+                      <>
+                        {/* Re-run sits outside the kebab: on a run that didn't finish it
+                        is the one action the operator is looking for. */}
+                        {onResume && isResumableRun(run) && (
+                          <Button
+                            data-testid="run-rerun"
+                            disabled={resuming}
+                            icon="run"
+                            intent="primary"
+                            onClick={onResume}
+                            size="sm"
+                          >
+                            {run.sessionId ? t("resumeContinue") : t("resumeFresh")}
+                          </Button>
+                        )}
+                        <MenuButton ariaLabel={t("actionsMenuLabel")} items={actionItems} />
+                      </>
                     )}
                   </Stack>
                 </Stack>
@@ -820,7 +827,7 @@ export function RunDetail({
               (approval.action === "pr.open" || approval.action === "git.push") && (
                 <RunPrGatePanel workflowRunId={run.runId} />
               )}
-            <RunApprovalGate approval={approval} />
+            <RunApprovalGate approval={approval} run={run} />
             <Accordion>
               <AccordionItem summary={t("output")}>{logPanel}</AccordionItem>
             </Accordion>

@@ -954,7 +954,13 @@
       "low": "nízká",
       "medium": "střední",
       "high": "vysoká"
-    }
+    },
+    "checkpointOutput": "Výstup kroku ke kontrole",
+    "revise": "Odpovědět / připomínky",
+    "reviseLabel": "Odpověď nebo připomínky",
+    "reviseHint": "Krok se spustí znovu s touto poznámkou (třeba s odpověďmi na otázky výše) a pak se ti vrátí ke kontrole.",
+    "confirmRevise": "Odeslat",
+    "cancelRevise": "Zrušit"
   },
   "settings": {
     "title": "Nastavení systému",

@@ -7,9 +7,24 @@ import { RunApprovalGate } from "./RunApprovalGate";
 
 const approve = vi.fn();
 const reject = vi.fn();
+const revise = vi.fn();
 vi.mock("../../approvals/mutations", () => ({
   useApproveMutation: () => ({ mutate: approve, isPending: false }),
   useRejectMutation: () => ({ mutate: reject, isPending: false }),
+  useReviseMutation: () => ({ mutate: revise, isPending: false }),
+}));
+vi.mock("../../workflows", () => ({
+  useWorkflowsQuery: () => ({
+    data: [{ id: "audit", phases: [{ id: "interview", produces: "needs.md" }] }],
+  }),
+}));
+vi.mock("../queries/useRunArtifactQuery", () => ({
+  useRunArtifactQuery: (_runId: string, name: string, enabled: boolean) => ({
+    data:
+      enabled && name === "needs.md"
+        ? { name, content: "# Otázky\n\n1. Ponechat Netflix?" }
+        : undefined,
+  }),
 }));
 
 const approval: DashboardApproval = {
@@ -29,6 +44,7 @@ describe("RunApprovalGate (30) — the gate's no rejects, it never deletes the r
   beforeEach(() => {
     approve.mockClear();
     reject.mockClear();
+    revise.mockClear();
   });
 
   it("rejects the approval (the gate endpoint) on the negative button — not a run delete", async () => {
@@ -90,5 +106,46 @@ describe("RunApprovalGate (30) — the gate's no rejects, it never deletes the r
     render(<RunApprovalGate approval={{ ...approval, text: "push to origin" }} />);
     expect(screen.queryByTestId(CodeBlockTestId.Root)).toBeNull();
     expect(screen.getByText("push to origin")).toBeInTheDocument();
+  });
+});
+
+describe("RunApprovalGate — a workflow stage checkpoint", () => {
+  const checkpoint: DashboardApproval = {
+    ...approval,
+    id: "gate-1",
+    kind: "workflow-gate",
+    action: "stage-approval",
+    risk: "low",
+  };
+  const run = {
+    kind: "workflow" as const,
+    runId: "audit_1",
+    owner: "audit",
+    stageRuns: [
+      { phaseId: "interview", runId: "audit_1.interview", attempt: 1, status: "done" as const },
+    ],
+  };
+
+  beforeEach(() => revise.mockClear());
+
+  it("shows the finished phase's output so its questions can be read", () => {
+    render(<RunApprovalGate approval={checkpoint} run={run} />);
+    expect(screen.getByTestId("checkpoint-output")).toHaveTextContent("Ponechat Netflix?");
+  });
+
+  it("sends an answer note back through revise", async () => {
+    render(<RunApprovalGate approval={checkpoint} run={run} />);
+    await userEvent.click(screen.getByTestId("checkpoint-revise"));
+    await userEvent.type(screen.getByRole("textbox"), "R-netflix: 2");
+    await userEvent.click(screen.getByTestId("checkpoint-send"));
+    expect(revise).toHaveBeenCalledWith(
+      { params: { id: "gate-1" }, body: { note: "R-netflix: 2" } },
+      expect.anything(),
+    );
+  });
+
+  it("offers no answer button on a non-checkpoint approval", () => {
+    render(<RunApprovalGate approval={approval} />);
+    expect(screen.queryByTestId("checkpoint-revise")).not.toBeInTheDocument();
   });
 });

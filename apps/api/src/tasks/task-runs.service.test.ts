@@ -20,6 +20,7 @@ import type { WorkflowRunnerService } from "../workflows/workflow-runner.service
 import type { WorkflowsStorageService } from "../workflows/workflows.storage.service";
 import type { ProjectsStorageService } from "../projects/projects.storage.service";
 import type { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
+import type { TaskSchedulerService } from "./task-scheduler.service";
 import {
   TaskRunNotResumableError,
   TaskRunNotStoppableError,
@@ -146,7 +147,13 @@ function build() {
   const workflowsStore = { list: vi.fn(async () => [workflowDef]) };
   const goalsStore = { list: vi.fn(async () => [] as Goal[]) };
   const projectsStore = { list: vi.fn(async () => [acmeProject]) };
-  const scheduled = { list: vi.fn(async () => [scheduledS]) };
+  const scheduled = {
+    list: vi.fn(async () => [scheduledS]),
+    get: vi.fn(async () => scheduledS),
+  };
+  const scheduler = {
+    createTask: vi.fn(async () => ({ outcome: "pending", task: scheduledS })),
+  };
 
   const service = new TaskRunsService(
     agentRunner as unknown as AgentRunnerService,
@@ -157,6 +164,7 @@ function build() {
     goalsStore as unknown as GoalsStorageService,
     projectsStore as unknown as ProjectsStorageService,
     scheduled as unknown as ScheduledTasksStorageService,
+    scheduler as unknown as TaskSchedulerService,
   );
   return {
     service,
@@ -166,6 +174,7 @@ function build() {
     workflowsStore,
     projectsStore,
     scheduled,
+    scheduler,
   };
 }
 
@@ -584,6 +593,23 @@ describe("TaskRunsService", () => {
       await service.resume("ship-it_4", "again");
       expect(goalRunner.resumeParked).toHaveBeenCalledWith("ship-it_4", "again");
       await expect(service.resume("researcher_1")).rejects.toBeInstanceOf(TaskRunNotResumableError);
+    });
+
+    it("re-runs a failed workflow run as a new task with the original inputs", async () => {
+      const { service, workflowRunner, scheduler } = build();
+      const failed: WorkflowRun = { ...pipeP, status: "failed", taskId: "task9" };
+      workflowRunner.listAll.mockResolvedValue([failed]);
+      workflowRunner.get.mockReturnValue(failed);
+      const res = await service.resume("delivery_3");
+      expect(workflowRunner.resumeParked).not.toHaveBeenCalled();
+      expect(scheduler.createTask).toHaveBeenCalledWith(
+        expect.objectContaining({ text: "do it later", target: scheduledS.target }),
+        undefined,
+        undefined,
+        undefined,
+        true,
+      );
+      expect(res.runId).toBe("task9");
     });
 
     it("deletes via the owning runner", async () => {

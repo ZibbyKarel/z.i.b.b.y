@@ -662,7 +662,10 @@ GET    /api/tasks/runs/:runId/artifacts/:name                a whitelisted artif
 POST   /api/tasks/runs/:runId/stop                            stop a running run
 POST   /api/tasks/runs/:runId/resume                          resume a parked workflow/goal run (with a note), or re-run an
                                                                 errored/interrupted agent run (with `--resume` if a session id
-                                                                was captured, else a fresh run of the same task)
+                                                                was captured, else a fresh run of the same task), or re-run an
+                                                                errored/interrupted workflow/goal run as a NEW task with the
+                                                                original task's text, paths, attachment set, tool grants,
+                                                                output and target (needs a backing task, else 409)
 DELETE /api/tasks/runs/:runId                                  delete a run and its artifacts
 PATCH  /api/tasks/runs/:runId/project                          assign a run into a project, or clear it back to "bez projektu"
                                                                 with a null projectId

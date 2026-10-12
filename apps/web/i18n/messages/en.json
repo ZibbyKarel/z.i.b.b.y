@@ -954,7 +954,13 @@
       "low": "low",
       "medium": "medium",
       "high": "high"
-    }
+    },
+    "checkpointOutput": "Step output to review",
+    "revise": "Answer / request changes",
+    "reviseLabel": "Answer or changes",
+    "reviseHint": "The step re-runs with this note (e.g. your answers to the questions above), then comes back to you for review.",
+    "confirmRevise": "Send",
+    "cancelRevise": "Cancel"
   },
   "settings": {
     "title": "System settings",

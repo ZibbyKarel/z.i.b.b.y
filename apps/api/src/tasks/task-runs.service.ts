@@ -27,6 +27,7 @@ import { WorkflowsStorageService } from "../workflows/workflows.storage.service"
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { archiveDepartmentId, isArchived, matchesArchiveSearch } from "./archive";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
+import { TaskSchedulerService } from "./task-scheduler.service";
 import { taskTargetId } from "./task-target";
 
 /** The unified run could not be resolved across any runner store (memory or disk). */
@@ -97,6 +98,7 @@ export class TaskRunsService {
     private readonly goalsStore: GoalsStorageService,
     private readonly projectsStore: ProjectsStorageService,
     private readonly scheduled: ScheduledTasksStorageService,
+    private readonly scheduler: TaskSchedulerService,
   ) {}
 
   /**
@@ -253,10 +255,15 @@ export class TaskRunsService {
    * Resume a run. A parked workflow/goal run resumes in place with an operator note.
    * Phase 49: an errored/interrupted AGENT run is instead re-run — a NEW run spawns
    * (with `--resume <sessionId>` when the errored run captured one, else fresh) and is
-   * returned, so the caller navigates to it. Any other kind/state → not resumable (409).
+   * returned, so the caller navigates to it. An errored/interrupted workflow/goal run
+   * is re-run as a fresh task ({@link rerunTask}). Any other kind/state → 409.
    */
   async resume(runId: string, note?: string): Promise<TaskRun> {
     const kind = await this.kindOf(runId);
+    if (kind === "workflow" || kind === "goal") {
+      const run = await this.getTaskRun(runId);
+      if (run.status === "error" || run.status === "interrupted") return this.rerunTask(run);
+    }
     if (kind === "workflow") await this.workflowRunner.resumeParked(runId, note);
     else if (kind === "goal") await this.goalRunner.resumeParked(runId, note);
     else if (kind === "agent") return this.rerunAgent(runId);
@@ -282,6 +289,34 @@ export class TaskRunsService {
     const newRun = await this.agentRunner.rerun(runId);
     if (run.taskId) await this.scheduled.reassignRun(run.taskId, newRun.runId);
     return this.getTaskRun(newRun.runId);
+  }
+
+  /**
+   * Re-run a failed/interrupted workflow or goal run: a NEW task from the original
+   * task's inputs (text, paths, attachment set, tool grants, output, target), through
+   * the normal create path so budget/staffing/approval gates all apply again. The old
+   * run stays as history. A run with no backing task has nothing to rebuild from (409).
+   * Returns the new task's view (`pending` until its background dispatch spawns).
+   */
+  private async rerunTask(run: TaskRun): Promise<TaskRun> {
+    if (!run.taskId) throw new TaskRunNotResumableError(run.runId);
+    const task = await this.scheduled.get(run.taskId);
+    const result = await this.scheduler.createTask(
+      {
+        title: task.title || undefined,
+        text: task.text,
+        paths: task.paths,
+        attachmentSetId: task.attachmentSetId,
+        toolGrants: task.toolGrants,
+        output: task.output,
+        target: task.target,
+      },
+      undefined,
+      task.projectId,
+      undefined,
+      true,
+    );
+    return this.getTaskRun(result.outcome === "dispatched" ? result.runRef : result.task.id);
   }
 
   /**

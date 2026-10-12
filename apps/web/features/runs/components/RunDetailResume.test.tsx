@@ -1,15 +1,11 @@
 import { renderWithProviders as render, screen } from "../../../test/render";
 import { describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { MenuButtonTestId } from "@zibby/design-system";
 import type { RunView } from "../run";
 import { RunDetail } from "./RunDetail";
 
-/** Opens the header's kebab menu and returns the resume row (or null if absent). */
-async function openResumeItem() {
-  await userEvent.click(screen.getByTestId(MenuButtonTestId.Trigger));
-  return screen.queryByTestId(`${MenuButtonTestId.Item}-resume`);
-}
+/** The header's re-run button (or null if absent) — it sits next to the kebab, not in it. */
+const resumeButton = () => screen.queryByTestId("run-rerun");
 
 // The header/action tests here don't exercise the gate, the log, or the output panel —
 // stub every side dependency so the render is just the header + its action cluster.
@@ -55,11 +51,11 @@ const renderRun = (run: RunView, onResume?: () => void) =>
     />,
   );
 
-describe("RunDetail — Resume an errored agent run (Phase 49)", () => {
-  it("shows a context-preserving 'Pokračovat' row when a session id was captured", async () => {
+describe("RunDetail — re-run a run that didn't finish", () => {
+  it("shows a context-preserving 'Pokračovat' button when a session id was captured", async () => {
     const onResume = vi.fn();
     renderRun({ ...erroredAgentRun, sessionId: "sess-1" }, onResume);
-    const item = await openResumeItem();
+    const item = resumeButton();
     expect(item).not.toBeNull();
     expect(item).toHaveTextContent("Pokračovat");
     await userEvent.click(item!);
@@ -68,27 +64,36 @@ describe("RunDetail — Resume an errored agent run (Phase 49)", () => {
 
   it("labels a fresh re-run 'Spustit znovu' when no session id was captured", async () => {
     renderRun(erroredAgentRun, () => {});
-    const item = await openResumeItem();
+    const item = resumeButton();
     expect(item).toHaveTextContent("Spustit znovu");
   });
 
-  it("also offers the row for an interrupted agent run", async () => {
+  it("also offers the button for an interrupted agent run", async () => {
     renderRun({ ...erroredAgentRun, status: "interrupted" }, () => {});
-    expect(await openResumeItem()).toBeInTheDocument();
+    expect(resumeButton()).toBeInTheDocument();
   });
 
-  it("does not offer the row for a done agent run", async () => {
+  it("does not offer the button for a done agent run", async () => {
     renderRun({ ...erroredAgentRun, status: "done" }, () => {});
-    expect(await openResumeItem()).not.toBeInTheDocument();
+    expect(resumeButton()).not.toBeInTheDocument();
   });
 
-  it("does not offer the row for an errored workflow run (agent-only in v1)", async () => {
+  it("offers 'Spustit znovu' for a failed workflow run born from a task", async () => {
+    const onResume = vi.fn();
+    renderRun({ ...erroredAgentRun, kind: "workflow", logBase: null, taskId: "task_1" }, onResume);
+    const item = resumeButton();
+    expect(item).toHaveTextContent("Spustit znovu");
+    await userEvent.click(item!);
+    expect(onResume).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not offer it for a workflow run with no backing task (nothing to rebuild from)", async () => {
     renderRun({ ...erroredAgentRun, kind: "workflow", logBase: null }, () => {});
-    expect(await openResumeItem()).not.toBeInTheDocument();
+    expect(resumeButton()).not.toBeInTheDocument();
   });
 
-  it("hides the row when no onResume handler is wired", async () => {
+  it("hides the button when no onResume handler is wired", async () => {
     renderRun({ ...erroredAgentRun, sessionId: "sess-1" });
-    expect(await openResumeItem()).not.toBeInTheDocument();
+    expect(resumeButton()).not.toBeInTheDocument();
   });
 });
