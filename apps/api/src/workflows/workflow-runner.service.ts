@@ -881,6 +881,18 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     if (root) await fs.rm(root, { recursive: true, force: true }).catch(() => {});
   }
 
+  /**
+   * Synchronous peek at an in-flight run's status + current stage from the
+   * in-memory registry (no disk fallback) — lets the employee roster derive
+   * `blocked` without an await per employee. `undefined` for an unknown/evicted run.
+   */
+  peekRun(
+    workflowRunId: string,
+  ): { status: WorkflowRun["status"]; currentStage: string | null } | undefined {
+    const run = this.runs.get(workflowRunId);
+    return run && { status: run.status, currentStage: run.currentStage };
+  }
+
   /** Read a stage's log by phase id (the most recent attempt of that phase). */
   async readStageLog(workflowRunId: string, phaseId: string, offset: number): Promise<RunLogChunk> {
     // Fall back to the on-disk aggregate (like delete/readArtifact/resume): a finished

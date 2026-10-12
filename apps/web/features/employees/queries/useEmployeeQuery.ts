@@ -8,5 +8,7 @@ export function useEmployeeQuery(id: string) {
     queryKey: getEmployeeQueryKey(id),
     queryData: { params: { id } },
     select: selectApiResponseBody,
+    // State derives from live run status (e.g. blocked → working after an approval).
+    refetchInterval: 3000,
   });
 }

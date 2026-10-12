@@ -76,6 +76,7 @@ export function EmployeeSheet({ employee, onClose }: EmployeeSheetProps) {
             live={employee.state === "working"}
             liveLabel={t("logLive")}
             logLabel={t("logIdle")}
+            phaseId={employee.currentStage}
             runId={employee.currentRunId}
           />
         ) : (

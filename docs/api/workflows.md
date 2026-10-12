@@ -582,6 +582,12 @@ holds no persisted state) — a stage found `running` with a dead PID
 reconciles to `interrupted` same as always, and a subsequent resume/retry
 re-acquires its lease fresh rather than assuming one is still held.
 
+`WorkflowRunnerService.peekRun(id)` is a synchronous, in-memory-only peek at a
+run's `status` + `currentStage` (no disk fallback; `undefined` once evicted). The
+employee roster uses it to report a leased employee whose run is `parked` /
+`paused-limit` as `blocked` instead of `working`, and to point its live log at the
+current stage.
+
 <!-- ZibbyCorp ZB-05a (2026-09-25): recordArtifact gains the chain-step emitter (fail-soft, like the scout emission). -->
 
 <!-- Publishing factory P1/P4 (2026-10-01): tool phase, approval: ask, budget, default project, run-folder line in the stage task, WORKFLOW_DEMO_FIXTURE_DIR. -->

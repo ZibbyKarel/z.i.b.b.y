@@ -127,6 +127,8 @@ export type EmployeePosition = z.infer<typeof EmployeePositionSchema>;
 export const EmployeeWithStateSchema = EmployeeSchema.extend({
   state: EmployeeStateSchema,
   currentRunId: z.string().optional(),
+  /** Phase id the leased workflow run is executing — keys the stage log stream. */
+  currentStage: z.string().optional(),
   currentTaskTitle: z.string().optional(),
   position: EmployeePositionSchema,
 });

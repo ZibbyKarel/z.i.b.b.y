@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import type { Agent } from "@zibby/contracts";
+import type { ModuleRef } from "@nestjs/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { AgentsStorageService } from "../agents/agents.storage.service";
 import { DepartmentsStorageService } from "../departments/departments.storage.service";
@@ -32,6 +33,7 @@ describe("EmployeesService", () => {
   let allocator: EmployeeAllocator;
   let departmentsDir: string;
   let service: EmployeesService;
+  let peeked: { status: string; currentStage: string | null } | undefined;
 
   beforeEach(async () => {
     employeesDir = await fs.mkdtemp(path.join(os.tmpdir(), "zibby-employees-svc-"));
@@ -48,7 +50,9 @@ describe("EmployeesService", () => {
       fakeAgents(["koder", "architekt"]),
       allocator,
       departments,
+      { get: () => ({ peekRun: () => peeked }) } as unknown as ModuleRef,
     );
+    peeked = undefined;
   });
 
   afterEach(async () => {
@@ -164,6 +168,21 @@ describe("EmployeesService", () => {
       const working = await service.get(hired.id);
       expect(working.state).toBe("working");
       expect(working.currentRunId).toBe("run_42");
+    });
+
+    it("derives 'blocked' (and exposes currentStage) while the leased run is parked or paused-limit", async () => {
+      const hired = await service.hire("dev", { agentId: "koder" });
+      await allocator.acquire("dev", "koder", { runId: "run_42" });
+
+      peeked = { status: "running", currentStage: "kodér" };
+      const running = await service.get(hired.id);
+      expect(running.state).toBe("working");
+      expect(running.currentStage).toBe("kodér");
+
+      peeked = { status: "parked", currentStage: "kodér" };
+      expect((await service.get(hired.id)).state).toBe("blocked");
+      peeked = { status: "paused-limit", currentStage: "kodér" };
+      expect((await service.get(hired.id)).state).toBe("blocked");
     });
 
     it("filters by department/agentId/status", async () => {

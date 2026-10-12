@@ -33,7 +33,12 @@ directly):
 - `state` — the O-04 vocabulary (`working | thinking | blocked | error | done
 | idle`), reusing the same enum `deriveAgentState` used client-side before
   positions were staffed by instances.
+  `blocked` = leased, but the workflow run is `parked`/`paused-limit` (waiting on
+  the operator); read synchronously via `WorkflowRunnerService.peekRun`, resolved
+  lazily through `ModuleRef` (`WorkflowsModule` imports `EmployeesModule`, so a
+  direct injection would be a module cycle).
 - `currentRunId` — the run it's leased to, while `working`/`blocked`.
+- `currentStage` — that run's current phase id (the stage-log stream key).
 - `currentTaskTitle` — best-effort title of that run's task, when known.
 - `position` — `{ id, name, title? }`, the position's display shape.
   `title` is the job title, humanized from the agent id

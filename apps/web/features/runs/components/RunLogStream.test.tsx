@@ -8,6 +8,15 @@ const { useRunLogMock } = vi.hoisted(() => ({
   useRunLogMock: vi.fn(() => ({ text: "", done: false })),
 }));
 vi.mock("../useRunLog", () => ({ useRunLog: useRunLogMock }));
+const { useStageMock } = vi.hoisted(() => ({
+  useStageMock: vi.fn<(runId: string, phaseId: string | null) => { text: string; done: boolean }>(
+    () => ({
+      text: "",
+      done: false,
+    }),
+  ),
+}));
+vi.mock("../useRunLogStream", () => ({ useStageRunLogStream: useStageMock }));
 
 import { RunLogStream } from "./RunLogStream";
 
@@ -22,6 +31,14 @@ describe("RunLogStream (54) — log rendered in the DS CodeBlock", () => {
   beforeEach(() => {
     useRunLogMock.mockReset();
     useRunLogMock.mockReturnValue({ text: "", done: false });
+  });
+
+  it("tails the stage log (not the run log) when phaseId is set", () => {
+    useStageMock.mockReturnValue({ text: "stage out", done: false });
+    render(<RunLogStream {...baseProps} live phaseId="kodér" />);
+    expect(useStageMock).toHaveBeenCalledWith("run_1", "kodér");
+    expect(useRunLogMock).toHaveBeenCalledWith(null);
+    expect(screen.getByTestId(CodeBlockTestId.Root)).toHaveTextContent("stage out");
   });
 
   it("renders the streamed log inside the CodeBlock framed monospace block", () => {

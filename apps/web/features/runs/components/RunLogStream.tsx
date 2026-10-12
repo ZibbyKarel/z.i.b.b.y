@@ -10,10 +10,16 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useRunLog } from "../useRunLog";
+import { useStageRunLogStream } from "../useRunLogStream";
 
 export interface RunLogStreamProps {
   /** The run whose log to tail (an agent run id, or a goal child's runRef). */
   runId: string;
+  /**
+   * Set for a workflow run: tail that stage's log (`…/stages/:phaseId/logs`) —
+   * the run-level `/logs` surface only serves agent runs.
+   */
+  phaseId?: string;
   /** Whether the run is still producing output (drives the live caret + label). */
   live: boolean;
   liveLabel: string;
@@ -43,6 +49,7 @@ export interface RunLogStreamProps {
  */
 export function RunLogStream({
   runId,
+  phaseId,
   live,
   liveLabel,
   logLabel,
@@ -50,7 +57,9 @@ export function RunLogStream({
   pct,
   tone = "run",
 }: RunLogStreamProps) {
-  const { text, done } = useRunLog(runId);
+  const runLog = useRunLog(phaseId ? null : runId);
+  const stageLog = useStageRunLogStream(runId, phaseId ?? null);
+  const { text, done } = phaseId ? stageLog : runLog;
   const body = text.replace(/\n$/, "");
   const lineCount = body.length === 0 ? 0 : body.split("\n").length;
 

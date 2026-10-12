@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { ModuleRef } from "@nestjs/core";
 import {
   type CreateEmployeeInput,
   type Employee,
@@ -8,6 +9,7 @@ import {
 } from "@zibby/contracts";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { DepartmentsStorageService } from "../departments/departments.storage.service";
+import { WorkflowRunnerService } from "../workflows/workflow-runner.service";
 import { EmployeeAllocator } from "./employee-allocator";
 import { EmployeeNamesStore } from "./employee-names.store";
 import { EmployeeDepartmentNotFoundError, EmployeeLeasedError } from "./employees.errors";
@@ -28,6 +30,11 @@ export class EmployeesService {
     private readonly allocator: EmployeeAllocator,
     /** D-022: the department a hire/transfer targets must exist in the store. */
     private readonly departments: DepartmentsStorageService,
+    /**
+     * Resolves `WorkflowRunnerService` lazily (`strict: false`): `WorkflowsModule`
+     * imports `EmployeesModule`, so injecting it directly would close a module cycle.
+     */
+    private readonly moduleRef: ModuleRef,
   ) {}
 
   async list(query: EmployeeQuery): Promise<EmployeeWithState[]> {
@@ -117,23 +124,33 @@ export class EmployeesService {
   /**
    * Project an employee to its `EmployeeWithState` shape: the position's display
    * name/title (the job title is the humanized agent id, e.g. `backend-developer`
-   * → "Backend Developer" — see `EmployeePositionSchema`'s docblock) and a derived state. `state` is scoped to
-   * what the allocator's in-memory lease table alone can tell (`working` while
-   * leased, `idle` otherwise) — the full O-04 six-state vocabulary (thinking /
-   * blocked / error / done) needs the underlying run's own status, which would
-   * pull AgentRunnerService/WorkflowRunnerService into this module; left for a
-   * follow-up (documented in the ZE-01 report) rather than widening this phase's
-   * dependency graph.
+   * → "Backend Developer" — see `EmployeePositionSchema`'s docblock) and a derived
+   * state: `idle` without a lease, `working` while leased, and `blocked` while
+   * leased to a workflow run that is `parked` (waiting on the operator/approval)
+   * or `paused-limit` — the lease stays held across those. `thinking`/`error`/`done`
+   * remain unused. `currentStage` is the leased run's current phase id (the
+   * stage-log key).
    */
+  private workflowRuns(): WorkflowRunnerService | null {
+    try {
+      return this.moduleRef.get(WorkflowRunnerService, { strict: false });
+    } catch {
+      return null; // not wired (e.g. a slim test module) — fall back to lease-only state
+    }
+  }
+
   private async withState(employee: Employee): Promise<EmployeeWithState> {
     const agent = await this.agents.get(employee.agentId).catch(() => null);
     const busy = this.allocator.busy();
     const runId = busy.get(employee.id);
     const leased = busy.has(employee.id);
+    const run = leased && runId ? this.workflowRuns()?.peekRun(runId) : undefined;
+    const waiting = run?.status === "parked" || run?.status === "paused-limit";
     return {
       ...employee,
-      state: leased ? "working" : "idle",
+      state: !leased ? "idle" : waiting ? "blocked" : "working",
       ...(leased && runId ? { currentRunId: runId } : {}),
+      ...(run?.currentStage ? { currentStage: run.currentStage } : {}),
       position: {
         id: employee.agentId,
         name: agent?.name ?? employee.agentId,

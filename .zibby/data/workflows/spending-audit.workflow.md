@@ -2,12 +2,16 @@
 name: Spending Audit
 phases:
   - id: extract
-    type: agent
-    agent: finance-analyst
+    type: tool
     consumes: task.md
     produces: extract.jsonl
-    model: haiku
-    thinking: low
+    commands:
+      - spend-audit extract
+    loop:
+      to: extract
+      maxRetries: 0
+      escalate: false
+      then: park
   - id: prepare
     type: tool
     consumes: extract.jsonl
@@ -16,12 +20,9 @@ phases:
       - spend-audit prepare extract.jsonl
     loop:
       to: extract
-      maxRetries: 2
-      escalate: true
+      maxRetries: 0
+      escalate: false
       then: park
-      escalation:
-        - model: sonnet
-          thinking: medium
   - id: classify
     type: agent
     agent: finance-analyst
@@ -135,10 +136,12 @@ checklistem, který provede operátor. Návrh: `docs/plans/spending-audit/DESIGN
 
 ## Fáze
 
-1. **extract** — výpisy z příloh (`context/attachments/`) → `extract.jsonl` (výpisy + transakce).
+1. **extract** — tool fáze: výpisy z příloh (`context/attachments/`) se čtou deterministicky
+   (Air Bank PDF přes python3 + pypdf, bez agenta); CSV zatím ne → `extract.jsonl` (výpisy +
+   transakce). Nesedí-li součty výpisu, nebo chybí PDF/pypdf, běh **zaparkuje** s důvodem.
 2. **prepare** — validace, kontrola zůstatků každého výpisu, odstranění překryvů,
-   anonymizace účtů, klíče obchodníků → `merchants.md`. Nesedí-li zůstatek, vrací na
-   **extract** s rozdílem (2× s eskalací, pak park).
+   anonymizace účtů, klíče obchodníků → `merchants.md`. Nesedí-li zůstatek, běh
+   **zaparkuje** (extract je deterministický, opakování by nic nezměnilo).
 3. **classify** — obchodník → název, kategorie, zda jde o službu → `categories.json`.
 4. **analyze** — opakované platby, zdražení, triály, duplicity, velké nákupy, kategorie a
    trend, mikrovýdaje, poplatky, cizí měna, hotovost, cashflow, 50/30/20 a srovnání s ČSÚ

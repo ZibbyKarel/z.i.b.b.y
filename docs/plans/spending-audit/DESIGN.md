@@ -28,8 +28,8 @@ computed by a deterministic CLI** (`libs/spend-audit`, bin `spend-audit`, same p
 
 | #   | Phase       | Type                                              | Consumes → Produces              | Notes                                                                                                                                                    |
 | --- | ----------- | ------------------------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `extract`   | agent `finance-analyst` (haiku)                   | task.md → `extract.jsonl`        | reads `context/attachments/*`; one `statement` line per statement + one `tx` line per transaction                                                        |
-| 2   | `prepare`   | tool `spend-audit prepare`                        | extract.jsonl → `merchants.md`   | zod-validate, reconcile balances per statement, dedupe overlapping statements, anonymise, merchant keys; mismatch → loop to `extract` (2×, then park)    |
+| 1   | `extract`   | tool `spend-audit extract`                        | task.md → `extract.jsonl`        | deterministic: python3+pypdf layout text parsed in TS (Air Bank PDF; CSV not yet), self-reconciles to the header; no agent; one `statement` line per statement + one `tx` line per transaction                                                        |
+| 2   | `prepare`   | tool `spend-audit prepare`                        | extract.jsonl → `merchants.md`   | zod-validate, reconcile balances per statement, dedupe overlapping statements, anonymise, merchant keys; mismatch → park immediately                              |
 | 3   | `classify`  | agent `finance-analyst` (sonnet)                  | merchants.md → `categories.json` | merchant key → display name, category, isService                                                                                                         |
 | 4   | `analyze`   | tool `spend-audit analyze`                        | categories.json → `findings.md`  | writes `spend/findings.json`; invalid categories → loop to `classify`                                                                                    |
 | 5   | `interview` | agent `finance-analyst` (sonnet), `approval: ask` | findings.md → `needs.md`         | ≤ 15 questions with defaults + fenced ```json decisions; operator answers via "revise with note" (`$ZIBBY_RUN_DIR/interview.note.md`), approve continues |
@@ -46,7 +46,7 @@ the run folder.
 
 ## Data model (spend/)
 
-`extract.jsonl` lines (agent output, validated by zod):
+`extract.jsonl` lines (written by `spend-audit extract`, validated by zod in `prepare`):
 
 ```
 {"kind":"statement","id":"2026-01","from":"2026-01-01","to":"2026-01-31","opening":12345.67,"closing":2345.6,"credits":50000,"debits":-60000.07}
@@ -117,8 +117,7 @@ Headline = certain + verified. Target shown separately.
 
 ## Privacy
 
-PDFs stay local (`tasks/attachments`, gitignored). Only `extract` is instructed to open them;
-this is an instruction-level guarantee (the attachments folder is visible to every stage).
+PDFs stay local (`tasks/attachments`, gitignored). Only the deterministic `extract` tool phase reads them; agents never need to (and have no Bash).
 After `prepare` all agents see anonymised data; `research` sees only the brief. Report is a
 personal-domain note, gitignored.
 

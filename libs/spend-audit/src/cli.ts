@@ -1,5 +1,6 @@
 import { analyze } from "./analyze.ts";
 import { decide } from "./decide.ts";
+import { extract } from "./extract.ts";
 import { prepare } from "./prepare.ts";
 import { render } from "./render.ts";
 import { savings } from "./savings.ts";
@@ -7,6 +8,7 @@ import type { Ctx } from "./ctx.ts";
 
 const HELP = `spend-audit <command>
 
+  extract [dir]               statement PDFs (default $ZIBBY_RUN_DIR/context/attachments) -> extract.jsonl
   prepare <extract.jsonl>     validate, reconcile, dedupe, anonymise -> merchants.md
   analyze <categories.json>   deterministic analyses -> findings.md
   decide  <needs.md>          operator decisions -> research-brief.md
@@ -14,6 +16,7 @@ const HELP = `spend-audit <command>
   render  <advice.md>         final report -> report.md
 
 State dir: $ZIBBY_RUN_DIR/spend (default ./spend). Output file is written into the cwd.
+Extract needs python3 + pypdf (pip3 install pypdf); Air Bank PDF only, CSV not supported yet.
 Env: SPEND_HOUSEHOLD_ACCOUNTS (comma list of raw account numbers flagged as household transfers).
 Invalid input: exit 1, message on stderr and in the output file.`;
 
@@ -26,6 +29,7 @@ export async function main(argv: string[], ctx: Ctx): Promise<number> {
     return 0;
   }
   const commands: Record<string, Command> = {
+    extract,
     prepare,
     analyze: (a, c) => analyze(a, c),
     decide,
