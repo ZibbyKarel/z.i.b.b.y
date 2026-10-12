@@ -24,7 +24,6 @@
     "policy": "Politika",
     "knowledge": "Znalosti",
     "ledger": "Rozpočet",
-    "system": "Systém",
     "subtab": {
       "org": {
         "map": "Mapa",
@@ -59,11 +58,20 @@
         "spend": "Útraty"
       },
       "system": {
-        "settings": "Nastavení",
-        "automations": "Automatizace",
-        "registries": "Registry"
+        "general": "Obecné",
+        "activity": "Aktivita",
+        "runtime": "Runtime",
+        "status": "Stav"
+      },
+      "registries": {
+        "positions": "Pozice",
+        "skills": "Dovednosti",
+        "mcp": "MCP",
+        "hooks": "Hooky",
+        "commands": "Příkazy"
       }
-    }
+    },
+    "registries": "Registry"
   },
   "memory": {
     "title": "Paměť",
@@ -972,8 +980,6 @@
       }
     },
     "automations": {
-      "title": "Systémové automatizace",
-      "hint": "Automatizace, které si ZIBBY sám naseeduje (např. destilace paměti). Tady je můžeš zapnout nebo vypnout; úprava rozvrhu se otevře na detailu automatizace.",
       "desc": {
         "briefing": "Sestaví ranní briefing z aktivit, běhů a paměti a doručí ho do sekce Tasky.",
         "memory-distill": "Noční průchod dokončenými běhy — levný model vydestiluje trvalé poznatky do vaultu.",
@@ -1046,19 +1052,6 @@
       "disabled": "Vypnutý"
     },
     "footer": "ZIBBY — Zestful Intuitive Brainy Butler for You",
-    "subnav": {
-      "ariaLabel": "Sekce nastavení",
-      "general": "Obecné",
-      "appearance": "Vzhled",
-      "coo": "Osobnost COO",
-      "activity": "Aktivita",
-      "automations": "Automatizace",
-      "runtime": "Běhové parametry",
-      "machine": "Stroj",
-      "status": "Stav",
-      "gates": "Pravidla schvalování",
-      "tasks": "Tasky"
-    },
     "appearance": {
       "title": "Vzhled",
       "themeLabel": "Motiv",
@@ -1695,6 +1688,8 @@
   "automations": {
     "title": "Automatizace",
     "autonomyNote": "Tady vzniká autonomie — trigger spustí běh bez vyzvání. Každá akce s vnějším efektem se ale zastaví na frontě schválení.",
+    "systemSection": "Systémové automatizace",
+    "systemHint": "Automatizace, které si ZIBBY sám naseeduje (např. destilace paměti). Tady je můžeš zapnout nebo vypnout; úprava rozvrhu se otevře na detailu automatizace.",
     "addAutomation": "Nová automatizace",
     "cronSection": "Časové triggery · cron",
     "eventSection": "Událostní triggery · event",
@@ -1842,6 +1837,8 @@
     "title": "Chat se ZIBBY",
     "close": "Zavřít",
     "newChat": "Vymazat",
+    "expand": "Zvětšit chat",
+    "collapse": "Zmenšit chat",
     "triggerLabel": "Chat",
     "triggerAria": "Otevřít chat se ZIBBY",
     "triggerTitle": "Chat se ZIBBY",
@@ -2253,17 +2250,15 @@
     "runningEmpty": "Nic neběží",
     "runningStop": "Zastavit",
     "runningRestart": "Spustit znovu",
-    "menuAriaLabel": "Více",
     "themeToDark": "Přepnout na tmavý režim",
     "themeToLight": "Přepnout na světlý režim",
-    "menuPin": "Připnout stránku",
-    "menuUnpin": "Odepnout stránku",
-    "menuSettings": "Nastavení",
-    "menuRegistries": "Registry",
     "pinnedTitle": "Připnuto · {count}",
-    "pinnedEmpty": "Připni libovolnou stránku z menu ⋮.",
+    "pinnedEmpty": "Připni libovolnou stránku tlačítkem špendlíku v podmenu.",
     "pinnedKindPage": "Stránka",
-    "pinnedUnpinAria": "Odepnout {name}"
+    "pinnedUnpinAria": "Odepnout {name}",
+    "settingsAria": "Nastavení",
+    "pagePinAria": "Připnout stránku",
+    "pageUnpinAria": "Odepnout stránku"
   },
   "orgMap": {
     "apiUnreachable": "api nedostupné",
@@ -2519,13 +2514,9 @@
     },
     "settingsSection": {
       "general": "Obecné",
-      "automations": "Automatizace",
-      "coo": "Persona COO",
       "activity": "Aktivita",
       "runtime": "Runtime",
-      "machine": "Stroj",
-      "status": "Stav",
-      "appearance": "Vzhled"
+      "status": "Stav"
     },
     "gateSection": {
       "floor": "Podlaha",

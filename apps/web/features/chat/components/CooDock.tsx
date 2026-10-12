@@ -153,7 +153,9 @@ export function CooDock() {
   return (
     <ChatDock
       closeLabel={t("close")}
+      collapseLabel={t("collapse")}
       composer={composer}
+      expandLabel={t("expand")}
       newChatLabel={t("newChat")}
       onNewChat={newChat}
       onOpenChange={setDockOpen}

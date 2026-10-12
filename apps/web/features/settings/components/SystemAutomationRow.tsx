@@ -14,7 +14,7 @@ import type { Automation } from "@zibby/contracts";
 import { nextCronRun, relativeLabel } from "../../automations/schedule";
 import { useCronLabel } from "../../automations/useCronLabel";
 
-/** Testids for a system-automation row (`/system/automations` selects via these). */
+/** Testids for a system-automation row (`/automations` selects via these). */
 export enum SystemAutomationRowTestId {
   Root = "system-automation-row",
   Toggle = "system-automation-row-toggle",
@@ -37,8 +37,8 @@ export interface SystemAutomationRowProps {
  * A system automation reduced to what's actually useful: name → schedule on
  * one line, last/next run + edit/run-now in the footer. Unlike {@link AutomationCard}
  * it skips the trigger/target tiles and the "Systémová" tag — every automation on
- * this list is already a system automation (`/system/automations` is the only
- * place they're shown), and the target duplicated the name in practice (e.g.
+ * this list is already a system automation (they sit in the
+ * dedicated system block of `/automations`), and the target duplicated the name in practice (e.g.
  * "Noční extrakce vzorů" → target "Extrakce vzorů").
  */
 export function SystemAutomationRow({

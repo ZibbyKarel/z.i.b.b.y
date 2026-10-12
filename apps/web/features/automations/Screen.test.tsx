@@ -5,6 +5,7 @@ import { fireEvent, renderWithProviders as render, screen } from "../../test/ren
 import { Screen } from "./Screen";
 import { AutomationCardTestId } from "./components/AutomationCard";
 import { AutomationFormTestId } from "./components/AutomationFormFields";
+import { SystemAutomationRowTestId } from "../settings/components/SystemAutomationRow";
 import { CommandLineTestId } from "../tasks/components/CommandLine/CommandLine";
 
 const automation: Automation = {
@@ -179,16 +180,43 @@ describe("Automations Screen", () => {
   });
 });
 
-describe("Automations Screen — system automations moved to Settings", () => {
+describe("Automations Screen — user + system automations in one list", () => {
   beforeEach(() => {
     query.automations = [automation, systemAutomation];
     query.isPending = false;
     query.isError = false;
+    update.mockClear();
+    push.mockClear();
   });
 
-  it("excludes system automations from this page — they live in System → Automations now", () => {
+  it("shows user automations as cards and system ones as rows, together", () => {
     render(<Screen />);
     expect(screen.getByText("Ranní standup")).toBeInTheDocument();
-    expect(screen.queryByText("Destilace paměti")).not.toBeInTheDocument();
+    expect(screen.getByTestId(AutomationCardTestId.Root)).toBeInTheDocument();
+    expect(screen.getByTestId(SystemAutomationRowTestId.Root)).toHaveTextContent(
+      "Destilace paměti",
+    );
+  });
+
+  it("toggles a system automation via the update mutation", () => {
+    render(<Screen />);
+    fireEvent.click(screen.getByTestId(SystemAutomationRowTestId.Toggle));
+    expect(update).toHaveBeenCalledWith({
+      params: { id: "memory-distill" },
+      body: { enabled: false },
+    });
+  });
+
+  it("system row edit navigates to the detail page", () => {
+    render(<Screen />);
+    fireEvent.click(screen.getByTestId(SystemAutomationRowTestId.Edit));
+    expect(push).toHaveBeenCalledWith("/automations/memory-distill");
+  });
+
+  it("system-only data is not an empty workspace", () => {
+    query.automations = [systemAutomation];
+    render(<Screen />);
+    expect(screen.queryByText("Zatím žádné automatizace")).not.toBeInTheDocument();
+    expect(screen.getByTestId(SystemAutomationRowTestId.Root)).toBeInTheDocument();
   });
 });

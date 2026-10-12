@@ -5,15 +5,7 @@
  * still resolves (`/system/settings/<section>` 404s until then, same posture as
  * every other freshly-added-route cast elsewhere in the app).
  */
-export const SETTINGS_SECTIONS = [
-  "general",
-  "coo",
-  "activity",
-  "runtime",
-  "machine",
-  "status",
-  "appearance",
-] as const;
+export const SETTINGS_SECTIONS = ["general", "activity", "runtime", "status"] as const;
 
 export type SettingsSectionId = (typeof SETTINGS_SECTIONS)[number];
 

@@ -1,12 +1,14 @@
 "use client";
 import type { ReactNode, Ref } from "react";
 import { useEffect, useRef, useState } from "react";
+import { cn } from "../../utils/cn";
 import { Button } from "../Button/Button";
 
 export enum ChatDockTestId {
   Root = "chat-dock-root",
   Transcript = "chat-dock-transcript",
   Header = "chat-dock-header",
+  ExpandButton = "chat-dock-expand-button",
   NewChatButton = "chat-dock-new-chat-button",
   CloseButton = "chat-dock-close-button",
   Messages = "chat-dock-messages",
@@ -31,6 +33,13 @@ export interface ChatDockProps {
   onNewChat?: () => void;
   newChatLabel?: string;
   closeLabel?: string;
+  /** Controlled expanded (larger) state — omit to let `ChatDock` manage it internally. */
+  expanded?: boolean;
+  /** Initial expanded state when uncontrolled. */
+  defaultExpanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
+  expandLabel?: string;
+  collapseLabel?: string;
   /** Any change scrolls the message list to the bottom (also on open). */
   scrollKey?: unknown;
   ref?: Ref<HTMLDivElement>;
@@ -53,11 +62,22 @@ export function ChatDock({
   onNewChat,
   newChatLabel = "Clear",
   closeLabel = "Close",
+  expanded,
+  defaultExpanded = false,
+  onExpandedChange,
+  expandLabel = "Expand",
+  collapseLabel = "Collapse",
   scrollKey,
   ref,
 }: ChatDockProps) {
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const isOpen = open ?? internalOpen;
+  const [internalExpanded, setInternalExpanded] = useState(defaultExpanded);
+  const isExpanded = expanded ?? internalExpanded;
+  const toggleExpanded = () => {
+    setInternalExpanded(!isExpanded);
+    onExpandedChange?.(!isExpanded);
+  };
   const messagesRef = useRef<HTMLDivElement>(null);
   const setOpen = (next: boolean) => {
     setInternalOpen(next);
@@ -84,19 +104,37 @@ export function ChatDock({
 
   return (
     <div
-      className="flex w-[420px] max-w-[calc(100vw-40px)] flex-col border border-ink bg-panel"
+      className={cn(
+        "flex max-w-[calc(100vw-40px)] flex-col border border-ink bg-panel",
+        // Expanded: 33% of the AppFrame dock area (never under 420px), three quarters of its height but
+        // never shorter than the normal dock (pane basis 440px grows into the 75%), capped to the area.
+        isOpen && isExpanded ? "max-h-full min-h-3/4 w-[max(420px,33%)]" : "w-[420px]",
+      )}
       data-testid={ChatDockTestId.Root}
       ref={ref}
     >
       {isOpen && (
         <div
-          className="flex h-[440px] flex-col border-b border-line"
+          className={cn(
+            "flex flex-col border-b border-line",
+            isExpanded ? "min-h-0 grow basis-[440px]" : "h-[440px]",
+          )}
           data-testid={ChatDockTestId.Transcript}
         >
           <div
             className="flex items-center gap-2.5 border-b border-line px-3.5 py-3"
             data-testid={ChatDockTestId.Header}
           >
+            <Button
+              aria-label={isExpanded ? collapseLabel : expandLabel}
+              aria-pressed={isExpanded}
+              data-testid={ChatDockTestId.ExpandButton}
+              icon={isExpanded ? "collapse" : "expand"}
+              intent="ghost"
+              onClick={toggleExpanded}
+              size="sm"
+              title={isExpanded ? collapseLabel : expandLabel}
+            />
             <div className="flex-1" />
             {onNewChat && (
               <Button

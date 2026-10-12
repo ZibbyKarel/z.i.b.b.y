@@ -43,8 +43,8 @@ export interface AppHeaderProps {
   themeToggle?: ReactNode;
   /** Notification bell slot, trailing cluster. */
   notifications?: ReactNode;
-  /** ⋮ overflow menu slot (an `app`-composed `MenuButton variant="bordered"`),
-   *  trailing cluster — last. Carries page-pin + settings/registries actions. */
+  /** Trailing action slot — last in the trailing cluster. The app composes a
+   *  standalone icon button here (the settings cog). */
   menu?: ReactNode;
   /** Search trigger label — the control itself is built in and always shows
    *  `⌘K`. Omit `onSearchClick` to not render the trigger at all — the
@@ -62,13 +62,12 @@ export interface AppHeaderProps {
  * DS.md §5/§8 app shell top bar — a fixed `LAYOUT.headerHeight` (56px) band,
  * `--panel` background, a bottom hairline. Leading brand mark (linking home,
  * ZB-01) + auto-width section nav, a centered search trigger (`flex:1`
- * region, ZB-06), and a trailing operator/active-count/usage/notifications/⋮
+ * region, ZB-06), and a trailing operator/active-count/usage/notifications/action
  * cluster. Every trailing slot the app owns is an opaque `ReactNode`
  * (domain-neutral, no `next/link` import here) except the search trigger,
  * which `AppHeader` renders itself so every screen gets the identical `⌘K`
- * affordance for free (DS.md §8 "Search trigger"). Settings/Registries now
- * live in the `menu` slot's ⋮ overflow (an app-composed `MenuButton
- * variant="bordered"`) instead of a dedicated top-bar control.
+ * affordance for free (DS.md §8 "Search trigger"). The `menu` slot holds the
+ * app-composed settings cog.
  */
 export function AppHeader({
   wordmark,

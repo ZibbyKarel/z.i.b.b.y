@@ -188,7 +188,7 @@ describe("buildCommandPaletteIndex", () => {
       expect.objectContaining({
         id: "security-scan",
         group: "automations",
-        href: "/system/automations",
+        href: "/automations",
       }),
     );
   });

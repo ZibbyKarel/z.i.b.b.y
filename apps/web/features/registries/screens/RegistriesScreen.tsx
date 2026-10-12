@@ -9,11 +9,9 @@ import {
   type DataTableColumn,
   Stack,
   StatusDot,
-  SubNav,
   Tag,
   Typography,
 } from "@zibby/design-system";
-import type { SubNavLinkComponent } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -42,7 +40,7 @@ import { AddSkillModal } from "../../skills/components/AddSkillModal/AddSkillMod
 import { useCreateSkillMutation } from "../../skills/mutations";
 import { useSkillCategoriesQuery, useSkillsQuery } from "../../skills/queries";
 import { useRegistryBindingsQuery } from "../queries";
-import { REGISTRY_KINDS, type RegistryKindParam } from "../registryKinds";
+import type { RegistryKindParam } from "../registryKinds";
 
 export interface RegistriesScreenProps {
   kind: RegistryKindParam;
@@ -96,8 +94,7 @@ function BoundInCell({
 
 /**
  * `/system/registries/[kind]` (ZB-11, ROUTE-MAP §1/§3): a `DataTable` per global
- * library kind (skills, mcp, hooks, commands), horizontal `SubNav` to switch
- * kinds, and a "Bound in" column derived from `GET /api/registries/bindings`
+ * library kind (skills, mcp, hooks, commands), kind switching lives in the shell's sub-nav row (`AppShell`), and a "Bound in" column derived from `GET /api/registries/bindings`
  * (O-09 — read-only, no stored binding); positions derive theirs from the
  * employees hired into each department. Row click navigates to the unchanged
  * `/system/registries/<kind>/[id]` detail form; creation reuses each domain's
@@ -126,15 +123,6 @@ export function RegistriesScreen({ kind, openCreateOnMount }: RegistriesScreenPr
               {t(`add.${kind}`)}
             </Button>
           </Stack>
-
-          <SubNav
-            items={REGISTRY_KINDS.map((k) => ({
-              href: `/system/registries/${k}`,
-              label: t(`kinds.${k}`),
-              active: k === kind,
-            }))}
-            linkComponent={Link as SubNavLinkComponent}
-          />
 
           {kind === "positions" && <PositionsTable />}
           {kind === "skills" && <SkillsTable bindings={bindings?.skills} />}

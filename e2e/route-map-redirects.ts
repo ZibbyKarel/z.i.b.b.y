@@ -46,7 +46,12 @@ export const ROUTE_MAP_REDIRECTS: ReadonlyArray<[from: string, to: string]> = [
   ["/hooks", "/system/registries/hooks"],
   ["/commands", "/system/registries/commands"],
   ["/settings", "/system/settings/general"],
-  ["/system/settings/automations", "/system/automations"],
+  ["/system/settings/automations", "/automations"],
+  ["/system/automations", "/automations"],
+  // Appearance / machine / COO persona merged into Settings → General.
+  ["/system/settings/appearance", "/system/settings/general"],
+  ["/system/settings/machine", "/system/settings/general"],
+  ["/system/settings/coo", "/system/settings/general"],
   // Signals became automation triggers.
   ["/signals", "/automations"],
   ["/signals/new", "/automations"],
@@ -62,11 +67,11 @@ export const QUERY_REDIRECTS: ReadonlyArray<[from: string, to: string]> = [
   // `/system/settings/<section>` route (ROUTE-MAP §3).
   ["/settings?tab=preferences", "/system/settings/general"],
   ["/settings?tab=tasks", "/system/settings/general"],
-  ["/settings?tab=automations", "/system/automations"],
-  ["/settings?tab=chat", "/system/settings/coo"],
+  ["/settings?tab=automations", "/automations"],
+  ["/settings?tab=chat", "/system/settings/general"],
   ["/settings?tab=activity", "/system/settings/activity"],
   ["/settings?tab=runtime", "/system/settings/runtime"],
-  ["/settings?tab=machine", "/system/settings/machine"],
+  ["/settings?tab=machine", "/system/settings/general"],
   ["/settings?tab=selfKnowledge", "/knowledge/distill"],
   ["/settings?tab=system", "/system/settings/status"],
 ];

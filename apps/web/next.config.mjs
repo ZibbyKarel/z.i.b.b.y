@@ -78,12 +78,19 @@ const nextConfig = {
       { source: "/hooks/:id", destination: "/system/registries/hooks/:id", permanent: true },
       { source: "/commands", destination: "/system/registries/commands", permanent: true },
       { source: "/commands/:id", destination: "/system/registries/commands/:id", permanent: true },
-      // System automations moved out of settings to their own System tab.
+      // Automations (user + system) live on the single top-level `/automations`.
       {
         source: "/system/settings/automations",
-        destination: "/system/automations",
+        destination: "/automations",
         permanent: true,
       },
+      { source: "/system/automations", destination: "/automations", permanent: true },
+      // Appearance, machine and COO persona now live on Settings → General.
+      ...["appearance", "machine", "coo"].map((section) => ({
+        source: `/system/settings/${section}`,
+        destination: "/system/settings/general",
+        permanent: true,
+      })),
       // ZB-13: every `/settings(?tab=)` case (ROUTE-MAP §3) moved to a
       // page-level redirect (`app/(company)/settings/page.tsx`) instead of a
       // static `has: query` rule here — Next.js's `redirects()` forwards an

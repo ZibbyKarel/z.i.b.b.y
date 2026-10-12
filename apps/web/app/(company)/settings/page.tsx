@@ -20,11 +20,11 @@ const TAB_DESTINATION: Record<string, Route> = {
   // validate a literal path against it, so each one needs an explicit cast.
   preferences: "/system/settings/general" as Route,
   tasks: "/system/settings/general" as Route,
-  automations: "/system/automations" as Route,
-  chat: "/system/settings/coo" as Route,
+  automations: "/automations",
+  chat: "/system/settings/general" as Route,
   activity: "/system/settings/activity" as Route,
   runtime: "/system/settings/runtime" as Route,
-  machine: "/system/settings/machine" as Route,
+  machine: "/system/settings/general" as Route,
   selfKnowledge: "/knowledge/distill",
   system: "/system/settings/status" as Route,
 };

@@ -24,7 +24,6 @@
     "policy": "Policy",
     "knowledge": "Knowledge",
     "ledger": "Ledger",
-    "system": "System",
     "subtab": {
       "org": {
         "map": "Map",
@@ -59,11 +58,20 @@
         "spend": "Spend"
       },
       "system": {
-        "settings": "Settings",
-        "automations": "Automations",
-        "registries": "Registries"
+        "general": "General",
+        "activity": "Activity",
+        "runtime": "Runtime",
+        "status": "Status"
+      },
+      "registries": {
+        "positions": "Positions",
+        "skills": "Skills",
+        "mcp": "MCP",
+        "hooks": "Hooks",
+        "commands": "Commands"
       }
-    }
+    },
+    "registries": "Registries"
   },
   "memory": {
     "title": "Memory",
@@ -972,8 +980,6 @@
       }
     },
     "automations": {
-      "title": "System automations",
-      "hint": "Automations ZIBBY seeds itself (e.g. memory distillation). You can enable or disable them here; rescheduling opens the automation's detail page.",
       "desc": {
         "briefing": "Assembles the morning briefing from activity, runs and memory, delivered to Tasks.",
         "memory-distill": "Nightly pass over finished runs; a cheap model distils durable learnings into the vault.",
@@ -1046,19 +1052,6 @@
       "disabled": "Disabled"
     },
     "footer": "ZIBBY — Zestful Intuitive Brainy Butler for You",
-    "subnav": {
-      "ariaLabel": "Settings sections",
-      "general": "General",
-      "appearance": "Appearance",
-      "coo": "COO persona",
-      "activity": "Activity",
-      "automations": "Automations",
-      "runtime": "Runtime",
-      "machine": "Machine",
-      "status": "Status",
-      "gates": "Approval rules",
-      "tasks": "Tasks"
-    },
     "appearance": {
       "title": "Appearance",
       "themeLabel": "Theme",
@@ -1695,7 +1688,9 @@
   "automations": {
     "title": "Automations",
     "autonomyNote": "This is where autonomy begins — a trigger starts a run unprompted. Every external-effect action still stops at the approval gate.",
-    "addAutomation": "Add automation",
+    "systemSection": "System automations",
+    "systemHint": "Automations ZIBBY seeds itself (e.g. memory distillation). You can enable or disable them here; rescheduling opens the automation's detail page.",
+    "addAutomation": "New automation",
     "cronSection": "Time triggers · cron",
     "eventSection": "Event triggers · event",
     "emptyTitle": "No automations yet",
@@ -1842,6 +1837,8 @@
     "title": "Chat with ZIBBY",
     "close": "Close",
     "newChat": "Clear",
+    "expand": "Expand chat",
+    "collapse": "Collapse chat",
     "triggerLabel": "Chat",
     "triggerAria": "Open chat with ZIBBY",
     "triggerTitle": "Chat with ZIBBY",
@@ -2253,17 +2250,15 @@
     "runningEmpty": "Nothing is running",
     "runningStop": "Stop",
     "runningRestart": "Restart",
-    "menuAriaLabel": "More",
     "themeToDark": "Switch to dark mode",
     "themeToLight": "Switch to light mode",
-    "menuPin": "Pin page",
-    "menuUnpin": "Unpin page",
-    "menuSettings": "Settings",
-    "menuRegistries": "Registries",
     "pinnedTitle": "Pinned · {count}",
-    "pinnedEmpty": "Pin any page from the ⋮ menu.",
+    "pinnedEmpty": "Pin any page with the pin button in the sub-menu.",
     "pinnedKindPage": "Page",
-    "pinnedUnpinAria": "Unpin {name}"
+    "pinnedUnpinAria": "Unpin {name}",
+    "settingsAria": "Settings",
+    "pagePinAria": "Pin page",
+    "pageUnpinAria": "Unpin page"
   },
   "orgMap": {
     "apiUnreachable": "API unreachable",
@@ -2519,13 +2514,9 @@
     },
     "settingsSection": {
       "general": "General",
-      "automations": "Automations",
-      "coo": "COO persona",
       "activity": "Activity",
       "runtime": "Runtime",
-      "machine": "Machine",
-      "status": "Status",
-      "appearance": "Appearance"
+      "status": "Status"
     },
     "gateSection": {
       "floor": "Floor",

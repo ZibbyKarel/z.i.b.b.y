@@ -1,14 +1,14 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * ZB-01: the ZibbyCorp shell's section nav — `AppHeader`'s 7-section `Tabs` bar
+ * ZB-01: the ZibbyCorp shell's section nav — `AppHeader`'s 8-section `Tabs` bar
  * (`state/config.ts`'s `SECTIONS`) plus the `SubNav` sub-tab strip for the active
  * section. Every section's `href` is today's "closest existing route" fallback
  * (its own screen phase hasn't shipped), so this only asserts the shell chrome
  * itself: every section tab is present, is reachable, and drives the sub-nav —
  * not the (mostly unbuilt) destination screens.
  */
-test("the section nav renders all seven sections and navigates on click", async ({ page }) => {
+test("the section nav renders all eight sections and navigates on click", async ({ page }) => {
   await page.goto("/org");
 
   const nav = page.getByTestId("app-header-nav");
@@ -21,7 +21,8 @@ test("the section nav renders all seven sections and navigates on click", async 
     ["policy", "Policy"],
     ["knowledge", "Knowledge"],
     ["ledger", "Ledger"],
-    ["system", "System"],
+    ["automations", "Automations"],
+    ["registries", "Registries"],
   ];
   for (const [id, label] of sections) {
     await expect(nav.getByTestId(`tabs-tab-${id}`)).toHaveText(label);
@@ -34,6 +35,19 @@ test("the section nav renders all seven sections and navigates on click", async 
   // (ZB-04/06 shipped every `work` sub-tab at its real `/work/*` home).
   await nav.getByTestId("tabs-tab-work").click();
   await expect(page).toHaveURL(/\/work\/tasks$/);
+  await nav.getByTestId("tabs-tab-automations").click();
+  await expect(page).toHaveURL(/\/automations$/);
+  // System is not a top tab — settings sits behind the header cog.
+  await expect(nav.getByTestId("tabs-tab-system")).toHaveCount(0);
+});
+
+test("the header cog opens Settings and the sub-nav lists its sections", async ({ page }) => {
+  await page.goto("/org");
+  await page.getByTestId("app-shell-settings-cog").click();
+  await expect(page).toHaveURL(/\/system\/settings\/general$/);
+  const subnav = page.getByTestId("subnav-root");
+  await expect(subnav).toContainText("General");
+  await expect(subnav).toContainText("Status");
 });
 
 test("the sub-nav lists the active section's tabs and offers + New task", async ({ page }) => {

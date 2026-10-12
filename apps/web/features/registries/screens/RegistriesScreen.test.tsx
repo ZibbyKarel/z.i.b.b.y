@@ -91,21 +91,11 @@ describe("RegistriesScreen — /system/registries/[kind]", () => {
     render(<RegistriesScreen kind="positions" />);
     expect(screen.getByText("Kevin")).toBeInTheDocument();
     expect(screen.getByText("DEV")).toBeInTheDocument();
-    expect(screen.getByTestId(`${SubNavTestId.Item}-/system/registries/positions`)).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
   });
 
-  it("marks the active kind in the sub-nav", () => {
+  it("leaves kind navigation to the shell sub-nav (no inline SubNav)", () => {
     render(<RegistriesScreen kind="skills" />);
-    expect(screen.getByTestId(`${SubNavTestId.Item}-/system/registries/skills`)).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-    expect(screen.getByTestId(`${SubNavTestId.Item}-/system/registries/mcp`)).not.toHaveAttribute(
-      "aria-current",
-    );
+    expect(screen.queryByTestId(SubNavTestId.Root)).toBeNull();
   });
 
   it("openCreateOnMount pre-opens the create dialog", () => {

@@ -12,8 +12,6 @@ import {
   ApprovalCard,
   Button,
   LimitBar,
-  MenuButton,
-  type MenuButtonEntry,
   Rail,
   Stack,
   SubNav,
@@ -51,12 +49,14 @@ import { SECTIONS, type SectionId, type SubTabConfig, sectionForPath } from "../
 
 export enum AppShellTestId {
   NewTask = "app-shell-new-task",
+  SettingsCog = "app-shell-settings-cog",
+  PinToggle = "app-shell-pin-toggle",
 }
 
-/** Top nav sections, minus `system` (spec step 1) — its own route group keeps
- *  working via `sectionForPath`/`SECTIONS` (the sub-nav still shows its tabs);
- *  it just never gets a clickable top tab, and `/system/*` highlights nothing
- *  up there (`Tabs` tolerates a `value` matching no rendered `Tab`). */
+/** Top nav sections, minus `system` — settings is reached through the header
+ *  cog (`SettingsCog`), its tabs still fill the sub-nav row, and
+ *  `/system/settings/*` highlights no top tab (`Tabs` tolerates a `value`
+ *  matching no rendered `Tab`). */
 const NAV_SECTIONS = SECTIONS.filter((section) => section.id !== "system");
 
 /** `/work/<kind>/<id>` (and its sub-tabs) — a company/project/team detail
@@ -162,13 +162,62 @@ function activeSubNavHref(
   return activeSubNavTab(tabs, pathname)?.tab.href ?? null;
 }
 
+/** Header cog → Settings → General. A plain ghost button (DS `Button` renders a
+ *  `<button>`, no link mode, hence `router.push`); `aria-current` marks `/system/settings/**`. */
+function SettingsCog() {
+  const t = useTranslations("shell");
+  const pathname = usePathname();
+  const router = useRouter();
+  const onSettings = pathname === "/system/settings" || pathname.startsWith("/system/settings/");
+  return (
+    <Button
+      aria-current={onSettings ? "page" : undefined}
+      aria-label={t("settingsAria")}
+      data-testid={AppShellTestId.SettingsCog}
+      icon="gear"
+      intent="ghost"
+      onClick={() => router.push("/system/settings/general" as Route)}
+      size="sm"
+    />
+  );
+}
+
+/** Sub-nav page-pin toggle — pins unpinned pages via `PinPageDialog`
+ *  (`onPinRequested`), unpins immediately. */
+function PagePinToggle({
+  currentHref,
+  onPinRequested,
+}: {
+  currentHref: string;
+  onPinRequested: () => void;
+}) {
+  const t = useTranslations("shell");
+  const { isPagePinned, unpinPage } = usePagePins();
+  const pinned = isPagePinned(currentHref);
+  return (
+    <Button
+      aria-label={t(pinned ? "pageUnpinAria" : "pagePinAria")}
+      aria-pressed={pinned}
+      data-testid={AppShellTestId.PinToggle}
+      icon="pin"
+      intent={pinned ? "secondary" : "ghost"}
+      onClick={() => (pinned ? unpinPage(currentHref) : onPinRequested())}
+      size="sm"
+    />
+  );
+}
+
 function SectionSubNav({
   active,
   trail,
+  currentHref,
+  onPinRequested,
 }: {
   active: SectionId;
   /** The page-breadcrumb portal target, rendered after the tabs. */
   trail: ReactNode;
+  currentHref: string;
+  onPinRequested: () => void;
 }) {
   const t = useTranslations("nav");
   const tShell = useTranslations("shell");
@@ -188,13 +237,15 @@ function SectionSubNav({
         <>
           {/* Spec step 5: a company/project/team detail page (never /new) gets
            *  a "+ PIN"/"PINNED" toggle before "+ NEW TASK". */}
-          {entity && (
+          {entity ? (
             <SubnavPinButton
               href={entity.href}
               id={entity.id}
               key={entity.href}
               kind={entity.kind}
             />
+          ) : (
+            <PagePinToggle currentHref={currentHref} onPinRequested={onPinRequested} />
           )}
           {/* ZB-04b: "+ NEW TASK" opens the dedicated `/work/tasks/new` page
            *  (Option+N does the same from anywhere; the classify-driven dialog
@@ -289,37 +340,6 @@ function NeedsYouRail({ onOpenApproval }: { onOpenApproval: (id: string) => void
   );
 }
 
-/** The ⋮ overflow menu (`AppHeader`'s `menu` slot, spec step 2) — the page-pin
- *  toggle (opens `PinPageDialog` to pin, unpins immediately), then SETTINGS/
- *  REGISTRIES (today's System sub-tab hrefs, `SECTIONS` — the top tab is gone
- *  but these routes still work, spec step 1). */
-function useHeaderMenu(currentHref: string, onPinRequested: () => void): MenuButtonEntry[] {
-  const t = useTranslations("shell");
-  const { isPagePinned, unpinPage } = usePagePins();
-  const pinned = isPagePinned(currentHref);
-  const system = SECTIONS.find((s) => s.id === "system");
-  const settingsHref = system?.tabs.find((tab) => tab.id === "settings")?.href ?? system?.href;
-  const registriesHref = system?.tabs.find((tab) => tab.id === "registries")?.href ?? system?.href;
-
-  return [
-    pinned
-      ? {
-          id: "pin",
-          label: t("menuUnpin"),
-          trailing: "●",
-          onSelect: () => unpinPage(currentHref),
-        }
-      : { id: "pin", label: t("menuPin"), trailing: "+", onSelect: onPinRequested },
-    { id: "divider-1", divider: true },
-    ...(settingsHref
-      ? [{ id: "settings", label: t("menuSettings"), trailing: "⚙", href: settingsHref }]
-      : []),
-    ...(registriesHref
-      ? [{ id: "registries", label: t("menuRegistries"), href: registriesHref }]
-      : []),
-  ];
-}
-
 function AppShellChrome({ children }: { children: ReactNode }) {
   const t = useTranslations("common");
   const tShell = useTranslations("shell");
@@ -341,7 +361,6 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   useNewTaskPageHotkey();
 
   const currentHref = pinHrefFor(pathname, searchParams.toString());
-  const menuItems = useHeaderMenu(currentHref, () => setPinDialogOpen(true));
   const [dockActive, setDockActive] = useDockState();
   const { data: approvals } = useApprovalsQuery();
   const liveCount = useLiveRuns().length;
@@ -356,14 +375,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
             homeHref="/org"
             limits={trailing.limits}
             linkComponent={NavLink}
-            menu={
-              <MenuButton
-                ariaLabel={tShell("menuAriaLabel")}
-                items={menuItems}
-                linkComponent={NavLink}
-                variant="bordered"
-              />
-            }
+            menu={<SettingsCog />}
             nav={<SectionNav active={active} />}
             notifications={<NotificationBell />}
             onSearchClick={() => setPaletteOpen(true)}
@@ -400,7 +412,14 @@ function AppShellChrome({ children }: { children: ReactNode }) {
           />
         }
         skipLinkLabel={t("skipToContent")}
-        subnav={<SectionSubNav active={active} trail={<div ref={setCrumbSlot} />} />}
+        subnav={
+          <SectionSubNav
+            active={active}
+            currentHref={currentHref}
+            onPinRequested={() => setPinDialogOpen(true)}
+            trail={<div ref={setCrumbSlot} />}
+          />
+        }
       >
         {children}
         <ApprovalSheet approvalId={approvalSheet.approvalId} onClose={approvalSheet.close} />

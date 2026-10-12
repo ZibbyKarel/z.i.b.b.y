@@ -41,6 +41,14 @@ export const Overview: Story = {
   ),
 };
 
+export const Expanded: Story = {
+  render: () => (
+    <div className="flex h-[640px] items-end">
+      <ChatDock defaultExpanded defaultOpen composer={composer} transcript={transcript} />
+    </div>
+  ),
+};
+
 export const Playground: Story = {
   args: { composer },
   render: (args) => {

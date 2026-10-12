@@ -22,7 +22,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 // ZB-01: `AppShell` is rebuilt over the ZibbyCorp DS `AppFrame` — a header
-// (section nav, ⋮ menu, limits), the PINNED/"NEEDS YOU"/RUNNING rails and the
+// (section nav, settings cog, limits), the PINNED/"NEEDS YOU"/RUNNING rails and the
 // page content, plus the same provider stack (catalog/new-task/chat) as
 // before. `usePathname`/`useRouter`/`useSearchParams` come from the global
 // `next/navigation` mock in `vitest.setup.tsx` (`usePathname` → `/chat`,
@@ -56,7 +56,7 @@ describe("AppShell", () => {
     expect(link).toHaveAttribute("href", `#${APP_FRAME_MAIN_CONTENT_ID}`);
   });
 
-  it("renders the header's section nav without a SYSTEM tab, and no operator/active-count slot", () => {
+  it("renders the header's section nav with automations/registries but no SYSTEM tab, and no operator/active-count slot", () => {
     renderWithProviders(
       <AppShell>
         <div>obsah stránky</div>
@@ -64,6 +64,8 @@ describe("AppShell", () => {
     );
     expect(screen.getByTestId(AppHeaderTestId.Nav)).toBeInTheDocument();
     expect(screen.queryByTestId(`${TabsTestId.Tab}-system`)).toBeNull();
+    expect(screen.getByTestId(`${TabsTestId.Tab}-automations`)).toBeInTheDocument();
+    expect(screen.getByTestId(`${TabsTestId.Tab}-registries`)).toBeInTheDocument();
     expect(screen.queryByTestId(AppHeaderTestId.Operator)).toBeNull();
     expect(screen.queryByTestId(AppHeaderTestId.ActiveCount)).toBeNull();
   });
@@ -77,24 +79,42 @@ describe("AppShell", () => {
     expect(screen.getByTestId(AppHeaderTestId.ThemeToggle)).toBeInTheDocument();
   });
 
-  it("renders the ⋮ overflow menu in the header", () => {
+  it("renders a labelled settings cog instead of a ⋮ menu", () => {
     renderWithProviders(
       <AppShell>
         <div>obsah stránky</div>
       </AppShell>,
     );
     expect(screen.getByTestId(AppHeaderTestId.Menu)).toBeInTheDocument();
+    expect(screen.getByTestId(AppShellTestId.SettingsCog)).toHaveAccessibleName("Nastavení");
+    expect(screen.queryByTestId(MenuButtonTestId.Trigger)).toBeNull();
   });
 
-  it("opens the pin dialog for the current page from the ⋮ menu's PIN PAGE item", async () => {
+  it("marks the settings cog current on /system/settings/**", () => {
+    mockPath = "/system/settings/status";
+    try {
+      renderWithProviders(
+        <AppShell>
+          <div />
+        </AppShell>,
+      );
+      expect(screen.getByTestId(AppShellTestId.SettingsCog)).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
+    } finally {
+      mockPath = "/chat";
+    }
+  });
+
+  it("opens the pin dialog for the current page from the sub-nav pin button", async () => {
     renderWithProviders(
       <AppShell>
         <div>obsah stránky</div>
       </AppShell>,
     );
     expect(screen.queryByTestId(PinPageDialogTestId.Name)).toBeNull();
-    await userEvent.click(screen.getByTestId(MenuButtonTestId.Trigger));
-    await userEvent.click(screen.getByText("Připnout stránku"));
+    await userEvent.click(screen.getByTestId(AppShellTestId.PinToggle));
     expect(screen.getByTestId(PinPageDialogTestId.Name)).toBeInTheDocument();
   });
 
@@ -147,8 +167,8 @@ describe("AppShell", () => {
   });
 
   it.each([
-    ["/system/registries/hooks/foo", "/system/registries/skills"],
-    ["/system/settings/appearance", "/system/settings/general"],
+    ["/system/registries/hooks/foo", "/system/registries/hooks"],
+    ["/system/settings/status", "/system/settings/status"],
   ])("highlights the owning sub-tab for %s", (path, tabHref) => {
     mockPath = path;
     try {
@@ -182,6 +202,28 @@ describe("AppShell", () => {
         </AppShell>,
       );
       expect(screen.queryByTestId(AppShellTestId.NewTask)).toBeNull();
+    } finally {
+      mockPath = "/chat";
+    }
+  });
+});
+
+describe("AppShell top menu sections", () => {
+  it.each([
+    ["/automations", "automations"],
+    ["/system/registries/skills", "registries"],
+  ])("highlights the %s top tab", (path, id) => {
+    mockPath = path;
+    try {
+      renderWithProviders(
+        <AppShell>
+          <div />
+        </AppShell>,
+      );
+      expect(screen.getByTestId(`${TabsTestId.Tab}-${id}`)).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
     } finally {
       mockPath = "/chat";
     }

@@ -28,7 +28,8 @@ export interface SectionConfig {
    *  updated as each section ships: org→/org (ZB-02), work→/work/tasks (ZB-04/06),
    *  activity→/activity/log (ZB-07), policy→/policy/approvals (ZB-08),
    *  knowledge→/knowledge/vault (ZB-09), ledger→/ledger/budgets (ZB-10),
-   *  system→/system/settings/general (ZB-11). */
+   *  system→/system/settings/general (ZB-11); automations and registries
+   *  were split out of `system` into their own top tabs. */
   href: Route;
   tabs: readonly SubTabConfig[];
 }
@@ -107,21 +108,35 @@ export const SECTIONS = [
     ],
   },
   {
+    id: "automations",
+    glyph: "spark",
+    href: "/automations" as Route,
+    // No sub-tabs: the sub-nav row still carries pin + "+ NEW TASK".
+    tabs: [],
+  },
+  {
+    id: "registries",
+    glyph: "server",
+    href: "/system/registries/skills" as Route,
+    tabs: [
+      { id: "positions", href: "/system/registries/positions" as Route },
+      { id: "skills", href: "/system/registries/skills" as Route },
+      { id: "mcp", href: "/system/registries/mcp" as Route },
+      { id: "hooks", href: "/system/registries/hooks" as Route },
+      { id: "commands", href: "/system/registries/commands" as Route },
+    ],
+  },
+  {
+    // Not a top tab — reached through the header cog (`AppShell`); its tabs
+    // fill the sub-nav row on `/system/settings/*`.
     id: "system",
     glyph: "gear",
     href: "/system/settings/general" as Route,
     tabs: [
-      {
-        id: "settings",
-        href: "/system/settings/general" as Route,
-        matchPrefix: "/system/settings",
-      },
-      { id: "automations", href: "/system/automations" as Route },
-      {
-        id: "registries",
-        href: "/system/registries/skills" as Route,
-        matchPrefix: "/system/registries",
-      },
+      { id: "general", href: "/system/settings/general" as Route },
+      { id: "activity", href: "/system/settings/activity" as Route },
+      { id: "runtime", href: "/system/settings/runtime" as Route },
+      { id: "status", href: "/system/settings/status" as Route },
     ],
   },
 ] as const satisfies readonly SectionConfig[];
@@ -138,12 +153,13 @@ export type SectionId = (typeof SECTIONS)[number]["id"];
 const PATH_SECTION: readonly (readonly [prefix: string, section: SectionId])[] = [
   ["/agents", "org"],
   ["/workflows", "work"],
-  ["/automations", "org"],
+  ["/automations", "automations"],
   ["/chat", "org"],
   // ZB-03 (D-015/D-009): the employee directory + department pages (org) and
   // the moved position registry (system).
   ["/org", "org"],
   ["/policy", "policy"],
+  ["/system/registries", "registries"],
   ["/system", "system"],
   // ZB-06: goals/companies/teams/projects moved under /work/*; the bare
   // top-level prefixes are kept as redirect targets only (D-009), not routes.

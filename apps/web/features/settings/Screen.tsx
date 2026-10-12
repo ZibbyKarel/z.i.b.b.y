@@ -4,18 +4,14 @@ import {
   ButtonGroup,
   Container,
   Divider,
-  Grid,
   Icon,
   Panel,
   Stack,
   StatusDot,
-  SubNav,
   Toggle,
   Typography,
 } from "@zibby/design-system";
-import type { SubNavLinkComponent } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
@@ -27,7 +23,7 @@ import { ChatSection } from "./components/ChatSection";
 import { MachineSection } from "./components/MachineSection";
 import { SystemSection } from "./components/SystemSection";
 import { WatcherRows } from "./components/WatcherRows";
-import { SETTINGS_SECTIONS, type SettingsSection } from "./settingsSections";
+import type { SettingsSection } from "./settingsSections";
 
 type Locale = "cs" | "en";
 
@@ -99,8 +95,9 @@ export interface SettingsScreenProps {
 
 /**
  * `/system/settings/[section]` (ZB-11, ROUTE-MAP §3) — the settings sections
- * router. Each former `/settings?tab=` is now its own route; the "gates" and
- * "mandate" tabs already moved to `/policy/gates` (ZB-08), "automations" to its own `/system/automations`
+ * router; the section tabs live in the shell's shared sub-nav row. `general`
+ * stacks General, Appearance, Machine and COO persona. Each former `/settings?tab=` is now its own route; the "gates" and
+ * "mandate" tabs already moved to `/policy/gates` (ZB-08), "automations" to the top-level `/automations`
  * page, "selfKnowledge" to
  * `/knowledge/distill` (ZB-09), and the per-project "tasks" level mapping to
  * `/work/projects/[id]/roadmap` (ZB-06) — only the GLOBAL DEFAULT level mapping
@@ -131,91 +128,72 @@ export function SettingsScreen({ section }: SettingsScreenProps) {
         <Stack direction="col" gap="250">
           <Typography type="title">{t("title")}</Typography>
 
-          <Grid gap="300" sidebar="left">
-            <Container shrink={false}>
-              <SubNav
-                items={SETTINGS_SECTIONS.map((id) => ({
-                  href: `/system/settings/${id}`,
-                  label: t(`subnav.${id}`),
-                  active: id === section,
-                }))}
-                linkComponent={Link as SubNavLinkComponent}
-                orientation="responsive"
-              />
-            </Container>
-
-            <Container grow minW0>
-              {section === "general" && (
-                <Stack gap="250">
-                  <Panel header={t("preferences")} padding="300">
-                    <Stack gap="200">
-                      <SettingRow
-                        control={
-                          <ButtonGroup
-                            ariaLabel={t("language")}
-                            onChange={(v) => setLocale(v as Locale)}
-                            options={[
-                              { id: "cs", label: "Čeština" },
-                              { id: "en", label: "English" },
-                            ]}
-                            value={locale}
-                          />
-                        }
-                        hint={t("languageHint")}
-                        label={t("language")}
+          {section === "general" && (
+            <Stack gap="250">
+              <Panel header={t("preferences")} padding="300">
+                <Stack gap="200">
+                  <SettingRow
+                    control={
+                      <ButtonGroup
+                        ariaLabel={t("language")}
+                        onChange={(v) => setLocale(v as Locale)}
+                        options={[
+                          { id: "cs", label: "Čeština" },
+                          { id: "en", label: "English" },
+                        ]}
+                        value={locale}
                       />
-                      <Divider />
-                      <SettingRow
-                        control={
-                          <Toggle
-                            checked={caffeinate}
-                            label={t("caffeinate")}
-                            onChange={setCaffeinateValue}
-                          />
-                        }
-                        hint={t("caffeinateHint")}
+                    }
+                    hint={t("languageHint")}
+                    label={t("language")}
+                  />
+                  <Divider />
+                  <SettingRow
+                    control={
+                      <Toggle
+                        checked={caffeinate}
                         label={t("caffeinate")}
+                        onChange={setCaffeinateValue}
                       />
-                    </Stack>
-                  </Panel>
-                  <LevelMappingSection />
+                    }
+                    hint={t("caffeinateHint")}
+                    label={t("caffeinate")}
+                  />
                 </Stack>
-              )}
+              </Panel>
+              <LevelMappingSection />
+              <AppearanceSection />
+              <MachineSection />
+              <ChatSection />
+            </Stack>
+          )}
 
-              {section === "appearance" && <AppearanceSection />}
-              {section === "coo" && <ChatSection />}
-              {section === "activity" && <ActivitySection />}
-              {section === "runtime" && <SystemSection />}
-              {section === "machine" && <MachineSection />}
+          {section === "activity" && <ActivitySection />}
+          {section === "runtime" && <SystemSection />}
 
-              {section === "status" && (
-                <Panel header={t("system")} padding="300">
-                  <Stack gap="150">
-                    <InfoRow label={t("daemon")} value={DAEMON} />
+          {section === "status" && (
+            <Panel header={t("system")} padding="300">
+              <Stack gap="150">
+                <InfoRow label={t("daemon")} value={DAEMON} />
+                <Divider />
+                <InfoRow label={t("host")} value={HOST} />
+                <Divider />
+                <InfoRow label={t("uptime")} value={health ? formatUptime(health.uptime) : "—"} />
+                <Divider />
+                <InfoRow
+                  label={t("status")}
+                  tone={isSuccess ? "ok" : undefined}
+                  value={isSuccess ? t("online") : t("offline")}
+                />
+                {health?.watchers && health.watchers.length > 0 && (
+                  <>
                     <Divider />
-                    <InfoRow label={t("host")} value={HOST} />
-                    <Divider />
-                    <InfoRow
-                      label={t("uptime")}
-                      value={health ? formatUptime(health.uptime) : "—"}
-                    />
-                    <Divider />
-                    <InfoRow
-                      label={t("status")}
-                      tone={isSuccess ? "ok" : undefined}
-                      value={isSuccess ? t("online") : t("offline")}
-                    />
-                    {health?.watchers && health.watchers.length > 0 && (
-                      <>
-                        <Divider />
-                        <WatcherRows watchers={health.watchers} />
-                      </>
-                    )}
-                  </Stack>
-                </Panel>
-              )}
-            </Container>
-          </Grid>
+                    <WatcherRows watchers={health.watchers} />
+                  </>
+                )}
+              </Stack>
+            </Panel>
+          )}
 
           <Stack align="center">
             <Stack align="center" direction="row" gap="75">

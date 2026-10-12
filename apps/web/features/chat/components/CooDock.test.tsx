@@ -272,6 +272,14 @@ describe("CooDock (ZB-12)", () => {
     expect(voiceState.off).toHaveBeenCalled();
   });
 
+  it("passes localized expand/collapse labels to the header expand button", async () => {
+    renderDock();
+    const button = screen.getByTestId(ChatDockTestId.ExpandButton);
+    expect(button).toHaveAccessibleName("Zvětšit chat");
+    await userEvent.setup().click(button);
+    expect(button).toHaveAccessibleName("Zmenšit chat");
+  });
+
   it("keeps the mic idle-gated: voice is not suspended while idle", () => {
     renderDock();
     expect(voiceOptions.at(-1)?.suspended).toBe(false);

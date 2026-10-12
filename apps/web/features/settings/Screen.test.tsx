@@ -32,12 +32,9 @@ describe("SettingsScreen — /system/settings/[section]", () => {
     expect(screen.getByText("Nastavení systému")).toBeInTheDocument();
   });
 
-  it("marks the current section active in the sub-nav and shows its content", () => {
+  it("shows the general section's content without its own sub-nav", () => {
     render(<SettingsScreen section="general" />);
-    expect(screen.getByTestId("subnav-item-/system/settings/general")).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    expect(screen.queryByTestId("subnav-root")).toBeNull();
     expect(screen.getByText("Jazyk rozhraní")).toBeInTheDocument();
   });
 
@@ -46,13 +43,13 @@ describe("SettingsScreen — /system/settings/[section]", () => {
     expect(screen.getByText("Mac")).toBeInTheDocument();
   });
 
-  it("renders the appearance section's theme control", () => {
+  it("aggregates the appearance theme control on the general section", () => {
     // `AppearanceSection` reads `useAppearance()` — `AppearanceProvider` isn't
     // part of the shared `renderWithProviders` shell, so this one test brings
     // its own (it also happens to supply the real `DesignSystemProvider`).
     render(
       <AppearanceProvider>
-        <SettingsScreen section="appearance" />
+        <SettingsScreen section="general" />
       </AppearanceProvider>,
     );
     expect(screen.getByTestId("segmented-control-item-system")).toBeInTheDocument();
@@ -75,7 +72,7 @@ describe("SettingsScreen — /system/settings/[section]", () => {
   });
 
   it("shows the butler footer on every section", () => {
-    render(<SettingsScreen section="machine" />);
+    render(<SettingsScreen section="activity" />);
     expect(screen.getByText("ZIBBY — Zestful Intuitive Brainy Butler for You")).toBeInTheDocument();
   });
 });

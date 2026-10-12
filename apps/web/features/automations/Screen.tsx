@@ -1,7 +1,15 @@
 "use client";
 
 import type { Automation } from "@zibby/contracts";
-import { Button, Container, Icon, type IconName, Stack, Typography } from "@zibby/design-system";
+import {
+  Button,
+  Container,
+  Grid,
+  Icon,
+  type IconName,
+  Stack,
+  Typography,
+} from "@zibby/design-system";
 import { Collection } from "@/components/Collection/Collection";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -11,6 +19,7 @@ import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { SectionLabel } from "../../components/SectionLabel/SectionLabel";
+import { SystemAutomationRow } from "../settings/components/SystemAutomationRow";
 import { useAgentsQuery } from "../agents/queries";
 import { useWorkflowsQuery } from "../workflows/queries";
 import { AutomationCard } from "./components/AutomationCard";
@@ -26,9 +35,11 @@ export function Screen() {
   const t = useTranslations("automations");
   const router = useRouter();
   const automationsQuery = useAutomationsQuery();
-  // System automations live on System → Automations — this page is the
-  // operator's own automations only.
-  const automations = (automationsQuery.data ?? []).filter((a) => !a.system);
+  // One list for everything: the operator's own automations as cards, the
+  // server-seeded system ones in their own block below.
+  const all = automationsQuery.data ?? [];
+  const automations = all.filter((a) => !a.system);
+  const systemAutomations = all.filter((a) => a.system);
   const { data: agents = [] } = useAgentsQuery();
   const { data: workflows = [] } = useWorkflowsQuery();
   const create = useCreateAutomationMutation();
@@ -110,7 +121,7 @@ export function Screen() {
         </Typography>
       </Stack>
 
-      {automations.length === 0 ? (
+      {all.length === 0 ? (
         <EmptyState
           actionLabel={t("addAutomation")}
           description={t("emptyDescription")}
@@ -146,6 +157,38 @@ export function Screen() {
                 </Stack>
               </SectionLabel>
               <Stack gap="150">{eventAutomations.map(renderCard)}</Stack>
+            </Container>
+          )}
+          {systemAutomations.length > 0 && (
+            <Container>
+              <SectionLabel>
+                <Stack inline align="center" direction="row" gap="50">
+                  <Icon name="gear" size="sm" tone="accent" /> {t("systemSection")}
+                </Stack>
+              </SectionLabel>
+              <Stack gap="150">
+                <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
+                  {t("systemHint")}
+                </Typography>
+                <Grid gap="150" lg={2}>
+                  {systemAutomations.map((automation) => (
+                    <SystemAutomationRow
+                      automation={automation}
+                      description={automation.description}
+                      key={automation.id}
+                      onEdit={() => router.push(`/automations/${automation.id}`)}
+                      onToggle={() =>
+                        update.mutate({
+                          params: { id: automation.id },
+                          body: { enabled: !automation.enabled },
+                        })
+                      }
+                      onTrigger={() => trigger.mutate({ params: { id: automation.id }, body: {} })}
+                      triggering={trigger.isPending}
+                    />
+                  ))}
+                </Grid>
+              </Stack>
             </Container>
           )}
         </Stack>
