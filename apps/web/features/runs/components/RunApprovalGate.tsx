@@ -19,34 +19,12 @@ import { HIGH_RISK_TYPES, SEVERITY, gateTitleKey } from "../../approvals/approva
 import { ApprovalPreview } from "../../approvals/components/ApprovalPreview";
 import { useApproveMutation, useRejectMutation } from "../../approvals";
 import { useReviseMutation } from "../../approvals/mutations";
-import { useWorkflowsQuery } from "../../workflows";
-import { useRunArtifactQuery } from "../queries/useRunArtifactQuery";
-import type { RunView } from "../run";
+import { type CheckpointRun, useCheckpointArtifact } from "../useCheckpointArtifact";
 
 export interface RunApprovalGateProps {
   approval: DashboardApproval;
   /** The gated run — lets a workflow stage checkpoint show the phase's output inline. */
-  run?: Pick<RunView, "kind" | "runId" | "owner" | "stageRuns">;
-}
-
-/**
- * The artifact a workflow stage checkpoint asks the operator to review: the
- * `produces` of the phase that just finished (the last recorded stage — a revise
- * re-runs it and appends it again). Null when it isn't a checkpoint or the phase
- * declares no output.
- */
-function useCheckpointArtifact(
-  approval: DashboardApproval,
-  run: RunApprovalGateProps["run"],
-): string | null {
-  const isCheckpoint = run?.kind === "workflow" && gateTitleKey(approval) === "stage-approval";
-  const { data: workflows } = useWorkflowsQuery();
-  const phaseId = run?.stageRuns?.at(-1)?.phaseId;
-  const produces = isCheckpoint
-    ? workflows?.find((w) => w.id === run.owner)?.phases.find((p) => p.id === phaseId)?.produces
-    : undefined;
-  const { data } = useRunArtifactQuery(run?.runId ?? "", produces ?? "", Boolean(produces));
-  return produces ? (data?.content ?? null) : null;
+  run?: CheckpointRun;
 }
 
 /**

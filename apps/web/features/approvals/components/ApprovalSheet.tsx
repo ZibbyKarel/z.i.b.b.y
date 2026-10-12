@@ -23,6 +23,8 @@ import { useState } from "react";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
+import { useTaskRunQuery } from "../../runs/queries/useTaskRunQuery";
+import { useCheckpointArtifact } from "../../runs/useCheckpointArtifact";
 import { useTaskQuery } from "../../tasks/queries";
 import {
   HIGH_RISK_TYPES,
@@ -52,7 +54,8 @@ function toDsHunks(hunks: { h: string; lines: [kind: "add" | "del" | "ctx", text
  * other deep link can open it over any page. Single-click approve everywhere
  * (D-014/O-13 overrides the spec's HoldButton-if-high-risk) — `highRisk` is
  * shown only as a `Tag` marker. A workflow stage checkpoint also offers "request
- * changes": a required note sends the step back to re-run instead of failing the run.
+ * changes": a required note sends the step back to re-run instead of failing the run,
+ * shown next to the phase's output so questions can be answered from the sheet.
  */
 export function ApprovalSheet({
   approvalId,
@@ -100,6 +103,12 @@ export function ApprovalSheet({
   };
 
   const gateKey = approval ? gateTitleKey(approval) : null;
+  // A stage checkpoint shows the finished phase's output (e.g. interview questions)
+  // so the operator can answer right here instead of opening the run.
+  const { data: gatedRun } = useTaskRunQuery(
+    gateKey === "stage-approval" ? (approval?.runId ?? null) : null,
+  );
+  const checkpoint = useCheckpointArtifact(approval, gatedRun);
   const origin = approval ? approvalOrigin(approval, task) : null;
   const body = !approvalId ? null : isPending ? (
     <QueryLoading />
@@ -168,6 +177,12 @@ export function ApprovalSheet({
       />
 
       {approval.consequence && <Typography type="text">{approval.consequence}</Typography>}
+
+      {checkpoint && (
+        <Container data-testid="checkpoint-output" maxHeight="50vh" overflow="auto">
+          <Markdown escapeHtml source={checkpoint} />
+        </Container>
+      )}
 
       {approval.preview?.kind === "message" && (
         <Container maxHeight="50vh" overflow="auto">

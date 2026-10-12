@@ -32,6 +32,7 @@ const { hooks } = vi.hoisted(() => ({
     approve: vi.fn(),
     reject: vi.fn(),
     revise: vi.fn(),
+    checkpoint: null as string | null,
   },
 }));
 
@@ -42,6 +43,12 @@ vi.mock("../mutations", () => ({
   useReviseMutation: () => ({ mutate: hooks.revise, isPending: false }),
 }));
 vi.mock("../../tasks/queries", () => ({ useTaskQuery: () => hooks.task }));
+vi.mock("../../runs/queries/useTaskRunQuery", () => ({
+  useTaskRunQuery: () => ({ data: undefined }),
+}));
+vi.mock("../../runs/useCheckpointArtifact", () => ({
+  useCheckpointArtifact: () => hooks.checkpoint,
+}));
 
 describe("ApprovalSheet (ZB-08 / D-014)", () => {
   const onClose = vi.fn();
@@ -52,6 +59,7 @@ describe("ApprovalSheet (ZB-08 / D-014)", () => {
     hooks.reject.mockClear();
     hooks.approval = { data: APPROVAL, isPending: false, isError: false, refetch: vi.fn() };
     hooks.task = { data: undefined };
+    hooks.checkpoint = null;
   });
 
   it("renders nothing when no approval id is set", () => {
@@ -115,7 +123,19 @@ describe("ApprovalSheet (ZB-08 / D-014)", () => {
 
   it("hides request-changes on a non-checkpoint approval", async () => {
     render(<ApprovalSheet approvalId="appr-1" onClose={onClose} />);
-    expect(screen.queryByRole("button", { name: "Připomínky" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Odpovědět / připomínky" })).toBeNull();
+  });
+
+  it("shows a stage checkpoint's output so its questions can be answered in the sheet", () => {
+    hooks.approval = {
+      data: { ...APPROVAL, kind: "workflow-gate", action: "stage-approval" },
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    };
+    hooks.checkpoint = "# Questions\n\nWhich months?";
+    render(<ApprovalSheet approvalId="appr-1" onClose={onClose} />);
+    expect(screen.getByTestId("checkpoint-output")).toHaveTextContent("Which months?");
   });
 
   it("request changes on a stage checkpoint requires a note, then revises", async () => {
@@ -126,10 +146,10 @@ describe("ApprovalSheet (ZB-08 / D-014)", () => {
       refetch: vi.fn(),
     };
     render(<ApprovalSheet approvalId="appr-1" onClose={onClose} />);
-    await userEvent.click(screen.getByRole("button", { name: "Připomínky" }));
-    const confirm = screen.getByRole("button", { name: "Vrátit k úpravě" });
+    await userEvent.click(screen.getByRole("button", { name: "Odpovědět / připomínky" }));
+    const confirm = screen.getByRole("button", { name: "Odeslat" });
     expect(confirm).toBeDisabled();
-    await userEvent.type(screen.getByLabelText("Co upravit"), "přegeneruj stranu 7");
+    await userEvent.type(screen.getByLabelText("Odpověď nebo připomínky"), "přegeneruj stranu 7");
     await userEvent.click(confirm);
     expect(hooks.revise).toHaveBeenCalledWith(
       { params: { id: "appr-1" }, body: { note: "přegeneruj stranu 7" } },
