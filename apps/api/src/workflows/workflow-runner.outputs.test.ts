@@ -227,6 +227,29 @@ describe("WorkflowRunnerService — output sinks", () => {
     expect(d.signalBus.emit).not.toHaveBeenCalled();
   });
 
+  it("file sink → vault: keeps the source's frontmatter and strips the --- block from the body", async () => {
+    const workflow: Workflow = {
+      id: "audit",
+      phases: [docPhase],
+      outputs: [{ type: "file", from: "docs.md", dest: "vault", to: "audit-fm" }],
+      instructions: "x",
+      complexity: "standard",
+    };
+    const { service, d } = await makeService(dir, workflow);
+    const run = await seedRun(service, dir, workflow, {
+      a: { phaseId: "dok", file: "docs.md", content: "---\ndomain: personal\n---\n# Audit\n" },
+    });
+
+    await runOutputs(service, run, workflow);
+
+    expect(d.vault.createNote).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "audit-fm", frontmatter: { domain: "personal" } }),
+    );
+    const call = d.vault.createNote.mock.calls[0]?.[0] as { body: string };
+    expect(call.body).toContain("# Audit");
+    expect(call.body).not.toContain("---");
+  });
+
   it("file sink → vault: a FAILED delivery records no artifact", async () => {
     const workflow: Workflow = {
       id: "audit",

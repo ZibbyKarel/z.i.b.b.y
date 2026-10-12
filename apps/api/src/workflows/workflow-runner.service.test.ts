@@ -1900,6 +1900,43 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
       expect(path.isAbsolute(await fs.readlink(consumesLink))).toBe(false);
       expect(await fs.readFile(consumesLink, "utf8")).toBe("chain content here");
     });
+
+    it("Spending audit: attachments are copied into context/attachments/ and listed in the first phase's input; unsafe names are skipped", async () => {
+      (
+        h.service as unknown as { workflows: { get: ReturnType<typeof vi.fn> } }
+      ).workflows.get.mockResolvedValue({
+        id: "release",
+        phases: [twoPhaseWorkflow.phases[0]],
+        instructions: "ship",
+      });
+      scriptRunStage(async (_phaseId, cwd) => {
+        await fs.writeFile(path.join(cwd, "out.md"), "done", "utf8");
+      });
+      const attDir = path.join(dir, "att-src");
+      await fs.mkdir(attDir, { recursive: true });
+      await fs.writeFile(path.join(attDir, "a.pdf"), "pdf-bytes", "utf8");
+      await fs.writeFile(path.join(dir, "evil.txt"), "nope", "utf8");
+
+      const run = await h.service.start(
+        "release",
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        "brief",
+        undefined,
+        { dir: attDir, names: ["a.pdf", "../evil.txt", "sub/x.txt"] },
+      );
+      await vi.waitFor(() => expect(run.status).toBe("done"));
+
+      const copied = path.join(run.cwd, "context", "attachments");
+      expect(await fs.readdir(copied)).toEqual(["a.pdf"]);
+      expect(await fs.readFile(path.join(copied, "a.pdf"), "utf8")).toBe("pdf-bytes");
+      expect(await fs.readFile(path.join(run.cwd, "context", "input.md"), "utf8")).toBe(
+        "brief\n\n## Přílohy\n- context/attachments/a.pdf",
+      );
+    });
   });
 
   describe("Phase 77 — clone-if-missing dispatch (ProjectLocalService.resolveForRun)", () => {

@@ -84,6 +84,9 @@ importers:
       '@zibby/product-factory':
         specifier: workspace:*
         version: link:libs/product-factory
+      '@zibby/spend-audit':
+        specifier: workspace:*
+        version: link:libs/spend-audit
       concurrently:
         specifier: ^9.1.2
         version: 9.2.3
@@ -336,6 +339,12 @@ importers:
       sharp:
         specifier: ^0.34.5
         version: 0.34.5
+      zod:
+        specifier: ^4.0.0
+        version: 4.4.3
+
+  libs/spend-audit:
+    dependencies:
       zod:
         specifier: ^4.0.0
         version: 4.4.3

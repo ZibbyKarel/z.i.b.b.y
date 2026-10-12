@@ -1464,8 +1464,8 @@ export class TaskSchedulerService
       // the workflow runner takes lease + fuse slot per stage itself.
       const wait = await this.workflowStaffing(target.id);
       if (wait) return { queued: true, target, classification, ...wait };
-      // Task 8: attachments are intentionally NOT passed to a workflow target in v1 —
-      // the workflow runner has no attachments seam yet (documented deferred gap).
+      // Spending audit: the task's attachments ride along — the runner copies them into
+      // the run's context/attachments/ and lists them in the first phase's input.
       // The task's text is the workflow's first-phase input (its `consumes`, e.g. a
       // brief) — without it every stage runs blind to what the operator asked for.
       const run = await this.workflowRunner.start(
@@ -1476,6 +1476,8 @@ export class TaskSchedulerService
         undefined,
         output,
         text,
+        undefined,
+        runAttachments,
       );
       return { runRef: run.workflowRunId, target, classification };
     }

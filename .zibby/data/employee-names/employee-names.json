@@ -255,7 +255,8 @@
   },
   {
     "id": "empname_ted",
-    "name": "Ted"
+    "name": "Ted",
+    "employeeId": "employee_finance-analyst"
   },
   {
     "id": "empname_tim",

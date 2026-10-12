@@ -1,0 +1,12 @@
+{
+  "name": "@zibby/spend-audit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "spend-audit": "./bin/spend-audit.mjs"
+  },
+  "dependencies": {
+    "zod": "^4.0.0"
+  }
+}

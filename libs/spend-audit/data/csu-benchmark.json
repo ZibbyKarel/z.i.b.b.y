@@ -1,0 +1,21 @@
+{
+  "year": 2025,
+  "source": "ČSÚ, Statistika rodinných účtů (SRÚ 2025), dataset ZUR11A; annual Kč per person divided by 12",
+  "url": "https://data.csu.gov.cz/opendata/sady/ZUR11A/distribuce/csv",
+  "householdType": "Domácnosti se 2 dětmi (na osobu)",
+  "perPersonMonthly": {
+    "01": 2752.17,
+    "02": 315.17,
+    "03": 733.67,
+    "04": 3134.08,
+    "05": 801.92,
+    "06": 463.42,
+    "07": 1670.58,
+    "08": 889.08,
+    "09": 1730.75,
+    "10": 317.42,
+    "11": 1490.67,
+    "12": 561.83,
+    "13": 706.67
+  }
+}

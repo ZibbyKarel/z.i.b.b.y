@@ -3,6 +3,7 @@ import { EventEmitter } from "node:events";
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import matter from "gray-matter";
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import {
   type ArtifactKind,
@@ -23,6 +24,7 @@ import {
   WorkflowRunSchema,
   type Workspace,
 } from "@zibby/contracts";
+import { type RunAttachments } from "../agents/agent-runner.service";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { ApprovalsService } from "../approvals/approvals.service";
@@ -348,6 +350,12 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
      * remaining spend (the child shares the parent's cap — it never gets more).
      */
     child?: { parentRunId: string; maxCostUsd?: number },
+    /**
+     * Spending audit: the originating task's uploaded files. Copied into
+     * `<run>/context/attachments/` (symlinked into every stage) and listed in the
+     * first phase's input. Absent for every other caller.
+     */
+    attachments?: RunAttachments,
   ): Promise<WorkflowRun> {
     // Throws WorkflowNotFoundError / InvalidWorkflowIdError when unknown → 404.
     const workflow = await this.workflows.get(workflowId);
@@ -385,6 +393,27 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     // chain input) so every stage's `context` symlink resolves to a real folder.
     const contextDir = path.join(root, "context");
     await fs.mkdir(contextDir, { recursive: true });
+
+    // Spending audit: copy the task's attachments into context/attachments/ and
+    // list them for the first phase. Names come from storage, but a separator or
+    // `..` is still refused (skip + warn) so a name can never escape the folder.
+    if (attachments?.names.length) {
+      const copied: string[] = [];
+      const attDir = path.join(contextDir, "attachments");
+      await fs.mkdir(attDir, { recursive: true });
+      for (const name of attachments.names) {
+        if (name !== path.basename(name) || name.includes("\\") || name === ".." || name === ".") {
+          this.log.warn("attachment skipped — unsafe name", { workflowRunId, name });
+          continue;
+        }
+        await fs.copyFile(path.join(attachments.dir, name), path.join(attDir, name));
+        copied.push(name);
+      }
+      if (copied.length) {
+        const section = `## Přílohy\n${copied.map((n) => `- context/attachments/${n}`).join("\n")}`;
+        input = input === undefined ? section : `${input}\n\n${section}`;
+      }
+    }
 
     const firstPhase = workflow.phases[0];
     const run: WorkflowRun = {
@@ -1582,13 +1611,25 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     }
     if (output.dest === "vault") {
       // A durable second-brain artifact. Replace on re-delivery (idempotent re-run).
+      // Spending audit: keep the source's own frontmatter (domain, tags, ...) instead
+      // of dumping the whole file — `---` block included — into the body.
+      const parsed = matter(content);
+      const frontmatter = Object.keys(parsed.data).length ? parsed.data : undefined;
       const delivered = await this.vault
-        .createNote({ id: output.to, tier: "knowledge", body: content })
+        .createNote({
+          id: output.to,
+          tier: "knowledge",
+          body: parsed.content,
+          ...(frontmatter ? { frontmatter } : {}),
+        })
         .then(() => true)
         .catch(async (error) => {
           if (error instanceof DuplicateNoteError) {
             return this.vault
-              .updateNote(output.to, { body: content })
+              .updateNote(output.to, {
+                body: parsed.content,
+                ...(frontmatter ? { frontmatter } : {}),
+              })
               .then(() => true)
               .catch(() => false);
           }

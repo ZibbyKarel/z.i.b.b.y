@@ -33,6 +33,7 @@
     ".next",
     "worktrees",
     ".claude/worktrees",
-    "libs/product-factory"
+    "libs/product-factory",
+    "libs/spend-audit"
   ]
 }

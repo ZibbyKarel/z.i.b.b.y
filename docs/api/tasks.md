@@ -61,6 +61,7 @@ Body: {
                               # today only the roadmap gate. See "Routing text" below.
   paths?: string[]            # files / directories (max 64)
   attachmentSetId?: string    # a previously-uploaded attachment set (POST /api/tasks/attachments)
+                              # a workflow target gets it in <run>/context/attachments/
   scheduledAt?: number         # epoch ms; absent or in the past → immediate dispatch
   output?: TaskOutput          # what happens to the finished work (PR / file / void).
                                # Absent = inherit (a workflow target keeps its own

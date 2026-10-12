@@ -126,3 +126,6 @@ z-i-b-b-y
 .zibby/backups/
 design/ZibbyCorp.zip
 .zibby/data/_backup-*
+
+# Spending audit: the report is a personal-finance note — the knowledge tier is tracked, this note never is.
+.zibby/data/vault/knowledge/spending-audit*.md

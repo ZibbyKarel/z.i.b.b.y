@@ -132,9 +132,9 @@ schema (`pr` / `file` / `void`).
 > created from the New Task dialog. `target` (the @-mention) is optional: when
 > present it bypasses classification (an explicit override); when absent the
 > classifier/orchestrator-fallback picks a destination at fire time. As with an
-> ordinary task, attachments only flow to an agent/orchestrator/goal
-> destination — a workflow/department target carries neither (a
-> pre-existing runner gap, not new to automations). An attachment set
+> ordinary task, attachments flow to an agent/orchestrator/goal destination and,
+> for a workflow/department target, are copied into the run's
+> `context/attachments/` and listed in the first phase's input. An attachment set
 > referenced by a `task`-target automation is exempted from the tasks
 > attachment-sweep's 24h TTL (it never becomes a `ScheduledTask` — and thus
 > isn't "referenced" the ordinary way — until the automation actually fires);

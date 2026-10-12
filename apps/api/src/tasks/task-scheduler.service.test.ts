@@ -406,6 +406,26 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     expect(String((lastArg as { dir: string }).dir)).toContain(attachmentSetId);
   });
 
+  it("passes attachments to the workflow dispatch (Spending audit)", async () => {
+    const { attachmentSetId } = await attachmentStorage.save([
+      { originalname: "a.pdf", size: 2, mimetype: "application/pdf", buffer: Buffer.from("hi") },
+    ]);
+    await service.createTask(
+      {
+        text: "use it",
+        attachmentSetId,
+        target: { kind: "workflow", id: "release", name: "Release" },
+      },
+      undefined,
+      undefined,
+      undefined,
+      false,
+    );
+    const lastArg = workflowRunner.start.mock.calls.at(-1)?.at(-1);
+    expect(lastArg).toMatchObject({ names: ["a.pdf"] });
+    expect(String((lastArg as { dir: string }).dir)).toContain(attachmentSetId);
+  });
+
   it("removes attachment sets older than 24h that no task references", async () => {
     // Attachment storage's root is real (ZIBBY_DATA_DIR-scoped, isolated per test
     // FILE not per test) — clear any sets left behind by earlier tests in this file
@@ -527,6 +547,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       undefined,
       undefined,
       expect.any(String),
+      undefined,
+      undefined,
     );
     expect(result.task.target).toEqual({ kind: "workflow", id: "release", name: "Release" });
   });
@@ -651,6 +673,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       undefined,
       undefined,
       expect.any(String),
+      undefined,
+      undefined,
     );
 
     workflowListener?.(
@@ -960,6 +984,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         undefined,
         undefined,
         expect.any(String),
+        undefined,
+        undefined,
       );
       // The resolved target IS a concrete workflow target — a department target
       // never reaches persistence (its "via <department>" attribution rides on the
@@ -1008,6 +1034,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         undefined,
         undefined,
         expect.any(String),
+        undefined,
+        undefined,
       );
     });
 
@@ -1045,6 +1073,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         undefined,
         undefined,
         expect.any(String),
+        undefined,
+        undefined,
       );
     });
 
@@ -1236,6 +1266,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         undefined,
         { type: "pr" },
         expect.any(String),
+        undefined,
+        undefined,
       );
     });
 
@@ -1294,6 +1326,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         undefined,
         { type: "pr" },
         expect.any(String),
+        undefined,
+        undefined,
       );
     });
 
@@ -1434,6 +1468,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         undefined,
         undefined,
         expect.any(String),
+        undefined,
+        undefined,
       );
       expect(result.task.target).toEqual({
         kind: "workflow",
