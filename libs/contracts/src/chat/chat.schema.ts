@@ -126,6 +126,17 @@ export const ChatTranscriptSchema = z.object({
 });
 export type ChatTranscript = z.infer<typeof ChatTranscriptSchema>;
 
+/** One row of the chat history sidebar — a past conversation, newest first. */
+export const ChatConversationSummarySchema = z.object({
+  conversationId: z.string(),
+  /** The first operator turn (truncated) — the conversation's de-facto title. */
+  title: z.string(),
+  messageCount: z.number().int().nonnegative(),
+  /** ISO timestamp of the last message. */
+  updatedAt: z.string(),
+});
+export type ChatConversationSummary = z.infer<typeof ChatConversationSummarySchema>;
+
 export const SendChatMessageBodySchema = z.object({
   /** Omit to use (or create) the single active conversation. */
   conversationId: z.string().optional(),

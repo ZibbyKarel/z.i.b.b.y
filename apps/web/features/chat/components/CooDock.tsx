@@ -9,6 +9,7 @@ import { useCallback, useEffect } from "react";
 import { CommandLine, type ScopeKind } from "../../tasks/components/CommandLine/CommandLine";
 import { useChat } from "../ChatContext";
 import { useCooChat } from "../hooks/useCooChat";
+import { ChatHistorySidebar } from "./ChatHistorySidebar";
 import { ChatTranscript } from "./ChatTranscript";
 import { VoiceStatusStrip } from "./VoiceStatusStrip";
 import { VoiceToggleButton } from "./VoiceToggleButton";
@@ -161,6 +162,8 @@ export function CooDock() {
       onOpenChange={setDockOpen}
       open={dockOpen}
       scrollKey={`${messages.length}:${stream.text.length}:${thinking}`}
+      sidebar={<ChatHistorySidebar />}
+      sidebarLabel={t("history.toggle")}
       targetChip={targetChip}
       transcript={transcript}
     />

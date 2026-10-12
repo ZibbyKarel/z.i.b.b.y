@@ -1,7 +1,12 @@
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import { type ChatMessage, ChatMessageSchema, type ChatTranscript } from "@zibby/contracts";
+import {
+  type ChatConversationSummary,
+  type ChatMessage,
+  ChatMessageSchema,
+  type ChatTranscript,
+} from "@zibby/contracts";
 import {
   collisionResistantId,
   ensureDir,
@@ -13,6 +18,9 @@ import type { AttachmentSetRefProvider } from "../tasks/attachment-set-ref-provi
 
 /** DI token for the directory holding per-conversation chat transcripts. */
 export const CHAT_DIR = "CHAT_DIR";
+
+/** Longest title a history row carries (the first operator turn, truncated). */
+const TITLE_MAX = 80;
 
 /** Sidecar meta for one conversation: the threaded `claude` session id lives here. */
 interface ConversationMeta {
@@ -100,6 +108,33 @@ export class ChatTranscriptStore implements AttachmentSetRefProvider {
   ): Promise<void> {
     const meta = (await this.readMeta(conversationId)) ?? this.freshMeta(conversationId, now);
     await this.writeMeta({ ...meta, sessionId, updatedAt: now.toISOString() });
+  }
+
+  /**
+   * Past conversations for the history sidebar, newest first. Empty threads are
+   * skipped; `q` keeps only threads where some message's text contains it
+   * (case-insensitive).
+   */
+  async listConversations(q?: string): Promise<ChatConversationSummary[]> {
+    // ponytail: reads every transcript per call — fine for one operator's history,
+    // add a summary index if it grows to thousands of threads.
+    const needle = q?.trim().toLowerCase();
+    const out: ChatConversationSummary[] = [];
+    for (const conversationId of await this.listConversationIds()) {
+      const messages = await this.readMessages(conversationId);
+      const last = messages.at(-1);
+      if (!last) continue;
+      if (needle && !messages.some((m) => m.text.toLowerCase().includes(needle))) continue;
+      const first = messages.find((m) => m.role === "user") ?? messages[0];
+      const title = (first?.text ?? "").replace(/\s+/g, " ").trim();
+      out.push({
+        conversationId,
+        title: title.length > TITLE_MAX ? `${title.slice(0, TITLE_MAX - 1)}…` : title,
+        messageCount: messages.length,
+        updatedAt: last.at,
+      });
+    }
+    return out.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }
 
   /** Every conversation id with a transcript on disk (newest intake order not implied). */

@@ -12,7 +12,7 @@ import { ChatTranscriptStore } from "./chat-transcript.store";
 
 /**
  * Chat HTTP surface. The ts-rest handlers cover the request/response routes
- * (`POST /chat/messages`, `GET /chat/transcript`); the streaming of assistant
+ * (`POST /chat/messages`, `GET /chat/transcript`, `GET /chat/conversations`); the streaming of assistant
  * tokens lives on a raw `@Sse()` route (`GET /api/chat/stream`) because ts-rest
  * doesn't model event streams — same split as the task-run log tail. The client
  * opens the SSE first, then POSTs; tokens for its conversation arrive live.
@@ -53,6 +53,10 @@ export class ChatController {
         const conversationId = query.conversationId ?? (await this.store.ensureConversation());
         return { status: 200, body: await this.store.readTranscript(conversationId) };
       },
+      listConversations: async ({ query }) => ({
+        status: 200 as const,
+        body: await this.store.listConversations(query.q),
+      }),
     });
   }
 

@@ -1939,6 +1939,13 @@
       "chat": "Chat",
       "task": "Run a task",
       "note": "Add a note"
+    },
+    "history": {
+      "toggle": "Recent conversations",
+      "search": "Search conversations",
+      "empty": "No conversations yet.",
+      "noMatch": "Nothing found.",
+      "untitled": "Untitled conversation"
     }
   },
   "departments": {

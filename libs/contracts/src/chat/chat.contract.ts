@@ -2,6 +2,7 @@ import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { ErrorSchema } from "../common.schema";
 import {
+  ChatConversationSummarySchema,
   ChatTranscriptSchema,
   SendChatMessageBodySchema,
   SendChatMessageResultSchema,
@@ -33,6 +34,14 @@ export const chatContract = c.router(
       query: z.object({ conversationId: z.string().optional() }),
       responses: { 200: ChatTranscriptSchema },
       summary: "Read the conversation transcript (pure read)",
+    },
+    listConversations: {
+      method: "GET",
+      path: "/chat/conversations",
+      /** `q` — case-insensitive substring match over every message's text. */
+      query: z.object({ q: z.string().optional() }),
+      responses: { 200: z.array(ChatConversationSummarySchema) },
+      summary: "List past conversations, newest first (pure read)",
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },

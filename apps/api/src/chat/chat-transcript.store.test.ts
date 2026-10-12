@@ -114,4 +114,27 @@ describe("ChatTranscriptStore", () => {
       await expect(empty.referencedSetIds()).resolves.toEqual([]);
     });
   });
+
+  it("lists non-empty conversations newest first, titled by the first user turn, filtered by q", async () => {
+    await store.appendMessage("old", msg({ id: "a0", role: "assistant", text: "briefing" }));
+    await store.appendMessage(
+      "old",
+      msg({ id: "u0", text: "Deploy  the\nAPI", at: "2026-06-23T10:01:00.000Z" }),
+    );
+    await store.appendMessage(
+      "new",
+      msg({ id: "u1", text: "faktura", at: "2026-06-24T09:00:00.000Z" }),
+    );
+    await store.ensureConversation("empty");
+
+    const all = await store.listConversations();
+    expect(all.map((c) => c.conversationId)).toEqual(["new", "old"]);
+    expect(all[1]).toEqual({
+      conversationId: "old",
+      title: "Deploy the API",
+      messageCount: 2,
+      updatedAt: "2026-06-23T10:01:00.000Z",
+    });
+    expect((await store.listConversations("BRIEF")).map((c) => c.conversationId)).toEqual(["old"]);
+  });
 });

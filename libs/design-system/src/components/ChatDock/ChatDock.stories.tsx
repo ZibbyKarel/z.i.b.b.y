@@ -49,6 +49,19 @@ export const Expanded: Story = {
   ),
 };
 
+export const WithSidebar: Story = {
+  render: () => (
+    <div className="flex h-[640px] w-[1200px] items-end">
+      <ChatDock
+        defaultOpen
+        composer={composer}
+        sidebar={<div className="text-[13px]">Recent conversations…</div>}
+        transcript={transcript}
+      />
+    </div>
+  ),
+};
+
 export const Playground: Story = {
   args: { composer },
   render: (args) => {

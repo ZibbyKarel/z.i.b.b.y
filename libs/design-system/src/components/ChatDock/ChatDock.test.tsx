@@ -114,4 +114,37 @@ describe("ChatDock", () => {
     render(<ChatDock composer={composer} targetChip={<span>Dept: dev</span>} />);
     expect(screen.getByTestId(ChatDockTestId.TargetChip)).toHaveTextContent("Dept: dev");
   });
+
+  it("sidebar toggle opens the sidebar, expands the dock; collapsing closes the sidebar", async () => {
+    const user = userEvent.setup();
+    const onExpandedChange = vi.fn();
+    render(
+      <ChatDock
+        defaultOpen
+        composer={composer}
+        onExpandedChange={onExpandedChange}
+        sidebar={<div>History</div>}
+        sidebarLabel="Historie"
+      />,
+    );
+    const toggle = screen.getByTestId(ChatDockTestId.SidebarButton);
+    expect(toggle).toHaveAccessibleName("Historie");
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByTestId(ChatDockTestId.Sidebar)).toBeNull();
+
+    await user.click(toggle);
+    expect(screen.getByTestId(ChatDockTestId.Sidebar)).toHaveTextContent("History");
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(onExpandedChange).toHaveBeenLastCalledWith(true);
+    expect(screen.getByTestId(ChatDockTestId.Root)).toHaveClass("w-[max(660px,45%)]", "flex-row");
+
+    await user.click(screen.getByTestId(ChatDockTestId.ExpandButton));
+    expect(screen.queryByTestId(ChatDockTestId.Sidebar)).toBeNull();
+    expect(screen.getByTestId(ChatDockTestId.Root)).toHaveClass("w-[420px]");
+  });
+
+  it("omits the sidebar toggle without a sidebar", () => {
+    render(<ChatDock defaultOpen composer={composer} />);
+    expect(screen.queryByTestId(ChatDockTestId.SidebarButton)).toBeNull();
+  });
 });

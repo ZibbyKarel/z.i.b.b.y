@@ -1939,6 +1939,13 @@
       "chat": "Chat",
       "task": "Spustit úlohu",
       "note": "Přidat poznámku"
+    },
+    "history": {
+      "toggle": "Poslední konverzace",
+      "search": "Hledat v konverzacích",
+      "empty": "Zatím žádné konverzace.",
+      "noMatch": "Nic nenalezeno.",
+      "untitled": "Konverzace bez názvu"
     }
   },
   "departments": {
