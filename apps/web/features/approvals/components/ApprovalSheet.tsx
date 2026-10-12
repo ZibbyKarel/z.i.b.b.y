@@ -223,61 +223,64 @@ export function ApprovalSheet({
           <ChainRouteStrip size="compact" steps={steps} />
         </Stack>
       )}
-
-      {mode && (
-        <TextAreaField
-          hint={t(mode === "revise" ? "reviseHint" : "reasonHint")}
-          label={t(mode === "revise" ? "reviseLabel" : "reasonLabel")}
-          onChange={(e) => setReason(e.target.value)}
-          value={reason}
-        />
-      )}
     </Stack>
   );
 
+  // The note field lives in the footer, not the scrolling body — below a long
+  // checkpoint output it would open out of sight.
   const footer = !approval ? null : mode ? (
-    <Row gap="100">
-      <Button
-        block
-        intent="secondary"
-        onClick={() => {
-          setMode(null);
-          setReason("");
-        }}
-      >
-        {t("cancel")}
-      </Button>
-      {mode === "revise" ? (
+    <Stack gap="150">
+      <TextAreaField
+        autoFocus
+        data-testid="approval-note"
+        hint={t(mode === "revise" ? "reviseHint" : "reasonHint")}
+        label={t(mode === "revise" ? "reviseLabel" : "reasonLabel")}
+        onChange={(e) => setReason(e.target.value)}
+        value={reason}
+      />
+      <Row gap="100">
         <Button
           block
-          disabled={!reason.trim()}
-          intent="primary"
-          loading={revise.isPending}
-          onClick={() =>
-            revise.mutate(
-              { params: { id: approval.id }, body: { note: reason.trim() } },
-              { onSuccess: close },
-            )
-          }
+          intent="secondary"
+          onClick={() => {
+            setMode(null);
+            setReason("");
+          }}
         >
-          {t("confirmRevise")}
+          {t("cancel")}
         </Button>
-      ) : (
-        <Button
-          block
-          intent="primary"
-          loading={reject.isPending}
-          onClick={() =>
-            reject.mutate(
-              { params: { id: approval.id }, body: reason ? { reason } : {} },
-              { onSuccess: close },
-            )
-          }
-        >
-          {t("confirmDeny")}
-        </Button>
-      )}
-    </Row>
+        {mode === "revise" ? (
+          <Button
+            block
+            disabled={!reason.trim()}
+            intent="primary"
+            loading={revise.isPending}
+            onClick={() =>
+              revise.mutate(
+                { params: { id: approval.id }, body: { note: reason.trim() } },
+                { onSuccess: close },
+              )
+            }
+          >
+            {t("confirmRevise")}
+          </Button>
+        ) : (
+          <Button
+            block
+            intent="primary"
+            loading={reject.isPending}
+            onClick={() =>
+              reject.mutate(
+                { params: { id: approval.id }, body: reason ? { reason } : {} },
+                { onSuccess: close },
+              )
+            }
+          >
+            {t("confirmDeny")}
+          </Button>
+        )}
+      </Row>
+    </Stack>
   ) : (
     <Row gap="100">
       <Button
