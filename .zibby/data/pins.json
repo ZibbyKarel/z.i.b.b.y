@@ -3,5 +3,9 @@
     "kind": "page",
     "id": "/work/projects/shoptet-partner-cli/roadmap",
     "label": "CLI - Roadmap"
+  },
+  {
+    "kind": "employee",
+    "id": "employee_finance-analyst"
   }
 ]
