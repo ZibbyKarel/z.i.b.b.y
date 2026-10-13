@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Agent } from "@zibby/contracts";
 import { IconTileTestId } from "@zibby/design-system";
 import type { Workflow } from "../../../../domain";
-import { WorkflowCard } from "./WorkflowCard";
+import { WorkflowCard, WorkflowCardTestId } from "./WorkflowCard";
 import { WorkflowOwnerChipTestId } from "./WorkflowOwnerChip";
 
 const agents: Agent[] = [
@@ -41,9 +41,7 @@ const workflow: Workflow = {
 
 describe("WorkflowCard", () => {
   it("renders the name but neither a state label nor a last-run line", () => {
-    render(
-      <WorkflowCard agents={agents} onSelect={() => {}} selected={false} workflow={workflow} />,
-    );
+    render(<WorkflowCard agents={agents} onSelect={() => {}} workflow={workflow} />);
     expect(screen.getByText("Build Feature")).toBeInTheDocument();
     expect(screen.queryByText("zaparkováno")).toBeNull();
     expect(screen.queryByText(/dnes 03:12/)).toBeNull();
@@ -51,10 +49,11 @@ describe("WorkflowCard", () => {
 
   it("selects on click", async () => {
     const onSelect = vi.fn();
-    render(
-      <WorkflowCard agents={agents} onSelect={onSelect} selected={false} workflow={workflow} />,
-    );
-    await userEvent.click(screen.getByRole("button"));
+    render(<WorkflowCard agents={agents} onSelect={onSelect} workflow={workflow} />);
+    const card = screen.getByTestId(WorkflowCardTestId.Root);
+    expect(card).toHaveRole("button");
+    expect(card).not.toHaveAttribute("aria-pressed");
+    await userEvent.click(card);
     expect(onSelect).toHaveBeenCalledWith("build-feature");
   });
 
@@ -63,7 +62,6 @@ describe("WorkflowCard", () => {
       <WorkflowCard
         agents={agents}
         onSelect={() => {}}
-        selected={false}
         workflow={{ ...workflow, avatar: "/avatars/orchestrator.png" }}
       />,
     );
@@ -78,15 +76,12 @@ describe("WorkflowCard", () => {
       <WorkflowCard
         agents={agents}
         onSelect={() => {}}
-        selected={false}
         workflow={{ ...workflow, department: "dev" }}
       />,
     );
     expect(screen.getByTestId(WorkflowOwnerChipTestId.Root)).toHaveTextContent("Dev");
 
-    rerender(
-      <WorkflowCard agents={agents} onSelect={() => {}} selected={false} workflow={workflow} />,
-    );
+    rerender(<WorkflowCard agents={agents} onSelect={() => {}} workflow={workflow} />);
     expect(screen.queryByTestId(WorkflowOwnerChipTestId.Root)).toBeNull();
   });
 });
