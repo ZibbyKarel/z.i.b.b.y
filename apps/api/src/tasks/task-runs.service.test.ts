@@ -130,6 +130,7 @@ function build() {
     readArtifact: vi.fn(async () => ({ name: "pr-draft.md", content: "PR" })),
     stop: vi.fn(async () => {}),
     resumeParked: vi.fn(async () => pipeP),
+    continueFailed: vi.fn(async (): Promise<WorkflowRun | null> => null),
     delete: vi.fn(async () => {}),
   };
   const goalRunner = {
@@ -141,6 +142,7 @@ function build() {
     readArtifact: vi.fn(async () => ({ name: "verdict.txt", content: "ok" })),
     stop: vi.fn(async () => {}),
     resumeParked: vi.fn(async () => goalG),
+    continueFailed: vi.fn(async (): Promise<GoalRun | null> => null),
     delete: vi.fn(async () => {}),
   };
   const agentsStore = { list: vi.fn(async () => [agentDef]) };
@@ -150,6 +152,7 @@ function build() {
   const scheduled = {
     list: vi.fn(async () => [scheduledS]),
     get: vi.fn(async () => scheduledS),
+    reassignRun: vi.fn(async () => scheduledS),
   };
   const scheduler = {
     createTask: vi.fn(async () => ({ outcome: "pending", task: scheduledS })),
@@ -595,7 +598,20 @@ describe("TaskRunsService", () => {
       await expect(service.resume("researcher_1")).rejects.toBeInstanceOf(TaskRunNotResumableError);
     });
 
-    it("re-runs a failed workflow run as a new task with the original inputs", async () => {
+    it("continues a failed workflow run in place, clearing the task's failed outcome", async () => {
+      const { service, workflowRunner, scheduler, scheduled } = build();
+      const failed: WorkflowRun = { ...pipeP, status: "failed", taskId: "task9" };
+      workflowRunner.listAll.mockResolvedValue([failed]);
+      workflowRunner.get.mockReturnValue(failed);
+      workflowRunner.continueFailed.mockResolvedValue(failed);
+      const res = await service.resume("delivery_3");
+      expect(workflowRunner.continueFailed).toHaveBeenCalledWith("delivery_3");
+      expect(scheduler.createTask).not.toHaveBeenCalled();
+      expect(scheduled.reassignRun).toHaveBeenCalledWith("task9", "delivery_3");
+      expect(res.runId).toBe("delivery_3");
+    });
+
+    it("re-runs a failed workflow run as a new task when there is nothing to continue", async () => {
       const { service, workflowRunner, scheduler } = build();
       const failed: WorkflowRun = { ...pipeP, status: "failed", taskId: "task9" };
       workflowRunner.listAll.mockResolvedValue([failed]);

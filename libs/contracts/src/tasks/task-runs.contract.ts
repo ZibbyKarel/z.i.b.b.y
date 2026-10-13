@@ -140,8 +140,9 @@ export const taskRunsContract = c.router(
       summary:
         "Resume a run: a parked workflow/goal run (with an operator note), or re-run an " +
         "errored/interrupted agent run (returns the NEW run — with --resume when a session " +
-        "id was captured, else a fresh run of the same task), or re-run an errored/interrupted " +
-        "workflow/goal run as a NEW task with the original task's inputs (returns its view)",
+        "id was captured, else a fresh run of the same task), or continue an errored/interrupted " +
+        "workflow/goal run in place from where it stopped (falls back to a NEW task from the " +
+        "original task's inputs when nothing ran yet)",
     },
 
     deleteTaskRun: {

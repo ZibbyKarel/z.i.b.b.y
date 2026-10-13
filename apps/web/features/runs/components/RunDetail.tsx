@@ -781,7 +781,9 @@ export function RunDetail({
                             onClick={onResume}
                             size="sm"
                           >
-                            {run.sessionId ? t("resumeContinue") : t("resumeFresh")}
+                            {run.sessionId || run.kind !== "agent"
+                              ? t("resumeContinue")
+                              : t("resumeFresh")}
                           </Button>
                         )}
                         <MenuButton ariaLabel={t("actionsMenuLabel")} items={actionItems} />

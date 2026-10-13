@@ -961,6 +961,46 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
       expect(resume.retries.get("review")).toBe(0);
     });
 
+    it("continueFailed re-enters at the failed phase, keeping the finished ones", async () => {
+      const run = h.runs.get(WORKFLOW_RUN_ID);
+      if (!run) throw new Error("missing run");
+      (
+        h.service as unknown as { workflows: { get: ReturnType<typeof vi.fn> } }
+      ).workflows.get.mockResolvedValue(parkedWorkflow);
+      const drive = vi.fn(async () => {});
+      (h.service as unknown as { drive: unknown }).drive = drive;
+
+      run.status = "running";
+      expect(await h.service.continueFailed(WORKFLOW_RUN_ID)).toBeNull(); // not failed
+
+      run.status = "failed";
+      expect(await h.service.continueFailed(WORKFLOW_RUN_ID)).toBeNull(); // nothing ran yet
+
+      run.stageRuns = [
+        { phaseId: "build", runId: "b1", attempt: 1, status: "done" },
+        { phaseId: "review", runId: "r1", attempt: 1, status: "error" },
+        {
+          phaseId: "review",
+          runId: `${WORKFLOW_RUN_ID}.review.escalated`,
+          attempt: 1,
+          status: "error",
+        },
+      ];
+      run.retries = { review: 3 };
+      const resumed = await h.service.continueFailed(WORKFLOW_RUN_ID);
+      expect(resumed?.status).toBe("running");
+      expect(resumed?.currentStage).toBe("review");
+      expect(resumed?.retries).toEqual({});
+      await vi.waitFor(() => expect(drive).toHaveBeenCalled());
+      const resume = (drive.mock.calls[0] as unknown as unknown[])?.[3] as { cursor: string };
+      expect(resume.cursor).toBe("review");
+
+      // Interrupted right after a finished phase → continue at the next one.
+      run.status = "interrupted";
+      run.stageRuns = [{ phaseId: "build", runId: "b1", attempt: 1, status: "done" }];
+      expect((await h.service.continueFailed(WORKFLOW_RUN_ID))?.currentStage).toBe("review");
+    });
+
     it("resumeParked refuses a run that is not retries-parked (409 material)", async () => {
       const run = h.runs.get(WORKFLOW_RUN_ID);
       if (!run) throw new Error("missing run");

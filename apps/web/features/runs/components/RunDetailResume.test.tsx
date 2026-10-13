@@ -78,18 +78,13 @@ describe("RunDetail — re-run a run that didn't finish", () => {
     expect(resumeButton()).not.toBeInTheDocument();
   });
 
-  it("offers 'Spustit znovu' for a failed workflow run born from a task", async () => {
+  it("offers 'Pokračovat' for a failed workflow run (continues where it stopped)", async () => {
     const onResume = vi.fn();
-    renderRun({ ...erroredAgentRun, kind: "workflow", logBase: null, taskId: "task_1" }, onResume);
+    renderRun({ ...erroredAgentRun, kind: "workflow", logBase: null }, onResume);
     const item = resumeButton();
-    expect(item).toHaveTextContent("Spustit znovu");
+    expect(item).toHaveTextContent("Pokračovat");
     await userEvent.click(item!);
     expect(onResume).toHaveBeenCalledTimes(1);
-  });
-
-  it("does not offer it for a workflow run with no backing task (nothing to rebuild from)", async () => {
-    renderRun({ ...erroredAgentRun, kind: "workflow", logBase: null }, () => {});
-    expect(resumeButton()).not.toBeInTheDocument();
   });
 
   it("hides the button when no onResume handler is wired", async () => {

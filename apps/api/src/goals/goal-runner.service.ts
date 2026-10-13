@@ -986,6 +986,36 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * Continue a failed/interrupted run at the iteration it stopped on — earlier
+   * iterations (and their commits on the goal's branch) stay. Returns null when no
+   * iteration ever ran (the caller falls back to a fresh re-run).
+   */
+  async continueFailed(goalRunId: string): Promise<GoalRun | null> {
+    const run = this.runs.get(goalRunId) ?? (await this.readAggregate(goalRunId));
+    if (!run) throw new GoalRunNotFoundError(goalRunId);
+    if (run.status !== "failed" && run.status !== "interrupted") return null;
+    const last = run.iterations[run.iterations.length - 1];
+    if (!last) return null;
+
+    this.runs.set(goalRunId, run);
+    const goal = await this.goals.get(run.goalId);
+    const project = await this.projectForRun(run);
+    run.status = "running";
+    run.currentIteration = last.index;
+    await this.writeAggregate(run);
+    this.log.info("failed goal run continued", { goalRunId, index: last.index });
+
+    const resumeContext = await this.composeResumeContext(run, goal, last.verifier.output);
+    const traceId = this.trace.getTraceId() ?? randomUUID();
+    void this.trace
+      .run({ traceId, runId: goalRunId }, () =>
+        this.drive(run, goal, project, [], { startIndex: last.index, resumeContext }),
+      )
+      .catch((err) => this.onDriveError(run, err));
+    return run;
+  }
+
+  /**
    * Re-resolve a run's project from its persisted `projectPath` (resume / restart).
    * A registry record deleted meanwhile degrades to a synthetic project carrying
    * just the path — the worktree cwd still applies.

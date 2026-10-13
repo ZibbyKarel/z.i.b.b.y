@@ -256,13 +256,24 @@ export class TaskRunsService {
    * Phase 49: an errored/interrupted AGENT run is instead re-run — a NEW run spawns
    * (with `--resume <sessionId>` when the errored run captured one, else fresh) and is
    * returned, so the caller navigates to it. An errored/interrupted workflow/goal run
-   * is re-run as a fresh task ({@link rerunTask}). Any other kind/state → 409.
+   * CONTINUES in place from the phase/iteration it stopped on (finished work is kept);
+   * only when there is nothing to continue at is it re-run as a fresh task
+   * ({@link rerunTask}). Any other kind/state → 409.
    */
   async resume(runId: string, note?: string): Promise<TaskRun> {
     const kind = await this.kindOf(runId);
     if (kind === "workflow" || kind === "goal") {
       const run = await this.getTaskRun(runId);
-      if (run.status === "error" || run.status === "interrupted") return this.rerunTask(run);
+      if (run.status === "error" || run.status === "interrupted") {
+        const continued =
+          kind === "workflow"
+            ? await this.workflowRunner.continueFailed(runId)
+            : await this.goalRunner.continueFailed(runId);
+        if (!continued) return this.rerunTask(run);
+        // The task's failed outcome is cleared so this run's terminal writes back again.
+        if (run.taskId) await this.scheduled.reassignRun(run.taskId, runId);
+        return this.getTaskRun(runId);
+      }
     }
     if (kind === "workflow") await this.workflowRunner.resumeParked(runId, note);
     else if (kind === "goal") await this.goalRunner.resumeParked(runId, note);

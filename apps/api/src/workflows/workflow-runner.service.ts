@@ -716,6 +716,55 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * Continue a failed/interrupted run from where it stopped: phases that finished stay
+   * done, the driver re-enters at the phase that failed (or the one after the last
+   * finished phase) with a fresh retry budget and the resume-context (progress +
+   * committed checkpoints + the failed attempt's log tail). Returns null when there is
+   * no phase to continue at — failed before any stage ran, or every phase finished
+   * (the caller falls back to a fresh re-run).
+   */
+  async continueFailed(workflowRunId: string): Promise<WorkflowRun | null> {
+    const run = this.runs.get(workflowRunId) ?? (await this.readAggregate(workflowRunId));
+    if (!run) throw new WorkflowRunNotFoundError(workflowRunId);
+    if (run.status !== "failed" && run.status !== "interrupted") return null;
+    const workflow = await this.workflows.get(run.workflowId);
+    const order = workflow.phases;
+    const last = [...run.stageRuns].reverse().find((s) => !s.runId.endsWith(".escalated"));
+    if (!last) return null;
+    const lastIdx = order.findIndex((p) => p.id === last.phaseId);
+    // A qualify phase that ran clean but graded gap/drift counts as failed.
+    const passed = last.status === "done" && (!last.verdict || last.verdict === "pass");
+    const cursor = order[passed ? lastIdx + 1 : lastIdx]?.id;
+    if (!cursor) return null;
+
+    this.runs.set(workflowRunId, run);
+    run.status = "running";
+    run.currentStage = cursor;
+    run.retries = {};
+    delete run.failedReason;
+    await this.writeAggregate(run);
+    this.log.info("failed workflow run continued", { workflowRunId, phase: cursor });
+
+    const project = await this.projectForRun(run);
+    const resumeContext = await this.composeResumeContext(
+      run,
+      order.map((p) => p.id),
+      passed ? {} : { failureTail: await this.tailLog(last.runId) },
+    );
+    const handoffSource = this.recomputeHandoff(run, workflow, cursor);
+    const traceId = this.trace.getTraceId() ?? randomUUID();
+    void this.trace.run({ traceId, runId: workflowRunId }, () =>
+      this.drive(run, workflow, project, {
+        cursor,
+        handoffSource,
+        retries: new Map(),
+        resumeContext,
+      }),
+    );
+    return run;
+  }
+
+  /**
    * Phase 9: park a limit-paused workflow run that flapped past `LIMIT_RESUME_MAX`.
    * Durable, operator-resumable (`parkedReason: "limit"`, re-enters at the parked
    * phase). Writes a short flap note as the parked surface and discards any stale

@@ -54,11 +54,12 @@ export function isStoppableRun(run: Pick<RunView, "kind" | "status">): boolean {
  * Whether the "Resume" (re-run) action applies: a run that ended in error or
  * interrupted. An AGENT run re-runs in place (Phase 49 — continuing its claude session
  * via `--resume` when one was captured, see {@link RunView.sessionId}); a workflow/goal
- * run re-runs as a fresh task from its original task's inputs, so it needs a `taskId`.
+ * run continues from the phase/iteration it stopped on (the API falls back to a fresh
+ * task re-run when nothing ran yet).
  */
-export function isResumableRun(run: Pick<RunView, "kind" | "status" | "taskId">): boolean {
+export function isResumableRun(run: Pick<RunView, "kind" | "status">): boolean {
   if (run.status !== "error" && run.status !== "interrupted") return false;
-  return run.kind === "agent" || ((run.kind === "workflow" || run.kind === "goal") && !!run.taskId);
+  return run.kind === "agent" || run.kind === "workflow" || run.kind === "goal";
 }
 
 /**
