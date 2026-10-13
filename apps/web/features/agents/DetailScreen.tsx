@@ -25,7 +25,6 @@ import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { RuleModal } from "../gates/components/RuleModal";
-import { PinButton } from "../pins";
 import { useWorkflowsQuery } from "../workflows";
 import { useNewTask } from "../tasks";
 import { agentFile } from "./agentDraft";
@@ -138,7 +137,6 @@ function AgentEditor({ agent }: { agent: Agent }) {
               >
                 {t("run")}
               </Button>
-              <PinButton id={agent.id} kind="agent" />
               <Button
                 data-testid={AgentDetailScreenTestId.Delete}
                 icon="x"

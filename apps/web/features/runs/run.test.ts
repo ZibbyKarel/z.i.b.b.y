@@ -133,7 +133,7 @@ describe("findSelectedRun (selection survives pending → dispatched)", () => {
 describe("runOutputHref", () => {
   const done = { runId: "r/1", kind: "agent" as const, status: "done" as const };
 
-  it("opens a PR on its forge, even before the run settles", () => {
+  it("opens a PR on its git host, even before the run settles", () => {
     const prOutput = { url: "https://gitlab.com/x/-/merge_requests/3", additions: 1, deletions: 0 };
     expect(runOutputHref({ ...done, status: "running", prOutput })).toBe(prOutput.url);
   });

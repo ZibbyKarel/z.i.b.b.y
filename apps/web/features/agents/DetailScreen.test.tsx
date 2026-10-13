@@ -66,8 +66,8 @@ describe("agents DetailScreen (N4c grammar)", () => {
     expect(screen.getByRole("button", { name: "Uložit změny" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Spustit" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Smazat" })).toBeInTheDocument();
-    // Phase 04: a pin toggle sits in the action row next to Run.
-    expect(screen.getByRole("button", { name: "Připnout" })).toBeInTheDocument();
+    // Agents are not pinnable.
+    expect(screen.queryByRole("button", { name: "Připnout" })).toBeNull();
     // The header carries no file-path subtitle; the used-by panel lists workflows.
     expect(screen.queryByText("~/zibby/agents/koder.agent.md")).toBeNull();
     expect(screen.getByText(/Delivery/)).toBeInTheDocument();
