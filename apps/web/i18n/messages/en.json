@@ -1165,6 +1165,7 @@
     "classificationSwitchboard": "Switchboard",
     "classificationConfidence": "{pct}% confidence",
     "openOutput": "Open output",
+    "outputEmpty": "This task hasn't produced any output yet.",
     "openPr": "Open PR",
     "prAdded": "{n} lines added",
     "prRemoved": "{n} lines removed",

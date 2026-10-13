@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Approval } from "@zibby/contracts";
-import { type RunView, approvalForRun, findSelectedRun, runTitle } from "./run";
+import { type RunView, approvalForRun, findSelectedRun, runOutputHref, runTitle } from "./run";
 
 const approval = (runId: string, kind: Approval["kind"]): Approval => ({
   id: `appr-${runId}`,
@@ -127,5 +127,50 @@ describe("findSelectedRun (selection survives pending → dispatched)", () => {
     expect(findSelectedRun([first, mkRun({ runId: "b" })], "missing")?.runId).toBe("a");
     expect(findSelectedRun([], "x")).toBeNull();
     expect(findSelectedRun([first], null)?.runId).toBe("a");
+  });
+});
+
+describe("runOutputHref", () => {
+  const done = { runId: "r/1", kind: "agent" as const, status: "done" as const };
+
+  it("opens a PR on its forge, even before the run settles", () => {
+    const prOutput = { url: "https://gitlab.com/x/-/merge_requests/3", additions: 1, deletions: 0 };
+    expect(runOutputHref({ ...done, status: "running", prOutput })).toBe(prOutput.url);
+  });
+
+  it("falls back to the url in a legacy PR summary", () => {
+    const run = {
+      ...done,
+      taskOutputKind: "pr" as const,
+      taskOutcomeSummary: "PR: https://gh/x/1 ok",
+    };
+    expect(runOutputHref(run)).toBe("https://gh/x/1");
+    expect(runOutputHref({ ...run, taskOutcomeSummary: "no url" })).toBeNull();
+  });
+
+  it("opens a vault-note file output in the vault, a project file in the viewer", () => {
+    const run = { ...done, taskOutputKind: "file" as const, taskOutcomeSummary: "body" };
+    expect(runOutputHref(run, { type: "file", dest: "vault", to: "a b" })).toBe(
+      "/knowledge/vault?note=a%20b",
+    );
+    expect(runOutputHref(run, { type: "file", dest: "project", to: "x.md" })).toBe(
+      "/activity/runs/r%2F1/output",
+    );
+  });
+
+  it("opens a workflow's file artifact in the viewer", () => {
+    const wf = { ...done, kind: "workflow" as const };
+    expect(runOutputHref({ ...wf, outputArtifactName: "report.md" })).toBe(
+      "/activity/runs/r%2F1/output",
+    );
+    expect(runOutputHref(wf)).toBeNull();
+  });
+
+  it("has nothing to open for an unfinished or void run", () => {
+    const file = { ...done, taskOutputKind: "file" as const, taskOutcomeSummary: "body" };
+    expect(runOutputHref({ ...file, status: "running" })).toBeNull();
+    expect(
+      runOutputHref({ ...done, taskOutputKind: "void" as const, taskOutcomeSummary: "x" }),
+    ).toBeNull();
   });
 });

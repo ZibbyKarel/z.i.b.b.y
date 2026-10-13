@@ -1,4 +1,4 @@
-import type { Approval, RunKind, TaskRun, TaskRunStatus } from "@zibby/contracts";
+import type { Approval, RunKind, TaskOutput, TaskRun, TaskRunStatus } from "@zibby/contracts";
 import type { DotTone, IconName, LegacyStateTone, TagTone } from "@zibby/design-system";
 
 /**
@@ -114,6 +114,46 @@ export function isMarkdownFilename(name: string | undefined): boolean {
   const ext = name.slice(dot + 1).toLowerCase();
   if (ext === "md" || ext === "markdown") return true;
   return !NON_MARKDOWN_EXTENSIONS.has(ext);
+}
+
+/** The full-page viewer for a run's produced output (`/activity/runs/[runId]/output`). */
+export function runOutputViewerHref(runId: string): string {
+  return `/activity/runs/${encodeURIComponent(runId)}/output`;
+}
+
+/**
+ * Where a run's produced output opens in a new window: an opened PR on its forge
+ * (GitHub/GitLab — whatever url was stored), a vault-note `file` output in the vault,
+ * any other produced file/artifact in the {@link runOutputViewerHref} viewer. `null`
+ * when the run surfaced nothing openable (in flight, `void`, no artifact).
+ */
+export function runOutputHref(
+  run: Pick<
+    RunView,
+    | "runId"
+    | "kind"
+    | "status"
+    | "prOutput"
+    | "outputArtifactName"
+    | "taskOutputKind"
+    | "taskOutcomeSummary"
+  >,
+  taskOutput?: TaskOutput,
+): string | null {
+  if (run.prOutput) return run.prOutput.url;
+  if (run.status !== "done") return null;
+  if (run.kind === "workflow") {
+    return run.outputArtifactName ? runOutputViewerHref(run.runId) : null;
+  }
+  const summary = run.taskOutcomeSummary;
+  if (!summary) return null;
+  // A legacy PR outcome (no structured `prOutput`) only carries the url in its summary.
+  if (run.taskOutputKind === "pr") return summary.match(/https?:\/\/\S+/)?.[0] ?? null;
+  if (run.taskOutputKind !== "file") return null;
+  if (taskOutput?.type === "file" && taskOutput.dest === "vault") {
+    return `/knowledge/vault?note=${encodeURIComponent(taskOutput.to)}`;
+  }
+  return runOutputViewerHref(run.runId);
 }
 
 /**

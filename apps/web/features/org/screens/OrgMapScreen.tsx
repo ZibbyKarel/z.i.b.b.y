@@ -92,8 +92,8 @@ export function OrgMapScreen() {
     [departments, employees, t],
   );
 
-  const cooRuns = departments.reduce((sum, d) => sum + d.tier2Count + d.tier3Count, 0);
-  const ownState: StateTone = cooRuns > 0 ? "working" : "idle";
+  // `tier2Count` is finished-but-unseen reports, not live work — only a `running` department counts.
+  const ownState: StateTone = departments.some((d) => d.state === "running") ? "working" : "idle";
   // Zibby mirrors the most urgent agent state: any employee's state, an unread
   // failed run in the bell (error) or a pending approval (blocked) — worse wins.
   const apiDown = useApiUnreachable();

@@ -29,6 +29,7 @@ import { type DepartmentLookup } from "../../departments/departmentLookup";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { RunDetail } from "../../runs/components/RunDetail";
 import { useRunGlyphMap } from "../../runs/queries/useRunsQuery";
+import { runOutputHref } from "../../runs/run";
 import { useTaskRunQuery } from "../../runs/queries/useTaskRunQuery";
 import { useRunActions } from "../../runs/useRunActions";
 import { useTaskQuery } from "../queries";
@@ -59,6 +60,7 @@ export interface TaskDetailScreenProps {
  */
 export function TaskDetailScreen({ taskId }: TaskDetailScreenProps) {
   const t = useTranslations("tasksWork");
+  const tRuns = useTranslations("runs");
   const departments = useDepartmentLookup();
   const router = useRouter();
   const pathname = usePathname();
@@ -98,6 +100,8 @@ export function TaskDetailScreen({ taskId }: TaskDetailScreenProps) {
     (a) => a.runId === (selectedRunRef ?? task?.id) || a.runId === task?.id,
   );
 
+  const outputHref = selectedRun ? runOutputHref(selectedRun, task?.output) : null;
+
   if (isPending) {
     return (
       <Container padding={["300", "350"]}>
@@ -117,12 +121,25 @@ export function TaskDetailScreen({ taskId }: TaskDetailScreenProps) {
   return (
     <Container padding={["300", "350"]}>
       <Stack gap="200">
-        <Stack gap="50">
-          <Typography type="h1">{task.title || task.text.slice(0, 120)}</Typography>
-          {task.title && (
-            <Typography type="text" variant="secondary">
-              {task.text}
-            </Typography>
+        <Stack align="start" direction="row" gap="200" justify="between">
+          <Stack gap="50">
+            <Typography type="h1">{task.title || task.text.slice(0, 120)}</Typography>
+            {task.title && (
+              <Typography type="text" variant="secondary">
+                {task.text}
+              </Typography>
+            )}
+          </Stack>
+          {outputHref && (
+            <Button
+              data-testid="open-task-output"
+              icon="link"
+              intent="primary"
+              onClick={() => window.open(outputHref, "_blank", "noopener,noreferrer")}
+              size="sm"
+            >
+              {tRuns("openOutput")}
+            </Button>
           )}
         </Stack>
 

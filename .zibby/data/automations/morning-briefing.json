@@ -1,10 +1,1 @@
-{
-  "id": "morning-briefing",
-  "name": "Ranní briefing",
-  "trigger": { "type": "cron", "expr": "0 7 * * *" },
-  "target": { "type": "briefing" },
-  "enabled": true,
-  "system": true,
-  "lastFiredAt": "2026-10-09T05:00:16.634Z",
-  "description": "Každé ráno sestaví briefing z aktivit, běhů a paměti a doručí ho do Tasků — co se stalo a co čeká na tebe."
-}
+{"id":"morning-briefing","name":"Ranní briefing","description":"Každé ráno sestaví briefing z aktivit, běhů a paměti a doručí ho do Tasků — co se stalo a co čeká na tebe.","trigger":{"type":"cron","expr":"0 7 * * *"},"target":{"type":"briefing"},"enabled":true,"system":true,"lastFiredAt":"2026-10-13T05:00:33.775Z"}
