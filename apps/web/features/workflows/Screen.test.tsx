@@ -89,6 +89,14 @@ describe("workflows Screen — avatar hero", () => {
     const image = screen.getByTestId(EntityHeroTestId.Image);
     expect(image).toHaveAttribute("src", WORKFLOW.avatar);
   });
+
+  it("offers no upload or remove control (images are read-only)", () => {
+    hooks.workflows = { data: [WORKFLOW], isPending: false, isError: false, refetch: vi.fn() };
+    render(<Screen selectedId="build-feature" />);
+    expect(screen.queryByTestId(EntityHeroTestId.UploadButton)).toBeNull();
+    expect(screen.queryByTestId(EntityHeroTestId.RemoveButton)).toBeNull();
+    expect(screen.queryByTestId(EntityHeroTestId.FileInput)).toBeNull();
+  });
 });
 
 // F5 (docs/plans/hud2chat-F5-orchestration.md): one Screen serves both

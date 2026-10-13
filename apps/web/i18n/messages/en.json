@@ -733,10 +733,6 @@
     "outputPr": "opens a PR from {from} (the gate — waits for approval)",
     "outputFileProject": "writes {from} into the project: {to}",
     "outputFileVault": "saves {from} to memory: {to}",
-    "uploadImage": "Upload image",
-    "removeImage": "Remove image",
-    "uploadWorkflowAvatar": "Upload workflow image",
-    "avatarTooLarge": "Image is too large (max ~200 KB).",
     "outputType": "Output type",
     "outputTypeOption": {
       "pr": "Pull request",
