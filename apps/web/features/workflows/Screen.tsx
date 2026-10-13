@@ -14,7 +14,7 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { PageBreadcrumb } from "../../components/layout/PageBreadcrumb";
-import { AVATAR_MAX, type UpdateWorkflowInput, type WorkflowOutput } from "@zibby/contracts";
+import { type UpdateWorkflowInput, type WorkflowOutput } from "@zibby/contracts";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -24,7 +24,6 @@ import { EmptyState } from "../../components/EmptyState/EmptyState";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { toastBus } from "../../components/Toaster/toastBus";
 import { useAgentsQuery } from "../agents";
 import { PinButton } from "../pins";
 import { useNewTask } from "../tasks";
@@ -224,27 +223,13 @@ export function Screen({ selectedId: routeId, basePath = "/work/workflows" }: Sc
               above already shows the workflow/chain's name — showIdentity={false}
               keeps the hero to a bare image/glyph band instead of repeating it. */}
           <EntityHero
-            editable
             desc={editing ? editDesc : selected.desc}
             fit="contain"
             glyph="flow"
             height="lg"
             image={selected.avatar}
             name={editing ? editName : selected.name}
-            onRemove={() =>
-              updateWorkflow.mutate({ params: { id: selected.id }, body: { avatar: null } })
-            }
-            onUpload={(dataUri) => {
-              if (dataUri.length > AVATAR_MAX) {
-                toastBus.emit({ message: t("workflows.avatarTooLarge") });
-                return;
-              }
-              updateWorkflow.mutate({ params: { id: selected.id }, body: { avatar: dataUri } });
-            }}
-            placeholder={t("workflows.uploadWorkflowAvatar")}
-            removeLabel={t("workflows.removeImage")}
             showIdentity={false}
-            uploadLabel={t("workflows.uploadImage")}
           />
           <Panel padding="250">
             <Stack gap="200">

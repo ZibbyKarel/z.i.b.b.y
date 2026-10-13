@@ -733,10 +733,6 @@
     "outputPr": "otevře PR z {from} (brána — čeká na schválení)",
     "outputFileProject": "zapíše {from} do projektu: {to}",
     "outputFileVault": "uloží {from} do paměti: {to}",
-    "uploadImage": "Nahrát obrázek",
-    "removeImage": "Odebrat obrázek",
-    "uploadWorkflowAvatar": "Nahraj obrázek workflow",
-    "avatarTooLarge": "Obrázek je příliš velký (max ~200 KB).",
     "outputType": "Typ výstupu",
     "outputTypeOption": {
       "pr": "Pull request",
