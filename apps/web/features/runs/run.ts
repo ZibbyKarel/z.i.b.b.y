@@ -122,7 +122,7 @@ export function runOutputViewerHref(runId: string): string {
 }
 
 /**
- * Where a run's produced output opens in a new window: an opened PR on its forge
+ * Where a run's produced output opens in a new window: an opened PR on its git host
  * (GitHub/GitLab — whatever url was stored), a vault-note `file` output in the vault,
  * any other produced file/artifact in the {@link runOutputViewerHref} viewer. `null`
  * when the run surfaced nothing openable (in flight, `void`, no artifact).
