@@ -3,21 +3,20 @@
 import {
   Button,
   Container,
+  Dialog,
   Divider,
   EntityHero,
   Grid,
   Icon,
   Panel,
+  SectionLabel,
   Stack,
-  type SubNavLinkComponent,
   TextInputField,
   Typography,
 } from "@zibby/design-system";
-import { PageBreadcrumb } from "../../components/layout/PageBreadcrumb";
 import { type UpdateWorkflowInput, type WorkflowOutput } from "@zibby/contracts";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { EmptyState } from "../../components/EmptyState/EmptyState";
@@ -25,6 +24,7 @@ import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { useAgentsQuery } from "../agents";
+import { useDepartmentLookup } from "../departments/useDepartmentLookup";
 import { PinButton } from "../pins";
 import { useNewTask } from "../tasks";
 import { OutputsEditor, outputsValid } from "./components/OutputsEditor/OutputsEditor";
@@ -49,7 +49,12 @@ import {
   useDuplicateWorkflowMutation,
   useUpdateWorkflowMutation,
 } from "./mutations";
+import { groupWorkflowsByDepartment } from "./groupWorkflowsByDepartment";
 import { useWorkflowRunsQuery, useWorkflowsQuery } from "./queries";
+
+export enum ScreenTestId {
+  Group = "workflows-group",
+}
 
 export interface ScreenProps {
   /** Pre-selected workflow id from the [id] route segment. */
@@ -68,13 +73,9 @@ const noop = () => {};
 
 /**
  * The `/workflows` and `/workflows/[id]` routes share this one Screen (F5,
- * docs/plans/hud2chat-F5-orchestration.md): `routeId` (the `[id]` route
- * segment, absent on the list route) drives the immersive header's title,
- * actions and `backHref` — NOT `selected`, which always falls back
- * to `list[0]` for the master/detail preview even on the plain list route.
- * Getting `backHref` right for both states is the single most likely defect
- * here: it must point at `/workflows` on the detail route (never loop back to
- * itself) and at `/chat` on the list route.
+ * docs/plans/hud2chat-F5-orchestration.md). The page is always the
+ * department-grouped card grid; `routeId` (the `[id]` route segment) opens that
+ * workflow's detail in a dialog over it, and closing navigates back to `basePath`.
  */
 export function Screen({ selectedId: routeId, basePath = "/work/workflows" }: ScreenProps) {
   const t = useTranslations();
@@ -88,14 +89,28 @@ export function Screen({ selectedId: routeId, basePath = "/work/workflows" }: Sc
   const [adding, setAdding] = useState(false);
   const router = useRouter();
 
+  const departments = useDepartmentLookup();
+
   const list = workflows;
-  const selected = (routeId ? list.find((p) => p.id === routeId) : null) ?? list[0];
+  const selected = routeId ? list.find((p) => p.id === routeId) : undefined;
+  const groups = useMemo(
+    () =>
+      groupWorkflowsByDepartment(
+        list,
+        (id) => departments.get(id)?.name,
+        t("workflows.noDepartment"),
+      ),
+    [list, departments, t],
+  );
 
   // Inline edit state, keyed by the workflow id being edited (rather than a
   // plain boolean) so navigating to a different workflow while mid-edit
   // implicitly exits edit mode instead of applying stale edits to the wrong
   // workflow.
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Closing the detail dialog (any route without a matching workflow) drops the
+  // edit, so reopening the same workflow starts in read mode.
+  if (!selected && editingId !== null) setEditingId(null);
   const editing = Boolean(selected) && editingId === selected?.id;
   const [editGraph, setEditGraph] = useState<WorkflowGraph>(() => phasesToGraph(selected, agents));
   const [editName, setEditName] = useState("");
@@ -204,263 +219,263 @@ export function Screen({ selectedId: routeId, basePath = "/work/workflows" }: Sc
       title={t("workflows.emptyTitle")}
     />
   ) : (
-    <Grid center align="start" gap="250" sidebar="left">
-      <Stack gap="150">
-        {list.map((p) => (
-          <WorkflowCard
-            agents={agents}
-            key={p.id}
-            onSelect={(id: string) => router.push(`${basePath}/${id}` as Route)}
-            selected={p.id === (selected?.id ?? "")}
-            workflow={p}
-          />
-        ))}
-      </Stack>
+    <Stack gap="300">
+      {groups.map((group) => (
+        <Stack data-testid={ScreenTestId.Group} gap="150" key={group.department ?? ""}>
+          <SectionLabel
+            action={
+              <Typography mono size="xs" type="note" variant="tertiary">
+                {group.workflows.length}
+              </Typography>
+            }
+            aria-level={2}
+            role="heading"
+          >
+            {group.label}
+          </SectionLabel>
+          <Grid cols={1} gap="150" lg={3} md={2}>
+            {group.workflows.map((p) => (
+              <WorkflowCard
+                agents={agents}
+                key={p.id}
+                onSelect={(id: string) => router.push(`${basePath}/${id}` as Route)}
+                workflow={p}
+              />
+            ))}
+          </Grid>
+        </Stack>
+      ))}
+    </Stack>
+  );
 
-      {selected && (
-        <Stack gap="250">
-          {/* D13 (docs/hud2chat/DECISIONS.md, resolved F6b): the page header
+  const detail = selected && (
+    <Stack gap="250">
+      {/* D13 (docs/hud2chat/DECISIONS.md, resolved F6b): the page header
               above already shows the workflow/chain's name — showIdentity={false}
               keeps the hero to a bare image/glyph band instead of repeating it. */}
-          <EntityHero
-            desc={editing ? editDesc : selected.desc}
-            fit="contain"
-            glyph="flow"
-            height="lg"
-            image={selected.avatar}
-            name={editing ? editName : selected.name}
-            showIdentity={false}
-          />
-          <Panel padding="250">
-            <Stack gap="200">
-              {editing && (
-                <Stack direction="row" gap="200">
-                  <Container grow minW0>
-                    <TextInputField
-                      label={t("forms.workflow.nameLabel")}
-                      onChange={(e) => setEditName(e.target.value)}
-                      placeholder={t("forms.workflow.namePlaceholder")}
-                      value={editName}
-                    />
-                  </Container>
-                  <Container grow minW0>
-                    <TextInputField
-                      label={t("forms.workflow.descLabel")}
-                      onChange={(e) => setEditDesc(e.target.value)}
-                      placeholder={t("forms.workflow.descPlaceholder")}
-                      value={editDesc}
-                    />
-                  </Container>
-                </Stack>
-              )}
-              <Stack wrap align="start" direction="row" gap="200" justify="between">
-                <Container minW0>
-                  <Stack gap="100">
-                    <Stack align="center" direction="row" gap="75">
-                      <Icon name="file" size="xs" tone="faint" />
-                      <Typography mono size="sm" type="note" variant="tertiary">
-                        {selected.file}
-                      </Typography>
-                    </Stack>
-                  </Stack>
-                </Container>
-                <Stack align="center" direction="row" gap="100">
-                  <PinButton id={selected.id} kind="workflow" />
-                  {editing ? (
-                    <>
-                      <Button intent="ghost" onClick={cancelEdit} size="sm">
-                        {t("common.cancel")}
-                      </Button>
-                      <Button
-                        disabled={!canSaveEdit}
-                        icon="check"
-                        intent="primary"
-                        loading={updateWorkflow.isPending}
-                        onClick={saveEdit}
-                        size="sm"
-                      >
-                        {t("common.save")}
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button icon="edit" intent="ghost" onClick={startEdit} size="sm">
-                        {t("common.edit")}
-                      </Button>
-                      <Button
-                        disabled={duplicateWorkflow.isPending}
-                        icon="link"
-                        intent="ghost"
-                        onClick={() => {
-                          const body = duplicateWorkflowBody(
-                            selected,
-                            list.map((p) => p.id),
-                          );
-                          duplicateWorkflow.mutate(
-                            { body },
-                            {
-                              onSuccess: () => router.push(`${basePath}/${body.id}` as Route),
-                            },
-                          );
-                        }}
-                        size="sm"
-                      >
-                        {t("common.duplicate")}
-                      </Button>
-                      <Button
-                        icon="play"
-                        intent="primary"
-                        onClick={() =>
-                          openNewTask(undefined, {
-                            kind: "workflow",
-                            id: selected.id,
-                            name: selected.name,
-                            glyph: "flow",
-                          })
-                        }
-                      >
-                        {t("workflows.runWorkflow")}
-                      </Button>
-                    </>
-                  )}
+      <EntityHero
+        desc={editing ? editDesc : selected.desc}
+        fit="contain"
+        glyph="flow"
+        height="lg"
+        image={selected.avatar}
+        name={editing ? editName : selected.name}
+        showIdentity={false}
+      />
+      <Panel padding="250">
+        <Stack gap="200">
+          {editing && (
+            <Stack direction="row" gap="200">
+              <Container grow minW0>
+                <TextInputField
+                  label={t("forms.workflow.nameLabel")}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder={t("forms.workflow.namePlaceholder")}
+                  value={editName}
+                />
+              </Container>
+              <Container grow minW0>
+                <TextInputField
+                  label={t("forms.workflow.descLabel")}
+                  onChange={(e) => setEditDesc(e.target.value)}
+                  placeholder={t("forms.workflow.descPlaceholder")}
+                  value={editDesc}
+                />
+              </Container>
+            </Stack>
+          )}
+          <Stack wrap align="start" direction="row" gap="200" justify="between">
+            <Container minW0>
+              <Stack gap="100">
+                <Stack align="center" direction="row" gap="75">
+                  <Icon name="file" size="xs" tone="faint" />
+                  <Typography mono size="sm" type="note" variant="tertiary">
+                    {selected.file}
+                  </Typography>
                 </Stack>
               </Stack>
-              {selected.outputs.some((o) => o.type === "pr") && (
+            </Container>
+            <Stack align="center" direction="row" gap="100">
+              <PinButton id={selected.id} kind="workflow" />
+              {editing ? (
                 <>
-                  <Divider />
-                  <Stack align="center" direction="row" gap="100">
-                    <Icon name="branch" size="md" tone="dim" />
-                    <Typography mono size="caption" type="note" variant="secondary">
-                      {t("workflows.branchNote")}
-                    </Typography>
-                  </Stack>
+                  <Button intent="ghost" onClick={cancelEdit} size="sm">
+                    {t("common.cancel")}
+                  </Button>
+                  <Button
+                    disabled={!canSaveEdit}
+                    icon="check"
+                    intent="primary"
+                    loading={updateWorkflow.isPending}
+                    onClick={saveEdit}
+                    size="sm"
+                  >
+                    {t("common.save")}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button icon="edit" intent="ghost" onClick={startEdit} size="sm">
+                    {t("common.edit")}
+                  </Button>
+                  <Button
+                    disabled={duplicateWorkflow.isPending}
+                    icon="link"
+                    intent="ghost"
+                    onClick={() => {
+                      const body = duplicateWorkflowBody(
+                        selected,
+                        list.map((p) => p.id),
+                      );
+                      duplicateWorkflow.mutate(
+                        { body },
+                        {
+                          onSuccess: () => router.push(`${basePath}/${body.id}` as Route),
+                        },
+                      );
+                    }}
+                    size="sm"
+                  >
+                    {t("common.duplicate")}
+                  </Button>
+                  <Button
+                    icon="play"
+                    intent="primary"
+                    onClick={() =>
+                      openNewTask(undefined, {
+                        kind: "workflow",
+                        id: selected.id,
+                        name: selected.name,
+                        glyph: "flow",
+                      })
+                    }
+                  >
+                    {t("workflows.runWorkflow")}
+                  </Button>
                 </>
               )}
             </Stack>
-          </Panel>
-
-          <Panel
-            header={t("workflows.chainTitle")}
-            headerEnd={
-              editing && (
-                <Button
-                  icon="plus"
-                  intent="ghost"
-                  onClick={() => setShowPalette((v) => !v)}
-                  size="sm"
-                >
-                  {t("forms.workflow.addStep")}
-                </Button>
-              )
-            }
-            padding="250"
-          >
-            <Container
-              height="460px"
-              overflow="hidden"
-              position="relative"
-              style={{
-                display: "flex",
-                borderRadius: 6,
-                border: "1px solid var(--color-border)",
-              }}
-            >
-              {editing && showPalette && (
-                <AgentPalette
-                  agents={agents}
-                  closeLabel={t("common.close")}
-                  onAdd={(agentId) => addAgentToEdit(agentId)}
-                  onAddStep={addStepToEdit}
-                  onClose={() => setShowPalette(false)}
-                />
-              )}
-              <WorkflowCanvas
-                agents={agents}
-                attempts={attempts}
-                graph={editing ? editGraph : detailGraph}
-                onAddAgent={editing ? addAgentToEdit : noop}
-                readOnly={!editing}
-                setGraph={editing ? setEditGraph : noop}
-              />
-              {editing && (
-                <StepSettings
-                  excludeWorkflowId={selected.id}
-                  graph={editGraph}
-                  setGraph={setEditGraph}
-                />
-              )}
-            </Container>
-          </Panel>
-
-          {(editing || selected.outputs.length > 0) && (
-            <Panel header={t("workflows.outputsTitle")} padding="250">
-              {editing ? (
-                <OutputsEditor
-                  onChange={setEditOutputs}
-                  outputs={editOutputs}
-                  produces={editGraph.nodes.map((n) => n.produces).filter(Boolean)}
-                />
-              ) : (
-                <Stack gap="100">
-                  {selected.outputs.map((o, i) => (
-                    <Stack
-                      align="center"
-                      data-testid={`output-${i}`}
-                      direction="row"
-                      gap="100"
-                      key={`${o.type}-${o.from}-${i}`}
-                    >
-                      <Icon
-                        name={
-                          o.type === "pr"
-                            ? "branch"
-                            : o.type === "folder"
-                              ? "doc"
-                              : o.dest === "vault"
-                                ? "brain"
-                                : "file"
-                        }
-                        size="md"
-                        tone="dim"
-                      />
-                      <Typography size="caption" type="note" variant="secondary">
-                        {o.type === "pr"
-                          ? t("workflows.outputPr", { from: o.from })
-                          : o.type === "folder"
-                            ? t("workflows.outputFolder", { from: o.from, to: o.to })
-                            : t(
-                                o.dest === "vault"
-                                  ? "workflows.outputFileVault"
-                                  : "workflows.outputFileProject",
-                                { from: o.from, to: o.to },
-                              )}
-                      </Typography>
-                    </Stack>
-                  ))}
-                </Stack>
-              )}
-            </Panel>
+          </Stack>
+          {selected.outputs.some((o) => o.type === "pr") && (
+            <>
+              <Divider />
+              <Stack align="center" direction="row" gap="100">
+                <Icon name="branch" size="md" tone="dim" />
+                <Typography mono size="caption" type="note" variant="secondary">
+                  {t("workflows.branchNote")}
+                </Typography>
+              </Stack>
+            </>
           )}
         </Stack>
-      )}
-    </Grid>
-  );
+      </Panel>
 
-  const title = routeId ? (selected?.name ?? selected?.id ?? routeId) : t("workflows.title");
+      <Panel
+        header={t("workflows.chainTitle")}
+        headerEnd={
+          editing && (
+            <Button icon="plus" intent="ghost" onClick={() => setShowPalette((v) => !v)} size="sm">
+              {t("forms.workflow.addStep")}
+            </Button>
+          )
+        }
+        padding="250"
+      >
+        <Container
+          height="460px"
+          overflow="hidden"
+          position="relative"
+          style={{
+            display: "flex",
+            borderRadius: 6,
+            border: "1px solid var(--color-border)",
+          }}
+        >
+          {editing && showPalette && (
+            <AgentPalette
+              agents={agents}
+              closeLabel={t("common.close")}
+              onAdd={(agentId) => addAgentToEdit(agentId)}
+              onAddStep={addStepToEdit}
+              onClose={() => setShowPalette(false)}
+            />
+          )}
+          <WorkflowCanvas
+            agents={agents}
+            attempts={attempts}
+            graph={editing ? editGraph : detailGraph}
+            onAddAgent={editing ? addAgentToEdit : noop}
+            readOnly={!editing}
+            setGraph={editing ? setEditGraph : noop}
+          />
+          {editing && (
+            <StepSettings
+              excludeWorkflowId={selected.id}
+              graph={editGraph}
+              setGraph={setEditGraph}
+            />
+          )}
+        </Container>
+      </Panel>
+
+      {(editing || selected.outputs.length > 0) && (
+        <Panel header={t("workflows.outputsTitle")} padding="250">
+          {editing ? (
+            <OutputsEditor
+              onChange={setEditOutputs}
+              outputs={editOutputs}
+              produces={editGraph.nodes.map((n) => n.produces).filter(Boolean)}
+            />
+          ) : (
+            <Stack gap="100">
+              {selected.outputs.map((o, i) => (
+                <Stack
+                  align="center"
+                  data-testid={`output-${i}`}
+                  direction="row"
+                  gap="100"
+                  key={`${o.type}-${o.from}-${i}`}
+                >
+                  <Icon
+                    name={
+                      o.type === "pr"
+                        ? "branch"
+                        : o.type === "folder"
+                          ? "doc"
+                          : o.dest === "vault"
+                            ? "brain"
+                            : "file"
+                    }
+                    size="md"
+                    tone="dim"
+                  />
+                  <Typography size="caption" type="note" variant="secondary">
+                    {o.type === "pr"
+                      ? t("workflows.outputPr", { from: o.from })
+                      : o.type === "folder"
+                        ? t("workflows.outputFolder", { from: o.from, to: o.to })
+                        : t(
+                            o.dest === "vault"
+                              ? "workflows.outputFileVault"
+                              : "workflows.outputFileProject",
+                            { from: o.from, to: o.to },
+                          )}
+                  </Typography>
+                </Stack>
+              ))}
+            </Stack>
+          )}
+        </Panel>
+      )}
+    </Stack>
+  );
 
   return (
     <Container padding={["300", "350"]}>
       <PageContainer>
         <Stack gap="250">
-          {routeId && (
-            <PageBreadcrumb
-              items={[{ label: t("workflows.title"), href: basePath as Route }, { label: title }]}
-              linkComponent={Link as SubNavLinkComponent}
-            />
-          )}
-
           <Stack wrap align="center" direction="row" gap="150" justify="between">
-            <Typography type="h1">{title}</Typography>
+            <Typography type="h1">{t("workflows.title")}</Typography>
             <Button icon="plus" intent="primary" onClick={() => setAdding(true)}>
               {t("workflows.addWorkflow")}
             </Button>
@@ -470,6 +485,15 @@ export function Screen({ selectedId: routeId, basePath = "/work/workflows" }: Sc
         </Stack>
       </PageContainer>
 
+      <Dialog
+        closeLabel={t("common.close")}
+        onClose={() => router.push(basePath as Route)}
+        open={Boolean(selected)}
+        title={selected?.name}
+        width="full"
+      >
+        {detail}
+      </Dialog>
       {addModal}
     </Container>
   );

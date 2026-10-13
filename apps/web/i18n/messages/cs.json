@@ -724,6 +724,7 @@
     "verify": "verify",
     "runWorkflow": "Spustit workflow",
     "title": "Workflow",
+    "noDepartment": "Bez oddělení",
     "emptyTitle": "Zatím žádné workflow",
     "emptyDescription": "Workflow řetězí agenty přes soubory. Přidej první a fáze pak poskládáš v editoru.",
     "emptyHint": "// vytvoří ~/zibby/workflows/'<název>'.workflow.md",

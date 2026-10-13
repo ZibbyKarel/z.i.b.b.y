@@ -724,6 +724,7 @@
     "verify": "verify",
     "runWorkflow": "Run workflow",
     "title": "Workflows",
+    "noDepartment": "No department",
     "emptyTitle": "No workflows yet",
     "emptyDescription": "Workflows chain agents together via files. Add the first one and compose the phases in the editor.",
     "emptyHint": "// creates ~/zibby/workflows/'<name>'.workflow.md",

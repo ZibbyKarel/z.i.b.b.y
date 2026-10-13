@@ -5,30 +5,27 @@ import { Fragment } from "react";
 import { type Workflow, glyphForPhase } from "../../../../domain";
 import { WorkflowOwnerChip } from "./WorkflowOwnerChip";
 
+export enum WorkflowCardTestId {
+  Root = "workflow-card",
+}
+
 export interface WorkflowCardProps {
   showPhases?: boolean;
   workflow: Workflow;
   agents: Agent[];
-  selected: boolean;
   onSelect: (id: string) => void;
 }
 
-/** Master-list card for a workflow: name, phase chips + owner. */
-export function WorkflowCard({
-  workflow,
-  showPhases,
-  agents,
-  selected,
-  onSelect,
-}: WorkflowCardProps) {
+/** Grid card for a workflow: name, phase chips + owner. Fills its grid cell. */
+export function WorkflowCard({ workflow, showPhases, agents, onSelect }: WorkflowCardProps) {
   const t = useTranslations("workflows");
   return (
     <Card
-      aria-pressed={selected}
+      interactive
       as="button"
-      interactive={!selected}
+      data-testid={WorkflowCardTestId.Root}
       onClick={() => onSelect(workflow.id)}
-      selected={selected}
+      style={{ height: "100%" }}
     >
       <Container padding="150">
         <Stack gap="150">
