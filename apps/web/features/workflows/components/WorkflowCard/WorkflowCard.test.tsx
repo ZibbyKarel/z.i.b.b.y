@@ -2,7 +2,6 @@ import { renderWithProviders as render, screen } from "../../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { Agent } from "@zibby/contracts";
-import { IconTileTestId } from "@zibby/design-system";
 import type { Workflow } from "../../../../domain";
 import { WorkflowCard, WorkflowCardTestId } from "./WorkflowCard";
 import { WorkflowOwnerChipTestId } from "./WorkflowOwnerChip";
@@ -55,20 +54,6 @@ describe("WorkflowCard", () => {
     expect(card).not.toHaveAttribute("aria-pressed");
     await userEvent.click(card);
     expect(onSelect).toHaveBeenCalledWith("build-feature");
-  });
-
-  it("renders the workflow avatar over the glyph", () => {
-    render(
-      <WorkflowCard
-        agents={agents}
-        onSelect={() => {}}
-        workflow={{ ...workflow, avatar: "/avatars/orchestrator.png" }}
-      />,
-    );
-    expect(screen.getByTestId(IconTileTestId.Image)).toHaveAttribute(
-      "src",
-      "/avatars/orchestrator.png",
-    );
   });
 
   it("shows an owner chip for a tagged workflow, none for an untagged one (Phase 85)", () => {

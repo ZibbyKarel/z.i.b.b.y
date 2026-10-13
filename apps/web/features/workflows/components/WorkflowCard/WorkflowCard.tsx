@@ -30,7 +30,7 @@ export function WorkflowCard({ workflow, showPhases, agents, onSelect }: Workflo
       <Container padding="150">
         <Stack gap="150">
           <Stack align="start" direction="row" gap="150">
-            <IconTile alt={workflow.name} glyph="flow" size="md" src={workflow.avatar} />
+            <IconTile alt={workflow.name} glyph="flow" size="md" />
             <Stack gap="75">
               <Typography mono size="md" type="note" weight="bold">
                 {workflow.name}

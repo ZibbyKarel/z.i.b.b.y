@@ -36,7 +36,6 @@ function selectWorkflows(response: { body: ContractWorkflow[] }): Workflow[] {
       qualify: ph.qualify,
     })),
     outputs: p.outputs,
-    avatar: p.avatar,
     department: p.department,
     complexity: p.complexity,
     budget: p.budget,

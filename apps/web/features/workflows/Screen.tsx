@@ -5,7 +5,6 @@ import {
   Container,
   Dialog,
   Divider,
-  EntityHero,
   Grid,
   Icon,
   Panel,
@@ -250,18 +249,6 @@ export function Screen({ selectedId: routeId, basePath = "/work/workflows" }: Sc
 
   const detail = selected && (
     <Stack gap="250">
-      {/* D13 (docs/hud2chat/DECISIONS.md, resolved F6b): the page header
-              above already shows the workflow/chain's name — showIdentity={false}
-              keeps the hero to a bare image/glyph band instead of repeating it. */}
-      <EntityHero
-        desc={editing ? editDesc : selected.desc}
-        fit="contain"
-        glyph="flow"
-        height="lg"
-        image={selected.avatar}
-        name={editing ? editName : selected.name}
-        showIdentity={false}
-      />
       <Panel padding="250">
         <Stack gap="200">
           {editing && (

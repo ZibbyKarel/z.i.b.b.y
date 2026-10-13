@@ -24,7 +24,6 @@ const WORKFLOW: Workflow = {
   file: "f",
   outputs: [],
   phases: [],
-  avatar: "data:image/png;base64,AAA",
 };
 
 // A workflow with an existing chain (agent → verify with a rework loop back to
@@ -88,20 +87,11 @@ vi.mock("../departments/useDepartmentLookup", () => ({
   }),
 }));
 
-describe("workflows Screen — avatar hero", () => {
-  it("renders the selected workflow's avatar in the detail hero", () => {
+describe("workflows Screen — no images", () => {
+  it("renders no hero image in the detail dialog", () => {
     hooks.workflows = { data: [WORKFLOW], isPending: false, isError: false, refetch: vi.fn() };
     render(<Screen selectedId="build-feature" />);
-    const image = screen.getByTestId(EntityHeroTestId.Image);
-    expect(image).toHaveAttribute("src", WORKFLOW.avatar);
-  });
-
-  it("offers no upload or remove control (images are read-only)", () => {
-    hooks.workflows = { data: [WORKFLOW], isPending: false, isError: false, refetch: vi.fn() };
-    render(<Screen selectedId="build-feature" />);
-    expect(screen.queryByTestId(EntityHeroTestId.UploadButton)).toBeNull();
-    expect(screen.queryByTestId(EntityHeroTestId.RemoveButton)).toBeNull();
-    expect(screen.queryByTestId(EntityHeroTestId.FileInput)).toBeNull();
+    expect(screen.queryByTestId(EntityHeroTestId.Root)).toBeNull();
   });
 });
 
@@ -150,7 +140,7 @@ describe("workflows Screen — categorized grid + detail dialog", () => {
     render(<Screen selectedId="build-feature" />);
     const dialog = screen.getByTestId(DialogTestId.Root);
     expect(screen.getByTestId(DialogTestId.Title)).toHaveTextContent("Build Feature");
-    expect(dialog).toContainElement(screen.getByTestId(EntityHeroTestId.Image));
+    expect(dialog).toBeInTheDocument();
     expect(screen.getAllByTestId(ScreenTestId.Group)).toHaveLength(2);
     expect(screen.getByRole("heading", { name: "Workflow" })).toBeInTheDocument();
   });
