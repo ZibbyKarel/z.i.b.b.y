@@ -34,6 +34,11 @@
 //      executes as if approved. So the hook takes its own, shorter deadline as
 //      argv[2] and DENIES fail-closed when it elapses, before the CLI kills it.
 //
+//   6. Ownership (see `analyzeOwnership`): a file the session created itself is its
+//      own scratch — overwriting, moving or deleting it later is NOT gated. The
+//      per-session ledger `created-files.json` in the coordination dir records each
+//      path a Bash/Write call creates; every doubt falls back to the gate.
+//
 // The coordination directory is the run's sandbox, passed explicitly by RunnerCore as
 // `ZIBBY_INTENT_DIR`. We must NOT use the Bash call's own cwd: an agent runs `rm`/`git`
 // *inside* the granted target (or its worktree spawn cwd), so trusting `input.cwd`
@@ -50,12 +55,14 @@
 // the non-interactive run shape are the real guarantees; this just routes the common
 // idioms to the gate.
 
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 const REQUEST_FILE = "intent-request.json";
 const DECISION_FILE = "intent-decision.json";
+const LEDGER_FILE = "created-files.json";
 const POLL_MS = 200;
 
 /**
@@ -115,7 +122,8 @@ const ACTION_META = {
   },
   "gh.api_write": {
     summary: "Mutační volání GitHub API (gh api)",
-    consequence: "Neznámý dopad — může měnit nastavení, oprávnění nebo obsah repozitáře na GitHubu.",
+    consequence:
+      "Neznámý dopad — může měnit nastavení, oprávnění nebo obsah repozitáře na GitHubu.",
   },
 };
 
@@ -389,8 +397,7 @@ function enrich(action, { branch, command } = {}) {
     return {
       action,
       riskType: "mazani",
-      summary:
-        action === "move" ? "Přesunout nebo přejmenovat soubor" : "Přepsat soubor",
+      summary: action === "move" ? "Přesunout nebo přejmenovat soubor" : "Přepsat soubor",
       consequence:
         action === "move"
           ? "Soubor bude přesunut nebo přejmenován — může skončit mimo sledovaný adresář."
@@ -438,11 +445,536 @@ function classifySegment(segment, fullCommand) {
 export function classify(command) {
   if (typeof command !== "string" || !command.trim()) return null;
   let best = null;
-  for (const segment of command.split(/&&|\|\||;|\|/)) {
+  for (const segment of stripCatHeredocs(command).split(/&&|\|\||;|\||\n|&/)) {
     const c = classifySegment(segment.trim(), command);
     if (c && (best === null || ACTION_RANK[c.action] > ACTION_RANK[best.action])) best = c;
   }
   return best;
+}
+
+/**
+ * Drop the body of a `cat … <<'DELIM'` heredoc — it is data being written to a
+ * file, not shell, so a Python `'-->'` or an `rm` word inside it must not be
+ * classified as a command. Only a QUOTED delimiter qualifies (an unquoted body
+ * still expands `$(…)`), on a line whose simple command is a plain `cat` (no pipe,
+ * no substitution, no quote before it, no trailing `\` continuation): `bash <<EOF`,
+ * `cat <<EOF | sh` and `"$(cat <<EOF …)"` all EXECUTE their body, so those stay.
+ */
+function stripCatHeredocs(command) {
+  const lines = command.split("\n");
+  const out = [];
+  const opener =
+    /^\s*(?:[^|`$()"'\n]*(?:&&|;)\s*)?cat\b[^|;&`$()<]*<<(-?)\s*(['"])([A-Za-z_][\w.-]*)\2[^|;&`$()<\\]*$/;
+  for (let i = 0; i < lines.length; i++) {
+    const m = opener.exec(lines[i]);
+    const dash = m?.[1];
+    const delim = m?.[3];
+    const end = m
+      ? lines.findIndex((l, j) => j > i && (dash ? l.replace(/^\t+/, "") : l) === delim)
+      : -1;
+    if (end === -1) {
+      out.push(lines[i]);
+      continue;
+    }
+    // Keep the command, drop the `<<'DELIM'` operator, the body and the delimiter.
+    out.push(lines[i].replace(/<<-?\s*(['"])[A-Za-z_][\w.-]*\1/, ""));
+    i = end;
+  }
+  return out.join("\n");
+}
+
+// ── Ownership: files the agent created itself ────────────────────────────────
+//
+// A file this agent session created (it did not exist when the creating command was
+// announced) is the agent's own scratch — overwriting, moving or deleting it later
+// is Tier 1, not a gate prompt. RunnerCore's intent dir carries a per-session ledger
+// (`created-files.json`) of every such path; a directory in it covers everything
+// beneath it (files a script wrote into the agent's own dir are its own too).
+//
+// This is an EXEMPTION from the gate, so every doubt keeps the gate: a target that
+// isn't a literal word (`$var`, glob, `~user`, `$(…)`, a symlink leaf), a relative
+// path after a `cd`, an effect with no enumerable targets (`find -delete`,
+// `git clean`, `xargs rm`, `install`), or anything that pre-existed and is not in
+// the ledger → the command is gated exactly as before. The coordination files
+// themselves (request/decision/ledger) are never ownable. Known ceiling: a script
+// (`python x.py`) can still write the ledger directly — no worse than today, since
+// the same script could delete the file without any gate at all.
+
+const COORDINATION_FILES = [REQUEST_FILE, DECISION_FILE, LEDGER_FILE];
+const FS_ACTIONS = new Set(["delete", "overwrite", "move"]);
+
+/**
+ * Quote-aware lexer: split a command into simple commands at unquoted `;` `&` `|`
+ * newline `(` `)`, each with its argv `words` and its `>`/`>>`/`&>`/`<>` redirect
+ * targets (`null` = a redirect whose target isn't a readable word). Returns `null`
+ * on an unterminated quote — the caller then keeps the gate.
+ */
+function lex(text) {
+  const segments = [];
+  let seg = { words: [], redirects: [] };
+  let word = "";
+  let inWord = false;
+  let pending = null; // "redirect" | "input" — what the next word belongs to
+  const endWord = () => {
+    if (inWord) {
+      if (pending === "redirect") seg.redirects.push(word);
+      else if (pending !== "input") seg.words.push(word);
+      pending = null;
+    }
+    word = "";
+    inWord = false;
+  };
+  const endSeg = () => {
+    endWord();
+    if (pending === "redirect") seg.redirects.push(null);
+    pending = null;
+    if (seg.words.length || seg.redirects.length) segments.push(seg);
+    seg = { words: [], redirects: [] };
+  };
+  /** An all-digit word glued to a redirect operator is its fd (`2>`), not an arg. */
+  const startOperator = () => {
+    if (inWord && /^\d+$/.test(word)) {
+      word = "";
+      inWord = false;
+    } else endWord();
+    if (pending === "redirect") seg.redirects.push(null);
+  };
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === "\\") {
+      if (text[i + 1] !== "\n") {
+        word += text[i + 1] ?? "";
+        inWord = true;
+      }
+      i++;
+      continue;
+    }
+    if (c === "'") {
+      const j = text.indexOf("'", i + 1);
+      if (j === -1) return null;
+      word += text.slice(i + 1, j);
+      inWord = true;
+      i = j;
+      continue;
+    }
+    if (c === '"') {
+      let j = i + 1;
+      while (j < text.length && text[j] !== '"') {
+        // Inside double quotes a backslash only escapes $ ` " \ and newline.
+        if (text[j] === "\\" && /[$`"\\\n]/.test(text[j + 1] ?? "")) {
+          if (text[j + 1] !== "\n") word += text[j + 1];
+          j += 2;
+          continue;
+        }
+        word += text[j];
+        j++;
+      }
+      if (j >= text.length) return null;
+      inWord = true;
+      i = j;
+      continue;
+    }
+    if (c === " " || c === "\t") {
+      endWord();
+      continue;
+    }
+    if (c === "#" && !inWord) {
+      // A comment runs to end of line — its quotes must not pair with real ones.
+      const nl = text.indexOf("\n", i);
+      i = (nl === -1 ? text.length : nl) - 1;
+      continue;
+    }
+    if (c === "\n" || c === ";" || c === "|" || c === "(" || c === ")") {
+      endSeg();
+      continue;
+    }
+    if (c === "&") {
+      if (text[i + 1] !== ">") {
+        endSeg();
+        continue;
+      }
+      i++; // `&>` / `&>>` — stdout+stderr to a file
+      startOperator();
+      if (text[i + 1] === ">") i++;
+      pending = "redirect";
+      continue;
+    }
+    if (c === ">") {
+      startOperator();
+      if (text[i + 1] === ">") i++;
+      if (text[i + 1] === "|" || text[i + 1] === "!") i++; // `>|`, zsh `>!` clobber
+      if (text[i + 1] === "&") {
+        const dup = /^&(\d+|-)/.exec(text.slice(i + 1));
+        if (dup) {
+          i += dup[0].length; // `2>&1`, `>&-` — fd duplication, not a file
+          continue;
+        }
+        i++; // `>&file` — both streams to a file
+      }
+      pending = "redirect";
+      continue;
+    }
+    if (c === "<") {
+      startOperator();
+      if (text[i + 1] === ">") {
+        i++; // `<>` opens read-write
+        pending = "redirect";
+        continue;
+      }
+      while (text[i + 1] === "<" || text[i + 1] === "-") i++; // `<<`, `<<-`, `<<<`
+      pending = "input"; // input file / heredoc delimiter / here-string — not a write
+      continue;
+    }
+    word += c;
+    inWord = true;
+  }
+  endSeg();
+  return segments;
+}
+
+/**
+ * Resolve a literal path word against `cwd` to its canonical absolute path
+ * (symlinked ancestors like macOS `/tmp` → `/private/tmp` resolved). `null` when
+ * the word isn't a literal path, it's relative with no known cwd, or the leaf is a
+ * symlink (deleting the link vs. writing through it can't be told apart here).
+ * `firstMissing` is the topmost ancestor that doesn't exist yet — what a create
+ * records, so `mkdir -p a/b/c` owns `a` and everything below it.
+ */
+function resolvePath(word, cwd) {
+  // Anything a shell (bash or zsh) could expand, plus `..` — the kernel walks `..`
+  // physically through a symlink while `path.resolve` would collapse it lexically.
+  if (typeof word !== "string" || !word || /[$`*?[\]{}\n^#()<>!\\]/.test(word)) return null;
+  if (word.startsWith("=") || word.split("/").includes("..")) return null;
+  let p = word;
+  if (p === "~" || p.startsWith("~/")) p = path.join(os.homedir(), p.slice(1));
+  if (p.includes("~")) return null;
+  if (!path.isAbsolute(p)) {
+    if (!cwd) return null;
+    p = path.resolve(cwd, p);
+  }
+  p = path.resolve(p);
+  const tail = [];
+  let head = p;
+  let leaf;
+  for (;;) {
+    try {
+      leaf = lstatSync(head);
+      break;
+    } catch {
+      const parent = path.dirname(head);
+      if (parent === head) return null;
+      tail.unshift(path.basename(head));
+      head = parent;
+    }
+  }
+  if (tail.length === 0 && leaf.isSymbolicLink()) return null;
+  let real;
+  try {
+    real = realpathSync(head);
+  } catch {
+    return null;
+  }
+  return {
+    abs: path.join(real, ...tail),
+    exists: tail.length === 0,
+    isDir: tail.length === 0 && leaf.isDirectory(),
+    // A second hard link makes "this path's content" someone else's file too.
+    sharedInode: tail.length === 0 && !leaf.isDirectory() && leaf.nlink > 1,
+    missingDepth: tail.length,
+    firstMissing: tail.length ? path.join(real, tail[0]) : null,
+  };
+}
+
+/** True for a path inside (or equal to) an entry of the ledger. */
+function isOwned(abs, ledger) {
+  return ledger.some((e) => abs === e || abs.startsWith(e.endsWith(path.sep) ? e : e + path.sep));
+}
+
+/** The intent dir itself, any ancestor of it, or one of its coordination files. */
+function isCoordination(abs, intentDir) {
+  const rel = path.relative(abs, intentDir);
+  if (rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel))) return true;
+  return COORDINATION_FILES.some((f) => abs === path.join(intentDir, f));
+}
+
+/** Positional args of an argv tail: non-flags, everything after `--`, skipping flag values. */
+function positionals(args, valueFlags = new Set()) {
+  const out = [];
+  let flagsDone = false;
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (flagsDone || !a.startsWith("-") || a === "-") out.push(a);
+    else if (a === "--") flagsDone = true;
+    else if (valueFlags.has(a)) i++;
+  }
+  return out;
+}
+
+/** The flags of an argv tail (up to `--`). */
+function flagsOf(args) {
+  const end = args.indexOf("--");
+  return (end === -1 ? args : args.slice(0, end)).filter((a) => a.startsWith("-") && a !== "-");
+}
+
+/**
+ * True for a sed script made only of plain `s/…/…/flags` commands — no `w`/`W`
+ * (write a file), `e` (run a command), `r`/`R` or any other command that touches
+ * paths beyond the in-place target.
+ */
+function isPlainSubstitution(script) {
+  let i = 0;
+  const n = script.length;
+  for (;;) {
+    while (i < n && /[\s;]/.test(script[i])) i++;
+    if (i >= n) return true;
+    if (script[i] !== "s") return false;
+    const d = script[i + 1];
+    if (!d || /[\s\\]/.test(d)) return false;
+    i += 2;
+    for (let part = 0; part < 2; part++) {
+      while (i < n && script[i] !== d) i += script[i] === "\\" ? 2 : 1;
+      if (i >= n) return false;
+      i++;
+    }
+    while (i < n && /[gIip0-9M]/.test(script[i])) i++;
+    if (i < n && !/[\s;]/.test(script[i])) return false;
+  }
+}
+
+/** cp/mv flags whose effect on the written path is fully understood. */
+const CP_MV_SAFE_SHORT = /^-[rRfvpaiPLHn]+$/;
+const CP_MV_SAFE_LONG = new Set(["--recursive", "--force", "--verbose", "--no-clobber"]);
+
+/**
+ * Decide whether a Bash command's gated file effects (overwrite / move / delete)
+ * all land on paths this session owns or that don't exist yet, and collect the
+ * paths it creates. Pure apart from reading the filesystem — exported for tests.
+ * `exempt: false` means "gate as usual"; it is the answer to every doubt.
+ * `touchesCoordination` flags a literal write onto the gate's own files.
+ */
+export function analyzeOwnership(command, { cwd, ledger, intentDir }) {
+  const creates = [];
+  const closed = { exempt: false, creates, touchesCoordination: false };
+  if (typeof command !== "string") return closed;
+  const text = stripCatHeredocs(command);
+  // Command/process substitution, ANSI-C quoting and any heredoc left unstripped
+  // (its body is not shell this lexer can read) are beyond this check.
+  if (/\$\(|`|\$'|[<>]\(|<<(?!<)/.test(text)) return closed;
+  const segments = lex(text);
+  if (!segments) return closed;
+  const changesDir = segments.some((s) => s.words.some((w) => /^(cd|pushd|popd)$/.test(w)));
+  const relCwd = changesDir ? null : cwd;
+  const resolve = (word) => resolvePath(word, relCwd);
+  let exempt = true;
+  let touchesCoordination = false;
+
+  const acceptable = (r) =>
+    r !== null &&
+    !isCoordination(r.abs, intentDir) &&
+    !r.sharedInode &&
+    (!r.exists || isOwned(r.abs, ledger));
+  /** A path the command overwrites/moves/deletes — must be owned or not exist. */
+  const mutates = (r) => {
+    if (r && isCoordination(r.abs, intentDir)) touchesCoordination = true;
+    if (!acceptable(r)) exempt = false;
+  };
+  /**
+   * A path the command creates — recorded when it doesn't exist yet and its parent
+   * does (a write into a missing dir fails); `parents` for `mkdir -p`.
+   */
+  const records = (r, parents = false) => {
+    if (!r) return;
+    if (isCoordination(r.abs, intentDir)) touchesCoordination = true;
+    if (r.exists || !(parents || r.missingDepth === 1)) return;
+    if (!isCoordination(r.firstMissing, intentDir)) creates.push(r.firstMissing);
+  };
+  /** cp/mv destination(s): `dest/<basename>` per source when dest is an existing dir. */
+  const destinations = (sources, destWord) => {
+    const d = resolve(destWord);
+    if (!d || !d.isDir) return [d];
+    return sources.map((s) => resolve(path.join(destWord, path.basename(s))));
+  };
+
+  for (const { words, redirects } of segments) {
+    for (const target of redirects) {
+      if (target === "/dev/null" || target === "/dev/stdout" || target === "/dev/stderr") continue;
+      const r = resolve(target);
+      mutates(r);
+      records(r);
+    }
+    if (!words.length) continue;
+    const cmd = path.basename(words[0]);
+    const args = words.slice(1);
+    const flags = flagsOf(args);
+
+    const rmAt = words.findIndex((w) => RM_FAMILY_NAMES.has(path.basename(w)));
+    if (rmAt !== -1) {
+      const targets = positionals(words.slice(rmAt + 1));
+      // Only a plain `rm …` names its own targets: `xargs rm`, `git -C x rm`,
+      // `find -exec rm`, `env -C x rm` get them (or their cwd) from elsewhere.
+      if (rmAt !== 0 || !targets.length) exempt = false;
+      targets.forEach((t) => mutates(resolve(t)));
+    }
+    if (words.includes("-delete") || (words.includes("git") && words.includes("clean"))) {
+      exempt = false; // implicit target set
+    }
+
+    if (cmd === "cp" || cmd === "mv") {
+      const pos = positionals(args);
+      const known = flags.every((f) => CP_MV_SAFE_SHORT.test(f) || CP_MV_SAFE_LONG.has(f));
+      // BSD `cp -R src/ dest` copies src's CONTENTS into dest, not dest/src.
+      if (!known || pos.slice(0, -1).some((s) => s.endsWith("/") || s.endsWith("/."))) {
+        exempt = false;
+      } else if (pos.length >= 2) {
+        const sources = pos.slice(0, -1);
+        const dests = destinations(sources, pos.at(-1));
+        dests.forEach((r) => mutates(r));
+        if (cmd === "mv") {
+          const srcs = sources.map(resolve);
+          srcs.forEach(mutates);
+          // A moved file stays ours only if what was moved was ours.
+          if (srcs.every((r) => r && r.exists && isOwned(r.abs, ledger))) {
+            dests.forEach((r) => records(r));
+          }
+        } else dests.forEach((r) => records(r));
+      }
+    } else if (cmd === "tee") {
+      const appends = flags.some((f) => f === "-a" || f === "--append");
+      for (const t of positionals(args)) {
+        const r = resolve(t);
+        if (!appends) mutates(r);
+        records(r);
+      }
+    } else if (cmd === "sed" && flags.some((f) => /^-i/.test(f) || f === "--in-place")) {
+      const scripts = [];
+      const files = [];
+      for (let i = 0; i < args.length; i++) {
+        const a = args[i];
+        if (a === "-e" || a === "--expression") scripts.push(args[++i] ?? "");
+        else if (a.startsWith("--expression=")) scripts.push(a.slice("--expression=".length));
+        else if (a === "-f" || a.startsWith("--file"))
+          exempt = false; // script from a file
+        else if (a === "-i" && args[i + 1] === "")
+          i++; // BSD `sed -i '' …`
+        else if (a === "-l") i++;
+        else if (/^-[^-]*[ef]/.test(a))
+          exempt = false; // `-ne 's/…/'` — script glued to a cluster
+        else if (!a.startsWith("-") || a === "-") files.push(a);
+      }
+      if (!scripts.length) scripts.push(files.shift() ?? "");
+      if (!files.length || !scripts.every(isPlainSubstitution)) exempt = false;
+      files.forEach((t) => mutates(resolve(t)));
+    } else if (cmd === "truncate") {
+      const noCreate = flags.some((f) => f === "-c" || f === "--no-create");
+      for (const t of positionals(args, new Set(["-s", "--size", "-r", "--reference"]))) {
+        const r = resolve(t);
+        mutates(r);
+        if (!noCreate) records(r);
+      }
+    } else if (cmd === "dd") {
+      for (const a of args) {
+        if (!a.startsWith("of=")) continue;
+        const r = resolve(a.slice(3));
+        mutates(r);
+        records(r);
+      }
+    } else if (cmd === "install") {
+      exempt = false; // -d/-t/-D forms — destination not worth parsing
+    } else if (cmd === "mkdir") {
+      const parents = flags.some((f) => /^-[^-]*p/.test(f) || f === "--parents");
+      positionals(args, new Set(["-m", "--mode"])).forEach((t) => records(resolve(t), parents));
+    } else if (cmd === "touch" && !flags.some((f) => /^-[^-]*c/.test(f) || f === "--no-create")) {
+      positionals(args, new Set(["-r", "-t", "-d", "--reference", "--date"])).forEach((t) =>
+        records(resolve(t)),
+      );
+    }
+  }
+  return { exempt, creates, touchesCoordination };
+}
+
+/**
+ * Read the session's ledger. It must be a plain, singly-linked file — a symlink or
+ * a hard link means someone other than the hook can rewrite it, so it counts as
+ * empty. Malformed entries, or ones pointing at the intent dir, are dropped.
+ */
+function readLedger(ledgerPath, intentDir) {
+  try {
+    const st = lstatSync(ledgerPath);
+    if (!st.isFile() || st.nlink !== 1) return [];
+    const raw = JSON.parse(readFileSync(ledgerPath, "utf8"));
+    return Array.isArray(raw)
+      ? raw.filter(
+          (e) => typeof e === "string" && path.isAbsolute(e) && !isCoordination(e, intentDir),
+        )
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Where a Write/Edit `file_path` actually lands: the realpath when it exists
+ * (following a symlink leaf), else the realpath of its deepest existing ancestor
+ * plus the rest. `null` when it can't be told (relative with no cwd, dangling link).
+ */
+function landingPath(filePath, cwd) {
+  if (typeof filePath !== "string" || !filePath) return null;
+  if (!path.isAbsolute(filePath) && !cwd) return null;
+  let head = path.resolve(cwd ?? "/", filePath);
+  const tail = [];
+  for (;;) {
+    try {
+      return path.join(realpathSync(head), ...tail);
+    } catch {
+      try {
+        lstatSync(head);
+        return null; // exists but realpath fails — a dangling symlink
+      } catch {
+        const parent = path.dirname(head);
+        if (parent === head) return null;
+        tail.unshift(path.basename(head));
+        head = parent;
+      }
+    }
+  }
+}
+
+/**
+ * Apply the ownership ledger to one PreToolUse event: record what a Bash/Write call
+ * creates, and lift the gate (→ `null`) from a file-effect request whose every
+ * target is the session's own. A write aimed at a coordination file returns a
+ * `deny` marker — the ledger and the gate files are off-limits to the agent.
+ * The ledger is only written for a call that runs without asking (a Write, or a
+ * Bash command with no remaining request): a gated create the operator later
+ * denies must not leave an "owned" path behind.
+ */
+function applyOwnership(input, request, intentDirEnv) {
+  const intentDir = realpathSync(intentDirEnv);
+  const ledgerPath = path.join(intentDir, LEDGER_FILE);
+  const ledger = readLedger(ledgerPath, intentDir);
+  let creates = [];
+  let result = request;
+  const tool = input?.tool_name;
+  if (tool === "Write" || tool === "Edit") {
+    // An unknowable landing spot (a dangling symlink would CREATE its target) is
+    // denied along with the coordination files themselves.
+    const landing = landingPath(input?.tool_input?.file_path, input?.cwd);
+    if (landing === null || isCoordination(landing, intentDir)) return { deny: true };
+    const r = tool === "Write" ? resolvePath(input?.tool_input?.file_path, input?.cwd) : null;
+    if (r && !r.exists && !isCoordination(r.firstMissing, intentDir)) creates = [r.firstMissing];
+  } else if (tool === "Bash") {
+    const analysis = analyzeOwnership(input?.tool_input?.command, {
+      cwd: input?.cwd,
+      ledger,
+      intentDir,
+    });
+    if (analysis.touchesCoordination) return { deny: true };
+    if (request && FS_ACTIONS.has(request.action) && analysis.exempt) result = null;
+    if (result === null) creates = analysis.creates;
+  }
+  const fresh = [...new Set(creates)].filter((p) => !isOwned(p, ledger));
+  if (fresh.length) writeFileSync(ledgerPath, JSON.stringify([...ledger, ...fresh]), "utf8");
+  return result;
 }
 
 /**
@@ -557,6 +1089,17 @@ function main() {
     request = classifyEvent(input);
   } catch {
     request = null;
+  }
+  // The ownership ledger only ever LIFTS a gate, so it fails CLOSED: on any error
+  // the classified request stands unchanged.
+  if (process.env.ZIBBY_INTENT_DIR) {
+    try {
+      const owned = applyOwnership(input, request, process.env.ZIBBY_INTENT_DIR);
+      if (owned?.deny) decide("deny", "The gate's coordination files are off-limits.");
+      request = owned;
+    } catch {
+      // keep `request`
+    }
   }
   if (!request) process.exit(0);
 

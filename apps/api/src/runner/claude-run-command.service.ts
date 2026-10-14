@@ -243,11 +243,16 @@ interface HookMatcherGroup {
  * protocol as Bash; there is no locked floor rule for it (default `allow`, Tier 1 —
  * logged, not blocking), but an operator's own `ask`/`deny` gate-rules.json rule on
  * `action: agent.delegate` takes effect immediately, same as any other action.
+ *
+ * `Write|Edit` feed only the hook's ownership ledger: a `Write` that creates a new
+ * file records it as the agent's own (so a later `sed -i`/`rm` on it isn't gated),
+ * and either tool aimed at the gate's coordination files is denied. Neither raises
+ * an intent.
  */
 function approvalGroup(): HookMatcherGroup {
   const command = `${JSON.stringify(process.execPath)} ${JSON.stringify(APPROVAL_HOOK)} ${GATE_DEADLINE_S}`;
   return {
-    matcher: "Bash|Task",
+    matcher: "Bash|Task|Write|Edit",
     hooks: [{ type: "command", command, timeout: GATE_DEADLINE_S + HOOK_KILL_MARGIN_S }],
   };
 }

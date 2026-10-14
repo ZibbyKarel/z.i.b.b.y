@@ -169,6 +169,27 @@ explicitly as `ZIBBY_INTENT_DIR` — never the Bash call's own working directory
 `docs/api/gates.md` for the evaluation semantics (`GateEvaluatorService`) that
 sits behind the handler agent runs actually wire in.
 
+**Ownership ledger — the agent's own files are not gated.** The hook keeps a
+per-session ledger, `created-files.json`, in the same coordination dir. Any path
+a Bash command (`>`/`>>`, `tee`, `cp`/`mv` dest, `mkdir`, `touch`, `truncate`,
+`dd of=`) or a `Write` call creates — it did not exist when the call was announced
+— is recorded; a directory entry covers everything beneath it. A later overwrite /
+move / delete whose **every** target is owned (or doesn't exist) raises no intent.
+Every doubt keeps the gate: non-literal targets (`$var`, globs, `$(…)`, zsh `=cmd`,
+`~user`, `..`, a symlink leaf, a hard-linked file), relative paths after a `cd`,
+`rm` that isn't the command word (`xargs rm`, `git -C x rm`), effects without
+enumerable targets (`find -delete`, `git clean`, `install`), `sed` scripts other
+than plain `s///`, unknown `cp`/`mv` flags, unterminated quotes. Only a command
+that runs without asking writes the ledger (a gated create the operator denies
+leaves nothing behind); a ledger that is a symlink or hard link counts as empty.
+Push / PR / `gh api` gates are never exempted, and a literal write onto the
+coordination files (Bash, `Write` or `Edit`) is denied. The body of a plain
+`cat … <<'EOF'` heredoc (quoted delimiter) is data and is not classified as shell;
+an unquoted or executed heredoc (`bash <<EOF`, `cat <<EOF | sh`) still is.
+`classify()` also splits on newlines and `&`, so a `mv`/`cp` on the second line of
+a multi-line command is gated too. Ceiling: an interpreter (`python x.py`) can
+write the ledger directly — it could equally delete files ungated, so nothing new.
+
 ### Output capture
 
 Every stdout/stderr chunk is buffered across chunk boundaries (`residual`) so
@@ -281,7 +302,8 @@ Key assembled pieces:
   ZIBBY vendors no third-party plugin tree. The args are persisted in the run
   spec, so the loaded plugins are the trace and approval-resume replays them.
 - **`--settings`** — the locked approval-hook `PreToolUse` group is always
-  **first**, `matcher: "Bash|Task"`; any custom hook whose matcher could catch
+  **first**, `matcher: "Bash|Task|Write|Edit"` (`Write`/`Edit` only feed the
+  ownership ledger above, they never raise an intent); any custom hook whose matcher could catch
   `Bash`/`Task` (empty, `*`, or containing either token) is dropped at merge
   time (`collidesWithApprovalGate`) so a stored hook can never weaken the gate
   (Law 1).

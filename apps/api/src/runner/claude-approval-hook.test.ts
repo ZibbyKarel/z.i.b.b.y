@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 // The hook is a dependency-free `.mjs` with no `.d.ts` sibling; `classify` is a pure
 // `(command: string) => { action, branch?, … } | null`. Imported for unit coverage.
 // @ts-expect-error — untyped .mjs module (implicit any), intentional for this seam.
-import { classify, classifyTask } from "./claude-approval-hook.mjs";
+import { analyzeOwnership, classify, classifyTask } from "./claude-approval-hook.mjs";
 
 /**
  * Direct coverage for the PreToolUse approval hook's destructive-command detector.
@@ -287,7 +287,7 @@ describe("claude approval hook — destructive-command gate", () => {
     expect(req.action).toBe("overwrite");
   });
 
-  it("does NOT gate `echo \"rm -rf\" > note.txt` as a delete — the rm-rf is echo DATA, not a real rm", async () => {
+  it('does NOT gate `echo "rm -rf" > note.txt` as a delete — the rm-rf is echo DATA, not a real rm', async () => {
     await preApprove();
     const res = await runHook(cwd, bashEvent('echo "rm -rf" > note.txt', cwd));
     const req = await readRequest();
@@ -381,6 +381,8 @@ describe("claude approval hook — destructive-command gate", () => {
         JSON.stringify({ decision: "allow" }),
         "utf8",
       );
+      // A pre-existing file (not the agent's own — see the ownership ledger).
+      await fs.writeFile(path.join(target, "scratch.tmp"), "x", "utf8");
       // Event reports the *target* as cwd; env points the gate at the *sandbox*.
       await runHook(target, bashEvent("rm -rf scratch.tmp", target), {
         ZIBBY_INTENT_DIR: sandbox,
@@ -627,5 +629,255 @@ describe("claude approval hook — classifyTask (agent delegation)", () => {
     expect(classifyTask(undefined)).toEqual({ action: "agent.delegate" });
     expect(classifyTask(null)).toEqual({ action: "agent.delegate" });
     expect(classifyTask("not an object")).toEqual({ action: "agent.delegate" });
+  });
+});
+
+describe("claude approval hook — ownership ledger (agent's own files)", () => {
+  let intentDir: string;
+  let work: string;
+  const ledgerFile = () => path.join(intentDir, "created-files.json");
+  const readLedger = async (): Promise<string[]> =>
+    JSON.parse(await fs.readFile(ledgerFile(), "utf8").catch(() => "[]"));
+  const requestRaised = () =>
+    fs
+      .access(path.join(intentDir, "intent-request.json"))
+      .then(() => true)
+      .catch(() => false);
+  const env = () => ({ ZIBBY_INTENT_DIR: intentDir });
+  /** Pre-approve so a gated call returns immediately; the request file is the signal. */
+  const preApprove = () =>
+    fs.writeFile(path.join(intentDir, "intent-decision.json"), '{"decision":"allow"}', "utf8");
+  const analyze = (command: string, ledger: string[] = []) =>
+    analyzeOwnership(command, { cwd: work, ledger, intentDir });
+
+  beforeEach(async () => {
+    // realpath: macOS tmpdir is a symlink, and the ledger stores canonical paths.
+    intentDir = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "hook-intent-")));
+    work = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "hook-work-")));
+  });
+  afterEach(async () => {
+    await fs.rm(intentDir, { recursive: true, force: true });
+    await fs.rm(work, { recursive: true, force: true });
+  });
+
+  it("records a file the agent creates and lets it overwrite and delete it later, ungated", async () => {
+    const file = path.join(work, "vtt2txt.py");
+    let res = await runHook(work, bashEvent(`echo x > ${file}`, work), env());
+    expect(res.stdout).toBe("");
+    expect(await requestRaised()).toBe(false);
+    expect(await readLedger()).toEqual([file]);
+
+    await fs.writeFile(file, "x");
+    res = await runHook(work, bashEvent(`sed -i 's/x/y/' ${file}`, work), env());
+    expect(res.stdout).toBe("");
+    res = await runHook(work, bashEvent(`rm -f ${file}`, work), env());
+    expect(res.stdout).toBe("");
+    expect(await requestRaised()).toBe(false);
+  });
+
+  it("still gates an overwrite of a file that pre-existed and isn't in the ledger", async () => {
+    await fs.writeFile(path.join(work, "notes.md"), "operator data");
+    await preApprove();
+    await runHook(work, bashEvent("echo x > notes.md", work), env());
+    expect(await requestRaised()).toBe(true);
+  });
+
+  it("owns everything under a directory the agent created (a script's outputs inside it)", async () => {
+    const dir = path.join(work, "kbvtt");
+    await runHook(work, bashEvent(`mkdir -p ${dir}`, work), env());
+    expect(await readLedger()).toEqual([dir]);
+    await fs.mkdir(dir);
+    await fs.writeFile(path.join(dir, "a.txt"), "written by python");
+    expect(analyze(`rm ${dir}/a.txt`, [dir]).exempt).toBe(true);
+    expect(analyze(`rm -rf ${dir}`, [dir]).exempt).toBe(true);
+  });
+
+  it("records a file created by the Write tool", async () => {
+    const file = path.join(work, "scratch.py");
+    const res = await runHook(
+      work,
+      { tool_name: "Write", tool_input: { file_path: file, content: "x" }, cwd: work },
+      env(),
+    );
+    expect(res.stdout).toBe("");
+    expect(await readLedger()).toEqual([file]);
+  });
+
+  it("denies Write/Edit aimed at the gate's own coordination files", async () => {
+    for (const name of ["created-files.json", "intent-decision.json"]) {
+      const res = await runHook(
+        work,
+        {
+          tool_name: "Write",
+          tool_input: { file_path: path.join(intentDir, name), content: '["/"]' },
+          cwd: work,
+        },
+        env(),
+      );
+      expect(res.stdout).toContain('"permissionDecision":"deny"');
+    }
+  });
+
+  it("never treats the coordination files or the intent dir as ownable", () => {
+    expect(analyze(`echo '["/"]' > ${intentDir}/created-files.json`).exempt).toBe(false);
+    expect(analyze(`rm -rf ${intentDir}`, [intentDir]).exempt).toBe(false);
+  });
+
+  it("ignores the body of a cat heredoc (data, not shell) — the real kb-librarian command", async () => {
+    const cmd = [
+      `mkdir -p ${work}/kbvtt && cat > ${work}/vtt2txt.py <<'EOF'`,
+      "import sys,re",
+      "for l in open(src):",
+      "    m=re.match(r'<v ([^>]*)>(.*?)(</v>)?$',l.strip())",
+      "    elif '-->' in l: rm = 1",
+      "EOF",
+    ].join("\n");
+    expect(classify(cmd)?.action).toBe("overwrite");
+    expect(analyze(cmd)).toMatchObject({
+      exempt: true,
+      creates: [path.join(work, "kbvtt"), path.join(work, "vtt2txt.py")],
+    });
+  });
+
+  it("keeps the body of a heredoc that is executed (bash <<EOF) visible to the gate", () => {
+    const cmd = ["bash <<'EOF'", "rm -rf /etc/hosts", "EOF"].join("\n");
+    expect(classify(cmd)?.action).toBe("delete");
+    expect(analyze(cmd).exempt).toBe(false);
+  });
+
+  it("keeps the gate on every target it can't resolve to a literal path", async () => {
+    const owned = path.join(work, "own");
+    await fs.writeFile(owned, "x");
+    const ledger = [owned];
+    expect(analyze(`rm ${owned}`, ledger).exempt).toBe(true);
+    for (const cmd of [
+      `rm $X`,
+      `rm ${work}/*.txt`,
+      `rm ~other/x`,
+      `rm $(echo ${owned})`,
+      `cd sub && rm own`,
+      `find ${work} -delete`,
+      `git clean -fd`,
+      `echo ${owned} | xargs rm`,
+      `install ${owned} /usr/local/bin/x`,
+      `rm ${owned} "unterminated`,
+      `cp -t ${work} ${owned}`,
+    ]) {
+      expect(analyze(cmd, ledger).exempt, cmd).toBe(false);
+    }
+  });
+
+  it("checks every target of a chain, including the arg after `--` and a non-owned symlink leaf", async () => {
+    const owned = path.join(work, "own");
+    const foreign = path.join(work, "foreign");
+    await fs.writeFile(owned, "x");
+    await fs.writeFile(foreign, "operator data");
+    const ledger = [owned];
+    expect(analyze(`rm ${owned} && rm ${foreign}`, ledger).exempt).toBe(false);
+    expect(analyze(`rm ${owned} -- -x ${foreign}`, ledger).exempt).toBe(false);
+    expect(analyze(`echo "a > ${owned}" > ${foreign}`, ledger).exempt).toBe(false);
+    const link = path.join(work, "link");
+    await fs.symlink(foreign, link);
+    expect(analyze(`echo x > ${link}`, [owned, link]).exempt).toBe(false);
+  });
+
+  it("resolves cp/mv into an existing directory to dest/<basename>", async () => {
+    const owned = path.join(work, "own");
+    await fs.writeFile(owned, "x");
+    await fs.mkdir(path.join(work, "out"));
+    // out/ pre-exists, out/own does not → a create, not an overwrite.
+    expect(analyze(`cp ${owned} ${work}/out`, [owned])).toMatchObject({
+      exempt: true,
+      creates: [path.join(work, "out", "own")],
+    });
+    await fs.writeFile(path.join(work, "out", "own"), "operator copy");
+    expect(analyze(`cp ${owned} ${work}/out`, [owned]).exempt).toBe(false);
+    // Moving a non-owned file is gated even onto a new path.
+    expect(analyze(`mv ${work}/out/own ${work}/new`, [owned]).exempt).toBe(false);
+  });
+
+  it("closes the review's bypasses — each would have silently hit a pre-existing file", async () => {
+    const foreign = path.join(work, "victim");
+    const owned = path.join(work, "own");
+    await fs.writeFile(foreign, "operator data");
+    await fs.writeFile(owned, "x");
+    await fs.mkdir(path.join(work, "tpl"));
+    await fs.mkdir(path.join(work, "dest"));
+    await fs.mkdir(path.join(work, "outside"));
+    await fs.writeFile(path.join(work, "outside", "victim"), "operator data");
+    await fs.symlink(path.join(work, "outside"), path.join(work, "lnk"));
+    const ledger = [owned, path.join(work, "tpl")];
+    for (const cmd of [
+      // a quote inside a comment must not pair up and swallow the next line
+      `touch new.txt # don't forget\nrm ${foreign}\n# that's it`,
+      // an unquoted heredoc body expands $(…) — it is NOT data
+      `cat > new.sh <<EOF\n$(rm -f ${foreign})\nEOF`,
+      // a line continuation on the heredoc opener line
+      `cat <<'EOF' > new.txt \\\n&& rm -f ${foreign}\nbody\nEOF`,
+      // zsh clobber override: the target is the NEXT word
+      `echo x >! ${foreign}`,
+      // BSD cp: trailing slash copies the contents into dest
+      `cp -R tpl/ dest`,
+      // rm whose targets/cwd come from elsewhere
+      `echo ${foreign} | xargs -I % rm %`,
+      `xargs rm -f nothere`,
+      `git -C ${work} rm victim`,
+      // `..` through a symlink resolves physically
+      `rm lnk/../outside/victim`,
+      // zsh =cmd expansion
+      `rm -f =node`,
+      // sed scripts that write or execute
+      `sed -i 's/a/b/w ${foreign}' ${owned}`,
+      `sed -i 's/a/b/e' ${owned}`,
+      // GNU cp long flags that change the written path
+      `cp --parents ${owned} dest`,
+    ]) {
+      expect(analyze(cmd, ledger).exempt, cmd).toBe(false);
+    }
+  });
+
+  it("refuses a hard-linked file and an untrustworthy (linked) ledger", async () => {
+    const owned = path.join(work, "own");
+    const foreign = path.join(work, "victim");
+    await fs.writeFile(foreign, "operator data");
+    await fs.link(foreign, owned);
+    expect(analyze(`echo x > ${owned}`, [owned]).exempt).toBe(false);
+
+    // A ledger that is a symlink counts as empty — the gate stays.
+    await fs.writeFile(path.join(work, "fake.json"), JSON.stringify([foreign]));
+    await fs.symlink(path.join(work, "fake.json"), ledgerFile());
+    await preApprove();
+    await runHook(work, bashEvent(`rm ${foreign}`, work), env());
+    expect(await requestRaised()).toBe(true);
+  });
+
+  it("denies a literal Bash write onto the ledger, even an ungated append", async () => {
+    const res = await runHook(
+      work,
+      bashEvent(`echo '["/"]' | tee -a ${ledgerFile()}`, work),
+      env(),
+    );
+    expect(res.stdout).toContain('"permissionDecision":"deny"');
+  });
+
+  it("does not record a create whose command is still gated (operator may deny it)", async () => {
+    await fs.writeFile(path.join(work, "notes.md"), "operator data");
+    await preApprove();
+    await runHook(work, bashEvent(`echo x > ${work}/new.txt && echo y > notes.md`, work), env());
+    expect(await requestRaised()).toBe(true);
+    expect(await readLedger()).toEqual([]);
+  });
+
+  it("lets plain multi-command sed substitutions through on an owned file (the kb-librarian fix-up)", async () => {
+    const owned = path.join(work, "vtt2txt.py");
+    await fs.writeFile(owned, "import sys,re");
+    const cmd = `sed -i 's/^import sys,re/import sys,re,html/; s/open(dst,.w.).write(.\\\\n.\\.join(out))/open(dst,"w").write(x)/' ${owned}; tail -2 ${owned}`;
+    expect(analyze(cmd, [owned]).exempt).toBe(true);
+  });
+
+  it("leaves non-file gates (push, PR) untouched even when every path is owned", async () => {
+    await preApprove();
+    await runHook(work, bashEvent(`echo x > ${work}/new.txt && git push origin main`, work), env());
+    expect(await requestRaised()).toBe(true);
   });
 });
