@@ -11,7 +11,7 @@ import { useGenerateBriefingMutation } from "../mutations";
 import { useBriefingQuery } from "../queries";
 
 /**
- * `/activity/briefings` (ZB-07) — the assembled butler's briefing as a full
+ * `/dashboard/briefings` (ZB-07) — the assembled butler's briefing as a full
  * document (headline, needs-you, did-for-you, watching, per-department lines)
  * inside corner-bracketed `Panel`s, plus the "generate now" trigger.
  *

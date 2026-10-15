@@ -35,7 +35,7 @@ export interface ArchiveDepartmentFilterProps {
 }
 
 /**
- * The `/archiv` page's department filter (F2, `docs/plans/hud2chat-F2-archive.md`,
+ * The `/activity/runs` page's department filter (F2, `docs/plans/hud2chat-F2-archive.md`,
  * decision D3) — a multi-select with per-option coloured dots and live counts.
  *
  * Built as a DOMAIN COMPOSITE here, not a DS `Dropdown` extension: DS's existing

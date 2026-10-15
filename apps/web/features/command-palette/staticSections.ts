@@ -9,7 +9,7 @@ export const SETTINGS_SECTIONS = ["general", "activity", "runtime", "status"] as
 
 export type SettingsSectionId = (typeof SETTINGS_SECTIONS)[number];
 
-/** ROUTE-MAP §1's `/policy/gates?section=<s>` tabs — same static posture. */
+/** ROUTE-MAP §1's `/governance/gates?section=<s>` tabs — same static posture. */
 export const GATE_SECTIONS = ["floor", "global", "per-project", "per-agent", "mandate"] as const;
 
 export type GateSectionId = (typeof GATE_SECTIONS)[number];

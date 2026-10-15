@@ -44,7 +44,7 @@ describe("SubnavPinButton", () => {
 
   it("shows a '+ PIN'-style outline button and opens the dialog when unpinned", async () => {
     hooks.isPagePinned.mockReturnValue(false);
-    render(<SubnavPinButton href="/work/companies/acme" id="acme" kind="companies" />);
+    render(<SubnavPinButton href="/companies/acme" id="acme" kind="companies" />);
     const button = screen.getByTestId(SubnavPinButtonTestId.Button);
     expect(button).toBeInTheDocument();
     expect(screen.queryByTestId(PinPageDialogTestId.Name)).toBeNull();
@@ -56,23 +56,23 @@ describe("SubnavPinButton", () => {
   it("prefills the dialog with the resolved entity name", async () => {
     hooks.isPagePinned.mockReturnValue(false);
     hooks.companyName = "Acme Corp";
-    render(<SubnavPinButton href="/work/companies/acme" id="acme" kind="companies" />);
+    render(<SubnavPinButton href="/companies/acme" id="acme" kind="companies" />);
     await userEvent.click(screen.getByTestId(SubnavPinButtonTestId.Button));
     expect(screen.getByTestId(PinPageDialogTestId.Name)).toHaveValue("Acme Corp");
   });
 
   it("falls back to the id when the entity name hasn't resolved yet", async () => {
     hooks.isPagePinned.mockReturnValue(false);
-    render(<SubnavPinButton href="/work/projects/proj-1" id="proj-1" kind="projects" />);
+    render(<SubnavPinButton href="/projects/proj-1" id="proj-1" kind="projects" />);
     await userEvent.click(screen.getByTestId(SubnavPinButtonTestId.Button));
     expect(screen.getByTestId(PinPageDialogTestId.Name)).toHaveValue("proj-1");
   });
 
   it("shows a filled 'PINNED' state and unpins directly on click, without a dialog", async () => {
     hooks.isPagePinned.mockReturnValue(true);
-    render(<SubnavPinButton href="/work/teams/core" id="core" kind="teams" />);
+    render(<SubnavPinButton href="/teams/core" id="core" kind="teams" />);
     await userEvent.click(screen.getByTestId(SubnavPinButtonTestId.Button));
-    expect(hooks.unpinPage).toHaveBeenCalledWith("/work/teams/core");
+    expect(hooks.unpinPage).toHaveBeenCalledWith("/teams/core");
     expect(screen.queryByTestId(PinPageDialogTestId.Name)).toBeNull();
   });
 });

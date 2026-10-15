@@ -9,7 +9,7 @@ export function getAgentQueryKey(id: string) {
   return ["agents", "detail", id] as const;
 }
 
-/** One agent from `GET /api/agents/:id` — backs the `/agents/:id` detail page. */
+/** One agent from `GET /api/agents/:id` — backs the `/workforce/positions/:id` detail page. */
 export function useAgentQuery(id: string) {
   return apiClient.agents.getAgent.useQuery({
     queryKey: getAgentQueryKey(id),

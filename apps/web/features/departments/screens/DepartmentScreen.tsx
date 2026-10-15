@@ -79,7 +79,7 @@ export function DepartmentScreen({ departmentId, tab }: DepartmentScreenProps) {
       <PageContainer>
         <Stack gap="250">
           <PageBreadcrumb
-            items={[{ label: t("breadcrumbOrg"), href: "/org" }, { label: department.name }]}
+            items={[{ label: t("breadcrumbOrg"), href: "/dashboard" }, { label: department.name }]}
             linkComponent={Link as SubNavLinkComponent}
           />
 
@@ -117,7 +117,7 @@ export function DepartmentScreen({ departmentId, tab }: DepartmentScreenProps) {
           <MetricStrip columns={4} items={kpis} />
 
           <Tabs
-            onChange={(next) => router.push(`/org/departments/${departmentId}/${next}`)}
+            onChange={(next) => router.push(`/workforce/departments/${departmentId}/${next}`)}
             tab={tab}
           />
 
@@ -176,7 +176,7 @@ function TeamTab({
     <Stack gap="200">
       <Stack direction="row" justify="between">
         <Typography type="labelSm">{t("team.title")}</Typography>
-        <Link href={`/org/people/new?department=${departmentId}`}>
+        <Link href={`/workforce/agents/new?department=${departmentId}`}>
           <Button icon="plus" intent="primary" size="sm">
             {t("team.hire")}
           </Button>
@@ -208,7 +208,7 @@ function TeamTab({
             },
           ]}
           getRowKey={(e) => e.id}
-          rowHref={(e) => `/org/people/${e.id}`}
+          rowHref={(e) => `/workforce/agents/${e.id}`}
           rows={list}
         />
       )}
@@ -287,7 +287,9 @@ function WorkflowsTab({
               {
                 onSuccess: () => {
                   setAdding(false);
-                  router.push(`/org/departments/${departmentId}/workflows/${body.id}` as Route);
+                  router.push(
+                    `/workforce/departments/${departmentId}/workflows/${body.id}` as Route,
+                  );
                 },
               },
             )
@@ -302,7 +304,7 @@ function WorkflowsTab({
         />
       )}
       {list.map((p) => (
-        <Link href={`/org/departments/${departmentId}/workflows/${p.id}`} key={p.id}>
+        <Link href={`/workforce/departments/${departmentId}/workflows/${p.id}`} key={p.id}>
           <Card interactive radius="sm">
             <Container padding="200">
               <Stack gap="100">
@@ -323,7 +325,7 @@ function WorkflowsTab({
 }
 
 /** ZB-11: a link out to the global registry (skills/mcp/hooks now live at
- * `/system/registries/<kind>`; system automations stay at `/automations` —
+ * `/system/registries/<kind>`; system automations stay at `/work/automations` —
  * out of ZB-11's scope) rather than a derived "bound in" list on this tab
  * itself — the derived list now lives ON the registry table (O-09), as a
  * "Bound in" column linking back here. */
@@ -334,7 +336,7 @@ function RegistryLinkTab({ kind }: { kind: "skills" | "mcp" | "automations" | "h
     skills: "/system/registries/skills" as Route,
     mcp: "/system/registries/mcp" as Route,
     hooks: "/system/registries/hooks" as Route,
-    automations: "/automations",
+    automations: "/work/automations",
   };
   return (
     <EmptyState

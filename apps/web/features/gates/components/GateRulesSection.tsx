@@ -53,7 +53,7 @@ export interface GateRulesSectionProps {
    */
   department?: DepartmentId;
   /**
-   * ZB-08: `/policy/gates?section=global` shows the floor in its own `floor`
+   * ZB-08: `/governance/gates?section=global` shows the floor in its own `floor`
    * section — set this to skip the embedded {@link SystemFloorPanel} so it
    * isn't rendered twice. Every other call site (the department drawer's
    * Gates tab, the pre-ZB-08 Settings tab) keeps today's behavior.

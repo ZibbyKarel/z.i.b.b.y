@@ -7,7 +7,7 @@ const push = vi.fn();
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
-  usePathname: () => "/org",
+  usePathname: () => "/dashboard",
 }));
 
 const department = (id: string, code: string, name: string, division: string) => ({
@@ -116,13 +116,13 @@ describe("OrgMapScreen", () => {
     render(<OrgMapScreen />);
     fireEvent.click(screen.getByTestId(`${OrgFloorplanTestId.Desk}-e1`));
     expect(push).toHaveBeenCalledTimes(1);
-    expect(push).toHaveBeenCalledWith("/org/people/e1");
+    expect(push).toHaveBeenCalledWith("/workforce/agents/e1");
   });
 
   it("navigates to the department when a room is clicked", () => {
     render(<OrgMapScreen />);
     fireEvent.click(screen.getByTestId(`${OrgFloorplanTestId.Room}-dev`));
-    expect(push).toHaveBeenCalledWith("/org/departments/dev");
+    expect(push).toHaveBeenCalledWith("/workforce/departments/dev");
   });
 
   it("shows the employee's role and current task in the hover popover", () => {
@@ -162,7 +162,7 @@ describe("OrgMapScreen", () => {
   it("sends an error Zibby with no employee in error to the notification bell", () => {
     render(<OrgMapScreen />);
     fireEvent.click(screen.getByTestId(OrgFloorplanTestId.Coo));
-    expect(push).toHaveBeenCalledWith("/org?notifications=open");
+    expect(push).toHaveBeenCalledWith("/dashboard?notifications=open");
   });
 
   it("sends a blocked Zibby waiting on an approval to the approvals queue", () => {
@@ -171,14 +171,14 @@ describe("OrgMapScreen", () => {
     render(<OrgMapScreen />);
     expect(screen.getByTestId(ZibbyAvatarTestId.Root)).toHaveAttribute("data-state", "blocked");
     fireEvent.click(screen.getByTestId(OrgFloorplanTestId.Coo));
-    expect(push).toHaveBeenCalledWith("/policy/approvals");
+    expect(push).toHaveBeenCalledWith("/governance/approvals");
   });
 
   it("sends Zibby to the People roster when an employee is in its state", () => {
     notifications = [];
     render(<OrgMapScreen />);
     fireEvent.click(screen.getByTestId(OrgFloorplanTestId.Coo));
-    expect(push).toHaveBeenCalledWith("/org/people?state=working");
+    expect(push).toHaveBeenCalledWith("/workforce/agents?state=working");
   });
 
   it("drops Zibby out of error once every failure is read", () => {

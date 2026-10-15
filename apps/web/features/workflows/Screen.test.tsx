@@ -154,9 +154,9 @@ describe("workflows Screen — categorized grid + detail dialog", () => {
 
   it("department tab basePath: close returns to that basePath", async () => {
     withList();
-    render(<Screen basePath="/org/departments/delivery/workflows" selectedId="ship" />);
+    render(<Screen basePath="/workforce/departments/delivery/workflows" selectedId="ship" />);
     await userEvent.click(screen.getByTestId(DialogTestId.CloseButton));
-    expect(push).toHaveBeenCalledWith("/org/departments/delivery/workflows");
+    expect(push).toHaveBeenCalledWith("/workforce/departments/delivery/workflows");
   });
 
   it("unknown selectedId: no dialog, grid still renders", () => {

@@ -80,7 +80,7 @@ describe("CompanyDetailScreen (ZB-06)", () => {
     expect(screen.queryByText("Other Project")).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByText("Linked Co Project"));
-    expect(push).toHaveBeenCalledWith("/work/projects/linked");
+    expect(push).toHaveBeenCalledWith("/projects/linked");
   });
 
   it("removes a contact via the ContactRow remove action", async () => {

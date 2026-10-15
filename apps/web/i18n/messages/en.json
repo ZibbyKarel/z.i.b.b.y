@@ -18,66 +18,65 @@
     "mcp": "MCP servers",
     "commands": "Commands",
     "hooks": "Hooks",
-    "org": "Org",
     "work": "Work",
     "activity": "Activity",
-    "policy": "Policy",
     "knowledge": "Knowledge",
-    "ledger": "Ledger",
-    "inbox": "Inbox",
     "subtab": {
-      "org": {
-        "map": "Map",
-        "people": "People"
-      },
       "work": {
         "tasks": "Tasks",
         "goals": "Goals",
         "workflows": "Workflows",
-        "companies": "Companies",
-        "teams": "Teams",
-        "projects": "Projects"
-      },
-      "inbox": {
-        "overview": "Overview",
-        "issues": "Issues",
-        "pull-requests": "Pull requests"
+        "automations": "Automations"
       },
       "activity": {
         "log": "Log",
         "runs": "Runs",
-        "inbox": "Inbox",
-        "briefings": "Briefings"
-      },
-      "policy": {
-        "approvals": "Approvals",
-        "gates": "Gates",
-        "patterns": "Patterns"
+        "channels": "Channels"
       },
       "knowledge": {
         "vault": "Vault",
         "graph": "Graph",
         "distill": "Distill"
       },
-      "ledger": {
-        "budgets": "Budgets",
-        "spend": "Spend"
-      },
       "system": {
+        "skills": "Skills",
+        "mcp": "MCP",
+        "hooks": "Hooks",
+        "commands": "Commands",
+        "settings": "Settings",
         "general": "General",
         "activity": "Activity",
         "runtime": "Runtime",
         "status": "Status"
       },
-      "registries": {
-        "positions": "Positions",
-        "skills": "Skills",
-        "mcp": "MCP",
-        "hooks": "Hooks",
-        "commands": "Commands"
+      "dashboard": {
+        "map": "Map",
+        "overview": "Inbox",
+        "issues": "Issues",
+        "pull-requests": "Pull requests",
+        "briefings": "Briefings"
+      },
+      "companies": {
+        "companies": "Companies",
+        "teams": "Teams",
+        "projects": "Projects"
+      },
+      "workforce": {
+        "agents": "Agents",
+        "positions": "Positions"
+      },
+      "governance": {
+        "approvals": "Approvals",
+        "gates": "Gates",
+        "patterns": "Patterns",
+        "budgets": "Budgets",
+        "spend": "Spend"
       }
     },
-    "registries": "Registries"
+    "dashboard": "Dashboard",
+    "workforce": "Workforce",
+    "governance": "Governance",
+    "system": "System"
   },
   "memory": {
     "title": "Memory",

@@ -46,7 +46,7 @@ function readOpen(): Record<string, boolean> {
 }
 
 /**
- * `/inbox/issues` — the operator's roadmap items across all projects: search,
+ * `/dashboard/inbox/issues` — the operator's roadmap items across all projects: search,
  * the shared company / team / project filters, toggles (group by epic, show done,
  * show hidden), sorted new → waiting → running. `/` focuses the search.
  */

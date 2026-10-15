@@ -101,12 +101,12 @@ export function ProjectCard({ project, budget, onOpen }: ProjectCardProps) {
 
   // Per-status task stats (minus the "Celkem" total). Each stat is its own
   // `next/link` — living in the card footer, outside the body's click target, so a
-  // stat click deep-links to /archiv and never triggers the card's open-detail nav.
+  // stat click deep-links to /activity/runs and never triggers the card's open-detail nav.
   // Phase 108: the runs feed has no global scope any more — each href carries the
   // project explicitly via `?project=<id>` (the pre-Phase-24 mechanism), restored
   // as the one way to drill into a single project's runs.
   //
-  // F8d: `/runs` is deleted — repointed at `/archiv` (F2). Pre-existing F2
+  // F8d: `/runs` is deleted — repointed at `/activity/runs` (F2). Pre-existing F2
   // limitation, not fixed here: the Archive screen only reads `?run=`, so
   // `?project=`/`?filter=` land inert (the archive opens unscoped/unfiltered
   // rather than 404ing).
@@ -115,7 +115,7 @@ export function ProjectCard({ project, budget, onOpen }: ProjectCardProps) {
       {groups.map(({ group: g, count }) => (
         <Link
           data-testid={`project-card-stat-${g.key}`}
-          href={`/archiv?project=${project.id}&filter=${groupFilterParam(g)}` as Route}
+          href={`/activity/runs?project=${project.id}&filter=${groupFilterParam(g)}` as Route}
           key={g.key}
         >
           <Stat

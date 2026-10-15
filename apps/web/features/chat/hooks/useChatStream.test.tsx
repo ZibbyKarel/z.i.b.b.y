@@ -50,11 +50,19 @@ describe("useChatStream", () => {
         conversationId: "c1",
         turnId: "t1",
         type: "tool",
-        tool: { name: "create_task", status: "ok", summary: "Spustil jsem úkol.", href: "/archiv" },
+        tool: {
+          name: "create_task",
+          status: "ok",
+          summary: "Spustil jsem úkol.",
+          href: "/activity/runs",
+        },
       });
     });
     expect(result.current.toolEvents).toHaveLength(1);
-    expect(result.current.toolEvents[0]).toMatchObject({ name: "create_task", href: "/archiv" });
+    expect(result.current.toolEvents[0]).toMatchObject({
+      name: "create_task",
+      href: "/activity/runs",
+    });
   });
 
   it("replaces a buffered tool event by callId (started→ok collapses to one entry)", () => {
@@ -80,7 +88,7 @@ describe("useChatStream", () => {
           status: "ok",
           callId: "toolu_1",
           summary: "Spustil jsem úkol — workflow Delivery.",
-          href: "/archiv?run=delivery_1",
+          href: "/activity/runs/delivery_1",
           runRef: "delivery_1",
           taskId: "task-9",
         },
@@ -91,7 +99,7 @@ describe("useChatStream", () => {
     expect(result.current.toolEvents[0]).toMatchObject({
       status: "ok",
       callId: "toolu_1",
-      href: "/archiv?run=delivery_1",
+      href: "/activity/runs/delivery_1",
     });
   });
 

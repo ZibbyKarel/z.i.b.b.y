@@ -112,11 +112,11 @@ export function OrgMapScreen() {
   // pending approval, else the runs archive filtered to that state.
   const cooGroup = RUN_GROUP[cooState];
   const cooHref = employees.some((e) => e.state === cooState)
-    ? `/org/people?state=${cooState}`
+    ? `/workforce/agents?state=${cooState}`
     : cooState === "error"
       ? `${pathname}?${NOTIFICATIONS_PARAM}=open`
       : cooState === "blocked" && approvals.length > 0
-        ? "/policy/approvals"
+        ? "/governance/approvals"
         : cooGroup
           ? `/activity/runs?state=${cooGroup}`
           : "/activity/runs";
@@ -164,9 +164,11 @@ export function OrgMapScreen() {
           minimap: t("controls.minimap"),
           workingOn: t("popover.workingOn"),
         }}
-        onAgentClick={(_roomId, employeeId) => router.push(`/org/people/${employeeId}` as Route)}
+        onAgentClick={(_roomId, employeeId) =>
+          router.push(`/workforce/agents/${employeeId}` as Route)
+        }
         onCooClick={() => router.push(cooHref as Route)}
-        onRoomClick={(id) => router.push(`/org/departments/${id}` as Route)}
+        onRoomClick={(id) => router.push(`/workforce/departments/${id}` as Route)}
         rooms={rooms}
         stateLabels={stateLabels}
       />

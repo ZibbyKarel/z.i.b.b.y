@@ -18,7 +18,7 @@ import { type DashboardApproval, HIGH_RISK_TYPES, formatWaited, gateTitleKey } f
 import { useApproveMutation, useRejectMutation } from "../mutations";
 import { useApprovalHistoryQuery, useApprovalsQuery } from "../queries";
 
-/** `/policy/approvals` — the queue (as row-density `ApprovalCard`s) and the
+/** `/governance/approvals` — the queue (as row-density `ApprovalCard`s) and the
  * decided history, both `DataTable`s. The detail/decision surface itself is
  * the shell-level `?approval=` sheet (`ApprovalSheet`) — a row's "Open" (or a
  * click on history) sets that search param rather than navigating away. */

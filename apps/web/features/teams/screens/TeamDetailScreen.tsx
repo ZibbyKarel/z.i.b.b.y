@@ -31,7 +31,7 @@ import { useCreateTeamMutation, useDeleteTeamMutation, useUpdateTeamMutation } f
 import { useTeamQuery } from "../queries";
 
 export interface TeamDetailScreenProps {
-  /** The team to edit; omitted when creating a new one (the `/work/teams/new` route). */
+  /** The team to edit; omitted when creating a new one (the `/teams/new` route). */
   teamId?: string;
 }
 
@@ -42,7 +42,7 @@ interface MemberProjectRow {
 }
 
 /**
- * `/work/teams/[id]` (ZB-06) — moved from `/teams/[id]` and re-skinned:
+ * `/teams/[id]` (ZB-06) — moved from `/teams/[id]` and re-skinned:
  * `MetricStrip` (projects), the linked-projects `DataTable`, and
  * `ConfirmDeleteButton` for delete. A team has no contacts/budget of its own
  * (`TeamSchema` carries neither — those stay company-only, D-003), so this
@@ -74,7 +74,7 @@ export function TeamDetailScreen({ teamId }: TeamDetailScreenProps) {
       const newId = slug(body.name) || `team-${Date.now()}`;
       createTeam.mutate(
         { body: { ...body, companyId: body.companyId ?? undefined, id: newId } },
-        { onSuccess: () => router.replace(`/work/teams/${newId}` as Route) },
+        { onSuccess: () => router.replace(`/teams/${newId}` as Route) },
       );
     } else {
       updateTeam.mutate({ params: { id }, body });
@@ -106,7 +106,7 @@ export function TeamDetailScreen({ teamId }: TeamDetailScreenProps) {
       <Stack gap="250">
         <PageBreadcrumb
           items={[
-            { label: t("title"), href: "/work/teams" },
+            { label: t("title"), href: "/teams" },
             { label: isNew ? t("newTeam") : (team?.name ?? "") },
           ]}
           linkComponent={Link as SubNavLinkComponent}
@@ -121,7 +121,7 @@ export function TeamDetailScreen({ teamId }: TeamDetailScreenProps) {
               onConfirm={() =>
                 deleteTeam.mutate(
                   { params: { id } },
-                  { onSuccess: () => router.push("/work/teams" as Route) },
+                  { onSuccess: () => router.push("/teams" as Route) },
                 )
               }
             />
@@ -173,7 +173,7 @@ export function TeamDetailScreen({ teamId }: TeamDetailScreenProps) {
                   </Typography>
                 }
                 getRowKey={(r) => r.id}
-                onRowClick={(r) => router.push(`/work/projects/${r.id}` as Route)}
+                onRowClick={(r) => router.push(`/projects/${r.id}` as Route)}
                 rows={memberProjectRows}
               />
             </Panel>

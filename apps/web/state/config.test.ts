@@ -2,26 +2,30 @@ import { describe, expect, it } from "vitest";
 import { sectionForPath } from "./config";
 
 describe("sectionForPath", () => {
-  it.each(["/policy/approvals", "/policy/gates", "/policy/patterns"])(
-    "maps %s to policy",
-    (path) => {
-      expect(sectionForPath(path)).toBe("policy");
-    },
-  );
-
   it.each([
-    ["/automations", "automations"],
-    ["/automations/memory-distill", "automations"],
-    ["/system/registries", "registries"],
-    ["/system/registries/hooks/foo", "registries"],
+    ["/dashboard", "dashboard"],
+    ["/dashboard/inbox/issues/p/i", "dashboard"],
+    ["/dashboard/briefings", "dashboard"],
+    ["/work/automations", "work"],
+    ["/work/automations/memory-distill", "work"],
+    ["/companies", "companies"],
+    ["/teams/x", "companies"],
+    ["/projects/x/roadmap", "companies"],
+    ["/workforce/agents/e1", "workforce"],
+    ["/workforce/positions", "workforce"],
+    ["/workforce/departments/dev/team", "workforce"],
+    ["/activity/channels", "activity"],
+    ["/governance/approvals", "governance"],
+    ["/governance/spend", "governance"],
+    ["/system/registries", "system"],
+    ["/system/registries/hooks/foo", "system"],
     ["/system/settings/general", "system"],
-    ["/system/settings/status", "system"],
   ])("maps %s to %s", (path, section) => {
     expect(sectionForPath(path)).toBe(section);
   });
 
-  it("keeps existing mappings", () => {
-    expect(sectionForPath("/work/projects")).toBe("work");
-    expect(sectionForPath("/unknown")).toBe("org");
+  it("falls back to dashboard and does not match partial segments", () => {
+    expect(sectionForPath("/unknown")).toBe("dashboard");
+    expect(sectionForPath("/teamsfoo")).toBe("dashboard");
   });
 });

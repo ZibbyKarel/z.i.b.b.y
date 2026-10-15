@@ -133,7 +133,7 @@ const createTask = vi.fn((vars: CreateVars, opts?: CreateOpts) => {
     });
   } else {
     // The interactive path returns a `pending` task (its run spawns in the
-    // background); the dialog redirects to `/archiv` keyed by the task id
+    // background); the dialog redirects to `/activity/runs` keyed by the task id
     // (F8d — `/runs` is deleted).
     opts?.onSuccess?.({
       status: 201,
@@ -276,7 +276,7 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
     expect(createTask.mock.calls[0]?.[0].body.scheduledAt).toBeFalsy();
     // No output chosen → the field is omitted (inherit), not sent as void.
     expect(createTask.mock.calls[0]?.[0].body.output).toBeUndefined();
-    expect(push).toHaveBeenCalledWith("/archiv?run=task_1");
+    expect(push).toHaveBeenCalledWith("/activity/runs/task_1");
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -358,7 +358,7 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
     const taskBody = createTask.mock.calls[0]?.[0].body;
     expect(taskBody?.target?.kind).toBe("goal");
     expect(taskBody?.scheduledAt).toBeFalsy();
-    expect(push).toHaveBeenCalledWith("/archiv?run=task_1");
+    expect(push).toHaveBeenCalledWith("/activity/runs/task_1");
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -508,7 +508,7 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
       name: "Delivery",
       glyph: "flow",
     });
-    expect(push).toHaveBeenCalledWith("/archiv?run=task_1");
+    expect(push).toHaveBeenCalledWith("/activity/runs/task_1");
     expect(onClose).toHaveBeenCalled();
   });
 

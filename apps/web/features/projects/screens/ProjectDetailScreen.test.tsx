@@ -142,7 +142,7 @@ describe("ProjectDetailScreen (ZB-06)", () => {
   it("clicking a tab navigates to the [tab] route instead of an internal switch", async () => {
     render(<ProjectDetailScreen projectId="media-vault" tab="overview" />);
     await userEvent.click(screen.getByTestId(`${TabsTestId.Tab}-profile`));
-    expect(push).toHaveBeenCalledWith("/work/projects/media-vault/profile");
+    expect(push).toHaveBeenCalledWith("/projects/media-vault/profile");
   });
 
   it("shows the person's name and standup time on the profile tab", () => {

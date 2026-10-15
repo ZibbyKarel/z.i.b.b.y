@@ -33,7 +33,7 @@ export enum InboxOverviewScreenTestId {
 const TOP_ROWS = 3;
 
 /**
- * `/inbox/overview` — two cards (spec decision 14): the issues that need you and
+ * `/dashboard/inbox` — two cards (spec decision 14): the issues that need you and
  * the pull requests to review / blocked of mine, each with its top rows and a link
  * to the sub-page. Both use the shared filters; the sub-nav counters do not.
  */
@@ -78,7 +78,7 @@ export function InboxOverviewScreen() {
           header={t("overview.issuesHeader")}
           headerEnd={t("overview.issuesSources")}
           headline={t("overview.needYou", { n: pad2(actionable.length) })}
-          openHref="/inbox/issues"
+          openHref="/dashboard/inbox/issues"
           openLabel={t("overview.openIssues")}
           rows={actionable.slice(0, TOP_ROWS).map((item) => (
             <OverviewRow
@@ -127,7 +127,7 @@ export function InboxOverviewScreen() {
               toReview: pad2(toReview.length),
               blocked: pad2(mineBlocked.length),
             })}
-            openHref="/inbox/pull-requests"
+            openHref="/dashboard/inbox/pull-requests"
             openLabel={t("overview.openPrs")}
             rows={topPrs.map((pr) => (
               <OverviewRow

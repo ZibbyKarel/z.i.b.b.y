@@ -278,7 +278,7 @@ describe("RoadmapItemDialog", () => {
 
       await userEvent.click(screen.getByTestId(RoadmapItemDialogTestId.OpenRun));
 
-      expect(push).toHaveBeenCalledWith("/archiv?run=delivery_42");
+      expect(push).toHaveBeenCalledWith("/activity/runs/delivery_42");
     });
 
     it("falls back to the taskId when the release never dispatched (queued/held — no runRef)", async () => {
@@ -292,7 +292,7 @@ describe("RoadmapItemDialog", () => {
 
       await userEvent.click(screen.getByTestId(RoadmapItemDialogTestId.OpenRun));
 
-      expect(push).toHaveBeenCalledWith("/archiv?run=task-7");
+      expect(push).toHaveBeenCalledWith("/activity/runs/task-7");
     });
 
     it("keeps the PR link alongside it rather than replacing it", () => {

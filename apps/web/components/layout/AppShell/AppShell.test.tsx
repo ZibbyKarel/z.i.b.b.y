@@ -56,16 +56,25 @@ describe("AppShell", () => {
     expect(link).toHaveAttribute("href", `#${APP_FRAME_MAIN_CONTENT_ID}`);
   });
 
-  it("renders the header's section nav with automations/registries but no SYSTEM tab, and no operator/active-count slot", () => {
+  it("renders the header's section nav with all eight sections, and no operator/active-count slot", () => {
     renderWithProviders(
       <AppShell>
         <div>obsah stránky</div>
       </AppShell>,
     );
     expect(screen.getByTestId(AppHeaderTestId.Nav)).toBeInTheDocument();
-    expect(screen.queryByTestId(`${TabsTestId.Tab}-system`)).toBeNull();
-    expect(screen.getByTestId(`${TabsTestId.Tab}-automations`)).toBeInTheDocument();
-    expect(screen.getByTestId(`${TabsTestId.Tab}-registries`)).toBeInTheDocument();
+    for (const id of [
+      "dashboard",
+      "work",
+      "companies",
+      "workforce",
+      "activity",
+      "knowledge",
+      "governance",
+      "system",
+    ]) {
+      expect(screen.getByTestId(`${TabsTestId.Tab}-${id}`)).toBeInTheDocument();
+    }
     expect(screen.queryByTestId(AppHeaderTestId.Operator)).toBeNull();
     expect(screen.queryByTestId(AppHeaderTestId.ActiveCount)).toBeNull();
   });
@@ -142,7 +151,7 @@ describe("AppShell", () => {
   });
 
   it.each([
-    ["/work/projects/cms4/integrations", "/work/projects"],
+    ["/projects/cms4/integrations", "/projects"],
     ["/work/tasks", "/work/tasks"],
   ])("marks the owning sub-nav tab current on %s", (path, href) => {
     mockPath = path;
@@ -168,7 +177,7 @@ describe("AppShell", () => {
 
   it.each([
     ["/system/registries/hooks/foo", "/system/registries/hooks"],
-    ["/system/settings/status", "/system/settings/status"],
+    ["/system/settings/status", "/system/settings/general"],
   ])("highlights the owning sub-tab for %s", (path, tabHref) => {
     mockPath = path;
     try {
@@ -210,8 +219,11 @@ describe("AppShell", () => {
 
 describe("AppShell top menu sections", () => {
   it.each([
-    ["/automations", "automations"],
-    ["/system/registries/skills", "registries"],
+    ["/work/automations", "work"],
+    ["/system/registries/skills", "system"],
+    ["/system/settings/status", "system"],
+    ["/workforce/positions/writer", "workforce"],
+    ["/governance/spend", "governance"],
   ])("highlights the %s top tab", (path, id) => {
     mockPath = path;
     try {

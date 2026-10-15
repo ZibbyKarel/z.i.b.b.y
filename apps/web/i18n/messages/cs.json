@@ -18,66 +18,65 @@
     "mcp": "MCP servery",
     "commands": "Příkazy",
     "hooks": "Hooky",
-    "org": "Org",
     "work": "Práce",
     "activity": "Aktivita",
-    "policy": "Politika",
     "knowledge": "Znalosti",
-    "ledger": "Rozpočet",
-    "inbox": "Inbox",
     "subtab": {
-      "org": {
-        "map": "Mapa",
-        "people": "Lidé"
-      },
       "work": {
         "tasks": "Úkoly",
         "goals": "Cíle",
         "workflows": "Workflows",
-        "companies": "Firmy",
-        "teams": "Týmy",
-        "projects": "Projekty"
-      },
-      "inbox": {
-        "overview": "Přehled",
-        "issues": "Issues",
-        "pull-requests": "Pull requesty"
+        "automations": "Automatizace"
       },
       "activity": {
         "log": "Log",
         "runs": "Běhy",
-        "inbox": "Doručená pošta",
-        "briefings": "Souhrny"
-      },
-      "policy": {
-        "approvals": "Schválení",
-        "gates": "Pravidla",
-        "patterns": "Vzory"
+        "channels": "Kanály"
       },
       "knowledge": {
         "vault": "Trezor",
         "graph": "Graf",
         "distill": "Destilace"
       },
-      "ledger": {
-        "budgets": "Rozpočty",
-        "spend": "Útraty"
-      },
       "system": {
+        "skills": "Dovednosti",
+        "mcp": "MCP",
+        "hooks": "Hooky",
+        "commands": "Příkazy",
+        "settings": "Nastavení",
         "general": "Obecné",
         "activity": "Aktivita",
         "runtime": "Runtime",
         "status": "Stav"
       },
-      "registries": {
-        "positions": "Pozice",
-        "skills": "Dovednosti",
-        "mcp": "MCP",
-        "hooks": "Hooky",
-        "commands": "Příkazy"
+      "dashboard": {
+        "map": "Mapa",
+        "overview": "Inbox",
+        "issues": "Issues",
+        "pull-requests": "Pull requesty",
+        "briefings": "Souhrny"
+      },
+      "companies": {
+        "companies": "Firmy",
+        "teams": "Týmy",
+        "projects": "Projekty"
+      },
+      "workforce": {
+        "agents": "Agenti",
+        "positions": "Pozice"
+      },
+      "governance": {
+        "approvals": "Schválení",
+        "gates": "Pravidla",
+        "patterns": "Vzory",
+        "budgets": "Rozpočty",
+        "spend": "Útraty"
       }
     },
-    "registries": "Registry"
+    "dashboard": "Přehled",
+    "workforce": "Agenti",
+    "governance": "Pravidla",
+    "system": "Systém"
   },
   "memory": {
     "title": "Paměť",

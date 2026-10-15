@@ -44,7 +44,7 @@ export interface IntegrationDetailScreenProps {
 }
 
 /**
- * The project-nested `/work/projects/:id/integrations/:integrationId` detail page
+ * The project-nested `/projects/:id/integrations/:integrationId` detail page
  * (N4h, closing the grammar series; GitLab's Settings → Webhooks → webhook-page
  * precedent) — the card's Configure action NAVIGATES here, the page IS the edit
  * surface (the same {@link IntegrationFormFields} the create dialog renders;
@@ -80,7 +80,7 @@ function IntegrationEditor({
   const form = useIntegrationFormState(projectId, integration);
 
   const name = integration.name ?? integration.id;
-  const backHref = `/work/projects/${projectId}/integrations` as Route;
+  const backHref = `/projects/${projectId}/integrations` as Route;
 
   const save = () => {
     updateIntegration.mutate(

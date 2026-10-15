@@ -4,7 +4,7 @@ import type { RunView } from "../runs/run";
 import { type OwnerDepartmentMaps, runDepartmentId } from "../departments/useOwnerDepartment";
 
 /**
- * Pure department-attribution logic for the `/archiv` page (F2,
+ * Pure department-attribution logic for the `/activity/runs` page (F2,
  * `docs/plans/hud2chat-F2-archive.md`, decision D3/D8). Search, department filtering,
  * and grouping/time-bucketing now run server-side (`TaskRunsService.listArchivedTaskRuns`/
  * `getArchiveCounts`) so the archive reaches every archived run, not just whatever page

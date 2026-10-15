@@ -11,7 +11,7 @@ import { TeamCard } from "../components/TeamCard";
 import { useTeamsQuery } from "../queries";
 
 /**
- * `/work/teams` (ZB-06) — the team catalog, moved from `/teams`. Mirrors
+ * `/teams` (ZB-06) — the team catalog, moved from `/teams`. Mirrors
  * `CompaniesListScreen` (D-003: teams follow the companies pattern).
  */
 export function TeamsListScreen() {
@@ -20,8 +20,8 @@ export function TeamsListScreen() {
   const teamsQuery = useTeamsQuery();
   const teams = teamsQuery.data ?? [];
 
-  const openTeam = (team: Team) => router.push(`/work/teams/${team.id}` as Route);
-  const addTeam = () => router.push("/work/teams/new" as Route);
+  const openTeam = (team: Team) => router.push(`/teams/${team.id}` as Route);
+  const addTeam = () => router.push("/teams/new" as Route);
 
   return (
     <Container padding={["300", "350"]}>

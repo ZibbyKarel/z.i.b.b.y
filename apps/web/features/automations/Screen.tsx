@@ -79,7 +79,7 @@ export function Screen() {
       {
         onSuccess: () => {
           setCreating(false);
-          router.push(`/automations/${body.id}`);
+          router.push(`/work/automations/${body.id}`);
         },
       },
     );
@@ -91,7 +91,7 @@ export function Screen() {
       <AutomationCard
         automation={automation}
         key={automation.id}
-        onEdit={() => router.push(`/automations/${automation.id}`)}
+        onEdit={() => router.push(`/work/automations/${automation.id}`)}
         onToggle={() =>
           update.mutate({ params: { id: automation.id }, body: { enabled: !automation.enabled } })
         }
@@ -176,7 +176,7 @@ export function Screen() {
                       automation={automation}
                       description={automation.description}
                       key={automation.id}
-                      onEdit={() => router.push(`/automations/${automation.id}`)}
+                      onEdit={() => router.push(`/work/automations/${automation.id}`)}
                       onToggle={() =>
                         update.mutate({
                           params: { id: automation.id },

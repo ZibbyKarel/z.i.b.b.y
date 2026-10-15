@@ -75,7 +75,7 @@ function PrSection({
 }
 
 /**
- * `/inbox/pull-requests` — two sections, "To review" and "Mine — push to merged",
+ * `/dashboard/inbox/pull-requests` — two sections, "To review" and "Mine — push to merged",
  * each sorted by blocker. Read-only. `?pr=<n>` focuses one PR (the link from an
  * issue's badge or the Overview); the list refetches on focus and every 60 s.
  */

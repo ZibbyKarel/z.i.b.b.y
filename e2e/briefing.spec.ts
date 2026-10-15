@@ -28,7 +28,7 @@ test("generating a briefing appends it to the chat transcript", async ({ page })
     briefing: { headline },
   } = (await res.json()) as { briefing: { headline: string } };
 
-  await page.goto("/org");
+  await page.goto("/dashboard");
   await page.keyboard.press("Control+j");
 
   // `BriefingMessageCardTestId.Root` — the transcript's briefing card variant.

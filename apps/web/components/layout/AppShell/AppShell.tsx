@@ -55,22 +55,16 @@ export enum AppShellTestId {
   PinToggle = "app-shell-pin-toggle",
 }
 
-/** Top nav sections, minus `system` — settings is reached through the header
- *  cog (`SettingsCog`), its tabs still fill the sub-nav row, and
- *  `/system/settings/*` highlights no top tab (`Tabs` tolerates a `value`
- *  matching no rendered `Tab`). */
-const NAV_SECTIONS = SECTIONS.filter((section) => section.id !== "system");
-
-/** `/work/<kind>/<id>` (and its sub-tabs) — a company/project/team detail
+/** `/<kind>/<id>` (and its sub-tabs) — a company/project/team detail
  *  page, never its `/new` creation screen (spec step 5). */
 function matchEntityDetail(
   pathname: string,
 ): { kind: SubnavPinEntityKind; id: string; href: string } | null {
-  const match = /^\/work\/(companies|projects|teams)\/([^/]+)/.exec(pathname);
+  const match = /^\/(companies|projects|teams)\/([^/]+)/.exec(pathname);
   if (!match) return null;
   const [, kind, id] = match as unknown as [string, SubnavPinEntityKind, string];
   if (!id || id === "new") return null;
-  return { kind, id, href: `/work/${kind}/${id}` };
+  return { kind, id, href: `/${kind}/${id}` };
 }
 
 /** Sets (or clears) the shell's `?approval=` search param over whatever page
@@ -127,7 +121,7 @@ function SectionNav({ active }: { active: SectionId }) {
       variant="mono"
     >
       <TabList>
-        {NAV_SECTIONS.map((section) => (
+        {SECTIONS.map((section) => (
           <Tab key={section.id} value={section.id}>
             {t(section.id)}
           </Tab>
@@ -138,7 +132,7 @@ function SectionNav({ active }: { active: SectionId }) {
 }
 
 /** The sub-nav tab owning `pathname`: the longest `matchPrefix ?? href` it equals
- *  or prefixes (so a detail page like `/work/projects/x` keeps `/work/projects`
+ *  or prefixes (so a detail page like `/projects/x` keeps `/projects`
  *  active). Returns the tab and the prefix that matched. */
 function activeSubNavTab<T extends { href: string; matchPrefix?: string }>(
   tabs: readonly T[],
@@ -228,13 +222,13 @@ function SectionSubNav({
   const section = SECTIONS.find((s) => s.id === active) ?? SECTIONS[0];
   const activeHref = activeSubNavHref(section.tabs, pathname);
   // Inbox counters (global, actionable only) ride in the tab labels — `SubNavItem`
-  // has no badge slot. Only fetched while the Inbox section is open.
-  const inboxCounts = useInboxCounts(active === "inbox");
+  // has no badge slot. Only fetched while the Dashboard section is open.
+  const inboxCounts = useInboxCounts(active === "dashboard");
   const items = section.tabs.map((tab) => ({
     href: tab.href,
     label:
       t(`subtab.${section.id}.${tab.id}` as Parameters<typeof t>[0]) +
-      (active === "inbox" ? counterSuffix(tab.id, inboxCounts) : ""),
+      (active === "dashboard" ? counterSuffix(tab.id, inboxCounts) : ""),
     active: tab.href === activeHref,
   }));
   const entity = matchEntityDetail(pathname);
@@ -376,10 +370,10 @@ function AppShellChrome({ children }: { children: ReactNode }) {
     <PageBreadcrumbSlotProvider activeHrefs={activeSubHrefs} element={crumbSlot}>
       <AppFrame
         dock={<CooDock />}
-        fullBleed={pathname === "/org"}
+        fullBleed={pathname === "/dashboard"}
         header={
           <AppHeader
-            homeHref="/org"
+            homeHref="/dashboard"
             limits={trailing.limits}
             linkComponent={NavLink}
             menu={<SettingsCog />}

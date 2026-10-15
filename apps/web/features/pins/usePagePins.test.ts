@@ -21,47 +21,49 @@ describe("usePagePins", () => {
   it("pagePins only surfaces page-kind pins", () => {
     hooks.pins = [
       { kind: "agent", id: "researcher" },
-      { kind: "page", id: "/org/people", label: "People" },
+      { kind: "page", id: "/workforce/agents", label: "People" },
     ];
     const { result } = renderHook(() => usePagePins());
-    expect(result.current.pagePins).toEqual([{ kind: "page", id: "/org/people", label: "People" }]);
+    expect(result.current.pagePins).toEqual([
+      { kind: "page", id: "/workforce/agents", label: "People" },
+    ]);
   });
 
   it("isPagePinned reflects the current list by href", () => {
-    hooks.pins = [{ kind: "page", id: "/org/people", label: "People" }];
+    hooks.pins = [{ kind: "page", id: "/workforce/agents", label: "People" }];
     const { result } = renderHook(() => usePagePins());
-    expect(result.current.isPagePinned("/org/people")).toBe(true);
+    expect(result.current.isPagePinned("/workforce/agents")).toBe(true);
     expect(result.current.isPagePinned("/org/teams")).toBe(false);
   });
 
   it("pinPage appends a new page pin to the mutated list", () => {
     hooks.pins = [{ kind: "agent", id: "researcher" }];
     const { result } = renderHook(() => usePagePins());
-    result.current.pinPage("/org/people", "People");
+    result.current.pinPage("/workforce/agents", "People");
     expect(hooks.mutate).toHaveBeenCalledWith({
       body: [
         { kind: "agent", id: "researcher" },
-        { kind: "page", id: "/org/people", label: "People" },
+        { kind: "page", id: "/workforce/agents", label: "People" },
       ],
     });
   });
 
   it("pinPage on an already-pinned href replaces its label", () => {
-    hooks.pins = [{ kind: "page", id: "/org/people", label: "People" }];
+    hooks.pins = [{ kind: "page", id: "/workforce/agents", label: "People" }];
     const { result } = renderHook(() => usePagePins());
-    result.current.pinPage("/org/people", "People (renamed)");
+    result.current.pinPage("/workforce/agents", "People (renamed)");
     expect(hooks.mutate).toHaveBeenCalledWith({
-      body: [{ kind: "page", id: "/org/people", label: "People (renamed)" }],
+      body: [{ kind: "page", id: "/workforce/agents", label: "People (renamed)" }],
     });
   });
 
   it("unpinPage removes the page pin with that href", () => {
     hooks.pins = [
-      { kind: "page", id: "/org/people", label: "People" },
+      { kind: "page", id: "/workforce/agents", label: "People" },
       { kind: "agent", id: "researcher" },
     ];
     const { result } = renderHook(() => usePagePins());
-    result.current.unpinPage("/org/people");
+    result.current.unpinPage("/workforce/agents");
     expect(hooks.mutate).toHaveBeenCalledWith({
       body: [{ kind: "agent", id: "researcher" }],
     });

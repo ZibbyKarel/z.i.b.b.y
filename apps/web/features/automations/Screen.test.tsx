@@ -136,7 +136,7 @@ describe("Automations Screen", () => {
   it("Edit NAVIGATES to the automation detail route (N4f grammar) — no dialog", () => {
     render(<Screen />);
     fireEvent.click(screen.getByTestId(AutomationCardTestId.Edit));
-    expect(push).toHaveBeenCalledWith("/automations/morning-standup");
+    expect(push).toHaveBeenCalledWith("/work/automations/morning-standup");
     expect(screen.queryByText("Upravit automatizaci")).toBeNull();
   });
 
@@ -210,7 +210,7 @@ describe("Automations Screen — user + system automations in one list", () => {
   it("system row edit navigates to the detail page", () => {
     render(<Screen />);
     fireEvent.click(screen.getByTestId(SystemAutomationRowTestId.Edit));
-    expect(push).toHaveBeenCalledWith("/automations/memory-distill");
+    expect(push).toHaveBeenCalledWith("/work/automations/memory-distill");
   });
 
   it("system-only data is not an empty workspace", () => {

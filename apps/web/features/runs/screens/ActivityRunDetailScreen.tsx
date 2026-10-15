@@ -17,7 +17,7 @@ export interface ActivityRunDetailScreenProps {
 }
 
 /**
- * `/activity/runs/[runId]` (ZB-07) — the run detail moved out of the ex-`/archiv`
+ * `/activity/runs/[runId]` (ZB-07) — the run detail moved out of the ex-`/activity/runs`
  * master/detail split into its own route: stop/resume, log, stage timeline and
  * artifacts, unchanged (`RunDetail` itself is reused as-is).
  */

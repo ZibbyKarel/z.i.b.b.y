@@ -25,7 +25,7 @@ import { useBudgetQuery, useProjectCategoriesQuery, useProjectsQuery } from "../
 import { useCreateProjectCategoryMutation, useDeleteProjectCategoryMutation } from "../mutations";
 
 /**
- * `/work/projects` (ZB-06) — the project catalog, moved from `/projects`.
+ * `/projects` (ZB-06) — the project catalog, moved from `/projects`.
  * Category taxonomy is unchanged; only the header (`Container`/eyebrow/`h1`,
  * matching Companies/Teams/Tasks) and the detail routes moved under `/work`.
  */
@@ -47,8 +47,8 @@ export function ProjectsListScreen() {
   const knownNames = new Set(categories.map((c) => c.name));
   const uncategorized = projects.filter((p) => !p.category || !knownNames.has(p.category));
 
-  const openProject = (p: Project) => router.push(`/work/projects/${p.id}` as Route);
-  const addProject = () => router.push("/work/projects/new" as Route);
+  const openProject = (p: Project) => router.push(`/projects/${p.id}` as Route);
+  const addProject = () => router.push("/projects/new" as Route);
 
   const renderSection = (key: string, label: string, glyph: IconName, items: Project[]) => {
     const empty = items.length === 0;

@@ -99,7 +99,7 @@ describe("agents DetailScreen (N4c grammar)", () => {
       { params: { id: "koder" } },
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     );
-    expect(push).toHaveBeenCalledWith("/system/registries/positions");
+    expect(push).toHaveBeenCalledWith("/workforce/positions");
   });
 
   it("Run pre-fills the New Task dialog with the agent as explicit target", async () => {

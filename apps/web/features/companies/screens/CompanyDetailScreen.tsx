@@ -36,7 +36,7 @@ import {
 import { useCompanyQuery } from "../queries";
 
 export interface CompanyDetailScreenProps {
-  /** The company to edit; omitted when creating a new one (the `/work/companies/new` route). */
+  /** The company to edit; omitted when creating a new one (the `/companies/new` route). */
   companyId?: string;
 }
 
@@ -47,7 +47,7 @@ interface MemberProjectRow {
 }
 
 /**
- * `/work/companies/[id]` (ZB-06) — moved from `/companies/[id]` and re-skinned:
+ * `/companies/[id]` (ZB-06) — moved from `/companies/[id]` and re-skinned:
  * a `MetricStrip` (projects/contacts/budget), the linked-projects `DataTable`,
  * contacts as `ContactRow`s, `ConfirmDeleteButton` for delete, and the
  * "ALL TASKS FOR THIS COMPANY →" link into `/work/tasks?company=<id>`.
@@ -81,7 +81,7 @@ export function CompanyDetailScreen({ companyId }: CompanyDetailScreenProps) {
       const newId = slug(body.name) || `company-${Date.now()}`;
       createCompany.mutate(
         { body: { ...body, id: newId } },
-        { onSuccess: () => router.replace(`/work/companies/${newId}` as Route) },
+        { onSuccess: () => router.replace(`/companies/${newId}` as Route) },
       );
     } else {
       updateCompany.mutate({ params: { id }, body });
@@ -137,7 +137,7 @@ export function CompanyDetailScreen({ companyId }: CompanyDetailScreenProps) {
       <Stack gap="250">
         <PageBreadcrumb
           items={[
-            { label: t("title"), href: "/work/companies" },
+            { label: t("title"), href: "/companies" },
             { label: isNew ? t("newCompany") : (company?.name ?? "") },
           ]}
           linkComponent={Link as SubNavLinkComponent}
@@ -152,7 +152,7 @@ export function CompanyDetailScreen({ companyId }: CompanyDetailScreenProps) {
               onConfirm={() =>
                 deleteCompany.mutate(
                   { params: { id } },
-                  { onSuccess: () => router.push("/work/companies" as Route) },
+                  { onSuccess: () => router.push("/companies" as Route) },
                 )
               }
             />
@@ -192,7 +192,7 @@ export function CompanyDetailScreen({ companyId }: CompanyDetailScreenProps) {
                   </Typography>
                 }
                 getRowKey={(r) => r.id}
-                onRowClick={(r) => router.push(`/work/projects/${r.id}` as Route)}
+                onRowClick={(r) => router.push(`/projects/${r.id}` as Route)}
                 rows={memberProjectRows}
               />
             </Panel>

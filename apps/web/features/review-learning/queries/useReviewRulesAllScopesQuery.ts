@@ -17,7 +17,7 @@ export interface ScopedReviewRule extends ReviewRule {
 }
 
 /**
- * `/policy/patterns` needs every project's rules PLUS `_global` flattened into
+ * `/governance/patterns` needs every project's rules PLUS `_global` flattened into
  * one list (the contract only lists one scope at a time, no "all" route) —
  * `useQueries` fans one GET out per scope, each independently cached under
  * {@link getReviewRulesQueryKey}. A plain `fetch` (not the ts-rest hook) because

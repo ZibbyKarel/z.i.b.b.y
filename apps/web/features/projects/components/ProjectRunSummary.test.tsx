@@ -52,21 +52,21 @@ describe("ProjectRunSummary", () => {
     expect(tileValue("parked")).toBe("0");
   });
 
-  it("deep-links each tile into /archiv pre-filtered to this project (and, for a bucket, its states) (F8d — /runs is deleted; /archiv doesn't yet read these params, a pre-existing F2 gap)", () => {
+  it("deep-links each tile into /activity/runs pre-filtered to this project (and, for a bucket, its states) (F8d — /runs is deleted; /activity/runs doesn't yet read these params, a pre-existing F2 gap)", () => {
     feed = [run("alpha", "done")];
     render(<ProjectRunSummary projectId="alpha" />);
 
     expect(screen.getByTestId("project-run-summary-total")).toHaveAttribute(
       "href",
-      "/archiv?project=alpha",
+      "/activity/runs?project=alpha",
     );
     expect(screen.getByTestId("project-run-summary-done")).toHaveAttribute(
       "href",
-      "/archiv?project=alpha&filter=done",
+      "/activity/runs?project=alpha&filter=done",
     );
     expect(screen.getByTestId("project-run-summary-waiting")).toHaveAttribute(
       "href",
-      "/archiv?project=alpha&filter=queued,scheduled,pending,held,awaiting-approval",
+      "/activity/runs?project=alpha&filter=queued,scheduled,pending,held,awaiting-approval",
     );
   });
 });

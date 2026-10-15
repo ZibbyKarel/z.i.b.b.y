@@ -186,14 +186,14 @@ function PersonRow({
 // ---------------------------------------------------------------------------
 
 export interface ProjectDetailScreenProps {
-  /** The project to edit; omitted when creating a new one (the `/work/projects/new` route). */
+  /** The project to edit; omitted when creating a new one (the `/projects/new` route). */
   projectId?: string;
   /** The active tab — the `[tab]` route segment; omitted (or ignored) in `isNew` mode. */
   tab?: ProjectTab;
 }
 
 /**
- * `/work/projects/[id]/[tab]` (ZB-06) — moved from `/projects/[id]?tab=` and
+ * `/projects/[id]/[tab]` (ZB-06) — moved from `/projects/[id]?tab=` and
  * re-skinned: the header is the `Container`/`Breadcrumb`/`h1` shell shared with
  * Companies/Teams, and the 5 real tabs (overview/profile/secrets/integrations/
  * roadmap, O-14) are kept, now route-driven instead of query-driven (mirrors
@@ -215,9 +215,7 @@ export function ProjectDetailScreen({ projectId, tab = "overview" }: ProjectDeta
   const id = projectId ?? "";
 
   const setTab = (next: ProjectTab) =>
-    router.push(
-      (next === "overview" ? `/work/projects/${id}` : `/work/projects/${id}/${next}`) as Route,
-    );
+    router.push((next === "overview" ? `/projects/${id}` : `/projects/${id}/${next}`) as Route);
 
   const projectQ = useProjectQuery(id, { enabled: !isNew });
   const profileQ = useProjectProfileQuery(id, { enabled: !isNew });
@@ -254,7 +252,7 @@ export function ProjectDetailScreen({ projectId, tab = "overview" }: ProjectDeta
   // starts empty and creates the record.
   const project = isNew ? undefined : projectQ.data;
 
-  // `/work/projects/new?companyId=<id>` pre-links the created project to a
+  // `/projects/new?companyId=<id>` pre-links the created project to a
   // company (the company detail's "Create new project" action). A dangling id
   // resolves as "no company" downstream, so we don't validate it here — just
   // surface the pending link so the operator sees it before saving.
@@ -266,7 +264,7 @@ export function ProjectDetailScreen({ projectId, tab = "overview" }: ProjectDeta
       const newId = slug(body.name) || `project-${Date.now()}`;
       createProject.mutate(
         { body: { ...body, id: newId, ...(linkCompanyId ? { companyId: linkCompanyId } : {}) } },
-        { onSuccess: () => router.replace(`/work/projects/${newId}` as Route) },
+        { onSuccess: () => router.replace(`/projects/${newId}` as Route) },
       );
     } else {
       updateProject.mutate({ params: { id }, body });
@@ -312,7 +310,7 @@ export function ProjectDetailScreen({ projectId, tab = "overview" }: ProjectDeta
     draft_only: t("autonomy.draftOnly"),
   };
 
-  // The core record — also the only thing `/work/projects/new` shows.
+  // The core record — also the only thing `/projects/new` shows.
   const basicsPanel = (
     <ProjectBasicsPanel
       categories={categories}
@@ -550,10 +548,10 @@ export function ProjectDetailScreen({ projectId, tab = "overview" }: ProjectDeta
         <Stack gap="250">
           <PageBreadcrumb
             items={[
-              { label: tp("title"), href: "/work/projects" },
+              { label: tp("title"), href: "/projects" },
               isNew || tab === "overview"
                 ? { label: isNew ? tp("newProject") : (project?.name ?? "") }
-                : { label: project?.name ?? "", href: `/work/projects/${id}` },
+                : { label: project?.name ?? "", href: `/projects/${id}` },
               ...(isNew || tab === "overview" ? [] : [{ label: t(`tabs.${tab}`) }]),
             ]}
             linkComponent={Link as SubNavLinkComponent}
@@ -703,7 +701,7 @@ export function ProjectDetailScreen({ projectId, tab = "overview" }: ProjectDeta
               {
                 onSuccess: () => {
                   setConfirmDelete(false);
-                  router.push("/work/projects" as Route);
+                  router.push("/projects" as Route);
                 },
               },
             )

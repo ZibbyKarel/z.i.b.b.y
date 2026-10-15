@@ -13,14 +13,14 @@ export enum SubnavPinButtonTestId {
   Button = "subnav-pin-button",
 }
 
-/** `/work/<kind>/<id>` detail pages this button appears on (spec step 5) —
+/** `/<kind>/<id>` detail pages this button appears on (spec step 5) —
  *  `companies`/`projects`/`teams`, never their `/new` creation screen. */
 export type SubnavPinEntityKind = "companies" | "projects" | "teams";
 
 export interface SubnavPinButtonProps {
   kind: SubnavPinEntityKind;
   id: string;
-  /** This entity's base detail href (`/work/<kind>/<id>`) — the pin target,
+  /** This entity's base detail href (`/<kind>/<id>`) — the pin target,
    *  even when the current page is one of its sub-tabs. */
   href: string;
 }

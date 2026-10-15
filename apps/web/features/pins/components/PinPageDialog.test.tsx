@@ -23,7 +23,7 @@ describe("PinPageDialog", () => {
   });
 
   it("prefills the name field with the explicit defaultName when given", () => {
-    render(<PinPageDialog defaultName="Acme Corp" href="/work/companies/acme" onClose={vi.fn()} />);
+    render(<PinPageDialog defaultName="Acme Corp" href="/companies/acme" onClose={vi.fn()} />);
     expect(screen.getByTestId(PinPageDialogTestId.Name)).toHaveValue("Acme Corp");
   });
 
@@ -33,7 +33,7 @@ describe("PinPageDialog", () => {
   });
 
   it("blocks submit and marks the field invalid when the name is cleared", async () => {
-    render(<PinPageDialog defaultName="People" href="/org/people" onClose={vi.fn()} />);
+    render(<PinPageDialog defaultName="People" href="/workforce/agents" onClose={vi.fn()} />);
     const input = screen.getByTestId(PinPageDialogTestId.Name);
     await userEvent.clear(input);
     await userEvent.click(screen.getByTestId(PinPageDialogTestId.Submit));
@@ -43,32 +43,32 @@ describe("PinPageDialog", () => {
 
   it("pins the href with the (possibly edited) name and closes on submit", async () => {
     const onClose = vi.fn();
-    render(<PinPageDialog defaultName="People" href="/org/people" onClose={onClose} />);
+    render(<PinPageDialog defaultName="People" href="/workforce/agents" onClose={onClose} />);
     const input = screen.getByTestId(PinPageDialogTestId.Name);
     await userEvent.clear(input);
     await userEvent.type(input, "My People Page");
     await userEvent.click(screen.getByTestId(PinPageDialogTestId.Submit));
     await waitFor(() =>
-      expect(hooks.pinPage).toHaveBeenCalledWith("/org/people", "My People Page"),
+      expect(hooks.pinPage).toHaveBeenCalledWith("/workforce/agents", "My People Page"),
     );
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("submits on Enter in the name field", async () => {
     const onClose = vi.fn();
-    render(<PinPageDialog defaultName="People" href="/org/people" onClose={onClose} />);
+    render(<PinPageDialog defaultName="People" href="/workforce/agents" onClose={onClose} />);
     const input = screen.getByTestId(PinPageDialogTestId.Name);
     await userEvent.type(input, "{Enter}");
     // jsdom's implicit form submission on Enter can fire the native submit
     // event more than once for a single keypress (a jsdom/user-event quirk,
     // not app behavior) — assert submission happened, not an exact count.
-    await waitFor(() => expect(hooks.pinPage).toHaveBeenCalledWith("/org/people", "People"));
+    await waitFor(() => expect(hooks.pinPage).toHaveBeenCalledWith("/workforce/agents", "People"));
     expect(onClose).toHaveBeenCalled();
   });
 
   it("closes without pinning on Cancel", async () => {
     const onClose = vi.fn();
-    render(<PinPageDialog defaultName="People" href="/org/people" onClose={onClose} />);
+    render(<PinPageDialog defaultName="People" href="/workforce/agents" onClose={onClose} />);
     await userEvent.click(screen.getByTestId(PinPageDialogTestId.Cancel));
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(hooks.pinPage).not.toHaveBeenCalled();

@@ -8,12 +8,12 @@ import { expect, test } from "@playwright/test";
  * on that canvas; loop *execution* and the retry visualization are covered by the
  * fast API e2e. Here it's the detail → authoring-surface UI path.
  *
- * ZB-06/ZB-13: `/workflows/[id]` now redirects to `/org/departments/<dept>/workflows/<id>`
+ * ZB-06/ZB-13: `/workflows/[id]` now redirects to `/workforce/departments/<dept>/workflows/<id>`
  * (ROUTE-MAP §2) — the seeded "Demo Pipe" is owned by the `dev` department (see
  * `workflow-run.spec.ts`'s note), so this goes straight there.
  */
 test("open a workflow and enter its inline editor", async ({ page }) => {
-  await page.goto("/org/departments/dev/workflows/demo-pipe");
+  await page.goto("/workforce/departments/dev/workflows/demo-pipe");
 
   // The detail renders the read-only phase-chain canvas.
   await expect(page.getByText(/phase chain/)).toBeVisible();

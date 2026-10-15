@@ -3,7 +3,7 @@ import { BreadcrumbTestId } from "@zibby/design-system";
 import { render, screen, within } from "@testing-library/react";
 import { PageBreadcrumb, PageBreadcrumbSlotProvider } from "./PageBreadcrumb";
 
-const items = [{ label: "Projects", href: "/work/projects" }, { label: "CMS4" }];
+const items = [{ label: "Projects", href: "/projects" }, { label: "CMS4" }];
 
 function setup(activeHref: string | string[], crumbs = items) {
   const slot = document.createElement("div");
@@ -25,7 +25,7 @@ describe("PageBreadcrumb", () => {
   });
 
   it("portals into the slot and drops the crumb matching the active href", () => {
-    const { slot } = setup("/work/projects");
+    const { slot } = setup("/projects");
     expect(within(slot).getByText("CMS4")).toBeInTheDocument();
     expect(within(slot).queryByText("Projects")).toBeNull();
     expect(within(slot).getByTestId(`${BreadcrumbTestId.Separator}-0`)).toBeInTheDocument();
@@ -33,13 +33,13 @@ describe("PageBreadcrumb", () => {
   });
 
   it("keeps all crumbs when the first href is not the active one", () => {
-    const { slot } = setup("/org");
+    const { slot } = setup("/dashboard");
     expect(within(slot).getByText("Projects")).toBeInTheDocument();
     expect(within(slot).getByText("CMS4")).toBeInTheDocument();
   });
 
   it("renders nothing when the only crumb is dropped", () => {
-    const { slot } = setup("/work/projects", [items[0]!]);
+    const { slot } = setup("/projects", [items[0]!]);
     expect(slot).toBeEmptyDOMElement();
   });
 

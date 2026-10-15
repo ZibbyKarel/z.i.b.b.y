@@ -54,7 +54,7 @@ export enum IntegrationFormTestId {
 
 /**
  * Controlled form state for an integration, shared by the create dialog and the
- * `/work/projects/:id/integrations/:integrationId` detail page (N4h) — one place
+ * `/projects/:id/integrations/:integrationId` detail page (N4h) — one place
  * owns the kind-switching config, the validity rules and the payload building.
  * The secret stays write-only: carried out-of-band (never inside the persisted
  * config) and persisted through the separate credentials mutation by the caller

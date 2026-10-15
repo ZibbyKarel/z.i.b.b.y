@@ -34,7 +34,7 @@ const TIER_TONE: Record<1 | 2 | 3, "ok" | "accent" | "warn"> = {
 };
 
 /**
- * `/activity/inbox` (ZB-07) — inbound channel items (mine-and-mentions):
+ * `/activity/channels` (ZB-07) — inbound channel items (mine-and-mentions):
  * source, sender, tier, handling and the triage outcome, as a `DataTable`. Text
  * stays truncated per Law 4 (inbound content is data, never rendered as more
  * than a preview). Read-only — reuses `useChannelItemsQuery`, the same feed

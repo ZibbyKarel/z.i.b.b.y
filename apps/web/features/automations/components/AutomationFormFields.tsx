@@ -23,7 +23,7 @@ type TriggerType = Trigger["type"];
 
 /**
  * Controlled form state for an automation's TRIGGER — shared by the create dialog
- * (via {@link TriggerFields}) and the `/automations/:id` detail page. The
+ * (via {@link TriggerFields}) and the `/work/automations/:id` detail page. The
  * name/target/prompt half of the old form is gone (Phase 116d/116e): a `task`
  * automation is created and edited entirely through `CommandLine`, and a system
  * automation never exposes those fields at all — so this state only ever needs
@@ -129,8 +129,8 @@ export interface AutomationFormFieldsProps {
  * name/target/prompt UI it used to render is gone, replaced entirely by
  * `CommandLine` for a `task` automation. For a system automation this renders a
  * note explaining the lock plus the trigger block; for anything else (the
- * legacy schedule-only fallback on `/automations/:id`) it's just the trigger
- * block. Shared with the `/automations/:id` detail page.
+ * legacy schedule-only fallback on `/work/automations/:id`) it's just the trigger
+ * block. Shared with the `/work/automations/:id` detail page.
  */
 export function AutomationFormFields({ form, isSystem = false }: AutomationFormFieldsProps) {
   const t = useTranslations("automations");

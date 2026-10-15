@@ -39,7 +39,7 @@ function deriveName(text: string): string {
  * via `onSubmit`'s send-delegation mode.
  *
  * Editing an existing automation (including the schedule-only system ones)
- * lives on the `/automations/:id` detail page ({@link ../DetailScreen}),
+ * lives on the `/work/automations/:id` detail page ({@link ../DetailScreen}),
  * which still renders the older {@link AutomationFormFields}.
  */
 export function AutomationFormDialog({ onClose, onCreate }: AutomationFormDialogProps) {

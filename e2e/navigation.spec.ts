@@ -1,53 +1,48 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * ZB-01: the ZibbyCorp shell's section nav — `AppHeader`'s 8-section `Tabs` bar
+ * The shell's section nav — `AppHeader`'s 8-section `Tabs` bar
  * (`state/config.ts`'s `SECTIONS`) plus the `SubNav` sub-tab strip for the active
- * section. Every section's `href` is today's "closest existing route" fallback
- * (its own screen phase hasn't shipped), so this only asserts the shell chrome
- * itself: every section tab is present, is reachable, and drives the sub-nav —
- * not the (mostly unbuilt) destination screens.
+ * section.
  */
 test("the section nav renders all eight sections and navigates on click", async ({ page }) => {
-  await page.goto("/org");
+  await page.goto("/dashboard");
 
   const nav = page.getByTestId("app-header-nav");
   await expect(nav).toBeVisible();
 
   const sections: Array<[id: string, label: string]> = [
-    ["org", "Org"],
+    ["dashboard", "Dashboard"],
     ["work", "Work"],
+    ["companies", "Companies"],
+    ["workforce", "Workforce"],
     ["activity", "Activity"],
-    ["policy", "Policy"],
     ["knowledge", "Knowledge"],
-    ["ledger", "Ledger"],
-    ["automations", "Automations"],
-    ["registries", "Registries"],
+    ["governance", "Governance"],
+    ["system", "System"],
   ];
   for (const [id, label] of sections) {
     await expect(nav.getByTestId(`tabs-tab-${id}`)).toHaveText(label);
   }
 
-  // "/org" is the org section's own home route.
-  await expect(nav.getByTestId("tabs-tab-org")).toHaveAttribute("aria-selected", "true");
+  await expect(nav.getByTestId("tabs-tab-dashboard")).toHaveAttribute("aria-selected", "true");
 
-  // Clicking "Work" navigates to its section fallback route — `/work/tasks`
-  // (ZB-04/06 shipped every `work` sub-tab at its real `/work/*` home).
   await nav.getByTestId("tabs-tab-work").click();
   await expect(page).toHaveURL(/\/work\/tasks$/);
-  await nav.getByTestId("tabs-tab-automations").click();
-  await expect(page).toHaveURL(/\/automations$/);
-  // System is not a top tab — settings sits behind the header cog.
-  await expect(nav.getByTestId("tabs-tab-system")).toHaveCount(0);
+  await nav.getByTestId("tabs-tab-workforce").click();
+  await expect(page).toHaveURL(/\/workforce\/agents$/);
+  await nav.getByTestId("tabs-tab-governance").click();
+  await expect(page).toHaveURL(/\/governance\/approvals$/);
+  await nav.getByTestId("tabs-tab-system").click();
+  await expect(page).toHaveURL(/\/system\/registries\/skills$/);
 });
 
-test("the header cog opens Settings and the sub-nav lists its sections", async ({ page }) => {
-  await page.goto("/org");
+test("the header cog opens Settings and the screen lists its sections", async ({ page }) => {
+  await page.goto("/dashboard");
   await page.getByTestId("app-shell-settings-cog").click();
   await expect(page).toHaveURL(/\/system\/settings\/general$/);
-  const subnav = page.getByTestId("subnav-root");
-  await expect(subnav).toContainText("General");
-  await expect(subnav).toContainText("Status");
+  await expect(page.getByRole("tab", { name: "General" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Status" })).toBeVisible();
 });
 
 test("the sub-nav lists the active section's tabs and offers + New task", async ({ page }) => {
@@ -55,17 +50,16 @@ test("the sub-nav lists the active section's tabs and offers + New task", async 
 
   const subnav = page.getByTestId("subnav-root");
   await expect(subnav).toBeVisible();
-  // `work`'s sub-tabs (PART-B's recipe table): tasks, goals, companies,
-  // teams, projects.
+  // `work`'s sub-tabs: tasks, goals, workflows, automations.
   await expect(subnav).toContainText("Tasks");
-  await expect(subnav).toContainText("Companies");
-  await expect(subnav).toContainText("Projects");
+  await expect(subnav).toContainText("Workflows");
+  await expect(subnav).toContainText("Automations");
 
   await expect(subnav.getByRole("button", { name: "New task" })).toBeVisible();
 });
 
 test("the NEEDS YOU rail renders on every section", async ({ page }) => {
-  await page.goto("/org");
+  await page.goto("/dashboard");
   await page.getByRole("button", { name: /^(Potřebuje tě|Needs you)/ }).click();
   await expect(page.getByTestId("rail-root").first()).toBeVisible();
   await expect(page.getByTestId("rail-header")).toContainText("Needs you");

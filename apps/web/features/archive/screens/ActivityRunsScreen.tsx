@@ -67,7 +67,7 @@ function statusGroupKey(status: RunView["status"]): RunStatusGroupKey | undefine
 
 /**
  * `/activity/runs` (ZB-07) — every archived run (D9's `ARCHIVED_STATES`), the
- * ex-`/archiv` search + department filter promoted to a `DataTable` with a state
+ * ex-`/activity/runs` search + department filter promoted to a `DataTable` with a state
  * `SegmentedControl` and infinite scroll; row click opens `/activity/runs/[runId]`
  * (moved from this screen's own master/detail split).
  */

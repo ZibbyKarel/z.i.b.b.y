@@ -323,7 +323,7 @@ export function RoadmapItemDialog({
                         either, and `taskId` is the only key always present. */}
                     <Pressable
                       data-testid={RoadmapItemDialogTestId.OpenRun}
-                      onClick={() => router.push(`/archiv?run=${run.runRef ?? run.taskId}`)}
+                      onClick={() => router.push(`/activity/runs/${run.runRef ?? run.taskId}`)}
                     >
                       <Typography size="sm" tone="accent" type="text">
                         {t("dialog.openRun")}

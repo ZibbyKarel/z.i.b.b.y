@@ -20,7 +20,7 @@ import { TargetIdentity } from "./TargetIdentity";
 
 export interface ChatRunCardProps {
   /** The dispatched run's id (`ChatToolEvent.runRef`) — the same id the archive
-   * screen deep-links with (`/archiv?run=<runRef>`, F8d — `/runs` is deleted). */
+   * screen deep-links with (`/activity/runs/<runRef>`, F8d — `/runs` is deleted). */
   runRef: string;
   /** The routing target the dispatch went to, when known — rendered as the same
    * identity chip `ChatMessage` uses for a flat tool row. */
@@ -85,7 +85,7 @@ function runDetail(run: RunView, runRef: string) {
  * component does not read the chat SSE stream at all (Rozhodnutí 6).
  *
  * Collapsed by default: a state badge, the dispatch target's identity chip, and a
- * compact progress caption. The `/archiv?run=` link (F8d) is always visible and
+ * compact progress caption. The `/activity/runs/` link (F8d) is always visible and
  * never toggles the expansion (its click stops propagation before it reaches the
  * toggle).
  */
@@ -99,7 +99,7 @@ export function ChatRunCard({ runRef, target }: ChatRunCardProps) {
     <Link
       aria-label={t("openRunAria")}
       data-testid={ChatRunCardTestId.Link}
-      href={`/archiv?run=${runRef}` as Route}
+      href={`/activity/runs/${runRef}` as Route}
       onClick={(e) => e.stopPropagation()}
     >
       <Icon name="arrow" size="sm" tone="accent" />

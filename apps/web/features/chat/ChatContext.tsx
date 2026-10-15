@@ -78,7 +78,7 @@ const ChatContext = createContext<ChatStore | null>(null);
  * Owns the chat conversation state and the COO dock's open/scope state, plus the
  * global ⌘/Ctrl+J shortcut. Mounted once in {@link AppShell}; the dock itself
  * (`CooDock`) renders in the shell's `dock` slot on every route (ZB-12 — the
- * `/chat` page is retired and redirects to `/org`).
+ * `/chat` page is retired and redirects to `/dashboard`).
  */
 export function ChatProvider({ children }: { children: ReactNode }) {
   // Lazily initialised from localStorage so a full page reload re-attaches to the

@@ -48,7 +48,7 @@ const CI_SYMBOL = { passing: "✓", failing: "✗", pending: "…", unknown: "?"
 
 /** Where an item's detail page lives. */
 export function issueHref(item: Pick<InboxRoadmapItem, "id" | "project">): string {
-  return `/inbox/issues/${item.project.id}/${item.id}`;
+  return `/dashboard/inbox/issues/${item.project.id}/${item.id}`;
 }
 
 export interface IssueRowProps {

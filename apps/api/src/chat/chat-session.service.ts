@@ -419,12 +419,12 @@ export class ChatSessionService {
         // can pair it with the started entry that also carries "".
         ...(callId !== undefined ? { callId } : {}),
         summary: `Spustil jsem úkol — ${describeTarget(result.target)}.`,
-        // F8d (D17): `/archiv` replaced `/runs` as the task archive — stop minting
+        // F8d (D17): `/activity/runs` replaced `/runs` as the task archive — stop minting
         // new `/runs` links. `/runs` itself stays a redirect shim (preserving
         // `?run=`) so already-persisted transcript JSONL carrying the old href
         // still lands on the right run; this is the one live call site that used
-        // to mint it, so from here on every NEW event points straight at `/archiv`.
-        href: result.runRef ? `/archiv?run=${result.runRef}` : "/archiv",
+        // to mint it, so from here on every NEW event points straight at `/activity/runs`.
+        href: result.runRef ? `/activity/runs/${result.runRef}` : "/activity/runs",
         target: result.target,
         ...(result.runRef ? { runRef: result.runRef } : {}),
         taskId: result.taskId,

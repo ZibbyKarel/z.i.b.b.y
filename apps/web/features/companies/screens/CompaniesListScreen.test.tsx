@@ -30,16 +30,16 @@ describe("CompaniesListScreen (ZB-06)", () => {
     expect(screen.getByText("Acme")).toBeInTheDocument();
   });
 
-  it("a card click navigates to the /work/companies detail route", async () => {
+  it("a card click navigates to the /companies detail route", async () => {
     render(<CompaniesListScreen />);
     await userEvent.click(screen.getByRole("button", { name: "Otevřít Acme" }));
-    expect(push).toHaveBeenCalledWith("/work/companies/acme");
+    expect(push).toHaveBeenCalledWith("/companies/acme");
   });
 
-  it("the header add action navigates to /work/companies/new", async () => {
+  it("the header add action navigates to /companies/new", async () => {
     render(<CompaniesListScreen />);
     await userEvent.click(screen.getByRole("button", { name: "Přidat firmu" }));
-    expect(push).toHaveBeenCalledWith("/work/companies/new");
+    expect(push).toHaveBeenCalledWith("/companies/new");
   });
 
   it("shows the empty state when there are no companies", () => {

@@ -99,7 +99,7 @@ describe("CommandPaletteHost", () => {
 
     await user.click(screen.getByTestId(`${CommandPaletteTestId.Item}-dev`));
 
-    expect(push).toHaveBeenCalledWith("/org/departments/dev/team");
+    expect(push).toHaveBeenCalledWith("/workforce/departments/dev/team");
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 

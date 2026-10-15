@@ -42,7 +42,7 @@ test("a triaged inbound message surfaces an approval; approving it handles the i
   // binding reads as `undefined` mid-compile, e.g. `PROJECT_TABS.includes is not a
   // function") — a dev-only artifact `next build` never reproduces, not a real app
   // bug. A reload once the module has finished compiling clears it.
-  await page.goto("/work/projects/demo-project/integrations");
+  await page.goto("/projects/demo-project/integrations");
   if (
     await page
       .getByText("Application error")
@@ -92,7 +92,7 @@ test("a triaged inbound message surfaces an approval; approving it handles the i
   await page.request.post(`${API}/api/approvals/${channelApproval.id}/approve`);
 
   // Back on the project inbox, the item is now handled (the reply was sent on approve).
-  await page.goto("/work/projects/demo-project/integrations");
+  await page.goto("/projects/demo-project/integrations");
   await expect(page.getByTestId("inbox-panel").getByText("handled").first()).toBeVisible({
     timeout: 20000,
   });

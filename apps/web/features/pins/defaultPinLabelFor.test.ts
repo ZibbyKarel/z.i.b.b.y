@@ -7,15 +7,15 @@ describe("defaultPinLabelFor", () => {
   });
 
   it("humanizes a dash-separated slug", () => {
-    expect(defaultPinLabelFor("/work/companies/acme-corp")).toBe("Acme Corp");
+    expect(defaultPinLabelFor("/companies/acme-corp")).toBe("Acme Corp");
   });
 
   it("humanizes an underscore-separated slug", () => {
-    expect(defaultPinLabelFor("/work/teams/core_eng")).toBe("Core Eng");
+    expect(defaultPinLabelFor("/teams/core_eng")).toBe("Core Eng");
   });
 
   it("ignores the search string", () => {
-    expect(defaultPinLabelFor("/org/people?tab=active")).toBe("People");
+    expect(defaultPinLabelFor("/workforce/agents?tab=active")).toBe("Agents");
   });
 
   it("falls back to the href when there is no path segment", () => {
@@ -23,6 +23,6 @@ describe("defaultPinLabelFor", () => {
   });
 
   it("humanizes a single top-level segment", () => {
-    expect(defaultPinLabelFor("/org")).toBe("Org");
+    expect(defaultPinLabelFor("/dashboard")).toBe("Dashboard");
   });
 });

@@ -35,7 +35,7 @@ function selectArchiveRuns(data: InfiniteData<ArchivePageResponse>): TaskRun[] {
 }
 
 /**
- * The `/archiv` page's flat, lazy-loaded feed: `GET /api/tasks/runs/archive` walked
+ * The `/activity/runs` page's flat, lazy-loaded feed: `GET /api/tasks/runs/archive` walked
  * forward as an infinite query. The first page is the newest archived runs;
  * `fetchNextPage` pulls the next (older) page via the opaque `nextCursor`. Search and
  * department filtering both run server-side (`TaskRunsService.listArchivedTaskRuns`),

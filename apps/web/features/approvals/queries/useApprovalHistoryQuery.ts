@@ -9,7 +9,7 @@ export function getApprovalHistoryQueryKey() {
 
 /**
  * Decided approvals (approved + rejected), newest decision first — the Policy
- * `/policy/approvals` history table. `listPendingApprovals` (despite its name)
+ * `/governance/approvals` history table. `listPendingApprovals` (despite its name)
  * lists every status when none is given, so this reuses it rather than adding
  * an endpoint, and filters/sorts client-side.
  */

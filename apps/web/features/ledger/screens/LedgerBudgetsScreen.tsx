@@ -117,7 +117,7 @@ function EntityBudgetCard({
 }
 
 /**
- * ZB-10 / `/ledger/budgets` — global + per-company + per-project run-cap
+ * ZB-10 / `/governance/budgets` — global + per-company + per-project run-cap
  * `BudgetMeter`s (from the existing `GET /api/budget` readout) plus the
  * department table (runs/spend today, rolled up client-side from the unified
  * run feed — O-06; the caps column is "—", per-department caps aren't built).
@@ -253,7 +253,7 @@ export function LedgerBudgetsScreen() {
                 <Grid cols={1} data-testid={LedgerBudgetsScreenTestId.CompanyGrid} gap="100" md={3}>
                   {companyRows.map((c) => (
                     <EntityBudgetCard
-                      href={`/work/companies/${c.id}` as Route}
+                      href={`/companies/${c.id}` as Route}
                       key={c.id}
                       name={c.name}
                       row={c.row}
@@ -274,7 +274,7 @@ export function LedgerBudgetsScreen() {
                 <Grid cols={1} data-testid={LedgerBudgetsScreenTestId.ProjectGrid} gap="100" md={3}>
                   {projectRows.map((p) => (
                     <EntityBudgetCard
-                      href={`/work/projects/${p.projectId}` as Route}
+                      href={`/projects/${p.projectId}` as Route}
                       key={p.projectId}
                       name={p.name}
                       row={p}

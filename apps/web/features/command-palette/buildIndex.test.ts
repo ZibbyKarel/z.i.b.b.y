@@ -89,7 +89,7 @@ describe("buildCommandPaletteIndex", () => {
         group: "departments",
         kind: "department",
         label: "Development",
-        href: "/org/departments/dev/team",
+        href: "/workforce/departments/dev/team",
       }),
     );
   });
@@ -106,7 +106,7 @@ describe("buildCommandPaletteIndex", () => {
         kind: "person",
         label: "Alice",
         meta: "dev",
-        href: "/org/people/alice",
+        href: "/workforce/agents/alice",
       }),
     );
   });
@@ -175,7 +175,7 @@ describe("buildCommandPaletteIndex", () => {
       "/system/settings/general",
     );
     expect(entries.find((e) => e.id === "mandate" && e.group === "gates")?.href).toBe(
-      "/policy/gates?section=mandate",
+      "/governance/gates?section=mandate",
     );
   });
 
@@ -188,7 +188,7 @@ describe("buildCommandPaletteIndex", () => {
       expect.objectContaining({
         id: "security-scan",
         group: "automations",
-        href: "/automations",
+        href: "/work/automations",
       }),
     );
   });

@@ -138,7 +138,7 @@ describe("automations DetailScreen (N4f grammar)", () => {
       { params: { id: "on-file" } },
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     );
-    expect(push).toHaveBeenCalledWith("/automations");
+    expect(push).toHaveBeenCalledWith("/work/automations");
   });
 
   describe("system automation", () => {

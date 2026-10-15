@@ -12,7 +12,7 @@ import { expect, test } from "@playwright/test";
  * so this exercises the same identity-core throughline against the current surface.
  */
 test("confirm a pending approval from the NEEDS YOU rail", async ({ page }) => {
-  await page.goto("/org");
+  await page.goto("/dashboard");
 
   // The activity dock starts collapsed: open the "Needs you" panel first.
   await page

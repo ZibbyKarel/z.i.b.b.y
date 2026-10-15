@@ -245,9 +245,9 @@ export function approvalOrigin(
     case "workflow-output":
       return { origin: "workflow", href: run, ...url };
     case "channel":
-      return { origin: "channel", href: "/activity/inbox", ...url };
+      return { origin: "channel", href: "/activity/channels", ...url };
     case "comms-graduation":
-      return { origin: "comms", href: "/activity/inbox", ...url };
+      return { origin: "comms", href: "/activity/channels", ...url };
     // Triage stamps the inbound item's url and titles the issue "Bug from <integration>:"
     // (the prefix also covers url-less items and approvals predating the stamp);
     // anything else was filed by hand.
@@ -257,18 +257,18 @@ export function approvalOrigin(
         ...url,
       };
     case "automation-dispatch":
-      return { origin: "automation", href: "/automations", ...url };
+      return { origin: "automation", href: "/work/automations", ...url };
     case "agent-proposal":
       return {
         origin: "agent-factory",
-        href: `/system/registries/positions/${encodeURIComponent(a.runId)}`,
+        href: `/workforce/positions/${encodeURIComponent(a.runId)}`,
         ...url,
       };
     case "review-rule": {
       const projectId = a.runId.split("/")[0] ?? "";
       return {
         origin: "pr-review",
-        href: `/work/projects/${encodeURIComponent(projectId)}`,
+        href: `/projects/${encodeURIComponent(projectId)}`,
         ...url,
       };
     }

@@ -41,7 +41,7 @@ describe("approvalOrigin", () => {
   it("a review rule links the owning project", () => {
     expect(approvalOrigin({ kind: "review-rule", runId: "p1/rule-a", detail: "" })).toMatchObject({
       origin: "pr-review",
-      href: "/work/projects/p1",
+      href: "/projects/p1",
     });
   });
 });

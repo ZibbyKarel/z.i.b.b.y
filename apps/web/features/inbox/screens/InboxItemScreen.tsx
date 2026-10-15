@@ -85,7 +85,7 @@ function MetaRow({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * `/inbox/issues/[projectId]/[itemId]` — read-only item detail (a page, not a
+ * `/dashboard/inbox/issues/[projectId]/[itemId]` — read-only item detail (a page, not a
  * dialog): the source's task (title, description) next to ZIBBY's execution
  * (status, log, linked PR). It never edits the task; "waiting for you" only
  * shows when the lifecycle says so — a failed run's reason or a PR awaiting merge.
@@ -116,7 +116,7 @@ export function InboxItemScreen({ projectId, itemId }: InboxItemScreenProps) {
         <Stack gap="250">
           <PageBreadcrumb
             items={[
-              { label: t("title.issues"), href: "/inbox/issues" },
+              { label: t("title.issues"), href: "/dashboard/inbox/issues" },
               { label: t("detail.crumb", { key: itemId }) },
             ]}
             linkComponent={NavLink as SubNavLinkComponent}
@@ -125,7 +125,7 @@ export function InboxItemScreen({ projectId, itemId }: InboxItemScreenProps) {
             action={
               <Button
                 intent="secondary"
-                onClick={() => router.push("/inbox/issues" as Route)}
+                onClick={() => router.push("/dashboard/inbox/issues" as Route)}
                 size="sm"
               >
                 {t("detail.back")}
@@ -219,7 +219,7 @@ function InboxItemView({
       <Stack gap="250">
         <PageBreadcrumb
           items={[
-            { label: t("title.issues"), href: "/inbox/issues" },
+            { label: t("title.issues"), href: "/dashboard/inbox/issues" },
             { label: t("detail.crumb", { key }) },
           ]}
           linkComponent={NavLink as SubNavLinkComponent}
@@ -229,7 +229,7 @@ function InboxItemView({
           <Stack gap="100">
             <TextLink
               data-testid={InboxItemScreenTestId.Back}
-              href="/inbox/issues"
+              href="/dashboard/inbox/issues"
               linkComponent={NavLink}
             >
               <Typography type="label">{t("detail.back")}</Typography>
@@ -330,7 +330,9 @@ function InboxItemView({
                       <Button
                         onClick={() =>
                           router.push(
-                            (pr ? prListHref(prRef.url) : "/inbox/pull-requests") as Route,
+                            (pr
+                              ? prListHref(prRef.url)
+                              : "/dashboard/inbox/pull-requests") as Route,
                           )
                         }
                         size="sm"

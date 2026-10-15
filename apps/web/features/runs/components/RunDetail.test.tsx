@@ -457,7 +457,7 @@ describe("RunDetail — worker name links to its detail (Phase 63)", () => {
   it("links the agent name in the meta line to its own detail page", async () => {
     renderDetail(agentRun);
     await userEvent.click(screen.getByTestId("run-agent-link"));
-    expect(push).toHaveBeenCalledWith("/agents/writer");
+    expect(push).toHaveBeenCalledWith("/workforce/positions/writer");
   });
 
   it("links the workflow owner meta cell to its own detail page", async () => {
@@ -558,7 +558,7 @@ describe("RunDetail — project meta cell links to project detail (Phase 67 item
   it("links the project meta cell to its detail page when the run carries a projectId", async () => {
     renderDetail({ ...workflowRun, project: "Acme", projectId: "alpha" });
     await userEvent.click(screen.getByTestId("run-project-link"));
-    expect(push).toHaveBeenCalledWith("/work/projects/alpha");
+    expect(push).toHaveBeenCalledWith("/projects/alpha");
   });
 
   it("shows the assign control (not a link) for a project-less run", () => {
@@ -581,7 +581,7 @@ describe("RunDetail — roadmap issue meta cell (the run -> issue half of the li
       roadmapItemLabel: "CZ3TDR1-524",
     });
     await userEvent.click(screen.getByTestId("run-roadmap-item-link"));
-    expect(push).toHaveBeenCalledWith("/work/projects/alpha/roadmap?item=alpha-jira-cz3tdr1-524");
+    expect(push).toHaveBeenCalledWith("/projects/alpha/roadmap?item=alpha-jira-cz3tdr1-524");
   });
 
   it("falls back to the raw item id when no label was snapshotted", () => {

@@ -14,7 +14,7 @@ export interface CommandPaletteSources {
   teams: Array<{ id: string; name: string }>;
   projects: Array<{ id: string; name: string }>;
   /** Only workflows with a known owning department are indexed — the route
-   * (`/org/departments/<dept>/workflows/<id>`) has no "unknown department" form. */
+   * (`/workforce/departments/<dept>/workflows/<id>`) has no "unknown department" form. */
   workflows: Array<{ id: string; name: string; department?: string }>;
   skills: Array<{ id: string; name: string }>;
   mcpServers: Array<{ id: string; name?: string }>;
@@ -70,7 +70,7 @@ export function buildCommandPaletteIndex(
       group: "departments",
       kind: "department",
       label: d.name,
-      href: `/org/departments/${d.id}/team` as Route,
+      href: `/workforce/departments/${d.id}/team` as Route,
     });
   }
 
@@ -81,7 +81,7 @@ export function buildCommandPaletteIndex(
       kind: "person",
       label: p.name,
       meta: p.department,
-      href: `/org/people/${p.id}` as Route,
+      href: `/workforce/agents/${p.id}` as Route,
     });
   }
 
@@ -112,7 +112,7 @@ export function buildCommandPaletteIndex(
       group: "companies",
       kind: "company",
       label: c.name,
-      href: `/work/companies/${c.id}` as Route,
+      href: `/companies/${c.id}` as Route,
     });
   }
 
@@ -122,7 +122,7 @@ export function buildCommandPaletteIndex(
       group: "teams",
       kind: "team",
       label: t.name,
-      href: `/work/teams/${t.id}` as Route,
+      href: `/teams/${t.id}` as Route,
     });
   }
 
@@ -132,7 +132,7 @@ export function buildCommandPaletteIndex(
       group: "projects",
       kind: "project",
       label: p.name,
-      href: `/work/projects/${p.id}` as Route,
+      href: `/projects/${p.id}` as Route,
     });
   }
 
@@ -195,7 +195,7 @@ export function buildCommandPaletteIndex(
       // No per-automation deep link yet — the owning-department mapping
       // (PART-B §3) is ZB-11's to define; the global list is the closest
       // resolvable target today.
-      href: "/automations" as Route,
+      href: "/work/automations" as Route,
     });
   }
 
@@ -226,7 +226,7 @@ export function buildCommandPaletteIndex(
       group: "gates",
       kind: "gate",
       label: labels.gateSection[section] ?? section,
-      href: `/policy/gates?section=${section}` as Route,
+      href: `/governance/gates?section=${section}` as Route,
     });
   }
 

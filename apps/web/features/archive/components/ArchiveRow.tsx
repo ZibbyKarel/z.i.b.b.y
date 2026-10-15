@@ -25,7 +25,7 @@ export interface ArchiveRowProps {
 }
 
 /**
- * One row of the `/archiv` master list (F2, `docs/plans/hud2chat-F2-archive.md`)
+ * One row of the `/activity/runs` master list (F2, `docs/plans/hud2chat-F2-archive.md`)
  * — a design-literal, single-line row: department-colour dot (with glow) → title
  * (ellipsis) → subline (`{department} · {project}`, mono) → state glyph →
  * duration (mono). Deliberately NOT `TaskCard` (the live runs feed's heavier

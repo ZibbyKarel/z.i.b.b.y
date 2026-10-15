@@ -6,7 +6,7 @@ const push = vi.fn();
 let open = false;
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
-  usePathname: () => "/org",
+  usePathname: () => "/dashboard",
   useSearchParams: () => new URLSearchParams(open ? "notifications=open" : ""),
 }));
 
@@ -36,7 +36,7 @@ describe("NotificationBell", () => {
     const trigger = screen.getByTestId(NotificationBellTestId.Trigger);
     expect(trigger).toHaveTextContent("2");
     fireEvent.click(trigger);
-    expect(push).toHaveBeenCalledWith("/org?notifications=open");
+    expect(push).toHaveBeenCalledWith("/dashboard?notifications=open");
   });
 
   it("marks one failure read, or all of them", () => {

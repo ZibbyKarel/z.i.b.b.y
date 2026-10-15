@@ -47,7 +47,7 @@ function subtaskRouteSteps(parent: TaskParent): ChainRouteStripStep[] {
 
 /**
  * `/work/tasks` — ZB-04b: the parent-task list (`GET /api/tasks/parents`), the
- * task-centric replacement for the old run-centric `/archiv` list (that stays as
+ * task-centric replacement for the old run-centric `/activity/runs` list (that stays as
  * `/activity/runs`, ZB-07). A `FilterBar` (company → project cascade, department,
  * state, source) over a cursor-paginated `DataTable`.
  */

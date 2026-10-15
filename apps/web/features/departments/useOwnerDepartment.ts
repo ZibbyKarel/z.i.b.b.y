@@ -16,7 +16,7 @@ export interface OwnerDepartmentMaps {
 /**
  * Shared run→department join (extracted from `AktivitaTab`'s original inline
  * `ownedWorkflowIds` Set — F2, `docs/plans/hud2chat-F2-archive.md`,
- * decision D8) so the `/archiv` page's "group by department" mode and the
+ * decision D8) so the `/activity/runs` page's "group by department" mode and the
  * department drawer's Aktivita tab read the SAME attribution instead of two
  * copies drifting apart.
  *

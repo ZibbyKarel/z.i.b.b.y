@@ -51,7 +51,7 @@ describe("ChatRunCard (14.3)", () => {
     expect(screen.getByTestId(ChatRunCardTestId.Header)).toHaveTextContent("běží");
     expect(screen.getByTestId(ChatRunCardTestId.Link)).toHaveAttribute(
       "href",
-      "/archiv?run=delivery_1",
+      "/activity/runs/delivery_1",
     );
     expect(screen.queryByTestId(ChatRunCardTestId.Detail)).not.toBeInTheDocument();
   });

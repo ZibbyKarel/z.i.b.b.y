@@ -41,7 +41,7 @@ interface AgentRuleRow {
 }
 
 /**
- * `/policy/gates` — the gate-rule surfaces unified behind a `?section=` SubNav
+ * `/governance/gates` — the gate-rule surfaces unified behind a `?section=` SubNav
  * (ZB-08): floor, global rules, per-project, per-agent (links out) and mandate
  * (ex-settings `MandateSection`, moved).
  */
@@ -51,7 +51,7 @@ export function GatesScreen() {
   const section = asSection(searchParams.get("section"));
 
   const items = SECTIONS.map((id) => ({
-    href: `/policy/gates?section=${id}`,
+    href: `/governance/gates?section=${id}`,
     label: t(`sections.${id}`),
     active: id === section,
   }));
@@ -108,7 +108,7 @@ function useProjectPickerState() {
     const params = new URLSearchParams(searchParams);
     if (next) params.set("project", next);
     else params.delete("project");
-    router.replace(`/policy/gates?${params.toString()}` as Route);
+    router.replace(`/governance/gates?${params.toString()}` as Route);
   };
   return [value, set] as const;
 }
@@ -137,7 +137,7 @@ function AgentRulesList() {
       columns={columns}
       empty="—"
       getRowKey={(r) => r.id}
-      rowHref={(r) => `/org/people/${r.id}`}
+      rowHref={(r) => `/workforce/agents/${r.id}`}
       rows={rows}
     />
   );

@@ -601,7 +601,7 @@ export function RunDetail({
       <MetaCell
         key="project"
         label={t("metaProject")}
-        onClick={() => router.push(`/work/projects/${projectId}`)}
+        onClick={() => router.push(`/projects/${projectId}`)}
         testId="run-project-link"
         tone="accent"
         value={run.project}
@@ -620,7 +620,7 @@ export function RunDetail({
       <MetaCell
         key="roadmapItem"
         label={t("metaRoadmapItem")}
-        onClick={() => router.push(`/work/projects/${projectId}/roadmap?item=${roadmapItemId}`)}
+        onClick={() => router.push(`/projects/${projectId}/roadmap?item=${roadmapItemId}`)}
         testId="run-roadmap-item-link"
         tone="accent"
         value={run.roadmapItemLabel ?? roadmapItemId}
@@ -735,7 +735,7 @@ export function RunDetail({
                             {` · ${t("metaAgent")} `}
                             <Pressable
                               data-testid="run-agent-link"
-                              onClick={() => router.push(`/agents/${run.owner}`)}
+                              onClick={() => router.push(`/workforce/positions/${run.owner}`)}
                             >
                               <Typography mono as="span" size="2xs" tone="accent" type="note">
                                 {agentName}

@@ -9,7 +9,7 @@ export function getReviewRulesQueryKey(scope: string) {
 
 /**
  * Learned review rules in one scope (`GET /api/review-rules?scope=`) — a
- * project id, or `_global`. `/policy/patterns` (ZB-08) reads every project's
+ * project id, or `_global`. `/governance/patterns` (ZB-08) reads every project's
  * scope plus `_global` and flattens them into one `PatternCard` list.
  */
 export function useReviewRulesQuery(scope: string) {

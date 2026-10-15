@@ -11,7 +11,7 @@ import { CompanyCard } from "../components/CompanyCard";
 import { useCompaniesQuery } from "../queries";
 
 /**
- * `/work/companies` (ZB-06) — the company catalog, moved from `/companies`.
+ * `/companies` (ZB-06) — the company catalog, moved from `/companies`.
  * Mirrors `features/projects/screens/ProjectsListScreen.tsx`'s header pattern
  * (the ZibbyCorp `Container`/eyebrow/`h1` shell), minus the category taxonomy —
  * companies have no category grouping.
@@ -22,8 +22,8 @@ export function CompaniesListScreen() {
   const companiesQuery = useCompaniesQuery();
   const companies = companiesQuery.data ?? [];
 
-  const openCompany = (c: Company) => router.push(`/work/companies/${c.id}` as Route);
-  const addCompany = () => router.push("/work/companies/new" as Route);
+  const openCompany = (c: Company) => router.push(`/companies/${c.id}` as Route);
+  const addCompany = () => router.push("/companies/new" as Route);
 
   return (
     <Container padding={["300", "350"]}>

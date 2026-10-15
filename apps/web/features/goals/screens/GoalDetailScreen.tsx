@@ -79,7 +79,7 @@ export function GoalDetailScreen({ goalId }: GoalDetailScreenProps) {
           {project && (
             <Tag
               uppercase
-              onClick={() => router.push(`/work/projects/${project.id}` as Route)}
+              onClick={() => router.push(`/projects/${project.id}` as Route)}
               tone="neutral"
             >
               {project.name}

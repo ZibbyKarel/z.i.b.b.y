@@ -5,7 +5,7 @@ import { getEmployeesQueryKey } from "./keys";
 
 /**
  * D-015 — the employee registry, optionally filtered by department/agentId/status.
- * Used by the `/org/people` directory (unfiltered, grouped client-side) and by a
+ * Used by the `/workforce/agents` directory (unfiltered, grouped client-side) and by a
  * department's Team tab (`department: id`).
  */
 export function useEmployeesQuery(query?: EmployeeQuery) {

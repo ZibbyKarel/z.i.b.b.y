@@ -43,7 +43,7 @@ export interface AutomationDetailScreenProps {
 }
 
 /**
- * The `/automations/:id` detail page — the card's Edit action NAVIGATES here,
+ * The `/work/automations/:id` detail page — the card's Edit action NAVIGATES here,
  * the page IS the edit surface. Three shapes, keyed on `automation.system` and
  * `automation.target.type` (Phase 116e):
  * - **system**: schedule-only ({@link AutomationFormFields}) with a top-right
@@ -119,7 +119,7 @@ function AutomationEditor({ automation }: { automation: Automation }) {
       <PageContainer>
         <Stack gap="250">
           <PageBreadcrumb
-            items={[{ label: t("title"), href: "/automations" }, { label: name }]}
+            items={[{ label: t("title"), href: "/work/automations" }, { label: name }]}
             linkComponent={Link as SubNavLinkComponent}
           />
 
@@ -211,7 +211,7 @@ function AutomationEditor({ automation }: { automation: Automation }) {
           onConfirm={() =>
             deleteAutomation.mutate(
               { params: { id: automation.id } },
-              { onSuccess: () => router.push("/automations") },
+              { onSuccess: () => router.push("/work/automations") },
             )
           }
           pending={deleteAutomation.isPending}

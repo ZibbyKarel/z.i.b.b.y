@@ -14,6 +14,7 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
+import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
@@ -40,7 +41,7 @@ import { AddSkillModal } from "../../skills/components/AddSkillModal/AddSkillMod
 import { useCreateSkillMutation } from "../../skills/mutations";
 import { useSkillCategoriesQuery, useSkillsQuery } from "../../skills/queries";
 import { useRegistryBindingsQuery } from "../queries";
-import type { RegistryKindParam } from "../registryKinds";
+import { type RegistryKindParam, registryHref } from "../registryKinds";
 
 export interface RegistriesScreenProps {
   kind: RegistryKindParam;
@@ -81,7 +82,7 @@ function BoundInCell({
         const code = departments.get(id)?.code ?? id;
         const tag = <Tag key={id}>{code}</Tag>;
         return tab ? (
-          <Link href={`/org/departments/${id}/${tab}`} key={id}>
+          <Link href={`/workforce/departments/${id}/${tab}`} key={id}>
             {tag}
           </Link>
         ) : (
@@ -107,7 +108,7 @@ export function RegistriesScreen({ kind, openCreateOnMount }: RegistriesScreenPr
 
   const closeCreate = () => {
     setCreating(false);
-    if (openCreateOnMount) router.replace(`/system/registries/${kind}`);
+    if (openCreateOnMount) router.replace(registryHref(kind) as Route);
   };
 
   const bindingsQuery = useRegistryBindingsQuery();
@@ -191,7 +192,7 @@ function PositionsTable() {
       empty={t("emptyPositions")}
       getRowKey={(a) => a.id}
       loading={query.isPending}
-      rowHref={(a) => `/system/registries/positions/${a.id}`}
+      rowHref={(a) => registryHref("positions", a.id)}
       rows={rows}
     />
   );
@@ -371,7 +372,7 @@ function CreatePositionDialog({ onClose }: { onClose: () => void }) {
           {
             onSuccess: () => {
               onClose();
-              router.push(`/system/registries/positions/${id}`);
+              router.push(registryHref("positions", id) as Route);
             },
           },
         );

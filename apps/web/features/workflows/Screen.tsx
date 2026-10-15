@@ -61,7 +61,7 @@ export interface ScreenProps {
   /**
    * ZB-03 — the list/detail route prefix. Defaults to `/work/workflows`; a
    * department's Workflows tab hosts this same screen at
-   * `/org/departments/[id]/workflows` so its editor opens under the
+   * `/workforce/departments/[id]/workflows` so its editor opens under the
    * department instead of the global catalog.
    */
   basePath?: string;

@@ -10,5 +10,13 @@
  * pure constant out of the client component file sidesteps the boundary
  * entirely.
  */
-export const REGISTRY_KINDS = ["positions", "skills", "mcp", "hooks", "commands"] as const;
-export type RegistryKindParam = (typeof REGISTRY_KINDS)[number];
+export const REGISTRY_KINDS = ["skills", "mcp", "hooks", "commands"] as const;
+
+/** Every kind `RegistriesScreen` renders — positions live under `/workforce`. */
+export type RegistryKindParam = (typeof REGISTRY_KINDS)[number] | "positions";
+
+/** Web route of a registry list (`id` omitted) or detail page. */
+export function registryHref(kind: RegistryKindParam, id?: string): string {
+  const base = kind === "positions" ? "/workforce/positions" : `/system/registries/${kind}`;
+  return id ? `${base}/${id}` : base;
+}

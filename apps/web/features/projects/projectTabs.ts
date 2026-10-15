@@ -1,7 +1,7 @@
 /**
- * The `/work/projects/[id]/[tab]` sections (ZB-06). Lives in its own plain
+ * The `/projects/[id]/[tab]` sections (ZB-06). Lives in its own plain
  * (non-`"use client"`) module rather than `ProjectDetailScreen.tsx`: the
- * owning server page (`app/(company)/work/projects/[id]/[tab]/page.tsx`)
+ * owning server page (`app/(company)/projects/[id]/[tab]/page.tsx`)
  * needs this array at module init to validate the dynamic segment, and a
  * plain value re-exported from a `"use client"` file is not reliably readable
  * from a server module under the dev bundler's client/server boundary — it

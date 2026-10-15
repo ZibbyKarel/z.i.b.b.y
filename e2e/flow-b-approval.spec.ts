@@ -23,7 +23,7 @@ const API = "http://localhost:3333";
  *   `HIGH_RISK_TYPES` retry-budget logic, covered by the API's own e2e suite,
  *   not this UI throughline.
  * - Step 06's second half ("repeated approvals turn into suggested rules") is
- *   `/policy/patterns`, a separate, unrelated read model.
+ *   `/governance/patterns`, a separate, unrelated read model.
  */
 test("an approval is denied with a reason from the sheet, and the denial is recorded", async ({
   page,
@@ -66,7 +66,7 @@ test("an approval is denied with a reason from the sheet, and the denial is reco
   expect(approvalId, "the seeded gated task never produced a pending approval").toBeTruthy();
 
   // The NEEDS YOU rail, on any page.
-  await page.goto("/org");
+  await page.goto("/dashboard");
   // The activity dock starts collapsed: open the "Needs you" panel first.
   await page
     .getByTestId("activity-dock-button")
@@ -102,7 +102,7 @@ test("an approval is denied with a reason from the sheet, and the denial is reco
   // table (`ApprovalsScreen`) has no agent-name column — its "task" column
   // shows `a.runId` (the fake-claude runner's generic intent text isn't
   // unique per test run, but the run id is), so assert on that instead.
-  await page.goto("/policy/approvals");
+  await page.goto("/governance/approvals");
   expect(runId, "the pending approval carried no runId").toBeTruthy();
   await expect(page.getByText(runId as string)).toBeVisible({ timeout: 20000 });
 });

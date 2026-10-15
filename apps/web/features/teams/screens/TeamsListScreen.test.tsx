@@ -30,16 +30,16 @@ describe("TeamsListScreen (ZB-06)", () => {
     expect(screen.getByText("Platform")).toBeInTheDocument();
   });
 
-  it("a card click navigates to the /work/teams detail route", async () => {
+  it("a card click navigates to the /teams detail route", async () => {
     render(<TeamsListScreen />);
     await userEvent.click(screen.getByRole("button", { name: "Otevřít Platform" }));
-    expect(push).toHaveBeenCalledWith("/work/teams/platform");
+    expect(push).toHaveBeenCalledWith("/teams/platform");
   });
 
-  it("the header add action navigates to /work/teams/new", async () => {
+  it("the header add action navigates to /teams/new", async () => {
     render(<TeamsListScreen />);
     await userEvent.click(screen.getByRole("button", { name: "Přidat tým" }));
-    expect(push).toHaveBeenCalledWith("/work/teams/new");
+    expect(push).toHaveBeenCalledWith("/teams/new");
   });
 
   it("shows the empty state when there are no teams", () => {

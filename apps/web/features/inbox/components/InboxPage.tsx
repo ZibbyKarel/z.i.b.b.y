@@ -52,7 +52,7 @@ export function InboxPage({ view, items, status, errors, children }: InboxPagePr
         ) : noIntegrations ? (
           <EmptyState
             action={
-              <Button onClick={() => router.push("/work/projects" as Route)} size="sm">
+              <Button onClick={() => router.push("/projects" as Route)} size="sm">
                 {t("noIntegrations.action")}
               </Button>
             }

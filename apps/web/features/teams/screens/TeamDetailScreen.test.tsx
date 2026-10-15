@@ -104,7 +104,7 @@ describe("TeamDetailScreen (ZB-06)", () => {
     expect(screen.queryByText("Other Project")).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByText("Linked Team Project"));
-    expect(push).toHaveBeenCalledWith("/work/projects/linked");
+    expect(push).toHaveBeenCalledWith("/projects/linked");
   });
 
   it("deletes via the two-click ConfirmDeleteButton and redirects to the list", async () => {

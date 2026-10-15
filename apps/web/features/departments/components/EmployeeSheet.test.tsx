@@ -26,7 +26,7 @@ describe("EmployeeSheet", () => {
     render(<EmployeeSheet employee={employee} onClose={() => {}} />);
     expect(screen.getByTestId(EmployeeSheetTestId.EditLink)).toHaveAttribute(
       "href",
-      "/org/people/emp-1",
+      "/workforce/agents/emp-1",
     );
     const rows = screen.getAllByTestId(EmployeeSheetTestId.TaskRow);
     expect(rows).toHaveLength(1);

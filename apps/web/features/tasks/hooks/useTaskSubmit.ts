@@ -56,7 +56,7 @@ export interface UseTaskSubmit {
 /**
  * Owns dispatch: a single task (auto or to an explicit target), or a loop (create the
  * goal, then enter it through a task carrying its goal target so the scheduler's
- * defer/limit/budget machinery owns the run). A dispatched run routes to `/archiv`
+ * defer/limit/budget machinery owns the run). A dispatched run routes to `/activity/runs`
  * (F8d — `/runs` is gone); a scheduled one shows the lingering confirmation, then
  * closes.
  */
@@ -89,12 +89,12 @@ export function useTaskSubmit({
       // the feed row flips from the pending task to its run in place, and the Archive
       // screen keeps the selection because it matches `runId` OR `taskId`.
       if (result.outcome === "dispatched") {
-        router.push(`/archiv?run=${encodeURIComponent(result.runRef)}`);
+        router.push(`/activity/runs/${encodeURIComponent(result.runRef)}`);
         onClose();
         return;
       }
       if (result.outcome === "pending") {
-        router.push(`/archiv?run=${encodeURIComponent(result.task.id)}`);
+        router.push(`/activity/runs/${encodeURIComponent(result.task.id)}`);
         onClose();
         return;
       }

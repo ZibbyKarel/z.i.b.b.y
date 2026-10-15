@@ -15,7 +15,7 @@ export enum BriefingMessageCardTestId {
 
 /**
  * The butler briefing rendered as a chat transcript message (F8a, O6): the
- * headline, the needs-you rows (deep-linked to `/archiv`), the per-department
+ * headline, the needs-you rows (deep-linked to `/activity/runs`), the per-department
  * lines, engagement rollups, and the did-for-you/watching/paused-limit counters —
  * the same content `BriefingCard` shows on `/overview`, reusing its row
  * sub-components (`NeedsYouRow`, `DepartmentLineRow`) rather than re-implementing

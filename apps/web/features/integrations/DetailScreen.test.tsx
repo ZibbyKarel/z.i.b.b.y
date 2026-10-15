@@ -71,7 +71,7 @@ describe("integrations DetailScreen (N4h grammar — closes the series)", () => 
     render(<DetailScreen integrationId="team-slack" projectId="acme" />);
     expect(screen.getByTestId(`${BreadcrumbTestId.Item}-0`)).toHaveAttribute(
       "href",
-      "/work/projects/acme/integrations",
+      "/projects/acme/integrations",
     );
   });
 
@@ -127,6 +127,6 @@ describe("integrations DetailScreen (N4h grammar — closes the series)", () => 
       { params: { id: "team-slack" } },
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     );
-    expect(push).toHaveBeenCalledWith("/work/projects/acme/integrations");
+    expect(push).toHaveBeenCalledWith("/projects/acme/integrations");
   });
 });

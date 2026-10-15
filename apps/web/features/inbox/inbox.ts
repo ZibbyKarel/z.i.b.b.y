@@ -259,7 +259,7 @@ export function linkedPrOf(item: InboxRoadmapItem): ItemPrRef | null {
 
 /** Pull requests page focused on one PR. Keyed by url: PR numbers repeat across repos. */
 export function prListHref(url: string): string {
-  return `/inbox/pull-requests?pr=${encodeURIComponent(url)}`;
+  return `/dashboard/inbox/pull-requests?pr=${encodeURIComponent(url)}`;
 }
 
 /** Joins an item's PR reference with the PR list (by url) for ci / blocker. */

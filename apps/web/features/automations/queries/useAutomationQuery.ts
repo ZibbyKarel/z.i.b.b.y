@@ -10,7 +10,7 @@ export function getAutomationQueryKey(id: string) {
   return ["automations", "detail", id] as const;
 }
 
-/** One automation from `GET /api/automations/:id` — backs the `/automations/:id` detail page. */
+/** One automation from `GET /api/automations/:id` — backs the `/work/automations/:id` detail page. */
 export function useAutomationQuery(id: string) {
   return apiClient.automations.getAutomation.useQuery({
     queryKey: getAutomationQueryKey(id),

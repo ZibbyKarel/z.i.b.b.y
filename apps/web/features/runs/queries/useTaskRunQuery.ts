@@ -14,7 +14,7 @@ export function getTaskRunQueryKey(runId: string) {
 /**
  * Resolve ONE run by id, independent of any feed.
  *
- * Why it exists: `/archiv`'s own feed is server-filtered to SETTLED runs
+ * Why it exists: `/activity/runs`'s own feed is server-filtered to SETTLED runs
  * (`ARCHIVED_STATES`), but `?run=<id>` deep links arrive from places that don't
  * know or care whether the run has finished — notably the roadmap item dialog's
  * "open run" affordance, which links an issue to a run that is usually still in

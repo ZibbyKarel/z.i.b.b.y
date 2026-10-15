@@ -1,7 +1,7 @@
 /**
- * The `/org/departments/[id]/[tab]` sections (ROUTE-MAP §1). Lives in its own
+ * The `/workforce/departments/[id]/[tab]` sections (ROUTE-MAP §1). Lives in its own
  * plain (non-`"use client"`) module rather than `DepartmentScreen.tsx`: the
- * owning server page (`app/(company)/org/departments/[id]/[tab]/page.tsx`)
+ * owning server page (`app/(company)/workforce/departments/[id]/[tab]/page.tsx`)
  * needs this array at module init to validate the dynamic segment, and a
  * plain value re-exported from a `"use client"` file is not reliably readable
  * from a server module under the dev bundler's client/server boundary — it

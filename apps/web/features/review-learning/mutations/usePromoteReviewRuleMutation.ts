@@ -6,7 +6,7 @@ const GLOBAL_SCOPE = "_global";
 
 /**
  * Widen an active project rule to global scope (`POST
- * /review-rules/:projectId/:ruleId/promote`) — the `/policy/patterns` "Accept
+ * /review-rules/:projectId/:ruleId/promote`) — the `/governance/patterns` "Accept
  * as rule" action. Promotion moves the rule out of its project's scope and
  * into `_global`, so both cached scopes are invalidated on success.
  */

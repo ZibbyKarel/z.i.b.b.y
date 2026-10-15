@@ -121,7 +121,11 @@ export function PeopleScreen() {
         <Stack gap="250">
           <Stack wrap align="end" direction="row" gap="200" justify="between">
             <Typography type="title">{t("title")}</Typography>
-            <Button icon="plus" intent="primary" onClick={() => router.push("/org/people/new")}>
+            <Button
+              icon="plus"
+              intent="primary"
+              onClick={() => router.push("/workforce/agents/new")}
+            >
               {t("hire")}
             </Button>
           </Stack>
@@ -185,7 +189,7 @@ export function PeopleScreen() {
               actionLabel={t("hire")}
               description={t("emptyDescription")}
               glyph="bot"
-              onAction={() => router.push("/org/people/new")}
+              onAction={() => router.push("/workforce/agents/new")}
               title={t("emptyTitle")}
             />
           ) : (

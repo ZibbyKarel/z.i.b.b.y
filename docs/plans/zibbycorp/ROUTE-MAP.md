@@ -1,5 +1,44 @@
 # ZibbyCorp — route, settings and feature relocation map
 
+## Current IA (supersedes everything below)
+
+Eight top tabs, all always visible (`apps/web/state/config.ts` `SECTIONS`):
+
+| Section | Tabs (route) |
+| --- | --- |
+| dashboard | map `/dashboard`, inbox `/dashboard/inbox`, issues `/dashboard/inbox/issues` (+ `/[projectId]/[itemId]`), pull-requests `/dashboard/inbox/pull-requests`, briefings `/dashboard/briefings` |
+| work | tasks `/work/tasks`, goals `/work/goals`, workflows `/work/workflows`, automations `/work/automations` (+ `/[id]`) |
+| companies | companies `/companies`, teams `/teams`, projects `/projects` |
+| workforce | agents `/workforce/agents`, positions `/workforce/positions`; departments `/workforce/departments/[id]/...` (no tab, entered from the dashboard map) |
+| activity | log `/activity/log`, runs `/activity/runs`, channels `/activity/channels` |
+| knowledge | vault, graph, distill (`/knowledge/*`) |
+| governance | approvals, gates, patterns, budgets, spend (`/governance/<id>`) |
+| system | skills, mcp, hooks, commands (`/system/registries/<kind>`), settings `/system/settings/{general,activity,runtime,status}` (section row inside the screen) |
+
+Old routes were **removed without redirects** (they 404): `/org`, `/org/people`,
+`/org/departments`, `/inbox/*`, `/policy/*`, `/ledger/*`, `/automations`,
+`/work/{companies,teams,projects}`, `/activity/inbox`, `/activity/briefings`,
+`/system/registries/positions`, plus the older `/chat`, `/agents`, `/archiv`, `/runs`,
+`/settings`, `/signals`, `/pipelines`, `/workflows`, `/skills|mcp|hooks|commands`,
+`/memory` shims. Only section roots redirect to their first tab (`/`, `/activity`,
+`/governance`, `/workforce`, `/knowledge`, `/system/registries`, `/system/settings`).
+
+| Old | New |
+| --- | --- |
+| `/org` | `/dashboard` |
+| `/org/people/**` | `/workforce/agents/**` |
+| `/org/departments/**` | `/workforce/departments/**` |
+| `/inbox/overview` | `/dashboard/inbox` |
+| `/inbox/{issues,pull-requests}` | `/dashboard/inbox/{issues,pull-requests}` |
+| `/activity/briefings` | `/dashboard/briefings` |
+| `/activity/inbox` | `/activity/channels` |
+| `/automations/**` | `/work/automations/**` |
+| `/work/{companies,teams,projects}/**` | `/{companies,teams,projects}/**` |
+| `/system/registries/positions/**` | `/workforce/positions/**` |
+| `/policy/*`, `/ledger/{budgets,spend}` | `/governance/*` |
+
+The history below describes the earlier (ZB-01..ZB-14) layout.
+
 This is the spec for Part B ("přesouvání stránek, logiky, nastavení"). Every current
 route, settings tab and orphan feature has exactly one new home.
 

@@ -8,10 +8,14 @@ import {
   Panel,
   Stack,
   StatusDot,
+  Tab,
+  TabList,
+  Tabs,
   Toggle,
   Typography,
 } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
+import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
@@ -23,7 +27,7 @@ import { ChatSection } from "./components/ChatSection";
 import { MachineSection } from "./components/MachineSection";
 import { SystemSection } from "./components/SystemSection";
 import { WatcherRows } from "./components/WatcherRows";
-import type { SettingsSection } from "./settingsSections";
+import { SETTINGS_SECTIONS, type SettingsSection } from "./settingsSections";
 
 type Locale = "cs" | "en";
 
@@ -95,16 +99,17 @@ export interface SettingsScreenProps {
 
 /**
  * `/system/settings/[section]` (ZB-11, ROUTE-MAP §3) — the settings sections
- * router; the section tabs live in the shell's shared sub-nav row. `general`
+ * router; the section tabs are a secondary `Tabs` row at the top of this screen. `general`
  * stacks General, Appearance, Machine and COO persona. Each former `/settings?tab=` is now its own route; the "gates" and
- * "mandate" tabs already moved to `/policy/gates` (ZB-08), "automations" to the top-level `/automations`
+ * "mandate" tabs already moved to `/governance/gates` (ZB-08), "automations" to the top-level `/work/automations`
  * page, "selfKnowledge" to
  * `/knowledge/distill` (ZB-09), and the per-project "tasks" level mapping to
- * `/work/projects/[id]/roadmap` (ZB-06) — only the GLOBAL DEFAULT level mapping
+ * `/projects/[id]/roadmap` (ZB-06) — only the GLOBAL DEFAULT level mapping
  * stays here, under `general`.
  */
 export function SettingsScreen({ section }: SettingsScreenProps) {
   const t = useTranslations("settings");
+  const tNav = useTranslations("nav");
   const locale = useLocale() as Locale;
   const router = useRouter();
   const { data: health, isSuccess } = useHealthQuery();
@@ -127,6 +132,20 @@ export function SettingsScreen({ section }: SettingsScreenProps) {
       <PageContainer>
         <Stack direction="col" gap="250">
           <Typography type="title">{t("title")}</Typography>
+
+          <Tabs
+            onValueChange={(id) => router.push(`/system/settings/${id}` as Route)}
+            value={section}
+            variant="mono"
+          >
+            <TabList>
+              {SETTINGS_SECTIONS.map((id) => (
+                <Tab key={id} value={id}>
+                  {tNav(`subtab.system.${id}`)}
+                </Tab>
+              ))}
+            </TabList>
+          </Tabs>
 
           {section === "general" && (
             <Stack gap="250">

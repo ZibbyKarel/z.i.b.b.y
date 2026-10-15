@@ -82,7 +82,7 @@ export function HireEmployeeScreen({ initialDepartment }: HireEmployeeScreenProp
                         params: { id: department },
                         body: { agentId, ...(name.trim() ? { name: name.trim() } : {}) },
                       },
-                      { onSuccess: (res) => router.push(`/org/people/${res.body.id}`) },
+                      { onSuccess: (res) => router.push(`/workforce/agents/${res.body.id}`) },
                     )
                   }
                 >

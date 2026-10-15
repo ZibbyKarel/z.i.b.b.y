@@ -82,7 +82,7 @@ function Profile({
         <Stack gap="250">
           <PageBreadcrumb
             items={[
-              { label: t("breadcrumbPeople"), href: "/org/people" },
+              { label: t("breadcrumbPeople"), href: "/workforce/agents" },
               { label: employee.name },
             ]}
             linkComponent={Link as SubNavLinkComponent}
@@ -94,7 +94,7 @@ function Profile({
               <Stack gap="75">
                 <Typography type="title">{employee.name}</Typography>
                 <StatePill label={t(`state.${employee.state}`)} state={tone} />
-                <Link href={`/org/departments/${employee.department}/team`}>
+                <Link href={`/workforce/departments/${employee.department}/team`}>
                   <Typography type="note" variant="secondary">
                     {department_?.name ?? employee.department}
                   </Typography>
@@ -193,7 +193,7 @@ function Profile({
                 <Button
                   icon="bot"
                   intent="ghost"
-                  onClick={() => router.push(`/system/registries/positions/${employee.agentId}`)}
+                  onClick={() => router.push(`/workforce/positions/${employee.agentId}`)}
                 >
                   {t("positionLink", { name: employee.position.name })}
                 </Button>
@@ -208,10 +208,10 @@ function Profile({
                   agentName={agent.name ?? agent.id}
                   gateRuleIds={agent.gateRuleIds ?? []}
                   gates={(agent.gates ?? []) as GateRuleInput[]}
-                  onAddRule={() => router.push(`/system/registries/positions/${agent.id}`)}
-                  onDeleteRule={() => router.push(`/system/registries/positions/${agent.id}`)}
-                  onEditRule={() => router.push(`/system/registries/positions/${agent.id}`)}
-                  onLinkedChange={() => router.push(`/system/registries/positions/${agent.id}`)}
+                  onAddRule={() => router.push(`/workforce/positions/${agent.id}`)}
+                  onDeleteRule={() => router.push(`/workforce/positions/${agent.id}`)}
+                  onEditRule={() => router.push(`/workforce/positions/${agent.id}`)}
+                  onLinkedChange={() => router.push(`/workforce/positions/${agent.id}`)}
                 />
               </Container>
             </Panel>

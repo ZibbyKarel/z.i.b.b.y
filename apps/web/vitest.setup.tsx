@@ -14,7 +14,7 @@ if (!("ResizeObserver" in globalThis)) {
   globalThis.ResizeObserver = ResizeObserver as unknown as typeof globalThis.ResizeObserver;
 }
 
-// jsdom ships no IntersectionObserver; the `/archiv` page's lazy-load security
+// jsdom ships no IntersectionObserver; the `/activity/runs` page's lazy-load security
 // (and any future scroll-triggered loader) references it on mount.
 if (!("IntersectionObserver" in globalThis)) {
   class IntersectionObserver {

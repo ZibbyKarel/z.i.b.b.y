@@ -134,7 +134,7 @@ describe("mergeToolEvent", () => {
       status: "ok",
       callId: "a",
       summary: "Spustil jsem úkol — workflow Delivery.",
-      href: "/archiv?run=r1",
+      href: "/activity/runs/r1",
     };
 
     const merged = mergeToolEvent([started, other], ok);
@@ -453,7 +453,7 @@ describe("ChatSessionService", () => {
     const callId = started && started.type === "tool" ? started.tool.callId : undefined;
     expect(callId).toBe("toolu_4");
     expect(ok && ok.type === "tool" && ok.tool.callId).toBe(callId);
-    expect(ok && ok.type === "tool" && ok.tool.href).toBe("/archiv?run=delivery_1");
+    expect(ok && ok.type === "tool" && ok.tool.href).toBe("/activity/runs/delivery_1");
     expect(ok && ok.type === "tool" && ok.tool.runRef).toBe("delivery_1");
     expect(ok && ok.type === "tool" && ok.tool.taskId).toBe("task-9");
     expect(ok && ok.type === "tool" && ok.tool.target).toEqual(target);

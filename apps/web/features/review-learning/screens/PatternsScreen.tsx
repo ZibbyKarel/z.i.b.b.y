@@ -48,7 +48,7 @@ function PatternRow({
 }
 
 /**
- * `/policy/patterns` — learned review rules (`libs/contracts/src/review-learning`,
+ * `/governance/patterns` — learned review rules (`libs/contracts/src/review-learning`,
  * O-10: "the same thing as review-learning rules") as `PatternCard`s: every
  * project's scope plus `_global`, flattened. "Accept as rule" calls the one
  * mutation the contract has — `promote` — which widens an already-`active`

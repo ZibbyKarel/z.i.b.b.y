@@ -7,29 +7,19 @@
 import type { IconName, SelectOption } from "@zibby/design-system";
 import type { Route } from "next";
 
-/**
- * A section sub-tab. `href` is a real ZibbyCorp route once its screen phase ships
- * (ZB-02..ZB-11); until then it is "the closest existing current route" (ZB-01's
- * rule) — usually the section's own fallback. ZB-06 shipped `goals`/`companies`/
- * `teams`/`projects` at their real `/work/*` homes.
- */
+/** A section sub-tab. */
 export interface SubTabConfig {
   id: string;
   href: Route;
   /** Path prefix owning this tab when `href` is only its first sub-page
-   *  (e.g. registries → `/system/registries`); defaults to `href`. */
+   *  (e.g. settings → `/system/settings`); defaults to `href`. */
   matchPrefix?: string;
 }
 
 export interface SectionConfig {
   id: string;
   glyph: IconName;
-  /** Section-level fallback route (AppHeader's section nav) — the ZB-01 mapping,
-   *  updated as each section ships: org→/org (ZB-02), work→/work/tasks (ZB-04/06),
-   *  activity→/activity/log (ZB-07), policy→/policy/approvals (ZB-08),
-   *  knowledge→/knowledge/vault (ZB-09), ledger→/ledger/budgets (ZB-10),
-   *  system→/system/settings/general (ZB-11); automations and registries
-   *  were split out of `system` into their own top tabs. */
+  /** Section-level fallback route (AppHeader's section nav) — its first tab. */
   href: Route;
   tabs: readonly SubTabConfig[];
 }
@@ -42,13 +32,16 @@ export interface SectionConfig {
  */
 export const SECTIONS = [
   {
-    id: "org",
+    id: "dashboard",
     glyph: "compass",
-    href: "/org",
+    href: "/dashboard" as Route,
     tabs: [
-      // ZB-02: the map ships. ZB-03: `/org/people` (the employee directory) ships too.
-      { id: "map", href: "/org" },
-      { id: "people", href: "/org/people" },
+      { id: "map", href: "/dashboard" as Route },
+      // Roadmap items + GitHub PRs awaiting the operator (docs/plans/inbox-ui-spec.md).
+      { id: "overview", href: "/dashboard/inbox" as Route },
+      { id: "issues", href: "/dashboard/inbox/issues" as Route },
+      { id: "pull-requests", href: "/dashboard/inbox/pull-requests" as Route },
+      { id: "briefings", href: "/dashboard/briefings" as Route },
     ],
   },
   {
@@ -59,20 +52,27 @@ export const SECTIONS = [
       { id: "tasks", href: "/work/tasks" as Route },
       { id: "goals", href: "/work/goals" as Route },
       { id: "workflows", href: "/work/workflows" as Route },
-      { id: "companies", href: "/work/companies" as Route },
-      { id: "teams", href: "/work/teams" as Route },
-      { id: "projects", href: "/work/projects" as Route },
+      { id: "automations", href: "/work/automations" as Route },
     ],
   },
   {
-    // Roadmap items + GitHub PRs awaiting the operator (docs/plans/inbox-ui-spec.md).
-    id: "inbox",
-    glyph: "doc",
-    href: "/inbox/overview" as Route,
+    id: "companies",
+    glyph: "grid",
+    href: "/companies" as Route,
     tabs: [
-      { id: "overview", href: "/inbox/overview" as Route },
-      { id: "issues", href: "/inbox/issues" as Route },
-      { id: "pull-requests", href: "/inbox/pull-requests" as Route },
+      { id: "companies", href: "/companies" as Route },
+      { id: "teams", href: "/teams" as Route },
+      { id: "projects", href: "/projects" as Route },
+    ],
+  },
+  {
+    id: "workforce",
+    glyph: "bot",
+    href: "/workforce/agents" as Route,
+    // Departments have no tab — the dashboard map is their entry point.
+    tabs: [
+      { id: "agents", href: "/workforce/agents" as Route },
+      { id: "positions", href: "/workforce/positions" as Route },
     ],
   },
   {
@@ -82,21 +82,7 @@ export const SECTIONS = [
     tabs: [
       { id: "log", href: "/activity/log" },
       { id: "runs", href: "/activity/runs" },
-      { id: "inbox", href: "/activity/inbox" },
-      { id: "briefings", href: "/activity/briefings" },
-    ],
-  },
-  {
-    id: "policy",
-    glyph: "shield",
-    href: "/policy/approvals",
-    tabs: [
-      { id: "approvals", href: "/policy/approvals" },
-      // Not yet in the typed-route union until a build/dev regenerates
-      // `.next/types` for these freshly-added pages (ZB-08) — same cast
-      // pattern as the other freshly-added routes in this table.
-      { id: "gates", href: "/policy/gates" as Route },
-      { id: "patterns", href: "/policy/patterns" as Route },
+      { id: "channels", href: "/activity/channels" as Route },
     ],
   },
   {
@@ -110,44 +96,32 @@ export const SECTIONS = [
     ],
   },
   {
-    id: "ledger",
-    glyph: "dollar",
-    href: "/ledger/budgets",
+    id: "governance",
+    glyph: "shield",
+    href: "/governance/approvals" as Route,
     tabs: [
-      { id: "budgets", href: "/ledger/budgets" },
-      { id: "spend", href: "/ledger/spend" as Route },
+      { id: "approvals", href: "/governance/approvals" as Route },
+      { id: "gates", href: "/governance/gates" as Route },
+      { id: "patterns", href: "/governance/patterns" as Route },
+      { id: "budgets", href: "/governance/budgets" as Route },
+      { id: "spend", href: "/governance/spend" as Route },
     ],
   },
   {
-    id: "automations",
-    glyph: "spark",
-    href: "/automations" as Route,
-    // No sub-tabs: the sub-nav row still carries pin + "+ NEW TASK".
-    tabs: [],
-  },
-  {
-    id: "registries",
-    glyph: "server",
+    id: "system",
+    glyph: "gear",
     href: "/system/registries/skills" as Route,
     tabs: [
-      { id: "positions", href: "/system/registries/positions" as Route },
       { id: "skills", href: "/system/registries/skills" as Route },
       { id: "mcp", href: "/system/registries/mcp" as Route },
       { id: "hooks", href: "/system/registries/hooks" as Route },
       { id: "commands", href: "/system/registries/commands" as Route },
-    ],
-  },
-  {
-    // Not a top tab — reached through the header cog (`AppShell`); its tabs
-    // fill the sub-nav row on `/system/settings/*`.
-    id: "system",
-    glyph: "gear",
-    href: "/system/settings/general" as Route,
-    tabs: [
-      { id: "general", href: "/system/settings/general" as Route },
-      { id: "activity", href: "/system/settings/activity" as Route },
-      { id: "runtime", href: "/system/settings/runtime" as Route },
-      { id: "status", href: "/system/settings/status" as Route },
+      // Its four sections render as a secondary tab row inside the screen.
+      {
+        id: "settings",
+        href: "/system/settings/general" as Route,
+        matchPrefix: "/system/settings",
+      },
     ],
   },
 ] as const satisfies readonly SectionConfig[];
@@ -155,38 +129,28 @@ export const SECTIONS = [
 export type SectionId = (typeof SECTIONS)[number]["id"];
 
 /**
- * Reverse lookup — which section a legacy pathname belongs to, for the
- * `AppHeader` section nav's active-item highlight (`usePathname()`). Checked as
- * a prefix match, longest-path entries are irrelevant here since every legacy
- * route is a single top-level segment. Falls back to `"org"` (today's `/chat`
- * home) for anything unmatched.
+ * Reverse lookup — which section a pathname belongs to, for the `AppHeader`
+ * section nav's active-item highlight (`usePathname()`). First match wins, so
+ * specific prefixes go before generic ones. Falls back to `"dashboard"`.
  */
 const PATH_SECTION: readonly (readonly [prefix: string, section: SectionId])[] = [
-  ["/agents", "org"],
-  ["/workflows", "work"],
-  ["/automations", "automations"],
-  ["/chat", "org"],
-  // ZB-03 (D-015/D-009): the employee directory + department pages (org) and
-  // the moved position registry (system).
-  ["/org", "org"],
-  ["/policy", "policy"],
-  ["/system/registries", "registries"],
-  ["/system", "system"],
-  // ZB-06: goals/companies/teams/projects moved under /work/*; the bare
-  // top-level prefixes are kept as redirect targets only (D-009), not routes.
+  ["/dashboard", "dashboard"],
   ["/work", "work"],
-  ["/inbox", "inbox"],
+  ["/companies", "companies"],
+  ["/teams", "companies"],
+  ["/projects", "companies"],
+  ["/workforce", "workforce"],
   ["/activity", "activity"],
-  ["/archiv", "activity"],
-  ["/runs", "activity"],
-  ["/memory", "knowledge"],
   ["/knowledge", "knowledge"],
-  ["/ledger", "ledger"],
+  ["/governance", "governance"],
+  ["/system", "system"],
 ];
 
 export function sectionForPath(pathname: string): SectionId {
-  const match = PATH_SECTION.find(([prefix]) => pathname.startsWith(prefix));
-  return match?.[1] ?? "org";
+  const match = PATH_SECTION.find(
+    ([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+  return match?.[1] ?? "dashboard";
 }
 
 export const MODEL_OPTIONS: SelectOption[] = [

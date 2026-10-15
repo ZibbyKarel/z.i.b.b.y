@@ -1,7 +1,6 @@
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { type Page, expect, test } from "@playwright/test";
-import { QUERY_REDIRECTS, ROUTE_MAP_REDIRECTS } from "../../e2e/route-map-redirects";
 
 /**
  * ZB-14 / ZA-08 — the ROUTE-MAP §1/§2 live-browser sweep. NOT part of `pnpm e2e`
@@ -73,28 +72,32 @@ function routes(): RouteCase[] {
   const dep = "dev";
   return [
     // --- ORG ---
-    { slug: "org-map", path: () => "/org" },
-    { slug: "org-map-focus", path: () => `/org?focus=${dep}` },
-    { slug: "org-department-team", path: () => `/org/departments/${dep}/team` },
-    { slug: "org-department-subtasks", path: () => `/org/departments/${dep}/subtasks` },
-    { slug: "org-department-workflows", path: () => `/org/departments/${dep}/workflows` },
+    { slug: "org-map", path: () => "/dashboard" },
+    { slug: "org-map-focus", path: () => `/dashboard?focus=${dep}` },
+    { slug: "org-department-team", path: () => `/workforce/departments/${dep}/team` },
+    { slug: "org-department-subtasks", path: () => `/workforce/departments/${dep}/subtasks` },
+    { slug: "org-department-workflows", path: () => `/workforce/departments/${dep}/workflows` },
     {
       slug: "org-department-workflow-detail",
-      path: (i) => `/org/departments/${dep}/workflows/${i?.departmentWorkflowId ?? "demo-pipe"}`,
+      path: (i) =>
+        `/workforce/departments/${dep}/workflows/${i?.departmentWorkflowId ?? "demo-pipe"}`,
     },
-    { slug: "org-department-handoff", path: () => `/org/departments/${dep}/handoff` },
-    { slug: "org-department-skills", path: () => `/org/departments/${dep}/skills` },
-    { slug: "org-department-integrations", path: () => `/org/departments/${dep}/integrations` },
-    { slug: "org-department-automations", path: () => `/org/departments/${dep}/automations` },
-    { slug: "org-department-hooks", path: () => `/org/departments/${dep}/hooks` },
-    { slug: "org-people", path: () => "/org/people" },
+    { slug: "org-department-handoff", path: () => `/workforce/departments/${dep}/handoff` },
+    { slug: "org-department-skills", path: () => `/workforce/departments/${dep}/skills` },
+    {
+      slug: "org-department-integrations",
+      path: () => `/workforce/departments/${dep}/integrations`,
+    },
+    { slug: "org-department-automations", path: () => `/workforce/departments/${dep}/automations` },
+    { slug: "org-department-hooks", path: () => `/workforce/departments/${dep}/hooks` },
+    { slug: "org-people", path: () => "/workforce/agents" },
     {
       slug: "org-people-detail",
-      path: (i) => (i?.employeeId ? `/org/people/${i.employeeId}` : ""),
+      path: (i) => (i?.employeeId ? `/workforce/agents/${i.employeeId}` : ""),
       skip: (i) =>
         i?.employeeId ? undefined : "no employee hired (POST /departments/dev/employees failed)",
     },
-    { slug: "org-people-new", path: () => "/org/people/new" },
+    { slug: "org-people-new", path: () => "/workforce/agents/new" },
 
     // --- WORK ---
     { slug: "work-tasks", path: () => "/work/tasks" },
@@ -205,33 +208,6 @@ function routes(): RouteCase[] {
   ];
 }
 
-/** Every §2 redirect worth a screenshot of the LANDED page (not just the URL —
- * `redirects.spec.ts`/§2 QUERY_REDIRECTS already assert the URL half). Static
- * pairs come straight from `redirects.spec.ts`; the two id-dependent ones
- * (`/agents/:id`, `/workflows/:id`) are ROUTE-MAP §2 rows that table
- * deliberately excludes as "left uncovered — this table only fits static
- * pairs" — covered here instead, with the sweep's own seeded ids.
- */
-function redirectRoutes(): RouteCase[] {
-  const idRedirects: RouteCase[] = [
-    {
-      slug: "redirect-agents-id",
-      path: (i) => `/agents/${i?.redirectAgentId ?? "gated-agent"}`,
-    },
-    {
-      slug: "redirect-workflows-id",
-      path: (i) => `/workflows/${i?.redirectWorkflowId ?? "demo-pipe"}`,
-    },
-  ];
-  const staticRedirects: RouteCase[] = [...ROUTE_MAP_REDIRECTS, ...QUERY_REDIRECTS].map(
-    ([from]) => ({
-      slug: `redirect-${from.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "")}`,
-      path: () => from,
-    }),
-  );
-  return [...staticRedirects, ...idRedirects];
-}
-
 /** Sets the DS theme choice via the same `localStorage` key `DesignSystemProvider`
  * reads (`THEME_STORAGE_KEY` = `"zibby-theme"`) before any script runs, so the
  * page never flashes the wrong theme and never needs a UI toggle click. */
@@ -332,21 +308,6 @@ for (const viewport of VIEWPORTS) {
               consoleErrors,
             );
           }
-        });
-      }
-
-      for (const route of redirectRoutes()) {
-        test(`${route.slug}`, async ({ page }) => {
-          const targetPath = route.path(ids);
-          await setTheme(page, theme);
-          const res = await page.goto(targetPath);
-          expect(res?.ok(), `${targetPath} responded ${res?.status()}`).toBeTruthy();
-          await waitForSplashGone(page);
-          await assertNoCrash(page);
-          await page.screenshot({
-            fullPage: true,
-            path: path.join(SCREENSHOT_DIR, `${route.slug}-${theme}-${viewport.width}.png`),
-          });
         });
       }
     });

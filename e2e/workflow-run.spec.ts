@@ -10,12 +10,12 @@ import { expect, test } from "@playwright/test";
  *
  * ZB-06/ZB-13: the old standalone `/workflows` catalog is gone — `/workflows/[id]`
  * now resolves the workflow's owning department server-side and redirects to
- * `/org/departments/<dept>/workflows/<id>` (ROUTE-MAP §2); the seeded "Demo Pipe"
+ * `/workforce/departments/<dept>/workflows/<id>` (ROUTE-MAP §2); the seeded "Demo Pipe"
  * (`e2e/global-setup.ts`) is owned by the `dev` department, so this goes straight
  * there instead of round-tripping through the old catalog.
  */
 test("open a workflow, see its phase chain, and run it via the task composer", async ({ page }) => {
-  await page.goto("/org/departments/dev/workflows/demo-pipe");
+  await page.goto("/workforce/departments/dev/workflows/demo-pipe");
 
   // The detail panel shows the phase chain for the selected workflow.
   await expect(page.getByText(/phase chain/)).toBeVisible();
@@ -32,8 +32,6 @@ test("open a workflow, see its phase chain, and run it via the task composer", a
   await dialog.getByTestId("command-line-input").fill("run the demo pipe");
   await dialog.getByRole("button", { name: "Run", exact: true }).click();
 
-  // Dispatched → navigated to the run. `/archiv` (kept as a page-level redirect for
-  // its `?run=` deep links, ROUTE-MAP §2) forwards straight to the run's own detail
-  // route.
+  // Dispatched → navigated to the run's detail route.
   await expect(page).toHaveURL(/\/activity\/runs\//);
 });

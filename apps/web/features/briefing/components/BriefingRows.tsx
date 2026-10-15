@@ -85,7 +85,7 @@ export function DepartmentLineRow({ line }: { line: BriefingDepartmentLine }) {
 
 /**
  * One "needs you" row: a kind chip + the summary, linking to where it's resolved.
- * Parked runs and approvals both surface on the run archive — `/archiv` (F2) is
+ * Parked runs and approvals both surface on the run archive — `/activity/runs` (F2) is
  * now `/activity/runs` (ZB-07, ROUTE-MAP §2). Shared by `chat/BriefingMessageCard`
  * (D18) — relocated here in F8c so it and the (now-deleted, F8d) `overview/BriefingCard`
  * didn't import from each other.

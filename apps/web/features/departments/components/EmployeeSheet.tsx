@@ -47,7 +47,7 @@ export function EmployeeSheet({ employee, onClose }: EmployeeSheetProps) {
       open
       closeLabel={tc("close")}
       headerActions={
-        <Link data-testid={EmployeeSheetTestId.EditLink} href={`/org/people/${employee.id}`}>
+        <Link data-testid={EmployeeSheetTestId.EditLink} href={`/workforce/agents/${employee.id}`}>
           <Button icon="edit" intent="secondary" size="sm">
             {tc("edit")}
           </Button>

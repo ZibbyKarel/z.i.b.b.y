@@ -50,7 +50,7 @@ export interface AgentDetailScreenProps {
 }
 
 /**
- * The `/agents/:id` detail page (N4c) — the grammar-conformant replacement for
+ * The `/workforce/positions/:id` detail page (N4c) — the grammar-conformant replacement for
  * the old view/edit dialog: a card click NAVIGATES here, the page IS the edit
  * surface (one form over the Basics + Rules panels) and every action sits
  * top-right in the header — Save (primary), Run (New-Task pre-fill; the target
@@ -114,7 +114,7 @@ function AgentEditor({ agent }: { agent: Agent }) {
       <PageContainer>
         <Stack gap="250">
           <PageBreadcrumb
-            items={[{ label: t("title"), href: "/system/registries/positions" }, { label: name }]}
+            items={[{ label: t("title"), href: "/workforce/positions" }, { label: name }]}
             linkComponent={Link as SubNavLinkComponent}
           />
 
@@ -230,7 +230,7 @@ function AgentEditor({ agent }: { agent: Agent }) {
           onConfirm={() =>
             deleteAgent.mutate(
               { params: { id: agent.id } },
-              { onSuccess: () => router.push("/system/registries/positions") },
+              { onSuccess: () => router.push("/workforce/positions") },
             )
           }
           pending={deleteAgent.isPending}
