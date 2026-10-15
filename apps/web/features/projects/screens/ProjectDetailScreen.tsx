@@ -257,6 +257,7 @@ export function ProjectDetailScreen({ projectId, tab = "overview" }: ProjectDeta
   // resolves as "no company" downstream, so we don't validate it here — just
   // surface the pending link so the operator sees it before saving.
   const linkCompanyId = isNew ? searchParams.get("companyId") || undefined : undefined;
+  const resolvedCompanyName = companies.find((c) => c.id === project?.companyId)?.name;
   const linkCompanyName = companies.find((c) => c.id === linkCompanyId)?.name ?? linkCompanyId;
 
   function saveBasics(body: ProjectBasicsBody) {
@@ -667,9 +668,13 @@ export function ProjectDetailScreen({ projectId, tab = "overview" }: ProjectDeta
               {tab === "integrations" && (
                 <Stack gap="300">
                   {/* Channels owned by this project (one project = one company) */}
-                  <ProjectIntegrationsPanel projectId={id} />
+                  <ProjectIntegrationsPanel
+                    gitRemote={project.gitRemote}
+                    projectId={id}
+                    routing={project.integrationRouting}
+                  />
                   {/* What ZIBBY may do with those sources unattended */}
-                  <RoadmapAutomationPanel projectId={id} />
+                  <RoadmapAutomationPanel companyName={resolvedCompanyName} projectId={id} />
                   {/* This project's recent channel items */}
                   <InboxPanel projectId={id} />
                   {/* What the project's integrations processed + outcome */}

@@ -156,4 +156,29 @@ describe("IntegrationFormDialog", () => {
     await userEvent.type(screen.getByTestId(IntegrationFormTestId.GithubRepo), "not-a-repo");
     expect(screen.getByTestId(IntegrationFormTestId.Submit)).toBeDisabled();
   });
+
+  it("stamps companyId (not projectId) for a company-owned integration", async () => {
+    const onSubmit = vi.fn();
+    render(<IntegrationFormDialog companyId="shoptet" onClose={vi.fn()} onCreate={onSubmit} />);
+
+    await userEvent.type(screen.getByTestId("integration-id"), "slack-shoptet");
+    await userEvent.click(screen.getByTestId(IntegrationFormTestId.Submit));
+
+    const create = onSubmit.mock.calls[0]![0].create;
+    expect(create).toMatchObject({ id: "slack-shoptet", companyId: "shoptet" });
+    expect(create).not.toHaveProperty("projectId");
+  });
+
+  it("prefills the kind when opened to override an inherited integration", () => {
+    render(
+      <IntegrationFormDialog
+        initialKind="jira"
+        onClose={vi.fn()}
+        onCreate={vi.fn()}
+        projectId="acme-app"
+      />,
+    );
+
+    expect(screen.getByTestId(IntegrationFormTestId.JiraBaseUrl)).toBeInTheDocument();
+  });
 });

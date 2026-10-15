@@ -1,6 +1,7 @@
 "use client";
 
-import { Panel, Stack, ToggleField, Typography } from "@zibby/design-system";
+import { Panel, SegmentedControl, Stack, Typography } from "@zibby/design-system";
+import type { EffectiveRoadmapConfig } from "@zibby/contracts";
 import { useTranslations } from "next-intl";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { useSetRoadmapConfigMutation } from "../mutations";
@@ -10,10 +11,90 @@ export enum RoadmapAutomationPanelTestId {
   Root = "roadmap-automation-panel",
   AutoSync = "roadmap-automation-auto-sync",
   AutoPlay = "roadmap-automation-auto-play",
+  AutoSyncEffective = "roadmap-automation-auto-sync-effective",
+  AutoPlayEffective = "roadmap-automation-auto-play-effective",
 }
 
 export interface RoadmapAutomationPanelProps {
   projectId: string;
+  /** The project's company, named in "inherited from company X" (omitted = no company). */
+  companyName?: string | undefined;
+}
+
+type TriState = "inherit" | "on" | "off";
+type ToggleKey = "autoSync" | "autoPlay";
+
+const toTriState = (value: boolean | null | undefined): TriState =>
+  value === true ? "on" : value === false ? "off" : "inherit";
+/** `inherit` maps to `null` — the contract's explicit "reset to inherit". */
+const fromTriState = (value: string): boolean | null =>
+  value === "on" ? true : value === "off" ? false : null;
+
+interface TriStateFieldProps {
+  toggle: ToggleKey;
+  testId: RoadmapAutomationPanelTestId;
+  effectiveTestId: RoadmapAutomationPanelTestId;
+  value: boolean | null | undefined;
+  effective: EffectiveRoadmapConfig | undefined;
+  companyName: string | undefined;
+  disabled: boolean;
+  onChange: (value: boolean | null) => void;
+}
+
+/**
+ * Inherit / On / Off for one toggle (DS `SegmentedControl` — mutually exclusive
+ * options, which a binary `Switch` cannot express), plus the value that actually
+ * applies and where it comes from.
+ */
+function TriStateField({
+  toggle,
+  testId,
+  effectiveTestId,
+  value,
+  effective,
+  companyName,
+  disabled,
+  onChange,
+}: TriStateFieldProps) {
+  const t = useTranslations("roadmap.automation");
+  const source = effective?.source[toggle];
+  const sourceLabel =
+    source === "company"
+      ? t("source.company", { name: companyName ?? "" })
+      : source === "global"
+        ? t("source.global")
+        : t("source.project");
+
+  return (
+    <Stack gap="75">
+      <Typography type="label">{t(toggle)}</Typography>
+      <Typography size="xs" type="note" variant="tertiary">
+        {t(`${toggle}Hint`)}
+      </Typography>
+      <Stack data-testid={testId}>
+        <SegmentedControl
+          ariaLabel={t(toggle)}
+          items={[
+            { value: "inherit", label: t("state.inherit") },
+            { value: "on", label: t("state.on") },
+            { value: "off", label: t("state.off") },
+          ]}
+          // The DS control has no `disabled`; a write in flight just swallows the click.
+          onChange={(next) => !disabled && onChange(fromTriState(next))}
+          size="sm"
+          value={toTriState(value)}
+        />
+      </Stack>
+      {effective && (
+        <Typography data-testid={effectiveTestId} size="xs" type="note" variant="secondary">
+          {t("effective", {
+            state: effective[toggle] ? t("state.on") : t("state.off"),
+            source: sourceLabel,
+          })}
+        </Typography>
+      )}
+    </Stack>
+  );
 }
 
 /**
@@ -23,20 +104,19 @@ export interface RoadmapAutomationPanelProps {
  * channels above them answer — and unlike the Sync button, neither shows its
  * result on the board, so neither earns a place in the board's header.
  *
- * Both apply immediately (no Save button): a toggle IS the commit, the same
- * posture the integration cards' enable switch uses. Each flip PATCHes only its
- * own field — the route merges (see `putRoadmapConfig`'s contract comment), so
- * flipping one can never reset the other, whatever this component last read.
+ * Each toggle is tri-state (Phase 128, D8): Inherit (the company default, else
+ * the global default), or an explicit On / Off for this project. Saving Inherit
+ * sends `null`. Choices apply immediately (no Save button), and each PATCHes only
+ * its own field — the route merges, so flipping one can never reset the other.
  */
-export function RoadmapAutomationPanel({ projectId }: RoadmapAutomationPanelProps) {
+export function RoadmapAutomationPanel({ projectId, companyName }: RoadmapAutomationPanelProps) {
   const t = useTranslations("roadmap.automation");
   const configQuery = useRoadmapConfigQuery(projectId);
   const setConfig = useSetRoadmapConfigMutation(projectId);
 
   const config = configQuery.data;
   // A toggle mid-flight must not invite a second click; a config still loading
-  // has no honest state to show, so it reads as off-and-locked rather than
-  // flickering into position under the operator's cursor.
+  // has no honest state to show, so it reads as locked rather than flickering.
   const busy = configQuery.isPending || setConfig.isPending;
 
   return (
@@ -48,21 +128,25 @@ export function RoadmapAutomationPanel({ projectId }: RoadmapAutomationPanelProp
           <Typography size="xs" type="note" variant="tertiary">
             {t("hint")}
           </Typography>
-          <ToggleField
-            checked={config?.autoSync ?? false}
-            data-testid={RoadmapAutomationPanelTestId.AutoSync}
+          <TriStateField
+            companyName={companyName}
             disabled={busy}
-            hint={t("autoSyncHint")}
-            label={t("autoSync")}
+            effective={config?.effective}
+            effectiveTestId={RoadmapAutomationPanelTestId.AutoSyncEffective}
             onChange={(autoSync) => setConfig.mutate({ params: { projectId }, body: { autoSync } })}
+            testId={RoadmapAutomationPanelTestId.AutoSync}
+            toggle="autoSync"
+            value={config?.autoSync}
           />
-          <ToggleField
-            checked={config?.autoPlay ?? false}
-            data-testid={RoadmapAutomationPanelTestId.AutoPlay}
+          <TriStateField
+            companyName={companyName}
             disabled={busy}
-            hint={t("autoPlayHint")}
-            label={t("autoPlay")}
+            effective={config?.effective}
+            effectiveTestId={RoadmapAutomationPanelTestId.AutoPlayEffective}
             onChange={(autoPlay) => setConfig.mutate({ params: { projectId }, body: { autoPlay } })}
+            testId={RoadmapAutomationPanelTestId.AutoPlay}
+            toggle="autoPlay"
+            value={config?.autoPlay}
           />
         </Stack>
       )}

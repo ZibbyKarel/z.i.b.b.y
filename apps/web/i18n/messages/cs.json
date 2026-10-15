@@ -1420,7 +1420,29 @@
     "integrations": {
       "title": "Integrace",
       "add": "Přidat integraci",
-      "empty": "Zatím žádné integrace — přidej Slack, e-mail, Jiru nebo GitHub pro tento projekt."
+      "empty": "Zatím žádné integrace — přidej Slack, e-mail, Jiru nebo GitHub pro tento projekt.",
+      "inherited": {
+        "title": "Zděděno z firmy",
+        "fromCompany": "Z firmy {name}",
+        "openCompany": "Otevřít firmu",
+        "override": "Přebít vlastní integrací",
+        "githubRoutedBy": "Směrováno podle git remote {repo}",
+        "githubNoRemote": "Nastav projektu git remote, aby se mu položky z GitHubu mohly přiřazovat.",
+        "githubRoute": "Přiřazovat tomuto projektu položky z tohoto repozitáře"
+      },
+      "routing": {
+        "projectKey": "Klíč projektu",
+        "projectKeyHint": "Položky tohoto Jira projektu patří tomuto projektu",
+        "components": "Komponenty",
+        "labels": "Štítky",
+        "listHint": "Oddělené čárkou; položka sedí, pokud má kterýkoli z nich",
+        "jql": "JQL",
+        "jqlHint": "Vyhodnotí Jira; kombinuje se s klíčem projektu a seznamy výše",
+        "channels": "Kanály",
+        "channelsHint": "ID konverzací oddělená čárkou",
+        "save": "Uložit pravidlo směrování",
+        "clear": "Odebrat pravidlo"
+      }
     },
     "fields": {
       "name": "Název projektu",
@@ -1635,6 +1657,33 @@
       "projects": "PROJEKTY",
       "contacts": "KONTAKTY",
       "budget": "ROZPOČET / MĚS"
+    },
+    "tabs": {
+      "overview": "Přehled",
+      "integrations": "Integrace"
+    },
+    "integrations": {
+      "title": "Integrace firmy",
+      "add": "Přidat integraci",
+      "hint": "Sdílené všemi projekty této firmy. Každý projekt si položky přiřazuje vlastními pravidly směrování a může integraci přebít vlastní.",
+      "empty": "Zatím žádné integrace firmy — přidej Jiru, GitHub nebo Slack jednou a sdílej je napříč projekty firmy."
+    },
+    "roadmapDefaults": {
+      "title": "Výchozí nastavení roadmapy",
+      "hint": "Dědí každý projekt této firmy, pokud si sám nenastaví Dědit / Zapnuto / Vypnuto.",
+      "autoSync": "Automatická synchronizace",
+      "autoSyncHint": "Pravidelně natahuje nová issues z Jiry a GitHubu do roadmapy dědících projektů.",
+      "autoPlay": "Automatická implementace",
+      "autoPlayHint": "Nezablokované úlohy dědících projektů se rozjedou samy. ZIBBY otevře PR a zastaví se — merge zůstává na tobě."
+    },
+    "levelMapping": {
+      "title": "Přepisy mapování úrovní",
+      "hint": "Přepiš, jak se externí úrovně této firmy mapují na epik / úlohu / ignorovat. Co nepřepíšeš, drží globální tabulka (Nastavení → Úlohy).",
+      "useGlobal": "Globální",
+      "global": "Globálně: {target}",
+      "companyOnly": "Jen firma",
+      "override": "Přepis firmy",
+      "reset": "Vrátit na globální"
     }
   },
   "teams": {
@@ -2160,11 +2209,22 @@
     },
     "automation": {
       "title": "Automatizace roadmapy",
-      "hint": "Co smí ZIBBY u tohohle projektu dělat sám. Obojí je vypnuté, dokud to nezapneš.",
+      "hint": "Co smí ZIBBY u tohohle projektu dělat sám. Dědit bere výchozí hodnotu firmy, pak globální (vypnuto).",
       "autoSync": "Automatická synchronizace",
       "autoSyncHint": "Pravidelně natahuje nová issues z Jiry a GitHubu do roadmapy. Nic nespouští — jen doplňuje, co přibylo.",
       "autoPlay": "Automatická implementace",
-      "autoPlayHint": "Nezablokované úlohy se rozjedou samy a epik bez potomků se sám rozfázuje. ZIBBY otevře PR a zastaví se — merge zůstává na tobě. Kolik úloh běží najednou, řídí Nastavení → Běhové parametry."
+      "autoPlayHint": "Nezablokované úlohy se rozjedou samy a epik bez potomků se sám rozfázuje. ZIBBY otevře PR a zastaví se — merge zůstává na tobě. Kolik úloh běží najednou, řídí Nastavení → Běhové parametry.",
+      "state": {
+        "inherit": "Dědit",
+        "on": "Zapnuto",
+        "off": "Vypnuto"
+      },
+      "effective": "Aktuálně {state} — {source}",
+      "source": {
+        "company": "zděděno z firmy {name}",
+        "global": "globální výchozí",
+        "project": "nastaveno na tomto projektu"
+      }
     },
     "epic": {
       "unphased": "nerozfázováno",

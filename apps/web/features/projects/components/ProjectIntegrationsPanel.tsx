@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Alert, Button, Grid, Panel, Stack, Typography } from "@zibby/design-system";
-import type { Integration } from "@zibby/contracts";
+import type { Integration, IntegrationKind, IntegrationRoutingRule } from "@zibby/contracts";
+import { ProjectInheritedIntegrations } from "./ProjectInheritedIntegrations";
 import { IntegrationCard } from "../../integrations/components/IntegrationCard";
 import {
   type IntegrationCreateDraft,
@@ -21,6 +22,10 @@ import {
 export interface ProjectIntegrationsPanelProps {
   /** The project that owns the integrations shown here (one project = one company). */
   projectId: string;
+  /** The project's routing rules for inherited company integrations. */
+  routing?: IntegrationRoutingRule[];
+  /** The project's `gitRemote` (GitHub routing is implicit from it). */
+  gitRemote?: string | undefined;
 }
 
 /**
@@ -31,12 +36,20 @@ export interface ProjectIntegrationsPanelProps {
  * grammar), which also owns delete (behind a confirm; the card used to delete
  * unconfirmed). The create dialog is create-only and lands on the new detail.
  */
-export function ProjectIntegrationsPanel({ projectId }: ProjectIntegrationsPanelProps) {
+export function ProjectIntegrationsPanel({
+  projectId,
+  routing = [],
+  gitRemote,
+}: ProjectIntegrationsPanelProps) {
   const t = useTranslations();
   const router = useRouter();
   const integrationsQuery = useIntegrationsQuery(projectId);
-  const integrations = integrationsQuery.data ?? [];
+  // The scoped list is the EFFECTIVE merge; company-owned entries are shown
+  // read-only below (Phase 128), so only this project's own integrations get cards.
+  const integrations = (integrationsQuery.data ?? []).filter((i) => !i.companyId);
   const [creating, setCreating] = useState(false);
+  /** Set when the create flow was opened by "Override with own integration". */
+  const [overrideKind, setOverrideKind] = useState<IntegrationKind | undefined>();
   const [testResult, setTestResult] = useState<{ id: string; ok: boolean; detail: string } | null>(
     null,
   );
@@ -59,6 +72,7 @@ export function ProjectIntegrationsPanel({ projectId }: ProjectIntegrationsPanel
             });
           }
           setCreating(false);
+          setOverrideKind(undefined);
           router.push(`/projects/${projectId}/integrations/${body.id}`);
         },
       },
@@ -137,9 +151,23 @@ export function ProjectIntegrationsPanel({ projectId }: ProjectIntegrationsPanel
         )}
       </Stack>
 
+      <ProjectInheritedIntegrations
+        gitRemote={gitRemote}
+        onOverride={(kind) => {
+          setOverrideKind(kind);
+          setCreating(true);
+        }}
+        projectId={projectId}
+        routing={routing}
+      />
+
       {creating && (
         <IntegrationFormDialog
-          onClose={() => setCreating(false)}
+          initialKind={overrideKind}
+          onClose={() => {
+            setCreating(false);
+            setOverrideKind(undefined);
+          }}
           onCreate={onCreate}
           projectId={projectId}
         />

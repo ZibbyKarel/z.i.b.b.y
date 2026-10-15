@@ -40,6 +40,7 @@ vi.mock("../../projects/mutations", () => ({
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, replace }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 beforeEach(() => {

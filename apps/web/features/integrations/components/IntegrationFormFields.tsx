@@ -125,11 +125,16 @@ export interface IntegrationFormState {
   newSecret: () => string | undefined;
 }
 
+/** Who owns the integration being created: exactly one of a project or a company (Phase 68 XOR). */
+export type IntegrationOwner = { projectId: string } | { companyId: string };
+
 export function useIntegrationFormState(
-  projectId: string,
+  owner: IntegrationOwner,
   integration?: Integration,
+  /** Prefills the kind of a NEW integration (the "override with own integration" flow). */
+  initialKind?: IntegrationKind,
 ): IntegrationFormState {
-  const [kind, setKind] = useState<IntegrationKind>(integration?.kind ?? "slack");
+  const [kind, setKind] = useState<IntegrationKind>(integration?.kind ?? initialKind ?? "slack");
   const [id, setId] = useState(integration?.id ?? "");
   const [name, setName] = useState(integration?.name ?? "");
   const [enabled, setEnabled] = useState(integration?.enabled ?? true);
@@ -313,7 +318,7 @@ export function useIntegrationFormState(
     buildCreate: () => ({
       id: id.trim(),
       kind,
-      projectId,
+      ...owner,
       name: name.trim() || undefined,
       enabled,
       config: buildConfig(),

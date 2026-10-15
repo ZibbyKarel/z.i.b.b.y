@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Dialog } from "@zibby/design-system";
-import type { CreateIntegrationInput } from "@zibby/contracts";
+import type { CreateIntegrationInput, IntegrationKind } from "@zibby/contracts";
 import { DialogFormFooter } from "../../../components/DialogFormFooter/DialogFormFooter";
 import {
   IntegrationFormFields,
@@ -22,7 +22,11 @@ export interface IntegrationCreateDraft {
 
 export interface IntegrationFormDialogProps {
   /** The owning project (one project = one company); baked into the create payload. */
-  projectId: string;
+  projectId?: string;
+  /** The owning company (company-level integration); XOR with `projectId`. */
+  companyId?: string;
+  /** Prefills the kind (e.g. a project overriding an inherited company integration). */
+  initialKind?: IntegrationKind;
   onClose: () => void;
   onCreate: (draft: IntegrationCreateDraft) => void;
 }
@@ -38,11 +42,17 @@ export interface IntegrationFormDialogProps {
  */
 export function IntegrationFormDialog({
   projectId,
+  companyId,
+  initialKind,
   onClose,
   onCreate,
 }: IntegrationFormDialogProps) {
   const t = useTranslations();
-  const form = useIntegrationFormState(projectId);
+  const form = useIntegrationFormState(
+    companyId ? { companyId } : { projectId: projectId ?? "" },
+    undefined,
+    initialKind,
+  );
 
   return (
     <Dialog

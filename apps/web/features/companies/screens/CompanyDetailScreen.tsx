@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
 import type { ProjectPerson } from "@zibby/contracts";
@@ -18,6 +18,9 @@ import {
   Row,
   Stack,
   type SubNavLinkComponent,
+  Tab,
+  TabList,
+  Tabs,
   TextInputField,
   Typography,
 } from "@zibby/design-system";
@@ -27,6 +30,9 @@ import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { slug } from "../../../utils/slug";
 import { useProjectsQuery } from "../../projects";
 import { type CompanyBasicsBody, CompanyBasicsPanel } from "../components/CompanyBasicsPanel";
+import { CompanyIntegrationsPanel } from "../components/CompanyIntegrationsPanel";
+import { CompanyLevelMappingPanel } from "../components/CompanyLevelMappingPanel";
+import { CompanyRoadmapDefaultsPanel } from "../components/CompanyRoadmapDefaultsPanel";
 import { LinkProjectDialog } from "../components/LinkProjectDialog";
 import {
   useCreateCompanyMutation,
@@ -34,6 +40,9 @@ import {
   useUpdateCompanyMutation,
 } from "../mutations";
 import { useCompanyQuery } from "../queries";
+
+const COMPANY_TABS = ["overview", "integrations"] as const;
+type CompanyTab = (typeof COMPANY_TABS)[number];
 
 export interface CompanyDetailScreenProps {
   /** The company to edit; omitted when creating a new one (the `/companies/new` route). */
@@ -69,6 +78,11 @@ export function CompanyDetailScreen({ companyId }: CompanyDetailScreenProps) {
   const [newContactName, setNewContactName] = useState("");
   const [newContactRole, setNewContactRole] = useState("");
   const [linkingProject, setLinkingProject] = useState(false);
+  // `?tab=integrations` deep-links the tab (the integration detail page's back link).
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<CompanyTab>(
+    searchParams.get("tab") === "integrations" ? "integrations" : "overview",
+  );
 
   if (!isNew && companyQ.isError) return <QueryError onRetry={() => void companyQ.refetch()} />;
   if (!isNew && companyQ.isPending) return <QueryLoading />;
@@ -161,15 +175,37 @@ export function CompanyDetailScreen({ companyId }: CompanyDetailScreenProps) {
 
         {!isNew && company && <MetricStrip columns={3} items={metrics} />}
 
-        <CompanyBasicsPanel
-          company={company}
-          isNew={isNew}
-          key={company?.id ?? "new"}
-          onSave={saveBasics}
-          saving={createCompany.isPending || updateCompany.isPending}
-        />
-
         {!isNew && company && (
+          <Tabs onValueChange={(v) => setTab(v as CompanyTab)} value={tab}>
+            <TabList>
+              {COMPANY_TABS.map((key) => (
+                <Tab key={key} value={key}>
+                  {t(`tabs.${key}`)}
+                </Tab>
+              ))}
+            </TabList>
+          </Tabs>
+        )}
+
+        {!isNew && company && tab === "integrations" && (
+          <Stack gap="250">
+            <CompanyIntegrationsPanel companyId={id} />
+            <CompanyRoadmapDefaultsPanel company={company} />
+            <CompanyLevelMappingPanel company={company} />
+          </Stack>
+        )}
+
+        {(isNew || tab === "overview") && (
+          <CompanyBasicsPanel
+            company={company}
+            isNew={isNew}
+            key={company?.id ?? "new"}
+            onSave={saveBasics}
+            saving={createCompany.isPending || updateCompany.isPending}
+          />
+        )}
+
+        {!isNew && company && tab === "overview" && (
           <>
             <Panel
               header={<Typography type="h3">{t("memberProjects.title")}</Typography>}

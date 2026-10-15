@@ -39,7 +39,9 @@ export enum IntegrationDetailScreenTestId {
 
 export interface IntegrationDetailScreenProps {
   /** The owning project — the back navigation returns to its integrations tab. */
-  projectId: string;
+  projectId?: string;
+  /** The owning company (company-level integration) — back returns to the company's Integrations tab. */
+  companyId?: string;
   integrationId: string;
 }
 
@@ -53,21 +55,34 @@ export interface IntegrationDetailScreenProps {
  * secret still rides out-of-band through the separate credentials mutation
  * (email → `password`, everything else → `token`).
  */
-export function DetailScreen({ projectId, integrationId }: IntegrationDetailScreenProps) {
+export function DetailScreen({
+  projectId,
+  companyId,
+  integrationId,
+}: IntegrationDetailScreenProps) {
   const query = useIntegrationQuery(integrationId);
   if (query.isError) return <QueryError onRetry={() => void query.refetch()} />;
   if (query.isPending) return <QueryLoading />;
   if (!query.data) return null;
   // The form captures its defaults at mount — key by integration so a different id remounts.
-  return <IntegrationEditor integration={query.data} key={query.data.id} projectId={projectId} />;
+  return (
+    <IntegrationEditor
+      companyId={companyId}
+      integration={query.data}
+      key={query.data.id}
+      projectId={projectId}
+    />
+  );
 }
 
 function IntegrationEditor({
   integration,
   projectId,
+  companyId,
 }: {
   integration: Integration;
-  projectId: string;
+  projectId?: string | undefined;
+  companyId?: string | undefined;
 }) {
   const t = useTranslations();
   const router = useRouter();
@@ -77,10 +92,15 @@ function IntegrationEditor({
   const testIntegration = useTestIntegrationMutation();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; detail: string } | null>(null);
-  const form = useIntegrationFormState(projectId, integration);
+  const form = useIntegrationFormState(
+    companyId ? { companyId } : { projectId: projectId ?? "" },
+    integration,
+  );
 
   const name = integration.name ?? integration.id;
-  const backHref = `/projects/${projectId}/integrations` as Route;
+  const backHref = (
+    companyId ? `/companies/${companyId}?tab=integrations` : `/projects/${projectId}/integrations`
+  ) as Route;
 
   const save = () => {
     updateIntegration.mutate(
