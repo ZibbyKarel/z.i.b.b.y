@@ -32,6 +32,8 @@ import {
 import { ApprovalSheet } from "../../../features/approvals/components/ApprovalSheet";
 import { TasksDockPanel, useLiveRuns } from "../../../features/runs/components/TasksDockPanel";
 import { HIGH_RISK_TYPES, formatWaited } from "../../../features/approvals/approval";
+import { counterSuffix } from "../../../features/inbox/inbox";
+import { useInboxCounts } from "../../../features/inbox/useInboxCounts";
 import { useLimitsQuery } from "../../../features/limits";
 import { NotificationBell } from "../../../features/notifications";
 import {
@@ -225,9 +227,14 @@ function SectionSubNav({
   const router = useRouter();
   const section = SECTIONS.find((s) => s.id === active) ?? SECTIONS[0];
   const activeHref = activeSubNavHref(section.tabs, pathname);
+  // Inbox counters (global, actionable only) ride in the tab labels — `SubNavItem`
+  // has no badge slot. Only fetched while the Inbox section is open.
+  const inboxCounts = useInboxCounts(active === "inbox");
   const items = section.tabs.map((tab) => ({
     href: tab.href,
-    label: t(`subtab.${section.id}.${tab.id}` as Parameters<typeof t>[0]),
+    label:
+      t(`subtab.${section.id}.${tab.id}` as Parameters<typeof t>[0]) +
+      (active === "inbox" ? counterSuffix(tab.id, inboxCounts) : ""),
     active: tab.href === activeHref,
   }));
   const entity = matchEntityDetail(pathname);

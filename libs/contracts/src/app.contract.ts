@@ -42,6 +42,7 @@ import { pinsContract } from "./pins/pins.contract";
 import { projectsContract } from "./projects/projects.contract";
 import { reviewLearningContract } from "./review-learning/review-learning.contract";
 import { roadmapContract } from "./roadmap/roadmap.contract";
+import { inboxContract } from "./inbox/inbox.contract";
 import { skillsContract } from "./skills/skills.contract";
 import { speechContract } from "./speech/speech.contract";
 import { systemContract } from "./system/system.contract";
@@ -99,6 +100,7 @@ export const appContract = c.router({
   system: systemContract,
   pins: pinsContract,
   roadmap: roadmapContract,
+  inbox: inboxContract,
   activity: activityContract,
   activityView: activityViewContract,
   briefing: briefingContract,

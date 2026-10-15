@@ -24,6 +24,7 @@
     "policy": "Politika",
     "knowledge": "Znalosti",
     "ledger": "Rozpočet",
+    "inbox": "Inbox",
     "subtab": {
       "org": {
         "map": "Mapa",
@@ -36,6 +37,11 @@
         "companies": "Firmy",
         "teams": "Týmy",
         "projects": "Projekty"
+      },
+      "inbox": {
+        "overview": "Přehled",
+        "issues": "Issues",
+        "pull-requests": "Pull requesty"
       },
       "activity": {
         "log": "Log",
@@ -2594,5 +2600,210 @@
     "empty": "Žádné nepřečtené chybné běhy.",
     "markRead": "Označit jako přečtené",
     "markAllRead": "Označit vše jako přečtené"
+  },
+  "inboxPage": {
+    "kicker": {
+      "overview": "Inbox — přehled",
+      "issues": "Inbox — issues",
+      "prs": "Inbox — pull requesty"
+    },
+    "title": {
+      "overview": "Inbox",
+      "issues": "Issues",
+      "prs": "Pull requesty"
+    },
+    "age": {
+      "now": "právě teď",
+      "ago": "před {age}",
+      "min": "{n} min",
+      "h": "{n} h",
+      "d": "{n} d"
+    },
+    "sync": {
+      "button": "Synchronizovat",
+      "syncing": "Synchronizuji…",
+      "never": "Zatím nesynchronizováno",
+      "at": "Synchronizováno {when}"
+    },
+    "source": {
+      "jira": "Jira",
+      "github": "GitHub",
+      "manual": "Ručně"
+    },
+    "status": {
+      "new": "Nové ve zdroji",
+      "waiting": "Čeká na vás",
+      "running": "Běží",
+      "done": "Hotovo"
+    },
+    "filter": {
+      "company": "Firma",
+      "team": "Tým",
+      "project": "Projekt",
+      "all": "Vše",
+      "noCompany": "Bez firmy",
+      "noTeam": "Bez týmu",
+      "remove": "Odebrat"
+    },
+    "banner": {
+      "title": "Synchronizace {source} selhala pro {project}",
+      "reconnect": "Znovu připojit →"
+    },
+    "noIntegrations": {
+      "title": "Připojte Jira nebo GitHub a naplňte inbox",
+      "body": "Integrace se nastavují po projektech. Jakmile je jedna připojená, objeví se tu položky přiřazené vám, nahlášené vámi, sledované nebo se zmínkou o vás.",
+      "action": "Otevřít projekty →"
+    },
+    "search": {
+      "aria": "Hledat issues",
+      "placeholder": "Hledat v názvu a popisu"
+    },
+    "toggle": {
+      "groupByEpic": "Seskupit podle epiku",
+      "showDone": "Zobrazit hotové",
+      "showHidden": "Zobrazit skryté · {n}"
+    },
+    "list": {
+      "count": "{n} položek",
+      "countMatch": "{n} položek odpovídá „{query}“",
+      "sort": "Řazení · nové → čeká → běží"
+    },
+    "empty": {
+      "title": "Není co zpracovat",
+      "body": "Vše ve vašem rozsahu už běží nebo je hotové.",
+      "bodySearch": "Hledání nic nenašlo.",
+      "showDone": "Zobrazit hotové"
+    },
+    "row": {
+      "source": "Zdroj",
+      "zibby": "ZIBBY",
+      "differs": "Liší se od zdroje",
+      "differsHint": "ZIBBY a zdroj se neshodují. ZIBBY nikdy nezapisuje zpět.",
+      "hidden": "Skryto",
+      "updated": "Změněno {when}",
+      "process": "Zpracovat",
+      "respond": "Reagovat",
+      "viewRun": "Zobrazit běh",
+      "more": "Další akce",
+      "openIn": "Otevřít v {source}",
+      "hide": "Skrýt",
+      "unhide": "Zobrazit",
+      "permanent": "Trvale",
+      "inPrs": "V pull requestech →"
+    },
+    "epic": {
+      "none": "Bez epiku",
+      "tag": "Epik · {source}",
+      "progress": "{done} z {total} hotovo",
+      "newCount": "{n} nových",
+      "source": "Zdroj ↗"
+    },
+    "blocker": {
+      "ci-failing": "CI selhává",
+      "changes-requested": "Požadovány změny",
+      "merge-conflict": "Konflikt při merge",
+      "awaiting-review": "Čeká na review",
+      "ready-to-merge": "Připraveno k merge"
+    },
+    "ci": {
+      "passing": "prochází",
+      "failing": "selhává",
+      "pending": "běží",
+      "unknown": "neznámé"
+    },
+    "review": {
+      "none": "Zatím bez review",
+      "changes-requested": "Požadovány změny",
+      "approved": "Schváleno"
+    },
+    "scope": {
+      "assigned": "Přiřazeno vám",
+      "reported": "Nahlášeno vámi",
+      "watched": "Sledujete",
+      "mentioned": "Zmínili vás"
+    },
+    "overview": {
+      "issuesHeader": "01 — Issues",
+      "issuesSources": "Jira · GitHub",
+      "needYou": "{n} čeká na vás",
+      "prsHeader": "02 — Pull requesty",
+      "prsSources": "GitHub",
+      "prSummary": "{toReview} k review · {blocked} blokovaných",
+      "toReviewBucket": "K review",
+      "mineBlockedBucket": "Moje · blokované",
+      "noIssues": "V tomto filtru není co zpracovat.",
+      "noPrs": "V tomto filtru nejsou žádné pull requesty.",
+      "openIssues": "Otevřít issues →",
+      "openPrs": "Otevřít pull requesty →"
+    },
+    "prs": {
+      "ci": "CI {symbol} {state}",
+      "review": "Review · {state}",
+      "draft": "Koncept",
+      "reason": {
+        "direct": "Přímo",
+        "team": "Přes tým {team}"
+      },
+      "toReview": "K review",
+      "toReviewNote": "Vyžádáno od vás nebo vašeho týmu",
+      "mineTitle": "Moje — až do mergnutí",
+      "mine": "Moje",
+      "mineNote": "Otevřené PR v projektech ZIBBY · řazeno podle blokace",
+      "emptyToReview": "Na vaše review nikdo nečeká.",
+      "emptyMine": "Nemáte žádné otevřené pull requesty.",
+      "openGithub": "Otevřít na GitHubu",
+      "item": "Položka {key} →",
+      "focus": "Zobrazeno pouze #{n}",
+      "showAll": "Zobrazit vše ×",
+      "footer": "Pouze ke čtení. Merge zůstává ve frontě merge; inbox nikdy nemerguje. Obnovuje se při návratu do okna a každých 60 s."
+    },
+    "detail": {
+      "back": "← Issues",
+      "crumb": "Položka · {key}",
+      "openIn": "Otevřít v {source} ↗",
+      "sourceStatus": "Stav ve zdroji · {source}",
+      "execution": "Provedení · ZIBBY",
+      "lastChange": "Poslední změna",
+      "differsBody": "ZIBBY tuto položku dokončil, ale {source} stále uvádí „{status}“. ZIBBY nikdy nezapisuje zpět; v případě potřeby ji upravte v {source}.",
+      "waiting": "Čeká na vás",
+      "waitFailedNoReason": "Poslední běh selhal a nezaznamenal žádný důvod.",
+      "waitMerge": "PR #{n} čeká na merge. Merge zůstává ve frontě merge.",
+      "waitMergeNoPr": "Pull request čeká na merge. Merge zůstává ve frontě merge.",
+      "openPr": "Otevřít pull request",
+      "description": "Popis",
+      "readOnly": "Pouze ke čtení · upravit v {source}",
+      "noDescription": "Ve zdroji {source} není žádný popis.",
+      "log": {
+        "title": "Log provedení · ZIBBY",
+        "started": "Běh zahájen · úkol {task}",
+        "prOpened": "Otevřen PR #{n}",
+        "finished": "Běh skončil · úkol {task} · {outcome}",
+        "failure": "Běh selhal: {reason}",
+        "synced": "Synchronizováno ze zdroje {source} · v rozsahu: {scope}",
+        "outcome": {
+          "running": "běží",
+          "awaiting-merge": "čeká na merge",
+          "done": "hotovo",
+          "failed": "selhal"
+        }
+      },
+      "viewRun": "Zobrazit běh →",
+      "linkedPr": "Propojený PR · #{n}",
+      "ciState": "CI {state}",
+      "inList": "V seznamu →",
+      "meta": {
+        "project": "Projekt",
+        "company": "Firma",
+        "team": "Tým",
+        "epic": "Epik",
+        "source": "Zdroj"
+      },
+      "noCompany": "Bez firmy",
+      "noTeam": "Bez týmu",
+      "noEpic": "Bez epiku",
+      "why": "Proč tu je",
+      "notFoundTitle": "Položka nenalezena",
+      "notFoundBody": "Není ve vašem rozsahu, nebo ji zdroj už nevrací."
+    }
   }
 }

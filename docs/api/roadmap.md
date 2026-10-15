@@ -86,6 +86,11 @@ origin?             // "zibby-decomposed" -> the "navrhla ZIBBY" badge (125g); c
 output?             // 125e: the gate's terminal output choice for this item's task; absent = { type: "pr" }
 lifecycle           // "todo" | "external" | "enqueued" | "running" | "awaiting-merge" | "done" | "failed" | "archived"
 linkedPr?           // sync-owned: an open PR naming this item's key ({ number, url, title }); set/cleared by the sync while the item is sync-owned; gate-owned lifecycles keep it untouched
+sourceStatus?       // sync-owned: { name, done } — the source's own status ("In Progress", "open"); done = Jira status category
+                    // "done" / closed GitHub issue or milestone. Rewritten every sync. Feeds the Inbox (docs/api/inbox.md)
+scopeReasons?       // sync-owned: why it's the operator's — "assigned" | "reported" | "watched" | "mentioned". Jira:
+                    // from GET /rest/api/3/myself vs assignee/reporter + watches.isWatching (never "mentioned");
+                    // GitHub: integration `username` vs assignees/author. A failed /myself keeps the stored value
 enqueuedAt?         // 125e: stamped by play/playBulk/restart; the gate drains a project's enqueued
                     // items strictly FIFO by this timestamp, never `updatedAt`
 runs[]              // { taskId, runRef?, prNumber?, prUrl?, artifactPath?, startedAt, finishedAt?, outcome }
@@ -317,8 +322,8 @@ Keyed by `(integrationId, externalId)` through `roadmapItemIdForSource`, so re-i
 is idempotent and one issue never becomes two items.
 
 A re-sync writes only `name`, `description`, `externalLevel`, `attachments`,
-`source.url`, `parentId`, `dependsOnFromSource`, `syncNotes`, `syncedAt` and
-`linkedPr` — plus the sanctioned lifecycle transitions below. It never touches
+`source.url`, `parentId`, `dependsOnFromSource`, `syncNotes`, `syncedAt`,
+`linkedPr`, `sourceStatus` and `scopeReasons` — plus the sanctioned lifecycle transitions below. It never touches
 `runs`, `overrideBlocked`, `origin` — or any manual `dependsOn` edge.
 
 That last one is subtle enough to live in its own pure, separately-tested function,

@@ -24,6 +24,7 @@
     "policy": "Policy",
     "knowledge": "Knowledge",
     "ledger": "Ledger",
+    "inbox": "Inbox",
     "subtab": {
       "org": {
         "map": "Map",
@@ -36,6 +37,11 @@
         "companies": "Companies",
         "teams": "Teams",
         "projects": "Projects"
+      },
+      "inbox": {
+        "overview": "Overview",
+        "issues": "Issues",
+        "pull-requests": "Pull requests"
       },
       "activity": {
         "log": "Log",
@@ -2594,5 +2600,210 @@
     "empty": "No unread failed runs.",
     "markRead": "Mark as read",
     "markAllRead": "Mark all as read"
+  },
+  "inboxPage": {
+    "kicker": {
+      "overview": "Inbox — overview",
+      "issues": "Inbox — issues",
+      "prs": "Inbox — pull requests"
+    },
+    "title": {
+      "overview": "Inbox",
+      "issues": "Issues",
+      "prs": "Pull requests"
+    },
+    "age": {
+      "now": "just now",
+      "ago": "{age} ago",
+      "min": "{n} min",
+      "h": "{n} h",
+      "d": "{n} d"
+    },
+    "sync": {
+      "button": "Sync",
+      "syncing": "Syncing…",
+      "never": "Not synced yet",
+      "at": "Synced {when}"
+    },
+    "source": {
+      "jira": "Jira",
+      "github": "GitHub",
+      "manual": "Manual"
+    },
+    "status": {
+      "new": "New in source",
+      "waiting": "Waiting for you",
+      "running": "Running",
+      "done": "Done"
+    },
+    "filter": {
+      "company": "Company",
+      "team": "Team",
+      "project": "Project",
+      "all": "All",
+      "noCompany": "No company",
+      "noTeam": "No team",
+      "remove": "Remove"
+    },
+    "banner": {
+      "title": "{source} sync failed for {project}",
+      "reconnect": "Reconnect →"
+    },
+    "noIntegrations": {
+      "title": "Connect Jira or GitHub to fill the inbox",
+      "body": "Integrations are set per project. Once one is connected, items assigned to you, reported by you, watched or mentioning you show up here.",
+      "action": "Open projects →"
+    },
+    "search": {
+      "aria": "Search issues",
+      "placeholder": "Search title and description"
+    },
+    "toggle": {
+      "groupByEpic": "Group by epic",
+      "showDone": "Show done",
+      "showHidden": "Show hidden · {n}"
+    },
+    "list": {
+      "count": "{n} items",
+      "countMatch": "{n} items match “{query}”",
+      "sort": "Sort · new → waiting → running"
+    },
+    "empty": {
+      "title": "Nothing to process",
+      "body": "Everything in your scope is running or done.",
+      "bodySearch": "No item matches this search.",
+      "showDone": "Show done"
+    },
+    "row": {
+      "source": "Source",
+      "zibby": "ZIBBY",
+      "differs": "Differs from source",
+      "differsHint": "ZIBBY and the source disagree. ZIBBY never writes back.",
+      "hidden": "Hidden",
+      "updated": "Updated {when}",
+      "process": "Process",
+      "respond": "Respond",
+      "viewRun": "View run",
+      "more": "More actions",
+      "openIn": "Open in {source}",
+      "hide": "Hide",
+      "unhide": "Unhide",
+      "permanent": "Permanent",
+      "inPrs": "In pull requests →"
+    },
+    "epic": {
+      "none": "No epic",
+      "tag": "Epic · {source}",
+      "progress": "{done} of {total} done",
+      "newCount": "{n} new",
+      "source": "Source ↗"
+    },
+    "blocker": {
+      "ci-failing": "CI failing",
+      "changes-requested": "Changes requested",
+      "merge-conflict": "Merge conflict",
+      "awaiting-review": "Awaiting review",
+      "ready-to-merge": "Ready to merge"
+    },
+    "ci": {
+      "passing": "passing",
+      "failing": "failing",
+      "pending": "pending",
+      "unknown": "unknown"
+    },
+    "review": {
+      "none": "No review yet",
+      "changes-requested": "Changes requested",
+      "approved": "Approved"
+    },
+    "scope": {
+      "assigned": "Assigned to you",
+      "reported": "Reported by you",
+      "watched": "Watched by you",
+      "mentioned": "You were mentioned"
+    },
+    "overview": {
+      "issuesHeader": "01 — Issues",
+      "issuesSources": "Jira · GitHub",
+      "needYou": "{n} need you",
+      "prsHeader": "02 — Pull requests",
+      "prsSources": "GitHub",
+      "prSummary": "{toReview} to review · {blocked} blocked",
+      "toReviewBucket": "To review",
+      "mineBlockedBucket": "Mine · blocked",
+      "noIssues": "Nothing to process in this filter.",
+      "noPrs": "No pull requests in this filter.",
+      "openIssues": "Open issues →",
+      "openPrs": "Open pull requests →"
+    },
+    "prs": {
+      "ci": "CI {symbol} {state}",
+      "review": "Review · {state}",
+      "draft": "Draft",
+      "reason": {
+        "direct": "Directly",
+        "team": "Via team {team}"
+      },
+      "toReview": "To review",
+      "toReviewNote": "Requested from you or your team",
+      "mineTitle": "Mine — push to merged",
+      "mine": "Mine",
+      "mineNote": "Open PRs in ZIBBY projects · sorted by blocker",
+      "emptyToReview": "No review is waiting on you.",
+      "emptyMine": "You have no open pull requests.",
+      "openGithub": "Open on GitHub",
+      "item": "Item {key} →",
+      "focus": "Showing #{n} only",
+      "showAll": "Show all ×",
+      "footer": "Read-only. Merging stays in the merge queue; the inbox never merges. Refreshes on focus and every 60 s."
+    },
+    "detail": {
+      "back": "← Issues",
+      "crumb": "Item · {key}",
+      "openIn": "Open in {source} ↗",
+      "sourceStatus": "Source status · {source}",
+      "execution": "Execution · ZIBBY",
+      "lastChange": "Last change",
+      "differsBody": "ZIBBY finished this item, but {source} still says “{status}”. ZIBBY never writes back; update it in {source} if needed.",
+      "waiting": "Waiting for you",
+      "waitFailedNoReason": "The last run failed and recorded no reason.",
+      "waitMerge": "PR #{n} is awaiting merge. Merging stays in the merge queue.",
+      "waitMergeNoPr": "A pull request is awaiting merge. Merging stays in the merge queue.",
+      "openPr": "Open pull request",
+      "description": "Description",
+      "readOnly": "Read-only · edit in {source}",
+      "noDescription": "No description in {source}.",
+      "log": {
+        "title": "Execution log · ZIBBY",
+        "started": "Run started · task {task}",
+        "prOpened": "Opened PR #{n}",
+        "finished": "Run finished · task {task} · {outcome}",
+        "failure": "Run failed: {reason}",
+        "synced": "Synced from {source} · in scope: {scope}",
+        "outcome": {
+          "running": "running",
+          "awaiting-merge": "awaiting merge",
+          "done": "done",
+          "failed": "failed"
+        }
+      },
+      "viewRun": "View run →",
+      "linkedPr": "Linked PR · #{n}",
+      "ciState": "CI {state}",
+      "inList": "In list →",
+      "meta": {
+        "project": "Project",
+        "company": "Company",
+        "team": "Team",
+        "epic": "Epic",
+        "source": "Source"
+      },
+      "noCompany": "No company",
+      "noTeam": "No team",
+      "noEpic": "No epic",
+      "why": "Why it is here",
+      "notFoundTitle": "Item not found",
+      "notFoundBody": "It is not in your scope, or the source no longer returns it."
+    }
   }
 }

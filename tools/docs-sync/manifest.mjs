@@ -38,6 +38,7 @@ export const API_MODULE_DOC_MAP = {
   "limits-resume": "docs/api/limits.md",
   limits: "docs/api/limits.md",
   arch: "docs/api/departments.md",
+  inbox: "docs/api/inbox.md",
   machine: "docs/api/machine.md",
   registries: "docs/api/extensibility.md",
   release: "docs/api/departments.md",

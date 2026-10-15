@@ -13,6 +13,7 @@ import {
   categoriesContract,
   gatesContract,
   healthContract,
+  inboxContract,
   limitsContract,
   memoryContract,
   registriesContract,
@@ -48,6 +49,7 @@ const apiContract = initContract().router({
   limits: limitsContract,
   tasks: tasksContract,
   roadmap: roadmapContract,
+  inbox: inboxContract,
   registries: registriesContract,
 });
 

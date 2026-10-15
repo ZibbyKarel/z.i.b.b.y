@@ -157,6 +157,15 @@ export const RoadmapLinkedPrSchema = z.object({
 });
 export type RoadmapLinkedPr = z.infer<typeof RoadmapLinkedPrSchema>;
 
+export const RoadmapSourceStatusSchema = z.object({
+  name: z.string().min(1),
+  done: z.boolean(),
+});
+export type RoadmapSourceStatus = z.infer<typeof RoadmapSourceStatusSchema>;
+
+export const RoadmapScopeReasonSchema = z.enum(["assigned", "reported", "watched", "mentioned"]);
+export type RoadmapScopeReason = z.infer<typeof RoadmapScopeReasonSchema>;
+
 /**
  * A roadmap item: an epic or a task, imported from Jira/GitHub or created
  * manually. One file per item on disk (`<projectId>/<itemId>.json`) — see
@@ -237,6 +246,20 @@ export const RoadmapItemSchema = z.object({
   syncNotes: z.array(z.string()).default([]),
   /** Sync-owned; see `RoadmapLinkedPrSchema`. */
   linkedPr: RoadmapLinkedPrSchema.optional(),
+  /**
+   * Sync-owned: the item's status as the source names it (`In Progress`,
+   * `open`), and whether the source considers it finished (Jira status
+   * category `done`, a closed GitHub issue). Feeds the Inbox's "source status"
+   * and "differs from source" tags. Absent for manual items and items synced
+   * before this field existed.
+   */
+  sourceStatus: RoadmapSourceStatusSchema.optional(),
+  /**
+   * Sync-owned: why the item is in the operator's scope, computed from the
+   * integration identity. Empty/absent = not the operator's, so the Inbox
+   * leaves it out.
+   */
+  scopeReasons: z.array(RoadmapScopeReasonSchema).optional(),
   createdAt: IsoDateTimeSchema,
   updatedAt: IsoDateTimeSchema,
   /** Last time a sync tick (125b) wrote this item from its source. Absent for manual items. */

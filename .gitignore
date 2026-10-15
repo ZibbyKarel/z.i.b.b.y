@@ -61,6 +61,8 @@ graphify-out/
 
 # Phase 76: per-machine clone-root config — never synced, differs per machine.
 .zibby/data/machine/config.json
+# Inbox hidden-items state — operator-personal, never synced (docs/api/inbox.md).
+.zibby/data/inbox-state.json
 
 # Phase 73: uploaded avatar image bytes live outside the (committed) .md
 # frontmatter — binary, regenerable from an upload, never versioned.

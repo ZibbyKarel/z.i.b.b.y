@@ -37,6 +37,7 @@ import { RegistriesModule } from "./registries/registries.module";
 import { ReviewLearningModule } from "./review-learning/review-learning.module";
 import { HttpConnectionReaperModule } from "./shared/http/http-connection-reaper.module";
 import { LoggingModule } from "./shared/logging/logging.module";
+import { InboxModule } from "./inbox/inbox.module";
 import { PinsModule } from "./pins/pins.module";
 import { RoadmapModule } from "./roadmap/roadmap.module";
 import { SelfModule } from "./self/self.module";
@@ -64,6 +65,7 @@ import { EmployeesModule } from "./employees/employees.module";
     SystemModule,
     PinsModule,
     RoadmapModule,
+    InboxModule,
     ActivityLogModule,
     ActivityViewModule,
     AgentsModule,

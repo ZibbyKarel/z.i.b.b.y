@@ -1,6 +1,6 @@
 # Inbox — UI spec (hand-off to Claude Design)
 
-Status: specified, not implemented. Language of the UI: cs (default) + en via next-intl.
+Status: implemented (2026-10-15) — API in `docs/api/inbox.md`, UI in `apps/web/features/inbox/`. Language of the UI: cs (default) + en via next-intl.
 
 ## Problem
 

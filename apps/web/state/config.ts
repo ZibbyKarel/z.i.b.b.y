@@ -65,6 +65,17 @@ export const SECTIONS = [
     ],
   },
   {
+    // Roadmap items + GitHub PRs awaiting the operator (docs/plans/inbox-ui-spec.md).
+    id: "inbox",
+    glyph: "doc",
+    href: "/inbox/overview" as Route,
+    tabs: [
+      { id: "overview", href: "/inbox/overview" as Route },
+      { id: "issues", href: "/inbox/issues" as Route },
+      { id: "pull-requests", href: "/inbox/pull-requests" as Route },
+    ],
+  },
+  {
     id: "activity",
     glyph: "pulse",
     href: "/activity/log",
@@ -164,6 +175,7 @@ const PATH_SECTION: readonly (readonly [prefix: string, section: SectionId])[] =
   // ZB-06: goals/companies/teams/projects moved under /work/*; the bare
   // top-level prefixes are kept as redirect targets only (D-009), not routes.
   ["/work", "work"],
+  ["/inbox", "inbox"],
   ["/activity", "activity"],
   ["/archiv", "activity"],
   ["/runs", "activity"],

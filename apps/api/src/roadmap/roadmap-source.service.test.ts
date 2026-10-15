@@ -247,6 +247,8 @@ const githubIssuesFull = [
     state: "open",
     html_url: "https://github.com/acme/app/issues/10",
     milestone: { number: 1 },
+    user: { login: "octocat" },
+    assignees: [{ login: "octocat" }],
   },
   {
     number: 11,
@@ -476,10 +478,91 @@ describe("RoadmapSourceService", () => {
       expect(items.map((item) => item.id)).toContain(subtaskId); // never deleted
     });
 
+    it("writes sourceStatus + scopeReasons from /myself, and keeps the reasons when /myself fails", async () => {
+      let myself = true;
+      const issues = [
+        {
+          key: "PROJ-7",
+          fields: {
+            summary: "Mine",
+            issuetype: { name: "Story" },
+            status: { name: "In Progress", statusCategory: { key: "indeterminate" } },
+            assignee: { accountId: "me" },
+            reporter: { accountId: "someone" },
+            watches: { isWatching: true },
+          },
+        },
+        {
+          key: "PROJ-8",
+          fields: {
+            summary: "Not mine",
+            issuetype: { name: "Story" },
+            status: { name: "Done", statusCategory: { key: "done" } },
+            assignee: { accountId: "someone" },
+          },
+        },
+      ];
+      const fetchImpl = (async (url: string | URL) => {
+        const u = new URL(String(url));
+        if (u.pathname.endsWith("/myself")) {
+          return myself ? jsonResponse({ accountId: "me" }) : jsonResponse({}, 500);
+        }
+        expect(u.searchParams.get("fields")).toMatch(/assignee,reporter,watches/);
+        return jsonResponse({ issues, isLast: true });
+      }) as unknown as typeof fetch;
+      const { service, roadmap } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [JIRA_INTEGRATION],
+        fetchImpl,
+      });
+
+      await service.sync(PROJECT.id);
+      const mine = await roadmap.get(
+        PROJECT.id,
+        roadmapItemIdForSource(JIRA_INTEGRATION.id, "PROJ-7"),
+      );
+      expect(mine.sourceStatus).toEqual({ name: "In Progress", done: false });
+      expect(mine.scopeReasons).toEqual(["assigned", "watched"]);
+      const other = await roadmap.get(
+        PROJECT.id,
+        roadmapItemIdForSource(JIRA_INTEGRATION.id, "PROJ-8"),
+      );
+      expect(other.sourceStatus).toEqual({ name: "Done", done: true });
+      expect(other.scopeReasons).toEqual([]);
+
+      myself = false;
+      await service.sync(PROJECT.id);
+      const again = await roadmap.get(PROJECT.id, mine.id);
+      expect(again.scopeReasons).toEqual(["assigned", "watched"]);
+    });
+
+    it("remembers a source's last sync failure until a clean sync clears it", async () => {
+      let fail = true;
+      const fetchImpl = (async () =>
+        fail
+          ? jsonResponse({ errorMessages: ["boom"] }, 500)
+          : jsonResponse({ issues: [], isLast: true })) as unknown as typeof fetch;
+      const { service } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [JIRA_INTEGRATION],
+        fetchImpl,
+      });
+      await service.sync(PROJECT.id);
+      expect(service.lastFailures()).toEqual([
+        { projectId: PROJECT.id, source: "jira", message: "jira search: boom" },
+      ]);
+      fail = false;
+      await service.sync(PROJECT.id);
+      expect(service.lastFailures()).toEqual([]);
+    });
+
     it("scopes the default JQL to the whole project when projectKey is set", async () => {
       const capturedJql: string[] = [];
       const fetchImpl = (async (url: string | URL) => {
         const u = new URL(String(url));
+        if (u.pathname.endsWith("/myself")) return jsonResponse({}, 404);
         capturedJql.push(u.searchParams.get("jql") ?? "");
         return jsonResponse({ issues: [], total: 0 });
       }) as unknown as typeof fetch;
@@ -502,6 +585,7 @@ describe("RoadmapSourceService", () => {
       const capturedJql: string[] = [];
       const fetchImpl = (async (url: string | URL) => {
         const u = new URL(String(url));
+        if (u.pathname.endsWith("/myself")) return jsonResponse({}, 404);
         capturedJql.push(u.searchParams.get("jql") ?? "");
         return jsonResponse({ issues: [], total: 0 });
       }) as unknown as typeof fetch;
@@ -534,6 +618,7 @@ describe("RoadmapSourceService", () => {
       const tokens: (string | null)[] = [];
       const fetchImpl = (async (url: string | URL) => {
         const u = new URL(String(url));
+        if (u.pathname.endsWith("/myself")) return jsonResponse({}, 404);
         paths.push(u.pathname);
         const token = u.searchParams.get("nextPageToken");
         tokens.push(token);
@@ -994,6 +1079,11 @@ describe("RoadmapSourceService", () => {
 
       const issue11 = await roadmap.get(PROJECT.id, issue11Id);
       expect(issue11.lifecycle).toBe("done"); // GitHub state: closed
+      expect(issue11.sourceStatus).toEqual({ name: "closed", done: true });
+      expect(issue11.scopeReasons).toEqual([]);
+      expect(issue10.sourceStatus).toEqual({ name: "open", done: false });
+      expect(issue10.scopeReasons).toEqual(["assigned", "reported"]);
+      expect(milestone.sourceStatus).toEqual({ name: "open", done: false });
 
       const issue12 = await roadmap.get(PROJECT.id, issue12Id);
       expect(issue12.lifecycle).toBe("todo");

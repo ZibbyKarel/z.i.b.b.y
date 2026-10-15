@@ -78,6 +78,8 @@ export * from "./roadmap/decomposition-artifact.schema";
 export * from "./roadmap/level-mapping.schema";
 export * from "./roadmap/routing-proposal.schema";
 export * from "./roadmap/roadmap.contract";
+export * from "./inbox/inbox.schema";
+export * from "./inbox/inbox.contract";
 export * from "./review-learning";
 export * from "./tasks/task.schema";
 export * from "./tasks/task-parents.schema";

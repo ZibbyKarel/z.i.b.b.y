@@ -131,6 +131,6 @@ function resolveLevelMappingFile(): string {
   // `@Global()`, needs no importer) so `ProjectPrService` can inject it (125e).
   // RoadmapDecompositionService is exported too (125g) so a future consumer —
   // 125h's tick, or anything else — can reach `reconcile()` the same way.
-  exports: [RoadmapStore, RoadmapGateService, RoadmapDecompositionService],
+  exports: [RoadmapStore, RoadmapGateService, RoadmapDecompositionService, RoadmapSourceService],
 })
 export class RoadmapModule {}

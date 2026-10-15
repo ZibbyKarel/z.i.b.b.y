@@ -9,9 +9,12 @@ import type {
   RoadmapItem,
   RoadmapItemLevel,
   RoadmapLinkedPr,
+  RoadmapScopeReason,
   RoadmapSource,
+  RoadmapSourceStatus,
   RoadmapSyncResult,
 } from "@zibby/contracts";
+import type { InboxSourceError } from "@zibby/contracts";
 import { resolveLevel, roadmapItemIdForSource } from "@zibby/contracts";
 import { CredentialsStore } from "../integrations/credentials.store";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
@@ -71,6 +74,10 @@ interface NormalizedSourceIssue {
   workState: JiraWorkState;
   /** An open PR naming this item's key — Jira only, sync-owned (see `findLinkedPr`). */
   linkedPr?: RoadmapLinkedPr;
+  /** Sync-owned (see `RoadmapItemSchema.sourceStatus`). */
+  sourceStatus?: RoadmapSourceStatus;
+  /** Sync-owned; `undefined` = identity unknown this sync, so the stored value is kept. */
+  scopeReasons?: RoadmapScopeReason[];
   attachments: NormalizedAttachment[];
 }
 
@@ -109,6 +116,9 @@ interface JiraSearchIssue {
     status?: JiraStatus;
     issuelinks?: JiraIssueLink[];
     attachment?: JiraAttachment[];
+    assignee?: { accountId?: string } | null;
+    reporter?: { accountId?: string } | null;
+    watches?: { isWatching?: boolean };
   };
 }
 interface JiraSearchResponse {
@@ -131,6 +141,8 @@ interface GitHubIssue {
   /** Present (any shape) only on a PR — the issues endpoint returns both. */
   pull_request?: unknown;
   milestone?: { number?: number } | null;
+  user?: { login?: string } | null;
+  assignees?: { login?: string }[];
 }
 interface GitHubMilestone {
   number?: number;
@@ -250,6 +262,28 @@ function jiraWorkState(status: JiraStatus | undefined): JiraWorkState {
   return status?.statusCategory?.key === "new" ? "todo" : "external";
 }
 
+function jiraSourceStatus(status: JiraStatus | undefined): RoadmapSourceStatus | undefined {
+  return status?.name
+    ? { name: status.name, done: status.statusCategory?.key === "done" }
+    : undefined;
+}
+
+/**
+ * Why a Jira issue is the operator's. `mentioned` isn't derivable from the search
+ * response (it would need a comment scan per issue), so it's never set for Jira.
+ */
+function jiraScopeReasons(
+  fields: JiraSearchIssue["fields"],
+  me: string | undefined,
+): RoadmapScopeReason[] | undefined {
+  if (!me) return undefined;
+  const reasons: RoadmapScopeReason[] = [];
+  if (fields?.assignee?.accountId === me) reasons.push("assigned");
+  if (fields?.reporter?.accountId === me) reasons.push("reported");
+  if (fields?.watches?.isWatching) reasons.push("watched");
+  return reasons;
+}
+
 /**
  * Whole-token, case-insensitive match of a source key in a PR title or branch
  * (`PROJ-1` matches "PROJ-1: fix" and "proj-1-login", never "PROJ-12").
@@ -304,6 +338,12 @@ function parseGithubDependsOn(body: string): number[] {
 @Injectable()
 export class RoadmapSourceService {
   private readonly fetchImpl: typeof fetch;
+  /**
+   * Last failure per `projectId:source`, cleared by that source's next clean sync —
+   * surfaced by the Inbox as a non-blocking banner.
+   * ponytail: in-memory, lost on restart; persist next to `_config.json` if it matters.
+   */
+  private readonly failures = new Map<string, InboxSourceError>();
 
   constructor(
     private readonly roadmap: RoadmapStore,
@@ -368,26 +408,39 @@ export class RoadmapSourceService {
     );
 
     if (jira) {
-      try {
-        await this.syncJira(projectId, jira, summary, githubForPrs);
-      } catch (error) {
-        summary.notes.push({
-          itemId: jira.id,
-          note: `jira sync failed: ${(error as Error).message}`,
-        });
-      }
+      await this.recordOutcome(projectId, "jira", jira.id, summary, () =>
+        this.syncJira(projectId, jira, summary, githubForPrs),
+      );
     }
     if (github) {
-      try {
-        await this.syncGithub(projectId, github, summary);
-      } catch (error) {
-        summary.notes.push({
-          itemId: github.id,
-          note: `github sync failed: ${(error as Error).message}`,
-        });
-      }
+      await this.recordOutcome(projectId, "github", github.id, summary, () =>
+        this.syncGithub(projectId, github, summary),
+      );
     }
     return summary;
+  }
+
+  /** Every source's last sync failure that hasn't been cleared by a clean sync since. */
+  lastFailures(): InboxSourceError[] {
+    return [...this.failures.values()];
+  }
+
+  private async recordOutcome(
+    projectId: string,
+    source: "jira" | "github",
+    integrationId: string,
+    summary: RoadmapSyncResult,
+    run: () => Promise<void>,
+  ): Promise<void> {
+    const key = `${projectId}:${source}`;
+    try {
+      await run();
+      this.failures.delete(key);
+    } catch (error) {
+      const message = (error as Error).message;
+      summary.notes.push({ itemId: integrationId, note: `${source} sync failed: ${message}` });
+      this.failures.set(key, { projectId, source, message: message || "unknown error" });
+    }
   }
 
   // --- Jira ------------------------------------------------------------------
@@ -420,6 +473,7 @@ export class RoadmapSourceService {
     }
 
     const authHeader = `Basic ${Buffer.from(`${integration.config.email}:${token}`).toString("base64")}`;
+    const me = await this.fetchJiraAccountId(integration.config.baseUrl, authHeader);
     const primaryIssues = await this.fetchAllJiraIssues(
       integration.config.baseUrl,
       integration.config.jql,
@@ -518,6 +572,8 @@ export class RoadmapSourceService {
         dependsOnExternalIds: jiraDependsOnKeys(issue.fields?.issuelinks ?? []),
         workState,
         ...(linkedPr ? { linkedPr } : {}),
+        sourceStatus: jiraSourceStatus(issue.fields?.status),
+        scopeReasons: jiraScopeReasons(issue.fields, me),
         attachments,
       });
       summary[outcome.outcome] += 1;
@@ -570,7 +626,8 @@ export class RoadmapSourceService {
       const params = new URLSearchParams({
         jql: clause,
         maxResults: String(PAGE_SIZE),
-        fields: "summary,description,issuetype,parent,issuelinks,attachment,status",
+        fields:
+          "summary,description,issuetype,parent,issuelinks,attachment,status,assignee,reporter,watches",
       });
       if (nextPageToken) params.set("nextPageToken", nextPageToken);
       const res = await this.fetchImpl(`${baseUrl}/rest/api/3/search/jql?${params}`, {
@@ -589,6 +646,22 @@ export class RoadmapSourceService {
       nextPageToken = body.nextPageToken;
     }
     return out;
+  }
+
+  /** The operator's Jira accountId for `scopeReasons`; any failure → unknown, never a failed sync. */
+  private async fetchJiraAccountId(
+    baseUrl: string,
+    authHeader: string,
+  ): Promise<string | undefined> {
+    try {
+      const res = await this.fetchImpl(`${baseUrl}/rest/api/3/myself`, {
+        headers: { authorization: authHeader, accept: "application/json" },
+      });
+      if (!res.ok) return undefined;
+      return ((await res.json()) as { accountId?: string }).accountId || undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   /**
@@ -713,6 +786,9 @@ export class RoadmapSourceService {
           level: milestoneTarget,
           dependsOnExternalIds: [],
           workState: milestone.state === "closed" ? "done" : "todo",
+          ...(milestone.state
+            ? { sourceStatus: { name: milestone.state, done: milestone.state === "closed" } }
+            : {}),
           // GitHub issues expose attachments only as inline markdown links in
           // the body, with no listing/download endpoint the way Jira's
           // `fields.attachment` is a structured array — out of scope here.
@@ -757,6 +833,20 @@ export class RoadmapSourceService {
           parentExternalId,
           dependsOnExternalIds: [...dependsOnNumbers].map((n) => `issue:${n}`),
           workState: issue.state === "closed" ? "done" : "todo",
+          ...(issue.state
+            ? { sourceStatus: { name: issue.state, done: issue.state === "closed" } }
+            : {}),
+          // `mentioned` would need a second `mentions:` search, which would also
+          // widen the roadmap import (and autoPlay) to issues that aren't mine to do.
+          scopeReasons: [
+            // GitHub logins are case-insensitive; the configured handle may differ in case.
+            ...(issue.assignees?.some((a) => a.login?.toLowerCase() === username.toLowerCase())
+              ? ["assigned" as const]
+              : []),
+            ...(issue.user?.login?.toLowerCase() === username.toLowerCase()
+              ? ["reported" as const]
+              : []),
+          ],
           attachments: [],
         });
         summary[outcome.outcome] += 1;
@@ -890,7 +980,8 @@ export class RoadmapSourceService {
    * becomes two items). Enforces the ownership split (`docs/api/roadmap.md`):
    * a re-sync writes only `name`, `description`, `externalLevel`,
    * `attachments`/`attachmentSetId`, `source.url`, `parentId`,
-   * `dependsOnFromSource`, `syncNotes`, `syncedAt`, `linkedPr` — plus the
+   * `dependsOnFromSource`, `syncNotes`, `syncedAt`, `linkedPr`, `sourceStatus`,
+   * `scopeReasons` — plus the
    * narrow, explicitly-sanctioned lifecycle transitions: `-> done` whenever
    * the source reports a done status (from ANY lifecycle — pre-existing,
    * unrelated to this sync), and, for an item still in a sync-owned lifecycle
@@ -958,6 +1049,8 @@ export class RoadmapSourceService {
         runs: [],
         syncNotes: notes,
         ...(input.linkedPr ? { linkedPr: input.linkedPr } : {}),
+        ...(input.sourceStatus ? { sourceStatus: input.sourceStatus } : {}),
+        ...(input.scopeReasons ? { scopeReasons: input.scopeReasons } : {}),
         createdAt: now,
         updatedAt: now,
         syncedAt: now,
@@ -1015,6 +1108,11 @@ export class RoadmapSourceService {
       // the item is leaving the queue `drain` scans by `lifecycle === "enqueued"`,
       // so a stale timestamp would be meaningless once it's gone.
       if (enqueuedToExternal) delete next.enqueuedAt;
+      // Sync-owned like `linkedPr`: rewritten every sync. Unknown scope (Jira
+      // `/myself` failed) keeps the stored reasons rather than blanking the Inbox.
+      if (input.sourceStatus) next.sourceStatus = input.sourceStatus;
+      else delete next.sourceStatus;
+      if (input.scopeReasons) next.scopeReasons = input.scopeReasons;
       // `linkedPr` is only meaningful while the item is `external` — drop it
       // (rather than leaving it stale) once the item returns to `todo` or
       // moves anywhere else. But a GATE-owned lifecycle
