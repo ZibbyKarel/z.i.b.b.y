@@ -183,6 +183,24 @@ function build() {
 
 describe("TaskRunsService", () => {
   describe("listTaskRuns — goal child folding", () => {
+    it("hides a pending task row once its run exists, but keeps a run-less pending task", async () => {
+      const { service, scheduled } = build();
+      const shadow = { ...scheduledS, id: "task1", status: "pending" as const };
+      const waiting = { ...scheduledS, id: "task10", status: "pending" as const };
+      scheduled.list.mockResolvedValue([shadow, waiting]);
+      const feed = await service.listTaskRuns();
+      expect(feed.filter((r) => r.taskId === "task1" || r.runId === "task1")).toHaveLength(1);
+      expect(feed.map((r) => r.runId)).not.toContain("task1");
+      expect(feed.map((r) => r.runId)).toContain("task10");
+    });
+
+    it("keeps a queued task row even when a run references it", async () => {
+      const { service, scheduled } = build();
+      scheduled.list.mockResolvedValue([{ ...scheduledS, id: "task1", status: "queued" as const }]);
+      const feed = await service.listTaskRuns();
+      expect(feed.filter((r) => r.kind === "scheduled").map((r) => r.runId)).toEqual(["task1"]);
+    });
+
     it("folds a goal's maker child run out of the feed", async () => {
       const { service } = build();
       const feed = await service.listTaskRuns();

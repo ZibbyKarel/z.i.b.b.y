@@ -440,7 +440,7 @@ export class TaskRunsService {
     // A `workflow` phase's sub-run is execution detail of its parent run.
     for (const p of workflows) if (p.parentRunId) childRunIds.add(p.workflowRunId);
 
-    const runs: TaskRun[] = [
+    const runViews: TaskRun[] = [
       ...agents.map((r) =>
         resolveProjectDisplay(
           enrichRunWithTask(this.withProcessor(agentRunToView(r, projectNames), names), tasksById),
@@ -472,7 +472,16 @@ export class TaskRunsService {
       // cell value) hardcoded `""`. Every other run-kind view above resolves its name via
       // `resolveProjectDisplay`; this one must too, or a roadmap pickup parked behind the
       // budget/concurrency cap reads as project-less until it dispatches.
+    ];
+    const taskIdsWithRun = new Set(runViews.flatMap((r) => (r.taskId ? [r.taskId] : [])));
+    const runs: TaskRun[] = [
+      ...runViews,
       ...scheduled.flatMap((t) => {
+        // `pending` is the brief window between the runner exposing the run and
+        // `markDispatched` flipping the task: both exist, the run is the truth. Only
+        // `pending` is suppressed — queued/held/scheduled are genuine waits (a re-queued
+        // task keeps its place), and `reassignRun` marks the task `dispatched` at once.
+        if (t.status === "pending" && taskIdsWithRun.has(t.id)) return [];
         const view = scheduledTaskToView(t);
         return view ? [resolveProjectDisplay(view, projectNames)] : [];
       }),
@@ -594,7 +603,9 @@ function workflowRunToView(
     r.status === "paused-limit"
       ? "paused-limit"
       : r.status === "parked"
-        ? r.parkedReason === "retries" || r.parkedReason === "limit" || r.parkedReason === "no-employee"
+        ? r.parkedReason === "retries" ||
+          r.parkedReason === "limit" ||
+          r.parkedReason === "no-employee"
           ? "parked"
           : "awaiting-approval"
         : r.status === "failed"
