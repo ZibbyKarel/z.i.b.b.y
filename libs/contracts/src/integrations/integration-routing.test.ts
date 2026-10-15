@@ -47,7 +47,6 @@ const projects: RoutableProject[] = [
     integrationRouting: [
       { integrationId: "jira1", match: { kind: "jira", projectKey: "CZ", labels: ["cli"] } },
       { integrationId: "jira1", match: { kind: "jira", jql: "labels = x", projectKey: "ZZ" } },
-      { integrationId: "gh", match: { kind: "github" } },
     ],
   },
   { id: "none" },
@@ -75,9 +74,13 @@ describe("matchRouting", () => {
   it("ignores other integrations and projects without rules", () => {
     expect(matchRouting({ ...jira(["portal"]), integrationId: "other" }, projects)).toEqual([]);
   });
-  it("matches github through the project's gitRemote", () => {
+  it("matches github implicitly through the project's gitRemote, no rule needed", () => {
     const item = { integrationId: "gh", kind: "github" as const, github: { repo: "Shoptet/CMS4" } };
     expect(matchRouting(item, projects)).toEqual(["cms4"]);
+    expect(matchRouting({ ...item, github: { repo: "shoptet/partner-cli" } }, projects)).toEqual([
+      "cli",
+    ]);
+    expect(matchRouting({ ...item, github: { repo: "shoptet/other" } }, projects)).toEqual([]);
   });
   it("matches slack by channel", () => {
     const item = { integrationId: "sl", kind: "slack" as const, slack: { channel: "C1" } };

@@ -129,7 +129,7 @@ describe("ProjectInheritedIntegrations", () => {
     });
   });
 
-  it("github shows the git-remote routing text and no editor; the switch writes the implicit rule", async () => {
+  it("github shows only the git-remote routing text, no editor and no switch", () => {
     resolved([github]);
     render(
       <ProjectInheritedIntegrations
@@ -142,11 +142,13 @@ describe("ProjectInheritedIntegrations", () => {
 
     expect(screen.getByTestId(TestId.GithubRemote)).toHaveTextContent("shoptet/cli");
     expect(screen.queryByTestId(IntegrationRoutingEditorTestId.Root)).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+  });
 
-    await userEvent.click(screen.getByTestId(TestId.GithubRoute));
-    expect(hooks.update.mutate).toHaveBeenCalledWith({
-      params: { id: "p1" },
-      body: { integrationRouting: [{ integrationId: "gh-shoptet", match: { kind: "github" } }] },
-    });
+  it("github without a gitRemote shows the hint", () => {
+    resolved([github]);
+    render(<ProjectInheritedIntegrations onOverride={vi.fn()} projectId="p1" routing={[]} />);
+
+    expect(screen.getByTestId(TestId.GithubRemote)).toHaveTextContent(/git remote/i);
   });
 });

@@ -1427,8 +1427,7 @@
         "openCompany": "Open company",
         "override": "Override with own integration",
         "githubRoutedBy": "Routed by git remote {repo}",
-        "githubNoRemote": "Set a git remote on this project to route GitHub items to it.",
-        "githubRoute": "Route this repository's items to this project"
+        "githubNoRemote": "Set a git remote on this project to route GitHub items to it."
       },
       "routing": {
         "projectKey": "Project key",

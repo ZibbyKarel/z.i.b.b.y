@@ -1453,7 +1453,7 @@ describe("RoadmapSourceService", () => {
       expect(global.entries.find((e) => e.externalLevel === "Story")?.target).toBe("task");
     });
 
-    it("routes a company GitHub integration to the project whose gitRemote is its repo", async () => {
+    it("routes a company GitHub integration implicitly to the project whose gitRemote is its repo (no rule)", async () => {
       const COMPANY_GITHUB: Integration = {
         ...GITHUB_INTEGRATION,
         id: "co-gh",
@@ -1466,7 +1466,6 @@ describe("RoadmapSourceService", () => {
           name: id,
           path: `/repos/${id}`,
           gitRemote,
-          integrationRouting: [{ integrationId: "co-gh", match: { kind: "github" } }],
         }) as Project;
       const { service, roadmap } = await buildService({
         dir,
@@ -1483,6 +1482,35 @@ describe("RoadmapSourceService", () => {
 
       expect(results.get("app")?.imported).toBe(4);
       expect(await roadmap.list("web")).toEqual([]);
+    });
+
+    it("never fans a company GitHub integration out to projects whose gitRemote differs", async () => {
+      const COMPANY_GITHUB: Integration = {
+        ...GITHUB_INTEGRATION,
+        id: "co-gh",
+        projectId: undefined,
+        companyId: "shoptet",
+      };
+      const { service, roadmap } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [COMPANY_GITHUB],
+        companyProjects: [
+          {
+            id: "x",
+            name: "x",
+            path: "/repos/x",
+            gitRemote: "git@github.com:acme/x.git",
+          } as Project,
+          { id: "nogit", name: "nogit", path: "/repos/nogit" } as Project,
+        ],
+        fetchImpl: githubFetch({ issues: githubIssuesFull, milestones: githubMilestonesFull }),
+      });
+
+      await service.syncProjects(["x", "nogit"]);
+
+      expect(await roadmap.list("x")).toEqual([]);
+      expect(await roadmap.list("nogit")).toEqual([]);
     });
   });
 });

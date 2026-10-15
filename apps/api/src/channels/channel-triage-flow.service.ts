@@ -334,7 +334,8 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     const hasRules = inheriting.some((p) =>
       (p.integrationRouting ?? []).some((r) => r.integrationId === integration.id),
     );
-    if (!hasRules) return undefined;
+    // GitHub routes implicitly by gitRemote (D3), so it never falls back to the text matcher.
+    if (!hasRules && integration.kind !== "github") return undefined;
     const routingItem = routingItemOf(item);
     if (!routingItem) return null;
     const triageable = inheriting.map((p) => ({

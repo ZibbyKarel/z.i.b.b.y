@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import type { Route } from "next";
-import { Button, Divider, Stack, Tag, ToggleField, Typography } from "@zibby/design-system";
+import { Button, Divider, Stack, Tag, Typography } from "@zibby/design-system";
 import {
   type Integration,
   type IntegrationKind,
@@ -22,7 +22,6 @@ export enum ProjectInheritedIntegrationsTestId {
   CompanyLink = "project-inherited-company-link",
   Override = "project-inherited-override",
   GithubRemote = "project-inherited-github-remote",
-  GithubRoute = "project-inherited-github-route",
 }
 
 export interface ProjectInheritedIntegrationsProps {
@@ -122,23 +121,14 @@ export function ProjectInheritedIntegrations({
             )}
 
             {integration.kind === "github" && (
-              <Stack gap="75">
-                <Typography
-                  data-testid={ProjectInheritedIntegrationsTestId.GithubRemote}
-                  size="xs"
-                  type="note"
-                  variant="tertiary"
-                >
-                  {repo ? t("githubRoutedBy", { repo }) : t("githubNoRemote")}
-                </Typography>
-                <ToggleField
-                  checked={Boolean(rule)}
-                  data-testid={ProjectInheritedIntegrationsTestId.GithubRoute}
-                  disabled={updateProject.isPending || !repo}
-                  label={t("githubRoute")}
-                  onChange={(on) => saveRule(integration.id, on ? { kind: "github" } : null)}
-                />
-              </Stack>
+              <Typography
+                data-testid={ProjectInheritedIntegrationsTestId.GithubRemote}
+                size="xs"
+                type="note"
+                variant="tertiary"
+              >
+                {repo ? t("githubRoutedBy", { repo }) : t("githubNoRemote")}
+              </Typography>
             )}
           </Stack>
         );

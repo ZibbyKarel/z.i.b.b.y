@@ -527,7 +527,8 @@ export class RoadmapSourceService {
   /**
    * Phase 128 (D1/D7) — how items of `integration` are distributed. A project-owned
    * integration, or a company one no inheriting project has a routing rule for yet,
-   * sends every item to every write target (pre-routing behaviour). Otherwise
+   * sends every item to every write target (pre-routing behaviour); a company GitHub
+   * integration is never in that case (D3: implicit routing by gitRemote). Otherwise
    * `matchRouting` over the inheriting projects decides: exactly one match, or the
    * item is unroutable (D4 — never first-match); a match outside `writeTo` is
    * simply not written by this call. `jqlRules` lists the rules whose JQL the
@@ -543,7 +544,9 @@ export class RoadmapSourceService {
     const inheriting = await this.resolvedProjects.inheritingProjects(integration);
     const rulesOf = (project: Project) =>
       (project.integrationRouting ?? []).filter((rule) => rule.integrationId === integration.id);
-    if (!inheriting.some((project) => rulesOf(project).length > 0)) {
+    // GitHub of a company is always routed (implicitly by gitRemote), never "all".
+    const implicit = integration.kind === "github" && Boolean(integration.companyId);
+    if (!implicit && !inheriting.some((project) => rulesOf(project).length > 0)) {
       return { route: () => [...writeTo], jqlRules: [] };
     }
     const jqlRules: { projectId: string; jql: string }[] = [];
@@ -555,7 +558,13 @@ export class RoadmapSourceService {
     }
     const route = (item: RoutingItem, jqlMatches?: ReadonlySet<string>): Routed => {
       const matched = matchRouting(item, inheriting, jqlMatches);
-      if (matched.length === 0) return { reason: "matches no project's routing rule" };
+      if (matched.length === 0)
+        return {
+          reason:
+            integration.kind === "github"
+              ? "matches no project's git remote"
+              : "matches no project's routing rule",
+        };
       if (matched.length > 1) {
         return { reason: `matches ${matched.length} projects (${matched.join(", ")})` };
       }

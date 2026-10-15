@@ -1427,8 +1427,7 @@
         "openCompany": "Otevřít firmu",
         "override": "Přebít vlastní integrací",
         "githubRoutedBy": "Směrováno podle git remote {repo}",
-        "githubNoRemote": "Nastav projektu git remote, aby se mu položky z GitHubu mohly přiřazovat.",
-        "githubRoute": "Přiřazovat tomuto projektu položky z tohoto repozitáře"
+        "githubNoRemote": "Nastav projektu git remote, aby se mu položky z GitHubu mohly přiřazovat."
       },
       "routing": {
         "projectKey": "Klíč projektu",

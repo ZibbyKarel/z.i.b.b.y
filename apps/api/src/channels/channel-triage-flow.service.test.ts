@@ -344,6 +344,44 @@ describe("ChannelTriageFlowService", () => {
       expect(out.projectId).toBe("alpha");
     });
 
+    it("github: attributes implicitly by gitRemote with no rules; no match → notify-only", async () => {
+      const companyGithub: Integration = {
+        ...integration,
+        kind: "github",
+        projectId: undefined,
+        companyId: "co",
+        config: { kind: "github", repo: "acme/app", streams: ["issues"], username: "me" },
+      };
+      const gh = (id: string, gitRemote: string): Project => ({
+        id,
+        name: id,
+        path: `/work/${id}`,
+        gitRemote,
+      });
+      const issue = item({
+        kind: "github",
+        externalRef: { channel: "acme/app", messageId: "7" },
+        text: "the Alpha login is broken",
+      });
+      const hit = makeFlow({
+        verdict: bug,
+        integration: companyGithub,
+        inheriting: [
+          gh("app", "git@github.com:acme/app.git"),
+          gh("web", "https://github.com/acme/web"),
+        ],
+      });
+      expect((await hit.handle(issue)).projectId).toBe("app");
+
+      createTask.mockClear();
+      const miss = makeFlow({
+        verdict: bug,
+        integration: companyGithub,
+        inheriting: [gh("web", "https://github.com/acme/web")],
+      });
+      expect((await miss.handle(issue)).projectId).toBeUndefined();
+    });
+
     it("jira: matches on projectKey/labels from the item; a jql-only rule never matches in triage", async () => {
       const companyJira: Integration = {
         ...integration,

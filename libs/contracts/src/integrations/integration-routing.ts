@@ -16,7 +16,7 @@ export const JiraRoutingMatchSchema = z
   .refine((m) => m.jql !== undefined || m.projectKey !== undefined, {
     message: "a jira routing match needs a jql or a projectKey",
   });
-/** GitHub routing is implicit — the project's `gitRemote` decides, nothing to configure. */
+/** Not required anymore (GitHub routes implicitly by `gitRemote`); kept so stored rules still parse. */
 export const GitHubRoutingMatchSchema = z.object({ kind: z.literal("github") });
 export const SlackRoutingMatchSchema = z.object({
   kind: z.literal("slack"),
@@ -72,14 +72,20 @@ const ci = (s: string) => s.trim().toLowerCase();
  * match if the item has ANY of them. A rule carrying a `jql` cannot be evaluated
  * locally, so it matches only when the project is in `jqlMatches` (the sync layer
  * runs the JQL server-side); its other fields then narrow further.
- * GitHub: a project matches when its `gitRemote` resolves to the item's repo
- * (and it has a github rule for the integration). Slack: item channel in `channels`.
+ * GitHub is IMPLICIT (D3): a project matches when its `gitRemote` resolves to the
+ * item's repo, with or without a rule. Slack: item channel in `channels`.
  */
 export function matchRouting(
   item: RoutingItem,
   projects: RoutableProject[],
   jqlMatches?: ReadonlySet<string>,
 ): string[] {
+  if (item.kind === "github") {
+    const repo = item.github ? ci(item.github.repo) : null;
+    return projects
+      .filter((p) => repo !== null && repoFromGitRemote(p.gitRemote) === repo)
+      .map((p) => p.id);
+  }
   return projects
     .filter((p) =>
       (p.integrationRouting ?? []).some(
@@ -98,10 +104,8 @@ function ruleMatches(
 ): boolean {
   if (match.kind !== item.kind) return false;
   switch (match.kind) {
-    case "github": {
-      const repo = repoFromGitRemote(project.gitRemote);
-      return repo !== null && item.github !== undefined && repo === ci(item.github.repo);
-    }
+    case "github":
+      return false; // handled implicitly in matchRouting
     case "slack":
       return (
         item.slack !== undefined &&
