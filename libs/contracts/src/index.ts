@@ -47,6 +47,7 @@ export * from "./automations/signal.schema";
 export * from "./automations/automation.schema";
 export * from "./automations/automations.contract";
 export * from "./integrations/integration.schema";
+export * from "./integrations/integration-routing";
 export * from "./integrations/integrations.contract";
 export * from "./channels/channel.schema";
 export * from "./channels/channels.contract";

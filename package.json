@@ -36,6 +36,7 @@
     "api:smoke": "node apps/api/scripts/claude-smoke.mjs",
     "seed": "node apps/api/scripts/seed.mjs",
     "seed:test": "ZIBBY_DATA_DIR=.zibby/data-test node apps/api/scripts/seed.mjs",
+    "migrate:company-integrations": "pnpm --filter @zibby/api exec ts-node -P tsconfig.json ../../scripts/migrate-company-integrations.ts",
     "self-knowledge:generate": "pnpm --filter @zibby/api exec ts-node -P tsconfig.json ../../tools/self-knowledge/generate.ts",
     "prepare": "git config core.hooksPath .githooks",
     "format": "prettier --write .",

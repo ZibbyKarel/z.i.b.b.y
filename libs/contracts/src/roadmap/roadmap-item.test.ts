@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   ROADMAP_ITEM_ID_REGEX,
+  RoadmapConfigSchema,
   RoadmapItemSchema,
+  resolveRoadmapConfig,
   roadmapItemIdForSource,
 } from "./roadmap-item.schema";
 
@@ -86,5 +88,36 @@ describe("RoadmapItemSchema", () => {
       ],
     });
     expect(parsed.runs).toHaveLength(1);
+  });
+});
+
+describe("RoadmapConfigSchema (tri-state)", () => {
+  it("parses legacy booleans unchanged and defaults absent to null (inherit)", () => {
+    expect(RoadmapConfigSchema.parse({ autoSync: true, autoPlay: false })).toEqual({
+      autoSync: true,
+      autoPlay: false,
+    });
+    expect(RoadmapConfigSchema.parse({})).toEqual({ autoSync: null, autoPlay: null });
+  });
+});
+
+describe("resolveRoadmapConfig", () => {
+  it("project > company > global, with provenance", () => {
+    expect(
+      resolveRoadmapConfig({ autoSync: false, autoPlay: null }, { autoSync: true, autoPlay: true }),
+    ).toEqual({
+      autoSync: false,
+      autoPlay: true,
+      source: { autoSync: "project", autoPlay: "company" },
+    });
+    expect(resolveRoadmapConfig({ autoSync: null, autoPlay: null }, { autoSync: true })).toEqual({
+      autoSync: true,
+      autoPlay: false,
+      source: { autoSync: "company", autoPlay: "global" },
+    });
+    expect(resolveRoadmapConfig({}, undefined).source).toEqual({
+      autoSync: "global",
+      autoPlay: "global",
+    });
   });
 });

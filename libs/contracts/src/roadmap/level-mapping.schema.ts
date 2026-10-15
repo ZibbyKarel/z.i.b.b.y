@@ -67,3 +67,22 @@ export function resolveLevel(
   );
   return found?.target;
 }
+
+/**
+ * Compose the global table with a company's overrides: a company entry wins per
+ * `(kind, externalLevel)` (case-insensitive, like {@link resolveLevel}); global
+ * entries it doesn't touch are kept, and company-only entries are appended. The
+ * result is a full table usable by `resolveLevel`.
+ */
+export function composeLevelMapping(
+  global: LevelMapping,
+  companyOverrides?: LevelMapping,
+): LevelMapping {
+  const overrides = companyOverrides?.entries ?? [];
+  if (overrides.length === 0) return global;
+  const key = (e: LevelMappingEntry) => `${e.kind}:${e.externalLevel.trim().toLowerCase()}`;
+  const byKey = new Map(overrides.map((e) => [key(e), e]));
+  const kept = global.entries.map((e) => byKey.get(key(e)) ?? e);
+  const seen = new Set(global.entries.map(key));
+  return { entries: [...kept, ...[...byKey.values()].filter((e) => !seen.has(key(e)))] };
+}

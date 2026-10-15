@@ -122,18 +122,24 @@ describe("Roadmap API (e2e)", () => {
     const initial = await request(app.getHttpServer())
       .get("/api/projects/other-project/roadmap/config")
       .expect(200);
-    expect(initial.body).toEqual({ autoSync: false, autoPlay: false });
+    expect(initial.body).toMatchObject({ autoSync: null, autoPlay: null });
+    expect(initial.body.effective).toEqual({
+      autoSync: false,
+      autoPlay: false,
+      source: { autoSync: "global", autoPlay: "global" },
+    });
 
     const updated = await request(app.getHttpServer())
       .put("/api/projects/other-project/roadmap/config")
       .send({ autoSync: true })
       .expect(200);
-    expect(updated.body).toEqual({ autoSync: true, autoPlay: false });
+    expect(updated.body).toMatchObject({ autoSync: true, autoPlay: null });
+    expect(updated.body.effective.autoSync).toBe(true);
 
     const reread = await request(app.getHttpServer())
       .get("/api/projects/other-project/roadmap/config")
       .expect(200);
-    expect(reread.body).toEqual({ autoSync: true, autoPlay: false });
+    expect(reread.body).toMatchObject({ autoSync: true, autoPlay: null });
   });
 
   it("PUT config MERGES — patching one toggle never resets the other", async () => {
@@ -148,7 +154,7 @@ describe("Roadmap API (e2e)", () => {
       .put("/api/projects/merge-project/roadmap/config")
       .send({ autoSync: true })
       .expect(200);
-    expect(merged.body).toEqual({ autoSync: true, autoPlay: true });
+    expect(merged.body).toMatchObject({ autoSync: true, autoPlay: true });
   });
 
   it("POST sync on a project with no Jira/GitHub integration returns an all-zero summary, not an error", async () => {

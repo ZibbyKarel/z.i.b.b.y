@@ -317,7 +317,8 @@ export type UpdateRoadmapItemInput = z.infer<typeof UpdateRoadmapItemSchema>;
  * `RoadmapGateService`'s docblock for the full provenance rule.
  */
 export const RoadmapConfigSchema = z.object({
-  autoSync: z.boolean().default(false),
+  /** Tri-state (Phase 128): `true`/`false` = explicit project choice; `null`/absent = inherit. */
+  autoSync: z.boolean().nullable().default(null),
   /**
    * Auto-pickup (`RoadmapTickService`): every tick, enqueue every unblocked
    * `todo` TASK and dispatch a decomposition for every childless epic that has
@@ -326,9 +327,60 @@ export const RoadmapConfigSchema = z.object({
    * machine fuse), applied by `TaskSchedulerService` to the tasks those releases
    * create — the roadmap has no cap of its own.
    */
-  autoPlay: z.boolean().default(false),
+  autoPlay: z.boolean().nullable().default(null),
 });
 export type RoadmapConfig = z.infer<typeof RoadmapConfigSchema>;
+
+/** Company-level defaults (`Company.roadmapDefaults`) a project inherits when its own toggle is `null`. */
+export const RoadmapDefaultsSchema = z.object({
+  autoSync: z.boolean().optional(),
+  autoPlay: z.boolean().optional(),
+});
+export type RoadmapDefaults = z.infer<typeof RoadmapDefaultsSchema>;
+
+/** Where an effective toggle value came from. */
+export const RoadmapConfigSourceSchema = z.enum(["project", "company", "global"]);
+export type RoadmapConfigSource = z.infer<typeof RoadmapConfigSourceSchema>;
+
+/** The resolved (inheritance applied) toggles plus their provenance — what the UI shows. */
+export const EffectiveRoadmapConfigSchema = z.object({
+  autoSync: z.boolean(),
+  autoPlay: z.boolean(),
+  source: z.object({
+    autoSync: RoadmapConfigSourceSchema,
+    autoPlay: RoadmapConfigSourceSchema,
+  }),
+});
+export type EffectiveRoadmapConfig = z.infer<typeof EffectiveRoadmapConfigSchema>;
+
+/** `GET/PUT roadmap/config` response: the stored tri-state config plus the resolved `effective` view. */
+export const RoadmapConfigResponseSchema = RoadmapConfigSchema.extend({
+  effective: EffectiveRoadmapConfigSchema,
+});
+export type RoadmapConfigResponse = z.infer<typeof RoadmapConfigResponseSchema>;
+
+/** Global fallback when neither project nor company decides. */
+export const GLOBAL_ROADMAP_DEFAULTS = { autoSync: false, autoPlay: false } as const;
+
+/**
+ * Pure inheritance resolver: project explicit value (non-null) wins, then the
+ * company default, then the global default (`false`).
+ */
+export function resolveRoadmapConfig(
+  projectConfig: RoadmapConfig | { autoSync?: boolean | null; autoPlay?: boolean | null },
+  companyDefaults?: RoadmapDefaults,
+): EffectiveRoadmapConfig {
+  const pick = (key: "autoSync" | "autoPlay"): [boolean, RoadmapConfigSource] => {
+    const own = projectConfig[key];
+    if (typeof own === "boolean") return [own, "project"];
+    const inherited = companyDefaults?.[key];
+    if (typeof inherited === "boolean") return [inherited, "company"];
+    return [GLOBAL_ROADMAP_DEFAULTS[key], "global"];
+  };
+  const [autoSync, syncSource] = pick("autoSync");
+  const [autoPlay, playSource] = pick("autoPlay");
+  return { autoSync, autoPlay, source: { autoSync: syncSource, autoPlay: playSource } };
+}
 /** Pre-defaults shape — what a full-replace writer may hand in (see `RoadmapStore.writeConfig`). */
 export type RoadmapConfigInput = z.input<typeof RoadmapConfigSchema>;
 
@@ -342,10 +394,11 @@ export type RoadmapConfigInput = z.input<typeof RoadmapConfigSchema>;
  * materialises that default for a missing key, so `.partial()` would hand the
  * handler `{ autoSync: true, autoPlay: false }` for a body of
  * `{ autoSync: true }` and clobber the very toggle it was meant to preserve.
+ * `null` is an explicit "reset to inherit" (Phase 128).
  * The defaults belong to {@link RoadmapConfigSchema} (the stored shape); a
  * patch has no defaults at all, by construction.
  */
 export const RoadmapConfigPatchSchema = z
-  .object({ autoSync: z.boolean(), autoPlay: z.boolean() })
+  .object({ autoSync: z.boolean().nullable(), autoPlay: z.boolean().nullable() })
   .partial();
 export type RoadmapConfigPatch = z.infer<typeof RoadmapConfigPatchSchema>;

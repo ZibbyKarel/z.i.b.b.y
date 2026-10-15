@@ -6,7 +6,7 @@ import { LevelMappingSchema } from "./level-mapping.schema";
 import {
   CreateRoadmapItemSchema,
   RoadmapConfigPatchSchema,
-  RoadmapConfigSchema,
+  RoadmapConfigResponseSchema,
   RoadmapItemIdSchema,
   RoadmapItemSchema,
   UpdateRoadmapItemSchema,
@@ -199,7 +199,7 @@ export const roadmapContract = c.router(
       path: "/projects/:projectId/roadmap/config",
       pathParams: z.object({ projectId: ProjectIdSchema }),
       responses: {
-        200: RoadmapConfigSchema,
+        200: RoadmapConfigResponseSchema,
       },
       summary: "Get a project's roadmap config (the auto-sync toggle)",
     },
@@ -217,7 +217,7 @@ export const roadmapContract = c.router(
       // that would reintroduce exactly the clobber it looks like it prevents.)
       body: RoadmapConfigPatchSchema,
       responses: {
-        200: RoadmapConfigSchema,
+        200: RoadmapConfigResponseSchema,
       },
       summary: "Update a project's roadmap config (partial merge)",
     },

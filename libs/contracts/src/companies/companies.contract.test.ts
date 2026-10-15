@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CompanySchema, companiesContract } from "../index";
+import { CompanySchema, UpdateProjectSchema, companiesContract } from "../index";
 
 describe("companiesContract", () => {
   it("lists companies under GET /api/companies", () => {
@@ -75,5 +75,29 @@ describe("company schema", () => {
         budget: { dailyTokens: 1000 },
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("Phase 128 schema additions", () => {
+  it("company accepts roadmapDefaults and levelMapping overrides", () => {
+    const parsed = CompanySchema.parse({
+      id: "c",
+      name: "C",
+      roadmapDefaults: { autoPlay: true },
+      levelMapping: { entries: [{ kind: "jira", externalLevel: "Story", target: "epic" }] },
+    });
+    expect(parsed.roadmapDefaults).toEqual({ autoPlay: true });
+    expect(parsed.levelMapping?.entries).toHaveLength(1);
+  });
+
+  it("project update accepts integrationRouting and rejects a keyless jira rule", () => {
+    const ok = UpdateProjectSchema.safeParse({
+      integrationRouting: [{ integrationId: "i", match: { kind: "github" } }],
+    });
+    expect(ok.success).toBe(true);
+    const bad = UpdateProjectSchema.safeParse({
+      integrationRouting: [{ integrationId: "i", match: { kind: "jira", labels: ["a"] } }],
+    });
+    expect(bad.success).toBe(false);
   });
 });

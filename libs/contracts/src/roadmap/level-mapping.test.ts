@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_LEVEL_MAPPING, LevelMappingSchema, resolveLevel } from "./level-mapping.schema";
+import {
+  DEFAULT_LEVEL_MAPPING,
+  LevelMappingSchema,
+  composeLevelMapping,
+  resolveLevel,
+} from "./level-mapping.schema";
 
 describe("DEFAULT_LEVEL_MAPPING", () => {
   it("parses against LevelMappingSchema", () => {
@@ -41,5 +46,24 @@ describe("resolveLevel", () => {
       ],
     };
     expect(resolveLevel(mapping, "jira", "spike")).toBe("ignore");
+  });
+});
+
+describe("composeLevelMapping", () => {
+  it("company entry wins case-insensitively; others and company-only entries are kept", () => {
+    const composed = composeLevelMapping(DEFAULT_LEVEL_MAPPING, {
+      entries: [
+        { kind: "jira", externalLevel: "story", target: "epic" },
+        { kind: "jira", externalLevel: "Spike", target: "ignore" },
+      ],
+    });
+    expect(resolveLevel(composed, "jira", "Story")).toBe("epic");
+    expect(resolveLevel(composed, "jira", "Bug")).toBe("task");
+    expect(resolveLevel(composed, "jira", "Spike")).toBe("ignore");
+    expect(resolveLevel(composed, "github", "Issue")).toBe("task");
+    expect(composed.entries).toHaveLength(DEFAULT_LEVEL_MAPPING.entries.length + 1);
+  });
+  it("is the global table when there are no overrides", () => {
+    expect(composeLevelMapping(DEFAULT_LEVEL_MAPPING)).toBe(DEFAULT_LEVEL_MAPPING);
   });
 });

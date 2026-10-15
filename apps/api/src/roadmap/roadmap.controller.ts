@@ -1,7 +1,16 @@
 import { Controller } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import { type RoadmapItem, RoadmapItemSchema, roadmapContract } from "@zibby/contracts";
+import {
+  type RoadmapConfig,
+  type RoadmapConfigResponse,
+  type RoadmapItem,
+  RoadmapItemSchema,
+  resolveRoadmapConfig,
+  roadmapContract,
+} from "@zibby/contracts";
 import { ProjectNotFoundError } from "../projects/projects.errors";
+import { ProjectsStorageService } from "../projects/projects.storage.service";
+import { ResolvedProjectService } from "../projects/resolved-project.service";
 import { collisionResistantId } from "../shared/file-storage";
 import { makeErrorMapper } from "../shared/http/error-mapping";
 import { LevelMappingStore } from "./level-mapping.store";
@@ -68,7 +77,22 @@ export class RoadmapController {
     private readonly levelMapping: LevelMappingStore,
     private readonly roadmapSource: RoadmapSourceService,
     private readonly roadmapGate: RoadmapGateService,
+    private readonly projects: ProjectsStorageService,
+    private readonly resolvedProjects: ResolvedProjectService,
   ) {}
+
+  /**
+   * The stored tri-state config plus the resolved `effective` view (project →
+   * company default → global). A dangling project id resolves with no company.
+   */
+  private async withEffective(
+    projectId: string,
+    config: RoadmapConfig,
+  ): Promise<RoadmapConfigResponse> {
+    const project = await this.projects.get(projectId).catch(() => null);
+    const company = project ? await this.resolvedProjects.resolveCompany(project) : undefined;
+    return { ...config, effective: resolveRoadmapConfig(config, company?.roadmapDefaults) };
+  }
 
   @TsRestHandler(roadmapContract)
   handler() {
@@ -181,13 +205,13 @@ export class RoadmapController {
 
       getRoadmapConfig: async ({ params: { projectId } }) => ({
         status: 200,
-        body: await this.roadmap.readConfig(projectId),
+        body: await this.withEffective(projectId, await this.roadmap.readConfig(projectId)),
       }),
 
       putRoadmapConfig: async ({ params: { projectId }, body }) => ({
         status: 200,
         // Patch, not replace — see the route's own comment in the contract.
-        body: await this.roadmap.updateConfig(projectId, body),
+        body: await this.withEffective(projectId, await this.roadmap.updateConfig(projectId, body)),
       }),
 
       getLevelMapping: async () => ({

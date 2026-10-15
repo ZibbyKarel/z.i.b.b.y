@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { AgentIdSchema } from "../agents/agent.schema";
+import { LevelMappingEntrySchema } from "../roadmap/level-mapping.schema";
+import { RoadmapDefaultsSchema } from "../roadmap/roadmap-item.schema";
 import { ProjectBudgetSchema, ProjectPersonSchema } from "../projects/project.schema";
 
 /**
@@ -26,6 +28,10 @@ export const CompanySchema = z.object({
   people: z.array(ProjectPersonSchema).optional(),
   /** Default per-engagement budget; a linked project overrides it field-by-field. */
   budget: ProjectBudgetSchema.optional(),
+  /** Phase 128 (D8): roadmap automation defaults a linked project inherits unless it overrides. */
+  roadmapDefaults: RoadmapDefaultsSchema.optional(),
+  /** Phase 128 (D9): per-`(kind, externalLevel)` overrides on top of the global level-mapping table. */
+  levelMapping: z.object({ entries: z.array(LevelMappingEntrySchema) }).optional(),
 });
 export type Company = z.infer<typeof CompanySchema>;
 

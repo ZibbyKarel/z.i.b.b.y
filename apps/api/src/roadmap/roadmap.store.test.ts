@@ -168,7 +168,7 @@ describe("RoadmapStore", () => {
 
   describe("config", () => {
     it("round-trips the per-project config", async () => {
-      expect(await store.readConfig("proj-1")).toEqual({ autoSync: false, autoPlay: false });
+      expect(await store.readConfig("proj-1")).toEqual({ autoSync: null, autoPlay: null });
       await store.writeConfig("proj-1", { autoSync: true, autoPlay: true });
       expect(await store.readConfig("proj-1")).toEqual({ autoSync: true, autoPlay: true });
       // A fresh store instance over the same dir sees the persisted config.
@@ -180,13 +180,13 @@ describe("RoadmapStore", () => {
     it("falls back to the default config on a corrupt _config.json", async () => {
       await fs.mkdir(path.join(dir, "proj-1"), { recursive: true });
       await fs.writeFile(path.join(dir, "proj-1", "_config.json"), "{ not json");
-      expect(await store.readConfig("proj-1")).toEqual({ autoSync: false, autoPlay: false });
+      expect(await store.readConfig("proj-1")).toEqual({ autoSync: null, autoPlay: null });
     });
 
     it("writeConfig() REPLACES — an omitted toggle falls back to its default", async () => {
       await store.writeConfig("proj-1", { autoSync: true, autoPlay: true });
       await store.writeConfig("proj-1", { autoSync: true });
-      expect(await store.readConfig("proj-1")).toEqual({ autoSync: true, autoPlay: false });
+      expect(await store.readConfig("proj-1")).toEqual({ autoSync: true, autoPlay: null });
     });
 
     it("updateConfig() MERGES — flipping one toggle leaves the other alone", async () => {
@@ -201,7 +201,15 @@ describe("RoadmapStore", () => {
 
     it("updateConfig() on a project with no config yet writes defaults plus the patch", async () => {
       expect(await store.updateConfig("proj-1", { autoPlay: true })).toEqual({
-        autoSync: false,
+        autoSync: null,
+        autoPlay: true,
+      });
+    });
+
+    it("updateConfig() with null resets a toggle to inherit", async () => {
+      await store.writeConfig("proj-1", { autoSync: true, autoPlay: true });
+      expect(await store.updateConfig("proj-1", { autoSync: null })).toEqual({
+        autoSync: null,
         autoPlay: true,
       });
     });

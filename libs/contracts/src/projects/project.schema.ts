@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { AvatarSchema, IsoDateTimeSchema } from "../common.schema";
 import { AgentIdSchema } from "../agents/agent.schema";
+import { IntegrationRoutingRuleSchema } from "../integrations/integration-routing";
 
 /**
  * A project's `id` doubles as the registry key and travels in a URL path param
@@ -323,6 +324,12 @@ export const ProjectSchema = z.object({
    * "no team" at read time. At most one team per project.
    */
   teamId: z.string().optional(),
+
+  /**
+   * Phase 128 (D3) — which items of a company-owned integration belong to this
+   * project. Evaluated by `matchRouting`; replaced wholesale on update.
+   */
+  integrationRouting: z.array(IntegrationRoutingRuleSchema).optional(),
 
   /**
    * Phase 76 — the canonical clone source for this project (a `https://…` or

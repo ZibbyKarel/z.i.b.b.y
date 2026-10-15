@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import type {
+  Company,
   Integration,
   KnowledgeBaseSource,
   Project,
@@ -90,6 +91,11 @@ export class ResolvedProjectService {
       company?.id,
     );
     return computeResolvedContext(project, company, companyIntegrations, projectIntegrations);
+  }
+
+  /** The project's effective company record (project → team → company), or `undefined`. */
+  async resolveCompany(project: Project): Promise<Company | undefined> {
+    return (await this.findCompany(await this.effectiveCompanyId(project))) ?? undefined;
   }
 
   /**
