@@ -1,6 +1,9 @@
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
+import { type EffectiveRoadmapConfig, resolveRoadmapConfig } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { WatcherHealthRegistry } from "../health/watcher-health.registry";
+import { ProjectsStorageService } from "../projects/projects.storage.service";
+import { ResolvedProjectService } from "../projects/resolved-project.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TickingWatcherBase } from "../shared/ticking-watcher-base";
 import { SystemConfigStore } from "../system/system-config.store";
@@ -13,17 +16,18 @@ import { RoadmapStore } from "./roadmap.store";
  * `0` disables; tests drive {@link tick} directly). Every project with a roadmap
  * directory gets two independent, per-step-guarded passes each tick:
  *
- * 1. **Auto-sync** — if the project's `RoadmapConfig.autoSync` is `true`, pull its
- *    Jira/GitHub items via `RoadmapSourceService.sync` (the same routine the
- *    manual Sync button drives). Skipped entirely for a project with the toggle
- *    off — nothing is fetched, nothing is logged.
+ * 1. **Auto-sync** — every project whose EFFECTIVE `autoSync` is `true` (own
+ *    toggle, else its company's `roadmapDefaults`, else off — Phase 128 D8) is
+ *    re-imported via `RoadmapSourceService.syncProjects`, once per integration
+ *    (a company integration feeding three opted-in projects is fetched once).
+ *    A project with the toggle off is never written — nothing is logged.
  * 2. **Gate poll** — `RoadmapGateService.reconcileRunning` +
  *    `reconcileAwaitingMerge`, run for EVERY project with a roadmap regardless of
  *    `autoSync`. This is the poll half of the two release signals (master plan
  *    "Release signals"): an operator who merges a PR straight on GitHub, with
  *    periodic re-import switched off, must still see its dependents released —
  *    the poll is a gate-lifecycle concern, not an import concern.
- * 3. **Auto-pickup** — if the project's `RoadmapConfig.autoPlay` is `true`,
+ * 3. **Auto-pickup** — if the project's effective `autoPlay` is `true`,
  *    `RoadmapGateService.autoPickup` enqueues its unblocked `todo` tasks and
  *    decomposes its never-decomposed childless epics. Skipped entirely for a
  *    project with the toggle off. Runs LAST so it sees the freshly imported items
@@ -67,6 +71,8 @@ export class RoadmapTickService
     private readonly activity: ActivityLogService,
     private readonly systemConfig: SystemConfigStore,
     private readonly watcherHealthRegistry: WatcherHealthRegistry,
+    private readonly projects: ProjectsStorageService,
+    private readonly resolvedProjects: ResolvedProjectService,
     logger: LoggerService,
   ) {
     super();
@@ -99,9 +105,22 @@ export class RoadmapTickService
    * a deleted project) never stops the sweep from reaching the rest.
    */
   async tick(): Promise<void> {
-    for (const projectId of await this.roadmap.projectIds()) {
+    const projectIds = await this.roadmap.projectIds();
+    const effective = new Map<string, EffectiveRoadmapConfig>();
+    for (const projectId of projectIds) {
+      const config = await this.effectiveConfig(projectId).catch((error: unknown) => {
+        this.log.warn("roadmap config unreadable for one project — skipped this tick", {
+          projectId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return null;
+      });
+      if (config) effective.set(projectId, config);
+    }
+    await this.syncAll([...effective].filter(([, c]) => c.autoSync).map(([id]) => id));
+    for (const [projectId, config] of effective) {
       try {
-        await this.tickProject(projectId);
+        await this.tickProject(projectId, config);
       } catch (error) {
         this.log.warn("roadmap tick failed for one project — others unaffected", {
           projectId,
@@ -111,9 +130,19 @@ export class RoadmapTickService
     }
   }
 
-  private async tickProject(projectId: string): Promise<void> {
-    await this.syncOne(projectId);
-    // Independent of the sync step above (and of each other): a poll must still
+  /**
+   * Phase 128 (D8) — the project's toggles with inheritance applied: own value,
+   * else its effective company's `roadmapDefaults`, else the global `false`.
+   */
+  private async effectiveConfig(projectId: string): Promise<EffectiveRoadmapConfig> {
+    const config = await this.roadmap.readConfig(projectId);
+    const project = await this.projects.get(projectId).catch(() => null);
+    const company = project ? await this.resolvedProjects.resolveCompany(project) : undefined;
+    return resolveRoadmapConfig(config, company?.roadmapDefaults);
+  }
+
+  private async tickProject(projectId: string, config: EffectiveRoadmapConfig): Promise<void> {
+    // Independent of the sync step (and of each other): a poll must still
     // run for a project whose sync just failed, and vice versa.
     await this.gate.reconcileRunning(projectId).catch((error: unknown) => {
       this.log.warn("roadmap reconcileRunning failed for one project", {
@@ -130,13 +159,11 @@ export class RoadmapTickService
     // LAST on purpose: sync has just imported whatever is new, and both reconcile
     // passes have just freed the slots of everything that finished — so pickup
     // sees the most current picture this tick can offer.
-    await this.autoPlayOne(projectId);
+    if (config.autoPlay) await this.autoPlayOne(projectId);
   }
 
-  /** Auto-pickup via `RoadmapGateService.autoPickup`, but only when the project opted in. */
+  /** Auto-pickup via `RoadmapGateService.autoPickup` (the caller checked the effective `autoPlay`). */
   private async autoPlayOne(projectId: string): Promise<void> {
-    const config = await this.roadmap.readConfig(projectId);
-    if (!config.autoPlay) return;
     try {
       await this.gate.autoPickup(projectId);
     } catch (error) {
@@ -147,22 +174,26 @@ export class RoadmapTickService
     }
   }
 
-  /** Re-import via `RoadmapSourceService.sync`, but only when the project opted in. */
-  private async syncOne(projectId: string): Promise<void> {
-    const config = await this.roadmap.readConfig(projectId);
-    if (!config.autoSync) return;
+  /**
+   * Re-import every opted-in project (effective `autoSync`) via
+   * `RoadmapSourceService.syncProjects`: each integration is fetched once per
+   * tick and writes only to the opted-in projects it feeds (Phase 128 D7).
+   */
+  private async syncAll(projectIds: string[]): Promise<void> {
+    if (projectIds.length === 0) return;
     try {
-      const result = await this.source.sync(projectId);
-      if (result.imported > 0 || result.archived > 0) {
-        void this.activity.record({
-          kind: "roadmap-sync",
-          summary: `Roadmap sync: ${result.imported} imported, ${result.archived} archived`,
-          refs: { projectId },
-        });
+      const results = await this.source.syncProjects(projectIds);
+      for (const [projectId, result] of results) {
+        if (result.imported > 0 || result.archived > 0) {
+          void this.activity.record({
+            kind: "roadmap-sync",
+            summary: `Roadmap sync: ${result.imported} imported, ${result.archived} archived`,
+            refs: { projectId },
+          });
+        }
       }
     } catch (error) {
-      this.log.warn("roadmap auto-sync failed for one project", {
-        projectId,
+      this.log.warn("roadmap auto-sync failed", {
         error: error instanceof Error ? error.message : String(error),
       });
     }

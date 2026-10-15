@@ -313,6 +313,29 @@ describe("ChannelWatcherService", () => {
     expect((await integrations.get("gh")).status).toBe("connected");
   });
 
+  it("a company-owned github integration unions the PR numbers of its same-repo inheriting projects (phase 128)", async () => {
+    await integrations.create({ ...github("co-gh"), projectId: undefined, companyId: "co" });
+    await credentials.write("co-gh", { token: "ghp" });
+
+    const calls: Array<{ integrationId: string; ctx: PollContext | undefined }> = [];
+    const numbers: Record<string, number[]> = { a: [1, 2], b: [2, 3], other: [99] };
+    const moduleRef = {
+      get: () => ({
+        inheritingProjects: async () => [
+          { id: "a", gitRemote: "git@github.com:acme/app.git" },
+          { id: "b", gitRemote: "https://github.com/acme/app" },
+          { id: "other", gitRemote: "https://github.com/acme/other" },
+        ],
+        numbersFor: async (projectId: string) => numbers[projectId] ?? [],
+      }),
+    } as unknown as ModuleRef;
+    const watcher = makeWatcher(spyRegistry(calls), moduleRef);
+
+    await watcher.tick();
+
+    expect(calls[0]?.ctx).toEqual({ zibbyPrNumbers: [1, 2, 3] });
+  });
+
   it("caps the PR-number set — the adapter turns each number into its own request", async () => {
     await integrations.create(github("gh"));
     await credentials.write("gh", { token: "ghp" });

@@ -6,7 +6,12 @@ import {
   Optional,
 } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
-import type { ChannelItem, CredentialsInput, Integration } from "@zibby/contracts";
+import {
+  type ChannelItem,
+  type CredentialsInput,
+  type Integration,
+  repoFromGitRemote,
+} from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { CredentialsStore } from "../integrations/credentials.store";
 import { IntegrationsStorageService } from "../integrations/integrations.storage.service";
@@ -233,15 +238,42 @@ export class ChannelWatcherService
     }
   }
 
+  /**
+   * The locator keys on projectId: a project-owned integration asks for its owner;
+   * a company-owned one (Phase 128) unions the numbers of its inheriting projects
+   * whose `gitRemote` is this integration's repo (another repo's PR numbers would
+   * name the wrong PRs). Fail-open like {@link zibbyPrNumbersFor}.
+   */
+  private async zibbyPrNumbersForIntegration(integration: Integration): Promise<readonly number[]> {
+    if (integration.projectId) return this.zibbyPrNumbersFor(integration.projectId);
+    if (!integration.companyId || integration.config.kind !== "github") return [];
+    const repo = integration.config.repo.toLowerCase();
+    try {
+      const { ResolvedProjectService } = await import("../projects/resolved-project.service");
+      const resolved = this.moduleRef.get(ResolvedProjectService, { strict: false });
+      const union = new Set<number>();
+      for (const project of await resolved.inheritingProjects(integration)) {
+        if (repoFromGitRemote(project.gitRemote) !== repo) continue;
+        for (const n of await this.zibbyPrNumbersFor(project.id)) union.add(n);
+      }
+      return [...union].slice(0, MAX_ZIBBY_PR_READS);
+    } catch (err) {
+      this.log.debug("company zibby PR lookup failed (fail-open, mentions-only this poll)", {
+        integrationId: integration.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return [];
+    }
+  }
+
   private async pollOne(integration: Integration, creds: CredentialsInput): Promise<string[]> {
     const adapter = this.registry.resolve(integration.kind);
     const cursor = await this.store.readCursor(integration.id);
-    // Only a github integration owned by a project (never a company — the locator
-    // keys on projectId) gets the ZIBBY-PR half of the union; every other kind
-    // (and a company-owned github integration) polls with no ctx at all.
+    // Only a github integration gets the ZIBBY-PR half of the union; every other
+    // kind polls with no ctx at all.
     const ctx: PollContext | undefined =
-      integration.kind === "github" && integration.projectId
-        ? { zibbyPrNumbers: await this.zibbyPrNumbersFor(integration.projectId) }
+      integration.kind === "github"
+        ? { zibbyPrNumbers: await this.zibbyPrNumbersForIntegration(integration) }
         : undefined;
     // M8: retry a transient poll failure with exponential backoff before giving up.
     // Only the network read retries; item persistence below is idempotent (dedup-by-id)

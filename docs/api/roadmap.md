@@ -388,6 +388,21 @@ error, mirroring `ProjectPrService.listOpen`'s "no link is not an error" posture
 Sync is **read-only toward Jira and GitHub** — nothing is ever written back (Law 3),
 and imported issue bodies are data, never instructions (Law 4).
 
+### Company-owned integrations (Phase 128)
+
+Sync runs **per integration**: one fetch, then each item is distributed to projects.
+A project-owned integration sends every item to its project (unchanged). A company-owned
+one feeds the company's projects that don't override its kind with their own integration;
+once any of them has an `integrationRouting` rule for it, `matchRouting` decides per item —
+exactly one matching project or the item is not imported (`skipped` + a note; ≥2 matches
+is never first-match). Until then every inheriting project receives everything (the
+pre-routing behaviour). A Jira rule's `jql` runs server-side AND'ed with the
+integration's own scope, so routing only ever narrows what the integration fetches.
+The project-scoped `POST .../roadmap/sync` fetches the whole integration but writes only
+that project's share. Level mapping is the global table with the integration's company
+`levelMapping` overrides on top (owning company, or the owning project's effective
+company); `ensureLevels` still appends unseen levels to the global table only.
+
 ## Play + the dependency gate (125e)
 
 `RoadmapGateService` (`apps/api/src/roadmap/roadmap-gate.service.ts`) is the one
@@ -766,11 +781,13 @@ Item files (`.zibby/data/roadmap/<project>/<id>.json`) are a sync cache of Jira/
 gitignored; only the `_`-prefixed settings files (`_config.json`, `_level-mapping.json`) are
 versioned. Each tick:
 
-1. re-syncs every project whose per-project `_config.json` sets `autoSync: true`
-   (projects that never opted in are skipped, but still polled — see below);
+1. re-syncs every project whose EFFECTIVE `autoSync` is true (own toggle, else its
+   company's `roadmapDefaults`, else off) via `RoadmapSourceService.syncProjects` —
+   each integration once per tick, writing only to opted-in projects (projects that
+   never opted in are skipped, but still polled — see below);
 2. drives `reconcileRunning` + `reconcileAwaitingMerge`;
-3. runs `RoadmapGateService.autoPickup` for every project whose `_config.json`
-   sets `autoPlay: true`.
+3. runs `RoadmapGateService.autoPickup` for every project whose effective `autoPlay`
+   is true (a company default `autoPlay: true` enables it for inheriting projects).
 
 Step 2 is the **poll half** of the two release signals, and it runs regardless of
 `autoSync`. It is what catches a PR **merged directly on GitHub**, where the eager

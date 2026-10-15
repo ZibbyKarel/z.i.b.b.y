@@ -3,6 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type {
   Attachment,
+  Company,
   CredentialsInput,
   Integration,
   JiraConfig,
@@ -46,6 +47,10 @@ async function buildService(opts: {
   creds?: Record<string, CredentialsInput | null>;
   fetchImpl: typeof fetch;
   attachmentStore?: { save: ReturnType<typeof fakeAttachmentStorage>["save"] };
+  /** Phase 128: the integration's company (level-mapping overrides). */
+  company?: Company;
+  /** Phase 128: projects inheriting a company-owned integration (also resolvable by `projects.get`). */
+  companyProjects?: Project[];
 }): Promise<{
   service: RoadmapSourceService;
   roadmap: RoadmapStore;
@@ -56,11 +61,18 @@ async function buildService(opts: {
   const levelMapping = new LevelMappingStore(opts.levelMappingFile);
   const projects = {
     get: async (id: string) => {
-      if (id !== PROJECT.id) throw new ProjectNotFoundError(id);
-      return PROJECT;
+      if (id === PROJECT.id) return PROJECT;
+      const other = opts.companyProjects?.find((p) => p.id === id);
+      if (!other) throw new ProjectNotFoundError(id);
+      return other;
     },
   };
-  const resolvedProjects = { resolveIntegrations: async () => opts.integrations };
+  const resolvedProjects = {
+    resolveIntegrations: async () => opts.integrations,
+    integrationCompany: async () => opts.company,
+    inheritingProjects: async (integration: Integration) =>
+      integration.companyId ? (opts.companyProjects ?? []) : [],
+  };
   const creds = opts.creds ?? {};
   const credentials = {
     read: async (integrationId: string) => creds[integrationId] ?? { token: "tok" },
@@ -1284,6 +1296,193 @@ describe("RoadmapSourceService", () => {
       });
       const result = await service.sync(PROJECT.id, "jira");
       expect(result).toEqual({ imported: 0, updated: 0, archived: 0, skipped: 0, notes: [] });
+    });
+  });
+
+  describe("Phase 128 — company-owned integrations", () => {
+    const COMPANY_JIRA: Integration = {
+      id: "co-jira",
+      kind: "jira",
+      companyId: "shoptet",
+      enabled: true,
+      status: "connected",
+      hasCredentials: true,
+      config: { kind: "jira", baseUrl: JIRA_BASE_URL, email: "me@acme.com" },
+    };
+    const routed = (id: string, match: Record<string, unknown>): Project =>
+      ({
+        id,
+        name: id,
+        path: `/repos/${id}`,
+        integrationRouting: [{ integrationId: COMPANY_JIRA.id, match: { kind: "jira", ...match } }],
+      }) as Project;
+    const CMS = routed("cms", { projectKey: "CMS" });
+    const CLI = routed("cli", { projectKey: "CLI", labels: ["cli"] });
+    const DUP = routed("dup", { projectKey: "CLI" });
+    const story = (key: string, labels: string[] = []) => ({
+      key,
+      fields: {
+        summary: key,
+        issuetype: { name: "Story" },
+        status: { name: "To Do", statusCategory: { key: "new" } },
+        labels,
+      },
+    });
+    const ids = async (roadmap: RoadmapStore, projectId: string) =>
+      (await roadmap.list(projectId)).map((item) => item.source.externalKey).sort();
+
+    it("fetches once and distributes by routing rules; 0 or ≥2 matches are skipped with a note", async () => {
+      let searches = 0;
+      const fetchImpl = (async (url: string | URL) => {
+        if (String(url).includes("/search/jql")) {
+          searches += 1;
+          return jsonResponse({
+            issues: [story("CMS-1"), story("CLI-1", ["cli"]), story("CLI-2"), story("ZZ-1")],
+          });
+        }
+        return jsonResponse({}, 404);
+      }) as unknown as typeof fetch;
+      const { service, roadmap } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [COMPANY_JIRA],
+        companyProjects: [CMS, CLI, DUP],
+        fetchImpl,
+      });
+
+      const results = await service.syncProjects(["cms", "cli", "dup"]);
+
+      expect(searches).toBe(1); // one integration → one fetch, not one per project
+      expect(await ids(roadmap, "cms")).toEqual(["CMS-1"]);
+      // CLI-1 matches both `cli` (label) and `dup` (key only) → ambiguous, not imported.
+      expect(await ids(roadmap, "cli")).toEqual([]);
+      // CLI-2 has no `cli` label → only `dup` matches.
+      expect(await ids(roadmap, "dup")).toEqual(["CLI-2"]);
+      const cms = results.get("cms");
+      expect(cms?.imported).toBe(1);
+      expect(cms?.skipped).toBe(2); // CLI-1 (2 matches) + ZZ-1 (0 matches)
+      expect(cms?.notes.map((n) => n.note)).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining("CLI-1 matches 2 projects"),
+          expect.stringContaining("ZZ-1 matches no project"),
+        ]),
+      );
+      // Item ids stay keyed by (integration, externalId).
+      expect((await roadmap.list("cms"))[0]?.id).toBe(roadmapItemIdForSource("co-jira", "CMS-1"));
+    });
+
+    it("a project-scoped sync writes only that project's share", async () => {
+      const fetchImpl = (async (url: string | URL) =>
+        String(url).includes("/search/jql")
+          ? jsonResponse({ issues: [story("CMS-1"), story("CLI-1", ["cli"])] })
+          : jsonResponse({}, 404)) as unknown as typeof fetch;
+      const { service, roadmap } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [COMPANY_JIRA],
+        companyProjects: [CMS, CLI],
+        fetchImpl,
+      });
+
+      const result = await service.sync("cms");
+
+      expect(result.imported).toBe(1);
+      expect(await ids(roadmap, "cms")).toEqual(["CMS-1"]);
+      expect(await ids(roadmap, "cli")).toEqual([]); // not written from a cms-scoped call
+    });
+
+    it("runs a rule's JQL server-side AND'ed with the integration scope", async () => {
+      const jqls: string[] = [];
+      const fetchImpl = (async (url: string | URL) => {
+        const u = new URL(String(url));
+        if (!u.pathname.endsWith("/search/jql")) return jsonResponse({}, 404);
+        const jql = u.searchParams.get("jql") ?? "";
+        jqls.push(jql);
+        return jsonResponse({
+          issues: jql.startsWith("(sprint") ? [story("X-2")] : [story("X-1"), story("X-2")],
+        });
+      }) as unknown as typeof fetch;
+      const { service, roadmap } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [COMPANY_JIRA],
+        companyProjects: [routed("cms", { jql: "sprint in openSprints() ORDER BY rank" })],
+        fetchImpl,
+      });
+
+      await service.syncProjects(["cms"]);
+
+      expect(jqls).toContain(
+        "(sprint in openSprints()) AND (assignee = currentUser()) ORDER BY created ASC",
+      );
+      expect(await ids(roadmap, "cms")).toEqual(["X-2"]);
+    });
+
+    it("applies the company's level-mapping overrides on top of the global table", async () => {
+      const fetchImpl = (async (url: string | URL) =>
+        String(url).includes("/search/jql")
+          ? jsonResponse({
+              issues: [
+                story("CMS-1"),
+                {
+                  ...story("CMS-2"),
+                  fields: { ...story("CMS-2").fields, issuetype: { name: "Bug" } },
+                },
+              ],
+            })
+          : jsonResponse({}, 404)) as unknown as typeof fetch;
+      const { service, roadmap } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [COMPANY_JIRA],
+        companyProjects: [CMS],
+        company: {
+          id: "shoptet",
+          name: "Shoptet",
+          levelMapping: { entries: [{ kind: "jira", externalLevel: "story", target: "ignore" }] },
+        } as Company,
+        fetchImpl,
+      });
+
+      const result = await service.syncProjects(["cms"]);
+
+      expect(await ids(roadmap, "cms")).toEqual(["CMS-2"]);
+      expect(result.get("cms")?.skipped).toBe(1);
+      // The global table itself is untouched by the company override.
+      const global = await new LevelMappingStore(levelMappingFile).read();
+      expect(global.entries.find((e) => e.externalLevel === "Story")?.target).toBe("task");
+    });
+
+    it("routes a company GitHub integration to the project whose gitRemote is its repo", async () => {
+      const COMPANY_GITHUB: Integration = {
+        ...GITHUB_INTEGRATION,
+        id: "co-gh",
+        projectId: undefined,
+        companyId: "shoptet",
+      };
+      const gh = (id: string, gitRemote: string): Project =>
+        ({
+          id,
+          name: id,
+          path: `/repos/${id}`,
+          gitRemote,
+          integrationRouting: [{ integrationId: "co-gh", match: { kind: "github" } }],
+        }) as Project;
+      const { service, roadmap } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [COMPANY_GITHUB],
+        companyProjects: [
+          gh("app", "git@github.com:acme/app.git"),
+          gh("web", "https://github.com/acme/web"),
+        ],
+        fetchImpl: githubFetch({ issues: githubIssuesFull, milestones: githubMilestonesFull }),
+      });
+
+      const results = await service.syncProjects(["app", "web"]);
+
+      expect(results.get("app")?.imported).toBe(4);
+      expect(await roadmap.list("web")).toEqual([]);
     });
   });
 });

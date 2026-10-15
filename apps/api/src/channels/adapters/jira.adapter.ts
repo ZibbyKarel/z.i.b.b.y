@@ -51,6 +51,8 @@ interface JiraIssue {
     watches?: { isWatching?: boolean };
     description?: unknown;
     comment?: { total?: number; comments?: JiraComment[] };
+    components?: { name?: string }[];
+    labels?: string[];
   };
 }
 
@@ -173,7 +175,8 @@ export class JiraChannelAdapter implements ChannelAdapter {
     const params = new URLSearchParams({
       jql: clause,
       maxResults: "50",
-      fields: "summary,updated,reporter,assignee,watches,description,comment",
+      // `components,labels` ride along in `raw` for triage routing (Phase 128 D10).
+      fields: "summary,updated,reporter,assignee,watches,description,comment,components,labels",
     });
     // `/search/jql` — the legacy `/rest/api/3/search` was removed by Atlassian
     // (May 2025, CHANGE-2046) and answers 410 Gone; the `issues`/`errorMessages`

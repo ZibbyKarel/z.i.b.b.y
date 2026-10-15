@@ -1,13 +1,16 @@
 import { Injectable, type OnModuleInit, Optional } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
-import type {
-  ChannelItem,
-  Decision,
-  GateRule,
-  GlobalGateRule,
-  Mandate,
-  Project,
-  TriageVerdict,
+import {
+  type ChannelItem,
+  type Decision,
+  type GateRule,
+  type GlobalGateRule,
+  type Integration,
+  type Mandate,
+  type Project,
+  type RoutingItem,
+  type TriageVerdict,
+  matchRouting,
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service";
@@ -44,6 +47,34 @@ const DECISION_RANK: Record<Decision, number> = { allow: 0, notify: 1, ask: 2, d
 /** A GitHub pull request (the adapter stamps PRs with a `/pull/<n>` url). */
 function isPullRequest(item: ChannelItem): boolean {
   return item.kind === "github" && /\/pull\/\d+$/.test(item.url ?? "");
+}
+
+/** The routing descriptor of an inbound item (D10), or `null` when it carries too little to route. */
+function routingItemOf(item: ChannelItem): RoutingItem | null {
+  const channel = item.externalRef.channel;
+  if (item.kind === "slack" && channel) {
+    return { integrationId: item.integrationId, kind: "slack", slack: { channel } };
+  }
+  if (item.kind === "github" && channel) {
+    return { integrationId: item.integrationId, kind: "github", github: { repo: channel } };
+  }
+  const key = item.externalRef.messageId;
+  if (item.kind === "jira" && key) {
+    const fields = (
+      item.raw as { issue?: { fields?: { components?: unknown; labels?: unknown } } } | null
+    )?.issue?.fields;
+    const strings = (v: unknown) =>
+      Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+    const components = Array.isArray(fields?.components)
+      ? strings(fields.components.map((c: { name?: unknown }) => c?.name))
+      : [];
+    return {
+      integrationId: item.integrationId,
+      kind: "jira",
+      jira: { projectKey: key.replace(/-\d+$/, ""), components, labels: strings(fields?.labels) },
+    };
+  }
+  return null;
 }
 
 /**
@@ -180,9 +211,17 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     const owned = integration?.projectId
       ? (projects.find((p) => p.id === integration.projectId) ?? null)
       : null;
+    // Phase 128 (D10): a company integration with routing rules is attributed by the
+    // rules alone; 0 or ≥2 matches leave it unattributed and notify-only.
+    const routed = owned || !integration ? undefined : await this.routeByRules(item, integration);
+    const unroutable = routed === null;
     const matched =
       owned ??
-      matchProject(projects, { text: `${item.text} ${integration?.name ?? item.integrationId}` });
+      (routed === undefined
+        ? matchProject(projects, {
+            text: `${item.text} ${integration?.name ?? item.integrationId}`,
+          })
+        : routed);
     // Enforce per-project autonomy policy (M2): VIP escalation and respond_as.
     // Phase 70: VIP status is checked against the project's EFFECTIVE roster (its
     // company's canonical people merged with its own) — a company VIP escalates
@@ -216,7 +255,7 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     // reply. ZIBBY only decides whether the item needs the operator and, if so, surfaces
     // a one-line summary they can act on — inbound mail is data to be triaged for
     // attention, not a command to execute (the autonomy contract: surface and wait).
-    if (this.isNotifyOnly(item.kind)) {
+    if (unroutable || this.isNotifyOnly(item.kind)) {
       return this.handleNotifyOnly(triaged, effectiveVerdict, degraded);
     }
 
@@ -276,6 +315,38 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
       tier: verdict.tier,
     });
     return pending;
+  }
+
+  /**
+   * Phase 128 (D10) — attribute an item of a COMPANY-owned integration by the
+   * inheriting projects' routing rules: the single matching project, `null` for
+   * 0 or ≥2 matches, or `undefined` when no project has a rule for it (caller
+   * falls back to the text matcher). A `jql` rule can't be evaluated here without a
+   * remote call, so it is judged on its `projectKey`/`components`/`labels` only and
+   * a jql-only rule never matches in triage.
+   */
+  private async routeByRules(
+    item: ChannelItem,
+    integration: Integration,
+  ): Promise<Project | null | undefined> {
+    if (!integration.companyId) return undefined;
+    const inheriting = await this.resolved.inheritingProjects(integration).catch(() => []);
+    const hasRules = inheriting.some((p) =>
+      (p.integrationRouting ?? []).some((r) => r.integrationId === integration.id),
+    );
+    if (!hasRules) return undefined;
+    const routingItem = routingItemOf(item);
+    if (!routingItem) return null;
+    const triageable = inheriting.map((p) => ({
+      ...p,
+      integrationRouting: (p.integrationRouting ?? []).map((rule) =>
+        rule.match.kind === "jira" && rule.match.jql && rule.match.projectKey
+          ? { ...rule, match: { ...rule.match, jql: undefined } }
+          : rule,
+      ),
+    }));
+    const ids = matchRouting(routingItem, triageable);
+    return ids.length === 1 ? (inheriting.find((p) => p.id === ids[0]) ?? null) : null;
   }
 
   // ---- Notify-only channels (email): surface, never act -----------------------

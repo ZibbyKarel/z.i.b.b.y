@@ -59,6 +59,7 @@ function build(
     },
   };
   const projectsStore = {
+    list: async () => projects,
     get: async (id: string) => {
       const found = projects.find((p) => p.id === id);
       if (!found) throw new ProjectNotFoundError(id);
@@ -207,6 +208,55 @@ describe("ResolvedProjectService", () => {
       const alpha = project({ id: "alpha", companyId: "acme", teamId: "devrel" });
       const service = build({ companies: [acme, shoptet], teams: [devrel] });
       expect(await service.resolveBudget(alpha)).toEqual({ dailyRuns: 10 });
+    });
+  });
+
+  describe("Phase 128 — company-owned integration fan-out", () => {
+    const companyJira = integration({
+      id: "co-jira",
+      kind: "jira",
+      companyId: "co",
+      config: { kind: "jira", baseUrl: "https://co.atlassian.net", email: "me@co" },
+    });
+
+    it("inheritingProjects: the company's projects (direct or via team), minus a same-kind override", async () => {
+      const service = build({
+        companies: [{ id: "co", name: "Co" }],
+        teams: [team({ id: "t", companyId: "co" })],
+        integrations: [
+          companyJira,
+          integration({
+            id: "own-jira",
+            kind: "jira",
+            projectId: "overrides",
+            config: { kind: "jira", baseUrl: "https://own.atlassian.net", email: "me@own" },
+          }),
+          integration({ id: "own-slack", kind: "slack", projectId: "direct" }),
+        ],
+        projects: [
+          project({ id: "direct", companyId: "co" }),
+          project({ id: "via-team", teamId: "t" }),
+          project({ id: "overrides", companyId: "co" }),
+          project({ id: "elsewhere", companyId: "other" }),
+        ],
+      });
+
+      const ids = (await service.inheritingProjects(companyJira)).map((p) => p.id);
+
+      expect(ids).toEqual(["direct", "via-team"]);
+    });
+
+    it("integrationCompany: the owner company, or the owning project's effective company", async () => {
+      const co: Company = { id: "co", name: "Co" };
+      const service = build({
+        companies: [co],
+        projects: [project({ id: "p", companyId: "co" })],
+      });
+      const own = integration({ id: "own", kind: "jira", projectId: "p" });
+
+      expect(await service.integrationCompany(companyJira)).toEqual(co);
+      expect(await service.integrationCompany(own)).toEqual(co);
+      expect(await service.inheritingProjects(own)).toEqual([]);
     });
   });
 });

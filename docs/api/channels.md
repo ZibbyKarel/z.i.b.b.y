@@ -371,6 +371,11 @@ client-driven write; it can't fake a verdict, only retire a surfaced item).
 **Project attribution:** an item is attributed to a project via the stored
 `integration.projectId` (the authoritative owner); the text/name heuristic
 `matchProject` is only a fallback for integrations with no stored project.
+Phase 128: for a company-owned integration that any inheriting project has an
+`integrationRouting` rule for, the rules alone decide (`matchRouting` over the item's
+Jira key/components/labels, GitHub repo or Slack channel); 0 or ≥2 matches leave the
+item unattributed and notify-only (no dispatch, no reply draft). A `jql` rule is judged
+on its other fields only in triage, so a jql-only rule never matches there.
 `projectId` rides into `createTask` as a server-derived label (never
 authorization — Law 4). Channel-triage's `createTask` call also stamps
 `source: "channel"` (ZB-04a / O-18) — server-derived, never client-asserted, matching

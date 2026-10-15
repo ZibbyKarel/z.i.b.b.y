@@ -14,8 +14,13 @@ import type {
   RoadmapSourceStatus,
   RoadmapSyncResult,
 } from "@zibby/contracts";
-import type { InboxSourceError } from "@zibby/contracts";
-import { resolveLevel, roadmapItemIdForSource } from "@zibby/contracts";
+import type { InboxSourceError, RoutingItem } from "@zibby/contracts";
+import {
+  composeLevelMapping,
+  matchRouting,
+  resolveLevel,
+  roadmapItemIdForSource,
+} from "@zibby/contracts";
 import { CredentialsStore } from "../integrations/credentials.store";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ResolvedProjectService } from "../projects/resolved-project.service";
@@ -119,6 +124,8 @@ interface JiraSearchIssue {
     assignee?: { accountId?: string } | null;
     reporter?: { accountId?: string } | null;
     watches?: { isWatching?: boolean };
+    components?: { name?: string }[];
+    labels?: string[];
   };
 }
 interface JiraSearchResponse {
@@ -161,6 +168,76 @@ interface GitHubPull {
 /** PAT/API-token from the closed credentials union (null if absent) — same helper every adapter has. */
 function tokenOf(creds: CredentialsInput | null): string | null {
   return creds && "token" in creds ? creds.token : null;
+}
+
+type JiraIntegration = Integration & { config: JiraConfig };
+type GitHubIntegration = Integration & { config: GitHubConfig };
+
+/** Where one item goes (Phase 128 D7): the write-target project ids, or why it can't be routed. */
+type Routed = string[] | { reason: string };
+
+const emptySummary = (): RoadmapSyncResult => ({
+  imported: 0,
+  updated: 0,
+  archived: 0,
+  skipped: 0,
+  notes: [],
+});
+
+function summaryFor(results: Map<string, RoadmapSyncResult>, projectId: string): RoadmapSyncResult {
+  let summary = results.get(projectId);
+  if (!summary) results.set(projectId, (summary = emptySummary()));
+  return summary;
+}
+
+function recordUpsert(summary: RoadmapSyncResult, outcome: UpsertOutcome): void {
+  summary[outcome.outcome] += 1;
+  for (const note of outcome.notes) summary.notes.push({ itemId: outcome.itemId, note });
+}
+
+function setFor(sets: Map<string, Set<string>>, key: string): Set<string> {
+  let set = sets.get(key);
+  if (!set) sets.set(key, (set = new Set()));
+  return set;
+}
+
+/** The first Jira and the first GitHub integration (today's "one of each" rule), narrowed by `source`. */
+function syncableIntegrations(
+  integrations: Integration[],
+  source?: "jira" | "github",
+): (JiraIntegration | GitHubIntegration)[] {
+  const jira =
+    source === "github"
+      ? undefined
+      : integrations.find((i): i is JiraIntegration => i.config.kind === "jira");
+  const github =
+    source === "jira"
+      ? undefined
+      : integrations.find((i): i is GitHubIntegration => i.config.kind === "github");
+  return [...(jira ? [jira] : []), ...(github ? [github] : [])];
+}
+
+/**
+ * The integration's own Jira scope without `ORDER BY` — a routing rule's `jql` is
+ * AND'ed with it, so routing can only narrow what the integration already fetches (D5).
+ */
+function jiraScopeClause(config: JiraConfig): string {
+  if (config.jql) return config.jql.replace(/\s+ORDER\s+BY\s[\s\S]*$/i, "");
+  return config.projectKey ? `project = ${config.projectKey}` : "assignee = currentUser()";
+}
+
+function jiraRoutingItem(integrationId: string, key: string, issue: JiraSearchIssue): RoutingItem {
+  return {
+    integrationId,
+    kind: "jira",
+    jira: {
+      projectKey: key.replace(/-\d+$/, ""),
+      components: (issue.fields?.components ?? [])
+        .map((c) => c.name)
+        .filter((name): name is string => typeof name === "string"),
+      labels: issue.fields?.labels ?? [],
+    },
+  };
 }
 
 function isRoadmapLevel(target: LevelMappingTarget): target is RoadmapItemLevel {
@@ -376,48 +453,39 @@ export class RoadmapSourceService {
   async sync(projectId: string, source?: "jira" | "github"): Promise<RoadmapSyncResult> {
     const project: Project = await this.projects.get(projectId); // 404 before anything else
     const integrations = await this.resolvedProjects.resolveIntegrations(project);
-    const jira =
-      source === "github"
-        ? undefined
-        : integrations.find(
-            (integration): integration is Integration & { config: JiraConfig } =>
-              integration.config.kind === "jira",
-          );
-    const github =
-      source === "jira"
-        ? undefined
-        : integrations.find(
-            (integration): integration is Integration & { config: GitHubConfig } =>
-              integration.config.kind === "github",
-          );
-
-    const summary: RoadmapSyncResult = {
-      imported: 0,
-      updated: 0,
-      archived: 0,
-      skipped: 0,
-      notes: [],
-    };
-    if (!jira && !github) return summary;
-
-    // PR lookup for linking is resolved independently of the `source` filter
-    // — a `source: "jira"` sync must still be able to link an existing PR.
-    const githubForPrs = integrations.find(
-      (integration): integration is Integration & { config: GitHubConfig } =>
-        integration.config.kind === "github",
-    );
-
-    if (jira) {
-      await this.recordOutcome(projectId, "jira", jira.id, summary, () =>
-        this.syncJira(projectId, jira, summary, githubForPrs),
-      );
+    const results = new Map<string, RoadmapSyncResult>();
+    // Project-scoped: a company integration is fetched whole, but only THIS project's share is written.
+    const writeTo = new Set([projectId]);
+    for (const integration of syncableIntegrations(integrations, source)) {
+      await this.syncIntegration(integration, writeTo, results);
     }
-    if (github) {
-      await this.recordOutcome(projectId, "github", github.id, summary, () =>
-        this.syncGithub(projectId, github, summary),
-      );
+    return summaryFor(results, projectId);
+  }
+
+  /**
+   * Phase 128 (D7) — the auto-sync tick's entry point: each integration that feeds
+   * any of `projectIds` is synced ONCE (fetch once, distribute), writing only to
+   * the projects in `projectIds` it feeds. Per-project summaries; an unknown
+   * project id is skipped.
+   */
+  async syncProjects(projectIds: Iterable<string>): Promise<Map<string, RoadmapSyncResult>> {
+    const groups = new Map<string, { integration: Integration; writeTo: Set<string> }>();
+    for (const projectId of projectIds) {
+      const project = await this.projects.get(projectId).catch(() => null);
+      if (!project) continue;
+      for (const integration of syncableIntegrations(
+        await this.resolvedProjects.resolveIntegrations(project),
+      )) {
+        const group = groups.get(integration.id) ?? { integration, writeTo: new Set<string>() };
+        group.writeTo.add(projectId);
+        groups.set(integration.id, group);
+      }
     }
-    return summary;
+    const results = new Map<string, RoadmapSyncResult>();
+    for (const { integration, writeTo } of groups.values()) {
+      await this.syncIntegration(integration, writeTo, results);
+    }
+    return results;
   }
 
   /** Every source's last sync failure that hasn't been cleared by a clean sync since. */
@@ -425,52 +493,139 @@ export class RoadmapSourceService {
     return [...this.failures.values()];
   }
 
-  private async recordOutcome(
-    projectId: string,
-    source: "jira" | "github",
-    integrationId: string,
-    summary: RoadmapSyncResult,
-    run: () => Promise<void>,
+  private async syncIntegration(
+    integration: Integration,
+    writeTo: ReadonlySet<string>,
+    results: Map<string, RoadmapSyncResult>,
   ): Promise<void> {
-    const key = `${projectId}:${source}`;
+    const config = integration.config;
+    if (config.kind !== "jira" && config.kind !== "github") return;
+    const source = config.kind;
     try {
-      await run();
-      this.failures.delete(key);
+      if (config.kind === "jira") {
+        await this.syncJira({ ...integration, config }, writeTo, results);
+      } else {
+        await this.syncGithub({ ...integration, config }, writeTo, results);
+      }
+      for (const projectId of writeTo) this.failures.delete(`${projectId}:${source}`);
     } catch (error) {
       const message = (error as Error).message;
-      summary.notes.push({ itemId: integrationId, note: `${source} sync failed: ${message}` });
-      this.failures.set(key, { projectId, source, message: message || "unknown error" });
+      for (const projectId of writeTo) {
+        summaryFor(results, projectId).notes.push({
+          itemId: integration.id,
+          note: `${source} sync failed: ${message}`,
+        });
+        this.failures.set(`${projectId}:${source}`, {
+          projectId,
+          source,
+          message: message || "unknown error",
+        });
+      }
     }
+  }
+
+  /**
+   * Phase 128 (D1/D7) — how items of `integration` are distributed. A project-owned
+   * integration, or a company one no inheriting project has a routing rule for yet,
+   * sends every item to every write target (pre-routing behaviour). Otherwise
+   * `matchRouting` over the inheriting projects decides: exactly one match, or the
+   * item is unroutable (D4 — never first-match); a match outside `writeTo` is
+   * simply not written by this call. `jqlRules` lists the rules whose JQL the
+   * caller must run server-side to fill `jqlMatches`.
+   */
+  private async routerFor(
+    integration: Integration,
+    writeTo: ReadonlySet<string>,
+  ): Promise<{
+    route: (item: RoutingItem, jqlMatches?: ReadonlySet<string>) => Routed;
+    jqlRules: { projectId: string; jql: string }[];
+  }> {
+    const inheriting = await this.resolvedProjects.inheritingProjects(integration);
+    const rulesOf = (project: Project) =>
+      (project.integrationRouting ?? []).filter((rule) => rule.integrationId === integration.id);
+    if (!inheriting.some((project) => rulesOf(project).length > 0)) {
+      return { route: () => [...writeTo], jqlRules: [] };
+    }
+    const jqlRules: { projectId: string; jql: string }[] = [];
+    for (const project of inheriting) {
+      for (const { match } of rulesOf(project)) {
+        if (match.kind === "jira" && match.jql)
+          jqlRules.push({ projectId: project.id, jql: match.jql });
+      }
+    }
+    const route = (item: RoutingItem, jqlMatches?: ReadonlySet<string>): Routed => {
+      const matched = matchRouting(item, inheriting, jqlMatches);
+      if (matched.length === 0) return { reason: "matches no project's routing rule" };
+      if (matched.length > 1) {
+        return { reason: `matches ${matched.length} projects (${matched.join(", ")})` };
+      }
+      return matched.filter((id) => writeTo.has(id));
+    };
+    return { route, jqlRules };
+  }
+
+  /** Global level mapping with the integration's company overrides on top (D9). */
+  private async levelMappingFor(integration: Integration) {
+    const company = await this.resolvedProjects.integrationCompany(integration);
+    return composeLevelMapping(await this.levelMapping.read(), company?.levelMapping);
+  }
+
+  /**
+   * Open PRs per write-target project, from that project's own resolved GitHub
+   * integration (fetched once per GitHub integration). A failed lookup is a note,
+   * never a failed sync.
+   */
+  private async pullsByProject(
+    writeTo: ReadonlySet<string>,
+    results: Map<string, RoadmapSyncResult>,
+  ): Promise<Map<string, GitHubPull[]>> {
+    const byIntegration = new Map<string, GitHubPull[]>();
+    const out = new Map<string, GitHubPull[]>();
+    for (const projectId of writeTo) {
+      const project = await this.projects.get(projectId).catch(() => null);
+      if (!project) continue;
+      const [github] = syncableIntegrations(
+        await this.resolvedProjects.resolveIntegrations(project),
+        "github",
+      );
+      if (!github || github.config.kind !== "github") continue;
+      let pulls = byIntegration.get(github.id);
+      if (!pulls) {
+        pulls = [];
+        const ghToken = tokenOf(await this.credentials.read(github.id));
+        if (ghToken) {
+          try {
+            pulls = await this.fetchOpenGithubPulls(github.config.repo, {
+              authorization: `Bearer ${ghToken}`,
+              accept: "application/vnd.github+json",
+            });
+          } catch (error) {
+            summaryFor(results, projectId).notes.push({
+              itemId: github.id,
+              note: `github PR lookup failed: ${(error as Error).message}`,
+            });
+          }
+        }
+        byIntegration.set(github.id, pulls);
+      }
+      out.set(projectId, pulls);
+    }
+    return out;
   }
 
   // --- Jira ------------------------------------------------------------------
 
   private async syncJira(
-    projectId: string,
-    integration: Integration & { config: JiraConfig },
-    summary: RoadmapSyncResult,
-    githubForPrs?: Integration & { config: GitHubConfig },
+    integration: JiraIntegration,
+    writeTo: ReadonlySet<string>,
+    results: Map<string, RoadmapSyncResult>,
   ): Promise<void> {
     const token = tokenOf(await this.credentials.read(integration.id));
     if (!token) return; // no credentials configured for this integration — nothing to sync
 
-    let pulls: GitHubPull[] = [];
-    if (githubForPrs) {
-      const ghToken = tokenOf(await this.credentials.read(githubForPrs.id));
-      if (ghToken) {
-        try {
-          pulls = await this.fetchOpenGithubPulls(githubForPrs.config.repo, {
-            authorization: `Bearer ${ghToken}`,
-            accept: "application/vnd.github+json",
-          });
-        } catch (error) {
-          summary.notes.push({
-            itemId: githubForPrs.id,
-            note: `github PR lookup failed: ${(error as Error).message}`,
-          });
-        }
-      }
-    }
+    // PR lookup for linking is resolved independently of the `source` filter
+    // — a `source: "jira"` sync must still be able to link an existing PR.
+    const pullsOf = await this.pullsByProject(writeTo, results);
 
     const authHeader = `Basic ${Buffer.from(`${integration.config.email}:${token}`).toString("base64")}`;
     const me = await this.fetchJiraAccountId(integration.config.baseUrl, authHeader);
@@ -509,7 +664,7 @@ export class RoadmapSourceService {
       ),
     ];
     await this.levelMapping.ensureLevels("jira", externalLevels);
-    const mapping = await this.levelMapping.read();
+    const mapping = await this.levelMappingFor(integration);
 
     const levelOf = new Map<string, LevelMappingTarget>();
     for (const issue of rawIssues) {
@@ -518,14 +673,51 @@ export class RoadmapSourceService {
       levelOf.set(issue.key, resolveLevel(mapping, "jira", externalLevel) ?? "task");
     }
 
-    const seen = new Set<string>();
+    // Routing (D7): each rule's JQL runs server-side, AND'ed with the integration's
+    // own scope, to learn which issues it claims for its project.
+    const { route, jqlRules } = await this.routerFor(integration, writeTo);
+    const jqlMatches = new Map<string, Set<string>>();
+    for (const rule of jqlRules) {
+      const ruleJql = rule.jql.replace(/\s+ORDER\s+BY\s[\s\S]*$/i, "");
+      const hits = await this.fetchAllJiraIssues(
+        integration.config.baseUrl,
+        `(${ruleJql}) AND (${jiraScopeClause(integration.config)}) ORDER BY created ASC`,
+        undefined,
+        authHeader,
+      );
+      for (const hit of hits) if (hit.key) setFor(jqlMatches, hit.key).add(rule.projectId);
+    }
+    const routedOf = new Map<string, Routed>();
+    for (const issue of rawIssues) {
+      if (!issue.key) continue;
+      routedOf.set(
+        issue.key,
+        route(jiraRoutingItem(integration.id, issue.key, issue), jqlMatches.get(issue.key)),
+      );
+    }
+
+    const seen = new Map<string, Set<string>>();
     for (const issue of rawIssues) {
       if (!issue.key) continue;
       const target = levelOf.get(issue.key) ?? "task";
       const isOwned = ownedKeys.has(issue.key);
+      const routed = routedOf.get(issue.key) ?? [];
       if (isOwned) {
         if (!isRoadmapLevel(target)) {
-          summary.skipped += 1;
+          for (const projectId of Array.isArray(routed) ? routed : writeTo) {
+            summaryFor(results, projectId).skipped += 1;
+          }
+          continue;
+        }
+        if (!Array.isArray(routed)) {
+          for (const projectId of writeTo) {
+            const summary = summaryFor(results, projectId);
+            summary.skipped += 1;
+            summary.notes.push({
+              itemId: roadmapItemIdForSource(integration.id, issue.key),
+              note: `${issue.key} ${routed.reason} — not imported`,
+            });
+          }
           continue;
         }
       } else {
@@ -539,13 +731,13 @@ export class RoadmapSourceService {
         // must NOT count toward `summary.skipped` (that counter is reserved
         // for level-mapping `"ignore"`, a different reason) or join `seen`
         // (so `archiveMissing` never has to reason about it).
-        if (target !== "epic") continue;
+        // An unroutable ancestor is dropped the same silent way (see above).
+        if (target !== "epic" || !Array.isArray(routed)) continue;
       }
-      seen.add(issue.key);
 
       const externalLevel = issue.fields?.issuetype?.name ?? "";
-      const parentExternalId =
-        target === "epic" ? undefined : resolveEpicParent(issue, byKey, levelOf);
+      const epicKey = target === "epic" ? undefined : resolveEpicParent(issue, byKey, levelOf);
+      const epicRouted = epicKey ? routedOf.get(epicKey) : undefined;
       const attachments: NormalizedAttachment[] = (issue.fields?.attachment ?? []).map((raw) => ({
         name: raw.filename ?? "attachment",
         size: raw.size ?? 0,
@@ -553,34 +745,46 @@ export class RoadmapSourceService {
         download: () => this.downloadBytes(raw.content, { authorization: authHeader }),
       }));
 
-      const linkedPr = findLinkedPr(issue.key, pulls);
-      const remote = jiraWorkState(issue.fields?.status);
-      const workState: JiraWorkState = remote === "todo" && linkedPr ? "external" : remote;
+      for (const projectId of routed) {
+        setFor(seen, projectId).add(issue.key);
+        // The epic parent only when it lands in the same project.
+        const parentExternalId =
+          Array.isArray(epicRouted) && epicRouted.includes(projectId) ? epicKey : undefined;
+        const linkedPr = findLinkedPr(issue.key, pullsOf.get(projectId) ?? []);
+        const remote = jiraWorkState(issue.fields?.status);
+        const workState: JiraWorkState = remote === "todo" && linkedPr ? "external" : remote;
 
-      const outcome = await this.upsertItem({
-        projectId,
-        integrationId: integration.id,
-        sourceKind: "jira",
-        externalId: issue.key,
-        externalKey: issue.key,
-        url: `${integration.config.baseUrl}/browse/${issue.key}`,
-        name: issue.fields?.summary ?? issue.key,
-        description: adfToMarkdown(issue.fields?.description ?? null),
-        externalLevel,
-        level: target,
-        parentExternalId,
-        dependsOnExternalIds: jiraDependsOnKeys(issue.fields?.issuelinks ?? []),
-        workState,
-        ...(linkedPr ? { linkedPr } : {}),
-        sourceStatus: jiraSourceStatus(issue.fields?.status),
-        scopeReasons: jiraScopeReasons(issue.fields, me),
-        attachments,
-      });
-      summary[outcome.outcome] += 1;
-      for (const note of outcome.notes) summary.notes.push({ itemId: outcome.itemId, note });
+        const outcome = await this.upsertItem({
+          projectId,
+          integrationId: integration.id,
+          sourceKind: "jira",
+          externalId: issue.key,
+          externalKey: issue.key,
+          url: `${integration.config.baseUrl}/browse/${issue.key}`,
+          name: issue.fields?.summary ?? issue.key,
+          description: adfToMarkdown(issue.fields?.description ?? null),
+          externalLevel,
+          level: target,
+          parentExternalId,
+          dependsOnExternalIds: jiraDependsOnKeys(issue.fields?.issuelinks ?? []),
+          workState,
+          ...(linkedPr ? { linkedPr } : {}),
+          sourceStatus: jiraSourceStatus(issue.fields?.status),
+          scopeReasons: jiraScopeReasons(issue.fields, me),
+          attachments,
+        });
+        recordUpsert(summaryFor(results, projectId), outcome);
+      }
     }
 
-    await this.archiveMissing(projectId, integration.id, seen, summary);
+    for (const projectId of writeTo) {
+      await this.archiveMissing(
+        projectId,
+        integration.id,
+        setFor(seen, projectId),
+        summaryFor(results, projectId),
+      );
+    }
   }
 
   /**
@@ -627,7 +831,7 @@ export class RoadmapSourceService {
         jql: clause,
         maxResults: String(PAGE_SIZE),
         fields:
-          "summary,description,issuetype,parent,issuelinks,attachment,status,assignee,reporter,watches",
+          "summary,description,issuetype,parent,issuelinks,attachment,status,assignee,reporter,watches,components,labels",
       });
       if (nextPageToken) params.set("nextPageToken", nextPageToken);
       const res = await this.fetchImpl(`${baseUrl}/rest/api/3/search/jql?${params}`, {
@@ -723,9 +927,9 @@ export class RoadmapSourceService {
   // --- GitHub ------------------------------------------------------------------
 
   private async syncGithub(
-    projectId: string,
-    integration: Integration & { config: GitHubConfig },
-    summary: RoadmapSyncResult,
+    integration: GitHubIntegration,
+    writeTo: ReadonlySet<string>,
+    results: Map<string, RoadmapSyncResult>,
   ): Promise<void> {
     const token = tokenOf(await this.credentials.read(integration.id));
     if (!token) return; // no credentials configured for this integration — nothing to sync
@@ -755,8 +959,26 @@ export class RoadmapSourceService {
         milestone.number !== undefined && referencedMilestoneNumbers.has(milestone.number),
     );
 
+    // GitHub routing is per repo, so every item of this integration routes the same way.
+    const { route } = await this.routerFor(integration, writeTo);
+    const routed = route({ integrationId: integration.id, kind: "github", github: { repo } });
+    if (!Array.isArray(routed)) {
+      for (const projectId of writeTo) {
+        const summary = summaryFor(results, projectId);
+        summary.skipped += issues.length;
+        summary.notes.push({
+          itemId: integration.id,
+          note: `${repo} ${routed.reason} — not imported`,
+        });
+      }
+    }
+    const targets = Array.isArray(routed) ? routed : [];
+    const forTargets = (fn: (summary: RoadmapSyncResult) => void) => {
+      for (const projectId of targets) fn(summaryFor(results, projectId));
+    };
+
     await this.levelMapping.ensureLevels("github", ["Milestone", "Issue"]);
-    const mapping = await this.levelMapping.read();
+    const mapping = await this.levelMappingFor(integration);
     const milestoneTarget = resolveLevel(mapping, "github", "Milestone") ?? "epic";
     const issueTarget = resolveLevel(mapping, "github", "Issue") ?? "task";
 
@@ -766,15 +988,14 @@ export class RoadmapSourceService {
     // scope — never upserted, never added to `seen`, so `archiveMissing`
     // prunes a previously-imported milestone that no longer parents anything
     // of mine.
-    summary.skipped += allMilestones.length - milestones.length;
+    forTargets((summary) => (summary.skipped += allMilestones.length - milestones.length));
 
     if (isRoadmapLevel(milestoneTarget)) {
       for (const milestone of milestones) {
         if (milestone.number === undefined) continue;
         const externalId = `milestone:${milestone.number}`;
         seen.add(externalId);
-        const outcome = await this.upsertItem({
-          projectId,
+        const input: Omit<NormalizedSourceIssue, "projectId"> = {
           integrationId: integration.id,
           sourceKind: "github",
           externalId,
@@ -793,12 +1014,16 @@ export class RoadmapSourceService {
           // the body, with no listing/download endpoint the way Jira's
           // `fields.attachment` is a structured array — out of scope here.
           attachments: [],
-        });
-        summary[outcome.outcome] += 1;
-        for (const note of outcome.notes) summary.notes.push({ itemId: outcome.itemId, note });
+        };
+        for (const projectId of targets) {
+          recordUpsert(
+            summaryFor(results, projectId),
+            await this.upsertItem({ ...input, projectId }),
+          );
+        }
       }
     } else {
-      summary.skipped += milestones.length;
+      forTargets((summary) => (summary.skipped += milestones.length));
     }
 
     if (isRoadmapLevel(issueTarget)) {
@@ -819,8 +1044,7 @@ export class RoadmapSourceService {
         const parentExternalId =
           issue.milestone?.number !== undefined ? `milestone:${issue.milestone.number}` : undefined;
 
-        const outcome = await this.upsertItem({
-          projectId,
+        const input: Omit<NormalizedSourceIssue, "projectId"> = {
           integrationId: integration.id,
           sourceKind: "github",
           externalId,
@@ -848,15 +1072,27 @@ export class RoadmapSourceService {
               : []),
           ],
           attachments: [],
-        });
-        summary[outcome.outcome] += 1;
-        for (const note of outcome.notes) summary.notes.push({ itemId: outcome.itemId, note });
+        };
+        for (const projectId of targets) {
+          recordUpsert(
+            summaryFor(results, projectId),
+            await this.upsertItem({ ...input, projectId }),
+          );
+        }
       }
     } else {
-      summary.skipped += issues.length;
+      forTargets((summary) => (summary.skipped += issues.length));
     }
 
-    await this.archiveMissing(projectId, integration.id, seen, summary);
+    for (const projectId of writeTo) {
+      const seenHere = targets.includes(projectId) ? seen : new Set<string>();
+      await this.archiveMissing(
+        projectId,
+        integration.id,
+        seenHere,
+        summaryFor(results, projectId),
+      );
+    }
   }
 
   /**

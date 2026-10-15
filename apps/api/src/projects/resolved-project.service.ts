@@ -99,6 +99,35 @@ export class ResolvedProjectService {
   }
 
   /**
+   * Phase 128 (D9) — the company whose settings (level-mapping overrides) apply to
+   * `integration`: its owning company, or the owning project's effective company.
+   */
+  async integrationCompany(integration: Integration): Promise<Company | undefined> {
+    if (integration.companyId) return (await this.findCompany(integration.companyId)) ?? undefined;
+    const project = integration.projectId
+      ? await this.projects?.get(integration.projectId).catch(() => null)
+      : null;
+    return project ? this.resolveCompany(project) : undefined;
+  }
+
+  /**
+   * Phase 128 (D1) — the projects a COMPANY-owned integration feeds: every project
+   * whose effective company owns it and that doesn't override its kind with an own
+   * integration. `[]` for a project-owned integration (its owner is the only target).
+   */
+  async inheritingProjects(integration: Integration): Promise<Project[]> {
+    if (!integration.companyId || !this.projects) return [];
+    const all = await this.integrations.list();
+    const out: Project[] = [];
+    for (const project of await this.projects.list()) {
+      if ((await this.effectiveCompanyId(project)) !== integration.companyId) continue;
+      const overrides = all.some((i) => i.projectId === project.id && i.kind === integration.kind);
+      if (!overrides) out.push(project);
+    }
+    return out;
+  }
+
+  /**
    * The linked company's `id`/`name` — `undefined` for "no company" (absent
    * `companyId`, or a dangling one whose company was deleted). Only for the wire
    * context's UI-facing "resolved from company X" note (Phase 72); the merge

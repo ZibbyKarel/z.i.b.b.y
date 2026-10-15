@@ -53,6 +53,10 @@ describe("ChannelTriageFlowService", () => {
     jiraPropose?: ReturnType<typeof vi.fn>;
     readOnly?: boolean;
     degraded?: boolean;
+    /** Phase 128 — override the fixture integration (e.g. a company-owned one). */
+    integration?: Integration;
+    /** Phase 128 — `ResolvedProjectService.inheritingProjects` result. */
+    inheriting?: Project[];
     /** NS2 F6a — a stubbed CommsService (graduation + ledger seam). */
     comms?: {
       isGraduated: ReturnType<typeof vi.fn>;
@@ -83,7 +87,7 @@ describe("ChannelTriageFlowService", () => {
     };
     const gateRules = { list: async () => [] };
     const integrations = {
-      get: async () => integration,
+      get: async () => opts.integration ?? integration,
       list: async () => opts.jiraIntegrations ?? [],
     };
     const projects = { list: async () => opts.projects ?? [] };
@@ -92,6 +96,7 @@ describe("ChannelTriageFlowService", () => {
     // The resolver's own merge rules are unit-tested in resolved-project.helpers.test.ts.
     const resolved = {
       resolvePeople: async (project: Project) => project.identity?.people ?? [],
+      inheritingProjects: async () => opts.inheriting ?? [],
     };
     const credentials = { read: async () => ({ token: "xoxb-1" }) };
     const registry = {
@@ -289,6 +294,87 @@ describe("ChannelTriageFlowService", () => {
     const out = await flow.handle(item({ text: "something generic and unrelated" }));
     expect(out.projectId).toBe("acme-app");
     expect(createTask.mock.calls[0]![2]).toBe("acme-app");
+  });
+
+  describe("Phase 128 — company integration routing (D10)", () => {
+    const companySlack: Integration = { ...integration, projectId: undefined, companyId: "co" };
+    const routedTo = (id: string, channels: string[]): Project => ({
+      id,
+      name: id,
+      path: `/work/${id}`,
+      integrationRouting: [{ integrationId: "team", match: { kind: "slack", channels } }],
+    });
+
+    it("attributes by the routing rules alone when any project has one", async () => {
+      const cms = routedTo("cms", ["C1"]);
+      const flow = makeFlow({
+        verdict: bug,
+        integration: companySlack,
+        // "Alpha" would win the text matcher — the rules must decide instead.
+        projects: [{ id: "alpha", name: "Alpha", path: "/work/alpha" }, cms],
+        inheriting: [cms, routedTo("cli", ["C2"])],
+      });
+      const out = await flow.handle(item({ text: "the Alpha login is broken" }));
+      expect(out.projectId).toBe("cms");
+      expect(createTask.mock.calls[0]![2]).toBe("cms");
+    });
+
+    it("0 or ≥2 rule matches → unattributed and notify-only (no dispatch, no reply draft)", async () => {
+      for (const inheriting of [
+        [routedTo("cms", ["C9"])],
+        [routedTo("cms", ["C1"]), routedTo("cli", ["C1"])],
+      ]) {
+        const flow = makeFlow({ verdict: question, integration: companySlack, inheriting });
+        const out = await flow.handle(item({ text: "how do I log in?" }));
+        expect(out.projectId).toBeUndefined();
+        expect(out.state).toBe("triaged"); // surfaced, not `needs-draft`
+        expect(out.approvalId).toBeUndefined();
+        expect(createTask).not.toHaveBeenCalled();
+      }
+    });
+
+    it("no rules anywhere → falls back to the text matcher", async () => {
+      const flow = makeFlow({
+        verdict: bug,
+        integration: companySlack,
+        projects: [{ id: "alpha", name: "Alpha", path: "/work/alpha" }],
+        inheriting: [{ id: "alpha", name: "Alpha", path: "/work/alpha" }],
+      });
+      const out = await flow.handle(item({ text: "the Alpha login is broken" }));
+      expect(out.projectId).toBe("alpha");
+    });
+
+    it("jira: matches on projectKey/labels from the item; a jql-only rule never matches in triage", async () => {
+      const companyJira: Integration = {
+        ...integration,
+        kind: "jira",
+        projectId: undefined,
+        companyId: "co",
+        config: { kind: "jira", baseUrl: "https://co.atlassian.net", email: "me@co" },
+      };
+      const rule = (id: string, match: Record<string, unknown>) =>
+        ({
+          id,
+          name: id,
+          path: `/work/${id}`,
+          integrationRouting: [{ integrationId: "team", match: { kind: "jira", ...match } }],
+        }) as Project;
+      const jiraItem = item({
+        kind: "jira",
+        externalRef: { channel: "CMS", messageId: "CMS-7" },
+        raw: { issue: { key: "CMS-7", fields: { labels: ["web"], components: [{ name: "ui" }] } } },
+      });
+      const flow = makeFlow({
+        verdict: bug,
+        integration: companyJira,
+        inheriting: [
+          rule("cms", { projectKey: "CMS", labels: ["web"], jql: "sprint = 1" }),
+          rule("jql-only", { jql: "project = CMS" }),
+        ],
+      });
+      const out = await flow.handle(jiraItem);
+      expect(out.projectId).toBe("cms");
+    });
   });
 
   // ---- The reply path: research first, THEN the tier/gate decision -------------
