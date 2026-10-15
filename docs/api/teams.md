@@ -115,7 +115,10 @@ run endpoint exists. A team KB stays read-only for ZIBBY (Law 1).
 only write the app does to a KB checkout: `git pull --ff-only` (no shell, 60 s
 timeout, `GIT_TERMINAL_PROMPT=0`). It never creates commits or overwrites local
 changes — git itself refuses when incoming changes touch dirty files — and any
-failure (not a repo, diverged, network) maps to 409 with git's trimmed stderr.
+failure (not a repo, diverged, network) maps to 409 with git's trimmed stderr
+(max 400 chars). Remote-access failures (`Repository not found`, `Permission
+denied`, auth errors) are prefixed with a plain-language hint (wrong account /
+missing org access / SSO) before git's own text.
 `readOnly` means ZIBBY never authors into the KB; a ff pull only syncs it.
 
 `TeamsController` mirrors `CompaniesController` in shape: `deleteTeam` reads

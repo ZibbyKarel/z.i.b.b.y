@@ -79,6 +79,15 @@ export class TaskRunsController {
         return { status: 200, body: artifact };
       },
 
+      openTaskRunFolder: async ({ params: { runId } }) => {
+        try {
+          return { status: 200, body: await this.runs.openFolder(runId) };
+        } catch (error) {
+          if (isMissing(error)) return { status: 404, body: { message: notFound(runId) } };
+          throw error;
+        }
+      },
+
       stopTaskRun: async ({ params: { runId } }) => {
         try {
           return { status: 200, body: await this.runs.stop(runId) };

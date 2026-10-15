@@ -41,13 +41,25 @@ export function RunWorkflowSummary({ runId, owner, totalCostUsd }: RunWorkflowSu
     run?.parkedReason === "gate" || run?.parkedReason === "budget" || run?.parkedReason === "child"
       ? run.parkedReason
       : null;
+  const workflow = workflows?.find((p) => p.id === owner);
+  const noStaff = run?.parkedReason === "no-employee";
   const budget = run?.budget;
-  if (!reason && !budget && !(writesBook && run?.cwd) && totalCostUsd == null) return null;
+  if (!reason && !noStaff && !budget && !(writesBook && run?.cwd) && totalCostUsd == null)
+    return null;
 
   return (
     <Panel data-testid="run-workflow-summary" padding="250">
       <Stack gap="150">
         {reason && <Alert severity="warn">{t(PARKED_LABEL[reason])}</Alert>}
+        {noStaff && (
+          <Alert severity="warn">
+            {t("parkedNoEmployee", {
+              stage: run.currentStage ?? "?",
+              agent: workflow?.phases.find((ph) => ph.id === run.currentStage)?.agent ?? "?",
+              department: workflow?.department ?? "?",
+            })}
+          </Alert>
+        )}
         {budget ? (
           <Typography mono size="xs" type="note" variant="secondary">
             {t("budgetSpent", {

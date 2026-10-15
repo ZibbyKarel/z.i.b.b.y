@@ -2,9 +2,9 @@
 title: Vault lint
 tags:
   - report
-updated: '2026-10-13'
+updated: '2026-10-15'
 ---
-Generated 2026-10-13. Report only — no notes were modified.
+Generated 2026-10-15. Report only — no notes were modified.
 
 ## Broken wikilinks (15)
 - [[2026-07-30]] → `subsystem-forge-moc`
@@ -23,10 +23,11 @@ Generated 2026-10-13. Report only — no notes were modified.
 - [[north-star]] → `patterns/approval-patterns`
 - [[north-star]] → `knowledge/architecture`
 
-## Orphans (7)
+## Orphans (8)
 - [[code-audit-report]]
 - [[coloring-book-latest]]
 - [[spec-created-note]]
+- [[spending-audit]]
 - [[kzphoto]]
 - [[portfolio]]
 - [[test-project]]
@@ -35,8 +36,8 @@ Generated 2026-10-13. Report only — no notes were modified.
 ## Stale notes, updated over 90 days ago (0)
 - none
 
-## Missing `updated` (29)
-29 notes have no `updated` stamp yet.
+## Missing `updated` (24)
+24 notes have no `updated` stamp yet.
 
 ## More than 15 tags (0)
 - none

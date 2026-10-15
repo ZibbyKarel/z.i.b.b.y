@@ -11,5 +11,5 @@
   "powerSaver": false,
   "ttsVoice": "cs_male_cv26_default",
   "maxConcurrentRuns": 3,
-  "roadmapTickMs": 10800000
+  "roadmapTickMs": 900000
 }

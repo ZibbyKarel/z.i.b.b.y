@@ -660,6 +660,7 @@ GET    /api/tasks/runs/:runId/stages/:phaseId/logs?offset=    one workflow stage
 GET    /api/tasks/runs/:runId/stages/:phaseId/logs/stream     SSE tail for a workflow stage's log
 GET    /api/tasks/runs/:runId/artifacts/:name                a whitelisted artifact (pr-draft.md, verdict.txt, …)
 POST   /api/tasks/runs/:runId/stop                            stop a running run
+POST   /api/tasks/runs/:runId/open-folder                     open a workflow run's `book/` (else run root) folder in Finder; operator-initiated, no approval; 404 for non-workflow runs
 POST   /api/tasks/runs/:runId/resume                          resume a parked workflow/goal run (with a note), or re-run an
                                                                 errored/interrupted agent run (with `--resume` if a session id
                                                                 was captured, else a fresh run of the same task), or CONTINUE an

@@ -6,6 +6,7 @@ tags:
   - department
   - dev
   - moc
+updated: '2026-10-15'
 ---
 
 Development owns the delivery loop: Architekt → Kodér ⇄ Code-Review → Tester →
@@ -19,3 +20,5 @@ code. Mostly built.
 - [[distilled-2026-10-03]] — Destilace — 2026-10-03
 - [[distilled-2026-10-04]] — Destilace — 2026-10-04
 - [[distilled-2026-10-05]] — Destilace — 2026-10-05
+- [[distilled-2026-10-14]] — Destilace — 2026-10-14
+- [[distilled-2026-10-15]] — Destilace — 2026-10-15

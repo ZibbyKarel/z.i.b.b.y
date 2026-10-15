@@ -31,6 +31,7 @@ import { RunDetail } from "../../runs/components/RunDetail";
 import { useRunGlyphMap } from "../../runs/queries/useRunsQuery";
 import { runOutputHref } from "../../runs/run";
 import { useTaskRunQuery } from "../../runs/queries/useTaskRunQuery";
+import { useOpenTaskRunFolderMutation } from "../../runs/mutations";
 import { useRunActions } from "../../runs/useRunActions";
 import { useTaskQuery } from "../queries";
 
@@ -88,6 +89,8 @@ export function TaskDetailScreen({ taskId }: TaskDetailScreenProps) {
     isError: runError,
   } = useTaskRunQuery(selectedRunRef ?? null);
 
+  const openFolder = useOpenTaskRunFolderMutation();
+
   const rosterQuery = useDepartmentRosterQuery(selected?.department ?? "");
 
   const { stop, stopping, resume, resuming, remove, deleting } = useRunActions(
@@ -130,17 +133,30 @@ export function TaskDetailScreen({ taskId }: TaskDetailScreenProps) {
               </Typography>
             )}
           </Stack>
-          {outputHref && (
-            <Button
-              data-testid="open-task-output"
-              icon="link"
-              intent="primary"
-              onClick={() => window.open(outputHref, "_blank", "noopener,noreferrer")}
-              size="sm"
-            >
-              {tRuns("openOutput")}
-            </Button>
-          )}
+          <Stack align="center" direction="row" gap="100">
+            {selectedRun?.kind === "workflow" && (
+              <Button
+                data-testid="open-task-folder"
+                disabled={openFolder.isPending}
+                icon="doc"
+                onClick={() => openFolder.mutate({ params: { runId: selectedRun.runId }, body: {} })}
+                size="sm"
+              >
+                {tRuns("openFolder")}
+              </Button>
+            )}
+            {outputHref && (
+              <Button
+                data-testid="open-task-output"
+                icon="link"
+                intent="primary"
+                onClick={() => window.open(outputHref, "_blank", "noopener,noreferrer")}
+                size="sm"
+              >
+                {tRuns("openOutput")}
+              </Button>
+            )}
+          </Stack>
         </Stack>
 
         {steps.length > 0 ? (

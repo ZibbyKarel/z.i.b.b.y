@@ -605,3 +605,7 @@ JSON/JSONL and in workflow/goal frontmatter. Free text is never rewritten. A per
 marker (`.zibby/data/.workflow-rename.done`, git-ignored) makes it run once; an interrupted
 run is simply re-run. The old env names (`PIPELINES_DIR`, `PIPELINE_RUNS_DIR`,
 `PIPELINE_DEMO_*`) are still read as a fallback. Old web URLs (`/pipelines…`) redirect.
+
+`WorkflowRunnerService.runFolder(runId)` returns the folder shown to the operator for a run
+(`<run dir>/book` when present, else the run root; `null` if unknown) — used by
+`POST /api/tasks/runs/:runId/open-folder` (see `docs/api/tasks.md`).

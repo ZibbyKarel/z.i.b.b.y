@@ -16,7 +16,19 @@ export class TeamKbSyncError extends Error {
   }
 }
 
-const STDERR_MAX = 300;
+const STDERR_MAX = 400;
+
+/** Prefix git's terse network errors with what they usually mean; keep git's own text after it. */
+function explain(stderr: string): string {
+  if (
+    /repository not found|permission denied|authentication failed|could not read from remote/i.test(
+      stderr,
+    )
+  ) {
+    return `Git remote is not accessible with the credentials this machine uses (wrong account, missing org access/SSO authorization, or the repository does not exist). Check \`git ls-remote origin\` in the KB folder. Git said: ${stderr}`;
+  }
+  return stderr;
+}
 
 /**
  * Operator-triggered `git pull --ff-only --no-rebase` (overrides a user `pull.rebase`, which refuses any dirty tree) of a team's KB checkout. This is the
@@ -48,7 +60,7 @@ export class TeamKbSyncService {
     } catch (error) {
       const stderr = (error as { stderr?: unknown }).stderr;
       const raw = typeof stderr === "string" && stderr.trim() ? stderr : String(error);
-      throw new TeamKbSyncError(raw.trim().slice(0, STDERR_MAX));
+      throw new TeamKbSyncError(explain(raw.trim()).slice(0, STDERR_MAX));
     }
     const after = await this.head(kbPath);
     return { updated: before !== after, before, after };

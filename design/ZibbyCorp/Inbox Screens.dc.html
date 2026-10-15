@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="padding:24px 28px;display:flex;flex-direction:column;gap:18px;color:var(--ink)">
+
+  <div data-screen-label="Inbox header" style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
+    <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+      <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">{{ secLabel }}</span>
+      <h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">{{ title }}</h1>
+    </div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:12px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--ink2)">
+      <span style="display:flex;align-items:center;gap:8px">{{ syncDot }}{{ syncLabel }}</span>
+      <button onClick="{{ onSync }}" style="all:unset;cursor:pointer;height:32px;box-sizing:border-box;display:flex;align-items:center;padding:0 12px;border:1px solid var(--line2);font-size:10px;color:var(--ink)" style-hover="background:var(--panel2)">{{ syncBtn }}</button>
+    </div>
+  </div>
+
+  <sc-if value="{{ showFilters }}" hint-placeholder-val="{{ true }}">
+    <div data-screen-label="Filter bar" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <sc-for list="{{ filters }}" as="f" hint-placeholder-count="3">
+        <div style="position:relative">
+          <button onClick="{{ f.onToggle }}" style="all:unset;cursor:pointer;height:32px;box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid {{ f.line }};background:{{ f.bg }};font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em" style-hover="border-color:var(--ink)"><span style="color:var(--ink3)">{{ f.label }}</span><span style="color:var(--ink)">{{ f.value }}</span><span style="color:var(--ink3)">▾</span></button>
+          <sc-if value="{{ f.open }}">
+            <div onClick="{{ closePop }}" style="position:fixed;inset:0;z-index:30"></div>
+            <div style="position:absolute;top:36px;left:0;z-index:31;width:240px;background:var(--panel);border:1px solid var(--ink);display:flex;flex-direction:column;padding:4px 0">
+              <sc-for list="{{ f.opts }}" as="o">
+                <button onClick="{{ o.onClick }}" style="all:unset;cursor:pointer;display:grid;grid-template-columns:12px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 12px;font-size:13px" style-hover="background:var(--panel2)">
+                  <span style="width:10px;height:10px;box-sizing:border-box;border:1px solid var(--ink);background:{{ o.fill }}"></span>
+                  <span style="color:{{ o.ink }}">{{ o.label }}</span>
+                  <span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--ink3)">{{ o.meta }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+      <sc-if value="{{ hasFilters }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ clearFilters }}" style="all:unset;cursor:pointer;height:32px;box-sizing:border-box;display:flex;align-items:center;padding:0 10px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2)" style-hover="color:var(--ink)">CLEAR</button>
+      </sc-if>
+      <span style="margin-left:auto;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ filterNote }}</span>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ showBanner }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Integration banner" style="display:flex;align-items:center;gap:12px;border:1px solid var(--line2);background:var(--panel);padding:10px 14px">
+      {{ errDot }}
+      <span style="font-size:13px;flex:1;min-width:0">Jira sync failed for <strong style="font-weight:500">mobile</strong>: token expired. Other sources are up to date; MOB items show their last synced state.</span>
+      <button onClick="{{ goReconnect }}" style="all:unset;cursor:pointer;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;border:1px solid var(--line2);padding:6px 10px;color:var(--ink)" style-hover="background:var(--panel2)">RECONNECT →</button>
+      <button onClick="{{ dismissBanner }}" style="all:unset;cursor:pointer;font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink3);padding:4px 6px" style-hover="color:var(--ink)">×</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isLoading }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Loading" style="border:1px solid var(--line);background:var(--panel)">
+      <sc-for list="{{ skel }}" as="s" hint-placeholder-count="5">
+        <div style="display:flex;flex-direction:column;gap:8px;padding:14px;border-bottom:1px solid var(--line)">
+          <div style="display:flex;gap:12px"><span style="width:64px;height:12px;background:var(--panel2)"></span><span style="height:12px;background:var(--panel2);width:{{ s.w }}"></span></div>
+          <div style="display:flex;gap:6px"><span style="width:48px;height:10px;background:var(--panel2)"></span><span style="width:180px;height:10px;background:var(--panel2)"></span><span style="width:70px;height:10px;background:var(--panel2)"></span></div>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isError }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Error" style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;border:1px solid var(--ink);background:var(--panel);padding:20px">
+      <span style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em">{{ errDot }}COULD NOT LOAD THE INBOX</span>
+      <span style="font-size:14px;color:var(--ink2);line-height:1.45">GET /roadmap/items returned 503. Nothing was changed; the last sync is still on disk.</span>
+      <button onClick="{{ onSync }}" style="all:unset;cursor:pointer;background:var(--ink);color:var(--panel);padding:9px 14px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">RETRY</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isNone }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="No integrations" style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;border:1px dashed var(--line2);padding:24px">
+      <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">NO INTEGRATIONS</span>
+      <span style="font-size:18px;font-weight:500">Connect Jira or GitHub to fill the inbox</span>
+      <span style="font-size:14px;color:var(--ink2);line-height:1.45;max-width:560px;text-wrap:pretty">Integrations are set per project. Once one is connected, items assigned to you, reported by you, watched or mentioning you show up here.</span>
+      <button onClick="{{ goProjects }}" style="all:unset;cursor:pointer;background:var(--ink);color:var(--panel);padding:9px 14px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">OPEN PROJECTS →</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
+    <div data-screen-label="Inbox overview" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+      <div style="border:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column">
+        <div style="display:flex;justify-content:space-between;padding:13px 18px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)"><span>01 — ISSUES</span><span>JIRA · GITHUB</span></div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px;border-bottom:1px solid var(--line)">
+          <span style="font-size:24px;font-weight:500;letter-spacing:-.01em"><span style="font-variant-numeric:tabular-nums">{{ ov.need }}</span> need you</span>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ ov.buckets }}" as="b" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em">{{ b.dot }}<span style="flex:1">{{ b.label }}</span><span style="font-variant-numeric:tabular-nums">{{ b.n }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+        <sc-for list="{{ ov.top }}" as="r" hint-placeholder-count="3">
+          <button onClick="{{ r.onOpen }}" style="all:unset;cursor:pointer;box-sizing:border-box;width:100%;display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 18px;border-bottom:1px solid var(--line)" style-hover="background:var(--panel2)">
+            <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ r.key }}</span>
+            <span style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.title }}</span>
+            <span style="display:flex;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)">{{ r.dot }}{{ r.zsU }}</span>
+          </button>
+        </sc-for>
+        <sc-if value="{{ ov.noIssues }}"><div style="padding:14px 18px;font-size:13px;color:var(--ink2)">Nothing to process in this filter.</div></sc-if>
+        <button onClick="{{ goIssues }}" style="all:unset;cursor:pointer;margin-top:auto;align-self:flex-end;padding:12px 18px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink)" style-hover="background:var(--panel2)">OPEN ISSUES →</button>
+      </div>
+
+      <div style="border:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column">
+        <div style="display:flex;justify-content:space-between;padding:13px 18px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)"><span>02 — PULL REQUESTS</span><span>GITHUB</span></div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px;border-bottom:1px solid var(--line)">
+          <span style="font-size:24px;font-weight:500;letter-spacing:-.01em"><span style="font-variant-numeric:tabular-nums">{{ ov.toReview }}</span> to review · <span style="font-variant-numeric:tabular-nums">{{ ov.blocked }}</span> blocked</span>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ ov.prBuckets }}" as="b" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em">{{ b.dot }}<span style="flex:1">{{ b.label }}</span><span style="font-variant-numeric:tabular-nums">{{ b.n }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+        <sc-for list="{{ ov.prTop }}" as="r" hint-placeholder-count="3">
+          <button onClick="{{ r.onOpen }}" style="all:unset;cursor:pointer;box-sizing:border-box;width:100%;display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 18px;border-bottom:1px solid var(--line)" style-hover="background:var(--panel2)">
+            <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ r.n }}</span>
+            <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.title }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--ink3)">{{ r.sub }}</span></span>
+            <span style="display:flex;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)">{{ r.dot }}{{ r.blU }}</span>
+          </button>
+        </sc-for>
+        <sc-if value="{{ ov.noPrs }}"><div style="padding:14px 18px;font-size:13px;color:var(--ink2)">No pull requests in this filter.</div></sc-if>
+        <button onClick="{{ goPrs }}" style="all:unset;cursor:pointer;margin-top:auto;align-self:flex-end;padding:12px 18px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink)" style-hover="background:var(--panel2)">OPEN PULL REQUESTS →</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isIssues }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Inbox issues" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="flex:1;min-width:280px;max-width:520px;display:flex;align-items:center;height:34px;box-sizing:border-box;border:1px solid var(--line2);background:var(--bg)">
+          <input ref="{{ searchRef }}" value="{{ q }}" onChange="{{ onQ }}" placeholder="Search title and description" style="flex:1;min-width:0;height:32px;border:0;background:transparent;padding:0 10px;font-size:13px;outline:none">
+          <span style="margin-right:8px;border:1px solid var(--line2);padding:1px 6px;font-family:'Geist Mono',monospace;font-size:10px;color:var(--ink3)">/</span>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:6px">
+          <sc-for list="{{ toggles }}" as="t" hint-placeholder-count="3">
+            <button onClick="{{ t.onClick }}" style="all:unset;cursor:pointer;height:32px;box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid {{ t.line }};font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:{{ t.ink }}" style-hover="border-color:var(--ink)"><span style="width:10px;height:10px;box-sizing:border-box;border:1px solid var(--ink);background:{{ t.fill }}"></span>{{ t.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>{{ listMeta }}</span><span>SORT · NEW → WAITING → RUNNING</span></div>
+
+      <div style="border:1px solid var(--line);background:var(--panel)">
+        <sc-for list="{{ groups }}" as="g" hint-placeholder-count="1">
+          <div style="display:flex;flex-direction:column">
+            <sc-if value="{{ g.showHeader }}">
+              <button onClick="{{ g.onToggle }}" style="all:unset;cursor:pointer;box-sizing:border-box;width:100%;display:grid;grid-template-columns:14px 72px minmax(0,1fr) 180px 64px 80px;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);background:{{ g.bg }}" style-hover="background:var(--panel2)">
+                <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ g.caret }}</span>
+                <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ g.key }}</span>
+                <span style="display:flex;align-items:center;gap:10px;min-width:0"><span style="font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.title }}</span><sc-if value="{{ g.isEpic }}"><span style="border:1px solid var(--line2);padding:2px 6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)">EPIC · {{ g.srcU }}</span></sc-if></span>
+                <span style="display:flex;align-items:center;gap:8px"><sc-if value="{{ g.isEpic }}"><span style="flex:1;height:2px;background:var(--line);display:block"><span style="display:block;height:2px;background:var(--ink);width:{{ g.progW }}"></span></span><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;font-variant-numeric:tabular-nums">{{ g.prog }}</span></sc-if></span>
+                <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2);text-align:right">{{ g.newStr }}</span>
+                <span style="text-align:right"><sc-if value="{{ g.isEpic }}"><a href="{{ g.srcUrl }}" target="_blank" onClick="{{ stop }}" style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2);text-decoration:none">SOURCE ↗</a></sc-if></span>
+              </button>
+            </sc-if>
+            <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="5">
+              <div onClick="{{ r.onOpen }}" style="position:relative;cursor:pointer;display:flex;flex-direction:column;gap:7px;padding:12px 14px 12px {{ r.padL }};border-bottom:1px solid var(--line);opacity:{{ r.op }};box-shadow:{{ r.rail }}" style-hover="background:var(--panel2)">
+                <div style="display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:12px;align-items:center">
+                  <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ r.key }}</span>
+                  <span style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.title }}</span>
+                  <div style="display:flex;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">
+                    <sc-if value="{{ r.hasPrimary }}"><button onClick="{{ r.onPrimary }}" style="all:unset;cursor:pointer;padding:7px 12px;background:{{ r.pBg }};color:{{ r.pInk }};border:1px solid {{ r.pLine }}">{{ r.primary }}</button></sc-if>
+                    <button onClick="{{ r.onMenu }}" title="More" style="all:unset;cursor:pointer;width:30px;box-sizing:border-box;text-align:center;padding:6px 0;border:1px solid {{ r.menuLine }};color:var(--ink2);font-size:12px" style-hover="color:var(--ink);border-color:var(--ink)">⋯</button>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-left:84px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em">
+                  <span style="border:1px solid var(--line2);padding:2px 6px;color:var(--ink)">{{ r.srcU }}</span>
+                  <span style="color:var(--ink3)">SOURCE</span><span style="color:var(--ink2)">{{ r.ssU }}</span>
+                  <span style="color:var(--line2)">·</span>
+                  <span style="color:var(--ink3)">ZIBBY</span><span style="display:flex;align-items:center;gap:6px;color:var(--ink)">{{ r.zDot }}{{ r.zsU }}</span>
+                  <sc-if value="{{ r.drift }}"><span title="ZIBBY state and source state disagree. ZIBBY never writes back." style="border:1px dashed var(--ink);padding:2px 6px;color:var(--ink)">DIFFERS FROM SOURCE</span></sc-if>
+                  <span style="width:8px"></span>
+                  <span style="border:1px solid var(--line);padding:2px 6px;color:var(--ink2)">{{ r.projU }}</span>
+                  <sc-if value="{{ r.hasTeam }}"><span style="border:1px solid var(--line);padding:2px 6px;color:var(--ink2)">{{ r.teamU }}</span></sc-if>
+                  <sc-if value="{{ r.isHidden }}"><span style="border:1px dashed var(--line2);padding:2px 6px;color:var(--ink2)">HIDDEN</span></sc-if>
+                  <span style="margin-left:auto;color:var(--ink3)">UPDATED {{ r.upd }}</span>
+                </div>
+                <sc-if value="{{ r.hasPr }}">
+                  <div style="display:flex;align-items:center;gap:10px;padding-left:84px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em">
+                    <a href="{{ r.prUrl }}" target="_blank" onClick="{{ stop }}" style="display:flex;align-items:center;gap:6px;border:1px solid var(--line2);background:var(--bg);padding:3px 8px;color:var(--ink);text-decoration:none" style-hover="border-color:var(--ink)">{{ r.prDot }}{{ r.prLabel }} ↗</a>
+                    <sc-if value="{{ r.prListable }}"><button onClick="{{ r.onPrList }}" style="all:unset;cursor:pointer;color:var(--ink3)" style-hover="color:var(--ink)">IN PULL REQUESTS →</button></sc-if>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ r.menuOpen }}">
+                  <div onClick="{{ closeMenu }}" style="position:fixed;inset:0;z-index:30;cursor:default"></div>
+                  <div onClick="{{ stop }}" style="position:absolute;top:44px;right:14px;z-index:31;width:200px;background:var(--panel);border:1px solid var(--ink);display:flex;flex-direction:column;padding:4px 0;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;cursor:default">
+                    <a href="{{ r.srcUrl }}" target="_blank" onClick="{{ closeMenu }}" style="display:flex;justify-content:space-between;padding:9px 12px;color:var(--ink);text-decoration:none" style-hover="background:var(--panel2)"><span>OPEN IN {{ r.srcU }}</span><span style="color:var(--ink3)">↗</span></a>
+                    <div style="height:1px;background:var(--line);margin:4px 0"></div>
+                    <button onClick="{{ r.onHide }}" style="all:unset;cursor:pointer;display:flex;justify-content:space-between;padding:9px 12px;color:var(--ink)" style-hover="background:var(--panel2)"><span>{{ r.hideLabel }}</span><span style="color:var(--ink3)">{{ r.hideNote }}</span></button>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+        <sc-if value="{{ issuesEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start;padding:28px 18px">
+            <span style="font-size:18px;font-weight:500">Nothing to process</span>
+            <span style="font-size:13px;color:var(--ink2)">{{ emptyNote }}</span>
+            <button onClick="{{ showDoneNow }}" style="all:unset;cursor:pointer;border:1px solid var(--line2);padding:7px 12px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink)" style-hover="background:var(--panel2)">SHOW DONE</button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isItem }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Inbox item detail" style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:0">
+          <button onClick="{{ goIssues }}" style="all:unset;cursor:pointer;align-self:flex-start;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)" style-hover="color:var(--ink)">← ISSUES</button>
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">{{ dt.key }} · {{ dt.srcU }} · {{ dt.projU }}</span>
+          <h2 style="margin:0;font-size:30px;font-weight:500;letter-spacing:-.02em;line-height:1.15;text-wrap:pretty">{{ dt.title }}</h2>
+        </div>
+        <div style="display:flex;gap:8px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em">
+          <a href="{{ dt.srcUrl }}" target="_blank" style="border:1px solid var(--line2);padding:10px 12px;color:var(--ink);text-decoration:none" style-hover="background:var(--panel2)">OPEN IN {{ dt.srcU }} ↗</a>
+          <button onClick="{{ dt.onHide }}" style="all:unset;cursor:pointer;border:1px solid var(--line2);padding:10px 12px;color:var(--ink2)" style-hover="background:var(--panel2);color:var(--ink)">{{ dt.hideLabel }}</button>
+          <sc-if value="{{ dt.hasPrimary }}"><button onClick="{{ dt.onPrimary }}" style="all:unset;cursor:pointer;background:var(--ink);color:var(--panel);padding:11px 16px">{{ dt.primary }}</button></sc-if>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+        <div style="display:flex;flex-direction:column;gap:6px;padding:12px 0"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">SOURCE STATUS · {{ dt.srcU }}</span><span style="font-size:18px;font-weight:500">{{ dt.ss }}</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;padding:12px 0"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">EXECUTION · ZIBBY</span><span style="display:flex;align-items:center;gap:8px;font-size:18px;font-weight:500">{{ dt.zDot }}{{ dt.zs }}</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;padding:12px 0"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">LAST CHANGE</span><span style="font-size:18px;font-weight:500">{{ dt.updLong }}</span></div>
+      </div>
+
+      <sc-if value="{{ dt.drift }}">
+        <div style="display:flex;align-items:center;gap:12px;border:1px dashed var(--ink);padding:10px 14px">
+          <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">DIFFERS FROM SOURCE</span>
+          <span style="font-size:13px;color:var(--ink2)">ZIBBY finished this item, but {{ dt.srcName }} still says “{{ dt.ss }}”. ZIBBY never writes back; update it in {{ dt.srcName }} if needed.</span>
+        </div>
+      </sc-if>
+
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+          <sc-if value="{{ dt.hasWait }}">
+            <div style="position:relative;border:1px solid var(--ink);background:var(--panel);padding:14px;display:flex;flex-direction:column;gap:10px">
+              <span style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em">{{ blockDot }}WAITING FOR YOU</span>
+              <span style="font-size:15px;line-height:1.4;text-wrap:pretty">{{ dt.wait }}</span>
+              <div style="display:flex;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em"><button onClick="{{ goApprovals }}" style="all:unset;cursor:pointer;background:var(--ink);color:var(--panel);padding:7px 12px">RESPOND →</button></div>
+            </div>
+          </sc-if>
+          <div style="border:1px solid var(--line);background:var(--panel)">
+            <div style="display:flex;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>DESCRIPTION</span><span>READ-ONLY · EDIT IN {{ dt.srcU }}</span></div>
+            <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
+              <sc-for list="{{ dt.desc }}" as="p" hint-placeholder-count="2"><p style="margin:0;font-size:14px;line-height:1.5;text-wrap:pretty">{{ p.t }}</p></sc-for>
+            </div>
+          </div>
+          <div style="border:1px solid var(--line);background:var(--panel)">
+            <div style="display:flex;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>EXECUTION LOG · ZIBBY</span><sc-if value="{{ dt.hasRun }}"><button onClick="{{ dt.onRun }}" style="all:unset;cursor:pointer;color:var(--ink)">VIEW RUN →</button></sc-if></div>
+            <div style="padding:10px 14px;display:flex;flex-direction:column;gap:6px;font-family:'Geist Mono',monospace;font-size:11px;line-height:1.4">
+              <sc-for list="{{ dt.log }}" as="l" hint-placeholder-count="3"><div style="display:grid;grid-template-columns:56px minmax(0,1fr);gap:10px"><span style="color:var(--ink3)">{{ l.t }}</span><span style="color:{{ l.ink }}">{{ l.text }}</span></div></sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <sc-if value="{{ dt.hasPr }}">
+            <div style="border:1px solid var(--line2);background:var(--panel);padding:12px;display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>LINKED PR · {{ dt.prN }}</span><span>{{ dt.prRepo }}</span></div>
+              <span style="font-size:14px;font-weight:500">{{ dt.prTitle }}</span>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em">
+                <span style="display:flex;align-items:center;gap:6px;border:1px solid var(--ink);padding:3px 7px">{{ dt.prDot }}{{ dt.prBlocker }}</span>
+                <span style="border:1px solid var(--line2);padding:3px 7px;color:var(--ink2)">{{ dt.prCi }}</span>
+              </div>
+              <div style="display:flex;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">
+                <a href="{{ dt.prUrl }}" target="_blank" style="flex:1;text-align:center;border:1px solid var(--line2);padding:7px;color:var(--ink);text-decoration:none" style-hover="background:var(--panel2)">OPEN ON GITHUB ↗</a>
+                <sc-if value="{{ dt.prListable }}"><button onClick="{{ dt.onPrList }}" style="all:unset;cursor:pointer;border:1px solid var(--line2);padding:7px 10px;color:var(--ink2)" style-hover="background:var(--panel2);color:var(--ink)">IN LIST →</button></sc-if>
+              </div>
+            </div>
+          </sc-if>
+          <div style="border:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column">
+            <sc-for list="{{ dt.meta }}" as="m" hint-placeholder-count="6">
+              <div style="display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);align-items:baseline"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ m.k }}</span><span style="font-size:13px">{{ m.v }}</span></div>
+            </sc-for>
+            <div style="display:flex;flex-direction:column;gap:8px;padding:10px 12px">
+              <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">WHY IT IS HERE</span>
+              <div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ dt.scope }}" as="s" hint-placeholder-count="1"><span style="border:1px solid var(--line2);padding:4px 8px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)">{{ s.l }}</span></sc-for></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isPrs }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Inbox pull requests" style="display:flex;flex-direction:column;gap:20px">
+      <sc-if value="{{ prFocus }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:12px;border:1px solid var(--ink);background:var(--panel);padding:8px 12px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em"><span>SHOWING {{ prFocus }} ONLY</span><button onClick="{{ clearFocus }}" style="all:unset;cursor:pointer;margin-left:auto;color:var(--ink2)" style-hover="color:var(--ink)">SHOW ALL ×</button></div>
+      </sc-if>
+      <sc-for list="{{ prSections }}" as="sec" hint-placeholder-count="2">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">{{ sec.num }}</span><span style="font-size:18px;font-weight:500">{{ sec.title }}</span><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--ink2)">{{ sec.count }}</span><span style="margin-left:auto;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ sec.note }}</span></div>
+          <div style="border:1px solid var(--line);background:var(--panel)">
+            <sc-for list="{{ sec.rows }}" as="r" hint-placeholder-count="3">
+              <div style="display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);box-shadow:{{ r.rail }}">
+                <div style="display:grid;grid-template-columns:56px minmax(0,1fr) auto auto;gap:14px;align-items:center">
+                  <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ r.n }}</span>
+                  <span style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.title }}</span>
+                  <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--ink3)">{{ r.meta }}</span>
+                  <a href="{{ r.url }}" target="_blank" style="border:1px solid var(--line2);padding:6px 10px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink);text-decoration:none" style-hover="background:var(--panel2)">OPEN ON GITHUB ↗</a>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-left:70px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em">
+                  <span style="display:flex;align-items:center;gap:6px;border:1px solid var(--ink);padding:3px 8px;color:var(--ink)">{{ r.blDot }}{{ r.blU }}</span>
+                  <span style="color:var(--ink2);padding:0 4px">{{ r.ciU }}</span>
+                  <span style="color:var(--line2)">·</span>
+                  <span style="color:var(--ink2);padding:0 4px">{{ r.reviewU }}</span>
+                  <sc-if value="{{ r.draft }}"><span style="border:1px dashed var(--line2);padding:2px 6px;color:var(--ink2)">DRAFT</span></sc-if>
+                  <sc-if value="{{ r.hasReason }}"><span style="border:1px solid var(--line);padding:2px 6px;color:var(--ink2)">{{ r.reasonU }}</span></sc-if>
+                  <sc-if value="{{ r.hasItem }}"><button onClick="{{ r.onItem }}" style="all:unset;cursor:pointer;margin-left:auto;color:var(--ink3)" style-hover="color:var(--ink)">ITEM {{ r.itemKey }} →</button></sc-if>
+                </div>
+              </div>
+            </sc-for>
+            <sc-if value="{{ sec.empty }}"><div style="padding:16px 14px;font-size:13px;color:var(--ink2)">{{ sec.emptyText }}</div></sc-if>
+          </div>
+        </div>
+      </sc-for>
+      <span style="font-size:12px;color:var(--ink2)">Read-only. Merging stays in the merge queue; the inbox never merges. Refreshes on focus and every 60 s.</span>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { q: '', byEpic: false, showDone: false, showHidden: false, menu: null, pop: null, syncing: false, bannerOff: false,
+    open: JSON.parse(sessionStorage.getItem('zc-inbox-open') || '{}'),
+    f: JSON.parse(localStorage.getItem('zc-inbox-f') || 'null') || { co: [], team: [], proj: [] } };
+  searchRef = React.createRef();
+  componentDidMount() {
+    this.k = e => { if (e.key !== '/') return; const t = (document.activeElement || {}).tagName || ''; if (/INPUT|TEXTAREA|SELECT/.test(t)) return; const el = this.searchRef.current; if (el) { e.preventDefault(); el.focus(); } };
+    window.addEventListener('keydown', this.k);
+    this.poll = setInterval(() => this.forceUpdate(), 60000);
+    this.onFocus = () => this.forceUpdate(); window.addEventListener('focus', this.onFocus);
+  }
+  componentWillUnmount() { window.removeEventListener('keydown', this.k); window.removeEventListener('focus', this.onFocus); clearInterval(this.poll); clearTimeout(this.st); }
+  setF(f) { localStorage.setItem('zc-inbox-f', JSON.stringify(f)); this.setState({ f }); }
+  toggleF(dim, v) { const cur = this.state.f[dim]; this.setF({ ...this.state.f, [dim]: cur.includes(v) ? cur.filter(x => x !== v) : cur.concat([v]) }); }
+  pass(o) { const f = this.state.f, co = window.ZC.coOf(o.project), cv = co ? co.id : '__none', tv = o.team || '__none';
+    return (!f.co.length || f.co.includes(cv)) && (!f.team.length || f.team.includes(tv)) && (!f.proj.length || f.proj.includes(o.project)); }
+  norm(s) { return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
+  process(it) {
+    const Z = window.ZC, p = Z.projects.find(x => x.id === it.project) || {};
+    const t = Z.createTask({ title: it.title, chain: p.chain || 'feature', project: it.project, source: (it.src === 'JIRA' ? 'Jira ' : 'GitHub ') + it.key, picked: 'auto' });
+    it.zs = 'running'; it.task = t.id; it.upd = 0; it.log = [{ t: 'NOW', text: 'Processed from inbox · created ' + t.id }];
+    Z.emit(); this.forceUpdate();
+  }
+  sync = () => { if (this.state.syncing) return; this.setState({ syncing: true }); this.st = setTimeout(() => { window.ZI.synced = Date.now(); this.setState({ syncing: false }); window.ZC.emit(); }, 1200); };
+  renderVals() {
+    const Z = window.ZC, B = window.ZB, ZI = window.ZI, go = this.props.go || (() => {});
+    const empty = { filters: [], groups: [], toggles: [], skel: [], prSections: [], ov: { buckets: [], top: [], prBuckets: [], prTop: [] }, dt: { desc: [], log: [], meta: [], scope: [] }, searchRef: this.searchRef };
+    if (!Z || !B || !ZI) return empty;
+    const st = this.state, pad = Z.pad, stop = e => e.stopPropagation();
+    const parts = (this.props.route || 'inbox/overview').split('/'), sub = parts[1] || 'overview';
+    const demo = this.props.demoState || 'normal';
+    const isItemRoute = sub === 'issues' && parts[3];
+    const view = isItemRoute ? 'item' : sub === 'issues' ? 'issues' : sub === 'pull-requests' ? 'prs' : 'overview';
+    const blocked = demo === 'loading' || demo === 'error' || demo === 'none';
+    const ZS = { new: ['idle', 'NEW IN SOURCE', 'New in source'], waiting: ['blocked', 'WAITING FOR YOU', 'Waiting for you'], running: ['working', 'RUNNING', 'Running'], done: ['done', 'DONE', 'Done'] };
+    const RANK = { new: 0, waiting: 1, running: 2, done: 3 };
+    const BL = { 'ci-failing': ['error', 'CI FAILING'], changes: ['blocked', 'CHANGES REQUESTED'], conflict: ['error', 'MERGE CONFLICT'], awaiting: ['idle', 'AWAITING REVIEW'], ready: ['working', 'READY TO MERGE'] };
+    const CI = { passing: '✓', failing: '✗', pending: '…', unknown: '?' };
+    const REV = { none: 'NO REVIEW YET', 'changes-requested': 'CHANGES REQUESTED', approved: 'APPROVED' };
+    const itemsAll = demo === 'empty' ? [] : ZI.items;
+    const prsAll = demo === 'empty' ? [] : ZI.prs;
+    const minutes = Math.max(0, Math.round((Date.now() - ZI.synced) / 60000));
+
+    // filters
+    const f = st.f, dims = [
+      ['co', 'COMPANY', Z.companies.map(c => [c.id, c.name]).concat([['__none', 'No company']])],
+      ['team', 'TEAM', ['dev', 'ops', 'qa', 'sec'].map(id => [id, Z.D(id).name]).concat([['__none', 'No team']])],
+      ['proj', 'PROJECT', Z.projects.map(p => [p.id, p.id])]
+    ];
+    const filters = dims.map(([dim, label, opts]) => {
+      const sel = f[dim], on = sel.length > 0, open = st.pop === dim;
+      const value = !on ? 'ALL' : sel.length === 1 ? (opts.find(o => o[0] === sel[0]) || [, ''])[1].toUpperCase() : pad(sel.length) + ' SELECTED';
+      return { label, value, line: on || open ? 'var(--ink)' : 'var(--line2)', bg: open ? 'var(--panel2)' : 'transparent', open,
+        onToggle: () => this.setState({ pop: open ? null : dim }),
+        opts: opts.map(([v, l]) => ({ label: l, fill: sel.includes(v) ? 'var(--ink)' : 'transparent', ink: v === '__none' ? 'var(--ink2)' : 'var(--ink)', meta: dim === 'proj' ? ((Z.coOf(v) || {}).name || 'Internal').toUpperCase() : '', onClick: () => this.toggleF(dim, v) })) };
+    });
+    const hasFilters = f.co.length + f.team.length + f.proj.length > 0;
+
+    // issues
+    const q = this.norm(st.q.trim());
+    const matchQ = it => !q || this.norm(it.title + ' ' + it.desc + ' ' + it.key).includes(q);
+    const visible = it => this.pass(it) && (st.showHidden || !ZI.hidden.has(it.id)) && (st.showDone || it.zs !== 'done' || false) && matchQ(it);
+    const sortI = (a, b) => RANK[a.zs] - RANK[b.zs] || a.upd - b.upd;
+    const rowOf = (it, nested) => {
+      const pr = ZI.prOf(it), hidden = ZI.hidden.has(it.id), z = ZS[it.zs], menuOpen = st.menu === it.id;
+      const primary = it.zs === 'new' || it.zs === 'waiting' ? 'PROCESS' : it.zs === 'running' ? 'VIEW RUN' : '';
+      const prState = pr ? (pr.isMerged ? 'MERGED' : BL[pr.blocker][1]) : '';
+      return { key: it.key, title: it.title, srcU: it.src, ssU: it.ss.toUpperCase(), zDot: B.dot(React, z[0], 7), zsU: z[1], drift: !!it.drift,
+        projU: it.project.toUpperCase(), hasTeam: !!it.team, teamU: it.team ? Z.D(it.team).code : '', isHidden: hidden, upd: ZI.ago(it.upd),
+        padL: nested ? '42px' : '14px', op: hidden ? .55 : 1, rail: nested ? 'inset 28px 0 0 var(--bg), inset 29px 0 0 var(--line)' : 'none',
+        hasPrimary: !!primary, primary, pBg: primary === 'PROCESS' ? 'var(--ink)' : 'transparent', pInk: primary === 'PROCESS' ? 'var(--panel)' : 'var(--ink)', pLine: primary === 'PROCESS' ? 'var(--ink)' : 'var(--line2)',
+        onPrimary: e => { e.stopPropagation(); if (it.zs === 'new') this.process(it); else if (it.zs === 'waiting') go('inbox/issues/' + it.project + '/' + it.id); else go(it.task ? 'work/task/' + it.task : 'work/tasks'); },
+        menuOpen, menuLine: menuOpen ? 'var(--ink)' : 'var(--line2)', onMenu: e => { e.stopPropagation(); this.setState({ menu: menuOpen ? null : it.id }); },
+        srcUrl: ZI.srcUrl(it), hideLabel: hidden ? 'UNHIDE' : 'HIDE', hideNote: hidden ? '' : 'PERMANENT',
+        onHide: e => { e.stopPropagation(); ZI.setHidden(it.id, !hidden); this.setState({ menu: null }); },
+        hasPr: !!pr, prUrl: pr ? pr.url : '', prDot: pr ? B.dot(React, pr.isMerged ? 'done' : BL[pr.blocker][0], 6) : null,
+        prLabel: pr ? '#' + pr.n + ' · CI ' + CI[pr.ci] + ' · ' + prState : '', prListable: !!pr && !pr.isMerged, onPrList: e => { e.stopPropagation(); go('inbox/pull-requests/' + pr.n); },
+        onOpen: () => go('inbox/issues/' + it.project + '/' + it.id) };
+    };
+    const list = itemsAll.filter(visible).sort(sortI);
+    let groups = [];
+    if (st.byEpic) {
+      const setOpen = (id, v) => { const open = { ...st.open, [id]: v }; sessionStorage.setItem('zc-inbox-open', JSON.stringify(open)); this.setState({ open }); };
+      const mk = (id, key, title, srcU, kids, ep) => {
+        const open = q ? true : !!st.open[id], nNew = kids.filter(k => k.zs === 'new').length;
+        return { showHeader: true, isEpic: !!ep, key, title, srcU, caret: open ? '▾' : '▸', bg: open ? 'var(--bg)' : 'transparent',
+          prog: ep ? pad(ep.done) + '/' + pad(ep.total) : '', progW: ep ? Math.round(ep.done / ep.total * 100) + '%' : '0%', newStr: nNew ? pad(nNew) + ' NEW' : '',
+          srcUrl: ep ? ZI.srcUrl(ep) : '', onToggle: () => setOpen(id, !open), rows: open ? kids.map(k => rowOf(k, true)) : [] };
+      };
+      ZI.epics.forEach(ep => { const kids = list.filter(i => i.epic === ep.id); if (kids.length) groups.push(Object.assign(mk(ep.id, ep.key, ep.title, ep.src, kids, ep), { r: RANK[kids[0].zs] })); });
+      groups.sort((a, b) => a.r - b.r);
+      const loose = list.filter(i => !i.epic);
+      if (loose.length) groups.push(mk('__none', '', 'No epic', '', loose, null));
+    } else if (list.length) groups = [{ showHeader: false, rows: list.map(i => rowOf(i, false)) }];
+    const tog = (label, on, k) => ({ label, line: on ? 'var(--ink)' : 'var(--line2)', ink: on ? 'var(--ink)' : 'var(--ink2)', fill: on ? 'var(--ink)' : 'transparent', onClick: () => this.setState({ [k]: !on }) });
+    const hiddenN = itemsAll.filter(i => ZI.hidden.has(i.id) && this.pass(i)).length;
+
+    // overview
+    const scoped = itemsAll.filter(i => this.pass(i) && !ZI.hidden.has(i.id));
+    const act = scoped.filter(i => i.zs === 'new' || i.zs === 'waiting').sort(sortI);
+    const prsF = prsAll.filter(p => this.pass(p));
+    const prSort = (a, b) => ZI.BL_ORDER.indexOf(a.blocker) - ZI.BL_ORDER.indexOf(b.blocker) || b.age - a.age;
+    const toRev = prsF.filter(p => p.bucket === 'to-review').sort(prSort), mine = prsF.filter(p => p.bucket === 'mine').sort(prSort);
+    const mineBlocked = mine.filter(p => ['ci-failing', 'changes', 'conflict'].includes(p.blocker));
+    const ov = { need: pad(act.length),
+      buckets: ['new', 'waiting'].map(k => ({ dot: B.dot(React, ZS[k][0], 8), label: ZS[k][1], n: pad(act.filter(i => i.zs === k).length) })),
+      top: act.slice(0, 3).map(i => ({ key: i.key, title: i.title, dot: B.dot(React, ZS[i.zs][0], 7), zsU: ZS[i.zs][1], onOpen: () => go('inbox/issues/' + i.project + '/' + i.id) })),
+      noIssues: !act.length, toReview: pad(toRev.length), blocked: pad(mineBlocked.length),
+      prBuckets: [{ dot: B.dot(React, 'idle', 8), label: 'TO REVIEW', n: pad(toRev.length) }, { dot: B.dot(React, 'error', 8), label: 'MINE · BLOCKED', n: pad(mineBlocked.length) }],
+      prTop: toRev.concat(mineBlocked).sort(prSort).slice(0, 3).map(p => ({ n: '#' + p.n, title: p.title, sub: p.repo.toUpperCase() + ' · ' + (p.bucket === 'mine' ? 'MINE' : p.reason === 'team' ? 'VIA TEAM ' + p.reviewTeam.toUpperCase() : 'DIRECTLY'), dot: B.dot(React, BL[p.blocker][0], 7), blU: BL[p.blocker][1], onOpen: () => go('inbox/pull-requests/' + p.n) })),
+      noPrs: !toRev.length && !mineBlocked.length };
+
+    // prs
+    const focusN = sub === 'pull-requests' && parts[2] ? +parts[2] : null;
+    const prRow = p => ({ n: '#' + p.n, title: p.title, meta: p.repo.toUpperCase() + ' · ' + p.author.toUpperCase() + ' · ' + ZI.ago(p.age), url: p.url,
+      blDot: B.dot(React, BL[p.blocker][0], 7), blU: BL[p.blocker][1], ciU: 'CI ' + CI[p.ci] + ' ' + p.ci.toUpperCase(), reviewU: 'REVIEW · ' + REV[p.review], draft: p.draft,
+      hasReason: p.bucket === 'to-review', reasonU: p.reason === 'team' ? 'VIA TEAM ' + (p.reviewTeam || '').toUpperCase() : 'DIRECTLY',
+      rail: p.n === focusN ? 'inset 2px 0 0 var(--ink)' : 'none',
+      hasItem: !!p.item, itemKey: p.item ? (ZI.items.find(i => i.id === p.item) || {}).key : '', onItem: () => { const i = ZI.items.find(x => x.id === p.item); i && go('inbox/issues/' + i.project + '/' + i.id); } });
+    const fo = arr => focusN ? arr.filter(p => p.n === focusN) : arr;
+    const prSections = [
+      { num: '01 —', title: 'To review', count: pad(fo(toRev).length), note: 'REQUESTED FROM YOU OR YOUR TEAM', rows: fo(toRev).map(prRow), empty: !fo(toRev).length, emptyText: 'No review is waiting on you.' },
+      { num: '02 —', title: 'Mine — push to merged', count: pad(fo(mine).length), note: 'OPEN PRS IN ZIBBY PROJECTS · SORTED BY BLOCKER', rows: fo(mine).map(prRow), empty: !fo(mine).length, emptyText: 'You have no open pull requests.' }
+    ];
+
+    // detail
+    let dt = { desc: [], log: [], meta: [], scope: [] };
+    const it = isItemRoute && ZI.items.find(i => i.id === parts[3]);
+    if (it) {
+      const pr = ZI.prOf(it), hidden = ZI.hidden.has(it.id), co = Z.coOf(it.project), ep = ZI.epics.find(e => e.id === it.epic), srcName = it.src === 'JIRA' ? 'Jira' : 'GitHub';
+      const primary = it.zs === 'new' ? 'PROCESS' : it.zs === 'running' ? 'VIEW RUN →' : '';
+      const log = (it.log || []).concat(it.zs === 'running' && !it.log ? [{ t: '1H', text: 'DEV picked up the subtask · branch created' }] : [])
+        .concat(pr && !pr.isMerged ? [{ t: ZI.ago(pr.age), text: 'Opened PR #' + pr.n + ' in ' + pr.repo }] : [])
+        .concat(pr && pr.isMerged ? [{ t: '2D', text: 'PR #' + pr.n + ' merged through the merge queue' }] : [])
+        .concat(it.wait ? [{ t: ZI.ago(it.upd), text: 'Gate fired · waiting for you' }] : [])
+        .concat([{ t: ZI.ago(it.upd + 2), text: 'Synced from ' + srcName + ' · in scope: ' + it.scope.join(', ') }]);
+      dt = { key: it.key, title: it.title, srcU: it.src, srcName, projU: it.project.toUpperCase(), srcUrl: ZI.srcUrl(it), ss: it.ss, zs: ZS[it.zs][2], zDot: B.dot(React, ZS[it.zs][0], 9),
+        updLong: ZI.ago(it.upd).toLowerCase() === 'now' ? 'Just now' : ZI.ago(it.upd).toLowerCase().replace('h', ' h ago').replace('d', ' d ago'), drift: !!it.drift,
+        hideLabel: hidden ? 'UNHIDE' : 'HIDE', onHide: () => ZI.setHidden(it.id, !hidden),
+        hasPrimary: !!primary, primary, onPrimary: () => it.zs === 'new' ? this.process(it) : go(it.task && it.task !== true ? 'work/task/' + it.task : 'work/tasks'),
+        hasWait: it.zs === 'waiting' && !!it.wait, wait: it.wait,
+        desc: (it.desc || 'No description in ' + srcName + '.').split('\n').map(t => ({ t })),
+        log: log.map((l, i) => ({ t: l.t, text: l.text, ink: i === 0 ? 'var(--ink)' : 'var(--ink2)' })),
+        hasRun: it.zs === 'running' || it.zs === 'done', onRun: () => go(it.task && it.task !== true ? 'work/task/' + it.task : 'work/tasks'),
+        hasPr: !!pr, prN: pr ? '#' + pr.n : '', prRepo: pr ? pr.repo.toUpperCase() : '', prTitle: pr ? pr.title : '', prUrl: pr ? pr.url : '',
+        prDot: pr ? B.dot(React, pr.isMerged ? 'done' : BL[pr.blocker][0], 7) : null, prBlocker: pr ? (pr.isMerged ? 'MERGED' : BL[pr.blocker][1]) : '', prCi: pr ? 'CI ' + CI[pr.ci] + ' · ' + REV[pr.review] : '',
+        prListable: !!pr && !pr.isMerged, onPrList: () => pr && go('inbox/pull-requests/' + pr.n),
+        meta: [{ k: 'PROJECT', v: it.project }, { k: 'COMPANY', v: co ? co.name : 'Internal' }, { k: 'TEAM', v: it.team ? Z.D(it.team).name : 'No team' }, { k: 'EPIC', v: ep ? ep.key + ' · ' + ep.title : 'No epic' }, { k: 'SOURCE', v: srcName + ' · ' + it.key }],
+        scope: it.scope.map(s => ({ l: s.toUpperCase() })) };
+    }
+
+    const titles = { overview: 'Inbox', issues: 'Issues', prs: 'Pull requests', item: 'Issue' };
+    const showList = !blocked;
+    return {
+      searchRef: this.searchRef, stop,
+      secLabel: 'INBOX — ' + ({ overview: 'OVERVIEW', issues: 'ISSUES', prs: 'PULL REQUESTS', item: 'ISSUES · DETAIL' })[view],
+      title: titles[view],
+      syncLabel: st.syncing ? 'SYNCING…' : minutes === 0 ? 'SYNCED JUST NOW' : 'SYNCED ' + minutes + ' MIN AGO', syncBtn: st.syncing ? 'SYNCING' : 'SYNC',
+      syncDot: B.dot(React, st.syncing ? 'working' : demo === 'partial' && !st.bannerOff ? 'error' : 'idle', 7), onSync: this.sync,
+      showFilters: view !== 'item' && demo !== 'none' && demo !== 'loading', filters, hasFilters, clearFilters: () => this.setF({ co: [], team: [], proj: [] }), closePop: () => this.setState({ pop: null }),
+      filterNote: hasFilters ? 'FILTER APPLIES TO ISSUES AND PULL REQUESTS' : '',
+      showBanner: demo === 'partial' && !st.bannerOff, dismissBanner: () => this.setState({ bannerOff: true }), goReconnect: () => go('work/projects/mobile'), errDot: B.dot(React, 'error', 7), blockDot: B.dot(React, 'blocked', 7),
+      isLoading: demo === 'loading', skel: ['62%', '48%', '70%', '40%', '56%'].map(w => ({ w })), isError: demo === 'error', isNone: demo === 'none', goProjects: () => go('work/projects'),
+      isOverview: showList && view === 'overview', ov, goIssues: () => go('inbox/issues'), goPrs: () => go('inbox/pull-requests'),
+      isIssues: showList && view === 'issues', q: st.q, onQ: e => this.setState({ q: e.target.value }),
+      toggles: [tog('GROUP BY EPIC', st.byEpic, 'byEpic'), tog('SHOW DONE', st.showDone, 'showDone'), tog('SHOW HIDDEN · ' + pad(hiddenN), st.showHidden, 'showHidden')],
+      listMeta: pad(list.length) + ' ITEMS' + (q ? ' MATCH “' + st.q.trim().toUpperCase() + '”' : ''), groups, issuesEmpty: !list.length,
+      emptyNote: q ? 'No item matches this search.' : 'Everything in your scope is running or done.', showDoneNow: () => this.setState({ showDone: true }),
+      closeMenu: e => { e && e.stopPropagation(); this.setState({ menu: null }); },
+      isItem: showList && view === 'item' && !!it, dt, goApprovals: () => go('policy/approvals'),
+      isPrs: showList && view === 'prs', prSections, prFocus: focusN ? '#' + focusN : '', clearFocus: () => go('inbox/pull-requests')
+    };
+  }
+}
+</script>
+</body>
+</html>

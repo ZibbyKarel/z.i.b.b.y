@@ -54,7 +54,7 @@ system-config section — link there rather than duplicating the table here.
      (read via `GET /tasks/runs/archive?limit=N`). The API stores it, nothing
      server-side reads it; a stored file without the key reads back as `20`.
    - `roadmapTickMs` (Phase 125h) is `RoadmapTickService`'s heartbeat —
-     `60_000` by default, `0` disables, re-arms live via `onChange()` like the
+     `900_000` (15 min) by default, `0` disables, re-arms live via `onChange()` like the
      other `*TickMs` knobs. Each tick re-syncs every project whose roadmap
      config has `autoSync: true`, then drives
      `RoadmapGateService.reconcileRunning`/`reconcileAwaitingMerge` for every

@@ -77,7 +77,7 @@ export const SystemConfigSchema = z
      * Editable from `/settings?tab=runtime`; read live (never cached) via
      * `SystemConfigStore.current()`.
      */
-    roadmapTickMs: z.number().int().min(0).default(60_000),
+    roadmapTickMs: z.number().int().min(0).default(900_000),
     /**
      * Activity Dock: how many finished (done/failed) tasks the dock's "Hotové" list
      * shows. Editable from `/settings` (runtime section); default 20.

@@ -1,5 +1,7 @@
+import { execFile } from "node:child_process";
 import * as path from "node:path";
-import { Injectable } from "@nestjs/common";
+import { promisify } from "node:util";
+import { Injectable, Optional } from "@nestjs/common";
 import {
   type AgentRun,
   type ArchiveCounts,
@@ -77,6 +79,11 @@ interface ProjectNameMaps {
   byPath: ReadonlyMap<string, string>;
 }
 
+export type FolderOpener = (folder: string) => Promise<void>;
+const openInFinder: FolderOpener = async (folder) => {
+  await promisify(execFile)("open", [folder]);
+};
+
 /**
  * The unified task-run surface. Owns the merge that used to live in the web
  * (`mergeRunFeed` + the per-kind `*ToView` converters): it reads all three runner
@@ -99,7 +106,22 @@ export class TaskRunsService {
     private readonly projectsStore: ProjectsStorageService,
     private readonly scheduled: ScheduledTasksStorageService,
     private readonly scheduler: TaskSchedulerService,
+    // Optional so Nest doesn't DI-resolve it — tests inject a stub so nothing launches.
+    @Optional() private readonly opener: FolderOpener = openInFinder,
   ) {}
+
+  /**
+   * Open a workflow run's output folder on the operator's machine (macOS `open`).
+   * Read-only and operator-initiated, so no approval gate. Non-workflow / unknown
+   * runs → {@link TaskRunNotFoundError}.
+   */
+  async openFolder(runId: string): Promise<{ path: string }> {
+    const kind = await this.kindOf(runId);
+    const folder = kind === "workflow" ? await this.workflowRunner.runFolder(runId) : null;
+    if (!folder) throw new TaskRunNotFoundError(runId);
+    await this.opener(folder);
+    return { path: folder };
+  }
 
   /**
    * The unified feed, newest-first. A goal dispatches its maker as a child
@@ -572,7 +594,7 @@ function workflowRunToView(
     r.status === "paused-limit"
       ? "paused-limit"
       : r.status === "parked"
-        ? r.parkedReason === "retries" || r.parkedReason === "limit"
+        ? r.parkedReason === "retries" || r.parkedReason === "limit" || r.parkedReason === "no-employee"
           ? "parked"
           : "awaiting-approval"
         : r.status === "failed"

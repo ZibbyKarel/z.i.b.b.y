@@ -12,6 +12,7 @@
 <style>html,body{margin:0;background:#F3F4F2}a{color:#111312}a:hover{color:#50544F}input,textarea,select{font:inherit;color:inherit}::placeholder{color:#8A8E88}@keyframes zc-flowx{0%{left:0;opacity:0}15%{opacity:1}85%{opacity:1}100%{left:calc(100% - 4px);opacity:0}}@keyframes zc-bar{0%,100%{transform:scaleY(.25)}50%{transform:scaleY(1)}}@media (prefers-reduced-motion:reduce){*{animation:none!important}}</style>
 <script src="./zibby.js"></script>
 <script src="./zc-data.js"></script>
+<script src="./zc-inbox.js"></script>
 </helmet>
 <div ref="{{ rootRef }}" style="--bg:#F3F4F2;--panel:#FAFAF8;--panel2:#EDEEEB;--line:#D9DBD6;--line2:#BFC2BC;--ink:#111312;--ink2:#50544F;--ink3:#8A8E88;--grid:rgba(17,19,18,.05);--gw:0px;--s-work:oklch(0.6 0.14 160);--s-think:oklch(0.58 0.14 250);--s-block:oklch(0.7 0.15 70);--s-err:oklch(0.58 0.2 25);--s-done:oklch(0.56 0.15 300);--s-idle:#A9ADA7;--pod:var(--panel);width:100vw;height:100vh;min-width:1440px;min-height:900px;box-sizing:border-box;background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px, transparent 1px),linear-gradient(90deg, var(--grid) 1px, transparent 1px);background-size:24px 24px;color:var(--ink);font-family:'Geist',system-ui,sans-serif;display:grid;grid-template-rows:56px minmax(0,1fr);overflow:hidden;position:relative;--dot-r:0">
   <header data-screen-label="Header" style="display:flex;align-items:center;gap:18px;padding:0 20px;border-bottom:1px solid var(--line);background:var(--panel)">
@@ -107,6 +108,7 @@
         <sc-if value="{{ isActivity }}" hint-placeholder-val="{{ false }}"><dc-import name="Activity Screens" route="{{ route }}" go="{{ go }}" tick="{{ tick }}" hint-size="100%,760px"></dc-import></sc-if>
         <sc-if value="{{ isPolicy }}" hint-placeholder-val="{{ false }}"><dc-import name="Policy Screens" route="{{ route }}" go="{{ go }}" tick="{{ tick }}" open-approval="{{ openApproval }}" hint-size="100%,760px"></dc-import></sc-if>
         <sc-if value="{{ isKnowledge }}" hint-placeholder-val="{{ false }}"><dc-import name="Knowledge Screens" route="{{ route }}" go="{{ go }}" tick="{{ tick }}" hint-size="100%,760px"></dc-import></sc-if>
+        <sc-if value="{{ isInbox }}" hint-placeholder-val="{{ false }}"><dc-import name="Inbox Screens" route="{{ route }}" go="{{ go }}" tick="{{ tick }}" demo-state="{{ inboxState }}" hint-size="100%,760px"></dc-import></sc-if>
         <sc-if value="{{ isLedger }}" hint-placeholder-val="{{ false }}"><dc-import name="Ledger Screens" route="{{ route }}" go="{{ go }}" tick="{{ tick }}" hint-size="100%,760px"></dc-import></sc-if>
         <sc-if value="{{ isSystem }}" hint-placeholder-val="{{ false }}"><dc-import name="System Screens" route="{{ route }}" go="{{ go }}" tick="{{ tick }}" theme="{{ theme }}" set-theme="{{ setThemeFn }}" hint-size="100%,760px"></dc-import></sc-if>
       </div>
@@ -198,7 +200,7 @@
   </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script>
+<script type="text/x-dc" data-dc-script data-props='{"inboxState":{"editor":"enum","default":"normal","options":["normal","partial","loading","error","empty","none"],"tsType":"string","section":"Inbox demo state"}}'>
 class Component extends DCLogic {
   state = { ready: !!(window.ZB && window.ZC), route: (location.hash.slice(1) || localStorage.getItem('zc-route') || 'org/map'), now: '', theme: localStorage.getItem('zb-dash-theme') || 'light',
     dockOpen: false, attach: [], draft: '', msgs: null, listening: false, sheet: null, denyMode: false, reason: '', palOpen: false, q: '', palIdx: 0, tick: 0, menuOpen: false,
@@ -224,6 +226,7 @@ class Component extends DCLogic {
   };
   SECTIONS = {
     org: ['ORG', [['map','ORG MAP'],['pool','AGENT POOL']]],
+    inbox: ['INBOX', [['overview','OVERVIEW'],['issues','ISSUES'],['pull-requests','PULL REQUESTS']]],
     work: ['WORK', [['tasks','TASKS'],['chains','CHAINS'],['goals','GOALS'],['companies','COMPANIES'],['projects','PROJECTS']]],
     activity: ['ACTIVITY', [['log','LIVE LOG'],['runs','RUNS'],['inbox','INBOX'],['briefings','BRIEFINGS']]],
     policy: ['POLICY', [['approvals','APPROVALS'],['gates','GATE RULES'],['patterns','LEARNED PATTERNS']]],
@@ -306,14 +309,17 @@ class Component extends DCLogic {
     if (!Z || !B) return { rootRef: this.rootRef, chatRef: this.chatRef, palRef: this.palRef, nav: [], approvals: [], legend: [], pins: [], subnav: [], msgs: [], palItems: [], sh: { diff: [], route: [], metrics: [] } };
     const pad = Z.pad, G = (a, size, glow) => B.glyph(React, { seed: a.name, state: a.state, size, glow });
     const parts = this.state.route.split('/'), sec = this.SECTIONS[parts[0]] ? parts[0] : 'org', sub = parts[1];
-    const nav = ['org','work','activity','policy','knowledge','ledger'].map(k => ({ label: this.SECTIONS[k][0], badge: k === 'policy' && Z.approvals.length ? pad(Z.approvals.length) : '', line: k === sec ? 'var(--ink)' : 'transparent', color: k === sec ? 'var(--ink)' : 'var(--ink3)', onClick: () => this.go(k + '/' + this.SECTIONS[k][1][0][0]) }));
-    const subnav = this.SECTIONS[sec][1].map(([k, l]) => ({ label: l, line: k === sub ? 'var(--ink)' : 'transparent', color: k === sub ? 'var(--ink)' : 'var(--ink3)', onClick: () => this.go(sec + '/' + k) }));
+    const nav = ['org','work','inbox','activity','policy','knowledge','ledger'].map(k => ({ label: this.SECTIONS[k][0], badge: k === 'policy' && Z.approvals.length ? pad(Z.approvals.length) : '', line: k === sec ? 'var(--ink)' : 'transparent', color: k === sec ? 'var(--ink)' : 'var(--ink3)', onClick: () => this.go(k + '/' + this.SECTIONS[k][1][0][0]) }));
+    const IC = sec === 'inbox' && window.ZI ? window.ZI.counts() : null;
+    const subnav = this.SECTIONS[sec][1].map(([k, l]) => ({ label: l + (IC && k === 'issues' ? ' · ' + pad(IC.issues) : IC && k === 'pull-requests' ? ' · ' + pad(IC.toReview) + ' · ' + pad(IC.mineBlocked) : ''), line: k === sub ? 'var(--ink)' : 'transparent', color: k === sub ? 'var(--ink)' : 'var(--ink3)', onClick: () => this.go(sec + '/' + k) }));
     let crumb = '';
     if (sub === 'dept') crumb = 'DEPARTMENT · ' + (Z.D(parts[2]) || {}).code;
     if (sub === 'agent') crumb = 'AGENT · ' + parts[2];
     if (sub === 'chat') crumb = 'DIRECT LINE · ' + (Z.D(parts[2]) || {}).code;
     if (sub === 'task') crumb = 'TASK · ' + parts[2];
     if (sub === 'new') crumb = 'NEW TASK';
+    if (sec === 'inbox' && sub === 'issues' && parts[3] && window.ZI) crumb = 'ITEM · ' + ((window.ZI.items.find(i => i.id === parts[3]) || {}).key || parts[3]);
+    if (sec === 'inbox' && sub === 'pull-requests' && parts[2]) crumb = 'PR · #' + parts[2];
     const ent = this.entityOf(parts), entName = ent && this.PIN[ent.t].name(ent.id);
     const isPinned = !!ent && this.state.pins.some(p => p.t === ent.t && p.id === ent.id);
     if (ent && ent.t !== 'team' && entName) crumb = this.PIN[ent.t].crumb + ' · ' + entName.toUpperCase();
@@ -355,7 +361,7 @@ class Component extends DCLogic {
       theme: this.state.theme, setThemeFn: this.setTheme, setLight: () => this.setTheme('light'), setDark: () => this.setTheme('dark'),
       lightBg: dk ? 'transparent' : 'var(--ink)', lightInk: dk ? 'var(--ink3)' : 'var(--panel)', darkBg: dk ? 'var(--ink)' : 'transparent', darkInk: dk ? 'var(--panel)' : 'var(--ink3)',
       nav, subnav, crumb, sectionU: this.SECTIONS[sec][0], sysLine: sec === 'system' ? 'var(--ink)' : 'var(--line2)',
-      isOrg: sec === 'org', isWork: sec === 'work', isActivity: sec === 'activity', isPolicy: sec === 'policy', isKnowledge: sec === 'knowledge', isLedger: sec === 'ledger', isSystem: sec === 'system',
+      isOrg: sec === 'org', isWork: sec === 'work', isActivity: sec === 'activity', isPolicy: sec === 'policy', isKnowledge: sec === 'knowledge', isLedger: sec === 'ledger', isInbox: sec === 'inbox', inboxState: this.props.inboxState ?? 'normal', isSystem: sec === 'system',
       goHome: () => this.go('org/map'), goSystem: () => this.go('system/settings'), goBudgets: () => this.go('ledger/budgets'), goSpend: () => this.go('ledger/spend'), sub5h: Z.spend.sub5h + '%', subWeek: Z.spend.subWeek + '%', goNew: () => this.go('work/new'),
       logoGlyph: (B.zibbyFavicon(Z.approvals.length ? 'blocked' : 'working'), B.zibby(React, { state: 'idle', size: 24, anim: false })), liveDot: B.dot(React, 'working', 7),
       activeStr: pad(active), concStr: pad(Z.settings.concurrency), dayPct: Math.round(Z.budget.day[0] / Z.budget.day[1] * 100) + '%', clock: this.state.now || B.clock(),

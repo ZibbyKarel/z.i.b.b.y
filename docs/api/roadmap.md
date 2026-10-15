@@ -756,7 +756,10 @@ this sub-phase ships the fully-tested mechanism, not the ticker.
 ## The auto-sync tick (125h) — `RoadmapTickService`
 
 Driven by `roadmapTickMs` (`SystemConfigSchema`, see [system.md](./system.md)), re-armed
-live like every other `*TickMs`. Each tick:
+live like every other `*TickMs`. The default is 15 minutes (`900_000`); `0` disables it.
+Item files (`.zibby/data/roadmap/<project>/<id>.json`) are a sync cache of Jira/GitHub and are
+gitignored; only the `_`-prefixed settings files (`_config.json`, `_level-mapping.json`) are
+versioned. Each tick:
 
 1. re-syncs every project whose per-project `_config.json` sets `autoSync: true`
    (projects that never opted in are skipped, but still polled — see below);
@@ -791,7 +794,7 @@ For an opted-in project, one pass does two things:
 - **Dispatch a decomposition for every childless epic that has never been
   decomposed.** "Never" is `epic.runs.length === 0`, deliberately stricter than the
   `hasRunningDecomposition` check `playEpic` uses: a decomposition that failed, or
-  that produced no children, must not be retried every 60 seconds forever. The
+  that produced no children, must not be retried on every tick forever. The
   childless test itself (`items.some(i => i.parentId === epic.id)`, archived children
   included) matches `playEpic`'s exactly, so the manual and automatic entry points
   can never disagree about what "empty epic" means. One epic's failure is logged and

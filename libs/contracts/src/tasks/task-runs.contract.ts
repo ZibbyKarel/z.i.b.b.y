@@ -111,6 +111,18 @@ export const taskRunsContract = c.router(
       summary: "Read a whitelisted run artifact (PR draft, diffstat, verdict, handoffs)",
     },
 
+    openTaskRunFolder: {
+      method: "POST",
+      path: "/tasks/runs/:runId/open-folder",
+      pathParams: RunIdParam,
+      body: EmptyBodySchema,
+      responses: {
+        200: z.object({ path: z.string() }),
+        404: ErrorSchema,
+      },
+      summary: "Open a workflow run's output folder (the book/ deliverable, else the run root) in Finder",
+    },
+
     stopTaskRun: {
       method: "POST",
       path: "/tasks/runs/:runId/stop",

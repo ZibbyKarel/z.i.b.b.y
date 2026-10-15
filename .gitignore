@@ -48,6 +48,9 @@ graphify-out/
 .zibby/data/budget-ledger
 .zibby/data/subsystem-seen.json
 .zibby/data/artifacts
+# roadmap items are a sync cache of Jira/GitHub; _config/_level-mapping stay tracked
+.zibby/data/roadmap/*/*.json
+!.zibby/data/roadmap/*/_*.json
 # Signal bus runtime state (fired fingerprints + parked dispatches) — regenerable.
 .zibby/data/automations-fired
 .zibby/data/research-digest.json

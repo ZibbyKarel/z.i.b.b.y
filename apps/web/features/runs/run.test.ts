@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Approval } from "@zibby/contracts";
-import { type RunView, approvalForRun, findSelectedRun, runOutputHref, runTitle } from "./run";
+import {
+  type RunView,
+  approvalForRun,
+  findSelectedRun,
+  isResumableRun,
+  isStoppableRun,
+  runOutputHref,
+  runTitle,
+} from "./run";
 
 const approval = (runId: string, kind: Approval["kind"]): Approval => ({
   id: `appr-${runId}`,
@@ -172,5 +180,13 @@ describe("runOutputHref", () => {
     expect(
       runOutputHref({ ...done, taskOutputKind: "void" as const, taskOutcomeSummary: "x" }),
     ).toBeNull();
+  });
+});
+
+describe("parked workflow actions", () => {
+  it("a parked workflow without a parked surface can be re-run and stopped", () => {
+    const run = { kind: "workflow", status: "parked" } as const;
+    expect(isResumableRun(run)).toBe(true);
+    expect(isStoppableRun(run)).toBe(true);
   });
 });

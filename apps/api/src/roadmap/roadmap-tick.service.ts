@@ -9,7 +9,7 @@ import { RoadmapSourceService } from "./roadmap-source.service";
 import { RoadmapStore } from "./roadmap.store";
 
 /**
- * Phase 125h — the roadmap heartbeat: `systemConfig.roadmapTickMs` (default 60s,
+ * Phase 125h — the roadmap heartbeat: `systemConfig.roadmapTickMs` (default 15 min,
  * `0` disables; tests drive {@link tick} directly). Every project with a roadmap
  * directory gets two independent, per-step-guarded passes each tick:
  *

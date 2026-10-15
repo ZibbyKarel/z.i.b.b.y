@@ -592,7 +592,10 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       this.runs.set(workflowRunId, fromDisk);
       run = fromDisk;
     }
-    // Phase 9 widens the resumable parkings from `retries`-only to `retries | limit`.
+    // Phase 9 widens the resumable parkings from `retries`-only to `retries | limit`;
+    // `no-employee` re-enters the parked phase once staff exists (no parked surface).
+    const noStaff = run.status === "parked" && run.parkedReason === "no-employee";
+    if (noStaff) return this.resumeNoEmployee(run, note);
     const isLimit = run.parkedReason === "limit";
     if (run.status !== "parked" || (run.parkedReason !== "retries" && !isLimit) || !run.parked) {
       throw new RunNotRetriesParkedError(workflowRunId);
@@ -656,6 +659,31 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     );
     const traceId = this.trace.getTraceId() ?? randomUUID();
     void this.trace.run({ traceId, runId: workflowRunId }, () =>
+      this.drive(run, workflow, project, { cursor, handoffSource, retries, resumeContext }),
+    );
+    return run;
+  }
+
+  /** Re-drive a `no-employee`-parked run at the phase that found no staff. */
+  private async resumeNoEmployee(run: WorkflowRun, note?: string): Promise<WorkflowRun> {
+    const workflow = await this.workflows.get(run.workflowId);
+    const cursor = run.currentStage ?? workflow.phases[0]?.id;
+    if (!cursor) throw new RunNotRetriesParkedError(run.workflowRunId);
+    run.status = "running";
+    delete run.parkedReason;
+    run.currentStage = cursor;
+    await this.writeAggregate(run);
+    this.log.info("no-employee workflow run resumed", { workflowRunId: run.workflowRunId, cursor });
+    const project = await this.projectForRun(run);
+    const resumeContext = await this.composeResumeContext(
+      run,
+      workflow.phases.map((p) => p.id),
+      { note: note?.trim() },
+    );
+    const retries = new Map(Object.entries(run.retries ?? {}));
+    const handoffSource = this.recomputeHandoff(run, workflow, cursor);
+    const traceId = this.trace.getTraceId() ?? randomUUID();
+    void this.trace.run({ traceId, runId: run.workflowRunId }, () =>
       this.drive(run, workflow, project, { cursor, handoffSource, retries, resumeContext }),
     );
     return run;
@@ -887,6 +915,15 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       }
       return;
     }
+    // A parked run has no live child — cancelling it just lands it `interrupted`
+    // (still resumable/deletable, and no longer reads as waiting on an approval).
+    if (run?.status === "parked") {
+      run.status = "interrupted";
+      delete run.parkedReason;
+      delete run.parked;
+      await this.writeAggregate(run);
+      return;
+    }
     if (!run || run.status !== "running" || !run.currentStageRunId) {
       throw new WorkflowRunNotStoppableError(workflowRunId);
     }
@@ -940,6 +977,17 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
   ): { status: WorkflowRun["status"]; currentStage: string | null } | undefined {
     const run = this.runs.get(workflowRunId);
     return run && { status: run.status, currentStage: run.currentStage };
+  }
+
+  /**
+   * The folder to show the operator for a run: its `book/` deliverable when the
+   * workflow produced one, else the run root. `null` for an unknown run.
+   */
+  async runFolder(workflowRunId: string): Promise<string | null> {
+    const root = this.resolveRunDir(workflowRunId);
+    if (!root || !(await fs.stat(root).catch(() => null))?.isDirectory()) return null;
+    const book = path.join(root, "book");
+    return (await fs.stat(book).catch(() => null))?.isDirectory() ? book : root;
   }
 
   /** Read a stage's log by phase id (the most recent attempt of that phase). */

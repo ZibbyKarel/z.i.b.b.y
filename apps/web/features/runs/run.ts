@@ -47,7 +47,11 @@ const STOPPABLE_KINDS = new Set<RunKind>(["agent", "workflow", "goal"]);
 
 /** Whether the Stop action applies to `run` at all — a stoppable kind, currently running. */
 export function isStoppableRun(run: Pick<RunView, "kind" | "status">): boolean {
-  return run.status === "running" && STOPPABLE_KINDS.has(run.kind);
+  // A parked workflow has no process — stop cancels it (→ interrupted).
+  return (
+    (run.status === "running" || (run.status === "parked" && run.kind === "workflow")) &&
+    STOPPABLE_KINDS.has(run.kind)
+  );
 }
 
 /**
@@ -57,8 +61,11 @@ export function isStoppableRun(run: Pick<RunView, "kind" | "status">): boolean {
  * run continues from the phase/iteration it stopped on (the API falls back to a fresh
  * task re-run when nothing ran yet).
  */
-export function isResumableRun(run: Pick<RunView, "kind" | "status">): boolean {
-  if (run.status !== "error" && run.status !== "interrupted") return false;
+export function isResumableRun(run: Pick<RunView, "kind" | "status" | "parked">): boolean {
+  // A parked run with a `parked` surface resumes through its note panel; one without
+  // (no-employee) has nothing else to offer, so it gets the plain re-run button.
+  const parkedNoPanel = run.status === "parked" && !run.parked;
+  if (run.status !== "error" && run.status !== "interrupted" && !parkedNoPanel) return false;
   return run.kind === "agent" || run.kind === "workflow" || run.kind === "goal";
 }
 
