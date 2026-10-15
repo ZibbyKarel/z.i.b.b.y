@@ -48,12 +48,12 @@ export type DropdownVariant = "inline" | "field";
 export type DropdownTone = "neutral" | "accent" | "ok" | "warn" | "bad" | "run";
 
 const toneBorderBgClass: Record<DropdownTone, string> = {
-  neutral: "border-border bg-hover/60",
-  accent: "border-accent/35 bg-accent-dim",
-  ok: "border-ok/35 bg-ok/10",
-  warn: "border-warn/35 bg-warn/10",
-  bad: "border-bad/35 bg-bad/10",
-  run: "border-run/35 bg-run/10",
+  neutral: "border-border bg-hover",
+  accent: "border-accent/35 bg-accent-solid",
+  ok: "border-ok/35 bg-ok-solid",
+  warn: "border-warn/35 bg-warn-solid",
+  bad: "border-bad/35 bg-bad-solid",
+  run: "border-run/35 bg-run-solid",
 };
 
 const toneTextClass: Record<DropdownTone, string> = {
@@ -404,8 +404,8 @@ export function Dropdown<T extends string = string>(props: DropdownProps<T>) {
     open
       ? "border-ink bg-background"
       : invalid
-        ? "border-bad bg-transparent"
-        : (toneClasses ?? "border-border bg-transparent"),
+        ? "border-bad bg-surface"
+        : (toneClasses ?? "border-border bg-surface"),
     invalid ? "focus-visible:ring-bad" : "focus-visible:ring-foreground",
   );
 

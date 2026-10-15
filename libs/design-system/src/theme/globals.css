@@ -103,6 +103,12 @@
   --color-warn-glow: var(--color-state-block);
   --color-bad-glow: var(--color-state-err);
   --color-run-glow: var(--color-state-work);
+  /* Opaque status surfaces (toasts, tinted triggers): status colour mixed into the themed panel-2. Re-declared in each theme block so the mix re-resolves per theme. */
+  --color-ok-solid: color-mix(in oklch, var(--color-ok) 14%, var(--color-panel-2));
+  --color-warn-solid: color-mix(in oklch, var(--color-warn) 14%, var(--color-panel-2));
+  --color-bad-solid: color-mix(in oklch, var(--color-bad) 14%, var(--color-panel-2));
+  --color-run-solid: color-mix(in oklch, var(--color-run) 14%, var(--color-panel-2));
+  --color-accent-solid: color-mix(in oklch, var(--color-accent) 14%, var(--color-panel-2));
 
   /* ---- Risk categories (the only categorical palette; unchanged by ZA-01) -- */
   --color-risk-payment: #f0b429;
@@ -292,6 +298,12 @@
   --color-warn-glow: var(--color-state-block);
   --color-bad-glow: var(--color-state-err);
   --color-run-glow: var(--color-state-work);
+  /* Opaque status surfaces (toasts, tinted triggers): status colour mixed into the themed panel-2. Re-declared in each theme block so the mix re-resolves per theme. */
+  --color-ok-solid: color-mix(in oklch, var(--color-ok) 14%, var(--color-panel-2));
+  --color-warn-solid: color-mix(in oklch, var(--color-warn) 14%, var(--color-panel-2));
+  --color-bad-solid: color-mix(in oklch, var(--color-bad) 14%, var(--color-panel-2));
+  --color-run-solid: color-mix(in oklch, var(--color-run) 14%, var(--color-panel-2));
+  --color-accent-solid: color-mix(in oklch, var(--color-accent) 14%, var(--color-panel-2));
   --shadow-hairline: none;
   --shadow-card: none;
   --shadow-elevated: none;
@@ -347,6 +359,12 @@
   --color-warn-glow: var(--color-state-block);
   --color-bad-glow: var(--color-state-err);
   --color-run-glow: var(--color-state-work);
+  /* Opaque status surfaces (toasts, tinted triggers): status colour mixed into the themed panel-2. Re-declared in each theme block so the mix re-resolves per theme. */
+  --color-ok-solid: color-mix(in oklch, var(--color-ok) 14%, var(--color-panel-2));
+  --color-warn-solid: color-mix(in oklch, var(--color-warn) 14%, var(--color-panel-2));
+  --color-bad-solid: color-mix(in oklch, var(--color-bad) 14%, var(--color-panel-2));
+  --color-run-solid: color-mix(in oklch, var(--color-run) 14%, var(--color-panel-2));
+  --color-accent-solid: color-mix(in oklch, var(--color-accent) 14%, var(--color-panel-2));
   --shadow-hairline: none;
   --shadow-card: none;
   --shadow-elevated: none;

@@ -425,4 +425,18 @@ describe("Dropdown", () => {
       });
     });
   });
+
+  it.each(["neutral", "accent", "ok", "warn", "bad", "run"] as const)(
+    "has an opaque trigger background for tone %s",
+    (tone) => {
+      render(<Dropdown onChange={vi.fn()} options={OPTIONS} tone={tone} value="cs" />);
+      const cls = screen.getByTestId(DropdownTestId.Trigger).className;
+      expect(cls).not.toMatch(/bg-transparent|bg-\S+\/\d+|bg-accent-dim/);
+    },
+  );
+
+  it("has an opaque default trigger background", () => {
+    render(<Dropdown onChange={vi.fn()} options={OPTIONS} value="cs" />);
+    expect(screen.getByTestId(DropdownTestId.Trigger).className).not.toMatch(/bg-transparent/);
+  });
 });

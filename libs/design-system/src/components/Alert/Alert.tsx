@@ -19,10 +19,10 @@ export interface AlertProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"
 }
 
 const severityClasses: Record<AlertSeverity, string> = {
-  info: "text-work bg-work/10 border-work/25",
-  ok: "text-ok bg-ok/10 border-ok/25",
-  warn: "text-warn bg-warn/10 border-warn/25",
-  error: "text-bad bg-bad/10 border-bad/25",
+  info: "text-run bg-run-solid border-run/40",
+  ok: "text-ok bg-ok-solid border-ok/40",
+  warn: "text-warn bg-warn-solid border-warn/40",
+  error: "text-bad bg-bad-solid border-bad/40",
 };
 
 /** Severities that interrupt/warn get the assertive `alert` role; informational

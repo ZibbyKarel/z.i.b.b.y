@@ -48,4 +48,16 @@ describe("Alert", () => {
     render(<Alert>Zpráva</Alert>);
     expect(screen.queryByTestId(AlertTestId.CloseButton)).toBeNull();
   });
+
+  it.each([
+    ["info", "bg-run-solid"],
+    ["ok", "bg-ok-solid"],
+    ["warn", "bg-warn-solid"],
+    ["error", "bg-bad-solid"],
+  ] as const)("uses an opaque background for %s", (severity, bg) => {
+    render(<Alert severity={severity}>Zpráva</Alert>);
+    const root = screen.getByTestId(AlertTestId.Root);
+    expect(root).toHaveClass(bg);
+    expect(root.className).not.toMatch(/bg-\S+\/\d+/);
+  });
 });
