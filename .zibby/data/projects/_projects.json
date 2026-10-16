@@ -6,7 +6,17 @@
     "category": "Shoptet",
     "companyId": "shoptet",
     "teamId": "devrel",
-    "gitRemote": "git@github.com:shoptet/cms4.git"
+    "gitRemote": "git@github.com:shoptet/cms4.git",
+    "integrationRouting": [
+      {
+        "integrationId": "shoptet-jira",
+        "match": {
+          "kind": "jira",
+          "projectKey": "CZ3TDR1",
+          "jql": "project = CZ3TDR1 AND labels = \"partner-portal\" AND assignee = currentUser() ORDER BY created ASC"
+        }
+      }
+    ]
   },
   {
     "id": "kzphoto",
@@ -42,7 +52,17 @@
     "category": "Shoptet",
     "companyId": "shoptet",
     "teamId": "devrel",
-    "gitRemote": "git@github.com:shoptet/partner-cli.git"
+    "gitRemote": "git@github.com:shoptet/partner-cli.git",
+    "integrationRouting": [
+      {
+        "integrationId": "shoptet-jira",
+        "match": {
+          "kind": "jira",
+          "projectKey": "CZ3TDR1",
+          "jql": "project = CZ3TDR1 AND labels = \"shoptet-addon-cli\" AND assignee = currentUser() ORDER BY created ASC"
+        }
+      }
+    ]
   },
   {
     "id": "test-project",

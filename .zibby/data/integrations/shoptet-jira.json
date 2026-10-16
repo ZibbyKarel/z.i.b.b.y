@@ -1,0 +1,12 @@
+{
+  "id": "shoptet-jira",
+  "kind": "jira",
+  "companyId": "shoptet",
+  "name": "Jira",
+  "enabled": true,
+  "config": {
+    "kind": "jira",
+    "baseUrl": "https://teamdotblue.atlassian.net",
+    "email": "karel.zibar@team.blue"
+  }
+}
