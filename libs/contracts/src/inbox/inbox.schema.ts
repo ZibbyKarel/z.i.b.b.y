@@ -119,6 +119,17 @@ export const InboxPrsResponseSchema = z.object({
 });
 export type InboxPrsResponse = z.infer<typeof InboxPrsResponseSchema>;
 
+/**
+ * todo-4 — how thorough a PR-inbox code review is. `quick` (the default, also when
+ * absent) = the `code-reviewer` agent alone; `thorough` = the `pr-review-thorough`
+ * workflow (architecture pass + line-level review); `tested` = `pr-review-tested`
+ * (checks out the PR head and runs its tests first). Every level ends in the same
+ * Tier-3 `pr-review` approval.
+ */
+export const PR_REVIEW_LEVELS = ["quick", "thorough", "tested"] as const;
+export const PrReviewLevelSchema = z.enum(PR_REVIEW_LEVELS);
+export type PrReviewLevel = z.infer<typeof PrReviewLevelSchema>;
+
 /** Phase 129 P2 — body of `POST /api/inbox/prs/review` ("Do code review"). */
 export const ReviewInboxPrInputSchema = z
   .object({
@@ -127,6 +138,8 @@ export const ReviewInboxPrInputSchema = z
     number: z.number().int().positive(),
     /** Display only (the task title); the PR url is derived server-side from repo + number. */
     title: z.string().max(300).optional(),
+    /** Absent = `quick` (old clients keep the agent review). */
+    level: PrReviewLevelSchema.optional(),
   })
   .strict();
 export type ReviewInboxPrInput = z.infer<typeof ReviewInboxPrInputSchema>;

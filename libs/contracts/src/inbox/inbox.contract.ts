@@ -43,7 +43,7 @@ export const inboxContract = c.router(
         422: ErrorSchema,
       },
       summary:
-        "Start a code-reviewer task for one PR; the finished review is parked as a Tier-3 approval to post it as a COMMENT",
+        "Start a code review task for one PR (level quick = code-reviewer agent, thorough/tested = pr-review-* workflow); the finished review is parked as a Tier-3 approval to post it as a COMMENT",
     },
     getInboxState: {
       method: "GET",
