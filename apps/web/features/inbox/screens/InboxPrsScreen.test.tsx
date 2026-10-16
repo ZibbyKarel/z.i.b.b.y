@@ -124,6 +124,29 @@ describe("InboxPrsScreen sections", () => {
     );
   });
 
+  it("card shows review/CI badges only when they say something, and opens the PR on click", () => {
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    hooks.prs = [
+      pr(1, { section: "needs-your-review", bucket: "to-review", review: "none" }),
+      pr(2, { section: "ready-to-merge", review: "approved" }),
+    ];
+    renderWithProviders(<InboxPrsScreen />);
+    const row = (n: number) => screen.getByTestId(`${PrRowTestId.Root}-${n}`);
+    expect(within(row(1)).queryByTestId(PrRowTestId.Review)).toBeNull();
+    expect(within(row(2)).getByTestId(PrRowTestId.Review)).toHaveTextContent(/approved|schváleno/i);
+    expect(within(row(2)).getByTestId(PrRowTestId.Ci)).toBeInTheDocument();
+
+    fireEvent.click(within(row(2)).getByTestId(PrRowTestId.Meta));
+    expect(open).toHaveBeenCalledWith(
+      "https://github.com/acme/api/pull/2",
+      "_blank",
+      "noopener,noreferrer",
+    );
+    open.mockClear();
+    fireEvent.click(within(row(2)).getByTestId(PrActionsTestId.DeleteBranch));
+    expect(open).not.toHaveBeenCalled();
+  });
+
   it("offers code review only in the review sections, merge only in ready-to-merge", () => {
     hooks.prs = [
       pr(1, { section: "needs-your-review", bucket: "to-review" }),

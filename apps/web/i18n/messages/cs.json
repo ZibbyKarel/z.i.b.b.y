@@ -2798,7 +2798,6 @@
     },
     "prs": {
       "ci": "CI {symbol} {state}",
-      "review": "Review · {state}",
       "draft": "Koncept",
       "reason": {
         "direct": "Přímo",

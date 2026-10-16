@@ -86,6 +86,17 @@ function isRecord(v: unknown): v is Record<string, unknown> {
  * (unenriched) backend payload.
  */
 export function parseApprovalDetail(a: ContractApproval): DashboardApproval {
+  // A `pr-review` detail is "Post review to GitHub — repo#n (COMMENT)\n\n<markdown review>":
+  // the first line is the queue title, the rest renders as markdown in the sheet.
+  if (a.kind === "pr-review") {
+    const split = a.detail.indexOf("\n\n");
+    if (split === -1) return { ...a, text: a.detail };
+    return {
+      ...a,
+      detail: a.detail.slice(0, split),
+      preview: { kind: "message", to: "GitHub", body: a.detail.slice(split + 2) },
+    };
+  }
   let data: unknown;
   try {
     data = JSON.parse(a.detail);

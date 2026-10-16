@@ -1,5 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { approvalOrigin, formatWaited, sourceLinkKind } from "./approval";
+import { approvalOrigin, formatWaited, parseApprovalDetail, sourceLinkKind } from "./approval";
+
+describe("parseApprovalDetail", () => {
+  it("a pr-review splits into a one-line title and a markdown body preview", () => {
+    const parsed = parseApprovalDetail({
+      id: "a1",
+      runId: "t1",
+      kind: "pr-review",
+      skill: "code-reviewer",
+      action: "github.pr.review",
+      detail: "Post review to GitHub — o/r#7 (COMMENT)\n\n## Review\n\nLooks **good**.",
+      risk: "medium",
+      status: "pending",
+      requestedAt: "2026-10-16T10:00:00.000Z",
+    });
+    expect(parsed.detail).toBe("Post review to GitHub — o/r#7 (COMMENT)");
+    expect(parsed.text).toBeUndefined();
+    expect(parsed.preview).toEqual({
+      kind: "message",
+      to: "GitHub",
+      body: "## Review\n\nLooks **good**.",
+    });
+  });
+});
 
 describe("approvalOrigin", () => {
   it("a task-backed approval takes the task's source and links the task", () => {

@@ -6,6 +6,7 @@ import {
   AccordionSummary,
   Button,
   Container,
+  Grid,
   Panel,
   Row,
   Stack,
@@ -18,7 +19,8 @@ import { useMemo } from "react";
 import { useNow } from "../../../hooks/useNow";
 import { InboxPage } from "../components/InboxPage";
 import { issueHref } from "../components/IssueRow";
-import { PrActions } from "../components/PrActions";
+import { useProjectsQuery } from "../../projects";
+import { PrActions, hasPrActions } from "../components/PrActions";
 import { PrRow } from "../components/PrRow";
 import { groupPrsBySection, itemKey, linkedPrOf, pad2 } from "../inbox";
 import { useInboxItemsQuery, useInboxPrsQuery } from "../queries";
@@ -44,6 +46,7 @@ interface SectionProps {
   now: number;
   focus: string | null;
   itemFor: (pr: InboxPr) => { key: string; href: string } | undefined;
+  projectNames: Map<string, string>;
   expanded: boolean;
   onToggle?: () => void;
 }
@@ -57,6 +60,7 @@ function PrSection({
   now,
   focus,
   itemFor,
+  projectNames,
   expanded,
   onToggle,
 }: SectionProps) {
@@ -87,18 +91,19 @@ function PrSection({
             </Typography>
           </Panel>
         ) : (
-          <Stack gap="50">
+          <Grid cols={1} gap="100" lg={2}>
             {prs.map((pr) => (
               <PrRow
-                actions={<PrActions pr={pr} />}
+                actions={hasPrActions(pr) ? <PrActions pr={pr} /> : undefined}
                 focused={focus === pr.url}
                 item={itemFor(pr)}
                 key={pr.url}
                 now={now}
                 pr={pr}
+                projectName={projectNames.get(pr.projectId)}
               />
             ))}
-          </Stack>
+          </Grid>
         )}
       </AccordionDetails>
     </Stack>
@@ -107,7 +112,7 @@ function PrSection({
 
 /**
  * `/dashboard/inbox/pull-requests` — GitHub-style sections (Phase 129 P1, server-computed
- * `pr.section`, `INBOX_PR_SECTIONS` order), each sorted by blocker. Empty sections are
+ * `pr.section`, `INBOX_PR_SECTIONS` order), each sorted by blocker and laid out as a 1–2 column card grid. Empty sections are
  * hidden except "Needs your review". Review / squash-and-merge are operator clicks
  * (`PrActions`). `?pr=<n>` focuses one PR (the link from an
  * issue's badge or the Overview); the list refetches every 15 min + on inbox-refresh activity.
@@ -123,6 +128,11 @@ export function InboxPrsScreen() {
   const { filters } = useInboxFilters();
   const itemsQuery = useInboxItemsQuery();
   const prsQuery = useInboxPrsQuery();
+  const { data: projects } = useProjectsQuery();
+  const projectNames = useMemo(
+    () => new Map((projects ?? []).map((p) => [p.id, p.name])),
+    [projects],
+  );
 
   // `?pr=<url>` (see `prListHref`); the number is only for the banner label.
   const focus = searchParams.get("pr") || null;
@@ -200,6 +210,7 @@ export function InboxPrsScreen() {
               onToggle={
                 focus ? undefined : () => setCollapsed(section, collapsed[section] !== true)
               }
+              projectNames={projectNames}
               prs={prs}
               testId={`${InboxPrsScreenTestId.Section}-${section}`}
               title={t(`prs.section.${section}`)}

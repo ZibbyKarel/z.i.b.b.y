@@ -27,6 +27,12 @@ export enum PrActionsTestId {
   Message = "inbox-pr-action-message",
 }
 
+const isReviewable = (pr: InboxPr) =>
+  pr.section === "needs-your-review" || pr.section === "needs-team-review";
+
+/** Whether `PrActions` renders anything for this PR. */
+export const hasPrActions = (pr: InboxPr) => isReviewable(pr) || pr.section === "ready-to-merge";
+
 export interface PrActionsProps {
   pr: InboxPr;
 }
@@ -48,9 +54,9 @@ export function PrActions({ pr }: PrActionsProps) {
   const [deleteBranch, setDeleteBranch] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
 
-  const reviewable = pr.section === "needs-your-review" || pr.section === "needs-team-review";
+  const reviewable = isReviewable(pr);
   const busy = pr.codeReview?.state === "running" || pr.codeReview?.state === "awaiting-approval";
-  if (!reviewable && pr.section !== "ready-to-merge") return null;
+  if (!hasPrActions(pr)) return null;
 
   const onReview = (level: PrReviewLevel) =>
     review.mutate(
