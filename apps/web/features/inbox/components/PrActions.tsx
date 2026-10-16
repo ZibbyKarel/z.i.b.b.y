@@ -1,8 +1,17 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import type { InboxPr } from "@zibby/contracts";
-import { Button, Checkbox, HoldButton, Row, Tag, TextLink, Typography } from "@zibby/design-system";
+import type { InboxPr, PrReviewLevel } from "@zibby/contracts";
+import {
+  Checkbox,
+  Container,
+  DropDownButton,
+  HoldButton,
+  Row,
+  Tag,
+  TextLink,
+  Typography,
+} from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useMergeProjectPrMutation } from "../../projects/mutations";
@@ -24,8 +33,10 @@ export interface PrActionsProps {
 
 /**
  * Phase 129 PR actions, each an explicit operator click:
- * - review sections → "Do code review" (a `code-reviewer` task; posting to GitHub
- *   waits on a Tier-3 approval) plus the latest review's state, linked to its task;
+ * - review sections → split "code review" button: the primary click runs a quick
+ *   `code-reviewer` review, the menu offers thorough / with tests (pr-review-* workflows).
+ *   Posting to GitHub waits on a Tier-3 approval. Plus the latest review's state,
+ *   linked to its task;
  * - `ready-to-merge` → hold-to-confirm "Squash and merge" (optionally deleting the
  *   head branch, on by default) through the existing project merge route.
  */
@@ -41,9 +52,17 @@ export function PrActions({ pr }: PrActionsProps) {
   const busy = pr.codeReview?.state === "running" || pr.codeReview?.state === "awaiting-approval";
   if (!reviewable && pr.section !== "ready-to-merge") return null;
 
-  const onReview = () =>
+  const onReview = (level: PrReviewLevel) =>
     review.mutate(
-      { body: { projectId: pr.projectId, repo: pr.repo, number: pr.number, title: pr.title } },
+      {
+        body: {
+          projectId: pr.projectId,
+          repo: pr.repo,
+          number: pr.number,
+          title: pr.title,
+          level,
+        },
+      },
       {
         onSuccess: () => setMessage(t("reviewStarted")),
         onError: () => setMessage(t("reviewFailed")),
@@ -70,16 +89,21 @@ export function PrActions({ pr }: PrActionsProps) {
   return (
     <Row wrap gap="150">
       {reviewable && (
-        <Button
-          data-testid={PrActionsTestId.Review}
-          disabled={busy}
-          intent="secondary"
-          loading={review.isPending}
-          onClick={onReview}
-          size="sm"
-        >
-          {t("review")}
-        </Button>
+        <Container data-testid={PrActionsTestId.Review}>
+          <DropDownButton
+            disabled={busy}
+            intent="secondary"
+            label={t("review")}
+            loading={review.isPending}
+            menuAriaLabel={t("reviewLevelsAria")}
+            menuItems={[
+              { id: "thorough", label: t("reviewThorough"), onSelect: () => onReview("thorough") },
+              { id: "tested", label: t("reviewTested"), onSelect: () => onReview("tested") },
+            ]}
+            onClick={() => onReview("quick")}
+            size="sm"
+          />
+        </Container>
       )}
       {pr.codeReview && (
         <TextLink

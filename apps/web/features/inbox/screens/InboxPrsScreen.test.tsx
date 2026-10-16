@@ -1,6 +1,6 @@
 import type { InboxPr } from "@zibby/contracts";
 import { within } from "@testing-library/react";
-import { AccordionTestId } from "@zibby/design-system";
+import { AccordionTestId, DropDownButtonTestId } from "@zibby/design-system";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, renderWithProviders, screen } from "../../../test/render";
 import { PrActionsTestId } from "../components/PrActions";
@@ -150,17 +150,44 @@ describe("InboxPrsScreen sections", () => {
     ]);
   });
 
-  it("Do code review sends projectId/repo/number/title", () => {
+  it("the primary segment starts a quick review", () => {
     hooks.prs = [pr(1, { section: "needs-your-review", bucket: "to-review" })];
     renderWithProviders(<InboxPrsScreen />);
-    fireEvent.click(screen.getByTestId(PrActionsTestId.Review));
+    const split = screen.getByTestId(PrActionsTestId.Review);
+    fireEvent.click(within(split).getByTestId(DropDownButtonTestId.Primary));
     expect(review).toHaveBeenCalledWith(
-      { body: { projectId: "api", repo: "acme/api", number: 1, title: "PR 1" } },
+      {
+        body: { projectId: "api", repo: "acme/api", number: 1, title: "PR 1", level: "quick" },
+      },
       expect.anything(),
     );
   });
 
-  it("a running review disables the button and links to its task", () => {
+  it.each(["thorough", "tested"] as const)("the %s menu item starts that level", (level) => {
+    hooks.prs = [pr(1, { section: "needs-your-review", bucket: "to-review" })];
+    renderWithProviders(<InboxPrsScreen />);
+    const split = screen.getByTestId(PrActionsTestId.Review);
+    fireEvent.click(within(split).getByTestId(DropDownButtonTestId.Trigger));
+    fireEvent.click(screen.getByTestId(`${DropDownButtonTestId.Item}-${level}`));
+    expect(review).toHaveBeenCalledWith(
+      { body: { projectId: "api", repo: "acme/api", number: 1, title: "PR 1", level } },
+      expect.anything(),
+    );
+  });
+
+  it("labels the split button and its menu (cs default)", () => {
+    hooks.prs = [pr(1, { section: "needs-your-review", bucket: "to-review" })];
+    renderWithProviders(<InboxPrsScreen />);
+    const split = screen.getByTestId(PrActionsTestId.Review);
+    expect(within(split).getByTestId(DropDownButtonTestId.Primary)).toHaveTextContent(
+      "Rychlé code-review",
+    );
+    expect(within(split).getByTestId(DropDownButtonTestId.Trigger)).toHaveAccessibleName(
+      "Další úrovně code-review",
+    );
+  });
+
+  it("a running review disables both segments and links to its task", () => {
     hooks.prs = [
       pr(1, {
         section: "needs-your-review",
@@ -169,7 +196,9 @@ describe("InboxPrsScreen sections", () => {
       }),
     ];
     renderWithProviders(<InboxPrsScreen />);
-    expect(screen.getByTestId(PrActionsTestId.Review)).toBeDisabled();
+    const split = screen.getByTestId(PrActionsTestId.Review);
+    expect(within(split).getByTestId(DropDownButtonTestId.Primary)).toBeDisabled();
+    expect(within(split).getByTestId(DropDownButtonTestId.Trigger)).toBeDisabled();
     expect(screen.getByTestId(PrActionsTestId.ReviewStatus)).toHaveAttribute(
       "href",
       "/work/tasks/task_9",
