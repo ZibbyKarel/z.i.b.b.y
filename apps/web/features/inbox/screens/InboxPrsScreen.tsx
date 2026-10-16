@@ -25,7 +25,6 @@ export enum InboxPrsScreenTestId {
 
 interface SectionProps {
   testId: string;
-  index: string;
   title: string;
   note?: string;
   emptyText?: string;
@@ -35,21 +34,10 @@ interface SectionProps {
   itemFor: (pr: InboxPr) => { key: string; href: string } | undefined;
 }
 
-function PrSection({
-  testId,
-  index,
-  title,
-  note,
-  emptyText,
-  prs,
-  now,
-  focus,
-  itemFor,
-}: SectionProps) {
+function PrSection({ testId, title, note, emptyText, prs, now, focus, itemFor }: SectionProps) {
   return (
     <Stack data-testid={testId} gap="100">
       <Row wrap gap="150">
-        <Typography type="label">{index}</Typography>
         <Typography type="h3">{title}</Typography>
         <Typography type="label" variant="secondary">
           {pad2(prs.length)}
@@ -163,11 +151,10 @@ export function InboxPrsScreen() {
           .filter(
             ({ section, prs }) => (section === "needs-your-review" && !focus) || prs.length > 0,
           )
-          .map(({ section, prs }, i) => (
+          .map(({ section, prs }) => (
             <PrSection
               emptyText={t("prs.emptyToReview")}
               focus={focus}
-              index={`${pad2(i + 1)} —`}
               itemFor={(pr) => itemByPrUrl.get(pr.url)}
               key={section}
               note={t(`prs.sectionNote.${section}`)}

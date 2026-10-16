@@ -194,4 +194,12 @@ describe("InboxPrsScreen sections", () => {
       expect.anything(),
     );
   });
+
+  it("shows the PR count once, after the title — no ordinal before it", () => {
+    hooks.prs = [pr(1, { section: "ready-to-merge" }), pr(2, { section: "ready-to-merge" })];
+    renderWithProviders(<InboxPrsScreen />);
+    const header = screen.getByTestId(sectionId("ready-to-merge"));
+    expect(header).not.toHaveTextContent(/\d{2} —/);
+    expect(header.textContent?.match(/02/g)).toHaveLength(1);
+  });
 });
