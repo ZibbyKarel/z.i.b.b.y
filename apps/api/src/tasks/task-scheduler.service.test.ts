@@ -1695,7 +1695,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       await vi.waitFor(async () => {
         expect((await storage.get(id)).outcome).toBeDefined();
       });
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      await vi.waitFor(() => expect(taskOutput.parkPrReview).toHaveBeenCalledTimes(1));
       expect(taskOutput.parkPrReview).toHaveBeenCalledTimes(1);
     });
 
@@ -1706,6 +1706,39 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         expect((await storage.get(id)).outcome?.status).toBe("error");
       });
       expect(taskOutput.parkPrReview).not.toHaveBeenCalled();
+    });
+
+    it("an interrupted review run writes an error outcome", async () => {
+      const id = await seedReview();
+      workflowListener?.({ ...done(id), status: "interrupted" });
+      await vi.waitFor(async () => {
+        expect((await storage.get(id)).outcome?.status).toBe("error");
+      });
+      expect(taskOutput.parkPrReview).not.toHaveBeenCalled();
+    });
+
+    it("an interrupted non-review workflow writes no outcome", async () => {
+      const id = storage.newId();
+      await storage.createDispatched(
+        id,
+        { text: "ship it" },
+        "release_1",
+        { kind: "workflow", id: "release", name: "Release" },
+        Date.now(),
+        "alpha",
+      );
+      workflowListener?.(workflowRun({ status: "interrupted", taskId: id }));
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect((await storage.get(id)).outcome).toBeUndefined();
+    });
+
+    it("a park that throws marks the review failed", async () => {
+      const id = await seedReview();
+      taskOutput.parkPrReview.mockRejectedValue(new Error("approvals down"));
+      workflowListener?.(done(id));
+      await vi.waitFor(async () => {
+        expect((await storage.get(id)).prReview?.state).toBe("failed");
+      });
     });
 
     it("a workflow task without prReview never reads the artifact", async () => {

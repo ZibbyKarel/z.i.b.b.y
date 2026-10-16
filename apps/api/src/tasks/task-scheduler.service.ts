@@ -1848,7 +1848,14 @@ export class TaskSchedulerService
   }
 
   private async writeWorkflowOutcome(taskId: string, run: WorkflowRun): Promise<void> {
-    if (run.status !== "done" && run.status !== "failed") return;
+    if (run.status !== "done" && run.status !== "failed") {
+      // todo-4 — a stopped PR-review run must not leave `prReview` stuck `running`
+      // (the agent path writes an error outcome for `interrupted`; do the same here,
+      // but only for review tasks so ordinary interrupted workflows stay untouched).
+      if (run.status !== "interrupted") return;
+      const stopped = await this.storage.get(taskId).catch(() => null);
+      if (stopped?.prReview?.state !== "running") return;
+    }
     const outcome: TaskOutcome = {
       status: run.status === "done" ? "done" : "error",
       // A `pr` output opened a PR (Tier-2, no gate) → surface the url as the summary and
@@ -1879,11 +1886,17 @@ export class TaskSchedulerService
               .catch(() => null);
             const delivery = await this.taskOutput
               .parkPrReview(existing, artifact?.content ?? "")
-              .catch((error: unknown) => {
+              .catch(async (error: unknown) => {
                 this.log.warn("pr review park failed (soft)", {
                   taskId,
                   err: error instanceof Error ? error.message : String(error),
                 });
+                // Don't leave the row `running` forever when parking threw.
+                await this.storage
+                  .setPrReview(taskId, (c) =>
+                    c ? { ...c, state: "failed", note: "park failed" } : c,
+                  )
+                  .catch(() => undefined);
                 return null;
               });
             if (delivery?.summary) outcome.summary = delivery.summary;

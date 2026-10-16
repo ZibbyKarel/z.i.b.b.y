@@ -91,7 +91,7 @@ export function PrActions({ pr }: PrActionsProps) {
       {reviewable && (
         <Container data-testid={PrActionsTestId.Review}>
           <DropDownButton
-            disabled={busy}
+            disabled={busy || review.isPending}
             intent="secondary"
             label={t("review")}
             loading={review.isPending}

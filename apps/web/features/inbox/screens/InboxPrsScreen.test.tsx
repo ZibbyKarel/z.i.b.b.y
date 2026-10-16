@@ -8,7 +8,7 @@ import { PrRowTestId } from "../components/PrRow";
 import { InboxPrsScreen, InboxPrsScreenTestId } from "./InboxPrsScreen";
 
 const { hooks, review, merge } = vi.hoisted(() => ({
-  hooks: { prs: [] as unknown[], search: "" },
+  hooks: { prs: [] as unknown[], search: "", reviewPending: false },
   review: vi.fn(),
   merge: vi.fn(),
 }));
@@ -33,7 +33,7 @@ vi.mock("../queries", () => ({
 }));
 vi.mock("../mutations", async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  useReviewInboxPrMutation: () => ({ mutate: review, isPending: false }),
+  useReviewInboxPrMutation: () => ({ mutate: review, isPending: hooks.reviewPending }),
 }));
 vi.mock("../../projects/mutations", () => ({
   useMergeProjectPrMutation: () => ({ mutate: merge, isPending: false }),
@@ -87,6 +87,7 @@ describe("InboxPrsScreen sections", () => {
   afterEach(() => {
     window.sessionStorage.clear();
     hooks.search = "";
+    hooks.reviewPending = false;
     vi.restoreAllMocks();
     review.mockClear();
     merge.mockClear();
@@ -203,6 +204,14 @@ describe("InboxPrsScreen sections", () => {
       "href",
       "/work/tasks/task_9",
     );
+  });
+
+  it("a pending review request disables the menu trigger too", () => {
+    hooks.reviewPending = true;
+    hooks.prs = [pr(1, { section: "needs-your-review", bucket: "to-review" })];
+    renderWithProviders(<InboxPrsScreen />);
+    const split = screen.getByTestId(PrActionsTestId.Review);
+    expect(within(split).getByTestId(DropDownButtonTestId.Trigger)).toBeDisabled();
   });
 
   it("holding Squash and merge sends squash + deleteBranch (default on, toggleable)", () => {

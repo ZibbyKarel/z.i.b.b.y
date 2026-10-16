@@ -270,7 +270,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Latest `code-reviewer` task per `repo#number` (Phase 129 P2). A review still
+   * Latest review task (any level) per `repo#number` (Phase 129 P2). A review still
    * `running` whose task failed or whose run errored reads as `failed`.
    */
   private async codeReviews(): Promise<Map<string, NonNullable<InboxPr["codeReview"]>>> {
