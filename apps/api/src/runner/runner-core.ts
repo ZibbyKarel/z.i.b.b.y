@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { type WriteStream, createWriteStream } from "node:fs";
 import { promises as fs } from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import { type IntendedAction, IntendedActionSchema } from "@zibby/contracts";
 import { writeFileAtomic } from "../shared/file-storage";
@@ -49,6 +50,23 @@ const INTENT_REQUEST_FILE = "intent-request.json";
  * watches, stranding the gate. The hook reads this first (see claude-approval-hook.mjs).
  */
 export const INTENT_DIR_ENV = "ZIBBY_INTENT_DIR";
+
+/**
+ * Env var listing (`path.delimiter`-separated) the run's free zone — where the
+ * approval hook lets file effects through ungated: the checkout it spawns in, its
+ * sandbox, every `--add-dir` grant and the temp dirs. Anything outside still asks.
+ */
+export const FREE_DIRS_ENV = "ZIBBY_FREE_DIRS";
+
+/** System dirs every run may freely use (scratch + `/etc`, which needs root anyway). */
+const SHARED_FREE_DIRS = [os.tmpdir(), "/tmp", "/var/tmp", "/etc"];
+
+/** The free zone of one run — see {@link FREE_DIRS_ENV}. */
+export function freeDirs(spec: Pick<RunSpec, "cwd" | "spawnCwd" | "args">): string {
+  const granted = spec.args.flatMap((a, i) => (a === "--add-dir" ? [spec.args[i + 1] ?? ""] : []));
+  const dirs = [spec.cwd, spec.spawnCwd ?? "", ...granted, ...SHARED_FREE_DIRS];
+  return [...new Set(dirs.filter(Boolean))].join(path.delimiter);
+}
 
 /** A run id may only contain the safe characters our filenames are built from. */
 const RUN_ID_REGEX = /^[a-zA-Z0-9._-]+$/;
@@ -411,6 +429,7 @@ export class RunnerCore<R extends BaseRun> {
         CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD: "1",
         ...spec.env,
         [INTENT_DIR_ENV]: spec.cwd,
+        [FREE_DIRS_ENV]: freeDirs(spec),
       },
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
@@ -508,6 +527,7 @@ export class RunnerCore<R extends BaseRun> {
         CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD: "1",
         ...spec.env,
         [INTENT_DIR_ENV]: spec.cwd,
+        [FREE_DIRS_ENV]: freeDirs(spec),
       },
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],

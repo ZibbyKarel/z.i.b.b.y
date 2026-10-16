@@ -39,6 +39,13 @@
 //      per-session ledger `created-files.json` in the coordination dir records each
 //      path a Bash/Write call creates; every doubt falls back to the gate.
 //
+//   7. Free zone (`ZIBBY_FREE_DIRS`, set by RunnerCore): the project checkout, the
+//      sandbox, the granted dirs and the temp dirs. A file effect (or a Write/Edit)
+//      whose every target lands inside it is not gated at all; one that reaches a
+//      path outside it — someone else's system or user folder — always asks, even
+//      for a path that doesn't exist yet. Without the env (tests, non-RunnerCore
+//      callers) the old behaviour stands: only pre-existing, non-owned files gate.
+//
 // The coordination directory is the run's sandbox, passed explicitly by RunnerCore as
 // `ZIBBY_INTENT_DIR`. We must NOT use the Bash call's own cwd: an agent runs `rm`/`git`
 // *inside* the granted target (or its worktree spawn cwd), so trusting `input.cwd`
@@ -690,6 +697,25 @@ function isOwned(abs, ledger) {
   return ledger.some((e) => abs === e || abs.startsWith(e.endsWith(path.sep) ? e : e + path.sep));
 }
 
+/**
+ * The free-zone roots from `ZIBBY_FREE_DIRS` (`path.delimiter`-separated), each
+ * canonicalized like a resolved target so `/tmp` matches `/private/tmp/...`.
+ * Missing entries are dropped; an empty list means "no free zone".
+ */
+function readFreeRoots(env = process.env.ZIBBY_FREE_DIRS) {
+  if (!env) return [];
+  const roots = [];
+  for (const dir of env.split(path.delimiter)) {
+    if (!dir || !path.isAbsolute(dir)) continue;
+    try {
+      roots.push(realpathSync(dir));
+    } catch {
+      // missing dir — not part of the zone
+    }
+  }
+  return roots;
+}
+
 /** The intent dir itself, any ancestor of it, or one of its coordination files. */
 function isCoordination(abs, intentDir) {
   const rel = path.relative(abs, intentDir);
@@ -752,7 +778,7 @@ const CP_MV_SAFE_LONG = new Set(["--recursive", "--force", "--verbose", "--no-cl
  * `exempt: false` means "gate as usual"; it is the answer to every doubt.
  * `touchesCoordination` flags a literal write onto the gate's own files.
  */
-export function analyzeOwnership(command, { cwd, ledger, intentDir }) {
+export function analyzeOwnership(command, { cwd, ledger, intentDir, free = [] }) {
   const creates = [];
   const closed = { exempt: false, creates, touchesCoordination: false };
   if (typeof command !== "string") return closed;
@@ -762,17 +788,27 @@ export function analyzeOwnership(command, { cwd, ledger, intentDir }) {
   if (/\$\(|`|\$'|[<>]\(|<<(?!<)/.test(text)) return closed;
   const segments = lex(text);
   if (!segments) return closed;
-  const changesDir = segments.some((s) => s.words.some((w) => /^(cd|pushd|popd)$/.test(w)));
-  const relCwd = changesDir ? null : cwd;
-  const resolve = (word) => resolvePath(word, relCwd);
+  // Every dir a relative path could be relative to by now: the start cwd plus each
+  // literal `cd` target (a failed `cd x; …` leaves the old one in force). A relative
+  // target must be acceptable from all of them. `null` = unknowable (`pushd`, `cd -`).
+  let cwds = cwd ? [cwd] : null;
+  const resolve = (word) => {
+    if (typeof word === "string" && (path.isAbsolute(word) || word.startsWith("~"))) {
+      return resolvePath(word, null);
+    }
+    if (!cwds) return null;
+    const all = cwds.map((d) => resolvePath(word, d));
+    return all.every(acceptable) ? all.at(-1) : null;
+  };
   let exempt = true;
   let touchesCoordination = false;
 
-  const acceptable = (r) =>
-    r !== null &&
-    !isCoordination(r.abs, intentDir) &&
-    !r.sharedInode &&
-    (!r.exists || isOwned(r.abs, ledger));
+  function acceptable(r) {
+    if (r === null || isCoordination(r.abs, intentDir) || r.sharedInode) return false;
+    if (isOwned(r.abs, ledger)) return true;
+    // With a free zone, outside it nothing passes — not even a brand-new path.
+    return free.length ? isOwned(r.abs, free) : !r.exists;
+  }
   /** A path the command overwrites/moves/deletes — must be owned or not exist. */
   const mutates = (r) => {
     if (r && isCoordination(r.abs, intentDir)) touchesCoordination = true;
@@ -807,6 +843,16 @@ export function analyzeOwnership(command, { cwd, ledger, intentDir }) {
     const args = words.slice(1);
     const flags = flagsOf(args);
 
+    if (/^(pushd|popd)$/.test(cmd)) cwds = null;
+    if (cmd === "cd" && cwds) {
+      const dest = positionals(args);
+      const resolved =
+        dest.length === 1 && dest[0] !== "-" ? cwds.map((d) => resolvePath(dest[0], d)) : [null];
+      // A not-yet-existing target is fine: `mkdir -p x && cd x` resolves the same.
+      const ok = resolved.every((r) => r && (r.isDir || !r.exists));
+      cwds = ok ? [...new Set([...cwds, ...resolved.map((r) => r.abs)])] : null;
+    }
+
     const rmAt = words.findIndex((w) => RM_FAMILY_NAMES.has(path.basename(w)));
     if (rmAt !== -1) {
       const targets = positionals(words.slice(rmAt + 1));
@@ -815,7 +861,16 @@ export function analyzeOwnership(command, { cwd, ledger, intentDir }) {
       if (rmAt !== 0 || !targets.length) exempt = false;
       targets.forEach((t) => mutates(resolve(t)));
     }
-    if (words.includes("-delete") || (words.includes("git") && words.includes("clean"))) {
+    if (cmd === "find" && words.includes("-delete")) {
+      // The start points are the deleted set's roots: after -H/-L/-P, before the expression.
+      let i = 1;
+      while (/^-[HLP]$/.test(words[i] ?? "")) i++;
+      const roots = [];
+      for (; i < words.length && !/^[-(!]/.test(words[i]); i++) roots.push(words[i]);
+      (roots.length ? roots : ["."]).forEach((t) => mutates(resolve(t)));
+    } else if (words[0] === "git" && words[1] === "clean") {
+      mutates(resolve("."));
+    } else if (words.includes("-delete") || (words.includes("git") && words.includes("clean"))) {
       exempt = false; // implicit target set
     }
 
@@ -952,6 +1007,7 @@ function applyOwnership(input, request, intentDirEnv) {
   const intentDir = realpathSync(intentDirEnv);
   const ledgerPath = path.join(intentDir, LEDGER_FILE);
   const ledger = readLedger(ledgerPath, intentDir);
+  const free = readFreeRoots();
   let creates = [];
   let result = request;
   const tool = input?.tool_name;
@@ -960,6 +1016,9 @@ function applyOwnership(input, request, intentDirEnv) {
     // denied along with the coordination files themselves.
     const landing = landingPath(input?.tool_input?.file_path, input?.cwd);
     if (landing === null || isCoordination(landing, intentDir)) return { deny: true };
+    if (free.length && !isOwned(landing, free) && !isOwned(landing, ledger)) {
+      return outsideWriteRequest(tool, landing);
+    }
     const r = tool === "Write" ? resolvePath(input?.tool_input?.file_path, input?.cwd) : null;
     if (r && !r.exists && !isCoordination(r.firstMissing, intentDir)) creates = [r.firstMissing];
   } else if (tool === "Bash") {
@@ -967,6 +1026,7 @@ function applyOwnership(input, request, intentDirEnv) {
       cwd: input?.cwd,
       ledger,
       intentDir,
+      free,
     });
     if (analysis.touchesCoordination) return { deny: true };
     if (request && FS_ACTIONS.has(request.action) && analysis.exempt) result = null;
@@ -975,6 +1035,19 @@ function applyOwnership(input, request, intentDirEnv) {
   const fresh = [...new Set(creates)].filter((p) => !isOwned(p, ledger));
   if (fresh.length) writeFileSync(ledgerPath, JSON.stringify([...ledger, ...fresh]), "utf8");
   return result;
+}
+
+/** A Write/Edit landing outside the free zone — asked like a Bash overwrite. */
+function outsideWriteRequest(tool, landing) {
+  return {
+    action: "overwrite",
+    context: JSON.stringify({
+      riskType: "mazani",
+      summary: "Zapsat soubor mimo projekt",
+      consequence: "Agent zapisuje mimo repozitář projektu a dočasné složky.",
+      preview: { kind: "command", shell: "bash", cmd: `${tool} ${landing}`, targets: [landing] },
+    }),
+  };
 }
 
 /**

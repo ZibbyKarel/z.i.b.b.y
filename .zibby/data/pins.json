@@ -1,11 +1,16 @@
 [
   {
-    "kind": "page",
-    "id": "/work/projects/shoptet-partner-cli/roadmap",
-    "label": "CLI - Roadmap"
-  },
-  {
     "kind": "employee",
     "id": "employee_finance-analyst"
+  },
+  {
+    "kind": "page",
+    "id": "/dashboard/inbox/pull-requests",
+    "label": "Pull Requests"
+  },
+  {
+    "kind": "page",
+    "id": "/dashboard/inbox/issues?project=cms4",
+    "label": "CMS4 - Issues"
   }
 ]

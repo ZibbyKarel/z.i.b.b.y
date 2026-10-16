@@ -755,7 +755,7 @@ describe("claude approval hook — ownership ledger (agent's own files)", () => 
       `rm ${work}/*.txt`,
       `rm ~other/x`,
       `rm $(echo ${owned})`,
-      `cd sub && rm own`,
+      `cd $D && rm own`,
       `find ${work} -delete`,
       `git clean -fd`,
       `echo ${owned} | xargs rm`,
@@ -879,5 +879,86 @@ describe("claude approval hook — ownership ledger (agent's own files)", () => 
     await preApprove();
     await runHook(work, bashEvent(`echo x > ${work}/new.txt && git push origin main`, work), env());
     expect(await requestRaised()).toBe(true);
+  });
+});
+
+describe("claude approval hook — free zone (repo + temp dirs)", () => {
+  let intentDir: string;
+  let repo: string;
+  let tmp: string;
+  let outside: string;
+  const requestRaised = () =>
+    fs
+      .access(path.join(intentDir, "intent-request.json"))
+      .then(() => true)
+      .catch(() => false);
+  const env = () => ({
+    ZIBBY_INTENT_DIR: intentDir,
+    ZIBBY_FREE_DIRS: [repo, tmp].join(path.delimiter),
+  });
+  const preApprove = () =>
+    fs.writeFile(path.join(intentDir, "intent-decision.json"), '{"decision":"allow"}', "utf8");
+  const analyze = (command: string) =>
+    analyzeOwnership(command, { cwd: repo, ledger: [], intentDir, free: [repo, tmp] });
+
+  beforeEach(async () => {
+    const mk = async (p: string) => fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), p)));
+    [intentDir, repo, tmp, outside] = await Promise.all([
+      mk("fz-intent-"),
+      mk("fz-repo-"),
+      mk("fz-tmp-"),
+      mk("fz-outside-"),
+    ]);
+    await fs.mkdir(path.join(tmp, "pr1"));
+    await fs.writeFile(path.join(tmp, "pr1", "src.ts"), "old");
+    await fs.writeFile(path.join(repo, "a.ts"), "old");
+    await fs.writeFile(path.join(outside, "b.ts"), "old");
+  });
+  afterEach(async () => {
+    await Promise.all(
+      [intentDir, repo, tmp, outside].map((d) => fs.rm(d, { recursive: true, force: true })),
+    );
+  });
+
+  it("lets overwrites, moves and deletes inside the repo and temp dirs through", () => {
+    expect(analyze(`cd ${tmp}/pr1 && gh api x -H 'A: b' > src.ts; grep -n y src.ts`).exempt).toBe(
+      true,
+    );
+    expect(analyze("echo x > a.ts && mv a.ts c.ts && rm -rf c.ts").exempt).toBe(true);
+    expect(analyze(`find ${tmp} -name '*.ts' -delete`).exempt).toBe(true);
+    expect(analyze("git clean -fd").exempt).toBe(true);
+    expect(analyze(`mkdir -p ${tmp}/new && cd ${tmp}/new && echo x > f`).exempt).toBe(true);
+  });
+
+  it("gates any effect reaching outside the zone, even onto a new path", () => {
+    expect(analyze(`rm ${outside}/b.ts`).exempt).toBe(false);
+    expect(analyze(`echo x > ${outside}/new.txt`).exempt).toBe(false);
+    expect(analyze(`cp a.ts ${outside}/`).exempt).toBe(false);
+    expect(analyze(`cd ${outside} && echo x > a.ts`).exempt).toBe(false);
+    expect(analyze(`find ${outside} -delete`).exempt).toBe(false);
+    expect(analyze("pushd /x && rm a.ts").exempt).toBe(false);
+  });
+
+  it("asks for a Write outside the zone and stays silent for one inside", async () => {
+    const write = (file_path: string) =>
+      runHook(
+        repo,
+        { tool_name: "Write", tool_input: { file_path, content: "x" }, cwd: repo },
+        env(),
+      );
+    const inside = await write(path.join(tmp, "pr1", "src.ts"));
+    expect(inside.stdout).toBe("");
+    expect(await requestRaised()).toBe(false);
+
+    await preApprove();
+    const res = await write(path.join(outside, "b.ts"));
+    expect(await requestRaised()).toBe(true);
+    expect(JSON.parse(res.stdout).hookSpecificOutput.permissionDecision).toBe("allow");
+  });
+
+  it("does not raise a request for a temp-dir overwrite end to end", async () => {
+    const res = await runHook(repo, bashEvent(`cd ${tmp}/pr1 && echo x > src.ts`, repo), env());
+    expect(res.stdout).toBe("");
+    expect(await requestRaised()).toBe(false);
   });
 });

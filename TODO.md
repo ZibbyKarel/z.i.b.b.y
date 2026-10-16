@@ -1,7 +1,5 @@
 # TODO
 
-1. [x] odstranit možnost připnout jednotlivé agenty (main@9a70e654)
-2. [x] odstranit možnost přidat/editovat obrázky u workflows (main@ffd622e4)
-3. [x] Udělat kompletní redesign stránky /work/workflows. Workflows máme hodně a potřebujeme mít kategorizovaný přehled a né je mít v jednom sloupci. navrhuji grid a klik na kartičku otevře dialog s detailem workflow (main@cfe5d83b)
-4. [x] pokud spustím úlohu, v levém panelu ji vidím nejdřív dvakrát - ve stavu čeká a ve stavu running ale jen první je správně (main@c9b77bf7)
-5. [x] notifikační hlášky a dropdown komponenta mají průhledné pozadí - špatně se to čte takže pozadí bude neprůhledné a v barvě (main@2b972b8a)
+1. [ ] synchronizovat pull requesty a issues není třeba každých 60s. stačí co 15minut + když se stane v zibbycorpu akce, která query invaliduje - například vytvoření PR, mergnutí jiného atp...
+2. [ ] na stráce pull-requests máme duplicitní informace o počtu PR v jednotlivích sekcí - před i za názvem sekce. Stačí za názvem.
+3. [ ] na stráce pull-requests bude každá sekce sbalitelná. Sekce budou jako Accordion který bude defaáltně celý rozbalená. Sekce se ale dají sbalit. Sbalení sekce se pamatuje per session.

@@ -80,9 +80,10 @@ This is the only place a wrapper injects its own fields (`agentId`, `prompt`,
   actually runs — used when a project-targeted stage spawns inside the real
   project checkout. Only its `CLAUDE.md` loads (see **`--setting-sources`**);
   its `.claude/` settings, hooks, skills and commands do not.
-- `env: { ...process.env, CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD: "1", ...spec.env, [INTENT_DIR_ENV]: spec.cwd }`
+- `env: { ...process.env, CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD: "1", ...spec.env, [INTENT_DIR_ENV]: spec.cwd, [FREE_DIRS_ENV]: freeDirs(spec) }`
   — a project env can override the CLAUDE.md var, but the intent-dir pin
-  (`ZIBBY_INTENT_DIR`) is applied **last** so it can never be overridden.
+  (`ZIBBY_INTENT_DIR`) and the free zone (`ZIBBY_FREE_DIRS`, see the free-zone
+  paragraph below) are applied **last** so they can never be overridden.
 - The run id is `${ownerId}_${startedMs}_${pid}`; the log file is
   `<dir>/<runId>.log` (append mode); the sidecar is `<dir>/<runId>.json`.
 - The child's `exit`/`error` listeners are wired **synchronously, before any
@@ -176,9 +177,12 @@ a Bash command (`>`/`>>`, `tee`, `cp`/`mv` dest, `mkdir`, `touch`, `truncate`,
 — is recorded; a directory entry covers everything beneath it. A later overwrite /
 move / delete whose **every** target is owned (or doesn't exist) raises no intent.
 Every doubt keeps the gate: non-literal targets (`$var`, globs, `$(…)`, zsh `=cmd`,
-`~user`, `..`, a symlink leaf, a hard-linked file), relative paths after a `cd`,
-`rm` that isn't the command word (`xargs rm`, `git -C x rm`), effects without
-enumerable targets (`find -delete`, `git clean`, `install`), `sed` scripts other
+`~user`, `..`, a symlink leaf, a hard-linked file), relative paths after a
+non-literal `cd` or any `pushd`/`popd` (after a literal `cd x` a relative target
+must pass from both the old cwd and `x`), `rm` that isn't the command word
+(`xargs rm`, `git -C x rm`), effects without enumerable targets (`xargs rm`,
+`install`; `find <roots> -delete` and a plain `git clean` are checked against
+their roots / the cwd), `sed` scripts other
 than plain `s///`, unknown `cp`/`mv` flags, unterminated quotes. Only a command
 that runs without asking writes the ledger (a gated create the operator denies
 leaves nothing behind); a ledger that is a symlink or hard link counts as empty.
@@ -189,6 +193,16 @@ an unquoted or executed heredoc (`bash <<EOF`, `cat <<EOF | sh`) still is.
 `classify()` also splits on newlines and `&`, so a `mv`/`cp` on the second line of
 a multi-line command is gated too. Ceiling: an interpreter (`python x.py`) can
 write the ledger directly — it could equally delete files ungated, so nothing new.
+
+**Free zone — the repo and temp dirs are not gated at all.** RunnerCore passes
+`ZIBBY_FREE_DIRS` (`freeDirs(spec)`): the sandbox `cwd`, the `spawnCwd` checkout,
+every `--add-dir` grant, plus `os.tmpdir()`, `/tmp`, `/var/tmp` and `/etc`. A file
+effect whose every target lands inside the zone (or in the ledger) raises no
+intent. Outside it nothing passes silently — not even a brand-new path — and a
+`Write`/`Edit` landing outside raises an `overwrite` intent ("Zapsat soubor mimo
+projekt"). Without the env (tests, non-RunnerCore callers) the ledger rules above
+stand alone. Reads are not gated; neither are unclassified commands (`touch`,
+`mkdir`, interpreters) outside the zone.
 
 ### Output capture
 
@@ -302,8 +316,9 @@ Key assembled pieces:
   ZIBBY vendors no third-party plugin tree. The args are persisted in the run
   spec, so the loaded plugins are the trace and approval-resume replays them.
 - **`--settings`** — the locked approval-hook `PreToolUse` group is always
-  **first**, `matcher: "Bash|Task|Write|Edit"` (`Write`/`Edit` only feed the
-  ownership ledger above, they never raise an intent); any custom hook whose matcher could catch
+  **first**, `matcher: "Bash|Task|Write|Edit"` (`Write`/`Edit` feed the
+  ownership ledger above and raise an intent only when they land outside the
+  free zone); any custom hook whose matcher could catch
   `Bash`/`Task` (empty, `*`, or containing either token) is dropped at merge
   time (`collidesWithApprovalGate`) so a stored hook can never weaken the gate
   (Law 1).
