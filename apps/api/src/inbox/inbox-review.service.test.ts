@@ -18,6 +18,7 @@ describe("InboxReviewService", () => {
   let storage: ScheduledTasksStorageService;
   let createTask: ReturnType<typeof vi.fn>;
   let register: ReturnType<typeof vi.fn>;
+  let dropPrsCache: ReturnType<typeof vi.fn>;
   let fetchImpl: ReturnType<typeof vi.fn>;
   let integrations: Integration[];
   let service: InboxReviewService;
@@ -41,6 +42,7 @@ describe("InboxReviewService", () => {
       ),
     }));
     register = vi.fn();
+    dropPrsCache = vi.fn();
     fetchImpl = vi.fn(async () => new Response("{}", { status: 200 }));
     service = new InboxReviewService(
       {
@@ -54,6 +56,7 @@ describe("InboxReviewService", () => {
       { createTask } as never,
       storage,
       { register } as never,
+      { dropPrsCache } as never,
       undefined,
       fetchImpl as unknown as typeof fetch,
     );
@@ -125,6 +128,7 @@ describe("InboxReviewService", () => {
       }),
     );
     expect((await storage.get("task_r1")).prReview?.state).toBe("posted");
+    expect(dropPrsCache).toHaveBeenCalledOnce();
   });
 
   it("a GitHub failure marks the review failed and throws", async () => {

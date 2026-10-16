@@ -6,6 +6,7 @@ import { resolveGithubToken } from "../projects/project-pr.service";
 import { NoGithubLinkError } from "../projects/projects.errors";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ResolvedProjectService } from "../projects/resolved-project.service";
+import { InboxService } from "./inbox.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
 import { PR_REVIEW_ARTIFACT } from "../tasks/task-output.service";
@@ -66,6 +67,7 @@ export class InboxReviewService implements OnModuleInit {
     private readonly scheduler: TaskSchedulerService,
     private readonly tasks: ScheduledTasksStorageService,
     private readonly approvals: ApprovalsService,
+    private readonly inbox: InboxService,
     @Optional() logger?: LoggerService,
     @Optional() fetchImpl?: typeof fetch,
   ) {
@@ -148,6 +150,8 @@ export class InboxReviewService implements OnModuleInit {
     );
     if (!res.ok) return fail(`github review post: HTTP ${res.status}`);
     await this.tasks.setPrReview(taskId, (c) => (c ? { ...c, state: "posted" } : c));
+    // The review changes the PR's section — don't serve the stale 30 s cache.
+    this.inbox.dropPrsCache();
     this.log?.info("pr review posted", { taskId, repo: link.repo, number: review.number });
   }
 

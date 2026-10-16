@@ -71,6 +71,7 @@ describe("RunEventsProvider — SSE-driven invalidation (N1)", () => {
       mock.last().emit({ scope: "activity", kind: "task-created", at: "2026-10-16" });
     });
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: getInboxPrsQueryKey() });
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: getInboxItemsQueryKey() });
   });
 
   it("an awaiting-approval run transition refreshes the approvals queue (existing path)", () => {

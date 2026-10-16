@@ -1,4 +1,5 @@
-import { Injectable, type OnModuleInit, Optional } from "@nestjs/common";
+import { Injectable, type OnModuleDestroy, type OnModuleInit, Optional } from "@nestjs/common";
+import type { Subscription } from "rxjs";
 import { INBOX_REFRESH_ACTIVITY_KINDS } from "@zibby/contracts";
 import type {
   InboxEpic,
@@ -140,8 +141,9 @@ function orgOf(project: Project): { companyId?: string; teamId?: string } {
  * to Jira/GitHub. `fetchImpl` is injectable like `ProjectPrService`'s.
  */
 @Injectable()
-export class InboxService implements OnModuleInit {
+export class InboxService implements OnModuleInit, OnModuleDestroy {
   private readonly fetchImpl: typeof fetch;
+  private activitySub?: Subscription;
   private prsCache: { at: number; value: Promise<InboxPrsResponse> } | null = null;
 
   constructor(
@@ -162,14 +164,21 @@ export class InboxService implements OnModuleInit {
   onModuleInit(): void {
     // Phase 129 P3 — a merge (from any surface) drops the 30 s PR cache so the
     // merged PR leaves the list on the very next read instead of lingering.
-    this.projectPrs.onMerged(() => {
-      this.prsCache = null;
-    });
+    this.projectPrs.onMerged(() => this.dropPrsCache());
     // A ZIBBY action that changes PRs (task opened one, roadmap dispatch…) drops the
     // cache too, so the web's event-driven refetch reaches GitHub, not a stale copy.
-    this.activityEvents.stream().subscribe(({ kind }) => {
-      if (INBOX_REFRESH_ACTIVITY_KINDS.includes(kind)) this.prsCache = null;
+    this.activitySub = this.activityEvents.stream().subscribe(({ kind }) => {
+      if (INBOX_REFRESH_ACTIVITY_KINDS.includes(kind)) this.dropPrsCache();
     });
+  }
+
+  onModuleDestroy(): void {
+    this.activitySub?.unsubscribe();
+  }
+
+  /** Drop the 30 s PR cache so the next read reaches GitHub. */
+  dropPrsCache(): void {
+    this.prsCache = null;
   }
 
   getState(): Promise<InboxState> {

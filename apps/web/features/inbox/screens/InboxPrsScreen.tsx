@@ -89,7 +89,7 @@ function PrSection({
  * `pr.section`, `INBOX_PR_SECTIONS` order), each sorted by blocker. Empty sections are
  * hidden except "Needs your review". Review / squash-and-merge are operator clicks
  * (`PrActions`). `?pr=<n>` focuses one PR (the link from an
- * issue's badge or the Overview); the list refetches on focus and every 60 s.
+ * issue's badge or the Overview); the list refetches every 15 min + on inbox-refresh activity.
  */
 export function InboxPrsScreen() {
   const t = useTranslations("inboxPage");

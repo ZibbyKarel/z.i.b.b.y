@@ -152,7 +152,8 @@ export type SetInboxHidden = z.infer<typeof SetInboxHiddenSchema>;
 
 /**
  * Activity kinds after which the inbox PR/issue lists are stale: a task may have
- * opened a PR or posted a review, a merge closed one, a roadmap sync/dispatch/outcome
+ * opened a PR or drafted a review (the posted review itself drops the API cache
+ * directly, in InboxReviewService), a merge closed one, a roadmap sync/dispatch/outcome
  * changed the issues. The web invalidates both inbox queries on these, the API drops
  * its PR cache — everything else waits for the 15-min poll.
  */
