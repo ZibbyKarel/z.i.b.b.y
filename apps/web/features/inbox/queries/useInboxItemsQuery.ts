@@ -1,3 +1,4 @@
+import { MINUTE_MS } from "../../../utils/time";
 import { apiClient } from "../../../state/api";
 import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
 
@@ -17,5 +18,7 @@ export function useInboxItemsQuery(options?: { enabled?: boolean }) {
     queryKey: getInboxItemsQueryKey(),
     select: selectApiResponseBody,
     enabled: options?.enabled,
+    // Picks up the API's 15-min roadmap tick.
+    refetchInterval: 15 * MINUTE_MS,
   });
 }

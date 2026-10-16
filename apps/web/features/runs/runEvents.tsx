@@ -3,12 +3,14 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, createContext, useContext, useEffect, useState } from "react";
 import { getRunningAgentsQueryKey } from "../agents/queries/keys";
-import type { ActivityEntry } from "@zibby/contracts";
+import { type ActivityEntry, INBOX_REFRESH_ACTIVITY_KINDS } from "@zibby/contracts";
 import { getApprovalsQueryKey } from "../approvals/queries/keys";
 import { getBudgetQueryKey, getCiStatusQueryKey } from "../projects/queries/keys";
 import { getActivityQueryKey } from "../activity/queries/useActivityQuery";
 import { prependActivityEntry } from "../activity/queries/useActivityFeedInfiniteQuery";
 import { getBriefingQueryKey } from "../briefing/queries/useBriefingQuery";
+import { getInboxItemsQueryKey } from "../inbox/queries/useInboxItemsQuery";
+import { getInboxPrsQueryKey } from "../inbox/queries/useInboxPrsQuery";
 import { getChannelItemsQueryKey } from "../integrations/queries/useChannelItemsQuery";
 import { getWorkflowRunQueryKey } from "../workflows/queries/keys";
 import { getScheduledTasksQueryKey } from "../tasks/queries/useScheduledTasksQuery";
@@ -175,6 +177,15 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         // slow interval (which exists for the silent green recovery).
         if (parsed.kind === "monitor-alert") {
           void qc.invalidateQueries({ queryKey: getCiStatusQueryKey() });
+        }
+        // A ZIBBY action changed PRs/issues (task opened a PR, merge, roadmap sync) —
+        // refresh the inbox now; otherwise it waits for its 15-min poll.
+        if (
+          parsed.kind &&
+          (INBOX_REFRESH_ACTIVITY_KINDS as readonly string[]).includes(parsed.kind)
+        ) {
+          void qc.invalidateQueries({ queryKey: getInboxPrsQueryKey() });
+          void qc.invalidateQueries({ queryKey: getInboxItemsQueryKey() });
         }
       }
       // A new run may be a scheduled task firing (scheduled → dispatched); refresh

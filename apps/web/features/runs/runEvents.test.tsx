@@ -4,6 +4,8 @@ import { type MockInstance, afterEach, beforeEach, describe, expect, it, vi } fr
 import { installEventSourceMock } from "../../test/eventSourceMock";
 import { getApprovalsQueryKey } from "../approvals/queries/keys";
 import { getWorkflowRunQueryKey } from "../workflows/queries/keys";
+import { getInboxItemsQueryKey } from "../inbox/queries/useInboxItemsQuery";
+import { getInboxPrsQueryKey } from "../inbox/queries/useInboxPrsQuery";
 import { getCiStatusQueryKey } from "../projects/queries/keys";
 
 // `API_URL` gates the provider (no URL → no stream); pin it so the EventSource opens.
@@ -54,6 +56,21 @@ describe("RunEventsProvider — SSE-driven invalidation (N1)", () => {
       mock.last().emit({ scope: "activity", kind: "monitor-alert", at: "2026-07-02" });
     });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: getCiStatusQueryKey() });
+  });
+
+  it("an inbox-refresh activity kind (a task finished) refreshes the inbox PRs and issues", () => {
+    act(() => {
+      mock.last().emit({ scope: "activity", kind: "task-outcome", at: "2026-10-16" });
+    });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: getInboxPrsQueryKey() });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: getInboxItemsQueryKey() });
+  });
+
+  it("other activity leaves the inbox alone", () => {
+    act(() => {
+      mock.last().emit({ scope: "activity", kind: "task-created", at: "2026-10-16" });
+    });
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: getInboxPrsQueryKey() });
   });
 
   it("an awaiting-approval run transition refreshes the approvals queue (existing path)", () => {

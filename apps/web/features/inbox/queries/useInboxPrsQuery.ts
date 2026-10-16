@@ -9,15 +9,14 @@ export function getInboxPrsQueryKey() {
 
 /**
  * The operator's GitHub PRs (`GET /api/inbox/prs`): review requests on me or my
- * team plus my own open PRs. State is polled, not streamed — refetch on window
- * focus and every 60 s (spec decision 21).
+ * team plus my own open PRs. State is polled every 15 min; inbox-refresh activity
+ * refreshes it immediately via RunEventsProvider.
  */
 export function useInboxPrsQuery(options?: { enabled?: boolean }) {
   return apiClient.inbox.listInboxPrs.useQuery({
     queryKey: getInboxPrsQueryKey(),
     select: selectApiResponseBody,
     enabled: options?.enabled,
-    refetchOnWindowFocus: true,
-    refetchInterval: MINUTE_MS,
+    refetchInterval: 15 * MINUTE_MS,
   });
 }
