@@ -103,7 +103,9 @@ export function sectionOf(pr: {
   ) {
     return "needs-action";
   }
-  return pr.review === "approved" && pr.ci === "passing" ? "ready-to-merge" : "waiting";
+  // `unknown` = no check-runs (a repo without CI) or unreadable checks; GitHub's own
+  // branch protection still gates the merge, so only a running CI keeps it waiting.
+  return pr.review === "approved" && pr.ci !== "pending" ? "ready-to-merge" : "waiting";
 }
 
 const hiddenKey = (integrationId: string, externalId: string) =>

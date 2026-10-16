@@ -90,7 +90,7 @@ describe("sectionOf", () => {
     expect(sectionOf({ ...mine, mergeable: false })).toBe("needs-action");
     expect(sectionOf({ ...mine, ci: "pending" })).toBe("waiting");
     expect(sectionOf({ ...mine, review: "none" })).toBe("waiting");
-    expect(sectionOf({ ...mine, ci: "unknown" })).toBe("waiting");
+    expect(sectionOf({ ...mine, ci: "unknown" })).toBe("ready-to-merge"); // repo without CI
   });
 });
 

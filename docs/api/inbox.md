@@ -76,7 +76,7 @@ and passing = `ready-to-merge` → `awaiting-review`.
 `section` (Phase 129 P1, `INBOX_PR_SECTIONS` order = display order): to-review →
 `needs-your-review` (direct) / `needs-team-review` (team only); mine → `needs-action`
 (draft, CI failing, changes requested or `mergeable === false`), else `ready-to-merge`
-(approved + CI passing; `mergeable: null` still counts), else `waiting`. `bucket` and
+(approved + CI not pending — `unknown`, i.e. a repo without checks, counts; `mergeable: null` still counts), else `waiting`. `bucket` and
 `blocker` stay for back-compat.
 
 A failing repo lands in `errors` and never fails the request. The GitHub part is
