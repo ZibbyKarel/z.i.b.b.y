@@ -1,0 +1,8 @@
+{
+  "id": "shoptet-github",
+  "kind": "github",
+  "companyId": "shoptet",
+  "name": "Shoptet-GitHub-CMS4",
+  "enabled": true,
+  "config": { "kind": "github", "streams": ["issues", "pulls"], "username": "ZibbyKarel" }
+}
