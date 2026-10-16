@@ -1802,7 +1802,12 @@ export class TaskSchedulerService
         // Already resolved, or parked at the PR output gate (the gate writes the outcome
         // on the operator's decision) — don't re-process / re-park.
         if (existing.outcome || existing.status === "awaiting-output") return;
-        const summary = await this.agentRunSummary(run.runId);
+        // An interrupted run's last log line is just whatever it was doing when killed —
+        // say why it stopped instead.
+        const summary =
+          run.status === "interrupted"
+            ? await this.interruptedRunSummary(run.runId)
+            : await this.agentRunSummary(run.runId);
         // A successful run with a chosen `pr`/`file` output runs its terminal sink first.
         // A `pr` sink opens the PR immediately (Tier-2, no gate) and hands back the PR
         // note + structured result to fold into the outcome we write here.
@@ -1948,6 +1953,32 @@ export class TaskSchedulerService
   ): Promise<void> {
     if (!projectId || costUsd == null) return Promise.resolve();
     return this.budget.recordCost({ projectId, taskId, runRef, kind, costUsd });
+  }
+
+  /**
+   * Why an agent run was interrupted: a rejected approval of that run (the reject
+   * cancels it), otherwise a manual stop or an API restart.
+   */
+  private async interruptedRunSummary(runId: string): Promise<string> {
+    const rejected = await this.approvals
+      .list("rejected")
+      .then((all) => all.filter((a) => a.runId === runId))
+      .catch(() => []);
+    const approval = rejected.sort((a, b) =>
+      (b.decidedAt ?? "").localeCompare(a.decidedAt ?? ""),
+    )[0];
+    if (!approval) return "Běh přerušen — zastaven ručně nebo restartem API.";
+    let label = approval.action;
+    try {
+      const detail: unknown = JSON.parse(approval.detail);
+      if (detail && typeof detail === "object" && "summary" in detail) {
+        label = `${String(detail.summary)} (${approval.action})`;
+      }
+    } catch {
+      // plain-text detail — keep the action
+    }
+    const text = `Zrušeno: zamítnutý approval „${label}“${approval.reason ? ` — ${approval.reason}` : ""}`;
+    return text.length > SUMMARY_MAX_CHARS ? `${text.slice(0, SUMMARY_MAX_CHARS - 1)}…` : text;
   }
 
   /** Last non-empty log line of an agent run, truncated to one readable line. */

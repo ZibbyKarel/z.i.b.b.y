@@ -123,6 +123,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
   let systemConfig: ReturnType<typeof fakeSystemConfigStore>;
   let attachmentStorage: AttachmentStorageService;
   let activity: { record: ReturnType<typeof vi.fn<(input: ActivityInput) => Promise<void>>> };
+  let fakeApprovals: Record<string, unknown>;
 
   /** A fixed near-future window-reset epoch the limit guard defers to. */
   const RESET_AT = Date.parse("2026-06-13T04:30:00.000Z");
@@ -194,10 +195,11 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       recordDispatch: async () => {},
       recordCost: vi.fn(async () => {}),
     };
-    const fakeApprovals = {
+    fakeApprovals = {
       register: vi.fn(),
       requestApproval: async () => ({ id: "appr_1" }),
       reject: async () => {},
+      list: async () => [],
     };
     fakeGates = { floor: async () => [], evaluate: vi.fn(() => ({ decision: "allow" })) };
     // Limits double (Phase 9): headroom by default; a test flips windowExhausted to
@@ -651,7 +653,33 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     agentListener?.(agentRun({ status: "interrupted", taskId: result.task.id }));
     await vi.waitFor(async () => {
       const task = await storage.get(result.task.id);
-      expect(task.outcome?.status).toBe("error");
+      expect(task.outcome).toMatchObject({
+        status: "error",
+        summary: "Běh přerušen — zastaven ručně nebo restartem API.",
+      });
+    });
+  });
+
+  it("names the rejected approval as the reason an interrupted agent run stopped", async () => {
+    const result = await service.createTask({ text: "do" });
+    if (result.outcome !== "dispatched") throw new Error("expected dispatched");
+    const run = agentRun({ status: "interrupted", taskId: result.task.id });
+    fakeApprovals.list = vi.fn(async () => [
+      {
+        runId: run.runId,
+        action: "overwrite",
+        detail: JSON.stringify({ summary: "Přepsat soubor" }),
+        decidedAt: "2026-10-16T07:25:27.890Z",
+      },
+    ]);
+
+    agentListener?.(run);
+    await vi.waitFor(async () => {
+      const task = await storage.get(result.task.id);
+      expect(task.outcome).toMatchObject({
+        status: "error",
+        summary: "Zrušeno: zamítnutý approval „Přepsat soubor (overwrite)“",
+      });
     });
   });
 
