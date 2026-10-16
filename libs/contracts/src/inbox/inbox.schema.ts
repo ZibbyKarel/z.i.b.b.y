@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ActivityKind } from "../activity/activity.schema";
 import { IsoDateTimeSchema } from "../common.schema";
 import { RoadmapItemSchema, RoadmapSourceKindSchema } from "../roadmap/roadmap-item.schema";
 import { PrReviewStateSchema } from "../tasks/task.schema";
@@ -148,3 +149,18 @@ export type InboxState = z.infer<typeof InboxStateSchema>;
 
 export const SetInboxHiddenSchema = InboxHiddenKeySchema.extend({ hidden: z.boolean() }).strict();
 export type SetInboxHidden = z.infer<typeof SetInboxHiddenSchema>;
+
+/**
+ * Activity kinds after which the inbox PR/issue lists are stale: a task may have
+ * opened a PR or posted a review, a merge closed one, a roadmap sync/dispatch/outcome
+ * changed the issues. The web invalidates both inbox queries on these, the API drops
+ * its PR cache — everything else waits for the 15-min poll.
+ */
+export const INBOX_REFRESH_ACTIVITY_KINDS: readonly ActivityKind[] = [
+  "task-outcome",
+  "merge-completed",
+  "post-merge-outcome",
+  "roadmap-sync",
+  "roadmap-item-dispatched",
+  "roadmap-item-outcome",
+];
