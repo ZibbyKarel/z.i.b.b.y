@@ -133,4 +133,31 @@ describe("IntegrationFormFields — github kind", () => {
       includeTeams: true,
     });
   });
+
+  it("phase 129 — a company-owned github integration saves without a repo (hint names the git remote)", async () => {
+    const onSubmit = vi.fn();
+    render(<IntegrationFormDialog companyId="acme" onClose={vi.fn()} onCreate={onSubmit} />);
+    await selectGithub();
+
+    expect(screen.getByText(/git remote/)).toBeInTheDocument();
+    await userEvent.type(screen.getByTestId("integration-id"), "acme-github");
+    await userEvent.type(screen.getByTestId(IntegrationFormTestId.GithubUsername), "octocat");
+    await userEvent.click(screen.getByTestId(IntegrationFormTestId.Submit));
+
+    const draft = onSubmit.mock.calls[0]![0];
+    expect(draft.create.config).toEqual({
+      kind: "github",
+      streams: ["issues", "pulls"],
+      username: "octocat",
+    });
+  });
+
+  it("a project-owned github integration still requires a repo", async () => {
+    render(<IntegrationFormDialog onClose={vi.fn()} onCreate={vi.fn()} projectId="acme-app" />);
+    await selectGithub();
+
+    await userEvent.type(screen.getByTestId("integration-id"), "acme-github");
+    await userEvent.type(screen.getByTestId(IntegrationFormTestId.GithubUsername), "octocat");
+    expect(screen.getByTestId(IntegrationFormTestId.Submit)).toBeDisabled();
+  });
 });

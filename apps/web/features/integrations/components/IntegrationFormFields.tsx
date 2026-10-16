@@ -115,6 +115,11 @@ export interface IntegrationFormState {
   setSentryBaseUrl: (v: string) => void;
   sentryMinLevel: SentryMinLevel;
   setSentryMinLevel: (v: SentryMinLevel) => void;
+  /**
+   * Company-owned (phase 129): a GitHub integration's repo is optional there — each
+   * project's repo comes from its git remote; a project-owned one must name it.
+   */
+  companyOwned: boolean;
   /** Contract-side id validation message while the id is still editable. */
   idError: string | null;
   /** Valid for submit (id counts only while it is still editable). */
@@ -176,6 +181,8 @@ export function useIntegrationFormState(
     sentryCfg?.minLevel ?? "error",
   );
 
+  const companyOwned = integration ? integration.companyId !== undefined : "companyId" in owner;
+
   const buildConfig = (): CreateIntegrationInput["config"] => {
     switch (kind) {
       case "slack":
@@ -211,7 +218,7 @@ export function useIntegrationFormState(
         ];
         return {
           kind: "github",
-          repo: repo.trim(),
+          ...(repo.trim() ? { repo: repo.trim() } : {}),
           streams,
           username: githubUsername.trim(),
           ...(githubIncludeTeams ? { includeTeams: true } : {}),
@@ -244,7 +251,10 @@ export function useIntegrationFormState(
       case "jira":
         return baseUrl.trim().length > 0 && jiraEmail.trim().length > 0;
       case "github":
-        return /^[^/]+\/[^/]+$/.test(repo.trim()) && githubUsername.trim().length > 0;
+        return (
+          (companyOwned && repo.trim() === "" ? true : /^[^/]+\/[^/]+$/.test(repo.trim())) &&
+          githubUsername.trim().length > 0
+        );
       case "calendar":
         return Number(lookaheadDays) > 0;
       case "sentry":
@@ -312,6 +322,7 @@ export function useIntegrationFormState(
     setSentryBaseUrl,
     sentryMinLevel,
     setSentryMinLevel,
+    companyOwned,
     idError,
     canSave: (idEditable) =>
       (idEditable ? id.trim().length > 0 && idError === null : true) && configReady(),
@@ -527,8 +538,16 @@ export function IntegrationFormFields({
         <>
           <TextInputField
             data-testid={IntegrationFormTestId.GithubRepo}
-            hint={t("integrations.githubRepoHint")}
-            label={t("integrations.githubRepo")}
+            hint={
+              form.companyOwned
+                ? t("integrations.githubRepoCompanyHint")
+                : t("integrations.githubRepoHint")
+            }
+            label={
+              form.companyOwned
+                ? t("integrations.githubRepoOptional")
+                : t("integrations.githubRepo")
+            }
             onChange={(e) => form.setRepo(e.target.value)}
             placeholder="owner/name"
             value={form.repo}

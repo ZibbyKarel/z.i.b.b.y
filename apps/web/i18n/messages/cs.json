@@ -635,6 +635,8 @@
     "jiraJqlHint": "Zúží stahované issue; výchozí jsou nedávno změněné v projektu",
     "githubRepo": "Repozitář",
     "githubRepoHint": "owner/name",
+    "githubRepoOptional": "Repozitář (volitelné)",
+    "githubRepoCompanyHint": "Nech prázdné: repozitář se bere z git remote každého projektu. owner/name vyplň jen pro pevně daný repozitář.",
     "githubStreamIssues": "Sledovat issues",
     "githubStreamPulls": "Sledovat pull requesty",
     "githubUsername": "Tvůj GitHub username",

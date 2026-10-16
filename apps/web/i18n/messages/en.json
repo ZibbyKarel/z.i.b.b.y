@@ -635,6 +635,8 @@
     "jiraJqlHint": "Narrows polled issues; defaults to the project's recently updated",
     "githubRepo": "Repository",
     "githubRepoHint": "owner/name",
+    "githubRepoOptional": "Repository (optional)",
+    "githubRepoCompanyHint": "Leave empty: the repo is taken from each project's git remote. Set owner/name only to pin one repo.",
     "githubStreamIssues": "Watch issues",
     "githubStreamPulls": "Watch pull requests",
     "githubUsername": "Your GitHub username",

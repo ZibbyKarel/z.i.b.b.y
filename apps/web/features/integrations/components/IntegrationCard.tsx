@@ -91,7 +91,7 @@ export function IntegrationCard({
         : config.kind === "jira"
           ? (config.projectKey ?? config.baseUrl)
           : config.kind === "github"
-            ? config.repo
+            ? (config.repo ?? `@${config.username}`)
             : config.kind === "calendar"
               ? config.calendarId
               : `${config.org}/${config.project}`;
