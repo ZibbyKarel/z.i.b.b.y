@@ -95,6 +95,42 @@ describe("InboxReviewService", () => {
     });
   });
 
+  it.each([
+    ["thorough", "pr-review-thorough"],
+    ["tested", "pr-review-tested"],
+  ] as const)(
+    "level %s starts the %s workflow with a per-phase brief",
+    async (level, workflowId) => {
+      await service.start({
+        projectId: "acme",
+        repo: "acme/app",
+        number: 7,
+        title: "Fix it",
+        level,
+      });
+      const [input, , trustedProjectId, target, background] = createTask.mock.calls[0] ?? [];
+      expect(trustedProjectId).toBe("acme");
+      expect(target).toMatchObject({ kind: "workflow", id: workflowId });
+      expect(background).toBe(false);
+      expect(input.title).toBe(`Code review (${level}): acme/app#7 Fix it`);
+      expect(input.text).toContain("gh pr checkout 7 --repo acme/app --detach");
+      expect(input.text).toContain("## Phase `final`");
+      expect(input.text).toContain("context/input.md");
+      expect(input.text).toMatch(/Do NOT post anything to GitHub/);
+      expect(input.text).toContain('PR title: "Fix it"');
+      expect((await storage.get("task_r1")).prReview?.state).toBe("running");
+    },
+  );
+
+  it("an explicit quick level is the code-reviewer agent with today's brief", async () => {
+    await service.start({ projectId: "acme", repo: "acme/app", number: 7, level: "quick" });
+    const [input, , , target] = createTask.mock.calls[0] ?? [];
+    expect(target).toMatchObject({ kind: "agent", id: "code-reviewer" });
+    expect(input.title).toBe("Code review: acme/app#7");
+    expect(input.text).toContain("zibby-pr-review.md");
+    expect(input.text).not.toContain("## Phase");
+  });
+
   it("start refuses an unknown project, a missing link and a foreign repo", async () => {
     await expect(service.start({ projectId: "nope", repo: "acme/app", number: 1 })).rejects.toThrow(
       ProjectNotFoundError,

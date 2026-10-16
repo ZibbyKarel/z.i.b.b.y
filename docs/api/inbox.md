@@ -20,13 +20,13 @@ projects merge route. UI spec: `docs/plans/inbox-ui-spec.md`.
 
 ## Endpoints
 
-| Method | Path                    | Body                                             | Response                                                                   |
-| ------ | ----------------------- | ------------------------------------------------ | -------------------------------------------------------------------------- |
-| GET    | `/api/roadmap/items`    | —                                                | `InboxItemsResponse`                                                       |
-| GET    | `/api/inbox/prs`        | —                                                | `InboxPrsResponse`                                                         |
-| POST   | `/api/inbox/prs/review` | `{ projectId, repo, number, title? }` (strict)   | 201 `{ taskId }`; 404 project; 422 no GitHub link / repo not the project's |
-| GET    | `/api/inbox/state`      | —                                                | `InboxState`                                                               |
-| PUT    | `/api/inbox/state`      | `{ integrationId, externalId, hidden }` (strict) | `InboxState`                                                               |
+| Method | Path                    | Body                                                                                                                  | Response                                                                   |
+| ------ | ----------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| GET    | `/api/roadmap/items`    | —                                                                                                                     | `InboxItemsResponse`                                                       |
+| GET    | `/api/inbox/prs`        | —                                                                                                                     | `InboxPrsResponse`                                                         |
+| POST   | `/api/inbox/prs/review` | `{ projectId, repo, number, title?, level? }` (strict; `level` = `quick` \| `thorough` \| `tested`, absent = `quick`) | 201 `{ taskId }`; 404 project; 422 no GitHub link / repo not the project's |
+| GET    | `/api/inbox/state`      | —                                                                                                                     | `InboxState`                                                               |
+| PUT    | `/api/inbox/state`      | `{ integrationId, externalId, hidden }` (strict)                                                                      | `InboxState`                                                               |
 
 `/api/roadmap/items` has no `:projectId` segment, so it can't collide with the
 per-project `/api/projects/:projectId/roadmap/...` routes.
@@ -81,7 +81,7 @@ and passing = `ready-to-merge` → `awaiting-review`.
 
 A failing repo lands in `errors` and never fails the request. The GitHub part is
 cached in memory for 30 s; any successful merge (`ProjectPrService.onMerged`) clears
-it. `codeReview` (the latest `code-reviewer` task per `repo#number`, from the tasks
+it. `codeReview` (the latest review task, of any level, per `repo#number`, from the tasks
 store) is joined on every read, uncached. A `running` review whose task failed or
 whose run errored reads `failed`.
 
@@ -91,12 +91,16 @@ Shown on PRs in the two review sections. The service resolves the project's GitH
 link (`resolveGithubToken`) and refuses a `repo` that isn't the project's (422); the
 PR url is derived from repo + number, never taken from the client. It then:
 
-1. `TaskSchedulerService.createTask` with explicit target `{ kind: "agent", id:
-"code-reviewer" }`, `trustedProjectId = projectId`, title `Code review:
-<repo>#<n> <title>`. The text tells the agent to read the PR (`gh pr view` /
-   `gh pr diff --repo`), read the project checkout, write the review to
-   `zibby-pr-review.md` in its working directory, and **not** post to GitHub, commit
-   or push. The PR title is quoted as untrusted data.
+1. `TaskSchedulerService.createTask` with the explicit target for `level`:
+   `quick` → `{ kind: "agent", id: "code-reviewer" }`; `thorough` → workflow
+   `pr-review-thorough` (architect-reviewer → code-reviewer); `tested` → workflow
+   `pr-review-tested` (test-automator checks out the PR head with
+   `gh pr checkout --detach` in the run's own worktree and runs the repo's tests →
+   architect-reviewer → code-reviewer). `trustedProjectId = projectId`, title
+   `Code review[ (<level>)]: <repo>#<n> <title>`. The text tells the agent(s) to read the PR (`gh pr view` /
+   `gh pr diff --repo`), write the review to `zibby-pr-review.md` (agent: its working
+   directory; workflow: the `final` phase's `produces`), and **not** post to GitHub,
+   commit or push. The PR title is quoted as untrusted data.
 2. Stamps `ScheduledTask.prReview = { repo, number, url, state: "running" }`.
 
 **Run → approval mechanism:** the existing terminal-output hook,
@@ -107,6 +111,12 @@ PR url is derived from repo + number, never taken from the client. It then:
 "github.pr.review", detail: "Post review to GitHub — <repo>#<n> (COMMENT)\n\n<body>",
 sourceUrl })` — the approvals UI shows `detail` in full as the preview. No artifact →
 no approval (a reply is concrete or it is not drafted), `state: "failed"`.
+
+A workflow-level review has no `handleTerminal` call (that hook is agent-only).
+`TaskSchedulerService.writeWorkflowOutcome` does the same thing instead: on a `done`
+run whose task has `prReview.state === "running"`, it reads `zibby-pr-review.md` via
+`WorkflowRunnerService.readArtifact` and calls `TaskOutputService.parkPrReview`. A
+`failed` run parks nothing, and the row reads `failed` from the task outcome.
 
 `InboxReviewService` registers as the `pr-review` runner: **approve** →
 `POST /repos/{repo}/pulls/{n}/reviews` with `{ body, event: "COMMENT" }` using the
