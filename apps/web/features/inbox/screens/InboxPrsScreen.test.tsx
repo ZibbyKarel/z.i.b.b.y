@@ -242,6 +242,13 @@ describe("InboxPrsScreen sections", () => {
     hooks.search = "pr=https://github.com/acme/api/pull/1";
     renderWithProviders(<InboxPrsScreen />);
     expect(headerOf("ready-to-merge")).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByTestId(sectionId("ready-to-merge"))).toHaveTextContent("PR 1");
+  });
+
+  it("keeps block elements out of the summary button", () => {
+    hooks.prs = [pr(1, { section: "ready-to-merge" })];
+    renderWithProviders(<InboxPrsScreen />);
+    expect(headerOf("ready-to-merge").querySelector("h3, div")).toBeNull();
   });
 
   it("the empty 'needs your review' section collapses too", () => {

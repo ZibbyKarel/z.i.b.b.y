@@ -45,7 +45,7 @@ interface SectionProps {
   focus: string | null;
   itemFor: (pr: InboxPr) => { key: string; href: string } | undefined;
   expanded: boolean;
-  onToggle: () => void;
+  onToggle?: () => void;
 }
 
 function PrSection({
@@ -63,14 +63,18 @@ function PrSection({
   return (
     <Stack data-testid={testId} gap="100">
       <AccordionSummary expanded={expanded} onToggle={onToggle}>
-        <Row wrap gap="150">
-          <Typography type="h3">{title}</Typography>
-          <Typography type="label" variant="secondary">
+        <Row wrap as="span" gap="150">
+          <Typography as="span" type="h3">
+            {title}
+          </Typography>
+          <Typography as="span" type="label" variant="secondary">
             {pad2(prs.length)}
           </Typography>
           {note && (
-            <Container grow textAlign="right">
-              <Typography type="label">{note}</Typography>
+            <Container grow as="span" textAlign="right">
+              <Typography as="span" type="label">
+                {note}
+              </Typography>
             </Container>
           )}
         </Row>
@@ -193,7 +197,9 @@ export function InboxPrsScreen() {
               key={section}
               note={t(`prs.sectionNote.${section}`)}
               now={now}
-              onToggle={() => setCollapsed(section, collapsed[section] !== true)}
+              onToggle={
+                focus ? undefined : () => setCollapsed(section, collapsed[section] !== true)
+              }
               prs={prs}
               testId={`${InboxPrsScreenTestId.Section}-${section}`}
               title={t(`prs.section.${section}`)}
