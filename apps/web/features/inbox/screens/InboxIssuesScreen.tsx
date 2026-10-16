@@ -22,6 +22,7 @@ import { findPr, groupByEpic, hiddenCount, linkedPrOf, pad2, visibleItems } from
 import { useInboxItemsQuery, useInboxPrsQuery } from "../queries";
 import { useInboxFilters } from "../useInboxFilters";
 import { useInboxItemActions } from "../useInboxItemActions";
+import { useSessionFlags } from "../useSessionFlags";
 
 export enum InboxIssuesScreenTestId {
   Search = "inbox-issues-search",
@@ -34,16 +35,6 @@ export enum InboxIssuesScreenTestId {
 }
 
 const OPEN_STORAGE_KEY = "zibby-inbox-epics-open";
-
-function readOpen(): Record<string, boolean> {
-  try {
-    const raw = window.sessionStorage.getItem(OPEN_STORAGE_KEY);
-    const parsed: unknown = raw ? JSON.parse(raw) : {};
-    return typeof parsed === "object" && parsed !== null ? (parsed as Record<string, boolean>) : {};
-  } catch {
-    return {};
-  }
-}
 
 /**
  * `/dashboard/inbox/issues` — the operator's roadmap items across all projects: search,
@@ -63,7 +54,7 @@ export function InboxIssuesScreen() {
   const [groupByEpicOn, setGroupByEpic] = useState(false);
   const [showDone, setShowDone] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
-  const [open, setOpen] = useState<Record<string, boolean>>(readOpen);
+  const [open, setOpenFlag] = useSessionFlags(OPEN_STORAGE_KEY);
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -98,16 +89,6 @@ export function InboxIssuesScreen() {
   );
   const hidden = hiddenCount(items, filters);
   const trimmed = search.trim();
-
-  const toggleEpic = (id: string, next: boolean) => {
-    const updated = { ...open, [id]: next };
-    setOpen(updated);
-    try {
-      window.sessionStorage.setItem(OPEN_STORAGE_KEY, JSON.stringify(updated));
-    } catch {
-      // Session storage unavailable: expansion simply isn't remembered.
-    }
-  };
 
   return (
     <InboxPage
@@ -193,7 +174,7 @@ export function InboxIssuesScreen() {
             isProcessing={actions.isProcessing}
             now={now}
             onProcess={actions.process}
-            onToggle={toggleEpic}
+            onToggle={setOpenFlag}
             onToggleHidden={actions.toggleHidden}
             open={open}
             prs={prs}
