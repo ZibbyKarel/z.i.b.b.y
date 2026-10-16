@@ -3,6 +3,7 @@ import path from "node:path";
 import matter from "gray-matter";
 import { describe, expect, it } from "vitest";
 import { McpServerSchema, WorkflowSchema } from "@zibby/contracts";
+import { PR_REVIEW_ARTIFACT } from "../tasks/task-output.service";
 
 /**
  * The workflow definitions ZIBBY actually ships live as markdown on disk, outside
@@ -258,6 +259,42 @@ describe("shipped dev workflows — verify phase gates the PR", () => {
       expect(phases[phases.length - 1]?.type, `${id}: verify must be the last phase`).toBe(
         "verify",
       );
+    }
+  });
+});
+
+describe("pr-review-* — the PR inbox's thorough / tested review levels (todo-4)", () => {
+  const LEVELS = {
+    "pr-review-thorough": ["architecture", "final"],
+    "pr-review-tested": ["test", "architecture", "final"],
+  } as const;
+
+  it.each(Object.entries(LEVELS))(
+    "%s runs phases %j and ends in the review artifact",
+    (id, ids) => {
+      const wf = readWorkflow(id);
+      expect(wf.phases.map((p) => p.id)).toEqual(ids);
+      expect(wf.phases[0]?.consumes).toBe("task.md");
+      expect(wf.phases.at(-1)).toMatchObject({
+        type: "agent",
+        agent: "code-reviewer",
+        produces: PR_REVIEW_ARTIFACT,
+      });
+    },
+  );
+
+  it.each(Object.keys(LEVELS))("%s never opens a PR and is never QA's cheapest rung", (id) => {
+    const wf = readWorkflow(id);
+    expect(wf.outputs).toEqual([]);
+    expect(wf.department).toBe("qa");
+    expect(wf.complexity).toBe("deep");
+  });
+
+  it.each(Object.keys(LEVELS))("%s has a hired QA employee for every phase agent", (id) => {
+    for (const phase of readWorkflow(id).phases) {
+      const file = path.join(WORKFLOWS_DIR, `../employees/employee_${phase.agent}.json`);
+      const employee = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
+      expect(employee).toMatchObject({ agentId: phase.agent, department: "qa", status: "active" });
     }
   });
 });
