@@ -7,6 +7,7 @@ import {
   differsFromSource,
   elapsed,
   groupByEpic,
+  groupPrsBySection,
   hiddenCount,
   inboxCounts,
   linkedPrOf,
@@ -54,6 +55,7 @@ function makePr(over: Partial<InboxPr> = {}): InboxPr {
     mergeable: true,
     bucket: "mine",
     blocker: "awaiting-review",
+    section: "waiting",
     projectId: "api",
     ...over,
   };
@@ -196,6 +198,28 @@ describe("pull requests", () => {
     const { mine, toReview } = splitPrs(prs, EMPTY_INBOX_FILTERS);
     expect(mine.map((p) => p.number)).toEqual([3, 2, 1]);
     expect(toReview.map((p) => p.number)).toEqual([4]);
+  });
+
+  it("groups by server-computed section, every section present, sorted within", () => {
+    const groups = groupPrsBySection(
+      [
+        makePr({ number: 1, section: "ready-to-merge" }),
+        makePr({ number: 2, section: "needs-action", blocker: "ci-failing" }),
+        makePr({ number: 3, section: "needs-action", blocker: "merge-conflict" }),
+        makePr({ number: 4, bucket: "to-review", section: "needs-team-review" }),
+      ],
+      EMPTY_INBOX_FILTERS,
+    );
+    expect(Object.keys(groups)).toEqual([
+      "needs-your-review",
+      "needs-team-review",
+      "waiting",
+      "needs-action",
+      "ready-to-merge",
+    ]);
+    expect(groups["needs-action"].map((p) => p.number)).toEqual([2, 3]);
+    expect(groups["needs-your-review"]).toEqual([]);
+    expect(groups["needs-team-review"].map((p) => p.number)).toEqual([4]);
   });
 
   it("applies the shared filters", () => {

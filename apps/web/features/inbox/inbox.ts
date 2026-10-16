@@ -1,8 +1,10 @@
 import {
   INBOX_PR_BLOCKERS,
+  INBOX_PR_SECTIONS,
   type InboxEpic,
   type InboxPr,
   type InboxPrBlocker,
+  type InboxPrSection,
   type InboxRoadmapItem,
 } from "@zibby/contracts";
 
@@ -238,6 +240,21 @@ export function splitPrs(prs: InboxPr[], filters: InboxFilters): InboxPrBuckets 
     toReview: passing.filter((pr) => pr.bucket === "to-review"),
     mine: passing.filter((pr) => pr.bucket === "mine"),
   };
+}
+
+/** Phase 129 P1 — filtered + sorted PRs per GitHub-style section (`INBOX_PR_SECTIONS` order). */
+export function groupPrsBySection(
+  prs: InboxPr[],
+  filters: InboxFilters,
+): Record<InboxPrSection, InboxPr[]> {
+  const groups = Object.fromEntries(INBOX_PR_SECTIONS.map((s) => [s, [] as InboxPr[]])) as Record<
+    InboxPrSection,
+    InboxPr[]
+  >;
+  for (const pr of prs.filter((p) => passesFilters(filters, p)).sort(comparePrs)) {
+    groups[pr.section].push(pr);
+  }
+  return groups;
 }
 
 /** A PR an item points at: the synced `linkedPr`, else the latest run that opened one. */

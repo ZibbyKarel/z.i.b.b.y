@@ -13,6 +13,7 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import type { ReactNode } from "react";
 import { useElapsedLabel } from "../useElapsedLabel";
 import { ExternalAnchor, NavLink } from "./links";
 import { PR_BLOCKER_TONE } from "./zibbyStatus";
@@ -35,14 +36,16 @@ export interface PrRowProps {
   focused?: boolean;
   /** The inbox item whose linked PR this is — "ITEM KEY →". */
   item?: { key: string; href: string } | undefined;
+  /** Phase 129 — the row's action strip (review / squash-and-merge), when any. */
+  actions?: ReactNode;
 }
 
 /**
  * One pull-request row (spec "Pull requests"): `#n`, title, repo · author · age,
  * "Open on GitHub", ONE prominent blocker tag plus the quieter CI / review /
- * draft / reason details. Read-only — merging stays in the merge queue.
+ * draft / reason details, plus an optional `actions` strip (see `PrActions`).
  */
-export function PrRow({ pr, now, focused, item }: PrRowProps) {
+export function PrRow({ pr, now, focused, item, actions }: PrRowProps) {
   const t = useTranslations("inboxPage");
   const elapsedLabel = useElapsedLabel();
   return (
@@ -105,6 +108,7 @@ export function PrRow({ pr, now, focused, item }: PrRowProps) {
               </Container>
             )}
           </Row>
+          {actions}
         </Stack>
       </CardContent>
     </Card>

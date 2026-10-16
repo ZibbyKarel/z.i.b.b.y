@@ -82,6 +82,12 @@ export const ApprovalRunKindSchema = z.enum([
   // expensive routing mistake available, so "unsure" here is Tier-3 rather than a
   // silent default.
   "routing-proposal",
+  // Phase 129 P2 — a code review prepared by the `code-reviewer` agent for a PR in
+  // the inbox, parked before it is posted to GitHub. The runId is the taskId (the
+  // task's `prReview` holds repo/number/body); approving posts it as a `COMMENT`
+  // review (never APPROVE / REQUEST_CHANGES), rejecting discards it. Outbound write
+  // in the operator's name → always Tier-3.
+  "pr-review",
 ]);
 export type ApprovalRunKind = z.infer<typeof ApprovalRunKindSchema>;
 

@@ -158,6 +158,12 @@ rate-limit error, injectable `fetchImpl` for tests).
   documented as never called from any scheduler/monitor/autonomous runner —
   Law "Never: Auto-merge". 422 with no link, 409 when GitHub reports
   not-mergeable.
+  Body `{ method?, deleteBranch? }` (Phase 129 P3). With `deleteBranch: true`, after a
+  successful merge it reads the PR's head and `DELETE /repos/{repo}/git/refs/heads/{branch}`;
+  a fork (head repo ≠ base repo) is skipped, a 422 (ref already gone) counts as deleted.
+  The delete never fails the merge: the result carries `branchDeleted` and, when skipped or
+  failed, a `note`. Every successful merge fires the `onMerged(repo, number)` listeners
+  (the PR inbox drops its 30 s cache there; no module cycle).
 - `getPr(projectId, number)` / `isMerged(projectId, number)` (phase 125e) — one PR's
   live state, for the roadmap gate's merge poll. `getPr` mirrors `listOpen`'s error
   posture exactly (404 → `null`, 429/403 → rate-limit error, other non-2xx → throws).

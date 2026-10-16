@@ -389,4 +389,60 @@ describe("ProjectPrService", () => {
       await expect(service.isMerged("acme", 42)).resolves.toBe(false);
     });
   });
+
+  describe("merge with deleteBranch (Phase 129 P3)", () => {
+    const route = (opts: { headRepo?: string; deleteStatus?: number }) =>
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (url.endsWith("/merge")) return jsonResponse(200, { merged: true, sha: "abc" });
+        if (url.endsWith("/pulls/42")) {
+          return jsonResponse(200, {
+            head: { ref: "feat/x", repo: { full_name: opts.headRepo ?? "acme/app" } },
+            base: { repo: { full_name: "acme/app" } },
+          });
+        }
+        if (init?.method === "DELETE") return jsonResponse(opts.deleteStatus ?? 204, {});
+        throw new Error(`unexpected ${url}`);
+      });
+
+    it("deletes the head branch after a successful squash merge", async () => {
+      const fetchImpl = route({});
+      const service = build({ fetchImpl: fetchImpl as unknown as typeof fetch });
+      const result = await service.merge("acme", 42, "squash", true);
+      expect(result).toMatchObject({ merged: true, branchDeleted: true });
+      expect(fetchImpl).toHaveBeenCalledWith(
+        "https://api.github.com/repos/acme/app/git/refs/heads/feat/x",
+        expect.objectContaining({ method: "DELETE" }),
+      );
+    });
+
+    it("a failed delete never fails the merge — it comes back as a note", async () => {
+      const service = build({
+        fetchImpl: route({ deleteStatus: 403 }) as unknown as typeof fetch,
+      });
+      const result = await service.merge("acme", 42, "squash", true);
+      expect(result.merged).toBe(true);
+      expect(result.branchDeleted).toBe(false);
+      expect(result.note).toMatch(/HTTP 403/);
+    });
+
+    it("skips a fork's branch", async () => {
+      const fetchImpl = route({ headRepo: "someone/app" });
+      const service = build({ fetchImpl: fetchImpl as unknown as typeof fetch });
+      const result = await service.merge("acme", 42, "squash", true);
+      expect(result).toMatchObject({ merged: true, branchDeleted: false });
+      expect(result.note).toMatch(/fork/);
+      expect(fetchImpl.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(false);
+    });
+
+    it("without deleteBranch nothing is deleted; listeners fire on merge", async () => {
+      const fetchImpl = route({});
+      const service = build({ fetchImpl: fetchImpl as unknown as typeof fetch });
+      const merged: string[] = [];
+      service.onMerged((repo, n) => merged.push(`${repo}#${n}`));
+      const result = await service.merge("acme", 42, "squash");
+      expect(result.branchDeleted).toBeUndefined();
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+      expect(merged).toEqual(["acme/app#42"]);
+    });
+  });
 });

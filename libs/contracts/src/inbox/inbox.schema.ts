@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { IsoDateTimeSchema } from "../common.schema";
 import { RoadmapItemSchema, RoadmapSourceKindSchema } from "../roadmap/roadmap-item.schema";
+import { PrReviewStateSchema } from "../tasks/task.schema";
 
 /**
  * Inbox (docs/plans/inbox-ui-spec.md): a view over the synced roadmap cache
@@ -65,6 +66,24 @@ export const INBOX_PR_BLOCKERS = [
 export const InboxPrBlockerSchema = z.enum(INBOX_PR_BLOCKERS);
 export type InboxPrBlocker = z.infer<typeof InboxPrBlockerSchema>;
 
+/**
+ * Phase 129 P1 — GitHub-style section of one PR, computed server-side. The array
+ * order IS the display order. `needs-your-review` = review requested from you
+ * directly; `needs-team-review` = via one of your teams only. Your own PRs:
+ * `needs-action` (changes requested, CI failing, merge conflict or draft),
+ * `ready-to-merge` (approved + CI passing + not conflicting + not draft),
+ * `waiting` (everything else — review or checks pending).
+ */
+export const INBOX_PR_SECTIONS = [
+  "needs-your-review",
+  "needs-team-review",
+  "waiting",
+  "needs-action",
+  "ready-to-merge",
+] as const;
+export const InboxPrSectionSchema = z.enum(INBOX_PR_SECTIONS);
+export type InboxPrSection = z.infer<typeof InboxPrSectionSchema>;
+
 export const InboxPrSchema = z.object({
   /** Only GitHub today; the field keeps the list open for another source. */
   source: z.literal("github"),
@@ -84,6 +103,9 @@ export const InboxPrSchema = z.object({
   /** `org/team` slug when `reviewReason === "team"`. */
   reviewTeam: z.string().min(1).optional(),
   blocker: InboxPrBlockerSchema,
+  section: InboxPrSectionSchema,
+  /** Phase 129 P2 — the latest ZIBBY code review of this PR (see `PrReviewStateSchema`). */
+  codeReview: z.object({ taskId: z.string().min(1), state: PrReviewStateSchema }).optional(),
   projectId: z.string().min(1),
   companyId: z.string().min(1).optional(),
   teamId: z.string().min(1).optional(),
@@ -95,6 +117,21 @@ export const InboxPrsResponseSchema = z.object({
   errors: z.array(InboxSourceErrorSchema),
 });
 export type InboxPrsResponse = z.infer<typeof InboxPrsResponseSchema>;
+
+/** Phase 129 P2 — body of `POST /api/inbox/prs/review` ("Do code review"). */
+export const ReviewInboxPrInputSchema = z
+  .object({
+    projectId: z.string().min(1),
+    repo: z.string().regex(/^[\w.-]+\/[\w.-]+$/),
+    number: z.number().int().positive(),
+    /** Display only (the task title); the PR url is derived server-side from repo + number. */
+    title: z.string().max(300).optional(),
+  })
+  .strict();
+export type ReviewInboxPrInput = z.infer<typeof ReviewInboxPrInputSchema>;
+
+export const ReviewInboxPrResultSchema = z.object({ taskId: z.string().min(1) });
+export type ReviewInboxPrResult = z.infer<typeof ReviewInboxPrResultSchema>;
 
 /** Hide key: the item's source identity, stable across re-syncs. */
 export const InboxHiddenKeySchema = z.object({

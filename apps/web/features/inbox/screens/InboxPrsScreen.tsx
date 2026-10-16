@@ -1,6 +1,6 @@
 "use client";
 
-import type { InboxPr } from "@zibby/contracts";
+import { INBOX_PR_SECTIONS, type InboxPr } from "@zibby/contracts";
 import { Button, Container, Panel, Row, Stack, Typography } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
@@ -9,16 +9,17 @@ import { useMemo } from "react";
 import { useNow } from "../../../hooks/useNow";
 import { InboxPage } from "../components/InboxPage";
 import { issueHref } from "../components/IssueRow";
+import { PrActions } from "../components/PrActions";
 import { PrRow } from "../components/PrRow";
-import { itemKey, linkedPrOf, pad2, splitPrs } from "../inbox";
+import { groupPrsBySection, itemKey, linkedPrOf, pad2 } from "../inbox";
 import { useInboxItemsQuery, useInboxPrsQuery } from "../queries";
 import { useInboxFilters } from "../useInboxFilters";
 
 export enum InboxPrsScreenTestId {
   Focus = "inbox-prs-focus",
   ShowAll = "inbox-prs-show-all",
-  ToReview = "inbox-prs-to-review",
-  Mine = "inbox-prs-mine",
+  /** Suffixed with the section id: `inbox-prs-section-needs-your-review`. */
+  Section = "inbox-prs-section",
   Footer = "inbox-prs-footer",
 }
 
@@ -26,8 +27,8 @@ interface SectionProps {
   testId: string;
   index: string;
   title: string;
-  note: string;
-  emptyText: string;
+  note?: string;
+  emptyText?: string;
   prs: InboxPr[];
   now: number;
   focus: string | null;
@@ -53,9 +54,11 @@ function PrSection({
         <Typography type="label" variant="secondary">
           {pad2(prs.length)}
         </Typography>
-        <Container grow textAlign="right">
-          <Typography type="label">{note}</Typography>
-        </Container>
+        {note && (
+          <Container grow textAlign="right">
+            <Typography type="label">{note}</Typography>
+          </Container>
+        )}
       </Row>
       {prs.length === 0 ? (
         <Panel padding={["200", "200"]} radius="none">
@@ -66,7 +69,14 @@ function PrSection({
       ) : (
         <Stack gap="50">
           {prs.map((pr) => (
-            <PrRow focused={focus === pr.url} item={itemFor(pr)} key={pr.url} now={now} pr={pr} />
+            <PrRow
+              actions={<PrActions pr={pr} />}
+              focused={focus === pr.url}
+              item={itemFor(pr)}
+              key={pr.url}
+              now={now}
+              pr={pr}
+            />
           ))}
         </Stack>
       )}
@@ -75,8 +85,10 @@ function PrSection({
 }
 
 /**
- * `/dashboard/inbox/pull-requests` — two sections, "To review" and "Mine — push to merged",
- * each sorted by blocker. Read-only. `?pr=<n>` focuses one PR (the link from an
+ * `/dashboard/inbox/pull-requests` — GitHub-style sections (Phase 129 P1, server-computed
+ * `pr.section`, `INBOX_PR_SECTIONS` order), each sorted by blocker. Empty sections are
+ * hidden except "Needs your review". Review / squash-and-merge are operator clicks
+ * (`PrActions`). `?pr=<n>` focuses one PR (the link from an
  * issue's badge or the Overview); the list refetches on focus and every 60 s.
  */
 export function InboxPrsScreen() {
@@ -93,8 +105,8 @@ export function InboxPrsScreen() {
   const focus = searchParams.get("pr") || null;
   const focusNumber = focus?.match(/\/pull\/(\d+)/)?.[1] ?? focus;
 
-  const { toReview, mine } = useMemo(
-    () => splitPrs(prsQuery.data?.prs ?? [], filters),
+  const sections = useMemo(
+    () => groupPrsBySection(prsQuery.data?.prs ?? [], filters),
     [prsQuery.data, filters],
   );
   const only = (prs: InboxPr[]) => (focus ? prs.filter((pr) => pr.url === focus) : prs);
@@ -147,28 +159,24 @@ export function InboxPrsScreen() {
             </Row>
           </Panel>
         )}
-        <PrSection
-          emptyText={t("prs.emptyToReview")}
-          focus={focus}
-          index="01 —"
-          itemFor={(pr) => itemByPrUrl.get(pr.url)}
-          note={t("prs.toReviewNote")}
-          now={now}
-          prs={only(toReview)}
-          testId={InboxPrsScreenTestId.ToReview}
-          title={t("prs.toReview")}
-        />
-        <PrSection
-          emptyText={t("prs.emptyMine")}
-          focus={focus}
-          index="02 —"
-          itemFor={(pr) => itemByPrUrl.get(pr.url)}
-          note={t("prs.mineNote")}
-          now={now}
-          prs={only(mine)}
-          testId={InboxPrsScreenTestId.Mine}
-          title={t("prs.mineTitle")}
-        />
+        {INBOX_PR_SECTIONS.map((section) => ({ section, prs: only(sections[section]) }))
+          .filter(
+            ({ section, prs }) => (section === "needs-your-review" && !focus) || prs.length > 0,
+          )
+          .map(({ section, prs }, i) => (
+            <PrSection
+              emptyText={t("prs.emptyToReview")}
+              focus={focus}
+              index={`${pad2(i + 1)} —`}
+              itemFor={(pr) => itemByPrUrl.get(pr.url)}
+              key={section}
+              note={t(`prs.sectionNote.${section}`)}
+              now={now}
+              prs={prs}
+              testId={`${InboxPrsScreenTestId.Section}-${section}`}
+              title={t(`prs.section.${section}`)}
+            />
+          ))}
         <Typography data-testid={InboxPrsScreenTestId.Footer} type="note" variant="secondary">
           {t("prs.footer")}
         </Typography>

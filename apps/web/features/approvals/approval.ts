@@ -274,6 +274,9 @@ export function approvalOrigin(
     }
     case "routing-proposal":
       return { origin: "roadmap", ...url };
+    // Phase 129 P2 — runId is the code-reviewer task; sourceUrl is the PR.
+    case "pr-review":
+      return { origin: "pr-review", href: `/work/tasks/${encodeURIComponent(a.runId)}`, ...url };
     case "machine":
       return { origin: "chat", ...url };
     case "proposed-task":

@@ -1,8 +1,11 @@
 import { initContract } from "@ts-rest/core";
+import { ErrorSchema } from "../common.schema";
 import {
   InboxItemsResponseSchema,
   InboxPrsResponseSchema,
   InboxStateSchema,
+  ReviewInboxPrInputSchema,
+  ReviewInboxPrResultSchema,
   SetInboxHiddenSchema,
 } from "./inbox.schema";
 
@@ -28,6 +31,19 @@ export const inboxContract = c.router(
       path: "/inbox/prs",
       responses: { 200: InboxPrsResponseSchema },
       summary: "List GitHub PRs awaiting the operator's review and the operator's own open PRs",
+    },
+    reviewInboxPr: {
+      method: "POST",
+      path: "/inbox/prs/review",
+      body: ReviewInboxPrInputSchema,
+      responses: {
+        201: ReviewInboxPrResultSchema,
+        404: ErrorSchema,
+        // 422: the project has no GitHub link, or `repo` is not the project's repo.
+        422: ErrorSchema,
+      },
+      summary:
+        "Start a code-reviewer task for one PR; the finished review is parked as a Tier-3 approval to post it as a COMMENT",
     },
     getInboxState: {
       method: "GET",

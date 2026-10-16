@@ -1,6 +1,6 @@
 import type { Integration, Project } from "@zibby/contracts";
 import { describe, expect, it } from "vitest";
-import { InboxService, blockerOf, ciState, reviewState } from "./inbox.service";
+import { InboxService, blockerOf, ciState, reviewState, sectionOf } from "./inbox.service";
 
 describe("PR classification", () => {
   it("reviewState: latest non-COMMENTED review per reviewer, changes-requested beats approved", () => {
@@ -63,6 +63,37 @@ describe("PR classification", () => {
   });
 });
 
+describe("sectionOf", () => {
+  const mine = {
+    bucket: "mine" as const,
+    ci: "passing" as const,
+    review: "approved" as const,
+    mergeable: true as boolean | null,
+    draft: false,
+  };
+
+  it("review requests: direct vs team only", () => {
+    expect(sectionOf({ ...mine, bucket: "to-review", reviewReason: "direct" })).toBe(
+      "needs-your-review",
+    );
+    expect(sectionOf({ ...mine, bucket: "to-review", reviewReason: "team" })).toBe(
+      "needs-team-review",
+    );
+  });
+
+  it("mine: ready only when approved + passing + not conflicting + not draft", () => {
+    expect(sectionOf(mine)).toBe("ready-to-merge");
+    expect(sectionOf({ ...mine, mergeable: null })).toBe("ready-to-merge");
+    expect(sectionOf({ ...mine, draft: true })).toBe("needs-action");
+    expect(sectionOf({ ...mine, ci: "failing" })).toBe("needs-action");
+    expect(sectionOf({ ...mine, review: "changes-requested" })).toBe("needs-action");
+    expect(sectionOf({ ...mine, mergeable: false })).toBe("needs-action");
+    expect(sectionOf({ ...mine, ci: "pending" })).toBe("waiting");
+    expect(sectionOf({ ...mine, review: "none" })).toBe("waiting");
+    expect(sectionOf({ ...mine, ci: "unknown" })).toBe("waiting");
+  });
+});
+
 describe("InboxService.listPrs", () => {
   const project: Project = {
     id: "acme",
@@ -76,8 +107,9 @@ describe("InboxService.listPrs", () => {
     config: { kind: "github", repo: "Acme/app", username: "me" },
   } as unknown as Integration;
 
-  function build() {
+  function build(tasks: unknown[] = []) {
     const calls: string[] = [];
+    const merged: (() => void)[] = [];
     const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
     const fetchImpl = (async (url: string | URL) => {
       const u = new URL(String(url));
@@ -133,9 +165,15 @@ describe("InboxService.listPrs", () => {
       {} as never,
       {} as never,
       {} as never,
+      { list: async () => tasks } as never,
+      {
+        onMerged: (fn: () => void) => {
+          merged.push(fn);
+        },
+      } as never,
       fetchImpl,
     );
-    return { service, calls };
+    return { service, calls, merged };
   }
 
   it("buckets direct / team / mine PRs and derives ci, review and blocker", async () => {
@@ -149,6 +187,7 @@ describe("InboxService.listPrs", () => {
       reviewReason: "direct",
       ci: "failing",
       blocker: "ci-failing",
+      section: "needs-your-review",
       author: "alice",
       projectId: "acme",
       companyId: "co",
@@ -162,6 +201,7 @@ describe("InboxService.listPrs", () => {
       ci: "passing",
       mergeable: false,
       blocker: "merge-conflict",
+      section: "needs-team-review",
     });
     // #3 is mine AND review-requested -> mine, never "to review".
     expect(byNumber[3]).toMatchObject({
@@ -170,6 +210,7 @@ describe("InboxService.listPrs", () => {
       review: "approved",
       ci: "passing",
       blocker: "ready-to-merge",
+      section: "needs-action", // draft
       createdAt: "2026-10-01T10:00:00.000Z",
     });
     expect(byNumber[3]?.reviewReason).toBeUndefined();
@@ -179,5 +220,41 @@ describe("InboxService.listPrs", () => {
     const before = calls.length;
     await service.listPrs();
     expect(calls.length).toBe(before);
+  });
+
+  it("a merge clears the 30 s cache", async () => {
+    const { service, calls, merged } = build();
+    service.onModuleInit();
+    await service.listPrs();
+    const before = calls.length;
+    for (const fn of merged) fn();
+    await service.listPrs();
+    expect(calls.length).toBeGreaterThan(before);
+  });
+
+  it("attaches the latest code review per PR; a dead running review reads failed", async () => {
+    const task = (id: string, createdAt: string, extra: object) => ({
+      id,
+      createdAt,
+      status: "dispatched",
+      ...extra,
+    });
+    const { service } = build([
+      task("t1", "2026-10-01T00:00:00Z", {
+        prReview: { repo: "Acme/app", number: 1, url: "u", state: "posted" },
+      }),
+      task("t2", "2026-10-02T00:00:00Z", {
+        prReview: { repo: "acme/app", number: 1, url: "u", state: "awaiting-approval" },
+      }),
+      task("t3", "2026-10-02T00:00:00Z", {
+        outcome: { status: "error", summary: "", finishedAt: "2026-10-02T00:00:00Z" },
+        prReview: { repo: "Acme/app", number: 2, url: "u", state: "running" },
+      }),
+      task("t4", "2026-10-02T00:00:00Z", {}),
+    ]);
+    const byNumber = Object.fromEntries((await service.listPrs()).prs.map((p) => [p.number, p]));
+    expect(byNumber[1]?.codeReview).toEqual({ taskId: "t2", state: "awaiting-approval" });
+    expect(byNumber[2]?.codeReview).toEqual({ taskId: "t3", state: "failed" });
+    expect(byNumber[3]?.codeReview).toBeUndefined();
   });
 });

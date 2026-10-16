@@ -2804,18 +2804,45 @@
         "direct": "Directly",
         "team": "Via team {team}"
       },
-      "toReview": "To review",
-      "toReviewNote": "Requested from you or your team",
-      "mineTitle": "Mine — push to merged",
       "mine": "Mine",
-      "mineNote": "Open PRs in ZIBBY projects · sorted by blocker",
       "emptyToReview": "No review is waiting on you.",
-      "emptyMine": "You have no open pull requests.",
       "openGithub": "Open on GitHub",
       "item": "Item {key} →",
       "focus": "Showing #{n} only",
       "showAll": "Show all ×",
-      "footer": "Read-only. Merging stays in the merge queue; the inbox never merges. Refreshes on focus and every 60 s."
+      "footer": "Merges only on your click. A code review is posted to GitHub only after you approve it. Refreshes on focus and every 60 s.",
+      "section": {
+        "needs-your-review": "Needs your review",
+        "needs-team-review": "Needs your team's review",
+        "waiting": "Waiting for review or checks",
+        "needs-action": "Needs action",
+        "ready-to-merge": "Ready to merge"
+      },
+      "sectionNote": {
+        "needs-your-review": "Requested from you directly",
+        "needs-team-review": "Requested from your team",
+        "waiting": "Your PRs · review or CI still pending",
+        "needs-action": "Your PRs · changes, CI, conflict or draft",
+        "ready-to-merge": "Your PRs · approved, CI passing"
+      },
+      "actions": {
+        "review": "Do code review",
+        "reviewStarted": "Code review started.",
+        "reviewFailed": "Could not start the code review.",
+        "reviewState": {
+          "running": "Review running",
+          "awaiting-approval": "Review awaiting approval",
+          "posted": "Review posted",
+          "discarded": "Review discarded",
+          "failed": "Review failed"
+        },
+        "merge": "Squash and merge",
+        "mergeArmed": "Hold to merge",
+        "mergeDone": "Merged",
+        "deleteBranch": "Delete branch after merge",
+        "mergedNote": "Merged. {note}",
+        "mergeFailed": "Merge failed."
+      }
     },
     "detail": {
       "back": "← Issues",

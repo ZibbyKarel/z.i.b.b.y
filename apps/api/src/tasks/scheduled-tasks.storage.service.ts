@@ -235,6 +235,21 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
   }
 
   /**
+   * Phase 129 P2 — patch the PR-inbox code review provenance (`prReview`). Written by
+   * the inbox review flow (create → `running`), the terminal hook (→ `awaiting-approval`
+   * / `failed`) and the approval decision (→ `posted` / `discarded`). Server-only.
+   */
+  async setPrReview(
+    id: string,
+    patch: (current: ScheduledTask["prReview"]) => ScheduledTask["prReview"],
+  ): Promise<ScheduledTask> {
+    return this.updateEntity(id, (existing) => ({
+      ...existing,
+      prReview: patch(existing.prReview),
+    }));
+  }
+
+  /**
    * Patch the stage-1 classification trace in place.
    *
    * `markDispatched` already writes the trace for the UNDIRECTED classify path,

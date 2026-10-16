@@ -11,6 +11,15 @@ import { WorkspaceService } from "../workspace/workspace.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
 
 /**
+ * Phase 129 P2 — the file a PR-inbox `code-reviewer` run writes its review into, at
+ * the root of its working directory. Read at terminal `done` and parked as the
+ * Tier-3 `pr-review` approval's body; the agent itself never posts to GitHub.
+ */
+export const PR_REVIEW_ARTIFACT = "zibby-pr-review.md";
+/** GitHub caps a review body at 65 536 chars; keep headroom for the footer. */
+const PR_REVIEW_MAX_CHARS = 60_000;
+
+/**
  * What a terminal output sink delivered, folded into the task outcome by the caller: a
  * `summary` override (the PR note replaces the run's last log line) and/or the
  * structured `pr` result the run detail renders. `null` from {@link
@@ -77,6 +86,16 @@ export class TaskOutputService implements OnModuleInit {
     run: AgentRun,
     summary: string,
   ): Promise<TaskTerminalDelivery | null> {
+    // Phase 129 P2 — a PR-inbox code review parks its artifact behind a Tier-3 approval.
+    if (task.prReview) {
+      return this.parkPrReview(task, run).catch((error: unknown) => {
+        this.log.warn("pr review park failed (soft)", {
+          taskId: task.id,
+          err: error instanceof Error ? error.message : String(error),
+        });
+        return null;
+      });
+    }
     const output = task.output;
     // Absent = inherit (agent/orchestrator inherit "no terminal delivery"); `void` =
     // explicit suppression. Both fall through to the normal outcome write-back.
@@ -94,6 +113,48 @@ export class TaskOutputService implements OnModuleInit {
       });
       return null;
     }
+  }
+
+  /**
+   * Read the review artifact and park it as a `pr-review` approval ("Post review to
+   * GitHub"). No artifact → no approval (a reply is concrete or it is not drafted);
+   * the review is marked `failed` and the outcome says why.
+   */
+  private async parkPrReview(task: ScheduledTask, run: AgentRun): Promise<TaskTerminalDelivery> {
+    const review = task.prReview;
+    if (!review) return {};
+    const file = resolveInside(run.cwd, PR_REVIEW_ARTIFACT);
+    const raw = file ? await fs.readFile(file, "utf8").catch(() => "") : "";
+    const body = raw.trim().slice(0, PR_REVIEW_MAX_CHARS);
+    const ref = `${review.repo}#${review.number}`;
+    if (!body) {
+      await this.storage.setPrReview(task.id, (current) =>
+        current ? { ...current, state: "failed", note: `no ${PR_REVIEW_ARTIFACT}` } : current,
+      );
+      this.log.warn("pr review: run left no review artifact — nothing parked", {
+        taskId: task.id,
+        ref,
+      });
+      return { summary: `Code review ${ref}: žádný ${PR_REVIEW_ARTIFACT} — nic k odeslání` };
+    }
+    const approval = await this.approvals.requestApproval({
+      runId: task.id,
+      kind: "pr-review",
+      skill: "code-reviewer",
+      action: "github.pr.review",
+      detail: `Post review to GitHub — ${ref} (COMMENT)\n\n${body}`,
+      risk: "medium",
+      sourceUrl: review.url,
+    });
+    await this.storage.setPrReview(task.id, (current) =>
+      current ? { ...current, state: "awaiting-approval", body, approvalId: approval.id } : current,
+    );
+    this.log.info("pr review parked for approval", {
+      taskId: task.id,
+      ref,
+      approvalId: approval.id,
+    });
+    return { summary: `Code review ${ref} připraveno — čeká na schválení odeslání na GitHub` };
   }
 
   /** Write the run summary to the chosen file — a vault note or a path in the worktree. */

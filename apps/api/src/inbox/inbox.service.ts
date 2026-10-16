@@ -1,4 +1,4 @@
-import { Injectable, Optional } from "@nestjs/common";
+import { Injectable, type OnModuleInit, Optional } from "@nestjs/common";
 import type {
   InboxEpic,
   InboxItemsResponse,
@@ -6,6 +6,7 @@ import type {
   InboxPrBlocker,
   InboxPrCi,
   InboxPrReview,
+  InboxPrSection,
   InboxPrsResponse,
   InboxRoadmapItem,
   InboxSourceError,
@@ -15,11 +16,12 @@ import type {
   SetInboxHidden,
 } from "@zibby/contracts";
 import { CredentialsStore } from "../integrations/credentials.store";
-import { resolveGithubToken } from "../projects/project-pr.service";
+import { ProjectPrService, resolveGithubToken } from "../projects/project-pr.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ResolvedProjectService } from "../projects/resolved-project.service";
 import { RoadmapSourceService } from "../roadmap/roadmap-source.service";
 import { RoadmapStore } from "../roadmap/roadmap.store";
+import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
 import { InboxStateStore } from "./inbox-state.store";
 
 const GITHUB_API = "https://api.github.com";
@@ -81,6 +83,29 @@ export function blockerOf(pr: {
   return "awaiting-review";
 }
 
+/** Phase 129 P1 — the GitHub-style section (see `INBOX_PR_SECTIONS`). */
+export function sectionOf(pr: {
+  bucket: InboxPr["bucket"];
+  reviewReason?: InboxPr["reviewReason"];
+  ci: InboxPrCi;
+  review: InboxPrReview;
+  mergeable: boolean | null;
+  draft: boolean;
+}): InboxPrSection {
+  if (pr.bucket === "to-review") {
+    return pr.reviewReason === "team" ? "needs-team-review" : "needs-your-review";
+  }
+  if (
+    pr.draft ||
+    pr.ci === "failing" ||
+    pr.review === "changes-requested" ||
+    pr.mergeable === false
+  ) {
+    return "needs-action";
+  }
+  return pr.review === "approved" && pr.ci === "passing" ? "ready-to-merge" : "waiting";
+}
+
 const hiddenKey = (integrationId: string, externalId: string) =>
   `${integrationId}\u0000${externalId}`;
 
@@ -111,7 +136,7 @@ function orgOf(project: Project): { companyId?: string; teamId?: string } {
  * to Jira/GitHub. `fetchImpl` is injectable like `ProjectPrService`'s.
  */
 @Injectable()
-export class InboxService {
+export class InboxService implements OnModuleInit {
   private readonly fetchImpl: typeof fetch;
   private prsCache: { at: number; value: Promise<InboxPrsResponse> } | null = null;
 
@@ -122,9 +147,19 @@ export class InboxService {
     private readonly roadmap: RoadmapStore,
     private readonly roadmapSource: RoadmapSourceService,
     private readonly state: InboxStateStore,
+    private readonly tasks: ScheduledTasksStorageService,
+    private readonly projectPrs: ProjectPrService,
     @Optional() fetchImpl?: typeof fetch,
   ) {
     this.fetchImpl = fetchImpl ?? fetch;
+  }
+
+  onModuleInit(): void {
+    // Phase 129 P3 — a merge (from any surface) drops the 30 s PR cache so the
+    // merged PR leaves the list on the very next read instead of lingering.
+    this.projectPrs.onMerged(() => {
+      this.prsCache = null;
+    });
   }
 
   getState(): Promise<InboxState> {
@@ -195,12 +230,45 @@ export class InboxService {
     };
   }
 
-  listPrs(): Promise<InboxPrsResponse> {
+  /** Cached GitHub classification + the (uncached, local) code-review state per PR. */
+  async listPrs(): Promise<InboxPrsResponse> {
+    const [result, reviews] = await Promise.all([this.cachedPrs(), this.codeReviews()]);
+    return {
+      ...result,
+      prs: result.prs.map((pr) => {
+        const codeReview = reviews.get(`${pr.repo.toLowerCase()}#${pr.number}`);
+        return codeReview ? { ...pr, codeReview } : pr;
+      }),
+    };
+  }
+
+  private cachedPrs(): Promise<InboxPrsResponse> {
     if (this.prsCache && Date.now() - this.prsCache.at < PRS_TTL_MS) return this.prsCache.value;
     const value = this.fetchPrs();
     this.prsCache = { at: Date.now(), value };
     value.catch(() => (this.prsCache = null));
     return value;
+  }
+
+  /**
+   * Latest `code-reviewer` task per `repo#number` (Phase 129 P2). A review still
+   * `running` whose task failed or whose run errored reads as `failed`.
+   */
+  private async codeReviews(): Promise<Map<string, NonNullable<InboxPr["codeReview"]>>> {
+    const tasks = await this.tasks.list().catch(() => []);
+    const out = new Map<string, NonNullable<InboxPr["codeReview"]>>();
+    for (const task of [...tasks].sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
+      const review = task.prReview;
+      if (!review) continue;
+      const dead =
+        task.status === "failed" ||
+        task.status === "cancelled" ||
+        task.status === "dead-letter" ||
+        task.outcome?.status === "error";
+      const state = review.state === "running" && dead ? "failed" : review.state;
+      out.set(`${review.repo.toLowerCase()}#${review.number}`, { taskId: task.id, state });
+    }
+    return out;
   }
 
   private async fetchPrs(): Promise<InboxPrsResponse> {
@@ -299,6 +367,7 @@ export class InboxService {
           mergeable,
           ...bucket,
           blocker: blockerOf({ ci, review, mergeable }),
+          section: sectionOf({ ...bucket, ci, review, mergeable, draft: pull.draft === true }),
           projectId: project.id,
           ...orgOf(project),
         };

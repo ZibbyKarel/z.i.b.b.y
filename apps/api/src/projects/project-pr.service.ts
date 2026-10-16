@@ -2,6 +2,7 @@ import { Inject, Injectable, Optional, forwardRef } from "@nestjs/common";
 import {
   type CredentialsInput,
   type MergeMethod,
+  type MergeProjectPrResult,
   type Project,
   type ProjectPr,
   githubRepoFor,
@@ -106,6 +107,8 @@ function toProjectPr(pull: GitHubPull): ProjectPr | null {
 @Injectable()
 export class ProjectPrService {
   private readonly fetchImpl: typeof fetch;
+  /** Phase 129 P3 — merge listeners (the PR inbox drops its cache); registered at startup. */
+  private readonly mergedListeners: ((repo: string, number: number) => void)[] = [];
 
   constructor(
     private readonly projects: ProjectsStorageService,
@@ -122,6 +125,11 @@ export class ProjectPrService {
     @Optional() fetchImpl?: typeof fetch,
   ) {
     this.fetchImpl = fetchImpl ?? fetch;
+  }
+
+  /** Register a callback fired after every successful merge (no module cycle). */
+  onMerged(listener: (repo: string, number: number) => void): void {
+    this.mergedListeners.push(listener);
   }
 
   /** The project's effective github integration's repo + stored token, or `null`. */
@@ -225,7 +233,8 @@ export class ProjectPrService {
     projectId: string,
     number: number,
     method?: MergeMethod,
-  ): Promise<{ merged: boolean; url?: string; sha?: string }> {
+    deleteBranch = false,
+  ): Promise<MergeProjectPrResult> {
     const project = await this.projects.get(projectId); // 404 before anything else
     const link = await this.resolveGithubLink(project);
     if (!link) throw new NoGithubLinkError(projectId);
@@ -255,13 +264,67 @@ export class ProjectPrService {
       // itself is unconditional and un-gated by this: a recording failure must
       // NEVER surface as a merge failure (the merge already happened on GitHub).
       await this.recordMerge(projectId, link.repo, number, body.sha).catch(() => {});
+      for (const listener of this.mergedListeners) {
+        try {
+          listener(link.repo, number);
+        } catch {
+          // a listener failure must never surface as a merge failure
+        }
+      }
     }
+    const cleanup = merged && deleteBranch ? await this.deleteHeadBranch(link, number) : {};
 
     return {
       merged,
       url: `https://github.com/${link.repo}/pull/${number}`,
       ...(body.sha ? { sha: body.sha } : {}),
+      ...cleanup,
     };
+  }
+
+  /**
+   * Phase 129 P3 — delete a merged PR's head branch
+   * (`DELETE /repos/{repo}/git/refs/heads/{branch}`). Skipped for a fork (head repo ≠
+   * base repo — not ours to delete). Never throws: the merge already happened, so a
+   * failed lookup/delete only comes back as a `note`.
+   */
+  private async deleteHeadBranch(
+    link: { repo: string; token: string },
+    number: number,
+  ): Promise<Pick<MergeProjectPrResult, "branchDeleted" | "note">> {
+    const headers = {
+      authorization: `Bearer ${link.token}`,
+      accept: "application/vnd.github+json",
+    };
+    try {
+      const res = await this.fetchImpl(`${GITHUB_API}/repos/${link.repo}/pulls/${number}`, {
+        headers,
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status} reading the PR`);
+      const pull = (await res.json()) as {
+        head?: { ref?: string; repo?: { full_name?: string } | null };
+        base?: { repo?: { full_name?: string } | null };
+      };
+      const branch = pull.head?.ref;
+      const headRepo = pull.head?.repo?.full_name?.toLowerCase();
+      const baseRepo = (pull.base?.repo?.full_name ?? link.repo).toLowerCase();
+      if (!branch) throw new Error("PR has no head branch");
+      if (headRepo !== baseRepo) {
+        return { branchDeleted: false, note: "head branch is on a fork — not deleted" };
+      }
+      const del = await this.fetchImpl(
+        `${GITHUB_API}/repos/${link.repo}/git/refs/heads/${branch.split("/").map(encodeURIComponent).join("/")}`,
+        { method: "DELETE", headers },
+      );
+      // 422 = the ref is already gone (e.g. the repo auto-deletes head branches).
+      if (!del.ok && del.status !== 422) throw new Error(`HTTP ${del.status} deleting ${branch}`);
+      return { branchDeleted: true };
+    } catch (error) {
+      return {
+        branchDeleted: false,
+        note: `merged, but the branch was not deleted: ${(error as Error).message}`,
+      };
+    }
   }
 
   /**

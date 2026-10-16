@@ -5,7 +5,7 @@ import type { AgentRun, ScheduledTask, TaskOutput, Workspace } from "@zibby/cont
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DuplicateNoteError } from "../memory/vault.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
-import { TaskOutputService } from "./task-output.service";
+import { PR_REVIEW_ARTIFACT, TaskOutputService } from "./task-output.service";
 
 /**
  * The directed-task output gate: an agent/orchestrator task's `file`/`pr` sink. The
@@ -236,5 +236,55 @@ describe("TaskOutputService", () => {
     await seed({ type: "pr" }); // status dispatched, not awaiting-output
     await service.resolve("task_1", "approved");
     expect(workspace.openPr).not.toHaveBeenCalled();
+  });
+
+  describe("pr review (Phase 129 P2)", () => {
+    async function seedReview(): Promise<ScheduledTask> {
+      const task = await storage.createDispatched(
+        "t_review",
+        { text: "review it" },
+        "run_1",
+        { kind: "agent", id: "code-reviewer", name: "code-reviewer" },
+        Date.now(),
+        "p1",
+      );
+      return storage.setPrReview(task.id, () => ({
+        repo: "acme/app",
+        number: 7,
+        url: "https://github.com/acme/app/pull/7",
+        state: "running",
+      }));
+    }
+    const runIn = (cwd: string) => ({ ...run(null), cwd }) as AgentRun;
+
+    it("parks the review artifact as a pr-review approval", async () => {
+      const task = await seedReview();
+      const cwd = path.join(dir, "wt");
+      await fs.mkdir(cwd, { recursive: true });
+      await fs.writeFile(path.join(cwd, PR_REVIEW_ARTIFACT), "## Review\n\nLooks off at a.ts:3\n");
+      const delivered = await service.handleTerminal(task, runIn(cwd), "done");
+      expect(delivered?.summary).toMatch(/acme\/app#7/);
+      expect(approvals.requestApproval).toHaveBeenCalledWith(
+        expect.objectContaining({
+          runId: "t_review",
+          kind: "pr-review",
+          sourceUrl: "https://github.com/acme/app/pull/7",
+          detail: expect.stringContaining("Looks off at a.ts:3"),
+        }),
+      );
+      expect((await storage.get("t_review")).prReview).toMatchObject({
+        state: "awaiting-approval",
+        approvalId: "appr_1",
+        body: "## Review\n\nLooks off at a.ts:3",
+      });
+    });
+
+    it("no artifact → no approval, review failed", async () => {
+      const task = await seedReview();
+      const delivered = await service.handleTerminal(task, runIn(path.join(dir, "empty")), "x");
+      expect(delivered?.summary).toMatch(PR_REVIEW_ARTIFACT);
+      expect(approvals.requestApproval).not.toHaveBeenCalled();
+      expect((await storage.get("t_review")).prReview?.state).toBe("failed");
+    });
   });
 });

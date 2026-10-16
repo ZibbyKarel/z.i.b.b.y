@@ -185,7 +185,12 @@ export class ProjectsController {
         try {
           return {
             status: 200 as const,
-            body: await this.projectPrs.merge(id, number, body?.method),
+            body: await this.projectPrs.merge(
+              id,
+              number,
+              body?.method,
+              body?.deleteBranch === true,
+            ),
           };
         } catch (error) {
           if (error instanceof ProjectNotFoundError) {

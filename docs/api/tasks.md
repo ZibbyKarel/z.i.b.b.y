@@ -93,6 +93,14 @@ this input: they are provenance too, written onto the persisted `ScheduledTask` 
 solves. A client-settable "this task belongs to issue X" would be forgeable
 provenance.
 
+**`prReview`** (Phase 129 P2) is the same kind of server-only provenance: stamped by
+the PR inbox's "Do code review" flow (`InboxReviewService`, `docs/api/inbox.md`) via
+`ScheduledTasksStorageService.setPrReview`. At terminal `done`,
+`TaskOutputService.handleTerminal` checks it before the `output` sink: it reads
+`zibby-pr-review.md` (`PR_REVIEW_ARTIFACT`) from the run's `cwd` and parks a Tier-3
+`pr-review` approval with the review as `detail`; no artifact → no approval,
+`prReview.state = "failed"`.
+
 `scheduledAt` absent or in the past → `createTask` runs classification + dispatch
 immediately. From the dialog (`background = true`), dispatch happens in the
 background and the endpoint returns `pending` right away (see "`pending` —

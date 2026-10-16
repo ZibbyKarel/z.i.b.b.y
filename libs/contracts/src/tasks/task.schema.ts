@@ -515,6 +515,21 @@ export const PrOutputSchema = z.object({
 export type PrOutput = z.infer<typeof PrOutputSchema>;
 
 /**
+ * Phase 129 P2 — lifecycle of a PR-inbox code review (`ScheduledTask.prReview`):
+ * `running` → the agent works; `awaiting-approval` → parked as a Tier-3 "Post review
+ * to GitHub" approval; `posted`/`discarded` → decided; `failed` → the run errored or
+ * left no review artifact (nothing is ever drafted from filler).
+ */
+export const PrReviewStateSchema = z.enum([
+  "running",
+  "awaiting-approval",
+  "posted",
+  "discarded",
+  "failed",
+]);
+export type PrReviewState = z.infer<typeof PrReviewStateSchema>;
+
+/**
  * How a task's dispatched run ended: a terminal verdict plus a short, readable
  * summary (an agent run's last log line, or a workflow's stage tally).
  */
@@ -679,6 +694,24 @@ export const ScheduledTaskSchema = z.object({
        * approval time — durable across restart and worktree cleanup.
        */
       body: z.string(),
+    })
+    .optional(),
+  /**
+   * Phase 129 P2 — set on a `code-reviewer` task started from the PR inbox ("Do code
+   * review"). Provenance, server-written only (like {@link roadmapItemId}), never
+   * part of `CreateTaskInput`. At terminal `done` the review artifact is read into
+   * `body` and parked as a Tier-3 `pr-review` approval (`approvalId`); approving posts
+   * it to GitHub as a `COMMENT` review, rejecting discards it.
+   */
+  prReview: z
+    .object({
+      repo: z.string().min(1),
+      number: z.number().int().positive(),
+      url: z.string().min(1),
+      state: PrReviewStateSchema,
+      body: z.string().optional(),
+      approvalId: z.string().optional(),
+      note: z.string().optional(),
     })
     .optional(),
   /** Set once dispatched: the started agent-run / workflow-run id. */

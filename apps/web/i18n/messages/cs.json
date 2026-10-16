@@ -2804,18 +2804,45 @@
         "direct": "Přímo",
         "team": "Přes tým {team}"
       },
-      "toReview": "K review",
-      "toReviewNote": "Vyžádáno od vás nebo vašeho týmu",
-      "mineTitle": "Moje — až do mergnutí",
       "mine": "Moje",
-      "mineNote": "Otevřené PR v projektech ZIBBY · řazeno podle blokace",
       "emptyToReview": "Na vaše review nikdo nečeká.",
-      "emptyMine": "Nemáte žádné otevřené pull requesty.",
       "openGithub": "Otevřít na GitHubu",
       "item": "Položka {key} →",
       "focus": "Zobrazeno pouze #{n}",
       "showAll": "Zobrazit vše ×",
-      "footer": "Pouze ke čtení. Merge zůstává ve frontě merge; inbox nikdy nemerguje. Obnovuje se při návratu do okna a každých 60 s."
+      "footer": "Merguje jen na vaše kliknutí. Code-review se na GitHub odešle až po vašem schválení. Obnovuje se při návratu do okna a každých 60 s.",
+      "section": {
+        "needs-your-review": "Čeká na vaše review",
+        "needs-team-review": "Čeká na review vašeho týmu",
+        "waiting": "Čeká na review nebo checks",
+        "needs-action": "Vyžaduje akci",
+        "ready-to-merge": "Připraveno k merge"
+      },
+      "sectionNote": {
+        "needs-your-review": "Vyžádáno přímo od vás",
+        "needs-team-review": "Vyžádáno od vašeho týmu",
+        "waiting": "Vaše PR · review nebo CI ještě běží",
+        "needs-action": "Vaše PR · změny, CI, konflikt nebo koncept",
+        "ready-to-merge": "Vaše PR · schváleno, CI prochází"
+      },
+      "actions": {
+        "review": "Udělat code-review",
+        "reviewStarted": "Code-review spuštěno.",
+        "reviewFailed": "Code-review se nepodařilo spustit.",
+        "reviewState": {
+          "running": "Review běží",
+          "awaiting-approval": "Review čeká na schválení",
+          "posted": "Review odesláno",
+          "discarded": "Review zahozeno",
+          "failed": "Review selhalo"
+        },
+        "merge": "Squash and merge",
+        "mergeArmed": "Držte pro merge",
+        "mergeDone": "Mergnuto",
+        "deleteBranch": "Po merge smazat branch",
+        "mergedNote": "Mergnuto. {note}",
+        "mergeFailed": "Merge se nepodařil."
+      }
     },
     "detail": {
       "back": "← Issues",
