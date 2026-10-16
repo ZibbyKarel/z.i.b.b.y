@@ -96,7 +96,10 @@ export default defineConfig({
       command: "npm run api:dev",
       url: "http://localhost:3333/api/health",
       env: apiEnv,
-      reuseExistingServer: !process.env.CI,
+      // Never reuse: a reused server is the operator's dev API on the real `.zibby/data`,
+      // so `apiEnv` is ignored and global-setup's seeds (1s channel tick, fixture
+      // agents/integrations) land in live data. A busy :3333 must fail the run instead.
+      reuseExistingServer: false,
       timeout: 120_000,
       stdout: "ignore",
       stderr: "pipe",

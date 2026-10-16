@@ -10,6 +10,7 @@
   "chatPersona": "concise",
   "powerSaver": false,
   "ttsVoice": "cs_male_cv26_default",
-  "maxConcurrentRuns": 3,
-  "roadmapTickMs": 900000
+  "maxWorkingAgents": 3,
+  "roadmapTickMs": 900000,
+  "dockDoneTasksLimit": 20
 }
