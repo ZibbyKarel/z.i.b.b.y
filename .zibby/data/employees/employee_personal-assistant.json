@@ -4,5 +4,13 @@
   "agentId": "personal-assistant",
   "department": "per",
   "status": "active",
-  "hiredAt": "2026-09-25T00:32:32.986Z"
+  "hiredAt": "2026-09-25T00:32:32.986Z",
+  "appearance": {
+    "width": 50,
+    "height": 58,
+    "eyes": 1,
+    "hair": "sprout",
+    "skin": 0,
+    "hat": "headphones"
+  }
 }

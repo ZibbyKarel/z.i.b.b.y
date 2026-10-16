@@ -9,14 +9,14 @@ const meta: Meta<typeof ZibbyAvatar> = {
   args: { state: "working", size: 112, animate: true },
   argTypes: {
     state: { control: "select", options: STATE_ORDER },
-    size: { control: "select", options: [16, 24, 32, 112] },
+    size: { control: "select", options: [16, 24, 32, 112, 128, 200] },
   },
 };
 export default meta;
 
 type Story = StoryObj<typeof ZibbyAvatar>;
 
-const SIZES: ZibbyAvatarSize[] = [112, 32, 24, 16];
+const SIZES: ZibbyAvatarSize[] = [200, 112, 32, 24, 16];
 
 function StateRow({ theme }: { theme: "light" | "dark" }) {
   return (

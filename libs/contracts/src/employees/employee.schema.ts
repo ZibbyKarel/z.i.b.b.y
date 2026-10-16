@@ -23,6 +23,33 @@ export const EmployeeNameIdSchema = EmployeeIdSchema;
 export const EmployeeStatusSchema = z.enum(["active", "fired"]);
 export type EmployeeStatus = z.infer<typeof EmployeeStatusSchema>;
 
+export const MINION_WIDTHS = [38, 40, 42, 44, 46, 50, 52, 56] as const;
+export const MINION_HEIGHTS = [50, 54, 58, 62, 66] as const;
+export const MINION_HAIRS = ["tuft", "spikes", "sprout", "strands"] as const;
+export const MINION_HATS = ["headphones", "hardhat", "beanie"] as const;
+
+/**
+ * The look of an employee's Minion avatar. ALLOCATED once at hire (unique among
+ * active employees) and persisted on the employee record — never settable via
+ * the Create/Update bodies. Mirrors the design system's `MinionAppearance`.
+ */
+export const MinionAppearanceSchema = z.object({
+  width: z
+    .number()
+    .int()
+    .refine((n) => (MINION_WIDTHS as readonly number[]).includes(n), "unsupported width"),
+  height: z
+    .number()
+    .int()
+    .refine((n) => (MINION_HEIGHTS as readonly number[]).includes(n), "unsupported height"),
+  eyes: z.union([z.literal(1), z.literal(2)]),
+  hair: z.enum(MINION_HAIRS),
+  hat: z.enum(MINION_HATS).optional(),
+  skin: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+  tie: z.boolean().optional(),
+});
+export type MinionAppearance = z.infer<typeof MinionAppearanceSchema>;
+
 /**
  * D-015 — an employee is a hired INSTANCE of an agent (the position): a process
  * to the agent's program. Its identity is its name + live state + run history;
@@ -41,6 +68,8 @@ export const EmployeeSchema = z.object({
   status: EmployeeStatusSchema,
   hiredAt: IsoDateTimeSchema,
   firedAt: IsoDateTimeSchema.optional(),
+  /** Allocated Minion look (see `MinionAppearanceSchema`); backfilled for older records. */
+  appearance: MinionAppearanceSchema.optional(),
 });
 export type Employee = z.infer<typeof EmployeeSchema>;
 

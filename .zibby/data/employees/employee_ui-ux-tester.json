@@ -4,5 +4,13 @@
   "agentId": "ui-ux-tester",
   "department": "qa",
   "status": "active",
-  "hiredAt": "2026-09-25T00:32:32.986Z"
+  "hiredAt": "2026-09-25T00:32:32.986Z",
+  "appearance": {
+    "width": 46,
+    "height": 54,
+    "eyes": 1,
+    "hair": "strands",
+    "skin": 1,
+    "hat": "beanie"
+  }
 }

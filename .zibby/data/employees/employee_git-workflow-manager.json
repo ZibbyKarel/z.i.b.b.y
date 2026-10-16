@@ -4,5 +4,13 @@
   "agentId": "git-workflow-manager",
   "department": "rel",
   "status": "active",
-  "hiredAt": "2026-09-25T00:32:32.986Z"
+  "hiredAt": "2026-09-25T00:32:32.986Z",
+  "appearance": {
+    "width": 52,
+    "height": 62,
+    "eyes": 1,
+    "hair": "spikes",
+    "skin": 1,
+    "hat": "beanie"
+  }
 }

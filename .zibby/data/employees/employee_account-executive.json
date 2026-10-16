@@ -4,5 +4,6 @@
   "agentId": "account-executive",
   "department": "com",
   "status": "active",
-  "hiredAt": "2026-09-25T00:32:32.986Z"
+  "hiredAt": "2026-09-25T00:32:32.986Z",
+  "appearance": { "width": 42, "height": 50, "eyes": 2, "hair": "strands", "skin": 1, "tie": true }
 }

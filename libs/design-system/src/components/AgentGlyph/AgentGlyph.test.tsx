@@ -1,43 +1,61 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { STATE_ORDER } from "../../stateTone";
+import { MinionFigureTestId } from "../Minion/MinionFigure";
+import { ZIBBY_APPEARANCE } from "../Minion/minionAppearance";
 import { AgentGlyph, AgentGlyphTestId } from "./AgentGlyph";
 
 const SEEDS = ["Kevin", "Stuart", "Dave", "Otto", "Zibby"];
+
+/** `useId`-based clip ids differ per render; normalise them before comparing markup. */
+const stable = (html: string) => html.replace(/minion-clip-[^")]+/g, "clip");
 
 describe("AgentGlyph", () => {
   it("is deterministic — the same seed renders the same markup", () => {
     const { container: a } = render(<AgentGlyph seed="Kevin" state="working" />);
     const { container: b } = render(<AgentGlyph seed="Kevin" state="working" />);
-    expect(a.innerHTML).toBe(b.innerHTML);
+    expect(stable(a.innerHTML)).toBe(stable(b.innerHTML));
   });
 
-  it("renders a different body for a different seed", () => {
+  it("renders a different minion for a different seed", () => {
     const { container: a } = render(<AgentGlyph seed="Kevin" state="idle" />);
     const { container: b } = render(<AgentGlyph seed="Stuart" state="idle" />);
-    expect(a.innerHTML).not.toBe(b.innerHTML);
+    expect(stable(a.innerHTML).replace(/data-seed="\w+"/, "")).not.toBe(
+      stable(b.innerHTML).replace(/data-seed="\w+"/, ""),
+    );
+  });
+
+  it("an explicit appearance overrides the seed-derived one", () => {
+    const { container: a } = render(<AgentGlyph seed="Kevin" state="idle" />);
+    const { container: b } = render(
+      <AgentGlyph appearance={ZIBBY_APPEARANCE} seed="Kevin" state="idle" />,
+    );
+    expect(stable(a.innerHTML)).not.toBe(stable(b.innerHTML));
   });
 
   for (const seed of SEEDS) {
     for (const state of STATE_ORDER) {
-      it(`renders seed="${seed}" state="${state}" as a crisp-edged 12x12 SVG`, () => {
+      it(`renders seed="${seed}" state="${state}" as a 100x120 minion SVG`, () => {
         render(<AgentGlyph seed={seed} state={state} />);
         const svg = screen.getByTestId(AgentGlyphTestId.Root);
-        expect(svg).toHaveAttribute("viewBox", "0 0 12 12");
-        expect(svg).toHaveAttribute("shape-rendering", "crispEdges");
+        expect(svg).toHaveAttribute("viewBox", "0 0 100 120");
         expect(svg).toHaveAttribute("data-state", state);
         expect(svg).toHaveAttribute("data-seed", seed);
-        // At least the mirrored body pixels + two eyes are always present.
-        expect(svg.querySelectorAll("rect").length).toBeGreaterThanOrEqual(2);
+        expect(svg.querySelectorAll("path, circle, rect").length).toBeGreaterThan(5);
       });
     }
   }
 
-  it("sizes via width/height (sealed sizing, no raw px prop)", () => {
+  it("sizes via height and the 100:120 aspect width (sealed sizing)", () => {
     render(<AgentGlyph seed="Kevin" size={128} state="idle" />);
     const svg = screen.getByTestId(AgentGlyphTestId.Root);
-    expect(svg).toHaveAttribute("width", "128");
     expect(svg).toHaveAttribute("height", "128");
+    expect(svg).toHaveAttribute("width", "107");
+  });
+
+  it("does not render the standalone figure root (the glyph owns its svg)", () => {
+    render(<AgentGlyph seed="Kevin" state="idle" />);
+    expect(screen.queryByTestId(MinionFigureTestId.Root)).toBeNull();
   });
 
   it("glows only when live, size >= 40 and glow is on", () => {
@@ -58,37 +76,6 @@ describe("AgentGlyph", () => {
     expect(svg?.style.getPropertyValue("--glyph-glow-color")).toContain(
       "color-mix(in oklch, var(--color-state-work) 75%, transparent)",
     );
-  });
-
-  // The eye group is always the LAST direct `<g>` child of the whole-body `<g>` —
-  // it renders after the 0-or-2 arm groups, whose count varies per seed.
-  function eyeGroupOf(container: HTMLElement) {
-    const groups = container.querySelectorAll("svg > g > g");
-    return groups[groups.length - 1] ?? null;
-  }
-
-  it("blinks idle/working/thinking but not blocked/error/done", () => {
-    const { container: blinking } = render(<AgentGlyph seed="Kevin" state="thinking" />);
-    expect(eyeGroupOf(blinking)?.getAttribute("style")).toContain("zb-blink");
-
-    const { container: still } = render(<AgentGlyph seed="Kevin" state="blocked" />);
-    expect(eyeGroupOf(still)?.getAttribute("style") ?? "").not.toContain("zb-blink");
-  });
-
-  it("tints the eyes with the state colour only when errored", () => {
-    const { container: errored } = render(<AgentGlyph seed="Kevin" state="error" />);
-    const errorEyes = eyeGroupOf(errored)?.querySelectorAll("rect") ?? [];
-    expect(errorEyes.length).toBe(2);
-    for (const eye of errorEyes) {
-      expect((eye as SVGRectElement).style.fill).toBe("var(--color-state-err)");
-    }
-
-    const { container: idle } = render(<AgentGlyph seed="Kevin" state="idle" />);
-    const idleEyes = eyeGroupOf(idle)?.querySelectorAll("rect") ?? [];
-    expect(idleEyes.length).toBe(2);
-    for (const eye of idleEyes) {
-      expect((eye as SVGRectElement).style.fill).toBe("var(--color-panel)");
-    }
   });
 
   it("forwards a ref to the root svg", () => {

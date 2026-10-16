@@ -221,6 +221,35 @@ export {
 } from "./components/ZibbyAvatar/ZibbyAvatar";
 export type { ZibbyAvatarProps, ZibbyAvatarSize } from "./components/ZibbyAvatar/ZibbyAvatar";
 
+export { MinionBody, MinionArm } from "./components/Minion/MinionBody";
+export type {
+  MinionBodyProps,
+  MinionArmProps,
+  MinionMouthState,
+} from "./components/Minion/MinionBody";
+export {
+  MinionFigure,
+  MinionFigureTestId,
+  minionFigureWidth,
+} from "./components/Minion/MinionFigure";
+export type { MinionFigureProps, MinionSize } from "./components/Minion/MinionFigure";
+export { MinionScene, MinionSceneTestId } from "./components/Minion/MinionScene";
+export type { MinionSceneProps } from "./components/Minion/MinionScene";
+export { MinionWalker, MinionWalkerTestId } from "./components/Minion/MinionWalker";
+export type { MinionWalkerProps } from "./components/Minion/MinionWalker";
+export {
+  MINION_HAIRS,
+  MINION_HATS,
+  MINION_HEIGHTS,
+  MINION_WIDTHS,
+  ZIBBY_APPEARANCE,
+  minionAppearanceFromSeed,
+} from "./components/Minion/minionAppearance";
+export type { MinionAppearance, MinionHair, MinionHat } from "./components/Minion/minionAppearance";
+export { minionGeometry } from "./components/Minion/minionGeometry";
+export type { MinionGeometry } from "./components/Minion/minionGeometry";
+export { usePrefersReducedMotion } from "./hooks/usePrefersReducedMotion";
+
 export { StatePill, StatePillTestId } from "./components/StatePill/StatePill";
 export type { StatePillProps } from "./components/StatePill/StatePill";
 
@@ -565,6 +594,8 @@ export {
 } from "./components/Splash/Splash";
 export type { SplashPhase, SplashProps } from "./components/Splash/Splash";
 
+export { BrandMark, BrandMarkTestId } from "./components/BrandMark/BrandMark";
+export type { BrandMarkProps, BrandMarkSize } from "./components/BrandMark/BrandMark";
 export { Wordmark, WordmarkTestId } from "./components/Wordmark/Wordmark";
 export type { WordmarkProps } from "./components/Wordmark/Wordmark";
 

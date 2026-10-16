@@ -20,6 +20,14 @@ program. An employee has:
 - `status` — `active` (lease-eligible) or `fired` (soft-deleted, kept as a
   read-only archive — no delete path exists).
 - `hiredAt` / `firedAt` — ISO timestamps.
+- `appearance` — the employee's Minion look (`MinionAppearance`: `width`,
+  `height`, `eyes`, `hair`, `skin`, optional `hat` and `tie`). It is allocated
+  server-side and is not part of the create/update bodies. On hire it gets a
+  combination that no active employee has. `hat` and `tie` come from the
+  position's catalog category; the free dimensions are walked from a hash of
+  the name. A boot-time backfill gives one to every employee that lacks it. It
+  is idempotent and fail-open. The web renders it through the DS `AgentGlyph` /
+  Minion components, which fall back to a seed-derived look when it is absent.
 
 An employee carries no memory or prompt of its own — those are inherited from
 its position (`agentId`). Its identity is its name, its live state, and its

@@ -2,6 +2,7 @@ import type { ReactNode, Ref } from "react";
 import { LAYOUT } from "../../tokens";
 import { cn } from "../../utils/cn";
 import { focusRing, focusRingInset } from "../../utils/focus";
+import { BrandMark } from "../BrandMark/BrandMark";
 import { Container } from "../Container/Container";
 import { Row } from "../Stack/Stack";
 import type { SubNavLinkComponent } from "../SubNav/SubNav";
@@ -23,7 +24,7 @@ export enum AppHeaderTestId {
 }
 
 export interface AppHeaderProps {
-  /** Brand mark, leading the header. Defaults to `<Wordmark />`. */
+  /** Brand mark, leading the header. Defaults to the `BrandMark` + `<Wordmark />` lockup. */
   wordmark?: ReactNode;
   /** Href the brand mark (glyph + wordmark) links to. Omit to render it inert. */
   homeHref?: string;
@@ -86,7 +87,12 @@ export function AppHeader({
   ref,
 }: AppHeaderProps) {
   const HomeLink = linkComponent ?? "a";
-  const mark = wordmark ?? <Wordmark />;
+  const mark = wordmark ?? (
+    <Row align="center" style={{ gap: 10 }}>
+      <BrandMark />
+      <Wordmark />
+    </Row>
+  );
   return (
     <Row
       align="center"

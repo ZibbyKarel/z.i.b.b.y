@@ -953,6 +953,58 @@
       opacity: 1;
     }
   }
+
+  /* ---- Minion art (`design/ZibbyCorp/ZibbyCorp App.dc.html`) — CSS half of the minion
+   * motion (the rest is SMIL inside `MinionScene`/`MinionWalker`). ---- */
+  @keyframes mv-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.35;
+    }
+  }
+  @keyframes mv-blink {
+    0% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.15;
+    }
+  }
+  @keyframes mv-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes mv-flick {
+    from {
+      transform: scaleY(0.75);
+    }
+    to {
+      transform: scaleY(1.15);
+    }
+  }
+  @keyframes mv-boom {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.08);
+    }
+  }
+  @keyframes mv-ring {
+    0% {
+      transform: scale(1);
+      opacity: 0.8;
+    }
+    100% {
+      transform: scale(1.14);
+      opacity: 0;
+    }
+  }
 }
 
 /* Markdown prose (`Markdown`'s `variant="prose"`) — the chat transcript and

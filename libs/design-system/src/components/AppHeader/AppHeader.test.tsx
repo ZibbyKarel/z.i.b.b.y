@@ -1,12 +1,18 @@
 import { screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "../../utils/testRender";
+import { BrandMarkTestId } from "../BrandMark/BrandMark";
 import { AppHeader, AppHeaderTestId } from "./AppHeader";
 
 describe("AppHeader", () => {
   it("renders the default Wordmark when no wordmark slot is given", () => {
     render(<AppHeader />);
     expect(screen.getByTestId(AppHeaderTestId.Wordmark)).toHaveTextContent("ZIBBYCORP");
+  });
+
+  it("renders the brand mark beside the default wordmark", () => {
+    render(<AppHeader />);
+    expect(screen.getByTestId(BrandMarkTestId.Root)).toBeInTheDocument();
   });
 
   it("renders a custom wordmark slot", () => {

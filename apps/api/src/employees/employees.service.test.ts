@@ -61,6 +61,31 @@ describe("EmployeesService", () => {
     await fs.rm(departmentsDir, { recursive: true, force: true });
   });
 
+  describe("appearance", () => {
+    it("hire assigns a persisted, unique appearance", async () => {
+      const a = await service.hire("dev", { agentId: "koder" });
+      const b = await service.hire("dev", { agentId: "koder" });
+      expect(a.appearance).toBeDefined();
+      expect((await employees.get(a.id)).appearance).toEqual(a.appearance);
+      expect(b.appearance).not.toEqual(a.appearance);
+    });
+
+    it("backfill fills only missing records and is idempotent", async () => {
+      const kept = await service.hire("dev", { agentId: "koder" });
+      const legacy = await service.hire("dev", { agentId: "architekt" });
+      const bare: Record<string, unknown> = { ...legacy };
+      delete bare.appearance;
+      await employees.update(bare as unknown as typeof legacy);
+      expect(await service.backfillAppearances()).toBe(1);
+      const filled = await employees.get(legacy.id);
+      expect(filled.appearance).toBeDefined();
+      expect(filled.appearance).not.toEqual(kept.appearance);
+      expect((await employees.get(kept.id)).appearance).toEqual(kept.appearance);
+      expect(await service.backfillAppearances()).toBe(0);
+      expect((await employees.get(legacy.id)).appearance).toEqual(filled.appearance);
+    });
+  });
+
   describe("hire()", () => {
     it("hires the position into the department, claiming the first free pool name", async () => {
       const hired = await service.hire("dev", { agentId: "koder" });

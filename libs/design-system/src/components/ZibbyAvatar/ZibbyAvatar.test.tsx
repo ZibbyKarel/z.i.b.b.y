@@ -4,7 +4,7 @@ import { STATE_ORDER, stateToneVar } from "../../stateTone";
 import { ZIBBY_AVATAR_ROWS, ZibbyAvatar, ZibbyAvatarTestId } from "./ZibbyAvatar";
 
 describe("ZibbyAvatar", () => {
-  it("draws a mirrored 16-wide pixel map that fits the 16×16 favicon grid", () => {
+  it("still exports the legacy mirrored pixel map for the favicon tooling", () => {
     expect(ZIBBY_AVATAR_ROWS.length).toBeLessThanOrEqual(15);
     for (const row of ZIBBY_AVATAR_ROWS) {
       expect(row).toHaveLength(16);
@@ -13,26 +13,38 @@ describe("ZibbyAvatar", () => {
   });
 
   for (const state of STATE_ORDER) {
-    it(`renders state="${state}" as a crisp 16×16 SVG tinted by the state tone`, () => {
+    it(`renders state="${state}" as the Zibby minion tinted by the state tone`, () => {
       render(<ZibbyAvatar state={state} />);
       const svg = screen.getByTestId(ZibbyAvatarTestId.Root);
-      expect(svg).toHaveAttribute("viewBox", "0 0 16 16");
-      expect(svg).toHaveAttribute("shape-rendering", "crispEdges");
+      expect(svg).toHaveAttribute("viewBox", "0 0 100 120");
       expect(svg).toHaveAttribute("data-state", state);
-      expect(screen.getByTestId(ZibbyAvatarTestId.Accent).style.fill).toBe(stateToneVar[state]);
+      expect(screen.getByTestId(ZibbyAvatarTestId.Accent).style.color).toBe(stateToneVar[state]);
     });
   }
 
-  it("sizes via width/height (sealed sizing)", () => {
-    render(<ZibbyAvatar size={112} state="idle" />);
-    const svg = screen.getByTestId(ZibbyAvatarTestId.Root);
-    expect(svg).toHaveAttribute("width", "112");
-    expect(svg).toHaveAttribute("height", "112");
+  it("draws the glow goggles in the state colour", () => {
+    render(<ZibbyAvatar state="thinking" />);
+    const lens = Array.from(
+      screen.getByTestId(ZibbyAvatarTestId.Root).querySelectorAll("circle"),
+    ).filter(
+      (c) => c.style.fill === stateToneVar.thinking && c.getAttribute("stroke-width") === "2.4",
+    );
+    expect(lens).toHaveLength(2);
   });
 
-  it("renders at the 128 lobby size", () => {
-    render(<ZibbyAvatar size={128} state="idle" />);
-    expect(screen.getByTestId(ZibbyAvatarTestId.Root)).toHaveAttribute("width", "128");
+  it("sizes via height and the 100:120 aspect width (sealed sizing)", () => {
+    render(<ZibbyAvatar size={112} state="idle" />);
+    const svg = screen.getByTestId(ZibbyAvatarTestId.Root);
+    expect(svg).toHaveAttribute("height", "112");
+    expect(svg).toHaveAttribute("width", "93");
+  });
+
+  it("renders at the 128 and 200 lobby sizes", () => {
+    const { unmount } = render(<ZibbyAvatar size={128} state="idle" />);
+    expect(screen.getByTestId(ZibbyAvatarTestId.Root)).toHaveAttribute("height", "128");
+    unmount();
+    render(<ZibbyAvatar size={200} state="idle" />);
+    expect(screen.getByTestId(ZibbyAvatarTestId.Root)).toHaveAttribute("height", "200");
   });
 
   it("is decorative without a label and an img with one", () => {
@@ -46,8 +58,14 @@ describe("ZibbyAvatar", () => {
     expect(svg).toHaveAccessibleName("Zibby · COO");
   });
 
-  it("stops all motion with animate={false}", () => {
-    render(<ZibbyAvatar animate={false} state="working" />);
-    expect(screen.getByTestId(ZibbyAvatarTestId.Accent).style.animation).toBe("none");
+  it("stops all CSS motion with animate={false}", () => {
+    render(<ZibbyAvatar animate={false} state="thinking" />);
+    const root = screen.getByTestId(ZibbyAvatarTestId.Root);
+    expect(root.innerHTML).not.toContain("mv-");
+  });
+
+  it("animates the thinking bubbles by default", () => {
+    render(<ZibbyAvatar state="thinking" />);
+    expect(screen.getByTestId(ZibbyAvatarTestId.Root).innerHTML).toContain("mv-pulse");
   });
 });
