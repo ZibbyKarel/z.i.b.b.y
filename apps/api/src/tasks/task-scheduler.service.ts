@@ -56,7 +56,7 @@ import { AttachmentStorageService } from "./attachment-storage.service";
 import { ClaudeCliTaskNamer, deriveTitleFallback } from "./claude-cli-task-namer";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
 import { TaskClassifierService } from "./task-classifier.service";
-import { TaskOutputService } from "./task-output.service";
+import { PR_REVIEW_ARTIFACT, TaskOutputService } from "./task-output.service";
 import { sumStageCosts } from "./task-runs.service";
 import { taskTargetId } from "./task-target";
 
@@ -1867,6 +1867,28 @@ export class TaskSchedulerService
     // consistency.
     await withPathLock(`task:${taskId}`, async () => {
       try {
+        // todo-4 — a PR-inbox review run as a workflow (level thorough/tested) parks
+        // its final phase's `produces` (zibby-pr-review.md) exactly like the agent
+        // path's handleTerminal. Gated on `running` so the onRunStatus fast path and
+        // the reconcile sweep park one approval, not two.
+        if (run.status === "done") {
+          const existing = await this.storage.get(taskId);
+          if (existing.prReview?.state === "running") {
+            const artifact = await this.workflowRunner
+              .readArtifact(run.workflowRunId, PR_REVIEW_ARTIFACT)
+              .catch(() => null);
+            const delivery = await this.taskOutput
+              .parkPrReview(existing, artifact?.content ?? "")
+              .catch((error: unknown) => {
+                this.log.warn("pr review park failed (soft)", {
+                  taskId,
+                  err: error instanceof Error ? error.message : String(error),
+                });
+                return null;
+              });
+            if (delivery?.summary) outcome.summary = delivery.summary;
+          }
+        }
         const task = await this.storage.writeOutcome(taskId, outcome);
         this.log.info("task outcome written", {
           taskId,

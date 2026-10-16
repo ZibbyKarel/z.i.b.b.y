@@ -88,7 +88,9 @@ export class TaskOutputService implements OnModuleInit {
   ): Promise<TaskTerminalDelivery | null> {
     // Phase 129 P2 — a PR-inbox code review parks its artifact behind a Tier-3 approval.
     if (task.prReview) {
-      return this.parkPrReview(task, run).catch((error: unknown) => {
+      const file = resolveInside(run.cwd, PR_REVIEW_ARTIFACT);
+      const raw = file ? await fs.readFile(file, "utf8").catch(() => "") : "";
+      return this.parkPrReview(task, raw).catch((error: unknown) => {
         this.log.warn("pr review park failed (soft)", {
           taskId: task.id,
           err: error instanceof Error ? error.message : String(error),
@@ -116,15 +118,16 @@ export class TaskOutputService implements OnModuleInit {
   }
 
   /**
-   * Read the review artifact and park it as a `pr-review` approval ("Post review to
-   * GitHub"). No artifact → no approval (a reply is concrete or it is not drafted);
-   * the review is marked `failed` and the outcome says why.
+   * Park a finished PR-inbox review's text as a `pr-review` approval ("Post review to
+   * GitHub"). Blank → no approval (a reply is concrete or it is not drafted); the
+   * review is marked `failed` and the outcome says why. Public because the agent path
+   * ({@link handleTerminal}, file at `run.cwd`) and the workflow path
+   * (`TaskSchedulerService.writeWorkflowOutcome`, the final phase's `produces` read by
+   * the workflow runner — todo-4) read the artifact differently and park identically.
    */
-  private async parkPrReview(task: ScheduledTask, run: AgentRun): Promise<TaskTerminalDelivery> {
+  async parkPrReview(task: ScheduledTask, raw: string): Promise<TaskTerminalDelivery> {
     const review = task.prReview;
     if (!review) return {};
-    const file = resolveInside(run.cwd, PR_REVIEW_ARTIFACT);
-    const raw = file ? await fs.readFile(file, "utf8").catch(() => "") : "";
     const body = raw.trim().slice(0, PR_REVIEW_MAX_CHARS);
     const ref = `${review.repo}#${review.number}`;
     if (!body) {

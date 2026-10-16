@@ -257,6 +257,27 @@ describe("TaskOutputService", () => {
     }
     const runIn = (cwd: string) => ({ ...run(null), cwd }) as AgentRun;
 
+    it("parkPrReview parks raw text handed in by a caller (the workflow path)", async () => {
+      const task = await seedReview();
+      const delivered = await service.parkPrReview(task, "\n## Review\n\nnull deref at b.ts:9\n");
+      expect(delivered.summary).toMatch(/acme\/app#7/);
+      expect(approvals.requestApproval).toHaveBeenCalledWith(
+        expect.objectContaining({ runId: "t_review", kind: "pr-review" }),
+      );
+      expect((await storage.get("t_review")).prReview).toMatchObject({
+        state: "awaiting-approval",
+        body: "## Review\n\nnull deref at b.ts:9",
+      });
+    });
+
+    it("parkPrReview with blank text parks nothing and fails the review", async () => {
+      const task = await seedReview();
+      const delivered = await service.parkPrReview(task, "  \n");
+      expect(delivered.summary).toMatch(PR_REVIEW_ARTIFACT);
+      expect(approvals.requestApproval).not.toHaveBeenCalled();
+      expect((await storage.get("t_review")).prReview?.state).toBe("failed");
+    });
+
     it("parks the review artifact as a pr-review approval", async () => {
       const task = await seedReview();
       const cwd = path.join(dir, "wt");

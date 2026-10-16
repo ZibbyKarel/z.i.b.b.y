@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { AgentRun, Employee, TaskTarget, WorkflowRun } from "@zibby/contracts";
+import type { AgentRun, Employee, ScheduledTask, TaskTarget, WorkflowRun } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ActivityInput } from "../activity/activity-log.service";
 import type { BudgetCheck } from "../budget/budget.service";
@@ -11,6 +11,7 @@ import { WorkingAgentsFuse } from "../employees/working-agents-fuse";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { AttachmentStorageService } from "./attachment-storage.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
+import { PR_REVIEW_ARTIFACT } from "./task-output.service";
 import { TaskSchedulerService } from "./task-scheduler.service";
 
 const fakeLogger = {
@@ -68,6 +69,11 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     start: ReturnType<typeof vi.fn>;
     onRunStatus: ReturnType<typeof vi.fn>;
     get: ReturnType<typeof vi.fn>;
+    readArtifact: ReturnType<typeof vi.fn>;
+  };
+  let taskOutput: {
+    handleTerminal: () => Promise<null>;
+    parkPrReview: ReturnType<typeof vi.fn>;
   };
   /** Phase 91: the workflow definition store, for department-target resolution
    *  (`department` lookup). Empty by default — no test in this file dispatches
@@ -155,6 +161,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         return () => {};
       }),
       get: vi.fn(() => workflowRun({})),
+      readArtifact: vi.fn(async () => null),
     };
     workflowsStore = { list: vi.fn(async () => []) };
     agentsStore = { listActive: vi.fn(async () => []) };
@@ -210,6 +217,10 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     };
     activity = { record: vi.fn(async (_input: ActivityInput) => {}) };
 
+    taskOutput = {
+      handleTerminal: async () => null,
+      parkPrReview: vi.fn(async () => ({ summary: "parked" })),
+    };
     service = new TaskSchedulerService(
       storage,
       classifier as never,
@@ -249,7 +260,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       fakeLimits as never,
       // The output sink is exercised in task-output.service.test.ts; here it delivers
       // nothing (a `done` run with no chosen output) → returns null, normal outcome.
-      { handleTerminal: async () => null } as never,
+      taskOutput as never,
       (systemConfig = fakeSystemConfigStore()),
       // Namer double: returns null so title derivation falls back to the deterministic
       // slice (the Haiku CLI path never spawns under test).
@@ -1612,6 +1623,107 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       expect(result.outcome).toBe("dispatched");
       if (result.outcome !== "dispatched") return;
       expect(result.task.classification).toBeUndefined();
+    });
+  });
+
+  describe("PR-inbox review run as a workflow (todo-4)", () => {
+    async function seedReview(): Promise<string> {
+      const id = storage.newId();
+      await storage.createDispatched(
+        id,
+        { text: "review" },
+        "pr-review-thorough_1",
+        { kind: "workflow", id: "pr-review-thorough", name: "pr-review-thorough" },
+        Date.now(),
+        "alpha",
+      );
+      await storage.setPrReview(id, () => ({
+        repo: "acme/app",
+        number: 7,
+        url: "https://github.com/acme/app/pull/7",
+        state: "running",
+      }));
+      return id;
+    }
+    const done = (taskId: string) =>
+      workflowRun({
+        workflowRunId: "pr-review-thorough_1",
+        workflowId: "pr-review-thorough",
+        status: "done",
+        taskId,
+      });
+
+    it("parks the final phase's review artifact and folds its summary into the outcome", async () => {
+      const id = await seedReview();
+      workflowRunner.readArtifact.mockResolvedValue({
+        name: PR_REVIEW_ARTIFACT,
+        content: "## Review\n\nbug at a.ts:3",
+      });
+      workflowListener?.(done(id));
+      await vi.waitFor(async () => {
+        expect((await storage.get(id)).outcome).toBeDefined();
+      });
+      expect(workflowRunner.readArtifact).toHaveBeenCalledWith(
+        "pr-review-thorough_1",
+        PR_REVIEW_ARTIFACT,
+      );
+      expect(taskOutput.parkPrReview).toHaveBeenCalledWith(
+        expect.objectContaining({ id }),
+        "## Review\n\nbug at a.ts:3",
+      );
+      expect((await storage.get(id)).outcome?.summary).toBe("parked");
+    });
+
+    it("a missing artifact still goes through parkPrReview (which fails the review)", async () => {
+      const id = await seedReview();
+      workflowListener?.(done(id));
+      await vi.waitFor(async () => {
+        expect((await storage.get(id)).outcome).toBeDefined();
+      });
+      expect(taskOutput.parkPrReview).toHaveBeenCalledWith(expect.objectContaining({ id }), "");
+    });
+
+    it("parks once when the done event arrives twice", async () => {
+      const id = await seedReview();
+      workflowRunner.readArtifact.mockResolvedValue({ name: PR_REVIEW_ARTIFACT, content: "x" });
+      taskOutput.parkPrReview.mockImplementation(async (task: ScheduledTask) => {
+        await storage.setPrReview(task.id, (c) => (c ? { ...c, state: "awaiting-approval" } : c));
+        return { summary: "parked" };
+      });
+      workflowListener?.(done(id));
+      workflowListener?.(done(id));
+      await vi.waitFor(async () => {
+        expect((await storage.get(id)).outcome).toBeDefined();
+      });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(taskOutput.parkPrReview).toHaveBeenCalledTimes(1);
+    });
+
+    it("a failed workflow run parks nothing", async () => {
+      const id = await seedReview();
+      workflowListener?.({ ...done(id), status: "failed" });
+      await vi.waitFor(async () => {
+        expect((await storage.get(id)).outcome?.status).toBe("error");
+      });
+      expect(taskOutput.parkPrReview).not.toHaveBeenCalled();
+    });
+
+    it("a workflow task without prReview never reads the artifact", async () => {
+      const id = storage.newId();
+      await storage.createDispatched(
+        id,
+        { text: "ship it" },
+        "release_1",
+        { kind: "workflow", id: "release", name: "Release" },
+        Date.now(),
+        "alpha",
+      );
+      workflowListener?.(workflowRun({ status: "done", taskId: id }));
+      await vi.waitFor(async () => {
+        expect((await storage.get(id)).outcome).toBeDefined();
+      });
+      expect(workflowRunner.readArtifact).not.toHaveBeenCalled();
+      expect(taskOutput.parkPrReview).not.toHaveBeenCalled();
     });
   });
 });
