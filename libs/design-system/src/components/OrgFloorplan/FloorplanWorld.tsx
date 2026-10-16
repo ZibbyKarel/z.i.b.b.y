@@ -4,7 +4,9 @@ import { Fragment, type KeyboardEvent, type MouseEvent, memo } from "react";
 import { type StateTone, stateToneVar } from "../../stateTone";
 import { cn } from "../../utils/cn";
 import { focusRing } from "../../utils/focus";
-import { AgentGlyph } from "../AgentGlyph/AgentGlyph";
+import { minionAppearanceFromSeed } from "../Minion/minionAppearance";
+import { MinionScene } from "../Minion/MinionScene";
+import { MINION_K } from "../Minion/minionPalette";
 import { StateDot } from "../StatePill/StatePill";
 import { ZibbyAvatar } from "../ZibbyAvatar/ZibbyAvatar";
 import { FLOORPLAN_METRICS, type FloorplanLayout, type PlacedRoom } from "./layoutFloorplan";
@@ -16,17 +18,45 @@ import {
   OrgFloorplanTestId,
 } from "./types";
 
-const { CW, CH, SW, CORR } = FLOORPLAN_METRICS;
+const { CW, CH, SW, CORR, BORDER } = FLOORPLAN_METRICS;
 
 const DASH_X =
   "bg-[repeating-linear-gradient(to_right,var(--color-line-2)_0_8px,transparent_8px_20px)]";
 const DASH_Y =
   "bg-[repeating-linear-gradient(to_bottom,var(--color-line-2)_0_8px,transparent_8px_20px)]";
 
-/** State → the desk badge glyph; other states carry none. */
-const BADGE: Partial<Record<StateTone, string>> = { error: "!", blocked: "?", done: "✓" };
-/** Seconds of the `zb-ring` pulse — error is the faster one. */
-const RING_SECONDS: Partial<Record<StateTone, number>> = { error: 0.8, blocked: 1.2 };
+/** Goggle-lens hue (oklch) per department id — the design's table; real ids are `dist` / `des`. */
+export const ROOM_HUE: Readonly<Record<string, number>> = {
+  dev: 95,
+  rnd: 150,
+  qa: 60,
+  sec: 25,
+  rel: 300,
+  ops: 200,
+  inc: 40,
+  com: 250,
+  knw: 175,
+  fin: 130,
+  dist: 80,
+  pub: 330,
+  des: 350,
+  per: 270,
+};
+const DEFAULT_HUE = 95;
+
+/** Table hue, else a deterministic hue hashed from the id (so an unknown room keeps its colour). */
+export function roomHue(id: string): number {
+  const known = ROOM_HUE[id];
+  if (known !== undefined) return known;
+  if (!id) return DEFAULT_HUE;
+  let h = 7;
+  for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return h % 360;
+}
+
+const LENS_SHADOW = "0 0 0 3px var(--color-panel), inset 0 0 0 3px rgba(255,255,255,.55)";
+const HAZARD =
+  "bg-[repeating-linear-gradient(-45deg,var(--color-state-block)_0_6px,var(--color-ink)_6px_12px)]";
 
 export interface FloorplanWorldProps {
   layout: FloorplanLayout;
@@ -37,6 +67,8 @@ export interface FloorplanWorldProps {
   onAgent: (roomId: string, agentId: string) => void;
   onCoo: () => void;
   onHover: (subject: FloorplanHoverSubject | null, el?: HTMLElement) => void;
+  /** Employees currently out walking — their desk scene dims. */
+  awayAgents?: ReadonlySet<string>;
 }
 
 /** Enter/Space activates a role="button" — only for the element's own key events. */
@@ -53,6 +85,9 @@ function activateOnKey(run: () => void) {
 interface DeskProps {
   room: OrgFloorplanRoom;
   agent: OrgFloorplanAgent;
+  /** global desk index — staggers the scene animations */
+  index: number;
+  away: boolean;
   x: number;
   y: number;
   stateLabels: Record<StateTone, string>;
@@ -60,10 +95,8 @@ interface DeskProps {
   onHover: FloorplanWorldProps["onHover"];
 }
 
-function Desk({ room, agent, x, y, stateLabels, onAgent, onHover }: DeskProps) {
-  const color = stateToneVar[agent.state];
-  const badge = BADGE[agent.state];
-  const ringSeconds = RING_SECONDS[agent.state];
+function Desk({ room, agent, index, away, x, y, stateLabels, onAgent, onHover }: DeskProps) {
+  const appearance = agent.appearance ?? minionAppearanceFromSeed(agent.id);
   const open = () => onAgent(room.id, agent.id);
   const show = (e: { currentTarget: HTMLElement }) =>
     onHover(
@@ -73,6 +106,7 @@ function Desk({ room, agent, x, y, stateLabels, onAgent, onHover }: DeskProps) {
         meta: agent.role ? `${agent.code ?? agent.id} · ${agent.role}` : (agent.code ?? agent.id),
         state: agent.state,
         task: agent.task,
+        appearance,
       },
       e.currentTarget,
     );
@@ -103,47 +137,29 @@ function Desk({ room, agent, x, y, stateLabels, onAgent, onHover }: DeskProps) {
       style={{ left: x, top: y, width: CW, height: CH }}
       tabIndex={0}
     >
-      {ringSeconds !== undefined && (
-        <div
-          className="absolute left-[2px] top-[30px] box-border h-[30px] w-[68px] border"
-          data-testid={`${OrgFloorplanTestId.DeskRing}-${agent.id}`}
-          style={{ borderColor: color, animation: `zb-ring ${ringSeconds}s ease-out infinite` }}
-        />
-      )}
-      <div className="absolute left-[8px] top-[34px] box-border h-[22px] w-[56px] border border-line-2 bg-panel-2" />
-      <div className="absolute left-[28px] top-[37px] box-border h-[5px] w-[16px] border border-line-2 bg-panel" />
-      <div className="absolute left-[24px] top-[47px] h-[4px] w-[24px] bg-ink-2" />
-      <div className="absolute left-[22px] top-[4px]">
-        <AgentGlyph glow={false} seed={agent.id} size={28} state={agent.state} />
-      </div>
-      {badge && (
-        <div
-          aria-hidden="true"
-          className="absolute left-[46px] top-[-1px] grid h-[13px] w-[13px] place-items-center font-mono text-[10px] font-semibold leading-none text-panel"
-          data-testid={`${OrgFloorplanTestId.DeskBadge}-${agent.id}`}
-          style={{ background: color }}
-        >
-          {badge}
-        </div>
-      )}
-      {/* Nameplate clipped to the desk's front edge: state dot, name, role. */}
       <div
-        className="absolute left-[8px] top-[53px] box-border flex h-[16px] w-[56px] items-center gap-[4px] border border-ink bg-panel px-[4px] font-mono uppercase"
+        className={cn(
+          "absolute left-[2px] top-0 transition-opacity duration-300",
+          away ? "opacity-[0.18]" : "opacity-100",
+        )}
+        style={{ width: CW - 4 }}
+      >
+        <MinionScene
+          appearance={appearance}
+          ground={false}
+          phase={-((index * 0.37) % 2.6)}
+          state={agent.state}
+        />
+      </div>
+      {/* Nameplate: state dot + NAME. */}
+      <div
+        className="absolute bottom-[3px] left-1/2 flex -translate-x-1/2 items-center gap-[5px] whitespace-nowrap border border-ink bg-panel px-[6px] py-[2px] font-mono uppercase"
         data-testid={`${OrgFloorplanTestId.DeskTag}-${agent.id}`}
       >
         <span className="flex shrink-0">
-          <StateDot px={5} state={agent.state} />
+          <StateDot px={6} state={agent.state} />
         </span>
-        <span className="flex min-w-0 flex-col gap-[1px]">
-          <span className="truncate text-[7.5px] font-semibold leading-none tracking-[0.08em]">
-            {agent.name}
-          </span>
-          {agent.role && (
-            <span className="truncate text-[5px] leading-none tracking-[0.08em] text-ink-3">
-              {agent.role}
-            </span>
-          )}
-        </span>
+        <span className="text-[9px] font-semibold leading-none tracking-[0.1em]">{agent.name}</span>
       </div>
     </div>
   );
@@ -162,9 +178,7 @@ function Room({ room, placed, onRoom }: RoomProps) {
         room.ariaLabel ?? `${room.code} · ${room.name}, ${n} ${n === 1 ? "agent" : "agents"}`
       }
       className={cn(
-        "absolute box-border cursor-pointer border-2 border-ink",
-        room.zone === "ops" ? "bg-bg" : "bg-panel",
-        room.zone === "per" && "border-dashed",
+        "absolute box-border cursor-pointer rounded-[34px] border-[3px] border-double border-ink bg-panel",
         focusRing,
       )}
       data-testid={`${OrgFloorplanTestId.Room}-${room.id}`}
@@ -176,18 +190,41 @@ function Room({ room, placed, onRoom }: RoomProps) {
     >
       <div
         className={cn(
-          "absolute left-1/2 z-[2] ml-[-22px] h-[2px] w-[44px] bg-panel-2",
+          "absolute left-1/2 z-[2] ml-[-26px] h-[2px] w-[52px] bg-panel-2",
           placed.door === "down" ? "bottom-[-2px]" : "top-[-2px]",
         )}
       />
-      <div className="absolute inset-x-[12px] top-0 flex h-[26px] items-center gap-[8px]">
-        <span className="font-mono text-[11px] font-semibold tracking-[0.12em]">{room.code}</span>
-        <span className="min-w-0 truncate text-[12px] text-ink-2">{room.name}</span>
+      <div
+        className={cn(
+          "absolute inset-x-[30px] bottom-[4px] h-[6px] rounded-[3px] opacity-75",
+          HAZARD,
+        )}
+      />
+      <div className="absolute inset-x-[22px] top-[13px] h-[5px] bg-ink opacity-[0.85]" />
+      <div
+        className="absolute left-[12px] top-[-24px] z-[3] box-border grid h-[58px] w-[58px] place-items-center rounded-full border-[5px] border-ink"
+        data-testid={`${OrgFloorplanTestId.RoomLens}-${room.id}`}
+        style={{ background: `oklch(0.86 0.12 ${roomHue(room.id)})`, boxShadow: LENS_SHADOW }}
+      >
+        <span
+          className="font-mono text-[14px] font-bold tracking-[0.04em]"
+          style={{ color: MINION_K }}
+        >
+          {room.code}
+        </span>
+      </div>
+      <div className="absolute left-[80px] right-[14px] top-[2px] flex h-[26px] items-center gap-[8px]">
+        <span className="min-w-0 truncate bg-panel px-[6px] text-[13px] font-semibold">
+          {room.name}
+        </span>
         <span className="flex-1" />
-        <span className="flex gap-[3px]" data-testid={`${OrgFloorplanTestId.RoomStrip}-${room.id}`}>
+        <span
+          className="flex gap-[3px] rounded-[8px] bg-panel px-[5px] py-[3px]"
+          data-testid={`${OrgFloorplanTestId.RoomStrip}-${room.id}`}
+        >
           {room.agents.map((a) => (
             <span
-              className="h-[7px] w-[7px]"
+              className="h-[7px] w-[7px] rounded-full"
               key={a.id}
               style={{ background: stateToneVar[a.state] }}
             />
@@ -209,8 +246,10 @@ export const FloorplanWorld = memo(function FloorplanWorld({
   onAgent,
   onCoo,
   onHover,
+  awayAgents,
 }: FloorplanWorldProps) {
   const roomById = new Map(rooms.map((r) => [r.id, r]));
+  let deskIndex = 0;
   const showCoo = (e: { currentTarget: HTMLElement }) =>
     onHover(
       {
@@ -249,7 +288,7 @@ export const FloorplanWorld = memo(function FloorplanWorld({
             height: CORR,
           }}
         >
-          <div className={cn("absolute inset-x-[12px] top-[21px] h-[2px]", DASH_X)} />
+          <div className={cn("absolute inset-x-[12px] top-[27px] h-[2px]", DASH_X)} />
         </div>
       ))}
       <div
@@ -264,7 +303,7 @@ export const FloorplanWorld = memo(function FloorplanWorld({
         <div
           aria-label={coo.ariaLabel ?? coo.label}
           className={cn(
-            "absolute left-1/2 top-1/2 ml-[-74px] mt-[-74px] grid h-[148px] w-[148px] cursor-pointer place-items-center",
+            "absolute left-1/2 top-1/2 ml-[-90px] mt-[-110px] grid h-[220px] w-[180px] cursor-pointer place-items-center",
             focusRing,
           )}
           data-testid={OrgFloorplanTestId.Coo}
@@ -277,11 +316,11 @@ export const FloorplanWorld = memo(function FloorplanWorld({
           role="button"
           tabIndex={0}
         >
-          <ZibbyAvatar label={coo.label} size={128} state={coo.state} />
+          <ZibbyAvatar label={coo.label} size={200} state={coo.state} />
         </div>
         {coo.speech && (
           <div
-            className="pointer-events-none absolute bottom-[calc(50%+78px)] left-1/2 -translate-x-1/2 whitespace-nowrap border border-ink bg-panel px-[12px] py-[7px] font-mono text-[12px] uppercase tracking-[0.12em]"
+            className="pointer-events-none absolute bottom-[calc(50%+104px)] left-1/2 -translate-x-1/2 whitespace-nowrap border border-ink bg-panel px-[12px] py-[7px] font-mono text-[12px] uppercase tracking-[0.12em]"
             data-testid={OrgFloorplanTestId.CooSpeech}
             role="status"
             style={{ color: stateToneVar[coo.state] }}
@@ -296,7 +335,7 @@ export const FloorplanWorld = memo(function FloorplanWorld({
         const room = roomById.get(placed.id);
         if (!room) return null;
         // Desks are siblings of their room (not children) so no button nests in a button;
-        // the +2 is the room's border width. Rendered after the room → painted on top.
+        // BORDER is the room's border width. Rendered after the room → painted on top.
         return (
           <Fragment key={room.id}>
             <Room onRoom={onRoom} placed={placed} room={room} />
@@ -305,13 +344,15 @@ export const FloorplanWorld = memo(function FloorplanWorld({
               return d ? (
                 <Desk
                   agent={agent}
+                  away={awayAgents?.has(agent.id) ?? false}
+                  index={deskIndex++}
                   key={agent.id}
                   onAgent={onAgent}
                   onHover={onHover}
                   room={room}
                   stateLabels={stateLabels}
-                  x={placed.x + 2 + d.x}
-                  y={placed.y + 2 + d.y}
+                  x={placed.x + BORDER + d.x}
+                  y={placed.y + BORDER + d.y}
                 />
               ) : null;
             })}

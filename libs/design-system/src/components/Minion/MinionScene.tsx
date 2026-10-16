@@ -1,3 +1,5 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { usePrefersReducedMotion } from "../../hooks/usePrefersReducedMotion";
 import { type StateTone, stateToneVar } from "../../stateTone";

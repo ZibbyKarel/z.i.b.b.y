@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { OrgFloorplanTestId, ZibbyAvatarTestId } from "@zibby/design-system";
-import { fireEvent, renderWithProviders as render, screen } from "../../../test/render";
+import { type MinionAppearance, OrgFloorplanTestId, ZibbyAvatarTestId } from "@zibby/design-system";
+import { act, fireEvent, renderWithProviders as render, screen } from "../../../test/render";
 import { OrgMapScreen, OrgMapScreenTestId } from "./OrgMapScreen";
 
 const push = vi.fn();
@@ -45,23 +45,45 @@ vi.mock("../../approvals/queries/useApprovalsQuery", () => ({
   useApprovalsQuery: () => ({ data: approvals }),
 }));
 
+const APPEARANCE: MinionAppearance = {
+  width: 44,
+  height: 58,
+  eyes: 1,
+  hair: "spikes",
+  hat: "beanie",
+  skin: 2,
+};
+const kessler = {
+  id: "e1",
+  name: "Kessler",
+  agentId: "koder",
+  department: "dev",
+  status: "active",
+  hiredAt: "2026-01-01T00:00:00.000Z",
+  state: "working",
+  currentTaskTitle: "Fix the checkout test",
+  position: { id: "koder", name: "Kodér", title: "Coder" },
+  appearance: APPEARANCE,
+};
+let employeeRows: Record<string, unknown>[] = [];
 vi.mock("../../employees/queries/useEmployeesQuery", () => ({
-  useEmployeesQuery: () => ({
-    data: [
-      {
-        id: "e1",
-        name: "Kessler",
-        agentId: "koder",
-        department: "dev",
-        status: "active",
-        hiredAt: "2026-01-01T00:00:00.000Z",
-        state: "working",
-        currentTaskTitle: "Fix the checkout test",
-        position: { id: "koder", name: "Kodér", title: "Coder" },
-      },
-    ],
-  }),
+  useEmployeesQuery: () => ({ data: employeeRows }),
 }));
+
+// Spy on the floorplan's props while still rendering the real thing.
+const floorplanProps = vi.hoisted(() => ({
+  last: undefined as Record<string, unknown> | undefined,
+}));
+vi.mock("@zibby/design-system", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@zibby/design-system")>();
+  return {
+    ...actual,
+    OrgFloorplan: (props: Record<string, unknown>) => {
+      floorplanProps.last = props;
+      return (actual.OrgFloorplan as (p: unknown) => unknown)(props);
+    },
+  };
+});
 
 vi.mock("../../departments/mutations", () => ({
   useCreateDepartmentMutation: () => ({ mutate: vi.fn(), isPending: false }),
@@ -79,6 +101,8 @@ vi.mock("../../runs/runEvents", () => ({ useApiUnreachable: () => apiDown }));
 describe("OrgMapScreen", () => {
   beforeEach(() => {
     push.mockReset();
+    employeeRows = [kessler];
+    floorplanProps.last = undefined;
     apiDown = false;
     approvals = [];
     notifications = [{ runId: "r_fail", title: "Broken patch", failedAt: "2026-10-01T00:00:00Z" }];
@@ -96,13 +120,6 @@ describe("OrgMapScreen", () => {
     expect(dev).toHaveAccessibleName("DEV · Development, 1 agent");
     expect(screen.getByTestId(`${OrgFloorplanTestId.Room}-per`)).toHaveAccessibleName(
       "PER · Personal Office, 0 agentů",
-    );
-  });
-
-  it("maps the office division to the dashed personal room", () => {
-    render(<OrgMapScreen />);
-    expect(screen.getByTestId(`${OrgFloorplanTestId.Room}-per`).className).toContain(
-      "border-dashed",
     );
   });
 
@@ -191,5 +208,36 @@ describe("OrgMapScreen", () => {
     render(<OrgMapScreen />);
     expect(screen.getByTestId(OrgMapScreenTestId.AddDepartmentButton)).toBeInTheDocument();
     expect(screen.queryByText("OTEVŘÍT ODDĚLENÍ →")).not.toBeInTheDocument();
+  });
+
+  it("passes the employee's stored appearance to its desk", () => {
+    render(<OrgMapScreen />);
+    const rooms = floorplanProps.last?.rooms as {
+      agents: { id: string; appearance?: unknown }[];
+    }[];
+    expect(rooms.flatMap((r) => r.agents).find((a) => a.id === "e1")?.appearance).toEqual(
+      APPEARANCE,
+    );
+  });
+
+  it("shows no walkers on first load, then one when a run is handed to another department", () => {
+    employeeRows = [
+      { ...kessler, currentRunId: "r1" },
+      { ...kessler, id: "e2", name: "Tester", department: "per" },
+    ];
+    const { rerender } = render(<OrgMapScreen />);
+    expect(floorplanProps.last?.walkers).toEqual([]);
+
+    employeeRows = [
+      { ...kessler, currentRunId: undefined },
+      { ...kessler, id: "e2", name: "Tester", department: "per", currentRunId: "r1" },
+    ];
+    rerender(<OrgMapScreen />);
+    expect(floorplanProps.last?.walkers).toEqual([
+      { id: "r1:e1->e2", agentId: "e1", toRoomId: "per", label: "Fix the checkout test" },
+    ]);
+
+    act(() => (floorplanProps.last?.onWalkerDone as (id: string) => void)("r1:e1->e2"));
+    expect(floorplanProps.last?.walkers).toEqual([]);
   });
 });

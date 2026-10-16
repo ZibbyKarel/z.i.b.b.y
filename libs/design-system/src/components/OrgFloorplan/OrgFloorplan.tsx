@@ -2,12 +2,16 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode, Ref } from "react";
+import { usePrefersReducedMotion } from "../../hooks/usePrefersReducedMotion";
 import { STATE_LABEL, type StateTone } from "../../stateTone";
 import { cn } from "../../utils/cn";
 import { focusRing } from "../../utils/focus";
 import { FloorplanMinimap } from "./FloorplanMinimap";
+import { minionAppearanceFromSeed } from "../Minion/minionAppearance";
 import { FloorplanPopover, POPOVER_WIDTH } from "./FloorplanPopover";
+import { FloorplanWalkers } from "./FloorplanWalkers";
 import { FloorplanWorld } from "./FloorplanWorld";
+import { buildTrips } from "./walkerPaths";
 import { DEFAULT_FLOORPLAN_ROWS, type FloorplanRowSpec, layoutFloorplan } from "./layoutFloorplan";
 import {
   DEFAULT_FLOORPLAN_LABELS,
@@ -17,6 +21,7 @@ import {
   type OrgFloorplanLabels,
   type OrgFloorplanRoom,
   OrgFloorplanTestId,
+  type OrgFloorplanWalker,
 } from "./types";
 
 export { OrgFloorplanTestId } from "./types";
@@ -25,10 +30,12 @@ export type {
   OrgFloorplanCoo,
   OrgFloorplanLabels,
   OrgFloorplanRoom,
+  OrgFloorplanWalker,
   OrgFloorplanZone,
 } from "./types";
 export { DEFAULT_FLOORPLAN_ROWS, type FloorplanRowSpec } from "./layoutFloorplan";
 
+const NO_WALKERS: OrgFloorplanWalker[] = [];
 const MIN_K = 0.2;
 const MAX_K = 2.5;
 const FIT_MIN_K = 0.35;
@@ -52,6 +59,15 @@ export interface OrgFloorplanProps {
   onRoomClick?: (roomId: string) => void;
   onAgentClick?: (roomId: string, agentId: string) => void;
   onCooClick?: () => void;
+  /**
+   * Trips of work between rooms: the employee walks from their desk to the destination
+   * room carrying a box, dwells, and walks back — once. Walkers naming an unknown employee
+   * or room, or a room the employee already sits in, are ignored. With reduced motion
+   * nobody walks and each trip finishes immediately.
+   */
+  walkers?: OrgFloorplanWalker[];
+  /** A trip finished (the minion is back at its desk) — drop it from `walkers`. */
+  onWalkerDone?: (id: string) => void;
   /** Control / popover copy (English defaults) — the app passes translations. */
   labels?: Partial<OrgFloorplanLabels>;
   /** State names shown in the popover; defaults to {@link STATE_LABEL}. */
@@ -63,7 +79,7 @@ export interface OrgFloorplanProps {
 
 /**
  * The ORG floorplan (`design/ZibbyCorp/Floorplan Map.dc.html`): every department is a
- * room, every agent a desk, Zibby sits in the lobby on the spine. Scroll / drag pans,
+ * goggle-shaped room, every agent a minion at a desk, Zibby sits in the lobby on the spine. Scroll / drag pans,
  * ⌘/Ctrl + scroll (or pinch) and the buttons zoom; a minimap overviews. i18n- and
  * data-agnostic.
  */
@@ -74,6 +90,8 @@ export function OrgFloorplan({
   onRoomClick,
   onAgentClick,
   onCooClick,
+  walkers = NO_WALKERS,
+  onWalkerDone,
   labels,
   stateLabels,
   actions,
@@ -103,10 +121,49 @@ export function OrgFloorplan({
   /** The user panned/zoomed — stop auto-fitting when the data changes size. */
   const touched = useRef(false);
   const stopDrag = useRef<(() => void) | null>(null);
-  const handlers = useRef({ onRoomClick, onAgentClick, onCooClick });
+  const handlers = useRef({ onRoomClick, onAgentClick, onCooClick, onWalkerDone });
   useEffect(() => {
-    handlers.current = { onRoomClick, onAgentClick, onCooClick };
+    handlers.current = { onRoomClick, onAgentClick, onCooClick, onWalkerDone };
   });
+
+  // Walkers: resolve paths, hide finished trips, dim the desks of those still out.
+  const reduced = usePrefersReducedMotion();
+  const allTrips = useMemo(() => buildTrips(layout, rooms, walkers), [layout, rooms, walkers]);
+  const [finished, setFinished] = useState<ReadonlySet<string>>(new Set());
+  const doneIds = useRef(new Set<string>());
+  const finishTrip = useCallback((id: string) => {
+    if (doneIds.current.has(id)) return;
+    doneIds.current.add(id);
+    setFinished(new Set(doneIds.current));
+    handlers.current.onWalkerDone?.(id);
+  }, []);
+  useEffect(() => {
+    // Forget trips the parent has dropped, so an id can be reused later.
+    const ids = new Set(walkers.map((w) => w.id));
+    let pruned = false;
+    for (const id of doneIds.current) {
+      if (ids.has(id)) continue;
+      doneIds.current.delete(id);
+      pruned = true;
+    }
+    if (pruned) setFinished(new Set(doneIds.current));
+  }, [walkers]);
+  useEffect(() => {
+    if (!reduced) return;
+    for (const t of allTrips) finishTrip(t.walker.id);
+  }, [reduced, allTrips, finishTrip]);
+  const trips = useMemo(
+    () => (reduced ? [] : allTrips.filter((t) => !finished.has(t.walker.id))),
+    [reduced, allTrips, finished],
+  );
+  const awayAgents = useMemo(() => new Set(trips.map((t) => t.agentId)), [trips]);
+  const appearanceOf = useCallback(
+    (agentId: string) => {
+      const agent = rooms.flatMap((r) => r.agents).find((a) => a.id === agentId);
+      return agent?.appearance ?? minionAppearanceFromSeed(agentId);
+    },
+    [rooms],
+  );
 
   const fit = useCallback(() => {
     const v = viewportRef.current;
@@ -261,6 +318,7 @@ export function OrgFloorplan({
           }}
         >
           <FloorplanWorld
+            awayAgents={awayAgents}
             coo={coo}
             layout={layout}
             onAgent={clickAgent}
@@ -270,6 +328,7 @@ export function OrgFloorplan({
             rooms={rooms}
             stateLabels={names}
           />
+          <FloorplanWalkers appearanceOf={appearanceOf} onDone={finishTrip} trips={trips} />
         </div>
         <div
           className="absolute bottom-[16px] left-[16px] flex cursor-default items-center border border-line-2 bg-panel font-mono text-[10px] uppercase tracking-[0.12em]"

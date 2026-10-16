@@ -215,7 +215,12 @@ export function PeopleScreen() {
                     >
                       <Container padding="200">
                         <Stack align="center" gap="100">
-                          <AgentGlyph seed={e.agentId} size={48} state={STATE_TONE[e.state]} />
+                          <AgentGlyph
+                            appearance={e.appearance}
+                            seed={e.agentId}
+                            size={48}
+                            state={STATE_TONE[e.state]}
+                          />
                           <Typography truncate type="labelSm">
                             {isPinned("employee", e.id) ? "★ " : ""}
                             {e.name}

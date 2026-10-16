@@ -7,28 +7,32 @@
 /** Fixed metrics, px (world units). */
 export const FLOORPLAN_METRICS = {
   /** desk cell */
-  CW: 72,
-  CH: 76,
+  CW: 112,
+  CH: 104,
   /** room horizontal / bottom padding */
-  PX: 12,
+  PX: 18,
   /** room header height */
-  HEAD: 26,
+  HEAD: 40,
   /** spine width */
-  SW: 56,
+  SW: 64,
   /** corridor height */
-  CORR: 44,
+  CORR: 56,
   /** gap between rooms in a row-side */
   GAP: 10,
   /** outer margin */
   M: 40,
-  /** lobby box */
-  LOBBY: 120,
+  /** room border width — desks (siblings of the room) are inset by it */
+  BORDER: 3,
+  /** minimum room width */
+  ROOM_MIN: 240,
+  /** lobby box — fits the 200px Zibby (2x the design's 100) and its speech bubble above */
+  LOBBY: 220,
   LOBBY_TOP: 50,
-  SPINE_TOP: 190,
-  ROWS_TOP: 210,
+  SPINE_TOP: 290,
+  ROWS_TOP: 310,
 } as const;
 
-const { CW, CH, PX, HEAD, SW, CORR, GAP, M, LOBBY, LOBBY_TOP, SPINE_TOP, ROWS_TOP } =
+const { CW, CH, PX, HEAD, SW, CORR, GAP, M, ROOM_MIN, LOBBY, LOBBY_TOP, SPINE_TOP, ROWS_TOP } =
   FLOORPLAN_METRICS;
 
 export interface FloorplanRowSpec {
@@ -65,6 +69,10 @@ export interface PlacedRoom {
   cols: number;
   rows: number;
   door: "up" | "down";
+  /** world x of the door (the room's horizontal centre) */
+  doorX: number;
+  /** world y of the centre line of the corridor this room's door opens onto */
+  corrY: number;
   desks: PlacedDesk[];
 }
 
@@ -94,7 +102,14 @@ interface Sizing {
 function sizeRoom({ id, agentCount: n }: FloorplanRoomInput): Sizing {
   const cols = Math.max(2, Math.min(5, n));
   const rows = Math.ceil(n / cols);
-  return { id, n, cols, rows, base: Math.max(150, cols * CW + 2 * PX), h: HEAD + rows * CH + PX };
+  return {
+    id,
+    n,
+    cols,
+    rows,
+    base: Math.max(ROOM_MIN, cols * CW + 2 * PX),
+    h: HEAD + rows * CH + PX,
+  };
 }
 
 const sumBase = (list: Sizing[]) => list.reduce((s, r) => s + r.base, 0);
@@ -152,6 +167,13 @@ export function layoutFloorplan(
         const w = r.base;
         const y = ri === 0 ? ROWS_TOP + (rowH[0] ?? 0) - r.h : (rowY[ri] ?? ROWS_TOP);
         const gx0 = (w - r.cols * CW) / 2;
+        const corrTop = row.door === "down" ? corridors[ri] : corridors[ri - 1];
+        const corrY =
+          corrTop !== undefined
+            ? corrTop + CORR / 2
+            : row.door === "down"
+              ? y + r.h + CORR / 2
+              : y - CORR / 2;
         out.push({
           id: r.id,
           x,
@@ -161,6 +183,8 @@ export function layoutFloorplan(
           cols: r.cols,
           rows: r.rows,
           door: row.door,
+          doorX: x + w / 2,
+          corrY,
           desks: Array.from({ length: r.n }, (_, j) => ({
             x: gx0 + (j % r.cols) * CW,
             y: HEAD + Math.floor(j / r.cols) * CH,

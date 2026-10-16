@@ -3,6 +3,7 @@ import { cn } from "../../utils/cn";
 import type { StateTone } from "../../stateTone";
 import { focusRing } from "../../utils/focus";
 import { AgentGlyph } from "../AgentGlyph/AgentGlyph";
+import type { MinionAppearance } from "../Minion/minionAppearance";
 import { Button } from "../Button/Button";
 import { Container } from "../Container/Container";
 import { Row } from "../Stack/Stack";
@@ -30,6 +31,8 @@ export enum ApprovalCardTestId {
 export interface ApprovalCardProps extends Omit<HTMLAttributes<HTMLDivElement>, "className"> {
   /** Deterministic seed for the requesting agent's {@link AgentGlyph}. */
   glyphSeed: string;
+  /** The requesting employee's stored Minion look; falls back to one derived from `glyphSeed`. */
+  glyphAppearance?: MinionAppearance;
   agentName: string;
   /** Secondary line — e.g. `"TASK · DEV"` (kind · department). */
   meta: string;
@@ -76,6 +79,7 @@ export interface ApprovalCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 
  */
 export function ApprovalCard({
   glyphSeed,
+  glyphAppearance,
   agentName,
   meta,
   waited,
@@ -135,7 +139,12 @@ export function ApprovalCard({
       >
         <div className={cn("flex items-center gap-2.5", density === "row" && "min-w-0 flex-1")}>
           <span data-testid={ApprovalCardTestId.Glyph}>
-            <AgentGlyph seed={glyphSeed} size={glyphSize} state={state} />
+            <AgentGlyph
+              appearance={glyphAppearance}
+              seed={glyphSeed}
+              size={glyphSize}
+              state={state}
+            />
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <Typography

@@ -1,5 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { MinionSceneTestId } from "../Minion/MinionScene";
+import { MinionWalkerTestId } from "../Minion/MinionWalker";
+import { ZibbyAvatarTestId } from "../ZibbyAvatar/ZibbyAvatar";
+import { FLOORPLAN_METRICS } from "./layoutFloorplan";
+import { ROOM_HUE, roomHue } from "./FloorplanWorld";
 import { OrgFloorplan, type OrgFloorplanRoom, OrgFloorplanTestId } from "./OrgFloorplan";
 
 const ROOMS: OrgFloorplanRoom[] = [
@@ -83,35 +88,63 @@ describe("OrgFloorplan", () => {
     expect(room("dev")).toHaveAccessibleName("DEV, 5 lidí");
   });
 
-  it("dashes the personal room and gives the ops room the page background", () => {
+  it("draws every room as goggles: lens with the department code, strap and hazard stripe", () => {
     render(<OrgFloorplan coo={COO} rooms={ROOMS} />);
-    expect(room("per").className).toContain("border-dashed");
-    expect(room("ops").className).toContain("bg-bg");
-    expect(room("dev").className).not.toContain("border-dashed");
+    expect(room("dev").className).toContain("border-double");
+    expect(room("dev").className).toContain("rounded-[34px]");
+    expect(room("per").className).not.toContain("border-dashed");
+    expect(screen.getByTestId(`${OrgFloorplanTestId.RoomLens}-dev`)).toHaveTextContent("DEV");
+    expect(screen.getByTestId(`${OrgFloorplanTestId.RoomLens}-ops`)).toHaveTextContent("OPS");
   });
 
-  it("badges error/blocked/done desks, rings error/blocked, nothing otherwise", () => {
-    render(<OrgFloorplan coo={COO} rooms={ROOMS} />);
-    expect(screen.getByTestId(`${OrgFloorplanTestId.DeskBadge}-a2`)).toHaveTextContent("!");
-    expect(screen.getByTestId(`${OrgFloorplanTestId.DeskBadge}-a3`)).toHaveTextContent("?");
-    expect(screen.getByTestId(`${OrgFloorplanTestId.DeskBadge}-a4`)).toHaveTextContent("✓");
-    expect(screen.queryByTestId(`${OrgFloorplanTestId.DeskBadge}-a1`)).not.toBeInTheDocument();
-    expect(screen.queryByTestId(`${OrgFloorplanTestId.DeskBadge}-a5`)).not.toBeInTheDocument();
-    expect(screen.getByTestId(`${OrgFloorplanTestId.DeskRing}-a2`).style.animation).toContain(
-      "zb-ring 0.8s",
-    );
-    expect(screen.getByTestId(`${OrgFloorplanTestId.DeskRing}-a3`).style.animation).toContain(
-      "zb-ring 1.2s",
-    );
-    expect(screen.queryByTestId(`${OrgFloorplanTestId.DeskRing}-a1`)).not.toBeInTheDocument();
+  it("picks the lens hue from the table and hashes unknown ids deterministically", () => {
+    expect(roomHue("dev")).toBe(95);
+    expect(roomHue("dist")).toBe(ROOM_HUE.dist);
+    expect(roomHue("des")).toBe(350);
+    const hue = roomHue("lab");
+    expect(hue).toBeGreaterThanOrEqual(0);
+    expect(hue).toBeLessThan(360);
+    expect(roomHue("lab")).toBe(hue);
+    expect(roomHue("lab")).not.toBe(roomHue("labx"));
   });
 
-  it("puts name and role on the desk nameplate, role only when given", () => {
+  it("renders a state-driven minion scene at every desk", () => {
     render(<OrgFloorplan coo={COO} rooms={ROOMS} />);
-    const withRole = screen.getByTestId(`${OrgFloorplanTestId.DeskTag}-a1`);
-    expect(withRole).toHaveTextContent("Stuart");
-    expect(withRole).toHaveTextContent("Coder");
+    const states: Record<string, string> = {
+      a1: "working",
+      a2: "error",
+      a3: "blocked",
+      a4: "done",
+      a5: "idle",
+    };
+    for (const [id, state] of Object.entries(states)) {
+      const scene = within(desk(id)).getByTestId(MinionSceneTestId.Root);
+      expect(scene).toHaveAttribute("data-state", state);
+    }
+    expect(screen.getAllByTestId(MinionSceneTestId.Root)).toHaveLength(6);
+  });
+
+  it("puts the state dot and upper-case name on the desk nameplate (no role)", () => {
+    render(<OrgFloorplan coo={COO} rooms={ROOMS} />);
+    const tag = screen.getByTestId(`${OrgFloorplanTestId.DeskTag}-a1`);
+    expect(tag).toHaveTextContent(/^Stuart$/);
+    expect(tag.className).toContain("uppercase");
     expect(screen.getByTestId(`${OrgFloorplanTestId.DeskTag}-a2`)).toHaveTextContent(/^Ken$/);
+  });
+
+  it("renders Zibby in the lobby at 200px", () => {
+    render(<OrgFloorplan coo={COO} rooms={ROOMS} />);
+    const zibby = within(screen.getByTestId(OrgFloorplanTestId.Coo)).getByTestId(
+      ZibbyAvatarTestId.Root,
+    );
+    expect(zibby).toHaveAttribute("height", "200");
+  });
+
+  it("places minimap dots at the desk centre", () => {
+    render(<OrgFloorplan coo={COO} rooms={ROOMS} />);
+    const dot = screen.getByTestId(`${OrgFloorplanTestId.MinimapDot}-a1`);
+    expect(dot).toBeInTheDocument();
+    expect(FLOORPLAN_METRICS.CW / 2).toBe(56);
   });
 
   it("clicking a desk opens the agent only; clicking the room opens the room", () => {
@@ -259,5 +292,97 @@ describe("OrgFloorplan", () => {
     expect(screen.getByTestId(`${OrgFloorplanTestId.MinimapDot}-a1`)).toBeInTheDocument();
     expect(screen.getByTestId(`${OrgFloorplanTestId.MinimapRoom}-dev`)).toBeInTheDocument();
     expect(screen.getByTestId(OrgFloorplanTestId.MinimapViewport)).toBeInTheDocument();
+  });
+});
+
+describe("OrgFloorplan walkers", () => {
+  const WALKER = { id: "w1", agentId: "a1", toRoomId: "ops", label: "PR #322" };
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("walks from the desk, dims the desk, and finishes exactly once", () => {
+    vi.useFakeTimers();
+    const onWalkerDone = vi.fn();
+    render(<OrgFloorplan coo={COO} onWalkerDone={onWalkerDone} rooms={ROOMS} walkers={[WALKER]} />);
+    const walker = screen.getByTestId(`${OrgFloorplanTestId.Walker}-w1`);
+    expect(within(walker).getByTestId(MinionWalkerTestId.Root)).toHaveAttribute(
+      "data-carry",
+      "true",
+    );
+    expect(walker).toHaveTextContent("PR #322");
+    const scene = within(desk("a1")).getByTestId(MinionSceneTestId.Root);
+    expect(scene.parentElement?.className).toContain("opacity-[0.18]");
+    expect(
+      within(desk("a2")).getByTestId(MinionSceneTestId.Root).parentElement?.className,
+    ).toContain("opacity-100");
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+    expect(onWalkerDone).toHaveBeenCalledTimes(1);
+    expect(onWalkerDone).toHaveBeenCalledWith("w1");
+    expect(screen.queryByTestId(`${OrgFloorplanTestId.Walker}-w1`)).not.toBeInTheDocument();
+    expect(
+      within(desk("a1")).getByTestId(MinionSceneTestId.Root).parentElement?.className,
+    ).toContain("opacity-100");
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+    expect(onWalkerDone).toHaveBeenCalledTimes(1);
+  });
+
+  it("drops the box on the way back", () => {
+    vi.useFakeTimers();
+    render(<OrgFloorplan coo={COO} rooms={ROOMS} walkers={[WALKER]} />);
+    // outbound (~6s) + 4.5s dwell is well under 14s; the return trip is empty-handed
+    act(() => {
+      vi.advanceTimersByTime(11_000);
+    });
+    const walker = screen.getByTestId(`${OrgFloorplanTestId.Walker}-w1`);
+    expect(within(walker).getByTestId(MinionWalkerTestId.Root)).toHaveAttribute(
+      "data-carry",
+      "false",
+    );
+  });
+
+  it("ignores unknown agents, unknown rooms and trips to the own room", () => {
+    vi.useFakeTimers();
+    const onWalkerDone = vi.fn();
+    render(
+      <OrgFloorplan
+        coo={COO}
+        onWalkerDone={onWalkerDone}
+        rooms={ROOMS}
+        walkers={[
+          { ...WALKER, id: "x1", agentId: "ghost" },
+          { ...WALKER, id: "x2", toRoomId: "nowhere" },
+          { ...WALKER, id: "x3", toRoomId: "dev" },
+        ]}
+      />,
+    );
+    for (const id of ["x1", "x2", "x3"]) {
+      expect(screen.queryByTestId(`${OrgFloorplanTestId.Walker}-${id}`)).not.toBeInTheDocument();
+    }
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+    expect(onWalkerDone).not.toHaveBeenCalled();
+  });
+
+  it("does not walk with reduced motion, and finishes the trip immediately", () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockReturnValue({
+        matches: true,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }),
+    );
+    const onWalkerDone = vi.fn();
+    render(<OrgFloorplan coo={COO} onWalkerDone={onWalkerDone} rooms={ROOMS} walkers={[WALKER]} />);
+    expect(screen.queryByTestId(`${OrgFloorplanTestId.Walker}-w1`)).not.toBeInTheDocument();
+    expect(onWalkerDone).toHaveBeenCalledTimes(1);
+    expect(onWalkerDone).toHaveBeenCalledWith("w1");
   });
 });

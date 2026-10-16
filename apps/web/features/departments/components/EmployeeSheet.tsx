@@ -59,7 +59,12 @@ export function EmployeeSheet({ employee, onClose }: EmployeeSheetProps) {
     >
       <Stack gap="250">
         <Stack align="center" direction="row" gap="200">
-          <AgentGlyph seed={employee.agentId} size={128} state={employee.state} />
+          <AgentGlyph
+            appearance={employee.appearance}
+            seed={employee.agentId}
+            size={128}
+            state={employee.state}
+          />
           <Stack gap="75">
             <Typography type="h3">{employee.name}</Typography>
             <Typography size="sm" type="note" variant="secondary">

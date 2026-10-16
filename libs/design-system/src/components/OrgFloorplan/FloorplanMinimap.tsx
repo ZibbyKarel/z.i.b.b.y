@@ -2,9 +2,10 @@
 
 import type { MouseEvent } from "react";
 import { stateToneVar } from "../../stateTone";
-import type { FloorplanLayout } from "./layoutFloorplan";
+import { FLOORPLAN_METRICS, type FloorplanLayout } from "./layoutFloorplan";
 import { type OrgFloorplanRoom, OrgFloorplanTestId } from "./types";
 
+const { CW, CH } = FLOORPLAN_METRICS;
 const MAX_W = 150;
 const MAX_H = 300;
 
@@ -69,8 +70,8 @@ export function FloorplanMinimap({
               data-testid={`${OrgFloorplanTestId.MinimapDot}-${a.id}`}
               key={a.id}
               style={{
-                left: (p.x + d.x + 36) * s - 1.5,
-                top: (p.y + d.y + 18) * s - 1.5,
+                left: (p.x + d.x + CW / 2) * s - 1.5,
+                top: (p.y + d.y + CH / 2) * s - 1.5,
                 background: stateToneVar[a.state],
               }}
             />

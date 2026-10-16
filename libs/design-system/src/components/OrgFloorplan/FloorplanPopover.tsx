@@ -40,7 +40,13 @@ export function FloorplanPopover({ hover, stateLabels, workingOn }: FloorplanPop
         {subject.coo ? (
           <ZibbyAvatar size={38} state={subject.state} />
         ) : (
-          <AgentGlyph glow={false} seed={subject.seed} size={38} state={subject.state} />
+          <AgentGlyph
+            appearance={subject.appearance}
+            glow={false}
+            seed={subject.seed}
+            size={38}
+            state={subject.state}
+          />
         )}
         <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
           <span

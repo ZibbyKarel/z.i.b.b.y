@@ -1,3 +1,5 @@
+"use client";
+
 import { usePrefersReducedMotion } from "../../hooks/usePrefersReducedMotion";
 import { MinionArm, MinionBody } from "./MinionBody";
 import { type MinionSize, minionFigureWidth } from "./MinionFigure";

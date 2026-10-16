@@ -1,4 +1,5 @@
 import type { StateTone } from "../../stateTone";
+import type { MinionAppearance } from "../Minion/minionAppearance";
 
 export enum OrgFloorplanTestId {
   Root = "org-floorplan-root",
@@ -15,12 +16,12 @@ export enum OrgFloorplanTestId {
   RoomStrip = "org-floorplan-room-strip",
   /** suffixed `-<agentId>` */
   Desk = "org-floorplan-desk",
-  /** suffixed `-<agentId>` */
-  DeskBadge = "org-floorplan-desk-badge",
-  /** suffixed `-<agentId>` */
-  DeskRing = "org-floorplan-desk-ring",
-  /** suffixed `-<agentId>` — the nameplate under the desk (state dot, name, role) */
+  /** suffixed `-<agentId>` — the nameplate at the desk's bottom (state dot, NAME) */
   DeskTag = "org-floorplan-desk-tag",
+  /** suffixed `-<roomId>` — the goggle lens carrying the department code */
+  RoomLens = "org-floorplan-room-lens",
+  /** suffixed `-<walkerId>` — a minion carrying work between rooms */
+  Walker = "org-floorplan-walker",
   Controls = "org-floorplan-controls",
   Actions = "org-floorplan-actions",
   ZoomOut = "org-floorplan-zoom-out",
@@ -45,13 +46,27 @@ export interface OrgFloorplanAgent {
   name: string;
   /** Display id (e.g. `DEV-01`) for the popover meta and default aria label; falls back to `id`. */
   code?: string;
-  /** Job title — on the desk nameplate under the name, and after the id in the popover head (`ID · ROLE`). */
+  /** Job title — after the id in the popover head (`ID · ROLE`). */
   role?: string;
   state: StateTone;
   /** What the agent is working on right now; the popover section is skipped without it. */
   task?: string;
   /** Overrides the default `"<name>, <state label>"` accessible name of the desk. */
   ariaLabel?: string;
+  /** The employee's minion look; falls back to one derived from `id`. */
+  appearance?: MinionAppearance;
+}
+
+/** One trip of work between rooms — the employee walks from their desk, carries a box, and returns. */
+export interface OrgFloorplanWalker {
+  /** stable id of this trip */
+  id: string;
+  /** the employee (OrgFloorplanAgent.id) who carries the work — walks from their desk */
+  agentId: string;
+  /** destination room id */
+  toRoomId: string;
+  /** label on the carried box (task title / artifact), truncated visually */
+  label: string;
 }
 
 export interface OrgFloorplanRoom {
@@ -105,6 +120,7 @@ export interface FloorplanHoverSubject {
   state: StateTone;
   task?: string;
   coo?: boolean;
+  appearance?: MinionAppearance;
 }
 
 export interface FloorplanHover {

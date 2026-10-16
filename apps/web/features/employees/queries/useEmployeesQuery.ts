@@ -8,10 +8,16 @@ import { getEmployeesQueryKey } from "./keys";
  * Used by the `/workforce/agents` directory (unfiltered, grouped client-side) and by a
  * department's Team tab (`department: id`).
  */
-export function useEmployeesQuery(query?: EmployeeQuery) {
+export function useEmployeesQuery(
+  query?: EmployeeQuery,
+  options?: {
+    /** Poll the registry (ms) — only the org map asks for this. */ refetchInterval?: number;
+  },
+) {
   return apiClient.employees.listEmployees.useQuery({
     queryKey: getEmployeesQueryKey(query),
     queryData: { query: query ?? {} },
     select: selectApiResponseBody,
+    refetchInterval: options?.refetchInterval,
   });
 }

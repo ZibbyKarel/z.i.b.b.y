@@ -21,6 +21,7 @@ import { NOTIFICATIONS_PARAM, useNotificationsQuery } from "../../notifications"
 import { useApiUnreachable } from "../../runs/runEvents";
 import type { RunStatusGroupKey } from "../../runs/statusGroups";
 import { aggregateZibbyState } from "../state/aggregateZibbyState";
+import { useHandoffWalkers } from "../state/useHandoffWalkers";
 
 export enum OrgMapScreenTestId {
   Root = "org-map-screen-root",
@@ -45,6 +46,9 @@ const ZONE_BY_DIVISION: Record<string, OrgFloorplanZone> = {
   office: "per",
 };
 
+/** The org map polls the registry so lease hand-offs between departments can be seen. */
+const EMPLOYEES_POLL_MS = 3000;
+
 const STATES: readonly StateTone[] = ["working", "thinking", "blocked", "error", "done", "idle"];
 
 /**
@@ -61,7 +65,11 @@ export function OrgMapScreen() {
 
   const { data: departments = [] } = useDepartmentsQuery();
   const { data: divisions = [] } = useDivisionsQuery();
-  const { data: employees = [] } = useEmployeesQuery({ status: "active" });
+  const { data: employees = [] } = useEmployeesQuery(
+    { status: "active" },
+    { refetchInterval: EMPLOYEES_POLL_MS },
+  );
+  const { walkers, onWalkerDone } = useHandoffWalkers(employees);
   const { data: approvals = [] } = useApprovalsQuery();
   const { data: notifications = [] } = useNotificationsQuery();
   const [creatingDepartment, setCreatingDepartment] = useState(false);
@@ -79,6 +87,7 @@ export function OrgMapScreen() {
             role: e.position.title ?? e.position.name,
             state: e.state,
             task: e.currentTaskTitle,
+            appearance: e.appearance,
           }));
         return {
           id: d.id,
@@ -169,8 +178,10 @@ export function OrgMapScreen() {
         }
         onCooClick={() => router.push(cooHref as Route)}
         onRoomClick={(id) => router.push(`/workforce/departments/${id}` as Route)}
+        onWalkerDone={onWalkerDone}
         rooms={rooms}
         stateLabels={stateLabels}
+        walkers={walkers}
       />
     </Stack>
   );

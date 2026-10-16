@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { OrgFloorplan, type OrgFloorplanRoom } from "./OrgFloorplan";
+import { useCallback, useState } from "react";
+import { OrgFloorplan, type OrgFloorplanRoom, type OrgFloorplanWalker } from "./OrgFloorplan";
 
 const ROOMS: OrgFloorplanRoom[] = [
   {
@@ -92,11 +93,47 @@ const ROOMS: OrgFloorplanRoom[] = [
   { id: "lab", code: "LAB", name: "Unlisted department", zone: "biz", agents: [] },
 ];
 
+/** Trips the demo hands out in turn — each is replaced a moment after it finishes. */
+const TRIPS: Omit<OrgFloorplanWalker, "id">[] = [
+  { agentId: "dev-04", toRoomId: "qa", label: "PR #322" },
+  { agentId: "dev-03", toRoomId: "com", label: "release-notes.md" },
+  { agentId: "rnd-01", toRoomId: "dev", label: "research.md" },
+];
+
+function WalkingFloorplan() {
+  const [seq, setSeq] = useState(TRIPS.length);
+  const [walkers, setWalkers] = useState<OrgFloorplanWalker[]>(
+    TRIPS.map((t, i) => ({ ...t, id: `trip-${i}` })),
+  );
+  const done = useCallback((id: string) => {
+    setSeq((n) => n + 1);
+    setWalkers((all) => {
+      const finished = all.find((w) => w.id === id);
+      const rest = all.filter((w) => w.id !== id);
+      if (!finished) return rest;
+      // Re-queue the same errand so the story keeps moving.
+      return [...rest, { ...finished, id: `${id}-r${Date.now()}` }];
+    });
+  }, []);
+  return (
+    <OrgFloorplan
+      coo={{ state: "working", label: "Zibby · COO", speech: `${seq} trips so far` }}
+      onWalkerDone={done}
+      rooms={ROOMS}
+      walkers={walkers}
+    />
+  );
+}
+
 const meta: Meta<typeof OrgFloorplan> = {
   title: "DesignSystem/OrgFloorplan",
   component: OrgFloorplan,
   parameters: { layout: "fullscreen" },
-  args: { rooms: ROOMS, coo: { state: "working", label: "Zibby · COO" } },
+  args: {
+    rooms: ROOMS,
+    coo: { state: "working", label: "Zibby · COO" },
+    walkers: [{ id: "w1", agentId: "dev-04", toRoomId: "qa", label: "PR #322" }],
+  },
 };
 export default meta;
 
@@ -105,7 +142,7 @@ type Story = StoryObj<typeof OrgFloorplan>;
 export const Overview: Story = {
   render: () => (
     <div className="h-[720px] w-full">
-      <OrgFloorplan coo={{ state: "working", label: "Zibby · COO" }} rooms={ROOMS} />
+      <WalkingFloorplan />
     </div>
   ),
 };

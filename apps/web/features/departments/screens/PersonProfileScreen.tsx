@@ -90,7 +90,12 @@ function Profile({
 
           <Stack wrap align="center" direction="row" gap="200" justify="between">
             <Stack align="center" direction="row" gap="200">
-              <AgentGlyph seed={employee.agentId} size={128} state={tone} />
+              <AgentGlyph
+                appearance={employee.appearance}
+                seed={employee.agentId}
+                size={128}
+                state={tone}
+              />
               <Stack gap="75">
                 <Typography type="title">{employee.name}</Typography>
                 <StatePill label={t(`state.${employee.state}`)} state={tone} />

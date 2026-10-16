@@ -541,6 +541,7 @@ export type {
   OrgFloorplanLabels,
   OrgFloorplanProps,
   OrgFloorplanRoom,
+  OrgFloorplanWalker,
   OrgFloorplanZone,
 } from "./components/OrgFloorplan/OrgFloorplan";
 export {

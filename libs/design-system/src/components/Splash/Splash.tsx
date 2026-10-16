@@ -2,8 +2,8 @@
 import type { Ref } from "react";
 import { useEffect, useRef, useState } from "react";
 import type { StateTone } from "../../stateTone";
-import { AgentGlyph } from "../AgentGlyph/AgentGlyph";
 import { Typography } from "../Typography/Typography";
+import { ZibbyAvatar } from "../ZibbyAvatar/ZibbyAvatar";
 import { Wordmark } from "../Wordmark/Wordmark";
 
 export enum SplashTestId {
@@ -155,7 +155,7 @@ export function Splash({
         data-testid={SplashTestId.Panel}
       >
         <div data-testid={SplashTestId.Glyph}>
-          <AgentGlyph seed="Zibby" size={48} state={PHASE_GLYPH_STATE[displayPhase]} />
+          <ZibbyAvatar size={64} state={PHASE_GLYPH_STATE[displayPhase]} />
         </div>
 
         <div

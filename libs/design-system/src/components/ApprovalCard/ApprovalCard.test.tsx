@@ -2,9 +2,20 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "../../utils/testRender";
+import { AgentGlyphTestId } from "../AgentGlyph/AgentGlyph";
+import { minionAppearanceFromSeed } from "../Minion/minionAppearance";
 import { ApprovalCard, ApprovalCardTestId } from "./ApprovalCard";
 
 describe("ApprovalCard", () => {
+  it("draws the glyph from glyphAppearance when given, else from the seed", () => {
+    const base = { agentName: "K", glyphSeed: "seed-a", meta: "m", request: "r", waited: "w" };
+    const { unmount } = render(<ApprovalCard {...base} />);
+    const seeded = screen.getByTestId(AgentGlyphTestId.Root).innerHTML;
+    unmount();
+    render(<ApprovalCard {...base} glyphAppearance={minionAppearanceFromSeed("zzz-other")} />);
+    expect(screen.getByTestId(AgentGlyphTestId.Root).innerHTML).not.toBe(seeded);
+  });
+
   it("renders identity, meta, wait and request text (card density)", () => {
     render(
       <ApprovalCard
