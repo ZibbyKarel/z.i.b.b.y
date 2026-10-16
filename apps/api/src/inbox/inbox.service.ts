@@ -1,4 +1,5 @@
 import { Injectable, type OnModuleInit, Optional } from "@nestjs/common";
+import { INBOX_REFRESH_ACTIVITY_KINDS } from "@zibby/contracts";
 import type {
   InboxEpic,
   InboxItemsResponse,
@@ -15,6 +16,7 @@ import type {
   RoadmapItem,
   SetInboxHidden,
 } from "@zibby/contracts";
+import { ActivityEventsService } from "../activity/activity-events.service";
 import { CredentialsStore } from "../integrations/credentials.store";
 import { ProjectPrService, resolveGithubToken } from "../projects/project-pr.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
@@ -25,8 +27,8 @@ import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.s
 import { InboxStateStore } from "./inbox-state.store";
 
 const GITHUB_API = "https://api.github.com";
-// ponytail: whole-result in-memory cache, 30 s ceiling (web polls every 60 s + on
-// focus). Every refresh costs 2 + teams Search calls per repo against GitHub's
+// ponytail: whole-result in-memory cache, 30 s ceiling (web polls every 15 min + refetches
+// on inbox-refresh activity). Every refresh costs 2 + teams Search calls per repo against GitHub's
 // ~30/min Search limit — batch the legs with OR if an operator has many repos/teams.
 const PRS_TTL_MS = 30_000;
 
@@ -151,6 +153,7 @@ export class InboxService implements OnModuleInit {
     private readonly state: InboxStateStore,
     private readonly tasks: ScheduledTasksStorageService,
     private readonly projectPrs: ProjectPrService,
+    private readonly activityEvents: ActivityEventsService,
     @Optional() fetchImpl?: typeof fetch,
   ) {
     this.fetchImpl = fetchImpl ?? fetch;
@@ -161,6 +164,11 @@ export class InboxService implements OnModuleInit {
     // merged PR leaves the list on the very next read instead of lingering.
     this.projectPrs.onMerged(() => {
       this.prsCache = null;
+    });
+    // A ZIBBY action that changes PRs (task opened one, roadmap dispatch…) drops the
+    // cache too, so the web's event-driven refetch reaches GitHub, not a stale copy.
+    this.activityEvents.stream().subscribe(({ kind }) => {
+      if (INBOX_REFRESH_ACTIVITY_KINDS.includes(kind)) this.prsCache = null;
     });
   }
 

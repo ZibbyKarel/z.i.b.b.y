@@ -1,4 +1,5 @@
 import type { Integration, Project } from "@zibby/contracts";
+import { Subject } from "rxjs";
 import { describe, expect, it } from "vitest";
 import { InboxService, blockerOf, ciState, reviewState, sectionOf } from "./inbox.service";
 
@@ -158,6 +159,7 @@ describe("InboxService.listPrs", () => {
       throw new Error(`unhandled ${u.pathname}`);
     }) as unknown as typeof fetch;
 
+    const activity = new Subject<{ kind: string }>();
     const service = new InboxService(
       { list: async () => [project] } as never,
       { resolveIntegrations: async () => [github] } as never,
@@ -171,10 +173,24 @@ describe("InboxService.listPrs", () => {
           merged.push(fn);
         },
       } as never,
+      { stream: () => activity.asObservable() } as never,
       fetchImpl,
     );
-    return { service, calls, merged };
+    return { service, calls, merged, activity };
   }
+
+  it("an inbox-refresh activity kind clears the 30 s cache; other kinds don't", async () => {
+    const { service, calls, activity } = build();
+    service.onModuleInit();
+    await service.listPrs();
+    const before = calls.length;
+    activity.next({ kind: "task-created" });
+    await service.listPrs();
+    expect(calls.length).toBe(before);
+    activity.next({ kind: "task-outcome" });
+    await service.listPrs();
+    expect(calls.length).toBeGreaterThan(before);
+  });
 
   it("buckets direct / team / mine PRs and derives ci, review and blocker", async () => {
     const { service, calls } = build();
