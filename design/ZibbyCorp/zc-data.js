@@ -6,17 +6,17 @@ const pad = (n, w) => String(n).padStart(w || 2, '0');
 ZC.pad = pad;
 
 ZC.depts = [
- ['dev','DEV','Development','Plans and implements tasks, then returns a PR.'],
- ['ops','OPS','Monitoring & Ops','Watches channels, calendar and CI on a heartbeat, and triages inbound work.'],
- ['sec','SEC','Security','Tracks CVEs and secret leaks, and guards the boundary to the outside world.'],
- ['rel','REL','Release Management','Prepares releases and changelogs, and waits for you to approve merges.'],
- ['inc','INC','Incident Response','Escalates critical issues: Tier-3 surface-and-wait.'],
- ['rnd','RND','R&D','Runs research and hands the result on as an artifact.'],
- ['com','COM','Communications','Speaks for the company externally and asks when information is missing.'],
- ['qa','QA','QA & Architecture','Proactively scans code quality and passes findings to Development.'],
- ['knw','KNW','Knowledge Management','Maintains the memory vault, grounding and nightly distillation.'],
- ['fin','FIN','Finance','Manages budgets, run caps and subscription thresholds.'],
- ['per','PER','Personal Office','Handles your personal life, separate from work.']
+ ['dev','DEV','Gadget Workshop','Builds whatever Gru sketches on a napkin, then returns a PR.'],
+ ['ops','OPS','Lair Lookout','Watches channels, calendar and CI from the periscope, and triages inbound work.'],
+ ['sec','SEC','Lair Defense','Tracks CVEs and leaked secrets, and keeps the Anti-Villain League out.'],
+ ['rel','REL','Launch Pad','Fuels up releases and changelogs, and waits for your go before liftoff.'],
+ ['inc','INC','Banana Alarm','Sounds the siren on critical issues: Tier-3 surface-and-wait.'],
+ ['rnd','RND','Nefario Lab','Runs experiments and hands the result on as an artifact. Mostly no explosions.'],
+ ['com','COM','Minionese Relay','Translates for the outside world and asks when information is missing.'],
+ ['qa','QA','Shrink Ray Testing','Zaps code quality issues early and passes findings to the Workshop.'],
+ ['knw','KNW','Scheme Archive','Guards the vault of evil plans, grounding and nightly distillation.'],
+ ['fin','FIN','Bank of Evil','Counts the bananas: budgets, run caps and subscription thresholds.'],
+ ['per','PER','Gru\'s Quarters','Handles your personal life, separate from world domination.']
 ].map(([id, code, name, desc]) => ({ id, code, name, desc }));
 ZC.D = id => ZC.depts.find(d => d.id === id);
 

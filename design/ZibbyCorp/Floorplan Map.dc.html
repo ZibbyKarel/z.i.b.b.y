@@ -7,42 +7,44 @@
 </head>
 <body>
 <x-dc>
-
+<helmet>
+<script src="./minion-art.js"></script>
+<style>@keyframes mv-pulse{0%,100%{opacity:1}50%{opacity:.35}}@keyframes mv-blink{0%{opacity:1}50%{opacity:.15}}@keyframes mv-spin{to{transform:rotate(360deg)}}@keyframes mv-flick{from{transform:scaleY(.75)}to{transform:scaleY(1.15)}}@keyframes mv-boom{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}@keyframes mv-ring{0%{transform:scale(1);opacity:.8}100%{transform:scale(1.14);opacity:0}}</style>
+</helmet>
 <div data-screen-label="Floorplan" style="width:100%;height:calc(100vh - 170px);min-height:520px;box-sizing:border-box;border:1px solid var(--line2);background:var(--bg);color:var(--ink);font-family:'Geist',system-ui,sans-serif;display:grid;grid-template-rows:minmax(0,1fr);grid-template-columns:minmax(0,1fr);overflow:hidden;position:relative">
   <div ref="{{ setVp }}" onMouseDown="{{ onDown }}" data-screen-label="Floorplan canvas" style="position:relative;overflow:hidden;cursor:grab;background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px;user-select:none">
     <div style="{{ worldStyle }}">
       <div style="{{ spineStyle }}"><div style="position:absolute;left:27px;top:12px;bottom:12px;width:2px;background-image:repeating-linear-gradient(to bottom,var(--line2) 0 8px,transparent 8px 20px)"></div></div>
       <sc-for list="{{ corrs }}" as="c" hint-placeholder-count="2"><div style="{{ c.style }}"><div style="{{ c.line }}"></div></div></sc-for>
       <div style="{{ lobby.style }}">
-        <div onMouseEnter="{{ lobby.enter }}" onMouseLeave="{{ lobby.leave }}" style="position:absolute;left:50%;top:50%;width:84px;height:84px;margin:-42px 0 0 -42px;display:grid;place-items:center;cursor:default">{{ lobby.zibby }}</div>
+        <div onMouseEnter="{{ lobby.enter }}" onMouseLeave="{{ lobby.leave }}" style="position:absolute;left:50%;top:50%;width:110px;height:120px;margin:-60px 0 0 -55px;display:grid;place-items:center;cursor:default">{{ lobby.zibby }}</div>
       </div>
       <sc-for list="{{ rooms }}" as="r" hint-placeholder-count="14">
         <div data-screen-label="{{ r.name }}" onClick="{{ r.onClick }}" style="{{ r.boxStyle }}">
           <div style="{{ r.doorStyle }}"></div>
-          <div style="position:absolute;left:12px;right:12px;top:0;height:26px;display:flex;align-items:center;gap:8px">
-            <span style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.12em">{{ r.code }}</span>
-            <span style="font-size:12px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">{{ r.name }}</span>
+          <div style="{{ r.hazardStyle }}"></div>
+          <div style="{{ r.strapStyle }}"></div>
+          <div style="{{ r.lensStyle }}">
+            <span style="font-family:'Geist Mono',monospace;font-size:14px;font-weight:700;letter-spacing:.04em;color:#111312">{{ r.code }}</span>
+          </div>
+          <div style="position:absolute;left:80px;right:14px;top:2px;height:26px;display:flex;align-items:center;gap:8px">
+            <span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;background:var(--panel);padding:0 6px">{{ r.name }}</span>
             <span style="flex:1"></span>
-            <span style="display:flex;gap:3px"><sc-for list="{{ r.strip }}" as="s" hint-placeholder-count="3"><span style="{{ s.style }}"></span></sc-for></span>
+            <span style="display:flex;gap:3px;background:var(--panel);padding:3px 5px;border-radius:8px"><sc-for list="{{ r.strip }}" as="s" hint-placeholder-count="3"><span style="{{ s.style }}"></span></sc-for></span>
           </div>
           <sc-for list="{{ r.desks }}" as="d" hint-placeholder-count="3">
             <div onClick="{{ d.onClick }}" onMouseEnter="{{ d.enter }}" onMouseLeave="{{ d.leave }}" style="{{ d.cellStyle }}">
-              <div style="{{ d.pulse }}"></div>
-              <div style="position:absolute;left:8px;top:34px;width:56px;height:22px;box-sizing:border-box;background:var(--panel2);border:1px solid var(--line2)"></div>
-              <div style="position:absolute;left:28px;top:37px;width:16px;height:5px;box-sizing:border-box;border:1px solid var(--line2);background:var(--panel)"></div>
-              <div style="position:absolute;left:24px;top:47px;width:24px;height:4px;background:var(--ink2)"></div>
-              <div style="{{ d.glyphStyle }}">{{ d.glyph }}</div>
-              <div style="{{ d.iconStyle }}">{{ d.icon }}</div>
-              <div style="position:absolute;left:8px;top:53px;width:56px;height:16px;box-sizing:border-box;background:var(--panel);border:1px solid var(--ink);display:flex;align-items:center;gap:4px;padding:0 4px"><span style="display:flex;flex-shrink:0">{{ d.dot }}</span><span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-family:'Geist Mono',monospace;font-size:7.5px;font-weight:600;letter-spacing:.08em;line-height:1">{{ d.nameU }}</span><span style="font-family:'Geist Mono',monospace;font-size:5px;letter-spacing:.08em;color:var(--ink3);line-height:1;white-space:nowrap;overflow:hidden">{{ d.roleU }}</span></span></div>
+              <div style="{{ d.vigStyle }}">{{ d.vig }}</div>
+              <div style="position:absolute;left:50%;bottom:3px;transform:translateX(-50%);display:flex;align-items:center;gap:5px;background:var(--panel);border:1px solid var(--ink);padding:2px 6px;white-space:nowrap"><span style="display:flex">{{ d.dot }}</span><span style="font-family:'Geist Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.1em;line-height:1">{{ d.nameU }}</span></div>
             </div>
           </sc-for>
         </div>
       </sc-for>
       <sc-for list="{{ runners }}" as="u" hint-placeholder-count="0">
         <div style="{{ u.style }}">
-          <div onClick="{{ u.onClick }}" onMouseEnter="{{ u.enter }}" onMouseLeave="{{ u.leave }}" style="position:absolute;left:-18px;top:-38px;width:36px;height:46px;cursor:default">
+          <div onClick="{{ u.onClick }}" onMouseEnter="{{ u.enter }}" onMouseLeave="{{ u.leave }}" style="position:absolute;left:-24px;top:-58px;width:48px;height:60px;cursor:pointer">
             <div style="{{ u.packetStyle }}"><span style="width:5px;height:5px;background:var(--ink);flex-shrink:0"></span>{{ u.label }}</div>
-            <div style="position:absolute;left:4px;top:16px">{{ u.glyph }}</div>
+            <div style="position:absolute;left:0;top:2px">{{ u.glyph }}</div>
           </div>
         </div>
       </sc-for>
@@ -98,7 +100,7 @@
   </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;route&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;go&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(r:string)=>void&quot;},&quot;tick&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;number&quot;},&quot;runners&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Floor&quot;},&quot;simulate&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Floor&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;route&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;go&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(r:string)=>void&quot;},&quot;tick&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;number&quot;},&quot;runners&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Floor&quot;},&quot;simulate&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Floor&quot;}}">
 class Component extends DCLogic {
   state = { t: Date.now(), tx: 0, ty: 0, k: 0.5, hover: null, ready: false };
   vp = null;
@@ -137,11 +139,12 @@ class Component extends DCLogic {
     }));
     this.coo = { id: 'COO', name: 'Zibby', role: 'Chief Operating Officer', state: 'working', task: '', now: 'Routing 11 tasks across 14 departments', t0: Date.now() - 41 * 60000, prog: 0, help: '', dept: null, code: 'COO', err: null };
     this.byName = id;
-    const CW = 72, CH = 76, PX = 12, HEAD = 26, SW = 56, CORR = 44, GAP = 10, M = 40;
+    const CW = 112, CH = 104, PX = 18, HEAD = 40, SW = 64, CORR = 56, GAP = 10, M = 40;
+    window.ZRoles = window.ZRoles || {}; this.agents.forEach(a => { window.ZRoles[a.name] = a.role; });
     const info = {};
     this.DEPTS.forEach(([did, code, name, zone]) => {
       const ag = this.agents.filter(a => a.dept === did), n = ag.length, cols = Math.max(2, Math.min(5, n)), rows = Math.ceil(n / cols);
-      info[did] = { did, code, name, zone, ag, n, cols, rows, base: Math.max(150, cols * CW + 2 * PX), h: HEAD + rows * CH + PX };
+      info[did] = { did, code, name, zone, ag, n, cols, rows, base: Math.max(240, cols * CW + 2 * PX), h: HEAD + rows * CH + PX };
     });
     const LAYOUT = [{ door: 'D', L: ['dev'], R: ['com', 'knw', 'fin'] }, { door: 'U', L: ['rnd', 'qa'], R: ['dis', 'pub', 'dsn'] }, { door: 'U', L: ['sec', 'rel', 'per'], R: ['ops', 'inc'] }];
     const sumW = l => l.reduce((s, d) => s + info[d].base, 0) + GAP * (l.length - 1);
@@ -167,7 +170,7 @@ class Component extends DCLogic {
     this.L = { rooms, W, H, spineX, SW, CW, CH, PX, HEAD, corrs, yEnd };
     this.paths = this.RUNNERS.map(([nm, to, label, cyc, off]) => {
       const a = id[nm], A = a.room, B = rooms.find(r => r.did === to), dsk = A.desks.find(d => d.a === a);
-      const ax = A.x + dsk.x + 36, ay = A.y + dsk.y + 26;
+      const ax = A.x + dsk.x + CW / 2, ay = A.y + dsk.y + CH * .72;
       const pts = A.corrY === B.corrY ? [[ax, ay], [A.doorX, ay], [A.doorX, A.corrY], [B.doorX, A.corrY]] : [[ax, ay], [A.doorX, ay], [A.doorX, A.corrY], [spineX, A.corrY], [spineX, B.corrY], [B.doorX, B.corrY]];
             const cl = [0]; for (let i = 1; i < pts.length; i++) cl.push(cl[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
       return { a, label, cyc, off, pts, cl, len: cl[cl.length - 1] };
@@ -184,7 +187,8 @@ class Component extends DCLogic {
 
   componentDidMount() {
     this.poll = setInterval(() => {
-      if (!window.ZB || !this.vp) return; clearInterval(this.poll);
+      if (!window.ZB || !window.MinionArt || !this.vp) return; clearInterval(this.poll);
+      this.MA = window.MA || (window.MA = window.MinionArt(React)); this.MA.install(window.ZB, n => ((window.ZC && window.ZC.byName(n)) || {}).role || (window.ZRoles || {})[n]); this.VC = {};
       this.init(); this.vp.addEventListener('wheel', this.onWheel, { passive: false }); window.addEventListener('resize', this.fit);
       this.fit(); this.setState({ ready: true });
       this.timer = setInterval(() => this.setState({ t: Date.now() }), 120);
@@ -240,7 +244,7 @@ class Component extends DCLogic {
     if (!Z || !this.L) return empty;
     const S = Z.S, { rooms, W, H, spineX, SW, CW, CH, corrs, yEnd } = this.L, { tx, ty, k, hover } = this.state, now = this.state.t, pad = n => String(n).padStart(2, '0');
     const fmt = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return pad(Math.floor(s / 60)) + ':' + pad(s % 60); };
-    const showRun = this.props.runners === true;
+    const showRun = this.props.runners !== false, MA = this.MA, VC = this.VC;
     const frames = showRun ? this.paths.map(p => ({ p, f: this.runnerFrame(p, now / 1000) })) : [];
     const away = new Set(frames.filter(x => x.f).map(x => x.p.a.name));
     const ST = { error: ['!', 'var(--s-err)'], blocked: ['?', 'var(--s-block)'], done: ['✓', 'var(--s-done)'] };
@@ -248,39 +252,41 @@ class Component extends DCLogic {
     const roomsOut = rooms.map(r => {
       return {
         name: r.name, code: r.code, onClick: this.goRoom(r),
-        boxStyle: `position:absolute;left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px;box-sizing:border-box;border:2px solid var(--ink);background:${r.zone === 'ops' ? 'var(--bg)' : 'var(--panel)'};${r.zone === 'per' ? 'border-style:dashed;' : ''}`,
-        doorStyle: `position:absolute;left:50%;margin-left:-22px;width:44px;height:2px;${r.door === 'D' ? 'bottom' : 'top'}:-2px;background:var(--panel2);z-index:2`,
-        strip: r.ag.map(a => ({ style: `width:7px;height:7px;background:${S[a.state].c}` })),
+        boxStyle: `position:absolute;left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px;box-sizing:border-box;border:3px double var(--ink);border-radius:34px;background:var(--panel);cursor:pointer`,
+        strapStyle: `position:absolute;left:22px;right:22px;top:13px;height:5px;background:var(--ink);opacity:.85`,
+        lensStyle: `position:absolute;left:12px;top:-24px;width:58px;height:58px;box-sizing:border-box;border-radius:50%;border:5px solid var(--ink);background:oklch(0.86 0.12 ${({ dev:95, rnd:150, qa:60, sec:25, rel:300, ops:200, inc:40, com:250, knw:175, fin:130, dis:80, pub:330, dsn:350, per:270 })[r.did] || 95});box-shadow:0 0 0 3px var(--panel),inset 0 0 0 3px rgba(255,255,255,.55);display:grid;place-items:center;z-index:3`,
+        hazardStyle: `position:absolute;left:30px;right:30px;bottom:4px;height:6px;border-radius:3px;background:repeating-linear-gradient(-45deg,var(--s-block) 0 6px,var(--ink) 6px 12px);opacity:.75`,
+        doorStyle: `position:absolute;left:50%;margin-left:-26px;width:52px;height:2px;${r.door === 'D' ? 'bottom' : 'top'}:-2px;background:var(--panel2);z-index:2`,
+        strip: r.ag.map(a => ({ style: `width:7px;height:7px;border-radius:50%;background:${S[a.state].c}` })),
         desks: r.desks.map(({ a, x, y }) => {
-          const st = ST[a.state], isAway = away.has(a.name), live = a.state === 'error' || a.state === 'blocked';
+          const isAway = away.has(a.name), vk = a.id + a.state;
+          if (!VC[vk]) VC[vk] = MA.scene3(a.state, MA.specFor(a.name, a.role), 'fm' + vk, -((this.agents.indexOf(a) * .37) % 2.6), true);
           return {
-            cellStyle: `position:absolute;left:${x}px;top:${y}px;width:${CW}px;height:${CH}px;cursor:default`,
-            pulse: live ? `position:absolute;left:2px;top:30px;width:68px;height:30px;box-sizing:border-box;border:1px solid ${S[a.state].c};animation:zb-ring ${a.state === 'error' ? .8 : 1.2}s ease-out infinite` : 'display:none',
-            glyphStyle: `position:absolute;left:22px;top:4px;opacity:${isAway ? .18 : 1}`, glyph: Z.glyph(R, { seed: a.name, state: a.state, size: 28, glow: false }),
-            iconStyle: st ? `position:absolute;left:46px;top:-1px;width:13px;height:13px;background:${st[1]};color:var(--panel);display:${isAway ? 'none' : 'grid'};place-items:center;font-family:'Geist Mono',monospace;font-size:10px;font-weight:600;line-height:1` : 'display:none',
-            icon: st ? st[0] : '', dot: Z.dot(R, a.state, 5), nameU: a.name.toUpperCase(), roleU: a.role.toUpperCase(), enter: this.enter(a.id), leave: this.leave, onClick: this.goAgent(a)
+            cellStyle: `position:absolute;left:${x}px;top:${y}px;width:${CW}px;height:${CH}px;cursor:pointer`,
+            vigStyle: `position:absolute;left:2px;top:0;width:${CW - 4}px;opacity:${isAway ? .18 : 1};transition:opacity .3s`, vig: VC[vk],
+            dot: Z.dot(R, a.state, 6), nameU: a.name.toUpperCase(), enter: this.enter(a.id), leave: this.leave, onClick: this.goAgent(a)
           };
         })
       };
     });
     const runners = frames.map(({ p, f }) => ({
       style: f ? `position:absolute;left:${f.pos[0].toFixed(1)}px;top:${f.pos[1].toFixed(1)}px;width:0;height:0;z-index:6;transition:left .12s linear,top .12s linear` : 'display:none',
-      packetStyle: f && f.carry ? `position:absolute;left:18px;top:0;transform:translateX(-50%);display:flex;align-items:center;gap:4px;white-space:nowrap;background:var(--panel);border:1px solid var(--ink);padding:1px 5px;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.08em` : 'display:none',
-      label: p.label, glyph: Z.glyph(R, { seed: p.a.name, state: p.a.state, size: 28, glow: false }), enter: this.enter(p.a.id), leave: this.leave, onClick: this.goAgent(p.a)
+      packetStyle: f && f.carry ? `position:absolute;left:24px;top:-14px;z-index:2;transform:translateX(-50%);display:flex;align-items:center;gap:4px;white-space:nowrap;background:var(--panel);border:1px solid var(--ink);padding:1px 5px;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.08em` : 'display:none',
+      label: p.label, glyph: (() => { const wk = 'w' + p.a.id + (f && f.carry ? 1 : 0); if (!VC[wk]) VC[wk] = MA.walker(MA.specFor(p.a.name, p.a.role), 'fw' + wk, !!(f && f.carry), 0, 58); return VC[wk]; })(), enter: this.enter(p.a.id), leave: this.leave, onClick: this.goAgent(p.a)
     }));
     const cnt = {}; Z.ORDER.forEach(s => cnt[s] = 0); this.agents.forEach(a => cnt[a.state]++);
     const s = this.mmScale(), mmW = Math.round(W * s), mmH = Math.round(H * s), vw = this.vp ? this.vp.clientWidth : 1000, vh = this.vp ? this.vp.clientHeight : 800;
     const mm = {
       style: `position:absolute;right:16px;bottom:16px;width:${mmW}px;height:${mmH}px;background:var(--panel);border:1px solid var(--ink);cursor:pointer`,
       rooms: rooms.map(r => ({ style: `position:absolute;left:${r.x * s}px;top:${r.y * s}px;width:${r.w * s}px;height:${r.h * s}px;box-sizing:border-box;border:1px solid var(--ink3);background:var(--panel2)` })).concat([{ style: `position:absolute;left:${(spineX - 100 * 1.5) * s}px;top:${24 * s}px;width:${300 * s}px;height:${170 * s}px;box-sizing:border-box;border:1px solid var(--ink)` }]),
-      dots: this.agents.map(a => ({ style: `position:absolute;left:${(a.wx + 42) * s - 1.5}px;top:${(a.wy + 20) * s - 1.5}px;width:3px;height:3px;background:${S[a.state].c}` })),
+      dots: this.agents.map(a => ({ style: `position:absolute;left:${(a.wx + CW / 2) * s - 1.5}px;top:${(a.wy + CH / 2) * s - 1.5}px;width:3px;height:3px;background:${S[a.state].c}` })),
       view: `position:absolute;left:${-tx / k * s}px;top:${-ty / k * s}px;width:${vw / k * s}px;height:${vh / k * s}px;box-sizing:border-box;border:1px solid var(--ink);pointer-events:none`
     };
     const coo = this.coo;
     const lobby = {
       style: `position:absolute;left:${spineX - 60}px;top:50px;width:120px;height:120px`,
       wallL: `position:absolute;left:-2px;bottom:0;width:${180 - SW / 2}px;height:2px;margin-left:0;background:var(--ink);bottom:-2px`, wallR: `position:absolute;right:-2px;bottom:-2px;width:${180 - SW / 2}px;height:2px;background:var(--ink)`,
-      zibby: Z.zibby(R, { state: coo.state, size: 64 }), dot: Z.dot(R, coo.state, 7), stateU: S[coo.state].label.toUpperCase(), enter: this.enter('COO'), leave: this.leave
+      zibby: Z.zibby(R, { state: coo.state, size: 100 }), dot: Z.dot(R, coo.state, 7), stateU: S[coo.state].label.toUpperCase(), enter: this.enter('COO'), leave: this.leave
     };
     let pop = {}, hasPop = false;
     if (hover) {

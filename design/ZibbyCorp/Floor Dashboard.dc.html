@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap">
+<style>html,body{margin:0;background:#F3F4F2}a{color:#111312}a:hover{color:#50544F}@keyframes mv-pulse{0%,100%{opacity:1}50%{opacity:.35}}@keyframes mv-blink{0%{opacity:1}50%{opacity:.15}}@keyframes mv-spin{to{transform:rotate(360deg)}}@keyframes mv-flick{from{transform:scaleY(.75)}to{transform:scaleY(1.15)}}@keyframes mv-boom{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}@keyframes mv-ring{0%{transform:scale(1);opacity:.8}100%{transform:scale(1.14);opacity:0}}@media (prefers-reduced-motion:reduce){*{animation:none!important}}</style>
+<script src="./zc-data.js"></script>
+<script src="./minion-art.js"></script>
+</helmet>
+<div style="--bg:#F3F4F2;--panel:#FAFAF8;--panel2:#EDEEEB;--line:#D9DBD6;--line2:#BFC2BC;--ink:#111312;--ink2:#50544F;--ink3:#8A8E88;--grid:rgba(17,19,18,.05);width:1600px;height:1000px;box-sizing:border-box;background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px;color:var(--ink);font-family:'Geist',system-ui,sans-serif;display:grid;grid-template-rows:56px minmax(0,1fr);overflow:hidden">
+  <header data-screen-label="Header" style="display:flex;align-items:center;gap:32px;padding:0 20px;border-bottom:1px solid var(--line);background:var(--panel)">
+    <div style="display:flex;align-items:center;gap:10px"><div style="width:28px;height:32px;display:grid;place-items:center;overflow:hidden">{{ logoFig }}</div><span style="font-family:'Geist Mono',monospace;font-size:13px;letter-spacing:.18em;font-weight:600">ZIBBYCORP</span><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">/ AGENT OS</span></div>
+    <nav style="display:flex;height:100%;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em">
+      <span style="display:flex;align-items:center;padding:0 12px;border-bottom:1px solid var(--ink)">FLOOR</span>
+      <span style="display:flex;align-items:center;padding:0 12px;color:var(--ink3)">TASKS</span>
+      <span style="display:flex;align-items:center;padding:0 12px;color:var(--ink3)">INBOX</span>
+      <span style="display:flex;align-items:center;padding:0 12px;color:var(--ink3)">ACTIVITY</span>
+      <span style="display:flex;align-items:center;padding:0 12px;color:var(--ink3)">LEDGER</span>
+    </nav>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:20px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--ink2)">
+      <span style="display:flex;align-items:center;gap:8px"><span style="width:7px;height:7px;background:#1F9D6E;display:block"></span>{{ activeStr }} ACTIVE / {{ totalStr }}</span>
+      <span style="display:flex;gap:14px;border:1px solid var(--line2);padding:6px 10px"><span>SEARCH AGENTS</span><span style="color:var(--ink3)">⌘K</span></span>
+    </div>
+  </header>
+  <div style="display:grid;grid-template-columns:280px minmax(0,1fr) 400px;min-height:0">
+    <aside data-screen-label="Needs you rail" style="border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0">
+      <div style="padding:18px 20px 12px;display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)"><span>NEEDS YOU</span><span style="color:var(--ink)">{{ needCount }}</span></div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding:0 12px 12px;overflow-y:auto;min-height:0">
+        <sc-for list="{{ errors }}" as="e" hint-placeholder-count="1">
+          <div style="border:1px solid var(--ink);padding:12px;display:flex;flex-direction:column;gap:10px;background:var(--bg)">
+            <div style="display:flex;align-items:center;gap:10px">
+              <button onClick="{{ e.open }}" style="all:unset;cursor:pointer;width:36px;height:40px;display:grid;place-items:center;flex-shrink:0">{{ e.fig }}</button>
+              <div style="display:flex;flex-direction:column;gap:3px;min-width:0;flex:1"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;font-weight:600">{{ e.nameU }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink3)">{{ e.id }} · {{ e.deptU }}</span></div>
+              <span style="display:flex;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;font-weight:600"><span style="width:7px;height:7px;background:#D0453F;display:block"></span>ERROR</span>
+            </div>
+            <span style="font-size:13px;line-height:1.35">{{ e.now }}</span>
+            <div style="display:flex;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">
+              <button onClick="{{ e.retry }}" style="all:unset;cursor:pointer;flex:1;background:var(--ink);color:var(--panel);padding:7px;text-align:center">RETRY</button>
+              <button onClick="{{ e.open }}" style="all:unset;cursor:pointer;flex:1;border:1px solid var(--line2);color:var(--ink2);padding:6px;text-align:center">OPEN</button>
+            </div>
+          </div>
+        </sc-for>
+        <sc-for list="{{ approvals }}" as="p" hint-placeholder-count="4">
+          <div style="border:1px solid var(--line2);padding:12px;display:flex;flex-direction:column;gap:10px;background:var(--bg)">
+            <div style="display:flex;align-items:center;gap:10px">
+              <button onClick="{{ p.open }}" style="all:unset;cursor:pointer;width:36px;height:40px;display:grid;place-items:center;flex-shrink:0">{{ p.fig }}</button>
+              <div style="display:flex;flex-direction:column;gap:3px;min-width:0;flex:1"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;font-weight:600">{{ p.nameU }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink3)">{{ p.kind }} · {{ p.deptU }}</span></div>
+              <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink3)">{{ p.wait }}</span>
+            </div>
+            <span style="font-size:13px;line-height:1.35">{{ p.text }}</span>
+            <div style="display:flex;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">
+              <button onClick="{{ p.approve }}" style="all:unset;cursor:pointer;flex:1;background:var(--ink);color:var(--panel);padding:7px;text-align:center">APPROVE</button>
+              <button onClick="{{ p.deny }}" style="all:unset;cursor:pointer;flex:1;border:1px solid var(--line2);color:var(--ink2);padding:6px;text-align:center">DENY</button>
+            </div>
+          </div>
+        </sc-for>
+        <sc-if value="{{ allClear }}" hint-placeholder-val="{{ false }}"><div style="border:1px dashed var(--line2);padding:16px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3);text-align:center">ALL CLEAR</div></sc-if>
+      </div>
+    </aside>
+
+    <main data-screen-label="Floor" style="display:flex;flex-direction:column;gap:14px;padding:18px 22px 20px;min-width:0;min-height:0">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3);white-space:nowrap">FLOOR 01 — {{ layoutU }}</span>
+          <span style="font-size:22px;font-weight:500;letter-spacing:-.01em">The office</span>
+        </div>
+        <div style="display:flex;gap:14px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2)">
+          <sc-for list="{{ legend }}" as="l" hint-placeholder-count="6"><span style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;background:{{ l.c }};display:block"></span>{{ l.labelU }}<span style="color:var(--ink3)">{{ l.n }}</span></span></sc-for>
+        </div>
+      </div>
+
+      <sc-if value="{{ isTiles }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:1;min-height:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(5,minmax(0,1fr));grid-auto-flow:dense;gap:2px;background:var(--ink);border:3px solid var(--ink)">
+          <sc-for list="{{ rooms }}" as="r" hint-placeholder-count="12">
+            <div onClick="{{ r.onClick }}" style="position:relative;grid-column:{{ r.col }};grid-row:{{ r.row }};background-color:{{ r.bg }};background-image:{{ r.hatch }};display:flex;flex-direction:column;gap:6px;padding:9px 10px;min-width:0;min-height:0;overflow:hidden;cursor:pointer" style-hover="background-color:var(--panel2)">
+              <div style="display:flex;align-items:baseline;gap:8px;min-width:0">
+                <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ r.code }}</span>
+                <span style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">{{ r.name }}</span>
+                <span style="margin-left:auto;display:flex;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;white-space:nowrap;color:{{ r.alertInk }}"><span style="width:6px;height:6px;background:{{ r.alertC }};display:block"></span>{{ r.alertU }}</span>
+              </div>
+              <div style="flex:1;display:flex;flex-wrap:wrap;align-content:flex-end;gap:0 4px">
+                <sc-for list="{{ r.agents }}" as="a" hint-placeholder-count="1">
+                  <button onClick="{{ a.onClick }}" style="all:unset;cursor:pointer;width:94px;display:flex;flex-direction:column;align-items:center">
+                    {{ a.el }}
+                    <span style="font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.12em;font-weight:600;padding:1px 4px;background:{{ a.tagBg }};color:{{ a.tagInk }}">{{ a.nameU }}</span>
+                  </button>
+                </sc-for>
+                <sc-if value="{{ r.empty }}"><span style="align-self:center;margin:auto;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3);border:1px dashed var(--line2);padding:8px 12px">NO AGENTS</span></sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isPlan }}" hint-placeholder-val="{{ false }}">
+        <div style="position:relative;flex:1;min-height:0;background:var(--panel);border:5px solid var(--ink)">
+          <div style="position:absolute;left:0;right:0;top:38%;height:8%;display:flex;align-items:center;justify-content:center;background-image:linear-gradient(90deg,var(--line2) 50%,transparent 50%);background-size:12px 1px;background-repeat:repeat-x;background-position:0 50%">
+            <span style="background:var(--panel);padding:0 12px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.3em;color:var(--ink3)">CORRIDOR</span>
+          </div>
+          <sc-for list="{{ rooms }}" as="r" hint-placeholder-count="12">
+            <div onClick="{{ r.onClick }}" style="position:absolute;left:{{ r.l }};top:{{ r.t }};width:{{ r.w }};height:{{ r.h }};box-sizing:border-box;border:2px solid var(--ink);background-color:{{ r.bg }};background-image:{{ r.hatch }};display:flex;flex-direction:column;gap:6px;padding:9px 10px;overflow:hidden;cursor:pointer" style-hover="background-color:var(--panel2)">
+              <sc-if value="{{ r.doorB }}"><div style="position:absolute;bottom:-2px;left:18px;width:26px;height:2px;background:var(--panel)"></div><div style="position:absolute;bottom:-2px;left:16px;width:2px;height:12px;background:var(--ink)"></div></sc-if>
+              <sc-if value="{{ r.doorT }}"><div style="position:absolute;top:-2px;left:18px;width:26px;height:2px;background:var(--panel)"></div><div style="position:absolute;top:-2px;left:16px;width:2px;height:12px;background:var(--ink)"></div></sc-if>
+              <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                <div style="display:flex;align-items:center;gap:8px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;font-weight:600">{{ r.code }}</span><span style="margin-left:auto;display:flex;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;white-space:nowrap;color:{{ r.alertInk }}"><span style="width:6px;height:6px;background:{{ r.alertC }};display:block"></span>{{ r.alertU }}</span></div>
+                <span style="font-size:12px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</span>
+              </div>
+              <div style="flex:1;display:flex;flex-wrap:wrap;align-content:flex-end;justify-content:center;gap:2px 4px">
+                <sc-for list="{{ r.agents }}" as="a" hint-placeholder-count="1">
+                  <button onClick="{{ a.onClick }}" style="all:unset;cursor:pointer;width:90px;display:flex;flex-direction:column;align-items:center">
+                    {{ a.el }}
+                    <span style="font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.12em;font-weight:600;padding:1px 4px;background:{{ a.tagBg }};color:{{ a.tagInk }}">{{ a.nameU }}</span>
+                  </button>
+                </sc-for>
+                <sc-if value="{{ r.empty }}"><span style="align-self:center;margin:auto;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3);border:1px dashed var(--line2);padding:8px 12px">NO AGENTS</span></sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </main>
+
+    <aside data-screen-label="Side panel" style="border-left:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0;overflow:hidden">
+      <sc-if value="{{ isZibby }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:14px;padding:18px 20px 14px;border-bottom:1px solid var(--line)">
+          <div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)"><span>COO</span><span>EXEC-00</span></div>
+          <div style="display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;align-items:center">
+            <div style="position:relative;height:170px;display:grid;place-items:center;border:1px solid var(--line2);background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:12px 12px">
+              <div style="position:absolute;top:-1px;left:-1px;width:9px;height:9px;border-top:1px solid var(--ink);border-left:1px solid var(--ink)"></div>
+              <div style="position:absolute;top:-1px;right:-1px;width:9px;height:9px;border-top:1px solid var(--ink);border-right:1px solid var(--ink)"></div>
+              <div style="position:absolute;bottom:-1px;left:-1px;width:9px;height:9px;border-bottom:1px solid var(--ink);border-left:1px solid var(--ink)"></div>
+              <div style="position:absolute;bottom:-1px;right:-1px;width:9px;height:9px;border-bottom:1px solid var(--ink);border-right:1px solid var(--ink)"></div>
+              {{ zibbyFig }}
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font-size:28px;font-weight:500;letter-spacing:-.02em;line-height:1">Zibby</span>
+              <span style="font-size:13px;color:var(--ink2)">Chief Operating Officer</span>
+              <span style="align-self:flex-start;display:flex;align-items:center;gap:7px;border:1px solid var(--line2);padding:5px 9px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em"><span style="width:7px;height:7px;background:{{ zibbyC }};display:block"></span>{{ zibbyStateU }}</span>
+            </div>
+          </div>
+          <p style="margin:0;font-size:13px;line-height:1.45;color:var(--ink);text-wrap:pretty">{{ brief }}</p>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--line)">
+            <sc-for list="{{ legend }}" as="l" hint-placeholder-count="6"><div style="display:flex;flex-direction:column;gap:3px;padding:8px 10px;box-shadow:0 0 0 .5px var(--line)"><span style="display:flex;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.12em;color:var(--ink3)"><span style="width:6px;height:6px;background:{{ l.c }};display:block"></span>{{ l.labelU }}</span><span style="font-size:18px;font-weight:500;font-variant-numeric:tabular-nums">{{ l.n }}</span></div></sc-for>
+          </div>
+        </div>
+        <div ref="{{ chatRef }}" style="flex:1;min-height:0;overflow-y:auto;padding:14px 20px;display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ chat }}" as="m" hint-placeholder-count="3">
+            <sc-if value="{{ m.you }}"><div style="align-self:flex-end;max-width:82%;background:var(--ink);color:var(--panel);padding:9px 11px;font-size:13px;line-height:1.4">{{ m.text }}</div></sc-if>
+            <sc-if value="{{ m.coo }}"><div style="align-self:flex-start;max-width:86%;border:1px solid var(--line2);background:var(--bg);padding:9px 11px;font-size:13px;line-height:1.4">{{ m.text }}</div></sc-if>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line)">
+          <input value="{{ draft }}" onChange="{{ onDraft }}" onKeyDown="{{ onKey }}" placeholder="Ask Zibby…" style="flex:1;min-width:0;border:1px solid var(--line2);background:var(--bg);padding:9px 10px;font:inherit;font-size:13px;color:var(--ink);outline:none">
+          <button onClick="{{ send }}" style="all:unset;cursor:pointer;background:var(--ink);color:var(--panel);padding:0 14px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;display:flex;align-items:center">SEND</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isDept }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:14px;padding:18px 20px;min-height:0;overflow-y:auto">
+          <div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)"><button onClick="{{ back }}" style="all:unset;cursor:pointer;color:var(--ink)">← ZIBBY</button><span>ROOM · {{ room.code }}</span></div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span style="font-size:26px;font-weight:500;letter-spacing:-.02em;line-height:1.1">{{ room.name }}</span>
+            <span style="font-size:13px;line-height:1.45;color:var(--ink2);text-wrap:pretty">{{ room.desc }}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+            <sc-for list="{{ room.metrics }}" as="m" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:4px;padding:10px 0"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ m.k }}</span><span style="font-size:20px;font-weight:500;font-variant-numeric:tabular-nums">{{ m.v }}</span></div></sc-for>
+          </div>
+          <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">AGENTS</span>
+          <div style="display:flex;flex-direction:column;border-top:1px solid var(--line)">
+            <sc-for list="{{ room.list }}" as="a" hint-placeholder-count="3">
+              <button onClick="{{ a.onClick }}" style="all:unset;cursor:pointer;display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)" style-hover="background:var(--panel2)">
+                <div style="width:40px;height:44px;display:grid;place-items:center">{{ a.fig }}</div>
+                <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;font-weight:600">{{ a.nameU }} <span style="font-weight:400;color:var(--ink3)">· {{ a.role }}</span></span><span style="font-size:12px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.now }}</span></div>
+                <span style="display:flex;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em"><span style="width:6px;height:6px;background:{{ a.c }};display:block"></span>{{ a.stateU }}</span>
+              </button>
+            </sc-for>
+          </div>
+          <sc-if value="{{ room.hasSubs }}" hint-placeholder-val="{{ false }}">
+            <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">SUBTASKS IN THIS ROOM</span>
+            <div style="display:flex;flex-direction:column;border-top:1px solid var(--line)">
+              <sc-for list="{{ room.subs }}" as="s" hint-placeholder-count="2"><div style="display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:12px"><span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--ink3)">{{ s.id }}</span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.title }}</span><span style="display:flex;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em"><span style="width:6px;height:6px;background:{{ s.c }};display:block"></span>{{ s.stateU }}</span></div></sc-for>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isAgent }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:14px;padding:18px 20px;min-height:0;overflow-y:auto">
+          <div style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)"><button onClick="{{ back }}" style="all:unset;cursor:pointer;color:var(--ink)">← ZIBBY</button><span>AGENT PROFILE · {{ ag.id }}</span></div>
+          <div style="position:relative;border:1px solid var(--line2);background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:12px 12px">
+            <div style="position:absolute;top:-1px;left:-1px;width:9px;height:9px;border-top:1px solid var(--ink);border-left:1px solid var(--ink)"></div>
+            <div style="position:absolute;top:-1px;right:-1px;width:9px;height:9px;border-top:1px solid var(--ink);border-right:1px solid var(--ink)"></div>
+            <div style="position:absolute;bottom:-1px;left:-1px;width:9px;height:9px;border-bottom:1px solid var(--ink);border-left:1px solid var(--ink)"></div>
+            <div style="position:absolute;bottom:-1px;right:-1px;width:9px;height:9px;border-bottom:1px solid var(--ink);border-right:1px solid var(--ink)"></div>
+            {{ ag.big }}
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><span style="font-size:30px;font-weight:500;letter-spacing:-.02em;line-height:1">{{ ag.name }}</span><span style="display:flex;align-items:center;gap:7px;border:1px solid var(--line2);padding:5px 9px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em"><span style="width:7px;height:7px;background:{{ ag.c }};display:block"></span>{{ ag.stateU }}</span></div>
+            <span style="font-size:14px;color:var(--ink2)">{{ ag.role }} · {{ ag.deptName }}</span>
+          </div>
+          <div style="border:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--bg)">
+            <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">RIGHT NOW</span>
+            <span style="font-size:15px;line-height:1.35">{{ ag.now }}</span>
+            <sc-if value="{{ ag.hasTask }}" hint-placeholder-val="{{ false }}"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)">{{ ag.task }} · {{ ag.taskTitle }}</span></sc-if>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">TOOLS</span>
+            <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ ag.tools }}" as="t" hint-placeholder-count="3"><span style="font-family:'Geist Mono',monospace;font-size:11px;border:1px solid var(--line2);padding:4px 8px;color:var(--ink2)">{{ t }}</span></sc-for></div>
+          </div>
+          <div style="display:flex;gap:8px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;margin-top:auto">
+            <span style="flex:1;text-align:center;border:1px solid var(--line2);padding:11px;cursor:pointer">PAUSE</span>
+            <span style="flex:2;text-align:center;background:var(--ink);color:var(--panel);padding:12px;cursor:pointer">OPEN SESSION →</span>
+          </div>
+        </div>
+      </sc-if>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1600,&quot;height&quot;:1000},&quot;layout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;tiles&quot;,&quot;options&quot;:[&quot;tiles&quot;,&quot;plan&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;zibbyState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;working&quot;,&quot;options&quot;:[&quot;working&quot;,&quot;thinking&quot;,&quot;blocked&quot;,&quot;error&quot;,&quot;done&quot;,&quot;idle&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { mode: 'zibby', id: null, draft: '', msgs: null, ready: false };
+  chatRef = React.createRef();
+  componentDidMount() {
+    this.p = setInterval(() => { if (window.ZC && window.MinionArt) { clearInterval(this.p); this.MA = window.MinionArt(React); this.off = window.ZC.on(() => this.forceUpdate()); this.setState({ ready: true }); } }, 40);
+  }
+  componentWillUnmount() { clearInterval(this.p); this.off && this.off(); }
+  spec(a, i) {
+    this.SP = this.SP || {};
+    if (this.SP[a.id]) return this.SP[a.id];
+    const MA = this.MA, named = {}; MA.CREW2.forEach(c => named[c.name] = c.o);
+    named.MEL = { w: 56, h: 52, eyes: 2, hair: 'strands', skin: MA.VSKIN[2] };
+    const HAT = { Coder: 'headphones', Architect: 'hardhat', 'Incident Commander': 'hardhat', 'Release Manager': 'hardhat', Watcher: 'beanie', Scanner: 'beanie', Triager: 'beanie', Librarian: 'beanie' };
+    const o = named[a.name.toUpperCase()] || { w: [40, 48, 54, 38, 50][i % 5], h: [56, 62, 50, 66, 58][(i * 3) % 5], eyes: i % 3 === 1 ? 1 : 2, hair: ['tuft', 'spikes', 'sprout', 'strands'][i % 4], hat: HAT[a.role], skin: MA.VSKIN[i % 3], tie: a.role === 'Auditor' || a.role === 'Accountant' || a.role === 'Summarizer' };
+    return (this.SP[a.id] = o);
+  }
+  renderVals() {
+    const Z = window.ZC, MA = this.MA;
+    if (!Z || !MA) return { rooms: [], legend: [], approvals: [], errors: [], chat: [], room: { metrics: [], list: [], subs: [] }, ag: { tools: [] }, isTiles: (this.props.layout ?? 'tiles') === 'tiles', isPlan: this.props.layout === 'plan', isZibby: true, chatRef: this.chatRef };
+    const L = this.props.layout ?? 'tiles', kp = L[0], SH = MA.SH, pad = Z.pad, st = this.state;
+    const idx = a => Z.agents.indexOf(a), sp = a => this.spec(a, idx(a));
+    const bad = a => a.state === 'blocked' || a.state === 'error', on = a => a.state === 'working' || a.state === 'thinking';
+    const fig = (a, size, k) => MA.vsvg(MA.vMinion(Object.assign({}, sp(a), { state: a.state, key: kp + k + a.id + a.state })), size);
+    const selA = st.mode === 'agent' ? st.id : null;
+    const ORDER = ['dev', 'inc', 'ops', 'sec', 'pool', 'rel', 'rnd', 'com', 'qa', 'knw', 'fin', 'per'];
+    const TILE = { dev: ['span 2', 'span 2'], pool: ['span 2', 'span 2'], inc: ['span 2', 'span 1'], per: ['span 2', 'span 1'] };
+    const PLAN = { dev: [0, 0, 46, 38], inc: [46, 0, 18, 38], ops: [64, 0, 18, 38], sec: [82, 0, 18, 38], rnd: [0, 46, 20, 27], rel: [20, 46, 20, 27], com: [40, 46, 20, 27], qa: [60, 46, 20, 27], fin: [80, 46, 20, 27], pool: [0, 73, 46, 27], knw: [46, 73, 27, 27], per: [73, 73, 27, 27] };
+    const deptOf = id => id === 'pool' ? { id, code: 'POOL', name: 'Canteen · agent pool', desc: 'Agents waiting to be borrowed by a department. They eat bananas until Zibby calls them.' } : Z.D(id);
+    const roomAgents = id => Z.agents.filter(a => id === 'pool' ? !a.dept : a.dept === id);
+    const rooms = ORDER.map(id => {
+      const d = deptOf(id), ag = roomAgents(id), b = ag.filter(bad), err = b.some(a => a.state === 'error'), n = ag.filter(on).length;
+      const k = b.length ? (err ? 'error' : 'blocked') : n ? 'working' : 'idle';
+      const alertU = b.length ? (err ? b.length + ' ALERT' + (b.length > 1 ? 'S' : '') : b.length + ' BLOCKED') : !ag.length ? 'EMPTY' : id === 'pool' ? ag.length + ' ON BREAK' : n ? n + '/' + ag.length + ' ON' : 'QUIET';
+      const p = PLAN[id], t = TILE[id] || ['span 1', 'span 1'], sel = st.mode === 'dept' && st.id === id;
+      return { id, code: d.code, name: d.name, alertU, alertC: SH[k], alertInk: b.length ? 'var(--ink)' : 'var(--ink3)',
+        col: t[0], row: t[1], l: p[0] + '%', t: p[1] + '%', w: p[2] + '%', h: p[3] + '%', doorB: p[1] === 0, doorT: p[1] === 46,
+        hatch: b.length ? 'repeating-linear-gradient(135deg, ' + SH[k] + '30 0 2px, transparent 2px 9px)' : 'none', bg: sel ? 'var(--panel2)' : 'var(--panel)', empty: !ag.length,
+        agents: ag.map(a => ({ nameU: a.name.toUpperCase(), el: MA.scene3(a.state, sp(a), kp + 'v' + a.id + a.state, -((idx(a) * .37) % 2.6), true),
+          tagBg: a.id === selA ? 'var(--ink)' : 'transparent', tagInk: a.id === selA ? 'var(--panel)' : 'var(--ink)',
+          onClick: e => { e.stopPropagation(); this.setState({ mode: 'agent', id: a.id }); } })),
+        onClick: () => this.setState({ mode: 'dept', id }) };
+    });
+    const legend = MA.ORD.map(k => ({ labelU: k.toUpperCase(), c: SH[k], n: pad(Z.agents.filter(a => a.state === k).length) }));
+    const open = a => () => this.setState({ mode: 'agent', id: a.id });
+    const approvals = Z.approvals.map(p => { const a = Z.A(p.agent); return { id: p.id, kind: p.kind, wait: p.wait, text: p.text, nameU: a.name.toUpperCase(), deptU: Z.D(p.dept).code, fig: fig(a, 40, 'r'), open: open(a), approve: () => Z.resolve(p.id, 'APPROVED'), deny: () => Z.resolve(p.id, 'DENIED') }; });
+    const errors = Z.agents.filter(a => a.state === 'error').map(a => ({ id: a.id, nameU: a.name.toUpperCase(), deptU: a.dept ? Z.D(a.dept).code : 'POOL', now: a.now, fig: fig(a, 40, 'e'), open: open(a), retry: () => { a.state = 'working'; a.now = 'Retrying after the conflict cleared'; Z.emit(); } }));
+    const zs = this.props.zibbyState ?? 'working';
+    const msgs = st.msgs || Z.chat.coo;
+    const send = () => { const t = st.draft.trim(); if (!t) return; this.setState({ draft: '', msgs: msgs.concat([['you', t], ['coo', 'On it. I will route this and tell you when something needs you.']]) }, () => { const el = this.chatRef.current; if (el) el.scrollTop = el.scrollHeight; }); };
+    let room = { metrics: [], list: [], subs: [] };
+    if (st.mode === 'dept') { const d = deptOf(st.id), ag = roomAgents(st.id), subs = st.id === 'pool' ? [] : Z.subtasksOf(st.id);
+      room = { code: d.code, name: d.name, desc: d.desc, metrics: [{ k: 'AGENTS', v: pad(ag.length) }, { k: 'ACTIVE', v: pad(ag.filter(on).length) }, { k: 'NEED YOU', v: pad(ag.filter(bad).length) }],
+        list: ag.map(a => ({ nameU: a.name.toUpperCase(), role: a.role, now: a.now, stateU: a.state.toUpperCase(), c: SH[a.state], fig: fig(a, 44, 'd'), onClick: open(a) })),
+        hasSubs: subs.length > 0, subs: subs.map(s => ({ id: s.task.id, title: s.task.title, stateU: s.state.toUpperCase(), c: SH[s.state] })) }; }
+    let ag = { tools: [] };
+    if (st.mode === 'agent') { const a = Z.A(st.id), t = a.task && Z.Tk(a.task);
+      ag = { id: a.id, name: a.name, role: a.role, deptName: a.dept ? Z.D(a.dept).name : 'Agent pool', stateU: a.state.toUpperCase(), c: SH[a.state], now: a.now, hasTask: !!t, task: a.task, taskTitle: t ? t.title : '', tools: Z.tools(a),
+        big: MA.scene3(a.state, sp(a), kp + 'pv' + a.id + a.state, 0, false) }; }
+    return {
+      isTiles: L === 'tiles', isPlan: L === 'plan', layoutU: L === 'plan' ? 'ARCHITECTURAL PLAN' : 'MODULAR ROOMS',
+      logoFig: MA.vsvg(MA.vMinion(Object.assign({}, MA.ZBASE, MA.Z2[1].o, { state: zs, key: kp + 'logo' })), 32),
+      zibbyFig: MA.vsvg(MA.vMinion(Object.assign({}, MA.ZBASE, MA.Z2[1].o, { state: zs, key: kp + 'zib' + zs })), 150), zibbyC: SH[zs], zibbyStateU: zs.toUpperCase(),
+      activeStr: pad(Z.agents.filter(on).length), totalStr: pad(Z.agents.length), needCount: pad(approvals.length + errors.length), allClear: !approvals.length && !errors.length,
+      rooms, legend, approvals, errors, brief: Z.briefings[0].lead,
+      chat: msgs.map(([w, text]) => ({ you: w === 'you', coo: w !== 'you', text })), chatRef: this.chatRef, draft: st.draft,
+      onDraft: e => this.setState({ draft: e.target.value }), onKey: e => { if (e.key === 'Enter') send(); }, send,
+      isZibby: st.mode === 'zibby', isDept: st.mode === 'dept', isAgent: st.mode === 'agent', back: () => this.setState({ mode: 'zibby', id: null }), room, ag
+    };
+  }
+}
+</script>
+</body>
+</html>

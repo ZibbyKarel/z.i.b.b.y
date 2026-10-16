@@ -11,13 +11,14 @@
 
 <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ true }}">
   <div data-screen-label="Settings" style="display:flex;flex-direction:column;gap:20px;max-width:880px">
-    <div style="display:flex;align-items:baseline;gap:16px"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">SYSTEM — SETTINGS</span><h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">Settings</h1><span style="margin-left:auto;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2)">{{ savedU }}</span></div>
+    <div style="display:flex;align-items:baseline;gap:16px"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">SYSTEM — SETTINGS — {{ setTabU }}</span><h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">Settings</h1><span style="margin-left:auto;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2)">{{ savedU }}</span></div>
     <sc-for list="{{ groups }}" as="g" hint-placeholder-count="3">
       <div style="border:1px solid var(--line);background:var(--panel)">
         <div style="padding:12px 16px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">{{ g.label }}</div>
         <sc-for list="{{ g.rows }}" as="r">
           <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)">
             <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:14px">{{ r.label }}</span><span style="font-size:12px;color:var(--ink2)">{{ r.help }}</span></div>
+            <sc-if value="{{ r.isInfo }}"><span style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',monospace;font-size:12px;color:var(--ink2)">{{ r.dot }}{{ r.value }}</span></sc-if>
             <sc-if value="{{ r.isText }}"><input value="{{ r.value }}" onChange="{{ r.onText }}" style="height:34px;box-sizing:border-box;border:1px solid var(--line2);background:var(--bg);padding:0 10px;font-size:13px;outline:none" style-focus="border-color:var(--ink)"></sc-if>
             <sc-if value="{{ r.isSeg }}"><div style="display:flex;border:1px solid var(--line2);justify-self:start;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em"><sc-for list="{{ r.opts }}" as="o"><button onClick="{{ o.onClick }}" style="all:unset;cursor:pointer;padding:7px 12px;background:{{ o.bg }};color:{{ o.ink }}">{{ o.label }}</button></sc-for></div></sc-if>
           </div>
@@ -29,10 +30,10 @@
 
 <sc-if value="{{ isRegistries }}" hint-placeholder-val="{{ false }}">
   <div data-screen-label="Registries" style="display:flex;flex-direction:column;gap:18px">
-    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">SYSTEM — REGISTRIES</span><h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">Global libraries</h1><span style="font-size:14px;color:var(--ink2)">Departments bind to these in their own tabs.</span></div>
-    <div style="display:flex;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em">
+    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">{{ regEyebrow }}</span><h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">{{ regTitle }}</h1><span style="font-size:14px;color:var(--ink2)">Departments bind to these in their own tabs.</span></div>
+    <sc-if value="{{ showTabs }}"><div style="display:flex;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em">
       <sc-for list="{{ regTabs }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.onClick }}" style="all:unset;cursor:pointer;padding:10px 14px;margin-bottom:-1px;border-bottom:1px solid {{ t.line }};color:{{ t.color }}">{{ t.label }} <span style="color:var(--ink3)">{{ t.n }}</span></button></sc-for>
-    </div>
+    </div></sc-if>
     <div style="border:1px solid var(--line);background:var(--panel)">
       <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) minmax(0,.8fr) minmax(0,1.6fr);gap:14px;padding:9px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>NAME</span><span>DESCRIPTION</span><span>{{ metaHead }}</span><span>BOUND IN</span></div>
       <sc-for list="{{ regRows }}" as="r" hint-placeholder-count="8">
@@ -58,7 +59,7 @@ class Component extends DCLogic {
     const empty = { groups: [], regTabs: [], regRows: [] };
     if (!Z || !B) return empty;
     const pad = Z.pad, parts = (this.props.route || 'system/settings').split('/'), v = parts[1] || 'settings';
-    const out = { ...empty, isSettings: v === 'settings', isRegistries: v === 'registries' };
+    const out = { ...empty, isSettings: v === 'settings', isRegistries: ['registries','skills','mcp','hooks','commands'].includes(v), showTabs: v === 'registries' };
     if (out.isSettings) {
       const S = Z.settings, save = p => { Object.assign(S, p); this.setState({ saved: 'SAVED ' + B.clock() }); };
       const seg = (k, labels, onPick) => labels.map(l => { const cur = String(S[k]).toUpperCase() === l || (l === 'ON' && S[k] === true) || (l === 'OFF' && S[k] === false); return { label: l, bg: cur ? 'var(--ink)' : 'transparent', ink: cur ? 'var(--panel)' : 'var(--ink3)', onClick: () => onPick(l) }; });
@@ -66,15 +67,23 @@ class Component extends DCLogic {
       const O = (label, help, k, labels, map) => ({ label, help, isSeg: true, opts: seg(k, labels, l => save({ [k]: map ? map(l) : l.toLowerCase() })) });
       const onoff = l => l === 'ON';
       S.theme = this.props.theme || S.theme;
-      out.groups = [
-        { label: 'GENERAL', rows: [T('Company name', 'Shown in the header and briefings.', 'name'), T('Time zone', 'Used for schedules and briefings.', 'tz'), O('Concurrent agents', 'How many agents may run at once.', 'concurrency', ['6','12','24'], l => +l)] },
+      const st = parts[2] || 'general'; out.setTabU = st.toUpperCase();
+      const I = (label, help, value, state) => ({ label, help, isInfo: true, value, dot: state ? B.dot(React, state, 7) : null });
+      const all = [
+        { label: 'GENERAL', rows: [T('Company name', 'Shown in the header and briefings.', 'name'), T('Time zone', 'Used for schedules and briefings.', 'tz')] },
         { label: 'VOICE', rows: [T('Wake word', 'Say it to open the COO dock hands-free.', 'wake'), O('Voice', 'How Zibby sounds when it speaks.', 'voice', ['CALM','BRISK','NEUTRAL'], l => l.charAt(0) + l.slice(1).toLowerCase()), O('Push to talk', 'Hold the VOICE button instead of listening continuously.', 'ptt', ['ON','OFF'], onoff), O('Speak replies', 'Read COO replies aloud.', 'speak', ['ON','OFF'], onoff)] },
         { label: 'THEME', rows: [{ label: 'Appearance', help: 'Light is instrument paper. Dark adds a glow to live status.', isSeg: true, opts: ['LIGHT','DARK'].map(l => { const cur = (this.props.theme || 'light').toUpperCase() === l; return { label: l, bg: cur ? 'var(--ink)' : 'transparent', ink: cur ? 'var(--panel)' : 'var(--ink3)', onClick: () => this.props.setTheme && this.props.setTheme(l.toLowerCase()) }; }) }, O('Motion', 'Glyph and status animations. Off also follows reduced motion.', 'motion', ['ON','OFF'], onoff)] }
       ];
+      const act = { label: 'ACTIVITY', rows: [O('Keep live log', 'How long log lines stay before moving to the archive.', 'logKeep', ['7D','30D','90D']), O('Archive finished work after', 'Done tasks and goals leave the active lists.', 'archiveAfter', ['1D','7D','30D']), O('Run notifications', 'Surface failed runs in NEEDS YOU.', 'notifyRuns', ['ON','OFF'], onoff)] };
+      const rt = { label: 'RUNTIME', rows: [O('Concurrent agents', 'How many agents may run at once.', 'concurrency', ['6','12','24'], l => +l), O('Rework loops', 'Bounded retries after a denial or failed review.', 'retries', ['1','3','5'], l => +l), O('Motion', 'Glyph and status animations. Off also follows reduced motion.', 'motion', ['ON','OFF'], onoff)] };
+      const stat = { label: 'STATUS', rows: [I('Runtime', 'Agent scheduler.', 'RUNNING · ' + Z.agents.filter(a => a.state === 'working' || a.state === 'thinking').length + ' ACTIVE', 'working'), I('MCP servers', 'Connected of total.', Z.registries.mcp.filter(m => m[2] === 'connected').length + ' / ' + Z.registries.mcp.length, 'working'), I('Subscription', '5-hour and weekly limits.', Z.spend.sub5h + '% · ' + Z.spend.subWeek + '%', 'thinking'), I('Vault', 'Last distillation.', Z.distills[0].date, 'idle'), I('Version', 'Build of this install.', 'zibbycorp 0.9.0', null)] };
+      Object.assign(S, { logKeep: S.logKeep || '30d', archiveAfter: S.archiveAfter || '7d', notifyRuns: S.notifyRuns ?? true, retries: S.retries || 3 });
+      out.groups = st === 'activity' ? [act] : st === 'runtime' ? [rt] : st === 'status' ? [stat] : all;
       out.savedU = this.state.saved || 'CHANGES SAVE AUTOMATICALLY';
     }
     if (out.isRegistries) {
-      const R = Z.registries, tab = this.state.tab;
+      const R = Z.registries, tab = ['skills','mcp','hooks','commands'].includes(v) ? v : this.state.tab;
+      out.regTitle = { skills: 'Skills', mcp: 'MCP servers', hooks: 'Hooks', commands: 'Commands' }[v] || 'Global libraries'; out.regEyebrow = 'SYSTEM — ' + (out.regTitle.toUpperCase());
       out.regTabs = [['mcp','MCP SERVERS'],['skills','SKILLS'],['hooks','HOOKS'],['commands','COMMANDS']].map(([k, l]) => ({ label: l, n: pad(R[k].length), line: k === tab ? 'var(--ink)' : 'transparent', color: k === tab ? 'var(--ink)' : 'var(--ink3)', onClick: () => this.setState({ tab: k }) }));
       const dl = ds => (ds.includes('*') ? [{ code: 'ALL', onClick: () => go('org/map') }] : ds.map(d => ({ code: Z.D(d).code, onClick: () => go('org/dept/' + d + '/' + (tab === 'mcp' ? 'integrations' : tab)) })));
       out.metaHead = { mcp: 'STATUS', skills: 'TYPE', hooks: 'EVENT', commands: 'SCOPE' }[tab];

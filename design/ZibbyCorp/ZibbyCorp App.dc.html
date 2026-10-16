@@ -9,21 +9,22 @@
 <x-dc>
 <helmet>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap">
-<style>html,body{margin:0;background:#F3F4F2}a{color:#111312}a:hover{color:#50544F}input,textarea,select{font:inherit;color:inherit}::placeholder{color:#8A8E88}@keyframes zc-flowx{0%{left:0;opacity:0}15%{opacity:1}85%{opacity:1}100%{left:calc(100% - 4px);opacity:0}}@keyframes zc-bar{0%,100%{transform:scaleY(.25)}50%{transform:scaleY(1)}}@media (prefers-reduced-motion:reduce){*{animation:none!important}}</style>
+<style>html,body{margin:0;background:#F3F4F2}a{color:#111312}a:hover{color:#50544F}input,textarea,select{font:inherit;color:inherit}::placeholder{color:#8A8E88}@keyframes zc-flowx{0%{left:0;opacity:0}15%{opacity:1}85%{opacity:1}100%{left:calc(100% - 4px);opacity:0}}@keyframes zc-bar{0%,100%{transform:scaleY(.25)}50%{transform:scaleY(1)}}@keyframes mv-pulse{0%,100%{opacity:1}50%{opacity:.35}}@keyframes mv-blink{0%{opacity:1}50%{opacity:.15}}@keyframes mv-spin{to{transform:rotate(360deg)}}@keyframes mv-flick{from{transform:scaleY(.75)}to{transform:scaleY(1.15)}}@keyframes mv-boom{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}@keyframes mv-ring{0%{transform:scale(1);opacity:.8}100%{transform:scale(1.14);opacity:0}}@media (prefers-reduced-motion:reduce){*{animation:none!important}}</style>
 <script src="./zibby.js"></script>
 <script src="./zc-data.js"></script>
 <script src="./zc-inbox.js"></script>
+<script src="./minion-art.js"></script>
 </helmet>
 <div ref="{{ rootRef }}" style="--bg:#F3F4F2;--panel:#FAFAF8;--panel2:#EDEEEB;--line:#D9DBD6;--line2:#BFC2BC;--ink:#111312;--ink2:#50544F;--ink3:#8A8E88;--grid:rgba(17,19,18,.05);--gw:0px;--s-work:oklch(0.6 0.14 160);--s-think:oklch(0.58 0.14 250);--s-block:oklch(0.7 0.15 70);--s-err:oklch(0.58 0.2 25);--s-done:oklch(0.56 0.15 300);--s-idle:#A9ADA7;--pod:var(--panel);width:100vw;height:100vh;min-width:1440px;min-height:900px;box-sizing:border-box;background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px, transparent 1px),linear-gradient(90deg, var(--grid) 1px, transparent 1px);background-size:24px 24px;color:var(--ink);font-family:'Geist',system-ui,sans-serif;display:grid;grid-template-rows:56px minmax(0,1fr);overflow:hidden;position:relative;--dot-r:0">
   <header data-screen-label="Header" style="display:flex;align-items:center;gap:18px;padding:0 20px;border-bottom:1px solid var(--line);background:var(--panel)">
-    <button onClick="{{ goHome }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:10px">{{ logoGlyph }}<span style="font-family:'Geist Mono',monospace;font-size:13px;letter-spacing:.18em;font-weight:600">ZIBBYCORP</span></button>
-    <nav style="display:flex;height:100%;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em">
+    <button onClick="{{ goHome }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:10px"><svg width="30" height="30" viewBox="0 0 32 32" style="display:block"><polygon points="1,3 11,8.5 16,1 21,8.5 31,3 27,18 16,31 5,18" fill="var(--ink)"></polygon><polygon points="16,5.5 18.5,10 13.5,10" fill="var(--panel)"></polygon><path d="M10.5 12.5H21.5L11.5 22H21.5" fill="none" stroke="var(--panel)" stroke-width="2.6" stroke-linejoin="miter" stroke-miterlimit="10"></path></svg><span style="font-family:'Geist Mono',monospace;font-size:13px;letter-spacing:.18em;font-weight:600">ZIBBYCORP</span></button>
+    <nav style="display:flex;height:100%;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.1em">
       <sc-for list="{{ nav }}" as="n" hint-placeholder-count="6">
-        <button onClick="{{ n.onClick }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:6px;padding:0 10px;box-sizing:border-box;height:100%;border-bottom:1px solid {{ n.line }};color:{{ n.color }}">{{ n.label }}</button>
+        <button onClick="{{ n.onClick }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:6px;padding:0 8px;box-sizing:border-box;height:100%;border-bottom:1px solid {{ n.line }};color:{{ n.color }}">{{ n.label }}</button>
       </sc-for>
     </nav>
     <div style="flex:1;display:flex;justify-content:center;min-width:0">
-      <button onClick="{{ openPalette }}" style="all:unset;cursor:pointer;box-sizing:border-box;width:340px;max-width:100%;height:32px;display:flex;align-items:center;justify-content:space-between;gap:14px;border:1px solid var(--line2);background:var(--bg);padding:0 12px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--ink2)" style-hover="border-color:var(--ink)"><span>SEARCH</span><span style="color:var(--ink3)">⌘K</span></button>
+      <button onClick="{{ openPalette }}" style="all:unset;cursor:pointer;box-sizing:border-box;width:260px;max-width:100%;height:32px;display:flex;align-items:center;justify-content:space-between;gap:14px;border:1px solid var(--line2);background:var(--bg);padding:0 12px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--ink2)" style-hover="border-color:var(--ink)"><span>SEARCH</span><span style="color:var(--ink3)">⌘K</span></button>
     </div>
     <div style="display:flex;align-items:center;gap:14px;white-space:nowrap;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--ink2)">
       <button onClick="{{ goSpend }}" title="Claude Code usage limits" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:5px"><span style="display:grid;grid-template-columns:44px 96px 30px;gap:8px;align-items:center;font-size:10px;letter-spacing:.12em"><span>5H</span><span style="height:2px;background:var(--line);display:block"><span style="display:block;height:2px;width:{{ sub5h }};background:var(--ink)"></span></span><span style="color:var(--ink);text-align:right;font-variant-numeric:tabular-nums">{{ sub5h }}</span></span><span style="display:grid;grid-template-columns:44px 96px 30px;gap:8px;align-items:center;font-size:10px;letter-spacing:.12em"><span>WEEK</span><span style="height:2px;background:var(--line);display:block"><span style="display:block;height:2px;width:{{ subWeek }};background:var(--ink)"></span></span><span style="color:var(--ink);text-align:right;font-variant-numeric:tabular-nums">{{ subWeek }}</span></span></button>
@@ -94,6 +95,7 @@
         <sc-for list="{{ subnav }}" as="s" hint-placeholder-count="4">
           <button onClick="{{ s.onClick }}" style="all:unset;cursor:pointer;display:flex;align-items:center;padding:0 12px;border-bottom:1px solid {{ s.line }};color:{{ s.color }}">{{ s.label }}</button>
         </sc-for>
+        <sc-if value="{{ hasTabs }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:stretch;gap:0;margin-left:6px;padding-left:6px;border-left:1px solid var(--line)"><sc-for list="{{ tabs }}" as="t" hint-placeholder-count="2"><button onClick="{{ t.onClick }}" style="all:unset;cursor:pointer;display:flex;align-items:center;padding:0 10px;border-bottom:1px solid {{ t.line }};color:{{ t.color }}">{{ t.label }}</button></sc-for></span></sc-if>
         <sc-if value="{{ crumb }}" hint-placeholder-val="{{ false }}">
           <span style="display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--ink)"><span style="color:var(--ink3)">/</span>{{ crumb }}</span>
         </sc-if>
@@ -103,6 +105,7 @@
         <button onClick="{{ goNew }}" style="all:unset;cursor:pointer;margin:8px 0 8px auto;display:flex;align-items:center;padding:0 12px;background:var(--ink);color:var(--panel)">+ NEW TASK</button>
       </div>
       <div style="min-height:0;overflow:auto;padding-bottom:72px">
+        <sc-if value="{{ isExtra }}" hint-placeholder-val="{{ false }}"><dc-import name="Extra Screens" route="{{ route }}" go="{{ go }}" tick="{{ tick }}" hint-size="100%,760px"></dc-import></sc-if>
         <sc-if value="{{ isOrg }}" hint-placeholder-val="{{ true }}"><dc-import name="Org Screens" route="{{ route }}" go="{{ go }}" tick="{{ tick }}" hint-size="100%,760px"></dc-import></sc-if>
         <sc-if value="{{ isWork }}" hint-placeholder-val="{{ false }}"><dc-import name="Work Screens" route="{{ route }}" go="{{ go }}" tick="{{ tick }}" hint-size="100%,760px"></dc-import></sc-if>
         <sc-if value="{{ isActivity }}" hint-placeholder-val="{{ false }}"><dc-import name="Activity Screens" route="{{ route }}" go="{{ go }}" tick="{{ tick }}" hint-size="100%,760px"></dc-import></sc-if>
@@ -225,22 +228,32 @@ class Component extends DCLogic {
     dark: { '--bg':'#0A0B0B','--panel':'#101211','--panel2':'#161917','--line':'#232725','--line2':'#343936','--ink':'#ECEFEA','--ink2':'#A2A8A2','--ink3':'#666C67','--grid':'rgba(236,239,234,.035)','--gw':'8px','--s-work':'oklch(0.82 0.17 160)','--s-think':'oklch(0.78 0.13 245)','--s-block':'oklch(0.84 0.15 80)','--s-err':'oklch(0.7 0.2 25)','--s-done':'oklch(0.78 0.14 300)','--s-idle':'#4A504B' }
   };
   SECTIONS = {
-    org: ['ORG', [['map','ORG MAP'],['pool','AGENT POOL']]],
-    inbox: ['INBOX', [['overview','OVERVIEW'],['issues','ISSUES'],['pull-requests','PULL REQUESTS']]],
-    work: ['WORK', [['tasks','TASKS'],['chains','CHAINS'],['goals','GOALS'],['companies','COMPANIES'],['projects','PROJECTS']]],
-    activity: ['ACTIVITY', [['log','LIVE LOG'],['runs','RUNS'],['inbox','INBOX'],['briefings','BRIEFINGS']]],
-    policy: ['POLICY', [['approvals','APPROVALS'],['gates','GATE RULES'],['patterns','LEARNED PATTERNS']]],
-    knowledge: ['KNOWLEDGE', [['vault','VAULT'],['distill','DISTILLATION']]],
-    ledger: ['LEDGER', [['budgets','BUDGETS'],['spend','SPEND']]],
-    system: ['SYSTEM', [['settings','SETTINGS'],['registries','REGISTRIES']]]
+    dashboard: ['DASHBOARD', [['overview','OVERVIEW','org/map',['org/map']],['inbox','INBOX','inbox/issues',['inbox']],['briefings','BRIEFINGS','activity/briefings',['activity/briefings']]]],
+    work: ['WORK', [['tasks','TASKS','work/tasks',['work/tasks','work/task','work/new']],['goals','GOALS','work/goals',['work/goals']],['workflows','WORKFLOWS','work/chains',['work/chains']],['automations','AUTOMATIONS','work/automations',['work/automations']]]],
+    companies: ['COMPANIES', [['companies','COMPANIES','work/companies',['work/companies']],['teams','TEAMS','companies/teams',['companies/teams']],['projects','PROJECTS','work/projects',['work/projects']]]],
+    workforce: ['WORKFORCE', [['agents','AGENTS','org/pool',['org/pool','org/agent']],['departments','DEPARTMENTS','workforce/departments',['workforce/departments','org/dept','org/chat']],['positions','POSITIONS','workforce/positions',['workforce/positions']]]],
+    activity: ['ACTIVITY', [['log','LOG','activity/log',['activity/log','activity/inbox']],['runs','RUNS','activity/runs',['activity/runs']],['archive','ARCHIVE','activity/archive',['activity/archive']]]],
+    knowledge: ['KNOWLEDGE', [['vault','VAULT','knowledge/vault',['knowledge/vault']],['graph','GRAPH','knowledge/graph',['knowledge/graph']],['distill','DISTILL','knowledge/distill',['knowledge/distill']]]],
+    governance: ['GOVERNANCE', [['approvals','APPROVALS','policy/approvals',['policy/approvals']],['gates','GATES','policy/gates',['policy/gates']],['patterns','PATTERNS','policy/patterns',['policy/patterns']],['budgets','BUDGETS','ledger/budgets',['ledger/budgets']],['spend','SPEND','ledger/spend',['ledger/spend']]]],
+    system: ['SYSTEM', [['skills','SKILLS','system/skills',['system/skills']],['mcp','MCP','system/mcp',['system/mcp']],['hooks','HOOKS','system/hooks',['system/hooks']],['commands','COMMANDS','system/commands',['system/commands']],['settings','SETTINGS','system/settings',['system/settings','system/registries']]]]
   };
+  TABS = {
+    inbox: [['ISSUES','inbox/issues'],['PULL REQUESTS','inbox/pull-requests']],
+    settings: [['GENERAL','system/settings/general'],['ACTIVITY','system/settings/activity'],['RUNTIME','system/settings/runtime'],['STATUS','system/settings/status']]
+  };
+  FALLBACK = { org: 'dashboard', inbox: 'dashboard', work: 'work', activity: 'activity', policy: 'governance', ledger: 'governance', knowledge: 'knowledge', system: 'system', companies: 'companies', workforce: 'workforce' };
+  locate(r) {
+    for (const [k, [, items]] of Object.entries(this.SECTIONS)) for (const it of items) if (it[3].some(m => r === m || r.startsWith(m + '/'))) return { sec: k, item: it[0] };
+    return { sec: this.FALLBACK[r.split('/')[0]] || 'dashboard', item: '' };
+  }
+  EXTRA = ['work/automations','companies/teams','workforce/departments','workforce/positions','activity/archive','knowledge/graph'];
   go = r => { location.hash = r; localStorage.setItem('zc-route', r); this.setState({ route: r, palOpen: false }); };
   applyTheme() { const el = this.rootRef.current; if (!el) return; const v = this.THEMES[this.state.theme]; for (const k in v) el.style.setProperty(k, v[k]); document.body.style.background = v['--bg']; }
   setTheme = t => { localStorage.setItem('zb-dash-theme', t); this.setState({ theme: t }); };
   componentDidMount() {
     this.applyTheme();
-    this.t = setInterval(() => { if (window.ZB && window.ZC) { if (!this.state.ready) this.hook(); this.setState({ ready: true, now: window.ZB.clock() }); } }, 1000);
-    this.p = setInterval(() => { if (window.ZB && window.ZC) { clearInterval(this.p); this.hook(); this.setState({ ready: true, now: window.ZB.clock() }); } }, 40);
+    this.t = setInterval(() => { if (window.ZB && window.ZC) { this.minion(); if (!this.state.ready) this.hook(); this.setState({ ready: true, now: window.ZB.clock() }); } }, 1000);
+    this.p = setInterval(() => { if (window.ZB && window.ZC && window.MinionArt) { clearInterval(this.p); this.hook(); this.setState({ ready: true, now: window.ZB.clock() }); } }, 40);
     this.onHash = () => { const r = location.hash.slice(1); if (r && r !== this.state.route) this.setState({ route: r }); };
     window.addEventListener('hashchange', this.onHash);
     this.onKey = e => {
@@ -249,7 +262,8 @@ class Component extends DCLogic {
     };
     window.addEventListener('keydown', this.onKey);
   }
-  hook() { if (this.unsub) return; this.unsub = window.ZC.on(() => this.setState(s => ({ tick: s.tick + 1 }))); }
+  minion() { if (window.MinionArt && window.ZB && !window.ZB.__minion) { window.MA = window.MA || window.MinionArt(React); window.MA.install(window.ZB, n => ((window.ZC && window.ZC.byName(n)) || {}).role || (window.ZRoles || {})[n]); } }
+  hook() { this.minion(); if (this.unsub) return; this.unsub = window.ZC.on(() => this.setState(s => ({ tick: s.tick + 1 }))); }
   componentDidUpdate() {
     this.applyTheme();
     const s = this.state, c = this.chatRef.current;
@@ -294,13 +308,13 @@ class Component extends DCLogic {
   };
   palList() {
     const Z = window.ZC, go = this.go, L = [];
-    Object.entries(this.SECTIONS).forEach(([k, [n, subs]]) => subs.forEach(([s, l]) => L.push({ kind: 'PAGE', label: n + ' / ' + l, meta: '', to: k + '/' + s })));
+    Object.values(this.SECTIONS).forEach(([n, subs]) => subs.forEach(([, l, to]) => L.push({ kind: 'PAGE', label: n + ' / ' + l, meta: '', to })));
     L.push({ kind: 'PAGE', label: 'WORK / NEW TASK', meta: '', to: 'work/new' });
     Z.depts.forEach(d => L.push({ kind: 'DEPARTMENT', label: d.name, meta: d.code, to: 'org/dept/' + d.id + '/team' }));
     Z.agents.forEach(a => L.push({ kind: 'AGENT', label: a.name + ' · ' + a.role, meta: a.id, to: 'org/agent/' + a.id }));
     (Z.companies || []).forEach(c => L.push({ kind: 'COMPANY', label: c.name, meta: c.projectIds.length + ' PROJ', to: 'work/companies/' + c.id }));
     Z.tasks.forEach(t => L.push({ kind: 'TASK', label: t.title, meta: t.id, to: 'work/task/' + t.id }));
-    Z.registries.commands.forEach(([c, d]) => L.push({ kind: 'COMMAND', label: c + '  ' + d, meta: '', to: c === '/task' ? 'work/new' : c === '/brief' ? 'activity/briefings' : c === '/budget' ? 'ledger/budgets' : c === '/distill' ? 'knowledge/distill' : c === '/approve' ? 'policy/approvals' : 'system/registries' }));
+    Z.registries.commands.forEach(([c, d]) => L.push({ kind: 'COMMAND', label: c + '  ' + d, meta: '', to: c === '/task' ? 'work/new' : c === '/brief' ? 'activity/briefings' : c === '/budget' ? 'ledger/budgets' : c === '/distill' ? 'knowledge/distill' : c === '/approve' ? 'policy/approvals' : 'system/commands' }));
     const q = this.state.q.toLowerCase().trim();
     return (q ? L.filter(x => (x.label + ' ' + x.meta + ' ' + x.kind).toLowerCase().includes(q)) : L).slice(0, 40);
   }
@@ -308,18 +322,20 @@ class Component extends DCLogic {
     const Z = window.ZC, B = window.ZB;
     if (!Z || !B) return { rootRef: this.rootRef, chatRef: this.chatRef, palRef: this.palRef, nav: [], approvals: [], legend: [], pins: [], subnav: [], msgs: [], palItems: [], sh: { diff: [], route: [], metrics: [] } };
     const pad = Z.pad, G = (a, size, glow) => B.glyph(React, { seed: a.name, state: a.state, size, glow });
-    const parts = this.state.route.split('/'), sec = this.SECTIONS[parts[0]] ? parts[0] : 'org', sub = parts[1];
-    const nav = ['org','work','inbox','activity','policy','knowledge','ledger'].map(k => ({ label: this.SECTIONS[k][0], badge: k === 'policy' && Z.approvals.length ? pad(Z.approvals.length) : '', line: k === sec ? 'var(--ink)' : 'transparent', color: k === sec ? 'var(--ink)' : 'var(--ink3)', onClick: () => this.go(k + '/' + this.SECTIONS[k][1][0][0]) }));
-    const IC = sec === 'inbox' && window.ZI ? window.ZI.counts() : null;
-    const subnav = this.SECTIONS[sec][1].map(([k, l]) => ({ label: l + (IC && k === 'issues' ? ' · ' + pad(IC.issues) : IC && k === 'pull-requests' ? ' · ' + pad(IC.toReview) + ' · ' + pad(IC.mineBlocked) : ''), line: k === sub ? 'var(--ink)' : 'transparent', color: k === sub ? 'var(--ink)' : 'var(--ink3)', onClick: () => this.go(sec + '/' + k) }));
+    const parts = this.state.route.split('/'), sub = parts[1], loc = this.locate(this.state.route), sec = loc.sec, p0 = parts[0], isExtra = this.EXTRA.includes(parts.slice(0, 2).join('/'));
+    const nav = Object.keys(this.SECTIONS).map(k => ({ label: this.SECTIONS[k][0], line: k === sec ? 'var(--ink)' : 'transparent', color: k === sec ? 'var(--ink)' : 'var(--ink3)', onClick: () => this.go(this.SECTIONS[k][1][0][2]) }));
+    const IC = loc.item === 'inbox' && window.ZI ? window.ZI.counts() : null;
+    const subnav = this.SECTIONS[sec][1].map(([k, l, to]) => ({ label: l, line: k === loc.item ? 'var(--ink)' : 'transparent', color: k === loc.item ? 'var(--ink)' : 'var(--ink3)', onClick: () => this.go(to) }));
+    const tabs = (this.TABS[loc.item] || []).map(([l, to]) => { const rt = this.state.route, on = rt === to || (to.endsWith('/general') && (rt === 'system/settings' || rt === 'system/registries')) || (to.endsWith('issues') && rt === 'inbox/overview');
+      return { label: l + (IC && l === 'ISSUES' ? ' · ' + pad(IC.issues) : IC && l === 'PULL REQUESTS' ? ' · ' + pad(IC.toReview) + ' · ' + pad(IC.mineBlocked) : ''), line: on ? 'var(--ink)' : 'transparent', color: on ? 'var(--ink)' : 'var(--ink3)', onClick: () => this.go(to) }; });
     let crumb = '';
     if (sub === 'dept') crumb = 'DEPARTMENT · ' + (Z.D(parts[2]) || {}).code;
     if (sub === 'agent') crumb = 'AGENT · ' + parts[2];
     if (sub === 'chat') crumb = 'DIRECT LINE · ' + (Z.D(parts[2]) || {}).code;
     if (sub === 'task') crumb = 'TASK · ' + parts[2];
     if (sub === 'new') crumb = 'NEW TASK';
-    if (sec === 'inbox' && sub === 'issues' && parts[3] && window.ZI) crumb = 'ITEM · ' + ((window.ZI.items.find(i => i.id === parts[3]) || {}).key || parts[3]);
-    if (sec === 'inbox' && sub === 'pull-requests' && parts[2]) crumb = 'PR · #' + parts[2];
+    if (p0 === 'inbox' && sub === 'issues' && parts[3] && window.ZI) crumb = 'ITEM · ' + ((window.ZI.items.find(i => i.id === parts[3]) || {}).key || parts[3]);
+    if (p0 === 'inbox' && sub === 'pull-requests' && parts[2]) crumb = 'PR · #' + parts[2];
     const ent = this.entityOf(parts), entName = ent && this.PIN[ent.t].name(ent.id);
     const isPinned = !!ent && this.state.pins.some(p => p.t === ent.t && p.id === ent.id);
     if (ent && ent.t !== 'team' && entName) crumb = this.PIN[ent.t].crumb + ' · ' + entName.toUpperCase();
@@ -360,8 +376,8 @@ class Component extends DCLogic {
       rootRef: this.rootRef, chatRef: this.chatRef, palRef: this.palRef, tick: this.state.tick, route: this.state.route, go: this.go, openApproval: this.openApproval,
       theme: this.state.theme, setThemeFn: this.setTheme, setLight: () => this.setTheme('light'), setDark: () => this.setTheme('dark'),
       lightBg: dk ? 'transparent' : 'var(--ink)', lightInk: dk ? 'var(--ink3)' : 'var(--panel)', darkBg: dk ? 'var(--ink)' : 'transparent', darkInk: dk ? 'var(--panel)' : 'var(--ink3)',
-      nav, subnav, crumb, sectionU: this.SECTIONS[sec][0], sysLine: sec === 'system' ? 'var(--ink)' : 'var(--line2)',
-      isOrg: sec === 'org', isWork: sec === 'work', isActivity: sec === 'activity', isPolicy: sec === 'policy', isKnowledge: sec === 'knowledge', isLedger: sec === 'ledger', isInbox: sec === 'inbox', inboxState: this.props.inboxState ?? 'normal', isSystem: sec === 'system',
+      nav, subnav, tabs, hasTabs: tabs.length > 0, crumb, sectionU: this.SECTIONS[sec][0], sysLine: sec === 'system' ? 'var(--ink)' : 'var(--line2)',
+      isExtra, isOrg: !isExtra && p0 === 'org', isWork: !isExtra && p0 === 'work', isActivity: !isExtra && p0 === 'activity', isPolicy: p0 === 'policy', isKnowledge: !isExtra && p0 === 'knowledge', isLedger: p0 === 'ledger', isInbox: p0 === 'inbox', inboxState: this.props.inboxState ?? 'normal', isSystem: p0 === 'system',
       goHome: () => this.go('org/map'), goSystem: () => this.go('system/settings'), goBudgets: () => this.go('ledger/budgets'), goSpend: () => this.go('ledger/spend'), sub5h: Z.spend.sub5h + '%', subWeek: Z.spend.subWeek + '%', goNew: () => this.go('work/new'),
       logoGlyph: (B.zibbyFavicon(Z.approvals.length ? 'blocked' : 'working'), B.zibby(React, { state: 'idle', size: 24, anim: false })), liveDot: B.dot(React, 'working', 7),
       activeStr: pad(active), concStr: pad(Z.settings.concurrency), dayPct: Math.round(Z.budget.day[0] / Z.budget.day[1] * 100) + '%', clock: this.state.now || B.clock(),

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="padding:24px 28px;display:flex;flex-direction:column;gap:22px;color:var(--ink)">
+<div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">{{ eyebrow }}</span><h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">{{ title }}</h1><span style="font-size:14px;color:var(--ink2)">{{ lead }}</span></div>
+
+<sc-if value="{{ isAuto }}" hint-placeholder-val="{{ true }}">
+  <div style="border:1px solid var(--line);background:var(--panel)">
+    <div style="display:grid;grid-template-columns:90px minmax(0,1.4fr) minmax(0,1fr) 90px 90px;gap:14px;padding:9px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>DEPT</span><span>AUTOMATION</span><span>SCHEDULE</span><span>NEXT</span><span>STATE</span></div>
+    <sc-for list="{{ autos }}" as="r" hint-placeholder-count="8">
+      <div style="display:grid;grid-template-columns:90px minmax(0,1.4fr) minmax(0,1fr) 90px 90px;gap:14px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--line)">
+        <button onClick="{{ r.onDept }}" style="all:unset;cursor:pointer;justify-self:start;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;border:1px solid var(--line2);padding:3px 6px;color:var(--ink2)" style-hover="border-color:var(--ink);color:var(--ink)">{{ r.code }}</button>
+        <span style="font-size:13px">{{ r.name }}</span><span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ r.sched }}</span><span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ r.next }}</span>
+        <button onClick="{{ r.toggle }}" style="all:unset;cursor:pointer;justify-self:start;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;padding:4px 8px;border:1px solid {{ r.line }};background:{{ r.bg }};color:{{ r.ink }}">{{ r.label }}</button>
+      </div>
+    </sc-for>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isTeams }}" hint-placeholder-val="{{ false }}">
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px">
+    <sc-for list="{{ coTeams }}" as="c" hint-placeholder-count="3">
+      <div style="border:1px solid var(--line);background:var(--panel)">
+        <button onClick="{{ c.onOpen }}" style="all:unset;cursor:pointer;box-sizing:border-box;width:100%;display:flex;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em" style-hover="background:var(--panel2)"><span>{{ c.nameU }}</span><span style="color:var(--ink3)">{{ c.n }} PEOPLE →</span></button>
+        <sc-for list="{{ c.people }}" as="p"><div style="display:flex;flex-direction:column;gap:2px;padding:10px 16px;border-bottom:1px solid var(--line)"><span style="display:flex;gap:8px;font-size:14px">{{ p.name }}<span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink)">{{ p.vip }}</span></span><span style="font-size:12px;color:var(--ink2)">{{ p.role }}{{ p.note }}</span></div></sc-for>
+      </div>
+    </sc-for>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isDepts }}" hint-placeholder-val="{{ false }}">
+  <div style="border:1px solid var(--line);background:var(--panel)">
+    <div style="display:grid;grid-template-columns:70px minmax(0,1fr) minmax(0,2fr) 80px 110px;gap:14px;padding:9px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>CODE</span><span>DEPARTMENT</span><span>PURPOSE</span><span>AGENTS</span><span>BUDGET</span></div>
+    <sc-for list="{{ depts }}" as="r" hint-placeholder-count="8">
+      <button onClick="{{ r.onClick }}" style="all:unset;cursor:pointer;box-sizing:border-box;width:100%;display:grid;grid-template-columns:70px minmax(0,1fr) minmax(0,2fr) 80px 110px;gap:14px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--line)" style-hover="background:var(--panel2)">
+        <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.1em">{{ r.code }}</span><span style="font-size:14px">{{ r.name }}</span><span style="font-size:13px;color:var(--ink2)">{{ r.desc }}</span>
+        <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ r.agents }}</span><span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ r.budget }}</span>
+      </button>
+    </sc-for>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isPos }}" hint-placeholder-val="{{ false }}">
+  <div style="border:1px solid var(--line);background:var(--panel)">
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 80px minmax(0,1.2fr) minmax(0,2fr);gap:14px;padding:9px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>POSITION</span><span>HOLDERS</span><span>DEPARTMENTS</span><span>TOOLS</span></div>
+    <sc-for list="{{ positions }}" as="r" hint-placeholder-count="8">
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 80px minmax(0,1.2fr) minmax(0,2fr);gap:14px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--line)">
+        <span style="font-size:14px">{{ r.role }}</span><span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ r.n }}</span>
+        <div style="display:flex;flex-wrap:wrap;gap:4px"><sc-for list="{{ r.depts }}" as="d"><button onClick="{{ d.onClick }}" style="all:unset;cursor:pointer;font-family:'Geist Mono',monospace;font-size:10px;border:1px solid var(--line2);padding:3px 6px;color:var(--ink2)" style-hover="border-color:var(--ink);color:var(--ink)">{{ d.code }}</button></sc-for></div>
+        <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink3)">{{ r.tools }}</span>
+      </div>
+    </sc-for>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isArch }}" hint-placeholder-val="{{ false }}">
+  <div style="border:1px solid var(--line);background:var(--panel)">
+    <div style="display:grid;grid-template-columns:90px minmax(0,1fr) 100px 80px 80px;gap:14px;padding:9px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>ID</span><span>TITLE</span><span>KIND</span><span>COST</span><span>TOOK</span></div>
+    <sc-for list="{{ archive }}" as="r" hint-placeholder-count="6">
+      <button onClick="{{ r.onClick }}" style="all:unset;cursor:pointer;box-sizing:border-box;width:100%;display:grid;grid-template-columns:90px minmax(0,1fr) 100px 80px 80px;gap:14px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--line)" style-hover="background:var(--panel2)">
+        <span style="font-family:'Geist Mono',monospace;font-size:11px">{{ r.id }}</span><span style="font-size:13px">{{ r.title }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)">{{ r.kind }}</span><span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ r.cost }}</span><span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ r.age }}</span>
+      </button>
+    </sc-for>
+    <sc-if value="{{ noArchive }}"><div style="padding:16px;font-size:13px;color:var(--ink2)">Finished work moves here automatically.</div></sc-if>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isGraph }}" hint-placeholder-val="{{ false }}">
+  <div style="position:relative;border:1px solid var(--line);background:var(--panel);height:560px;overflow:hidden">
+    <svg viewBox="0 0 1000 560" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%">
+      <sc-for list="{{ edges }}" as="e"><line x1="{{ e.x1 }}" y1="{{ e.y1 }}" x2="{{ e.x2 }}" y2="{{ e.y2 }}" stroke="var(--line2)" stroke-width="1" vector-effect="non-scaling-stroke"></line></sc-for>
+      
+    </svg>
+    <sc-for list="{{ nodes }}" as="n"><button onClick="{{ n.onClick }}" style="all:unset;cursor:pointer;position:absolute;left:{{ n.left }};top:{{ n.top }};transform:translate(-50%,-50%);white-space:nowrap;background:var(--bg);border:1px solid var(--ink);padding:4px 9px;font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink)" style-hover="background:var(--ink);color:var(--panel)">{{ n.label }}</button></sc-for>
+    <span style="position:absolute;left:14px;bottom:12px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ graphStat }} · CLICK A NOTE TO OPEN IN VAULT</span>
+  </div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;route&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;go&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(r:string)=&gt;void&quot;},&quot;tick&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;number&quot;}}">
+class Component extends DCLogic {
+  state = { off: {} };
+  componentDidMount() { this.p = setInterval(() => { if (window.ZC) { clearInterval(this.p); this.forceUpdate(); } }, 50); }
+  componentWillUnmount() { clearInterval(this.p); }
+  renderVals() {
+    const Z = window.ZC, go = this.props.go || (() => {});
+    const out = { eyebrow: '', title: '', lead: '', autos: [], coTeams: [], depts: [], positions: [], archive: [], edges: [], nodes: [] };
+    if (!Z) return out;
+    const pad = Z.pad, k = (this.props.route || '').split('/').slice(0, 2).join('/');
+    Object.assign(out, { isAuto: k === 'work/automations', isTeams: k === 'companies/teams', isDepts: k === 'workforce/departments', isPos: k === 'workforce/positions', isArch: k === 'activity/archive', isGraph: k === 'knowledge/graph' });
+    const H = { 'work/automations': ['WORK — AUTOMATIONS', 'Automations', 'Scheduled jobs that start work without you.'], 'companies/teams': ['COMPANIES — TEAMS', 'Client teams', 'The people on the other side of each company.'], 'workforce/departments': ['WORKFORCE — DEPARTMENTS', 'Departments', 'Agents are borrowed from the pool per task.'], 'workforce/positions': ['WORKFORCE — POSITIONS', 'Positions', 'Roles an agent can hold, and what each can use.'], 'activity/archive': ['ACTIVITY — ARCHIVE', 'Archive', 'Finished tasks and goals.'], 'knowledge/graph': ['KNOWLEDGE — GRAPH', 'Vault graph', 'Notes and the links between them.'] }[k] || ['', '', ''];
+    [out.eyebrow, out.title, out.lead] = H;
+    if (out.isAuto) out.autos = Z.automations.map((a, i) => { const on = this.state.off[i] === undefined ? a.on : this.state.off[i]; return { code: Z.D(a.dept).code, name: a.name, sched: a.sched, next: on ? a.next : '—', label: on ? 'ON' : 'PAUSED', bg: on ? 'var(--ink)' : 'transparent', ink: on ? 'var(--panel)' : 'var(--ink3)', line: on ? 'var(--ink)' : 'var(--line2)', onDept: () => go('org/dept/' + a.dept + '/automations'), toggle: () => this.setState(s => ({ off: { ...s.off, [i]: !on } })) }; });
+    if (out.isTeams) out.coTeams = Z.companies.map(c => ({ nameU: c.name.toUpperCase(), n: pad(c.team.length), onOpen: () => go('work/companies/' + c.id), people: c.team.map(p => ({ name: p.name, role: p.role, vip: p.vip ? 'VIP' : '', note: p.note ? ' · ' + p.note : '' })) }));
+    if (out.isDepts) out.depts = Z.depts.map(d => ({ code: d.code, name: d.name, desc: d.desc, agents: pad(Z.agents.filter(a => a.dept === d.id).length), budget: '$' + Z.deptBudget[d.id][0] + ' / $' + Z.deptBudget[d.id][1], onClick: () => go('org/dept/' + d.id + '/team') }));
+    if (out.isPos) { const roles = [...new Set(Z.agents.map(a => a.role))]; out.positions = roles.map(r => { const hs = Z.agents.filter(a => a.role === r), ds = [...new Set(hs.map(a => a.dept).filter(Boolean))]; return { role: r, n: pad(hs.length), tools: Z.tools(hs[0]).join(' · '), depts: ds.length ? ds.map(d => ({ code: Z.D(d).code, onClick: () => go('org/dept/' + d + '/team') })) : [{ code: 'POOL', onClick: () => go('org/pool') }] }; }); }
+    if (out.isArch) { out.archive = Z.tasks.filter(t => Z.taskState(t) === 'done').map(t => ({ id: t.id, title: t.title, kind: String(t.chain || '').toUpperCase(), cost: '$' + t.cost.toFixed(2), age: t.age || '—', onClick: () => go('work/task/' + t.id) })).concat((Z.goals || []).filter(g => g.state === 'done').map(g => ({ id: g.id, title: g.title, kind: 'GOAL', cost: '—', age: '—', onClick: () => go('work/goals') }))); out.noArchive = !out.archive.length; }
+    if (out.isGraph) {
+      const V = Z.vault, ids = V.map(n => n.id), cx = 500, cy = 280, pos = {};
+      V.forEach((n, i) => { const a = i / V.length * Math.PI * 2 - Math.PI / 2; pos[n.id] = { x: cx + Math.cos(a) * 400, y: cy + Math.sin(a) * 215 }; });
+      const seen = new Set();
+      V.forEach(n => (n.body || []).join(' ').replace(/\[\[([^\]|]+)/g, (_, t) => { if (pos[t] && t !== n.id) { const key = [n.id, t].sort().join('|'); if (!seen.has(key)) { seen.add(key); out.edges.push({ x1: pos[n.id].x, y1: pos[n.id].y, x2: pos[t].x, y2: pos[t].y }); } } }));
+      out.nodes = V.map(n => { const p = pos[n.id], w = n.title.length * 7 + 20; return { label: n.title, left: p.x / 10 + '%', top: p.y / 5.6 + '%', onClick: () => go('knowledge/vault') }; });
+      out.graphStat = pad(V.length) + ' NOTES · ' + pad(out.edges.length) + ' LINKS';
+    }
+    return out;
+  }
+}
+</script>
+</body>
+</html>
