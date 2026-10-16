@@ -336,6 +336,57 @@ describe("ChannelWatcherService", () => {
     expect(calls[0]?.ctx).toEqual({ zibbyPrNumbers: [1, 2, 3] });
   });
 
+  it("a repo-less company github integration polls each inheriting repo with its own cursor (phase 129)", async () => {
+    await integrations.create({
+      id: "co-gh",
+      kind: "github",
+      companyId: "co",
+      config: { kind: "github", streams: ["issues", "pulls"], username: "karel" },
+    });
+    await credentials.write("co-gh", { token: "ghp" });
+
+    const polled: Array<{
+      repo: string | undefined;
+      cursor: string | undefined;
+      ctx?: PollContext;
+    }> = [];
+    const adapter: ChannelAdapter = {
+      kind: "fake",
+      test: async () => ({ ok: true, detail: "spy" }),
+      poll: (integration: Integration, _creds, cursor, ctx): Promise<PollResult> => {
+        const repo = integration.config.kind === "github" ? integration.config.repo : undefined;
+        polled.push({ repo, cursor, ...(ctx ? { ctx } : {}) });
+        return Promise.resolve({ items: [], cursor: `next-${repo}` });
+      },
+      send: async () => {},
+    };
+    const numbers: Record<string, number[]> = { a: [1], b: [2], c: [3] };
+    const moduleRef = {
+      get: () => ({
+        githubRepoTargets: async () =>
+          new Map([
+            ["acme/app", ["a", "b"]],
+            ["acme/other", ["c"]],
+          ]),
+        numbersFor: async (projectId: string) => numbers[projectId] ?? [],
+      }),
+    } as unknown as ModuleRef;
+    const watcher = makeWatcher(
+      { resolve: () => adapter } as unknown as AdapterRegistry,
+      moduleRef,
+    );
+
+    await watcher.tick();
+    await watcher.tick();
+
+    expect(polled.slice(0, 2)).toEqual([
+      { repo: "acme/app", cursor: undefined, ctx: { zibbyPrNumbers: [1, 2] } },
+      { repo: "acme/other", cursor: undefined, ctx: { zibbyPrNumbers: [3] } },
+    ]);
+    expect(polled.slice(2).map((p) => p.cursor)).toEqual(["next-acme/app", "next-acme/other"]);
+    expect(await store.readCursor("co-gh")).toBeUndefined();
+  });
+
   it("caps the PR-number set — the adapter turns each number into its own request", async () => {
     await integrations.create(github("gh"));
     await credentials.write("gh", { token: "ghp" });

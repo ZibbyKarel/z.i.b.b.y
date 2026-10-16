@@ -246,6 +246,32 @@ describe("ResolvedProjectService", () => {
       expect(ids).toEqual(["direct", "via-team"]);
     });
 
+    it("githubRepoTargets: distinct repos of the inheriting projects (phase 129)", async () => {
+      const companyGithub = integration({
+        id: "co-github",
+        kind: "github",
+        companyId: "co",
+        config: { kind: "github", streams: ["pulls"], username: "me" },
+      });
+      const service = build({
+        companies: [{ id: "co", name: "Co" }],
+        integrations: [companyGithub],
+        projects: [
+          project({ id: "a", companyId: "co", gitRemote: "git@github.com:co/web.git" }),
+          project({ id: "b", companyId: "co", gitRemote: "https://github.com/co/web" }),
+          project({ id: "c", companyId: "co", gitRemote: "git@github.com:co/api.git" }),
+          project({ id: "no-remote", companyId: "co" }),
+        ],
+      });
+
+      const targets = await service.githubRepoTargets(companyGithub);
+
+      expect([...targets]).toEqual([
+        ["co/web", ["a", "b"]],
+        ["co/api", ["c"]],
+      ]);
+    });
+
     it("integrationCompany: the owner company, or the owning project's effective company", async () => {
       const co: Company = { id: "co", name: "Co" };
       const service = build({

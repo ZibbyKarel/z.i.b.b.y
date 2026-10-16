@@ -57,7 +57,8 @@ export class SourceLinkBackfillService implements OnModuleInit {
     if (item.kind === "github" && integration.config.kind === "github") {
       // GitHub redirects /issues/<n> to /pull/<n> when it's actually a PR, so a
       // uniform "issues" URL is correct without re-deriving the PR/issue split.
-      return `https://github.com/${integration.config.repo}/issues/${item.externalRef.messageId}`;
+      const repo = integration.config.repo ?? item.externalRef.channel;
+      return repo ? `https://github.com/${repo}/issues/${item.externalRef.messageId}` : undefined;
     }
     return undefined;
   }

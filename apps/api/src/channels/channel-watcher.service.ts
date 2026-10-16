@@ -45,6 +45,12 @@ export interface ChannelTriageFlow {
 }
 export const CHANNEL_TRIAGE_FLOW = Symbol("CHANNEL_TRIAGE_FLOW");
 
+/** One repo of a repo-less company GitHub integration, with the projects on it (phase 129). */
+interface RepoTarget {
+  repo: string;
+  projectIds: readonly string[];
+}
+
 /**
  * The inbound heartbeat (Phase 5.2). `systemConfig.channelTickMs` (default 30s, `0`
  * disables; every e2e seeds "0" and drives {@link tick} directly).
@@ -244,19 +250,21 @@ export class ChannelWatcherService
    * whose `gitRemote` is this integration's repo (another repo's PR numbers would
    * name the wrong PRs). Fail-open like {@link zibbyPrNumbersFor}.
    */
-  private async zibbyPrNumbersForIntegration(integration: Integration): Promise<readonly number[]> {
+  private async zibbyPrNumbersForIntegration(
+    integration: Integration,
+    target?: RepoTarget,
+  ): Promise<readonly number[]> {
     if (integration.projectId) return this.zibbyPrNumbersFor(integration.projectId);
+    if (target) return this.unionZibbyPrNumbers(target.projectIds);
     if (!integration.companyId || integration.config.kind !== "github") return [];
-    const repo = integration.config.repo.toLowerCase();
+    const repo = integration.config.repo?.toLowerCase();
+    if (!repo) return [];
     try {
-      const { ResolvedProjectService } = await import("../projects/resolved-project.service");
-      const resolved = this.moduleRef.get(ResolvedProjectService, { strict: false });
-      const union = new Set<number>();
-      for (const project of await resolved.inheritingProjects(integration)) {
-        if (repoFromGitRemote(project.gitRemote) !== repo) continue;
-        for (const n of await this.zibbyPrNumbersFor(project.id)) union.add(n);
-      }
-      return [...union].slice(0, MAX_ZIBBY_PR_READS);
+      const resolved = await this.resolvedProjects();
+      const projectIds = (await resolved.inheritingProjects(integration))
+        .filter((project) => repoFromGitRemote(project.gitRemote) === repo)
+        .map((project) => project.id);
+      return this.unionZibbyPrNumbers(projectIds);
     } catch (err) {
       this.log.debug("company zibby PR lookup failed (fail-open, mentions-only this poll)", {
         integrationId: integration.id,
@@ -266,14 +274,58 @@ export class ChannelWatcherService
     }
   }
 
+  /** Union of the projects' ZIBBY PR numbers, capped (each one is a request). */
+  private async unionZibbyPrNumbers(projectIds: readonly string[]): Promise<readonly number[]> {
+    const union = new Set<number>();
+    for (const id of projectIds) for (const n of await this.zibbyPrNumbersFor(id)) union.add(n);
+    return [...union].slice(0, MAX_ZIBBY_PR_READS);
+  }
+
+  /** Lazily resolved, same `ModuleRef` escape hatch as the PR locator above. */
+  private async resolvedProjects() {
+    const { ResolvedProjectService } = await import("../projects/resolved-project.service");
+    return this.moduleRef.get(ResolvedProjectService, { strict: false });
+  }
+
+  /**
+   * Phase 129 (G2) — a company-owned GitHub integration without its own `repo` is
+   * polled once per distinct repo of its inheriting projects (from their
+   * `gitRemote`), each with `config.repo` filled in and its own cursor (the
+   * `repos` map of the integration's cursor file). One failing repo doesn't stop
+   * the others; the first failure is rethrown after all were tried. Every other
+   * integration polls exactly as before.
+   */
   private async pollOne(integration: Integration, creds: CredentialsInput): Promise<string[]> {
+    if (integration.config.kind !== "github" || integration.config.repo) {
+      return this.pollTarget(integration, creds);
+    }
+    const resolved = await this.resolvedProjects();
+    const ingested: string[] = [];
+    let failure: unknown;
+    for (const [repo, projectIds] of await resolved.githubRepoTargets(integration)) {
+      const scoped: Integration = { ...integration, config: { ...integration.config, repo } };
+      try {
+        ingested.push(...(await this.pollTarget(scoped, creds, { repo, projectIds })));
+      } catch (err) {
+        failure ??= new Error(`${repo}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+    if (failure !== undefined) throw failure;
+    return ingested;
+  }
+
+  private async pollTarget(
+    integration: Integration,
+    creds: CredentialsInput,
+    target?: RepoTarget,
+  ): Promise<string[]> {
     const adapter = this.registry.resolve(integration.kind);
-    const cursor = await this.store.readCursor(integration.id);
+    const cursor = await this.store.readCursor(integration.id, target?.repo);
     // Only a github integration gets the ZIBBY-PR half of the union; every other
     // kind polls with no ctx at all.
     const ctx: PollContext | undefined =
       integration.kind === "github"
-        ? { zibbyPrNumbers: await this.zibbyPrNumbersForIntegration(integration) }
+        ? { zibbyPrNumbers: await this.zibbyPrNumbersForIntegration(integration, target) }
         : undefined;
     // M8: retry a transient poll failure with exponential backoff before giving up.
     // Only the network read retries; item persistence below is idempotent (dedup-by-id)
@@ -336,7 +388,7 @@ export class ChannelWatcherService
     }
 
     // Cursor AFTER items persist — crash re-polls (dedup-safe) rather than drops.
-    await this.store.writeCursor(integration.id, nextCursor);
+    await this.store.writeCursor(integration.id, nextCursor, target?.repo);
     await this.integrations.markSync(integration.id, {
       status: "connected",
       lastSyncAt: new Date().toISOString(),

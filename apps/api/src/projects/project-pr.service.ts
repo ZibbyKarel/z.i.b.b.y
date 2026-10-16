@@ -1,10 +1,10 @@
 import { Inject, Injectable, Optional, forwardRef } from "@nestjs/common";
-import type {
-  CredentialsInput,
-  Integration,
-  MergeMethod,
-  Project,
-  ProjectPr,
+import {
+  type CredentialsInput,
+  type MergeMethod,
+  type Project,
+  type ProjectPr,
+  githubRepoFor,
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { CredentialsStore } from "../integrations/credentials.store";
@@ -64,15 +64,15 @@ export async function resolveGithubToken(
   project: Project,
 ): Promise<{ repo: string; token: string } | null> {
   const integrations = await resolvedProjects.resolveIntegrations(project);
-  const github = integrations.find(
-    (integration): integration is Integration & { config: { kind: "github"; repo: string } } =>
-      integration.config.kind === "github",
-  );
+  const github = integrations.find((integration) => integration.config.kind === "github");
   if (!github) return null;
+  // Phase 129 (G2): a company-owned integration takes the repo from the project's gitRemote.
+  const repo = githubRepoFor(github, project);
+  if (!repo) return null;
   const creds = await credentials.read(github.id);
   const token = creds ? tokenOf(creds) : null;
   if (!token) return null;
-  return { repo: github.config.repo, token };
+  return { repo, token };
 }
 
 /** Map one GitHub `pulls` list entry to the wire `ProjectPr` shape; `null` for a malformed entry. */

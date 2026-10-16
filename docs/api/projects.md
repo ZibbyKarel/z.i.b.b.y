@@ -146,6 +146,10 @@ rate-limit error, injectable `fetchImpl` for tests).
   github integration + stored token via `ResolvedProjectService.resolveIntegrations`;
   returns `[]` (never an error) when there's no link/token — a missing
   integration reads as "nothing to show". A real GitHub failure still throws.
+  The repo comes from `githubRepoFor` (Phase 129): `config.repo` of a project-owned
+  integration; for a company-owned one its `config.repo` if set, else the project's
+  `gitRemote`. No resolvable repo reads as no link. `resolveGithubToken` (shared with
+  inbox, release, security, review-learning) uses the same helper.
   The request is bounded by `LIST_OPEN_TIMEOUT_MS` (`AbortSignal.timeout`) — this
   feeds Release's merge queue, which in turn feeds the briefing/`get_status`
   chat tool, so a stalled request must not hang that chain.

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   type RoutableProject,
   RoutingMatchSchema,
+  githubRepoFor,
   matchRouting,
   repoFromGitRemote,
 } from "./integration-routing";
@@ -86,5 +87,27 @@ describe("matchRouting", () => {
     const item = { integrationId: "sl", kind: "slack" as const, slack: { channel: "C1" } };
     expect(matchRouting(item, projects)).toEqual(["cms4"]);
     expect(matchRouting({ ...item, slack: { channel: "C2" } }, projects)).toEqual([]);
+  });
+});
+
+describe("githubRepoFor", () => {
+  const remote = { gitRemote: "git@github.com:Acme/Web.git" };
+  const gh = (repo?: string) => ({
+    kind: "github",
+    streams: [],
+    username: "me",
+    ...(repo ? { repo } : {}),
+  });
+  it("project-owned: config.repo, never the gitRemote", () => {
+    expect(githubRepoFor({ projectId: "p", config: gh("acme/api") }, remote)).toBe("acme/api");
+    expect(githubRepoFor({ projectId: "p", config: gh() }, remote)).toBeNull();
+  });
+  it("company-owned: config.repo override, else the project's gitRemote", () => {
+    expect(githubRepoFor({ companyId: "c", config: gh("acme/api") }, remote)).toBe("acme/api");
+    expect(githubRepoFor({ config: gh() }, remote)).toBe("acme/web");
+    expect(githubRepoFor({ config: gh() }, {})).toBeNull();
+  });
+  it("null for a non-github integration", () => {
+    expect(githubRepoFor({ projectId: "p", config: { kind: "jira" } }, remote)).toBeNull();
   });
 });

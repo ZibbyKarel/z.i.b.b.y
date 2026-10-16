@@ -73,7 +73,10 @@ export type JiraConfig = z.infer<typeof JiraConfigSchema>;
 
 /**
  * GitHub config — the `repo` ("owner/name") to monitor; the PAT lives in the
- * credentials store. `streams` selects which event streams to ingest: `issues`
+ * credentials store. Phase 129 (G1): `repo` is required on a PROJECT-owned
+ * integration (enforced at the integration level, see `requireGithubRepoForProject`)
+ * and optional on a COMPANY-owned one, where each inheriting project's repo comes
+ * from its `gitRemote` (`githubRepoFor`); a set `repo` there still overrides. `streams` selects which event streams to ingest: `issues`
  * and/or `pulls` (the conversational channel), plus `ci` — which opts the repo
  * into the N3 CI monitor (workflow-run status alerts, not messages; the channel
  * adapter ignores it). Defaults to the conversational pair. `username` (required,
@@ -86,7 +89,10 @@ export type JiraConfig = z.infer<typeof JiraConfigSchema>;
 export const GitHubConfigSchema = z
   .object({
     kind: z.literal("github"),
-    repo: z.string().regex(/^[^/]+\/[^/]+$/, "repo must be 'owner/name'"),
+    repo: z
+      .string()
+      .regex(/^[^/]+\/[^/]+$/, "repo must be 'owner/name'")
+      .optional(),
     streams: z.array(z.enum(["issues", "pulls", "ci"])).default(["issues", "pulls"]),
     username: z.string().min(1),
     includeTeams: z.boolean().optional(),
@@ -166,6 +172,36 @@ function requireExactlyOneOwner(
 }
 
 /**
+ * Phase 129 (G1) — a project-owned GitHub integration must name its `repo`; only a
+ * company-owned one may leave it to each project's `gitRemote`.
+ */
+function requireGithubRepoForProject(
+  data: { projectId?: string | undefined; config: IntegrationConfig },
+  ctx: z.RefinementCtx,
+): void {
+  if (data.projectId !== undefined && data.config.kind === "github" && !data.config.repo) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "a project-owned github integration needs a repo",
+      path: ["config", "repo"],
+    });
+  }
+}
+
+/** Both integration-level refinements, shared by the entity and the create body. */
+function refineIntegration(
+  data: {
+    projectId?: string | undefined;
+    companyId?: string | undefined;
+    config: IntegrationConfig;
+  },
+  ctx: z.RefinementCtx,
+): void {
+  requireExactlyOneOwner(data, ctx);
+  requireGithubRepoForProject(data, ctx);
+}
+
+/**
  * The un-refined object shape shared by the full entity and the create body —
  * kept separate from `IntegrationSchema` because `.superRefine` returns a
  * `ZodEffects`, which cannot `.omit()`/`.partial()` (needed below for the update
@@ -205,7 +241,7 @@ const IntegrationObjectSchema = z.object({
  * at read time from the separate gitignored credentials store — the secret itself
  * is never stored on, nor served from, the entity (Law 3 / credentials hygiene).
  */
-export const IntegrationSchema = IntegrationObjectSchema.superRefine(requireExactlyOneOwner);
+export const IntegrationSchema = IntegrationObjectSchema.superRefine(refineIntegration);
 export type Integration = z.infer<typeof IntegrationObjectSchema>;
 
 /**
@@ -222,8 +258,7 @@ const CreateIntegrationObjectSchema = z.object({
   enabled: z.boolean().optional(),
   config: IntegrationConfigSchema,
 });
-export const CreateIntegrationSchema =
-  CreateIntegrationObjectSchema.superRefine(requireExactlyOneOwner);
+export const CreateIntegrationSchema = CreateIntegrationObjectSchema.superRefine(refineIntegration);
 export type CreateIntegrationInput = z.infer<typeof CreateIntegrationObjectSchema>;
 
 /**

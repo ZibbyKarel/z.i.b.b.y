@@ -225,6 +225,9 @@ export class GitHubChannelAdapter implements ChannelAdapter {
   ): Promise<PollResult> {
     if (integration.config.kind !== "github") throw new Error("not a github integration");
     const { repo, streams, username, includeTeams } = integration.config;
+    // A company-owned integration is polled per inheriting project's repo (phase 129):
+    // the watcher fills `config.repo` in for each one.
+    if (!repo) throw new Error("github integration has no repo");
 
     // First enable (no persisted cursor): seed it to "now" and ingest nothing, so a
     // fresh integration never backfills the repo's full issue/PR history — the same
@@ -303,14 +306,14 @@ export class GitHubChannelAdapter implements ChannelAdapter {
     if (integration.config.kind !== "github") throw new Error("not a github integration");
     const number = item.externalRef.messageId;
     if (!number) throw new Error("github item has no issue/pr number");
-    const res = await this.fetchImpl(
-      `${GITHUB_API}/repos/${integration.config.repo}/issues/${number}/comments`,
-      {
-        method: "POST",
-        headers: { ...this.headers(creds), "content-type": "application/json" },
-        body: JSON.stringify({ body: text }),
-      },
-    );
+    // A repo-less company integration spans many repos: use the item's own (`externalRef.channel`).
+    const repo = integration.config.repo ?? item.externalRef.channel;
+    if (!repo) throw new Error("github item has no repo");
+    const res = await this.fetchImpl(`${GITHUB_API}/repos/${repo}/issues/${number}/comments`, {
+      method: "POST",
+      headers: { ...this.headers(creds), "content-type": "application/json" },
+      body: JSON.stringify({ body: text }),
+    });
     if (!res.ok) throw new Error(`github comment: HTTP ${res.status}`);
   }
 }

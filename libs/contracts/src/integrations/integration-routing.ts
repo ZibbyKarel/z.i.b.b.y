@@ -62,6 +62,25 @@ export function repoFromGitRemote(remote: string | undefined): string | null {
   return repo && /^[^/]+\/[^/]+$/.test(repo) ? repo.toLowerCase() : null;
 }
 
+/**
+ * Phase 129 (G1/G2) — the repo a GitHub integration covers for `project`: a
+ * project-owned integration's `config.repo`; a company-owned one's `config.repo`
+ * override, else the project's `gitRemote`. `null` when there is none (or the
+ * integration is not GitHub).
+ */
+export function githubRepoFor(
+  integration: {
+    projectId?: string | undefined;
+    companyId?: string | undefined;
+    config: { kind: string; repo?: string | undefined };
+  },
+  project: { gitRemote?: string | undefined },
+): string | null {
+  if (integration.config.kind !== "github") return null;
+  if (integration.projectId !== undefined) return integration.config.repo ?? null;
+  return integration.config.repo ?? repoFromGitRemote(project.gitRemote);
+}
+
 const ci = (s: string) => s.trim().toLowerCase();
 
 /**

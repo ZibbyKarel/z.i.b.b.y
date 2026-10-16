@@ -17,6 +17,7 @@ import type {
 import type { InboxSourceError, RoutingItem } from "@zibby/contracts";
 import {
   composeLevelMapping,
+  githubRepoFor,
   matchRouting,
   resolveLevel,
   roadmapItemIdForSource,
@@ -504,8 +505,18 @@ export class RoadmapSourceService {
     try {
       if (config.kind === "jira") {
         await this.syncJira({ ...integration, config }, writeTo, results);
-      } else {
+      } else if (config.repo) {
         await this.syncGithub({ ...integration, config }, writeTo, results);
+      } else {
+        // Phase 129 (G2): a repo-less company integration syncs each write target's
+        // repo (from its gitRemote) separately, writing only to the projects on it.
+        for (const [repo, projects] of await this.writeTargetsByRepo(
+          integration,
+          writeTo,
+          results,
+        )) {
+          await this.syncGithub({ ...integration, config: { ...config, repo } }, projects, results);
+        }
       }
       for (const projectId of writeTo) this.failures.delete(`${projectId}:${source}`);
     } catch (error) {
@@ -522,6 +533,28 @@ export class RoadmapSourceService {
         });
       }
     }
+  }
+
+  /** Write targets grouped by their GitHub repo; a project without one gets a note. */
+  private async writeTargetsByRepo(
+    integration: Integration,
+    writeTo: ReadonlySet<string>,
+    results: Map<string, RoadmapSyncResult>,
+  ): Promise<Map<string, Set<string>>> {
+    const byRepo = new Map<string, Set<string>>();
+    for (const projectId of writeTo) {
+      const project = await this.projects.get(projectId).catch(() => null);
+      const repo = project ? githubRepoFor(integration, project) : null;
+      if (!repo) {
+        summaryFor(results, projectId).notes.push({
+          itemId: integration.id,
+          note: "no GitHub repo: the project's gitRemote is not a GitHub remote",
+        });
+        continue;
+      }
+      byRepo.set(repo, (byRepo.get(repo) ?? new Set()).add(projectId));
+    }
+    return byRepo;
   }
 
   /**
@@ -598,13 +631,16 @@ export class RoadmapSourceService {
         "github",
       );
       if (!github || github.config.kind !== "github") continue;
-      let pulls = byIntegration.get(github.id);
+      const repo = githubRepoFor(github, project);
+      if (!repo) continue;
+      const cacheKey = `${github.id}:${repo}`;
+      let pulls = byIntegration.get(cacheKey);
       if (!pulls) {
         pulls = [];
         const ghToken = tokenOf(await this.credentials.read(github.id));
         if (ghToken) {
           try {
-            pulls = await this.fetchOpenGithubPulls(github.config.repo, {
+            pulls = await this.fetchOpenGithubPulls(repo, {
               authorization: `Bearer ${ghToken}`,
               accept: "application/vnd.github+json",
             });
@@ -615,7 +651,7 @@ export class RoadmapSourceService {
             });
           }
         }
-        byIntegration.set(github.id, pulls);
+        byIntegration.set(cacheKey, pulls);
       }
       out.set(projectId, pulls);
     }
@@ -945,6 +981,7 @@ export class RoadmapSourceService {
 
     const headers = { authorization: `Bearer ${token}`, accept: "application/vnd.github+json" };
     const repo = integration.config.repo;
+    if (!repo) throw new Error("github integration has no repo");
     const username = integration.config.username;
 
     const rawIssues = await this.fetchAllGithubIssues(repo, username, headers);

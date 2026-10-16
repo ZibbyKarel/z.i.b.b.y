@@ -256,6 +256,10 @@ created ASC` fetches — repeating because a newly-fetched ancestor can itself h
 
 ### GitHub
 
+Repo (Phase 129): a repo-less company GitHub integration syncs once per distinct repo
+of its write-target projects (each from its `gitRemote` via `githubRepoFor`), writing
+only to the projects on that repo; a project without a GitHub remote gets a note.
+
 `GET /search/issues?q=repo:{repo} assignee:{username}` (the `username` on
 `GitHubConfig` is required — scope is always "mine"), paginated via `page`/`per_page=100`
 up to `MAX_PAGES`, spanning **all** states (no `is:open` qualifier — unlike

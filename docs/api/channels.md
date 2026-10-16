@@ -176,6 +176,15 @@ worth reading if every row is a real answer awaiting a yes. Binds every channel.
 
 ### GitHub adapter
 
+**Which repo (Phase 129).** A project-owned GitHub integration polls its
+`config.repo`. A company-owned one may omit `repo`: the watcher then polls the
+distinct repos of its inheriting projects, each resolved from the project's
+`gitRemote` (`githubRepoFor`), with a cursor per repo (the `repos` map of the
+integration's `cursor.json`; a plain integration's file stays `{ cursor }`). A failing
+repo doesn't stop the others. A reply goes to the item's own repo
+(`externalRef.channel`). Scope per repo is the same
+"mine and mentions" set below.
+
 **What gets ingested — and what deliberately doesn't.** On a repo the operator works
 on professionally, "everything touching me" is far too much: the inbox filled with
 threads the operator was never addressed in. The adapter ingests the union of the

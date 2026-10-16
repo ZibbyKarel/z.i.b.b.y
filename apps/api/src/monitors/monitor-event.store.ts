@@ -127,10 +127,12 @@ export class MonitorEventStore extends EntityFileStore<MonitorEvent> {
   /**
    * The last known CI status per (integration, adapter) — a sidecar the watcher
    * OVERWRITES every tick (N4b). State, not an event: no dedup, no history; the
-   * newest snapshot is the whole truth and survives a restart.
+   * newest snapshot is the whole truth and survives a restart. `key` names the
+   * sidecar (phase 129: `<integrationId>--<repo>` for one repo of a company
+   * integration); it defaults to the integration id.
    */
-  async writeStatus(status: CiStatus): Promise<void> {
-    const file = this.statusFile(status.integrationId, status.adapterKind);
+  async writeStatus(status: CiStatus, key: string = status.integrationId): Promise<void> {
+    const file = this.statusFile(key, status.adapterKind);
     if (!file) return;
     await fs.mkdir(this.statusDir, { recursive: true });
     await writeFileAtomic(file, `${JSON.stringify(status, null, 2)}\n`);

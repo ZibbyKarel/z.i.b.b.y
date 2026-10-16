@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
+import { Injectable, type OnModuleDestroy, type OnModuleInit, Optional } from "@nestjs/common";
 import type {
   CredentialsInput,
   Integration,
@@ -9,6 +9,7 @@ import type {
 import { ActivityLogService } from "../activity/activity-log.service";
 import { CredentialsStore } from "../integrations/credentials.store";
 import { IntegrationsStorageService } from "../integrations/integrations.storage.service";
+import { ResolvedProjectService } from "../projects/resolved-project.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TraceContextService } from "../shared/logging/trace-context.service";
 import { withRetry } from "../shared/retry";
@@ -52,6 +53,9 @@ export class MonitorWatcherService
     private readonly trace: TraceContextService,
     private readonly watcherHealthRegistry: WatcherHealthRegistry,
     logger: LoggerService,
+    // Phase 129 — the repos of a repo-less company GitHub integration. Optional so
+    // existing wiring/tests without it keep polling project-owned integrations.
+    @Optional() private readonly resolvedProjects?: ResolvedProjectService,
   ) {
     super();
     this.log = logger.child(MonitorWatcherService.name);
@@ -119,12 +123,51 @@ export class MonitorWatcherService
     return ingested;
   }
 
+  /**
+   * Phase 129 (G2) — a company-owned GitHub integration without its own `repo` is
+   * polled once per distinct repo of its inheriting projects, with `config.repo`
+   * filled in. Each repo keeps its own cursor + status sidecar, keyed
+   * `<integrationId>--<owner>-<name>` (so they never collide with each other or a
+   * plain integration's), and its alerts/status carry the repo's first project.
+   * One failing repo doesn't stop the others; the first failure is rethrown.
+   */
   private async pollOne(
     integration: Integration,
     creds: CredentialsInput,
     adapter: MonitorAdapter,
   ): Promise<string[]> {
-    const cursor = await this.store.readCursor(integration.id, adapter.kind);
+    if (integration.config.kind !== "github" || integration.config.repo) {
+      return this.pollTarget(integration, creds, adapter);
+    }
+    const targets = (await this.resolvedProjects?.githubRepoTargets(integration)) ?? new Map();
+    const ingested: string[] = [];
+    let failure: unknown;
+    for (const [repo, projectIds] of targets) {
+      const scoped: Integration = { ...integration, config: { ...integration.config, repo } };
+      const target = {
+        key: `${integration.id}--${repo.replace(/[^a-zA-Z0-9._-]/g, "-")}`,
+        ...(projectIds[0] ? { projectId: projectIds[0] } : {}),
+      };
+      try {
+        ingested.push(...(await this.pollTarget(scoped, creds, adapter, target)));
+      } catch (err) {
+        failure ??= new Error(`${repo}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+    if (failure !== undefined) throw failure;
+    return ingested;
+  }
+
+  private async pollTarget(
+    integration: Integration,
+    creds: CredentialsInput,
+    adapter: MonitorAdapter,
+    target: { key: string; projectId?: string } = {
+      key: integration.id,
+      ...(integration.projectId ? { projectId: integration.projectId } : {}),
+    },
+  ): Promise<string[]> {
+    const cursor = await this.store.readCursor(target.key, adapter.kind);
     const {
       events,
       cursor: nextCursor,
@@ -145,7 +188,7 @@ export class MonitorWatcherService
       const event: MonitorEvent = {
         ...alert,
         integrationId: integration.id,
-        ...(integration.projectId ? { projectId: integration.projectId } : {}),
+        ...(target.projectId ? { projectId: target.projectId } : {}),
         state: "new",
       };
       const stored = await this.store.putNew(event);
@@ -161,16 +204,19 @@ export class MonitorWatcherService
     }
 
     // Cursor AFTER events persist — crash re-polls (dedup-safe) rather than drops.
-    await this.store.writeCursor(integration.id, adapter.kind, nextCursor);
+    await this.store.writeCursor(target.key, adapter.kind, nextCursor);
     // N4b: the source's health snapshot is state, not an event — overwrite the
     // sidecar every tick (silent Tier-1; the alert path above owns notification).
     if (status) {
-      await this.store.writeStatus({
-        integrationId: integration.id,
-        ...(integration.projectId ? { projectId: integration.projectId } : {}),
-        adapterKind: adapter.kind,
-        ...status,
-      });
+      await this.store.writeStatus(
+        {
+          integrationId: integration.id,
+          ...(target.projectId ? { projectId: target.projectId } : {}),
+          adapterKind: adapter.kind,
+          ...status,
+        },
+        target.key,
+      );
     }
     return ingested;
   }

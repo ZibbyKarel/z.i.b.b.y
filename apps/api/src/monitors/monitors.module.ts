@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { IntegrationsModule } from "../integrations/integrations.module";
+import { ResolvedProjectModule } from "../projects/resolved-project.module";
 import { dataDir } from "../shared/data-dir";
 import { TasksModule } from "../tasks/tasks.module";
 import { GithubCiMonitor } from "./github-ci.monitor";
@@ -22,7 +23,7 @@ export function resolveMonitorEventsDir(): string {
  * task scheduler (an alert's investigation dispatches like any other task).
  */
 @Module({
-  imports: [IntegrationsModule, TasksModule],
+  imports: [IntegrationsModule, ResolvedProjectModule, TasksModule],
   controllers: [MonitorsController],
   providers: [
     { provide: MONITOR_EVENTS_DIR, useFactory: resolveMonitorEventsDir },

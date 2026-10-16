@@ -1,12 +1,13 @@
 import { Injectable } from "@nestjs/common";
-import type {
-  Company,
-  Integration,
-  KnowledgeBaseSource,
-  Project,
-  ProjectBudget,
-  ProjectPerson,
-  Team,
+import {
+  type Company,
+  type Integration,
+  type KnowledgeBaseSource,
+  type Project,
+  type ProjectBudget,
+  type ProjectPerson,
+  type Team,
+  githubRepoFor,
 } from "@zibby/contracts";
 import { CompaniesStorageService } from "../companies/companies.storage.service";
 import { IntegrationsStorageService } from "../integrations/integrations.storage.service";
@@ -125,6 +126,21 @@ export class ResolvedProjectService {
       if (!overrides) out.push(project);
     }
     return out;
+  }
+
+  /**
+   * Phase 129 (G2) — the distinct repos a company-owned GitHub integration covers,
+   * each with the inheriting projects on it (repo → project ids, in project order).
+   * A project whose repo can't be resolved (no/odd `gitRemote`) is left out.
+   */
+  async githubRepoTargets(integration: Integration): Promise<Map<string, string[]>> {
+    const targets = new Map<string, string[]>();
+    for (const project of await this.inheritingProjects(integration)) {
+      const repo = githubRepoFor(integration, project);
+      if (!repo) continue;
+      targets.set(repo, [...(targets.get(repo) ?? []), project.id]);
+    }
+    return targets;
   }
 
   /**

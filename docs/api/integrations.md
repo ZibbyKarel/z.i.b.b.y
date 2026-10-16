@@ -64,6 +64,17 @@ with `422` before it ever reaches the store.
 rewrite would desync the two; `updateIntegration` returns `422` if a patch's
 `config.kind` disagrees with the existing `kind`.
 
+GitHub `repo` (Phase 129): required on a project-owned GitHub integration
+(`IntegrationSchema`/`CreateIntegrationSchema` refine it next to the owner XOR, and
+`updateIntegration` returns `422` for a patch that would drop it), optional on a
+company-owned one, where each inheriting project's repo comes from its `gitRemote`
+(`githubRepoFor` in `libs/contracts`). `pnpm migrate:company-integrations` (dry-run
+by default, `--apply` writes) also merges ≥2 project-owned GitHub integrations of
+one company sharing token + username into a repo-less `<companyId>-github`, but only
+when every project's `gitRemote` resolves to its old `repo` and GitHub reports the
+repo under that same name (a renamed repo skips the group with a reason). A company
+that already owns a GitHub integration is skipped. Tokens are compared, never printed.
+
 ## Connection testing
 
 `POST /integrations/:id/test` calls the `ConnectionTester` seam (bound to the

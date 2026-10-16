@@ -117,6 +117,29 @@ describe("ProjectPrService", () => {
       expect(fetchImpl).not.toHaveBeenCalled();
     });
 
+    it("phase 129 — a company github integration without repo uses the project's gitRemote", async () => {
+      const fetchImpl = vi.fn(async () => jsonResponse(200, [])) as unknown as typeof fetch;
+      const company: Integration = {
+        ...GITHUB_INTEGRATION,
+        projectId: undefined,
+        companyId: "acme-co",
+        config: { kind: "github", streams: ["pulls"], username: "octocat" },
+      };
+      const withRemote = { ...PROJECT, gitRemote: "git@github.com:acme/web.git" };
+      const service = build({
+        projects: { acme: withRemote },
+        integrations: [company],
+        fetchImpl,
+      });
+      await service.listOpen("acme");
+      expect(String(vi.mocked(fetchImpl).mock.calls[0]?.[0])).toContain("/repos/acme/web/pulls");
+      // No gitRemote → no repo → nothing to show, no fetch.
+      const noRemote = vi.fn();
+      const bare = build({ integrations: [company], fetchImpl: noRemote as never });
+      expect(await bare.listOpen("acme")).toEqual([]);
+      expect(noRemote).not.toHaveBeenCalled();
+    });
+
     it("a github integration with no stored token → [] (no fetch call)", async () => {
       const fetchImpl = vi.fn();
       const service = build({ token: null, fetchImpl: fetchImpl as never });

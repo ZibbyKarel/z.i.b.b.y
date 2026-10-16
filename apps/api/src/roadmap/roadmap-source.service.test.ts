@@ -1484,6 +1484,44 @@ describe("RoadmapSourceService", () => {
       expect(await roadmap.list("web")).toEqual([]);
     });
 
+    it("a repo-less company GitHub integration syncs each project's own repo from its gitRemote (phase 129)", async () => {
+      const COMPANY_GITHUB: Integration = {
+        ...GITHUB_INTEGRATION,
+        id: "co-gh",
+        projectId: undefined,
+        companyId: "shoptet",
+        config: { kind: "github", streams: ["issues", "pulls"], username: "octocat" },
+      };
+      const gh = (id: string, gitRemote?: string): Project =>
+        ({ id, name: id, path: `/repos/${id}`, ...(gitRemote ? { gitRemote } : {}) }) as Project;
+      const inner = githubFetch({ issues: githubIssuesFull, milestones: githubMilestonesFull });
+      const urls: string[] = [];
+      const fetchImpl = (async (url: string | URL) => {
+        urls.push(decodeURIComponent(String(url)));
+        return inner(url);
+      }) as unknown as typeof fetch;
+      const { service, roadmap } = await buildService({
+        dir,
+        levelMappingFile,
+        integrations: [COMPANY_GITHUB],
+        companyProjects: [
+          gh("app", "git@github.com:acme/app.git"),
+          gh("web", "https://github.com/acme/web"),
+          gh("nogit"),
+        ],
+        fetchImpl,
+      });
+
+      const results = await service.syncProjects(["app", "web", "nogit"]);
+
+      expect(results.get("app")?.imported).toBe(4);
+      expect(results.get("web")?.imported).toBe(4);
+      expect((await roadmap.list("app")).length).toBeGreaterThan(0);
+      expect(urls.some((u) => u.includes("repo:acme/app"))).toBe(true);
+      expect(urls.some((u) => u.includes("repo:acme/web"))).toBe(true);
+      expect(results.get("nogit")?.notes[0]?.note).toContain("no GitHub repo");
+    });
+
     it("never fans a company GitHub integration out to projects whose gitRemote differs", async () => {
       const COMPANY_GITHUB: Integration = {
         ...GITHUB_INTEGRATION,

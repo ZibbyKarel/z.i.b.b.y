@@ -219,3 +219,19 @@ describe("integration schema", () => {
     expect(parsed).toMatchObject({ minLevel: "error" });
   });
 });
+
+describe("GitHub repo ownership (phase 129)", () => {
+  const base = { id: "gh", kind: "github" as const };
+  const config = { kind: "github" as const, username: "me" };
+  it("a company-owned github integration may omit repo", () => {
+    expect(IntegrationSchema.safeParse({ ...base, companyId: "acme", config }).success).toBe(true);
+  });
+  it("a project-owned github integration needs a repo", () => {
+    const r = CreateIntegrationSchema.safeParse({ ...base, projectId: "p", config });
+    expect(r.success).toBe(false);
+    expect(
+      IntegrationSchema.safeParse({ ...base, projectId: "p", config: { ...config, repo: "a/b" } })
+        .success,
+    ).toBe(true);
+  });
+});

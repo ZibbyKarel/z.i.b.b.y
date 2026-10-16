@@ -54,7 +54,10 @@ export class GithubCiMonitor implements MonitorAdapter {
     if (integration.config.kind !== "github") throw new Error("not a github integration");
     const token = tokenOf(creds);
     if (!token) throw new Error("no github token configured");
+    // A company-owned integration has no repo of its own; the watcher polls it per
+    // inheriting project's repo (phase 129) with `config.repo` filled in.
     const { repo } = integration.config;
+    if (!repo) throw new Error("github integration has no repo");
 
     const res = await this.fetchImpl(`${GITHUB_API}/repos/${repo}/actions/runs?per_page=50`, {
       headers: { authorization: `Bearer ${token}`, accept: "application/vnd.github+json" },

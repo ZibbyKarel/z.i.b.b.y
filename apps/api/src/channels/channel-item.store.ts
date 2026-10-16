@@ -117,27 +117,51 @@ export class ChannelItemStore implements OnModuleInit {
     return out.sort((a, b) => a.receivedAt.localeCompare(b.receivedAt));
   }
 
-  /** Read the persisted poll cursor for an integration (null if none/unsafe). */
-  async readCursor(integrationId: string): Promise<string | undefined> {
-    const dir = this.integrationDir(integrationId);
-    if (dir === null) return undefined;
-    const raw = await fs.readFile(path.join(dir, CURSOR_FILE), "utf8").catch(() => null);
-    if (raw === null) return undefined;
-    const parsed = safeJson(raw);
-    return parsed &&
-      typeof parsed === "object" &&
-      typeof (parsed as { cursor?: unknown }).cursor === "string"
-      ? (parsed as { cursor: string }).cursor
-      : undefined;
+  /**
+   * Read the persisted poll cursor for an integration (null if none/unsafe). With
+   * `repo` (phase 129: a repo-less company GitHub integration polled per inheriting
+   * project's repo), the per-repo cursor from the same file's `repos` map.
+   */
+  async readCursor(integrationId: string, repo?: string): Promise<string | undefined> {
+    const parsed = await this.readCursorFile(integrationId);
+    const value = repo === undefined ? parsed.cursor : parsed.repos?.[repo];
+    return typeof value === "string" ? value : undefined;
   }
 
   /** Persist the poll cursor AFTER items are written (crash-safe replay ordering). */
-  async writeCursor(integrationId: string, cursor: string | undefined): Promise<void> {
+  async writeCursor(
+    integrationId: string,
+    cursor: string | undefined,
+    repo?: string,
+  ): Promise<void> {
     if (cursor === undefined) return;
     const dir = this.integrationDir(integrationId);
     if (dir === null) throw new Error(`unsafe integration id: ${integrationId}`);
     await ensureDir(dir);
-    await writeFileAtomic(path.join(dir, CURSOR_FILE), JSON.stringify({ cursor }));
+    // Without `repo` the file stays exactly `{ cursor }`, as before phase 129.
+    const next =
+      repo === undefined
+        ? { cursor }
+        : await this.readCursorFile(integrationId).then((existing) => ({
+            ...existing,
+            repos: { ...existing.repos, [repo]: cursor },
+          }));
+    await writeFileAtomic(path.join(dir, CURSOR_FILE), JSON.stringify(next));
+  }
+
+  private async readCursorFile(
+    integrationId: string,
+  ): Promise<{ cursor?: unknown; repos?: Record<string, unknown> }> {
+    const dir = this.integrationDir(integrationId);
+    if (dir === null) return {};
+    const raw = await fs.readFile(path.join(dir, CURSOR_FILE), "utf8").catch(() => null);
+    const parsed = raw === null ? null : safeJson(raw);
+    if (!parsed || typeof parsed !== "object") return {};
+    const { cursor, repos } = parsed as { cursor?: unknown; repos?: unknown };
+    return {
+      ...(cursor !== undefined ? { cursor } : {}),
+      ...(repos && typeof repos === "object" ? { repos: repos as Record<string, unknown> } : {}),
+    };
   }
 
   /** The integration ids that have a channel directory under the root. */

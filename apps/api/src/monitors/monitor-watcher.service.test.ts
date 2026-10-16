@@ -57,7 +57,7 @@ describe("MonitorWatcherService", () => {
   let scheduler: { createTask: ReturnType<typeof vi.fn> };
   let activity: { record: ReturnType<typeof vi.fn> };
 
-  const makeWatcher = () =>
+  const makeWatcher = (resolvedProjects?: unknown) =>
     new MonitorWatcherService(
       integrations as never,
       credentials as never,
@@ -71,6 +71,7 @@ describe("MonitorWatcherService", () => {
       // base/e2e specs, not here.
       { register: () => {} } as never,
       fakeLogger as never,
+      resolvedProjects as never,
     );
 
   beforeEach(async () => {
@@ -111,6 +112,52 @@ describe("MonitorWatcherService", () => {
     );
     // Cursor advanced only after the event persisted.
     expect(await store.readCursor(GH.id, "github-ci")).toBe("C1");
+  });
+
+  it("a repo-less company github integration is polled per inheriting repo, cursors keyed per repo (phase 129)", async () => {
+    const company: Integration = {
+      ...GH,
+      id: "co-github",
+      projectId: undefined,
+      companyId: "co",
+      config: { kind: "github", streams: ["ci"], username: "octocat" },
+    };
+    integrations.list.mockResolvedValue([company]);
+    const repos: Array<string | undefined> = [];
+    const adapter = fakeAdapter("github-ci", () => true);
+    adapter.poll.mockImplementation(async (i: Integration) => {
+      const repo = i.config.kind === "github" ? i.config.repo : undefined;
+      repos.push(repo);
+      return {
+        events: [{ ...ALERT, id: `ci-${repo?.replace("/", "-")}-42-1` }],
+        cursor: `C-${repo}`,
+        status: {
+          state: "red",
+          sinceAt: ALERT.occurredAt,
+          checkedAt: ALERT.occurredAt,
+          summary: "x",
+        },
+      };
+    });
+    registry.register(adapter);
+    const resolved = {
+      githubRepoTargets: async () =>
+        new Map([
+          ["co/web", ["web", "web-2"]],
+          ["co/api", ["api"]],
+        ]),
+    };
+
+    await makeWatcher(resolved).tick();
+
+    expect(repos).toEqual(["co/web", "co/api"]);
+    expect(await store.readCursor("co-github--co-web", "github-ci")).toBe("C-co/web");
+    expect(await store.readCursor("co-github--co-api", "github-ci")).toBe("C-co/api");
+    expect(await store.readCursor("co-github", "github-ci")).toBeUndefined();
+    expect((await store.get("ci-co-web-42-1")).projectId).toBe("web");
+    expect((await store.get("ci-co-api-42-1")).projectId).toBe("api");
+    const statuses = await store.listStatuses();
+    expect(statuses.map((st) => st.projectId).sort()).toEqual(["api", "web"]);
   });
 
   it("a re-poll of the same alert is a dedup no-op (no second task, no second record)", async () => {

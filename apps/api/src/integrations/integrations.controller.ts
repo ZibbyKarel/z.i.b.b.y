@@ -103,14 +103,22 @@ export class IntegrationsController {
               throw new ImmutableKindViolation();
             }
             if (body.projectId) await this.assertProjectExists(body.projectId);
+            // Phase 129 (G1): the patch must not leave a project-owned github integration repo-less.
+            const config = body.config ?? existing.config;
+            const projectId = "projectId" in body ? body.projectId : existing.projectId;
+            if (projectId && config.kind === "github" && !config.repo) {
+              throw new MissingGithubRepoViolation();
+            }
             return this.withCredentialState(await this.storage.update(id, body));
           },
           (error) =>
             error instanceof ImmutableKindViolation
               ? unprocessable("kind is immutable")
-              : error instanceof UnknownProjectViolation
-                ? unprocessable("unknown project")
-                : undefined,
+              : error instanceof MissingGithubRepoViolation
+                ? unprocessable("a project-owned github integration needs a repo")
+                : error instanceof UnknownProjectViolation
+                  ? unprocessable("unknown project")
+                  : undefined,
         ),
 
       deleteIntegration: ({ params: { id } }) =>
@@ -176,6 +184,7 @@ export class IntegrationsController {
 
 /** Internal control-flow markers mapped to 422/409 by the handler's `extra` callbacks. */
 class ImmutableKindViolation extends Error {}
+class MissingGithubRepoViolation extends Error {}
 class CredentialKindViolation extends Error {}
 class NoCredentialsViolation extends Error {}
 class UnknownProjectViolation extends Error {}

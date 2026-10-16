@@ -76,6 +76,14 @@ describe("ChannelItemStore", () => {
     expect(await store.readCursor("team-slack")).toBe("1700.5");
   });
 
+  it("keeps per-repo cursors apart in the same file (phase 129)", async () => {
+    await store.writeCursor("co-github", "T1", "co/web");
+    await store.writeCursor("co-github", "T2", "co/api");
+    expect(await store.readCursor("co-github", "co/web")).toBe("T1");
+    expect(await store.readCursor("co-github", "co/api")).toBe("T2");
+    expect(await store.readCursor("co-github")).toBeUndefined();
+  });
+
   it("refuses traversal in BOTH the integration id and the item id", async () => {
     // Unsafe integration id.
     await expect(store.put(item({ integrationId: "../escape" }))).rejects.toThrow();
