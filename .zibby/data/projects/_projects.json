@@ -19,6 +19,16 @@
     ]
   },
   {
+    "id": "devrel-knowledgebase",
+    "name": "DevRel knowledge base",
+    "path": "/Users/zibar/Workspace/devrel-knowledgebase",
+    "desc": "The DevRel team's knowledge base (LLM-wiki style markdown repo with its own AGENTS.md). Target project for the team-kb-ingest workflow; changes land only as PRs.",
+    "category": "Shoptet",
+    "companyId": "shoptet",
+    "teamId": "devrel",
+    "gitRemote": "git@github.com:shoptet/devrel-knowledgebase.git"
+  },
+  {
     "id": "kzphoto",
     "name": "kzphoto",
     "path": "/Users/zibby/Workspace/kzphoto",
@@ -52,7 +62,7 @@
     "category": "Shoptet",
     "companyId": "shoptet",
     "teamId": "devrel",
-    "gitRemote": "git@github.com:shoptet/partner-cli.git",
+    "gitRemote": "git@github.com:shoptet/cli.git",
     "integrationRouting": [
       {
         "integrationId": "shoptet-jira",
@@ -86,8 +96,7 @@
     "budget": {
       "dailyRuns": 40,
       "weeklyRuns": 150,
-      "monthlyRuns": 500,
-      "maxConcurrent": 2
+      "monthlyRuns": 500
     },
     "identity": {
       "people": [
@@ -113,15 +122,5 @@
     },
     "companyId": "zibby-corp",
     "gitRemote": "https://github.com/ZibbyKarel/z.i.b.b.y"
-  },
-  {
-    "id": "devrel-knowledgebase",
-    "name": "DevRel knowledge base",
-    "desc": "The DevRel team's knowledge base (LLM-wiki style markdown repo with its own AGENTS.md). Target project for the team-kb-ingest workflow; changes land only as PRs.",
-    "category": "Shoptet",
-    "companyId": "shoptet",
-    "teamId": "devrel",
-    "path": "/Users/zibar/Workspace/devrel-knowledgebase",
-    "gitRemote": "git@github.com:shoptet/devrel-knowledgebase.git"
   }
 ]

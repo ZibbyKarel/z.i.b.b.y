@@ -15,8 +15,17 @@
         "name": "Tomáš Beneš",
         "role": "Developer",
         "vip": false
+      },
+      {
+        "id": "romana-borza",
+        "name": "Romana Borza",
+        "role": "Designer",
+        "vip": false
       }
-    ]
+    ],
+    "roadmapDefaults": {
+      "autoSync": true
+    }
   },
   {
     "id": "zibby-corp",

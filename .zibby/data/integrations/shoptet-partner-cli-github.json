@@ -6,7 +6,7 @@
   "enabled": true,
   "config": {
     "kind": "github",
-    "repo": "shoptet/partner-cli",
+    "repo": "shoptet/cli",
     "streams": ["pulls"],
     "username": "ZibbyKarel"
   },
