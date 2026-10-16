@@ -1,7 +1,16 @@
 "use client";
 
 import { INBOX_PR_SECTIONS, type InboxPr } from "@zibby/contracts";
-import { Button, Container, Panel, Row, Stack, Typography } from "@zibby/design-system";
+import {
+  AccordionDetails,
+  AccordionSummary,
+  Button,
+  Container,
+  Panel,
+  Row,
+  Stack,
+  Typography,
+} from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -14,6 +23,9 @@ import { PrRow } from "../components/PrRow";
 import { groupPrsBySection, itemKey, linkedPrOf, pad2 } from "../inbox";
 import { useInboxItemsQuery, useInboxPrsQuery } from "../queries";
 import { useInboxFilters } from "../useInboxFilters";
+import { useSessionFlags } from "../useSessionFlags";
+
+const COLLAPSED_STORAGE_KEY = "zibby-inbox-pr-sections-collapsed";
 
 export enum InboxPrsScreenTestId {
   Focus = "inbox-prs-focus",
@@ -32,42 +44,59 @@ interface SectionProps {
   now: number;
   focus: string | null;
   itemFor: (pr: InboxPr) => { key: string; href: string } | undefined;
+  expanded: boolean;
+  onToggle: () => void;
 }
 
-function PrSection({ testId, title, note, emptyText, prs, now, focus, itemFor }: SectionProps) {
+function PrSection({
+  testId,
+  title,
+  note,
+  emptyText,
+  prs,
+  now,
+  focus,
+  itemFor,
+  expanded,
+  onToggle,
+}: SectionProps) {
   return (
     <Stack data-testid={testId} gap="100">
-      <Row wrap gap="150">
-        <Typography type="h3">{title}</Typography>
-        <Typography type="label" variant="secondary">
-          {pad2(prs.length)}
-        </Typography>
-        {note && (
-          <Container grow textAlign="right">
-            <Typography type="label">{note}</Typography>
-          </Container>
-        )}
-      </Row>
-      {prs.length === 0 ? (
-        <Panel padding={["200", "200"]} radius="none">
-          <Typography type="bodySm" variant="secondary">
-            {emptyText}
+      <AccordionSummary expanded={expanded} onToggle={onToggle}>
+        <Row wrap gap="150">
+          <Typography type="h3">{title}</Typography>
+          <Typography type="label" variant="secondary">
+            {pad2(prs.length)}
           </Typography>
-        </Panel>
-      ) : (
-        <Stack gap="50">
-          {prs.map((pr) => (
-            <PrRow
-              actions={<PrActions pr={pr} />}
-              focused={focus === pr.url}
-              item={itemFor(pr)}
-              key={pr.url}
-              now={now}
-              pr={pr}
-            />
-          ))}
-        </Stack>
-      )}
+          {note && (
+            <Container grow textAlign="right">
+              <Typography type="label">{note}</Typography>
+            </Container>
+          )}
+        </Row>
+      </AccordionSummary>
+      <AccordionDetails expanded={expanded}>
+        {prs.length === 0 ? (
+          <Panel padding={["200", "200"]} radius="none">
+            <Typography type="bodySm" variant="secondary">
+              {emptyText}
+            </Typography>
+          </Panel>
+        ) : (
+          <Stack gap="50">
+            {prs.map((pr) => (
+              <PrRow
+                actions={<PrActions pr={pr} />}
+                focused={focus === pr.url}
+                item={itemFor(pr)}
+                key={pr.url}
+                now={now}
+                pr={pr}
+              />
+            ))}
+          </Stack>
+        )}
+      </AccordionDetails>
     </Stack>
   );
 }
@@ -78,6 +107,8 @@ function PrSection({ testId, title, note, emptyText, prs, now, focus, itemFor }:
  * hidden except "Needs your review". Review / squash-and-merge are operator clicks
  * (`PrActions`). `?pr=<n>` focuses one PR (the link from an
  * issue's badge or the Overview); the list refetches every 15 min + on inbox-refresh activity.
+ * Sections are collapsible accordions, expanded by default; collapse is remembered per session
+ * (a focused PR always expands its section).
  */
 export function InboxPrsScreen() {
   const t = useTranslations("inboxPage");
@@ -98,6 +129,8 @@ export function InboxPrsScreen() {
     [prsQuery.data, filters],
   );
   const only = (prs: InboxPr[]) => (focus ? prs.filter((pr) => pr.url === focus) : prs);
+
+  const [collapsed, setCollapsed] = useSessionFlags(COLLAPSED_STORAGE_KEY);
 
   const itemByPrUrl = useMemo(() => {
     const map = new Map<string, { key: string; href: string }>();
@@ -154,11 +187,13 @@ export function InboxPrsScreen() {
           .map(({ section, prs }) => (
             <PrSection
               emptyText={t("prs.emptyToReview")}
+              expanded={Boolean(focus) || collapsed[section] !== true}
               focus={focus}
               itemFor={(pr) => itemByPrUrl.get(pr.url)}
               key={section}
               note={t(`prs.sectionNote.${section}`)}
               now={now}
+              onToggle={() => setCollapsed(section, collapsed[section] !== true)}
               prs={prs}
               testId={`${InboxPrsScreenTestId.Section}-${section}`}
               title={t(`prs.section.${section}`)}

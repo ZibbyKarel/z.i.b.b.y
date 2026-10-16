@@ -1,5 +1,6 @@
 import type { InboxPr } from "@zibby/contracts";
 import { within } from "@testing-library/react";
+import { AccordionTestId } from "@zibby/design-system";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, renderWithProviders, screen } from "../../../test/render";
 import { PrActionsTestId } from "../components/PrActions";
@@ -7,9 +8,14 @@ import { PrRowTestId } from "../components/PrRow";
 import { InboxPrsScreen, InboxPrsScreenTestId } from "./InboxPrsScreen";
 
 const { hooks, review, merge } = vi.hoisted(() => ({
-  hooks: { prs: [] as unknown[] },
+  hooks: { prs: [] as unknown[], search: "" },
   review: vi.fn(),
   merge: vi.fn(),
+}));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => "/inbox/pull-requests",
+  useSearchParams: () => new URLSearchParams(hooks.search),
 }));
 vi.mock("../queries", () => ({
   useInboxItemsQuery: () => ({
@@ -58,6 +64,8 @@ function pr(number: number, over: Partial<InboxPr>): InboxPr {
 }
 
 const sectionId = (s: string) => `${InboxPrsScreenTestId.Section}-${s}`;
+const headerOf = (s: string) =>
+  within(screen.getByTestId(sectionId(s))).getByTestId(AccordionTestId.Summary);
 
 /** Drive the HoldButton's rAF loop to completion (same harness as MergeQueueCard.test). */
 function mockFrames(frameTime: number) {
@@ -77,6 +85,8 @@ function mockFrames(frameTime: number) {
 
 describe("InboxPrsScreen sections", () => {
   afterEach(() => {
+    window.sessionStorage.clear();
+    hooks.search = "";
     vi.restoreAllMocks();
     review.mockClear();
     merge.mockClear();
@@ -198,8 +208,48 @@ describe("InboxPrsScreen sections", () => {
   it("shows the PR count once, after the title — no ordinal before it", () => {
     hooks.prs = [pr(1, { section: "ready-to-merge" }), pr(2, { section: "ready-to-merge" })];
     renderWithProviders(<InboxPrsScreen />);
-    const header = screen.getByTestId(sectionId("ready-to-merge"));
+    const header = headerOf("ready-to-merge");
     expect(header).not.toHaveTextContent(/\d{2} —/);
     expect(header.textContent?.match(/02/g)).toHaveLength(1);
+  });
+
+  it("sections start expanded and collapse on header click", () => {
+    hooks.prs = [pr(1, { section: "ready-to-merge" })];
+    renderWithProviders(<InboxPrsScreen />);
+    const header = headerOf("ready-to-merge");
+    expect(header).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByTestId(sectionId("ready-to-merge"))).toHaveTextContent("PR 1");
+    fireEvent.click(header);
+    expect(header).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByTestId(sectionId("ready-to-merge"))).not.toHaveTextContent("PR 1");
+  });
+
+  it("remembers a collapsed section for the session", () => {
+    hooks.prs = [pr(1, { section: "ready-to-merge" })];
+    const first = renderWithProviders(<InboxPrsScreen />);
+    fireEvent.click(headerOf("ready-to-merge"));
+    first.unmount();
+    renderWithProviders(<InboxPrsScreen />);
+    expect(headerOf("ready-to-merge")).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("a focused PR shows even when its section was collapsed", () => {
+    window.sessionStorage.setItem(
+      "zibby-inbox-pr-sections-collapsed",
+      JSON.stringify({ "ready-to-merge": true }),
+    );
+    hooks.prs = [pr(1, { section: "ready-to-merge" })];
+    hooks.search = "pr=https://github.com/acme/api/pull/1";
+    renderWithProviders(<InboxPrsScreen />);
+    expect(headerOf("ready-to-merge")).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("the empty 'needs your review' section collapses too", () => {
+    hooks.prs = [];
+    renderWithProviders(<InboxPrsScreen />);
+    fireEvent.click(headerOf("needs-your-review"));
+    expect(screen.getByTestId(sectionId("needs-your-review"))).not.toHaveTextContent(
+      "Na vaše review nikdo nečeká.",
+    );
   });
 });
