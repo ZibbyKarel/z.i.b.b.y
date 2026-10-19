@@ -105,6 +105,12 @@ so the live path is `TaskSchedulerService.writeWorkflowOutcome` →
 operator already approved the final `comment` phase at its gate, the approval is
 recorded and approved in one go (posted with the review event the operator picked at the gate (todo-10; none → COMMENT)), otherwise it parks as pending.
 
+**`prRebase`** (todo-11) is the rebase counterpart: stamped by `InboxRebaseService.start`
+via `ScheduledTasksStorageService.setPrRebase`, written to `awaiting-approval` by
+`TaskOutputService.parkPrRebase` from `writeWorkflowOutcome` (with the run's `worktree`),
+and to `pushed`/`discarded`/`failed` by the `pr-rebase` approval runner. An interrupted
+run with `prRebase.state === "running"` gets an error outcome, like a review.
+
 `scheduledAt` absent or in the past → `createTask` runs classification + dispatch
 immediately. From the dialog (`background = true`), dispatch happens in the
 background and the endpoint returns `pending` right away (see "`pending` —

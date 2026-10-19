@@ -1,3 +1,4 @@
+import { execFile } from "node:child_process";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Injectable, Optional } from "@nestjs/common";
@@ -385,28 +386,51 @@ export class WorkspaceService {
 
   /**
    * todo-11 — force-push a rebased PR head from a run's worktree. Every guard lives
-   * here, not in the agent prompt: refuses `head === base`, a rebase still in progress,
-   * dirty tracked files, a HEAD that is not on top of the freshly fetched
-   * `origin/<base>`, and a HEAD with no commits of its own (the PR's changes would be
-   * gone). The lease pins the remote branch to `expectedSha` — the head the operator
-   * clicked on — so a push made since is never overwritten. Returns the pushed sha;
-   * throws an Error whose message is the reason.
+   * here, not in the agent prompt: `head`/`base` must be valid, non-option-like branch
+   * names and `expectedSha` a full sha; refuses `head` equal to `base` or to the remote
+   * default branch, a rebase still in progress, dirty tracked files, a HEAD that is not
+   * on top of the freshly fetched `origin/<base>`, and a HEAD that did not preserve the
+   * PR's commits. Preservation compares the clicked head's commits
+   * (`merge-base(expectedSha, origin/<base>)..expectedSha`) with the new ones
+   * (`origin/<base>..HEAD`): counts must match and, unless `allowRewrittenCommits`
+   * (the operator approved after conflicts were resolved), every old `patch-id` must
+   * survive. The lease pins the remote branch to `expectedSha`, so a push made since the
+   * click is never overwritten. Returns the pushed sha; throws an Error with the reason.
    */
   async pushRebased(opts: {
     cwd: string;
     head: string;
     base: string;
     expectedSha: string;
+    allowRewrittenCommits?: boolean;
   }): Promise<string> {
-    const { cwd, head, base, expectedSha } = opts;
-    if (head === base) throw new Error(`refusing to push the base branch "${base}"`);
+    const { cwd, head, base, expectedSha, allowRewrittenCommits = false } = opts;
     const git = async (args: string[], timeout = GIT_TIMEOUT_MS): Promise<string> =>
-      (await exec("git", args, { cwd, timeout })).stdout.trim();
+      (await exec("git", args, { cwd, timeout, maxBuffer: 64 * 1024 * 1024 })).stdout.trim();
     const ok = (args: string[]) =>
       git(args).then(
         () => true,
         () => false,
       );
+    for (const [label, name] of [
+      ["head", head],
+      ["base", base],
+    ] as const) {
+      if (name.startsWith("-") || !(await ok(["check-ref-format", "--branch", name]))) {
+        throw new Error(`invalid ${label} branch name "${name}"`);
+      }
+    }
+    if (!/^[0-9a-f]{40}$/.test(expectedSha)) {
+      throw new Error(`expectedSha is not a full 40-char sha: "${expectedSha}"`);
+    }
+    if (head === base) throw new Error(`refusing to push the base branch "${base}"`);
+    const defaultBranch = await git(["symbolic-ref", "--short", "refs/remotes/origin/HEAD"]).then(
+      (ref) => ref.replace(/^origin\//, ""),
+      () => null,
+    );
+    if (head === defaultBranch) {
+      throw new Error(`refusing to push the default branch "${head}"`);
+    }
     for (const dir of ["rebase-merge", "rebase-apply"]) {
       const marker = path.resolve(cwd, await git(["rev-parse", "--git-path", dir]));
       if (
@@ -421,12 +445,45 @@ export class WorkspaceService {
     if (await git(["status", "--porcelain", "--untracked-files=no"])) {
       throw new Error("uncommitted changes in the worktree");
     }
-    await git(["fetch", "origin", base], GIT_NETWORK_TIMEOUT_MS);
+    await git(
+      ["fetch", "origin", `+refs/heads/${base}:refs/remotes/origin/${base}`],
+      GIT_NETWORK_TIMEOUT_MS,
+    );
     if (!(await ok(["merge-base", "--is-ancestor", `origin/${base}`, "HEAD"]))) {
       throw new Error(`HEAD is not on top of origin/${base}; rebase again`);
     }
-    if (Number(await git(["rev-list", "--count", `origin/${base}..HEAD`])) === 0) {
-      throw new Error(`HEAD has no commits beyond origin/${base}; the PR's changes are gone`);
+    const hasClicked = () => ok(["cat-file", "-e", `${expectedSha}^{commit}`]);
+    if (!(await hasClicked())) {
+      await ok(["fetch", "origin", expectedSha]);
+      if (!(await hasClicked())) await ok(["fetch", "origin", `refs/heads/${head}`]);
+    }
+    if (!(await hasClicked())) {
+      throw new Error(`cannot find the clicked head ${expectedSha} to compare commits`);
+    }
+    const commits = async (range: string): Promise<string[]> =>
+      (await git(["rev-list", "--reverse", range])).split("\n").filter(Boolean);
+    const mergeBase = await git(["merge-base", expectedSha, `origin/${base}`]);
+    const oldCommits = await commits(`${mergeBase}..${expectedSha}`);
+    const newCommits = await commits(`origin/${base}..HEAD`);
+    if (oldCommits.length !== newCommits.length) {
+      throw new Error(
+        `rebase did not preserve the PR's commits: ${oldCommits.length} before, ${newCommits.length} after`,
+      );
+    }
+    if (!allowRewrittenCommits) {
+      const patchId = async (sha: string): Promise<string> => {
+        const diff = await git(["diff-tree", "-p", "--no-commit-id", "-m", "--root", sha]);
+        return (await this.patchIdOf(diff, cwd)) || sha;
+      };
+      const kept = new Set(await Promise.all(newCommits.map(patchId)));
+      const missing: string[] = [];
+      for (const sha of oldCommits)
+        if (!kept.has(await patchId(sha))) missing.push(sha.slice(0, 9));
+      if (missing.length > 0) {
+        throw new Error(
+          `rebase did not preserve the PR's commits (changed or missing: ${missing.join(", ")})`,
+        );
+      }
     }
     await git(
       [
@@ -440,6 +497,19 @@ export class WorkspaceService {
     const sha = await git(["rev-parse", "HEAD"]);
     this.log?.info("rebased branch force-pushed", { cwd, head, base, sha });
     return sha;
+  }
+
+  /** `git patch-id --stable` of a diff on stdin; "" for an empty diff. */
+  private patchIdOf(diff: string, cwd: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const child = execFile(
+        "git",
+        ["patch-id", "--stable"],
+        { cwd, timeout: GIT_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 },
+        (err, stdout) => (err ? reject(err) : resolve(stdout.trim().split(" ")[0] ?? "")),
+      );
+      child.stdin?.end(diff);
+    });
   }
 
   /**

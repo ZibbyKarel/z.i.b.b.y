@@ -68,6 +68,13 @@ origin <branch>` then `gh pr create`. This is the actual outward, Tier-3
    outlives `git worktree remove` — commit ≠ push); otherwise it's derived from
    the worktree's current branch. Returns `{ url }` on success, `null` on any
    failure (a failed PR open is a soft error — the branch's commits are safe).
+   **`pushRebased({ cwd, head, base, expectedSha, allowRewrittenCommits? })`** (todo-11)
+   — force-pushes a rebased PR head with
+   `--force-with-lease=refs/heads/<head>:<expectedSha>`. Refuses invalid branch names or
+   sha, `head` equal to `base` or the remote default branch, an in-progress rebase, dirty
+   tracked files, a HEAD not on top of the freshly fetched `origin/<base>`, and lost PR
+   commits (equal commit count; without `allowRewrittenCommits`, every original
+   patch-id must survive). Returns the pushed sha, throws the reason.
 6. **`removeWorktree({ projectPath, worktreePath })`** — `git worktree remove
 --force` then `git worktree prune`, tolerant of an already-removed
    directory. **Never deletes the branch** — it may carry the PR, and pruning
