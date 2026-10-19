@@ -2428,6 +2428,8 @@
         "title": "Approval",
         "highRisk": "High risk",
         "waited": "waited {waited}",
+        "submitReview": "Submit review",
+        "approveFailed": "Approval failed",
         "reviewEvent": {
           "label": "Review type",
           "APPROVE": "Approve",

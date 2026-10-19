@@ -31,6 +31,7 @@ const { hooks } = vi.hoisted(() => ({
     },
     task: { data: undefined },
     approve: vi.fn(),
+    approveState: { isError: false, error: null as Error | null },
     reject: vi.fn(),
     revise: vi.fn(),
     checkpoint: null as string | null,
@@ -39,7 +40,7 @@ const { hooks } = vi.hoisted(() => ({
 
 vi.mock("../queries", () => ({ useApprovalQuery: () => hooks.approval }));
 vi.mock("../mutations", () => ({
-  useApproveMutation: () => ({ mutate: hooks.approve, isPending: false }),
+  useApproveMutation: () => ({ mutate: hooks.approve, isPending: false, ...hooks.approveState }),
   useRejectMutation: () => ({ mutate: hooks.reject, isPending: false }),
   useReviseMutation: () => ({ mutate: hooks.revise, isPending: false }),
 }));
@@ -61,6 +62,7 @@ describe("ApprovalSheet (ZB-08 / D-014)", () => {
     hooks.approval = { data: APPROVAL, isPending: false, isError: false, refetch: vi.fn() };
     hooks.task = { data: undefined };
     hooks.checkpoint = null;
+    hooks.approveState = { isError: false, error: null };
   });
 
   it("renders nothing when no approval id is set", () => {
@@ -160,7 +162,7 @@ describe("ApprovalSheet (ZB-08 / D-014)", () => {
     expect(screen.getByTestId(item("REQUEST_CHANGES"))).toHaveAttribute("aria-checked", "true");
     expect(screen.getByTestId(item("APPROVE"))).toHaveTextContent("Schválit");
     expect(screen.getByTestId(item("COMMENT"))).toHaveTextContent("Komentář");
-    await userEvent.click(screen.getByRole("button", { name: "Schválit" }));
+    await userEvent.click(screen.getByRole("button", { name: "Odeslat review" }));
     expect(hooks.approve).toHaveBeenCalledWith(
       { params: { id: "appr-pr" }, body: { reviewEvent: "REQUEST_CHANGES" } },
       { onSuccess: expect.any(Function) },
@@ -172,7 +174,7 @@ describe("ApprovalSheet (ZB-08 / D-014)", () => {
     render(<ApprovalSheet approvalId="appr-pr" onClose={onClose} />);
     await userEvent.click(screen.getByTestId(item("COMMENT")));
     expect(screen.getByTestId(item("COMMENT"))).toHaveAttribute("aria-checked", "true");
-    await userEvent.click(screen.getByRole("button", { name: "Schválit" }));
+    await userEvent.click(screen.getByRole("button", { name: "Odeslat review" }));
     expect(hooks.approve).toHaveBeenCalledWith(
       { params: { id: "appr-pr" }, body: { reviewEvent: "COMMENT" } },
       { onSuccess: expect.any(Function) },
@@ -191,6 +193,24 @@ describe("ApprovalSheet (ZB-08 / D-014)", () => {
     };
     rerender(<ApprovalSheet approvalId="appr-pr2" onClose={onClose} />);
     expect(screen.getByTestId(item("APPROVE"))).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("todo-10: a decided PR-review approval shows no picker and no buttons", () => {
+    hooks.approval = {
+      data: { ...PR_REVIEW, status: "approved" },
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    };
+    render(<ApprovalSheet approvalId="appr-pr" onClose={onClose} />);
+    expect(screen.queryByTestId(SegmentedControlTestId.Root)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Odeslat review" })).toBeNull();
+  });
+
+  it("todo-10: a failed approve shows its error under the buttons", () => {
+    hooks.approveState = { isError: true, error: new Error("GitHub: nope") };
+    render(<ApprovalSheet approvalId="appr-1" onClose={onClose} />);
+    expect(screen.getByTestId("approval-approve-error")).toHaveTextContent("GitHub: nope");
   });
 
   it("request changes on a stage checkpoint requires a note, then revises", async () => {

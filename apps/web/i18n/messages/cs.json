@@ -2428,6 +2428,8 @@
         "title": "Schválení",
         "highRisk": "Vysoké riziko",
         "waited": "čeká {waited}",
+        "submitReview": "Odeslat review",
+        "approveFailed": "Schválení se nepodařilo",
         "reviewEvent": {
           "label": "Typ review",
           "APPROVE": "Schválit",

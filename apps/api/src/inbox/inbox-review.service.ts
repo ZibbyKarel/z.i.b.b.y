@@ -202,7 +202,7 @@ export class InboxReviewService implements OnModuleInit {
         body: JSON.stringify({ body: review.body, event }),
       },
     );
-    if (!res.ok) return fail(`github review post: HTTP ${res.status}`);
+    if (!res.ok) return fail(`github review post: HTTP ${res.status}${await githubReason(res)}`);
     await this.tasks.setPrReview(taskId, (c) => (c ? { ...c, state: "posted" } : c));
     // The review changes the PR's section — don't serve the stale 30 s cache.
     this.inbox.dropPrsCache();
@@ -221,4 +221,23 @@ export class InboxReviewService implements OnModuleInit {
       .catch(() => undefined);
     this.log?.info("pr review discarded", { taskId });
   }
+}
+
+/** GitHub's own reason for a rejected request: JSON `message` + `errors[]`, else truncated text. */
+async function githubReason(res: Response): Promise<string> {
+  const text = await res.text().catch(() => "");
+  let reason = "";
+  try {
+    const json: unknown = JSON.parse(text);
+    if (json && typeof json === "object") {
+      const { message, errors } = json as { message?: unknown; errors?: unknown };
+      const errs = (Array.isArray(errors) ? errors : []).map((e) =>
+        typeof e === "string" ? e : ((e as { message?: unknown } | null)?.message ?? ""),
+      );
+      reason = [message, ...errs].filter((m) => typeof m === "string" && m).join("; ");
+    }
+  } catch {
+    reason = text;
+  }
+  return reason ? `: ${reason.slice(0, 300)}` : "";
 }

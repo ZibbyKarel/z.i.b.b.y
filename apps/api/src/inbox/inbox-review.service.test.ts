@@ -196,6 +196,23 @@ describe("InboxReviewService", () => {
     expect((await storage.get("task_r1")).prReview).toMatchObject({ state: "failed" });
   });
 
+  it("todo-10: a GitHub rejection's reason lands in the review note", async () => {
+    await parked();
+    fetchImpl.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          message: "Unprocessable Entity",
+          errors: ["Can not approve your own pull request"],
+        }),
+        { status: 422 },
+      ),
+    );
+    await expect(service.post("task_r1", "APPROVE")).rejects.toThrow(/HTTP 422/);
+    const note = (await storage.get("task_r1")).prReview?.note;
+    expect(note).toContain("Unprocessable Entity");
+    expect(note).toContain("Can not approve your own pull request");
+  });
+
   it("approve with nothing parked posts nothing; reject discards", async () => {
     await service.start({ projectId: "acme", repo: "acme/app", number: 7 });
     await service.post("task_r1");

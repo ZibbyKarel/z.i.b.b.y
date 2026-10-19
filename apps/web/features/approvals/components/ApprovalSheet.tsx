@@ -236,106 +236,113 @@ export function ApprovalSheet({
 
   // The note field lives in the footer, not the scrolling body — below a long
   // checkpoint output it would open out of sight.
-  const footer = !approval ? null : mode ? (
-    <Stack gap="150">
-      <TextAreaField
-        autoFocus
-        data-testid="approval-note"
-        hint={t(mode === "revise" ? "reviseHint" : "reasonHint")}
-        label={t(mode === "revise" ? "reviseLabel" : "reasonLabel")}
-        onChange={(e) => setReason(e.target.value)}
-        value={reason}
-      />
-      <Row gap="100">
-        <Button
-          block
-          intent="secondary"
-          onClick={() => {
-            setMode(null);
-            setReason("");
-          }}
-        >
-          {t("cancel")}
-        </Button>
-        {mode === "revise" ? (
+  const footer =
+    !approval || approval.status !== "pending" ? null : mode ? (
+      <Stack gap="150">
+        <TextAreaField
+          autoFocus
+          data-testid="approval-note"
+          hint={t(mode === "revise" ? "reviseHint" : "reasonHint")}
+          label={t(mode === "revise" ? "reviseLabel" : "reasonLabel")}
+          onChange={(e) => setReason(e.target.value)}
+          value={reason}
+        />
+        <Row gap="100">
           <Button
             block
-            disabled={!reason.trim()}
-            intent="primary"
-            loading={revise.isPending}
-            onClick={() =>
-              revise.mutate(
-                { params: { id: approval.id }, body: { note: reason.trim() } },
-                { onSuccess: close },
-              )
-            }
+            intent="secondary"
+            onClick={() => {
+              setMode(null);
+              setReason("");
+            }}
           >
-            {t("confirmRevise")}
+            {t("cancel")}
           </Button>
-        ) : (
-          <Button
-            block
-            intent="primary"
-            loading={reject.isPending}
-            onClick={() =>
-              reject.mutate(
-                { params: { id: approval.id }, body: reason ? { reason } : {} },
-                { onSuccess: close },
-              )
-            }
-          >
-            {t("confirmDeny")}
-          </Button>
-        )}
-      </Row>
-    </Stack>
-  ) : (
-    <Stack gap="150">
-      {/* todo-10: a PR-review sign-off — the server's suggestion is preselected; nothing
+          {mode === "revise" ? (
+            <Button
+              block
+              disabled={!reason.trim()}
+              intent="primary"
+              loading={revise.isPending}
+              onClick={() =>
+                revise.mutate(
+                  { params: { id: approval.id }, body: { note: reason.trim() } },
+                  { onSuccess: close },
+                )
+              }
+            >
+              {t("confirmRevise")}
+            </Button>
+          ) : (
+            <Button
+              block
+              intent="primary"
+              loading={reject.isPending}
+              onClick={() =>
+                reject.mutate(
+                  { params: { id: approval.id }, body: reason ? { reason } : {} },
+                  { onSuccess: close },
+                )
+              }
+            >
+              {t("confirmDeny")}
+            </Button>
+          )}
+        </Row>
+      </Stack>
+    ) : (
+      <Stack gap="150">
+        {/* todo-10: a PR-review sign-off — the server's suggestion is preselected; nothing
           but this approve posts APPROVE / REQUEST_CHANGES. */}
-      {reviewEvent && (
-        <Stack gap="50">
-          <Typography tracking="wider" type="labelSm" variant="tertiary">
-            {t("reviewEvent.label")}
-          </Typography>
-          <SegmentedControl
-            ariaLabel={t("reviewEvent.label")}
-            items={PrReviewEventSchema.options.map((value) => ({
-              value,
-              label: t(`reviewEvent.${value}`),
-            }))}
-            onChange={(value) =>
-              setPicked({ id: approval.id, event: PrReviewEventSchema.parse(value) })
-            }
-            value={reviewEvent}
-          />
-        </Stack>
-      )}
-      <Row gap="100">
-        <Button
-          block
-          intent="primary"
-          loading={approve.isPending}
-          onClick={() =>
-            approve.mutate(
-              { params: { id: approval.id }, body: reviewEvent ? { reviewEvent } : {} },
-              { onSuccess: close },
-            )
-          }
-        >
-          {t("approve")}
-        </Button>
-        {gateKey === "stage-approval" && (
-          <Button block intent="secondary" onClick={() => setMode("revise")}>
-            {t("revise")}
-          </Button>
+        {reviewEvent && (
+          <Stack gap="50">
+            <Typography id="review-event-label" tracking="wider" type="labelSm" variant="tertiary">
+              {t("reviewEvent.label")}
+            </Typography>
+            <SegmentedControl
+              ariaLabel={t("reviewEvent.label")}
+              ariaLabelledby="review-event-label"
+              items={PrReviewEventSchema.options.map((value) => ({
+                value,
+                label: t(`reviewEvent.${value}`),
+              }))}
+              onChange={(value) =>
+                setPicked({ id: approval.id, event: PrReviewEventSchema.parse(value) })
+              }
+              value={reviewEvent}
+            />
+          </Stack>
         )}
-        <Button block intent="secondary" onClick={() => setMode("deny")}>
-          {t("deny")}
-        </Button>
-      </Row>
-    </Stack>
-  );
+        <Row gap="100">
+          <Button
+            block
+            intent="primary"
+            loading={approve.isPending}
+            onClick={() =>
+              approve.mutate(
+                { params: { id: approval.id }, body: reviewEvent ? { reviewEvent } : {} },
+                { onSuccess: close },
+              )
+            }
+          >
+            {t(reviewEvent ? "submitReview" : "approve")}
+          </Button>
+          {gateKey === "stage-approval" && (
+            <Button block intent="secondary" onClick={() => setMode("revise")}>
+              {t("revise")}
+            </Button>
+          )}
+          <Button block intent="secondary" onClick={() => setMode("deny")}>
+            {t("deny")}
+          </Button>
+        </Row>
+        {approve.isError && (
+          <Typography data-testid="approval-approve-error" size="sm" tone="bad" type="text">
+            {approve.error instanceof Error ? approve.error.message : t("approveFailed")}
+          </Typography>
+        )}
+      </Stack>
+    );
 
   return (
     <Sheet
