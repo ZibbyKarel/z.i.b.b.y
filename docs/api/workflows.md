@@ -419,6 +419,9 @@ meaning fully autonomous. Once the phase lands green (`produces` written):
    parks at the same gate again for another review. Approving the gate of the LAST
    phase also stamps `WorkflowRun.approvedFinalGate`. When that phase produces
    `zibby-pr-review.md`, the gate approval carries `suggestedReviewEvent` (findings → REQUEST_CHANGES, none → APPROVE) and approving it with a `reviewEvent` stamps `WorkflowRun.approvedReviewEvent`, the event the review is posted with.
+   The shipped `pr-rebase` workflow (todo-11, agent `rebase-resolver`) has no gate: it
+   writes `zibby-pr-rebase.md` and the task output parks a `pr-rebase` approval instead
+   (see `./inbox.md`); the agent never pushes.
 
 ### Budget (`budget`)
 
