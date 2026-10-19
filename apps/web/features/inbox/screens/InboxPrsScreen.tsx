@@ -28,7 +28,12 @@ import { useInboxItemsQuery, useInboxPrsQuery } from "../queries";
 import { useInboxFilters } from "../useInboxFilters";
 import { useSessionFlags } from "../useSessionFlags";
 
-/** Height of the list + detail panes at lg+ — the page itself must not scroll there. */
+/**
+ * Height of the list + detail panes at lg+ — the page itself must not scroll there.
+ * 24rem = everything in `<main>` outside the grid (app bar, page header, filter row,
+ * page padding) plus the 72px dock padding, measured at 1440x900: 14rem left `<main>`
+ * overflowing by 155px, hence +10rem. Re-measure if that chrome changes.
+ */
 const PRS_PANE_HEIGHT = "calc(100vh - 24rem)";
 
 const COLLAPSED_STORAGE_KEY = "zibby-inbox-pr-sections-collapsed";
@@ -177,7 +182,7 @@ export function InboxPrsScreen() {
       view="prs"
     >
       <Grid gap="200" lgHeight={PRS_PANE_HEIGHT} sidebar="left-narrow">
-        <Container maxHeight={PRS_PANE_HEIGHT} overflowY="auto">
+        <Container overflowY="auto">
           <Stack gap="250">
             {visibleSections.length === 0 && (
               <EmptyState

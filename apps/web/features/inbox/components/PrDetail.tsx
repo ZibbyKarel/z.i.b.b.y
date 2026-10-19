@@ -112,7 +112,15 @@ export function PrDetail({ pr, projectName, now }: PrDetailProps) {
       </Stack>
       {/* At lg the column has a fixed height, so this is the only thing that scrolls;
           below lg it is content-sized and the page scrolls as usual. */}
-      <Container grow data-testid={PrDetailTestId.Body} minHeight="0" overflowY="auto">
+      <Container
+        grow
+        aria-label={t("diff.region")}
+        data-testid={PrDetailTestId.Body}
+        minHeight="0"
+        overflowY="auto"
+        role="region"
+        tabIndex={0}
+      >
         {body}
       </Container>
     </Stack>

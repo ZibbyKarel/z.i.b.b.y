@@ -488,7 +488,7 @@ describe("InboxPrsScreen master–detail", () => {
     const detail = screen.getByTestId(InboxPrsScreenTestId.Detail);
     const grid = detail.parentElement as HTMLElement;
     expect(grid).toHaveAttribute("data-testid", GridTestId.Root);
-    expect(grid.className).toContain("lg:h-(--grid-lg-height)");
+    expect(grid.style.getPropertyValue("--grid-lg-height")).not.toBe("");
     expect(detail.style.display).toBe("flex");
     const root = screen.getByTestId(PrDetailTestId.Root);
     expect(root.style.minHeight).toBe("0");
@@ -496,6 +496,9 @@ describe("InboxPrsScreen master–detail", () => {
     const body = screen.getByTestId(PrDetailTestId.Body);
     expect(body.style.overflowY).toBe("auto");
     expect(body.style.minHeight).toBe("0");
+    expect(body).toHaveAttribute("tabindex", "0");
+    expect(body).toHaveAttribute("role", "region");
+    expect(body).toHaveAccessibleName();
     expect(body).toContainElement(await screen.findByTestId("pr-diff"));
   });
 

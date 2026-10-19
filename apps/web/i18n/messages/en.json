@@ -2811,6 +2811,7 @@
     },
     "prs": {
       "diff": {
+        "region": "PR changes",
         "select": "Select a PR on the left to see its changes.",
         "loading": "Loading changes…",
         "error": "Couldn't load the changes.",
