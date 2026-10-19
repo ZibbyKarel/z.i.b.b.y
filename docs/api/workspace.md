@@ -43,7 +43,9 @@ apps/api/src` turns up only those call sites, never a route).
    chars, empty input becomes `run`). Returns the `Workspace` record
    (`{ branch, path, baseRef }`) that gets stored on the run aggregate. Throws
    `WorkspaceSetupError` on any git failure — the caller fails the run rather
-   than silently falling back to the operator's main checkout.
+   than silently falling back to the operator's main checkout. The
+   `git worktree add` itself runs under `GIT_NETWORK_TIMEOUT_MS` (60 s), not the
+   10 s local bound — a checkout of a large monorepo exceeds the latter.
 3. **`checkpoint({ worktreePath, phaseId, summary })`** (Phase 9.3) — commits
    whatever is dirty in the worktree as `zibby-checkpoint(<phaseId>): <summary>`,
    using a synthetic `zibby@local` / `ZIBBY` git identity so it works even in a

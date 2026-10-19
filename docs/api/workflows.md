@@ -147,7 +147,9 @@ project must carry `web: { url }` (an http(s) base URL, see `docs/api/projects.m
 `WorkflowRunnerService.start()` checks it right after the run aggregate is first
 written — before any worktree, stage or agent. An unmet requirement (no project,
 an unresolvable project ref, or a project without `web.url`) ends the run
-immediately as `failed` with `failedReason` recorded on `run.json`. For a project
+immediately as `failed` with `failedReason` recorded on `run.json`. A failed
+worktree setup (or unresolvable local clone) is recorded the same way, with the
+error message as `failedReason`. For a project
 with `web.url`, every agent stage of a workflow that declares `requires: ["web"]`
 names that base URL in its task; other workflows on the same project never see it.
 

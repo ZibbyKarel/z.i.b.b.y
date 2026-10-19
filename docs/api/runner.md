@@ -204,6 +204,11 @@ projekt"). Without the env (tests, non-RunnerCore callers) the ledger rules abov
 stand alone. Reads are not gated; neither are unclassified commands (`touch`,
 `mkdir`, interpreters) outside the zone.
 
+Bare `>`/`>>` redirects are judged on the whole command through the quote-aware
+`lex()`, not per naive chain segment: a `>` inside a quoted string (`grep "a->b"`)
+is no redirect, and `2>/dev/null)` inside `$(…)` targets `/dev/null`. Only an
+unlexable command falls back to the raw regex scan.
+
 ### Output capture
 
 Every stdout/stderr chunk is buffered across chunk boundaries (`residual`) so
@@ -268,7 +273,9 @@ Key assembled pieces:
 
 - **System prompt** = `OPERATING_CONTRACT` (framed first — tells the headless
   session it runs non-interactively and must never print a confirmation
-  question, since nothing replies) + grounding + resume-context + the entity's
+  question, since nothing replies, and confines it to the checkout, the added
+  dirs and the run sandbox `$ZIBBY_INTENT_DIR` — scratch goes in the sandbox,
+  not `/tmp` or `~`) + grounding + resume-context + the entity's
   own instructions. Spilled to `.zibby-system-prompt.md` in the sandbox
   (`--append-system-prompt-file`) when `systemPromptDir` is given — keeps a
   large prompt off argv, which shares the same OS limit `--agents` can blow.

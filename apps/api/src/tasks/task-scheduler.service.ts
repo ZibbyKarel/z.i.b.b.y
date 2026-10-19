@@ -1862,7 +1862,7 @@ export class TaskSchedulerService
       // carry the structured result so the run detail renders the link + line totals.
       summary: run.prOutput
         ? `PR otevřen: ${run.prOutput.url}`
-        : `${run.stageRuns.length} stages, ${run.status}`,
+        : (run.failedReason ?? `${run.stageRuns.length} stages, ${run.status}`),
       finishedAt: new Date().toISOString(),
       ...(run.prOutput ? { pr: run.prOutput } : {}),
     };

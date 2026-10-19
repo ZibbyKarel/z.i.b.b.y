@@ -364,7 +364,16 @@ function classifyFsCommand(tokens) {
  * skipping fd-duplication forms (`2>&1`, `>&2`, `>&-`) and a `/dev/null` discard
  * target (not a real-file overwrite) — both explicitly required to stay ungated.
  */
+const DEV_SINKS = new Set(["/dev/null", "/dev/stdout", "/dev/stderr"]);
+
 function classifyRedirectOverwrite(segment) {
+  // Quote-aware first: a `>` inside a quoted string (`grep "a->b"`) is no redirect,
+  // and `2>/dev/null)` inside `$(…)` targets `/dev/null`, not `/dev/null)`. Only an
+  // unlexable segment (a quote the naive chain split cut in half) takes the raw scan.
+  const lexed = lex(segment);
+  if (lexed) {
+    return lexed.some((s) => s.redirects.some((t) => t === null || !DEV_SINKS.has(t)));
+  }
   const re = /\d*(>{1,2})(&[-\d]+)?\s*(\S+)?/g;
   let m;
   while ((m = re.exec(segment)) !== null) {
@@ -439,7 +448,6 @@ function classifySegment(segment, fullCommand) {
   const fsKind = classifyFsCommand(tokens);
   if (fsKind) return enrich(fsKind, { command: fullCommand });
   if (isDestructive(segment, tokens)) return enrich("delete", { command: fullCommand });
-  if (classifyRedirectOverwrite(segment)) return enrich("overwrite", { command: fullCommand });
   return null;
 }
 
@@ -452,10 +460,13 @@ function classifySegment(segment, fullCommand) {
 export function classify(command) {
   if (typeof command !== "string" || !command.trim()) return null;
   let best = null;
-  for (const segment of stripCatHeredocs(command).split(/&&|\|\||;|\||\n|&/)) {
+  const text = stripCatHeredocs(command);
+  for (const segment of text.split(/&&|\|\||;|\||\n|&/)) {
     const c = classifySegment(segment.trim(), command);
     if (c && (best === null || ACTION_RANK[c.action] > ACTION_RANK[best.action])) best = c;
   }
+  // Redirects are judged on the whole command: the naive split above cuts quotes in half.
+  if (best === null && classifyRedirectOverwrite(text)) best = enrich("overwrite", { command });
   return best;
 }
 

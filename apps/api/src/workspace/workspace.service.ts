@@ -89,7 +89,9 @@ export class WorkspaceService {
       const base = await this.resolveWorktreeBase(opts.projectPath);
       await exec("git", ["worktree", "add", "-b", branch, opts.dir, base.ref], {
         cwd: opts.projectPath,
-        timeout: GIT_TIMEOUT_MS,
+        // The checkout of a large monorepo (cms4: ~65k files) takes well over the
+        // 10s local-git bound — the network bound is the finite upper limit here.
+        timeout: GIT_NETWORK_TIMEOUT_MS,
       });
       this.log?.info("worktree created", {
         projectPath: opts.projectPath,

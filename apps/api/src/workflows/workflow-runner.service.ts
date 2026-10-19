@@ -488,6 +488,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         }
         run.status = "failed";
         run.currentStage = null;
+        run.failedReason = error.message;
         await this.writeAggregate(run);
         this.log.error("workflow run failed: worktree setup", {
           workflowRunId,

@@ -564,6 +564,7 @@ The daemon watches the run's terminal state:
 
 - `AgentRun.status: done | error | interrupted` → the task gets `outcome: { status, summary }`
 - `WorkflowRun.status: done | failed` → the same
+  (a failed run's `summary` is its `failedReason` when set, else `<n> stages, failed`)
 - `summary` is truncated to `SUMMARY_MAX_CHARS = 200` characters
 
 ## API endpoints

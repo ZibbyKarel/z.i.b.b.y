@@ -585,6 +585,19 @@ describe("claude approval hook — classify (overwrite/move + rm-family boundary
     expect(classify("echo hi > /dev/null")).toBeNull();
   });
 
+  it("does not read a quoted `->` or a `/dev/null` inside `$(…)` as a file redirect", () => {
+    // Both read-only commands raised overwrite cards in a real pr-review run.
+    expect(
+      classify(
+        `for s in Foo "repo->save"; do echo "== $s: $(git grep -l "$s" -- ':!tests' | tr '\\n' ' ')"; done`,
+      ),
+    ).toBeNull();
+    expect(
+      classify('d=$(dirname $(grep -rl "class X" cms 2>/dev/null | head -1) 2>/dev/null); ls $d'),
+    ).toBeNull();
+    expect(classify('echo "$(date)" >out.txt')?.action).toBe("overwrite");
+  });
+
   it("does not falsely gate a quoted 'rm -rf' as delete, but does gate the real redirect after it as overwrite", () => {
     const c = classify('echo "rm -rf" > note.txt');
     expect(c?.action).toBe("overwrite");
