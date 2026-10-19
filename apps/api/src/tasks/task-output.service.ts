@@ -245,17 +245,43 @@ export class TaskOutputService implements OnModuleInit {
       return { summary: `Rebase ${ref}: ${note} — nic nepushnuto` };
     }
     const clean = isCleanPrRebase(rebase.conflictAtStart, report);
+    // The report is the agent's claim; this is what the worktree really holds.
+    const facts = await this.workspace
+      .rebaseFacts({ cwd: worktree, base: rebase.base, headSha: rebase.headSha })
+      .catch((error: unknown) => (error instanceof Error ? error.message : String(error)));
+    const verified =
+      typeof facts === "string"
+        ? `could not read the worktree: ${facts}`
+        : [
+            `HEAD ${facts.sha}`,
+            "",
+            `git log --oneline origin/${rebase.base}..HEAD:`,
+            facts.log || "(nothing)",
+            "",
+            `git diff --stat ${rebase.headSha} HEAD:`,
+            facts.stat || "(no changes)",
+          ].join("\n");
+    const rebasedSha = typeof facts === "string" ? undefined : facts.sha;
     const approval = await this.approvals.requestApproval({
       runId: task.id,
       kind: "pr-rebase",
       skill: "rebase-resolver",
       action: "git.force_push",
-      detail: `Force-push ${rebase.head} rebased onto ${rebase.base} — ${ref}${clean ? " (no conflicts, authorised by the Rebase click)" : ""}\n\n${report}`,
+      detail: `Force-push ${rebase.head} rebased onto ${rebase.base} — ${ref}${clean ? " (no conflicts, authorised by the Rebase click)" : ""}\n\n${report}\n\n## Verified by ZIBBY\n\n${verified}`,
       risk: clean ? "medium" : "high",
       sourceUrl: rebase.url,
     });
     await this.storage.setPrRebase(task.id, (c) =>
-      c ? { ...c, state: "awaiting-approval", report, worktree, approvalId: approval.id } : c,
+      c
+        ? {
+            ...c,
+            state: "awaiting-approval",
+            report,
+            worktree,
+            ...(rebasedSha ? { rebasedSha } : {}),
+            approvalId: approval.id,
+          }
+        : c,
     );
     if (!clean) {
       return { summary: `Rebase ${ref}: konflikty vyřešeny — force-push čeká na schválení` };

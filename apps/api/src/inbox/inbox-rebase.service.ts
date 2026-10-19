@@ -16,7 +16,7 @@ import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.s
 import { PR_REBASE_ARTIFACT, isCleanPrRebase } from "../tasks/task-output.service";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
 import { WorkspaceService } from "../workspace/workspace.service";
-import { InboxService } from "./inbox.service";
+import { InboxService, isDeadTask } from "./inbox.service";
 import { ReviewRepoMismatchError } from "./inbox-review.service";
 
 const GITHUB_API = "https://api.github.com";
@@ -27,7 +27,7 @@ const REBASE_TARGET: TaskTarget = {
   glyph: "flow",
 };
 
-/** ZIBBY won't rebase this PR: fork head, closed PR, unreadable PR, or a base/default-branch head (→ 422). */
+/** ZIBBY won't rebase this PR: fork head, closed PR, unreadable PR, a base/default-branch head, or a rebase already in flight (→ 422). */
 export class RebaseRefusedError extends Error {
   constructor(message: string) {
     super(message);
@@ -66,7 +66,7 @@ export function rebaseTaskText(p: RebaseBrief): string {
       p.base +
       "`.",
     "",
-    `Write your report to \`${PR_REBASE_ARTIFACT}\`. Its FIRST line is exactly \`Conflicts: none\` when git stopped on no conflict, otherwise \`Conflicts: <n> files\`. Then, per conflicted file: the path, what each side changed, and how you resolved it. Then every command you ran with pass/fail, then \`git log --oneline origin/${p.base}..HEAD\`.`,
+    `Write your report to \`${PR_REBASE_ARTIFACT}\`. Its FIRST line is exactly one of: \`Conflicts: aborted\` followed by the reason when the rebase did not complete (you ran \`git rebase --abort\`, or the branch moved); \`Conflicts: none, checks failed\` when git stopped on no conflict but a typecheck or test failed; \`Conflicts: <n> files\` when you resolved conflicts; \`Conflicts: none\` ONLY for a complete, conflict-free rebase whose checks all passed. Then, per conflicted file: the path, what each side changed, and how you resolved it. Then every command you ran with pass/fail, then \`git log --oneline origin/${p.base}..HEAD\`.`,
     "",
     `Do NOT push or force-push, do not open, merge or comment on PRs, and never touch \`${p.base}\`. ZIBBY pushes the rebased HEAD itself with --force-with-lease — right away when there were no conflicts, after the operator approves your report when there were.`,
     "",
@@ -120,6 +120,20 @@ export class InboxRebaseService implements OnModuleInit {
       throw new ReviewRepoMismatchError(project.id, input.repo);
     }
     const ref = `${link.repo}#${input.number}`;
+    const latest = (await this.tasks.list())
+      .filter(
+        (t) =>
+          t.prRebase?.repo.toLowerCase() === link.repo.toLowerCase() &&
+          t.prRebase.number === input.number,
+      )
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      .pop();
+    const state = latest?.prRebase?.state;
+    // ponytail: check-then-create, not atomic; two clicks within ms both start — the
+    // push claim + lease still allow only one push.
+    if (latest && (state === "running" || state === "awaiting-approval") && !isDeadTask(latest)) {
+      throw new RebaseRefusedError(`a rebase of ${ref} is already ${state} (task ${latest.id})`);
+    }
     const res = await this.fetchImpl(`${GITHUB_API}/repos/${link.repo}/pulls/${input.number}`, {
       headers: { authorization: `Bearer ${link.token}`, accept: "application/vnd.github+json" },
     });
@@ -227,6 +241,7 @@ export class InboxRebaseService implements OnModuleInit {
         // The on-the-spot clean approval must not rewrite commits; an operator-approved
         // (conflicts resolved, reviewed) rebase legitimately does.
         allowRewrittenCommits: !isCleanPrRebase(rebase.conflictAtStart, rebase.report ?? ""),
+        ...(rebase.rebasedSha ? { rebasedSha: rebase.rebasedSha } : {}),
       });
       await settle({ state: "pushed", note: sha });
     } catch (error) {

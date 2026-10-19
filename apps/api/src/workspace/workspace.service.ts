@@ -392,10 +392,14 @@ export class WorkspaceService {
    * on top of the freshly fetched `origin/<base>`, and a HEAD that did not preserve the
    * PR's commits. Preservation compares the clicked head's commits
    * (`merge-base(expectedSha, origin/<base>)..expectedSha`) with the new ones
-   * (`origin/<base>..HEAD`): counts must match and, unless `allowRewrittenCommits`
-   * (the operator approved after conflicts were resolved), every old `patch-id` must
-   * survive. The lease pins the remote branch to `expectedSha`, so a push made since the
-   * click is never overwritten. Returns the pushed sha; throws an Error with the reason.
+   * (`origin/<base>..HEAD`), merge commits excluded (`--no-merges`: a rebase drops a
+   * "merge base into feature" commit). Unapproved, counts must match and every old
+   * `patch-id` must survive; with `allowRewrittenCommits` (the operator approved after
+   * conflicts were resolved) HEAD only needs at least one own commit beyond
+   * `origin/<base>`. With `rebasedSha` (the HEAD ZIBBY verified at approval time) the
+   * worktree HEAD must still equal it, and exactly that sha is pushed. The lease pins
+   * the remote branch to `expectedSha`, so a push made since the click is never
+   * overwritten. Returns the pushed sha; throws an Error with the reason.
    */
   async pushRebased(opts: {
     cwd: string;
@@ -403,8 +407,9 @@ export class WorkspaceService {
     base: string;
     expectedSha: string;
     allowRewrittenCommits?: boolean;
+    rebasedSha?: string;
   }): Promise<string> {
-    const { cwd, head, base, expectedSha, allowRewrittenCommits = false } = opts;
+    const { cwd, head, base, expectedSha, allowRewrittenCommits = false, rebasedSha } = opts;
     const git = async (args: string[], timeout = GIT_TIMEOUT_MS): Promise<string> =>
       (await exec("git", args, { cwd, timeout, maxBuffer: 64 * 1024 * 1024 })).stdout.trim();
     const ok = (args: string[]) =>
@@ -422,6 +427,9 @@ export class WorkspaceService {
     }
     if (!/^[0-9a-f]{40}$/.test(expectedSha)) {
       throw new Error(`expectedSha is not a full 40-char sha: "${expectedSha}"`);
+    }
+    if (rebasedSha !== undefined && !/^[0-9a-f]{40}$/.test(rebasedSha)) {
+      throw new Error(`rebasedSha is not a full 40-char sha: "${rebasedSha}"`);
     }
     if (head === base) throw new Error(`refusing to push the base branch "${base}"`);
     const defaultBranch = await git(["symbolic-ref", "--short", "refs/remotes/origin/HEAD"]).then(
@@ -445,6 +453,14 @@ export class WorkspaceService {
     if (await git(["status", "--porcelain", "--untracked-files=no"])) {
       throw new Error("uncommitted changes in the worktree");
     }
+    if (rebasedSha !== undefined) {
+      const current = await git(["rev-parse", "HEAD"]);
+      if (current !== rebasedSha) {
+        throw new Error(
+          `worktree HEAD ${current.slice(0, 9)} is not the approved rebased head ${rebasedSha.slice(0, 9)}`,
+        );
+      }
+    }
     await git(
       ["fetch", "origin", `+refs/heads/${base}:refs/remotes/origin/${base}`],
       GIT_NETWORK_TIMEOUT_MS,
@@ -465,19 +481,25 @@ export class WorkspaceService {
       throw new Error(`cannot find the clicked head ${expectedSha} to compare commits`);
     }
     const commits = async (range: string): Promise<string[]> =>
-      (await git(["rev-list", "--reverse", range])).split("\n").filter(Boolean);
+      (await git(["rev-list", "--reverse", "--no-merges", range])).split("\n").filter(Boolean);
     const mergeBase = await git(["merge-base", expectedSha, `origin/${base}`]);
     const oldCommits = await commits(`${mergeBase}..${expectedSha}`);
     if (oldCommits.length === 0) {
       throw new Error(`the PR has no commits of its own beyond ${base}; nothing to rebase`);
     }
     const newCommits = await commits(`origin/${base}..HEAD`);
-    if (oldCommits.length !== newCommits.length) {
-      throw new Error(
-        `rebase did not preserve the PR's commits: ${oldCommits.length} before, ${newCommits.length} after`,
-      );
-    }
-    if (!allowRewrittenCommits) {
+    if (allowRewrittenCommits) {
+      // Operator-approved: conflict resolution may squash or split commits; only demand
+      // that HEAD still carries own work on top of origin/<base> (checked above).
+      if (newCommits.length === 0) {
+        throw new Error(`HEAD has no commits of its own beyond origin/${base}; refusing to push`);
+      }
+    } else {
+      if (oldCommits.length !== newCommits.length) {
+        throw new Error(
+          `rebase did not preserve the PR's commits: ${oldCommits.length} before, ${newCommits.length} after`,
+        );
+      }
       const patchId = async (sha: string): Promise<string> => {
         const diff = await git(["diff-tree", "-p", "--no-commit-id", "-m", "--root", sha]);
         return (await this.patchIdOf(diff, cwd)) || sha;
@@ -492,16 +514,16 @@ export class WorkspaceService {
         );
       }
     }
+    const sha = rebasedSha ?? (await git(["rev-parse", "HEAD"]));
     await git(
       [
         "push",
         `--force-with-lease=refs/heads/${head}:${expectedSha}`,
         "origin",
-        `HEAD:refs/heads/${head}`,
+        `${sha}:refs/heads/${head}`,
       ],
       GIT_NETWORK_TIMEOUT_MS,
     );
-    const sha = await git(["rev-parse", "HEAD"]);
     this.log?.info("rebased branch force-pushed", { cwd, head, base, sha });
     return sha;
   }
@@ -518,6 +540,27 @@ export class WorkspaceService {
       child.stdin?.on("error", reject); // early git exit -> EPIPE; reject via the normal path
       child.stdin?.end(diff);
     });
+  }
+
+  /**
+   * todo-11 — what a pr-rebase worktree really holds, read by ZIBBY (not the agent's
+   * report): HEAD's sha, `git log --oneline origin/<base>..HEAD` and
+   * `git diff --stat <headSha> HEAD`. Throws when HEAD cannot be read; the log and stat
+   * are best-effort ("" on a git failure).
+   */
+  async rebaseFacts(opts: {
+    cwd: string;
+    base: string;
+    headSha: string;
+  }): Promise<{ sha: string; log: string; stat: string }> {
+    const git = (args: string[]) =>
+      exec("git", args, { cwd: opts.cwd, timeout: GIT_TIMEOUT_MS }).then((r) => r.stdout.trim());
+    const sha = await git(["rev-parse", "--verify", "HEAD^{commit}"]);
+    const [log, stat] = await Promise.all([
+      git(["log", "--oneline", `origin/${opts.base}..HEAD`, "--"]).catch(() => ""),
+      git(["diff", "--stat", opts.headSha, "HEAD", "--"]).catch(() => ""),
+    ]);
+    return { sha, log, stat };
   }
 
   /**

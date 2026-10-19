@@ -751,6 +751,11 @@ export const ScheduledTaskSchema = z.object({
       state: PrRebaseStateSchema,
       report: z.string().optional(),
       worktree: z.string().optional(),
+      /** The worktree HEAD ZIBBY read when parking the approval; the only sha it pushes. */
+      rebasedSha: z
+        .string()
+        .regex(/^[0-9a-f]{40}$/)
+        .optional(),
       approvalId: z.string().optional(),
       note: z.string().optional(),
     })

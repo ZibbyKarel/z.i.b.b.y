@@ -42,7 +42,7 @@ describe("InboxRebaseService", () => {
       runRef: "run_1",
       target,
       task: await storage.createDispatched(
-        "task_b1",
+        `task_b${createTask.mock.calls.length}`,
         input,
         "run_1",
         target,
@@ -107,6 +107,38 @@ describe("InboxRebaseService", () => {
       conflictAtStart: false,
       state: "running",
     });
+  });
+
+  it("the brief's first-line rule matches the rebase-resolver report contract", async () => {
+    await start();
+    const text: string = createTask.mock.calls[0]?.[0].text ?? "";
+    expect(text).toContain("`Conflicts: aborted` followed by the reason");
+    expect(text).toContain("`Conflicts: none, checks failed`");
+    expect(text).toMatch(/`Conflicts: none` ONLY for a complete, conflict-free rebase/);
+  });
+
+  it("refuses a second start while a rebase of the same PR is in flight (422)", async () => {
+    await start();
+    await expect(start()).rejects.toThrow(/already running/);
+    await storage.setPrRebase("task_b1", (c) => (c ? { ...c, state: "awaiting-approval" } : c));
+    await expect(start()).rejects.toThrow(RebaseRefusedError);
+    expect(createTask).toHaveBeenCalledOnce();
+    // Another PR is not blocked.
+    await service.start({ projectId: "acme", repo: "acme/app", number: 8 });
+    expect(createTask).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    [
+      "a finished rebase",
+      async () =>
+        storage.setPrRebase("task_b1", (c) => (c ? { ...c, state: "pushed" as const } : c)),
+    ],
+    ["a dead running one", async () => storage.markFailed("task_b1", "boom")],
+  ])("allows a new start after %s", async (_name, settle) => {
+    await start();
+    await settle();
+    expect(await start()).toEqual({ taskId: "task_b2" });
   });
 
   it.each([false, null])("mergeable %j at the click → conflictAtStart", async (mergeable) => {
@@ -177,6 +209,15 @@ describe("InboxRebaseService", () => {
       note: "newsha",
     });
     expect(dropPrsCache).toHaveBeenCalledOnce();
+  });
+
+  it("approve passes the verified rebasedSha to pushRebased", async () => {
+    await parked();
+    await storage.setPrRebase("task_b1", (c) => (c ? { ...c, rebasedSha: "f".repeat(40) } : c));
+    await service.push("task_b1");
+    expect(pushRebased).toHaveBeenCalledWith(
+      expect.objectContaining({ rebasedSha: "f".repeat(40) }),
+    );
   });
 
   it("a refused push marks the rebase failed with git's reason and throws", async () => {

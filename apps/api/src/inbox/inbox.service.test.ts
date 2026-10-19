@@ -230,9 +230,17 @@ describe("InboxService.listPrs", () => {
         outcome: { status: "error" },
         prRebase: rebase(1, "running"),
       },
+      {
+        // The push claim: the run finished fine, the approval runner is pushing.
+        id: "r5",
+        createdAt: "2026-10-03T00:00:00Z",
+        status: "done",
+        outcome: { status: "done" },
+        prRebase: rebase(3, "running"),
+      },
     ]);
     const byNumber = Object.fromEntries((await service.listPrs()).prs.map((p) => [p.number, p]));
-    expect(byNumber[3]?.rebase).toEqual({ taskId: "r2", state: "awaiting-approval" });
+    expect(byNumber[3]?.rebase).toEqual({ taskId: "r5", state: "running" });
     expect(byNumber[2]?.rebase).toEqual({ taskId: "r3", state: "failed" });
     expect(byNumber[1]?.rebase).toEqual({ taskId: "r4", state: "failed" });
     expect(byNumber[3]?.codeReview).toBeUndefined();

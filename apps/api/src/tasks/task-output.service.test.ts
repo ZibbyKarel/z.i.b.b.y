@@ -26,6 +26,7 @@ describe("TaskOutputService", () => {
     diffstat: ReturnType<typeof vi.fn>;
     diffStats: ReturnType<typeof vi.fn>;
     openPr: ReturnType<typeof vi.fn>;
+    rebaseFacts: ReturnType<typeof vi.fn>;
   };
   let vault: { createNote: ReturnType<typeof vi.fn>; updateNote: ReturnType<typeof vi.fn> };
   let approvals: {
@@ -50,6 +51,11 @@ describe("TaskOutputService", () => {
       diffstat: vi.fn(async () => "1 file changed, 2 insertions(+)"),
       diffStats: vi.fn(async () => ({ additions: 2, deletions: 0 })),
       openPr: vi.fn(async () => ({ url: "https://example/pr/1" })),
+      rebaseFacts: vi.fn(async () => ({
+        sha: "f".repeat(40),
+        log: "fff0001 feat: thing",
+        stat: " a.ts | 2 +-",
+      })),
     };
     vault = { createNote: vi.fn(async () => ({})), updateNote: vi.fn(async () => ({})) };
     approvals = {
@@ -315,6 +321,31 @@ describe("TaskOutputService", () => {
         report: "Conflicts: none\n\nrebased 2 commits",
       });
       expect(delivered.summary).toMatch(/acme\/app#7/);
+    });
+
+    it("appends what ZIBBY read from the worktree and records the verified sha", async () => {
+      const task = await seedRebase();
+      await service.parkPrRebase(task, "Conflicts: 1 files", "/wt");
+      expect(workspace.rebaseFacts).toHaveBeenCalledWith({
+        cwd: "/wt",
+        base: "main",
+        headSha: "abc",
+      });
+      const { detail } = approvals.requestApproval.mock.calls[0]?.[0] as { detail: string };
+      expect(detail).toContain("## Verified by ZIBBY");
+      expect(detail).toContain(`HEAD ${"f".repeat(40)}`);
+      expect(detail).toContain("fff0001 feat: thing");
+      expect(detail).toContain("a.ts | 2 +-");
+      expect((await storage.get("t_rebase")).prRebase?.rebasedSha).toBe("f".repeat(40));
+    });
+
+    it("an unreadable worktree is noted in the detail and records no sha", async () => {
+      workspace.rebaseFacts.mockRejectedValueOnce(new Error("not a git repository"));
+      const task = await seedRebase();
+      await service.parkPrRebase(task, "Conflicts: 1 files", "/wt");
+      const { detail } = approvals.requestApproval.mock.calls[0]?.[0] as { detail: string };
+      expect(detail).toContain("could not read the worktree: not a git repository");
+      expect((await storage.get("t_rebase")).prRebase?.rebasedSha).toBeUndefined();
     });
 
     it("resolved conflicts park a pending high-risk approval", async () => {

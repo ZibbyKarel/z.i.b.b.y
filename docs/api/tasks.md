@@ -107,7 +107,8 @@ recorded and approved in one go (posted with the review event the operator picke
 
 **`prRebase`** (todo-11) is the rebase counterpart: stamped by `InboxRebaseService.start`
 via `ScheduledTasksStorageService.setPrRebase`, written to `awaiting-approval` by
-`TaskOutputService.parkPrRebase` from `writeWorkflowOutcome` (with the run's `worktree`),
+`TaskOutputService.parkPrRebase` from `writeWorkflowOutcome` (with the run's `worktree`
+and `rebasedSha`, the worktree HEAD ZIBBY read then — the only sha the runner pushes),
 and to `pushed`/`discarded`/`failed` by the `pr-rebase` approval runner. An interrupted
 run with `prRebase.state === "running"` gets an error outcome, like a review. The runner
 pushes only while `prRebase.state === "awaiting-approval"`; an on-the-spot (conflict-free)

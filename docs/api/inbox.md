@@ -166,7 +166,8 @@ Hidden is permanent until unhidden. A missing/garbage file reads as `{ hidden: [
 
 todo-11. Body `{ projectId, repo, number, title? }` (strict) → 201 `{ taskId }`; 404 unknown
 project; 422 no GitHub link / repo not the project's / fork head / closed PR / head is the
-base or default branch. Shown on `bucket === "mine"` PRs with `mergeable === false || behind`
+base or default branch / a rebase of the same PR already `running` or `awaiting-approval`
+(latest such task, not dead — same check as the list). Shown on `bucket === "mine"` PRs with `mergeable === false || behind`
 (`behind` = GitHub's `mergeable_state === "behind"`, reported only under an up-to-date branch
 protection).
 
@@ -177,7 +178,14 @@ conflictAtStart, state: "running" }`. The `rebase-resolver` agent rebases in the
 worktree and never pushes. On a `done` run, `TaskOutputService.parkPrRebase` records a
 `pr-rebase` approval: approved on the spot only when `conflictAtStart === false` and the
 report's first line is `Conflicts: none` (the operator's click was the decision), otherwise
-pending (Tier-3, risk high). The approval runner pushes only while the rebase is
+pending (Tier-3, risk high). The approval `detail` is the agent's report followed by a
+"Verified by ZIBBY" section read from the worktree itself (`WorkspaceService.rebaseFacts`:
+HEAD sha, `git log --oneline origin/<base>..HEAD`, `git diff --stat <headSha> HEAD`; an
+unreadable worktree is noted there instead), and that HEAD is stored as
+`prRebase.rebasedSha` — the push refuses if the worktree HEAD moved since and pushes
+exactly that sha. The report's first line is `Conflicts: none` only for a complete,
+conflict-free, green rebase; `Conflicts: aborted` + reason, `Conflicts: none, checks
+failed` or `Conflicts: <n> files` otherwise. The approval runner pushes only while the rebase is
 `awaiting-approval`, via `WorkspaceService.pushRebased` (`--force-with-lease`, see
 `./workspace.md`) → `pushed` or `failed` with git's reason. Reject → `discarded`; an
 interrupted run → `failed`.

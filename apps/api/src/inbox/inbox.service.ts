@@ -15,6 +15,7 @@ import type {
   InboxState,
   Project,
   RoadmapItem,
+  ScheduledTask,
   SetInboxHidden,
 } from "@zibby/contracts";
 import { ActivityEventsService } from "../activity/activity-events.service";
@@ -287,11 +288,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
     const reviews = new Map<string, NonNullable<InboxPr["codeReview"]>>();
     const rebases = new Map<string, NonNullable<InboxPr["rebase"]>>();
     for (const task of [...tasks].sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
-      const dead =
-        task.status === "failed" ||
-        task.status === "cancelled" ||
-        task.status === "dead-letter" ||
-        task.outcome?.status === "error";
+      const dead = isDeadTask(task);
       const { prReview: review, prRebase: rebase } = task;
       if (review) {
         reviews.set(`${review.repo.toLowerCase()}#${review.number}`, {
@@ -460,4 +457,14 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
   private headers(token: string): Record<string, string> {
     return { authorization: `Bearer ${token}`, accept: "application/vnd.github+json" };
   }
+}
+
+/** A task whose PR review/rebase can no longer progress: failed, cancelled, dead-lettered, or its run errored. */
+export function isDeadTask(task: ScheduledTask): boolean {
+  return (
+    task.status === "failed" ||
+    task.status === "cancelled" ||
+    task.status === "dead-letter" ||
+    task.outcome?.status === "error"
+  );
 }
