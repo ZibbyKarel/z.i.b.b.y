@@ -112,6 +112,14 @@ export const InboxPrSchema = z.object({
    * Absent otherwise. GitHub reports it only under an "up to date" branch protection.
    */
   behind: z.boolean().optional(),
+  /**
+   * todo-13 — the PR's head branch, for stacked-PR detection (B is stacked on A when
+   * `B.baseRef === A.headRef` in the same repo). Absent for a fork head: its branch lives
+   * in another repo and must not match this repo's branches.
+   */
+  headRef: z.string().min(1).optional(),
+  /** todo-13 — the branch this PR merges into. */
+  baseRef: z.string().min(1).optional(),
   /** todo-11 — the latest ZIBBY rebase of this PR (see `PrRebaseStateSchema`). */
   rebase: z.object({ taskId: z.string().min(1), state: PrRebaseStateSchema }).optional(),
   projectId: z.string().min(1),

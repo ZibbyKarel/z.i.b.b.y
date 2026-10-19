@@ -191,3 +191,4 @@ failed` or `Conflicts: <n> files` otherwise. The approval runner pushes only whi
 interrupted run → `failed`.
 
 `GET /api/inbox/prs` rows carry `behind: true` (only when GitHub says so) and `rebase { taskId, state }` (latest rebase task per PR; a `running` one whose task/run died reads `failed`).
+They also carry `headRef` / `baseRef` (todo-13, from the same `GET /pulls/<n>`; `headRef` is omitted for a fork head) — the web joins them to show stacked PRs (B's `baseRef` = A's `headRef`, same repo).

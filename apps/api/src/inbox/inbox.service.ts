@@ -51,7 +51,8 @@ interface GhPull {
   mergeable_state?: string;
   created_at?: string;
   user?: { login?: string } | null;
-  head?: { sha?: string };
+  head?: { sha?: string; ref?: string; repo?: { full_name?: string } | null };
+  base?: { ref?: string };
 }
 
 /** Latest non-COMMENTED review per reviewer: any CHANGES_REQUESTED wins, then any APPROVED. */
@@ -401,6 +402,10 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
           review,
           mergeable,
           ...(pull.mergeable_state === "behind" ? { behind: true } : {}),
+          ...(pull.head?.ref && pull.head.repo?.full_name?.toLowerCase() === repo.toLowerCase()
+            ? { headRef: pull.head.ref }
+            : {}),
+          ...(pull.base?.ref ? { baseRef: pull.base.ref } : {}),
           ...bucket,
           blocker: blockerOf({ ci, review, mergeable }),
           section: sectionOf({ ...bucket, ci, review, mergeable, draft: pull.draft === true }),
