@@ -2796,6 +2796,17 @@
       "openPrs": "Open pull requests →"
     },
     "prs": {
+      "diff": {
+        "select": "Select a PR on the left to see its changes.",
+        "loading": "Loading changes…",
+        "error": "Couldn't load the changes.",
+        "retry": "Retry",
+        "empty": "This PR has no changes.",
+        "noHunks": "No textual changes (binary file or rename).",
+        "truncated": "The diff is too large — showing part of it. See the full diff on GitHub.",
+        "tooLarge": "The diff is too large to display. Open the PR on GitHub.",
+        "files": "{count, plural, one {# file} other {# files}}"
+      },
       "ci": "CI {symbol} {state}",
       "draft": "Draft",
       "reason": {
