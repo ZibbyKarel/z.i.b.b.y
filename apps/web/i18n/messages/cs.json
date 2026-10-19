@@ -2803,6 +2803,10 @@
       "openIssues": "Otevřít issues →",
       "openPrs": "Otevřít pull requesty →"
     },
+    "chain": {
+      "on": "↳ navazuje na {label}",
+      "by": "{label} čeká na tohle →"
+    },
     "prs": {
       "diff": {
         "select": "Vyber PR vlevo a uvidíš jeho změny.",

@@ -15,6 +15,8 @@ import {
 import { useTranslations } from "next-intl";
 import type { MouseEvent, ReactNode } from "react";
 import { useElapsedLabel } from "../useElapsedLabel";
+import { type PrChain, prListHref } from "../inbox";
+import { ChainLinks } from "./ChainLinks";
 import { ExternalAnchor, NavLink } from "./links";
 
 export enum PrRowTestId {
@@ -37,6 +39,12 @@ const CI_TONE = {
   unknown: "neutral",
 } as const;
 
+const toChainLink = (pr: InboxPr) => ({
+  key: String(pr.number),
+  label: `#${pr.number}`,
+  href: prListHref(pr.url),
+});
+
 export interface PrRowProps {
   pr: InboxPr;
   now: number;
@@ -53,16 +61,27 @@ export interface PrRowProps {
    * is plain text — GitHub is opened from the detail header.
    */
   onSelect?: (pr: InboxPr) => void;
+  /** todo-13 — the PRs this one is stacked on / that are stacked on it (see `prChains`). */
+  chain?: PrChain | undefined;
 }
 
 /**
- * One pull-request card, three lines: `#n` title + review / CI badges; project · author ·
+ * One pull-request card, three lines (+ stack line): `#n` title + review / CI badges; project · author ·
  * age; the actions strip (see `PrActions`) + linked item. Without `onSelect` the whole card
  * opens the PR on GitHub — the title is the real (keyboard-reachable) link, a click anywhere
  * else on the card follows it; with `onSelect` a click selects the PR instead. Clicks inside
  * the actions line never do either.
  */
-export function PrRow({ pr, now, projectName, focused, item, actions, onSelect }: PrRowProps) {
+export function PrRow({
+  pr,
+  now,
+  projectName,
+  focused,
+  item,
+  actions,
+  onSelect,
+  chain,
+}: PrRowProps) {
   const t = useTranslations("inboxPage");
   const elapsedLabel = useElapsedLabel();
   const openPr = (e: MouseEvent) => {
@@ -138,6 +157,7 @@ export function PrRow({ pr, now, projectName, focused, item, actions, onSelect }
             <Typography data-testid={PrRowTestId.Meta} type="label" variant="secondary">
               {[projectName ?? pr.repo, pr.author, elapsedLabel(pr.createdAt, now)].join(" · ")}
             </Typography>
+            {chain && <ChainLinks by={chain.by.map(toChainLink)} on={chain.on.map(toChainLink)} />}
 
             {(actions || item) && (
               // The actions line is its own click zone — a button / menu / checkbox click

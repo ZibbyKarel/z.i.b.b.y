@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, renderWithProviders, screen } from "../../../test/render";
 import { PrDetailTestId } from "../components/PrDetail";
 import { PrActionsTestId } from "../components/PrActions";
+import { ChainLinksTestId } from "../components/ChainLinks";
 import { PrRowTestId } from "../components/PrRow";
 import { InboxPrsScreen, InboxPrsScreenTestId } from "./InboxPrsScreen";
 
@@ -542,5 +543,41 @@ describe("InboxPrsScreen master–detail", () => {
     const split = screen.getByTestId(PrActionsTestId.Review);
     fireEvent.click(within(split).getByTestId(DropDownButtonTestId.Primary));
     expect(hooks.replace).not.toHaveBeenCalled();
+  });
+});
+
+describe("InboxPrsScreen stacked PRs", () => {
+  afterEach(() => {
+    hooks.search = "";
+    hooks.prs = [];
+  });
+
+  it("shows each card's place in a stack, linking to the partner PR", () => {
+    hooks.prs = [
+      pr(1, { headRef: "feat-a", baseRef: "main", section: "ready-to-merge" }),
+      pr(2, { headRef: "feat-b", baseRef: "feat-a" }),
+    ];
+    renderWithProviders(<InboxPrsScreen />);
+
+    const parent = screen.getByTestId(`${PrRowTestId.Root}-1`);
+    const waits = within(parent).getByTestId(`${ChainLinksTestId.By}-2`);
+    expect(waits).toHaveAttribute(
+      "href",
+      `/dashboard/inbox/pull-requests?pr=${encodeURIComponent(urlOf(2))}`,
+    );
+    expect(waits).toHaveTextContent("#2");
+    expect(within(parent).queryByTestId(`${ChainLinksTestId.On}-2`)).toBeNull();
+
+    const child = screen.getByTestId(`${PrRowTestId.Root}-2`);
+    expect(within(child).getByTestId(`${ChainLinksTestId.On}-1`)).toHaveAttribute(
+      "href",
+      `/dashboard/inbox/pull-requests?pr=${encodeURIComponent(urlOf(1))}`,
+    );
+  });
+
+  it("an unstacked PR has no chain line", () => {
+    hooks.prs = [pr(1, { headRef: "feat-a", baseRef: "main" })];
+    renderWithProviders(<InboxPrsScreen />);
+    expect(screen.queryByTestId(ChainLinksTestId.Root)).toBeNull();
   });
 });
