@@ -309,6 +309,43 @@ export function prChains(prs: InboxPr[]): Map<string, PrChain> {
   return chains;
 }
 
+/** todo-14 — the issues blocking this one (`on`) and the issues it blocks (`by`). */
+export interface IssueChain {
+  on: InboxRoadmapItem[];
+  by: InboxRoadmapItem[];
+}
+
+/** Item ids are project-local slugs, so a chain key carries the project. */
+export function chainKey(item: Pick<InboxRoadmapItem, "id" | "project">): string {
+  return `${item.project.id}/${item.id}`;
+}
+
+/**
+ * Blocking queues from the synced `dependsOn` (Jira "is blocked by", GitHub
+ * "blocked by #n" / sub-issues, plus ZIBBY-owned edges). One level each way,
+ * within one project; archived and unknown ids are dropped. Items without a
+ * link are absent.
+ */
+export function issueChains(items: InboxRoadmapItem[]): Map<string, IssueChain> {
+  const listed = items.filter(isListable);
+  const byKey = new Map(listed.map((item) => [chainKey(item), item]));
+  const chains = new Map<string, IssueChain>();
+  const chainOf = (item: InboxRoadmapItem) => {
+    let chain = chains.get(chainKey(item));
+    if (!chain) chains.set(chainKey(item), (chain = { on: [], by: [] }));
+    return chain;
+  };
+  for (const blocked of listed) {
+    for (const id of new Set(blocked.dependsOn)) {
+      const blocker = byKey.get(`${blocked.project.id}/${id}`);
+      if (!blocker || blocker === blocked) continue;
+      chainOf(blocked).on.push(blocker);
+      chainOf(blocker).by.push(blocked);
+    }
+  }
+  return chains;
+}
+
 /** Joins an item's PR reference with the PR list (by url) for ci / blocker. */
 export function findPr(prs: InboxPr[], ref: ItemPrRef | null): InboxPr | undefined {
   return ref ? prs.find((pr) => pr.url === ref.url) : undefined;

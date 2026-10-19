@@ -20,6 +20,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import type { MouseEvent } from "react";
 import {
+  type IssueChain,
   differsFromSource,
   itemKey,
   latestTaskId,
@@ -28,6 +29,7 @@ import {
   zibbyStatus,
 } from "../inbox";
 import { useElapsedLabel } from "../useElapsedLabel";
+import { type ChainLink, ChainLinks, type ChainLinksMessages } from "./ChainLinks";
 import { ExternalAnchor, NavLink } from "./links";
 import { PR_BLOCKER_TONE, ZibbyStatusLabel } from "./zibbyStatus";
 
@@ -51,6 +53,13 @@ export function issueHref(item: Pick<InboxRoadmapItem, "id" | "project">): strin
   return `/dashboard/inbox/issues/${item.project.id}/${item.id}`;
 }
 
+const toChainLink = (item: InboxRoadmapItem): ChainLink => ({
+  key: item.id,
+  label: itemKey(item),
+  title: item.name,
+  href: issueHref(item),
+});
+
 export interface IssueRowProps {
   item: InboxRoadmapItem;
   now: number;
@@ -58,6 +67,8 @@ export interface IssueRowProps {
   teamName?: string | undefined;
   /** The inbox PR this item's linked PR resolves to, for ci / blocker. */
   pr?: InboxPr | undefined;
+  /** todo-14 — the issues blocking this one / blocked by it (see `issueChains`). */
+  chain?: IssueChain | undefined;
   /** Indented under an epic accordion. */
   nested?: boolean;
   processing: boolean;
@@ -75,6 +86,7 @@ export function IssueRow({
   now,
   teamName,
   pr,
+  chain,
   nested,
   processing,
   onProcess,
@@ -89,6 +101,12 @@ export function IssueRow({
   const prRef = linkedPrOf(item);
   const sourceName = t(`source.${item.source.kind}`);
   const canHide = !!item.source.integrationId && !!item.source.externalId;
+  const chainMessages: ChainLinksMessages = {
+    on: (link) => t("issueChain.on", { label: link.label }),
+    by: (link) => t("issueChain.by", { label: link.label }),
+    onAria: (link) => t("issueChain.onAria", { label: link.label, title: link.title ?? "" }),
+    byAria: (link) => t("issueChain.byAria", { label: link.label, title: link.title ?? "" }),
+  };
 
   const open = (e: MouseEvent<HTMLElement>) => {
     const target = e.target;
@@ -275,6 +293,13 @@ export function IssueRow({
                   </TextLink>
                 )}
               </Row>
+            )}
+            {chain && (
+              <ChainLinks
+                by={chain.by.map(toChainLink)}
+                messages={chainMessages}
+                on={chain.on.map(toChainLink)}
+              />
             )}
           </Stack>
         </CardContent>

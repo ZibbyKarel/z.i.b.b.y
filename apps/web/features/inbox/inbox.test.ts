@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   EMPTY_INBOX_FILTERS,
   NONE_OPTION,
+  chainKey,
   counterSuffix,
   differsFromSource,
   elapsed,
@@ -10,6 +11,7 @@ import {
   groupPrsBySection,
   hiddenCount,
   inboxCounts,
+  issueChains,
   linkedPrOf,
   normalizeSearch,
   passesFilters,
@@ -342,5 +344,66 @@ describe("prChains", () => {
     const chains = prChains([x, y]);
     expect(chains.get(x.url)).toEqual({ on: [y], by: [y] });
     expect(chains.get(y.url)).toEqual({ on: [x], by: [x] });
+  });
+});
+
+describe("issueChains", () => {
+  it("links a blocked issue to its blocker both ways", () => {
+    const blocker = makeItem({ id: "a" });
+    const blocked = makeItem({ id: "b", dependsOn: ["a"] });
+    const chains = issueChains([blocker, blocked]);
+    expect(chains.get(chainKey(blocked))).toEqual({ on: [blocker], by: [] });
+    expect(chains.get(chainKey(blocker))).toEqual({ on: [], by: [blocked] });
+  });
+
+  it("reads a queue one level each way", () => {
+    const a = makeItem({ id: "a" });
+    const b = makeItem({ id: "b", dependsOn: ["a"] });
+    const c = makeItem({ id: "c", dependsOn: ["b"] });
+    const chains = issueChains([a, b, c]);
+    expect(chains.get(chainKey(b))).toEqual({ on: [a], by: [c] });
+    expect(chains.get(chainKey(a))?.by).toEqual([b]);
+  });
+
+  it("scopes edges to one project", () => {
+    const otherBlocker = makeItem({
+      id: "a",
+      project: { id: "web", name: "web" },
+      projectId: "web",
+    });
+    const blocked = makeItem({ id: "b", dependsOn: ["a"] });
+    const chains = issueChains([otherBlocker, blocked]);
+    expect(chains.has(chainKey(blocked))).toBe(false);
+    expect(chains.has(chainKey(otherBlocker))).toBe(false);
+  });
+
+  it("ignores dangling and archived neighbours", () => {
+    const archived = makeItem({ id: "a", lifecycle: "archived" });
+    const blocked = makeItem({ id: "b", dependsOn: ["a", "missing"] });
+    expect(issueChains([archived, blocked]).size).toBe(0);
+  });
+
+  it("links a duplicated dependsOn id once", () => {
+    const blocker = makeItem({ id: "a" });
+    const blocked = makeItem({ id: "b", dependsOn: ["a", "a"] });
+    const chains = issueChains([blocker, blocked]);
+    expect(chains.get(chainKey(blocked))).toEqual({ on: [blocker], by: [] });
+    expect(chains.get(chainKey(blocker))).toEqual({ on: [], by: [blocked] });
+  });
+
+  it("skips a self-link", () => {
+    expect(issueChains([makeItem({ id: "a", dependsOn: ["a"] })]).size).toBe(0);
+  });
+
+  it("survives a two-issue cycle", () => {
+    const a = makeItem({ id: "a", dependsOn: ["b"] });
+    const b = makeItem({ id: "b", dependsOn: ["a"] });
+    const chains = issueChains([a, b]);
+    expect(chains.get(chainKey(a))).toEqual({ on: [b], by: [b] });
+    expect(chains.get(chainKey(b))).toEqual({ on: [a], by: [a] });
+  });
+
+  it("leaves unlinked items out", () => {
+    expect(issueChains([makeItem({ id: "a" }), makeItem({ id: "b" })]).size).toBe(0);
   });
 });

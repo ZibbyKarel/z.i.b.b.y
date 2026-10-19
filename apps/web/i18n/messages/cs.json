@@ -2809,6 +2809,12 @@
       "onAria": "Navazuje na {label}: {title}",
       "byAria": "{label} čeká na tento PR: {title}"
     },
+    "issueChain": {
+      "on": "↳ blokováno {label}",
+      "by": "{label} čeká na tohle →",
+      "onAria": "Blokováno issue {label}: {title}",
+      "byAria": "{label} je blokováno tímto issue: {title}"
+    },
     "prs": {
       "diff": {
         "select": "Vyber PR vlevo a uvidíš jeho změny.",

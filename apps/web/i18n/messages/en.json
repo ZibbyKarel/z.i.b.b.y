@@ -2809,6 +2809,12 @@
       "onAria": "Stacked on {label}: {title}",
       "byAria": "{label} waits on this: {title}"
     },
+    "issueChain": {
+      "on": "↳ blocked by {label}",
+      "by": "{label} is blocked by this →",
+      "onAria": "Blocked by {label}: {title}",
+      "byAria": "{label} is blocked by this issue: {title}"
+    },
     "prs": {
       "diff": {
         "select": "Select a PR on the left to see its changes.",
