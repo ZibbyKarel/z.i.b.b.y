@@ -1,6 +1,6 @@
 import type { InboxPr } from "@zibby/contracts";
 import { within } from "@testing-library/react";
-import { AccordionTestId, DropDownButtonTestId } from "@zibby/design-system";
+import { AccordionTestId, DropDownButtonTestId, GridTestId } from "@zibby/design-system";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, renderWithProviders, screen } from "../../../test/render";
 import { PrDetailTestId } from "../components/PrDetail";
@@ -474,6 +474,33 @@ describe("InboxPrsScreen master–detail", () => {
     expect(title).toHaveFocus();
     fireEvent.click(title);
     expect(hooks.replace).toHaveBeenCalledTimes(1);
+  });
+
+  it("pins the master–detail grid height at lg; the diff body is the only scroll area", async () => {
+    select2();
+    hooks.diffQuery = { ...okDiff, data: { diff: "x", truncated: false } };
+    renderWithProviders(<InboxPrsScreen />);
+    const detail = screen.getByTestId(InboxPrsScreenTestId.Detail);
+    const grid = detail.parentElement as HTMLElement;
+    expect(grid).toHaveAttribute("data-testid", GridTestId.Root);
+    expect(grid.className).toContain("lg:h-(--grid-lg-height)");
+    expect(detail.style.display).toBe("flex");
+    const root = screen.getByTestId(PrDetailTestId.Root);
+    expect(root.style.minHeight).toBe("0");
+    expect(screen.getByTestId(PrDetailTestId.Header).style.flexShrink).toBe("0");
+    const body = screen.getByTestId(PrDetailTestId.Body);
+    expect(body.style.overflowY).toBe("auto");
+    expect(body.style.minHeight).toBe("0");
+    expect(body).toContainElement(await screen.findByTestId("pr-diff"));
+  });
+
+  it("keeps the loading state inside the scroll body", () => {
+    select2();
+    hooks.diffQuery = { ...okDiff, data: undefined, isPending: true };
+    renderWithProviders(<InboxPrsScreen />);
+    expect(screen.getByTestId(PrDetailTestId.Body)).toContainElement(
+      screen.getByTestId(PrDetailTestId.Loading),
+    );
   });
 
   it("lists all PRs and shows the selected one's detail", () => {

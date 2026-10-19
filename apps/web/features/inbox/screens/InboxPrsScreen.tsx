@@ -28,6 +28,9 @@ import { useInboxItemsQuery, useInboxPrsQuery } from "../queries";
 import { useInboxFilters } from "../useInboxFilters";
 import { useSessionFlags } from "../useSessionFlags";
 
+/** Height of the list + detail panes at lg+ — the page itself must not scroll there. */
+const PRS_PANE_HEIGHT = "calc(100vh - 24rem)";
+
 const COLLAPSED_STORAGE_KEY = "zibby-inbox-pr-sections-collapsed";
 
 export enum InboxPrsScreenTestId {
@@ -173,8 +176,8 @@ export function InboxPrsScreen() {
       status={prsQuery}
       view="prs"
     >
-      <Grid align="start" gap="200" sidebar="left-narrow">
-        <Container maxHeight="calc(100vh - 14rem)" overflowY="auto">
+      <Grid gap="200" lgHeight={PRS_PANE_HEIGHT} sidebar="left-narrow">
+        <Container maxHeight={PRS_PANE_HEIGHT} overflowY="auto">
           <Stack gap="250">
             {visibleSections.length === 0 && (
               <EmptyState
@@ -207,7 +210,7 @@ export function InboxPrsScreen() {
             </Typography>
           </Stack>
         </Container>
-        <Container aria-live="polite" data-testid={InboxPrsScreenTestId.Detail} ref={detailRef}>
+        <Stack minH0 aria-live="polite" data-testid={InboxPrsScreenTestId.Detail} ref={detailRef}>
           {selected ? (
             <PrDetail
               key={selected.url}
@@ -226,7 +229,7 @@ export function InboxPrsScreen() {
               </Typography>
             </Panel>
           )}
-        </Container>
+        </Stack>
       </Grid>
     </InboxPage>
   );
