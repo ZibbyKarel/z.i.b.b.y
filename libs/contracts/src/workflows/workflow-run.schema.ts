@@ -236,6 +236,12 @@ export const WorkflowRunSchema = z.object({
    */
   pendingOutput: z.object({ index: z.number().int().nonnegative() }).optional(),
   /**
+   * The id of the LAST phase when the operator approved its `approval: ask` gate —
+   * the finished chain's final output was signed off as-is. A PR-review run uses it
+   * to post that output on the same approval instead of parking a second one.
+   */
+  approvedFinalGate: z.string().min(1).optional(),
+  /**
    * P1-02/P1-03 — present while `parkedReason` is `gate` or `budget`: where the
    * driver re-enters on approve (`cursor` null = the chain is finished, deliver the
    * outputs) and the handoff the next phase consumes. No live child → durable.

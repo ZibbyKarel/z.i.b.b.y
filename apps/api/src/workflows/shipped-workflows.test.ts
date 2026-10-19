@@ -263,31 +263,32 @@ describe("shipped dev workflows — verify phase gates the PR", () => {
   });
 });
 
-describe("pr-review-* — the PR inbox's thorough / tested review levels (todo-4)", () => {
+describe("pr-review-* — the PR inbox's review levels (todo-4)", () => {
   const LEVELS = {
-    "pr-review-thorough": ["architecture", "final"],
-    "pr-review-tested": ["test", "architecture", "final"],
+    "pr-review-quick": ["aggregate", "comment"],
+    "pr-review-thorough": ["architecture", "aggregate", "comment"],
+    "pr-review-tested": ["test", "architecture", "aggregate", "comment"],
   } as const;
 
   it.each(Object.entries(LEVELS))(
-    "%s runs phases %j and ends in the review artifact",
+    "%s runs phases %j and ends in the github-commenter's gated review artifact",
     (id, ids) => {
       const wf = readWorkflow(id);
       expect(wf.phases.map((p) => p.id)).toEqual(ids);
       expect(wf.phases[0]?.consumes).toBe("task.md");
       expect(wf.phases.at(-1)).toMatchObject({
         type: "agent",
-        agent: "code-reviewer",
+        agent: "github-commenter",
         produces: PR_REVIEW_ARTIFACT,
+        approval: "ask",
       });
     },
   );
 
-  it.each(Object.keys(LEVELS))("%s never opens a PR and is never QA's cheapest rung", (id) => {
+  it.each(Object.keys(LEVELS))("%s never opens a PR and stays in QA", (id) => {
     const wf = readWorkflow(id);
     expect(wf.outputs).toEqual([]);
     expect(wf.department).toBe("qa");
-    expect(wf.complexity).toBe("deep");
   });
 
   it.each(Object.keys(LEVELS))("%s has a hired QA employee for every phase agent", (id) => {

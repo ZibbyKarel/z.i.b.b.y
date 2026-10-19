@@ -47,6 +47,7 @@ import { ProjectLocalUnresolvedError } from "../projects/projects.errors";
 import { ProjectSecretsStore } from "../projects/project-secrets.store";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { writeFileAtomic } from "../shared/file-storage/file-utils";
+import { PR_REVIEW_ARTIFACT } from "../tasks/task-output.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TraceContextService } from "../shared/logging/trace-context.service";
 import { prepareWorktreeDir } from "../shared/worktree-root";
@@ -1473,7 +1474,10 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
             approval: {
               skill: workflow.name ?? workflow.id,
               action: "stage-approval",
-              detail: `Workflow "${run.workflowId}", phase "${phase.id}" finished — review ${producesPath} and approve to continue (reject fails the run).`,
+              detail:
+                cursor === null && phase.produces === PR_REVIEW_ARTIFACT
+                  ? `Workflow "${run.workflowId}", phase "${phase.id}" finished — review ${producesPath}. Approve posts it to the PR on GitHub as a COMMENT review; notes send it back to this phase; reject discards it.`
+                  : `Workflow "${run.workflowId}", phase "${phase.id}" finished — review ${producesPath} and approve to continue (reject fails the run).`,
               risk: "low",
               department: workflow.department,
             },
@@ -2018,6 +2022,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         };
       }
       run.status = "running";
+      if (reason === "gate" && gate.cursor === null) run.approvedFinalGate = gate.phaseId;
       await this.writeAggregate(run);
       if (gate.cursor === null) {
         await this.runOutputs(run, workflow, 0, phaseIds);

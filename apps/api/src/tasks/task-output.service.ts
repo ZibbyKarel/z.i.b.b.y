@@ -124,8 +124,18 @@ export class TaskOutputService implements OnModuleInit {
    * ({@link handleTerminal}, file at `run.cwd`) and the workflow path
    * (`TaskSchedulerService.writeWorkflowOutcome`, the final phase's `produces` read by
    * the workflow runner — todo-4) read the artifact differently and park identically.
+   *
+   * `signedOffAtGate` — the workflow's final phase (the `github-commenter` output) was
+   * already approved by the operator at its `approval: ask` gate, where notes go back
+   * to the phase. That gate WAS the decision on this exact text, so the approval is
+   * recorded and approved in one go (the `pr-review` runner posts it) instead of
+   * asking twice.
    */
-  async parkPrReview(task: ScheduledTask, raw: string): Promise<TaskTerminalDelivery> {
+  async parkPrReview(
+    task: ScheduledTask,
+    raw: string,
+    signedOffAtGate?: string,
+  ): Promise<TaskTerminalDelivery> {
     const review = task.prReview;
     if (!review) return {};
     const body = raw.trim().slice(0, PR_REVIEW_MAX_CHARS);
@@ -145,7 +155,7 @@ export class TaskOutputService implements OnModuleInit {
       kind: "pr-review",
       skill: "code-reviewer",
       action: "github.pr.review",
-      detail: `Post review to GitHub — ${ref} (COMMENT)\n\n${body}`,
+      detail: `Post review to GitHub — ${ref} (COMMENT)${signedOffAtGate ? `, approved at workflow gate "${signedOffAtGate}"` : ""}\n\n${body}`,
       risk: "medium",
       sourceUrl: review.url,
     });
@@ -157,6 +167,24 @@ export class TaskOutputService implements OnModuleInit {
       ref,
       approvalId: approval.id,
     });
+    if (signedOffAtGate) {
+      // A failed post already marks the review `failed` with the GitHub error.
+      const posted = await this.approvals.approve(approval.id).then(
+        () => true,
+        (error: unknown) => {
+          this.log.warn("pr review post after gate sign-off failed", {
+            taskId: task.id,
+            err: error instanceof Error ? error.message : String(error),
+          });
+          return false;
+        },
+      );
+      return {
+        summary: posted
+          ? `Code review ${ref} odesláno na GitHub`
+          : `Code review ${ref}: odeslání na GitHub selhalo`,
+      };
+    }
     return { summary: `Code review ${ref} připraveno — čeká na schválení odeslání na GitHub` };
   }
 

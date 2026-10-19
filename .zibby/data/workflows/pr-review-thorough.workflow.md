@@ -8,13 +8,21 @@ phases:
     produces: architecture.md
     model: opus
     thinking: high
-  - id: final
+  - id: aggregate
     type: agent
     agent: code-reviewer
     consumes: architecture.md
-    produces: zibby-pr-review.md
+    produces: review.md
     model: opus
     thinking: high
+  - id: comment
+    type: agent
+    agent: github-commenter
+    consumes: review.md
+    produces: zibby-pr-review.md
+    model: sonnet
+    thinking: medium
+    approval: ask
 desc: >-
   Interní linka PR inboxu — spouští ji jen tlačítko „Důkladné code-review" u
   konkrétního GitHub PR. Nesměruj sem běžné úkoly: review existujícího kódu je
@@ -25,19 +33,22 @@ complexity: deep
 
 # PR Review — Thorough
 
-Úroveň „důkladné" tlačítka code-review v PR inboxu (todo-4). Dvě optiky nad jedním
-PR: **architecture → final**. Read-only: nic se nepostuje, necommituje ani nepushuje.
+Úroveň „důkladné" tlačítka code-review v PR inboxu: **architecture → aggregate →
+comment**. Read-only vůči GitHubu: agenti nic nepostují, necommitují ani nepushují.
 
 ## Fáze
 
-1. **architecture** (`architect-reviewer`): `task.md` (zadání z inboxu) →
-   `architecture.md`. Checkne PR head v pracovním worktree běhu a posoudí návrh:
-   hranice modulů, kontrakty, tok dat, chybové stavy, bezpečnost, zpětnou kompatibilitu.
-2. **final** (`code-reviewer`): `architecture.md` → `zibby-pr-review.md`. Projde diff
-   řádek po řádku a sloučí to s nálezy z architektury do jednoho review.
+1. **architecture** (`architect-reviewer`): `task.md` → `architecture.md`. Checkne PR
+   head v pracovním worktree běhu a posoudí návrh: hranice modulů, kontrakty, tok dat,
+   chybové stavy, bezpečnost, zpětnou kompatibilitu.
+2. **aggregate** (`code-reviewer`): `architecture.md` → `review.md`. Projde diff řádek po
+   řádku a sloučí to s nálezy z architektury do jedné agregace.
+3. **comment** (`github-commenter`, `approval: ask`): `review.md` →
+   `zibby-pr-review.md`. Přepíše agregaci do textu, který se postne na PR, stylem z
+   promptu agenta. Běh tu zaparkuje ke schválení.
 
-## Výstup
+## Schválení
 
-Žádný `outputs:`. `zibby-pr-review.md` z fáze `final` přečte scheduler při dokončení
-běhu a zaparkuje ho jako Tier-3 schválení `pr-review`. Po schválení odejde na GitHub
-jako `COMMENT` review.
+Ve frontě schválení je výsledné review. **Připomínky** ho vrátí fázi `comment` s tvou
+poznámkou a nová verze se vrátí ke schválení. **Schválit** ho postne na PR jako
+`COMMENT` review. **Zamítnout** ho zahodí.

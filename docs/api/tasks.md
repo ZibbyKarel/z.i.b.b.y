@@ -99,7 +99,11 @@ the PR inbox's "Do code review" flow (`InboxReviewService`, `docs/api/inbox.md`)
 `TaskOutputService.handleTerminal` checks it before the `output` sink: it reads
 `zibby-pr-review.md` (`PR_REVIEW_ARTIFACT`) from the run's `cwd` and parks a Tier-3
 `pr-review` approval with the review as `detail`; no artifact → no approval,
-`prReview.state = "failed"`.
+`prReview.state = "failed"`. Every inbox review level is now a `pr-review-*` workflow,
+so the live path is `TaskSchedulerService.writeWorkflowOutcome` →
+`TaskOutputService.parkPrReview(task, text, run.approvedFinalGate)`: when the
+operator already approved the final `comment` phase at its gate, the approval is
+recorded and approved in one go (posted), otherwise it parks as pending.
 
 `scheduledAt` absent or in the past → `createTask` runs classification + dispatch
 immediately. From the dialog (`background = true`), dispatch happens in the

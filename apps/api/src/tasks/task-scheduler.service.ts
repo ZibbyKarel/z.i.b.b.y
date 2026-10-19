@@ -1876,7 +1876,8 @@ export class TaskSchedulerService
       try {
         // todo-4 — a PR-inbox review run as a workflow (level thorough/tested) parks
         // its final phase's `produces` (zibby-pr-review.md) exactly like the agent
-        // path's handleTerminal. Gated on `running` so the onRunStatus fast path and
+        // path's handleTerminal — or, when the operator already approved the final
+        // phase at its gate, posts it on that sign-off. Gated on `running` so the onRunStatus fast path and
         // the reconcile sweep park one approval, not two.
         if (run.status === "done") {
           const existing = await this.storage.get(taskId);
@@ -1885,7 +1886,7 @@ export class TaskSchedulerService
               .readArtifact(run.workflowRunId, PR_REVIEW_ARTIFACT)
               .catch(() => null);
             const delivery = await this.taskOutput
-              .parkPrReview(existing, artifact?.content ?? "")
+              .parkPrReview(existing, artifact?.content ?? "", run.approvedFinalGate)
               .catch(async (error: unknown) => {
                 this.log.warn("pr review park failed (soft)", {
                   taskId,

@@ -1670,8 +1670,23 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       expect(taskOutput.parkPrReview).toHaveBeenCalledWith(
         expect.objectContaining({ id }),
         "## Review\n\nbug at a.ts:3",
+        undefined,
       );
       expect((await storage.get(id)).outcome?.summary).toBe("parked");
+    });
+
+    it("passes the approved final gate on, so the review posts on that sign-off", async () => {
+      const id = await seedReview();
+      workflowRunner.readArtifact.mockResolvedValue({ name: PR_REVIEW_ARTIFACT, content: "x" });
+      workflowListener?.({ ...done(id), approvedFinalGate: "comment" });
+      await vi.waitFor(async () => {
+        expect((await storage.get(id)).outcome).toBeDefined();
+      });
+      expect(taskOutput.parkPrReview).toHaveBeenCalledWith(
+        expect.objectContaining({ id }),
+        "x",
+        "comment",
+      );
     });
 
     it("a missing artifact still goes through parkPrReview (which fails the review)", async () => {
@@ -1680,7 +1695,11 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       await vi.waitFor(async () => {
         expect((await storage.get(id)).outcome).toBeDefined();
       });
-      expect(taskOutput.parkPrReview).toHaveBeenCalledWith(expect.objectContaining({ id }), "");
+      expect(taskOutput.parkPrReview).toHaveBeenCalledWith(
+        expect.objectContaining({ id }),
+        "",
+        undefined,
+      );
     });
 
     it("parks once when the done event arrives twice", async () => {

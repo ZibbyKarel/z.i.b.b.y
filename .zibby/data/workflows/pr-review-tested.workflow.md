@@ -15,13 +15,21 @@ phases:
     produces: architecture.md
     model: opus
     thinking: high
-  - id: final
+  - id: aggregate
     type: agent
     agent: code-reviewer
     consumes: architecture.md
-    produces: zibby-pr-review.md
+    produces: review.md
     model: opus
     thinking: high
+  - id: comment
+    type: agent
+    agent: github-commenter
+    consumes: review.md
+    produces: zibby-pr-review.md
+    model: sonnet
+    thinking: medium
+    approval: ask
 desc: >-
   Interní linka PR inboxu — spouští ji jen tlačítko „Code-review s testy" u
   konkrétního GitHub PR. Nesměruj sem běžné úkoly: review existujícího kódu je
@@ -32,9 +40,9 @@ complexity: deep
 
 # PR Review — With Tests
 
-Nejdůkladnější úroveň tlačítka code-review v PR inboxu (todo-4):
-**test → architecture → final**. Read-only vůči GitHubu: nic se nepostuje,
-necommituje ani nepushuje.
+Nejdůkladnější úroveň tlačítka code-review v PR inboxu: **test → architecture →
+aggregate → comment**. Read-only vůči GitHubu: agenti nic nepostují, necommitují ani
+nepushují.
 
 ## Fáze
 
@@ -44,11 +52,13 @@ necommituje ani nepushuje.
    spustit, řekne výslovně.
 2. **architecture** (`architect-reviewer`): `test-report.md` → `architecture.md`.
    Posouzení návrhu nad už checknutým PR headem.
-3. **final** (`code-reviewer`): `architecture.md` → `zibby-pr-review.md`. Řádkové
-   review diffu, sloučené s výsledky testů (sekce **Tests** první) a nálezy z
-   architektury.
+3. **aggregate** (`code-reviewer`): `architecture.md` → `review.md`. Řádkové review diffu,
+   sloučené s výsledky testů a nálezy z architektury do jedné agregace.
+4. **comment** (`github-commenter`, `approval: ask`): `review.md` →
+   `zibby-pr-review.md`. Přepíše agregaci do textu, který se postne na PR, stylem z
+   promptu agenta. Běh tu zaparkuje ke schválení.
 
-## Výstup
+## Schválení
 
-Stejně jako `pr-review-thorough`: `zibby-pr-review.md` z fáze `final` se zaparkuje
-jako schválení `pr-review` a po schválení odejde jako `COMMENT` review.
+Stejně jako `pr-review-thorough`: **Připomínky** vrátí review fázi `comment`,
+**Schválit** ho postne na PR jako `COMMENT` review, **Zamítnout** ho zahodí.

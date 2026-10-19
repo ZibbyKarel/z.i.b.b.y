@@ -91,16 +91,18 @@ Shown on PRs in the two review sections. The service resolves the project's GitH
 link (`resolveGithubToken`) and refuses a `repo` that isn't the project's (422); the
 PR url is derived from repo + number, never taken from the client. It then:
 
-1. `TaskSchedulerService.createTask` with the explicit target for `level`:
-   `quick` → `{ kind: "agent", id: "code-reviewer" }`; `thorough` → workflow
-   `pr-review-thorough` (architect-reviewer → code-reviewer); `tested` → workflow
-   `pr-review-tested` (test-automator checks out the PR head with
+1. `TaskSchedulerService.createTask` with the explicit workflow target for `level`:
+   `quick` → `pr-review-quick` (code-reviewer → github-commenter); `thorough` →
+   `pr-review-thorough` (architect-reviewer → code-reviewer → github-commenter);
+   `tested` → `pr-review-tested` (test-automator checks out the PR head with
    `gh pr checkout --detach` in the run's own worktree and runs the repo's tests →
-   architect-reviewer → code-reviewer). `trustedProjectId = projectId`, title
-   `Code review[ (<level>)]: <repo>#<n> <title>`. The text tells the agent(s) to read the PR (`gh pr view` /
-   `gh pr diff --repo`), write the review to `zibby-pr-review.md` (agent: its working
-   directory; workflow: the `final` phase's `produces`), and **not** post to GitHub,
-   commit or push. The PR title is quoted as untrusted data.
+   architect-reviewer → code-reviewer → github-commenter). The `aggregate` phase
+   (code-reviewer) merges the reviewers' findings into `review.md`; the last phase,
+   `comment` (`github-commenter`, whose agent prompt holds the posting style), turns
+   it into `zibby-pr-review.md` and has `approval: ask`. `trustedProjectId = projectId`, title
+   `Code review[ (<level>)]: <repo>#<n> <title>`. The text tells the agents to read the PR (`gh pr view` /
+   `gh pr diff --repo`) and **not** post to GitHub, commit or push. The PR title is
+   quoted as untrusted data.
 2. Stamps `ScheduledTask.prReview = { repo, number, url, state: "running" }`.
 
 **Run → approval mechanism:** the existing terminal-output hook,
@@ -113,10 +115,16 @@ sourceUrl })` — the approvals UI shows `detail` in full as the preview. No art
 no approval (a reply is concrete or it is not drafted), `state: "failed"`.
 
 A workflow-level review has no `handleTerminal` call (that hook is agent-only).
-`TaskSchedulerService.writeWorkflowOutcome` does the same thing instead: on a `done`
-run whose task has `prReview.state === "running"`, it reads `zibby-pr-review.md` via
-`WorkflowRunnerService.readArtifact` and calls `TaskOutputService.parkPrReview`. A
-`failed` run parks nothing, and the row reads `failed` from the task outcome.
+The run parks at the `comment` phase's gate (a `workflow-gate` `stage-approval`; the
+sheet renders `zibby-pr-review.md`). **Notes** ("request changes") re-run `comment`
+with the operator's note and park at the same gate again; **reject** fails the run
+and nothing is posted. **Approve** finishes the run and stamps
+`WorkflowRun.approvedFinalGate`. `TaskSchedulerService.writeWorkflowOutcome` then, on a
+`done` run whose task has `prReview.state === "running"`, reads `zibby-pr-review.md`
+via `WorkflowRunnerService.readArtifact` and calls `TaskOutputService.parkPrReview`
+with that gate id: the `pr-review` approval is recorded and approved in one go, so the
+operator decides once. A run that ended without the final gate parks the approval as
+pending. A `failed` run parks nothing, and the row reads `failed` from the task outcome.
 
 `InboxReviewService` registers as the `pr-review` runner: **approve** →
 `POST /repos/{repo}/pulls/{n}/reviews` with `{ body, event: "COMMENT" }` using the

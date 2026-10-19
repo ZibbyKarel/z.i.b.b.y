@@ -249,6 +249,7 @@ Run fields added by the gates and the budget:
 | Field                      | When                                 | Meaning                                                                                                                             |
 | -------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `pendingGate`              | `parkedReason` is `gate` or `budget` | `{ phaseId, cursor, handoffSource }` — where the driver re-enters on approve (`cursor: null` = chain finished, deliver the outputs) |
+| `approvedFinalGate`        | the LAST phase's gate was approved   | that phase's id; the chain's final output was signed off as-is (a PR-review run posts it on this sign-off, see `docs/api/inbox.md`) |
 | `budget`                   | the workflow declares a `budget`     | `{ maxCostUsd, warnAtPct, spentUsd, warned? }` — snapshot of the cap plus spend so far                                              |
 | `StageRun.externalCostUsd` | a stage reported non-model spend     | sum of `costUsd` over the lines of `<stageDir>/costs.jsonl`; absent when none                                                       |
 | `failedReason`             | the run was refused before any work  | e.g. `requires a web project, but the run has no project` — set with `status: "failed"`                                             |
@@ -414,7 +415,9 @@ meaning fully autonomous. Once the phase lands green (`produces` written):
    (`POST /api/approvals/:id/revise` with a note) re-runs the gated phase itself with the
    note as its resume-context ("Operator note"), resets that phase's retry counter, and
    appends the note to `<phaseId>.note.md` in the run folder — the phase lands green and
-   parks at the same gate again for another review.
+   parks at the same gate again for another review. Approving the gate of the LAST
+   phase also stamps `WorkflowRun.approvedFinalGate`. When that phase produces
+   `zibby-pr-review.md`, the gate detail says that approve posts it to the PR.
 
 ### Budget (`budget`)
 

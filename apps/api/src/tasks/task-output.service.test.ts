@@ -23,7 +23,11 @@ describe("TaskOutputService", () => {
     openPr: ReturnType<typeof vi.fn>;
   };
   let vault: { createNote: ReturnType<typeof vi.fn>; updateNote: ReturnType<typeof vi.fn> };
-  let approvals: { register: ReturnType<typeof vi.fn>; requestApproval: ReturnType<typeof vi.fn> };
+  let approvals: {
+    register: ReturnType<typeof vi.fn>;
+    requestApproval: ReturnType<typeof vi.fn>;
+    approve: ReturnType<typeof vi.fn>;
+  };
   let projects: { get: ReturnType<typeof vi.fn> };
   let service: TaskOutputService;
 
@@ -43,7 +47,11 @@ describe("TaskOutputService", () => {
       openPr: vi.fn(async () => ({ url: "https://example/pr/1" })),
     };
     vault = { createNote: vi.fn(async () => ({})), updateNote: vi.fn(async () => ({})) };
-    approvals = { register: vi.fn(), requestApproval: vi.fn(async () => ({ id: "appr_1" })) };
+    approvals = {
+      register: vi.fn(),
+      requestApproval: vi.fn(async () => ({ id: "appr_1" })),
+      approve: vi.fn(async () => ({})),
+    };
     projects = { get: vi.fn(async () => ({ id: "p1", name: "Repo", path: "/repo" })) };
 
     service = new TaskOutputService(
@@ -268,6 +276,25 @@ describe("TaskOutputService", () => {
         state: "awaiting-approval",
         body: "## Review\n\nnull deref at b.ts:9",
       });
+    });
+
+    it("parkPrReview signed off at the workflow gate approves (posts) it right away", async () => {
+      const task = await seedReview();
+      const delivered = await service.parkPrReview(task, "bug at a.ts:3", "comment");
+      expect(approvals.requestApproval).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: "pr-review",
+          detail: expect.stringContaining('approved at workflow gate "comment"'),
+        }),
+      );
+      expect(approvals.approve).toHaveBeenCalledWith("appr_1");
+      expect(delivered.summary).toMatch(/odesláno/);
+    });
+
+    it("parkPrReview without a gate sign-off leaves the approval pending", async () => {
+      const task = await seedReview();
+      await service.parkPrReview(task, "bug at a.ts:3");
+      expect(approvals.approve).not.toHaveBeenCalled();
     });
 
     it("parkPrReview with blank text parks nothing and fails the review", async () => {
