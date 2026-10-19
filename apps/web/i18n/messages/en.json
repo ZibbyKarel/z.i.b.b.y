@@ -2817,8 +2817,6 @@
       "emptyToReview": "No review is waiting on you.",
       "openGithub": "Open on GitHub",
       "item": "Item {key} →",
-      "focus": "Showing #{n} only",
-      "showAll": "Show all ×",
       "footer": "Merges only on your click. A code review is posted to GitHub only after you approve it. Refreshes on focus and every 60 s.",
       "section": {
         "needs-your-review": "Needs your review",

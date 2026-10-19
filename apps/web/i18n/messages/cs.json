@@ -2817,8 +2817,6 @@
       "emptyToReview": "Na vaše review nikdo nečeká.",
       "openGithub": "Otevřít na GitHubu",
       "item": "Položka {key} →",
-      "focus": "Zobrazeno pouze #{n}",
-      "showAll": "Zobrazit vše ×",
       "footer": "Merguje jen na vaše kliknutí. Code-review se na GitHub odešle až po vašem schválení. Obnovuje se při návratu do okna a každých 60 s.",
       "section": {
         "needs-your-review": "Čeká na vaše review",

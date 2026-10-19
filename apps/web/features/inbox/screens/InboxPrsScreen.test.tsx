@@ -3,17 +3,24 @@ import { within } from "@testing-library/react";
 import { AccordionTestId, DropDownButtonTestId } from "@zibby/design-system";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, renderWithProviders, screen } from "../../../test/render";
+import { PrDetailTestId } from "../components/PrDetail";
 import { PrActionsTestId } from "../components/PrActions";
 import { PrRowTestId } from "../components/PrRow";
 import { InboxPrsScreen, InboxPrsScreenTestId } from "./InboxPrsScreen";
 
 const { hooks, review, merge } = vi.hoisted(() => ({
-  hooks: { prs: [] as unknown[], search: "", reviewPending: false },
+  hooks: {
+    prs: [] as unknown[],
+    search: "",
+    reviewPending: false,
+    replace: vi.fn(),
+    diffQuery: {} as unknown,
+  },
   review: vi.fn(),
   merge: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), replace: hooks.replace }),
   usePathname: () => "/inbox/pull-requests",
   useSearchParams: () => new URLSearchParams(hooks.search),
 }));
@@ -24,12 +31,16 @@ vi.mock("../queries", () => ({
     isError: false,
     refetch: vi.fn(),
   }),
+  useInboxPrDiffQuery: () => hooks.diffQuery,
   useInboxPrsQuery: () => ({
     data: { prs: hooks.prs, errors: [] },
     isPending: false,
     isError: false,
     refetch: vi.fn(),
   }),
+}));
+vi.mock("../components/PrDiff/PrDiff", () => ({
+  PrDiff: ({ diff }: { diff: string }) => <div data-testid="pr-diff">{diff}</div>,
 }));
 vi.mock("../mutations", async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -41,6 +52,14 @@ vi.mock("../../projects/mutations", () => ({
 vi.mock("../../teams", () => ({ useTeamsQuery: () => ({ data: [] }) }));
 vi.mock("../../companies", () => ({ useCompaniesQuery: () => ({ data: [] }) }));
 vi.mock("../../projects", () => ({ useProjectsQuery: () => ({ data: [] }) }));
+
+const okDiff = {
+  data: { diff: "", truncated: false },
+  isPending: false,
+  isError: false,
+  refetch: vi.fn(),
+};
+const urlOf = (n: number) => `https://github.com/acme/api/pull/${n}`;
 
 function pr(number: number, over: Partial<InboxPr>): InboxPr {
   return {
@@ -88,6 +107,8 @@ describe("InboxPrsScreen sections", () => {
     window.sessionStorage.clear();
     hooks.search = "";
     hooks.reviewPending = false;
+    hooks.diffQuery = okDiff;
+    hooks.replace.mockClear();
     vi.restoreAllMocks();
     review.mockReset();
     merge.mockClear();
@@ -124,7 +145,7 @@ describe("InboxPrsScreen sections", () => {
     );
   });
 
-  it("card shows review/CI badges only when they say something, and opens the PR on click", () => {
+  it("card shows review/CI badges only when they say something, and a click selects it", () => {
     const open = vi.spyOn(window, "open").mockImplementation(() => null);
     hooks.prs = [
       pr(1, { section: "needs-your-review", bucket: "to-review", review: "none" }),
@@ -137,12 +158,10 @@ describe("InboxPrsScreen sections", () => {
     expect(within(row(2)).getByTestId(PrRowTestId.Ci)).toBeInTheDocument();
 
     fireEvent.click(within(row(2)).getByTestId(PrRowTestId.Meta));
-    expect(open).toHaveBeenCalledWith(
-      "https://github.com/acme/api/pull/2",
-      "_blank",
-      "noopener,noreferrer",
+    expect(hooks.replace).toHaveBeenCalledWith(
+      `/inbox/pull-requests?pr=${encodeURIComponent(urlOf(2))}`,
     );
-    open.mockClear();
+    expect(open).not.toHaveBeenCalled();
     fireEvent.click(within(row(2)).getByTestId(PrActionsTestId.DeleteBranch));
     expect(open).not.toHaveBeenCalled();
   });
@@ -318,7 +337,7 @@ describe("InboxPrsScreen sections", () => {
     expect(headerOf("ready-to-merge")).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("a focused PR shows even when its section was collapsed", () => {
+  it("the selected PR shows even when its section was collapsed", () => {
     window.sessionStorage.setItem(
       "zibby-inbox-pr-sections-collapsed",
       JSON.stringify({ "ready-to-merge": true }),
@@ -343,5 +362,102 @@ describe("InboxPrsScreen sections", () => {
     expect(screen.getByTestId(sectionId("needs-your-review"))).not.toHaveTextContent(
       "Na vaše review nikdo nečeká.",
     );
+  });
+});
+
+describe("InboxPrsScreen master–detail", () => {
+  afterEach(() => {
+    hooks.search = "";
+    hooks.diffQuery = okDiff;
+    hooks.replace.mockClear();
+    vi.restoreAllMocks();
+  });
+  const two = () => [
+    pr(1, { section: "waiting" }),
+    pr(2, { section: "needs-your-review", bucket: "to-review" }),
+  ];
+  const select2 = () => {
+    hooks.prs = two();
+    hooks.search = `pr=${encodeURIComponent(urlOf(2))}`;
+  };
+
+  it("shows the placeholder when no PR is selected", () => {
+    hooks.prs = two();
+    renderWithProviders(<InboxPrsScreen />);
+    expect(screen.getByTestId(InboxPrsScreenTestId.Placeholder)).toHaveTextContent(
+      "Vyber PR vlevo",
+    );
+    expect(screen.queryByTestId(PrDetailTestId.Root)).toBeNull();
+  });
+
+  it("clicking a card selects it without opening GitHub", () => {
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    hooks.prs = two();
+    renderWithProviders(<InboxPrsScreen />);
+    fireEvent.click(screen.getByTestId(`${PrRowTestId.Root}-2`));
+    expect(hooks.replace).toHaveBeenCalledWith(
+      `/inbox/pull-requests?pr=${encodeURIComponent(urlOf(2))}`,
+    );
+    expect(open).not.toHaveBeenCalled();
+  });
+
+  it("lists all PRs and shows the selected one's detail", () => {
+    select2();
+    renderWithProviders(<InboxPrsScreen />);
+    expect(screen.getByTestId(`${PrRowTestId.Root}-1`)).toBeInTheDocument();
+    expect(screen.getByTestId(`${PrRowTestId.Root}-2`)).toHaveAttribute("aria-current", "true");
+    expect(screen.getByTestId(`${PrRowTestId.Root}-1`)).not.toHaveAttribute("aria-current");
+    const detail = screen.getByTestId(PrDetailTestId.Root);
+    expect(detail).toHaveTextContent("#2");
+    expect(detail).toHaveTextContent("PR 2");
+    expect(screen.getByTestId(PrDetailTestId.GitHub)).toHaveAttribute("href", urlOf(2));
+  });
+
+  it("an unknown ?pr= falls back to the placeholder", () => {
+    hooks.prs = two();
+    hooks.search = `pr=${encodeURIComponent(urlOf(99))}`;
+    renderWithProviders(<InboxPrsScreen />);
+    expect(screen.getByTestId(InboxPrsScreenTestId.Placeholder)).toBeInTheDocument();
+    expect(screen.queryByTestId(PrDetailTestId.Root)).toBeNull();
+  });
+
+  it("shows the diff loading state", () => {
+    select2();
+    hooks.diffQuery = { ...okDiff, data: undefined, isPending: true };
+    renderWithProviders(<InboxPrsScreen />);
+    expect(screen.getByTestId(PrDetailTestId.Loading)).toBeInTheDocument();
+  });
+
+  it("shows the diff error and retries", () => {
+    select2();
+    const refetch = vi.fn();
+    hooks.diffQuery = { ...okDiff, data: undefined, isError: true, refetch };
+    renderWithProviders(<InboxPrsScreen />);
+    expect(screen.getByTestId(PrDetailTestId.Error)).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId(PrDetailTestId.Retry));
+    expect(refetch).toHaveBeenCalled();
+  });
+
+  it("an empty truncated diff is 'too large'", () => {
+    select2();
+    hooks.diffQuery = { ...okDiff, data: { diff: "", truncated: true } };
+    renderWithProviders(<InboxPrsScreen />);
+    expect(screen.getByTestId(PrDetailTestId.TooLarge)).toBeInTheDocument();
+  });
+
+  it("a truncated diff shows the notice and the partial diff", async () => {
+    select2();
+    hooks.diffQuery = { ...okDiff, data: { diff: "x", truncated: true } };
+    renderWithProviders(<InboxPrsScreen />);
+    expect(screen.getByTestId(PrDetailTestId.Truncated)).toBeInTheDocument();
+    expect(await screen.findByTestId("pr-diff")).toHaveTextContent("x");
+  });
+
+  it("clicking the review split button does not select the PR", () => {
+    hooks.prs = [pr(1, { section: "needs-your-review", bucket: "to-review" })];
+    renderWithProviders(<InboxPrsScreen />);
+    const split = screen.getByTestId(PrActionsTestId.Review);
+    fireEvent.click(within(split).getByTestId(DropDownButtonTestId.Primary));
+    expect(hooks.replace).not.toHaveBeenCalled();
   });
 });

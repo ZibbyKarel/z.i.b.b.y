@@ -29,7 +29,12 @@ export enum PrRowTestId {
 }
 
 const CI_SYMBOL = { passing: "✓", failing: "✗", pending: "…", unknown: "?" } as const;
-const CI_TONE = { passing: "done", failing: "error", pending: "working", unknown: "neutral" } as const;
+const CI_TONE = {
+  passing: "done",
+  failing: "error",
+  pending: "working",
+  unknown: "neutral",
+} as const;
 
 export interface PrRowProps {
   pr: InboxPr;
@@ -42,24 +47,32 @@ export interface PrRowProps {
   item?: { key: string; href: string } | undefined;
   /** Phase 129 — the row's action strip (review / squash-and-merge), when any. */
   actions?: ReactNode;
+  /**
+   * Master–detail mode: a card click selects the PR (instead of opening GitHub) and the title
+   * is plain text — GitHub is opened from the detail header.
+   */
+  onSelect?: (pr: InboxPr) => void;
 }
 
 /**
  * One pull-request card, three lines: `#n` title + review / CI badges; project · author ·
- * age; the actions strip (see `PrActions`) + linked item. The whole card opens the PR on
- * GitHub — the title is the real (keyboard-reachable) link, a click anywhere else on the
- * card follows it; clicks inside the actions line never do.
+ * age; the actions strip (see `PrActions`) + linked item. Without `onSelect` the whole card
+ * opens the PR on GitHub — the title is the real (keyboard-reachable) link, a click anywhere
+ * else on the card follows it; with `onSelect` a click selects the PR instead. Clicks inside
+ * the actions line never do either.
  */
-export function PrRow({ pr, now, projectName, focused, item, actions }: PrRowProps) {
+export function PrRow({ pr, now, projectName, focused, item, actions, onSelect }: PrRowProps) {
   const t = useTranslations("inboxPage");
   const elapsedLabel = useElapsedLabel();
   const openPr = (e: MouseEvent) => {
     if ((e.target as Element).closest("a")) return;
+    if (onSelect) return onSelect(pr);
     window.open(pr.url, "_blank", "noopener,noreferrer");
   };
   return (
     <Card
       interactive
+      aria-current={focused ? "true" : undefined}
       data-testid={`${PrRowTestId.Root}-${pr.number}`}
       onClick={openPr}
       radius="none"
@@ -73,15 +86,21 @@ export function PrRow({ pr, now, projectName, focused, item, actions }: PrRowPro
                 #{pr.number}
               </Typography>
               <Container grow minW0>
-                <TextLink
-                  data-testid={PrRowTestId.Title}
-                  href={pr.url}
-                  linkComponent={ExternalAnchor}
-                >
-                  <Typography truncate type="body" weight="medium">
+                {onSelect ? (
+                  <Typography truncate data-testid={PrRowTestId.Title} type="body" weight="medium">
                     {pr.title}
                   </Typography>
-                </TextLink>
+                ) : (
+                  <TextLink
+                    data-testid={PrRowTestId.Title}
+                    href={pr.url}
+                    linkComponent={ExternalAnchor}
+                  >
+                    <Typography truncate type="body" weight="medium">
+                      {pr.title}
+                    </Typography>
+                  </TextLink>
+                )}
               </Container>
               {pr.draft && (
                 <Tag uppercase data-testid={PrRowTestId.Draft} tone="neutral">

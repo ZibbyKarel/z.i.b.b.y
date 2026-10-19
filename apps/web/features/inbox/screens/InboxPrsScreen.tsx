@@ -4,7 +4,6 @@ import { INBOX_PR_SECTIONS, type InboxPr } from "@zibby/contracts";
 import {
   AccordionDetails,
   AccordionSummary,
-  Button,
   Container,
   Grid,
   Panel,
@@ -21,6 +20,7 @@ import { InboxPage } from "../components/InboxPage";
 import { issueHref } from "../components/IssueRow";
 import { useProjectsQuery } from "../../projects";
 import { PrActions, hasPrActions } from "../components/PrActions";
+import { PrDetail } from "../components/PrDetail";
 import { PrRow } from "../components/PrRow";
 import { groupPrsBySection, itemKey, linkedPrOf, pad2 } from "../inbox";
 import { useInboxItemsQuery, useInboxPrsQuery } from "../queries";
@@ -30,11 +30,11 @@ import { useSessionFlags } from "../useSessionFlags";
 const COLLAPSED_STORAGE_KEY = "zibby-inbox-pr-sections-collapsed";
 
 export enum InboxPrsScreenTestId {
-  Focus = "inbox-prs-focus",
-  ShowAll = "inbox-prs-show-all",
   /** Suffixed with the section id: `inbox-prs-section-needs-your-review`. */
   Section = "inbox-prs-section",
   Footer = "inbox-prs-footer",
+  Detail = "inbox-prs-detail",
+  Placeholder = "inbox-prs-detail-placeholder",
 }
 
 interface SectionProps {
@@ -45,6 +45,7 @@ interface SectionProps {
   prs: InboxPr[];
   now: number;
   focus: string | null;
+  onSelect: (pr: InboxPr) => void;
   itemFor: (pr: InboxPr) => { key: string; href: string } | undefined;
   projectNames: Map<string, string>;
   expanded: boolean;
@@ -59,6 +60,7 @@ function PrSection({
   prs,
   now,
   focus,
+  onSelect,
   itemFor,
   projectNames,
   expanded,
@@ -91,7 +93,7 @@ function PrSection({
             </Typography>
           </Panel>
         ) : (
-          <Grid cols={1} gap="100" lg={2}>
+          <Stack gap="100">
             {prs.map((pr) => (
               <PrRow
                 actions={hasPrActions(pr) ? <PrActions pr={pr} /> : undefined}
@@ -99,11 +101,12 @@ function PrSection({
                 item={itemFor(pr)}
                 key={pr.url}
                 now={now}
+                onSelect={onSelect}
                 pr={pr}
                 projectName={projectNames.get(pr.projectId)}
               />
             ))}
-          </Grid>
+          </Stack>
         )}
       </AccordionDetails>
     </Stack>
@@ -111,13 +114,13 @@ function PrSection({
 }
 
 /**
- * `/dashboard/inbox/pull-requests` — GitHub-style sections (Phase 129 P1, server-computed
- * `pr.section`, `INBOX_PR_SECTIONS` order), each sorted by blocker and laid out as a 1–2 column card grid. Empty sections are
- * hidden except "Needs your review". Review / squash-and-merge are operator clicks
- * (`PrActions`). `?pr=<n>` focuses one PR (the link from an
- * issue's badge or the Overview); the list refetches every 15 min + on inbox-refresh activity.
- * Sections are collapsible accordions, expanded by default; collapse is remembered per session
- * (a focused PR always expands its section).
+ * `/dashboard/inbox/pull-requests` — master–detail. Left: GitHub-style sections (server-computed
+ * `pr.section`, `INBOX_PR_SECTIONS` order) as a single column of cards, each sorted by blocker;
+ * empty sections are hidden except "Needs your review". Right: the selected PR (`?pr=<url>`,
+ * set by a card click, the issue badge link or the Overview) with its diff and the operator's
+ * actions (`PrActions` — review / squash-and-merge). The list refetches every 15 min + on
+ * inbox-refresh activity. Sections are collapsible accordions, expanded by default; collapse is
+ * remembered per session (the selected PR's section always expands).
  */
 export function InboxPrsScreen() {
   const t = useTranslations("inboxPage");
@@ -134,15 +137,14 @@ export function InboxPrsScreen() {
     [projects],
   );
 
-  // `?pr=<url>` (see `prListHref`); the number is only for the banner label.
+  // `?pr=<url>` (see `prListHref`) selects the PR shown on the right.
   const focus = searchParams.get("pr") || null;
-  const focusNumber = focus?.match(/\/pull\/(\d+)/)?.[1] ?? focus;
+  const selected = focus ? (prsQuery.data?.prs ?? []).find((p) => p.url === focus) : undefined;
 
   const sections = useMemo(
     () => groupPrsBySection(prsQuery.data?.prs ?? [], filters),
     [prsQuery.data, filters],
   );
-  const only = (prs: InboxPr[]) => (focus ? prs.filter((pr) => pr.url === focus) : prs);
 
   const [collapsed, setCollapsed] = useSessionFlags(COLLAPSED_STORAGE_KEY);
 
@@ -155,11 +157,10 @@ export function InboxPrsScreen() {
     return map;
   }, [itemsQuery.data]);
 
-  const clearFocus = () => {
+  const select = (url: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.delete("pr");
-    const qs = params.toString();
-    router.replace((qs ? `${pathname}?${qs}` : pathname) as Route);
+    params.set("pr", url);
+    router.replace(`${pathname}?${params.toString()}` as Route);
   };
 
   return (
@@ -169,57 +170,56 @@ export function InboxPrsScreen() {
       status={prsQuery}
       view="prs"
     >
-      <Stack gap="250">
-        {focus && (
-          <Panel
-            borderTone="ink"
-            data-testid={InboxPrsScreenTestId.Focus}
-            padding={["75", "150"]}
-            radius="none"
-          >
-            <Row gap="150">
-              <Typography type="label" variant="primary">
-                {t("prs.focus", { n: focusNumber ?? "" })}
-              </Typography>
-              <Container grow textAlign="right">
-                <Button
-                  data-testid={InboxPrsScreenTestId.ShowAll}
-                  intent="ghost"
-                  onClick={clearFocus}
-                  size="sm"
-                >
-                  {t("prs.showAll")}
-                </Button>
-              </Container>
-            </Row>
-          </Panel>
-        )}
-        {INBOX_PR_SECTIONS.map((section) => ({ section, prs: only(sections[section]) }))
-          .filter(
-            ({ section, prs }) => (section === "needs-your-review" && !focus) || prs.length > 0,
-          )
-          .map(({ section, prs }) => (
-            <PrSection
-              emptyText={t("prs.emptyToReview")}
-              expanded={Boolean(focus) || collapsed[section] !== true}
-              focus={focus}
-              itemFor={(pr) => itemByPrUrl.get(pr.url)}
-              key={section}
-              note={t(`prs.sectionNote.${section}`)}
+      <Grid align="start" gap="200" sidebar="left-narrow">
+        <Container maxHeight="calc(100vh - 14rem)" overflowY="auto">
+          <Stack gap="250">
+            {INBOX_PR_SECTIONS.filter(
+              (section) => section === "needs-your-review" || sections[section].length > 0,
+            ).map((section) => (
+              <PrSection
+                emptyText={t("prs.emptyToReview")}
+                expanded={
+                  collapsed[section] !== true || sections[section].some((p) => p.url === focus)
+                }
+                focus={focus}
+                itemFor={(pr) => itemByPrUrl.get(pr.url)}
+                key={section}
+                note={t(`prs.sectionNote.${section}`)}
+                now={now}
+                onSelect={(pr) => select(pr.url)}
+                onToggle={() => setCollapsed(section, collapsed[section] !== true)}
+                projectNames={projectNames}
+                prs={sections[section]}
+                testId={`${InboxPrsScreenTestId.Section}-${section}`}
+                title={t(`prs.section.${section}`)}
+              />
+            ))}
+            <Typography data-testid={InboxPrsScreenTestId.Footer} type="note" variant="secondary">
+              {t("prs.footer")}
+            </Typography>
+          </Stack>
+        </Container>
+        <Container data-testid={InboxPrsScreenTestId.Detail}>
+          {selected ? (
+            <PrDetail
+              key={selected.url}
               now={now}
-              onToggle={
-                focus ? undefined : () => setCollapsed(section, collapsed[section] !== true)
-              }
-              projectNames={projectNames}
-              prs={prs}
-              testId={`${InboxPrsScreenTestId.Section}-${section}`}
-              title={t(`prs.section.${section}`)}
+              pr={selected}
+              projectName={projectNames.get(selected.projectId)}
             />
-          ))}
-        <Typography data-testid={InboxPrsScreenTestId.Footer} type="note" variant="secondary">
-          {t("prs.footer")}
-        </Typography>
-      </Stack>
+          ) : (
+            <Panel
+              data-testid={InboxPrsScreenTestId.Placeholder}
+              padding={["200", "200"]}
+              radius="none"
+            >
+              <Typography type="bodySm" variant="secondary">
+                {t("prs.diff.select")}
+              </Typography>
+            </Panel>
+          )}
+        </Container>
+      </Grid>
     </InboxPage>
   );
 }
