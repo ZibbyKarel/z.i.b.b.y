@@ -6,6 +6,7 @@ import {
   InboxPrDiffSchema,
   InboxPrsResponseSchema,
   InboxStateSchema,
+  RebaseInboxPrInputSchema,
   ReviewInboxPrInputSchema,
   ReviewInboxPrResultSchema,
   SetInboxHiddenSchema,
@@ -46,6 +47,20 @@ export const inboxContract = c.router(
       },
       summary:
         "Start a code review task for one PR (level quick = code-reviewer agent, thorough/tested = pr-review-* workflow); the finished review is parked as a Tier-3 approval to post it as a COMMENT",
+    },
+    rebaseInboxPr: {
+      method: "POST",
+      path: "/inbox/prs/rebase",
+      body: RebaseInboxPrInputSchema,
+      responses: {
+        201: ReviewInboxPrResultSchema,
+        404: ErrorSchema,
+        // 422: no GitHub link, foreign repo, fork head, closed PR, or a head that is the
+        // base/default branch.
+        422: ErrorSchema,
+      },
+      summary:
+        "Start a rebase of one PR's head onto its base (pr-rebase workflow); ZIBBY force-pushes with lease — right away when conflict-free, after a Tier-3 approval when conflicts were resolved",
     },
     getInboxPrDiff: {
       method: "GET",

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { PR_REVIEW_LEVELS, ReviewInboxPrInputSchema } from "./inbox.schema";
+import {
+  PR_REVIEW_LEVELS,
+  RebaseInboxPrInputSchema,
+  ReviewInboxPrInputSchema,
+} from "./inbox.schema";
 
 const base = { projectId: "acme", repo: "acme/app", number: 7 };
 
@@ -17,5 +21,19 @@ describe("ReviewInboxPrInputSchema level (todo-4)", () => {
 
   it("rejects an unknown level", () => {
     expect(ReviewInboxPrInputSchema.safeParse({ ...base, level: "deep" }).success).toBe(false);
+  });
+});
+
+describe("RebaseInboxPrInputSchema (todo-11)", () => {
+  it("accepts projectId/repo/number and an optional title", () => {
+    expect(RebaseInboxPrInputSchema.parse({ ...base, title: "Fix" })).toEqual({
+      ...base,
+      title: "Fix",
+    });
+  });
+
+  it("is strict — no level, no branch names from the client", () => {
+    expect(RebaseInboxPrInputSchema.safeParse({ ...base, level: "quick" }).success).toBe(false);
+    expect(RebaseInboxPrInputSchema.safeParse({ ...base, head: "main" }).success).toBe(false);
   });
 });

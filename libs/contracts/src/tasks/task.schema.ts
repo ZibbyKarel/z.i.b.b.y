@@ -530,6 +530,23 @@ export const PrReviewStateSchema = z.enum([
 export type PrReviewState = z.infer<typeof PrReviewStateSchema>;
 
 /**
+ * todo-11 — lifecycle of a PR-inbox rebase (`ScheduledTask.prRebase`): `running` → the
+ * `rebase-resolver` agent rebases in the run's worktree; `awaiting-approval` → its report
+ * is parked as a `pr-rebase` force-push approval (pending when conflicts were resolved,
+ * approved on the spot when there were none); `pushed` → force-pushed with lease;
+ * `discarded` → rejected, nothing pushed; `failed` → the run errored, left no report, or
+ * the push was refused.
+ */
+export const PrRebaseStateSchema = z.enum([
+  "running",
+  "awaiting-approval",
+  "pushed",
+  "discarded",
+  "failed",
+]);
+export type PrRebaseState = z.infer<typeof PrRebaseStateSchema>;
+
+/**
  * How a task's dispatched run ended: a terminal verdict plus a short, readable
  * summary (an agent run's last log line, or a workflow's stage tally).
  */
@@ -710,6 +727,30 @@ export const ScheduledTaskSchema = z.object({
       url: z.string().min(1),
       state: PrReviewStateSchema,
       body: z.string().optional(),
+      approvalId: z.string().optional(),
+      note: z.string().optional(),
+    })
+    .optional(),
+  /**
+   * todo-11 — set on a `pr-rebase` task started from the PR inbox ("Rebase").
+   * Server-written provenance (like `prReview`), never part of `CreateTaskInput`.
+   * `head`/`base`/`headSha` are read from GitHub at the click; `headSha` is the
+   * force-with-lease expectation. `conflictAtStart` = GitHub did not report the PR as
+   * cleanly mergeable then, so the push is always gated. `worktree` is the run's
+   * worktree, recorded at terminal so the approval runner can push from it.
+   */
+  prRebase: z
+    .object({
+      repo: z.string().min(1),
+      number: z.number().int().positive(),
+      url: z.string().min(1),
+      head: z.string().min(1),
+      base: z.string().min(1),
+      headSha: z.string().min(1),
+      conflictAtStart: z.boolean(),
+      state: PrRebaseStateSchema,
+      report: z.string().optional(),
+      worktree: z.string().optional(),
       approvalId: z.string().optional(),
       note: z.string().optional(),
     })

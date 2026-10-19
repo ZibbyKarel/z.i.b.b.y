@@ -86,9 +86,9 @@ function isRecord(v: unknown): v is Record<string, unknown> {
  * (unenriched) backend payload.
  */
 export function parseApprovalDetail(a: ContractApproval): DashboardApproval {
-  // A `pr-review` detail is "Post review to GitHub — repo#n (COMMENT)\n\n<markdown review>":
+  // A `pr-review` / `pr-rebase` detail is "<one-line title>\n\n<markdown body>":
   // the first line is the queue title, the rest renders as markdown in the sheet.
-  if (a.kind === "pr-review") {
+  if (a.kind === "pr-review" || a.kind === "pr-rebase") {
     const split = a.detail.indexOf("\n\n");
     if (split === -1) return { ...a, text: a.detail };
     return {
@@ -285,8 +285,9 @@ export function approvalOrigin(
     }
     case "routing-proposal":
       return { origin: "roadmap", ...url };
-    // Phase 129 P2 — runId is the code-reviewer task; sourceUrl is the PR.
+    // Phase 129 P2 / todo-11 — runId is the review/rebase task; sourceUrl is the PR.
     case "pr-review":
+    case "pr-rebase":
       return { origin: "pr-review", href: `/work/tasks/${encodeURIComponent(a.runId)}`, ...url };
     case "machine":
       return { origin: "chat", ...url };

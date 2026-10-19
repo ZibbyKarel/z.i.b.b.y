@@ -32,6 +32,11 @@ export class InboxController {
           throw error;
         }
       },
+      // todo-11 Task 1 stub — Task 2 wires the real rebase service.
+      rebaseInboxPr: async () => ({
+        status: 422 as const,
+        body: { message: "PR rebase is not wired yet" },
+      }),
       getInboxPrDiff: async ({ params }) => {
         try {
           return {
