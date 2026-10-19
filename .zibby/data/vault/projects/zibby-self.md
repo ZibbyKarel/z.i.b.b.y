@@ -21,6 +21,7 @@ daily_rhythm:
   standup_time: '09:00'
   format: yesterday / today / blockers
   active_hours: '09:00-19:00'
+updated: '2026-10-17'
 ---
 # Z.I.B.B.Y - copy
 
@@ -43,3 +44,4 @@ daily_rhythm:
 - **standup**: 09:00
 - **active hours**: 09:00-19:00
 - **format**: yesterday / today / blockers
+- [[distilled-2026-10-17]] — Destilace — 2026-10-17
