@@ -6,6 +6,7 @@ import { ResolvedProjectModule } from "../projects/resolved-project.module";
 import { dataDir } from "../shared/data-dir";
 import { TasksModule } from "../tasks/tasks.module";
 import { INBOX_STATE_FILE, InboxStateStore } from "./inbox-state.store";
+import { InboxPrDiffService } from "./inbox-pr-diff.service";
 import { InboxReviewService } from "./inbox-review.service";
 import { InboxController } from "./inbox.controller";
 import { InboxService } from "./inbox.service";
@@ -31,6 +32,7 @@ export function resolveInboxStateFile(): string {
     InboxStateStore,
     InboxService,
     InboxReviewService,
+    InboxPrDiffService,
   ],
 })
 export class InboxModule {}

@@ -1,7 +1,9 @@
 import { initContract } from "@ts-rest/core";
+import { z } from "zod";
 import { ErrorSchema } from "../common.schema";
 import {
   InboxItemsResponseSchema,
+  InboxPrDiffSchema,
   InboxPrsResponseSchema,
   InboxStateSchema,
   ReviewInboxPrInputSchema,
@@ -44,6 +46,17 @@ export const inboxContract = c.router(
       },
       summary:
         "Start a code review task for one PR (level quick = code-reviewer agent, thorough/tested = pr-review-* workflow); the finished review is parked as a Tier-3 approval to post it as a COMMENT",
+    },
+    getInboxPrDiff: {
+      method: "GET",
+      path: "/inbox/prs/:projectId/:number/diff",
+      pathParams: z.object({
+        projectId: z.string().min(1),
+        number: z.coerce.number().int().positive(),
+      }),
+      responses: { 200: InboxPrDiffSchema, 404: ErrorSchema, 422: ErrorSchema },
+      summary:
+        "Get one PR's unified diff from GitHub (repo derived from the project's GitHub link)",
     },
     getInboxState: {
       method: "GET",

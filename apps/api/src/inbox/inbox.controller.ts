@@ -2,6 +2,7 @@ import { Controller } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { inboxContract } from "@zibby/contracts";
 import { NoGithubLinkError, ProjectNotFoundError } from "../projects/projects.errors";
+import { InboxPrDiffService } from "./inbox-pr-diff.service";
 import { InboxReviewService, ReviewRepoMismatchError } from "./inbox-review.service";
 import { InboxService } from "./inbox.service";
 
@@ -10,6 +11,7 @@ export class InboxController {
   constructor(
     private readonly inbox: InboxService,
     private readonly reviews: InboxReviewService,
+    private readonly diffs: InboxPrDiffService,
   ) {}
 
   @TsRestHandler(inboxContract)
@@ -25,6 +27,22 @@ export class InboxController {
             return { status: 404 as const, body: { message: error.message } };
           }
           if (error instanceof NoGithubLinkError || error instanceof ReviewRepoMismatchError) {
+            return { status: 422 as const, body: { message: error.message } };
+          }
+          throw error;
+        }
+      },
+      getInboxPrDiff: async ({ params }) => {
+        try {
+          return {
+            status: 200 as const,
+            body: await this.diffs.getDiff(params.projectId, params.number),
+          };
+        } catch (error) {
+          if (error instanceof ProjectNotFoundError) {
+            return { status: 404 as const, body: { message: error.message } };
+          }
+          if (error instanceof NoGithubLinkError) {
             return { status: 422 as const, body: { message: error.message } };
           }
           throw error;

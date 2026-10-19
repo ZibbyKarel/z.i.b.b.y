@@ -127,4 +127,8 @@ describe("Inbox API (e2e)", () => {
       .send({ ...key, hidden: false, extra: 1 })
       .expect(400); // strict body
   });
+
+  it("GET /api/inbox/prs/:projectId/:number/diff is 404 for an unknown project", async () => {
+    await request(app.getHttpServer()).get("/api/inbox/prs/nope/7/diff").expect(404);
+  });
 });

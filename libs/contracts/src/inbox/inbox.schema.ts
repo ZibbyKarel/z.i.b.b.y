@@ -147,6 +147,10 @@ export type ReviewInboxPrInput = z.infer<typeof ReviewInboxPrInputSchema>;
 export const ReviewInboxPrResultSchema = z.object({ taskId: z.string().min(1) });
 export type ReviewInboxPrResult = z.infer<typeof ReviewInboxPrResultSchema>;
 
+/** One PR's unified diff; `truncated` = GitHub refused it (too large) or it was capped. */
+export const InboxPrDiffSchema = z.object({ diff: z.string(), truncated: z.boolean() });
+export type InboxPrDiff = z.infer<typeof InboxPrDiffSchema>;
+
 /** Hide key: the item's source identity, stable across re-syncs. */
 export const InboxHiddenKeySchema = z.object({
   integrationId: z.string().min(1),
