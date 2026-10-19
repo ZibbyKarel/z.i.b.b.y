@@ -8,7 +8,7 @@ import { PrActionsTestId } from "../components/PrActions";
 import { PrRowTestId } from "../components/PrRow";
 import { InboxPrsScreen, InboxPrsScreenTestId } from "./InboxPrsScreen";
 
-const { hooks, review, merge } = vi.hoisted(() => ({
+const { hooks, review, merge, rebase } = vi.hoisted(() => ({
   hooks: {
     prs: [] as unknown[],
     search: "",
@@ -18,6 +18,7 @@ const { hooks, review, merge } = vi.hoisted(() => ({
   },
   review: vi.fn(),
   merge: vi.fn(),
+  rebase: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: hooks.replace }),
@@ -45,6 +46,7 @@ vi.mock("../components/PrDiff/PrDiff", () => ({
 vi.mock("../mutations", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   useReviewInboxPrMutation: () => ({ mutate: review, isPending: hooks.reviewPending }),
+  useRebaseInboxPrMutation: () => ({ mutate: rebase, isPending: false }),
 }));
 vi.mock("../../projects/mutations", () => ({
   useMergeProjectPrMutation: () => ({ mutate: merge, isPending: false }),
@@ -112,6 +114,69 @@ describe("InboxPrsScreen sections", () => {
     vi.restoreAllMocks();
     review.mockReset();
     merge.mockClear();
+    rebase.mockReset();
+  });
+
+  it("offers Rebase only on my PRs that conflict with or are behind their base", () => {
+    hooks.prs = [
+      pr(1, { section: "needs-action", mergeable: false, blocker: "merge-conflict" }),
+      pr(2, { section: "waiting", behind: true }),
+      pr(3, { section: "waiting" }),
+      pr(4, { section: "needs-your-review", bucket: "to-review", mergeable: false }),
+    ];
+    renderWithProviders(<InboxPrsScreen />);
+    const has = (n: number) =>
+      within(screen.getByTestId(`${PrRowTestId.Root}-${n}`)).queryByTestId(
+        PrActionsTestId.Rebase,
+      ) !== null;
+    expect([1, 2, 3, 4].map(has)).toEqual([true, true, false, false]);
+  });
+
+  it("clicking Rebase starts it for that PR", () => {
+    hooks.prs = [pr(1, { section: "needs-action", mergeable: false })];
+    renderWithProviders(<InboxPrsScreen />);
+    fireEvent.click(screen.getByTestId(PrActionsTestId.Rebase));
+    expect(rebase).toHaveBeenCalledWith(
+      { body: { projectId: "api", repo: "acme/api", number: 1, title: "PR 1" } },
+      expect.anything(),
+    );
+    expect(screen.getByTestId(PrActionsTestId.Rebase)).toHaveTextContent("Rebase na cílovou větev");
+  });
+
+  it("a refused rebase shows the server's reason", () => {
+    hooks.prs = [pr(1, { section: "needs-action", mergeable: false })];
+    rebase.mockImplementationOnce((_vars, opts: { onError?: (e: unknown) => void }) =>
+      opts.onError?.({ status: 422, body: { message: "acme/api#1 comes from a fork" } }),
+    );
+    renderWithProviders(<InboxPrsScreen />);
+    fireEvent.click(screen.getByTestId(PrActionsTestId.Rebase));
+    expect(screen.getByTestId(PrActionsTestId.Message)).toHaveTextContent(
+      "Rebase odmítnut: acme/api#1 comes from a fork",
+    );
+  });
+
+  it("a running rebase disables the button and links to its task", () => {
+    hooks.prs = [
+      pr(1, {
+        section: "needs-action",
+        mergeable: false,
+        rebase: { taskId: "task_7", state: "running" },
+      }),
+    ];
+    renderWithProviders(<InboxPrsScreen />);
+    expect(screen.getByTestId(PrActionsTestId.Rebase)).toBeDisabled();
+    expect(screen.getByTestId(PrActionsTestId.RebaseStatus)).toHaveAttribute(
+      "href",
+      "/work/tasks/task_7",
+    );
+    expect(screen.getByTestId(PrActionsTestId.RebaseStatus)).toHaveTextContent("Rebase běží");
+  });
+
+  it("a pushed rebase keeps its status link after the PR is up to date again", () => {
+    hooks.prs = [pr(1, { section: "waiting", rebase: { taskId: "task_7", state: "pushed" } })];
+    renderWithProviders(<InboxPrsScreen />);
+    expect(screen.queryByTestId(PrActionsTestId.Rebase)).toBeNull();
+    expect(screen.getByTestId(PrActionsTestId.RebaseStatus)).toHaveTextContent("Rebase pushnut");
   });
 
   it("keeps the empty 'needs your review' section and hides other empty ones", () => {
