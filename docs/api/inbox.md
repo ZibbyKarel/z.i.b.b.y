@@ -20,13 +20,14 @@ projects merge route. UI spec: `docs/plans/inbox-ui-spec.md`.
 
 ## Endpoints
 
-| Method | Path                    | Body                                                                                                                  | Response                                                                   |
-| ------ | ----------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| GET    | `/api/roadmap/items`    | —                                                                                                                     | `InboxItemsResponse`                                                       |
-| GET    | `/api/inbox/prs`        | —                                                                                                                     | `InboxPrsResponse`                                                         |
-| POST   | `/api/inbox/prs/review` | `{ projectId, repo, number, title?, level? }` (strict; `level` = `quick` \| `thorough` \| `tested`, absent = `quick`) | 201 `{ taskId }`; 404 project; 422 no GitHub link / repo not the project's |
-| GET    | `/api/inbox/state`      | —                                                                                                                     | `InboxState`                                                               |
-| PUT    | `/api/inbox/state`      | `{ integrationId, externalId, hidden }` (strict)                                                                      | `InboxState`                                                               |
+| Method | Path                                     | Body                                                                                                                  | Response                                                                   |
+| ------ | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| GET    | `/api/roadmap/items`                     | —                                                                                                                     | `InboxItemsResponse`                                                       |
+| GET    | `/api/inbox/prs`                         | —                                                                                                                     | `InboxPrsResponse`                                                         |
+| POST   | `/api/inbox/prs/review`                  | `{ projectId, repo, number, title?, level? }` (strict; `level` = `quick` \| `thorough` \| `tested`, absent = `quick`) | 201 `{ taskId }`; 404 project; 422 no GitHub link / repo not the project's |
+| GET    | `/api/inbox/prs/:projectId/:number/diff` | —                                                                                                                     | 200 `{ diff, truncated }`; 404 project; 422 no GitHub link                 |
+| GET    | `/api/inbox/state`                       | —                                                                                                                     | `InboxState`                                                               |
+| PUT    | `/api/inbox/state`                       | `{ integrationId, externalId, hidden }` (strict)                                                                      | `InboxState`                                                               |
 
 `/api/roadmap/items` has no `:projectId` segment, so it can't collide with the
 per-project `/api/projects/:projectId/roadmap/...` routes.
@@ -131,6 +132,17 @@ pending. A `failed` run parks nothing, and the row reads `failed` from the task 
 project's resolved token (never `APPROVE` / `REQUEST_CHANGES`), `state: "posted"`;
 a GitHub error sets `failed` + `note` and throws. **Reject** → `discarded`, nothing
 is sent. The PR row links to the task while the review is running or parked.
+
+## PR diff (`GET /api/inbox/prs/:projectId/:number/diff`)
+
+Read-only (Tier 1). `number` is a positive integer; the repo is derived from the
+project's GitHub link, never taken from the client. Fetches
+`GET /repos/{repo}/pulls/{n}` with `Accept: application/vnd.github.diff` using the
+project's resolved token and returns `{ diff, truncated }`. GitHub `406` (diff too
+large for GitHub) → `{ diff: "", truncated: true }`. A diff over 2 MB
+(`MAX_DIFF_BYTES`) is cut before the last line-start `diff --git` boundary under
+the cap and returned with `truncated: true`. Any other GitHub error → 500. Errors:
+404 unknown project, 422 project has no GitHub link.
 
 ## Squash and merge
 
