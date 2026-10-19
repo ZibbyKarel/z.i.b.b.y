@@ -72,7 +72,8 @@ origin <branch>` then `gh pr create`. This is the actual outward, Tier-3
    — force-pushes a rebased PR head with
    `--force-with-lease=refs/heads/<head>:<expectedSha>`. Refuses invalid branch names or
    sha, `head` equal to `base` or the remote default branch, an in-progress rebase, dirty
-   tracked files, a HEAD not on top of the freshly fetched `origin/<base>`, and lost PR
+   tracked files, a HEAD not on top of the freshly fetched `origin/<base>`, a PR with no
+   commits of its own beyond `<base>`, and lost PR
    commits (equal commit count; without `allowRewrittenCommits`, every original
    patch-id must survive). Returns the pushed sha, throws the reason.
 6. **`removeWorktree({ projectPath, worktreePath })`** — `git worktree remove

@@ -454,8 +454,12 @@ export class WorkspaceService {
     }
     const hasClicked = () => ok(["cat-file", "-e", `${expectedSha}^{commit}`]);
     if (!(await hasClicked())) {
-      await ok(["fetch", "origin", expectedSha]);
-      if (!(await hasClicked())) await ok(["fetch", "origin", `refs/heads/${head}`]);
+      await git(["fetch", "origin", expectedSha], GIT_NETWORK_TIMEOUT_MS).catch(() => undefined);
+      if (!(await hasClicked())) {
+        await git(["fetch", "origin", `refs/heads/${head}`], GIT_NETWORK_TIMEOUT_MS).catch(
+          () => undefined,
+        );
+      }
     }
     if (!(await hasClicked())) {
       throw new Error(`cannot find the clicked head ${expectedSha} to compare commits`);
@@ -464,6 +468,9 @@ export class WorkspaceService {
       (await git(["rev-list", "--reverse", range])).split("\n").filter(Boolean);
     const mergeBase = await git(["merge-base", expectedSha, `origin/${base}`]);
     const oldCommits = await commits(`${mergeBase}..${expectedSha}`);
+    if (oldCommits.length === 0) {
+      throw new Error(`the PR has no commits of its own beyond ${base}; nothing to rebase`);
+    }
     const newCommits = await commits(`origin/${base}..HEAD`);
     if (oldCommits.length !== newCommits.length) {
       throw new Error(
@@ -508,6 +515,7 @@ export class WorkspaceService {
         { cwd, timeout: GIT_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 },
         (err, stdout) => (err ? reject(err) : resolve(stdout.trim().split(" ")[0] ?? "")),
       );
+      child.stdin?.on("error", reject); // early git exit -> EPIPE; reject via the normal path
       child.stdin?.end(diff);
     });
   }

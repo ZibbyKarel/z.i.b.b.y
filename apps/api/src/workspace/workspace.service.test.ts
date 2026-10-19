@@ -421,8 +421,8 @@ describe("WorkspaceService.pushRebased (todo-11)", () => {
     return git(dir, "rev-parse", "HEAD");
   };
   const remoteFeat = () => git(origin, "rev-parse", "refs/heads/feat");
-  const push = (over: Partial<{ head: string; base: string }> = {}) =>
-    svc.pushRebased({ cwd: wt, head: "feat", base: "main", expectedSha: featSha, ...over });
+  const push = (over: Partial<{ head: string; base: string }> = {}, expectedSha = featSha) =>
+    svc.pushRebased({ cwd: wt, head: "feat", base: "main", expectedSha, ...over });
 
   beforeEach(async () => {
     root = await fs.mkdtemp(path.join(os.tmpdir(), "zibby-rebase-"));
@@ -476,6 +476,13 @@ describe("WorkspaceService.pushRebased (todo-11)", () => {
   it("refuses a head with no commits of its own (the PR's changes are gone)", async () => {
     await git(wt, "checkout", "--detach", "origin/main");
     await expect(push()).rejects.toThrow(/did not preserve/);
+    expect(await remoteFeat()).toBe(featSha);
+  });
+
+  it("refuses when the PR's commits are already in the base (empty old range)", async () => {
+    const mainSha = await git(wt, "rev-parse", "origin/main");
+    await git(wt, "checkout", "--detach", mainSha);
+    await expect(push({}, mainSha)).rejects.toThrow(/no commits of its own/);
     expect(await remoteFeat()).toBe(featSha);
   });
 
