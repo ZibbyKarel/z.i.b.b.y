@@ -109,7 +109,9 @@ recorded and approved in one go (posted with the review event the operator picke
 via `ScheduledTasksStorageService.setPrRebase`, written to `awaiting-approval` by
 `TaskOutputService.parkPrRebase` from `writeWorkflowOutcome` (with the run's `worktree`),
 and to `pushed`/`discarded`/`failed` by the `pr-rebase` approval runner. An interrupted
-run with `prRebase.state === "running"` gets an error outcome, like a review.
+run with `prRebase.state === "running"` gets an error outcome, like a review. The runner
+pushes only while `prRebase.state === "awaiting-approval"`; an on-the-spot (conflict-free)
+approval pushes with `allowRewrittenCommits: false`, an operator-approved one with `true`.
 
 `scheduledAt` absent or in the past → `createTask` runs classification + dispatch
 immediately. From the dialog (`background = true`), dispatch happens in the

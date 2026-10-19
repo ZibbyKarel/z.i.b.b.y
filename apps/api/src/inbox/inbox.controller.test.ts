@@ -2,6 +2,7 @@ import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { GithubDiffError, InboxPrDiffService } from "./inbox-pr-diff.service";
+import { InboxRebaseService, RebaseRefusedError } from "./inbox-rebase.service";
 import { InboxReviewService } from "./inbox-review.service";
 import { InboxController } from "./inbox.controller";
 import { InboxService } from "./inbox.service";
@@ -17,6 +18,14 @@ describe("InboxController getInboxPrDiff GitHub error mapping", () => {
       providers: [
         { provide: InboxService, useValue: {} },
         { provide: InboxReviewService, useValue: {} },
+        {
+          provide: InboxRebaseService,
+          useValue: {
+            start: async () => {
+              throw new RebaseRefusedError("acme/app#7 comes from a fork");
+            },
+          },
+        },
         {
           provide: InboxPrDiffService,
           useValue: {
@@ -45,5 +54,13 @@ describe("InboxController getInboxPrDiff GitHub error mapping", () => {
     upstream = gh;
     const res = await request(app.getHttpServer()).get("/api/inbox/prs/acme/7/diff").expect(mapped);
     expect(res.body.message).toContain(String(gh));
+  });
+
+  it("maps a refused rebase to 422 with its reason", async () => {
+    const res = await request(app.getHttpServer())
+      .post("/api/inbox/prs/rebase")
+      .send({ projectId: "acme", repo: "acme/app", number: 7 })
+      .expect(422);
+    expect(res.body.message).toContain("fork");
   });
 });

@@ -29,6 +29,11 @@ export const PR_REBASE_ARTIFACT = "zibby-pr-rebase.md";
 /** The only conflict-free first line of a rebase report. */
 const NO_CONFLICTS = /^Conflicts:\s*none\s*$/i;
 
+/** A pr-rebase run is "clean" (authorised by the Rebase click) when GitHub saw it mergeable AND the report's first line is `Conflicts: none`. */
+export function isCleanPrRebase(conflictAtStart: boolean, report: string): boolean {
+  return !conflictAtStart && NO_CONFLICTS.test(report.split("\n", 1)[0] ?? "");
+}
+
 /** A labelled finding line (item 9: `Critical:` / `Important:` / `Minor:`), tolerating a bullet/numbered list marker or bold. */
 const FINDING_LINE = /^[\s>*_-]*(?:\d+[.)][\s>*_-]*)?(?:Critical|Important|Minor)[*_]*:/m;
 
@@ -239,7 +244,7 @@ export class TaskOutputService implements OnModuleInit {
       this.log.warn("pr rebase: nothing to push", { taskId: task.id, ref, note });
       return { summary: `Rebase ${ref}: ${note} — nic nepushnuto` };
     }
-    const clean = !rebase.conflictAtStart && NO_CONFLICTS.test(report.split("\n", 1)[0] ?? "");
+    const clean = isCleanPrRebase(rebase.conflictAtStart, report);
     const approval = await this.approvals.requestApproval({
       runId: task.id,
       kind: "pr-rebase",

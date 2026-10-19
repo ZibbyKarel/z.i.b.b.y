@@ -158,3 +158,23 @@ query. Agents still can't merge (`floor-pr.merge: deny`).
 `.zibby/data/inbox-state.json` (override `INBOX_STATE_FILE`), gitignored —
 operator-personal. Keyed `(integrationId, externalId)`; hide/unhide is idempotent.
 Hidden is permanent until unhidden. A missing/garbage file reads as `{ hidden: [] }`.
+
+## Rebase (`POST /api/inbox/prs/rebase`)
+
+todo-11. Body `{ projectId, repo, number, title? }` (strict) → 201 `{ taskId }`; 404 unknown
+project; 422 no GitHub link / repo not the project's / fork head / closed PR / head is the
+base or default branch. Shown on `bucket === "mine"` PRs with `mergeable === false || behind`
+(`behind` = GitHub's `mergeable_state === "behind"`, reported only under an up-to-date branch
+protection).
+
+`InboxRebaseService.start` (`apps/api/src/inbox/inbox-rebase.service.ts`) reads head/base/sha
+from `GET /pulls/<n>`, creates a task with the explicit `pr-rebase` workflow target and
+`trustedProjectId`, and stamps `prRebase { repo, number, url, head, base, headSha,
+conflictAtStart, state: "running" }`. The `rebase-resolver` agent rebases in the run's
+worktree and never pushes. On a `done` run, `TaskOutputService.parkPrRebase` records a
+`pr-rebase` approval: approved on the spot only when `conflictAtStart === false` and the
+report's first line is `Conflicts: none` (the operator's click was the decision), otherwise
+pending (Tier-3, risk high). The approval runner pushes only while the rebase is
+`awaiting-approval`, via `WorkspaceService.pushRebased` (`--force-with-lease`, see
+`./workspace.md`) → `pushed` or `failed` with git's reason. Reject → `discarded`; an
+interrupted run → `failed`.
