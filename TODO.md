@@ -12,7 +12,7 @@
 9. [x] Všechny workflows, která dělají code-review by měla vracet seřazený seznam nálezů od nejkritičtějších po nejmíň kritické. (main@c3b73908)
 10. [x] U code-reviews musím mít na konci možnost zvolit jeslti chci dané PR schválit, jestli si chci vyžádat změny nebo jestli chci jen postnout komentář (aproove/require changes/comment). Defaultně bude vybráno require changes pokud budou nějaký nálezy. pokud nebudou nálezy tak defaultně bude aproove (main@4e844fab)
 11. [x] stránka pull requests - u PRs která vyžadují nějakou akci chci mít tlačítko na rebase větve na target branch. To pustí rebase proces kdy, v případě, že jsou konflikty se automaticky vyřeší agentem. (Možná pro to budem potřebovat nějakého rebase agenta. Klidně ho vytvoř) (main@378283d3)
-12. [ ] stránka pull requests - pokud sekce neobsahuje žádná PR tak sekci vůbec neukazujeme. Pokud nejsou v žádné sekci PRs tak zobrazíme něco jako EmptyContent
+12. [x] stránka pull requests - pokud sekce neobsahuje žádná PR tak sekci vůbec neukazujeme. Pokud nejsou v žádné sekci PRs tak zobrazíme něco jako EmptyContent (main@7faca6bb)
 13. [ ] stránka pull requests - Musíme tady nějak nastínit pokud se jedná o frontu PRs pokud jedno PR se merguje do druhého PR a tak dále.
 14. [ ] stránka issues - musíme tady také nějak nastínit pokud se jedná o frontu issues - pokud jedno issue blokuje jiné a tak dále. Udělej to stejně jako v bodu 13 u PRs.
 15. [ ] stránka pull requests - pokud zobrazím diff PR tak nechci abych scrolloval celou stránkou. Scrollovat by se měl jen ten diff. Zároveň pokud máme takto úzké karty Prs tak se tam nevejde text. Musíme kartu PR udělat responzivní a pokud je title dloouhý tak se bude zalamovat. Zároveň ale nesmí přesahovat do labelů v pravo nahoře
