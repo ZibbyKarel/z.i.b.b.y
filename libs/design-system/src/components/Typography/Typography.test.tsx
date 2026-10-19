@@ -140,4 +140,13 @@ describe("Typography", () => {
     expect(el.tagName).toBe("H2");
     expect(el.style.fontSize).toBe("16px");
   });
+
+  it("wrapAnywhere breaks long unbroken words", () => {
+    render(
+      <Typography wrapAnywhere type="body">
+        feature/very-long-branch-name-without-spaces
+      </Typography>,
+    );
+    expect(screen.getByTestId(TypographyTestId.Root).className).toContain("wrap-anywhere");
+  });
 });

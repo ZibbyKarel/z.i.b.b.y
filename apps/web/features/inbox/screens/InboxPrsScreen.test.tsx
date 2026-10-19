@@ -1,6 +1,11 @@
 import type { InboxPr } from "@zibby/contracts";
 import { within } from "@testing-library/react";
-import { AccordionTestId, DropDownButtonTestId } from "@zibby/design-system";
+import {
+  AccordionTestId,
+  DropDownButtonTestId,
+  GridTestId,
+  TypographyTestId,
+} from "@zibby/design-system";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, renderWithProviders, screen } from "../../../test/render";
 import { PrDetailTestId } from "../components/PrDetail";
@@ -474,6 +479,64 @@ describe("InboxPrsScreen master–detail", () => {
     expect(title).toHaveFocus();
     fireEvent.click(title);
     expect(hooks.replace).toHaveBeenCalledTimes(1);
+  });
+
+  it("pins the master–detail grid height at lg; the diff body is the only scroll area", async () => {
+    select2();
+    hooks.diffQuery = { ...okDiff, data: { diff: "x", truncated: false } };
+    renderWithProviders(<InboxPrsScreen />);
+    const detail = screen.getByTestId(InboxPrsScreenTestId.Detail);
+    const grid = detail.parentElement as HTMLElement;
+    expect(grid).toHaveAttribute("data-testid", GridTestId.Root);
+    expect(grid.style.getPropertyValue("--grid-lg-height")).not.toBe("");
+    expect(detail.style.display).toBe("flex");
+    const root = screen.getByTestId(PrDetailTestId.Root);
+    expect(root.style.minHeight).toBe("0");
+    expect(screen.getByTestId(PrDetailTestId.Header).style.flexShrink).toBe("0");
+    const body = screen.getByTestId(PrDetailTestId.Body);
+    expect(body.style.overflowY).toBe("auto");
+    expect(body.style.minHeight).toBe("0");
+    expect(body).toHaveAttribute("tabindex", "0");
+    expect(body).toHaveAttribute("role", "region");
+    expect(body).toHaveAccessibleName();
+    expect(body).toContainElement(await screen.findByTestId("pr-diff"));
+  });
+
+  it("keeps the loading state inside the scroll body", () => {
+    select2();
+    hooks.diffQuery = { ...okDiff, data: undefined, isPending: true };
+    renderWithProviders(<InboxPrsScreen />);
+    expect(screen.getByTestId(PrDetailTestId.Body)).toContainElement(
+      screen.getByTestId(PrDetailTestId.Loading),
+    );
+  });
+
+  it("a long title wraps beside a non-shrinking tag column", () => {
+    const long = "feat/inbox-web-stacked-pr-chains-derived-from-head-and-base-refs-".repeat(3);
+    hooks.prs = [
+      pr(7, {
+        title: long,
+        draft: true,
+        blocker: "merge-conflict",
+        review: "changes-requested",
+        ci: "failing",
+      }),
+    ];
+    renderWithProviders(<InboxPrsScreen />);
+    const row = screen.getByTestId(`${PrRowTestId.Root}-7`);
+    const titleText = within(within(row).getByTestId(PrRowTestId.Title)).getByTestId(
+      TypographyTestId.Root,
+    );
+    expect(titleText).toHaveTextContent(long);
+    expect(titleText.className).toContain("wrap-anywhere");
+    expect(titleText.className).not.toContain("truncate");
+    const tags = within(row).getByTestId(PrRowTestId.Tags);
+    expect(tags.style.flexShrink).toBe("0");
+    expect(tags.style.flexDirection).toBe("column");
+    for (const id of [PrRowTestId.Draft, PrRowTestId.Conflict, PrRowTestId.Review, PrRowTestId.Ci])
+      expect(tags).toContainElement(within(row).getByTestId(id));
+    // The title row aligns to the top so the tags stay top-right while the title wraps.
+    expect((tags.parentElement as HTMLElement).style.alignItems).toBe("flex-start");
   });
 
   it("lists all PRs and shows the selected one's detail", () => {

@@ -14,6 +14,8 @@ export interface StackProps extends Omit<HTMLAttributes<HTMLElement>, "className
   inline?: boolean;
   grow?: boolean;
   shrink?: boolean;
+  /** `min-height: 0` — lets this flex child shrink below its content (scroll panes). */
+  minH0?: boolean;
   as?:
     | "div"
     | "section"
@@ -54,6 +56,7 @@ export function Stack({
   inline,
   grow,
   shrink,
+  minH0,
   as: Tag = "div",
   style,
   ref,
@@ -68,6 +71,7 @@ export function Stack({
     flexWrap: wrap ? "wrap" : undefined,
     flexGrow: grow ? 1 : undefined,
     flexShrink: shrink === false ? 0 : undefined,
+    minHeight: minH0 ? 0 : undefined,
     ...style,
   };
 

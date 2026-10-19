@@ -12,6 +12,7 @@ import { ExternalAnchor } from "./links";
 export enum PrDetailTestId {
   Root = "inbox-pr-detail",
   Header = "inbox-pr-detail-header",
+  Body = "inbox-pr-detail-body",
   GitHub = "inbox-pr-detail-github",
   Loading = "inbox-pr-detail-loading",
   Error = "inbox-pr-detail-error",
@@ -42,7 +43,7 @@ export interface PrDetailProps {
   now: number;
 }
 
-/** The selected PR: header (title, meta, GitHub link, actions) above its diff. */
+/** The selected PR: fixed header (title, meta, GitHub link, actions) above its diff, which scrolls on its own at lg+. */
 export function PrDetail({ pr, projectName, now }: PrDetailProps) {
   const t = useTranslations("inboxPage.prs");
   const elapsedLabel = useElapsedLabel();
@@ -85,14 +86,16 @@ export function PrDetail({ pr, projectName, now }: PrDetailProps) {
     );
 
   return (
-    <Stack data-testid={PrDetailTestId.Root} gap="200">
-      <Stack data-testid={PrDetailTestId.Header} gap="100">
-        <Row gap="150">
+    <Stack grow minH0 data-testid={PrDetailTestId.Root} gap="200">
+      <Stack data-testid={PrDetailTestId.Header} gap="100" shrink={false}>
+        <Row align="start" gap="150">
           <Typography mono nowrap size="xs" type="note" variant="secondary">
             #{pr.number}
           </Typography>
           <Container grow minW0>
-            <Typography type="h3">{pr.title}</Typography>
+            <Typography wrapAnywhere type="h3">
+              {pr.title}
+            </Typography>
           </Container>
           <TextLink
             data-testid={PrDetailTestId.GitHub}
@@ -107,7 +110,19 @@ export function PrDetail({ pr, projectName, now }: PrDetailProps) {
         </Typography>
         {hasPrActions(pr) && <PrActions pr={pr} />}
       </Stack>
-      {body}
+      {/* At lg the column has a fixed height, so this is the only thing that scrolls;
+          below lg it is content-sized and the page scrolls as usual. */}
+      <Container
+        grow
+        aria-label={t("diff.region")}
+        data-testid={PrDetailTestId.Body}
+        minHeight="0"
+        overflowY="auto"
+        role="region"
+        tabIndex={0}
+      >
+        {body}
+      </Container>
     </Stack>
   );
 }

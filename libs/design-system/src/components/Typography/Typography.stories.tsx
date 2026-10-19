@@ -74,3 +74,13 @@ export const Overview: Story = {
 };
 
 export const Playground: Story = {};
+
+export const WrapAnywhere: Story = {
+  render: () => (
+    <div className="w-48">
+      <Typography wrapAnywhere type="body" weight="medium">
+        feat/inbox-web-stacked-pr-chains-derived-from-head-and-base-refs
+      </Typography>
+    </div>
+  ),
+};

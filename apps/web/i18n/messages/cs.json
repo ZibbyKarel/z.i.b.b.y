@@ -2817,6 +2817,7 @@
     },
     "prs": {
       "diff": {
+        "region": "Změny v PR",
         "select": "Vyber PR vlevo a uvidíš jeho změny.",
         "loading": "Načítám změny…",
         "error": "Změny se nepodařilo načíst.",

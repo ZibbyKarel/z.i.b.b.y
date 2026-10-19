@@ -8,6 +8,7 @@ const meta: Meta<typeof Grid> = {
   component: Grid,
   parameters: { backgrounds: { default: "velin" } },
   argTypes: {
+    lgHeight: { control: "text" },
     cols: { control: "select", options: [1, 2, 3, 4, 5] },
     sm: { control: "select", options: [undefined, 1, 2, 3, 4, 5] },
     md: { control: "select", options: [undefined, 1, 2, 3, 4, 5] },
@@ -72,6 +73,25 @@ export const LeftNarrow: Story = {
       <Card>
         <Container padding="200">Detail (75%)</Container>
       </Card>
+    </Grid>
+  ),
+};
+
+export const LeftNarrowFixedHeight: Story = {
+  render: () => (
+    <Grid gap="300" lgHeight="360px" sidebar="left-narrow">
+      <Container overflowY="auto">
+        <Card>
+          <Container padding="200">List (25%)</Container>
+        </Card>
+      </Container>
+      <Container overflowY="auto">
+        <Card>
+          <Container height="1200px" padding="200">
+            Detail (75%) — scrolls inside a 360px pane from lg up
+          </Container>
+        </Card>
+      </Container>
     </Grid>
   ),
 };
