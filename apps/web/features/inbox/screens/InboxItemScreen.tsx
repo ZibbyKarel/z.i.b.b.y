@@ -1,6 +1,6 @@
 "use client";
 
-import type { InboxEpic, InboxRoadmapItem } from "@zibby/contracts";
+import type { InboxRoadmapItem } from "@zibby/contracts";
 import {
   Alert,
   Button,
@@ -57,6 +57,9 @@ export enum InboxItemScreenTestId {
   Log = "inbox-item-log",
   LinkedPr = "inbox-item-linked-pr",
   Meta = "inbox-item-meta",
+  MetaProject = "inbox-item-meta-project",
+  MetaCompany = "inbox-item-meta-company",
+  MetaTeam = "inbox-item-meta-team",
   Scope = "inbox-item-scope",
   NotFound = "inbox-item-not-found",
 }
@@ -71,14 +74,31 @@ interface LogEntry {
   text: string;
 }
 
-function MetaRow({ label, value }: { label: string; value: string }) {
+function MetaRow({
+  label,
+  value,
+  href,
+  testId,
+}: {
+  label: string;
+  value: string;
+  href?: string;
+  testId?: string;
+}) {
+  const text = <Typography type="bodySm">{value}</Typography>;
   return (
     <Row gap="150">
       <Container shrink={false} width="6rem">
         <Typography type="label">{label}</Typography>
       </Container>
       <Container grow minW0>
-        <Typography type="bodySm">{value}</Typography>
+        {href ? (
+          <TextLink data-testid={testId} href={href} linkComponent={NavLink}>
+            {text}
+          </TextLink>
+        ) : (
+          text
+        )}
       </Container>
     </Row>
   );
@@ -139,21 +159,10 @@ export function InboxItemScreen({ projectId, itemId }: InboxItemScreenProps) {
       </Container>
     );
   }
-  return (
-    <InboxItemView
-      epic={item.parentId ? itemsQuery.data?.epics.find((e) => e.id === item.parentId) : undefined}
-      item={item}
-    />
-  );
+  return <InboxItemView item={item} />;
 }
 
-function InboxItemView({
-  item: it,
-  epic,
-}: {
-  item: InboxRoadmapItem;
-  epic: InboxEpic | undefined;
-}) {
+function InboxItemView({ item: it }: { item: InboxRoadmapItem }) {
   const t = useTranslations("inboxPage");
   const router = useRouter();
   const now = useNow(60_000);
@@ -208,8 +217,8 @@ function InboxItemView({
   const sourceName = t(`source.${it.source.kind}`);
   const taskId = latestTaskId(it);
   const canHide = !!it.source.integrationId && !!it.source.externalId;
-  const company = it.companyId ? companies?.find((c) => c.id === it.companyId)?.name : undefined;
-  const team = it.teamId ? teams?.find((x) => x.id === it.teamId)?.name : undefined;
+  const company = it.companyId ? companies?.find((c) => c.id === it.companyId) : undefined;
+  const team = it.teamId ? teams?.find((x) => x.id === it.teamId) : undefined;
   const waitingFailed = it.lifecycle === "failed";
   const waitingMerge = it.lifecycle === "awaiting-merge";
   const viewRun = () => router.push(`/work/tasks/${taskId}` as Route);
@@ -446,19 +455,24 @@ function InboxItemView({
 
             <Panel data-testid={InboxItemScreenTestId.Meta} padding="150" radius="none">
               <Stack gap="100">
-                <MetaRow label={t("detail.meta.project")} value={it.project.name} />
                 <MetaRow
+                  href={`/projects/${it.project.id}`}
+                  label={t("detail.meta.project")}
+                  testId={InboxItemScreenTestId.MetaProject}
+                  value={it.project.name}
+                />
+                <MetaRow
+                  href={company ? `/companies/${company.id}` : undefined}
                   label={t("detail.meta.company")}
-                  value={company ?? t("detail.noCompany")}
+                  testId={InboxItemScreenTestId.MetaCompany}
+                  value={company?.name ?? t("detail.noCompany")}
                 />
-                <MetaRow label={t("detail.meta.team")} value={team ?? t("detail.noTeam")} />
                 <MetaRow
-                  label={t("detail.meta.epic")}
-                  value={
-                    epic ? [epic.key, epic.title].filter(Boolean).join(" · ") : t("detail.noEpic")
-                  }
+                  href={team ? `/teams/${team.id}` : undefined}
+                  label={t("detail.meta.team")}
+                  testId={InboxItemScreenTestId.MetaTeam}
+                  value={team?.name ?? t("detail.noTeam")}
                 />
-                <MetaRow label={t("detail.meta.source")} value={`${sourceName} · ${key}`} />
                 <Stack data-testid={InboxItemScreenTestId.Scope} gap="75">
                   <Typography type="label">{t("detail.why")}</Typography>
                   <Row wrap gap="75">

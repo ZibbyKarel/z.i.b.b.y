@@ -2920,13 +2920,10 @@
       "meta": {
         "project": "Projekt",
         "company": "Firma",
-        "team": "Tým",
-        "epic": "Epik",
-        "source": "Zdroj"
+        "team": "Tým"
       },
       "noCompany": "Bez firmy",
       "noTeam": "Bez týmu",
-      "noEpic": "Bez epiku",
       "why": "Proč tu je",
       "notFoundTitle": "Položka nenalezena",
       "notFoundBody": "Není ve vašem rozsahu, nebo ji zdroj už nevrací."
