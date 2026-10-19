@@ -26,6 +26,7 @@ export enum PrRowTestId {
   Ci = "inbox-pr-ci",
   Conflict = "inbox-pr-conflict",
   Draft = "inbox-pr-draft",
+  Tags = "inbox-pr-tags",
   Meta = "inbox-pr-meta",
   Actions = "inbox-pr-actions",
   Item = "inbox-pr-item",
@@ -67,7 +68,7 @@ export interface PrRowProps {
 }
 
 /**
- * One pull-request card, three lines (+ stack line): `#n` title + review / CI badges;
+ * One pull-request card: `#n` + wrapping title with the review / CI tags as a column top-right;
  * project · author · age; the actions strip (see `PrActions`) + linked item. Without `onSelect` the whole card
  * opens the PR on GitHub — the title is the real (keyboard-reachable) link, a click anywhere
  * else on the card follows it; with `onSelect` a click selects the PR instead. Clicks inside
@@ -107,7 +108,7 @@ export function PrRow({
       <CardContent padding={["150", "200"]}>
         <Container cursor="pointer">
           <Stack gap="100">
-            <Row gap="150">
+            <Row align="start" gap="150">
               <Typography mono nowrap size="xs" type="note" variant="secondary">
                 #{pr.number}
               </Typography>
@@ -121,7 +122,7 @@ export function PrRow({
                       onSelect(pr);
                     }}
                   >
-                    <Typography truncate type="body" weight="medium">
+                    <Typography wrapAnywhere type="body" weight="medium">
                       {pr.title}
                     </Typography>
                   </Pressable>
@@ -131,34 +132,37 @@ export function PrRow({
                     href={pr.url}
                     linkComponent={ExternalAnchor}
                   >
-                    <Typography truncate type="body" weight="medium">
+                    <Typography wrapAnywhere type="body" weight="medium">
                       {pr.title}
                     </Typography>
                   </TextLink>
                 )}
               </Container>
-              {pr.draft && (
-                <Tag uppercase data-testid={PrRowTestId.Draft} tone="neutral">
-                  {t("prs.draft")}
+              {/* Own non-shrinking column: a wrapping title never runs into the tags. */}
+              <Stack align="end" data-testid={PrRowTestId.Tags} gap="50" shrink={false}>
+                {pr.draft && (
+                  <Tag uppercase data-testid={PrRowTestId.Draft} tone="neutral">
+                    {t("prs.draft")}
+                  </Tag>
+                )}
+                {pr.blocker === "merge-conflict" && (
+                  <Tag uppercase data-testid={PrRowTestId.Conflict} tone="error">
+                    {t("blocker.merge-conflict")}
+                  </Tag>
+                )}
+                {pr.review !== "none" && (
+                  <Tag
+                    uppercase
+                    data-testid={PrRowTestId.Review}
+                    tone={pr.review === "approved" ? "done" : "error"}
+                  >
+                    {t(`review.${pr.review}`)}
+                  </Tag>
+                )}
+                <Tag uppercase data-testid={PrRowTestId.Ci} tone={CI_TONE[pr.ci]}>
+                  {t("prs.ci", { symbol: CI_SYMBOL[pr.ci], state: t(`ci.${pr.ci}`) })}
                 </Tag>
-              )}
-              {pr.blocker === "merge-conflict" && (
-                <Tag uppercase data-testid={PrRowTestId.Conflict} tone="error">
-                  {t("blocker.merge-conflict")}
-                </Tag>
-              )}
-              {pr.review !== "none" && (
-                <Tag
-                  uppercase
-                  data-testid={PrRowTestId.Review}
-                  tone={pr.review === "approved" ? "done" : "error"}
-                >
-                  {t(`review.${pr.review}`)}
-                </Tag>
-              )}
-              <Tag uppercase data-testid={PrRowTestId.Ci} tone={CI_TONE[pr.ci]}>
-                {t("prs.ci", { symbol: CI_SYMBOL[pr.ci], state: t(`ci.${pr.ci}`) })}
-              </Tag>
+              </Stack>
             </Row>
 
             <Typography data-testid={PrRowTestId.Meta} type="label" variant="secondary">

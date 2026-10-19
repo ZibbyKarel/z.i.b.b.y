@@ -1,6 +1,11 @@
 import type { InboxPr } from "@zibby/contracts";
 import { within } from "@testing-library/react";
-import { AccordionTestId, DropDownButtonTestId, GridTestId } from "@zibby/design-system";
+import {
+  AccordionTestId,
+  DropDownButtonTestId,
+  GridTestId,
+  TypographyTestId,
+} from "@zibby/design-system";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, renderWithProviders, screen } from "../../../test/render";
 import { PrDetailTestId } from "../components/PrDetail";
@@ -501,6 +506,34 @@ describe("InboxPrsScreen master–detail", () => {
     expect(screen.getByTestId(PrDetailTestId.Body)).toContainElement(
       screen.getByTestId(PrDetailTestId.Loading),
     );
+  });
+
+  it("a long title wraps beside a non-shrinking tag column", () => {
+    const long = "feat/inbox-web-stacked-pr-chains-derived-from-head-and-base-refs-".repeat(3);
+    hooks.prs = [
+      pr(7, {
+        title: long,
+        draft: true,
+        blocker: "merge-conflict",
+        review: "changes-requested",
+        ci: "failing",
+      }),
+    ];
+    renderWithProviders(<InboxPrsScreen />);
+    const row = screen.getByTestId(`${PrRowTestId.Root}-7`);
+    const titleText = within(within(row).getByTestId(PrRowTestId.Title)).getByTestId(
+      TypographyTestId.Root,
+    );
+    expect(titleText).toHaveTextContent(long);
+    expect(titleText.className).toContain("wrap-anywhere");
+    expect(titleText.className).not.toContain("truncate");
+    const tags = within(row).getByTestId(PrRowTestId.Tags);
+    expect(tags.style.flexShrink).toBe("0");
+    expect(tags.style.flexDirection).toBe("column");
+    for (const id of [PrRowTestId.Draft, PrRowTestId.Conflict, PrRowTestId.Review, PrRowTestId.Ci])
+      expect(tags).toContainElement(within(row).getByTestId(id));
+    // The title row aligns to the top so the tags stay top-right while the title wraps.
+    expect((tags.parentElement as HTMLElement).style.alignItems).toBe("flex-start");
   });
 
   it("lists all PRs and shows the selected one's detail", () => {
