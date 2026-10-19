@@ -24,6 +24,10 @@ import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service"
 export const PR_REVIEW_ARTIFACT = "zibby-pr-review.md";
 /** GitHub caps a review body at 65 536 chars; keep headroom for the footer. */
 const PR_REVIEW_MAX_CHARS = 60_000;
+/** todo-11 — the `rebase-resolver` agent's report; its first line is the conflict claim. */
+export const PR_REBASE_ARTIFACT = "zibby-pr-rebase.md";
+/** The only conflict-free first line of a rebase report. */
+const NO_CONFLICTS = /^Conflicts:\s*none\s*$/i;
 
 /** A labelled finding line (item 9: `Critical:` / `Important:` / `Minor:`), tolerating a bullet/numbered list marker or bold. */
 const FINDING_LINE = /^[\s>*_-]*(?:\d+[.)][\s>*_-]*)?(?:Critical|Important|Minor)[*_]*:/m;
@@ -208,6 +212,61 @@ export class TaskOutputService implements OnModuleInit {
       };
     }
     return { summary: `Code review ${ref} připraveno — čeká na schválení odeslání na GitHub` };
+  }
+
+  /**
+   * todo-11 — a finished `pr-rebase` run: record its report as a `pr-rebase` approval
+   * ("Force-push rebased branch"). The operator's Rebase click already authorised a
+   * conflict-free rebase, so that approval is approved on the spot (its runner,
+   * `InboxRebaseService`, pushes) — the same "already signed off" path as
+   * {@link parkPrReview}'s gate sign-off. It stays pending (Tier 3) when the report's
+   * FIRST line is not exactly `Conflicts: none`, or GitHub did not report the PR as
+   * cleanly mergeable at the click — when unsure, the higher tier. No report or no
+   * worktree → `failed`, nothing pushed.
+   */
+  async parkPrRebase(
+    task: ScheduledTask,
+    raw: string,
+    worktree?: string,
+  ): Promise<TaskTerminalDelivery> {
+    const rebase = task.prRebase;
+    if (!rebase) return {};
+    const report = raw.trim().slice(0, PR_REVIEW_MAX_CHARS);
+    const ref = `${rebase.repo}#${rebase.number}`;
+    if (!report || !worktree) {
+      const note = report ? "no worktree" : `no ${PR_REBASE_ARTIFACT}`;
+      await this.storage.setPrRebase(task.id, (c) => (c ? { ...c, state: "failed", note } : c));
+      this.log.warn("pr rebase: nothing to push", { taskId: task.id, ref, note });
+      return { summary: `Rebase ${ref}: ${note} — nic nepushnuto` };
+    }
+    const clean = !rebase.conflictAtStart && NO_CONFLICTS.test(report.split("\n", 1)[0] ?? "");
+    const approval = await this.approvals.requestApproval({
+      runId: task.id,
+      kind: "pr-rebase",
+      skill: "rebase-resolver",
+      action: "git.force_push",
+      detail: `Force-push ${rebase.head} rebased onto ${rebase.base} — ${ref}${clean ? " (no conflicts, authorised by the Rebase click)" : ""}\n\n${report}`,
+      risk: clean ? "medium" : "high",
+      sourceUrl: rebase.url,
+    });
+    await this.storage.setPrRebase(task.id, (c) =>
+      c ? { ...c, state: "awaiting-approval", report, worktree, approvalId: approval.id } : c,
+    );
+    if (!clean) {
+      return { summary: `Rebase ${ref}: konflikty vyřešeny — force-push čeká na schválení` };
+    }
+    // A failed push already marks the rebase `failed` with git's reason (the runner).
+    const pushed = await this.approvals.approve(approval.id).then(
+      () => true,
+      (error: unknown) => {
+        this.log.warn("pr rebase push after the click failed", {
+          taskId: task.id,
+          err: error instanceof Error ? error.message : String(error),
+        });
+        return false;
+      },
+    );
+    return { summary: pushed ? `Rebase ${ref} force-pushnut` : `Rebase ${ref}: force-push selhal` };
   }
 
   /** Write the run summary to the chosen file — a vault note or a path in the worktree. */
