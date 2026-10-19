@@ -330,4 +330,17 @@ describe("prChains", () => {
     const self = pr(5, { headRef: "loop", baseRef: "loop" });
     expect(prChains([a, otherRepo, noRefs, noHead, self]).size).toBe(0);
   });
+
+  it("lists every child of one parent, and survives a two-PR cycle", () => {
+    const a = pr(1, { headRef: "feat-a", baseRef: "main" });
+    const b = pr(2, { headRef: "feat-b", baseRef: "feat-a" });
+    const c = pr(3, { headRef: "feat-c", baseRef: "feat-a" });
+    expect(prChains([a, b, c]).get(a.url)).toEqual({ on: [], by: [b, c] });
+
+    const x = pr(4, { headRef: "y", baseRef: "x" });
+    const y = pr(5, { headRef: "x", baseRef: "y" });
+    const chains = prChains([x, y]);
+    expect(chains.get(x.url)).toEqual({ on: [y], by: [y] });
+    expect(chains.get(y.url)).toEqual({ on: [x], by: [x] });
+  });
 });

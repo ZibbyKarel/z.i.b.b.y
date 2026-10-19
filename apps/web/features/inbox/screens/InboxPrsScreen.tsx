@@ -127,7 +127,7 @@ export function InboxPrsScreen() {
   const itemsQuery = useInboxItemsQuery();
   const prsQuery = useInboxPrsQuery();
   const { data: projects } = useProjectsQuery();
-  // Unfiltered on purpose: stacked PRs share a repo, hence a project, so filters can't split a stack.
+  // Unfiltered on purpose: a chain link may point at a PR the filters hide (it still opens).
   const chains = useMemo(() => prChains(prsQuery.data?.prs ?? []), [prsQuery.data]);
   const projectNames = useMemo(
     () => new Map((projects ?? []).map((p) => [p.id, p.name])),
@@ -140,10 +140,8 @@ export function InboxPrsScreen() {
     () => groupPrsBySection(prsQuery.data?.prs ?? [], filters),
     [prsQuery.data, filters],
   );
-  // Resolved from the rendered (filtered) sections, so a hidden PR shows the placeholder.
-  const selected = focus
-    ? INBOX_PR_SECTIONS.flatMap((s) => sections[s]).find((p) => p.url === focus)
-    : undefined;
+  // Resolved from the unfiltered list, so a chain link to a filtered-out PR still opens it.
+  const selected = focus ? prsQuery.data?.prs.find((p) => p.url === focus) : undefined;
 
   const visibleSections = INBOX_PR_SECTIONS.filter((section) => sections[section].length > 0);
 

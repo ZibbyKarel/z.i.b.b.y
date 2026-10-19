@@ -2805,7 +2805,9 @@
     },
     "chain": {
       "on": "↳ navazuje na {label}",
-      "by": "{label} čeká na tohle →"
+      "by": "{label} čeká na tohle →",
+      "onAria": "Navazuje na {label}: {title}",
+      "byAria": "{label} čeká na tento PR: {title}"
     },
     "prs": {
       "diff": {

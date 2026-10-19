@@ -16,7 +16,7 @@ import { useTranslations } from "next-intl";
 import type { MouseEvent, ReactNode } from "react";
 import { useElapsedLabel } from "../useElapsedLabel";
 import { type PrChain, prListHref } from "../inbox";
-import { ChainLinks } from "./ChainLinks";
+import { ChainLinks, type ChainLinksMessages } from "./ChainLinks";
 import { ExternalAnchor, NavLink } from "./links";
 
 export enum PrRowTestId {
@@ -42,6 +42,7 @@ const CI_TONE = {
 const toChainLink = (pr: InboxPr) => ({
   key: String(pr.number),
   label: `#${pr.number}`,
+  title: pr.title,
   href: prListHref(pr.url),
 });
 
@@ -66,8 +67,8 @@ export interface PrRowProps {
 }
 
 /**
- * One pull-request card, three lines (+ stack line): `#n` title + review / CI badges; project · author ·
- * age; the actions strip (see `PrActions`) + linked item. Without `onSelect` the whole card
+ * One pull-request card, three lines (+ stack line): `#n` title + review / CI badges;
+ * project · author · age; the actions strip (see `PrActions`) + linked item. Without `onSelect` the whole card
  * opens the PR on GitHub — the title is the real (keyboard-reachable) link, a click anywhere
  * else on the card follows it; with `onSelect` a click selects the PR instead. Clicks inside
  * the actions line never do either.
@@ -83,6 +84,12 @@ export function PrRow({
   chain,
 }: PrRowProps) {
   const t = useTranslations("inboxPage");
+  const chainMessages: ChainLinksMessages = {
+    on: (link) => t("chain.on", { label: link.label }),
+    by: (link) => t("chain.by", { label: link.label }),
+    onAria: (link) => t("chain.onAria", { label: link.label, title: link.title ?? "" }),
+    byAria: (link) => t("chain.byAria", { label: link.label, title: link.title ?? "" }),
+  };
   const elapsedLabel = useElapsedLabel();
   const openPr = (e: MouseEvent) => {
     if ((e.target as Element).closest("a")) return;
@@ -157,7 +164,13 @@ export function PrRow({
             <Typography data-testid={PrRowTestId.Meta} type="label" variant="secondary">
               {[projectName ?? pr.repo, pr.author, elapsedLabel(pr.createdAt, now)].join(" · ")}
             </Typography>
-            {chain && <ChainLinks by={chain.by.map(toChainLink)} on={chain.on.map(toChainLink)} />}
+            {chain && (
+              <ChainLinks
+                by={chain.by.map(toChainLink)}
+                messages={chainMessages}
+                on={chain.on.map(toChainLink)}
+              />
+            )}
 
             {(actions || item) && (
               // The actions line is its own click zone — a button / menu / checkbox click

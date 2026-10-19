@@ -2805,7 +2805,9 @@
     },
     "chain": {
       "on": "↳ on {label}",
-      "by": "{label} waits on this →"
+      "by": "{label} waits on this →",
+      "onAria": "Stacked on {label}: {title}",
+      "byAria": "{label} waits on this: {title}"
     },
     "prs": {
       "diff": {

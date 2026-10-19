@@ -16,6 +16,8 @@ export interface TextLinkProps {
   linkComponent?: SubNavLinkComponent;
   /** Truncates to one line with an ellipsis instead of wrapping. */
   truncate?: boolean;
+  /** Accessible name when the visible text carries decorative glyphs. */
+  "aria-label"?: string;
   "data-testid"?: string;
 }
 
@@ -31,11 +33,13 @@ export function TextLink({
   children,
   linkComponent,
   truncate,
+  "aria-label": ariaLabel,
   "data-testid": testId = TextLinkTestId.Root,
 }: TextLinkProps) {
   const Link = linkComponent ?? "a";
   return (
     <Link
+      aria-label={ariaLabel}
       className={cn("rounded-sm no-underline", truncate && "block truncate", focusRing)}
       data-testid={testId}
       href={href}
