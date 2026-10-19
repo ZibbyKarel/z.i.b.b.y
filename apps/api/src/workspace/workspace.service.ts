@@ -384,6 +384,65 @@ export class WorkspaceService {
   }
 
   /**
+   * todo-11 — force-push a rebased PR head from a run's worktree. Every guard lives
+   * here, not in the agent prompt: refuses `head === base`, a rebase still in progress,
+   * dirty tracked files, a HEAD that is not on top of the freshly fetched
+   * `origin/<base>`, and a HEAD with no commits of its own (the PR's changes would be
+   * gone). The lease pins the remote branch to `expectedSha` — the head the operator
+   * clicked on — so a push made since is never overwritten. Returns the pushed sha;
+   * throws an Error whose message is the reason.
+   */
+  async pushRebased(opts: {
+    cwd: string;
+    head: string;
+    base: string;
+    expectedSha: string;
+  }): Promise<string> {
+    const { cwd, head, base, expectedSha } = opts;
+    if (head === base) throw new Error(`refusing to push the base branch "${base}"`);
+    const git = async (args: string[], timeout = GIT_TIMEOUT_MS): Promise<string> =>
+      (await exec("git", args, { cwd, timeout })).stdout.trim();
+    const ok = (args: string[]) =>
+      git(args).then(
+        () => true,
+        () => false,
+      );
+    for (const dir of ["rebase-merge", "rebase-apply"]) {
+      const marker = path.resolve(cwd, await git(["rev-parse", "--git-path", dir]));
+      if (
+        await fs.stat(marker).then(
+          () => true,
+          () => false,
+        )
+      ) {
+        throw new Error("a rebase is still in progress in the worktree");
+      }
+    }
+    if (await git(["status", "--porcelain", "--untracked-files=no"])) {
+      throw new Error("uncommitted changes in the worktree");
+    }
+    await git(["fetch", "origin", base], GIT_NETWORK_TIMEOUT_MS);
+    if (!(await ok(["merge-base", "--is-ancestor", `origin/${base}`, "HEAD"]))) {
+      throw new Error(`HEAD is not on top of origin/${base}; rebase again`);
+    }
+    if (Number(await git(["rev-list", "--count", `origin/${base}..HEAD`])) === 0) {
+      throw new Error(`HEAD has no commits beyond origin/${base}; the PR's changes are gone`);
+    }
+    await git(
+      [
+        "push",
+        `--force-with-lease=refs/heads/${head}:${expectedSha}`,
+        "origin",
+        `HEAD:refs/heads/${head}`,
+      ],
+      GIT_NETWORK_TIMEOUT_MS,
+    );
+    const sha = await git(["rev-parse", "HEAD"]);
+    this.log?.info("rebased branch force-pushed", { cwd, head, base, sha });
+    return sha;
+  }
+
+  /**
    * A human-readable diff of the run's branch against its base HEAD — the commit
    * list plus the changed-files summary. Consumed by the PR gate (3.3) to assemble
    * the Tier-3 decision surface. Best-effort: a git failure yields an empty string.

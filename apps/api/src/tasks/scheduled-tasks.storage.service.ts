@@ -249,6 +249,17 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
     }));
   }
 
+  /** todo-11 — patch the PR-inbox rebase provenance (`prRebase`). Server-only, like `setPrReview`. */
+  async setPrRebase(
+    id: string,
+    patch: (current: ScheduledTask["prRebase"]) => ScheduledTask["prRebase"],
+  ): Promise<ScheduledTask> {
+    return this.updateEntity(id, (existing) => ({
+      ...existing,
+      prRebase: patch(existing.prRebase),
+    }));
+  }
+
   /**
    * Patch the stage-1 classification trace in place.
    *
