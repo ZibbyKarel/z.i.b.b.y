@@ -59,6 +59,12 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLElement>, "className"
    * Single column below the lg breakpoint.
    */
   sidebar?: "left" | "left-wide" | "left-narrow" | "right";
+  /**
+   * Fixes the grid's height from the lg breakpoint up (any CSS length, e.g.
+   * `calc(100vh - 14rem)`), with one `minmax(0,1fr)` row so the columns fill it and
+   * can host their own scroll areas. Below lg the grid stays content-sized.
+   */
+  lgHeight?: string;
   gap?: Spacing;
   align?: GridAlign;
   maxWidth?: string;
@@ -75,6 +81,7 @@ export function Grid({
   md,
   lg,
   sidebar,
+  lgHeight,
   gap,
   align,
   maxWidth,
@@ -84,13 +91,14 @@ export function Grid({
   ref,
   ...rest
 }: GridProps) {
-  const computedStyle: CSSProperties = {
+  const computedStyle = {
     display: "grid",
     gap: gap !== undefined ? spacingToPx(gap) : undefined,
     maxWidth,
     marginInline: center ? "auto" : undefined,
+    ...(lgHeight ? { "--grid-lg-height": lgHeight } : {}),
     ...style,
-  };
+  } as CSSProperties;
 
   // Rendering through a bare `ElementType` breaks once any library augments
   // React.JSX.IntrinsicElements globally — see the identical cast in Stack.tsx for
@@ -120,6 +128,7 @@ export function Grid({
         sidebar === "left-wide" && "grid-cols-1 lg:grid-cols-[minmax(0,33%)_minmax(0,1fr)]",
         sidebar === "left-narrow" && "grid-cols-1 lg:grid-cols-[minmax(0,25%)_minmax(0,1fr)]",
         !sidebar && [baseCols[cols], sm && smCols[sm], md && mdCols[md], lg && lgCols[lg]],
+        lgHeight && "lg:h-(--grid-lg-height) lg:grid-rows-[minmax(0,1fr)]",
         align && alignClass[align],
       )}
       ref={ref}

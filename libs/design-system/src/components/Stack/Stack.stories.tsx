@@ -54,3 +54,14 @@ export const Overview: Story = {
 };
 
 export const Playground: Story = {};
+
+export const ScrollPane: Story = {
+  render: () => (
+    <Stack minH0 gap="150">
+      {box("Header (fixed)")}
+      <div className="h-40">
+        <Stack minH0>{Array.from({ length: 12 }, (_, i) => box(`Row ${i + 1}`))}</Stack>
+      </div>
+    </Stack>
+  ),
+};

@@ -233,6 +233,8 @@ export interface TypographyProps extends Omit<HTMLAttributes<HTMLElement>, "clas
   uppercase?: boolean;
   truncate?: boolean;
   nowrap?: boolean;
+  /** `overflow-wrap: anywhere` — wraps long unbroken tokens (branch names, URLs). */
+  wrapAnywhere?: boolean;
   align?: TypographyAlign;
   /** Override the rendered element. */
   as?: As;
@@ -251,6 +253,7 @@ export function Typography({
   uppercase,
   truncate,
   nowrap,
+  wrapAnywhere,
   align,
   as,
   style,
@@ -297,6 +300,7 @@ export function Typography({
         (uppercase ?? preset.uppercase) && "uppercase",
         truncate && "truncate",
         nowrap && "whitespace-nowrap",
+        wrapAnywhere && "wrap-anywhere",
       )}
       data-testid={TypographyTestId.Root}
       ref={

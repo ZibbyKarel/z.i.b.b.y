@@ -59,4 +59,14 @@ describe("Row", () => {
     expect(el.style.flexDirection).toBe("row");
     expect(el.style.alignItems).toBe("center");
   });
+
+  it("minH0 lets a flex child shrink below its content", () => {
+    render(<Stack minH0>x</Stack>);
+    expect(screen.getByTestId(StackTestId.Root).style.minHeight).toBe("0");
+  });
+
+  it("Row forwards minH0", () => {
+    render(<Row minH0>x</Row>);
+    expect(screen.getByTestId(StackTestId.Root).style.minHeight).toBe("0");
+  });
 });

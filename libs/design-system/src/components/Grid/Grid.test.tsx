@@ -46,4 +46,18 @@ describe("Grid", () => {
     expect(el.style.maxWidth).toBe("1400px");
     expect(el.style.marginInline).toBe("auto");
   });
+
+  it("fixes the height at lg only, with a single shrinkable row", () => {
+    render(<Grid lgHeight="calc(100vh - 14rem)" sidebar="left-narrow" />);
+    const el = screen.getByTestId(GridTestId.Root);
+    expect(el.style.getPropertyValue("--grid-lg-height")).toBe("calc(100vh - 14rem)");
+    expect(el.className).toContain("lg:h-(--grid-lg-height)");
+    expect(el.className).toContain("lg:grid-rows-[minmax(0,1fr)]");
+    expect(el.style.height).toBe("");
+  });
+
+  it("adds no height classes without lgHeight", () => {
+    render(<Grid sidebar="left-narrow" />);
+    expect(screen.getByTestId(GridTestId.Root).className).not.toContain("lg:h-");
+  });
 });
