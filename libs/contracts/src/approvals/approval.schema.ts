@@ -84,8 +84,9 @@ export const ApprovalRunKindSchema = z.enum([
   "routing-proposal",
   // Phase 129 P2 — a code review prepared by the `code-reviewer` agent for a PR in
   // the inbox, parked before it is posted to GitHub. The runId is the taskId (the
-  // task's `prReview` holds repo/number/body); approving posts it as a `COMMENT`
-  // review (never APPROVE / REQUEST_CHANGES), rejecting discards it. Outbound write
+  // task's `prReview` holds repo/number/body); approving posts it with the
+  // review event the operator picked on approve (APPROVE / REQUEST_CHANGES / COMMENT;
+  // none picked → COMMENT — ZIBBY never picks one itself), rejecting discards it. Outbound write
   // in the operator's name → always Tier-3.
   "pr-review",
 ]);
@@ -98,6 +99,13 @@ export type ApprovalRunKind = z.infer<typeof ApprovalRunKindSchema>;
  */
 export const ApprovalStatusSchema = z.enum(["pending", "approved", "rejected", "revised"]);
 export type ApprovalStatus = z.infer<typeof ApprovalStatusSchema>;
+
+/**
+ * todo-10 — the GitHub review event a PR review is posted with. The operator picks it
+ * when signing off the review text; ZIBBY only suggests (see `suggestedReviewEvent`).
+ */
+export const PrReviewEventSchema = z.enum(["APPROVE", "REQUEST_CHANGES", "COMMENT"]);
+export type PrReviewEvent = z.infer<typeof PrReviewEventSchema>;
 
 /**
  * A request for human sign-off before a gated action runs. Unifies the dashboard's
@@ -146,5 +154,15 @@ export const ApprovalSchema = z.object({
    * simply absent.
    */
   reason: z.string().min(1).max(4000).optional(),
+  /**
+   * todo-10 — set on a PR-review sign-off only: a `pr-review` approval, or the final
+   * `comment`-phase `workflow-gate` of a pr-review workflow. ZIBBY's preselection from
+   * the review text — any `Critical:` / `Important:` / `Minor:` finding →
+   * `REQUEST_CHANGES`, none → `APPROVE`. A suggestion only: it takes effect solely
+   * through the operator's approve. Its presence is what shows the review-type picker.
+   */
+  suggestedReviewEvent: PrReviewEventSchema.optional(),
+  /** todo-10 — the review event the operator chose on approve; absent → posted as `COMMENT`. */
+  reviewEvent: PrReviewEventSchema.optional(),
 });
 export type Approval = z.infer<typeof ApprovalSchema>;

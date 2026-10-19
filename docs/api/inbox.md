@@ -112,7 +112,7 @@ PR url is derived from repo + number, never taken from the client. It then:
 (under the per-task lock) when an agent task's run ends `done`. When the task has
 `prReview`, it reads the artifact from `run.cwd` and calls
 `ApprovalsService.requestApproval({ kind: "pr-review", runId: taskId, action:
-"github.pr.review", detail: "Post review to GitHub — <repo>#<n> (COMMENT)\n\n<body>",
+"github.pr.review", detail: "Post review to GitHub — <repo>#<n>\n\n<body>", suggestedReviewEvent,
 sourceUrl })` — the approvals UI shows `detail` in full as the preview. No artifact →
 no approval (a reply is concrete or it is not drafted), `state: "failed"`.
 
@@ -129,8 +129,8 @@ operator decides once. A run that ended without the final gate parks the approva
 pending. A `failed` run parks nothing, and the row reads `failed` from the task outcome.
 
 `InboxReviewService` registers as the `pr-review` runner: **approve** →
-`POST /repos/{repo}/pulls/{n}/reviews` with `{ body, event: "COMMENT" }` using the
-project's resolved token (never `APPROVE` / `REQUEST_CHANGES`), `state: "posted"`;
+`POST /repos/{repo}/pulls/{n}/reviews` with `{ body, event }` — `event` is the operator's pick on approve (`reviewEvent`; APPROVE / REQUEST_CHANGES / COMMENT, preselected from `suggestedReviewEvent` = REQUEST_CHANGES when the review has a `Critical:`/`Important:`/`Minor:` finding, else APPROVE; no pick → COMMENT, ZIBBY never picks one itself) — using the
+project's resolved token, `state: "posted"`;
 a GitHub error sets `failed` + `note` and throws. **Reject** → `discarded`, nothing
 is sent. The PR row links to the task while the review is running or parked.
 

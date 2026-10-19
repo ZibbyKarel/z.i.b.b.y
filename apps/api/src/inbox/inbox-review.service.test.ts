@@ -178,10 +178,21 @@ describe("InboxReviewService", () => {
     expect(dropPrsCache).toHaveBeenCalledOnce();
   });
 
+  it("todo-10: posts the operator-picked event; the runner passes it from the approval", async () => {
+    await parked();
+    await service.post("task_r1", "REQUEST_CHANGES");
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api.github.com/repos/acme/app/pulls/7/reviews",
+      expect.objectContaining({
+        body: JSON.stringify({ body: "LGTM-ish", event: "REQUEST_CHANGES" }),
+      }),
+    );
+  });
+
   it("a GitHub failure marks the review failed and throws", async () => {
     await parked();
     fetchImpl.mockResolvedValueOnce(new Response("{}", { status: 422 }));
-    await expect(service.post("task_r1")).rejects.toThrow(/HTTP 422/);
+    await expect(service.post("task_r1", "APPROVE")).rejects.toThrow(/HTTP 422/);
     expect((await storage.get("task_r1")).prReview).toMatchObject({ state: "failed" });
   });
 

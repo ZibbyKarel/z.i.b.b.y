@@ -5,7 +5,7 @@ import type { AgentRun, ScheduledTask, TaskOutput, Workspace } from "@zibby/cont
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DuplicateNoteError } from "../memory/vault.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
-import { PR_REVIEW_ARTIFACT, TaskOutputService } from "./task-output.service";
+import { PR_REVIEW_ARTIFACT, TaskOutputService, suggestReviewEvent } from "./task-output.service";
 
 /**
  * The directed-task output gate: an agent/orchestrator task's `file`/`pr` sink. The
@@ -246,6 +246,21 @@ describe("TaskOutputService", () => {
     expect(workspace.openPr).not.toHaveBeenCalled();
   });
 
+  describe("suggestReviewEvent (todo-10)", () => {
+    it.each([
+      ["Critical: null deref at a.ts:3", "REQUEST_CHANGES"],
+      ["Looks solid overall.\n\nMinor: rename x at b.ts:9", "REQUEST_CHANGES"],
+      ["- **Important:** missing await at c.ts:1", "REQUEST_CHANGES"],
+      ["**Critical**: leaks the token", "REQUEST_CHANGES"],
+      ["No findings — looks good to merge.", "APPROVE"],
+      ["No critical issues found.", "APPROVE"],
+      ["Uses the Minor: label convention mid-line only.", "APPROVE"],
+      ["", "APPROVE"],
+    ])("%j → %s", (body, expected) => {
+      expect(suggestReviewEvent(body)).toBe(expected);
+    });
+  });
+
   describe("pr review (Phase 129 P2)", () => {
     async function seedReview(): Promise<ScheduledTask> {
       const task = await storage.createDispatched(
@@ -287,8 +302,25 @@ describe("TaskOutputService", () => {
           detail: expect.stringContaining('approved at workflow gate "comment"'),
         }),
       );
-      expect(approvals.approve).toHaveBeenCalledWith("appr_1");
+      expect(approvals.approve).toHaveBeenCalledWith("appr_1", {});
       expect(delivered.summary).toMatch(/odesláno/);
+    });
+
+    it("parkPrReview stamps the suggested review event on the approval (todo-10)", async () => {
+      const task = await seedReview();
+      await service.parkPrReview(task, "Critical: bug at a.ts:3");
+      expect(approvals.requestApproval).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: "pr-review", suggestedReviewEvent: "REQUEST_CHANGES" }),
+      );
+    });
+
+    it("parkPrReview signed off at the gate posts with the operator's gate pick (todo-10)", async () => {
+      const task = await seedReview();
+      await service.parkPrReview(task, "bug at a.ts:3", "comment", "APPROVE");
+      expect(approvals.requestApproval).toHaveBeenCalledWith(
+        expect.objectContaining({ detail: expect.stringContaining("(APPROVE)") }),
+      );
+      expect(approvals.approve).toHaveBeenCalledWith("appr_1", { reviewEvent: "APPROVE" });
     });
 
     it("parkPrReview without a gate sign-off leaves the approval pending", async () => {

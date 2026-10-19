@@ -1,7 +1,13 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { Injectable, type OnModuleInit } from "@nestjs/common";
-import type { AgentRun, PrOutput, ScheduledTask, TaskOutput } from "@zibby/contracts";
+import type {
+  AgentRun,
+  PrOutput,
+  PrReviewEvent,
+  ScheduledTask,
+  TaskOutput,
+} from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { ApprovalsService } from "../approvals/approvals.service";
 import { DuplicateNoteError, VaultService } from "../memory/vault.service";
@@ -18,6 +24,18 @@ import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service"
 export const PR_REVIEW_ARTIFACT = "zibby-pr-review.md";
 /** GitHub caps a review body at 65 536 chars; keep headroom for the footer. */
 const PR_REVIEW_MAX_CHARS = 60_000;
+
+/** A labelled finding line (item 9: `Critical:` / `Important:` / `Minor:`), tolerating a list marker or bold. */
+const FINDING_LINE = /^[\s>*_-]*(?:Critical|Important|Minor)[*_]*:/m;
+
+/**
+ * todo-10 — ZIBBY's preselection for the operator's review-type pick: any finding →
+ * REQUEST_CHANGES, none → APPROVE. Only a suggestion; nothing posts without the
+ * operator's approve, and every approve without a pick posts COMMENT.
+ */
+export function suggestReviewEvent(body: string): PrReviewEvent {
+  return FINDING_LINE.test(body) ? "REQUEST_CHANGES" : "APPROVE";
+}
 
 /**
  * What a terminal output sink delivered, folded into the task outcome by the caller: a
@@ -129,12 +147,13 @@ export class TaskOutputService implements OnModuleInit {
    * already approved by the operator at its `approval: ask` gate, where notes go back
    * to the phase. That gate WAS the decision on this exact text, so the approval is
    * recorded and approved in one go (the `pr-review` runner posts it) instead of
-   * asking twice.
+   * asking twice. `reviewEvent` — the operator's pick at that gate (todo-10); absent → COMMENT.
    */
   async parkPrReview(
     task: ScheduledTask,
     raw: string,
     signedOffAtGate?: string,
+    reviewEvent?: PrReviewEvent,
   ): Promise<TaskTerminalDelivery> {
     const review = task.prReview;
     if (!review) return {};
@@ -155,9 +174,10 @@ export class TaskOutputService implements OnModuleInit {
       kind: "pr-review",
       skill: "code-reviewer",
       action: "github.pr.review",
-      detail: `Post review to GitHub — ${ref} (COMMENT)${signedOffAtGate ? `, approved at workflow gate "${signedOffAtGate}"` : ""}\n\n${body}`,
+      detail: `Post review to GitHub — ${ref}${signedOffAtGate ? ` (${reviewEvent ?? "COMMENT"}), approved at workflow gate "${signedOffAtGate}"` : ""}\n\n${body}`,
       risk: "medium",
       sourceUrl: review.url,
+      suggestedReviewEvent: suggestReviewEvent(body),
     });
     await this.storage.setPrReview(task.id, (current) =>
       current ? { ...current, state: "awaiting-approval", body, approvalId: approval.id } : current,
@@ -169,16 +189,18 @@ export class TaskOutputService implements OnModuleInit {
     });
     if (signedOffAtGate) {
       // A failed post already marks the review `failed` with the GitHub error.
-      const posted = await this.approvals.approve(approval.id).then(
-        () => true,
-        (error: unknown) => {
-          this.log.warn("pr review post after gate sign-off failed", {
-            taskId: task.id,
-            err: error instanceof Error ? error.message : String(error),
-          });
-          return false;
-        },
-      );
+      const posted = await this.approvals
+        .approve(approval.id, reviewEvent ? { reviewEvent } : {})
+        .then(
+          () => true,
+          (error: unknown) => {
+            this.log.warn("pr review post after gate sign-off failed", {
+              taskId: task.id,
+              err: error instanceof Error ? error.message : String(error),
+            });
+            return false;
+          },
+        );
       return {
         summary: posted
           ? `Code review ${ref} odesláno na GitHub`

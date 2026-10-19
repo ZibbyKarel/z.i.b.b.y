@@ -51,8 +51,36 @@ describe("ApprovalsService", () => {
     const decided = await service.approve(created.id);
     expect(decided.status).toBe("approved");
     expect(decided.decidedAt).toBeTruthy();
-    expect(resume).toHaveBeenCalledWith("agent-007_1_p0");
+    expect(resume).toHaveBeenCalledWith("agent-007_1_p0", decided);
     expect(cancel).not.toHaveBeenCalled();
+  });
+
+  it("todo-10: approve records the operator's reviewEvent and hands the approval to the runner", async () => {
+    const resume = vi.fn();
+    service.register("pr-review", { resume, cancel: vi.fn() });
+    const created = await service.requestApproval({
+      runId: "task_r1",
+      kind: "pr-review",
+      skill: "code-reviewer",
+      action: "github.pr.review",
+      detail: "Post review",
+      risk: "medium",
+      suggestedReviewEvent: "REQUEST_CHANGES",
+    });
+    expect(created.suggestedReviewEvent).toBe("REQUEST_CHANGES");
+    const decided = await service.approve(created.id, { reviewEvent: "APPROVE" });
+    expect(decided.reviewEvent).toBe("APPROVE");
+    expect((await service.get(created.id)).reviewEvent).toBe("APPROVE");
+    expect(resume).toHaveBeenCalledWith(
+      "task_r1",
+      expect.objectContaining({ reviewEvent: "APPROVE" }),
+    );
+  });
+
+  it("todo-10: approve without a reviewEvent records none", async () => {
+    const created = await request();
+    const decided = await service.approve(created.id);
+    expect(decided.reviewEvent).toBeUndefined();
   });
 
   it("revise routes the note to the runner and only works on a stage checkpoint", async () => {

@@ -101,9 +101,9 @@ the PR inbox's "Do code review" flow (`InboxReviewService`, `docs/api/inbox.md`)
 `pr-review` approval with the review as `detail`; no artifact → no approval,
 `prReview.state = "failed"`. Every inbox review level is now a `pr-review-*` workflow,
 so the live path is `TaskSchedulerService.writeWorkflowOutcome` →
-`TaskOutputService.parkPrReview(task, text, run.approvedFinalGate)`: when the
+`TaskOutputService.parkPrReview(task, text, run.approvedFinalGate, run.approvedReviewEvent)`: when the
 operator already approved the final `comment` phase at its gate, the approval is
-recorded and approved in one go (posted), otherwise it parks as pending.
+recorded and approved in one go (posted with the review event the operator picked at the gate (todo-10; none → COMMENT)), otherwise it parks as pending.
 
 `scheduledAt` absent or in the past → `createTask` runs classification + dispatch
 immediately. From the dialog (`background = true`), dispatch happens in the

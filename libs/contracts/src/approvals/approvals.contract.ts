@@ -1,7 +1,7 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
-import { EmptyBodySchema, ErrorSchema } from "../common.schema";
-import { ApprovalSchema } from "./approval.schema";
+import { ErrorSchema } from "../common.schema";
+import { ApprovalSchema, PrReviewEventSchema } from "./approval.schema";
 
 const c = initContract();
 
@@ -32,7 +32,9 @@ export const approvalsContract = c.router(
       method: "POST",
       path: "/approvals/:id/approve",
       pathParams: ApprovalIdParam,
-      body: EmptyBodySchema,
+      // todo-10: the operator's pick of the GitHub review event on a PR-review sign-off.
+      // Optional and additive — a caller that posts `{}` (or nothing) gets COMMENT.
+      body: z.object({ reviewEvent: PrReviewEventSchema.optional() }).optional(),
       responses: { 200: ApprovalSchema, 404: ErrorSchema, 409: ErrorSchema },
       summary: "Approve a pending approval (resumes the gated run)",
     },

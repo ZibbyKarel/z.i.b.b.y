@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { EmptyBodySchema } from "../common.schema";
 import { ApprovalSchema, approvalsContract } from "../index";
 
 describe("approvalsContract", () => {
@@ -11,8 +10,14 @@ describe("approvalsContract", () => {
     expect(approvalsContract.approveApproval.method).toBe("POST");
   });
 
-  it("approveApproval's empty body IS the shared EmptyBodySchema (T11 dedup, finding #37)", () => {
-    expect(approvalsContract.approveApproval.body).toBe(EmptyBodySchema);
+  it("approveApproval takes an optional reviewEvent (todo-10), still accepting an empty body", () => {
+    const body = approvalsContract.approveApproval.body;
+    expect(body.safeParse(undefined).success).toBe(true);
+    expect(body.safeParse({}).success).toBe(true);
+    expect(body.safeParse({ reviewEvent: "APPROVE" }).success).toBe(true);
+    expect(body.safeParse({ reviewEvent: "REQUEST_CHANGES" }).success).toBe(true);
+    expect(body.safeParse({ reviewEvent: "COMMENT" }).success).toBe(true);
+    expect(body.safeParse({ reviewEvent: "MERGE" }).success).toBe(false);
   });
 
   it("rejectApproval takes an optional reason (ZB-08 deny-with-reason), still accepting an empty body", () => {
@@ -46,6 +51,18 @@ describe("approval schema", () => {
     status: "pending",
     requestedAt: new Date().toISOString(),
   };
+
+  it("todo-10: carries an optional suggested and chosen review event", () => {
+    expect(
+      ApprovalSchema.safeParse({
+        ...base,
+        kind: "pr-review",
+        suggestedReviewEvent: "REQUEST_CHANGES",
+      }).success,
+    ).toBe(true);
+    expect(ApprovalSchema.safeParse({ ...base, reviewEvent: "APPROVE" }).success).toBe(true);
+    expect(ApprovalSchema.safeParse({ ...base, reviewEvent: "approve" }).success).toBe(false);
+  });
 
   it("accepts a pending approval and an approved one with decidedAt", () => {
     expect(ApprovalSchema.safeParse(base).success).toBe(true);

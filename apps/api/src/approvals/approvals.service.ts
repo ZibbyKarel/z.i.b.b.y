@@ -1,5 +1,5 @@
 import { Injectable, Optional } from "@nestjs/common";
-import type { Approval, ApprovalRunKind, DepartmentId } from "@zibby/contracts";
+import type { Approval, ApprovalRunKind, DepartmentId, PrReviewEvent } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { withPathLock } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
@@ -13,8 +13,11 @@ import { ApprovalsStorageService } from "./approvals.storage.service";
  * themselves at startup.
  */
 export interface ResumableRunner {
-  /** Spawn an approved, previously-paused run. */
-  resume(runId: string): Promise<void> | void;
+  /**
+   * Spawn an approved, previously-paused run. `approval` is the decided record —
+   * todo-10: a PR-review runner reads the operator's `reviewEvent` from it.
+   */
+  resume(runId: string, approval?: Approval): Promise<void> | void;
   /** Terminate a rejected run without performing its action. */
   cancel(runId: string): void;
   /** Optional: re-run the gated step with the operator's change request. */
@@ -42,6 +45,8 @@ export interface RequestApprovalInput {
    * Jira issue, review rule, routing proposal) — see `ApprovalSchema.sourceUrl`.
    */
   sourceUrl?: string;
+  /** todo-10 — the PR-review sign-off's suggested event (see `ApprovalSchema.suggestedReviewEvent`). */
+  suggestedReviewEvent?: PrReviewEvent;
 }
 
 /**
@@ -86,6 +91,7 @@ export class ApprovalsService {
       requestedAt: new Date().toISOString(),
       ...(input.department ? { department: input.department } : {}),
       ...(input.sourceUrl ? { sourceUrl: input.sourceUrl } : {}),
+      ...(input.suggestedReviewEvent ? { suggestedReviewEvent: input.suggestedReviewEvent } : {}),
     };
     this.log?.info("approval requested", {
       id: approval.id,
@@ -120,15 +126,15 @@ export class ApprovalsService {
     return this.storage.get(id);
   }
 
-  /** Approve a pending approval and resume its gated run. */
-  async approve(id: string): Promise<Approval> {
-    const approval = await this.decide(id, "approved");
+  /** Approve a pending approval and resume its gated run. `reviewEvent` — todo-10, the operator's PR-review pick. */
+  async approve(id: string, opts: { reviewEvent?: PrReviewEvent } = {}): Promise<Approval> {
+    const approval = await this.decide(id, "approved", undefined, opts.reviewEvent);
     this.log?.info("approval approved; resuming run", {
       id,
       runId: approval.runId,
       kind: approval.kind,
     });
-    await this.runners.get(approval.kind)?.resume(approval.runId);
+    await this.runners.get(approval.kind)?.resume(approval.runId, approval);
     return approval;
   }
 
@@ -210,6 +216,7 @@ export class ApprovalsService {
     id: string,
     status: Exclude<Approval["status"], "pending">,
     reason?: string,
+    reviewEvent?: PrReviewEvent,
   ): Promise<Approval> {
     return withPathLock(`approval:${id}`, async () => {
       const approval = await this.storage.get(id);
@@ -219,6 +226,7 @@ export class ApprovalsService {
         status,
         decidedAt: new Date().toISOString(),
         ...(reason ? { reason } : {}),
+        ...(reviewEvent ? { reviewEvent } : {}),
       };
       void this.activity?.record({
         kind: `approval-${status}`,
