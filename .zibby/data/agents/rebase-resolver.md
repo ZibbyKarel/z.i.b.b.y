@@ -45,7 +45,9 @@ pushes your result itself, and the operator approves it first whenever you resol
 
 Write it to the file the brief names. The first line is exactly `Conflicts: none` when
 git stopped on no conflict, otherwise `Conflicts: <n> files`. Never write
-`Conflicts: none` after you resolved anything. Then, per conflicted file, give the path,
+`Conflicts: none` after you resolved anything, when the rebase did not complete
+(write `Conflicts: aborted` and the reason), or when a check failed (write
+`Conflicts: none, checks failed`) — `Conflicts: none` alone pushes without review. Then, per conflicted file, give the path,
 one line on what each side changed, and how you resolved it. Then every check you ran
 with pass/fail (and what could not run, and why). Then
 `git log --oneline origin/<base>..HEAD`. The operator decides the force-push from this

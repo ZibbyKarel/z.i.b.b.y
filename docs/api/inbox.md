@@ -3,9 +3,10 @@
 One place that answers "what do I have to process?" — a read-only view over the
 synced roadmap cache narrowed to the operator's scope, plus the operator's GitHub
 PRs. Jira/GitHub stay the source of truth for the _task_; the Inbox never edits
-titles or descriptions. Two PR actions exist, both operator-clicked (Phase 129): a
-code review posted only after a Tier-3 approval, and squash-and-merge through the
-projects merge route. UI spec: `docs/plans/inbox-ui-spec.md`.
+titles or descriptions. Three PR actions exist, all operator-clicked: a code review
+posted only after a Tier-3 approval (Phase 129), a rebase onto the base branch
+(todo-11; force-push with lease, Tier-3 when conflicts were resolved), and
+squash-and-merge through the projects merge route. UI spec: `docs/plans/inbox-ui-spec.md`.
 
 ## Pieces
 
@@ -15,20 +16,22 @@ projects merge route. UI spec: `docs/plans/inbox-ui-spec.md`.
 | Contract   | `libs/contracts/src/inbox/inbox.contract.ts`  | `inboxContract`, `/api`                             |
 | Service    | `apps/api/src/inbox/inbox.service.ts`         | Cross-project item list, PR classification, state   |
 | Service    | `apps/api/src/inbox/inbox-review.service.ts`  | "Do code review" task + `pr-review` approval runner |
+| Service    | `apps/api/src/inbox/inbox-rebase.service.ts`  | "Rebase" task + `pr-rebase` approval runner         |
 | Service    | `apps/api/src/inbox/inbox-pr-diff.service.ts` | One PR's unified diff from GitHub (500 KB cap)      |
 | Store      | `apps/api/src/inbox/inbox-state.store.ts`     | `InboxStateStore` — hidden items, one JSON file     |
 | Controller | `apps/api/src/inbox/inbox.controller.ts`      | `@TsRestHandler(inboxContract)`                     |
 
 ## Endpoints
 
-| Method | Path                                     | Body                                                                                                                  | Response                                                                                       |
-| ------ | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| GET    | `/api/roadmap/items`                     | —                                                                                                                     | `InboxItemsResponse`                                                                           |
-| GET    | `/api/inbox/prs`                         | —                                                                                                                     | `InboxPrsResponse`                                                                             |
-| POST   | `/api/inbox/prs/review`                  | `{ projectId, repo, number, title?, level? }` (strict; `level` = `quick` \| `thorough` \| `tested`, absent = `quick`) | 201 `{ taskId }`; 404 project; 422 no GitHub link / repo not the project's                     |
-| GET    | `/api/inbox/prs/:projectId/:number/diff` | —                                                                                                                     | 200 `{ diff, truncated }`; 404 project/PR; 422 no GitHub link/token rejected; 502 GitHub error |
-| GET    | `/api/inbox/state`                       | —                                                                                                                     | `InboxState`                                                                                   |
-| PUT    | `/api/inbox/state`                       | `{ integrationId, externalId, hidden }` (strict)                                                                      | `InboxState`                                                                                   |
+| Method | Path                                     | Body                                                                                                                  | Response                                                                                                             |
+| ------ | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/roadmap/items`                     | —                                                                                                                     | `InboxItemsResponse`                                                                                                 |
+| GET    | `/api/inbox/prs`                         | —                                                                                                                     | `InboxPrsResponse`                                                                                                   |
+| POST   | `/api/inbox/prs/review`                  | `{ projectId, repo, number, title?, level? }` (strict; `level` = `quick` \| `thorough` \| `tested`, absent = `quick`) | 201 `{ taskId }`; 404 project; 422 no GitHub link / repo not the project's                                           |
+| POST   | `/api/inbox/prs/rebase`                  | `{ projectId, repo, number, title? }` (strict)                                                                        | 201 `{ taskId }`; 404 project; 422 no GitHub link / not the project's repo / fork / closed / head is base or default |
+| GET    | `/api/inbox/prs/:projectId/:number/diff` | —                                                                                                                     | 200 `{ diff, truncated }`; 404 project/PR; 422 no GitHub link/token rejected; 502 GitHub error                       |
+| GET    | `/api/inbox/state`                       | —                                                                                                                     | `InboxState`                                                                                                         |
+| PUT    | `/api/inbox/state`                       | `{ integrationId, externalId, hidden }` (strict)                                                                      | `InboxState`                                                                                                         |
 
 `/api/roadmap/items` has no `:projectId` segment, so it can't collide with the
 per-project `/api/projects/:projectId/roadmap/...` routes.
