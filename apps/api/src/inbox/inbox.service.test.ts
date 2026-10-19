@@ -142,7 +142,13 @@ describe("InboxService.listPrs", () => {
           mergeable_state: n === 3 ? "behind" : "clean",
           created_at: "2026-10-01T10:00:00Z",
           user: { login: n === 3 ? "me" : "alice" },
-          head: { sha: `sha${n}` },
+          head: {
+            sha: `sha${n}`,
+            ref: `feat-${n}`,
+            // #2 comes from a fork: its head branch must not take part in stacking.
+            repo: { full_name: n === 2 ? "someone/app" : "acme/APP" },
+          },
+          base: { ref: n === 3 ? "feat-1" : "main" },
         });
       }
       if (u.pathname.endsWith("/reviews")) {
@@ -253,6 +259,11 @@ describe("InboxService.listPrs", () => {
     const byNumber = Object.fromEntries(result.prs.map((p) => [p.number, p]));
     expect(byNumber[3]?.behind).toBe(true);
     expect(byNumber[1]?.behind).toBeUndefined();
+    // todo-13 — head/base refs for stacking; repo match is case-insensitive, forks get no head.
+    expect(byNumber[1]).toMatchObject({ headRef: "feat-1", baseRef: "main" });
+    expect(byNumber[3]).toMatchObject({ headRef: "feat-3", baseRef: "feat-1" });
+    expect(byNumber[2]?.headRef).toBeUndefined();
+    expect(byNumber[2]?.baseRef).toBe("main");
     // #1 is both direct and team -> direct wins.
     expect(byNumber[1]).toMatchObject({
       bucket: "to-review",

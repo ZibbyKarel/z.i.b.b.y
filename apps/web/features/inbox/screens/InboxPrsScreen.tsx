@@ -23,7 +23,7 @@ import { useProjectsQuery } from "../../projects";
 import { PrActions, hasPrActions } from "../components/PrActions";
 import { PrDetail } from "../components/PrDetail";
 import { PrRow } from "../components/PrRow";
-import { groupPrsBySection, itemKey, linkedPrOf, pad2 } from "../inbox";
+import { type PrChain, groupPrsBySection, itemKey, linkedPrOf, pad2, prChains } from "../inbox";
 import { useInboxItemsQuery, useInboxPrsQuery } from "../queries";
 import { useInboxFilters } from "../useInboxFilters";
 import { useSessionFlags } from "../useSessionFlags";
@@ -48,6 +48,7 @@ interface SectionProps {
   focus: string | null;
   onSelect: (pr: InboxPr) => void;
   itemFor: (pr: InboxPr) => { key: string; href: string } | undefined;
+  chainFor: (pr: InboxPr) => PrChain | undefined;
   projectNames: Map<string, string>;
   expanded: boolean;
   onToggle?: () => void;
@@ -62,6 +63,7 @@ function PrSection({
   focus,
   onSelect,
   itemFor,
+  chainFor,
   projectNames,
   expanded,
   onToggle,
@@ -90,6 +92,7 @@ function PrSection({
           {prs.map((pr) => (
             <PrRow
               actions={hasPrActions(pr) && focus !== pr.url ? <PrActions pr={pr} /> : undefined}
+              chain={chainFor(pr)}
               focused={focus === pr.url}
               item={itemFor(pr)}
               key={pr.url}
@@ -124,6 +127,8 @@ export function InboxPrsScreen() {
   const itemsQuery = useInboxItemsQuery();
   const prsQuery = useInboxPrsQuery();
   const { data: projects } = useProjectsQuery();
+  // Unfiltered on purpose: a chain link may point at a PR the filters hide (it still opens).
+  const chains = useMemo(() => prChains(prsQuery.data?.prs ?? []), [prsQuery.data]);
   const projectNames = useMemo(
     () => new Map((projects ?? []).map((p) => [p.id, p.name])),
     [projects],
@@ -135,10 +140,8 @@ export function InboxPrsScreen() {
     () => groupPrsBySection(prsQuery.data?.prs ?? [], filters),
     [prsQuery.data, filters],
   );
-  // Resolved from the rendered (filtered) sections, so a hidden PR shows the placeholder.
-  const selected = focus
-    ? INBOX_PR_SECTIONS.flatMap((s) => sections[s]).find((p) => p.url === focus)
-    : undefined;
+  // Resolved from the unfiltered list, so a chain link to a filtered-out PR still opens it.
+  const selected = focus ? prsQuery.data?.prs.find((p) => p.url === focus) : undefined;
 
   const visibleSections = INBOX_PR_SECTIONS.filter((section) => sections[section].length > 0);
 
@@ -182,6 +185,7 @@ export function InboxPrsScreen() {
             )}
             {visibleSections.map((section) => (
               <PrSection
+                chainFor={(pr) => chains.get(pr.url)}
                 expanded={
                   collapsed[section] !== true || sections[section].some((p) => p.url === focus)
                 }

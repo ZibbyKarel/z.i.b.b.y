@@ -2803,6 +2803,12 @@
       "openIssues": "Open issues →",
       "openPrs": "Open pull requests →"
     },
+    "chain": {
+      "on": "↳ on {label}",
+      "by": "{label} waits on this →",
+      "onAria": "Stacked on {label}: {title}",
+      "byAria": "{label} waits on this: {title}"
+    },
     "prs": {
       "diff": {
         "select": "Select a PR on the left to see its changes.",
