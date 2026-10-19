@@ -401,12 +401,29 @@ describe("InboxPrsScreen master–detail", () => {
     expect(open).not.toHaveBeenCalled();
   });
 
+  it("the title is a focusable button that selects the PR once", () => {
+    hooks.prs = two();
+    renderWithProviders(<InboxPrsScreen />);
+    const title = within(screen.getByTestId(`${PrRowTestId.Root}-2`)).getByTestId(
+      PrRowTestId.Title,
+    );
+    expect(title).toHaveRole("button");
+    title.focus();
+    expect(title).toHaveFocus();
+    fireEvent.click(title);
+    expect(hooks.replace).toHaveBeenCalledTimes(1);
+  });
+
   it("lists all PRs and shows the selected one's detail", () => {
     select2();
     renderWithProviders(<InboxPrsScreen />);
     expect(screen.getByTestId(`${PrRowTestId.Root}-1`)).toBeInTheDocument();
-    expect(screen.getByTestId(`${PrRowTestId.Root}-2`)).toHaveAttribute("aria-current", "true");
-    expect(screen.getByTestId(`${PrRowTestId.Root}-1`)).not.toHaveAttribute("aria-current");
+    expect(
+      within(screen.getByTestId(`${PrRowTestId.Root}-2`)).getByTestId(PrRowTestId.Title),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      within(screen.getByTestId(`${PrRowTestId.Root}-1`)).getByTestId(PrRowTestId.Title),
+    ).toHaveAttribute("aria-pressed", "false");
     const detail = screen.getByTestId(PrDetailTestId.Root);
     expect(detail).toHaveTextContent("#2");
     expect(detail).toHaveTextContent("PR 2");

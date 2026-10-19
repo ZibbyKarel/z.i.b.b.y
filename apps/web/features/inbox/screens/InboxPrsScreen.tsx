@@ -139,12 +139,14 @@ export function InboxPrsScreen() {
 
   // `?pr=<url>` (see `prListHref`) selects the PR shown on the right.
   const focus = searchParams.get("pr") || null;
-  const selected = focus ? (prsQuery.data?.prs ?? []).find((p) => p.url === focus) : undefined;
-
   const sections = useMemo(
     () => groupPrsBySection(prsQuery.data?.prs ?? [], filters),
     [prsQuery.data, filters],
   );
+  // Resolved from the rendered (filtered) sections, so a hidden PR shows the placeholder.
+  const selected = focus
+    ? INBOX_PR_SECTIONS.flatMap((s) => sections[s]).find((p) => p.url === focus)
+    : undefined;
 
   const [collapsed, setCollapsed] = useSessionFlags(COLLAPSED_STORAGE_KEY);
 

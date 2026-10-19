@@ -5,6 +5,7 @@ import {
   Card,
   CardContent,
   Container,
+  Pressable,
   Row,
   Stack,
   Tag,
@@ -72,7 +73,6 @@ export function PrRow({ pr, now, projectName, focused, item, actions, onSelect }
   return (
     <Card
       interactive
-      aria-current={focused ? "true" : undefined}
       data-testid={`${PrRowTestId.Root}-${pr.number}`}
       onClick={openPr}
       radius="none"
@@ -87,9 +87,18 @@ export function PrRow({ pr, now, projectName, focused, item, actions, onSelect }
               </Typography>
               <Container grow minW0>
                 {onSelect ? (
-                  <Typography truncate data-testid={PrRowTestId.Title} type="body" weight="medium">
-                    {pr.title}
-                  </Typography>
+                  <Pressable
+                    aria-pressed={focused === true}
+                    data-testid={PrRowTestId.Title}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelect(pr);
+                    }}
+                  >
+                    <Typography truncate type="body" weight="medium">
+                      {pr.title}
+                    </Typography>
+                  </Pressable>
                 ) : (
                   <TextLink
                     data-testid={PrRowTestId.Title}
