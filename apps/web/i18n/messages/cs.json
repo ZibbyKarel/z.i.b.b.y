@@ -2828,7 +2828,6 @@
         "reviewThorough": "Důkladné code-review",
         "reviewTested": "Code-review s testy",
         "reviewLevelsAria": "Další úrovně code-review",
-        "reviewStarted": "Code-review spuštěno.",
         "reviewFailed": "Code-review se nepodařilo spustit.",
         "reviewState": {
           "running": "Review běží",

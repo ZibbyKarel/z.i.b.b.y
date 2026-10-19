@@ -89,7 +89,7 @@ describe("InboxPrsScreen sections", () => {
     hooks.search = "";
     hooks.reviewPending = false;
     vi.restoreAllMocks();
-    review.mockClear();
+    review.mockReset();
     merge.mockClear();
   });
 
@@ -185,6 +185,30 @@ describe("InboxPrsScreen sections", () => {
       },
       expect.anything(),
     );
+  });
+
+  it("a successful review start shows no extra message — only the status link reports it", () => {
+    hooks.prs = [pr(1, { section: "needs-your-review", bucket: "to-review" })];
+    review.mockImplementation((_vars, opts: { onSuccess?: () => void }) => opts.onSuccess?.());
+    renderWithProviders(<InboxPrsScreen />);
+    const split = screen.getByTestId(PrActionsTestId.Review);
+    fireEvent.click(within(split).getByTestId(DropDownButtonTestId.Primary));
+    expect(screen.queryByTestId(PrActionsTestId.Message)).toBeNull();
+  });
+
+  it("a failed review start shows the error, and a later success clears it", () => {
+    hooks.prs = [pr(1, { section: "needs-your-review", bucket: "to-review" })];
+    review.mockImplementationOnce((_vars, opts: { onError?: () => void }) => opts.onError?.());
+    renderWithProviders(<InboxPrsScreen />);
+    const primary = () =>
+      within(screen.getByTestId(PrActionsTestId.Review)).getByTestId(DropDownButtonTestId.Primary);
+    fireEvent.click(primary());
+    expect(screen.getByTestId(PrActionsTestId.Message)).toHaveTextContent(
+      "Code-review se nepodařilo spustit.",
+    );
+    review.mockImplementationOnce((_vars, opts: { onSuccess?: () => void }) => opts.onSuccess?.());
+    fireEvent.click(primary());
+    expect(screen.queryByTestId(PrActionsTestId.Message)).toBeNull();
   });
 
   it.each(["thorough", "tested"] as const)("the %s menu item starts that level", (level) => {

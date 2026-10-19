@@ -70,7 +70,9 @@ export function PrActions({ pr }: PrActionsProps) {
         },
       },
       {
-        onSuccess: () => setMessage(t("reviewStarted")),
+        // The row's status link ("Review běží →") already reports the started review
+        // once the list refetches — no second "started" message beside it.
+        onSuccess: () => setMessage(null),
         onError: () => setMessage(t("reviewFailed")),
       },
     );

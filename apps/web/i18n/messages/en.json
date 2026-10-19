@@ -2828,7 +2828,6 @@
         "reviewThorough": "Thorough code review",
         "reviewTested": "Code review with tests",
         "reviewLevelsAria": "More code review levels",
-        "reviewStarted": "Code review started.",
         "reviewFailed": "Could not start the code review.",
         "reviewState": {
           "running": "Review running",
