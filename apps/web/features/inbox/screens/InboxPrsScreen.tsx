@@ -5,6 +5,7 @@ import {
   AccordionDetails,
   AccordionSummary,
   Container,
+  EmptyState,
   Grid,
   Panel,
   Row,
@@ -35,13 +36,13 @@ export enum InboxPrsScreenTestId {
   Footer = "inbox-prs-footer",
   Detail = "inbox-prs-detail",
   Placeholder = "inbox-prs-detail-placeholder",
+  Empty = "inbox-prs-empty",
 }
 
 interface SectionProps {
   testId: string;
   title: string;
   note?: string;
-  emptyText?: string;
   prs: InboxPr[];
   now: number;
   focus: string | null;
@@ -56,7 +57,6 @@ function PrSection({
   testId,
   title,
   note,
-  emptyText,
   prs,
   now,
   focus,
@@ -86,28 +86,20 @@ function PrSection({
         </Row>
       </AccordionSummary>
       <AccordionDetails expanded={expanded}>
-        {prs.length === 0 ? (
-          <Panel padding={["200", "200"]} radius="none">
-            <Typography type="bodySm" variant="secondary">
-              {emptyText}
-            </Typography>
-          </Panel>
-        ) : (
-          <Stack gap="100">
-            {prs.map((pr) => (
-              <PrRow
-                actions={hasPrActions(pr) && focus !== pr.url ? <PrActions pr={pr} /> : undefined}
-                focused={focus === pr.url}
-                item={itemFor(pr)}
-                key={pr.url}
-                now={now}
-                onSelect={onSelect}
-                pr={pr}
-                projectName={projectNames.get(pr.projectId)}
-              />
-            ))}
-          </Stack>
-        )}
+        <Stack gap="100">
+          {prs.map((pr) => (
+            <PrRow
+              actions={hasPrActions(pr) && focus !== pr.url ? <PrActions pr={pr} /> : undefined}
+              focused={focus === pr.url}
+              item={itemFor(pr)}
+              key={pr.url}
+              now={now}
+              onSelect={onSelect}
+              pr={pr}
+              projectName={projectNames.get(pr.projectId)}
+            />
+          ))}
+        </Stack>
       </AccordionDetails>
     </Stack>
   );
@@ -116,7 +108,7 @@ function PrSection({
 /**
  * `/dashboard/inbox/pull-requests` — master–detail. Left: GitHub-style sections (server-computed
  * `pr.section`, `INBOX_PR_SECTIONS` order) as a single column of cards, each sorted by blocker;
- * empty sections are hidden except "Needs your review". Right: the selected PR (`?pr=<url>`,
+ * empty sections are hidden; with none left, an `EmptyState`. Right: the selected PR (`?pr=<url>`,
  * set by a card click, the issue badge link or the Overview) with its diff and the operator's
  * actions (`PrActions` — review / squash-and-merge). The list refetches every 15 min + on
  * inbox-refresh activity. Sections are collapsible accordions, expanded by default; collapse is
@@ -147,6 +139,8 @@ export function InboxPrsScreen() {
   const selected = focus
     ? INBOX_PR_SECTIONS.flatMap((s) => sections[s]).find((p) => p.url === focus)
     : undefined;
+
+  const visibleSections = INBOX_PR_SECTIONS.filter((section) => sections[section].length > 0);
 
   const [collapsed, setCollapsed] = useSessionFlags(COLLAPSED_STORAGE_KEY);
 
@@ -179,11 +173,15 @@ export function InboxPrsScreen() {
       <Grid align="start" gap="200" sidebar="left-narrow">
         <Container maxHeight="calc(100vh - 14rem)" overflowY="auto">
           <Stack gap="250">
-            {INBOX_PR_SECTIONS.filter(
-              (section) => section === "needs-your-review" || sections[section].length > 0,
-            ).map((section) => (
+            {visibleSections.length === 0 && (
+              <EmptyState
+                body={t("prs.emptyBody")}
+                data-testid={InboxPrsScreenTestId.Empty}
+                title={t("prs.emptyTitle")}
+              />
+            )}
+            {visibleSections.map((section) => (
               <PrSection
-                emptyText={t("prs.emptyToReview")}
                 expanded={
                   collapsed[section] !== true || sections[section].some((p) => p.url === focus)
                 }

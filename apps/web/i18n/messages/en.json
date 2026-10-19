@@ -2821,7 +2821,8 @@
         "team": "Via team {team}"
       },
       "mine": "Mine",
-      "emptyToReview": "No review is waiting on you.",
+      "emptyTitle": "No pull requests",
+      "emptyBody": "Nothing is waiting on your review or action.",
       "openGithub": "Open on GitHub",
       "item": "Item {key} →",
       "footer": "Merges only on your click. A code review is posted to GitHub only after you approve it. Refreshes on focus and every 60 s.",

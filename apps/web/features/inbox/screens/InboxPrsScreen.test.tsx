@@ -179,16 +179,21 @@ describe("InboxPrsScreen sections", () => {
     expect(screen.getByTestId(PrActionsTestId.RebaseStatus)).toHaveTextContent("Rebase pushnut");
   });
 
-  it("keeps the empty 'needs your review' section and hides other empty ones", () => {
+  it("hides every empty section", () => {
     hooks.prs = [pr(1, { section: "ready-to-merge" })];
     renderWithProviders(<InboxPrsScreen />);
-    expect(screen.getByTestId(sectionId("needs-your-review"))).toHaveTextContent(
-      "Na vaše review nikdo nečeká.",
-    );
     expect(screen.getByTestId(sectionId("ready-to-merge"))).toHaveTextContent("Připraveno k merge");
-    for (const s of ["needs-team-review", "waiting", "needs-action"]) {
+    for (const s of ["needs-your-review", "needs-team-review", "waiting", "needs-action"]) {
       expect(screen.queryByTestId(sectionId(s))).not.toBeInTheDocument();
     }
+    expect(screen.queryByTestId(InboxPrsScreenTestId.Empty)).not.toBeInTheDocument();
+  });
+
+  it("shows an empty state when no section has a PR", () => {
+    hooks.prs = [];
+    renderWithProviders(<InboxPrsScreen />);
+    expect(screen.getByTestId(InboxPrsScreenTestId.Empty)).toHaveTextContent("Žádné pull requesty");
+    expect(screen.queryByTestId(sectionId("needs-your-review"))).not.toBeInTheDocument();
   });
 
   it("renders sections in display order", () => {
@@ -418,15 +423,6 @@ describe("InboxPrsScreen sections", () => {
     hooks.prs = [pr(1, { section: "ready-to-merge" })];
     renderWithProviders(<InboxPrsScreen />);
     expect(headerOf("ready-to-merge").querySelector("h3, div")).toBeNull();
-  });
-
-  it("the empty 'needs your review' section collapses too", () => {
-    hooks.prs = [];
-    renderWithProviders(<InboxPrsScreen />);
-    fireEvent.click(headerOf("needs-your-review"));
-    expect(screen.getByTestId(sectionId("needs-your-review"))).not.toHaveTextContent(
-      "Na vaše review nikdo nečeká.",
-    );
   });
 });
 

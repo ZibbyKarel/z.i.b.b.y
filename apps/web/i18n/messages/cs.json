@@ -2821,7 +2821,8 @@
         "team": "Přes tým {team}"
       },
       "mine": "Moje",
-      "emptyToReview": "Na vaše review nikdo nečeká.",
+      "emptyTitle": "Žádné pull requesty",
+      "emptyBody": "Nic nečeká na vaše review ani na akci.",
       "openGithub": "Otevřít na GitHubu",
       "item": "Položka {key} →",
       "footer": "Merguje jen na vaše kliknutí. Code-review se na GitHub odešle až po vašem schválení. Obnovuje se při návratu do okna a každých 60 s.",
