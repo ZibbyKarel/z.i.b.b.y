@@ -9,14 +9,15 @@ projects merge route. UI spec: `docs/plans/inbox-ui-spec.md`.
 
 ## Pieces
 
-| Piece      | File                                         | Role                                                |
-| ---------- | -------------------------------------------- | --------------------------------------------------- |
-| Contract   | `libs/contracts/src/inbox/inbox.schema.ts`   | Item/epic/PR/state schemas                          |
-| Contract   | `libs/contracts/src/inbox/inbox.contract.ts` | `inboxContract`, `/api`                             |
-| Service    | `apps/api/src/inbox/inbox.service.ts`        | Cross-project item list, PR classification, state   |
-| Service    | `apps/api/src/inbox/inbox-review.service.ts` | "Do code review" task + `pr-review` approval runner |
-| Store      | `apps/api/src/inbox/inbox-state.store.ts`    | `InboxStateStore` — hidden items, one JSON file     |
-| Controller | `apps/api/src/inbox/inbox.controller.ts`     | `@TsRestHandler(inboxContract)`                     |
+| Piece      | File                                          | Role                                                |
+| ---------- | --------------------------------------------- | --------------------------------------------------- |
+| Contract   | `libs/contracts/src/inbox/inbox.schema.ts`    | Item/epic/PR/state schemas                          |
+| Contract   | `libs/contracts/src/inbox/inbox.contract.ts`  | `inboxContract`, `/api`                             |
+| Service    | `apps/api/src/inbox/inbox.service.ts`         | Cross-project item list, PR classification, state   |
+| Service    | `apps/api/src/inbox/inbox-review.service.ts`  | "Do code review" task + `pr-review` approval runner |
+| Service    | `apps/api/src/inbox/inbox-pr-diff.service.ts` | One PR's unified diff from GitHub (2 MB cap)        |
+| Store      | `apps/api/src/inbox/inbox-state.store.ts`     | `InboxStateStore` — hidden items, one JSON file     |
+| Controller | `apps/api/src/inbox/inbox.controller.ts`      | `@TsRestHandler(inboxContract)`                     |
 
 ## Endpoints
 

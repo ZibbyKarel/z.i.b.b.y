@@ -40,7 +40,7 @@ export class InboxPrDiffService {
     if (!res.ok) throw new Error(`GitHub diff for ${link.repo}#${number} failed: ${res.status}`);
     const text = await res.text();
     if (text.length <= MAX_DIFF_BYTES) return { diff: text, truncated: false };
-    const nl = text.lastIndexOf("\ndiff --git", MAX_DIFF_BYTES); // line-anchored: not "+diff --git" in a hunk
+    const nl = text.lastIndexOf("\ndiff --git", MAX_DIFF_BYTES - 1); // line-anchored: not "+diff --git" in a hunk
     const cut = nl >= 0 ? nl + 1 : -1;
     return { diff: text.slice(0, cut > 0 ? cut : MAX_DIFF_BYTES), truncated: true };
   }

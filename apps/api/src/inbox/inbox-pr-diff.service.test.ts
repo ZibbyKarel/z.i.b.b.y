@@ -77,6 +77,16 @@ describe("InboxPrDiffService", () => {
     expect(diff.endsWith("\n")).toBe(true);
   });
 
+  it("never exceeds the cap when a boundary's newline sits exactly at the cap", async () => {
+    const head = "diff --git a/a b/a\n";
+    const body = `${head}${"+x".repeat(1)}${"y".repeat(MAX_DIFF_BYTES - head.length - 2)}\ndiff --git a/b b/b\n+z\n`;
+    expect(body[MAX_DIFF_BYTES]).toBe("\n");
+    fetchImpl.mockResolvedValue(new Response(body));
+    const { diff, truncated } = await service.getDiff("acme", 7);
+    expect(truncated).toBe(true);
+    expect(diff.length).toBeLessThanOrEqual(MAX_DIFF_BYTES);
+  });
+
   it.each([404, 500])("throws on GitHub %i", async (status) => {
     fetchImpl.mockResolvedValue(new Response("", { status }));
     await expect(service.getDiff("acme", 7)).rejects.toThrow(String(status));
