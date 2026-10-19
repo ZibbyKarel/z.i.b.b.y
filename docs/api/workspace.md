@@ -68,6 +68,22 @@ origin <branch>` then `gh pr create`. This is the actual outward, Tier-3
    outlives `git worktree remove` — commit ≠ push); otherwise it's derived from
    the worktree's current branch. Returns `{ url }` on success, `null` on any
    failure (a failed PR open is a soft error — the branch's commits are safe).
+   **`pushRebased({ cwd, head, base, expectedSha, allowRewrittenCommits?, rebasedSha? })`** (todo-11)
+   — force-pushes a rebased PR head with
+   `--force-with-lease=refs/heads/<head>:<expectedSha>`. Refuses invalid branch names or
+   sha, `head` equal to `base` or the remote default branch, an in-progress rebase, dirty
+   tracked files, a HEAD not on top of the freshly fetched `origin/<base>`, a PR with no
+   commits of its own beyond `<base>`, and lost PR commits. Commits are counted with
+   `rev-list --no-merges`, so a "merge base into feature" commit the rebase drops does
+   not count. Without `allowRewrittenCommits` the counts must be equal and every
+   original patch-id must survive; with it (operator-approved) HEAD only needs at least
+   one own commit beyond `origin/<base>` (conflict resolution may squash or split). With
+   `rebasedSha` (40-hex, the HEAD ZIBBY verified when parking the approval) the
+   worktree HEAD must still equal it, and `<rebasedSha>:refs/heads/<head>` is pushed
+   instead of `HEAD:`. Returns the pushed sha, throws the reason.
+   **`rebaseFacts({ cwd, base, headSha })`** — what the rebase worktree really holds:
+   `{ sha, log, stat }` from `rev-parse HEAD`, `log --oneline origin/<base>..HEAD` and
+   `diff --stat <headSha> HEAD`; throws when HEAD is unreadable, log/stat best-effort.
 6. **`removeWorktree({ projectPath, worktreePath })`** — `git worktree remove
 --force` then `git worktree prune`, tolerant of an already-removed
    directory. **Never deletes the branch** — it may carry the PR, and pruning

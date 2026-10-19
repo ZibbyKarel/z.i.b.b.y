@@ -22,9 +22,36 @@ describe("parseApprovalDetail", () => {
       body: "## Review\n\nLooks **good**.",
     });
   });
+  it("a pr-rebase splits like a pr-review: title line + markdown report", () => {
+    const parsed = parseApprovalDetail({
+      id: "a2",
+      runId: "t2",
+      kind: "pr-rebase",
+      skill: "rebase-resolver",
+      action: "git.force_push",
+      detail:
+        "Force-push feat rebased onto main — o/r#7\n\nConflicts: 1 files\n\n- a.ts: kept both",
+      risk: "high",
+      status: "pending",
+      requestedAt: "2026-10-19T10:00:00.000Z",
+    });
+    expect(parsed.detail).toBe("Force-push feat rebased onto main — o/r#7");
+    expect(parsed.preview).toEqual({
+      kind: "message",
+      to: "GitHub",
+      body: "Conflicts: 1 files\n\n- a.ts: kept both",
+    });
+  });
 });
 
 describe("approvalOrigin", () => {
+  it("a pr-rebase links its task", () => {
+    expect(approvalOrigin({ kind: "pr-rebase", runId: "t2", detail: "" })).toEqual({
+      origin: "pr-review",
+      href: "/work/tasks/t2",
+    });
+  });
+
   it("a task-backed approval takes the task's source and links the task", () => {
     expect(
       approvalOrigin({ kind: "task-output", runId: "t1", detail: "" }, { source: "automation" }),

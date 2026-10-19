@@ -11,7 +11,7 @@ import { WorkingAgentsFuse } from "../employees/working-agents-fuse";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { AttachmentStorageService } from "./attachment-storage.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
-import { PR_REVIEW_ARTIFACT } from "./task-output.service";
+import { PR_REBASE_ARTIFACT, PR_REVIEW_ARTIFACT } from "./task-output.service";
 import { TaskSchedulerService } from "./task-scheduler.service";
 
 const fakeLogger = {
@@ -74,6 +74,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
   let taskOutput: {
     handleTerminal: () => Promise<null>;
     parkPrReview: ReturnType<typeof vi.fn>;
+    parkPrRebase: ReturnType<typeof vi.fn>;
   };
   /** Phase 91: the workflow definition store, for department-target resolution
    *  (`department` lookup). Empty by default — no test in this file dispatches
@@ -220,6 +221,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     taskOutput = {
       handleTerminal: async () => null,
       parkPrReview: vi.fn(async () => ({ summary: "parked" })),
+      parkPrRebase: vi.fn(async () => ({ summary: "rebase parked" })),
     };
     service = new TaskSchedulerService(
       storage,
@@ -1623,6 +1625,67 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       expect(result.outcome).toBe("dispatched");
       if (result.outcome !== "dispatched") return;
       expect(result.task.classification).toBeUndefined();
+    });
+  });
+
+  describe("PR-inbox rebase run (todo-11)", () => {
+    async function seedRebase(): Promise<string> {
+      const id = storage.newId();
+      await storage.createDispatched(
+        id,
+        { text: "rebase" },
+        "pr-rebase_1",
+        { kind: "workflow", id: "pr-rebase", name: "pr-rebase" },
+        Date.now(),
+        "alpha",
+      );
+      await storage.setPrRebase(id, () => ({
+        repo: "acme/app",
+        number: 7,
+        url: "https://github.com/acme/app/pull/7",
+        head: "feat",
+        base: "main",
+        headSha: "abc",
+        conflictAtStart: false,
+        state: "running",
+      }));
+      return id;
+    }
+    const rebaseRun = (taskId: string, status: WorkflowRun["status"]) =>
+      workflowRun({
+        workflowRunId: "pr-rebase_1",
+        workflowId: "pr-rebase",
+        status,
+        taskId,
+        workspace: { branch: "zibby/pr-rebase_1", path: "/wt", baseRef: "main" },
+      });
+
+    it("a done run hands the report and the worktree to parkPrRebase", async () => {
+      const id = await seedRebase();
+      workflowRunner.readArtifact.mockResolvedValue({
+        name: PR_REBASE_ARTIFACT,
+        content: "Conflicts: none",
+      });
+      workflowListener?.(rebaseRun(id, "done"));
+      await vi.waitFor(async () => {
+        expect((await storage.get(id)).outcome).toBeDefined();
+      });
+      expect(workflowRunner.readArtifact).toHaveBeenCalledWith("pr-rebase_1", PR_REBASE_ARTIFACT);
+      expect(taskOutput.parkPrRebase).toHaveBeenCalledWith(
+        expect.objectContaining({ id }),
+        "Conflicts: none",
+        "/wt",
+      );
+      expect((await storage.get(id)).outcome?.summary).toBe("rebase parked");
+    });
+
+    it("a stopped rebase run writes an error outcome so the row reads failed", async () => {
+      const id = await seedRebase();
+      workflowListener?.(rebaseRun(id, "interrupted"));
+      await vi.waitFor(async () => {
+        expect((await storage.get(id)).outcome?.status).toBe("error");
+      });
+      expect(taskOutput.parkPrRebase).not.toHaveBeenCalled();
     });
   });
 

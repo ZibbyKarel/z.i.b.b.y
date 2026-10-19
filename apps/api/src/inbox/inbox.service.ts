@@ -15,6 +15,7 @@ import type {
   InboxState,
   Project,
   RoadmapItem,
+  ScheduledTask,
   SetInboxHidden,
 } from "@zibby/contracts";
 import { ActivityEventsService } from "../activity/activity-events.service";
@@ -47,6 +48,7 @@ interface GhPull {
   html_url?: string;
   draft?: boolean;
   mergeable?: boolean | null;
+  mergeable_state?: string;
   created_at?: string;
   user?: { login?: string } | null;
   head?: { sha?: string };
@@ -249,14 +251,19 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-  /** Cached GitHub classification + the (uncached, local) code-review state per PR. */
+  /** Cached GitHub classification + the (uncached, local) review/rebase task state per PR. */
   async listPrs(): Promise<InboxPrsResponse> {
-    const [result, reviews] = await Promise.all([this.cachedPrs(), this.codeReviews()]);
+    const [result, { reviews, rebases }] = await Promise.all([
+      this.cachedPrs(),
+      this.prTaskStates(),
+    ]);
     return {
       ...result,
       prs: result.prs.map((pr) => {
-        const codeReview = reviews.get(`${pr.repo.toLowerCase()}#${pr.number}`);
-        return codeReview ? { ...pr, codeReview } : pr;
+        const key = `${pr.repo.toLowerCase()}#${pr.number}`;
+        const codeReview = reviews.get(key);
+        const rebase = rebases.get(key);
+        return { ...pr, ...(codeReview ? { codeReview } : {}), ...(rebase ? { rebase } : {}) };
       }),
     };
   }
@@ -270,24 +277,33 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Latest review task (any level) per `repo#number` (Phase 129 P2). A review still
-   * `running` whose task failed or whose run errored reads as `failed`.
+   * Latest review task (Phase 129 P2, any level) and latest rebase task (todo-11) per
+   * `repo#number`. A `running` one whose task failed or whose run errored reads `failed`.
    */
-  private async codeReviews(): Promise<Map<string, NonNullable<InboxPr["codeReview"]>>> {
+  private async prTaskStates(): Promise<{
+    reviews: Map<string, NonNullable<InboxPr["codeReview"]>>;
+    rebases: Map<string, NonNullable<InboxPr["rebase"]>>;
+  }> {
     const tasks = await this.tasks.list().catch(() => []);
-    const out = new Map<string, NonNullable<InboxPr["codeReview"]>>();
+    const reviews = new Map<string, NonNullable<InboxPr["codeReview"]>>();
+    const rebases = new Map<string, NonNullable<InboxPr["rebase"]>>();
     for (const task of [...tasks].sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
-      const review = task.prReview;
-      if (!review) continue;
-      const dead =
-        task.status === "failed" ||
-        task.status === "cancelled" ||
-        task.status === "dead-letter" ||
-        task.outcome?.status === "error";
-      const state = review.state === "running" && dead ? "failed" : review.state;
-      out.set(`${review.repo.toLowerCase()}#${review.number}`, { taskId: task.id, state });
+      const dead = isDeadTask(task);
+      const { prReview: review, prRebase: rebase } = task;
+      if (review) {
+        reviews.set(`${review.repo.toLowerCase()}#${review.number}`, {
+          taskId: task.id,
+          state: review.state === "running" && dead ? "failed" : review.state,
+        });
+      }
+      if (rebase) {
+        rebases.set(`${rebase.repo.toLowerCase()}#${rebase.number}`, {
+          taskId: task.id,
+          state: rebase.state === "running" && dead ? "failed" : rebase.state,
+        });
+      }
     }
-    return out;
+    return { reviews, rebases };
   }
 
   private async fetchPrs(): Promise<InboxPrsResponse> {
@@ -384,6 +400,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
           ci,
           review,
           mergeable,
+          ...(pull.mergeable_state === "behind" ? { behind: true } : {}),
           ...bucket,
           blocker: blockerOf({ ci, review, mergeable }),
           section: sectionOf({ ...bucket, ci, review, mergeable, draft: pull.draft === true }),
@@ -440,4 +457,14 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
   private headers(token: string): Record<string, string> {
     return { authorization: `Bearer ${token}`, accept: "application/vnd.github+json" };
   }
+}
+
+/** A task whose PR review/rebase can no longer progress: failed, cancelled, dead-lettered, or its run errored. */
+export function isDeadTask(task: ScheduledTask): boolean {
+  return (
+    task.status === "failed" ||
+    task.status === "cancelled" ||
+    task.status === "dead-letter" ||
+    task.outcome?.status === "error"
+  );
 }

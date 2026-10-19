@@ -139,6 +139,7 @@ describe("InboxService.listPrs", () => {
           html_url: `https://github.com/Acme/app/pull/${n}`,
           draft: n === 3,
           mergeable: n === 2 ? false : true,
+          mergeable_state: n === 3 ? "behind" : "clean",
           created_at: "2026-10-01T10:00:00Z",
           user: { login: n === 3 ? "me" : "alice" },
           head: { sha: `sha${n}` },
@@ -192,11 +193,66 @@ describe("InboxService.listPrs", () => {
     expect(calls.length).toBeGreaterThan(before);
   });
 
+  it("attaches the latest rebase per PR; a dead running rebase reads failed", async () => {
+    const rebase = (number: number, state: string) => ({
+      repo: "acme/app",
+      number,
+      url: "u",
+      head: "feat",
+      base: "main",
+      headSha: "s",
+      conflictAtStart: false,
+      state,
+    });
+    const { service } = build([
+      {
+        id: "r1",
+        createdAt: "2026-10-01T00:00:00Z",
+        status: "dispatched",
+        prRebase: rebase(3, "pushed"),
+      },
+      {
+        id: "r2",
+        createdAt: "2026-10-02T00:00:00Z",
+        status: "dispatched",
+        prRebase: rebase(3, "awaiting-approval"),
+      },
+      {
+        id: "r3",
+        createdAt: "2026-10-02T00:00:00Z",
+        status: "cancelled",
+        prRebase: rebase(2, "running"),
+      },
+      {
+        id: "r4",
+        createdAt: "2026-10-02T00:00:00Z",
+        status: "dispatched",
+        outcome: { status: "error" },
+        prRebase: rebase(1, "running"),
+      },
+      {
+        // The push claim: the run finished fine, the approval runner is pushing.
+        id: "r5",
+        createdAt: "2026-10-03T00:00:00Z",
+        status: "done",
+        outcome: { status: "done" },
+        prRebase: rebase(3, "running"),
+      },
+    ]);
+    const byNumber = Object.fromEntries((await service.listPrs()).prs.map((p) => [p.number, p]));
+    expect(byNumber[3]?.rebase).toEqual({ taskId: "r5", state: "running" });
+    expect(byNumber[2]?.rebase).toEqual({ taskId: "r3", state: "failed" });
+    expect(byNumber[1]?.rebase).toEqual({ taskId: "r4", state: "failed" });
+    expect(byNumber[3]?.codeReview).toBeUndefined();
+  });
+
   it("buckets direct / team / mine PRs and derives ci, review and blocker", async () => {
     const { service, calls } = build();
     const result = await service.listPrs();
     expect(result.errors).toEqual([]);
     const byNumber = Object.fromEntries(result.prs.map((p) => [p.number, p]));
+    expect(byNumber[3]?.behind).toBe(true);
+    expect(byNumber[1]?.behind).toBeUndefined();
     // #1 is both direct and team -> direct wins.
     expect(byNumber[1]).toMatchObject({
       bucket: "to-review",

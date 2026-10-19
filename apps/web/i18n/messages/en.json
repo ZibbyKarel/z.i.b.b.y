@@ -2857,7 +2857,17 @@
         "mergeDone": "Merged",
         "deleteBranch": "Delete branch after merge",
         "mergedNote": "Merged. {note}",
-        "mergeFailed": "Merge failed."
+        "mergeFailed": "Merge failed.",
+        "rebase": "Rebase onto base branch",
+        "rebaseFailed": "Could not start the rebase.",
+        "rebaseRefused": "Rebase refused: {reason}",
+        "rebaseState": {
+          "running": "Rebase running",
+          "awaiting-approval": "Rebase awaiting approval",
+          "pushed": "Rebase pushed",
+          "discarded": "Rebase discarded",
+          "failed": "Rebase failed"
+        }
       }
     },
     "detail": {

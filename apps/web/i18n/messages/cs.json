@@ -2857,7 +2857,17 @@
         "mergeDone": "Mergnuto",
         "deleteBranch": "Po merge smazat branch",
         "mergedNote": "Mergnuto. {note}",
-        "mergeFailed": "Merge se nepodařil."
+        "mergeFailed": "Merge se nepodařil.",
+        "rebase": "Rebase na cílovou větev",
+        "rebaseFailed": "Rebase se nepodařilo spustit.",
+        "rebaseRefused": "Rebase odmítnut: {reason}",
+        "rebaseState": {
+          "running": "Rebase běží",
+          "awaiting-approval": "Rebase čeká na schválení",
+          "pushed": "Rebase pushnut",
+          "discarded": "Rebase zahozen",
+          "failed": "Rebase selhal"
+        }
       }
     },
     "detail": {

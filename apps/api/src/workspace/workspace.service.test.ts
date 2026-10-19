@@ -406,3 +406,188 @@ describe("WorkspaceService.openPr — draft mode (NS2 F0b)", () => {
     expect(ghArgs).not.toContain("--draft");
   });
 });
+
+describe("WorkspaceService.pushRebased (todo-11)", () => {
+  let root: string;
+  let origin: string;
+  let op: string;
+  let wt: string;
+  let featSha: string;
+  const svc = new WorkspaceService(fakeLogger as never);
+  const commit = async (dir: string, file: string, body: string): Promise<string> => {
+    await fs.writeFile(path.join(dir, file), body, "utf8");
+    await git(dir, "add", "-A");
+    await git(dir, "commit", "-m", file);
+    return git(dir, "rev-parse", "HEAD");
+  };
+  const remoteFeat = () => git(origin, "rev-parse", "refs/heads/feat");
+  const push = (over: Partial<{ head: string; base: string }> = {}, expectedSha = featSha) =>
+    svc.pushRebased({ cwd: wt, head: "feat", base: "main", expectedSha, ...over });
+
+  beforeEach(async () => {
+    root = await fs.mkdtemp(path.join(os.tmpdir(), "zibby-rebase-"));
+    origin = path.join(root, "origin.git");
+    op = path.join(root, "op");
+    wt = path.join(root, "wt");
+    await fs.mkdir(origin);
+    await initBareOrigin(origin);
+    await cloneAndCommit(origin, op, "base");
+    await git(op, "checkout", "-b", "feat");
+    featSha = await commit(op, "feat.txt", "feat\n");
+    await git(op, "push", "origin", "feat");
+    await git(op, "checkout", "main");
+    await commit(op, "main2.txt", "main2\n");
+    await git(op, "push", "origin", "main");
+    await exec("git", ["clone", origin, wt]);
+    await git(wt, "config", "user.email", "test@zibby.local");
+    await git(wt, "config", "user.name", "ZIBBY Test");
+    await git(wt, "checkout", "--detach", featSha);
+  });
+
+  afterEach(async () => {
+    await fs.rm(root, { recursive: true, force: true });
+  });
+
+  it("force-pushes a rebased head with a lease on the clicked sha", async () => {
+    await git(wt, "rebase", "origin/main");
+    const sha = await push();
+    expect(sha).not.toBe(featSha);
+    expect(await remoteFeat()).toBe(sha);
+  });
+
+  it("never overwrites a push made after the click (lease)", async () => {
+    await git(wt, "rebase", "origin/main");
+    await git(op, "checkout", "feat");
+    const theirs = await commit(op, "theirs.txt", "x\n");
+    await git(op, "push", "origin", "feat");
+    await expect(push()).rejects.toThrow();
+    expect(await remoteFeat()).toBe(theirs);
+  });
+
+  it("refuses a head that is not on top of the base", async () => {
+    await expect(push()).rejects.toThrow(/not on top of origin\/main/);
+    expect(await remoteFeat()).toBe(featSha);
+  });
+
+  it("refuses to push the base branch", async () => {
+    await expect(push({ head: "main" })).rejects.toThrow(/base branch/);
+  });
+
+  it("refuses a head with no commits of its own (the PR's changes are gone)", async () => {
+    await git(wt, "checkout", "--detach", "origin/main");
+    await expect(push()).rejects.toThrow(/did not preserve/);
+    expect(await remoteFeat()).toBe(featSha);
+  });
+
+  it("refuses when the PR's commits are already in the base (empty old range)", async () => {
+    const mainSha = await git(wt, "rev-parse", "origin/main");
+    await git(wt, "checkout", "--detach", mainSha);
+    await expect(push({}, mainSha)).rejects.toThrow(/no commits of its own/);
+    expect(await remoteFeat()).toBe(featSha);
+  });
+
+  it("refuses while a rebase is still in progress", async () => {
+    await commit(op, "feat.txt", "main side\n"); // add/add conflict with feat.txt
+    await git(op, "push", "origin", "main");
+    await git(wt, "fetch", "origin");
+    await expect(git(wt, "rebase", "origin/main")).rejects.toThrow();
+    await expect(push()).rejects.toThrow(/still in progress/);
+    expect(await remoteFeat()).toBe(featSha);
+  });
+  const approved = (rebasedSha?: string) =>
+    svc.pushRebased({
+      cwd: wt,
+      head: "feat",
+      base: "main",
+      expectedSha: featSha,
+      allowRewrittenCommits: true,
+      rebasedSha,
+    });
+
+  it("refuses a dropped commit unapproved, pushes it (n-1) when approved", async () => {
+    await git(op, "checkout", "feat");
+    featSha = await commit(op, "feat2.txt", "feat2\n");
+    await git(op, "push", "origin", "feat");
+    await git(wt, "fetch", "origin");
+    await git(wt, "checkout", "--detach", featSha);
+    await git(wt, "rebase", "origin/main");
+    await git(wt, "reset", "--hard", "HEAD~1");
+    await expect(push()).rejects.toThrow(/did not preserve/);
+    expect(await remoteFeat()).toBe(featSha);
+    const sha = await approved();
+    expect(await remoteFeat()).toBe(sha);
+  });
+
+  it("refuses an extra commit (n+1) unapproved, pushes it when approved", async () => {
+    await git(wt, "rebase", "origin/main");
+    await commit(wt, "extra.txt", "extra\n");
+    await expect(push()).rejects.toThrow(/1 before, 2 after/);
+    expect(await remoteFeat()).toBe(featSha);
+    const sha = await approved();
+    expect(await remoteFeat()).toBe(sha);
+  });
+
+  it("refuses an approved head with no own commits beyond the base", async () => {
+    await git(wt, "checkout", "--detach", "origin/main");
+    await expect(approved()).rejects.toThrow(/no commits of its own beyond origin\/main/);
+    expect(await remoteFeat()).toBe(featSha);
+  });
+
+  it("pushes a clean rebase of a PR that merged its base in (merge commit dropped)", async () => {
+    await git(op, "checkout", "feat");
+    await git(op, "merge", "--no-ff", "-m", "Merge main into feat", "main");
+    featSha = await commit(op, "feat2.txt", "feat2\n");
+    await git(op, "push", "origin", "feat");
+    await git(wt, "fetch", "origin");
+    await git(wt, "checkout", "--detach", featSha);
+    await git(wt, "rebase", "origin/main");
+    const sha = await push();
+    expect(await remoteFeat()).toBe(sha);
+  });
+
+  it("pushes exactly the approved rebasedSha and refuses a moved worktree HEAD", async () => {
+    await git(wt, "rebase", "origin/main");
+    const rebased = await git(wt, "rev-parse", "HEAD");
+    await commit(wt, "late.txt", "late\n");
+    await expect(approved(rebased)).rejects.toThrow(/not the approved rebased head/);
+    expect(await remoteFeat()).toBe(featSha);
+    await git(wt, "reset", "--hard", rebased);
+    expect(await approved(rebased)).toBe(rebased);
+    expect(await remoteFeat()).toBe(rebased);
+    await expect(approved("HEAD")).rejects.toThrow(/rebasedSha is not a full/);
+  });
+
+  it("refuses a rewritten commit unless the operator allowed it", async () => {
+    await git(wt, "rebase", "origin/main");
+    await fs.appendFile(path.join(wt, "feat.txt"), "sneaky\n");
+    await git(wt, "commit", "-a", "--amend", "--no-edit");
+    await expect(push()).rejects.toThrow(/changed or missing/);
+    expect(await remoteFeat()).toBe(featSha);
+    const sha = await svc.pushRebased({
+      cwd: wt,
+      head: "feat",
+      base: "main",
+      expectedSha: featSha,
+      allowRewrittenCommits: true,
+    });
+    expect(await remoteFeat()).toBe(sha);
+  });
+
+  it("refuses an option-like base or head and a non-hex sha", async () => {
+    await expect(push({ base: "--upload-pack=x" })).rejects.toThrow(/invalid base/);
+    await expect(push({ head: "--force" })).rejects.toThrow(/invalid head/);
+    await expect(
+      svc.pushRebased({ cwd: wt, head: "feat", base: "main", expectedSha: "HEAD" }),
+    ).rejects.toThrow(/40-char sha/);
+  });
+
+  it("refuses to push the remote default branch", async () => {
+    await expect(push({ head: "main", base: "feat" })).rejects.toThrow(/default branch/);
+  });
+
+  it("refuses a dirty tree", async () => {
+    await git(wt, "rebase", "origin/main");
+    await fs.appendFile(path.join(wt, "feat.txt"), "dirty\n");
+    await expect(push()).rejects.toThrow(/uncommitted/);
+  });
+});

@@ -89,6 +89,14 @@ export const ApprovalRunKindSchema = z.enum([
   // none picked → COMMENT — ZIBBY never picks one itself), rejecting discards it. Outbound write
   // in the operator's name → always Tier-3.
   "pr-review",
+  // todo-11 — force-push of a PR head the `rebase-resolver` agent rebased onto its base
+  // (runId = the taskId; the task's `prRebase` holds repo/head/base/headSha/worktree;
+  // `detail` carries the agent's report). Recorded for every rebase: approved on the
+  // spot when GitHub saw no conflict at the click and the report says `Conflicts: none`
+  // (the operator's click was the decision), otherwise pending — rewriting a shared
+  // branch after an agent resolved conflicts is Tier-3. Approving pushes with
+  // `--force-with-lease`; rejecting discards.
+  "pr-rebase",
 ]);
 export type ApprovalRunKind = z.infer<typeof ApprovalRunKindSchema>;
 

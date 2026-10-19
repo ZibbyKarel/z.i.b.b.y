@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { ActivityKind } from "../activity/activity.schema";
 import { IsoDateTimeSchema } from "../common.schema";
 import { RoadmapItemSchema, RoadmapSourceKindSchema } from "../roadmap/roadmap-item.schema";
-import { PrReviewStateSchema } from "../tasks/task.schema";
+import { PrRebaseStateSchema, PrReviewStateSchema } from "../tasks/task.schema";
 
 /**
  * Inbox (docs/plans/inbox-ui-spec.md): a view over the synced roadmap cache
@@ -107,6 +107,13 @@ export const InboxPrSchema = z.object({
   section: InboxPrSectionSchema,
   /** Phase 129 P2 — the latest ZIBBY code review of this PR (see `PrReviewStateSchema`). */
   codeReview: z.object({ taskId: z.string().min(1), state: PrReviewStateSchema }).optional(),
+  /**
+   * todo-11 — GitHub's `mergeable_state === "behind"`: the head lacks base commits.
+   * Absent otherwise. GitHub reports it only under an "up to date" branch protection.
+   */
+  behind: z.boolean().optional(),
+  /** todo-11 — the latest ZIBBY rebase of this PR (see `PrRebaseStateSchema`). */
+  rebase: z.object({ taskId: z.string().min(1), state: PrRebaseStateSchema }).optional(),
   projectId: z.string().min(1),
   companyId: z.string().min(1).optional(),
   teamId: z.string().min(1).optional(),
@@ -146,6 +153,21 @@ export type ReviewInboxPrInput = z.infer<typeof ReviewInboxPrInputSchema>;
 
 export const ReviewInboxPrResultSchema = z.object({ taskId: z.string().min(1) });
 export type ReviewInboxPrResult = z.infer<typeof ReviewInboxPrResultSchema>;
+
+/**
+ * todo-11 — body of `POST /api/inbox/prs/rebase`. Branch names and the head sha are
+ * read from GitHub server-side, never taken from the client. Response = `ReviewInboxPrResult`.
+ */
+export const RebaseInboxPrInputSchema = z
+  .object({
+    projectId: z.string().min(1),
+    repo: z.string().regex(/^[\w.-]+\/[\w.-]+$/),
+    number: z.number().int().positive(),
+    /** Display only (the task title). */
+    title: z.string().max(300).optional(),
+  })
+  .strict();
+export type RebaseInboxPrInput = z.infer<typeof RebaseInboxPrInputSchema>;
 
 /** One PR's unified diff; `truncated` = GitHub refused it (too large) or it was capped. */
 export const InboxPrDiffSchema = z.object({ diff: z.string(), truncated: z.boolean() });

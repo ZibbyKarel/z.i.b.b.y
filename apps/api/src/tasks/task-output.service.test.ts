@@ -5,7 +5,12 @@ import type { AgentRun, ScheduledTask, TaskOutput, Workspace } from "@zibby/cont
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DuplicateNoteError } from "../memory/vault.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
-import { PR_REVIEW_ARTIFACT, TaskOutputService, suggestReviewEvent } from "./task-output.service";
+import {
+  PR_REBASE_ARTIFACT,
+  PR_REVIEW_ARTIFACT,
+  TaskOutputService,
+  suggestReviewEvent,
+} from "./task-output.service";
 
 /**
  * The directed-task output gate: an agent/orchestrator task's `file`/`pr` sink. The
@@ -21,6 +26,7 @@ describe("TaskOutputService", () => {
     diffstat: ReturnType<typeof vi.fn>;
     diffStats: ReturnType<typeof vi.fn>;
     openPr: ReturnType<typeof vi.fn>;
+    rebaseFacts: ReturnType<typeof vi.fn>;
   };
   let vault: { createNote: ReturnType<typeof vi.fn>; updateNote: ReturnType<typeof vi.fn> };
   let approvals: {
@@ -45,6 +51,11 @@ describe("TaskOutputService", () => {
       diffstat: vi.fn(async () => "1 file changed, 2 insertions(+)"),
       diffStats: vi.fn(async () => ({ additions: 2, deletions: 0 })),
       openPr: vi.fn(async () => ({ url: "https://example/pr/1" })),
+      rebaseFacts: vi.fn(async () => ({
+        sha: "f".repeat(40),
+        log: "fff0001 feat: thing",
+        stat: " a.ts | 2 +-",
+      })),
     };
     vault = { createNote: vi.fn(async () => ({})), updateNote: vi.fn(async () => ({})) };
     approvals = {
@@ -261,6 +272,112 @@ describe("TaskOutputService", () => {
       ["", "APPROVE"],
     ])("%j → %s", (body, expected) => {
       expect(suggestReviewEvent(body)).toBe(expected);
+    });
+  });
+
+  describe("pr rebase (todo-11)", () => {
+    async function seedRebase(over: { conflictAtStart?: boolean } = {}): Promise<ScheduledTask> {
+      const task = await storage.createDispatched(
+        "t_rebase",
+        { text: "rebase it" },
+        "pr-rebase_1",
+        { kind: "workflow", id: "pr-rebase", name: "pr-rebase" },
+        Date.now(),
+        "p1",
+      );
+      return storage.setPrRebase(task.id, () => ({
+        repo: "acme/app",
+        number: 7,
+        url: "https://github.com/acme/app/pull/7",
+        head: "feat",
+        base: "main",
+        headSha: "abc",
+        conflictAtStart: over.conflictAtStart ?? false,
+        state: "running",
+      }));
+    }
+
+    it("a conflict-free rebase is recorded and approved on the spot (the click decided)", async () => {
+      const task = await seedRebase();
+      const delivered = await service.parkPrRebase(
+        task,
+        "Conflicts: none\n\nrebased 2 commits",
+        "/wt",
+      );
+      expect(approvals.requestApproval).toHaveBeenCalledWith(
+        expect.objectContaining({
+          runId: "t_rebase",
+          kind: "pr-rebase",
+          action: "git.force_push",
+          risk: "medium",
+          sourceUrl: "https://github.com/acme/app/pull/7",
+        }),
+      );
+      expect(approvals.approve).toHaveBeenCalledWith("appr_1");
+      expect((await storage.get("t_rebase")).prRebase).toMatchObject({
+        state: "awaiting-approval",
+        worktree: "/wt",
+        approvalId: "appr_1",
+        report: "Conflicts: none\n\nrebased 2 commits",
+      });
+      expect(delivered.summary).toMatch(/acme\/app#7/);
+    });
+
+    it("appends what ZIBBY read from the worktree and records the verified sha", async () => {
+      const task = await seedRebase();
+      await service.parkPrRebase(task, "Conflicts: 1 files", "/wt");
+      expect(workspace.rebaseFacts).toHaveBeenCalledWith({
+        cwd: "/wt",
+        base: "main",
+        headSha: "abc",
+      });
+      const { detail } = approvals.requestApproval.mock.calls[0]?.[0] as { detail: string };
+      expect(detail).toContain("## Verified by ZIBBY");
+      expect(detail).toContain(`HEAD ${"f".repeat(40)}`);
+      expect(detail).toContain("fff0001 feat: thing");
+      expect(detail).toContain("a.ts | 2 +-");
+      expect((await storage.get("t_rebase")).prRebase?.rebasedSha).toBe("f".repeat(40));
+    });
+
+    it("an unreadable worktree is noted in the detail and records no sha", async () => {
+      workspace.rebaseFacts.mockRejectedValueOnce(new Error("not a git repository"));
+      const task = await seedRebase();
+      await service.parkPrRebase(task, "Conflicts: 1 files", "/wt");
+      const { detail } = approvals.requestApproval.mock.calls[0]?.[0] as { detail: string };
+      expect(detail).toContain("could not read the worktree: not a git repository");
+      expect((await storage.get("t_rebase")).prRebase?.rebasedSha).toBeUndefined();
+    });
+
+    it("resolved conflicts park a pending high-risk approval", async () => {
+      const task = await seedRebase();
+      const delivered = await service.parkPrRebase(task, "Conflicts: 2 files\n\n- a.ts", "/wt");
+      expect(approvals.requestApproval).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: "pr-rebase", risk: "high" }),
+      );
+      expect(approvals.approve).not.toHaveBeenCalled();
+      expect(delivered.summary).toMatch(/čeká na schválení/);
+    });
+
+    it("a conflicting PR is gated even when the report claims none", async () => {
+      const task = await seedRebase({ conflictAtStart: true });
+      await service.parkPrRebase(task, "Conflicts: none", "/wt");
+      expect(approvals.approve).not.toHaveBeenCalled();
+    });
+
+    it("only the FIRST line counts as the conflict-free claim", async () => {
+      const task = await seedRebase();
+      await service.parkPrRebase(task, "Rebased.\nConflicts: none", "/wt");
+      expect(approvals.approve).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["", "/wt", `no ${PR_REBASE_ARTIFACT}`],
+      ["Conflicts: none", undefined, "no worktree"],
+    ])("report %j / worktree %j → failed, nothing parked", async (raw, wt, note) => {
+      const task = await seedRebase();
+      await service.parkPrRebase(task, raw, wt);
+      expect(approvals.requestApproval).not.toHaveBeenCalled();
+      expect((await storage.get("t_rebase")).prRebase).toMatchObject({ state: "failed", note });
     });
   });
 

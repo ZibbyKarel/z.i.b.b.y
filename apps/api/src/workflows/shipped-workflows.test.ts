@@ -3,7 +3,7 @@ import path from "node:path";
 import matter from "gray-matter";
 import { describe, expect, it } from "vitest";
 import { McpServerSchema, WorkflowSchema } from "@zibby/contracts";
-import { PR_REVIEW_ARTIFACT } from "../tasks/task-output.service";
+import { PR_REBASE_ARTIFACT, PR_REVIEW_ARTIFACT } from "../tasks/task-output.service";
 
 /**
  * The workflow definitions ZIBBY actually ships live as markdown on disk, outside
@@ -297,5 +297,33 @@ describe("pr-review-* — the PR inbox's review levels (todo-4)", () => {
       const employee = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
       expect(employee).toMatchObject({ agentId: phase.agent, department: "qa", status: "active" });
     }
+  });
+});
+
+describe("pr-rebase — the PR inbox's Rebase button (todo-11)", () => {
+  it("runs one ungated rebase-resolver phase that writes the rebase report", () => {
+    const wf = readWorkflow("pr-rebase");
+    expect(wf.phases).toHaveLength(1);
+    expect(wf.phases[0]).toMatchObject({
+      id: "rebase",
+      type: "agent",
+      agent: "rebase-resolver",
+      consumes: "task.md",
+      produces: PR_REBASE_ARTIFACT,
+    });
+    // The push gate is ZIBBY's (TaskOutputService.parkPrRebase), not a workflow gate.
+    expect(wf.phases[0]?.approval).toBeUndefined();
+    expect(wf.outputs).toEqual([]);
+    expect(wf.department).toBe("dev");
+  });
+
+  it("has a hired dev employee for its agent", () => {
+    const file = path.join(WORKFLOWS_DIR, "../employees/employee_rebase-resolver.json");
+    const employee = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
+    expect(employee).toMatchObject({
+      agentId: "rebase-resolver",
+      department: "dev",
+      status: "active",
+    });
   });
 });
