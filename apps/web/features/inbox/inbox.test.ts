@@ -383,6 +383,26 @@ describe("issueChains", () => {
     expect(issueChains([archived, blocked]).size).toBe(0);
   });
 
+  it("links a duplicated dependsOn id once", () => {
+    const blocker = makeItem({ id: "a" });
+    const blocked = makeItem({ id: "b", dependsOn: ["a", "a"] });
+    const chains = issueChains([blocker, blocked]);
+    expect(chains.get(chainKey(blocked))).toEqual({ on: [blocker], by: [] });
+    expect(chains.get(chainKey(blocker))).toEqual({ on: [], by: [blocked] });
+  });
+
+  it("skips a self-link", () => {
+    expect(issueChains([makeItem({ id: "a", dependsOn: ["a"] })]).size).toBe(0);
+  });
+
+  it("survives a two-issue cycle", () => {
+    const a = makeItem({ id: "a", dependsOn: ["b"] });
+    const b = makeItem({ id: "b", dependsOn: ["a"] });
+    const chains = issueChains([a, b]);
+    expect(chains.get(chainKey(a))).toEqual({ on: [b], by: [b] });
+    expect(chains.get(chainKey(b))).toEqual({ on: [a], by: [a] });
+  });
+
   it("leaves unlinked items out", () => {
     expect(issueChains([makeItem({ id: "a" }), makeItem({ id: "b" })]).size).toBe(0);
   });

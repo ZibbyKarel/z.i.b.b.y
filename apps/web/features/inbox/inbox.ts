@@ -336,7 +336,7 @@ export function issueChains(items: InboxRoadmapItem[]): Map<string, IssueChain> 
     return chain;
   };
   for (const blocked of listed) {
-    for (const id of blocked.dependsOn) {
+    for (const id of new Set(blocked.dependsOn)) {
       const blocker = byKey.get(`${blocked.project.id}/${id}`);
       if (!blocker || blocker === blocked) continue;
       chainOf(blocked).on.push(blocker);
