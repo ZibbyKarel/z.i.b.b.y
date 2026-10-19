@@ -259,9 +259,6 @@ importers:
       react:
         specifier: ^19.0.0
         version: 19.2.6
-      react-diff-view:
-        specifier: 3.3.3
-        version: 3.3.3(react@19.2.6)
       react-dom:
         specifier: ^19.0.0
         version: 19.2.6(react@19.2.6)
@@ -296,6 +293,9 @@ importers:
       react:
         specifier: ^19.0.0
         version: 19.2.6
+      react-diff-view:
+        specifier: 3.3.3
+        version: 3.3.3(react@19.2.6)
       react-dom:
         specifier: ^19.0.0
         version: 19.2.6(react@19.2.6)

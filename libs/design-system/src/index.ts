@@ -602,3 +602,5 @@ export type { WordmarkProps } from "./components/Wordmark/Wordmark";
 
 export { SkipLink, SkipLinkTestId } from "./components/SkipLink/SkipLink";
 export type { SkipLinkProps } from "./components/SkipLink/SkipLink";
+export { FileDiffView, FileDiffViewTestId } from "./components/FileDiffView/FileDiffView";
+export type { FileDiffViewProps } from "./components/FileDiffView/FileDiffView";
