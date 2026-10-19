@@ -2914,13 +2914,10 @@
       "meta": {
         "project": "Project",
         "company": "Company",
-        "team": "Team",
-        "epic": "Epic",
-        "source": "Source"
+        "team": "Team"
       },
       "noCompany": "No company",
       "noTeam": "No team",
-      "noEpic": "No epic",
       "why": "Why it is here",
       "notFoundTitle": "Item not found",
       "notFoundBody": "It is not in your scope, or the source no longer returns it."
