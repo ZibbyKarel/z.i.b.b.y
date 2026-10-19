@@ -8,7 +8,7 @@
 6. [x] stránka PullRequests - pokud pustím znovu code review na PR nepotřebuji dvakrát zobrazovat že běží - necháme jen odkaz "Review běží" na detail běhu (main@6ae8eb7d)
 7. [ ] animace mimoňů:
        a. [ ] iddle - je málo výrazná. Z dálky to vypadá že se mimoni vůbec nehýbají
-8. [ ] Stránka PullRequestů - zobrazíme PR v jednom sloupci pod sebou na šířku 25% stránky. Klik na PR otevře na zbylých 75% šířky detail se změnamy v PR. Použij na to nějakou knihovnu jako třeba je https://www.npmjs.com/package/react-diff-view (zkus prohledat i alternativy)
+8. [x] Stránka PullRequestů - zobrazíme PR v jednom sloupci pod sebou na šířku 25% stránky. Klik na PR otevře na zbylých 75% šířky detail se změnamy v PR. Použij na to nějakou knihovnu jako třeba je https://www.npmjs.com/package/react-diff-view (zkus prohledat i alternativy) (main@bc9a05d7)
 9. [ ] Všechny workflows, která dělají code-review by měla vracet seřazený seznam nálezů od nejkritičtějších po nejmíň kritické.
 10. [ ] U code-reviews musím mít na konci možnost zvolit jeslti chci dané PR schválit, jestli si chci vyžádat změny nebo jestli chci jen postnout komentář (aproove/require changes/comment). Defaultně bude vybráno require changes pokud budou nějaký nálezy. pokud nebudou nálezy tak defaultně bude aproove
 11. [ ] stránka pull requests - u PRs která vyžadují nějakou akci chci mít tlačítko na rebase větve na target branch. To pustí rebase proces kdy, v případě, že jsou konflikty se automaticky vyřeší agentem. (Možná pro to budem potřebovat nějakého rebase agenta. Klidně ho vytvoř)
