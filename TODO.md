@@ -5,7 +5,7 @@
 3. [x] na stráce pull-requests bude každá sekce sbalitelná. Sekce budou jako Accordion který bude defaáltně celý rozbalená. Sekce se ale dají sbalit. Sbalení sekce se pamatuje per session. (main@30c735bc)
 4. [x] na stráce pull-requests - tlačítko "udělat code review" -> uděláme z něj dropdown button kde defaultní hodnota bude rychlé code-review ale na výběr budu mít možnosti udělat zevrubné code-review a pak i s testováním. Projdi jaké workflows se na to hodí. Moje idea by byla defaultně jen code-review agent a na výběr z několika workflows. Zkus tam něco vymyslet. Idea je taková abych měl možnost vybrat si level zevrubnosti code-review - jak moc důkladné bude. (main@459721d3)
 5. [x] V panelu rychlého připnutí nepotřebuji mít připnuté odkazy v accordionu. Odstraň komponentu accordion (main@38d75086)
-6. [ ] stránka PullRequests - pokud pustím znovu code review na PR nepotřebuji dvakrát zobrazovat že běží - necháme jen odkaz "Review běží" na detail běhu
+6. [x] stránka PullRequests - pokud pustím znovu code review na PR nepotřebuji dvakrát zobrazovat že běží - necháme jen odkaz "Review běží" na detail běhu (main@6ae8eb7d)
 7. [ ] animace mimoňů:
        a. [ ] iddle - je málo výrazná. Z dálky to vypadá že se mimoni vůbec nehýbají
 8. [ ] Stránka PullRequestů - zobrazíme PR v jednom sloupci pod sebou na šířku 25% stránky. Klik na PR otevře na zbylých 75% šířky detail se změnamy v PR. Použij na to nějakou knihovnu jako třeba je https://www.npmjs.com/package/react-diff-view (zkus prohledat i alternativy)
