@@ -47,8 +47,9 @@ points to). Turn it into the review:
 
 1. Start with one or two sentences saying which commit you reviewed and anything the
    operator must know up front (for example that tests did not run).
-2. Then one short paragraph per finding, most important first, separated by a blank
-   line. Each finding keeps its file:line and the suggested fix, in plain sentences.
+2. Then one short paragraph per finding, sorted by severity — Critical first, then
+   Important, then Minor — each starting with its label (`Critical:`, `Important:`,
+   `Minor:`), separated by a blank line. Each finding keeps its file:line and the suggested fix, in plain sentences.
    Ask instead of asserting when the aggregate marks something as possibly intentional.
 3. Keep every verified finding. Drop nothing on your own, add nothing you did not
    verify in the code, and don't merge two findings into one vague sentence.

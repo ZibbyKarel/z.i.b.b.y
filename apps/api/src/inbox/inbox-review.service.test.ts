@@ -5,7 +5,11 @@ import type { Integration, Project } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NoGithubLinkError, ProjectNotFoundError } from "../projects/projects.errors";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
-import { InboxReviewService, ReviewRepoMismatchError } from "./inbox-review.service";
+import {
+  InboxReviewService,
+  ReviewRepoMismatchError,
+  reviewTaskText,
+} from "./inbox-review.service";
 
 const PROJECT: Project = { id: "acme", name: "Acme", path: "~/acme" };
 const GITHUB = {
@@ -127,6 +131,16 @@ describe("InboxReviewService", () => {
       expect((await storage.get("task_r1")).prReview?.state).toBe("running");
     },
   );
+
+  it("asks every reviewing phase for findings sorted Critical → Important → Minor", () => {
+    const text = reviewTaskText("acme/app", 7, "https://github.com/acme/app/pull/7", "Fix it");
+    expect(text).toContain(
+      "List findings sorted by severity, most critical first, each labelled `Critical`, `Important` or `Minor`",
+    );
+    expect(text).toContain(
+      "Keep the findings in that severity order and start each one with its label",
+    );
+  });
 
   it("start refuses an unknown project, a missing link and a foreign repo", async () => {
     await expect(service.start({ projectId: "nope", repo: "acme/app", number: 1 })).rejects.toThrow(
