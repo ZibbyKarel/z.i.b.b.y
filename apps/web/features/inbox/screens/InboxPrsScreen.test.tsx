@@ -420,10 +420,15 @@ describe("InboxPrsScreen master–detail", () => {
     expect(screen.getByTestId(`${PrRowTestId.Root}-1`)).toBeInTheDocument();
     expect(
       within(screen.getByTestId(`${PrRowTestId.Root}-2`)).getByTestId(PrRowTestId.Title),
-    ).toHaveAttribute("aria-pressed", "true");
+    ).toHaveAttribute("aria-current", "true");
     expect(
       within(screen.getByTestId(`${PrRowTestId.Root}-1`)).getByTestId(PrRowTestId.Title),
-    ).toHaveAttribute("aria-pressed", "false");
+    ).not.toHaveAttribute("aria-current");
+    // The selected row drops its action strip — the detail pane already has it.
+    expect(
+      within(screen.getByTestId(`${PrRowTestId.Root}-2`)).queryByTestId(PrActionsTestId.Review),
+    ).toBeNull();
+    expect(screen.getByTestId(InboxPrsScreenTestId.Detail)).toHaveAttribute("aria-live", "polite");
     const detail = screen.getByTestId(PrDetailTestId.Root);
     expect(detail).toHaveTextContent("#2");
     expect(detail).toHaveTextContent("PR 2");

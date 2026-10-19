@@ -2804,8 +2804,7 @@
         "empty": "PR neobsahuje žádné změny.",
         "noHunks": "Bez textových změn (binární soubor nebo přejmenování).",
         "truncated": "Diff je příliš velký — zobrazeno jen část. Celý ho najdeš na GitHubu.",
-        "tooLarge": "Diff je příliš velký na zobrazení. Otevři PR na GitHubu.",
-        "files": "{count, plural, one {# soubor} few {# soubory} other {# souborů}}"
+        "tooLarge": "Diff je příliš velký na zobrazení. Otevři PR na GitHubu."
       },
       "ci": "CI {symbol} {state}",
       "draft": "Koncept",

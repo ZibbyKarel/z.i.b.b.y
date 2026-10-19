@@ -1,7 +1,7 @@
 import type { Integration, Project } from "@zibby/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NoGithubLinkError, ProjectNotFoundError } from "../projects/projects.errors";
-import { InboxPrDiffService, MAX_DIFF_BYTES } from "./inbox-pr-diff.service";
+import { GithubDiffError, InboxPrDiffService, MAX_DIFF_BYTES } from "./inbox-pr-diff.service";
 
 const PROJECT: Project = { id: "acme", name: "Acme", path: "~/acme" };
 const GITHUB = {
@@ -35,7 +35,11 @@ describe("InboxPrDiffService", () => {
       diff: "diff --git a/x b/x\n+x\n",
       truncated: false,
     });
-    const [url, init] = fetchImpl.mock.calls[0] as [string, { headers: Record<string, string> }];
+    const [url, init] = fetchImpl.mock.calls[0] as [
+      string,
+      { headers: Record<string, string>; signal: unknown },
+    ];
+    expect(init.signal).toBeInstanceOf(AbortSignal);
     expect(url).toBe("https://api.github.com/repos/acme/app/pulls/7");
     expect(init.headers).toMatchObject({
       accept: "application/vnd.github.diff",
@@ -87,9 +91,11 @@ describe("InboxPrDiffService", () => {
     expect(diff.length).toBeLessThanOrEqual(MAX_DIFF_BYTES);
   });
 
-  it.each([404, 500])("throws on GitHub %i", async (status) => {
+  it.each([404, 500])("throws a typed GithubDiffError on GitHub %i", async (status) => {
     fetchImpl.mockResolvedValue(new Response("", { status }));
-    await expect(service.getDiff("acme", 7)).rejects.toThrow(String(status));
+    const error = await service.getDiff("acme", 7).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(GithubDiffError);
+    expect((error as GithubDiffError).status).toBe(status);
   });
 
   it("rejects with NoGithubLinkError without a GitHub link", async () => {

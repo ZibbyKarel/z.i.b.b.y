@@ -67,7 +67,7 @@ export function FileDiffView({
             </Typography>
           ) : (
             <Diff diffType={file.type} hunks={file.hunks} viewType="unified">
-              {(hunks) => hunks.map((h) => <Hunk hunk={h} key={h.content} />)}
+              {(hunks) => hunks.map((h) => <Hunk hunk={h} key={`${h.oldStart}-${h.newStart}`} />)}
             </Diff>
           )}
         </Stack>

@@ -2804,8 +2804,7 @@
         "empty": "This PR has no changes.",
         "noHunks": "No textual changes (binary file or rename).",
         "truncated": "The diff is too large — showing part of it. See the full diff on GitHub.",
-        "tooLarge": "The diff is too large to display. Open the PR on GitHub.",
-        "files": "{count, plural, one {# file} other {# files}}"
+        "tooLarge": "The diff is too large to display. Open the PR on GitHub."
       },
       "ci": "CI {symbol} {state}",
       "draft": "Draft",

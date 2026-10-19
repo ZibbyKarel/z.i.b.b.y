@@ -131,4 +131,8 @@ describe("Inbox API (e2e)", () => {
   it("GET /api/inbox/prs/:projectId/:number/diff is 404 for an unknown project", async () => {
     await request(app.getHttpServer()).get("/api/inbox/prs/nope/7/diff").expect(404);
   });
+
+  it("GET /api/inbox/prs/:projectId/:number/diff is 422 for a project without a GitHub link", async () => {
+    await request(app.getHttpServer()).get("/api/inbox/prs/acme/7/diff").expect(422);
+  });
 });

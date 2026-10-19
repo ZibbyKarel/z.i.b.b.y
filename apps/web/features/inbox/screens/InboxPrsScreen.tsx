@@ -14,7 +14,7 @@ import {
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { useNow } from "../../../hooks/useNow";
 import { InboxPage } from "../components/InboxPage";
 import { issueHref } from "../components/IssueRow";
@@ -96,7 +96,7 @@ function PrSection({
           <Stack gap="100">
             {prs.map((pr) => (
               <PrRow
-                actions={hasPrActions(pr) ? <PrActions pr={pr} /> : undefined}
+                actions={hasPrActions(pr) && focus !== pr.url ? <PrActions pr={pr} /> : undefined}
                 focused={focus === pr.url}
                 item={itemFor(pr)}
                 key={pr.url}
@@ -159,10 +159,14 @@ export function InboxPrsScreen() {
     return map;
   }, [itemsQuery.data]);
 
+  const detailRef = useRef<HTMLElement>(null);
+
   const select = (url: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("pr", url);
     router.replace(`${pathname}?${params.toString()}` as Route);
+    // Below lg the detail stacks under the list — bring it into view (absent in jsdom).
+    detailRef.current?.scrollIntoView?.({ block: "start" });
   };
 
   return (
@@ -201,7 +205,7 @@ export function InboxPrsScreen() {
             </Typography>
           </Stack>
         </Container>
-        <Container data-testid={InboxPrsScreenTestId.Detail}>
+        <Container aria-live="polite" data-testid={InboxPrsScreenTestId.Detail} ref={detailRef}>
           {selected ? (
             <PrDetail
               key={selected.url}

@@ -88,7 +88,7 @@ export function PrRow({ pr, now, projectName, focused, item, actions, onSelect }
               <Container grow minW0>
                 {onSelect ? (
                   <Pressable
-                    aria-pressed={focused === true}
+                    aria-current={focused ? "true" : undefined}
                     data-testid={PrRowTestId.Title}
                     onClick={(e) => {
                       e.stopPropagation();

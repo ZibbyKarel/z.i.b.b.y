@@ -15,20 +15,20 @@ projects merge route. UI spec: `docs/plans/inbox-ui-spec.md`.
 | Contract   | `libs/contracts/src/inbox/inbox.contract.ts`  | `inboxContract`, `/api`                             |
 | Service    | `apps/api/src/inbox/inbox.service.ts`         | Cross-project item list, PR classification, state   |
 | Service    | `apps/api/src/inbox/inbox-review.service.ts`  | "Do code review" task + `pr-review` approval runner |
-| Service    | `apps/api/src/inbox/inbox-pr-diff.service.ts` | One PR's unified diff from GitHub (2 MB cap)        |
+| Service    | `apps/api/src/inbox/inbox-pr-diff.service.ts` | One PR's unified diff from GitHub (500 KB cap)      |
 | Store      | `apps/api/src/inbox/inbox-state.store.ts`     | `InboxStateStore` — hidden items, one JSON file     |
 | Controller | `apps/api/src/inbox/inbox.controller.ts`      | `@TsRestHandler(inboxContract)`                     |
 
 ## Endpoints
 
-| Method | Path                                     | Body                                                                                                                  | Response                                                                   |
-| ------ | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| GET    | `/api/roadmap/items`                     | —                                                                                                                     | `InboxItemsResponse`                                                       |
-| GET    | `/api/inbox/prs`                         | —                                                                                                                     | `InboxPrsResponse`                                                         |
-| POST   | `/api/inbox/prs/review`                  | `{ projectId, repo, number, title?, level? }` (strict; `level` = `quick` \| `thorough` \| `tested`, absent = `quick`) | 201 `{ taskId }`; 404 project; 422 no GitHub link / repo not the project's |
-| GET    | `/api/inbox/prs/:projectId/:number/diff` | —                                                                                                                     | 200 `{ diff, truncated }`; 404 project; 422 no GitHub link                 |
-| GET    | `/api/inbox/state`                       | —                                                                                                                     | `InboxState`                                                               |
-| PUT    | `/api/inbox/state`                       | `{ integrationId, externalId, hidden }` (strict)                                                                      | `InboxState`                                                               |
+| Method | Path                                     | Body                                                                                                                  | Response                                                                                       |
+| ------ | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| GET    | `/api/roadmap/items`                     | —                                                                                                                     | `InboxItemsResponse`                                                                           |
+| GET    | `/api/inbox/prs`                         | —                                                                                                                     | `InboxPrsResponse`                                                                             |
+| POST   | `/api/inbox/prs/review`                  | `{ projectId, repo, number, title?, level? }` (strict; `level` = `quick` \| `thorough` \| `tested`, absent = `quick`) | 201 `{ taskId }`; 404 project; 422 no GitHub link / repo not the project's                     |
+| GET    | `/api/inbox/prs/:projectId/:number/diff` | —                                                                                                                     | 200 `{ diff, truncated }`; 404 project/PR; 422 no GitHub link/token rejected; 502 GitHub error |
+| GET    | `/api/inbox/state`                       | —                                                                                                                     | `InboxState`                                                                                   |
+| PUT    | `/api/inbox/state`                       | `{ integrationId, externalId, hidden }` (strict)                                                                      | `InboxState`                                                                                   |
 
 `/api/roadmap/items` has no `:projectId` segment, so it can't collide with the
 per-project `/api/projects/:projectId/roadmap/...` routes.
@@ -140,10 +140,11 @@ Read-only (Tier 1). `number` is a positive integer; the repo is derived from the
 project's GitHub link, never taken from the client. Fetches
 `GET /repos/{repo}/pulls/{n}` with `Accept: application/vnd.github.diff` using the
 project's resolved token and returns `{ diff, truncated }`. GitHub `406` (diff too
-large for GitHub) → `{ diff: "", truncated: true }`. A diff over 2 MB
+large for GitHub) → `{ diff: "", truncated: true }`. A diff over 500,000 chars
 (`MAX_DIFF_BYTES`) is cut before the last line-start `diff --git` boundary under
-the cap and returned with `truncated: true`. Any other GitHub error → 500. Errors:
-404 unknown project, 422 project has no GitHub link.
+the cap and returned with `truncated: true`. The request times out after 15 s. Errors (non-406 GitHub failures throw
+`GithubDiffError` carrying the upstream status): 404 unknown project or GitHub 404, 422 project has no
+GitHub link or GitHub 401/403, 502 any other GitHub failure.
 
 ## Squash and merge
 

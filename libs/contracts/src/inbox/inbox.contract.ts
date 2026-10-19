@@ -54,7 +54,12 @@ export const inboxContract = c.router(
         projectId: z.string().min(1),
         number: z.coerce.number().int().positive(),
       }),
-      responses: { 200: InboxPrDiffSchema, 404: ErrorSchema, 422: ErrorSchema },
+      responses: {
+        200: InboxPrDiffSchema,
+        404: ErrorSchema,
+        422: ErrorSchema,
+        502: ErrorSchema,
+      },
       summary:
         "Get one PR's unified diff from GitHub (repo derived from the project's GitHub link)",
     },
