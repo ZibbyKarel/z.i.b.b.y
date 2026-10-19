@@ -2,6 +2,7 @@ import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { GithubDiffError, InboxPrDiffService } from "./inbox-pr-diff.service";
+import { ProjectNotFoundError } from "../projects/projects.errors";
 import { InboxRebaseService, RebaseRefusedError } from "./inbox-rebase.service";
 import { InboxReviewService } from "./inbox-review.service";
 import { InboxController } from "./inbox.controller";
@@ -11,6 +12,7 @@ import type { INestApplication } from "@nestjs/common";
 describe("InboxController getInboxPrDiff GitHub error mapping", () => {
   let app: INestApplication;
   let upstream = 500;
+  let rebaseError: Error = new RebaseRefusedError("acme/app#7 comes from a fork");
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -22,7 +24,7 @@ describe("InboxController getInboxPrDiff GitHub error mapping", () => {
           provide: InboxRebaseService,
           useValue: {
             start: async () => {
-              throw new RebaseRefusedError("acme/app#7 comes from a fork");
+              throw rebaseError;
             },
           },
         },
@@ -62,5 +64,13 @@ describe("InboxController getInboxPrDiff GitHub error mapping", () => {
       .send({ projectId: "acme", repo: "acme/app", number: 7 })
       .expect(422);
     expect(res.body.message).toContain("fork");
+  });
+
+  it("maps an unknown project on rebase to 404", async () => {
+    rebaseError = new ProjectNotFoundError("nope");
+    await request(app.getHttpServer())
+      .post("/api/inbox/prs/rebase")
+      .send({ projectId: "nope", repo: "acme/app", number: 7 })
+      .expect(404);
   });
 });

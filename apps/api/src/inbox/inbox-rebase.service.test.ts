@@ -208,11 +208,11 @@ describe("InboxRebaseService", () => {
     );
   });
 
-  it("approve with nothing parked pushes nothing and marks the rebase failed", async () => {
+  it("approve with nothing parked pushes nothing and leaves it running", async () => {
     await start();
     await service.push("task_b1");
     expect(pushRebased).not.toHaveBeenCalled();
-    expect((await storage.get("task_b1")).prRebase?.state).toBe("failed");
+    expect((await storage.get("task_b1")).prRebase?.state).toBe("running");
   });
 
   it("reject discards", async () => {
@@ -220,5 +220,53 @@ describe("InboxRebaseService", () => {
     await service.discard("task_b1");
     expect((await storage.get("task_b1")).prRebase?.state).toBe("discarded");
     expect(pushRebased).not.toHaveBeenCalled();
+  });
+
+  it("a second push after the claim does not push again nor overwrite pushed", async () => {
+    await parked();
+    let release: (sha: string) => void = () => undefined;
+    pushRebased.mockImplementationOnce(() => new Promise<string>((r) => (release = r)));
+    const first = service.push("task_b1");
+    await vi.waitFor(() => expect(pushRebased).toHaveBeenCalledOnce());
+    await service.push("task_b1"); // in flight: state is the claim, no-op
+    release("newsha");
+    await first;
+    await service.push("task_b1"); // after pushed: no-op
+    expect(pushRebased).toHaveBeenCalledOnce();
+    expect((await storage.get("task_b1")).prRebase).toMatchObject({
+      state: "pushed",
+      note: "newsha",
+    });
+  });
+
+  it.each(["running", "pushed", "discarded", "failed"] as const)(
+    "a stray approve on a %s rebase leaves it untouched",
+    async (state) => {
+      await start();
+      await storage.setPrRebase("task_b1", (c) => (c ? { ...c, state, worktree: "/wt" } : c));
+      await service.push("task_b1");
+      expect(pushRebased).not.toHaveBeenCalled();
+      expect((await storage.get("task_b1")).prRebase?.state).toBe(state);
+    },
+  );
+
+  it.each(["running", "pushed", "failed"] as const)(
+    "reject on a %s rebase is a no-op",
+    async (state) => {
+      await start();
+      await storage.setPrRebase("task_b1", (c) => (c ? { ...c, state } : c));
+      await service.discard("task_b1");
+      expect((await storage.get("task_b1")).prRebase?.state).toBe(state);
+    },
+  );
+
+  it.each([
+    ["head", { head: { ref: "--upload-pack=x", sha: "s", repo: { full_name: "acme/app" } } }],
+    ["head", { head: { ref: "fe at", sha: "s", repo: { full_name: "acme/app" } } }],
+    ["base", { base: { ref: "-x", repo: { full_name: "acme/app", default_branch: "main" } } }],
+  ])("refuses an unsafe %s branch name", async (_n, over) => {
+    Object.assign(pull, over);
+    await expect(start()).rejects.toThrow(RebaseRefusedError);
+    expect(createTask).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,10 @@
 import { Injectable, type OnModuleInit, Optional } from "@nestjs/common";
-import type { RebaseInboxPrInput, ReviewInboxPrResult, TaskTarget } from "@zibby/contracts";
+import type {
+  RebaseInboxPrInput,
+  ReviewInboxPrResult,
+  ScheduledTask,
+  TaskTarget,
+} from "@zibby/contracts";
 import { ApprovalsService } from "../approvals/approvals.service";
 import { CredentialsStore } from "../integrations/credentials.store";
 import { resolveGithubToken } from "../projects/project-pr.service";
@@ -133,6 +138,12 @@ export class InboxRebaseService implements OnModuleInit {
         `${ref} comes from a fork (${headRepo ?? "deleted repo"}) — ZIBBY only rebases branches of ${link.repo}`,
       );
     }
+    const SAFE_REF = /^[\w./-]+$/;
+    for (const name of [head, base]) {
+      if (!SAFE_REF.test(name) || name.startsWith("-")) {
+        throw new RebaseRefusedError(`refusing ${ref}: branch name "${name}" is not a plain ref`);
+      }
+    }
     if (head === base || head === pull.base?.repo?.default_branch) {
       throw new RebaseRefusedError(
         `refusing to rewrite "${head}" — it is the base or default branch`,
@@ -179,28 +190,37 @@ export class InboxRebaseService implements OnModuleInit {
     return { taskId: result.task.id };
   }
 
-  /** Approve → force-push the parked rebase with lease from the run's worktree. */
+  /**
+   * Approve → force-push the parked rebase with lease from the run's worktree.
+   * Only `awaiting-approval` pushes: it is claimed atomically (→ `running`, inside the
+   * storage lock) before the push, so a second call cannot push again, and the final
+   * `pushed` / `failed` write only lands from that claimed state.
+   */
   async push(taskId: string): Promise<void> {
-    const task = await this.tasks.get(taskId).catch(() => null);
-    const rebase = task?.prRebase;
-    if (!rebase) {
-      this.log?.warn("pr rebase approve: no rebase on the task, not pushing", { taskId });
-      return;
-    }
-    if (rebase.state !== "awaiting-approval" || !rebase.worktree) {
-      this.log?.warn("pr rebase approve: nothing parked, not pushing", {
-        taskId,
-        state: rebase.state,
+    let claimed: ScheduledTask["prRebase"];
+    try {
+      await this.tasks.setPrRebase(taskId, (c) => {
+        if (c?.state !== "awaiting-approval" || !c.worktree) return c;
+        claimed = c;
+        return { ...c, state: "running" };
       });
-      if (rebase.state !== "pushed" && rebase.state !== "discarded") {
-        const note = "approved but no parked rebase to push";
-        await this.tasks.setPrRebase(taskId, (c) => (c ? { ...c, state: "failed", note } : c));
-      }
+    } catch (error) {
+      this.log?.warn("pr rebase approve: task unreadable, not pushing", {
+        taskId,
+        err: errMsg(error),
+      });
       return;
     }
+    if (!claimed?.worktree) {
+      this.log?.warn("pr rebase approve: nothing parked, not pushing", { taskId });
+      return;
+    }
+    const rebase = claimed;
+    const settle = (patch: { state: "pushed" | "failed"; note: string }) =>
+      this.tasks.setPrRebase(taskId, (c) => (c?.state === "running" ? { ...c, ...patch } : c));
     try {
       const sha = await this.workspace.pushRebased({
-        cwd: rebase.worktree,
+        cwd: rebase.worktree ?? "",
         head: rebase.head,
         base: rebase.base,
         expectedSha: rebase.headSha,
@@ -208,10 +228,10 @@ export class InboxRebaseService implements OnModuleInit {
         // (conflicts resolved, reviewed) rebase legitimately does.
         allowRewrittenCommits: !isCleanPrRebase(rebase.conflictAtStart, rebase.report ?? ""),
       });
-      await this.tasks.setPrRebase(taskId, (c) => (c ? { ...c, state: "pushed", note: sha } : c));
+      await settle({ state: "pushed", note: sha });
     } catch (error) {
-      const note = (error instanceof Error ? error.message : String(error)).slice(0, 300);
-      await this.tasks.setPrRebase(taskId, (c) => (c ? { ...c, state: "failed", note } : c));
+      const note = errMsg(error).slice(0, 300);
+      await settle({ state: "failed", note });
       throw new Error(note);
     }
     // The push changes the PR's mergeability — don't serve the stale 30 s cache.
@@ -219,11 +239,19 @@ export class InboxRebaseService implements OnModuleInit {
     this.log?.info("pr rebase pushed", { taskId, repo: rebase.repo, number: rebase.number });
   }
 
-  /** Reject → discard; nothing is pushed. */
+  /** Reject → discard, only from `awaiting-approval`; nothing is pushed. */
   async discard(taskId: string): Promise<void> {
-    await this.tasks
-      .setPrRebase(taskId, (c) => (c ? { ...c, state: "discarded" } : c))
-      .catch(() => undefined);
-    this.log?.info("pr rebase discarded", { taskId });
+    try {
+      await this.tasks.setPrRebase(taskId, (c) =>
+        c?.state === "awaiting-approval" ? { ...c, state: "discarded" } : c,
+      );
+      this.log?.info("pr rebase discard handled", { taskId });
+    } catch (error) {
+      this.log?.warn("pr rebase discard failed", { taskId, err: errMsg(error) });
+    }
   }
+}
+
+function errMsg(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
