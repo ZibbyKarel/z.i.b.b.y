@@ -61,4 +61,4 @@ nepushují.
 ## Schválení
 
 Stejně jako `pr-review-thorough`: **Připomínky** vrátí review fázi `comment`,
-**Schválit** ho postne na PR jako `COMMENT` review, **Zamítnout** ho zahodí.
+**Schválit** ho postne na PR jako review typu, který zvolíš (schválit / vyžádat změny / komentář), **Zamítnout** ho zahodí.

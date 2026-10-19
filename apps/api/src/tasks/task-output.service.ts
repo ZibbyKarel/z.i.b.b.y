@@ -25,8 +25,8 @@ export const PR_REVIEW_ARTIFACT = "zibby-pr-review.md";
 /** GitHub caps a review body at 65 536 chars; keep headroom for the footer. */
 const PR_REVIEW_MAX_CHARS = 60_000;
 
-/** A labelled finding line (item 9: `Critical:` / `Important:` / `Minor:`), tolerating a list marker or bold. */
-const FINDING_LINE = /^[\s>*_-]*(?:Critical|Important|Minor)[*_]*:/m;
+/** A labelled finding line (item 9: `Critical:` / `Important:` / `Minor:`), tolerating a bullet/numbered list marker or bold. */
+const FINDING_LINE = /^[\s>*_-]*(?:\d+[.)][\s>*_-]*)?(?:Critical|Important|Minor)[*_]*:/m;
 
 /**
  * todo-10 — ZIBBY's preselection for the operator's review-type pick: any finding →

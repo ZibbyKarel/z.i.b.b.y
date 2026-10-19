@@ -10,6 +10,7 @@ import {
   type DepartmentId,
   type IntendedAction,
   type PhaseEscalation,
+  type PrReviewEvent,
   type Project,
   type RunLogChunk,
   type StageRun,
@@ -47,7 +48,7 @@ import { ProjectLocalUnresolvedError } from "../projects/projects.errors";
 import { ProjectSecretsStore } from "../projects/project-secrets.store";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { writeFileAtomic } from "../shared/file-storage/file-utils";
-import { PR_REVIEW_ARTIFACT } from "../tasks/task-output.service";
+import { PR_REVIEW_ARTIFACT, suggestReviewEvent } from "../tasks/task-output.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TraceContextService } from "../shared/logging/trace-context.service";
 import { prepareWorktreeDir } from "../shared/worktree-root";
@@ -298,7 +299,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     });
     // P1-02/P1-03: a run parked at a phase boundary (stage checkpoint or spend cap).
     this.approvals.register("workflow-gate", {
-      resume: (workflowRunId) => this.resumeGate(workflowRunId, "approved"),
+      resume: (workflowRunId, approval) =>
+        this.resumeGate(workflowRunId, "approved", undefined, approval?.reviewEvent),
       cancel: (workflowRunId) => void this.resumeGate(workflowRunId, "rejected"),
       revise: (workflowRunId, note) => this.resumeGate(workflowRunId, "revised", note),
     });
@@ -1465,6 +1467,9 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         // artifact; approve re-enters at `cursor` (or delivers the outputs).
         if (phase.approval === "ask") {
           const producesPath = phase.produces ? path.join(stageCwd, phase.produces) : stageCwd;
+          // todo-10: the final phase writing the PR review is where the operator signs
+          // the review off — preselect the GitHub event from its findings.
+          const prReviewGate = cursor === null && phase.produces === PR_REVIEW_ARTIFACT;
           await this.parkAtGate(run, "gate", {
             phaseId: phase.id,
             cursor,
@@ -1474,12 +1479,18 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
             approval: {
               skill: workflow.name ?? workflow.id,
               action: "stage-approval",
-              detail:
-                cursor === null && phase.produces === PR_REVIEW_ARTIFACT
-                  ? `Workflow "${run.workflowId}", phase "${phase.id}" finished — review ${producesPath}. Approve posts it to the PR on GitHub as a COMMENT review; notes send it back to this phase; reject discards it.`
-                  : `Workflow "${run.workflowId}", phase "${phase.id}" finished — review ${producesPath} and approve to continue (reject fails the run).`,
+              detail: prReviewGate
+                ? `Workflow "${run.workflowId}", phase "${phase.id}" finished — review ${producesPath}. Approve posts it to the PR on GitHub as the review type you pick (approve / request changes / comment; COMMENT when none); notes send it back to this phase; reject discards it.`
+                : `Workflow "${run.workflowId}", phase "${phase.id}" finished — review ${producesPath} and approve to continue (reject fails the run).`,
               risk: "low",
               department: workflow.department,
+              ...(prReviewGate
+                ? {
+                    suggestedReviewEvent: suggestReviewEvent(
+                      await fs.readFile(producesPath, "utf8").catch(() => ""),
+                    ),
+                  }
+                : {}),
             },
           });
           return;
@@ -1925,6 +1936,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         detail: string;
         risk: "low" | "medium" | "high";
         department?: DepartmentId;
+        suggestedReviewEvent?: PrReviewEvent;
       };
     },
   ): Promise<void> {
@@ -1961,6 +1973,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     workflowRunId: string,
     decision: "approved" | "rejected" | "revised",
     note?: string,
+    reviewEvent?: PrReviewEvent,
   ): Promise<void> {
     try {
       const run = this.runs.get(workflowRunId) ?? (await this.readAggregate(workflowRunId));
@@ -2022,7 +2035,11 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         };
       }
       run.status = "running";
-      if (reason === "gate" && gate.cursor === null) run.approvedFinalGate = gate.phaseId;
+      if (reason === "gate" && gate.cursor === null) {
+        run.approvedFinalGate = gate.phaseId;
+        // todo-10: the operator's PR-review pick travels with the run to parkPrReview.
+        if (reviewEvent) run.approvedReviewEvent = reviewEvent;
+      }
       await this.writeAggregate(run);
       if (gate.cursor === null) {
         await this.runOutputs(run, workflow, 0, phaseIds);

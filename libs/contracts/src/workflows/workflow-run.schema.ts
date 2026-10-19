@@ -2,6 +2,7 @@ import { z } from "zod";
 import { AgentIdSchema } from "../agents/agent.schema";
 import { DepartmentIdSchema } from "../departments/department.schema";
 import { IsoDateTimeSchema, RunStatusSchema, WorkspaceSchema } from "../common.schema";
+import { PrReviewEventSchema } from "../approvals/approval.schema";
 import { PrOutputSchema } from "../tasks/task.schema";
 import { WorkflowOutputSchema } from "./workflow.schema";
 import { StageVerdictSchema } from "./stage-verdict.schema";
@@ -241,6 +242,11 @@ export const WorkflowRunSchema = z.object({
    * to post that output on the same approval instead of parking a second one.
    */
   approvedFinalGate: z.string().min(1).optional(),
+  /**
+   * todo-10 — the GitHub review event the operator picked when approving that final
+   * gate (a PR-review run). Absent → the review posts as COMMENT.
+   */
+  approvedReviewEvent: PrReviewEventSchema.optional(),
   /**
    * P1-02/P1-03 — present while `parkedReason` is `gate` or `budget`: where the
    * driver re-enters on approve (`cursor` null = the chain is finished, deliver the

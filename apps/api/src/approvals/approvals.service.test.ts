@@ -77,6 +77,13 @@ describe("ApprovalsService", () => {
     );
   });
 
+  it("todo-10: a reviewEvent on an approval without a suggestion is not recorded", async () => {
+    const created = await request();
+    const decided = await service.approve(created.id, { reviewEvent: "APPROVE" });
+    expect(decided.reviewEvent).toBeUndefined();
+    expect((await service.get(created.id)).reviewEvent).toBeUndefined();
+  });
+
   it("todo-10: approve without a reviewEvent records none", async () => {
     const created = await request();
     const decided = await service.approve(created.id);

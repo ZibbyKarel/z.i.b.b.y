@@ -246,13 +246,14 @@ running → done       (every phase passed + outputs delivered)
 
 Run fields added by the gates and the budget:
 
-| Field                      | When                                 | Meaning                                                                                                                             |
-| -------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `pendingGate`              | `parkedReason` is `gate` or `budget` | `{ phaseId, cursor, handoffSource }` — where the driver re-enters on approve (`cursor: null` = chain finished, deliver the outputs) |
-| `approvedFinalGate`        | the LAST phase's gate was approved   | that phase's id; the chain's final output was signed off as-is (a PR-review run posts it on this sign-off, see `docs/api/inbox.md`) |
-| `budget`                   | the workflow declares a `budget`     | `{ maxCostUsd, warnAtPct, spentUsd, warned? }` — snapshot of the cap plus spend so far                                              |
-| `StageRun.externalCostUsd` | a stage reported non-model spend     | sum of `costUsd` over the lines of `<stageDir>/costs.jsonl`; absent when none                                                       |
-| `failedReason`             | the run was refused before any work  | e.g. `requires a web project, but the run has no project` — set with `status: "failed"`                                             |
+| Field                      | When                                               | Meaning                                                                                                                             |
+| -------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `pendingGate`              | `parkedReason` is `gate` or `budget`               | `{ phaseId, cursor, handoffSource }` — where the driver re-enters on approve (`cursor: null` = chain finished, deliver the outputs) |
+| `approvedFinalGate`        | the LAST phase's gate was approved                 | that phase's id; the chain's final output was signed off as-is (a PR-review run posts it on this sign-off, see `docs/api/inbox.md`) |
+| `approvedReviewEvent`      | that final gate was approved with a PR-review pick | todo-10 — the operator's `reviewEvent` (APPROVE / REQUEST_CHANGES / COMMENT); absent → COMMENT (see `docs/api/inbox.md`)            |
+| `budget`                   | the workflow declares a `budget`                   | `{ maxCostUsd, warnAtPct, spentUsd, warned? }` — snapshot of the cap plus spend so far                                              |
+| `StageRun.externalCostUsd` | a stage reported non-model spend                   | sum of `costUsd` over the lines of `<stageDir>/costs.jsonl`; absent when none                                                       |
+| `failedReason`             | the run was refused before any work                | e.g. `requires a web project, but the run has no project` — set with `status: "failed"`                                             |
 
 ### Log polling (unified surface)
 
@@ -417,7 +418,7 @@ meaning fully autonomous. Once the phase lands green (`produces` written):
    appends the note to `<phaseId>.note.md` in the run folder — the phase lands green and
    parks at the same gate again for another review. Approving the gate of the LAST
    phase also stamps `WorkflowRun.approvedFinalGate`. When that phase produces
-   `zibby-pr-review.md`, the gate detail says that approve posts it to the PR.
+   `zibby-pr-review.md`, the gate approval carries `suggestedReviewEvent` (findings → REQUEST_CHANGES, none → APPROVE) and approving it with a `reviewEvent` stamps `WorkflowRun.approvedReviewEvent`, the event the review is posted with.
 
 ### Budget (`budget`)
 

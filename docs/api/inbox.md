@@ -121,10 +121,10 @@ The run parks at the `comment` phase's gate (a `workflow-gate` `stage-approval`;
 sheet renders `zibby-pr-review.md`). **Notes** ("request changes") re-run `comment`
 with the operator's note and park at the same gate again; **reject** fails the run
 and nothing is posted. **Approve** finishes the run and stamps
-`WorkflowRun.approvedFinalGate`. `TaskSchedulerService.writeWorkflowOutcome` then, on a
+`WorkflowRun.approvedFinalGate` (plus `approvedReviewEvent` — the review type the operator picked on that gate; the gate approval carries `suggestedReviewEvent` from `zibby-pr-review.md`). `TaskSchedulerService.writeWorkflowOutcome` then, on a
 `done` run whose task has `prReview.state === "running"`, reads `zibby-pr-review.md`
 via `WorkflowRunnerService.readArtifact` and calls `TaskOutputService.parkPrReview`
-with that gate id: the `pr-review` approval is recorded and approved in one go, so the
+with that gate id and pick: the `pr-review` approval is recorded and approved in one go, so the
 operator decides once. A run that ended without the final gate parks the approval as
 pending. A `failed` run parks nothing, and the row reads `failed` from the task outcome.
 

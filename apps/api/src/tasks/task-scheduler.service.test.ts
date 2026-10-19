@@ -1671,6 +1671,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         expect.objectContaining({ id }),
         "## Review\n\nbug at a.ts:3",
         undefined,
+        undefined,
       );
       expect((await storage.get(id)).outcome?.summary).toBe("parked");
     });
@@ -1686,6 +1687,26 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         expect.objectContaining({ id }),
         "x",
         "comment",
+        undefined,
+      );
+    });
+
+    it("todo-10: passes the operator's gate pick on to parkPrReview", async () => {
+      const id = await seedReview();
+      workflowRunner.readArtifact.mockResolvedValue({ name: PR_REVIEW_ARTIFACT, content: "x" });
+      workflowListener?.({
+        ...done(id),
+        approvedFinalGate: "comment",
+        approvedReviewEvent: "APPROVE",
+      });
+      await vi.waitFor(async () => {
+        expect((await storage.get(id)).outcome).toBeDefined();
+      });
+      expect(taskOutput.parkPrReview).toHaveBeenCalledWith(
+        expect.objectContaining({ id }),
+        "x",
+        "comment",
+        "APPROVE",
       );
     });
 
@@ -1698,6 +1719,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       expect(taskOutput.parkPrReview).toHaveBeenCalledWith(
         expect.objectContaining({ id }),
         "",
+        undefined,
         undefined,
       );
     });

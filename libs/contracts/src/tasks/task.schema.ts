@@ -701,7 +701,7 @@ export const ScheduledTaskSchema = z.object({
    * review"). Provenance, server-written only (like {@link roadmapItemId}), never
    * part of `CreateTaskInput`. At terminal `done` the review artifact is read into
    * `body` and parked as a Tier-3 `pr-review` approval (`approvalId`); approving posts
-   * it to GitHub as a `COMMENT` review, rejecting discards it.
+   * it to GitHub with the review event the operator picks (`COMMENT` when none), rejecting discards it.
    */
   prReview: z
     .object({

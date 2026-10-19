@@ -10,6 +10,7 @@ import request from "supertest";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
 import { ApprovalsService } from "../src/approvals/approvals.service";
+import { PR_REVIEW_ARTIFACT } from "../src/tasks/task-output.service";
 import { WorkflowRunnerService } from "../src/workflows/workflow-runner.service";
 import { defaultEmployeesDir, seedEmployeeFixture } from "./fixtures/employee-fixture";
 
@@ -492,6 +493,7 @@ describe("Workflows API (e2e)", () => {
     expect(parked.stageRuns.map((s: { phaseId: string }) => s.phaseId)).toEqual(["a"]);
     const approval = await until(() => pendingGate(first.workflowRunId));
     expect(approval.action).toBe("stage-approval");
+    expect(approval.suggestedReviewEvent).toBeUndefined(); // not a PR-review gate
     await app.get(ApprovalsService).approve(approval.id);
     const done = await until(async () => {
       const r = runner.get(first.workflowRunId);
@@ -530,6 +532,51 @@ describe("Workflows API (e2e)", () => {
       const r = runner.get(third.workflowRunId);
       return r.status === "done" ? r : null;
     });
+  });
+
+  it("todo-10: the final gate on zibby-pr-review.md suggests the review event; approve stamps the pick", async () => {
+    // A tool phase writes the review (demo mode's agent output has no findings to key off).
+    const write = `printf 'Mostly fine.\\n\\nCritical: null deref at a.ts:3\\n' > ${PR_REVIEW_ARTIFACT}`;
+    await request(app.getHttpServer())
+      .post("/api/workflows")
+      .send({
+        id: "pr-review-gated",
+        phases: [
+          {
+            id: "comment",
+            type: "tool",
+            produces: PR_REVIEW_ARTIFACT,
+            commands: [write],
+            approval: "ask",
+          },
+        ],
+        instructions: "review → (human)",
+        department: "dev",
+      })
+      .expect(201);
+    const runner = app.get(WorkflowRunnerService);
+
+    // Operator picks APPROVE over the REQUEST_CHANGES suggestion.
+    const picked = await runner.start("pr-review-gated", undefined, undefined);
+    const gate = await until(() => pendingGate(picked.workflowRunId));
+    expect(gate.suggestedReviewEvent).toBe("REQUEST_CHANGES");
+    await app.get(ApprovalsService).approve(gate.id, { reviewEvent: "APPROVE" });
+    const done = await until(async () => {
+      const r = runner.get(picked.workflowRunId);
+      return r.status === "done" ? r : null;
+    });
+    expect(done.approvedFinalGate).toBe("comment");
+    expect(done.approvedReviewEvent).toBe("APPROVE");
+
+    // A quick approve without a pick never carries the suggestion → COMMENT downstream.
+    const plain = await runner.start("pr-review-gated", undefined, undefined);
+    const gate2 = await until(() => pendingGate(plain.workflowRunId));
+    await app.get(ApprovalsService).approve(gate2.id);
+    const done2 = await until(async () => {
+      const r = runner.get(plain.workflowRunId);
+      return r.status === "done" ? r : null;
+    });
+    expect(done2.approvedReviewEvent).toBeUndefined();
   });
 
   it("budget: a tool's costs.jsonl pushes spend past the cap → parks before the next phase; approve raises the cap (P1-03)", async () => {

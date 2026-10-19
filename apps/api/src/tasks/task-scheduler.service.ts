@@ -1886,7 +1886,12 @@ export class TaskSchedulerService
               .readArtifact(run.workflowRunId, PR_REVIEW_ARTIFACT)
               .catch(() => null);
             const delivery = await this.taskOutput
-              .parkPrReview(existing, artifact?.content ?? "", run.approvedFinalGate)
+              .parkPrReview(
+                existing,
+                artifact?.content ?? "",
+                run.approvedFinalGate,
+                run.approvedReviewEvent,
+              )
               .catch(async (error: unknown) => {
                 this.log.warn("pr review park failed (soft)", {
                   taskId,

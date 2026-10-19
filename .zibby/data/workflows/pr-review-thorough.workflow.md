@@ -51,4 +51,4 @@ comment**. Read-only vůči GitHubu: agenti nic nepostují, necommitují ani nep
 
 Ve frontě schválení je výsledné review. **Připomínky** ho vrátí fázi `comment` s tvou
 poznámkou a nová verze se vrátí ke schválení. **Schválit** ho postne na PR jako
-`COMMENT` review. **Zamítnout** ho zahodí.
+review typu, který zvolíš (schválit / vyžádat změny / komentář; předvybráno podle nálezů). **Zamítnout** ho zahodí.

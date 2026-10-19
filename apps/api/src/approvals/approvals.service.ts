@@ -226,7 +226,8 @@ export class ApprovalsService {
         status,
         decidedAt: new Date().toISOString(),
         ...(reason ? { reason } : {}),
-        ...(reviewEvent ? { reviewEvent } : {}),
+        // todo-10: only a PR-review sign-off (it carries a suggestion) records a pick.
+        ...(reviewEvent && approval.suggestedReviewEvent ? { reviewEvent } : {}),
       };
       void this.activity?.record({
         kind: `approval-${status}`,
