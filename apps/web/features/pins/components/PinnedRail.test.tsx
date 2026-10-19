@@ -43,10 +43,12 @@ describe("PinnedRail", () => {
     expect(screen.getAllByTestId(PinnedRailTestId.Kind)).toHaveLength(2);
   });
 
-  it("includes the two-digit pin count in the header title", () => {
+  it("shows the pin count in the static header, with no accordion toggle", () => {
     hooks.pagePins = [{ kind: "page", id: "/workforce/agents", label: "People" }];
     render(<PinnedRail currentHref="/dashboard" />);
-    expect(screen.getByTestId(RailTestId.ToggleButton)).toHaveTextContent("01");
+    expect(screen.getByTestId(RailTestId.Count)).toHaveTextContent("1");
+    expect(screen.queryByTestId(RailTestId.ToggleButton)).toBeNull();
+    expect(screen.getByTestId(RailTestId.Body)).toBeInTheDocument();
   });
 
   it("marks the row matching the current href as active", () => {
@@ -67,20 +69,10 @@ describe("PinnedRail", () => {
     expect(hooks.unpinPage).toHaveBeenCalledWith("/workforce/agents");
   });
 
-  it("collapses on toggle and persists the choice to localStorage", async () => {
-    hooks.pagePins = [{ kind: "page", id: "/workforce/agents", label: "People" }];
-    render(<PinnedRail currentHref="/dashboard" />);
-    expect(screen.getByTestId(RailTestId.Body)).toBeInTheDocument();
-
-    await userEvent.click(screen.getByTestId(RailTestId.ToggleButton));
-    expect(screen.queryByTestId(RailTestId.Body)).toBeNull();
-    expect(window.localStorage.getItem("zibby-pinned-rail-open")).toBe("0");
-  });
-
-  it("defaults open, and reopens from a stored closed choice on mount", () => {
+  it("ignores a stale stored collapsed choice and always shows the list", () => {
     window.localStorage.setItem("zibby-pinned-rail-open", "0");
     hooks.pagePins = [{ kind: "page", id: "/workforce/agents", label: "People" }];
     render(<PinnedRail currentHref="/dashboard" />);
-    expect(screen.queryByTestId(RailTestId.Body)).toBeNull();
+    expect(screen.getByTestId(PinnedRailTestId.Row)).toBeInTheDocument();
   });
 });

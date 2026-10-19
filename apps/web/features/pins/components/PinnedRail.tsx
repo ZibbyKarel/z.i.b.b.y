@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  type AnchorHTMLAttributes,
-  useLayoutEffect,
-  useEffect as useReactEffect,
-  useState,
-} from "react";
+import type { AnchorHTMLAttributes } from "react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -29,41 +24,6 @@ export enum PinnedRailTestId {
   Empty = "pinned-rail-empty",
 }
 
-/** `useLayoutEffect` on the client, `useEffect` on the server (a no-op there —
- *  this only ever runs client-side anyway, `"use client"`) — same seam
- *  `AppearanceProvider` uses for its own persisted-choice read. A plain
- *  `useEffect` here is flagged by `react-hooks/set-state-in-effect` (a
- *  synchronous `setState` in a passive effect risks a cascading extra
- *  render); reading the stored choice in the LAYOUT phase, before paint,
- *  avoids both the lint and a visible open→closed flash. */
-const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useReactEffect;
-
-/** Per-viewer convenience, not domain data — survives a refresh via
- *  `localStorage`, read only after mount so the server render (which never
- *  knows the stored choice) and the client's first paint stay in sync and
- *  default open, per spec decision 5. */
-const STORAGE_KEY = "zibby-pinned-rail-open";
-
-function readStoredOpen(): boolean | null {
-  try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored === "0") return false;
-    if (stored === "1") return true;
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-function writeStoredOpen(open: boolean): void {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, open ? "1" : "0");
-  } catch {
-    // Storage unavailable (private mode, disabled) — the choice still
-    // applies for the rest of this session.
-  }
-}
-
 /** Adapts `next/link`'s `Link` (which types `href` as `Route | UrlObject`) to
  *  `TextLink`'s router-agnostic `linkComponent` contract (`href: string`) —
  *  same seam as `AppShell`'s own `NavLink`. */
@@ -81,32 +41,15 @@ export interface PinnedRailProps {
 }
 
 /**
- * The rail's "PINNED" section (ZibbyCorp spec decisions 2/5) — any page pin,
- * in pin order, collapsible and capped at 260px (scrolls past that). Sits
- * above NEEDS YOU/RUNNING in `AppShell`'s rail, `flex: none` so it never
- * competes with them for height.
+ * The ActivityDock "Pinned" panel body — any page pin, in pin order, as a static list (no accordion; the dock panel itself is the container and scrolls).
  */
 export function PinnedRail({ currentHref }: PinnedRailProps) {
   const t = useTranslations("shell");
   const { pagePins, unpinPage } = usePagePins();
-  const [open, setOpen] = useState(true);
-
-  useIsomorphicLayoutEffect(() => {
-    const stored = readStoredOpen();
-    if (stored !== null) setOpen(stored);
-  }, []);
-
-  const toggle = () => {
-    setOpen((prev) => {
-      const next = !prev;
-      writeStoredOpen(next);
-      return next;
-    });
-  };
 
   return (
     <Rail
-      collapsible
+      count={pagePins.length}
       empty={
         <Card
           background="surface"
@@ -121,10 +64,7 @@ export function PinnedRail({ currentHref }: PinnedRailProps) {
           </CardContent>
         </Card>
       }
-      maxHeight="260px"
-      onToggle={toggle}
-      open={open}
-      title={t("pinnedTitle", { count: String(pagePins.length).padStart(2, "0") })}
+      title={t("dockPinned")}
     >
       {pagePins.length === 0
         ? undefined

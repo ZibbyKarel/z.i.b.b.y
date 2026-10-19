@@ -2331,7 +2331,6 @@
     "runningRestart": "Restart",
     "themeToDark": "Switch to dark mode",
     "themeToLight": "Switch to light mode",
-    "pinnedTitle": "Pinned · {count}",
     "pinnedEmpty": "Pin any page with the pin button in the sub-menu.",
     "pinnedKindPage": "Page",
     "pinnedUnpinAria": "Unpin {name}",
