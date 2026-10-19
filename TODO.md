@@ -14,6 +14,6 @@
 11. [x] stránka pull requests - u PRs která vyžadují nějakou akci chci mít tlačítko na rebase větve na target branch. To pustí rebase proces kdy, v případě, že jsou konflikty se automaticky vyřeší agentem. (Možná pro to budem potřebovat nějakého rebase agenta. Klidně ho vytvoř) (main@378283d3)
 12. [x] stránka pull requests - pokud sekce neobsahuje žádná PR tak sekci vůbec neukazujeme. Pokud nejsou v žádné sekci PRs tak zobrazíme něco jako EmptyContent (main@7faca6bb)
 13. [x] stránka pull requests - Musíme tady nějak nastínit pokud se jedná o frontu PRs pokud jedno PR se merguje do druhého PR a tak dále. (main@0a0af532)
-14. [ ] stránka issues - musíme tady také nějak nastínit pokud se jedná o frontu issues - pokud jedno issue blokuje jiné a tak dále. Udělej to stejně jako v bodu 13 u PRs.
+14. [x] stránka issues - musíme tady také nějak nastínit pokud se jedná o frontu issues - pokud jedno issue blokuje jiné a tak dále. Udělej to stejně jako v bodu 13 u PRs. (main@4b338ced)
 15. [ ] stránka pull requests - pokud zobrazím diff PR tak nechci abych scrolloval celou stránkou. Scrollovat by se měl jen ten diff. Zároveň pokud máme takto úzké karty Prs tak se tam nevejde text. Musíme kartu PR udělat responzivní a pokud je title dloouhý tak se bude zalamovat. Zároveň ale nesmí přesahovat do labelů v pravo nahoře
 16. [ ] detail tasku - pravý panel s detaily - názvy firmy, projektu, týmu, musejí být odkazy + nezobrazuj zdroj a epic (epic není entita u nás v systému)
