@@ -11,3 +11,7 @@
 8. [ ] Stránka PullRequestů - zobrazíme PR v jednom sloupci pod sebou na šířku 25% stránky. Klik na PR otevře na zbylých 75% šířky detail se změnamy v PR. Použij na to nějakou knihovnu jako třeba je https://www.npmjs.com/package/react-diff-view (zkus prohledat i alternativy)
 9. [ ] Všechny workflows, která dělají code-review by měla vracet seřazený seznam nálezů od nejkritičtějších po nejmíň kritické.
 10. [ ] U code-reviews musím mít na konci možnost zvolit jeslti chci dané PR schválit, jestli si chci vyžádat změny nebo jestli chci jen postnout komentář (aproove/require changes/comment). Defaultně bude vybráno require changes pokud budou nějaký nálezy. pokud nebudou nálezy tak defaultně bude aproove
+11. [ ] stránka pull requests - u PRs která vyžadují nějakou akci chci mít tlačítko na rebase větve na target branch. To pustí rebase proces kdy, v případě, že jsou konflikty se automaticky vyřeší agentem. (Možná pro to budem potřebovat nějakého rebase agenta. Klidně ho vytvoř)
+12. [ ] stránka pull requests - pokud sekce neobsahuje žádná PR tak sekci vůbec neukazujeme. Pokud nejsou v žádné sekci PRs tak zobrazíme něco jako EmptyContent
+13. [ ] stránka pull requests - Musíme tady nějak nastínit pokud se jedná o frontu PRs pokud jedno PR se merguje do druhého PR a tak dále.
+14. [ ] stránka issues - musíme tady také nějak nastínit pokud se jedná o frontu issues - pokud jedno issue blokuje jiné a tak dále. Udělej to stejně jako v bodu 13 u PRs.
