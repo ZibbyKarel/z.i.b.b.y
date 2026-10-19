@@ -2428,6 +2428,12 @@
         "title": "Approval",
         "highRisk": "High risk",
         "waited": "waited {waited}",
+        "reviewEvent": {
+          "label": "Review type",
+          "APPROVE": "Approve",
+          "REQUEST_CHANGES": "Request changes",
+          "COMMENT": "Comment"
+        },
         "metric": {
           "action": "Action",
           "severity": "Severity",

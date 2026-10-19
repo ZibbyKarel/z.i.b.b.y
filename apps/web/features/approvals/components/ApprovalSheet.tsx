@@ -10,12 +10,14 @@ import {
   Markdown,
   MetricStrip,
   Row,
+  SegmentedControl,
   Sheet,
   Stack,
   Tag,
   TextAreaField,
   Typography,
 } from "@zibby/design-system";
+import { type PrReviewEvent, PrReviewEventSchema } from "@zibby/contracts";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -56,6 +58,7 @@ function toDsHunks(hunks: { h: string; lines: [kind: "add" | "del" | "ctx", text
  * shown only as a `Tag` marker. A workflow stage checkpoint also offers "request
  * changes": a required note sends the step back to re-run instead of failing the run,
  * shown next to the phase's output so questions can be answered from the sheet.
+ * A PR-review sign-off (an approval carrying `suggestedReviewEvent`) adds a review-type picker above Approve (todo-10).
  */
 export function ApprovalSheet({
   approvalId,
@@ -75,6 +78,11 @@ export function ApprovalSheet({
   const [reason, setReason] = useState("");
   // Which note the footer is collecting: a deny reason or a change request.
   const [mode, setMode] = useState<"deny" | "revise" | null>(null);
+  // todo-10: the operator's review-type pick on a PR-review sign-off, keyed by approval
+  // id so switching approvals in the open sheet falls back to the new suggestion.
+  const [picked, setPicked] = useState<{ id: string; event: PrReviewEvent } | null>(null);
+  const reviewEvent =
+    approval && picked?.id === approval.id ? picked.event : approval?.suggestedReviewEvent;
 
   // Best-effort parent chain: most gated runs ARE (or belong to) a task, whose
   // `subtasks` — when present — are this approval's chain route. A non-task
@@ -282,26 +290,51 @@ export function ApprovalSheet({
       </Row>
     </Stack>
   ) : (
-    <Row gap="100">
-      <Button
-        block
-        intent="primary"
-        loading={approve.isPending}
-        onClick={() =>
-          approve.mutate({ params: { id: approval.id }, body: {} }, { onSuccess: close })
-        }
-      >
-        {t("approve")}
-      </Button>
-      {gateKey === "stage-approval" && (
-        <Button block intent="secondary" onClick={() => setMode("revise")}>
-          {t("revise")}
-        </Button>
+    <Stack gap="150">
+      {/* todo-10: a PR-review sign-off — the server's suggestion is preselected; nothing
+          but this approve posts APPROVE / REQUEST_CHANGES. */}
+      {reviewEvent && (
+        <Stack gap="50">
+          <Typography tracking="wider" type="labelSm" variant="tertiary">
+            {t("reviewEvent.label")}
+          </Typography>
+          <SegmentedControl
+            ariaLabel={t("reviewEvent.label")}
+            items={PrReviewEventSchema.options.map((value) => ({
+              value,
+              label: t(`reviewEvent.${value}`),
+            }))}
+            onChange={(value) =>
+              setPicked({ id: approval.id, event: PrReviewEventSchema.parse(value) })
+            }
+            value={reviewEvent}
+          />
+        </Stack>
       )}
-      <Button block intent="secondary" onClick={() => setMode("deny")}>
-        {t("deny")}
-      </Button>
-    </Row>
+      <Row gap="100">
+        <Button
+          block
+          intent="primary"
+          loading={approve.isPending}
+          onClick={() =>
+            approve.mutate(
+              { params: { id: approval.id }, body: reviewEvent ? { reviewEvent } : {} },
+              { onSuccess: close },
+            )
+          }
+        >
+          {t("approve")}
+        </Button>
+        {gateKey === "stage-approval" && (
+          <Button block intent="secondary" onClick={() => setMode("revise")}>
+            {t("revise")}
+          </Button>
+        )}
+        <Button block intent="secondary" onClick={() => setMode("deny")}>
+          {t("deny")}
+        </Button>
+      </Row>
+    </Stack>
   );
 
   return (

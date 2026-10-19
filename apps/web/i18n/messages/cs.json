@@ -2428,6 +2428,12 @@
         "title": "Schválení",
         "highRisk": "Vysoké riziko",
         "waited": "čeká {waited}",
+        "reviewEvent": {
+          "label": "Typ review",
+          "APPROVE": "Schválit",
+          "REQUEST_CHANGES": "Vyžádat změny",
+          "COMMENT": "Komentář"
+        },
         "metric": {
           "action": "Akce",
           "severity": "Závažnost",

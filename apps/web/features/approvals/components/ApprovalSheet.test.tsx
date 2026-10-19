@@ -1,5 +1,6 @@
 import { renderWithProviders as render, screen } from "../../../test/render";
 import userEvent from "@testing-library/user-event";
+import { SegmentedControlTestId } from "@zibby/design-system";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DashboardApproval } from "../approval";
 import { ApprovalSheet } from "./ApprovalSheet";
@@ -136,6 +137,60 @@ describe("ApprovalSheet (ZB-08 / D-014)", () => {
     hooks.checkpoint = "# Questions\n\nWhich months?";
     render(<ApprovalSheet approvalId="appr-1" onClose={onClose} />);
     expect(screen.getByTestId("checkpoint-output")).toHaveTextContent("Which months?");
+  });
+
+  const PR_REVIEW: DashboardApproval = {
+    ...APPROVAL,
+    id: "appr-pr",
+    kind: "pr-review",
+    action: "github.pr.review",
+    suggestedReviewEvent: "REQUEST_CHANGES",
+  };
+  const item = (event: string) => `${SegmentedControlTestId.Item}-${event}`;
+
+  it("todo-10: a non-PR approval shows no review-type picker and approves with an empty body", async () => {
+    render(<ApprovalSheet approvalId="appr-1" onClose={onClose} />);
+    expect(screen.queryByTestId(SegmentedControlTestId.Root)).toBeNull();
+  });
+
+  it("todo-10: a PR-review sign-off preselects the suggestion and approves with it", async () => {
+    hooks.approval = { data: PR_REVIEW, isPending: false, isError: false, refetch: vi.fn() };
+    render(<ApprovalSheet approvalId="appr-pr" onClose={onClose} />);
+    expect(screen.getByTestId(SegmentedControlTestId.Root)).toHaveAccessibleName("Typ review");
+    expect(screen.getByTestId(item("REQUEST_CHANGES"))).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByTestId(item("APPROVE"))).toHaveTextContent("Schválit");
+    expect(screen.getByTestId(item("COMMENT"))).toHaveTextContent("Komentář");
+    await userEvent.click(screen.getByRole("button", { name: "Schválit" }));
+    expect(hooks.approve).toHaveBeenCalledWith(
+      { params: { id: "appr-pr" }, body: { reviewEvent: "REQUEST_CHANGES" } },
+      { onSuccess: expect.any(Function) },
+    );
+  });
+
+  it("todo-10: the operator's pick overrides the suggestion", async () => {
+    hooks.approval = { data: PR_REVIEW, isPending: false, isError: false, refetch: vi.fn() };
+    render(<ApprovalSheet approvalId="appr-pr" onClose={onClose} />);
+    await userEvent.click(screen.getByTestId(item("COMMENT")));
+    expect(screen.getByTestId(item("COMMENT"))).toHaveAttribute("aria-checked", "true");
+    await userEvent.click(screen.getByRole("button", { name: "Schválit" }));
+    expect(hooks.approve).toHaveBeenCalledWith(
+      { params: { id: "appr-pr" }, body: { reviewEvent: "COMMENT" } },
+      { onSuccess: expect.any(Function) },
+    );
+  });
+
+  it("todo-10: switching to another approval drops the previous pick", async () => {
+    hooks.approval = { data: PR_REVIEW, isPending: false, isError: false, refetch: vi.fn() };
+    const { rerender } = render(<ApprovalSheet approvalId="appr-pr" onClose={onClose} />);
+    await userEvent.click(screen.getByTestId(item("COMMENT")));
+    hooks.approval = {
+      data: { ...PR_REVIEW, id: "appr-pr2", suggestedReviewEvent: "APPROVE" },
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    };
+    rerender(<ApprovalSheet approvalId="appr-pr2" onClose={onClose} />);
+    expect(screen.getByTestId(item("APPROVE"))).toHaveAttribute("aria-checked", "true");
   });
 
   it("request changes on a stage checkpoint requires a note, then revises", async () => {
