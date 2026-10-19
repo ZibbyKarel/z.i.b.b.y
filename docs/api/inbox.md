@@ -178,3 +178,5 @@ pending (Tier-3, risk high). The approval runner pushes only while the rebase is
 `awaiting-approval`, via `WorkspaceService.pushRebased` (`--force-with-lease`, see
 `./workspace.md`) → `pushed` or `failed` with git's reason. Reject → `discarded`; an
 interrupted run → `failed`.
+
+`GET /api/inbox/prs` rows carry `behind: true` (only when GitHub says so) and `rebase { taskId, state }` (latest rebase task per PR; a `running` one whose task/run died reads `failed`).
