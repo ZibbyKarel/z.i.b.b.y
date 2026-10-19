@@ -61,6 +61,22 @@ describe("InboxPrDiffService", () => {
     expect(body.slice(diff.length).startsWith("diff --git")).toBe(true);
   });
 
+  it("does not cut at a diff --git text inside hunk content", async () => {
+    let body = "";
+    for (let i = 0; body.length < MAX_DIFF_BYTES - 5000; i++) {
+      body += `diff --git a/f${i} b/f${i}\n+line\n`;
+    }
+    const realCut = body.length;
+    body += "diff --git a/last b/last\n+diff --git a/fake b/fake\n";
+    while (body.length <= MAX_DIFF_BYTES + 1000) body += "+pad\n";
+    fetchImpl.mockResolvedValue(new Response(body));
+    const { diff, truncated } = await service.getDiff("acme", 7);
+    expect(truncated).toBe(true);
+    expect(diff.length).toBe(realCut);
+    expect(body.slice(diff.length).startsWith("diff --git a/last")).toBe(true);
+    expect(diff.endsWith("\n")).toBe(true);
+  });
+
   it.each([404, 500])("throws on GitHub %i", async (status) => {
     fetchImpl.mockResolvedValue(new Response("", { status }));
     await expect(service.getDiff("acme", 7)).rejects.toThrow(String(status));
