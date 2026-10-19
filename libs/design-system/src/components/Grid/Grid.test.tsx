@@ -33,6 +33,13 @@ describe("Grid", () => {
     );
   });
 
+  it("switches to the narrow left-sidebar template (25/75)", () => {
+    render(<Grid sidebar="left-narrow" />);
+    expect(screen.getByTestId(GridTestId.Root).className).toContain(
+      "lg:grid-cols-[minmax(0,25%)_minmax(0,1fr)]",
+    );
+  });
+
   it("centres and constrains width", () => {
     render(<Grid center maxWidth="1400px" />);
     const el = screen.getByTestId(GridTestId.Root);

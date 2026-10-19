@@ -55,9 +55,10 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLElement>, "className"
    * "left" = 320px list + content, "left-wide" = the same split proportionally
    * (~33% list + content) for a rail whose rows carry real prose — a fixed 320px
    * truncates them regardless of how much room the viewport actually has.
+   * "left-narrow" = 25% list + 75% detail (master–detail screens).
    * Single column below the lg breakpoint.
    */
-  sidebar?: "left" | "left-wide" | "right";
+  sidebar?: "left" | "left-wide" | "left-narrow" | "right";
   gap?: Spacing;
   align?: GridAlign;
   maxWidth?: string;
@@ -117,6 +118,7 @@ export function Grid({
         sidebar === "right" && "grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px]",
         sidebar === "left" && "grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)]",
         sidebar === "left-wide" && "grid-cols-1 lg:grid-cols-[minmax(0,33%)_minmax(0,1fr)]",
+        sidebar === "left-narrow" && "grid-cols-1 lg:grid-cols-[minmax(0,25%)_minmax(0,1fr)]",
         !sidebar && [baseCols[cols], sm && smCols[sm], md && mdCols[md], lg && lgCols[lg]],
         align && alignClass[align],
       )}
