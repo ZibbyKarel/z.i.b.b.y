@@ -14,7 +14,7 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { type EpicGroup, findPr, linkedPrOf, newCount, pad2 } from "../inbox";
+import { type EpicGroup, type IssueChain, findPr, linkedPrOf, newCount, pad2 } from "../inbox";
 import { IssueRow } from "./IssueRow";
 import { ExternalAnchor } from "./links";
 
@@ -39,6 +39,8 @@ export interface EpicAccordionProps {
   isProcessing: (item: InboxRoadmapItem) => boolean;
   onProcess: (item: InboxRoadmapItem) => void;
   onToggleHidden: (item: InboxRoadmapItem) => void;
+  /** todo-14 — blocking chain per item, resolved from the unfiltered list. */
+  chainFor: (item: InboxRoadmapItem) => IssueChain | undefined;
 }
 
 function EpicHeader({ epic, items }: { epic: InboxEpic | null; items: InboxRoadmapItem[] }) {
@@ -97,6 +99,7 @@ export function EpicAccordion({
   isProcessing,
   onProcess,
   onToggleHidden,
+  chainFor,
 }: EpicAccordionProps) {
   const t = useTranslations("inboxPage");
   return (
@@ -127,6 +130,7 @@ export function EpicAccordion({
                 {children.map((item) => (
                   <IssueRow
                     nested
+                    chain={chainFor(item)}
                     item={item}
                     key={item.id}
                     now={now}

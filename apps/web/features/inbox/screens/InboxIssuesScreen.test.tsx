@@ -1,6 +1,8 @@
 import type { InboxItemsResponse, InboxRoadmapItem } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, renderWithProviders, screen } from "../../../test/render";
+import { fireEvent, renderWithProviders, screen, within } from "../../../test/render";
+import { ChainLinksTestId } from "../components/ChainLinks";
+import { IssueRowTestId } from "../components/IssueRow";
 import { InboxIssuesScreen, InboxIssuesScreenTestId } from "./InboxIssuesScreen";
 
 const { hooks } = vi.hoisted(() => ({
@@ -90,5 +92,70 @@ describe("InboxIssuesScreen", () => {
     renderWithProviders(<InboxIssuesScreen />);
     fireEvent.click(screen.getByTestId(InboxIssuesScreenTestId.GroupByEpic));
     expect(screen.getByText("Bez epiku")).toBeInTheDocument();
+  });
+});
+
+describe("InboxIssuesScreen blocking chains", () => {
+  const blocker = () =>
+    item({
+      id: "a",
+      name: "Blocker",
+      source: { kind: "jira", integrationId: "jira-1", externalId: "7", externalKey: "API-7" },
+    });
+  const blocked = () =>
+    item({
+      id: "b",
+      name: "Blocked",
+      dependsOn: ["a"],
+      source: { kind: "jira", integrationId: "jira-1", externalId: "9", externalKey: "API-9" },
+    });
+
+  it("shows each row's place in the queue, linking to the other issue", () => {
+    setData([blocker(), blocked()]);
+    renderWithProviders(<InboxIssuesScreen />);
+
+    const blockedRow = screen.getByTestId(`${IssueRowTestId.Root}-b`);
+    const on = within(blockedRow).getByTestId(`${ChainLinksTestId.On}-a`);
+    expect(on).toHaveAttribute("href", "/dashboard/inbox/issues/api/a");
+    expect(on).toHaveTextContent("API-7");
+    expect(on).toHaveAccessibleName(/API-7.*Blocker/);
+
+    const blockerRow = screen.getByTestId(`${IssueRowTestId.Root}-a`);
+    const by = within(blockerRow).getByTestId(`${ChainLinksTestId.By}-b`);
+    expect(by).toHaveAttribute("href", "/dashboard/inbox/issues/api/b");
+    expect(by).toHaveTextContent("API-9");
+    expect(within(blockerRow).queryByTestId(`${ChainLinksTestId.On}-b`)).toBeNull();
+  });
+
+  it("links to a blocker hidden by the done filter", () => {
+    setData([{ ...blocker(), lifecycle: "done" }, blocked()]);
+    renderWithProviders(<InboxIssuesScreen />);
+    expect(screen.queryByTestId(`${IssueRowTestId.Root}-a`)).toBeNull();
+    expect(
+      within(screen.getByTestId(`${IssueRowTestId.Root}-b`)).getByTestId(
+        `${ChainLinksTestId.On}-a`,
+      ),
+    ).toHaveAttribute("href", "/dashboard/inbox/issues/api/a");
+  });
+
+  it("shows the chain inside an epic group", () => {
+    setData([blocker(), blocked()]);
+    renderWithProviders(<InboxIssuesScreen />);
+    fireEvent.click(screen.getByTestId(InboxIssuesScreenTestId.GroupByEpic));
+    // A search force-opens every group that still has a match.
+    fireEvent.change(screen.getByTestId(InboxIssuesScreenTestId.Search), {
+      target: { value: "blocked" },
+    });
+    expect(
+      within(screen.getByTestId(`${IssueRowTestId.Root}-b`)).getByTestId(
+        `${ChainLinksTestId.On}-a`,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("an unblocked issue has no chain line", () => {
+    setData([item({ id: "a", dependsOn: ["missing"] })]);
+    renderWithProviders(<InboxIssuesScreen />);
+    expect(screen.queryByTestId(ChainLinksTestId.Root)).toBeNull();
   });
 });

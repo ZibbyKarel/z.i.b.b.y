@@ -1,5 +1,6 @@
 "use client";
 
+import type { InboxRoadmapItem } from "@zibby/contracts";
 import {
   Button,
   Container,
@@ -18,7 +19,16 @@ import { useTeamsQuery } from "../../teams";
 import { EpicAccordion } from "../components/EpicAccordion";
 import { InboxPage } from "../components/InboxPage";
 import { IssueRow } from "../components/IssueRow";
-import { findPr, groupByEpic, hiddenCount, linkedPrOf, pad2, visibleItems } from "../inbox";
+import {
+  chainKey,
+  findPr,
+  groupByEpic,
+  hiddenCount,
+  issueChains,
+  linkedPrOf,
+  pad2,
+  visibleItems,
+} from "../inbox";
 import { useInboxItemsQuery, useInboxPrsQuery } from "../queries";
 import { useInboxFilters } from "../useInboxFilters";
 import { useInboxItemActions } from "../useInboxItemActions";
@@ -78,6 +88,9 @@ export function InboxIssuesScreen() {
   const epics = useMemo(() => itemsQuery.data?.epics ?? [], [itemsQuery.data]);
   const prs = useMemo(() => prsQuery.data?.prs ?? [], [prsQuery.data]);
   const teamNames = useMemo(() => new Map((teams ?? []).map((x) => [x.id, x.name])), [teams]);
+  // Unfiltered on purpose: a chain link may point at an issue the filters hide (it still opens).
+  const chains = useMemo(() => issueChains(items), [items]);
+  const chainFor = (item: InboxRoadmapItem) => chains.get(chainKey(item));
 
   const list = useMemo(
     () => visibleItems(items, { filters, search, showDone, showHidden }),
@@ -169,6 +182,7 @@ export function InboxIssuesScreen() {
           />
         ) : groupByEpicOn ? (
           <EpicAccordion
+            chainFor={chainFor}
             forceOpen={trimmed.length > 0}
             groups={groups}
             isProcessing={actions.isProcessing}
@@ -184,6 +198,7 @@ export function InboxIssuesScreen() {
           <Stack gap="50">
             {list.map((item) => (
               <IssueRow
+                chain={chainFor(item)}
                 item={item}
                 key={item.id}
                 now={now}
