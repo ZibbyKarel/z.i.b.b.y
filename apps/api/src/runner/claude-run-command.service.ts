@@ -255,7 +255,8 @@ interface HookMatcherGroup {
  * logged, not blocking), but an operator's own `ask`/`deny` gate-rules.json rule on
  * `action: agent.delegate` takes effect immediately, same as any other action.
  *
- * `Write|Edit` feed only the hook's ownership ledger: a `Write` that creates a new
+ * `Read|Grep|Glob` are matched only so the hook can deny the operator token's directory
+ * (anything else exits 0 untouched). `Write|Edit` feed only the hook's ownership ledger: a `Write` that creates a new
  * file records it as the agent's own (so a later `sed -i`/`rm` on it isn't gated),
  * and either tool aimed at the gate's coordination files is denied. Neither raises
  * an intent. `mcp__zibby-run__ask_operator` always raises `operator.question` (a
@@ -264,7 +265,7 @@ interface HookMatcherGroup {
 function approvalGroup(): HookMatcherGroup {
   const command = `${JSON.stringify(process.execPath)} ${JSON.stringify(APPROVAL_HOOK)} ${GATE_DEADLINE_S}`;
   return {
-    matcher: "Bash|Task|Write|Edit|mcp__zibby-run__ask_operator",
+    matcher: "Bash|Task|Read|Grep|Glob|Write|Edit|mcp__zibby-run__ask_operator",
     hooks: [{ type: "command", command, timeout: GATE_DEADLINE_S + HOOK_KILL_MARGIN_S }],
   };
 }

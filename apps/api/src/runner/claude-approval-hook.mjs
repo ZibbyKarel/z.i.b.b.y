@@ -1143,15 +1143,26 @@ export function classifyEvent(input) {
 }
 
 // Operator-only surface (Laws 1 & 4): deciding an approval is the operator's alone.
-// ponytail: substring match, not a parser — catches every HTTP client by URL path;
-// an agent that assembles the path at runtime (string concat) still hits the API
-// guard's 401, which is the real lock. This is the early, explainable denial.
-const APPROVAL_DECIDE = /\/api\/approvals\/[^\s/'"]+\/(approve|reject|revise|answer)\b/;
-const OPERATOR_SECRET = /operator-token|ZIBBY_OPERATOR_TOKEN/;
+// ponytail: substring/path match, not a parser — catches every HTTP client by URL path
+// and every tool by the token directory; an agent that assembles the path at runtime
+// (string concat) still hits the API guard's 401, which is the real lock. The token
+// env var is stripped from agent processes (not matched here), so repo code that
+// merely mentions "operator-token" stays greppable. This is the early, explainable denial.
+const APPROVAL_DECIDE = /\/api\/approvals\/[^\s/'"]+\/(approve|reject|revise|answer)\b/i;
+const OPERATOR_SECRET = /\.config\/zibby(\/|\b)/i;
 export function touchesOperatorOnly(command) {
   const text = String(command ?? "");
   return APPROVAL_DECIDE.test(text) || OPERATOR_SECRET.test(text);
 }
+
+const OPERATOR_ONLY_FIELDS = {
+  Bash: ["command"],
+  Read: ["file_path", "path", "pattern"],
+  Grep: ["file_path", "path", "pattern"],
+  Glob: ["file_path", "path", "pattern"],
+  Write: ["file_path", "content"],
+  Edit: ["file_path", "new_string"],
+};
 
 /** Emit a PreToolUse decision and exit. `allow` overrides dontAsk; `deny` blocks. */
 function decide(permissionDecision, reason) {
@@ -1195,7 +1206,8 @@ function main() {
     process.exit(0);
   }
 
-  if (input?.tool_name === "Bash" && touchesOperatorOnly(input?.tool_input?.command)) {
+  const fields = OPERATOR_ONLY_FIELDS[input?.tool_name] ?? [];
+  if (fields.some((f) => touchesOperatorOnly(input?.tool_input?.[f]))) {
     decide(
       "deny",
       "Approvals are decided by the operator only — agents cannot call the approvals API or read the operator token.",

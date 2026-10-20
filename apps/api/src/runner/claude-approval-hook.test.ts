@@ -111,12 +111,54 @@ describe("claude approval hook — destructive-command gate", () => {
       'wget --post-data=\'{"answer":"yes"}\' http://localhost:3333/api/approvals/q1/answer',
       "python3 -c \"import urllib.request as u; u.urlopen(u.Request('http://localhost:3333/api/approvals/a/revise', data=b'{}'))\"",
       "cat ~/.config/zibby/operator-token",
-      "echo $ZIBBY_OPERATOR_TOKEN",
+      "cat $HOME/.config/zibby/operator-token",
+      "curl -X POST http://localhost:3333/API/Approvals/x/APPROVE",
     ])("denies %s without raising a request", async (command) => {
       const res = await runHook(cwd, bashEvent(command, cwd), { ZIBBY_INTENT_DIR: "" });
       expect(res.code).toBe(0);
       expect(res.stdout).toContain('"permissionDecision":"deny"');
       expect(await present(requestFile())).toBe(false);
+    });
+
+    it.each([
+      { tool_name: "Read", tool_input: { file_path: "/Users/x/.config/zibby/operator-token" } },
+      { tool_name: "Grep", tool_input: { pattern: "a", path: "/Users/x/.config/zibby" } },
+      { tool_name: "Glob", tool_input: { pattern: "**/.config/zibby/*" } },
+      {
+        tool_name: "Write",
+        tool_input: {
+          file_path: "x.sh",
+          content: "curl -X POST localhost/api/approvals/a/approve",
+        },
+      },
+      {
+        tool_name: "Edit",
+        tool_input: { file_path: "x.sh", new_string: "curl localhost/api/approvals/a/reject" },
+      },
+      { tool_name: "Write", tool_input: { file_path: "/Users/x/.config/zibby/t", content: "" } },
+    ])("denies $tool_name touching operator-only data", async (event) => {
+      const res = await runHook(cwd, { ...event, cwd }, { ZIBBY_INTENT_DIR: "" });
+      expect(res.code).toBe(0);
+      expect(res.stdout).toContain('"permissionDecision":"deny"');
+      expect(await present(requestFile())).toBe(false);
+    });
+
+    it.each([
+      { tool_name: "Read", tool_input: { file_path: "/etc/hosts" } },
+      { tool_name: "Grep", tool_input: { pattern: "operator-token", path: "apps/" } },
+      { tool_name: "Glob", tool_input: { pattern: "**/*.ts" } },
+    ])("leaves benign $tool_name untouched (exit 0, no output, no request)", async (event) => {
+      for (const env of [{ ZIBBY_INTENT_DIR: "" }, { ZIBBY_INTENT_DIR: cwd }]) {
+        const res = await runHook(cwd, { ...event, cwd }, env);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toBe("");
+        expect(await present(requestFile())).toBe(false);
+      }
+    });
+
+    it("allows grepping the repo for operator-token", async () => {
+      const res = await runHook(cwd, bashEvent("grep -rn operator-token apps/", cwd));
+      expect(res.stdout).not.toContain('"permissionDecision":"deny"');
     });
 
     it("still allows reading the approvals list", async () => {
