@@ -201,6 +201,23 @@ describe("PrActions address / rebase", () => {
     expect(screen.getByTestId(PrActionsTestId.Address)).toBeInTheDocument();
   });
 
+  it("comment-only review (not changes-requested) with open threads shows Address", () => {
+    renderWithProviders(
+      <PrActions
+        baseLabel="main"
+        pr={pr(7, { blocker: "awaiting-review", headRef: "feat", unresolvedThreads: 3 })}
+      />,
+    );
+    expect(screen.getByTestId(PrActionsTestId.Address)).toBeInTheDocument();
+  });
+
+  it("unknown thread count outside changes-requested hides Address", () => {
+    renderWithProviders(
+      <PrActions baseLabel="main" pr={pr(7, { blocker: "awaiting-review", headRef: "feat" })} />,
+    );
+    expect(screen.queryByTestId(PrActionsTestId.Address)).toBeNull();
+  });
+
   it("0 unresolved threads + behind shows Rebase but no Address", () => {
     renderWithProviders(
       <PrActions

@@ -400,7 +400,7 @@ describe("InboxService.listPrs", () => {
     expect(byNumber[3]?.codeReview).toBeUndefined();
   });
 
-  it("counts unresolved review threads only on my changes-requested PRs", async () => {
+  it("counts unresolved review threads only on my PRs", async () => {
     const { service, calls, gqlInits } = build([], { changesRequested: true });
     const byNumber = Object.fromEntries((await service.listPrs()).prs.map((p) => [p.number, p]));
     expect(calls.filter((c) => c === "graphql")).toHaveLength(1);
@@ -440,9 +440,11 @@ describe("InboxService.listPrs", () => {
     expect(pr3?.unresolvedThreads).toBeUndefined();
   });
 
-  it("does not read threads when my PR is not changes-requested", async () => {
+  it("reads threads on my PR even without changes-requested (comment-only reviews)", async () => {
     const { service, calls } = build();
-    await service.listPrs();
-    expect(calls.filter((c) => c === "graphql")).toHaveLength(0);
+    const pr3 = (await service.listPrs()).prs.find((p) => p.number === 3);
+    expect(calls.filter((c) => c === "graphql")).toHaveLength(1);
+    expect(pr3?.review).toBe("approved");
+    expect(pr3?.unresolvedThreads).toBe(1);
   });
 });

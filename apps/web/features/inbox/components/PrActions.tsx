@@ -54,12 +54,13 @@ type Run =
   | { kind: "address"; taskId: string; state: PrAddressCommentsState };
 
 const isReview = (pr: InboxPr) => pr.bucket === "to-review" && !pr.draft;
+/** Colleagues may review with comments only, so open threads count, not just CHANGES_REQUESTED. */
+const hasThreadsToAddress = (pr: InboxPr) =>
+  pr.unresolvedThreads === undefined
+    ? pr.blocker === "changes-requested" // unknown count: only a changes-requested PR still offers it
+    : pr.unresolvedThreads > 0;
 const isFix = (pr: InboxPr) =>
-  !isReview(pr) &&
-  pr.bucket === "mine" &&
-  pr.blocker === "changes-requested" &&
-  pr.headRef !== undefined &&
-  pr.unresolvedThreads !== 0; // todo-21: nothing left to address (undefined = unknown → offer)
+  !isReview(pr) && pr.bucket === "mine" && pr.headRef !== undefined && hasThreadsToAddress(pr);
 /** todo-11 — offered only when conflicting or behind, never as a fallback. */
 const isRebase = (pr: InboxPr) =>
   !isReview(pr) &&

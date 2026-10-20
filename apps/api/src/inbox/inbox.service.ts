@@ -405,7 +405,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
         const review = reviewState(Array.isArray(reviews) ? reviews : []);
         const mergeable = pull.mergeable ?? null;
         const unresolvedThreads =
-          bucket.bucket === "mine" && review === "changes-requested"
+          bucket.bucket === "mine"
             ? await this.unresolvedThreads(token, repo, number).catch(() => undefined)
             : undefined;
         return {

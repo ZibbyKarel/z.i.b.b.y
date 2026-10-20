@@ -195,10 +195,10 @@ closed PR / head is the base or default branch / an address-comments run of the 
 `running` or `awaiting-approval` (latest such task, not dead). The PR checks are shared with the
 rebase flow (`readPushablePr` in `inbox-rebase.service.ts`, refusals are `PrRefusedError`).
 
-The web offers the button only while `unresolvedThreads !== 0` (unknown, i.e. omitted, is still
-offered). A CHANGES_REQUESTED review whose feedback lives only in the review summary (no inline
-threads) reads 0 and hides the button; this is accepted per spec todo-21 (hide even with
-CHANGES_REQUESTED).
+The web offers the button on my PRs with `unresolvedThreads > 0`, whatever the review state:
+colleagues may review with comments only (no CHANGES_REQUESTED). When the count is unknown
+(omitted, the GraphQL read failed) it is offered only for a changes-requested PR. A review whose
+feedback lives only in the review summary (no inline threads) reads 0 and hides the button.
 
 `InboxAddressCommentsService.start` (`apps/api/src/inbox/inbox-address-comments.service.ts`)
 creates a task with the explicit `pr-address-comments` workflow target and `trustedProjectId`,
@@ -281,4 +281,4 @@ interrupted run → `failed`.
 
 `GET /api/inbox/prs` rows carry `behind: true` (only when GitHub says so) and `rebase { taskId, state }` (latest rebase task per PR; a `running` one whose task/run died reads `failed`).
 They also carry `headRef` / `baseRef` (todo-13, from the same `GET /pulls/<n>`; `headRef` is omitted for a fork head) — the web joins them to show stacked PRs (B's `baseRef` = A's `headRef`, same repo).
-Rows of my own PRs with "changes requested" also carry `unresolvedThreads` (todo-21; GraphQL `reviewThreads.isResolved`, first 100 threads, omitted when the read fails or the PR isn't `mine` + changes-requested). The web hides the address-comments button when it is `0`.
+Rows of my own PRs (`mine`) also carry `unresolvedThreads` (todo-21; GraphQL `reviewThreads.isResolved`, first 100 threads, omitted when the read fails or the PR isn't `mine`). The web offers the address-comments button when it is `> 0`.
