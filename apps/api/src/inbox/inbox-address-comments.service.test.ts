@@ -5,6 +5,7 @@ import type { Integration, Project } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NoGithubLinkError, ProjectNotFoundError } from "../projects/projects.errors";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
+import { threadsMarkedDone } from "../tasks/task-output.service";
 import { InboxAddressCommentsService } from "./inbox-address-comments.service";
 import { PrRefusedError } from "./inbox-rebase.service";
 import { ReviewRepoMismatchError } from "./inbox-review.service";
@@ -27,6 +28,7 @@ describe("InboxAddressCommentsService", () => {
   let graphql: string[];
   let threads: { id: string; isResolved: boolean }[];
   let mutationStatus: number;
+  let resolveStatus: number;
   let rest: { url: string; body: string }[];
   let reviews: { author: { __typename: string; login: string }; state: string }[];
   let requestStatus: number;
@@ -71,6 +73,7 @@ describe("InboxAddressCommentsService", () => {
       { id: "PRRT_r", isResolved: true },
     ];
     mutationStatus = 200;
+    resolveStatus = 200;
     rest = [];
     reviews = [
       { author: { __typename: "User", login: "alice" }, state: "CHANGES_REQUESTED" },
@@ -92,7 +95,7 @@ describe("InboxAddressCommentsService", () => {
         if (body.includes("resolveReviewThread")) {
           return new Response(
             JSON.stringify({ data: { resolveReviewThread: { thread: { id: "x" } } } }),
-            { status: mutationStatus },
+            { status: mutationStatus === 200 ? resolveStatus : mutationStatus },
           );
         }
         if (body.includes("latestOpinionatedReviews")) {
@@ -285,6 +288,12 @@ describe("InboxAddressCommentsService", () => {
         c
           ? {
               ...c,
+              report: [
+                "Addressed: partial",
+                "thread: PRRT_a src/a.ts:1 rename it — done in bbbbbbb",
+                "thread: PRRT_b src/b.ts:2 rewrite it — skipped: out of scope",
+                "thread: PRRT_r src/r.ts:3 typo — done in bbbbbbb",
+              ].join("\n"),
               replies: [
                 { threadId: "PRRT_a", body: "Good catch, fixed in bbbbbbb.", resolve: true },
                 { threadId: "PRRT_b", body: "Skipped, out of scope." },
@@ -325,6 +334,48 @@ describe("InboxAddressCommentsService", () => {
         reviewersRequested: ["alice"],
       });
       expect(fix?.repliesNote).toMatch(/1 skipped/);
+    });
+
+    it("never resolves a thread the address report did not mark done, whatever the flag says", async () => {
+      const taskId = await parkedWithReplies();
+      await storage.setPrAddressComments(taskId, (c) =>
+        c
+          ? {
+              ...c,
+              replies: (c.replies ?? []).map((x) => ({ ...x, resolve: true })),
+            }
+          : c,
+      );
+      await service.push(taskId);
+      const resolves = graphql.filter((b) => b.includes("resolveReviewThread"));
+      expect(resolves).toHaveLength(1);
+      expect(resolves[0]).toContain("PRRT_a");
+    });
+
+    it("a failed resolve is noted, push stays pushed, review still re-requested", async () => {
+      resolveStatus = 502;
+      const taskId = await parkedWithReplies();
+      await service.push(taskId);
+      const fix = (await storage.get(taskId)).prAddressComments;
+      expect(fix).toMatchObject({
+        state: "pushed",
+        replied: 2,
+        resolved: 0,
+        reviewersRequested: ["alice"],
+      });
+      expect(fix?.followUpNote).toMatch(/resolve PRRT_a: .*502/);
+      expect(rest).toHaveLength(1);
+    });
+
+    it("no GitHub token at follow-up time is noted, push stays pushed", async () => {
+      const taskId = await parkedWithReplies();
+      integrations = [];
+      await service.push(taskId);
+      const fix = (await storage.get(taskId)).prAddressComments;
+      expect(fix).toMatchObject({ state: "pushed", replied: 0 });
+      expect(fix?.followUpNote).toMatch(/no GitHub token/);
+      expect(graphql).toEqual([]);
+      expect(rest).toEqual([]);
     });
 
     it("a failed push does nothing on GitHub", async () => {
@@ -377,5 +428,31 @@ describe("InboxAddressCommentsService", () => {
       expect(graphql.some((b) => b.includes("resolveReviewThread"))).toBe(false);
       expect((await storage.get(taskId)).prAddressComments).toMatchObject({ replied: 0 });
     });
+  });
+});
+
+describe("threadsMarkedDone", () => {
+  it("collects only threads whose block says done in, up to the next thread line or the end", () => {
+    const report = [
+      "Addressed: partial",
+      "thread: PRRT_a",
+      "src/a.ts:1 rename it",
+      "done in abc1234",
+      "thread: PRRT_b src/b.ts:2 — skipped: disagree",
+      "thread: `PRRT_c` src/c.ts:3 — skipped: out of scope",
+      "thread: PRRT_last src/d.ts:4",
+      "done in def5678",
+      "Checks: typecheck pass",
+    ].join("\n");
+    const done = threadsMarkedDone(report);
+    expect(done.has("PRRT_a")).toBe(true);
+    expect(done.has("PRRT_b")).toBe(false); // skipped
+    expect(done.has("PRRT_c")).toBe(false); // skipped, id in backticks
+    expect(done.has("PRRT_last")).toBe(true); // last block runs to the end
+    expect(done.has("PRRT_missing")).toBe(false); // not in the report at all
+  });
+
+  it("is empty without a report", () => {
+    expect(threadsMarkedDone(undefined).size).toBe(0);
   });
 });

@@ -57,6 +57,21 @@ export function isAutoPushAddressComments(report: string): boolean {
 }
 
 /**
+ * Thread ids the parked `address` report marks fixed: the text from a `thread: <id>` line up to
+ * the next `thread:` (or the end) contains `done in`. The reply agent's `resolve` flag alone is
+ * never enough to resolve a thread.
+ */
+export function threadsMarkedDone(report: string | undefined): Set<string> {
+  const done = new Set<string>();
+  const matches = [...(report ?? "").matchAll(/thread:\s*`?([A-Za-z0-9_-]+)`?/g)];
+  matches.forEach((m, i) => {
+    const block = (report ?? "").slice(m.index, matches[i + 1]?.index);
+    if (m[1] && /done in/i.test(block)) done.add(m[1]);
+  });
+  return done;
+}
+
+/**
  * PR inbox redesign — `github-commenter`'s reply file → valid, de-duplicated replies (≤ 50).
  * Anything malformed is dropped, never repaired: agent output is data. Which threads may
  * really be answered is decided again at post time against GitHub.
@@ -399,9 +414,17 @@ export class TaskOutputService implements OnModuleInit {
     if (facts.sha === fix.headSha) return fail("no new commits");
     const autoPush = isAutoPushAddressComments(report);
     const replies = parseThreadReplies(rawReplies);
+    const done = threadsMarkedDone(report);
     const repliesBlock = replies.length
-      ? `\n\n## Replies ZIBBY will post after the push\n\n${replies.map((r) => `${r.threadId}: ${r.body}`).join("\n")}`
+      ? `\n\n## Replies ZIBBY will post after the push\n\n${replies
+          .map(
+            (r) =>
+              `${r.threadId}${r.resolve && done.has(r.threadId) ? " (resolve)" : ""}: ${r.body}`,
+          )
+          .join("\n")}`
       : "";
+    const resolving = replies.some((r) => r.resolve && done.has(r.threadId));
+    const followUpBlock = `${repliesBlock}\n\nThen ${resolving ? "resolves the threads marked (resolve) and " : ""}re-requests review from everyone whose latest review is "Changes requested".`;
     const approval = await this.approvals.requestApproval({
       runId: task.id,
       kind: "pr-address-comments",
@@ -409,7 +432,7 @@ export class TaskOutputService implements OnModuleInit {
       action: "git.push",
       detail: `Push review fixes onto ${fix.head} — ${ref}${
         autoPush ? " (all comments addressed, checks green — authorised by the click)" : ""
-      }\n\n${report}${repliesBlock}\n\n## Verified by ZIBBY\n\nHEAD ${facts.sha}\n\ngit diff --stat ${fix.headSha} HEAD:\n${facts.stat || "(no changes)"}`,
+      }\n\n${report}${followUpBlock}\n\n## Verified by ZIBBY\n\nHEAD ${facts.sha}\n\ngit diff --stat ${fix.headSha} HEAD:\n${facts.stat || "(no changes)"}`,
       risk: autoPush ? "medium" : "high",
       sourceUrl: fix.url,
     });
@@ -450,6 +473,7 @@ export class TaskOutputService implements OnModuleInit {
     if (after?.reviewersRequested?.length) {
       parts.push(`review znovu vyžádáno od ${after.reviewersRequested.join(", ")}`);
     }
+    if (after?.followUpNote) parts.push(`follow-up: ${after.followUpNote.slice(0, 120)}`);
     return { summary: `Review komentáře ${ref}: ${parts.join(", ")}` };
   }
 

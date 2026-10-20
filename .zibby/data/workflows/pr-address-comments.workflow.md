@@ -38,12 +38,15 @@ od těch, kdo požadovali změny. Agenti nic nepushují, nic nepostují a vlákn
 ## Push a odpovědi
 
 Push dělá ZIBBY, **jen fast-forward, nikdy force** (`git push origin <sha>:refs/heads/<head>`),
-a teprve po úspěšném pushi postne odpovědi do vláken (jen do nevyřešených vláken tohoto PR):
+a teprve po úspěšném pushi postne odpovědi do vláken (jen do nevyřešených vláken tohoto PR),
+resolvne opravená vlákna (`done in` v reportu) a znovu vyžádá review od těch, kdo požadovali
+změny:
 
-- **`Addressed: all`** (vše opraveno, checky zelené) — pushne a odpoví hned, rozhodnutím bylo
-  kliknutí (Tier 2, výsledek je v outcome úkolu a v briefingu).
+- **`Addressed: all`** (vše opraveno, checky zelené) — pushne a všechno výše udělá hned,
+  rozhodnutím bylo kliknutí (Tier 2, výsledek je v outcome úkolu a v briefingu).
 - **Cokoli jiného s novými commity** (`partial`, `checks failed`) — push i odpovědi čekají
-  ve frontě schválení (Tier 3) s reportem. **Schválit** pushne a odpoví, **Zamítnout** zahodí.
+  ve frontě schválení (Tier 3) s reportem. **Schválit** pushne, odpoví, resolvne opravená
+  vlákna a znovu vyžádá review, **Zamítnout** zahodí.
 - **Žádné nové commity** — `failed`, nic se nepushne ani nepostne.
 
 ## Obsazení

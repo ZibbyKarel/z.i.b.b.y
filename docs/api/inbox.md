@@ -192,14 +192,16 @@ ungated phases:
    per thread (`done in <sha>` or `skipped: <reason>`). It never pushes.
 2. `reply` (`github-commenter`, the existing operator-voice agent, reused — no new prompt; it
    also holds a `dev` seat because the runner staffs phases from the workflow's department):
-   writes `zibby-pr-replies.json` = `[{ threadId, body, resolve? }]` (`resolve: true` only on fixed threads). It never posts.
+   writes `zibby-pr-replies.json` = `[{ threadId, body, resolve? }]` (`resolve: true` only on
+   fixed threads). It never posts.
 
 The PR title, description, diff and the review comments are quoted as untrusted data.
 ZIBBY pushes **fast-forward only, never force** (`WorkspaceService.pushFastForward`,
 `./workspace.md`) and posts replies only after a successful push, only to threads GitHub still
-reports as unresolved on this PR; it then resolves the fixed ones and re-requests review (below). `Addressed: all` → push + replies
-right away (Tier-2, reported in the task outcome); anything else with new commits → one Tier-3
-`pr-address-comments` approval covering push and replies; no new commits → `failed`.
+reports as unresolved on this PR; it then resolves the fixed ones and re-requests review
+(below). `Addressed: all` → push + replies (Tier-2, reported in the task outcome); anything else with new commits → one Tier-3
+`pr-address-comments` approval covering push, replies, resolves and the review re-request; no
+new commits → `failed`.
 On a `done` run `TaskOutputService.parkPrAddressComments` reads the worktree
 (`WorkspaceService.rebaseFacts`): HEAD equal to the clicked `headSha` → `failed` ("no new
 commits"); otherwise it records the `pr-address-comments` approval with the report plus a
@@ -212,14 +214,16 @@ moved since the click is rejected as non-fast-forward). Reject → `discarded`. 
 empty, over-500-char and duplicate entries are dropped, max 50, listed in the approval
 `detail` under "Replies ZIBBY will post after the push") via GraphQL
 `addPullRequestReviewThreadReply` — only to threads a fresh `reviewThreads` read of this PR
-reports as unresolved. Then each posted reply flagged `resolve: true` gets GraphQL
-`resolveReviewThread` (a thread whose reply failed stays open), and review is re-requested via
+reports as unresolved. Then each posted reply flagged `resolve: true` whose thread the parked
+report also marks `done in` (`threadsMarkedDone`) gets GraphQL `resolveReviewThread` (a thread
+whose reply failed stays open), and review is re-requested via
 `POST /repos/{repo}/pulls/{n}/requested_reviewers` from every user whose latest review
-(`latestOpinionatedReviews`) is `CHANGES_REQUESTED`, excluding the PR author and bots. `replied` /
-`repliesNote` record what was posted and why the rest was skipped; `resolved`,
+(`latestOpinionatedReviews`) is `CHANGES_REQUESTED`, excluding the PR author and bots.
+`replied` / `repliesNote` record what was posted and why the rest was skipped; `resolved`,
 `reviewersRequested` and `followUpNote` record the rest. A follow-up failure leaves the push
-`pushed`, a push failure does nothing. A missing reply file never blocks the push. The Tier-2 task outcome says how many
-replies reached GitHub, how many threads were resolved and who was asked to re-review.
+`pushed`, a push failure does nothing. A missing reply file never blocks the push. The Tier-2
+task outcome says how many replies reached GitHub, how many threads were resolved, who was
+asked to re-review, and any follow-up failure.
 
 `GET /api/inbox/prs` rows carry `addressComments { taskId, state }` (latest such task per PR; a
 `running` one whose task/run died reads `failed`).

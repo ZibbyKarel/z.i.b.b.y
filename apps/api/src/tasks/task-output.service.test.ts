@@ -430,6 +430,24 @@ describe("TaskOutputService", () => {
       expect(detail).toContain("PRRT_a: Yep, done in abc1234.");
     });
 
+    it("marks threads it will resolve and says review is re-requested", async () => {
+      const task = await seed();
+      await service.parkPrAddressComments(
+        task,
+        "Addressed: partial\nthread: PRRT_a — done in abc1234\nthread: PRRT_b — skipped: no",
+        "/wt",
+        JSON.stringify([
+          { threadId: "PRRT_a", body: "Fixed in abc1234.", resolve: true },
+          { threadId: "PRRT_b", body: "Out of scope.", resolve: true },
+        ]),
+      );
+      const { detail } = approvals.requestApproval.mock.calls[0]?.[0] as { detail: string };
+      expect(detail).toContain("PRRT_a (resolve): Fixed in abc1234.");
+      expect(detail).toContain("PRRT_b: Out of scope.");
+      expect(detail).toMatch(/resolves the threads marked \(resolve\) and re-requests review/);
+      expect(detail).toContain('"Changes requested"');
+    });
+
     it("Addressed: all with replies reports how many replies reached GitHub", async () => {
       const task = await seed();
       approvals.approve.mockImplementationOnce(async () => {
@@ -443,6 +461,19 @@ describe("TaskOutputService", () => {
         JSON.stringify([{ threadId: "PRRT_a", body: "Fixed in abc1234." }]),
       );
       expect(delivered.summary).toMatch(/odpovědi ve vláknech 1\/1/);
+    });
+
+    it("a follow-up failure shows in the summary", async () => {
+      const task = await seed();
+      approvals.approve.mockImplementationOnce(async () => {
+        await storage.setPrAddressComments("t_fix", (c) =>
+          c ? { ...c, followUpNote: `re-request review: HTTP 422 ${"x".repeat(200)}` } : c,
+        );
+        return {};
+      });
+      const delivered = await service.parkPrAddressComments(task, "Addressed: all", "/wt");
+      expect(delivered.summary).toMatch(/opravy pushnuty, follow-up: re-request review: HTTP 422/);
+      expect(delivered.summary?.length).toBeLessThan(200);
     });
 
     it("a refused push after the click reports the failure", async () => {

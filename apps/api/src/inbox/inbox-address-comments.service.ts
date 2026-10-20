@@ -13,7 +13,11 @@ import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ResolvedProjectService } from "../projects/resolved-project.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
-import { PR_ADDRESS_COMMENTS_ARTIFACT, PR_REPLIES_ARTIFACT } from "../tasks/task-output.service";
+import {
+  PR_ADDRESS_COMMENTS_ARTIFACT,
+  PR_REPLIES_ARTIFACT,
+  threadsMarkedDone,
+} from "../tasks/task-output.service";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
 import { WorkspaceService } from "../workspace/workspace.service";
 import { InboxService, isDeadTask } from "./inbox.service";
@@ -289,8 +293,12 @@ export class InboxAddressCommentsService implements OnModuleInit {
 
     const notes: string[] = [];
     let resolved = 0;
-    // Resolve only what was fixed AND got its reply just now — a thread whose reply failed stays open.
-    for (const r of replies.filter((x) => x.resolve && posted.has(x.threadId))) {
+    // Resolve only what the address report marks `done in` AND got its reply just now — a
+    // thread whose reply failed stays open.
+    const done = threadsMarkedDone(fix.report);
+    for (const r of replies.filter(
+      (x) => x.resolve && posted.has(x.threadId) && done.has(x.threadId),
+    )) {
       try {
         await gql("mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{id}}}", {
           id: r.threadId,
@@ -323,6 +331,7 @@ export class InboxAddressCommentsService implements OnModuleInit {
         .map((n) => n.author?.login ?? "")
         .filter((l) => l && l.toLowerCase() !== author);
       if (logins.length) {
+        // ponytail: one POST for all logins — one invalid login 422s the whole request; per-login calls if that bites.
         const res = await this.fetchImpl(
           `${GITHUB_API}/repos/${link.repo}/pulls/${fix.number}/requested_reviewers`,
           { method: "POST", headers, body: JSON.stringify({ reviewers: logins }) },
