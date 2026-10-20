@@ -2326,6 +2326,38 @@ describe("operator pause (D-PAUSE)", () => {
     expect(order).toEqual(["phase1"]); // phase 2 never started (no lease, no fuse slot)
   });
 
+  it("rejecting a stage's approval interrupts the run, no retry", async () => {
+    await h.service.onModuleInit();
+    const run = runOf();
+    const workflow = {
+      ...threePhases,
+      phases: [
+        phase("phase1"),
+        phase("phase2", { loop: { to: "phase1", maxRetries: 2, escalate: false, then: "park" } }),
+        phase("phase3"),
+      ],
+    };
+    const order: string[] = [];
+    scriptStages(
+      order,
+      (id) => {
+        // The stage is held on an approval; the operator rejects it.
+        if (id === "phase2") h.registered.get("workflow-stage")?.cancel(STAGE_RUN_ID);
+      },
+      (id) => (id === "phase2" ? "interrupted" : "done"),
+    );
+
+    await svc().drive(run, workflow);
+
+    expect(h.core.cancel).toHaveBeenCalledWith(STAGE_RUN_ID);
+    expect(run.status).toBe("interrupted");
+    expect(order).toEqual(["phase1", "phase2"]); // no retry, no further stage
+    expect(run.stageRuns.map((s) => [s.phaseId, s.status])).toEqual([
+      ["phase1", "done"],
+      ["phase2", "interrupted"],
+    ]);
+  });
+
   it("resume continues at the paused phase", async () => {
     const run = runOf();
     const order: string[] = [];

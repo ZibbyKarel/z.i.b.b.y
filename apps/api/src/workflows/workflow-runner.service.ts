@@ -311,10 +311,21 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
           });
         }
       },
+      // A rejected stage approval stops the whole run: marked as an operator stop so
+      // `drive()` lands it `interrupted` instead of spending a retry on the killed stage.
       cancel: (stageRunId) => {
+        let workflowRunId: string | undefined;
+        try {
+          workflowRunId = this.core.get(stageRunId).workflowRunId;
+        } catch {
+          workflowRunId = stageRunId.split(".")[0];
+        }
+        if (workflowRunId) this.stopRequested.add(workflowRunId);
         try {
           this.core.cancel(stageRunId);
         } catch (error) {
+          // No live stage to kill → nothing will consume the stop mark.
+          if (workflowRunId) this.stopRequested.delete(workflowRunId);
           this.log.warn("workflow-stage cancel skipped (run not found)", {
             stageRunId,
             err: error instanceof Error ? error.message : String(error),

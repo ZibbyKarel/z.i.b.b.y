@@ -303,6 +303,12 @@ sub-run phases read no context, so their messages wait for the next agent phase;
 loop back-edge never re-delivers a message. A sub-run settle re-entry delivers
 nothing (no stage starts).
 
+**Rejecting a stage approval.** The `workflow-stage` runner's `cancel(stageRunId)`
+marks the owning run (`core.get(stageRunId).workflowRunId`, else the id prefix before
+the first `.`) in `stopRequested` before it kills the held stage, so `drive()` lands
+the run `interrupted` exactly like an operator STOP: partial `stageRuns` kept, no
+retry, no park. When there is no live stage to kill the mark is dropped again.
+
 **Resume modes (D-RESUME).** `continueFailed(id, note?)` re-enters a failed/interrupted
 run at the phase it stopped on; the note joins that stage's resume context and is
 recorded as a message delivered to the re-entered phase. `resume { mode: "fresh" }`

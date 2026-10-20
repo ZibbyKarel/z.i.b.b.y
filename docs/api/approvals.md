@@ -158,6 +158,10 @@ When a gate rule resolves to `ask`:
    `approval-rejected`) and looks up the registered runner for that `kind`
 6. The runner's `resume(runId)` (approve) or `cancel(runId)` (reject) is called
 
+Rejecting a `workflow-stage` approval stops the whole workflow run: the stage is
+killed and the run lands `interrupted` (its finished `stageRuns` are kept). It is not
+treated as a failed stage, so no loop retry or escalation re-runs the rejected action.
+
 Deciding an already-decided approval returns `409`
 (`ApprovalAlreadyDecidedError`).
 
