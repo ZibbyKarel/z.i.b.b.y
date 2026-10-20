@@ -70,47 +70,50 @@ export function PrRow({
       selected={focused === true}
     >
       <CardContent padding={["150", "175"]}>
-        <Stack gap="75">
-          <Row align="baseline" gap="100">
-            <Typography nowrap type="code">
-              #{pr.number}
+        {/* Content block, then the action row 8px below (design: 12/14/8 + 0/14/12). */}
+        <Stack gap="100">
+          <Stack gap="75">
+            <Row align="baseline" gap="100">
+              <Typography nowrap type="code">
+                #{pr.number}
+              </Typography>
+              <Pressable
+                aria-current={focused ? "true" : undefined}
+                data-testid={PrRowTestId.Title}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelect(pr);
+                }}
+              >
+                <Typography wrapAnywhere type="bodySm" weight="medium">
+                  {pr.title}
+                </Typography>
+              </Pressable>
+            </Row>
+            <Typography data-testid={PrRowTestId.Meta} type="labelSm" variant="secondary">
+              {[projectName ?? pr.repo, pr.author, elapsedLabel(pr.createdAt, now)].join(" · ")}
             </Typography>
-            <Pressable
-              aria-current={focused ? "true" : undefined}
-              data-testid={PrRowTestId.Title}
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelect(pr);
-              }}
-            >
-              <Typography wrapAnywhere type="bodySm" weight="medium">
-                {pr.title}
+            <Row wrap gap="100">
+              <Typography
+                data-testid={PrRowTestId.State}
+                type="labelSm"
+                variant="primary"
+                weight="semibold"
+              >
+                {t(`state.${state.key}`, { team: pr.reviewTeam ?? "" })}
               </Typography>
-            </Pressable>
-          </Row>
-          <Typography data-testid={PrRowTestId.Meta} type="labelSm" variant="secondary">
-            {[projectName ?? pr.repo, pr.author, elapsedLabel(pr.createdAt, now)].join(" · ")}
-          </Typography>
-          <Row wrap gap="100">
-            <Typography
-              data-testid={PrRowTestId.State}
-              type="labelSm"
-              variant="primary"
-              weight="semibold"
-            >
-              {t(`state.${state.key}`, { team: pr.reviewTeam ?? "" })}
-            </Typography>
-            {parent && (
-              <Typography data-testid={PrRowTestId.On} type="labelSm">
-                {t("on", { base: `#${parent.number}` })}
-              </Typography>
-            )}
-            {waits.length > 0 && (
-              <Typography data-testid={PrRowTestId.Waits} type="labelSm">
-                {t("waitsOn", { prs: waits.map((w) => `#${w.number}`).join(", ") })}
-              </Typography>
-            )}
-          </Row>
+              {parent && (
+                <Typography data-testid={PrRowTestId.On} type="labelSm">
+                  {t("on", { base: `#${parent.number}` })}
+                </Typography>
+              )}
+              {waits.length > 0 && (
+                <Typography data-testid={PrRowTestId.Waits} type="labelSm">
+                  {t("waitsOn", { prs: waits.map((w) => `#${w.number}`).join(", ") })}
+                </Typography>
+              )}
+            </Row>
+          </Stack>
           {hasPrActions(pr) && (
             // Its own click zone — buttons / portalled menus never select the card.
             <Container

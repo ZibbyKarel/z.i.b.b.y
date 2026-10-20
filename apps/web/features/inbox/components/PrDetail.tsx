@@ -158,7 +158,8 @@ export function PrDetail({ pr, all, projectName, now, item, onSelect }: PrDetail
                         elapsedLabel(pr.createdAt, now),
                       ].join(" · ")}
                     </Typography>
-                    <Typography wrapAnywhere type="h3">
+                    {/* Design: 20px — `xl` (21px) is the nearest DS step. */}
+                    <Typography wrapAnywhere size="xl" type="h3">
                       {pr.title}
                     </Typography>
                   </Stack>
@@ -168,9 +169,9 @@ export function PrDetail({ pr, all, projectName, now, item, onSelect }: PrDetail
                   href={pr.url}
                   linkComponent={ExternalAnchor}
                 >
-                  <Typography type="labelSm" variant="primary">
+                  <Tag uppercase size="md" tone="neutral">
                     {t("openGithub")} ↗
-                  </Typography>
+                  </Tag>
                 </TextLink>
               </Row>
               <Row wrap gap="75">
@@ -195,9 +196,9 @@ export function PrDetail({ pr, all, projectName, now, item, onSelect }: PrDetail
                   </Container>
                 )}
               </Row>
+              {inStack && <Divider />}
               {inStack && (
                 <Stack data-testid={PrDetailTestId.Stack} gap="100">
-                  <Divider />
                   <PrStackPath all={all} onSelect={onSelect} pr={pr} />
                   <Typography
                     data-testid={PrDetailTestId.WaitText}
