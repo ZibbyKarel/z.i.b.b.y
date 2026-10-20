@@ -18,4 +18,4 @@
 15. [x] stránka pull requests - pokud zobrazím diff PR tak nechci abych scrolloval celou stránkou. Scrollovat by se měl jen ten diff. Zároveň pokud máme takto úzké karty Prs tak se tam nevejde text. Musíme kartu PR udělat responzivní a pokud je title dloouhý tak se bude zalamovat. Zároveň ale nesmí přesahovat do labelů v pravo nahoře (main@a1c8d4eb)
 16. [x] detail tasku - pravý panel s detaily - názvy firmy, projektu, týmu, musejí být odkazy + nezobrazuj zdroj a epic (epic není entita u nás v systému) (main@64e124a6)
 17. [x] pokud při rebase PR nejsou konflikty není potřeba nic řešit. Tento agent má být rychlý. Pokud konflikty nastanou, vyřeši je a pushne do větve. Projede jen rychlé checky. Není třeba kompletní otestování celé větve na to je pak CI v githubu (main@633b1214)
-18. [ ] úkoly ve frontě bych měl být schopen "stopnout" -> odstraní se z fronty a nikdy se tak nenastartují
+18. [x] úkoly ve frontě bych měl být schopen "stopnout" -> odstraní se z fronty a nikdy se tak nenastartují (main@f2cc3686)
