@@ -38,6 +38,9 @@ squash-and-merge through the projects merge route. UI spec: `docs/plans/inbox-ui
 `/api/roadmap/items` has no `:projectId` segment, so it can't collide with the
 per-project `/api/projects/:projectId/roadmap/...` routes.
 
+Every non-GET inbox route requires the operator token header (`x-zibby-operator-token`,
+missing or wrong → 401) — see _Operator token_ in `docs/api/approvals.md`.
+
 ## Items (`GET /api/roadmap/items`)
 
 Every project's roadmap tasks where `level === "task"`, `lifecycle !== "archived"`,

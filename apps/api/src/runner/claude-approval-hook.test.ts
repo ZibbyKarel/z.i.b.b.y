@@ -112,6 +112,8 @@ describe("claude approval hook — destructive-command gate", () => {
       "python3 -c \"import urllib.request as u; u.urlopen(u.Request('http://localhost:3333/api/approvals/a/revise', data=b'{}'))\"",
       "cat ~/.config/zibby/operator-token",
       "cat $HOME/.config/zibby/operator-token",
+      "cat ~/.config//zibby/operator-token",
+      "cat ~/.config/./zibby/operator-token",
       "curl -X POST http://localhost:3333/API/Approvals/x/APPROVE",
     ])("denies %s without raising a request", async (command) => {
       const res = await runHook(cwd, bashEvent(command, cwd), { ZIBBY_INTENT_DIR: "" });
@@ -136,6 +138,9 @@ describe("claude approval hook — destructive-command gate", () => {
         tool_input: { file_path: "x.sh", new_string: "curl localhost/api/approvals/a/reject" },
       },
       { tool_name: "Write", tool_input: { file_path: "/Users/x/.config/zibby/t", content: "" } },
+      { tool_name: "Read", tool_input: { file_path: "/Users/x/.config//zibby/operator-token" } },
+      { tool_name: "Read", tool_input: { file_path: "/Users/x/.config/./zibby/operator-token" } },
+      { tool_name: "Read", tool_input: { file_path: "~/.config/zibby/operator-token" } },
     ])("denies $tool_name touching operator-only data", async (event) => {
       const res = await runHook(cwd, { ...event, cwd }, { ZIBBY_INTENT_DIR: "" });
       expect(res.code).toBe(0);
@@ -153,6 +158,25 @@ describe("claude approval hook — destructive-command gate", () => {
         expect(res.code).toBe(0);
         expect(res.stdout).toBe("");
         expect(await present(requestFile())).toBe(false);
+      }
+    });
+
+    it("denies a Read through a symlinked parent of the token dir", async () => {
+      const home = await fs.mkdtemp(path.join(os.tmpdir(), "hook-home-"));
+      try {
+        // ~/.config is itself a symlink (dotfiles), so the realpath has no ".config/zibby".
+        await fs.mkdir(path.join(home, "dotfiles", "zibby"), { recursive: true });
+        await fs.writeFile(path.join(home, "dotfiles", "zibby", "operator-token"), "t");
+        await fs.symlink(path.join(home, "dotfiles"), path.join(home, ".config"));
+        await fs.symlink(path.join(home, "dotfiles", "zibby"), path.join(cwd, "lnk"));
+        const res = await runHook(
+          cwd,
+          { tool_name: "Read", tool_input: { file_path: "lnk/operator-token" }, cwd },
+          { ZIBBY_INTENT_DIR: "", HOME: home },
+        );
+        expect(res.stdout).toContain('"permissionDecision":"deny"');
+      } finally {
+        await fs.rm(home, { recursive: true, force: true });
       }
     });
 

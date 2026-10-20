@@ -192,14 +192,34 @@ POST /api/approvals/:id/answer   answer an agent's `operator.question` — 404 |
 
 Every decision route (`approve` / `reject` / `revise` / `answer`) requires the header
 `x-zibby-operator-token` (`OPERATOR_TOKEN_HEADER` in `@zibby/contracts`); missing or wrong
-→ `401 { message }`. The expected token resolves from `ZIBBY_OPERATOR_TOKEN`, else the 0600
-file `ZIBBY_OPERATOR_TOKEN_FILE ?? ~/.config/zibby/operator-token` (created on first read);
-if none resolves the routes stay `401` (fail closed). `GET` routes are unguarded. The web app
-sends the token pasted in Settings → General (`localStorage["zibby.operatorToken"]`).
+→ `401 { message }`. So does every mutating inbox route (`POST /api/inbox/prs/review`,
+`/rebase`, `/address-comments`, `PUT /api/inbox/state`) — rebase and address-comments
+auto-approve their push "authorised by the click", so the click must be the operator's
+(`OperatorTokenGuard` on `InboxController`, exported from `ApprovalsModule`).
+`GET` / `HEAD` / `OPTIONS` pass unguarded.
 
-Agents cannot decide their own approvals: every `claude` child gets its env from
-`agentBaseEnv()` (both variables stripped), and the PreToolUse hook denies Bash commands
-hitting the decision URLs or `.config/zibby`, and Read/Grep/Glob/Write/Edit on that path.
+The expected token resolves from `ZIBBY_OPERATOR_TOKEN`, else the 0600 file
+`ZIBBY_OPERATOR_TOKEN_FILE ?? ~/.config/zibby/operator-token` (an absolute path — dotenv does
+not expand `~`). It is resolved at boot (the file is created then, and its path — never the
+value — is logged once: _"Operator token at … — paste it into Settings → General"_). If none
+resolves the routes stay `401` (fail closed) and resolution is retried on the next request.
+The web app sends the token pasted in Settings → General (`localStorage["zibby.operatorToken"]`)
+on every request.
+
+**Guarantee:** an agent cannot decide approvals unless it obtains the token. Every `claude`
+child and every git/gh child (`shared/git-exec.ts` — git runs hooks from agent worktrees)
+gets its env from `agentBaseEnv()` (both variables stripped), and the PreToolUse hook denies
+Bash commands hitting the decision URLs or `.config/zibby` (`//` and `/./` collapsed), and
+Read/Grep/Glob/Write/Edit whose path — resolved against the call's cwd and through symlinks —
+lands in that directory.
+
+**Known ceiling.** Agents run as the same OS user as the operator, so this is not a hard
+boundary. The same user can still reach the token through a Bash path the hook can't see
+statically (`cd ~/.config && cat zibby/*`, a glob, a `node -e` one-liner), the browser's
+profile storage (`localStorage`), `ps eww` of the API process when the token is provided via
+env, or a `.env` file in the repo. Prefer the default file over `ZIBBY_OPERATOR_TOKEN` /
+`.env`. Upgrade path: a Claude Code sandbox read-deny on `~/.config/zibby`, or running agents
+as a separate OS user.
 
 ## Agent questions (`ask_operator`)
 

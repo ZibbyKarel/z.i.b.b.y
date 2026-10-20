@@ -11,8 +11,8 @@ const guard = (token: string | null) =>
   new OperatorTokenGuard({ token: () => token } as OperatorTokenService);
 
 describe("OperatorTokenGuard", () => {
-  it("lets GET through without a token", () => {
-    expect(guard("secret").canActivate(ctx("GET"))).toBe(true);
+  it.each(["GET", "HEAD", "OPTIONS"])("lets %s through without a token", (method) => {
+    expect(guard("secret").canActivate(ctx(method))).toBe(true);
   });
   it("accepts a POST carrying the operator token", () => {
     expect(guard("secret").canActivate(ctx("POST", { "x-zibby-operator-token": "secret" }))).toBe(

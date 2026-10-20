@@ -1,6 +1,9 @@
 import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { withOperator } from "../../test/operator-token";
+import { OperatorTokenGuard } from "../approvals/operator-token.guard";
+import { OperatorTokenService } from "../approvals/operator-token.service";
 import { GithubDiffError, InboxPrDiffService } from "./inbox-pr-diff.service";
 import { ProjectNotFoundError } from "../projects/projects.errors";
 import { InboxAddressCommentsService } from "./inbox-address-comments.service";
@@ -20,6 +23,8 @@ describe("InboxController getInboxPrDiff GitHub error mapping", () => {
     const moduleRef = await Test.createTestingModule({
       controllers: [InboxController],
       providers: [
+        OperatorTokenService,
+        OperatorTokenGuard,
         { provide: InboxService, useValue: {} },
         { provide: InboxReviewService, useValue: {} },
         {
@@ -69,9 +74,18 @@ describe("InboxController getInboxPrDiff GitHub error mapping", () => {
     expect(res.body.message).toContain(String(gh));
   });
 
+  it.each(["/api/inbox/prs/rebase", "/api/inbox/prs/address-comments"])(
+    "POST %s without the operator token is 401",
+    async (url) => {
+      await request(app.getHttpServer())
+        .post(url)
+        .send({ projectId: "acme", repo: "acme/app", number: 7 })
+        .expect(401);
+    },
+  );
+
   it("maps a refused rebase to 422 with its reason", async () => {
-    const res = await request(app.getHttpServer())
-      .post("/api/inbox/prs/rebase")
+    const res = await withOperator(request(app.getHttpServer()).post("/api/inbox/prs/rebase"))
       .send({ projectId: "acme", repo: "acme/app", number: 7 })
       .expect(422);
     expect(res.body.message).toContain("fork");
@@ -79,16 +93,16 @@ describe("InboxController getInboxPrDiff GitHub error mapping", () => {
 
   it("maps an unknown project on rebase to 404", async () => {
     rebaseError = new ProjectNotFoundError("nope");
-    await request(app.getHttpServer())
-      .post("/api/inbox/prs/rebase")
+    await withOperator(request(app.getHttpServer()).post("/api/inbox/prs/rebase"))
       .send({ projectId: "nope", repo: "acme/app", number: 7 })
       .expect(404);
   });
 
   it("address-comments returns the service's 201 body", async () => {
     addressError = null;
-    const res = await request(app.getHttpServer())
-      .post("/api/inbox/prs/address-comments")
+    const res = await withOperator(
+      request(app.getHttpServer()).post("/api/inbox/prs/address-comments"),
+    )
       .send({ projectId: "acme", repo: "acme/app", number: 7 })
       .expect(201);
     expect(res.body).toEqual({ taskId: "task_a1" });
@@ -98,14 +112,14 @@ describe("InboxController getInboxPrDiff GitHub error mapping", () => {
     addressError = new PrRefusedError(
       "addressing review comments on acme/app#7 is already running",
     );
-    const res = await request(app.getHttpServer())
-      .post("/api/inbox/prs/address-comments")
+    const res = await withOperator(
+      request(app.getHttpServer()).post("/api/inbox/prs/address-comments"),
+    )
       .send({ projectId: "acme", repo: "acme/app", number: 7 })
       .expect(422);
     expect(res.body.message).toContain("already running");
     addressError = new ProjectNotFoundError("nope");
-    await request(app.getHttpServer())
-      .post("/api/inbox/prs/address-comments")
+    await withOperator(request(app.getHttpServer()).post("/api/inbox/prs/address-comments"))
       .send({ projectId: "nope", repo: "acme/app", number: 7 })
       .expect(404);
   });

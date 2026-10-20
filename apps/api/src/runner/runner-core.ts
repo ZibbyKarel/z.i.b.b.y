@@ -6,7 +6,6 @@ import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { type IntendedAction, IntendedActionSchema } from "@zibby/contracts";
-import { OPERATOR_TOKEN_ENV, OPERATOR_TOKEN_FILE_ENV } from "../approvals/operator-token.service";
 import { agentBaseEnv } from "../shared/agent-env";
 import { writeFileAtomic } from "../shared/file-storage";
 import type { ScopedLogger } from "../shared/logging/logger.service";
@@ -73,25 +72,20 @@ export function freeDirs(spec: Pick<RunSpec, "cwd" | "spawnCwd" | "args">): stri
 
 /**
  * The env an agent process is spawned with: sanitized process.env, then the per-run
- * env, then the gate pins. The operator-token keys are deleted last so a project
- * secret with the same name cannot reintroduce them (no reliance on spawn's
- * handling of `undefined` values).
+ * env, then the gate pins. {@link agentBaseEnv} deletes the operator-token keys last,
+ * so a project secret with the same name cannot reintroduce them.
  */
 export function agentSpawnEnv(
   spec: Pick<RunSpec, "cwd" | "spawnCwd" | "args" | "env">,
 ): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = {
-    ...agentBaseEnv(),
+  return agentBaseEnv({
     // Runs spawn with --setting-sources "" (no project source), so the target
     // repo's CLAUDE.md only loads as an --add-dir (see ClaudeRunOptions.contextDir).
     CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD: "1",
     ...spec.env,
     [INTENT_DIR_ENV]: spec.cwd,
     [FREE_DIRS_ENV]: freeDirs(spec),
-  };
-  delete env[OPERATOR_TOKEN_ENV];
-  delete env[OPERATOR_TOKEN_FILE_ENV];
-  return env;
+  });
 }
 
 /** A run id may only contain the safe characters our filenames are built from. */

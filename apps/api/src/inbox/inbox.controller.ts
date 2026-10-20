@@ -1,6 +1,7 @@
-import { Controller } from "@nestjs/common";
+import { Controller, UseGuards } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { inboxContract } from "@zibby/contracts";
+import { OperatorTokenGuard } from "../approvals/operator-token.guard";
 import { NoGithubLinkError, ProjectNotFoundError } from "../projects/projects.errors";
 import { InboxAddressCommentsService } from "./inbox-address-comments.service";
 import { InboxRebaseService, PrRefusedError } from "./inbox-rebase.service";
@@ -8,7 +9,13 @@ import { GithubDiffError, InboxPrDiffService } from "./inbox-pr-diff.service";
 import { InboxReviewService, ReviewRepoMismatchError } from "./inbox-review.service";
 import { InboxService } from "./inbox.service";
 
+/**
+ * Every mutating inbox route is an operator click; rebase and address-comments
+ * auto-approve their push ("authorised by the click"), so an agent must not be able
+ * to fake the click — all non-GET routes need the operator token.
+ */
 @Controller()
+@UseGuards(OperatorTokenGuard)
 export class InboxController {
   constructor(
     private readonly inbox: InboxService,

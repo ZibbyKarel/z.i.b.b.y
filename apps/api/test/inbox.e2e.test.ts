@@ -7,6 +7,7 @@ import type { RoadmapItem } from "@zibby/contracts";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
+import { withOperator } from "./operator-token";
 
 const NOW = "2026-10-01T10:00:00.000Z";
 
@@ -111,8 +112,7 @@ describe("Inbox API (e2e)", () => {
 
   it("hides an item via PUT /api/inbox/state and reports it as hidden", async () => {
     const key = { integrationId: "acme-jira", externalId: "TASK-MINE" };
-    const put = await request(app.getHttpServer())
-      .put("/api/inbox/state")
+    const put = await withOperator(request(app.getHttpServer()).put("/api/inbox/state"))
       .send({ ...key, hidden: true })
       .expect(200);
     expect(put.body).toEqual({ hidden: [key] });
@@ -122,8 +122,7 @@ describe("Inbox API (e2e)", () => {
     const res = await request(app.getHttpServer()).get("/api/roadmap/items").expect(200);
     expect(res.body.items[0].hidden).toBe(true);
 
-    await request(app.getHttpServer())
-      .put("/api/inbox/state")
+    await withOperator(request(app.getHttpServer()).put("/api/inbox/state"))
       .send({ ...key, hidden: false, extra: 1 })
       .expect(400); // strict body
   });

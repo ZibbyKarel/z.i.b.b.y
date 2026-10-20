@@ -3,7 +3,14 @@ import { OPERATOR_TOKEN_HEADER } from "@zibby/contracts";
 import { timingSafeEqual } from "node:crypto";
 import { OperatorTokenService } from "./operator-token.service";
 
-/** Every non-GET approvals route (approve/reject/revise/answer) needs the operator token. */
+/** Read-only methods pass; anything else needs the operator token. */
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+/**
+ * Every mutating route of a controller it guards needs the operator token: the
+ * approvals decisions (approve/reject/revise/answer) and the inbox clicks whose task
+ * output is auto-approved (rebase, address-comments).
+ */
 @Injectable()
 export class OperatorTokenGuard implements CanActivate {
   constructor(private readonly tokens: OperatorTokenService) {}
@@ -12,7 +19,7 @@ export class OperatorTokenGuard implements CanActivate {
     const req = context
       .switchToHttp()
       .getRequest<{ method: string; headers: Record<string, unknown> }>();
-    if (req.method === "GET") return true;
+    if (SAFE_METHODS.has(req.method)) return true;
     const expected = this.tokens.token();
     const got = req.headers[OPERATOR_TOKEN_HEADER];
     if (expected && typeof got === "string") {
@@ -21,7 +28,7 @@ export class OperatorTokenGuard implements CanActivate {
       if (a.length === b.length && timingSafeEqual(a, b)) return true;
     }
     throw new UnauthorizedException({
-      message: "Deciding an approval requires the operator token.",
+      message: "This operator action requires the operator token.",
     });
   }
 }

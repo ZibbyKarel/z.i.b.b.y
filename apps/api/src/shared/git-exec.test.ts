@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { InvalidGitRemoteError, isValidGitRemote, validateRemote } from "./git-exec";
+import { InvalidGitRemoteError, exec, isValidGitRemote, validateRemote } from "./git-exec";
 
 describe("isValidGitRemote / validateRemote (Task 8 — clone remote allowlist)", () => {
   const legit = [
@@ -46,6 +46,27 @@ describe("isValidGitRemote / validateRemote (Task 8 — clone remote allowlist)"
       expect(error).toBeInstanceOf(InvalidGitRemoteError);
       expect((error as InvalidGitRemoteError).name).toBe("InvalidGitRemoteError");
       expect((error as InvalidGitRemoteError).remote).toBe('ext::sh -c "id"');
+    }
+  });
+});
+
+describe("exec child env", () => {
+  it("never passes the operator token to a git/gh child, but keeps a caller's env", async () => {
+    const saved = { ...process.env };
+    process.env.ZIBBY_OPERATOR_TOKEN = "secret";
+    process.env.ZIBBY_OPERATOR_TOKEN_FILE = "/tmp/x";
+    try {
+      const { stdout } = await exec(
+        "sh",
+        [
+          "-c",
+          'printf "%s|%s|%s" "${ZIBBY_OPERATOR_TOKEN-unset}" "${ZIBBY_OPERATOR_TOKEN_FILE-unset}" "$FOO"',
+        ],
+        { env: { NODE_ENV: process.env.NODE_ENV, FOO: "bar", ZIBBY_OPERATOR_TOKEN: "again" } },
+      );
+      expect(stdout).toBe("unset|unset|bar");
+    } finally {
+      process.env = saved;
     }
   });
 });

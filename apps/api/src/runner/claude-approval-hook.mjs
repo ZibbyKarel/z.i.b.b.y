@@ -1144,15 +1144,47 @@ export function classifyEvent(input) {
 
 // Operator-only surface (Laws 1 & 4): deciding an approval is the operator's alone.
 // ponytail: substring/path match, not a parser — catches every HTTP client by URL path
-// and every tool by the token directory; an agent that assembles the path at runtime
-// (string concat) still hits the API guard's 401, which is the real lock. The token
-// env var is stripped from agent processes (not matched here), so repo code that
-// merely mentions "operator-token" stays greppable. This is the early, explainable denial.
+// and every tool by the token directory. Against URL obfuscation (an agent assembling
+// the path at runtime) the API guard's 401 still holds; against an obfuscated READ of
+// the token (cd + relative path, a glob, a node one-liner) nothing here does — see
+// "Known ceiling" in docs/api/approvals.md. The token env var is stripped from agent
+// processes (not matched here), so repo code that merely mentions "operator-token"
+// stays greppable. This is the early, explainable denial.
 const APPROVAL_DECIDE = /\/api\/approvals\/[^\s/'"]+\/(approve|reject|revise|answer)\b/i;
 const OPERATOR_SECRET = /\.config\/zibby(\/|\b)/i;
+/** Collapse `//` and `/./` so `~/.config//zibby` / `~/.config/./zibby` still match. */
+const squash = (text) => text.replace(/\/(?:\.?\/)+/g, "/");
 export function touchesOperatorOnly(command) {
-  const text = String(command ?? "");
+  const text = squash(String(command ?? ""));
   return APPROVAL_DECIDE.test(text) || OPERATOR_SECRET.test(text);
+}
+
+/** Realpath of `p`, or null when it doesn't exist / can't be resolved. */
+function realOrNull(p) {
+  try {
+    return realpathSync(p);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A tool's path field (Read/Write/…), resolved against the call's cwd and through
+ * symlinks, lands in the operator token dir — even via a symlinked parent or a
+ * symlinked `~/.config` that realpaths somewhere the text match can't see.
+ */
+export function pathTouchesOperatorOnly(value, cwd) {
+  if (typeof value !== "string" || !value) return false;
+  if (touchesOperatorOnly(value)) return true;
+  let p = value;
+  if (p === "~" || p.startsWith("~/")) p = path.join(os.homedir(), p.slice(1));
+  const abs = path.resolve(typeof cwd === "string" && cwd ? cwd : process.cwd(), p);
+  if (touchesOperatorOnly(abs)) return true;
+  const real = realOrNull(abs);
+  if (!real) return false;
+  if (touchesOperatorOnly(real)) return true;
+  const secretDir = realOrNull(path.join(os.homedir(), ".config", "zibby"));
+  return !!secretDir && (real === secretDir || real.startsWith(secretDir + path.sep));
 }
 
 const OPERATOR_ONLY_FIELDS = {
@@ -1163,6 +1195,8 @@ const OPERATOR_ONLY_FIELDS = {
   Write: ["file_path", "content"],
   Edit: ["file_path", "new_string"],
 };
+/** Fields that name a filesystem path (normalised + realpath'd before matching). */
+const PATH_FIELDS = new Set(["file_path", "path"]);
 
 /** Emit a PreToolUse decision and exit. `allow` overrides dontAsk; `deny` blocks. */
 function decide(permissionDecision, reason) {
@@ -1207,7 +1241,13 @@ function main() {
   }
 
   const fields = OPERATOR_ONLY_FIELDS[input?.tool_name] ?? [];
-  if (fields.some((f) => touchesOperatorOnly(input?.tool_input?.[f]))) {
+  if (
+    fields.some((f) =>
+      input?.tool_name !== "Bash" && PATH_FIELDS.has(f)
+        ? pathTouchesOperatorOnly(input?.tool_input?.[f], input?.cwd)
+        : touchesOperatorOnly(input?.tool_input?.[f]),
+    )
+  ) {
     decide(
       "deny",
       "Approvals are decided by the operator only — agents cannot call the approvals API or read the operator token.",

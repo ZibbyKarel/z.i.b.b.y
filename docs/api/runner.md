@@ -393,9 +393,12 @@ through to Claude's own permissions) but **closed** on a decision timeout
 
 The hook also hard-denies (no intent classification) anything touching operator-only data:
 Bash commands hitting `/api/approvals/:id/(approve|reject|revise|answer)` or `.config/zibby`,
-Read/Grep/Glob/Write/Edit on that path, and Write/Edit content containing a decision URL
-(`touchesOperatorOnly`). Spawned children also get `agentBaseEnv()`, which strips
-`ZIBBY_OPERATOR_TOKEN` and `ZIBBY_OPERATOR_TOKEN_FILE`. See `docs/api/approvals.md`.
+Read/Grep/Glob/Write/Edit on that path (`file_path`/`path` resolved against the call's cwd
+and through symlinks, `//` and `/./` collapsed — `pathTouchesOperatorOnly`), and Write/Edit
+content containing a decision URL (`touchesOperatorOnly`). Spawned children (agents via
+`agentSpawnEnv`, and every git/gh child via `shared/git-exec.ts`) get `agentBaseEnv()`, which
+strips `ZIBBY_OPERATOR_TOKEN` and `ZIBBY_OPERATOR_TOKEN_FILE`. This is an early denial, not a
+hard boundary — see _Known ceiling_ in `docs/api/approvals.md`.
 
 ## `ClaudePreflightService`
 

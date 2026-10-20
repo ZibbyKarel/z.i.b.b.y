@@ -1,6 +1,7 @@
-import { execFile } from "node:child_process";
+import { type ExecFileOptions, execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { isValidGitRemote } from "@zibby/contracts";
+import { agentBaseEnv } from "./agent-env";
 
 /**
  * Task 8 — shared git primitives: (a) the bounded-`execFile` wrapper
@@ -9,8 +10,15 @@ import { isValidGitRemote } from "@zibby/contracts";
  * one concern per file — same home as `ticking-watcher-base.ts`/`retry.ts`.
  */
 
-/** `promisify(execFile)` — the exact wrapper both services used to redefine. */
-export const exec = promisify(execFile);
+const execFileAsync = promisify(execFile);
+
+/**
+ * `promisify(execFile)` with the child env defaulted to {@link agentBaseEnv} (a
+ * caller's `env` is merged on top): git runs hooks from agent worktrees, where an
+ * agent can set `core.hooksPath`, so no git/gh child may see the operator token.
+ */
+export const exec = ((file: string, args: readonly string[], opts: ExecFileOptions = {}) =>
+  execFileAsync(file, args, { ...opts, env: agentBaseEnv(opts.env) })) as typeof execFileAsync;
 
 /** Local-only git invocations (no network) — a short timeout bounds a hang. */
 export const GIT_TIMEOUT_MS = 10_000;

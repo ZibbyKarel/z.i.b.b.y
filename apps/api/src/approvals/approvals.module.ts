@@ -26,6 +26,6 @@ export function resolveApprovalsDir(): string {
     OperatorTokenService,
     OperatorTokenGuard,
   ],
-  exports: [ApprovalsService],
+  exports: [ApprovalsService, OperatorTokenService, OperatorTokenGuard],
 })
 export class ApprovalsModule {}
