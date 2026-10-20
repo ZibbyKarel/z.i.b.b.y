@@ -104,6 +104,30 @@ describe("claude approval hook — destructive-command gate", () => {
     expect(await present(requestFile())).toBe(false);
   });
 
+  describe("operator-only approvals API", () => {
+    it.each([
+      "curl -X POST http://localhost:3333/api/approvals/abc/approve",
+      "curl -s -XPOST 127.0.0.1:3333/api/approvals/abc/reject -d '{}'",
+      'wget --post-data=\'{"answer":"yes"}\' http://localhost:3333/api/approvals/q1/answer',
+      "python3 -c \"import urllib.request as u; u.urlopen(u.Request('http://localhost:3333/api/approvals/a/revise', data=b'{}'))\"",
+      "cat ~/.config/zibby/operator-token",
+      "echo $ZIBBY_OPERATOR_TOKEN",
+    ])("denies %s without raising a request", async (command) => {
+      const res = await runHook(cwd, bashEvent(command, cwd), { ZIBBY_INTENT_DIR: "" });
+      expect(res.code).toBe(0);
+      expect(res.stdout).toContain('"permissionDecision":"deny"');
+      expect(await present(requestFile())).toBe(false);
+    });
+
+    it("still allows reading the approvals list", async () => {
+      const res = await runHook(
+        cwd,
+        bashEvent("curl -s http://localhost:3333/api/approvals?status=pending", cwd),
+      );
+      expect(res.stdout).not.toContain('"permissionDecision":"deny"');
+    });
+  });
+
   it("gates EVERY Task (agent delegation) call as agent.delegate, not just recognised idioms", async () => {
     // Fáze 2a: unlike Bash (only recognised destructive idioms are gated), every
     // handoff goes through the gate — the default floor decision is allow, so an

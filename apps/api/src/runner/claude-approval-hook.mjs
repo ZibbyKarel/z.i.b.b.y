@@ -25,6 +25,9 @@
 //          no locked floor rule for it (default allow, Tier 1, just logged), but an
 //          operator's own gate-rules.json rule on `action: agent.delegate` (e.g. `ask`)
 //          takes effect immediately through the same protocol.
+//      Independently of all that, a Bash call that hits the approvals decision API
+//      (approve/reject/revise/answer) or touches the operator token is hard-denied
+//      (`touchesOperatorOnly`) — deciding an approval is the operator's alone.
 //   3. RunnerCore watches the dir for the request, routes it through the gate
 //      evaluator (allow / ask-a-human / deny), and writes the decision file.
 //   4. The hook returns the decision to Claude as `hookSpecificOutput`, which
@@ -1139,6 +1142,17 @@ export function classifyEvent(input) {
   return null;
 }
 
+// Operator-only surface (Laws 1 & 4): deciding an approval is the operator's alone.
+// ponytail: substring match, not a parser — catches every HTTP client by URL path;
+// an agent that assembles the path at runtime (string concat) still hits the API
+// guard's 401, which is the real lock. This is the early, explainable denial.
+const APPROVAL_DECIDE = /\/api\/approvals\/[^\s/'"]+\/(approve|reject|revise|answer)\b/;
+const OPERATOR_SECRET = /operator-token|ZIBBY_OPERATOR_TOKEN/;
+export function touchesOperatorOnly(command) {
+  const text = String(command ?? "");
+  return APPROVAL_DECIDE.test(text) || OPERATOR_SECRET.test(text);
+}
+
 /** Emit a PreToolUse decision and exit. `allow` overrides dontAsk; `deny` blocks. */
 function decide(permissionDecision, reason) {
   process.stdout.write(
@@ -1179,6 +1193,13 @@ function main() {
   } catch {
     // Can't parse the event → don't gate; let Claude's own permissions decide.
     process.exit(0);
+  }
+
+  if (input?.tool_name === "Bash" && touchesOperatorOnly(input?.tool_input?.command)) {
+    decide(
+      "deny",
+      "Approvals are decided by the operator only — agents cannot call the approvals API or read the operator token.",
+    );
   }
 
   // Fail OPEN: a classifier exception must never block all Bash/Task calls (this
