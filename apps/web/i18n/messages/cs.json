@@ -2992,9 +2992,6 @@
         "ready-to-merge": "Vaše PR · schváleno, CI prochází"
       },
       "actions": {
-        "review": "Rychlé code-review",
-        "reviewThorough": "Důkladné code-review",
-        "reviewTested": "Code-review s testy",
         "reviewLevelsAria": "Další úrovně code-review",
         "reviewFailed": "Code-review se nepodařilo spustit.",
         "reviewState": {
@@ -3010,7 +3007,6 @@
         "deleteBranch": "Po merge smazat branch",
         "mergedNote": "Mergnuto. {note}",
         "mergeFailed": "Merge se nepodařil.",
-        "rebase": "Rebase na cílovou větev",
         "rebaseFailed": "Rebase se nepodařilo spustit.",
         "rebaseRefused": "Rebase odmítnut: {reason}",
         "rebaseState": {
@@ -3019,7 +3015,33 @@
           "pushed": "Rebase pushnut",
           "discarded": "Rebase zahozen",
           "failed": "Rebase selhal"
-        }
+        },
+        "reviewMode": "Review · {mode}",
+        "mode": {
+          "quick": {
+            "label": "Rychlé",
+            "desc": "Agent projde diff a označí riziková místa. Asi 2 min."
+          },
+          "tested": {
+            "label": "Důkladné",
+            "desc": "Řádek po řádku. Pustí testy a prověří okrajové případy."
+          },
+          "browser": {
+            "label": "Důkladné + prohlížeč",
+            "desc": "Důkladné, pak změnu proklikne v prohlížeči a uloží screenshoty do běhu."
+          }
+        },
+        "address": "Zapracovat review komentáře",
+        "addressFailed": "Zapracování komentářů se nepodařilo spustit.",
+        "addressRefused": "Odmítnuto: {reason}",
+        "addressState": {
+          "running": "Agent zapracovává komentáře",
+          "awaiting-approval": "Opravy čekají na schválení",
+          "pushed": "Opravy pushnuty",
+          "discarded": "Opravy zahozeny",
+          "failed": "Zapracování komentářů selhalo"
+        },
+        "rebaseOn": "Rebase na {base}"
       }
     },
     "detail": {

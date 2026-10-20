@@ -2992,9 +2992,6 @@
         "ready-to-merge": "Your PRs · approved, CI passing"
       },
       "actions": {
-        "review": "Quick code review",
-        "reviewThorough": "Thorough code review",
-        "reviewTested": "Code review with tests",
         "reviewLevelsAria": "More code review levels",
         "reviewFailed": "Could not start the code review.",
         "reviewState": {
@@ -3010,7 +3007,6 @@
         "deleteBranch": "Delete branch after merge",
         "mergedNote": "Merged. {note}",
         "mergeFailed": "Merge failed.",
-        "rebase": "Rebase onto base branch",
         "rebaseFailed": "Could not start the rebase.",
         "rebaseRefused": "Rebase refused: {reason}",
         "rebaseState": {
@@ -3019,7 +3015,33 @@
           "pushed": "Rebase pushed",
           "discarded": "Rebase discarded",
           "failed": "Rebase failed"
-        }
+        },
+        "reviewMode": "Review · {mode}",
+        "mode": {
+          "quick": {
+            "label": "Quick",
+            "desc": "Agent reads the diff and flags risky spots. About 2 min."
+          },
+          "tested": {
+            "label": "Thorough",
+            "desc": "Line by line. Runs tests and checks edge cases."
+          },
+          "browser": {
+            "label": "Thorough + browser",
+            "desc": "Thorough, then clicks through the change in a browser and saves screenshots to the run."
+          }
+        },
+        "address": "Address review comments",
+        "addressFailed": "Could not start addressing the review comments.",
+        "addressRefused": "Refused: {reason}",
+        "addressState": {
+          "running": "Agent addressing comments",
+          "awaiting-approval": "Fixes awaiting approval",
+          "pushed": "Fixes pushed",
+          "discarded": "Fixes discarded",
+          "failed": "Addressing comments failed"
+        },
+        "rebaseOn": "Rebase on {base}"
       }
     },
     "detail": {

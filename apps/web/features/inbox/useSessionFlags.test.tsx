@@ -36,4 +36,15 @@ describe("useSessionFlags", () => {
     act(() => result.current[1]("a", true));
     expect(result.current[0]).toEqual({ a: true });
   });
+
+  it("two hook instances never overwrite each other's ids", () => {
+    const a = renderHook(() => useSessionFlags<string>("k"));
+    const b = renderHook(() => useSessionFlags<string>("k"));
+    act(() => a.result.current[1]("pr-a", "tested"));
+    act(() => b.result.current[1]("pr-b", "browser"));
+    expect(JSON.parse(window.sessionStorage.getItem("k") ?? "{}")).toEqual({
+      "pr-a": "tested",
+      "pr-b": "browser",
+    });
+  });
 });

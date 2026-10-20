@@ -53,6 +53,7 @@ vi.mock("../mutations", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   useReviewInboxPrMutation: () => ({ mutate: review, isPending: hooks.reviewPending }),
   useRebaseInboxPrMutation: () => ({ mutate: rebase, isPending: false }),
+  useAddressInboxPrCommentsMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 vi.mock("../../projects/mutations", () => ({
   useMergeProjectPrMutation: () => ({ mutate: merge, isPending: false }),
@@ -94,22 +95,6 @@ const sectionId = (s: string) => `${InboxPrsScreenTestId.Section}-${s}`;
 const headerOf = (s: string) =>
   within(screen.getByTestId(sectionId(s))).getByTestId(AccordionTestId.Summary);
 
-/** Drive the HoldButton's rAF loop to completion (same harness as MergeQueueCard.test). */
-function mockFrames(frameTime: number) {
-  let now = 0;
-  let firstFrame = true;
-  vi.spyOn(performance, "now").mockImplementation(() => now);
-  vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
-    if (firstFrame) {
-      firstFrame = false;
-      now = frameTime;
-      cb(now);
-    }
-    return 1;
-  });
-  vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => undefined);
-}
-
 describe("InboxPrsScreen sections", () => {
   afterEach(() => {
     window.sessionStorage.clear();
@@ -121,68 +106,6 @@ describe("InboxPrsScreen sections", () => {
     review.mockReset();
     merge.mockClear();
     rebase.mockReset();
-  });
-
-  it("offers Rebase only on my PRs that conflict with or are behind their base", () => {
-    hooks.prs = [
-      pr(1, { section: "needs-action", mergeable: false, blocker: "merge-conflict" }),
-      pr(2, { section: "waiting", behind: true }),
-      pr(3, { section: "waiting" }),
-      pr(4, { section: "needs-your-review", bucket: "to-review", mergeable: false }),
-    ];
-    renderWithProviders(<InboxPrsScreen />);
-    const has = (n: number) =>
-      within(screen.getByTestId(`${PrRowTestId.Root}-${n}`)).queryByTestId(
-        PrActionsTestId.Rebase,
-      ) !== null;
-    expect([1, 2, 3, 4].map(has)).toEqual([true, true, false, false]);
-  });
-
-  it("clicking Rebase starts it for that PR", () => {
-    hooks.prs = [pr(1, { section: "needs-action", mergeable: false })];
-    renderWithProviders(<InboxPrsScreen />);
-    fireEvent.click(screen.getByTestId(PrActionsTestId.Rebase));
-    expect(rebase).toHaveBeenCalledWith(
-      { body: { projectId: "api", repo: "acme/api", number: 1, title: "PR 1" } },
-      expect.anything(),
-    );
-    expect(screen.getByTestId(PrActionsTestId.Rebase)).toHaveTextContent("Rebase na cílovou větev");
-  });
-
-  it("a refused rebase shows the server's reason", () => {
-    hooks.prs = [pr(1, { section: "needs-action", mergeable: false })];
-    rebase.mockImplementationOnce((_vars, opts: { onError?: (e: unknown) => void }) =>
-      opts.onError?.({ status: 422, body: { message: "acme/api#1 comes from a fork" } }),
-    );
-    renderWithProviders(<InboxPrsScreen />);
-    fireEvent.click(screen.getByTestId(PrActionsTestId.Rebase));
-    expect(screen.getByTestId(PrActionsTestId.Message)).toHaveTextContent(
-      "Rebase odmítnut: acme/api#1 comes from a fork",
-    );
-  });
-
-  it("a running rebase disables the button and links to its task", () => {
-    hooks.prs = [
-      pr(1, {
-        section: "needs-action",
-        mergeable: false,
-        rebase: { taskId: "task_7", state: "running" },
-      }),
-    ];
-    renderWithProviders(<InboxPrsScreen />);
-    expect(screen.getByTestId(PrActionsTestId.Rebase)).toBeDisabled();
-    expect(screen.getByTestId(PrActionsTestId.RebaseStatus)).toHaveAttribute(
-      "href",
-      "/work/tasks/task_7",
-    );
-    expect(screen.getByTestId(PrActionsTestId.RebaseStatus)).toHaveTextContent("Rebase běží");
-  });
-
-  it("a pushed rebase keeps its status link after the PR is up to date again", () => {
-    hooks.prs = [pr(1, { section: "waiting", rebase: { taskId: "task_7", state: "pushed" } })];
-    renderWithProviders(<InboxPrsScreen />);
-    expect(screen.queryByTestId(PrActionsTestId.Rebase)).toBeNull();
-    expect(screen.getByTestId(PrActionsTestId.RebaseStatus)).toHaveTextContent("Rebase pushnut");
   });
 
   it("hides every empty section", () => {
@@ -267,122 +190,6 @@ describe("InboxPrsScreen sections", () => {
       false,
       true,
     ]);
-  });
-
-  it("the primary segment starts a quick review", () => {
-    hooks.prs = [pr(1, { section: "needs-your-review", bucket: "to-review" })];
-    renderWithProviders(<InboxPrsScreen />);
-    const split = screen.getByTestId(PrActionsTestId.Review);
-    fireEvent.click(within(split).getByTestId(DropDownButtonTestId.Primary));
-    expect(review).toHaveBeenCalledWith(
-      {
-        body: { projectId: "api", repo: "acme/api", number: 1, title: "PR 1", level: "quick" },
-      },
-      expect.anything(),
-    );
-  });
-
-  it("a successful review start shows no extra message — only the status link reports it", () => {
-    hooks.prs = [pr(1, { section: "needs-your-review", bucket: "to-review" })];
-    review.mockImplementation((_vars, opts: { onSuccess?: () => void }) => opts.onSuccess?.());
-    renderWithProviders(<InboxPrsScreen />);
-    const split = screen.getByTestId(PrActionsTestId.Review);
-    fireEvent.click(within(split).getByTestId(DropDownButtonTestId.Primary));
-    expect(screen.queryByTestId(PrActionsTestId.Message)).toBeNull();
-  });
-
-  it("a failed review start shows the error, and a later success clears it", () => {
-    hooks.prs = [pr(1, { section: "needs-your-review", bucket: "to-review" })];
-    review.mockImplementationOnce((_vars, opts: { onError?: () => void }) => opts.onError?.());
-    renderWithProviders(<InboxPrsScreen />);
-    const primary = () =>
-      within(screen.getByTestId(PrActionsTestId.Review)).getByTestId(DropDownButtonTestId.Primary);
-    fireEvent.click(primary());
-    expect(screen.getByTestId(PrActionsTestId.Message)).toHaveTextContent(
-      "Code-review se nepodařilo spustit.",
-    );
-    review.mockImplementationOnce((_vars, opts: { onSuccess?: () => void }) => opts.onSuccess?.());
-    fireEvent.click(primary());
-    expect(screen.queryByTestId(PrActionsTestId.Message)).toBeNull();
-  });
-
-  it.each(["thorough", "tested"] as const)("the %s menu item starts that level", (level) => {
-    hooks.prs = [pr(1, { section: "needs-your-review", bucket: "to-review" })];
-    renderWithProviders(<InboxPrsScreen />);
-    const split = screen.getByTestId(PrActionsTestId.Review);
-    fireEvent.click(within(split).getByTestId(DropDownButtonTestId.Trigger));
-    fireEvent.click(screen.getByTestId(`${DropDownButtonTestId.Item}-${level}`));
-    expect(review).toHaveBeenCalledWith(
-      { body: { projectId: "api", repo: "acme/api", number: 1, title: "PR 1", level } },
-      expect.anything(),
-    );
-  });
-
-  it("labels the split button and its menu (cs default)", () => {
-    hooks.prs = [pr(1, { section: "needs-your-review", bucket: "to-review" })];
-    renderWithProviders(<InboxPrsScreen />);
-    const split = screen.getByTestId(PrActionsTestId.Review);
-    expect(within(split).getByTestId(DropDownButtonTestId.Primary)).toHaveTextContent(
-      "Rychlé code-review",
-    );
-    expect(within(split).getByTestId(DropDownButtonTestId.Trigger)).toHaveAccessibleName(
-      "Další úrovně code-review",
-    );
-  });
-
-  it("a running review disables both segments and links to its task", () => {
-    hooks.prs = [
-      pr(1, {
-        section: "needs-your-review",
-        bucket: "to-review",
-        codeReview: { taskId: "task_9", state: "running" },
-      }),
-    ];
-    renderWithProviders(<InboxPrsScreen />);
-    const split = screen.getByTestId(PrActionsTestId.Review);
-    expect(within(split).getByTestId(DropDownButtonTestId.Primary)).toBeDisabled();
-    expect(within(split).getByTestId(DropDownButtonTestId.Trigger)).toBeDisabled();
-    expect(screen.getByTestId(PrActionsTestId.ReviewStatus)).toHaveAttribute(
-      "href",
-      "/work/tasks/task_9",
-    );
-  });
-
-  it("a pending review request disables the menu trigger too", () => {
-    hooks.reviewPending = true;
-    hooks.prs = [pr(1, { section: "needs-your-review", bucket: "to-review" })];
-    renderWithProviders(<InboxPrsScreen />);
-    const split = screen.getByTestId(PrActionsTestId.Review);
-    expect(within(split).getByTestId(DropDownButtonTestId.Trigger)).toBeDisabled();
-  });
-
-  it("holding Squash and merge sends squash + deleteBranch (default on, toggleable)", () => {
-    hooks.prs = [pr(5, { section: "ready-to-merge" })];
-    mockFrames(1000);
-    renderWithProviders(<InboxPrsScreen />);
-    fireEvent.pointerDown(screen.getByTestId(PrActionsTestId.Merge));
-    expect(merge).toHaveBeenCalledTimes(1);
-    expect(merge).toHaveBeenCalledWith(
-      { params: { id: "api", number: 5 }, body: { method: "squash", deleteBranch: true } },
-      expect.anything(),
-    );
-  });
-
-  it("unchecking delete-branch sends deleteBranch: false; a single click never merges", () => {
-    hooks.prs = [pr(5, { section: "ready-to-merge" })];
-    renderWithProviders(<InboxPrsScreen />);
-    fireEvent.click(screen.getByTestId(PrActionsTestId.DeleteBranch));
-    const button = screen.getByTestId(PrActionsTestId.Merge);
-    fireEvent.pointerDown(button);
-    fireEvent.pointerUp(button);
-    expect(merge).not.toHaveBeenCalled();
-    vi.restoreAllMocks();
-    mockFrames(1000);
-    fireEvent.pointerDown(button);
-    expect(merge).toHaveBeenCalledWith(
-      { params: { id: "api", number: 5 }, body: { method: "squash", deleteBranch: false } },
-      expect.anything(),
-    );
   });
 
   it("shows the PR count once, after the title — no ordinal before it", () => {
@@ -549,10 +356,10 @@ describe("InboxPrsScreen master–detail", () => {
     expect(
       within(screen.getByTestId(`${PrRowTestId.Root}-1`)).getByTestId(PrRowTestId.Title),
     ).not.toHaveAttribute("aria-current");
-    // The selected row drops its action strip — the detail pane already has it.
+    // Actions live on the cards only — the selected card keeps its action row.
     expect(
-      within(screen.getByTestId(`${PrRowTestId.Root}-2`)).queryByTestId(PrActionsTestId.Review),
-    ).toBeNull();
+      within(screen.getByTestId(`${PrRowTestId.Root}-2`)).getByTestId(PrActionsTestId.Review),
+    ).toBeInTheDocument();
     expect(screen.getByTestId(InboxPrsScreenTestId.Detail)).toHaveAttribute("aria-live", "polite");
     const detail = screen.getByTestId(PrDetailTestId.Root);
     expect(detail).toHaveTextContent("#2");

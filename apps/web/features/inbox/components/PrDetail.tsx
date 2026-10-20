@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { useInboxPrDiffQuery } from "../queries";
 import { useElapsedLabel } from "../useElapsedLabel";
-import { PrActions, hasPrActions } from "./PrActions";
 import { ExternalAnchor } from "./links";
 
 export enum PrDetailTestId {
@@ -43,7 +42,7 @@ export interface PrDetailProps {
   now: number;
 }
 
-/** The selected PR: fixed header (title, meta, GitHub link, actions) above its diff, which scrolls on its own at lg+. */
+/** The selected PR: fixed header (title, meta, GitHub link) above its diff, which scrolls on its own at lg+. */
 export function PrDetail({ pr, projectName, now }: PrDetailProps) {
   const t = useTranslations("inboxPage.prs");
   const elapsedLabel = useElapsedLabel();
@@ -108,7 +107,6 @@ export function PrDetail({ pr, projectName, now }: PrDetailProps) {
         <Typography type="label" variant="secondary">
           {[projectName ?? pr.repo, pr.author, elapsedLabel(pr.createdAt, now)].join(" · ")}
         </Typography>
-        {hasPrActions(pr) && <PrActions pr={pr} />}
       </Stack>
       {/* At lg the column has a fixed height, so this is the only thing that scrolls;
           below lg it is content-sized and the page scrolls as usual. */}

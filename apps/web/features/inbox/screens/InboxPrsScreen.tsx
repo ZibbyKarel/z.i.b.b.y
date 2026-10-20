@@ -23,7 +23,15 @@ import { useProjectsQuery } from "../../projects";
 import { PrActions, hasPrActions } from "../components/PrActions";
 import { PrDetail } from "../components/PrDetail";
 import { PrRow } from "../components/PrRow";
-import { type PrChain, groupPrsBySection, itemKey, linkedPrOf, pad2, prChains } from "../inbox";
+import {
+  type PrChain,
+  groupPrsBySection,
+  itemKey,
+  linkedPrOf,
+  pad2,
+  prBaseLabel,
+  prChains,
+} from "../inbox";
 import { useInboxItemsQuery, useInboxPrsQuery } from "../queries";
 import { useInboxFilters } from "../useInboxFilters";
 import { useSessionFlags } from "../useSessionFlags";
@@ -57,6 +65,7 @@ interface SectionProps {
   onSelect: (pr: InboxPr) => void;
   itemFor: (pr: InboxPr) => { key: string; href: string } | undefined;
   chainFor: (pr: InboxPr) => PrChain | undefined;
+  baseLabelFor: (pr: InboxPr) => string;
   projectNames: Map<string, string>;
   expanded: boolean;
   onToggle?: () => void;
@@ -72,6 +81,7 @@ function PrSection({
   onSelect,
   itemFor,
   chainFor,
+  baseLabelFor,
   projectNames,
   expanded,
   onToggle,
@@ -99,7 +109,9 @@ function PrSection({
         <Stack gap="100">
           {prs.map((pr) => (
             <PrRow
-              actions={hasPrActions(pr) && focus !== pr.url ? <PrActions pr={pr} /> : undefined}
+              actions={
+                hasPrActions(pr) ? <PrActions baseLabel={baseLabelFor(pr)} pr={pr} /> : undefined
+              }
               chain={chainFor(pr)}
               focused={focus === pr.url}
               item={itemFor(pr)}
@@ -193,6 +205,7 @@ export function InboxPrsScreen() {
             )}
             {visibleSections.map((section) => (
               <PrSection
+                baseLabelFor={(pr) => prBaseLabel(pr, prsQuery.data?.prs ?? [])}
                 chainFor={(pr) => chains.get(pr.url)}
                 expanded={
                   collapsed[section] !== true || sections[section].some((p) => p.url === focus)
