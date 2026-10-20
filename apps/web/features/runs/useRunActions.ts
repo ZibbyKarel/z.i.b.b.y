@@ -12,6 +12,9 @@ export interface ResumeRunOptions {
   /** continue (default): `--resume` session / continue in place. fresh: a new task from the original inputs. */
   mode?: "continue" | "fresh";
   note?: string;
+  /** Per-call callbacks (the composer clears its input on success, unlocks on settle). */
+  onSuccess?: () => void;
+  onSettled?: () => void;
 }
 
 export interface RunActions {
@@ -72,7 +75,10 @@ export function useRunActions(
       // RESUME while pausing cancels the pending pause.
       (run.status === "running" && run.pauseRequested === true) ||
       (opts.mode === "fresh" && run.status === "done");
-    if (!allowed) return;
+    if (!allowed) {
+      opts.onSettled?.();
+      return;
+    }
     const body = {
       ...(opts.mode && { mode: opts.mode }),
       ...(opts.note?.trim() && { note: opts.note.trim() }),
@@ -81,8 +87,10 @@ export function useRunActions(
       { params: { runId: run.runId }, body },
       {
         onSuccess: (res) => {
+          opts.onSuccess?.();
           if (res.body.runId !== run.runId) onResumed(res.body.runId);
         },
+        onSettled: opts.onSettled,
       },
     );
   };
