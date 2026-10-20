@@ -23,6 +23,9 @@ export const ENTITY_MCP_SERVER_ID = "zibby-entities";
 /** Stable id of the built-in, team-scoped, read-only knowledge-base MCP server (Task 7b). */
 export const KB_MCP_SERVER_ID = "zibby-kb";
 
+/** Stable id of the built-in run-control MCP server (`ask_operator`, D-ASK). */
+export const RUN_MCP_SERVER_ID = "zibby-run";
+
 /**
  * Durable, file-backed persistence for MCP servers — one `<id>.json` each.
  * `hasCredentials` is intentionally NOT persisted — it's a read-time computation
@@ -47,6 +50,7 @@ export class McpServersStorageService extends EntityFileStore<McpServer> {
     await super.onModuleInit();
     await this.seedEntitiesServer();
     await this.seedKbServer();
+    await this.seedRunServer();
   }
 
   /**
@@ -131,6 +135,36 @@ export class McpServersStorageService extends EntityFileStore<McpServer> {
       await this.writeEntity(server);
     }
     await this.credentials.write(KB_MCP_SERVER_ID, { authToken: this.kbAuth.runBearerToken });
+  }
+
+  /**
+   * Ensure the built-in `zibby-run` row exists (D-ASK — `RunMcpController`,
+   * `apps/api/src/runner/run-mcp.controller.ts`, the `ask_operator` tool). Same
+   * rules as {@link seedKbServer}: the row is created only when absent, the RUN
+   * bearer credential is rewritten on every boot.
+   */
+  private async seedRunServer(): Promise<void> {
+    let existing: McpServer | null = null;
+    try {
+      existing = await this.get(RUN_MCP_SERVER_ID);
+    } catch (error) {
+      if (!(error instanceof McpServerNotFoundError)) throw error;
+    }
+    if (!existing) {
+      const port = Number(process.env.PORT ?? 3333);
+      const server = McpServerSchema.parse({
+        id: RUN_MCP_SERVER_ID,
+        name: "ZIBBY run control",
+        desc:
+          "ask_operator: an agent asks the operator one question through the approval " +
+          "gate — see docs/api/approvals.md.",
+        type: "http",
+        url: `http://localhost:${port}/api/runs/mcp`,
+        enabled: true,
+      });
+      await this.writeEntity(server);
+    }
+    await this.credentials.write(RUN_MCP_SERVER_ID, { authToken: this.kbAuth.runBearerToken });
   }
 
   async create(input: CreateMcpServerInput): Promise<McpServer> {

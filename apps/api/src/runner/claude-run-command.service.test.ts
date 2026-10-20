@@ -115,6 +115,7 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     expect(prompt.startsWith(OPERATING_CONTRACT)).toBe(true);
     expect(prompt.endsWith("Jsi Kodér.")).toBe(true);
     expect(prompt).toMatch(/NEVER ask for confirmation/);
+    expect(prompt).toContain("mcp__zibby-run__ask_operator");
   });
 
   it("omits the grounding block when none is supplied (contract directly precedes the body)", async () => {
@@ -422,7 +423,7 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     const entry = settings.hooks?.PreToolUse?.[0];
     // `Task` is the Agent tool's delegation call — every handoff now hits the same
     // gate the destructive Bash commands do (see claude-approval-hook.mjs classifyTask).
-    expect(entry.matcher).toBe("Bash|Task|Write|Edit");
+    expect(entry.matcher).toBe("Bash|Task|Write|Edit|mcp__zibby-run__ask_operator");
     expect(entry.hooks[0].type).toBe("command");
     expect(entry.hooks[0].command).toContain("claude-approval-hook.mjs");
   });
@@ -504,7 +505,9 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     const settings = JSON.parse(flagValue(args, "--settings") ?? "{}");
     expect(settings.hooks.Stop[0].hooks[0].command).toBe("/usr/bin/notify run finished");
     // The approval hook is untouched by an unrelated custom hook.
-    expect(settings.hooks.PreToolUse[0].matcher).toBe("Bash|Task|Write|Edit");
+    expect(settings.hooks.PreToolUse[0].matcher).toBe(
+      "Bash|Task|Write|Edit|mcp__zibby-run__ask_operator",
+    );
     expect(settings.hooks.PreToolUse[0].hooks[0].command).toContain("claude-approval-hook.mjs");
   });
 

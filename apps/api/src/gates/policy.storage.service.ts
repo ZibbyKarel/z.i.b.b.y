@@ -96,11 +96,14 @@ export class PolicyStorageService implements OnModuleInit {
       if (DECISION_RANK[rule.decision] >= DECISION_RANK[canonical.decision]) {
         merged[idx] = rule; // disk matches or hardens canonical: keep disk's (may carry a custom resolve).
       } else {
-        this.log?.warn("policy floor drift: disk rule weaker than the canonical minimum, ignoring", {
-          action: key,
-          diskDecision: rule.decision,
-          canonicalDecision: canonical.decision,
-        });
+        this.log?.warn(
+          "policy floor drift: disk rule weaker than the canonical minimum, ignoring",
+          {
+            action: key,
+            diskDecision: rule.decision,
+            canonicalDecision: canonical.decision,
+          },
+        );
       }
     }
     return merged;
@@ -175,6 +178,9 @@ const ASK_FLOOR_ACTIONS = [
   // catalog rule may still harden it (route to a reviewing agent, etc.), but it
   // can never be weakened below `ask`.
   "deploy",
+  // D-ASK: an agent's `ask_operator` question. Only a human can answer it, so it is
+  // never auto-resolved — no rule may weaken it below `ask`.
+  "operator.question",
 ] as const;
 
 const DEFAULT_FLOOR: GateRule[] = [

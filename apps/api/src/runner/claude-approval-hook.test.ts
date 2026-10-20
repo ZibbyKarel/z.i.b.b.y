@@ -8,6 +8,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 // `(command: string) => { action, branch?, … } | null`. Imported for unit coverage.
 // @ts-expect-error — untyped .mjs module (implicit any), intentional for this seam.
 import { analyzeOwnership, classify, classifyTask } from "./claude-approval-hook.mjs";
+// @ts-expect-error — same untyped seam; a separate line keeps the directive on the import.
+import { classifyEvent } from "./claude-approval-hook.mjs";
 
 /**
  * Direct coverage for the PreToolUse approval hook's destructive-command detector.
@@ -973,5 +975,32 @@ describe("claude approval hook — free zone (repo + temp dirs)", () => {
     const res = await runHook(repo, bashEvent(`cd ${tmp}/pr1 && echo x > src.ts`, repo), env());
     expect(res.stdout).toBe("");
     expect(await requestRaised()).toBe(false);
+  });
+});
+
+describe("classifyEvent — ask_operator (D-ASK)", () => {
+  const ask = (question: unknown) =>
+    classifyEvent({ tool_name: "mcp__zibby-run__ask_operator", tool_input: { question } }) as {
+      action: string;
+      context: string;
+    };
+
+  it("classifies the question as an operator.question intent", () => {
+    const r = ask("  Which env?  ");
+    expect(r.action).toBe("operator.question");
+    expect(JSON.parse(r.context)).toEqual({
+      riskType: "question",
+      summary: "Which env?",
+      consequence: "The run waits for your answer.",
+    });
+  });
+
+  it("an empty question is still gated, never fail-open", () => {
+    expect(ask("   ").action).toBe("operator.question");
+    expect(JSON.parse(ask(undefined).context).summary).toBe("(empty question)");
+  });
+
+  it("caps the question at 2000 chars", () => {
+    expect(JSON.parse(ask("x".repeat(3000)).context).summary).toHaveLength(2000);
   });
 });

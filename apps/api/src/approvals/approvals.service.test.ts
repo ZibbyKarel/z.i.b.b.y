@@ -4,6 +4,7 @@ import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ApprovalAlreadyDecidedError,
+  ApprovalNotAnswerableError,
   ApprovalNotFoundError,
   ApprovalNotRevisableError,
 } from "./approvals.errors";
@@ -53,6 +54,45 @@ describe("ApprovalsService", () => {
     expect(decided.decidedAt).toBeTruthy();
     expect(resume).toHaveBeenCalledWith("agent-007_1_p0", decided);
     expect(cancel).not.toHaveBeenCalled();
+  });
+
+  describe("answer (D-ASK)", () => {
+    const question = () =>
+      service.requestApproval({
+        runId: "wf_1.build_123_9",
+        kind: "workflow-stage",
+        skill: "Writer",
+        action: "operator.question",
+        detail: JSON.stringify({ summary: "Which env?" }),
+        risk: "high",
+      });
+
+    it("approves an operator.question with the answer as reason and resumes the run", async () => {
+      const resume = vi.fn();
+      service.register("workflow-stage", { resume, cancel: vi.fn() });
+      const created = await question();
+      const answered = await service.answer(created.id, "staging");
+      expect(answered.status).toBe("approved");
+      expect(answered.reason).toBe("staging");
+      expect(resume).toHaveBeenCalledWith("wf_1.build_123_9", answered);
+    });
+
+    it("refuses a non-question approval and leaves it pending", async () => {
+      const created = await request();
+      await expect(service.answer(created.id, "yes")).rejects.toBeInstanceOf(
+        ApprovalNotAnswerableError,
+      );
+      expect((await service.get(created.id)).status).toBe("pending");
+    });
+
+    it("an already-decided question is the existing already-decided error", async () => {
+      service.register("workflow-stage", { resume: vi.fn(), cancel: vi.fn() });
+      const created = await question();
+      await service.answer(created.id, "staging");
+      await expect(service.answer(created.id, "prod")).rejects.toBeInstanceOf(
+        ApprovalAlreadyDecidedError,
+      );
+    });
   });
 
   it("todo-10: approve records the operator's reviewEvent and hands the approval to the runner", async () => {

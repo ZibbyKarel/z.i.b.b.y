@@ -107,6 +107,17 @@ describe("GateEvaluatorService", () => {
       expect(evaluator.evaluate(rules, { action: "tweet", tool: "gh" }).decision).toBe("allow");
     });
 
+    it("(D-ASK) an allow rule on operator.question cannot override the floor's ask:human", async () => {
+      const floor = await evaluator.floor();
+      const allow = rule({
+        match: [{ type: "action", action: "operator.question" }],
+        decision: "allow",
+      });
+      const result = evaluator.evaluate([allow, ...floor], { action: "operator.question" });
+      expect(result.decision).toBe("ask");
+      expect(result.resolve).toEqual({ type: "human" });
+    });
+
     it("a more specific own rule still wins over a less specific own rule (first-match-wins survives bucketing)", () => {
       const rules: GateRule[] = [
         rule({

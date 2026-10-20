@@ -175,6 +175,9 @@ export const OPERATING_CONTRACT = [
   '- So "present a plan and wait for approval" means: state the plan in one line, then RUN it.',
   "  Do not stop after the plan — carry it out; the gate does the asking for you, out of band.",
   "- This covers delete, overwrite, move, and any other external effect.",
+  "- If you are blocked on a fact only the operator knows (not a permission or a",
+  "  confirmation), call `mcp__zibby-run__ask_operator` once with one concrete question,",
+  "  then continue with the answer.",
   "",
   "## Workspace",
   "",
@@ -255,12 +258,13 @@ interface HookMatcherGroup {
  * `Write|Edit` feed only the hook's ownership ledger: a `Write` that creates a new
  * file records it as the agent's own (so a later `sed -i`/`rm` on it isn't gated),
  * and either tool aimed at the gate's coordination files is denied. Neither raises
- * an intent.
+ * an intent. `mcp__zibby-run__ask_operator` always raises `operator.question` (a
+ * locked ask:human floor), so the agent's question waits for the operator's answer.
  */
 function approvalGroup(): HookMatcherGroup {
   const command = `${JSON.stringify(process.execPath)} ${JSON.stringify(APPROVAL_HOOK)} ${GATE_DEADLINE_S}`;
   return {
-    matcher: "Bash|Task|Write|Edit",
+    matcher: "Bash|Task|Write|Edit|mcp__zibby-run__ask_operator",
     hooks: [{ type: "command", command, timeout: GATE_DEADLINE_S + HOOK_KILL_MARGIN_S }],
   };
 }

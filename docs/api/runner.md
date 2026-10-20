@@ -323,9 +323,10 @@ Key assembled pieces:
   ZIBBY vendors no third-party plugin tree. The args are persisted in the run
   spec, so the loaded plugins are the trace and approval-resume replays them.
 - **`--settings`** — the locked approval-hook `PreToolUse` group is always
-  **first**, `matcher: "Bash|Task|Write|Edit"` (`Write`/`Edit` feed the
-  ownership ledger above and raise an intent only when they land outside the
-  free zone); any custom hook whose matcher could catch
+  **first**, `matcher: "Bash|Task|Write|Edit|mcp__zibby-run__ask_operator"`
+  (`Write`/`Edit` feed the ownership ledger above and raise an intent only when
+  they land outside the free zone; `ask_operator` always raises
+  `operator.question`, see `docs/api/approvals.md`); any custom hook whose matcher could catch
   `Bash`/`Task` (empty, `*`, or containing either token) is dropped at merge
   time (`collidesWithApprovalGate`) so a stored hook can never weaken the gate
   (Law 1).
@@ -337,7 +338,7 @@ Key assembled pieces:
   pre-spawn id in), an `X-Zibby-Run-Id` header is added to every http/sse
   server whose `url` resolves to a **loopback host**
   (`localhost`/`127.0.0.1`/`[::1]`) — i.e. ZIBBY's own in-process MCP
-  controllers (`zibby-entities`, `zibby-kb`), never a third-party remote
+  controllers (`zibby-entities`, `zibby-kb`, `zibby-run`), never a third-party remote
   server (context7, playwright, …). `KbScopeService`
   (`apps/api/src/kb/kb-scope.service.ts`) consumes the header to scope what
   the run may read — see `docs/api/teams.md`'s "Scoping which KBs a caller

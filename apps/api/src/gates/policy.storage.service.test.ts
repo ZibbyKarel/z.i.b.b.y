@@ -227,6 +227,13 @@ describe("PolicyStorageService", () => {
     expect(decisionFor(floor, "floor-deploy")).toBe("ask");
   });
 
+  it("(D-ASK) operator.question is a locked ask:human floor entry", async () => {
+    const policy = new PolicyStorageService(dir);
+    const floor = await policy.floor();
+    const entry = floor.find((r) => r.id === "floor-operator.question");
+    expect(entry).toMatchObject({ decision: "ask", locked: true, resolve: { type: "human" } });
+  });
+
   it("(claim 3 step 1) agent.delegate is present on the floor at notify rank", async () => {
     const policy = new PolicyStorageService(dir);
     const floor = await policy.floor();

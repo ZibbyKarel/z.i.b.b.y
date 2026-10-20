@@ -106,6 +106,15 @@ policy:
     decision: ask
     resolve:
       type: human
+  - id: floor-operator.question
+    source: system
+    locked: true
+    match:
+      - type: action
+        action: operator.question
+    decision: ask
+    resolve:
+      type: human
   - id: floor-channel-reply
     source: system
     locked: true

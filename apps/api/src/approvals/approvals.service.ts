@@ -1,9 +1,19 @@
 import { Injectable, Optional } from "@nestjs/common";
-import type { Approval, ApprovalRunKind, DepartmentId, PrReviewEvent } from "@zibby/contracts";
+import {
+  type Approval,
+  type ApprovalRunKind,
+  type DepartmentId,
+  OPERATOR_QUESTION_ACTION,
+  type PrReviewEvent,
+} from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { withPathLock } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
-import { ApprovalAlreadyDecidedError, ApprovalNotRevisableError } from "./approvals.errors";
+import {
+  ApprovalAlreadyDecidedError,
+  ApprovalNotAnswerableError,
+  ApprovalNotRevisableError,
+} from "./approvals.errors";
 import { ApprovalsStorageService } from "./approvals.storage.service";
 
 /**
@@ -147,6 +157,26 @@ export class ApprovalsService {
       kind: approval.kind,
     });
     this.runners.get(approval.kind)?.cancel(approval.runId);
+    return approval;
+  }
+
+  /**
+   * Answer an agent's `ask_operator` question (D-ASK): approve it with the answer as
+   * `reason`, then resume the run the same way `approve` does — the held tool call
+   * proceeds and `RunMcpController` hands the stored answer back to the agent. Only
+   * an `operator.question` approval is answerable; the check runs before `decide`,
+   * so a refused answer leaves the approval pending.
+   */
+  async answer(id: string, answer: string): Promise<Approval> {
+    const pending = await this.storage.get(id);
+    if (pending.action !== OPERATOR_QUESTION_ACTION) throw new ApprovalNotAnswerableError(id);
+    const approval = await this.decide(id, "approved", answer);
+    this.log?.info("question answered; resuming run", {
+      id,
+      runId: approval.runId,
+      kind: approval.kind,
+    });
+    await this.runners.get(approval.kind)?.resume(approval.runId, approval);
     return approval;
   }
 

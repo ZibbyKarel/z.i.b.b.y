@@ -36,7 +36,9 @@ _wants_ to ask "which of these?" must therefore narrow itself to one yes/no and 
 alternatives as information — `routing-proposal` names both candidate departments in its
 `detail` string while approving only ever means "release to the winner". Rejecting is the
 escape hatch back to the operator, whose own re-entry (an explicit target) is a hard
-override.
+override. (`answer` is not a third outcome: it is an approve that also stores the
+operator's free-text answer, and only for an `operator.question` — see _Agent
+questions_ below.)
 
 ## Lifecycle
 
@@ -179,7 +181,34 @@ POST /api/approvals/:id/revise   request changes on a `stage-approval` workflow 
                                   body: { note: string } (required); status → `revised`, the gated
                                   phase re-runs with the note and parks at the same gate again.
                                   Any other approval (incl. `spend-past-cap`) → 409, stays pending
+POST /api/approvals/:id/answer   answer an agent's `operator.question` — 404 | 409
+                                  body: { answer: string } (1-4000 chars, trimmed); status → `approved`
+                                  with `reason` = the answer, then the run resumes like approve.
+                                  Any other action or an already-decided approval → 409, stays as is
 ```
+
+## Agent questions (`ask_operator`)
+
+An agent that is blocked on a fact only the operator knows calls the
+`mcp__zibby-run__ask_operator({ question })` tool (the `OPERATING_CONTRACT` tells it
+to, once, with one concrete question — never for a permission or a confirmation).
+
+1. The PreToolUse approval hook classifies the call as `operator.question` (context
+   `{ riskType: "question", summary: <question>, consequence }`; an empty question
+   is still gated as `(empty question)`).
+2. `operator.question` is a locked `ask:human` floor entry, so no agent, department
+   or catalog rule can weaken it. The run holds on a normal `agent` /
+   `workflow-stage` approval whose `detail` is that context.
+3. `POST /approvals/:id/answer` stores the answer as `reason` and resumes the run.
+   Rejecting stops the run, as for any other approval.
+4. The held tool call proceeds to `RunMcpController` (`POST /api/runs/mcp`, the
+   `zibby-run` server seeded by `McpServersStorageService` with the run bearer token,
+   behind `KbMcpAuthGuard`). It returns the newest approved answer to that question
+   for the calling run (`X-Zibby-Run-Id`; a stage's approval run id is
+   `<workflowRunId>.<stage>`, so the prefix matches too). No run id, or the chat
+   token → an `isError` result. No recorded answer (e.g. a plain approve) →
+   "No answer was recorded. Decide yourself or stop." It never waits and never
+   answers on its own.
 
 A client can never create an Approval directly — only the server (a runner or
 triage flow) generates them. This prevents forging a decision (Law 4).

@@ -14,6 +14,7 @@ import {
   ENTITY_MCP_SERVER_ID,
   KB_MCP_SERVER_ID,
   McpServersStorageService,
+  RUN_MCP_SERVER_ID,
 } from "./mcp.storage.service";
 
 const sample: CreateMcpServerInput = {
@@ -155,6 +156,17 @@ describe("McpServersStorageService", () => {
       await service.onModuleInit();
       const creds = await credentials.read(KB_MCP_SERVER_ID);
       expect(creds?.authToken).toBe(kbAuth.runBearerToken);
+    });
+  });
+
+  describe("seedSystem (D-ASK — the zibby-run server)", () => {
+    it("seeds the enabled zibby-run http row with the RUN token credential", async () => {
+      const seeded = await service.get(RUN_MCP_SERVER_ID);
+      expect(seeded).toMatchObject({ type: "http", enabled: true });
+      expect(seeded.url).toContain("/api/runs/mcp");
+      expect((await credentials.read(RUN_MCP_SERVER_ID))?.authToken).toBe(kbAuth.runBearerToken);
+      const onDisk = await fs.readFile(fileFor(dir, RUN_MCP_SERVER_ID), "utf8");
+      expect(onDisk).not.toContain(kbAuth.runBearerToken);
     });
   });
 });

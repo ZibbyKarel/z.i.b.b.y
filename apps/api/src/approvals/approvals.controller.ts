@@ -4,6 +4,7 @@ import { approvalsContract } from "@zibby/contracts";
 import { makeErrorMapper } from "../shared/http/error-mapping";
 import {
   ApprovalAlreadyDecidedError,
+  ApprovalNotAnswerableError,
   ApprovalNotFoundError,
   ApprovalNotRevisableError,
   InvalidApprovalIdError,
@@ -14,9 +15,11 @@ const errors = makeErrorMapper("Approval", {
   missing: [ApprovalNotFoundError, InvalidApprovalIdError],
 });
 
-/** Deciding an already-decided (or revising a non-checkpoint) approval → 409. */
+/** Deciding an already-decided (or revising a non-checkpoint / answering a non-question) approval → 409. */
 const decided = (error: unknown) =>
-  error instanceof ApprovalAlreadyDecidedError || error instanceof ApprovalNotRevisableError
+  error instanceof ApprovalAlreadyDecidedError ||
+  error instanceof ApprovalNotRevisableError ||
+  error instanceof ApprovalNotAnswerableError
     ? ({ status: 409, body: { message: error.message } } as const)
     : undefined;
 
@@ -51,11 +54,8 @@ export class ApprovalsController {
       reviseApproval: ({ params: { id }, body }) =>
         errors.or404(id, () => this.approvals.revise(id, body.note), decided),
 
-      // Implemented with B8 (`ApprovalsService.answer`); refused until then.
-      answerApproval: async () => ({
-        status: 409,
-        body: { message: "Answering is not implemented yet" },
-      }),
+      answerApproval: ({ params: { id }, body }) =>
+        errors.or404(id, () => this.approvals.answer(id, body.answer), decided),
     });
   }
 }

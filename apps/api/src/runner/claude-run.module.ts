@@ -1,8 +1,10 @@
 import { Module } from "@nestjs/common";
 import { AGENTS_DIR, AgentsStorageService } from "../agents/agents.storage.service";
+import { ApprovalsModule } from "../approvals/approvals.module";
 import { COMMANDS_DIR, CommandsStorageService } from "../commands/commands.storage.service";
 import { HOOKS_DIR, HooksStorageService } from "../hooks/hooks.storage.service";
 import { KbAuthModule } from "../kb/kb-auth.module";
+import { KbMcpAuthGuard } from "../kb/kb-mcp-auth.guard";
 import { MCP_CREDENTIALS_DIR, McpCredentialsStore } from "../mcp/mcp-credentials.store";
 import { MCP_DIR, McpServersStorageService } from "../mcp/mcp.storage.service";
 import { dataDir } from "../shared/data-dir";
@@ -10,6 +12,7 @@ import { SKILLS_DIR, SkillsStorageService } from "../skills/skills.storage.servi
 import { ClaudePreflightService } from "./claude-preflight.service";
 import { ClaudeRunCommandService } from "./claude-run-command.service";
 import { CommandMaterializerService } from "./command-materializer.service";
+import { RunMcpController } from "./run-mcp.controller";
 
 /**
  * Provides the {@link ClaudeRunCommandService} (the `claude -p` command builder)
@@ -30,10 +33,16 @@ import { CommandMaterializerService } from "./command-materializer.service";
  * instead gets the SAME app-wide singleton `KbMcpAuthService` NestJS shares
  * with every other importer, so both `McpServersStorageService` instances
  * (this one and `McpModule`'s) and the guard agree on one token pair.
+ *
+ * It also hosts the `zibby-run` MCP endpoint ({@link RunMcpController}, D-ASK),
+ * behind the same `KbMcpAuthGuard` / run token. `ApprovalsModule` imports no runner
+ * module, so importing it here closes no cycle.
  */
 @Module({
-  imports: [KbAuthModule],
+  imports: [KbAuthModule, ApprovalsModule],
+  controllers: [RunMcpController],
   providers: [
+    KbMcpAuthGuard,
     { provide: AGENTS_DIR, useFactory: () => process.env.AGENTS_DIR ?? dataDir("agents") },
     { provide: SKILLS_DIR, useFactory: () => process.env.SKILLS_DIR ?? dataDir("skills") },
     { provide: HOOKS_DIR, useFactory: () => process.env.HOOKS_DIR ?? dataDir("hooks") },

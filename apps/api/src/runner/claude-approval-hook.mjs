@@ -1104,7 +1104,7 @@ export function classifyTask(toolInput) {
  * something, see {@link classifyTask}). Pure and synchronous, called inside a
  * try/catch by `main()` so a classifier bug fails OPEN, never blocks the tool.
  */
-function classifyEvent(input) {
+export function classifyEvent(input) {
   if (input?.tool_name === "Bash") {
     const cls = classify(input?.tool_input?.command ?? "");
     if (!cls) return null;
@@ -1120,6 +1120,22 @@ function classifyEvent(input) {
     };
   }
   if (input?.tool_name === "Task") return classifyTask(input?.tool_input);
+  // An agent's question to the operator always goes through the gate (a locked
+  // ask:human floor) — even an empty one, so the tool can never answer itself.
+  if (input?.tool_name === "mcp__zibby-run__ask_operator") {
+    const q =
+      String(input?.tool_input?.question ?? "")
+        .trim()
+        .slice(0, 2000) || "(empty question)";
+    return {
+      action: "operator.question",
+      context: JSON.stringify({
+        riskType: "question",
+        summary: q,
+        consequence: "The run waits for your answer.",
+      }),
+    };
+  }
   return null;
 }
 

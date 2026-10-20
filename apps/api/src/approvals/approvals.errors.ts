@@ -29,3 +29,11 @@ export class ApprovalNotRevisableError extends Error {
     this.name = "ApprovalNotRevisableError";
   }
 }
+
+/** Raised when answering an approval that is not an agent's `operator.question`. */
+export class ApprovalNotAnswerableError extends Error {
+  constructor(public readonly id: string) {
+    super(`Approval "${id}" is not a question to answer`);
+    this.name = "ApprovalNotAnswerableError";
+  }
+}
