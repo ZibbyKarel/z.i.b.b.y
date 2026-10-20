@@ -46,9 +46,9 @@ _Generated: 2026-09-24T18:31:39.613Z_
 
 <!-- AUTO:GATES:START -->
 
-## Gate rules (20)
+## Gate rules (21)
 
-### System floor (locked, 15)
+### System floor (locked, 16)
 
 - `floor-agent.delegate`: action=agent.delegate → **notify**
 - `floor-agent.propose_new`: action=agent.propose_new → **ask**
@@ -59,6 +59,7 @@ _Generated: 2026-09-24T18:31:39.613Z_
 - `floor-git.force_push`: action=git.force_push → **ask**
 - `floor-git.push`: action=git.push → **ask**
 - `floor-jira.create_issue`: action=jira.create_issue → **ask**
+- `floor-operator.question`: action=operator.question → **ask**
 - `floor-payment`: action=payment → **ask**
 - `floor-pr.merge`: action=pr.merge → **deny**
 - `floor-pr.open`: action=pr.open → **notify**
