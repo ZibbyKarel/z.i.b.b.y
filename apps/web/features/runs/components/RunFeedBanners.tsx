@@ -126,11 +126,10 @@ export function RunApprovalBanner({
                 <Button
                   block
                   data-testid={RunFeedBannersTestId.Reject}
-                  intent="secondary"
+                  intent="danger"
                   onClick={() => setConfirmReject(true)}
                   size="sm"
                 >
-                  <StatusDot size="75" tone="error" />
                   {t("banner.reject")}
                 </Button>
               </Stack>

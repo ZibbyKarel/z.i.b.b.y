@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Button,
-  Container,
-  MenuButton,
-  type MenuButtonItem,
-  Stack,
-  StatusDot,
-} from "@zibby/design-system";
+import { Button, Container, MenuButton, type MenuButtonItem, Stack } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -168,11 +161,10 @@ export function RunDetailActions({
         <Button
           data-testid={`${RunDetailActionsTestId.Action}-${a.id}`}
           disabled={a.disabled || pending}
-          intent={a.primary ? "primary" : "secondary"}
+          intent={a.primary ? "primary" : a.id === "stop" ? "danger" : "secondary"}
           key={a.id}
           onClick={a.onClick}
         >
-          {a.id === "stop" && <StatusDot size="75" tone="error" />}
           {t(`detail.action.${a.id}`)}
         </Button>
       ))}
