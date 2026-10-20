@@ -633,6 +633,7 @@ function workflowRunToView(
     checkpoints: r.checkpoints,
     stageRuns: r.stageRuns,
     currentStage: r.currentStage,
+    currentStageStartedAt: r.currentStageStartedAt,
     outputArtifactName: fileOutput?.from,
     costUsd,
   };

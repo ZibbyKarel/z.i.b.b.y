@@ -277,6 +277,15 @@ describe("TaskRunsService", () => {
     });
   });
 
+  it("workflowRunToView passes currentStageStartedAt through", async () => {
+    const { service, workflowRunner } = build();
+    workflowRunner.listAll.mockResolvedValue([
+      { ...pipeP, currentStageStartedAt: "2026-06-16T00:03:00.000Z" },
+    ]);
+    const run = await service.getTaskRun(pipeP.workflowRunId);
+    expect(run.currentStageStartedAt).toBe("2026-06-16T00:03:00.000Z");
+  });
+
   describe("costUsd projection (Phase 03)", () => {
     it("sums the stage costs of a workflow run", async () => {
       const { service, workflowRunner } = build();

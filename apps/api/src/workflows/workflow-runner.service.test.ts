@@ -1216,7 +1216,7 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
         statusByRunId.set(runId, outcomes[cwds.length] ?? "done");
         await fs.writeFile(path.join(spec.cwd, "marker.txt"), runId, "utf8");
         cwds.push(spec.cwd);
-        return { runId };
+        return { runId, startedAt: new Date().toISOString() };
       });
       h.core.get.mockImplementation((runId: string) => ({
         runId,
@@ -1237,6 +1237,27 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
           resolveOutputSource(r: WorkflowRun, p: unknown, f: string): Promise<string | null>;
         }
       ).resolveOutputSource(run, workflow, fromName);
+
+    it("records start/finish per stage and a live stage clock while it runs", async () => {
+      const run = h.runs.get(WORKFLOW_RUN_ID);
+      if (!run) throw new Error("missing run");
+      scriptCore(["done", "done"]);
+      const liveClock: (string | undefined)[] = [];
+      const get = h.core.get.getMockImplementation();
+      h.core.get.mockImplementation((runId: string) => {
+        liveClock.push(run.currentStageStartedAt); // the stage is "running" while polled
+        return get?.(runId);
+      });
+
+      await drive(run, loopWorkflow);
+
+      expect(run.status).toBe("done");
+      expect(
+        run.stageRuns.every((s) => s.startedAt && s.finishedAt && s.finishedAt >= s.startedAt),
+      ).toBe(true);
+      expect(liveClock.some((t) => t !== undefined)).toBe(true);
+      expect(run.currentStageStartedAt).toBeUndefined();
+    });
 
     it("numbers stage folders in dispatch order — a loop's second run never overwrites the first", async () => {
       const run = h.runs.get(WORKFLOW_RUN_ID);

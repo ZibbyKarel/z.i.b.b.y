@@ -672,6 +672,11 @@ stage links to them. `TaskRun.department` (ZB-04a) is
 enriched from the underlying task's `department` field in `enrichRunWithTask` — the same
 value the parent/subtask read model above uses.
 
+Workflow runs also expose per-stage timing: every non-synthetic `stageRuns[]` entry
+carries `startedAt` / `finishedAt` (ISO; absent on old runs and on the synthetic
+`.escalated` marker), and `TaskRun.currentStageStartedAt` is the start of the stage
+currently running (cleared once it lands), which the live rail row uses as its clock.
+
 ```
 GET    /api/tasks/runs                                       the unified feed (newest-first; agent/workflow/goal/scheduled)
 GET    /api/tasks/runs/archive                                the `/archiv` page's feed: cursor-paginated, search/department-

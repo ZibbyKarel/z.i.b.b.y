@@ -1331,6 +1331,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       // to be appended to `stageRuns` — its log is readable from there now, so drop
       // the live pointer the running attempt used.
       run.currentStageRunId = undefined;
+      run.currentStageStartedAt = undefined;
 
       // Phase 43: an operator-requested stop killed this stage's child — land the
       // aggregate `interrupted` right here, before any retry/park/limit logic runs,
@@ -2428,6 +2429,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     // is enough for the live UI (it polls the aggregate); the driver clears it once
     // the stage goes terminal.
     run.currentStageRunId = rec.runId;
+    run.currentStageStartedAt = rec.startedAt;
+    await this.writeAggregate(run); // also emits the status event, so the live row shows at once
     const status = await this.waitForStage(rec.runId);
     // Cena té fáze se čte z dokončeného stage recordu (naakumulovaná přes
     // případné limit-pause respawny) a promítá se na vrácený StageRun.
@@ -2441,6 +2444,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       attempt,
       status,
       dir: path.basename(stageCwd),
+      startedAt: rec.startedAt,
+      finishedAt: new Date().toISOString(),
       ...(finishedRec?.costUsd != null ? { costUsd: finishedRec.costUsd } : {}),
       ...(lease ? { employeeId: lease.employeeId, employeeName: lease.employeeName } : {}),
     };
@@ -2750,6 +2755,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         status,
         dir: pending.stageDir,
         costUsd: runSpend(child),
+        startedAt: child.startedAt,
+        finishedAt: new Date().toISOString(),
       };
       parent.status = "running";
       delete parent.parkedReason;
