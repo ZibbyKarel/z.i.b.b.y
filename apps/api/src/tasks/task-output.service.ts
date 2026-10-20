@@ -1,12 +1,14 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { Injectable, type OnModuleInit } from "@nestjs/common";
-import type {
-  AgentRun,
-  PrOutput,
-  PrReviewEvent,
-  ScheduledTask,
-  TaskOutput,
+import {
+  type AgentRun,
+  type PrOutput,
+  type PrReviewEvent,
+  type PrThreadReply,
+  PrThreadReplySchema,
+  type ScheduledTask,
+  type TaskOutput,
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { ApprovalsService } from "../approvals/approvals.service";
@@ -52,6 +54,31 @@ const ADDRESSED_ALL = /^Addressed:\s*all\s*$/i;
 /** The Address-review-comments click authorises the push only when the report's FIRST line is `Addressed: all`. */
 export function isAutoPushAddressComments(report: string): boolean {
   return ADDRESSED_ALL.test(report.split("\n", 1)[0] ?? "");
+}
+
+/**
+ * PR inbox redesign — `github-commenter`'s reply file → valid, de-duplicated replies (≤ 50).
+ * Anything malformed is dropped, never repaired: agent output is data. Which threads may
+ * really be answered is decided again at post time against GitHub.
+ */
+export function parseThreadReplies(raw: string | undefined): PrThreadReply[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw ?? "[]");
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  const seen = new Set<string>();
+  const out: PrThreadReply[] = [];
+  for (const entry of parsed) {
+    const r = PrThreadReplySchema.safeParse(entry);
+    if (!r.success || seen.has(r.data.threadId)) continue;
+    seen.add(r.data.threadId);
+    out.push(r.data);
+    if (out.length === 50) break;
+  }
+  return out;
 }
 
 /** A labelled finding line (item 9: `Critical:` / `Important:` / `Minor:`), tolerating a bullet/numbered list marker or bold. */
@@ -337,7 +364,9 @@ export class TaskOutputService implements OnModuleInit {
    * `pr-address-comments` approval ("Push review fixes"). `Addressed: all` was authorised by
    * the click (Tier-2: fast-forward commits onto the operator's own PR only request review), so
    * it is approved on the spot and the runner (`InboxAddressCommentsService`) pushes; any other
-   * first line stays pending (Tier-3, risk high). The worktree HEAD ZIBBY reads here is stored
+   * first line stays pending (Tier-3, risk high). The `github-commenter` thread replies
+   * (`rawReplies`, parsed by {@link parseThreadReplies}) ride on the same approval — same tier as
+   * the push, posted by the runner only after it. The worktree HEAD ZIBBY reads here is stored
    * as `fixedSha` — the only sha the runner pushes. No report / no worktree / an unreadable
    * worktree / no new commits → `failed`, nothing pushed.
    */
@@ -345,6 +374,7 @@ export class TaskOutputService implements OnModuleInit {
     task: ScheduledTask,
     raw: string,
     worktree?: string,
+    rawReplies?: string,
   ): Promise<TaskTerminalDelivery> {
     const fix = task.prAddressComments;
     if (!fix) return {};
@@ -368,6 +398,10 @@ export class TaskOutputService implements OnModuleInit {
     }
     if (facts.sha === fix.headSha) return fail("no new commits");
     const autoPush = isAutoPushAddressComments(report);
+    const replies = parseThreadReplies(rawReplies);
+    const repliesBlock = replies.length
+      ? `\n\n## Replies ZIBBY will post after the push\n\n${replies.map((r) => `${r.threadId}: ${r.body}`).join("\n")}`
+      : "";
     const approval = await this.approvals.requestApproval({
       runId: task.id,
       kind: "pr-address-comments",
@@ -375,7 +409,7 @@ export class TaskOutputService implements OnModuleInit {
       action: "git.push",
       detail: `Push review fixes onto ${fix.head} — ${ref}${
         autoPush ? " (all comments addressed, checks green — authorised by the click)" : ""
-      }\n\n${report}\n\n## Verified by ZIBBY\n\nHEAD ${facts.sha}\n\ngit diff --stat ${fix.headSha} HEAD:\n${facts.stat || "(no changes)"}`,
+      }\n\n${report}${repliesBlock}\n\n## Verified by ZIBBY\n\nHEAD ${facts.sha}\n\ngit diff --stat ${fix.headSha} HEAD:\n${facts.stat || "(no changes)"}`,
       risk: autoPush ? "medium" : "high",
       sourceUrl: fix.url,
     });
@@ -388,6 +422,7 @@ export class TaskOutputService implements OnModuleInit {
             worktree,
             fixedSha: facts.sha,
             approvalId: approval.id,
+            ...(replies.length ? { replies } : {}),
           }
         : c,
     );
@@ -403,10 +438,15 @@ export class TaskOutputService implements OnModuleInit {
         return false;
       },
     );
+    if (!pushed) return { summary: `Review komentáře ${ref}: push selhal` };
+    if (!replies.length) return { summary: `Review komentáře ${ref}: opravy pushnuty` };
+    // The runner posted the replies right after the push; report what really reached GitHub.
+    const replied = await this.storage
+      .get(task.id)
+      .then((t) => t.prAddressComments?.replied ?? 0)
+      .catch(() => 0);
     return {
-      summary: pushed
-        ? `Review komentáře ${ref}: opravy pushnuty`
-        : `Review komentáře ${ref}: push selhal`,
+      summary: `Review komentáře ${ref}: opravy pushnuty, odpovědi ve vláknech ${replied}/${replies.length}`,
     };
   }
 

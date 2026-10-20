@@ -203,7 +203,16 @@ commits"); otherwise it records the `pr-address-comments` approval with the repo
 "Verified by ZIBBY" HEAD / `git diff --stat <headSha> HEAD` and stores that HEAD as `fixedSha`.
 The runner (`InboxAddressCommentsService.push`) claims `awaiting-approval` atomically, pushes
 exactly `fixedSha` → `pushed` (note = sha) or `failed` with git's reason (a remote head that
-moved since the click is rejected as non-fast-forward). Reject → `discarded`.
+moved since the click is rejected as non-fast-forward). Reject → `discarded`. Only after a successful push,
+`InboxAddressCommentsService.postReplies` posts the parked `github-commenter` replies
+(`zibby-pr-replies.json`, parsed leniently by `parseThreadReplies`: malformed, non-`PRRT_`,
+empty, over-500-char and duplicate entries are dropped, max 50, listed in the approval
+`detail` under "Replies ZIBBY will post after the push") via GraphQL
+`addPullRequestReviewThreadReply` — only to threads a fresh `reviewThreads` read of this PR
+reports as unresolved, never resolving any. `replied` / `repliesNote` record what was posted
+and why the rest was skipped; a reply failure leaves the push `pushed`, a push failure posts
+nothing. A missing reply file never blocks the push. The Tier-2 task outcome says how many
+replies reached GitHub.
 
 `GET /api/inbox/prs` rows carry `addressComments { taskId, state }` (latest such task per PR; a
 `running` one whose task/run died reads `failed`).

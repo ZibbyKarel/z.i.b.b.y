@@ -232,7 +232,7 @@ export class InboxReviewService implements OnModuleInit {
 }
 
 /** GitHub's own reason for a rejected request: JSON `message` + `errors[]`, else truncated text. */
-async function githubReason(res: Response): Promise<string> {
+export async function githubReason(res: Response): Promise<string> {
   const text = await res.text().catch(() => "");
   let reason = "";
   try {

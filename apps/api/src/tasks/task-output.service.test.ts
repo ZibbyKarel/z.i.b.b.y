@@ -11,6 +11,7 @@ import {
   TaskOutputService,
   isAutoPushAddressComments,
   isAutoPushPrRebase,
+  parseThreadReplies,
   suggestReviewEvent,
 } from "./task-output.service";
 
@@ -383,6 +384,57 @@ describe("TaskOutputService", () => {
         state: "failed",
         note,
       });
+    });
+
+    it("parses the reply file leniently: drops malformed entries, keeps the rest, caps at 50", () => {
+      expect(parseThreadReplies(undefined)).toEqual([]);
+      expect(parseThreadReplies("not json")).toEqual([]);
+      expect(parseThreadReplies('{"threadId":"PRRT_a","body":"x"}')).toEqual([]);
+      expect(
+        parseThreadReplies(
+          JSON.stringify([
+            { threadId: "PRRT_a", body: "Good catch, fixed in abc1234." },
+            { threadId: "IC_b", body: "x" },
+            { threadId: "PRRT_c", body: "" },
+            { threadId: "PRRT_d", body: "x".repeat(501) },
+            { threadId: "PRRT_e", body: "ok", extra: true },
+            { threadId: "PRRT_a", body: "dup" },
+          ]),
+        ),
+      ).toEqual([{ threadId: "PRRT_a", body: "Good catch, fixed in abc1234." }]);
+      const many = Array.from({ length: 60 }, (_, i) => ({ threadId: `PRRT_${i}`, body: "ok" }));
+      expect(parseThreadReplies(JSON.stringify(many))).toHaveLength(50);
+    });
+
+    it("stores the replies and lists them in the approval detail", async () => {
+      const task = await seed();
+      await service.parkPrAddressComments(
+        task,
+        "Addressed: partial",
+        "/wt",
+        JSON.stringify([{ threadId: "PRRT_a", body: "Yep, done in abc1234." }]),
+      );
+      expect((await storage.get("t_fix")).prAddressComments?.replies).toEqual([
+        { threadId: "PRRT_a", body: "Yep, done in abc1234." },
+      ]);
+      const { detail } = approvals.requestApproval.mock.calls[0]?.[0] as { detail: string };
+      expect(detail).toContain("## Replies ZIBBY will post after the push");
+      expect(detail).toContain("PRRT_a: Yep, done in abc1234.");
+    });
+
+    it("Addressed: all with replies reports how many replies reached GitHub", async () => {
+      const task = await seed();
+      approvals.approve.mockImplementationOnce(async () => {
+        await storage.setPrAddressComments("t_fix", (c) => (c ? { ...c, replied: 1 } : c));
+        return {};
+      });
+      const delivered = await service.parkPrAddressComments(
+        task,
+        "Addressed: all",
+        "/wt",
+        JSON.stringify([{ threadId: "PRRT_a", body: "Fixed in abc1234." }]),
+      );
+      expect(delivered.summary).toMatch(/odpovědi ve vláknech 1\/1/);
     });
 
     it("a refused push after the click reports the failure", async () => {

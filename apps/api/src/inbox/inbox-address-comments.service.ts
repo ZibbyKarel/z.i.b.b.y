@@ -18,8 +18,9 @@ import { TaskSchedulerService } from "../tasks/task-scheduler.service";
 import { WorkspaceService } from "../workspace/workspace.service";
 import { InboxService, isDeadTask } from "./inbox.service";
 import { PrRefusedError, type RebaseBrief, errMsg, readPushablePr } from "./inbox-rebase.service";
-import { ReviewRepoMismatchError } from "./inbox-review.service";
+import { ReviewRepoMismatchError, githubReason } from "./inbox-review.service";
 
+const GITHUB_API = "https://api.github.com";
 const TARGET: TaskTarget = {
   kind: "workflow",
   id: "pr-address-comments",
@@ -155,7 +156,8 @@ export class InboxAddressCommentsService implements OnModuleInit {
    * Approve → fast-forward the parked fixes from the run's worktree. Only `awaiting-approval`
    * with a worktree and a verified `fixedSha` pushes: it is claimed atomically (→ `running`,
    * inside the storage lock) so a second approve cannot push again, and the final `pushed` /
-   * `failed` write only lands from that claimed state. Never a force-push.
+   * `failed` write only lands from that claimed state. Never a force-push. The parked thread
+   * replies are posted after the push succeeded, never before or instead.
    */
   async push(taskId: string): Promise<void> {
     let claimed: ScheduledTask["prAddressComments"];
@@ -194,9 +196,80 @@ export class InboxAddressCommentsService implements OnModuleInit {
       await settle({ state: "failed", note });
       throw new Error(note);
     }
+    // Only after a successful push: the replies cite shas that must exist on GitHub. Never throws.
+    await this.postReplies(taskId);
     // The push changes the PR's head and checks — don't serve the stale 30 s cache.
     this.inbox.dropPrsCache();
     this.log?.info("pr review fixes pushed", { taskId, repo: fix.repo, number: fix.number });
+  }
+
+  /**
+   * Post the parked `github-commenter` replies — only to threads GitHub reports, right now, as
+   * unresolved threads of THIS PR (the ids in the file are never trusted on their own). Reply
+   * only, never resolve. Failures are noted on the task (`replied`, `repliesNote`); the push
+   * stays `pushed` and nothing is retried.
+   */
+  async postReplies(taskId: string): Promise<void> {
+    const task = await this.tasks.get(taskId).catch(() => null);
+    const fix = task?.prAddressComments;
+    if (!task || !fix?.replies?.length) return;
+    const replies = fix.replies;
+    const note = (replied: number, repliesNote: string) =>
+      this.tasks
+        .setPrAddressComments(taskId, (c) => (c ? { ...c, replied, repliesNote } : c))
+        .catch(() => undefined);
+    const project = task.projectId
+      ? await this.projects.get(task.projectId).catch(() => null)
+      : null;
+    const link = project
+      ? await resolveGithubToken(this.resolvedProjects, this.credentials, project).catch(() => null)
+      : null;
+    if (!link || link.repo.toLowerCase() !== fix.repo.toLowerCase()) {
+      await note(0, `no GitHub token for ${fix.repo}; no replies posted`);
+      return;
+    }
+    const [owner, name] = link.repo.split("/");
+    const gql = async <T>(query: string, variables: Record<string, unknown>): Promise<T> => {
+      const res = await this.fetchImpl(`${GITHUB_API}/graphql`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${link.token}`, "content-type": "application/json" },
+        body: JSON.stringify({ query, variables }),
+      });
+      if (!res.ok) throw new Error(`github graphql: HTTP ${res.status}${await githubReason(res)}`);
+      const json = (await res.json()) as { data?: T; errors?: { message?: string }[] };
+      if (json.errors?.length || !json.data) {
+        throw new Error(`github graphql: ${json.errors?.[0]?.message ?? "no data"}`);
+      }
+      return json.data;
+    };
+    let replied = 0;
+    try {
+      // ponytail: first 100 threads; on a PR with more, replies to the rest are skipped (noted).
+      const data = await gql<{
+        repository: {
+          pullRequest: { reviewThreads: { nodes: { id: string; isResolved: boolean }[] } } | null;
+        } | null;
+      }>(
+        "query($owner:String!,$name:String!,$n:Int!){repository(owner:$owner,name:$name){pullRequest(number:$n){reviewThreads(first:100){nodes{id isResolved}}}}}",
+        { owner, name, n: fix.number },
+      );
+      const nodes = data.repository?.pullRequest?.reviewThreads.nodes ?? [];
+      const open = new Set(nodes.filter((t) => !t.isResolved).map((t) => t.id));
+      const allowed = replies.filter((r) => open.has(r.threadId));
+      for (const r of allowed) {
+        await gql(
+          "mutation($id:ID!,$body:String!){addPullRequestReviewThreadReply(input:{pullRequestReviewThreadId:$id,body:$body}){comment{id}}}",
+          { id: r.threadId, body: r.body },
+        );
+        replied++;
+      }
+      const skipped = replies.length - allowed.length;
+      await note(replied, skipped ? `${skipped} skipped (not an open thread of this PR)` : "");
+      this.log?.info("pr review replies posted", { taskId, replied, skipped });
+    } catch (error) {
+      await note(replied, errMsg(error).slice(0, 300));
+      this.log?.warn("pr review replies failed", { taskId, replied, err: errMsg(error) });
+    }
   }
 
   /** Reject → discard, only from `awaiting-approval`; nothing is pushed. */

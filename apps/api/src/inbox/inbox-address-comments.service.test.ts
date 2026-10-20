@@ -23,6 +23,10 @@ describe("InboxAddressCommentsService", () => {
   let dropPrsCache: ReturnType<typeof vi.fn>;
   let pushFastForward: ReturnType<typeof vi.fn>;
   let pull: Record<string, unknown>;
+  /** Every GraphQL request body ZIBBY sent, and how the fake answers the threads query / a mutation. */
+  let graphql: string[];
+  let threads: { id: string; isResolved: boolean }[];
+  let mutationStatus: number;
   let integrations: Integration[];
   let service: InboxAddressCommentsService;
 
@@ -58,7 +62,31 @@ describe("InboxAddressCommentsService", () => {
     register = vi.fn();
     dropPrsCache = vi.fn();
     pushFastForward = vi.fn(async () => "newsha");
-    const fetchImpl = vi.fn(async () => new Response(JSON.stringify(pull), { status: 200 }));
+    graphql = [];
+    threads = [
+      { id: "PRRT_a", isResolved: false },
+      { id: "PRRT_r", isResolved: true },
+    ];
+    mutationStatus = 200;
+    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url === "https://api.github.com/graphql") {
+        const body = String(init?.body ?? "");
+        graphql.push(body);
+        if (body.includes("addPullRequestReviewThreadReply")) {
+          return new Response(
+            JSON.stringify({ data: { addPullRequestReviewThreadReply: { comment: { id: "c" } } } }),
+            { status: mutationStatus },
+          );
+        }
+        return new Response(
+          JSON.stringify({
+            data: { repository: { pullRequest: { reviewThreads: { nodes: threads } } } },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response(JSON.stringify(pull), { status: 200 });
+    });
     service = new InboxAddressCommentsService(
       {
         get: async (id: string) => {
@@ -212,5 +240,64 @@ describe("InboxAddressCommentsService", () => {
     await service.discard(running);
     expect((await storage.get(running)).prAddressComments?.state).toBe("running");
     expect(pushFastForward).not.toHaveBeenCalled();
+  });
+
+  describe("thread replies after the push (reused github-commenter)", () => {
+    async function parkedWithReplies(): Promise<string> {
+      const taskId = await parked();
+      await storage.setPrAddressComments(taskId, (c) =>
+        c
+          ? {
+              ...c,
+              replies: [
+                { threadId: "PRRT_a", body: "Good catch, fixed in bbbbbbb." },
+                { threadId: "PRRT_r", body: "Resolved already." },
+                { threadId: "PRRT_x", body: "Not on this PR." },
+              ],
+            }
+          : c,
+      );
+      return taskId;
+    }
+
+    it("after the push, replies only to this PR's unresolved threads and never resolves", async () => {
+      const taskId = await parkedWithReplies();
+      await service.push(taskId);
+      const mutations = graphql.filter((b) => b.includes("addPullRequestReviewThreadReply"));
+      expect(mutations).toHaveLength(1);
+      expect(mutations[0]).toContain("PRRT_a");
+      expect(mutations[0]).toContain("Good catch, fixed in bbbbbbb.");
+      expect(graphql.some((b) => b.includes("resolveReviewThread"))).toBe(false);
+      expect(graphql[0]).toContain('"n":7'); // the threads are re-read from THIS PR
+      const fix = (await storage.get(taskId)).prAddressComments;
+      expect(fix).toMatchObject({ state: "pushed", replied: 1 });
+      expect(fix?.repliesNote).toMatch(/2 skipped/);
+    });
+
+    it("a failed push posts no replies", async () => {
+      pushFastForward.mockRejectedValue(new Error("non-fast-forward"));
+      const taskId = await parkedWithReplies();
+      await expect(service.push(taskId)).rejects.toThrow();
+      expect(graphql).toEqual([]);
+    });
+
+    it("a failed reply keeps the push as pushed and notes it", async () => {
+      mutationStatus = 502;
+      const taskId = await parkedWithReplies();
+      await service.push(taskId);
+      const fix = (await storage.get(taskId)).prAddressComments;
+      expect(fix).toMatchObject({ state: "pushed", replied: 0 });
+      expect(fix?.repliesNote).toMatch(/502/);
+    });
+
+    it("no replies parked → no GitHub call; a resolved-only PR posts nothing", async () => {
+      await service.push(await parked());
+      expect(graphql).toEqual([]);
+      threads = [{ id: "PRRT_a", isResolved: true }];
+      const taskId = await parkedWithReplies();
+      await service.push(taskId);
+      expect(graphql.filter((b) => b.includes("addPullRequestReviewThreadReply"))).toEqual([]);
+      expect((await storage.get(taskId)).prAddressComments).toMatchObject({ replied: 0 });
+    });
   });
 });

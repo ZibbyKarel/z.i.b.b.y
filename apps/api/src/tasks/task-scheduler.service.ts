@@ -59,6 +59,7 @@ import { TaskClassifierService } from "./task-classifier.service";
 import {
   PR_ADDRESS_COMMENTS_ARTIFACT,
   PR_REBASE_ARTIFACT,
+  PR_REPLIES_ARTIFACT,
   PR_REVIEW_ARTIFACT,
   TaskOutputService,
 } from "./task-output.service";
@@ -1954,8 +1955,17 @@ export class TaskSchedulerService
             const artifact = await this.workflowRunner
               .readArtifact(run.workflowRunId, PR_ADDRESS_COMMENTS_ARTIFACT)
               .catch(() => null);
+            // A missing reply file never blocks the push — it just means no replies.
+            const replies = await this.workflowRunner
+              .readArtifact(run.workflowRunId, PR_REPLIES_ARTIFACT)
+              .catch(() => null);
             const delivery = await this.taskOutput
-              .parkPrAddressComments(existing, artifact?.content ?? "", run.workspace?.path)
+              .parkPrAddressComments(
+                existing,
+                artifact?.content ?? "",
+                run.workspace?.path,
+                replies?.content,
+              )
               .catch(async (error: unknown) => {
                 this.log.warn("pr address-comments park failed (soft)", {
                   taskId,

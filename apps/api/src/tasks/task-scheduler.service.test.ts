@@ -14,6 +14,7 @@ import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service"
 import {
   PR_ADDRESS_COMMENTS_ARTIFACT,
   PR_REBASE_ARTIFACT,
+  PR_REPLIES_ARTIFACT,
   PR_REVIEW_ARTIFACT,
 } from "./task-output.service";
 import { TaskSchedulerService } from "./task-scheduler.service";
@@ -1728,10 +1729,10 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
 
     it("a done run hands the report and the worktree to parkPrAddressComments", async () => {
       const id = await seedFix();
-      workflowRunner.readArtifact.mockResolvedValue({
-        name: PR_ADDRESS_COMMENTS_ARTIFACT,
-        content: "Addressed: all",
-      });
+      workflowRunner.readArtifact.mockImplementation(async (_run: string, name: string) => ({
+        name,
+        content: name === PR_REPLIES_ARTIFACT ? "[]" : "Addressed: all",
+      }));
       workflowListener?.(fixRun(id, "done"));
       await vi.waitFor(async () => {
         expect((await storage.get(id)).outcome).toBeDefined();
@@ -1744,9 +1745,28 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         expect.objectContaining({ id }),
         "Addressed: all",
         "/wt",
+        "[]",
       );
       expect(taskOutput.parkPrRebase).not.toHaveBeenCalled();
       expect((await storage.get(id)).outcome?.summary).toBe("fixes parked");
+    });
+
+    it("a missing reply file never blocks the park (replies = undefined)", async () => {
+      const id = await seedFix();
+      workflowRunner.readArtifact.mockImplementation(async (_run: string, name: string) => {
+        if (name === PR_REPLIES_ARTIFACT) throw new Error("ENOENT");
+        return { name, content: "Addressed: partial" };
+      });
+      workflowListener?.(fixRun(id, "done"));
+      await vi.waitFor(async () => {
+        expect((await storage.get(id)).outcome).toBeDefined();
+      });
+      expect(taskOutput.parkPrAddressComments).toHaveBeenCalledWith(
+        expect.objectContaining({ id }),
+        "Addressed: partial",
+        "/wt",
+        undefined,
+      );
     });
 
     it("a stopped address-comments run writes an error outcome and parks nothing", async () => {
