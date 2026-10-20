@@ -9,6 +9,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AgentRunnerService } from "../src/agents/agent-runner.service";
 import { AppModule } from "../src/app.module";
+import { withOperator } from "./operator-token";
 
 const FAKE_CLAUDE = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -183,8 +184,7 @@ describe("Activity log (e2e)", () => {
       );
     });
 
-    await request(app.getHttpServer())
-      .post(`/api/approvals/${approval.id}/approve`)
+    await withOperator(request(app.getHttpServer()).post(`/api/approvals/${approval.id}/approve`))
       .send({})
       .expect(200);
     await until(async () => {

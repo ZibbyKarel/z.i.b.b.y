@@ -1,4 +1,4 @@
-import { Controller } from "@nestjs/common";
+import { Controller, UseGuards } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { approvalsContract } from "@zibby/contracts";
 import { makeErrorMapper } from "../shared/http/error-mapping";
@@ -10,6 +10,7 @@ import {
   InvalidApprovalIdError,
 } from "./approvals.errors";
 import { ApprovalsService } from "./approvals.service";
+import { OperatorTokenGuard } from "./operator-token.guard";
 
 const errors = makeErrorMapper("Approval", {
   missing: [ApprovalNotFoundError, InvalidApprovalIdError],
@@ -28,6 +29,7 @@ const decided = (error: unknown) =>
  * id → 404; deciding an already-decided approval → 409.
  */
 @Controller()
+@UseGuards(OperatorTokenGuard)
 export class ApprovalsController {
   constructor(private readonly approvals: ApprovalsService) {}
 

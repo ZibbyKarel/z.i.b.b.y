@@ -3,6 +3,8 @@ import { dataDir } from "../shared/data-dir";
 import { ApprovalsController } from "./approvals.controller";
 import { ApprovalsService } from "./approvals.service";
 import { APPROVALS_DIR, ApprovalsStorageService } from "./approvals.storage.service";
+import { OperatorTokenGuard } from "./operator-token.guard";
+import { OperatorTokenService } from "./operator-token.service";
 
 /** Default approvals dir, anchored to `apps/api/data/approvals` like the run dirs. */
 export function resolveApprovalsDir(): string {
@@ -21,6 +23,8 @@ export function resolveApprovalsDir(): string {
     { provide: APPROVALS_DIR, useFactory: resolveApprovalsDir },
     ApprovalsStorageService,
     ApprovalsService,
+    OperatorTokenService,
+    OperatorTokenGuard,
   ],
   exports: [ApprovalsService],
 })

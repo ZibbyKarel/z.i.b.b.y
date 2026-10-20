@@ -9,6 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
 import { ChannelWatcherService } from "../src/channels/channel-watcher.service";
 import { seedEmployeeFixture } from "./fixtures/employee-fixture";
+import { withOperator } from "./operator-token";
 
 const FAKE_CLAUDE = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -256,7 +257,9 @@ describe("Channels triage throughline (e2e)", () => {
     expect(approval).toBeTruthy();
 
     const sentBefore = (await fs.readdir(path.join(fakeDir, "sent")).catch(() => [])).length;
-    await request(app.getHttpServer()).post(`/api/approvals/${approval.id}/approve`).expect(200);
+    await withOperator(
+      request(app.getHttpServer()).post(`/api/approvals/${approval.id}/approve`),
+    ).expect(200);
 
     // Approving routes back to the channel runner → draft sent, item handled.
     await until(async () => {
@@ -299,7 +302,9 @@ describe("Channels triage throughline (e2e)", () => {
       (a: { kind: string; runId: string }) =>
         a.kind === "channel" && a.runId === `team/${triaged.id}`,
     );
-    await request(app.getHttpServer()).post(`/api/approvals/${approval.id}/reject`).expect(200);
+    await withOperator(
+      request(app.getHttpServer()).post(`/api/approvals/${approval.id}/reject`),
+    ).expect(200);
 
     await until(async () => {
       const found = (await items()).body.find((i: { id: string }) => i.id === triaged.id);

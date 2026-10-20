@@ -101,6 +101,9 @@ if (!process.env.CHANNEL_FAKE_DIR) {
 // the deterministic demo seam unless a suite explicitly opts into another mode.
 process.env.AGENT_RUNNER_MODE ??= "demo";
 
+// Approvals mutations require the operator token; pin one so e2e suites can decide approvals.
+process.env.ZIBBY_OPERATOR_TOKEN ??= "test-operator-token";
+
 // M8: keep the integration-poll retry/backoff effectively instant under test so a
 // failing-poll case exercises the retry path without burning real wall-clock.
 process.env.CHANNEL_POLL_BACKOFF_MS ??= "1";

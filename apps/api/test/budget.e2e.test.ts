@@ -7,6 +7,7 @@ import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
+import { withOperator } from "./operator-token";
 
 const FAKE_CLAUDE = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -162,7 +163,9 @@ describe("Budget API (e2e)", () => {
     );
 
     // 3. Approving the override dispatches the held task.
-    const approve = await request(server()).post(`/api/approvals/${approval!.id}/approve`);
+    const approve = await withOperator(
+      request(server()).post(`/api/approvals/${approval!.id}/approve`),
+    );
     expect(approve.status).toBe(200);
     const dispatched = await poll(
       () => scheduled(heldTaskId),
@@ -183,7 +186,9 @@ describe("Budget API (e2e)", () => {
     expect(held?.status).toBe("held");
     const approvalId = held?.approvalId as string;
 
-    const reject = await request(server()).post(`/api/approvals/${approvalId}/reject`);
+    const reject = await withOperator(
+      request(server()).post(`/api/approvals/${approvalId}/reject`),
+    );
     expect(reject.status).toBe(200);
 
     const cancelled = await poll(

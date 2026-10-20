@@ -9,6 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
 import { WorkingAgentsFuse } from "../src/employees/working-agents-fuse";
 import { SystemConfigStore } from "../src/system/system-config.store";
+import { withOperator } from "./operator-token";
 
 const FAKE_CLAUDE = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -156,7 +157,9 @@ describe("Budget restart (e2e)", () => {
     expect(pending.some((a) => a.id === approvalId)).toBe(true);
 
     // Approving after the restart still dispatches it (kind-"task" runner re-registered).
-    const approve = await request(server()).post(`/api/approvals/${approvalId}/approve`);
+    const approve = await withOperator(
+      request(server()).post(`/api/approvals/${approvalId}/approve`),
+    );
     expect(approve.status).toBe(200);
     const dispatched = await poll(
       () => taskById(heldId),

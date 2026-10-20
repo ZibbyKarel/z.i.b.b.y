@@ -8,6 +8,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AgentRunnerService } from "../src/agents/agent-runner.service";
 import { AppModule } from "../src/app.module";
+import { withOperator } from "./operator-token";
 
 const FAKE_CLAUDE = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -164,8 +165,7 @@ describe("Mid-run approval gate (Variant B, e2e)", () => {
     const approval = await until(async () => (await pendingFor(runId)) ?? null);
     expect(approval.action).toBe("add_to_cart");
 
-    await request(app.getHttpServer())
-      .post(`/api/approvals/${approval.id}/approve`)
+    await withOperator(request(app.getHttpServer()).post(`/api/approvals/${approval.id}/approve`))
       .send({})
       .expect(200);
 
@@ -186,8 +186,7 @@ describe("Mid-run approval gate (Variant B, e2e)", () => {
     expect(approval.action).toBe("payment");
     expect(approval.risk).toBe("high");
 
-    await request(app.getHttpServer())
-      .post(`/api/approvals/${approval.id}/approve`)
+    await withOperator(request(app.getHttpServer()).post(`/api/approvals/${approval.id}/approve`))
       .send({})
       .expect(200);
 
@@ -200,8 +199,7 @@ describe("Mid-run approval gate (Variant B, e2e)", () => {
     const { runId, cwd } = await startRun("payer", "nope");
 
     const approval = await until(async () => (await pendingFor(runId)) ?? null);
-    await request(app.getHttpServer())
-      .post(`/api/approvals/${approval.id}/reject`)
+    await withOperator(request(app.getHttpServer()).post(`/api/approvals/${approval.id}/reject`))
       .send({})
       .expect(200);
 
@@ -209,8 +207,7 @@ describe("Mid-run approval gate (Variant B, e2e)", () => {
     expect(await paymentDone(cwd)).toBe(false);
 
     // Deciding again is a 409.
-    await request(app.getHttpServer())
-      .post(`/api/approvals/${approval.id}/reject`)
+    await withOperator(request(app.getHttpServer()).post(`/api/approvals/${approval.id}/reject`))
       .send({})
       .expect(409);
   });
@@ -236,8 +233,7 @@ describe("Mid-run approval gate (Variant B, e2e)", () => {
     // The push hasn't happened yet (the receipt is the gated effect).
     expect(await paymentDone(cwd)).toBe(false);
 
-    await request(app.getHttpServer())
-      .post(`/api/approvals/${approval.id}/approve`)
+    await withOperator(request(app.getHttpServer()).post(`/api/approvals/${approval.id}/approve`))
       .send({})
       .expect(200);
     await until(async () => ((await runStatus(runId)) === "done" ? true : null));

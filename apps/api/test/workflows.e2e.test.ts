@@ -13,6 +13,7 @@ import { ApprovalsService } from "../src/approvals/approvals.service";
 import { PR_REVIEW_ARTIFACT } from "../src/tasks/task-output.service";
 import { WorkflowRunnerService } from "../src/workflows/workflow-runner.service";
 import { defaultEmployeesDir, seedEmployeeFixture } from "./fixtures/employee-fixture";
+import { withOperator } from "./operator-token";
 
 /** Token-free stand-in for the real `claude` CLI (see fixtures/fake-claude.mjs). */
 const FAKE_CLAUDE = path.resolve(
@@ -1263,7 +1264,9 @@ describe("Workflow stage gates (claude mode, e2e)", () => {
     await until(async () => ((await runStatus(workflowRunId)).status === "parked" ? true : null));
     const approval = await until(() => pendingStageApproval(workflowRunId));
 
-    await request(app.getHttpServer()).post(`/api/approvals/${approval.id}/approve`).expect(200);
+    await withOperator(
+      request(app.getHttpServer()).post(`/api/approvals/${approval.id}/approve`),
+    ).expect(200);
 
     // The blocked child proceeds (no respawn) and the run finishes.
     const final = await until(async () => {
@@ -1281,7 +1284,9 @@ describe("Workflow stage gates (claude mode, e2e)", () => {
     await until(async () => ((await runStatus(workflowRunId)).status === "parked" ? true : null));
     const approval = await until(() => pendingStageApproval(workflowRunId));
 
-    await request(app.getHttpServer()).post(`/api/approvals/${approval.id}/reject`).expect(200);
+    await withOperator(
+      request(app.getHttpServer()).post(`/api/approvals/${approval.id}/reject`),
+    ).expect(200);
 
     const final = await until(async () => {
       const run = await runStatus(workflowRunId);

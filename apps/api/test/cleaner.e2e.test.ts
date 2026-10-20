@@ -8,6 +8,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AgentRunnerService } from "../src/agents/agent-runner.service";
 import { AppModule } from "../src/app.module";
+import { withOperator } from "./operator-token";
 
 const FAKE_CLAUDE = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -144,8 +145,7 @@ describe("Cleaner agent (Variant B, e2e)", () => {
     expect(await exists(path.join(target, "scratch.tmp"))).toBe(true);
     expect(await exists(path.join(target, "report-final.txt"))).toBe(true);
 
-    await request(app.getHttpServer())
-      .post(`/api/approvals/${approval.id}/approve`)
+    await withOperator(request(app.getHttpServer()).post(`/api/approvals/${approval.id}/approve`))
       .send({})
       .expect(200);
 
@@ -176,8 +176,7 @@ describe("Cleaner agent (Variant B, e2e)", () => {
     const { runId } = start as { runId: string };
 
     const approval = await until(async () => (await pendingFor(runId)) ?? null);
-    await request(app.getHttpServer())
-      .post(`/api/approvals/${approval.id}/reject`)
+    await withOperator(request(app.getHttpServer()).post(`/api/approvals/${approval.id}/reject`))
       .send({})
       .expect(200);
 
