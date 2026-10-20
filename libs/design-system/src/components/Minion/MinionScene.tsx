@@ -28,6 +28,7 @@ const K = MINION_K;
 
 export enum MinionSceneTestId {
   Root = "minion-scene-root",
+  IdleBody = "minion-scene-idle-body",
 }
 
 export interface MinionSceneProps {
@@ -552,49 +553,52 @@ function IdleScene({ appearance, bn }: PartProps) {
         strokeLinejoin="round"
         strokeWidth={1.4}
       />
-      <MinionBody
-        noArms
-        noExtras
-        noFloor
-        appearance={appearance}
-        cx={84}
-        eyeSt="done"
-        gy={95}
-        mouthSt="none"
-        state="idle"
-      />
-      <ellipse cx={g.cx - 1} cy={g.my + 1} fill={K} rx={2.6} ry={1}>
-        <An attr="ry" begin={b} dur=".45s" values="1;2.6;1" />
-      </ellipse>
-      <ArmG g={g} hand={[g.x - 2, g.ovTop + 9]} out={-6} side="L" skin={sk} />
-      <ArmG
-        g={g}
-        hand={[hx, hy]}
-        out={14}
-        pre={
-          <>
-            <path
-              d={`M${hx - 2} ${hy - 2} Q${hx - 8} ${hy - 11} ${hx - 5} ${hy - 17} Q${hx + 1} ${hy - 11} ${hx + 2} ${hy - 2} Z`}
-              fill={MINION_FLESH}
-              stroke={K}
-              strokeLinejoin="round"
-              strokeWidth={1.6}
-            />
-            <path d={`M${hx - 2} ${hy - 3} q-7 1 -8 8 q4 -1 7 -4 z`} {...peel} />
-            <path d={`M${hx + 2} ${hy - 3} q7 1 8 8 q-4 -1 -7 -4 z`} {...peel} />
-          </>
-        }
-        side="R"
-        skin={sk}
-      >
-        <At
-          begin={b}
-          dur="2.6s"
-          keyTimes="0;.35;.45;.8;1"
-          type="rotate"
-          values={rotValues([0, 0, 12, 12, 0], g.armR, g.shY)}
+      <g data-testid={MinionSceneTestId.IdleBody}>
+        <At begin={b} dur="3.2s" type="translate" values="0 0;0 -3;0 0" />
+        <MinionBody
+          noArms
+          noExtras
+          noFloor
+          appearance={appearance}
+          cx={84}
+          eyeSt="done"
+          gy={95}
+          mouthSt="none"
+          state="idle"
         />
-      </ArmG>
+        <ellipse cx={g.cx - 1} cy={g.my + 1} fill={K} rx={2.6} ry={1}>
+          <An attr="ry" begin={b} dur="2.6s" keyTimes="0;.4;.5;.6;.7;1" values="1;1;3.2;1;3.2;1" />
+        </ellipse>
+        <ArmG g={g} hand={[g.x - 2, g.ovTop + 9]} out={-6} side="L" skin={sk} />
+        <ArmG
+          g={g}
+          hand={[hx, hy]}
+          out={14}
+          pre={
+            <>
+              <path
+                d={`M${hx - 2} ${hy - 2} Q${hx - 8} ${hy - 11} ${hx - 5} ${hy - 17} Q${hx + 1} ${hy - 11} ${hx + 2} ${hy - 2} Z`}
+                fill={MINION_FLESH}
+                stroke={K}
+                strokeLinejoin="round"
+                strokeWidth={1.6}
+              />
+              <path d={`M${hx - 2} ${hy - 3} q-7 1 -8 8 q4 -1 7 -4 z`} {...peel} />
+              <path d={`M${hx + 2} ${hy - 3} q7 1 8 8 q-4 -1 -7 -4 z`} {...peel} />
+            </>
+          }
+          side="R"
+          skin={sk}
+        >
+          <At
+            begin={b}
+            dur="2.6s"
+            keyTimes="0;.3;.45;.75;1"
+            type="rotate"
+            values={rotValues([0, 0, 28, 28, 0], g.armR, g.shY)}
+          />
+        </ArmG>
+      </g>
     </>
   );
 }
