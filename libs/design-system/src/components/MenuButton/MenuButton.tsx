@@ -2,8 +2,8 @@
 import { type CSSProperties, useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../../utils/cn";
-import { focusRing, focusRingInset } from "../../utils/focus";
-import { Button, type ButtonIntent, type ButtonSize } from "../Button/Button";
+import { focusRingInset } from "../../utils/focus";
+import { Button, type ButtonIntent, type ButtonSize, buttonClasses } from "../Button/Button";
 import { Divider } from "../Divider/Divider";
 import { Icon, type IconName } from "../Icon/Icon";
 import { MenuSurface } from "../MenuSurface/MenuSurface";
@@ -64,7 +64,7 @@ export interface MenuButtonProps {
    * (horizontal `⋯`, `intent`/`size` apply), with a sentence-case item list —
    * unchanged for existing consumers (`RoadmapCard`, `RunDetail`).
    *
-   * `"bordered"` — the ZibbyCorp header overflow trigger: a 32×32 square
+   * `"bordered"` — the ZibbyCorp header overflow trigger: a square
    * outline button (vertical `⋮`) that solidifies to an ink border + panel-2
    * fill while open, opening a 220px mono-uppercase panel with label-left /
    * trailing-mark-right rows (`AppHeader`'s `menu` slot).
@@ -225,11 +225,10 @@ export function MenuButton({
           aria-haspopup="menu"
           aria-label={ariaLabel}
           className={cn(
-            "inline-flex h-8 w-8 items-center justify-center border transition-colors",
-            open
-              ? "border-ink bg-panel-2 text-ink"
-              : "border-line-2 text-ink-2 hover:bg-panel-2 hover:text-ink",
-            focusRing,
+            // Secondary icon button at the md footprint, so it sits flush beside
+            // md header actions (run-detail ··· in the design); ink border while open.
+            buttonClasses({ intent: "secondary", size: "md", iconOnly: true }),
+            open && "border-ink bg-panel-2 text-ink",
           )}
           data-testid={MenuButtonTestId.Trigger}
           disabled={disabled}

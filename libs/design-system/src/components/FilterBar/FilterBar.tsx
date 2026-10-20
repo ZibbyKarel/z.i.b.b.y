@@ -36,8 +36,9 @@ export function FilterBar({ children, onClear, actions, ref }: FilterBarProps) {
         <button
           className={cn(
             "box-border flex h-8 items-center border border-border-strong px-[10px]",
-            "font-mono text-[10px] tracking-wider text-foreground-secondary",
-            "hover:bg-elevated hover:text-foreground",
+            // Secondary-button look (DS.md §8) at the 32px filter-control height.
+            "font-mono text-[10px] uppercase tracking-wider text-ink-2",
+            "hover:bg-panel-2 hover:text-ink",
             focusRing,
           )}
           data-testid={FilterBarTestId.Clear}

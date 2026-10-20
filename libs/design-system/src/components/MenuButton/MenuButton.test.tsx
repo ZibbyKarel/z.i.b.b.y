@@ -118,7 +118,7 @@ describe("MenuButton", () => {
       ];
     }
 
-    it("renders a 32×32 bordered trigger with the vertical-dots glyph", () => {
+    it("renders a bordered icon trigger with the vertical-dots glyph", () => {
       render(<MenuButton items={makeBorderedEntries()} variant="bordered" />);
       const trigger = screen.getByTestId(MenuButtonTestId.Trigger);
       expect(trigger.tagName).toBe("BUTTON");
