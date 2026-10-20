@@ -257,6 +257,13 @@ export const RUN_STATE: Record<FeedStatus, RunStateMeta> = {
     glyph: "wait",
     pulse: false,
   },
+  paused: {
+    key: "paused",
+    badge: "neutral",
+    dot: "idle",
+    glyph: "pause",
+    pulse: false,
+  },
   "paused-limit": {
     key: "paused-limit",
     badge: "neutral",

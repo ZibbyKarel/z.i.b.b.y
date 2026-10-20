@@ -4,9 +4,10 @@ import {
   GoalParkedDetailSchema,
   GoalParkedReasonSchema,
 } from "../goals/goal-run.schema";
-import { RunArtifactSchema, RunStatusSchema } from "../common.schema";
+import { DiffstatSchema, RunArtifactSchema, RunStatusSchema } from "../common.schema";
 import { DepartmentIdSchema } from "../departments/department.schema";
 import {
+  OperatorMessageSchema,
   ParkedDetailSchema,
   StageRunSchema,
   WorkflowCheckpointSchema,
@@ -39,6 +40,8 @@ export const TaskRunStatusSchema = z.enum([
   // is still running in the background — it has no run behind it yet (its `runId` is
   // the task id), and flips to `running` in place once the spawn completes.
   "pending",
+  // A workflow run parked at a stage boundary by the operator's pause request.
+  "paused",
 ]);
 export type TaskRunStatus = z.infer<typeof TaskRunStatusSchema>;
 
@@ -192,6 +195,14 @@ export const TaskRunSchema = z.object({
    * or one dispatched before this field existed.
    */
   department: DepartmentIdSchema.optional(),
+  /** Workflow runs: a pause was requested and lands at the next stage boundary. */
+  pauseRequested: z.boolean().optional(),
+  /** Workflow runs: start of the stage currently running. */
+  currentStageStartedAt: z.string().optional(),
+  /** Workflow runs: operator messages queued/delivered. */
+  messages: z.array(OperatorMessageSchema).optional(),
+  /** Would-publish (parked at a PR gate) or published (prOutput.files) per-file diff. */
+  diffstat: DiffstatSchema.optional(),
 });
 export type TaskRun = z.infer<typeof TaskRunSchema>;
 
@@ -206,8 +217,31 @@ export type TaskRunArtifact = z.infer<typeof TaskRunArtifactSchema>;
 /** Body accepted by `resumeTaskRun` — the operator's note for the resumed run. */
 export const ResumeTaskRunSchema = z.object({
   note: z.string().optional(),
+  /** continue (default): --resume session / continue in place. fresh: new task from the original inputs. */
+  mode: z.enum(["continue", "fresh"]).optional(),
 });
 export type ResumeTaskRunInput = z.infer<typeof ResumeTaskRunSchema>;
+
+/** Body accepted by `sendTaskRunMessage` — an operator message for the crew. */
+export const SendRunMessageSchema = z.object({
+  text: z.string().trim().min(1).max(4000),
+  to: z.string().min(1).default("all"),
+});
+export type SendRunMessageInput = z.infer<typeof SendRunMessageSchema>;
+
+/** One entry of a workflow run folder listing. */
+export const RunFileEntrySchema = z.object({
+  /** POSIX path relative to the run root, e.g. "output/report.md". */
+  path: z.string().min(1),
+  kind: z.enum(["file", "dir"]),
+  size: z.number().int().nonnegative(),
+  modifiedAt: z.string(),
+});
+export const RunFilesSchema = z.object({
+  entries: z.array(RunFileEntrySchema),
+  truncated: z.boolean(),
+});
+export type RunFiles = z.infer<typeof RunFilesSchema>;
 
 /**
  * Body accepted by `assignTaskRunProject` (Phase 24 Part D) — the operator

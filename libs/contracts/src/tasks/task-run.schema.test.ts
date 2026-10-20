@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { RunArtifactSchema, RunStatusSchema } from "../common.schema";
-import { TaskRunArtifactSchema, TaskRunSchema, TaskRunStatusSchema } from "./task-run.schema";
+import { DiffstatSchema } from "../common.schema";
+import { StageRunSchema } from "../workflows/workflow-run.schema";
+import {
+  ResumeTaskRunSchema,
+  SendRunMessageSchema,
+  TaskRunArtifactSchema,
+  TaskRunSchema,
+  TaskRunStatusSchema,
+} from "./task-run.schema";
 
 /** The minimal valid TaskRun — every required (non-optional) field, nothing else. */
 const minimalRun = {
@@ -103,5 +111,40 @@ describe("T11 finding #28 — TaskRunStatusSchema derives from RunStatusSchema.o
 describe("T11 finding #29 — TaskRunArtifactSchema is the shared RunArtifactSchema", () => {
   it("is the shared common.schema export (identity), proving the dedup happened", () => {
     expect(TaskRunArtifactSchema).toBe(RunArtifactSchema);
+  });
+});
+
+describe("run-detail redesign schemas", () => {
+  it("accepts the paused status", () => {
+    expect(TaskRunStatusSchema.parse("paused")).toBe("paused");
+  });
+
+  it("SendRunMessageSchema trims and defaults the recipient", () => {
+    expect(SendRunMessageSchema.parse({ text: "  hi " })).toEqual({ text: "hi", to: "all" });
+    expect(SendRunMessageSchema.safeParse({ text: "   " }).success).toBe(false);
+  });
+
+  it("ResumeTaskRunSchema rejects an unknown mode", () => {
+    expect(ResumeTaskRunSchema.safeParse({ mode: "bogus" }).success).toBe(false);
+    expect(ResumeTaskRunSchema.parse({ mode: "fresh" }).mode).toBe("fresh");
+  });
+
+  it("StageRunSchema keeps start/finish times", () => {
+    const s = StageRunSchema.parse({
+      phaseId: "p",
+      runId: "r",
+      attempt: 1,
+      status: "done",
+      startedAt: "2026-10-20T10:00:00Z",
+      finishedAt: "2026-10-20T10:02:00Z",
+    });
+    expect(s.startedAt).toBe("2026-10-20T10:00:00Z");
+    expect(s.finishedAt).toBe("2026-10-20T10:02:00Z");
+  });
+
+  it("DiffstatSchema rejects a negative count", () => {
+    expect(DiffstatSchema.safeParse({ files: [], additions: -1, deletions: 0 }).success).toBe(
+      false,
+    );
   });
 });

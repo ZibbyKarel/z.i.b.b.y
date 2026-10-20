@@ -109,3 +109,21 @@ export const EmptyBodySchema = z.object({}).optional();
  */
 export const RunArtifactSchema = z.object({ name: z.string(), content: z.string() });
 export type RunArtifact = z.infer<typeof RunArtifactSchema>;
+
+/** One file row of a diffstat (`git diff --numstat`). */
+export const DiffFileSchema = z.object({
+  path: z.string().min(1),
+  additions: z.number().int().nonnegative(),
+  deletions: z.number().int().nonnegative(),
+  /** git numstat reports `-`/`-` for binaries — kept as a row, counted as 0/0. */
+  binary: z.boolean().optional(),
+});
+export type DiffFile = z.infer<typeof DiffFileSchema>;
+
+/** A structured diffstat: per-file rows plus the totals. */
+export const DiffstatSchema = z.object({
+  files: z.array(DiffFileSchema),
+  additions: z.number().int().nonnegative(),
+  deletions: z.number().int().nonnegative(),
+});
+export type Diffstat = z.infer<typeof DiffstatSchema>;

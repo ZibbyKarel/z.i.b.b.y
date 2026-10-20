@@ -1202,6 +1202,7 @@
       "error": "chyba",
       "interrupted": "přerušeno",
       "parked": "zaparkováno",
+      "paused": "pozastaveno",
       "paused-limit": "pauza na limitu"
     },
     "kind": {

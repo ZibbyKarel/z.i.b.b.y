@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AvatarSchema, IsoDateTimeSchema } from "../common.schema";
+import { AvatarSchema, DiffFileSchema, IsoDateTimeSchema } from "../common.schema";
 import { AgentIdSchema } from "../agents/agent.schema";
 import { MakerRefSchema, VerifierSpecSchema } from "../goals/goal.schema";
 import { ProjectIdSchema } from "../projects/project.schema";
@@ -511,6 +511,8 @@ export const PrOutputSchema = z.object({
   url: z.string().min(1),
   additions: z.number().int().nonnegative(),
   deletions: z.number().int().nonnegative(),
+  /** Per-file rows of the same diff; absent on outcomes predating them. */
+  files: z.array(DiffFileSchema).optional(),
 });
 export type PrOutput = z.infer<typeof PrOutputSchema>;
 

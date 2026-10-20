@@ -9,6 +9,8 @@ import {
   ArchivePageSchema,
   AssignTaskRunProjectSchema,
   ResumeTaskRunSchema,
+  RunFilesSchema,
+  SendRunMessageSchema,
   TaskRunArtifactSchema,
   TaskRunSchema,
 } from "./task-run.schema";
@@ -120,7 +122,8 @@ export const taskRunsContract = c.router(
         200: z.object({ path: z.string() }),
         404: ErrorSchema,
       },
-      summary: "Open a workflow run's output folder (the book/ deliverable, else the run root) in Finder",
+      summary:
+        "Open a workflow run's output folder (the book/ deliverable, else the run root) in Finder",
     },
 
     stopTaskRun: {
@@ -155,6 +158,32 @@ export const taskRunsContract = c.router(
         "id was captured, else a fresh run of the same task), or continue an errored/interrupted " +
         "workflow/goal run in place from where it stopped (falls back to a NEW task from the " +
         "original task's inputs when nothing ran yet)",
+    },
+
+    pauseTaskRun: {
+      method: "POST",
+      path: "/tasks/runs/:runId/pause",
+      pathParams: RunIdParam,
+      body: EmptyBodySchema,
+      responses: { 200: TaskRunSchema, 404: ErrorSchema, 409: ErrorSchema },
+      summary: "Request a pause: the running workflow parks at the next stage boundary",
+    },
+
+    sendTaskRunMessage: {
+      method: "POST",
+      path: "/tasks/runs/:runId/messages",
+      pathParams: RunIdParam,
+      body: SendRunMessageSchema,
+      responses: { 200: TaskRunSchema, 404: ErrorSchema, 409: ErrorSchema },
+      summary: "Queue an operator message, delivered into the next stage's context",
+    },
+
+    listTaskRunFiles: {
+      method: "GET",
+      path: "/tasks/runs/:runId/files",
+      pathParams: RunIdParam,
+      responses: { 200: RunFilesSchema, 404: ErrorSchema },
+      summary: "List a workflow run's folder (read-only tree; no file contents)",
     },
 
     deleteTaskRun: {

@@ -1,7 +1,12 @@
 import { z } from "zod";
 import { AgentIdSchema } from "../agents/agent.schema";
 import { DepartmentIdSchema } from "../departments/department.schema";
-import { IsoDateTimeSchema, RunStatusSchema, WorkspaceSchema } from "../common.schema";
+import {
+  DiffstatSchema,
+  IsoDateTimeSchema,
+  RunStatusSchema,
+  WorkspaceSchema,
+} from "../common.schema";
 import { PrReviewEventSchema } from "../approvals/approval.schema";
 import { PrOutputSchema } from "../tasks/task.schema";
 import { WorkflowOutputSchema } from "./workflow.schema";
@@ -78,6 +83,9 @@ export const StageRunSchema = z.object({
   employeeName: z.string().optional(),
   /** A `workflow` phase: the child (sub-run) `workflowRunId` this stage ran. */
   childRunId: z.string().min(1).optional(),
+  /** When this stage's child started / finished (ISO); absent on synthetic markers and old runs. */
+  startedAt: z.string().optional(),
+  finishedAt: z.string().optional(),
 });
 export type StageRun = z.infer<typeof StageRunSchema>;
 
@@ -112,6 +120,8 @@ export const ParkedReasonSchema = z.enum([
   // A `workflow` phase's sub-run is parked (or paused); durable, the parent continues
   // on its own once the child settles (`pendingChild`).
   "child",
+  // The operator asked to pause; parked at a stage boundary, durable, resumable in place.
+  "paused",
 ]);
 export type ParkedReason = z.infer<typeof ParkedReasonSchema>;
 
@@ -157,6 +167,18 @@ export type VerifyEvidence = z.infer<typeof VerifyEvidenceSchema>;
  * A run of a workflow: the aggregate of its per-phase stage runs, the phase
  * currently executing, and an overall status mapped to {@link WorkflowStateSchema}.
  */
+/** An operator message queued for a run, delivered into the next stage's context. */
+export const OperatorMessageSchema = z.object({
+  id: z.string().min(1),
+  text: z.string().min(1).max(4000),
+  /** "all" or a phaseId — delivered when that phase next starts. */
+  to: z.string().min(1),
+  at: z.string(),
+  deliveredAt: z.string().optional(),
+  deliveredPhaseId: z.string().optional(),
+});
+export type OperatorMessage = z.infer<typeof OperatorMessageSchema>;
+
 export const WorkflowRunSchema = z.object({
   workflowRunId: z.string().min(1),
   workflowId: AgentIdSchema,
@@ -314,6 +336,13 @@ export const WorkflowRunSchema = z.object({
   prBlockedReason: z.string().optional(),
   /** Why the run ended `failed` before doing any work (e.g. an unmet `requires`). */
   failedReason: z.string().optional(),
+  /** The operator asked to pause; the run parks `paused` at the next stage boundary. */
+  pauseRequested: z.boolean().optional(),
+  /** Start time of the stage currently running (the live row's clock). */
+  currentStageStartedAt: z.string().optional(),
+  operatorMessages: z.array(OperatorMessageSchema).optional(),
+  /** Would-publish diffstat while parked at a PR gate. */
+  pendingDiffstat: DiffstatSchema.optional(),
 });
 export type WorkflowRun = z.infer<typeof WorkflowRunSchema>;
 
