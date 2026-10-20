@@ -5,7 +5,37 @@ import { DropDownButton, type DropDownButtonItem } from "./DropDownButton";
 const RUN_LATER_ITEMS: DropDownButtonItem[] = [
   { id: "in-1h", label: "in 1h", icon: "clock", onSelect: () => {} },
   { id: "on-limits", label: "when limits reset", icon: "wait", onSelect: () => {} },
-  { id: "on-schedule", label: "on a schedule…", icon: "checkpoint", disabled: true, onSelect: () => {} },
+  {
+    id: "on-schedule",
+    label: "on a schedule…",
+    icon: "checkpoint",
+    disabled: true,
+    onSelect: () => {},
+  },
+];
+
+const MODE_ITEMS: DropDownButtonItem[] = [
+  {
+    id: "quick",
+    label: "Quick",
+    description: "Skims the diff. About 2 minutes.",
+    checked: true,
+    onSelect: () => {},
+  },
+  {
+    id: "tested",
+    label: "Thorough",
+    description: "Line by line. Runs tests and checks edge cases.",
+    checked: false,
+    onSelect: () => {},
+  },
+  {
+    id: "browser",
+    label: "Thorough + browser",
+    description: "Also drives the UI and saves screenshots to the run.",
+    checked: false,
+    onSelect: () => {},
+  },
 ];
 
 const meta: Meta<typeof DropDownButton> = {
@@ -76,7 +106,9 @@ export const Overview: Story = {
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography type="label">disabled — both halves + divider read as one inert unit</Typography>
+        <Typography type="label">
+          disabled — both halves + divider read as one inert unit
+        </Typography>
         <div className="flex flex-wrap items-center gap-3">
           <DropDownButton
             disabled
@@ -94,6 +126,12 @@ export const Overview: Story = {
             menuItems={RUN_LATER_ITEMS}
             onClick={() => {}}
           />
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <Typography type="label">described modes (checked)</Typography>
+        <div className="flex flex-wrap gap-3">
+          <DropDownButton label="Review" menuItems={MODE_ITEMS} onClick={() => {}} />
         </div>
       </div>
       <div className="flex flex-col gap-2">

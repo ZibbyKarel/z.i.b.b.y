@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { DropDownButton, DropDownButtonTestId } from "./DropDownButton";
@@ -142,5 +142,53 @@ describe("DropDownButton", () => {
         "disabled:border-border",
       );
     }
+  });
+
+  it("renders an item's description and a check on the checked item as a menuitemradio", async () => {
+    const user = userEvent.setup();
+    render(
+      <DropDownButton
+        label="Review"
+        menuItems={[
+          {
+            id: "a",
+            label: "Quick",
+            description: "About 2 min.",
+            checked: true,
+            onSelect: vi.fn(),
+          },
+          {
+            id: "b",
+            label: "Thorough",
+            description: "Runs tests.",
+            checked: false,
+            onSelect: vi.fn(),
+          },
+        ]}
+        onClick={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByTestId(DropDownButtonTestId.Trigger));
+    const a = screen.getByTestId(`${DropDownButtonTestId.Item}-a`);
+    expect(a).toHaveRole("menuitemradio");
+    expect(a).toHaveAttribute("aria-checked", "true");
+    expect(within(a).getByTestId(DropDownButtonTestId.ItemCheck)).toHaveTextContent("✓");
+    expect(within(a).getByTestId(DropDownButtonTestId.ItemDescription)).toHaveTextContent(
+      "About 2 min.",
+    );
+    expect(screen.getByTestId(`${DropDownButtonTestId.Item}-b`)).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+  });
+
+  it("items without checked stay plain menuitems", async () => {
+    const user = userEvent.setup();
+    render(<DropDownButton label="Spustit" menuItems={makeItems()} onClick={vi.fn()} />);
+    await user.click(screen.getByTestId(DropDownButtonTestId.Trigger));
+    const item = screen.getByTestId(`${DropDownButtonTestId.Item}-in-1h`);
+    expect(item).toHaveRole("menuitem");
+    expect(item).not.toHaveAttribute("aria-checked");
+    expect(screen.queryByTestId(DropDownButtonTestId.ItemCheck)).not.toBeInTheDocument();
   });
 });

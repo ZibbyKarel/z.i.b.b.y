@@ -14,12 +14,18 @@ export enum DropDownButtonTestId {
   Trigger = "drop-down-button-trigger",
   Menu = "drop-down-button-menu",
   Item = "drop-down-button-item",
+  ItemDescription = "drop-down-button-item-description",
+  ItemCheck = "drop-down-button-item-check",
 }
 
 export interface DropDownButtonItem {
   id: string;
   label: string;
   icon?: IconName;
+  /** Secondary line under the label. */
+  description?: string;
+  /** When defined the item is a `menuitemradio`; `true` shows a leading ✓. */
+  checked?: boolean;
   disabled?: boolean;
   onSelect: () => void;
 }
@@ -149,10 +155,8 @@ export function DropDownButton({
     const flip = spaceBelow < 160 && spaceAbove > spaceBelow;
     const available = Math.max(flip ? spaceAbove : spaceBelow, 0);
     const maxHeight = Math.min(Math.max(available, 120), viewportH * 0.6);
-    const horizontal: CSSProperties = {
-      left: Math.max(0, rect.right - 200),
-      minWidth: Math.max(200, rect.width),
-    };
+    const w = Math.max(menuItems.some((i) => i.description) ? 300 : 200, rect.width);
+    const horizontal: CSSProperties = { left: Math.max(0, rect.right - w), minWidth: w };
     return flip
       ? { bottom: viewportH - rect.top + gap, ...horizontal, maxHeight }
       : { top: rect.bottom + gap, ...horizontal, maxHeight };
@@ -216,9 +220,11 @@ export function DropDownButton({
                   const active = i === activeRow;
                   return (
                     <button
+                      aria-checked={item.checked}
                       aria-disabled={item.disabled || undefined}
                       className={cn(
-                        "w-full flex items-center gap-2.5 px-[11px] py-[9px]",
+                        "w-full flex gap-2.5 px-[11px] py-[9px]",
+                        item.description ? "items-start" : "items-center",
                         "rounded-sm cursor-pointer border-none text-left",
                         focusRingInset,
                         "transition-colors duration-100",
@@ -232,11 +238,30 @@ export function DropDownButton({
                       key={item.id}
                       onClick={() => activate(i)}
                       onPointerMove={() => !item.disabled && setActiveIndex(i)}
-                      role="menuitem"
+                      role={item.checked === undefined ? "menuitem" : "menuitemradio"}
                       type="button"
                     >
+                      {item.checked !== undefined && (
+                        <span
+                          aria-hidden
+                          className="w-3 shrink-0 font-mono text-sm"
+                          data-testid={DropDownButtonTestId.ItemCheck}
+                        >
+                          {item.checked ? "✓" : ""}
+                        </span>
+                      )}
                       {item.icon && <Icon name={item.icon} size="sm" />}
-                      <span className="text-md text-foreground flex-1">{item.label}</span>
+                      <span className="flex flex-1 flex-col gap-0.5">
+                        <span className="text-md text-foreground">{item.label}</span>
+                        {item.description && (
+                          <span
+                            className="text-sm text-foreground-dim"
+                            data-testid={DropDownButtonTestId.ItemDescription}
+                          >
+                            {item.description}
+                          </span>
+                        )}
+                      </span>
                     </button>
                   );
                 })}
