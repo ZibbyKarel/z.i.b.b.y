@@ -8,14 +8,21 @@ import {
   differsFromSource,
   elapsed,
   groupByEpic,
+  groupPrStacks,
   groupPrsBySection,
   hiddenCount,
   inboxCounts,
   issueChains,
   linkedPrOf,
   normalizeSearch,
+  parentPr,
   passesFilters,
+  prAncestors,
+  prBaseLabel,
   prChains,
+  prChildren,
+  prState,
+  prWaits,
   splitPrs,
   visibleItems,
   zibbyStatus,
@@ -63,6 +70,25 @@ function makePr(over: Partial<InboxPr> = {}): InboxPr {
     ...over,
   };
 }
+
+const pr = (n: number, o: Partial<InboxPr> = {}): InboxPr => ({
+  source: "github",
+  number: n,
+  title: `PR ${n}`,
+  url: `https://github.com/acme/api/pull/${n}`,
+  repo: "acme/api",
+  author: "me",
+  createdAt: `2026-01-${String(10 + (n % 10)).padStart(2, "0")}T00:00:00.000Z`,
+  draft: false,
+  ci: "passing",
+  review: "none",
+  mergeable: true,
+  bucket: "mine",
+  blocker: "awaiting-review",
+  section: "waiting",
+  projectId: "api",
+  ...o,
+});
 
 describe("zibbyStatus / differsFromSource", () => {
   it("maps the lifecycle to the four ZIBBY statuses", () => {
@@ -291,25 +317,6 @@ describe("elapsed", () => {
 });
 
 describe("prChains", () => {
-  const pr = (number: number, over: Partial<InboxPr> = {}): InboxPr => ({
-    source: "github",
-    number,
-    title: `PR ${number}`,
-    url: `https://github.com/acme/api/pull/${number}`,
-    repo: "acme/api",
-    author: "me",
-    createdAt: "2026-01-01T00:00:00.000Z",
-    draft: false,
-    ci: "passing",
-    review: "none",
-    mergeable: true,
-    bucket: "mine",
-    blocker: "awaiting-review",
-    section: "waiting",
-    projectId: "api",
-    ...over,
-  });
-
   it("links a PR whose base is another PR's head, one level each way", () => {
     const a = pr(1, { headRef: "feat-a", baseRef: "main" });
     const b = pr(2, { headRef: "feat-b", baseRef: "feat-a" });
@@ -405,5 +412,112 @@ describe("issueChains", () => {
 
   it("leaves unlinked items out", () => {
     expect(issueChains([makeItem({ id: "a" }), makeItem({ id: "b" })]).size).toBe(0);
+  });
+});
+
+describe("PR stacks", () => {
+  const a = pr(1, { headRef: "a", baseRef: "main", blocker: "ready-to-merge" });
+  const b = pr(2, { headRef: "b", baseRef: "a", blocker: "changes-requested" });
+  const c = pr(3, { headRef: "c", baseRef: "b" });
+  const d = pr(4, { headRef: "d", baseRef: "b" });
+  const all = [d, c, b, a];
+
+  it("walks ancestors bottom first, same repo only", () => {
+    expect(prAncestors(c, all)).toEqual([a, b]);
+    expect(prAncestors(a, all)).toEqual([]);
+    const foreign = pr(5, {
+      repo: "acme/web",
+      url: "https://github.com/acme/web/pull/5",
+      baseRef: "a",
+    });
+    expect(parentPr(foreign, all)).toBeUndefined();
+  });
+
+  it("stops on a cycle and on a self-reference", () => {
+    const x = pr(6, { headRef: "x", baseRef: "y" });
+    const y = pr(7, { headRef: "y", baseRef: "x" });
+    expect(prAncestors(x, [x, y])).toEqual([y]);
+    const self = pr(8, { headRef: "s", baseRef: "s" });
+    expect(prAncestors(self, [self])).toEqual([]);
+  });
+
+  it("waits on every ancestor that is not ready to merge", () => {
+    expect(prWaits(c, all)).toEqual([b]);
+    expect(prWaits(b, all)).toEqual([]);
+  });
+
+  it("labels the base #parent when stacked, else the base branch", () => {
+    expect(prBaseLabel(b, all)).toBe("#1");
+    expect(prBaseLabel(a, all)).toBe("main");
+    expect(prBaseLabel(pr(9), all)).toBe("");
+  });
+
+  it("children are the PRs stacked directly on it", () => {
+    expect(prChildren(b, all)).toEqual([d, c]);
+  });
+
+  it("groups by the bottom-most visible ancestor; kids sorted by number", () => {
+    expect(groupPrStacks(all, all)).toEqual([{ root: a, kids: [b, c, d] }]);
+  });
+
+  it("a kid whose ancestors are all filtered out becomes its own root", () => {
+    expect(groupPrStacks(all, [c, d])).toEqual([
+      { root: c, kids: [] },
+      { root: d, kids: [] },
+    ]);
+    expect(groupPrStacks(all, [b, c])).toEqual([{ root: b, kids: [c] }]);
+  });
+
+  it("sorts groups by their best member's rank, then the older root first", () => {
+    const review = pr(20, {
+      bucket: "to-review",
+      blocker: "awaiting-review",
+      createdAt: "2026-02-01T00:00:00.000Z",
+    });
+    const failing = pr(21, { blocker: "ci-failing", createdAt: "2026-01-01T00:00:00.000Z" });
+    const old = pr(22, { blocker: "awaiting-review", createdAt: "2025-12-01T00:00:00.000Z" });
+    const young = pr(23, { blocker: "awaiting-review", createdAt: "2026-03-01T00:00:00.000Z" });
+    const list = [young, old, failing, review];
+    expect(groupPrStacks(list, list).map((g) => g.root.number)).toEqual([20, 21, 22, 23]);
+    // a group ranks by its best member: a ci-failing kid lifts its awaiting-review root
+    const root = pr(30, { headRef: "r", baseRef: "main" });
+    const kid = pr(31, {
+      headRef: "k",
+      baseRef: "r",
+      blocker: "ci-failing",
+      createdAt: "2027-01-01T00:00:00.000Z",
+    });
+    const lone = pr(32, { blocker: "changes-requested" });
+    expect(groupPrStacks([root, kid, lone], [root, kid, lone]).map((g) => g.root.number)).toEqual([
+      30, 32,
+    ]);
+  });
+});
+
+describe("prState", () => {
+  it.each([
+    [{ draft: true, bucket: "to-review" as const }, "draft", "neutral"],
+    [
+      { bucket: "to-review" as const, reviewReason: "team" as const, reviewTeam: "acme/core" },
+      "team-review",
+      "thinking",
+    ],
+    [
+      { bucket: "to-review" as const, reviewReason: "direct" as const },
+      "review-requested",
+      "thinking",
+    ],
+    [
+      { bucket: "to-review" as const, blocker: "ready-to-merge" as const },
+      "ready-to-merge",
+      "working",
+    ],
+    [{ blocker: "ci-failing" as const }, "ci-failing", "error"],
+    [{ blocker: "changes-requested" as const }, "changes-requested", "blocked"],
+    [{ blocker: "merge-conflict" as const }, "merge-conflict", "error"],
+    [{ blocker: "awaiting-review" as const }, "awaiting-review", "idle"],
+    [{ blocker: "ready-to-merge" as const }, "ready-to-merge", "working"],
+  ])("%j → %s / %s", (over, key, tone) => {
+    expect(prState(pr(1, over))).toEqual({ key, tone });
   });
 });

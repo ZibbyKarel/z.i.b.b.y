@@ -309,6 +309,100 @@ export function prChains(prs: InboxPr[]): Map<string, PrChain> {
   return chains;
 }
 
+/** The open PR `pr` is stacked on: same repo, `pr`'s base branch is that PR's head branch. */
+export function parentPr(pr: InboxPr, all: readonly InboxPr[]): InboxPr | undefined {
+  if (!pr.baseRef) return undefined;
+  return all.find((p) => p !== pr && p.repo === pr.repo && p.headRef === pr.baseRef);
+}
+
+/** The chain under `pr`, bottom PR first (`pr` itself excluded). Stops at the first repeat, so a cycle can't hang. */
+// ponytail: O(n · depth) per PR over tens of open PRs; index by `repo#headRef` if that grows.
+export function prAncestors(pr: InboxPr, all: readonly InboxPr[]): InboxPr[] {
+  const out: InboxPr[] = [];
+  const seen = new Set([pr.url]);
+  for (let p = parentPr(pr, all); p && !seen.has(p.url); p = parentPr(p, all)) {
+    seen.add(p.url);
+    out.unshift(p);
+  }
+  return out;
+}
+
+/** PRs stacked directly on `pr`. */
+export function prChildren(pr: InboxPr, all: readonly InboxPr[]): InboxPr[] {
+  return all.filter((p) => parentPr(p, all) === pr);
+}
+
+/** Ancestors not yet ready to merge — what `pr` waits on. */
+export function prWaits(pr: InboxPr, all: readonly InboxPr[]): InboxPr[] {
+  return prAncestors(pr, all).filter((a) => a.blocker !== "ready-to-merge");
+}
+
+/** What `pr` sits on: `#<parent>` when stacked on a listed PR, else its base branch (`""` if unknown). */
+export function prBaseLabel(pr: InboxPr, all: readonly InboxPr[]): string {
+  const parent = parentPr(pr, all);
+  return parent ? `#${parent.number}` : (pr.baseRef ?? "");
+}
+
+/** Review requests first, then `INBOX_PR_BLOCKERS` order. */
+export function prRank(pr: InboxPr): number {
+  return pr.bucket === "to-review" && pr.blocker !== "ready-to-merge"
+    ? -1
+    : INBOX_PR_BLOCKERS.indexOf(pr.blocker);
+}
+
+export interface PrStackGroup {
+  root: InboxPr;
+  kids: InboxPr[];
+}
+
+/**
+ * The visible PRs grouped by stack: a PR's root is its bottom-most ancestor that is itself
+ * visible (else the PR). Kids are flat, by number. Groups by their best member's rank, then
+ * the older root first.
+ */
+export function groupPrStacks(
+  all: readonly InboxPr[],
+  visible: readonly InboxPr[],
+): PrStackGroup[] {
+  const shown = new Set(visible.map((p) => p.url));
+  const groups = new Map<string, PrStackGroup>();
+  for (const pr of visible) {
+    const root = prAncestors(pr, all).find((a) => shown.has(a.url)) ?? pr;
+    let group = groups.get(root.url);
+    if (!group) groups.set(root.url, (group = { root, kids: [] }));
+    if (root !== pr) group.kids.push(pr);
+  }
+  const best = (g: PrStackGroup) => Math.min(prRank(g.root), ...g.kids.map(prRank));
+  return [...groups.values()]
+    .map((g) => ({ root: g.root, kids: [...g.kids].sort((a, b) => a.number - b.number) }))
+    .sort(
+      (a, b) => best(a) - best(b) || Date.parse(a.root.createdAt) - Date.parse(b.root.createdAt),
+    );
+}
+
+export type PrStateKey = "draft" | "review-requested" | "team-review" | InboxPrBlocker;
+export type PrStateTone = "neutral" | "thinking" | "error" | "blocked" | "idle" | "working";
+
+const BLOCKER_TONE: Record<InboxPrBlocker, PrStateTone> = {
+  "ci-failing": "error",
+  "changes-requested": "blocked",
+  "merge-conflict": "error",
+  "awaiting-review": "idle",
+  "ready-to-merge": "working",
+};
+
+/** The single state a card shows (label key + stripe tone): draft, then a pending review request, then the blocker. */
+export function prState(pr: InboxPr): { key: PrStateKey; tone: PrStateTone } {
+  if (pr.draft) return { key: "draft", tone: "neutral" };
+  if (pr.bucket === "to-review" && pr.blocker !== "ready-to-merge") {
+    return {
+      key: pr.reviewReason === "team" ? "team-review" : "review-requested",
+      tone: "thinking",
+    };
+  }
+  return { key: pr.blocker, tone: BLOCKER_TONE[pr.blocker] };
+}
+
 /** todo-14 — the issues blocking this one (`on`) and the issues it blocks (`by`). */
 export interface IssueChain {
   on: InboxRoadmapItem[];
