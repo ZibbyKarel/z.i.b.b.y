@@ -410,20 +410,15 @@
     },
     "detail": {
       "back": "← Zpět na úkoly",
-      "noSubtasksTitle": "Zatím žádné podúkoly",
-      "noSubtasksBody": "Tento úkol zatím nespustil žádný krok řetězce.",
       "subtaskHeader": "Podúkol {id}",
       "unassigned": "Nepřiřazeno",
       "step": "Krok {n}",
       "roster": "Tým oddělení",
       "noRoster": "V tomto oddělení zatím nejsou žádní agenti.",
-      "runHeader": "Běh",
       "noRunTitle": "Zatím žádný běh",
       "noRunBody": "Tento podúkol zatím nespustil běh.",
       "approvalsHeader": "Čekající schválení",
       "noApprovals": "Zde nic nepotřebuje vaši pozornost.",
-      "attachmentsHeader": "Přílohy",
-      "noAttachments": "Žádné přílohy.",
       "created": "Vytvořeno {time}"
     },
     "new": {

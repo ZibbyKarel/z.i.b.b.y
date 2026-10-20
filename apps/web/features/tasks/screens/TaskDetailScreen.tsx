@@ -8,7 +8,6 @@ import {
   type ChainRouteStripStep,
   Container,
   EmptyState,
-  IconTile,
   Panel,
   Stack,
   StatePill,
@@ -28,9 +27,7 @@ import { useDepartmentRosterQuery } from "../../departments/queries";
 import { type DepartmentLookup } from "../../departments/departmentLookup";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { RunDetail } from "../../runs/components/RunDetail";
-import { runOutputHref } from "../../runs/run";
 import { useTaskRunQuery } from "../../runs/queries/useTaskRunQuery";
-import { useOpenTaskRunFolderMutation } from "../../runs/mutations";
 import { useTaskQuery } from "../queries";
 
 function stepFor(
@@ -59,7 +56,6 @@ export interface TaskDetailScreenProps {
  */
 export function TaskDetailScreen({ taskId }: TaskDetailScreenProps) {
   const t = useTranslations("tasksWork");
-  const tRuns = useTranslations("runs");
   const departments = useDepartmentLookup();
   const router = useRouter();
   const pathname = usePathname();
@@ -86,16 +82,12 @@ export function TaskDetailScreen({ taskId }: TaskDetailScreenProps) {
     isError: runError,
   } = useTaskRunQuery(selectedRunRef ?? null);
 
-  const openFolder = useOpenTaskRunFolderMutation();
-
   const rosterQuery = useDepartmentRosterQuery(selected?.department ?? "");
 
   // Approvals whose run/task the selected subtask (or the task itself) owns.
   const relatedApprovals = approvals.filter(
     (a) => a.runId === (selectedRunRef ?? task?.id) || a.runId === task?.id,
   );
-
-  const outputHref = selectedRun ? runOutputHref(selectedRun, task?.output) : null;
 
   if (isPending) {
     return (
@@ -114,162 +106,111 @@ export function TaskDetailScreen({ taskId }: TaskDetailScreenProps) {
   }
 
   return (
-    <Container padding={["300", "350"]}>
-      <Stack gap="200">
-        <Stack align="start" direction="row" gap="200" justify="between">
-          <Stack gap="50">
+    <Stack>
+      {!selectedRunRef ? (
+        <Container padding={["300", "350"]}>
+          <Stack gap="200">
             <Typography type="h1">{task.title || task.text.slice(0, 120)}</Typography>
-            {task.title && (
-              <Typography type="text" variant="secondary">
-                {task.text}
-              </Typography>
-            )}
+            <EmptyState body={t("detail.noRunBody")} title={t("detail.noRunTitle")} />
           </Stack>
-          <Stack align="center" direction="row" gap="100">
-            {selectedRun?.kind === "workflow" && (
-              <Button
-                data-testid="open-task-folder"
-                disabled={openFolder.isPending}
-                icon="doc"
-                onClick={() =>
-                  openFolder.mutate({ params: { runId: selectedRun.runId }, body: {} })
-                }
-                size="sm"
-              >
-                {tRuns("openFolder")}
-              </Button>
-            )}
-            {outputHref && (
-              <Button
-                data-testid="open-task-output"
-                icon="link"
-                intent="primary"
-                onClick={() => window.open(outputHref, "_blank", "noopener,noreferrer")}
-                size="sm"
-              >
-                {tRuns("openOutput")}
-              </Button>
-            )}
-          </Stack>
-        </Stack>
+        </Container>
+      ) : runPending ? (
+        <Container padding={["300", "350"]}>
+          <QueryLoading />
+        </Container>
+      ) : runError || !selectedRun ? (
+        <Container padding={["300", "350"]}>
+          <QueryError />
+        </Container>
+      ) : (
+        <RunDetail run={selectedRun} />
+      )}
 
-        {steps.length > 0 ? (
-          <Panel padding="300">
-            <ChainRouteStrip
-              onStepClick={setSelectedIndex}
-              size="full"
-              steps={steps.map((s, i) => ({ ...s, selected: i === selectedIndex }))}
-            />
-          </Panel>
-        ) : (
-          <EmptyState body={t("detail.noSubtasksBody")} title={t("detail.noSubtasksTitle")} />
-        )}
+      <Container padding={["300", "350"]}>
+        <Stack gap="200">
+          {steps.length > 0 && (
+            <Panel padding="300">
+              <ChainRouteStrip
+                onStepClick={setSelectedIndex}
+                size="full"
+                steps={steps.map((s, i) => ({ ...s, selected: i === selectedIndex }))}
+              />
+            </Panel>
+          )}
 
-        <Stack wrap direction="row" gap="200">
-          <Stack gap="150" style={{ flex: "1 1 480px", minWidth: 0 }}>
-            {selected && (
-              <Panel header={t("detail.subtaskHeader", { id: selectedIndex + 1 })}>
-                <Stack gap="150">
-                  <Stack align="center" direction="row" gap="100">
-                    <StatePill label={t(`state.${selected.state}`)} state={selected.state} />
-                    <Typography type="note">
-                      {selected.department
-                        ? departments.name(selected.department)
-                        : t("detail.unassigned")}
-                    </Typography>
-                    {selected.step != null && (
-                      <Tag tone="neutral">{t("detail.step", { n: selected.step })}</Tag>
-                    )}
-                  </Stack>
+          {(selected || relatedApprovals.length > 0) && (
+            <Stack wrap direction="row" gap="200">
+              {selected && (
+                <Stack gap="150" style={{ flex: "1 1 480px", minWidth: 0 }}>
+                  <Panel header={t("detail.subtaskHeader", { id: selectedIndex + 1 })}>
+                    <Stack gap="150">
+                      <Stack align="center" direction="row" gap="100">
+                        <StatePill label={t(`state.${selected.state}`)} state={selected.state} />
+                        <Typography type="note">
+                          {selected.department
+                            ? departments.name(selected.department)
+                            : t("detail.unassigned")}
+                        </Typography>
+                        {selected.step != null && (
+                          <Tag tone="neutral">{t("detail.step", { n: selected.step })}</Tag>
+                        )}
+                      </Stack>
 
-                  <Typography mono size="2xs" tracking="wider" type="note" variant="tertiary">
-                    {t("detail.roster")}
-                  </Typography>
-                  {rosterQuery.data && rosterQuery.data.agents.length > 0 ? (
-                    <Stack wrap direction="row" gap="100">
-                      {rosterQuery.data.agents.map((a) => (
-                        <Tag key={a.id}>{a.name ?? a.id}</Tag>
+                      <Typography mono size="2xs" tracking="wider" type="note" variant="tertiary">
+                        {t("detail.roster")}
+                      </Typography>
+                      {rosterQuery.data && rosterQuery.data.agents.length > 0 ? (
+                        <Stack wrap direction="row" gap="100">
+                          {rosterQuery.data.agents.map((a) => (
+                            <Tag key={a.id}>{a.name ?? a.id}</Tag>
+                          ))}
+                        </Stack>
+                      ) : (
+                        <Typography size="sm" type="note" variant="tertiary">
+                          {t("detail.noRoster")}
+                        </Typography>
+                      )}
+                    </Stack>
+                  </Panel>
+                </Stack>
+              )}
+
+              {relatedApprovals.length > 0 && (
+                <Stack gap="150" style={{ flex: "0 1 340px", minWidth: 280 }}>
+                  <Panel header={t("detail.approvalsHeader")}>
+                    <Stack gap="100">
+                      {relatedApprovals.map((a) => (
+                        <ApprovalCard
+                          agentName={a.skill}
+                          density="row"
+                          glyphSeed={a.skill}
+                          highRisk={a.riskType != null && HIGH_RISK_TYPES.has(a.riskType)}
+                          key={a.id}
+                          meta={a.kind}
+                          onApprove={() => approve.mutate({ params: { id: a.id }, body: {} })}
+                          onDeny={() => reject.mutate({ params: { id: a.id }, body: {} })}
+                          onOpen={() => openApprovalSheet(a.id)}
+                          request={a.detail}
+                          taskRef={a.runId}
+                          waited={formatWaited(a.requestedAt)}
+                        />
                       ))}
                     </Stack>
-                  ) : (
-                    <Typography size="sm" type="note" variant="tertiary">
-                      {t("detail.noRoster")}
-                    </Typography>
-                  )}
-                </Stack>
-              </Panel>
-            )}
-
-            <Panel header={t("detail.runHeader")}>
-              {!selectedRunRef ? (
-                <EmptyState body={t("detail.noRunBody")} title={t("detail.noRunTitle")} />
-              ) : runPending ? (
-                <QueryLoading />
-              ) : runError || !selectedRun ? (
-                <QueryError />
-              ) : (
-                <RunDetail run={selectedRun} />
-              )}
-            </Panel>
-          </Stack>
-
-          <Stack gap="150" style={{ flex: "0 1 340px", minWidth: 280 }}>
-            <Panel header={t("detail.approvalsHeader")}>
-              {relatedApprovals.length === 0 ? (
-                <Typography size="sm" type="note" variant="tertiary">
-                  {t("detail.noApprovals")}
-                </Typography>
-              ) : (
-                <Stack gap="100">
-                  {relatedApprovals.map((a) => (
-                    <ApprovalCard
-                      agentName={a.skill}
-                      density="row"
-                      glyphSeed={a.skill}
-                      highRisk={a.riskType != null && HIGH_RISK_TYPES.has(a.riskType)}
-                      key={a.id}
-                      meta={a.kind}
-                      onApprove={() => approve.mutate({ params: { id: a.id }, body: {} })}
-                      onDeny={() => reject.mutate({ params: { id: a.id }, body: {} })}
-                      onOpen={() => openApprovalSheet(a.id)}
-                      request={a.detail}
-                      taskRef={a.runId}
-                      waited={formatWaited(a.requestedAt)}
-                    />
-                  ))}
+                  </Panel>
                 </Stack>
               )}
-            </Panel>
+            </Stack>
+          )}
 
-            <Panel header={t("detail.attachmentsHeader")}>
-              {task.attachments.length === 0 ? (
-                <Typography size="sm" type="note" variant="tertiary">
-                  {t("detail.noAttachments")}
-                </Typography>
-              ) : (
-                <Stack gap="75">
-                  {task.attachments.map((att) => (
-                    <Stack direction="row" gap="100" key={att.name}>
-                      <IconTile glyph="doc" size="sm" />
-                      <Typography size="sm" type="note">
-                        {att.name}
-                      </Typography>
-                    </Stack>
-                  ))}
-                </Stack>
-              )}
-            </Panel>
+          <Typography mono size="2xs" tracking="wider" type="note" variant="tertiary">
+            {t("detail.created", { time: compactAgo(task.createdAt, now) })}
+          </Typography>
 
-            <Typography mono size="2xs" tracking="wider" type="note" variant="tertiary">
-              {t("detail.created", { time: compactAgo(task.createdAt, now) })}
-            </Typography>
-          </Stack>
+          <Button intent="ghost" onClick={() => router.push("/work/tasks" as Route)} size="sm">
+            {t("detail.back")}
+          </Button>
         </Stack>
-
-        <Button intent="ghost" onClick={() => router.push("/work/tasks" as Route)} size="sm">
-          {t("detail.back")}
-        </Button>
-      </Stack>
-    </Container>
+      </Container>
+    </Stack>
   );
 }

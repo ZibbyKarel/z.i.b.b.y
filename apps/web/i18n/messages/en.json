@@ -410,20 +410,15 @@
     },
     "detail": {
       "back": "← Back to tasks",
-      "noSubtasksTitle": "No subtasks yet",
-      "noSubtasksBody": "This task hasn't dispatched any chain steps.",
       "subtaskHeader": "Subtask {id}",
       "unassigned": "Unassigned",
       "step": "Step {n}",
       "roster": "Department roster",
       "noRoster": "No agents in this department yet.",
-      "runHeader": "Run",
       "noRunTitle": "No run yet",
       "noRunBody": "This subtask hasn't dispatched a run.",
       "approvalsHeader": "Pending approvals",
       "noApprovals": "Nothing needs you here.",
-      "attachmentsHeader": "Attachments",
-      "noAttachments": "No attachments.",
       "created": "Created {time}"
     },
     "new": {

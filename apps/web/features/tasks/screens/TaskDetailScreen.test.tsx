@@ -89,11 +89,11 @@ describe("TaskDetailScreen (ZB-04b)", () => {
     refetch.mockClear();
   });
 
-  it("renders the task title and the no-subtasks empty state", () => {
+  it("renders the task title only once and no subtask strip without subtasks", () => {
     hooks.task = task();
     render(<TaskDetailScreen taskId="t_1" />);
-    expect(screen.getAllByText("Ship the release").length).toBeGreaterThan(0);
-    expect(screen.getByText("Zatím žádné podúkoly")).toBeInTheDocument();
+    expect(screen.getAllByText("Ship the release")).toHaveLength(1);
+    expect(screen.queryByTestId(ChainRouteStripTestId.Root)).not.toBeInTheDocument();
   });
 
   it("renders a chain route strip and selects a subtask on click", () => {
