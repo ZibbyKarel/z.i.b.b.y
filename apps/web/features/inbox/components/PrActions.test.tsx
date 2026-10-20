@@ -201,6 +201,22 @@ describe("PrActions address / rebase", () => {
     expect(screen.getByTestId(PrActionsTestId.Address)).toBeInTheDocument();
   });
 
+  it("0 unresolved threads + behind shows Rebase but no Address", () => {
+    renderWithProviders(
+      <PrActions
+        baseLabel="main"
+        pr={pr(7, {
+          blocker: "changes-requested",
+          headRef: "feat",
+          unresolvedThreads: 0,
+          behind: true,
+        })}
+      />,
+    );
+    expect(screen.queryByTestId(PrActionsTestId.Address)).toBeNull();
+    expect(screen.getByTestId(PrActionsTestId.Rebase)).toBeInTheDocument();
+  });
+
   it("0 unresolved threads hides Address but a failed run still shows its link", () => {
     renderWithProviders(
       <PrActions

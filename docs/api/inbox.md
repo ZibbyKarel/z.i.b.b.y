@@ -179,6 +179,11 @@ closed PR / head is the base or default branch / an address-comments run of the 
 `running` or `awaiting-approval` (latest such task, not dead). The PR checks are shared with the
 rebase flow (`readPushablePr` in `inbox-rebase.service.ts`, refusals are `PrRefusedError`).
 
+The web offers the button only while `unresolvedThreads !== 0` (unknown, i.e. omitted, is still
+offered). A CHANGES_REQUESTED review whose feedback lives only in the review summary (no inline
+threads) reads 0 and hides the button; this is accepted per spec todo-21 (hide even with
+CHANGES_REQUESTED).
+
 `InboxAddressCommentsService.start` (`apps/api/src/inbox/inbox-address-comments.service.ts`)
 creates a task with the explicit `pr-address-comments` workflow target and `trustedProjectId`,
 and stamps `prAddressComments { repo, number, url, head, base, headSha, state: "running" }`.

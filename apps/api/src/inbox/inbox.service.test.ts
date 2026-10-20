@@ -110,19 +110,26 @@ describe("InboxService.listPrs", () => {
 
   function build(
     tasks: unknown[] = [],
-    opts: { changesRequested?: boolean; graphqlThreads?: unknown[]; graphqlStatus?: number } = {},
+    opts: {
+      changesRequested?: boolean;
+      graphqlThreads?: unknown[];
+      graphqlStatus?: number;
+      graphqlBody?: unknown;
+    } = {},
   ) {
     const calls: string[] = [];
+    const gqlInits: (RequestInit | undefined)[] = [];
     const graphqlThreads = opts.graphqlThreads ?? [{ isResolved: true }, { isResolved: false }];
     const merged: (() => void)[] = [];
     const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
-    const fetchImpl = (async (url: string | URL) => {
+    const fetchImpl = (async (url: string | URL, init?: RequestInit) => {
       const u = new URL(String(url));
       calls.push(u.pathname);
       if (u.pathname === "/graphql") {
         calls.push("graphql");
+        gqlInits.push(init);
         return json(
-          {
+          opts.graphqlBody ?? {
             data: {
               repository: { pullRequest: { reviewThreads: { nodes: graphqlThreads } } },
             },
@@ -205,7 +212,7 @@ describe("InboxService.listPrs", () => {
       { stream: () => activity.asObservable() } as never,
       fetchImpl,
     );
-    return { service, calls, merged, activity };
+    return { service, calls, gqlInits, merged, activity };
   }
 
   it("an inbox-refresh activity kind clears the 30 s cache; other kinds don't", async () => {
@@ -394,9 +401,13 @@ describe("InboxService.listPrs", () => {
   });
 
   it("counts unresolved review threads only on my changes-requested PRs", async () => {
-    const { service, calls } = build([], { changesRequested: true });
+    const { service, calls, gqlInits } = build([], { changesRequested: true });
     const byNumber = Object.fromEntries((await service.listPrs()).prs.map((p) => [p.number, p]));
     expect(calls.filter((c) => c === "graphql")).toHaveLength(1);
+    const init = gqlInits[0];
+    expect(init?.method).toBe("POST");
+    expect((init?.headers as Record<string, string>)["content-type"]).toBe("application/json");
+    expect(JSON.parse(String(init?.body)).variables).toEqual({ owner: "Acme", name: "app", n: 3 });
     expect(byNumber[3]?.unresolvedThreads).toBe(1);
     expect(byNumber[1]?.unresolvedThreads).toBeUndefined();
     expect(byNumber[2]?.unresolvedThreads).toBeUndefined();
@@ -415,6 +426,16 @@ describe("InboxService.listPrs", () => {
     const { service, calls } = build([], { changesRequested: true, graphqlStatus: 502 });
     const pr3 = (await service.listPrs()).prs.find((p) => p.number === 3);
     expect(calls.filter((c) => c === "graphql")).toHaveLength(1);
+    expect(pr3).toBeDefined();
+    expect(pr3?.unresolvedThreads).toBeUndefined();
+  });
+
+  it.each([
+    ["graphql errors", { errors: [{ message: "x" }] }],
+    ["a null pullRequest", { data: { repository: { pullRequest: null } } }],
+  ])("200 with %s omits unresolvedThreads and keeps the PR", async (_n, graphqlBody) => {
+    const { service } = build([], { changesRequested: true, graphqlBody });
+    const pr3 = (await service.listPrs()).prs.find((p) => p.number === 3);
     expect(pr3).toBeDefined();
     expect(pr3?.unresolvedThreads).toBeUndefined();
   });
