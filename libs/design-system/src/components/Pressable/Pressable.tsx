@@ -41,7 +41,7 @@ export function Pressable({ type = "button", ref, chipTone, ...rest }: Pressable
   return (
     <button
       className={cn(
-        "cursor-pointer border-none bg-transparent p-0 text-inherit rounded-sm",
+        "cursor-pointer border-none bg-transparent p-0 text-inherit [text-align:inherit] rounded-sm",
         chipTone ? chipToneClass[chipTone] : focusRing,
       )}
       data-testid={PressableTestId.Root}
