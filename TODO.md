@@ -6,7 +6,7 @@
 4. [x] na stráce pull-requests - tlačítko "udělat code review" -> uděláme z něj dropdown button kde defaultní hodnota bude rychlé code-review ale na výběr budu mít možnosti udělat zevrubné code-review a pak i s testováním. Projdi jaké workflows se na to hodí. Moje idea by byla defaultně jen code-review agent a na výběr z několika workflows. Zkus tam něco vymyslet. Idea je taková abych měl možnost vybrat si level zevrubnosti code-review - jak moc důkladné bude. (main@459721d3)
 5. [x] V panelu rychlého připnutí nepotřebuji mít připnuté odkazy v accordionu. Odstraň komponentu accordion (main@38d75086)
 6. [x] stránka PullRequests - pokud pustím znovu code review na PR nepotřebuji dvakrát zobrazovat že běží - necháme jen odkaz "Review běží" na detail běhu (main@6ae8eb7d)
-7. [ ] animace mimoňů:
+7. [x] animace mimoňů: (main@ea586ba9)
        a. [ ] iddle - je málo výrazná. Z dálky to vypadá že se mimoni vůbec nehýbají
 8. [x] Stránka PullRequestů - zobrazíme PR v jednom sloupci pod sebou na šířku 25% stránky. Klik na PR otevře na zbylých 75% šířky detail se změnamy v PR. Použij na to nějakou knihovnu jako třeba je https://www.npmjs.com/package/react-diff-view (zkus prohledat i alternativy) (main@bc9a05d7)
 9. [x] Všechny workflows, která dělají code-review by měla vracet seřazený seznam nálezů od nejkritičtějších po nejmíň kritické. (main@c3b73908)
@@ -17,3 +17,5 @@
 14. [x] stránka issues - musíme tady také nějak nastínit pokud se jedná o frontu issues - pokud jedno issue blokuje jiné a tak dále. Udělej to stejně jako v bodu 13 u PRs. (main@4b338ced)
 15. [x] stránka pull requests - pokud zobrazím diff PR tak nechci abych scrolloval celou stránkou. Scrollovat by se měl jen ten diff. Zároveň pokud máme takto úzké karty Prs tak se tam nevejde text. Musíme kartu PR udělat responzivní a pokud je title dloouhý tak se bude zalamovat. Zároveň ale nesmí přesahovat do labelů v pravo nahoře (main@a1c8d4eb)
 16. [x] detail tasku - pravý panel s detaily - názvy firmy, projektu, týmu, musejí být odkazy + nezobrazuj zdroj a epic (epic není entita u nás v systému) (main@64e124a6)
+17. [ ] pokud při rebase PR nejsou konflikty není potřeba nic řešit. Tento agent má být rychlý. Pokud konflikty nastanou, vyřeši je a pushne do větve. Projede jen rychlé checky. Není třeba kompletní otestování celé větve na to je pak CI v githubu
+18. [ ] úkoly ve frontě bych měl být schopen "stopnout" -> odstraní se z fronty a nikdy se tak nenastartují
