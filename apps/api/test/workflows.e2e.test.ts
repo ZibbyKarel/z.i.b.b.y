@@ -1274,7 +1274,7 @@ describe("Workflow stage gates (claude mode, e2e)", () => {
     expect(final.stageRuns.map((s) => s.status)).toEqual(["done"]);
   });
 
-  it("reject aborts the gated stage and fails the run", async () => {
+  it("reject aborts the gated stage and stops the run as interrupted", async () => {
     const start = await app.get(WorkflowRunnerService).start("gated", undefined, undefined);
     const { workflowRunId } = start as { workflowRunId: string };
 
@@ -1287,7 +1287,7 @@ describe("Workflow stage gates (claude mode, e2e)", () => {
       const run = await runStatus(workflowRunId);
       return run.status !== "running" && run.status !== "parked" ? run : null;
     });
-    expect(final.status).toBe("failed");
+    expect(final.status).toBe("interrupted");
     expect(final.stageRuns.map((s) => s.status)).toEqual(["interrupted"]);
   });
 
