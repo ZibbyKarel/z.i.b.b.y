@@ -11,7 +11,6 @@ const meta: Meta<typeof Button> = {
       control: "select",
       options: ["primary", "secondary", "ghost", "danger"],
     },
-    tone: { control: "select", options: ["accent", "ok", "warn", "bad"] },
     size: { control: "select", options: ["sm", "md"] },
   },
   args: { children: "Spustit", intent: "primary", size: "md" },
@@ -20,64 +19,52 @@ export default meta;
 
 type Story = StoryObj<typeof Button>;
 
+const intents = ["primary", "secondary", "ghost", "danger"] as const;
+
 export const Overview: Story = {
   render: () => (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <Typography type="label">variants</Typography>
-        <div className="flex flex-wrap gap-3">
-          <Button icon="play" intent="primary">
-            Spustit
-          </Button>
-          <Button icon="edit" intent="secondary">
-            Edit raw
-          </Button>
-          <Button icon="edit" intent="ghost">
-            Otevřít
-          </Button>
-          <Button icon="x" intent="danger">
-            Zamítnout
-          </Button>
-          <Button icon="check" intent="primary" tone="ok">
-            Schválit
-          </Button>
+      {(["md", "sm"] as const).map((size) => (
+        <div className="flex flex-col gap-2" key={size}>
+          <Typography type="label">{`variants — ${size}`}</Typography>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button intent="primary" size={size}>
+              Re-run
+            </Button>
+            <Button intent="secondary" size={size}>
+              Pause
+            </Button>
+            <Button intent="ghost" size={size}>
+              Open
+            </Button>
+            <Button intent="danger" size={size}>
+              Stop
+            </Button>
+            <Button icon="play" intent="primary" size={size}>
+              Run
+            </Button>
+            <Button aria-label="Next" icon="arrow" intent="secondary" size={size} />
+          </div>
         </div>
-      </div>
+      ))}
       <div className="flex flex-col gap-2">
-        <Typography type="label">sizes</Typography>
+        <Typography type="label">loading</Typography>
         <div className="flex flex-wrap items-center gap-3">
-          <Button icon="play" size="sm">
-            sm
-          </Button>
-          <Button icon="play" size="md">
-            md
-          </Button>
-        </div>
-      </div>
-      <div className="flex flex-col gap-2">
-        <Typography type="label">states</Typography>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button loading>Spouštím…</Button>
-          <Button loading intent="ghost">
-            Načítám…
-          </Button>
+          {intents.map((intent) => (
+            <Button loading intent={intent} key={intent}>
+              {intent}
+            </Button>
+          ))}
         </div>
       </div>
       <div className="flex flex-col gap-2">
         <Typography type="label">disabled — inert across every intent, not a faded fill</Typography>
         <div className="flex flex-wrap items-center gap-3">
-          <Button disabled icon="play" intent="primary">
-            Spustit
-          </Button>
-          <Button disabled icon="edit" intent="ghost">
-            Edit raw
-          </Button>
-          <Button disabled icon="x" intent="danger">
-            Zamítnout
-          </Button>
-          <Button disabled icon="check" intent="primary" tone="ok">
-            Schválit
-          </Button>
+          {intents.map((intent) => (
+            <Button disabled intent={intent} key={intent}>
+              {intent}
+            </Button>
+          ))}
         </div>
       </div>
     </div>

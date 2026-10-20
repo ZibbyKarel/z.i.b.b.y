@@ -173,7 +173,6 @@ export function ReworkControl({
           intent={escalate ? "primary" : "ghost"}
           onClick={() => onEscalate(!escalate)}
           size="sm"
-          tone="warn"
           type="button"
         >
           ↑ {t("escalateEffort")}

@@ -22,6 +22,18 @@ describe("Button", () => {
     expect(screen.getByTestId(ButtonTestId.Icon)).toBeInTheDocument();
   });
 
+  it("leads a danger button with an error dot instead of a red fill", () => {
+    render(<Button intent="danger">Zamítnout</Button>);
+    expect(screen.getByTestId(ButtonTestId.Dot)).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByTestId(ButtonTestId.Root)).toHaveAccessibleName("Zamítnout");
+    expect(screen.getByTestId(ButtonTestId.Root)).not.toHaveClass("bg-bad");
+  });
+
+  it("renders no dot on non-destructive intents", () => {
+    render(<Button intent="secondary">Edit</Button>);
+    expect(screen.queryByTestId(ButtonTestId.Dot)).toBeNull();
+  });
+
   it("does not fire when disabled", async () => {
     const onClick = vi.fn();
     render(
