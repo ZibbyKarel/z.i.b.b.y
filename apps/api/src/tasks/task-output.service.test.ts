@@ -9,6 +9,7 @@ import {
   PR_REBASE_ARTIFACT,
   PR_REVIEW_ARTIFACT,
   TaskOutputService,
+  isAutoPushPrRebase,
   suggestReviewEvent,
 } from "./task-output.service";
 
@@ -348,9 +349,23 @@ describe("TaskOutputService", () => {
       expect((await storage.get("t_rebase")).prRebase?.rebasedSha).toBeUndefined();
     });
 
-    it("resolved conflicts park a pending high-risk approval", async () => {
+    it("resolved conflicts with green quick checks are force-pushed on the spot (todo-17)", async () => {
       const task = await seedRebase();
       const delivered = await service.parkPrRebase(task, "Conflicts: 2 files\n\n- a.ts", "/wt");
+      expect(approvals.requestApproval).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: "pr-rebase", risk: "high" }),
+      );
+      expect(approvals.approve).toHaveBeenCalledWith("appr_1");
+      expect(delivered.summary).toMatch(/konflikty vyřešeny a force-pushnuto/);
+    });
+
+    it.each([
+      "Conflicts: 2 files, checks failed\n\n- a.ts",
+      "Conflicts: aborted\n\nthe branch moved",
+      "Conflicts: none, checks failed",
+    ])("%j parks a pending approval and pushes nothing", async (report) => {
+      const task = await seedRebase();
+      const delivered = await service.parkPrRebase(task, report, "/wt");
       expect(approvals.requestApproval).toHaveBeenCalledWith(
         expect.objectContaining({ kind: "pr-rebase", risk: "high" }),
       );
@@ -358,10 +373,30 @@ describe("TaskOutputService", () => {
       expect(delivered.summary).toMatch(/čeká na schválení/);
     });
 
-    it("a conflicting PR is gated even when the report claims none", async () => {
+    it("a PR GitHub saw conflicting is pushed on `Conflicts: none`, but never labelled clean", async () => {
       const task = await seedRebase({ conflictAtStart: true });
       await service.parkPrRebase(task, "Conflicts: none", "/wt");
-      expect(approvals.approve).not.toHaveBeenCalled();
+      expect(approvals.approve).toHaveBeenCalledWith("appr_1");
+      const { detail, risk } = approvals.requestApproval.mock.calls[0]?.[0] as {
+        detail: string;
+        risk: string;
+      };
+      expect(risk).toBe("high");
+      expect(detail).not.toContain("no conflicts, authorised");
+    });
+
+    it.each([
+      ["Conflicts: none", true],
+      ["conflicts: NONE  ", true],
+      ["Conflicts: 1 file", true],
+      ["Conflicts: 12 files\n\n- a.ts", true],
+      ["Conflicts: 2 files, checks failed", false],
+      ["Conflicts: none, checks failed", false],
+      ["Conflicts: aborted", false],
+      ["Rebased.\nConflicts: none", false],
+      ["", false],
+    ])("isAutoPushPrRebase(%j) → %s", (report, expected) => {
+      expect(isAutoPushPrRebase(report)).toBe(expected);
     });
 
     it("only the FIRST line counts as the conflict-free claim", async () => {
