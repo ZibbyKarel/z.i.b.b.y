@@ -6,6 +6,7 @@ import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { type IntendedAction, IntendedActionSchema } from "@zibby/contracts";
+import { OPERATOR_TOKEN_ENV, OPERATOR_TOKEN_FILE_ENV } from "../approvals/operator-token.service";
 import { writeFileAtomic } from "../shared/file-storage";
 import type { ScopedLogger } from "../shared/logging/logger.service";
 import { detectLimit } from "./detect-limit";
@@ -66,6 +67,37 @@ export function freeDirs(spec: Pick<RunSpec, "cwd" | "spawnCwd" | "args">): stri
   const granted = spec.args.flatMap((a, i) => (a === "--add-dir" ? [spec.args[i + 1] ?? ""] : []));
   const dirs = [spec.cwd, spec.spawnCwd ?? "", ...granted, ...SHARED_FREE_DIRS];
   return [...new Set(dirs.filter(Boolean))].join(path.delimiter);
+}
+
+/** process.env minus the operator-only credential (Laws 1 & 4): agents must never decide approvals. */
+export function agentBaseEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  delete env[OPERATOR_TOKEN_ENV];
+  delete env[OPERATOR_TOKEN_FILE_ENV];
+  return env;
+}
+
+/**
+ * The env an agent process is spawned with: sanitized process.env, then the per-run
+ * env, then the gate pins. The operator-token keys are deleted last so a project
+ * secret with the same name cannot reintroduce them (no reliance on spawn's
+ * handling of `undefined` values).
+ */
+export function agentSpawnEnv(
+  spec: Pick<RunSpec, "cwd" | "spawnCwd" | "args" | "env">,
+): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {
+    ...agentBaseEnv(),
+    // Runs spawn with --setting-sources "" (no project source), so the target
+    // repo's CLAUDE.md only loads as an --add-dir (see ClaudeRunOptions.contextDir).
+    CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD: "1",
+    ...spec.env,
+    [INTENT_DIR_ENV]: spec.cwd,
+    [FREE_DIRS_ENV]: freeDirs(spec),
+  };
+  delete env[OPERATOR_TOKEN_ENV];
+  delete env[OPERATOR_TOKEN_FILE_ENV];
+  return env;
 }
 
 /** A run id may only contain the safe characters our filenames are built from. */
@@ -422,15 +454,7 @@ export class RunnerCore<R extends BaseRun> {
       // coordination-dir pin is applied AFTER spec.env so a project can never
       // override it (the hook must write its request where {@link watchIntentRequest}
       // watches — not into whatever `--add-dir` target the destructive command runs in).
-      env: {
-        ...process.env,
-        // Runs spawn with --setting-sources "" (no project source), so the target
-        // repo's CLAUDE.md only loads as an --add-dir (see ClaudeRunOptions.contextDir).
-        CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD: "1",
-        ...spec.env,
-        [INTENT_DIR_ENV]: spec.cwd,
-        [FREE_DIRS_ENV]: freeDirs(spec),
-      },
+      env: agentSpawnEnv(spec),
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -520,15 +544,7 @@ export class RunnerCore<R extends BaseRun> {
     const child = spawn(spec.command, spec.args, {
       cwd: spec.spawnCwd ?? spec.cwd,
       // Same per-run env + coordination-dir pin as the initial spawn (see {@link start}).
-      env: {
-        ...process.env,
-        // Runs spawn with --setting-sources "" (no project source), so the target
-        // repo's CLAUDE.md only loads as an --add-dir (see ClaudeRunOptions.contextDir).
-        CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD: "1",
-        ...spec.env,
-        [INTENT_DIR_ENV]: spec.cwd,
-        [FREE_DIRS_ENV]: freeDirs(spec),
-      },
+      env: agentSpawnEnv(spec),
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
     });

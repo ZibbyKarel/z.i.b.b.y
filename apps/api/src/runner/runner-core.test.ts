@@ -5,7 +5,14 @@ import type { IntendedAction } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { formatClaudeStreamLine } from "./claude-stream-format";
-import { INTENT_DIR_ENV, MAX_LOG_READ_BYTES, RunNotFoundError, RunnerCore } from "./runner-core";
+import {
+  INTENT_DIR_ENV,
+  MAX_LOG_READ_BYTES,
+  RunNotFoundError,
+  RunnerCore,
+  agentBaseEnv,
+  agentSpawnEnv,
+} from "./runner-core";
 import type { BaseRun, KindStrategy } from "./runner-core.types";
 
 // A minimal record + strategy mirroring how a real wrapper plugs into the core.
@@ -1194,5 +1201,35 @@ describe("RunnerCore", () => {
     });
     await waitForStatus(core, run.runId, "done");
     expect(core.get(run.runId).costUsd).toBeUndefined();
+  });
+});
+
+describe("operator token never reaches agent processes", () => {
+  afterEach(() => {
+    delete process.env.ZIBBY_OPERATOR_TOKEN;
+    delete process.env.ZIBBY_OPERATOR_TOKEN_FILE;
+  });
+
+  it("agentBaseEnv drops the operator credential but keeps the rest", () => {
+    process.env.ZIBBY_OPERATOR_TOKEN = "secret";
+    process.env.ZIBBY_OPERATOR_TOKEN_FILE = "/tmp/x";
+    const env = agentBaseEnv();
+    expect(env.ZIBBY_OPERATOR_TOKEN).toBeUndefined();
+    expect(env.ZIBBY_OPERATOR_TOKEN_FILE).toBeUndefined();
+    expect("ZIBBY_OPERATOR_TOKEN" in env).toBe(false);
+    expect(env.PATH).toBe(process.env.PATH);
+  });
+
+  it("agentSpawnEnv also strips them when spec.env reintroduces them", () => {
+    process.env.ZIBBY_OPERATOR_TOKEN = "secret";
+    const env = agentSpawnEnv({
+      cwd: "/tmp/run",
+      args: [],
+      env: { ZIBBY_OPERATOR_TOKEN: "from-project", ZIBBY_OPERATOR_TOKEN_FILE: "/p", FOO: "bar" },
+    });
+    expect("ZIBBY_OPERATOR_TOKEN" in env).toBe(false);
+    expect("ZIBBY_OPERATOR_TOKEN_FILE" in env).toBe(false);
+    expect(env.FOO).toBe("bar");
+    expect(env[INTENT_DIR_ENV]).toBe("/tmp/run");
   });
 });
