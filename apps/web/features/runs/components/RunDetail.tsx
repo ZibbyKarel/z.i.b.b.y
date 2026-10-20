@@ -10,7 +10,6 @@ import {
   FilePreview,
   Icon,
   type IconName,
-  IconTile,
   Markdown,
   MenuButton,
   type MenuButtonItem,
@@ -21,13 +20,13 @@ import {
   Tag,
   Typography,
 } from "@zibby/design-system";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useState } from "react";
 import { ConfirmDeleteDialog } from "../../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import { API_URL } from "../../../state/api";
 import { formatCostUsd } from "../../../utils/cost";
-import { formatDuration, resumeEta } from "../../../utils/time";
+import { formatDuration } from "../../../utils/time";
 import { useApprovalsQuery } from "../../approvals";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { RiskBadge } from "../../approvals/components/RiskBadge";
@@ -47,6 +46,7 @@ import {
   runTitle,
 } from "../run";
 import { GoalDetailPanel } from "./GoalDetailPanel";
+import { LimitPausedPanel } from "./RunFeedBanners";
 import { WorkflowStageTimeline } from "./WorkflowStageTimeline";
 import { RunApprovalGate } from "./RunApprovalGate";
 import { RunLogStream } from "./RunLogStream";
@@ -70,36 +70,6 @@ export interface RunDetailProps {
    * kinds/states that aren't re-runnable — the button then never shows. */
   onResume?: () => void;
   resuming?: boolean;
-}
-
-/**
- * The "paused on a usage limit" notice — a pause, not a failure (Phase 9). Shared by
- * agent, workflow, and goal runs (it was three inline copies); shows the reset ETA and,
- * when present, how many auto-resume cycles have been spent.
- */
-function LimitPausedPanel({ run, now }: { run: RunView; now: number }) {
-  const t = useTranslations("runs");
-  const locale = useLocale();
-  return (
-    <Panel padding="300" tone="warn">
-      <Stack align="start" direction="row" gap="150">
-        <IconTile glyph="pause" size="md" />
-        <Stack gap="50">
-          <Typography type="note" weight="semibold">
-            {t("limitPausedTitle")}
-          </Typography>
-          <Typography leading="snug" size="sm" type="text" variant="secondary">
-            {t("limitPausedBody", { eta: resumeEta(run.resumeAt, now, locale) })}
-          </Typography>
-          {run.limitResumeCycles != null && run.limitResumeCycles > 0 && (
-            <Typography mono size="2xs" type="note" variant="tertiary">
-              {t("limitResumeCycles", { n: run.limitResumeCycles })}
-            </Typography>
-          )}
-        </Stack>
-      </Stack>
-    </Panel>
-  );
 }
 
 function MetaCell({
