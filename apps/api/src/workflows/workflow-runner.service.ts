@@ -995,6 +995,19 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     // A parked run has no live child — cancelling it just lands it `interrupted`
     // (still resumable/deletable, and no longer reads as waiting on an approval).
     if (run?.status === "parked") {
+      // An approval park still has a live stage child (drive() waits on it, holding the
+      // lease + fuse slot): kill it like a reject would, and drop its pending approval
+      // so a later approve can't release the old child.
+      const stageRunId = run.parkedReason === "approval" ? run.currentStageRunId : undefined;
+      if (stageRunId) {
+        this.stopRequested.add(workflowRunId);
+        try {
+          this.core.cancel(stageRunId);
+        } catch {
+          this.stopRequested.delete(workflowRunId);
+        }
+        await this.approvals.cancelPendingForRun(stageRunId).catch(() => {});
+      }
       run.status = "interrupted";
       delete run.parkedReason;
       delete run.parked;

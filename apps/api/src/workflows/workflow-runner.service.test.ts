@@ -44,7 +44,11 @@ interface FakeCore {
 interface Harness {
   service: WorkflowRunnerService;
   core: FakeCore;
-  approvals: { register: ReturnType<typeof vi.fn>; requestApproval: ReturnType<typeof vi.fn> };
+  approvals: {
+    register: ReturnType<typeof vi.fn>;
+    requestApproval: ReturnType<typeof vi.fn>;
+    cancelPendingForRun: ReturnType<typeof vi.fn>;
+  };
   gates: {
     rulesForAgent: ReturnType<typeof vi.fn>;
     rulesForAgentInDepartment: ReturnType<typeof vi.fn>;
@@ -65,6 +69,7 @@ async function makeHarness(dir: string): Promise<Harness> {
   const approvals = {
     register: vi.fn((kind: string, runner: ResumableRunner) => registered.set(kind, runner)),
     requestApproval: vi.fn(async () => ({})),
+    cancelPendingForRun: vi.fn(async () => {}),
   };
   const gates = {
     rulesForAgent: vi.fn(async () => []),
@@ -2356,6 +2361,32 @@ describe("operator pause (D-PAUSE)", () => {
       ["phase1", "done"],
       ["phase2", "interrupted"],
     ]);
+  });
+
+  it("stopping a run parked on a live stage approval kills the stage and drops the approval", async () => {
+    await h.service.onModuleInit();
+    const run = runOf();
+    const order: string[] = [];
+    scriptStages(
+      order,
+      async (id) => {
+        if (id !== "phase2") return;
+        // The live stage raises an intent → the run parks on its approval.
+        run.currentStageRunId = STAGE_RUN_ID;
+        await fireIntent(h);
+        expect(run.parkedReason).toBe("approval");
+        // RE-RUN FRESH stops the parked run while drive() still waits on the stage.
+        await h.service.stop(WORKFLOW_RUN_ID);
+      },
+      (id) => (id === "phase2" ? "interrupted" : "done"),
+    );
+
+    await svc().drive(run, threePhases);
+
+    expect(h.core.cancel).toHaveBeenCalledWith(STAGE_RUN_ID);
+    expect(h.approvals.cancelPendingForRun).toHaveBeenCalledWith(STAGE_RUN_ID);
+    expect(run.status).toBe("interrupted");
+    expect(order).toEqual(["phase1", "phase2"]); // phase3 never runs on the stopped run
   });
 
   it("resume continues at the paused phase", async () => {

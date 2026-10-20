@@ -309,6 +309,12 @@ the first `.`) in `stopRequested` before it kills the held stage, so `drive()` l
 the run `interrupted` exactly like an operator STOP: partial `stageRuns` kept, no
 retry, no park. When there is no live stage to kill the mark is dropped again.
 
+**Stopping a parked run.** `stop()` on a parked run lands it `interrupted`. When it is
+parked on a stage approval (`parkedReason: "approval"`) the stage child is still alive
+and `drive()` is still waiting on it, so `stop()` does what a reject does — marks
+`stopRequested`, `core.cancel(currentStageRunId)` — and rejects the stage's pending
+approval (`cancelPendingForRun`), so a later approve can't release the old child.
+
 **Resume modes (D-RESUME).** `continueFailed(id, note?)` re-enters a failed/interrupted
 run at the phase it stopped on; the note joins that stage's resume context and is
 recorded as a message delivered to the re-entered phase. `resume { mode: "fresh" }`
