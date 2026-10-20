@@ -20,13 +20,14 @@ export enum MetricStripTestId {
 export interface MetricStripProps extends Omit<HTMLAttributes<HTMLDivElement>, "className"> {
   items: MetricStripItem[];
   /** Fixed column count (DS.md §8 Inspector's "metric strip: 3 columns"). */
-  columns: 3 | 4;
+  columns: 3 | 4 | 6;
   ref?: Ref<HTMLDivElement>;
 }
 
-const gridColsClass: Record<3 | 4, string> = {
+const gridColsClass: Record<3 | 4 | 6, string> = {
   3: "grid-cols-3",
   4: "grid-cols-4",
+  6: "grid-cols-6",
 };
 
 /** DS.md §8 Inspector metric strip — N equal columns of label/value pairs,

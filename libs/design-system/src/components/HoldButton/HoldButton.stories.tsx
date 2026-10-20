@@ -7,7 +7,7 @@ const meta: Meta<typeof HoldButton> = {
   component: HoldButton,
   parameters: { backgrounds: { default: "velin" } },
   argTypes: {
-    tone: { control: "select", options: ["warn", "bad", "ok", "accent"] },
+    tone: { control: "select", options: ["warn", "bad", "ok", "accent", "ink"] },
     size: { control: "radio", options: ["sm", "md"] },
   },
   args: {
@@ -30,10 +30,13 @@ export const Overview: Story = {
           <HoldButton doneLabel="Schváleno" label="Podržet pro schválení" tone="warn" />
           <HoldButton doneLabel="Smazáno" label="Podržet pro smazání" tone="bad" />
           <HoldButton doneLabel="Potvrzeno" label="Podržet pro potvrzení" tone="accent" />
+          <HoldButton doneLabel="Approved" label="HOLD TO APPROVE" tone="ink" />
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography type="label">armed (diskrétní cesta) — krátký klik nabije, druhý klik potvrdí</Typography>
+        <Typography type="label">
+          armed (diskrétní cesta) — krátký klik nabije, druhý klik potvrdí
+        </Typography>
         <div className="flex flex-wrap gap-3">
           <HoldButton
             armedLabel="Stiskni znovu pro potvrzení"
@@ -44,7 +47,9 @@ export const Overview: Story = {
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <Typography type="label">sizes — sm sedí vedle Button size=&quot;sm&quot; v hustém chrome</Typography>
+        <Typography type="label">
+          sizes — sm sedí vedle Button size=&quot;sm&quot; v hustém chrome
+        </Typography>
         <div className="flex flex-wrap items-center gap-3">
           <HoldButton label="Podržet pro schválení" size="sm" tone="warn" />
           <HoldButton label="Podržet pro schválení" size="md" tone="warn" />

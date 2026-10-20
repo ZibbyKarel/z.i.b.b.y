@@ -32,4 +32,11 @@ describe("MetricStrip", () => {
     render(<MetricStrip columns={4} items={ITEMS} />);
     expect(screen.getByTestId(MetricStripTestId.Root)).toHaveClass("grid-cols-4");
   });
+
+  it("supports a 6-column layout", () => {
+    const six = Array.from({ length: 6 }, (_, i) => ({ label: `L${i}`, value: i }));
+    render(<MetricStrip columns={6} items={six} />);
+    expect(screen.getByTestId(MetricStripTestId.Root)).toHaveClass("grid-cols-6");
+    expect(screen.getByTestId(`${MetricStripTestId.Item}-5`)).toBeInTheDocument();
+  });
 });

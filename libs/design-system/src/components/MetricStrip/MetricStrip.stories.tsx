@@ -24,11 +24,21 @@ const FOUR: MetricStripItem[] = [
   { label: "Contacts", value: "06" },
 ];
 
+const SIX: MetricStripItem[] = [
+  { label: "Status", value: "Running" },
+  { label: "Stage", value: "2/5" },
+  { label: "Elapsed", value: "04:12" },
+  { label: "Cost", value: "$0.42" },
+  { label: "Tokens", value: "18.2k" },
+  { label: "Files", value: "7" },
+];
+
 export const Overview: Story = {
   render: () => (
-    <div className="flex max-w-2xl flex-col gap-8 p-8">
+    <div className="flex max-w-4xl flex-col gap-8 p-8">
       <MetricStrip columns={3} items={THREE} />
       <MetricStrip columns={4} items={FOUR} />
+      <MetricStrip columns={6} items={SIX} />
     </div>
   ),
 };

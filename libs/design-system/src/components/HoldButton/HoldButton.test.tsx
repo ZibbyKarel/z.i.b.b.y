@@ -173,4 +173,10 @@ describe("HoldButton", () => {
       expect(root).toHaveAccessibleName("Press again to confirm");
     });
   });
+
+  it("renders the ink tone with a state-work fill", () => {
+    render(<HoldButton label="HOLD TO APPROVE" tone="ink" />);
+    expect(screen.getByTestId(HoldButtonTestId.Root)).toHaveClass("bg-ink");
+    expect(screen.getByTestId(HoldButtonTestId.Fill)).toHaveClass("bg-state-work");
+  });
 });

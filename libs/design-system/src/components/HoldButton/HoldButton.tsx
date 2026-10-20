@@ -4,7 +4,7 @@ import { cn } from "../../utils/cn";
 import { disabledClasses, focusRingOffset } from "../../utils/focus";
 import { Icon } from "../Icon/Icon";
 
-export type HoldButtonTone = "warn" | "bad" | "ok" | "accent";
+export type HoldButtonTone = "warn" | "bad" | "ok" | "accent" | "ink";
 
 /** Two footprints on the shared button scale: `md` is the standalone approval
  * default; `sm` matches `Button size="sm"` so the control sits flush beside its
@@ -21,6 +21,7 @@ const toneClass: Record<HoldButtonTone, string> = {
   bad: "text-bad bg-bad/[0.08] border-bad/40",
   ok: "text-ok bg-ok/[0.08] border-ok/40",
   accent: "text-accent bg-accent/[0.08] border-accent/40",
+  ink: "text-panel bg-ink border-ink",
 };
 
 const fillClass: Record<HoldButtonTone, string> = {
@@ -28,6 +29,7 @@ const fillClass: Record<HoldButtonTone, string> = {
   bad: "bg-bad/[0.18]",
   ok: "bg-ok/[0.18]",
   accent: "bg-accent/[0.18]",
+  ink: "bg-state-work",
 };
 
 /** How long the button must be held before it confirms. */
