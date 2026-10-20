@@ -119,6 +119,7 @@ async function makeHarness(dir: string): Promise<Harness> {
       // post-phase checkpoint step needs a stub too (no-op: no sha to report).
       checkpoint: vi.fn(async () => null),
       diffstat: vi.fn(async () => ""),
+      diffStats: vi.fn(async () => ({ additions: 0, deletions: 0, files: [] })),
     } as never,
     { compose: vi.fn(async () => "") } as never,
     // Vault double: this workflow declares no `outputs`, so the delivery sinks never
@@ -247,6 +248,30 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
       await fs.readFile(path.join(dir, WORKFLOW_RUN_ID, "run.json"), "utf8"),
     ) as WorkflowRun;
     expect(sidecar.status).toBe("parked");
+  });
+
+  it("parking on a pr.open gate records the structured diffstat; resume clears it", async () => {
+    await h.service.onModuleInit();
+    const run = h.runs.get(WORKFLOW_RUN_ID);
+    if (!run) throw new Error("missing run");
+    run.workspace = { path: "/wt/x", baseRef: "main", branch: "zibby/x" } as never;
+    const stats = {
+      additions: 3,
+      deletions: 0,
+      files: [{ path: "a.txt", additions: 3, deletions: 0 }],
+    };
+    (
+      h.service as unknown as { workspace: { diffStats: ReturnType<typeof vi.fn> } }
+    ).workspace.diffStats.mockResolvedValue(stats);
+    h.gates.evaluate.mockReturnValue({ decision: "ask", ruleId: "rule-1" });
+    await (
+      h.service as unknown as { onStageIntent(id: string, a: IntendedAction): Promise<void> }
+    ).onStageIntent(STAGE_RUN_ID, { action: "pr.open" });
+
+    expect(run.pendingDiffstat?.files.length).toBeGreaterThan(0);
+
+    await h.registered.get("workflow-stage")?.resume(STAGE_RUN_ID);
+    expect(run.pendingDiffstat).toBeUndefined();
   });
 
   it("deny: refuses the intent without parking", async () => {

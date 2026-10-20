@@ -634,6 +634,7 @@ function workflowRunToView(
     stageRuns: r.stageRuns,
     currentStage: r.currentStage,
     currentStageStartedAt: r.currentStageStartedAt,
+    ...(r.pendingDiffstat ? { diffstat: r.pendingDiffstat } : {}),
     outputArtifactName: fileOutput?.from,
     costUsd,
   };
@@ -688,6 +689,17 @@ function enrichRunWithTask(run: TaskRun, tasksById: ReadonlyMap<string, Schedule
     // The structured PR result (url + line totals) when the task's `pr` output opened a
     // PR — what makes the detail render the compact link + coloured `+/−` surface.
     ...(task.outcome?.pr ? { prOutput: task.outcome.pr } : {}),
+    // The per-file diffstat: the PR-gate park's would-publish one (already on the run)
+    // wins, else the published PR's rows.
+    ...(!run.diffstat && task.outcome?.pr?.files
+      ? {
+          diffstat: {
+            files: task.outcome.pr.files,
+            additions: task.outcome.pr.additions,
+            deletions: task.outcome.pr.deletions,
+          },
+        }
+      : {}),
     attachments: task.attachments,
     // Phase 65: carried alongside `attachments` so the detail can build the
     // open-file serve URL (`GET /api/tasks/attachments/:setId/:name`).

@@ -422,7 +422,12 @@ export class TaskOutputService implements OnModuleInit {
     this.log.info("task PR opened", { taskId: task.id, branch: ws.branch, url: result.url });
     return {
       summary: `PR otevřen: ${result.url}`,
-      pr: { url: result.url, additions: stats.additions, deletions: stats.deletions },
+      pr: {
+        url: result.url,
+        additions: stats.additions,
+        deletions: stats.deletions,
+        ...(stats.files ? { files: stats.files } : {}),
+      },
     };
   }
 

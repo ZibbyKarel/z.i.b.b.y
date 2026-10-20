@@ -1383,6 +1383,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       if (run.status === "parked") {
         run.status = "running";
         delete run.parkedReason;
+        delete run.pendingDiffstat;
       }
       // P1-03: external (non-model) cost the stage reported + the run's running spend.
       await this.accrueStageCost(run, stageRun, stageCwd);
@@ -2224,11 +2225,12 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     if (result) {
       const stats = await this.workspace
         .diffStats({ worktreePath: run.workspace.path, baseRef: run.workspace.baseRef })
-        .catch(() => ({ additions: 0, deletions: 0 }));
+        .catch(() => ({ additions: 0, deletions: 0, files: [] }));
       run.prOutput = {
         url: result.url,
         additions: stats.additions,
         deletions: stats.deletions,
+        files: stats.files,
       };
       await this.writeAggregate(run);
       this.log.info("PR output opened", { workflowRunId: run.workflowRunId, url: result.url });
@@ -2536,6 +2538,10 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
           if (diff) {
             await fs.writeFile(path.join(run.cwd, "diffstat.txt"), diff, "utf8").catch(() => {});
           }
+          // The structured twin of diffstat.txt, for the run detail's per-file list.
+          run.pendingDiffstat = await this.workspace
+            .diffStats({ worktreePath: run.workspace.path, baseRef: run.workspace.baseRef })
+            .catch(() => undefined);
         }
         await this.writeAggregate(run);
         await this.approvals.requestApproval({
@@ -2572,7 +2578,10 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     const run = this.runs.get(rec.workflowRunId);
     if (!run) return;
     run.status = status;
-    if (status !== "parked") delete run.parkedReason;
+    if (status !== "parked") {
+      delete run.parkedReason;
+      delete run.pendingDiffstat; // the gate resolved
+    }
     await this.writeAggregate(run);
   }
 

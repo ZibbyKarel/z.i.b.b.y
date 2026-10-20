@@ -569,6 +569,37 @@ describe("TaskRunsService", () => {
     });
   });
 
+  describe("diffstat", () => {
+    const files = [{ path: "a.ts", additions: 3, deletions: 1 }];
+
+    it("maps a published PR's per-file rows onto the run", async () => {
+      const { service, scheduled } = build();
+      scheduled.list.mockResolvedValue([
+        {
+          ...scheduledS,
+          id: "task1",
+          status: "dispatched",
+          outcome: {
+            status: "done",
+            summary: "ok",
+            finishedAt: "2026-06-16T00:05:00.000Z",
+            pr: { url: "https://example/pr/1", additions: 3, deletions: 1, files },
+          },
+        },
+      ]);
+      const run = await service.getTaskRun(agentA.runId);
+      expect(run.diffstat).toEqual({ files, additions: 3, deletions: 1 });
+    });
+
+    it("exposes a workflow run's pending (PR-gate) diffstat", async () => {
+      const { service, workflowRunner } = build();
+      const pendingDiffstat = { files, additions: 3, deletions: 1 };
+      workflowRunner.listAll.mockResolvedValue([{ ...pipeP, pendingDiffstat }]);
+      const run = await service.getTaskRun(pipeP.workflowRunId);
+      expect(run.diffstat).toEqual(pendingDiffstat);
+    });
+  });
+
   describe("resolveOwner — lifecycle dispatch by kind", () => {
     it("routes logs to the agent runner", async () => {
       const { service, agentRunner } = build();

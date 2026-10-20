@@ -133,6 +133,22 @@ describe("WorkspaceService", () => {
     expect(out).toContain("feature.txt");
   });
 
+  it("numstat returns per-file rows (binary as 0/0) and diffStats sums them", async () => {
+    const dir = path.join(runDir, "worktree");
+    const ws = await svc.createWorktree({ projectPath: repo, runId: "r-ns", slug: "s", dir });
+    await fs.writeFile(path.join(dir, "a.txt"), "1\n2\n3\n", "utf8");
+    await fs.writeFile(path.join(dir, "b.bin"), Buffer.from([0, 1]));
+    await git(dir, "add", "-A");
+    await git(dir, "commit", "-m", "add files");
+
+    const opts = { worktreePath: dir, baseRef: ws.baseRef };
+    expect(await svc.numstat(opts)).toEqual([
+      { path: "a.txt", additions: 3, deletions: 0 },
+      { path: "b.bin", additions: 0, deletions: 0, binary: true },
+    ]);
+    expect(await svc.diffStats(opts)).toMatchObject({ additions: 3, deletions: 0 });
+  });
+
   it("checkpoint commits a dirty worktree, returns the sha, and never touches main", async () => {
     const dir = path.join(runDir, "worktree");
     const ws = await svc.createWorktree({ projectPath: repo, runId: "r-cp", slug: "s", dir });

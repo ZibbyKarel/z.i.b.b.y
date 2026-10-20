@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Injectable, Optional } from "@nestjs/common";
-import type { Workspace } from "@zibby/contracts";
+import type { DiffFile, Workspace } from "@zibby/contracts";
 import {
   GIT_NETWORK_TIMEOUT_MS,
   GIT_TIMEOUT_MS,
@@ -585,27 +585,45 @@ export class WorkspaceService {
   }
 
   /**
-   * The branch-vs-base line-change totals — summed `git diff --numstat` added/deleted
-   * columns (binary files show `-`/`-` and are skipped). The coloured `+X / −Y` the run
-   * detail's PR output surface renders. Best-effort: any git failure yields `{0, 0}`.
+   * The branch-vs-base per-file rows of `git diff --numstat` (binary files show `-`/`-`:
+   * kept as a row, counted 0/0). Best-effort: any git failure yields `[]`.
    */
-  async diffStats(opts: {
-    worktreePath: string;
-    baseRef: string;
-  }): Promise<{ additions: number; deletions: number }> {
+  async numstat(opts: { worktreePath: string; baseRef: string }): Promise<DiffFile[]> {
     const out = await exec("git", ["diff", "--numstat", `${opts.baseRef}...HEAD`], {
       cwd: opts.worktreePath,
       timeout: GIT_TIMEOUT_MS,
     })
       .then((r) => r.stdout)
       .catch(() => "");
-    let additions = 0;
-    let deletions = 0;
+    const files: DiffFile[] = [];
     for (const line of out.split(/\r?\n/)) {
-      const [add, del] = line.split("\t");
-      if (add && add !== "-") additions += Number.parseInt(add, 10) || 0;
-      if (del && del !== "-") deletions += Number.parseInt(del, 10) || 0;
+      const [add, del, ...rest] = line.split("\t");
+      const filePath = rest.join("\t");
+      if (!filePath || add === undefined || del === undefined) continue;
+      const binary = add === "-" && del === "-";
+      files.push({
+        path: filePath,
+        additions: binary ? 0 : Number.parseInt(add, 10) || 0,
+        deletions: binary ? 0 : Number.parseInt(del, 10) || 0,
+        ...(binary ? { binary: true } : {}),
+      });
     }
-    return { additions, deletions };
+    return files;
+  }
+
+  /**
+   * The branch-vs-base line-change totals (the coloured `+X / −Y` of the run detail's
+   * PR output surface) plus the per-file rows they were summed from.
+   */
+  async diffStats(opts: {
+    worktreePath: string;
+    baseRef: string;
+  }): Promise<{ additions: number; deletions: number; files: DiffFile[] }> {
+    const files = await this.numstat(opts);
+    return {
+      additions: files.reduce((sum, f) => sum + f.additions, 0),
+      deletions: files.reduce((sum, f) => sum + f.deletions, 0),
+      files,
+    };
   }
 }

@@ -677,6 +677,12 @@ carries `startedAt` / `finishedAt` (ISO; absent on old runs and on the synthetic
 `.escalated` marker), and `TaskRun.currentStageStartedAt` is the start of the stage
 currently running (cleared once it lands), which the live rail row uses as its clock.
 
+`TaskRun.diffstat` (`{ files[], additions, deletions }`, per-file rows from
+`git diff --numstat`; binaries are a row counted 0/0) is the structured diff: for a
+workflow run parked at a PR gate it is the would-publish diff (`run.pendingDiffstat`,
+cleared when the gate resolves), otherwise the published PR's `prOutput.files`. The
+legacy `diffstat.txt` artifact is still written.
+
 ```
 GET    /api/tasks/runs                                       the unified feed (newest-first; agent/workflow/goal/scheduled)
 GET    /api/tasks/runs/archive                                the `/archiv` page's feed: cursor-paginated, search/department-
