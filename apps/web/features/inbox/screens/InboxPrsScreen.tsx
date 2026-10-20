@@ -17,9 +17,19 @@ import { useMemo, useRef } from "react";
 import { useNow } from "../../../hooks/useNow";
 import { InboxPage } from "../components/InboxPage";
 import { useProjectsQuery } from "../../projects";
+import { issueHref } from "../components/IssueRow";
 import { PrDetail } from "../components/PrDetail";
 import { PrRow } from "../components/PrRow";
-import { groupPrStacks, pad2, parentPr, passesFilters, prBaseLabel, prWaits } from "../inbox";
+import {
+  groupPrStacks,
+  itemKey,
+  linkedPrOf,
+  pad2,
+  parentPr,
+  passesFilters,
+  prBaseLabel,
+  prWaits,
+} from "../inbox";
 import { useInboxItemsQuery, useInboxPrsQuery } from "../queries";
 import { useInboxFilters } from "../useInboxFilters";
 
@@ -73,6 +83,15 @@ export function InboxPrsScreen() {
   // written to the URL.
   const focus = searchParams.get("pr") || null;
   const selected = (focus ? all.find((p) => p.url === focus) : undefined) ?? groups[0]?.root;
+
+  const itemByPrUrl = useMemo(() => {
+    const map = new Map<string, { key: string; href: string }>();
+    for (const item of itemsQuery.data?.items ?? []) {
+      const ref = linkedPrOf(item);
+      if (ref) map.set(ref.url, { key: itemKey(item), href: issueHref(item) });
+    }
+    return map;
+  }, [itemsQuery.data]);
 
   const detailRef = useRef<HTMLElement>(null);
 
@@ -138,8 +157,11 @@ export function InboxPrsScreen() {
         <Stack minH0 aria-live="polite" data-testid={InboxPrsScreenTestId.Detail} ref={detailRef}>
           {selected && (
             <PrDetail
+              all={all}
+              item={itemByPrUrl.get(selected.url)}
               key={selected.url}
               now={now}
+              onSelect={select}
               pr={selected}
               projectName={projectNames.get(selected.projectId)}
             />

@@ -3038,6 +3038,15 @@
         "merge-conflict": "Merge conflict",
         "awaiting-review": "Awaiting review",
         "ready-to-merge": "Approved"
+      },
+      "nextOnTop": "Next on top:",
+      "reviewChip": "Review · {review}",
+      "diffVs": "Diff · vs {base}",
+      "waitText": {
+        "waits": "Merges after {prs}.",
+        "and": " and ",
+        "below": "Everything below is approved.",
+        "bottom": "Bottom of the stack. Targets {base}."
       }
     },
     "detail": {

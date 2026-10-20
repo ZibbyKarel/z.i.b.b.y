@@ -11,11 +11,13 @@ import { fireEvent, renderWithProviders, screen } from "../../../test/render";
 import { PrDetailTestId } from "../components/PrDetail";
 import { PrActionsTestId } from "../components/PrActions";
 import { PrRowTestId } from "../components/PrRow";
+import { PrStackPathTestId } from "../components/PrStackPath";
 import { InboxPrsScreen, InboxPrsScreenTestId } from "./InboxPrsScreen";
 
 const { hooks, review, merge, rebase } = vi.hoisted(() => ({
   hooks: {
     prs: [] as unknown[],
+    items: [] as unknown[],
     search: "",
     reviewPending: false,
     replace: vi.fn(),
@@ -32,7 +34,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("../queries", () => ({
   useInboxItemsQuery: () => ({
-    data: { items: [], epics: [], syncProjectIds: ["api"], errors: [] },
+    data: { items: hooks.items, epics: [], syncProjectIds: ["api"], errors: [] },
     isPending: false,
     isError: false,
     refetch: vi.fn(),
@@ -232,8 +234,99 @@ describe("InboxPrsScreen list", () => {
 describe("InboxPrsScreen master–detail", () => {
   afterEach(() => {
     hooks.search = "";
+    hooks.items = [];
     hooks.replace.mockClear();
     vi.restoreAllMocks();
+  });
+
+  it("the detail header shows meta, chips and the item link", () => {
+    hooks.prs = [pr(7, { ci: "failing", review: "changes-requested", blocker: "ci-failing" })];
+    hooks.items = [
+      {
+        id: "i7",
+        projectId: "api",
+        level: "task",
+        name: "Item 7",
+        description: "",
+        source: { kind: "jira", integrationId: "jira-1", externalId: "7", externalKey: "API-7" },
+        attachments: [],
+        dependsOn: [],
+        dependsOnFromSource: [],
+        lifecycle: "todo",
+        runs: [],
+        syncNotes: [],
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+        project: { id: "api", name: "api" },
+        hidden: false,
+        linkedPr: { number: 7, url: urlOf(7) },
+      },
+    ];
+    renderWithProviders(<InboxPrsScreen />);
+    expect(screen.getByTestId(PrDetailTestId.Header)).toHaveTextContent("acme/api · #7 · me");
+    expect(screen.getByTestId(PrDetailTestId.StateChip)).toHaveTextContent(/ci selhává/i);
+    expect(screen.getByTestId(PrDetailTestId.CiChip)).toHaveTextContent("✗");
+    expect(screen.getByTestId(PrDetailTestId.ReviewChip)).toHaveTextContent(/požadovány změny/i);
+    expect(screen.getByTestId(PrDetailTestId.Item)).toHaveTextContent("API-7");
+    expect(screen.getByTestId(PrDetailTestId.Item)).toHaveAttribute(
+      "href",
+      "/dashboard/inbox/issues/api/i7",
+    );
+  });
+
+  it("a stacked PR shows MAIN ← #1 ← #2, NEXT ON TOP and what it waits on; steps select", () => {
+    hooks.prs = [
+      pr(1, { headRef: "a", baseRef: "main", blocker: "changes-requested" }),
+      pr(2, { headRef: "b", baseRef: "a" }),
+      pr(3, { headRef: "c", baseRef: "b" }),
+    ];
+    hooks.search = `pr=${encodeURIComponent(urlOf(2))}`;
+    renderWithProviders(<InboxPrsScreen />);
+    expect(screen.getByTestId(PrStackPathTestId.Base)).toHaveTextContent(/main/i);
+    expect(screen.getByTestId(`${PrStackPathTestId.Step}-1`)).toBeInTheDocument();
+    expect(screen.getByTestId(`${PrStackPathTestId.Step}-2`)).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+    expect(screen.getByTestId(`${PrStackPathTestId.Next}-3`)).toBeInTheDocument();
+    expect(screen.getByTestId(PrDetailTestId.WaitText)).toHaveTextContent(
+      "Mergne se po #1 (požadovány změny).",
+    );
+    expect(screen.getByTestId(PrDetailTestId.DiffLabel)).toHaveTextContent("#1");
+    fireEvent.click(screen.getByTestId(`${PrStackPathTestId.Step}-1`));
+    expect(hooks.replace).toHaveBeenCalledWith(
+      expect.stringContaining(encodeURIComponent(urlOf(1))),
+    );
+    fireEvent.click(screen.getByTestId(`${PrStackPathTestId.Next}-3`));
+    expect(hooks.replace).toHaveBeenLastCalledWith(
+      expect.stringContaining(encodeURIComponent(urlOf(3))),
+    );
+  });
+
+  it("the bottom of a stack says so; a PR over an approved parent says everything below is approved", () => {
+    hooks.prs = [
+      pr(1, { headRef: "a", baseRef: "main", blocker: "ready-to-merge" }),
+      pr(2, { headRef: "b", baseRef: "a" }),
+    ];
+    hooks.search = `pr=${encodeURIComponent(urlOf(1))}`;
+    const first = renderWithProviders(<InboxPrsScreen />);
+    expect(screen.getByTestId(PrDetailTestId.WaitText)).toHaveTextContent(
+      "Spodek stacku. Cílí na MAIN.",
+    );
+    first.unmount();
+    hooks.search = `pr=${encodeURIComponent(urlOf(2))}`;
+    renderWithProviders(<InboxPrsScreen />);
+    expect(screen.getByTestId(PrDetailTestId.WaitText)).toHaveTextContent(
+      "Vše pod ním je schválené.",
+    );
+  });
+
+  it("an unstacked PR has no stack block; the diff label names its base branch", () => {
+    hooks.prs = [pr(7, { baseRef: "develop" })];
+    renderWithProviders(<InboxPrsScreen />);
+    expect(screen.queryByTestId(PrStackPathTestId.Root)).toBeNull();
+    expect(screen.queryByTestId(PrDetailTestId.Stack)).toBeNull();
+    expect(screen.getByTestId(PrDetailTestId.DiffLabel)).toHaveTextContent(/develop/i);
   });
   const two = () => [
     pr(1, { section: "waiting" }),

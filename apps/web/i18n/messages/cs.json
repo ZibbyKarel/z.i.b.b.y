@@ -3038,6 +3038,15 @@
         "merge-conflict": "Konflikt",
         "awaiting-review": "Čeká na review",
         "ready-to-merge": "Schváleno"
+      },
+      "nextOnTop": "Další nahoře:",
+      "reviewChip": "Review · {review}",
+      "diffVs": "Diff · vs {base}",
+      "waitText": {
+        "waits": "Mergne se po {prs}.",
+        "and": " a ",
+        "below": "Vše pod ním je schválené.",
+        "bottom": "Spodek stacku. Cílí na {base}."
       }
     },
     "detail": {
