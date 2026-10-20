@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { randomBytes } from "node:crypto";
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -28,9 +28,11 @@ export class OperatorTokenService {
     const file =
       process.env[OPERATOR_TOKEN_FILE_ENV] ?? join(homedir(), ".config", "zibby", "operator-token");
     try {
-      if (!existsSync(file)) {
-        mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
-        writeFileSync(file, randomBytes(32).toString("hex") + "\n", { mode: 0o600 });
+      mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
+      try {
+        writeFileSync(file, randomBytes(32).toString("hex") + "\n", { flag: "wx", mode: 0o600 });
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
       }
       chmodSync(file, 0o600);
       return readFileSync(file, "utf8").trim() || null;

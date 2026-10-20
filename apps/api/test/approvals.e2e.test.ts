@@ -173,6 +173,22 @@ describe("Mid-run approval gate (Variant B, e2e)", () => {
     expect(await paymentDone(cwd)).toBe(true);
   });
 
+  it("rejects deciding an approval without the operator token (401)", async () => {
+    process.env.FAKE_CLAUDE_INTENT = PAYMENT_INTENT;
+    const { runId } = await startRun("payer", "buy it without the token");
+    const approval = await until(async () => (await pendingFor(runId)) ?? null);
+
+    await request(app.getHttpServer())
+      .post(`/api/approvals/${approval.id}/approve`)
+      .send({})
+      .expect(401);
+
+    const after = await request(app.getHttpServer())
+      .get(`/api/approvals/${approval.id}`)
+      .expect(200);
+    expect(after.body.status).toBe("pending");
+  });
+
   it("pauses mid-run on a threshold intent, then resumes to done on approve", async () => {
     process.env.FAKE_CLAUDE_INTENT = PAYMENT_INTENT;
     const { runId, cwd } = await startRun("payer", "buy the expensive thing");
