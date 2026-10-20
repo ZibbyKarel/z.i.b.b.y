@@ -24,17 +24,11 @@ const toneSwatch: Record<ButtonGroupTone, string> = {
   bad: "bg-bad",
 };
 
-const toneActive: Record<ButtonGroupTone, string> = {
-  accent: "bg-accent text-panel",
-  ok: "bg-ok text-panel",
-  warn: "bg-warn text-panel",
-  bad: "bg-bad text-panel",
-};
-
 export interface ButtonGroupOption {
   id: string;
   label: string;
-  /** Semantic colour for the swatch + active state, resolved inside the DS. */
+  /** Semantic colour for the swatch dot, resolved inside the DS. The selected item
+   *  is always ink/panel (DS.md segmented control) — status hue stays on the dot. */
   tone?: ButtonGroupTone;
   /** Arbitrary content rendered before the label (icon, status dot, …). */
   leading?: ReactNode;
@@ -90,12 +84,10 @@ export function ButtonGroup({
             <button
               aria-pressed={active}
               className={cn(
-                "inline-flex items-center gap-2 rounded-none border-none px-[10px] py-[6px] font-mono text-[10px] font-semibold tracking-wider uppercase transition-all",
+                "inline-flex items-center gap-2 rounded-none border-none px-[10px] py-[6px] font-mono text-[10px] font-normal tracking-wider uppercase transition-all",
                 focusRing,
                 active
-                  ? o.tone
-                    ? toneActive[o.tone]
-                    : "bg-ink text-panel"
+                  ? "bg-ink text-panel"
                   : "bg-transparent text-foreground-faint hover:text-foreground",
               )}
               data-testid={`${ButtonGroupTestId.Option}-${o.id}`}
@@ -111,11 +103,7 @@ export function ButtonGroup({
                   {o.leading}
                 </span>
               )}
-              {o.tone && (
-                <span
-                  className={cn("h-1.5 w-1.5", active ? "bg-panel opacity-70" : toneSwatch[o.tone])}
-                />
-              )}
+              {o.tone && <span className={cn("h-1.5 w-1.5", toneSwatch[o.tone])} />}
               {o.label}
               {!!o.trailing && (
                 <span

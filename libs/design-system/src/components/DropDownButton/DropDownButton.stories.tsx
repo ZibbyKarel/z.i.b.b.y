@@ -43,7 +43,7 @@ const meta: Meta<typeof DropDownButton> = {
   component: DropDownButton,
   parameters: { backgrounds: { default: "velin" } },
   argTypes: {
-    intent: { control: "select", options: ["primary", "ghost", "danger"] },
+    intent: { control: "select", options: ["primary", "secondary", "ghost", "danger"] },
     size: { control: "select", options: ["sm", "md"] },
   },
   args: {
@@ -81,6 +81,13 @@ export const Overview: Story = {
             icon="play"
             intent="primary"
             label="Spustit"
+            menuItems={RUN_LATER_ITEMS}
+            onClick={() => {}}
+          />
+          <DropDownButton
+            icon="retry"
+            intent="secondary"
+            label="Znovu"
             menuItems={RUN_LATER_ITEMS}
             onClick={() => {}}
           />
@@ -131,7 +138,12 @@ export const Overview: Story = {
       <div className="flex flex-col gap-2">
         <Typography type="label">described modes (checked)</Typography>
         <div className="flex flex-wrap gap-3">
-          <DropDownButton label="Review" menuItems={MODE_ITEMS} onClick={() => {}} />
+          <DropDownButton
+            label="Review · Quick"
+            menuItems={MODE_ITEMS}
+            onClick={() => {}}
+            size="sm"
+          />
         </div>
       </div>
       <div className="flex flex-col gap-2">

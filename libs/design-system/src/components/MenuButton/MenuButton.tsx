@@ -225,8 +225,10 @@ export function MenuButton({
           aria-haspopup="menu"
           aria-label={ariaLabel}
           className={cn(
-            "inline-flex h-8 w-8 items-center justify-center border text-ink transition-colors",
-            open ? "border-ink bg-panel-2" : "border-line-2 hover:border-ink",
+            "inline-flex h-8 w-8 items-center justify-center border transition-colors",
+            open
+              ? "border-ink bg-panel-2 text-ink"
+              : "border-line-2 text-ink-2 hover:bg-panel-2 hover:text-ink",
             focusRing,
           )}
           data-testid={MenuButtonTestId.Trigger}

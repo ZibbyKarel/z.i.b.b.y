@@ -3,8 +3,7 @@ import { type CSSProperties, useCallback, useEffect, useId, useRef, useState } f
 import { createPortal } from "react-dom";
 import { cn } from "../../utils/cn";
 import { focusRingInset } from "../../utils/focus";
-import { Button, type ButtonIntent, type ButtonSize } from "../Button/Button";
-import { Divider } from "../Divider/Divider";
+import { Button, type ButtonIntent, type ButtonSize, buttonClasses } from "../Button/Button";
 import { Icon, type IconName } from "../Icon/Icon";
 import { MenuSurface } from "../MenuSurface/MenuSurface";
 
@@ -173,32 +172,38 @@ export function DropDownButton({
           loading={loading}
           onClick={onClick}
           size={size}
-          style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
         >
           {label}
         </Button>
-        <Divider orientation="vertical" />
-        <Button
+        {/* The ▾ segment shares the Button recipe; on primary a 1px `--ink2` left
+            edge is the divider (Inbox design), on hairline intents it overlaps the
+            primary segment's right border so the seam stays 1px. */}
+        <button
           aria-activedescendant={open && activeRow >= 0 ? itemId(activeRow) : undefined}
           aria-controls={`${baseId}-menu`}
           aria-expanded={open}
           aria-haspopup="menu"
           aria-label={menuAriaLabel}
+          className={cn(
+            buttonClasses({ intent, size, iconOnly: true }),
+            intent === "primary" ? "border-l-ink-2 disabled:border-l-border" : "-ml-px",
+          )}
           data-testid={DropDownButtonTestId.Trigger}
           disabled={disabled}
-          intent={intent}
           onClick={() => (open ? close() : openMenu())}
           onKeyDown={handleKeyDown}
           ref={triggerRef}
-          size={size}
-          style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}
+          type="button"
         >
           <span
-            className={cn("inline-flex transition-transform duration-150", open && "rotate-90")}
+            className={cn(
+              "inline-flex transition-transform duration-150",
+              open ? "-rotate-90" : "rotate-90",
+            )}
           >
             <Icon name="chevron" size={size === "sm" ? "xs" : "sm"} />
           </span>
-        </Button>
+        </button>
       </div>
 
       {open &&
