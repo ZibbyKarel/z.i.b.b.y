@@ -33,6 +33,8 @@
   </div>
 </sc-if>
 
+<sc-if value="{{ isRun }}" hint-placeholder-val="{{ false }}"><dc-import name="Run Detail" route="{{ route }}" go="{{ go }}" tick="{{ tick }}" hint-size="100%,820px"></dc-import></sc-if>
+
 <sc-if value="{{ isRuns }}" hint-placeholder-val="{{ false }}">
   <div data-screen-label="Runs" style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px;align-items:start">
     <div style="display:flex;flex-direction:column;gap:14px">
@@ -41,7 +43,7 @@
       <div style="border:1px solid var(--line);background:var(--panel)">
         <div style="display:grid;grid-template-columns:84px 110px 100px 110px 60px 50px 60px;gap:12px;padding:9px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>RUN</span><span>AGENT</span><span>SUBTASK</span><span>STATE</span><span>TIME</span><span>RETRY</span><span style="text-align:right">COST</span></div>
         <sc-for list="{{ runs }}" as="r" hint-placeholder-count="10">
-          <button onClick="{{ r.onClick }}" style="all:unset;cursor:pointer;box-sizing:border-box;width:100%;display:grid;grid-template-columns:84px 110px 100px 110px 60px 50px 60px;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px;background:{{ r.bg }}" style-hover="background:var(--panel2)">
+          <button onClick="{{ r.onClick }}" onDoubleClick="{{ r.onOpen }}" style="all:unset;cursor:pointer;box-sizing:border-box;width:100%;display:grid;grid-template-columns:84px 110px 100px 110px 60px 50px 60px;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px;background:{{ r.bg }}" style-hover="background:var(--panel2)">
             <span style="color:var(--ink2)">{{ r.id }}</span><span>{{ r.agentU }}</span><span style="color:var(--ink2)">{{ r.sub }}</span><span style="display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.1em">{{ r.dot }}{{ r.stateU }}</span><span style="color:var(--ink2)">{{ r.dur }}</span><span style="color:var(--ink2)">{{ r.retryStr }}</span><span style="text-align:right">{{ r.costStr }}</span>
           </button>
         </sc-for>
@@ -56,7 +58,7 @@
         <div style="display:flex;flex-direction:column">
           <sc-for list="{{ rn.events }}" as="e" hint-placeholder-count="3"><div style="display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;padding:9px 0;border-top:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px"><span style="color:var(--ink3)">{{ e.n }}</span><span style="color:{{ e.color }}">{{ e.t }}</span></div></sc-for>
         </div>
-        <div style="display:flex;gap:8px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em"><button onClick="{{ rn.onAgent }}" style="all:unset;cursor:pointer;flex:1;text-align:center;border:1px solid var(--line2);padding:10px">AGENT →</button><button onClick="{{ rn.onTask }}" style="all:unset;cursor:pointer;flex:1;text-align:center;background:var(--ink);color:var(--panel);padding:11px">TASK →</button></div>
+        <div style="display:flex;gap:8px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em"><button onClick="{{ rn.onAgent }}" style="all:unset;cursor:pointer;flex:1;text-align:center;border:1px solid var(--line2);padding:10px">AGENT →</button><button onClick="{{ rn.onTask }}" style="all:unset;cursor:pointer;flex:1;text-align:center;border:1px solid var(--line2);padding:10px">TASK →</button><button onClick="{{ rn.onOpen }}" style="all:unset;cursor:pointer;flex:2;text-align:center;background:var(--ink);color:var(--panel);padding:11px">OPEN RUN →</button></div>
       </div>
     </div>
   </div>
@@ -129,7 +131,7 @@ class Component extends DCLogic {
     const empty = { lines: [], logFilters: [], runs: [], runFilters: [], rn: { metrics: [], events: [] }, inbox: [], im: {}, briefs: [], br: { sections: [] } };
     if (!Z || !B) return empty;
     const pad = Z.pad, parts = (this.props.route || 'activity/log').split('/'), v = parts[1] || 'log';
-    const out = { ...empty, isLog: v === 'log', isRuns: v === 'runs', isInbox: v === 'inbox', isBrief: v === 'briefings' };
+    const out = { ...empty, isLog: v === 'log', isRuns: v === 'runs' && !parts[2], isRun: v === 'runs' && !!parts[2], isInbox: v === 'inbox', isBrief: v === 'briefings' };
 
     if (out.isLog) {
       const fTask = this.state.fTask ?? (parts[2] || ''), { fDept, fAgent } = this.state;
@@ -148,13 +150,13 @@ class Component extends DCLogic {
     if (out.isRuns) {
       const f = this.state.runF, list = Z.runs.filter(r => f === 'all' || r.state === f);
       out.runFilters = ['all','working','thinking','blocked','error','done'].map(k => { const on = k === f; return { label: k === 'all' ? 'ALL' : B.S[k].label.toUpperCase(), dot: k === 'all' ? null : B.dot(React, k, 6), bg: on ? 'var(--ink)' : 'transparent', ink: on ? 'var(--panel)' : 'var(--ink3)', onClick: () => this.setState({ runF: k }) }; });
-      out.runs = list.map(r => ({ ...r, agentU: Z.A(r.agent).name.toUpperCase(), dot: B.dot(React, r.state, 6), stateU: B.S[r.state].label.toUpperCase(), retryStr: pad(r.retries), costStr: '$' + r.cost.toFixed(2), bg: r.id === this.state.run ? 'var(--panel2)' : 'transparent', onClick: () => this.setState({ run: r.id }) }));
+      out.runs = list.map(r => ({ ...r, agentU: Z.A(r.agent).name.toUpperCase(), dot: B.dot(React, r.state, 6), stateU: B.S[r.state].label.toUpperCase(), retryStr: pad(r.retries), costStr: '$' + r.cost.toFixed(2), bg: r.id === this.state.run ? 'var(--panel2)' : 'transparent', onClick: () => this.setState({ run: r.id }), onOpen: () => go('activity/runs/' + r.id) }));
       const tot = Z.runs.reduce((s, r) => s + r.cost, 0);
       out.runsMeta = pad(Z.runs.length) + ' RUNS · $' + tot.toFixed(2);
       const r = Z.runs.find(x => x.id === this.state.run) || Z.runs[0], a = Z.A(r.agent), t = Z.Tk(r.sub.split('.')[0]);
       out.rn = { id: r.id, agentName: a.name + ' · ' + a.role, dot: B.dot(React, r.state, 7), stateU: B.S[r.state].label.toUpperCase(), context: r.sub + ' · ' + (t ? t.title : '') + ' · ' + (a.dept ? Z.D(a.dept).name : ''),
         metrics: [{ k: 'DURATION', v: r.dur }, { k: 'RETRIES', v: pad(r.retries) }, { k: 'COST', v: '$' + r.cost.toFixed(2) }],
-        events: r.events.map((e, i) => ({ n: pad(i + 1), t: e, color: i === r.events.length - 1 ? 'var(--ink)' : 'var(--ink2)' })), onAgent: () => go('org/agent/' + a.id), onTask: () => t && go('work/task/' + t.id) };
+        events: r.events.map((e, i) => ({ n: pad(i + 1), t: e, color: i === r.events.length - 1 ? 'var(--ink)' : 'var(--ink2)' })), onOpen: () => go('activity/runs/' + r.id), onAgent: () => go('org/agent/' + a.id), onTask: () => t && go('work/task/' + t.id) };
     }
 
     if (out.isInbox) {

@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap">
+<style>html,body{margin:0;background:#E6E7E4}a{color:#111312}a:hover{color:#50544F}input,textarea,select,button{font:inherit;color:inherit}::placeholder{color:#8A8E88}</style>
+<script src="./zibby.js"></script>
+</helmet>
+<section data-screen-label="Turn 1" style="--bg:#F3F4F2;--panel:#FAFAF8;--panel2:#EDEEEB;--line:#D9DBD6;--line2:#BFC2BC;--ink:#111312;--ink2:#50544F;--ink3:#8A8E88;--grid:rgba(17,19,18,.05);--gw:0px;--dot-r:0;--s-work:oklch(0.6 0.14 160);--s-think:oklch(0.58 0.14 250);--s-block:oklch(0.7 0.15 70);--s-err:oklch(0.58 0.2 25);--s-done:oklch(0.56 0.15 300);--s-idle:#A9ADA7;font-family:'Geist',system-ui,sans-serif;color:var(--ink);padding:48px;display:flex;flex-direction:column;gap:32px">
+
+  <div style="display:flex;align-items:flex-end;gap:32px;flex-wrap:wrap;max-width:1440px">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">TURN 01 — RUN DETAIL · /activity/runs/[runId]</span>
+      <h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em">Three ways to run one run</h1>
+      <p style="margin:0;font-size:14px;color:var(--ink2);max-width:720px;text-wrap:pretty">Same workflow run, same data. Switch state and output type to see how each layout copes. Controls stay in one place in every option; secondary metadata is folded away.</p>
+    </div>
+    <div style="display:flex;gap:16px;margin-left:auto;flex-wrap:wrap">
+      <div style="display:flex;flex-direction:column;gap:6px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">RUN STATE</span>
+        <div style="display:flex;border:1px solid var(--line2);background:var(--panel)"><sc-for list="{{ stateOpts }}" as="o" hint-placeholder-count="4"><button onClick="{{ o.onClick }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:6px;padding:7px 10px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;background:{{ o.bg }};color:{{ o.ink }}">{{ o.dot }}{{ o.label }}</button></sc-for></div></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">OUTPUT</span>
+        <div style="display:flex;border:1px solid var(--line2);background:var(--panel)"><sc-for list="{{ outOpts }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.onClick }}" style="all:unset;cursor:pointer;padding:7px 10px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;background:{{ o.bg }};color:{{ o.ink }}">{{ o.label }}</button></sc-for></div></div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:48px;align-items:flex-start;flex-wrap:wrap">
+
+    <!-- 1a -->
+    <div id="1a" style="width:1440px;flex:none;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.14em;background:var(--ink);color:var(--panel);padding:4px 8px">1A</span><span style="font-size:16px;font-weight:500">Control header + input/output split</span><span style="font-size:13px;color:var(--ink2)">Everything you act on sits in one sticky bar. Brief and result face each other; the process lives in tabs below.</span></div>
+      <div data-screen-label="1a Run detail" style="border:1px solid var(--line2);background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px;min-height:1000px">
+        <div style="background:var(--panel);border-bottom:1px solid var(--line)">
+          <div style="display:flex;align-items:flex-start;gap:24px;padding:20px 32px 16px">
+            <div style="display:flex;flex-direction:column;gap:10px;min-width:0;flex:1">
+              <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">ACTIVITY / RUNS / RUN-8812 · WORKFLOW</span>
+              <h1 style="margin:0;font-size:30px;font-weight:500;letter-spacing:-.02em;line-height:1.1">Migrate billing webhooks to the v2 API</h1>
+              <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2)">
+                <span style="display:flex;align-items:center;gap:7px;border:1px solid var(--line2);padding:5px 10px;color:var(--ink);font-size:11px">{{ stateDot }}{{ stateU }}</span>
+                <span style="display:flex;align-items:center;gap:7px">{{ glyph18 }}<a href="#" style="color:var(--ink);text-decoration:none">KODO · DEV-02</a></span>
+                <span>·</span><a href="#" style="color:var(--ink2)">BILLING PLATFORM</a>
+                <span>·</span><a href="#" style="color:var(--ink2)">ROADMAP · PAYMENTS V2</a>
+                <span>·</span><span>WORKFLOW · SHIP FEATURE</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;padding-top:20px">
+              <sc-for list="{{ acts }}" as="a" hint-placeholder-count="3"><button onClick="{{ a.onClick }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:7px;padding:10px 14px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;background:{{ a.bg }};color:{{ a.ink }};border:1px solid {{ a.bd }}">{{ a.dot }}{{ a.label }}</button></sc-for>
+              <button onClick="{{ toggleMore }}" style="all:unset;cursor:pointer;padding:10px 12px;border:1px solid var(--line2);font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">···</button>
+            </div>
+          </div>
+          <div style="height:2px;background:var(--line)"><div style="height:2px;width:{{ progW }};background:{{ progC }}"></div></div>
+          <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));padding:0 32px">
+            <sc-for list="{{ metrics }}" as="m" hint-placeholder-count="6"><div style="display:flex;flex-direction:column;gap:4px;padding:12px 0"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ m.k }}</span><span style="font-size:18px;font-weight:500;font-variant-numeric:tabular-nums">{{ m.v }}</span></div></sc-for>
+          </div>
+        </div>
+
+        <div style="padding:20px 32px;display:flex;flex-direction:column;gap:16px">
+          <sc-if value="{{ isRunning }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--line2);background:var(--panel);padding:8px 8px 8px 14px">
+              <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">MESSAGE</span>
+              <div style="display:flex;gap:6px"><sc-for list="{{ crew }}" as="c"><span style="display:flex;align-items:center;gap:6px;border:1px solid var(--line2);padding:3px 8px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em">{{ c.glyph }}{{ c.name }}</span></sc-for></div>
+              <input value="{{ msg }}" onChange="{{ onMsg }}" onKeyDown="{{ onMsgKey }}" placeholder="Tell the crew something. It lands in their context on the next step." style="flex:1;height:32px;border:0;background:transparent;font-size:13px;outline:none;padding:0 6px">
+              <button onClick="{{ onSend }}" style="all:unset;cursor:pointer;padding:8px 12px;background:var(--ink);color:var(--panel);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em">SEND ↵</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isApproval }}" hint-placeholder-val="{{ false }}">
+            <div style="position:relative;border:1px solid var(--ink);background:var(--panel);display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) 300px">
+              <div style="position:absolute;top:-1px;left:-1px;width:10px;height:10px;border-top:2px solid var(--ink);border-left:2px solid var(--ink)"></div>
+              <div style="padding:16px 18px;display:flex;flex-direction:column;gap:8px;border-right:1px solid var(--line)">
+                <span style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em">{{ blockDot }}NEEDS YOU · SEVERITY HIGH · EXTERNAL WRITE</span>
+                <span style="font-size:18px;font-weight:500">Publish branch and open PR #318 against <code style="font-family:'Geist Mono',monospace;font-size:15px">main</code></span>
+                <span style="font-size:13px;color:var(--ink2);text-wrap:pretty">Consequence: the PR becomes visible to the payments team and triggers CI on shared runners. Nothing merges without a second review.</span>
+                <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">REQUESTED 14:31 · VIA SLACK #BILLING · WAITING 06 MIN · GUARANTEED REVIEW BEFORE EFFECT</span>
+              </div>
+              <div style="padding:16px 18px;display:flex;flex-direction:column;gap:6px;border-right:1px solid var(--line);background:var(--bg)">
+                <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">WOULD PUBLISH · 06 FILES · +412 −96</span>
+                <sc-for list="{{ prFilesShort }}" as="f"><div style="display:grid;grid-template-columns:minmax(0,1fr) 40px 40px;gap:8px;font-family:'Geist Mono',monospace;font-size:11px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink2)">{{ f.path }}</span><span style="text-align:right">+{{ f.add }}</span><span style="text-align:right;color:var(--ink3)">−{{ f.del }}</span></div></sc-for>
+              </div>
+              <div style="padding:16px 18px;display:flex;flex-direction:column;gap:8px;justify-content:center">
+                <button onMouseDown="{{ holdStart }}" onMouseUp="{{ holdEnd }}" onMouseLeave="{{ holdEnd }}" style="all:unset;cursor:pointer;position:relative;overflow:hidden;text-align:center;padding:12px;background:var(--ink);color:var(--panel);font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em"><span style="position:absolute;left:0;top:0;bottom:0;width:{{ holdW }};background:var(--s-work)"></span><span style="position:relative">{{ holdU }}</span></button>
+                <div style="display:flex;gap:6px"><button onClick="{{ toggleRevise }}" style="all:unset;cursor:pointer;flex:1;text-align:center;padding:9px;border:1px solid var(--line2);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em">REVISE</button><button style="all:unset;cursor:pointer;flex:1;display:flex;justify-content:center;align-items:center;gap:6px;padding:9px;border:1px solid var(--line2);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em">{{ errDot }}REJECT</button></div>
+                <sc-if value="{{ reviseOpen }}"><input placeholder="What should change before publishing?" style="height:32px;border:1px solid var(--ink);background:var(--bg);font-size:13px;padding:0 8px;outline:none"></sc-if>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isParked }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px solid var(--ink);background:var(--panel);padding:14px 18px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start">
+              <div style="display:flex;flex-direction:column;gap:6px"><span style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em">{{ errDot }}PARKED · PHASE 03 TEST · 03/03 ATTEMPTS</span><span style="font-size:15px">Retries exhausted. Integration test <code style="font-family:'Geist Mono',monospace;font-size:13px">webhook_replay_idempotent</code> fails on duplicate event IDs.</span><span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">AssertionError: expected 1 ledger entry, got 2 · tests/webhooks/replay.spec.ts:88</span></div>
+              <div style="display:flex;gap:6px"><input placeholder="Resume with a note: e.g. dedupe on event.id before writing" style="flex:1;height:36px;border:1px solid var(--line2);background:var(--bg);font-size:13px;padding:0 10px;outline:none"><button style="all:unset;cursor:pointer;padding:0 14px;background:var(--ink);color:var(--panel);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em">RESUME</button></div>
+            </div>
+          </sc-if>
+
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:16px">
+            <div style="border:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column">
+              <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line)"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">01 — INPUT</span><span style="font-size:15px;font-weight:500">Task brief</span><span style="margin-left:auto;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">TSK-1207 · 02 FILES</span></div>
+              <div style="padding:18px;display:flex;flex-direction:column;gap:10px;max-height:440px;overflow:auto">
+                <sc-for list="{{ inputMd }}" as="b" hint-placeholder-count="6">
+                  <sc-if value="{{ b.h }}"><span style="font-size:15px;font-weight:500;padding-top:4px">{{ b.t }}</span></sc-if>
+                  <sc-if value="{{ b.p }}"><span style="font-size:14px;line-height:1.5;color:var(--ink2);text-wrap:pretty">{{ b.t }}</span></sc-if>
+                  <sc-if value="{{ b.li }}"><span style="display:flex;gap:10px;font-size:14px;line-height:1.45;color:var(--ink2)"><span style="color:var(--ink3)">—</span>{{ b.t }}</span></sc-if>
+                </sc-for>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;padding:12px 18px;border-top:1px solid var(--line);margin-top:auto"><sc-for list="{{ attachments }}" as="f"><a href="#" style="display:flex;gap:8px;align-items:center;border:1px solid var(--line2);padding:5px 9px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;text-decoration:none;color:var(--ink)">{{ f.name }}<span style="color:var(--ink3)">{{ f.meta }} ↗</span></a></sc-for></div>
+            </div>
+            <div style="border:1px solid var(--ink);background:var(--panel);display:flex;flex-direction:column">
+              <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line)"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">02 — OUTPUT</span><span style="font-size:15px;font-weight:500">{{ outTitle }}</span><span style="margin-left:auto;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ outMeta }}</span><sc-for list="{{ outActs }}" as="a"><a href="#" style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;border:1px solid var(--line2);padding:5px 9px;text-decoration:none">{{ a }}</a></sc-for></div>
+              <sc-if value="{{ outPending }}"><div style="padding:14px 18px;border-bottom:1px dashed var(--line2);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2);display:flex;gap:8px;align-items:center">{{ stateDot }}{{ outPendingU }}</div></sc-if>
+              <div style="padding:18px;max-height:440px;overflow:auto;display:flex;flex-direction:column;gap:10px">
+                <sc-if value="{{ isMd }}" hint-placeholder-val="{{ true }}"><sc-for list="{{ outMd }}" as="b" hint-placeholder-count="6">
+                  <sc-if value="{{ b.h }}"><span style="font-size:15px;font-weight:500;padding-top:4px">{{ b.t }}</span></sc-if>
+                  <sc-if value="{{ b.p }}"><span style="font-size:14px;line-height:1.5;color:var(--ink2);text-wrap:pretty">{{ b.t }}</span></sc-if>
+                  <sc-if value="{{ b.li }}"><span style="display:flex;gap:10px;font-size:14px;line-height:1.45;color:var(--ink2)"><span style="color:var(--ink3)">—</span>{{ b.t }}</span></sc-if>
+                </sc-for></sc-if>
+                <sc-if value="{{ isFolder }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;border:1px solid var(--line);background:var(--bg)"><sc-for list="{{ tree }}" as="r"><div style="display:grid;grid-template-columns:minmax(0,1fr) 70px 70px;gap:10px;padding:7px 12px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px"><span style="padding-left:{{ r.ind }};color:{{ r.c }}">{{ r.icon }} {{ r.name }}</span><span style="color:var(--ink3);text-align:right">{{ r.size }}</span><span style="color:var(--ink3);text-align:right">{{ r.when }}</span></div></sc-for></div></sc-if>
+                <sc-if value="{{ isPr }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:12px">
+                  <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:17px;font-weight:500">feat(billing): move webhook handlers to v2 events API</span></div>
+                  <span style="font-size:14px;line-height:1.5;color:var(--ink2);text-wrap:pretty">Replaces the v1 polling consumer with signed v2 webhooks, adds idempotency on event.id, and keeps v1 behind a flag for one release.</span>
+                  <div style="display:flex;flex-direction:column;border:1px solid var(--line);background:var(--bg)"><sc-for list="{{ prFiles }}" as="f"><div style="display:grid;grid-template-columns:minmax(0,1fr) 50px 50px 90px;gap:10px;align-items:center;padding:7px 12px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px"><span style="color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.path }}</span><span style="text-align:right">+{{ f.add }}</span><span style="text-align:right;color:var(--ink3)">−{{ f.del }}</span><span style="display:flex;height:6px;background:var(--line)"><span style="width:{{ f.addW }};background:var(--ink)"></span><span style="width:{{ f.delW }};background:var(--ink3)"></span></span></div></sc-for></div>
+                </div></sc-if>
+              </div>
+            </div>
+          </div>
+
+          <div style="border:1px solid var(--line);background:var(--panel)">
+            <div style="display:flex;border-bottom:1px solid var(--line);padding:0 18px"><sc-for list="{{ tabs1a }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.onClick }}" style="all:unset;cursor:pointer;padding:13px 14px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:{{ t.ink }};border-bottom:1px solid {{ t.bd }};margin-bottom:-1px">{{ t.label }}</button></sc-for></div>
+            <sc-if value="{{ tabStages }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column">
+                <sc-for list="{{ stages }}" as="s" hint-placeholder-count="5">
+                  <button onClick="{{ s.onClick }}" style="all:unset;cursor:pointer;box-sizing:border-box;width:100%;display:grid;grid-template-columns:40px minmax(0,1.4fr) 130px 110px 90px 80px 30px;gap:12px;align-items:center;padding:11px 18px;border-bottom:1px solid var(--line);background:{{ s.bg }}" style-hover="background:var(--panel2)">
+                    <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink3)">{{ s.n }}</span><span style="font-size:14px;font-weight:500">{{ s.name }}</span><span style="display:flex;align-items:center;gap:7px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">{{ s.dot }}{{ s.stateU }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)">{{ s.att }}</span><span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ s.dur }}</span><span style="font-family:'Geist Mono',monospace;font-size:11px;text-align:right">{{ s.cost }}</span><span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink3);text-align:right">{{ s.chev }}</span>
+                  </button>
+                  <sc-if value="{{ s.open }}"><div style="padding:10px 18px 14px 70px;background:var(--bg);border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:2px"><sc-for list="{{ s.log }}" as="l"><div style="display:grid;grid-template-columns:70px minmax(0,1fr);gap:10px;font-family:'Geist Mono',monospace;font-size:11px;line-height:1.5"><span style="color:var(--ink3)">{{ l.t }}</span><span style="color:{{ l.c }}">{{ l.x }}{{ l.caret }}</span></div></sc-for><sc-if value="{{ s.retry }}"><span style="margin-top:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2)">⇄ {{ s.retry }}</span></sc-if></div></sc-if>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ tabLog }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:10px 18px;background:var(--bg);display:flex;flex-direction:column;gap:2px;max-height:360px;overflow:auto"><sc-for list="{{ log }}" as="l"><div style="display:grid;grid-template-columns:70px 70px minmax(0,1fr);gap:10px;font-family:'Geist Mono',monospace;font-size:11px;line-height:1.55"><span style="color:var(--ink3)">{{ l.t }}</span><span style="color:var(--ink3)">{{ l.who }}</span><span style="color:{{ l.c }}">{{ l.x }}{{ l.caret }}</span></div></sc-for></div>
+            </sc-if>
+            <sc-if value="{{ tabRoute }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;padding:18px"><sc-for list="{{ route }}" as="r"><div style="box-shadow:0 0 0 1px var(--line);padding:12px;display:flex;flex-direction:column;gap:6px;background:var(--bg)"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">{{ r.k }}</span><span style="font-size:14px;font-weight:500">{{ r.v }}</span><span style="font-size:12px;color:var(--ink2)">{{ r.s }}</span></div></sc-for></div>
+            </sc-if>
+            <sc-if value="{{ tabDetails }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 32px;padding:8px 18px 16px"><sc-for list="{{ details }}" as="d"><div style="display:grid;grid-template-columns:120px minmax(0,1fr);gap:10px;padding:9px 0;border-bottom:1px solid var(--line)"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ d.k }}</span><span style="font-size:13px">{{ d.v }}</span></div></sc-for></div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1b -->
+    <div id="1b" style="width:1440px;flex:none;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.14em;background:var(--ink);color:var(--panel);padding:4px 8px">1B</span><span style="font-size:16px;font-weight:500">Cockpit: stages · conversation · inspector</span><span style="font-size:13px;color:var(--ink2)">Feels like an open session with the crew. Center is a chat-style channel with a composer; brief and result are one toggle away.</span></div>
+      <div data-screen-label="1b Run detail" style="border:1px solid var(--line2);background:var(--bg);display:grid;grid-template-rows:auto minmax(0,1fr);height:1000px">
+        <div style="display:flex;align-items:center;gap:16px;padding:14px 20px;background:var(--panel);border-bottom:1px solid var(--line)">
+          {{ pod30 }}
+          <div style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">RUN-8812 · WORKFLOW · SHIP FEATURE · BILLING PLATFORM</span><span style="font-size:18px;font-weight:500">Migrate billing webhooks to the v2 API</span></div>
+          <span style="display:flex;align-items:center;gap:7px;border:1px solid var(--line2);padding:5px 10px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em">{{ stateDot }}{{ stateU }}</span>
+          <div style="display:flex;flex-direction:column;gap:4px;width:180px"><div style="height:2px;background:var(--line)"><div style="height:2px;width:{{ progW }};background:{{ progC }}"></div></div><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink3)">{{ progMeta }}</span></div>
+          <div style="display:flex;gap:6px;margin-left:auto"><sc-for list="{{ acts }}" as="a" hint-placeholder-count="3"><button onClick="{{ a.onClick }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:7px;padding:8px 12px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;background:{{ a.bg }};color:{{ a.ink }};border:1px solid {{ a.bd }}">{{ a.dot }}{{ a.label }}</button></sc-for><button style="all:unset;cursor:pointer;padding:8px 10px;border:1px solid var(--line2);font-family:'Geist Mono',monospace;font-size:10px;color:var(--ink2)">···</button></div>
+        </div>
+        <div style="display:grid;grid-template-columns:260px minmax(0,1fr) 340px;min-height:0">
+          <div style="border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0;overflow:auto">
+            <span style="padding:14px 16px 8px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">STAGES · {{ stageCount }}</span>
+            <sc-for list="{{ stages }}" as="s" hint-placeholder-count="5">
+              <button onClick="{{ s.onClick }}" style="all:unset;cursor:pointer;box-sizing:border-box;display:grid;grid-template-columns:16px minmax(0,1fr);gap:10px;padding:10px 16px;border-left:2px solid {{ s.selBd }};background:{{ s.bg }}" style-hover="background:var(--panel2)">
+                <span style="padding-top:4px">{{ s.dot }}</span>
+                <span style="display:flex;flex-direction:column;gap:3px"><span style="font-size:13px;font-weight:500">{{ s.n }} · {{ s.name }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink3)">{{ s.stateU }} · {{ s.att }} · {{ s.cost }}</span></span>
+              </button>
+            </sc-for>
+            <div style="margin-top:auto;border-top:1px solid var(--line);padding:12px 16px;display:flex;flex-direction:column;gap:6px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">CHECKPOINTS</span><sc-for list="{{ checkpoints }}" as="c"><span style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)"><span>{{ c.p }}</span><span>{{ c.sha }}</span></span></sc-for><button style="all:unset;cursor:pointer;margin-top:4px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em">OPEN TASK FOLDER →</button></div>
+          </div>
+          <div style="display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-height:0;min-width:0;overflow:hidden">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--panel)">
+              <div style="display:flex;border:1px solid var(--line2)"><sc-for list="{{ views1b }}" as="v" hint-placeholder-count="3"><button onClick="{{ v.onClick }}" style="all:unset;cursor:pointer;padding:7px 12px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;background:{{ v.bg }};color:{{ v.ink }}">{{ v.label }}</button></sc-for></div>
+              <span style="margin-left:auto;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ v1bMeta }}</span>
+            </div>
+            <div style="overflow:auto;min-height:0;padding:20px;display:flex;flex-direction:column;gap:12px">
+              <sc-if value="{{ vLive }}" hint-placeholder-val="{{ true }}">
+                <sc-if value="{{ isApproval }}"><div style="border:1px solid var(--ink);background:var(--panel);padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+                  <span style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em">{{ blockDot }}NEEDS YOU · HIGH · EXTERNAL WRITE · WAITING 06 MIN</span>
+                  <span style="font-size:15px;font-weight:500">Publish branch and open PR #318 against main</span>
+                  <span style="font-size:13px;color:var(--ink2)">PR becomes visible to the payments team and triggers CI. 06 files · +412 −96. Reviewed before it takes effect.</span>
+                  <div style="display:flex;gap:6px"><button onMouseDown="{{ holdStart }}" onMouseUp="{{ holdEnd }}" onMouseLeave="{{ holdEnd }}" style="all:unset;cursor:pointer;position:relative;overflow:hidden;flex:2;text-align:center;padding:10px;background:var(--ink);color:var(--panel);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em"><span style="position:absolute;left:0;top:0;bottom:0;width:{{ holdW }};background:var(--s-work)"></span><span style="position:relative">{{ holdU }}</span></button><button onClick="{{ toggleRevise }}" style="all:unset;cursor:pointer;flex:1;text-align:center;padding:10px;border:1px solid var(--line2);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em">REVISE</button><button style="all:unset;cursor:pointer;flex:1;display:flex;gap:6px;justify-content:center;align-items:center;padding:10px;border:1px solid var(--line2);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em">{{ errDot }}REJECT</button></div>
+                </div></sc-if>
+                <sc-for list="{{ feed }}" as="f" hint-placeholder-count="8">
+                  <sc-if value="{{ f.isSys }}"><div style="display:flex;align-items:center;gap:10px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)"><span style="flex:1;height:1px;background:var(--line)"></span>{{ f.x }}<span style="flex:1;height:1px;background:var(--line)"></span></div></sc-if>
+                  <sc-if value="{{ f.isAgent }}"><div style="display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;max-width:720px"><span>{{ f.glyph }}</span><div style="display:flex;flex-direction:column;gap:4px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ f.who }} · {{ f.t }}</span><span style="font-size:14px;line-height:1.45;text-wrap:pretty">{{ f.x }}</span><sc-if value="{{ f.tools }}"><div style="border:1px solid var(--line);background:var(--panel);padding:8px 10px;display:flex;flex-direction:column;gap:2px"><sc-for list="{{ f.tools }}" as="l"><span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ l }}</span></sc-for></div></sc-if></div></div></sc-if>
+                  <sc-if value="{{ f.isYou }}"><div style="align-self:flex-end;max-width:520px;display:flex;flex-direction:column;gap:4px;align-items:flex-end"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">YOU → {{ f.to }} · {{ f.t }}</span><span style="background:var(--ink);color:var(--panel);padding:9px 12px;font-size:14px;line-height:1.45">{{ f.x }}</span></div></sc-if>
+                </sc-for>
+              </sc-if>
+              <sc-if value="{{ vBrief }}" hint-placeholder-val="{{ false }}"><div style="max-width:720px;display:flex;flex-direction:column;gap:10px">
+                <sc-for list="{{ inputMd }}" as="b">
+                  <sc-if value="{{ b.h }}"><span style="font-size:16px;font-weight:500;padding-top:6px">{{ b.t }}</span></sc-if>
+                  <sc-if value="{{ b.p }}"><span style="font-size:14px;line-height:1.55;color:var(--ink2);text-wrap:pretty">{{ b.t }}</span></sc-if>
+                  <sc-if value="{{ b.li }}"><span style="display:flex;gap:10px;font-size:14px;line-height:1.45;color:var(--ink2)"><span style="color:var(--ink3)">—</span>{{ b.t }}</span></sc-if>
+                </sc-for>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--line)"><sc-for list="{{ attachments }}" as="f"><a href="#" style="display:flex;gap:8px;border:1px solid var(--line2);padding:5px 9px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;text-decoration:none;color:var(--ink)">{{ f.name }}<span style="color:var(--ink3)">{{ f.meta }} ↗</span></a></sc-for></div>
+              </div></sc-if>
+              <sc-if value="{{ vResult }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;align-items:center;gap:10px"><span style="font-size:16px;font-weight:500">{{ outTitle }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ outMeta }}</span><span style="margin-left:auto;display:flex;gap:6px"><sc-for list="{{ outActs }}" as="a"><a href="#" style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;border:1px solid var(--line2);padding:5px 9px;text-decoration:none">{{ a }}</a></sc-for></span></div>
+                <sc-if value="{{ outPending }}"><div style="border:1px dashed var(--line2);padding:10px 12px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2);display:flex;gap:8px;align-items:center">{{ stateDot }}{{ outPendingU }}</div></sc-if>
+                <sc-if value="{{ isMd }}"><div style="max-width:720px;display:flex;flex-direction:column;gap:10px"><sc-for list="{{ outMd }}" as="b">
+                  <sc-if value="{{ b.h }}"><span style="font-size:16px;font-weight:500;padding-top:6px">{{ b.t }}</span></sc-if>
+                  <sc-if value="{{ b.p }}"><span style="font-size:14px;line-height:1.55;color:var(--ink2);text-wrap:pretty">{{ b.t }}</span></sc-if>
+                  <sc-if value="{{ b.li }}"><span style="display:flex;gap:10px;font-size:14px;line-height:1.45;color:var(--ink2)"><span style="color:var(--ink3)">—</span>{{ b.t }}</span></sc-if>
+                </sc-for></div></sc-if>
+                <sc-if value="{{ isFolder }}"><div style="display:flex;flex-direction:column;border:1px solid var(--line);background:var(--panel)"><sc-for list="{{ tree }}" as="r"><div style="display:grid;grid-template-columns:minmax(0,1fr) 70px 70px;gap:10px;padding:7px 12px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px"><span style="padding-left:{{ r.ind }};color:{{ r.c }}">{{ r.icon }} {{ r.name }}</span><span style="color:var(--ink3);text-align:right">{{ r.size }}</span><span style="color:var(--ink3);text-align:right">{{ r.when }}</span></div></sc-for></div></sc-if>
+                <sc-if value="{{ isPr }}"><div style="display:flex;flex-direction:column;gap:10px"><span style="font-size:15px;font-weight:500">feat(billing): move webhook handlers to v2 events API</span><span style="font-size:14px;line-height:1.5;color:var(--ink2)">Replaces the v1 polling consumer with signed v2 webhooks, adds idempotency on event.id, keeps v1 behind a flag for one release.</span><div style="display:flex;flex-direction:column;border:1px solid var(--line);background:var(--panel)"><sc-for list="{{ prFiles }}" as="f"><div style="display:grid;grid-template-columns:minmax(0,1fr) 50px 50px 90px;gap:10px;align-items:center;padding:7px 12px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px"><span style="color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.path }}</span><span style="text-align:right">+{{ f.add }}</span><span style="text-align:right;color:var(--ink3)">−{{ f.del }}</span><span style="display:flex;height:6px;background:var(--line)"><span style="width:{{ f.addW }};background:var(--ink)"></span><span style="width:{{ f.delW }};background:var(--ink3)"></span></span></div></sc-for></div></div></sc-if>
+              </div></sc-if>
+            </div>
+            <div style="border-top:1px solid var(--line);background:var(--panel);padding:12px 20px;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">TO<sc-for list="{{ crew }}" as="c"><span style="display:flex;align-items:center;gap:6px;border:1px solid var(--line2);padding:3px 8px;color:var(--ink)">{{ c.glyph }}{{ c.name }}</span></sc-for><span style="margin-left:auto">{{ composerHint }}</span></div>
+              <div style="display:flex;gap:6px"><input value="{{ msg }}" onChange="{{ onMsg }}" onKeyDown="{{ onMsgKey }}" placeholder="{{ composerPh }}" style="flex:1;height:38px;border:1px solid var(--line2);background:var(--bg);font-size:14px;padding:0 12px;outline:none" style-focus="border-color:var(--ink)"><button onClick="{{ onSend }}" style="all:unset;cursor:pointer;padding:0 16px;background:var(--ink);color:var(--panel);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;display:flex;align-items:center">{{ sendU }}</button></div>
+            </div>
+          </div>
+          <div style="border-left:1px solid var(--line);background:var(--panel);overflow:auto;display:flex;flex-direction:column">
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-bottom:1px solid var(--line)"><sc-for list="{{ metrics3 }}" as="m"><div style="display:flex;flex-direction:column;gap:4px;padding:14px 16px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ m.k }}</span><span style="font-size:18px;font-weight:500;font-variant-numeric:tabular-nums">{{ m.v }}</span></div></sc-for></div>
+            <div style="padding:14px 16px;display:flex;flex-direction:column;gap:2px;border-bottom:1px solid var(--line)"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3);padding-bottom:6px">DETAILS</span><sc-for list="{{ details }}" as="d"><div style="display:grid;grid-template-columns:100px minmax(0,1fr);gap:10px;padding:6px 0"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ d.k }}</span><span style="font-size:13px">{{ d.v }}</span></div></sc-for></div>
+            <div style="padding:14px 16px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--line)"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">ROUTING</span><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-family:'Geist Mono',monospace;font-size:11px"><sc-for list="{{ routeChips }}" as="r"><span style="border:1px solid var(--line2);padding:4px 8px">{{ r }}</span></sc-for></div><span style="font-size:12px;color:var(--ink2)">Switchboard matched “webhook”, “billing” · 94% confidence</span></div>
+            <div style="padding:14px 16px;display:flex;flex-direction:column;gap:8px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">BUDGET · WEEKLY WINDOW</span><div style="height:2px;background:var(--line)"><div style="height:2px;width:34%;background:var(--ink)"></div></div><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)">$3.42 OF $10.00 CAP · 34%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1c -->
+    <div id="1c" style="width:1440px;flex:none;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.14em;background:var(--ink);color:var(--panel);padding:4px 8px">1C</span><span style="font-size:16px;font-weight:500">Report page + control dock</span><span style="font-size:13px;color:var(--ink2)">Reads like a document: brief → progress → result. One dock at the bottom carries every control and the message box.</span></div>
+      <div data-screen-label="1c Run detail" style="border:1px solid var(--line2);background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px;height:1000px;overflow:auto;position:relative">
+        <div style="max-width:920px;margin:0 auto;padding:40px 24px 140px;display:flex;flex-direction:column;gap:36px">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">RUN-8812 · WORKFLOW · STARTED 14:02</span>
+            <h1 style="margin:0;font-size:32px;font-weight:500;letter-spacing:-.02em;line-height:1.1">Migrate billing webhooks to the v2 API</h1>
+            <p style="margin:0;font-size:18px;line-height:1.45;color:var(--ink2);text-wrap:pretty">{{ summary }}</p>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em"><span style="display:flex;align-items:center;gap:6px;border:1px solid var(--line2);padding:4px 8px;background:var(--panel)">{{ glyph18 }}KODO · DEV-02</span><a href="#" style="border:1px solid var(--line2);padding:4px 8px;text-decoration:none;background:var(--panel)">BILLING PLATFORM</a><a href="#" style="border:1px solid var(--line2);padding:4px 8px;text-decoration:none;background:var(--panel)">PAYMENTS V2</a><button onClick="{{ toggleDetails }}" style="all:unset;cursor:pointer;border:1px dashed var(--line2);padding:4px 8px;color:var(--ink2)">{{ detailsU }}</button></div>
+            <sc-if value="{{ detailsOpen }}"><div style="border:1px solid var(--line);background:var(--panel);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 28px;padding:6px 16px"><sc-for list="{{ details }}" as="d"><div style="display:grid;grid-template-columns:110px minmax(0,1fr);gap:10px;padding:8px 0;border-bottom:1px solid var(--line)"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ d.k }}</span><span style="font-size:13px">{{ d.v }}</span></div></sc-for><sc-for list="{{ route }}" as="r"><div style="display:grid;grid-template-columns:110px minmax(0,1fr);gap:10px;padding:8px 0;border-bottom:1px solid var(--line)"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ r.k }}</span><span style="font-size:13px">{{ r.v }}</span></div></sc-for></div></sc-if>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--line);padding-bottom:10px"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">01 — BRIEF</span><span style="margin-left:auto;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">TSK-1207</span></div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <sc-for list="{{ inputMd }}" as="b" hint-placeholder-count="6">
+                <sc-if value="{{ b.h }}"><span style="font-size:16px;font-weight:500;padding-top:4px">{{ b.t }}</span></sc-if>
+                <sc-if value="{{ b.p }}"><span style="font-size:15px;line-height:1.55;color:var(--ink2);text-wrap:pretty">{{ b.t }}</span></sc-if>
+                <sc-if value="{{ b.li }}"><span style="display:flex;gap:10px;font-size:15px;line-height:1.45;color:var(--ink2)"><span style="color:var(--ink3)">—</span>{{ b.t }}</span></sc-if>
+              </sc-for>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ attachments }}" as="f"><a href="#" style="display:flex;gap:8px;border:1px solid var(--line2);background:var(--panel);padding:5px 9px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;text-decoration:none;color:var(--ink)">{{ f.name }}<span style="color:var(--ink3)">{{ f.meta }} ↗</span></a></sc-for></div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--line);padding-bottom:10px"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">02 — PROGRESS</span><span style="margin-left:auto;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ progMeta }}</span></div>
+            <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px">
+              <sc-for list="{{ stages }}" as="s" hint-placeholder-count="5"><button onClick="{{ s.onClick }}" style="all:unset;cursor:pointer;box-sizing:border-box;box-shadow:0 0 0 1px {{ s.cellBd }};background:{{ s.cellBg }};padding:12px;display:flex;flex-direction:column;gap:6px;position:relative;z-index:{{ s.z }}">
+                <span style="display:flex;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ s.dot }}{{ s.n }} · {{ s.stateU }}</span><span style="font-size:14px;font-weight:500">{{ s.name }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)">{{ s.att }} · {{ s.cost }}</span>
+              </button></sc-for>
+            </div>
+            <div style="border:1px solid var(--line);background:var(--panel)">
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>LOG · {{ selStage.n }} {{ selStage.nameU }}</span><span style="margin-left:auto">{{ selStage.att }}</span></div>
+              <div style="padding:10px 14px;background:var(--bg);display:flex;flex-direction:column;gap:2px;max-height:220px;overflow:auto"><sc-for list="{{ selStage.log }}" as="l"><div style="display:grid;grid-template-columns:70px minmax(0,1fr);gap:10px;font-family:'Geist Mono',monospace;font-size:11px;line-height:1.55"><span style="color:var(--ink3)">{{ l.t }}</span><span style="color:{{ l.c }}">{{ l.x }}{{ l.caret }}</span></div></sc-for><sc-if value="{{ selStage.empty }}"><span style="font-size:13px;color:var(--ink2)">This stage has not started.</span></sc-if></div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--ink);padding-bottom:10px"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink)">03 — RESULT</span><span style="font-size:15px;font-weight:500">{{ outTitle }}</span><span style="margin-left:auto;display:flex;gap:6px"><sc-for list="{{ outActs }}" as="a"><a href="#" style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;border:1px solid var(--line2);background:var(--panel);padding:5px 9px;text-decoration:none">{{ a }}</a></sc-for></span></div>
+            <sc-if value="{{ outPending }}"><div style="border:1px dashed var(--line2);padding:10px 12px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2);display:flex;gap:8px;align-items:center">{{ stateDot }}{{ outPendingU }}</div></sc-if>
+            <sc-if value="{{ isMd }}" hint-placeholder-val="{{ true }}"><div style="display:flex;flex-direction:column;gap:10px"><sc-for list="{{ outMd }}" as="b">
+              <sc-if value="{{ b.h }}"><span style="font-size:16px;font-weight:500;padding-top:4px">{{ b.t }}</span></sc-if>
+              <sc-if value="{{ b.p }}"><span style="font-size:15px;line-height:1.55;color:var(--ink2);text-wrap:pretty">{{ b.t }}</span></sc-if>
+              <sc-if value="{{ b.li }}"><span style="display:flex;gap:10px;font-size:15px;line-height:1.45;color:var(--ink2)"><span style="color:var(--ink3)">—</span>{{ b.t }}</span></sc-if>
+            </sc-for></div></sc-if>
+            <sc-if value="{{ isFolder }}"><div style="display:flex;flex-direction:column;border:1px solid var(--line);background:var(--panel)"><sc-for list="{{ tree }}" as="r"><div style="display:grid;grid-template-columns:minmax(0,1fr) 70px 70px;gap:10px;padding:7px 12px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px"><span style="padding-left:{{ r.ind }};color:{{ r.c }}">{{ r.icon }} {{ r.name }}</span><span style="color:var(--ink3);text-align:right">{{ r.size }}</span><span style="color:var(--ink3);text-align:right">{{ r.when }}</span></div></sc-for></div></sc-if>
+            <sc-if value="{{ isPr }}"><div style="display:flex;flex-direction:column;gap:10px"><span style="font-size:16px;font-weight:500">feat(billing): move webhook handlers to v2 events API</span><span style="font-size:15px;line-height:1.5;color:var(--ink2)">Replaces the v1 polling consumer with signed v2 webhooks, adds idempotency on event.id, keeps v1 behind a flag for one release.</span><div style="display:flex;flex-direction:column;border:1px solid var(--line);background:var(--panel)"><sc-for list="{{ prFiles }}" as="f"><div style="display:grid;grid-template-columns:minmax(0,1fr) 50px 50px 90px;gap:10px;align-items:center;padding:7px 12px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px"><span style="color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.path }}</span><span style="text-align:right">+{{ f.add }}</span><span style="text-align:right;color:var(--ink3)">−{{ f.del }}</span><span style="display:flex;height:6px;background:var(--line)"><span style="width:{{ f.addW }};background:var(--ink)"></span><span style="width:{{ f.delW }};background:var(--ink3)"></span></span></div></sc-for></div></div></sc-if>
+          </div>
+        </div>
+
+        <div style="position:sticky;bottom:0;padding:0 24px 20px;display:flex;justify-content:center;pointer-events:none">
+          <div style="pointer-events:auto;width:100%;max-width:920px;background:var(--panel);border:1px solid var(--ink);display:flex;flex-direction:column">
+            <sc-if value="{{ isApproval }}"><div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line)"><span style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em">{{ blockDot }}NEEDS YOU</span><span style="font-size:14px;flex:1">Publish branch and open PR #318 against main · +412 −96 · HIGH</span><button onMouseDown="{{ holdStart }}" onMouseUp="{{ holdEnd }}" onMouseLeave="{{ holdEnd }}" style="all:unset;cursor:pointer;position:relative;overflow:hidden;padding:8px 14px;background:var(--ink);color:var(--panel);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em"><span style="position:absolute;left:0;top:0;bottom:0;width:{{ holdW }};background:var(--s-work)"></span><span style="position:relative">{{ holdU }}</span></button><button style="all:unset;cursor:pointer;padding:8px 12px;border:1px solid var(--line2);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em">REVISE</button><button style="all:unset;cursor:pointer;display:flex;gap:6px;align-items:center;padding:8px 12px;border:1px solid var(--line2);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em">{{ errDot }}REJECT</button></div></sc-if>
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 10px 10px 14px">
+              <span style="display:flex;align-items:center;gap:7px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;white-space:nowrap">{{ stateDot }}{{ stateU }} · {{ progPct }}</span>
+              <span style="width:1px;align-self:stretch;background:var(--line)"></span>
+              <input value="{{ msg }}" onChange="{{ onMsg }}" onKeyDown="{{ onMsgKey }}" placeholder="{{ composerPh }}" style="flex:1;height:34px;border:0;background:transparent;font-size:14px;outline:none">
+              <sc-for list="{{ acts }}" as="a" hint-placeholder-count="3"><button onClick="{{ a.onClick }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:7px;padding:9px 12px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;background:{{ a.bg }};color:{{ a.ink }};border:1px solid {{ a.bd }}">{{ a.dot }}{{ a.label }}</button></sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;runState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;running&quot;,&quot;approval&quot;,&quot;parked&quot;,&quot;done&quot;],&quot;default&quot;:&quot;running&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;outputKind&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;markdown&quot;,&quot;folder&quot;,&quot;pr&quot;],&quot;default&quot;:&quot;pr&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { st: null, out: null, tab: 'stages', open: '03', sel: '03', view: 'live', msg: '', sent: [], hold: 0, revise: false, details: false, tick: 0, approved: false };
+  componentDidMount() {
+    this.t = setInterval(() => { if (this.cur() === 'running') this.setState(s => ({ tick: s.tick + 1 })); }, 2200);
+    this.w = setInterval(() => { if (window.ZB) { this.forceUpdate(); clearInterval(this.w); } }, 80);
+  }
+  componentWillUnmount() { clearInterval(this.t); clearInterval(this.w); clearInterval(this.h); }
+  cur() { return this.state.st || this.props.runState || 'running'; }
+  renderVals() {
+    const B = window.ZB, st = this.cur(), out = this.state.out || this.props.outputKind || 'pr';
+    const dot = (k, n) => B ? B.dot(React, k, n || 7) : null;
+    const gl = (seed, k, n) => B ? B.glyph(React, { seed, state: k, size: n, glow: false }) : null;
+    const SK = { running: 'working', approval: 'blocked', parked: 'error', done: 'done' };
+    const SL = { running: 'RUNNING', approval: 'WAITING ON APPROVAL', parked: 'PARKED', done: 'DONE' };
+    const pct = { running: 62, approval: 90, parked: 48, done: 100 }[st];
+    const stageSt = { running: ['done','done','working','idle','idle'], approval: ['done','done','done','done','blocked'], parked: ['done','done','error','idle','idle'], done: ['done','done','done','done','done'] }[st];
+    const stU = { done: 'DONE', working: 'RUNNING', idle: 'QUEUED', blocked: 'AT GATE', error: 'PARKED' };
+    const liveLines = ['vitest → 38 passed, 0 failed', 'replay fixture 07/12 ok', 'reading src/billing/ledger.ts', 'replay fixture 08/12 ok', 'tool call → ci.status ok', 'replay fixture 09/12 ok'];
+    const youLines = this.state.sent.map(m => ({ t: m.t, x: 'YOU → CREW: ' + m.x, c: 'var(--ink)', who: 'YOU' }));
+    const base = [
+      [['14:02:11','Plan drafted from TSK-1207 · 5 steps'],['14:03:40','Mapped 14 v1 handlers to v2 event types'],['14:04:02','checkpoint a91f3c2']],
+      [['14:05:12','attempt 01 · wrote 6 files'],['14:09:48','ci.run → 3 failed (signature check)'],['14:10:03','⇄ retry loop → IMPLEMENT'],['14:10:30','attempt 02 · fixed HMAC header casing'],['14:15:51','ci.run → 41 passed'],['14:16:02','checkpoint 4c0de77']],
+      [['14:16:40','spawned Vera · QA-01 for replay tests'],['14:18:05','replay fixture 01/12 ok'],['14:21:30','replay fixture 06/12 ok']],
+      [['14:27:10','review by Ilse · QA-03 · 2 comments resolved']],
+      [['14:31:02','gate: publish PR to main — waiting on approval']]];
+    if (st === 'running') base[2] = base[2].concat(liveLines.slice(0, Math.min(liveLines.length, this.state.tick)).map((x, i) => ['14:2' + (2 + i) + ':' + String(10 + i * 7).padStart(2,'0'), x]));
+    if (st === 'parked') base[2] = base[2].concat([['14:22:40','attempt 03 · webhook_replay_idempotent failed'],['14:22:41','retries exhausted 03/03 → parked']]);
+    if (st === 'approval' || st === 'done') base[2] = base[2].concat([['14:26:02','replay fixture 12/12 ok']]);
+    if (st === 'done') base[4] = base[4].concat([['14:38:20','approved · PR #318 opened']]);
+    const names = ['Plan','Implement','Test','Review','Release'], durs = ['01:51','11:28', st === 'running' ? '06:12' : '09:22', '04:40', st === 'done' ? '07:18' : '—'];
+    const atts = ['01/03','02/03 · ⇄', st === 'parked' ? '03/03' : '01/03','01/03','01/01'], costs = ['$0.18','$1.64','$0.92','$0.41','$0.27'];
+    const stages = names.map((name, i) => {
+      const n = String(i + 1).padStart(2, '0'), k = stageSt[i], started = k !== 'idle', logs = started ? base[i] : [];
+      const isLive = k === 'working';
+      const log = logs.map(([t, x], j) => ({ t, x, c: j === logs.length - 1 ? 'var(--ink)' : 'var(--ink2)', caret: isLive && j === logs.length - 1 && B ? B.caret(React) : null }));
+      const selHere = this.state.sel === n;
+      return { n, name, nameU: name.toUpperCase(), stateU: stU[k], dot: dot(k, 7), att: started ? atts[i] : '—', dur: started ? durs[i] : '—', cost: started ? costs[i] : '—', log, empty: !log.length,
+        open: this.state.open === n, chev: this.state.open === n ? '−' : '+', retry: i === 1 ? 'RETRY LOOP → IMPLEMENT · 01 ESCALATION NONE' : null,
+        bg: selHere ? 'var(--panel2)' : 'transparent', selBd: selHere ? 'var(--ink)' : 'transparent',
+        cellBg: selHere ? 'var(--panel)' : 'var(--bg)', cellBd: selHere ? 'var(--ink)' : 'var(--line)', z: selHere ? 1 : 0,
+        onClick: () => this.setState(s => ({ open: s.open === n ? null : n, sel: n })) };
+    });
+    const selStage = stages.find(s => s.n === this.state.sel) || stages[2];
+    const allLog = []; stages.forEach(s => s.log.forEach(l => allLog.push({ ...l, who: s.nameU, caret: null })));
+    const log = allLog.concat(youLines).sort((a, b) => a.t < b.t ? -1 : 1).map((l, i, arr) => ({ ...l, c: i === arr.length - 1 ? 'var(--ink)' : (l.who === 'YOU' ? 'var(--ink)' : 'var(--ink2)'), caret: st === 'running' && i === arr.length - 1 && B ? B.caret(React) : null }));
+
+    const btn = (label, kind, onClick, d) => ({ label, onClick: onClick || (() => {}), dot: d || null, bg: kind === 'p' ? 'var(--ink)' : 'transparent', ink: kind === 'p' ? 'var(--panel)' : 'var(--ink)', bd: kind === 'p' ? 'var(--ink)' : 'var(--line2)' });
+    const confirmStop = () => { if (window.confirm('Stop RUN-8812? The current stage will be cancelled.')) this.setState({ st: 'parked' }); };
+    const acts = {
+      running: [btn('PAUSE', 's'), btn('STOP', 's', confirmStop, dot('error', 6))],
+      approval: [btn('PAUSE', 's'), btn('STOP', 's', confirmStop, dot('error', 6))],
+      parked: [btn('RE-RUN FRESH', 's'), btn('CONTINUE SESSION', 'p')],
+      done: [btn('RE-RUN', 's'), btn('CONTINUE TASK →', 'p')] }[st];
+
+    const metrics = [{ k: 'PROGRESS', v: pct + '%' }, { k: 'ELAPSED', v: st === 'done' ? '34:39' : st === 'running' ? '24:31' : '29:02' }, { k: 'STAGE', v: { running: '03/05', approval: '05/05', parked: '03/05', done: '05/05' }[st] }, { k: 'ATTEMPTS', v: st === 'parked' ? '07' : '05' }, { k: 'COST', v: st === 'done' ? '$3.42' : '$2.74' }, { k: 'CONFIDENCE', v: '94%' }];
+
+    const md = a => a.map(([k, t]) => ({ h: k === 'h', p: k === 'p', li: k === 'li', t }));
+    const inputMd = md([['p', 'Move all billing webhook consumers from the v1 polling endpoint to the signed v2 events API before the v1 sunset on 30 Nov.'], ['h', 'Scope'], ['li', 'Replace the 14 handlers in src/billing/webhooks with v2 equivalents'], ['li', 'Verify HMAC signatures on every inbound event'], ['li', 'Make ledger writes idempotent on event.id'], ['h', 'Done when'], ['li', 'Replay of last 7 days of events produces an identical ledger'], ['li', 'v1 path stays behind BILLING_V1 flag for one release'], ['p', 'Open a PR to main; do not merge.']]);
+    const outMdArr = md([['p', 'All 14 handlers now consume v2 events. Signature verification is enforced at the edge, and ledger writes dedupe on event.id.'], ['h', 'What changed'], ['li', 'New v2 router with typed event map (src/billing/webhooks/v2.ts)'], ['li', 'Idempotency key table, 30-day TTL'], ['li', 'v1 consumer gated by BILLING_V1, default off'], ['h', 'Verification'], ['li', '7-day replay: 18,402 events, ledger diff 0'], ['li', '41 unit + 12 replay tests green'], ['h', 'Follow-ups'], ['li', 'Remove v1 path after the 4 Dec release']]);
+    const tree = [['d',0,'TSK-1207/','',''],['d',1,'report/','','14:31'],['f',2,'migration-report.md','6.2 KB','14:31'],['f',2,'replay-diff.csv','184 KB','14:26'],['d',1,'patches/','','14:16'],['f',2,'0001-v2-router.patch','21 KB','14:16'],['f',2,'0002-idempotency.patch','9.4 KB','14:16'],['d',1,'logs/','','14:22'],['f',2,'stage-03-test.log','48 KB','14:22']]
+      .map(([t, l, name, size, when]) => ({ icon: t === 'd' ? '▸' : ' ', name, size, when, ind: (l * 18) + 'px', c: t === 'd' ? 'var(--ink)' : 'var(--ink2)' }));
+    const pf = [['src/billing/webhooks/v2.ts',184,0],['src/billing/webhooks/router.ts',62,48],['src/billing/ledger.ts',41,12],['src/billing/idempotency.ts',58,0],['tests/webhooks/replay.spec.ts',61,4],['src/billing/webhooks/v1.ts',6,32]];
+    const prFiles = pf.map(([path, add, del]) => ({ path, add, del, addW: Math.round(add / 2.5) + '%', delW: Math.round(del / 2.5) + '%' }));
+    const outInfo = { markdown: ['Migration report', 'MIGRATION-REPORT.MD · 6.2 KB', ['OPEN OUTPUT ↗']], folder: ['Task folder', 'TSK-1207/ · 07 FILES · 270 KB', ['OPEN FOLDER ↗']], pr: ['Pull request #318', 'DRAFT · 06 FILES · +412 −96', ['OPEN PR ↗']] }[out];
+    const outPending = st !== 'done';
+    const outPendingU = { running: 'IN PROGRESS · PARTIAL OUTPUT FROM CHECKPOINT 4C0DE77', approval: 'NOT PUBLISHED · WAITING ON YOUR APPROVAL', parked: 'PARTIAL · LAST GOOD CHECKPOINT 4C0DE77' }[st];
+
+    const details = [{ k: 'RUN ID', v: 'RUN-8812' }, { k: 'KIND', v: 'Workflow · Ship feature' }, { k: 'AGENT', v: 'Kodo · DEV-02' }, { k: 'PROJECT', v: 'Billing Platform' }, { k: 'ROADMAP', v: 'Payments v2 · Q4' }, { k: 'STARTED', v: '20 Oct 2026, 14:02' }, { k: 'DURATION', v: st === 'done' ? '34 min 39 s' : '—' }, { k: 'PARENT TASK', v: 'TSK-1207 · Webhook v2' }, { k: 'BOOK FOLDER', v: '/books/billing/TSK-1207' }];
+    const route = [{ k: 'STAGE 1', v: 'Switchboard', s: 'Matched “webhook”, “billing”' }, { k: 'DEPARTMENT', v: 'Development', s: 'DEV' }, { k: 'UNIT', v: 'Backend', s: 'Processor · ship-feature' }, { k: 'CONFIDENCE', v: '94%', s: 'Above 80% auto-route' }];
+
+    const crew = [{ name: 'KODO', glyph: gl('Kodo', SK[st] === 'done' ? 'done' : 'working', 14) }, { name: 'VERA', glyph: gl('Vera', st === 'running' ? 'thinking' : 'idle', 14) }];
+    const send = () => { const x = this.state.msg.trim(); if (!x) return; this.setState(s => ({ msg: '', sent: s.sent.concat([{ x, t: '14:2' + (4 + s.sent.length) + ':00' }]) })); };
+
+    const feed = [
+      { isSys: true, x: '01 PLAN · DONE · 01:51' },
+      { isAgent: true, who: 'KODO · DEV-02', t: '14:03', glyph: gl('Kodo', 'idle', 30), x: 'Mapped the 14 v1 handlers onto v2 event types. Plan has 5 steps; the risky one is ledger idempotency.' },
+      { isSys: true, x: '02 IMPLEMENT · DONE · 02 ATTEMPTS · ⇄' },
+      { isAgent: true, who: 'KODO · DEV-02', t: '14:10', glyph: gl('Kodo', 'idle', 30), x: 'CI caught header casing on the HMAC check. Fixed and re-ran.', tools: ['ci.run → 3 failed (signature check)', 'edit src/billing/webhooks/v2.ts', 'ci.run → 41 passed'] },
+      { isSys: true, x: '03 TEST · ' + stU[stageSt[2]] },
+      { isAgent: true, who: 'VERA · QA-01', t: '14:21', glyph: gl('Vera', st === 'running' ? 'working' : 'idle', 30), x: st === 'parked' ? 'Replay still writes two ledger entries for duplicate event IDs. Out of retries; parking for a human note.' : 'Replaying the last 7 days of events against a staging ledger.', tools: selStage.n === '03' ? stages[2].log.slice(-3).map(l => l.t + '  ' + l.x) : null }
+    ];
+    if (st === 'approval' || st === 'done') feed.push({ isSys: true, x: '04 REVIEW · DONE' }, { isSys: true, x: '05 RELEASE · ' + stU[stageSt[4]] });
+    this.state.sent.forEach(m => feed.push({ isYou: true, to: 'KODO, VERA', t: m.t, x: m.x }));
+
+    const holdStart = () => { clearInterval(this.h); this.h = setInterval(() => this.setState(s => { const h = Math.min(100, s.hold + 8); if (h >= 100) { clearInterval(this.h); return { hold: 0, st: 'done' }; } return { hold: h }; }), 60); };
+    const holdEnd = () => { clearInterval(this.h); if (this.state.hold) this.setState({ hold: 0 }); };
+
+    const seg = (opts, curV, set) => opts.map(([v, l, k]) => ({ label: l, dot: k ? dot(k, 6) : null, bg: v === curV ? 'var(--ink)' : 'transparent', ink: v === curV ? 'var(--panel)' : 'var(--ink3)', onClick: () => set(v) }));
+    const summary = { running: 'Kodo and Vera are replaying a week of billing events against the new handlers. Three of five stages are done; nothing has been published yet.', approval: 'All tests pass. The crew is holding at the release gate until you approve publishing PR #318 to main.', parked: 'Testing stopped after three attempts: duplicate events still write twice to the ledger. It needs a note from you to continue.', done: 'Done in 34 minutes for $3.42. PR #318 is open against main with a migration report and a clean 7-day replay.' }[st];
+
+    return {
+      stateOpts: seg([['running','RUNNING','working'],['approval','APPROVAL','blocked'],['parked','PARKED','error'],['done','DONE','done']], st, v => this.setState({ st: v, hold: 0, tick: 0 })),
+      outOpts: seg([['markdown','MARKDOWN'],['folder','FOLDER'],['pr','PR']], out, v => this.setState({ out: v })),
+      isRunning: st === 'running', isApproval: st === 'approval', isParked: st === 'parked', isDone: st === 'done',
+      stateU: SL[st], stateDot: dot(SK[st], 8), blockDot: dot('blocked', 8), errDot: dot('error', 6),
+      glyph18: gl('Kodo', SK[st], 18), pod30: B ? B.pod(React, { seed: 'Kodo', state: SK[st], size: 36 }) : null,
+      progW: pct + '%', progC: st === 'running' ? 'var(--s-work)' : 'var(--ink)', progPct: pct + '%',
+      progMeta: { running: '03/05 TEST · 24:31 · ' + pct + '%', approval: '05/05 RELEASE · AT GATE', parked: '03/05 TEST · PARKED', done: '05/05 · 34:39 · 100%' }[st],
+      metrics, metrics3: [metrics[1], metrics[4], metrics[3]], acts, crew, summary,
+      toggleMore: () => {},
+      tabs1a: [['stages','STAGES · 05'],['log','LIVE LOG · ' + String(log.length).padStart(2,'0')],['route','ROUTING'],['details','DETAILS']].map(([v, l]) => ({ label: l, ink: this.state.tab === v ? 'var(--ink)' : 'var(--ink3)', bd: this.state.tab === v ? 'var(--ink)' : 'transparent', onClick: () => this.setState({ tab: v }) })),
+      tabStages: this.state.tab === 'stages', tabLog: this.state.tab === 'log', tabRoute: this.state.tab === 'route', tabDetails: this.state.tab === 'details',
+      stages, stageCount: '05', selStage, log, route, details,
+      routeChips: ['SWITCHBOARD', '→', 'DEV', '→', 'BACKEND'],
+      checkpoints: [{ p: '01 PLAN', sha: 'a91f3c2' }, { p: '02 IMPLEMENT', sha: '4c0de77' }].concat(st === 'approval' || st === 'done' ? [{ p: '03 TEST', sha: 'e5b2190' }, { p: '04 REVIEW', sha: '7d13aa4' }] : []),
+      views1b: [['live','LIVE'],['brief','BRIEF'],['result','RESULT']].map(([v, l]) => ({ label: l, bg: this.state.view === v ? 'var(--ink)' : 'transparent', ink: this.state.view === v ? 'var(--panel)' : 'var(--ink3)', onClick: () => this.setState({ view: v }) })),
+      vLive: this.state.view === 'live', vBrief: this.state.view === 'brief', vResult: this.state.view === 'result',
+      v1bMeta: { live: 'STREAMING · ' + String(log.length).padStart(2,'0') + ' EVENTS', brief: 'TSK-1207 · 02 ATTACHMENTS', result: outInfo[1] }[this.state.view],
+      feed,
+      inputMd, outMd: outMdArr, attachments: [{ name: 'v2-events-spec.pdf', meta: 'PDF · 1.2 MB' }, { name: 'ledger-sample.csv', meta: 'CSV · 88 KB' }],
+      isMd: out === 'markdown', isFolder: out === 'folder', isPr: out === 'pr', tree, prFiles, prFilesShort: prFiles.slice(0, 5),
+      outTitle: outInfo[0], outMeta: outInfo[1], outActs: st === 'done' ? outInfo[2].concat(['CONTINUE TASK']) : outInfo[2], outPending, outPendingU,
+      msg: this.state.msg, onMsg: e => this.setState({ msg: e.target.value }), onMsgKey: e => { if (e.key === 'Enter') send(); }, onSend: send,
+      composerPh: { running: 'Message Kodo and Vera. Lands in their context on the next step.', approval: 'Add a note to the crew before deciding…', parked: 'Resume with a note: e.g. dedupe on event.id before writing', done: 'Ask a follow-up. Starts a new task with this output as context.' }[st],
+      sendU: { running: 'SEND ↵', approval: 'SEND ↵', parked: 'RESUME ↵', done: 'NEW TASK ↵' }[st],
+      composerHint: { running: 'DELIVERED BETWEEN STEPS', approval: 'RUN IS HELD AT GATE', parked: 'NOTE IS ADDED TO CONTEXT', done: 'RUN FINISHED' }[st],
+      holdStart, holdEnd, holdW: this.state.hold + '%', holdU: this.state.hold ? 'HOLD… ' + this.state.hold + '%' : 'HOLD TO APPROVE',
+      reviseOpen: this.state.revise, toggleRevise: () => this.setState(s => ({ revise: !s.revise })),
+      detailsOpen: this.state.details, detailsU: this.state.details ? 'HIDE DETAILS −' : 'DETAILS · ROUTING +', toggleDetails: () => this.setState(s => ({ details: !s.details }))
+    };
+  }
+}
+</script>
+</body>
+</html>

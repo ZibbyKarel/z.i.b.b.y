@@ -6,17 +6,17 @@
     "category": "Shoptet",
     "companyId": "shoptet",
     "teamId": "devrel",
-    "gitRemote": "git@github.com:shoptet/cms4.git",
     "integrationRouting": [
       {
         "integrationId": "shoptet-jira",
         "match": {
           "kind": "jira",
           "projectKey": "CZ3TDR1",
-          "jql": "project = CZ3TDR1 AND labels = \"partner-portal\" AND assignee = currentUser() ORDER BY created ASC"
+          "jql": "project = CZ3TDR1 AND assignee = currentUser() ORDER BY created ASC"
         }
       }
-    ]
+    ],
+    "gitRemote": "git@github.com:shoptet/cms4.git"
   },
   {
     "id": "devrel-knowledgebase",
@@ -62,7 +62,6 @@
     "category": "Shoptet",
     "companyId": "shoptet",
     "teamId": "devrel",
-    "gitRemote": "git@github.com:shoptet/cli.git",
     "integrationRouting": [
       {
         "integrationId": "shoptet-jira",
@@ -72,7 +71,8 @@
           "jql": "project = CZ3TDR1 AND labels = \"shoptet-addon-cli\" AND assignee = currentUser() ORDER BY created ASC"
         }
       }
-    ]
+    ],
+    "gitRemote": "git@github.com:shoptet/cli.git"
   },
   {
     "id": "test-project",
@@ -110,8 +110,16 @@
       ]
     },
     "autonomy_policy": {
-      "can_do_alone": ["reply", "create_task", "summarize"],
-      "always_ask": ["merge", "deploy", "delete"],
+      "can_do_alone": [
+        "reply",
+        "create_task",
+        "summarize"
+      ],
+      "always_ask": [
+        "merge",
+        "deploy",
+        "delete"
+      ],
       "vip_escalation": false,
       "respond_as": "autonomous"
     },

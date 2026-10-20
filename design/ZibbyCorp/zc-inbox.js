@@ -35,13 +35,21 @@
     { n: 311, src: 'GITHUB', repo: 'acme/mobile', project: 'mobile', team: 'dev', title: 'Migrate push notifications to FCM HTTP v1', author: 'tberg', age: 72, draft: false, ci: 'failing', review: 'none', mergeable: true, bucket: 'to-review', reason: 'direct' },
     { n: 94, src: 'GITHUB', repo: 'zibbykarel/z.i.b.b.y', project: 'zibby', team: 'ops', title: 'Channel adapter: reply in Slack threads', author: 'ops-bot', age: 5, draft: false, ci: 'passing', review: 'none', mergeable: false, bucket: 'to-review', reason: 'team', reviewTeam: '@zibby/core' },
     { n: 482, src: 'GITHUB', repo: 'acme/api', project: 'api', team: 'dev', title: 'Retry webhook deliveries with exponential backoff', author: 'zibby-dev', age: 5, draft: false, ci: 'passing', review: 'none', mergeable: true, bucket: 'mine', item: 'api-131' },
+    { n: 483, src: 'GITHUB', repo: 'acme/api', project: 'api', team: 'dev', title: 'Per-subscriber backoff config', author: 'zibby-dev', age: 4, draft: false, ci: 'passing', review: 'changes-requested', mergeable: true, bucket: 'mine', base: 482 },
+    { n: 485, src: 'GITHUB', repo: 'acme/api', project: 'api', team: 'dev', title: 'Dead-letter queue for exhausted deliveries', author: 'zibby-dev', age: 3, draft: false, ci: 'passing', review: 'approved', mergeable: true, bucket: 'mine', base: 483 },
+    { n: 486, src: 'GITHUB', repo: 'acme/api', project: 'api', team: 'dev', title: 'Delivery metrics on /v2/webhooks/stats', author: 'zibby-dev', age: 2, draft: false, ci: 'failing', review: 'none', mergeable: true, bucket: 'mine', base: 483 },
+    { n: 492, src: 'GITHUB', repo: 'acme/mobile', project: 'mobile', team: 'dev', title: 'Subscribe drivers to FCM topics per depot', author: 'tberg', age: 20, draft: false, ci: 'passing', review: 'none', mergeable: true, bucket: 'to-review', reason: 'direct', base: 311 },
     { n: 479, src: 'GITHUB', repo: 'acme/mobile', project: 'mobile', team: 'dev', title: 'Offline cache for the shipment list', author: 'zibby-dev', age: 1, draft: true, ci: 'failing', review: 'none', mergeable: true, bucket: 'mine', item: 'mob-52' },
     { n: 476, src: 'GITHUB', repo: 'acme/mobile', project: 'mobile', team: 'qa', title: 'Handle denied camera permission on Android 15', author: 'zibby-dev', age: 9, draft: false, ci: 'passing', review: 'approved', mergeable: true, bucket: 'mine', item: 'mob-49' },
     { n: 474, src: 'GITHUB', repo: 'acme/client-portal', project: 'client-portal', team: 'sec', title: 'Per-tenant session timeout', author: 'zibby-dev', age: 52, draft: false, ci: 'passing', review: 'changes-requested', mergeable: true, bucket: 'mine', item: 'cp-21' }
   ];
   ZI.blocker = p => p.ci === 'failing' ? 'ci-failing' : p.review === 'changes-requested' ? 'changes' : !p.mergeable ? 'conflict' : p.review === 'approved' && p.ci === 'passing' ? 'ready' : 'awaiting';
   ZI.BL_ORDER = ['ci-failing', 'changes', 'conflict', 'awaiting', 'ready'];
-  ZI.prs.forEach(p => { p.blocker = ZI.blocker(p); p.url = 'https://github.com/' + p.repo + '/pull/' + p.n; });
+  ZI.prs.forEach(p => { p.base = p.base || 'main'; p.blocker = ZI.blocker(p); p.url = 'https://github.com/' + p.repo + '/pull/' + p.n; });
+  // Stacks: a PR whose base is another open PR. anc = chain from the bottom PR up to (not including) p.
+  ZI.prByN = n => ZI.prs.find(p => p.n === n);
+  ZI.anc = p => { const out = []; let b = p.base; while (b !== 'main' && ZI.prByN(b)) { out.unshift(b); b = ZI.prByN(b).base; } return out; };
+  ZI.waits = p => ZI.anc(p).filter(n => ZI.prByN(n).blocker !== 'ready');
   ZI.prOf = it => ZI.prs.find(p => p.item === it.id) || (it.merged ? Object.assign({ ci: 'passing', review: 'approved', isMerged: true, url: 'https://github.com/' + it.merged.repo + '/pull/' + it.merged.n }, it.merged) : null);
   ZI.srcUrl = it => it.src === 'JIRA' ? 'https://acme.atlassian.net/browse/' + it.key : 'https://github.com/' + ((window.ZC.projects.find(p => p.id === it.project) || {}).repo || '') + '/issues/' + it.key.slice(1);
 

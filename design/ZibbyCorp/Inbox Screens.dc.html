@@ -290,45 +290,101 @@
   </sc-if>
 
   <sc-if value="{{ isPrs }}" hint-placeholder-val="{{ false }}">
-    <div data-screen-label="Inbox pull requests" style="display:flex;flex-direction:column;gap:20px">
-      <sc-if value="{{ prFocus }}" hint-placeholder-val="{{ false }}">
-        <div style="display:flex;align-items:center;gap:12px;border:1px solid var(--ink);background:var(--panel);padding:8px 12px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em"><span>SHOWING {{ prFocus }} ONLY</span><button onClick="{{ clearFocus }}" style="all:unset;cursor:pointer;margin-left:auto;color:var(--ink2)" style-hover="color:var(--ink)">SHOW ALL ×</button></div>
-      </sc-if>
-      <sc-for list="{{ prSections }}" as="sec" hint-placeholder-count="2">
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">{{ sec.num }}</span><span style="font-size:18px;font-weight:500">{{ sec.title }}</span><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--ink2)">{{ sec.count }}</span><span style="margin-left:auto;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ sec.note }}</span></div>
-          <div style="border:1px solid var(--line);background:var(--panel)">
-            <sc-for list="{{ sec.rows }}" as="r" hint-placeholder-count="3">
-              <div style="display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);box-shadow:{{ r.rail }}">
-                <div style="display:grid;grid-template-columns:56px minmax(0,1fr) auto auto;gap:14px;align-items:center">
-                  <span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ r.n }}</span>
-                  <span style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.title }}</span>
-                  <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--ink3)">{{ r.meta }}</span>
-                  <a href="{{ r.url }}" target="_blank" style="border:1px solid var(--line2);padding:6px 10px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink);text-decoration:none" style-hover="background:var(--panel2)">OPEN ON GITHUB ↗</a>
+    <div data-screen-label="Inbox pull requests" onClick="{{ prCloseMenu }}" style="border:1px solid var(--line);background:var(--bg);height:calc(100vh - 230px);min-height:620px;display:grid;grid-template-columns:minmax(320px,440px) minmax(0,1fr)">
+      <div style="border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0">
+        <div style="padding:14px 16px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3);display:flex;justify-content:space-between"><span>PULL REQUESTS</span><span>{{ prTotal }}</span></div>
+        <div style="overflow-y:auto;min-height:0;padding-bottom:160px">
+          <sc-for list="{{ prGroups }}" as="g" hint-placeholder-count="5">
+            <div style="display:flex;flex-direction:column">
+              <sc-for list="{{ g.top }}" as="r" hint-placeholder-count="1">
+                  <div style="position:relative;display:flex;flex-direction:column;border-left:4px solid {{ r.c }};background:{{ r.bg }};border-bottom:1px solid var(--line);box-shadow:{{ r.ring }}">
+                    <button onClick="{{ r.onClick }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:6px;padding:12px 14px 8px" style-hover="background:var(--panel2)">
+                      <div style="display:flex;align-items:baseline;gap:8px"><span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2);flex:none">{{ r.n }}</span><span style="font-size:13px;font-weight:500;line-height:1.35;text-wrap:pretty">{{ r.title }}</span></div>
+                      <div style="display:flex;gap:6px;flex-wrap:wrap;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)"><span>{{ r.projU }}</span><span style="color:var(--ink3)">·</span><span>{{ r.auU }}</span><span style="color:var(--ink3)">·</span><span>{{ r.age }}</span></div>
+                      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em"><span style="font-weight:600;color:var(--ink)">{{ r.stU }}</span><sc-if value="{{ r.child }}"><span style="color:var(--ink3)">ON {{ r.baseU }}</span></sc-if><sc-if value="{{ r.blocked }}"><span style="color:var(--ink3)">· WAITS ON {{ r.waitU }}</span></sc-if></div>
+                    </button>
+                    <div style="display:flex;align-items:center;gap:8px;padding:0 14px 12px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">
+                      <sc-if value="{{ r.running }}"><span style="display:flex;align-items:center;gap:6px;color:var(--ink2)"><span style="width:6px;height:6px;background:var(--s-work)"></span>{{ r.runU }}</span></sc-if>
+                      <sc-if value="{{ r.idle }}">
+                        <sc-if value="{{ r.isReview }}"><div style="display:flex"><button onClick="{{ r.onReview }}" style="all:unset;cursor:pointer;background:var(--ink);color:var(--panel);padding:6px 10px;white-space:nowrap">REVIEW · {{ r.modeU }}</button><button onClick="{{ r.onMenu }}" style="all:unset;cursor:pointer;background:var(--ink);color:var(--panel);padding:6px 8px;border-left:1px solid var(--ink2)">▾</button></div></sc-if>
+                        <sc-if value="{{ r.isFix }}"><button onClick="{{ r.onFix }}" style="all:unset;cursor:pointer;background:var(--ink);color:var(--panel);padding:6px 10px;white-space:nowrap">ADDRESS REVIEW COMMENTS</button></sc-if>
+                        <sc-if value="{{ r.isRebase }}"><button onClick="{{ r.onRebase }}" style="all:unset;cursor:pointer;border:1px solid var(--line2);color:var(--ink);padding:5px 9px;white-space:nowrap" style-hover="background:var(--panel2)">REBASE ON {{ r.baseU }}</button></sc-if>
+                      </sc-if>
+                    </div>
+                    <sc-if value="{{ r.menuOpen }}">
+                      <div style="position:absolute;left:14px;top:100%;margin-top:-8px;z-index:5;width:300px;background:var(--panel);border:1px solid var(--ink);box-shadow:0 8px 24px rgba(17,19,18,.12);display:flex;flex-direction:column">
+                        <sc-for list="{{ r.modes }}" as="o" hint-placeholder-count="3">
+                          <button onClick="{{ o.onClick }}" style="all:unset;cursor:pointer;display:flex;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line)" style-hover="background:var(--panel2)"><span style="width:12px;flex:none;font-family:'Geist Mono',monospace;font-size:11px">{{ o.check }}</span><div style="display:flex;flex-direction:column;gap:3px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">{{ o.label }}</span><span style="font-size:12px;line-height:1.35;color:var(--ink2)">{{ o.desc }}</span></div></button>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
+              </sc-for>
+              <sc-if value="{{ g.hasKids }}">
+                <div style="display:flex;flex-direction:column;margin-left:20px;border-left:1px solid var(--line2)">
+                  <sc-for list="{{ g.kids }}" as="r" hint-placeholder-count="2">
+                  <div style="position:relative;display:flex;flex-direction:column;border-left:4px solid {{ r.c }};background:{{ r.bg }};border-bottom:1px solid var(--line);box-shadow:{{ r.ring }}">
+                    <button onClick="{{ r.onClick }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:6px;padding:12px 14px 8px" style-hover="background:var(--panel2)">
+                      <div style="display:flex;align-items:baseline;gap:8px"><span style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2);flex:none">{{ r.n }}</span><span style="font-size:13px;font-weight:500;line-height:1.35;text-wrap:pretty">{{ r.title }}</span></div>
+                      <div style="display:flex;gap:6px;flex-wrap:wrap;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)"><span>{{ r.projU }}</span><span style="color:var(--ink3)">·</span><span>{{ r.auU }}</span><span style="color:var(--ink3)">·</span><span>{{ r.age }}</span></div>
+                      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em"><span style="font-weight:600;color:var(--ink)">{{ r.stU }}</span><sc-if value="{{ r.child }}"><span style="color:var(--ink3)">ON {{ r.baseU }}</span></sc-if><sc-if value="{{ r.blocked }}"><span style="color:var(--ink3)">· WAITS ON {{ r.waitU }}</span></sc-if></div>
+                    </button>
+                    <div style="display:flex;align-items:center;gap:8px;padding:0 14px 12px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">
+                      <sc-if value="{{ r.running }}"><span style="display:flex;align-items:center;gap:6px;color:var(--ink2)"><span style="width:6px;height:6px;background:var(--s-work)"></span>{{ r.runU }}</span></sc-if>
+                      <sc-if value="{{ r.idle }}">
+                        <sc-if value="{{ r.isReview }}"><div style="display:flex"><button onClick="{{ r.onReview }}" style="all:unset;cursor:pointer;background:var(--ink);color:var(--panel);padding:6px 10px;white-space:nowrap">REVIEW · {{ r.modeU }}</button><button onClick="{{ r.onMenu }}" style="all:unset;cursor:pointer;background:var(--ink);color:var(--panel);padding:6px 8px;border-left:1px solid var(--ink2)">▾</button></div></sc-if>
+                        <sc-if value="{{ r.isFix }}"><button onClick="{{ r.onFix }}" style="all:unset;cursor:pointer;background:var(--ink);color:var(--panel);padding:6px 10px;white-space:nowrap">ADDRESS REVIEW COMMENTS</button></sc-if>
+                        <sc-if value="{{ r.isRebase }}"><button onClick="{{ r.onRebase }}" style="all:unset;cursor:pointer;border:1px solid var(--line2);color:var(--ink);padding:5px 9px;white-space:nowrap" style-hover="background:var(--panel2)">REBASE ON {{ r.baseU }}</button></sc-if>
+                      </sc-if>
+                    </div>
+                    <sc-if value="{{ r.menuOpen }}">
+                      <div style="position:absolute;left:14px;top:100%;margin-top:-8px;z-index:5;width:300px;background:var(--panel);border:1px solid var(--ink);box-shadow:0 8px 24px rgba(17,19,18,.12);display:flex;flex-direction:column">
+                        <sc-for list="{{ r.modes }}" as="o" hint-placeholder-count="3">
+                          <button onClick="{{ o.onClick }}" style="all:unset;cursor:pointer;display:flex;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line)" style-hover="background:var(--panel2)"><span style="width:12px;flex:none;font-family:'Geist Mono',monospace;font-size:11px">{{ o.check }}</span><div style="display:flex;flex-direction:column;gap:3px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">{{ o.label }}</span><span style="font-size:12px;line-height:1.35;color:var(--ink2)">{{ o.desc }}</span></div></button>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
+                  </sc-for>
                 </div>
-                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-left:70px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em">
-                  <span style="display:flex;align-items:center;gap:6px;border:1px solid var(--ink);padding:3px 8px;color:var(--ink)">{{ r.blDot }}{{ r.blU }}</span>
-                  <span style="color:var(--ink2);padding:0 4px">{{ r.ciU }}</span>
-                  <span style="color:var(--line2)">·</span>
-                  <span style="color:var(--ink2);padding:0 4px">{{ r.reviewU }}</span>
-                  <sc-if value="{{ r.draft }}"><span style="border:1px dashed var(--line2);padding:2px 6px;color:var(--ink2)">DRAFT</span></sc-if>
-                  <sc-if value="{{ r.hasReason }}"><span style="border:1px solid var(--line);padding:2px 6px;color:var(--ink2)">{{ r.reasonU }}</span></sc-if>
-                  <sc-if value="{{ r.hasItem }}"><button onClick="{{ r.onItem }}" style="all:unset;cursor:pointer;margin-left:auto;color:var(--ink3)" style-hover="color:var(--ink)">ITEM {{ r.itemKey }} →</button></sc-if>
+              </sc-if>
+            </div>
+          </sc-for>
+          <sc-if value="{{ prEmpty }}"><div style="margin:16px;border:1px dashed var(--line2);padding:14px;font-size:13px;color:var(--ink2)">No open pull requests match these filters.</div></sc-if>
+        </div>
+      </div>
+      <sc-if value="{{ prHasSel }}">
+        <div style="display:flex;flex-direction:column;min-width:0;min-height:0">
+          <div style="padding:18px 24px;border-bottom:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;gap:12px;border-top:4px solid {{ pd.c }}">
+            <div style="display:flex;align-items:flex-start;gap:16px">
+              <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">{{ pd.metaU }}</span><span style="font-size:20px;font-weight:500;letter-spacing:-.01em;text-wrap:pretty">{{ pd.title }}</span></div>
+              <a href="{{ pd.url }}" target="_blank" style="flex:none;border:1px solid var(--line2);padding:6px 10px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink);text-decoration:none" style-hover="background:var(--panel2)">OPEN ON GITHUB ↗</a>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em"><span style="border:1px solid var(--ink);padding:3px 7px;font-weight:600">{{ pd.stU }}</span><span style="border:1px solid var(--line2);padding:3px 7px;color:var(--ink2)">{{ pd.ciU }}</span><span style="border:1px solid var(--line2);padding:3px 7px;color:var(--ink2)">{{ pd.reviewU }}</span><sc-if value="{{ pd.hasItem }}"><button onClick="{{ pd.onItem }}" style="all:unset;cursor:pointer;margin-left:auto;color:var(--ink3)" style-hover="color:var(--ink)">ITEM {{ pd.itemKey }} →</button></sc-if></div>
+            <sc-if value="{{ pd.inStack }}">
+              <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px">
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.08em">
+                  <span style="padding:4px 8px;border:1px solid var(--line2);color:var(--ink3)">MAIN</span>
+                  <sc-for list="{{ pd.path }}" as="p" hint-placeholder-count="3"><span style="color:var(--ink3)">←</span><button onClick="{{ p.onClick }}" style="all:unset;cursor:pointer;padding:4px 8px;border:1px solid {{ p.bd }};border-left:3px solid {{ p.c }};background:{{ p.bg }};color:{{ p.ink }}">{{ p.n }}</button></sc-for>
+                  <sc-if value="{{ pd.hasKids }}"><span style="color:var(--ink3);margin-left:8px">NEXT ON TOP:</span><sc-for list="{{ pd.kids }}" as="k" hint-placeholder-count="1"><button onClick="{{ k.onClick }}" style="all:unset;cursor:pointer;padding:4px 8px;border:1px dashed var(--line2);color:var(--ink2)">{{ k.n }}</button></sc-for></sc-if>
                 </div>
+                <span style="font-size:13px;color:var(--ink2);text-wrap:pretty">{{ pd.waitText }}</span>
               </div>
-            </sc-for>
-            <sc-if value="{{ sec.empty }}"><div style="padding:16px 14px;font-size:13px;color:var(--ink2)">{{ sec.emptyText }}</div></sc-if>
+            </sc-if>
+          </div>
+          <div style="padding:16px 24px;display:flex;flex-direction:column;gap:10px;flex:1;min-height:0">
+            <div style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ pd.diffU }}</div>
+            <div style="flex:1;border:1px dashed var(--line2);display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--ink3)">DIFF</div>
           </div>
         </div>
-      </sc-for>
-      <span style="font-size:12px;color:var(--ink2)">Read-only. Merging stays in the merge queue; the inbox never merges. Refreshes on focus and every 60 s.</span>
+      </sc-if>
     </div>
   </sc-if>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { q: '', byEpic: false, showDone: false, showHidden: false, menu: null, pop: null, syncing: false, bannerOff: false,
+  state = { q: '', byEpic: false, showDone: false, showHidden: false, menu: null, pop: null, syncing: false, bannerOff: false, prMenu: null, prMode: {}, prRun: {},
     open: JSON.parse(sessionStorage.getItem('zc-inbox-open') || '{}'),
     f: JSON.parse(localStorage.getItem('zc-inbox-f') || 'null') || { co: [], team: [], proj: [] } };
   searchRef = React.createRef();
@@ -353,7 +409,7 @@ class Component extends DCLogic {
   sync = () => { if (this.state.syncing) return; this.setState({ syncing: true }); this.st = setTimeout(() => { window.ZI.synced = Date.now(); this.setState({ syncing: false }); window.ZC.emit(); }, 1200); };
   renderVals() {
     const Z = window.ZC, B = window.ZB, ZI = window.ZI, go = this.props.go || (() => {});
-    const empty = { filters: [], groups: [], toggles: [], skel: [], prSections: [], ov: { buckets: [], top: [], prBuckets: [], prTop: [] }, dt: { desc: [], log: [], meta: [], scope: [] }, searchRef: this.searchRef };
+    const empty = { filters: [], groups: [], toggles: [], skel: [], prGroups: [], pd: { path: [], kids: [] }, ov: { buckets: [], top: [], prBuckets: [], prTop: [] }, dt: { desc: [], log: [], meta: [], scope: [] }, searchRef: this.searchRef };
     if (!Z || !B || !ZI) return empty;
     const st = this.state, pad = Z.pad, stop = e => e.stopPropagation();
     const parts = (this.props.route || 'inbox/overview').split('/'), sub = parts[1] || 'overview';
@@ -441,16 +497,34 @@ class Component extends DCLogic {
 
     // prs
     const focusN = sub === 'pull-requests' && parts[2] ? +parts[2] : null;
-    const prRow = p => ({ n: '#' + p.n, title: p.title, meta: p.repo.toUpperCase() + ' · ' + p.author.toUpperCase() + ' · ' + ZI.ago(p.age), url: p.url,
-      blDot: B.dot(React, BL[p.blocker][0], 7), blU: BL[p.blocker][1], ciU: 'CI ' + CI[p.ci] + ' ' + p.ci.toUpperCase(), reviewU: 'REVIEW · ' + REV[p.review], draft: p.draft,
-      hasReason: p.bucket === 'to-review', reasonU: p.reason === 'team' ? 'VIA TEAM ' + (p.reviewTeam || '').toUpperCase() : 'DIRECTLY',
-      rail: p.n === focusN ? 'inset 2px 0 0 var(--ink)' : 'none',
-      hasItem: !!p.item, itemKey: p.item ? (ZI.items.find(i => i.id === p.item) || {}).key : '', onItem: () => { const i = ZI.items.find(x => x.id === p.item); i && go('inbox/issues/' + i.project + '/' + i.id); } });
-    const fo = arr => focusN ? arr.filter(p => p.n === focusN) : arr;
-    const prSections = [
-      { num: '01 —', title: 'To review', count: pad(fo(toRev).length), note: 'REQUESTED FROM YOU OR YOUR TEAM', rows: fo(toRev).map(prRow), empty: !fo(toRev).length, emptyText: 'No review is waiting on you.' },
-      { num: '02 —', title: 'Mine — push to merged', count: pad(fo(mine).length), note: 'OPEN PRS IN ZIBBY PROJECTS · SORTED BY BLOCKER', rows: fo(mine).map(prRow), empty: !fo(mine).length, emptyText: 'You have no open pull requests.' }
-    ];
+    const TS = p => p.draft ? ['var(--line2)', 'DRAFT'] : p.bucket === 'to-review' && p.blocker !== 'ready' ? ['var(--s-think)', p.reason === 'team' ? 'TEAM REVIEW · ' + (p.reviewTeam || '').toUpperCase() : 'REVIEW REQUESTED'] : ({ 'ci-failing': ['var(--s-err)', 'CI FAILING'], changes: ['var(--s-block)', 'CHANGES REQUESTED'], conflict: ['var(--s-err)', 'MERGE CONFLICT'], awaiting: ['var(--s-idle)', 'AWAITING REVIEW'], ready: ['var(--s-work)', 'APPROVED'] })[p.blocker];
+    const MODES = [['quick', 'QUICK', 'Agent reads the diff and flags risky spots. About 2 min.'], ['deep', 'THOROUGH', 'Line by line. Runs tests and checks edge cases.'], ['browser', 'THOROUGH + BROWSER', 'Thorough, then clicks through the change in a browser and attaches screenshots.']];
+    const inF = new Set(prsF.map(p => p.n)), rootOf = p => { const a = ZI.anc(p).filter(n => inF.has(n)); return a.length ? a[0] : p.n; };
+    const rank = p => p.bucket === 'to-review' && p.blocker !== 'ready' ? -1 : ZI.BL_ORDER.indexOf(p.blocker);
+    const grpRaw = prsF.filter(p => rootOf(p) === p.n).map(r => ({ r, kids: prsF.filter(p => p.n !== r.n && rootOf(p) === r.n).sort((a, b) => a.n - b.n) }));
+    grpRaw.sort((a, b) => Math.min(...[a.r].concat(a.kids).map(rank)) - Math.min(...[b.r].concat(b.kids).map(rank)) || b.r.age - a.r.age);
+    const selN = focusN && inF.has(focusN) ? focusN : grpRaw.length ? grpRaw[0].r.n : null;
+    const prCard = p => { const w = ZI.waits(p), ts = TS(p), on = selN === p.n, isReview = p.bucket === 'to-review' && !p.draft, isFix = !isReview && p.blocker === 'changes', md = st.prMode[p.n] || 'quick', run = st.prRun[p.n], baseU = p.base === 'main' ? 'MAIN' : '#' + p.base;
+      const act = label => e => { stop(e); this.setState({ prRun: { ...st.prRun, [p.n]: label }, prMenu: null }); }, mU = MODES.find(m => m[0] === md)[1];
+      return { n: '#' + p.n, title: p.title, c: ts[0], stU: ts[1], projU: p.project.toUpperCase(), auU: p.author.toUpperCase(), age: ZI.ago(p.age),
+        bg: on ? 'var(--panel2)' : 'var(--panel)', ring: on ? 'inset 0 0 0 1px var(--ink)' : 'none', onClick: () => { this.setState({ prMenu: null }); go('inbox/pull-requests/' + p.n); },
+        child: p.base !== 'main', baseU, blocked: w.length > 0, waitU: w.map(x => '#' + x).join(', '),
+        running: !!run, runU: run, idle: !run, isReview, isFix, isRebase: !isReview && !isFix, modeU: mU, menuOpen: st.prMenu === p.n,
+        onMenu: e => { stop(e); this.setState({ prMenu: st.prMenu === p.n ? null : p.n }); },
+        onReview: act(mU + ' REVIEW RUNNING'), onFix: act('AGENT ADDRESSING COMMENTS'), onRebase: act('REBASING ON ' + baseU),
+        modes: MODES.map(([k, l, d]) => ({ label: l, desc: d, check: md === k ? '✓' : '', onClick: e => { stop(e); this.setState({ prMode: { ...st.prMode, [p.n]: k }, prMenu: null }); } })) }; };
+    const prGroups = grpRaw.map(g => ({ top: [prCard(g.r)], kids: g.kids.map(prCard), hasKids: g.kids.length > 0 }));
+    const sp = selN ? ZI.prByN(selN) : null;
+    let pd = { path: [], kids: [] };
+    if (sp) { const ts = TS(sp), w = ZI.waits(sp), path = ZI.anc(sp).concat([sp.n]), kids = ZI.prs.filter(p => p.base === sp.n), toPr = n => () => go('inbox/pull-requests/' + n);
+      pd = { metaU: sp.repo.toUpperCase() + ' · #' + sp.n + ' · ' + sp.author.toUpperCase() + ' · ' + ZI.ago(sp.age), title: sp.title, url: sp.url, c: ts[0], stU: ts[1],
+        ciU: 'CI ' + CI[sp.ci] + ' ' + sp.ci.toUpperCase(), reviewU: 'REVIEW · ' + REV[sp.review],
+        hasItem: !!sp.item, itemKey: sp.item ? (ZI.items.find(i => i.id === sp.item) || {}).key : '', onItem: () => { const i = ZI.items.find(x => x.id === sp.item); i && go('inbox/issues/' + i.project + '/' + i.id); },
+        inStack: path.length > 1 || kids.length > 0,
+        path: path.map(n => { const q = ZI.prByN(n), me = n === sp.n; return { n: '#' + n, c: TS(q)[0], onClick: toPr(n), bd: me ? 'var(--ink)' : 'var(--line2)', bg: me ? 'var(--ink)' : 'var(--panel)', ink: me ? 'var(--panel)' : 'var(--ink)' }; }),
+        kids: kids.map(k => ({ n: '#' + k.n, onClick: toPr(k.n) })), hasKids: kids.length > 0,
+        waitText: w.length ? 'Merges after ' + w.map(n => '#' + n + ' (' + TS(ZI.prByN(n))[1].toLowerCase() + ')').join(' and ') + '.' : sp.base === 'main' ? 'Bottom of the stack. Targets main.' : 'Everything below is approved.',
+        diffU: 'DIFF · VS ' + (sp.base === 'main' ? 'MAIN' : '#' + sp.base) }; }
 
     // detail
     let dt = { desc: [], log: [], meta: [], scope: [] };
@@ -497,7 +571,7 @@ class Component extends DCLogic {
       emptyNote: q ? 'No item matches this search.' : 'Everything in your scope is running or done.', showDoneNow: () => this.setState({ showDone: true }),
       closeMenu: e => { e && e.stopPropagation(); this.setState({ menu: null }); },
       isItem: showList && view === 'item' && !!it, dt, goApprovals: () => go('policy/approvals'),
-      isPrs: showList && view === 'prs', prSections, prFocus: focusN ? '#' + focusN : '', clearFocus: () => go('inbox/pull-requests')
+      isPrs: showList && view === 'prs', prGroups, prTotal: pad(prsF.length), prEmpty: !prsF.length, prHasSel: !!sp, pd, prCloseMenu: () => st.prMenu != null && this.setState({ prMenu: null })
     };
   }
 }
