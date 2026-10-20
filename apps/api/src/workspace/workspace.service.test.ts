@@ -607,3 +607,81 @@ describe("WorkspaceService.pushRebased (todo-11)", () => {
     await expect(push()).rejects.toThrow(/uncommitted/);
   });
 });
+
+describe("WorkspaceService.pushFastForward (PR inbox address-comments)", () => {
+  let root: string;
+  let origin: string;
+  let op: string;
+  let wt: string;
+  let featSha: string;
+  let fixSha: string;
+  const svc = new WorkspaceService(fakeLogger as never);
+  const commit = async (dir: string, file: string, body: string): Promise<string> => {
+    await fs.writeFile(path.join(dir, file), body, "utf8");
+    await git(dir, "add", "-A");
+    await git(dir, "commit", "-m", file);
+    return git(dir, "rev-parse", "HEAD");
+  };
+  const remoteFeat = () => git(origin, "rev-parse", "refs/heads/feat");
+  const push = (over: Partial<{ head: string; expectedSha: string; sha: string }> = {}) =>
+    svc.pushFastForward({ cwd: wt, head: "feat", expectedSha: featSha, sha: fixSha, ...over });
+
+  beforeEach(async () => {
+    root = await fs.mkdtemp(path.join(os.tmpdir(), "zibby-ff-"));
+    origin = path.join(root, "origin.git");
+    op = path.join(root, "op");
+    wt = path.join(root, "wt");
+    await fs.mkdir(origin);
+    await initBareOrigin(origin);
+    await cloneAndCommit(origin, op, "base");
+    await git(op, "checkout", "-b", "feat");
+    featSha = await commit(op, "feat.txt", "feat\n");
+    await git(op, "push", "origin", "feat");
+    await exec("git", ["clone", origin, wt]);
+    await git(wt, "config", "user.email", "test@zibby.local");
+    await git(wt, "config", "user.name", "ZIBBY Test");
+    await git(wt, "checkout", "--detach", featSha);
+    fixSha = await commit(wt, "fix.txt", "review fix\n");
+  });
+
+  afterEach(async () => {
+    await fs.rm(root, { recursive: true, force: true });
+  });
+
+  it("fast-forwards the PR head to the new commit", async () => {
+    expect(await push()).toBe(fixSha);
+    expect(await remoteFeat()).toBe(fixSha);
+  });
+
+  it("refuses when the clicked head is not an ancestor (history rewritten)", async () => {
+    await git(wt, "checkout", "--detach", "origin/main");
+    const rewritten = await commit(wt, "other.txt", "other\n");
+    await expect(push({ sha: rewritten })).rejects.toThrow(/not on top of the clicked head/);
+    expect(await remoteFeat()).toBe(featSha);
+  });
+
+  it("refuses when the remote moved meanwhile (non-fast-forward), never forces", async () => {
+    const theirs = await commit(op, "theirs.txt", "x\n");
+    await git(op, "push", "origin", "feat");
+    await expect(push()).rejects.toThrow();
+    expect(await remoteFeat()).toBe(theirs);
+  });
+
+  it("refuses a dirty worktree", async () => {
+    await fs.appendFile(path.join(wt, "feat.txt"), "dirty\n");
+    await expect(push()).rejects.toThrow(/uncommitted changes/);
+    expect(await remoteFeat()).toBe(featSha);
+  });
+
+  it("refuses no new commits, a HEAD other than sha, and the default branch", async () => {
+    await expect(push({ sha: featSha })).rejects.toThrow(/no new commits/);
+    await expect(push({ sha: "f".repeat(40) })).rejects.toThrow(/is not the approved head/);
+    await expect(push({ head: "main" })).rejects.toThrow(/default branch/);
+    expect(await remoteFeat()).toBe(featSha);
+  });
+
+  it("refuses an option-like head and a non-hex sha", async () => {
+    await expect(push({ head: "--force" })).rejects.toThrow(/invalid head/);
+    await expect(push({ expectedSha: "HEAD" })).rejects.toThrow(/40-char sha/);
+  });
+});

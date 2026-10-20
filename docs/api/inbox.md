@@ -175,6 +175,8 @@ note?, replies?, replied?, repliesNote?`), `PrThreadReply` (`{ threadId: "PRRT_â
 `InboxPr.addressComments { taskId, state }` (same states as `rebase`) and the
 `pr-address-comments` approval kind (fast-forward push + thread replies; approved on the spot
 for `Addressed: all`, otherwise Tier-3). The handler is a stub returning 422 until the service lands.
+The push primitive exists: `WorkspaceService.pushFastForward` (fast-forward only, never force,
+see `./workspace.md`).
 
 ## Rebase (`POST /api/inbox/prs/rebase`)
 

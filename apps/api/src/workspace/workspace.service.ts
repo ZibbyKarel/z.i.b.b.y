@@ -528,6 +528,75 @@ export class WorkspaceService {
     return sha;
   }
 
+  /**
+   * PR inbox redesign — push commits an agent added on top of a PR head (address review
+   * comments). Fast-forward only: the clicked head must be an ancestor of HEAD and the push is
+   * a plain `git push` (no force, no `+` refspec), so a remote that moved meanwhile is rejected
+   * by git itself. Refuses the default branch, a dirty worktree, an in-progress rebase/merge, a
+   * push with no new commits and a HEAD other than the approved `sha`. Returns the pushed sha;
+   * throws an Error with the reason.
+   */
+  async pushFastForward(opts: {
+    cwd: string;
+    head: string;
+    expectedSha: string;
+    sha: string;
+  }): Promise<string> {
+    const { cwd, head, expectedSha, sha } = opts;
+    const git = async (args: string[], timeout = GIT_TIMEOUT_MS): Promise<string> =>
+      (await exec("git", args, { cwd, timeout, maxBuffer: 64 * 1024 * 1024 })).stdout.trim();
+    const ok = (args: string[]) =>
+      git(args).then(
+        () => true,
+        () => false,
+      );
+    if (head.startsWith("-") || !(await ok(["check-ref-format", "--branch", head]))) {
+      throw new Error(`invalid head branch name "${head}"`);
+    }
+    for (const [label, value] of [
+      ["expectedSha", expectedSha],
+      ["sha", sha],
+    ] as const) {
+      if (!/^[0-9a-f]{40}$/.test(value)) {
+        throw new Error(`${label} is not a full 40-char sha: "${value}"`);
+      }
+    }
+    const defaultBranch = await git(["symbolic-ref", "--short", "refs/remotes/origin/HEAD"]).then(
+      (ref) => ref.replace(/^origin\//, ""),
+      () => null,
+    );
+    if (head === defaultBranch) throw new Error(`refusing to push the default branch "${head}"`);
+    for (const marker of ["rebase-merge", "rebase-apply", "MERGE_HEAD"]) {
+      const file = path.resolve(cwd, await git(["rev-parse", "--git-path", marker]));
+      if (
+        await fs.stat(file).then(
+          () => true,
+          () => false,
+        )
+      ) {
+        throw new Error("a rebase or merge is still in progress in the worktree");
+      }
+    }
+    if (await git(["status", "--porcelain", "--untracked-files=no"])) {
+      throw new Error("uncommitted changes in the worktree");
+    }
+    if (sha === expectedSha) throw new Error("no new commits on top of the PR head");
+    const current = await git(["rev-parse", "HEAD"]);
+    if (current !== sha) {
+      throw new Error(
+        `worktree HEAD ${current.slice(0, 9)} is not the approved head ${sha.slice(0, 9)}`,
+      );
+    }
+    if (!(await ok(["merge-base", "--is-ancestor", expectedSha, sha]))) {
+      throw new Error(
+        `HEAD is not on top of the clicked head ${expectedSha.slice(0, 9)}; refusing to rewrite the PR`,
+      );
+    }
+    await git(["push", "origin", `${sha}:refs/heads/${head}`], GIT_NETWORK_TIMEOUT_MS);
+    this.log?.info("pr head fast-forwarded", { cwd, head, sha });
+    return sha;
+  }
+
   /** `git patch-id --stable` of a diff on stdin; "" for an empty diff. */
   private patchIdOf(diff: string, cwd: string): Promise<string> {
     return new Promise((resolve, reject) => {

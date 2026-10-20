@@ -81,6 +81,13 @@ origin <branch>` then `gh pr create`. This is the actual outward, Tier-3
    `rebasedSha` (40-hex, the HEAD ZIBBY verified when parking the approval) the
    worktree HEAD must still equal it, and `<rebasedSha>:refs/heads/<head>` is pushed
    instead of `HEAD:`. Returns the pushed sha, throws the reason.
+   **`pushFastForward({ cwd, head, expectedSha, sha })`** (PR inbox address-comments) —
+   pushes `<sha>:refs/heads/<head>` with a plain `git push`: **never force**, so a remote
+   head that moved since the click is rejected by git as non-fast-forward. Refuses an
+   invalid branch name or a non-40-hex sha, the remote default branch, an in-progress
+   rebase/merge, dirty tracked files, `sha === expectedSha` (no new commits), a worktree
+   HEAD other than `sha`, and an `expectedSha` (the clicked head) that is not an ancestor of
+   `sha`. Returns the pushed sha, throws the reason.
    **`rebaseFacts({ cwd, base, headSha })`** — what the rebase worktree really holds:
    `{ sha, log, stat }` from `rev-parse HEAD`, `log --oneline origin/<base>..HEAD` and
    `diff --stat <headSha> HEAD`; throws when HEAD is unreadable, log/stat best-effort.
