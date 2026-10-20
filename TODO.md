@@ -19,3 +19,4 @@
 16. [x] detail tasku - pravý panel s detaily - názvy firmy, projektu, týmu, musejí být odkazy + nezobrazuj zdroj a epic (epic není entita u nás v systému) (main@64e124a6)
 17. [x] pokud při rebase PR nejsou konflikty není potřeba nic řešit. Tento agent má být rychlý. Pokud konflikty nastanou, vyřeši je a pushne do větve. Projede jen rychlé checky. Není třeba kompletní otestování celé větve na to je pak CI v githubu (main@633b1214)
 18. [x] úkoly ve frontě bych měl být schopen "stopnout" -> odstraní se z fronty a nikdy se tak nenastartují (main@f2cc3686)
+19. [ ] Guard the approvals API so agents cannot decide approvals: today an agent with Bash can curl localhost:3333/api/approvals/:id/approve or /answer and bypass the locked ask:human floor (Laws 1 & 4). Require an operator-only credential agent processes never see, and block agent calls to the approvals API in the hook. Found in run-detail backend review 2026-10-20.
