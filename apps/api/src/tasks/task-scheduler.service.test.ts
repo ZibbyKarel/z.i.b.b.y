@@ -2393,6 +2393,26 @@ describe("Task 3c — project-capacity lock closes the budget check→record rac
     expect(agentRunner.start).toHaveBeenCalledTimes(1);
   });
 
+  it("tick skips a task cancelled after its list() snapshot", async () => {
+    makeService({ id: PROJECT_ID, name: "Proj" });
+    const now = Date.now();
+    const task = await storage.create(
+      { text: "scheduled A", title: "A", scheduledAt: now - 1000 },
+      new Date(now).toISOString(),
+      PROJECT_ID,
+    );
+    // The snapshot still says `scheduled`; the cancel lands before tick takes the lock.
+    vi.spyOn(storage, "list").mockImplementation(async () => {
+      const snapshot = [task];
+      await storage.cancel(task.id);
+      return snapshot;
+    });
+
+    expect(await service.tick(new Date(now))).toEqual([]);
+    expect(agentRunner.start).not.toHaveBeenCalled();
+    expect((await storage.get(task.id)).status).toBe("cancelled");
+  });
+
   it("T7 — two overlapping timer-driven ticks: the second is skipped while the first is in flight, so a due task is dispatched exactly once", async () => {
     // No fuse cap here — this regression is about TickingWatcherBase's
     // skip-if-in-flight guard on the timer-driven path itself (two `setInterval`
@@ -2698,5 +2718,23 @@ describe("staffing-driven capacity", () => {
     expect(workflowRunner.start).toHaveBeenCalledTimes(1);
     const statuses = [(await storage.get(a.task.id)).status, (await storage.get(b.task.id)).status];
     expect(statuses.sort()).toEqual(["dispatched", "queued"]);
+  });
+
+  it("a queued task cancelled before the drain never dispatches", async () => {
+    employees = [hire("e1")];
+    makeService();
+    const first = await service.createTask({ text: "do A", title: "A" });
+    const second = await service.createTask({ text: "do B", title: "B" });
+    if (first.outcome !== "dispatched" || second.outcome !== "scheduled") {
+      throw new Error("expected dispatched + queued");
+    }
+
+    await service.cancel(second.task.id);
+    expect((await storage.get(second.task.id)).status).toBe("cancelled");
+
+    agentListener?.(agentRun({ runId: first.runRef, status: "done" })); // frees the employee → drain
+    await new Promise((r) => setTimeout(r, 50));
+    expect(agentRunner.start).toHaveBeenCalledTimes(1);
+    expect((await storage.get(second.task.id)).status).toBe("cancelled");
   });
 });

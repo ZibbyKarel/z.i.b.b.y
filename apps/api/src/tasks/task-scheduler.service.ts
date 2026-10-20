@@ -670,7 +670,8 @@ export class TaskSchedulerService
       await this.approvals.reject(task.approvalId).catch(() => {});
       return this.storage.get(id);
     }
-    return this.storage.cancel(id);
+    // Under the project-capacity lock so it serializes with a dispatch in flight.
+    return this.withCapacityLock(task.projectId, () => this.storage.cancel(id));
   }
 
   /** Fire every scheduled task whose time has come; returns the fired ids. */
@@ -690,9 +691,12 @@ export class TaskSchedulerService
           // the heartbeat concurrently with a create/drain/release for the same
           // project raced the same check→record window findings #8/#9 are about. Same
           // lock, same fix — matches the `drainQueues` wrap shape.
-          const result = await this.withCapacityLock(task.projectId, () =>
-            this.attemptDispatch(task, project, now, { skipBudget: false }),
-          );
+          const result = await this.withCapacityLock(task.projectId, async () => {
+            // A cancel may land between the list() snapshot and this lock.
+            const current = await this.storage.get(task.id).catch(() => null);
+            if (current?.status !== "scheduled") return null;
+            return this.attemptDispatch(current, project, now, { skipBudget: false });
+          });
           if (result === "dispatched") fired.push(task.id);
         } catch (err) {
           // M8: a THROWN dispatch error is transient (infra) — retry it with backoff
