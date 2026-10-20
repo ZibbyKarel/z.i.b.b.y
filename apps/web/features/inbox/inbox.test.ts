@@ -9,7 +9,6 @@ import {
   elapsed,
   groupByEpic,
   groupPrStacks,
-  groupPrsBySection,
   hiddenCount,
   inboxCounts,
   issueChains,
@@ -19,7 +18,6 @@ import {
   passesFilters,
   prAncestors,
   prBaseLabel,
-  prChains,
   prChildren,
   prState,
   prWaits,
@@ -229,28 +227,6 @@ describe("pull requests", () => {
     expect(toReview.map((p) => p.number)).toEqual([4]);
   });
 
-  it("groups by server-computed section, every section present, sorted within", () => {
-    const groups = groupPrsBySection(
-      [
-        makePr({ number: 1, section: "ready-to-merge" }),
-        makePr({ number: 2, section: "needs-action", blocker: "ci-failing" }),
-        makePr({ number: 3, section: "needs-action", blocker: "merge-conflict" }),
-        makePr({ number: 4, bucket: "to-review", section: "needs-team-review" }),
-      ],
-      EMPTY_INBOX_FILTERS,
-    );
-    expect(Object.keys(groups)).toEqual([
-      "needs-your-review",
-      "needs-team-review",
-      "waiting",
-      "needs-action",
-      "ready-to-merge",
-    ]);
-    expect(groups["needs-action"].map((p) => p.number)).toEqual([2, 3]);
-    expect(groups["needs-your-review"]).toEqual([]);
-    expect(groups["needs-team-review"].map((p) => p.number)).toEqual([4]);
-  });
-
   it("applies the shared filters", () => {
     const prs = [makePr({ number: 1 }), makePr({ number: 2, projectId: "web" })];
     expect(splitPrs(prs, { ...EMPTY_INBOX_FILTERS, project: ["web"] }).mine).toHaveLength(1);
@@ -313,44 +289,6 @@ describe("elapsed", () => {
     expect(elapsed("2026-01-10T11:56:00.000Z", now)).toEqual({ unit: "min", n: 4 });
     expect(elapsed("2026-01-10T07:00:00.000Z", now)).toEqual({ unit: "h", n: 5 });
     expect(elapsed("2026-01-08T12:00:00.000Z", now)).toEqual({ unit: "d", n: 2 });
-  });
-});
-
-describe("prChains", () => {
-  it("links a PR whose base is another PR's head, one level each way", () => {
-    const a = pr(1, { headRef: "feat-a", baseRef: "main" });
-    const b = pr(2, { headRef: "feat-b", baseRef: "feat-a" });
-    const c = pr(3, { headRef: "feat-c", baseRef: "feat-b" });
-    const chains = prChains([a, b, c]);
-    expect(chains.get(a.url)).toEqual({ on: [], by: [b] });
-    expect(chains.get(b.url)).toEqual({ on: [a], by: [c] });
-    expect(chains.get(c.url)).toEqual({ on: [b], by: [] });
-  });
-
-  it("never links across repos, without refs, or a PR to itself", () => {
-    const a = pr(1, { headRef: "feat-a", baseRef: "main" });
-    const otherRepo = pr(2, {
-      repo: "acme/web",
-      url: "https://github.com/acme/web/pull/2",
-      baseRef: "feat-a",
-    });
-    const noRefs = pr(3); // old payload / fork head: undefined must not match undefined
-    const noHead = pr(4, { baseRef: "main" });
-    const self = pr(5, { headRef: "loop", baseRef: "loop" });
-    expect(prChains([a, otherRepo, noRefs, noHead, self]).size).toBe(0);
-  });
-
-  it("lists every child of one parent, and survives a two-PR cycle", () => {
-    const a = pr(1, { headRef: "feat-a", baseRef: "main" });
-    const b = pr(2, { headRef: "feat-b", baseRef: "feat-a" });
-    const c = pr(3, { headRef: "feat-c", baseRef: "feat-a" });
-    expect(prChains([a, b, c]).get(a.url)).toEqual({ on: [], by: [b, c] });
-
-    const x = pr(4, { headRef: "y", baseRef: "x" });
-    const y = pr(5, { headRef: "x", baseRef: "y" });
-    const chains = prChains([x, y]);
-    expect(chains.get(x.url)).toEqual({ on: [y], by: [y] });
-    expect(chains.get(y.url)).toEqual({ on: [x], by: [x] });
   });
 });
 

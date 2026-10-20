@@ -1,16 +1,15 @@
 import type { InboxPr } from "@zibby/contracts";
 import { within } from "@testing-library/react";
 import {
-  AccordionTestId,
   DropDownButtonTestId,
   GridTestId,
+  IndentRailTestId,
   TypographyTestId,
 } from "@zibby/design-system";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, renderWithProviders, screen } from "../../../test/render";
 import { PrDetailTestId } from "../components/PrDetail";
 import { PrActionsTestId } from "../components/PrActions";
-import { ChainLinksTestId } from "../components/ChainLinks";
 import { PrRowTestId } from "../components/PrRow";
 import { InboxPrsScreen, InboxPrsScreenTestId } from "./InboxPrsScreen";
 
@@ -69,6 +68,7 @@ const okDiff = {
   refetch: vi.fn(),
 };
 const urlOf = (n: number) => `https://github.com/acme/api/pull/${n}`;
+const toReview = { bucket: "to-review", section: "needs-your-review" } as const;
 
 function pr(number: number, over: Partial<InboxPr>): InboxPr {
   return {
@@ -91,158 +91,147 @@ function pr(number: number, over: Partial<InboxPr>): InboxPr {
   };
 }
 
-const sectionId = (s: string) => `${InboxPrsScreenTestId.Section}-${s}`;
-const headerOf = (s: string) =>
-  within(screen.getByTestId(sectionId(s))).getByTestId(AccordionTestId.Summary);
+beforeEach(() => {
+  hooks.diffQuery = okDiff;
+});
 
-describe("InboxPrsScreen sections", () => {
+describe("InboxPrsScreen list", () => {
   afterEach(() => {
     window.sessionStorage.clear();
     hooks.search = "";
-    hooks.reviewPending = false;
-    hooks.diffQuery = okDiff;
     hooks.replace.mockClear();
     vi.restoreAllMocks();
     review.mockReset();
-    merge.mockClear();
-    rebase.mockReset();
   });
 
-  it("hides every empty section", () => {
-    hooks.prs = [pr(1, { section: "ready-to-merge" })];
+  it("groups a stack under its root, kids indented and sorted by number", () => {
+    hooks.prs = [
+      pr(3, { headRef: "c", baseRef: "b" }),
+      pr(1, { headRef: "a", baseRef: "main" }),
+      pr(2, { headRef: "b", baseRef: "a" }),
+      pr(9, {}),
+    ];
     renderWithProviders(<InboxPrsScreen />);
-    expect(screen.getByTestId(sectionId("ready-to-merge"))).toHaveTextContent("Připraveno k merge");
-    for (const s of ["needs-your-review", "needs-team-review", "waiting", "needs-action"]) {
-      expect(screen.queryByTestId(sectionId(s))).not.toBeInTheDocument();
-    }
-    expect(screen.queryByTestId(InboxPrsScreenTestId.Empty)).not.toBeInTheDocument();
+    const group = screen.getByTestId(`${InboxPrsScreenTestId.Group}-1`);
+    const rail = within(group).getByTestId(IndentRailTestId.Root);
+    expect(
+      within(rail)
+        .getAllByTestId(/^inbox-pr-row-/)
+        .map((r) => r.dataset.testid),
+    ).toEqual(["inbox-pr-row-2", "inbox-pr-row-3"]);
+    expect(screen.getByTestId(`${InboxPrsScreenTestId.Group}-9`)).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId(`${InboxPrsScreenTestId.Group}-9`)).queryByTestId(
+        IndentRailTestId.Root,
+      ),
+    ).toBeNull();
   });
 
-  it("shows an empty state when no section has a PR", () => {
+  it("the list header counts the visible PRs, zero-padded", () => {
+    hooks.prs = [pr(1, {}), pr(2, {})];
+    renderWithProviders(<InboxPrsScreen />);
+    expect(screen.getByTestId(InboxPrsScreenTestId.List)).toHaveTextContent("Pull requesty");
+    expect(screen.getByTestId(InboxPrsScreenTestId.Count)).toHaveTextContent("02");
+  });
+
+  it("a card shows one state label, ON #parent and WAITS ON the unready ancestors", () => {
+    hooks.prs = [
+      pr(1, { headRef: "a", baseRef: "main", blocker: "changes-requested" }),
+      pr(2, { headRef: "b", baseRef: "a" }),
+    ];
+    renderWithProviders(<InboxPrsScreen />);
+    const kid = screen.getByTestId(`${PrRowTestId.Root}-2`);
+    expect(within(kid).getByTestId(PrRowTestId.State)).toHaveTextContent(/čeká na review/i);
+    expect(within(kid).getByTestId(PrRowTestId.On)).toHaveTextContent("#1");
+    expect(within(kid).getByTestId(PrRowTestId.Waits)).toHaveTextContent("#1");
+    const root = screen.getByTestId(`${PrRowTestId.Root}-1`);
+    expect(within(root).getByTestId(PrRowTestId.State)).toHaveTextContent(/požadovány změny/i);
+    expect(within(root).queryByTestId(PrRowTestId.On)).toBeNull();
+    expect(within(root).queryByTestId(PrRowTestId.Waits)).toBeNull();
+  });
+
+  it("a kid whose parent is filtered out is its own group and still says ON #parent", () => {
+    hooks.prs = [
+      pr(1, { headRef: "a", baseRef: "main", projectId: "web" }),
+      pr(2, { headRef: "b", baseRef: "a" }),
+    ];
+    hooks.search = "project=api";
+    renderWithProviders(<InboxPrsScreen />);
+    expect(screen.queryByTestId(`${PrRowTestId.Root}-1`)).toBeNull();
+    expect(screen.getByTestId(`${InboxPrsScreenTestId.Group}-2`)).toBeInTheDocument();
+    const kid = screen.getByTestId(`${PrRowTestId.Root}-2`);
+    expect(within(kid).getByTestId(PrRowTestId.On)).toHaveTextContent("#1");
+    expect(screen.getByTestId(InboxPrsScreenTestId.Count)).toHaveTextContent("01");
+  });
+
+  it("selects the first group's root when no ?pr= is set, and when ?pr= is unknown", () => {
+    hooks.prs = [pr(5, { blocker: "awaiting-review" }), pr(6, { blocker: "ci-failing" })];
+    const first = renderWithProviders(<InboxPrsScreen />);
+    expect(screen.getByTestId(PrDetailTestId.Root)).toHaveTextContent("PR 6");
+    expect(
+      within(screen.getByTestId(`${PrRowTestId.Root}-6`)).getByTestId(PrRowTestId.Title),
+    ).toHaveAttribute("aria-current", "true");
+    first.unmount();
+    hooks.search = `pr=${encodeURIComponent(urlOf(99))}`;
+    renderWithProviders(<InboxPrsScreen />);
+    expect(screen.getByTestId(PrDetailTestId.Root)).toHaveTextContent("PR 6");
+    expect(hooks.replace).not.toHaveBeenCalled();
+  });
+
+  it("?pr= of a filtered-out PR still opens it", () => {
+    hooks.prs = [pr(1, { projectId: "web" }), pr(2, {})];
+    hooks.search = `project=api&pr=${encodeURIComponent(urlOf(1))}`;
+    renderWithProviders(<InboxPrsScreen />);
+    expect(screen.queryByTestId(`${PrRowTestId.Root}-1`)).toBeNull();
+    expect(screen.getByTestId(PrDetailTestId.Root)).toHaveTextContent("PR 1");
+  });
+
+  it("no PRs → empty state and no detail", () => {
     hooks.prs = [];
     renderWithProviders(<InboxPrsScreen />);
     expect(screen.getByTestId(InboxPrsScreenTestId.Empty)).toHaveTextContent("Žádné pull requesty");
-    expect(screen.queryByTestId(sectionId("needs-your-review"))).not.toBeInTheDocument();
+    expect(screen.queryByTestId(PrDetailTestId.Root)).toBeNull();
   });
 
-  it("renders sections in display order", () => {
-    hooks.prs = [
-      pr(5, { section: "ready-to-merge" }),
-      pr(4, { section: "needs-action" }),
-      pr(3, { section: "waiting" }),
-      pr(2, { section: "needs-team-review", bucket: "to-review" }),
-      pr(1, { section: "needs-your-review", bucket: "to-review" }),
-    ];
-    renderWithProviders(<InboxPrsScreen />);
-    const order = screen
-      .getAllByTestId(new RegExp(`^${InboxPrsScreenTestId.Section}-`))
-      .map((el) => el.getAttribute("data-testid"));
-    expect(order).toEqual(
-      ["needs-your-review", "needs-team-review", "waiting", "needs-action", "ready-to-merge"].map(
-        sectionId,
-      ),
-    );
-  });
-
-  it("card shows review/CI badges only when they say something, and a click selects it", () => {
-    const open = vi.spyOn(window, "open").mockImplementation(() => null);
-    hooks.prs = [
-      pr(1, { section: "needs-your-review", bucket: "to-review", review: "none" }),
-      pr(2, { section: "ready-to-merge", review: "approved" }),
-    ];
-    renderWithProviders(<InboxPrsScreen />);
-    const row = (n: number) => screen.getByTestId(`${PrRowTestId.Root}-${n}`);
-    expect(within(row(1)).queryByTestId(PrRowTestId.Review)).toBeNull();
-    expect(within(row(2)).getByTestId(PrRowTestId.Review)).toHaveTextContent(/approved|schváleno/i);
-    expect(within(row(2)).getByTestId(PrRowTestId.Ci)).toBeInTheDocument();
-
-    fireEvent.click(within(row(2)).getByTestId(PrRowTestId.Meta));
-    expect(hooks.replace).toHaveBeenCalledWith(
-      `/inbox/pull-requests?pr=${encodeURIComponent(urlOf(2))}`,
-    );
-    expect(open).not.toHaveBeenCalled();
-    fireEvent.click(within(row(2)).getByTestId(PrActionsTestId.DeleteBranch));
-    expect(open).not.toHaveBeenCalled();
-  });
-
-  it("offers code review only in the review sections, merge only in ready-to-merge", () => {
+  it("offers code review on review requests, merge only when ready to merge", () => {
     hooks.prs = [
       pr(1, { section: "needs-your-review", bucket: "to-review" }),
-      pr(2, { section: "needs-team-review", bucket: "to-review" }),
+      pr(2, { section: "needs-team-review", bucket: "to-review", reviewReason: "team" }),
       pr(3, { section: "waiting" }),
-      pr(4, { section: "needs-action" }),
-      pr(5, { section: "ready-to-merge" }),
+      pr(5, { section: "ready-to-merge", blocker: "ready-to-merge" }),
     ];
     renderWithProviders(<InboxPrsScreen />);
-    const row = (n: number) => screen.getByTestId(`${PrRowTestId.Root}-${n}`);
-    const has = (n: number, id: string) => within(row(n)).queryByTestId(id) !== null;
-    expect([1, 2, 3, 4, 5].map((n) => has(n, PrActionsTestId.Review))).toEqual([
+    const has = (n: number, id: string) =>
+      within(screen.getByTestId(`${PrRowTestId.Root}-${n}`)).queryByTestId(id) !== null;
+    expect([1, 2, 3, 5].map((n) => has(n, PrActionsTestId.Review))).toEqual([
       true,
       true,
-      false,
       false,
       false,
     ]);
-    expect([1, 2, 3, 4, 5].map((n) => has(n, PrActionsTestId.Merge))).toEqual([
-      false,
+    expect([1, 2, 3, 5].map((n) => has(n, PrActionsTestId.Merge))).toEqual([
       false,
       false,
       false,
       true,
     ]);
+    expect([1, 2, 3, 5].map((n) => has(n, PrRowTestId.Actions))).toEqual([true, true, false, true]);
   });
 
-  it("shows the PR count once, after the title — no ordinal before it", () => {
-    hooks.prs = [pr(1, { section: "ready-to-merge" }), pr(2, { section: "ready-to-merge" })];
+  it("clicking in the action row never selects the card", () => {
+    hooks.prs = [pr(5, { section: "ready-to-merge" }), pr(1, toReview)];
     renderWithProviders(<InboxPrsScreen />);
-    const header = headerOf("ready-to-merge");
-    expect(header).not.toHaveTextContent(/\d{2} —/);
-    expect(header.textContent?.match(/02/g)).toHaveLength(1);
-  });
-
-  it("sections start expanded and collapse on header click", () => {
-    hooks.prs = [pr(1, { section: "ready-to-merge" })];
-    renderWithProviders(<InboxPrsScreen />);
-    const header = headerOf("ready-to-merge");
-    expect(header).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByTestId(sectionId("ready-to-merge"))).toHaveTextContent("PR 1");
-    fireEvent.click(header);
-    expect(header).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByTestId(sectionId("ready-to-merge"))).not.toHaveTextContent("PR 1");
-  });
-
-  it("remembers a collapsed section for the session", () => {
-    hooks.prs = [pr(1, { section: "ready-to-merge" })];
-    const first = renderWithProviders(<InboxPrsScreen />);
-    fireEvent.click(headerOf("ready-to-merge"));
-    first.unmount();
-    renderWithProviders(<InboxPrsScreen />);
-    expect(headerOf("ready-to-merge")).toHaveAttribute("aria-expanded", "false");
-  });
-
-  it("the selected PR shows even when its section was collapsed", () => {
-    window.sessionStorage.setItem(
-      "zibby-inbox-pr-sections-collapsed",
-      JSON.stringify({ "ready-to-merge": true }),
+    fireEvent.click(screen.getByTestId(PrActionsTestId.DeleteBranch));
+    fireEvent.click(
+      within(screen.getByTestId(PrActionsTestId.Review)).getByTestId(DropDownButtonTestId.Primary),
     );
-    hooks.prs = [pr(1, { section: "ready-to-merge" })];
-    hooks.search = "pr=https://github.com/acme/api/pull/1";
-    renderWithProviders(<InboxPrsScreen />);
-    expect(headerOf("ready-to-merge")).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByTestId(sectionId("ready-to-merge"))).toHaveTextContent("PR 1");
-  });
-
-  it("keeps block elements out of the summary button", () => {
-    hooks.prs = [pr(1, { section: "ready-to-merge" })];
-    renderWithProviders(<InboxPrsScreen />);
-    expect(headerOf("ready-to-merge").querySelector("h3, div")).toBeNull();
+    expect(hooks.replace).not.toHaveBeenCalled();
   });
 });
 
 describe("InboxPrsScreen master–detail", () => {
   afterEach(() => {
     hooks.search = "";
-    hooks.diffQuery = okDiff;
     hooks.replace.mockClear();
     vi.restoreAllMocks();
   });
@@ -254,15 +243,6 @@ describe("InboxPrsScreen master–detail", () => {
     hooks.prs = two();
     hooks.search = `pr=${encodeURIComponent(urlOf(2))}`;
   };
-
-  it("shows the placeholder when no PR is selected", () => {
-    hooks.prs = two();
-    renderWithProviders(<InboxPrsScreen />);
-    expect(screen.getByTestId(InboxPrsScreenTestId.Placeholder)).toHaveTextContent(
-      "Vyber PR vlevo",
-    );
-    expect(screen.queryByTestId(PrDetailTestId.Root)).toBeNull();
-  });
 
   it("clicking a card selects it without opening GitHub", () => {
     const open = vi.spyOn(window, "open").mockImplementation(() => null);
@@ -286,6 +266,19 @@ describe("InboxPrsScreen master–detail", () => {
     expect(title).toHaveFocus();
     fireEvent.click(title);
     expect(hooks.replace).toHaveBeenCalledTimes(1);
+  });
+
+  it("a long title wraps", () => {
+    const long = "feat/inbox-web-stacked-pr-chains-derived-from-head-and-base-refs-".repeat(3);
+    hooks.prs = [pr(7, { title: long })];
+    renderWithProviders(<InboxPrsScreen />);
+    const row = screen.getByTestId(`${PrRowTestId.Root}-7`);
+    const titleText = within(within(row).getByTestId(PrRowTestId.Title)).getByTestId(
+      TypographyTestId.Root,
+    );
+    expect(titleText).toHaveTextContent(long);
+    expect(titleText.className).toContain("wrap-anywhere");
+    expect(titleText.className).not.toContain("truncate");
   });
 
   it("pins the master–detail grid height at lg; the diff body is the only scroll area", async () => {
@@ -318,34 +311,6 @@ describe("InboxPrsScreen master–detail", () => {
     );
   });
 
-  it("a long title wraps beside a non-shrinking tag column", () => {
-    const long = "feat/inbox-web-stacked-pr-chains-derived-from-head-and-base-refs-".repeat(3);
-    hooks.prs = [
-      pr(7, {
-        title: long,
-        draft: true,
-        blocker: "merge-conflict",
-        review: "changes-requested",
-        ci: "failing",
-      }),
-    ];
-    renderWithProviders(<InboxPrsScreen />);
-    const row = screen.getByTestId(`${PrRowTestId.Root}-7`);
-    const titleText = within(within(row).getByTestId(PrRowTestId.Title)).getByTestId(
-      TypographyTestId.Root,
-    );
-    expect(titleText).toHaveTextContent(long);
-    expect(titleText.className).toContain("wrap-anywhere");
-    expect(titleText.className).not.toContain("truncate");
-    const tags = within(row).getByTestId(PrRowTestId.Tags);
-    expect(tags.style.flexShrink).toBe("0");
-    expect(tags.style.flexDirection).toBe("column");
-    for (const id of [PrRowTestId.Draft, PrRowTestId.Conflict, PrRowTestId.Review, PrRowTestId.Ci])
-      expect(tags).toContainElement(within(row).getByTestId(id));
-    // The title row aligns to the top so the tags stay top-right while the title wraps.
-    expect((tags.parentElement as HTMLElement).style.alignItems).toBe("flex-start");
-  });
-
   it("lists all PRs and shows the selected one's detail", () => {
     select2();
     renderWithProviders(<InboxPrsScreen />);
@@ -365,14 +330,6 @@ describe("InboxPrsScreen master–detail", () => {
     expect(detail).toHaveTextContent("#2");
     expect(detail).toHaveTextContent("PR 2");
     expect(screen.getByTestId(PrDetailTestId.GitHub)).toHaveAttribute("href", urlOf(2));
-  });
-
-  it("an unknown ?pr= falls back to the placeholder", () => {
-    hooks.prs = two();
-    hooks.search = `pr=${encodeURIComponent(urlOf(99))}`;
-    renderWithProviders(<InboxPrsScreen />);
-    expect(screen.getByTestId(InboxPrsScreenTestId.Placeholder)).toBeInTheDocument();
-    expect(screen.queryByTestId(PrDetailTestId.Root)).toBeNull();
   });
 
   it("shows the diff loading state", () => {
@@ -405,49 +362,5 @@ describe("InboxPrsScreen master–detail", () => {
     renderWithProviders(<InboxPrsScreen />);
     expect(screen.getByTestId(PrDetailTestId.Truncated)).toBeInTheDocument();
     expect(await screen.findByTestId("pr-diff")).toHaveTextContent("x");
-  });
-
-  it("clicking the review split button does not select the PR", () => {
-    hooks.prs = [pr(1, { section: "needs-your-review", bucket: "to-review" })];
-    renderWithProviders(<InboxPrsScreen />);
-    const split = screen.getByTestId(PrActionsTestId.Review);
-    fireEvent.click(within(split).getByTestId(DropDownButtonTestId.Primary));
-    expect(hooks.replace).not.toHaveBeenCalled();
-  });
-});
-
-describe("InboxPrsScreen stacked PRs", () => {
-  afterEach(() => {
-    hooks.search = "";
-    hooks.prs = [];
-  });
-
-  it("shows each card's place in a stack, linking to the partner PR", () => {
-    hooks.prs = [
-      pr(1, { headRef: "feat-a", baseRef: "main", section: "ready-to-merge" }),
-      pr(2, { headRef: "feat-b", baseRef: "feat-a" }),
-    ];
-    renderWithProviders(<InboxPrsScreen />);
-
-    const parent = screen.getByTestId(`${PrRowTestId.Root}-1`);
-    const waits = within(parent).getByTestId(`${ChainLinksTestId.By}-2`);
-    expect(waits).toHaveAttribute(
-      "href",
-      `/dashboard/inbox/pull-requests?pr=${encodeURIComponent(urlOf(2))}`,
-    );
-    expect(waits).toHaveTextContent("#2");
-    expect(within(parent).queryByTestId(`${ChainLinksTestId.On}-2`)).toBeNull();
-
-    const child = screen.getByTestId(`${PrRowTestId.Root}-2`);
-    expect(within(child).getByTestId(`${ChainLinksTestId.On}-1`)).toHaveAttribute(
-      "href",
-      `/dashboard/inbox/pull-requests?pr=${encodeURIComponent(urlOf(1))}`,
-    );
-  });
-
-  it("an unstacked PR has no chain line", () => {
-    hooks.prs = [pr(1, { headRef: "feat-a", baseRef: "main" })];
-    renderWithProviders(<InboxPrsScreen />);
-    expect(screen.queryByTestId(ChainLinksTestId.Root)).toBeNull();
   });
 });

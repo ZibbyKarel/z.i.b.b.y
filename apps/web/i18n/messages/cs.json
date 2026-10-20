@@ -2956,7 +2956,6 @@
     "prs": {
       "diff": {
         "region": "Změny v PR",
-        "select": "Vyber PR vlevo a uvidíš jeho změny.",
         "loading": "Načítám změny…",
         "error": "Změny se nepodařilo načíst.",
         "retry": "Zkusit znovu",
@@ -2966,7 +2965,6 @@
         "tooLarge": "Diff je příliš velký na zobrazení. Otevři PR na GitHubu."
       },
       "ci": "CI {symbol} {state}",
-      "draft": "Koncept",
       "reason": {
         "direct": "Přímo",
         "team": "Přes tým {team}"
@@ -2976,21 +2974,6 @@
       "emptyBody": "Nic nečeká na vaše review ani na akci.",
       "openGithub": "Otevřít na GitHubu",
       "item": "Položka {key} →",
-      "footer": "Merguje jen na vaše kliknutí. Code-review se na GitHub odešle až po vašem schválení. Obnovuje se při návratu do okna a každých 60 s.",
-      "section": {
-        "needs-your-review": "Čeká na vaše review",
-        "needs-team-review": "Čeká na review vašeho týmu",
-        "waiting": "Čeká na review nebo checks",
-        "needs-action": "Vyžaduje akci",
-        "ready-to-merge": "Připraveno k merge"
-      },
-      "sectionNote": {
-        "needs-your-review": "Vyžádáno přímo od vás",
-        "needs-team-review": "Vyžádáno od vašeho týmu",
-        "waiting": "Vaše PR · review nebo CI ještě běží",
-        "needs-action": "Vaše PR · změny, CI, konflikt nebo koncept",
-        "ready-to-merge": "Vaše PR · schváleno, CI prochází"
-      },
       "actions": {
         "reviewLevelsAria": "Další úrovně code-review",
         "reviewFailed": "Code-review se nepodařilo spustit.",
@@ -3042,6 +3025,19 @@
           "failed": "Zapracování komentářů selhalo"
         },
         "rebaseOn": "Rebase na {base}"
+      },
+      "listTitle": "Pull requesty",
+      "on": "Na {base}",
+      "waitsOn": "· Čeká na {prs}",
+      "state": {
+        "draft": "Koncept",
+        "review-requested": "Žádost o review",
+        "team-review": "Týmové review · {team}",
+        "ci-failing": "CI selhává",
+        "changes-requested": "Požadovány změny",
+        "merge-conflict": "Konflikt",
+        "awaiting-review": "Čeká na review",
+        "ready-to-merge": "Schváleno"
       }
     },
     "detail": {

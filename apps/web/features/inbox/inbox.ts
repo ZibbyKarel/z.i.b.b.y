@@ -1,10 +1,8 @@
 import {
   INBOX_PR_BLOCKERS,
-  INBOX_PR_SECTIONS,
   type InboxEpic,
   type InboxPr,
   type InboxPrBlocker,
-  type InboxPrSection,
   type InboxRoadmapItem,
 } from "@zibby/contracts";
 
@@ -242,21 +240,6 @@ export function splitPrs(prs: InboxPr[], filters: InboxFilters): InboxPrBuckets 
   };
 }
 
-/** Phase 129 P1 — filtered + sorted PRs per GitHub-style section (`INBOX_PR_SECTIONS` order). */
-export function groupPrsBySection(
-  prs: InboxPr[],
-  filters: InboxFilters,
-): Record<InboxPrSection, InboxPr[]> {
-  const groups = Object.fromEntries(INBOX_PR_SECTIONS.map((s) => [s, [] as InboxPr[]])) as Record<
-    InboxPrSection,
-    InboxPr[]
-  >;
-  for (const pr of prs.filter((p) => passesFilters(filters, p)).sort(comparePrs)) {
-    groups[pr.section].push(pr);
-  }
-  return groups;
-}
-
 /** A PR an item points at: the synced `linkedPr`, else the latest run that opened one. */
 export interface ItemPrRef {
   number: number;
@@ -277,36 +260,6 @@ export function linkedPrOf(item: InboxRoadmapItem): ItemPrRef | null {
 /** Pull requests page focused on one PR. Keyed by url: PR numbers repeat across repos. */
 export function prListHref(url: string): string {
   return `/dashboard/inbox/pull-requests?pr=${encodeURIComponent(url)}`;
-}
-
-/** todo-13 — the PRs this one is stacked on (`on`) and the PRs stacked on it (`by`). */
-export interface PrChain {
-  on: InboxPr[];
-  by: InboxPr[];
-}
-
-/**
- * Stacked PRs: B is on A when they share a repo and B's base branch is A's head branch.
- * One level each way (A–B–C reads card by card), keyed by url; PRs without a link are absent.
- */
-// ponytail: O(n²) over the operator's open PRs, which number in the tens. Index by `repo#headRef` if that ever grows.
-export function prChains(prs: InboxPr[]): Map<string, PrChain> {
-  const chains = new Map<string, PrChain>();
-  const chainOf = (pr: InboxPr) => {
-    let chain = chains.get(pr.url);
-    if (!chain) chains.set(pr.url, (chain = { on: [], by: [] }));
-    return chain;
-  };
-  for (const child of prs) {
-    if (!child.baseRef) continue;
-    for (const parent of prs) {
-      if (parent === child || parent.repo !== child.repo || parent.headRef !== child.baseRef)
-        continue;
-      chainOf(child).on.push(parent);
-      chainOf(parent).by.push(child);
-    }
-  }
-  return chains;
 }
 
 /** The open PR `pr` is stacked on: same repo, `pr`'s base branch is that PR's head branch. */

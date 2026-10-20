@@ -1,13 +1,11 @@
 "use client";
 
-import { INBOX_PR_SECTIONS, type InboxPr } from "@zibby/contracts";
+import type { InboxPr } from "@zibby/contracts";
 import {
-  AccordionDetails,
-  AccordionSummary,
   Container,
   EmptyState,
   Grid,
-  Panel,
+  IndentRail,
   Row,
   Stack,
   Typography,
@@ -18,23 +16,12 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useRef } from "react";
 import { useNow } from "../../../hooks/useNow";
 import { InboxPage } from "../components/InboxPage";
-import { issueHref } from "../components/IssueRow";
 import { useProjectsQuery } from "../../projects";
-import { PrActions, hasPrActions } from "../components/PrActions";
 import { PrDetail } from "../components/PrDetail";
 import { PrRow } from "../components/PrRow";
-import {
-  type PrChain,
-  groupPrsBySection,
-  itemKey,
-  linkedPrOf,
-  pad2,
-  prBaseLabel,
-  prChains,
-} from "../inbox";
+import { groupPrStacks, pad2, parentPr, passesFilters, prBaseLabel, prWaits } from "../inbox";
 import { useInboxItemsQuery, useInboxPrsQuery } from "../queries";
 import { useInboxFilters } from "../useInboxFilters";
-import { useSessionFlags } from "../useSessionFlags";
 
 /**
  * Height of the list + detail panes at lg+ — the page itself must not scroll there.
@@ -44,98 +31,21 @@ import { useSessionFlags } from "../useSessionFlags";
  */
 const PRS_PANE_HEIGHT = "calc(100vh - 24rem)";
 
-const COLLAPSED_STORAGE_KEY = "zibby-inbox-pr-sections-collapsed";
-
 export enum InboxPrsScreenTestId {
-  /** Suffixed with the section id: `inbox-prs-section-needs-your-review`. */
-  Section = "inbox-prs-section",
-  Footer = "inbox-prs-footer",
+  List = "inbox-prs-list",
+  Count = "inbox-prs-count",
+  /** Suffixed with the group root's number: `inbox-prs-group-12`. */
+  Group = "inbox-prs-group",
   Detail = "inbox-prs-detail",
-  Placeholder = "inbox-prs-detail-placeholder",
   Empty = "inbox-prs-empty",
 }
 
-interface SectionProps {
-  testId: string;
-  title: string;
-  note?: string;
-  prs: InboxPr[];
-  now: number;
-  focus: string | null;
-  onSelect: (pr: InboxPr) => void;
-  itemFor: (pr: InboxPr) => { key: string; href: string } | undefined;
-  chainFor: (pr: InboxPr) => PrChain | undefined;
-  baseLabelFor: (pr: InboxPr) => string;
-  projectNames: Map<string, string>;
-  expanded: boolean;
-  onToggle?: () => void;
-}
-
-function PrSection({
-  testId,
-  title,
-  note,
-  prs,
-  now,
-  focus,
-  onSelect,
-  itemFor,
-  chainFor,
-  baseLabelFor,
-  projectNames,
-  expanded,
-  onToggle,
-}: SectionProps) {
-  return (
-    <Stack data-testid={testId} gap="100">
-      <AccordionSummary expanded={expanded} onToggle={onToggle}>
-        <Row wrap as="span" gap="150">
-          <Typography as="span" type="h3">
-            {title}
-          </Typography>
-          <Typography as="span" type="label" variant="secondary">
-            {pad2(prs.length)}
-          </Typography>
-          {note && (
-            <Container grow as="span" textAlign="right">
-              <Typography as="span" type="label">
-                {note}
-              </Typography>
-            </Container>
-          )}
-        </Row>
-      </AccordionSummary>
-      <AccordionDetails expanded={expanded}>
-        <Stack gap="100">
-          {prs.map((pr) => (
-            <PrRow
-              actions={
-                hasPrActions(pr) ? <PrActions baseLabel={baseLabelFor(pr)} pr={pr} /> : undefined
-              }
-              chain={chainFor(pr)}
-              focused={focus === pr.url}
-              item={itemFor(pr)}
-              key={pr.url}
-              now={now}
-              onSelect={onSelect}
-              pr={pr}
-              projectName={projectNames.get(pr.projectId)}
-            />
-          ))}
-        </Stack>
-      </AccordionDetails>
-    </Stack>
-  );
-}
-
 /**
- * `/dashboard/inbox/pull-requests` — master–detail. Left: GitHub-style sections (server-computed
- * `pr.section`, `INBOX_PR_SECTIONS` order) as a single column of cards, each sorted by blocker;
- * empty sections are hidden; with none left, an `EmptyState`. Right: the selected PR (`?pr=<url>`,
- * set by a card click, the issue badge link or the Overview) with its diff and the operator's
- * actions (`PrActions` — review / squash-and-merge). The list refetches every 15 min + on
- * inbox-refresh activity. Sections are collapsible accordions, expanded by default; collapse is
- * remembered per session (the selected PR's section always expands).
+ * `/dashboard/inbox/pull-requests` — master–detail. Left: the visible PRs grouped by stack
+ * (`groupPrStacks`): each group's root card, its stacked kids indented behind a rail; groups by
+ * their most urgent member. Each card carries its state stripe, state line and action row
+ * (`PrActions`). Right: the selected PR (`?pr=<url>`, else the first group's root) with its
+ * diff. The list refetches every 15 min + on inbox-refresh activity.
  */
 export function InboxPrsScreen() {
   const t = useTranslations("inboxPage");
@@ -147,34 +57,22 @@ export function InboxPrsScreen() {
   const itemsQuery = useInboxItemsQuery();
   const prsQuery = useInboxPrsQuery();
   const { data: projects } = useProjectsQuery();
-  // Unfiltered on purpose: a chain link may point at a PR the filters hide (it still opens).
-  const chains = useMemo(() => prChains(prsQuery.data?.prs ?? []), [prsQuery.data]);
   const projectNames = useMemo(
     () => new Map((projects ?? []).map((p) => [p.id, p.name])),
     [projects],
   );
 
-  // `?pr=<url>` (see `prListHref`) selects the PR shown on the right.
+  // Stack relations read the unfiltered list: a kid whose parent is filtered out still says
+  // "ON #parent".
+  const all = useMemo(() => prsQuery.data?.prs ?? [], [prsQuery.data]);
+  const visible = useMemo(() => all.filter((p) => passesFilters(filters, p)), [all, filters]);
+  const groups = useMemo(() => groupPrStacks(all, visible), [all, visible]);
+
+  // `?pr=<url>` (see `prListHref`) resolves against the unfiltered list, so a link to a
+  // filtered-out PR still opens; none or unknown → the first group's root. Computed, not
+  // written to the URL.
   const focus = searchParams.get("pr") || null;
-  const sections = useMemo(
-    () => groupPrsBySection(prsQuery.data?.prs ?? [], filters),
-    [prsQuery.data, filters],
-  );
-  // Resolved from the unfiltered list, so a chain link to a filtered-out PR still opens it.
-  const selected = focus ? prsQuery.data?.prs.find((p) => p.url === focus) : undefined;
-
-  const visibleSections = INBOX_PR_SECTIONS.filter((section) => sections[section].length > 0);
-
-  const [collapsed, setCollapsed] = useSessionFlags(COLLAPSED_STORAGE_KEY);
-
-  const itemByPrUrl = useMemo(() => {
-    const map = new Map<string, { key: string; href: string }>();
-    for (const item of itemsQuery.data?.items ?? []) {
-      const ref = linkedPrOf(item);
-      if (ref) map.set(ref.url, { key: itemKey(item), href: issueHref(item) });
-    }
-    return map;
-  }, [itemsQuery.data]);
+  const selected = (focus ? all.find((p) => p.url === focus) : undefined) ?? groups[0]?.root;
 
   const detailRef = useRef<HTMLElement>(null);
 
@@ -186,6 +84,20 @@ export function InboxPrsScreen() {
     detailRef.current?.scrollIntoView?.({ block: "start" });
   };
 
+  const card = (p: InboxPr) => (
+    <PrRow
+      baseLabel={prBaseLabel(p, all)}
+      focused={p.url === selected?.url}
+      key={p.url}
+      now={now}
+      onSelect={() => select(p.url)}
+      parent={parentPr(p, all)}
+      pr={p}
+      projectName={projectNames.get(p.projectId)}
+      waits={prWaits(p, all)}
+    />
+  );
+
   return (
     <InboxPage
       errors={[...(itemsQuery.data?.errors ?? []), ...(prsQuery.data?.errors ?? [])]}
@@ -195,57 +107,42 @@ export function InboxPrsScreen() {
     >
       <Grid gap="200" lgHeight={PRS_PANE_HEIGHT} sidebar="left-narrow">
         <Container overflowY="auto">
-          <Stack gap="250">
-            {visibleSections.length === 0 && (
+          <Stack data-testid={InboxPrsScreenTestId.List} gap="100">
+            <Row justify="between">
+              <Typography type="label">{t("prs.listTitle")}</Typography>
+              <Typography data-testid={InboxPrsScreenTestId.Count} type="label">
+                {pad2(visible.length)}
+              </Typography>
+            </Row>
+            {groups.length === 0 && (
               <EmptyState
                 body={t("prs.emptyBody")}
                 data-testid={InboxPrsScreenTestId.Empty}
                 title={t("prs.emptyTitle")}
               />
             )}
-            {visibleSections.map((section) => (
-              <PrSection
-                baseLabelFor={(pr) => prBaseLabel(pr, prsQuery.data?.prs ?? [])}
-                chainFor={(pr) => chains.get(pr.url)}
-                expanded={
-                  collapsed[section] !== true || sections[section].some((p) => p.url === focus)
-                }
-                focus={focus}
-                itemFor={(pr) => itemByPrUrl.get(pr.url)}
-                key={section}
-                note={t(`prs.sectionNote.${section}`)}
-                now={now}
-                onSelect={(pr) => select(pr.url)}
-                onToggle={() => setCollapsed(section, collapsed[section] !== true)}
-                projectNames={projectNames}
-                prs={sections[section]}
-                testId={`${InboxPrsScreenTestId.Section}-${section}`}
-                title={t(`prs.section.${section}`)}
-              />
-            ))}
-            <Typography data-testid={InboxPrsScreenTestId.Footer} type="note" variant="secondary">
-              {t("prs.footer")}
-            </Typography>
+            <Stack gap="0">
+              {groups.map((g) => (
+                <Stack
+                  data-testid={`${InboxPrsScreenTestId.Group}-${g.root.number}`}
+                  gap="0"
+                  key={g.root.url}
+                >
+                  {card(g.root)}
+                  {g.kids.length > 0 && <IndentRail>{g.kids.map(card)}</IndentRail>}
+                </Stack>
+              ))}
+            </Stack>
           </Stack>
         </Container>
         <Stack minH0 aria-live="polite" data-testid={InboxPrsScreenTestId.Detail} ref={detailRef}>
-          {selected ? (
+          {selected && (
             <PrDetail
               key={selected.url}
               now={now}
               pr={selected}
               projectName={projectNames.get(selected.projectId)}
             />
-          ) : (
-            <Panel
-              data-testid={InboxPrsScreenTestId.Placeholder}
-              padding={["200", "200"]}
-              radius="none"
-            >
-              <Typography type="bodySm" variant="secondary">
-                {t("prs.diff.select")}
-              </Typography>
-            </Panel>
           )}
         </Stack>
       </Grid>

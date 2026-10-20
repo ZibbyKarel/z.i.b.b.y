@@ -2956,7 +2956,6 @@
     "prs": {
       "diff": {
         "region": "PR changes",
-        "select": "Select a PR on the left to see its changes.",
         "loading": "Loading changes…",
         "error": "Couldn't load the changes.",
         "retry": "Retry",
@@ -2966,7 +2965,6 @@
         "tooLarge": "The diff is too large to display. Open the PR on GitHub."
       },
       "ci": "CI {symbol} {state}",
-      "draft": "Draft",
       "reason": {
         "direct": "Directly",
         "team": "Via team {team}"
@@ -2976,21 +2974,6 @@
       "emptyBody": "Nothing is waiting on your review or action.",
       "openGithub": "Open on GitHub",
       "item": "Item {key} →",
-      "footer": "Merges only on your click. A code review is posted to GitHub only after you approve it. Refreshes on focus and every 60 s.",
-      "section": {
-        "needs-your-review": "Needs your review",
-        "needs-team-review": "Needs your team's review",
-        "waiting": "Waiting for review or checks",
-        "needs-action": "Needs action",
-        "ready-to-merge": "Ready to merge"
-      },
-      "sectionNote": {
-        "needs-your-review": "Requested from you directly",
-        "needs-team-review": "Requested from your team",
-        "waiting": "Your PRs · review or CI still pending",
-        "needs-action": "Your PRs · changes, CI, conflict or draft",
-        "ready-to-merge": "Your PRs · approved, CI passing"
-      },
       "actions": {
         "reviewLevelsAria": "More code review levels",
         "reviewFailed": "Could not start the code review.",
@@ -3042,6 +3025,19 @@
           "failed": "Addressing comments failed"
         },
         "rebaseOn": "Rebase on {base}"
+      },
+      "listTitle": "Pull requests",
+      "on": "On {base}",
+      "waitsOn": "· Waits on {prs}",
+      "state": {
+        "draft": "Draft",
+        "review-requested": "Review requested",
+        "team-review": "Team review · {team}",
+        "ci-failing": "CI failing",
+        "changes-requested": "Changes requested",
+        "merge-conflict": "Merge conflict",
+        "awaiting-review": "Awaiting review",
+        "ready-to-merge": "Approved"
       }
     },
     "detail": {
