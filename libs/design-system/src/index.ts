@@ -474,6 +474,12 @@ export type { MetricStripItem, MetricStripProps } from "./components/MetricStrip
 export { RailSplit, RailSplitTestId } from "./components/RailSplit/RailSplit";
 export type { RailSplitProps } from "./components/RailSplit/RailSplit";
 
+export { RailItem, RailItemTestId } from "./components/RailItem/RailItem";
+export type { RailItemProps } from "./components/RailItem/RailItem";
+
+export { ToggleChip, ToggleChipTestId } from "./components/ToggleChip/ToggleChip";
+export type { ToggleChipProps } from "./components/ToggleChip/ToggleChip";
+
 export { DataTable, DataTableTestId } from "./components/DataTable/DataTable";
 export type {
   ColumnWidth,
