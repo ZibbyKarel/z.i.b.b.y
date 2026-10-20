@@ -39,6 +39,7 @@ import { useRunArtifactQuery } from "../queries/useRunArtifactQuery";
 import {
   type RunView,
   approvalForRun,
+  isCancellableRun,
   isMarkdownFilename,
   isResumableRun,
   isStoppableRun,
@@ -562,7 +563,7 @@ export function RunDetail({
   }
   actionItems.push({
     id: "delete",
-    label: run.status === "scheduled" ? t("cancelTask") : t("delete"),
+    label: isCancellableRun(run) ? t("cancelTask") : t("delete"),
     icon: "x",
     danger: true,
     disabled: deleting,
@@ -909,16 +910,16 @@ export function RunDetail({
       )}
       {confirmKind === "delete" && (
         <ConfirmDeleteDialog
-          body={run.status === "scheduled" ? t("cancelBody") : t("deleteBody")}
+          body={isCancellableRun(run) ? t("cancelBody") : t("deleteBody")}
           cancelLabel={tk("common.cancel")}
-          confirmLabel={run.status === "scheduled" ? t("cancelTask") : t("delete")}
+          confirmLabel={isCancellableRun(run) ? t("cancelTask") : t("delete")}
           onCancel={() => setConfirmKind(null)}
           onConfirm={() => {
             setConfirmKind(null);
             onDelete();
           }}
           pending={deleting}
-          title={run.status === "scheduled" ? t("cancelTitle") : t("deleteTitle")}
+          title={isCancellableRun(run) ? t("cancelTitle") : t("deleteTitle")}
         />
       )}
     </>

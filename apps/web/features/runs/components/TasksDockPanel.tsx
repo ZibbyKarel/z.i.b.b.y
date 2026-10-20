@@ -12,6 +12,7 @@ import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { useNow } from "../../../hooks/useNow";
 import { compactAgo } from "../../../utils/time";
 import { useSystemConfigQuery } from "../../system";
+import { useCancelScheduledTaskMutation } from "../../tasks/mutations";
 import { useResumeTaskRunMutation, useStopTaskRunMutation } from "../mutations";
 import {
   getRecentArchivedRunsQueryKey,
@@ -19,12 +20,20 @@ import {
 } from "../queries/useRecentArchivedRunsQuery";
 import { useRunGlyphMap, useRunsQuery } from "../queries/useRunsQuery";
 import { onRunEvent } from "../runEvents";
-import { type RunView, isStoppableRun, runGlyph, runStateTone, runTitle } from "../run";
+import {
+  type RunView,
+  isCancellableRun,
+  isStoppableRun,
+  runGlyph,
+  runStateTone,
+  runTitle,
+} from "../run";
 import { RunStateBadge } from "./RunStateBadge";
 
 export enum TasksDockPanelTestId {
   Card = "running-rail-card",
   Stop = "running-rail-stop",
+  Cancel = "running-rail-cancel",
   Restart = "running-rail-restart",
   DoneCard = "tasks-dock-done-card",
   DonePr = "tasks-dock-done-pr",
@@ -69,6 +78,7 @@ function RunningSection() {
   const glyphById = useRunGlyphMap();
   const stopRun = useStopTaskRunMutation();
   const resumeRun = useResumeTaskRunMutation();
+  const cancelTask = useCancelScheduledTaskMutation();
 
   const stop = (run: RunView) => stopRun.mutate({ params: { runId: run.runId }, body: {} });
   const restart = (run: RunView) =>
@@ -78,7 +88,8 @@ function RunningSection() {
     );
   const busy = (run: RunView) =>
     (stopRun.isPending && stopRun.variables?.params.runId === run.runId) ||
-    (resumeRun.isPending && resumeRun.variables?.params.runId === run.runId);
+    (resumeRun.isPending && resumeRun.variables?.params.runId === run.runId) ||
+    (cancelTask.isPending && cancelTask.variables?.params.id === run.runId);
 
   return (
     <Rail
@@ -122,6 +133,20 @@ function RunningSection() {
                     </Stack>
                     <Stack align="center" direction="row" gap="50" justify="between">
                       <RunStateBadge label={tRuns(`state.${run.status}`)} status={run.status} />
+                      {isCancellableRun(run) && (
+                        <Button
+                          aria-label={tRuns("cancelTask")}
+                          data-testid={TasksDockPanelTestId.Cancel}
+                          disabled={busy(run)}
+                          icon="stop"
+                          intent="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            cancelTask.mutate({ params: { id: run.runId } });
+                          }}
+                          size="sm"
+                        />
+                      )}
                       {stoppable && (
                         <Stack direction="row" gap="50">
                           {run.kind === "agent" && (

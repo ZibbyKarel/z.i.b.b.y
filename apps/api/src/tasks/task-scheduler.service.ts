@@ -670,7 +670,8 @@ export class TaskSchedulerService
       await this.approvals.reject(task.approvalId).catch(() => {});
       return this.storage.get(id);
     }
-    return this.storage.cancel(id);
+    // Under the project-capacity lock so it serializes with a dispatch in flight.
+    return this.withCapacityLock(task.projectId, () => this.storage.cancel(id));
   }
 
   /** Fire every scheduled task whose time has come; returns the fired ids. */
@@ -690,9 +691,12 @@ export class TaskSchedulerService
           // the heartbeat concurrently with a create/drain/release for the same
           // project raced the same check→record window findings #8/#9 are about. Same
           // lock, same fix — matches the `drainQueues` wrap shape.
-          const result = await this.withCapacityLock(task.projectId, () =>
-            this.attemptDispatch(task, project, now, { skipBudget: false }),
-          );
+          const result = await this.withCapacityLock(task.projectId, async () => {
+            // A cancel may land between the list() snapshot and this lock.
+            const current = await this.storage.get(task.id).catch(() => null);
+            if (current?.status !== "scheduled") return null;
+            return this.attemptDispatch(current, project, now, { skipBudget: false });
+          });
           if (result === "dispatched") fired.push(task.id);
         } catch (err) {
           // M8: a THROWN dispatch error is transient (infra) — retry it with backoff
@@ -1284,11 +1288,15 @@ export class TaskSchedulerService
         // a drain's dispatch is serialized against a concurrent `attemptCreate` or
         // `releaseHeld` for the same project, not just against other drains.
         const result = await this.trace.run({ traceId: randomUUID() }, () =>
-          this.withCapacityLock(fresh.projectId, () =>
-            this.attemptDispatch(fresh, project, Date.now(), {
-              skipBudget: this.budgetApproved.has(fresh.id),
-            }),
-          ),
+          this.withCapacityLock(fresh.projectId, async () => {
+            // cancel() flips under this same lock — re-check so a cancel that landed
+            // during the staffing/stage awaits above never dispatches.
+            const current = await this.storage.get(fresh.id).catch(() => null);
+            if (current?.status !== "queued") return null;
+            return this.attemptDispatch(current, project, Date.now(), {
+              skipBudget: this.budgetApproved.has(current.id),
+            });
+          }),
         );
         if (stageKey && result === "dispatched") handedOut.add(stageKey);
       }

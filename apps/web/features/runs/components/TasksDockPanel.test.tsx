@@ -13,6 +13,7 @@ const runs: RunView[] = [
   { ...base, runId: "flow_2", kind: "workflow", status: "running", title: "Book" },
   { ...base, runId: "koder_3", kind: "agent", status: "done", title: "Old" },
   { ...base, runId: "q_4", kind: "agent", status: "queued", title: "Waiting" },
+  { ...base, runId: "sched_5", kind: "scheduled", status: "queued", title: "Later" },
 ] as RunView[];
 vi.mock("../queries/useRunsQuery", () => ({
   useRunsQuery: () => ({ runs }),
@@ -48,6 +49,10 @@ const stopMutate = vi.fn((_vars: unknown, opts?: { onSuccess?: () => void }) =>
   opts?.onSuccess?.(),
 );
 const resumeMutate = vi.fn();
+const cancelMutate = vi.fn();
+vi.mock("../../tasks/mutations", () => ({
+  useCancelScheduledTaskMutation: () => ({ mutate: cancelMutate, isPending: false }),
+}));
 vi.mock("../mutations", () => ({
   useStopTaskRunMutation: () => ({ mutate: stopMutate, isPending: false }),
   useResumeTaskRunMutation: () => ({ mutate: resumeMutate, isPending: false }),
@@ -58,13 +63,14 @@ describe("TasksDockPanel", () => {
     push.mockClear();
     stopMutate.mockClear();
     resumeMutate.mockClear();
+    cancelMutate.mockClear();
   });
 
   it("lists only live runs; a card opens its task detail, else the run detail", async () => {
     const user = userEvent.setup();
     render(<TasksDockPanel />);
     const cards = screen.getAllByTestId(TasksDockPanelTestId.Card);
-    expect(cards).toHaveLength(3);
+    expect(cards).toHaveLength(4);
     await user.click(cards[0]!);
     expect(push).toHaveBeenCalledWith("/work/tasks/task_1");
     await user.click(cards[1]!);
@@ -104,6 +110,17 @@ describe("TasksDockPanel", () => {
     expect(resumeMutate).not.toHaveBeenCalled();
     await user.click(screen.getByTestId(TasksDockPanelTestId.Restart));
     expect(resumeMutate).toHaveBeenCalledWith({ params: { runId: "koder_1" }, body: {} });
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("cancels a waiting scheduled task without navigating; running agents get no cancel", async () => {
+    const user = userEvent.setup();
+    render(<TasksDockPanel />);
+    const cancel = screen.getAllByTestId(TasksDockPanelTestId.Cancel);
+    expect(cancel).toHaveLength(1);
+    expect(cancel[0]).toHaveAccessibleName("Zrušit task");
+    await user.click(cancel[0]!);
+    expect(cancelMutate).toHaveBeenCalledWith({ params: { id: "sched_5" } });
     expect(push).not.toHaveBeenCalled();
   });
 });
