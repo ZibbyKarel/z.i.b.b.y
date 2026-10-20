@@ -39,7 +39,14 @@ export function findAnswer(
       (a) =>
         a.action === OPERATOR_QUESTION_ACTION &&
         // A stage's header carries the workflow run id; its approval the stage run id.
-        (a.runId === runId || a.runId.startsWith(`${runId}.`)) &&
+        // An agent's header carries `${agentId}_${startedMs}` (the pid is unknown at
+        // spawn); its approval the core id `${agentId}_${startedMs}_${pid}` — only a
+        // bare numeric pid may follow, so no other run's id can match.
+        (a.runId === runId ||
+          a.runId.startsWith(`${runId}.`) ||
+          (a.kind === "agent" &&
+            a.runId.startsWith(`${runId}_`) &&
+            /^\d+$/.test(a.runId.slice(runId.length + 1)))) &&
         summaryOf(a.detail) === q,
     )
     .sort((a, b) => (b.decidedAt ?? "").localeCompare(a.decidedAt ?? ""))[0];

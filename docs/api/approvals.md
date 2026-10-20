@@ -205,7 +205,9 @@ to, once, with one concrete question — never for a permission or a confirmatio
    `zibby-run` server seeded by `McpServersStorageService` with the run bearer token,
    behind `KbMcpAuthGuard`). It returns the newest approved answer to that question
    for the calling run (`X-Zibby-Run-Id`; a stage's approval run id is
-   `<workflowRunId>.<stage>`, so the prefix matches too). No run id, or the chat
+   `<workflowRunId>.<stage>`, so the prefix matches too; an agent's header carries
+   `<agentId>_<startedMs>` and its approval the core id `<agentId>_<startedMs>_<pid>`,
+   so an `agent`-kind approval also matches when only a numeric pid follows). No run id, or the chat
    token → an `isError` result. No recorded answer (e.g. a plain approve) →
    "No answer was recorded. Decide yourself or stop." It never waits and never
    answers on its own.

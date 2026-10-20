@@ -108,6 +108,33 @@ describe("POST /api/runs/mcp — RunMcpController (ask_operator)", () => {
     expect(r.text).not.toContain("prod");
   });
 
+  it("answers an agent run whose approval carries the core id (header id + _pid)", async () => {
+    // Header: `${agentId}_${startedMs}`; approval: the core's `${agentId}_${startedMs}_${pid}`.
+    list.mockResolvedValue([
+      approval({ id: "mine", kind: "agent", runId: "writer_1700_42", reason: "staging" }),
+      // Another run of an agent whose id extends this one's must never match.
+      approval({
+        id: "foreign",
+        kind: "agent",
+        runId: "writer_1700_x_1800_7",
+        reason: "prod",
+        decidedAt: "2026-10-20T10:09:00.000Z",
+      }),
+      // The prefix match is agent-only: a workflow-stage approval never rides it.
+      approval({
+        id: "stage",
+        kind: "workflow-stage",
+        runId: "writer_1700_43",
+        reason: "qa",
+        decidedAt: "2026-10-20T10:08:00.000Z",
+      }),
+    ]);
+    const r = await ask(runToken, "writer_1700", "Which env?");
+    expect(r.text).toContain("staging");
+    expect(r.text).not.toContain("prod");
+    expect(r.text).not.toContain("qa");
+  });
+
   it("is an error without a run id (and the chat token counts as no run)", async () => {
     list.mockResolvedValue([approval({ reason: "staging" })]);
     const none = await ask(runToken, undefined, "Which env?");
