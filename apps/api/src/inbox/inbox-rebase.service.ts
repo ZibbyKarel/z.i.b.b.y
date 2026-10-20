@@ -27,11 +27,11 @@ const REBASE_TARGET: TaskTarget = {
   glyph: "flow",
 };
 
-/** ZIBBY won't rebase this PR: fork head, closed PR, unreadable PR, a base/default-branch head, or a rebase already in flight (→ 422). */
-export class RebaseRefusedError extends Error {
+/** ZIBBY won't push to this PR's head: fork head, closed PR, unreadable PR, a base/default-branch head, or a run already in flight (→ 422). */
+export class PrRefusedError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "RebaseRefusedError";
+    this.name = "PrRefusedError";
   }
 }
 
@@ -50,6 +50,46 @@ export interface RebaseBrief {
   head: string;
   base: string;
   headSha: string;
+}
+
+/**
+ * The refs of an open, same-repo PR whose head ZIBBY may push to (rebase, address review
+ * comments). Refuses an unreadable or closed PR, a fork head, a non-plain ref name, and a
+ * head that is the base or default branch — all as `PrRefusedError` (→ 422).
+ */
+export async function readPushablePr(
+  fetchImpl: typeof fetch,
+  link: { repo: string; token: string },
+  number: number,
+): Promise<{ head: string; base: string; headSha: string; mergeable: boolean | null }> {
+  const ref = `${link.repo}#${number}`;
+  const res = await fetchImpl(`${GITHUB_API}/repos/${link.repo}/pulls/${number}`, {
+    headers: { authorization: `Bearer ${link.token}`, accept: "application/vnd.github+json" },
+  });
+  if (!res.ok) throw new PrRefusedError(`cannot read ${ref} from GitHub (HTTP ${res.status})`);
+  const pull = (await res.json()) as GhPullRefs;
+  const head = pull.head?.ref;
+  const base = pull.base?.ref;
+  const headSha = pull.head?.sha;
+  if (pull.state !== "open" || !head || !base || !headSha) {
+    throw new PrRefusedError(`${ref} is not an open PR`);
+  }
+  const headRepo = pull.head?.repo?.full_name;
+  if (headRepo?.toLowerCase() !== link.repo.toLowerCase()) {
+    throw new PrRefusedError(
+      `${ref} comes from a fork (${headRepo ?? "deleted repo"}) — ZIBBY only pushes to branches of ${link.repo}`,
+    );
+  }
+  const SAFE_REF = /^[\w./-]+$/;
+  for (const name of [head, base]) {
+    if (!SAFE_REF.test(name) || name.startsWith("-")) {
+      throw new PrRefusedError(`refusing ${ref}: branch name "${name}" is not a plain ref`);
+    }
+  }
+  if (head === base || head === pull.base?.repo?.default_branch) {
+    throw new PrRefusedError(`refusing to rewrite "${head}" — it is the base or default branch`);
+  }
+  return { head, base, headSha, mergeable: pull.mergeable ?? null };
 }
 
 /** The `rebase` phase's brief (`task.md`). The PR title is inbound content — data only. */
@@ -131,37 +171,13 @@ export class InboxRebaseService implements OnModuleInit {
     // ponytail: check-then-create, not atomic; two clicks within ms both start — the
     // push claim + lease still allow only one push.
     if (latest && (state === "running" || state === "awaiting-approval") && !isDeadTask(latest)) {
-      throw new RebaseRefusedError(`a rebase of ${ref} is already ${state} (task ${latest.id})`);
+      throw new PrRefusedError(`a rebase of ${ref} is already ${state} (task ${latest.id})`);
     }
-    const res = await this.fetchImpl(`${GITHUB_API}/repos/${link.repo}/pulls/${input.number}`, {
-      headers: { authorization: `Bearer ${link.token}`, accept: "application/vnd.github+json" },
-    });
-    if (!res.ok)
-      throw new RebaseRefusedError(`cannot read ${ref} from GitHub (HTTP ${res.status})`);
-    const pull = (await res.json()) as GhPullRefs;
-    const head = pull.head?.ref;
-    const base = pull.base?.ref;
-    const headSha = pull.head?.sha;
-    if (pull.state !== "open" || !head || !base || !headSha) {
-      throw new RebaseRefusedError(`${ref} is not an open PR`);
-    }
-    const headRepo = pull.head?.repo?.full_name;
-    if (headRepo?.toLowerCase() !== link.repo.toLowerCase()) {
-      throw new RebaseRefusedError(
-        `${ref} comes from a fork (${headRepo ?? "deleted repo"}) — ZIBBY only rebases branches of ${link.repo}`,
-      );
-    }
-    const SAFE_REF = /^[\w./-]+$/;
-    for (const name of [head, base]) {
-      if (!SAFE_REF.test(name) || name.startsWith("-")) {
-        throw new RebaseRefusedError(`refusing ${ref}: branch name "${name}" is not a plain ref`);
-      }
-    }
-    if (head === base || head === pull.base?.repo?.default_branch) {
-      throw new RebaseRefusedError(
-        `refusing to rewrite "${head}" — it is the base or default branch`,
-      );
-    }
+    const { head, base, headSha, mergeable } = await readPushablePr(
+      this.fetchImpl,
+      link,
+      input.number,
+    );
     const url = `https://github.com/${link.repo}/pull/${input.number}`;
     const title = input.title?.trim() ?? "";
     const result = await this.scheduler.createTask(
@@ -191,7 +207,7 @@ export class InboxRebaseService implements OnModuleInit {
       head,
       base,
       headSha,
-      conflictAtStart: pull.mergeable !== true,
+      conflictAtStart: mergeable !== true,
       state: "running",
     }));
     this.log?.info("pr rebase task started", {
@@ -266,6 +282,6 @@ export class InboxRebaseService implements OnModuleInit {
   }
 }
 
-function errMsg(error: unknown): string {
+export function errMsg(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }

@@ -5,7 +5,7 @@ import type { Integration, Project } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NoGithubLinkError, ProjectNotFoundError } from "../projects/projects.errors";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
-import { InboxRebaseService, RebaseRefusedError } from "./inbox-rebase.service";
+import { InboxRebaseService, PrRefusedError } from "./inbox-rebase.service";
 import { ReviewRepoMismatchError } from "./inbox-review.service";
 
 const PROJECT: Project = { id: "acme", name: "Acme", path: "~/acme" };
@@ -126,7 +126,7 @@ describe("InboxRebaseService", () => {
     await start();
     await expect(start()).rejects.toThrow(/already running/);
     await storage.setPrRebase("task_b1", (c) => (c ? { ...c, state: "awaiting-approval" } : c));
-    await expect(start()).rejects.toThrow(RebaseRefusedError);
+    await expect(start()).rejects.toThrow(PrRefusedError);
     expect(createTask).toHaveBeenCalledOnce();
     // Another PR is not blocked.
     await service.start({ projectId: "acme", repo: "acme/app", number: 8 });
@@ -166,7 +166,7 @@ describe("InboxRebaseService", () => {
     ],
   ])("refuses %s with a clear 422 reason", async (_name, over, reason) => {
     Object.assign(pull, over);
-    await expect(start()).rejects.toThrow(RebaseRefusedError);
+    await expect(start()).rejects.toThrow(PrRefusedError);
     await expect(start()).rejects.toThrow(reason);
     expect(createTask).not.toHaveBeenCalled();
   });
@@ -312,7 +312,7 @@ describe("InboxRebaseService", () => {
     ["base", { base: { ref: "-x", repo: { full_name: "acme/app", default_branch: "main" } } }],
   ])("refuses an unsafe %s branch name", async (_n, over) => {
     Object.assign(pull, over);
-    await expect(start()).rejects.toThrow(RebaseRefusedError);
+    await expect(start()).rejects.toThrow(PrRefusedError);
     expect(createTask).not.toHaveBeenCalled();
   });
 });

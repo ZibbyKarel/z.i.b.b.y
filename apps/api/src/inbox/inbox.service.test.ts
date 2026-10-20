@@ -252,6 +252,36 @@ describe("InboxService.listPrs", () => {
     expect(byNumber[3]?.codeReview).toBeUndefined();
   });
 
+  it("attaches the latest address-comments task per PR; a dead running one reads failed", async () => {
+    const fix = (number: number, state: string) => ({
+      repo: "acme/app",
+      number,
+      url: "u",
+      head: "feat",
+      base: "main",
+      headSha: "s",
+      state,
+    });
+    const { service } = build([
+      {
+        id: "a1",
+        createdAt: "2026-10-02T00:00:00Z",
+        status: "dispatched",
+        prAddressComments: fix(3, "running"),
+      },
+      {
+        id: "a2",
+        createdAt: "2026-10-02T00:00:00Z",
+        status: "failed",
+        prAddressComments: fix(2, "running"),
+      },
+    ]);
+    const byNumber = Object.fromEntries((await service.listPrs()).prs.map((p) => [p.number, p]));
+    expect(byNumber[3]?.addressComments).toEqual({ taskId: "a1", state: "running" });
+    expect(byNumber[2]?.addressComments).toEqual({ taskId: "a2", state: "failed" });
+    expect(byNumber[3]?.rebase).toBeUndefined();
+  });
+
   it("buckets direct / team / mine PRs and derives ci, review and blocker", async () => {
     const { service, calls } = build();
     const result = await service.listPrs();

@@ -10,29 +10,30 @@ squash-and-merge through the projects merge route. UI spec: `docs/plans/inbox-ui
 
 ## Pieces
 
-| Piece      | File                                          | Role                                                |
-| ---------- | --------------------------------------------- | --------------------------------------------------- |
-| Contract   | `libs/contracts/src/inbox/inbox.schema.ts`    | Item/epic/PR/state schemas                          |
-| Contract   | `libs/contracts/src/inbox/inbox.contract.ts`  | `inboxContract`, `/api`                             |
-| Service    | `apps/api/src/inbox/inbox.service.ts`         | Cross-project item list, PR classification, state   |
-| Service    | `apps/api/src/inbox/inbox-review.service.ts`  | "Do code review" task + `pr-review` approval runner |
-| Service    | `apps/api/src/inbox/inbox-rebase.service.ts`  | "Rebase" task + `pr-rebase` approval runner         |
-| Service    | `apps/api/src/inbox/inbox-pr-diff.service.ts` | One PR's unified diff from GitHub (500 KB cap)      |
-| Store      | `apps/api/src/inbox/inbox-state.store.ts`     | `InboxStateStore` — hidden items, one JSON file     |
-| Controller | `apps/api/src/inbox/inbox.controller.ts`      | `@TsRestHandler(inboxContract)`                     |
+| Piece      | File                                                   | Role                                                          |
+| ---------- | ------------------------------------------------------ | ------------------------------------------------------------- |
+| Contract   | `libs/contracts/src/inbox/inbox.schema.ts`             | Item/epic/PR/state schemas                                    |
+| Contract   | `libs/contracts/src/inbox/inbox.contract.ts`           | `inboxContract`, `/api`                                       |
+| Service    | `apps/api/src/inbox/inbox.service.ts`                  | Cross-project item list, PR classification, state             |
+| Service    | `apps/api/src/inbox/inbox-review.service.ts`           | "Do code review" task + `pr-review` approval runner           |
+| Service    | `apps/api/src/inbox/inbox-rebase.service.ts`           | "Rebase" task + `pr-rebase` approval runner                   |
+| Service    | `apps/api/src/inbox/inbox-address-comments.service.ts` | "Address review comments" task + `pr-address-comments` runner |
+| Service    | `apps/api/src/inbox/inbox-pr-diff.service.ts`          | One PR's unified diff from GitHub (500 KB cap)                |
+| Store      | `apps/api/src/inbox/inbox-state.store.ts`              | `InboxStateStore` — hidden items, one JSON file               |
+| Controller | `apps/api/src/inbox/inbox.controller.ts`               | `@TsRestHandler(inboxContract)`                               |
 
 ## Endpoints
 
-| Method | Path                                     | Body                                                                                                                               | Response                                                                                                                                                                          |
-| ------ | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/api/roadmap/items`                     | —                                                                                                                                  | `InboxItemsResponse`                                                                                                                                                              |
-| GET    | `/api/inbox/prs`                         | —                                                                                                                                  | `InboxPrsResponse`                                                                                                                                                                |
-| POST   | `/api/inbox/prs/review`                  | `{ projectId, repo, number, title?, level? }` (strict; `level` = `quick` \| `thorough` \| `tested` \| `browser`, absent = `quick`) | 201 `{ taskId }`; 404 project; 422 no GitHub link / repo not the project's                                                                                                        |
-| POST   | `/api/inbox/prs/rebase`                  | `{ projectId, repo, number, title? }` (strict)                                                                                     | 201 `{ taskId }`; 404 project; 422 no GitHub link / not the project's repo / fork / closed / head is base or default                                                              |
-| POST   | `/api/inbox/prs/address-comments`        | `{ projectId, repo, number, title? }` (strict; same body as rebase)                                                                | 201 `{ taskId }`; 404 project; 422 no GitHub link / foreign repo / fork / closed / head is base or default / run in flight (currently a stub: always 422 until the service lands) |
-| GET    | `/api/inbox/prs/:projectId/:number/diff` | —                                                                                                                                  | 200 `{ diff, truncated }`; 404 project/PR; 422 no GitHub link/token rejected; 502 GitHub error                                                                                    |
-| GET    | `/api/inbox/state`                       | —                                                                                                                                  | `InboxState`                                                                                                                                                                      |
-| PUT    | `/api/inbox/state`                       | `{ integrationId, externalId, hidden }` (strict)                                                                                   | `InboxState`                                                                                                                                                                      |
+| Method | Path                                     | Body                                                                                                                               | Response                                                                                                                   |
+| ------ | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/roadmap/items`                     | —                                                                                                                                  | `InboxItemsResponse`                                                                                                       |
+| GET    | `/api/inbox/prs`                         | —                                                                                                                                  | `InboxPrsResponse`                                                                                                         |
+| POST   | `/api/inbox/prs/review`                  | `{ projectId, repo, number, title?, level? }` (strict; `level` = `quick` \| `thorough` \| `tested` \| `browser`, absent = `quick`) | 201 `{ taskId }`; 404 project; 422 no GitHub link / repo not the project's                                                 |
+| POST   | `/api/inbox/prs/rebase`                  | `{ projectId, repo, number, title? }` (strict)                                                                                     | 201 `{ taskId }`; 404 project; 422 no GitHub link / not the project's repo / fork / closed / head is base or default       |
+| POST   | `/api/inbox/prs/address-comments`        | `{ projectId, repo, number, title? }` (strict; same body as rebase)                                                                | 201 `{ taskId }`; 404 project; 422 no GitHub link / foreign repo / fork / closed / head is base or default / run in flight |
+| GET    | `/api/inbox/prs/:projectId/:number/diff` | —                                                                                                                                  | 200 `{ diff, truncated }`; 404 project/PR; 422 no GitHub link/token rejected; 502 GitHub error                             |
+| GET    | `/api/inbox/state`                       | —                                                                                                                                  | `InboxState`                                                                                                               |
+| PUT    | `/api/inbox/state`                       | `{ integrationId, externalId, hidden }` (strict)                                                                                   | `InboxState`                                                                                                               |
 
 `/api/roadmap/items` has no `:projectId` segment, so it can't collide with the
 per-project `/api/projects/:projectId/roadmap/...` routes.
@@ -169,14 +170,37 @@ Hidden is permanent until unhidden. A missing/garbage file reads as `{ hidden: [
 
 ## Address review comments (`POST /api/inbox/prs/address-comments`)
 
-Contract only so far (PR inbox redesign): the route, `ScheduledTask.prAddressComments`
-(`repo, number, url, head, base, headSha, state, report?, worktree?, fixedSha?, approvalId?,
-note?, replies?, replied?, repliesNote?`), `PrThreadReply` (`{ threadId: "PRRT_…", body <= 500 }`),
-`InboxPr.addressComments { taskId, state }` (same states as `rebase`) and the
-`pr-address-comments` approval kind (fast-forward push + thread replies; approved on the spot
-for `Addressed: all`, otherwise Tier-3). The handler is a stub returning 422 until the service lands.
-The push primitive exists: `WorkspaceService.pushFastForward` (fast-forward only, never force,
-see `./workspace.md`).
+PR inbox redesign. Body `{ projectId, repo, number, title? }` (strict, same as rebase) → 201
+`{ taskId }`; 404 unknown project; 422 no GitHub link / repo not the project's / fork head /
+closed PR / head is the base or default branch / an address-comments run of the same PR already
+`running` or `awaiting-approval` (latest such task, not dead). The PR checks are shared with the
+rebase flow (`readPushablePr` in `inbox-rebase.service.ts`, refusals are `PrRefusedError`).
+
+`InboxAddressCommentsService.start` (`apps/api/src/inbox/inbox-address-comments.service.ts`)
+creates a task with the explicit `pr-address-comments` workflow target and `trustedProjectId`,
+and stamps `prAddressComments { repo, number, url, head, base, headSha, state: "running" }`.
+The workflow (`.zibby/data/workflows/pr-address-comments.workflow.md`, dept `dev`) has two
+ungated phases:
+
+1. `address` (`fullstack-developer`): checks out the clicked head, reads the unresolved review
+   threads (`gh api graphql … reviewThreads`), commits a focused fix per comment it accepts,
+   runs quick checks, writes `zibby-pr-address-comments.md` whose first line is
+   `Addressed: all` / `partial` / `checks failed` / `aborted`, then one `thread: <PRRT_…>` entry
+   per thread (`done in <sha>` or `skipped: <reason>`). It never pushes.
+2. `reply` (`github-commenter`, the existing operator-voice agent, reused — no new prompt; it
+   also holds a `dev` seat because the runner staffs phases from the workflow's department):
+   writes `zibby-pr-replies.json` = `[{ threadId, body }]`. It never posts.
+
+The PR title, description, diff and the review comments are quoted as untrusted data.
+ZIBBY pushes **fast-forward only, never force** (`WorkspaceService.pushFastForward`,
+`./workspace.md`) and posts replies only after a successful push, only to threads GitHub still
+reports as unresolved on this PR; threads are never resolved. `Addressed: all` → push + replies
+right away (Tier-2, reported in the task outcome); anything else with new commits → one Tier-3
+`pr-address-comments` approval covering push and replies; no new commits → `failed`.
+(Parking, push runner and replies: see the approvals doc once wired.)
+
+`GET /api/inbox/prs` rows carry `addressComments { taskId, state }` (latest such task per PR; a
+`running` one whose task/run died reads `failed`).
 
 ## Rebase (`POST /api/inbox/prs/rebase`)
 

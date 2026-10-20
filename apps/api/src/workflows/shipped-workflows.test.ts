@@ -2,8 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import { describe, expect, it } from "vitest";
-import { McpServerSchema, WorkflowSchema } from "@zibby/contracts";
-import { PR_REBASE_ARTIFACT, PR_REVIEW_ARTIFACT } from "../tasks/task-output.service";
+import { EmployeeSchema, McpServerSchema, WorkflowSchema } from "@zibby/contracts";
+import {
+  PR_ADDRESS_COMMENTS_ARTIFACT,
+  PR_REBASE_ARTIFACT,
+  PR_REPLIES_ARTIFACT,
+  PR_REVIEW_ARTIFACT,
+} from "../tasks/task-output.service";
 
 /**
  * The workflow definitions ZIBBY actually ships live as markdown on disk, outside
@@ -341,5 +346,44 @@ describe("pr-rebase — the PR inbox's Rebase button (todo-11)", () => {
       department: "dev",
       status: "active",
     });
+  });
+});
+
+describe("pr-address-comments — the PR inbox's Address review comments button", () => {
+  it("fixes with fullstack-developer, then github-commenter drafts the thread replies, both ungated", () => {
+    const wf = readWorkflow("pr-address-comments");
+    expect(wf.phases.map((p) => [p.id, p.agent])).toEqual([
+      ["address", "fullstack-developer"],
+      ["reply", "github-commenter"], // the operator-voice agent, reused — no new prompt copy
+    ]);
+    expect(wf.phases[0]).toMatchObject({
+      consumes: "task.md",
+      produces: PR_ADDRESS_COMMENTS_ARTIFACT,
+    });
+    expect(wf.phases[1]).toMatchObject({
+      consumes: PR_ADDRESS_COMMENTS_ARTIFACT,
+      produces: PR_REPLIES_ARTIFACT,
+    });
+    // The push/reply gate is ZIBBY's (TaskOutputService.parkPrAddressComments), not a workflow gate.
+    expect(wf.phases.every((p) => p.approval === undefined)).toBe(true);
+    expect(wf.outputs).toEqual([]);
+    expect(wf.department).toBe("dev");
+  });
+
+  it("has a hired dev employee for every phase agent, so no phase parks on NoEmployeeError", () => {
+    // The runner leases each phase from the WORKFLOW's department (workflow-runner.service.ts),
+    // so github-commenter (qa for the review levels) also holds a dev seat — same agent prompt.
+    const dir = path.join(WORKFLOWS_DIR, "../employees");
+    const employees = fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith(".json"))
+      .map((f) => EmployeeSchema.parse(JSON.parse(fs.readFileSync(path.join(dir, f), "utf8"))));
+    for (const phase of readWorkflow("pr-address-comments").phases) {
+      expect(
+        employees.some(
+          (e) => e.agentId === phase.agent && e.department === "dev" && e.status === "active",
+        ),
+      ).toBe(true);
+    }
   });
 });

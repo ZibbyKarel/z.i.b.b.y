@@ -26,6 +26,10 @@ export const PR_REVIEW_ARTIFACT = "zibby-pr-review.md";
 const PR_REVIEW_MAX_CHARS = 60_000;
 /** todo-11 — the `rebase-resolver` agent's report; its first line is the conflict claim. */
 export const PR_REBASE_ARTIFACT = "zibby-pr-rebase.md";
+/** PR inbox redesign — the address-comments agent's report; its first line is the claim (`Addressed: all` pushes without asking). */
+export const PR_ADDRESS_COMMENTS_ARTIFACT = "zibby-pr-address-comments.md";
+/** PR inbox redesign — `github-commenter`'s thread replies (`PrThreadReply[]` JSON), posted by ZIBBY after the push. */
+export const PR_REPLIES_ARTIFACT = "zibby-pr-replies.json";
 /** The only conflict-free first line of a rebase report. */
 const NO_CONFLICTS = /^Conflicts:\s*none\s*$/i;
 

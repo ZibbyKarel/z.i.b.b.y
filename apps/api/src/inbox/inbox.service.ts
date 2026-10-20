@@ -252,9 +252,9 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-  /** Cached GitHub classification + the (uncached, local) review/rebase task state per PR. */
+  /** Cached GitHub classification + the (uncached, local) review/rebase/address-comments task state per PR. */
   async listPrs(): Promise<InboxPrsResponse> {
-    const [result, { reviews, rebases }] = await Promise.all([
+    const [result, { reviews, rebases, addressings }] = await Promise.all([
       this.cachedPrs(),
       this.prTaskStates(),
     ]);
@@ -264,7 +264,13 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
         const key = `${pr.repo.toLowerCase()}#${pr.number}`;
         const codeReview = reviews.get(key);
         const rebase = rebases.get(key);
-        return { ...pr, ...(codeReview ? { codeReview } : {}), ...(rebase ? { rebase } : {}) };
+        const addressComments = addressings.get(key);
+        return {
+          ...pr,
+          ...(codeReview ? { codeReview } : {}),
+          ...(rebase ? { rebase } : {}),
+          ...(addressComments ? { addressComments } : {}),
+        };
       }),
     };
   }
@@ -278,19 +284,22 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Latest review task (Phase 129 P2, any level) and latest rebase task (todo-11) per
-   * `repo#number`. A `running` one whose task failed or whose run errored reads `failed`.
+   * Latest review task (Phase 129 P2, any level), latest rebase task (todo-11) and latest
+   * address-comments task (PR inbox redesign) per `repo#number`. A `running` one whose task
+   * failed or whose run errored reads `failed`.
    */
   private async prTaskStates(): Promise<{
     reviews: Map<string, NonNullable<InboxPr["codeReview"]>>;
     rebases: Map<string, NonNullable<InboxPr["rebase"]>>;
+    addressings: Map<string, NonNullable<InboxPr["addressComments"]>>;
   }> {
     const tasks = await this.tasks.list().catch(() => []);
     const reviews = new Map<string, NonNullable<InboxPr["codeReview"]>>();
     const rebases = new Map<string, NonNullable<InboxPr["rebase"]>>();
+    const addressings = new Map<string, NonNullable<InboxPr["addressComments"]>>();
     for (const task of [...tasks].sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
       const dead = isDeadTask(task);
-      const { prReview: review, prRebase: rebase } = task;
+      const { prReview: review, prRebase: rebase, prAddressComments: fix } = task;
       if (review) {
         reviews.set(`${review.repo.toLowerCase()}#${review.number}`, {
           taskId: task.id,
@@ -303,8 +312,14 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
           state: rebase.state === "running" && dead ? "failed" : rebase.state,
         });
       }
+      if (fix) {
+        addressings.set(`${fix.repo.toLowerCase()}#${fix.number}`, {
+          taskId: task.id,
+          state: fix.state === "running" && dead ? "failed" : fix.state,
+        });
+      }
     }
-    return { reviews, rebases };
+    return { reviews, rebases, addressings };
   }
 
   private async fetchPrs(): Promise<InboxPrsResponse> {

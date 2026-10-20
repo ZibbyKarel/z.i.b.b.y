@@ -260,6 +260,17 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
     }));
   }
 
+  /** PR inbox redesign — patch the address-comments provenance (`prAddressComments`). Server-only. */
+  async setPrAddressComments(
+    id: string,
+    patch: (current: ScheduledTask["prAddressComments"]) => ScheduledTask["prAddressComments"],
+  ): Promise<ScheduledTask> {
+    return this.updateEntity(id, (existing) => ({
+      ...existing,
+      prAddressComments: patch(existing.prAddressComments),
+    }));
+  }
+
   /**
    * Patch the stage-1 classification trace in place.
    *
