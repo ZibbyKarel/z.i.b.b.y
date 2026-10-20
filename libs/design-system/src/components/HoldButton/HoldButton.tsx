@@ -1,36 +1,13 @@
 "use client";
 import { type ButtonHTMLAttributes, type Ref, useEffect, useRef, useState } from "react";
 import { cn } from "../../utils/cn";
-import { disabledClasses, focusRingOffset } from "../../utils/focus";
+import { type ButtonSize, buttonClasses } from "../Button/Button";
 import { Icon } from "../Icon/Icon";
 
-export type HoldButtonTone = "warn" | "bad" | "ok" | "accent" | "ink";
-
-/** Two footprints on the shared button scale: `md` is the standalone approval
- * default; `sm` matches `Button size="sm"` so the control sits flush beside its
- * peers in dense chrome like the top bar. */
-export type HoldButtonSize = "sm" | "md";
-
-const sizeClass: Record<HoldButtonSize, string> = {
-  sm: "px-3 py-1.5 text-sm",
-  md: "px-[18px] py-[11px] text-caption",
-};
-
-const toneClass: Record<HoldButtonTone, string> = {
-  warn: "text-warn bg-warn/[0.08] border-warn/40",
-  bad: "text-bad bg-bad/[0.08] border-bad/40",
-  ok: "text-ok bg-ok/[0.08] border-ok/40",
-  accent: "text-accent bg-accent/[0.08] border-accent/40",
-  ink: "text-panel bg-ink border-ink",
-};
-
-const fillClass: Record<HoldButtonTone, string> = {
-  warn: "bg-warn/[0.18]",
-  bad: "bg-bad/[0.18]",
-  ok: "bg-ok/[0.18]",
-  accent: "bg-accent/[0.18]",
-  ink: "bg-state-work",
-};
+/** Two footprints on the shared button scale (`Button`'s `sm`/`md`): `md` is the
+ * standalone approval default; `sm` sits flush beside `Button size="sm"` peers in
+ * dense chrome like the top bar or a PR row. */
+export type HoldButtonSize = ButtonSize;
 
 /** How long the button must be held before it confirms. */
 export const HOLD_DURATION_MS = 900;
@@ -61,7 +38,6 @@ export interface HoldButtonProps extends Omit<
    * consumers override via props.
    */
   armedLabel?: string;
-  tone?: HoldButtonTone;
   size?: HoldButtonSize;
   block?: boolean;
   ref?: Ref<HTMLButtonElement>;
@@ -82,7 +58,6 @@ export function HoldButton({
   label = "Hold to confirm",
   doneLabel = "Confirmed",
   armedLabel = "Press again to confirm",
-  tone = "warn",
   size = "md",
   block,
   disabled,
@@ -153,14 +128,10 @@ export function HoldButton({
   return (
     <button
       className={cn(
-        "relative inline-flex items-center justify-center gap-1.5 overflow-hidden select-none",
-        "rounded-none border font-mono font-bold uppercase tracking-wider",
-        sizeClass[size],
-        "cursor-pointer whitespace-nowrap transition-colors duration-200",
-        done ? "border-ok bg-ok text-accent-contrast" : toneClass[tone],
-        block && "w-full",
-        focusRingOffset,
-        disabledClasses,
+        buttonClasses({ intent: "primary", size, block }),
+        "relative overflow-hidden select-none",
+        // A completed hold keeps the fill it grew: the whole face in `--s-work`.
+        done && "border-state-work bg-state-work hover:bg-state-work",
       )}
       data-testid={HoldButtonTestId.Root}
       disabled={disabled}
@@ -184,7 +155,7 @@ export function HoldButton({
         <span
           className={cn(
             "absolute inset-y-0 left-0",
-            fillClass[tone],
+            "bg-state-work",
             armed && "w-full animate-pulse",
             !armed && progress === 0 && "transition-[width] duration-200",
           )}
@@ -199,7 +170,14 @@ export function HoldButton({
         className="relative inline-flex items-center gap-1.5"
         data-testid={HoldButtonTestId.Label}
       >
-        {done && <Icon data-testid={HoldButtonTestId.Icon} name="check" size="sm" stroke="bold" />}
+        {done && (
+          <Icon
+            data-testid={HoldButtonTestId.Icon}
+            name="check"
+            size={size === "sm" ? "xs" : "sm"}
+            stroke="medium"
+          />
+        )}
         {done ? (
           doneLabel
         ) : armed ? (

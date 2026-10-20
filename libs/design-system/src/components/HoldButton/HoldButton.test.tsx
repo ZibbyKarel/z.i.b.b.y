@@ -50,11 +50,19 @@ describe("HoldButton", () => {
   it("defaults to the md footprint and applies the sm scale when asked", () => {
     const { rerender } = render(<HoldButton label="Podržet" />);
     // md (default) — the standalone approval footprint.
-    expect(screen.getByTestId(HoldButtonTestId.Root)).toHaveClass("px-[18px]", "py-[11px]");
-    // sm — matches Button size="sm" (px-3 py-1.5 text-sm) so it sits flush beside
-    // its peers in dense chrome like the top bar.
+    expect(screen.getByTestId(HoldButtonTestId.Root)).toHaveClass(
+      "px-[14px]",
+      "py-[10px]",
+      "text-[11px]",
+    );
+    // sm — the same recipe as Button size="sm" so it sits flush beside its peers
+    // in dense chrome like the top bar or a PR row.
     rerender(<HoldButton label="Podržet" size="sm" />);
-    expect(screen.getByTestId(HoldButtonTestId.Root)).toHaveClass("px-3", "py-1.5", "text-sm");
+    expect(screen.getByTestId(HoldButtonTestId.Root)).toHaveClass(
+      "px-[10px]",
+      "py-[6px]",
+      "text-[10px]",
+    );
   });
 
   it("does not start a hold when disabled", () => {
@@ -174,9 +182,9 @@ describe("HoldButton", () => {
     });
   });
 
-  it("renders the ink tone with a state-work fill", () => {
-    render(<HoldButton label="HOLD TO APPROVE" tone="ink" />);
-    expect(screen.getByTestId(HoldButtonTestId.Root)).toHaveClass("bg-ink");
+  it("renders as a primary button whose hold fill grows in state-work", () => {
+    render(<HoldButton label="HOLD TO APPROVE" />);
+    expect(screen.getByTestId(HoldButtonTestId.Root)).toHaveClass("bg-ink", "text-panel");
     expect(screen.getByTestId(HoldButtonTestId.Fill)).toHaveClass("bg-state-work");
   });
 });

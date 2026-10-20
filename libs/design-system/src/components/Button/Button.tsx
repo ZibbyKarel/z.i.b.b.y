@@ -41,6 +41,9 @@ const button = cva(
   },
 );
 
+/** The button class recipe, shared with `HoldButton` so both stay one look. Not public. */
+export const buttonClasses = button;
+
 /** Spinner border color per intent — primary spins in the panel-contrast color. */
 const spinnerClass: Record<ButtonIntent, string> = {
   primary: "border-panel/30 border-t-panel",

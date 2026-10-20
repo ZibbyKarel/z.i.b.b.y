@@ -76,7 +76,6 @@ function MergeQueueRow({ entry }: { entry: MergeQueueEntry }) {
                 label={t("release.merge.hold", { number: entry.number })}
                 onConfirm={onConfirmMerge}
                 size="sm"
-                tone="warn"
               />
             </Container>
           ) : (

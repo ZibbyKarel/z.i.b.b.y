@@ -261,7 +261,6 @@ export function PrActions({ pr, baseLabel }: PrActionsProps) {
                 label={t("merge")}
                 onConfirm={onMerge}
                 size="sm"
-                tone="warn"
               />
               <Row gap="75">
                 <Checkbox

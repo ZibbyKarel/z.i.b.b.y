@@ -109,7 +109,6 @@ export function RunApprovalBanner({
                     { onSuccess: onApproved },
                   )
                 }
-                tone="ink"
               />
               <Stack direction="row" gap="75">
                 {approval.action === "stage-approval" && (
