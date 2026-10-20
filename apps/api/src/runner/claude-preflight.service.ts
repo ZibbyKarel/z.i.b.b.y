@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { agentBaseEnv } from "../shared/agent-env";
 import { Injectable, Optional } from "@nestjs/common";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 
@@ -111,7 +112,7 @@ export class ClaudePreflightService {
 
       let child: ReturnType<typeof spawn>;
       try {
-        child = spawn(bin, args, { stdio: ["ignore", "pipe", "pipe"] });
+        child = spawn(bin, args, { stdio: ["ignore", "pipe", "pipe"], env: agentBaseEnv() });
       } catch (error) {
         settle({ ok: false, reason: error instanceof Error ? error.message : String(error) });
         return;

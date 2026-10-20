@@ -1,4 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process";
+import { agentBaseEnv } from "../shared/agent-env";
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { promises as fs } from "node:fs";
@@ -749,6 +750,7 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
       let settled = false;
       const child = spawn(command, args, {
         cwd,
+        env: agentBaseEnv(),
         detached: true,
         stdio: ["ignore", "pipe", "pipe"],
       });

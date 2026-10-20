@@ -7,6 +7,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { type IntendedAction, IntendedActionSchema } from "@zibby/contracts";
 import { OPERATOR_TOKEN_ENV, OPERATOR_TOKEN_FILE_ENV } from "../approvals/operator-token.service";
+import { agentBaseEnv } from "../shared/agent-env";
 import { writeFileAtomic } from "../shared/file-storage";
 import type { ScopedLogger } from "../shared/logging/logger.service";
 import { detectLimit } from "./detect-limit";
@@ -25,6 +26,7 @@ import type {
  * / {@link RunnerCore.holdForApproval}; the child blocks on a decision file until it
  * does. Wired by the agent runner (the core is entity-agnostic); other runners omit it.
  */
+export { agentBaseEnv };
 export type IntentHandler = (
   runId: string,
   action: IntendedAction,
@@ -67,14 +69,6 @@ export function freeDirs(spec: Pick<RunSpec, "cwd" | "spawnCwd" | "args">): stri
   const granted = spec.args.flatMap((a, i) => (a === "--add-dir" ? [spec.args[i + 1] ?? ""] : []));
   const dirs = [spec.cwd, spec.spawnCwd ?? "", ...granted, ...SHARED_FREE_DIRS];
   return [...new Set(dirs.filter(Boolean))].join(path.delimiter);
-}
-
-/** process.env minus the operator-only credential (Laws 1 & 4): agents must never decide approvals. */
-export function agentBaseEnv(): NodeJS.ProcessEnv {
-  const env = { ...process.env };
-  delete env[OPERATOR_TOKEN_ENV];
-  delete env[OPERATOR_TOKEN_FILE_ENV];
-  return env;
 }
 
 /**

@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { agentBaseEnv } from "./agent-env";
 import { Logger } from "@nestjs/common";
 
 const logger = new Logger("spawnClaudeCli");
@@ -67,6 +68,7 @@ export function spawnClaudeCli(opts: SpawnClaudeCliOptions): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn(process.env.CLAUDE_BIN ?? "claude", args, {
       stdio: ["ignore", "pipe", "pipe"],
+      env: agentBaseEnv(),
       ...(opts.cwd ? { cwd: opts.cwd } : {}),
     });
 

@@ -50,6 +50,7 @@ describe("spawnClaudeCli", () => {
     await expect(promise).resolves.toBe('{"result":"ok"}');
     expect(spawnMock).toHaveBeenCalledWith("claude", ["--setting-sources", "", "-p", "hi"], {
       stdio: ["ignore", "pipe", "pipe"],
+      env: expect.any(Object),
     });
   });
 

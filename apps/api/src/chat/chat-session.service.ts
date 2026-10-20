@@ -1,4 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process";
+import { agentBaseEnv } from "../shared/agent-env";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Inject, Injectable, Logger } from "@nestjs/common";
@@ -363,6 +364,7 @@ export class ChatSessionService {
   protected createProcess(args: string[]): ClaudeProcess {
     return spawn(process.env.CLAUDE_BIN ?? "claude", args, {
       stdio: ["ignore", "pipe", "pipe"],
+      env: agentBaseEnv(),
     }) as ChildProcess;
   }
 
