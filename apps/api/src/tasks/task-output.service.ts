@@ -35,7 +35,7 @@ export function isCleanPrRebase(conflictAtStart: boolean, report: string): boole
 }
 
 /** todo-17 — first lines ZIBBY force-pushes on without asking: a clean rebase, or conflicts resolved with green quick checks. */
-const AUTO_PUSH = /^Conflicts:\s*(?:none|\d+\s+files?)\s*$/i;
+const AUTO_PUSH = /^Conflicts:\s*(?:none|[1-9]\d*\s+files?)\s*$/i;
 
 /** The Rebase click authorises the push when the report's FIRST line is `Conflicts: none` or `Conflicts: <n> files`; aborted / checks-failed reports wait for the operator. */
 export function isAutoPushPrRebase(report: string): boolean {

@@ -390,6 +390,7 @@ describe("TaskOutputService", () => {
       ["conflicts: NONE  ", true],
       ["Conflicts: 1 file", true],
       ["Conflicts: 12 files\n\n- a.ts", true],
+      ["Conflicts: 0 files", false],
       ["Conflicts: 2 files, checks failed", false],
       ["Conflicts: none, checks failed", false],
       ["Conflicts: aborted", false],

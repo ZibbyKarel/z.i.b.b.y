@@ -394,9 +394,9 @@ export class WorkspaceService {
    * (`merge-base(expectedSha, origin/<base>)..expectedSha`) with the new ones
    * (`origin/<base>..HEAD`), merge commits excluded (`--no-merges`: a rebase drops a
    * "merge base into feature" commit). Unapproved, counts must match and every old
-   * `patch-id` must survive; with `allowRewrittenCommits` (the operator approved after
-   * conflicts were resolved) HEAD only needs at least one own commit beyond
-   * `origin/<base>`. With `rebasedSha` (the HEAD ZIBBY verified at approval time) the
+   * `patch-id` must survive; with `allowRewrittenCommits` (approved after conflicts
+   * were resolved, on the spot (todo-17) or by the operator) HEAD only needs at least
+   * one own commit beyond `origin/<base>`. With `rebasedSha` (the HEAD ZIBBY verified at approval time) the
    * worktree HEAD must still equal it, and exactly that sha is pushed. The lease pins
    * the remote branch to `expectedSha`, so a push made since the click is never
    * overwritten. Returns the pushed sha; throws an Error with the reason.

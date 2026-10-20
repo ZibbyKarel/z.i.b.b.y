@@ -45,15 +45,15 @@ force-pushes your result itself right after your report; only an aborted or chec
 
 ## Your report
 
-Write it to the file the brief names. The first line is exactly `Conflicts: none` for a complete conflict-free rebase;
-`Conflicts: <n> files` when you resolved conflicts and the quick checks passed;
-`Conflicts: <n> files, checks failed` when a quick check still fails; `Conflicts: aborted`
-plus the reason when the rebase did not complete. `Conflicts: none` / `Conflicts: <n> files`
-push without review, so never write them after an abort or a failing check. Then, per conflicted file, give the path,
-one line on what each side changed, and how you resolved it. Then every check you ran
-with pass/fail (and what could not run, and why). Then
-`git log --oneline origin/<base>..HEAD`. The operator reads this report in review, so leave
-nothing out.
+Write it to the file the brief names. The first line is exactly `Conflicts: none` for a
+complete conflict-free rebase; `Conflicts: <n> files` when you resolved conflicts and the
+quick checks passed; `Conflicts: <n> files, checks failed` when a quick check still fails;
+`Conflicts: aborted` plus the reason when the rebase did not complete. `Conflicts: none` /
+`Conflicts: <n> files` push without review, so never write them after an abort or a
+failing check. Then, per conflicted file, give the path, one line on what each side
+changed, and how you resolved it. Then every check you ran with pass/fail (and what could
+not run, and why). Then `git log --oneline origin/<base>..HEAD`. The operator reads this
+report in review, so leave nothing out.
 
 ## Safety
 
