@@ -105,6 +105,18 @@ describe("Card", () => {
     expect(edge).toHaveClass("bg-run");
   });
 
+  it("edge defaults to a 3px left bar; edgeSize lg is 4px; edgeSide top spans the top", () => {
+    const { rerender } = render(<Card edge="working" />);
+    expect(screen.getByTestId(CardTestId.Edge)).toHaveClass("left-0", "w-[3px]");
+    rerender(<Card edge="working" edgeSide="top" edgeSize="lg" />);
+    expect(screen.getByTestId(CardTestId.Edge)).toHaveClass("top-0", "h-[4px]");
+  });
+
+  it("edge neutral uses the strong-border colour", () => {
+    render(<Card edge="neutral" />);
+    expect(screen.getByTestId(CardTestId.Edge)).toHaveClass("bg-border-strong");
+  });
+
   it("omits the edge bar by default", () => {
     render(<Card>x</Card>);
     expect(screen.queryByTestId(CardTestId.Edge)).not.toBeInTheDocument();

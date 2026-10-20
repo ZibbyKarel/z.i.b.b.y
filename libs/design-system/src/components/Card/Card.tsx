@@ -115,7 +115,11 @@ export interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, "classNa
    * state at a glance without claiming to be "live". Combine with `tone` +
    * `living` on a genuinely in-flight card for the glow on top of the bar.
    */
-  edge?: AnyStateTone;
+  edge?: AnyStateTone | "neutral";
+  /** Which side the edge bar sits on — `left` (default) or across the `top`. */
+  edgeSide?: "left" | "top";
+  /** Edge thickness — `md` 3px (default) or `lg` 4px. */
+  edgeSize?: "md" | "lg";
   header?: ReactNode;
   footer?: ReactNode;
   ref?: Ref<HTMLDivElement>;
@@ -175,7 +179,8 @@ const toneGlow: Record<StateTone, string> = {
   idle: "shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-state-idle)_12%,transparent)]",
 };
 
-const edgeClass: Record<StateTone, string> = {
+const edgeClass: Record<StateTone | "neutral", string> = {
+  neutral: "bg-border-strong",
   thinking: "bg-accent",
   done: "bg-ok",
   blocked: "bg-warn",
@@ -202,6 +207,8 @@ export function Card({
   selected = false,
   borderTone,
   edge,
+  edgeSide = "left",
+  edgeSize = "md",
   header,
   footer,
   children,
@@ -209,7 +216,7 @@ export function Card({
   ...rest
 }: CardProps) {
   const resolvedTone = tone ? normalizeStateTone(tone) : undefined;
-  const resolvedEdge = edge ? normalizeStateTone(edge) : undefined;
+  const resolvedEdge = edge === "neutral" ? "neutral" : edge ? normalizeStateTone(edge) : undefined;
   return (
     <Tag
       data-testid={CardTestId.Root}
@@ -251,7 +258,13 @@ export function Card({
         <span
           aria-hidden
           className={cn(
-            "pointer-events-none absolute inset-y-0 left-0 w-[3px] rounded-l-[inherit]",
+            "pointer-events-none absolute",
+            edgeSide === "top"
+              ? cn("inset-x-0 top-0 rounded-t-[inherit]", edgeSize === "lg" ? "h-[4px]" : "h-[3px]")
+              : cn(
+                  "inset-y-0 left-0 rounded-l-[inherit]",
+                  edgeSize === "lg" ? "w-[4px]" : "w-[3px]",
+                ),
             edgeClass[resolvedEdge],
           )}
           data-testid={CardTestId.Edge}

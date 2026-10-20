@@ -385,6 +385,9 @@ export type {
 export { MenuSurface, MenuSurfaceTestId } from "./components/MenuSurface/MenuSurface";
 export type { MenuSurfaceAlign, MenuSurfaceProps } from "./components/MenuSurface/MenuSurface";
 
+export { IndentRail, IndentRailTestId } from "./components/IndentRail/IndentRail";
+export type { IndentRailProps } from "./components/IndentRail/IndentRail";
+
 export { DropDownButton, DropDownButtonTestId } from "./components/DropDownButton/DropDownButton";
 export type {
   DropDownButtonItem,

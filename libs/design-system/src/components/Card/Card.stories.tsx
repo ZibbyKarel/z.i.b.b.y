@@ -95,6 +95,15 @@ export const Overview: Story = {
           <Card edge="bad">
             <CardContent>Chyba</CardContent>
           </Card>
+          <Card edge="neutral">
+            <CardContent>Draft (neutral)</CardContent>
+          </Card>
+          <Card edge="ok" edgeSize="lg">
+            <CardContent>edgeSize lg (4px)</CardContent>
+          </Card>
+          <Card edge="run" edgeSide="top" edgeSize="lg">
+            <CardContent>edgeSide top, lg</CardContent>
+          </Card>
         </div>
       </div>
     </div>
