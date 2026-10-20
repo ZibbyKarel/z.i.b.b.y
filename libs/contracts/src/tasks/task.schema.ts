@@ -752,6 +752,11 @@ export const ScheduledTaskSchema = z.object({
       body: z.string().optional(),
       approvalId: z.string().optional(),
       note: z.string().optional(),
+      /** todo-22 — the PR head read at start: every phase reviews it, inline comments pin to it (`commit_id`). */
+      headSha: z
+        .string()
+        .regex(/^[0-9a-f]{40}$/)
+        .optional(),
     })
     .optional(),
   /**

@@ -58,7 +58,11 @@ export function reviewTaskText(
   url: string,
   title: string,
   level: PrReviewLevel = "quick",
+  headSha?: string,
 ): string {
+  const checkout = headSha
+    ? `- Your working directory is this run's own git worktree of the project. Review exactly commit \`${headSha}\` (the PR head when the review started): if HEAD is not it, run \`gh pr checkout ${number} --repo ${repo} --detach\` then \`git checkout --detach ${headSha}\` (if that commit is missing, \`git fetch origin ${headSha}\` first).`
+    : `- Your working directory is this run's own git worktree of the project. If HEAD is not the PR head (\`gh pr view ${number} --repo ${repo} --json headRefOid -q .headRefOid\`), check it out first: \`gh pr checkout ${number} --repo ${repo} --detach\`.`;
   return [
     `Code review of GitHub pull request ${repo}#${number} (${url}) — a multi-phase ZIBBY workflow run (level: ${level}).`,
     "",
@@ -68,7 +72,7 @@ export function reviewTaskText(
     "",
     "Every phase:",
     `- Read the PR: \`gh pr view ${number} --repo ${repo}\` and \`gh pr diff ${number} --repo ${repo}\`.`,
-    `- Your working directory is this run's own git worktree of the project. If HEAD is not the PR head (\`gh pr view ${number} --repo ${repo} --json headRefOid -q .headRefOid\`), check it out first: \`gh pr checkout ${number} --repo ${repo} --detach\`.`,
+    checkout,
     "- Do not edit tracked files.",
     "",
     "## Phase `test`",
@@ -89,7 +93,7 @@ export function reviewTaskText(
     "Merge what earlier phases found (test, architecture and browser, whichever ran; their outputs are in the run folder's phase subfolders, if any ran) with your own line-level review of the diff: correctness, security, error handling, tests, readability. Drop duplicates and anything you could not verify in the code. List findings sorted by severity, most critical first, each labelled \`Critical\`, \`Important\` or \`Minor\` (within one severity, the most impactful first). Every finding: severity, file:line, what is wrong, a suggested fix. No findings → say so in one line. If a `test` phase ran, start with what ran and what failed. Skip praise and generic advice. This is the reviewers' aggregate, not the final text.",
     "",
     "## Phase `comment`",
-    `Turn the \`review\` phase's findings into the review that gets posted on the PR, written the way a human reviewer comments on GitHub. Write ONLY \`${PR_REVIEW_ARTIFACT}\`, in this exact shape: first one or two sentences (which commit you reviewed, anything the reader must know up front, plus any finding that has no single line in the diff); then, for every finding tied to a line, a block whose heading is exactly \`### <path>:<line> (<Critical|Important|Minor>)\` (or \`### <path>:<start>-<end> (…)\` for a range) followed by the comment text. Use only lines that appear on the new side of \`gh pr diff\` (added or context lines of a hunk); a finding on any other line goes in the opening sentences instead. Keep every verified finding, in severity order; add nothing you did not verify. The heading's severity is for the operator only — ZIBBY posts each block as an inline comment on that line without it, and the opening sentences as the review body — so the comment text itself carries no label. No \`Brief:\` line, no phase notes. The operator reads this document at the approval gate; when it comes back with their notes, those notes are authoritative.`,
+    `Turn the \`review\` phase's findings into the review that gets posted on the PR, written the way a human reviewer comments on GitHub. Write ONLY \`${PR_REVIEW_ARTIFACT}\`, in this exact shape: first one or two sentences (which commit you reviewed${headSha ? ` — \`${headSha.slice(0, 7)}\`` : ""}, anything the reader must know up front, plus any finding that has no single line in the diff); then, for every finding tied to a line, a block whose heading is exactly \`### <path>:<line> (<Critical|Important|Minor>)\` (or \`### <path>:<start>-<end> (…)\` for a range) followed by the comment text. Use only lines that appear on the new side of \`gh pr diff\` (added or context lines of a hunk); a finding on any other line goes in the opening sentences instead. Keep every verified finding, in severity order; add nothing you did not verify. The heading's severity is for the operator only — ZIBBY posts each block as an inline comment on that line without it, and the opening sentences as the review body — so the comment text itself carries no label. No \`Brief:\` line, no phase notes. The operator reads this document at the approval gate; when it comes back with their notes, those notes are authoritative.`,
     "",
     "Do NOT post anything to GitHub yourself — no `gh pr review`, `gh pr comment`, or `gh api` writes — and do not commit or push.",
     "ZIBBY posts the approved `comment` output as one review — the opening sentences as its body, each block as an inline comment on its line — of the type the operator picks at sign-off (approve, request changes or comment).",
@@ -150,10 +154,11 @@ export class InboxReviewService implements OnModuleInit {
     const title = input.title?.trim() ?? "";
     const level = input.level ?? "quick";
     const label = level === "quick" ? "Code review" : `Code review (${level})`;
+    const headSha = await this.readHeadSha(link.repo, input.number, link.token);
     const result = await this.scheduler.createTask(
       {
         title: `${label}: ${link.repo}#${input.number}${title ? ` ${title}` : ""}`.slice(0, 200),
-        text: reviewTaskText(link.repo, input.number, url, title, level),
+        text: reviewTaskText(link.repo, input.number, url, title, level, headSha),
       },
       Date.now(),
       project.id,
@@ -167,6 +172,7 @@ export class InboxReviewService implements OnModuleInit {
       number: input.number,
       url,
       state: "running",
+      ...(headSha ? { headSha } : {}),
     }));
     this.log?.info("pr review task started", {
       taskId: result.task.id,
@@ -174,6 +180,24 @@ export class InboxReviewService implements OnModuleInit {
       level,
     });
     return { taskId: result.task.id };
+  }
+
+  /** todo-22 — the PR head sha the review pins to; any failure → undefined (review runs unpinned). */
+  private async readHeadSha(
+    repo: string,
+    number: number,
+    token: string,
+  ): Promise<string | undefined> {
+    try {
+      const res = await this.fetchImpl(`${GITHUB_API}/repos/${repo}/pulls/${number}`, {
+        headers: { authorization: `Bearer ${token}`, accept: "application/vnd.github+json" },
+      });
+      if (!res.ok) return undefined;
+      const sha = ((await res.json()) as { head?: { sha?: unknown } }).head?.sha;
+      return typeof sha === "string" && /^[0-9a-f]{40}$/.test(sha) ? sha : undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   /** Approve → post the parked review body with the operator-picked event (todo-10; none picked → COMMENT). */
@@ -210,9 +234,11 @@ export class InboxReviewService implements OnModuleInit {
       });
     // The operator's pick at sign-off (todo-10); ZIBBY never chooses APPROVE /
     // REQUEST_CHANGES itself — no pick → COMMENT. todo-22: findings go inline.
+    const commit = review.headSha ? { commit_id: review.headSha } : {};
     let res = await send({
       body: summary,
       event,
+      ...commit,
       ...(comments.length
         ? {
             comments: comments.map((c) => ({
@@ -229,7 +255,7 @@ export class InboxReviewService implements OnModuleInit {
     if (res.status === 422 && comments.length) {
       // A line outside the diff rejects the whole review: post it once as one body instead.
       note = `inline comments rejected by GitHub${await githubReason(res)}; posted as one review`;
-      res = await send({ body: foldComments(summary, comments), event });
+      res = await send({ body: foldComments(summary, comments), event, ...commit });
     }
     if (!res.ok) return fail(`github review post: HTTP ${res.status}${await githubReason(res)}`);
     await this.tasks.setPrReview(taskId, (c) =>

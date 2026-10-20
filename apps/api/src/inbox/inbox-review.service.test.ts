@@ -165,6 +165,7 @@ describe("InboxReviewService", () => {
 
   async function parked(): Promise<void> {
     await service.start({ projectId: "acme", repo: "acme/app", number: 7 });
+    fetchImpl.mockClear(); // drop start's PR head read
     await storage.setPrReview("task_r1", (c) =>
       c ? { ...c, state: "awaiting-approval", body: "LGTM-ish", approvalId: "a1" } : c,
     );
@@ -222,6 +223,7 @@ describe("InboxReviewService", () => {
 
   async function parkBody(body: string): Promise<void> {
     await service.start({ projectId: "acme", repo: "acme/app", number: 7 });
+    fetchImpl.mockClear(); // drop start's PR head read
     await storage.setPrReview("task_r1", (c) =>
       c ? { ...c, state: "awaiting-approval", body, approvalId: "a1" } : c,
     );
@@ -280,8 +282,56 @@ describe("InboxReviewService", () => {
     expect(sentBody()).toEqual({ body: "Just a summary.", event: "COMMENT" });
   });
 
+  it("todo-22: start pins the PR head sha; post sends it as commit_id, also on the fold retry", async () => {
+    const sha = "a".repeat(40);
+    fetchImpl.mockResolvedValueOnce(
+      new Response(JSON.stringify({ head: { sha } }), { status: 200 }),
+    );
+    await service.start({ projectId: "acme", repo: "acme/app", number: 7 });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api.github.com/repos/acme/app/pulls/7",
+      expect.objectContaining({
+        headers: expect.objectContaining({ authorization: "Bearer tok" }),
+      }),
+    );
+    expect((await storage.get("task_r1")).prReview?.headSha).toBe(sha);
+    const [input] = createTask.mock.calls[0] ?? [];
+    expect(input.text).toContain(`git checkout --detach ${sha}`);
+    expect(input.text).toContain("`aaaaaaa`");
+    await storage.setPrReview("task_r1", (c) =>
+      c
+        ? {
+            ...c,
+            state: "awaiting-approval",
+            body: "Sum.\n\n### a.ts:1 (Minor)\nx",
+            approvalId: "a1",
+          }
+        : c,
+    );
+    fetchImpl.mockClear();
+    fetchImpl.mockResolvedValueOnce(new Response("{}", { status: 422 }));
+    await service.post("task_r1");
+    expect(sentBody(0).commit_id).toBe(sha);
+    expect(sentBody(1).commit_id).toBe(sha);
+  });
+
+  it("todo-22: a failed PR head read starts the review without headSha", async () => {
+    fetchImpl.mockResolvedValueOnce(new Response("{}", { status: 404 }));
+    await service.start({ projectId: "acme", repo: "acme/app", number: 7 });
+    expect((await storage.get("task_r1")).prReview).not.toHaveProperty("headSha");
+    const [input] = createTask.mock.calls[0] ?? [];
+    expect(input.text).not.toContain("git checkout --detach");
+    fetchImpl.mockClear();
+    await storage.setPrReview("task_r1", (c) =>
+      c ? { ...c, state: "awaiting-approval", body: "Sum.", approvalId: "a1" } : c,
+    );
+    await service.post("task_r1");
+    expect(sentBody()).not.toHaveProperty("commit_id");
+  });
+
   it("approve with nothing parked posts nothing; reject discards", async () => {
     await service.start({ projectId: "acme", repo: "acme/app", number: 7 });
+    fetchImpl.mockClear();
     await service.post("task_r1");
     expect(fetchImpl).not.toHaveBeenCalled();
     await service.discard("task_r1");

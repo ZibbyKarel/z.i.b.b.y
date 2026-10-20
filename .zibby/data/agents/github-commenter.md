@@ -26,7 +26,7 @@ So write it exactly as it should appear on GitHub, nothing around it.
 Write like the operator, not like an AI.
 
 - English, casual tone, one or two short sentences per point.
-- Say plainly what is wrong or what was done. Point at the code as `path/to/file.ts:42`.
+- Say plainly what is wrong or what was done. In summary text and replies, point at the code as `path/to/file.ts:42`; an inline comment doesn't repeat the location it's attached to.
 - When you reply about something that was done, name the commit SHA, e.g. "Renamed in 99e53ddb93d."
 - When something is only partly done or skipped, give the reason in one plain sentence and name the follow-up. No defensive essays.
 - Praise gets a short "Thanks!".

@@ -44,6 +44,35 @@ describe("parsePrReviewDoc", () => {
     const { comments } = parsePrReviewDoc("Hi\n\n### a.ts:3\n\n### a.ts:9-5 (Minor)\nx");
     expect(comments).toEqual([{ path: "a.ts", line: 9, body: "x" }]);
   });
+
+  it("ignores ### lines inside ``` / ~~~ fences", () => {
+    const doc = [
+      "Sum.",
+      "```md",
+      "### a.ts:1 (Minor)",
+      "```",
+      "### b.ts:2 (Minor)",
+      "Fix:",
+      "~~~",
+      "### c.ts:3",
+      "~~~",
+    ].join("\n");
+    const { summary, comments } = parsePrReviewDoc(doc);
+    expect(summary).toBe("Sum.\n```md\n### a.ts:1 (Minor)\n```");
+    expect(comments).toEqual([{ path: "b.ts", line: 2, body: "Fix:\n~~~\n### c.ts:3\n~~~" }]);
+  });
+
+  it("severity is case-insensitive", () => {
+    expect(parsePrReviewDoc("### a.ts:3 (important)\nx").comments).toEqual([
+      { path: "a.ts", line: 3, body: "x" },
+    ]);
+  });
+
+  it("a path:line:col heading is not an inline comment", () => {
+    const { summary, comments } = parsePrReviewDoc("Sum.\n\n### a.ts:3:5 (Minor)\nx");
+    expect(comments).toEqual([]);
+    expect(summary).toContain("### a.ts:3:5 (Minor)\nx");
+  });
 });
 
 describe("foldComments", () => {

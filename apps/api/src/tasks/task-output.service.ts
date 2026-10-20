@@ -100,7 +100,7 @@ export function parseThreadReplies(raw: string | undefined): PrThreadReply[] {
 const FINDING_LINE = /^[\s>*_-]*(?:\d+[.)][\s>*_-]*)?(?:Critical|Important|Minor)[*_]*:/m;
 
 /** todo-22 — a finding in the inline-comment format: `### path:line (Critical|Important|Minor)`. */
-const FINDING_HEADING = /^###\s.*\((?:Critical|Important|Minor)\)\s*$/m;
+const FINDING_HEADING = /^###\s.*\((?:Critical|Important|Minor)\)\s*$/im;
 
 /**
  * todo-10 — ZIBBY's preselection for the operator's review-type pick: any finding →

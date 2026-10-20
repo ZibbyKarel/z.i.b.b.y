@@ -270,6 +270,7 @@ describe("TaskOutputService", () => {
       ["Summary.\n\n2) Minor: rename x at b.ts:9", "REQUEST_CHANGES"],
       ["3. Important: missing await", "REQUEST_CHANGES"],
       ["Sum.\n\n### a.ts:1 (Minor)\nx", "REQUEST_CHANGES"],
+      ["Sum.\n\n### a.ts:1 (important)\nx", "REQUEST_CHANGES"],
       ["Looks good.", "APPROVE"],
       ["No findings — looks good to merge.", "APPROVE"],
       ["No critical issues found.", "APPROVE"],

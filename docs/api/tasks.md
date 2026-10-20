@@ -107,7 +107,8 @@ recorded and approved in one go (posted with the review event the operator picke
 The parked text is one readable document — a summary plus `### path:line (Severity)`
 blocks (todo-22) — which `suggestReviewEvent` reads (a labelled finding line or a
 severity heading → REQUEST_CHANGES); the runner posts the blocks as inline comments
-(see `docs/api/inbox.md`).
+(see `docs/api/inbox.md`), pinned to `prReview.headSha` (`commit_id`) when the PR head was
+read at start.
 
 **`prRebase`** (todo-11) is the rebase counterpart: stamped by `InboxRebaseService.start`
 via `ScheduledTasksStorageService.setPrRebase`, written to `awaiting-approval` by

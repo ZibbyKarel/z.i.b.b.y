@@ -12,7 +12,7 @@ export interface PrReviewInlineComment {
 }
 
 const HEADING =
-  /^###\s+`?([^\s`]+?):(\d+)(?:-(\d+))?`?(?:\s*\((?:Critical|Important|Minor)\))?\s*$/;
+  /^###\s+`?([^\s`:]+):(\d+)(?:-(\d+))?`?(?:\s*\((?:Critical|Important|Minor)\))?\s*$/i;
 
 export function parsePrReviewDoc(doc: string): {
   summary: string;
@@ -36,12 +36,15 @@ export function parsePrReviewDoc(doc: string): {
     }
     current = null;
   };
+  let inFence = false;
   for (const line of doc.split("\n")) {
-    const head = line.match(HEADING);
+    // A `### ` line inside a ``` / ~~~ fence is code, not a heading.
+    if (/^\s*(?:```|~~~)/.test(line)) inFence = !inFence;
+    const head = inFence ? null : line.match(HEADING);
     if (head) {
       flush();
       current = { head, lines: [] };
-    } else if (current && /^###\s/.test(line)) {
+    } else if (current && !inFence && /^###\s/.test(line)) {
       flush();
       summary.push(line);
     } else if (current) {

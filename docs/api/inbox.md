@@ -117,7 +117,10 @@ PR url is derived from repo + number, never taken from the client. It then:
    `Code review[ (<level>)]: <repo>#<n> <title>`. The text tells the agents to read the PR (`gh pr view` /
    `gh pr diff --repo`) and **not** post to GitHub, commit or push. The PR title is
    quoted as untrusted data.
-2. Stamps `ScheduledTask.prReview = { repo, number, url, state: "running" }`.
+2. Stamps `ScheduledTask.prReview = { repo, number, url, state: "running", headSha? }`. `headSha`
+   is the PR head read from `GET /repos/{repo}/pulls/{n}` right before the task is created; the
+   brief tells every phase to review exactly that commit (`git checkout --detach <sha>`) and the
+   comment phase's summary names it. A failed read starts the review without it (unpinned).
 
 **Run → approval mechanism:** the existing terminal-output hook,
 `TaskOutputService.handleTerminal`, which the scheduler already calls exactly once
@@ -152,11 +155,12 @@ block (or `<path>:<start>-<end>`) per finding. `parsePrReviewDoc` (`pr-review-do
 it: the summary becomes the review `body`, each block one entry of `comments`
 (`{ path, line, side: "RIGHT", start_line?, start_side?, body }`) without its severity label —
 the label only drives `suggestedReviewEvent` (a severity heading counts as a finding). A heading
-that doesn't parse stays in the summary; more than 100 blocks fold into it. A doc without blocks
-posts `{ body, event }` as before. When GitHub rejects the inline comments (422 — a line outside
+that doesn't parse (e.g. `path:line:col`) stays in the summary, `### ` lines inside ``` / ~~~ fences
+are code, and the severity is case-insensitive; more than 100 blocks fold into it. A doc without blocks
+posts `{ body, event }` as before. With `prReview.headSha` set, both the inline post and the fold
+retry carry `commit_id: headSha`, so the comments land on the reviewed commit even if the PR moved. When GitHub rejects the inline comments (422 — a line outside
 the diff), the review is retried once with every comment folded into the body
-(`` `path:line` text ``) and `note` says the inline comments were rejected; a second failure is
-`failed` as above.
+(`` `path:line` text ``) and `note`says the inline comments were rejected; a second failure is`failed` as above.
 
 ## PR diff (`GET /api/inbox/prs/:projectId/:number/diff`)
 
