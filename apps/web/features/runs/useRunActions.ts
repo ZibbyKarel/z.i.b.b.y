@@ -2,16 +2,30 @@ import { useCancelScheduledTaskMutation } from "../tasks";
 import {
   useDeleteAgentRunMutation,
   useDeleteWorkflowRunMutation,
+  usePauseTaskRunMutation,
   useResumeTaskRunMutation,
   useStopTaskRunMutation,
 } from "./mutations";
 import { type RunView, isResumableRun, isStoppableRun } from "./run";
 
+export interface ResumeRunOptions {
+  /** continue (default): `--resume` session / continue in place. fresh: a new task from the original inputs. */
+  mode?: "continue" | "fresh";
+  note?: string;
+}
+
 export interface RunActions {
   stop: (run: RunView) => void;
   stopping: boolean;
-  /** Absent kinds/states no-op — same guard `isResumableRun` applies before firing. */
-  resume: (run: RunView) => void;
+  /** Pause a running workflow at its next stage boundary; other kinds/states no-op. */
+  pause: (run: RunView) => void;
+  pausing: boolean;
+  /**
+   * Absent kinds/states no-op — `isResumableRun`, widened to any parked/paused run, a
+   * pausing run (cancels the pause) and a `fresh` re-run of a done run (the API is the
+   * authority on those).
+   */
+  resume: (run: RunView, opts?: ResumeRunOptions) => void;
   resuming: boolean;
   remove: (runId: string, kind: string) => void;
   deleting: boolean;
@@ -36,6 +50,7 @@ export function useRunActions(
 ): RunActions {
   const stopRun = useStopTaskRunMutation();
   const resumeRun = useResumeTaskRunMutation();
+  const pauseRun = usePauseTaskRunMutation();
   const deleteAgent = useDeleteAgentRunMutation();
   const deleteWorkflow = useDeleteWorkflowRunMutation();
   const cancelTask = useCancelScheduledTaskMutation();
@@ -44,11 +59,31 @@ export function useRunActions(
     if (isStoppableRun(run)) stopRun.mutate({ params: { runId: run.runId }, body: {} });
   };
 
-  const resume = (run: RunView) => {
-    if (!isResumableRun(run)) return;
+  const pause = (run: RunView) => {
+    if (run.kind === "workflow" && run.status === "running")
+      pauseRun.mutate({ params: { runId: run.runId }, body: {} });
+  };
+
+  const resume = (run: RunView, opts: ResumeRunOptions = {}) => {
+    const allowed =
+      isResumableRun(run) ||
+      run.status === "parked" ||
+      run.status === "paused" ||
+      // RESUME while pausing cancels the pending pause.
+      (run.status === "running" && run.pauseRequested === true) ||
+      (opts.mode === "fresh" && run.status === "done");
+    if (!allowed) return;
+    const body = {
+      ...(opts.mode && { mode: opts.mode }),
+      ...(opts.note?.trim() && { note: opts.note.trim() }),
+    };
     resumeRun.mutate(
-      { params: { runId: run.runId }, body: {} },
-      { onSuccess: (res) => onResumed(res.body.runId) },
+      { params: { runId: run.runId }, body },
+      {
+        onSuccess: (res) => {
+          if (res.body.runId !== run.runId) onResumed(res.body.runId);
+        },
+      },
     );
   };
 
@@ -62,6 +97,8 @@ export function useRunActions(
   return {
     stop,
     stopping: stopRun.isPending,
+    pause,
+    pausing: pauseRun.isPending,
     resume,
     resuming: resumeRun.isPending,
     remove,

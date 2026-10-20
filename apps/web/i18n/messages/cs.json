@@ -1281,7 +1281,154 @@
     "budgetSpent": "Utraceno {spent} / {cap}",
     "totalCost": "Celková cena {cost}",
     "bookFolder": "Složka knihy",
-    "stageExternalCost": "+{cost} externí"
+    "stageExternalCost": "+{cost} externí",
+    "detail": {
+      "backToRuns": "← BĚHY",
+      "assignProject": "+ PŘIŘADIT PROJEKT",
+      "workflow": "WORKFLOW · {name}",
+      "action": {
+        "pause": "POZASTAVIT",
+        "pausing": "POZASTAVUJI…",
+        "resume": "POKRAČOVAT",
+        "stop": "ZASTAVIT",
+        "rerunFresh": "SPUSTIT OD NULY",
+        "continueSession": "POKRAČOVAT V RELACI",
+        "rerun": "SPUSTIT ZNOVU",
+        "continueTask": "NAVÁZAT ÚKOLEM →"
+      },
+      "more": {
+        "openTask": "OTEVŘÍT ÚKOL →",
+        "openAgent": "OTEVŘÍT AGENTA →",
+        "openFolder": "OTEVŘÍT SLOŽKU",
+        "copyId": "ZKOPÍROVAT ID",
+        "delete": "SMAZAT BĚH"
+      },
+      "metric": {
+        "progress": "PRŮBĚH",
+        "elapsed": "UPLYNULO",
+        "stage": "FÁZE",
+        "retries": "POKUSY",
+        "cost": "CENA",
+        "confidence": "JISTOTA"
+      },
+      "mode": {
+        "running": "BĚŽÍ",
+        "pausing": "POZASTAVUJI · PO TÉTO FÁZI",
+        "paused": "POZASTAVENO",
+        "approval": "ČEKÁ NA SCHVÁLENÍ",
+        "question": "ČEKÁ NA ODPOVĚĎ",
+        "parked": "ZAPARKOVÁNO · POKUSY VYČERPÁNY",
+        "limit": "POZASTAVENO · LIMIT",
+        "stopped": "ZASTAVENO",
+        "error": "SELHALO",
+        "done": "HOTOVO",
+        "waiting": "ČEKÁ"
+      },
+      "stage": {
+        "done": "HOTOVO",
+        "running": "BĚŽÍ",
+        "waiting": "ČEKÁ",
+        "parked": "ZAPARKOVÁNO",
+        "queued": "VE FRONTĚ",
+        "stopped": "ZASTAVENO"
+      },
+      "rail": {
+        "title": "FÁZE · {n}",
+        "routed": "SMĚROVÁNO",
+        "switchboard": "SWITCHBOARD",
+        "checkpoints": "CHECKPOINTY",
+        "openFolder": "OTEVŘÍT SLOŽKU →"
+      },
+      "view": {
+        "live": "ŽIVĚ",
+        "input": "VSTUP",
+        "output": "VÝSTUP",
+        "metaLive": "{state} · {n} UDÁLOSTÍ",
+        "metaInput": "{task} · {n} PŘÍLOH"
+      },
+      "banner": {
+        "approvalHead": "POTŘEBUJE TĚ · ZÁVAŽNOST {sev} · {risk}",
+        "approvalMeta": "VYŽÁDÁNO {at} · PŘES {via} · PŘED PROVEDENÍM ZKONTROLOVÁNO",
+        "hold": "PODRŽ PRO SCHVÁLENÍ",
+        "holding": "DRŽÍM…",
+        "revise": "PŘEPRACOVAT",
+        "reject": "ZAMÍTNOUT",
+        "wouldPublish": "ZVEŘEJNÍ · {files} SOUBORŮ · +{add} −{del}",
+        "questionHead": "POTŘEBUJE TĚ · OTÁZKA OD {agent}",
+        "questionHint": "ODPOVĚZ NÍŽE · BĚH POKRAČUJE PO ODPOVĚDI",
+        "parkedHead": "ZAPARKOVÁNO · FÁZE {n} {name} · {att} POKUSŮ",
+        "parkedBody": "Pokusy jsou vyčerpány. Poslední chyba: {error}.",
+        "parkedHint": "PŘIDEJ POZNÁMKU NÍŽE A POKRAČUJ, NEBO SPUSŤ ZNOVU"
+      },
+      "feed": {
+        "youTo": "TY → {to} · {t}",
+        "queued": "VE FRONTĚ",
+        "delivered": "DORUČENO → {stage}",
+        "notDelivered": "NEDORUČENO"
+      },
+      "output": {
+        "prTitle": "Pull request #{n}",
+        "prMeta": "{state} · {files} SOUBORŮ · +{add} −{del}",
+        "folderMeta": "SLOŽKA ÚKOLU · {n} SOUBORŮ",
+        "openPr": "OTEVŘÍT PR ↗",
+        "openOutput": "OTEVŘÍT VÝSTUP ↗",
+        "openFolder": "OTEVŘÍT SLOŽKU ↗",
+        "pending": {
+          "running": "PROBÍHÁ · ČÁSTEČNÝ VÝSTUP Z POSLEDNÍHO CHECKPOINTU",
+          "approval": "NEZVEŘEJNĚNO · ČEKÁ NA SCHVÁLENÍ",
+          "question": "POZASTAVENO · ČEKÁ NA ODPOVĚĎ",
+          "paused": "POZASTAVENO · ČÁSTEČNÝ VÝSTUP ZACHOVÁN",
+          "parked": "ČÁSTEČNÉ · POSLEDNÍ DOBRÝ CHECKPOINT",
+          "stopped": "ZASTAVENO · ČÁSTEČNÝ VÝSTUP ZACHOVÁN"
+        }
+      },
+      "composer": {
+        "to": "KOMU",
+        "all": "VŠICHNI · {n}",
+        "inputLabel": "Zpráva",
+        "ph": {
+          "running": "Napiš posádce. Dostane to do kontextu v dalším kroku.",
+          "approval": "Přidej poznámku k žádosti, nebo ji PŘEPRACOVAT vrať.",
+          "question": "Odpověz {agent}…",
+          "parked": "Pokračuj s poznámkou, třeba co zkusit jinak",
+          "stopped": "Přidej poznámku a spusť znovu",
+          "done": "Zeptej se dál. Založí nový úkol s tímto výstupem jako kontextem.",
+          "revise": "Co se má změnit před zveřejněním?",
+          "agentRunning": "Agentní běh přijme poznámku, až v něm budeš pokračovat."
+        },
+        "send": {
+          "send": "ODESLAT ↵",
+          "answer": "ODPOVĚDĚT ↵",
+          "resume": "POKRAČOVAT ↵",
+          "rerun": "SPUSTIT ↵",
+          "newTask": "NOVÝ ÚKOL ↵",
+          "sendBack": "VRÁTIT ↵"
+        },
+        "hint": {
+          "running": "DORUČENO MEZI KROKY",
+          "paused": "BĚH JE POZASTAVEN · ZPRÁVY ČEKAJÍ",
+          "approval": "BĚH ČEKÁ U BRÁNY",
+          "question": "BĚH POKRAČUJE PO ODPOVĚDI",
+          "parked": "POZNÁMKA PŮJDE DO KONTEXTU",
+          "stopped": "BĚH JE ZASTAVEN",
+          "done": "BĚH SKONČIL",
+          "revise": "PŘEPRACOVÁNÍ · POSÁDKA TO PŘEDĚLÁ A ZEPTÁ SE ZNOVU"
+        }
+      },
+      "confirm": {
+        "stopTitle": "ZASTAVIT {id}",
+        "stopBody": "Aktuální fáze ({stage}) se zruší. Částečný výstup a checkpointy zůstanou a běh můžeš spustit znovu.",
+        "rejectTitle": "ZAMÍTNOUT ŽÁDOST",
+        "rejectBody": "Posádka neprovede: {action}. Běh se zastaví a ponechá částečný výstup.",
+        "deleteTitle": "SMAZAT {id}",
+        "deleteBody": "Běh, jeho logy a checkpointy se odstraní. Úkol a jeho zapsaný výstup zůstanou."
+      },
+      "notFound": {
+        "title": "BĚH NENALEZEN",
+        "body": "Běh s ID {id} neexistuje. Možná byl smazán.",
+        "back": "← VŠECHNY BĚHY"
+      }
+    }
   },
   "gates": {
     "title": "Pravidla schvalování",

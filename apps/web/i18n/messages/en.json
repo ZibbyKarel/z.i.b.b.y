@@ -1281,7 +1281,154 @@
     "budgetSpent": "Spent {spent} / {cap}",
     "totalCost": "Total cost {cost}",
     "bookFolder": "Book folder",
-    "stageExternalCost": "+{cost} external"
+    "stageExternalCost": "+{cost} external",
+    "detail": {
+      "backToRuns": "← RUNS",
+      "assignProject": "+ ASSIGN PROJECT",
+      "workflow": "WORKFLOW · {name}",
+      "action": {
+        "pause": "PAUSE",
+        "pausing": "PAUSING…",
+        "resume": "RESUME",
+        "stop": "STOP",
+        "rerunFresh": "RE-RUN FRESH",
+        "continueSession": "CONTINUE SESSION",
+        "rerun": "RE-RUN",
+        "continueTask": "CONTINUE TASK →"
+      },
+      "more": {
+        "openTask": "OPEN TASK →",
+        "openAgent": "OPEN AGENT →",
+        "openFolder": "OPEN TASK FOLDER",
+        "copyId": "COPY RUN ID",
+        "delete": "DELETE RUN"
+      },
+      "metric": {
+        "progress": "PROGRESS",
+        "elapsed": "ELAPSED",
+        "stage": "STAGE",
+        "retries": "RETRIES",
+        "cost": "COST",
+        "confidence": "CONFIDENCE"
+      },
+      "mode": {
+        "running": "RUNNING",
+        "pausing": "PAUSING · AFTER THIS STAGE",
+        "paused": "PAUSED",
+        "approval": "WAITING ON APPROVAL",
+        "question": "NEEDS YOUR ANSWER",
+        "parked": "PARKED · RETRIES EXHAUSTED",
+        "limit": "PAUSED · USAGE LIMIT",
+        "stopped": "STOPPED",
+        "error": "FAILED",
+        "done": "DONE",
+        "waiting": "WAITING"
+      },
+      "stage": {
+        "done": "DONE",
+        "running": "RUNNING",
+        "waiting": "WAITING",
+        "parked": "PARKED",
+        "queued": "QUEUED",
+        "stopped": "STOPPED"
+      },
+      "rail": {
+        "title": "STAGES · {n}",
+        "routed": "ROUTED",
+        "switchboard": "SWITCHBOARD",
+        "checkpoints": "CHECKPOINTS",
+        "openFolder": "OPEN TASK FOLDER →"
+      },
+      "view": {
+        "live": "LIVE",
+        "input": "INPUT",
+        "output": "OUTPUT",
+        "metaLive": "{state} · {n} EVENTS",
+        "metaInput": "{task} · {n} ATTACHMENTS"
+      },
+      "banner": {
+        "approvalHead": "NEEDS YOU · SEVERITY {sev} · {risk}",
+        "approvalMeta": "REQUESTED {at} · VIA {via} · REVIEWED BEFORE IT TAKES EFFECT",
+        "hold": "HOLD TO APPROVE",
+        "holding": "HOLD…",
+        "revise": "REVISE",
+        "reject": "REJECT",
+        "wouldPublish": "WOULD PUBLISH · {files} FILES · +{add} −{del}",
+        "questionHead": "NEEDS YOU · QUESTION FROM {agent}",
+        "questionHint": "ANSWER BELOW · THE RUN RESUMES WHEN YOU REPLY",
+        "parkedHead": "PARKED · STAGE {n} {name} · {att} ATTEMPTS",
+        "parkedBody": "Retries are exhausted. The last error was: {error}.",
+        "parkedHint": "ADD A NOTE BELOW TO RESUME, OR RE-RUN FROM THE MENU"
+      },
+      "feed": {
+        "youTo": "YOU → {to} · {t}",
+        "queued": "QUEUED",
+        "delivered": "DELIVERED → {stage}",
+        "notDelivered": "NOT DELIVERED"
+      },
+      "output": {
+        "prTitle": "Pull request #{n}",
+        "prMeta": "{state} · {files} FILES · +{add} −{del}",
+        "folderMeta": "TASK FOLDER · {n} FILES",
+        "openPr": "OPEN PR ↗",
+        "openOutput": "OPEN OUTPUT ↗",
+        "openFolder": "OPEN FOLDER ↗",
+        "pending": {
+          "running": "IN PROGRESS · PARTIAL OUTPUT FROM LAST CHECKPOINT",
+          "approval": "NOT PUBLISHED · WAITING ON YOUR APPROVAL",
+          "question": "PAUSED · WAITING ON YOUR ANSWER",
+          "paused": "PAUSED · PARTIAL OUTPUT KEPT",
+          "parked": "PARTIAL · LAST GOOD CHECKPOINT",
+          "stopped": "STOPPED · PARTIAL OUTPUT KEPT"
+        }
+      },
+      "composer": {
+        "to": "TO",
+        "all": "ALL · {n}",
+        "inputLabel": "Message",
+        "ph": {
+          "running": "Message the crew. It lands in their context on the next step.",
+          "approval": "Add a note to the gate request, or use REVISE to send it back.",
+          "question": "Answer {agent}…",
+          "parked": "Resume with a note, e.g. what to try differently",
+          "stopped": "Add a note and start again",
+          "done": "Ask a follow-up. Starts a new task with this output as context.",
+          "revise": "What should change before this is published?",
+          "agentRunning": "Agent runs take notes when you continue them."
+        },
+        "send": {
+          "send": "SEND ↵",
+          "answer": "ANSWER ↵",
+          "resume": "RESUME ↵",
+          "rerun": "RE-RUN ↵",
+          "newTask": "NEW TASK ↵",
+          "sendBack": "SEND BACK ↵"
+        },
+        "hint": {
+          "running": "DELIVERED BETWEEN STEPS",
+          "paused": "RUN IS PAUSED · MESSAGES QUEUE",
+          "approval": "RUN IS HELD AT THE GATE",
+          "question": "RUN RESUMES ON REPLY",
+          "parked": "NOTE IS ADDED TO CONTEXT",
+          "stopped": "RUN IS STOPPED",
+          "done": "RUN FINISHED",
+          "revise": "REVISION · THE CREW REWORKS BEFORE ASKING AGAIN"
+        }
+      },
+      "confirm": {
+        "stopTitle": "STOP {id}",
+        "stopBody": "The current stage ({stage}) is cancelled. Partial output and checkpoints are kept, and you can re-run later.",
+        "rejectTitle": "REJECT REQUEST",
+        "rejectBody": "The crew will not {action}. The run stops and keeps its partial output.",
+        "deleteTitle": "DELETE {id}",
+        "deleteBody": "The run, its logs and checkpoints are removed. The task and its written-back output stay."
+      },
+      "notFound": {
+        "title": "RUN NOT FOUND",
+        "body": "There is no run with ID {id}. It may have been deleted.",
+        "back": "← ALL RUNS"
+      }
+    }
   },
   "gates": {
     "title": "Approval rules",

@@ -5,3 +5,5 @@ export { useResumeWorkflowRunMutation } from "./useResumeWorkflowRunMutation";
 export { useResumeTaskRunMutation } from "./useResumeTaskRunMutation";
 export { useAssignRunProjectMutation } from "./useAssignRunProjectMutation";
 export { useOpenTaskRunFolderMutation } from "./useOpenTaskRunFolderMutation";
+export { usePauseTaskRunMutation } from "./usePauseTaskRunMutation";
+export { useSendTaskRunMessageMutation } from "./useSendTaskRunMessageMutation";
