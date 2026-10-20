@@ -1288,11 +1288,15 @@ export class TaskSchedulerService
         // a drain's dispatch is serialized against a concurrent `attemptCreate` or
         // `releaseHeld` for the same project, not just against other drains.
         const result = await this.trace.run({ traceId: randomUUID() }, () =>
-          this.withCapacityLock(fresh.projectId, () =>
-            this.attemptDispatch(fresh, project, Date.now(), {
-              skipBudget: this.budgetApproved.has(fresh.id),
-            }),
-          ),
+          this.withCapacityLock(fresh.projectId, async () => {
+            // cancel() flips under this same lock — re-check so a cancel that landed
+            // during the staffing/stage awaits above never dispatches.
+            const current = await this.storage.get(fresh.id).catch(() => null);
+            if (current?.status !== "queued") return null;
+            return this.attemptDispatch(current, project, Date.now(), {
+              skipBudget: this.budgetApproved.has(current.id),
+            });
+          }),
         );
         if (stageKey && result === "dispatched") handedOut.add(stageKey);
       }
