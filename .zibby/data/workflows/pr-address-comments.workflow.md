@@ -31,8 +31,9 @@ worktree běhu checkne PR head, přečte nevyřešená review vlákna (`gh api g
 opraví, co je v rozsahu PR, každou opravu jako samostatný commit, pustí rychlé checky
 a zapíše report. Druhá fáze **reply** (`github-commenter`, agent, který píše na GitHub
 hlasem operátora): `zibby-pr-address-comments.md` → `zibby-pr-replies.json`, krátká
-odpověď na každé opravené vlákno („Good catch, fixed in abc1234."). Agenti nic
-nepushují, nic nepostují a vlákna neresolvují.
+odpověď na každé opravené vlákno („Good catch, fixed in abc1234."); u opravených vláken
+přidá `resolve: true` a ZIBBY je po odpovědi resolvne. Po pushi ZIBBY znovu vyžádá review
+od těch, kdo požadovali změny. Agenti nic nepushují, nic nepostují a vlákna neresolvují.
 
 ## Push a odpovědi
 

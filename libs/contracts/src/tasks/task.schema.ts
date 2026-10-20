@@ -563,6 +563,8 @@ export const PrThreadReplySchema = z
   .object({
     threadId: z.string().regex(/^PRRT_[\w-]+$/),
     body: z.string().trim().min(1).max(500),
+    /** Only for a thread the `address` phase marked `done in <sha>`: ZIBBY resolves it after the reply. */
+    resolve: z.boolean().optional(),
   })
   .strict();
 export type PrThreadReply = z.infer<typeof PrThreadReplySchema>;
@@ -809,6 +811,12 @@ export const ScheduledTaskSchema = z.object({
       /** How many replies reached GitHub, and why any did not. */
       replied: z.number().int().nonnegative().optional(),
       repliesNote: z.string().optional(),
+      /** Threads ZIBBY resolved after replying (only `resolve: true` replies that were posted). */
+      resolved: z.number().int().nonnegative().optional(),
+      /** Logins whose latest review was "Changes requested" and got a fresh review request. */
+      reviewersRequested: z.array(z.string()).optional(),
+      /** Why resolving or re-requesting review (partly) failed. */
+      followUpNote: z.string().optional(),
     })
     .optional(),
   /** Set once dispatched: the started agent-run / workflow-run id. */

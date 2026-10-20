@@ -402,6 +402,14 @@ describe("TaskOutputService", () => {
           ]),
         ),
       ).toEqual([{ threadId: "PRRT_a", body: "Good catch, fixed in abc1234." }]);
+      expect(
+        parseThreadReplies(
+          JSON.stringify([
+            { threadId: "PRRT_a", body: "Fixed.", resolve: true },
+            { threadId: "PRRT_b", body: "Fixed.", resolve: "yes" },
+          ]),
+        ),
+      ).toEqual([{ threadId: "PRRT_a", body: "Fixed.", resolve: true }]);
       const many = Array.from({ length: 60 }, (_, i) => ({ threadId: `PRRT_${i}`, body: "ok" }));
       expect(parseThreadReplies(JSON.stringify(many))).toHaveLength(50);
     });

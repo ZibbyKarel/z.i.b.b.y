@@ -27,6 +27,9 @@ describe("InboxAddressCommentsService", () => {
   let graphql: string[];
   let threads: { id: string; isResolved: boolean }[];
   let mutationStatus: number;
+  let rest: { url: string; body: string }[];
+  let reviews: { author: { __typename: string; login: string }; state: string }[];
+  let requestStatus: number;
   let integrations: Integration[];
   let service: InboxAddressCommentsService;
 
@@ -68,6 +71,14 @@ describe("InboxAddressCommentsService", () => {
       { id: "PRRT_r", isResolved: true },
     ];
     mutationStatus = 200;
+    rest = [];
+    reviews = [
+      { author: { __typename: "User", login: "alice" }, state: "CHANGES_REQUESTED" },
+      { author: { __typename: "User", login: "bob" }, state: "APPROVED" },
+      { author: { __typename: "Bot", login: "copilot" }, state: "CHANGES_REQUESTED" },
+      { author: { __typename: "User", login: "octo" }, state: "CHANGES_REQUESTED" }, // PR author
+    ];
+    requestStatus = 201;
     const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
       if (url === "https://api.github.com/graphql") {
         const body = String(init?.body ?? "");
@@ -78,12 +89,37 @@ describe("InboxAddressCommentsService", () => {
             { status: mutationStatus },
           );
         }
+        if (body.includes("resolveReviewThread")) {
+          return new Response(
+            JSON.stringify({ data: { resolveReviewThread: { thread: { id: "x" } } } }),
+            { status: mutationStatus },
+          );
+        }
+        if (body.includes("latestOpinionatedReviews")) {
+          return new Response(
+            JSON.stringify({
+              data: {
+                repository: {
+                  pullRequest: {
+                    author: { login: "octo" },
+                    latestOpinionatedReviews: { nodes: reviews },
+                  },
+                },
+              },
+            }),
+            { status: 200 },
+          );
+        }
         return new Response(
           JSON.stringify({
             data: { repository: { pullRequest: { reviewThreads: { nodes: threads } } } },
           }),
           { status: 200 },
         );
+      }
+      if (url.endsWith("/requested_reviewers") && init?.method === "POST") {
+        rest.push({ url, body: String(init.body) });
+        return new Response("{}", { status: requestStatus });
       }
       return new Response(JSON.stringify(pull), { status: 200 });
     });
@@ -242,7 +278,7 @@ describe("InboxAddressCommentsService", () => {
     expect(pushFastForward).not.toHaveBeenCalled();
   });
 
-  describe("thread replies after the push (reused github-commenter)", () => {
+  describe("follow-up after the push (reused github-commenter)", () => {
     async function parkedWithReplies(): Promise<string> {
       const taskId = await parked();
       await storage.setPrAddressComments(taskId, (c) =>
@@ -250,9 +286,9 @@ describe("InboxAddressCommentsService", () => {
           ? {
               ...c,
               replies: [
-                { threadId: "PRRT_a", body: "Good catch, fixed in bbbbbbb." },
-                { threadId: "PRRT_r", body: "Resolved already." },
-                { threadId: "PRRT_x", body: "Not on this PR." },
+                { threadId: "PRRT_a", body: "Good catch, fixed in bbbbbbb.", resolve: true },
+                { threadId: "PRRT_b", body: "Skipped, out of scope." },
+                { threadId: "PRRT_r", body: "Resolved already.", resolve: true },
               ],
             }
           : c,
@@ -260,43 +296,85 @@ describe("InboxAddressCommentsService", () => {
       return taskId;
     }
 
-    it("after the push, replies only to this PR's unresolved threads and never resolves", async () => {
-      const taskId = await parkedWithReplies();
-      await service.push(taskId);
-      const mutations = graphql.filter((b) => b.includes("addPullRequestReviewThreadReply"));
-      expect(mutations).toHaveLength(1);
-      expect(mutations[0]).toContain("PRRT_a");
-      expect(mutations[0]).toContain("Good catch, fixed in bbbbbbb.");
-      expect(graphql.some((b) => b.includes("resolveReviewThread"))).toBe(false);
-      expect(graphql[0]).toContain('"n":7'); // the threads are re-read from THIS PR
-      const fix = (await storage.get(taskId)).prAddressComments;
-      expect(fix).toMatchObject({ state: "pushed", replied: 1 });
-      expect(fix?.repliesNote).toMatch(/2 skipped/);
+    beforeEach(() => {
+      threads = [
+        { id: "PRRT_a", isResolved: false },
+        { id: "PRRT_b", isResolved: false },
+        { id: "PRRT_r", isResolved: true },
+      ];
     });
 
-    it("a failed push posts no replies", async () => {
+    it("replies, resolves only open threads flagged resolve, re-requests changes-requested reviewers", async () => {
+      const taskId = await parkedWithReplies();
+      await service.push(taskId);
+      const resolves = graphql.filter((b) => b.includes("resolveReviewThread"));
+      expect(resolves).toHaveLength(1);
+      expect(resolves[0]).toContain("PRRT_a");
+      expect(graphql.filter((b) => b.includes("addPullRequestReviewThreadReply"))).toHaveLength(2);
+      expect(graphql[0]).toContain('"n":7'); // the threads are re-read from THIS PR
+      expect(rest).toHaveLength(1);
+      expect(rest[0]?.url).toBe(
+        "https://api.github.com/repos/acme/app/pulls/7/requested_reviewers",
+      );
+      expect(JSON.parse(rest[0]?.body ?? "{}")).toEqual({ reviewers: ["alice"] });
+      const fix = (await storage.get(taskId)).prAddressComments;
+      expect(fix).toMatchObject({
+        state: "pushed",
+        replied: 2,
+        resolved: 1,
+        reviewersRequested: ["alice"],
+      });
+      expect(fix?.repliesNote).toMatch(/1 skipped/);
+    });
+
+    it("a failed push does nothing on GitHub", async () => {
       pushFastForward.mockRejectedValue(new Error("non-fast-forward"));
       const taskId = await parkedWithReplies();
       await expect(service.push(taskId)).rejects.toThrow();
       expect(graphql).toEqual([]);
+      expect(rest).toEqual([]);
     });
 
-    it("a failed reply keeps the push as pushed and notes it", async () => {
+    it("no replies parked still re-requests review", async () => {
+      await service.push(await parked());
+      expect(graphql.some((b) => b.includes("addPullRequestReviewThreadReply"))).toBe(false);
+      expect(graphql.some((b) => b.includes("resolveReviewThread"))).toBe(false);
+      expect(rest).toHaveLength(1);
+    });
+
+    it("nobody requested changes → no review request", async () => {
+      reviews = [{ author: { __typename: "User", login: "bob" }, state: "APPROVED" }];
+      const taskId = await parked();
+      await service.push(taskId);
+      expect(rest).toEqual([]);
+      expect((await storage.get(taskId)).prAddressComments?.reviewersRequested).toEqual([]);
+    });
+
+    it("a refused review request (422) is noted, push stays pushed", async () => {
+      requestStatus = 422;
+      const taskId = await parked();
+      await service.push(taskId);
+      const fix = (await storage.get(taskId)).prAddressComments;
+      expect(fix).toMatchObject({ state: "pushed" });
+      expect(fix?.followUpNote).toMatch(/422/);
+    });
+
+    it("a failed reply resolves nothing", async () => {
       mutationStatus = 502;
       const taskId = await parkedWithReplies();
       await service.push(taskId);
+      expect(graphql.some((b) => b.includes("resolveReviewThread"))).toBe(false);
       const fix = (await storage.get(taskId)).prAddressComments;
       expect(fix).toMatchObject({ state: "pushed", replied: 0 });
       expect(fix?.repliesNote).toMatch(/502/);
     });
 
-    it("no replies parked → no GitHub call; a resolved-only PR posts nothing", async () => {
-      await service.push(await parked());
-      expect(graphql).toEqual([]);
+    it("a resolved-only PR posts no replies", async () => {
       threads = [{ id: "PRRT_a", isResolved: true }];
       const taskId = await parkedWithReplies();
       await service.push(taskId);
       expect(graphql.filter((b) => b.includes("addPullRequestReviewThreadReply"))).toEqual([]);
+      expect(graphql.some((b) => b.includes("resolveReviewThread"))).toBe(false);
       expect((await storage.get(taskId)).prAddressComments).toMatchObject({ replied: 0 });
     });
   });

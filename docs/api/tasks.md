@@ -124,7 +124,7 @@ head, base, headSha, state: "running"`), written to `awaiting-approval` by
 pushes; no report / no worktree / no new commits → `failed` + `note`), and to
 `pushed`/`discarded`/`failed` by the `pr-address-comments` approval runner, which pushes only
 from `awaiting-approval`, fast-forward only. An interrupted run with `state === "running"` gets an
-error outcome. `replies` / `replied` / `repliesNote` record the thread replies (see
+error outcome. `replies` / `replied` / `repliesNote` record the thread replies, `resolved` / `reviewersRequested` / `followUpNote` the thread resolving and review re-request (see
 `docs/api/inbox.md`).
 
 `scheduledAt` absent or in the past → `createTask` runs classification + dispatch

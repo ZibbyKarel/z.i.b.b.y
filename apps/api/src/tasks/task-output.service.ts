@@ -439,15 +439,18 @@ export class TaskOutputService implements OnModuleInit {
       },
     );
     if (!pushed) return { summary: `Review komentáře ${ref}: push selhal` };
-    if (!replies.length) return { summary: `Review komentáře ${ref}: opravy pushnuty` };
-    // The runner posted the replies right after the push; report what really reached GitHub.
-    const replied = await this.storage
+    // The runner posted replies / resolved threads / re-requested review right after the push.
+    const after = await this.storage
       .get(task.id)
-      .then((t) => t.prAddressComments?.replied ?? 0)
-      .catch(() => 0);
-    return {
-      summary: `Review komentáře ${ref}: opravy pushnuty, odpovědi ve vláknech ${replied}/${replies.length}`,
-    };
+      .then((t) => t.prAddressComments)
+      .catch(() => undefined);
+    const parts = ["opravy pushnuty"];
+    if (replies.length) parts.push(`odpovědi ve vláknech ${after?.replied ?? 0}/${replies.length}`);
+    if (after?.resolved) parts.push(`vyřešená vlákna ${after.resolved}`);
+    if (after?.reviewersRequested?.length) {
+      parts.push(`review znovu vyžádáno od ${after.reviewersRequested.join(", ")}`);
+    }
+    return { summary: `Review komentáře ${ref}: ${parts.join(", ")}` };
   }
 
   /** Write the run summary to the chosen file — a vault note or a path in the worktree. */
