@@ -928,6 +928,7 @@
     "waiting": "čekání na výstup…"
   },
   "approvals": {
+    "operatorTokenMissing": "Operátorský token chybí nebo je špatný — nastav ho v Nastavení → Obecné.",
     "wants": "chce",
     "exactAction": "přesně tohle agent udělá",
     "consequenceLabel": "co se stane po schválení",
@@ -962,6 +963,11 @@
     "cancelRevise": "Zrušit"
   },
   "settings": {
+    "operatorToken": "Operátorský token",
+    "operatorTokenHint": "Potřebný ke schválení, zamítnutí nebo odpovědi. Stejná hodnota jako ZIBBY_OPERATOR_TOKEN v API, nebo obsah souboru ~/.config/zibby/operator-token. Ukládá se jen v tomto prohlížeči.",
+    "operatorTokenSave": "Uložit",
+    "operatorTokenSaved": "Token uložen",
+    "operatorTokenMissing": "Token není nastaven — schvalování bude odmítnuto",
     "title": "Nastavení systému",
     "mandate": {
       "title": "Mandát autonomie",

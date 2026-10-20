@@ -1,5 +1,6 @@
-import { appContract } from "@zibby/contracts";
+import { OPERATOR_TOKEN_HEADER, appContract } from "@zibby/contracts";
 import { initTsrReactQuery } from "@ts-rest/react-query/v5";
+import { readOperatorToken } from "./operatorToken";
 
 /**
  * Base URL of the API. Configurable per environment via NEXT_PUBLIC_API_URL
@@ -21,6 +22,10 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL!;
  */
 export const apiClient = initTsrReactQuery(appContract, {
   baseUrl: API_URL,
-  baseHeaders: { accept: "application/json" },
+  baseHeaders: {
+    accept: "application/json",
+    // Function-valued so the token pasted in Settings applies without a reload.
+    [OPERATOR_TOKEN_HEADER]: () => readOperatorToken(),
+  },
   validateResponse: true,
 });

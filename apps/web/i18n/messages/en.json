@@ -928,6 +928,7 @@
     "waiting": "waiting for output…"
   },
   "approvals": {
+    "operatorTokenMissing": "The operator token is missing or wrong — set it in Settings → General.",
     "wants": "wants to",
     "exactAction": "exactly what the agent will do",
     "consequenceLabel": "what happens after approval",
@@ -962,6 +963,11 @@
     "cancelRevise": "Cancel"
   },
   "settings": {
+    "operatorToken": "Operator token",
+    "operatorTokenHint": "Needed to approve, reject or answer. Same value as the API's ZIBBY_OPERATOR_TOKEN, or the contents of ~/.config/zibby/operator-token. Stored in this browser only.",
+    "operatorTokenSave": "Save",
+    "operatorTokenSaved": "Token saved",
+    "operatorTokenMissing": "No token set — approvals will be refused",
     "title": "System settings",
     "mandate": {
       "title": "Autonomy mandate",

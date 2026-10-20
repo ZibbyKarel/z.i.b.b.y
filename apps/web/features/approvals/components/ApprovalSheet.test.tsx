@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { SegmentedControlTestId } from "@zibby/design-system";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DashboardApproval } from "../approval";
+import cs from "../../../i18n/messages/cs.json";
 import { ApprovalSheet } from "./ApprovalSheet";
 
 const push = vi.fn();
@@ -31,7 +32,7 @@ const { hooks } = vi.hoisted(() => ({
     },
     task: { data: undefined },
     approve: vi.fn(),
-    approveState: { isError: false, error: null as Error | null },
+    approveState: { isError: false, error: null as unknown },
     reject: vi.fn(),
     revise: vi.fn(),
     checkpoint: null as string | null,
@@ -211,6 +212,14 @@ describe("ApprovalSheet (ZB-08 / D-014)", () => {
     hooks.approveState = { isError: true, error: new Error("GitHub: nope") };
     render(<ApprovalSheet approvalId="appr-1" onClose={onClose} />);
     expect(screen.getByTestId("approval-approve-error")).toHaveTextContent("GitHub: nope");
+  });
+
+  it("a 401 on approve tells the operator to set the token in Settings", () => {
+    hooks.approveState = { isError: true, error: { status: 401, body: { message: "no" } } };
+    render(<ApprovalSheet approvalId="appr-1" onClose={onClose} />);
+    expect(screen.getByTestId("approval-approve-error")).toHaveTextContent(
+      cs.approvals.operatorTokenMissing,
+    );
   });
 
   it("request changes on a stage checkpoint requires a note, then revises", async () => {

@@ -81,6 +81,13 @@ export function ApprovalSheet({
   // todo-10: the operator's review-type pick on a PR-review sign-off, keyed by approval
   // id so switching approvals in the open sheet falls back to the new suggestion.
   const [picked, setPicked] = useState<{ id: string; event: PrReviewEvent } | null>(null);
+  // A 401 means the operator token is unset/wrong — say so instead of a bare failure.
+  const decisionErrorText = (error: unknown) =>
+    typeof error === "object" && error !== null && "status" in error && error.status === 401
+      ? tApprovals("operatorTokenMissing")
+      : error instanceof Error
+        ? error.message
+        : t("approveFailed");
   const reviewEvent =
     approval && picked?.id === approval.id ? picked.event : approval?.suggestedReviewEvent;
 
@@ -289,6 +296,11 @@ export function ApprovalSheet({
             </Button>
           )}
         </Row>
+        {(reject.isError || revise.isError) && (
+          <Typography data-testid="approval-deny-error" size="sm" tone="bad" type="text">
+            {decisionErrorText(reject.error ?? revise.error)}
+          </Typography>
+        )}
       </Stack>
     ) : (
       <Stack gap="150">
@@ -338,7 +350,7 @@ export function ApprovalSheet({
         </Row>
         {approve.isError && (
           <Typography data-testid="approval-approve-error" size="sm" tone="bad" type="text">
-            {approve.error instanceof Error ? approve.error.message : t("approveFailed")}
+            {decisionErrorText(approve.error)}
           </Typography>
         )}
       </Stack>
