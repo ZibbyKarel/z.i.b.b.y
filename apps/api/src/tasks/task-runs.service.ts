@@ -8,6 +8,7 @@ import {
   type ArchivePage,
   type GoalRun,
   type Processor,
+  type RunFiles,
   type RunKind,
   type RunLogChunk,
   type ScheduledTask,
@@ -121,6 +122,14 @@ export class TaskRunsService {
     if (!folder) throw new TaskRunNotFoundError(runId);
     await this.opener(folder);
     return { path: folder };
+  }
+
+  /** A workflow run's folder tree (read-only). Non-workflow / unknown runs → not found. */
+  async listFiles(runId: string): Promise<RunFiles> {
+    const kind = await this.kindOf(runId);
+    const files = kind === "workflow" ? await this.workflowRunner.listRunFiles(runId) : null;
+    if (!files) throw new TaskRunNotFoundError(runId);
+    return files;
   }
 
   /**

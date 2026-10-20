@@ -116,7 +116,7 @@ export class TaskRunsController {
         }
       },
 
-      // Handlers land with the API tasks (pause B4, messages B5, files B3); until then
+      // Handlers land with the API tasks (pause B4, messages B5); until then
       // the contract routes answer with a plain refusal so the tree typechecks.
       pauseTaskRun: async () => ({
         status: 409,
@@ -126,10 +126,14 @@ export class TaskRunsController {
         status: 409,
         body: { message: "Messages are not implemented yet" },
       }),
-      listTaskRunFiles: async ({ params: { runId } }) => ({
-        status: 404,
-        body: { message: notFound(runId) },
-      }),
+      listTaskRunFiles: async ({ params: { runId } }) => {
+        try {
+          return { status: 200, body: await this.runs.listFiles(runId) };
+        } catch (error) {
+          if (isMissing(error)) return { status: 404, body: { message: notFound(runId) } };
+          throw error;
+        }
+      },
 
       deleteTaskRun: async ({ params: { runId } }) => {
         try {

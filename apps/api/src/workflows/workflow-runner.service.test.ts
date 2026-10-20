@@ -221,6 +221,64 @@ async function fireIntent(h: Harness): Promise<void> {
   ).onStageIntent(STAGE_RUN_ID, intent);
 }
 
+describe("WorkflowRunnerService — listRunFiles", () => {
+  let dir: string;
+  let h: Harness;
+
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "pipe-runner-files-"));
+    h = await makeHarness(dir);
+  });
+
+  afterEach(async () => {
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  it("lists the run tree: symlinks inside the root, no dotfiles, no escapes, dirs first", async () => {
+    const root = path.join(dir, "files_run");
+    await fs.mkdir(path.join(root, "context"), { recursive: true });
+    await fs.mkdir(path.join(root, "01_plan"), { recursive: true });
+    await fs.mkdir(path.join(root, "output"), { recursive: true });
+    await fs.writeFile(path.join(root, "context/input.md"), "in");
+    await fs.writeFile(path.join(root, "01_plan/plan.md"), "plan");
+    await fs.writeFile(path.join(root, ".zibby-system-prompt.md"), "secret");
+    await fs.symlink("../01_plan/plan.md", path.join(root, "output/plan.md"));
+    await fs.symlink("/etc", path.join(root, "output/evil"));
+
+    const out = await h.service.listRunFiles("files_run");
+    const paths = out?.entries.map((e) => e.path) ?? [];
+
+    expect(paths).toEqual([
+      "01_plan",
+      "01_plan/plan.md",
+      "context",
+      "context/input.md",
+      "output",
+      "output/plan.md",
+    ]);
+    expect(out?.entries.find((e) => e.path === "output/plan.md")).toMatchObject({
+      kind: "file",
+      size: 4,
+    });
+    expect(out?.truncated).toBe(false);
+  });
+
+  it("caps at 500 entries and flags truncated", async () => {
+    const root = path.join(dir, "big_run");
+    await fs.mkdir(root, { recursive: true });
+    await Promise.all(
+      Array.from({ length: 600 }, (_, i) => fs.writeFile(path.join(root, `f${i}.txt`), "x")),
+    );
+    const out = await h.service.listRunFiles("big_run");
+    expect(out?.entries.length).toBe(500);
+    expect(out?.truncated).toBe(true);
+  });
+
+  it("is null for an unknown run", async () => {
+    expect(await h.service.listRunFiles("nope")).toBeNull();
+  });
+});
+
 describe("WorkflowRunnerService — stage gates & resume", () => {
   let dir: string;
   let h: Harness;

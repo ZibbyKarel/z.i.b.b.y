@@ -12,6 +12,7 @@ import {
   type PhaseEscalation,
   type PrReviewEvent,
   type Project,
+  type RunFiles,
   type RunLogChunk,
   type StageRun,
   type StageVerdict,
@@ -185,6 +186,10 @@ export class WorkflowRunNotStoppableError extends Error {
  * run left `running` at restart is reconciled to `failed` (same honesty as agent
  * runs being relabelled `interrupted`).
  */
+/** Caps for {@link WorkflowRunnerService.listRunFiles}. */
+const RUN_FILES_MAX_ENTRIES = 500;
+const RUN_FILES_MAX_DEPTH = 4;
+
 @Injectable()
 export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
   private readonly dir: string;
@@ -992,6 +997,54 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     if (!root || !(await fs.stat(root).catch(() => null))?.isDirectory()) return null;
     const book = path.join(root, "book");
     return (await fs.stat(book).catch(() => null))?.isDirectory() ? book : root;
+  }
+
+  /**
+   * A read-only tree of the run root for the detail's output panel: no dotfiles,
+   * depth <= 4, <= 500 entries, dirs before files (alphabetical). Symlinks (the
+   * `output/` entries) list when their realpath stays inside the root, and are
+   * skipped otherwise. No file contents. `null` for an unknown run.
+   */
+  async listRunFiles(workflowRunId: string): Promise<RunFiles | null> {
+    const dir = this.resolveRunDir(workflowRunId);
+    const root = dir ? await fs.realpath(dir).catch(() => null) : null;
+    if (!root) return null;
+    const entries: RunFiles["entries"] = [];
+    let truncated = false;
+    const walk = async (rel: string, depth: number): Promise<void> => {
+      const names = (await fs.readdir(path.join(root, rel)).catch(() => [] as string[]))
+        .filter((n) => !n.startsWith("."))
+        .sort();
+      const found = await Promise.all(
+        names.map(async (n) => {
+          const relPath = rel ? `${rel}/${n}` : n;
+          const real = await fs.realpath(path.join(root, relPath)).catch(() => null);
+          if (!real || !real.startsWith(root + path.sep)) return null; // symlink escape
+          const st = await fs.stat(real).catch(() => null);
+          return st ? { relPath, st } : null;
+        }),
+      );
+      const ok = found
+        .filter((f): f is NonNullable<typeof f> => f !== null)
+        .sort((a, b) => Number(b.st.isDirectory()) - Number(a.st.isDirectory()));
+      for (const { relPath, st } of ok) {
+        if (entries.length >= RUN_FILES_MAX_ENTRIES) {
+          truncated = true;
+          return;
+        }
+        const isDir = st.isDirectory();
+        entries.push({
+          path: relPath,
+          kind: isDir ? "dir" : "file",
+          size: isDir ? 0 : st.size,
+          modifiedAt: st.mtime.toISOString(),
+        });
+        if (isDir && depth < RUN_FILES_MAX_DEPTH) await walk(relPath, depth + 1);
+        if (truncated) return;
+      }
+    };
+    await walk("", 1);
+    return { entries, truncated };
   }
 
   /** Read a stage's log by phase id (the most recent attempt of that phase). */

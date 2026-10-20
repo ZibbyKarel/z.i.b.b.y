@@ -694,6 +694,10 @@ GET    /api/tasks/runs/:runId/logs/stream                    SSE tail (falls bac
 GET    /api/tasks/runs/:runId/stages/:phaseId/logs?offset=    one workflow stage's log
 GET    /api/tasks/runs/:runId/stages/:phaseId/logs/stream     SSE tail for a workflow stage's log
 GET    /api/tasks/runs/:runId/artifacts/:name                a whitelisted artifact (pr-draft.md, verdict.txt, …)
+GET    /api/tasks/runs/:runId/files                          a workflow run's folder tree (read-only; no dotfiles, depth <= 4,
+                                                                <= 500 entries -> `truncated`; dirs first; symlinks that resolve
+                                                                outside the run root are skipped; no file contents); 404 for
+                                                                non-workflow runs
 POST   /api/tasks/runs/:runId/stop                            stop a running run
 POST   /api/tasks/runs/:runId/open-folder                     open a workflow run's `book/` (else run root) folder in Finder; operator-initiated, no approval; 404 for non-workflow runs
 POST   /api/tasks/runs/:runId/resume                          resume a parked workflow/goal run (with a note), or re-run an

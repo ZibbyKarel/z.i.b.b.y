@@ -22,6 +22,7 @@ import type { ProjectsStorageService } from "../projects/projects.storage.servic
 import type { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
 import type { TaskSchedulerService } from "./task-scheduler.service";
 import {
+  TaskRunNotFoundError,
   TaskRunNotResumableError,
   TaskRunNotStoppableError,
   TaskRunsService,
@@ -128,6 +129,7 @@ function build() {
     readStageLog: vi.fn(async () => ({ content: "stage", nextOffset: 5, done: false })),
     onStageLogAppend: vi.fn(() => () => {}),
     readArtifact: vi.fn(async () => ({ name: "pr-draft.md", content: "PR" })),
+    listRunFiles: vi.fn(async () => ({ entries: [], truncated: false })),
     stop: vi.fn(async () => {}),
     resumeParked: vi.fn(async () => pipeP),
     continueFailed: vi.fn(async (): Promise<WorkflowRun | null> => null),
@@ -566,6 +568,22 @@ describe("TaskRunsService", () => {
       scheduled.list.mockResolvedValue([{ ...scheduledS, id: "task1", status: "dispatched" }]);
       const run = await service.getTaskRun(agentA.runId);
       expect(run.taskOutcomeFinishedAt).toBeUndefined();
+    });
+  });
+
+  describe("listFiles", () => {
+    it("delegates a workflow run to the runner", async () => {
+      const { service, workflowRunner } = build();
+      await expect(service.listFiles(pipeP.workflowRunId)).resolves.toEqual({
+        entries: [],
+        truncated: false,
+      });
+      expect(workflowRunner.listRunFiles).toHaveBeenCalledWith(pipeP.workflowRunId);
+    });
+
+    it("is not found for a non-workflow run", async () => {
+      const { service } = build();
+      await expect(service.listFiles(agentA.runId)).rejects.toThrow(TaskRunNotFoundError);
     });
   });
 
