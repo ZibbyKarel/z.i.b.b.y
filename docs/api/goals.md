@@ -47,6 +47,9 @@ artifact allowlist: a goal run only ever exposes `objective.md`, `verdict.txt`, 
 
 ## Flow
 
+Goal-run children get their env from `agentBaseEnv()`, which strips the operator-token env vars
+(see `docs/api/approvals.md`).
+
 ### Starting a run
 
 `GoalRunnerService.start(goalId, prompt, project, files, title, taskId, matchedTerms, attachments)`

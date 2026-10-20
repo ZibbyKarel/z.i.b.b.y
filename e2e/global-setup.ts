@@ -3,6 +3,7 @@ import * as path from "node:path";
 import { request } from "@playwright/test";
 
 const API = "http://localhost:3333";
+const OPERATOR_TOKEN = "e2e-operator-token";
 const E2E_DATA = path.resolve(".e2e-data");
 
 /**
@@ -29,7 +30,12 @@ export default async function globalSetup(): Promise<void> {
           sameSite: "Lax",
         },
       ],
-      origins: [],
+      origins: [
+        {
+          origin: "http://localhost:3000",
+          localStorage: [{ name: "zibby.operatorToken", value: OPERATOR_TOKEN }],
+        },
+      ],
     }),
   );
 
@@ -225,7 +231,12 @@ async function drainPendingApprovals(
   const pending = (await res.json().catch(() => [])) as Array<{ id?: string }>;
   if (!Array.isArray(pending)) return;
   for (const a of pending) {
-    if (a.id) await ctx.post(`/api/approvals/${a.id}/reject`).catch(() => {});
+    if (a.id)
+      await ctx
+        .post(`/api/approvals/${a.id}/reject`, {
+          headers: { "x-zibby-operator-token": OPERATOR_TOKEN },
+        })
+        .catch(() => {});
   }
 }
 

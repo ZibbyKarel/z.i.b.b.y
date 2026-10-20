@@ -77,6 +77,9 @@ claude -p <msg> [--resume <sid>] \
   of dispatching. (Verified with a live eval.)
 - The model is overridable via `ZIBBY_CHAT_MODEL` (default `sonnet`).
 
+Chat spawns get their env from `agentBaseEnv()`, which strips the operator-token env vars
+(approval decisions are operator-only; see `docs/api/approvals.md`).
+
 ## Tools (`chat-tools.service.ts` + `chat-mcp.controller.ts`)
 
 An MCP server hosted directly in the API (`@modelcontextprotocol/sdk`,

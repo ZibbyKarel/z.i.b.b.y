@@ -389,6 +389,14 @@ Fails **open** on a classifier exception (an unclassified command falls
 through to Claude's own permissions) but **closed** on a decision timeout
 (deny) — the two failure modes are asymmetric on purpose.
 
+### Operator-token denial
+
+The hook also hard-denies (no intent classification) anything touching operator-only data:
+Bash commands hitting `/api/approvals/:id/(approve|reject|revise|answer)` or `.config/zibby`,
+Read/Grep/Glob/Write/Edit on that path, and Write/Edit content containing a decision URL
+(`touchesOperatorOnly`). Spawned children also get `agentBaseEnv()`, which strips
+`ZIBBY_OPERATOR_TOKEN` and `ZIBBY_OPERATOR_TOKEN_FILE`. See `docs/api/approvals.md`.
+
 ## `ClaudePreflightService`
 
 Answers "can this machine run `claude -p` right now?" by spawning

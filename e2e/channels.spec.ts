@@ -89,7 +89,9 @@ test("a triaged inbound message surfaces an approval; approving it handles the i
   await page.reload();
   await expect(inbox.getByText("needs approval")).toBeVisible({ timeout: 20000 });
 
-  await page.request.post(`${API}/api/approvals/${channelApproval.id}/approve`);
+  await page.request.post(`${API}/api/approvals/${channelApproval.id}/approve`, {
+    headers: { "x-zibby-operator-token": "e2e-operator-token" },
+  });
 
   // Back on the project inbox, the item is now handled (the reply was sent on approve).
   await page.goto("/projects/demo-project/integrations");

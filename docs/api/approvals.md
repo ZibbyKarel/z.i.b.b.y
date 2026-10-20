@@ -188,6 +188,19 @@ POST /api/approvals/:id/answer   answer an agent's `operator.question` — 404 |
                                   Any other action or an already-decided approval → 409, stays as is
 ```
 
+## Operator token
+
+Every decision route (`approve` / `reject` / `revise` / `answer`) requires the header
+`x-zibby-operator-token` (`OPERATOR_TOKEN_HEADER` in `@zibby/contracts`); missing or wrong
+→ `401 { message }`. The expected token resolves from `ZIBBY_OPERATOR_TOKEN`, else the 0600
+file `ZIBBY_OPERATOR_TOKEN_FILE ?? ~/.config/zibby/operator-token` (created on first read);
+if none resolves the routes stay `401` (fail closed). `GET` routes are unguarded. The web app
+sends the token pasted in Settings → General (`localStorage["zibby.operatorToken"]`).
+
+Agents cannot decide their own approvals: every `claude` child gets its env from
+`agentBaseEnv()` (both variables stripped), and the PreToolUse hook denies Bash commands
+hitting the decision URLs or `.config/zibby`, and Read/Grep/Glob/Write/Edit on that path.
+
 ## Agent questions (`ask_operator`)
 
 An agent that is blocked on a fact only the operator knows calls the

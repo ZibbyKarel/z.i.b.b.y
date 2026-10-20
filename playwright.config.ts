@@ -50,6 +50,9 @@ const apiEnv: Record<string, string> = {
   AGENT_DEMO_STEPS: "3",
   AGENT_DEMO_DELAY_MS: "80",
   PORT: "3333",
+  // Approval decisions require this header token; global-setup seeds the same value into the
+  // browser's localStorage (`zibby.operatorToken`) and sends it on its own API calls.
+  ZIBBY_OPERATOR_TOKEN: "e2e-operator-token",
   // Deterministic, token-free agent runner: point the `claude` seam at the same
   // fake-claude stub the api e2e uses, and give it a benign mid-run INTENT. The
   // seeded gated agent (`requires_approval: true`) desugars to a catch-all `ask`
