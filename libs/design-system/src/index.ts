@@ -480,6 +480,12 @@ export type { RailItemProps } from "./components/RailItem/RailItem";
 export { ToggleChip, ToggleChipTestId } from "./components/ToggleChip/ToggleChip";
 export type { ToggleChipProps } from "./components/ToggleChip/ToggleChip";
 
+export { DiffstatList, DiffstatListTestId } from "./components/DiffstatList/DiffstatList";
+export type { DiffstatListFile, DiffstatListProps } from "./components/DiffstatList/DiffstatList";
+
+export { FileTreeList, FileTreeListTestId } from "./components/FileTreeList/FileTreeList";
+export type { FileTreeListEntry, FileTreeListProps } from "./components/FileTreeList/FileTreeList";
+
 export { DataTable, DataTableTestId } from "./components/DataTable/DataTable";
 export type {
   ColumnWidth,
