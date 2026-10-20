@@ -677,6 +677,15 @@ carries `startedAt` / `finishedAt` (ISO; absent on old runs and on the synthetic
 `.escalated` marker), and `TaskRun.currentStageStartedAt` is the start of the stage
 currently running (cleared once it lands), which the live rail row uses as its clock.
 
+**Pause.** `POST /tasks/runs/:runId/pause` asks a running workflow run to stop at its
+next stage boundary (the current stage finishes; nothing is killed). Until it lands
+the view stays `running` with `pauseRequested: true` (the UI shows PAUSING); then the
+run reads `status: "paused"` (a `parked` aggregate with `parkedReason: "paused"`).
+Agent, goal and scheduled runs have no boundary → 409 (`TaskRunNotPausableError`);
+so does a workflow run that is not running. RESUME on a `paused` run re-enters it in
+place; RESUME while it is still pausing just withdraws the request. `paused` is not
+an archived state.
+
 `TaskRun.diffstat` (`{ files[], additions, deletions }`, per-file rows from
 `git diff --numstat`; binaries are a row counted 0/0) is the structured diff: for a
 workflow run parked at a PR gate it is the would-publish diff (`run.pendingDiffstat`,
@@ -699,8 +708,11 @@ GET    /api/tasks/runs/:runId/files                          a workflow run's fo
                                                                 outside the run root are skipped; no file contents); 404 for
                                                                 non-workflow runs
 POST   /api/tasks/runs/:runId/stop                            stop a running run
+POST   /api/tasks/runs/:runId/pause                           pause a running workflow run at the next stage boundary (409 for
+                                                                other kinds / states)
 POST   /api/tasks/runs/:runId/open-folder                     open a workflow run's `book/` (else run root) folder in Finder; operator-initiated, no approval; 404 for non-workflow runs
-POST   /api/tasks/runs/:runId/resume                          resume a parked workflow/goal run (with a note), or re-run an
+POST   /api/tasks/runs/:runId/resume                          resume a parked/paused workflow or parked goal run (with a note;
+                                                                on a still-pausing run it withdraws the pause), or re-run an
                                                                 errored/interrupted agent run (with `--resume` if a session id
                                                                 was captured, else a fresh run of the same task), or CONTINUE an
                                                                 errored/interrupted workflow/goal run in place from the phase /

@@ -5,6 +5,7 @@ import { GoalRunNotParkedError } from "../goals/goals.errors";
 import { RunNotRetriesParkedError } from "../workflows/workflow-runner.service";
 import {
   TaskRunNotFoundError,
+  TaskRunNotPausableError,
   TaskRunNotResumableError,
   TaskRunNotStoppableError,
   TaskRunsService,
@@ -116,12 +117,19 @@ export class TaskRunsController {
         }
       },
 
-      // Handlers land with the API tasks (pause B4, messages B5); until then
-      // the contract routes answer with a plain refusal so the tree typechecks.
-      pauseTaskRun: async () => ({
-        status: 409,
-        body: { message: "Pause is not implemented yet" },
-      }),
+      pauseTaskRun: async ({ params: { runId } }) => {
+        try {
+          return { status: 200, body: await this.runs.pause(runId) };
+        } catch (error) {
+          if (isMissing(error)) return { status: 404, body: { message: notFound(runId) } };
+          if (error instanceof TaskRunNotPausableError) {
+            return { status: 409, body: { message: error.message } };
+          }
+          throw error;
+        }
+      },
+
+      // Handler lands with B5; until then the route answers with a plain refusal.
       sendTaskRunMessage: async () => ({
         status: 409,
         body: { message: "Messages are not implemented yet" },

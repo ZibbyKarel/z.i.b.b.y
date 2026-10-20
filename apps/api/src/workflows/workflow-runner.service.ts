@@ -174,6 +174,17 @@ export class WorkflowRunNotStoppableError extends Error {
 }
 
 /**
+ * Raised when a pause targets a run that is neither running nor parked on a
+ * mid-stage approval (there is no next stage boundary to stop at) → 409.
+ */
+export class WorkflowRunNotPausableError extends Error {
+  constructor(id: string) {
+    super(`Workflow run "${id}" cannot be paused (not running)`);
+    this.name = "WorkflowRunNotPausableError";
+  }
+}
+
+/**
  * Runs a workflow by chaining its phases through the shared {@link RunnerCore}: one
  * child process per phase (so each stage's log polls independently), handoff over
  * disk (phase N's `produces` is copied into phase N+1's `consumes`), and the
@@ -603,8 +614,10 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     }
     // Phase 9 widens the resumable parkings from `retries`-only to `retries | limit`;
     // `no-employee` re-enters the parked phase once staff exists (no parked surface).
-    const noStaff = run.status === "parked" && run.parkedReason === "no-employee";
-    if (noStaff) return this.resumeNoEmployee(run, note);
+    const inPlace =
+      run.status === "parked" &&
+      (run.parkedReason === "no-employee" || run.parkedReason === "paused");
+    if (inPlace) return this.resumeInPlace(run, note);
     const isLimit = run.parkedReason === "limit";
     if (run.status !== "parked" || (run.parkedReason !== "retries" && !isLimit) || !run.parked) {
       throw new RunNotRetriesParkedError(workflowRunId);
@@ -673,16 +686,29 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     return run;
   }
 
-  /** Re-drive a `no-employee`-parked run at the phase that found no staff. */
-  private async resumeNoEmployee(run: WorkflowRun, note?: string): Promise<WorkflowRun> {
+  /**
+   * Re-drive a `no-employee`- or `paused`-parked run at the phase it stopped before.
+   * A pause recorded the exact handoff in `pendingGate` (a loop back-edge's failure
+   * file included); otherwise it is recomputed from the nearest upstream phase.
+   */
+  private async resumeInPlace(run: WorkflowRun, note?: string): Promise<WorkflowRun> {
     const workflow = await this.workflows.get(run.workflowId);
-    const cursor = run.currentStage ?? workflow.phases[0]?.id;
+    const cursor = run.pendingGate?.cursor ?? run.currentStage ?? workflow.phases[0]?.id;
     if (!cursor) throw new RunNotRetriesParkedError(run.workflowRunId);
+    const handoffSource = run.pendingGate
+      ? run.pendingGate.handoffSource
+      : this.recomputeHandoff(run, workflow, cursor);
+    const reason = run.parkedReason;
     run.status = "running";
     delete run.parkedReason;
+    delete run.pendingGate;
     run.currentStage = cursor;
     await this.writeAggregate(run);
-    this.log.info("no-employee workflow run resumed", { workflowRunId: run.workflowRunId, cursor });
+    this.log.info("parked workflow run resumed in place", {
+      workflowRunId: run.workflowRunId,
+      reason,
+      cursor,
+    });
     const project = await this.projectForRun(run);
     const resumeContext = await this.composeResumeContext(
       run,
@@ -690,7 +716,6 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       { note: note?.trim() },
     );
     const retries = new Map(Object.entries(run.retries ?? {}));
-    const handoffSource = this.recomputeHandoff(run, workflow, cursor);
     const traceId = this.trace.getTraceId() ?? randomUUID();
     void this.trace.run({ traceId, runId: run.workflowRunId }, () =>
       this.drive(run, workflow, project, { cursor, handoffSource, retries, resumeContext }),
@@ -943,6 +968,36 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       this.stopRequested.delete(workflowRunId);
       throw error;
     }
+  }
+
+  /**
+   * Ask a run to pause at its next stage boundary. Nothing is killed: the current
+   * stage finishes normally (a SIGSTOP would freeze the model stream and keep the
+   * fuse slot), then {@link drive} parks the run `paused` before the next stage.
+   * The flag is durable in `run.json`. Only a running run, or one parked on a
+   * mid-stage approval (whose stage resumes after the decision), has a boundary
+   * ahead → else {@link WorkflowRunNotPausableError}.
+   */
+  async requestPause(workflowRunId: string): Promise<WorkflowRun> {
+    const run = this.runs.get(workflowRunId) ?? (await this.readAggregate(workflowRunId));
+    if (!run) throw new WorkflowRunNotFoundError(workflowRunId);
+    const pausable =
+      run.status === "running" || (run.status === "parked" && run.parkedReason === "approval");
+    if (!pausable) throw new WorkflowRunNotPausableError(workflowRunId);
+    run.pauseRequested = true;
+    await this.writeAggregate(run);
+    this.log.info("pause requested (lands at the next stage boundary)", { workflowRunId });
+    return run;
+  }
+
+  /** Withdraw a pause that has not landed yet (RESUME while PAUSING). */
+  async cancelPause(workflowRunId: string): Promise<WorkflowRun> {
+    const run = this.runs.get(workflowRunId) ?? (await this.readAggregate(workflowRunId));
+    if (!run) throw new WorkflowRunNotFoundError(workflowRunId);
+    if (!run.pauseRequested) throw new WorkflowRunNotPausableError(workflowRunId);
+    run.pauseRequested = false;
+    await this.writeAggregate(run);
+    return run;
   }
 
   /**
@@ -1216,6 +1271,22 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       run.currentStage = phase.id;
       const settled = settledChild?.phaseId === phase.id ? settledChild : undefined;
       settledChild = undefined;
+
+      // Operator pause (D-PAUSE): the boundary is reached — park before spending the
+      // next stage. No lease or fuse slot is held here. The exact cursor + handoff
+      // are kept so the resume re-enters identically (a loop back-edge included).
+      // A just-settled sub-run is recorded first; the next boundary parks it.
+      if (!settled && run.pauseRequested) {
+        run.pauseRequested = false;
+        run.status = "parked";
+        run.parkedReason = "paused";
+        run.pendingGate = { phaseId: phase.id, cursor: phase.id, handoffSource };
+        run.retries = Object.fromEntries(retries);
+        await this.writeAggregate(run);
+        await this.writeProgress(run, phaseIds);
+        this.log.info("workflow run paused at a stage boundary (operator)", { phase: phase.id });
+        return;
+      }
 
       // Phase 9 (boundary pause, decision 3b): before spending a stage, halt if the
       // usage window is exhausted — persist the aggregate `paused-limit` with the
@@ -3033,6 +3104,14 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async writeAggregate(run: WorkflowRun): Promise<void> {
+    // A pause request only means something while a stage boundary lies ahead: once
+    // the run parks for another reason or ends, drop it so a later resume (e.g. from
+    // retries) never pauses instantly. One choke point covers every park/terminal site.
+    const boundaryAhead =
+      run.status === "running" ||
+      (run.status === "parked" &&
+        (run.parkedReason === "approval" || run.parkedReason === "child"));
+    if (run.pauseRequested && !boundaryAhead) run.pauseRequested = false;
     await writeFileAtomic(path.join(run.cwd, AGGREGATE_FILE), JSON.stringify(run)).catch(() => {
       // Best-effort: a failed write degrades restart fidelity, not the run.
     });
@@ -3098,7 +3177,15 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       // `output` parking (a PR-gate wait after the chain already finished) has no live
       // child either — it is durable like `retries` and survives the restart parked.
       // `gate`/`budget` (P1-02/03) park at a phase boundary with no child — durable too.
-      const durableParks: (string | undefined)[] = ["retries", "output", "gate", "budget", "child"];
+      // `paused` (operator pause) parks at a boundary with no child — durable too.
+      const durableParks: (string | undefined)[] = [
+        "retries",
+        "output",
+        "gate",
+        "budget",
+        "child",
+        "paused",
+      ];
       const approvalParked = run.status === "parked" && !durableParks.includes(run.parkedReason);
       // A parent waiting on a sub-run has no child process of its own — it is settled
       // from the child's state right after this sweep.

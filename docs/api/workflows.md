@@ -241,19 +241,21 @@ running → done       (every phase passed + outputs delivered)
         → failed     (a phase failed, retry/escalation were exhausted, and there's no then.fail)
         → parked     (the loop was exhausted → durable parking for human review;
                       or a `pr` output is waiting on the gate → parkedReason "output";
-                      or a phase checkpoint / spend cap is waiting → parkedReason "gate" / "budget")
+                      or a phase checkpoint / spend cap is waiting → parkedReason "gate" / "budget";
+                      or the operator paused it at a stage boundary → parkedReason "paused")
 ```
 
 Run fields added by the gates and the budget:
 
-| Field                      | When                                               | Meaning                                                                                                                             |
-| -------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `pendingGate`              | `parkedReason` is `gate` or `budget`               | `{ phaseId, cursor, handoffSource }` — where the driver re-enters on approve (`cursor: null` = chain finished, deliver the outputs) |
-| `approvedFinalGate`        | the LAST phase's gate was approved                 | that phase's id; the chain's final output was signed off as-is (a PR-review run posts it on this sign-off, see `docs/api/inbox.md`) |
-| `approvedReviewEvent`      | that final gate was approved with a PR-review pick | todo-10 — the operator's `reviewEvent` (APPROVE / REQUEST_CHANGES / COMMENT); absent → COMMENT (see `docs/api/inbox.md`)            |
-| `budget`                   | the workflow declares a `budget`                   | `{ maxCostUsd, warnAtPct, spentUsd, warned? }` — snapshot of the cap plus spend so far                                              |
-| `StageRun.externalCostUsd` | a stage reported non-model spend                   | sum of `costUsd` over the lines of `<stageDir>/costs.jsonl`; absent when none                                                       |
-| `failedReason`             | the run was refused before any work                | e.g. `requires a web project, but the run has no project` — set with `status: "failed"`                                             |
+| Field                      | When                                               | Meaning                                                                                                                                    |
+| -------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pendingGate`              | `parkedReason` is `gate`, `budget` or `paused`     | `{ phaseId, cursor, handoffSource }` — where the driver re-enters on approve/resume (`cursor: null` = chain finished, deliver the outputs) |
+| `pauseRequested`           | the operator asked to pause, not landed yet        | durable flag; `drive()` parks `paused` at the next loop top; cleared on any other park or terminal state                                   |
+| `approvedFinalGate`        | the LAST phase's gate was approved                 | that phase's id; the chain's final output was signed off as-is (a PR-review run posts it on this sign-off, see `docs/api/inbox.md`)        |
+| `approvedReviewEvent`      | that final gate was approved with a PR-review pick | todo-10 — the operator's `reviewEvent` (APPROVE / REQUEST_CHANGES / COMMENT); absent → COMMENT (see `docs/api/inbox.md`)                   |
+| `budget`                   | the workflow declares a `budget`                   | `{ maxCostUsd, warnAtPct, spentUsd, warned? }` — snapshot of the cap plus spend so far                                                     |
+| `StageRun.externalCostUsd` | a stage reported non-model spend                   | sum of `costUsd` over the lines of `<stageDir>/costs.jsonl`; absent when none                                                              |
+| `failedReason`             | the run was refused before any work                | e.g. `requires a web project, but the run has no project` — set with `status: "failed"`                                                    |
 
 ### Log polling (unified surface)
 
@@ -265,8 +267,29 @@ GET  /api/tasks/runs/:runId                              run state (+ stageRuns[
 GET  /api/tasks/runs/:runId/stages/:phaseId/logs?offset= a single phase's log (per phase)
 GET  /api/tasks/runs/:runId/stages/:phaseId/logs/stream  SSE tail of the currently running phase's log
 GET  /api/tasks/runs/:runId/artifacts/:name              a whitelisted artifact (pr-draft.md, …)
-POST /api/tasks/runs/:runId/resume                       resume a retries-parked run
+GET  /api/tasks/runs/:runId/files                        the run root as a read-only tree (`listRunFiles`)
+POST /api/tasks/runs/:runId/pause                        pause at the next stage boundary
+POST /api/tasks/runs/:runId/resume                       resume a parked/paused run (or withdraw a pending pause)
 ```
+
+**Run folder tree.** `WorkflowRunnerService.listRunFiles(id)` walks the run root
+(realpath) for the detail's output panel: no dotfiles, depth <= 4, <= 500 entries
+(`truncated` past that), dirs before files, alphabetical. A symlink lists only when
+its realpath stays inside the root (the `output/` links do; anything pointing out is
+skipped). It never returns file contents; `null` for an unknown run.
+
+**Pause (D-PAUSE).** `requestPause(id)` sets a durable `pauseRequested` on a running
+run (or one parked on a mid-stage `approval`); anything else throws
+`WorkflowRunNotPausableError` (→ 409). Nothing is killed: the current stage finishes,
+and at the top of the next `drive()` iteration (before the usage-limit/budget checks,
+and before any employee lease or fuse slot is taken) the run parks
+`parkedReason: "paused"` with `pendingGate = { cursor, handoffSource }`, so a pause
+that lands on a loop back-edge keeps the failure handoff. A just-settled sub-run stage
+is recorded first. `writeAggregate` drops the flag whenever the run parks for any
+other reason or ends, so a later resume never pauses instantly. `resumeParked`
+re-enters a paused run in place (same path as `no-employee`: cursor from
+`pendingGate`, retry map kept, resume-context with the note). `cancelPause` withdraws
+a pause that has not landed. STOP on a paused run lands it `interrupted`.
 
 **Live log of the running phase.** A stage is only written into `stageRuns`
 once it reaches a terminal state, so a still-running phase can't be found
@@ -565,12 +588,13 @@ A run parks when:
 - the `loop` is exhausted (`maxRetries` reached) and there's no `then.fail`,
 - or explicitly via `then: { fail: park }`,
 - or a phase with `approval: ask` finished (`parkedReason: "gate"`),
-- or the run's spend passed its `budget` cap (`parkedReason: "budget"`).
+- or the run's spend passed its `budget` cap (`parkedReason: "budget"`),
+- or the operator paused it (`parkedReason: "paused"`, at the next stage boundary).
 
 A parked workflow run:
 
 - Is durable (survives an API restart) for the parks that have no live child:
-  `retries`, `output`, `gate` and `budget`. An `approval` park (a live stage child
+  `retries`, `output`, `gate`, `budget`, `child` and `paused`. An `approval` park (a live stage child
   blocking on a gate decision) does not survive — its child dies with the API.
 - Shows up in the UI with a human-review option.
 - Can be manually decided by the operator (resume / abandon).
@@ -581,7 +605,7 @@ A parked workflow run:
 Same as for agent runs: `WorkflowRunnerService` checks running stage runs on
 init and reconciles orphaned `running` → `interrupted`.
 
-Runs parked `retries`, `output`, `gate` or `budget` are **left parked** on reconstruct:
+Runs parked `retries`, `output`, `gate`, `budget`, `child` or `paused` are **left parked** on reconstruct:
 their `pendingGate` / `pendingOutput` / `parked` detail is in the persisted aggregate,
 and the matching `workflow-gate` / `workflow-output` approval resumes them after the
 restart.

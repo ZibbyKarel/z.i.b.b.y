@@ -15,7 +15,10 @@ import type { AgentsStorageService } from "../agents/agents.storage.service";
 import type { GoalRunnerService } from "../goals/goal-runner.service";
 import { GoalRunNotStoppableError } from "../goals/goals.errors";
 import type { GoalsStorageService } from "../goals/goals.storage.service";
-import { WorkflowRunNotStoppableError } from "../workflows/workflow-runner.service";
+import {
+  WorkflowRunNotPausableError,
+  WorkflowRunNotStoppableError,
+} from "../workflows/workflow-runner.service";
 import type { WorkflowRunnerService } from "../workflows/workflow-runner.service";
 import type { WorkflowsStorageService } from "../workflows/workflows.storage.service";
 import type { ProjectsStorageService } from "../projects/projects.storage.service";
@@ -23,6 +26,7 @@ import type { ScheduledTasksStorageService } from "./scheduled-tasks.storage.ser
 import type { TaskSchedulerService } from "./task-scheduler.service";
 import {
   TaskRunNotFoundError,
+  TaskRunNotPausableError,
   TaskRunNotResumableError,
   TaskRunNotStoppableError,
   TaskRunsService,
@@ -132,6 +136,8 @@ function build() {
     listRunFiles: vi.fn(async () => ({ entries: [], truncated: false })),
     stop: vi.fn(async () => {}),
     resumeParked: vi.fn(async () => pipeP),
+    requestPause: vi.fn(async () => pipeP),
+    cancelPause: vi.fn(async () => pipeP),
     continueFailed: vi.fn(async (): Promise<WorkflowRun | null> => null),
     delete: vi.fn(async () => {}),
   };
@@ -702,6 +708,43 @@ describe("TaskRunsService", () => {
         true,
       );
       expect(res.runId).toBe("task9");
+    });
+
+    it("pauses a workflow run; agent/goal runs and refused pauses are not pausable", async () => {
+      const { service, workflowRunner } = build();
+      await service.pause("delivery_3");
+      expect(workflowRunner.requestPause).toHaveBeenCalledWith("delivery_3");
+      await expect(service.pause("researcher_1")).rejects.toBeInstanceOf(TaskRunNotPausableError);
+      await expect(service.pause("ship-it_4")).rejects.toBeInstanceOf(TaskRunNotPausableError);
+      workflowRunner.requestPause.mockRejectedValueOnce(
+        new WorkflowRunNotPausableError("delivery_3"),
+      );
+      await expect(service.pause("delivery_3")).rejects.toBeInstanceOf(TaskRunNotPausableError);
+    });
+
+    it("maps a paused park to status paused and carries pauseRequested", async () => {
+      const { service, workflowRunner } = build();
+      workflowRunner.listAll.mockResolvedValue([
+        { ...pipeP, status: "parked", parkedReason: "paused" },
+      ]);
+      expect((await service.getTaskRun("delivery_3")).status).toBe("paused");
+      workflowRunner.listAll.mockResolvedValue([{ ...pipeP, pauseRequested: true }]);
+      const pausing = await service.getTaskRun("delivery_3");
+      expect(pausing.status).toBe("running");
+      expect(pausing.pauseRequested).toBe(true);
+    });
+
+    it("resume while pausing withdraws the pause; a paused run resumes in place", async () => {
+      const { service, workflowRunner } = build();
+      workflowRunner.listAll.mockResolvedValue([{ ...pipeP, pauseRequested: true }]);
+      await service.resume("delivery_3");
+      expect(workflowRunner.cancelPause).toHaveBeenCalledWith("delivery_3");
+      expect(workflowRunner.resumeParked).not.toHaveBeenCalled();
+      workflowRunner.listAll.mockResolvedValue([
+        { ...pipeP, status: "parked", parkedReason: "paused" },
+      ]);
+      await service.resume("delivery_3", "carry on");
+      expect(workflowRunner.resumeParked).toHaveBeenCalledWith("delivery_3", "carry on");
     });
 
     it("deletes via the owning runner", async () => {

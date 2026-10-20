@@ -270,9 +270,9 @@ export const WorkflowRunSchema = z.object({
    */
   approvedReviewEvent: PrReviewEventSchema.optional(),
   /**
-   * P1-02/P1-03 — present while `parkedReason` is `gate` or `budget`: where the
-   * driver re-enters on approve (`cursor` null = the chain is finished, deliver the
-   * outputs) and the handoff the next phase consumes. No live child → durable.
+   * P1-02/P1-03 — present while `parkedReason` is `gate`, `budget` or `paused`: where
+   * the driver re-enters on approve/resume (`cursor` null = the chain is finished,
+   * deliver the outputs) and the handoff the next phase consumes. No live child → durable.
    */
   pendingGate: z
     .object({

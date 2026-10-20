@@ -23,6 +23,7 @@ import { GoalRunnerService } from "../goals/goal-runner.service";
 import { GoalRunNotStoppableError } from "../goals/goals.errors";
 import { GoalsStorageService } from "../goals/goals.storage.service";
 import {
+  WorkflowRunNotPausableError,
   WorkflowRunNotStoppableError,
   WorkflowRunnerService,
 } from "../workflows/workflow-runner.service";
@@ -64,6 +65,17 @@ export class TaskRunNotResumableError extends Error {
       `Task run "${runId}" cannot be resumed (parked workflow/goal runs, or errored/interrupted agent runs)`,
     );
     this.name = "TaskRunNotResumableError";
+  }
+}
+
+/**
+ * Only a running workflow run has a stage boundary to pause at (agent/goal runs have
+ * none; STOP + continue session is their equivalent) → 409.
+ */
+export class TaskRunNotPausableError extends Error {
+  constructor(runId: string) {
+    super(`Task run "${runId}" cannot be paused (only running workflow runs pause)`);
+    this.name = "TaskRunNotPausableError";
   }
 }
 
@@ -283,6 +295,22 @@ export class TaskRunsService {
   }
 
   /**
+   * Pause a running workflow run at its next stage boundary (D-PAUSE). The current
+   * stage finishes; the view reads `pauseRequested` until the run parks `paused`.
+   */
+  async pause(runId: string): Promise<TaskRun> {
+    const kind = await this.kindOf(runId);
+    if (kind !== "workflow") throw new TaskRunNotPausableError(runId);
+    try {
+      await this.workflowRunner.requestPause(runId);
+    } catch (error) {
+      if (error instanceof WorkflowRunNotPausableError) throw new TaskRunNotPausableError(runId);
+      throw error;
+    }
+    return this.getTaskRun(runId);
+  }
+
+  /**
    * Resume a run. A parked workflow/goal run resumes in place with an operator note.
    * Phase 49: an errored/interrupted AGENT run is instead re-run — a NEW run spawns
    * (with `--resume <sessionId>` when the errored run captured one, else fresh) and is
@@ -295,6 +323,11 @@ export class TaskRunsService {
     const kind = await this.kindOf(runId);
     if (kind === "workflow" || kind === "goal") {
       const run = await this.getTaskRun(runId);
+      // RESUME while PAUSING: the pause has not landed yet — just withdraw it.
+      if (kind === "workflow" && run.status === "running" && run.pauseRequested) {
+        await this.workflowRunner.cancelPause(runId);
+        return this.getTaskRun(runId);
+      }
       if (run.status === "error" || run.status === "interrupted") {
         const continued =
           kind === "workflow"
@@ -612,11 +645,13 @@ function workflowRunToView(
     r.status === "paused-limit"
       ? "paused-limit"
       : r.status === "parked"
-        ? r.parkedReason === "retries" ||
-          r.parkedReason === "limit" ||
-          r.parkedReason === "no-employee"
-          ? "parked"
-          : "awaiting-approval"
+        ? r.parkedReason === "paused"
+          ? "paused"
+          : r.parkedReason === "retries" ||
+              r.parkedReason === "limit" ||
+              r.parkedReason === "no-employee"
+            ? "parked"
+            : "awaiting-approval"
         : r.status === "failed"
           ? "error"
           : r.status === "done"
@@ -643,6 +678,7 @@ function workflowRunToView(
     stageRuns: r.stageRuns,
     currentStage: r.currentStage,
     currentStageStartedAt: r.currentStageStartedAt,
+    ...(r.pauseRequested ? { pauseRequested: true } : {}),
     ...(r.pendingDiffstat ? { diffstat: r.pendingDiffstat } : {}),
     outputArtifactName: fileOutput?.from,
     costUsd,

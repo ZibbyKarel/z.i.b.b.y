@@ -2214,3 +2214,210 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
     });
   });
 });
+
+describe("operator pause (D-PAUSE)", () => {
+  let dir: string;
+  let h: Harness;
+
+  const phase = (id: string, extra: Record<string, unknown> = {}) => ({
+    id,
+    type: "agent",
+    agent: "writer",
+    consumes: "in.md",
+    produces: `${id}.md`,
+    model: "sonnet",
+    thinking: "medium",
+    ...extra,
+  });
+  const threePhases = {
+    id: "release",
+    phases: [phase("phase1"), phase("phase2"), phase("phase3")],
+    instructions: "ship",
+  };
+
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "pipe-runner-pause-"));
+    h = await makeHarness(dir);
+  });
+
+  afterEach(async () => {
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  const svc = () =>
+    h.service as unknown as {
+      runStage: unknown;
+      drive(r: WorkflowRun, w: unknown): Promise<void>;
+      workflows: { get: ReturnType<typeof vi.fn> };
+      reconstruct(): Promise<void>;
+    };
+
+  /** runStage double: records the order, runs `during` mid-stage, returns `statusFor`. */
+  function scriptStages(
+    order: string[],
+    during: (phaseId: string, attempt: number) => Promise<void> | void,
+    statusFor: (phaseId: string, attempt: number) => string = () => "done",
+  ): void {
+    svc().runStage = vi.fn(
+      async (_r: unknown, p: { id: string }, _cwd: string, attempt: number) => {
+        order.push(p.id);
+        await during(p.id, attempt);
+        return {
+          phaseId: p.id,
+          runId: `${WORKFLOW_RUN_ID}.${p.id}_${order.length}`,
+          attempt,
+          status: statusFor(p.id, attempt),
+        };
+      },
+    );
+  }
+
+  const runOf = (): WorkflowRun => {
+    const run = h.runs.get(WORKFLOW_RUN_ID);
+    if (!run) throw new Error("missing run");
+    return run;
+  };
+
+  it("pause lands after the current stage", async () => {
+    const run = runOf();
+    const order: string[] = [];
+    let seenDuring: WorkflowRun | undefined;
+    scriptStages(order, async (id) => {
+      if (id !== "phase1") return;
+      seenDuring = { ...(await h.service.requestPause(WORKFLOW_RUN_ID)) };
+    });
+
+    await svc().drive(run, threePhases);
+
+    expect(seenDuring?.pauseRequested).toBe(true);
+    expect(seenDuring?.status).toBe("running");
+    expect(run.status).toBe("parked");
+    expect(run.parkedReason).toBe("paused");
+    expect(run.currentStage).toBe("phase2");
+    expect(run.pauseRequested).toBeFalsy();
+    expect(order).toEqual(["phase1"]); // phase 2 never started (no lease, no fuse slot)
+  });
+
+  it("resume continues at the paused phase", async () => {
+    const run = runOf();
+    const order: string[] = [];
+    scriptStages(order, async (id) => {
+      if (id === "phase1" && order.length === 1) await h.service.requestPause(WORKFLOW_RUN_ID);
+    });
+    svc().workflows.get.mockResolvedValue(threePhases);
+    await svc().drive(run, threePhases);
+    expect(run.parkedReason).toBe("paused");
+
+    await h.service.resumeParked(WORKFLOW_RUN_ID);
+    await vi.waitFor(() => expect(run.status).toBe("done"));
+    expect(run.stageRuns.map((s) => s.phaseId)).toEqual(["phase1", "phase2", "phase3"]);
+    expect(run.pendingGate).toBeUndefined();
+  });
+
+  it("a retry loop still pauses at the next boundary", async () => {
+    const run = runOf();
+    const workflow = {
+      ...threePhases,
+      phases: [
+        phase("phase1"),
+        phase("phase2", { loop: { to: "phase1", maxRetries: 2, escalate: false, then: "park" } }),
+        phase("phase3"),
+      ],
+    };
+    const order: string[] = [];
+    scriptStages(
+      order,
+      async (id) => {
+        if (id === "phase2") await h.service.requestPause(WORKFLOW_RUN_ID);
+      },
+      (id) => (id === "phase2" ? "error" : "done"),
+    );
+
+    await svc().drive(run, workflow);
+
+    expect(run.status).toBe("parked");
+    expect(run.parkedReason).toBe("paused");
+    expect(run.currentStage).toBe("phase1");
+    // The back-edge's failure context is the handoff the resume re-enters with.
+    expect(run.pendingGate?.handoffSource).toContain("phase2.failure.txt");
+    expect(run.retries).toEqual({ phase2: 1 });
+  });
+
+  it("parking on exhausted retries clears the pause request", async () => {
+    const run = runOf();
+    const workflow = {
+      ...threePhases,
+      phases: [
+        phase("phase1"),
+        phase("phase2", { loop: { to: "phase1", maxRetries: 0, escalate: false, then: "park" } }),
+      ],
+    };
+    scriptStages(
+      [],
+      async (id) => {
+        if (id === "phase2") await h.service.requestPause(WORKFLOW_RUN_ID);
+      },
+      (id) => (id === "phase2" ? "error" : "done"),
+    );
+
+    await svc().drive(run, workflow);
+
+    expect(run.parkedReason).toBe("retries");
+    expect(run.pauseRequested).toBeFalsy();
+  });
+
+  it("paused survives a restart", async () => {
+    const ghostId = "ghost_1780000000099";
+    const root = path.join(dir, ghostId);
+    await fs.mkdir(root, { recursive: true });
+    await fs.writeFile(
+      path.join(root, "run.json"),
+      JSON.stringify({
+        workflowRunId: ghostId,
+        workflowId: "release",
+        status: "parked",
+        parkedReason: "paused",
+        pendingGate: { phaseId: "phase2", cursor: "phase2", handoffSource: null },
+        currentStage: "phase2",
+        stageRuns: [],
+        startedAt: new Date().toISOString(),
+        cwd: root,
+      }),
+      "utf8",
+    );
+    await svc().reconstruct();
+    const run = h.service.get(ghostId);
+    expect(run.status).toBe("parked");
+    expect(run.parkedReason).toBe("paused");
+  });
+
+  it("a pause request survives a restart in run.json", async () => {
+    await h.service.requestPause(WORKFLOW_RUN_ID);
+    const sidecar = JSON.parse(
+      await fs.readFile(path.join(dir, WORKFLOW_RUN_ID, "run.json"), "utf8"),
+    ) as WorkflowRun;
+    expect(sidecar.pauseRequested).toBe(true);
+  });
+
+  it("stop a paused run", async () => {
+    const run = runOf();
+    run.status = "parked";
+    run.parkedReason = "paused";
+    await h.service.stop(WORKFLOW_RUN_ID);
+    expect(run.status).toBe("interrupted");
+    expect(run.parkedReason).toBeUndefined();
+  });
+
+  it("pause is refused on a done run", async () => {
+    runOf().status = "done";
+    await expect(h.service.requestPause(WORKFLOW_RUN_ID)).rejects.toMatchObject({
+      name: "WorkflowRunNotPausableError",
+    });
+  });
+
+  it("cancelPause withdraws a pending pause", async () => {
+    await h.service.requestPause(WORKFLOW_RUN_ID);
+    const run = await h.service.cancelPause(WORKFLOW_RUN_ID);
+    expect(run.pauseRequested).toBe(false);
+  });
+});
