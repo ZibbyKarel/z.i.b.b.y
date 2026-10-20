@@ -20,3 +20,8 @@ export function writeOperatorToken(value: string): void {
     /* storage blocked — the next decision gets a 401 and the UI says so */
   }
 }
+
+/** True for the API's 401 on a guarded write (ts-rest throws `{ status, body }`). */
+export function isOperatorTokenError(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "status" in error && error.status === 401;
+}

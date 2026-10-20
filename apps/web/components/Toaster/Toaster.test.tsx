@@ -3,7 +3,8 @@ import { act } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { Toaster, ToasterTestId } from "./Toaster";
-import { toastBus } from "./toastBus";
+import cs from "../../i18n/messages/cs.json";
+import { emitMutationError, toastBus } from "./toastBus";
 
 const ERROR_CS = "Akce se nepovedla — změna se neuložila. Zkus to prosím znovu.";
 
@@ -29,5 +30,13 @@ describe("Toaster (43) — surfaces mutation errors", () => {
     const root = screen.getByTestId(ToasterTestId.Root);
     expect(root.style.top).toBe("1rem");
     expect(root.style.bottom).toBe("");
+  });
+
+  it("a 401 mutation error shows the operator-token message, anything else the generic one", () => {
+    render(<Toaster />);
+    act(() => emitMutationError({ status: 401, body: { message: "no" } }));
+    expect(screen.getByText(cs.approvals.operatorTokenMissing)).toBeInTheDocument();
+    act(() => emitMutationError(new Error("boom")));
+    expect(screen.getByText(ERROR_CS)).toBeInTheDocument();
   });
 });

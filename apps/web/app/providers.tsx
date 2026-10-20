@@ -7,7 +7,7 @@ import { AppearanceProvider } from "../state/appearance";
 import { RunEventsProvider } from "../features/runs/runEvents";
 import { BootSplash } from "../components/layout/BootSplash/BootSplash";
 import { Toaster } from "../components/Toaster/Toaster";
-import { toastBus } from "../components/Toaster/toastBus";
+import { emitMutationError } from "../components/Toaster/toastBus";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(
@@ -20,7 +20,7 @@ export function Providers({ children }: { children: ReactNode }) {
         // (network / server / schema-drift — the cases ts-rest throws on) as a toast, so a
         // failed delete / create / toggle is never silent. The copy is localized in Toaster.
         mutationCache: new MutationCache({
-          onError: () => toastBus.emit(),
+          onError: emitMutationError,
         }),
       }),
   );

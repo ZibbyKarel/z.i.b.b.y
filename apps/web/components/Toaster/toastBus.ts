@@ -1,9 +1,13 @@
+import { isOperatorTokenError } from "../../state/operatorToken";
+
 /** The two outcomes a toast conveys — a green confirmation or a red failure.
  * Absent (the `MutationCache` path) is treated as `"error"` by the Toaster. */
 export type ToastSeverity = "ok" | "error";
 
 export interface Toast {
   id: number;
+  /** Render the localized "set the operator token in Settings" copy (a 401 on a guarded write). */
+  operatorToken?: boolean;
   /** Custom copy; when absent the Toaster renders the localized mutation-error message. */
   message?: string;
   /** Visual tone; defaults to `"error"` at render (preserves the MutationCache behavior). */
@@ -22,8 +26,13 @@ let nextId = 1;
  * the cache callback (outside React, no i18n) from the React toast surface.
  */
 export const toastBus = {
-  emit(toast: { message?: string; severity?: ToastSeverity } = {}): void {
-    const t: Toast = { id: nextId++, message: toast.message, severity: toast.severity };
+  emit(toast: { message?: string; severity?: ToastSeverity; operatorToken?: boolean } = {}): void {
+    const t: Toast = {
+      id: nextId++,
+      message: toast.message,
+      severity: toast.severity,
+      operatorToken: toast.operatorToken,
+    };
     for (const l of listeners) l(t);
   },
   subscribe(listener: Listener): () => void {
@@ -33,3 +42,8 @@ export const toastBus = {
     };
   },
 };
+
+/** `MutationCache.onError`: every failed write toasts; a 401 gets the operator-token copy. */
+export function emitMutationError(error: unknown): void {
+  toastBus.emit({ operatorToken: isOperatorTokenError(error) });
+}

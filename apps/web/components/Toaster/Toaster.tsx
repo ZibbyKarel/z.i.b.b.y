@@ -19,6 +19,7 @@ export enum ToasterTestId {
  */
 export function Toaster() {
   const t = useTranslations("common");
+  const tApprovals = useTranslations("approvals");
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   useEffect(
@@ -49,7 +50,9 @@ export function Toaster() {
             onClose={() => dismiss(toast.id)}
             severity={toast.severity ?? "error"}
           >
-            {toast.message ?? t("mutationError")}
+            {toast.operatorToken
+              ? tApprovals("operatorTokenMissing")
+              : (toast.message ?? t("mutationError"))}
           </Alert>
         ))}
       </Stack>

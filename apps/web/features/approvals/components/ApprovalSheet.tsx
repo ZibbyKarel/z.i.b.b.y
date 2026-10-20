@@ -36,6 +36,7 @@ import {
   sourceLinkKind,
 } from "../approval";
 import { ApprovalPreview } from "./ApprovalPreview";
+import { isOperatorTokenError } from "../../../state/operatorToken";
 import { useApproveMutation, useRejectMutation, useReviseMutation } from "../mutations";
 import { useApprovalQuery } from "../queries";
 
@@ -83,7 +84,7 @@ export function ApprovalSheet({
   const [picked, setPicked] = useState<{ id: string; event: PrReviewEvent } | null>(null);
   // A 401 means the operator token is unset/wrong — say so instead of a bare failure.
   const decisionErrorText = (error: unknown) =>
-    typeof error === "object" && error !== null && "status" in error && error.status === 401
+    isOperatorTokenError(error)
       ? tApprovals("operatorTokenMissing")
       : error instanceof Error
         ? error.message
