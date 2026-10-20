@@ -731,11 +731,11 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
    */
   private async resumeInPlace(run: WorkflowRun, note?: string): Promise<WorkflowRun> {
     const workflow = await this.workflows.get(run.workflowId);
-    const cursor = run.pendingGate?.cursor ?? run.currentStage ?? workflow.phases[0]?.id;
+    // Only a pause owns `pendingGate` here; any other cursor left on the run is stale.
+    const gate = run.parkedReason === "paused" ? run.pendingGate : undefined;
+    const cursor = gate?.cursor ?? run.currentStage ?? workflow.phases[0]?.id;
     if (!cursor) throw new RunNotRetriesParkedError(run.workflowRunId);
-    const handoffSource = run.pendingGate
-      ? run.pendingGate.handoffSource
-      : this.recomputeHandoff(run, workflow, cursor);
+    const handoffSource = gate ? gate.handoffSource : this.recomputeHandoff(run, workflow, cursor);
     const reason = run.parkedReason;
     // A paused run's note is a message like any other: queued, delivered into the next
     // agent stage. A no-employee note goes straight into the resume context (as before).
@@ -850,6 +850,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     run.currentStage = cursor;
     run.retries = {};
     delete run.failedReason;
+    delete run.pendingGate; // the continue owns the cursor now
     const trimmed = note?.trim();
     if (trimmed) this.recordDeliveredNote(run, trimmed, cursor);
     await this.writeAggregate(run);
@@ -1019,6 +1020,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       run.status = "interrupted";
       delete run.parkedReason;
       delete run.parked;
+      delete run.pendingGate; // a stale cursor would rewind a later in-place resume
       await this.writeAggregate(run);
       return;
     }
@@ -2248,7 +2250,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     try {
       const run = this.runs.get(workflowRunId) ?? (await this.readAggregate(workflowRunId));
       const gate = run?.pendingGate;
-      if (!run || run.status !== "parked" || !gate) {
+      const gateParked = run?.parkedReason === "gate" || run?.parkedReason === "budget";
+      if (!run || run.status !== "parked" || !gateParked || !gate) {
         this.log.warn("gate resume skipped (run not gate-parked)", { workflowRunId, decision });
         return;
       }

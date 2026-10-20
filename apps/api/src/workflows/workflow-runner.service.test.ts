@@ -2536,6 +2536,31 @@ describe("operator pause (D-PAUSE)", () => {
     expect(run.parkedReason).toBeUndefined();
   });
 
+  it("a stopped paused run drops its gate cursor; a later no-employee resume ignores a stale one", async () => {
+    await h.service.onModuleInit();
+    const run = runOf();
+    run.status = "parked";
+    run.parkedReason = "paused";
+    run.pendingGate = { phaseId: "phase1", cursor: "phase1", handoffSource: null };
+    await h.service.stop(WORKFLOW_RUN_ID);
+    expect(run.pendingGate).toBeUndefined();
+
+    // A stale cursor from an older pause must not rewind a no-employee resume.
+    run.status = "parked";
+    run.parkedReason = "no-employee";
+    run.currentStage = "phase3";
+    run.pendingGate = { phaseId: "phase1", cursor: "phase1", handoffSource: null };
+    svc().workflows.get.mockResolvedValue(threePhases);
+    // Nor may a workflow-gate decision resume a run that is not gate-parked.
+    await h.registered.get("workflow-gate")?.resume(WORKFLOW_RUN_ID);
+    expect(run.status).toBe("parked");
+    const order: string[] = [];
+    scriptStages(order, () => {});
+    await h.service.resumeParked(WORKFLOW_RUN_ID);
+    await vi.waitFor(() => expect(run.status).toBe("done"));
+    expect(order).toEqual(["phase3"]);
+  });
+
   it("pause is refused on a done run", async () => {
     runOf().status = "done";
     await expect(h.service.requestPause(WORKFLOW_RUN_ID)).rejects.toMatchObject({
