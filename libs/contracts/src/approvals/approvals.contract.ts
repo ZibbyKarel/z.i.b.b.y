@@ -1,7 +1,7 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { ErrorSchema } from "../common.schema";
-import { ApprovalSchema, PrReviewEventSchema } from "./approval.schema";
+import { AnswerApprovalSchema, ApprovalSchema, PrReviewEventSchema } from "./approval.schema";
 
 const c = initContract();
 
@@ -57,6 +57,14 @@ export const approvalsContract = c.router(
       body: z.object({ note: z.string().trim().min(1).max(4000) }),
       responses: { 200: ApprovalSchema, 404: ErrorSchema, 409: ErrorSchema },
       summary: "Send a pending stage checkpoint back for rework with an operator note",
+    },
+    answerApproval: {
+      method: "POST",
+      path: "/approvals/:id/answer",
+      pathParams: ApprovalIdParam,
+      body: AnswerApprovalSchema,
+      responses: { 200: ApprovalSchema, 404: ErrorSchema, 409: ErrorSchema },
+      summary: "Answer an agent's operator.question approval (stores the answer, resumes the run)",
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },

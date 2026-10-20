@@ -50,6 +50,12 @@ export class ApprovalsController {
 
       reviseApproval: ({ params: { id }, body }) =>
         errors.or404(id, () => this.approvals.revise(id, body.note), decided),
+
+      // Implemented with B8 (`ApprovalsService.answer`); refused until then.
+      answerApproval: async () => ({
+        status: 409,
+        body: { message: "Answering is not implemented yet" },
+      }),
     });
   }
 }

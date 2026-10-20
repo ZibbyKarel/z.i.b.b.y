@@ -174,3 +174,10 @@ export const ApprovalSchema = z.object({
   reviewEvent: PrReviewEventSchema.optional(),
 });
 export type Approval = z.infer<typeof ApprovalSchema>;
+
+/** The intent action an agent's `ask_operator` MCP call is classified as. */
+export const OPERATOR_QUESTION_ACTION = "operator.question" as const;
+
+/** Body accepted by `answerApproval` — the operator's answer to an agent's question. */
+export const AnswerApprovalSchema = z.object({ answer: z.string().trim().min(1).max(4000) });
+export type AnswerApprovalInput = z.infer<typeof AnswerApprovalSchema>;
