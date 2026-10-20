@@ -122,11 +122,14 @@ export function RunStageRail({
                 </Stack>
               ))}
               {showFolder && (
-                <Pressable data-testid={RunStageRailTestId.OpenFolder} onClick={onOpenFolder}>
-                  <Typography as="span" type="labelSm" variant="primary">
-                    {t("rail.openFolder")}
-                  </Typography>
-                </Pressable>
+                // Row wrapper: a stretched <button> centres its label; the design left-aligns it.
+                <Stack direction="row">
+                  <Pressable data-testid={RunStageRailTestId.OpenFolder} onClick={onOpenFolder}>
+                    <Typography as="span" type="labelSm" variant="primary">
+                      {t("rail.openFolder")}
+                    </Typography>
+                  </Pressable>
+                </Stack>
               )}
             </Stack>
           </Container>
