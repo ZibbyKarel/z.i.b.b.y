@@ -268,6 +268,7 @@ describe("pr-review-* — the PR inbox's review levels (todo-4)", () => {
     "pr-review-quick": ["aggregate", "comment"],
     "pr-review-thorough": ["architecture", "aggregate", "comment"],
     "pr-review-tested": ["test", "architecture", "aggregate", "comment"],
+    "pr-review-browser": ["test", "architecture", "browser", "aggregate", "comment"],
   } as const;
 
   it.each(Object.entries(LEVELS))(
@@ -297,6 +298,19 @@ describe("pr-review-* — the PR inbox's review levels (todo-4)", () => {
       const employee = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
       expect(employee).toMatchObject({ agentId: phase.agent, department: "qa", status: "active" });
     }
+  });
+});
+
+describe("pr-review-browser (PR inbox redesign)", () => {
+  it("clicks through with ui-ux-tester before the aggregate and needs no web.url", () => {
+    const wf = readWorkflow("pr-review-browser");
+    expect(wf.phases.find((p) => p.id === "browser")).toMatchObject({
+      agent: "ui-ux-tester",
+      consumes: "architecture.md",
+      produces: "browser-report.md",
+    });
+    expect(wf.phases.find((p) => p.id === "aggregate")?.consumes).toBe("browser-report.md");
+    expect(wf.requires ?? []).not.toContain("web");
   });
 });
 

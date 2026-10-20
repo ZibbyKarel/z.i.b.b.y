@@ -103,6 +103,7 @@ describe("InboxReviewService", () => {
     ["quick", "pr-review-quick"],
     ["thorough", "pr-review-thorough"],
     ["tested", "pr-review-tested"],
+    ["browser", "pr-review-browser"],
   ] as const)(
     "level %s starts the %s workflow with a per-phase brief",
     async (level, workflowId) => {
@@ -131,6 +132,13 @@ describe("InboxReviewService", () => {
       expect((await storage.get("task_r1")).prReview?.state).toBe("running");
     },
   );
+
+  it("level browser briefs the browser phase and saves screenshots to the run", async () => {
+    await service.start({ projectId: "acme", repo: "acme/app", number: 7, level: "browser" });
+    const [input] = createTask.mock.calls[0] ?? [];
+    expect(input.text).toContain("## Phase `browser`");
+    expect(input.text).toContain("$ZIBBY_RUN_DIR/screenshots/");
+  });
 
   it("asks every reviewing phase for findings sorted Critical → Important → Minor", () => {
     const text = reviewTaskText("acme/app", 7, "https://github.com/acme/app/pull/7", "Fix it");

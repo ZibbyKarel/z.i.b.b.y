@@ -34,6 +34,7 @@ const REVIEW_TARGETS: Record<PrReviewLevel, TaskTarget> = {
   quick: reviewWorkflow("pr-review-quick"),
   thorough: reviewWorkflow("pr-review-thorough"),
   tested: reviewWorkflow("pr-review-tested"),
+  browser: reviewWorkflow("pr-review-browser"),
 };
 
 /** The PR's repo is not the project's resolved GitHub repo (→ 422). */
@@ -76,8 +77,15 @@ export function reviewTaskText(
     "## Phase `architecture`",
     "Review the PR at design level: module boundaries and coupling, data flow, contract/API changes, error handling and failure modes, security (input validation, authz, secrets, injection), migrations and backward compatibility. Concrete findings with file:line; skip what is fine. List findings sorted by severity, most critical first, each labelled \`Critical\`, \`Important\` or \`Minor\`.",
     "",
+    "## Phase `browser`",
+    "1. The worktree is at the PR head (checked out by an earlier phase; check again as above). If the repo has no web UI, or the diff changes nothing a user can see, write that in one line and finish.",
+    "2. Install dependencies if needed and start the app the repo's own way (package.json dev script, README, CLAUDE.md) on a free local port. Use the local URL only — never a production or shared environment.",
+    "3. With the Playwright MCP tools, click through every user journey the diff changes, plus one error or edge path per journey. Never log in with real credentials and never submit anything that writes to an external service.",
+    "4. Save a screenshot of each step that matters to `$ZIBBY_RUN_DIR/screenshots/<nn>-<slug>.png` (create the folder). List every file with one line on what it shows.",
+    "5. Findings: severity (`Critical` / `Important` / `Minor`), journey, steps to reproduce, expected vs actual, screenshot file. Stop the server you started.",
+    "",
     "## Phase `aggregate`",
-    "Merge what earlier phases found (their outputs are in the run folder's phase subfolders, if any ran) with your own line-level review of the diff: correctness, security, error handling, tests, readability. Drop duplicates and anything you could not verify in the code. List findings sorted by severity, most critical first, each labelled \`Critical\`, \`Important\` or \`Minor\` (within one severity, the most impactful first). Every finding: severity, file:line, what is wrong, a suggested fix. No findings → say so in one line. If a `test` phase ran, start with what ran and what failed. Skip praise and generic advice. This is the reviewers' aggregate, not the final text.",
+    "Merge what earlier phases found (test, architecture and browser, whichever ran; their outputs are in the run folder's phase subfolders, if any ran) with your own line-level review of the diff: correctness, security, error handling, tests, readability. Drop duplicates and anything you could not verify in the code. List findings sorted by severity, most critical first, each labelled \`Critical\`, \`Important\` or \`Minor\` (within one severity, the most impactful first). Every finding: severity, file:line, what is wrong, a suggested fix. No findings → say so in one line. If a `test` phase ran, start with what ran and what failed. Skip praise and generic advice. This is the reviewers' aggregate, not the final text.",
     "",
     "## Phase `comment`",
     `Turn the \`review\` phase's findings into the review that gets posted on the PR, in your own house style. Keep every verified finding and its file:line; add nothing you did not verify. Keep the findings in that severity order and start each one with its label (\`Critical:\`, \`Important:\`, \`Minor:\`). Write ONLY that text to \`${PR_REVIEW_ARTIFACT}\` — it is posted verbatim, so no \`Brief:\` line and no phase notes. The operator reads it at the approval gate; when it comes back with their notes, those notes are authoritative.`,

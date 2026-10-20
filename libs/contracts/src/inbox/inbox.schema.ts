@@ -147,9 +147,10 @@ export type InboxPrsResponse = z.infer<typeof InboxPrsResponseSchema>;
  * absent) = the `code-reviewer` agent alone; `thorough` = the `pr-review-thorough`
  * workflow (architecture pass + line-level review); `tested` = `pr-review-tested`
  * (checks out the PR head and runs its tests first). Every level ends in the same
- * Tier-3 `pr-review` approval.
+ * Tier-3 `pr-review` approval. `browser` = `pr-review-browser` (`tested` + a
+ * ui-ux-tester click-through of the PR head with screenshots saved to the run).
  */
-export const PR_REVIEW_LEVELS = ["quick", "thorough", "tested"] as const;
+export const PR_REVIEW_LEVELS = ["quick", "thorough", "tested", "browser"] as const;
 export const PrReviewLevelSchema = z.enum(PR_REVIEW_LEVELS);
 export type PrReviewLevel = z.infer<typeof PrReviewLevelSchema>;
 

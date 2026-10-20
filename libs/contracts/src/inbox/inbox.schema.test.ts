@@ -12,8 +12,8 @@ import {
 const base = { projectId: "acme", repo: "acme/app", number: 7 };
 
 describe("ReviewInboxPrInputSchema level (todo-4)", () => {
-  it("lists the three levels, quick first (the default)", () => {
-    expect(PR_REVIEW_LEVELS).toEqual(["quick", "thorough", "tested"]);
+  it("lists the four levels, quick first (the default)", () => {
+    expect(PR_REVIEW_LEVELS).toEqual(["quick", "thorough", "tested", "browser"]);
   });
 
   it("accepts every level and an omitted level", () => {
