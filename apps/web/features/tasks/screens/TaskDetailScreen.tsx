@@ -28,11 +28,9 @@ import { useDepartmentRosterQuery } from "../../departments/queries";
 import { type DepartmentLookup } from "../../departments/departmentLookup";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { RunDetail } from "../../runs/components/RunDetail";
-import { useRunGlyphMap } from "../../runs/queries/useRunsQuery";
 import { runOutputHref } from "../../runs/run";
 import { useTaskRunQuery } from "../../runs/queries/useTaskRunQuery";
 import { useOpenTaskRunFolderMutation } from "../../runs/mutations";
-import { useRunActions } from "../../runs/useRunActions";
 import { useTaskQuery } from "../queries";
 
 function stepFor(
@@ -66,7 +64,6 @@ export function TaskDetailScreen({ taskId }: TaskDetailScreenProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [now] = useState(() => Date.now());
-  const glyphById = useRunGlyphMap();
 
   const { data: task, isPending, isError, refetch } = useTaskQuery(taskId);
   const { data: approvals = [] } = useApprovalsQuery();
@@ -92,11 +89,6 @@ export function TaskDetailScreen({ taskId }: TaskDetailScreenProps) {
   const openFolder = useOpenTaskRunFolderMutation();
 
   const rosterQuery = useDepartmentRosterQuery(selected?.department ?? "");
-
-  const { stop, stopping, resume, resuming, remove, deleting } = useRunActions(
-    () => undefined,
-    () => undefined,
-  );
 
   // Approvals whose run/task the selected subtask (or the task itself) owns.
   const relatedApprovals = approvals.filter(
@@ -139,7 +131,9 @@ export function TaskDetailScreen({ taskId }: TaskDetailScreenProps) {
                 data-testid="open-task-folder"
                 disabled={openFolder.isPending}
                 icon="doc"
-                onClick={() => openFolder.mutate({ params: { runId: selectedRun.runId }, body: {} })}
+                onClick={() =>
+                  openFolder.mutate({ params: { runId: selectedRun.runId }, body: {} })
+                }
                 size="sm"
               >
                 {tRuns("openFolder")}
@@ -214,18 +208,7 @@ export function TaskDetailScreen({ taskId }: TaskDetailScreenProps) {
               ) : runError || !selectedRun ? (
                 <QueryError />
               ) : (
-                <RunDetail
-                  avatar={undefined}
-                  deleting={deleting}
-                  glyph={glyphById.get(selectedRun.owner) ?? "flow"}
-                  now={now}
-                  onDelete={() => remove(selectedRun.runId, selectedRun.kind)}
-                  onResume={() => resume(selectedRun)}
-                  onStop={() => stop(selectedRun)}
-                  resuming={resuming}
-                  run={selectedRun}
-                  stopping={stopping}
-                />
+                <RunDetail run={selectedRun} />
               )}
             </Panel>
           </Stack>

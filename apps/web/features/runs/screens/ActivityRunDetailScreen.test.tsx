@@ -1,3 +1,4 @@
+import { EmptyStateTestId } from "@zibby/design-system";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen } from "../../../test/render";
 import type { RunView } from "../run";
@@ -6,26 +7,13 @@ import { ActivityRunDetailScreen } from "./ActivityRunDetailScreen";
 vi.mock("../components/RunDetail", () => ({
   RunDetail: ({ run }: { run: RunView }) => <div data-testid="run-detail">{run.runId}</div>,
 }));
-vi.mock("../queries/useRunsQuery", () => ({
-  useRunGlyphMap: () => new Map(),
-  useRunAvatarMap: () => new Map(),
-}));
-vi.mock("../useRunActions", () => ({
-  useRunActions: () => ({
-    stop: vi.fn(),
-    stopping: false,
-    resume: vi.fn(),
-    resuming: false,
-    remove: vi.fn(),
-    deleting: false,
-  }),
-}));
 
 const { hooks } = vi.hoisted(() => ({
   hooks: {
     run: undefined as RunView | undefined,
     isPending: false,
     isError: false,
+    error: null as { status: number } | null,
   },
 }));
 vi.mock("../queries/useTaskRunQuery", () => ({
@@ -33,24 +21,33 @@ vi.mock("../queries/useTaskRunQuery", () => ({
     data: hooks.run,
     isPending: hooks.isPending,
     isError: hooks.isError,
+    error: hooks.error,
     refetch: vi.fn(),
   }),
 }));
 
-describe("ActivityRunDetailScreen (ZB-07)", () => {
+function setHooks(over: Partial<typeof hooks>) {
+  Object.assign(hooks, { run: undefined, isPending: false, isError: false, error: null }, over);
+}
+
+describe("ActivityRunDetailScreen", () => {
   it("renders the resolved run in RunDetail", () => {
-    hooks.run = { runId: "r_1" } as RunView;
-    hooks.isPending = false;
-    hooks.isError = false;
+    setHooks({ run: { runId: "r_1" } as RunView });
     render(<ActivityRunDetailScreen runId="r_1" />);
     expect(screen.getByTestId("run-detail")).toHaveTextContent("r_1");
   });
 
   it("shows a loading state while the run resolves", () => {
-    hooks.run = undefined;
-    hooks.isPending = true;
-    hooks.isError = false;
+    setHooks({ isPending: true });
     render(<ActivityRunDetailScreen runId="r_1" />);
     expect(screen.queryByTestId("run-detail")).toBeNull();
+  });
+
+  it("a 404 renders the not-found empty state naming the id", () => {
+    setHooks({ isError: true, error: { status: 404 } });
+    render(<ActivityRunDetailScreen runId="r_gone" />);
+    const empty = screen.getByTestId(EmptyStateTestId.Root);
+    expect(empty).toHaveTextContent("BĚH NENALEZEN");
+    expect(empty).toHaveTextContent("r_gone");
   });
 });
