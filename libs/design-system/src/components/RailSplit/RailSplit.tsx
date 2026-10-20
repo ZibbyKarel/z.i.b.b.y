@@ -23,11 +23,15 @@ export interface RailSplitProps {
 }
 
 /** Rail + toolbar/body/footer layout at viewport height (Run Detail). Stacks to
- * one column below `lg`, rail on top. */
+ * one column below `lg`, rail on top.
+ *
+ * lg height = 100vh − 336px chrome above it (app bar, sub-nav, run header + metrics,
+ * measured at 1440×900) − the 72px `AppFrame` keeps free under the content for the
+ * floating chat dock — otherwise the footer (composer) sits under the dock. */
 export function RailSplit({ rail, toolbar, children, footer, bodyRef, ref }: RailSplitProps) {
   return (
     <div
-      className="grid min-h-[560px] grid-cols-1 border-b border-border lg:h-[calc(100vh-330px)] lg:grid-cols-[260px_minmax(0,1fr)]"
+      className="grid min-h-[560px] grid-cols-1 border-b border-border lg:h-[calc(100vh-408px)] lg:min-h-[320px] lg:grid-cols-[260px_minmax(0,1fr)]"
       data-testid={RailSplitTestId.Root}
       ref={ref}
     >
