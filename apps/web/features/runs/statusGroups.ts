@@ -2,7 +2,7 @@ import type { TaskRunStatus } from "@zibby/contracts";
 import type { IconName, StatTone, StateTone } from "@zibby/design-system";
 
 /**
- * The eleven run states folded into five operator-facing buckets — the shared
+ * The twelve run states folded into five operator-facing buckets — the shared
  * vocabulary the project run-summary tiles and their deep-links into `/activity/runs`
  * (F8d — `/runs` is deleted) use. Order reads the lifecycle: live → waiting →
  * done → failed → parked.
@@ -45,7 +45,14 @@ export const RUN_STATUS_GROUPS: readonly RunStatusGroup[] = [
     icon: "warn",
     state: "error",
   },
-  { key: "parked", statuses: ["parked"], tone: "warn", icon: "pause", state: "blocked" },
+  // `paused` is halted at a stage boundary until the operator resumes — same bucket as a park.
+  {
+    key: "parked",
+    statuses: ["parked", "paused"],
+    tone: "warn",
+    icon: "pause",
+    state: "blocked",
+  },
 ];
 
 /** The `?filter=` value that reproduces a bucket on the runs screen. */
