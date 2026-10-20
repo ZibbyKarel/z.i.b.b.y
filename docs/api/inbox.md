@@ -197,7 +197,13 @@ ZIBBY pushes **fast-forward only, never force** (`WorkspaceService.pushFastForwa
 reports as unresolved on this PR; threads are never resolved. `Addressed: all` → push + replies
 right away (Tier-2, reported in the task outcome); anything else with new commits → one Tier-3
 `pr-address-comments` approval covering push and replies; no new commits → `failed`.
-(Parking, push runner and replies: see the approvals doc once wired.)
+On a `done` run `TaskOutputService.parkPrAddressComments` reads the worktree
+(`WorkspaceService.rebaseFacts`): HEAD equal to the clicked `headSha` → `failed` ("no new
+commits"); otherwise it records the `pr-address-comments` approval with the report plus a
+"Verified by ZIBBY" HEAD / `git diff --stat <headSha> HEAD` and stores that HEAD as `fixedSha`.
+The runner (`InboxAddressCommentsService.push`) claims `awaiting-approval` atomically, pushes
+exactly `fixedSha` → `pushed` (note = sha) or `failed` with git's reason (a remote head that
+moved since the click is rejected as non-fast-forward). Reject → `discarded`.
 
 `GET /api/inbox/prs` rows carry `addressComments { taskId, state }` (latest such task per PR; a
 `running` one whose task/run died reads `failed`).

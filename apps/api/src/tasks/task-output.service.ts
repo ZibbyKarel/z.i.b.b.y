@@ -46,6 +46,14 @@ export function isAutoPushPrRebase(report: string): boolean {
   return AUTO_PUSH.test(report.split("\n", 1)[0] ?? "");
 }
 
+/** PR inbox redesign — `Addressed: all` is the only first line ZIBBY pushes review fixes on without asking. */
+const ADDRESSED_ALL = /^Addressed:\s*all\s*$/i;
+
+/** The Address-review-comments click authorises the push only when the report's FIRST line is `Addressed: all`. */
+export function isAutoPushAddressComments(report: string): boolean {
+  return ADDRESSED_ALL.test(report.split("\n", 1)[0] ?? "");
+}
+
 /** A labelled finding line (item 9: `Critical:` / `Important:` / `Minor:`), tolerating a bullet/numbered list marker or bold. */
 const FINDING_LINE = /^[\s>*_-]*(?:\d+[.)][\s>*_-]*)?(?:Critical|Important|Minor)[*_]*:/m;
 
@@ -321,6 +329,84 @@ export class TaskOutputService implements OnModuleInit {
       summary: clean
         ? `Rebase ${ref} force-pushnut`
         : `Rebase ${ref}: konflikty vyřešeny a force-pushnuto`,
+    };
+  }
+
+  /**
+   * PR inbox redesign — a finished `pr-address-comments` run: record its report as a
+   * `pr-address-comments` approval ("Push review fixes"). `Addressed: all` was authorised by
+   * the click (Tier-2: fast-forward commits onto the operator's own PR only request review), so
+   * it is approved on the spot and the runner (`InboxAddressCommentsService`) pushes; any other
+   * first line stays pending (Tier-3, risk high). The worktree HEAD ZIBBY reads here is stored
+   * as `fixedSha` — the only sha the runner pushes. No report / no worktree / an unreadable
+   * worktree / no new commits → `failed`, nothing pushed.
+   */
+  async parkPrAddressComments(
+    task: ScheduledTask,
+    raw: string,
+    worktree?: string,
+  ): Promise<TaskTerminalDelivery> {
+    const fix = task.prAddressComments;
+    if (!fix) return {};
+    const report = raw.trim().slice(0, PR_REVIEW_MAX_CHARS);
+    const ref = `${fix.repo}#${fix.number}`;
+    const fail = async (note: string): Promise<TaskTerminalDelivery> => {
+      await this.storage.setPrAddressComments(task.id, (c) =>
+        c ? { ...c, state: "failed", note } : c,
+      );
+      this.log.warn("pr address-comments: nothing to push", { taskId: task.id, ref, note });
+      return { summary: `Review komentáře ${ref}: ${note} — nic nepushnuto` };
+    };
+    if (!report) return fail(`no ${PR_ADDRESS_COMMENTS_ARTIFACT}`);
+    if (!worktree) return fail("no worktree");
+    // The report is the agent's claim; this is what the worktree really holds.
+    const facts = await this.workspace
+      .rebaseFacts({ cwd: worktree, base: fix.base, headSha: fix.headSha })
+      .catch((error: unknown) => (error instanceof Error ? error.message : String(error)));
+    if (typeof facts === "string") {
+      return fail(`could not read the worktree: ${facts}`.slice(0, 300));
+    }
+    if (facts.sha === fix.headSha) return fail("no new commits");
+    const autoPush = isAutoPushAddressComments(report);
+    const approval = await this.approvals.requestApproval({
+      runId: task.id,
+      kind: "pr-address-comments",
+      skill: "fullstack-developer",
+      action: "git.push",
+      detail: `Push review fixes onto ${fix.head} — ${ref}${
+        autoPush ? " (all comments addressed, checks green — authorised by the click)" : ""
+      }\n\n${report}\n\n## Verified by ZIBBY\n\nHEAD ${facts.sha}\n\ngit diff --stat ${fix.headSha} HEAD:\n${facts.stat || "(no changes)"}`,
+      risk: autoPush ? "medium" : "high",
+      sourceUrl: fix.url,
+    });
+    await this.storage.setPrAddressComments(task.id, (c) =>
+      c
+        ? {
+            ...c,
+            state: "awaiting-approval",
+            report,
+            worktree,
+            fixedSha: facts.sha,
+            approvalId: approval.id,
+          }
+        : c,
+    );
+    if (!autoPush) return { summary: `Review komentáře ${ref}: push oprav čeká na schválení` };
+    // A failed push already marks the task `failed` with git's reason (the runner).
+    const pushed = await this.approvals.approve(approval.id).then(
+      () => true,
+      (error: unknown) => {
+        this.log.warn("pr address-comments push after the click failed", {
+          taskId: task.id,
+          err: error instanceof Error ? error.message : String(error),
+        });
+        return false;
+      },
+    );
+    return {
+      summary: pushed
+        ? `Review komentáře ${ref}: opravy pushnuty`
+        : `Review komentáře ${ref}: push selhal`,
     };
   }
 

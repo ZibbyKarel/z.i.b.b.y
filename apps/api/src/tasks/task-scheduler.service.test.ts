@@ -11,7 +11,11 @@ import { WorkingAgentsFuse } from "../employees/working-agents-fuse";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { AttachmentStorageService } from "./attachment-storage.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
-import { PR_REBASE_ARTIFACT, PR_REVIEW_ARTIFACT } from "./task-output.service";
+import {
+  PR_ADDRESS_COMMENTS_ARTIFACT,
+  PR_REBASE_ARTIFACT,
+  PR_REVIEW_ARTIFACT,
+} from "./task-output.service";
 import { TaskSchedulerService } from "./task-scheduler.service";
 
 const fakeLogger = {
@@ -75,6 +79,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     handleTerminal: () => Promise<null>;
     parkPrReview: ReturnType<typeof vi.fn>;
     parkPrRebase: ReturnType<typeof vi.fn>;
+    parkPrAddressComments: ReturnType<typeof vi.fn>;
   };
   /** Phase 91: the workflow definition store, for department-target resolution
    *  (`department` lookup). Empty by default — no test in this file dispatches
@@ -222,6 +227,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       handleTerminal: async () => null,
       parkPrReview: vi.fn(async () => ({ summary: "parked" })),
       parkPrRebase: vi.fn(async () => ({ summary: "rebase parked" })),
+      parkPrAddressComments: vi.fn(async () => ({ summary: "fixes parked" })),
     };
     service = new TaskSchedulerService(
       storage,
@@ -1686,6 +1692,83 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         expect((await storage.get(id)).outcome?.status).toBe("error");
       });
       expect(taskOutput.parkPrRebase).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("PR-inbox address-comments run (PR inbox redesign)", () => {
+    async function seedFix(): Promise<string> {
+      const id = storage.newId();
+      await storage.createDispatched(
+        id,
+        { text: "address" },
+        "pr-address-comments_1",
+        { kind: "workflow", id: "pr-address-comments", name: "pr-address-comments" },
+        Date.now(),
+        "alpha",
+      );
+      await storage.setPrAddressComments(id, () => ({
+        repo: "acme/app",
+        number: 7,
+        url: "https://github.com/acme/app/pull/7",
+        head: "feat",
+        base: "main",
+        headSha: "abc",
+        state: "running",
+      }));
+      return id;
+    }
+    const fixRun = (taskId: string, status: WorkflowRun["status"]) =>
+      workflowRun({
+        workflowRunId: "pr-address-comments_1",
+        workflowId: "pr-address-comments",
+        status,
+        taskId,
+        workspace: { branch: "zibby/pr-address-comments_1", path: "/wt", baseRef: "main" },
+      });
+
+    it("a done run hands the report and the worktree to parkPrAddressComments", async () => {
+      const id = await seedFix();
+      workflowRunner.readArtifact.mockResolvedValue({
+        name: PR_ADDRESS_COMMENTS_ARTIFACT,
+        content: "Addressed: all",
+      });
+      workflowListener?.(fixRun(id, "done"));
+      await vi.waitFor(async () => {
+        expect((await storage.get(id)).outcome).toBeDefined();
+      });
+      expect(workflowRunner.readArtifact).toHaveBeenCalledWith(
+        "pr-address-comments_1",
+        PR_ADDRESS_COMMENTS_ARTIFACT,
+      );
+      expect(taskOutput.parkPrAddressComments).toHaveBeenCalledWith(
+        expect.objectContaining({ id }),
+        "Addressed: all",
+        "/wt",
+      );
+      expect(taskOutput.parkPrRebase).not.toHaveBeenCalled();
+      expect((await storage.get(id)).outcome?.summary).toBe("fixes parked");
+    });
+
+    it("a stopped address-comments run writes an error outcome and parks nothing", async () => {
+      const id = await seedFix();
+      workflowListener?.(fixRun(id, "interrupted"));
+      await vi.waitFor(async () => {
+        expect((await storage.get(id)).outcome?.status).toBe("error");
+      });
+      expect(taskOutput.parkPrAddressComments).not.toHaveBeenCalled();
+    });
+
+    it("a park that throws marks the task failed instead of leaving it running", async () => {
+      const id = await seedFix();
+      taskOutput.parkPrAddressComments.mockRejectedValueOnce(new Error("boom"));
+      workflowRunner.readArtifact.mockResolvedValue({ name: "x", content: "Addressed: all" });
+      workflowListener?.(fixRun(id, "done"));
+      await vi.waitFor(async () => {
+        expect((await storage.get(id)).prAddressComments).toMatchObject({
+          state: "failed",
+          note: "park failed",
+        });
+      });
     });
   });
 

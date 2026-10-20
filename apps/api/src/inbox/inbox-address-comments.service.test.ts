@@ -150,4 +150,67 @@ describe("InboxAddressCommentsService", () => {
     integrations = [];
     await expect(start()).rejects.toThrow(NoGithubLinkError);
   });
+
+  const A = "a".repeat(40);
+  const B = "b".repeat(40);
+  /** Start, then park the run the way TaskOutputService.parkPrAddressComments does. */
+  async function parked(): Promise<string> {
+    const { taskId } = await start();
+    await storage.setPrAddressComments(taskId, (c) =>
+      c ? { ...c, headSha: A, state: "awaiting-approval", worktree: "/wt", fixedSha: B } : c,
+    );
+    return taskId;
+  }
+
+  it("approve pushes the parked fixes fast-forward and marks pushed", async () => {
+    const taskId = await parked();
+    await service.push(taskId);
+    expect(pushFastForward).toHaveBeenCalledWith({
+      cwd: "/wt",
+      head: "feat",
+      expectedSha: A,
+      sha: B,
+    });
+    expect((await storage.get(taskId)).prAddressComments).toMatchObject({
+      state: "pushed",
+      note: "newsha",
+    });
+    expect(dropPrsCache).toHaveBeenCalled();
+  });
+
+  it("a refused push (remote moved, not an ancestor) marks failed with git's reason and rethrows", async () => {
+    pushFastForward.mockRejectedValue(new Error("non-fast-forward"));
+    const taskId = await parked();
+    await expect(service.push(taskId)).rejects.toThrow("non-fast-forward");
+    expect((await storage.get(taskId)).prAddressComments).toMatchObject({
+      state: "failed",
+      note: "non-fast-forward",
+    });
+    expect(dropPrsCache).not.toHaveBeenCalled();
+  });
+
+  it("a second approve does not push again; nothing parked → no push", async () => {
+    const taskId = await parked();
+    await service.push(taskId);
+    await service.push(taskId);
+    expect(pushFastForward).toHaveBeenCalledOnce();
+    pushFastForward.mockClear();
+    await storage.setPrAddressComments(taskId, (c) => (c ? { ...c, state: "running" } : c));
+    await service.push(taskId);
+    await storage.setPrAddressComments(taskId, (c) =>
+      c ? { ...c, state: "awaiting-approval", fixedSha: undefined } : c,
+    );
+    await service.push(taskId);
+    expect(pushFastForward).not.toHaveBeenCalled();
+  });
+
+  it("reject discards only from awaiting-approval", async () => {
+    const taskId = await parked();
+    await service.discard(taskId);
+    expect((await storage.get(taskId)).prAddressComments?.state).toBe("discarded");
+    const { taskId: running } = await start();
+    await service.discard(running);
+    expect((await storage.get(running)).prAddressComments?.state).toBe("running");
+    expect(pushFastForward).not.toHaveBeenCalled();
+  });
 });

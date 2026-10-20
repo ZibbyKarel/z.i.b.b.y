@@ -9,6 +9,7 @@ import {
   PR_REBASE_ARTIFACT,
   PR_REVIEW_ARTIFACT,
   TaskOutputService,
+  isAutoPushAddressComments,
   isAutoPushPrRebase,
   suggestReviewEvent,
 } from "./task-output.service";
@@ -273,6 +274,122 @@ describe("TaskOutputService", () => {
       ["", "APPROVE"],
     ])("%j → %s", (body, expected) => {
       expect(suggestReviewEvent(body)).toBe(expected);
+    });
+  });
+
+  describe("pr address comments (PR inbox redesign)", () => {
+    const A = "a".repeat(40);
+    const B = "b".repeat(40);
+    async function seed(): Promise<ScheduledTask> {
+      const task = await storage.createDispatched(
+        "t_fix",
+        { text: "address it" },
+        "pr-address-comments_1",
+        { kind: "workflow", id: "pr-address-comments", name: "pr-address-comments" },
+        Date.now(),
+        "p1",
+      );
+      return storage.setPrAddressComments(task.id, () => ({
+        repo: "acme/app",
+        number: 7,
+        url: "https://github.com/acme/app/pull/7",
+        head: "feat",
+        base: "main",
+        headSha: A,
+        state: "running",
+      }));
+    }
+    beforeEach(() => {
+      workspace.rebaseFacts.mockResolvedValue({ sha: B, log: "b1 fix", stat: " a.ts | 2 +-" });
+    });
+
+    it("only an exact `Addressed: all` first line auto-pushes", () => {
+      expect(isAutoPushAddressComments("Addressed: all\n- done")).toBe(true);
+      expect(isAutoPushAddressComments("addressed:  ALL ")).toBe(true);
+      expect(isAutoPushAddressComments("Addressed: all but one")).toBe(false);
+      expect(isAutoPushAddressComments("Done.\nAddressed: all")).toBe(false);
+    });
+
+    it("Addressed: all → recorded and approved on the spot (Tier-2)", async () => {
+      const task = await seed();
+      const delivered = await service.parkPrAddressComments(
+        task,
+        "Addressed: all\n\n- a.ts:3 done",
+        "/wt",
+      );
+      expect(workspace.rebaseFacts).toHaveBeenCalledWith({ cwd: "/wt", base: "main", headSha: A });
+      expect(approvals.requestApproval).toHaveBeenCalledWith(
+        expect.objectContaining({
+          runId: "t_fix",
+          kind: "pr-address-comments",
+          action: "git.push",
+          risk: "medium",
+          sourceUrl: "https://github.com/acme/app/pull/7",
+        }),
+      );
+      const { detail } = approvals.requestApproval.mock.calls[0]?.[0] as { detail: string };
+      expect(detail).toContain("## Verified by ZIBBY");
+      expect(detail).toContain(`HEAD ${B}`);
+      expect(approvals.approve).toHaveBeenCalledWith("appr_1");
+      expect((await storage.get("t_fix")).prAddressComments).toMatchObject({
+        state: "awaiting-approval",
+        worktree: "/wt",
+        fixedSha: B,
+        approvalId: "appr_1",
+      });
+      expect(delivered.summary).toMatch(/acme\/app#7: opravy pushnuty/);
+    });
+
+    it.each(["Addressed: partial", "Addressed: checks failed", "Done.\nAddressed: all"])(
+      "%j → pending Tier-3 approval, nothing pushed",
+      async (report) => {
+        const task = await seed();
+        const delivered = await service.parkPrAddressComments(task, report, "/wt");
+        expect(approvals.requestApproval).toHaveBeenCalledWith(
+          expect.objectContaining({ risk: "high" }),
+        );
+        expect(approvals.approve).not.toHaveBeenCalled();
+        expect(delivered.summary).toMatch(/čeká na schválení/);
+      },
+    );
+
+    it("no new commits (HEAD is still the clicked head) → failed, no approval", async () => {
+      workspace.rebaseFacts.mockResolvedValue({ sha: A, log: "", stat: "" });
+      const task = await seed();
+      await service.parkPrAddressComments(task, "Addressed: partial", "/wt");
+      expect(approvals.requestApproval).not.toHaveBeenCalled();
+      expect((await storage.get("t_fix")).prAddressComments).toMatchObject({
+        state: "failed",
+        note: "no new commits",
+      });
+    });
+
+    it("an unreadable worktree → failed, no approval (fail closed)", async () => {
+      workspace.rebaseFacts.mockRejectedValue(new Error("not a git repository"));
+      const task = await seed();
+      await service.parkPrAddressComments(task, "Addressed: all", "/wt");
+      expect(approvals.requestApproval).not.toHaveBeenCalled();
+      expect((await storage.get("t_fix")).prAddressComments?.state).toBe("failed");
+    });
+
+    it.each([
+      ["", "/wt", "no zibby-pr-address-comments.md"],
+      ["Addressed: all", undefined, "no worktree"],
+    ])("report %j / worktree %j → failed (%s)", async (raw, wt, note) => {
+      const task = await seed();
+      await service.parkPrAddressComments(task, raw, wt);
+      expect(approvals.requestApproval).not.toHaveBeenCalled();
+      expect((await storage.get("t_fix")).prAddressComments).toMatchObject({
+        state: "failed",
+        note,
+      });
+    });
+
+    it("a refused push after the click reports the failure", async () => {
+      approvals.approve.mockRejectedValueOnce(new Error("non-fast-forward"));
+      const task = await seed();
+      const delivered = await service.parkPrAddressComments(task, "Addressed: all", "/wt");
+      expect(delivered.summary).toMatch(/push selhal/);
     });
   });
 

@@ -56,7 +56,12 @@ import { AttachmentStorageService } from "./attachment-storage.service";
 import { ClaudeCliTaskNamer, deriveTitleFallback } from "./claude-cli-task-namer";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
 import { TaskClassifierService } from "./task-classifier.service";
-import { PR_REBASE_ARTIFACT, PR_REVIEW_ARTIFACT, TaskOutputService } from "./task-output.service";
+import {
+  PR_ADDRESS_COMMENTS_ARTIFACT,
+  PR_REBASE_ARTIFACT,
+  PR_REVIEW_ARTIFACT,
+  TaskOutputService,
+} from "./task-output.service";
 import { sumStageCosts } from "./task-runs.service";
 import { taskTargetId } from "./task-target";
 
@@ -1857,12 +1862,18 @@ export class TaskSchedulerService
 
   private async writeWorkflowOutcome(taskId: string, run: WorkflowRun): Promise<void> {
     if (run.status !== "done" && run.status !== "failed") {
-      // a stopped PR-review or PR-rebase run must not leave `prReview` stuck `running`
+      // a stopped PR-review, PR-rebase or address-comments run must not leave its state stuck `running`
       // (the agent path writes an error outcome for `interrupted`; do the same here,
       // but only for review tasks so ordinary interrupted workflows stay untouched).
       if (run.status !== "interrupted") return;
       const stopped = await this.storage.get(taskId).catch(() => null);
-      if (stopped?.prReview?.state !== "running" && stopped?.prRebase?.state !== "running") return;
+      if (
+        stopped?.prReview?.state !== "running" &&
+        stopped?.prRebase?.state !== "running" &&
+        stopped?.prAddressComments?.state !== "running"
+      ) {
+        return;
+      }
     }
     const outcome: TaskOutcome = {
       status: run.status === "done" ? "done" : "error",
@@ -1930,6 +1941,28 @@ export class TaskSchedulerService
                 });
                 await this.storage
                   .setPrRebase(taskId, (c) =>
+                    c ? { ...c, state: "failed", note: "park failed" } : c,
+                  )
+                  .catch(() => undefined);
+                return null;
+              });
+            if (delivery?.summary) outcome.summary = delivery.summary;
+          }
+          // PR inbox redesign — Address review comments: park (or, `Addressed: all`, push) the fixes.
+          // Gated on `running` so the fast path and the reconcile sweep park once.
+          if (existing.prAddressComments?.state === "running") {
+            const artifact = await this.workflowRunner
+              .readArtifact(run.workflowRunId, PR_ADDRESS_COMMENTS_ARTIFACT)
+              .catch(() => null);
+            const delivery = await this.taskOutput
+              .parkPrAddressComments(existing, artifact?.content ?? "", run.workspace?.path)
+              .catch(async (error: unknown) => {
+                this.log.warn("pr address-comments park failed (soft)", {
+                  taskId,
+                  err: error instanceof Error ? error.message : String(error),
+                });
+                await this.storage
+                  .setPrAddressComments(taskId, (c) =>
                     c ? { ...c, state: "failed", note: "park failed" } : c,
                   )
                   .catch(() => undefined);

@@ -2,6 +2,7 @@ import { Injectable, type OnModuleInit, Optional } from "@nestjs/common";
 import type {
   AddressInboxPrCommentsInput,
   ReviewInboxPrResult,
+  ScheduledTask,
   TaskTarget,
 } from "@zibby/contracts";
 import { ApprovalsService } from "../approvals/approvals.service";
@@ -16,7 +17,7 @@ import { PR_ADDRESS_COMMENTS_ARTIFACT, PR_REPLIES_ARTIFACT } from "../tasks/task
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
 import { WorkspaceService } from "../workspace/workspace.service";
 import { InboxService, isDeadTask } from "./inbox.service";
-import { PrRefusedError, type RebaseBrief, readPushablePr } from "./inbox-rebase.service";
+import { PrRefusedError, type RebaseBrief, errMsg, readPushablePr } from "./inbox-rebase.service";
 import { ReviewRepoMismatchError } from "./inbox-review.service";
 
 const TARGET: TaskTarget = {
@@ -150,8 +151,63 @@ export class InboxAddressCommentsService implements OnModuleInit {
     return { taskId: result.task.id };
   }
 
-  // TODO(pr-inbox-redesign Task 5): fast-forward push + discard. Until then an approval never pushes.
-  async push(_taskId: string): Promise<void> {}
+  /**
+   * Approve → fast-forward the parked fixes from the run's worktree. Only `awaiting-approval`
+   * with a worktree and a verified `fixedSha` pushes: it is claimed atomically (→ `running`,
+   * inside the storage lock) so a second approve cannot push again, and the final `pushed` /
+   * `failed` write only lands from that claimed state. Never a force-push.
+   */
+  async push(taskId: string): Promise<void> {
+    let claimed: ScheduledTask["prAddressComments"];
+    try {
+      await this.tasks.setPrAddressComments(taskId, (c) => {
+        if (c?.state !== "awaiting-approval" || !c.worktree || !c.fixedSha) return c;
+        claimed = c;
+        return { ...c, state: "running" };
+      });
+    } catch (error) {
+      this.log?.warn("pr address-comments approve: task unreadable, not pushing", {
+        taskId,
+        err: errMsg(error),
+      });
+      return;
+    }
+    if (!claimed?.worktree || !claimed.fixedSha) {
+      this.log?.warn("pr address-comments approve: nothing parked, not pushing", { taskId });
+      return;
+    }
+    const fix = claimed;
+    const settle = (patch: { state: "pushed" | "failed"; note: string }) =>
+      this.tasks.setPrAddressComments(taskId, (c) =>
+        c?.state === "running" ? { ...c, ...patch } : c,
+      );
+    try {
+      const sha = await this.workspace.pushFastForward({
+        cwd: fix.worktree ?? "",
+        head: fix.head,
+        expectedSha: fix.headSha,
+        sha: fix.fixedSha ?? "",
+      });
+      await settle({ state: "pushed", note: sha });
+    } catch (error) {
+      const note = errMsg(error).slice(0, 300);
+      await settle({ state: "failed", note });
+      throw new Error(note);
+    }
+    // The push changes the PR's head and checks — don't serve the stale 30 s cache.
+    this.inbox.dropPrsCache();
+    this.log?.info("pr review fixes pushed", { taskId, repo: fix.repo, number: fix.number });
+  }
 
-  async discard(_taskId: string): Promise<void> {}
+  /** Reject → discard, only from `awaiting-approval`; nothing is pushed. */
+  async discard(taskId: string): Promise<void> {
+    try {
+      await this.tasks.setPrAddressComments(taskId, (c) =>
+        c?.state === "awaiting-approval" ? { ...c, state: "discarded" } : c,
+      );
+      this.log?.info("pr address-comments discard handled", { taskId });
+    } catch (error) {
+      this.log?.warn("pr address-comments discard failed", { taskId, err: errMsg(error) });
+    }
+  }
 }

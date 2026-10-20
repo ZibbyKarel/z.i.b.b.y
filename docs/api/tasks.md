@@ -116,6 +116,17 @@ pushes only while `prRebase.state === "awaiting-approval"`; a clean approval
 `allowRewrittenCommits: false`, any other — resolved conflicts approved on the spot
 (todo-17) or operator-approved — with `true`.
 
+**`prAddressComments`** (PR inbox redesign) is the "Address review comments" counterpart:
+stamped by `InboxAddressCommentsService.start` via `setPrAddressComments` (`repo, number, url,
+head, base, headSha, state: "running"`), written to `awaiting-approval` by
+`TaskOutputService.parkPrAddressComments` from `writeWorkflowOutcome` (with `report`,
+`worktree`, `approvalId` and `fixedSha`, the worktree HEAD ZIBBY read — the only sha the runner
+pushes; no report / no worktree / no new commits → `failed` + `note`), and to
+`pushed`/`discarded`/`failed` by the `pr-address-comments` approval runner, which pushes only
+from `awaiting-approval`, fast-forward only. An interrupted run with `state === "running"` gets an
+error outcome. `replies` / `replied` / `repliesNote` record the thread replies (see
+`docs/api/inbox.md`).
+
 `scheduledAt` absent or in the past → `createTask` runs classification + dispatch
 immediately. From the dialog (`background = true`), dispatch happens in the
 background and the endpoint returns `pending` right away (see "`pending` —
