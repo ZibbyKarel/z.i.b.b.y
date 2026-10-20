@@ -471,6 +471,9 @@ export type {
 export { MetricStrip, MetricStripTestId } from "./components/MetricStrip/MetricStrip";
 export type { MetricStripItem, MetricStripProps } from "./components/MetricStrip/MetricStrip";
 
+export { RailSplit, RailSplitTestId } from "./components/RailSplit/RailSplit";
+export type { RailSplitProps } from "./components/RailSplit/RailSplit";
+
 export { DataTable, DataTableTestId } from "./components/DataTable/DataTable";
 export type {
   ColumnWidth,
