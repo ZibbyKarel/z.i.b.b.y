@@ -2389,6 +2389,43 @@ describe("operator pause (D-PAUSE)", () => {
     expect(order).toEqual(["phase1", "phase2"]); // phase3 never runs on the stopped run
   });
 
+  it("rejecting a stale stage approval (terminal stage) leaves no stop mark behind", async () => {
+    await h.service.onModuleInit();
+    const run = runOf();
+    // After a restart: the run was reconciled to failed, its stage record is terminal,
+    // but the approval is still pending — the operator rejects it now.
+    run.status = "failed";
+    run.stageRuns = [{ phaseId: "phase1", runId: STAGE_RUN_ID, attempt: 1, status: "error" }];
+    h.core.get.mockReturnValue({
+      runId: STAGE_RUN_ID,
+      workflowRunId: WORKFLOW_RUN_ID,
+      phaseId: "phase1",
+      status: "interrupted",
+    });
+    h.registered.get("workflow-stage")?.cancel(STAGE_RUN_ID);
+
+    const order: string[] = [];
+    scriptStages(order, () => {});
+    svc().workflows.get.mockResolvedValue(threePhases);
+    await h.service.continueFailed(WORKFLOW_RUN_ID);
+    await vi.waitFor(() => expect(run.status).toBe("done"));
+    expect(order).toEqual(["phase1", "phase2", "phase3"]);
+  });
+
+  it("a lingering stop mark is cleared when a parked run resumes", async () => {
+    const run = runOf();
+    run.status = "parked";
+    run.parkedReason = "paused";
+    run.currentStage = "phase1";
+    (h.service as unknown as { stopRequested: Set<string> }).stopRequested.add(WORKFLOW_RUN_ID);
+    const order: string[] = [];
+    scriptStages(order, () => {});
+    svc().workflows.get.mockResolvedValue(threePhases);
+    await h.service.resumeParked(WORKFLOW_RUN_ID);
+    await vi.waitFor(() => expect(run.status).toBe("done"));
+    expect(order).toEqual(["phase1", "phase2", "phase3"]);
+  });
+
   it("resume continues at the paused phase", async () => {
     const run = runOf();
     const order: string[] = [];

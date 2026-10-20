@@ -304,10 +304,13 @@ loop back-edge never re-delivers a message. A sub-run settle re-entry delivers
 nothing (no stage starts).
 
 **Rejecting a stage approval.** The `workflow-stage` runner's `cancel(stageRunId)`
-marks the owning run (`core.get(stageRunId).workflowRunId`, else the id prefix before
-the first `.`) in `stopRequested` before it kills the held stage, so `drive()` lands
-the run `interrupted` exactly like an operator STOP: partial `stageRuns` kept, no
-retry, no park. When there is no live stage to kill the mark is dropped again.
+marks the owning run (`core.get(stageRunId).workflowRunId`) in `stopRequested` before
+it kills the held stage, so `drive()` lands the run `interrupted` exactly like an
+operator STOP: partial `stageRuns` kept, no retry, no park. The mark is only set while
+the stage is live (`awaiting-approval` / `running`) — a stale approval rejected after
+a restart (stage already terminal) or an unknown stage leaves none behind — and
+`continueFailed` / `resumeParked` / the in-place resume clear any leftover mark before
+they re-drive.
 
 **Stopping a parked run.** `stop()` on a parked run lands it `interrupted`. When it is
 parked on a stage approval (`parkedReason: "approval"`) the stage child is still alive

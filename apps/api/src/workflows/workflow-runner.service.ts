@@ -314,17 +314,22 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       // A rejected stage approval stops the whole run: marked as an operator stop so
       // `drive()` lands it `interrupted` instead of spending a retry on the killed stage.
       cancel: (stageRunId) => {
+        // Only a live stage (held or running) has a drive() waiting to consume the stop
+        // mark — a stale approval (stage already terminal, e.g. after a restart) or an
+        // unknown stage must not leave one behind for a later continue to trip over.
         let workflowRunId: string | undefined;
         try {
-          workflowRunId = this.core.get(stageRunId).workflowRunId;
+          const rec = this.core.get(stageRunId);
+          if (rec.status === "awaiting-approval" || rec.status === "running") {
+            workflowRunId = rec.workflowRunId;
+          }
         } catch {
-          workflowRunId = stageRunId.split(".")[0];
+          // unknown stage → core.cancel below throws and logs
         }
         if (workflowRunId) this.stopRequested.add(workflowRunId);
         try {
           this.core.cancel(stageRunId);
         } catch (error) {
-          // No live stage to kill → nothing will consume the stop mark.
           if (workflowRunId) this.stopRequested.delete(workflowRunId);
           this.log.warn("workflow-stage cancel skipped (run not found)", {
             stageRunId,
@@ -686,6 +691,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       : parked.failureFile;
 
     run.status = "running";
+    this.stopRequested.delete(workflowRunId); // a stale stop mark must not end the new drive
     delete run.parkedReason;
     delete run.parked;
     run.retries = Object.fromEntries(retries);
@@ -737,6 +743,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     if (trimmed && reason === "paused") this.queueOperatorMessage(run, trimmed, "all");
     else if (trimmed) this.recordDeliveredNote(run, trimmed, cursor);
     run.status = "running";
+    this.stopRequested.delete(run.workflowRunId); // a stale stop mark must not end the new drive
     delete run.parkedReason;
     delete run.pendingGate;
     run.currentStage = cursor;
@@ -839,6 +846,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
 
     this.runs.set(workflowRunId, run);
     run.status = "running";
+    this.stopRequested.delete(workflowRunId); // a stale stop mark must not end the new drive
     run.currentStage = cursor;
     run.retries = {};
     delete run.failedReason;
