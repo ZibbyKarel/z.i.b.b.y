@@ -111,8 +111,8 @@ via `ScheduledTasksStorageService.setPrRebase`, written to `awaiting-approval` b
 and `rebasedSha`, the worktree HEAD ZIBBY read then — the only sha the runner pushes),
 and to `pushed`/`discarded`/`failed` by the `pr-rebase` approval runner. An interrupted
 run with `prRebase.state === "running"` gets an error outcome, like a review. The runner
-pushes only while `prRebase.state === "awaiting-approval"`; an on-the-spot (conflict-free)
-approval pushes with `allowRewrittenCommits: false`, an operator-approved one with `true`.
+pushes only while `prRebase.state === "awaiting-approval"`; an on-the-spot approval (a `Conflicts: none` report, or — todo-17 — resolved conflicts with green
+quick checks, `Conflicts: <n> files`) pushes with `allowRewrittenCommits: false`, an operator-approved one with `true`.
 
 `scheduledAt` absent or in the past → `createTask` runs classification + dispatch
 immediately. From the dialog (`background = true`), dispatch happens in the

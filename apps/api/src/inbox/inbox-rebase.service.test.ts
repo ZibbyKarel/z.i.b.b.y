@@ -113,8 +113,13 @@ describe("InboxRebaseService", () => {
     await start();
     const text: string = createTask.mock.calls[0]?.[0].text ?? "";
     expect(text).toContain("`Conflicts: aborted` followed by the reason");
-    expect(text).toContain("`Conflicts: none, checks failed`");
+    expect(text).toContain("`Conflicts: <n> files, checks failed`");
+    expect(text).toContain(
+      "`Conflicts: <n> files` when you resolved conflicts and the quick checks passed",
+    );
     expect(text).toMatch(/`Conflicts: none` ONLY for a complete, conflict-free rebase/);
+    expect(text).toContain("A conflict-free rebase runs no checks");
+    expect(text).toMatch(/Do NOT run test suites/);
   });
 
   it("refuses a second start while a rebase of the same PR is in flight (422)", async () => {
