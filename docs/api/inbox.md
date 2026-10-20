@@ -23,15 +23,16 @@ squash-and-merge through the projects merge route. UI spec: `docs/plans/inbox-ui
 
 ## Endpoints
 
-| Method | Path                                     | Body                                                                                                                  | Response                                                                                                             |
-| ------ | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/api/roadmap/items`                     | —                                                                                                                     | `InboxItemsResponse`                                                                                                 |
-| GET    | `/api/inbox/prs`                         | —                                                                                                                     | `InboxPrsResponse`                                                                                                   |
-| POST   | `/api/inbox/prs/review`                  | `{ projectId, repo, number, title?, level? }` (strict; `level` = `quick` \| `thorough` \| `tested`, absent = `quick`) | 201 `{ taskId }`; 404 project; 422 no GitHub link / repo not the project's                                           |
-| POST   | `/api/inbox/prs/rebase`                  | `{ projectId, repo, number, title? }` (strict)                                                                        | 201 `{ taskId }`; 404 project; 422 no GitHub link / not the project's repo / fork / closed / head is base or default |
-| GET    | `/api/inbox/prs/:projectId/:number/diff` | —                                                                                                                     | 200 `{ diff, truncated }`; 404 project/PR; 422 no GitHub link/token rejected; 502 GitHub error                       |
-| GET    | `/api/inbox/state`                       | —                                                                                                                     | `InboxState`                                                                                                         |
-| PUT    | `/api/inbox/state`                       | `{ integrationId, externalId, hidden }` (strict)                                                                      | `InboxState`                                                                                                         |
+| Method | Path                                     | Body                                                                                                                  | Response                                                                                                                                                                          |
+| ------ | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/roadmap/items`                     | —                                                                                                                     | `InboxItemsResponse`                                                                                                                                                              |
+| GET    | `/api/inbox/prs`                         | —                                                                                                                     | `InboxPrsResponse`                                                                                                                                                                |
+| POST   | `/api/inbox/prs/review`                  | `{ projectId, repo, number, title?, level? }` (strict; `level` = `quick` \| `thorough` \| `tested`, absent = `quick`) | 201 `{ taskId }`; 404 project; 422 no GitHub link / repo not the project's                                                                                                        |
+| POST   | `/api/inbox/prs/rebase`                  | `{ projectId, repo, number, title? }` (strict)                                                                        | 201 `{ taskId }`; 404 project; 422 no GitHub link / not the project's repo / fork / closed / head is base or default                                                              |
+| POST   | `/api/inbox/prs/address-comments`        | `{ projectId, repo, number, title? }` (strict; same body as rebase)                                                   | 201 `{ taskId }`; 404 project; 422 no GitHub link / foreign repo / fork / closed / head is base or default / run in flight (currently a stub: always 422 until the service lands) |
+| GET    | `/api/inbox/prs/:projectId/:number/diff` | —                                                                                                                     | 200 `{ diff, truncated }`; 404 project/PR; 422 no GitHub link/token rejected; 502 GitHub error                                                                                    |
+| GET    | `/api/inbox/state`                       | —                                                                                                                     | `InboxState`                                                                                                                                                                      |
+| PUT    | `/api/inbox/state`                       | `{ integrationId, externalId, hidden }` (strict)                                                                      | `InboxState`                                                                                                                                                                      |
 
 `/api/roadmap/items` has no `:projectId` segment, so it can't collide with the
 per-project `/api/projects/:projectId/roadmap/...` routes.
@@ -161,6 +162,15 @@ query. Agents still can't merge (`floor-pr.merge: deny`).
 `.zibby/data/inbox-state.json` (override `INBOX_STATE_FILE`), gitignored —
 operator-personal. Keyed `(integrationId, externalId)`; hide/unhide is idempotent.
 Hidden is permanent until unhidden. A missing/garbage file reads as `{ hidden: [] }`.
+
+## Address review comments (`POST /api/inbox/prs/address-comments`)
+
+Contract only so far (PR inbox redesign): the route, `ScheduledTask.prAddressComments`
+(`repo, number, url, head, base, headSha, state, report?, worktree?, fixedSha?, approvalId?,
+note?, replies?, replied?, repliesNote?`), `PrThreadReply` (`{ threadId: "PRRT_…", body <= 500 }`),
+`InboxPr.addressComments { taskId, state }` (same states as `rebase`) and the
+`pr-address-comments` approval kind (fast-forward push + thread replies; approved on the spot
+for `Addressed: all`, otherwise Tier-3). The handler is a stub returning 422 until the service lands.
 
 ## Rebase (`POST /api/inbox/prs/rebase`)
 

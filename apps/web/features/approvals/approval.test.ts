@@ -22,6 +22,21 @@ describe("parseApprovalDetail", () => {
       body: "## Review\n\nLooks **good**.",
     });
   });
+  it("a pr-address-comments splits like a pr-rebase", () => {
+    const parsed = parseApprovalDetail({
+      id: "a3",
+      runId: "t3",
+      kind: "pr-address-comments",
+      skill: "fullstack-developer",
+      action: "git.push",
+      detail: "Push fixes — acme/app#7\n\nAddressed: partial",
+      risk: "high",
+      status: "pending",
+      requestedAt: "2026-10-19T10:00:00.000Z",
+    });
+    expect(parsed.detail).toBe("Push fixes — acme/app#7");
+    expect(parsed.preview).toEqual({ kind: "message", to: "GitHub", body: "Addressed: partial" });
+  });
   it("a pr-rebase splits like a pr-review: title line + markdown report", () => {
     const parsed = parseApprovalDetail({
       id: "a2",
@@ -45,6 +60,13 @@ describe("parseApprovalDetail", () => {
 });
 
 describe("approvalOrigin", () => {
+  it("a pr-address-comments links its task", () => {
+    expect(approvalOrigin({ kind: "pr-address-comments", runId: "t3", detail: "" })).toEqual({
+      origin: "pr-review",
+      href: "/work/tasks/t3",
+    });
+  });
+
   it("a pr-rebase links its task", () => {
     expect(approvalOrigin({ kind: "pr-rebase", runId: "t2", detail: "" })).toEqual({
       origin: "pr-review",

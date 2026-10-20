@@ -97,6 +97,13 @@ export const ApprovalRunKindSchema = z.enum([
   // branch after an agent resolved conflicts is Tier-3. Approving pushes with
   // `--force-with-lease`; rejecting discards.
   "pr-rebase",
+  // PR inbox redesign — fast-forward push of commits the `fullstack-developer` agent made to
+  // address a PR's unresolved review comments, then the `github-commenter` replies on the
+  // addressed threads (runId = the taskId; `prAddressComments` holds repo/head/headSha/
+  // worktree/replies; `detail` carries the report and the replies). Approved on the spot when
+  // the report says `Addressed: all` (the click decided — Tier-2, reported), otherwise pending
+  // (Tier-3, covers push and replies). Never a force-push, never resolves a thread.
+  "pr-address-comments",
 ]);
 export type ApprovalRunKind = z.infer<typeof ApprovalRunKindSchema>;
 

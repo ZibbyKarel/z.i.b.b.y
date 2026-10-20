@@ -2,7 +2,11 @@ import { z } from "zod";
 import type { ActivityKind } from "../activity/activity.schema";
 import { IsoDateTimeSchema } from "../common.schema";
 import { RoadmapItemSchema, RoadmapSourceKindSchema } from "../roadmap/roadmap-item.schema";
-import { PrRebaseStateSchema, PrReviewStateSchema } from "../tasks/task.schema";
+import {
+  PrAddressCommentsStateSchema,
+  PrRebaseStateSchema,
+  PrReviewStateSchema,
+} from "../tasks/task.schema";
 
 /**
  * Inbox (docs/plans/inbox-ui-spec.md): a view over the synced roadmap cache
@@ -122,6 +126,10 @@ export const InboxPrSchema = z.object({
   baseRef: z.string().min(1).optional(),
   /** todo-11 — the latest ZIBBY rebase of this PR (see `PrRebaseStateSchema`). */
   rebase: z.object({ taskId: z.string().min(1), state: PrRebaseStateSchema }).optional(),
+  /** PR inbox redesign — the latest ZIBBY "Address review comments" task of this PR. */
+  addressComments: z
+    .object({ taskId: z.string().min(1), state: PrAddressCommentsStateSchema })
+    .optional(),
   projectId: z.string().min(1),
   companyId: z.string().min(1).optional(),
   teamId: z.string().min(1).optional(),
@@ -176,6 +184,10 @@ export const RebaseInboxPrInputSchema = z
   })
   .strict();
 export type RebaseInboxPrInput = z.infer<typeof RebaseInboxPrInputSchema>;
+
+/** Body of `POST /api/inbox/prs/address-comments` — same shape as a rebase; refs are read from GitHub server-side. */
+export const AddressInboxPrCommentsInputSchema = RebaseInboxPrInputSchema;
+export type AddressInboxPrCommentsInput = RebaseInboxPrInput;
 
 /** One PR's unified diff; `truncated` = GitHub refused it (too large) or it was capped. */
 export const InboxPrDiffSchema = z.object({ diff: z.string(), truncated: z.boolean() });

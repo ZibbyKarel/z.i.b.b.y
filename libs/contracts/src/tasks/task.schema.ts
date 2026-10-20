@@ -549,6 +549,25 @@ export const PrRebaseStateSchema = z.enum([
 export type PrRebaseState = z.infer<typeof PrRebaseStateSchema>;
 
 /**
+ * PR inbox redesign — lifecycle of "Address review comments" (`ScheduledTask.prAddressComments`):
+ * same states as a rebase. `running` → the agent commits fixes in the run's worktree;
+ * `awaiting-approval` → its report is parked as a `pr-address-comments` push approval (approved
+ * on the spot for `Addressed: all`); `pushed` → fast-forwarded onto the PR head; `discarded`;
+ * `failed` → errored, no report, no new commits, or the push was refused.
+ */
+export const PrAddressCommentsStateSchema = PrRebaseStateSchema;
+export type PrAddressCommentsState = PrRebaseState;
+
+/** One reply ZIBBY posts on a review thread after the fixes are pushed (GraphQL thread node id + body). */
+export const PrThreadReplySchema = z
+  .object({
+    threadId: z.string().regex(/^PRRT_[\w-]+$/),
+    body: z.string().trim().min(1).max(500),
+  })
+  .strict();
+export type PrThreadReply = z.infer<typeof PrThreadReplySchema>;
+
+/**
  * How a task's dispatched run ended: a terminal verdict plus a short, readable
  * summary (an agent run's last log line, or a workflow's stage tally).
  */
@@ -760,6 +779,36 @@ export const ScheduledTaskSchema = z.object({
         .optional(),
       approvalId: z.string().optional(),
       note: z.string().optional(),
+    })
+    .optional(),
+  /**
+   * PR inbox redesign — set on a `pr-address-comments` task ("Address review comments").
+   * Server-written like `prRebase`; `headSha` is the head the operator clicked on — the push
+   * must fast-forward from it. `fixedSha` = the worktree HEAD ZIBBY read when parking; the only
+   * sha it pushes.
+   */
+  prAddressComments: z
+    .object({
+      repo: z.string().min(1),
+      number: z.number().int().positive(),
+      url: z.string().min(1),
+      head: z.string().min(1),
+      base: z.string().min(1),
+      headSha: z.string().min(1),
+      state: PrAddressCommentsStateSchema,
+      report: z.string().optional(),
+      worktree: z.string().optional(),
+      fixedSha: z
+        .string()
+        .regex(/^[0-9a-f]{40}$/)
+        .optional(),
+      approvalId: z.string().optional(),
+      note: z.string().optional(),
+      /** Thread replies `github-commenter` drafted (validated at park time); posted only after the push. */
+      replies: z.array(PrThreadReplySchema).max(50).optional(),
+      /** How many replies reached GitHub, and why any did not. */
+      replied: z.number().int().nonnegative().optional(),
+      repliesNote: z.string().optional(),
     })
     .optional(),
   /** Set once dispatched: the started agent-run / workflow-run id. */

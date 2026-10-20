@@ -2,6 +2,7 @@ import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { ErrorSchema } from "../common.schema";
 import {
+  AddressInboxPrCommentsInputSchema,
   InboxItemsResponseSchema,
   InboxPrDiffSchema,
   InboxPrsResponseSchema,
@@ -61,6 +62,20 @@ export const inboxContract = c.router(
       },
       summary:
         "Start a rebase of one PR's head onto its base (pr-rebase workflow); ZIBBY force-pushes with lease — right away when conflict-free, after a Tier-3 approval when conflicts were resolved",
+    },
+    addressInboxPrComments: {
+      method: "POST",
+      path: "/inbox/prs/address-comments",
+      body: AddressInboxPrCommentsInputSchema,
+      responses: {
+        201: ReviewInboxPrResultSchema,
+        404: ErrorSchema,
+        // 422: no GitHub link, foreign repo, fork head, closed PR, a base/default-branch head,
+        // or a run already in flight.
+        422: ErrorSchema,
+      },
+      summary:
+        "Start an agent that fixes one PR's unresolved review comments (pr-address-comments workflow); ZIBBY fast-forwards the PR head — right away when every comment was addressed with green checks, after a Tier-3 approval otherwise",
     },
     getInboxPrDiff: {
       method: "GET",

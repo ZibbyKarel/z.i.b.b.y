@@ -51,6 +51,11 @@ export class InboxController {
           throw error;
         }
       },
+      // TODO(pr-inbox-redesign Task 4): replace with InboxAddressCommentsService.start.
+      addressInboxPrComments: async () => ({
+        status: 422 as const,
+        body: { message: "Address review comments is not implemented yet" },
+      }),
       getInboxPrDiff: async ({ params }) => {
         try {
           return {
