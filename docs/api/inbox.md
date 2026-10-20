@@ -176,16 +176,18 @@ from `GET /pulls/<n>`, creates a task with the explicit `pr-rebase` workflow tar
 `trustedProjectId`, and stamps `prRebase { repo, number, url, head, base, headSha,
 conflictAtStart, state: "running" }`. The `rebase-resolver` agent rebases in the run's
 worktree and never pushes. On a `done` run, `TaskOutputService.parkPrRebase` records a
-`pr-rebase` approval: approved on the spot only when `conflictAtStart === false` and the
-report's first line is `Conflicts: none` (the operator's click was the decision), otherwise
-pending (Tier-3, risk high). The approval `detail` is the agent's report followed by a
+`pr-rebase` approval: approved on the spot (the operator's click was the decision) when the
+report's first line is `Conflicts: none` or — todo-17 — `Conflicts: <n> files` (conflicts resolved,
+quick checks green); otherwise pending (Tier-3). Risk is `medium` only for a clean rebase
+(`conflictAtStart === false` + `Conflicts: none`), else `high`. The approval `detail` is the agent's report followed by a
 "Verified by ZIBBY" section read from the worktree itself (`WorkspaceService.rebaseFacts`:
 HEAD sha, `git log --oneline origin/<base>..HEAD`, `git diff --stat <headSha> HEAD`; an
 unreadable worktree is noted there instead), and that HEAD is stored as
 `prRebase.rebasedSha` — the push refuses if the worktree HEAD moved since and pushes
-exactly that sha. The report's first line is `Conflicts: none` only for a complete,
-conflict-free, green rebase; `Conflicts: aborted` + reason, `Conflicts: none, checks
-failed` or `Conflicts: <n> files` otherwise. The approval runner pushes only while the rebase is
+exactly that sha. The agent runs no checks on a conflict-free rebase and only quick checks
+(typecheck of the affected package, lint of conflicted files — no test suites, CI runs them) after
+resolving conflicts, on `sonnet`/`medium`. First line: `Conflicts: none`, `Conflicts: <n> files`,
+`Conflicts: <n> files, checks failed`, or `Conflicts: aborted` + reason. The approval runner pushes only while the rebase is
 `awaiting-approval`, via `WorkspaceService.pushRebased` (`--force-with-lease`, see
 `./workspace.md`) → `pushed` or `failed` with git's reason. Reject → `discarded`; an
 interrupted run → `failed`.

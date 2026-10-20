@@ -34,6 +34,14 @@ export function isCleanPrRebase(conflictAtStart: boolean, report: string): boole
   return !conflictAtStart && NO_CONFLICTS.test(report.split("\n", 1)[0] ?? "");
 }
 
+/** todo-17 — first lines ZIBBY force-pushes on without asking: a clean rebase, or conflicts resolved with green quick checks. */
+const AUTO_PUSH = /^Conflicts:\s*(?:none|[1-9]\d*\s+files?)\s*$/i;
+
+/** The Rebase click authorises the push when the report's FIRST line is `Conflicts: none` or `Conflicts: <n> files`; aborted / checks-failed reports wait for the operator. */
+export function isAutoPushPrRebase(report: string): boolean {
+  return AUTO_PUSH.test(report.split("\n", 1)[0] ?? "");
+}
+
 /** A labelled finding line (item 9: `Critical:` / `Important:` / `Minor:`), tolerating a bullet/numbered list marker or bold. */
 const FINDING_LINE = /^[\s>*_-]*(?:\d+[.)][\s>*_-]*)?(?:Critical|Important|Minor)[*_]*:/m;
 
@@ -221,13 +229,13 @@ export class TaskOutputService implements OnModuleInit {
 
   /**
    * todo-11 — a finished `pr-rebase` run: record its report as a `pr-rebase` approval
-   * ("Force-push rebased branch"). The operator's Rebase click already authorised a
-   * conflict-free rebase, so that approval is approved on the spot (its runner,
-   * `InboxRebaseService`, pushes) — the same "already signed off" path as
-   * {@link parkPrReview}'s gate sign-off. It stays pending (Tier 3) when the report's
-   * FIRST line is not exactly `Conflicts: none`, or GitHub did not report the PR as
-   * cleanly mergeable at the click — when unsure, the higher tier. No report or no
-   * worktree → `failed`, nothing pushed.
+   * ("Force-push rebased branch"). The operator's Rebase click already authorised the
+   * push for a `Conflicts: none` report and for resolved conflicts whose quick checks
+   * passed (`Conflicts: <n> files`, todo-17), so that approval is approved on the spot
+   * (its runner, `InboxRebaseService`, pushes) — the same "already signed off" path as
+   * {@link parkPrReview}'s gate sign-off. It stays pending (Tier 3, risk high) for
+   * `aborted`, `checks failed` or any other first line; risk is `medium` only for
+   * {@link isCleanPrRebase}. No report or no worktree → `failed`, nothing pushed.
    */
   async parkPrRebase(
     task: ScheduledTask,
@@ -245,6 +253,7 @@ export class TaskOutputService implements OnModuleInit {
       return { summary: `Rebase ${ref}: ${note} — nic nepushnuto` };
     }
     const clean = isCleanPrRebase(rebase.conflictAtStart, report);
+    const autoPush = isAutoPushPrRebase(report);
     // The report is the agent's claim; this is what the worktree really holds.
     const facts = await this.workspace
       .rebaseFacts({ cwd: worktree, base: rebase.base, headSha: rebase.headSha })
@@ -267,7 +276,13 @@ export class TaskOutputService implements OnModuleInit {
       kind: "pr-rebase",
       skill: "rebase-resolver",
       action: "git.force_push",
-      detail: `Force-push ${rebase.head} rebased onto ${rebase.base} — ${ref}${clean ? " (no conflicts, authorised by the Rebase click)" : ""}\n\n${report}\n\n## Verified by ZIBBY\n\n${verified}`,
+      detail: `Force-push ${rebase.head} rebased onto ${rebase.base} — ${ref}${
+        clean
+          ? " (no conflicts, authorised by the Rebase click)"
+          : autoPush
+            ? " (conflicts resolved, quick checks green — authorised by the Rebase click)"
+            : ""
+      }\n\n${report}\n\n## Verified by ZIBBY\n\n${verified}`,
       risk: clean ? "medium" : "high",
       sourceUrl: rebase.url,
     });
@@ -283,8 +298,8 @@ export class TaskOutputService implements OnModuleInit {
           }
         : c,
     );
-    if (!clean) {
-      return { summary: `Rebase ${ref}: konflikty vyřešeny — force-push čeká na schválení` };
+    if (!autoPush) {
+      return { summary: `Rebase ${ref}: force-push čeká na schválení` };
     }
     // A failed push already marks the rebase `failed` with git's reason (the runner).
     const pushed = await this.approvals.approve(approval.id).then(
@@ -297,7 +312,12 @@ export class TaskOutputService implements OnModuleInit {
         return false;
       },
     );
-    return { summary: pushed ? `Rebase ${ref} force-pushnut` : `Rebase ${ref}: force-push selhal` };
+    if (!pushed) return { summary: `Rebase ${ref}: force-push selhal` };
+    return {
+      summary: clean
+        ? `Rebase ${ref} force-pushnut`
+        : `Rebase ${ref}: konflikty vyřešeny a force-pushnuto`,
+    };
   }
 
   /** Write the run summary to the chosen file — a vault note or a path in the worktree. */

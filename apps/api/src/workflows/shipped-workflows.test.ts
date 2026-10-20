@@ -311,6 +311,8 @@ describe("pr-rebase — the PR inbox's Rebase button (todo-11)", () => {
       consumes: "task.md",
       produces: PR_REBASE_ARTIFACT,
     });
+    // todo-17 — the rebase is meant to be fast.
+    expect(wf.phases[0]).toMatchObject({ model: "sonnet", thinking: "medium" });
     // The push gate is ZIBBY's (TaskOutputService.parkPrRebase), not a workflow gate.
     expect(wf.phases[0]?.approval).toBeUndefined();
     expect(wf.outputs).toEqual([]);
