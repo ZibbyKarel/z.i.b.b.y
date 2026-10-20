@@ -809,9 +809,10 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
    * finished phase) with a fresh retry budget and the resume-context (progress +
    * committed checkpoints + the failed attempt's log tail). Returns null when there is
    * no phase to continue at — failed before any stage ran, or every phase finished
-   * (the caller falls back to a fresh re-run).
+   * (the caller falls back to a fresh re-run). An operator `note` joins the resume
+   * context and is recorded as a message delivered to the re-entered phase.
    */
-  async continueFailed(workflowRunId: string): Promise<WorkflowRun | null> {
+  async continueFailed(workflowRunId: string, note?: string): Promise<WorkflowRun | null> {
     const run = this.runs.get(workflowRunId) ?? (await this.readAggregate(workflowRunId));
     if (!run) throw new WorkflowRunNotFoundError(workflowRunId);
     if (run.status !== "failed" && run.status !== "interrupted") return null;
@@ -830,6 +831,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     run.currentStage = cursor;
     run.retries = {};
     delete run.failedReason;
+    const trimmed = note?.trim();
+    if (trimmed) this.recordDeliveredNote(run, trimmed, cursor);
     await this.writeAggregate(run);
     this.log.info("failed workflow run continued", { workflowRunId, phase: cursor });
 
@@ -837,7 +840,10 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     const resumeContext = await this.composeResumeContext(
       run,
       order.map((p) => p.id),
-      passed ? {} : { failureTail: await this.tailLog(last.runId) },
+      {
+        ...(trimmed ? { note: trimmed } : {}),
+        ...(passed ? {} : { failureTail: await this.tailLog(last.runId) }),
+      },
     );
     const handoffSource = this.recomputeHandoff(run, workflow, cursor);
     const traceId = this.trace.getTraceId() ?? randomUUID();

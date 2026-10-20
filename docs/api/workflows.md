@@ -270,7 +270,7 @@ GET  /api/tasks/runs/:runId/artifacts/:name              a whitelisted artifact 
 GET  /api/tasks/runs/:runId/files                        the run root as a read-only tree (`listRunFiles`)
 POST /api/tasks/runs/:runId/pause                        pause at the next stage boundary
 POST /api/tasks/runs/:runId/messages                     queue an operator message for the next agent stage
-POST /api/tasks/runs/:runId/resume                       resume a parked/paused run (or withdraw a pending pause)
+POST /api/tasks/runs/:runId/resume                       resume a parked/paused run (or withdraw a pending pause); `mode: "fresh"` re-runs it
 ```
 
 **Run folder tree.** `WorkflowRunnerService.listRunFiles(id)` walks the run root
@@ -302,6 +302,12 @@ stamps `deliveredAt` / `deliveredPhaseId` before the stage spawns. Verify, tool 
 sub-run phases read no context, so their messages wait for the next agent phase; a
 loop back-edge never re-delivers a message. A sub-run settle re-entry delivers
 nothing (no stage starts).
+
+**Resume modes (D-RESUME).** `continueFailed(id, note?)` re-enters a failed/interrupted
+run at the phase it stopped on; the note joins that stage's resume context and is
+recorded as a message delivered to the re-entered phase. `resume { mode: "fresh" }`
+never re-enters the run: the task layer stops a parked/paused run (→ `interrupted`) and
+re-runs the original task as a new run (see `docs/api/tasks.md`).
 
 **Live log of the running phase.** A stage is only written into `stageRuns`
 once it reaches a terminal state, so a still-running phase can't be found

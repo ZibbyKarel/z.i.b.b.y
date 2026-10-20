@@ -104,7 +104,7 @@ export class TaskRunsController {
 
       resumeTaskRun: async ({ params: { runId }, body }) => {
         try {
-          return { status: 200, body: await this.runs.resume(runId, body.note) };
+          return { status: 200, body: await this.runs.resume(runId, body) };
         } catch (error) {
           if (isMissing(error)) return { status: 404, body: { message: notFound(runId) } };
           if (

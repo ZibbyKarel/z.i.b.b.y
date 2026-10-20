@@ -252,19 +252,29 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
    * it starts fresh. A fresh worktree is used (the `--resume` conversation carries the
    * context, not the checkout); task attachments are not re-threaded here (a resumed
    * session already holds them — the fresh re-run's documented gap). Returns the new run.
+   * `fresh` drops the captured session (a clean conversation). An operator `note` is the
+   * new user turn of a resumed session (`-p` = note), or is appended to the original
+   * prompt when the run starts fresh.
    */
-  async rerun(runId: string): Promise<AgentRun> {
+  async rerun(runId: string, opts: { note?: string; fresh?: boolean } = {}): Promise<AgentRun> {
     const rec = await this.resolveRunRecord(runId);
     const agent =
       rec.agentId === ORCHESTRATOR_ID ? ORCHESTRATOR_AGENT : await this.agents.get(rec.agentId);
+    const sessionId = opts.fresh ? undefined : rec.sessionId;
+    const note = opts.note?.trim();
+    const prompt = !note
+      ? rec.prompt
+      : sessionId
+        ? note
+        : `${rec.prompt}\n\nOperator note: ${note}`;
     this.log.info("re-running agent run", {
       from: runId,
       agentId: rec.agentId,
-      resume: rec.sessionId ? "session" : "fresh",
+      resume: sessionId ? "session" : "fresh",
     });
     return this.launch(
       agent,
-      rec.prompt,
+      prompt,
       rec.project,
       rec.files,
       rec.title,
@@ -272,7 +282,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       undefined,
       undefined,
       undefined,
-      rec.sessionId,
+      sessionId,
       // Phase 108: a re-run doesn't re-thread the original toolGrants (mirrors the
       // documented attachments gap above — a resumed session already holds context).
       undefined,

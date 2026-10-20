@@ -400,3 +400,41 @@ describe("AgentRunnerService.evaluateIntent — classifier-fallback orchestrator
     }
   });
 });
+
+describe("AgentRunnerService.rerun — note and fresh (D-RESUME)", () => {
+  function rerunHarness(sessionId?: string) {
+    const runner = Object.create(AgentRunnerService.prototype) as AgentRunnerService;
+    const launch = vi.fn(async () => ({}));
+    Object.assign(runner, {
+      log: { info: () => {} },
+      agents: { get: async () => agentFixture },
+      get: () => ({ runId: "a_1", agentId: "koder", prompt: "build X", files: [], sessionId }),
+      launch,
+    });
+    return { runner, launch };
+  }
+  // launch(agent, prompt, project, files, title, taskId, …, resumeSessionId = arg 9, …)
+  const promptOf = (l: ReturnType<typeof vi.fn>) => l.mock.calls[0]?.[1];
+  const sessionOf = (l: ReturnType<typeof vi.fn>) => l.mock.calls[0]?.[9];
+
+  it("rerun with a session passes the note as the prompt of the --resume turn", async () => {
+    const { runner, launch } = rerunHarness("sid-1");
+    await runner.rerun("a_1", { note: " use pnpm " });
+    expect(promptOf(launch)).toBe("use pnpm");
+    expect(sessionOf(launch)).toBe("sid-1");
+  });
+
+  it("without a note keeps the original prompt and session", async () => {
+    const { runner, launch } = rerunHarness("sid-1");
+    await runner.rerun("a_1");
+    expect(promptOf(launch)).toBe("build X");
+    expect(sessionOf(launch)).toBe("sid-1");
+  });
+
+  it("fresh drops the session and appends the note to the original prompt", async () => {
+    const { runner, launch } = rerunHarness("sid-1");
+    await runner.rerun("a_1", { note: "use pnpm", fresh: true });
+    expect(promptOf(launch)).toBe("build X\n\nOperator note: use pnpm");
+    expect(sessionOf(launch)).toBeUndefined();
+  });
+});

@@ -8,6 +8,7 @@ import {
   type ArchivePage,
   type GoalRun,
   type Processor,
+  type ResumeTaskRunInput,
   type RunFiles,
   type RunKind,
   type RunLogChunk,
@@ -350,9 +351,16 @@ export class TaskRunsService {
    * CONTINUES in place from the phase/iteration it stopped on (finished work is kept);
    * only when there is nothing to continue at is it re-run as a fresh task
    * ({@link rerunTask}). Any other kind/state → 409.
+   *
+   * `mode: "fresh"` throws the old context away: a NEW task from the original inputs
+   * (also for a `done` run), a stopped-then-rebuilt parked workflow, or an agent re-run
+   * without `--resume`. The operator `note` is never dropped — it reaches the resumed
+   * stage/session or is appended to the re-run task's text.
    */
-  async resume(runId: string, note?: string): Promise<TaskRun> {
+  async resume(runId: string, input: ResumeTaskRunInput = {}): Promise<TaskRun> {
+    const { note, mode = "continue" } = input;
     const kind = await this.kindOf(runId);
+    if (mode === "fresh") return this.resumeFresh(runId, kind, note);
     if (kind === "workflow" || kind === "goal") {
       const run = await this.getTaskRun(runId);
       // RESUME while PAUSING: the pause has not landed yet — just withdraw it.
@@ -360,12 +368,13 @@ export class TaskRunsService {
         await this.workflowRunner.cancelPause(runId);
         return this.getTaskRun(runId);
       }
+      if (run.status === "done") throw new TaskRunNotResumableError(runId);
       if (run.status === "error" || run.status === "interrupted") {
         const continued =
           kind === "workflow"
-            ? await this.workflowRunner.continueFailed(runId)
+            ? await this.workflowRunner.continueFailed(runId, note)
             : await this.goalRunner.continueFailed(runId);
-        if (!continued) return this.rerunTask(run);
+        if (!continued) return this.rerunTask(run, note);
         // The task's failed outcome is cleared so this run's terminal writes back again.
         if (run.taskId) await this.scheduled.reassignRun(run.taskId, runId);
         return this.getTaskRun(runId);
@@ -373,9 +382,40 @@ export class TaskRunsService {
     }
     if (kind === "workflow") await this.workflowRunner.resumeParked(runId, note);
     else if (kind === "goal") await this.goalRunner.resumeParked(runId, note);
-    else if (kind === "agent") return this.rerunAgent(runId);
+    else if (kind === "agent") return this.rerunAgent(runId, note);
     else throw new TaskRunNotResumableError(runId);
     return this.getTaskRun(runId);
+  }
+
+  /** `resume` with `mode: "fresh"` — see the routing table on {@link resume}. */
+  private async resumeFresh(
+    runId: string,
+    kind: Exclude<RunKind, "scheduled">,
+    note: string | undefined,
+  ): Promise<TaskRun> {
+    if (kind !== "agent" && kind !== "workflow" && kind !== "goal") {
+      throw new TaskRunNotResumableError(runId);
+    }
+    const run = await this.getTaskRun(runId);
+    if (run.status === "done") return this.rerunTask(run, note);
+    if (run.status === "error" || run.status === "interrupted") {
+      if (kind === "agent" && !run.taskId) {
+        const newRun = await this.agentRunner.rerun(runId, { note, fresh: true });
+        return this.getTaskRun(newRun.runId);
+      }
+      return this.rerunTask(run, note);
+    }
+    // A parked/paused workflow is stopped (→ interrupted, kept as history) and rebuilt.
+    if (
+      kind === "workflow" &&
+      (run.status === "parked" || run.status === "paused" || run.status === "awaiting-approval")
+    ) {
+      // No backing task → nothing to rebuild from; refuse BEFORE stopping it.
+      if (!run.taskId) throw new TaskRunNotResumableError(runId);
+      await this.workflowRunner.stop(runId);
+      return this.rerunTask(run, note);
+    }
+    throw new TaskRunNotResumableError(runId);
   }
 
   /**
@@ -388,12 +428,12 @@ export class TaskRunsService {
    * allowed like any task launch; no autonomous commit/push is introduced. Returns the
    * NEW run.
    */
-  private async rerunAgent(runId: string): Promise<TaskRun> {
+  private async rerunAgent(runId: string, note?: string): Promise<TaskRun> {
     const run = await this.getTaskRun(runId);
     if (run.status !== "error" && run.status !== "interrupted") {
       throw new TaskRunNotResumableError(runId);
     }
-    const newRun = await this.agentRunner.rerun(runId);
+    const newRun = await this.agentRunner.rerun(runId, { note });
     if (run.taskId) await this.scheduled.reassignRun(run.taskId, newRun.runId);
     return this.getTaskRun(newRun.runId);
   }
@@ -404,14 +444,16 @@ export class TaskRunsService {
    * the normal create path so budget/staffing/approval gates all apply again. The old
    * run stays as history. A run with no backing task has nothing to rebuild from (409).
    * Returns the new task's view (`pending` until its background dispatch spawns).
+   * An operator `note` is appended to the copied task text.
    */
-  private async rerunTask(run: TaskRun): Promise<TaskRun> {
+  private async rerunTask(run: TaskRun, note?: string): Promise<TaskRun> {
     if (!run.taskId) throw new TaskRunNotResumableError(run.runId);
     const task = await this.scheduled.get(run.taskId);
+    const trimmed = note?.trim();
     const result = await this.scheduler.createTask(
       {
         title: task.title || undefined,
-        text: task.text,
+        text: trimmed ? `${task.text}\n\nOperator note: ${trimmed}` : task.text,
         paths: task.paths,
         attachmentSetId: task.attachmentSetId,
         toolGrants: task.toolGrants,

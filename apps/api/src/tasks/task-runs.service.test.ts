@@ -124,6 +124,7 @@ function build() {
     }),
     readLog: vi.fn(async () => ({ content: "log", nextOffset: 3, done: false })),
     stop: vi.fn((id: string) => ({ ...agentA, runId: id, status: "interrupted" })),
+    rerun: vi.fn(async () => agentA),
     delete: vi.fn(async () => {}),
   };
   const workflowRunner = {
@@ -676,9 +677,9 @@ describe("TaskRunsService", () => {
 
     it("resumes workflow/goal runs, refuses to resume an agent run", async () => {
       const { service, workflowRunner, goalRunner } = build();
-      await service.resume("delivery_3", "go");
+      await service.resume("delivery_3", { note: "go" });
       expect(workflowRunner.resumeParked).toHaveBeenCalledWith("delivery_3", "go");
-      await service.resume("ship-it_4", "again");
+      await service.resume("ship-it_4", { note: "again" });
       expect(goalRunner.resumeParked).toHaveBeenCalledWith("ship-it_4", "again");
       await expect(service.resume("researcher_1")).rejects.toBeInstanceOf(TaskRunNotResumableError);
     });
@@ -690,7 +691,7 @@ describe("TaskRunsService", () => {
       workflowRunner.get.mockReturnValue(failed);
       workflowRunner.continueFailed.mockResolvedValue(failed);
       const res = await service.resume("delivery_3");
-      expect(workflowRunner.continueFailed).toHaveBeenCalledWith("delivery_3");
+      expect(workflowRunner.continueFailed).toHaveBeenCalledWith("delivery_3", undefined);
       expect(scheduler.createTask).not.toHaveBeenCalled();
       expect(scheduled.reassignRun).toHaveBeenCalledWith("task9", "delivery_3");
       expect(res.runId).toBe("delivery_3");
@@ -711,6 +712,119 @@ describe("TaskRunsService", () => {
         true,
       );
       expect(res.runId).toBe("task9");
+    });
+
+    describe("resume modes (D-RESUME)", () => {
+      const reran = (text: string) => [
+        expect.objectContaining({ text, target: scheduledS.target }),
+        undefined,
+        undefined,
+        undefined,
+        true,
+      ];
+
+      it("continue on a done run is 409; fresh re-runs it as a new task with the note", async () => {
+        const { service, workflowRunner, scheduler } = build();
+        workflowRunner.listAll.mockResolvedValue([{ ...pipeP, status: "done", taskId: "task9" }]);
+        await expect(service.resume("delivery_3")).rejects.toBeInstanceOf(TaskRunNotResumableError);
+        const res = await service.resume("delivery_3", { mode: "fresh", note: "use v2" });
+        expect(scheduler.createTask).toHaveBeenCalledWith(
+          ...reran("do it later\n\nOperator note: use v2"),
+        );
+        expect(res.runId).toBe("task9");
+      });
+
+      it("fresh on a done run without a backing task is 409", async () => {
+        const { service, workflowRunner } = build();
+        workflowRunner.listAll.mockResolvedValue([{ ...pipeP, status: "done" }]);
+        await expect(service.resume("delivery_3", { mode: "fresh" })).rejects.toBeInstanceOf(
+          TaskRunNotResumableError,
+        );
+      });
+
+      it("continue on an errored agent run resumes its session with the note", async () => {
+        const { service, agentRunner } = build();
+        agentRunner.listAll.mockResolvedValue([{ ...agentA, status: "error" }, makerChild]);
+        await service.resume("researcher_1", { note: "try again" });
+        expect(agentRunner.rerun).toHaveBeenCalledWith("researcher_1", { note: "try again" });
+      });
+
+      it("fresh on an errored agent run re-runs its task, else a session-less agent re-run", async () => {
+        const { service, agentRunner, scheduler } = build();
+        agentRunner.listAll.mockResolvedValue([
+          { ...agentA, status: "error", taskId: "task9" },
+          makerChild,
+        ]);
+        await service.resume("researcher_1", { mode: "fresh", note: "n" });
+        expect(scheduler.createTask).toHaveBeenCalledWith(
+          ...reran("do it later\n\nOperator note: n"),
+        );
+        expect(agentRunner.rerun).not.toHaveBeenCalled();
+        const fresh = build();
+        fresh.agentRunner.listAll.mockResolvedValue([
+          { ...agentA, status: "error", taskId: undefined },
+          makerChild,
+        ]);
+        await fresh.service.resume("researcher_1", { mode: "fresh", note: "n" });
+        expect(fresh.agentRunner.rerun).toHaveBeenCalledWith("researcher_1", {
+          note: "n",
+          fresh: true,
+        });
+      });
+
+      it("continue on a failed workflow passes the note to continueFailed", async () => {
+        const { service, workflowRunner } = build();
+        const failed: WorkflowRun = { ...pipeP, status: "failed", taskId: "task9" };
+        workflowRunner.listAll.mockResolvedValue([failed]);
+        workflowRunner.continueFailed.mockResolvedValue(failed);
+        await service.resume("delivery_3", { note: "fix lint" });
+        expect(workflowRunner.continueFailed).toHaveBeenCalledWith("delivery_3", "fix lint");
+      });
+
+      it("fresh on a failed workflow skips continueFailed and re-runs the task", async () => {
+        const { service, workflowRunner, scheduler } = build();
+        workflowRunner.listAll.mockResolvedValue([{ ...pipeP, status: "failed", taskId: "task9" }]);
+        await service.resume("delivery_3", { mode: "fresh" });
+        expect(workflowRunner.continueFailed).not.toHaveBeenCalled();
+        expect(scheduler.createTask).toHaveBeenCalledWith(...reran("do it later"));
+      });
+
+      it("fresh on a parked/paused workflow stops it, then re-runs the task", async () => {
+        const { service, workflowRunner, scheduler } = build();
+        workflowRunner.listAll.mockResolvedValue([
+          { ...pipeP, status: "parked", parkedReason: "paused", taskId: "task9" },
+        ]);
+        await service.resume("delivery_3", { mode: "fresh", note: "restart" });
+        expect(workflowRunner.stop).toHaveBeenCalledWith("delivery_3");
+        expect(workflowRunner.resumeParked).not.toHaveBeenCalled();
+        expect(scheduler.createTask).toHaveBeenCalledWith(
+          ...reran("do it later\n\nOperator note: restart"),
+        );
+      });
+
+      it("fresh on a parked workflow with no backing task is refused before stopping it", async () => {
+        const { service, workflowRunner } = build();
+        workflowRunner.listAll.mockResolvedValue([
+          { ...pipeP, status: "parked", parkedReason: "retries" },
+        ]);
+        await expect(service.resume("delivery_3", { mode: "fresh" })).rejects.toBeInstanceOf(
+          TaskRunNotResumableError,
+        );
+        expect(workflowRunner.stop).not.toHaveBeenCalled();
+      });
+
+      it("fresh on a parked goal or while pausing is 409", async () => {
+        const { service, goalRunner, workflowRunner } = build();
+        goalRunner.listAll.mockResolvedValue([{ ...goalG, status: "parked" }]);
+        await expect(service.resume("ship-it_4", { mode: "fresh" })).rejects.toBeInstanceOf(
+          TaskRunNotResumableError,
+        );
+        workflowRunner.listAll.mockResolvedValue([{ ...pipeP, pauseRequested: true }]);
+        await expect(service.resume("delivery_3", { mode: "fresh" })).rejects.toBeInstanceOf(
+          TaskRunNotResumableError,
+        );
+        expect(workflowRunner.cancelPause).not.toHaveBeenCalled();
+      });
     });
 
     it("pauses a workflow run; agent/goal runs and refused pauses are not pausable", async () => {
@@ -746,7 +860,7 @@ describe("TaskRunsService", () => {
       workflowRunner.listAll.mockResolvedValue([
         { ...pipeP, status: "parked", parkedReason: "paused" },
       ]);
-      await service.resume("delivery_3", "carry on");
+      await service.resume("delivery_3", { note: "carry on" });
       expect(workflowRunner.resumeParked).toHaveBeenCalledWith("delivery_3", "carry on");
     });
 

@@ -1089,6 +1089,29 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
       expect((await h.service.continueFailed(WORKFLOW_RUN_ID))?.currentStage).toBe("review");
     });
 
+    it("continueFailed carries the note into the resume context", async () => {
+      const run = h.runs.get(WORKFLOW_RUN_ID);
+      if (!run) throw new Error("missing run");
+      (
+        h.service as unknown as { workflows: { get: ReturnType<typeof vi.fn> } }
+      ).workflows.get.mockResolvedValue(parkedWorkflow);
+      const drive = vi.fn(async () => {});
+      (h.service as unknown as { drive: unknown }).drive = drive;
+      run.status = "failed";
+      run.stageRuns = [{ phaseId: "build", runId: "b1", attempt: 1, status: "error" }];
+
+      const resumed = await h.service.continueFailed(WORKFLOW_RUN_ID, "  use the staging db ");
+      expect(resumed?.operatorMessages?.at(-1)).toMatchObject({
+        text: "use the staging db",
+        deliveredPhaseId: "build",
+      });
+      await vi.waitFor(() => expect(drive).toHaveBeenCalled());
+      const resume = (drive.mock.calls[0] as unknown as unknown[])?.[3] as {
+        resumeContext: string;
+      };
+      expect(resume.resumeContext).toContain("use the staging db");
+    });
+
     it("resumeParked refuses a run that is not retries-parked (409 material)", async () => {
       const run = h.runs.get(WORKFLOW_RUN_ID);
       if (!run) throw new Error("missing run");

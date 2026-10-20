@@ -697,6 +697,19 @@ another park is recorded as already delivered to the phase it re-enters. Agent, 
 and scheduled runs, finished runs, and a `to` that is not an agent phase of the
 workflow → 409 (`TaskRunNotMessageableError`). Nothing replies on the agent's behalf.
 
+**Resume modes.** `POST /tasks/runs/:runId/resume { note?, mode = "continue" }`.
+`continue` keeps the old context: a parked/paused workflow resumes in place, a failed
+workflow/goal continues from where it stopped, an errored agent run re-runs with
+`--resume <sessionId>` (the note, when given, is the `-p` prompt of that resumed turn).
+`fresh` throws the context away: a `done`, errored or interrupted run is re-run as a
+NEW task from the original inputs (an agent run with no backing task re-runs without
+`--resume`); a parked/paused workflow is stopped (kept as `interrupted` history) and
+re-run as a new task. `continue` on a `done` run, `fresh` on a parked goal or a
+still-pausing run, and `fresh` with no backing task to rebuild from → 409. The note is
+never dropped: it reaches the resumed stage/session, or is appended to the re-run
+task's text as `Operator note: …`. (A goal's continue-in-place does not take a note
+yet.)
+
 `TaskRun.diffstat` (`{ files[], additions, deletions }`, per-file rows from
 `git diff --numstat`; binaries are a row counted 0/0) is the structured diff: for a
 workflow run parked at a PR gate it is the would-publish diff (`run.pendingDiffstat`,
@@ -732,7 +745,9 @@ POST   /api/tasks/runs/:runId/resume                          resume a parked/pa
                                                                 iteration it stopped on (finished phases are kept; fresh retry
                                                                 budget). Nothing to continue at (failed before any stage, or
                                                                 every phase finished) → re-run as a NEW task from the original
-                                                                task's inputs (needs a backing task, else 409)
+                                                                task's inputs (needs a backing task, else 409). `mode: "fresh"`
+                                                                re-runs as a new task instead (also for `done` runs) — see
+                                                                Resume modes above
 DELETE /api/tasks/runs/:runId                                  delete a run and its artifacts
 PATCH  /api/tasks/runs/:runId/project                          assign a run into a project, or clear it back to "bez projektu"
                                                                 with a null projectId
