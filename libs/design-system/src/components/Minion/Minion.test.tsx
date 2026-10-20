@@ -155,6 +155,44 @@ describe("MinionScene", () => {
     expect(svg).toHaveAttribute("data-state", "working");
     expect(svg.querySelectorAll("animate, animateTransform")).toHaveLength(0);
   });
+
+  it("bobs the whole idle minion visibly, phase-shifted", () => {
+    render(<MinionScene appearance={KEVIN} phase={0.7} state="idle" />);
+    const body = screen.getByTestId(MinionSceneTestId.IdleBody);
+    // direct child only (jsdom's `:scope >` mishandles camelCase SVG tags)
+    const bob = Array.from(body.children).find(
+      (n) => n.tagName === "animateTransform" && n.getAttribute("type") === "translate",
+    );
+    expect(bob).not.toBeNull();
+    expect(bob).toHaveAttribute("begin", "0.7s");
+    const dys = (bob?.getAttribute("values") ?? "")
+      .split(";")
+      .map((v) => Math.abs(Number(v.trim().split(/\s+/)[1])));
+    expect(Math.max(...dys)).toBeGreaterThanOrEqual(2.5);
+    expect(Math.max(...dys)).toBeLessThanOrEqual(3);
+  });
+
+  it("lifts the banana to the mouth with a clearly visible arm swing", () => {
+    render(<MinionScene appearance={KEVIN} state="idle" />);
+    const body = screen.getByTestId(MinionSceneTestId.IdleBody);
+    const angles = Array.from(body.querySelectorAll("animateTransform[type='rotate']")).flatMap(
+      (n) =>
+        (n.getAttribute("values") ?? "")
+          .split(";")
+          .map((v) => Math.abs(Number(v.trim().split(/\s+/)[0]))),
+    );
+    expect(Math.max(...angles)).toBeGreaterThanOrEqual(25);
+  });
+
+  it("renders the idle scene static under reduced motion", async () => {
+    mockReducedMotion(true);
+    await act(async () => {
+      render(<MinionScene appearance={KEVIN} state="idle" />);
+    });
+    const svg = screen.getByTestId(MinionSceneTestId.Root);
+    expect(svg.querySelectorAll("animate, animateTransform")).toHaveLength(0);
+    expect(screen.queryByTestId(MinionSceneTestId.IdleBody)).toBeNull();
+  });
 });
 
 describe("MinionWalker", () => {
