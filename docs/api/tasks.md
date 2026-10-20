@@ -686,6 +686,17 @@ so does a workflow run that is not running. RESUME on a `paused` run re-enters i
 place; RESUME while it is still pausing just withdraws the request. `paused` is not
 an archived state.
 
+**Operator messages.** `POST /tasks/runs/:runId/messages { text, to = "all" }` queues
+a message for a workflow run that is not finished. There is no live channel into a
+running claude child, so it is delivered when the next agent stage starts (to `all`,
+or when the named phase next runs) through that stage's resume-context system prompt.
+`TaskRun.messages[]` is the run's record: `{ id, text, to, at, deliveredAt?,
+deliveredPhaseId? }` (no `deliveredAt` = still queued; still queued on a finished run =
+not delivered). A resume note on a paused run is queued the same way; a resume note on
+another park is recorded as already delivered to the phase it re-enters. Agent, goal
+and scheduled runs, finished runs, and a `to` that is not an agent phase of the
+workflow → 409 (`TaskRunNotMessageableError`). Nothing replies on the agent's behalf.
+
 `TaskRun.diffstat` (`{ files[], additions, deletions }`, per-file rows from
 `git diff --numstat`; binaries are a row counted 0/0) is the structured diff: for a
 workflow run parked at a PR gate it is the would-publish diff (`run.pendingDiffstat`,
@@ -710,6 +721,8 @@ GET    /api/tasks/runs/:runId/files                          a workflow run's fo
 POST   /api/tasks/runs/:runId/stop                            stop a running run
 POST   /api/tasks/runs/:runId/pause                           pause a running workflow run at the next stage boundary (409 for
                                                                 other kinds / states)
+POST   /api/tasks/runs/:runId/messages                        queue an operator message for the next agent stage of an open
+                                                                workflow run (409 for other kinds / finished runs)
 POST   /api/tasks/runs/:runId/open-folder                     open a workflow run's `book/` (else run root) folder in Finder; operator-initiated, no approval; 404 for non-workflow runs
 POST   /api/tasks/runs/:runId/resume                          resume a parked/paused workflow or parked goal run (with a note;
                                                                 on a still-pausing run it withdraws the pause), or re-run an

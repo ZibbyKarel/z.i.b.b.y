@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildResumeContext } from "./resume-context";
+import { buildOperatorMessagesBlock, buildResumeContext } from "./resume-context";
 
 describe("buildResumeContext", () => {
   it("assembles a continuation block from progress + checkpoint log + note", () => {
@@ -33,5 +33,19 @@ describe("buildResumeContext", () => {
     expect(onlyNote).not.toContain("Already committed");
     expect(onlyNote).not.toContain("What failed");
     expect(onlyNote).not.toContain("```\n```");
+  });
+});
+
+describe("buildOperatorMessagesBlock", () => {
+  it("is empty for no messages", () => {
+    expect(buildOperatorMessagesBlock([])).toBe("");
+    expect(buildOperatorMessagesBlock(["  "])).toBe("");
+  });
+
+  it("lists the messages as bullets, in order", () => {
+    const block = buildOperatorMessagesBlock(["use pnpm", "skip docs"]);
+    expect(block).toContain("### Messages from the operator");
+    expect(block.indexOf("- use pnpm")).toBeGreaterThan(-1);
+    expect(block.indexOf("- skip docs")).toBeGreaterThan(block.indexOf("- use pnpm"));
   });
 });

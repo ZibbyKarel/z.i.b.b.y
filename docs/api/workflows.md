@@ -269,6 +269,7 @@ GET  /api/tasks/runs/:runId/stages/:phaseId/logs/stream  SSE tail of the current
 GET  /api/tasks/runs/:runId/artifacts/:name              a whitelisted artifact (pr-draft.md, …)
 GET  /api/tasks/runs/:runId/files                        the run root as a read-only tree (`listRunFiles`)
 POST /api/tasks/runs/:runId/pause                        pause at the next stage boundary
+POST /api/tasks/runs/:runId/messages                     queue an operator message for the next agent stage
 POST /api/tasks/runs/:runId/resume                       resume a parked/paused run (or withdraw a pending pause)
 ```
 
@@ -290,6 +291,17 @@ other reason or ends, so a later resume never pauses instantly. `resumeParked`
 re-enters a paused run in place (same path as `no-employee`: cursor from
 `pendingGate`, retry map kept, resume-context with the note). `cancelPause` withdraws
 a pause that has not landed. STOP on a paused run lands it `interrupted`.
+
+**Operator messages (D-MSG).** `addOperatorMessage(id, { text, to })` appends to
+`run.operatorMessages[]` (refused with `WorkflowRunNotMessageableError` on a
+`done`/`failed`/`interrupted` run or a `to` that is not one of the workflow's agent
+phases). When `drive()` starts an agent stage it takes the undelivered messages
+addressed to `all` or to that phase, appends them as a `### Messages from the
+operator` block (`buildOperatorMessagesBlock`) to the stage's resume context, and
+stamps `deliveredAt` / `deliveredPhaseId` before the stage spawns. Verify, tool and
+sub-run phases read no context, so their messages wait for the next agent phase; a
+loop back-edge never re-delivers a message. A sub-run settle re-entry delivers
+nothing (no stage starts).
 
 **Live log of the running phase.** A stage is only written into `stageRuns`
 once it reaches a terminal state, so a still-running phase can't be found

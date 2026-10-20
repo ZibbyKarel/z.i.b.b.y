@@ -16,6 +16,7 @@ import type { GoalRunnerService } from "../goals/goal-runner.service";
 import { GoalRunNotStoppableError } from "../goals/goals.errors";
 import type { GoalsStorageService } from "../goals/goals.storage.service";
 import {
+  WorkflowRunNotMessageableError,
   WorkflowRunNotPausableError,
   WorkflowRunNotStoppableError,
 } from "../workflows/workflow-runner.service";
@@ -26,6 +27,7 @@ import type { ScheduledTasksStorageService } from "./scheduled-tasks.storage.ser
 import type { TaskSchedulerService } from "./task-scheduler.service";
 import {
   TaskRunNotFoundError,
+  TaskRunNotMessageableError,
   TaskRunNotPausableError,
   TaskRunNotResumableError,
   TaskRunNotStoppableError,
@@ -137,6 +139,7 @@ function build() {
     stop: vi.fn(async () => {}),
     resumeParked: vi.fn(async () => pipeP),
     requestPause: vi.fn(async () => pipeP),
+    addOperatorMessage: vi.fn(async () => pipeP),
     cancelPause: vi.fn(async () => pipeP),
     continueFailed: vi.fn(async (): Promise<WorkflowRun | null> => null),
     delete: vi.fn(async () => {}),
@@ -745,6 +748,31 @@ describe("TaskRunsService", () => {
       ]);
       await service.resume("delivery_3", "carry on");
       expect(workflowRunner.resumeParked).toHaveBeenCalledWith("delivery_3", "carry on");
+    });
+
+    it("queues a message on a workflow run; other kinds and refusals are 409 material", async () => {
+      const { service, workflowRunner } = build();
+      await service.sendMessage("delivery_3", { text: "use pnpm", to: "all" });
+      expect(workflowRunner.addOperatorMessage).toHaveBeenCalledWith("delivery_3", {
+        text: "use pnpm",
+        to: "all",
+      });
+      await expect(
+        service.sendMessage("researcher_1", { text: "hi", to: "all" }),
+      ).rejects.toBeInstanceOf(TaskRunNotMessageableError);
+      workflowRunner.addOperatorMessage.mockRejectedValueOnce(
+        new WorkflowRunNotMessageableError("delivery_3"),
+      );
+      await expect(
+        service.sendMessage("delivery_3", { text: "hi", to: "all" }),
+      ).rejects.toBeInstanceOf(TaskRunNotMessageableError);
+    });
+
+    it("maps the run's operator messages onto the view", async () => {
+      const { service, workflowRunner } = build();
+      const operatorMessages = [{ id: "m1", text: "hi", to: "all", at: AT }];
+      workflowRunner.listAll.mockResolvedValue([{ ...pipeP, operatorMessages }]);
+      expect((await service.getTaskRun("delivery_3")).messages).toEqual(operatorMessages);
     });
 
     it("deletes via the owning runner", async () => {

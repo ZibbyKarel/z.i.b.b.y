@@ -5,6 +5,7 @@ import { GoalRunNotParkedError } from "../goals/goals.errors";
 import { RunNotRetriesParkedError } from "../workflows/workflow-runner.service";
 import {
   TaskRunNotFoundError,
+  TaskRunNotMessageableError,
   TaskRunNotPausableError,
   TaskRunNotResumableError,
   TaskRunNotStoppableError,
@@ -129,11 +130,17 @@ export class TaskRunsController {
         }
       },
 
-      // Handler lands with B5; until then the route answers with a plain refusal.
-      sendTaskRunMessage: async () => ({
-        status: 409,
-        body: { message: "Messages are not implemented yet" },
-      }),
+      sendTaskRunMessage: async ({ params: { runId }, body }) => {
+        try {
+          return { status: 200, body: await this.runs.sendMessage(runId, body) };
+        } catch (error) {
+          if (isMissing(error)) return { status: 404, body: { message: notFound(runId) } };
+          if (error instanceof TaskRunNotMessageableError) {
+            return { status: 409, body: { message: error.message } };
+          }
+          throw error;
+        }
+      },
       listTaskRunFiles: async ({ params: { runId } }) => {
         try {
           return { status: 200, body: await this.runs.listFiles(runId) };

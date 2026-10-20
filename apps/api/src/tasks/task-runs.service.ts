@@ -12,6 +12,7 @@ import {
   type RunKind,
   type RunLogChunk,
   type ScheduledTask,
+  type SendRunMessageInput,
   type TaskRun,
   type TaskTarget,
   type Workflow,
@@ -23,6 +24,7 @@ import { GoalRunnerService } from "../goals/goal-runner.service";
 import { GoalRunNotStoppableError } from "../goals/goals.errors";
 import { GoalsStorageService } from "../goals/goals.storage.service";
 import {
+  WorkflowRunNotMessageableError,
   WorkflowRunNotPausableError,
   WorkflowRunNotStoppableError,
   WorkflowRunnerService,
@@ -76,6 +78,17 @@ export class TaskRunNotPausableError extends Error {
   constructor(runId: string) {
     super(`Task run "${runId}" cannot be paused (only running workflow runs pause)`);
     this.name = "TaskRunNotPausableError";
+  }
+}
+
+/**
+ * Messages are delivered between workflow stages; agent/goal/scheduled runs have no
+ * such boundary, and a finished run starts nothing that could receive one → 409.
+ */
+export class TaskRunNotMessageableError extends Error {
+  constructor(runId: string, why = "only open workflow runs take messages") {
+    super(`Task run "${runId}" cannot take a message (${why})`);
+    this.name = "TaskRunNotMessageableError";
   }
 }
 
@@ -305,6 +318,25 @@ export class TaskRunsService {
       await this.workflowRunner.requestPause(runId);
     } catch (error) {
       if (error instanceof WorkflowRunNotPausableError) throw new TaskRunNotPausableError(runId);
+      throw error;
+    }
+    return this.getTaskRun(runId);
+  }
+
+  /**
+   * Queue an operator message for a workflow run (D-MSG): delivered into the next
+   * agent stage's context, addressed to `all` or one phase. Never acknowledged on the
+   * agent's behalf; the view shows queued / delivered from the run record.
+   */
+  async sendMessage(runId: string, body: SendRunMessageInput): Promise<TaskRun> {
+    const kind = await this.kindOf(runId);
+    if (kind !== "workflow") throw new TaskRunNotMessageableError(runId);
+    try {
+      await this.workflowRunner.addOperatorMessage(runId, { text: body.text, to: body.to });
+    } catch (error) {
+      if (error instanceof WorkflowRunNotMessageableError) {
+        throw new TaskRunNotMessageableError(runId, error.message);
+      }
       throw error;
     }
     return this.getTaskRun(runId);
@@ -679,6 +711,7 @@ function workflowRunToView(
     currentStage: r.currentStage,
     currentStageStartedAt: r.currentStageStartedAt,
     ...(r.pauseRequested ? { pauseRequested: true } : {}),
+    ...(r.operatorMessages?.length ? { messages: r.operatorMessages } : {}),
     ...(r.pendingDiffstat ? { diffstat: r.pendingDiffstat } : {}),
     outputArtifactName: fileOutput?.from,
     costUsd,

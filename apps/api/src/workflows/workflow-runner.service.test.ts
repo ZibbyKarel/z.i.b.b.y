@@ -1024,6 +1024,11 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
       expect(resumed.parked).toBeUndefined();
       expect(resumed.retries).toEqual({ review: 0 });
       expect(resumed.currentStage).toBe("build");
+      // The feed's YOU bubble: an already-delivered message to the re-entered phase.
+      expect(resumed.operatorMessages?.[0]).toMatchObject({
+        text: "zkus to přes mock",
+        deliveredPhaseId: "build",
+      });
 
       // The note landed in its own file AND in the failure-context handoff.
       const note = await fs.readFile(path.join(run.cwd, "review.note.md"), "utf8");
@@ -2419,5 +2424,188 @@ describe("operator pause (D-PAUSE)", () => {
     await h.service.requestPause(WORKFLOW_RUN_ID);
     const run = await h.service.cancelPause(WORKFLOW_RUN_ID);
     expect(run.pauseRequested).toBe(false);
+  });
+});
+
+describe("operator messages (D-MSG)", () => {
+  let dir: string;
+  let h: Harness;
+
+  const phase = (id: string, extra: Record<string, unknown> = {}) => ({
+    id,
+    type: "agent",
+    agent: "writer",
+    consumes: "in.md",
+    produces: `${id}.md`,
+    model: "sonnet",
+    thinking: "medium",
+    ...extra,
+  });
+  const threePhases = {
+    id: "release",
+    phases: [phase("phase1"), phase("phase2"), phase("phase3")],
+    instructions: "ship",
+  };
+
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "pipe-runner-msg-"));
+    h = await makeHarness(dir);
+    svc().workflows.get.mockResolvedValue(threePhases);
+  });
+
+  afterEach(async () => {
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  const svc = () =>
+    h.service as unknown as {
+      runStage: unknown;
+      drive(r: WorkflowRun, w: unknown): Promise<void>;
+      workflows: { get: ReturnType<typeof vi.fn> };
+    };
+
+  /** runStage double capturing each dispatch's resume context (arg 6). */
+  function scriptStages(
+    seen: { id: string; ctx: string }[],
+    during: (phaseId: string) => Promise<void> | void,
+    statusFor: (phaseId: string, attempt: number) => string = () => "done",
+  ): void {
+    svc().runStage = vi.fn(
+      async (
+        _r: unknown,
+        p: { id: string },
+        _cwd: string,
+        attempt: number,
+        _project: unknown,
+        ctx?: string,
+      ) => {
+        seen.push({ id: p.id, ctx: ctx ?? "" });
+        await during(p.id);
+        return {
+          phaseId: p.id,
+          runId: `${WORKFLOW_RUN_ID}.${p.id}_${seen.length}`,
+          attempt,
+          status: statusFor(p.id, attempt),
+        };
+      },
+    );
+  }
+
+  const runOf = (): WorkflowRun => {
+    const run = h.runs.get(WORKFLOW_RUN_ID);
+    if (!run) throw new Error("missing run");
+    return run;
+  };
+
+  it("a message reaches the next stage, not the current one", async () => {
+    const run = runOf();
+    const seen: { id: string; ctx: string }[] = [];
+    scriptStages(seen, async (id) => {
+      if (id === "phase1") {
+        await h.service.addOperatorMessage(WORKFLOW_RUN_ID, { text: "use pnpm", to: "all" });
+      }
+    });
+
+    await svc().drive(run, threePhases);
+
+    expect(seen[0]?.ctx).not.toContain("use pnpm");
+    expect(seen[1]?.ctx).toContain("use pnpm");
+    expect(seen[1]?.ctx).toContain("### Messages from the operator");
+    expect(seen[2]?.ctx).not.toContain("use pnpm");
+    expect(run.operatorMessages?.[0]).toMatchObject({ deliveredPhaseId: "phase2" });
+    expect(run.operatorMessages?.[0]?.deliveredAt).toBeDefined();
+  });
+
+  it("a phase-addressed message waits for that phase", async () => {
+    const run = runOf();
+    const seen: { id: string; ctx: string }[] = [];
+    scriptStages(seen, async (id) => {
+      if (id === "phase1") {
+        await h.service.addOperatorMessage(WORKFLOW_RUN_ID, { text: "for three", to: "phase3" });
+      }
+    });
+
+    await svc().drive(run, threePhases);
+
+    expect(seen.find((s) => s.id === "phase2")?.ctx).not.toContain("for three");
+    expect(seen.find((s) => s.id === "phase3")?.ctx).toContain("for three");
+    expect(run.operatorMessages?.[0]?.deliveredPhaseId).toBe("phase3");
+  });
+
+  it("a message is delivered once", async () => {
+    const run = runOf();
+    const workflow = {
+      ...threePhases,
+      phases: [
+        phase("phase1"),
+        phase("phase2", { loop: { to: "phase1", maxRetries: 1, escalate: false, then: "fail" } }),
+      ],
+    };
+    const seen: { id: string; ctx: string }[] = [];
+    let first = true;
+    scriptStages(
+      seen,
+      async (id) => {
+        if (id === "phase1" && first) {
+          first = false;
+          await h.service.addOperatorMessage(WORKFLOW_RUN_ID, { text: "once", to: "all" });
+        }
+      },
+      (id, attempt) => (id === "phase2" && attempt === 1 ? "error" : "done"),
+    );
+
+    await svc().drive(run, workflow);
+
+    expect(seen.map((s) => s.id)).toEqual(["phase1", "phase2", "phase1", "phase2"]);
+    expect(seen.filter((s) => s.ctx.includes("once"))).toHaveLength(1);
+    expect(seen[1]?.ctx).toContain("once");
+  });
+
+  it("a non-agent phase leaves the message queued for the next agent phase", async () => {
+    const run = runOf();
+    const workflow = {
+      ...threePhases,
+      phases: [phase("phase1"), { id: "check", type: "verify" }, phase("phase3")],
+    };
+    const seen: { id: string; ctx: string }[] = [];
+    scriptStages(seen, async (id) => {
+      if (id === "phase1") {
+        await h.service.addOperatorMessage(WORKFLOW_RUN_ID, { text: "later", to: "all" });
+      }
+    });
+
+    await svc().drive(run, workflow);
+
+    expect(seen.find((s) => s.id === "check")?.ctx).not.toContain("later");
+    expect(run.operatorMessages?.[0]?.deliveredPhaseId).toBe("phase3");
+  });
+
+  it("terminal run refuses messages; an unknown phase is refused", async () => {
+    await expect(
+      h.service.addOperatorMessage(WORKFLOW_RUN_ID, { text: "x", to: "nope" }),
+    ).rejects.toMatchObject({ name: "WorkflowRunNotMessageableError" });
+    runOf().status = "done";
+    await expect(
+      h.service.addOperatorMessage(WORKFLOW_RUN_ID, { text: "x", to: "all" }),
+    ).rejects.toMatchObject({ name: "WorkflowRunNotMessageableError" });
+  });
+
+  it("a paused run's resume note is queued and delivered to the next stage", async () => {
+    const run = runOf();
+    const seen: { id: string; ctx: string }[] = [];
+    scriptStages(seen, async (id) => {
+      if (id === "phase1" && seen.length === 1) await h.service.requestPause(WORKFLOW_RUN_ID);
+    });
+    await svc().drive(run, threePhases);
+    expect(run.parkedReason).toBe("paused");
+
+    await h.service.resumeParked(WORKFLOW_RUN_ID, "focus on tests");
+    await vi.waitFor(() => expect(run.status).toBe("done"));
+    expect(seen.find((s) => s.id === "phase2")?.ctx).toContain("focus on tests");
+    expect(run.operatorMessages?.[0]).toMatchObject({
+      text: "focus on tests",
+      to: "all",
+      deliveredPhaseId: "phase2",
+    });
   });
 });

@@ -52,3 +52,14 @@ export function buildResumeContext(input: ResumeContextInput): string {
 
   return lines.join("\n").trimEnd();
 }
+
+/**
+ * The operator messages due for the stage about to start (D-MSG), as a block that
+ * rides the same `--append-system-prompt-file` channel as the resume context.
+ * Operator-authored (the trusted channel), shown verbatim. `""` when none are due.
+ */
+export function buildOperatorMessagesBlock(texts: string[]): string {
+  const items = texts.map((t) => t.trim()).filter(Boolean);
+  if (items.length === 0) return "";
+  return ["### Messages from the operator", "", ...items.map((t) => `- ${t}`)].join("\n");
+}

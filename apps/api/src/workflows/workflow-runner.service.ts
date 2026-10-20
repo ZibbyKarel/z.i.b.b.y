@@ -58,7 +58,7 @@ import { buildStageTask } from "./build-stage-task";
 import { WorkflowsStorageService } from "./workflows.storage.service";
 import { type WorkflowStageRecord, workflowStageStrategy } from "./workflow-stage.record";
 import { renderProgress } from "./progress";
-import { buildResumeContext } from "./resume-context";
+import { buildOperatorMessagesBlock, buildResumeContext } from "./resume-context";
 import { parseStageVerdict } from "./stage-verdict";
 import { buildVerifyCommand, resolveVerifyChecks } from "./verify-command";
 
@@ -182,6 +182,22 @@ export class WorkflowRunNotPausableError extends Error {
     super(`Workflow run "${id}" cannot be paused (not running)`);
     this.name = "WorkflowRunNotPausableError";
   }
+}
+
+/**
+ * Raised when an operator message targets a finished run (nothing will start again
+ * to receive it) or names a phase that is not an agent phase of the workflow → 409.
+ */
+export class WorkflowRunNotMessageableError extends Error {
+  constructor(id: string, why = "the run is finished") {
+    super(`Workflow run "${id}" cannot take a message (${why})`);
+    this.name = "WorkflowRunNotMessageableError";
+  }
+}
+
+/** Only an agent phase reads the resume-context channel messages ride on. */
+function readsStageContext(phase: WorkflowPhase): boolean {
+  return phase.type !== "verify" && phase.type !== "tool" && phase.type !== "workflow";
 }
 
 /**
@@ -632,6 +648,11 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
 
     const trimmed = note?.trim();
     if (trimmed) {
+      this.recordDeliveredNote(
+        run,
+        trimmed,
+        isLimit ? parked.phaseId : (phase.loop?.to ?? parked.phaseId),
+      );
       await fs
         .writeFile(path.join(run.cwd, `${parked.phaseId}.note.md`), `${trimmed}\n`, "utf8")
         .catch(() => {});
@@ -699,6 +720,11 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       ? run.pendingGate.handoffSource
       : this.recomputeHandoff(run, workflow, cursor);
     const reason = run.parkedReason;
+    // A paused run's note is a message like any other: queued, delivered into the next
+    // agent stage. A no-employee note goes straight into the resume context (as before).
+    const trimmed = note?.trim();
+    if (trimmed && reason === "paused") this.queueOperatorMessage(run, trimmed, "all");
+    else if (trimmed) this.recordDeliveredNote(run, trimmed, cursor);
     run.status = "running";
     delete run.parkedReason;
     delete run.pendingGate;
@@ -713,7 +739,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     const resumeContext = await this.composeResumeContext(
       run,
       workflow.phases.map((p) => p.id),
-      { note: note?.trim() },
+      { note: reason === "paused" ? undefined : trimmed },
     );
     const retries = new Map(Object.entries(run.retries ?? {}));
     const traceId = this.trace.getTraceId() ?? randomUUID();
@@ -968,6 +994,82 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       this.stopRequested.delete(workflowRunId);
       throw error;
     }
+  }
+
+  /**
+   * Queue an operator message (D-MSG). There is no live channel into a running
+   * claude child, so it lands at the next agent stage start addressed to `all` or
+   * to its phase, through the resume-context channel. Same in-memory object `drive()`
+   * holds, persisted atomically. A finished run, or a `to` that is not one of the
+   * workflow's agent phases (it would never be delivered), is refused.
+   */
+  async addOperatorMessage(
+    workflowRunId: string,
+    input: { text: string; to: string },
+  ): Promise<WorkflowRun> {
+    const run = this.runs.get(workflowRunId) ?? (await this.readAggregate(workflowRunId));
+    if (!run) throw new WorkflowRunNotFoundError(workflowRunId);
+    if (run.status === "done" || run.status === "failed" || run.status === "interrupted") {
+      throw new WorkflowRunNotMessageableError(workflowRunId);
+    }
+    if (input.to !== "all") {
+      const workflow = await this.workflows.get(run.workflowId);
+      const target = workflow.phases.find((p) => p.id === input.to);
+      if (!target || !readsStageContext(target)) {
+        throw new WorkflowRunNotMessageableError(workflowRunId, `no agent phase "${input.to}"`);
+      }
+    }
+    this.runs.set(workflowRunId, run);
+    this.queueOperatorMessage(run, input.text, input.to);
+    await this.writeAggregate(run);
+    return run;
+  }
+
+  private queueOperatorMessage(run: WorkflowRun, text: string, to: string): void {
+    (run.operatorMessages ??= []).push({
+      id: randomUUID(),
+      text,
+      to,
+      at: new Date().toISOString(),
+    });
+  }
+
+  /** A resume note that went straight into the resumed phase's context: the feed's YOU bubble. */
+  private recordDeliveredNote(run: WorkflowRun, text: string, phaseId: string): void {
+    const at = new Date().toISOString();
+    (run.operatorMessages ??= []).push({
+      id: randomUUID(),
+      text,
+      to: phaseId,
+      at,
+      deliveredAt: at,
+      deliveredPhaseId: phaseId,
+    });
+  }
+
+  /**
+   * Fold the messages due for `phase` (undelivered, to `all` or to it) into the
+   * stage's resume context and stamp them delivered. A non-agent phase reads no
+   * context, so its messages keep waiting for the next agent phase.
+   */
+  private async deliverOperatorMessages(
+    run: WorkflowRun,
+    phase: WorkflowPhase,
+    base: string | undefined,
+  ): Promise<string | undefined> {
+    if (!readsStageContext(phase)) return base;
+    const due = (run.operatorMessages ?? []).filter(
+      (m) => !m.deliveredAt && (m.to === "all" || m.to === phase.id),
+    );
+    if (due.length === 0) return base;
+    const block = buildOperatorMessagesBlock(due.map((m) => m.text));
+    const at = new Date().toISOString();
+    for (const m of due) {
+      m.deliveredAt = at;
+      m.deliveredPhaseId = phase.id;
+    }
+    await this.writeAggregate(run);
+    return [base, block].filter(Boolean).join("\n\n");
   }
 
   /**
@@ -1407,8 +1509,12 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         agent: phase.agent,
         attempt,
       });
-      const stageResumeContext = pendingResumeContext ?? undefined;
+      const consumedResumeContext = pendingResumeContext ?? undefined;
       pendingResumeContext = null; // consumed by this phase only
+      // D-MSG: queued operator messages ride the same channel into this stage.
+      const stageResumeContext = settled
+        ? consumedResumeContext
+        : await this.deliverOperatorMessages(run, phase, consumedResumeContext);
       let stageRun: StageRun;
       if (phase.type === "workflow") {
         // A sub-run: the parent waits durably (`pendingChild`); the driver returns and
