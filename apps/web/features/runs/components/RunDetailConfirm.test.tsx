@@ -43,6 +43,7 @@ const runningRun: RunView = {
 const scheduledRun: RunView = {
   ...runningRun,
   runId: "sched_1",
+  kind: "scheduled",
   status: "scheduled",
 };
 
@@ -95,9 +96,16 @@ describe("RunDetail — destructive-action confirm dialogs (Phase 18.1)", () => 
   it("a scheduled task's Delete reads as Cancel task, with matching confirm copy", async () => {
     const { onDelete } = renderDetail(scheduledRun);
     await activateMenuItem("delete");
-    expect(screen.getByText("Zrušit naplánovaný task?")).toBeInTheDocument();
+    expect(screen.getByText("Zrušit čekající task?")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Zrušit task" }));
     expect(onDelete).toHaveBeenCalledOnce();
+  });
+
+  it("a queued task's Delete reads as Cancel task too", async () => {
+    renderDetail({ ...scheduledRun, status: "queued" });
+    await activateMenuItem("delete");
+    expect(screen.getByText("Zrušit čekající task?")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Zrušit task" })).toBeInTheDocument();
   });
 });

@@ -45,6 +45,13 @@ export function findSelectedRun(list: readonly RunView[], selId: string | null):
  */
 const STOPPABLE_KINDS = new Set<RunKind>(["agent", "workflow", "goal"]);
 
+const WAITING_STATES = new Set(["scheduled", "queued", "held"]);
+
+/** A still-waiting task (never dispatched) — "stop" cancels it out of the queue. */
+export function isCancellableRun(run: Pick<RunView, "kind" | "status">): boolean {
+  return run.kind === "scheduled" && WAITING_STATES.has(run.status);
+}
+
 /** Whether the Stop action applies to `run` at all — a stoppable kind, currently running. */
 export function isStoppableRun(run: Pick<RunView, "kind" | "status">): boolean {
   // A parked workflow has no process — stop cancels it (→ interrupted).
