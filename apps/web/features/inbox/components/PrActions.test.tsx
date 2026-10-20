@@ -181,6 +181,42 @@ describe("PrActions address / rebase", () => {
     expect(screen.queryByTestId(PrActionsTestId.Address)).toBeNull();
   });
 
+  it("no unresolved threads left hides the Address button", () => {
+    renderWithProviders(
+      <PrActions
+        baseLabel="main"
+        pr={pr(7, { blocker: "changes-requested", headRef: "feat", unresolvedThreads: 0 })}
+      />,
+    );
+    expect(screen.queryByTestId(PrActionsTestId.Address)).toBeNull();
+  });
+
+  it("unresolved threads left keeps the Address button", () => {
+    renderWithProviders(
+      <PrActions
+        baseLabel="main"
+        pr={pr(7, { blocker: "changes-requested", headRef: "feat", unresolvedThreads: 2 })}
+      />,
+    );
+    expect(screen.getByTestId(PrActionsTestId.Address)).toBeInTheDocument();
+  });
+
+  it("0 unresolved threads hides Address but a failed run still shows its link", () => {
+    renderWithProviders(
+      <PrActions
+        baseLabel="main"
+        pr={pr(7, {
+          blocker: "changes-requested",
+          headRef: "feat",
+          unresolvedThreads: 0,
+          addressComments: { taskId: "t", state: "failed" },
+        })}
+      />,
+    );
+    expect(screen.queryByTestId(PrActionsTestId.Address)).toBeNull();
+    expect(screen.getByTestId(PrActionsTestId.Failed)).toHaveAttribute("href", "/work/tasks/t");
+  });
+
   it("a refused address shows the server's reason", () => {
     address.mockImplementationOnce((_vars, opts: { onError?: (e: unknown) => void }) =>
       opts.onError?.({ status: 422, body: { message: "acme/api#7 comes from a fork" } }),

@@ -108,13 +108,28 @@ describe("InboxService.listPrs", () => {
     config: { kind: "github", repo: "Acme/app", username: "me" },
   } as unknown as Integration;
 
-  function build(tasks: unknown[] = []) {
+  function build(
+    tasks: unknown[] = [],
+    opts: { changesRequested?: boolean; graphqlThreads?: unknown[]; graphqlStatus?: number } = {},
+  ) {
     const calls: string[] = [];
+    const graphqlThreads = opts.graphqlThreads ?? [{ isResolved: true }, { isResolved: false }];
     const merged: (() => void)[] = [];
     const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
     const fetchImpl = (async (url: string | URL) => {
       const u = new URL(String(url));
       calls.push(u.pathname);
+      if (u.pathname === "/graphql") {
+        calls.push("graphql");
+        return json(
+          {
+            data: {
+              repository: { pullRequest: { reviewThreads: { nodes: graphqlThreads } } },
+            },
+          },
+          opts.graphqlStatus ?? 200,
+        );
+      }
       const q = u.searchParams.get("q") ?? "";
       if (u.pathname === "/user/teams") {
         return json([
@@ -153,7 +168,14 @@ describe("InboxService.listPrs", () => {
       }
       if (u.pathname.endsWith("/reviews")) {
         return json(
-          u.pathname.includes("/pulls/3/") ? [{ user: { login: "bob" }, state: "APPROVED" }] : [],
+          u.pathname.includes("/pulls/3/")
+            ? [
+                {
+                  user: { login: "bob" },
+                  state: opts.changesRequested ? "CHANGES_REQUESTED" : "APPROVED",
+                },
+              ]
+            : [],
         );
       }
       if (u.pathname.includes("/check-runs")) {
@@ -369,5 +391,37 @@ describe("InboxService.listPrs", () => {
     expect(byNumber[1]?.codeReview).toEqual({ taskId: "t2", state: "awaiting-approval" });
     expect(byNumber[2]?.codeReview).toEqual({ taskId: "t3", state: "failed" });
     expect(byNumber[3]?.codeReview).toBeUndefined();
+  });
+
+  it("counts unresolved review threads only on my changes-requested PRs", async () => {
+    const { service, calls } = build([], { changesRequested: true });
+    const byNumber = Object.fromEntries((await service.listPrs()).prs.map((p) => [p.number, p]));
+    expect(calls.filter((c) => c === "graphql")).toHaveLength(1);
+    expect(byNumber[3]?.unresolvedThreads).toBe(1);
+    expect(byNumber[1]?.unresolvedThreads).toBeUndefined();
+    expect(byNumber[2]?.unresolvedThreads).toBeUndefined();
+  });
+
+  it("0 unresolved threads -> unresolvedThreads 0", async () => {
+    const { service } = build([], {
+      changesRequested: true,
+      graphqlThreads: [{ isResolved: true }],
+    });
+    const pr3 = (await service.listPrs()).prs.find((p) => p.number === 3);
+    expect(pr3?.unresolvedThreads).toBe(0);
+  });
+
+  it("a failed thread read omits unresolvedThreads and keeps the PR", async () => {
+    const { service, calls } = build([], { changesRequested: true, graphqlStatus: 502 });
+    const pr3 = (await service.listPrs()).prs.find((p) => p.number === 3);
+    expect(calls.filter((c) => c === "graphql")).toHaveLength(1);
+    expect(pr3).toBeDefined();
+    expect(pr3?.unresolvedThreads).toBeUndefined();
+  });
+
+  it("does not read threads when my PR is not changes-requested", async () => {
+    const { service, calls } = build();
+    await service.listPrs();
+    expect(calls.filter((c) => c === "graphql")).toHaveLength(0);
   });
 });

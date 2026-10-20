@@ -124,6 +124,11 @@ export const InboxPrSchema = z.object({
   headRef: z.string().min(1).optional(),
   /** todo-13 — the branch this PR merges into. */
   baseRef: z.string().min(1).optional(),
+  /**
+   * todo-21 — unresolved review threads, read only for the operator's own PRs with
+   * "changes requested". Absent when not read or the read failed (unknown).
+   */
+  unresolvedThreads: z.number().int().nonnegative().optional(),
   /** todo-11 — the latest ZIBBY rebase of this PR (see `PrRebaseStateSchema`). */
   rebase: z.object({ taskId: z.string().min(1), state: PrRebaseStateSchema }).optional(),
   /** PR inbox redesign — the latest ZIBBY "Address review comments" task of this PR. */

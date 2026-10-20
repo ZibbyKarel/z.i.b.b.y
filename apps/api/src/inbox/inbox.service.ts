@@ -404,6 +404,10 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
         const ci = checks ? ciState(checks.check_runs ?? []) : ("unknown" as const);
         const review = reviewState(Array.isArray(reviews) ? reviews : []);
         const mergeable = pull.mergeable ?? null;
+        const unresolvedThreads =
+          bucket.bucket === "mine" && review === "changes-requested"
+            ? await this.unresolvedThreads(token, repo, number).catch(() => undefined)
+            : undefined;
         return {
           source: "github" as const,
           number,
@@ -421,6 +425,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
             ? { headRef: pull.head.ref }
             : {}),
           ...(pull.base?.ref ? { baseRef: pull.base.ref } : {}),
+          ...(unresolvedThreads !== undefined ? { unresolvedThreads } : {}),
           ...bucket,
           blocker: blockerOf({ ci, review, mergeable }),
           section: sectionOf({ ...bucket, ci, review, mergeable, draft: pull.draft === true }),
@@ -472,6 +477,33 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
     const res = await this.fetchImpl(`${GITHUB_API}${path}`, { headers: this.headers(token) });
     if (!res.ok) throw new Error(`github ${path.split("?")[0]}: HTTP ${res.status}`);
     return (await res.json()) as T;
+  }
+
+  /** todo-21 — unresolved review threads of one PR (GraphQL; REST has no thread state). */
+  private async unresolvedThreads(token: string, repo: string, n: number): Promise<number> {
+    const [owner, name] = repo.split("/");
+    const res = await this.fetchImpl(`${GITHUB_API}/graphql`, {
+      method: "POST",
+      headers: { ...this.headers(token), "content-type": "application/json" },
+      body: JSON.stringify({
+        query:
+          "query($owner:String!,$name:String!,$n:Int!){repository(owner:$owner,name:$name){pullRequest(number:$n){reviewThreads(first:100){nodes{isResolved}}}}}",
+        variables: { owner, name, n },
+      }),
+    });
+    if (!res.ok) throw new Error(`github graphql: HTTP ${res.status}`);
+    const json = (await res.json()) as {
+      data?: {
+        repository?: {
+          pullRequest?: { reviewThreads?: { nodes?: { isResolved?: boolean }[] } } | null;
+        } | null;
+      };
+      errors?: unknown[];
+    };
+    const nodes = json.data?.repository?.pullRequest?.reviewThreads?.nodes;
+    if (json.errors?.length || !nodes) throw new Error("github graphql: no data");
+    // ponytail: first 100 threads; a PR with more counts only those.
+    return nodes.filter((t) => t.isResolved === false).length;
   }
 
   private headers(token: string): Record<string, string> {
