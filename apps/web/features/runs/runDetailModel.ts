@@ -57,6 +57,21 @@ export function deriveRunMode(
   }
 }
 
+/** The state dot/pill tone for a run mode (header pill, live view meta). */
+export const MODE_TONE: Record<RunMode, StateTone> = {
+  waiting: "idle",
+  running: "working",
+  pausing: "working",
+  paused: "idle",
+  approval: "blocked",
+  question: "blocked",
+  parked: "error",
+  limit: "idle",
+  stopped: "idle",
+  error: "error",
+  done: "done",
+};
+
 export type StageStateKey = "done" | "running" | "waiting" | "parked" | "queued" | "stopped";
 
 export interface StageRailRow {
