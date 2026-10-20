@@ -61,7 +61,7 @@ nepushují.
    uloží do složky běhu (`screenshots/`), na GitHub je nenahrává. Bez webového UI to
    jednou větou řekne a review pokračuje.
 4. **aggregate** (`code-reviewer`): `browser-report.md` → `review.md`.
-5. **comment** (`github-commenter`, `approval: ask`): `review.md` → `zibby-pr-review.md`.
+5. **comment** (`github-commenter`, `approval: ask`): `review.md` → `zibby-pr-review.md`. Dokument má shrnutí a pod ním jeden blok `### cesta:řádek (Závažnost)` na nález; ZIBBY ho postne jako jedno review s inline komentáři na řádcích (řádek mimo diff GitHub odmítne, pak se postne jako jeden komentář).
 
 ## Proč ne `requires: [web]`
 

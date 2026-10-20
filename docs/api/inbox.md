@@ -141,10 +141,22 @@ operator decides once. A run that ended without the final gate parks the approva
 pending. A `failed` run parks nothing, and the row reads `failed` from the task outcome.
 
 `InboxReviewService` registers as the `pr-review` runner: **approve** →
-`POST /repos/{repo}/pulls/{n}/reviews` with `{ body, event }` — `event` is the operator's pick on approve (`reviewEvent`; APPROVE / REQUEST_CHANGES / COMMENT, preselected from `suggestedReviewEvent` = REQUEST_CHANGES when the review has a `Critical:`/`Important:`/`Minor:` finding, else APPROVE; no pick → COMMENT, ZIBBY never picks one itself) — using the
+`POST /repos/{repo}/pulls/{n}/reviews` with `{ body, event, comments? }` (see Inline comments below) — `event` is the operator's pick on approve (`reviewEvent`; APPROVE / REQUEST_CHANGES / COMMENT, preselected from `suggestedReviewEvent` = REQUEST_CHANGES when the review has a `Critical:`/`Important:`/`Minor:` finding, else APPROVE; no pick → COMMENT, ZIBBY never picks one itself) — using the
 project's resolved token, `state: "posted"`;
 a GitHub error sets `failed` + `note` and throws. **Reject** → `discarded`, nothing
 is sent. The PR row links to the task while the review is running or parked.
+
+**Inline comments (todo-22).** `zibby-pr-review.md` is one readable document the operator
+approves as is: a short summary on top, then one `### <path>:<line> (Critical|Important|Minor)`
+block (or `<path>:<start>-<end>`) per finding. `parsePrReviewDoc` (`pr-review-doc.ts`) splits
+it: the summary becomes the review `body`, each block one entry of `comments`
+(`{ path, line, side: "RIGHT", start_line?, start_side?, body }`) without its severity label —
+the label only drives `suggestedReviewEvent` (a severity heading counts as a finding). A heading
+that doesn't parse stays in the summary; more than 100 blocks fold into it. A doc without blocks
+posts `{ body, event }` as before. When GitHub rejects the inline comments (422 — a line outside
+the diff), the review is retried once with every comment folded into the body
+(`` `path:line` text ``) and `note` says the inline comments were rejected; a second failure is
+`failed` as above.
 
 ## PR diff (`GET /api/inbox/prs/:projectId/:number/diff`)
 

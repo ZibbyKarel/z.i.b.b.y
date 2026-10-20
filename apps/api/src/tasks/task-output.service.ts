@@ -99,13 +99,16 @@ export function parseThreadReplies(raw: string | undefined): PrThreadReply[] {
 /** A labelled finding line (item 9: `Critical:` / `Important:` / `Minor:`), tolerating a bullet/numbered list marker or bold. */
 const FINDING_LINE = /^[\s>*_-]*(?:\d+[.)][\s>*_-]*)?(?:Critical|Important|Minor)[*_]*:/m;
 
+/** todo-22 — a finding in the inline-comment format: `### path:line (Critical|Important|Minor)`. */
+const FINDING_HEADING = /^###\s.*\((?:Critical|Important|Minor)\)\s*$/m;
+
 /**
  * todo-10 — ZIBBY's preselection for the operator's review-type pick: any finding →
  * REQUEST_CHANGES, none → APPROVE. Only a suggestion; nothing posts without the
  * operator's approve, and every approve without a pick posts COMMENT.
  */
 export function suggestReviewEvent(body: string): PrReviewEvent {
-  return FINDING_LINE.test(body) ? "REQUEST_CHANGES" : "APPROVE";
+  return FINDING_LINE.test(body) || FINDING_HEADING.test(body) ? "REQUEST_CHANGES" : "APPROVE";
 }
 
 /**

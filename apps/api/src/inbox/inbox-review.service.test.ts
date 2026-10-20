@@ -145,9 +145,8 @@ describe("InboxReviewService", () => {
     expect(text).toContain(
       "List findings sorted by severity, most critical first, each labelled `Critical`, `Important` or `Minor`",
     );
-    expect(text).toContain(
-      "Keep the findings in that severity order and start each one with its label",
-    );
+    expect(text).toContain("Keep every verified finding, in severity order");
+    expect(text).toContain("`### <path>:<line> (<Critical|Important|Minor>)`");
   });
 
   it("start refuses an unknown project, a missing link and a foreign repo", async () => {
@@ -219,6 +218,66 @@ describe("InboxReviewService", () => {
     const note = (await storage.get("task_r1")).prReview?.note;
     expect(note).toContain("Unprocessable Entity");
     expect(note).toContain("Can not approve your own pull request");
+  });
+
+  async function parkBody(body: string): Promise<void> {
+    await service.start({ projectId: "acme", repo: "acme/app", number: 7 });
+    await storage.setPrReview("task_r1", (c) =>
+      c ? { ...c, state: "awaiting-approval", body, approvalId: "a1" } : c,
+    );
+  }
+  const sentBody = (call = 0): Record<string, unknown> =>
+    JSON.parse((fetchImpl.mock.calls[call]?.[1] as { body: string }).body);
+
+  it("todo-22: findings go inline, the summary is the review body", async () => {
+    await parkBody("Sum.\n\n### src/a.ts:42 (Important)\nCan we drop this?");
+    await service.post("task_r1");
+    expect(fetchImpl).toHaveBeenCalledOnce();
+    expect(sentBody()).toEqual({
+      body: "Sum.",
+      event: "COMMENT",
+      comments: [{ path: "src/a.ts", line: 42, side: "RIGHT", body: "Can we drop this?" }],
+    });
+    expect((await storage.get("task_r1")).prReview?.state).toBe("posted");
+  });
+
+  it("todo-22: a range block sets start_line/start_side", async () => {
+    await parkBody("Sum.\n\n### a.ts:2-4 (Minor)\nNit.");
+    await service.post("task_r1");
+    expect(sentBody().comments).toEqual([
+      { path: "a.ts", start_line: 2, start_side: "RIGHT", line: 4, side: "RIGHT", body: "Nit." },
+    ]);
+  });
+
+  it("todo-22: a rejected inline review is re-posted once as one body, with a note", async () => {
+    await parkBody("Sum.\n\n### src/a.ts:42 (Important)\nCan we drop this?");
+    fetchImpl.mockResolvedValueOnce(new Response("{}", { status: 422 }));
+    await service.post("task_r1");
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    const second = sentBody(1);
+    expect(second).toEqual({
+      body: "Sum.\n\n`src/a.ts:42` Can we drop this?",
+      event: "COMMENT",
+    });
+    expect(second).not.toHaveProperty("comments");
+    const review = (await storage.get("task_r1")).prReview;
+    expect(review?.state).toBe("posted");
+    expect(review?.note).toMatch(/inline comments rejected/);
+  });
+
+  it("todo-22: both attempts rejected → failed and throws", async () => {
+    await parkBody("Sum.\n\n### src/a.ts:42 (Important)\nCan we drop this?");
+    fetchImpl
+      .mockResolvedValueOnce(new Response("{}", { status: 422 }))
+      .mockResolvedValueOnce(new Response("{}", { status: 422 }));
+    await expect(service.post("task_r1")).rejects.toThrow(/HTTP 422/);
+    expect((await storage.get("task_r1")).prReview?.state).toBe("failed");
+  });
+
+  it("todo-22: a body without blocks sends no comments key", async () => {
+    await parkBody("Just a summary.");
+    await service.post("task_r1");
+    expect(sentBody()).toEqual({ body: "Just a summary.", event: "COMMENT" });
   });
 
   it("approve with nothing parked posts nothing; reject discards", async () => {

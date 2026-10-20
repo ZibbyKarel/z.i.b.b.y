@@ -269,6 +269,8 @@ describe("TaskOutputService", () => {
       ["1. **Critical:** null deref at a.ts:3", "REQUEST_CHANGES"],
       ["Summary.\n\n2) Minor: rename x at b.ts:9", "REQUEST_CHANGES"],
       ["3. Important: missing await", "REQUEST_CHANGES"],
+      ["Sum.\n\n### a.ts:1 (Minor)\nx", "REQUEST_CHANGES"],
+      ["Looks good.", "APPROVE"],
       ["No findings — looks good to merge.", "APPROVE"],
       ["No critical issues found.", "APPROVE"],
       ["Uses the Minor: label convention mid-line only.", "APPROVE"],

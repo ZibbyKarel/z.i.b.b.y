@@ -56,9 +56,9 @@ nepushují.
    sloučené s výsledky testů a nálezy z architektury do jedné agregace.
 4. **comment** (`github-commenter`, `approval: ask`): `review.md` →
    `zibby-pr-review.md`. Přepíše agregaci do textu, který se postne na PR, stylem z
-   promptu agenta. Běh tu zaparkuje ke schválení.
+   promptu agenta. Běh tu zaparkuje ke schválení. Dokument má shrnutí a pod ním jeden blok `### cesta:řádek (Závažnost)` na nález; ZIBBY ho postne jako jedno review s inline komentáři na řádcích (řádek mimo diff GitHub odmítne, pak se postne jako jeden komentář).
 
 ## Schválení
 
 Stejně jako `pr-review-thorough`: **Připomínky** vrátí review fázi `comment`,
-**Schválit** ho postne na PR jako review typu, který zvolíš (schválit / vyžádat změny / komentář), **Zamítnout** ho zahodí.
+**Schválit** ho postne na PR jako review typu, který zvolíš (schválit / vyžádat změny / komentář), **Zamítnout** ho zahodí. Nálezy se postnou jako inline komentáře na řádcích, shrnutí jako tělo review.

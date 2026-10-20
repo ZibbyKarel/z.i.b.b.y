@@ -35,10 +35,10 @@ GitHubu: agenti nic nepostují, necommitují ani nepushují.
    nálezy se závažností, file:line a návrhem opravy.
 2. **comment** (`github-commenter`, `approval: ask`): `review.md` →
    `zibby-pr-review.md`. Přepíše nálezy do textu, který se postne na PR, stylem z
-   promptu agenta. Běh tu zaparkuje ke schválení.
+   promptu agenta. Běh tu zaparkuje ke schválení. Dokument má shrnutí a pod ním jeden blok `### cesta:řádek (Závažnost)` na nález; ZIBBY ho postne jako jedno review s inline komentáři na řádcích (řádek mimo diff GitHub odmítne, pak se postne jako jeden komentář).
 
 ## Schválení
 
 Ve frontě schválení je výsledné review. **Připomínky** ho vrátí fázi `comment` s tvou
 poznámkou a nová verze se vrátí ke schválení. **Schválit** ho postne na PR jako
-review typu, který zvolíš (schválit / vyžádat změny / komentář; předvybráno podle nálezů). **Zamítnout** ho zahodí.
+review typu, který zvolíš (schválit / vyžádat změny / komentář; předvybráno podle nálezů). **Zamítnout** ho zahodí. Nálezy se postnou jako inline komentáře na řádcích, shrnutí jako tělo review.

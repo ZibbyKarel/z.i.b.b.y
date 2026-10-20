@@ -104,6 +104,10 @@ so the live path is `TaskSchedulerService.writeWorkflowOutcome` →
 `TaskOutputService.parkPrReview(task, text, run.approvedFinalGate, run.approvedReviewEvent)`: when the
 operator already approved the final `comment` phase at its gate, the approval is
 recorded and approved in one go (posted with the review event the operator picked at the gate (todo-10; none → COMMENT)), otherwise it parks as pending.
+The parked text is one readable document — a summary plus `### path:line (Severity)`
+blocks (todo-22) — which `suggestReviewEvent` reads (a labelled finding line or a
+severity heading → REQUEST_CHANGES); the runner posts the blocks as inline comments
+(see `docs/api/inbox.md`).
 
 **`prRebase`** (todo-11) is the rebase counterpart: stamped by `InboxRebaseService.start`
 via `ScheduledTasksStorageService.setPrRebase`, written to `awaiting-approval` by
