@@ -1,0 +1,8 @@
+{
+  "id": "zibby-run",
+  "name": "ZIBBY run control",
+  "desc": "ask_operator: an agent asks the operator one question through the approval gate — see docs/api/approvals.md.",
+  "type": "http",
+  "url": "http://localhost:3333/api/runs/mcp",
+  "enabled": true
+}
