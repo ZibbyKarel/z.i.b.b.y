@@ -1,7 +1,7 @@
 import { renderWithProviders as render, screen } from "../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { SystemConfig } from "@zibby/contracts";
+import { type SystemConfig, UiSettingsSchema } from "@zibby/contracts";
 import { SystemSection, SystemSectionTestId } from "./SystemSection";
 
 const DEFAULTS: SystemConfig = {
@@ -19,6 +19,7 @@ const DEFAULTS: SystemConfig = {
   chatPersona: "jarvis",
   powerSaver: false,
   ttsVoice: null,
+  ui: UiSettingsSchema.parse({}),
 };
 
 let config: SystemConfig = { ...DEFAULTS };

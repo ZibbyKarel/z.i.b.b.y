@@ -71,6 +71,12 @@ system-config section — link there rather than duplicating the table here.
    not the schema. Nothing seeds `operatorName` automatically; the operator
    sets it from `/system/settings/general` (ZB-11 builds that screen — until
    then, `PUT /system/config` is the only way to set it).
+6. **`ui`** holds operator UI preferences that must follow the operator across
+   browsers: `density` (system-wide DS spacing, default `airy`) and `bridge`
+   (the `/dashboard` Bridge board's layout, active preset, saved presets,
+   collapsed widgets, closed epics). Every writer must pass `ui` through —
+   the PUT replaces the whole document. See
+   [bridge-dashboard-design.md](../plans/bridge-dashboard-design.md).
 
 ## Not the same thing: the locked policy floor
 

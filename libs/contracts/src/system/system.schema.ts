@@ -1,6 +1,50 @@
 import { z } from "zod";
 import { ChatPersonaSchema } from "../chat/chat.schema";
 
+/** Bridge board density — scales the design-system spacing tokens system-wide. */
+export const DensitySchema = z.enum(["compact", "comfort", "airy", "open"]);
+export type Density = z.infer<typeof DensitySchema>;
+
+/**
+ * One widget placed on the Bridge's 12-column board. `x`/`w` are column units (the
+ * widget must fit the grid), `y`/`h` are row units (unbounded downwards).
+ */
+export const BridgeWidgetSchema = z.object({
+  id: z.string().min(1),
+  /** Catalog entry this widget renders. */
+  type: z.enum(["briefing", "issues", "prs", "tasks", "runs"]),
+  x: z.number().int().min(0).max(11),
+  y: z.number().int().min(0),
+  w: z.number().int().min(2).max(12),
+  h: z.number().int().min(1),
+});
+export type BridgeWidget = z.infer<typeof BridgeWidgetSchema>;
+
+/**
+ * Operator UI preferences persisted server-side (so they follow the operator across
+ * browsers). `prefault` — not `default` — so the nested field defaults are applied to
+ * an absent block (zod 4's `default` would skip parsing the `{}`).
+ */
+export const UiSettingsSchema = z.object({
+  /** System-wide spacing density. Default `"airy"`. */
+  density: DensitySchema.default("airy"),
+  bridge: z
+    .object({
+      /** Current board layout; `null` = the built-in DEFAULT preset. */
+      layout: z.array(BridgeWidgetSchema).nullable().default(null),
+      /** Name of the active preset (`DEFAULT`, `REVIEW`, a saved name, or `CUSTOM`). */
+      preset: z.string().min(1).default("DEFAULT"),
+      /** Operator-saved named layouts. */
+      saved: z.record(z.string(), z.array(BridgeWidgetSchema)).default({}),
+      /** Widget id -> collapsed. */
+      collapsed: z.record(z.string(), z.boolean()).default({}),
+      /** Epic group key -> closed (Issues widget). */
+      epicClosed: z.record(z.string(), z.boolean()).default({}),
+    })
+    .prefault({}),
+});
+export type UiSettings = z.infer<typeof UiSettingsSchema>;
+
 /**
  * Operator-owned runtime system config — `data/system-config.json`. These knobs were
  * formerly start-only environment variables (`TASK_TICK_MS`, `GOAL_AUTO_RESUME`, …);
@@ -94,6 +138,8 @@ export const SystemConfigSchema = z
      */
     operatorName: z.string().min(1).optional(),
     companyName: z.string().min(1).optional(),
+    /** Operator UI preferences (density, Bridge board layout). */
+    ui: UiSettingsSchema.prefault({}),
   })
   .strict();
 export type SystemConfig = z.infer<typeof SystemConfigSchema>;

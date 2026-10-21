@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { SystemConfigSchema } from "@zibby/contracts";
 import { SystemConfigStore } from "./system-config.store";
 
 describe("SystemConfigStore", () => {
@@ -77,5 +78,39 @@ describe("SystemConfigStore", () => {
     unsubscribe();
     await store.write({ ...store.current(), taskTickMs: 9_000 });
     expect(seen).toHaveBeenCalledTimes(1); // not called after unsubscribe
+  });
+
+  describe("ui settings", () => {
+    const widget = { id: "w1", type: "prs", x: 4, y: 3, w: 4, h: 18 } as const;
+
+    it("{} parses to full defaults including ui", () => {
+      expect(SystemConfigSchema.parse({}).ui).toEqual({
+        density: "airy",
+        bridge: { layout: null, preset: "DEFAULT", saved: {}, collapsed: {}, epicClosed: {} },
+      });
+    });
+
+    it("a stored ui round-trips through the store", async () => {
+      const ui = SystemConfigSchema.parse({}).ui;
+      const stored = {
+        ...ui,
+        density: "compact" as const,
+        bridge: { ...ui.bridge, layout: [widget], preset: "CUSTOM", saved: { A: [widget] } },
+      };
+      const store = new SystemConfigStore(file);
+      await store.write({ ...store.current(), ui: stored });
+      expect(new SystemConfigStore(file).current().ui).toEqual(stored);
+    });
+
+    it("rejects an unknown widget type and out-of-range x/w", () => {
+      const parse = (w: object) =>
+        SystemConfigSchema.safeParse({ ui: { bridge: { layout: [{ ...widget, ...w }] } } });
+      expect(parse({}).success).toBe(true);
+      expect(parse({ type: "incidents" }).success).toBe(false);
+      expect(parse({ x: 12 }).success).toBe(false);
+      expect(parse({ x: -1 }).success).toBe(false);
+      expect(parse({ w: 1 }).success).toBe(false);
+      expect(parse({ w: 13 }).success).toBe(false);
+    });
   });
 });
