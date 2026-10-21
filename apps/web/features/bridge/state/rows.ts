@@ -1,10 +1,4 @@
-import type {
-  BudgetStatus,
-  InboxEpic,
-  InboxPr,
-  InboxRoadmapItem,
-  TaskParent,
-} from "@zibby/contracts";
+import type { BudgetStatus, InboxEpic, InboxPr, InboxRoadmapItem } from "@zibby/contracts";
 import { type StateTone, normalizeStateTone } from "@zibby/design-system";
 import {
   type InboxFilters,
@@ -214,56 +208,6 @@ export function prGroups(
     kids: g.kids.map((k) => prRow(widgetId, k, all, ago)),
   }));
   return { groups, visible };
-}
-
-// ---------------------------------------------------------------------------
-// Tasks
-// ---------------------------------------------------------------------------
-
-export interface TaskRowVm {
-  key: string;
-  /** Selection id — the parent task id. */
-  id: string;
-  code: string;
-  title: string;
-  tone: StateTone;
-  /** Department pipeline (subtasks that carry a department). */
-  chips: { code: string; state: StateTone; title: string }[];
-  /** `YOU` when the task is blocked on the operator. */
-  needsYou: boolean;
-  age: string;
-}
-
-export interface DeptNames {
-  code: (id: string) => string;
-  name: (id: string) => string;
-}
-
-/** The `/work/tasks` list (newest first), done hidden. */
-export function taskRows(
-  widgetId: string,
-  parents: TaskParent[],
-  dept: DeptNames,
-  ago: Ago,
-): TaskRowVm[] {
-  return parents
-    .filter((p) => p.state !== "done")
-    .map((p) => ({
-      key: rowKey(widgetId, p.id),
-      id: p.id,
-      code: `TSK-${p.id.slice(-4).toUpperCase()}`,
-      title: p.title || p.text.slice(0, 80),
-      tone: p.state,
-      chips: p.subtasks
-        .filter((s) => s.department)
-        .map((s) => ({
-          code: dept.code(s.department ?? ""),
-          state: s.state,
-          title: `${dept.name(s.department ?? "")} · ${s.state}`,
-        })),
-      needsYou: p.state === "blocked",
-      age: ago(p.createdAt),
-    }));
 }
 
 // ---------------------------------------------------------------------------

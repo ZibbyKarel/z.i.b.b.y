@@ -1,19 +1,20 @@
 "use client";
 
-import { BoardRow, BoardTag, BoardText, PipelineChips } from "@zibby/design-system";
-import { useTranslations } from "next-intl";
+import { BoardLine, BoardRow, BoardText } from "@zibby/design-system";
+import { useLocale, useTranslations } from "next-intl";
 import { useMemo } from "react";
 import { useNow } from "../../../hooks/useNow";
-import { compactAgo } from "../../../utils/time";
-import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
-import { useTaskParentsInfiniteQuery } from "../../tasks/queries";
-import { taskRows } from "../state/rows";
+import { clockTime, compactAgo } from "../../../utils/time";
+import { useLiveRuns } from "../../runs/components/TasksDockPanel";
+import { WAITING_STATES, runTitle } from "../../runs/run";
+import { runRows } from "../state/rows";
 import type { BridgeWidgetProps } from "./registry";
 import { useWidgetReport } from "./useWidgetReport";
 
 /**
- * Tasks: the `/work/tasks` parent-task feed (newest first, first page, unfiltered), done
- * hidden. Pipeline chips are the task's department subtasks; blocked tasks carry `YOU`.
+ * Task queue: the live runs still waiting to start (queued / scheduled / held - the complement
+ * of what the running widget shows), in feed order. Scheduled rows show their fire time, the
+ * rest their age. The widget `type` stays `tasks` (saved layouts / presets).
  */
 export function TasksWidget({
   widget,
@@ -23,48 +24,65 @@ export function TasksWidget({
   onOpen,
   sheetSide,
 }: BridgeWidgetProps) {
-  const t = useTranslations("bridge.widgets.tasks");
+  const t = useTranslations("runs");
+  const locale = useLocale();
   const now = useNow(60_000);
-  const departments = useDepartmentLookup();
-  const { data, isPending } = useTaskParentsInfiniteQuery({});
+  const live = useLiveRuns();
 
-  const rows = useMemo(
-    () => taskRows(widget.id, data ?? [], departments, (iso) => compactAgo(iso, now).toUpperCase()),
-    [widget.id, data, departments, now],
-  );
+  const rows = useMemo(() => {
+    const waiting = live.filter((r) => WAITING_STATES.has(r.status));
+    const vms = runRows(widget.id, waiting);
+    return waiting.map((run, i) => {
+      const vm = vms[i];
+      return {
+        key: vm?.key ?? run.runId,
+        // Scheduled runs open by their own id (the task), the rest by task id.
+        id: (run.kind === "scheduled" ? run.runId : run.taskId) ?? null,
+        tone: vm?.tone ?? "idle",
+        title: runTitle(run),
+        meta: [run.projectId ?? run.project, run.processor?.name ?? run.owner]
+          .filter(Boolean)
+          .join(" · ")
+          .toUpperCase(),
+        state: t(`state.${run.status}`).toUpperCase(),
+        when:
+          run.status === "scheduled"
+            ? clockTime(run.startedAt, locale)
+            : compactAgo(run.startedAt, now).toUpperCase(),
+      };
+    });
+  }, [widget.id, live, t, locale, now]);
 
-  useWidgetReport(
-    {
-      loading: isPending,
-      count: isPending ? undefined : rows.length,
-      you: rows.filter((r) => r.needsYou).length,
-    },
-    { onEmptyChange, onCountChange },
-  );
+  useWidgetReport({ loading: false, count: rows.length, you: 0 }, { onEmptyChange, onCountChange });
 
   return (
     <>
       {rows.map((r) => (
         <BoardRow
-          columns="task"
+          columns="run"
           key={r.key}
-          needsYou={r.needsYou}
-          onClick={() => onOpen({ kind: "task", id: r.id, widgetId: widget.id, key: r.key })}
-          rowKey={r.key}
+          onClick={
+            r.id === null
+              ? undefined
+              : () => onOpen({ kind: "task", id: r.id as string, widgetId: widget.id, key: r.key })
+          }
+          rowKey={r.id === null ? undefined : r.key}
           selected={selection?.key === r.key}
           sheetSide={sheetSide}
           tone={r.tone}
         >
-          <BoardText kind="id">{r.code}</BoardText>
-          <BoardText kind="body">{r.title}</BoardText>
-          <PipelineChips chips={r.chips} />
-          {r.needsYou ? (
-            <BoardTag variant="you">{t("you")}</BoardTag>
-          ) : (
-            <BoardText align="right" kind="meta" tone="ink3">
-              {r.age}
+          <BoardLine direction="col" gap="3">
+            <BoardText kind="body">{r.title}</BoardText>
+            <BoardText truncate kind="meta">
+              {r.meta}
             </BoardText>
-          )}
+          </BoardLine>
+          <BoardText tabular kind="meta">
+            {r.state}
+          </BoardText>
+          <BoardText align="right" kind="meta" tone="ink3">
+            {r.when}
+          </BoardText>
         </BoardRow>
       ))}
     </>

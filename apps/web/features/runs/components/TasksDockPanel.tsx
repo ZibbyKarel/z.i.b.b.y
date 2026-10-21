@@ -188,7 +188,7 @@ function RunningSection() {
 }
 
 /** Refetch the "Hotové" list whenever a run event reports a terminal status. */
-function useInvalidateOnTerminalRun(limit: number) {
+export function useInvalidateOnTerminalRun(limit: number) {
   const qc = useQueryClient();
   useEffect(
     () =>

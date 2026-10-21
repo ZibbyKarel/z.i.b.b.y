@@ -1,4 +1,4 @@
-import type { InboxPr, InboxRoadmapItem, TaskParent } from "@zibby/contracts";
+import type { InboxPr, InboxRoadmapItem } from "@zibby/contracts";
 import { BoardRowTestId, KpiStripTestId, RowGroupHeaderTestId } from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -17,6 +17,8 @@ const d = vi.hoisted(() => ({
   prs: [] as unknown[],
   tasks: [] as unknown[],
   runs: [] as unknown[],
+  archived: [] as unknown[],
+  archivedPending: false,
   approvals: [] as unknown[],
   pending: false,
 }));
@@ -31,7 +33,13 @@ vi.mock("../../inbox/queries", () => ({
 vi.mock("../../tasks/queries", () => ({
   useTaskParentsInfiniteQuery: () => ({ data: d.tasks, isPending: d.pending }),
 }));
-vi.mock("../../runs/components/TasksDockPanel", () => ({ useLiveRuns: () => d.runs }));
+vi.mock("../../runs/components/TasksDockPanel", () => ({
+  useLiveRuns: () => d.runs,
+  useInvalidateOnTerminalRun: () => undefined,
+}));
+vi.mock("../../runs/queries/useRecentArchivedRunsQuery", () => ({
+  useRecentArchivedRunsQuery: () => ({ data: d.archived, isPending: d.archivedPending }),
+}));
 vi.mock("../../briefing/queries", () => ({
   useBriefingQuery: () => ({
     data: { headline: "Two PRs wait on you.", generatedAt: "2026-10-21T08:00:00.000Z" },
@@ -115,6 +123,8 @@ beforeEach(() => {
     prs: [],
     tasks: [],
     runs: [],
+    archived: [],
+    archivedPending: false,
     approvals: [],
     pending: false,
   });
@@ -241,42 +251,53 @@ describe("PrsWidget", () => {
   });
 });
 
-describe("TasksWidget", () => {
-  it("renders task rows with pipeline chips and a YOU tag for blocked", async () => {
-    const tasks: TaskParent[] = [
-      {
-        id: "abcdef12",
-        title: "Build it",
-        text: "",
-        createdAt: new Date(Date.now() - 600_000).toISOString(),
-        state: "working",
-        subtasks: [{ taskId: "s", department: "dev", state: "working" }],
-      },
-      {
-        id: "zz99",
-        title: "Approve it",
-        text: "",
-        createdAt: new Date(Date.now() - 600_000).toISOString(),
-        state: "blocked",
-        subtasks: [],
-      },
+const run = (runId: string, status: string, over: Record<string, unknown> = {}) => ({
+  runId,
+  kind: "agent",
+  owner: "coder",
+  status,
+  pct: null,
+  title: `Run ${runId}`,
+  prompt: "",
+  project: "shop",
+  startedAt: new Date(Date.now() - 600_000).toISOString(),
+  logBase: "agents",
+  taskId: `t-${runId}`,
+  ...over,
+});
+
+describe("TasksWidget (task queue)", () => {
+  it("shows only waiting runs; opens the task (scheduled: its own id); static without one", async () => {
+    d.runs = [
+      run("a", "running"),
+      run("q", "queued"),
+      run("s", "scheduled", { kind: "scheduled", taskId: undefined }),
+      run("h", "held", { taskId: undefined }),
+      run("w", "awaiting-approval"),
     ];
-    d.tasks = tasks;
     const props = setup({ widget: widget("w-tasks", "tasks") });
     renderWithProviders(<TasksWidget {...props} />);
     const rows = screen.getAllByTestId(BoardRowTestId.Root);
-    expect(rows[0]).toHaveAttribute("data-rk", "w-tasks:abcdef12");
-    expect(rows[0]).toHaveTextContent("TSK-EF12");
-    expect(rows[0]).toHaveTextContent("DEV");
-    expect(rows[1]).toHaveTextContent("TY");
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toHaveTextContent("Run q");
+    expect(rows[0]).toHaveTextContent("VE FRONTĚ");
+    expect(rows[1]).toHaveTextContent("NAPLÁNOVÁNO");
+    expect(rows[2]?.tagName).toBe("DIV");
     await userEvent.click(rows[1] as HTMLElement);
     expect(props.onOpen).toHaveBeenCalledWith({
       kind: "task",
-      id: "zz99",
+      id: "s",
       widgetId: "w-tasks",
-      key: "w-tasks:zz99",
+      key: "w-tasks:s",
     });
-    expect(props.onCountChange).toHaveBeenLastCalledWith({ count: 2, you: 1, aside: undefined });
+    expect(props.onCountChange).toHaveBeenLastCalledWith({ count: 3, you: 0, aside: undefined });
+  });
+
+  it("is empty when nothing waits", () => {
+    d.runs = [run("a", "running")];
+    const props = setup({ widget: widget("w", "tasks") });
+    renderWithProviders(<TasksWidget {...props} />);
+    expect(props.onEmptyChange).toHaveBeenLastCalledWith(true);
   });
 });
 
@@ -339,6 +360,54 @@ describe("RunsWidget", () => {
     expect(row).not.toHaveAttribute("data-rk");
     await userEvent.click(row);
     expect(props.onOpen).not.toHaveBeenCalled();
+  });
+
+  it("splits active (no waiting) from the last finished, with state-coloured bars and headers", () => {
+    d.runs = [run("a", "running", { pct: 10 }), run("q", "queued")];
+    d.archived = [run("d", "done"), run("e", "error")];
+    const props = setup({ widget: widget("w-runs", "runs") });
+    renderWithProviders(<RunsWidget {...props} />);
+    const headers = screen.getAllByTestId(RowGroupHeaderTestId.Title);
+    expect(headers.map((h) => h.textContent)).toEqual(["BĚŽÍ", "UKONČENÉ"]);
+    const rows = screen.getAllByTestId(BoardRowTestId.Root);
+    expect(rows.map((r) => r.getAttribute("data-rk"))).toEqual([
+      "w-runs:a",
+      "w-runs:d",
+      "w-runs:e",
+    ]);
+    expect(rows[1]).toHaveTextContent("HOTOVO");
+    expect(rows[2]).toHaveTextContent("CHYBA");
+    expect(props.onCountChange).toHaveBeenLastCalledWith({ count: 3, you: 0, aside: undefined });
+  });
+
+  it("omits the header of an empty group", () => {
+    d.runs = [run("a", "running")];
+    const props = setup({ widget: widget("w-runs", "runs") });
+    const { unmount } = renderWithProviders(<RunsWidget {...props} />);
+    expect(screen.getAllByTestId(RowGroupHeaderTestId.Title).map((h) => h.textContent)).toEqual([
+      "BĚŽÍ",
+    ]);
+    unmount();
+    d.runs = [];
+    d.archived = [run("d", "done")];
+    renderWithProviders(<RunsWidget {...props} />);
+    expect(screen.getAllByTestId(RowGroupHeaderTestId.Title).map((h) => h.textContent)).toEqual([
+      "UKONČENÉ",
+    ]);
+  });
+
+  it("the queue and the running widget never show the same run", () => {
+    d.runs = [run("a", "running"), run("p", "pending"), run("q", "queued"), run("s", "scheduled")];
+    const keys = (ui: React.ReactElement) => {
+      const view = renderWithProviders(ui);
+      const k = screen.getAllByTestId(BoardRowTestId.Root).map((r) => r.getAttribute("data-rk"));
+      view.unmount();
+      return k.map((x) => x?.split(":")[1]);
+    };
+    const queue = keys(<TasksWidget {...setup({ widget: widget("w", "tasks") })} />);
+    const active = keys(<RunsWidget {...setup({ widget: widget("w", "runs") })} />);
+    expect(queue.filter((k) => active.includes(k))).toEqual([]);
+    expect([...queue, ...active].sort()).toEqual(["a", "p", "q", "s"]);
   });
 
   it("is empty with no live runs", () => {

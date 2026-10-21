@@ -3160,13 +3160,11 @@
         "on": "ON {base}",
         "waitsOn": "· WAITS ON {prs}"
       },
-      "tasks": {
-        "you": "YOU"
-      },
       "runs": {
         "colTask": "TASK · STEP",
         "colProgress": "PROGRESS",
         "colIssue": "ISSUE",
+        "group": { "active": "RUNNING", "finished": "FINISHED" },
         "state": {
           "working": "WORKING",
           "thinking": "THINKING",
@@ -3196,16 +3194,16 @@
         "desc": "Jira and GitHub items, grouped under their epic"
       },
       "tasks": {
-        "label": "TASKS",
-        "desc": "Zibby tasks with their department pipeline"
+        "label": "TASK QUEUE",
+        "desc": "Runs waiting to start: queued, scheduled, held"
       },
       "prs": {
         "label": "PULL REQUESTS",
         "desc": "Agent PRs and your own, with stacks"
       },
       "runs": {
-        "label": "RUNNING NOW",
-        "desc": "Tasks moving through a workflow right now"
+        "label": "RUNNING & FINISHED",
+        "desc": "Active runs and the last 10 finished ones"
       }
     },
     "sheet": {

@@ -3160,13 +3160,11 @@
         "on": "NA {base}",
         "waitsOn": "· ČEKÁ NA {prs}"
       },
-      "tasks": {
-        "you": "TY"
-      },
       "runs": {
         "colTask": "ÚKOL · KROK",
         "colProgress": "POSTUP",
         "colIssue": "ISSUE",
+        "group": { "active": "BĚŽÍ", "finished": "UKONČENÉ" },
         "state": {
           "working": "PRACUJE",
           "thinking": "PŘEMÝŠLÍ",
@@ -3196,16 +3194,16 @@
         "desc": "Položky z Jiry a GitHubu seskupené pod epiky"
       },
       "tasks": {
-        "label": "ÚKOLY",
-        "desc": "Úkoly Zibby s pipeline po odděleních"
+        "label": "FRONTA ÚKOLŮ",
+        "desc": "Běhy čekající na start: ve frontě, naplánované, pozdržené"
       },
       "prs": {
         "label": "PULL REQUESTY",
         "desc": "PR od agentů i vaše, včetně stacků"
       },
       "runs": {
-        "label": "PRÁVĚ BĚŽÍ",
-        "desc": "Úkoly, které právě procházejí workflow"
+        "label": "PRÁVĚ BĚŽÍ A UKONČENÉ",
+        "desc": "Aktivní běhy a posledních 10 ukončených"
       }
     },
     "sheet": {

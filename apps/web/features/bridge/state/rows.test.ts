@@ -1,10 +1,4 @@
-import type {
-  BudgetStatus,
-  InboxEpic,
-  InboxPr,
-  InboxRoadmapItem,
-  TaskParent,
-} from "@zibby/contracts";
+import type { BudgetStatus, InboxEpic, InboxPr, InboxRoadmapItem } from "@zibby/contracts";
 import { describe, expect, it } from "vitest";
 import type { RunView } from "../../runs/run";
 import {
@@ -15,7 +9,6 @@ import {
   prNeed,
   runRows,
   spendTodayUsd,
-  taskRows,
 } from "./rows";
 
 const ago = (iso: string) => `ago:${iso.slice(0, 10)}`;
@@ -158,41 +151,6 @@ describe("pull requests", () => {
       ago,
     );
     expect(groups.map((g) => g.root.number)).toEqual(["#2"]);
-  });
-});
-
-describe("tasks", () => {
-  const parent = (over: Partial<TaskParent> & { id: string }): TaskParent => ({
-    title: "Do it",
-    text: "text",
-    createdAt: "2026-10-01T00:00:00.000Z",
-    state: "working",
-    subtasks: [
-      { taskId: "s1", department: "dev", state: "done" },
-      { taskId: "s2", state: "working" },
-    ],
-    ...over,
-  });
-  it("hides done, builds chips from department subtasks, blocked is YOU", () => {
-    const rows = taskRows(
-      "tasks",
-      [
-        parent({ id: "abcdef12" }),
-        parent({ id: "x", state: "done" }),
-        parent({ id: "zz9", state: "blocked", title: "" }),
-      ],
-      { code: (id) => id.toUpperCase(), name: (id) => `N-${id}` },
-      ago,
-    );
-    expect(rows.map((r) => r.id)).toEqual(["abcdef12", "zz9"]);
-    expect(rows[0]).toMatchObject({
-      key: "tasks:abcdef12",
-      code: "TSK-EF12",
-      tone: "working",
-      needsYou: false,
-      chips: [{ code: "DEV", state: "done", title: "N-dev · done" }],
-    });
-    expect(rows[1]).toMatchObject({ needsYou: true, title: "text" });
   });
 });
 
