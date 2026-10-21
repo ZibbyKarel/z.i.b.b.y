@@ -1,15 +1,7 @@
 "use client";
 
 import type { Decision, DepartmentId, GlobalGateRule, GlobalGateRuleInput } from "@zibby/contracts";
-import {
-  Button,
-  ButtonGroup,
-  Icon,
-  type IconName,
-  Panel,
-  Stack,
-  Typography,
-} from "@zibby/design-system";
+import { Button, Icon, type IconName, Panel, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { ConfirmDeleteDialog } from "../../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
@@ -18,27 +10,15 @@ import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { useAgentsQuery } from "../../agents";
 import { useSkillsQuery } from "../../skills";
-import { DECISION_META, DECISION_ORDER } from "../gate";
 import {
   useCreateGateRuleMutation,
   useDeleteGateRuleMutation,
-  useReorderGateRulesMutation,
   useUpdateGateRuleMutation,
 } from "../mutations";
 import { useGateRulesQuery } from "../queries";
+import { DecisionColumns } from "./DecisionColumns";
 import { GlobalRuleCard, type RuleUser } from "./GlobalRuleCard";
 import { RuleModal } from "./RuleModal";
-import { SystemFloorPanel } from "./SystemFloorPanel";
-
-/** Move `id` one step in the `ids` order; returns the new order or null if it can't. */
-function moved(ids: string[], id: string, delta: -1 | 1): string[] | null {
-  const i = ids.indexOf(id);
-  const j = i + delta;
-  if (i === -1 || j < 0 || j >= ids.length) return null;
-  const next = [...ids];
-  [next[i], next[j]] = [next[j]!, next[i]!];
-  return next;
-}
 
 export interface GateRulesSectionProps {
   /**
@@ -48,30 +28,20 @@ export interface GateRulesSectionProps {
    * catalog, no auto-tag — so the Settings tab (this component's other call
    * site; F10 deleted the standalone `/gates` page, O8) is unaffected by this
    * prop's existence.
-   * Reorder (whose order IS the evaluation order across the WHOLE catalog) is
-   * disabled while filtered, same reasoning as the existing decision filter.
    */
   department?: DepartmentId;
-  /**
-   * ZB-08: `/governance/gates?section=global` shows the floor in its own `floor`
-   * section — set this to skip the embedded {@link SystemFloorPanel} so it
-   * isn't rendered twice. Every other call site (the department drawer's
-   * Gates tab, the pre-ZB-08 Settings tab) keeps today's behavior.
-   */
-  hideFloor?: boolean;
 }
 
 /**
- * The global gate-rule catalog body — the editable list of approval rules with the
- * locked system floor above it. Content only (no page chrome), so it serves the
- * "Pravidla schvalování" tab in Settings AND (Phase 87) a department's Gates tab
- * via `department` (the standalone `/gates` page was a third consumer until
- * F10 deleted it, O8 — `GateRulesSection` and `SystemFloorPanel` themselves
- * stayed). Owns its own data + modal state;
- * `useGateRulesQuery` only fires once this mounts, so the Settings tab loads gate
- * rules lazily (the TabPanel unmounts inactive panels).
+ * The global gate-rule list body — ONE list of approval rules: the built-in system
+ * rules (`system: true`, the former POLICY.md floor — editable and movable, never
+ * deletable) alongside the operator's own, laid out in decision columns. The
+ * server applies the strictest matching rule, so order within the list is
+ * irrelevant (no reorder UI). Content only (no page chrome), so it serves
+ * `/governance/gates?section=global` AND a department's Gates tab via `department`.
+ * Owns its own data + modal state; `useGateRulesQuery` only fires once this mounts.
  */
-export function GateRulesSection({ department, hideFloor }: GateRulesSectionProps = {}) {
+export function GateRulesSection({ department }: GateRulesSectionProps = {}) {
   const t = useTranslations("gates");
   const tk = useTranslations();
   const rulesQuery = useGateRulesQuery();
@@ -83,21 +53,11 @@ export function GateRulesSection({ department, hideFloor }: GateRulesSectionProp
   const create = useCreateGateRuleMutation();
   const update = useUpdateGateRuleMutation();
   const remove = useDeleteGateRuleMutation();
-  const reorder = useReorderGateRulesMutation();
 
-  const [filter, setFilter] = useState<Decision | null>(null);
   const [editing, setEditing] = useState<GlobalGateRule | "new" | null>(null);
   // Deleting a rule can silently un-harden every agent/skill linked to it — confirm
   // before it fires (Phase 18).
   const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  const byDecision = (d: Decision) => rules.filter((r) => r.decision === d).length;
-  const shown = filter ? rules.filter((r) => r.decision === filter) : rules;
-  const ids = rules.map((r) => r.id);
-  // Reordering submits a full-catalog id permutation (`GateRulesStorageService.reorder`
-  // 422s on anything else) — `ids` above is only the FILTERED subset once
-  // `department` is set, so reorder must stay off exactly like the decision filter.
-  const canReorder = filter === null && !department;
 
   const usersFor = (ruleId: string): { agents: RuleUser[]; skills: RuleUser[] } => ({
     agents: agents
@@ -112,9 +72,22 @@ export function GateRulesSection({ department, hideFloor }: GateRulesSectionProp
       .map((s) => ({ id: s.id, name: s.name, glyph: s.glyph })),
   });
 
-  const move = (id: string, delta: -1 | 1) => {
-    const next = moved(ids, id, delta);
-    if (next) reorder.mutate({ body: { ids: next } });
+  // Moving a card to another column = a new decision (tier). `resolve` exists iff `ask`,
+  // so a move into ask defaults it to the operator, and a move out drops it.
+  const moveTo = (rule: GlobalGateRule, decision: Decision) => {
+    const base = {
+      name: rule.name,
+      desc: rule.desc,
+      match: rule.match,
+      department: rule.department,
+    };
+    update.mutate({
+      params: { id: rule.id },
+      body:
+        decision === "ask"
+          ? { ...base, decision, resolve: rule.resolve ?? { type: "human" } }
+          : { ...base, decision },
+    });
   };
 
   const save = (input: GlobalGateRuleInput) => {
@@ -124,7 +97,10 @@ export function GateRulesSection({ department, hideFloor }: GateRulesSectionProp
       // AUTHORING UI is deferred, per the Phase 87 plan) — its `input` never
       // carries the tag, so an edit must re-attach whatever tag the rule
       // already had or saving would silently un-tag it.
-      const body = editing.department ? { ...input, department: editing.department } : input;
+      const body = {
+        ...input,
+        ...(editing.department ? { department: editing.department } : {}),
+      };
       update.mutate({ params: { id: editing.id }, body }, done);
     } else {
       const body = department ? { ...input, department } : input;
@@ -134,30 +110,13 @@ export function GateRulesSection({ department, hideFloor }: GateRulesSectionProp
 
   return (
     <Stack gap="250">
-      {/* decision filter tabs */}
-      <Panel padding="200">
-        <Stack wrap align="center" direction="row" gap="100">
-          <ButtonGroup
-            deselectable
-            ariaLabel={t("title")}
-            onChange={(v) => setFilter(v ? (v as Decision) : null)}
-            options={DECISION_ORDER.map((d) => ({
-              id: d,
-              label: t(`decision_.${d}`),
-              leading: <Icon name={DECISION_META[d].icon} size="sm" />,
-              trailing: byDecision(d),
-            }))}
-            value={filter ?? ""}
-          />
-          <Stack grow align="center" direction="row" justify="end">
-            <Typography mono size="2xs" type="note" variant="tertiary">
-              {t("totalCount", { count: rules.length })}
-            </Typography>
-          </Stack>
-        </Stack>
-      </Panel>
+      <Stack align="center" direction="row" justify="end">
+        <Typography mono size="2xs" type="note" variant="tertiary">
+          {t("totalCount", { count: rules.length })}
+        </Typography>
+      </Stack>
 
-      {/* hierarchy note: system floor → this catalog → agent/skill rules */}
+      {/* hierarchy note: global rules (strictest match wins) → agent/skill can only tighten */}
       <Panel padding="150">
         <Stack align="center" direction="row" gap="100">
           <Icon name="bolt" size="xs" tone="accent" />
@@ -167,42 +126,31 @@ export function GateRulesSection({ department, hideFloor }: GateRulesSectionProp
         </Stack>
       </Panel>
 
-      {/* The locked POLICY.md floor — the structural guarantee, made visible above the
-          editable catalog (Law 1: agents can only harden it; Law 4: never talked around). */}
-      {!hideFloor && <SystemFloorPanel />}
-
       {rulesQuery.isPending ? (
         <QueryLoading />
       ) : rulesQuery.isError ? (
         <QueryError onRetry={() => void rulesQuery.refetch()} />
-      ) : shown.length === 0 ? (
-        <EmptyState
-          description={filter ? t("emptyFilteredDesc") : t("emptyDesc")}
-          glyph="shield"
-          title={filter ? t("emptyFilteredTitle") : t("emptyTitle")}
-        />
+      ) : rules.length === 0 ? (
+        <EmptyState description={t("emptyDesc")} glyph="shield" title={t("emptyTitle")} />
       ) : (
-        <Stack gap="100">
-          {shown.map((rule) => {
+        <DecisionColumns
+          onMove={moveTo}
+          renderCard={(rule, _idx, _column, moveMenu) => {
             const users = usersFor(rule.id);
-            const idx = ids.indexOf(rule.id);
             return (
               <GlobalRuleCard
                 agents={users.agents}
-                canReorder={canReorder}
-                isFirst={idx === 0}
-                isLast={idx === ids.length - 1}
                 key={rule.id}
+                moveMenu={moveMenu}
                 onDelete={(id) => setDeletingId(id)}
                 onEdit={(r) => setEditing(r)}
-                onMoveDown={(id) => move(id, 1)}
-                onMoveUp={(id) => move(id, -1)}
                 rule={rule}
                 skills={users.skills}
               />
             );
-          })}
-        </Stack>
+          }}
+          rules={rules}
+        />
       )}
 
       <Button block icon="plus" intent="ghost" onClick={() => setEditing("new")}>

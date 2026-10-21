@@ -241,6 +241,7 @@ describe("InboxAddressCommentsService", () => {
     expect((await storage.get(taskId)).prAddressComments).toMatchObject({
       state: "pushed",
       note: "newsha",
+      finishedAt: expect.any(String),
     });
     expect(dropPrsCache).toHaveBeenCalled();
   });

@@ -14,7 +14,7 @@ describe("GateEvaluatorService", () => {
 
   beforeEach(async () => {
     dir = await fs.mkdtemp(path.join(os.tmpdir(), "policy-"));
-    const policy = new PolicyStorageService(dir);
+    const policy = new PolicyStorageService(new GateRulesStorageService(dir));
     await policy.onModuleInit(); // seeds the default floor
     evaluator = new GateEvaluatorService(policy);
   });
@@ -308,7 +308,7 @@ describe("GateEvaluatorService", () => {
       const recorded: unknown[] = [];
       const activity = { record: (entry: unknown) => void recorded.push(entry) };
       const scoped = new GateEvaluatorService(
-        new PolicyStorageService(dir),
+        new PolicyStorageService(new GateRulesStorageService(dir)),
         undefined,
         activity as never,
       );
@@ -335,7 +335,7 @@ describe("GateEvaluatorService", () => {
       departments = new DepartmentsStorageService(departmentsDir);
       await departments.onModuleInit();
       scoped = new GateEvaluatorService(
-        new PolicyStorageService(dir),
+        new PolicyStorageService(new GateRulesStorageService(dir)),
         undefined,
         undefined,
         catalog,
@@ -433,7 +433,7 @@ describe("GateEvaluatorService", () => {
 
     it("no catalog service injected → empty department bucket, tier default still applies", async () => {
       const bare = new GateEvaluatorService(
-        new PolicyStorageService(dir),
+        new PolicyStorageService(new GateRulesStorageService(dir)),
         undefined,
         undefined,
         undefined,
@@ -463,5 +463,52 @@ describe("GateEvaluatorService", () => {
         }),
       ).toBeNull();
     });
+  });
+
+  describe("floor rule the operator moved to the allow column", () => {
+    const off: GateRule = {
+      id: "floor-git.push",
+      source: "system",
+      locked: true,
+      match: [{ type: "action", action: "git.push" }],
+      decision: "allow",
+    };
+    const evaluator = new GateEvaluatorService({ floor: async () => [off] } as never);
+
+    it("evaluates as allow (it still matches, so no fail-closed ask)", () => {
+      expect(evaluator.evaluate([off], { action: "git.push" }).decision).toBe("allow");
+    });
+
+    it("an own rule can still harden it", () => {
+      const own: GateRule = {
+        id: "own",
+        source: "agent",
+        locked: false,
+        match: off.match,
+        decision: "ask",
+        resolve: { type: "human" },
+      };
+      expect(evaluator.evaluate([own, off], { action: "git.push" }).decision).toBe("ask");
+    });
+
+    it("an allow own rule no longer weakens it", () => {
+      expect(
+        evaluator.validateHardenOnly([off], [{ match: off.match, decision: "allow" }]),
+      ).toBeNull();
+    });
+  });
+
+  it("the strictest matching global rule wins, whatever the list order", () => {
+    const global = (id: string, decision: "allow" | "ask" | "notify"): GateRule => ({
+      id,
+      source: "system",
+      locked: true,
+      match: [{ type: "action", action: "git.push" }],
+      decision,
+      ...(decision === "ask" ? { resolve: { type: "human" as const } } : {}),
+    });
+    const action = { action: "git.push", branch: "main" };
+    const rules = [global("a", "allow"), global("b", "ask"), global("c", "notify")];
+    expect(evaluator.evaluate(rules, action)).toMatchObject({ decision: "ask", ruleId: "b" });
   });
 });

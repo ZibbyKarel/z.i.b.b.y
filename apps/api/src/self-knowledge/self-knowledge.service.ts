@@ -6,7 +6,6 @@ import { IntegrationKindSchema, type Note, type SelfKnowledge } from "@zibby/con
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.service";
-import { PolicyStorageService } from "../gates/policy.storage.service";
 import { NoteNotFoundError, VaultService } from "../memory/vault.service";
 import { WorkflowsStorageService } from "../workflows/workflows.storage.service";
 import {
@@ -57,7 +56,6 @@ export class SelfKnowledgeService {
     private readonly agents: AgentsStorageService,
     private readonly workflows: WorkflowsStorageService,
     private readonly gateRules: GateRulesStorageService,
-    private readonly policy: PolicyStorageService,
     private readonly vault: VaultService,
     @Inject(GRAPH_REPORT_PATH) private readonly graphReportPath: string,
     private readonly departments: DepartmentsStorageService,
@@ -93,21 +91,18 @@ export class SelfKnowledgeService {
   }
 
   private async gather(): Promise<SelfKnowledgeComposerInput> {
-    const [agents, workflows, gateRules, policyFloor, codebaseShape, departments] =
-      await Promise.all([
-        this.agents.list(),
-        this.workflows.list(),
-        this.gateRules.list(),
-        this.policy.floor(),
-        this.readCodebaseShape(),
-        this.departments.list(),
-      ]);
+    const [agents, workflows, gateRules, codebaseShape, departments] = await Promise.all([
+      this.agents.list(),
+      this.workflows.list(),
+      this.gateRules.list(),
+      this.readCodebaseShape(),
+      this.departments.list(),
+    ]);
     return {
       agents,
       workflows,
       departments,
       gateRules,
-      policyFloor,
       channelKinds: [...IntegrationKindSchema.options],
       codebaseShape,
     };

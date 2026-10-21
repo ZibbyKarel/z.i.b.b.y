@@ -7,7 +7,6 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import type { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.service";
-import { PolicyStorageService } from "../gates/policy.storage.service";
 import { VaultService } from "../memory/vault.service";
 import { WorkflowsStorageService } from "../workflows/workflows.storage.service";
 import { SELF_KNOWLEDGE_NOTE_ID, SelfKnowledgeService } from "./self-knowledge.service";
@@ -29,8 +28,6 @@ async function makeService(
   await workflows.onModuleInit();
   const gateRules = new GateRulesStorageService(path.join(dir, "gate-rules"));
   await gateRules.onModuleInit();
-  const policy = new PolicyStorageService(path.join(dir, "policy"));
-  await policy.onModuleInit();
   const vault = new VaultService(path.join(dir, "vault"));
   await vault.onModuleInit();
 
@@ -42,7 +39,6 @@ async function makeService(
       agents,
       workflows,
       gateRules,
-      policy,
       vault,
       resolvedGraphReportPath,
       { list: async () => [...DEPARTMENT_SEED] } as unknown as DepartmentsStorageService,
@@ -72,7 +68,7 @@ describe("SelfKnowledgeService", () => {
       const result = await service.compose();
 
       expect(result.sections.agents).toBe(1);
-      // The seeded default catalog + floor are non-empty (see the storage services).
+      // The seeded default rules (system + starter) are non-empty (see the storage services).
       expect(result.sections.gateRules).toBeGreaterThan(0);
       expect(result.sections.channels).toBeGreaterThan(0);
       expect(result.markdown).toContain("koder");

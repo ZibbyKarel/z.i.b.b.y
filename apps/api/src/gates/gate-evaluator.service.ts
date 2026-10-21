@@ -11,7 +11,10 @@ import type {
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { DepartmentsStorageService } from "../departments/departments.storage.service";
-import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.service";
+import {
+  GateRulesStorageService,
+  isSystemGateRule,
+} from "../gate-rules/gate-rules.storage.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { DECISION_RANK } from "./decision-rank";
 import { PolicyStorageService } from "./policy.storage.service";
@@ -23,8 +26,8 @@ export interface AgentPolicyInput {
 }
 
 /**
- * The gate policy engine. Pure with respect to entities — it reads only the locked
- * floor (via {@link PolicyStorageService}), the global gate-rule catalog (NS2 F3a,
+ * The gate policy engine. Pure with respect to entities — it reads only the global
+ * rules (the "floor" bucket, via {@link PolicyStorageService}), the global gate-rule catalog (NS2 F3a,
  * via {@link GateRulesStorageService}, for the per-department bucket) and whatever
  * rules a caller hands it, so it has no dependency on the agents store (avoiding a
  * module cycle: the runner and the gates controller both depend on this, and the
@@ -195,8 +198,9 @@ export class GateEvaluatorService {
    *
    * Buckets matches into three sets — own (agent, unlocked), department (NS2 F3a:
    * catalog rules of the acting unit's owning department, `source: "department"`,
-   * unlocked) and floor (system, locked) — first-match-wins WITHIN each bucket
-   * (so a more specific rule still beats a less specific one on the same side),
+   * unlocked) and floor (the global rules, locked) — first-match-wins WITHIN the own
+   * and department buckets (so a more specific rule still beats a less specific one
+   * on the same side), strictest-match within the global bucket,
    * then returns the STRICTEST of the bucket winners. A rule list with no
    * department rules (every call before F3a, and every unowned unit after it)
    * leaves the department bucket empty, reproducing the two-bucket result exactly.
@@ -225,13 +229,14 @@ export class GateEvaluatorService {
         resolve: rule.resolve,
       };
       if (rule.locked) {
-        if (!floor) floor = hit;
+        // The global bucket shows on the gates board as decision columns with no
+        // cross-column order, so the STRICTEST matching global rule wins, not the first.
+        if (!floor || DECISION_RANK[hit.decision] > DECISION_RANK[floor.decision]) floor = hit;
       } else if (rule.source === "department") {
         if (!department) department = hit;
       } else {
         if (!own) own = hit;
       }
-      if (own && department && floor) break;
     }
     // Strictest non-null bucket wins; on a tie the LATER bucket (floor last) is
     // kept via `>=`, preserving the pre-F3a two-bucket tie behavior (floor wins).
@@ -267,14 +272,18 @@ export class GateEvaluatorService {
   }
 
   /**
-   * Harden-only check: an agent rule may not be weaker than a floor rule on the
-   * same action. Returns the first violation, or null if the rules only harden.
+   * Harden-only check: an agent rule may not be weaker than a built-in system rule
+   * on the same action. Returns the first violation, or null if the rules only harden.
+   * Only the system rules are checked: a broad operator rule (e.g. a scope-only
+   * `notify`) would otherwise 422 every unrelated agent `allow`. Runtime stays
+   * strictest-of-buckets against ALL global rules either way.
    */
   validateHardenOnly(floor: GateRule[], own: GateRuleInput[]): PolicyViolation | null {
+    const system = floor.filter((r) => isSystemGateRule(r.id));
     for (let i = 0; i < own.length; i++) {
       const rule = own[i];
       if (!rule) continue;
-      for (const floorRule of floor) {
+      for (const floorRule of system) {
         if (this.provablyDisjoint(rule.match, floorRule.match)) continue;
         if (DECISION_RANK[rule.decision] < DECISION_RANK[floorRule.decision]) {
           this.log?.warn("policy violation: agent rule weakens the floor", {

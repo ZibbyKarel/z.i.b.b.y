@@ -18,13 +18,12 @@ import { useAgentsQuery } from "../../agents";
 import { MandateSection } from "../../settings/components/MandateSection";
 import { useProjectsQuery } from "../../projects";
 import { GateRulesSection } from "../components/GateRulesSection";
-import { SystemFloorPanel } from "../components/SystemFloorPanel";
 
-const SECTIONS = ["floor", "global", "project", "agent", "mandate"] as const;
+const SECTIONS = ["global", "project", "agent", "mandate"] as const;
 type Section = (typeof SECTIONS)[number];
 
 function asSection(value: string | null): Section {
-  return (SECTIONS as readonly string[]).includes(value ?? "") ? (value as Section) : "floor";
+  return (SECTIONS as readonly string[]).includes(value ?? "") ? (value as Section) : "global";
 }
 
 function NavLink({
@@ -42,7 +41,7 @@ interface AgentRuleRow {
 
 /**
  * `/governance/gates` — the gate-rule surfaces unified behind a `?section=` SubNav
- * (ZB-08): floor, global rules, per-project, per-agent (links out) and mandate
+ * (ZB-08): global rules (system + operator), per-project, per-agent (links out) and mandate
  * (ex-settings `MandateSection`, moved).
  */
 export function GatesScreen() {
@@ -68,8 +67,7 @@ export function GatesScreen() {
 }
 
 function SectionBody({ section }: { section: Section }): ReactNode {
-  if (section === "floor") return <SystemFloorPanel />;
-  if (section === "global") return <GateRulesSection hideFloor />;
+  if (section === "global") return <GateRulesSection />;
   if (section === "project") return <ProjectRulesSection />;
   if (section === "agent") return <AgentRulesList />;
   if (section === "mandate") return <MandateSection />;

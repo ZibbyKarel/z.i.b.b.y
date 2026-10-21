@@ -227,3 +227,5 @@ directly, never a park) or predates the lease concept. A workflow stage's
 [workflows.md](./workflows.md) → "Wiring: workflow stage dispatch".
 
 <!-- Last reviewed 2026-09-24 (ZibbyCorp rename): module code changed only by the subsystem → department rename; this doc has no subsystem references. -->
+
+<!-- Last reviewed 2026-10-21 (gates unified): only agent-runner.service.test.ts changed (PolicyStorageService now wraps GateRulesStorageService); no runtime behavior described here changed. -->

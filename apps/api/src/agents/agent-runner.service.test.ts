@@ -8,6 +8,7 @@ import type { AgentsStorageService } from "./agents.storage.service";
 import type { HooksStorageService } from "../hooks/hooks.storage.service";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
 import { PolicyStorageService } from "../gates/policy.storage.service";
+import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.service";
 import type { McpCredentialsStore } from "../mcp/mcp-credentials.store";
 import type { McpServersStorageService } from "../mcp/mcp.storage.service";
 import type { SkillsStorageService } from "../skills/skills.storage.service";
@@ -282,7 +283,7 @@ describe("AgentRunnerService.evaluateIntent (Fáze 2b — orchestrator strictest
 
   beforeEach(async () => {
     policyDir = mkdtempSync(join(tmpdir(), "zibby-policy-"));
-    const policy = new PolicyStorageService(policyDir);
+    const policy = new PolicyStorageService(new GateRulesStorageService(policyDir));
     await policy.onModuleInit();
     gates = new GateEvaluatorService(policy);
   });
@@ -382,7 +383,7 @@ describe("AgentRunnerService.evaluateIntent (Fáze 2b — orchestrator strictest
 describe("AgentRunnerService.evaluateIntent — classifier-fallback orchestrator run is gated identically", () => {
   it("gates a run whose agentId is the reserved ORCHESTRATOR_ID exactly like a named-agent run", async () => {
     const policyDir = mkdtempSync(join(tmpdir(), "zibby-policy-"));
-    const policy = new PolicyStorageService(policyDir);
+    const policy = new PolicyStorageService(new GateRulesStorageService(policyDir));
     await policy.onModuleInit();
     const gates = new GateEvaluatorService(policy);
     try {

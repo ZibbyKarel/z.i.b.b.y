@@ -3,7 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { GlobalGateRuleInput } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { GateRuleNotFoundError } from "./gate-rules.errors";
+import { GateRuleNotFoundError, SystemGateRuleError } from "./gate-rules.errors";
 import { GateRulesStorageService } from "./gate-rules.storage.service";
 
 describe("GateRulesStorageService", () => {
@@ -87,5 +87,26 @@ describe("GateRulesStorageService", () => {
     expect(created.department).toBeUndefined();
     const listed = await store.list();
     expect(listed.find((r) => r.id === created.id)?.department).toBeUndefined();
+  });
+
+  it("flags the built-in system rules and refuses to delete one", async () => {
+    const merge = (await store.list()).find((r) => r.id === "floor-pr.merge");
+    expect(merge).toMatchObject({ system: true, decision: "deny" });
+    await expect(store.remove("floor-pr.merge")).rejects.toBeInstanceOf(SystemGateRuleError);
+    // ...but it can be edited (moved to another column).
+    const moved = await store.update("floor-pr.merge", { match: merge!.match, decision: "allow" });
+    expect(moved).toMatchObject({ system: true, decision: "allow" });
+  });
+
+  it("puts a system rule missing from the file back, without storing the flag", async () => {
+    const file = path.join(dir, "gate-rules.json");
+    const stored = JSON.parse(await fs.readFile(file, "utf8")) as { id: string }[];
+    expect(stored.some((r) => "system" in r)).toBe(false);
+    await fs.writeFile(file, JSON.stringify(stored.filter((r) => r.id !== "floor-git.push")));
+
+    expect((await store.list()).some((r) => r.id === "floor-git.push")).toBe(true);
+    await new GateRulesStorageService(dir).onModuleInit();
+    const healed = JSON.parse(await fs.readFile(file, "utf8")) as { id: string }[];
+    expect(healed.some((r) => r.id === "floor-git.push")).toBe(true);
   });
 });

@@ -28,3 +28,6 @@ tags:
 - 2026-10-20 03:00 | index | [[department-qa-moc]]
 - 2026-10-20 03:00 | index | [[department-pub-moc]]
 - 2026-10-20 03:00 | index | [[department-dev-moc]]
+- 2026-10-21 03:00 | create | [[distilled-2026-10-21]]
+- 2026-10-21 03:00 | index | [[department-dev-moc]]
+- 2026-10-21 03:00 | index | [[department-qa-moc]]

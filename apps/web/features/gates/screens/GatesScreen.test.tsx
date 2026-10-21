@@ -22,12 +22,7 @@ vi.mock("../../settings/components/MandateSection", () => ({
 }));
 vi.mock("../../projects", () => ({ useProjectsQuery: () => ({ data: [] }) }));
 vi.mock("../components/GateRulesSection", () => ({
-  GateRulesSection: ({ hideFloor }: { hideFloor?: boolean }) => (
-    <div>global-rules-section (hideFloor={String(Boolean(hideFloor))})</div>
-  ),
-}));
-vi.mock("../components/SystemFloorPanel", () => ({
-  SystemFloorPanel: () => <div>system-floor-panel</div>,
+  GateRulesSection: () => <div>global-rules-section</div>,
 }));
 
 describe("GatesScreen (ZB-08 ?section= router)", () => {
@@ -36,21 +31,21 @@ describe("GatesScreen (ZB-08 ?section= router)", () => {
     searchParams = new URLSearchParams();
   });
 
-  it("defaults to the read-only floor panel", () => {
+  it("defaults to the global rules section", () => {
     render(<GatesScreen />);
-    expect(screen.getByText("system-floor-panel")).toBeInTheDocument();
+    expect(screen.getByText("global-rules-section")).toBeInTheDocument();
   });
 
-  it("?section=global renders the global rules catalog with the floor hidden (I-1)", () => {
+  it("?section=global renders the unified global rules list", () => {
     searchParams = new URLSearchParams("section=global");
     render(<GatesScreen />);
-    expect(screen.getByText("global-rules-section (hideFloor=true)")).toBeInTheDocument();
+    expect(screen.getByText("global-rules-section")).toBeInTheDocument();
   });
 
-  it("the retired ?section=signals / handoff values fall back to the floor panel", () => {
+  it("the retired ?section=signals / handoff values fall back to the global rules section", () => {
     searchParams = new URLSearchParams("section=signals");
     render(<GatesScreen />);
-    expect(screen.getByText("system-floor-panel")).toBeInTheDocument();
+    expect(screen.getByText("global-rules-section")).toBeInTheDocument();
   });
 
   it("?section=mandate renders the moved ex-settings mandate section", () => {
@@ -59,9 +54,15 @@ describe("GatesScreen (ZB-08 ?section= router)", () => {
     expect(screen.getByText("mandate-section")).toBeInTheDocument();
   });
 
+  it("the retired ?section=floor link falls back to the global rules section", () => {
+    searchParams = new URLSearchParams("section=floor");
+    render(<GatesScreen />);
+    expect(screen.getByText("global-rules-section")).toBeInTheDocument();
+  });
+
   it("an unknown section value falls back to the floor panel", () => {
     searchParams = new URLSearchParams("section=bogus");
     render(<GatesScreen />);
-    expect(screen.getByText("system-floor-panel")).toBeInTheDocument();
+    expect(screen.getByText("global-rules-section")).toBeInTheDocument();
   });
 });

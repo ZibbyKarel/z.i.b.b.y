@@ -2,7 +2,6 @@ import { Module } from "@nestjs/common";
 import * as path from "node:path";
 import { AgentsModule } from "../agents/agents.module";
 import { GateRulesModule } from "../gate-rules/gate-rules.module";
-import { GatesModule } from "../gates/gates.module";
 import { MemoryModule } from "../memory/memory.module";
 import { WorkflowsModule } from "../workflows/workflows.module";
 import { GRAPH_REPORT_PATH, SelfKnowledgeService } from "./self-knowledge.service";
@@ -30,13 +29,13 @@ export function resolveGraphReportPath(): string {
 
 /**
  * Self-Knowledge (Fáze 1, extended in Fáze 10). Reads across four existing
- * resources (agents, workflows, gate rules + the locked policy floor, the
+ * resources (agents, workflows, gate rules (system + operator), the
  * vault) rather than owning any storage of its own — the note it produces is
  * stored as an ordinary vault note via `MemoryModule`'s `VaultService`. Fáze 10
  * adds a sixth input read straight off disk: graphify's `GRAPH_REPORT.md`.
  */
 @Module({
-  imports: [AgentsModule, WorkflowsModule, GateRulesModule, GatesModule, MemoryModule],
+  imports: [AgentsModule, WorkflowsModule, GateRulesModule, MemoryModule],
   controllers: [SelfKnowledgeController],
   providers: [
     { provide: GRAPH_REPORT_PATH, useFactory: resolveGraphReportPath },

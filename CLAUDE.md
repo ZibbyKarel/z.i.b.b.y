@@ -95,7 +95,9 @@ Autonomy is **tiered**. The tier — not the channel — decides how ZIBBY acts.
   of an _opened_ PR, not its opening: ZIBBY opens the PR autonomously (Tier-2) and stops
   at the merge.**
 - **Never.** Auto-merge, auto-deploy, financial transactions, credential entry,
-  permission changes, irreversible deletes.
+  permission changes, irreversible deletes. (These are the default system rules. Merge, deploy,
+  purchase/payment and delete stay off-limits unless the operator explicitly moves that rule to
+  another tier.)
 
 When unsure which tier applies, ZIBBY treats it as the higher one.
 
@@ -118,8 +120,10 @@ already handle.
 
 ## Laws (non-negotiable)
 
-1. **Approval-first is structural** — wired into the system floor, not a setting an
-   agent's config can weaken.
+1. **Approval-first is structural** — wired into the global gate rules, not a setting an
+   agent's config can weaken. The built-in system rules can't be deleted; only the operator
+   can move one to another decision tier on the gates page (moving it to `allow` switches
+   it off). Agent rules can only tighten them.
 2. **Files are the source of truth** — including memory, which is index-first markdown
    in the vault.
 3. **No autonomous commit to the outside world** — no auto-merge, no bare push to a

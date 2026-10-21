@@ -1,5 +1,5 @@
 import type { Decision, GateRule, MatchCondition, Resolve } from "@zibby/contracts";
-import type { IconName, TagTone } from "@zibby/design-system";
+import type { IconName, IconTone, TagTone } from "@zibby/design-system";
 
 /**
  * The gate engine (chat 6 — the newest design): a rule is `matcher → decision
@@ -9,7 +9,8 @@ import type { IconName, TagTone } from "@zibby/design-system";
  */
 
 export interface DecisionMeta {
-  tone: TagTone;
+  /** Valid as both a Tag and an Icon tone (the gates board tints column headers with it). */
+  tone: Extract<TagTone, IconTone>;
   icon: IconName;
   cssVar: string;
 }
@@ -21,8 +22,6 @@ export const DECISION_META: Record<Decision, DecisionMeta> = {
   ask: { tone: "warn", icon: "shield", cssVar: "var(--color-warn)" },
   deny: { tone: "bad", icon: "x", cssVar: "var(--color-bad)" },
 };
-
-export const DECISION_ORDER: Decision[] = ["allow", "notify", "ask", "deny"];
 
 export type MatchType = MatchCondition["type"];
 

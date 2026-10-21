@@ -757,6 +757,8 @@ export const ScheduledTaskSchema = z.object({
         .string()
         .regex(/^[0-9a-f]{40}$/)
         .optional(),
+      /** When the review reached GitHub (`posted`) — the inbox hides "Review" until the PR changes after it. */
+      finishedAt: IsoDateTimeSchema.optional(),
     })
     .optional(),
   /**
@@ -813,6 +815,8 @@ export const ScheduledTaskSchema = z.object({
       note: z.string().optional(),
       /** Thread replies `github-commenter` drafted (validated at park time); posted only after the push. */
       replies: z.array(PrThreadReplySchema).max(50).optional(),
+      /** When the push + follow-up finished (`pushed`) — the inbox hides "Address" until the PR changes after it. */
+      finishedAt: IsoDateTimeSchema.optional(),
       /** How many replies reached GitHub, and why any did not. */
       replied: z.number().int().nonnegative().optional(),
       repliesNote: z.string().optional(),

@@ -39,6 +39,8 @@
     "migrate:company-integrations": "pnpm --filter @zibby/api exec ts-node -P tsconfig.json ../../scripts/migrate-company-integrations.ts",
     "self-knowledge:generate": "pnpm --filter @zibby/api exec ts-node -P tsconfig.json ../../tools/self-knowledge/generate.ts",
     "prepare": "git config core.hooksPath .githooks",
+    "postinstall": "bash scripts/setup-coloring-book.sh --auto",
+    "setup:coloring-book": "bash scripts/setup-coloring-book.sh",
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",

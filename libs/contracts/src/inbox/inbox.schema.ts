@@ -98,6 +98,8 @@ export const InboxPrSchema = z.object({
   repo: z.string().min(1),
   author: z.string(),
   createdAt: IsoDateTimeSchema,
+  /** GitHub's `updated_at` — bumped by any comment, review, push or re-request on the PR. */
+  updatedAt: IsoDateTimeSchema.optional(),
   draft: z.boolean(),
   ci: InboxPrCiSchema,
   review: InboxPrReviewSchema,
@@ -110,7 +112,13 @@ export const InboxPrSchema = z.object({
   blocker: InboxPrBlockerSchema,
   section: InboxPrSectionSchema,
   /** Phase 129 P2 — the latest ZIBBY code review of this PR (see `PrReviewStateSchema`). */
-  codeReview: z.object({ taskId: z.string().min(1), state: PrReviewStateSchema }).optional(),
+  codeReview: z
+    .object({
+      taskId: z.string().min(1),
+      state: PrReviewStateSchema,
+      finishedAt: IsoDateTimeSchema.optional(),
+    })
+    .optional(),
   /**
    * todo-11 — GitHub's `mergeable_state === "behind"`: the head lacks base commits.
    * Absent otherwise. GitHub reports it only under an "up to date" branch protection.
@@ -133,7 +141,11 @@ export const InboxPrSchema = z.object({
   rebase: z.object({ taskId: z.string().min(1), state: PrRebaseStateSchema }).optional(),
   /** PR inbox redesign — the latest ZIBBY "Address review comments" task of this PR. */
   addressComments: z
-    .object({ taskId: z.string().min(1), state: PrAddressCommentsStateSchema })
+    .object({
+      taskId: z.string().min(1),
+      state: PrAddressCommentsStateSchema,
+      finishedAt: IsoDateTimeSchema.optional(),
+    })
     .optional(),
   projectId: z.string().min(1),
   companyId: z.string().min(1).optional(),

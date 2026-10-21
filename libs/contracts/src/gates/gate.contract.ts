@@ -14,8 +14,8 @@ import {
 const c = initContract();
 
 /**
- * The gate policy engine (Phase 3.5). A read-only system floor (`POLICY.md`,
- * locked), an agent's own rules (harden-only — a `replaceAgentGates` that weakens
+ * The gate policy engine (Phase 3.5). The global rules (the untagged entries of
+ * the gate-rules list, served here as the locked floor bucket), an agent's own rules (harden-only — a `replaceAgentGates` that weakens
  * the floor is a 422), and a dry-run `evaluate` for the UI. The runner calls the
  * same evaluator in-process; this is the thin HTTP wrapper over it.
  */
@@ -25,7 +25,7 @@ export const gatesContract = c.router(
       method: "GET",
       path: "/gates/policy",
       responses: { 200: z.object({ rules: z.array(GateRuleSchema) }) },
-      summary: "Read the locked system policy floor",
+      summary: "Read the global rules as the locked floor bucket",
     },
     evaluate: {
       method: "POST",

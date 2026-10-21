@@ -1,4 +1,5 @@
 import { renderWithProviders as render, screen } from "../../../test/render";
+import { fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { GlobalGateRule } from "@zibby/contracts";
@@ -28,7 +29,6 @@ vi.mock("../mutations", () => ({
   useCreateGateRuleMutation: () => ({ mutate: hooks.create, isPending: false }),
   useUpdateGateRuleMutation: () => ({ mutate: hooks.update, isPending: false }),
   useDeleteGateRuleMutation: () => ({ mutate: hooks.remove, isPending: false }),
-  useReorderGateRulesMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 vi.mock("../../agents", () => ({ useAgentsQuery: () => ({ data: [] }) }));
 vi.mock("../../skills", () => ({ useSkillsQuery: () => ({ data: [] }) }));
@@ -128,22 +128,137 @@ describe("GateRulesSection — department filter + auto-tag (Phase 87)", () => {
   it("renders the owner-department tag exactly on tagged rules (NS2 F3a)", () => {
     render(<GateRulesSection />);
     const tags = screen.getAllByTestId("global-rule-card-owner-tag");
-    // devRule + opsRule are tagged; untaggedRule renders no owner tag.
+    // devRule + opsRule are tagged; untaggedRule renders no owner tag. Columns run
+    // ask → deny → notify → allow, so the notify (Ops) card comes first.
     expect(tags).toHaveLength(2);
-    expect(tags[0]).toHaveTextContent("Dev");
-    expect(tags[1]).toHaveTextContent("Ops");
+    expect(tags[0]).toHaveTextContent("Ops");
+    expect(tags[1]).toHaveTextContent("Dev");
   });
 
   it("preserves an existing tag on edit, even though the edit form has no tag field", async () => {
     render(<GateRulesSection />);
     // Editing the untagged call site's own `devRule` (no `department`
     // prop) must not drop its existing tag.
+    // Columns run ask → deny → notify → allow: devRule (allow) is the last card.
     const editButtons = screen.getAllByRole("button", { name: "Upravit" });
-    await userEvent.click(editButtons[0]!);
+    await userEvent.click(editButtons.at(-1)!);
     await userEvent.click(screen.getByRole("button", { name: "Uložit pravidlo" }));
 
     expect(hooks.update).toHaveBeenCalledTimes(1);
     const [callArgs] = hooks.update.mock.calls[0]!;
     expect(callArgs.body.department).toBe("dev");
+  });
+});
+
+describe("GateRulesSection — decision columns", () => {
+  const askRule: GlobalGateRule = { ...rule, id: "a1", name: "Ask one" };
+  const askRule2: GlobalGateRule = { ...rule, id: "a2", name: "Ask two" };
+  const denyRule: GlobalGateRule = {
+    id: "d1",
+    name: "Deny one",
+    match: [{ type: "scope", scope: "*" }],
+    decision: "deny",
+  };
+
+  beforeEach(() => {
+    hooks.rules = {
+      data: [askRule, denyRule, askRule2],
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    };
+    hooks.update.mockClear();
+  });
+
+  it("always renders the four decision columns, allow included", () => {
+    render(<GateRulesSection />);
+    for (const d of ["ask", "deny", "notify", "allow"])
+      expect(screen.getByTestId(`decision-column-${d}`)).toBeInTheDocument();
+  });
+});
+
+describe("GateRulesSection — drag a card to another column", () => {
+  const askRule: GlobalGateRule = { ...rule, resolve: { type: "human" } };
+
+  beforeEach(() => {
+    hooks.rules = { data: [askRule], isPending: false, isError: false, refetch: vi.fn() };
+    hooks.update.mockClear();
+  });
+
+  it("dropping on the deny column moves the rule there and drops its resolve", () => {
+    render(<GateRulesSection />);
+    const data = new Map<string, string>();
+    const dataTransfer = {
+      setData: (k: string, v: string) => data.set(k, v),
+      getData: (k: string) => data.get(k) ?? "",
+      get types() {
+        return [...data.keys()];
+      },
+    };
+    const card = screen.getByText("Push do main").closest("[draggable]")!;
+    fireEvent.dragStart(card, { dataTransfer });
+    const deny = screen.getByTestId("decision-column-deny");
+    fireEvent.dragOver(deny, { dataTransfer });
+    fireEvent.drop(deny, { dataTransfer });
+    expect(hooks.update).toHaveBeenCalledWith({
+      params: { id: "push-main" },
+      body: { name: "Push do main", match: rule.match, decision: "deny" },
+    });
+  });
+
+  it("the move menu into ask defaults resolve to the operator", async () => {
+    hooks.rules.data = [{ ...rule, decision: "deny" }];
+    render(<GateRulesSection />);
+    await userEvent.click(screen.getAllByRole("button", { name: "Přesunout do" })[0]!);
+    await userEvent.click(screen.getByRole("menuitem", { name: /Přesunout do ask/ }));
+    expect(hooks.update.mock.calls[0]![0].body).toMatchObject({
+      decision: "ask",
+      resolve: { type: "human" },
+    });
+  });
+});
+
+describe("GateRulesSection — system rules", () => {
+  it("a system rule shows the shield and no delete button; an operator rule has one", () => {
+    hooks.rules = {
+      data: [{ ...rule, id: "floor-push", name: "Floor push", system: true }],
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    };
+    const first = render(<GateRulesSection />);
+    expect(screen.getByTestId("global-rule-card-system-icon")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Smazat" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Upravit" })).toBeInTheDocument();
+    first.unmount();
+
+    hooks.rules = { data: [rule], isPending: false, isError: false, refetch: vi.fn() };
+    render(<GateRulesSection />);
+    expect(screen.queryByTestId("global-rule-card-system-icon")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Smazat" })).toBeInTheDocument();
+  });
+
+  it("moving a system rule never sends the system flag", () => {
+    hooks.update.mockClear();
+    hooks.rules = {
+      data: [{ ...rule, id: "floor-push", system: true, decision: "deny" }],
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    };
+    render(<GateRulesSection />);
+    const data = new Map<string, string>();
+    const dataTransfer = {
+      setData: (k: string, v: string) => data.set(k, v),
+      getData: (k: string) => data.get(k) ?? "",
+      get types() {
+        return [...data.keys()];
+      },
+    };
+    fireEvent.dragStart(screen.getByText("Push do main").closest("[draggable]")!, { dataTransfer });
+    const notify = screen.getByTestId("decision-column-notify");
+    fireEvent.dragOver(notify, { dataTransfer });
+    fireEvent.drop(notify, { dataTransfer });
+    expect(hooks.update.mock.calls[0]![0].body).not.toHaveProperty("system");
   });
 });

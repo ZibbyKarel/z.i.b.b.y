@@ -6,11 +6,10 @@ import { GateRuleIdSchema, GlobalGateRuleInputSchema, GlobalGateRuleSchema } fro
 const c = initContract();
 
 /**
- * The global gate-rule catalog — the "Pravidla schvalování" page. A flat, ordered
- * list of reusable rules (first match wins) that agents and skills link by id. It
- * is the middle policy layer: the locked system floor (`POLICY.md`) is below it and
- * an entity's own rules are above. CRUD plus an explicit `reorder` (the order is
- * meaningful, so it is a first-class operation, not a side effect of update).
+ * The global gate rules — the gates board. One list holding the built-in system
+ * rules (`system: true`, not deletable) and the operator's own; untagged rules apply
+ * to every run (strictest match wins), an agent's own rules can only tighten them.
+ * CRUD plus `reorder` (order only matters within a department's bucket).
  */
 export const gateRulesContract = c.router(
   {
@@ -46,8 +45,8 @@ export const gateRulesContract = c.router(
       method: "DELETE",
       path: "/gate-rules/:id",
       pathParams: z.object({ id: GateRuleIdSchema }),
-      responses: { 200: z.object({ id: GateRuleIdSchema }), 404: ErrorSchema },
-      summary: "Remove a catalog rule",
+      responses: { 200: z.object({ id: GateRuleIdSchema }), 404: ErrorSchema, 409: ErrorSchema },
+      summary: "Remove a catalog rule (409 for a built-in system rule)",
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },

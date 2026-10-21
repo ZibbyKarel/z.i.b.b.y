@@ -53,14 +53,31 @@ type Run =
   | { kind: "rebase"; taskId: string; state: PrRebaseState }
   | { kind: "address"; taskId: string; state: PrAddressCommentsState };
 
-const isReview = (pr: InboxPr) => pr.bucket === "to-review" && !pr.draft;
+/**
+ * ZIBBY's own writes (the review, the push, thread replies, re-requests) bump GitHub's
+ * `updated_at` just before `finishedAt` is stamped — this absorbs them plus clock skew.
+ * ponytail: a colleague's comment within this window after a run stays hidden until the next change.
+ */
+const SETTLE_MS = 60_000;
+/** The run succeeded after the PR's last change: nothing new to act on until the PR moves again. */
+const handled = (pr: InboxPr, run?: { finishedAt?: string }) =>
+  run?.finishedAt !== undefined &&
+  pr.updatedAt !== undefined &&
+  Date.parse(pr.updatedAt) <= Date.parse(run.finishedAt) + SETTLE_MS;
+
+const isReview = (pr: InboxPr) =>
+  pr.bucket === "to-review" && !pr.draft && !handled(pr, pr.codeReview);
 /** Colleagues may review with comments only, so open threads count, not just CHANGES_REQUESTED. */
 const hasThreadsToAddress = (pr: InboxPr) =>
   pr.unresolvedThreads === undefined
     ? pr.blocker === "changes-requested" // unknown count: only a changes-requested PR still offers it
     : pr.unresolvedThreads > 0;
 const isFix = (pr: InboxPr) =>
-  !isReview(pr) && pr.bucket === "mine" && pr.headRef !== undefined && hasThreadsToAddress(pr);
+  !isReview(pr) &&
+  pr.bucket === "mine" &&
+  pr.headRef !== undefined &&
+  hasThreadsToAddress(pr) &&
+  !handled(pr, pr.addressComments);
 /** todo-11 — offered only when conflicting or behind, never as a fallback. */
 const isRebase = (pr: InboxPr) =>
   !isReview(pr) &&
@@ -106,7 +123,8 @@ export interface PrActionsProps {
  * - my PR conflicting with / behind its base → "Rebase on <base>" (todo-11). Never a fallback;
  * - `ready-to-merge` → hold-to-confirm "Squash and merge" (optionally deleting the head branch).
  * While a ZIBBY run is in flight its running label (linked to the task) replaces the buttons;
- * a failed run keeps the buttons and adds a link to the failed task.
+ * a failed run keeps the buttons and adds a link to the failed task. Review / Address hide once
+ * their latest run succeeded after the PR's last GitHub change (`updatedAt` ≤ `finishedAt`).
  */
 export function PrActions({ pr, baseLabel }: PrActionsProps) {
   const t = useTranslations("inboxPage.prs.actions");

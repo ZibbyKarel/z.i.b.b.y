@@ -259,7 +259,14 @@ export class InboxReviewService implements OnModuleInit {
     }
     if (!res.ok) return fail(`github review post: HTTP ${res.status}${await githubReason(res)}`);
     await this.tasks.setPrReview(taskId, (c) =>
-      c ? { ...c, state: "posted", ...(note ? { note: note.slice(0, 300) } : {}) } : c,
+      c
+        ? {
+            ...c,
+            state: "posted",
+            finishedAt: new Date().toISOString(),
+            ...(note ? { note: note.slice(0, 300) } : {}),
+          }
+        : c,
     );
     // The review changes the PR's section — don't serve the stale 30 s cache.
     this.inbox.dropPrsCache();

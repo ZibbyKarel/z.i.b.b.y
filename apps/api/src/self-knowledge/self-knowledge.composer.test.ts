@@ -1,4 +1,4 @@
-import type { Agent, Department, GateRule, GlobalGateRule, Workflow } from "@zibby/contracts";
+import type { Agent, Department, GlobalGateRule, Workflow } from "@zibby/contracts";
 import { describe, expect, it } from "vitest";
 import {
   type SelfKnowledgeComposerInput,
@@ -35,10 +35,9 @@ const workflow: Workflow = {
   complexity: "standard",
 };
 
-const floorRule: GateRule = {
+const systemRule: GlobalGateRule = {
   id: "floor-git.push",
-  source: "system",
-  locked: true,
+  system: true,
   match: [{ type: "action", action: "git.push", branch: "main" }],
   decision: "ask",
   resolve: { type: "human" },
@@ -73,8 +72,7 @@ function baseInput(
     agents: [agent],
     workflows: [workflow],
     departments: [department],
-    gateRules: [catalogRule],
-    policyFloor: [floorRule],
+    gateRules: [systemRule, catalogRule],
     channelKinds: ["slack", "email"],
     generatedAt: "2026-07-05T00:00:00.000Z",
     ...overrides,
@@ -141,7 +139,6 @@ describe("composeSelfKnowledge", () => {
         workflows: [],
         departments: [],
         gateRules: [],
-        policyFloor: [],
         channelKinds: [],
       }),
     );

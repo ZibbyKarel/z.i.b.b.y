@@ -203,6 +203,10 @@ export class InboxAddressCommentsService implements OnModuleInit {
     // Only after a successful push: replies cite shas that must exist, and resolving / re-requesting
     // review only makes sense once the fixes are on GitHub. Never throws.
     await this.postFollowUp(taskId);
+    // Stamped after the follow-up: its replies / re-requests bump the PR's `updated_at` too.
+    await this.tasks
+      .setPrAddressComments(taskId, (c) => (c ? { ...c, finishedAt: new Date().toISOString() } : c))
+      .catch(() => undefined);
     // The push changes the PR's head and checks — don't serve the stale 30 s cache.
     this.inbox.dropPrsCache();
     this.log?.info("pr review fixes pushed", { taskId, repo: fix.repo, number: fix.number });

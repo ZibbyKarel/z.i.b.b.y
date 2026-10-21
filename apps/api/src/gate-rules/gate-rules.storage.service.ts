@@ -14,7 +14,11 @@ import {
   safeJson,
   writeFileAtomic,
 } from "../shared/file-storage";
-import { GateRuleNotFoundError, InvalidGateRuleIdError } from "./gate-rules.errors";
+import {
+  GateRuleNotFoundError,
+  InvalidGateRuleIdError,
+  SystemGateRuleError,
+} from "./gate-rules.errors";
 
 /** DI token carrying the absolute path of the directory that holds the catalog file. */
 export const GATE_RULES_DIR = "GATE_RULES_DIR";
@@ -22,11 +26,14 @@ export const GATE_RULES_DIR = "GATE_RULES_DIR";
 const FILE = "gate-rules.json";
 
 /**
- * Durable persistence for the global gate-rule catalog: a single ordered
- * `gate-rules.json` (the list order is the evaluation order — first match wins, so
- * it is meaningful and must round-trip exactly). Tolerant parse (a single corrupt
- * rule is dropped, never fatal to the catalog) and atomic writes, mirroring the
- * other file-backed stores. Seeded with a conservative default catalog on first run.
+ * Durable persistence for the global gate rules: a single ordered `gate-rules.json`
+ * holding the built-in {@link SYSTEM_RULES} (the former `POLICY.md` floor) and the
+ * operator's own rules. Order only matters inside a department's bucket (first match
+ * wins there); the untagged global bucket takes the strictest match. A system rule
+ * can be edited or moved to another decision, never deleted: one missing from the
+ * file (hand-edited) is put back on every read. Tolerant parse (a single corrupt
+ * rule is dropped, never fatal) and atomic writes, mirroring the other file-backed
+ * stores. Seeded with the system rules + a starter catalog on first run.
  */
 @Injectable()
 export class GateRulesStorageService implements OnModuleInit {
@@ -39,10 +46,24 @@ export class GateRulesStorageService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     await ensureDir(this.dir);
     if (!(await fileExists(this.file))) await this.persist(DEFAULT_CATALOG);
+    else if ((await this.readFile()).length < (await this.list()).length) {
+      await this.persist(await this.list()); // a system rule was missing: the file stays the truth.
+    }
   }
 
-  /** The whole catalog, in order. A single malformed rule is skipped, not fatal. */
+  /**
+   * The whole list, in order, system rules flagged `system: true`; a missing system
+   * rule is put back in front. A single malformed rule is skipped, not fatal.
+   */
   async list(): Promise<GlobalGateRule[]> {
+    const rules = await this.readFile();
+    const ids = new Set(rules.map((r) => r.id));
+    return [...SYSTEM_RULES.filter((r) => !ids.has(r.id)), ...rules].map((r) =>
+      isSystemGateRule(r.id) ? { ...r, system: true } : r,
+    );
+  }
+
+  private async readFile(): Promise<GlobalGateRule[]> {
     const raw = await fs.readFile(this.file, "utf8").catch(() => null);
     if (raw === null) return [...DEFAULT_CATALOG];
     const parsed = safeJson(raw);
@@ -69,16 +90,19 @@ export class GateRulesStorageService implements OnModuleInit {
     const rules = await this.list();
     const index = rules.findIndex((r) => r.id === id);
     if (index === -1) throw new GateRuleNotFoundError(id);
-    const updated: GlobalGateRule = { ...input, id };
+    const updated: GlobalGateRule = isSystemGateRule(id)
+      ? { ...input, id, system: true }
+      : { ...input, id };
     const next = [...rules];
     next[index] = updated;
     await this.persist(next);
     return updated;
   }
 
-  /** Remove a rule from the catalog. */
+  /** Remove a rule from the catalog. A system rule can't be removed (move it to allow). */
   async remove(id: string): Promise<void> {
     this.assertValidId(id);
+    if (isSystemGateRule(id)) throw new SystemGateRuleError(id);
     const rules = await this.list();
     if (!rules.some((r) => r.id === id)) throw new GateRuleNotFoundError(id);
     await this.persist(rules.filter((r) => r.id !== id));
@@ -113,8 +137,81 @@ export class GateRulesStorageService implements OnModuleInit {
 
   private async persist(rules: GlobalGateRule[]): Promise<void> {
     await ensureDir(this.dir);
-    await writeFileAtomic(this.file, JSON.stringify(rules, null, 2));
+    // `system` is derived from the id, never stored.
+    const stored = rules.map((rule) => {
+      const copy = { ...rule };
+      delete copy.system;
+      return copy;
+    });
+    await writeFileAtomic(this.file, JSON.stringify(stored, null, 2));
   }
+}
+
+const ask = (action: string, name: string, desc: string): GlobalGateRule => ({
+  id: `floor-${action}`,
+  name,
+  desc,
+  match: [{ type: "action", action }],
+  decision: "ask",
+  resolve: { type: "human" },
+});
+
+const notify = (action: string, name: string, desc: string): GlobalGateRule => ({
+  id: `floor-${action}`,
+  name,
+  desc,
+  match: [{ type: "action", action }],
+  decision: "notify",
+});
+
+/**
+ * The built-in system rules — the former locked `POLICY.md` floor, now ordinary
+ * global rules the operator can edit or move to another decision (`allow` switches
+ * one off), but never delete. Defaults: money / destructive / outbound / git-publish
+ * actions ask a human; `pr.merge` is a deny (merging is "Never" in the autonomy
+ * contract). `agent.delegate`, `channel-reply` and `pr.open` are explicit `notify`
+ * entries (Tier-1/Tier-2, logged) so they don't fall through to the fail-closed
+ * `ask` an unmatched action gets. The `floor-` ids are kept stable: approvals and the
+ * activity feed reference them.
+ */
+export const SYSTEM_RULES: GlobalGateRule[] = [
+  ask("purchase", "Nákup", "Jakýkoli nákup čeká na tvé potvrzení."),
+  ask("payment", "Platba", "Platba odchází až po tvém schválení."),
+  ask("git.force_push", "Force push", "Force push přepisuje historii — vždy se zeptá."),
+  ask("git.push", "Push", "Push do vzdálené větve se nejdřív zeptá."),
+  ask(
+    "gh.api_write",
+    "Zápis přes GitHub API",
+    "Zápis přes GitHub API (komentáře, labely…) potřebuje souhlas.",
+  ),
+  ask("send_email", "Odeslání e-mailu", "Odeslání e-mailu jde přes tebe."),
+  ask("delete", "Mazání", "Mazání se neprovede bez tvého potvrzení."),
+  ask(
+    "jira.create_issue",
+    "Založení Jira issue",
+    "Založení Jira issue je zápis ven — čeká na schválení.",
+  ),
+  ask("spend-past-cap", "Útrata nad rozpočet", "Útrata nad rozpočet projektu se musí schválit."),
+  ask("agent.propose_new", "Nový agent", "Aktivace nově navrženého agenta čeká na tebe."),
+  ask("deploy", "Deploy", "Nasazení se nikdy nespustí samo."),
+  ask("operator.question", "Otázka na tebe", "Otázka agenta na tebe — odpovědět můžeš jen ty."),
+  {
+    id: "floor-pr.merge",
+    name: "Merge PR",
+    desc: "Merge PR ZIBBY nikdy neprovede sám.",
+    match: [{ type: "action", action: "pr.merge" }],
+    decision: "deny",
+  },
+  notify("channel-reply", "Odpověď do kanálu", "Odpověď do kanálu se pošle a zaloguje."),
+  notify("agent.delegate", "Předání subagentovi", "Předání práce subagentovi se jen zaloguje."),
+  notify("pr.open", "Otevření PR", "Otevření PR proběhne samo a objeví se v briefingu."),
+];
+
+const SYSTEM_RULE_IDS = new Set(SYSTEM_RULES.map((r) => r.id));
+
+/** Whether `id` names a built-in system rule (not deletable). */
+export function isSystemGateRule(id: string): boolean {
+  return SYSTEM_RULE_IDS.has(id);
 }
 
 /**
@@ -122,7 +219,7 @@ export class GateRulesStorageService implements OnModuleInit {
  * (action/threshold/scope/context/tool). The ids are stable so seeded agents/skills
  * can reference them via `gateRuleIds`.
  */
-const DEFAULT_CATALOG: GlobalGateRule[] = [
+const STARTER_CATALOG: GlobalGateRule[] = [
   {
     id: "gr-push-main",
     name: "Push do main",
@@ -163,3 +260,5 @@ const DEFAULT_CATALOG: GlobalGateRule[] = [
     resolve: { type: "human" },
   },
 ];
+
+const DEFAULT_CATALOG: GlobalGateRule[] = [...SYSTEM_RULES, ...STARTER_CATALOG];

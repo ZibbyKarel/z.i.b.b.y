@@ -1,5 +1,227 @@
 [
   {
+    "name": "Nákup",
+    "desc": "Jakýkoli nákup čeká na tvé potvrzení.",
+    "match": [
+      {
+        "type": "action",
+        "action": "purchase"
+      }
+    ],
+    "decision": "ask",
+    "resolve": {
+      "type": "human"
+    },
+    "id": "floor-purchase"
+  },
+  {
+    "name": "Platba",
+    "desc": "Platba odchází až po tvém schválení.",
+    "match": [
+      {
+        "type": "action",
+        "action": "payment"
+      }
+    ],
+    "decision": "ask",
+    "resolve": {
+      "type": "human"
+    },
+    "id": "floor-payment"
+  },
+  {
+    "name": "Force push",
+    "desc": "Force push přepisuje historii — vždy se zeptá.",
+    "match": [
+      {
+        "type": "action",
+        "action": "git.force_push"
+      }
+    ],
+    "decision": "ask",
+    "resolve": {
+      "type": "human"
+    },
+    "id": "floor-git.force_push"
+  },
+  {
+    "name": "Push",
+    "desc": "Push do vzdálené větve se nejdřív zeptá.",
+    "match": [
+      {
+        "type": "action",
+        "action": "git.push"
+      }
+    ],
+    "decision": "ask",
+    "resolve": {
+      "type": "human"
+    },
+    "id": "floor-git.push"
+  },
+  {
+    "name": "Zápis přes GitHub API",
+    "desc": "Zápis přes GitHub API (komentáře, labely…) potřebuje souhlas.",
+    "match": [
+      {
+        "type": "action",
+        "action": "gh.api_write"
+      }
+    ],
+    "decision": "allow",
+    "id": "floor-gh.api_write"
+  },
+  {
+    "name": "Odeslání e-mailu",
+    "desc": "Odeslání e-mailu jde přes tebe.",
+    "match": [
+      {
+        "type": "action",
+        "action": "send_email"
+      }
+    ],
+    "decision": "ask",
+    "resolve": {
+      "type": "human"
+    },
+    "id": "floor-send_email"
+  },
+  {
+    "name": "Mazání",
+    "desc": "Mazání se neprovede bez tvého potvrzení.",
+    "match": [
+      {
+        "type": "action",
+        "action": "delete"
+      }
+    ],
+    "decision": "notify",
+    "id": "floor-delete"
+  },
+  {
+    "name": "Založení Jira issue",
+    "desc": "Založení Jira issue je zápis ven — čeká na schválení.",
+    "match": [
+      {
+        "type": "action",
+        "action": "jira.create_issue"
+      }
+    ],
+    "decision": "ask",
+    "resolve": {
+      "type": "human"
+    },
+    "id": "floor-jira.create_issue"
+  },
+  {
+    "name": "Útrata nad rozpočet",
+    "desc": "Útrata nad rozpočet projektu se musí schválit.",
+    "match": [
+      {
+        "type": "action",
+        "action": "spend-past-cap"
+      }
+    ],
+    "decision": "ask",
+    "resolve": {
+      "type": "human"
+    },
+    "id": "floor-spend-past-cap"
+  },
+  {
+    "name": "Nový agent",
+    "desc": "Aktivace nově navrženého agenta čeká na tebe.",
+    "match": [
+      {
+        "type": "action",
+        "action": "agent.propose_new"
+      }
+    ],
+    "decision": "ask",
+    "resolve": {
+      "type": "human"
+    },
+    "id": "floor-agent.propose_new"
+  },
+  {
+    "name": "Deploy",
+    "desc": "Nasazení se nikdy nespustí samo.",
+    "match": [
+      {
+        "type": "action",
+        "action": "deploy"
+      }
+    ],
+    "decision": "ask",
+    "resolve": {
+      "type": "human"
+    },
+    "id": "floor-deploy"
+  },
+  {
+    "name": "Otázka na tebe",
+    "desc": "Otázka agenta na tebe — odpovědět můžeš jen ty.",
+    "match": [
+      {
+        "type": "action",
+        "action": "operator.question"
+      }
+    ],
+    "decision": "ask",
+    "resolve": {
+      "type": "human"
+    },
+    "id": "floor-operator.question"
+  },
+  {
+    "name": "Merge PR",
+    "desc": "Merge PR ZIBBY nikdy neprovede sám.",
+    "match": [
+      {
+        "type": "action",
+        "action": "pr.merge"
+      }
+    ],
+    "decision": "deny",
+    "id": "floor-pr.merge"
+  },
+  {
+    "name": "Odpověď do kanálu",
+    "desc": "Odpověď do kanálu se pošle a zaloguje.",
+    "match": [
+      {
+        "type": "action",
+        "action": "channel-reply"
+      }
+    ],
+    "decision": "notify",
+    "id": "floor-channel-reply"
+  },
+  {
+    "name": "Předání subagentovi",
+    "desc": "Předání práce subagentovi se jen zaloguje.",
+    "match": [
+      {
+        "type": "action",
+        "action": "agent.delegate"
+      }
+    ],
+    "decision": "notify",
+    "id": "floor-agent.delegate"
+  },
+  {
+    "name": "Otevření PR",
+    "desc": "Otevření PR proběhne samo a objeví se v briefingu.",
+    "match": [
+      {
+        "type": "action",
+        "action": "pr.open"
+      }
+    ],
+    "decision": "notify",
+    "id": "floor-pr.open"
+  },
+  {
     "name": "Push do main",
     "desc": "Přímý push do hlavní větve vždy projde tvým schválením.",
     "match": [

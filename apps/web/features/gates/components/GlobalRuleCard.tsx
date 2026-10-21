@@ -11,13 +11,16 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import type { ReactNode } from "react";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { DECISION_META, MATCHER_ICON } from "../gate";
-import { DecisionBadge, MatcherText, ResolveChips } from "./RuleParts";
+import { MatcherText, ResolveChips } from "./RuleParts";
 
 export enum GlobalRuleCardTestId {
   /** The owning-department scope tag (NS2 F3a) — rendered iff `rule.department` is set. */
   OwnerTag = "global-rule-card-owner-tag",
+  /** The shield replacing the matcher icon on a built-in system rule (`rule.system`). */
+  SystemIcon = "global-rule-card-system-icon",
 }
 
 /** A catalog rule's consumer (an agent or a skill that links it via `gateRuleIds`). */
@@ -33,14 +36,10 @@ export interface GlobalRuleCardProps {
   agents: RuleUser[];
   /** Skills that link this rule. */
   skills: RuleUser[];
-  /** Reorder is hidden while a decision filter is active (visual order ≠ eval order). */
-  canReorder: boolean;
-  isFirst: boolean;
-  isLast: boolean;
-  onMoveUp: (id: string) => void;
-  onMoveDown: (id: string) => void;
   onEdit: (rule: GlobalGateRule) => void;
   onDelete: (id: string) => void;
+  /** The board's "move to another column" menu (keyboard path for drag & drop). */
+  moveMenu?: ReactNode;
 }
 
 /** A chip naming one agent/skill that uses the rule. */
@@ -56,21 +55,20 @@ function UserChip({ user }: { user: RuleUser }) {
 }
 
 /**
- * One global gate rule in the catalog: matcher → decision (→ resolve, for `ask`),
- * an optional name/description, a usage strip (which agents/skills link it) and the
- * row actions (reorder up/down, edit, delete). The left border encodes the decision.
+ * One global gate rule in the catalog: name + description, the matcher (→ resolve,
+ * for `ask`), a usage strip (which agents/skills link it) and the row actions
+ * (move to another column, edit, delete). A built-in system rule (`rule.system`)
+ * looks the same but wears a shield instead of the matcher icon and has no delete
+ * button — it can be edited and moved, never removed. The decision isn't badged — the column
+ * the card sits in names it; the left border still encodes it.
  */
 export function GlobalRuleCard({
   rule,
   agents,
   skills,
-  canReorder,
-  isFirst,
-  isLast,
-  onMoveUp,
-  onMoveDown,
   onEdit,
   onDelete,
+  moveMenu,
 }: GlobalRuleCardProps) {
   const t = useTranslations("gates");
   const departments = useDepartmentLookup();
@@ -82,96 +80,38 @@ export function GlobalRuleCard({
   const owner = rule.department ? departments.get(rule.department) : undefined;
 
   return (
-    // eslint-disable-next-line react/forbid-dom-props
-    <div style={{ borderLeft: `3px solid ${meta.cssVar}`, borderRadius: 2 }}>
+    <div
+      // eslint-disable-next-line react/forbid-dom-props
+      style={{
+        borderLeft: `3px solid ${meta.cssVar}`,
+        borderRadius: 2,
+      }}
+    >
       <Card background="panel" radius="sm">
         <Container padding="150">
           <Stack gap="100">
-            <Stack align="start" direction="row" gap="100">
-              <Icon name={matcherIcon} size="sm" tone="faint" />
+            <Stack align="center" direction="row" gap="100">
+              {rule.system ? (
+                <Icon data-testid={GlobalRuleCardTestId.SystemIcon} name="shield" size="sm" tone="warn" />
+              ) : (
+                <Icon name={matcherIcon} size="sm" tone="faint" />
+              )}
               <Container grow minW0>
-                <Stack gap="50">
-                  {rule.name && (
-                    <Typography size="sm" type="text" weight="semibold">
-                      {rule.name}
-                    </Typography>
-                  )}
-                  <Stack wrap align="center" direction="row" gap="100">
-                    <MatcherText andLabel={t("and")} match={rule.match} />
-                    <Typography mono size="2xs" type="note" variant="tertiary">
-                      →
-                    </Typography>
-                    <DecisionBadge
-                      decision={rule.decision}
-                      label={t(`decision_.${rule.decision}`)}
-                    />
-                    {rule.decision === "ask" && (
-                      <ResolveChips resolve={rule.resolve} youLabel={t("you")} />
-                    )}
-                    {rule.decision === "notify" && (
-                      <Typography mono size="2xs" type="note" variant="tertiary">
-                        {t("notifyHint")}
-                      </Typography>
-                    )}
-                  </Stack>
-                  {rule.desc && (
-                    <Typography size="xs" type="note" variant="tertiary">
-                      {rule.desc}
-                    </Typography>
-                  )}
-                </Stack>
-              </Container>
-
-              <Stack align="center" direction="row" gap="50">
-                {owner && (
-                  <Tag data-testid={GlobalRuleCardTestId.OwnerTag} tone="accent">
-                    <Stack inline align="center" as="span" direction="row" gap="50">
-                      <Icon name={departments.icon(owner.id)} size="xs" />
-                      {owner.name}
-                    </Stack>
-                  </Tag>
-                )}
-                {total > 0 ? (
-                  <Tag tone="accent">
-                    <Stack inline align="center" as="span" direction="row" gap="50">
-                      <Icon name="bot" size="xs" />
-                      {total}
-                    </Stack>
-                  </Tag>
-                ) : (
-                  <Typography mono size="2xs" type="note" variant="tertiary">
-                    {t("unused")}
+                {rule.name && (
+                  <Typography size="sm" type="text" weight="semibold">
+                    {rule.name}
                   </Typography>
                 )}
-                {canReorder && (
-                  <>
-                    <Button
-                      aria-label={t("moveUp")}
-                      disabled={isFirst}
-                      intent="ghost"
-                      onClick={() => onMoveUp(rule.id)}
-                      size="sm"
-                    >
-                      ↑
-                    </Button>
-                    <Button
-                      aria-label={t("moveDown")}
-                      disabled={isLast}
-                      intent="ghost"
-                      onClick={() => onMoveDown(rule.id)}
-                      size="sm"
-                    >
-                      ↓
-                    </Button>
-                  </>
-                )}
-                <Button
-                  aria-label={t("edit")}
-                  icon="edit"
-                  intent="ghost"
-                  onClick={() => onEdit(rule)}
-                  size="sm"
-                />
+              </Container>
+              {moveMenu}
+              <Button
+                aria-label={t("edit")}
+                icon="edit"
+                intent="ghost"
+                onClick={() => onEdit(rule)}
+                size="sm"
+              />
+              {!rule.system && (
                 <Button
                   aria-label={t("delete")}
                   icon="x"
@@ -179,7 +119,42 @@ export function GlobalRuleCard({
                   onClick={() => onDelete(rule.id)}
                   size="sm"
                 />
-              </Stack>
+              )}
+            </Stack>
+
+            {rule.desc && (
+              <Typography size="xs" type="note" variant="secondary">
+                {rule.desc}
+              </Typography>
+            )}
+            <Stack wrap align="center" direction="row" gap="100">
+              <MatcherText andLabel={t("and")} match={rule.match} />
+              {rule.decision === "ask" && (
+                <ResolveChips resolve={rule.resolve} youLabel={t("you")} />
+              )}
+            </Stack>
+
+            <Stack align="center" direction="row" gap="50">
+              {owner && (
+                <Tag data-testid={GlobalRuleCardTestId.OwnerTag} tone="accent">
+                  <Stack inline align="center" as="span" direction="row" gap="50">
+                    <Icon name={departments.icon(owner.id)} size="xs" />
+                    {owner.name}
+                  </Stack>
+                </Tag>
+              )}
+              {total > 0 ? (
+                <Tag tone="accent">
+                  <Stack inline align="center" as="span" direction="row" gap="50">
+                    <Icon name="bot" size="xs" />
+                    {total}
+                  </Stack>
+                </Tag>
+              ) : (
+                <Typography mono size="2xs" type="note" variant="tertiary">
+                  {t("unused")}
+                </Typography>
+              )}
             </Stack>
 
             {total > 0 && (

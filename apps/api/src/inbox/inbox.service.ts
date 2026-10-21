@@ -50,6 +50,7 @@ interface GhPull {
   mergeable?: boolean | null;
   mergeable_state?: string;
   created_at?: string;
+  updated_at?: string;
   user?: { login?: string } | null;
   head?: { sha?: string; ref?: string; repo?: { full_name?: string } | null };
   base?: { ref?: string };
@@ -304,6 +305,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
         reviews.set(`${review.repo.toLowerCase()}#${review.number}`, {
           taskId: task.id,
           state: review.state === "running" && dead ? "failed" : review.state,
+          ...(review.finishedAt ? { finishedAt: review.finishedAt } : {}),
         });
       }
       if (rebase) {
@@ -316,6 +318,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
         addressings.set(`${fix.repo.toLowerCase()}#${fix.number}`, {
           taskId: task.id,
           state: fix.state === "running" && dead ? "failed" : fix.state,
+          ...(fix.finishedAt ? { finishedAt: fix.finishedAt } : {}),
         });
       }
     }
@@ -416,6 +419,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
           repo,
           author: pull.user?.login ?? "",
           createdAt: new Date(pull.created_at ?? Date.now()).toISOString(),
+          ...(pull.updated_at ? { updatedAt: new Date(pull.updated_at).toISOString() } : {}),
           draft: pull.draft === true,
           ci,
           review,

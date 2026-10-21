@@ -77,6 +77,8 @@ policy:
       - type: action
         action: channel-reply
     decision: notify
+decisions:
+  floor-delete: notify
 ---
 
 System policy floor. Agents may only harden these rules.

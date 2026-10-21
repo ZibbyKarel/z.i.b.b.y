@@ -334,6 +334,29 @@ describe("PrActions runs", () => {
   it("a finished run alone renders nothing", () => {
     expect(hasPrActions(pr(7, { rebase: { taskId: "t9", state: "pushed" } }))).toBe(false);
   });
+
+  it("Review / Address hide after a successful run until the PR changes again", () => {
+    const done = "2026-01-02T10:00:00.000Z";
+    const review = (updatedAt: string) =>
+      pr(3, {
+        ...toReview,
+        updatedAt,
+        codeReview: { taskId: "t", state: "posted", finishedAt: done },
+      });
+    const fix = (updatedAt: string) =>
+      pr(4, {
+        headRef: "feat",
+        unresolvedThreads: 2,
+        updatedAt,
+        addressComments: { taskId: "t", state: "pushed", finishedAt: done },
+      });
+    // ZIBBY's own write lands just before / around finishedAt → handled.
+    expect(hasPrActions(review("2026-01-02T10:00:30.000Z"))).toBe(false);
+    expect(hasPrActions(fix("2026-01-02T09:59:59.000Z"))).toBe(false);
+    // A colleague's comment / new push later → offered again.
+    expect(hasPrActions(review("2026-01-02T11:00:00.000Z"))).toBe(true);
+    expect(hasPrActions(fix("2026-01-02T11:00:00.000Z"))).toBe(true);
+  });
 });
 
 describe("PrActions merge", () => {

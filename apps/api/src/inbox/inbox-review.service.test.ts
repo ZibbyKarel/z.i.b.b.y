@@ -182,7 +182,10 @@ describe("InboxReviewService", () => {
         headers: expect.objectContaining({ authorization: "Bearer tok" }),
       }),
     );
-    expect((await storage.get("task_r1")).prReview?.state).toBe("posted");
+    expect((await storage.get("task_r1")).prReview).toMatchObject({
+      state: "posted",
+      finishedAt: expect.any(String),
+    });
     expect(dropPrsCache).toHaveBeenCalledOnce();
   });
 

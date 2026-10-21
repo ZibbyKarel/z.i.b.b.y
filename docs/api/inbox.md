@@ -95,6 +95,13 @@ it. `codeReview` (the latest review task, of any level, per `repo#number`, from 
 store) is joined on every read, uncached. A `running` review whose task failed or
 whose run errored reads `failed`.
 
+Each row carries `updatedAt` (GitHub's `updated_at`: any comment, review, push or
+re-request bumps it). `codeReview.finishedAt` / `addressComments.finishedAt` are stamped
+when the run succeeded (`posted` / `pushed` + follow-up). The UI hides "Review" / "Address
+review comments" while `updatedAt <= finishedAt + 60 s` (the slack absorbs ZIBBY's own
+writes and clock skew): the PR's GitHub state alone (team review request, changes
+requested, unresolved threads) doesn't re-offer an action already handled.
+
 ## Code review (`POST /api/inbox/prs/review`)
 
 Shown on PRs in the two review sections. The service resolves the project's GitHub
@@ -246,7 +253,7 @@ whose reply failed stays open), and review is re-requested via
 task outcome says how many replies reached GitHub, how many threads were resolved, who was
 asked to re-review, and any follow-up failure.
 
-`GET /api/inbox/prs` rows carry `addressComments { taskId, state }` (latest such task per PR; a
+`GET /api/inbox/prs` rows carry `addressComments { taskId, state, finishedAt? }` (latest such task per PR; a
 `running` one whose task/run died reads `failed`).
 
 ## Rebase (`POST /api/inbox/prs/rebase`)

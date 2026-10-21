@@ -4,7 +4,11 @@ import { gateRulesContract } from "@zibby/contracts";
 import { unknownDepartment422 } from "../departments/departments.errors";
 import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { makeErrorMapper } from "../shared/http/error-mapping";
-import { GateRuleNotFoundError, InvalidGateRuleIdError } from "./gate-rules.errors";
+import {
+  GateRuleNotFoundError,
+  InvalidGateRuleIdError,
+  SystemGateRuleError,
+} from "./gate-rules.errors";
 import { GateRulesStorageService } from "./gate-rules.storage.service";
 
 const errors = makeErrorMapper("Gate rule", {
@@ -60,10 +64,17 @@ export class GateRulesController {
       },
 
       deleteGateRule: ({ params: { id } }) =>
-        errors.or404(id, async () => {
-          await this.store.remove(id);
-          return { id };
-        }),
+        errors.or404(
+          id,
+          async () => {
+            await this.store.remove(id);
+            return { id };
+          },
+          (error) =>
+            error instanceof SystemGateRuleError
+              ? ({ status: 409, body: { message: error.message } } as const)
+              : undefined,
+        ),
     });
   }
 }

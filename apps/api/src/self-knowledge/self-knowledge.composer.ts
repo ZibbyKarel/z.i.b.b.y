@@ -1,7 +1,6 @@
 import type {
   Agent,
   Department,
-  GateRule,
   GlobalGateRule,
   MatchCondition,
   SelfKnowledgeSections,
@@ -44,10 +43,8 @@ export interface SelfKnowledgeComposerInput {
   /** Static department identities (`@zibby/contracts` `DEPARTMENTS`) — name + mandate
    *  only, NEVER live state/tier2Count/tier3Count (decision 3, phase-105 master plan). */
   departments: Department[];
-  /** The global gate-rule catalog (the "Pravidla schvalování" page). */
+  /** The global gate rules (built-in system rules flagged `system`, plus the operator's). */
   gateRules: GlobalGateRule[];
-  /** The locked system policy floor (`POLICY.md`). */
-  policyFloor: GateRule[];
   /** Kinds of channel adapter ZIBBY knows how to speak (e.g. "slack", "email"). */
   channelKinds: string[];
   /**
@@ -186,30 +183,22 @@ function renderDepartments(departments: Department[]): string {
   return lines.join("\n");
 }
 
-function renderGates(floor: GateRule[], catalog: GlobalGateRule[]): string {
-  const lines = [`## Gate rules (${floor.length + catalog.length})`, ""];
-
-  lines.push(`### System floor (locked, ${floor.length})`);
-  if (floor.length === 0) {
-    lines.push("_None._");
-  } else {
-    for (const rule of [...floor].sort(ascendingById)) {
-      lines.push(`- \`${rule.id}\`: ${describeMatch(rule.match)} → **${rule.decision}**`);
-    }
-  }
-
-  lines.push("", `### Catalog (${catalog.length})`);
-  if (catalog.length === 0) {
-    lines.push("_None._");
-  } else {
-    for (const rule of [...catalog].sort(ascendingById)) {
+function renderGates(rules: GlobalGateRule[]): string {
+  const lines = [`## Gate rules (${rules.length})`];
+  const groups: [string, GlobalGateRule[]][] = [
+    ["System rules", rules.filter((r) => r.system)],
+    ["Operator rules", rules.filter((r) => !r.system)],
+  ];
+  for (const [title, group] of groups) {
+    lines.push("", `### ${title} (${group.length})`);
+    if (group.length === 0) lines.push("_None._");
+    for (const rule of [...group].sort(ascendingById)) {
       const label = rule.name
         ? `${escapeAutoBoundaryMarkers(rule.name)} (\`${rule.id}\`)`
         : `\`${rule.id}\``;
       lines.push(`- ${label}: ${describeMatch(rule.match)} → **${rule.decision}**`);
     }
   }
-
   return lines.join("\n");
 }
 
@@ -278,7 +267,7 @@ export function composeSelfKnowledge(input: SelfKnowledgeComposerInput): Compose
   const sections: SelfKnowledgeSections = {
     agents: input.agents.length,
     workflows: input.workflows.length,
-    gateRules: input.policyFloor.length + input.gateRules.length,
+    gateRules: input.gateRules.length,
     channels: input.channelKinds.length,
     departments: input.departments.length,
     codebaseShape: {
@@ -293,7 +282,7 @@ export function composeSelfKnowledge(input: SelfKnowledgeComposerInput): Compose
     AGENTS: renderAgents(input.agents),
     WORKFLOWS: renderWorkflows(input.workflows),
     DEPARTMENTS: renderDepartments(input.departments),
-    GATES: renderGates(input.policyFloor, input.gateRules),
+    GATES: renderGates(input.gateRules),
     CHANNELS: renderChannels(input.channelKinds),
     "CODEBASE-SHAPE": renderCodebaseShape(codebaseShape),
   };

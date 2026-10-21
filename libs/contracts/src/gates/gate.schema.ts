@@ -138,11 +138,12 @@ export const PolicyViolationSchema = z.object({
 export type PolicyViolation = z.infer<typeof PolicyViolationSchema>;
 
 /**
- * The global gate-rule catalog (the "Pravidla schvalování" page) — the middle
- * layer between the locked system floor (`POLICY.md`) and an agent's/skill's own
- * rules. A catalog rule is the same decision core as a gate rule plus display
- * metadata (`name`/`desc`); agents and skills reference it by `id` (`gateRuleIds`)
- * to share one rule across many entities. The list is ordered (first match wins).
+ * The global gate rules (the gates board) — one list that holds both the built-in
+ * system rules (the former `POLICY.md` floor, `system: true`) and the operator's own.
+ * Untagged rules apply to every run as the global bucket (strictest matching rule
+ * wins, so their order doesn't matter); department-tagged ones only to that
+ * department's runs. A rule is the same decision core as a gate rule plus display
+ * metadata (`name`/`desc`); agents and skills may also link one by `id` (`gateRuleIds`).
  */
 
 /** Allowed shape of a catalog rule `id` — filename-safe, no path separators/traversal. */
@@ -183,5 +184,8 @@ export type GlobalGateRuleInput = z.infer<typeof GlobalGateRuleInputSchema>;
 /** A stored catalog rule: the input plus its stable `id` (referenced by `gateRuleIds`). */
 export const GlobalGateRuleSchema = GlobalGateRuleBaseSchema.extend({
   id: GateRuleIdSchema,
+  /** A built-in system rule: it can be edited and moved to another column (`allow` =
+   *  switched off), never deleted. Derived from the id by the server, never stored. */
+  system: z.boolean().optional(),
 }).superRefine(refineResolve);
 export type GlobalGateRule = z.infer<typeof GlobalGateRuleSchema>;
