@@ -60,6 +60,15 @@ describe("SystemSection", () => {
     expect(setConfig).toHaveBeenCalledWith({ body: { ...DEFAULTS, goalAutoResume: true } });
   });
 
+  it("keeps fields owned by other screens (operator/company name) on save", async () => {
+    config = { ...DEFAULTS, operatorName: "Karel", companyName: "Acme" };
+    render(<SystemSection />);
+    await userEvent.click(screen.getByTestId(SystemSectionTestId.Save));
+    expect(setConfig).toHaveBeenCalledWith({
+      body: { ...DEFAULTS, operatorName: "Karel", companyName: "Acme" },
+    });
+  });
+
   it("round-trips an untouched sub-minute tick unchanged", async () => {
     render(<SystemSection />);
     await userEvent.click(screen.getByTestId(SystemSectionTestId.Save));

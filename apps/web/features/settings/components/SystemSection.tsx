@@ -76,6 +76,9 @@ function SystemEditor({ config }: { config: SystemConfig }) {
   const save = () =>
     setConfig.mutate({
       body: {
+        // The whole document is PUT — spread the loaded config so fields owned by other
+        // screens (persona, power saver, TTS voice, operator/company name, ui) survive.
+        ...config,
         taskTickMs: tick(taskTickMs),
         channelTickMs: tick(channelTickMs),
         monitorTickMs: tick(monitorTickMs),
@@ -87,18 +90,6 @@ function SystemEditor({ config }: { config: SystemConfig }) {
         dockDoneTasksLimit: Math.min(100, positive(dockDoneTasksLimit, 1)),
         goalVerifyTimeoutMs: positive(goalVerifyTimeoutMs, 1),
         goalAutoResume,
-        // Not edited here — passed through so a runtime save can't reset the operator's
-        // chosen chat persona (the whole document is PUT). Owned by the Chat section.
-        chatPersona: config.chatPersona,
-        // Not edited here — passed through so a runtime save can't reset the operator's
-        // power-saver preference (the whole document is PUT). Owned by the Chat UI section.
-        powerSaver: config.powerSaver,
-        // Not edited here — passed through so a runtime save can't reset the operator's
-        // TTS voice pick (Phase 119c; the whole document is PUT). Owned by the Chat UI section.
-        ttsVoice: config.ttsVoice,
-        // Not edited here — passed through so a runtime save can't reset density or the
-        // Bridge layout (the whole document is PUT). Owned by the Bridge UI.
-        ui: config.ui,
       },
     });
 
