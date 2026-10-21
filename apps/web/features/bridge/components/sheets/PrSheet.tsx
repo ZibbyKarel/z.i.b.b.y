@@ -98,7 +98,7 @@ function reviewCell(pr: InboxPr): {
  * PR detail: REVIEW / CHECKS / CHANGES stat cells, STACK breadcrumb, details, CI, files and the
  * diff (`useInboxPrDiffQuery`). Footer: `OPEN ON GITHUB`, the inbox's `PrActionButtons` (code
  * review / address comments / rebase / merge, decided by the shared predicates) and — only when
- * the PR is not `ready-to-merge` — a dimmed MERGE plus `MERGE ON GITHUB`.
+ * the PR is not `ready-to-merge` — `MERGE ON GITHUB` (the note says why in-app merge is off).
  * The PR list carries no description, review comments or per-check list, so those blocks are
  * not shown; CI is the single aggregate row.
  */
@@ -169,14 +169,9 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
         <>
           <PrActionButtons baseLabel={base} pr={pr} />
           {merge ? null : (
-            <>
-              <SheetAction disabled intent="primary" title={t("bridge.sheet.pr.mergeBlocked")}>
-                {t("bridge.sheet.pr.merge")}
-              </SheetAction>
-              <SheetAction href={pr.url} intent="primary">
-                {t("bridge.sheet.pr.mergeOnGithub")}
-              </SheetAction>
-            </>
+            <SheetAction href={pr.url} intent="primary" title={t("bridge.sheet.pr.mergeBlocked")}>
+              {t("bridge.sheet.pr.mergeOnGithub")}
+            </SheetAction>
           )}
         </>
       }

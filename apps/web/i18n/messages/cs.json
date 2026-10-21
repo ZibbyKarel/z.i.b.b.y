@@ -3286,7 +3286,6 @@
         "by": "OD {who}",
         "you": "Ty",
         "openGithub": "OTEVŘÍT NA GITHUBU ↗",
-        "merge": "MERGE",
         "mergeOnGithub": "MERGE NA GITHUBU ↗",
         "mergeBlocked": "Merge se v aplikaci nabízí, jen když je PR připravený ke sloučení",
         "note": {

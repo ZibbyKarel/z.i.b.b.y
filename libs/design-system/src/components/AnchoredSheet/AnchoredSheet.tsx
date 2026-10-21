@@ -159,12 +159,18 @@ export function AnchoredSheet({
           >
             {footerStart}
             <span
-              className="min-w-0 flex-[1_1_0%] overflow-hidden text-ellipsis whitespace-nowrap px-[8px] text-ink-3"
+              className="min-w-[80px] flex-[1_1_0%] overflow-hidden text-ellipsis whitespace-nowrap px-[8px] text-ink-3"
               data-testid={AnchoredSheetTestId.FooterNote}
             >
               {footerNote}
             </span>
-            {footerEnd}
+            {/* One unbreakable group: if space runs out the whole group drops to its own
+             * line (right-aligned) — the buttons never wrap one by one or mid-label. */}
+            {footerEnd ? (
+              <div className="ml-auto flex flex-none items-center gap-[6px] whitespace-nowrap">
+                {footerEnd}
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>

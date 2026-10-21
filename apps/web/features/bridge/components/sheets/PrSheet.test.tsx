@@ -96,7 +96,7 @@ describe("PrSheet action buttons", () => {
     expect(screen.queryByTestId(PrActionsTestId.Address)).toBeNull();
   });
 
-  it("offers the in-app merge only when ready-to-merge; otherwise a dimmed MERGE + MERGE ON GITHUB", () => {
+  it("offers the in-app merge only when ready-to-merge; otherwise only MERGE ON GITHUB", () => {
     const { unmount } = show(
       pr(5, { section: "ready-to-merge", blocker: "ready-to-merge", review: "approved" }),
     );
@@ -109,7 +109,7 @@ describe("PrSheet action buttons", () => {
       "href",
       "https://github.com/acme/api/pull/6",
     );
-    expect(screen.getByText("MERGE")).toHaveAttribute("aria-disabled", "true");
+    expect(screen.queryByText("MERGE")).toBeNull();
   });
 });
 

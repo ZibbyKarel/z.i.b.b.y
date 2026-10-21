@@ -3286,7 +3286,6 @@
         "by": "BY {who}",
         "you": "You",
         "openGithub": "OPEN ON GITHUB ↗",
-        "merge": "MERGE",
         "mergeOnGithub": "MERGE ON GITHUB ↗",
         "mergeBlocked": "Merge is offered in the app only when the PR is ready to merge",
         "note": {
