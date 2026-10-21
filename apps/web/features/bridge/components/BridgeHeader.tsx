@@ -90,7 +90,7 @@ export function BridgeHeader({
   ];
 
   return (
-    <CommandBar subtitle={`/ ${t("title")}`} title="ZIBBYCORP">
+    <CommandBar logo={false} title={t("title")}>
       <CommandBarGroup>
         <CommandBarText faint>{t("layout")}</CommandBarText>
         <SegmentedControl

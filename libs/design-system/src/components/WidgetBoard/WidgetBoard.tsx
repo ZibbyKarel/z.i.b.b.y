@@ -26,8 +26,8 @@ export interface WidgetBoardProps {
 
 /**
  * A scrolling board that widgets are absolutely positioned on: `--color-bg` with a
- * 24px hairline grid, `var(--bridge-bp)` padding, a minimum inner width of 1440px
- * minus padding (the board scrolls inside a narrower shell). It measures its own
+ * 24px hairline grid, `var(--bridge-bp)` padding, it fills the available
+ * width (and scrolls if content ever overflows). It measures its own
  * inner width so the caller can derive the column width. Sits in a flex column and
  * fills the remaining height.
  */
@@ -66,7 +66,7 @@ export function WidgetBoard({
       ref={ref}
     >
       <div
-        className="relative w-full min-w-[calc(1440px-2*var(--bridge-bp))]"
+        className="relative w-full"
         data-testid={WidgetBoardTestId.Inner}
         ref={innerRef}
         style={{ height, backgroundImage: guides }}

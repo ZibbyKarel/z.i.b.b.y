@@ -14,6 +14,8 @@ export interface CommandBarProps {
   title: string;
   /** Faint trailing path, e.g. `/ BRIDGE`. */
   subtitle?: string;
+  /** Show the brand logo before the title (default true). */
+  logo?: boolean;
   /** Controls, right-aligned (use `CommandBarGroup`, `Button`, `SegmentedControl`, …). */
   children?: ReactNode;
   ref?: Ref<HTMLElement>;
@@ -23,7 +25,7 @@ export interface CommandBarProps {
  * A 48px screen header bar: `--color-panel`, bottom hairline, mono 10px/.12em. Logo +
  * title on the left, a spacer, then the controls. Sits above a `WidgetBoard`.
  */
-export function CommandBar({ title, subtitle, children, ref }: CommandBarProps) {
+export function CommandBar({ title, subtitle, logo = true, children, ref }: CommandBarProps) {
   return (
     <header
       className="flex h-[48px] flex-none items-center gap-[20px] border-b border-line bg-panel px-[16px] font-mono text-[10px] tracking-[.12em] whitespace-nowrap"
@@ -31,7 +33,7 @@ export function CommandBar({ title, subtitle, children, ref }: CommandBarProps) 
       ref={ref}
     >
       <div className="flex items-center gap-[10px]">
-        <BrandMark size={24} />
+        {logo ? <BrandMark size={24} /> : null}
         <span
           className="text-[13px] font-semibold tracking-[.18em]"
           data-testid={CommandBarTestId.Title}

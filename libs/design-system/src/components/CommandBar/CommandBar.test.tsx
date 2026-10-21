@@ -19,6 +19,11 @@ describe("CommandBar", () => {
     expect(screen.getAllByTestId(CommandBarTestId.Text)).toHaveLength(2);
   });
 
+  it("can omit the logo", () => {
+    const { container } = render(<CommandBar logo={false} title="X" />);
+    expect(container.querySelector("svg")).toBeNull();
+  });
+
   it("omits the subtitle when not given", () => {
     render(<CommandBar title="X" />);
     expect(screen.queryByTestId(CommandBarTestId.Subtitle)).toBeNull();

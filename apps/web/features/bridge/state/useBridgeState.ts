@@ -8,6 +8,7 @@ import {
   type DragOrigin,
   type WidgetType,
   addWidget,
+  compact,
   dragMove,
   dragResize,
   removeWidget,
@@ -110,11 +111,23 @@ export function useBridgeState() {
   const closeCatalog = useCallback(() => setCatalogOpen(false), []);
   const closeSelection = useCallback(() => setSelection(null), []);
   const beginDrag = useCallback((id: string) => setDraggingId(id), []);
-  const endDrag = useCallback(() => setDraggingId(null), []);
+  /** Drag end: a final compact WITHOUT priority (reference parity); CUSTOM only if it moved anything. */
+  const endDrag = useCallback(() => {
+    setDraggingId(null);
+    const cur = layoutRef.current;
+    const settled = compact(cur);
+    if (JSON.stringify(settled) !== JSON.stringify(cur)) commitLayout(settled);
+  }, [commitLayout]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      const el = e.target;
+      if (
+        el instanceof HTMLElement &&
+        (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)
+      )
+        return;
       if (selection) setSelection(null);
       else if (catalogOpen) setCatalogOpen(false);
       else if (editing) setEditing(false);

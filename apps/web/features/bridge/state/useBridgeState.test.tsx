@@ -80,6 +80,49 @@ describe("useBridgeState", () => {
     expect(setBridge).toHaveBeenLastCalledWith({ epicClosed: { "ZB-1": true } });
   });
 
+  it("Esc is ignored while typing in an input, textarea or contenteditable", () => {
+    const { result } = renderHook(() => useBridgeState());
+    act(() => result.current.toggleEditing());
+    const ta = document.createElement("textarea");
+    const ce = document.createElement("div");
+    // jsdom has no isContentEditable; emulate it
+    Object.defineProperty(ce, "isContentEditable", { value: true });
+    document.body.append(ta, ce);
+    for (const el of [ta, ce])
+      act(
+        () => void el.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })),
+      );
+    expect(result.current.editing).toBe(true);
+    ta.remove();
+    ce.remove();
+  });
+
+  it("endDrag settles with a final compact and flags CUSTOM only if something moved", () => {
+    ui = UiSettingsSchema.parse({
+      bridge: {
+        preset: "X",
+        layout: [
+          { id: "issues", type: "issues", x: 0, y: 0, w: 4, h: 4 },
+          { id: "prs", type: "prs", x: 0, y: 10, w: 4, h: 4 },
+        ],
+      },
+    });
+    const { result } = renderHook(() => useBridgeState());
+    act(() => result.current.beginDrag("prs"));
+    act(() => result.current.endDrag());
+    expect(result.current.draggingId).toBeNull();
+    expect(result.current.layout.find((w) => w.id === "prs")?.y).toBe(4);
+    expect(result.current.preset).toBe("CUSTOM");
+  });
+
+  it("endDrag on an already compact layout does not re-flag the preset", () => {
+    const { result } = renderHook(() => useBridgeState());
+    act(() => result.current.beginDrag("issues"));
+    act(() => result.current.endDrag());
+    expect(result.current.preset).toBe("DEFAULT");
+    expect(setBridge).not.toHaveBeenCalled();
+  });
+
   it("Esc closes the selection, then the catalog, then edit mode", () => {
     const { result } = renderHook(() => useBridgeState());
     const esc = () =>
