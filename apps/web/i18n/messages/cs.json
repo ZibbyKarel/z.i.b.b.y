@@ -3130,6 +3130,61 @@
     "resize": "Změnit velikost",
     "emptyWidget": "Tady nic není. Mimo režim úprav se widget sbalí na hlavičku.",
     "allClear": "VŠE V POŘÁDKU",
+    "widgets": {
+      "issues": {
+        "state": {
+          "new": "NOVÉ VE ZDROJI",
+          "waiting": "ČEKÁ NA TEBE",
+          "running": "BĚŽÍ",
+          "done": "HOTOVO"
+        },
+        "noEpic": "Bez epicu",
+        "you": "TY · {wait}",
+        "epicToggle": "Přepnout epic {title}"
+      },
+      "prs": {
+        "status": {
+          "reviewRequested": "ŽÁDOST O REVIEW",
+          "draft": "KONCEPT",
+          "ciFailing": "CI SELHÁVÁ",
+          "mergeConflict": "KONFLIKT PŘI MERGI",
+          "changesRequested": "POŽADOVANÉ ZMĚNY",
+          "checksRunning": "KONTROLY BĚŽÍ",
+          "approved": "SCHVÁLENO",
+          "awaitingReview": "ČEKÁ NA REVIEW"
+        },
+        "need": {
+          "merge": "MERGE"
+        },
+        "you": "TY · {wait}",
+        "on": "NA {base}",
+        "waitsOn": "· ČEKÁ NA {prs}"
+      },
+      "tasks": {
+        "you": "TY"
+      },
+      "runs": {
+        "colTask": "ÚKOL · KROK",
+        "colProgress": "POSTUP",
+        "colIssue": "ISSUE",
+        "state": {
+          "working": "PRACUJE",
+          "thinking": "PŘEMÝŠLÍ",
+          "blocked": "BLOKOVÁNO",
+          "error": "CHYBA",
+          "done": "HOTOVO",
+          "idle": "NEČINNÝ"
+        }
+      },
+      "briefing": {
+        "needs": "POTŘEBUJE TĚ",
+        "running": "BĚŽÍ TEĎ",
+        "prs": "OTEVŘENÉ PR",
+        "spend": "DNEŠNÍ VÝDAJE",
+        "kicker": "{date} · PŘEHLED",
+        "fallback": "Zatím není co hlásit."
+      }
+    },
     "you": "{n} TY",
     "widget": {
       "briefing": {
@@ -3151,6 +3206,100 @@
       "runs": {
         "label": "PRÁVĚ BĚŽÍ",
         "desc": "Úkoly, které právě procházejí workflow"
+      }
+    },
+    "sheet": {
+      "close": "Zavřít panel",
+      "hint": "J / K · ESC",
+      "kind": {
+        "issue": "ISSUE",
+        "task": "ÚKOL",
+        "pr": "PULL REQUEST"
+      },
+      "needsYou": "ČEKÁ NA TEBE · {kind}",
+      "waiting": "ČEKÁ {wait}",
+      "approve": "SCHVÁLIT",
+      "deny": "ZAMÍTNOUT",
+      "holdRule": "PRAVIDLO · SCHVÁLENÍ VYŽADUJE PODRŽENÍ NA STRÁNCE ÚKOLU",
+      "description": "POPIS",
+      "details": "DETAILY",
+      "none": "Zatím nic.",
+      "updated": "AKTUALIZOVÁNO {when}",
+      "created": "VYTVOŘENO {when}",
+      "issue": {
+        "epic": "EPIC",
+        "team": "TÝM",
+        "source": "ZDROJ",
+        "pr": "PULL REQUEST",
+        "noTeam": "Bez týmu",
+        "noEpic": "BEZ EPICU",
+        "epicChip": "EPIC {key}",
+        "noDescription": "Zdroj nemá žádný popis.",
+        "openIn": "OTEVŘÍT V {source} ↗",
+        "process": "ZPRACOVAT DO ÚKOLU",
+        "respond": "ODPOVĚDĚT",
+        "viewRun": "ZOBRAZIT BĚH"
+      },
+      "task": {
+        "chain": "ŘETĚZEC · {n}",
+        "subtasks": "PODÚKOLY",
+        "artifacts": "ARTEFAKTY",
+        "step": "KROK {n}",
+        "from": "Z {source}",
+        "noDepartment": "BEZ ODDĚLENÍ",
+        "noProject": "BEZ PROJEKTU",
+        "open": "OTEVŘÍT ÚKOL ↗",
+        "openApproval": "OTEVŘÍT SCHVÁLENÍ ↗"
+      },
+      "pr": {
+        "review": "REVIEW",
+        "checks": "KONTROLY",
+        "changes": "ZMĚNY",
+        "stack": "STACK",
+        "reviewValue": {
+          "approved": "SCHVÁLENO",
+          "changesRequested": "POŽADOVÁNY ZMĚNY",
+          "pending": "ČEKÁ",
+          "yourReview": "TVOJE REVIEW",
+          "draft": "DRAFT"
+        },
+        "ci": {
+          "passing": "PROŠLO",
+          "failing": "SELHÁVÁ",
+          "pending": "BĚŽÍ",
+          "unknown": "NEZNÁMÉ"
+        },
+        "ciRow": "CI",
+        "branch": "VĚTEV",
+        "author": "AUTOR",
+        "opened": "OTEVŘENO",
+        "updated": "AKTUALIZOVÁNO",
+        "mergeable": "SLUČITELNÉ",
+        "yes": "Ano",
+        "no": "Ne — konflikty",
+        "unknown": "Neznámé",
+        "threads": "OTEVŘENÁ VLÁKNA",
+        "files": "SOUBORY · {n}",
+        "noFiles": "Žádné soubory.",
+        "diffLoading": "Načítám změny…",
+        "diff": "DIFF · VŮČI {base}",
+        "by": "OD {who}",
+        "you": "Ty",
+        "openGithub": "OTEVŘÍT NA GITHUBU ↗",
+        "merge": "MERGE",
+        "mergeOnGithub": "MERGE NA GITHUBU ↗",
+        "mergeBlocked": "Merge se v aplikaci nabízí, jen když je PR připravený ke sloučení",
+        "note": {
+          "ready": "PŘIPRAVENO KE SLOUČENÍ",
+          "approved": "SCHVÁLENO",
+          "checksRunning": "KONTROLY BĚŽÍ",
+          "ciFailing": "CI SELHÁVÁ",
+          "conflict": "KONFLIKT PŘI SLUČOVÁNÍ",
+          "changesRequested": "POŽADOVÁNY ZMĚNY",
+          "needsApproval": "VYŽADUJE SCHVÁLENÍ",
+          "reviewRequested": "ŽÁDOST O REVIEW",
+          "draft": "DRAFT"
+        }
       }
     }
   }

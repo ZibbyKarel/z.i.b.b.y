@@ -3130,6 +3130,61 @@
     "resize": "Resize",
     "emptyWidget": "Nothing here. Outside edit mode this widget collapses to its header.",
     "allClear": "ALL CLEAR",
+    "widgets": {
+      "issues": {
+        "state": {
+          "new": "NEW IN SOURCE",
+          "waiting": "WAITING FOR YOU",
+          "running": "RUNNING",
+          "done": "DONE"
+        },
+        "noEpic": "No epic",
+        "you": "YOU · {wait}",
+        "epicToggle": "Toggle epic {title}"
+      },
+      "prs": {
+        "status": {
+          "reviewRequested": "REVIEW REQUESTED",
+          "draft": "DRAFT",
+          "ciFailing": "CI FAILING",
+          "mergeConflict": "MERGE CONFLICT",
+          "changesRequested": "CHANGES REQUESTED",
+          "checksRunning": "CHECKS RUNNING",
+          "approved": "APPROVED",
+          "awaitingReview": "AWAITING REVIEW"
+        },
+        "need": {
+          "merge": "MERGE"
+        },
+        "you": "YOU · {wait}",
+        "on": "ON {base}",
+        "waitsOn": "· WAITS ON {prs}"
+      },
+      "tasks": {
+        "you": "YOU"
+      },
+      "runs": {
+        "colTask": "TASK · STEP",
+        "colProgress": "PROGRESS",
+        "colIssue": "ISSUE",
+        "state": {
+          "working": "WORKING",
+          "thinking": "THINKING",
+          "blocked": "BLOCKED",
+          "error": "ERROR",
+          "done": "DONE",
+          "idle": "IDLE"
+        }
+      },
+      "briefing": {
+        "needs": "NEEDS YOU",
+        "running": "RUNNING NOW",
+        "prs": "OPEN PRS",
+        "spend": "SPEND TODAY",
+        "kicker": "{date} · BRIEFING",
+        "fallback": "Nothing to report yet."
+      }
+    },
     "you": "{n} YOU",
     "widget": {
       "briefing": {
@@ -3151,6 +3206,100 @@
       "runs": {
         "label": "RUNNING NOW",
         "desc": "Tasks moving through a workflow right now"
+      }
+    },
+    "sheet": {
+      "close": "Close sheet",
+      "hint": "J / K · ESC",
+      "kind": {
+        "issue": "ISSUE",
+        "task": "TASK",
+        "pr": "PULL REQUEST"
+      },
+      "needsYou": "NEEDS YOU · {kind}",
+      "waiting": "WAITING {wait}",
+      "approve": "APPROVE",
+      "deny": "DENY",
+      "holdRule": "RULE · APPROVAL NEEDS HOLD-TO-CONFIRM ON THE TASK PAGE",
+      "description": "DESCRIPTION",
+      "details": "DETAILS",
+      "none": "None yet.",
+      "updated": "UPDATED {when}",
+      "created": "CREATED {when}",
+      "issue": {
+        "epic": "EPIC",
+        "team": "TEAM",
+        "source": "SOURCE",
+        "pr": "PULL REQUEST",
+        "noTeam": "No team",
+        "noEpic": "NO EPIC",
+        "epicChip": "EPIC {key}",
+        "noDescription": "No description in the source.",
+        "openIn": "OPEN IN {source} ↗",
+        "process": "PROCESS INTO A TASK",
+        "respond": "RESPOND",
+        "viewRun": "VIEW RUN"
+      },
+      "task": {
+        "chain": "CHAIN · {n}",
+        "subtasks": "SUBTASKS",
+        "artifacts": "ARTIFACTS",
+        "step": "STEP {n}",
+        "from": "FROM {source}",
+        "noDepartment": "NO DEPARTMENT",
+        "noProject": "NO PROJECT",
+        "open": "OPEN TASK ↗",
+        "openApproval": "OPEN APPROVAL ↗"
+      },
+      "pr": {
+        "review": "REVIEW",
+        "checks": "CHECKS",
+        "changes": "CHANGES",
+        "stack": "STACK",
+        "reviewValue": {
+          "approved": "APPROVED",
+          "changesRequested": "CHANGES REQUESTED",
+          "pending": "PENDING",
+          "yourReview": "YOUR REVIEW",
+          "draft": "DRAFT"
+        },
+        "ci": {
+          "passing": "PASSING",
+          "failing": "FAILING",
+          "pending": "RUNNING",
+          "unknown": "UNKNOWN"
+        },
+        "ciRow": "CI",
+        "branch": "BRANCH",
+        "author": "AUTHOR",
+        "opened": "OPENED",
+        "updated": "UPDATED",
+        "mergeable": "MERGEABLE",
+        "yes": "Yes",
+        "no": "No — conflicts",
+        "unknown": "Unknown",
+        "threads": "OPEN THREADS",
+        "files": "FILES · {n}",
+        "noFiles": "No files.",
+        "diffLoading": "Loading changes…",
+        "diff": "DIFF · VS {base}",
+        "by": "BY {who}",
+        "you": "You",
+        "openGithub": "OPEN ON GITHUB ↗",
+        "merge": "MERGE",
+        "mergeOnGithub": "MERGE ON GITHUB ↗",
+        "mergeBlocked": "Merge is offered in the app only when the PR is ready to merge",
+        "note": {
+          "ready": "READY TO MERGE",
+          "approved": "APPROVED",
+          "checksRunning": "CHECKS RUNNING",
+          "ciFailing": "CI FAILING",
+          "conflict": "MERGE CONFLICT",
+          "changesRequested": "CHANGES REQUESTED",
+          "needsApproval": "NEEDS APPROVAL",
+          "reviewRequested": "REVIEW REQUESTED",
+          "draft": "DRAFT"
+        }
       }
     }
   }

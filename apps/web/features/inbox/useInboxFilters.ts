@@ -12,7 +12,8 @@ function parseDimension(raw: string | null): string[] {
   return raw ? raw.split(",").filter(Boolean) : [];
 }
 
-function readStored(): InboxFilters | null {
+/** The last filters the operator chose (localStorage), without touching the URL — for views outside the inbox. */
+export function readStoredInboxFilters(): InboxFilters | null {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
@@ -73,7 +74,7 @@ export function useInboxFilters() {
     if (restored.current) return;
     restored.current = true;
     if (hasInboxFilters(filters)) return;
-    const stored = readStored();
+    const stored = readStoredInboxFilters();
     if (stored && hasInboxFilters(stored)) replace(stored);
     // Mount-only restore; `replace` closes over the first render's params.
     // eslint-disable-next-line react-hooks/exhaustive-deps

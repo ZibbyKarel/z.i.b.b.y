@@ -42,4 +42,11 @@ describe("usageTone", () => {
     expect(getUsageTone(70)).toBe("warn");
     expect(getUsageTone(90)).toBe("bad");
   });
+
+  it("supports the board tones and a pulsing fill", () => {
+    render(<Progress pulse tone="idle" value={40} />);
+    const fill = screen.getByTestId(ProgressTestId.Fill);
+    expect(fill).toHaveClass("animate-zb-live");
+    expect(fill).toHaveClass("bg-[var(--color-state-idle)]");
+  });
 });

@@ -63,8 +63,10 @@ function BridgeWidgetHost({
     >
       <def.Component
         editing={editing}
+        epicClosed={state.epicClosed}
         onCountChange={onCountChange}
         onEmptyChange={onEmptyChange}
+        onEpicToggle={state.setEpicClosed}
         onOpen={state.setSelection}
         selection={selection}
         widget={widget}

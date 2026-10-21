@@ -4,26 +4,33 @@ import { cn } from "../../utils/cn";
 
 export type ProgressTone = "accent" | "ok" | "warn" | "bad" | "run";
 
+/** The bar fill also takes the ink and idle (neutral) fills the Bridge board uses. */
+export type ProgressBarTone = ProgressTone | "ink" | "idle";
+
 export enum ProgressTestId {
   Root = "progress-root",
   Fill = "progress-fill",
 }
 
-const toneBar: Record<ProgressTone, string> = {
+const toneBar: Record<ProgressBarTone, string> = {
   accent: "bg-accent",
   ok: "bg-ok",
   warn: "bg-warn",
   bad: "bg-bad",
   run: "bg-run",
+  ink: "bg-ink",
+  idle: "bg-[var(--color-state-idle)]",
 };
 
 export interface ProgressProps extends Omit<HTMLAttributes<HTMLDivElement>, "className"> {
   /** Fill percentage, 0–100. Ignored when `indeterminate`. */
   value?: number;
   /** Ignored when `indeterminate` — that fill is always the ZibbyCorp ink bar. */
-  tone?: ProgressTone;
+  tone?: ProgressBarTone;
   /** Track height as a spacing token. */
   height?: Spacing;
+  /** The fill breathes (`zb-live`) — only for a genuinely in-flight (working) bar. */
+  pulse?: boolean;
   /** Accessible label; renders an ARIA progressbar when provided. */
   label?: string;
   /** Unknown-duration loading: a sliding ink segment instead of a `value` fill
@@ -41,6 +48,7 @@ export function Progress({
   height = "75",
   label,
   indeterminate = false,
+  pulse = false,
   ref,
   ...props
 }: ProgressProps) {
@@ -71,6 +79,7 @@ export function Progress({
           className={cn(
             "absolute inset-y-0 left-0 rounded-none transition-[width] duration-300",
             toneBar[tone],
+            pulse && "animate-zb-live",
           )}
           data-testid={ProgressTestId.Fill}
           style={{ width: `${pct}%` }}

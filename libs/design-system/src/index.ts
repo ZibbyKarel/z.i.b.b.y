@@ -201,7 +201,7 @@ export { HoldButton, HoldButtonTestId } from "./components/HoldButton/HoldButton
 export type { HoldButtonProps, HoldButtonSize } from "./components/HoldButton/HoldButton";
 
 export { getUsageTone, Progress, ProgressTestId } from "./components/Progress/Progress";
-export type { ProgressProps, ProgressTone } from "./components/Progress/Progress";
+export type { ProgressBarTone, ProgressProps, ProgressTone } from "./components/Progress/Progress";
 
 export { ProgressRing, ProgressRingTestId } from "./components/ProgressRing/ProgressRing";
 export type { ProgressRingProps, ProgressRingSize } from "./components/ProgressRing/ProgressRing";
@@ -643,3 +643,58 @@ export type {
   WidgetCatalogEntry,
   WidgetCatalogProps,
 } from "./components/WidgetCatalog/WidgetCatalog";
+export {
+  BoardColumnHeader,
+  BoardGrid,
+  BoardLine,
+  BoardRow,
+  BoardRowTestId,
+} from "./components/BoardRow/BoardRow";
+export type {
+  BoardColumnHeaderProps,
+  BoardColumns,
+  BoardGridProps,
+  BoardLineProps,
+  BoardRowProps,
+  BoardRowTone,
+} from "./components/BoardRow/BoardRow";
+export { BoardText, BoardTextTestId } from "./components/BoardText/BoardText";
+export type {
+  BoardTextKind,
+  BoardTextProps,
+  BoardTextTone,
+} from "./components/BoardText/BoardText";
+export { BoardTag, BoardTagTestId } from "./components/BoardTag/BoardTag";
+export type { BoardTagProps } from "./components/BoardTag/BoardTag";
+export { RowGroupHeader, RowGroupHeaderTestId } from "./components/RowGroupHeader/RowGroupHeader";
+export type { RowGroupHeaderProps } from "./components/RowGroupHeader/RowGroupHeader";
+export { PipelineChips, PipelineChipsTestId } from "./components/PipelineChips/PipelineChips";
+export type { PipelineChip, PipelineChipsProps } from "./components/PipelineChips/PipelineChips";
+export { KpiStrip, KpiStripTestId } from "./components/KpiStrip/KpiStrip";
+export type { Kpi, KpiStripProps } from "./components/KpiStrip/KpiStrip";
+
+// --- Detail sheet kit (Bridge dashboard; generic) ---
+export { AnchoredSheet, AnchoredSheetTestId } from "./components/AnchoredSheet/AnchoredSheet";
+export type { AnchoredSheetProps } from "./components/AnchoredSheet/AnchoredSheet";
+export {
+  SheetAction,
+  SheetBlock,
+  SheetColumns,
+  SheetPartsTestId,
+  SheetSection,
+  SheetText,
+} from "./components/AnchoredSheet/SheetParts";
+export type { SheetActionProps } from "./components/AnchoredSheet/SheetParts";
+export type { SheetTone } from "./components/AnchoredSheet/sheetTone";
+export { StatCell, StatCellGrid, StatCellTestId } from "./components/StatCell/StatCell";
+export type { StatCellGridProps, StatCellProps } from "./components/StatCell/StatCell";
+export { NeedsYouCard, NeedsYouCardTestId } from "./components/NeedsYouCard/NeedsYouCard";
+export type { NeedsYouCardProps } from "./components/NeedsYouCard/NeedsYouCard";
+export { DetailTable, DetailTableTestId } from "./components/DetailTable/DetailTable";
+export type {
+  DetailTableProps,
+  DetailTableRow,
+  DetailTableVariant,
+} from "./components/DetailTable/DetailTable";
+export { StackCrumbs, StackCrumbsTestId } from "./components/StackCrumbs/StackCrumbs";
+export type { StackCrumb, StackCrumbsProps } from "./components/StackCrumbs/StackCrumbs";

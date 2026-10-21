@@ -45,6 +45,9 @@ export interface BridgeWidgetProps {
   onCountChange?: (info: BridgeWidgetInfo) => void;
   selection: BridgeSelection | null;
   onOpen: (selection: BridgeSelection) => void;
+  /** Collapsed epic groups (`ui.bridge.epicClosed`), keyed by epic id (`none` = no epic). */
+  epicClosed: Record<string, boolean>;
+  onEpicToggle: (key: string, closed: boolean) => void;
 }
 
 export interface WidgetDefinition {
