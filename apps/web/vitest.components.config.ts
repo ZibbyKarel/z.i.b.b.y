@@ -37,6 +37,8 @@ export default defineConfig({
       // Feature screens (page-level composites) and their pure state helpers.
       "features/*/screens/**/*.test.{ts,tsx}",
       "features/*/state/**/*.test.{ts,tsx}",
+      // Bridge grid engine (pure layout math).
+      "features/*/grid/**/*.test.ts",
       // Feature mutation hooks (TanStack Query mutations; renderHook needs jsdom).
       "features/*/mutations/**/*.test.{ts,tsx}",
       // Shared hooks (generic cross-domain browser-API wrappers).
