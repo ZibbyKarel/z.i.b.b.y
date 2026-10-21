@@ -51,7 +51,9 @@ function resolveSystemTheme(): ResolvedTheme {
 
 export interface DesignSystemProviderProps {
   theme?: ThemeChoice;
-  /** System-wide layout density (`data-density`); scales `--sp-*` spacing. */
+  /** System-wide layout density (`data-density`); scales `--sp-*` spacing.
+   *  Omitted → the provider leaves whatever `ThemeScript` put on `<html>` (e.g. while
+   *  the operator's setting is still loading), so there is no flash to a default. */
   density?: Density;
   /** Partial token overrides. */
   tokens?: PartialTheme;
@@ -81,7 +83,7 @@ export interface DesignSystemProviderProps {
  */
 export function DesignSystemProvider({
   theme = "dark",
-  density = "comfort",
+  density,
   tokens: override,
   layout,
   style,
@@ -117,6 +119,7 @@ export function DesignSystemProvider({
   }, [resolvedTheme]);
 
   useEffect(() => {
+    if (!density) return;
     document.documentElement.setAttribute("data-density", density);
     try {
       window.localStorage.setItem(DENSITY_STORAGE_KEY, density);

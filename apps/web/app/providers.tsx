@@ -2,7 +2,7 @@
 
 import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
-import { useUiSettings } from "../features/system";
+import { useSystemConfigQuery } from "../features/system";
 import { apiClient } from "../state/api";
 import { AppearanceProvider } from "../state/appearance";
 import { RunEventsProvider } from "../features/runs/runEvents";
@@ -10,10 +10,11 @@ import { BootSplash } from "../components/layout/BootSplash/BootSplash";
 import { Toaster } from "../components/Toaster/Toaster";
 import { emitMutationError } from "../components/Toaster/toastBus";
 
-/** `AppearanceProvider` fed the operator's density from the system config. */
+/** `AppearanceProvider` fed the operator's density from the system config. Undefined
+ *  until it loads, so `ThemeScript`'s cached value stays on screen meanwhile. */
 function DensityAppearance({ children }: { children: ReactNode }) {
-  const { ui } = useUiSettings();
-  return <AppearanceProvider density={ui.density}>{children}</AppearanceProvider>;
+  const { data } = useSystemConfigQuery();
+  return <AppearanceProvider density={data?.ui.density}>{children}</AppearanceProvider>;
 }
 
 export function Providers({ children }: { children: ReactNode }) {

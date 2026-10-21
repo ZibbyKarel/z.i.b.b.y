@@ -38,10 +38,17 @@ describe("density tokens", () => {
 });
 
 describe("DesignSystemProvider density", () => {
-  it("defaults to comfort and sets data-density on its root and <html>", () => {
+  it("sets data-density on its root and <html>", () => {
+    const { container } = render(<DesignSystemProvider density="airy">x</DesignSystemProvider>);
+    expect(container.firstElementChild).toHaveAttribute("data-density", "airy");
+    expect(document.documentElement).toHaveAttribute("data-density", "airy");
+  });
+
+  it("without a density leaves <html> alone (pre-hydration value survives)", () => {
+    document.documentElement.setAttribute("data-density", "open");
     const { container } = render(<DesignSystemProvider>x</DesignSystemProvider>);
-    expect(container.firstElementChild).toHaveAttribute("data-density", "comfort");
-    expect(document.documentElement).toHaveAttribute("data-density", "comfort");
+    expect(container.firstElementChild).not.toHaveAttribute("data-density");
+    expect(document.documentElement).toHaveAttribute("data-density", "open");
   });
 
   it("applies and caches an explicit density", () => {
