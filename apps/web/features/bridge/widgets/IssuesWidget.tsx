@@ -35,7 +35,6 @@ export function IssuesWidget({
   onEpicToggle,
 }: BridgeWidgetProps) {
   const t = useTranslations("bridge.widgets.issues");
-  const tAll = useTranslations("bridge");
   const now = useNow(60_000);
   const filters = useBridgeInboxFilters();
   const itemsQuery = useInboxItemsQuery();
@@ -65,7 +64,6 @@ export function IssuesWidget({
       loading: itemsQuery.isPending,
       count: itemsQuery.isPending ? undefined : list.length,
       you,
-      clearAside: tAll("allClear"),
     },
     { onEmptyChange, onCountChange },
   );

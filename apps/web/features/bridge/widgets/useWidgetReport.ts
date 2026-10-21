@@ -10,17 +10,14 @@ interface Report {
   count: number | undefined;
   /** Items needing the operator. */
   you: number;
-  /** Header note when nothing needs the operator and there is something listed (`ALL CLEAR`). */
-  clearAside?: string | undefined;
 }
 
 /** Feeds the frame: emptiness (never while loading) and the count / YOU / aside header info. */
 export function useWidgetReport(
-  { loading, count, you, clearAside }: Report,
+  { loading, count, you }: Report,
   { onEmptyChange, onCountChange }: Pick<BridgeWidgetProps, "onEmptyChange" | "onCountChange">,
 ) {
   const empty = !loading && !count;
   useEffect(() => onEmptyChange(empty), [empty, onEmptyChange]);
-  const aside = count && !you ? clearAside : undefined;
-  useEffect(() => onCountChange?.({ count, you, aside }), [count, you, aside, onCountChange]);
+  useEffect(() => onCountChange?.({ count, you }), [count, you, onCountChange]);
 }

@@ -106,7 +106,7 @@ export function WidgetFrame({
     >
       <header
         className={cn(
-          "flex h-[var(--bridge-head-h)] flex-none select-none items-center gap-[8px] border-b pl-[var(--bridge-head-px)] pr-[10px] font-mono text-[10px] tracking-[.14em] whitespace-nowrap",
+          "box-content flex h-[var(--bridge-head-h)] flex-none select-none items-center gap-[8px] border-b pl-[var(--bridge-head-px)] pr-[10px] font-mono text-[10px] tracking-[.14em] whitespace-nowrap",
           open ? "border-line" : "border-transparent",
           editing ? "cursor-move" : "cursor-default",
         )}

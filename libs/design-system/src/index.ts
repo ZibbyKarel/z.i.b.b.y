@@ -631,11 +631,16 @@ export { WidgetFrame, WidgetFrameTestId } from "./components/WidgetFrame/WidgetF
 export type { WidgetFrameProps } from "./components/WidgetFrame/WidgetFrame";
 export {
   CommandBar,
+  CommandBarButton,
   CommandBarGroup,
   CommandBarTestId,
   CommandBarText,
 } from "./components/CommandBar/CommandBar";
-export type { CommandBarProps, CommandBarTextProps } from "./components/CommandBar/CommandBar";
+export type {
+  CommandBarButtonProps,
+  CommandBarProps,
+  CommandBarTextProps,
+} from "./components/CommandBar/CommandBar";
 export { DensityMenu, DensityMenuTestId } from "./components/DensityMenu/DensityMenu";
 export type { DensityMenuProps } from "./components/DensityMenu/DensityMenu";
 export { WidgetCatalog, WidgetCatalogTestId } from "./components/WidgetCatalog/WidgetCatalog";

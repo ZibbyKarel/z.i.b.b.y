@@ -184,7 +184,7 @@ export function BoardLine({
       data-testid={BoardRowTestId.Line}
     >
       {children}
-      {end ? <span className="ml-auto">{end}</span> : null}
+      {end ? <span className="ml-auto flex">{end}</span> : null}
     </span>
   );
 }

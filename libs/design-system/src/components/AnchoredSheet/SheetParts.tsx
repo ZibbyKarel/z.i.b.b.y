@@ -90,7 +90,7 @@ export function SheetAction({
   "data-testid": testId,
 }: SheetActionProps) {
   const cls = cn(
-    "no-underline",
+    "whitespace-nowrap no-underline",
     intent === "primary"
       ? "bg-ink px-[16px] py-[8px] text-panel"
       : "border border-line-2 px-[12px] py-[8px] text-ink-2 hover:bg-panel-2 hover:text-ink",

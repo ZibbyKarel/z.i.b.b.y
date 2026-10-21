@@ -8,8 +8,7 @@ interface SelectFieldBaseProps<T extends string = string> {
   options: DropdownOption<T>[];
 }
 
-export interface SelectFieldSingleProps<T extends string = string>
-  extends SelectFieldBaseProps<T> {
+export interface SelectFieldSingleProps<T extends string = string> extends SelectFieldBaseProps<T> {
   multi?: false;
   value: T;
   onValueChange: (value: T) => void;

@@ -19,7 +19,7 @@ import { useInboxItemActions } from "../../../inbox/useInboxItemActions";
 import { useInboxItemsQuery } from "../../../inbox/queries";
 import { chainKey, itemKey, latestTaskId, linkedPrOf, zibbyStatus } from "../../../inbox/inbox";
 import { issueHref } from "../../../inbox/components/IssueRow";
-import { useElapsedLabel } from "../../../inbox/useElapsedLabel";
+import { compactAgo } from "../../../../utils/time";
 import { useTeamsQuery } from "../../../teams";
 import { type SheetProps, geometry } from "./sheetTypes";
 
@@ -34,7 +34,6 @@ const STATUS_TONE: Record<ReturnType<typeof zibbyStatus>, SheetTone> = {
 export function IssueSheet({ id, anchor, onClose }: SheetProps) {
   const t = useTranslations();
   const router = useRouter();
-  const elapsed = useElapsedLabel();
   const { data } = useInboxItemsQuery();
   const { data: teams } = useTeamsQuery();
   const actions = useInboxItemActions();
@@ -51,7 +50,7 @@ export function IssueSheet({ id, anchor, onClose }: SheetProps) {
   const source = t(`inboxPage.source.${item.source.kind}`);
   const none = t("bridge.sheet.none");
   const stateLabel = t(`inboxPage.status.${status}`).toUpperCase();
-  const updated = elapsed(item.updatedAt, now).toUpperCase();
+  const updated = compactAgo(item.updatedAt, now).toUpperCase();
 
   const rows: DetailTableRow[] = [
     { cells: [t("bridge.sheet.issue.epic"), epic ? `${epic.key ?? ""} · ${epic.title}` : "—"] },
@@ -80,7 +79,9 @@ export function IssueSheet({ id, anchor, onClose }: SheetProps) {
     <AnchoredSheet
       {...geometry(anchor)}
       chips={[
-        item.sourceStatus ? `${source} · ${item.sourceStatus.name.toUpperCase()}` : source,
+        item.sourceStatus
+          ? `${source.toUpperCase()} · ${item.sourceStatus.name.toUpperCase()}`
+          : source.toUpperCase(),
         `ZIBBY · ${stateLabel}`,
         item.project.name.toUpperCase(),
         epic
@@ -98,7 +99,7 @@ export function IssueSheet({ id, anchor, onClose }: SheetProps) {
         ) : null
       }
       hint={t("bridge.sheet.hint")}
-      kind={`${t("bridge.sheet.kind.issue")} · ${itemKey(item)}`}
+      kind={`${t("bridge.sheet.kind.issue")} · ${source.toUpperCase()} · ${itemKey(item)}`}
       onClose={onClose}
       stateLabel={stateLabel}
       title={item.name}

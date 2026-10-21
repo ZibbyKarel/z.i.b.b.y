@@ -24,7 +24,6 @@ export function TasksWidget({
   sheetSide,
 }: BridgeWidgetProps) {
   const t = useTranslations("bridge.widgets.tasks");
-  const tAll = useTranslations("bridge");
   const now = useNow(60_000);
   const departments = useDepartmentLookup();
   const { data, isPending } = useTaskParentsInfiniteQuery({});
@@ -39,7 +38,6 @@ export function TasksWidget({
       loading: isPending,
       count: isPending ? undefined : rows.length,
       you: rows.filter((r) => r.needsYou).length,
-      clearAside: tAll("allClear"),
     },
     { onEmptyChange, onCountChange },
   );

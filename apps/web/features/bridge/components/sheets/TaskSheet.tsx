@@ -19,7 +19,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useApprovalsQuery } from "../../../approvals";
 import { ExternalAnchor } from "../../../inbox/components/links";
-import { useElapsedLabel } from "../../../inbox/useElapsedLabel";
+import { compactAgo } from "../../../../utils/time";
 import { useDepartmentLookup } from "../../../departments/useDepartmentLookup";
 import { useTaskQuery } from "../../../tasks";
 import { taskState } from "../../state/taskState";
@@ -36,7 +36,6 @@ export function TaskSheet({ id, anchor, onClose }: SheetProps) {
   const t = useTranslations();
   const router = useRouter();
   const departments = useDepartmentLookup();
-  const elapsed = useElapsedLabel();
   const { data: task } = useTaskQuery(id);
   const { data: approvals = [] } = useApprovalsQuery();
   const [now] = useState(() => Date.now());
@@ -91,7 +90,7 @@ export function TaskSheet({ id, anchor, onClose }: SheetProps) {
         ...(task.source
           ? [t("bridge.sheet.task.from", { source: task.source.toUpperCase() })]
           : []),
-        t("bridge.sheet.created", { when: elapsed(task.createdAt, now).toUpperCase() }),
+        t("bridge.sheet.created", { when: compactAgo(task.createdAt, now).toUpperCase() }),
       ]}
       closeLabel={t("bridge.sheet.close")}
       footerEnd={

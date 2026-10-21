@@ -27,6 +27,8 @@ export interface SegmentedControlProps {
   value: string;
   onChange: (value: string) => void;
   size?: SegmentedControlSize;
+  /** Regular weight at the surrounding letter-spacing (inside a mono bar) instead of the semibold default. */
+  plain?: boolean;
   /** Accessible label for the radiogroup. */
   ariaLabel?: string;
   /** Id of an external label element — wins over `ariaLabel`. */
@@ -58,6 +60,7 @@ export function SegmentedControl({
   value,
   onChange,
   size = "md",
+  plain = false,
   ariaLabel,
   ariaLabelledby,
   ref,
@@ -95,7 +98,8 @@ export function SegmentedControl({
           <button
             aria-checked={active}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-none border-none font-mono font-semibold uppercase tracking-wider transition-colors",
+              "inline-flex items-center gap-1.5 rounded-none border-none font-mono uppercase transition-colors",
+              plain ? "font-normal tracking-[inherit]" : "font-semibold tracking-wider",
               focusRingInset,
               sizeClass[size],
               active

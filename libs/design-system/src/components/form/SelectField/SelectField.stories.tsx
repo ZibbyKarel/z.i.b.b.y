@@ -56,7 +56,13 @@ export const Playground: Story = {
   render: (args) => {
     const [value, setValue] = useState("opus");
     return (
-      <SelectField {...args} multi={false} onValueChange={setValue} options={OPTIONS} value={value} />
+      <SelectField
+        {...args}
+        multi={false}
+        onValueChange={setValue}
+        options={OPTIONS}
+        value={value}
+      />
     );
   },
   args: { label: "Model", hint: "Vyber jazykový model" },

@@ -61,7 +61,7 @@ export function WidgetBoard({
 
   return (
     <div
-      className="min-h-0 flex-1 overflow-auto bg-bg p-[var(--bridge-bp)] [background-image:linear-gradient(var(--color-grid)_1px,transparent_1px),linear-gradient(90deg,var(--color-grid)_1px,transparent_1px)] [background-size:24px_24px]"
+      className="min-h-0 flex-1 overflow-auto bg-bg leading-[normal] p-[var(--bridge-bp)] [background-image:linear-gradient(var(--color-grid)_1px,transparent_1px),linear-gradient(90deg,var(--color-grid)_1px,transparent_1px)] [background-size:24px_24px]"
       data-testid={WidgetBoardTestId.Root}
       ref={ref}
     >

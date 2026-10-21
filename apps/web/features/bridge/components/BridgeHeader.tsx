@@ -1,8 +1,8 @@
 "use client";
 
 import {
-  Button,
   CommandBar,
+  CommandBarButton,
   CommandBarGroup,
   CommandBarText,
   DENSITIES,
@@ -94,6 +94,7 @@ export function BridgeHeader({
       <CommandBarGroup>
         <CommandBarText faint>{t("layout")}</CommandBarText>
         <SegmentedControl
+          plain
           ariaLabel={t("layout")}
           items={names.map((name) => ({ value: name, label: presetLabel(name) }))}
           onChange={(name) => name !== CUSTOM_PRESET && onPreset(name)}
@@ -108,20 +109,14 @@ export function BridgeHeader({
       />
       {editing ? (
         <CommandBarGroup>
-          <Button intent="secondary" onClick={onToggleCatalog} size="sm">
-            {t("addWidget")}
-          </Button>
-          <Button intent="secondary" onClick={onSaveAs} size="sm">
-            {t("saveAs")}
-          </Button>
-          <Button intent="secondary" onClick={onReset} size="sm">
-            {t("reset")}
-          </Button>
+          <CommandBarButton onClick={onToggleCatalog}>{t("addWidget")}</CommandBarButton>
+          <CommandBarButton onClick={onSaveAs}>{t("saveAs")}</CommandBarButton>
+          <CommandBarButton onClick={onReset}>{t("reset")}</CommandBarButton>
         </CommandBarGroup>
       ) : null}
-      <Button intent={editing ? "primary" : "outline"} onClick={onToggleEditing} size="sm">
+      <CommandBarButton look={editing ? "done" : "edit"} onClick={onToggleEditing}>
         {editing ? t("done") : t("editLayout")}
-      </Button>
+      </CommandBarButton>
       <CommandBarText>{now ? formatBridgeClock(now, locale) : ""}</CommandBarText>
     </CommandBar>
   );

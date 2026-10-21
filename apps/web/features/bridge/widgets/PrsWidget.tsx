@@ -25,7 +25,6 @@ export function PrsWidget({
   sheetSide,
 }: BridgeWidgetProps) {
   const t = useTranslations("bridge.widgets.prs");
-  const tAll = useTranslations("bridge");
   const now = useNow(60_000);
   const filters = useBridgeInboxFilters();
   const prsQuery = useInboxPrsQuery();
@@ -43,7 +42,6 @@ export function PrsWidget({
       loading: prsQuery.isPending,
       count: prsQuery.isPending ? undefined : visible.length,
       you: groups.reduce((n, g) => n + [g.root, ...g.kids].filter((r) => r.needsYou).length, 0),
-      clearAside: tAll("allClear"),
     },
     { onEmptyChange, onCountChange },
   );

@@ -91,7 +91,7 @@ export function AnchoredSheet({
         aria-label={title}
         aria-modal="false"
         className={cn(
-          "absolute z-[32] box-border flex flex-col border border-ink border-t-4 bg-panel",
+          "absolute z-[32] box-border flex flex-col border border-ink border-t-4 bg-panel leading-[normal]",
           toneBorderTop[tone],
         )}
         data-testid={AnchoredSheetTestId.Root}
@@ -154,12 +154,12 @@ export function AnchoredSheet({
         </div>
         {hasFooter ? (
           <div
-            className="flex flex-none items-center gap-[6px] border-t border-line px-[20px] py-[12px] font-mono text-[10px] tracking-[.12em]"
+            className="flex flex-none flex-wrap items-center gap-[6px] border-t border-line px-[20px] py-[12px] font-mono text-[10px] tracking-[.12em]"
             data-testid={AnchoredSheetTestId.Footer}
           >
             {footerStart}
             <span
-              className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap px-[8px] text-ink-3"
+              className="min-w-0 flex-[1_1_0%] overflow-hidden text-ellipsis whitespace-nowrap px-[8px] text-ink-3"
               data-testid={AnchoredSheetTestId.FooterNote}
             >
               {footerNote}

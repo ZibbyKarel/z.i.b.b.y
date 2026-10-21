@@ -49,14 +49,14 @@ export function RowGroupHeader({
       <span className="font-mono text-[10px] text-ink-2" data-testid={RowGroupHeaderTestId.Caret}>
         {closed ? "▸" : "▾"}
       </span>
-      <span data-testid={RowGroupHeaderTestId.Key}>
+      <span className="flex" data-testid={RowGroupHeaderTestId.Key}>
         <BoardText kind="meta">{groupKey}</BoardText>
       </span>
-      <span data-testid={RowGroupHeaderTestId.Title}>
+      <span className="flex" data-testid={RowGroupHeaderTestId.Title}>
         <BoardText kind="title">{title}</BoardText>
       </span>
       <Progress height="25" tone="ink" value={progress} />
-      <span data-testid={RowGroupHeaderTestId.Count}>
+      <span className="flex" data-testid={RowGroupHeaderTestId.Count}>
         <BoardText tabular kind="meta">
           {count}
         </BoardText>

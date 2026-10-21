@@ -45,7 +45,7 @@ export function WidgetCatalog({
 }: WidgetCatalogProps) {
   return (
     <div
-      className="absolute right-[150px] top-[54px] z-40 flex w-[280px] flex-col border border-ink bg-panel"
+      className="absolute right-[150px] top-[54px] z-40 flex w-[280px] flex-col border border-ink bg-panel leading-[normal]"
       data-testid={WidgetCatalogTestId.Root}
       ref={ref}
     >

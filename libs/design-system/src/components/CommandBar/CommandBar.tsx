@@ -7,6 +7,7 @@ export enum CommandBarTestId {
   Title = "command-bar-title",
   Subtitle = "command-bar-subtitle",
   Text = "command-bar-text",
+  Button = "command-bar-button",
 }
 
 export interface CommandBarProps {
@@ -28,7 +29,7 @@ export interface CommandBarProps {
 export function CommandBar({ title, subtitle, logo = true, children, ref }: CommandBarProps) {
   return (
     <header
-      className="flex h-[48px] flex-none items-center gap-[20px] border-b border-line bg-panel px-[16px] font-mono text-[10px] tracking-[.12em] whitespace-nowrap"
+      className="flex h-[48px] flex-none items-center gap-[20px] border-b border-line bg-panel px-[16px] font-mono text-[10px] tracking-[.12em] whitespace-nowrap leading-[normal]"
       data-testid={CommandBarTestId.Root}
       ref={ref}
     >
@@ -72,5 +73,36 @@ export function CommandBarText({ children, faint = false }: CommandBarTextProps)
     >
       {children}
     </span>
+  );
+}
+
+export interface CommandBarButtonProps {
+  /** `tool` = quiet edit-mode tool; `edit` = the inked EDIT LAYOUT toggle; `done` = its filled state. */
+  look?: "tool" | "edit" | "done";
+  onClick?: () => void;
+  children: ReactNode;
+}
+
+const BUTTON_LOOK = {
+  tool: "border-line-2 px-[10px] py-[6px] text-ink-2 hover:bg-panel-2 hover:text-ink",
+  edit: "border-ink px-[12px] py-[6px] text-ink hover:bg-panel-2",
+  done: "border-ink bg-ink px-[12px] py-[6px] text-panel",
+} as const;
+
+/** A literal command-bar button: 1px border, mono 10px at the bar's own tracking. */
+export function CommandBarButton({ look = "tool", onClick, children }: CommandBarButtonProps) {
+  return (
+    <button
+      className={cn(
+        "cursor-pointer border border-solid bg-transparent",
+        BUTTON_LOOK[look],
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+      )}
+      data-testid={CommandBarTestId.Button}
+      onClick={onClick}
+      type="button"
+    >
+      {children}
+    </button>
   );
 }
