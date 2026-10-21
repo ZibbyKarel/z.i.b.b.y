@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap">
+<style>html,body{margin:0;background:#F3F4F2}a{color:#111312}a:hover{color:#50544F}textarea{font:inherit;color:inherit}::placeholder{color:#8A8E88}@keyframes zb-soft{0%,100%{opacity:1}50%{opacity:.55}}@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}</style>
+<script src="./zc-data.js"></script>
+<script src="./zc-inbox.js"></script>
+</helmet>
+<div ref="{{ rootRef }}" style="--bg:#F3F4F2;--panel:#FAFAF8;--panel2:#EDEEEB;--line:#D9DBD6;--line2:#BFC2BC;--ink:#111312;--ink2:#50544F;--ink3:#8A8E88;--grid:rgba(17,19,18,.05);--s-work:oklch(0.6 0.14 160);--s-think:oklch(0.58 0.14 250);--s-block:oklch(0.7 0.15 70);--s-err:oklch(0.58 0.2 25);--s-done:oklch(0.56 0.15 300);--s-idle:#A9ADA7;width:100vw;height:100vh;min-width:1440px;min-height:900px;box-sizing:border-box;background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px, transparent 1px),linear-gradient(90deg, var(--grid) 1px, transparent 1px);background-size:24px 24px;color:var(--ink);font-family:'Geist',system-ui,sans-serif;display:grid;grid-template-rows:48px minmax(0,1fr);overflow:hidden;position:relative">
+  <header data-screen-label="Bridge header" style="display:flex;align-items:center;gap:20px;padding:0 16px;border-bottom:1px solid var(--line);background:var(--panel);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;white-space:nowrap">
+    <div style="display:flex;align-items:center;gap:10px">
+      <svg width="24" height="24" viewBox="0 0 32 32" style="display:block"><polygon points="1,3 11,8.5 16,1 21,8.5 31,3 27,18 16,31 5,18" fill="var(--ink)"></polygon><polygon points="16,5.5 18.5,10 13.5,10" fill="var(--panel)"></polygon><path d="M10.5 12.5H21.5L11.5 22H21.5" fill="none" stroke="var(--panel)" stroke-width="2.6"></path></svg>
+      <span style="font-size:13px;letter-spacing:.18em;font-weight:600">ZIBBYCORP</span>
+      <span style="color:var(--ink3)">/ BRIDGE</span>
+    </div>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="color:var(--ink3)">LAYOUT</span>
+      <div style="display:flex;border:1px solid var(--line2)">
+        <sc-for list="{{ presets }}" as="p" hint-placeholder-count="3">
+          <button onClick="{{ p.onClick }}" style="all:unset;cursor:pointer;padding:6px 10px;background:{{ p.bg }};color:{{ p.fg }}">{{ p.name }}</button>
+        </sc-for>
+      </div>
+    </div>
+    <div style="position:relative">
+      <button onClick="{{ toggleDensity }}" title="Density" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid var(--line2);color:var(--ink)" style-hover="background:var(--panel2)">
+        <svg width="16" height="16" viewBox="0 0 16 16" style="display:block"><g stroke="currentColor" stroke-width="1.4"><line x1="2" x2="14" y1="{{ curD.0 }}" y2="{{ curD.0 }}"></line><line x1="2" x2="14" y1="{{ curD.1 }}" y2="{{ curD.1 }}"></line><line x1="2" x2="14" y1="{{ curD.2 }}" y2="{{ curD.2 }}"></line><line x1="2" x2="14" y1="{{ curD.3 }}" y2="{{ curD.3 }}"></line></g></svg>
+        <span style="color:var(--ink3);font-size:9px">▾</span>
+      </button>
+      <sc-if value="{{ densityOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;top:calc(100% + 6px);right:0;z-index:50;width:150px;background:var(--panel);border:1px solid var(--ink);display:flex;flex-direction:column">
+          <sc-for list="{{ dens }}" as="d" hint-placeholder-count="4">
+            <button onClick="{{ d.onClick }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;padding:9px 12px;background:{{ d.bg }};color:{{ d.fg }}" style-hover="background:var(--panel2)">
+              <svg width="16" height="16" viewBox="0 0 16 16" style="display:block"><g stroke="currentColor" stroke-width="1.4"><line x1="2" x2="14" y1="{{ d.y1 }}" y2="{{ d.y1 }}"></line><line x1="2" x2="14" y1="{{ d.y2 }}" y2="{{ d.y2 }}"></line><line x1="2" x2="14" y1="{{ d.y3 }}" y2="{{ d.y3 }}"></line><line x1="2" x2="14" y1="{{ d.y4 }}" y2="{{ d.y4 }}"></line></g></svg>
+              <span>{{ d.name }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+    <sc-if value="{{ editing }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;gap:6px">
+        <button onClick="{{ toggleCatalog }}" style="all:unset;cursor:pointer;padding:6px 10px;border:1px solid var(--line2);color:var(--ink2)" style-hover="color:var(--ink);background:var(--panel2)">+ WIDGET</button>
+        <button onClick="{{ saveAs }}" style="all:unset;cursor:pointer;padding:6px 10px;border:1px solid var(--line2);color:var(--ink2)" style-hover="color:var(--ink);background:var(--panel2)">SAVE AS</button>
+        <button onClick="{{ resetLayout }}" style="all:unset;cursor:pointer;padding:6px 10px;border:1px solid var(--line2);color:var(--ink2)" style-hover="color:var(--ink);background:var(--panel2)">RESET</button>
+      </div>
+    </sc-if>
+    <button onClick="{{ toggleEdit }}" style="all:unset;cursor:pointer;padding:6px 12px;border:1px solid var(--ink);background:{{ editBg }};color:{{ editFg }}">{{ editLabel }}</button>
+    <span style="color:var(--ink2);font-variant-numeric:tabular-nums">THU 24 SEP · 14:32</span>
+  </header>
+
+  <div ref="{{ boardRef }}" data-screen-label="Bridge board" style="overflow:auto;padding:{{ v.bp }};min-height:0">
+    <div ref="{{ innerRef }}" style="position:relative;width:100%;height:{{ boardH }};background-image:{{ guides }}">
+      <sc-for list="{{ widgets }}" as="w" hint-placeholder-count="6">
+        <div data-screen-label="{{ w.label }}" style="position:absolute;left:{{ w.left }};top:{{ w.top }};width:{{ w.width }};height:{{ w.height }};z-index:{{ w.z }};transition:{{ w.tr }};background:var(--panel);border:1px solid {{ w.line }};box-shadow:{{ v.ws }};box-sizing:border-box;display:flex;flex-direction:column;min-width:0">
+          <div onMouseDown="{{ w.onDrag }}" style="flex:none;height:{{ v.hh }};display:flex;align-items:center;gap:8px;padding:0 10px 0 {{ v.hx }};border-bottom:1px solid {{ w.hb }};cursor:{{ w.cursor }};user-select:none;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;white-space:nowrap">
+            <span style="color:var(--ink);font-weight:500">{{ w.label }}</span>
+            <span style="color:var(--ink2);font-variant-numeric:tabular-nums">{{ w.count }}</span>
+            <sc-if value="{{ w.hasNeeds }}" hint-placeholder-val="{{ false }}">
+              <span style="border:1px solid var(--ink);padding:1px 5px;color:var(--ink)">{{ w.needs }} YOU</span>
+            </sc-if>
+            <span style="flex:1"></span>
+            <span style="color:var(--ink3)">{{ w.aside }}</span>
+            <sc-if value="{{ w.canToggle }}" hint-placeholder-val="{{ true }}">
+              <button onMouseDown="{{ stop }}" onClick="{{ w.onToggle }}" title="Collapse" style="all:unset;cursor:pointer;padding:2px 6px;color:var(--ink3)" style-hover="color:var(--ink)">{{ w.caret }}</button>
+            </sc-if>
+            <sc-if value="{{ editing }}" hint-placeholder-val="{{ false }}">
+              <button onMouseDown="{{ stop }}" onClick="{{ w.onRemove }}" title="Remove widget" style="all:unset;cursor:pointer;padding:2px 6px;color:var(--ink3)" style-hover="color:var(--ink)">×</button>
+            </sc-if>
+          </div>
+          <sc-if value="{{ w.open }}" hint-placeholder-val="{{ true }}">
+            <div style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden">
+
+              <sc-if value="{{ w.isIssues }}" hint-placeholder-val="{{ false }}">
+                <sc-for list="{{ w.groups }}" as="g" hint-placeholder-count="2">
+                  <button onClick="{{ g.onToggle }}" style="all:unset;cursor:pointer;box-sizing:border-box;width:100%;display:grid;grid-template-columns:10px auto minmax(0,1fr) 56px auto;gap:8px;align-items:center;padding:{{ v.gp }};border-bottom:{{ v.rb }};background:var(--bg)" style-hover="background:var(--panel2)">
+                    <span style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--ink2)">{{ g.caret }}</span>
+                    <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.06em;color:var(--ink2)">{{ g.key }}</span>
+                    <span style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.title }}</span>
+                    <span style="height:2px;background:var(--line);display:block"><span style="display:block;height:2px;background:var(--ink);width:{{ g.progW }}"></span></span>
+                    <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.06em;font-variant-numeric:tabular-nums;color:var(--ink2)">{{ g.prog }}</span>
+                  </button>
+                  <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
+                    <div data-rk="{{ r.key }}" onClick="{{ r.onOpen }}" style="position:relative;z-index:{{ r.z }};cursor:pointer;display:flex;flex-direction:column;gap:{{ v.ig }};padding:{{ v.rp }};border-bottom:{{ v.rb }};border-left:{{ v.bl }} solid {{ r.c }};background:{{ r.bg }};box-shadow:{{ r.ring }}" style-hover="background:var(--panel2)">
+                      <div style="display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:8px;align-items:center">
+                        <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.06em;color:var(--ink2)">{{ r.id }}</span>
+                        <span style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.title }}</span>
+                        <sc-if value="{{ r.hasTag }}" hint-placeholder-val="{{ false }}"><span style="border:1px solid var(--ink);padding:1px 5px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em">{{ r.tag }}</span></sc-if>
+                      </div>
+                      <div style="display:flex;align-items:center;gap:6px;padding-left:70px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;white-space:nowrap;overflow:hidden">
+                        <span style="border:1px solid var(--line2);padding:1px 5px;color:var(--ink)">{{ r.src }}</span>
+                        <span style="color:var(--ink)">{{ r.zs }}</span>
+                        <span style="color:var(--ink3)">· {{ r.proj }}</span>
+                        <sc-if value="{{ r.hasPr }}" hint-placeholder-val="{{ false }}"><span style="color:var(--ink2);text-decoration:underline;text-underline-offset:2px">{{ r.pr }}</span></sc-if>
+                        <span style="margin-left:auto;color:var(--ink3)">{{ r.upd }}</span>
+                      </div>
+                    </div>
+                  </sc-for>
+                </sc-for>
+              </sc-if>
+
+              <sc-if value="{{ w.isTasks }}" hint-placeholder-val="{{ false }}">
+                <sc-for list="{{ w.rows }}" as="r" hint-placeholder-count="5">
+                  <div data-rk="{{ r.key }}" onClick="{{ r.onOpen }}" style="position:relative;z-index:{{ r.z }};cursor:pointer;display:grid;grid-template-columns:66px minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:{{ v.rp }};border-bottom:{{ v.rb }};border-left:{{ v.bl }} solid {{ r.c }};background:{{ r.bg }};box-shadow:{{ r.ring }}" style-hover="background:var(--panel2)">
+                    <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.06em;color:var(--ink2)">{{ r.id }}</span>
+                    <span style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.title }}</span>
+                    <span style="display:flex;gap:2px">
+                      <sc-for list="{{ r.pipe }}" as="p" hint-placeholder-count="3">
+                        <span title="{{ p.title }}" style="font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.08em;padding:2px 4px 1px;color:{{ p.ink }};background:var(--bg);border-bottom:2px solid {{ p.c }}">{{ p.code }}</span>
+                      </sc-for>
+                    </span>
+                    <span style="min-width:30px;text-align:right;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--ink3)">
+                      <sc-if value="{{ r.hasTag }}" hint-placeholder-val="{{ false }}"><span style="border:1px solid var(--ink);padding:1px 5px;color:var(--ink)">{{ r.tag }}</span></sc-if>
+                      <sc-if value="{{ r.noTag }}" hint-placeholder-val="{{ true }}">{{ r.upd }}</sc-if>
+                    </span>
+                  </div>
+                </sc-for>
+              </sc-if>
+
+              <sc-if value="{{ w.isPrs }}" hint-placeholder-val="{{ false }}">
+                <sc-for list="{{ w.prGroups }}" as="g" hint-placeholder-count="3">
+                  <div style="display:flex;flex-direction:column">
+                    <sc-for list="{{ g.top }}" as="r" hint-placeholder-count="1">
+                      <div data-rk="{{ r.key }}" onClick="{{ r.onOpen }}" style="position:relative;z-index:{{ r.z }};cursor:pointer;display:flex;flex-direction:column;gap:{{ v.ig }};padding:{{ v.rpPr }};border-bottom:{{ v.rb }};border-left:{{ v.bl }} solid {{ r.c }};background:{{ r.bg }};box-shadow:{{ r.ring }}" style-hover="background:var(--panel2)">
+                        <div style="display:flex;align-items:baseline;gap:8px"><span style="flex:none;font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ r.n }}</span><span style="flex:1;min-width:0;font-size:13px;font-weight:500;line-height:1.35;text-wrap:pretty">{{ r.title }}</span><sc-if value="{{ r.hasTag }}" hint-placeholder-val="{{ false }}"><span style="flex:none;border:1px solid var(--ink);padding:1px 5px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em">{{ r.tag }}</span></sc-if></div>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)"><span>{{ r.meta }}</span><sc-if value="{{ r.hasTask }}" hint-placeholder-val="{{ false }}"><span style="color:var(--ink3)">·</span><span style="text-decoration:underline;text-underline-offset:2px">{{ r.task }}</span></sc-if></div>
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em"><span style="font-weight:600">{{ r.stU }}</span><sc-if value="{{ r.child }}" hint-placeholder-val="{{ false }}"><span style="color:var(--ink3)">ON {{ r.baseU }}</span></sc-if><sc-if value="{{ r.blocked }}" hint-placeholder-val="{{ false }}"><span style="color:var(--ink3)">· WAITS ON {{ r.waitU }}</span></sc-if></div>
+                      </div>
+                    </sc-for>
+                    <sc-if value="{{ g.hasKids }}" hint-placeholder-val="{{ false }}">
+                      <div style="display:flex;flex-direction:column;margin-left:20px;border-left:1px solid var(--line2)">
+                        <sc-for list="{{ g.kids }}" as="r" hint-placeholder-count="2">
+                          <div data-rk="{{ r.key }}" onClick="{{ r.onOpen }}" style="position:relative;z-index:{{ r.z }};cursor:pointer;display:flex;flex-direction:column;gap:{{ v.ig }};padding:{{ v.rpPr }};border-bottom:{{ v.rb }};border-left:{{ v.bl }} solid {{ r.c }};background:{{ r.bg }};box-shadow:{{ r.ring }}" style-hover="background:var(--panel2)">
+                            <div style="display:flex;align-items:baseline;gap:8px"><span style="flex:none;font-family:'Geist Mono',monospace;font-size:11px;color:var(--ink2)">{{ r.n }}</span><span style="flex:1;min-width:0;font-size:13px;font-weight:500;line-height:1.35;text-wrap:pretty">{{ r.title }}</span><sc-if value="{{ r.hasTag }}" hint-placeholder-val="{{ false }}"><span style="flex:none;border:1px solid var(--ink);padding:1px 5px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em">{{ r.tag }}</span></sc-if></div>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)"><span>{{ r.meta }}</span><sc-if value="{{ r.hasTask }}" hint-placeholder-val="{{ false }}"><span style="color:var(--ink3)">·</span><span style="text-decoration:underline;text-underline-offset:2px">{{ r.task }}</span></sc-if></div>
+                            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em"><span style="font-weight:600">{{ r.stU }}</span><sc-if value="{{ r.child }}" hint-placeholder-val="{{ false }}"><span style="color:var(--ink3)">ON {{ r.baseU }}</span></sc-if><sc-if value="{{ r.blocked }}" hint-placeholder-val="{{ false }}"><span style="color:var(--ink3)">· WAITS ON {{ r.waitU }}</span></sc-if></div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </sc-if>
+
+              <sc-if value="{{ w.isRuns }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;grid-template-columns:minmax(0,1fr) 120px 64px;gap:10px;padding:6px 12px 6px 16px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>TASK · STEP</span><span>PROGRESS</span><span style="text-align:right">ISSUE</span></div>
+                <sc-for list="{{ w.rows }}" as="r" hint-placeholder-count="4">
+                  <div data-rk="{{ r.key }}" onClick="{{ r.onOpen }}" style="position:relative;z-index:{{ r.z }};cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) 120px 64px;gap:10px;align-items:center;padding:{{ v.rp }};border-bottom:{{ v.rb }};border-left:{{ v.bl }} solid {{ r.c }};background:{{ r.bg }};box-shadow:{{ r.ring }}" style-hover="background:var(--panel2)">
+                    <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                      <span style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.title }}</span>
+                      <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.step }}</span>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:5px">
+                      <span style="height:2px;background:var(--line);display:block"><span style="display:block;height:2px;width:{{ r.pct }};background:{{ r.c }};animation:{{ r.anim }}"></span></span>
+                      <span style="display:flex;justify-content:space-between;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--ink2);font-variant-numeric:tabular-nums"><span>{{ r.stU }}</span><span>{{ r.pct }}</span></span>
+                    </div>
+                    <span style="text-align:right;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.06em;color:{{ r.linkC }};text-decoration:{{ r.linkU }};text-underline-offset:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.link }}</span>
+                  </div>
+                </sc-for>
+              </sc-if>
+
+              <sc-if value="{{ w.isCompact }}" hint-placeholder-val="{{ false }}">
+                <sc-for list="{{ w.rows }}" as="r" hint-placeholder-count="2">
+                  <div data-rk="{{ r.key }}" onClick="{{ r.onOpen }}" style="position:relative;z-index:{{ r.z }};cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:{{ v.rp }};border-bottom:{{ v.rb }};border-left:{{ v.bl }} solid {{ r.c }};background:{{ r.bg }};box-shadow:{{ r.ring }}" style-hover="background:var(--panel2)">
+                    <span style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.title }}</span>
+                    <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--ink3);white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis">{{ r.src }}</span>
+                    <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap">{{ r.dur }}</span>
+                  </div>
+                </sc-for>
+              </sc-if>
+
+              <sc-if value="{{ w.isEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="margin:10px 12px;border:1px dashed var(--line2);padding:10px 12px;font-size:12px;color:var(--ink2)">Nothing here. Outside edit mode this widget collapses to its header.</div>
+              </sc-if>
+
+              <sc-if value="{{ w.isBrief }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:32px;align-items:center;padding:{{ v.bf }};height:100%;box-sizing:border-box">
+                  <sc-if value="{{ w.showLead }}" hint-placeholder-val="{{ true }}">
+                    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+                      <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ w.bdate }}</span>
+                      <p style="margin:0;font-size:14px;line-height:1.45;color:var(--ink2);text-wrap:pretty">{{ w.lead }}</p>
+                    </div>
+                  </sc-if>
+                  <div style="display:flex;flex-wrap:wrap;gap:10px 0;flex:none">
+                    <sc-for list="{{ w.kpis }}" as="k" hint-placeholder-count="6">
+                      <div style="display:flex;flex-direction:column;gap:4px;padding:0 {{ v.kp }};border-left:1px solid var(--line)">
+                        <span style="display:flex;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3);white-space:nowrap"><span style="width:7px;height:7px;background:{{ k.dot }}"></span>{{ k.label }}</span>
+                        <span style="font-size:{{ v.kpi }};line-height:1.1;font-weight:500;font-variant-numeric:tabular-nums">{{ k.value }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ editing }}" hint-placeholder-val="{{ false }}">
+            <span style="position:absolute;left:12px;bottom:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink3);background:var(--panel);padding:2px 4px">{{ w.size }}</span>
+            <div onMouseDown="{{ w.onResize }}" title="Resize" style="position:absolute;right:-1px;bottom:-1px;width:12px;height:12px;cursor:nwse-resize;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);box-sizing:border-box"></div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <sc-if value="{{ catalogOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;top:54px;right:150px;z-index:40;width:280px;background:var(--panel);border:1px solid var(--ink);display:flex;flex-direction:column">
+      <div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>WIDGET CATALOG</span><button onClick="{{ toggleCatalog }}" style="all:unset;cursor:pointer;color:var(--ink3)">×</button></div>
+      <sc-for list="{{ catalog }}" as="c" hint-placeholder-count="3">
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line)">
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em">{{ c.label }}</span><span style="font-size:12px;color:var(--ink2)">{{ c.desc }}</span></div>
+          <button onClick="{{ c.onAdd }}" style="all:unset;cursor:pointer;padding:5px 9px;border:1px solid var(--line2);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2)" style-hover="color:var(--ink);background:var(--panel2)">ADD</button>
+        </div>
+      </sc-for>
+      <sc-if value="{{ catalogEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:12px;font-size:12px;color:var(--ink2)">Every widget is already on the board.</div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;z-index:30;background:color-mix(in oklch, var(--bg) 74%, transparent)"></div>
+    <div data-screen-label="Detail sheet" style="position:absolute;z-index:32;left:{{ sh.left }};top:{{ sh.top }};width:{{ sh.width }};height:{{ sh.height }};background:var(--panel);border:1px solid var(--ink);border-top:4px solid {{ sh.c }};box-sizing:border-box;display:flex;flex-direction:column">
+      <div style="position:absolute;left:{{ sh.eL }};top:{{ sh.eT }};width:3px;height:{{ sh.eH }};background:var(--panel)"></div>
+      <div style="flex:none;padding:14px 20px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">
+          <span style="color:var(--ink2)">{{ sh.kindLabel }} · {{ sh.id }}</span>
+          <span style="color:var(--ink);font-weight:600">{{ sh.stateLabel }}</span>
+          <span style="flex:1"></span>
+          <span>J / K · ESC</span>
+          <button onClick="{{ closeSheet }}" style="all:unset;cursor:pointer;padding:2px 6px;font-size:14px;color:var(--ink2)" style-hover="color:var(--ink)">×</button>
+        </div>
+        <div style="font-size:22px;line-height:1.2;font-weight:500;letter-spacing:-.01em;text-wrap:pretty">{{ sh.title }}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <sc-for list="{{ sh.chips }}" as="c" hint-placeholder-count="4">
+            <span style="padding:4px 8px;border:1px solid var(--line2);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)">{{ c }}</span>
+          </sc-for>
+        </div>
+      </div>
+      <div style="flex:1;min-height:0;overflow-y:auto">
+        <sc-if value="{{ sh.hasNeed }}" hint-placeholder-val="{{ false }}">
+          <div style="margin:16px 20px 0;border:1px solid var(--ink);border-left:4px solid var(--s-block);background:var(--bg);padding:12px;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em"><span style="font-weight:600">NEEDS YOU · {{ sh.need.kind }}</span><span style="flex:1"></span><span style="color:var(--ink2)">WAITING {{ sh.need.wait }}</span></div>
+            <div style="font-size:14px;line-height:1.4;text-wrap:pretty">{{ sh.need.text }}</div>
+            <sc-if value="{{ sh.need.hasRule }}" hint-placeholder-val="{{ false }}">
+              <div style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink3)">RULE · {{ sh.need.rule }}</div>
+            </sc-if>
+            <sc-if value="{{ sh.need.hasDiff }}" hint-placeholder-val="{{ false }}">
+              <div style="background:var(--panel);border:1px solid var(--line);padding:8px 10px;font-family:'Geist Mono',monospace;font-size:11px;line-height:1.5;overflow-x:auto">
+                <sc-for list="{{ sh.need.diff }}" as="d" hint-placeholder-count="3"><div style="white-space:pre;color:{{ d.c }}">{{ d.t }}</div></sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ sh.need.canAnswer }}" hint-placeholder-val="{{ false }}">
+              <textarea value="{{ answer }}" onChange="{{ onAnswer }}" placeholder="Type your answer" rows="2" style="resize:vertical;background:var(--panel);border:1px solid var(--line2);padding:8px 10px;font-size:13px;outline:none;border-radius:0" style-focus="border-color:var(--ink)"></textarea>
+              <div style="display:flex;gap:6px"><button onClick="{{ sh.need.onSend }}" style="all:unset;cursor:pointer;padding:7px 14px;background:var(--ink);color:var(--panel);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">SEND ANSWER</button></div>
+            </sc-if>
+            <sc-if value="{{ sh.need.canApprove }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:6px">
+                <button onClick="{{ sh.need.onApprove }}" style="all:unset;cursor:pointer;flex:2;text-align:center;padding:8px;background:var(--ink);color:var(--panel);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">APPROVE</button>
+                <button onClick="{{ sh.need.onDeny }}" style="all:unset;cursor:pointer;flex:1;text-align:center;padding:8px;border:1px solid var(--line2);color:var(--ink2);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em" style-hover="color:var(--ink);background:var(--panel2)">DENY</button>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ sh.isIssue }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:18px 20px;display:flex;flex-direction:column;gap:22px">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">DESCRIPTION</span>
+              <sc-for list="{{ sh.desc }}" as="d" hint-placeholder-count="2"><p style="margin:0;font-size:14px;line-height:1.45;text-wrap:pretty">{{ d }}</p></sc-for>
+            </div>
+            <div style="display:flex;flex-direction:column">
+              <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3);padding-bottom:8px">DETAILS</span>
+              <sc-for list="{{ sh.meta }}" as="m" hint-placeholder-count="4">
+                <div style="display:grid;grid-template-columns:110px minmax(0,1fr);gap:10px;padding:8px 0;border-top:1px solid var(--line)"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ m.k }}</span><span style="font-size:13px">{{ m.v }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ sh.isTask }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:18px 20px;display:flex;flex-direction:column;gap:22px">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">CHAIN · {{ sh.chain }}</span>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px">
+                <sc-for list="{{ sh.route }}" as="c" hint-placeholder-count="3">
+                  <div style="box-shadow:0 0 0 1px var(--line);border-bottom:3px solid {{ c.dot }};padding:10px 12px;display:flex;flex-direction:column;gap:5px;background:{{ c.bg }}">
+                    <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ c.n }} · {{ c.code }}</span>
+                    <span style="font-size:13px;font-weight:500">{{ c.name }}</span>
+                    <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)">{{ c.pipe }} · {{ c.step }}</span>
+                    <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;font-weight:600">{{ c.st }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column">
+              <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3);padding-bottom:8px">SUBTASKS</span>
+              <sc-for list="{{ sh.subs }}" as="s" hint-placeholder-count="3">
+                <div style="display:grid;grid-template-columns:96px 44px minmax(0,1fr) 90px minmax(0,1fr);gap:10px;align-items:center;padding:8px 0 8px 10px;border-top:1px solid var(--line);border-left:3px solid {{ s.dot }};font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em">
+                  <span style="color:var(--ink2)">{{ s.id }}</span><span>{{ s.code }}</span><span style="color:var(--ink2)">{{ s.pipe }}</span><span>{{ s.st }}</span>
+                  <span style="color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.out }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:flex;flex-direction:column">
+              <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3);padding-bottom:8px">AGENTS · {{ sh.agentCount }}</span>
+              <sc-for list="{{ sh.agents }}" as="a" hint-placeholder-count="2">
+                <div style="display:grid;grid-template-columns:76px 130px minmax(0,1fr);gap:10px;align-items:center;padding:8px 0 8px 10px;border-top:1px solid var(--line);border-left:3px solid {{ a.dot }}">
+                  <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.1em;font-weight:600">{{ a.name }}</span>
+                  <span style="font-size:12px;color:var(--ink2)">{{ a.role }}</span>
+                  <span style="font-size:13px">{{ a.now }}</span>
+                </div>
+              </sc-for>
+              <sc-if value="{{ sh.noAgents }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:9px 0;border-top:1px solid var(--line);font-size:12px;color:var(--ink2)">No agent is on this task right now.</div>
+              </sc-if>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">ARTIFACTS</span>
+              <div style="display:flex;flex-wrap:wrap;gap:6px">
+                <sc-for list="{{ sh.artifacts }}" as="x" hint-placeholder-count="2">
+                  <span style="padding:5px 9px;border:1px solid var(--line2);background:var(--bg);font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.06em">{{ x }}</span>
+                </sc-for>
+                <sc-if value="{{ sh.noArtifacts }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:var(--ink2)">None yet.</span></sc-if>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ sh.isPr }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:16px 20px 0;gap:1px">
+            <sc-for list="{{ sh.stats }}" as="m" hint-placeholder-count="3">
+              <div style="box-shadow:0 0 0 1px var(--line);border-bottom:3px solid {{ m.dot }};padding:10px 12px;display:flex;flex-direction:column;gap:4px">
+                <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ m.label }}</span>
+                <span style="font-size:16px;font-weight:500;font-variant-numeric:tabular-nums">{{ m.value }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ sh.inStack }}" hint-placeholder-val="{{ false }}">
+            <div style="margin:12px 20px 0;display:flex;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;flex-wrap:wrap">
+              <span style="color:var(--ink3);margin-right:4px">STACK</span>
+              <sc-for list="{{ sh.stack }}" as="k" hint-placeholder-count="2">
+                <span style="padding:3px 8px;border:1px solid {{ k.bd }};border-left:4px solid {{ k.c }};background:{{ k.bg }};color:{{ k.fg }}">{{ k.n }}</span>
+                <span style="color:var(--ink3)">{{ k.arrow }}</span>
+              </sc-for>
+            </div>
+          </sc-if>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px 28px;padding:18px 20px">
+            <div style="display:flex;flex-direction:column;gap:22px;min-width:0">
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">DESCRIPTION</span>
+                <p style="margin:0;font-size:14px;line-height:1.45;text-wrap:pretty">{{ sh.desc }}</p>
+              </div>
+              <div style="display:flex;flex-direction:column">
+                <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3);padding-bottom:8px">REVIEW · {{ sh.commentCount }}</span>
+                <sc-for list="{{ sh.comments }}" as="c" hint-placeholder-count="2">
+                  <div style="padding:10px 0;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px">
+                    <div style="display:flex;gap:10px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em"><span style="font-weight:600">{{ c.who }}</span><span style="color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.04em">{{ c.where }}</span></div>
+                    <div style="font-size:13px;line-height:1.4;text-wrap:pretty">{{ c.text }}</div>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ sh.noComments }}" hint-placeholder-val="{{ false }}"><div style="padding:10px 0;border-top:1px solid var(--line);font-size:12px;color:var(--ink2)">No review comments yet.</div></sc-if>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:22px;min-width:0">
+              <div style="display:flex;flex-direction:column">
+                <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3);padding-bottom:8px">CHECKS</span>
+                <sc-for list="{{ sh.checks }}" as="c" hint-placeholder-count="4">
+                  <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 0 7px 10px;border-top:1px solid var(--line);border-left:3px solid {{ c.dot }};font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em">
+                    <span>{{ c.name }}</span><span style="color:var(--ink2)">{{ c.res }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;flex-direction:column">
+                <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3);padding-bottom:8px">FILES · {{ sh.fileCount }}</span>
+                <sc-for list="{{ sh.files }}" as="f" hint-placeholder-count="3">
+                  <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.02em">
+                    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.path }}</span><span style="color:var(--ink2);font-variant-numeric:tabular-nums">{{ f.delta }}</span>
+                  </div>
+                </sc-for>
+                <div style="margin-top:8px;background:var(--bg);border:1px solid var(--line);padding:8px 10px;font-family:'Geist Mono',monospace;font-size:11px;line-height:1.5;overflow-x:auto">
+                  <sc-for list="{{ sh.diff }}" as="d" hint-placeholder-count="4"><div style="white-space:pre;color:{{ d.c }}">{{ d.t }}</div></sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+      <sc-if value="{{ sh.isPr }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:none;border-top:1px solid var(--line);padding:12px 20px;display:flex;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">
+          <a href="#" onClick="{{ prevent }}" style="padding:8px 12px;border:1px solid var(--line2);color:var(--ink2);text-decoration:none">OPEN ON GITHUB ↗</a>
+          <span style="flex:1;color:var(--ink3);padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sh.mergeNote }}</span>
+          <sc-if value="{{ sh.canReview }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ sh.onChanges }}" style="all:unset;cursor:pointer;padding:8px 12px;border:1px solid var(--line2);color:var(--ink2)" style-hover="color:var(--ink);background:var(--panel2)">REQUEST CHANGES</button>
+            <button onClick="{{ sh.onApprovePr }}" style="all:unset;cursor:pointer;padding:8px 12px;border:1px solid var(--line2);color:var(--ink2)" style-hover="color:var(--ink);background:var(--panel2)">APPROVE</button>
+          </sc-if>
+          <sc-if value="{{ sh.mergeInApp }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ sh.onMerge }}" title="{{ sh.mergeTitle }}" style="all:unset;cursor:{{ sh.mergeCursor }};padding:8px 16px;background:var(--ink);color:var(--panel);opacity:{{ sh.mergeOp }}">MERGE</button>
+          </sc-if>
+          <sc-if value="{{ sh.mergeOnGh }}" hint-placeholder-val="{{ false }}">
+            <a href="#" onClick="{{ prevent }}" style="padding:8px 16px;background:var(--ink);color:var(--panel);text-decoration:none;opacity:{{ sh.mergeOp }}">MERGE ON GITHUB ↗</a>
+          </sc-if>
+        </div>
+      </sc-if>
+      <sc-if value="{{ sh.isIssue }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:none;border-top:1px solid var(--line);padding:12px 20px;display:flex;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">
+          <a href="#" onClick="{{ prevent }}" style="padding:8px 12px;border:1px solid var(--line2);color:var(--ink2);text-decoration:none">OPEN IN {{ sh.src }} ↗</a>
+          <span style="flex:1"></span>
+          <sc-if value="{{ sh.hasPrimary }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ sh.onPrimary }}" style="all:unset;cursor:pointer;padding:8px 16px;background:var(--ink);color:var(--panel)">{{ sh.primary }}</button>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;mergeInApp&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Pull requests&quot;},&quot;showDoneIssues&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Issues&quot;}}">
+class Component extends DCLogic {
+  KEY = 'zc-bridge-v2'; COLS = 12;
+  VAR = {
+    Compact:{ g:8, rh:30, bp:'12px', rp:'8px 12px', rpPr:'10px 12px', rb:'1px solid var(--line)', bl:'4px', ig:'5px', hh:'28px', hx:'12px', gp:'8px 12px', bf:'10px 14px', kpi:'20px', kp:'16px', ws:'none', wl:null },
+    Comfort:{ g:12, rh:32, bp:'20px', rp:'12px 16px', rpPr:'14px 16px', rb:'1px solid color-mix(in oklch, var(--line) 55%, transparent)', bl:'3px', ig:'7px', hh:'38px', hx:'16px', gp:'12px 16px', bf:'16px 20px', kpi:'22px', kp:'22px', ws:'none', wl:null },
+    Airy:{ g:14, rh:34, bp:'32px', rp:'16px 20px', rpPr:'18px 20px', rb:'1px solid color-mix(in oklch, var(--line) 35%, transparent)', bl:'2px', ig:'9px', hh:'46px', hx:'20px', gp:'16px 20px', bf:'22px 26px', kpi:'28px', kp:'28px', ws:'none', wl:'color-mix(in oklch, var(--line) 60%, transparent)' },
+    Open:{ g:16, rh:34, bp:'36px', rp:'15px 20px', rpPr:'17px 20px', rb:'0 solid transparent', bl:'3px', ig:'8px', hh:'48px', hx:'20px', gp:'14px 20px', bf:'24px 28px', kpi:'28px', kp:'28px', ws:'0 1px 2px rgba(17,19,18,.05), 0 8px 24px -12px rgba(17,19,18,.12)', wl:'transparent' }
+  };
+  get V() { return this.VAR[this.state.density] || this.VAR.Airy; }
+  get GAP() { return this.V.g; } get RH() { return this.V.rh; }
+  DN = { dev:'Development', ops:'Monitoring & Ops', sec:'Security', rel:'Release Management', inc:'Incident Response', rnd:'R&D', com:'Communications', qa:'QA & Architecture', knw:'Knowledge Management', fin:'Finance', per:'Personal Office' };
+  TYPES = {
+    briefing:['BRIEFING','Today in one paragraph plus the key counters'], issues:['ISSUES','Jira and GitHub items, grouped under their epic'],
+    tasks:['TASKS','Zibby tasks with their department pipeline'], prs:['PULL REQUESTS','Agent PRs and your own, with stacks'],
+    runs:['RUNNING NOW','Tasks moving through a workflow right now'], incidents:['INCIDENTS','Production incidents in response'],
+    errors:['ERRORS','Failed runs and failing checks'], alerts:['ALERTS','Monitoring alerts not yet triaged']
+  };
+  L0 = [['briefing',0,0,12,3],['issues',0,3,4,18],['prs',4,3,4,18],['tasks',8,3,4,7],['runs',8,10,4,5],['incidents',8,15,4,2],['errors',8,17,4,3],['alerts',8,20,4,2]];
+  P = {
+    REVIEW: [['prs',0,0,6,21],['issues',6,0,3,21],['tasks',9,0,3,11],['runs',9,11,3,10]],
+    INCIDENT: [['incidents',0,0,4,6],['errors',0,6,4,6],['alerts',0,12,4,3],['runs',4,0,4,21],['tasks',8,0,4,21]]
+  };
+  PRS = [
+    { n:318, title:'feat(auth): OAuth login for the client portal', repo:'acme/client-portal', branch:'feat/oauth-login', task:'TSK-0142', author:'Stuart', review:'changes', checks:[22,24], add:612, del:48, upd:'2M', now:'Rework loop 1 of 3',
+      desc:'Adds Google and Microsoft OAuth to the portal login. Sessions move to signed cookies; the old token endpoint stays for API clients.',
+      comments:[['Dave','src/auth/callback.ts:42','The state param is not checked against the session. Reject the callback when they differ.'],['Dave','src/auth/providers.ts:18','Read client secrets from the vault, not from env at import time.'],['Dave','tests/auth.spec.ts','Add a case for a denied consent screen.']],
+      cl:[['lint','pass'],['typecheck','pass'],['unit · 212','pass'],['e2e auth','fail'],['e2e checkout','pass'],['preview deploy','fail']],
+      files:[['src/auth/callback.ts',88,12],['src/auth/providers.ts',64,0],['src/auth/session.ts',41,19],['app/login/page.tsx',57,9],['tests/auth.spec.ts',120,0]], more:9,
+      diff:['@@ -38,6 +38,9 @@ export async function callback(req, res)','   const { code, state } = req.query','+  const tokens = await provider.exchange(code)','+  const user = await upsertUser(tokens.profile)','+  await session.create(res, user.id)','-  return res.json({ ok: true })','+  return redirect("/dashboard")'] },
+    { n:326, title:'feat(auth): SAML SSO for enterprise tenants', repo:'acme/client-portal', branch:'feat/saml-sso', base:318, task:'TSK-0142', author:'Stuart', review:'draft', checks:[14,14], add:388, del:22, upd:'6M', now:'Draft',
+      desc:'Adds SAML login on top of the OAuth provider layer. Answers the SSO question from Northwind.', comments:[], cl:[['lint','pass'],['unit · 64','pass']],
+      files:[['src/auth/saml.ts',210,0],['app/login/sso/page.tsx',88,0]], diff:['@@ -0,0 +1,4 @@','+export const saml = provider({','+  id: "saml",','+  metadataUrl: tenant.samlMetadata,'] },
+    { n:327, title:'feat(auth): rotate session on privilege change', repo:'acme/client-portal', branch:'feat/session-rotation', base:318, task:'TSK-0142', author:'Stuart', review:'pending', checks:[18,18], add:74, del:11, upd:'9M', now:'Waiting for review',
+      desc:'Issues a fresh session id when a user gains admin rights.', comments:[], cl:[['lint','pass'],['unit · 31','pass']],
+      files:[['src/auth/session.ts',52,11],['tests/session.spec.ts',22,0]], diff:['+  if (roleChanged) await session.rotate(res)'] },
+    { n:322, title:'feat(settings): dark mode', repo:'acme/client-portal', branch:'feat/dark-mode', task:'TSK-0150', author:'Jorge', review:'approved', checks:[24,24], add:418, del:37, upd:'4M', ap:'AP-0093', now:'Approved by Dave',
+      desc:'Theme tokens for light and dark, a toggle in Settings and a system-preference default. Docs updated in docs/settings.md.',
+      comments:[['Dave','—','Looks good. Contrast checked against the token sheet.']], cl:[['lint','pass'],['typecheck','pass'],['unit · 198','pass'],['visual regression','pass']],
+      files:[['styles/tokens.css',142,8],['app/settings/theme.tsx',96,0],['docs/settings.md',31,4]], more:9, diff:['@@ -1,4 +1,12 @@',' :root {','+  --bg: #F3F4F2;','+  --ink: #111312;',' }','+[data-theme="dark"] {','+  --bg: #0A0B0B;','+}'] },
+    { n:325, title:'fix(deps): bump jsonwebtoken to 9.0.3', repo:'acme/api', branch:'sec/cve-2026-3141', task:'TSK-0144', author:'Jorge', review:'pending', checks:[88,140], running:true, add:6, del:6, upd:'3M', now:'Auth suite 88 / 140',
+      desc:'Patches CVE-2026-3141 (signature bypass with algorithm none). No API changes.', comments:[], cl:[['lint','pass'],['unit','pass'],['auth suite · 88/140','run'],['e2e','queued']],
+      files:[['package.json',1,1],['package-lock.json',5,5]], diff:['@@ -24,7 +24,7 @@','-    "jsonwebtoken": "9.0.2",','+    "jsonwebtoken": "9.0.3",'] },
+    { n:321, title:'feat(webhooks): exponential retry backoff', repo:'acme/api', branch:'priya/retry-backoff', author:'Priya Shah', review:'requested', checks:[31,31], add:203, del:58, upd:'40M', need:'REVIEW', wait:'40M', now:'Review requested from you',
+      desc:'Replaces fixed 30 s retries with exponential backoff and jitter, capped at 6 attempts. Relates to API-219.',
+      comments:[['Dave','src/webhooks/retry.ts:27','Agent pre-review: no blocking issues. Jitter uses Math.random, which is fine here.']], cl:[['lint','pass'],['unit · 240','pass'],['integration','pass']],
+      files:[['src/webhooks/retry.ts',120,44],['src/webhooks/queue.ts',38,14],['tests/webhooks.spec.ts',45,0]], diff:['@@ -12,5 +12,8 @@','-const DELAY = 30_000','+const BASE = 2_000','+const delay = n => Math.min(BASE * 2 ** n, 300_000)'] },
+    { n:319, title:'docs: on-call runbook for webhooks', repo:'zibbykarel/z.i.b.b.y', branch:'docs/runbook-webhooks', author:'You', mine:true, review:'approved', checks:[12,12], add:144, del:3, upd:'1H', need:'MERGE', wait:'1H', now:'Approved by Dave',
+      desc:'Adds a rollback step for webhooks workers, flagged as a gap by the nightly distillation.', comments:[['Dave','—','Clear and complete. Approved.']], cl:[['markdown lint','pass'],['links','pass']],
+      files:[['vault/runbooks/webhooks.md',138,0],['vault/index.md',6,3]], diff:['@@ -0,0 +1,6 @@','+# Runbook: webhooks workers','+','+## Rollback','+1. Pause the queue: `zc queue pause webhooks`','+2. Redeploy the previous tag'] },
+    { n:320, title:'refactor(router): split order handlers', repo:'acme/api', branch:'karel/router-split', author:'You', mine:true, review:'pending', checks:[9,10], add:380, del:295, upd:'25M', now:'Unit tests failing',
+      desc:'Splits the orders router into read and write handlers ahead of the p95 work.', comments:[], cl:[['lint','pass'],['typecheck','pass'],['unit · orders','fail']],
+      files:[['src/routes/orders/read.ts',190,0],['src/routes/orders/write.ts',172,0],['src/routes/orders.ts',18,295]], diff:['@@ -1,9 +1,4 @@','-export const orders = Router()','-orders.get("/", list)','+export { read } from "./orders/read"','+export { write } from "./orders/write"'] }
+  ];
+  state = { density:'Airy', densityOpen:false, editing:false, sel:null, anchor:null, layout:null, preset:'DEFAULT', saved:{}, collapsed:{}, epicClosed:{}, catalog:false, dismissed:{}, answer:'', bw:1400, dragging:null };
+  rootRef = React.createRef(); boardRef = React.createRef(); innerRef = React.createRef();
+  rowsBy = {};
+
+  fromArr(a) { return a.map(([type, x, y, w, h]) => ({ id:type, type, x, y, w, h })); }
+  componentDidMount() {
+    let s = {}; try { s = JSON.parse(localStorage.getItem(this.KEY)) || {}; } catch (e) {}
+    this.setState({ layout: s.layout || this.compact(this.fromArr(this.L0)), preset: s.preset || 'DEFAULT', density: this.VAR[s.density] ? s.density : 'Airy', saved: s.saved || {}, collapsed: s.collapsed || {}, epicClosed: s.epicClosed || {} });
+    const hook = () => { if (window.ZC && window.ZI) { this.unsub = window.ZC.on(() => this.forceUpdate()); this.forceUpdate(); } else setTimeout(hook, 40); }; hook();
+    this.ro = new ResizeObserver(() => { const el = this.innerRef.current; if (el && Math.abs(el.clientWidth - this.state.bw) > 1) this.setState({ bw: el.clientWidth }); });
+    this.onKey = e => {
+      if (e.target && /TEXTAREA|INPUT/.test(e.target.tagName)) return;
+      if (e.key === 'Escape') { if (this.state.sel) this.close(); else if (this.state.catalog) this.setState({ catalog:false }); else if (this.state.editing) this.setState({ editing:false }); }
+      const d = (e.key === 'j' || e.key === 'ArrowDown') ? 1 : (e.key === 'k' || e.key === 'ArrowUp') ? -1 : 0;
+      if (d && this.state.sel) { const list = this.rowsBy[this.state.sel.wid] || []; const i = list.findIndex(r => r.key === this.state.sel.key); const n = list[i + d]; if (n) { e.preventDefault(); n.open(); } }
+    };
+    window.addEventListener('keydown', this.onKey);
+  }
+  componentWillUnmount() { this.unsub && this.unsub(); this.ro && this.ro.disconnect(); window.removeEventListener('keydown', this.onKey); }
+  componentDidUpdate() {
+    const s = this.state;
+    try { localStorage.setItem(this.KEY, JSON.stringify({ density:s.density, layout:s.layout, preset:s.preset, saved:s.saved, collapsed:s.collapsed, epicClosed:s.epicClosed })); } catch (e) {}
+    if (this.innerRef.current && this.ro && !this.obs) { this.obs = true; this.ro.observe(this.innerRef.current); }
+    this.measure();
+  }
+  measure() {
+    const s = this.state, root = this.rootRef.current, board = this.boardRef.current;
+    if (!s.sel) { if (s.anchor) this.setState({ anchor:null }); return; }
+    if (!root || !board) return;
+    const el = root.querySelector('[data-rk="' + s.sel.key + '"]'); if (!el) return;
+    const R = root.getBoundingClientRect(), r = el.getBoundingClientRect(), B = board.getBoundingClientRect();
+    const rightSpace = R.right - r.right, side = rightSpace >= 460 ? 'r' : 'l';
+    const a = side === 'r' ? { side, left: r.right - R.left - 1, width: rightSpace + 1, eL: -2 } : { side, left: 0, width: r.left - R.left + 1 };
+    if (side === 'l') a.eL = a.width - 2;
+    Object.assign(a, { top: B.top - R.top, height: R.bottom - B.top, eT: r.top - B.top - 4, eH: r.height });
+    const o = s.anchor; if (!o || Object.keys(a).some(k => typeof a[k] === 'number' ? Math.abs(a[k] - o[k]) > .5 : a[k] !== o[k])) this.setState({ anchor:a });
+  }
+  close() { this.setState({ sel:null, anchor:null, answer:'' }); }
+  open(kind, id, wid, key) { this.setState({ sel:{ kind, id, wid, key }, answer:'' }); }
+
+  compact(L, pri) {
+    const items = L.map(i => Object.assign({}, i)), placed = [];
+    const hit = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+    items.slice().sort((a, b) => (a.id === pri ? -1 : b.id === pri ? 1 : 0) || a.y - b.y || a.x - b.x).forEach(it => {
+      if (it.id !== pri) { let y = 0; while (placed.some(p => hit(Object.assign({}, it, { y }), p))) y++; it.y = y; }
+      placed.push(it);
+    });
+    return items;
+  }
+  cur() { return this.state.layout || []; }
+  setLayout(L, preset) { this.setState(s => ({ layout:L, preset: preset === undefined ? s.preset : preset })); }
+  applyPreset(name) {
+    const L = name === 'DEFAULT' ? this.fromArr(this.L0) : this.P[name] ? this.fromArr(this.P[name]) : (this.state.saved[name] || []).map(i => Object.assign({}, i));
+    this.close(); this.setLayout(this.compact(L), name);
+  }
+  startDrag(id, mode, e) {
+    if (!this.state.editing || e.button !== 0) return; e.preventDefault();
+    const it = this.cur().find(i => i.id === id); const s = { x:e.clientX, y:e.clientY, ox:it.x, oy:it.y, ow:it.w, oh:it.h };
+    const cw = this.colW() + this.GAP, rh = this.RH + this.GAP;
+    const move = ev => {
+      const dx = Math.round((ev.clientX - s.x) / cw), dy = Math.round((ev.clientY - s.y) / rh);
+      const L = this.cur().map(i => Object.assign({}, i)), t = L.find(i => i.id === id);
+      if (mode === 'move') { t.x = Math.max(0, Math.min(this.COLS - t.w, s.ox + dx)); t.y = Math.max(0, s.oy + dy); }
+      else { t.w = Math.max(2, Math.min(this.COLS - t.x, s.ow + dx)); t.h = Math.max(2, s.oh + dy); }
+      this.setLayout(this.compact(L, id), 'CUSTOM');
+    };
+    const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); this.setState({ dragging:null }); this.setLayout(this.compact(this.cur())); };
+    this.setState({ dragging:id }); window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
+  }
+  colW() { return (this.state.bw - this.GAP * (this.COLS - 1)) / this.COLS; }
+
+  col(s) { return ({ working:'var(--s-work)', thinking:'var(--s-think)', blocked:'var(--s-block)', error:'var(--s-err)', done:'var(--s-done)', idle:'var(--s-idle)' })[s] || 'var(--s-idle)'; }
+  mins(s) { if (!s || s === 'NOW') return 0; const n = parseInt(s, 10); return /D$/.test(s) ? n * 1440 : /H$/.test(s) ? n * 60 : n; }
+  mergeInApp() { return this.props.mergeInApp ?? true; }
+  stack(p) { const out = []; let b = p.base; while (b) { const q = this.PRS.find(x => x.n === b); if (!q) break; out.unshift(q); b = q.base; } return out; }
+  failing(p) { return p.cl.filter(c => c[1] === 'fail').length; }
+  TS(p) {
+    if (p.merged) return ['var(--s-done)', 'MERGED'];
+    if (p.need === 'REVIEW' && !p.needDone) return ['var(--s-think)', 'REVIEW REQUESTED'];
+    if (p.review === 'draft') return ['var(--line2)', 'DRAFT'];
+    if (this.failing(p)) return ['var(--s-err)', 'CI FAILING'];
+    if (p.review === 'changes') return ['var(--s-block)', 'CHANGES REQUESTED'];
+    if (p.running) return ['var(--s-think)', 'CHECKS RUNNING'];
+    if (p.review === 'approved') return ['var(--s-work)', 'APPROVED'];
+    return ['var(--s-idle)', 'AWAITING REVIEW'];
+  }
+  prNeed(p) {
+    if (p.merged) return null;
+    if (p.ap) { const a = window.ZC.approvals.find(x => x.id === p.ap); return a ? { kind:a.kind, text:a.text, wait:a.wait, ap:a.id } : null; }
+    if (p.need && !p.needDone) return { kind:p.need, wait:p.wait, text: p.need === 'MERGE' ? 'Approved and green. Ready to merge.' : 'Review requested from you.' };
+    return null;
+  }
+  mergeReady(p) { return !p.merged && p.review === 'approved' && p.checks[0] === p.checks[1] && !p.running && !this.failing(p) && !(p.ap && window.ZC.approvals.some(a => a.id === p.ap)) && this.stack(p).every(q => q.merged); }
+  prAct(n, act) {
+    const p = this.PRS.find(x => x.n === n); if (!p) return;
+    if (act === 'approve') { p.review = 'approved'; if (p.need === 'REVIEW') p.needDone = true; p.now = 'Approved by you'; }
+    if (act === 'changes') { p.review = 'changes'; if (p.need === 'REVIEW') p.needDone = true; p.now = 'Changes requested by you'; }
+    if (act === 'merge') { if (!this.mergeReady(p)) return; p.merged = true; p.needDone = true; p.review = 'merged'; p.now = 'Merged by you'; p.upd = 'NOW'; }
+    this.forceUpdate();
+  }
+  resolve(id, d, reason) { window.ZC.resolve(id, d, reason); if (this.state.sel && this.state.sel.kind === 'ap' && this.state.sel.id === id) this.close(); }
+
+  rowBase(wid, id, kind, oid, c, need) {
+    const key = wid + ':' + id, s = this.state, sel = s.sel && s.sel.key === key, side = (s.anchor && s.anchor.side) || 'r';
+    (this._rows[wid] = this._rows[wid] || []).push({ key, open:() => this.open(kind, oid, wid, key) });
+    return { key, c, z: sel ? 31 : 'auto', onOpen:() => this.open(kind, oid, wid, key),
+      bg: sel ? 'var(--panel)' : 'var(--panel)',
+      ring: sel ? 'inset 0 1px 0 var(--ink), inset 0 -1px 0 var(--ink)' + (side === 'l' ? ', inset -1px 0 0 var(--ink)' : '') : need ? 'inset 0 0 0 1px var(--ink)' : 'none',
+      hasTag: !!need, noTag: !need, tag: need ? 'YOU' + (need.wait ? ' · ' + need.wait : '') : '' };
+  }
+  ZS = { new:['var(--s-idle)','NEW IN SOURCE'], waiting:['var(--s-block)','WAITING FOR YOU'], running:['var(--s-work)','RUNNING'], done:['var(--s-done)','DONE'] };
+  issueGroups(wid) {
+    const ZI = window.ZI, Z = window.ZC, pad = Z.pad, RANK = { waiting:0, new:1, running:2, done:3 };
+    const items = ZI.items.filter(i => !ZI.hidden.has(i.id) && (this.props.showDoneIssues || i.zs !== 'done'));
+    const eps = ZI.epics.concat([{ id:null, key:'—', title:'No epic', src:'' }]);
+    const groups = [];
+    eps.forEach(ep => {
+      const kids = items.filter(i => (i.epic || null) === ep.id).sort((a, b) => RANK[a.zs] - RANK[b.zs] || a.upd - b.upd); if (!kids.length) return;
+      const gid = ep.id || 'none', closed = !!this.state.epicClosed[gid];
+      groups.push({ key:gid, keyL:ep.key, key2:ep.key, title:ep.title, caret: closed ? '▸' : '▾', prog: ep.total ? pad(ep.done) + '/' + pad(ep.total) : pad(kids.length), progW: ep.total ? Math.round(ep.done / ep.total * 100) + '%' : '0%',
+        onToggle:() => this.setState(x => ({ epicClosed:Object.assign({}, x.epicClosed, { [gid]:!closed }) })),
+        rows: closed ? [] : kids.map(it => {
+          const z = this.ZS[it.zs], need = it.zs === 'waiting' ? { wait:ZI.ago(it.upd) } : null, pr = ZI.prOf(it);
+          return Object.assign(this.rowBase(wid, it.id, 'issue', it.id, z[0], need), { id:it.key, title:it.title, src:it.src, zs:z[1], proj:it.project.toUpperCase(), upd:ZI.ago(it.upd), hasPr:!!pr, pr: pr ? '· #' + pr.n : '' });
+        }) });
+    });
+    groups.forEach(g => g.key = g.keyL);
+    return { groups, count: items.length, needs: items.filter(i => i.zs === 'waiting').length };
+  }
+  taskRows(wid) {
+    const Z = window.ZC;
+    const L = Z.tasks.slice().sort((a, b) => this.mins(a.updated) - this.mins(b.updated)).map(t => {
+      const st = Z.taskState(t), a = Z.approvals.find(x => x.task === t.id);
+      return Object.assign(this.rowBase(wid, t.id, 'task', t.id, this.col(st), a ? { wait:a.wait } : null), { id:t.id, title:t.title, upd:t.updated, _need:!!a,
+        pipe: t.subs.map(x => ({ code:Z.D(x.dept).code, c:this.col(x.state), ink: x.state === 'idle' ? 'var(--ink3)' : 'var(--ink)', title:this.DN[x.dept] + ' · ' + x.state })) });
+    });
+    Z.approvals.filter(a => !a.task).forEach(a => L.unshift(Object.assign(this.rowBase(wid, a.id, 'ap', a.id, 'var(--s-block)', { wait:a.wait }), { id:a.id, title:a.text, upd:a.wait, _need:true, pipe:[{ code:Z.D(a.dept).code, c:'var(--s-block)', ink:'var(--ink)', title:this.DN[a.dept] }] })));
+    return L;
+  }
+  prGroups(wid) {
+    const roots = this.PRS.filter(p => !p.base || !this.PRS.some(q => q.n === p.base));
+    const rank = p => { const n = this.prNeed(p); return n ? -1 : ['CI FAILING','CHANGES REQUESTED','REVIEW REQUESTED','AWAITING REVIEW','CHECKS RUNNING','DRAFT','APPROVED','MERGED'].indexOf(this.TS(p)[1]); };
+    const card = p => {
+      const ts = this.TS(p), nd = this.prNeed(p), st = this.stack(p), waits = st.filter(q => !q.merged && this.TS(q)[1] !== 'APPROVED');
+      return Object.assign(this.rowBase(wid, 'PR' + p.n, 'pr', p.n, ts[0], nd), { n:'#' + p.n, title:p.title, meta:[p.repo.split('/')[1], p.mine ? 'YOU' : p.author.toUpperCase(), p.upd].join(' · '),
+        hasTask:!!p.task, task:p.task || '', stU: nd && nd.kind !== 'REVIEW' ? ts[1] + ' · ' + nd.kind : ts[1], child:!!p.base, baseU:'#' + p.base, blocked:waits.length > 0, waitU:waits.map(q => '#' + q.n).join(', ') });
+    };
+    const all = p => [p].concat(this.PRS.filter(q => this.stack(q).includes(p)));
+    const groups = roots.map(r => ({ r, kids:this.PRS.filter(q => this.stack(q)[0] === r) })).sort((a, b) => Math.min(...all(a.r).map(rank)) - Math.min(...all(b.r).map(rank)));
+    return groups.map(g => ({ top:[card(g.r)], kids:g.kids.map(card), hasKids:g.kids.length > 0 }));
+  }
+  runRows(wid) {
+    const Z = window.ZC, ZI = window.ZI;
+    const live = Z.tasks.filter(t => ['working','thinking','blocked','error'].includes(Z.taskState(t))).map(t => {
+      const st = Z.taskState(t), n = t.subs.length, d = t.subs.filter(x => x.state === 'done').length, cur = t.subs.find(x => x.state !== 'done') || t.subs[n - 1];
+      const pl = (Z.pipelines[cur.dept] || []).find(p => p[0] === cur.pipeline), roles = pl ? pl[1] : [], si = roles.findIndex(r => r.toUpperCase() === cur.step);
+      const pct = Math.round((d + (si >= 0 ? (si + .5) / roles.length : 0)) / n * 100);
+      const m = /^(Jira|GitHub) (.+)$/.exec(t.source), inb = Z.inbox.find(i => i.task === t.id);
+      return { id:t.id, title:t.title, st, pct, step:t.id + ' · ' + Z.D(cur.dept).code + ' · ' + cur.pipeline + (cur.step ? ' · ' + cur.step : ''), link: m ? m[2] + ' ↗' : inb ? inb.id + ' ↗' : t.source.toUpperCase(), isLink: !!(m || inb) };
+    });
+    ZI.items.filter(i => i.zs === 'running').forEach((i, k) => live.push({ id:'ZI-' + i.id, title:i.title, st:'working', pct: k ? 22 : 46, step:'NEW TASK · DEV · DELIVERY · ' + (k ? 'ARCHITECT' : 'CODER'), link:i.key + ' ↗', isLink:true, issue:i.id }));
+    const SL = { working:'WORKING', thinking:'THINKING', blocked:'BLOCKED', error:'ERROR' };
+    return live.map(r => Object.assign(this.rowBase(wid, r.id, r.issue ? 'issue' : 'task', r.issue || r.id, this.col(r.st), null), { title:r.title, step:r.step, pct:r.pct + '%', stU:SL[r.st],
+      anim: r.st === 'working' ? 'zb-soft 2.8s ease-in-out infinite' : 'none', link:r.link, linkC: r.isLink ? 'var(--ink)' : 'var(--ink3)', linkU: r.isLink ? 'underline' : 'none' }));
+  }
+  compactRows(wid, type) {
+    const Z = window.ZC, s = this.state;
+    if (type === 'incidents') return Z.tasks.filter(t => t.chain === 'hotfix' && Z.taskState(t) !== 'done').map(t => { const inb = Z.inbox.find(i => i.task === t.id);
+      return Object.assign(this.rowBase(wid, t.id, 'task', t.id, 'var(--s-err)', null), { title:t.title, src: inb ? inb.src + ' · ' + inb.from.toUpperCase() : t.source.toUpperCase(), dur:'OPEN 24M' }); });
+    if (type === 'errors') {
+      const L = Z.runs.filter(r => r.state === 'error' && !s.dismissed[r.id]).map(r => { const ag = Z.A(r.agent);
+        return Object.assign(this.rowBase(wid, r.id, 'task', r.sub.split('.')[0], 'var(--s-err)', null), { title:'Worktree conflict on services/orders', src:r.sub + ' · ' + ag.role.toUpperCase(), dur:'FOR ' + r.dur }); });
+      this.PRS.filter(p => this.failing(p) && p.mine).forEach(p => L.push(Object.assign(this.rowBase(wid, 'PR' + p.n, 'pr', p.n, 'var(--s-err)', null), { title:'CI failing on #' + p.n + ' ' + p.title, src:'GITHUB · ' + p.repo.toUpperCase(), dur:'FOR ' + p.upd })));
+      return L;
+    }
+    return [];
+  }
+  brief() {
+    const Z = window.ZC, ZI = window.ZI, pad = Z.pad, b = Z.briefings[0];
+    const needN = Z.approvals.length + this.PRS.filter(p => !p.ap && this.prNeed(p)).length + ZI.items.filter(i => i.zs === 'waiting' && !ZI.hidden.has(i.id)).length;
+    const errN = Z.runs.filter(r => r.state === 'error' && !this.state.dismissed[r.id]).length + this.PRS.filter(p => p.mine && this.failing(p)).length;
+    return { lead:b.lead, bdate:'THU 24 SEP · ' + b.title.toUpperCase(), kpis:[
+      { label:'NEEDS YOU', value:pad(needN), dot:'var(--s-block)' },
+      { label:'RUNNING NOW', value:pad(Z.tasks.filter(t => ['working','thinking','blocked','error'].includes(Z.taskState(t))).length + ZI.items.filter(i => i.zs === 'running').length), dot:'var(--s-work)' },
+      { label:'OPEN PRS', value:pad(this.PRS.filter(p => !p.merged).length), dot:'var(--s-think)' },
+      { label:'ERRORS', value:pad(errN), dot: errN ? 'var(--s-err)' : 'var(--s-idle)' },
+      { label:'INCIDENTS', value:'01', dot:'var(--s-err)' },
+      { label:'SPEND TODAY', value:'$18.90', dot:'var(--s-idle)' }] };
+  }
+  diffLines(a) { return (a || []).map(t => ({ t, c: /^\+/.test(t) ? 'var(--ink)' : /^(-|@@)/.test(t) ? 'var(--ink3)' : 'var(--ink2)' })); }
+  needCard(nd) {
+    const ap = nd.ap && window.ZC.approvals.find(a => a.id === nd.ap);
+    return { kind:nd.kind, wait:nd.wait, text:nd.text, rule: ap ? ap.rule : '', hasRule:!!ap, diff:this.diffLines(ap && ap.diff), hasDiff:!!(ap && ap.diff),
+      canApprove: !!ap && nd.kind !== 'QUESTION', canAnswer: (!!ap && nd.kind === 'QUESTION') || !!nd.onSend,
+      onApprove:() => this.resolve(nd.ap, 'APPROVED'), onDeny:() => this.resolve(nd.ap, 'DENIED'),
+      onSend: nd.onSend || (() => { if (this.state.answer.trim()) { this.resolve(nd.ap, 'APPROVED', this.state.answer.trim()); this.setState({ answer:'' }); } }) };
+  }
+  sheet() {
+    const s = this.state, Z = window.ZC, ZI = window.ZI, a = s.anchor; if (!s.sel || !a || !Z) return null;
+    const px = n => Math.round(n) + 'px', base = { left:px(a.left), top:px(a.top), width:px(a.width), height:px(a.height), eL:px(a.eL), eT:px(a.eT), eH:px(a.eH) };
+    const { kind, id } = s.sel;
+    if (kind === 'issue') {
+      const it = ZI.items.find(i => i.id === id); if (!it) return null; const z = this.ZS[it.zs], ep = ZI.epics.find(e => e.id === it.epic), pr = ZI.prOf(it);
+      const need = it.zs === 'waiting' && it.wait ? this.needCard({ kind:'QUESTION', text:it.wait, wait:ZI.ago(it.upd), onSend:() => { if (this.state.answer.trim()) { it.zs = 'running'; this.setState({ answer:'' }); Z.emit(); } } }) : null;
+      return Object.assign(base, { isIssue:true, kindLabel:'ISSUE · ' + it.src, id:it.key, title:it.title, c:z[0], stateLabel:z[1], src:it.src,
+        chips:[it.src + ' · ' + it.ss.toUpperCase(), 'ZIBBY · ' + z[1], it.project.toUpperCase(), ep ? 'EPIC ' + ep.key : 'NO EPIC', 'UPDATED ' + ZI.ago(it.upd)],
+        hasNeed:!!need, need:need || {}, desc:(it.desc || 'No description in the source.').split('\n'),
+        meta:[{ k:'EPIC', v: ep ? ep.key + ' · ' + ep.title : '—' }, { k:'TEAM', v: it.team ? this.DN[it.team] : 'No team' }, { k:'SCOPE', v:it.scope.join(', ') }, { k:'PULL REQUEST', v: pr ? '#' + pr.n + ' · ' + pr.title : 'None yet' }],
+        hasPrimary: it.zs === 'new', primary:'PROCESS INTO A TASK', onPrimary:() => { it.zs = 'running'; Z.emit(); } });
+    }
+    if (kind === 'task') {
+      const t = Z.Tk(id); if (!t) return null; const st = Z.taskState(t), ap = Z.approvals.find(x => x.task === t.id), ags = Z.agents.filter(g => g.task === t.id);
+      const arts = t.subs.filter(x => x.produces).map(x => x.produces).concat(this.PRS.filter(p => p.task === t.id).map(p => '#' + p.n + ' ' + p.title.split(':')[0]));
+      const need = ap ? this.needCard({ kind:ap.kind, text:ap.text, wait:ap.wait, ap:ap.id }) : null;
+      return Object.assign(base, { isTask:true, kindLabel:'TASK', id:t.id, title:t.title, c:this.col(st), stateLabel:st.toUpperCase(), chain:Z.C(t.chain).name.toUpperCase(),
+        chips:[Z.C(t.chain).name.toUpperCase(), (t.project || 'NO PROJECT').toUpperCase(), 'FROM ' + t.source.toUpperCase(), '$' + t.cost.toFixed(2), 'UPDATED ' + t.updated],
+        hasNeed:!!need, need:need || {},
+        route:t.subs.map((x, i) => ({ n:Z.pad(i + 1), code:Z.D(x.dept).code, name:this.DN[x.dept], pipe:x.pipeline, step:x.step || '—', dot:this.col(x.state), st:x.state.toUpperCase(), bg: x.state !== 'done' && x.state !== 'idle' ? 'var(--bg)' : 'transparent' })),
+        subs:t.subs.map(x => ({ id:x.id, code:Z.D(x.dept).code, pipe:x.pipeline + (x.step ? ' · ' + x.step : ''), dot:this.col(x.state), st:x.state.toUpperCase(), out:x.produces || '—' })),
+        agents:ags.map(g => ({ name:g.name.toUpperCase(), role:g.role, now:g.now, dot:this.col(g.state) })), agentCount:Z.pad(ags.length), noAgents:!ags.length, artifacts:arts, noArtifacts:!arts.length });
+    }
+    if (kind === 'pr') {
+      const p = this.PRS.find(x => x.n === id); if (!p) return null; const nd = this.prNeed(p), ready = this.mergeReady(p), ts = this.TS(p), fail = this.failing(p);
+      const path = this.stack(p).concat([p]).concat(this.PRS.filter(q => q.base === p.n));
+      const need = nd && nd.ap ? this.needCard(nd) : null;
+      return Object.assign(base, { isPr:true, kindLabel:'PULL REQUEST', id:'#' + p.n, title:p.title, c:ts[0], stateLabel:ts[1] + (nd && !nd.ap ? ' · ' + nd.kind + ' · ' + nd.wait : ''),
+        chips:[p.repo.toUpperCase(), p.branch + ' → ' + (p.base ? '#' + p.base : 'main'), 'BY ' + (p.mine ? 'YOU' : p.author.toUpperCase()), p.task ? 'TASK ' + p.task : 'NO TASK'],
+        hasNeed:!!need, need:need || {},
+        inStack: path.length > 1, stack: path.map((q, i) => ({ n:'#' + q.n, c:this.TS(q)[0], bd: q === p ? 'var(--ink)' : 'var(--line2)', bg: q === p ? 'var(--ink)' : 'var(--panel)', fg: q === p ? 'var(--panel)' : 'var(--ink)', arrow: i < path.length - 1 ? '→' : '' })),
+        stats:[{ label:'REVIEW', value:({ changes:'CHANGES REQUESTED', approved:'APPROVED', pending:'PENDING', requested:'YOUR REVIEW', draft:'DRAFT', merged:'MERGED' })[p.review], dot: p.review === 'approved' || p.review === 'merged' ? 'var(--s-work)' : p.review === 'changes' ? 'var(--s-block)' : 'var(--s-idle)' },
+          { label:'CHECKS', value:p.checks[0] + ' / ' + p.checks[1], dot: fail ? 'var(--s-err)' : p.running ? 'var(--s-think)' : 'var(--s-work)' },
+          { label:'CHANGES', value:'+' + p.add + ' −' + p.del, dot:'var(--line)' }],
+        desc:p.desc, comments:p.comments.map(([who, where, text]) => ({ who:who.toUpperCase(), where, text })), commentCount:Z.pad(p.comments.length), noComments:!p.comments.length,
+        checks:p.cl.map(([name, r]) => ({ name:name.toUpperCase(), res:({ pass:'PASSED', fail:'FAILED', run:'RUNNING', queued:'QUEUED' })[r], dot:({ pass:'var(--s-work)', fail:'var(--s-err)', run:'var(--s-think)', queued:'var(--s-idle)' })[r] })),
+        files:p.files.map(([path, ad, de]) => ({ path, delta:'+' + ad + ' −' + de })).concat(p.more ? [{ path:'+ ' + p.more + ' more files', delta:'' }] : []), fileCount:Z.pad(p.files.length + (p.more || 0)), diff:this.diffLines(p.diff),
+        canReview: !p.merged && !p.mine, onApprovePr:() => this.prAct(p.n, 'approve'), onChanges:() => this.prAct(p.n, 'changes'),
+        mergeInApp: this.mergeInApp() && !p.merged, mergeOnGh: !this.mergeInApp() && !p.merged, onMerge:() => this.prAct(p.n, 'merge'),
+        mergeOp: ready ? 1 : .35, mergeCursor: ready ? 'pointer' : 'not-allowed', mergeTitle: ready ? 'Merge' : 'Needs approval, green checks, a merged base and no pending handoff',
+        mergeNote: p.merged ? 'MERGED' : !this.mergeInApp() ? 'FLOOR RULE · MERGE IS NEVER OFFERED IN APP' : ready ? 'READY TO MERGE' : p.running ? 'CHECKS RUNNING' : fail ? fail + ' CHECKS FAILING' : this.stack(p).some(q => !q.merged) ? 'MERGES AFTER #' + this.stack(p).filter(q => !q.merged).map(q => q.n).join(', #') : p.review !== 'approved' ? 'NEEDS APPROVAL' : 'WAITING FOR HANDOFF' });
+    }
+    if (kind === 'ap') {
+      const ap = Z.approvals.find(x => x.id === id); if (!ap) return null;
+      return Object.assign(base, { kindLabel:'APPROVAL', id:ap.id, title:ap.text, c:'var(--s-block)', stateLabel:'WAITING ' + ap.wait, chips:[this.DN[ap.dept].toUpperCase(), ap.kind, 'ASKED BY ' + ((Z.A(ap.agent) || {}).name || '').toUpperCase()], hasNeed:true, need:this.needCard({ kind:ap.kind, text:ap.text, wait:ap.wait, ap:ap.id }) });
+    }
+    return null;
+  }
+
+  renderVals() {
+    const s = this.state, Z = window.ZC, ZI = window.ZI;
+    const ps = s.preset || 'DEFAULT';
+    const presets = ['DEFAULT', 'REVIEW', 'INCIDENT'].concat(Object.keys(s.saved)).concat(ps === 'CUSTOM' ? ['CUSTOM'] : []).map(name => ({ name, onClick:() => name !== 'CUSTOM' && this.applyPreset(name), bg: ps === name ? 'var(--ink)' : 'transparent', fg: ps === name ? 'var(--panel)' : 'var(--ink3)' }));
+    const DY = { Compact:[3,6,9,12], Comfort:[2,5.5,9,12.5], Airy:[1.5,5,10,13.5], Open:[1,4.5,10.5,14] };
+    const dens = Object.keys(DY).map(k => ({ name:k.toUpperCase(), y1:DY[k][0], y2:DY[k][1], y3:DY[k][2], y4:DY[k][3], on:s.density === k, bg:s.density === k ? 'var(--panel2)' : 'transparent', fg:s.density === k ? 'var(--ink)' : 'var(--ink2)', onClick:() => this.setState({ density:k, densityOpen:false }) }));
+    const common = {
+      dens, curD:DY[s.density] || DY.Airy, densityOpen:s.densityOpen, toggleDensity:() => this.setState(x => ({ densityOpen:!x.densityOpen })),
+      v:this.V, rootRef:this.rootRef, boardRef:this.boardRef, innerRef:this.innerRef, presets, editing:s.editing,
+      editLabel: s.editing ? 'DONE' : 'EDIT LAYOUT', editBg: s.editing ? 'var(--ink)' : 'transparent', editFg: s.editing ? 'var(--panel)' : 'var(--ink)',
+      toggleEdit:() => { this.close(); this.setState(x => ({ editing:!x.editing, catalog:false })); }, toggleCatalog:() => this.setState(x => ({ catalog:!x.catalog })),
+      saveAs:() => { const n = 'MY LAYOUT ' + String(Object.keys(s.saved).length + 1).padStart(2, '0'); this.setState(x => ({ saved:Object.assign({}, x.saved, { [n]:this.cur().map(i => Object.assign({}, i)) }), preset:n })); },
+      resetLayout:() => this.applyPreset('DEFAULT'), stop: e => e.stopPropagation(), prevent: e => e.preventDefault(),
+      closeSheet:() => this.close(), answer:s.answer, onAnswer: e => this.setState({ answer:e.target.value })
+    };
+    if (!Z || !ZI || !s.layout) return Object.assign(common, { widgets:[], boardH:'0px', guides:'none', catalog:[], catalogOpen:false, catalogEmpty:false, sheetOpen:false, sh:{} });
+    const L = this.cur(), cw = this.colW(), px = n => Math.round(n) + 'px', pad = Z.pad;
+    this._rows = {};
+    const built = {};
+    L.forEach(it => {
+      const t = it.type, b = { count:0, needs:0 };
+      if (t === 'issues') { const r = this.issueGroups(it.id); b.groups = r.groups; b.count = r.count; b.needs = r.needs; }
+      else if (t === 'tasks') { b.rows = this.taskRows(it.id); b.count = b.rows.length; b.needs = b.rows.filter(r => r._need).length; }
+      else if (t === 'prs') { b.prGroups = this.prGroups(it.id); const all = b.prGroups.reduce((a, g) => a.concat(g.top, g.kids), []); b.count = all.length; b.needs = all.filter(r => r.hasTag).length; }
+      else if (t === 'runs') { b.rows = this.runRows(it.id); b.count = b.rows.length; }
+      else if (t !== 'briefing') { b.rows = this.compactRows(it.id, t); b.count = b.rows.length; }
+      b.empty = t !== 'briefing' && b.count === 0;
+      built[it.id] = b;
+    });
+    this.rowsBy = this._rows;
+    const eff = s.editing ? L : this.compact(L.map(it => Object.assign({}, it, { h: (built[it.id].empty || s.collapsed[it.id]) ? 1 : it.h })));
+    const numOf = {}; L.slice().sort((a, b) => a.y - b.y || a.x - b.x).forEach((it, i) => numOf[it.id] = pad(i + 1));
+    const br = this.brief();
+    const widgets = eff.map(it => {
+      const b = built[it.id], t = it.type, coll = !!s.collapsed[it.id], open = s.editing ? true : !(b.empty || coll);
+      return {
+        key:it.id, label:this.TYPES[t][0], num:numOf[it.id], count: t === 'briefing' ? '' : pad(b.count), hasNeeds: b.needs > 0, needs:pad(b.needs),
+        aside: b.empty && !s.editing ? 'ALL CLEAR' : '',
+        left:px(it.x * (cw + this.GAP)), top:px(it.y * (this.RH + this.GAP)), width:px(it.w * cw + (it.w - 1) * this.GAP), height:px(it.h * this.RH + (it.h - 1) * this.GAP),
+        z: s.dragging === it.id ? 5 : 'auto', tr: s.dragging === it.id ? 'none' : 'left .15s ease, top .15s ease, width .15s ease, height .15s ease',
+        line: s.editing ? (s.dragging === it.id ? 'var(--ink)' : 'var(--line2)') : (this.V.wl || 'var(--line)'), hb: open ? (this.V.wl === 'transparent' ? 'var(--line)' : (this.V.wl || 'var(--line)')) : 'transparent', cursor: s.editing ? 'move' : 'default',
+        open, canToggle: !s.editing && !b.empty, caret: coll ? '▸' : '▾', onToggle:() => this.setState(x => ({ collapsed:Object.assign({}, x.collapsed, { [it.id]:!coll }) })),
+        onRemove:() => this.setLayout(this.compact(this.cur().filter(i => i.id !== it.id)), 'CUSTOM'),
+        onDrag: e => this.startDrag(it.id, 'move', e), onResize: e => this.startDrag(it.id, 'resize', e), size: it.w + ' × ' + it.h,
+        isIssues: t === 'issues' && !b.empty, isTasks: t === 'tasks', isPrs: t === 'prs', isRuns: t === 'runs' && !b.empty, isCompact: ['incidents','errors','alerts'].includes(t), isBrief: t === 'briefing',
+        groups:b.groups || [], rows:b.rows || [], prGroups:b.prGroups || [], isEmpty: s.editing && b.empty,
+        showLead: it.h >= 3 || it.w <= 6, kpis:br.kpis, lead:br.lead, bdate:br.bdate
+      };
+    });
+    const maxY = eff.reduce((m, it) => Math.max(m, it.y + it.h), 0);
+    const present = new Set(L.map(i => i.type));
+    const catalog = Object.keys(this.TYPES).filter(t => !present.has(t)).map(t => ({ label:this.TYPES[t][0], desc:this.TYPES[t][1], onAdd:() => this.setLayout(this.compact(this.cur().concat([{ id:t, type:t, x:0, y:999, w:4, h:6 }])), 'CUSTOM') }));
+    const sh = this.sheet();
+    return Object.assign(common, {
+      widgets, boardH: px(Math.max(0, maxY * (this.RH + this.GAP) - this.GAP) + (s.editing ? 2 * (this.RH + this.GAP) : 0)),
+      guides: s.editing ? 'repeating-linear-gradient(90deg, color-mix(in oklch, var(--ink) 5%, transparent) 0 ' + cw.toFixed(2) + 'px, transparent ' + cw.toFixed(2) + 'px ' + (cw + this.GAP).toFixed(2) + 'px)' : 'none',
+      catalog, catalogOpen: s.editing && s.catalog, catalogEmpty: !catalog.length, sheetOpen: !!sh, sh: sh || {}
+    });
+  }
+}
+</script>
+</body>
+</html>

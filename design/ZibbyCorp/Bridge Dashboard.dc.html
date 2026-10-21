@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap">
+<style>html,body{margin:0;background:#F3F4F2}a{color:#111312}a:hover{color:#50544F}textarea{font:inherit;color:inherit}::placeholder{color:#8A8E88}@keyframes zb-live{0%,100%{opacity:1}50%{opacity:.35}}@keyframes zb-pulse{0%{opacity:1}50%{opacity:.1}}@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}</style>
+<script src="./zc-data.js"></script>
+</helmet>
+<div ref="{{ rootRef }}" style="--bg:#F3F4F2;--panel:#FAFAF8;--panel2:#EDEEEB;--line:#D9DBD6;--line2:#BFC2BC;--ink:#111312;--ink2:#50544F;--ink3:#8A8E88;--grid:rgba(17,19,18,.05);--s-work:oklch(0.6 0.14 160);--s-think:oklch(0.58 0.14 250);--s-block:oklch(0.7 0.15 70);--s-err:oklch(0.58 0.2 25);--s-done:oklch(0.56 0.15 300);--s-idle:#A9ADA7;width:100vw;height:100vh;min-width:1440px;min-height:900px;box-sizing:border-box;background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px, transparent 1px),linear-gradient(90deg, var(--grid) 1px, transparent 1px);background-size:24px 24px;color:var(--ink);font-family:'Geist',system-ui,sans-serif;display:grid;grid-template-rows:48px minmax(0,1fr);overflow:hidden;position:relative">
+  <header data-screen-label="Bridge header" style="display:flex;align-items:center;gap:20px;padding:0 16px;border-bottom:1px solid var(--line);background:var(--panel);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;white-space:nowrap">
+    <div style="display:flex;align-items:center;gap:10px">
+      <svg width="24" height="24" viewBox="0 0 32 32" style="display:block"><polygon points="1,3 11,8.5 16,1 21,8.5 31,3 27,18 16,31 5,18" fill="var(--ink)"></polygon><polygon points="16,5.5 18.5,10 13.5,10" fill="var(--panel)"></polygon><path d="M10.5 12.5H21.5L11.5 22H21.5" fill="none" stroke="var(--panel)" stroke-width="2.6"></path></svg>
+      <span style="font-size:13px;letter-spacing:.18em;font-weight:600">ZIBBYCORP</span>
+      <span style="color:var(--ink3)">/ BRIDGE</span>
+    </div>
+    <div style="display:flex;border:1px solid var(--line2)">
+      <sc-for list="{{ variants }}" as="v" hint-placeholder-count="3">
+        <button onClick="{{ v.onClick }}" style="all:unset;cursor:pointer;padding:6px 10px;background:{{ v.bg }};color:{{ v.fg }}">{{ v.code }} · {{ v.name }}</button>
+      </sc-for>
+    </div>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="color:var(--ink3)">LAYOUT</span>
+      <div style="display:flex;border:1px solid var(--line2)">
+        <sc-for list="{{ presets }}" as="p" hint-placeholder-count="3">
+          <button onClick="{{ p.onClick }}" style="all:unset;cursor:pointer;padding:6px 10px;background:{{ p.bg }};color:{{ p.fg }}">{{ p.name }}</button>
+        </sc-for>
+      </div>
+    </div>
+    <sc-if value="{{ editing }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;gap:6px">
+        <button onClick="{{ toggleCatalog }}" style="all:unset;cursor:pointer;padding:6px 10px;border:1px solid var(--line2);color:var(--ink2)" style-hover="color:var(--ink);background:var(--panel2)">+ WIDGET</button>
+        <button onClick="{{ saveAs }}" style="all:unset;cursor:pointer;padding:6px 10px;border:1px solid var(--line2);color:var(--ink2)" style-hover="color:var(--ink);background:var(--panel2)">SAVE AS</button>
+        <button onClick="{{ resetLayout }}" style="all:unset;cursor:pointer;padding:6px 10px;border:1px solid var(--line2);color:var(--ink2)" style-hover="color:var(--ink);background:var(--panel2)">RESET</button>
+      </div>
+    </sc-if>
+    <button onClick="{{ toggleEdit }}" style="all:unset;cursor:pointer;padding:6px 12px;border:1px solid var(--ink);background:{{ editBg }};color:{{ editFg }}">{{ editLabel }}</button>
+    <span style="color:var(--ink2);font-variant-numeric:tabular-nums">THU 24 SEP · 14:32</span>
+  </header>
+
+  <div ref="{{ boardRef }}" data-screen-label="Bridge board" style="overflow:auto;padding:12px;min-height:0">
+    <div ref="{{ innerRef }}" style="position:relative;width:100%;height:{{ boardH }};background-image:{{ guides }}">
+      <sc-for list="{{ widgets }}" as="w" hint-placeholder-count="6">
+        <div data-screen-label="{{ w.label }}" style="position:absolute;left:{{ w.left }};top:{{ w.top }};width:{{ w.width }};height:{{ w.height }};z-index:{{ w.z }};transition:{{ w.tr }};background:var(--panel);border:1px solid {{ w.line }};box-sizing:border-box;display:flex;flex-direction:column;min-width:0">
+          <div onMouseDown="{{ w.onDrag }}" style="flex:none;height:28px;display:flex;align-items:center;gap:8px;padding:0 8px 0 12px;border-bottom:1px solid {{ w.hb }};cursor:{{ w.cursor }};user-select:none;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;white-space:nowrap">
+            <span style="color:var(--ink3)">{{ w.num }} — {{ w.label }}</span>
+            <span style="color:var(--ink);font-variant-numeric:tabular-nums">{{ w.count }}</span>
+            <sc-if value="{{ w.hasNeeds }}" hint-placeholder-val="{{ false }}">
+              <span style="display:flex;align-items:center;gap:5px;color:var(--ink)"><span style="width:7px;height:7px;background:var(--s-block)"></span>{{ w.needs }} YOU</span>
+            </sc-if>
+            <span style="flex:1"></span>
+            <span style="color:var(--ink3)">{{ w.aside }}</span>
+            <sc-if value="{{ w.canToggle }}" hint-placeholder-val="{{ true }}">
+              <button onMouseDown="{{ stop }}" onClick="{{ w.onToggle }}" title="Collapse" style="all:unset;cursor:pointer;padding:2px 6px;color:var(--ink3)" style-hover="color:var(--ink)">{{ w.caret }}</button>
+            </sc-if>
+            <sc-if value="{{ editing }}" hint-placeholder-val="{{ false }}">
+              <button onMouseDown="{{ stop }}" onClick="{{ w.onRemove }}" title="Remove widget" style="all:unset;cursor:pointer;padding:2px 6px;color:var(--ink3)" style-hover="color:var(--ink)">×</button>
+            </sc-if>
+          </div>
+          <sc-if value="{{ w.open }}" hint-placeholder-val="{{ true }}">
+            <div style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden">
+              <sc-if value="{{ w.isList }}" hint-placeholder-val="{{ true }}">
+                <sc-for list="{{ w.rows }}" as="r" hint-placeholder-count="4">
+                  <sc-if value="{{ r.isHead }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;justify-content:space-between;padding:10px 12px 4px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>{{ r.label }}</span><span>{{ r.count }}</span></div>
+                  </sc-if>
+                  <sc-if value="{{ r.isRow }}" hint-placeholder-val="{{ true }}">
+                    <div data-rk="{{ r.key }}" onClick="{{ r.onOpen }}" style="position:relative;z-index:{{ r.z }};margin:{{ r.margin }};padding:7px 12px;display:flex;flex-direction:column;gap:3px;cursor:{{ r.cursor }};background:{{ r.bg }};border:1px solid;border-color:{{ r.bc }};min-width:0" style-hover="background:var(--panel2)">
+                      <div style="display:grid;grid-template-columns:8px auto minmax(0,1fr) auto;gap:8px;align-items:center">
+                        <span style="width:8px;height:8px;background:{{ r.dot }};animation:{{ r.anim }}"></span>
+                        <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--ink2)">{{ r.label }}</span>
+                        <span style="font-size:13px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.title }}</span>
+                        <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:{{ r.rightC }};font-variant-numeric:tabular-nums">{{ r.right }}</span>
+                      </div>
+                      <div style="padding-left:16px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.meta }}</div>
+                      <sc-if value="{{ r.hasNeed }}" hint-placeholder-val="{{ false }}">
+                        <div style="margin:4px 0 0 16px;padding-top:7px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:7px">
+                          <div style="display:flex;align-items:baseline;gap:8px;min-width:0">
+                            <span style="flex:none;width:7px;height:7px;background:var(--s-block);animation:zb-pulse 1s steps(1,end) infinite"></span>
+                            <span style="flex:none;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;font-weight:600">{{ r.needKind }} · {{ r.needWait }}</span>
+                            <span style="font-size:12px;line-height:1.35;color:var(--ink2);min-width:0;text-wrap:pretty">{{ r.needText }}</span>
+                          </div>
+                          <sc-if value="{{ r.hasActs }}" hint-placeholder-val="{{ false }}">
+                            <div style="display:flex;gap:6px">
+                              <button onClick="{{ r.a1.onClick }}" style="all:unset;cursor:pointer;flex:1;text-align:center;padding:6px 8px;background:var(--ink);color:var(--panel);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">{{ r.a1.label }}</button>
+                              <sc-if value="{{ r.hasA2 }}" hint-placeholder-val="{{ true }}">
+                                <button onClick="{{ r.a2.onClick }}" style="all:unset;cursor:pointer;flex:1;text-align:center;padding:6px 8px;border:1px solid var(--line2);color:var(--ink2);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em" style-hover="color:var(--ink);background:var(--panel)">{{ r.a2.label }}</button>
+                              </sc-if>
+                            </div>
+                          </sc-if>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </sc-if>
+                </sc-for>
+                <sc-if value="{{ w.isEmpty }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin:10px 12px;border:1px dashed var(--line2);padding:10px 12px;font-size:12px;color:var(--ink2)">Nothing here. Outside edit mode this widget collapses to its header.</div>
+                </sc-if>
+              </sc-if>
+              <sc-if value="{{ w.isBrief }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:28px;align-items:center;padding:10px 14px;height:100%;box-sizing:border-box">
+                  <sc-if value="{{ w.showLead }}" hint-placeholder-val="{{ true }}">
+                    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+                      <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ w.bdate }}</span>
+                      <p style="margin:0;font-size:14px;line-height:1.45;color:var(--ink2);text-wrap:pretty">{{ w.lead }}</p>
+                    </div>
+                  </sc-if>
+                  <div style="display:flex;flex-wrap:wrap;gap:10px 0;flex:{{ w.kpiFlex }}">
+                    <sc-for list="{{ w.kpis }}" as="k" hint-placeholder-count="6">
+                      <div style="display:flex;flex-direction:column;gap:4px;padding:0 16px;border-left:1px solid var(--line)">
+                        <span style="display:flex;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3);white-space:nowrap"><span style="width:7px;height:7px;background:{{ k.dot }}"></span>{{ k.label }}</span>
+                        <span style="font-size:20px;line-height:1.1;font-weight:500;font-variant-numeric:tabular-nums">{{ k.value }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ editing }}" hint-placeholder-val="{{ false }}">
+            <span style="position:absolute;left:12px;bottom:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink3);background:var(--panel);padding:2px 4px">{{ w.size }}</span>
+            <div onMouseDown="{{ w.onResize }}" title="Resize" style="position:absolute;right:-1px;bottom:-1px;width:12px;height:12px;cursor:nwse-resize;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);box-sizing:border-box"></div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <sc-if value="{{ catalogOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;top:54px;right:150px;z-index:40;width:280px;background:var(--panel);border:1px solid var(--ink);display:flex;flex-direction:column">
+      <div style="display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)"><span>WIDGET CATALOG</span><button onClick="{{ toggleCatalog }}" style="all:unset;cursor:pointer;color:var(--ink3)">×</button></div>
+      <sc-for list="{{ catalog }}" as="c" hint-placeholder-count="3">
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line)">
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.12em">{{ c.label }}</span><span style="font-size:12px;color:var(--ink2)">{{ c.desc }}</span></div>
+          <button onClick="{{ c.onAdd }}" style="all:unset;cursor:pointer;padding:5px 9px;border:1px solid var(--line2);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink2)" style-hover="color:var(--ink);background:var(--panel2)">ADD</button>
+        </div>
+      </sc-for>
+      <sc-if value="{{ catalogEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:12px;font-size:12px;color:var(--ink2)">Every widget is already on the board.</div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;z-index:30;background:color-mix(in oklch, var(--bg) 74%, transparent)"></div>
+    <div data-screen-label="Detail sheet" style="position:absolute;z-index:32;left:{{ sh.left }};top:{{ sh.top }};width:{{ sh.width }};height:{{ sh.height }};background:var(--panel);border:1px solid var(--ink);box-sizing:border-box;display:flex;flex-direction:column">
+      <div style="position:absolute;left:{{ sh.eL }};top:{{ sh.eT }};width:3px;height:{{ sh.eH }};background:var(--panel)"></div>
+      <div style="flex:none;padding:16px 20px 14px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink3)">
+          <span style="width:8px;height:8px;background:{{ sh.dot }}"></span>
+          <span style="color:var(--ink2)">{{ sh.kindLabel }} · {{ sh.id }}</span>
+          <span>{{ sh.stateLabel }}</span>
+          <span style="flex:1"></span>
+          <span>J / K · ESC</span>
+          <button onClick="{{ closeSheet }}" style="all:unset;cursor:pointer;padding:2px 6px;font-size:14px;color:var(--ink2)" style-hover="color:var(--ink)">×</button>
+        </div>
+        <div style="font-size:22px;line-height:1.2;font-weight:500;letter-spacing:-.01em;text-wrap:pretty">{{ sh.title }}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <sc-for list="{{ sh.chips }}" as="c" hint-placeholder-count="4">
+            <span style="padding:4px 8px;border:1px solid var(--line2);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)">{{ c }}</span>
+          </sc-for>
+        </div>
+      </div>
+      <div style="flex:1;min-height:0;overflow-y:auto">
+        <sc-if value="{{ sh.hasNeed }}" hint-placeholder-val="{{ false }}">
+          <div style="margin:16px 20px 0;border:1px solid var(--ink);background:var(--bg);padding:12px;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em"><span style="width:8px;height:8px;background:var(--s-block);animation:zb-pulse 1s steps(1,end) infinite"></span><span style="font-weight:600">NEEDS YOU · {{ sh.need.kind }}</span><span style="flex:1"></span><span style="color:var(--ink2)">WAITING {{ sh.need.wait }}</span></div>
+            <div style="font-size:14px;line-height:1.4">{{ sh.need.text }}</div>
+            <sc-if value="{{ sh.need.hasRule }}" hint-placeholder-val="{{ false }}">
+              <div style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink3)">RULE · {{ sh.need.rule }}</div>
+            </sc-if>
+            <sc-if value="{{ sh.need.hasDiff }}" hint-placeholder-val="{{ false }}">
+              <div style="background:var(--panel);border:1px solid var(--line);padding:8px 10px;font-family:'Geist Mono',monospace;font-size:11px;line-height:1.5;overflow-x:auto">
+                <sc-for list="{{ sh.need.diff }}" as="d" hint-placeholder-count="3"><div style="white-space:pre;color:{{ d.c }}">{{ d.t }}</div></sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ sh.need.canAnswer }}" hint-placeholder-val="{{ false }}">
+              <textarea value="{{ answer }}" onChange="{{ onAnswer }}" placeholder="Type your answer" rows="2" style="resize:vertical;background:var(--panel);border:1px solid var(--line2);padding:8px 10px;font-size:13px;outline:none;border-radius:0" style-focus="border-color:var(--ink)"></textarea>
+              <div style="display:flex;gap:6px"><button onClick="{{ sh.need.onSend }}" style="all:unset;cursor:pointer;padding:7px 14px;background:var(--ink);color:var(--panel);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">SEND ANSWER</button></div>
+            </sc-if>
+            <sc-if value="{{ sh.need.canApprove }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:6px">
+                <button onClick="{{ sh.need.onApprove }}" style="all:unset;cursor:pointer;flex:2;text-align:center;padding:8px;background:var(--ink);color:var(--panel);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">APPROVE</button>
+                <button onClick="{{ sh.need.onDeny }}" style="all:unset;cursor:pointer;flex:1;text-align:center;padding:8px;border:1px solid var(--line2);color:var(--ink2);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em" style-hover="color:var(--ink);background:var(--panel2)">DENY</button>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ sh.isTask }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:18px 20px;display:flex;flex-direction:column;gap:22px">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">01 — CHAIN · {{ sh.chain }}</span>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px">
+                <sc-for list="{{ sh.route }}" as="c" hint-placeholder-count="3">
+                  <div style="box-shadow:0 0 0 1px var(--line);padding:10px 12px;display:flex;flex-direction:column;gap:5px;background:{{ c.bg }}">
+                    <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)">{{ c.n }} · {{ c.code }}</span>
+                    <span style="font-size:13px;font-weight:500">{{ c.name }}</span>
+                    <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--ink2)">{{ c.pipe }} · {{ c.step }}</span>
+                    <span style="display:flex;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em"><span style="width:7px;height:7px;background:{{ c.dot }}"></span>{{ c.st }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column">
+              <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3);padding-bottom:8px">02 — SUBTASKS</span>
+              <sc-for list="{{ sh.subs }}" as="s" hint-placeholder-count="3">
+                <div style="display:grid;grid-template-columns:96px 44px minmax(0,1fr) 110px minmax(0,1fr);gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em">
+                  <span style="color:var(--ink2)">{{ s.id }}</span><span>{{ s.code }}</span><span style="color:var(--ink2)">{{ s.pipe }}</span>
+                  <span style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;background:{{ s.dot }}"></span>{{ s.st }}</span>
+                  <span style="color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.out }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:flex;flex-direction:column">
+              <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3);padding-bottom:8px">03 — AGENTS · {{ sh.agentCount }}</span>
+              <sc-for list="{{ sh.agents }}" as="a" hint-placeholder-count="2">
+                <div style="display:grid;grid-template-columns:8px 76px 130px minmax(0,1fr);gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line)">
+                  <span style="width:8px;height:8px;background:{{ a.dot }};animation:{{ a.anim }}"></span>
+                  <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.1em;font-weight:600">{{ a.name }}</span>
+                  <span style="font-size:12px;color:var(--ink2)">{{ a.role }}</span>
+                  <span style="font-size:13px">{{ a.now }}</span>
+                </div>
+              </sc-for>
+              <sc-if value="{{ sh.noAgents }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:9px 0;border-top:1px solid var(--line);font-size:12px;color:var(--ink2)">No agent is on this task right now.</div>
+              </sc-if>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">04 — ARTIFACTS</span>
+              <div style="display:flex;flex-wrap:wrap;gap:6px">
+                <sc-for list="{{ sh.artifacts }}" as="x" hint-placeholder-count="2">
+                  <span style="padding:5px 9px;border:1px solid var(--line2);background:var(--bg);font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.06em">{{ x }}</span>
+                </sc-for>
+                <sc-if value="{{ sh.noArtifacts }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:var(--ink2)">None yet.</span></sc-if>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ sh.isPr }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:16px 20px 0;gap:1px">
+            <sc-for list="{{ sh.stats }}" as="m" hint-placeholder-count="3">
+              <div style="box-shadow:0 0 0 1px var(--line);padding:10px 12px;display:flex;flex-direction:column;gap:4px">
+                <span style="display:flex;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3)"><span style="width:7px;height:7px;background:{{ m.dot }}"></span>{{ m.label }}</span>
+                <span style="font-size:16px;font-weight:500;font-variant-numeric:tabular-nums">{{ m.value }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px 28px;padding:18px 20px">
+            <div style="display:flex;flex-direction:column;gap:22px;min-width:0">
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3)">01 — DESCRIPTION</span>
+                <p style="margin:0;font-size:14px;line-height:1.45;text-wrap:pretty">{{ sh.desc }}</p>
+              </div>
+              <div style="display:flex;flex-direction:column">
+                <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3);padding-bottom:8px">02 — REVIEW · {{ sh.commentCount }}</span>
+                <sc-for list="{{ sh.comments }}" as="c" hint-placeholder-count="2">
+                  <div style="padding:10px 0;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px">
+                    <div style="display:flex;gap:10px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em"><span style="font-weight:600">{{ c.who }}</span><span style="color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:none;letter-spacing:.04em">{{ c.where }}</span></div>
+                    <div style="font-size:13px;line-height:1.4;text-wrap:pretty">{{ c.text }}</div>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ sh.noComments }}" hint-placeholder-val="{{ false }}"><div style="padding:10px 0;border-top:1px solid var(--line);font-size:12px;color:var(--ink2)">No review comments yet.</div></sc-if>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:22px;min-width:0">
+              <div style="display:flex;flex-direction:column">
+                <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3);padding-bottom:8px">03 — CHECKS</span>
+                <sc-for list="{{ sh.checks }}" as="c" hint-placeholder-count="4">
+                  <div style="display:grid;grid-template-columns:8px minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em">
+                    <span style="width:8px;height:8px;background:{{ c.dot }};animation:{{ c.anim }}"></span><span>{{ c.name }}</span><span style="color:var(--ink2)">{{ c.res }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;flex-direction:column">
+                <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--ink3);padding-bottom:8px">04 — FILES · {{ sh.fileCount }}</span>
+                <sc-for list="{{ sh.files }}" as="f" hint-placeholder-count="3">
+                  <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.02em">
+                    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.path }}</span><span style="color:var(--ink2);font-variant-numeric:tabular-nums">{{ f.delta }}</span>
+                  </div>
+                </sc-for>
+                <div style="margin-top:8px;background:var(--bg);border:1px solid var(--line);padding:8px 10px;font-family:'Geist Mono',monospace;font-size:11px;line-height:1.5;overflow-x:auto">
+                  <sc-for list="{{ sh.diff }}" as="d" hint-placeholder-count="4"><div style="white-space:pre;color:{{ d.c }}">{{ d.t }}</div></sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+      <sc-if value="{{ sh.isPr }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:none;border-top:1px solid var(--line);padding:12px 20px;display:flex;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em">
+          <a href="#" onClick="{{ prevent }}" style="padding:8px 12px;border:1px solid var(--line2);color:var(--ink2);text-decoration:none">OPEN ON GITHUB ↗</a>
+          <span style="flex:1;color:var(--ink3);padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sh.mergeNote }}</span>
+          <sc-if value="{{ sh.canReview }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ sh.onChanges }}" style="all:unset;cursor:pointer;padding:8px 12px;border:1px solid var(--line2);color:var(--ink2)" style-hover="color:var(--ink);background:var(--panel2)">REQUEST CHANGES</button>
+            <button onClick="{{ sh.onApprovePr }}" style="all:unset;cursor:pointer;padding:8px 12px;border:1px solid var(--line2);color:var(--ink2)" style-hover="color:var(--ink);background:var(--panel2)">APPROVE</button>
+          </sc-if>
+          <sc-if value="{{ sh.mergeInApp }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ sh.onMerge }}" title="{{ sh.mergeTitle }}" style="all:unset;cursor:{{ sh.mergeCursor }};padding:8px 16px;background:var(--ink);color:var(--panel);opacity:{{ sh.mergeOp }}">MERGE</button>
+          </sc-if>
+          <sc-if value="{{ sh.mergeOnGh }}" hint-placeholder-val="{{ false }}">
+            <a href="#" onClick="{{ prevent }}" style="padding:8px 16px;background:var(--ink);color:var(--panel);text-decoration:none;opacity:{{ sh.mergeOp }}">MERGE ON GITHUB ↗</a>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;needsStyle&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;inline&quot;,&quot;band&quot;,&quot;tag&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Needs you&quot;},&quot;sort&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;needs&quot;,&quot;state&quot;,&quot;time&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Lists&quot;},&quot;mergeInApp&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Pull requests&quot;}}">
+class Component extends DCLogic {
+  KEY = 'zc-bridge-v1'; COLS = 12; RH = 30; GAP = 8;
+  DN = { dev:'Development', ops:'Monitoring & Ops', sec:'Security', rel:'Release Management', inc:'Incident Response', rnd:'R&D', com:'Communications', qa:'QA & Architecture', knw:'Knowledge Management', fin:'Finance', per:'Personal Office' };
+  TYPES = {
+    briefing:['BRIEFING','Today in one paragraph plus the key counters'], needs:['NEEDS YOU','One queue of every approval, question, review and merge'],
+    tasks:['TASKS','Every task with its chain and current step'], prs:['PULL REQUESTS','Agent PRs and your own'], runs:['RUNS','Live agent runs and their last event'],
+    incidents:['INCIDENTS','Production incidents in response'], errors:['ERRORS','Failed runs and failing checks'], alerts:['ALERTS','Monitoring alerts not yet triaged'], inbox:['INBOX','Inbound items waiting for triage']
+  };
+  V = {
+    a: { name:'WORKBENCH', needs:'inline', sort:'needs', layout:[['briefing',0,0,12,3],['tasks',0,3,4,18],['prs',4,3,4,18],['incidents',8,3,4,4],['errors',8,7,4,5],['alerts',8,12,4,3],['runs',8,15,4,6]] },
+    b: { name:'BRIDGE', needs:'band', sort:'state', layout:[['briefing',0,0,12,2],['tasks',0,2,3,19],['prs',3,2,3,19],['runs',6,2,3,19],['incidents',9,2,3,4],['errors',9,6,3,5],['alerts',9,11,3,3],['inbox',9,14,3,7]] },
+    c: { name:'WIDGETS', needs:'tag', sort:'time', layout:[['needs',0,0,3,12],['tasks',3,0,5,12],['prs',8,0,4,12],['briefing',0,12,5,4],['runs',5,12,4,9],['incidents',9,12,3,4],['errors',9,16,3,5],['alerts',0,16,5,3]] }
+  };
+  P = {
+    REVIEW: [['prs',0,0,6,21],['needs',6,0,3,10],['tasks',6,10,3,11],['runs',9,0,3,21]],
+    INCIDENT: [['incidents',0,0,4,7],['errors',0,7,4,6],['alerts',0,13,4,3],['runs',4,0,4,21],['tasks',8,0,4,21]]
+  };
+  PRS = [
+    { n:318, title:'feat(auth): OAuth login for the client portal', repo:'acme/client-portal', branch:'feat/oauth-login', task:'TSK-0142', author:'Stuart', review:'changes', checks:[22,24], add:612, del:48, upd:'2M', st:'thinking', now:'Rework loop 1 of 3',
+      desc:'Adds Google and Microsoft OAuth to the portal login. Sessions move to signed cookies; the old token endpoint stays for API clients.',
+      comments:[['Dave','src/auth/callback.ts:42','The state param is not checked against the session. Reject the callback when they differ.'],['Dave','src/auth/providers.ts:18','Read client secrets from the vault, not from env at import time.'],['Dave','tests/auth.spec.ts','Add a case for a denied consent screen.']],
+      cl:[['lint','pass'],['typecheck','pass'],['unit · 212','pass'],['e2e auth','fail'],['e2e checkout','pass'],['preview deploy','fail']],
+      files:[['src/auth/callback.ts',88,12],['src/auth/providers.ts',64,0],['src/auth/session.ts',41,19],['app/login/page.tsx',57,9],['tests/auth.spec.ts',120,0]], more:9,
+      diff:['@@ -38,6 +38,9 @@ export async function callback(req, res)','   const { code, state } = req.query','+  const tokens = await provider.exchange(code)','+  const user = await upsertUser(tokens.profile)','+  await session.create(res, user.id)','-  return res.json({ ok: true })','+  return redirect("/dashboard")'] },
+    { n:322, title:'feat(settings): dark mode', repo:'acme/client-portal', branch:'feat/dark-mode', task:'TSK-0150', author:'Jorge', review:'approved', checks:[24,24], add:418, del:37, upd:'4M', st:'blocked', ap:'AP-0093', now:'Approved by Dave',
+      desc:'Theme tokens for light and dark, a toggle in Settings and a system-preference default. Docs updated in docs/settings.md.',
+      comments:[['Dave','—','Looks good. Contrast checked against the token sheet.']], cl:[['lint','pass'],['typecheck','pass'],['unit · 198','pass'],['visual regression','pass']],
+      files:[['styles/tokens.css',142,8],['app/settings/theme.tsx',96,0],['docs/settings.md',31,4]], more:9, diff:['@@ -1,4 +1,12 @@',' :root {','+  --bg: #F3F4F2;','+  --ink: #111312;',' }','+[data-theme="dark"] {','+  --bg: #0A0B0B;','+}'] },
+    { n:325, title:'fix(deps): bump jsonwebtoken to 9.0.3', repo:'acme/api', branch:'sec/cve-2026-3141', task:'TSK-0144', author:'Jorge', review:'pending', checks:[88,140], running:true, add:6, del:6, upd:'3M', st:'working', now:'Auth suite 88 / 140',
+      desc:'Patches CVE-2026-3141 (signature bypass with algorithm none). No API changes.', comments:[], cl:[['lint','pass'],['unit','pass'],['auth suite · 88/140','run'],['e2e','queued']],
+      files:[['package.json',1,1],['package-lock.json',5,5]], diff:['@@ -24,7 +24,7 @@','-    "jsonwebtoken": "9.0.2",','+    "jsonwebtoken": "9.0.3",'] },
+    { n:321, title:'feat(webhooks): exponential retry backoff', repo:'acme/api', branch:'priya/retry-backoff', task:null, author:'Priya Shah', review:'requested', checks:[31,31], add:203, del:58, upd:'40M', st:'blocked', need:'REVIEW', wait:'40M', now:'Review requested from you',
+      desc:'Replaces fixed 30 s retries with exponential backoff and jitter, capped at 6 attempts. Relates to API-219.',
+      comments:[['Dave','src/webhooks/retry.ts:27','Agent pre-review: no blocking issues. Jitter uses Math.random, which is fine here.']], cl:[['lint','pass'],['unit · 240','pass'],['integration','pass']],
+      files:[['src/webhooks/retry.ts',120,44],['src/webhooks/queue.ts',38,14],['tests/webhooks.spec.ts',45,0]], diff:['@@ -12,5 +12,8 @@','-const DELAY = 30_000','+const BASE = 2_000','+const delay = n => Math.min(BASE * 2 ** n, 300_000)','+  + Math.random() * 1_000'] },
+    { n:319, title:'docs: on-call runbook for webhooks', repo:'zibbykarel/z.i.b.b.y', branch:'docs/runbook-webhooks', task:null, author:'You', mine:true, review:'approved', checks:[12,12], add:144, del:3, upd:'1H', st:'blocked', need:'MERGE', wait:'1H', now:'Approved by Dave',
+      desc:'Adds a rollback step for webhooks workers, flagged as a gap by the nightly distillation.', comments:[['Dave','—','Clear and complete. Approved.']], cl:[['markdown lint','pass'],['links','pass']],
+      files:[['vault/runbooks/webhooks.md',138,0],['vault/index.md',6,3]], diff:['@@ -0,0 +1,6 @@','+# Runbook: webhooks workers','+','+## Rollback','+1. Pause the queue: `zc queue pause webhooks`','+2. Redeploy the previous tag'] },
+    { n:320, title:'refactor(router): split order handlers', repo:'acme/api', branch:'karel/router-split', task:null, author:'You', mine:true, review:'draft', checks:[9,10], add:380, del:295, upd:'25M', st:'error', now:'Unit tests failing',
+      desc:'Splits the orders router into read and write handlers ahead of the p95 work.', comments:[], cl:[['lint','pass'],['typecheck','pass'],['unit · orders','fail']],
+      files:[['src/routes/orders/read.ts',190,0],['src/routes/orders/write.ts',172,0],['src/routes/orders.ts',18,295]], diff:['@@ -1,9 +1,4 @@','-export const orders = Router()','-orders.get("/", list)','+export { read } from "./orders/read"','+export { write } from "./orders/write"'] },
+    { n:311, title:'fix(ratelimit): off-by-one on window edge', repo:'acme/api', branch:'fix/rate-limit', task:'TSK-0141', author:'Bob', review:'approved', checks:[30,30], merged:true, add:14, del:6, upd:'2H', st:'done', now:'Shipped in api@2.14.0',
+      desc:'Counts the request that lands exactly on the window edge in the next window.', comments:[['Dave','—','Approved.']], cl:[['all checks','pass']], files:[['src/middleware/ratelimit.ts',14,6]], diff:['-  if (now - start > WINDOW)','+  if (now - start >= WINDOW)'] }
+  ];
+  state = { variant:'a', editing:false, sel:null, anchor:null, layouts:{}, presetSel:{}, saved:{}, collapsed:{}, catalog:false, dismissed:{}, answer:'', bw:1400, tick:0, dragging:null };
+  rootRef = React.createRef(); boardRef = React.createRef(); innerRef = React.createRef();
+  rowsBy = {};
+
+  fromArr(a) { return a.map(([type, x, y, w, h]) => ({ id:type, type, x, y, w, h })); }
+  componentDidMount() {
+    let s = {}; try { s = JSON.parse(localStorage.getItem(this.KEY)) || {}; } catch (e) {}
+    const layouts = {}; for (const k of Object.keys(this.V)) layouts[k] = (s.layouts && s.layouts[k]) || this.compact(this.fromArr(this.V[k].layout));
+    this.setState({ variant: s.variant || 'a', layouts, presetSel: s.presetSel || {}, saved: s.saved || {}, collapsed: s.collapsed || {} });
+    const hook = () => { if (window.ZC) { this.unsub = window.ZC.on(() => this.forceUpdate()); this.forceUpdate(); } else setTimeout(hook, 40); }; hook();
+    this.ro = new ResizeObserver(() => { const el = this.innerRef.current; if (el && Math.abs(el.clientWidth - this.state.bw) > 1) this.setState({ bw: el.clientWidth }); });
+    if (this.innerRef.current) this.ro.observe(this.innerRef.current);
+    this.onKey = e => {
+      if (e.target && /TEXTAREA|INPUT/.test(e.target.tagName)) return;
+      if (e.key === 'Escape') { if (this.state.sel) this.close(); else if (this.state.catalog) this.setState({ catalog:false }); else if (this.state.editing) this.setState({ editing:false }); }
+      const d = (e.key === 'j' || e.key === 'ArrowDown') ? 1 : (e.key === 'k' || e.key === 'ArrowUp') ? -1 : 0;
+      if (d && this.state.sel) { const list = this.rowsBy[this.state.sel.wid] || []; const i = list.findIndex(r => r.key === this.state.sel.key); const n = list[i + d]; if (n) { e.preventDefault(); n.open(); } }
+    };
+    window.addEventListener('keydown', this.onKey);
+  }
+  componentWillUnmount() { this.unsub && this.unsub(); this.ro && this.ro.disconnect(); window.removeEventListener('keydown', this.onKey); }
+  componentDidUpdate() {
+    const s = this.state;
+    try { localStorage.setItem(this.KEY, JSON.stringify({ variant:s.variant, layouts:s.layouts, presetSel:s.presetSel, saved:s.saved, collapsed:s.collapsed })); } catch (e) {}
+    if (this.innerRef.current && this.ro && !this.obs) { this.obs = true; this.ro.observe(this.innerRef.current); }
+    this.measure();
+  }
+  measure() {
+    const s = this.state, root = this.rootRef.current, board = this.boardRef.current;
+    if (!s.sel) { if (s.anchor) this.setState({ anchor:null }); return; }
+    if (!root || !board) return;
+    const el = root.querySelector('[data-rk="' + s.sel.key + '"]'); if (!el) return;
+    const R = root.getBoundingClientRect(), r = el.getBoundingClientRect(), B = board.getBoundingClientRect();
+    const top = B.top - R.top, height = R.bottom - B.top, rightSpace = R.right - r.right, side = rightSpace >= 460 ? 'r' : 'l';
+    const a = side === 'r'
+      ? { side, left: r.right - R.left - 1, width: rightSpace + 1, eL: -2 }
+      : { side, left: 0, width: r.left - R.left + 1, eL: r.left - R.left - 1 };
+    Object.assign(a, { top, height, eT: r.top - B.top, eH: r.height - 2 });
+    if (side === 'l') a.eL = a.width - 2;
+    const o = s.anchor; if (!o || Object.keys(a).some(k => typeof a[k] === 'number' ? Math.abs(a[k] - o[k]) > .5 : a[k] !== o[k])) this.setState({ anchor:a });
+  }
+  close() { this.setState({ sel:null, anchor:null, answer:'' }); }
+  open(kind, id, wid, key) { this.setState({ sel:{ kind, id, wid, key }, answer:'' }); }
+
+  compact(L, pri) {
+    const items = L.map(i => Object.assign({}, i)), placed = [];
+    const hit = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+    items.slice().sort((a, b) => (a.id === pri ? -1 : b.id === pri ? 1 : 0) || a.y - b.y || a.x - b.x).forEach(it => {
+      if (it.id !== pri) { let y = 0; while (placed.some(p => hit(Object.assign({}, it, { y }), p))) y++; it.y = y; }
+      placed.push(it);
+    });
+    return items;
+  }
+  cur() { return this.state.layouts[this.state.variant] || []; }
+  setLayout(L, preset) { this.setState(s => ({ layouts: Object.assign({}, s.layouts, { [s.variant]: L }), presetSel: preset === undefined ? s.presetSel : Object.assign({}, s.presetSel, { [s.variant]: preset }) })); }
+  applyPreset(name) {
+    const v = this.state.variant;
+    const L = name === 'DEFAULT' ? this.fromArr(this.V[v].layout) : this.P[name] ? this.fromArr(this.P[name]) : (this.state.saved[name] || []).map(i => Object.assign({}, i));
+    this.close(); this.setLayout(this.compact(L), name);
+  }
+  startDrag(id, mode, e) {
+    if (!this.state.editing || e.button !== 0) return; e.preventDefault();
+    const it = this.cur().find(i => i.id === id); const s = { x:e.clientX, y:e.clientY, ox:it.x, oy:it.y, ow:it.w, oh:it.h };
+    const cw = this.colW() + this.GAP, rh = this.RH + this.GAP;
+    const move = ev => {
+      const dx = Math.round((ev.clientX - s.x) / cw), dy = Math.round((ev.clientY - s.y) / rh);
+      const L = this.cur().map(i => Object.assign({}, i)), t = L.find(i => i.id === id);
+      if (mode === 'move') { t.x = Math.max(0, Math.min(this.COLS - t.w, s.ox + dx)); t.y = Math.max(0, s.oy + dy); }
+      else { t.w = Math.max(2, Math.min(this.COLS - t.x, s.ow + dx)); t.h = Math.max(2, s.oh + dy); }
+      this.setLayout(this.compact(L, id), 'CUSTOM');
+    };
+    const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); this.setState({ dragging:null }); this.setLayout(this.compact(this.cur())); };
+    this.setState({ dragging:id }); window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
+  }
+  colW() { return (this.state.bw - this.GAP * (this.COLS - 1)) / this.COLS; }
+
+  col(s) { return ({ working:'var(--s-work)', thinking:'var(--s-think)', blocked:'var(--s-block)', error:'var(--s-err)', done:'var(--s-done)', idle:'var(--s-idle)' })[s] || 'var(--s-idle)'; }
+  anim(s) { return s === 'working' ? 'zb-live 1.4s ease-in-out infinite' : s === 'blocked' ? 'zb-pulse 1s steps(1,end) infinite' : 'none'; }
+  mins(s) { if (!s || s === 'NOW') return 0; const n = parseInt(s, 10); return /D$/.test(s) ? n * 1440 : /H$/.test(s) ? n * 60 : n; }
+  sev(s) { return ({ error:0, blocked:1, working:2, thinking:3, idle:4, done:5 })[s]; }
+  needsStyle() { const p = this.props.needsStyle; return p && p !== 'auto' ? p : this.V[this.state.variant].needs; }
+  sortMode() { const p = this.props.sort; return p && p !== 'auto' ? p : this.V[this.state.variant].sort; }
+  mergeInApp() { return this.props.mergeInApp ?? true; }
+  prNeed(p) {
+    if (p.merged) return null;
+    if (p.ap) { const a = window.ZC.approvals.find(x => x.id === p.ap); return a ? { kind:a.kind, text:a.text, wait:a.wait, ap:a.id, rule:a.rule, diff:a.diff } : null; }
+    if (p.need && !p.needDone) return { kind:p.need, wait:p.wait, text: p.need === 'MERGE' ? 'Approved and green. Ready to merge.' : 'Review requested from you.' };
+    return null;
+  }
+  prAct(n, act) {
+    const p = this.PRS.find(x => x.n === n); if (!p) return;
+    if (act === 'approve') { p.review = 'approved'; if (p.need === 'REVIEW') { p.needDone = true; p.st = 'idle'; p.now = 'Approved by you'; } }
+    if (act === 'changes') { p.review = 'changes'; if (p.need === 'REVIEW') p.needDone = true; p.st = 'thinking'; p.now = 'Changes requested by you'; }
+    if (act === 'merge') { if (!this.mergeReady(p)) return; p.merged = true; p.needDone = true; p.st = 'done'; p.review = 'merged'; p.now = 'Merged by you'; p.upd = 'NOW'; }
+    this.forceUpdate();
+  }
+  mergeReady(p) { return !p.merged && p.review === 'approved' && p.checks[0] === p.checks[1] && !p.running && !(p.ap && window.ZC.approvals.some(a => a.id === p.ap)); }
+  resolve(id, d, reason) { window.ZC.resolve(id, d, reason); if (this.state.sel && this.state.sel.kind === 'ap' && this.state.sel.id === id) this.close(); }
+  stopP(fn) { return e => { e.stopPropagation(); fn(); }; }
+
+  needActs(need, openFn) {
+    const k = need.kind;
+    if (need.ap && k !== 'QUESTION') return [{ label:'APPROVE', onClick:this.stopP(() => this.resolve(need.ap, 'APPROVED')) }, { label:'DENY', onClick:this.stopP(() => this.resolve(need.ap, 'DENIED')) }];
+    if (k === 'MERGE' && this.mergeInApp()) return [{ label:'MERGE', onClick:this.stopP(() => this.prAct(need.pr, 'merge')) }, { label:'OPEN →', onClick:this.stopP(openFn) }];
+    return [{ label: k === 'QUESTION' ? 'ANSWER →' : k === 'REVIEW' ? 'REVIEW →' : 'OPEN →', onClick:this.stopP(openFn) }];
+  }
+  row(wid, o) {
+    const key = wid + ':' + o.id, s = this.state, sel = s.sel && s.sel.key === key, ns = this.needsStyle(), need = o.need, card = need && (ns !== 'tag' || o.plain);
+    const side = (s.anchor && s.anchor.side) || 'r';
+    const openFn = () => o.okind && this.open(o.okind, o.oid, wid, key);
+    const acts = need && (ns === 'inline' || o.plain) ? this.needActs(need, openFn) : [];
+    return {
+      key, isRow:true, isHead:false, label:o.label, title:o.title, meta:o.meta, dot:this.col(o.state), anim:this.anim(o.state),
+      right: need && ns === 'tag' && !o.plain ? 'YOU · ' + need.wait : o.right, rightC: need && ns === 'tag' && !o.plain ? 'var(--ink)' : 'var(--ink3)',
+      hasNeed: !!(card && !o.plain) || !!(o.plain && acts.length), needKind: need ? need.kind : '', needWait: need ? need.wait : '', needText: o.plain ? '' : need ? need.text : '',
+      hasActs: acts.length > 0, a1: acts[0] || {}, a2: acts[1] || {}, hasA2: acts.length > 1,
+      z: sel ? 31 : 'auto', margin: card ? '6px 8px' : '0', cursor: o.okind ? 'pointer' : 'default',
+      bg: sel ? 'var(--panel)' : card ? 'var(--bg)' : 'transparent',
+      bc: sel ? (side === 'r' ? 'var(--ink) transparent var(--ink) var(--ink)' : 'var(--ink) var(--ink) var(--ink) transparent') : card ? 'var(--ink)' : 'transparent transparent var(--line) transparent',
+      onOpen: openFn, _o:o
+    };
+  }
+  sortRows(wid, items, mode) {
+    const by = (a, b) => (b.need ? 1 : 0) - (a.need ? 1 : 0) || (a.need && b.need ? this.mins(b.need.wait) - this.mins(a.need.wait) : 0) || this.sev(a.state) - this.sev(b.state) || this.mins(a.right) - this.mins(b.right);
+    if (mode === 'time') return items.slice().sort((a, b) => this.mins(a.right) - this.mins(b.right)).map(o => this.row(wid, o));
+    if (mode === 'needs') return items.slice().sort(by).map(o => this.row(wid, o));
+    const G = [['NEEDS YOU', o => o.need], ['ERROR', o => o.state === 'error'], ['IN PROGRESS', o => o.state === 'working' || o.state === 'thinking'], ['WAITING', o => o.state === 'blocked'], ['QUEUED', o => o.state === 'idle'], ['DONE', o => o.state === 'done']];
+    const out = [], used = new Set();
+    G.forEach(([label, f]) => { const g = items.filter(o => !used.has(o) && f(o)).sort(by); if (!g.length) return; g.forEach(o => used.add(o)); out.push({ key:wid + ':h:' + label, isHead:true, isRow:false, label, count:window.ZC.pad(g.length) }); g.forEach(o => out.push(this.row(wid, o))); });
+    return out;
+  }
+  items(type) {
+    const Z = window.ZC, pad = Z.pad, s = this.state;
+    if (type === 'tasks') {
+      const L = Z.tasks.map(t => {
+        const st = Z.taskState(t), sub = t.subs.find(x => x.state !== 'done' && x.state !== 'idle') || t.subs.find(x => x.state !== 'done') || t.subs[t.subs.length - 1];
+        const a = Z.approvals.find(x => x.task === t.id);
+        return { id:t.id, label:t.id, title:t.title, state:st, right:t.updated, okind:'task', oid:t.id,
+          meta: t.subs.map(x => Z.D(x.dept).code).join(' → ') + ' · ' + sub.pipeline + (sub.step ? ' · ' + sub.step : ''),
+          need: a ? { kind:a.kind, text:a.text, wait:a.wait, ap:a.id } : null };
+      });
+      Z.approvals.filter(a => !a.task).forEach(a => L.push({ id:a.id, label:a.id, title:a.text, state:'blocked', right:a.wait, okind:'ap', oid:a.id, meta:Z.D(a.dept).code + ' · ' + a.kind + ' · NO TASK', need:{ kind:a.kind, text:a.rule, wait:a.wait, ap:a.id } }));
+      return L;
+    }
+    if (type === 'prs') return this.PRS.map(p => {
+      const nd = this.prNeed(p); if (nd) nd.pr = p.n;
+      return { id:'PR' + p.n, label:'#' + p.n, title:p.title, state:p.st, right:p.upd, okind:'pr', oid:p.n, need:nd,
+        meta: [p.repo.split('/')[1], p.mine ? 'YOU' : p.author.toUpperCase(), 'CHECKS ' + p.checks[0] + '/' + p.checks[1], this.revLabel(p)].join(' · ') };
+    });
+    if (type === 'needs') {
+      const L = Z.approvals.map(a => {
+        const pr = this.PRS.find(p => p.ap === a.id), ag = Z.A(a.agent);
+        return { id:a.id, label:a.kind, title:a.text, state:'blocked', right:a.wait, okind: pr ? 'pr' : a.task ? 'task' : 'ap', oid: pr ? pr.n : a.task || a.id, plain:true,
+          meta: [Z.D(a.dept).code, pr ? '#' + pr.n : a.task || 'NO TASK', ag ? ag.name.toUpperCase() : ''].filter(Boolean).join(' · '), need:{ kind:a.kind, text:a.text, wait:a.wait, ap:a.id } };
+      });
+      this.PRS.forEach(p => { const nd = !p.ap && this.prNeed(p); if (nd) L.push({ id:'N' + p.n, label:nd.kind, title:'#' + p.n + ' ' + p.title, state:'blocked', right:nd.wait, okind:'pr', oid:p.n, plain:true, meta:p.repo + ' · ' + (p.mine ? 'YOU' : p.author.toUpperCase()), need:Object.assign(nd, { pr:p.n }) }); });
+      return L.sort((a, b) => this.mins(b.right) - this.mins(a.right));
+    }
+    if (type === 'runs') return Z.runs.filter(r => r.state !== 'done').map(r => { const ag = Z.A(r.agent); return { id:r.id, label:ag.name.toUpperCase(), title:r.events[r.events.length - 1], state:r.state, right:r.dur, okind:'task', oid:r.sub.split('.')[0], meta:ag.role.toUpperCase() + ' · ' + r.sub + ' · ' + r.id + (r.retries ? ' · RETRY ' + r.retries : '') }; });
+    if (type === 'incidents') return Z.tasks.filter(t => t.chain === 'hotfix' && Z.taskState(t) !== 'done').map(t => { const inb = Z.inbox.find(i => i.task === t.id); return { id:t.id, label:t.id, title:t.title, state:Z.taskState(t), right:t.updated, okind:'task', oid:t.id, meta:'SEV 2 · ' + (inb ? inb.from.toUpperCase() + ' · ' + inb.when : t.source.toUpperCase()) }; });
+    if (type === 'errors') {
+      const L = Z.runs.filter(r => r.state === 'error' && !s.dismissed[r.id]).map(r => { const ag = Z.A(r.agent); return { id:r.id, label:r.sub, title:'Worktree conflict on services/orders', state:'error', right:r.dur, okind:'task', oid:r.sub.split('.')[0], plain:true, meta:ag.name.toUpperCase() + ' · ' + ag.role.toUpperCase() + ' · RETRY ' + r.retries + ' OF 2',
+        need:{ kind:'ERROR', wait:'', text:'', custom:[{ label:'RETRY', onClick:this.stopP(() => { r.state = 'working'; r.events.push('Retry 3 · rebasing on main'); ag.state = 'working'; ag.now = 'Rebasing worktree on main'; Z.emit(); }) }, { label:'DISMISS', onClick:this.stopP(() => this.setState(x => ({ dismissed:Object.assign({}, x.dismissed, { [r.id]:true }) }))) }] } }; });
+      this.PRS.filter(p => p.st === 'error' && !s.dismissed['PR' + p.n]).forEach(p => L.push({ id:'PR' + p.n, label:'#' + p.n, title:'Unit tests failing · ' + p.title, state:'error', right:p.upd, okind:'pr', oid:p.n, meta:p.repo + ' · ' + (p.checks[1] - p.checks[0]) + ' OF ' + p.checks[1] + ' CHECKS FAILING' }));
+      return L;
+    }
+    if (type === 'alerts') return [];
+    if (type === 'inbox') return Z.inbox.filter(i => i.status === 'pending').map(i => ({ id:i.id, label:i.src, title:i.title, state:'idle', right:i.when, meta:i.from.toUpperCase() + ' · ' + i.triage.toUpperCase() }));
+    return [];
+  }
+  revLabel(p) { return ({ changes:'CHANGES REQUESTED', approved:'APPROVED', pending:'REVIEW PENDING', requested:'YOUR REVIEW', draft:'DRAFT', merged:'MERGED' })[p.review] || ''; }
+  brief() {
+    const Z = window.ZC, pad = Z.pad, b = Z.briefings[0];
+    const needN = Z.approvals.length + this.PRS.filter(p => !p.ap && this.prNeed(p)).length;
+    const errN = this.items('errors').length, incN = this.items('incidents').length;
+    return { lead:b.lead, bdate:'THU 24 SEP · ' + b.title.toUpperCase(), kpis:[
+      { label:'NEEDS YOU', value:pad(needN), dot:'var(--s-block)' },
+      { label:'TASKS IN FLIGHT', value:pad(Z.tasks.filter(t => Z.taskState(t) !== 'done').length), dot:'var(--s-think)' },
+      { label:'OPEN PRS', value:pad(this.PRS.filter(p => !p.merged).length), dot:'var(--s-think)' },
+      { label:'RUNNING', value:pad(Z.runs.filter(r => r.state === 'working' || r.state === 'thinking').length), dot:'var(--s-work)' },
+      { label:'ERRORS', value:pad(errN), dot: errN ? 'var(--s-err)' : 'var(--s-idle)' },
+      { label:'INCIDENTS', value:pad(incN), dot: incN ? 'var(--s-err)' : 'var(--s-idle)' },
+      { label:'SPEND TODAY', value:'$18.90', dot:'var(--s-idle)' }] };
+  }
+  diffLines(a) { return (a || []).map(t => ({ t, c: /^\+/.test(t) ? 'var(--ink)' : /^-/.test(t) ? 'var(--ink3)' : /^@@/.test(t) ? 'var(--ink3)' : 'var(--ink2)' })); }
+  needCard(nd) {
+    if (!nd) return null;
+    const ap = nd.ap && window.ZC.approvals.find(a => a.id === nd.ap);
+    return { kind:nd.kind, wait:nd.wait, text:nd.text, rule: ap ? ap.rule : '', hasRule: !!ap, diff:this.diffLines(ap && ap.diff), hasDiff: !!(ap && ap.diff),
+      canApprove: !!ap && nd.kind !== 'QUESTION', canAnswer: !!ap && nd.kind === 'QUESTION',
+      onApprove: () => this.resolve(nd.ap, 'APPROVED'), onDeny: () => this.resolve(nd.ap, 'DENIED'),
+      onSend: () => { if (this.state.answer.trim()) { this.resolve(nd.ap, 'APPROVED', this.state.answer.trim()); this.setState({ answer:'' }); } } };
+  }
+  sheet() {
+    const s = this.state, Z = window.ZC, a = s.anchor; if (!s.sel || !a || !Z) return null;
+    const px = n => Math.round(n) + 'px';
+    const base = { left:px(a.left), top:px(a.top), width:px(a.width), height:px(a.height), eL:px(a.eL), eT:px(a.eT), eH:px(a.eH) };
+    const { kind, id } = s.sel;
+    if (kind === 'task') {
+      const t = Z.Tk(id); if (!t) return null; const st = Z.taskState(t), ap = Z.approvals.find(x => x.task === t.id);
+      const ags = Z.agents.filter(g => g.task === t.id);
+      const arts = t.subs.filter(x => x.produces).map(x => x.produces).concat(this.PRS.filter(p => p.task === t.id).map(p => '#' + p.n + ' ' + p.title.split(':')[0]));
+      const need = ap ? this.needCard({ kind:ap.kind, text:ap.text, wait:ap.wait, ap:ap.id }) : null;
+      return Object.assign(base, { isTask:true, isPr:false, kindLabel:'TASK', id:t.id, title:t.title, dot:this.col(st), stateLabel:st.toUpperCase(), chain:Z.C(t.chain).name.toUpperCase(),
+        chips:[Z.C(t.chain).name.toUpperCase(), (t.project || 'NO PROJECT').toUpperCase(), 'FROM ' + t.source.toUpperCase(), '$' + t.cost.toFixed(2), 'UPDATED ' + t.updated],
+        hasNeed: !!need, need: need || {},
+        route: t.subs.map((x, i) => ({ n:Z.pad(i + 1), code:Z.D(x.dept).code, name:this.DN[x.dept], pipe:x.pipeline, step:x.step || '—', dot:this.col(x.state), st:x.state.toUpperCase(), bg: x.state !== 'done' && x.state !== 'idle' ? 'var(--bg)' : 'transparent' })),
+        subs: t.subs.map(x => ({ id:x.id, code:Z.D(x.dept).code, pipe:x.pipeline + (x.step ? ' · ' + x.step : ''), dot:this.col(x.state), st:x.state.toUpperCase(), out:x.produces || '—' })),
+        agents: ags.map(g => ({ name:g.name.toUpperCase(), role:g.role, now:g.now, dot:this.col(g.state), anim:this.anim(g.state) })), agentCount:Z.pad(ags.length), noAgents:!ags.length,
+        artifacts:arts, noArtifacts:!arts.length });
+    }
+    if (kind === 'pr') {
+      const p = this.PRS.find(x => x.n === id); if (!p) return null; const nd = this.prNeed(p); const ready = this.mergeReady(p);
+      const failing = p.cl.filter(c => c[1] === 'fail').length;
+      const need = nd ? this.needCard(nd) : null;
+      return Object.assign(base, { isPr:true, isTask:false, kindLabel:'PULL REQUEST', id:'#' + p.n, title:p.title, dot:this.col(p.st), stateLabel:p.now.toUpperCase(),
+        chips:[p.repo.toUpperCase(), p.branch + ' → main', 'BY ' + (p.mine ? 'YOU' : p.author.toUpperCase()), p.task ? 'TASK ' + p.task : 'NO TASK'].map(String),
+        hasNeed: !!need, need: need || {},
+        stats:[{ label:'REVIEW', value:this.revLabel(p), dot: p.review === 'approved' || p.review === 'merged' ? 'var(--s-work)' : p.review === 'changes' ? 'var(--s-err)' : 'var(--s-block)' },
+          { label:'CHECKS', value:p.checks[0] + ' / ' + p.checks[1], dot: failing ? 'var(--s-err)' : p.running ? 'var(--s-think)' : 'var(--s-work)' },
+          { label:'CHANGES', value:'+' + p.add + ' −' + p.del, dot:'var(--s-idle)' }],
+        desc:p.desc, comments:p.comments.map(([who, where, text]) => ({ who:who.toUpperCase(), where, text })), commentCount:Z.pad(p.comments.length), noComments:!p.comments.length,
+        checks:p.cl.map(([name, r]) => ({ name:name.toUpperCase(), res:({ pass:'PASSED', fail:'FAILED', run:'RUNNING', queued:'QUEUED' })[r], dot:({ pass:'var(--s-work)', fail:'var(--s-err)', run:'var(--s-think)', queued:'var(--s-idle)' })[r], anim: r === 'run' ? 'zb-live 1.4s ease-in-out infinite' : 'none' })),
+        files:p.files.map(([path, ad, de]) => ({ path, delta:'+' + ad + ' −' + de })).concat(p.more ? [{ path:'+ ' + p.more + ' more files', delta:'' }] : []), fileCount:Z.pad(p.files.length + (p.more || 0)), diff:this.diffLines(p.diff),
+        canReview: !p.merged && !p.mine, onApprovePr:() => this.prAct(p.n, 'approve'), onChanges:() => this.prAct(p.n, 'changes'),
+        mergeInApp: this.mergeInApp() && !p.merged, mergeOnGh: !this.mergeInApp() && !p.merged, onMerge:() => this.prAct(p.n, 'merge'),
+        mergeOp: ready ? 1 : .35, mergeCursor: ready ? 'pointer' : 'not-allowed', mergeTitle: ready ? 'Merge into main' : 'Needs approval, green checks and no pending handoff',
+        mergeNote: p.merged ? 'MERGED' : !this.mergeInApp() ? 'FLOOR RULE · MERGE IS NEVER OFFERED IN APP' : ready ? 'READY TO MERGE' : p.running ? 'CHECKS RUNNING' : failing ? failing + ' CHECKS FAILING' : p.review !== 'approved' ? 'NEEDS APPROVAL' : 'WAITING FOR HANDOFF' });
+    }
+    if (kind === 'ap') {
+      const ap = Z.approvals.find(x => x.id === id); if (!ap) return null;
+      const need = this.needCard({ kind:ap.kind, text:ap.text, wait:ap.wait, ap:ap.id });
+      return Object.assign(base, { isPr:false, isTask:false, kindLabel:'APPROVAL', id:ap.id, title:ap.text, dot:'var(--s-block)', stateLabel:'WAITING ' + ap.wait, chips:[this.DN[ap.dept].toUpperCase(), ap.kind, (Z.A(ap.agent) || {}).name ? 'ASKED BY ' + Z.A(ap.agent).name.toUpperCase() : ''], hasNeed:true, need });
+    }
+    return null;
+  }
+
+  renderVals() {
+    const s = this.state, Z = window.ZC, v = s.variant;
+    const variants = Object.entries(this.V).map(([k, x]) => ({ code:k.toUpperCase(), name:x.name, onClick:() => { this.close(); this.setState({ variant:k }); }, bg: v === k ? 'var(--ink)' : 'transparent', fg: v === k ? 'var(--panel)' : 'var(--ink3)' }));
+    const ps = s.presetSel[v] || 'DEFAULT';
+    const presets = ['DEFAULT', 'REVIEW', 'INCIDENT'].concat(Object.keys(s.saved)).concat(ps === 'CUSTOM' ? ['CUSTOM'] : []).map(name => ({ name, onClick:() => name !== 'CUSTOM' && this.applyPreset(name), bg: ps === name ? 'var(--ink)' : 'transparent', fg: ps === name ? 'var(--panel)' : 'var(--ink3)' }));
+    const common = {
+      rootRef:this.rootRef, boardRef:this.boardRef, innerRef:this.innerRef, variants, presets, editing:s.editing,
+      editLabel: s.editing ? 'DONE' : 'EDIT LAYOUT', editBg: s.editing ? 'var(--ink)' : 'transparent', editFg: s.editing ? 'var(--panel)' : 'var(--ink)',
+      toggleEdit:() => { this.close(); this.setState(x => ({ editing:!x.editing, catalog:false })); }, toggleCatalog:() => this.setState(x => ({ catalog:!x.catalog })),
+      saveAs:() => { const n = 'MY LAYOUT ' + String(Object.keys(s.saved).length + 1).padStart(2, '0'); this.setState(x => ({ saved:Object.assign({}, x.saved, { [n]:this.cur().map(i => Object.assign({}, i)) }), presetSel:Object.assign({}, x.presetSel, { [v]:n }) })); },
+      resetLayout:() => this.applyPreset('DEFAULT'), stop: e => e.stopPropagation(), prevent: e => e.preventDefault(),
+      closeSheet:() => this.close(), answer:s.answer, onAnswer: e => this.setState({ answer:e.target.value })
+    };
+    if (!Z) return Object.assign(common, { widgets:[], boardH:'0px', guides:'none', catalog:[], catalogOpen:false, catalogEmpty:false, sheetOpen:false, sh:{} });
+    const L = this.cur(), cw = this.colW(), px = n => Math.round(n) + 'px';
+    const built = {}, numOf = {};
+    L.forEach((it, i) => {
+      let rows = [], raw = [];
+      if (it.type !== 'briefing') { raw = this.items(it.type); rows = it.type === 'needs' || it.type === 'errors' || it.type === 'runs' || it.type === 'incidents' || it.type === 'inbox' ? raw.map(o => this.row(it.id, o)) : this.sortRows(it.id, raw, this.sortMode()); }
+      rows.forEach(r => { if (r.isRow && r._o && r._o.need && r._o.need.custom) { r.hasNeed = true; r.hasActs = true; r.a1 = r._o.need.custom[0]; r.a2 = r._o.need.custom[1]; r.hasA2 = true; r.needKind = ''; } });
+      this.rowsBy[it.id] = rows.filter(r => r.isRow && r._o.okind).map(r => ({ key:r.key, open:r.onOpen }));
+      built[it.id] = { raw, rows, empty: it.type !== 'briefing' && raw.length === 0 };
+    });
+    const eff = s.editing ? L : this.compact(L.map(it => Object.assign({}, it, { h: (built[it.id].empty || s.collapsed[v + it.id]) ? 1 : it.h })));
+    const order = L.slice().sort((a, b) => a.y - b.y || a.x - b.x); order.forEach((it, i) => numOf[it.id] = Z.pad(i + 1));
+    const br = this.brief();
+    const widgets = eff.map(it => {
+      const b = built[it.id], coll = !!s.collapsed[v + it.id], open = s.editing ? true : !(b.empty || coll);
+      const nNeeds = it.type === 'needs' ? 0 : b.raw.filter(o => o.need && !o.plain).length;
+      return {
+        key:it.id, label:this.TYPES[it.type][0], num:numOf[it.id], count: it.type === 'briefing' ? '' : Z.pad(b.raw.length), hasNeeds: nNeeds > 0, needs:Z.pad(nNeeds),
+        aside: b.empty && !s.editing ? 'ALL CLEAR' : it.type === 'tasks' || it.type === 'prs' ? ({ needs:'NEEDS FIRST', state:'BY STATE', time:'BY TIME' })[this.sortMode()] : '',
+        left:px(it.x * (cw + this.GAP)), top:px(it.y * (this.RH + this.GAP)), width:px(it.w * cw + (it.w - 1) * this.GAP), height:px(it.h * this.RH + (it.h - 1) * this.GAP),
+        z: s.dragging === it.id ? 5 : 'auto', tr: s.dragging === it.id ? 'none' : 'left .15s ease, top .15s ease, width .15s ease, height .15s ease',
+        line: s.editing ? (s.dragging === it.id ? 'var(--ink)' : 'var(--line2)') : 'var(--line)', hb: open ? 'var(--line)' : 'transparent', cursor: s.editing ? 'move' : 'default',
+        open, canToggle: !s.editing && !b.empty, caret: coll ? '▸' : '▾', onToggle:() => this.setState(x => ({ collapsed:Object.assign({}, x.collapsed, { [v + it.id]:!coll }) })),
+        onRemove:() => this.setLayout(this.compact(this.cur().filter(i => i.id !== it.id)), 'CUSTOM'),
+        onDrag: e => this.startDrag(it.id, 'move', e), onResize: e => this.startDrag(it.id, 'resize', e), size: it.w + ' × ' + it.h,
+        isList: it.type !== 'briefing', isBrief: it.type === 'briefing', rows:b.rows, isEmpty: s.editing && b.empty,
+        showLead: it.h >= 3 || it.w <= 6, kpis:br.kpis, lead:br.lead, bdate:br.bdate, kpiFlex: it.h >= 3 || it.w <= 6 ? 'none' : '1'
+      };
+    });
+    const maxY = eff.reduce((m, it) => Math.max(m, it.y + it.h), 0);
+    const present = new Set(L.map(i => i.type));
+    const catalog = Object.keys(this.TYPES).filter(t => !present.has(t)).map(t => ({ label:this.TYPES[t][0], desc:this.TYPES[t][1], onAdd:() => this.setLayout(this.compact(this.cur().concat([{ id:t, type:t, x:0, y:999, w:4, h:6 }])), 'CUSTOM') }));
+    const sh = this.sheet();
+    return Object.assign(common, {
+      widgets, boardH: px(Math.max(0, maxY * (this.RH + this.GAP) - this.GAP) + (s.editing ? 2 * (this.RH + this.GAP) : 0)),
+      guides: s.editing ? 'repeating-linear-gradient(90deg, color-mix(in oklch, var(--ink) 5%, transparent) 0 ' + cw.toFixed(2) + 'px, transparent ' + cw.toFixed(2) + 'px ' + (cw + this.GAP).toFixed(2) + 'px)' : 'none',
+      catalog, catalogOpen: s.editing && s.catalog, catalogEmpty: !catalog.length,
+      sheetOpen: !!sh, sh: sh || {}
+    });
+  }
+}
+</script>
+</body>
+</html>
