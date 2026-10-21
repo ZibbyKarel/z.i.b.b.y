@@ -229,7 +229,7 @@ describe("runs", () => {
       issue: "ZB-9",
     });
     expect(b).toMatchObject({
-      id: "r2",
+      id: null,
       tone: "blocked",
       pct: null,
       issue: null,

@@ -272,8 +272,8 @@ export function taskRows(
 
 export interface RunRowVm {
   key: string;
-  /** Selection id — the task id when the run came from a task, else the run id. */
-  id: string;
+  /** The task the run belongs to — null for a run without one (nothing to open). */
+  id: string | null;
   title: string;
   /** `PROCESSOR · STAGE`. */
   step: string;
@@ -291,7 +291,7 @@ export function runRows(widgetId: string, runs: RunView[]): RunRowVm[] {
     const stage = r.currentStage ?? r.processor?.kind ?? r.kind;
     return {
       key: rowKey(widgetId, r.runId),
-      id: r.taskId ?? r.runId,
+      id: r.taskId ?? null,
       title: runTitle(r),
       step: [r.processor?.name ?? r.owner, stage].filter(Boolean).join(" · ").toUpperCase(),
       tone: normalizeStateTone(runStateTone(r.status) ?? "idle"),

@@ -30,6 +30,7 @@ export function IssuesWidget({
   onCountChange,
   selection,
   onOpen,
+  sheetSide,
   epicClosed,
   onEpicToggle,
 }: BridgeWidgetProps) {
@@ -96,6 +97,7 @@ export function IssuesWidget({
                     }
                     rowKey={r.key}
                     selected={selection?.key === r.key}
+                    sheetSide={sheetSide}
                     tone={r.tone}
                   >
                     <BoardGrid columns="issue">

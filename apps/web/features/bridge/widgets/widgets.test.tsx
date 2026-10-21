@@ -176,6 +176,17 @@ describe("IssuesWidget", () => {
     expect(screen.getByTestId(BoardRowTestId.Root)).toHaveAttribute("aria-pressed", "true");
     unmount();
 
+    const left = setup({
+      widget: widget("w", "issues"),
+      selection: { kind: "issue", id: "p1/a", widgetId: "w", key: "w:p1/a" },
+      sheetSide: "left",
+    });
+    const leftView = renderWithProviders(<IssuesWidget {...left} />);
+    expect(screen.getByTestId(BoardRowTestId.Root).className).toContain(
+      "inset_-1px_0_0_var(--color-ink)",
+    );
+    leftView.unmount();
+
     d.items = [];
     d.pending = true;
     const loading = setup({ widget: widget("w", "issues") });
@@ -219,7 +230,7 @@ describe("PrsWidget", () => {
       key: "w-prs:https://github.com/o/r/pull/2",
     });
     expect(props.onCountChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({ count: 3, you: 1 }),
+      expect.objectContaining({ count: 3, you: 2 }),
     );
   });
 
@@ -304,6 +315,30 @@ describe("RunsWidget", () => {
       key: "w-runs:r1",
     });
     expect(props.onEmptyChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it("a run without a task is a static row: no click, no data-rk, not a button", async () => {
+    d.runs = [
+      {
+        runId: "r9",
+        kind: "workflow",
+        owner: "x",
+        status: "running",
+        pct: null,
+        title: "Orphan",
+        prompt: "",
+        project: "shop",
+        startedAt: "",
+        logBase: "workflows",
+      },
+    ];
+    const props = setup({ widget: widget("w-runs", "runs") });
+    renderWithProviders(<RunsWidget {...props} />);
+    const row = screen.getByTestId(BoardRowTestId.Root);
+    expect(row.tagName).toBe("DIV");
+    expect(row).not.toHaveAttribute("data-rk");
+    await userEvent.click(row);
+    expect(props.onOpen).not.toHaveBeenCalled();
   });
 
   it("is empty with no live runs", () => {

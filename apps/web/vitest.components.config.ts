@@ -39,6 +39,7 @@ export default defineConfig({
       "features/*/state/**/*.test.{ts,tsx}",
       // Bridge grid engine (pure layout math).
       "features/*/grid/**/*.test.ts",
+      "features/*/widgets/**/*.test.{ts,tsx}",
       // Feature mutation hooks (TanStack Query mutations; renderHook needs jsdom).
       "features/*/mutations/**/*.test.{ts,tsx}",
       // Shared hooks (generic cross-domain browser-API wrappers).

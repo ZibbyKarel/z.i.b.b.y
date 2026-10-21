@@ -30,7 +30,13 @@ const rect = (left: number, top: number, width: number, height: number) =>
 
 const ROWS = ["a", "b", "c"];
 
-function Harness({ initial }: { initial?: string }) {
+function Harness({
+  initial,
+  onSideChange,
+}: {
+  initial?: string;
+  onSideChange?: (s: "left" | "right") => void;
+}) {
   const [sel, setSel] = useState<BridgeSelection | null>(
     initial ? { kind: "issue", id: initial, widgetId: "w1", key: `w1:${initial}` } : null,
   );
@@ -50,7 +56,7 @@ function Harness({ initial }: { initial?: string }) {
         <div data-rk="w2:z" data-testid="row-z" />
       </section>
       <textarea data-testid="ta" />
-      <DetailSheet onClose={() => setSel(null)} selection={sel} />
+      <DetailSheet onClose={() => setSel(null)} onSideChange={onSideChange} selection={sel} />
     </div>
   );
 }
@@ -63,6 +69,16 @@ function stubRects() {
 }
 
 describe("DetailSheet", () => {
+  it("reports the side the sheet opened to", () => {
+    const onSideChange = vi.fn();
+    render(<Harness onSideChange={onSideChange} />);
+    stubRects();
+    fireEvent.click(screen.getByTestId("row-a"));
+    expect(onSideChange).toHaveBeenLastCalledWith("right");
+    fireEvent.click(screen.getByTestId("row-b"));
+    expect(onSideChange).toHaveBeenLastCalledWith("left");
+  });
+
   it("anchors right of a row with room, flush with its edge", async () => {
     render(<Harness />);
     stubRects();

@@ -30,13 +30,36 @@ describe("BoardRow", () => {
       "shadow-[inset_0_0_0_1px_var(--color-ink)]",
     );
     rerender(
-      <BoardRow selected tone="blocked">
+      <BoardRow selected onClick={() => {}} tone="blocked">
         x
       </BoardRow>,
     );
     const row = screen.getByTestId(BoardRowTestId.Root);
     expect(row).toHaveAttribute("aria-pressed", "true");
     expect(row).toHaveClass("z-[31]");
+  });
+
+  it("renders a static, non-focusable div without onClick", () => {
+    render(
+      <BoardRow rowKey="runs:r2" tone="idle">
+        x
+      </BoardRow>,
+    );
+    const row = screen.getByTestId(BoardRowTestId.Root);
+    expect(row.tagName).toBe("DIV");
+    expect(row).not.toHaveAttribute("aria-pressed");
+    expect(row).not.toHaveClass("cursor-pointer");
+  });
+
+  it("adds the ink right border on a selected row when the sheet opens left", () => {
+    render(
+      <BoardRow selected onClick={() => {}} sheetSide="left" tone="idle">
+        x
+      </BoardRow>,
+    );
+    expect(screen.getByTestId(BoardRowTestId.Root).className).toContain(
+      "inset_-1px_0_0_var(--color-ink)",
+    );
   });
 
   it("uses the PR padding and a grid template when asked", () => {

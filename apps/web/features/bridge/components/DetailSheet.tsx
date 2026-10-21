@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { type SheetAnchor, anchorChanged, measureSheet } from "../state/measure";
 import { findRow, useRowKeyNav } from "../state/useRowKeyNav";
 import type { BridgeSelection } from "../widgets/registry";
@@ -15,6 +15,8 @@ export enum DetailSheetTestId {
 export interface DetailSheetProps {
   selection: BridgeSelection | null;
   onClose: () => void;
+  /** Reports the side the sheet opened to (the open row drops its ink rule on that edge). */
+  onSideChange?: (side: "left" | "right") => void;
 }
 
 /**
@@ -24,14 +26,19 @@ export interface DetailSheetProps {
  * wrapper resizes, when any widget body scrolls, and on window resize. J/K step through the rows
  * of the row's widget.
  */
-export function DetailSheet({ selection, onClose }: DetailSheetProps) {
+export function DetailSheet({ selection, onClose, onSideChange }: DetailSheetProps) {
   const marker = useRef<HTMLSpanElement>(null);
   const root = useRef<HTMLElement | null>(null);
   const [anchor, setAnchor] = useState<SheetAnchor | null>(null);
   const last = useRef<SheetAnchor | null>(null);
   const key = selection?.key;
+  const side = anchor?.side;
 
   useRowKeyNav(selection, root);
+
+  useEffect(() => {
+    if (side) onSideChange?.(side === "l" ? "left" : "right");
+  }, [side, onSideChange]);
 
   useLayoutEffect(() => {
     const host = marker.current?.parentElement ?? null;

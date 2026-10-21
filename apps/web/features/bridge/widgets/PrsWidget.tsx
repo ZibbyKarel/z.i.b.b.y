@@ -22,6 +22,7 @@ export function PrsWidget({
   onCountChange,
   selection,
   onOpen,
+  sheetSide,
 }: BridgeWidgetProps) {
   const t = useTranslations("bridge.widgets.prs");
   const tAll = useTranslations("bridge");
@@ -55,6 +56,7 @@ export function PrsWidget({
       padding="pr"
       rowKey={r.key}
       selected={selection?.key === r.key}
+      sheetSide={sheetSide}
       tone={r.tone}
     >
       <BoardLine baseline gap="8">

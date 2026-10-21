@@ -52,8 +52,8 @@ export interface BoardRowProps {
 
 /**
  * One board row: left status bar, density-driven padding + hairline, hover `panel-2`,
- * `selected` / `needsYou` rings. A real `button` (keyboard + focus ring). Content must be
- * phrasing elements (`BoardText`, `BoardGrid`, ...).
+ * `selected` / `needsYou` rings. With `onClick` a real `button` (keyboard + focus ring); without
+ * it a static, non-focusable `div`. Content must be phrasing elements (`BoardText`, `BoardGrid`, ...).
  */
 export function BoardRow({
   tone,
@@ -67,11 +67,14 @@ export function BoardRow({
   children,
   ref,
 }: BoardRowProps) {
+  const interactive = onClick !== undefined;
+  const Tag = interactive ? "button" : "div";
   return (
-    <button
-      aria-pressed={selected}
+    <Tag
+      aria-pressed={interactive ? selected : undefined}
       className={cn(
-        "relative box-border w-full cursor-pointer appearance-none border-solid bg-panel text-left text-ink hover:bg-panel-2",
+        "relative box-border w-full border-solid bg-panel text-left text-ink",
+        interactive && "cursor-pointer appearance-none hover:bg-panel-2",
         "border-l-[length:var(--bridge-bar)] [border-bottom:var(--bridge-row-border)]",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
         padding === "pr"
@@ -92,11 +95,11 @@ export function BoardRow({
       data-rk={rowKey}
       data-testid={BoardRowTestId.Root}
       onClick={onClick}
-      ref={ref}
-      type="button"
+      ref={ref as Ref<HTMLDivElement & HTMLButtonElement>}
+      type={interactive ? "button" : undefined}
     >
       {children}
-    </button>
+    </Tag>
   );
 }
 

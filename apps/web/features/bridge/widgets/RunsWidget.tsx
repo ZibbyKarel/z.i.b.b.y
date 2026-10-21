@@ -35,6 +35,7 @@ export function RunsWidget({
   onCountChange,
   selection,
   onOpen,
+  sheetSide,
 }: BridgeWidgetProps) {
   const t = useTranslations("bridge.widgets.runs");
   const live = useLiveRuns();
@@ -57,9 +58,14 @@ export function RunsWidget({
         <BoardRow
           columns="run"
           key={r.key}
-          onClick={() => onOpen({ kind: "task", id: r.id, widgetId: widget.id, key: r.key })}
-          rowKey={r.key}
+          onClick={
+            r.id === null
+              ? undefined
+              : () => onOpen({ kind: "task", id: r.id as string, widgetId: widget.id, key: r.key })
+          }
+          rowKey={r.id === null ? undefined : r.key}
           selected={selection?.key === r.key}
+          sheetSide={sheetSide}
           tone={r.tone}
         >
           <BoardLine direction="col" gap="3">

@@ -2,6 +2,7 @@
 
 import { Stack, WidgetCatalog } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { useUiSettings } from "../../system";
 import { useBridgeState } from "../state/useBridgeState";
 import { WIDGETS, WIDGET_TYPES } from "../widgets/registry";
@@ -18,6 +19,7 @@ export function BridgeScreen() {
   const t = useTranslations();
   const state = useBridgeState();
   const { ui } = useUiSettings();
+  const [sheetSide, setSheetSide] = useState<"left" | "right">("right");
 
   const onBoard = new Set(state.layout.map((w) => w.type));
   const entries = WIDGET_TYPES.filter((type) => !onBoard.has(type)).map((type) => ({
@@ -43,9 +45,13 @@ export function BridgeScreen() {
         saved={Object.keys(state.saved)}
       />
       <Stack grow minH0 direction="col" style={{ position: "relative" }}>
-        <BridgeBoard density={ui.density} state={state} />
+        <BridgeBoard density={ui.density} sheetSide={sheetSide} state={state} />
         {/* Sheet layer: the detail-sheet task renders its overlay here, over the board. */}
-        <DetailSheet onClose={state.closeSelection} selection={state.selection} />
+        <DetailSheet
+          onClose={state.closeSelection}
+          onSideChange={setSheetSide}
+          selection={state.selection}
+        />
       </Stack>
       {state.catalogOpen ? (
         <WidgetCatalog

@@ -45,6 +45,8 @@ export interface BridgeWidgetProps {
   onCountChange?: (info: BridgeWidgetInfo) => void;
   selection: BridgeSelection | null;
   onOpen: (selection: BridgeSelection) => void;
+  /** Side the detail sheet opened to — pass to the selected `BoardRow`'s `sheetSide`. */
+  sheetSide?: "left" | "right";
   /** Collapsed epic groups (`ui.bridge.epicClosed`), keyed by epic id (`none` = no epic). */
   epicClosed: Record<string, boolean>;
   onEpicToggle: (key: string, closed: boolean) => void;

@@ -21,6 +21,7 @@ export function TasksWidget({
   onCountChange,
   selection,
   onOpen,
+  sheetSide,
 }: BridgeWidgetProps) {
   const t = useTranslations("bridge.widgets.tasks");
   const tAll = useTranslations("bridge");
@@ -53,6 +54,7 @@ export function TasksWidget({
           onClick={() => onOpen({ kind: "task", id: r.id, widgetId: widget.id, key: r.key })}
           rowKey={r.key}
           selected={selection?.key === r.key}
+          sheetSide={sheetSide}
           tone={r.tone}
         >
           <BoardText kind="id">{r.code}</BoardText>

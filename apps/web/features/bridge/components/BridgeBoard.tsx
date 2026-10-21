@@ -14,6 +14,7 @@ const pad2 = (n: number) => String(n).padStart(2, "0");
 interface HostProps {
   widget: BridgeWidget;
   state: BridgeState;
+  sheetSide: "left" | "right";
   empty: boolean;
   info: BridgeWidgetInfo | undefined;
   style: { left: number; top: number; width: number; height: number };
@@ -26,6 +27,7 @@ interface HostProps {
 function BridgeWidgetHost({
   widget,
   state,
+  sheetSide,
   empty,
   info,
   style,
@@ -69,6 +71,7 @@ function BridgeWidgetHost({
         onEpicToggle={state.setEpicClosed}
         onOpen={state.setSelection}
         selection={selection}
+        sheetSide={sheetSide}
         widget={widget}
       />
     </WidgetFrame>
@@ -78,6 +81,7 @@ function BridgeWidgetHost({
 export interface BridgeBoardProps {
   state: BridgeState;
   density: Density;
+  sheetSide?: "left" | "right";
 }
 
 /**
@@ -85,7 +89,7 @@ export interface BridgeBoardProps {
  * and positions each widget. View mode shrinks empty/collapsed widgets to one row and
  * compacts; edit mode keeps real sizes and handles pointer drags (move / resize).
  */
-export function BridgeBoard({ state, density }: BridgeBoardProps) {
+export function BridgeBoard({ state, density, sheetSide = "right" }: BridgeBoardProps) {
   const { gap, rowHeight } = BRIDGE_DENSITY[density];
   const { layout, editing, collapsed } = state;
   const [width, setWidth] = useState(0);
@@ -158,6 +162,7 @@ export function BridgeBoard({ state, density }: BridgeBoardProps) {
                 onDragStart={onDragStart}
                 onEmpty={onEmpty}
                 onInfo={onInfo}
+                sheetSide={sheetSide}
                 state={state}
                 style={{
                   left: Math.round(r.left),
