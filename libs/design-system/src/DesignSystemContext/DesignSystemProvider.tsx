@@ -8,7 +8,13 @@ import {
   useMemo,
   useState,
 } from "react";
-import { type PartialTheme, type Theme, mergeTheme, tokensToCssVars } from "../tokens";
+import {
+  type Density,
+  type PartialTheme,
+  type Theme,
+  mergeTheme,
+  tokensToCssVars,
+} from "../tokens";
 import { tokensForTheme } from "./themeRegistry";
 
 // ---------------------------------------------------------------------------
@@ -20,6 +26,10 @@ export const DesignSystemTokenContext = createContext<Theme | null>(null);
 /** `localStorage` key the resolved theme choice persists under — read by the
  * inline `ThemeScript` (see `ThemeScript.tsx`) before hydration to avoid a flash. */
 export const THEME_STORAGE_KEY = "zibby-theme";
+
+/** `localStorage` cache of the density (source of truth is the operator's server
+ * config) — read by `ThemeScript` before hydration so the first paint is right. */
+export const DENSITY_STORAGE_KEY = "zibby-density";
 
 /** `light`/`dark` are explicit; `system` follows `prefers-color-scheme` and updates
  * live if the OS preference changes while the app is open. */
@@ -41,6 +51,8 @@ function resolveSystemTheme(): ResolvedTheme {
 
 export interface DesignSystemProviderProps {
   theme?: ThemeChoice;
+  /** System-wide layout density (`data-density`); scales `--sp-*` spacing. */
+  density?: Density;
   /** Partial token overrides. */
   tokens?: PartialTheme;
   layout?: "block" | "flex";
@@ -62,11 +74,14 @@ export interface DesignSystemProviderProps {
  *   disabled storage must not throw) so a future theme switcher's choice survives
  *   a reload; deterministic on first render either way (SSR-safe, no hydration
  *   mismatch — the initial resolved theme never reads `localStorage` synchronously).
+ * - Sets `data-density` the same way (root + `<html>`) and caches it under
+ *   `DENSITY_STORAGE_KEY` for `ThemeScript`'s pre-hydration pass.
  * - `h-full` is load-bearing: the dashboard shell relies on a full-height chain.
  * - Does NOT import globals.css — the app and Storybook link it independently.
  */
 export function DesignSystemProvider({
   theme = "dark",
+  density = "comfort",
   tokens: override,
   layout,
   style,
@@ -101,6 +116,15 @@ export function DesignSystemProvider({
     document.documentElement.setAttribute("data-theme", resolvedTheme);
   }, [resolvedTheme]);
 
+  useEffect(() => {
+    document.documentElement.setAttribute("data-density", density);
+    try {
+      window.localStorage.setItem(DENSITY_STORAGE_KEY, density);
+    } catch {
+      // Storage unavailable — density still applies; only the no-flash cache is lost.
+    }
+  }, [density]);
+
   const merged = useMemo(
     () =>
       override
@@ -125,7 +149,12 @@ export function DesignSystemProvider({
   return (
     <DesignSystemTokenContext.Provider value={merged}>
       <DesignSystemResolvedThemeContext.Provider value={resolvedTheme}>
-        <div className={classes} data-theme={resolvedTheme} style={rootStyle}>
+        <div
+          className={classes}
+          data-density={density}
+          data-theme={resolvedTheme}
+          style={rootStyle}
+        >
           {children}
         </div>
       </DesignSystemResolvedThemeContext.Provider>

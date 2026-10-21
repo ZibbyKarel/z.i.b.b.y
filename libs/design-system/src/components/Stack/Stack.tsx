@@ -1,5 +1,5 @@
 import type { CSSProperties, FC, HTMLAttributes, Ref } from "react";
-import { type Spacing, spacingToPx } from "../../tokens";
+import { type Spacing, spacingToVar } from "../../tokens";
 
 export enum StackTestId {
   Root = "stack-root",
@@ -65,7 +65,7 @@ export function Stack({
   const computedStyle: CSSProperties = {
     display: inline ? "inline-flex" : "flex",
     flexDirection: direction === "row" ? "row" : "column",
-    gap: gap !== undefined ? spacingToPx(gap) : undefined,
+    gap: gap !== undefined ? spacingToVar(gap) : undefined,
     alignItems: align ? alignMap[align] : undefined,
     justifyContent: justify ? justifyMap[justify] : undefined,
     flexWrap: wrap ? "wrap" : undefined,

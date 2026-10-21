@@ -222,6 +222,135 @@
 }
 
 /* ---------------------------------------------------------------------------
+ * Density — system-wide layout whitespace. `DesignSystemProvider density=` (and
+ * the pre-hydration `DensityScript`) set `data-density` on `<html>` + the DS root.
+ * `--sp-*` back `spacingToVar()` (Stack/Grid gap, Container/Card padding, Spacer);
+ * they are redeclared on every `[data-density]` element so a nested override
+ * recomputes instead of inheriting the ancestor's resolved px. `comfort` = 1 =
+ * the historical spacing. Keep `DENSITY_SCALE` / `BRIDGE_DENSITY` (tokens.ts) in
+ * lockstep. `--bridge-*` is the Bridge board's density table (design handoff),
+ * literal per level.
+ * --------------------------------------------------------------------------- */
+:root,
+[data-density] {
+  --density: 1;
+  --sp-0: 0px;
+  --sp-25: calc(2px * var(--density));
+  --sp-50: calc(4px * var(--density));
+  --sp-75: calc(6px * var(--density));
+  --sp-100: calc(8px * var(--density));
+  --sp-125: calc(10px * var(--density));
+  --sp-150: calc(12px * var(--density));
+  --sp-175: calc(14px * var(--density));
+  --sp-200: calc(16px * var(--density));
+  --sp-225: calc(18px * var(--density));
+  --sp-250: calc(20px * var(--density));
+  --sp-300: calc(24px * var(--density));
+  --sp-350: calc(28px * var(--density));
+  --sp-400: calc(32px * var(--density));
+  --sp-450: calc(36px * var(--density));
+  --sp-500: calc(40px * var(--density));
+  --sp-700: calc(56px * var(--density));
+}
+
+[data-density="compact"] {
+  --density: 0.75;
+  --bridge-gap: 8px;
+  --bridge-rh: 30px;
+  --bridge-bp: 12px;
+  --bridge-row-py: 8px;
+  --bridge-row-px: 12px;
+  --bridge-pr-py: 10px;
+  --bridge-pr-px: 12px;
+  --bridge-row-border: 1px solid var(--color-line);
+  --bridge-bar: 4px;
+  --bridge-inner-gap: 5px;
+  --bridge-head-h: 28px;
+  --bridge-head-px: 12px;
+  --bridge-epic-py: 8px;
+  --bridge-epic-px: 12px;
+  --bridge-brief-py: 10px;
+  --bridge-brief-px: 14px;
+  --bridge-kpi-fs: 20px;
+  --bridge-kpi-px: 16px;
+  --bridge-shadow: none;
+  --bridge-border: var(--color-line);
+}
+
+[data-density="comfort"] {
+  --density: 1;
+  --bridge-gap: 12px;
+  --bridge-rh: 32px;
+  --bridge-bp: 20px;
+  --bridge-row-py: 12px;
+  --bridge-row-px: 16px;
+  --bridge-pr-py: 14px;
+  --bridge-pr-px: 16px;
+  --bridge-row-border: 1px solid color-mix(in oklch, var(--color-line) 55%, transparent);
+  --bridge-bar: 3px;
+  --bridge-inner-gap: 7px;
+  --bridge-head-h: 38px;
+  --bridge-head-px: 16px;
+  --bridge-epic-py: 12px;
+  --bridge-epic-px: 16px;
+  --bridge-brief-py: 16px;
+  --bridge-brief-px: 20px;
+  --bridge-kpi-fs: 22px;
+  --bridge-kpi-px: 22px;
+  --bridge-shadow: none;
+  --bridge-border: var(--color-line);
+}
+
+[data-density="airy"] {
+  --density: 1.25;
+  --bridge-gap: 14px;
+  --bridge-rh: 34px;
+  --bridge-bp: 32px;
+  --bridge-row-py: 16px;
+  --bridge-row-px: 20px;
+  --bridge-pr-py: 18px;
+  --bridge-pr-px: 20px;
+  --bridge-row-border: 1px solid color-mix(in oklch, var(--color-line) 35%, transparent);
+  --bridge-bar: 2px;
+  --bridge-inner-gap: 9px;
+  --bridge-head-h: 46px;
+  --bridge-head-px: 20px;
+  --bridge-epic-py: 16px;
+  --bridge-epic-px: 20px;
+  --bridge-brief-py: 22px;
+  --bridge-brief-px: 26px;
+  --bridge-kpi-fs: 28px;
+  --bridge-kpi-px: 28px;
+  --bridge-shadow: none;
+  --bridge-border: color-mix(in oklch, var(--color-line) 60%, transparent);
+}
+
+[data-density="open"] {
+  --density: 1.25;
+  --bridge-gap: 16px;
+  --bridge-rh: 34px;
+  --bridge-bp: 36px;
+  --bridge-row-py: 15px;
+  --bridge-row-px: 20px;
+  --bridge-pr-py: 17px;
+  --bridge-pr-px: 20px;
+  --bridge-row-border: none;
+  --bridge-bar: 3px;
+  --bridge-inner-gap: 8px;
+  --bridge-head-h: 48px;
+  --bridge-head-px: 20px;
+  --bridge-epic-py: 14px;
+  --bridge-epic-px: 20px;
+  --bridge-brief-py: 24px;
+  --bridge-brief-px: 28px;
+  --bridge-kpi-fs: 28px;
+  --bridge-kpi-px: 28px;
+  /* The one sanctioned shadow in the light theme (handoff: density Open only). */
+  --bridge-shadow: 0 1px 2px rgba(17, 19, 18, 0.05), 0 8px 24px -12px rgba(17, 19, 18, 0.12);
+  --bridge-border: transparent;
+}
+
+/* ---------------------------------------------------------------------------
  * Reduced motion opt-in (ZB-11 Appearance settings) — a per-viewer convenience
  * layered ON TOP of the OS `prefers-reduced-motion` query above: the app sets
  * `data-motion="reduced"` on `<html>` (localStorage-backed, independent of the

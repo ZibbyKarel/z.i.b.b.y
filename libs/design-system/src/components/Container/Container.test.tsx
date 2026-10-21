@@ -15,7 +15,7 @@ describe("Container", () => {
 
   it("applies uniform padding from spacing tokens", () => {
     render(<Container padding="200">x</Container>);
-    expect(screen.getByTestId(ContainerTestId.Root).style.padding).toContain("16px");
+    expect(screen.getByTestId(ContainerTestId.Root).style.padding).toContain("var(--sp-200)");
   });
 
   it("applies width and height", () => {

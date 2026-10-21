@@ -1,5 +1,5 @@
 import type { CSSProperties, HTMLAttributes, Ref } from "react";
-import { type Padding, resolvePadding, spacingToPx } from "../../tokens";
+import { type Padding, resolvePadding, spacingToVar } from "../../tokens";
 
 export type ContainerAs =
   | "div"
@@ -87,7 +87,7 @@ export function computeContainerStyle(props: ContainerProps): CSSProperties {
   const style: CSSProperties = {};
 
   if (props.padding !== undefined) {
-    const [t, r, b, l] = resolvePadding(props.padding).map(spacingToPx);
+    const [t, r, b, l] = resolvePadding(props.padding).map(spacingToVar);
     style.padding = `${t} ${r} ${b} ${l}`;
   }
   if (props.width) style.width = props.width;

@@ -1,4 +1,5 @@
-import { type ResolvedTheme, THEME_STORAGE_KEY } from "./DesignSystemProvider";
+import { DENSITIES, type Density } from "../tokens";
+import { DENSITY_STORAGE_KEY, type ResolvedTheme, THEME_STORAGE_KEY } from "./DesignSystemProvider";
 
 export enum ThemeScriptTestId {
   Root = "theme-script",
@@ -9,6 +10,8 @@ export interface ThemeScriptProps {
    *  `prefers-color-scheme` query (old browsers, or the query throwing) — must
    *  match the app's own `DesignSystemProvider theme=` default. */
   fallback?: ResolvedTheme;
+  /** Density applied when nothing is cached yet — match the server config default. */
+  densityFallback?: Density;
 }
 
 /**
@@ -22,9 +25,16 @@ export interface ThemeScriptProps {
  * can throw (private mode, disabled storage, an old browser) and must never leave
  * `<html>` without a `data-theme`.
  */
-function buildThemeScriptSource(fallback: ResolvedTheme): string {
+function buildThemeScriptSource(
+  fallback: ResolvedTheme,
+  densityFallback: Density = "comfort",
+): string {
   return (
     `(function(){try{` +
+    `var d=localStorage.getItem(${JSON.stringify(DENSITY_STORAGE_KEY)});` +
+    `document.documentElement.setAttribute("data-density",${JSON.stringify(DENSITIES)}.indexOf(d)>=0?d:${JSON.stringify(densityFallback)});` +
+    `}catch(e){document.documentElement.setAttribute("data-density",${JSON.stringify(densityFallback)});}` +
+    `try{` +
     `var s=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});` +
     `var t=(s==="light"||s==="dark")?s:` +
     `((window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches)?"dark":${JSON.stringify(fallback)});` +
@@ -40,13 +50,13 @@ function buildThemeScriptSource(fallback: ResolvedTheme): string {
  * synchronous inline `<script>`, no client JS of its own. See `DesignSystemProvider`
  * for the half that keeps `<html data-theme>` correct after hydration.
  */
-export function ThemeScript({ fallback = "dark" }: ThemeScriptProps) {
+export function ThemeScript({ fallback = "dark", densityFallback = "comfort" }: ThemeScriptProps) {
   // The one sanctioned inline script: it must run synchronously before hydration,
   // which rules out a React-rendered client component (see the file doc comment).
   return (
     <script
       suppressHydrationWarning
-      dangerouslySetInnerHTML={{ __html: buildThemeScriptSource(fallback) }}
+      dangerouslySetInnerHTML={{ __html: buildThemeScriptSource(fallback, densityFallback) }}
       data-testid={ThemeScriptTestId.Root}
     />
   );

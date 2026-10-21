@@ -75,9 +75,49 @@ export const LAYOUT = {
   gridSizeSm: 8,
 } as const;
 
+/** Literal px — for sizes (dot diameter, bar height) that must NOT follow density. */
 export function spacingToPx(token: Spacing): string {
   return spacingValues[token];
 }
+
+/**
+ * Density-aware spacing — `var(--sp-<token>)`, which globals.css defines as
+ * `calc(<px> * var(--density))`. Used for layout whitespace (gap, padding, inset)
+ * so the operator's density choice reflows every screen. Sizes use `spacingToPx`.
+ */
+export function spacingToVar(token: Spacing): string {
+  return `var(--sp-${token})`;
+}
+
+// ---------------------------------------------------------------------------
+// Density
+// ---------------------------------------------------------------------------
+
+/** System-wide layout density. `comfort` is the historical (scale 1) spacing. */
+export type Density = "compact" | "comfort" | "airy" | "open";
+
+export const DENSITIES: readonly Density[] = ["compact", "comfort", "airy", "open"];
+
+/** `--density` multiplier per level — must match the `[data-density]` blocks in globals.css. */
+export const DENSITY_SCALE: Record<Density, number> = {
+  compact: 0.75,
+  comfort: 1,
+  airy: 1.25,
+  open: 1.25,
+};
+
+/**
+ * Bridge board geometry per density (design handoff "Density table") — the numbers
+ * the board's JS grid math needs. The rest of the table lives only as `--bridge-*`
+ * CSS vars in globals.css; a test keeps the two in lockstep.
+ */
+export const BRIDGE_DENSITY: Record<Density, { gap: number; rowHeight: number; boardPad: number }> =
+  {
+    compact: { gap: 8, rowHeight: 30, boardPad: 12 },
+    comfort: { gap: 12, rowHeight: 32, boardPad: 20 },
+    airy: { gap: 14, rowHeight: 34, boardPad: 32 },
+    open: { gap: 16, rowHeight: 34, boardPad: 36 },
+  };
 
 export function resolvePadding(p: Padding): [Spacing, Spacing, Spacing, Spacing] {
   if (typeof p === "string") return [p, p, p, p];

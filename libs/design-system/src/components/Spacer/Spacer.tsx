@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { type Spacing, spacingToPx } from "../../tokens";
+import { type Spacing, spacingToVar } from "../../tokens";
 
 export enum SpacerTestId {
   Root = "spacer-root",
@@ -12,7 +12,7 @@ export interface SpacerProps {
 }
 
 export function Spacer({ size, axis = "both", grow }: SpacerProps) {
-  const px = size !== undefined ? spacingToPx(size) : undefined;
+  const px = size !== undefined ? spacingToVar(size) : undefined;
 
   const style: CSSProperties = {
     display: "block",

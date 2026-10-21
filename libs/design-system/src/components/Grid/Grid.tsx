@@ -1,5 +1,5 @@
 import type { CSSProperties, FC, HTMLAttributes, Ref } from "react";
-import { type Spacing, spacingToPx } from "../../tokens";
+import { type Spacing, spacingToVar } from "../../tokens";
 import { cn } from "../../utils/cn";
 
 export enum GridTestId {
@@ -93,7 +93,7 @@ export function Grid({
 }: GridProps) {
   const computedStyle = {
     display: "grid",
-    gap: gap !== undefined ? spacingToPx(gap) : undefined,
+    gap: gap !== undefined ? spacingToVar(gap) : undefined,
     maxWidth,
     marginInline: center ? "auto" : undefined,
     ...(lgHeight ? { "--grid-lg-height": lgHeight } : {}),

@@ -20,7 +20,7 @@ describe("Stack", () => {
 
   it("applies gap from spacing tokens", () => {
     render(<Stack gap="200">x</Stack>);
-    expect(screen.getByTestId(StackTestId.Root).style.gap).toBe("16px");
+    expect(screen.getByTestId(StackTestId.Root).style.gap).toBe("var(--sp-200)");
   });
 
   it("renders as a custom tag via as prop", () => {

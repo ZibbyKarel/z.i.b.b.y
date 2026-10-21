@@ -11,14 +11,18 @@ export { mergeRefs } from "./utils/refs";
 // Token system
 // ---------------------------------------------------------------------------
 export {
+  BRIDGE_DENSITY,
+  DENSITIES,
+  DENSITY_SCALE,
   LAYOUT,
   mergeTheme,
   resolvePadding,
   spacingToPx,
+  spacingToVar,
   spacingValues,
   tokensToCssVars,
 } from "./tokens";
-export type { Padding, PartialTheme, Size, Spacing, Theme } from "./tokens";
+export type { Density, Padding, PartialTheme, Size, Spacing, Theme } from "./tokens";
 
 // ---------------------------------------------------------------------------
 // Canonical state vocabulary (the living-state contract — see theme/LIVING-STATE.md)
@@ -50,6 +54,7 @@ export {
 // DesignSystemProvider + hooks
 // ---------------------------------------------------------------------------
 export {
+  DENSITY_STORAGE_KEY,
   DesignSystemProvider,
   THEME_STORAGE_KEY,
 } from "./DesignSystemContext/DesignSystemProvider";

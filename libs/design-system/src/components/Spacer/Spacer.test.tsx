@@ -16,21 +16,21 @@ describe("Spacer", () => {
   it("applies spacing size to both axes", () => {
     render(<Spacer size="200" />);
     const el = screen.getByTestId(SpacerTestId.Root);
-    expect(el.style.width).toBe("16px");
-    expect(el.style.height).toBe("16px");
+    expect(el.style.width).toBe("var(--sp-200)");
+    expect(el.style.height).toBe("var(--sp-200)");
   });
 
   it("axis=x only sets width", () => {
     render(<Spacer axis="x" size="100" />);
     const el = screen.getByTestId(SpacerTestId.Root);
-    expect(el.style.width).toBe("8px");
+    expect(el.style.width).toBe("var(--sp-100)");
     expect(el.style.height).toBe("");
   });
 
   it("axis=y only sets height", () => {
     render(<Spacer axis="y" size="100" />);
     const el = screen.getByTestId(SpacerTestId.Root);
-    expect(el.style.height).toBe("8px");
+    expect(el.style.height).toBe("var(--sp-100)");
     expect(el.style.width).toBe("");
   });
 });
