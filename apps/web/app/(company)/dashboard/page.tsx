@@ -1,5 +1,5 @@
-import { OrgMapScreen } from "../../../features/org/screens/OrgMapScreen";
+import { BridgeScreen } from "../../../features/bridge/components/BridgeScreen";
 
-export default function OrgPage() {
-  return <OrgMapScreen />;
+export default function BridgePage() {
+  return <BridgeScreen />;
 }

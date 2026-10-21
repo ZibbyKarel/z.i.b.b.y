@@ -50,7 +50,8 @@
         "status": "Status"
       },
       "dashboard": {
-        "map": "Map",
+        "map": "Bridge",
+        "old": "Floorplan",
         "overview": "Inbox",
         "issues": "Issues",
         "pull-requests": "Pull requests",

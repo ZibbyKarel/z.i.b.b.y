@@ -48,7 +48,7 @@ export default async function RootLayout({ children }: PropsWithChildren) {
          * `fallback="light"` (ZB-01/O-01/D-014) matches `Providers`' own
          * `theme="system"` default now that light — not dark — is the app's
          * default theme. */}
-        <ThemeScript fallback="light" />
+        <ThemeScript densityFallback="airy" fallback="light" />
       </head>
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>

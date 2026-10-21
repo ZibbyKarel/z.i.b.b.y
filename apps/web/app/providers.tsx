@@ -2,12 +2,19 @@
 
 import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
+import { useUiSettings } from "../features/system";
 import { apiClient } from "../state/api";
 import { AppearanceProvider } from "../state/appearance";
 import { RunEventsProvider } from "../features/runs/runEvents";
 import { BootSplash } from "../components/layout/BootSplash/BootSplash";
 import { Toaster } from "../components/Toaster/Toaster";
 import { emitMutationError } from "../components/Toaster/toastBus";
+
+/** `AppearanceProvider` fed the operator's density from the system config. */
+function DensityAppearance({ children }: { children: ReactNode }) {
+  const { ui } = useUiSettings();
+  return <AppearanceProvider density={ui.density}>{children}</AppearanceProvider>;
+}
 
 export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(
@@ -35,10 +42,10 @@ export function Providers({ children }: { children: ReactNode }) {
               reduced-motion state (`/system/settings/appearance` reads and
               writes both via `useAppearance()`) and wraps `DesignSystemProvider`
               itself so the resolved choice always drives the token swap. */}
-          <AppearanceProvider>
+          <DensityAppearance>
             <BootSplash>{children}</BootSplash>
             <Toaster />
-          </AppearanceProvider>
+          </DensityAppearance>
         </RunEventsProvider>
       </apiClient.ReactQueryProvider>
     </QueryClientProvider>

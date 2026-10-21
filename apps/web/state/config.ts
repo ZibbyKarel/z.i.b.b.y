@@ -37,6 +37,7 @@ export const SECTIONS = [
     href: "/dashboard" as Route,
     tabs: [
       { id: "map", href: "/dashboard" as Route },
+      { id: "old", href: "/dashboard-old" as Route },
       // Roadmap items + GitHub PRs awaiting the operator (docs/plans/inbox-ui-spec.md).
       { id: "overview", href: "/dashboard/inbox" as Route },
       { id: "issues", href: "/dashboard/inbox/issues" as Route },

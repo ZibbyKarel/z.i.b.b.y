@@ -50,7 +50,8 @@
         "status": "Stav"
       },
       "dashboard": {
-        "map": "Mapa",
+        "map": "Můstek",
+        "old": "Půdorys",
         "overview": "Inbox",
         "issues": "Issues",
         "pull-requests": "Pull requesty",

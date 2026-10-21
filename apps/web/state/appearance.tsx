@@ -1,6 +1,11 @@
 "use client";
 
-import { DesignSystemProvider, THEME_STORAGE_KEY, type ThemeChoice } from "@zibby/design-system";
+import {
+  type Density,
+  DesignSystemProvider,
+  THEME_STORAGE_KEY,
+  type ThemeChoice,
+} from "@zibby/design-system";
 import {
   type ReactNode,
   createContext,
@@ -76,7 +81,13 @@ const AppearanceContext = createContext<AppearanceContextValue | null>(null);
  * directly so the resolved `theme` choice always drives the actual token swap;
  * `useAppearance()` is how `/system/settings/appearance` reads and writes both.
  */
-export function AppearanceProvider({ children }: { children: ReactNode }) {
+export function AppearanceProvider({
+  children,
+  density,
+}: {
+  children: ReactNode;
+  density?: Density;
+}) {
   // "system" for both: matches `DesignSystemProvider`'s own SSR-safe default
   // and `ThemeScript`'s fallback, so the client's hydration render is
   // identical to the server's — the real stored choice (if any) is applied
@@ -122,7 +133,9 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
 
   return (
     <AppearanceContext.Provider value={{ theme, setTheme, motion, setMotion }}>
-      <DesignSystemProvider theme={theme}>{children}</DesignSystemProvider>
+      <DesignSystemProvider density={density} theme={theme}>
+        {children}
+      </DesignSystemProvider>
     </AppearanceContext.Provider>
   );
 }

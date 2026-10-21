@@ -362,7 +362,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   useNewTaskPageHotkey();
 
   const currentHref = pinHrefFor(pathname, searchParams.toString());
-  const [dockActive, setDockActive] = useDockState();
+  const [dockActive, setDockActive] = useDockState({ collapsedHere: pathname === "/dashboard" });
   const { data: approvals } = useApprovalsQuery();
   const liveCount = useLiveRuns().length;
 
@@ -370,7 +370,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
     <PageBreadcrumbSlotProvider activeHrefs={activeSubHrefs} element={crumbSlot}>
       <AppFrame
         dock={<CooDock />}
-        fullBleed={pathname === "/dashboard"}
+        fullBleed={pathname === "/dashboard" || pathname === "/dashboard-old"}
         header={
           <AppHeader
             homeHref="/dashboard"

@@ -10,10 +10,16 @@ export const DOCK_STORAGE_KEY = "zibby.dock.active";
 /**
  * The activity dock's open panel id (`null` = collapsed), remembered per browser.
  * SSR-safe: starts `null` and hydrates from storage in an effect. Blocked storage
- * just means "collapsed, not remembered".
+ * just means "collapsed, not remembered". `collapsedHere` — see below.
  */
-export function useDockState(): [string | null, (id: string | null) => void] {
+export function useDockState({ collapsedHere = false }: { collapsedHere?: boolean } = {}): [
+  string | null,
+  (id: string | null) => void,
+] {
   const [active, setActive] = useState<string | null>(null);
+  // `collapsedHere` (the Bridge route) swaps in a session-only slot that starts
+  // collapsed: a panel opened there works but never reads or writes the stored state.
+  const [local, setLocal] = useState<string | null>(null);
 
   useIsomorphicLayoutEffect(() => {
     try {
@@ -34,5 +40,5 @@ export function useDockState(): [string | null, (id: string | null) => void] {
     }
   }, []);
 
-  return [active, update];
+  return collapsedHere ? [local, setLocal] : [active, update];
 }
