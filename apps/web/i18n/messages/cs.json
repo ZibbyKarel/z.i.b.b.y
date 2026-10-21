@@ -3098,5 +3098,60 @@
       "notFoundTitle": "Položka nenalezena",
       "notFoundBody": "Není ve vašem rozsahu, nebo ji zdroj už nevrací."
     }
+  },
+  "bridge": {
+    "title": "MŮSTEK",
+    "layout": "ROZLOŽENÍ",
+    "preset": {
+      "DEFAULT": "VÝCHOZÍ",
+      "REVIEW": "REVIEW",
+      "CUSTOM": "VLASTNÍ"
+    },
+    "density": {
+      "label": "Hustota",
+      "compact": "KOMPAKTNÍ",
+      "comfort": "POHODLNÁ",
+      "airy": "VZDUŠNÁ",
+      "open": "OTEVŘENÁ"
+    },
+    "addWidget": "+ WIDGET",
+    "saveAs": "ULOŽIT JAKO",
+    "reset": "OBNOVIT",
+    "editLayout": "UPRAVIT ROZLOŽENÍ",
+    "done": "HOTOVO",
+    "catalog": {
+      "title": "KATALOG WIDGETŮ",
+      "add": "PŘIDAT",
+      "close": "Zavřít",
+      "empty": "Všechny widgety už jsou na plochě."
+    },
+    "collapse": "Sbalit",
+    "remove": "Odebrat widget",
+    "resize": "Změnit velikost",
+    "emptyWidget": "Tady nic není. Mimo režim úprav se widget sbalí na hlavičku.",
+    "allClear": "VŠE V POŘÁDKU",
+    "you": "{n} TY",
+    "widget": {
+      "briefing": {
+        "label": "PŘEHLED",
+        "desc": "Dnešek v jednom odstavci a klíčové ukazatele"
+      },
+      "issues": {
+        "label": "ISSUES",
+        "desc": "Položky z Jiry a GitHubu seskupené pod epiky"
+      },
+      "tasks": {
+        "label": "ÚKOLY",
+        "desc": "Úkoly Zibby s pipeline po odděleních"
+      },
+      "prs": {
+        "label": "PULL REQUESTY",
+        "desc": "PR od agentů i vaše, včetně stacků"
+      },
+      "runs": {
+        "label": "PRÁVĚ BĚŽÍ",
+        "desc": "Úkoly, které právě procházejí workflow"
+      }
+    }
   }
 }

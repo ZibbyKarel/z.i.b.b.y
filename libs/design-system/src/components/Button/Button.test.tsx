@@ -10,6 +10,11 @@ describe("Button", () => {
     expect(screen.getByTestId(ButtonTestId.Root)).toHaveAccessibleName("Spustit");
   });
 
+  it("outline keeps an ink hairline", () => {
+    render(<Button intent="outline">Edit</Button>);
+    expect(screen.getByTestId(ButtonTestId.Root)).toHaveClass("border-ink", "text-ink");
+  });
+
   it("fires onClick", async () => {
     const onClick = vi.fn();
     render(<Button onClick={onClick}>Spustit</Button>);

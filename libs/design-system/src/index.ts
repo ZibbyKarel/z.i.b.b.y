@@ -623,3 +623,23 @@ export { SkipLink, SkipLinkTestId } from "./components/SkipLink/SkipLink";
 export type { SkipLinkProps } from "./components/SkipLink/SkipLink";
 export { FileDiffView, FileDiffViewTestId } from "./components/FileDiffView/FileDiffView";
 export type { FileDiffViewProps } from "./components/FileDiffView/FileDiffView";
+
+// --- Widget board kit (Bridge dashboard; generic) ---
+export { WidgetBoard, WidgetBoardTestId } from "./components/WidgetBoard/WidgetBoard";
+export type { WidgetBoardProps } from "./components/WidgetBoard/WidgetBoard";
+export { WidgetFrame, WidgetFrameTestId } from "./components/WidgetFrame/WidgetFrame";
+export type { WidgetFrameProps } from "./components/WidgetFrame/WidgetFrame";
+export {
+  CommandBar,
+  CommandBarGroup,
+  CommandBarTestId,
+  CommandBarText,
+} from "./components/CommandBar/CommandBar";
+export type { CommandBarProps, CommandBarTextProps } from "./components/CommandBar/CommandBar";
+export { DensityMenu, DensityMenuTestId } from "./components/DensityMenu/DensityMenu";
+export type { DensityMenuProps } from "./components/DensityMenu/DensityMenu";
+export { WidgetCatalog, WidgetCatalogTestId } from "./components/WidgetCatalog/WidgetCatalog";
+export type {
+  WidgetCatalogEntry,
+  WidgetCatalogProps,
+} from "./components/WidgetCatalog/WidgetCatalog";

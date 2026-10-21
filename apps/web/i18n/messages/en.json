@@ -3098,5 +3098,60 @@
       "notFoundTitle": "Item not found",
       "notFoundBody": "It is not in your scope, or the source no longer returns it."
     }
+  },
+  "bridge": {
+    "title": "BRIDGE",
+    "layout": "LAYOUT",
+    "preset": {
+      "DEFAULT": "DEFAULT",
+      "REVIEW": "REVIEW",
+      "CUSTOM": "CUSTOM"
+    },
+    "density": {
+      "label": "Density",
+      "compact": "COMPACT",
+      "comfort": "COMFORT",
+      "airy": "AIRY",
+      "open": "OPEN"
+    },
+    "addWidget": "+ WIDGET",
+    "saveAs": "SAVE AS",
+    "reset": "RESET",
+    "editLayout": "EDIT LAYOUT",
+    "done": "DONE",
+    "catalog": {
+      "title": "WIDGET CATALOG",
+      "add": "ADD",
+      "close": "Close",
+      "empty": "Every widget is already on the board."
+    },
+    "collapse": "Collapse",
+    "remove": "Remove widget",
+    "resize": "Resize",
+    "emptyWidget": "Nothing here. Outside edit mode this widget collapses to its header.",
+    "allClear": "ALL CLEAR",
+    "you": "{n} YOU",
+    "widget": {
+      "briefing": {
+        "label": "BRIEFING",
+        "desc": "Today in one paragraph plus the key counters"
+      },
+      "issues": {
+        "label": "ISSUES",
+        "desc": "Jira and GitHub items, grouped under their epic"
+      },
+      "tasks": {
+        "label": "TASKS",
+        "desc": "Zibby tasks with their department pipeline"
+      },
+      "prs": {
+        "label": "PULL REQUESTS",
+        "desc": "Agent PRs and your own, with stacks"
+      },
+      "runs": {
+        "label": "RUNNING NOW",
+        "desc": "Tasks moving through a workflow right now"
+      }
+    }
   }
 }

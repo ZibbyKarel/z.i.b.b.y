@@ -10,6 +10,8 @@ import { StatusDot } from "../StatusDot/StatusDot";
  * UPPERCASE label (`label` 11px / `label-sm` 10px, 0.14em, weight 400):
  *   primary   — ink fill, panel text
  *   secondary — `--line2` hairline, `--ink2` text → hover `--ink` on `--panel2`
+
+ *   outline   — `--ink` hairline, `--ink` text (the Bridge EDIT LAYOUT toggle; DONE is `primary`)
  *   ghost     — secondary without the hairline (quietest action; no DS.md row)
  *   danger    — DS.md "Destructive": secondary + a leading `--s-err` dot, never a red fill
  * An icon-only button (no children) is DS.md's "Icon / arrow": 9px side padding.
@@ -26,6 +28,7 @@ const button = cva(
       intent: {
         primary: "border-ink bg-ink text-panel hover:bg-ink/90",
         secondary: "border-line-2 bg-transparent text-ink-2 hover:bg-panel-2 hover:text-ink",
+        outline: "border-ink bg-transparent text-ink hover:bg-panel-2",
         ghost: "border-transparent bg-transparent text-ink-2 hover:bg-panel-2 hover:text-ink",
         danger: "border-line-2 bg-transparent text-ink-2 hover:bg-panel-2 hover:text-ink",
       },
@@ -48,11 +51,12 @@ export const buttonClasses = button;
 const spinnerClass: Record<ButtonIntent, string> = {
   primary: "border-panel/30 border-t-panel",
   secondary: "border-ink-2/30 border-t-ink-2",
+  outline: "border-ink/30 border-t-ink",
   ghost: "border-ink-2/30 border-t-ink-2",
   danger: "border-ink-2/30 border-t-ink-2",
 };
 
-export type ButtonIntent = "primary" | "secondary" | "ghost" | "danger";
+export type ButtonIntent = "primary" | "secondary" | "outline" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md";
 
 export enum ButtonTestId {
