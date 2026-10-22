@@ -3372,14 +3372,17 @@
     "manage": {
       "title": "Manage layouts",
       "active": "ACTIVE",
-      "moveUp": "Move up",
-      "moveDown": "Move down",
+      "moveUp": "Move {name} up",
+      "moveDown": "Move {name} down",
       "edit": "Edit",
       "divider": "Shown in the header above · in the dropdown below",
       "dropShown": "Drop here to show in the header",
       "dropHidden": "Drop here to move to the dropdown",
       "newName": "New layout name",
-      "add": "Add"
+      "add": "Add",
+      "editNamed": "Edit {name}",
+      "deleteNamed": "DELETE {name}",
+      "dropEnd": "Drop here to put last in the dropdown"
     },
     "cancel": "Cancel"
   }

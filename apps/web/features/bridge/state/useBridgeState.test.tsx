@@ -137,6 +137,15 @@ describe("useBridgeState", () => {
     expect(result.current.layouts).toEqual({ shown: ["REVIEW"], hidden: [] });
   });
 
+  it("applyPreset is ignored while editing", () => {
+    const { result } = renderHook(() => useBridgeState());
+    act(() => result.current.startEditing("REVIEW"));
+    act(() => result.current.applyPreset("Mine"));
+    expect(result.current.preset).toBe("REVIEW");
+    act(() => result.current.saveEdit());
+    expect(result.current.saved["REVIEW"]).toEqual(compact(REVIEW_LAYOUT));
+  });
+
   it("DEFAULT is not editable", () => {
     const { result } = renderHook(() => useBridgeState());
     act(() => result.current.startEditing("DEFAULT"));

@@ -115,6 +115,74 @@ describe("ManageLayoutsDialog", () => {
     expect(p.onArrange).toHaveBeenCalledWith({ shown: [], hidden: ["A"] });
   });
 
+  it("up/down edges: shown[0] up and last hidden down are disabled; middle ones are not", () => {
+    setup();
+    expect(screen.getByTestId(`${Id.Up}-A`)).toBeDisabled();
+    expect(screen.getByTestId(`${Id.Up}-C`)).toBeEnabled();
+    expect(screen.getByTestId(`${Id.Down}-B`)).toBeEnabled();
+    expect(screen.getByTestId(`${Id.Down}-D`)).toBeDisabled();
+  });
+
+  it("empty shown: first hidden row moves up into shown", async () => {
+    const p = setup({ layouts: { shown: [], hidden: ["C", "D"] } });
+    expect(screen.getByTestId(`${Id.Up}-C`)).toBeEnabled();
+    await userEvent.click(screen.getByTestId(`${Id.Up}-C`));
+    expect(p.onArrange).toHaveBeenCalledWith({ shown: ["C"], hidden: ["D"] });
+  });
+
+  it("empty hidden: last shown row moves down into hidden", async () => {
+    const p = setup({ layouts: { shown: ["A", "B"], hidden: [] } });
+    expect(screen.getByTestId(`${Id.Down}-B`)).toBeEnabled();
+    await userEvent.click(screen.getByTestId(`${Id.Down}-B`));
+    expect(p.onArrange).toHaveBeenCalledWith({ shown: ["A"], hidden: ["B"] });
+  });
+
+  it("dropping on the end zone appends to hidden", () => {
+    const p = setup();
+    const data = new Map<string, string>([["application/x-zibby-bridge-layout", "A"]]);
+    const dataTransfer = {
+      setData: vi.fn(),
+      getData: (k: string) => data.get(k) ?? "",
+      types: [...data.keys()],
+    };
+    fireEvent.drop(screen.getByTestId(Id.DropEnd), { dataTransfer });
+    expect(p.onArrange).toHaveBeenCalledWith({ shown: ["B"], hidden: ["C", "D", "A"] });
+  });
+
+  it("row actions name the layout", () => {
+    setup();
+    expect(screen.getByTestId(`${Id.Edit}-B`)).toHaveAccessibleName("Upravit B");
+    expect(screen.getByTestId(`${Id.Up}-B`)).toHaveAccessibleName("Posunout B nahoru");
+    expect(screen.getByTestId(`${Id.Down}-B`)).toHaveAccessibleName("Posunout B dolů");
+    expect(
+      within(screen.getByTestId(`${Id.Delete}-B`)).getByTestId(ConfirmDeleteButtonTestId.Root),
+    ).toHaveAccessibleName("SMAZAT B");
+  });
+
+  it("a successful custom add shows no error and resets to nextName", async () => {
+    const props: ManageLayoutsDialogProps = {
+      open: true,
+      preset: "A",
+      layouts: arr,
+      nextName: "MY LAYOUT 01",
+      saved: { A: [] },
+      onArrange: vi.fn(),
+      onAdd: vi.fn(() => true),
+      onEdit: vi.fn(),
+      onDelete: vi.fn(),
+      onClose: vi.fn(),
+    };
+    const { rerender } = renderWithProviders(<ManageLayoutsDialog {...props} />);
+    const input = screen.getByTestId(Id.Input) as HTMLInputElement;
+    await userEvent.clear(input);
+    await userEvent.type(input, "FOO");
+    await userEvent.click(screen.getByTestId(Id.Add));
+    expect(props.onAdd).toHaveBeenCalledWith("FOO");
+    rerender(<ManageLayoutsDialog {...props} saved={{ A: [], FOO: [] }} />);
+    expect(screen.queryByTestId(FieldTestId.Error)).toBeNull();
+    expect((screen.getByTestId(Id.Input) as HTMLInputElement).value).toBe("MY LAYOUT 01");
+  });
+
   it("adds a valid name (prefilled, Enter submits) and errors on a taken one", async () => {
     const p = setup();
     const input = screen.getByTestId(Id.Input) as HTMLInputElement;

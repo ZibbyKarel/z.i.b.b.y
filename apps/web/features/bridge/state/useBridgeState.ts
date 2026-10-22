@@ -82,9 +82,13 @@ export function useBridgeState() {
     setDraft(next);
   }, []);
 
+  /** Switch layout. Ignored while editing — leave edit mode (save/cancel) first. */
   const applyPreset = useCallback(
-    (name: string) => update({ layout: presetLayout(name, saved), preset: name }),
-    [update, saved],
+    (name: string) => {
+      if (editTarget) return;
+      update({ layout: presetLayout(name, saved), preset: name });
+    },
+    [update, saved, editTarget],
   );
 
   const leaveEditing = useCallback(() => {
@@ -186,7 +190,7 @@ export function useBridgeState() {
   const closeCatalog = useCallback(() => setCatalogOpen(false), []);
   const closeSelection = useCallback(() => setSelection(null), []);
   const beginDrag = useCallback((id: string) => setDraggingId(id), []);
-  /** Drag end: a final compact WITHOUT priority (reference parity); CUSTOM only if it moved anything. */
+  /** Drag end: a final compact WITHOUT priority (reference parity); only changes the draft. */
   const endDrag = useCallback(() => {
     setDraggingId(null);
     const cur = layoutRef.current;

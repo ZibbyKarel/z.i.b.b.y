@@ -71,10 +71,10 @@ export function BridgeHeader({
           plain
           ariaLabel={t("layout")}
           items={names.map((name) => ({ value: name, label: presetLabel(name) }))}
-          onChange={(name) => name !== CUSTOM_PRESET && onPreset(name)}
+          onChange={(name) => !editing && name !== CUSTOM_PRESET && onPreset(name)}
           value={preset}
         />
-        {layouts.hidden.length > 0 ? (
+        {!editing && layouts.hidden.length > 0 ? (
           <Container data-testid={BridgeHeaderTestId.More}>
             <MenuButton
               ariaLabel={t("moreLayouts")}

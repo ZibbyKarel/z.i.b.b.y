@@ -96,6 +96,14 @@ describe("BridgeHeader", () => {
     expect(onToggleCatalog).toHaveBeenCalled();
   });
 
+  it("while editing, layouts cannot be switched and the kebab is hidden", async () => {
+    const onPreset = vi.fn();
+    renderWithProviders(<BridgeHeader {...props} editing layouts={two} onPreset={onPreset} />);
+    expect(screen.queryByTestId(BridgeHeaderTestId.More)).toBeNull();
+    await userEvent.click(screen.getByTestId(item("A")));
+    expect(onPreset).not.toHaveBeenCalled();
+  });
+
   it("hidden layouts sit in the kebab menu", async () => {
     const onPreset = vi.fn();
     renderWithProviders(<BridgeHeader {...props} layouts={two} onPreset={onPreset} />);

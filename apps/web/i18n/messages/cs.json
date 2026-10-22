@@ -3372,14 +3372,17 @@
     "manage": {
       "title": "Správa rozložení",
       "active": "AKTIVNÍ",
-      "moveUp": "Posunout nahoru",
-      "moveDown": "Posunout dolů",
+      "moveUp": "Posunout {name} nahoru",
+      "moveDown": "Posunout {name} dolů",
       "edit": "Upravit",
       "divider": "V liště nahoře ↑ · v nabídce ↓",
       "dropShown": "Pusť sem pro zobrazení v liště",
       "dropHidden": "Pusť sem pro přesun do nabídky",
       "newName": "Název nového rozložení",
-      "add": "Přidat"
+      "add": "Přidat",
+      "editNamed": "Upravit {name}",
+      "deleteNamed": "SMAZAT {name}",
+      "dropEnd": "Pusť sem pro přesun na konec nabídky"
     },
     "cancel": "Zrušit"
   }

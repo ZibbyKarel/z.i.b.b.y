@@ -25,6 +25,8 @@ export enum ManageLayoutsDialogTestId {
   Divider = "manage-layouts-divider",
   DropShown = "manage-layouts-drop-shown",
   DropHidden = "manage-layouts-drop-hidden",
+  /** Thin zone after the last hidden row: appends to the end of the dropdown. */
+  DropEnd = "manage-layouts-drop-end",
   /** Suffixed with the layout name. */
   Up = "manage-layouts-up",
   Down = "manage-layouts-down",
@@ -122,7 +124,6 @@ function ManageLayouts({
   };
 
   const row = (n: string) => {
-    const i = flat.indexOf(n);
     return (
       <div
         draggable
@@ -151,9 +152,9 @@ function ManageLayouts({
               ) : null}
             </Stack>
             <Button
-              aria-label={t("manage.moveUp")}
+              aria-label={t("manage.moveUp", { name: label(n) })}
               data-testid={`${ManageLayoutsDialogTestId.Up}-${n}`}
-              disabled={i === 0}
+              disabled={layouts.shown[0] === n}
               intent="ghost"
               onClick={() => onArrange(stepLayout(layouts, n, -1))}
               size="sm"
@@ -161,9 +162,9 @@ function ManageLayouts({
               ↑
             </Button>
             <Button
-              aria-label={t("manage.moveDown")}
+              aria-label={t("manage.moveDown", { name: label(n) })}
               data-testid={`${ManageLayoutsDialogTestId.Down}-${n}`}
-              disabled={i === flat.length - 1}
+              disabled={layouts.hidden.at(-1) === n}
               intent="ghost"
               onClick={() => onArrange(stepLayout(layouts, n, 1))}
               size="sm"
@@ -171,6 +172,7 @@ function ManageLayouts({
               ↓
             </Button>
             <Button
+              aria-label={t("manage.editNamed", { name: label(n) })}
               data-testid={`${ManageLayoutsDialogTestId.Edit}-${n}`}
               intent="ghost"
               onClick={() => onEdit(n)}
@@ -181,7 +183,7 @@ function ManageLayouts({
             <div data-testid={`${ManageLayoutsDialogTestId.Delete}-${n}`}>
               <ConfirmDeleteButton
                 confirmLabel={t("deleteLayoutConfirm")}
-                label={t("deleteLayout")}
+                label={t("manage.deleteNamed", { name: label(n) })}
                 onConfirm={() => onDelete(n)}
               />
             </div>
@@ -229,13 +231,26 @@ function ManageLayouts({
           {layouts.hidden.length === 0
             ? emptyZone(ManageLayoutsDialogTestId.DropHidden, null, t("manage.dropHidden"))
             : layouts.hidden.map(row)}
+          {layouts.hidden.length > 0 ? (
+            <div
+              data-testid={ManageLayoutsDialogTestId.DropEnd}
+              onDragOver={over}
+              onDrop={(e) => drop(e, null)}
+            >
+              <Typography mono size="2xs" type="note" variant="tertiary">
+                {t("manage.dropEnd")}
+              </Typography>
+            </div>
+          ) : null}
         </Stack>
         <form
           id={formId}
           onSubmit={(e) => {
             e.preventDefault();
             setSubmitted(true);
-            if (!err) onAdd(name.trim());
+            if (err || !onAdd(name.trim())) return;
+            setName(nextName);
+            setSubmitted(false);
           }}
         >
           <Stack align="end" direction="row" gap="100">
