@@ -28,5 +28,7 @@ export const INTEGRATION_LOGO: Partial<Record<IntegrationKind, string>> = {
 /** Icon of a roadmap item's source; `manual` has no integration, so just a glyph. */
 export function sourceIcon(kind: RoadmapSourceKind): { glyph: IconName; src?: string } {
   if (kind === "manual") return { glyph: "edit" };
+  // The GitHub mark is a white-filled <img>, invisible on the light theme's panel — glyph only.
+  if (kind === "github") return { glyph: INTEGRATION_GLYPH.github };
   return { glyph: INTEGRATION_GLYPH[kind], src: INTEGRATION_LOGO[kind] };
 }

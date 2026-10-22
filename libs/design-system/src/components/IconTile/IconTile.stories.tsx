@@ -11,7 +11,7 @@ const meta: Meta<typeof IconTile> = {
   component: IconTile,
   parameters: { backgrounds: { default: "velin" } },
   argTypes: {
-    size: { control: "select", options: ["sm", "md", "lg", "xl"] },
+    size: { control: "select", options: ["xs", "sm", "md", "lg", "xl"] },
     tone: { control: "select", options: ["accent", "neutral"] },
     radius: { control: "select", options: ["sm", "default"] },
     shape: { control: "select", options: ["square", "circle"] },
@@ -31,6 +31,7 @@ export const Overview: Story = {
           sizes
         </Typography>
         <div className="flex items-center gap-4">
+          <IconTile glyph="bot" size="xs" />
           <IconTile glyph="bot" size="sm" />
           <IconTile glyph="bot" size="md" />
           <IconTile glyph="bot" size="lg" />
