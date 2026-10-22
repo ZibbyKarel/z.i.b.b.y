@@ -100,10 +100,17 @@ export function removeWidget(layout: readonly BridgeWidget[], id: string): Bridg
   return compact(layout.filter((i) => i.id !== id));
 }
 
-/** View mode: empty/collapsed widgets shrink to h=1, then the board compacts. */
+/** View mode: empty/collapsed widgets shrink to h=1, others fit their content rows (never above
+ *  their layout height), then the board compacts. */
 export function viewLayout(
   layout: readonly BridgeWidget[],
   shrinkIds: ReadonlySet<string>,
+  fitRows: Readonly<Record<string, number>> = {},
 ): BridgeWidget[] {
-  return compact(layout.map((it) => (shrinkIds.has(it.id) ? { ...it, h: 1 } : it)));
+  return compact(
+    layout.map((it) => ({
+      ...it,
+      h: shrinkIds.has(it.id) ? 1 : Math.min(it.h, fitRows[it.id] ?? it.h),
+    })),
+  );
 }

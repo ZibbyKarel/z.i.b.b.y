@@ -35,3 +35,8 @@ export function boardHeight(
   const maxY = layout.reduce((m, it) => Math.max(m, it.y + it.h), 0);
   return Math.max(0, maxY * (rowH + gap) - gap) + extraRows * (rowH + gap);
 }
+
+/** Whole grid rows a content height of `px` occupies (min 1). */
+export function rowsFor(px: number, rowH: number, gap: number): number {
+  return Math.max(1, Math.ceil((px + gap) / (rowH + gap)));
+}

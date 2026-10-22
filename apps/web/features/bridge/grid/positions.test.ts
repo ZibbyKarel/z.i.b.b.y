@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boardHeight, colWidth, widgetRect } from "./positions";
+import { boardHeight, colWidth, rowsFor, widgetRect } from "./positions";
 import { DEFAULT_LAYOUT } from "./presets";
 
 describe("positions", () => {
@@ -19,5 +19,14 @@ describe("positions", () => {
     expect(boardHeight(DEFAULT_LAYOUT, 20, 10)).toBe(21 * 30 - 10);
     expect(boardHeight(DEFAULT_LAYOUT, 20, 10, 2)).toBe(21 * 30 - 10 + 60);
     expect(boardHeight([], 20, 10)).toBe(0);
+  });
+});
+
+describe("rowsFor", () => {
+  it("rounds content pixels up to whole rows, min 1", () => {
+    expect(rowsFor(30, 30, 8)).toBe(1);
+    expect(rowsFor(31, 30, 8)).toBe(2);
+    expect(rowsFor(0, 30, 8)).toBe(1);
+    expect(rowsFor(106, 30, 8)).toBe(3);
   });
 });
