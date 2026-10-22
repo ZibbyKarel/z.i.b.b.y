@@ -1,3 +1,4 @@
+import { FieldTestId } from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen } from "../../../test/render";
@@ -31,7 +32,7 @@ describe("SaveLayoutDialog", () => {
   it("a taken name shows the error and does not save", async () => {
     const onSave = setup({ "MY LAYOUT 01": [] });
     await userEvent.click(screen.getByTestId(Id.Submit));
-    expect(screen.getByTestId(Id.Error)).toBeInTheDocument();
+    expect(screen.getByTestId(FieldTestId.Error)).toBeInTheDocument();
     expect(onSave).not.toHaveBeenCalled();
   });
 
@@ -39,5 +40,18 @@ describe("SaveLayoutDialog", () => {
     const onSave = setup();
     await userEvent.type(input(), "{Enter}");
     expect(onSave).toHaveBeenCalledWith("MY LAYOUT 01");
+  });
+
+  it("reopening starts fresh: prefilled name, no error", async () => {
+    const props = { initialName: "MY LAYOUT 01", onClose: vi.fn(), onSave: vi.fn() };
+    const saved = { "MY LAYOUT 01": [] };
+    const { rerender } = renderWithProviders(<SaveLayoutDialog open saved={saved} {...props} />);
+    await userEvent.click(screen.getByTestId(Id.Submit));
+    expect(screen.getByTestId(FieldTestId.Error)).toBeInTheDocument();
+    await userEvent.type(input(), "x");
+    rerender(<SaveLayoutDialog open={false} saved={saved} {...props} />);
+    rerender(<SaveLayoutDialog open saved={saved} {...props} />);
+    expect(input().value).toBe("MY LAYOUT 01");
+    expect(screen.queryByTestId(FieldTestId.Error)).toBeNull();
   });
 });

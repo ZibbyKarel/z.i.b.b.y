@@ -85,7 +85,8 @@ export function useBridgeState() {
 
   const deleteSaved = useCallback(
     (name: string) => {
-      const { [name]: _gone, ...rest } = saved;
+      const rest = { ...saved };
+      delete rest[name];
       update({
         saved: rest,
         favorites: favorites.filter((n) => n !== name),
@@ -155,7 +156,7 @@ export function useBridgeState() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       const el = e.target;
-      if (el instanceof HTMLElement && el.closest('[role="dialog"]')) return;
+      if (el instanceof HTMLElement && el.closest('[aria-modal="true"]')) return;
       if (
         el instanceof HTMLElement &&
         (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)

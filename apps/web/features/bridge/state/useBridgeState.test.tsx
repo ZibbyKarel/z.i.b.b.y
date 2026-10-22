@@ -133,6 +133,30 @@ describe("useBridgeState", () => {
     ce.remove();
   });
 
+  it("Esc inside an aria-modal element is ignored; inside a non-modal dialog it closes the selection", () => {
+    const { result } = renderHook(() => useBridgeState());
+    act(() => result.current.toggleEditing());
+    act(() => result.current.setSelection({ kind: "pr", id: "1", widgetId: "prs", key: "pr:1" }));
+    const modal = document.createElement("div");
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    const sheet = document.createElement("div");
+    sheet.setAttribute("role", "dialog");
+    sheet.setAttribute("aria-modal", "false");
+    document.body.append(modal, sheet);
+    const esc = (el: HTMLElement) =>
+      act(
+        () => void el.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })),
+      );
+    esc(modal);
+    expect(result.current.editing).toBe(true);
+    expect(result.current.selection).not.toBeNull();
+    esc(sheet);
+    expect(result.current.selection).toBeNull();
+    modal.remove();
+    sheet.remove();
+  });
+
   it("endDrag settles with a final compact and flags CUSTOM only if something moved", () => {
     ui = UiSettingsSchema.parse({
       bridge: {

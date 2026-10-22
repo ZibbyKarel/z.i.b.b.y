@@ -2,13 +2,12 @@
 
 import { Button, Dialog, Stack, TextInputField } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { layoutNameError } from "../grid/presets";
 
 export enum SaveLayoutDialogTestId {
   Input = "save-layout-input",
   Submit = "save-layout-submit",
-  Error = "save-layout-error",
 }
 
 export interface SaveLayoutDialogProps {
@@ -35,6 +34,8 @@ function SaveLayoutForm({
   const t = useTranslations("bridge");
   const [name, setName] = useState(initialName);
   const [submitted, setSubmitted] = useState(false);
+  const formId = useId();
+  const tc = useTranslations("common");
   const err = layoutNameError(name, saved);
 
   return (
@@ -43,7 +44,7 @@ function SaveLayoutForm({
       actions={
         <Button
           data-testid={SaveLayoutDialogTestId.Submit}
-          form="save-layout-form"
+          form={formId}
           intent="primary"
           size="sm"
           type="submit"
@@ -51,11 +52,12 @@ function SaveLayoutForm({
           {t("save")}
         </Button>
       }
+      closeLabel={tc("close")}
       onClose={onClose}
       title={t("saveAsTitle")}
     >
       <form
-        id="save-layout-form"
+        id={formId}
         onSubmit={(e) => {
           e.preventDefault();
           setSubmitted(true);
@@ -66,6 +68,7 @@ function SaveLayoutForm({
           <TextInputField
             autoFocus
             data-testid={SaveLayoutDialogTestId.Input}
+            error={submitted && err ? t(`layoutNameError.${err}`) : undefined}
             label={t("layoutName")}
             onChange={(e) => {
               setName(e.target.value);
@@ -73,11 +76,6 @@ function SaveLayoutForm({
             }}
             value={name}
           />
-          {submitted && err ? (
-            <p data-testid={SaveLayoutDialogTestId.Error} role="alert">
-              {t(`layoutNameError.${err}`)}
-            </p>
-          ) : null}
         </Stack>
       </form>
     </Dialog>

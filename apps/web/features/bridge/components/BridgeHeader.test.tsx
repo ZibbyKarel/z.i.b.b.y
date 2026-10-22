@@ -1,4 +1,9 @@
-import { DensityMenuTestId, SegmentedControlTestId } from "@zibby/design-system";
+import {
+  ConfirmDeleteButtonTestId,
+  DensityMenuTestId,
+  MenuButtonTestId,
+  SegmentedControlTestId,
+} from "@zibby/design-system";
 import { UiSettingsSchema } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen, within } from "../../../test/render";
@@ -74,8 +79,8 @@ describe("BridgeHeader layouts", () => {
     renderWithProviders(<BridgeHeader {...props} {...two} onPreset={onPreset} />);
     expect(screen.getByTestId(item("A"))).toBeInTheDocument();
     expect(screen.queryByTestId(item("B"))).toBeNull();
-    await userEvent.click(within(screen.getByTestId(BridgeHeaderTestId.More)).getByRole("button"));
-    await userEvent.click(screen.getByRole("menuitem"));
+    await userEvent.click(screen.getByTestId(MenuButtonTestId.Trigger));
+    await userEvent.click(screen.getByTestId(`${MenuButtonTestId.Item}-B`));
     expect(onPreset).toHaveBeenCalledWith("B");
   });
 
@@ -99,6 +104,17 @@ describe("BridgeHeader layouts", () => {
     );
     expect(onToggleFavorite).toHaveBeenCalledWith("A");
     expect(screen.getByTestId(BridgeHeaderTestId.Delete)).toBeInTheDocument();
+  });
+
+  it("delete needs two clicks, then calls onDelete with the layout", async () => {
+    const onDelete = vi.fn();
+    renderWithProviders(
+      <BridgeHeader {...props} {...two} editing onDelete={onDelete} preset="A" />,
+    );
+    await userEvent.click(screen.getByTestId(ConfirmDeleteButtonTestId.Root));
+    expect(onDelete).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByTestId(ConfirmDeleteButtonTestId.Root));
+    expect(onDelete).toHaveBeenCalledWith("A");
   });
 
   it("no favorite/delete on DEFAULT", () => {
