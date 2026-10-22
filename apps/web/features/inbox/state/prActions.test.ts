@@ -87,8 +87,12 @@ describe("isRebase", () => {
     expect(isRebase(pr({}))).toBe(false);
     expect(isRebase(pr({ mergeable: true, behind: false }))).toBe(false);
   });
-  it("yields to fix", () => {
-    expect(isRebase(pr({ mergeable: false, headRef: "f", unresolvedThreads: 1 }))).toBe(false);
+  it("shows alongside fix and review", () => {
+    expect(isRebase(pr({ mergeable: false, headRef: "f", unresolvedThreads: 1 }))).toBe(true);
+    expect(isRebase(pr({ bucket: "to-review", behind: true }))).toBe(true);
+  });
+  it("not while GitHub is computing", () => {
+    expect(isRebase(pr({ mergeable: null }))).toBe(false);
   });
 });
 

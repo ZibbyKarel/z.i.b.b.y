@@ -68,7 +68,7 @@ export interface PrActionButtonsProps {
  * - my PR with changes requested → "Address review comments": a `pr-address-comments` task.
  *   ZIBBY fast-forwards the fixes (never force) — right away for `Addressed: all` (Tier-2),
  *   after a Tier-3 approval otherwise;
- * - my PR conflicting with / behind its base → "Rebase on <base>" (todo-11). Never a fallback;
+ * - any PR conflicting with / behind its base → "Rebase on <base>" (todo-11). Never a fallback;
  * - `ready-to-merge` → hold-to-confirm "Squash and merge" (optionally deleting the head branch).
  * While a ZIBBY run is in flight its running label (linked to the task) replaces the buttons;
  * a failed run keeps the buttons and adds a link to the failed task. Review / Address hide once

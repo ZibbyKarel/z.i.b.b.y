@@ -263,6 +263,23 @@ describe("PrActions address / rebase", () => {
     );
   });
 
+  it("a colleague's behind PR shows Review and Rebase", () => {
+    renderWithProviders(<PrActions baseLabel="main" pr={pr(7, { ...toReview, behind: true })} />);
+    expect(screen.getByTestId(DropDownButtonTestId.Root)).toBeInTheDocument();
+    expect(screen.getByTestId(PrActionsTestId.Rebase)).toBeInTheDocument();
+  });
+
+  it("my conflicting PR with threads shows Address and Rebase", () => {
+    renderWithProviders(
+      <PrActions
+        baseLabel="main"
+        pr={pr(7, { mergeable: false, headRef: "feat", unresolvedThreads: 2 })}
+      />,
+    );
+    expect(screen.getByTestId(PrActionsTestId.Address)).toBeInTheDocument();
+    expect(screen.getByTestId(PrActionsTestId.Rebase)).toBeInTheDocument();
+  });
+
   it("REBASE ON <base> only when conflicting or behind — never as a fallback", () => {
     const { rerender } = renderWithProviders(
       <PrActions baseLabel="#12" pr={pr(7, { behind: true })} />,
