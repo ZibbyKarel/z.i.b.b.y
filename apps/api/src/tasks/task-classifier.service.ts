@@ -4,7 +4,6 @@ import {
   type ClassifyTaskInput,
   type Department,
   type DepartmentId,
-  type Employee,
   type MakerRef,
   ORCHESTRATOR_TARGET,
   type ProposedGoal,
@@ -18,7 +17,6 @@ import {
 } from "@zibby/contracts";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { DepartmentsStorageService } from "../departments/departments.storage.service";
-import { EmployeesStorageService } from "../employees/employees.storage.service";
 import { WorkflowsStorageService } from "../workflows/workflows.storage.service";
 import { matchProject } from "../projects/project-matcher";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
@@ -209,8 +207,6 @@ export class TaskClassifierService {
     @Inject(TASK_ROUTER) private readonly router: TaskRouter,
     private readonly fallback: KeywordScorer,
     private readonly projects: ProjectsStorageService,
-    /** D-015: {@link departmentCandidates}'s agent membership (active employees, not `Agent.department`). */
-    private readonly employees: EmployeesStorageService,
     /** D-022: department identity + `fallback` policy come from the store. */
     private readonly departments: DepartmentsStorageService,
     logger: LoggerService,
@@ -254,17 +250,11 @@ export class TaskClassifierService {
     input: ClassifyTaskInput,
     departmentId: DepartmentId,
   ): Promise<TaskRouting | null> {
-    const [allWorkflows, allAgents, ownedPositionIds] = await Promise.all([
+    const [allWorkflows, allAgents] = await Promise.all([
       this.workflows.list().catch((): Workflow[] => []),
       this.agents.listActive().catch((): Agent[] => []),
-      this.ownedPositionIds(departmentId),
     ]);
-    const owned = this.departmentCandidates(
-      departmentId,
-      allWorkflows,
-      allAgents,
-      ownedPositionIds,
-    );
+    const owned = this.departmentCandidates(departmentId, allWorkflows, allAgents);
     // The required-sink constraint is applied BEFORE any ranking, so neither the LLM
     // leg nor the keyword scorer is ever offered a unit that cannot honour it.
     const { candidates, constrainedBy } = this.constrainByOutput(owned, input.output, departmentId);
@@ -429,11 +419,7 @@ export class TaskClassifierService {
     input: ClassifyTaskInput,
     preferred?: DepartmentId,
   ): Promise<TaskRouting | null> {
-    const [workflows, employees] = await Promise.all([
-      this.workflows.list().catch((): Workflow[] => []),
-      this.employees.list().catch((): Employee[] => []),
-    ]);
-    const candidates = await this.stage1DepartmentCandidates(workflows, employees);
+    const candidates = await this.buildCandidates();
     const fallbackCandidate = candidates.find((c) => c.id === preferred) ?? candidates[0];
     if (!fallbackCandidate) return null;
     // NS2 F10 — ambiguity is EXPOSED here, unlike at stage 2: the caller
@@ -703,22 +689,17 @@ export class TaskClassifierService {
    * it is why the create paths 422 without an owner.
    */
   private async buildCandidates(): Promise<RoutableTarget[]> {
-    // D-015: department seating is an EMPLOYEE fact (a position with nobody
-    // hired into it seats no department), not `Agent.department` — an agent
-    // record can still carry the field (schema back-compat / pre-migration
-    // fixtures), but it must never seat a department on its own.
-    const [workflows, employees] = await Promise.all([
+    const [workflows, agents] = await Promise.all([
       this.workflows.list().catch((): Workflow[] => []),
-      this.employees.list().catch((): Employee[] => []),
+      this.agents.listActive().catch((): Agent[] => []),
     ]);
 
-    return this.stage1DepartmentCandidates(workflows, employees);
+    return this.stage1DepartmentCandidates(workflows, agents);
   }
 
   /**
    * F2a/F2b — one stage-1 candidate per department that owns ≥1 workflow OR ≥1
-   * active employee (D-015: employee, not raw `Agent.department` — see
-   * {@link buildCandidates}), so the top-level switchboard can emit a
+   * active agent (by `Agent.department`), so the top-level switchboard can emit a
    * whole-delegation verdict alongside its agent/workflow picks. Departments
    * owning nothing yet (knowledge/finance, until F4/F5) are excluded — offering
    * them invites a verdict that immediately unwinds at stage-2's empty-roster
@@ -729,11 +710,11 @@ export class TaskClassifierService {
    */
   private async stage1DepartmentCandidates(
     workflows: readonly Workflow[],
-    employees: readonly Employee[],
+    agents: readonly Agent[],
   ): Promise<RoutableTarget[]> {
     const owning = new Set([
       ...workflows.map((p) => p.department).filter(Boolean),
-      ...employees.filter((e) => e.status === "active").map((e) => e.department),
+      ...agents.map((a) => a.department).filter(Boolean),
     ]);
     const departments = await this.departments.list().catch((): Department[] => []);
     return departments
@@ -767,22 +748,10 @@ export class TaskClassifierService {
     departmentId: DepartmentId,
     workflows: readonly Workflow[],
     agents: readonly Agent[],
-    /** D-015: the position ids ({@link ownedPositionIds}) an active employee holds here. */
-    ownedPositionIds: ReadonlySet<string>,
   ): RoutableTarget[] {
     const ownedWorkflows = workflows.filter((p) => p.department === departmentId);
-    const ownedAgents = agents.filter((a) => ownedPositionIds.has(a.id));
+    const ownedAgents = agents.filter((a) => a.department === departmentId);
     return [...this.agentCandidates(ownedAgents), ...this.workflowCandidates(ownedWorkflows)];
-  }
-
-  /** D-015: the set of agent (position) ids with at least one active employee in `departmentId`. */
-  private async ownedPositionIds(departmentId: DepartmentId): Promise<Set<string>> {
-    const employees = await this.employees.list().catch(() => []);
-    return new Set(
-      employees
-        .filter((e) => e.status === "active" && e.department === departmentId)
-        .map((e) => e.agentId),
-    );
   }
 
   /**

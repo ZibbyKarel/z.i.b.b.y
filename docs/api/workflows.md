@@ -283,12 +283,12 @@ skipped). It never returns file contents; `null` for an unknown run.
 run (or one parked on a mid-stage `approval`); anything else throws
 `WorkflowRunNotPausableError` (→ 409). Nothing is killed: the current stage finishes,
 and at the top of the next `drive()` iteration (before the usage-limit/budget checks,
-and before any employee lease or fuse slot is taken) the run parks
+and before any fuse slot is taken) the run parks
 `parkedReason: "paused"` with `pendingGate = { cursor, handoffSource }`, so a pause
 that lands on a loop back-edge keeps the failure handoff. A just-settled sub-run stage
 is recorded first. `writeAggregate` drops the flag whenever the run parks for any
 other reason or ends, so a later resume never pauses instantly. `resumeParked`
-re-enters a paused run in place (same path as `no-employee`: cursor from
+re-enters a paused run in place (cursor from
 `pendingGate`, retry map kept, resume-context with the note). `cancelPause` withdraws
 a pause that has not landed. STOP on a paused run lands it `interrupted`.
 
@@ -341,9 +341,8 @@ reachable from `stageRuns`).
 ### Phase: agent
 
 1. Loads the handoff file (`consumes`) from the previous phase (if any).
-2. **Leases an employee** for `phase.agent` from the workflow's own
-   `department` (see "Wiring: workflow stage dispatch" below) — before the
-   sandbox is created.
+2. **Takes a machine-fuse slot** (`WorkingAgentsFuse.take`, ranked by progress) —
+   before the sandbox is created.
 3. Builds the prompt = workflow prompt + phase instructions + the handoff file's content.
    The stage task (`buildStageTask`, `build-stage-task.ts`) also names the run folder
    (`$ZIBBY_RUN_DIR`, via the `runDirAbs` option) so an agent without Bash can still
@@ -352,38 +351,18 @@ reachable from `stageRuns`).
 5. Waits for it to finish (polling the sidecar status).
 6. Reads the output from the `produces` file (or the log's last N lines).
 7. Evaluates the result (success / failure).
-8. Releases the lease, on every terminal path.
+8. Releases the slot, on every terminal path.
 
-### Wiring: workflow stage dispatch (D-015, ZE-01)
+### Wiring: workflow stage dispatch
 
-An `agent`-type phase's dispatch **is** leasing an employee — a hired
-instance of `phase.agent` (the position), leased from the workflow's own
-`department` via `EmployeeAllocator.acquire(workflow.department, phase.agent,
-{ runId })`. Full model, the allocator's FIFO/park semantics, and D-017's
-single-agent-task lease ladder live in `docs/api/employees.md`; this section
-covers only what changes in the workflow runner itself:
-
-- **Parking.** When the department owns **no** employee of that position at
-  all (`NoEmployeeError`), the run **parks**: `status: "parked"`,
-  `parkedReason: "no-employee"` — a new member of `ParkedReasonSchema`
-  alongside `approval` / `retries` / `limit` / `output` — with
-  `currentStage` set to the phase that couldn't dispatch. This is a new,
-  durable-across-restart parked state distinct from the loop-exhausted /
-  PR-gate parks already documented under "Parking" below.
-- **Queued, not parked.** When every matching employee is busy but at least
-  one exists, `acquire` blocks FIFO instead of throwing — `run.status` is
-  untouched (stays `running`) while `currentStage` reflects the phase
-  waiting on a free lease; no `stageRuns` entry is appended until the lease
-  lands.
-- **Release discipline.** The lease is released in a `finally` around
-  `runStage`, covering every terminal outcome (`done`, `error`,
-  `interrupted`, `paused-limit`) — it never outlives the dispatch it was
-  acquired for.
-- A `verify`-type phase spawns no agent and never leases (`phase.agent` is
-  absent for it).
-- The leased employee's `employeeId`/`employeeName` are recorded onto the
-  stage's `AgentRun.extra` when present — see
-  [agents-runs.md](./agents-runs.md) → "Employee attribution".
+An `agent`-type phase takes one slot from the machine fuse (`apps/api/src/run-slots/`,
+see [tasks.md](./tasks.md) → _Machine fuse_) for the duration of the stage. When no slot
+is free the call blocks (FIFO, progress-ranked); `run.status` is untouched (stays
+`running`) and no `stageRuns` entry is appended until the slot lands. The slot is
+released in a `finally` around `runStage`, covering every terminal outcome (`done`,
+`error`, `interrupted`, `paused-limit`). A `verify`-type phase spawns no agent and never
+takes a slot. There is no per-stage employee lease, no `no-employee` park, and stage
+runs carry no `employeeId` / `employeeName`.
 
 ### Phase: verify
 
@@ -643,16 +622,9 @@ their `pendingGate` / `pendingOutput` / `parked` detail is in the persisted aggr
 and the matching `workflow-gate` / `workflow-output` approval resumes them after the
 restart.
 
-A restart also drops every in-memory `EmployeeAllocator` lease (the allocator
-holds no persisted state) — a stage found `running` with a dead PID
-reconciles to `interrupted` same as always, and a subsequent resume/retry
-re-acquires its lease fresh rather than assuming one is still held.
-
-`WorkflowRunnerService.peekRun(id)` is a synchronous, in-memory-only peek at a
-run's `status` + `currentStage` (no disk fallback; `undefined` once evicted). The
-employee roster uses it to report a leased employee whose run is `parked` /
-`paused-limit` as `blocked` instead of `working`, and to point its live log at the
-current stage.
+A restart also drops every in-memory fuse slot — a stage found `running` with a dead
+PID reconciles to `interrupted` same as always, and a subsequent resume/retry takes a
+slot fresh rather than assuming one is still held.
 
 <!-- ZibbyCorp ZB-05a (2026-09-25): recordArtifact gains the chain-step emitter (fail-soft, like the scout emission). -->
 

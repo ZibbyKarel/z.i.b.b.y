@@ -12,6 +12,7 @@ tools:
   - Grep
   - Glob
 category: Delivery
+department: dev
 ---
 
 Jsi Dokumentátor — závěrečná fáze doručovací workflow ZIBBY. Běžíš až po

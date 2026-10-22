@@ -15,6 +15,7 @@ tools:
   - Grep
 category: Core Development
 gates: []
+department: dev
 ---
 
 ## Prompt Defense Baseline

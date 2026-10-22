@@ -8,7 +8,6 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
 import { WorkflowRunnerService } from "../src/workflows/workflow-runner.service";
-import { defaultEmployeesDir, seedEmployeeFixture } from "./fixtures/employee-fixture";
 
 /**
  * P4-03 — the shipped `coloring-book` workflow end to end, token-free: agent phases
@@ -18,13 +17,6 @@ import { defaultEmployeesDir, seedEmployeeFixture } from "./fixtures/employee-fi
  */
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const FARM = path.join(REPO, "libs", "product-factory", "fixtures", "farm-4");
-const AGENTS = [
-  "creative-director",
-  "book-editor",
-  "illustrator",
-  "kids-book-qa",
-  "listing-specialist",
-];
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -80,12 +72,6 @@ describe("coloring-book workflow (e2e, mock providers)", () => {
     const redirected = workflowMd.replace("~/Workspace/zibby-publishing/books", booksDir);
     expect(redirected).not.toBe(workflowMd);
     await fs.writeFile(path.join(workflowsDir, "coloring-book.workflow.md"), redirected);
-    for (const agentId of AGENTS)
-      await seedEmployeeFixture(defaultEmployeesDir(), {
-        id: `employee_${agentId}`,
-        agentId,
-        department: "pub",
-      });
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
@@ -100,7 +86,6 @@ describe("coloring-book workflow (e2e, mock providers)", () => {
         tagline: "Sellable digital products",
         mandate: "x",
         color: "#c084fc",
-        division: "business",
         icon: "book",
       })
       .expect(201);

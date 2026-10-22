@@ -1,14 +1,12 @@
 import { z } from "zod";
 
-/** Co lze připnout jako katalogovou entitu s vlastní detail stránkou.
- *  `employee` (D-015, ZB-03): pinning targets the hired instance, not the
- *  position, so it sorts a specific person first on `/org/people`. */
-export const EntityPinKindSchema = z.enum(["agent", "workflow", "employee"]);
+/** Co lze připnout jako katalogovou entitu s vlastní detail stránkou. */
+export const EntityPinKindSchema = z.enum(["agent", "workflow"]);
 export type EntityPinKind = z.infer<typeof EntityPinKindSchema>;
 
 /** Všechny druhy připnutí — katalogové entity, nebo libovolná stránka
  *  (sidebar "Pinned"). */
-export const PinKindSchema = z.enum(["agent", "workflow", "employee", "page"]);
+export const PinKindSchema = z.enum(["agent", "workflow", "page"]);
 export type PinKind = z.infer<typeof PinKindSchema>;
 
 /** Jedno připnutí entity: druh + její id. Žádné jméno/glyph — ty se dočtou
@@ -23,7 +21,7 @@ export type EntityPin = z.infer<typeof EntityPinSchema>;
 /** Jedno připnutí libovolné stránky: `id` je její href (pathname + search,
  *  bez přechodného `?approval=`) — to JE identita připnutí, žádné katalogové
  *  id. Na rozdíl od entit nese i operátorem zadané jméno při připnutí (stránka
- *  nemá živý zdroj pravdy pro jméno, na rozdíl od agenta/workflow/employee).
+ *  nemá živý zdroj pravdy pro jméno, na rozdíl od agenta/workflow).
  *
  *  `id` must be an **app-internal path**: a single leading `/` not followed
  *  by another `/` or a `\` — `.startsWith("/")` alone would also admit a

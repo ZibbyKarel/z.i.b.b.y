@@ -1,17 +1,12 @@
 import { promises as fs } from "node:fs";
-import * as path from "node:path";
 import { Inject, Injectable } from "@nestjs/common";
 import {
   DEPARTMENT_SEED,
-  DIVISION_SEED,
   type Department,
   DepartmentIdSchema,
   DepartmentSchema,
-  type Division,
-  DivisionSchema,
 } from "@zibby/contracts";
-import { z } from "zod";
-import { EntityFileStore, safeJson, writeFileAtomic } from "../shared/file-storage";
+import { EntityFileStore } from "../shared/file-storage";
 import {
   DepartmentConflictError,
   DepartmentNotFoundError,
@@ -21,17 +16,13 @@ import {
 /** DI token carrying the absolute path of the directory that holds department files. */
 export const DEPARTMENTS_DIR = "DEPARTMENTS_DIR";
 
-/** The single divisions manifest, beside the department files (`_`-prefixed → never an entity). */
-const DIVISIONS_FILE = "_divisions.json";
-
 const SEED_ORDER: readonly string[] = DEPARTMENT_SEED.map((d) => d.id);
 
 /**
  * D-022 — departments as data: one `<id>.json` per department under
  * `.zibby/data/departments/`, seeded once from `DEPARTMENT_SEED` (stored files
- * always win afterwards). `_divisions.json` holds the divisions manifest; it and
- * the `findings/` subdirectory are not entities — the base listing only reads
- * `*.json` files that parse as a `Department`, so both fall out naturally.
+ * always win afterwards). The `findings/` subdirectory is not an entity — the base
+ * listing only reads `*.json` files that parse as a `Department`.
  */
 @Injectable()
 export class DepartmentsStorageService extends EntityFileStore<Department> {
@@ -77,15 +68,6 @@ export class DepartmentsStorageService extends EntityFileStore<Department> {
     for (const department of DEPARTMENT_SEED) {
       await this.createEntity(department.id, () => department);
     }
-    const file = path.join(this.dir, DIVISIONS_FILE);
-    await fs.access(file).catch(() => writeFileAtomic(file, JSON.stringify(DIVISION_SEED)));
-  }
-
-  async listDivisions(): Promise<Division[]> {
-    const raw = await fs.readFile(path.join(this.dir, DIVISIONS_FILE), "utf8").catch(() => null);
-    const parsed = z.array(DivisionSchema).safeParse(raw === null ? null : safeJson(raw));
-    const divisions = parsed.success ? parsed.data : [...DIVISION_SEED];
-    return divisions.sort((a, b) => a.order - b.order);
   }
 
   /** `true` when `id` names a stored department. Never throws (bad id → false). */

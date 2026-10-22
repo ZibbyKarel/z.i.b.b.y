@@ -323,8 +323,7 @@ export const RoadmapConfigSchema = z.object({
    * Auto-pickup (`RoadmapTickService`): every tick, enqueue every unblocked
    * `todo` TASK and dispatch a decomposition for every childless epic that has
    * never been decomposed. How many of those actually start at once is decided
-   * by free employees in each department (+ the `systemConfig.maxWorkingAgents`
-   * machine fuse), applied by `TaskSchedulerService` to the tasks those releases
+   * by the `systemConfig.maxWorkingAgents` machine fuse, applied by `TaskSchedulerService` to the tasks those releases
    * create — the roadmap has no cap of its own.
    */
   autoPlay: z.boolean().nullable().default(null),

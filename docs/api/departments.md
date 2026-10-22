@@ -38,29 +38,29 @@ backend/vault/integrations/scheduler). Never touch or reuse it for this resource
 
 ## Pieces
 
-| Piece        | File                                                                       | Role                                                                                                                                                                                                                                                                                    |
-| ------------ | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Schema       | `libs/contracts/src/departments/department.schema.ts`                      | `DepartmentIdSchema` (regex `^[a-z][a-z0-9-]{1,23}$`, open set), `DepartmentSchema`, `DivisionSchema`, `CreateDepartmentInputSchema` / `UpdateDepartmentInputSchema`, `DEPARTMENT_SEED` / `DIVISION_SEED` (first-boot seed only), `DepartmentStateSchema`, `DepartmentWithStatusSchema` |
-| Contract     | `libs/contracts/src/departments/departments.contract.ts`                   | `departmentsContract` — `getDepartments`, `listDivisions`, `createDepartment`, `updateDepartment`, `getDepartment`, `markDepartmentSeen`, `getDepartmentSubtasks` and the roster/unowned reads; see _Endpoints_ below for paths and status codes                                        |
-| Store        | `apps/api/src/departments/departments.storage.service.ts`                  | `DepartmentsStorageService` — one `.zibby/data/departments/<id>.json` per department + `_divisions.json`; seed-once; `exists()` / `firstMissing()` / `assertExists()` write-boundary guards                                                                                             |
-| Errors       | `apps/api/src/departments/departments.errors.ts`                           | `DepartmentNotFoundError`, `DepartmentConflictError` (409), `InvalidDepartmentIdError`, `UnknownDivisionError` (422), and the `unknownDepartment422()` helper write boundaries return                                                                                                   |
-| Seen store   | `apps/api/src/departments/department-seen.store.ts`                        | `DepartmentSeenStore` — `.zibby/data/department-seen.json`, `{ [id]: IsoDateTime }`, missing file/key = epoch, atomic writes                                                                                                                                                            |
-| Service      | `apps/api/src/departments/departments.service.ts`                          | `DepartmentsService.list()` / `.get(id)` / `.markSeen(id)` — real aggregation over workflows/agents/runs/approvals (phase 82; agents added in 126g)                                                                                                                                     |
-| Controller   | `apps/api/src/departments/departments.controller.ts`                       | implements `departmentsContract` via the shared `makeErrorMapper` 404 pattern                                                                                                                                                                                                           |
-| Module       | `apps/api/src/departments/departments.module.ts`                           | imports `WorkflowsModule`, `ApprovalsModule`, `TasksModule` (for `TaskRunsService`), `AgentsModule`, `IntegrationsModule`, and `MandateModule` (the roster's derived integration set reads the mandate) — registered in `app.module.ts`                                                 |
-| Web query    | `apps/web/features/departments/queries/useDepartmentsQuery.ts`             | `refetchInterval` ~15s, `select: selectApiResponseBody`, same posture as `useHealthQuery`/`useSelfStatusQuery`                                                                                                                                                                          |
-| Web mutation | `apps/web/features/departments/mutations/useMarkDepartmentSeenMutation.ts` | `makeInvalidatingMutation` over `markDepartmentSeen`, invalidates the departments query key — called when the operator opens a department's drawer (phase 84)                                                                                                                           |
+| Piece        | File                                                                       | Role                                                                                                                                                                                                                                                |
+| ------------ | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Schema       | `libs/contracts/src/departments/department.schema.ts`                      | `DepartmentIdSchema` (regex `^[a-z][a-z0-9-]{1,23}$`, open set), `DepartmentSchema`, `CreateDepartmentInputSchema` / `UpdateDepartmentInputSchema`, `DEPARTMENT_SEED` (first-boot seed only), `DepartmentStateSchema`, `DepartmentWithStatusSchema` |
+| Contract     | `libs/contracts/src/departments/departments.contract.ts`                   | `departmentsContract` — `getDepartments`, `createDepartment`, `updateDepartment`, `getDepartment`, `markDepartmentSeen`, `getDepartmentSubtasks` and the roster/unowned reads; see _Endpoints_ below for paths and status codes                     |
+| Store        | `apps/api/src/departments/departments.storage.service.ts`                  | `DepartmentsStorageService` — one `.zibby/data/departments/<id>.json` per department ; seed-once; `exists()` / `firstMissing()` / `assertExists()` write-boundary guards                                                                            |
+| Errors       | `apps/api/src/departments/departments.errors.ts`                           | `DepartmentNotFoundError`, `DepartmentConflictError` (409), `InvalidDepartmentIdError`, and the `unknownDepartment422()` helper write boundaries return                                                                                             |
+| Seen store   | `apps/api/src/departments/department-seen.store.ts`                        | `DepartmentSeenStore` — `.zibby/data/department-seen.json`, `{ [id]: IsoDateTime }`, missing file/key = epoch, atomic writes                                                                                                                        |
+| Service      | `apps/api/src/departments/departments.service.ts`                          | `DepartmentsService.list()` / `.get(id)` / `.markSeen(id)` — real aggregation over workflows/agents/runs/approvals (phase 82; agents added in 126g)                                                                                                 |
+| Controller   | `apps/api/src/departments/departments.controller.ts`                       | implements `departmentsContract` via the shared `makeErrorMapper` 404 pattern                                                                                                                                                                       |
+| Module       | `apps/api/src/departments/departments.module.ts`                           | imports `WorkflowsModule`, `ApprovalsModule`, `TasksModule` (for `TaskRunsService`), `AgentsModule`, `IntegrationsModule`, and `MandateModule` (the roster's derived integration set reads the mandate) — registered in `app.module.ts`             |
+| Web query    | `apps/web/features/departments/queries/useDepartmentsQuery.ts`             | `refetchInterval` ~15s, `select: selectApiResponseBody`, same posture as `useHealthQuery`/`useSelfStatusQuery`                                                                                                                                      |
+| Web mutation | `apps/web/features/departments/mutations/useMarkDepartmentSeenMutation.ts` | `makeInvalidatingMutation` over `markDepartmentSeen`, invalidates the departments query key — called when the operator opens a department's drawer (phase 84)                                                                                       |
 
 ## The registry
 
 Departments live in a file store (D-022): one file per department at
-`.zibby/data/departments/<id>.json`, plus the single divisions manifest
-`.zibby/data/departments/_divisions.json` (`_`-prefixed, so never read as a
+`.zibby/data/departments/<id>.json` (`_`-prefixed files are never read as a
 department; the `findings/` subdirectory is likewise not an entity). Files
-that fail `DepartmentSchema` are skipped by the listing, never fatal.
+that fail `DepartmentSchema` are skipped by the listing, never fatal. There are no
+divisions: a legacy `division` key in a stored file is ignored on read.
 
-**Seed-once rule.** `DEPARTMENT_SEED` (the original eleven) and `DIVISION_SEED`
-are written to disk only when the directory holds **no** non-`_` `*.json` file.
+**Seed-once rule.** `DEPARTMENT_SEED` (the original eleven)
+is written to disk only when the directory holds **no** non-`_` `*.json` file.
 Afterwards the stored files always win — editing or deleting a seeded department
 is permanent and never re-seeded unless the directory is emptied. Seeding is
 memoised per process.
@@ -68,10 +68,10 @@ memoised per process.
 **Id.** `DepartmentIdSchema` is the regex `^[a-z][a-z0-9-]{1,23}$`, not an enum.
 Whether an id _exists_ is a runtime check against the store, not a schema fact.
 
-Each entry: `{ id, code, name, tagline, mandate, color, division, icon, fallback,
+Each entry: `{ id, code, name, tagline, mandate, color, icon, fallback,
 tierDefault, createdAt? }`. `name` is the English display name, `tagline` a short
 Czech epithet, `mandate` the one-line Czech mandate, `code` an org-chart code
-(`^[A-Z0-9]{2,6}$`), `division` an id from `_divisions.json`. Three fields replace
+(`^[A-Z0-9]{2,6}$`). Three fields replace
 the former closed `Record` maps:
 
 | Field         | Values                                    | Was                       | Meaning                                        |
@@ -86,10 +86,10 @@ Departments list in org-chart order: seeded ones in seed order, later ones by
 **Creation is an operator action** — `POST /api/departments`, the _New department_
 dialog on the org map, or a hand-written file. ZIBBY never creates a department on
 its own. D-022 added two departments to the seed: `pub` (Publishing) and `dist`
-(Distribution), both in the Business Operations division.
+(Distribution).
 
 **Existence checks replace the enum.** The write boundaries that name a department
-— workflow create/update, agent create, hiring/transfer (employees), and the gate-rule
+— workflow create/update, agent create, and the gate-rule
 writes — check the store: an unknown department is a **422**
 `Unknown department "<id>"` (`unknownDepartment422`), not a schema error.
 (`PATCH /api/agents/:id` does not check yet: its contract declares no 422.)
@@ -177,35 +177,27 @@ Two consequences worth knowing:
   free-text task is ever "for incident". The other nine each carry a crew and a
   complexity ladder (see `docs/api/workflows.md` → _the ladder rung_).
 
-## Roster is an employee fact, not a stored agent tag (D-015, ZE-01)
+## Roster is derived from `Agent.department`
 
-`DepartmentsService.roster(id)`'s `agents` list used to be `agents` filtered
-by their own stored `department` field. As of ZE-01 it is **derived from
-employees**: an agent belongs to a department's roster IFF that department
-currently has at least one **active employee** holding that position
-(`agentId`) — `Agent.department` is no longer read by `roster()` at all. An
-agent can now be unowned, owned by exactly one department, or — through
-separate employees in different departments — owned by more than one, purely
-through who's hired where. See `docs/api/employees.md` for the full model
-(D-015/D-017) and hire/fire lifecycle.
+There are no employees: an agent belongs to a department's roster IFF its own
+frontmatter `department:` names that department. `DepartmentsService.roster(id)`
+filters the active agents by that field; an agent with no `department` is unowned.
 
 The task classifier's stage-1 seating (`stage1DepartmentCandidates`, used by
 both `classify()`'s full catalog and `classifyDepartment()` for the roadmap
 gate — see [tasks.md](./tasks.md) → _Classification_) follows the same rule:
 a department is a routable stage-1 candidate when it owns ≥1 workflow
-(`Workflow.department`) **or** has ≥1 active employee, never from
-`Agent.department` directly.
+(`Workflow.department`) **or** ≥1 active agent (`Agent.department`).
 
-**One deliberate, scoped gap:** `aggregateAll()` (the `running`/`report`/
-`error` aggregation behind `list()`/`get()`'s headline `state`, described
-below) still attributes an **agent-kind run** to a department via the raw
-`Agent.department` field — left alone as out-of-scope for this phase.
-Workflow-kind run attribution (via `Workflow.department`) is unaffected.
+`aggregateAll()` (the `running`/`report`/`error` aggregation behind
+`list()`/`get()`'s headline `state`, described below) attributes an agent-kind run
+to a department via the same `Agent.department` field; workflow-kind runs go via
+`Workflow.department`.
 
 ## Roster (`GET /api/departments/:id/roster`)
 
 A department's `{ agents, integrations, monitors }`, served by
-`DepartmentsService.roster(id)`. `agents` is the employee-derived set above.
+`DepartmentsService.roster(id)`. `agents` is the `Agent.department` set above.
 `integrations` is **derived, not stored** — integrations
 carry no owner tag:
 
@@ -233,17 +225,15 @@ model, per the design doc).
 
 ## Endpoints (`/api/departments`)
 
-- `GET /departments/divisions` — the divisions (`{ id, name, order }`) departments are
-  grouped under, in `order`; falls back to `DIVISION_SEED` if `_divisions.json` is
-  missing or invalid. Declared before `/departments/:id` so it is not captured as an id
-  (same for `/departments/unowned`).
+- `/departments/unowned` is declared before `/departments/:id` so it is not captured
+  as an id.
 - `POST /departments` — create a department (body: `CreateDepartmentInputSchema`, i.e.
   all fields incl. `id`, minus `createdAt`). 201 with the stored entry; **409** when the
-  id exists; **422** when `division` names no stored division; **400** for a body that
+  id exists; **400** for a body that
   fails schema validation, including a malformed `id` (ts-rest body validation).
 - `PATCH /departments/:id` — partial update of the editable fields (everything except
   `id`/`createdAt`; the id is immutable). 200 with the entry; 404 for an unknown or
-  unsafe id; 422 on an unknown `division`.
+  unsafe id.
 - `GET /departments` — all entries (seed + operator-created), sorted for LISTS/BRIEFINGS: `ceka` first
   (by `tier3Count` desc), then `hlaseni` (by `tier2Count` desc), then `bezi`,
   then `klid`; registry (insertion) order is the stable tiebreak. Note this

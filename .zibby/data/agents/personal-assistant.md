@@ -17,6 +17,7 @@ tools:
   - Grep
 category: Specialized Domains
 gates: []
+department: per
 ---
 
 You are ZIBBY's personal assistant — the working hands of **hearth**, the

@@ -10,7 +10,7 @@ const API = "http://localhost:3333";
  * cookie, the seeded gated agent + approval, `demo-project`/`demo-pipe`/`demo-skill`,
  * the `team-slack` integration, the vault notes) with the handful of extra entities
  * ROUTE-MAP §1 needs a real id for and the shared setup doesn't already seed: an
- * employee (People), a chain, a goal, a company, a team, a second (unrestricted)
+ * chain, a goal, a company, a team, a second (unrestricted)
  * task/run, and one MCP server / hook / slash command for the registries screens.
  *
  * Every id here is written to `.e2e-data/zc-sweep-ids.json`, which `sweep.spec.ts`
@@ -35,19 +35,6 @@ export default async function globalSetup(): Promise<void> {
       },
     })
     .catch(() => {});
-
-  // An employee (D-015: People shows employees, not positions) hired into `dev`
-  // under the `sweep-agent` position, for `/org/people/[id]`. `name` is
-  // omitted (not passed as "Sweep Employee" or similar) — hiring only accepts
-  // a name from the fixed `EmployeeName` pool (`GET /api/employee-names`,
-  // ZE-01's allocator), so any free-form name 409s "not available"; omitting
-  // it lets the allocator assign the next free pool name.
-  const employeeRes = await ctx
-    .post("/api/departments/dev/employees", {
-      data: { agentId: "sweep-agent" },
-    })
-    .catch(() => null);
-  const employee = employeeRes?.ok() ? ((await employeeRes.json()) as { id: string }) : null;
 
   // A chain for `/work/chains/[id]` and the New-task chain picker (Flow A).
   await ctx
@@ -145,7 +132,6 @@ export default async function globalSetup(): Promise<void> {
   const ids = {
     departmentId: "dev",
     departmentWorkflowId: "demo-pipe",
-    employeeId: employee?.id ?? null,
     chainId: "sweep-chain",
     goalId: "sweep-goal",
     companyId: "sweep-company",

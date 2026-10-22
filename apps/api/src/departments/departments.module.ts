@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common";
 import { AgentsModule } from "../agents/agents.module";
 import { ApprovalsModule } from "../approvals/approvals.module";
-import { EmployeesModule } from "../employees/employees.module";
 import { IntegrationsModule } from "../integrations/integrations.module";
 import { MandateModule } from "../mandate/mandate.module";
 import { dataDir } from "../shared/data-dir";
@@ -38,7 +37,6 @@ export function resolveRunReadFile(): string {
     ApprovalsModule,
     TasksModule,
     AgentsModule,
-    EmployeesModule,
     IntegrationsModule,
     MandateModule,
   ],

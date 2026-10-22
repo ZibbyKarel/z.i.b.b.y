@@ -2,10 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   CreateDepartmentInputSchema,
   DEPARTMENT_SEED,
-  DIVISION_SEED,
   DepartmentIdSchema,
   DepartmentSchema,
-  DivisionSchema,
   UpdateDepartmentInputSchema,
 } from "./department.schema";
 
@@ -16,7 +14,6 @@ const minimal = {
   tagline: "t",
   mandate: "m",
   color: "#112233",
-  division: "business",
 };
 
 describe("DepartmentIdSchema (open id, D-022)", () => {
@@ -52,14 +49,17 @@ describe("DepartmentSchema", () => {
   });
 });
 
+describe("legacy division key", () => {
+  it("is dropped on read", () => {
+    const parsed = DepartmentSchema.parse({ ...minimal, division: "business" });
+    expect((parsed as { division?: unknown }).division).toBeUndefined();
+  });
+});
+
 describe("seeds", () => {
-  it("parse, have 11 departments / 4 divisions, only inc asks", () => {
+  it("parse, have 11 departments, only inc asks", () => {
     expect(DEPARTMENT_SEED).toHaveLength(11);
     for (const d of DEPARTMENT_SEED) expect(DepartmentSchema.safeParse(d).success).toBe(true);
     expect(DEPARTMENT_SEED.filter((d) => d.tierDefault !== null).map((d) => d.id)).toEqual(["inc"]);
-    expect(DIVISION_SEED).toHaveLength(4);
-    for (const d of DIVISION_SEED) expect(DivisionSchema.safeParse(d).success).toBe(true);
-    const divisions = new Set(DIVISION_SEED.map((d) => d.id));
-    for (const d of DEPARTMENT_SEED) expect(divisions.has(d.division)).toBe(true);
   });
 });

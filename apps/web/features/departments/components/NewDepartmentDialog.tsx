@@ -51,8 +51,6 @@ export function NewDepartmentDialog({ onClose, onCreate, pending }: NewDepartmen
       tagline: "",
       mandate: "",
       color: "#5b8def",
-      // TODO(phase A): drop `division` once the contract no longer requires it.
-      division: "engineering",
       icon: "grid",
       fallback: "primary",
       tierDefault: "none",

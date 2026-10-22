@@ -39,7 +39,7 @@ describe("RegistriesService.getBindings", () => {
     expect(bindings.mcp.github).toEqual(["dev", "sec"]);
   });
 
-  it("binds skills/hooks/commands to every department with an active employee", async () => {
+  it("binds skills/hooks/commands to every department with an active agent", async () => {
     const agents = {
       listActive: vi
         .fn()

@@ -62,7 +62,7 @@ export const API_MODULE_DOC_MAP = {
   skills: "docs/api/extensibility.md",
   speech: "docs/api/speech.md",
   departments: "docs/api/departments.md",
-  employees: "docs/api/employees.md",
+  "run-slots": "docs/api/tasks.md",
   system: "docs/api/system.md",
   tasks: "docs/api/tasks.md",
   teams: "docs/api/teams.md",

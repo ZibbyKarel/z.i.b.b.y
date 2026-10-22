@@ -1,6 +1,6 @@
 /**
- * Staffing-driven capacity (docs/plans/zibbycorp/staffing-driven-capacity.md, decision 5):
- * the one ordering every lease and fuse slot is granted in —
+ * Grant ordering —
+ * the one ordering every fuse slot is granted in —
  *   1. progress (furthest stage reached / phase count) — finish work before starting new work;
  *   2. task priority — no task carries a priority yet, so this tier is a no-op today;
  *   3. round-robin across projects — the project granted least recently goes first

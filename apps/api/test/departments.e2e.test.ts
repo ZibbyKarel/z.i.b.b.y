@@ -117,18 +117,10 @@ describe("Departments API (e2e)", () => {
     expect(res.body).toEqual([]);
   });
 
-  it("D-022: seeds the 11 departments + 4 divisions into an empty dir on first boot", async () => {
+  it("D-022: seeds the 11 departments into an empty dir on first boot", async () => {
     const files = await fs.readdir(path.join(dir, "departments"));
     expect(files.filter((f) => f.endsWith(".json") && !f.startsWith("_"))).toHaveLength(11);
-    expect(files).toContain("_divisions.json");
-    const res = await request(app.getHttpServer()).get("/api/departments/divisions");
-    expect(res.status).toBe(200);
-    expect((res.body as Array<{ id: string }>).map((d) => d.id)).toEqual([
-      "engineering",
-      "operations",
-      "business",
-      "office",
-    ]);
+    expect(files).not.toContain("_divisions.json");
   });
 
   it("D-022: POST /api/departments creates `pub` (201), it is listed with an empty roster, a duplicate is 409", async () => {
@@ -139,7 +131,6 @@ describe("Departments API (e2e)", () => {
       tagline: "Knihy a produkty",
       mandate: "Výroba a prodej digitálních produktů.",
       color: "#22aa88",
-      division: "business",
       icon: "book",
       fallback: "primary",
       tierDefault: null,
@@ -147,6 +138,7 @@ describe("Departments API (e2e)", () => {
     const created = await request(app.getHttpServer()).post("/api/departments").send(body);
     expect(created.status).toBe(201);
     expect(created.body).toMatchObject({ id: "pub", icon: "book" });
+    expect(created.body).not.toHaveProperty("division");
     expect(typeof created.body.createdAt).toBe("string");
 
     const list = await request(app.getHttpServer()).get("/api/departments");
@@ -162,28 +154,22 @@ describe("Departments API (e2e)", () => {
     expect(dup.status).toBe(409);
   });
 
-  it("D-022: POST /api/departments rejects a malformed id (400) and an unknown division (422)", async () => {
+  it("D-022: POST /api/departments rejects a malformed id (400)", async () => {
     const base = {
       code: "XYZ",
       name: "X",
       tagline: "",
       mandate: "",
       color: "#112233",
-      division: "business",
     };
     const badId = await request(app.getHttpServer())
       .post("/api/departments")
       .send({ ...base, id: "Bad Id" });
-    // Schema-invalid bodies are rejected by ts-rest's body validation (400) like every
-    // other route; 422 is reserved for the semantic "division does not exist".
+    // Schema-invalid bodies are rejected by ts-rest's body validation (400) like every other route.
     expect(badId.status).toBe(400);
-    const badDivision = await request(app.getHttpServer())
-      .post("/api/departments")
-      .send({ ...base, id: "xyz", division: "nope" });
-    expect(badDivision.status).toBe(422);
   });
 
-  it("D-022: PATCH /api/departments/:id edits fields (id immutable), 404 unknown, 422 unknown division", async () => {
+  it("D-022: PATCH /api/departments/:id edits fields (id immutable), 404 unknown", async () => {
     const ok = await request(app.getHttpServer())
       .patch("/api/departments/pub")
       .send({ name: "Publishing House", tierDefault: "ask" });
@@ -193,17 +179,6 @@ describe("Departments API (e2e)", () => {
       .patch("/api/departments/ghost")
       .send({ name: "x" });
     expect(missing.status).toBe(404);
-    const badDivision = await request(app.getHttpServer())
-      .patch("/api/departments/pub")
-      .send({ division: "nope" });
-    expect(badDivision.status).toBe(422);
-  });
-
-  it("D-022: hiring into an unknown department is 404", async () => {
-    const res = await request(app.getHttpServer())
-      .post("/api/departments/ghost-dept/employees")
-      .send({ agentId: "koder" });
-    expect(res.status).toBe(404);
   });
 
   it("D-022: a gate rule tagged with an unknown department is 422", async () => {

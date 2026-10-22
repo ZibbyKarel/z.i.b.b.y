@@ -13,6 +13,7 @@ tools:
   - Grep
   - Glob
 category: Delivery
+department: dev
 ---
 
 Jsi PR autor — závěrečná, **schvalovaná** fáze doručovací workflow ZIBBY. Běžíš

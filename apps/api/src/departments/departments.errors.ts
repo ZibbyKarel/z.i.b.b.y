@@ -14,19 +14,11 @@ export class DepartmentConflictError extends Error {
   }
 }
 
-/** Raised when a department/division id is malformed or would escape the data dir. */
+/** Raised when a department id is malformed or would escape the data dir. */
 export class InvalidDepartmentIdError extends Error {
   constructor(public readonly id: string) {
     super(`Invalid department id "${id}"`);
     this.name = "InvalidDepartmentIdError";
-  }
-}
-
-/** Raised on create/update when `division` names no stored division (422). */
-export class UnknownDivisionError extends Error {
-  constructor(public readonly id: string) {
-    super(`Unknown division "${id}"`);
-    this.name = "UnknownDivisionError";
   }
 }
 

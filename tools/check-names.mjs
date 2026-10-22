@@ -17,20 +17,32 @@ const run = (args) => {
 const EXCLUDES = [":!tools/migrate/**", ":!tools/check-names.mjs"];
 const hits = [
   run([
-    "grep", "-nIiP",
+    "grep",
+    "-nIiP",
     String.raw`\b(forge|puls|sentinel|maestro|beacon|scout|herald|loom|codex|hearth)\b|subsyst|podsyst`,
-    "--", "apps", "libs", "tools", ...EXCLUDES,
+    "--",
+    "apps",
+    "libs",
+    "tools",
+    ...EXCLUDES,
   ]),
   // LEDGER is also a ZibbyCorp UI *section* (ROUTE-MAP §1) — its section id and
   // nav i18n keys are not the retired department id, so those two homes are exempt.
   run([
-    "grep", "-nIP", String.raw`["'\`]ledger["'\`]`, "--", "libs/contracts", "apps/web", ...EXCLUDES,
-    ":!apps/web/state/config.ts", ":!apps/web/i18n/messages/**",
+    "grep",
+    "-nIP",
+    String.raw`["'\`]ledger["'\`]`,
+    "--",
+    "libs/contracts",
+    "apps/web",
+    ...EXCLUDES,
+    ":!apps/web/state/config.ts",
+    ":!apps/web/i18n/messages/**",
   ]),
 ].filter(Boolean);
 
 if (hits.length > 0) {
-  console.error("check:names — retired subsystem names found (use departments / employees):\n");
+  console.error("check:names — retired subsystem names found (use departments):\n");
   console.error(hits.join("\n"));
   process.exit(1);
 }

@@ -8,7 +8,6 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
 import { ApprovalsService } from "../src/approvals/approvals.service";
 import { WorkflowRunnerService } from "../src/workflows/workflow-runner.service";
-import { defaultEmployeesDir, seedEmployeeFixture } from "./fixtures/employee-fixture";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 async function until<T>(fn: () => Promise<T>, timeoutMs = 25000): Promise<NonNullable<T>> {
@@ -52,11 +51,6 @@ describe("Workflow sub-runs (e2e)", () => {
     process.env.VAULT_DIR = dirs[3];
     process.env.AGENT_DEMO_STEPS = "2";
     process.env.AGENT_DEMO_DELAY_MS = "30";
-    await seedEmployeeFixture(defaultEmployeesDir(), {
-      id: "employee_writer",
-      agentId: "writer",
-      department: "dev",
-    });
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
     await app.init();

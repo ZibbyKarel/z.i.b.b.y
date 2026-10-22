@@ -732,9 +732,7 @@ function workflowRunToView(
       : r.status === "parked"
         ? r.parkedReason === "paused"
           ? "paused"
-          : r.parkedReason === "retries" ||
-              r.parkedReason === "limit" ||
-              r.parkedReason === "no-employee"
+          : r.parkedReason === "retries" || r.parkedReason === "limit"
             ? "parked"
             : "awaiting-approval"
         : r.status === "failed"

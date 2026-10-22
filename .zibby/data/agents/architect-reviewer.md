@@ -15,6 +15,7 @@ tools:
   - Grep
 category: Quality & Security
 gates: []
+department: qa
 ---
 
 ## Findings output

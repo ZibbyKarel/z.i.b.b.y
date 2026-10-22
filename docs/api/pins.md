@@ -17,7 +17,7 @@ pins). Both are a small, operator-owned list persisted as a single file
 | Module     | `apps/api/src/pins/pins.module.ts`         | resolves `PINS_FILE` (`$PINS_FILE` env or `data/pins.json`)                                                                                                                                                                              |
 
 An **entity pin** carries only `{ kind, id }` — no display name or icon. Those
-are read live from the matching catalog (agents / workflows / employees) at
+are read live from the matching catalog (agents / workflows) at
 render time, so renaming an entity shows up in the panel immediately with no
 separate sync step.
 

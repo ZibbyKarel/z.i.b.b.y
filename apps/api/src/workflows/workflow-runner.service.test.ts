@@ -11,9 +11,8 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResumableRunner } from "../approvals/approvals.service";
 import { ProjectLocalUnresolvedError } from "../projects/projects.errors";
-import { NoEmployeeError } from "../employees/employees.errors";
 import { RunNotFoundError } from "../runner/runner-core";
-import { WorkingAgentsFuse } from "../employees/working-agents-fuse";
+import { WorkingAgentsFuse } from "../run-slots/working-agents-fuse";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { WorkflowRunnerService } from "./workflow-runner.service";
 
@@ -148,11 +147,7 @@ async function makeHarness(dir: string): Promise<Harness> {
     // resolves null, so the git-worktree/clone-if-missing branch never runs — see
     // workflow-runner.project-local.test.ts for its dedicated dispatch coverage.
     { resolveForRun: vi.fn() } as never,
-    // EmployeeAllocator double (D-015): this fixture workflow carries no
-    // `department`, so `drive()` never calls `acquire` — present only to keep
-    // the positional constructor aligned.
-    { acquire: vi.fn(), release: vi.fn(), isBusy: vi.fn(), busy: vi.fn(() => new Map()) } as never,
-    // Machine fuse (staffing-driven capacity): a real one, effectively uncapped.
+    // Machine fuse: a real one, effectively uncapped.
     new WorkingAgentsFuse(fakeSystemConfigStore()),
     // A3: fake ModuleRef — HandoffService is resolved lazily (not constructor-
     // injected, see workflow-runner.service.ts's doc comment), so the double here
@@ -820,7 +815,7 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
         status: "running",
         currentStage: "build",
         currentStageRunId: stageRunId,
-        // A run that was waiting for staff when the API died must not keep the marker.
+        // A legacy run that was waiting for staff when the API died: the key is dropped on read.
         waitingForStaff: {
           department: "engineering",
           agentId: "writer",
@@ -841,7 +836,7 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
     const run = h.service.get(ghostId);
     expect(run.status).toBe("failed");
     expect(run.currentStage).toBeNull();
-    expect(run.waitingForStaff).toBeUndefined();
+    expect(run).not.toHaveProperty("waitingForStaff");
   });
 
   it("reconstruct fails a running aggregate with no currentStageRunId (nothing to check, safe default)", async () => {
@@ -1690,7 +1685,7 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
     });
   });
 
-  describe("staffing-driven capacity — ranked staff wait + machine fuse", () => {
+  describe("ranked machine fuse", () => {
     const staffedWorkflow = {
       id: "release",
       department: "engineering",
@@ -1707,99 +1702,19 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
       ],
       instructions: "ship",
     };
-    const lease = {
-      employeeId: "emp-1",
-      employeeName: "Ada",
-      department: "engineering",
-      agentId: "writer",
-    };
-
     const drive = (run: WorkflowRun) =>
       (h.service as unknown as { drive(r: WorkflowRun, p: unknown): Promise<void> }).drive(
         run,
         staffedWorkflow,
       );
-    const swap = (field: "employees" | "fuse", value: unknown) => {
+    const swap = (field: "fuse", value: unknown) => {
       (h.service as unknown as Record<string, unknown>)[field] = value;
     };
-    const readAggregate = async (run: WorkflowRun): Promise<WorkflowRun> =>
-      JSON.parse(await fs.readFile(path.join(run.cwd, "run.json"), "utf8")) as WorkflowRun;
-
     beforeEach(() => {
       h.core.start.mockImplementation(async (spec: { ownerId: string }) => ({
         runId: `${spec.ownerId}_0`,
       }));
       h.core.get.mockImplementation((runId: string) => ({ runId, status: "done" }));
-    });
-
-    it("writes waitingForStaff while the position is busy and clears it once leased", async () => {
-      const run = h.runs.get(WORKFLOW_RUN_ID);
-      if (!run) throw new Error("missing run");
-      let grant: (l: typeof lease) => void = () => {};
-      const employees = {
-        tryAcquire: vi.fn(async () => null),
-        acquire: vi.fn(() => new Promise<typeof lease>((resolve) => (grant = resolve))),
-        release: vi.fn(),
-      };
-      swap("employees", employees);
-
-      const driving = drive(run);
-      await vi.waitFor(() => expect(employees.acquire).toHaveBeenCalled());
-      const waiting = await readAggregate(run);
-      expect(waiting.status).toBe("running");
-      expect(waiting.waitingForStaff).toEqual({
-        department: "engineering",
-        agentId: "writer",
-        since: expect.any(String),
-      });
-      expect(employees.acquire).toHaveBeenCalledWith("engineering", "writer", {
-        runId: WORKFLOW_RUN_ID,
-        rank: { progress: 1, projectId: undefined },
-      });
-      expect(h.core.start).not.toHaveBeenCalled();
-
-      grant(lease);
-      await driving;
-      expect((await readAggregate(run)).waitingForStaff).toBeUndefined();
-      expect(h.core.start).toHaveBeenCalledTimes(1);
-      expect(employees.release).toHaveBeenCalledWith(lease);
-    });
-
-    it("parks no-employee and clears waitingForStaff when the position vanishes mid-wait", async () => {
-      const run = h.runs.get(WORKFLOW_RUN_ID);
-      if (!run) throw new Error("missing run");
-      swap("employees", {
-        tryAcquire: vi.fn(async () => null),
-        acquire: vi.fn(async () => {
-          throw new NoEmployeeError("engineering", "writer");
-        }),
-        release: vi.fn(),
-      });
-
-      await drive(run);
-      const onDisk = await readAggregate(run);
-      expect(onDisk.status).toBe("parked");
-      expect(onDisk.parkedReason).toBe("no-employee");
-      expect(onDisk.waitingForStaff).toBeUndefined();
-      expect(h.core.start).not.toHaveBeenCalled();
-    });
-
-    it("releases the lease when preparing the stage folder throws", async () => {
-      const run = h.runs.get(WORKFLOW_RUN_ID);
-      if (!run) throw new Error("missing run");
-      const employees = {
-        tryAcquire: vi.fn(async () => lease),
-        acquire: vi.fn(),
-        release: vi.fn(),
-      };
-      swap("employees", employees);
-      vi.spyOn(
-        h.service as unknown as { prepareStageDir(): Promise<void> },
-        "prepareStageDir",
-      ).mockRejectedValue(new Error("disk full"));
-
-      await expect(drive(run)).rejects.toThrow("disk full");
-      expect(employees.release).toHaveBeenCalledWith(lease);
     });
 
     it("progressOf keeps the furthest reached phase across a loop-back", () => {
@@ -1822,11 +1737,6 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
     it("waits for a machine-fuse slot before spawning and frees it when the stage ends", async () => {
       const run = h.runs.get(WORKFLOW_RUN_ID);
       if (!run) throw new Error("missing run");
-      swap("employees", {
-        tryAcquire: vi.fn(async () => lease),
-        acquire: vi.fn(),
-        release: vi.fn(),
-      });
       const fuse = new WorkingAgentsFuse(fakeSystemConfigStore({ maxWorkingAgents: 1 }));
       swap("fuse", fuse);
       const external = fuse.tryTake();
@@ -2536,7 +2446,7 @@ describe("operator pause (D-PAUSE)", () => {
     expect(run.parkedReason).toBeUndefined();
   });
 
-  it("a stopped paused run drops its gate cursor; a later no-employee resume ignores a stale one", async () => {
+  it("a stopped paused run drops its gate cursor", async () => {
     await h.service.onModuleInit();
     const run = runOf();
     run.status = "parked";
@@ -2544,21 +2454,6 @@ describe("operator pause (D-PAUSE)", () => {
     run.pendingGate = { phaseId: "phase1", cursor: "phase1", handoffSource: null };
     await h.service.stop(WORKFLOW_RUN_ID);
     expect(run.pendingGate).toBeUndefined();
-
-    // A stale cursor from an older pause must not rewind a no-employee resume.
-    run.status = "parked";
-    run.parkedReason = "no-employee";
-    run.currentStage = "phase3";
-    run.pendingGate = { phaseId: "phase1", cursor: "phase1", handoffSource: null };
-    svc().workflows.get.mockResolvedValue(threePhases);
-    // Nor may a workflow-gate decision resume a run that is not gate-parked.
-    await h.registered.get("workflow-gate")?.resume(WORKFLOW_RUN_ID);
-    expect(run.status).toBe("parked");
-    const order: string[] = [];
-    scriptStages(order, () => {});
-    await h.service.resumeParked(WORKFLOW_RUN_ID);
-    await vi.waitFor(() => expect(run.status).toBe("done"));
-    expect(order).toEqual(["phase3"]);
   });
 
   it("pause is refused on a done run", async () => {

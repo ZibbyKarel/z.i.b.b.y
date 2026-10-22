@@ -1277,7 +1277,6 @@
     "parkedGate": "Čeká na vaši kontrolu",
     "parkedBudget": "Dosažen limit útraty",
     "parkedChild": "Čeká na podřízený běh workflow",
-    "parkedNoEmployee": "Fáze „{stage}“ nemůže začít: v oddělení „{department}“ není najatý žádný zaměstnanec na pozici „{agent}“. Najměte ho v oddělení a pak běh obnovte.",
     "childRunLink": "Otevřít podřízený běh",
     "budgetSpent": "Utraceno {spent} / {cap}",
     "totalCost": "Celková cena {cost}",

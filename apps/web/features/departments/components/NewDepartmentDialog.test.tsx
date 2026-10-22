@@ -21,7 +21,6 @@ describe("NewDepartmentDialog", () => {
     expect(body).toMatchObject({
       id: "pub",
       code: "PUB",
-      division: "engineering",
       icon: "grid",
       fallback: "primary",
       tierDefault: null,

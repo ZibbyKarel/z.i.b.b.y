@@ -5,7 +5,7 @@ import type { Workflow, WorkflowRun } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResumableRunner } from "../approvals/approvals.service";
 import { DuplicateNoteError } from "../memory/vault.service";
-import { WorkingAgentsFuse } from "../employees/working-agents-fuse";
+import { WorkingAgentsFuse } from "../run-slots/working-agents-fuse";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { WorkflowRunnerService, stageWebUrl, unmetRequirement } from "./workflow-runner.service";
 
@@ -97,11 +97,7 @@ async function makeService(
     // ProjectLocalService double (Phase 77): unused here since `projects.get`
     // always resolves null, so the git-worktree/clone-if-missing branch never runs.
     {} as never,
-    // EmployeeAllocator double (D-015): this fixture workflow carries no
-    // `department`, so `drive()` never calls `acquire` — present only to keep
-    // the positional constructor aligned.
-    { acquire: vi.fn(), release: vi.fn(), isBusy: vi.fn(), busy: vi.fn(() => new Map()) } as never,
-    // Machine fuse (staffing-driven capacity): a real one, effectively uncapped.
+    // Machine fuse: a real one, effectively uncapped.
     new WorkingAgentsFuse(fakeSystemConfigStore()),
     signalBus as never,
   );

@@ -50,7 +50,6 @@ import { SystemModule } from "./system/system.module";
 import { AttachmentSetRefsModule } from "./tasks/attachment-set-refs.module";
 import { TasksModule } from "./tasks/tasks.module";
 import { TeamsModule } from "./teams/teams.module";
-import { EmployeesModule } from "./employees/employees.module";
 
 @Module({
   imports: [
@@ -74,7 +73,6 @@ import { EmployeesModule } from "./employees/employees.module";
     CompaniesModule,
     TeamsModule,
     DepartmentsStoreModule,
-    EmployeesModule,
     WorkflowsModule,
     GoalsModule,
     ApprovalsModule,

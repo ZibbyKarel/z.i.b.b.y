@@ -6,7 +6,6 @@ import {
   DepartmentConflictError,
   DepartmentNotFoundError,
   InvalidDepartmentIdError,
-  UnknownDivisionError,
 } from "./departments.errors";
 import { DepartmentsService } from "./departments.service";
 
@@ -14,11 +13,6 @@ const errors = makeErrorMapper("Department", {
   missing: [DepartmentNotFoundError, InvalidDepartmentIdError],
   conflict: [DepartmentConflictError],
 });
-
-const unprocessable = (error: unknown) =>
-  error instanceof UnknownDivisionError
-    ? ({ status: 422, body: { message: error.message } } as const)
-    : undefined;
 
 /**
  * Implements `departmentsContract` against the department file store (D-022). Not to
@@ -39,18 +33,10 @@ export class DepartmentsController {
         body: await this.departments.listUnowned(),
       }),
 
-      listDivisions: async () => ({ status: 200, body: await this.departments.listDivisions() }),
-
-      createDepartment: async ({ body }) => {
-        const result = await errors.created(
-          async () => this.departments.create(body),
-          unprocessable,
-        );
-        return result;
-      },
+      createDepartment: ({ body }) => errors.created(async () => this.departments.create(body)),
 
       updateDepartment: ({ params: { id }, body }) =>
-        errors.or404(id, async () => this.departments.update(id, body), unprocessable),
+        errors.or404(id, async () => this.departments.update(id, body)),
 
       getDepartment: ({ params: { id } }) => errors.or404(id, async () => this.departments.get(id)),
 

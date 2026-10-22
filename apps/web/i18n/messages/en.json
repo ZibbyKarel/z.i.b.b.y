@@ -1277,7 +1277,6 @@
     "parkedGate": "Waiting for your review",
     "parkedBudget": "Spend cap reached",
     "parkedChild": "Waiting for a sub-workflow run",
-    "parkedNoEmployee": "Cannot start stage “{stage}”: no employee is hired for position “{agent}” in department “{department}”. Hire one in the department roster, then resume the run.",
     "childRunLink": "Open sub-run",
     "budgetSpent": "Spent {spent} / {cap}",
     "totalCost": "Total cost {cost}",

@@ -2,7 +2,7 @@ import { Module } from "@nestjs/common";
 import { AgentsModule } from "../agents/agents.module";
 import { ApprovalsModule } from "../approvals/approvals.module";
 import { BudgetModule } from "../budget/budget.module";
-import { EmployeesModule } from "../employees/employees.module";
+import { RunSlotsModule } from "../run-slots/run-slots.module";
 import { GatesModule } from "../gates/gates.module";
 import { GoalsModule } from "../goals/goals.module";
 import { LimitsModule } from "../limits/limits.module";
@@ -32,13 +32,13 @@ import { TasksController } from "./tasks.controller";
  * back Phase 8's project attribution and the budget/concurrency guard; the
  * scheduled-tasks store is its own module so BudgetModule can share it cycle-free.
  * The primary router is the `claude -p` AI categorizer; the keyword scorer is the
- * always-available fallback. Concurrency is decided by free employees plus the
- * `maxWorkingAgents` machine fuse (EmployeesModule), not by any project cap.
+ * always-available fallback. Concurrency is decided by the
+ * `maxWorkingAgents` machine fuse (RunSlotsModule), not by any project cap.
  */
 @Module({
   imports: [
     AgentsModule,
-    EmployeesModule,
+    RunSlotsModule,
     WorkflowsModule,
     GoalsModule,
     ProjectsModule,

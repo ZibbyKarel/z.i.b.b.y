@@ -78,8 +78,8 @@ export function parsePrNumberFromUrl(url: string): number | undefined {
  * this item's dependencies done" — and answers it for as many items as qualify.
  *
  * **Concurrency is deliberately NOT this gate's job.** The gate releases everything
- * unblocked; how much actually runs is decided by free employees in each department
- * (+ the `maxWorkingAgents` machine fuse). `TaskSchedulerService.createTask` owns it — it decides
+ * unblocked; how much actually runs is decided by the machine fuse
+ * (`maxWorkingAgents`). `TaskSchedulerService.createTask` owns it — it decides
  * whether a release dispatches immediately or gets `queued`/held, and it is what
  * keeps an `autoPlay` project from starting a whole twenty-task epic at once. Either
  * way the roadmap item is `running` the moment its task exists; the task's own
@@ -534,7 +534,7 @@ export class RoadmapGateService {
    * the same item.
    *
    * No throttle here on purpose — see the class docblock: how much actually runs
-   * is decided by free employees (+ the machine fuse) in `TaskSchedulerService`, on
+   * is decided by the machine fuse in `TaskSchedulerService`, on
    * the tasks these releases create.
    */
   private async drain(projectId: string): Promise<void> {

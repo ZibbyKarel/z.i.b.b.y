@@ -13,10 +13,8 @@ scheduled    ← created with a future scheduledAt
     ↓
   tick()     ← daemon runs once per configured interval
     ↓
-queued       ← no capacity right now: the machine fuse (`maxWorkingAgents`) is full,
-                 or no employee for the task's first stage is free (no approval;
-                 `waitingForStaff` names the department/position). Drained by
-                 project round-robin -> oldest first.
+queued       ← no capacity right now: the machine fuse (`maxWorkingAgents`) is full
+                 (no approval). Drained by project round-robin -> oldest first.
 held         ← spend exceeded the budget cap (waits for approval to release)
 pending      ← interactive path (dialog): accepted, classification + spawn run IN THE BACKGROUND
     ↓
@@ -509,41 +507,31 @@ Before every dispatch (immediate or from the scheduler):
    - Once approved, the task re-enters dispatch (the budget check is skipped once for
      this id)
 
-## Staffing gate and machine fuse
+## Machine fuse (run slots)
 
 There is **no** project or system "parallel runs" cap any more (`maxConcurrent` and
-`maxConcurrentRuns` were removed). Whether a task starts is decided by capacity in the
-company, in two parts (design: `docs/plans/zibbycorp/staffing-driven-capacity.md`):
+`maxConcurrentRuns` were removed), and no employees or leases. Whether a task starts is
+decided by one global cap: `WorkingAgentsFuse` (`apps/api/src/run-slots/`, provided by
+`RunSlotsModule`) limits how many task-system agents work at once (`maxWorkingAgents`,
+default `3`, live-read). A single-agent / orchestrator run holds a slot for its whole
+lifetime (including `awaiting-approval` / `paused-limit`); a workflow agent stage holds
+one per stage. Goal-loop iterations, chat and channel-triage agents are not counted. The
+fuse is in-memory: runs that survive an API restart are not counted. This is the interim
+global fuse; it is being reworked into per-run slots.
 
-1. **Staffing.** A task leaves the queue only when an employee for its first stage is
-   free. A single-agent task leases one via
-   `EmployeeAllocator.tryAcquire` (an orchestrator task takes no lease, only a fuse slot) (see [employees.md](./employees.md)); a workflow task
-   is only _checked_ with `canStaffNow` (the workflow runner leases per stage). No
-   employee anywhere -> the task still runs (single-agent: unleashed, D-017; workflow:
-   the runner parks `no-employee`, the briefing proposes a hire).
-2. **The machine fuse.** `WorkingAgentsFuse` caps how many task-system agents work at
-   once (`maxWorkingAgents`, default `3`, live-read). A single-agent / orchestrator run
-   holds a slot for its whole lifetime (including `awaiting-approval` /
-   `paused-limit`, where it also keeps its lease); a workflow agent stage holds one per
-   stage. Goal-loop iterations, chat and channel-triage agents are not counted. The fuse
-   is in-memory: runs that survive an API restart are not counted.
+When no slot is free the task moves to **queued** (no approval). The queued task also
+persists its resolved `target` / `classification`, so a drain does not re-classify it.
+Waiting is a field, not a lifecycle status.
 
-If either is missing the task moves to **queued** (no approval) and `waitingForStaff`
-is persisted on the task (workflow runs: on the run, which stays `running`). The queued
-task also persists its resolved `target` / `classification`, so a drain does not
-re-classify it. Waiting is a field, not a lifecycle status.
-
-On every terminal run, fuse release, lease release or hire (`rosterChanged`) the
-scheduler calls `drainQueues()`: queued tasks are tried by project round-robin, then
-oldest first. Progress ranking (furthest stage first) applies to the allocator and fuse
-waiters, not to the queue drain; the priority tier is a no-op until tasks carry a
-priority. A drain hands out at most one workflow per first-stage position per pass
-(the dispatch check reserves nothing). Grant ordering is in-memory (`GrantQueue`) and
-re-established by the re-drive after a restart rather than recomputed from disk.
+On every terminal run or fuse release the scheduler calls `drainQueues()`: queued tasks
+are tried by project round-robin, then oldest first. Progress ranking (furthest stage
+first, `grant-order.ts`) applies to the fuse waiters, not to the queue drain; the
+priority tier is a no-op until tasks carry a priority. Grant ordering is in-memory
+(`GrantQueue`) and re-established by the re-drive after a restart rather than recomputed
+from disk.
 
 `withCapacityLock` (per project) serializes the budget read-then-dispatch window so two
-concurrent creates cannot both pass the budget check; staffing and the fuse are atomic in
-the allocator / fuse themselves.
+concurrent creates cannot both pass the budget check; the fuse is atomic in itself.
 
 `budgetApproved: Set<string>` in memory — task ids that were released past the cap;
 a drain skips the budget check for these once, then removes them from the set.
@@ -572,31 +560,6 @@ setInterval(() => tick(), systemConfig.current().taskTickMs);
 | `orchestrator` | `AgentRunnerService.startRun(ORCHESTRATOR_ID, { prompt })`                                                                                    |
 
 After dispatch, `runRef` is written back to the task record.
-
-### Employee lease (D-015 / D-017, ZE-01)
-
-An `agent`-target dispatch (including one resolved from `department` above)
-first tries to **lease an employee** for the position via
-`TaskSchedulerService.acquireEmployeeForDispatch(agentId, department)` — full
-model and the allocator itself in `docs/api/employees.md`. The ladder, in
-order:
-
-1. **Department-known** — if the task's own classification traced a
-   department, lease from it first.
-2. **Any-department fallback** — on no department, or `NoEmployeeError` from
-   step 1, fall back to every active employee holding the position across
-   **all** departments (`EmployeesStorageService.listActiveByPositionAnyDepartment`),
-   preferring a currently-free one.
-3. **Unleased fallback** — when the position has **no** employee anywhere,
-   the task still dispatches directly, unleased — this is never a park
-   (parking is a workflows-only concept for `agent` dispatch); it is the
-   concrete mechanism behind "a described task is always executed". The
-   lease (if any) is released on the run's terminal transition, same
-   discipline as the workflow path.
-
-`employeeId`/`employeeName` land on the dispatched run's `AgentRun.extra`
-when a lease was acquired — see [agents-runs.md](./agents-runs.md) →
-"Employee attribution".
 
 ## Outcome
 

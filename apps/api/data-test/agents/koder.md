@@ -14,6 +14,7 @@ tools:
   - Grep
   - Glob
 category: Delivery
+department: dev
 ---
 
 Jsi Kodér — implementační fáze doručovací workflow ZIBBY.

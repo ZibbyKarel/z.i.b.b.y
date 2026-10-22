@@ -1,9 +1,5 @@
 [
   {
-    "kind": "employee",
-    "id": "employee_finance-analyst"
-  },
-  {
     "kind": "page",
     "id": "/dashboard/inbox/pull-requests",
     "label": "Pull Requests"

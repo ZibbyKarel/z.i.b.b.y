@@ -21,7 +21,6 @@ const SCREENSHOT_DIR = path.resolve(".playwright-mcp/zc");
 type SweepIds = {
   departmentId: string;
   departmentWorkflowId: string;
-  employeeId: string | null;
   chainId: string;
   goalId: string;
   companyId: string;
@@ -93,9 +92,7 @@ function routes(): RouteCase[] {
     { slug: "org-people", path: () => "/workforce/agents" },
     {
       slug: "org-people-detail",
-      path: (i) => (i?.employeeId ? `/workforce/agents/${i.employeeId}` : ""),
-      skip: (i) =>
-        i?.employeeId ? undefined : "no employee hired (POST /departments/dev/employees failed)",
+      path: () => "/workforce/agents/sweep-agent",
     },
     { slug: "org-people-new", path: () => "/workforce/agents/new" },
 

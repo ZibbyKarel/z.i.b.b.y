@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { AgentIdSchema } from "../agents/agent.schema";
-import { DepartmentIdSchema } from "../departments/department.schema";
 import {
   DiffstatSchema,
   IsoDateTimeSchema,
@@ -73,14 +72,6 @@ export const StageRunSchema = z.object({
    * `costUsd` over the lines of `<stageDir>/costs.jsonl`. Absent when none.
    */
   externalCostUsd: z.number().nonnegative().optional(),
-  /**
-   * D-015: the employee (hired instance of `phase.agent`) the `EmployeeAllocator`
-   * leased for this dispatch, and its display name at dispatch time. Absent on a
-   * `verify` phase (which spawns no agent, so never acquires a lease) and on any
-   * stage run recorded before this field existed.
-   */
-  employeeId: z.string().optional(),
-  employeeName: z.string().optional(),
   /** A `workflow` phase: the child (sub-run) `workflowRunId` this stage ran. */
   childRunId: z.string().min(1).optional(),
   /** When this stage's child started / finished (ISO); absent on synthetic markers and old runs. */
@@ -102,17 +93,12 @@ export type StageRun = z.infer<typeof StageRunSchema>;
  *   chain already finished green — there is no live child, so (unlike `approval`) it
  *   is DURABLE: it survives a restart and resumes by re-entering output processing
  *   when the operator approves. `pendingOutput` records where to resume.
- * - `no-employee` (D-015): the next phase's department owns no employee of the
- *   phase's position (agent) — no live child, durable. There is no automatic
- *   resume; the operator hires the missing position (or reassigns one) and
- *   resumes the run, re-entering `drive()` at the same stage.
  */
 export const ParkedReasonSchema = z.enum([
   "approval",
   "retries",
   "limit",
   "output",
-  "no-employee",
   // P1-02: a phase with `approval: ask` finished; durable, `pendingGate` resumes it.
   "gate",
   // P1-03: the run's spend passed its cap; durable, `pendingGate` resumes it.
@@ -202,17 +188,6 @@ export const WorkflowRunSchema = z.object({
   taskId: z.string().optional(),
   /** Phase id currently executing, or null once the run has finished. */
   currentStage: z.string().nullable(),
-  /**
-   * Staffing-driven capacity (decision 7): set while the run's current stage waits for a
-   * free employee of this position; cleared when one is leased. The run stays `running`.
-   */
-  waitingForStaff: z
-    .object({
-      department: DepartmentIdSchema,
-      agentId: z.string().min(1),
-      since: IsoDateTimeSchema,
-    })
-    .optional(),
   /**
    * The RunnerCore run id of the stage currently executing — set when a stage
    * spawns, cleared when it goes terminal (or the run ends). Lets the detail's

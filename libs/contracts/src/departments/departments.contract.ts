@@ -7,7 +7,6 @@ import {
   DepartmentRosterSchema,
   DepartmentSchema,
   DepartmentWithStatusSchema,
-  DivisionSchema,
   UnownedEntitySchema,
   UpdateDepartmentInputSchema,
 } from "./department.schema";
@@ -44,16 +43,6 @@ export const departmentsContract = c.router(
         "List stored entities (workflows/chains/agents/integrations) with no department (F1b) — [] once the owner-backfill sweep has run",
     },
 
-    // Also before `getDepartment`, for the same reason.
-    listDivisions: {
-      method: "GET",
-      path: "/departments/divisions",
-      responses: {
-        200: z.array(DivisionSchema),
-      },
-      summary: "List the divisions departments are grouped under, in org-chart order",
-    },
-
     createDepartment: {
       method: "POST",
       path: "/departments",
@@ -63,7 +52,7 @@ export const departmentsContract = c.router(
         409: ErrorSchema,
         422: ErrorSchema,
       },
-      summary: "Create a department (D-022) — 409 when the id exists, 422 on an unknown division",
+      summary: "Create a department (D-022) — 409 when the id exists",
     },
 
     updateDepartment: {

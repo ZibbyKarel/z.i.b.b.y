@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { EmptyBodySchema } from "../common.schema";
 import {
   DEPARTMENTS,
-  DIVISIONS,
   DepartmentIdSchema,
   DepartmentSchema,
   DepartmentWithStatusSchema,
@@ -46,7 +45,7 @@ describe("departmentsContract", () => {
     expect(departmentsContract.listUnownedEntities.responses).toHaveProperty("200");
   });
 
-  it("D-022: exposes create / update / divisions routes", () => {
+  it("D-022: exposes create / update routes", () => {
     expect(departmentsContract.createDepartment.method).toBe("POST");
     expect(departmentsContract.createDepartment.path).toBe("/api/departments");
     expect(departmentsContract.createDepartment.responses).toHaveProperty("201");
@@ -54,12 +53,6 @@ describe("departmentsContract", () => {
     expect(departmentsContract.createDepartment.responses).toHaveProperty("422");
     expect(departmentsContract.updateDepartment.method).toBe("PATCH");
     expect(departmentsContract.updateDepartment.path).toBe("/api/departments/:id");
-    expect(departmentsContract.listDivisions.path).toBe("/api/departments/divisions");
-  });
-
-  it("declares listDivisions before getDepartment so /divisions is not captured by :id", () => {
-    const keys = Object.keys(departmentsContract);
-    expect(keys.indexOf("listDivisions")).toBeLessThan(keys.indexOf("getDepartment"));
   });
 
   it("NS2 F1c: exposes GET /api/departments/:id/roster with 200 and 404", () => {
@@ -81,13 +74,6 @@ describe("DEPARTMENTS registry", () => {
       expect(department).toBeDefined();
       expect(department?.tagline.length).toBeGreaterThan(0);
       expect(department?.mandate.length).toBeGreaterThan(0);
-    }
-  });
-
-  it("groups every department under a division, and every division holds at least one", () => {
-    expect(DIVISIONS.map((d) => d.id)).toEqual(["engineering", "operations", "business", "office"]);
-    for (const division of DIVISIONS) {
-      expect(DEPARTMENTS.some((d) => d.division === division.id)).toBe(true);
     }
   });
 

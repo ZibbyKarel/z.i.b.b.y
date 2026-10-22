@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import { describe, expect, it } from "vitest";
-import { EmployeeSchema, McpServerSchema, WorkflowSchema } from "@zibby/contracts";
+import { McpServerSchema, WorkflowSchema } from "@zibby/contracts";
 import {
   PR_ADDRESS_COMMENTS_ARTIFACT,
   PR_FIX_CI_ARTIFACT,
@@ -25,6 +25,10 @@ import {
  *  2. The delivery workflow's judging phases are actually gates.
  */
 const WORKFLOWS_DIR = path.join(__dirname, "../../../../.zibby/data/workflows");
+
+function agentFileExists(id: string): boolean {
+  return fs.existsSync(path.join(WORKFLOWS_DIR, `../agents/${id}.md`));
+}
 
 function readWorkflow(id: string) {
   const raw = fs.readFileSync(path.join(WORKFLOWS_DIR, `${id}.workflow.md`), "utf8");
@@ -172,15 +176,8 @@ describe("shipped workflow definitions", () => {
       expect(refute?.loop?.maxRetries).toBeGreaterThan(0);
     });
 
-    it("has a hired R&D employee for the skeptic, so the stage never parks on NoEmployeeError", () => {
-      const file = path.join(WORKFLOWS_DIR, "../employees/employee_research-skeptic.json");
-      const employee = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
-      expect(employee).toMatchObject({
-        agentId: "research-skeptic",
-        department: "rnd",
-        status: "active",
-      });
-      expect(fs.existsSync(path.join(WORKFLOWS_DIR, "../agents/research-skeptic.md"))).toBe(true);
+    it("ships the skeptic agent", () => {
+      expect(agentFileExists("research-skeptic")).toBe(true);
     });
   });
 
@@ -209,14 +206,8 @@ describe("shipped workflow definitions", () => {
       expect(readWorkflow("web-qa").complexity).not.toBe("light");
     });
 
-    it("has a hired QA employee for ui-ux-tester, so the stage never parks on NoEmployeeError", () => {
-      const file = path.join(WORKFLOWS_DIR, "../employees/employee_ui-ux-tester.json");
-      const employee = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
-      expect(employee).toMatchObject({
-        agentId: "ui-ux-tester",
-        department: "qa",
-        status: "active",
-      });
+    it("ships the ui-ux-tester agent", () => {
+      expect(agentFileExists("ui-ux-tester")).toBe(true);
     });
 
     it("grants ui-ux-tester the shipped Playwright MCP server (and no longer Chrome MCP)", () => {
@@ -298,11 +289,9 @@ describe("pr-review-* — the PR inbox's review levels (todo-4)", () => {
     expect(wf.department).toBe("qa");
   });
 
-  it.each(Object.keys(LEVELS))("%s has a hired QA employee for every phase agent", (id) => {
+  it.each(Object.keys(LEVELS))("%s ships an agent for every phase", (id) => {
     for (const phase of readWorkflow(id).phases) {
-      const file = path.join(WORKFLOWS_DIR, `../employees/employee_${phase.agent}.json`);
-      const employee = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
-      expect(employee).toMatchObject({ agentId: phase.agent, department: "qa", status: "active" });
+      expect(agentFileExists(phase.agent ?? "")).toBe(true);
     }
   });
 });
@@ -339,14 +328,8 @@ describe("pr-rebase — the PR inbox's Rebase button (todo-11)", () => {
     expect(wf.department).toBe("dev");
   });
 
-  it("has a hired dev employee for its agent", () => {
-    const file = path.join(WORKFLOWS_DIR, "../employees/employee_rebase-resolver.json");
-    const employee = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
-    expect(employee).toMatchObject({
-      agentId: "rebase-resolver",
-      department: "dev",
-      status: "active",
-    });
+  it("ships its agent", () => {
+    expect(agentFileExists("rebase-resolver")).toBe(true);
   });
 });
 
@@ -371,20 +354,9 @@ describe("pr-address-comments — the PR inbox's Address review comments button"
     expect(wf.department).toBe("dev");
   });
 
-  it("has a hired dev employee for every phase agent, so no phase parks on NoEmployeeError", () => {
-    // The runner leases each phase from the WORKFLOW's department (workflow-runner.service.ts),
-    // so github-commenter (qa for the review levels) also holds a dev seat — same agent prompt.
-    const dir = path.join(WORKFLOWS_DIR, "../employees");
-    const employees = fs
-      .readdirSync(dir)
-      .filter((f) => f.endsWith(".json"))
-      .map((f) => EmployeeSchema.parse(JSON.parse(fs.readFileSync(path.join(dir, f), "utf8"))));
+  it("ships an agent for every phase", () => {
     for (const phase of readWorkflow("pr-address-comments").phases) {
-      expect(
-        employees.some(
-          (e) => e.agentId === phase.agent && e.department === "dev" && e.status === "active",
-        ),
-      ).toBe(true);
+      expect(agentFileExists(phase.agent ?? "")).toBe(true);
     }
   });
 });
@@ -404,13 +376,7 @@ describe("pr-fix-ci — the PR inbox's Fix CI button", () => {
     expect(wf.department).toBe("dev");
   });
 
-  it("has a hired dev employee for its agent", () => {
-    const file = path.join(WORKFLOWS_DIR, "../employees/employee_fullstack-developer.json");
-    const employee = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
-    expect(employee).toMatchObject({
-      agentId: "fullstack-developer",
-      department: "dev",
-      status: "active",
-    });
+  it("ships its agent", () => {
+    expect(agentFileExists("fullstack-developer")).toBe(true);
   });
 });

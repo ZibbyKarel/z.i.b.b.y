@@ -6,7 +6,7 @@ import { GrantQueue, type GrantRank } from "./grant-order";
 export type FuseSlot = () => void;
 
 /**
- * The machine fuse (docs/plans/zibbycorp/staffing-driven-capacity.md, decision 2):
+ * The machine fuse:
  * at most `systemConfig.maxWorkingAgents` agents started by the task system work at
  * once — a single-agent / orchestrator task run holds a slot for its lifetime, a
  * workflow agent stage holds one per stage. Goal-loop iterations, chat and

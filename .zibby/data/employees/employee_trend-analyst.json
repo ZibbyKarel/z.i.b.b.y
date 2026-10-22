@@ -1,9 +1,0 @@
-{
-  "id": "employee_trend-analyst",
-  "name": "Moe",
-  "agentId": "trend-analyst",
-  "department": "rnd",
-  "status": "active",
-  "hiredAt": "2026-09-25T00:32:32.986Z",
-  "appearance": { "width": 38, "height": 66, "eyes": 1, "hair": "strands", "skin": 1 }
-}

@@ -6,7 +6,6 @@ import {
   type DepartmentRoster,
   type DepartmentState,
   type DepartmentWithStatus,
-  type Division,
   type FailedRunNotification,
   type SubtaskSummary,
   type UnownedEntity,
@@ -16,7 +15,6 @@ import type { Approval } from "@zibby/contracts";
 import type { TaskRun } from "@zibby/contracts";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { ApprovalsService } from "../approvals/approvals.service";
-import { EmployeesStorageService } from "../employees/employees.storage.service";
 import { IntegrationsStorageService } from "../integrations/integrations.storage.service";
 import { MandateStorageService } from "../mandate/mandate.storage.service";
 import { WorkflowsStorageService } from "../workflows/workflows.storage.service";
@@ -24,7 +22,6 @@ import { TaskParentsService } from "../tasks/task-parents.service";
 import { TaskRunsService } from "../tasks/task-runs.service";
 import { DepartmentSeenStore } from "./department-seen.store";
 import { type RunReadState, RunReadStore } from "./run-read.store";
-import { UnknownDivisionError } from "./departments.errors";
 import { DepartmentsStorageService } from "./departments.storage.service";
 
 /**
@@ -113,8 +110,6 @@ export class DepartmentsService {
     private readonly agents: AgentsStorageService,
     private readonly integrations: IntegrationsStorageService,
     private readonly mandate: MandateStorageService,
-    /** D-015: `roster()`'s agent membership derives from active employees, not `Agent.department`. */
-    private readonly employees: EmployeesStorageService,
     /** ZB-04a §5: {@link subtasks} serves off the ONE parent/subtask read model. */
     private readonly taskParents: TaskParentsService,
     /** D-022: departments are data — every read goes through the store. */
@@ -196,31 +191,19 @@ export class DepartmentsService {
     return withAggregate(department, aggregates);
   }
 
-  /** The divisions departments are grouped under, in org-chart order. */
-  listDivisions(): Promise<Division[]> {
-    return this.store.listDivisions();
-  }
-
-  /** D-022: create a department; duplicate id → `DepartmentConflictError`, bad division → `UnknownDivisionError`. */
+  /** D-022: create a department; duplicate id → `DepartmentConflictError`. */
   async create(input: CreateDepartmentInput): Promise<Department> {
-    await this.assertDivision(input.division);
     return this.store.create({ ...input, createdAt: new Date().toISOString() });
   }
 
   /** D-022: patch a department (id immutable); unknown id → `DepartmentNotFoundError`. */
   async update(id: string, patch: UpdateDepartmentInput): Promise<Department> {
-    if (patch.division !== undefined) await this.assertDivision(patch.division);
     return this.store.update(id, patch);
   }
 
   /** Write-boundary guard for other modules: throws `DepartmentNotFoundError` for an unknown id. */
   assertExists(id: string): Promise<void> {
     return this.store.assertExists(id);
-  }
-
-  private async assertDivision(id: string): Promise<void> {
-    const divisions = await this.store.listDivisions();
-    if (!divisions.some((d) => d.id === id)) throw new UnknownDivisionError(id);
   }
 
   /**
@@ -263,26 +246,15 @@ export class DepartmentsService {
    * entity. Throws `DepartmentNotFoundError` for an unknown id, same as
    * {@link get}. Workflows are deliberately excluded — the roster tab's canvas
    * already sources those client-side.
-   *
-   * D-015: an agent (a position) belongs to the department IFF it currently has
-   * at least one ACTIVE employee there — `Agent.department` is no longer read
-   * here (an agent can be unowned, or hired into a different department, purely
-   * through its employees).
    */
   async roster(id: string): Promise<DepartmentRoster> {
     const department = await this.find(id);
-    const [agents, integrations, mandate, employees] = await Promise.all([
+    const [agents, integrations, mandate] = await Promise.all([
       this.agents.list(),
       this.integrations.list(),
       this.mandate.read(),
-      this.employees.list(),
     ]);
-    const ownedPositionIds = new Set(
-      employees
-        .filter((e) => e.status === "active" && e.department === department.id)
-        .map((e) => e.agentId),
-    );
-    const ownedAgents = agents.filter((a) => ownedPositionIds.has(a.id));
+    const ownedAgents = agents.filter((a) => a.department === department.id);
     const rosterIntegrations =
       department.id === "ops"
         ? integrations

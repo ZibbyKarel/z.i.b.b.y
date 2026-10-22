@@ -19,7 +19,6 @@ export * from "./projects/projects.contract";
 export * from "./companies/company.schema";
 export * from "./companies/companies.contract";
 export * from "./teams";
-export * from "./employees";
 export * from "./workflows/workflow.schema";
 export * from "./workflows/workflow-run.schema";
 export * from "./workflows/stage-verdict.schema";

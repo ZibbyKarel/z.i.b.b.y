@@ -15,7 +15,6 @@ import type {
   CreateTaskInput,
   CreateTaskResult,
   DepartmentId,
-  Employee,
   GoalRun,
   Project,
   ScheduledTask,
@@ -34,13 +33,10 @@ import { AgentsStorageService } from "../agents/agents.storage.service";
 import { AgentRunnerService, type RunAttachments } from "../agents/agent-runner.service";
 import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service";
 import { type BudgetOverMetrics, BudgetService } from "../budget/budget.service";
-import { EmployeeAllocator, type EmployeeLease } from "../employees/employee-allocator";
-import { NoEmployeeError } from "../employees/employees.errors";
-import { EmployeesStorageService } from "../employees/employees.storage.service";
-import { type FuseSlot, WorkingAgentsFuse } from "../employees/working-agents-fuse";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
 import { WatcherHealthRegistry } from "../health/watcher-health.registry";
 import { LimitsService } from "../limits/limits.service";
+import { type FuseSlot, WorkingAgentsFuse } from "../run-slots/working-agents-fuse";
 import { GoalRunnerService } from "../goals/goal-runner.service";
 import { WorkflowRunnerService } from "../workflows/workflow-runner.service";
 import { WorkflowsStorageService } from "../workflows/workflows.storage.service";
@@ -72,21 +68,15 @@ type CreateTaskInputResolved = CreateTaskInput & { attachments: Attachment[] };
 
 /** A dispatch that started a run. */
 type Dispatched = { runRef: string; target: TaskTarget; classification?: ClassificationTrace };
-/** The position a queued task waits for a free employee of. */
-type StaffWait = { department: DepartmentId; agentId: string };
-/** {@link TaskSchedulerService.tryLeaseForDispatch}'s answer. */
-type StaffLease = { lease: EmployeeLease } | { busy: StaffWait } | { unleashed: true };
 /**
- * A dispatch that resolved its target but could not start it yet (staffing-driven
- * capacity): no machine-fuse slot, or — with `waitingForStaff` — no free employee for
- * its first stage. The caller persists it `queued` with the target, so the next
- * attempt dispatches straight to it without re-classifying.
+ * A dispatch that resolved its target but could not start it yet (no machine-fuse
+ * slot). The caller persists it `queued` with the target, so the next attempt
+ * dispatches straight to it without re-classifying.
  */
 type QueuedDispatch = {
   queued: true;
   target: TaskTarget;
   classification?: ClassificationTrace;
-  waitingForStaff?: StaffWait;
 };
 
 function isQueued(x: Dispatched | QueuedDispatch): x is QueuedDispatch {
@@ -155,11 +145,9 @@ const TERMINAL_GOAL = new Set<GoalRun["status"]>(["done", "failed"]);
  * budget guard ({@link attemptDispatch}). Over a budget cap → the task is HELD behind
  * a Tier-3 `spend-past-cap` approval (Law 3: no autonomous spend past budget).
  *
- * Staffing-driven capacity (docs/plans/zibbycorp/staffing-driven-capacity.md): there
- * is no "how many tasks at once" cap. A task is QUEUED (no approval) only when it
- * cannot start NOW — no free employee for its first stage (`waitingForStaff`), or no
- * {@link WorkingAgentsFuse} slot. The queue drains when an employee or a fuse slot
- * frees up: round-robin across projects, FIFO inside one.
+ * A task is QUEUED (no approval) only when it cannot start NOW — no
+ * {@link WorkingAgentsFuse} slot. The queue drains when a fuse slot frees up:
+ * round-robin across projects, FIFO inside one.
  *
  * The heartbeat mirrors the automations {@link SchedulerService}: a tick of 0 (the
  * test default) disables the loop so tests drive {@link tick} directly.
@@ -181,18 +169,9 @@ export class TaskSchedulerService
    */
   private readonly budgetApproved = new Set<string>();
   /**
-   * D-017: the employee leased to each in-flight single-agent run, keyed by its
-   * `runId` — set right after a successful `agentRunner.start()`, released by the
-   * `onRunStatus` subscriber below once the run reaches a terminal status. Absent
-   * for a run that never leased (the department's position has no employee
-   * anywhere — D-017's unleased fallback — or the orchestrator, which is never a
-   * position an employee holds).
-   */
-  private readonly employeeLeases = new Map<string, EmployeeLease>();
-  /**
    * The machine-fuse slot each in-flight single-agent / orchestrator run holds, keyed
-   * by `runId` — taken in {@link dispatch}, released on the run's terminal status
-   * (after its lease). Goal runs take none (a lifetime slot would deadlock with the
+   * by `runId` — taken in {@link dispatch}, released on the run's terminal status.
+   * Goal runs take none (a lifetime slot would deadlock with the
    * goal's own workflow stages); workflow stages take theirs in the workflow runner.
    */
   private readonly fuseSlots = new Map<string, FuseSlot>();
@@ -207,10 +186,7 @@ export class TaskSchedulerService
     private readonly workflowsStore: WorkflowsStorageService,
     /** F2b — for {@link resolveDepartmentTargetOrNull}'s owned-roster count (workflows + agents). */
     private readonly agentsStore: AgentsStorageService,
-    /** D-017: the single-agent dispatch lease/release path (see {@link employeeLeases}). */
-    private readonly employeeAllocator: EmployeeAllocator,
-    private readonly employeesStore: EmployeesStorageService,
-    /** Staffing-driven capacity: the machine fuse every agent dispatch takes a slot from. */
+    /** The machine fuse every agent dispatch takes a slot from. */
     private readonly fuse: WorkingAgentsFuse,
     private readonly goalRunner: GoalRunnerService,
     private readonly logger: LoggerService,
@@ -250,14 +226,7 @@ export class TaskSchedulerService
       this.agentRunner.onRunStatus((run) => {
         if (run.taskId) void this.writeAgentOutcome(run.taskId, run);
         if (TERMINAL_AGENT.has(run.status)) {
-          // D-017: release this run's leased employee (if any) back to the
-          // allocator — the best waiting acquire() for the same position wakes —
-          // THEN its fuse slot. Either release notifies `onFreed` → drain.
-          const lease = this.employeeLeases.get(run.runId);
-          if (lease) {
-            this.employeeAllocator.release(lease);
-            this.employeeLeases.delete(run.runId);
-          }
+          // Release this run's fuse slot; the release notifies `onFreed` → drain.
           this.fuseSlots.get(run.runId)?.();
           this.fuseSlots.delete(run.runId);
           this.requestDrain();
@@ -272,7 +241,6 @@ export class TaskSchedulerService
         if (TERMINAL_GOAL.has(run.status)) this.requestDrain();
       }),
       this.fuse.onFreed(() => this.requestDrain()),
-      this.employeeAllocator.onFreed(() => this.requestDrain()),
     );
 
     // The kind-"task" runner: a held task's `spend-past-cap` approval resumes it
@@ -506,20 +474,12 @@ export class TaskSchedulerService
      */
     output?: TaskOutput,
   ): Promise<DepartmentResolution | null> {
-    const [allWorkflows, allAgents, employees] = await Promise.all([
+    const [allWorkflows, allAgents] = await Promise.all([
       this.workflowsStore.list().catch((): Workflow[] => []),
       this.agentsStore.listActive().catch((): Agent[] => []),
-      this.employeesStore.list().catch((): Employee[] => []),
     ]);
     const ownedWorkflows = allWorkflows.filter((p) => p.department === target.id);
-    // D-015: an agent (a position) is "owned" by this department IFF it has at
-    // least one active employee here — `Agent.department` is no longer read.
-    const ownedPositionIds = new Set(
-      employees
-        .filter((e) => e.status === "active" && e.department === target.id)
-        .map((e) => e.agentId),
-    );
-    const ownedAgents = allAgents.filter((a) => ownedPositionIds.has(a.id));
+    const ownedAgents = allAgents.filter((a) => a.department === target.id);
     const totalOwned = ownedWorkflows.length + ownedAgents.length;
     if (totalOwned === 0) return null;
     // Same rule, same reason as the classifier's own filter: a task that must end in a
@@ -738,7 +698,7 @@ export class TaskSchedulerService
       });
     }
     void this.sweepOrphanAttachmentSets(now.getTime());
-    // Safety net: a missed release event (or a drain pass that skipped a workflow)
+    // Safety net: a missed release event
     // never strands a queued task for longer than one heartbeat.
     this.requestDrain();
     return fired;
@@ -785,8 +745,8 @@ export class TaskSchedulerService
    * over-recording the ledger past its cap — a Law-3 violation).
    * `project-capacity:${projectId}` is disjoint from the `task:${id}` outcome-writer
    * lock and the global `scheduler:drain` sweep lock. An unattributed dispatch has no
-   * project budget, so it runs unlocked. Staffing (employees + the machine fuse) needs
-   * no lock here: both are granted synchronously in-process, never check-then-act.
+   * project budget, so it runs unlocked. The machine fuse needs
+   * no lock here: it is granted synchronously in-process, never check-then-act.
    *
    * Every real spend path for a project is guarded by this SAME key (Task 3c fix —
    * the set is now complete):
@@ -869,7 +829,7 @@ export class TaskSchedulerService
    * ({@link guardExisting}) immediately before the real dispatch, now properly
    * serialized (same lock, FIFO) against every other real dispatch for the project —
    * a task that loses this recheck flips `pending → held` instead of also
-   * dispatching. A dispatch that finds no free employee / fuse slot flips it
+   * dispatching. A dispatch that finds no fuse slot flips it
    * `pending → queued`.
    */
   private async attemptCreate(
@@ -1099,7 +1059,7 @@ export class TaskSchedulerService
    * The guard for an EXISTING task record (the tick fire path, the queue drain, and
    * the release path). Returns the resulting state. `skipBudget` is the release-once
    * bypass — an operator-approved overage skips the budget check but still waits
-   * for staff / a fuse slot. Records the budget ledger line on every actual dispatch.
+   * for a fuse slot. Records the budget ledger line on every actual dispatch.
    */
   private async attemptDispatch(
     task: ScheduledTask,
@@ -1120,7 +1080,7 @@ export class TaskSchedulerService
     const guard = await this.guardExisting(task, project, at, opts.skipBudget);
     if (guard !== "ok") return guard;
     // Phase 10: a task that already carries a target (e.g. a goal, never classifiable,
-    // or a task queued for staff/fuse after its classification) re-dispatches to it;
+    // or a task queued for a fuse slot after its classification) re-dispatches to it;
     // otherwise classify as before.
     const dispatched = await this.dispatch(
       task.text,
@@ -1236,18 +1196,16 @@ export class TaskSchedulerService
    */
   private requestDrain(): void {
     // Coalesce: one drain already queued (not yet started) will see whatever this
-    // request would have — a run end fires lease-release, fuse-release and terminal.
+    // request would have — a run end fires fuse-release and terminal.
     if (this.drainRequested) return;
     this.drainRequested = true;
     outsideLocks(() => void this.drainQueues());
   }
 
   /**
-   * Drain the staffing queue: dispatch queued tasks while the machine fuse has room,
+   * Drain the queue: dispatch queued tasks while the machine fuse has room,
    * round-robin across projects (each project's 1st task, then each project's 2nd, …),
-   * FIFO inside one. A task waiting for an employee is skipped (left untouched) while
-   * its position is still fully busy, so a busy position never blocks other tasks. A
-   * normal queued task re-runs the full guard (budget first — it can become held if
+   * FIFO inside one. A normal queued task re-runs the full guard (budget first — it can become held if
    * the budget filled meanwhile); a released (budget-approved) task skips only the
    * budget check.
    */
@@ -1269,24 +1227,11 @@ export class TaskSchedulerService
           return { task, turn };
         })
         .sort((a, b) => a.turn - b.turn || a.task.createdAt.localeCompare(b.task.createdAt));
-      // A workflow probe reserves nothing (the runner leases per stage later), so two
-      // queued workflows with the same first stage would both pass it in one pass.
-      // ponytail: one workflow per first-stage position per pass, even when several
-      // employees are free; the rest wait for the next drain (any release / tick).
-      const handedOut = new Set<string>();
       for (const { task } of ordered) {
         if (!this.fuse.hasRoom()) return; // nothing can start anywhere right now
         // Re-read: a concurrent cancel may have moved it on already.
         const fresh = await this.storage.get(task.id).catch((): ScheduledTask | null => null);
         if (!fresh || fresh.status !== "queued") continue;
-        const wait = fresh.waitingForStaff;
-        if (wait && !(await this.employeeAllocator.canStaffNow(wait.department, wait.agentId))) {
-          continue;
-        }
-        const stage =
-          fresh.target?.kind === "workflow" ? await this.firstStage(fresh.target.id) : null;
-        const stageKey = stage && `${stage.department}::${stage.agentId}`;
-        if (stageKey && handedOut.has(stageKey)) continue;
         const project = fresh.projectId
           ? await this.projects.get(fresh.projectId).catch((): Project | null => null)
           : null;
@@ -1294,10 +1239,10 @@ export class TaskSchedulerService
         // global `scheduler:drain` sweep lock — different keys, ordinary nesting — so
         // a drain's dispatch is serialized against a concurrent `attemptCreate` or
         // `releaseHeld` for the same project, not just against other drains.
-        const result = await this.trace.run({ traceId: randomUUID() }, () =>
+        await this.trace.run({ traceId: randomUUID() }, () =>
           this.withCapacityLock(fresh.projectId, async () => {
             // cancel() flips under this same lock — re-check so a cancel that landed
-            // during the staffing/stage awaits above never dispatches.
+            // during the awaits above never dispatches.
             const current = await this.storage.get(fresh.id).catch(() => null);
             if (current?.status !== "queued") return null;
             return this.attemptDispatch(current, project, Date.now(), {
@@ -1305,7 +1250,6 @@ export class TaskSchedulerService
             });
           }),
         );
-        if (stageKey && result === "dispatched") handedOut.add(stageKey);
       }
     });
   }
@@ -1352,8 +1296,8 @@ export class TaskSchedulerService
      */
     toolGrants?: string[],
     /**
-     * The trace a previous attempt classified this task with (a task queued for staff
-     * or a fuse slot persists its target + trace). Used with `explicitTarget` so the
+     * The trace a previous attempt classified this task with (a task queued for
+     * a fuse slot persists its target + trace). Used with `explicitTarget` so the
      * re-dispatch keeps its department and memory terms without re-classifying.
      */
     priorClassification?: ClassificationTrace,
@@ -1415,70 +1359,35 @@ export class TaskSchedulerService
       };
     }
     if (target.kind === "agent") {
-      // Staffing gate, BEFORE any spawn: a fuse slot, then an employee (D-017 —
-      // never leased inside `AgentRunnerService`, since a workflow stage also spawns
-      // an agent run and leases per stage itself). Both are held until the run's
-      // terminal status. See `tryLeaseForDispatch` for the lease ladder.
+      // Fuse slot, BEFORE any spawn; held until the run's terminal status.
       const slot = this.fuse.tryTake({ projectId });
       if (!slot) return { queued: true, target, classification };
-      let staff: StaffLease;
-      try {
-        staff = await this.tryLeaseForDispatch(target.id, classification?.department, projectId);
-      } catch (error) {
-        slot();
-        throw error;
-      }
-      if ("busy" in staff) {
-        slot();
-        return { queued: true, target, classification, waitingForStaff: staff.busy };
-      }
-      const lease = "lease" in staff ? staff.lease : undefined;
       let run: AgentRun;
       try {
-        // A conditional call (not a trailing `lease ? {...} : undefined` arg) so an
-        // unleased dispatch's call arity is byte-for-byte identical to before D-017
-        // — existing `toHaveBeenCalledWith` fixtures assert an exact argument list.
-        run = lease
-          ? await this.agentRunner.start(
-              target.id,
-              text,
-              projectId ?? "",
-              paths,
-              title,
-              taskId,
-              matchedTerms,
-              undefined,
-              runAttachments,
-              toolGrants,
-              { employeeId: lease.employeeId, employeeName: lease.employeeName },
-            )
-          : await this.agentRunner.start(
-              target.id,
-              text,
-              projectId ?? "",
-              paths,
-              title,
-              taskId,
-              matchedTerms,
-              undefined,
-              runAttachments,
-              toolGrants,
-            );
+        run = await this.agentRunner.start(
+          target.id,
+          text,
+          projectId ?? "",
+          paths,
+          title,
+          taskId,
+          matchedTerms,
+          undefined,
+          runAttachments,
+          toolGrants,
+        );
       } catch (error) {
         // The spawn itself failed (e.g. preflight) — the run never entered the
         // registry, so it will never reach the terminal `onRunStatus` release path.
-        if (lease) this.employeeAllocator.release(lease);
         slot();
         throw error;
       }
-      this.holdUntilTerminal(run, slot, lease);
+      this.holdUntilTerminal(run, slot);
       return { runRef: run.runId, target, classification };
     }
     if (target.kind === "workflow") {
-      // Check (never reserve) fuse room + a free employee for the first agent stage:
-      // the workflow runner takes lease + fuse slot per stage itself.
-      const wait = await this.workflowStaffing(target.id);
-      if (wait) return { queued: true, target, classification, ...wait };
+      // Check (never reserve) fuse room: the workflow runner takes a fuse slot per stage itself.
+      if (!this.fuse.hasRoom()) return { queued: true, target, classification };
       // Spending audit: the task's attachments ride along — the runner copies them into
       // the run's context/attachments/ and lists them in the first phase's input.
       // The task's text is the workflow's first-phase input (its `consumes`, e.g. a
@@ -1528,7 +1437,7 @@ export class TaskSchedulerService
     }
     // Terminal fallback: the orchestrator session self-delegates to the right
     // subagent(s) or does the task directly — a task never no-ops. It holds a fuse
-    // slot (no lease: the orchestrator is no position an employee holds).
+    // slot.
     const slot = this.fuse.tryTake({ projectId });
     if (!slot) return { queued: true, target, classification };
     let run: AgentRun;
@@ -1551,12 +1460,12 @@ export class TaskSchedulerService
   }
 
   /**
-   * Record a started run's fuse slot (+ lease) for release on its terminal status —
+   * Record a started run's fuse slot for release on its terminal status —
    * unless the run ALREADY ended: a fast-failing child can emit its terminal status
    * while `start()` is still awaiting (RunnerCore's sidecar write), so the
-   * `onRunStatus` release found nothing. Then release both now instead of leaking them.
+   * `onRunStatus` release found nothing. Then release it now instead of leaking it.
    */
-  private holdUntilTerminal(run: AgentRun, slot: FuseSlot, lease?: EmployeeLease): void {
+  private holdUntilTerminal(run: AgentRun, slot: FuseSlot): void {
     let status = run.status;
     try {
       status = this.agentRunner.get(run.runId).status; // the live registry status
@@ -1564,72 +1473,10 @@ export class TaskSchedulerService
       // Not in the registry (already evicted) — the returned snapshot is all we have.
     }
     if (TERMINAL_AGENT.has(status)) {
-      if (lease) this.employeeAllocator.release(lease);
       slot();
       return;
     }
-    if (lease) this.employeeLeases.set(run.runId, lease);
     this.fuseSlots.set(run.runId, slot);
-  }
-
-  /**
-   * D-017: the single-agent-run lease ladder, non-blocking. A department already known
-   * (the task's own classification traced a department verdict) leases from THAT
-   * department first; failing that — or when no department is known at all — any
-   * department that currently employs the position. `busy` when every such employee is
-   * leased (the task queues with `waitingForStaff`); `unleashed` only when the
-   * position has no employee anywhere — D-017's "a described task is always executed"
-   * fallback, never a park (that's workflows only).
-   */
-  private async tryLeaseForDispatch(
-    agentId: string,
-    department: DepartmentId | undefined,
-    projectId: string | undefined,
-  ): Promise<StaffLease> {
-    const ctx = { rank: { projectId } };
-    if (department) {
-      try {
-        const lease = await this.employeeAllocator.tryAcquire(department, agentId, ctx);
-        return lease ? { lease } : { busy: { department, agentId } };
-      } catch (error) {
-        if (!(error instanceof NoEmployeeError)) throw error;
-        // Fall through — try any department that employs the position.
-      }
-    }
-    const candidates = await this.employeesStore.listActiveByPositionAnyDepartment(agentId);
-    if (candidates.length === 0) return { unleashed: true };
-    for (const dept of new Set(candidates.map((e) => e.department))) {
-      try {
-        const lease = await this.employeeAllocator.tryAcquire(dept, agentId, ctx);
-        if (lease) return { lease };
-      } catch (error) {
-        if (!(error instanceof NoEmployeeError)) throw error;
-      }
-    }
-    return { busy: { department: candidates[0]!.department, agentId } };
-  }
-
-  /**
-   * Can a workflow start right now? `null` = yes; otherwise why it must queue: no fuse
-   * room (`{}`), or its first agent stage's position fully busy (`waitingForStaff`).
-   * A probe only — nothing is taken; the workflow runner leases per stage.
-   */
-  private async workflowStaffing(
-    workflowId: string,
-  ): Promise<{ waitingForStaff?: StaffWait } | null> {
-    if (!this.fuse.hasRoom()) return {};
-    const stage = await this.firstStage(workflowId);
-    if (!stage) return null;
-    const free = await this.employeeAllocator.canStaffNow(stage.department, stage.agentId);
-    return free ? null : { waitingForStaff: stage };
-  }
-
-  /** A workflow's first agent stage as `(department, position)`, or null when it has none. */
-  private async firstStage(workflowId: string): Promise<StaffWait | null> {
-    const workflows = await this.workflowsStore.list().catch((): Workflow[] => []);
-    const workflow = workflows.find((w) => w.id === workflowId);
-    const agentId = workflow?.phases.find((ph) => ph.agent)?.agent;
-    return workflow?.department && agentId ? { department: workflow.department, agentId } : null;
   }
 
   /** Persist an immediately-dispatched task + its activity (the create path). */
@@ -1731,16 +1578,12 @@ export class TaskSchedulerService
   }
 
   private recordQueued(task: ScheduledTask, project: Project | null): void {
-    const wait = task.waitingForStaff;
-    const reason = wait
-      ? `waiting for a free ${wait.agentId} in ${wait.department}`
-      : "waiting for a machine-fuse slot";
     void this.activity.record({
       kind: "task-queued",
-      summary: `task queued — ${reason}${project ? ` (${project.name})` : ""}`,
+      summary: `task queued — waiting for a machine-fuse slot${project ? ` (${project.name})` : ""}`,
       refs: { taskId: task.id, ...(task.projectId ? { projectId: task.projectId } : {}) },
     });
-    this.log.info("task queued", { id: task.id, projectId: task.projectId, waitingForStaff: wait });
+    this.log.info("task queued", { id: task.id, projectId: task.projectId });
   }
 
   /**

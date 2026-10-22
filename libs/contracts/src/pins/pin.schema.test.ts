@@ -2,10 +2,9 @@ import { describe, expect, it } from "vitest";
 import { PinSchema, PinsSchema } from "./pin.schema";
 
 describe("PinSchema — entity pin", () => {
-  it("parses an agent/workflow/employee pin", () => {
+  it("parses an agent/workflow pin", () => {
     expect(PinSchema.safeParse({ kind: "agent", id: "researcher" }).success).toBe(true);
     expect(PinSchema.safeParse({ kind: "workflow", id: "delivery" }).success).toBe(true);
-    expect(PinSchema.safeParse({ kind: "employee", id: "emp-1" }).success).toBe(true);
   });
 
   it("rejects an empty id", () => {

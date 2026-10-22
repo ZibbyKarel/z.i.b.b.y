@@ -47,8 +47,7 @@ system-config section — link there rather than duplicating the table here.
      defaults to **`3`** and is always set (never `null`). It replaced the removed
      `maxConcurrentRuns`: a legacy `maxConcurrentRuns` value migrates to it on read
      (`null` -> the default `3`). The fuse reads it live, so a save (or a raised cap)
-     admits waiters immediately. Headcount, not this number, is the real throttle — see
-     [tasks.md](./tasks.md) and [employees.md](./employees.md).
+     admits waiters immediately. See [tasks.md](./tasks.md) → _Machine fuse_.
    - `dockDoneTasksLimit` (1–100, default `20`) is UI-only: how many of the
      newest archived runs the web shell's activity dock lists under "Hotové"
      (read via `GET /tasks/runs/archive?limit=N`). The API stores it, nothing

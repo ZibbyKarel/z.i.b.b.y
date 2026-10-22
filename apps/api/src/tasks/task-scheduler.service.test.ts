@@ -1,13 +1,11 @@
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { AgentRun, Employee, ScheduledTask, TaskTarget, WorkflowRun } from "@zibby/contracts";
+import type { AgentRun, ScheduledTask, TaskTarget, WorkflowRun } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ActivityInput } from "../activity/activity-log.service";
 import type { BudgetCheck } from "../budget/budget.service";
-import { EmployeeAllocator } from "../employees/employee-allocator";
-import { NoEmployeeError } from "../employees/employees.errors";
-import { WorkingAgentsFuse } from "../employees/working-agents-fuse";
+import { WorkingAgentsFuse } from "../run-slots/working-agents-fuse";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { AttachmentStorageService } from "./attachment-storage.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
@@ -90,17 +88,6 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
   let workflowsStore: { list: ReturnType<typeof vi.fn> };
   /** F2b — {@link TaskSchedulerService}'s owned-agents lookup for department resolution. */
   let agentsStore: { listActive: ReturnType<typeof vi.fn> };
-  /**
-   * D-015/D-017 — the employees store double: `resolveDepartmentTargetOrNull`'s
-   * OWNERSHIP read (`list`) plus `tryLeaseForDispatch`'s any-department
-   * fallback (`listActiveByPositionAnyDepartment`). Empty by default (no employee
-   * anywhere → every existing dispatch stays unleased); F2b tests that need an
-   * owned agent set `.list` to a matching employee fixture.
-   */
-  let employeesStore: {
-    list: ReturnType<typeof vi.fn>;
-    listActiveByPositionAnyDepartment: ReturnType<typeof vi.fn>;
-  };
   let goalRunner: {
     start: ReturnType<typeof vi.fn>;
     onRunStatus: ReturnType<typeof vi.fn>;
@@ -174,10 +161,6 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     };
     workflowsStore = { list: vi.fn(async () => []) };
     agentsStore = { listActive: vi.fn(async () => []) };
-    employeesStore = {
-      list: vi.fn(async () => []),
-      listActiveByPositionAnyDepartment: vi.fn(async () => []),
-    };
     goalRunner = {
       start: vi.fn(async () => ({ goalRunId: "goal_1" })),
       onRunStatus: vi.fn(() => () => {}),
@@ -240,26 +223,6 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       workflowRunner as never,
       workflowsStore as never,
       agentsStore as never,
-      // D-017: no fixture in this file gives a task a department context AND an
-      // agent-position lease scenario worth asserting on the allocator itself
-      // (that lives in employee-allocator.test.ts / employees-dispatch tests) —
-      // acquire always misses (falls through to the any-department ladder,
-      // itself empty by default) so every existing call keeps its unleased
-      // (pre-D-017) `agentRunner.start` argument list.
-      {
-        acquire: vi.fn(async () => {
-          throw new NoEmployeeError("dev", "unused");
-        }),
-        release: vi.fn(),
-        tryAcquire: vi.fn(async () => {
-          throw new NoEmployeeError("dev", "unused");
-        }),
-        canStaffNow: vi.fn(async () => true),
-        onFreed: vi.fn(() => () => {}),
-        isBusy: vi.fn(() => false),
-        busy: vi.fn(() => new Map()),
-      } as never,
-      employeesStore as never,
       new WorkingAgentsFuse(fakeSystemConfigStore()),
       goalRunner as never,
       fakeLogger as never,
@@ -495,26 +458,6 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       workflowRunner as never,
       workflowsStore as never,
       agentsStore as never,
-      // D-017: no fixture in this file gives a task a department context AND an
-      // agent-position lease scenario worth asserting on the allocator itself
-      // (that lives in employee-allocator.test.ts / employees-dispatch tests) —
-      // acquire always misses (falls through to the any-department ladder,
-      // itself empty by default) so every existing call keeps its unleased
-      // (pre-D-017) `agentRunner.start` argument list.
-      {
-        acquire: vi.fn(async () => {
-          throw new NoEmployeeError("dev", "unused");
-        }),
-        release: vi.fn(),
-        tryAcquire: vi.fn(async () => {
-          throw new NoEmployeeError("dev", "unused");
-        }),
-        canStaffNow: vi.fn(async () => true),
-        onFreed: vi.fn(() => () => {}),
-        isBusy: vi.fn(() => false),
-        busy: vi.fn(() => new Map()),
-      } as never,
-      employeesStore as never,
       new WorkingAgentsFuse(fakeSystemConfigStore()),
       goalRunner as never,
       fakeLogger as never,
@@ -1178,26 +1121,10 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     function agentDef(id: string, name: string) {
       return { id, name, department: "dev" };
     }
-    /**
-     * D-015: an active employee holding `agentId` in "dev" — `resolveDepartmentTargetOrNull`'s
-     * ownership read is now employees, not `Agent.department` (kept on `agentDef`
-     * above only as an unused legacy field on the fixture shape).
-     */
-    function employeeDef(agentId: string) {
-      return {
-        id: `employee_${agentId}`,
-        name: agentId,
-        agentId,
-        department: "dev" as const,
-        status: "active" as const,
-        hiredAt: "2026-01-01T00:00:00.000Z",
-      };
-    }
 
     it("1 owned agent, 0 owned workflows → direct dispatch to the agent, the classifier is NEVER called", async () => {
       workflowsStore.list.mockResolvedValue([]);
       agentsStore.listActive.mockResolvedValue([agentDef("coder", "Coder")]);
-      employeesStore.list.mockResolvedValue([employeeDef("coder")]);
       const result = await service.createTask({
         text: "fix the bug",
         title: "Fix",
@@ -1224,7 +1151,6 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     it("1 owned workflow + 1 owned agent (2 units) → classifyWithinDepartment is invoked, restricted to the owned catalog", async () => {
       workflowsStore.list.mockResolvedValue([workflowDef("delivery", "Delivery")]);
       agentsStore.listActive.mockResolvedValue([agentDef("coder", "Coder")]);
-      employeesStore.list.mockResolvedValue([employeeDef("coder")]);
       classifier.classifyWithinDepartment.mockResolvedValue({
         target: { kind: "agent", id: "coder", name: "Coder" },
         confidence: 0.9,
@@ -1282,17 +1208,6 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     }
     function agentDef(id: string, name: string) {
       return { id, name, department: "dev" };
-    }
-    /** D-015: an active employee holding `agentId` in "dev" — see the F2b describe's twin. */
-    function employeeDef(agentId: string) {
-      return {
-        id: `employee_${agentId}`,
-        name: agentId,
-        agentId,
-        department: "dev" as const,
-        status: "active" as const,
-        hiredAt: "2026-01-01T00:00:00.000Z",
-      };
     }
 
     it("resolves to the sole PR-capable workflow WITHOUT classifying, even though the roster has 2 units", async () => {
@@ -1471,7 +1386,6 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     it("without a PR sink the agent is still reachable — the constraint is what changes the outcome", async () => {
       workflowsStore.list.mockResolvedValue([]);
       agentsStore.listActive.mockResolvedValue([agentDef("documentation-engineer", "Docs")]);
-      employeesStore.list.mockResolvedValue([employeeDef("documentation-engineer")]);
       const result = await service.createTask({
         text: "write the API guide",
         title: "Docs",
@@ -2140,29 +2054,6 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
       workflowRunner as never,
       workflowsStore as never,
       agentsStore as never,
-      // D-017: no fixture in this file gives a task a department context AND an
-      // agent-position lease scenario worth asserting on the allocator itself
-      // (that lives in employee-allocator.test.ts / employees-dispatch tests) —
-      // acquire always misses (falls through to the any-department ladder,
-      // itself empty by default) so every existing call keeps its unleased
-      // (pre-D-017) `agentRunner.start` argument list.
-      {
-        acquire: vi.fn(async () => {
-          throw new NoEmployeeError("dev", "unused");
-        }),
-        release: vi.fn(),
-        tryAcquire: vi.fn(async () => {
-          throw new NoEmployeeError("dev", "unused");
-        }),
-        canStaffNow: vi.fn(async () => true),
-        onFreed: vi.fn(() => () => {}),
-        isBusy: vi.fn(() => false),
-        busy: vi.fn(() => new Map()),
-      } as never,
-      {
-        list: vi.fn(async () => []),
-        listActiveByPositionAnyDepartment: vi.fn(async () => []),
-      } as never,
       new WorkingAgentsFuse(fakeSystemConfigStore()),
       goalRunner as never,
       fakeLogger as never,
@@ -2334,29 +2225,6 @@ describe("Task 3c — project-capacity lock closes the budget check→record rac
       workflowRunner as never,
       workflowsStore as never,
       agentsStore as never,
-      // D-017: no fixture in this file gives a task a department context AND an
-      // agent-position lease scenario worth asserting on the allocator itself
-      // (that lives in employee-allocator.test.ts / employees-dispatch tests) —
-      // acquire always misses (falls through to the any-department ladder,
-      // itself empty by default) so every existing call keeps its unleased
-      // (pre-D-017) `agentRunner.start` argument list.
-      {
-        acquire: vi.fn(async () => {
-          throw new NoEmployeeError("dev", "unused");
-        }),
-        release: vi.fn(),
-        tryAcquire: vi.fn(async () => {
-          throw new NoEmployeeError("dev", "unused");
-        }),
-        canStaffNow: vi.fn(async () => true),
-        onFreed: vi.fn(() => () => {}),
-        isBusy: vi.fn(() => false),
-        busy: vi.fn(() => new Map()),
-      } as never,
-      {
-        list: vi.fn(async () => []),
-        listActiveByPositionAnyDepartment: vi.fn(async () => []),
-      } as never,
       new WorkingAgentsFuse(fakeSystemConfigStore({ maxWorkingAgents })),
       goalRunner as never,
       fakeLogger as never,
@@ -2641,13 +2509,11 @@ describe("Task 3c — project-capacity lock closes the budget check→record rac
   });
 });
 
-describe("staffing-driven capacity", () => {
+describe("machine fuse queue", () => {
   let dir: string;
   let storage: ScheduledTasksStorageService;
   let service: TaskSchedulerService;
   let fuse: WorkingAgentsFuse;
-  let allocator: EmployeeAllocator;
-  let employees: Employee[];
   let agentListener: ((run: AgentRun) => void) | undefined;
   let agentRunner: {
     start: ReturnType<typeof vi.fn>;
@@ -2671,25 +2537,9 @@ describe("staffing-driven capacity", () => {
     { id: "proj_B", name: "B" },
   ];
   const RELEASE: TaskTarget = { kind: "workflow", id: "release", name: "Release" };
-  const hire = (id: string, agentId = "koder", department = "dev"): Employee => ({
-    id,
-    name: id,
-    agentId,
-    department,
-    status: "active",
-    hiredAt: "2026-01-01T00:00:00.000Z",
-  });
 
-  /** A scheduler over a REAL fuse + allocator (backed by the in-memory `employees` roster). */
+  /** A scheduler over a REAL fuse. */
   function makeService(maxWorkingAgents = 1000): void {
-    const employeesStore = {
-      list: async () => employees,
-      listActiveByPosition: async (department: string, agentId: string) =>
-        employees.filter((e) => e.department === department && e.agentId === agentId),
-      listActiveByPositionAnyDepartment: async (agentId: string) =>
-        employees.filter((e) => e.agentId === agentId),
-    };
-    allocator = new EmployeeAllocator(employeesStore as never);
     fuse = new WorkingAgentsFuse(fakeSystemConfigStore({ maxWorkingAgents }));
     let runSeq = 0;
     agentRunner = {
@@ -2738,8 +2588,6 @@ describe("staffing-driven capacity", () => {
         ],
       } as never,
       { listActive: async () => [] } as never,
-      allocator,
-      employeesStore as never,
       fuse,
       {
         start: vi.fn(async () => ({ goalRunId: "goal_1" })),
@@ -2769,10 +2617,9 @@ describe("staffing-driven capacity", () => {
   }
 
   beforeEach(async () => {
-    dir = await fs.mkdtemp(path.join(os.tmpdir(), "task-sched-staffing-"));
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "task-sched-fuse-"));
     storage = new ScheduledTasksStorageService(dir);
     await storage.onModuleInit();
-    employees = [];
     agentListener = undefined;
   });
 
@@ -2789,7 +2636,6 @@ describe("staffing-driven capacity", () => {
     if (second.outcome !== "scheduled") throw new Error(`expected queued, got ${second.outcome}`);
     expect(second.task.status).toBe("queued");
     expect(second.task.target).toMatchObject({ kind: "agent", id: "koder" });
-    expect(second.task.waitingForStaff).toBeUndefined(); // waiting for the fuse, not staff
     expect(classifier.classify).toHaveBeenCalledTimes(2);
 
     if (first.outcome !== "dispatched") throw new Error("unreachable");
@@ -2802,41 +2648,16 @@ describe("staffing-driven capacity", () => {
     expect(fuse.inUse()).toBe(1);
   });
 
-  it("(b) the only employee busy: the task queues waitingForStaff; the lease release drains it", async () => {
-    employees = [hire("e1")];
-    makeService();
-    const first = await service.createTask({ text: "do A", title: "A" });
-    expect(first.outcome).toBe("dispatched");
-    expect(allocator.isBusy("e1")).toBe(true);
-
-    const second = await service.createTask({ text: "do B", title: "B" });
-    if (second.outcome !== "scheduled") throw new Error(`expected queued, got ${second.outcome}`);
-    expect(second.task.waitingForStaff).toEqual({ department: "dev", agentId: "koder" });
-    expect(fuse.inUse()).toBe(1); // the queued task gave its fuse slot back
-
-    if (first.outcome !== "dispatched") throw new Error("unreachable");
-    agentListener?.(agentRun({ runId: first.runRef, status: "done" }));
-    await vi.waitFor(async () => {
-      const task = await storage.get(second.task.id);
-      expect(task.status).toBe("dispatched");
-      expect(task.waitingForStaff).toBeUndefined();
-    });
-    expect(allocator.isBusy("e1")).toBe(true); // now leased to the second run
-  });
-
-  it("(c) a spawn that throws gives back the fuse slot and the lease", async () => {
-    employees = [hire("e1")];
+  it("(c) a spawn that throws gives back the fuse slot", async () => {
     makeService(1);
     agentRunner.start.mockRejectedValueOnce(new Error("preflight failed"));
     await expect(service.createTask({ text: "do A", title: "A" })).rejects.toThrow("preflight");
     expect(fuse.inUse()).toBe(0);
-    expect(allocator.isBusy("e1")).toBe(false);
   });
 
-  it("(d) a workflow whose first-stage employee is busy queues and starts nothing", async () => {
-    employees = [hire("e1")];
-    makeService();
-    const held = await allocator.tryAcquire("dev", "koder");
+  it("(d) a workflow with no fuse room queues and starts nothing", async () => {
+    makeService(1);
+    const held = fuse.tryTake();
     const result = await service.createTask(
       { text: "ship it", title: "Ship" },
       undefined,
@@ -2845,28 +2666,25 @@ describe("staffing-driven capacity", () => {
     );
     if (result.outcome !== "scheduled") throw new Error(`expected queued, got ${result.outcome}`);
     expect(result.task.status).toBe("queued");
-    expect(result.task.waitingForStaff).toEqual({ department: "dev", agentId: "koder" });
     expect(workflowRunner.start).not.toHaveBeenCalled();
-    expect(fuse.inUse()).toBe(0); // a workflow dispatch only checks, never reserves
+    expect(fuse.inUse()).toBe(1); // a workflow dispatch only checks, never reserves
 
-    allocator.release(held!);
+    held!();
     await vi.waitFor(async () => {
       expect((await storage.get(result.task.id)).status).toBe("dispatched");
     });
     expect(workflowRunner.start).toHaveBeenCalledTimes(1);
   });
 
-  it("(e) no employee anywhere: the agent runs unleashed (D-017) and still holds a fuse slot", async () => {
+  it("(e) an agent run holds a fuse slot", async () => {
     makeService();
     const result = await service.createTask({ text: "do A", title: "A" });
     expect(result.outcome).toBe("dispatched");
     expect(agentRunner.start).toHaveBeenCalledTimes(1);
-    expect(agentRunner.start.mock.calls[0]).toHaveLength(10); // no employee argument
     expect(fuse.inUse()).toBe(1);
   });
 
-  it("(f) a run already terminal when start() resolves releases its slot + lease at once", async () => {
-    employees = [hire("e1")];
+  it("(f) a run already terminal when start() resolves releases its slot at once", async () => {
     makeService(1);
     // The fast-failing child emitted `error` during start()'s sidecar await — before
     // the scheduler had recorded anything for the terminal handler to release.
@@ -2875,30 +2693,10 @@ describe("staffing-driven capacity", () => {
     const result = await service.createTask({ text: "do A", title: "A" });
     expect(result.outcome).toBe("dispatched");
     expect(fuse.inUse()).toBe(0);
-    expect(allocator.isBusy("e1")).toBe(false);
-  });
-
-  it("(g) one free employee, two queued workflows with the same first stage: one drain dispatches one", async () => {
-    employees = [hire("e1")];
-    makeService();
-    const held = await allocator.tryAcquire("dev", "koder");
-    const create = () =>
-      service.createTask({ text: "ship it", title: "Ship" }, undefined, undefined, RELEASE);
-    const a = await create();
-    const b = await create();
-    if (a.outcome !== "scheduled" || b.outcome !== "scheduled") throw new Error("expected queued");
-
-    allocator.release(held!); // onFreed → one drain pass
-    await vi.waitFor(() => expect(workflowRunner.start).toHaveBeenCalledTimes(1));
-    await new Promise((r) => setTimeout(r, 20)); // let the pass finish
-    expect(workflowRunner.start).toHaveBeenCalledTimes(1);
-    const statuses = [(await storage.get(a.task.id)).status, (await storage.get(b.task.id)).status];
-    expect(statuses.sort()).toEqual(["dispatched", "queued"]);
   });
 
   it("a queued task cancelled before the drain never dispatches", async () => {
-    employees = [hire("e1")];
-    makeService();
+    makeService(1);
     const first = await service.createTask({ text: "do A", title: "A" });
     const second = await service.createTask({ text: "do B", title: "B" });
     if (first.outcome !== "dispatched" || second.outcome !== "scheduled") {
@@ -2908,7 +2706,7 @@ describe("staffing-driven capacity", () => {
     await service.cancel(second.task.id);
     expect((await storage.get(second.task.id)).status).toBe("cancelled");
 
-    agentListener?.(agentRun({ runId: first.runRef, status: "done" })); // frees the employee → drain
+    agentListener?.(agentRun({ runId: first.runRef, status: "done" })); // frees the slot → drain
     await new Promise((r) => setTimeout(r, 50));
     expect(agentRunner.start).toHaveBeenCalledTimes(1);
     expect((await storage.get(second.task.id)).status).toBe("cancelled");

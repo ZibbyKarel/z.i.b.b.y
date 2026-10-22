@@ -12,7 +12,6 @@ import { AppModule } from "../src/app.module";
 import { ApprovalsService } from "../src/approvals/approvals.service";
 import { PR_REVIEW_ARTIFACT } from "../src/tasks/task-output.service";
 import { WorkflowRunnerService } from "../src/workflows/workflow-runner.service";
-import { defaultEmployeesDir, seedEmployeeFixture } from "./fixtures/employee-fixture";
 import { withOperator } from "./operator-token";
 
 /** Token-free stand-in for the real `claude` CLI (see fixtures/fake-claude.mjs). */
@@ -124,15 +123,6 @@ describe("Workflows API (e2e)", () => {
     vaultDir = await fs.mkdtemp(path.join(os.tmpdir(), "workflow-vault-e2e-"));
     process.env.AGENT_DEMO_STEPS = "2";
     process.env.AGENT_DEMO_DELAY_MS = "30";
-    // D-017: this describe block never overrides AGENTS_DIR — it never registers
-    // a real Agent either — so `phase()`'s bare "writer" id needs an employee
-    // seeded directly into the shared per-file data root, or every stage parks
-    // `no-employee` instead of dispatching.
-    await seedEmployeeFixture(defaultEmployeesDir(), {
-      id: "employee_writer",
-      agentId: "writer",
-      department: "dev",
-    });
     app = await boot();
   });
 
@@ -1060,81 +1050,6 @@ describe("Workflows API (e2e)", () => {
     expect(res.currentStage).toBeNull();
     await app2.close();
   });
-
-  describe("D-017 — the employee allocator (park vs. queued wait)", () => {
-    it("parks 'no-employee' when the workflow's department owns no employee of the stage's position", async () => {
-      await request(app.getHttpServer())
-        .post("/api/workflows")
-        .send({
-          id: "unstaffed",
-          phases: [phase("only", { agent: "ghost-writer" })],
-          instructions: "nobody hired for this position",
-          department: "dev",
-        })
-        .expect(201);
-
-      const start = await app.get(WorkflowRunnerService).start("unstaffed", undefined, undefined);
-      const { workflowRunId } = start as { workflowRunId: string };
-
-      const parked = await until(async () => {
-        const res = app.get(WorkflowRunnerService).get(workflowRunId);
-        return res.status === "parked" ? res : null;
-      });
-      expect(parked.parkedReason).toBe("no-employee");
-      expect(parked.currentStage).toBe("only");
-      // Nothing dispatched — no sandbox, no stageRuns entry, for the position with
-      // nobody in it.
-      expect(parked.stageRuns).toHaveLength(0);
-    });
-
-    it("a single shared employee serves two concurrent runs sequentially — the second QUEUES (never parks) behind the first, then dispatches once released", async () => {
-      // The "writer"/"dev" position has exactly ONE employee (seeded in this
-      // describe block's `beforeAll`) — two runs of a one-phase workflow on that
-      // same position contend for it.
-      await request(app.getHttpServer())
-        .post("/api/workflows")
-        .send({
-          id: "shared-position",
-          phases: [phase("only")],
-          instructions: "one employee, two runs",
-          department: "dev",
-        })
-        .expect(201);
-
-      const runner = app.get(WorkflowRunnerService);
-      const a = (await runner.start("shared-position", undefined, undefined)) as {
-        workflowRunId: string;
-      };
-      const b = (await runner.start("shared-position", undefined, undefined)) as {
-        workflowRunId: string;
-      };
-
-      // A gets the employee and dispatches its stage.
-      await until(async () => {
-        const res = runner.get(a.workflowRunId);
-        return res.stageRuns.length > 0 ? res : null;
-      });
-      // B is still queued behind the same employee — running (not parked), but
-      // nothing has dispatched for it yet.
-      const bWhileQueued = runner.get(b.workflowRunId);
-      expect(bWhileQueued.status).toBe("running");
-      expect(bWhileQueued.stageRuns).toHaveLength(0);
-
-      const doneA = await until(async () => {
-        const res = runner.get(a.workflowRunId);
-        return res.status !== "running" ? res : null;
-      });
-      expect(doneA.status).toBe("done");
-
-      // Released on A's terminal status — B now gets the SAME employee and finishes.
-      const doneB = await until(async () => {
-        const res = runner.get(b.workflowRunId);
-        return res.status !== "running" ? res : null;
-      });
-      expect(doneB.status).toBe("done");
-      expect(doneB.parkedReason).toBeUndefined();
-    });
-  });
 });
 
 describe("Workflow stage gates (claude mode, e2e)", () => {
@@ -1169,14 +1084,6 @@ describe("Workflow stage gates (claude mode, e2e)", () => {
     process.env.FAKE_CLAUDE_STEPS = "4";
     process.env.FAKE_CLAUDE_DELAY_MS = "40";
     process.env.FAKE_CLAUDE_INTENT = DELETE_INTENT;
-    // D-017: AGENTS_DIR is isolated above, but not EMPLOYEES_DIR — this block's
-    // employees still resolve to the shared per-file data root, so seed one
-    // there for the "gated-writer" position this block registers below.
-    await seedEmployeeFixture(defaultEmployeesDir(), {
-      id: "employee_gated-writer",
-      agentId: "gated-writer",
-      department: "dev",
-    });
     app = await boot();
 
     // The phase agent: deletes pause for a human; everything else is free.
@@ -1397,13 +1304,6 @@ describe("PR gate on a git project (claude mode, e2e)", () => {
     process.env.FAKE_CLAUDE_EXEC_CMD =
       'git push -u origin "$(git branch --show-current)" && gh pr create --title "Add feature" --body-file pr-draft.md';
 
-    // D-017: AGENTS_DIR is isolated above, but not EMPLOYEES_DIR — seed one for
-    // the "pr-writer" position this block registers below.
-    await seedEmployeeFixture(defaultEmployeesDir(), {
-      id: "employee_pr-writer",
-      agentId: "pr-writer",
-      department: "dev",
-    });
     app = await boot();
 
     await request(app.getHttpServer())

@@ -51,7 +51,6 @@ const department: Department = {
   mandate:
     "Orchestrace delivery workflow: Architekt → Kodér ⇄ Code-Review → Tester → Dokumentátor.",
   color: "#f97316",
-  division: "engineering",
   icon: "code",
   fallback: "primary",
   tierDefault: null,
@@ -170,7 +169,6 @@ describe("composeSelfKnowledge", () => {
         tagline: "Maják v noci",
         mandate: "Eskalace incidentů — vlastní podoba Tier-3 kontraktu surface-and-wait.",
         color: "#f59e0b",
-        division: "operations",
         icon: "warn",
         fallback: "orchestrator",
         tierDefault: "ask",

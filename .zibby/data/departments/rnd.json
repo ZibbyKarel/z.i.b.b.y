@@ -5,7 +5,6 @@
   "tagline": "Výzkum a analýza",
   "mandate": "Výzkumné workflow, které předávají výsledný artefakt dál.",
   "color": "#46cf8b",
-  "division": "engineering",
   "icon": "compass",
   "fallback": "primary",
   "tierDefault": null

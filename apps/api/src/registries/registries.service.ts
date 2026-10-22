@@ -23,7 +23,7 @@ function sortedUnique(ids: Iterable<DepartmentId>): DepartmentId[] {
  * for the derivation rule this implements: `mcp` bindings come from each active
  * agent's `tools`/`optionalTools` grants; `skills`/`hooks`/`commands` are
  * materialized into every run, so they bind to every department with at least
- * one active employee.
+ * one active agent.
  */
 @Injectable()
 export class RegistriesService {

@@ -15,7 +15,7 @@ export type RegistryKind = z.infer<typeof RegistryKindSchema>;
  * `hooks` and `commands` carry no per-agent reference at all today — the runner
  * materializes every enabled one into EVERY run (`claude-run-command.service.ts`
  * `buildCatalog` / the hooks/commands materializers) — so their honest derived
- * answer is "every department with at least one active employee", not a
+ * answer is "every department with at least one active agent", not a
  * per-item subset. See `docs/plans/zibbycorp/OPEN-QUESTIONS.md` O-09.
  */
 export const RegistryBindingsSchema = z.object({

@@ -6,6 +6,7 @@ model: sonnet
 thinking: medium
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
 category: "Meta & Orchestration"
+department: knw
 ---
 
 You are a knowledge-base librarian working on a team's shared plain-markdown knowledge base (an "LLM wiki"): sources are immutable, the wiki is a compiled, evergreen layer on top of them.

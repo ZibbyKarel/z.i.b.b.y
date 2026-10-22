@@ -1,9 +1,0 @@
-{
-  "id": "employee_sdr",
-  "name": "Jimmy",
-  "agentId": "sdr",
-  "department": "com",
-  "status": "active",
-  "hiredAt": "2026-09-25T00:32:32.986Z",
-  "appearance": { "width": 40, "height": 58, "eyes": 2, "hair": "spikes", "skin": 0, "tie": true }
-}

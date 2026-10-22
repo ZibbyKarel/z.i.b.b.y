@@ -32,9 +32,7 @@ import { AgentsStorageService } from "../agents/agents.storage.service";
 import { ApprovalsService } from "../approvals/approvals.service";
 import { SignalBusService } from "../automations/signal-bus.service";
 import { ArtifactsStorageService, artifactRecordId } from "../artifacts/artifacts.storage.service";
-import { EmployeeAllocator, type EmployeeLease } from "../employees/employee-allocator";
-import { type FuseSlot, WorkingAgentsFuse } from "../employees/working-agents-fuse";
-import { NoEmployeeError } from "../employees/employees.errors";
+import { type FuseSlot, WorkingAgentsFuse } from "../run-slots/working-agents-fuse";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
 import { GroundingService } from "../memory/grounding.service";
 import { DuplicateNoteError, VaultService } from "../memory/vault.service";
@@ -264,7 +262,6 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly activity: ActivityLogService,
     private readonly artifacts: ArtifactsStorageService,
     private readonly projectLocal: ProjectLocalService,
-    private readonly employees: EmployeeAllocator,
     private readonly fuse: WorkingAgentsFuse,
     // R&D/QA deliveries are emitted as signals (a leaf module).
     private readonly signalBus: SignalBusService,
@@ -645,11 +642,10 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       run = fromDisk;
     }
     // Phase 9 widens the resumable parkings from `retries`-only to `retries | limit`;
-    // `no-employee` re-enters the parked phase once staff exists (no parked surface).
-    const inPlace =
-      run.status === "parked" &&
-      (run.parkedReason === "no-employee" || run.parkedReason === "paused");
-    if (inPlace) return this.resumeInPlace(run, note);
+    // a `paused` run re-enters the parked phase in place (no parked surface).
+    if (run.status === "parked" && run.parkedReason === "paused") {
+      return this.resumeInPlace(run, note);
+    }
     const isLimit = run.parkedReason === "limit";
     if (run.status !== "parked" || (run.parkedReason !== "retries" && !isLimit) || !run.parked) {
       throw new RunNotRetriesParkedError(workflowRunId);
@@ -725,23 +721,20 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Re-drive a `no-employee`- or `paused`-parked run at the phase it stopped before.
+   * Re-drive a `paused` run at the phase it stopped before.
    * A pause recorded the exact handoff in `pendingGate` (a loop back-edge's failure
    * file included); otherwise it is recomputed from the nearest upstream phase.
    */
   private async resumeInPlace(run: WorkflowRun, note?: string): Promise<WorkflowRun> {
     const workflow = await this.workflows.get(run.workflowId);
-    // Only a pause owns `pendingGate` here; any other cursor left on the run is stale.
-    const gate = run.parkedReason === "paused" ? run.pendingGate : undefined;
+    const gate = run.pendingGate;
     const cursor = gate?.cursor ?? run.currentStage ?? workflow.phases[0]?.id;
     if (!cursor) throw new RunNotRetriesParkedError(run.workflowRunId);
     const handoffSource = gate ? gate.handoffSource : this.recomputeHandoff(run, workflow, cursor);
     const reason = run.parkedReason;
-    // A paused run's note is a message like any other: queued, delivered into the next
-    // agent stage. A no-employee note goes straight into the resume context (as before).
+    // A paused run's note is a message like any other: queued, delivered into the next agent stage.
     const trimmed = note?.trim();
-    if (trimmed && reason === "paused") this.queueOperatorMessage(run, trimmed, "all");
-    else if (trimmed) this.recordDeliveredNote(run, trimmed, cursor);
+    if (trimmed) this.queueOperatorMessage(run, trimmed, "all");
     run.status = "running";
     this.stopRequested.delete(run.workflowRunId); // a stale stop mark must not end the new drive
     delete run.parkedReason;
@@ -757,7 +750,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     const resumeContext = await this.composeResumeContext(
       run,
       workflow.phases.map((p) => p.id),
-      { note: reason === "paused" ? undefined : trimmed },
+      { note: undefined },
     );
     const retries = new Map(Object.entries(run.retries ?? {}));
     const traceId = this.trace.getTraceId() ?? randomUUID();
@@ -1174,18 +1167,6 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Synchronous peek at an in-flight run's status + current stage from the
-   * in-memory registry (no disk fallback) — lets the employee roster derive
-   * `blocked` without an await per employee. `undefined` for an unknown/evicted run.
-   */
-  peekRun(
-    workflowRunId: string,
-  ): { status: WorkflowRun["status"]; currentStage: string | null } | undefined {
-    const run = this.runs.get(workflowRunId);
-    return run && { status: run.status, currentStage: run.currentStage };
-  }
-
-  /**
    * The folder to show the operator for a run: its `book/` deliverable when the
    * workflow produced one, else the run root. `null` for an unknown run.
    */
@@ -1419,7 +1400,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       settledChild = undefined;
 
       // Operator pause (D-PAUSE): the boundary is reached — park before spending the
-      // next stage. No lease or fuse slot is held here. The exact cursor + handoff
+      // next stage. No fuse slot is held here. The exact cursor + handoff
       // are kept so the resume re-enters identically (a loop back-edge included).
       // A just-settled sub-run is recorded first; the next boundary parks it.
       if (!settled && run.pauseRequested) {
@@ -1477,58 +1458,11 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
 
       const attempt = (retries.get(phase.id) ?? 0) + 1;
 
-      // D-015: an `agent` phase's dispatch is an employee (a hired instance of
-      // `phase.agent`, the position), leased from the workflow's OWN department.
-      // Acquiring here — before the sandbox exists — means a `no-employee` park
-      // never leaves a half-built stage folder behind. When every matching employee
-      // is busy the stage waits RANKED (progress → project round-robin → FIFO)
-      // behind other waiters on the same department+position; the run stays
-      // `running` with `waitingForStaff` on disk for the whole wait (decision 7).
-      // The lease comes BEFORE the machine-fuse slot taken right before `runStage`,
-      // so a staff wait holds nothing. A `verify` phase spawns no agent, so it never
-      // acquires (`phase.agent` is absent for it).
+      // Ranked fuse waiting: progress → project round-robin → FIFO.
       const rank = {
         progress: this.progressOf(run, phaseIds, phase.id),
         projectId: project?.id,
       };
-      let lease: EmployeeLease | undefined;
-      if (phase.agent && workflow.department) {
-        try {
-          const ctx = { runId: run.workflowRunId, rank };
-          lease =
-            (await this.employees.tryAcquire(workflow.department, phase.agent, ctx)) ?? undefined;
-          if (!lease) {
-            run.waitingForStaff = {
-              department: workflow.department,
-              agentId: phase.agent,
-              since: new Date().toISOString(),
-            };
-            await this.writeAggregate(run);
-            lease = await this.employees.acquire(workflow.department, phase.agent, ctx);
-            run.waitingForStaff = undefined;
-            await this.writeAggregate(run);
-          }
-        } catch (error) {
-          if (!(error instanceof NoEmployeeError)) {
-            // A throw after the grant (the clear-and-write) must not leak the lease.
-            if (lease) this.employees.release(lease);
-            throw error;
-          }
-          run.waitingForStaff = undefined;
-          run.status = "parked";
-          run.parkedReason = "no-employee";
-          run.currentStage = phase.id;
-          run.retries = Object.fromEntries(retries);
-          await this.writeAggregate(run);
-          await this.writeProgress(run, phaseIds);
-          this.log.warn("workflow run parked (no employee of this position)", {
-            phase: phase.id,
-            department: workflow.department,
-            agent: phase.agent,
-          });
-          return;
-        }
-      }
 
       // Sequential sandbox numbering: every dispatch appends exactly one `stageRuns`
       // entry when it settles (there is no same-entry retry path in this machine),
@@ -1539,12 +1473,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       const stageDir = settled?.dir ?? this.stageDirName(run.stageRuns.length + 1, phase.id);
       const stageCwd = path.join(run.cwd, stageDir);
       if (!settled) {
-        try {
-          await this.prepareStageDir(run, stageCwd, handoffSource, phase);
-        } catch (error) {
-          if (lease) this.employees.release(lease); // not yet under runStage's finally
-          throw error;
-        }
+        await this.prepareStageDir(run, stageCwd, handoffSource, phase);
       }
 
       this.log.info("workflow phase starting", {
@@ -1578,8 +1507,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         if (!refused) return;
         stageRun = refused;
       } else {
-        // Machine fuse (decision 2): a slot per spawned agent process, taken after the
-        // lease (a fuse wait briefly holds the employee) and released after it.
+        // Machine fuse: a slot per spawned agent process.
         let slot: FuseSlot | undefined;
         try {
           if (phase.agent) slot = await this.fuse.take(rank);
@@ -1591,13 +1519,10 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
             project,
             stageResumeContext,
             delegates,
-            lease,
           );
         } finally {
           // Released on EVERY terminal path (done/error/interrupted/paused-limit) —
-          // `runStage` only returns once `waitForStage` sees one of those, so the
-          // lease never outlives the dispatch it was acquired for. Lease first, then slot.
-          if (lease) this.employees.release(lease);
+          // `runStage` only returns once `waitForStage` sees one of those.
           slot?.();
         }
       }
@@ -2640,7 +2565,6 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     project: Project | null,
     resumeContext?: string,
     delegates?: readonly string[],
-    lease?: EmployeeLease,
   ): Promise<StageRun> {
     const escalation = this.escalationFor(phase, attempt);
     if (escalation) {
@@ -2724,7 +2648,6 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       startedAt: rec.startedAt,
       finishedAt: new Date().toISOString(),
       ...(finishedRec?.costUsd != null ? { costUsd: finishedRec.costUsd } : {}),
-      ...(lease ? { employeeId: lease.employeeId, employeeName: lease.employeeName } : {}),
     };
   }
 
@@ -3348,7 +3271,6 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
           currentStage: null,
           parkedReason: undefined,
           parked: undefined,
-          waitingForStaff: undefined,
         };
         await this.writeAggregate(run);
       }

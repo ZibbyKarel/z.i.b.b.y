@@ -1,9 +1,0 @@
-{
-  "id": "employee_accessibility-auditor",
-  "name": "Kevin",
-  "agentId": "accessibility-auditor",
-  "department": "qa",
-  "status": "active",
-  "hiredAt": "2026-09-25T00:32:32.986Z",
-  "appearance": { "width": 42, "height": 54, "eyes": 2, "hair": "tuft", "skin": 1, "hat": "beanie" }
-}

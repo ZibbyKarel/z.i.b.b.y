@@ -178,8 +178,7 @@ export const ProjectBudgetSchema = z
     // cut on the Europe/Prague calendar month.
     monthlyRuns: z.number().int().positive().optional(),
     /**
-     * Removed (staffing-driven capacity): per-engagement concurrency is decided by free
-     * employees + project round-robin now. A legacy value is accepted and DROPPED on read
+     * Removed: per-engagement concurrency is decided by project round-robin now. A legacy value is accepted and DROPPED on read
      * (the schema stays `.strict()` for every other key) and disappears on the next write.
      */
     maxConcurrent: z

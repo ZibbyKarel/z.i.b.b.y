@@ -7,7 +7,7 @@ import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
-import { WorkingAgentsFuse } from "../src/employees/working-agents-fuse";
+import { WorkingAgentsFuse } from "../src/run-slots/working-agents-fuse";
 import { SystemConfigStore } from "../src/system/system-config.store";
 import { withOperator } from "./operator-token";
 

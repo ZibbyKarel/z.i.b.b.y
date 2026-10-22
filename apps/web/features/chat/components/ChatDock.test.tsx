@@ -47,7 +47,6 @@ vi.mock("../../projects", () => ({
 vi.mock("../../skills", () => ({
   useSkillsQuery: () => ({ data: [{ id: "tdd", name: "Test Driven", glyph: "spark" }] }),
 }));
-vi.mock("../../employees", () => ({ useEmployeesQuery: () => ({ data: [] }) }));
 vi.mock("../../system", () => ({ useSystemConfigQuery: () => ({ data: undefined }) }));
 
 const transcriptState: {

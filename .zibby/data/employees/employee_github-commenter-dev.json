@@ -1,9 +1,0 @@
-{
-  "id": "employee_github-commenter-dev",
-  "name": "Gwen",
-  "agentId": "github-commenter",
-  "department": "dev",
-  "status": "active",
-  "hiredAt": "2026-10-20T09:00:00.000Z",
-  "appearance": { "width": 40, "height": 54, "eyes": 1, "hair": "tuft", "skin": 2, "hat": "beanie" }
-}
