@@ -97,4 +97,39 @@ describe("WidgetFrame", () => {
     expect(root).toHaveClass("border-ink");
     expect(root).toHaveStyle({ left: "10px", top: "20px" });
   });
+
+  it("reports its natural height on mount", () => {
+    const heights: Record<string, [number, number]> = {
+      [WidgetFrameTestId.Root]: [100, 98],
+      [WidgetFrameTestId.Header]: [30, 0],
+      [WidgetFrameTestId.Content]: [50, 0],
+    };
+    const pick = (el: HTMLElement, i: 0 | 1) => heights[el.dataset.testid ?? ""]?.[i] ?? 0;
+    const off = vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return pick(this, 0);
+    });
+    const cli = vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return pick(this, 1);
+    });
+    const onNaturalHeight = vi.fn();
+    render(<WidgetFrame label="X" onNaturalHeight={onNaturalHeight} />);
+    expect(onNaturalHeight).toHaveBeenCalledWith(82);
+    off.mockRestore();
+    cli.mockRestore();
+  });
+
+  it("wraps children in the content wrapper", () => {
+    render(
+      <WidgetFrame label="X">
+        <p>rows</p>
+      </WidgetFrame>,
+    );
+    expect(screen.getByTestId(WidgetFrameTestId.Content)).toContainElement(
+      screen.getByText("rows"),
+    );
+  });
 });

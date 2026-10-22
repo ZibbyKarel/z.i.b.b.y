@@ -1,4 +1,11 @@
-import type { CSSProperties, PointerEvent, ReactNode, Ref } from "react";
+import {
+  type CSSProperties,
+  type PointerEvent,
+  type ReactNode,
+  type Ref,
+  useEffect,
+  useRef,
+} from "react";
 import { cn } from "../../utils/cn";
 
 export enum WidgetFrameTestId {
@@ -11,6 +18,8 @@ export enum WidgetFrameTestId {
   Collapse = "widget-frame-collapse",
   Remove = "widget-frame-remove",
   Body = "widget-frame-body",
+  /** Plain wrapper around the children (and empty box) inside the body; its height is the content's natural height. */
+  Content = "widget-frame-content",
   /** The dashed "nothing here" box shown for an empty widget in edit mode. */
   Empty = "widget-frame-empty",
   Size = "widget-frame-size",
@@ -52,6 +61,9 @@ export interface WidgetFrameProps {
   /** Widget content. Always mounted (hidden while closed) so the widget keeps
    *  reporting its own emptiness. */
   children?: ReactNode;
+  /** Reports the frame's height if it were `height: auto` (borders + header + content), on mount
+   *  and whenever the header or content resizes. */
+  onNaturalHeight?: (px: number) => void;
   ref?: Ref<HTMLElement>;
 }
 
@@ -83,9 +95,33 @@ export function WidgetFrame({
   resizeLabel,
   style,
   children,
+  onNaturalHeight,
   ref,
 }: WidgetFrameProps) {
   const open = editing ? true : !(empty || collapsed);
+  const rootRef = useRef<HTMLElement | null>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    const header = headerRef.current;
+    const content = contentRef.current;
+    if (!onNaturalHeight || !root || !header || !content) return;
+    const report = () =>
+      onNaturalHeight(
+        root.offsetHeight -
+          root.clientHeight +
+          header.offsetHeight +
+          (open ? content.offsetHeight : 0),
+      );
+    report();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(report);
+    ro.observe(header);
+    ro.observe(content);
+    return () => ro.disconnect();
+  }, [onNaturalHeight, open]);
   const canToggle = !!onToggleCollapse && !editing && !empty;
 
   return (
@@ -101,7 +137,11 @@ export function WidgetFrame({
         dragging && "z-[5] transition-none",
       )}
       data-testid={WidgetFrameTestId.Root}
-      ref={ref}
+      ref={(el) => {
+        rootRef.current = el;
+        if (typeof ref === "function") ref(el);
+        else if (ref) ref.current = el;
+      }}
       style={style}
     >
       <header
@@ -112,6 +152,7 @@ export function WidgetFrame({
         )}
         data-testid={WidgetFrameTestId.Header}
         onPointerDown={editing ? onMovePointerDown : undefined}
+        ref={headerRef}
       >
         <span className="font-medium text-ink" data-testid={WidgetFrameTestId.Label}>
           {label}
@@ -168,15 +209,17 @@ export function WidgetFrame({
         data-testid={WidgetFrameTestId.Body}
         hidden={!open}
       >
-        {children}
-        {editing && empty ? (
-          <div
-            className="mx-[12px] my-[10px] border border-dashed border-line-2 px-[12px] py-[10px] text-[12px] text-ink-2"
-            data-testid={WidgetFrameTestId.Empty}
-          >
-            {emptyText}
-          </div>
-        ) : null}
+        <div data-testid={WidgetFrameTestId.Content} ref={contentRef}>
+          {children}
+          {editing && empty ? (
+            <div
+              className="mx-[12px] my-[10px] border border-dashed border-line-2 px-[12px] py-[10px] text-[12px] text-ink-2"
+              data-testid={WidgetFrameTestId.Empty}
+            >
+              {emptyText}
+            </div>
+          ) : null}
+        </div>
       </div>
       {editing ? (
         <>
