@@ -26,8 +26,11 @@ test("new task with an explicit department entry: the task appears in Tasks", as
   await page.getByRole("button", { name: "Create task" }).click();
 
   // Submit routes to `/work/tasks/[id]` on success (`NewTaskScreen.submit`'s
-  // `onSuccess`) — the durable outcome, not a transient toast.
-  await expect(page).toHaveURL(/\/work\/tasks\/.+/, { timeout: 20000 });
+  // `onSuccess`) — the durable outcome, not a transient toast. `(?!new)` matters:
+  // the create page itself is `/work/tasks/new`, so a bare `.+` matches before the
+  // POST returns (it can take several seconds while stage 2 ranks the department's
+  // roster) and the list below would load without the task.
+  await expect(page).toHaveURL(/\/work\/tasks\/(?!new)[^/?]+$/, { timeout: 30000 });
 
   // The task is listed in `/work/tasks` by its title.
   await page.goto("/work/tasks");

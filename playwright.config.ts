@@ -61,6 +61,9 @@ const apiEnv: Record<string, string> = {
   // sometimes never gating), which is why the agent card used to be flaky/absent.
   CLAUDE_BIN: path.resolve("apps/api/test/fixtures/fake-claude.mjs"),
   FAKE_CLAUDE_INTENT: JSON.stringify({ action: "send_message", context: "post the drafted reply" }),
+  // The reply researcher (`--safe-mode`) answers with this text; unset, the fixture
+  // yields "no concrete answer" and — by design — no channel approval is ever drafted.
+  FAKE_CLAUDE_DRAFT: "The deadline is driven by the release branch — README.md:12.",
   FAKE_CLAUDE_STEPS: "4",
   FAKE_CLAUDE_DELAY_MS: "40",
 };

@@ -151,7 +151,9 @@ export default async function globalSetup(): Promise<void> {
   // `/integrations` route any more.
   await ctx
     .post("/api/projects", {
-      data: { id: "demo-project", name: "Demo Project" },
+      // `path` gives the reply researcher a local repo to run in (`ReplyDraftService.repoFor`);
+      // without one it drafts nothing and no channel approval ever surfaces.
+      data: { id: "demo-project", name: "Demo Project", path: process.cwd() },
     })
     .catch(() => {});
   await ctx

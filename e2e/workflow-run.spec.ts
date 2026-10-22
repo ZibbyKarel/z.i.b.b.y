@@ -24,7 +24,8 @@ test("open a workflow, see its phase chain, and run it via the task composer", a
   // dispatch target (a pre-fill, not a lock — classification still runs and the operator
   // can change it). The plan preview names the chosen target.
   await page.getByRole("button", { name: "Run workflow" }).click();
-  const dialog = page.getByRole("dialog");
+  // The workflow detail panel is itself a dialog, so name the composer.
+  const dialog = page.getByRole("dialog", { name: "NEW TASK" });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText("ZIBBY will hand this to Demo Pipe")).toBeVisible();
 
