@@ -155,6 +155,7 @@ export function useBridgeState() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       const el = e.target;
+      if (el instanceof HTMLElement && el.closest('[role="dialog"]')) return;
       if (
         el instanceof HTMLElement &&
         (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)

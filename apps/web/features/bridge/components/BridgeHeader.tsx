@@ -5,8 +5,11 @@ import {
   CommandBarButton,
   CommandBarGroup,
   CommandBarText,
+  ConfirmDeleteButton,
+  Container,
   DENSITIES,
   DensityMenu,
+  MenuButton,
   SegmentedControl,
 } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
@@ -46,28 +49,41 @@ function useMinuteClock(): Date | null {
   return now;
 }
 
+export enum BridgeHeaderTestId {
+  More = "bridge-header-more",
+  Favorite = "bridge-header-favorite",
+  Delete = "bridge-header-delete",
+}
+
 export interface BridgeHeaderProps {
   preset: string;
   /** Saved layout names, in creation order. */
   saved: readonly string[];
+  /** Saved layouts shown directly in the header (names not in `saved` are ignored). */
+  favorites: readonly string[];
   editing: boolean;
   onPreset: (name: string) => void;
   onToggleEditing: () => void;
   onToggleCatalog: () => void;
   onSaveAs: () => void;
   onReset: () => void;
+  onToggleFavorite: (name: string) => void;
+  onDelete: (name: string) => void;
 }
 
 /** The Bridge header: layout presets, density (system-wide), edit controls and the clock. */
 export function BridgeHeader({
   preset,
   saved,
+  favorites,
   editing,
   onPreset,
   onToggleEditing,
   onToggleCatalog,
   onSaveAs,
   onReset,
+  onToggleFavorite,
+  onDelete,
 }: BridgeHeaderProps) {
   const t = useTranslations("bridge");
   const locale = useLocale();
@@ -82,12 +98,15 @@ export function BridgeHeader({
         : name === CUSTOM_PRESET
           ? t("preset.CUSTOM")
           : name;
+  const isFav = (n: string) => favorites.includes(n);
+  const others = saved.filter((n) => !isFav(n));
   const names = [
     "DEFAULT",
     "REVIEW",
-    ...saved,
+    ...saved.filter((n) => isFav(n) || n === preset),
     ...(preset === CUSTOM_PRESET ? [CUSTOM_PRESET] : []),
   ];
+  const activeSaved = saved.includes(preset);
 
   return (
     <CommandBar logo={false} title={t("title")}>
@@ -100,6 +119,15 @@ export function BridgeHeader({
           onChange={(name) => name !== CUSTOM_PRESET && onPreset(name)}
           value={preset}
         />
+        {others.length > 0 ? (
+          <Container data-testid={BridgeHeaderTestId.More}>
+            <MenuButton
+              ariaLabel={t("moreLayouts")}
+              items={others.map((n) => ({ id: n, label: n, onSelect: () => onPreset(n) }))}
+              variant="kebab"
+            />
+          </Container>
+        ) : null}
       </CommandBarGroup>
       <DensityMenu
         label={t("density.label")}
@@ -111,6 +139,22 @@ export function BridgeHeader({
         <CommandBarGroup>
           <CommandBarButton onClick={onToggleCatalog}>{t("addWidget")}</CommandBarButton>
           <CommandBarButton onClick={onSaveAs}>{t("saveAs")}</CommandBarButton>
+          {activeSaved ? (
+            <>
+              <Container data-testid={BridgeHeaderTestId.Favorite}>
+                <CommandBarButton onClick={() => onToggleFavorite(preset)}>
+                  {isFav(preset) ? t("unfavorite") : t("favorite")}
+                </CommandBarButton>
+              </Container>
+              <Container data-testid={BridgeHeaderTestId.Delete}>
+                <ConfirmDeleteButton
+                  confirmLabel={t("deleteLayoutConfirm")}
+                  label={t("deleteLayout")}
+                  onConfirm={() => onDelete(preset)}
+                />
+              </Container>
+            </>
+          ) : null}
           <CommandBarButton onClick={onReset}>{t("reset")}</CommandBarButton>
         </CommandBarGroup>
       ) : null}

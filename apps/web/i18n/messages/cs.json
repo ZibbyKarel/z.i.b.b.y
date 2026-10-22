@@ -3361,6 +3361,20 @@
         "openApproval": "CELÉ SCHVÁLENÍ ↗",
         "output": "VÝSTUP FÁZE"
       }
+    },
+    "moreLayouts": "Další layouty",
+    "favorite": "★ OBLÍBENÝ",
+    "unfavorite": "☆ ZRUŠIT OBLÍBENÝ",
+    "deleteLayout": "SMAZAT",
+    "deleteLayoutConfirm": "OPRAVDU SMAZAT",
+    "saveAsTitle": "Uložit layout jako",
+    "layoutName": "Název layoutu",
+    "save": "Uložit",
+    "layoutNameError": {
+      "required": "Zadej název.",
+      "tooLong": "Nejvýš 40 znaků.",
+      "reserved": "Tento název je vyhrazený.",
+      "taken": "Layout s tímto názvem už existuje."
     }
   }
 }

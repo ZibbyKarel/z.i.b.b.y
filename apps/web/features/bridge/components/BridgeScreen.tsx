@@ -8,6 +8,7 @@ import { useBridgeState } from "../state/useBridgeState";
 import { WIDGETS, WIDGET_TYPES } from "../widgets/registry";
 import { BridgeBoard } from "./BridgeBoard";
 import { BridgeHeader } from "./BridgeHeader";
+import { SaveLayoutDialog } from "./SaveLayoutDialog";
 import { DetailSheet } from "./DetailSheet";
 
 export enum BridgeScreenTestId {
@@ -19,6 +20,7 @@ export function BridgeScreen() {
   const t = useTranslations();
   const state = useBridgeState();
   const { ui } = useUiSettings();
+  const [saveOpen, setSaveOpen] = useState(false);
   const [sheetSide, setSheetSide] = useState<"left" | "right">("right");
 
   const onBoard = new Set(state.layout.map((w) => w.type));
@@ -36,11 +38,14 @@ export function BridgeScreen() {
     >
       <BridgeHeader
         editing={state.editing}
+        favorites={state.favorites}
+        onDelete={state.deleteSaved}
         onPreset={state.applyPreset}
         onReset={state.reset}
-        onSaveAs={() => state.saveAs(state.nextName)}
+        onSaveAs={() => setSaveOpen(true)}
         onToggleCatalog={state.toggleCatalog}
         onToggleEditing={state.toggleEditing}
+        onToggleFavorite={state.toggleFavorite}
         preset={state.preset}
         saved={Object.keys(state.saved)}
       />
@@ -53,6 +58,16 @@ export function BridgeScreen() {
           selection={state.selection}
         />
       </Stack>
+      <SaveLayoutDialog
+        initialName={state.nextName}
+        onClose={() => setSaveOpen(false)}
+        onSave={(name) => {
+          state.saveAs(name);
+          setSaveOpen(false);
+        }}
+        open={saveOpen}
+        saved={state.saved}
+      />
       {state.catalogOpen ? (
         <WidgetCatalog
           addLabel={t("bridge.catalog.add")}

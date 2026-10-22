@@ -3361,6 +3361,20 @@
         "openApproval": "FULL APPROVAL ↗",
         "output": "PHASE OUTPUT"
       }
+    },
+    "moreLayouts": "More layouts",
+    "favorite": "★ FAVORITE",
+    "unfavorite": "☆ UNFAVORITE",
+    "deleteLayout": "DELETE",
+    "deleteLayoutConfirm": "CONFIRM DELETE",
+    "saveAsTitle": "Save layout as",
+    "layoutName": "Layout name",
+    "save": "Save",
+    "layoutNameError": {
+      "required": "Enter a name.",
+      "tooLong": "At most 40 characters.",
+      "reserved": "This name is reserved.",
+      "taken": "A layout with this name already exists."
     }
   }
 }
