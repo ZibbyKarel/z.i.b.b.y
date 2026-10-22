@@ -1,5 +1,10 @@
 import { Injectable, Optional } from "@nestjs/common";
-import type { InboxPrThread, ReplyInboxPrThreadInput } from "@zibby/contracts";
+import type {
+  InboxPrThread,
+  ReplyInboxPrThreadInput,
+  SubmitInboxPrReviewInput,
+  SubmitInboxPrReviewResult,
+} from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { CredentialsStore } from "../integrations/credentials.store";
 import { resolveGithubToken } from "../projects/project-pr.service";
@@ -109,6 +114,40 @@ export class InboxPrThreadsService {
     return after;
   }
 
+  /** Posts the operator's own review (approve / request changes / comment) on one PR. */
+  async submitReview(
+    projectId: string,
+    number: number,
+    input: SubmitInboxPrReviewInput,
+  ): Promise<SubmitInboxPrReviewResult> {
+    const { repo, token } = await this.open(projectId);
+    const res = await this.fetchImpl(
+      `https://api.github.com/repos/${repo}/pulls/${number}/reviews`,
+      {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${token}`,
+          accept: "application/vnd.github+json",
+          "x-github-api-version": "2022-11-28",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ event: input.event, ...(input.body ? { body: input.body } : {}) }),
+        signal: AbortSignal.timeout(GITHUB_TIMEOUT_MS),
+      },
+    );
+    if (!res.ok) {
+      throw new GithubThreadsError(res.status, `HTTP ${res.status}${await githubReason(res)}`);
+    }
+    const { id } = (await res.json()) as { id: number };
+    void this.activity?.record({
+      kind: "channel-reply",
+      summary: `reviewed ${repo}#${number} (${input.event})`,
+      refs: { projectId },
+    });
+    this.log?.info(`reviewed ${repo}#${number}`, { event: input.event });
+    return { id };
+  }
+
   private async read(gql: Gql, repo: string, number: number): Promise<InboxPrThread[]> {
     const [owner, name] = repo.split("/");
     const data = await gql<{
@@ -132,7 +171,7 @@ export class InboxPrThreadsService {
     }));
   }
 
-  private async open(projectId: string): Promise<{ gql: Gql; repo: string }> {
+  private async open(projectId: string): Promise<{ gql: Gql; repo: string; token: string }> {
     const project = await this.projects.get(projectId); // ProjectNotFoundError → 404
     const link = await resolveGithubToken(this.resolvedProjects, this.credentials, project);
     if (!link) throw new NoGithubLinkError(project.id);
@@ -152,7 +191,7 @@ export class InboxPrThreadsService {
       }
       return json.data;
     };
-    return { gql, repo: link.repo };
+    return { gql, repo: link.repo, token: link.token };
   }
 }
 

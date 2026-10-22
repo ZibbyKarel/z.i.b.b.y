@@ -14,6 +14,8 @@ import {
   ReviewInboxPrInputSchema,
   ReviewInboxPrResultSchema,
   SetInboxHiddenSchema,
+  SubmitInboxPrReviewInputSchema,
+  SubmitInboxPrReviewResultSchema,
 } from "./inbox.schema";
 
 const c = initContract();
@@ -122,6 +124,22 @@ export const inboxContract = c.router(
       body: ReplyInboxPrThreadInputSchema,
       responses: { 200: InboxPrThreadSchema, 404: ErrorSchema, 422: ErrorSchema, 502: ErrorSchema },
       summary: "Reply to and/or resolve one PR review thread; returns the updated thread",
+    },
+    submitInboxPrReview: {
+      method: "POST",
+      path: "/inbox/prs/:projectId/:number/reviews",
+      pathParams: z.object({
+        projectId: z.string().min(1),
+        number: z.coerce.number().int().positive(),
+      }),
+      body: SubmitInboxPrReviewInputSchema,
+      responses: {
+        201: SubmitInboxPrReviewResultSchema,
+        404: ErrorSchema,
+        422: ErrorSchema,
+        502: ErrorSchema,
+      },
+      summary: "Post the operator's own review (approve / request changes / comment) on one PR",
     },
     getInboxState: {
       method: "GET",

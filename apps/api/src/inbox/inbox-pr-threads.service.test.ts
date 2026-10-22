@@ -153,4 +153,48 @@ describe("InboxPrThreadsService", () => {
     fetchImpl.mockResolvedValueOnce(new Response("{}", { status: 401 }));
     await expect(service.list("acme", 7)).rejects.toMatchObject({ status: 401 });
   });
+
+  describe("submitReview", () => {
+    const call = () =>
+      fetchImpl.mock.calls[0] as [string, RequestInit & { headers: Record<string, string> }];
+
+    it("posts the event and body to the reviews endpoint", async () => {
+      fetchImpl.mockResolvedValueOnce(new Response(JSON.stringify({ id: 99 })));
+      expect(
+        await service.submitReview("acme", 7, { event: "REQUEST_CHANGES", body: "fix it" }),
+      ).toEqual({ id: 99 });
+      const [url, init] = call();
+      expect(url).toBe("https://api.github.com/repos/acme/app/pulls/7/reviews");
+      expect(init.method).toBe("POST");
+      expect(init.headers.authorization).toBe("Bearer tok");
+      expect(JSON.parse(init.body as string)).toEqual({ event: "REQUEST_CHANGES", body: "fix it" });
+      expect(record).toHaveBeenCalledTimes(1);
+    });
+
+    it("omits an empty body on approve", async () => {
+      fetchImpl.mockResolvedValueOnce(new Response(JSON.stringify({ id: 1 })));
+      await service.submitReview("acme", 7, { event: "APPROVE" });
+      expect(JSON.parse(call()[1].body as string)).toEqual({ event: "APPROVE" });
+    });
+
+    it("surfaces GitHub's refusal", async () => {
+      fetchImpl.mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: "Can not approve your own pull request" }), {
+          status: 422,
+        }),
+      );
+      const err = await service.submitReview("acme", 7, { event: "APPROVE" }).catch((e) => e);
+      expect(err).toBeInstanceOf(GithubThreadsError);
+      expect(err.status).toBe(422);
+      expect(err.message).toContain("Can not approve your own pull request");
+      expect(record).not.toHaveBeenCalled();
+    });
+
+    it("404s an unknown project", async () => {
+      await expect(service.submitReview("nope", 7, { event: "APPROVE" })).rejects.toBeInstanceOf(
+        ProjectNotFoundError,
+      );
+      expect(fetchImpl).not.toHaveBeenCalled();
+    });
+  });
 });
