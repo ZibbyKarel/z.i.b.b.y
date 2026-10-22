@@ -13,7 +13,7 @@ import {
   dragResize,
   removeWidget,
 } from "../grid/layout";
-import { DEFAULT_PRESET, nextSavedName, presetLayout } from "../grid/presets";
+import { DEFAULT_PRESET, layoutNameError, nextSavedName, presetLayout } from "../grid/presets";
 import type { BridgeSelection } from "../widgets/registry";
 
 export const CUSTOM_PRESET = "CUSTOM";
@@ -37,6 +37,7 @@ export function useBridgeState() {
 
   const bridge = { ...ui.bridge, ...local };
   const { preset, saved, collapsed, epicClosed } = bridge;
+  const favorites = bridge.favorites.filter((n) => n in saved);
   const layout = useMemo(
     () => bridge.layout ?? presetLayout(preset, saved),
     [bridge.layout, preset, saved],
@@ -69,10 +70,41 @@ export function useBridgeState() {
   );
   const reset = useCallback(() => applyPreset(DEFAULT_PRESET), [applyPreset]);
 
-  const saveAs = useCallback(() => {
-    const name = nextSavedName(saved);
-    update({ saved: { ...saved, [name]: layout }, preset: name });
-  }, [update, saved, layout]);
+  const saveAs = useCallback(
+    (raw: string) => {
+      const name = raw.trim();
+      if (layoutNameError(name, saved)) return;
+      update({
+        saved: { ...saved, [name]: layout },
+        favorites: [...favorites, name],
+        preset: name,
+      });
+    },
+    [update, saved, favorites, layout],
+  );
+
+  const deleteSaved = useCallback(
+    (name: string) => {
+      const { [name]: _gone, ...rest } = saved;
+      update({
+        saved: rest,
+        favorites: favorites.filter((n) => n !== name),
+        ...(preset === name ? { preset: CUSTOM_PRESET, layout } : {}),
+      });
+    },
+    [update, saved, favorites, preset, layout],
+  );
+
+  const toggleFavorite = useCallback(
+    (name: string) =>
+      update({
+        favorites: favorites.includes(name)
+          ? favorites.filter((n) => n !== name)
+          : [...favorites, name],
+      }),
+    [update, favorites],
+  );
+  const nextName = nextSavedName(saved);
 
   const toggleCollapsed = useCallback(
     (id: string) => update({ collapsed: { ...collapsed, [id]: !collapsed[id] } }),
@@ -141,6 +173,8 @@ export function useBridgeState() {
     layoutRef,
     preset,
     saved,
+    favorites,
+    nextName,
     collapsed,
     epicClosed,
     editing,
@@ -151,6 +185,8 @@ export function useBridgeState() {
     closeSelection,
     applyPreset,
     saveAs,
+    deleteSaved,
+    toggleFavorite,
     reset,
     toggleCollapsed,
     setEpicClosed,

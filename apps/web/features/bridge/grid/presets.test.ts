@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { compact } from "./layout";
-import { REVIEW_LAYOUT, nextSavedName, presetLayout } from "./presets";
+import { REVIEW_LAYOUT, layoutNameError, nextSavedName, presetLayout } from "./presets";
 
 describe("presets", () => {
   it("REVIEW is already compact", () => {
@@ -16,5 +16,12 @@ describe("presets", () => {
     expect(nextSavedName({})).toBe("MY LAYOUT 01");
     expect(nextSavedName({ "MY LAYOUT 01": 1, "MY LAYOUT 03": 1 })).toBe("MY LAYOUT 02");
     expect(nextSavedName({ "MY LAYOUT 01": 1, "MY LAYOUT 02": 1 })).toBe("MY LAYOUT 03");
+  });
+  it("layoutNameError validates the trimmed name", () => {
+    expect(layoutNameError("  ", {})).toBe("required");
+    expect(layoutNameError("x".repeat(41), {})).toBe("tooLong");
+    expect(layoutNameError("review", {})).toBe("reserved");
+    expect(layoutNameError("my layout 01", { "MY LAYOUT 01": 1 })).toBe("taken");
+    expect(layoutNameError("Mine", { "MY LAYOUT 01": 1 })).toBeNull();
   });
 });

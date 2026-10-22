@@ -38,7 +38,7 @@ export function BridgeScreen() {
         editing={state.editing}
         onPreset={state.applyPreset}
         onReset={state.reset}
-        onSaveAs={state.saveAs}
+        onSaveAs={() => state.saveAs(state.nextName)}
         onToggleCatalog={state.toggleCatalog}
         onToggleEditing={state.toggleEditing}
         preset={state.preset}

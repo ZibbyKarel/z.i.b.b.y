@@ -35,14 +35,50 @@ describe("useBridgeState", () => {
     });
   });
 
-  it("saveAs names layouts MY LAYOUT 01, 02 and selects them", () => {
+  it("saveAs(Mine) saves the current layout, favorites it and selects it", () => {
     const { result } = renderHook(() => useBridgeState());
-    act(() => result.current.saveAs());
-    expect(result.current.preset).toBe("MY LAYOUT 01");
-    expect(Object.keys(result.current.saved)).toEqual(["MY LAYOUT 01"]);
-    act(() => result.current.saveAs());
-    expect(Object.keys(result.current.saved)).toEqual(["MY LAYOUT 01", "MY LAYOUT 02"]);
-    expect(result.current.preset).toBe("MY LAYOUT 02");
+    act(() => result.current.saveAs("  Mine "));
+    expect(result.current.preset).toBe("Mine");
+    expect(result.current.saved["Mine"]).toEqual(compact(DEFAULT_LAYOUT));
+    expect(result.current.favorites).toEqual(["Mine"]);
+    expect(result.current.nextName).toBe("MY LAYOUT 01");
+  });
+
+  it("saveAs with a taken name changes nothing", () => {
+    const { result } = renderHook(() => useBridgeState());
+    act(() => result.current.saveAs("Mine"));
+    setBridge.mockClear();
+    act(() => result.current.saveAs("mine"));
+    expect(setBridge).not.toHaveBeenCalled();
+    expect(Object.keys(result.current.saved)).toEqual(["Mine"]);
+  });
+
+  it("deleteSaved of the active layout keeps the board and flips to CUSTOM", () => {
+    const { result } = renderHook(() => useBridgeState());
+    act(() => result.current.applyPreset("REVIEW"));
+    act(() => result.current.saveAs("Mine"));
+    act(() => result.current.deleteSaved("Mine"));
+    expect(result.current.saved).toEqual({});
+    expect(result.current.preset).toBe("CUSTOM");
+    expect(result.current.layout).toEqual(compact(REVIEW_LAYOUT));
+  });
+
+  it("deleteSaved removes it from favorites", () => {
+    const { result } = renderHook(() => useBridgeState());
+    act(() => result.current.saveAs("Mine"));
+    act(() => result.current.applyPreset("REVIEW"));
+    act(() => result.current.deleteSaved("Mine"));
+    expect(result.current.favorites).toEqual([]);
+    expect(result.current.preset).toBe("REVIEW");
+  });
+
+  it("toggleFavorite adds then removes", () => {
+    const { result } = renderHook(() => useBridgeState());
+    act(() => result.current.saveAs("Mine"));
+    act(() => result.current.toggleFavorite("Mine"));
+    expect(result.current.favorites).toEqual([]);
+    act(() => result.current.toggleFavorite("Mine"));
+    expect(result.current.favorites).toEqual(["Mine"]);
   });
 
   it("reset returns to DEFAULT", () => {

@@ -38,3 +38,18 @@ export function nextSavedName(saved: Readonly<Record<string, unknown>>): string 
     if (!(name in saved)) return name;
   }
 }
+
+const RESERVED = ["DEFAULT", "REVIEW", "CUSTOM"];
+
+/** Why a layout name can't be saved (checked on the trimmed name), or null if it can. */
+export function layoutNameError(
+  name: string,
+  saved: Readonly<Record<string, unknown>>,
+): "required" | "tooLong" | "reserved" | "taken" | null {
+  const n = name.trim().toUpperCase();
+  if (!n) return "required";
+  if (n.length > 40) return "tooLong";
+  if (RESERVED.includes(n)) return "reserved";
+  if (Object.keys(saved).some((k) => k.toUpperCase() === n)) return "taken";
+  return null;
+}

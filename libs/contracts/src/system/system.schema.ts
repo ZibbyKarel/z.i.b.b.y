@@ -36,6 +36,8 @@ export const UiSettingsSchema = z.object({
       preset: z.string().min(1).default("DEFAULT"),
       /** Operator-saved named layouts. */
       saved: z.record(z.string(), z.array(BridgeWidgetSchema)).default({}),
+      /** Names of saved layouts shown directly in the header. */
+      favorites: z.array(z.string()).default([]),
       /** Widget id -> collapsed. */
       collapsed: z.record(z.string(), z.boolean()).default({}),
       /** Epic group key -> closed (Issues widget). */

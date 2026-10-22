@@ -86,7 +86,14 @@ describe("SystemConfigStore", () => {
     it("{} parses to full defaults including ui", () => {
       expect(SystemConfigSchema.parse({}).ui).toEqual({
         density: "airy",
-        bridge: { layout: null, preset: "DEFAULT", saved: {}, collapsed: {}, epicClosed: {} },
+        bridge: {
+          layout: null,
+          preset: "DEFAULT",
+          saved: {},
+          favorites: [],
+          collapsed: {},
+          epicClosed: {},
+        },
       });
     });
 
