@@ -37,6 +37,7 @@ export class PrRefusedError extends Error {
 
 interface GhPullRefs {
   state?: string;
+  user?: { login?: string } | null;
   mergeable?: boolean | null;
   head?: { ref?: string; sha?: string; repo?: { full_name?: string } | null };
   base?: { ref?: string; repo?: { full_name?: string; default_branch?: string } | null };
@@ -61,7 +62,13 @@ export async function readPushablePr(
   fetchImpl: typeof fetch,
   link: { repo: string; token: string },
   number: number,
-): Promise<{ head: string; base: string; headSha: string; mergeable: boolean | null }> {
+): Promise<{
+  head: string;
+  base: string;
+  headSha: string;
+  mergeable: boolean | null;
+  author: string;
+}> {
   const ref = `${link.repo}#${number}`;
   const res = await fetchImpl(`${GITHUB_API}/repos/${link.repo}/pulls/${number}`, {
     headers: { authorization: `Bearer ${link.token}`, accept: "application/vnd.github+json" },
@@ -89,7 +96,7 @@ export async function readPushablePr(
   if (head === base || head === pull.base?.repo?.default_branch) {
     throw new PrRefusedError(`refusing to rewrite "${head}" — it is the base or default branch`);
   }
-  return { head, base, headSha, mergeable: pull.mergeable ?? null };
+  return { head, base, headSha, mergeable: pull.mergeable ?? null, author: pull.user?.login ?? "" };
 }
 
 /** The `rebase` phase's brief (`task.md`). The PR title is inbound content — data only. */

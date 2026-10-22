@@ -4,6 +4,7 @@ import { inboxContract } from "@zibby/contracts";
 import { OperatorTokenGuard } from "../approvals/operator-token.guard";
 import { NoGithubLinkError, ProjectNotFoundError } from "../projects/projects.errors";
 import { InboxAddressCommentsService } from "./inbox-address-comments.service";
+import { InboxFixCiService } from "./inbox-fix-ci.service";
 import { InboxRebaseService, PrRefusedError } from "./inbox-rebase.service";
 import { GithubDiffError, InboxPrDiffService } from "./inbox-pr-diff.service";
 import {
@@ -15,7 +16,7 @@ import { InboxReviewService, ReviewRepoMismatchError } from "./inbox-review.serv
 import { InboxService } from "./inbox.service";
 
 /**
- * Every mutating inbox route is an operator click; rebase and address-comments
+ * Every mutating inbox route is an operator click; rebase, address-comments and fix-ci
  * auto-approve their push ("authorised by the click"), so an agent must not be able
  * to fake the click — all non-GET routes need the operator token.
  */
@@ -29,6 +30,7 @@ export class InboxController {
     private readonly threads: InboxPrThreadsService,
     private readonly rebases: InboxRebaseService,
     private readonly addressComments: InboxAddressCommentsService,
+    private readonly fixCi: InboxFixCiService,
   ) {}
 
   @TsRestHandler(inboxContract)
@@ -69,6 +71,23 @@ export class InboxController {
       addressInboxPrComments: async ({ body }) => {
         try {
           return { status: 201 as const, body: await this.addressComments.start(body) };
+        } catch (error) {
+          if (error instanceof ProjectNotFoundError) {
+            return { status: 404 as const, body: { message: error.message } };
+          }
+          if (
+            error instanceof NoGithubLinkError ||
+            error instanceof ReviewRepoMismatchError ||
+            error instanceof PrRefusedError
+          ) {
+            return { status: 422 as const, body: { message: error.message } };
+          }
+          throw error;
+        }
+      },
+      fixInboxPrCi: async ({ body }) => {
+        try {
+          return { status: 201 as const, body: await this.fixCi.start(body) };
         } catch (error) {
           if (error instanceof ProjectNotFoundError) {
             return { status: 404 as const, body: { message: error.message } };

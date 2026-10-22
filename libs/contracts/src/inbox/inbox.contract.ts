@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ErrorSchema } from "../common.schema";
 import {
   AddressInboxPrCommentsInputSchema,
+  FixInboxPrCiInputSchema,
   InboxItemsResponseSchema,
   InboxPrDiffSchema,
   InboxPrThreadSchema,
@@ -81,6 +82,20 @@ export const inboxContract = c.router(
       },
       summary:
         "Start an agent that fixes one PR's unresolved review comments (pr-address-comments workflow); ZIBBY fast-forwards the PR head — right away when every comment was addressed with green checks, after a Tier-3 approval otherwise",
+    },
+    fixInboxPrCi: {
+      method: "POST",
+      path: "/inbox/prs/fix-ci",
+      body: FixInboxPrCiInputSchema,
+      responses: {
+        201: ReviewInboxPrResultSchema,
+        404: ErrorSchema,
+        // 422: no GitHub link, foreign repo, fork head, closed PR, a base/default-branch head,
+        // or a run already in flight.
+        422: ErrorSchema,
+      },
+      summary:
+        "Start an agent that fixes one PR's failing CI checks (pr-fix-ci workflow); ZIBBY fast-forwards the PR head — right away on the operator's own PR after a full fix, after a Tier-3 approval otherwise",
     },
     getInboxPrDiff: {
       method: "GET",

@@ -9,7 +9,7 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 /**
  * Every mutating route of a controller it guards needs the operator token: the
  * approvals decisions (approve/reject/revise/answer) and the inbox clicks whose task
- * output is auto-approved (rebase, address-comments).
+ * output is auto-approved (rebase, address-comments, fix-ci).
  */
 @Injectable()
 export class OperatorTokenGuard implements CanActivate {

@@ -271,6 +271,17 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
     }));
   }
 
+  /** "Fix CI" — patch the fix-ci provenance (`prFixCi`). Server-only. */
+  async setPrFixCi(
+    id: string,
+    patch: (current: ScheduledTask["prFixCi"]) => ScheduledTask["prFixCi"],
+  ): Promise<ScheduledTask> {
+    return this.updateEntity(id, (existing) => ({
+      ...existing,
+      prFixCi: patch(existing.prFixCi),
+    }));
+  }
+
   /**
    * Patch the stage-1 classification trace in place.
    *

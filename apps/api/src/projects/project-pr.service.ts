@@ -63,7 +63,7 @@ export async function resolveGithubToken(
   resolvedProjects: ResolvedProjectService,
   credentials: CredentialsStore,
   project: Project,
-): Promise<{ repo: string; token: string } | null> {
+): Promise<{ repo: string; token: string; username?: string } | null> {
   const integrations = await resolvedProjects.resolveIntegrations(project);
   const github = integrations.find((integration) => integration.config.kind === "github");
   if (!github) return null;
@@ -73,7 +73,8 @@ export async function resolveGithubToken(
   const creds = await credentials.read(github.id);
   const token = creds ? tokenOf(creds) : null;
   if (!token) return null;
-  return { repo, token };
+  const username = github.config.kind === "github" ? github.config.username : undefined;
+  return { repo, token, ...(username ? { username } : {}) };
 }
 
 /** Map one GitHub `pulls` list entry to the wire `ProjectPr` shape; `null` for a malformed entry. */

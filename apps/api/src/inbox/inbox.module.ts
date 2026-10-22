@@ -8,6 +8,7 @@ import { TasksModule } from "../tasks/tasks.module";
 import { WorkspaceModule } from "../workspace/workspace.module";
 import { INBOX_STATE_FILE, InboxStateStore } from "./inbox-state.store";
 import { InboxAddressCommentsService } from "./inbox-address-comments.service";
+import { InboxFixCiService } from "./inbox-fix-ci.service";
 import { InboxPrDiffService } from "./inbox-pr-diff.service";
 import { InboxPrThreadsService } from "./inbox-pr-threads.service";
 import { InboxRebaseService } from "./inbox-rebase.service";
@@ -39,6 +40,7 @@ export function resolveInboxStateFile(): string {
     InboxReviewService,
     InboxRebaseService,
     InboxAddressCommentsService,
+    InboxFixCiService,
     InboxPrDiffService,
     InboxPrThreadsService,
   ],

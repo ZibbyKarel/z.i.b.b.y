@@ -7,6 +7,7 @@ import { OperatorTokenService } from "../approvals/operator-token.service";
 import { GithubDiffError, InboxPrDiffService } from "./inbox-pr-diff.service";
 import { ProjectNotFoundError } from "../projects/projects.errors";
 import { InboxAddressCommentsService } from "./inbox-address-comments.service";
+import { InboxFixCiService } from "./inbox-fix-ci.service";
 import { InboxRebaseService, PrRefusedError } from "./inbox-rebase.service";
 import {
   GithubThreadsError,
@@ -46,6 +47,14 @@ describe("InboxController getInboxPrDiff GitHub error mapping", () => {
             start: async () => {
               if (addressError) throw addressError;
               return { taskId: "task_a1" };
+            },
+          },
+        },
+        {
+          provide: InboxFixCiService,
+          useValue: {
+            start: async () => {
+              throw new PrRefusedError("fixing CI on acme/app#7 is already running");
             },
           },
         },
@@ -90,7 +99,7 @@ describe("InboxController getInboxPrDiff GitHub error mapping", () => {
     expect(res.body.message).toContain(String(gh));
   });
 
-  it.each(["/api/inbox/prs/rebase", "/api/inbox/prs/address-comments"])(
+  it.each(["/api/inbox/prs/rebase", "/api/inbox/prs/address-comments", "/api/inbox/prs/fix-ci"])(
     "POST %s without the operator token is 401",
     async (url) => {
       await request(app.getHttpServer())
@@ -122,6 +131,13 @@ describe("InboxController getInboxPrDiff GitHub error mapping", () => {
       .send({ projectId: "acme", repo: "acme/app", number: 7 })
       .expect(201);
     expect(res.body).toEqual({ taskId: "task_a1" });
+  });
+
+  it("fixInboxPrCi → 422 on PrRefusedError", async () => {
+    const res = await withOperator(request(app.getHttpServer()).post("/api/inbox/prs/fix-ci"))
+      .send({ projectId: "acme", repo: "acme/app", number: 7 })
+      .expect(422);
+    expect(res.body.message).toContain("already running");
   });
 
   it("maps a refused address-comments start to 422 and an unknown project to 404", async () => {

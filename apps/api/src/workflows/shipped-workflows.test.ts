@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { EmployeeSchema, McpServerSchema, WorkflowSchema } from "@zibby/contracts";
 import {
   PR_ADDRESS_COMMENTS_ARTIFACT,
+  PR_FIX_CI_ARTIFACT,
   PR_REBASE_ARTIFACT,
   PR_REPLIES_ARTIFACT,
   PR_REVIEW_ARTIFACT,
@@ -385,5 +386,31 @@ describe("pr-address-comments — the PR inbox's Address review comments button"
         ),
       ).toBe(true);
     }
+  });
+});
+
+describe("pr-fix-ci — the PR inbox's Fix CI button", () => {
+  it("runs one ungated fullstack-developer phase that writes the fix report", () => {
+    const wf = readWorkflow("pr-fix-ci");
+    expect(wf.phases).toHaveLength(1);
+    expect(wf.phases[0]).toMatchObject({
+      id: "fix",
+      agent: "fullstack-developer",
+      consumes: "task.md",
+      produces: PR_FIX_CI_ARTIFACT,
+    });
+    expect(wf.phases[0]?.approval).toBeUndefined();
+    expect(wf.outputs).toEqual([]);
+    expect(wf.department).toBe("dev");
+  });
+
+  it("has a hired dev employee for its agent", () => {
+    const file = path.join(WORKFLOWS_DIR, "../employees/employee_fullstack-developer.json");
+    const employee = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
+    expect(employee).toMatchObject({
+      agentId: "fullstack-developer",
+      department: "dev",
+      status: "active",
+    });
   });
 });
