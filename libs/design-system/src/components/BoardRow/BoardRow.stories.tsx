@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { BoardTag } from "../BoardTag/BoardTag";
 import { BoardText } from "../BoardText/BoardText";
-import { BoardColumnHeader, BoardGrid, BoardRow } from "./BoardRow";
+import { IconTile } from "../IconTile/IconTile";
+import { BoardColumnHeader, BoardGrid, BoardLine, BoardRow } from "./BoardRow";
 
 const meta: Meta<typeof BoardRow> = {
   title: "DesignSystem/BoardRow",
@@ -24,16 +25,18 @@ type Story = StoryObj<typeof BoardRow>;
 const issue = (tag?: boolean) => (
   <>
     <BoardGrid columns="issue">
-      <BoardText kind="id">ZB-142</BoardText>
-      <BoardText kind="title">Checkout fails on empty cart</BoardText>
+      <IconTile filled={false} glyph="checkpoint" size="xs" tone="neutral" />
+      <BoardLine gap="6">
+        <BoardText kind="id">ZB-142</BoardText>
+        <BoardText kind="title">Checkout fails on empty cart</BoardText>
+      </BoardLine>
       {tag ? <BoardTag variant="you">YOU · 2H</BoardTag> : <span />}
     </BoardGrid>
-    <span className="flex items-center gap-[6px] pl-[70px]">
-      <BoardTag variant="source">JIRA</BoardTag>
+    <BoardLine gap="6" indent="icon">
       <BoardText kind="meta" tone="ink">
         WAITING FOR YOU
       </BoardText>
-    </span>
+    </BoardLine>
   </>
 );
 

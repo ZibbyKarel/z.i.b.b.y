@@ -13,6 +13,13 @@ describe("IconTile", () => {
     expect(screen.getByTestId(IconTestId.Root)).toBeInTheDocument();
   });
 
+  it("xs renders 16px", () => {
+    render(<IconTile glyph="bot" size="xs" />);
+    const tile = screen.getByTestId(IconTileTestId.Root);
+    expect(tile.style.width).toBe("16px");
+    expect(tile.style.height).toBe("16px");
+  });
+
   it("renders children instead of a glyph when provided", () => {
     render(
       <IconTile>

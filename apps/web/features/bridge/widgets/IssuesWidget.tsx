@@ -6,10 +6,12 @@ import {
   BoardRow,
   BoardTag,
   BoardText,
+  IconTile,
   RowGroupHeader,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { Fragment, useMemo } from "react";
+import { sourceIcon } from "../../integrations/kindIcon";
 import { useNow } from "../../../hooks/useNow";
 import { compactAgo } from "../../../utils/time";
 import { visibleItems } from "../../inbox/inbox";
@@ -18,6 +20,10 @@ import { issueGroups } from "../state/rows";
 import { useBridgeInboxFilters } from "../state/useBridgeInboxFilters";
 import type { BridgeWidgetProps } from "./registry";
 import { useWidgetReport } from "./useWidgetReport";
+
+export enum IssuesWidgetTestId {
+  Source = "issues-widget-source",
+}
 
 /**
  * Issues: exactly the set the `/dashboard/inbox/issues` screen lists with its defaults (stored
@@ -99,8 +105,22 @@ export function IssuesWidget({
                     tone={r.tone}
                   >
                     <BoardGrid columns="issue">
-                      <BoardText kind="id">{r.code}</BoardText>
-                      <BoardText kind="title">{r.title}</BoardText>
+                      <IconTile
+                        {...sourceIcon(r.sourceKind)}
+                        alt={r.source}
+                        aria-label={r.source}
+                        data-testid={IssuesWidgetTestId.Source}
+                        filled={false}
+                        radius="sm"
+                        role="img"
+                        size="xs"
+                        title={r.source}
+                        tone="neutral"
+                      />
+                      <BoardLine gap="6">
+                        <BoardText kind="id">{r.code}</BoardText>
+                        <BoardText kind="title">{r.title}</BoardText>
+                      </BoardLine>
                       {r.needsYou ? (
                         <BoardTag variant="you">{t("you", { wait: r.needsYou })}</BoardTag>
                       ) : (
@@ -108,15 +128,14 @@ export function IssuesWidget({
                       )}
                     </BoardGrid>
                     <BoardLine
-                      indent
                       end={
                         <BoardText kind="meta" tone="ink3">
                           {r.age}
                         </BoardText>
                       }
                       gap="6"
+                      indent="icon"
                     >
-                      <BoardTag variant="source">{r.source}</BoardTag>
                       <BoardText kind="meta" tone="ink">
                         {t(`state.${r.status}`)}
                       </BoardText>

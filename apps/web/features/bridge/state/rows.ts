@@ -1,4 +1,10 @@
-import type { BudgetStatus, InboxEpic, InboxPr, InboxRoadmapItem } from "@zibby/contracts";
+import type {
+  BudgetStatus,
+  InboxEpic,
+  InboxPr,
+  InboxRoadmapItem,
+  RoadmapSourceKind,
+} from "@zibby/contracts";
 import { type StateTone, normalizeStateTone } from "@zibby/design-system";
 import {
   type InboxFilters,
@@ -53,6 +59,7 @@ export interface IssueRowVm {
   needsYou: string | null;
   /** Source chip text (`JIRA`, `GITHUB`, `MANUAL`). */
   source: string;
+  sourceKind: RoadmapSourceKind;
   project: string;
   /** `#n` of the linked PR, else null. */
   pr: string | null;
@@ -97,6 +104,7 @@ export function issueRow(
     status,
     needsYou: status === "waiting" ? age : null,
     source: item.source.kind.toUpperCase(),
+    sourceKind: item.source.kind,
     project: item.project.name.toUpperCase(),
     pr: pr ? `#${pr.number}` : null,
     age,

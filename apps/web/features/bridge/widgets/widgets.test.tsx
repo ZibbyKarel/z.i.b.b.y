@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen, within } from "../../../test/render";
 import type { BridgeWidget } from "../grid/layout";
 import { BriefingWidget } from "./BriefingWidget";
-import { IssuesWidget } from "./IssuesWidget";
+import { IssuesWidget, IssuesWidgetTestId } from "./IssuesWidget";
 import { PrsWidget } from "./PrsWidget";
 import type { BridgeWidgetProps } from "./registry";
 import { RunsWidget } from "./RunsWidget";
@@ -132,6 +132,20 @@ beforeEach(() => {
 });
 
 describe("IssuesWidget", () => {
+  it("issue rows show the integration icon instead of the source chip", () => {
+    d.items = [item("a")];
+    renderWithProviders(<IssuesWidget {...setup({ widget: widget("w", "issues") })} />);
+    expect(screen.getByTestId(IssuesWidgetTestId.Source)).toHaveAccessibleName("JIRA");
+    expect(screen.queryByText("JIRA")).toBeNull();
+  });
+
+  it("the issue id sits on the title line", () => {
+    d.items = [item("a")];
+    renderWithProviders(<IssuesWidget {...setup({ widget: widget("w", "issues") })} />);
+    const line = screen.getByText("ZB-a").closest("[data-testid='board-row-line']");
+    expect(line).toHaveTextContent("Item a");
+  });
+
   it("lists issues under their epic with data-rk, opens on click, folds the epic", async () => {
     d.items = [
       item("a", { parentId: "e1", lifecycle: "failed" }),

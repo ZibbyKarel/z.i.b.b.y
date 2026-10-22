@@ -89,6 +89,7 @@ describe("issues", () => {
       tone: "blocked",
       needsYou: "ago:2026-10-01",
       source: "JIRA",
+      sourceKind: "jira",
       project: "SHOP",
       pr: null,
     });

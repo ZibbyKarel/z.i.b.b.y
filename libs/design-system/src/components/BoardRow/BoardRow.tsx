@@ -15,7 +15,7 @@ export type BoardRowTone = StateTone | "neutral";
 export type BoardColumns = "issue" | "task" | "run";
 
 const TEMPLATE: Record<BoardColumns, string> = {
-  issue: "grid-cols-[84px_minmax(0,1fr)_auto] gap-[8px]",
+  issue: "grid-cols-[16px_minmax(0,1fr)_auto] gap-[8px]",
   task: "grid-cols-[66px_minmax(0,1fr)_auto_auto] gap-[10px]",
   run: "grid-cols-[minmax(0,1fr)_120px_64px] gap-[10px]",
 };
@@ -149,8 +149,8 @@ export interface BoardLineProps {
   gap: keyof typeof LINE_GAP;
   /** `col` stacks the parts. Default `row`. */
   direction?: "row" | "col";
-  /** Left padding of 92px — aligns a second line under the title (past the 84px id column). */
-  indent?: boolean;
+  /** `true`: left padding of 92px (past an 84px id column). `"icon"`: 24px — aligns under the text past a 16px icon + 8px gap. */
+  indent?: boolean | "icon";
   wrap?: boolean;
   baseline?: boolean;
   /** Spread parts to both ends. */
@@ -177,7 +177,7 @@ export function BoardLine({
         "flex min-w-0",
         LINE_GAP[gap],
         direction === "col" ? "flex-col" : baseline ? "items-baseline" : "items-center",
-        indent && "pl-[92px] overflow-hidden",
+        indent && cn("overflow-hidden", indent === "icon" ? "pl-[24px]" : "pl-[92px]"),
         wrap && "flex-wrap",
         between && "justify-between",
       )}

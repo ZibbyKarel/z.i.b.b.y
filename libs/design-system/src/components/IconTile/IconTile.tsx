@@ -13,13 +13,14 @@ export enum IconTileTestId {
   Image = "icon-tile-image",
 }
 
-export type IconTileSize = "sm" | "md" | "lg" | "xl";
+export type IconTileSize = "xs" | "sm" | "md" | "lg" | "xl";
 export type IconTileTone = "accent" | "neutral";
 export type IconTileRadius = "sm" | "default";
 export type IconTileShape = "square" | "circle";
 
 /** Outer tile diameter in px, sealed to a small scale. */
 const tilePx: Record<IconTileSize, number> = {
+  xs: 16,
   sm: 30,
   md: 34,
   lg: 44,
@@ -28,6 +29,7 @@ const tilePx: Record<IconTileSize, number> = {
 
 /** Inner glyph size paired to each tile size. */
 const innerIcon: Record<IconTileSize, Size> = {
+  xs: "xs",
   sm: "sm",
   md: "md",
   lg: "lg",

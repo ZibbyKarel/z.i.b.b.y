@@ -85,7 +85,7 @@ describe("BoardRow", () => {
     );
     expect(screen.getByTestId(BoardRowTestId.ColumnHeader)).toHaveTextContent("head");
     expect(screen.getByTestId(BoardRowTestId.Grid)).toHaveClass(
-      "grid-cols-[84px_minmax(0,1fr)_auto]",
+      "grid-cols-[16px_minmax(0,1fr)_auto]",
     );
   });
 
@@ -98,5 +98,14 @@ describe("BoardRow", () => {
     const line = screen.getByTestId(BoardRowTestId.Line);
     expect(line).toHaveClass("gap-[6px]", "pl-[92px]");
     expect(line).toHaveTextContent("chipage");
+  });
+
+  it('indent="icon" aligns under the text past a 16px icon', () => {
+    render(
+      <BoardLine gap="6" indent="icon">
+        chip
+      </BoardLine>,
+    );
+    expect(screen.getByTestId(BoardRowTestId.Line)).toHaveClass("pl-[24px]");
   });
 });
