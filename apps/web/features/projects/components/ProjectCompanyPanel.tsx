@@ -38,6 +38,7 @@ const BUDGET_FIELDS = [
   ["dailyRuns", "fields.budgetDailyRuns"],
   ["weeklyRuns", "fields.budgetWeeklyRuns"],
   ["monthlyRuns", "fields.budgetMonthlyRuns"],
+  ["maxConcurrent", "fields.budgetMaxConcurrent"],
   ["dailyCostCapUsd", "fields.budgetDailyCostCapUsd"],
   ["weeklyCostCapUsd", "fields.budgetWeeklyCostCapUsd"],
   ["monthlyCostCapUsd", "fields.budgetMonthlyCostCapUsd"],

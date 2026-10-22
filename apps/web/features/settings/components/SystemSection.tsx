@@ -24,7 +24,7 @@ export enum SystemSectionTestId {
   LimitResumeTick = "system-limit-resume-tick",
   RoadmapTick = "system-roadmap-tick",
   LimitResumeMax = "system-limit-resume-max",
-  MaxWorkingAgents = "system-max-working-agents",
+  MaxConcurrentRuns = "system-max-concurrent-runs",
   DockDoneTasksLimit = "system-dock-done-tasks-limit",
   GoalVerifyTimeout = "system-goal-verify-timeout",
   GoalAutoResume = "system-goal-auto-resume",
@@ -59,7 +59,9 @@ function SystemEditor({ config }: { config: SystemConfig }) {
   );
   const [roadmapTickMs, setRoadmapTickMs] = useState<number | null>(config.roadmapTickMs);
   const [limitResumeMax, setLimitResumeMax] = useState<number | null>(config.limitResumeMax);
-  const [maxWorkingAgents, setMaxWorkingAgents] = useState<number | null>(config.maxWorkingAgents);
+  const [maxConcurrentRuns, setMaxConcurrentRuns] = useState<number | null>(
+    config.maxConcurrentRuns,
+  );
   const [dockDoneTasksLimit, setDockDoneTasksLimit] = useState<number | null>(
     config.dockDoneTasksLimit,
   );
@@ -86,7 +88,7 @@ function SystemEditor({ config }: { config: SystemConfig }) {
         limitResumeTickMs: tick(limitResumeTickMs),
         roadmapTickMs: tick(roadmapTickMs),
         limitResumeMax: positive(limitResumeMax, 1),
-        maxWorkingAgents: positive(maxWorkingAgents, 1),
+        maxConcurrentRuns: positive(maxConcurrentRuns, 1),
         dockDoneTasksLimit: Math.min(100, positive(dockDoneTasksLimit, 1)),
         goalVerifyTimeoutMs: positive(goalVerifyTimeoutMs, 1),
         goalAutoResume,
@@ -154,12 +156,12 @@ function SystemEditor({ config }: { config: SystemConfig }) {
           value={limitResumeMax}
         />
         <NumberField
-          data-testid={SystemSectionTestId.MaxWorkingAgents}
-          hint={t("runtime.maxWorkingAgentsHint")}
-          label={t("runtime.maxWorkingAgents")}
+          data-testid={SystemSectionTestId.MaxConcurrentRuns}
+          hint={t("runtime.maxConcurrentRunsHint")}
+          label={t("runtime.maxConcurrentRuns")}
           min={1}
-          onValueChange={setMaxWorkingAgents}
-          value={maxWorkingAgents}
+          onValueChange={setMaxConcurrentRuns}
+          value={maxConcurrentRuns}
         />
         <NumberField
           data-testid={SystemSectionTestId.DockDoneTasksLimit}

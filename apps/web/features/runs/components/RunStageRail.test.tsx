@@ -1,9 +1,16 @@
 import { renderWithProviders as render, screen } from "../../../test/render";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import type { RunView } from "../run";
 import type { StageRailRow } from "../runDetailModel";
 import { RunStageRail, RunStageRailTestId } from "./RunStageRail";
+
+const { symbolOfMock, workflowsMock } = vi.hoisted(() => ({
+  symbolOfMock: vi.fn((_id?: string) => ({ glyph: "bot" as const })),
+  workflowsMock: vi.fn(),
+}));
+vi.mock("../../agents", () => ({ useAgentSymbol: () => symbolOfMock }));
+vi.mock("../../workflows/queries", () => ({ useWorkflowsQuery: workflowsMock }));
 
 const run: RunView = {
   runId: "delivery_42",
@@ -53,6 +60,20 @@ function renderRail(over: Partial<RunView> = {}, onSelect = vi.fn(), onOpenFolde
 const stage = (id: string) => screen.getByTestId(`${RunStageRailTestId.Stage}-${id}`);
 
 describe("RunStageRail", () => {
+  beforeEach(() => {
+    symbolOfMock.mockClear();
+    workflowsMock.mockReturnValue({ data: undefined });
+  });
+
+  it("resolves a workflow stage's symbol from the phase's agent, not the phase id", () => {
+    workflowsMock.mockReturnValue({
+      data: [{ id: "delivery", phases: [{ id: "phase1", agent: "koder" }, { id: "phase2" }] }],
+    });
+    renderRail();
+    expect(symbolOfMock).toHaveBeenCalledWith("koder");
+    expect(symbolOfMock).toHaveBeenCalledWith("phase2"); // no agent → falls back to the row id
+  });
+
   it("renders one row per stage and marks the current one selected by default", () => {
     renderRail();
     expect(screen.getAllByTestId(new RegExp(`^${RunStageRailTestId.Stage}-`))).toHaveLength(3);

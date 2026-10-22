@@ -12,7 +12,7 @@ const DEFAULTS: SystemConfig = {
   limitResumeTickMs: 60000,
   roadmapTickMs: 60000,
   limitResumeMax: 3,
-  maxWorkingAgents: 3,
+  maxConcurrentRuns: 3,
   dockDoneTasksLimit: 20,
   goalVerifyTimeoutMs: 600000,
   goalAutoResume: false,
@@ -106,34 +106,34 @@ describe("SystemSection", () => {
     expect(minutes).toHaveValue(30);
   });
 
-  describe("maxWorkingAgents — the machine fuse", () => {
+  describe("maxConcurrentRuns — the run-slot cap", () => {
     it("seeds the control from the loaded fuse (default 3)", () => {
       render(<SystemSection />);
-      expect(screen.getByTestId(SystemSectionTestId.MaxWorkingAgents)).toHaveValue(3);
+      expect(screen.getByTestId(SystemSectionTestId.MaxConcurrentRuns)).toHaveValue(3);
     });
 
     it("Save round-trips a set fuse unchanged", async () => {
-      config = { ...DEFAULTS, maxWorkingAgents: 4 };
+      config = { ...DEFAULTS, maxConcurrentRuns: 4 };
       render(<SystemSection />);
       await userEvent.click(screen.getByTestId(SystemSectionTestId.Save));
-      expect(setConfig).toHaveBeenCalledWith({ body: { ...DEFAULTS, maxWorkingAgents: 4 } });
+      expect(setConfig).toHaveBeenCalledWith({ body: { ...DEFAULTS, maxConcurrentRuns: 4 } });
     });
 
     it("Save PUTs a newly-typed fuse", async () => {
       render(<SystemSection />);
-      const field = screen.getByTestId(SystemSectionTestId.MaxWorkingAgents);
+      const field = screen.getByTestId(SystemSectionTestId.MaxConcurrentRuns);
       await userEvent.clear(field);
       await userEvent.type(field, "8");
       await userEvent.click(screen.getByTestId(SystemSectionTestId.Save));
-      expect(setConfig).toHaveBeenCalledWith({ body: { ...DEFAULTS, maxWorkingAgents: 8 } });
+      expect(setConfig).toHaveBeenCalledWith({ body: { ...DEFAULTS, maxConcurrentRuns: 8 } });
     });
 
     it("a cleared fuse is clamped to the minimum of 1 — the fuse always exists", async () => {
-      config = { ...DEFAULTS, maxWorkingAgents: 4 };
+      config = { ...DEFAULTS, maxConcurrentRuns: 4 };
       render(<SystemSection />);
-      await userEvent.clear(screen.getByTestId(SystemSectionTestId.MaxWorkingAgents));
+      await userEvent.clear(screen.getByTestId(SystemSectionTestId.MaxConcurrentRuns));
       await userEvent.click(screen.getByTestId(SystemSectionTestId.Save));
-      expect(setConfig).toHaveBeenCalledWith({ body: { ...DEFAULTS, maxWorkingAgents: 1 } });
+      expect(setConfig).toHaveBeenCalledWith({ body: { ...DEFAULTS, maxConcurrentRuns: 1 } });
     });
   });
 });

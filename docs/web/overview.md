@@ -324,18 +324,6 @@ features/<domain>/
   components/   ← domain composites (never DS primitives)
 ```
 
-### Org map walkers (hand-offs between departments)
-
-`features/org/screens/OrgMapScreen` polls `useEmployeesQuery({ status: "active" })` every 3 s
-(`refetchInterval`, org map only) and feeds consecutive snapshots to
-`features/org/state/useHandoffWalkers`. `deriveHandoffWalkers` emits one walker
-(`${runId}:${fromId}->${toId}`) when a run's lease (`currentRunId`) moved from employee A to
-employee B in a _different_ department between two polls; the floorplan animates that
-employee's Minion walking to the target room. Walkers are **honest-only**: there is no
-hand-off feed in the API, so no history (first snapshot) or no lease movement means no
-walkers — nothing ambient or fake. Walkers live until the floorplan calls `onWalkerDone`
-(60 s safety TTL).
-
 ## Imports and module boundaries
 
 **A feature's public surface is its barrel.** Every feature consumed by other

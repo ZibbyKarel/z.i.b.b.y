@@ -14,6 +14,7 @@ import { useTranslations } from "next-intl";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { useAgentSymbol } from "../../agents";
 import { toClientTarget } from "../../tasks";
+import { useWorkflowsQuery } from "../../workflows/queries";
 import type { RunView } from "../run";
 import type { StageRailRow } from "../runDetailModel";
 
@@ -59,6 +60,10 @@ export function RunStageRail({
   const t = useTranslations("runs.detail");
   const route = useRouteTrace(run);
   const symbolOf = useAgentSymbol();
+  // A stage row is named by its phase id; the symbol belongs to the phase's agent.
+  const { data: workflows } = useWorkflowsQuery();
+  const phases = run.kind === "workflow" ? workflows?.find((w) => w.id === run.owner)?.phases : [];
+  const agentOf = (phaseId: string) => phases?.find((p) => p.id === phaseId)?.agent ?? phaseId;
   const checkpoints = run.checkpoints ?? [];
   const selected = selectedPhaseId ?? rows.find((r) => r.current)?.phaseId ?? null;
   const showFolder = run.kind === "workflow" && onOpenFolder;
@@ -75,7 +80,7 @@ export function RunStageRail({
         <RailItem
           data-testid={`${RunStageRailTestId.Stage}-${row.phaseId}`}
           key={row.phaseId}
-          leading={<AgentBadge {...symbolOf(row.name)} />}
+          leading={<AgentBadge {...symbolOf(agentOf(row.phaseId))} />}
           meta={
             <>
               <StatusDot size="75" tone={row.state} />
