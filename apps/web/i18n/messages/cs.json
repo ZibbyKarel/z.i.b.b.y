@@ -3169,10 +3169,7 @@
       "open": "OTEVŘENÁ"
     },
     "addWidget": "+ WIDGET",
-    "saveAs": "ULOŽIT JAKO",
-    "reset": "OBNOVIT",
     "editLayout": "UPRAVIT ROZLOŽENÍ",
-    "done": "HOTOVO",
     "catalog": {
       "title": "KATALOG WIDGETŮ",
       "add": "PŘIDAT",
@@ -3363,18 +3360,27 @@
       }
     },
     "moreLayouts": "Další layouty",
-    "favorite": "★ OBLÍBENÝ",
-    "unfavorite": "☆ ZRUŠIT OBLÍBENÝ",
     "deleteLayout": "SMAZAT",
     "deleteLayoutConfirm": "OPRAVDU SMAZAT",
-    "saveAsTitle": "Uložit layout jako",
-    "layoutName": "Název layoutu",
     "save": "Uložit",
     "layoutNameError": {
       "required": "Zadej název.",
       "tooLong": "Nejvýš 40 znaků.",
       "reserved": "Tento název je vyhrazený.",
       "taken": "Layout s tímto názvem už existuje."
-    }
+    },
+    "manage": {
+      "title": "Správa rozložení",
+      "active": "AKTIVNÍ",
+      "moveUp": "Posunout nahoru",
+      "moveDown": "Posunout dolů",
+      "edit": "Upravit",
+      "divider": "V liště nahoře ↑ · v nabídce ↓",
+      "dropShown": "Pusť sem pro zobrazení v liště",
+      "dropHidden": "Pusť sem pro přesun do nabídky",
+      "newName": "Název nového rozložení",
+      "add": "Přidat"
+    },
+    "cancel": "Zrušit"
   }
 }

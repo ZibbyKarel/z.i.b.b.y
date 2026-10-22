@@ -3169,10 +3169,7 @@
       "open": "OPEN"
     },
     "addWidget": "+ WIDGET",
-    "saveAs": "SAVE AS",
-    "reset": "RESET",
     "editLayout": "EDIT LAYOUT",
-    "done": "DONE",
     "catalog": {
       "title": "WIDGET CATALOG",
       "add": "ADD",
@@ -3363,18 +3360,27 @@
       }
     },
     "moreLayouts": "More layouts",
-    "favorite": "★ FAVORITE",
-    "unfavorite": "☆ UNFAVORITE",
     "deleteLayout": "DELETE",
     "deleteLayoutConfirm": "CONFIRM DELETE",
-    "saveAsTitle": "Save layout as",
-    "layoutName": "Layout name",
     "save": "Save",
     "layoutNameError": {
       "required": "Enter a name.",
       "tooLong": "At most 40 characters.",
       "reserved": "This name is reserved.",
       "taken": "A layout with this name already exists."
-    }
+    },
+    "manage": {
+      "title": "Manage layouts",
+      "active": "ACTIVE",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "edit": "Edit",
+      "divider": "Shown in the header above · in the dropdown below",
+      "dropShown": "Drop here to show in the header",
+      "dropHidden": "Drop here to move to the dropdown",
+      "newName": "New layout name",
+      "add": "Add"
+    },
+    "cancel": "Cancel"
   }
 }

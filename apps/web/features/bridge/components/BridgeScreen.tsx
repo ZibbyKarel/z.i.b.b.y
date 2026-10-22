@@ -8,7 +8,7 @@ import { useBridgeState } from "../state/useBridgeState";
 import { WIDGETS, WIDGET_TYPES } from "../widgets/registry";
 import { BridgeBoard } from "./BridgeBoard";
 import { BridgeHeader } from "./BridgeHeader";
-import { SaveLayoutDialog } from "./SaveLayoutDialog";
+import { ManageLayoutsDialog } from "./ManageLayoutsDialog";
 import { DetailSheet } from "./DetailSheet";
 
 export enum BridgeScreenTestId {
@@ -20,7 +20,7 @@ export function BridgeScreen() {
   const t = useTranslations();
   const state = useBridgeState();
   const { ui } = useUiSettings();
-  const [saveOpen, setSaveOpen] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
   const [sheetSide, setSheetSide] = useState<"left" | "right">("right");
 
   const onBoard = new Set(state.layout.map((w) => w.type));
@@ -38,16 +38,13 @@ export function BridgeScreen() {
     >
       <BridgeHeader
         editing={state.editing}
-        favorites={state.favorites}
-        onDelete={state.deleteSaved}
+        layouts={state.layouts}
+        onCancel={state.cancelEdit}
+        onManage={() => setManageOpen(true)}
         onPreset={state.applyPreset}
-        onReset={state.reset}
-        onSaveAs={() => setSaveOpen(true)}
+        onSave={state.saveEdit}
         onToggleCatalog={state.toggleCatalog}
-        onToggleEditing={state.toggleEditing}
-        onToggleFavorite={state.toggleFavorite}
         preset={state.preset}
-        saved={Object.keys(state.saved)}
       />
       <Stack grow minH0 direction="col" style={{ position: "relative" }}>
         <BridgeBoard density={ui.density} sheetSide={sheetSide} state={state} />
@@ -58,14 +55,19 @@ export function BridgeScreen() {
           selection={state.selection}
         />
       </Stack>
-      <SaveLayoutDialog
-        initialName={state.nextName}
-        onClose={() => setSaveOpen(false)}
-        onSave={(name) => {
-          state.saveAs(name);
-          setSaveOpen(false);
+      <ManageLayoutsDialog
+        layouts={state.layouts}
+        nextName={state.nextName}
+        onAdd={state.addLayout}
+        onArrange={state.arrange}
+        onClose={() => setManageOpen(false)}
+        onDelete={state.deleteLayout}
+        onEdit={(name) => {
+          state.startEditing(name);
+          setManageOpen(false);
         }}
-        open={saveOpen}
+        open={manageOpen}
+        preset={state.preset}
         saved={state.saved}
       />
       {state.catalogOpen ? (

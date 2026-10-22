@@ -5,90 +5,48 @@ import {
   CommandBarButton,
   CommandBarGroup,
   CommandBarText,
-  ConfirmDeleteButton,
   Container,
   DENSITIES,
   DensityMenu,
   MenuButton,
   SegmentedControl,
 } from "@zibby/design-system";
-import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useUiSettings } from "../../system";
 import { CUSTOM_PRESET } from "../state/useBridgeState";
 
-/** `THU 24 SEP · 14:32` in the active locale (uppercase). */
-export function formatBridgeClock(now: Date, locale: string): string {
-  const parts = new Intl.DateTimeFormat(locale, {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(now);
-  const get = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((p) => p.type === type)?.value ?? "";
-  const date = [get("weekday"), get("day"), get("month")].filter(Boolean).join(" ");
-  return `${date} · ${get("hour")}:${get("minute")}`.toLocaleUpperCase(locale);
-}
-
-/** Current time, re-rendered at every minute boundary. Null before mount (SSR-safe). */
-function useMinuteClock(): Date | null {
-  const [now, setNow] = useState<Date | null>(null);
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>;
-    const tick = () => {
-      const d = new Date();
-      setNow(d);
-      timer = setTimeout(tick, 60_000 - (d.getSeconds() * 1000 + d.getMilliseconds()));
-    };
-    tick();
-    return () => clearTimeout(timer);
-  }, []);
-  return now;
-}
-
 export enum BridgeHeaderTestId {
   More = "bridge-header-more",
-  Favorite = "bridge-header-favorite",
-  Delete = "bridge-header-delete",
+  Manage = "bridge-header-manage",
+  Save = "bridge-header-save",
+  Cancel = "bridge-header-cancel",
 }
 
 export interface BridgeHeaderProps {
   preset: string;
-  /** Saved layout names, in creation order. */
-  saved: readonly string[];
-  /** Saved layouts shown directly in the header (names not in `saved` are ignored). */
-  favorites: readonly string[];
+  /** Non-DEFAULT layouts: `shown` sit in the header, `hidden` behind the dropdown. */
+  layouts: { shown: readonly string[]; hidden: readonly string[] };
   editing: boolean;
   onPreset: (name: string) => void;
-  onToggleEditing: () => void;
+  onManage: () => void;
   onToggleCatalog: () => void;
-  onSaveAs: () => void;
-  onReset: () => void;
-  onToggleFavorite: (name: string) => void;
-  onDelete: (name: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
 }
 
-/** The Bridge header: layout presets, density (system-wide), edit controls and the clock. */
+/** The Bridge header: layout presets, density (system-wide) and the edit controls. */
 export function BridgeHeader({
   preset,
-  saved,
-  favorites,
+  layouts,
   editing,
   onPreset,
-  onToggleEditing,
+  onManage,
   onToggleCatalog,
-  onSaveAs,
-  onReset,
-  onToggleFavorite,
-  onDelete,
+  onSave,
+  onCancel,
 }: BridgeHeaderProps) {
   const t = useTranslations("bridge");
-  const locale = useLocale();
   const { ui, setDensity } = useUiSettings();
-  const now = useMinuteClock();
 
   const presetLabel = (name: string) =>
     name === "DEFAULT"
@@ -98,15 +56,12 @@ export function BridgeHeader({
         : name === CUSTOM_PRESET
           ? t("preset.CUSTOM")
           : name;
-  const isFav = (n: string) => favorites.includes(n);
-  const others = saved.filter((n) => !isFav(n));
   const names = [
     "DEFAULT",
-    "REVIEW",
-    ...saved.filter((n) => isFav(n) || n === preset),
+    ...layouts.shown,
+    ...(layouts.hidden.includes(preset) ? [preset] : []),
     ...(preset === CUSTOM_PRESET ? [CUSTOM_PRESET] : []),
   ];
-  const activeSaved = saved.includes(preset);
 
   return (
     <CommandBar logo={false} title={t("title")}>
@@ -119,11 +74,15 @@ export function BridgeHeader({
           onChange={(name) => name !== CUSTOM_PRESET && onPreset(name)}
           value={preset}
         />
-        {others.length > 0 ? (
+        {layouts.hidden.length > 0 ? (
           <Container data-testid={BridgeHeaderTestId.More}>
             <MenuButton
               ariaLabel={t("moreLayouts")}
-              items={others.map((n) => ({ id: n, label: n, onSelect: () => onPreset(n) }))}
+              items={layouts.hidden.map((n) => ({
+                id: n,
+                label: presetLabel(n),
+                onSelect: () => onPreset(n),
+              }))}
               variant="kebab"
             />
           </Container>
@@ -138,30 +97,22 @@ export function BridgeHeader({
       {editing ? (
         <CommandBarGroup>
           <CommandBarButton onClick={onToggleCatalog}>{t("addWidget")}</CommandBarButton>
-          <CommandBarButton onClick={onSaveAs}>{t("saveAs")}</CommandBarButton>
-          {activeSaved ? (
-            <>
-              <Container data-testid={BridgeHeaderTestId.Favorite}>
-                <CommandBarButton onClick={() => onToggleFavorite(preset)}>
-                  {isFav(preset) ? t("unfavorite") : t("favorite")}
-                </CommandBarButton>
-              </Container>
-              <Container data-testid={BridgeHeaderTestId.Delete}>
-                <ConfirmDeleteButton
-                  confirmLabel={t("deleteLayoutConfirm")}
-                  label={t("deleteLayout")}
-                  onConfirm={() => onDelete(preset)}
-                />
-              </Container>
-            </>
-          ) : null}
-          <CommandBarButton onClick={onReset}>{t("reset")}</CommandBarButton>
+          <Container data-testid={BridgeHeaderTestId.Cancel}>
+            <CommandBarButton onClick={onCancel}>{t("cancel")}</CommandBarButton>
+          </Container>
+          <Container data-testid={BridgeHeaderTestId.Save}>
+            <CommandBarButton look="done" onClick={onSave}>
+              {t("save")}
+            </CommandBarButton>
+          </Container>
         </CommandBarGroup>
-      ) : null}
-      <CommandBarButton look={editing ? "done" : "edit"} onClick={onToggleEditing}>
-        {editing ? t("done") : t("editLayout")}
-      </CommandBarButton>
-      <CommandBarText>{now ? formatBridgeClock(now, locale) : ""}</CommandBarText>
+      ) : (
+        <Container data-testid={BridgeHeaderTestId.Manage}>
+          <CommandBarButton look="edit" onClick={onManage}>
+            {t("editLayout")}
+          </CommandBarButton>
+        </Container>
+      )}
     </CommandBar>
   );
 }
