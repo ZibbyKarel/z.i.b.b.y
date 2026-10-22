@@ -98,28 +98,55 @@ describe("WidgetFrame", () => {
     expect(root).toHaveStyle({ left: "10px", top: "20px" });
   });
 
-  it("reports its natural height on mount", () => {
-    const heights: Record<string, [number, number]> = {
-      [WidgetFrameTestId.Root]: [100, 98],
-      [WidgetFrameTestId.Header]: [30, 0],
-      [WidgetFrameTestId.Content]: [50, 0],
-    };
-    const pick = (el: HTMLElement, i: 0 | 1) => heights[el.dataset.testid ?? ""]?.[i] ?? 0;
+  /** Stubs root border (offset-client) and header/content rect heights; returns a restore fn. */
+  const stubHeights = (header: number, content: number) => {
     const off = vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (
       this: HTMLElement,
     ) {
-      return pick(this, 0);
+      return this.dataset.testid === WidgetFrameTestId.Root ? 100 : 0;
     });
     const cli = vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (
       this: HTMLElement,
     ) {
-      return pick(this, 1);
+      return this.dataset.testid === WidgetFrameTestId.Root ? 98 : 0;
     });
+    const rect = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        const id = this.dataset.testid;
+        const height =
+          id === WidgetFrameTestId.Header ? header : id === WidgetFrameTestId.Content ? content : 0;
+        return { height } as DOMRect;
+      });
+    return () => {
+      off.mockRestore();
+      cli.mockRestore();
+      rect.mockRestore();
+    };
+  };
+
+  it("reports its natural height on mount, ceiling sub-pixel heights", () => {
+    const restore = stubHeights(30.4, 49.5);
     const onNaturalHeight = vi.fn();
     render(<WidgetFrame label="X" onNaturalHeight={onNaturalHeight} />);
-    expect(onNaturalHeight).toHaveBeenCalledWith(82);
-    off.mockRestore();
-    cli.mockRestore();
+    expect(onNaturalHeight).toHaveBeenCalledWith(2 + 31 + 50);
+    restore();
+  });
+
+  it("does not report while the open content measures 0px", () => {
+    const restore = stubHeights(30, 0);
+    const onNaturalHeight = vi.fn();
+    render(<WidgetFrame label="X" onNaturalHeight={onNaturalHeight} />);
+    expect(onNaturalHeight).not.toHaveBeenCalled();
+    restore();
+  });
+
+  it("reports header-only height when closed (empty)", () => {
+    const restore = stubHeights(30, 0);
+    const onNaturalHeight = vi.fn();
+    render(<WidgetFrame empty label="X" onNaturalHeight={onNaturalHeight} />);
+    expect(onNaturalHeight).toHaveBeenCalledWith(32);
+    restore();
   });
 
   it("wraps children in the content wrapper", () => {

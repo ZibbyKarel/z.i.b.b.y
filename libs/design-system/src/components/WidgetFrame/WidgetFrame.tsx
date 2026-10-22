@@ -3,7 +3,8 @@ import {
   type PointerEvent,
   type ReactNode,
   type Ref,
-  useEffect,
+  useCallback,
+  useLayoutEffect,
   useRef,
 } from "react";
 import { cn } from "../../utils/cn";
@@ -103,18 +104,22 @@ export function WidgetFrame({
   const headerRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = rootRef.current;
     const header = headerRef.current;
     const content = contentRef.current;
     if (!onNaturalHeight || !root || !header || !content) return;
-    const report = () =>
+    const report = () => {
+      // Open widgets render nothing while loading; reporting 0 would collapse them.
+      const contentH = open ? Math.ceil(content.getBoundingClientRect().height) : 0;
+      if (open && contentH === 0) return;
       onNaturalHeight(
         root.offsetHeight -
           root.clientHeight +
-          header.offsetHeight +
-          (open ? content.offsetHeight : 0),
+          Math.ceil(header.getBoundingClientRect().height) +
+          contentH,
       );
+    };
     report();
     if (typeof ResizeObserver === "undefined") return;
     const ro = new ResizeObserver(report);
@@ -122,6 +127,14 @@ export function WidgetFrame({
     ro.observe(content);
     return () => ro.disconnect();
   }, [onNaturalHeight, open]);
+  const setRoot = useCallback(
+    (el: HTMLElement | null) => {
+      rootRef.current = el;
+      if (typeof ref === "function") ref(el);
+      else if (ref) ref.current = el;
+    },
+    [ref],
+  );
   const canToggle = !!onToggleCollapse && !editing && !empty;
 
   return (
@@ -137,11 +150,7 @@ export function WidgetFrame({
         dragging && "z-[5] transition-none",
       )}
       data-testid={WidgetFrameTestId.Root}
-      ref={(el) => {
-        rootRef.current = el;
-        if (typeof ref === "function") ref(el);
-        else if (ref) ref.current = el;
-      }}
+      ref={setRoot}
       style={style}
     >
       <header
@@ -209,7 +218,7 @@ export function WidgetFrame({
         data-testid={WidgetFrameTestId.Body}
         hidden={!open}
       >
-        <div data-testid={WidgetFrameTestId.Content} ref={contentRef}>
+        <div className="flow-root" data-testid={WidgetFrameTestId.Content} ref={contentRef}>
           {children}
           {editing && empty ? (
             <div

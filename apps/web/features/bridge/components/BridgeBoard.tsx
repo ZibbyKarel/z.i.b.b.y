@@ -91,7 +91,8 @@ export interface BridgeBoardProps {
 /**
  * The widget board: measures its width, derives the column width from the density table
  * and positions each widget. View mode shrinks empty/collapsed widgets to one row, fits
- * every other widget to its content up to its layout height, and compacts; edit mode keeps real sizes and handles pointer drags (move / resize).
+ * every other widget to its content up to its layout height, and compacts; edit mode
+ * keeps real sizes and handles pointer drags (move / resize).
  */
 export function BridgeBoard({ state, density, sheetSide = "right" }: BridgeBoardProps) {
   const { gap, rowHeight } = BRIDGE_DENSITY[density];
