@@ -69,6 +69,11 @@ export interface IconTileProps extends Omit<HTMLAttributes<HTMLElement>, "classN
   shape?: IconTileShape;
   /** Filled tile (background tint) when true; outline-only when false. */
   filled?: boolean;
+  /**
+   * Hex colour (e.g. a department colour) tinting border, background and glyph in
+   * place of `tone`. Background tint only applies when `filled`.
+   */
+  color?: string;
   /** Add the accent glow halo (used for "launched"/confirmation states). */
   glow?: boolean;
   /** Render hover/focus affordances; pair with `as="button"` for click targets. */
@@ -95,6 +100,7 @@ export function IconTile({
   shape = "square",
   filled = true,
   glow = false,
+  color,
   interactive = false,
   as: Tag = "span",
   type,
@@ -135,7 +141,20 @@ export function IconTile({
       )}
       data-testid={IconTileTestId.Root}
       ref={ref as Ref<HTMLSpanElement & HTMLDivElement & HTMLButtonElement>}
-      style={{ width: px, height: px, ...style }}
+      style={{
+        width: px,
+        height: px,
+        ...(color
+          ? {
+              color,
+              borderColor: filled ? `color-mix(in srgb, ${color} 35%, transparent)` : color,
+              ...(filled
+                ? { backgroundColor: `color-mix(in srgb, ${color} 14%, transparent)` }
+                : {}),
+            }
+          : {}),
+        ...style,
+      }}
       type={Tag === "button" ? (type ?? "button") : undefined}
       {...rest}
     >

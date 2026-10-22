@@ -50,6 +50,16 @@ export const Overview: Story = {
       </div>
       <div className="flex flex-col gap-2">
         <Typography mono type="subtitle" variant="tertiary">
+          custom color (e.g. department)
+        </Typography>
+        <div className="flex items-center gap-4">
+          <IconTile color="#5b8def" glyph="code" />
+          <IconTile color="#f472b6" glyph="spark" />
+          <IconTile color="#56c4d6" filled={false} glyph="link" />
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <Typography mono type="subtitle" variant="tertiary">
           image (with glyph fallback)
         </Typography>
         <div className="flex items-center gap-4">

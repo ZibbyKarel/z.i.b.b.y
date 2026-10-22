@@ -13,6 +13,14 @@ describe("IconTile", () => {
     expect(screen.getByTestId(IconTestId.Root)).toBeInTheDocument();
   });
 
+  it("tints border, background and glyph with a custom color", () => {
+    render(<IconTile color="#5b8def" glyph="bot" />);
+    const tile = screen.getByTestId(IconTileTestId.Root);
+    expect(tile.style.color).toBe("rgb(91, 141, 239)");
+    expect(tile.style.backgroundColor).toContain("color-mix");
+    expect(tile.style.borderColor).toContain("color-mix");
+  });
+
   it("xs renders 16px", () => {
     render(<IconTile glyph="bot" size="xs" />);
     const tile = screen.getByTestId(IconTileTestId.Root);

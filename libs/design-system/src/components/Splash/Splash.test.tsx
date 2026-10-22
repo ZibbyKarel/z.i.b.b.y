@@ -1,15 +1,14 @@
 import { act, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "../../utils/testRender";
-import { ZibbyAvatarTestId } from "../ZibbyAvatar/ZibbyAvatar";
+import { BrandMarkTestId } from "../BrandMark/BrandMark";
 import { SPLASH_EXIT_MS, SPLASH_REVEAL_MS, SPLASH_WALK_MS, Splash, SplashTestId } from "./Splash";
 
 describe("Splash", () => {
-  it("shows the Zibby minion with the phase state", () => {
+  it("shows the brand mark", () => {
     render(<Splash ready={false} />);
-    const avatar = screen.getByTestId(ZibbyAvatarTestId.Root);
-    expect(screen.getByTestId(SplashTestId.Glyph)).toContainElement(avatar);
-    expect(avatar).toHaveAttribute("data-state", "working");
+    const mark = screen.getByTestId(BrandMarkTestId.Root);
+    expect(screen.getByTestId(SplashTestId.Glyph)).toContainElement(mark);
   });
 
   beforeEach(() => {

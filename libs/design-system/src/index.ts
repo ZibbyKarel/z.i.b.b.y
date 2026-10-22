@@ -206,6 +206,8 @@ export type { ProgressBarTone, ProgressProps, ProgressTone } from "./components/
 export { ProgressRing, ProgressRingTestId } from "./components/ProgressRing/ProgressRing";
 export type { ProgressRingProps, ProgressRingSize } from "./components/ProgressRing/ProgressRing";
 
+export { AgentBadge, AgentBadgeTestId } from "./components/AgentBadge/AgentBadge";
+export type { AgentBadgeProps } from "./components/AgentBadge/AgentBadge";
 export { StatusDot, StatusDotTestId } from "./components/StatusDot/StatusDot";
 export type { DotTone, StatusDotProps } from "./components/StatusDot/StatusDot";
 

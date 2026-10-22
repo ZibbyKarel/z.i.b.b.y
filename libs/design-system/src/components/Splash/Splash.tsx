@@ -1,9 +1,8 @@
 "use client";
 import type { Ref } from "react";
 import { useEffect, useRef, useState } from "react";
-import type { StateTone } from "../../stateTone";
 import { Typography } from "../Typography/Typography";
-import { ZibbyAvatar } from "../ZibbyAvatar/ZibbyAvatar";
+import { BrandMark } from "../BrandMark/BrandMark";
 import { Wordmark } from "../Wordmark/Wordmark";
 
 export enum SplashTestId {
@@ -30,13 +29,6 @@ export const SPLASH_WALK_MS = 900;
 export const SPLASH_REVEAL_MS = 500;
 /** Exit fade once `ready` — pointer-events are already `none` throughout it. */
 export const SPLASH_EXIT_MS = 320;
-
-const PHASE_GLYPH_STATE: Record<Exclude<SplashPhase, "done">, StateTone> = {
-  walk: "working",
-  reveal: "thinking",
-  settled: "idle",
-  exit: "done",
-};
 
 /** Defensive by design (mirrors `DesignSystemProvider`'s `matchMedia` guard):
  *  `window.matchMedia` is absent in SSR and throws "not implemented" in some
@@ -155,7 +147,7 @@ export function Splash({
         data-testid={SplashTestId.Panel}
       >
         <div data-testid={SplashTestId.Glyph}>
-          <ZibbyAvatar size={64} state={PHASE_GLYPH_STATE[displayPhase]} />
+          <BrandMark size={64} />
         </div>
 
         <div
