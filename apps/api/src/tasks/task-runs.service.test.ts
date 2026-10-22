@@ -612,6 +612,21 @@ describe("TaskRunsService", () => {
       expect(run.status).toBe("awaiting-approval");
     });
 
+    it("a done run whose prFixCi awaits approval reads awaiting-approval", async () => {
+      const { service, workflowRunner, scheduled } = build();
+      workflowRunner.listAll.mockResolvedValue([{ ...pipeP, status: "done", taskId: "task1" }]);
+      scheduled.list.mockResolvedValue([
+        {
+          ...scheduledS,
+          id: "task1",
+          status: "dispatched",
+          prFixCi: addressComments("awaiting-approval"),
+        },
+      ]);
+      const run = await service.getTaskRun(pipeP.workflowRunId);
+      expect(run.status).toBe("awaiting-approval");
+    });
+
     it("stays done once the gate is decided", async () => {
       const { service, workflowRunner, scheduled } = build();
       workflowRunner.listAll.mockResolvedValue([{ ...pipeP, status: "done", taskId: "task1" }]);

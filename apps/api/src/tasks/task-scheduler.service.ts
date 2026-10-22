@@ -58,6 +58,7 @@ import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service"
 import { TaskClassifierService } from "./task-classifier.service";
 import {
   PR_ADDRESS_COMMENTS_ARTIFACT,
+  PR_FIX_CI_ARTIFACT,
   PR_REBASE_ARTIFACT,
   PR_REPLIES_ARTIFACT,
   PR_REVIEW_ARTIFACT,
@@ -1871,7 +1872,8 @@ export class TaskSchedulerService
       if (
         stopped?.prReview?.state !== "running" &&
         stopped?.prRebase?.state !== "running" &&
-        stopped?.prAddressComments?.state !== "running"
+        stopped?.prAddressComments?.state !== "running" &&
+        stopped?.prFixCi?.state !== "running"
       ) {
         return;
       }
@@ -1973,6 +1975,27 @@ export class TaskSchedulerService
                 });
                 await this.storage
                   .setPrAddressComments(taskId, (c) =>
+                    c ? { ...c, state: "failed", note: "park failed" } : c,
+                  )
+                  .catch(() => undefined);
+                return null;
+              });
+            if (delivery?.summary) outcome.summary = delivery.summary;
+          }
+          // "Fix CI": park (or, `Fixed: all` on the operator's own PR, push) the fix.
+          if (existing.prFixCi?.state === "running") {
+            const artifact = await this.workflowRunner
+              .readArtifact(run.workflowRunId, PR_FIX_CI_ARTIFACT)
+              .catch(() => null);
+            const delivery = await this.taskOutput
+              .parkPrFixCi(existing, artifact?.content ?? "", run.workspace?.path)
+              .catch(async (error: unknown) => {
+                this.log.warn("pr fix-ci park failed (soft)", {
+                  taskId,
+                  err: error instanceof Error ? error.message : String(error),
+                });
+                await this.storage
+                  .setPrFixCi(taskId, (c) =>
                     c ? { ...c, state: "failed", note: "park failed" } : c,
                   )
                   .catch(() => undefined);

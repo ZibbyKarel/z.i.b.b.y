@@ -52,9 +52,14 @@ export function isAutoPushPrRebase(report: string): boolean {
 }
 
 /** PR inbox redesign — `Addressed: all` is the only first line ZIBBY pushes review fixes on without asking. */
+const FIXED_ALL = /^Fixed:\s*all\s*$/i;
 const ADDRESSED_ALL = /^Addressed:\s*all\s*$/i;
 
 /** The Address-review-comments click authorises the push only when the report's FIRST line is `Addressed: all`. */
+export function isAutoPushFixCi(report: string): boolean {
+  return FIXED_ALL.test(report.split("\n", 1)[0] ?? "");
+}
+
 export function isAutoPushAddressComments(report: string): boolean {
   return ADDRESSED_ALL.test(report.split("\n", 1)[0] ?? "");
 }
@@ -542,6 +547,77 @@ export class TaskOutputService implements OnModuleInit {
     }
     if (after?.followUpNote) parts.push(`follow-up: ${after.followUpNote.slice(0, 120)}`);
     return { summary: `Review komentáře ${ref}: ${parts.join(", ")}` };
+  }
+
+  /**
+   * "Fix CI" — a finished `pr-fix-ci` run: record its report as a `pr-fix-ci` approval. `Fixed: all`
+   * on the operator's own PR was authorised by the click (Tier-2) and is approved on the spot; every
+   * other first line, or a colleague's PR, stays pending (Tier-3, risk high). `fixedSha` is the
+   * worktree HEAD ZIBBY reads here, the only sha the runner pushes. No report / worktree / new
+   * commits → `failed`, nothing pushed.
+   */
+  async parkPrFixCi(
+    task: ScheduledTask,
+    raw: string,
+    worktree?: string,
+  ): Promise<TaskTerminalDelivery> {
+    const fix = task.prFixCi;
+    if (!fix) return {};
+    const report = raw.trim().slice(0, PR_REVIEW_MAX_CHARS);
+    const ref = `${fix.repo}#${fix.number}`;
+    const fail = async (note: string): Promise<TaskTerminalDelivery> => {
+      await this.storage.setPrFixCi(task.id, (c) => (c ? { ...c, state: "failed", note } : c));
+      this.log.warn("pr fix-ci: nothing to push", { taskId: task.id, ref, note });
+      return { summary: `Oprava CI ${ref}: ${note} — nic nepushnuto` };
+    };
+    if (!report) return fail(`no ${PR_FIX_CI_ARTIFACT}`);
+    if (!worktree) return fail("no worktree");
+    const facts = await this.workspace
+      .rebaseFacts({ cwd: worktree, base: fix.base, headSha: fix.headSha })
+      .catch((error: unknown) => (error instanceof Error ? error.message : String(error)));
+    if (typeof facts === "string") {
+      return fail(`could not read the worktree: ${facts}`.slice(0, 300));
+    }
+    if (facts.sha === fix.headSha) {
+      return fail(`no new commits — ${report.split("\n", 1)[0] ?? ""}`.slice(0, 300));
+    }
+    const autoPush = isAutoPushFixCi(report) && fix.ownPr === true;
+    const approval = await this.approvals.requestApproval({
+      runId: task.id,
+      kind: "pr-fix-ci",
+      skill: "fullstack-developer",
+      action: "git.push",
+      detail: `Push CI fix onto ${fix.head} — ${ref}${
+        autoPush ? " (all failing checks fixed, re-run green — authorised by the click)" : ""
+      }\n\n${report}\n\n## Verified by ZIBBY\n\nHEAD ${facts.sha}\n\ngit diff --stat ${fix.headSha} HEAD:\n${facts.stat || "(no changes)"}`,
+      risk: autoPush ? "medium" : "high",
+      sourceUrl: fix.url,
+    });
+    await this.storage.setPrFixCi(task.id, (c) =>
+      c
+        ? {
+            ...c,
+            state: "awaiting-approval",
+            report,
+            worktree,
+            fixedSha: facts.sha,
+            approvalId: approval.id,
+          }
+        : c,
+    );
+    if (!autoPush) return { summary: `Oprava CI ${ref}: push opravy čeká na schválení` };
+    // A failed push already marks the task `failed` with git's reason (the runner).
+    const pushed = await this.approvals.approve(approval.id).then(
+      () => true,
+      (error: unknown) => {
+        this.log.warn("pr fix-ci push after the click failed", {
+          taskId: task.id,
+          err: error instanceof Error ? error.message : String(error),
+        });
+        return false;
+      },
+    );
+    return { summary: `Oprava CI ${ref}: ${pushed ? "oprava pushnuta" : "push selhal"}` };
   }
 
   /** Write the run summary to the chosen file — a vault note or a path in the worktree. */

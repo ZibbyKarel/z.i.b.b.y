@@ -13,6 +13,7 @@ import { AttachmentStorageService } from "./attachment-storage.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
 import {
   PR_ADDRESS_COMMENTS_ARTIFACT,
+  PR_FIX_CI_ARTIFACT,
   PR_REBASE_ARTIFACT,
   PR_REPLIES_ARTIFACT,
   PR_REVIEW_ARTIFACT,
@@ -81,6 +82,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     parkPrReview: ReturnType<typeof vi.fn>;
     parkPrRebase: ReturnType<typeof vi.fn>;
     parkPrAddressComments: ReturnType<typeof vi.fn>;
+    parkPrFixCi: ReturnType<typeof vi.fn>;
   };
   /** Phase 91: the workflow definition store, for department-target resolution
    *  (`department` lookup). Empty by default — no test in this file dispatches
@@ -229,6 +231,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       parkPrReview: vi.fn(async () => ({ summary: "parked" })),
       parkPrRebase: vi.fn(async () => ({ summary: "rebase parked" })),
       parkPrAddressComments: vi.fn(async () => ({ summary: "fixes parked" })),
+      parkPrFixCi: vi.fn(async () => ({ summary: "ci fix parked" })),
     };
     service = new TaskSchedulerService(
       storage,
@@ -1785,6 +1788,76 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       workflowListener?.(fixRun(id, "done"));
       await vi.waitFor(async () => {
         expect((await storage.get(id)).prAddressComments).toMatchObject({
+          state: "failed",
+          note: "park failed",
+        });
+      });
+    });
+  });
+
+  describe("PR-inbox fix-ci run", () => {
+    async function seedCi(): Promise<string> {
+      const id = storage.newId();
+      await storage.createDispatched(
+        id,
+        { text: "fix ci" },
+        "pr-fix-ci_1",
+        { kind: "workflow", id: "pr-fix-ci", name: "pr-fix-ci" },
+        Date.now(),
+        "alpha",
+      );
+      await storage.setPrFixCi(id, () => ({
+        repo: "acme/app",
+        number: 7,
+        url: "https://github.com/acme/app/pull/7",
+        head: "feat",
+        base: "main",
+        headSha: "abc",
+        state: "running",
+      }));
+      return id;
+    }
+    const ciRun = (taskId: string, status: WorkflowRun["status"]) =>
+      workflowRun({
+        workflowRunId: "pr-fix-ci_1",
+        workflowId: "pr-fix-ci",
+        status,
+        taskId,
+        workspace: { branch: "zibby/pr-fix-ci_1", path: "/wt", baseRef: "main" },
+      });
+
+    it("a done pr-fix-ci run parks via parkPrFixCi", async () => {
+      const id = await seedCi();
+      workflowRunner.readArtifact.mockResolvedValue({ name: "x", content: "Fixed: all" });
+      workflowListener?.(ciRun(id, "done"));
+      await vi.waitFor(async () => {
+        expect((await storage.get(id)).outcome).toBeDefined();
+      });
+      expect(workflowRunner.readArtifact).toHaveBeenCalledWith("pr-fix-ci_1", PR_FIX_CI_ARTIFACT);
+      expect(taskOutput.parkPrFixCi).toHaveBeenCalledWith(
+        expect.objectContaining({ id }),
+        "Fixed: all",
+        "/wt",
+      );
+      expect((await storage.get(id)).outcome?.summary).toBe("ci fix parked");
+    });
+
+    it("a stopped pr-fix-ci run writes an error outcome so the row reads failed", async () => {
+      const id = await seedCi();
+      workflowListener?.(ciRun(id, "interrupted"));
+      await vi.waitFor(async () => {
+        expect((await storage.get(id)).outcome?.status).toBe("error");
+      });
+      expect(taskOutput.parkPrFixCi).not.toHaveBeenCalled();
+    });
+
+    it("a park that throws marks the task failed instead of leaving it running", async () => {
+      const id = await seedCi();
+      taskOutput.parkPrFixCi.mockRejectedValueOnce(new Error("boom"));
+      workflowRunner.readArtifact.mockResolvedValue({ name: "x", content: "Fixed: all" });
+      workflowListener?.(ciRun(id, "done"));
+      await vi.waitFor(async () => {
+        expect((await storage.get(id)).prFixCi).toMatchObject({
           state: "failed",
           note: "park failed",
         });

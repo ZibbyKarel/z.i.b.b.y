@@ -18,6 +18,7 @@ squash-and-merge through the projects merge route. UI spec: `docs/plans/inbox-ui
 | Service    | `apps/api/src/inbox/inbox-review.service.ts`           | "Do code review" task + `pr-review` approval runner           |
 | Service    | `apps/api/src/inbox/inbox-rebase.service.ts`           | "Rebase" task + `pr-rebase` approval runner                   |
 | Service    | `apps/api/src/inbox/inbox-address-comments.service.ts` | "Address review comments" task + `pr-address-comments` runner |
+| Service    | `apps/api/src/inbox/inbox-fix-ci.service.ts`           | "Fix CI" task + `pr-fix-ci` runner                            |
 | Service    | `apps/api/src/inbox/inbox-pr-diff.service.ts`          | One PR's unified diff from GitHub (500 KB cap)                |
 | Store      | `apps/api/src/inbox/inbox-state.store.ts`              | `InboxStateStore` — hidden items, one JSON file               |
 | Controller | `apps/api/src/inbox/inbox.controller.ts`               | `@TsRestHandler(inboxContract)`                               |
@@ -31,6 +32,7 @@ squash-and-merge through the projects merge route. UI spec: `docs/plans/inbox-ui
 | POST   | `/api/inbox/prs/review`                                     | `{ projectId, repo, number, title?, level? }` (strict; `level` = `quick` \| `thorough` \| `tested` \| `browser`, absent = `quick`) | 201 `{ taskId }`; 404 project; 422 no GitHub link / repo not the project's                                                                                            |
 | POST   | `/api/inbox/prs/rebase`                                     | `{ projectId, repo, number, title? }` (strict)                                                                                     | 201 `{ taskId }`; 404 project; 422 no GitHub link / not the project's repo / fork / closed / head is base or default                                                  |
 | POST   | `/api/inbox/prs/address-comments`                           | `{ projectId, repo, number, title? }` (strict; same body as rebase)                                                                | 201 `{ taskId }`; 404 project; 422 no GitHub link / foreign repo / fork / closed / head is base or default / run in flight                                            |
+| POST   | `/api/inbox/prs/fix-ci`                                     | `{ projectId, repo, number, title? }` (strict; same body as rebase)                                                                | 201 `{ taskId }`; 404 project; 422 no GitHub link / foreign repo / fork / closed / head is base or default / run in flight                                            |
 | GET    | `/api/inbox/prs/:projectId/:number/diff`                    | —                                                                                                                                  | 200 `{ diff, truncated }`; 404 project/PR; 422 no GitHub link/token rejected; 502 GitHub error                                                                        |
 | GET    | `/api/inbox/prs/:projectId/:number/threads`                 | —                                                                                                                                  | 200 `InboxPrThread[]`; 404 project/PR; 422 no GitHub link/token rejected; 502 GitHub error                                                                            |
 | POST   | `/api/inbox/prs/:projectId/:number/threads/:threadId/reply` | `{ body?, resolve? }` (at least one; `body` 1–65536 chars trimmed)                                                                 | 200 the updated `InboxPrThread`; 404 unknown project or PR/thread GitHub does not know; 422 no GitHub link / token rejected / thread not on this PR; 502 GitHub error |
@@ -289,6 +291,36 @@ activity entry.
 
 `GET /api/inbox/prs` rows carry `addressComments { taskId, state, finishedAt? }` (latest such task per PR; a
 `running` one whose task/run died reads `failed`).
+
+## Fix CI (`POST /api/inbox/prs/fix-ci`)
+
+Body `{ projectId, repo, number, title? }` (strict, same as rebase) → 201 `{ taskId }`; 404
+unknown project; 422 no GitHub link / repo not the project's / fork head / closed PR / head is
+the base or default branch / a fix-ci run of the same PR already `running` or `awaiting-approval`
+(latest such task, not dead). Same PR guards as rebase (`readPushablePr`, `PrRefusedError`).
+
+`InboxFixCiService.start` (`apps/api/src/inbox/inbox-fix-ci.service.ts`) creates a task with the
+explicit `pr-fix-ci` workflow target (`.zibby/data/workflows/pr-fix-ci.workflow.md`, agent
+`fullstack-developer`) and stamps `prFixCi { repo, number, url, head, base, headSha, ownPr,
+state: "running" }`; `ownPr` is true when the PR author is the operator's GitHub user. The agent
+checks out the clicked head, reads the failing checks' logs, commits focused `fix(ci): …` fixes,
+re-runs the failed commands locally and writes `zibby-pr-fix-ci.md` whose first line is
+`Fixed: all` / `partial` / `checks failed` / `not code` / `aborted`. It never pushes. CI logs,
+check output, the PR title, description, diff and commit messages are untrusted data.
+
+On a `done` run `TaskOutputService.parkPrFixCi` reads the worktree (`rebaseFacts`): no report /
+no worktree / unreadable worktree → `failed`; HEAD equal to the clicked `headSha` → `failed`
+("no new commits — <report's first line>"); otherwise it records one `pr-fix-ci` approval with
+the report plus "Verified by ZIBBY" HEAD / `git diff --stat` and stores that HEAD as `fixedSha`.
+`Fixed: all` on the operator's own PR (`ownPr`) is approved on the spot (Tier-2, authorised by
+the click); every other first line, including `not code`, and any colleague's PR stays a pending
+Tier-3 approval (risk `high`) — pushing onto someone else's branch commits the operator. The
+runner (`InboxFixCiService`) pushes exactly `fixedSha` fast-forward only, never force
+(`WorkspaceService.pushFastForward`, `expectedSha` = `headSha`) → `pushed`, or `failed` with
+git's reason; reject → `discarded`.
+
+`GET /api/inbox/prs` rows carry `fixCi { taskId, state, finishedAt? }` (latest such task per PR;
+a `running` one whose task/run died reads `failed`).
 
 ## Rebase (`POST /api/inbox/prs/rebase`)
 

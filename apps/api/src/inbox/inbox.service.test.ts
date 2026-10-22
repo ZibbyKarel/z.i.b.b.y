@@ -311,6 +311,46 @@ describe("InboxService.listPrs", () => {
     expect(byNumber[3]?.rebase).toBeUndefined();
   });
 
+  it("listPrs carries the latest fix-ci task per PR; a dead running one reads failed", async () => {
+    const fix = (number: number, state: string) => ({
+      repo: "acme/app",
+      number,
+      url: "u",
+      head: "feat",
+      base: "main",
+      headSha: "s",
+      state,
+    });
+    const { service } = build([
+      {
+        id: "c1",
+        createdAt: "2026-10-02T00:00:00Z",
+        status: "dispatched",
+        prFixCi: fix(3, "running"),
+      },
+      {
+        id: "c2",
+        createdAt: "2026-10-02T00:00:00Z",
+        status: "failed",
+        prFixCi: fix(2, "running"),
+      },
+      {
+        id: "c3",
+        createdAt: "2026-10-02T00:00:00Z",
+        status: "done",
+        prFixCi: { ...fix(1, "pushed"), finishedAt: "2026-10-02T01:00:00Z" },
+      },
+    ]);
+    const byNumber = Object.fromEntries((await service.listPrs()).prs.map((p) => [p.number, p]));
+    expect(byNumber[3]?.fixCi).toEqual({ taskId: "c1", state: "running" });
+    expect(byNumber[2]?.fixCi).toEqual({ taskId: "c2", state: "failed" });
+    expect(byNumber[1]?.fixCi).toEqual({
+      taskId: "c3",
+      state: "pushed",
+      finishedAt: "2026-10-02T01:00:00Z",
+    });
+  });
+
   it("buckets direct / team / mine PRs and derives ci, review and blocker", async () => {
     const { service, calls } = build();
     const result = await service.listPrs();

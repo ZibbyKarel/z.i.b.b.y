@@ -10,6 +10,7 @@ import {
   PR_REVIEW_ARTIFACT,
   TaskOutputService,
   isAutoPushAddressComments,
+  isAutoPushFixCi,
   isAutoPushPrRebase,
   parseThreadOutcomes,
   parseThreadReplies,
@@ -616,6 +617,112 @@ describe("TaskOutputService", () => {
       const task = await seed();
       const delivered = await service.parkPrAddressComments(task, "Addressed: all", "/wt");
       expect(delivered.summary).toMatch(/push selhal/);
+    });
+  });
+
+  describe("pr fix ci", () => {
+    const A = "a".repeat(40);
+    const B = "b".repeat(40);
+    async function seed(ownPr?: boolean): Promise<ScheduledTask> {
+      const task = await storage.createDispatched(
+        "t_ci",
+        { text: "fix ci" },
+        "pr-fix-ci_1",
+        { kind: "workflow", id: "pr-fix-ci", name: "pr-fix-ci" },
+        Date.now(),
+        "p1",
+      );
+      return storage.setPrFixCi(task.id, () => ({
+        repo: "acme/app",
+        number: 7,
+        url: "https://github.com/acme/app/pull/7",
+        head: "feat",
+        base: "main",
+        headSha: A,
+        ...(ownPr === undefined ? {} : { ownPr }),
+        state: "running",
+      }));
+    }
+    beforeEach(() => {
+      workspace.rebaseFacts.mockResolvedValue({ sha: B, log: "b1 fix", stat: " a.ts | 2 +-" });
+    });
+
+    it("only an exact `Fixed: all` first line auto-pushes a CI fix", () => {
+      expect(isAutoPushFixCi("Fixed: all\n- done")).toBe(true);
+      expect(isAutoPushFixCi("fixed:  ALL")).toBe(true);
+      expect(isAutoPushFixCi("Fixed: all but lint")).toBe(false);
+      expect(isAutoPushFixCi("Fixed: not code")).toBe(false);
+      expect(isAutoPushFixCi("Fixed: partial")).toBe(false);
+      expect(isAutoPushFixCi("x\nFixed: all")).toBe(false);
+    });
+
+    it("Fixed: all → approved on the spot, fixedSha = worktree HEAD", async () => {
+      const task = await seed(true);
+      const delivered = await service.parkPrFixCi(task, "Fixed: all\n\ncheck: lint", "/wt");
+      expect(workspace.rebaseFacts).toHaveBeenCalledWith({ cwd: "/wt", base: "main", headSha: A });
+      expect(approvals.requestApproval).toHaveBeenCalledWith(
+        expect.objectContaining({
+          runId: "t_ci",
+          kind: "pr-fix-ci",
+          action: "git.push",
+          risk: "medium",
+          sourceUrl: "https://github.com/acme/app/pull/7",
+        }),
+      );
+      const { detail } = approvals.requestApproval.mock.calls[0]?.[0] as { detail: string };
+      expect(detail).toContain("## Verified by ZIBBY");
+      expect(detail).toContain(`HEAD ${B}`);
+      expect(approvals.approve).toHaveBeenCalledWith("appr_1");
+      expect((await storage.get("t_ci")).prFixCi).toMatchObject({
+        state: "awaiting-approval",
+        worktree: "/wt",
+        fixedSha: B,
+        approvalId: "appr_1",
+      });
+      expect(delivered.summary).toBe("Oprava CI acme/app#7: oprava pushnuta");
+    });
+
+    it.each([false, undefined])(
+      "Fixed: all on a colleague's PR (ownPr %j) parks Tier-3 high and never auto-approves",
+      async (ownPr) => {
+        const task = await seed(ownPr);
+        const delivered = await service.parkPrFixCi(task, "Fixed: all", "/wt");
+        expect(approvals.requestApproval).toHaveBeenCalledWith(
+          expect.objectContaining({ risk: "high" }),
+        );
+        expect(approvals.approve).not.toHaveBeenCalled();
+        expect(delivered.summary).toMatch(/čeká na schválení/);
+      },
+    );
+
+    it("`Fixed: not code` with commits parks Tier-3 high and never auto-approves", async () => {
+      const task = await seed(true);
+      await service.parkPrFixCi(task, "Fixed: not code\nflaky infra", "/wt");
+      expect(approvals.requestApproval).toHaveBeenCalledWith(
+        expect.objectContaining({ risk: "high" }),
+      );
+      expect(approvals.approve).not.toHaveBeenCalled();
+    });
+
+    it("no new commits fails with the report's first line in the note", async () => {
+      workspace.rebaseFacts.mockResolvedValue({ sha: A, log: "", stat: "" });
+      const task = await seed(true);
+      await service.parkPrFixCi(task, "Fixed: aborted — no failing checks on abc1234\nrest", "/wt");
+      expect(approvals.requestApproval).not.toHaveBeenCalled();
+      expect((await storage.get("t_ci")).prFixCi).toMatchObject({
+        state: "failed",
+        note: "no new commits — Fixed: aborted — no failing checks on abc1234",
+      });
+    });
+
+    it.each([
+      ["", "/wt", "no zibby-pr-fix-ci.md"],
+      ["Fixed: all", undefined, "no worktree"],
+    ])("report %j / worktree %j → failed (%s), nothing parked", async (raw, wt, note) => {
+      const task = await seed(true);
+      await service.parkPrFixCi(task, raw, wt);
+      expect(approvals.requestApproval).not.toHaveBeenCalled();
+      expect((await storage.get("t_ci")).prFixCi).toMatchObject({ state: "failed", note });
     });
   });
 

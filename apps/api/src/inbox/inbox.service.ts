@@ -255,7 +255,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
 
   /** Cached GitHub classification + the (uncached, local) review/rebase/address-comments task state per PR. */
   async listPrs(): Promise<InboxPrsResponse> {
-    const [result, { reviews, rebases, addressings }] = await Promise.all([
+    const [result, { reviews, rebases, addressings, fixes }] = await Promise.all([
       this.cachedPrs(),
       this.prTaskStates(),
     ]);
@@ -266,11 +266,13 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
         const codeReview = reviews.get(key);
         const rebase = rebases.get(key);
         const addressComments = addressings.get(key);
+        const fixCi = fixes.get(key);
         return {
           ...pr,
           ...(codeReview ? { codeReview } : {}),
           ...(rebase ? { rebase } : {}),
           ...(addressComments ? { addressComments } : {}),
+          ...(fixCi ? { fixCi } : {}),
         };
       }),
     };
@@ -293,11 +295,13 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
     reviews: Map<string, NonNullable<InboxPr["codeReview"]>>;
     rebases: Map<string, NonNullable<InboxPr["rebase"]>>;
     addressings: Map<string, NonNullable<InboxPr["addressComments"]>>;
+    fixes: Map<string, NonNullable<InboxPr["fixCi"]>>;
   }> {
     const tasks = await this.tasks.list().catch(() => []);
     const reviews = new Map<string, NonNullable<InboxPr["codeReview"]>>();
     const rebases = new Map<string, NonNullable<InboxPr["rebase"]>>();
     const addressings = new Map<string, NonNullable<InboxPr["addressComments"]>>();
+    const fixes = new Map<string, NonNullable<InboxPr["fixCi"]>>();
     for (const task of [...tasks].sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
       const dead = isDeadTask(task);
       const { prReview: review, prRebase: rebase, prAddressComments: fix } = task;
@@ -321,8 +325,16 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
           ...(fix.finishedAt ? { finishedAt: fix.finishedAt } : {}),
         });
       }
+      const ci = task.prFixCi;
+      if (ci) {
+        fixes.set(`${ci.repo.toLowerCase()}#${ci.number}`, {
+          taskId: task.id,
+          state: ci.state === "running" && dead ? "failed" : ci.state,
+          ...(ci.finishedAt ? { finishedAt: ci.finishedAt } : {}),
+        });
+      }
     }
-    return { reviews, rebases, addressings };
+    return { reviews, rebases, addressings, fixes };
   }
 
   private async fetchPrs(): Promise<InboxPrsResponse> {

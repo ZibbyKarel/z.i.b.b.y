@@ -132,6 +132,15 @@ from `awaiting-approval`, fast-forward only. An interrupted run with `state === 
 error outcome. `replies` / `replied` / `repliesNote` record the thread replies, `resolved` / `reviewersRequested` / `followUpNote` the thread resolving and review re-request (see
 `docs/api/inbox.md`).
 
+**`prFixCi`** ("Fix CI") mirrors `prAddressComments` without replies: stamped by
+`InboxFixCiService.start` via `setPrFixCi` (`repo, number, url, head, base, headSha, ownPr,
+state: "running"`), written to `awaiting-approval` by `TaskOutputService.parkPrFixCi` from
+`writeWorkflowOutcome` (with `report`, `worktree`, `approvalId` and `fixedSha`, the worktree HEAD
+ZIBBY read — the only sha the runner pushes; no report / no worktree / no new commits → `failed` +
+`note`), and to `pushed`/`discarded`/`failed` by the `pr-fix-ci` approval runner, fast-forward
+only. An interrupted run with `state === "running"` gets an error outcome; a finished run whose
+`prFixCi` awaits approval reads `awaiting-approval` in the run list.
+
 `scheduledAt` absent or in the past → `createTask` runs classification + dispatch
 immediately. From the dialog (`background = true`), dispatch happens in the
 background and the endpoint returns `pending` right away (see "`pending` —

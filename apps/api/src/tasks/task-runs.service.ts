@@ -811,7 +811,7 @@ function enrichRunWithTask(run: TaskRun, tasksById: ReadonlyMap<string, Schedule
   if (!task) return run;
   // A finished run whose task still holds a PR-inbox gate (review post, rebase
   // force-push, review-fix push) is waiting on the operator, not done.
-  const gated = [task.prReview, task.prRebase, task.prAddressComments].some(
+  const gated = [task.prReview, task.prRebase, task.prAddressComments, task.prFixCi].some(
     (gate) => gate?.state === "awaiting-approval",
   );
   return {
