@@ -3008,6 +3008,21 @@
       "emptyBody": "Nic nečeká na vaše review ani na akci.",
       "openGithub": "Otevřít na GitHubu",
       "item": "Položka {key} →",
+      "manualReview": {
+        "event": {
+          "APPROVE": "Schválit",
+          "REQUEST_CHANGES": "Požadovat změny",
+          "COMMENT": "Komentovat"
+        },
+        "menuAria": "Další možnosti review",
+        "dialogTitle": "{event} · #{number}",
+        "comment": "Komentář",
+        "optional": "Nepovinné",
+        "required": "Povinné",
+        "cancel": "Zrušit",
+        "failed": "Review se nepodařilo odeslat.",
+        "refused": "GitHub odmítl: {reason}"
+      },
       "actions": {
         "reviewLevelsAria": "Další úrovně code-review",
         "reviewFailed": "Code-review se nepodařilo spustit.",

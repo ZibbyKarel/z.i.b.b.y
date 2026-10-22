@@ -3008,6 +3008,21 @@
       "emptyBody": "Nothing is waiting on your review or action.",
       "openGithub": "Open on GitHub",
       "item": "Item {key} →",
+      "manualReview": {
+        "event": {
+          "APPROVE": "Approve",
+          "REQUEST_CHANGES": "Request changes",
+          "COMMENT": "Comment"
+        },
+        "menuAria": "Other review options",
+        "dialogTitle": "{event} · #{number}",
+        "comment": "Comment",
+        "optional": "Optional",
+        "required": "Required",
+        "cancel": "Cancel",
+        "failed": "Could not post the review.",
+        "refused": "GitHub refused: {reason}"
+      },
       "actions": {
         "reviewLevelsAria": "More code review levels",
         "reviewFailed": "Could not start the code review.",
