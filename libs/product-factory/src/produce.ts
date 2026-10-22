@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { readJsonArtifact } from "./artifact.ts";
-import { appendCost, bookDirOf, envNum, nn, readJson, writeJson } from "./ctx.ts";
+import { appendCost, bookDirOf, envNum, nn, pageFile, readJson, writeJson } from "./ctx.ts";
 import type { Ctx } from "./ctx.ts";
 import { processImage } from "./image-proc.ts";
 import { createImageProvider, createVisionProvider } from "./providers/index.ts";
@@ -27,8 +27,10 @@ interface Unit {
 
 const hashSeed = (page: number, attempt: number): number =>
   (Math.imul(page + 1, 2654435761) ^ Math.imul(attempt, 40503)) >>> 0;
-const attemptFiles = (dir: string): string[] =>
-  fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => /^attempt-\d+\.png$/.test(f)) : [];
+const attemptFiles = (dir: string, pageNumber: number): string[] => {
+  const re = new RegExp(`^${pageFile(pageNumber, "attempt-")}\\d+\\.png$`);
+  return fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => re.test(f)) : [];
+};
 
 function parseRange(s: string | undefined, max: number): Set<number> {
   const all = new Set(Array.from({ length: max }, (_, i) => i + 1));
@@ -108,8 +110,8 @@ export async function produce(argv: string[], ctx: Ctx): Promise<number> {
       issues: [],
     });
   for (const u of units) {
-    u.attempts = attemptFiles(u.dir).length;
-    u.approved = fs.existsSync(path.join(u.dir, "approved.png"));
+    u.attempts = attemptFiles(u.dir, u.pageNumber).length;
+    u.approved = fs.existsSync(path.join(u.dir, pageFile(u.pageNumber, "approved.png")));
     const qaFile = path.join(book, "qa", `${nn(u.pageNumber)}.json`);
     if (!u.isCover && u.approved && fs.existsSync(qaFile))
       u.judge = (readJson(qaFile) as QaResult).judge;
@@ -165,7 +167,10 @@ export async function produce(argv: string[], ctx: Ctx): Promise<number> {
 
       fs.mkdirSync(u.dir, { recursive: true });
       const attempt = item.attempt;
-      const file = path.join(u.dir, `attempt-${String(attempt).padStart(3, "0")}.png`);
+      const file = path.join(
+        u.dir,
+        pageFile(u.pageNumber, `attempt-${String(attempt).padStart(3, "0")}.png`),
+      );
       if (fs.existsSync(file)) throw new Error(`refusing to overwrite ${file}`);
       const proc = await processImage(res.file, file, threshold, !u.isCover);
       const px = pixelQa(proc.pixels, 2550, proc.rawGrayRatio, proc.box, th, u.isCover);
@@ -229,8 +234,8 @@ export async function produce(argv: string[], ctx: Ctx): Promise<number> {
     for (const j of judged) {
       writeJson(path.join(book, "qa", `${nn(j.u.pageNumber)}.json`), j.qa);
       if (!j.qa.passed) continue;
-      fs.copyFileSync(j.file, path.join(j.u.dir, "approved.png"));
-      writeJson(path.join(j.u.dir, "meta.json"), {
+      fs.copyFileSync(j.file, path.join(j.u.dir, pageFile(j.u.pageNumber, "approved.png")));
+      writeJson(path.join(j.u.dir, pageFile(j.u.pageNumber, "meta.json")), {
         provider: image.id,
         model: image.model,
         seed: j.seed,
@@ -259,7 +264,9 @@ export async function produce(argv: string[], ctx: Ctx): Promise<number> {
     "",
     "## Approved images",
     "",
-    ...units.filter((u) => u.approved).map((u) => `- ${path.join(u.dir, "approved.png")}`),
+    ...units
+      .filter((u) => u.approved)
+      .map((u) => `- ${path.join(u.dir, pageFile(u.pageNumber, "approved.png"))}`),
     "",
     "## Blocked pages",
     "",

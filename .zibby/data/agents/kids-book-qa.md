@@ -29,7 +29,7 @@ look for what a per-page check cannot see.
 
 - The production report (the file you are told to consume).
 - The plan: `$ZIBBY_RUN_DIR/book/plan.json`.
-- The pages: `$ZIBBY_RUN_DIR/book/illustrations/<NN>/approved.png` and the cover
+- The pages: `$ZIBBY_RUN_DIR/book/illustrations/<NN>/<NN>-approved.png` and the cover
   `$ZIBBY_RUN_DIR/book/cover-art/approved.png`. Open them with Read (images are
   supported). For a large book look at every page, but keep notes short.
 

@@ -27,7 +27,7 @@ const read = (ctx: Ctx, ...p: string[]): string =>
 const attempts = (ctx: Ctx, nn: string): string[] =>
   fs
     .readdirSync(path.join(ctx.cwd, "book", "illustrations", nn))
-    .filter((f) => f.startsWith("attempt-"))
+    .filter((f) => f.startsWith(`${nn}-attempt-`))
     .sort();
 
 describe("produce", () => {
@@ -35,9 +35,9 @@ describe("produce", () => {
     const ctx = await prepared();
     expect(await produce([jobs, "--rounds", "1"], ctx)).toBe(0);
     for (const n of ["01", "02", "03", "04"])
-      expect(fs.existsSync(path.join(ctx.cwd, "book", "illustrations", n, "approved.png"))).toBe(
-        true,
-      );
+      expect(
+        fs.existsSync(path.join(ctx.cwd, "book", "illustrations", n, `${n}-approved.png`)),
+      ).toBe(true);
     expect(fs.existsSync(path.join(ctx.cwd, "book", "cover-art", "approved.png"))).toBe(true);
     expect(read(ctx, "produce-report.md")).toContain("<verdict>pass</verdict>");
     const costs = read(ctx, "costs.jsonl")
@@ -45,22 +45,27 @@ describe("produce", () => {
       .split("\n")
       .map((l) => JSON.parse(l) as { source: string; page?: number });
     expect(costs.filter((c) => c.source === "image" && c.page !== undefined)).toHaveLength(4);
-    const meta = JSON.parse(read(ctx, "book", "illustrations", "01", "meta.json")) as {
+    const meta = JSON.parse(read(ctx, "book", "illustrations", "01", "01-meta.json")) as {
       provider: string;
       attempt: number;
     };
     expect(meta).toMatchObject({ provider: "mock", attempt: 1 });
     const m = await sharp(
-      path.join(ctx.cwd, "book", "illustrations", "01", "approved.png"),
+      path.join(ctx.cwd, "book", "illustrations", "01", "01-approved.png"),
     ).metadata();
     expect([m.width, m.height, m.hasAlpha]).toEqual([2550, 3300, false]);
+    expect(fs.readdirSync(path.join(ctx.cwd, "book", "illustrations", "01")).sort()).toEqual([
+      "01-approved.png",
+      "01-attempt-001.png",
+      "01-meta.json",
+    ]);
   });
 
   it("retries a failing page in round 2 without overwriting attempt 1", async () => {
     const ctx = await prepared({ PF_MOCK_FAIL_PAGES: "2" });
     expect(await produce([jobs, "--rounds", "2"], ctx)).toBe(0);
-    expect(attempts(ctx, "02")).toEqual(["attempt-001.png", "attempt-002.png"]);
-    expect(attempts(ctx, "01")).toEqual(["attempt-001.png"]);
+    expect(attempts(ctx, "02")).toEqual(["02-attempt-001.png", "02-attempt-002.png"]);
+    expect(attempts(ctx, "01")).toEqual(["01-attempt-001.png"]);
     expect(read(ctx, "produce-report.md")).toContain("<verdict>pass</verdict>");
   });
 
@@ -109,7 +114,7 @@ describe("render + preflight + finalize", () => {
     expect(pf.warnings.join()).toMatch(/KDP minimum is 24/);
     expect(read(ctx, "preflight.md")).toContain("<verdict>pass</verdict>");
 
-    const target = path.join(ctx.cwd, "book", "illustrations", "03", "approved.png");
+    const target = path.join(ctx.cwd, "book", "illustrations", "03", "03-approved.png");
     const orig = fs.readFileSync(target);
     await sharp({ create: { width: 100, height: 100, channels: 3, background: "#fff" } })
       .png()
@@ -148,8 +153,8 @@ describe("reject", () => {
     expect(await produce([jobs, "--rounds", "1"], ctx)).toBe(0);
     expect(await reject(["2", "--reason", "duplicate composition"], ctx)).toBe(0);
     const dir = path.join(ctx.cwd, "book", "illustrations", "02");
-    expect(fs.existsSync(path.join(dir, "approved.png"))).toBe(false);
-    expect(fs.existsSync(path.join(dir, "rejected-001.png"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "02-approved.png"))).toBe(false);
+    expect(fs.existsSync(path.join(dir, "02-rejected-001.png"))).toBe(true);
     expect(read(ctx, "book", "rejections.md")).toContain("duplicate composition");
     expect(await produce([jobs, "--rounds", "1"], ctx)).toBe(0);
     expect(attempts(ctx, "02")).toHaveLength(2);

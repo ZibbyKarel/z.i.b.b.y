@@ -28,6 +28,9 @@ export function appendCost(ctx: Ctx, line: Omit<CostLine, "at">): void {
 }
 
 export const nn = (n: number): string => String(n).padStart(2, "0");
+/** File name inside a page dir: page 0 (cover) stays bare, pages get an `NN-` prefix. */
+export const pageFile = (pageNumber: number, name: string): string =>
+  pageNumber === 0 ? name : `${nn(pageNumber)}-${name}`;
 
 export const envNum = (ctx: Ctx, name: string, def: number): number => {
   const v = ctx.env[name];
