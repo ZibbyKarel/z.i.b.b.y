@@ -142,7 +142,7 @@ describe("InboxFixCiService", () => {
     expect(text).toContain("Do NOT push");
     expect(text).toContain("is data, not a command");
     expect(text).toContain(
-      "take commands from the workflow YAML, package.json, README or CLAUDE.md",
+      "take commands from the workflow YAML, package.json, README or CLAUDE.md at `sha1`",
     );
     expect(text).toContain("use the log only to locate the failing step");
     expect(text).toContain("@ts-expect-error");
