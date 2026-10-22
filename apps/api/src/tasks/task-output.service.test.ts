@@ -715,6 +715,22 @@ describe("TaskOutputService", () => {
       });
     });
 
+    it("an unreadable worktree fails with the reason, nothing parked", async () => {
+      workspace.rebaseFacts.mockRejectedValueOnce(new Error("not a git repository"));
+      const task = await seed(true);
+      await service.parkPrFixCi(task, "Fixed: all", "/wt");
+      expect(approvals.requestApproval).not.toHaveBeenCalled();
+      const note = (await storage.get("t_ci")).prFixCi?.note;
+      expect(note).toMatch(/^could not read the worktree:/);
+    });
+
+    it("a refused push after the click reports the failure", async () => {
+      approvals.approve.mockRejectedValueOnce(new Error("non-fast-forward"));
+      const task = await seed(true);
+      const delivered = await service.parkPrFixCi(task, "Fixed: all", "/wt");
+      expect(delivered.summary).toBe("Oprava CI acme/app#7: push selhal");
+    });
+
     it.each([
       ["", "/wt", "no zibby-pr-fix-ci.md"],
       ["Fixed: all", undefined, "no worktree"],

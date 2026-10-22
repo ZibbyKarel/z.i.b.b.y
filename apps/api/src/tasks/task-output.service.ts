@@ -52,16 +52,18 @@ export function isAutoPushPrRebase(report: string): boolean {
 }
 
 /** PR inbox redesign — `Addressed: all` is the only first line ZIBBY pushes review fixes on without asking. */
-const FIXED_ALL = /^Fixed:\s*all\s*$/i;
 const ADDRESSED_ALL = /^Addressed:\s*all\s*$/i;
 
 /** The Address-review-comments click authorises the push only when the report's FIRST line is `Addressed: all`. */
-export function isAutoPushFixCi(report: string): boolean {
-  return FIXED_ALL.test(report.split("\n", 1)[0] ?? "");
-}
-
 export function isAutoPushAddressComments(report: string): boolean {
   return ADDRESSED_ALL.test(report.split("\n", 1)[0] ?? "");
+}
+
+const FIXED_ALL = /^Fixed:\s*all\s*$/i;
+
+/** Only an exact `Fixed: all` first line auto-pushes a CI fix, and only on the operator's own PR. */
+export function isAutoPushFixCi(report: string): boolean {
+  return FIXED_ALL.test(report.split("\n", 1)[0] ?? "");
 }
 
 /**

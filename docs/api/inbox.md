@@ -319,6 +319,8 @@ runner (`InboxFixCiService`) pushes exactly `fixedSha` fast-forward only, never 
 (`WorkspaceService.pushFastForward`, `expectedSha` = `headSha`) → `pushed`, or `failed` with
 git's reason; reject → `discarded`.
 
+The server does not verify CI is failing: the agent aborts with `Fixed: aborted — no failing checks`, which ends as failed / "no new commits".
+
 `GET /api/inbox/prs` rows carry `fixCi { taskId, state, finishedAt? }` (latest such task per PR;
 a `running` one whose task/run died reads `failed`).
 
