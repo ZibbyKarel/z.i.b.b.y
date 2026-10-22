@@ -5,7 +5,7 @@
 3. [x] pull-requests - potřebuju mít u PRs v detailu i v plachtě možnost PR rovnou aproovnout/přidat komentář/request changes. uděláme to jako jeden OptionButton s předvyplněným "Aproove". a možnostmi requested changes a comment. Když na něj kliknu otevře se dialog s textareou kam vyplním komentář (optional) a po submitu dialogu se PR stav změní na to co jsem vybral. Idea je abych mohl udělat code-review PR i manuálně a né jen přes workflow. (main@351bf6e7)
 4. [x] U PRs které jsou neaktuální musím mít vždy tlačítko "rebase". (main@c962921d)
 5. [x] U PRs, u kterých selhává CI musím mít tlačítko "Fix CI", které pustí workflow (vytvoř ho), které zjistí v čem je problém a opraví to. (main@6e1c955d)
-6. [ ] Při editaci layoutu na dashboardu - změna velikosti widgetu znamená "změna jeho maximální velikosti". Pokud nejsou data, který ve widgetu zobrazit, widget se automaticky zmenší. Resp má height auto a max-height je ta nastavená velikost
+6. [x] Při editaci layoutu na dashboardu - změna velikosti widgetu znamená "změna jeho maximální velikosti". Pokud nejsou data, který ve widgetu zobrazit, widget se automaticky zmenší. Resp má height auto a max-height je ta nastavená velikost (main@20c52ec9)
 7. [ ] tlačítko "uložit jako" při editaci layoutu na dashboardu by mělo zobrazit dialog s inputem na zadání jména layoutu. Zároveň musím mít možnost si layouty odstranit a označit jako favorites. Favorites layouty budou zobrazeny rovnou jako dnes "výchozí" a "review" a ostatní budou schované přes icon dropdown.
 8. [ ] Widget issues - u issue místo labelu JIRA zobrazíme přímo ikonku integrace na levé straně. ID tasku posuneme na řádek k názvu issue.
 9. [ ] Widget issues - popis tasku musí být formátovaný markdown
