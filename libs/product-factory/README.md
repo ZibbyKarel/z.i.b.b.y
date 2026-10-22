@@ -39,7 +39,7 @@ allow-list are in `docs/ops/product-factory.md`.
 ## Layout
 
 ```
-book/  plan.json jobs.json illustrations/<NN>/{attempt-001.png,approved.png,meta.json}
+book/  plan.json jobs.json illustrations/<NN>/{<NN>-attempt-001.png,<NN>-approved.png,<NN>-meta.json}
        cover-art/{attempt-001.png,approved.png} qa/<NN>.json render-manifest.json
        interior.pdf cover.pdf preflight.json listing.md README.md
 <stage cwd>/costs.jsonl   one JSON line per image/vision call

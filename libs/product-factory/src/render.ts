@@ -5,7 +5,7 @@ import { parseArgs } from "node:util";
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, degrees, rgb } from "pdf-lib";
 import type { PDFFont, PDFPage } from "pdf-lib";
-import { bookDirOf, nn, readJson, writeJson } from "./ctx.ts";
+import { bookDirOf, nn, pageFile, readJson, writeJson } from "./ctx.ts";
 import type { Ctx } from "./ctx.ts";
 import { PlanSchema } from "./schemas.ts";
 import type { Plan } from "./schemas.ts";
@@ -131,7 +131,12 @@ export async function render(argv: string[], ctx: Ctx): Promise<number> {
 
   const approved = plan.pages.map((p) => ({
     page: p,
-    file: path.join(book, "illustrations", nn(p.pageNumber), "approved.png"),
+    file: path.join(
+      book,
+      "illustrations",
+      nn(p.pageNumber),
+      pageFile(p.pageNumber, "approved.png"),
+    ),
   }));
   const missing = approved.filter((a) => !fs.existsSync(a.file));
   if (missing.length > 0) {
