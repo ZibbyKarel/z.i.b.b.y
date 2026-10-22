@@ -127,7 +127,12 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
   const key = prStatusKey(pr);
   const review = reviewCell(pr);
   const path = [...prStack(pr, all), pr, ...prChildren(pr, all)];
-  const taskIds = [pr.codeReview?.taskId, pr.addressComments?.taskId, pr.rebase?.taskId];
+  const taskIds = [
+    pr.codeReview?.taskId,
+    pr.addressComments?.taskId,
+    pr.fixCi?.taskId,
+    pr.rebase?.taskId,
+  ];
   const approval = approvals.find((a) => taskIds.includes(a.runId));
   const added = files.reduce((n, f) => n + f.added, 0);
   const removed = files.reduce((n, f) => n + f.removed, 0);

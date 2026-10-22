@@ -4,12 +4,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, renderWithProviders, screen } from "../../../test/render";
 import { PrActions, PrActionsTestId, REVIEW_MODE_STORAGE_KEY, hasPrActions } from "./PrActions";
 
-const { hooks, review, merge, rebase, address } = vi.hoisted(() => ({
+const { hooks, review, merge, rebase, address, fixCi } = vi.hoisted(() => ({
   hooks: { reviewPending: false },
   review: vi.fn(),
   merge: vi.fn(),
   rebase: vi.fn(),
   address: vi.fn(),
+  fixCi: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -20,6 +21,7 @@ vi.mock("../mutations", () => ({
   useReviewInboxPrMutation: () => ({ mutate: review, isPending: hooks.reviewPending }),
   useRebaseInboxPrMutation: () => ({ mutate: rebase, isPending: false }),
   useAddressInboxPrCommentsMutation: () => ({ mutate: address, isPending: false }),
+  useFixInboxPrCiMutation: () => ({ mutate: fixCi, isPending: false }),
 }));
 vi.mock("../../projects/mutations", () => ({
   useMergeProjectPrMutation: () => ({ mutate: merge, isPending: false }),
@@ -73,6 +75,7 @@ afterEach(() => {
   merge.mockReset();
   rebase.mockReset();
   address.mockReset();
+  fixCi.mockReset();
 });
 
 describe("PrActions review", () => {
@@ -401,5 +404,52 @@ describe("PrActions merge", () => {
       { params: { id: "api", number: 5 }, body: { method: "squash", deleteBranch: false } },
       expect.anything(),
     );
+  });
+});
+
+describe("PrActions fix CI", () => {
+  const failing = { ci: "failing", headRef: "feat" } as const;
+
+  it("failing CI shows FIX CI, which starts it with the PR target", () => {
+    renderWithProviders(<PrActions baseLabel="main" pr={pr(7, failing)} />);
+    fireEvent.click(screen.getByTestId(PrActionsTestId.FixCi));
+    expect(fixCi).toHaveBeenCalledWith(
+      { body: { projectId: "api", repo: "acme/api", number: 7, title: "PR 7" } },
+      expect.anything(),
+    );
+  });
+
+  it("a refused Fix CI shows the server's reason", () => {
+    fixCi.mockImplementationOnce((_vars, opts: { onError?: (e: unknown) => void }) =>
+      opts.onError?.({ status: 422, body: { message: "acme/api#7 comes from a fork" } }),
+    );
+    renderWithProviders(<PrActions baseLabel="main" pr={pr(7, failing)} />);
+    fireEvent.click(screen.getByTestId(PrActionsTestId.FixCi));
+    expect(screen.getByTestId(PrActionsTestId.Message)).toHaveTextContent(
+      "Oprava CI odmítnuta: acme/api#7 comes from a fork",
+    );
+  });
+
+  it("a running fix-ci shows its running label linked to the task", () => {
+    renderWithProviders(
+      <PrActions
+        baseLabel="main"
+        pr={pr(7, { ...failing, fixCi: { taskId: "t1", state: "running" } })}
+      />,
+    );
+    const running = screen.getByTestId(PrActionsTestId.Running);
+    expect(running).toHaveAttribute("href", "/work/tasks/t1");
+    expect(running).toHaveTextContent("Agent opravuje CI");
+  });
+
+  it("a failed fix-ci keeps the button and links the failed task", () => {
+    renderWithProviders(
+      <PrActions
+        baseLabel="main"
+        pr={pr(7, { ...failing, fixCi: { taskId: "t1", state: "failed" } })}
+      />,
+    );
+    expect(screen.getByTestId(PrActionsTestId.FixCi)).toBeInTheDocument();
+    expect(screen.getByTestId(PrActionsTestId.Failed)).toHaveAttribute("href", "/work/tasks/t1");
   });
 });

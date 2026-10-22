@@ -3072,6 +3072,16 @@
           "discarded": "Fixes discarded",
           "failed": "Addressing comments failed"
         },
+        "fixCi": "Fix CI",
+        "fixCiFailed": "Could not start the CI fix.",
+        "fixCiRefused": "Fix CI refused: {reason}",
+        "fixCiState": {
+          "running": "Agent fixing CI",
+          "awaiting-approval": "CI fix awaiting approval",
+          "pushed": "CI fix pushed",
+          "discarded": "CI fix discarded",
+          "failed": "CI fix failed"
+        },
         "rebaseOn": "Rebase on {base}"
       },
       "listTitle": "Pull requests",

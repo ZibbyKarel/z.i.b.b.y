@@ -6,6 +6,7 @@ import {
   hasPrActions,
   hasThreadsToAddress,
   isFix,
+  isFixCi,
   isMerge,
   isRebase,
   isReview,
@@ -96,6 +97,31 @@ describe("isRebase", () => {
   });
 });
 
+describe("isFixCi", () => {
+  const base = { ci: "failing", headRef: "feat" } as const;
+  it("offers a failing PR of mine", () => {
+    expect(isFixCi(pr(base))).toBe(true);
+  });
+  it("offers a colleague's to-review PR; never a fork head", () => {
+    expect(isFixCi(pr({ ...base, bucket: "to-review" }))).toBe(true);
+    expect(isFixCi(pr({ ...base, headRef: undefined }))).toBe(false);
+  });
+  it("not for passing / pending / unknown CI", () => {
+    for (const ci of ["passing", "pending", "unknown"] as const) {
+      expect(isFixCi(pr({ ...base, ci }))).toBe(false);
+    }
+  });
+  it("hidden after a successful run until the PR changes again", () => {
+    const fixCi = { taskId: "t", state: "pushed", finishedAt: T0 } as InboxPr["fixCi"];
+    expect(isFixCi(pr({ ...base, fixCi, updatedAt: T0 }))).toBe(false);
+    expect(isFixCi(pr({ ...base, fixCi, updatedAt: after(SETTLE_MS + 1) }))).toBe(true);
+  });
+  it("independent of Address and Rebase", () => {
+    const both = pr({ ...base, behind: true, unresolvedThreads: 2 });
+    expect(isFixCi(both) && isFix(both) && isRebase(both)).toBe(true);
+  });
+});
+
 describe("isMerge", () => {
   it("is the ready-to-merge section", () => {
     expect(isMerge(pr({ section: "ready-to-merge" }))).toBe(true);
@@ -114,6 +140,9 @@ describe("hasPrActions", () => {
     expect(hasPrActions(pr({ rebase: run("awaiting-approval") }))).toBe(true);
     expect(hasPrActions(pr({ rebase: run("failed") }))).toBe(true);
     expect(hasPrActions(pr({ rebase: run("done") }))).toBe(false);
+  });
+  it("is true for a failing PR alone", () => {
+    expect(hasPrActions(pr({ ci: "failing", headRef: "feat" }))).toBe(true);
   });
   it("offers review on a draft to-review PR", () => {
     expect(hasPrActions(pr({ bucket: "to-review", draft: true }))).toBe(true);

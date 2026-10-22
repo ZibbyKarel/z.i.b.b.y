@@ -3072,6 +3072,16 @@
           "discarded": "Opravy zahozeny",
           "failed": "Zapracování komentářů selhalo"
         },
+        "fixCi": "Opravit CI",
+        "fixCiFailed": "Opravu CI se nepodařilo spustit.",
+        "fixCiRefused": "Oprava CI odmítnuta: {reason}",
+        "fixCiState": {
+          "running": "Agent opravuje CI",
+          "awaiting-approval": "Oprava CI čeká na schválení",
+          "pushed": "Oprava CI pushnuta",
+          "discarded": "Oprava CI zahozena",
+          "failed": "Oprava CI selhala"
+        },
         "rebaseOn": "Rebase na {base}"
       },
       "listTitle": "Pull requesty",

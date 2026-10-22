@@ -1,6 +1,7 @@
 import type {
   InboxPr,
   PrAddressCommentsState,
+  PrFixCiState,
   PrRebaseState,
   PrReviewState,
 } from "@zibby/contracts";
@@ -8,7 +9,8 @@ import type {
 export type Run =
   | { kind: "review"; taskId: string; state: PrReviewState }
   | { kind: "rebase"; taskId: string; state: PrRebaseState }
-  | { kind: "address"; taskId: string; state: PrAddressCommentsState };
+  | { kind: "address"; taskId: string; state: PrAddressCommentsState }
+  | { kind: "fix-ci"; taskId: string; state: PrFixCiState };
 
 /**
  * ZIBBY's own writes (the review, the push, thread replies, re-requests) bump GitHub's
@@ -36,12 +38,16 @@ export const isFix = (pr: InboxPr) =>
   !handled(pr, pr.addressComments);
 /** todo-11 — offered on any outdated PR (conflicting or behind its base), alongside Review/Address. */
 export const isRebase = (pr: InboxPr) => pr.mergeable === false || pr.behind === true;
+/** Offered on any PR with failing checks (never a fork head); independent of Address/Rebase. */
+export const isFixCi = (pr: InboxPr) =>
+  pr.ci === "failing" && pr.headRef !== undefined && !handled(pr, pr.fixCi);
 export const isMerge = (pr: InboxPr) => pr.section === "ready-to-merge";
 
-/** The PR's ZIBBY runs, address → rebase → review (the order the label prefers). */
+/** The PR's ZIBBY runs, address → fix-ci → rebase → review (the order the label prefers). */
 export function runsOf(pr: InboxPr): Run[] {
   const runs: Run[] = [];
   if (pr.addressComments) runs.push({ kind: "address", ...pr.addressComments });
+  if (pr.fixCi) runs.push({ kind: "fix-ci", ...pr.fixCi });
   if (pr.rebase) runs.push({ kind: "rebase", ...pr.rebase });
   if (pr.codeReview) runs.push({ kind: "review", ...pr.codeReview });
   return runs;
@@ -52,6 +58,7 @@ export const inFlight = (r: Run) => r.state === "running" || r.state === "awaiti
 export const hasPrActions = (pr: InboxPr) =>
   isReview(pr) ||
   isFix(pr) ||
+  isFixCi(pr) ||
   isRebase(pr) ||
   isMerge(pr) ||
   runsOf(pr).some((r) => inFlight(r) || r.state === "failed");

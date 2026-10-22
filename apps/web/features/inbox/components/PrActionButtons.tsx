@@ -19,6 +19,7 @@ import { useState } from "react";
 import { useMergeProjectPrMutation } from "../../projects/mutations";
 import {
   useAddressInboxPrCommentsMutation,
+  useFixInboxPrCiMutation,
   useRebaseInboxPrMutation,
   useReviewInboxPrMutation,
 } from "../mutations";
@@ -29,6 +30,7 @@ import {
   hasPrActions,
   inFlight,
   isFix,
+  isFixCi,
   isMerge,
   isRebase,
   isReview,
@@ -39,6 +41,7 @@ import { NavLink } from "./links";
 export enum PrActionsTestId {
   Review = "inbox-pr-review",
   Address = "inbox-pr-address-comments",
+  FixCi = "inbox-pr-fix-ci",
   Rebase = "inbox-pr-rebase",
   Running = "inbox-pr-running",
   Failed = "inbox-pr-failed",
@@ -68,6 +71,8 @@ export interface PrActionButtonsProps {
  * - my PR with changes requested → "Address review comments": a `pr-address-comments` task.
  *   ZIBBY fast-forwards the fixes (never force) — right away for `Addressed: all` (Tier-2),
  *   after a Tier-3 approval otherwise;
+ * - a PR with failing checks → "Fix CI": a `pr-fix-ci` task. ZIBBY fast-forwards the fix (never force) —
+ *   right away for `Fixed: all` on my own PR (Tier-2), after a Tier-3 approval otherwise;
  * - any PR conflicting with / behind its base → "Rebase on <base>" (todo-11). Never a fallback;
  * - `ready-to-merge` → hold-to-confirm "Squash and merge" (optionally deleting the head branch).
  * While a ZIBBY run is in flight its running label (linked to the task) replaces the buttons;
@@ -80,6 +85,7 @@ export function PrActionButtons({ pr, baseLabel }: PrActionButtonsProps) {
   const review = useReviewInboxPrMutation();
   const merge = useMergeProjectPrMutation();
   const rebase = useRebaseInboxPrMutation();
+  const fixCi = useFixInboxPrCiMutation();
   const address = useAddressInboxPrCommentsMutation();
   const [deleteBranch, setDeleteBranch] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
@@ -96,6 +102,8 @@ export function PrActionButtons({ pr, baseLabel }: PrActionButtonsProps) {
         return t(`rebaseState.${r.state}`);
       case "address":
         return t(`addressState.${r.state}`);
+      case "fix-ci":
+        return t(`fixCiState.${r.state}`);
     }
   };
 
@@ -135,6 +143,20 @@ export function PrActionButtons({ pr, baseLabel }: PrActionButtonsProps) {
             "status" in err && err.status === 422
               ? t("addressRefused", { reason: err.body.message })
               : t("addressFailed"),
+          ),
+      },
+    );
+
+  const onFixCi = () =>
+    fixCi.mutate(
+      { body: target },
+      {
+        onSuccess: () => setMessage(null),
+        onError: (err) =>
+          setMessage(
+            "status" in err && err.status === 422
+              ? t("fixCiRefused", { reason: err.body.message })
+              : t("fixCiFailed"),
           ),
       },
     );
@@ -206,6 +228,18 @@ export function PrActionButtons({ pr, baseLabel }: PrActionButtonsProps) {
               size="sm"
             >
               {t("address")}
+            </Button>
+          )}
+          {isFixCi(pr) && (
+            <Button
+              data-testid={PrActionsTestId.FixCi}
+              disabled={fixCi.isPending}
+              intent="primary"
+              loading={fixCi.isPending}
+              onClick={onFixCi}
+              size="sm"
+            >
+              {t("fixCi")}
             </Button>
           )}
           {isRebase(pr) && (
