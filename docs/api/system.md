@@ -74,7 +74,8 @@ system-config section — link there rather than duplicating the table here.
 6. **`ui`** holds operator UI preferences that must follow the operator across
    browsers: `density` (system-wide DS spacing, default `airy`) and `bridge`
    (the `/dashboard` Bridge board's layout, active preset, saved presets,
-   collapsed widgets, closed epics). Every writer must pass `ui` through —
+   `arranged` — which layouts sit in the header vs. its dropdown, `removed` —
+   deleted built-in layouts (REVIEW), collapsed widgets, closed epics). Every writer must pass `ui` through —
    the PUT replaces the whole document. See
    [bridge-dashboard-design.md](../plans/bridge-dashboard-design.md).
 

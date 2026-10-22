@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { compact } from "./layout";
-import { REVIEW_LAYOUT, layoutNameError, nextSavedName, presetLayout } from "./presets";
+import {
+  REVIEW_LAYOUT,
+  arrangement,
+  layoutNameError,
+  layoutNames,
+  nextSavedName,
+  presetLayout,
+} from "./presets";
 
 describe("presets", () => {
   it("REVIEW is already compact", () => {
@@ -23,5 +30,31 @@ describe("presets", () => {
     expect(layoutNameError("review", {})).toBe("reserved");
     expect(layoutNameError("my layout 01", { "MY LAYOUT 01": 1 })).toBe("taken");
     expect(layoutNameError("Mine", { "MY LAYOUT 01": 1 })).toBeNull();
+  });
+});
+
+describe("layoutNames / arrangement", () => {
+  it("lists REVIEW first unless removed or saved over", () => {
+    expect(layoutNames({ A: [] }, [])).toEqual(["REVIEW", "A"]);
+    expect(layoutNames({ A: [] }, ["REVIEW"])).toEqual(["A"]);
+    expect(layoutNames({ A: [], REVIEW: [] }, [])).toEqual(["A", "REVIEW"]);
+  });
+
+  it("drops stale names and appends unknown ones to hidden", () => {
+    expect(
+      arrangement(["REVIEW", "A", "B"], { shown: ["B", "gone"], hidden: ["REVIEW"] }, []),
+    ).toEqual({ shown: ["B"], hidden: ["REVIEW", "A"] });
+  });
+
+  it("never arranged: REVIEW and favorites are shown", () => {
+    expect(arrangement(["REVIEW", "A", "B"], null, ["B"])).toEqual({
+      shown: ["REVIEW", "B"],
+      hidden: ["A"],
+    });
+  });
+
+  it("a saved REVIEW override resolves before the built-in", () => {
+    const own = [{ id: "prs", type: "prs" as const, x: 0, y: 0, w: 4, h: 4 }];
+    expect(presetLayout("REVIEW", { REVIEW: own })).toEqual(own);
   });
 });

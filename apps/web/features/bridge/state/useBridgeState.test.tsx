@@ -35,76 +35,112 @@ describe("useBridgeState", () => {
     });
   });
 
-  it("saveAs(Mine) saves the current layout, favorites it and selects it", () => {
+  it("starts with REVIEW shown and nothing hidden; legacy favorites are shown too", () => {
     const { result } = renderHook(() => useBridgeState());
-    act(() => result.current.saveAs("  Mine "));
-    expect(result.current.preset).toBe("Mine");
-    expect(result.current.saved["Mine"]).toEqual(compact(DEFAULT_LAYOUT));
-    expect(result.current.favorites).toEqual(["Mine"]);
-    expect(result.current.nextName).toBe("MY LAYOUT 01");
+    expect(result.current.layouts).toEqual({ shown: ["REVIEW"], hidden: [] });
+    ui = UiSettingsSchema.parse({
+      bridge: { saved: { A: [], B: [] }, favorites: ["B"] },
+    });
+    const { result: legacy } = renderHook(() => useBridgeState());
+    expect(legacy.current.layouts).toEqual({ shown: ["REVIEW", "B"], hidden: ["A"] });
   });
 
-  it("saveAs with a taken name changes nothing", () => {
+  it("addLayout copies DEFAULT as the last hidden layout without selecting it", () => {
     const { result } = renderHook(() => useBridgeState());
-    act(() => result.current.saveAs("Mine"));
+    let ok = false;
+    act(() => void (ok = result.current.addLayout("  Mine ")));
+    expect(ok).toBe(true);
+    expect(result.current.saved["Mine"]).toEqual(compact(DEFAULT_LAYOUT));
+    expect(result.current.layouts).toEqual({ shown: ["REVIEW"], hidden: ["Mine"] });
+    expect(result.current.preset).toBe("DEFAULT");
+  });
+
+  it("addLayout with a taken or reserved name changes nothing", () => {
+    const { result } = renderHook(() => useBridgeState());
+    act(() => void result.current.addLayout("Mine"));
     setBridge.mockClear();
-    act(() => result.current.saveAs("mine"));
+    let ok = true;
+    act(() => void (ok = result.current.addLayout("mine")));
+    act(() => void result.current.addLayout("review"));
+    expect(ok).toBe(false);
     expect(setBridge).not.toHaveBeenCalled();
     expect(Object.keys(result.current.saved)).toEqual(["Mine"]);
   });
 
-  it("deleteSaved of the active layout keeps the board and flips to CUSTOM", () => {
+  it("arrange moves layouts between header and dropdown", () => {
     const { result } = renderHook(() => useBridgeState());
-    act(() => result.current.applyPreset("REVIEW"));
-    act(() => result.current.saveAs("Mine"));
-    act(() => result.current.deleteSaved("Mine"));
+    act(() => void result.current.addLayout("Mine"));
+    act(() => result.current.arrange({ shown: ["Mine"], hidden: ["REVIEW"] }));
+    expect(result.current.layouts).toEqual({ shown: ["Mine"], hidden: ["REVIEW"] });
+    expect(setBridge).toHaveBeenLastCalledWith({
+      arranged: { shown: ["Mine"], hidden: ["REVIEW"] },
+    });
+  });
+
+  it("deleteLayout of the active layout switches to DEFAULT", () => {
+    const { result } = renderHook(() => useBridgeState());
+    act(() => void result.current.addLayout("Mine"));
+    act(() => result.current.applyPreset("Mine"));
+    act(() => result.current.deleteLayout("Mine"));
     expect(result.current.saved).toEqual({});
-    expect(result.current.preset).toBe("CUSTOM");
-    expect(result.current.layout).toEqual(compact(REVIEW_LAYOUT));
-  });
-
-  it("deleteSaved removes it from favorites", () => {
-    const { result } = renderHook(() => useBridgeState());
-    act(() => result.current.saveAs("Mine"));
-    act(() => result.current.applyPreset("REVIEW"));
-    act(() => result.current.deleteSaved("Mine"));
-    expect(result.current.favorites).toEqual([]);
-    expect(result.current.preset).toBe("REVIEW");
-  });
-
-  it("toggleFavorite adds then removes", () => {
-    const { result } = renderHook(() => useBridgeState());
-    act(() => result.current.saveAs("Mine"));
-    act(() => result.current.toggleFavorite("Mine"));
-    expect(result.current.favorites).toEqual([]);
-    act(() => result.current.toggleFavorite("Mine"));
-    expect(result.current.favorites).toEqual(["Mine"]);
-  });
-
-  it("reset returns to DEFAULT", () => {
-    const { result } = renderHook(() => useBridgeState());
-    act(() => result.current.applyPreset("REVIEW"));
-    act(() => result.current.reset());
     expect(result.current.preset).toBe("DEFAULT");
     expect(result.current.layout).toEqual(compact(DEFAULT_LAYOUT));
+    expect(result.current.layouts).toEqual({ shown: ["REVIEW"], hidden: [] });
   });
 
-  it("a manual move flips the preset to CUSTOM", () => {
+  it("REVIEW is deletable and stays gone; DEFAULT is not", () => {
     const { result } = renderHook(() => useBridgeState());
-    act(() => result.current.move("issues", { x: 0, y: 3, w: 4, h: 18 }, 1, 0));
-    expect(result.current.preset).toBe("CUSTOM");
+    act(() => result.current.deleteLayout("REVIEW"));
+    expect(result.current.layouts).toEqual({ shown: [], hidden: [] });
+    expect(setBridge).toHaveBeenLastCalledWith(expect.objectContaining({ removed: ["REVIEW"] }));
+    setBridge.mockClear();
+    act(() => result.current.deleteLayout("DEFAULT"));
+    expect(setBridge).not.toHaveBeenCalled();
+  });
+
+  it("startEditing selects the layout; edits stay a draft until saveEdit writes them", () => {
+    const { result } = renderHook(() => useBridgeState());
+    act(() => void result.current.addLayout("Mine"));
+    act(() => result.current.startEditing("Mine"));
+    expect(result.current.editing).toBe(true);
+    expect(result.current.editTarget).toBe("Mine");
+    expect(result.current.preset).toBe("Mine");
+    setBridge.mockClear();
+    act(() => result.current.remove("runs"));
+    expect(result.current.layout.some((w) => w.id === "runs")).toBe(false);
+    expect(setBridge).not.toHaveBeenCalled();
+    act(() => result.current.saveEdit());
+    expect(result.current.editing).toBe(false);
+    expect(result.current.preset).toBe("Mine");
+    expect(result.current.saved["Mine"]?.some((w) => w.id === "runs")).toBe(false);
     expect(setBridge).toHaveBeenLastCalledWith(
-      expect.objectContaining({ preset: "CUSTOM", layout: expect.any(Array) }),
+      expect.objectContaining({ preset: "Mine", layout: result.current.layout }),
     );
   });
 
-  it("add and remove go CUSTOM", () => {
+  it("cancelEdit drops the draft", () => {
     const { result } = renderHook(() => useBridgeState());
+    act(() => result.current.startEditing("REVIEW"));
     act(() => result.current.remove("runs"));
-    expect(result.current.layout.some((w) => w.id === "runs")).toBe(false);
-    expect(result.current.preset).toBe("CUSTOM");
-    act(() => result.current.add("runs"));
-    expect(result.current.layout.some((w) => w.id === "runs")).toBe(true);
+    act(() => result.current.cancelEdit());
+    expect(result.current.editing).toBe(false);
+    expect(result.current.layout).toEqual(compact(REVIEW_LAYOUT));
+    expect(result.current.saved).toEqual({});
+  });
+
+  it("editing REVIEW saves an override of the built-in", () => {
+    const { result } = renderHook(() => useBridgeState());
+    act(() => result.current.startEditing("REVIEW"));
+    act(() => result.current.remove("runs"));
+    act(() => result.current.saveEdit());
+    expect(result.current.saved["REVIEW"]?.some((w) => w.id === "runs")).toBe(false);
+    expect(result.current.layouts).toEqual({ shown: ["REVIEW"], hidden: [] });
+  });
+
+  it("DEFAULT is not editable", () => {
+    const { result } = renderHook(() => useBridgeState());
+    act(() => result.current.startEditing("DEFAULT"));
+    expect(result.current.editing).toBe(false);
   });
 
   it("collapse toggles instantly and persists via setBridge", () => {
@@ -118,7 +154,7 @@ describe("useBridgeState", () => {
 
   it("Esc is ignored while typing in an input, textarea or contenteditable", () => {
     const { result } = renderHook(() => useBridgeState());
-    act(() => result.current.toggleEditing());
+    act(() => result.current.startEditing("REVIEW"));
     const ta = document.createElement("textarea");
     const ce = document.createElement("div");
     // jsdom has no isContentEditable; emulate it
@@ -135,7 +171,7 @@ describe("useBridgeState", () => {
 
   it("Esc inside an aria-modal element is ignored; inside a non-modal dialog it closes the selection", () => {
     const { result } = renderHook(() => useBridgeState());
-    act(() => result.current.toggleEditing());
+    act(() => result.current.startEditing("REVIEW"));
     act(() => result.current.setSelection({ kind: "pr", id: "1", widgetId: "prs", key: "pr:1" }));
     const modal = document.createElement("div");
     modal.setAttribute("role", "dialog");
@@ -157,25 +193,27 @@ describe("useBridgeState", () => {
     sheet.remove();
   });
 
-  it("endDrag settles with a final compact and flags CUSTOM only if something moved", () => {
+  it("endDrag settles with a final compact into the draft only if something moved", () => {
     ui = UiSettingsSchema.parse({
       bridge: {
-        preset: "X",
-        layout: [
-          { id: "issues", type: "issues", x: 0, y: 0, w: 4, h: 4 },
-          { id: "prs", type: "prs", x: 0, y: 10, w: 4, h: 4 },
-        ],
+        saved: {
+          X: [
+            { id: "issues", type: "issues", x: 0, y: 0, w: 4, h: 4 },
+            { id: "prs", type: "prs", x: 0, y: 10, w: 4, h: 4 },
+          ],
+        },
       },
     });
     const { result } = renderHook(() => useBridgeState());
+    act(() => result.current.startEditing("X"));
     act(() => result.current.beginDrag("prs"));
     act(() => result.current.endDrag());
     expect(result.current.draggingId).toBeNull();
     expect(result.current.layout.find((w) => w.id === "prs")?.y).toBe(4);
-    expect(result.current.preset).toBe("CUSTOM");
+    expect(result.current.preset).toBe("X");
   });
 
-  it("endDrag on an already compact layout does not re-flag the preset", () => {
+  it("endDrag on an already compact layout persists nothing", () => {
     const { result } = renderHook(() => useBridgeState());
     act(() => result.current.beginDrag("issues"));
     act(() => result.current.endDrag());
@@ -187,7 +225,7 @@ describe("useBridgeState", () => {
     const { result } = renderHook(() => useBridgeState());
     const esc = () =>
       act(() => void window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })));
-    act(() => result.current.toggleEditing());
+    act(() => result.current.startEditing("REVIEW"));
     act(() => result.current.toggleCatalog());
     act(() => result.current.setSelection({ kind: "pr", id: "1", widgetId: "prs", key: "pr:1" }));
     esc();
@@ -196,7 +234,9 @@ describe("useBridgeState", () => {
     esc();
     expect(result.current.catalogOpen).toBe(false);
     expect(result.current.editing).toBe(true);
+    act(() => result.current.remove("runs"));
     esc();
     expect(result.current.editing).toBe(false);
+    expect(result.current.layout).toEqual(compact(REVIEW_LAYOUT));
   });
 });

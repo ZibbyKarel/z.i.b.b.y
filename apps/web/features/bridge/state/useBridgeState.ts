@@ -13,7 +13,17 @@ import {
   dragResize,
   removeWidget,
 } from "../grid/layout";
-import { DEFAULT_PRESET, layoutNameError, nextSavedName, presetLayout } from "../grid/presets";
+import {
+  type Arrangement,
+  DEFAULT_LAYOUT,
+  DEFAULT_PRESET,
+  REVIEW_PRESET,
+  arrangement,
+  layoutNameError,
+  layoutNames,
+  nextSavedName,
+  presetLayout,
+} from "../grid/presets";
 import type { BridgeSelection } from "../widgets/registry";
 
 export const CUSTOM_PRESET = "CUSTOM";
@@ -21,27 +31,38 @@ export const CUSTOM_PRESET = "CUSTOM";
 type BridgeUi = UiSettings["bridge"];
 
 /**
- * Bridge screen state. Persisted bits (layout / preset / saved / collapsed / epicClosed) live in
- * `ui.bridge` (server, debounced by `useUiSettings.setBridge`); a local overlay keeps every change
- * instant so drags and toggles don't wait for the round trip. editing / catalog / dragging /
- * selection are local. Esc closes selection → catalog → edit mode.
+ * Bridge screen state. Persisted bits (layout / preset / saved / arranged / removed / collapsed /
+ * epicClosed) live in `ui.bridge` (server, debounced by `useUiSettings.setBridge`); a local overlay
+ * keeps every change instant so drags and toggles don't wait for the round trip. The edit target,
+ * its unsaved draft, catalog / dragging / selection are local: edits change only the draft until
+ * `saveEdit` writes it into the target layout. Esc closes selection → catalog → edit mode
+ * (discarding the draft).
  */
 export function useBridgeState() {
   const { ui, setBridge } = useUiSettings();
   const [local, setLocal] = useState<Partial<BridgeUi>>({});
-  const [editing, setEditing] = useState(false);
+  /** The layout being edited (never DEFAULT); null outside edit mode. */
+  const [editTarget, setEditTarget] = useState<string | null>(null);
+  /** Unsaved edits of `editTarget`; null until the first change. */
+  const [draft, setDraft] = useState<BridgeWidget[] | null>(null);
+  const editing = editTarget !== null;
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   /** The open detail-sheet row; null until the sheet task wires rows to `setSelection`. */
   const [selection, setSelection] = useState<BridgeSelection | null>(null);
 
   const bridge = { ...ui.bridge, ...local };
-  const { preset, saved, collapsed, epicClosed } = bridge;
-  const favorites = bridge.favorites.filter((n) => n in saved);
-  const layout = useMemo(
+  const { preset, saved, removed, collapsed, epicClosed } = bridge;
+  const { arranged, favorites } = bridge;
+  const layouts = useMemo(
+    () => arrangement(layoutNames(saved, removed), arranged, favorites),
+    [saved, removed, arranged, favorites],
+  );
+  const persistedLayout = useMemo(
     () => bridge.layout ?? presetLayout(preset, saved),
     [bridge.layout, preset, saved],
   );
+  const layout = draft ?? persistedLayout;
   const layoutRef = useRef(layout);
   useEffect(() => {
     layoutRef.current = layout;
@@ -55,56 +76,82 @@ export function useBridgeState() {
     [setBridge],
   );
 
-  /** A manual layout change — flips the preset to CUSTOM. */
-  const commitLayout = useCallback(
-    (next: BridgeWidget[]) => {
-      layoutRef.current = next;
-      update({ layout: next, preset: CUSTOM_PRESET });
-    },
-    [update],
-  );
+  /** A manual layout change (edit mode) — lands in the draft, not in the persisted board. */
+  const commitLayout = useCallback((next: BridgeWidget[]) => {
+    layoutRef.current = next;
+    setDraft(next);
+  }, []);
 
   const applyPreset = useCallback(
     (name: string) => update({ layout: presetLayout(name, saved), preset: name }),
     [update, saved],
   );
-  const reset = useCallback(() => applyPreset(DEFAULT_PRESET), [applyPreset]);
 
-  const saveAs = useCallback(
+  const leaveEditing = useCallback(() => {
+    setEditTarget(null);
+    setDraft(null);
+    setCatalogOpen(false);
+  }, []);
+
+  /** Select `name` and enter edit mode on it (DEFAULT is not editable). */
+  const startEditing = useCallback(
+    (name: string) => {
+      if (name === DEFAULT_PRESET) return;
+      applyPreset(name);
+      setDraft(null);
+      setSelection(null);
+      setEditTarget(name);
+    },
+    [applyPreset],
+  );
+
+  /** Write the edited board into the target layout and leave edit mode. */
+  const saveEdit = useCallback(() => {
+    if (!editTarget) return;
+    const next = layoutRef.current;
+    update({ saved: { ...saved, [editTarget]: next }, layout: next, preset: editTarget });
+    leaveEditing();
+  }, [editTarget, update, saved, leaveEditing]);
+
+  /** Add a layout — a copy of DEFAULT — as the last hidden one. False if the name is invalid. */
+  const addLayout = useCallback(
     (raw: string) => {
       const name = raw.trim();
-      if (layoutNameError(name, saved)) return;
+      if (layoutNameError(name, saved)) return false;
       update({
-        saved: { ...saved, [name]: layout },
-        favorites: [...favorites, name],
-        preset: name,
+        saved: { ...saved, [name]: compact(DEFAULT_LAYOUT) },
+        arranged: { shown: layouts.shown, hidden: [...layouts.hidden, name] },
       });
+      return true;
     },
-    [update, saved, favorites, layout],
+    [update, saved, layouts.shown, layouts.hidden],
   );
 
-  const deleteSaved = useCallback(
+  /** Delete a layout (anything but DEFAULT); deleting the active one switches to DEFAULT first. */
+  const deleteLayout = useCallback(
     (name: string) => {
+      if (name === DEFAULT_PRESET) return;
       const rest = { ...saved };
       delete rest[name];
+      const without = (ns: readonly string[]) => ns.filter((n) => n !== name);
       update({
         saved: rest,
-        favorites: favorites.filter((n) => n !== name),
-        ...(preset === name ? { preset: CUSTOM_PRESET, layout } : {}),
+        arranged: { shown: without(layouts.shown), hidden: without(layouts.hidden) },
+        favorites: without(favorites),
+        ...(name === REVIEW_PRESET && !removed.includes(name)
+          ? { removed: [...removed, name] }
+          : {}),
+        ...(preset === name
+          ? { preset: DEFAULT_PRESET, layout: presetLayout(DEFAULT_PRESET, {}) }
+          : {}),
       });
+      if (editTarget === name) leaveEditing();
     },
-    [update, saved, favorites, preset, layout],
+    [update, saved, layouts, favorites, removed, preset, editTarget, leaveEditing],
   );
 
-  const toggleFavorite = useCallback(
-    (name: string) =>
-      update({
-        favorites: favorites.includes(name)
-          ? favorites.filter((n) => n !== name)
-          : [...favorites, name],
-      }),
-    [update, favorites],
-  );
+  /** Persist a new header/dropdown split from the layout manager. */
+  const arrange = useCallback((next: Arrangement) => update({ arranged: next }), [update]);
   const nextName = nextSavedName(saved);
 
   const toggleCollapsed = useCallback(
@@ -135,11 +182,6 @@ export function useBridgeState() {
     [commitLayout],
   );
 
-  const toggleEditing = useCallback(() => {
-    setEditing((e) => !e);
-    setCatalogOpen(false);
-    setSelection(null);
-  }, []);
   const toggleCatalog = useCallback(() => setCatalogOpen((o) => !o), []);
   const closeCatalog = useCallback(() => setCatalogOpen(false), []);
   const closeSelection = useCallback(() => setSelection(null), []);
@@ -164,32 +206,35 @@ export function useBridgeState() {
         return;
       if (selection) setSelection(null);
       else if (catalogOpen) setCatalogOpen(false);
-      else if (editing) setEditing(false);
+      else if (editing) leaveEditing();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selection, catalogOpen, editing]);
+  }, [selection, catalogOpen, editing, leaveEditing]);
 
   return {
     layout,
     layoutRef,
     preset,
     saved,
-    favorites,
+    layouts,
     nextName,
     collapsed,
     epicClosed,
     editing,
+    editTarget,
     catalogOpen: editing && catalogOpen,
     draggingId,
     selection,
     setSelection,
     closeSelection,
     applyPreset,
-    saveAs,
-    deleteSaved,
-    toggleFavorite,
-    reset,
+    startEditing,
+    saveEdit,
+    cancelEdit: leaveEditing,
+    addLayout,
+    deleteLayout,
+    arrange,
     toggleCollapsed,
     setEpicClosed,
     move,
@@ -198,7 +243,6 @@ export function useBridgeState() {
     remove,
     beginDrag,
     endDrag,
-    toggleEditing,
     toggleCatalog,
     closeCatalog,
   };

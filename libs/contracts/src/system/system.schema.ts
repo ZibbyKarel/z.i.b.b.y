@@ -36,8 +36,18 @@ export const UiSettingsSchema = z.object({
       preset: z.string().min(1).default("DEFAULT"),
       /** Operator-saved named layouts. */
       saved: z.record(z.string(), z.array(BridgeWidgetSchema)).default({}),
-      /** Names of saved layouts shown directly in the header. */
+      /** Legacy: saved layouts shown in the header, read only while `arranged` is null. */
       favorites: z.array(z.string()).default([]),
+      /**
+       * Layout order from the layout manager: `shown` sit in the header after DEFAULT, `hidden`
+       * behind its dropdown. `null` = never arranged (REVIEW + `favorites` shown).
+       */
+      arranged: z
+        .object({ shown: z.array(z.string()), hidden: z.array(z.string()) })
+        .nullable()
+        .default(null),
+      /** Deleted built-in layouts (only `REVIEW` is deletable). */
+      removed: z.array(z.string()).default([]),
       /** Widget id -> collapsed. */
       collapsed: z.record(z.string(), z.boolean()).default({}),
       /** Epic group key -> closed (Issues widget). */

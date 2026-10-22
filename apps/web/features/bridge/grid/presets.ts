@@ -21,14 +21,52 @@ const REVIEW_TUPLES: readonly WidgetTuple[] = [
 export const DEFAULT_LAYOUT: BridgeWidget[] = fromArr(DEFAULT_TUPLES);
 export const REVIEW_LAYOUT: BridgeWidget[] = fromArr(REVIEW_TUPLES);
 
-/** Compacted layout for a preset name: DEFAULT, REVIEW, else a saved layout (empty if unknown). */
+/**
+ * Compacted layout for a preset name: DEFAULT, a saved layout, the built-in REVIEW (a saved
+ * `REVIEW` — written when it is edited — overrides it), else empty.
+ */
 export function presetLayout(
   name: string,
   saved: Readonly<Record<string, readonly BridgeWidget[]>>,
 ): BridgeWidget[] {
   if (name === DEFAULT_PRESET) return compact(DEFAULT_LAYOUT);
-  if (name === REVIEW_PRESET) return compact(REVIEW_LAYOUT);
-  return compact(saved[name] ?? []);
+  return compact(saved[name] ?? (name === REVIEW_PRESET ? REVIEW_LAYOUT : []));
+}
+
+/** Every layout name except DEFAULT: the built-in REVIEW (unless removed), then saved names. */
+export function layoutNames(
+  saved: Readonly<Record<string, unknown>>,
+  removed: readonly string[],
+): string[] {
+  const names = Object.keys(saved);
+  return removed.includes(REVIEW_PRESET) || names.includes(REVIEW_PRESET)
+    ? names
+    : [REVIEW_PRESET, ...names];
+}
+
+/** Which layouts sit in the header (`shown`, after DEFAULT) and which behind its dropdown. */
+export interface Arrangement {
+  shown: string[];
+  hidden: string[];
+}
+
+/**
+ * The effective arrangement of `names`. Never arranged (`null`): REVIEW and the legacy favorites
+ * are shown. Otherwise stale names are dropped and names it doesn't know yet go last in hidden.
+ */
+export function arrangement(
+  names: readonly string[],
+  arranged: Arrangement | null,
+  favorites: readonly string[],
+): Arrangement {
+  if (!arranged) {
+    const shown = names.filter((n) => n === REVIEW_PRESET || favorites.includes(n));
+    return { shown, hidden: names.filter((n) => !shown.includes(n)) };
+  }
+  const shown = arranged.shown.filter((n) => names.includes(n));
+  const hidden = arranged.hidden.filter((n) => names.includes(n) && !shown.includes(n));
+  const rest = names.filter((n) => !shown.includes(n) && !hidden.includes(n));
+  return { shown, hidden: [...hidden, ...rest] };
 }
 
 /** First free `MY LAYOUT NN` (two digits). */

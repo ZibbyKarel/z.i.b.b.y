@@ -91,6 +91,8 @@ describe("SystemConfigStore", () => {
           preset: "DEFAULT",
           saved: {},
           favorites: [],
+          arranged: null,
+          removed: [],
           collapsed: {},
           epicClosed: {},
         },
