@@ -16,6 +16,7 @@ import {
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { parentPr, prAncestors, prBaseLabel, prChildren, prState, prWaits } from "../inbox";
+import { PrReviewButton } from "./PrReviewButton";
 import { useInboxPrDiffQuery } from "../queries";
 import { useElapsedLabel } from "../useElapsedLabel";
 import { PrStackPath } from "./PrStackPath";
@@ -165,6 +166,7 @@ export function PrDetail({ pr, all, projectName, now, item, onSelect }: PrDetail
                     </Typography>
                   </Stack>
                 </Container>
+                <PrReviewButton pr={pr} />
                 <TextLink
                   data-testid={PrDetailTestId.GitHub}
                   href={pr.url}

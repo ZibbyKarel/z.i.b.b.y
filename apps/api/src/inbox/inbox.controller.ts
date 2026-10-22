@@ -127,6 +127,16 @@ export class InboxController {
           return mapThreadsError(error);
         }
       },
+      submitInboxPrReview: async ({ params, body }) => {
+        try {
+          return {
+            status: 201 as const,
+            body: await this.threads.submitReview(params.projectId, params.number, body),
+          };
+        } catch (error) {
+          return mapThreadsError(error);
+        }
+      },
       getInboxState: async () => ({ status: 200, body: await this.inbox.getState() }),
       setInboxHidden: async ({ body }) => ({ status: 200, body: await this.inbox.setHidden(body) }),
     });
@@ -144,7 +154,8 @@ function mapThreadsError(error: unknown) {
   if (error instanceof GithubThreadsError) {
     const { status } = error;
     if (status === 404) return { status: 404 as const, body: { message: error.message } };
-    if (status === 401 || status === 403) {
+    // 422 = GitHub's validation refusal (e.g. approving your own PR)
+    if (status === 401 || status === 403 || status === 422) {
       return { status: 422 as const, body: { message: error.message } };
     }
     return { status: 502 as const, body: { message: error.message } };

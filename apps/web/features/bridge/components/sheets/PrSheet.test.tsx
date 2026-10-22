@@ -18,6 +18,7 @@ vi.mock("../../../inbox/mutations", () => ({
   useReviewInboxPrMutation: () => ({ mutate: vi.fn(), isPending: false }),
   useRebaseInboxPrMutation: () => ({ mutate: vi.fn(), isPending: false }),
   useAddressInboxPrCommentsMutation: () => ({ mutate: vi.fn(), isPending: false }),
+  useSubmitInboxPrReviewMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 vi.mock("../../../projects/mutations", () => ({
   useMergeProjectPrMutation: () => ({ mutate: vi.fn(), isPending: false }),

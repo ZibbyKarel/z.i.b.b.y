@@ -41,6 +41,7 @@ describe("InboxPrThreadsService", () => {
   let nodes: ReturnType<typeof node>[];
   let service: InboxPrThreadsService;
   let record: ReturnType<typeof vi.fn>;
+  let dropPrsCache: ReturnType<typeof vi.fn>;
   const bodies = () =>
     fetchImpl.mock.calls.map(
       (c) => JSON.parse((c[1] as { body: string }).body) as { query: string },
@@ -48,6 +49,7 @@ describe("InboxPrThreadsService", () => {
 
   beforeEach(() => {
     record = vi.fn(async () => undefined);
+    dropPrsCache = vi.fn();
     nodes = [node("PRRT_1")];
     fetchImpl = vi.fn(async (_url: string, init: { body: string }) => {
       const { query } = JSON.parse(init.body) as { query: string };
@@ -65,6 +67,7 @@ describe("InboxPrThreadsService", () => {
       } as never,
       { resolveIntegrations: async () => [GITHUB] } as never,
       { read: async () => ({ token: "tok" }) } as never,
+      { dropPrsCache } as never,
       undefined,
       { record } as never,
       fetchImpl as unknown as typeof fetch,
@@ -152,5 +155,53 @@ describe("InboxPrThreadsService", () => {
   it("maps an HTTP 401 to GithubThreadsError with that status", async () => {
     fetchImpl.mockResolvedValueOnce(new Response("{}", { status: 401 }));
     await expect(service.list("acme", 7)).rejects.toMatchObject({ status: 401 });
+  });
+
+  describe("submitReview", () => {
+    const call = () =>
+      fetchImpl.mock.calls[0] as [string, RequestInit & { headers: Record<string, string> }];
+
+    it("posts the event and body to the reviews endpoint", async () => {
+      fetchImpl.mockResolvedValueOnce(new Response(JSON.stringify({ id: 99 })));
+      expect(
+        await service.submitReview("acme", 7, { event: "REQUEST_CHANGES", body: "fix it" }),
+      ).toEqual({ id: 99 });
+      const [url, init] = call();
+      expect(url).toBe("https://api.github.com/repos/acme/app/pulls/7/reviews");
+      expect(init.method).toBe("POST");
+      expect(init.headers.authorization).toBe("Bearer tok");
+      expect(JSON.parse(init.body as string)).toEqual({ event: "REQUEST_CHANGES", body: "fix it" });
+      expect(record).toHaveBeenCalledTimes(1);
+      expect(dropPrsCache).toHaveBeenCalledTimes(1);
+    });
+
+    it("omits an empty body on approve", async () => {
+      fetchImpl.mockResolvedValueOnce(new Response(JSON.stringify({ id: 1 })));
+      await service.submitReview("acme", 7, { event: "APPROVE" });
+      expect(JSON.parse(call()[1].body as string)).toEqual({ event: "APPROVE" });
+    });
+
+    it("surfaces GitHub's refusal", async () => {
+      fetchImpl.mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: "Can not approve your own pull request" }), {
+          status: 422,
+        }),
+      );
+      const err = await service.submitReview("acme", 7, { event: "APPROVE" }).catch((e) => e);
+      expect(err).toBeInstanceOf(GithubThreadsError);
+      expect(err.status).toBe(422);
+      expect(err.message).toBe(
+        "GitHub review failed: HTTP 422: Can not approve your own pull request",
+      );
+      expect(record).not.toHaveBeenCalled();
+      expect(dropPrsCache).not.toHaveBeenCalled();
+    });
+
+    it("404s an unknown project", async () => {
+      await expect(service.submitReview("nope", 7, { event: "APPROVE" })).rejects.toBeInstanceOf(
+        ProjectNotFoundError,
+      );
+      expect(fetchImpl).not.toHaveBeenCalled();
+    });
   });
 });

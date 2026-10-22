@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PrReviewEventSchema } from "../approvals/approval.schema";
 import type { ActivityKind } from "../activity/activity.schema";
 import { IsoDateTimeSchema } from "../common.schema";
 import { RoadmapItemSchema, RoadmapSourceKindSchema } from "../roadmap/roadmap-item.schema";
@@ -243,6 +244,21 @@ export const ReplyInboxPrThreadInputSchema = z
     message: "Provide a body or resolve: true",
   });
 export type ReplyInboxPrThreadInput = z.infer<typeof ReplyInboxPrThreadInputSchema>;
+
+/** The operator's own PR review; only APPROVE may omit the body. */
+export const SubmitInboxPrReviewInputSchema = z
+  .object({
+    event: PrReviewEventSchema,
+    body: z.string().trim().max(65536).optional(),
+  })
+  .refine((v) => v.event === "APPROVE" || Boolean(v.body), {
+    message: "Request changes and comment need a body",
+    path: ["body"],
+  });
+export type SubmitInboxPrReviewInput = z.infer<typeof SubmitInboxPrReviewInputSchema>;
+/** GitHub's review id. */
+export const SubmitInboxPrReviewResultSchema = z.object({ id: z.number().int() });
+export type SubmitInboxPrReviewResult = z.infer<typeof SubmitInboxPrReviewResultSchema>;
 
 /** Hide key: the item's source identity, stable across re-syncs. */
 export const InboxHiddenKeySchema = z.object({

@@ -20,6 +20,7 @@ import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { useApprovalsQuery } from "../../../approvals";
 import { PrActionButtons } from "../../../inbox/components/PrActionButtons";
+import { PrReviewButton } from "../../../inbox/components/PrReviewButton";
 import { prBaseLabel, prChildren } from "../../../inbox/inbox";
 import { PrThreads } from "../../../inbox/components/PrThreads";
 import {
@@ -173,6 +174,7 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
       closeLabel={t("bridge.sheet.close")}
       footerEnd={
         <>
+          <PrReviewButton pr={pr} />
           <PrActionButtons baseLabel={base} pr={pr} />
           {merge ? null : (
             <SheetAction href={pr.url} intent="primary" title={t("bridge.sheet.pr.mergeBlocked")}>

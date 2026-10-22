@@ -8,7 +8,11 @@ import { GithubDiffError, InboxPrDiffService } from "./inbox-pr-diff.service";
 import { ProjectNotFoundError } from "../projects/projects.errors";
 import { InboxAddressCommentsService } from "./inbox-address-comments.service";
 import { InboxRebaseService, PrRefusedError } from "./inbox-rebase.service";
-import { InboxPrThreadsService, ThreadNotOnPrError } from "./inbox-pr-threads.service";
+import {
+  GithubThreadsError,
+  InboxPrThreadsService,
+  ThreadNotOnPrError,
+} from "./inbox-pr-threads.service";
 import { InboxReviewService } from "./inbox-review.service";
 import { InboxController } from "./inbox.controller";
 import { InboxService } from "./inbox.service";
@@ -50,6 +54,9 @@ describe("InboxController getInboxPrDiff GitHub error mapping", () => {
           useValue: {
             reply: async () => {
               throw new ThreadNotOnPrError("PRRT_x", "acme/app", 7);
+            },
+            submitReview: async () => {
+              throw new GithubThreadsError(422, "HTTP 422: Can not approve your own pull request");
             },
           },
         },
@@ -140,5 +147,14 @@ describe("InboxController getInboxPrDiff GitHub error mapping", () => {
       .send({ body: "hi" })
       .expect(422);
     expect(res.body.message).toContain("not on");
+  });
+
+  it("submitInboxPrReview → 422 with GitHub's refusal message", async () => {
+    const res = await withOperator(
+      request(app.getHttpServer()).post("/api/inbox/prs/acme/7/reviews"),
+    )
+      .send({ event: "APPROVE" })
+      .expect(422);
+    expect(res.body.message).toContain("Can not approve your own pull request");
   });
 });

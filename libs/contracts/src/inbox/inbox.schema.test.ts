@@ -9,6 +9,7 @@ import {
   RebaseInboxPrInputSchema,
   ReplyInboxPrThreadInputSchema,
   ReviewInboxPrInputSchema,
+  SubmitInboxPrReviewInputSchema,
 } from "./inbox.schema";
 
 const base = { projectId: "acme", repo: "acme/app", number: 7 };
@@ -125,6 +126,30 @@ describe("PR review threads", () => {
     expect(inboxContract.getInboxPrThreads.path).toBe("/api/inbox/prs/:projectId/:number/threads");
     expect(inboxContract.replyInboxPrThread.path).toBe(
       "/api/inbox/prs/:projectId/:number/threads/:threadId/reply",
+    );
+  });
+});
+
+describe("SubmitInboxPrReviewInputSchema", () => {
+  it.each([
+    { event: "APPROVE" },
+    { event: "APPROVE", body: "lgtm" },
+    { event: "COMMENT", body: "x" },
+    { event: "REQUEST_CHANGES", body: "fix" },
+  ])("accepts %j", (v) => {
+    expect(SubmitInboxPrReviewInputSchema.safeParse(v).success).toBe(true);
+  });
+
+  it.each([{ event: "COMMENT" }, { event: "REQUEST_CHANGES", body: "   " }, { event: "DISMISS" }])(
+    "rejects %j",
+    (v) => {
+      expect(SubmitInboxPrReviewInputSchema.safeParse(v).success).toBe(false);
+    },
+  );
+
+  it("exposes the route", () => {
+    expect(inboxContract.submitInboxPrReview.path).toBe(
+      "/api/inbox/prs/:projectId/:number/reviews",
     );
   });
 });
