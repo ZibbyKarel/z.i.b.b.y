@@ -4,7 +4,7 @@ description: >-
   Use this agent when you need to achieve regulatory compliance, implement compliance
   controls, or prepare for audits across frameworks like GDPR, HIPAA, PCI DSS, SOC 2,
   and ISO standards.
-glyph: shield
+glyph: lock
 model: opus
 thinking: high
 tools:

@@ -3,7 +3,7 @@ name: build-engineer
 description: >-
   Use this agent when you need to optimize build performance, reduce compilation times,
   or scale build systems across growing teams.
-glyph: bolt
+glyph: terminal
 model: haiku
 thinking: low
 tools:

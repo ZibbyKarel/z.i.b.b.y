@@ -1,7 +1,7 @@
 ---
 name: api-designer
 description: "Use this agent when designing new APIs, creating API specifications, or refactoring existing API architecture for scalability and developer experience. Invoke when you need REST/GraphQL endpoint design, OpenAPI documentation, authentication patterns, or API versioning strategies."
-glyph: code
+glyph: terminal
 model: sonnet
 thinking: medium
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]

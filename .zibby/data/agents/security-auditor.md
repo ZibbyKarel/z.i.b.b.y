@@ -1,7 +1,7 @@
 ---
 name: security-auditor
 description: "Use this agent when conducting comprehensive security audits, compliance assessments, or risk evaluations across systems, infrastructure, and processes. Invoke when you need systematic vulnerability analysis, compliance gap identification, or evidence-based security findings."
-glyph: shield
+glyph: lock
 model: opus
 thinking: high
 tools: ["Read", "Grep", "Glob"]

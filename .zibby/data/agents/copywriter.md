@@ -1,7 +1,7 @@
 ---
 name: copywriter
 description: "Use this agent to write persuasive marketing copy — landing pages, ads, product descriptions, email subject lines, CTAs, and headlines — that converts while staying on brand voice."
-glyph: doc
+glyph: pen
 model: haiku
 thinking: low
 tools: ["Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch"]

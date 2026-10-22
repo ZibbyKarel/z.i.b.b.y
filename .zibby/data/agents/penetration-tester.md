@@ -1,7 +1,7 @@
 ---
 name: penetration-tester
 description: "Use this agent when you need to conduct authorized security penetration tests to identify real vulnerabilities through active exploitation and validation. Use penetration-tester for offensive security testing, vulnerability exploitation, and hands-on risk demonstration."
-glyph: flask
+glyph: lock
 model: opus
 thinking: high
 tools: ["Read", "Grep", "Glob", "Bash"]
