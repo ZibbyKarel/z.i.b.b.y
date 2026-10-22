@@ -1,4 +1,9 @@
-import { AnchoredSheetTestId, NeedsYouCardTestId, StatCellTestId } from "@zibby/design-system";
+import {
+  AnchoredSheetTestId,
+  MarkdownTestId,
+  NeedsYouCardTestId,
+  StatCellTestId,
+} from "@zibby/design-system";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, renderWithProviders, screen } from "../../../../test/render";
 import { IssueSheet } from "./IssueSheet";
@@ -39,7 +44,7 @@ const item = (lifecycle: string) => ({
   id: "i1",
   projectId: "p",
   name: "Fix login",
-  description: "Line one\nLine two",
+  description: "Line one\n\nLine **two** <b>raw</b>",
   lifecycle,
   source: { kind: "jira", externalKey: "ZB-1", url: "https://jira.test/ZB-1" },
   project: { id: "p", name: "Shop" },
@@ -60,10 +65,23 @@ describe("IssueSheet", () => {
     hooks.items = [item("todo")];
     renderWithProviders(<IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />);
     expect(screen.getByTestId(AnchoredSheetTestId.Title)).toHaveTextContent("Fix login");
-    expect(screen.getByText("Line two")).toBeInTheDocument();
     expect(screen.getByText(/OTEVŘÍT V JIRA/)).toHaveAttribute("href", "https://jira.test/ZB-1");
     fireEvent.click(screen.getByText("ZPRACOVAT DO ÚKOLU"));
     expect(process).toHaveBeenCalledOnce();
+  });
+
+  it("renders the description as markdown with raw HTML escaped", () => {
+    hooks.items = [item("todo")];
+    renderWithProviders(<IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />);
+    expect(screen.getByTestId(MarkdownTestId.Strong)).toHaveTextContent("two");
+    expect(screen.getByTestId(MarkdownTestId.Root)).toHaveTextContent("<b>raw</b>");
+  });
+
+  it("shows the fallback when the item has no description", () => {
+    hooks.items = [{ ...item("todo"), description: "" }];
+    renderWithProviders(<IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />);
+    expect(screen.queryByTestId(MarkdownTestId.Root)).toBeNull();
+    expect(screen.getByText("Zdroj nemá žádný popis.")).toBeInTheDocument();
   });
 
   it("has no process action once the item is running", () => {

@@ -4,6 +4,7 @@ import {
   AnchoredSheet,
   DetailTable,
   type DetailTableRow,
+  Markdown,
   NeedsYouCard,
   SheetAction,
   SheetBlock,
@@ -114,9 +115,11 @@ export function IssueSheet({ id, anchor, onClose }: SheetProps) {
       ) : null}
       <SheetSection>
         <SheetBlock label={t("bridge.sheet.description")}>
-          <SheetText
-            lines={(item.description || t("bridge.sheet.issue.noDescription")).split("\n")}
-          />
+          {item.description ? (
+            <Markdown escapeHtml source={item.description} />
+          ) : (
+            <SheetText lines={[t("bridge.sheet.issue.noDescription")]} />
+          )}
         </SheetBlock>
         <SheetBlock label={t("bridge.sheet.details")}>
           <DetailTable rows={rows} />
