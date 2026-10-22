@@ -34,12 +34,8 @@ export const isFix = (pr: InboxPr) =>
   pr.headRef !== undefined &&
   hasThreadsToAddress(pr) &&
   !handled(pr, pr.addressComments);
-/** todo-11 — offered only when conflicting or behind, never as a fallback. */
-export const isRebase = (pr: InboxPr) =>
-  !isReview(pr) &&
-  !isFix(pr) &&
-  pr.bucket === "mine" &&
-  (pr.mergeable === false || pr.behind === true);
+/** todo-11 — offered on any outdated PR (conflicting or behind its base), alongside Review/Address. */
+export const isRebase = (pr: InboxPr) => pr.mergeable === false || pr.behind === true;
 export const isMerge = (pr: InboxPr) => pr.section === "ready-to-merge";
 
 /** The PR's ZIBBY runs, address → rebase → review (the order the label prefers). */
