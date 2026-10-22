@@ -3381,7 +3381,7 @@
       "newName": "New layout name",
       "add": "Add",
       "editNamed": "Edit {name}",
-      "deleteNamed": "DELETE {name}",
+      "deleteNamed": "Delete {name}",
       "dropEnd": "Drop here to put last in the dropdown"
     },
     "cancel": "Cancel"

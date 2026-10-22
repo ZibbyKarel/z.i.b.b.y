@@ -182,8 +182,9 @@ function ManageLayouts({
             </Button>
             <div data-testid={`${ManageLayoutsDialogTestId.Delete}-${n}`}>
               <ConfirmDeleteButton
+                ariaLabel={t("manage.deleteNamed", { name: label(n) })}
                 confirmLabel={t("deleteLayoutConfirm")}
-                label={t("manage.deleteNamed", { name: label(n) })}
+                label={t("deleteLayout")}
                 onConfirm={() => onDelete(n)}
               />
             </div>

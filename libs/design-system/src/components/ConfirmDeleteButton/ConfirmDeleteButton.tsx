@@ -23,6 +23,8 @@ export interface ConfirmDeleteButtonProps {
   /** Label shown after the first click, prompting the second. */
   confirmLabel?: string;
   disabled?: boolean;
+  /** Accessible name while idle, when the visible `label` alone is ambiguous (e.g. one per row). */
+  ariaLabel?: string;
   ref?: Ref<HTMLButtonElement>;
 }
 
@@ -38,6 +40,7 @@ export function ConfirmDeleteButton({
   label = "Delete",
   confirmLabel = "Confirm delete",
   disabled,
+  ariaLabel,
   ref,
 }: ConfirmDeleteButtonProps) {
   const [armed, setArmed] = useState(false);
@@ -62,6 +65,7 @@ export function ConfirmDeleteButton({
 
   return (
     <button
+      aria-label={armed ? undefined : ariaLabel}
       aria-live="polite"
       className={cn(
         "inline-flex items-center gap-1.5 rounded-none border font-mono font-semibold uppercase tracking-wider",

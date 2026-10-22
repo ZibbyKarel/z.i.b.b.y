@@ -156,7 +156,7 @@ describe("ManageLayoutsDialog", () => {
     expect(screen.getByTestId(`${Id.Down}-B`)).toHaveAccessibleName("Posunout B dolů");
     expect(
       within(screen.getByTestId(`${Id.Delete}-B`)).getByTestId(ConfirmDeleteButtonTestId.Root),
-    ).toHaveAccessibleName("SMAZAT B");
+    ).toHaveAccessibleName("Smazat B");
   });
 
   it("a successful custom add shows no error and resets to nextName", async () => {

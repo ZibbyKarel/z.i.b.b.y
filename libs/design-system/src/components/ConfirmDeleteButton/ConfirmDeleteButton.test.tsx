@@ -17,6 +17,14 @@ describe("ConfirmDeleteButton", () => {
     expect(screen.getByTestId(ConfirmDeleteButtonTestId.Root)).toHaveTextContent("Confirm delete");
   });
 
+  it("ariaLabel names the idle button; the armed label takes over once armed", async () => {
+    render(<ConfirmDeleteButton ariaLabel="Delete row A" onConfirm={vi.fn()} />);
+    const button = screen.getByTestId(ConfirmDeleteButtonTestId.Root);
+    expect(button).toHaveAccessibleName("Delete row A");
+    await userEvent.click(button);
+    expect(button).toHaveAccessibleName("Confirm delete");
+  });
+
   it("confirms on the second click while armed", async () => {
     const onConfirm = vi.fn();
     render(<ConfirmDeleteButton onConfirm={onConfirm} />);

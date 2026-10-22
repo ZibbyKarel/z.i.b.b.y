@@ -3381,7 +3381,7 @@
       "newName": "Název nového rozložení",
       "add": "Přidat",
       "editNamed": "Upravit {name}",
-      "deleteNamed": "SMAZAT {name}",
+      "deleteNamed": "Smazat {name}",
       "dropEnd": "Pusť sem pro přesun na konec nabídky"
     },
     "cancel": "Zrušit"
