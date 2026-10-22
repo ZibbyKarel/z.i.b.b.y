@@ -5,6 +5,7 @@ import { IsoDateTimeSchema } from "../common.schema";
 import { RoadmapItemSchema, RoadmapSourceKindSchema } from "../roadmap/roadmap-item.schema";
 import {
   PrAddressCommentsStateSchema,
+  PrFixCiStateSchema,
   PrRebaseStateSchema,
   PrReviewStateSchema,
 } from "../tasks/task.schema";
@@ -148,6 +149,14 @@ export const InboxPrSchema = z.object({
       finishedAt: IsoDateTimeSchema.optional(),
     })
     .optional(),
+  /** The latest ZIBBY "Fix CI" task of this PR. */
+  fixCi: z
+    .object({
+      taskId: z.string().min(1),
+      state: PrFixCiStateSchema,
+      finishedAt: IsoDateTimeSchema.optional(),
+    })
+    .optional(),
   projectId: z.string().min(1),
   companyId: z.string().min(1).optional(),
   teamId: z.string().min(1).optional(),
@@ -207,6 +216,10 @@ export type RebaseInboxPrInput = z.infer<typeof RebaseInboxPrInputSchema>;
 /** Body of `POST /api/inbox/prs/address-comments` — same shape as a rebase; refs are read from GitHub server-side. */
 export const AddressInboxPrCommentsInputSchema = RebaseInboxPrInputSchema;
 export type AddressInboxPrCommentsInput = RebaseInboxPrInput;
+
+/** Body of `POST /api/inbox/prs/fix-ci` — same shape as a rebase. */
+export const FixInboxPrCiInputSchema = RebaseInboxPrInputSchema;
+export type FixInboxPrCiInput = RebaseInboxPrInput;
 
 /** One PR's unified diff; `truncated` = GitHub refused it (too large) or it was capped. */
 export const InboxPrDiffSchema = z.object({ diff: z.string(), truncated: z.boolean() });

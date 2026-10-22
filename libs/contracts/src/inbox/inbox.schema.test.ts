@@ -3,6 +3,7 @@ import { PrThreadReplySchema } from "../tasks/task.schema";
 import { inboxContract } from "./inbox.contract";
 import {
   AddressInboxPrCommentsInputSchema,
+  FixInboxPrCiInputSchema,
   InboxPrSchema,
   InboxPrThreadSchema,
   PR_REVIEW_LEVELS,
@@ -151,5 +152,42 @@ describe("SubmitInboxPrReviewInputSchema", () => {
     expect(inboxContract.submitInboxPrReview.path).toBe(
       "/api/inbox/prs/:projectId/:number/reviews",
     );
+  });
+});
+
+describe("fix CI", () => {
+  const pr = {
+    source: "github",
+    number: 7,
+    title: "t",
+    url: "https://github.com/acme/app/pull/7",
+    repo: "acme/app",
+    author: "me",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    draft: false,
+    ci: "passing",
+    review: "changes-requested",
+    mergeable: true,
+    bucket: "mine",
+    blocker: "changes-requested",
+    section: "needs-action",
+    projectId: "acme",
+  };
+  it("InboxPr accepts fixCi with a lifecycle state and rejects an unknown one", () => {
+    const ok = { ...pr, fixCi: { taskId: "t1", state: "awaiting-approval" } };
+    expect(InboxPrSchema.safeParse(ok).success).toBe(true);
+    expect(InboxPrSchema.safeParse({ ...pr, fixCi: { taskId: "t1", state: "done" } }).success).toBe(
+      false,
+    );
+  });
+  it("input is strict", () => {
+    expect(
+      FixInboxPrCiInputSchema.safeParse({
+        projectId: "acme",
+        repo: "acme/app",
+        number: 7,
+        head: "x",
+      }).success,
+    ).toBe(false);
   });
 });

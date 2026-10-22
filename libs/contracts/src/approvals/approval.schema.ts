@@ -105,6 +105,7 @@ export const ApprovalRunKindSchema = z.enum([
   // the report says `Addressed: all` (the click decided — Tier-2, reported), otherwise pending
   // (Tier-3, covers push and replies). Never a force-push, never resolves a thread.
   "pr-address-comments",
+  "pr-fix-ci",
 ]);
 export type ApprovalRunKind = z.infer<typeof ApprovalRunKindSchema>;
 

@@ -558,6 +558,10 @@ export type PrRebaseState = z.infer<typeof PrRebaseStateSchema>;
 export const PrAddressCommentsStateSchema = PrRebaseStateSchema;
 export type PrAddressCommentsState = PrRebaseState;
 
+/** "Fix CI" (`ScheduledTask.prFixCi`): same lifecycle as a rebase / address-comments. */
+export const PrFixCiStateSchema = PrRebaseStateSchema;
+export type PrFixCiState = PrRebaseState;
+
 /** One reply ZIBBY posts on a review thread after the fixes are pushed (GraphQL thread node id + body). */
 export const PrThreadReplySchema = z
   .object({
@@ -848,6 +852,31 @@ export const ScheduledTaskSchema = z.object({
       reviewersRequested: z.array(z.string()).optional(),
       /** Why resolving or re-requesting review (partly) failed. */
       followUpNote: z.string().optional(),
+    })
+    .optional(),
+  /**
+   * Set on a `pr-fix-ci` task ("Fix CI"). Server-written like `prAddressComments`, minus the
+   * reply fields. `ownPr` = the PR author is the operator (only then is the fix auto-pushed).
+   */
+  prFixCi: z
+    .object({
+      repo: z.string().min(1),
+      number: z.number().int().positive(),
+      url: z.string().min(1),
+      head: z.string().min(1),
+      base: z.string().min(1),
+      headSha: z.string().min(1),
+      ownPr: z.boolean().optional(),
+      state: PrFixCiStateSchema,
+      report: z.string().optional(),
+      worktree: z.string().optional(),
+      fixedSha: z
+        .string()
+        .regex(/^[0-9a-f]{40}$/)
+        .optional(),
+      approvalId: z.string().optional(),
+      note: z.string().optional(),
+      finishedAt: IsoDateTimeSchema.optional(),
     })
     .optional(),
   /** Set once dispatched: the started agent-run / workflow-run id. */

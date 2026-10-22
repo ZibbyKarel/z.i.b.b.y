@@ -476,3 +476,30 @@ describe("createTask contract — D-019 chain-target rejection", () => {
     expect(tasksContract.createTask.responses).toHaveProperty("503");
   });
 });
+
+describe("ScheduledTask.prFixCi", () => {
+  const base = {
+    id: "task_1",
+    title: "",
+    text: "fix ci",
+    paths: [],
+    scheduledAt: 1_700_000_000_000,
+    status: "queued" as const,
+    createdAt: new Date().toISOString(),
+  };
+  const fix = {
+    repo: "acme/app",
+    number: 7,
+    url: "https://github.com/acme/app/pull/7",
+    head: "feat",
+    base: "main",
+    headSha: "abc",
+    state: "awaiting-approval",
+  };
+  it("accepts a 40-hex fixedSha and rejects a short one", () => {
+    const ok = { ...base, prFixCi: { ...fix, ownPr: true, fixedSha: "a".repeat(40) } };
+    expect(ScheduledTaskSchema.safeParse(ok).success).toBe(true);
+    const bad = { ...base, prFixCi: { ...fix, fixedSha: "abc" } };
+    expect(ScheduledTaskSchema.safeParse(bad).success).toBe(false);
+  });
+});
