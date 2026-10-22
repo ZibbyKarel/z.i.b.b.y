@@ -1,5 +1,10 @@
 import { Injectable, Optional } from "@nestjs/common";
-import type { FixInboxPrCiInput, ReviewInboxPrResult, TaskTarget } from "@zibby/contracts";
+import type {
+  FixInboxPrCiInput,
+  ReviewInboxPrResult,
+  ScheduledTask,
+  TaskTarget,
+} from "@zibby/contracts";
 import { ApprovalsService } from "../approvals/approvals.service";
 import { CredentialsStore } from "../integrations/credentials.store";
 import { resolveGithubToken } from "../projects/project-pr.service";
@@ -12,7 +17,7 @@ import { PR_FIX_CI_ARTIFACT } from "../tasks/task-output.service";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
 import { WorkspaceService } from "../workspace/workspace.service";
 import { InboxService, isDeadTask } from "./inbox.service";
-import { PrRefusedError, type RebaseBrief, readPushablePr } from "./inbox-rebase.service";
+import { PrRefusedError, type RebaseBrief, errMsg, readPushablePr } from "./inbox-rebase.service";
 import { ReviewRepoMismatchError } from "./inbox-review.service";
 
 const TARGET: TaskTarget = {
@@ -69,6 +74,13 @@ export class InboxFixCiService {
   ) {
     this.fetchImpl = fetchImpl ?? fetch;
     this.log = logger?.child(InboxFixCiService.name);
+  }
+
+  onModuleInit(): void {
+    this.approvals.register("pr-fix-ci", {
+      resume: (taskId) => this.push(taskId),
+      cancel: (taskId) => void this.discard(taskId),
+    });
   }
 
   async start(input: FixInboxPrCiInput): Promise<ReviewInboxPrResult> {
@@ -130,5 +142,65 @@ export class InboxFixCiService {
     }));
     this.log?.info("pr fix-ci task started", { taskId: result.task.id, repo: link.repo, head });
     return { taskId: result.task.id };
+  }
+
+  /**
+   * Approve → fast-forward the parked fix commits from the run's worktree. Only `awaiting-approval`
+   * with a worktree and a `fixedSha` is claimed (→ `running`, atomically inside the storage lock) so
+   * a second approve cannot push again; the final `pushed` / `failed` write only lands from that
+   * claimed state. Never a force-push: a head that moved since the click is refused by git.
+   */
+  async push(taskId: string): Promise<void> {
+    let claimed: ScheduledTask["prFixCi"];
+    try {
+      await this.tasks.setPrFixCi(taskId, (c) => {
+        if (c?.state !== "awaiting-approval" || !c.worktree || !c.fixedSha) return c;
+        claimed = c;
+        return { ...c, state: "running" };
+      });
+    } catch (error) {
+      this.log?.warn("pr fix-ci approve: task unreadable, not pushing", {
+        taskId,
+        err: errMsg(error),
+      });
+      return;
+    }
+    if (!claimed?.worktree || !claimed.fixedSha) {
+      this.log?.warn("pr fix-ci approve: nothing parked, not pushing", { taskId });
+      return;
+    }
+    const fix = claimed;
+    const settle = (patch: { state: "pushed" | "failed"; note: string }) =>
+      this.tasks.setPrFixCi(taskId, (c) =>
+        c?.state === "running" ? { ...c, ...patch, finishedAt: new Date().toISOString() } : c,
+      );
+    try {
+      const sha = await this.workspace.pushFastForward({
+        cwd: fix.worktree ?? "",
+        head: fix.head,
+        expectedSha: fix.headSha,
+        sha: fix.fixedSha ?? "",
+      });
+      await settle({ state: "pushed", note: sha });
+    } catch (error) {
+      const note = errMsg(error).slice(0, 300);
+      await settle({ state: "failed", note });
+      throw new Error(note);
+    }
+    // The push changes the PR's head and checks — don't serve the stale 30 s cache.
+    this.inbox.dropPrsCache();
+    this.log?.info("pr fix-ci pushed", { taskId, repo: fix.repo, number: fix.number });
+  }
+
+  /** Reject → discard, only from `awaiting-approval`; nothing is pushed. */
+  async discard(taskId: string): Promise<void> {
+    try {
+      await this.tasks.setPrFixCi(taskId, (c) =>
+        c?.state === "awaiting-approval" ? { ...c, state: "discarded" } : c,
+      );
+      this.log?.info("pr fix-ci discard handled", { taskId });
+    } catch (error) {
+      this.log?.warn("pr fix-ci discard failed", { taskId, err: errMsg(error) });
+    }
   }
 }

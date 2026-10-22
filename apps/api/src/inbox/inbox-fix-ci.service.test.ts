@@ -9,6 +9,7 @@ import { InboxFixCiService } from "./inbox-fix-ci.service";
 import { PrRefusedError } from "./inbox-rebase.service";
 import { ReviewRepoMismatchError } from "./inbox-review.service";
 
+const FIXED = "f".repeat(40);
 const PROJECT: Project = { id: "acme", name: "Acme", path: "~/acme" };
 const GITHUB = {
   id: "gh",
@@ -21,6 +22,9 @@ describe("InboxFixCiService", () => {
   let createTask: ReturnType<typeof vi.fn>;
   let pull: Record<string, unknown>;
   let service: InboxFixCiService;
+  let register: ReturnType<typeof vi.fn>;
+  let pushFastForward: ReturnType<typeof vi.fn>;
+  let dropPrsCache: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     dir = await fs.mkdtemp(path.join(tmpdir(), "zibby-inbox-fix-ci-"));
@@ -46,6 +50,9 @@ describe("InboxFixCiService", () => {
         projectId,
       ),
     }));
+    register = vi.fn();
+    pushFastForward = vi.fn(async () => FIXED);
+    dropPrsCache = vi.fn();
     const fetchImpl = vi.fn(async () => new Response(JSON.stringify(pull), { status: 200 }));
     service = new InboxFixCiService(
       {
@@ -58,9 +65,9 @@ describe("InboxFixCiService", () => {
       { read: async () => ({ token: "tok" }) } as never,
       { createTask } as never,
       storage,
-      {} as never,
-      {} as never,
-      {} as never,
+      { register } as never,
+      { dropPrsCache } as never,
+      { pushFastForward } as never,
       undefined,
       fetchImpl as unknown as typeof fetch,
     );
@@ -135,5 +142,79 @@ describe("InboxFixCiService", () => {
     expect(text).toContain("Do NOT push");
     expect(text).toContain("gh run rerun");
     expect(text).toContain(JSON.stringify("Fix it"));
+  });
+
+  describe("approval runner", () => {
+    const park = async (patch: Record<string, unknown> = {}) => {
+      await start();
+      await storage.setPrFixCi("task_c1", (c) =>
+        c
+          ? {
+              ...c,
+              state: "awaiting-approval",
+              worktree: "/wt",
+              fixedSha: FIXED,
+              ...patch,
+            }
+          : c,
+      );
+    };
+    const fix = async () => (await storage.get("task_c1")).prFixCi;
+
+    it("registers the pr-fix-ci approval runner", async () => {
+      service.onModuleInit();
+      expect(register).toHaveBeenCalledWith(
+        "pr-fix-ci",
+        expect.objectContaining({ resume: expect.any(Function), cancel: expect.any(Function) }),
+      );
+    });
+
+    it("approve pushes fixedSha fast-forward, marks pushed with finishedAt and drops the PR cache", async () => {
+      await park();
+      await service.push("task_c1");
+      expect(pushFastForward).toHaveBeenCalledWith({
+        cwd: "/wt",
+        head: "feat",
+        expectedSha: "sha1",
+        sha: FIXED,
+      });
+      expect(await fix()).toMatchObject({
+        state: "pushed",
+        note: FIXED,
+        finishedAt: expect.any(String),
+      });
+      expect(dropPrsCache).toHaveBeenCalledOnce();
+    });
+
+    it("a head that moved since the click is refused: failed with git's reason, pushed once, never retried", async () => {
+      await park();
+      pushFastForward.mockRejectedValue(new Error("! [rejected] feat (non-fast-forward)"));
+      await expect(service.push("task_c1")).rejects.toThrow(/non-fast-forward/);
+      expect(await fix()).toMatchObject({ state: "failed" });
+      expect((await fix())?.note).toContain("non-fast-forward");
+      expect(pushFastForward).toHaveBeenCalledOnce();
+    });
+
+    it("a second approve does not push again; nothing parked → no push", async () => {
+      await park();
+      await service.push("task_c1");
+      await service.push("task_c1");
+      expect(pushFastForward).toHaveBeenCalledOnce();
+      pushFastForward.mockClear();
+      await storage.setPrFixCi("task_c1", (c) =>
+        c ? { ...c, state: "awaiting-approval", worktree: undefined } : c,
+      );
+      await service.push("task_c1");
+      expect(pushFastForward).not.toHaveBeenCalled();
+    });
+
+    it("reject discards only from awaiting-approval", async () => {
+      await park();
+      await service.discard("task_c1");
+      expect((await fix())?.state).toBe("discarded");
+      await storage.setPrFixCi("task_c1", (c) => (c ? { ...c, state: "pushed" } : c));
+      await service.discard("task_c1");
+      expect((await fix())?.state).toBe("pushed");
+    });
   });
 });
