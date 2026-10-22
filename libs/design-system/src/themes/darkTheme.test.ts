@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { stateToneHex } from "../stateTone";
 import { darkTheme } from "./darkTheme";
+import { lightTheme } from "./lightTheme";
 
 describe("darkTheme ZibbyCorp alignment", () => {
   it("uses the ZibbyCorp tertiary ink for foreground-faint", () => {
@@ -29,5 +31,13 @@ describe("darkTheme ZibbyCorp alignment", () => {
     expect(darkTheme.colorWarn).toBe(darkTheme.colorStateBlock);
     expect(darkTheme.colorDanger).toBe(darkTheme.colorStateErr);
     expect(darkTheme.colorRun).toBe(darkTheme.colorStateWork);
+  });
+
+  it("running is purple, done is green", () => {
+    expect(darkTheme.colorStateWork).toBe("oklch(0.78 0.14 300)");
+    expect(darkTheme.colorStateDone).toBe("oklch(0.82 0.17 160)");
+    expect(lightTheme.colorStateWork).toBe("oklch(0.56 0.15 300)");
+    expect(lightTheme.colorStateDone).toBe("oklch(0.6 0.14 160)");
+    expect(stateToneHex).toMatchObject({ working: "#c58ef0", done: "#4ce0a0" });
   });
 });

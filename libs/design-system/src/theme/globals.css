@@ -57,11 +57,11 @@
   --color-ink-3: #666c67;
   --color-grid: rgba(236, 239, 234, 0.035);
 
-  --color-state-work: oklch(0.82 0.17 160);
+  --color-state-work: oklch(0.78 0.14 300);
   --color-state-think: oklch(0.78 0.13 245);
   --color-state-block: oklch(0.84 0.15 80);
   --color-state-err: oklch(0.7 0.2 25);
-  --color-state-done: oklch(0.78 0.14 300);
+  --color-state-done: oklch(0.82 0.17 160);
   --color-state-idle: #4a504b;
 
   --gw: 8px;
@@ -396,11 +396,11 @@
    * (`tokens.ts`); `AgentGlyph` sets `--glyph-glow-color` and reads this var, so a
    * light-theme render is a plain no-glow `none` with zero JS branching. */
   --glyph-glow-filter: none;
-  --color-state-work: oklch(0.6 0.14 160);
+  --color-state-work: oklch(0.56 0.15 300);
   --color-state-think: oklch(0.58 0.14 250);
   --color-state-block: oklch(0.7 0.15 70);
   --color-state-err: oklch(0.58 0.2 25);
-  --color-state-done: oklch(0.56 0.15 300);
+  --color-state-done: oklch(0.6 0.14 160);
   --color-state-idle: #a9ada7;
 
   --color-background-deep: var(--color-bg);
@@ -457,11 +457,11 @@
   --dot-r: 0;
   /* AgentGlyph's glow is dark-theme-only (DS.md §7) — see the light block's note. */
   --glyph-glow-filter: drop-shadow(0 0 var(--gw) var(--glyph-glow-color, transparent));
-  --color-state-work: oklch(0.82 0.17 160);
+  --color-state-work: oklch(0.78 0.14 300);
   --color-state-think: oklch(0.78 0.13 245);
   --color-state-block: oklch(0.84 0.15 80);
   --color-state-err: oklch(0.7 0.2 25);
-  --color-state-done: oklch(0.78 0.14 300);
+  --color-state-done: oklch(0.82 0.17 160);
   --color-state-idle: #4a504b;
 
   --color-background-deep: var(--color-bg);
