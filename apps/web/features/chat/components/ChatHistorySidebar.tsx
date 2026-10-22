@@ -13,7 +13,7 @@ export enum ChatHistorySidebarTestId {
 }
 
 /**
- * The COO dock's history sidebar: recent conversations (newest first) with a
+ * The chat dock's history sidebar: recent conversations (newest first) with a
  * full-text search. Picking one loads its transcript into the dock and makes it
  * the thread the next turn resumes.
  */

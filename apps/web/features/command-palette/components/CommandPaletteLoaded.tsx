@@ -13,7 +13,7 @@ import { useApprovalsQuery, useApproveMutation } from "../../approvals";
 import { HIGH_RISK_TYPES } from "../../approvals/approval";
 import { useAppearance } from "../../../state/appearance";
 import { useDepartmentsQuery } from "../../departments/queries";
-import { useEmployeesQuery } from "../../employees/queries";
+import { useAgentsQuery } from "../../agents/queries";
 import { useTaskParentsInfiniteQuery } from "../../tasks/queries";
 import { useGoalsQuery } from "../../goals/queries";
 import { useCompaniesQuery } from "../../companies/queries";
@@ -66,7 +66,7 @@ export function CommandPaletteLoaded({
   const resolvedTheme = useResolvedTheme();
 
   const { data: departments } = useDepartmentsQuery();
-  const { data: employees } = useEmployeesQuery();
+  const { data: agents } = useAgentsQuery();
   const { data: tasks } = useTaskParentsInfiniteQuery({});
   const { data: goals } = useGoalsQuery();
   const { data: companies } = useCompaniesQuery();
@@ -97,10 +97,10 @@ export function CommandPaletteLoaded({
       buildCommandPaletteIndex(
         {
           departments: (departments ?? []).map((d) => ({ id: d.id, name: d.name })),
-          people: (employees ?? []).map((e) => ({
-            id: e.id,
-            name: e.name,
-            department: e.department,
+          agents: (agents ?? []).map((a) => ({
+            id: a.id,
+            name: a.displayName ?? a.name ?? a.id,
+            department: a.department,
           })),
           tasks: (tasks ?? []).map((t) => ({ id: t.id, title: t.title, department: t.department })),
           goals: (goals ?? []).map((g) => ({ id: g.id, name: g.name, objective: g.objective })),
@@ -128,7 +128,7 @@ export function CommandPaletteLoaded({
       ),
     [
       departments,
-      employees,
+      agents,
       tasks,
       goals,
       companies,

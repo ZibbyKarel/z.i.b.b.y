@@ -6,7 +6,8 @@ const meta: Meta<typeof ApprovalCard> = {
   component: ApprovalCard,
   parameters: { backgrounds: { default: "velin" } },
   args: {
-    glyphSeed: "kevin-1",
+    glyph: "flask",
+    color: "#8b5cf6",
     agentName: "Kevin",
     meta: "TASK · RND",
     waited: "12m",
@@ -23,7 +24,8 @@ export const Overview: Story = {
     <div className="flex w-[340px] flex-col gap-4">
       <ApprovalCard
         agentName="Kevin"
-        glyphSeed="kevin-1"
+        color="#8b5cf6"
+        glyph="flask"
         meta="TASK · RND"
         request="Research artifact ready for review — 3 sources, 1 open question."
         taskRef="TASK · rnd-88 · research"
@@ -32,7 +34,8 @@ export const Overview: Story = {
       <ApprovalCard
         highRisk
         agentName="Release Bot"
-        glyphSeed="release-bot"
+        color="#5b8def"
+        glyph="branch"
         meta="PUSH · REL"
         request="Push to main on the release branch — 3 files changed, 42 additions, 6 deletions."
         waited="2m"
@@ -40,8 +43,9 @@ export const Overview: Story = {
       <ApprovalCard
         highRisk
         agentName="Ledger Clerk"
+        color="#f59e0b"
         density="row"
-        glyphSeed="ledger-clerk"
+        glyph="dollar"
         meta="PAYMENT · FIN"
         request="Pay the Vercel invoice — $48.00."
         waited="4m"

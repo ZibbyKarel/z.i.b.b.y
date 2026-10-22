@@ -2,8 +2,8 @@ import type { HTMLAttributes, Ref } from "react";
 import { cn } from "../../utils/cn";
 import type { StateTone } from "../../stateTone";
 import { focusRing } from "../../utils/focus";
-import { AgentGlyph } from "../AgentGlyph/AgentGlyph";
-import type { MinionAppearance } from "../Minion/minionAppearance";
+import { AgentBadge } from "../AgentBadge/AgentBadge";
+import type { IconName } from "../Icon/Icon";
 import { Button } from "../Button/Button";
 import { Container } from "../Container/Container";
 import { Row } from "../Stack/Stack";
@@ -29,10 +29,9 @@ export enum ApprovalCardTestId {
 }
 
 export interface ApprovalCardProps extends Omit<HTMLAttributes<HTMLDivElement>, "className"> {
-  /** Deterministic seed for the requesting agent's {@link AgentGlyph}. */
-  glyphSeed: string;
-  /** The requesting employee's stored Minion look; falls back to one derived from `glyphSeed`. */
-  glyphAppearance?: MinionAppearance;
+  /** Requesting agent's symbol (DS icon) and department colour. */
+  glyph?: IconName;
+  color?: string;
   agentName: string;
   /** Secondary line — e.g. `"TASK · DEV"` (kind · department). */
   meta: string;
@@ -78,8 +77,8 @@ export interface ApprovalCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 
  * everywhere.
  */
 export function ApprovalCard({
-  glyphSeed,
-  glyphAppearance,
+  glyph,
+  color,
   agentName,
   meta,
   waited,
@@ -100,7 +99,7 @@ export function ApprovalCard({
   ref,
   ...rest
 }: ApprovalCardProps) {
-  const glyphSize = density === "row" ? 22 : 30;
+  const glyphSize = density === "row" ? "xs" : "sm";
   const actionsDisabled = approvePending || denyPending;
 
   return (
@@ -139,12 +138,7 @@ export function ApprovalCard({
       >
         <div className={cn("flex items-center gap-2.5", density === "row" && "min-w-0 flex-1")}>
           <span data-testid={ApprovalCardTestId.Glyph}>
-            <AgentGlyph
-              appearance={glyphAppearance}
-              seed={glyphSeed}
-              size={glyphSize}
-              state={state}
-            />
+            <AgentBadge color={color} glyph={glyph} size={glyphSize} state={state} />
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <Typography

@@ -30,7 +30,6 @@ const markPattern = new RegExp(`^${HighlightTextAreaFieldTestId.Mark}-`);
 // (see the per-kind cap test); `afterEach` restores the defaults.
 const fx = vi.hoisted(() => {
   const defaults = () => ({
-    // "pm" is held by the active employee below, so it never lists on its own.
     agents: [
       { id: "builder", name: "Builder", glyph: "hammer" },
       { id: "koder", name: "Kodér" },
@@ -43,8 +42,6 @@ const fx = vi.hoisted(() => {
       { id: "dev", name: "Dev", color: "#f97316", state: "idle", tier2Count: 0, tier3Count: 0 },
       { id: "ops", name: "Ops", color: "#14b8a6", state: "idle", tier2Count: 0, tier3Count: 0 },
     ],
-    // An `@` employee holds the "pm" position — picking it dispatches to that agent.
-    employees: [{ id: "emp-ada", name: "Ada Lovelace", agentId: "pm", status: "active" }],
   });
   return { defaults, data: defaults() };
 });
@@ -71,9 +68,6 @@ vi.mock("../../../projects", () => ({
 }));
 vi.mock("../../../skills", () => ({
   useSkillsQuery: () => ({ data: [{ id: "tdd", name: "Test Driven", glyph: "spark" }] }),
-}));
-vi.mock("../../../employees", () => ({
-  useEmployeesQuery: () => ({ data: fx.data.employees }),
 }));
 
 const uploadMutateAsync = vi.fn().mockResolvedValue({
@@ -166,12 +160,12 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       await user.type(input, "@");
       expect(input).toHaveFocus();
 
-      // Results order: Ada Lovelace (employee), Dev (department), Delivery, Builder,
-      // Kodér — ArrowDown once lands on Dev.
+      // Results order: Dev (department), Delivery (workflow), Builder, Kodér, PM —
+      // ArrowDown once lands on Delivery.
       await user.keyboard("{ArrowDown}{Enter}");
 
       expect(input).toHaveFocus();
-      expect(input).toHaveValue("@Dev ");
+      expect(input).toHaveValue("@Delivery ");
       expect(screen.queryByTestId(CommandLineTestId.MentionMenu)).not.toBeInTheDocument();
     });
 
@@ -357,7 +351,7 @@ describe("CommandLine (Phase 118d generic composer)", () => {
     });
   });
 
-  describe("trigger table — # scope, / skill, @ employee", () => {
+  describe("trigger table — # scope, / skill, @ agent", () => {
     it("opens no # picker unless the host passes scopeKinds", async () => {
       const user = userEvent.setup();
       render(<CommandLine onSubmit={vi.fn()} />);
@@ -410,28 +404,22 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       ).not.toBeInTheDocument();
     });
 
-    it("@ lists an active employee and picking it targets the employee's agent", async () => {
+    it("@ lists an agent and picking it targets that agent", async () => {
       const onTargetChange = vi.fn();
       const user = userEvent.setup();
       render(<CommandLine onSubmit={vi.fn()} onTargetChange={onTargetChange} />);
       const input = screen.getByTestId(CommandLineTestId.Input);
-      await user.type(input, "@Ada");
-      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-employee-emp-ada`));
+      await user.type(input, "@PM");
+      await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-pm`));
 
-      expect(input).toHaveValue("@Ada Lovelace ");
+      expect(input).toHaveValue("@PM ");
       expect(onTargetChange).toHaveBeenLastCalledWith(
-        expect.objectContaining({ kind: "agent", id: "pm", name: "Ada Lovelace" }),
+        expect.objectContaining({ kind: "agent", id: "pm", name: "PM" }),
       );
     });
 
-    it("an empty @ query shows every kind even when each has >12 entries, and never lists a held agent separately", async () => {
+    it("an empty @ query shows every kind even when each has >12 entries", async () => {
       const many = <T,>(make: (i: number) => T) => Array.from({ length: 20 }, (_, i) => make(i));
-      fx.data.employees = many((i) => ({
-        id: `emp-${i}`,
-        name: `Employee ${i}`,
-        agentId: `held-${i}`,
-        status: "active",
-      }));
       fx.data.departments = many((i) => ({
         id: `dep-${i}`,
         name: `Department ${i}`,
@@ -445,23 +433,17 @@ describe("CommandLine (Phase 118d generic composer)", () => {
         name: `Workflow ${i}`,
         department: `dep-${i}`,
       }));
-      fx.data.agents = [
-        ...many((i) => ({ id: `held-${i}`, name: `Held ${i}` })),
-        ...many((i) => ({ id: `free-${i}`, name: `Free ${i}` })),
-      ];
+      fx.data.agents = [...many((i) => ({ id: `free-${i}`, name: `Free ${i}` }))];
       const user = userEvent.setup();
       render(<CommandLine onSubmit={vi.fn()} />);
       await user.type(screen.getByTestId(CommandLineTestId.Input), "@");
 
-      for (const id of ["employee-emp-0", "department-dep-0", "workflow-wf-0", "agent-free-0"]) {
+      for (const id of ["department-dep-0", "workflow-wf-0", "agent-free-0"]) {
         expect(screen.getByTestId(`${CommandLineTestId.MentionItem}-${id}`)).toBeInTheDocument();
       }
-      expect(
-        screen.queryByTestId(`${CommandLineTestId.MentionItem}-agent-held-0`),
-      ).not.toBeInTheDocument();
       // 12 per kind on an empty query.
       expect(
-        screen.queryByTestId(`${CommandLineTestId.MentionItem}-employee-emp-12`),
+        screen.queryByTestId(`${CommandLineTestId.MentionItem}-agent-free-12`),
       ).not.toBeInTheDocument();
     });
 
@@ -765,7 +747,7 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       expect(screen.getByTestId(PanelTestId.Header)).toHaveTextContent("Zadej směr");
       // The hint only names the triggers this render actually offers.
       expect(screen.getByTestId(PanelTestId.Header).parentElement).toHaveTextContent(
-        "@ zaměstnanci, oddělení, workflow · přetáhni soubor, nebo použij sponku",
+        "@ agenti, oddělení, workflow · přetáhni soubor, nebo použij sponku",
       );
       expect(screen.queryByText(/skilly/)).not.toBeInTheDocument();
     });
@@ -780,7 +762,7 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       );
       expect(
         screen.getByText(
-          "@ zaměstnanci, oddělení, workflow · # firmy, týmy, projekty · / skilly · přetáhni soubor, nebo použij sponku",
+          "@ agenti, oddělení, workflow · # firmy, týmy, projekty · / skilly · přetáhni soubor, nebo použij sponku",
         ),
       ).toBeInTheDocument();
     });

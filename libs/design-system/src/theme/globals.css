@@ -391,11 +391,6 @@
   --color-grid: rgba(17, 19, 18, 0.05);
   --gw: 0px;
   --dot-r: 0;
-  /* AgentGlyph's glow is dark-theme-only (DS.md §7) — a computed CSS expression,
-   * not a discrete token, so it deliberately lives here rather than in `Theme`
-   * (`tokens.ts`); `AgentGlyph` sets `--glyph-glow-color` and reads this var, so a
-   * light-theme render is a plain no-glow `none` with zero JS branching. */
-  --glyph-glow-filter: none;
   --color-state-work: oklch(0.56 0.15 300);
   --color-state-think: oklch(0.58 0.14 250);
   --color-state-block: oklch(0.7 0.15 70);
@@ -455,8 +450,6 @@
   --color-grid: rgba(236, 239, 234, 0.035);
   --gw: 8px;
   --dot-r: 0;
-  /* AgentGlyph's glow is dark-theme-only (DS.md §7) — see the light block's note. */
-  --glyph-glow-filter: drop-shadow(0 0 var(--gw) var(--glyph-glow-color, transparent));
   --color-state-work: oklch(0.78 0.14 300);
   --color-state-think: oklch(0.78 0.13 245);
   --color-state-block: oklch(0.84 0.15 80);
@@ -865,13 +858,13 @@
 }
 
 /* ---------------------------------------------------------------------------
- * ZibbyCorp motion (DS.md §9 + the AgentGlyph family, `zibby.js`) — verbatim.
+ * ZibbyCorp motion (DS.md §9) — verbatim.
  *
  * `steps(1,end)` for a pixel/LCD feel; UI transitions stay short (≤200ms, not
  * defined as keyframes here). Wrapped in `prefers-reduced-motion: no-preference`
  * so a reduced-motion user gets a hard stop for free: an `animation-name` that
  * resolves to no `@keyframes` is simply a no-op per the CSS Animations spec — no
- * `motion-reduce:` variant is needed at each call site (`AgentGlyph` included).
+ * `motion-reduce:` variant is needed at each call site.
  * --------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: no-preference) {
   /* ---- DS.md §9 — status/flow ---- */
@@ -947,31 +940,6 @@
     }
   }
 
-  /* ---- AgentGlyph family (`design/ZibbyCorp/zibby.js`) — per-state motion ---- */
-  @keyframes zb-breathe {
-    0% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(0.5px);
-    }
-  }
-  @keyframes zb-bob {
-    0% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-1px);
-    }
-  }
-  @keyframes zb-arm {
-    0% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-1px);
-    }
-  }
   @keyframes zb-bar {
     0%,
     100% {
@@ -979,160 +947,6 @@
     }
     50% {
       transform: scaleY(1);
-    }
-  }
-  @keyframes zb-blink {
-    0%,
-    93%,
-    100% {
-      transform: scaleY(1);
-    }
-    96% {
-      transform: scaleY(0.15);
-    }
-  }
-  @keyframes zb-key {
-    0% {
-      opacity: 0.2;
-    }
-    50% {
-      opacity: 1;
-    }
-  }
-  @keyframes zb-shake {
-    0% {
-      transform: translateX(0);
-    }
-    25% {
-      transform: translateX(-0.6px);
-    }
-    50% {
-      transform: translateX(0);
-    }
-    75% {
-      transform: translateX(0.6px);
-    }
-  }
-  @keyframes zb-hop {
-    0% {
-      transform: translateY(0);
-    }
-    12% {
-      transform: translateY(-2px);
-    }
-    24% {
-      transform: translateY(-1px);
-    }
-    36% {
-      transform: translateY(0);
-    }
-  }
-
-  /* ---- ZibbyAvatar (`design/ZibbyCorp/Zibby Avatar.dc.html`) — gentler, 16-grid ---- */
-  @keyframes av-bob {
-    0% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-0.5px);
-    }
-  }
-  @keyframes av-hop {
-    0%,
-    45%,
-    100% {
-      transform: translateY(0);
-    }
-    15% {
-      transform: translateY(-1px);
-    }
-    30% {
-      transform: translateY(-0.5px);
-    }
-  }
-  @keyframes av-shake {
-    0% {
-      transform: translateX(0);
-    }
-    25% {
-      transform: translateX(-0.4px);
-    }
-    50% {
-      transform: translateX(0);
-    }
-    75% {
-      transform: translateX(0.4px);
-    }
-  }
-  @keyframes av-blink {
-    0%,
-    92%,
-    100% {
-      transform: scaleY(1);
-    }
-    95% {
-      transform: scaleY(0.1);
-    }
-  }
-  @keyframes av-think {
-    0%,
-    100% {
-      opacity: 0.25;
-    }
-    50% {
-      opacity: 1;
-    }
-  }
-
-  /* ---- Minion art (`design/ZibbyCorp/ZibbyCorp App.dc.html`) — CSS half of the minion
-   * motion (the rest is SMIL inside `MinionScene`/`MinionWalker`). ---- */
-  @keyframes mv-pulse {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.35;
-    }
-  }
-  @keyframes mv-blink {
-    0% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.15;
-    }
-  }
-  @keyframes mv-spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  @keyframes mv-flick {
-    from {
-      transform: scaleY(0.75);
-    }
-    to {
-      transform: scaleY(1.15);
-    }
-  }
-  @keyframes mv-boom {
-    0%,
-    100% {
-      transform: scale(1);
-    }
-    50% {
-      transform: scale(1.08);
-    }
-  }
-  @keyframes mv-ring {
-    0% {
-      transform: scale(1);
-      opacity: 0.8;
-    }
-    100% {
-      transform: scale(1.14);
-      opacity: 0;
     }
   }
 }

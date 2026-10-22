@@ -12,9 +12,9 @@ describe("ChatBubble", () => {
     expect(screen.queryByTestId(ChatBubbleTestId.Actions)).toBeNull();
   });
 
-  it("renders a left-aligned outlined bubble for coo with actions", () => {
+  it("renders a left-aligned outlined bubble for assistant with actions", () => {
     render(
-      <ChatBubble actions={<button type="button">Go</button>} author="coo">
+      <ChatBubble actions={<button type="button">Go</button>} author="assistant">
         Hello
       </ChatBubble>,
     );

@@ -191,7 +191,7 @@ export interface Theme {
   // ---- ZibbyCorp neutrals (DS.md §2.1) — the instrument-paper/blueprint palette.
   // `colorBackground*`/`colorSurface`/… above stay the app's existing 6-level
   // vocabulary (their *values* now derive from these 3 flat levels); these are the
-  // literal DS.md names for the new components (`AgentGlyph`, `StatePill`,
+  // literal DS.md names for the new components (`StatePill`,
   // `CellStrip`) and any future ZA-02 restyle to read directly. ---------------------
   /** App background, inset surfaces — DS.md `--bg`. */
   colorBg: string;

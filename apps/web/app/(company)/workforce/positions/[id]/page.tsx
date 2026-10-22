@@ -1,7 +1,7 @@
-import { DetailScreen } from "../../../../../features/agents/DetailScreen";
+import { redirect } from "next/navigation";
 
-/** `/workforce/positions/[id]` — a position (agent definition) edit form. */
+/** Legacy route — agents were once called positions. */
 export default async function PositionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return <DetailScreen agentId={id} />;
+  redirect(`/workforce/agents/${encodeURIComponent(id)}`);
 }

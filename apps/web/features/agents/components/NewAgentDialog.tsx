@@ -38,7 +38,7 @@ export interface NewAgentDialogProps {
 
 /**
  * The CREATE-ONLY agent dialog (N4c) — grammar: dialogs create and confirm,
- * nothing else. Viewing and editing an existing agent live on the `/workforce/positions/:id`
+ * nothing else. Viewing and editing an existing agent live on the `/workforce/agents/:id`
  * detail page ({@link ../DetailScreen}); this dialog only births the draft.
  */
 export function NewAgentDialog({ categories, onClose, onCreate, pending }: NewAgentDialogProps) {

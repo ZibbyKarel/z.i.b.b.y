@@ -13,7 +13,7 @@ export interface RailItemProps extends Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
   "className" | "title"
 > {
-  /** 30px centred leading column (e.g. an AgentGlyph). */
+  /** 30px centred leading column (e.g. an AgentBadge). */
   leading?: ReactNode;
   title: ReactNode;
   /** Small mono caption under the title (e.g. a StateDot + text). */

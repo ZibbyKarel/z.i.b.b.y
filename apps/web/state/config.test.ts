@@ -12,7 +12,6 @@ describe("sectionForPath", () => {
     ["/teams/x", "companies"],
     ["/projects/x/roadmap", "companies"],
     ["/workforce/agents/e1", "workforce"],
-    ["/workforce/positions", "workforce"],
     ["/workforce/departments/dev/team", "workforce"],
     ["/activity/channels", "activity"],
     ["/governance/approvals", "governance"],

@@ -12,11 +12,11 @@
  */
 export const REGISTRY_KINDS = ["skills", "mcp", "hooks", "commands"] as const;
 
-/** Every kind `RegistriesScreen` renders — positions live under `/workforce`. */
-export type RegistryKindParam = (typeof REGISTRY_KINDS)[number] | "positions";
+/** Every kind `RegistriesScreen` renders — agents live under `/workforce`. */
+export type RegistryKindParam = (typeof REGISTRY_KINDS)[number] | "agents";
 
 /** Web route of a registry list (`id` omitted) or detail page. */
 export function registryHref(kind: RegistryKindParam, id?: string): string {
-  const base = kind === "positions" ? "/workforce/positions" : `/system/registries/${kind}`;
+  const base = kind === "agents" ? "/workforce/agents" : `/system/registries/${kind}`;
   return id ? `${base}/${id}` : base;
 }

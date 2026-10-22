@@ -1,7 +1,7 @@
 "use client";
 import { type MouseEvent, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import type { Agent, AgentModel, AgentThinking } from "@zibby/contracts";
+import type { Agent, AgentModel, AgentThinking, Department } from "@zibby/contracts";
 import { Container, Icon, Stack, Typography } from "@zibby/design-system";
 import { ACCENT, BAD } from "./canvas-tokens";
 import { AgentNode, type HoverTarget, type PendingEdge, type PortKind } from "./AgentNode";
@@ -46,6 +46,7 @@ export interface WorkflowCanvasProps {
   graph: WorkflowGraph;
   setGraph: (update: (g: WorkflowGraph) => WorkflowGraph) => void;
   agents: Agent[];
+  departments?: readonly Department[];
   /** Add an agent node (palette drop with canvas coords). */
   onAddAgent: (agentId: string, x: number, y: number) => void;
   /** Detail view: render the exact same graph as a static, non-editable canvas. */
@@ -65,6 +66,7 @@ export function WorkflowCanvas({
   graph,
   setGraph,
   agents,
+  departments,
   onAddAgent,
   readOnly = false,
   attempts,
@@ -350,6 +352,7 @@ export function WorkflowCanvas({
             <AgentNode
               agents={agents}
               attempt={loop ? attempts?.[n.id] : undefined}
+              departments={departments}
               dragging={nodeDrag?.id === n.id}
               hasOutgoing={hasOutgoing(n.id)}
               hover={hover}

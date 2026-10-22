@@ -71,7 +71,7 @@ export function isStoppableRun(run: Pick<RunView, "kind" | "status">): boolean {
  */
 export function isResumableRun(run: Pick<RunView, "kind" | "status" | "parked">): boolean {
   // A parked run with a `parked` surface resumes through its note panel; one without
-  // (no-employee) has nothing else to offer, so it gets the plain re-run button.
+  // (e.g. a legacy staffing park) has nothing else to offer, so it gets the plain re-run button.
   const parkedNoPanel = run.status === "parked" && !run.parked;
   if (run.status !== "error" && run.status !== "interrupted" && !parkedNoPanel) return false;
   return run.kind === "agent" || run.kind === "workflow" || run.kind === "goal";

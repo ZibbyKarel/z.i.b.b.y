@@ -101,7 +101,7 @@ export interface SettingsScreenProps {
 /**
  * `/system/settings/[section]` (ZB-11, ROUTE-MAP §3) — the settings sections
  * router; the section tabs are a secondary `Tabs` row at the top of this screen. `general`
- * stacks General, Appearance, Machine and COO persona. Each former `/settings?tab=` is now its own route; the "gates" and
+ * stacks General, Appearance, Machine and chat persona. Each former `/settings?tab=` is now its own route; the "gates" and
  * "mandate" tabs already moved to `/governance/gates` (ZB-08), "automations" to the top-level `/work/automations`
  * page, "selfKnowledge" to
  * `/knowledge/distill` (ZB-09), and the per-project "tasks" level mapping to

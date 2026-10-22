@@ -12,7 +12,7 @@ function localeToLang(locale: string): string {
 }
 
 export interface UseVoiceModeOptions {
-  /** A finalized utterance — dictation, handed to the caller (the COO dock
+  /** A finalized utterance — dictation, handed to the caller (the chat dock
    * appends it to the composer draft; Enter sends it). */
   onFinal: (text: string) => void;
   /** Turn-taking gate (Phase 119d / Decision 7). While `true`, voice mode stays

@@ -6,7 +6,7 @@ import { renderWithProviders, screen } from "../../test/render";
 import { ChatProvider, useChat } from "./ChatContext";
 
 // A minimal harness exposing every store action + the conversation/dock state as
-// text, so tests can assert on the state the shell-global COO dock reads.
+// text, so tests can assert on the state the shell-global chat dock reads.
 function Harness() {
   const { conversationId, messages, open, newChat, dockOpen, dockTarget, setDockTarget } =
     useChat();
@@ -26,7 +26,7 @@ function Harness() {
         clear
       </button>
       <span data-testid="dock-open">{String(dockOpen)}</span>
-      <span data-testid="dock-target">{dockTarget ? `${dockTarget.kind}` : "coo"}</span>
+      <span data-testid="dock-target">{dockTarget ? `${dockTarget.kind}` : "auto"}</span>
       <button data-testid="new-chat" onClick={newChat} type="button">
         new chat
       </button>
@@ -67,11 +67,11 @@ describe("ChatProvider", () => {
     await user.click(screen.getByTestId("open"));
 
     expect(screen.getByTestId("dock-open")).toHaveTextContent("true");
-    expect(screen.getByTestId("dock-target")).toHaveTextContent("coo");
+    expect(screen.getByTestId("dock-target")).toHaveTextContent("auto");
     expect(screen.getByTestId("conversation-id")).not.toHaveTextContent("none");
   });
 
-  it("open(target) scopes the dock to an explicit department target (O-20), clearable back to the COO", async () => {
+  it("open(target) scopes the dock to an explicit department target (O-20), clearable back to automatic routing", async () => {
     const user = userEvent.setup();
     renderWithProviders(
       <ChatProvider>
@@ -84,7 +84,7 @@ describe("ChatProvider", () => {
     expect(screen.getByTestId("dock-target")).toHaveTextContent("department");
 
     await user.click(screen.getByTestId("clear-target"));
-    expect(screen.getByTestId("dock-target")).toHaveTextContent("coo");
+    expect(screen.getByTestId("dock-target")).toHaveTextContent("auto");
   });
 
   it("open() twice keeps the same conversation id (no re-mint on an existing thread)", async () => {

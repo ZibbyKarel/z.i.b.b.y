@@ -51,7 +51,6 @@
       },
       "dashboard": {
         "map": "Můstek",
-        "old": "Půdorys",
         "overview": "Inbox",
         "issues": "Issues",
         "pull-requests": "Pull requesty",
@@ -63,8 +62,7 @@
         "projects": "Projekty"
       },
       "workforce": {
-        "agents": "Agenti",
-        "positions": "Pozice"
+        "agents": "Agenti"
       },
       "governance": {
         "approvals": "Schválení",
@@ -270,7 +268,7 @@
       "chrome": {
         "label": "Zadej směr · přirozeným jazykem",
         "hintParts": {
-          "at": "@ zaměstnanci, oddělení, workflow",
+          "at": "@ agenti, oddělení, workflow",
           "hash": "# {kinds}",
           "slash": "/ skilly",
           "files": "přetáhni soubor, nebo použij sponku"
@@ -433,7 +431,7 @@
         "project": "Projekt"
       },
       "entry": {
-        "coo": "COO (automatická klasifikace)"
+        "auto": "Automaticky (automatická klasifikace)"
       },
       "cancel": "Zrušit",
       "submit": "Vytvořit úkol",
@@ -1019,7 +1017,7 @@
       "limitResumeMax": "Max. cyklů obnovy po limitu",
       "limitResumeMaxHint": "Kolikrát se běh pozastavený limitem zkusí obnovit, než se zaparkuje/selže.",
       "maxWorkingAgents": "Max. souběžně pracujících agentů",
-      "maxWorkingAgentsHint": "Pojistka stroje: kolik agentů smí pracovat současně napříč všemi projekty. O tom, kolik úloh se posouvá, rozhoduje počet volných zaměstnanců v odděleních — tohle je jen strop pro zátěž počítače. Čekající běhy slot nedrží.",
+      "maxWorkingAgentsHint": "Pojistka stroje: kolik agentů smí pracovat současně napříč všemi projekty. Tohle je jen strop pro zátěž počítače. Čekající běhy slot nedrží.",
       "dockDoneTasksLimit": "Počet hotových úkolů v doku",
       "dockDoneTasksLimitHint": "Kolik posledních dokončených či selhaných úkolů ukazuje panel Úkoly.",
       "goalVerifyTimeout": "Timeout verifikátoru cíle",
@@ -2044,12 +2042,9 @@
   "chat": {
     "createTask": "Vytvořit úkol",
     "dock": {
-      "role": "COO · Směruje, třídí, konverzuje",
-      "toggle": "Otevřít nebo zavřít chat s COO",
-      "targetCoo": "→ COO",
       "targetExplicit": "→ {name}",
-      "clearTarget": "Zrušit cíl (zpět na COO)",
-      "empty": "Zeptejte se COO na cokoli, nebo mu předejte úkol."
+      "clearTarget": "Zrušit cíl (zpět na automatické směrování)",
+      "empty": "Zeptejte se na cokoli, nebo předejte úkol."
     },
     "title": "Chat se ZIBBY",
     "close": "Zavřít",
@@ -2209,7 +2204,6 @@
       "mandateLabel": "Mandát",
       "colorLabel": "Barva",
       "colorHint": "Hex, např. #5b8def",
-      "divisionLabel": "Divize",
       "iconLabel": "Ikona",
       "fallbackLabel": "Záloha klasifikátoru",
       "fallbackPrimary": "Primární agent",
@@ -2228,7 +2222,6 @@
   "departmentDetail": {
     "chatWith": "Chat s {name}",
     "breadcrumbOrg": "Organizace",
-    "reportsToCoo": "Podléhá COO",
     "kpiOpenSubtasks": "Otevřené podúkoly",
     "kpiAgents": "Agenti",
     "kpiRunsToday": "Běhů dnes",
@@ -2252,12 +2245,10 @@
     },
     "team": {
       "title": "Tým",
-      "hire": "Najmout",
-      "emptyTitle": "Zatím nikdo nenajat",
-      "emptyDescription": "Toto oddělení zatím nemá žádné zaměstnance — najměte prvního.",
+      "emptyTitle": "Zatím žádní agenti",
+      "emptyDescription": "Do tohoto oddělení zatím nejsou přiřazeni žádní agenti.",
       "colName": "Jméno",
-      "colPosition": "Pozice",
-      "colState": "Stav"
+      "colRole": "Role"
     },
     "subtasks": {
       "emptyTitle": "Zatím žádné podúkoly",
@@ -2273,48 +2264,6 @@
     "registryLink": "Spravovat v registru →",
     "registryDescription": "Tento seznam se spravuje v globálním registru, ne po odděleních.",
     "registryTitle": "Spravováno v registru"
-  },
-  "people": {
-    "title": "Lidé",
-    "hire": "Najmout",
-    "hireTitle": "Najmout nového zaměstnance",
-    "filterDepartment": "Oddělení",
-    "allDepartments": "Všechna oddělení",
-    "filterState": "Stav",
-    "allStates": "Všechny stavy",
-    "filterRole": "Role",
-    "allRoles": "Všechny role",
-    "search": "Hledat",
-    "state": {
-      "working": "Pracuje",
-      "thinking": "Přemýšlí",
-      "blocked": "Zablokováno",
-      "error": "Chyba",
-      "done": "Hotovo",
-      "idle": "Nečinný"
-    },
-    "emptyTitle": "Nikdo tady není",
-    "emptyDescription": "Žádný zaměstnanec neodpovídá těmto filtrům.",
-    "breadcrumbPeople": "Lidé",
-    "stopRun": "Zastavit běh",
-    "currentSubtask": "Aktuální podúkol",
-    "logLines": "{count, plural, one {# řádek} few {# řádky} other {# řádků}}",
-    "logLive": "Živě",
-    "logIdle": "Log",
-    "noActiveRun": "Žádný aktivní běh.",
-    "config": "Nastavení",
-    "nameLabel": "Jméno",
-    "departmentLabel": "Oddělení",
-    "positionLabel": "Pozice",
-    "positionLink": "Upravit pozici: {name} →",
-    "nameHint": "Nechte prázdné pro zachování aktuálního jména",
-    "rules": "Pravidla",
-    "history": "Historie",
-    "historyRun": "Běh",
-    "historyState": "Stav",
-    "historyStarted": "Spuštěno",
-    "tasks": "Úkoly",
-    "historyEmpty": "Zatím žádné běhy"
   },
   "pins": {
     "pin": "Připnout",
@@ -2493,30 +2442,6 @@
     "settingsAria": "Nastavení",
     "pagePinAria": "Připnout stránku",
     "pageUnpinAria": "Odepnout stránku"
-  },
-  "orgMap": {
-    "apiUnreachable": "api nedostupné",
-    "cooAvatarLink": "Zobrazit lidi ve stavu: {state}",
-    "cooAvatarLabel": "Zibby · COO",
-    "roomAria": "{code} · {name}, {count, plural, one {# agent} few {# agenti} other {# agentů}}",
-    "state": {
-      "working": "Pracuje",
-      "thinking": "Přemýšlí",
-      "blocked": "Blokováno",
-      "error": "Chyba",
-      "done": "Hotovo",
-      "idle": "Nečinný"
-    },
-    "controls": {
-      "zoomOut": "Oddálit",
-      "zoomIn": "Přiblížit",
-      "zoomLevel": "Úroveň přiblížení",
-      "fill": "Vyplnit",
-      "minimap": "Mapa"
-    },
-    "popover": {
-      "workingOn": "Pracuje na"
-    }
   },
   "activityLog": {
     "title": "Živý log",
@@ -2720,7 +2645,7 @@
     "empty": "Žádné výsledky",
     "kind": {
       "department": "Oddělení",
-      "person": "Osoba",
+      "agent": "Agent",
       "task": "Úkol",
       "goal": "Cíl",
       "company": "Firma",
@@ -2740,7 +2665,7 @@
     "group": {
       "actions": "Akce",
       "departments": "Oddělení",
-      "people": "Lidé",
+      "agents": "Agenti",
       "tasks": "Úkoly",
       "goals": "Cíle",
       "companies": "Firmy",
@@ -2774,14 +2699,14 @@
   "registries": {
     "title": "Globální knihovny",
     "kinds": {
-      "positions": "Agenti",
+      "agents": "Agenti",
       "skills": "Skilly",
       "mcp": "MCP servery",
       "hooks": "Hooky",
       "commands": "Příkazy"
     },
     "add": {
-      "positions": "Přidat agenta",
+      "agents": "Přidat agenta",
       "skills": "Přidat skill",
       "mcp": "Přidat server",
       "hooks": "Přidat hook",
@@ -2793,7 +2718,7 @@
       "boundIn": "Napojeno na"
     },
     "metaHeader": {
-      "positions": "Kategorie",
+      "agents": "Kategorie",
       "skills": "Typ",
       "mcp": "Stav",
       "hooks": "Událost",
@@ -2804,7 +2729,7 @@
       "disabled": "Vypnuto"
     },
     "commandScope": {
-      "auto": "⌘K · COO",
+      "auto": "⌘K · automaticky",
       "manual": "Jen ručně"
     },
     "skillTypeFallback": "Skill",
@@ -2812,7 +2737,7 @@
     "emptyMcp": "Zatím žádné MCP servery.",
     "emptyHooks": "Zatím žádné hooky.",
     "emptyCommands": "Zatím žádné příkazy.",
-    "emptyPositions": "Zatím žádní agenti."
+    "emptyAgents": "Zatím žádní agenti."
   },
   "notifications": {
     "title": "Notifikace",

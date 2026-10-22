@@ -1,5 +1,6 @@
 "use client";
 
+import { useAgentSymbol } from "../../agents";
 import {
   ApprovalCard,
   Container,
@@ -24,6 +25,7 @@ import { useApprovalHistoryQuery, useApprovalsQuery } from "../queries";
  * click on history) sets that search param rather than navigating away. */
 export function ApprovalsScreen() {
   const t = useTranslations("policy.approvals");
+  const symbolOf = useAgentSymbol();
   const router = useRouter();
   const pathname = usePathname();
   const { data: queue, isPending, isError, refetch } = useApprovalsQuery();
@@ -44,7 +46,7 @@ export function ApprovalsScreen() {
           <ApprovalCard
             agentName={a.skill}
             density="row"
-            glyphSeed={a.skill}
+            {...symbolOf(a.skill)}
             highRisk={a.riskType != null && HIGH_RISK_TYPES.has(a.riskType)}
             meta={a.kind}
             onApprove={() => approve.mutate({ params: { id: a.id }, body: {} })}

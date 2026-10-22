@@ -1,6 +1,7 @@
 "use client";
 
 import type { SubtaskSummary } from "@zibby/contracts";
+import { useAgentSymbol } from "../../agents";
 import {
   ApprovalCard,
   Button,
@@ -56,6 +57,7 @@ export interface TaskDetailScreenProps {
  */
 export function TaskDetailScreen({ taskId }: TaskDetailScreenProps) {
   const t = useTranslations("tasksWork");
+  const symbolOf = useAgentSymbol();
   const departments = useDepartmentLookup();
   const router = useRouter();
   const pathname = usePathname();
@@ -183,7 +185,7 @@ export function TaskDetailScreen({ taskId }: TaskDetailScreenProps) {
                         <ApprovalCard
                           agentName={a.skill}
                           density="row"
-                          glyphSeed={a.skill}
+                          {...symbolOf(a.skill)}
                           highRisk={a.riskType != null && HIGH_RISK_TYPES.has(a.riskType)}
                           key={a.id}
                           meta={a.kind}

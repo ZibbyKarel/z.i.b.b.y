@@ -15,7 +15,7 @@ import {
 } from "@zibby/design-system";
 import { PageBreadcrumb } from "../../../components/layout/PageBreadcrumb";
 import type { StateTone, SubNavLinkComponent } from "@zibby/design-system";
-import type { DepartmentId } from "@zibby/contracts";
+import type { Agent, DepartmentId } from "@zibby/contracts";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -26,7 +26,6 @@ import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../../components/PageContainer/PageContainer";
 import { useChat } from "../../chat";
-import { useEmployeesQuery } from "../../employees";
 import { useAgentsQuery } from "../../agents";
 import { useCreateWorkflowMutation, useWorkflowsQuery } from "../../workflows";
 import { NewWorkflowDialog } from "../../workflows/components/NewWorkflowDialog/NewWorkflowDialog";
@@ -51,10 +50,7 @@ export function DepartmentScreen({ departmentId, tab }: DepartmentScreenProps) {
   const router = useRouter();
   const { open: openChat } = useChat();
   const departmentQuery = useDepartmentQuery(departmentId);
-  const employeesQuery = useEmployeesQuery({
-    department: departmentId as DepartmentId,
-    status: "active",
-  });
+  const agentsQuery = useAgentsQuery();
   const subtasksQuery = useDepartmentSubtasksQuery(departmentId);
   const workflowsQuery = useWorkflowsQuery();
 
@@ -62,14 +58,14 @@ export function DepartmentScreen({ departmentId, tab }: DepartmentScreenProps) {
   if (departmentQuery.isPending || !departmentQuery.data) return <QueryLoading />;
 
   const department = departmentQuery.data;
-  const employees = employeesQuery.data ?? [];
+  const agents = (agentsQuery.data ?? []).filter((a) => a.department === departmentId);
   const subtasks = subtasksQuery.data ?? [];
   const openSubtasks = subtasks.filter((s) => s.state !== "done").length;
   const workflows = (workflowsQuery.data ?? []).filter((p) => p.department === departmentId);
 
   const kpis = [
     { label: t("kpiOpenSubtasks"), value: openSubtasks },
-    { label: t("kpiAgents"), value: employees.length },
+    { label: t("kpiAgents"), value: agents.length },
     { label: t("kpiRunsToday"), value: "—" },
     { label: t("kpiSpendToday"), value: "—" },
   ];
@@ -91,7 +87,7 @@ export function DepartmentScreen({ departmentId, tab }: DepartmentScreenProps) {
                 </Typography>
                 <Typography type="title">{department.name}</Typography>
               </Stack>
-              {/* O-20: no separate department transcript — the COO dock opens
+              {/* O-20: no separate department transcript — the chat dock opens
                   pre-scoped with an explicit department target, which overrides
                   the classifier ("explicit target overrides the classifier"). */}
               <Button
@@ -109,9 +105,6 @@ export function DepartmentScreen({ departmentId, tab }: DepartmentScreenProps) {
             <Typography type="note" variant="secondary">
               {department.mandate}
             </Typography>
-            <Typography mono size="xs" type="note" variant="tertiary">
-              {t("reportsToCoo")}
-            </Typography>
           </Stack>
 
           <MetricStrip columns={4} items={kpis} />
@@ -121,13 +114,7 @@ export function DepartmentScreen({ departmentId, tab }: DepartmentScreenProps) {
             tab={tab}
           />
 
-          {tab === "team" && (
-            <TeamTab
-              departmentId={departmentId}
-              employees={employees}
-              loading={employeesQuery.isPending}
-            />
-          )}
+          {tab === "team" && <TeamTab agents={agents} loading={agentsQuery.isPending} />}
           {tab === "subtasks" && (
             <SubtasksTab loading={subtasksQuery.isPending} subtasks={subtasks} />
           )}
@@ -161,30 +148,14 @@ function Tabs({ tab, onChange }: { tab: DepartmentTab; onChange: (t: DepartmentT
   );
 }
 
-function TeamTab({
-  departmentId,
-  employees,
-  loading,
-}: {
-  departmentId: string;
-  employees: ReturnType<typeof useEmployeesQuery>["data"];
-  loading: boolean;
-}) {
+function TeamTab({ agents, loading }: { agents: Agent[]; loading: boolean }) {
   const t = useTranslations("departmentDetail");
-  const list = employees ?? [];
   return (
     <Stack gap="200">
-      <Stack direction="row" justify="between">
-        <Typography type="labelSm">{t("team.title")}</Typography>
-        <Link href={`/workforce/agents/new?department=${departmentId}`}>
-          <Button icon="plus" intent="primary" size="sm">
-            {t("team.hire")}
-          </Button>
-        </Link>
-      </Stack>
+      <Typography type="labelSm">{t("team.title")}</Typography>
       {loading ? (
         <QueryLoading />
-      ) : list.length === 0 ? (
+      ) : agents.length === 0 ? (
         <EmptyState
           description={t("team.emptyDescription")}
           glyph="bot"
@@ -193,23 +164,22 @@ function TeamTab({
       ) : (
         <DataTable
           columns={[
-            { key: "name", label: t("team.colName"), width: "lg" },
             {
-              key: "position",
-              label: t("team.colPosition"),
+              key: "name",
+              label: t("team.colName"),
               width: "lg",
-              render: (e) => e.position.title ?? e.position.name,
+              render: (a) => a.displayName ?? a.name ?? a.id,
             },
             {
-              key: "state",
-              label: t("team.colState"),
-              width: "sm",
-              render: (e) => t(`state.${e.state}`),
+              key: "role",
+              label: t("team.colRole"),
+              width: "flex",
+              render: (a) => a.title ?? a.description ?? "",
             },
           ]}
-          getRowKey={(e) => e.id}
-          rowHref={(e) => `/workforce/agents/${e.id}`}
-          rows={list}
+          getRowKey={(a) => a.id}
+          rowHref={(a) => `/workforce/agents/${a.id}`}
+          rows={agents}
         />
       )}
     </Stack>

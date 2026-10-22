@@ -260,7 +260,7 @@ describe("TaskCommandLine (Phase 118b task-launch container)", () => {
     render(<TaskCommandLine />);
     expect(
       screen.getByText(
-        "@ zaměstnanci, oddělení, workflow · # projekty · přetáhni soubor, nebo použij sponku",
+        "@ agenti, oddělení, workflow · # projekty · přetáhni soubor, nebo použij sponku",
       ),
     ).toBeInTheDocument();
   });

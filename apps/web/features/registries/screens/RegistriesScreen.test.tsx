@@ -58,7 +58,9 @@ vi.mock("../../commands/mutations", () => ({
 
 vi.mock("../../agents/queries", () => ({
   useAgentsQuery: () => ({
-    data: [{ id: "koder", name: "koder", displayName: "Kevin", category: "dev" }],
+    data: [
+      { id: "koder", name: "koder", displayName: "Kevin", category: "dev", department: "dev" },
+    ],
     isPending: false,
     isError: false,
   }),
@@ -66,10 +68,6 @@ vi.mock("../../agents/queries", () => ({
 }));
 vi.mock("../../agents/mutations", () => ({
   useCreateAgentMutation: () => ({ mutate: vi.fn(), isPending: false }),
-}));
-
-vi.mock("../../employees/queries", () => ({
-  useEmployeesQuery: () => ({ data: [{ id: "e1", agentId: "koder", department: "dev" }] }),
 }));
 
 beforeEach(() => {
@@ -87,8 +85,8 @@ describe("RegistriesScreen — /system/registries/[kind]", () => {
     expect(screen.getByText("QA")).toBeInTheDocument();
   });
 
-  it("renders the positions (agents) table with Bound in derived from employees", () => {
-    render(<RegistriesScreen kind="positions" />);
+  it("renders the agents table with Bound in derived from the department", () => {
+    render(<RegistriesScreen kind="agents" />);
     expect(screen.getByText("Kevin")).toBeInTheDocument();
     expect(screen.getByText("DEV")).toBeInTheDocument();
   });

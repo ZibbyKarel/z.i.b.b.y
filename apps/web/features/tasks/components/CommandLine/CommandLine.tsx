@@ -33,7 +33,6 @@ import { useAgentsQuery } from "../../../agents";
 import { useWorkflowsQuery } from "../../../workflows";
 import { useDepartmentsQuery } from "../../../departments/queries/useDepartmentsQuery";
 import { useTeamsQuery } from "../../../teams";
-import { useEmployeesQuery } from "../../../employees";
 import { useCompaniesQuery } from "../../../companies";
 import { useProjectsQuery } from "../../../projects";
 import { useSkillsQuery } from "../../../skills";
@@ -143,7 +142,7 @@ export interface CommandLineProps {
    * `initialTarget` still seeds the FIRST chip (mirrors how it seeds `target`
    * otherwise). `#` scope and `/` skill tags are unaffected — they were always
    * independent of the routing target(s). Default `false` — every existing
-   * single-target caller is unchanged. Only the chat dock (`CooDock`) sets this.
+   * single-target caller is unchanged. Only the chat dock (`ChatDock`) sets this.
    */
   multipleTargets?: boolean;
   /** Mirrors the attached file set up — needed by a parent whose OWN submit path
@@ -230,7 +229,7 @@ export interface CommandLineProps {
   inline?: boolean;
 }
 
-/** The trigger table: `@` = who runs it (agent/employee/department/workflow), `#` =
+/** The trigger table: `@` = who runs it (agent/department/workflow), `#` =
  * what it can see (company/team/project), `/` = which skill it uses. */
 type Trigger = "@" | "#" | "/";
 
@@ -246,8 +245,7 @@ interface Mention {
  * (glyph/tone by `kind`) and resolve what it picks. `color` is set only for a
  * `department` row — the mention list's rendering swaps the usual `Tag` glyph for a
  * dot tinted with the department's own brand color (Phase 91), matching
- * `WorkflowOwnerChip`'s established "colored dot" pattern. An `employee` row's `id`
- * is the employee id (testid), `agentId` is what it dispatches to. A `#` row
+ * `WorkflowOwnerChip`'s established "colored dot" pattern. A `#` row
  * ({@link ScopeKind}) or a `skill` row resolves to NO `TaskTarget` at all — it sets
  * a scope/skill tag instead (see `pickMentionResult`). */
 interface MentionRow {
@@ -256,9 +254,9 @@ interface MentionRow {
   glyph: IconName;
   color?: string;
 }
-type MentionResult =
-  | (MentionRow & { kind: "agent" | "workflow" | "department" | ScopeKind | "skill" })
-  | (MentionRow & { kind: "employee"; agentId: string });
+type MentionResult = MentionRow & {
+  kind: "agent" | "workflow" | "department" | ScopeKind | "skill";
+};
 
 const NO_SCOPE_KINDS: readonly ScopeKind[] = [];
 const SCOPE_GLYPH: Record<ScopeKind, IconName> = {
@@ -476,7 +474,7 @@ const CONTROLS_INSET = "8px";
  * The generic draft composer (Phase 26; restyled to the velin-b command bar in Phase
  * 31a; stripped of all task-launch machinery in Phase 118d): one growable input that
  * owns ONLY the draft — free-text description, an inline trigger picker (`@` assigns
- * an agent/employee/workflow/department target, `#` tags a company/team/project scope
+ * an agent/workflow/department target, `#` tags a company/team/project scope
  * when the host passes `scopeKinds`, `/` tags a skill with `allowSkillMentions`;
  * multi-word names stay ONE token), a `+`/pin button (and drag-and-drop) to attach
  * files, highlights (path + `@token` tones), and suggestion chips — firing `onSubmit`
@@ -605,7 +603,6 @@ export function CommandLine({
   const { data: agents = [] } = useAgentsQuery();
   const { data: workflows = [] } = useWorkflowsQuery();
   const { data: departments = [] } = useDepartmentsQuery();
-  const { data: employees = [] } = useEmployeesQuery({ status: "active" });
   // ponytail: the `#`/`/` sources fetch unconditionally (cached, cheap) — the hooks
   // take no `enabled` option; gate them if a host ever pays for it.
   const { data: teams = [] } = useTeamsQuery();
@@ -732,7 +729,6 @@ export function CommandLine({
     const at = (name: string, tone: HighlightTone): KnownName => ({ trigger: "@", name, tone });
     return [
       ...agents.map((a) => at(a.name ?? a.id, "accent")),
-      ...employees.map((e) => at(e.name, "accent")),
       ...departments.map((d) => at(d.name, "accent")),
       ...workflows.map((w) => at(w.name, "push")),
       ...scopeKinds.flatMap((kind) =>
@@ -742,16 +738,7 @@ export function CommandLine({
         ? skills.map((s): KnownName => ({ trigger: "/", name: s.name, tone: "accent" }))
         : []),
     ];
-  }, [
-    agents,
-    employees,
-    departments,
-    workflows,
-    scopeKinds,
-    scopeSources,
-    allowSkillMentions,
-    skills,
-  ]);
+  }, [agents, departments, workflows, scopeKinds, scopeSources, allowSkillMentions, skills]);
   const mentionHighlights = useMemo(
     () => mentionRanges(text, knownNames, enabledTriggers),
     [text, knownNames, enabledTriggers],
@@ -963,17 +950,14 @@ export function CommandLine({
   function toPickedTarget(result: MentionResult): TaskTarget {
     return result.kind === "agent"
       ? { kind: "agent", id: result.id, name: result.name, glyph: result.glyph }
-      : result.kind === "employee"
-        ? // An employee holds a position — it dispatches to that position's agent.
-          { kind: "agent", id: result.agentId, name: result.name, glyph: "bot" }
-        : result.kind === "workflow"
-          ? { kind: "workflow", id: result.id, name: result.name, glyph: result.glyph }
-          : {
-              kind: "department",
-              id: result.id as DepartmentId,
-              name: result.name,
-              glyph: result.glyph,
-            };
+      : result.kind === "workflow"
+        ? { kind: "workflow", id: result.id, name: result.name, glyph: result.glyph }
+        : {
+            kind: "department",
+            id: result.id as DepartmentId,
+            name: result.name,
+            glyph: result.glyph,
+          };
   }
 
   function pickMentionResult(result: MentionResult) {
@@ -1099,13 +1083,6 @@ export function CommandLine({
   // Every `@` row, unfiltered and grouped per kind in display order — the picker
   // filters it by the in-progress query, `handleChange` resolves a typed `@Name` in it.
   const atCandidates = useMemo<MentionResult[][]>(() => {
-    const employeeRows: MentionResult[] = employees.map((e) => ({
-      kind: "employee" as const,
-      id: e.id,
-      name: e.name,
-      glyph: "bot" as IconName,
-      agentId: e.agentId,
-    }));
     const departmentRows: MentionResult[] = rosterDepartments.map((s) => ({
       kind: "department" as const,
       id: s.id,
@@ -1119,18 +1096,14 @@ export function CommandLine({
       name: p.name,
       glyph: "flow" as IconName,
     }));
-    // An agent an active employee holds is already reachable through that employee.
-    const held = new Set(employees.map((e) => e.agentId));
-    const freeAgentRows: MentionResult[] = agents
-      .filter((a) => !held.has(a.id))
-      .map((a) => ({
-        kind: "agent" as const,
-        id: a.id,
-        name: a.name ?? a.id,
-        glyph: (a.glyph as IconName | undefined) ?? "bot",
-      }));
-    return [employeeRows, departmentRows, workflowRows, freeAgentRows];
-  }, [agents, employees, workflows, rosterDepartments]);
+    const agentRows: MentionResult[] = agents.map((a) => ({
+      kind: "agent" as const,
+      id: a.id,
+      name: a.name ?? a.id,
+      glyph: (a.glyph as IconName | undefined) ?? "bot",
+    }));
+    return [departmentRows, workflowRows, agentRows];
+  }, [agents, workflows, rosterDepartments]);
 
   const mentionResults = useMemo<MentionResult[]>(() => {
     if (!mention) return [];
@@ -1464,7 +1437,7 @@ export function CommandLine({
                             <Tag
                               icon={result.glyph}
                               tone={
-                                result.kind === "agent" || result.kind === "employee"
+                                result.kind === "agent"
                                   ? "accent"
                                   : result.kind === "workflow"
                                     ? "push"

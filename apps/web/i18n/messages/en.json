@@ -51,7 +51,6 @@
       },
       "dashboard": {
         "map": "Bridge",
-        "old": "Floorplan",
         "overview": "Inbox",
         "issues": "Issues",
         "pull-requests": "Pull requests",
@@ -63,8 +62,7 @@
         "projects": "Projects"
       },
       "workforce": {
-        "agents": "Agents",
-        "positions": "Positions"
+        "agents": "Agents"
       },
       "governance": {
         "approvals": "Approvals",
@@ -270,7 +268,7 @@
       "chrome": {
         "label": "Say what you need · plain language",
         "hintParts": {
-          "at": "@ employees, departments, workflows",
+          "at": "@ agents, departments, workflows",
           "hash": "# {kinds}",
           "slash": "/ skills",
           "files": "drag a file, or use the paperclip"
@@ -433,7 +431,7 @@
         "project": "Project"
       },
       "entry": {
-        "coo": "COO (auto-classify)"
+        "auto": "Automatic (auto-classify)"
       },
       "cancel": "Cancel",
       "submit": "Create task",
@@ -1019,7 +1017,7 @@
       "limitResumeMax": "Max limit-resume cycles",
       "limitResumeMaxHint": "How many times a limit-paused run is retried before it is parked/failed.",
       "maxWorkingAgents": "Max. agents working at once",
-      "maxWorkingAgentsHint": "Machine safety fuse: how many agents may work at the same time across every project. How many tasks advance is decided by free employees in each department — this only caps the load on this machine. Waiting runs hold no slot.",
+      "maxWorkingAgentsHint": "Machine safety fuse: how many agents may work at the same time across every project. This only caps the load on this machine. Waiting runs hold no slot.",
       "dockDoneTasksLimit": "Finished tasks in the dock",
       "dockDoneTasksLimitHint": "How many of the latest finished or failed tasks the Tasks panel shows.",
       "goalVerifyTimeout": "Goal verifier timeout",
@@ -2044,12 +2042,9 @@
   "chat": {
     "createTask": "Create task",
     "dock": {
-      "role": "COO · Routes, classifies, chats",
-      "toggle": "Toggle the COO chat",
-      "targetCoo": "→ COO",
       "targetExplicit": "→ {name}",
-      "clearTarget": "Clear the target (back to the COO)",
-      "empty": "Ask the COO anything, or hand it a task."
+      "clearTarget": "Clear the target (back to automatic routing)",
+      "empty": "Ask anything, or hand over a task."
     },
     "title": "Chat with ZIBBY",
     "close": "Close",
@@ -2209,7 +2204,6 @@
       "mandateLabel": "Mandate",
       "colorLabel": "Color",
       "colorHint": "Hex, e.g. #5b8def",
-      "divisionLabel": "Division",
       "iconLabel": "Icon",
       "fallbackLabel": "Classifier fallback",
       "fallbackPrimary": "Primary agent",
@@ -2228,7 +2222,6 @@
   "departmentDetail": {
     "chatWith": "Chat with {name}",
     "breadcrumbOrg": "Org",
-    "reportsToCoo": "Reports to COO",
     "kpiOpenSubtasks": "Open subtasks",
     "kpiAgents": "Agents",
     "kpiRunsToday": "Runs today",
@@ -2252,12 +2245,10 @@
     },
     "team": {
       "title": "Team",
-      "hire": "Hire",
-      "emptyTitle": "No one hired yet",
-      "emptyDescription": "This department has no employees yet — hire the first one.",
+      "emptyTitle": "No agents yet",
+      "emptyDescription": "No agents are assigned to this department yet.",
       "colName": "Name",
-      "colPosition": "Position",
-      "colState": "State"
+      "colRole": "Role"
     },
     "subtasks": {
       "emptyTitle": "No subtasks yet",
@@ -2273,48 +2264,6 @@
     "registryLink": "Manage in registry →",
     "registryDescription": "This list is managed in the global registry, not per department.",
     "registryTitle": "Managed in the registry"
-  },
-  "people": {
-    "title": "People",
-    "hire": "Hire",
-    "hireTitle": "Hire a new employee",
-    "filterDepartment": "Department",
-    "allDepartments": "All departments",
-    "filterState": "State",
-    "allStates": "All states",
-    "filterRole": "Role",
-    "allRoles": "All roles",
-    "search": "Search",
-    "state": {
-      "working": "Working",
-      "thinking": "Thinking",
-      "blocked": "Blocked",
-      "error": "Error",
-      "done": "Done",
-      "idle": "Idle"
-    },
-    "emptyTitle": "No one here",
-    "emptyDescription": "No employees match these filters.",
-    "breadcrumbPeople": "People",
-    "stopRun": "Stop run",
-    "currentSubtask": "Current subtask",
-    "logLines": "{count, plural, one {# line} other {# lines}}",
-    "logLive": "Live",
-    "logIdle": "Log",
-    "noActiveRun": "No active run.",
-    "config": "Config",
-    "nameLabel": "Name",
-    "departmentLabel": "Department",
-    "positionLabel": "Position",
-    "positionLink": "Edit position: {name} →",
-    "nameHint": "Leave blank to keep the current name",
-    "rules": "Rules",
-    "history": "History",
-    "historyRun": "Run",
-    "historyState": "State",
-    "historyStarted": "Started",
-    "tasks": "Tasks",
-    "historyEmpty": "No runs yet"
   },
   "pins": {
     "pin": "Pin",
@@ -2493,30 +2442,6 @@
     "settingsAria": "Settings",
     "pagePinAria": "Pin page",
     "pageUnpinAria": "Unpin page"
-  },
-  "orgMap": {
-    "apiUnreachable": "API unreachable",
-    "cooAvatarLink": "Show people in state: {state}",
-    "cooAvatarLabel": "Zibby · COO",
-    "roomAria": "{code} · {name}, {count, plural, one {# agent} other {# agents}}",
-    "state": {
-      "working": "Working",
-      "thinking": "Thinking",
-      "blocked": "Blocked",
-      "error": "Error",
-      "done": "Done",
-      "idle": "Idle"
-    },
-    "controls": {
-      "zoomOut": "Zoom out",
-      "zoomIn": "Zoom in",
-      "zoomLevel": "Zoom level",
-      "fill": "Fill",
-      "minimap": "Map"
-    },
-    "popover": {
-      "workingOn": "Working on"
-    }
   },
   "activityLog": {
     "title": "Live log",
@@ -2720,7 +2645,7 @@
     "empty": "No results",
     "kind": {
       "department": "Department",
-      "person": "Person",
+      "agent": "Agent",
       "task": "Task",
       "goal": "Goal",
       "company": "Company",
@@ -2740,7 +2665,7 @@
     "group": {
       "actions": "Actions",
       "departments": "Departments",
-      "people": "People",
+      "agents": "Agents",
       "tasks": "Tasks",
       "goals": "Goals",
       "companies": "Companies",
@@ -2774,14 +2699,14 @@
   "registries": {
     "title": "Global libraries",
     "kinds": {
-      "positions": "Agents",
+      "agents": "Agents",
       "skills": "Skills",
       "mcp": "MCP servers",
       "hooks": "Hooks",
       "commands": "Commands"
     },
     "add": {
-      "positions": "Add agent",
+      "agents": "Add agent",
       "skills": "Add skill",
       "mcp": "Add server",
       "hooks": "Add hook",
@@ -2793,7 +2718,7 @@
       "boundIn": "Bound in"
     },
     "metaHeader": {
-      "positions": "Category",
+      "agents": "Category",
       "skills": "Type",
       "mcp": "Status",
       "hooks": "Event",
@@ -2804,7 +2729,7 @@
       "disabled": "Disabled"
     },
     "commandScope": {
-      "auto": "⌘K · COO",
+      "auto": "⌘K · auto",
       "manual": "Manual only"
     },
     "skillTypeFallback": "Skill",
@@ -2812,7 +2737,7 @@
     "emptyMcp": "No MCP servers yet.",
     "emptyHooks": "No hooks yet.",
     "emptyCommands": "No commands yet.",
-    "emptyPositions": "No agents yet."
+    "emptyAgents": "No agents yet."
   },
   "notifications": {
     "title": "Notifications",

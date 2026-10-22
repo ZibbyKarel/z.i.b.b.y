@@ -214,45 +214,6 @@ export type { DotTone, StatusDotProps } from "./components/StatusDot/StatusDot";
 export { TypingDots, TypingDotsTestId } from "./components/TypingDots/TypingDots";
 export type { TypingDotsProps } from "./components/TypingDots/TypingDots";
 
-export { AgentGlyph, AgentGlyphTestId } from "./components/AgentGlyph/AgentGlyph";
-export type { AgentGlyphProps, GlyphSize } from "./components/AgentGlyph/AgentGlyph";
-
-export {
-  ZIBBY_AVATAR_ROWS,
-  ZibbyAvatar,
-  ZibbyAvatarTestId,
-} from "./components/ZibbyAvatar/ZibbyAvatar";
-export type { ZibbyAvatarProps, ZibbyAvatarSize } from "./components/ZibbyAvatar/ZibbyAvatar";
-
-export { MinionBody, MinionArm } from "./components/Minion/MinionBody";
-export type {
-  MinionBodyProps,
-  MinionArmProps,
-  MinionMouthState,
-} from "./components/Minion/MinionBody";
-export {
-  MinionFigure,
-  MinionFigureTestId,
-  minionFigureWidth,
-} from "./components/Minion/MinionFigure";
-export type { MinionFigureProps, MinionSize } from "./components/Minion/MinionFigure";
-export { MinionScene, MinionSceneTestId } from "./components/Minion/MinionScene";
-export type { MinionSceneProps } from "./components/Minion/MinionScene";
-export { MinionWalker, MinionWalkerTestId } from "./components/Minion/MinionWalker";
-export type { MinionWalkerProps } from "./components/Minion/MinionWalker";
-export {
-  MINION_HAIRS,
-  MINION_HATS,
-  MINION_HEIGHTS,
-  MINION_WIDTHS,
-  ZIBBY_APPEARANCE,
-  minionAppearanceFromSeed,
-} from "./components/Minion/minionAppearance";
-export type { MinionAppearance, MinionHair, MinionHat } from "./components/Minion/minionAppearance";
-export { minionGeometry } from "./components/Minion/minionGeometry";
-export type { MinionGeometry } from "./components/Minion/minionGeometry";
-export { usePrefersReducedMotion } from "./hooks/usePrefersReducedMotion";
-
 export { StatePill, StatePillTestId } from "./components/StatePill/StatePill";
 export type { StatePillProps } from "./components/StatePill/StatePill";
 
@@ -552,27 +513,6 @@ export {
   ConfirmDeleteButtonTestId,
 } from "./components/ConfirmDeleteButton/ConfirmDeleteButton";
 export type { ConfirmDeleteButtonProps } from "./components/ConfirmDeleteButton/ConfirmDeleteButton";
-
-export { OrgNode, OrgNodeTestId } from "./components/OrgNode/OrgNode";
-export type { OrgNodeProps } from "./components/OrgNode/OrgNode";
-export { OrgFloorplan, OrgFloorplanTestId } from "./components/OrgFloorplan/OrgFloorplan";
-export type {
-  OrgFloorplanAgent,
-  OrgFloorplanCoo,
-  OrgFloorplanLabels,
-  OrgFloorplanProps,
-  OrgFloorplanRoom,
-  OrgFloorplanWalker,
-  OrgFloorplanZone,
-} from "./components/OrgFloorplan/OrgFloorplan";
-export {
-  DEFAULT_FLOORPLAN_ROWS,
-  layoutFloorplan,
-  type FloorplanRowSpec,
-} from "./components/OrgFloorplan/layoutFloorplan";
-
-export { OrgConnector, OrgConnectorTestId } from "./components/OrgConnector/OrgConnector";
-export type { OrgConnectorProps } from "./components/OrgConnector/OrgConnector";
 
 export { Legend, LegendTestId } from "./components/Legend/Legend";
 export type { LegendItem, LegendProps } from "./components/Legend/Legend";

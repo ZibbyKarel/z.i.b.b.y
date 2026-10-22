@@ -34,8 +34,10 @@ vi.mock("@zibby/design-system", async (importOriginal) => ({
 vi.mock("../../departments/queries", () => ({
   useDepartmentsQuery: () => ({ data: [{ id: "dev", name: "Development" }] }),
 }));
-vi.mock("../../employees/queries", () => ({
-  useEmployeesQuery: () => ({ data: [{ id: "alice", name: "Alice", department: "dev" }] }),
+vi.mock("../../agents/queries", () => ({
+  useAgentsQuery: () => ({
+    data: [{ id: "alice", name: "alice", displayName: "Alice", department: "dev" }],
+  }),
 }));
 vi.mock("../../tasks/queries", () => ({
   useTaskParentsInfiniteQuery: () => ({ data: [] }),
@@ -74,7 +76,7 @@ describe("CommandPaletteHost", () => {
     expect(screen.queryByTestId(CommandPaletteTestId.Root)).not.toBeInTheDocument();
   });
 
-  it("lists the live index once open, including a department and a person", () => {
+  it("lists the live index once open, including a department and an agent", () => {
     renderWithProviders(<Harness open />);
     expect(screen.getByTestId(CommandPaletteTestId.Root)).toBeInTheDocument();
     expect(screen.getByTestId(`${CommandPaletteTestId.Item}-dev`)).toBeInTheDocument();

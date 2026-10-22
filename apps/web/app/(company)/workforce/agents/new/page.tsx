@@ -1,10 +1,5 @@
-import { HireEmployeeScreen } from "../../../../../features/departments/screens/HireEmployeeScreen";
+import { RegistriesScreen } from "../../../../../features/registries/screens/RegistriesScreen";
 
-export default async function HireEmployeePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ department?: string }>;
-}) {
-  const { department } = await searchParams;
-  return <HireEmployeeScreen initialDepartment={department} />;
+export default function AgentsNewPage() {
+  return <RegistriesScreen openCreateOnMount kind="agents" />;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  AgentGlyph,
+  AgentBadge,
   Container,
   Dropdown,
   MetricStrip,
@@ -15,6 +15,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
+import { useAgentSymbol } from "../../agents";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { useProjectsQuery } from "../../projects";
 import { useAssignRunProjectMutation } from "../mutations";
@@ -91,6 +92,7 @@ export function RunDetailHeader({
   const t = useTranslations("runs");
   const router = useRouter();
   const departments = useDepartmentLookup();
+  const symbolOf = useAgentSymbol();
   const { taskId, projectId, department } = run;
 
   return (
@@ -147,10 +149,10 @@ export function RunDetailHeader({
               {agent && (
                 <Pressable
                   data-testid={RunDetailHeaderTestId.AgentLink}
-                  onClick={() => router.push(`/workforce/positions/${agent.id}`)}
+                  onClick={() => router.push(`/workforce/agents/${agent.id}`)}
                 >
                   <Stack inline align="center" direction="row" gap="75">
-                    <AgentGlyph glow={false} seed={agent.name} size={22} state={agent.state} />
+                    <AgentBadge {...symbolOf(agent.id)} size="xs" state={agent.state} />
                     <Typography as="span" type="label" variant="primary">
                       {agent.role ? `${agent.name} · ${agent.role}` : agent.name}
                     </Typography>

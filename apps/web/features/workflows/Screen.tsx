@@ -390,6 +390,7 @@ export function Screen({ selectedId: routeId, basePath = "/work/workflows" }: Sc
           <WorkflowCanvas
             agents={agents}
             attempts={attempts}
+            departments={departments.list}
             graph={editing ? editGraph : detailGraph}
             onAddAgent={editing ? addAgentToEdit : noop}
             readOnly={!editing}

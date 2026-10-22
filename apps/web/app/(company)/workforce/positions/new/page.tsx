@@ -1,5 +1,6 @@
-import { RegistriesScreen } from "../../../../../features/registries/screens/RegistriesScreen";
+import { redirect } from "next/navigation";
 
+/** Legacy route — agents were once called positions. */
 export default function PositionsNewPage() {
-  return <RegistriesScreen openCreateOnMount kind="positions" />;
+  redirect("/workforce/agents/new");
 }

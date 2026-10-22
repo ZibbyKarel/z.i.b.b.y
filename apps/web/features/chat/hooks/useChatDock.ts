@@ -18,7 +18,7 @@ function isMentionTarget(target: TaskTarget): target is ChatMentionTarget {
   return target.kind === "agent" || target.kind === "workflow" || target.kind === "department";
 }
 
-export interface CooChat {
+export interface ChatDockEngine {
   /** The live SSE stream for the in-flight assistant turn. */
   stream: ChatStreamState;
   /** A turn is in flight: from send (`isPending`) through the terminal `done`/`error`. */
@@ -27,7 +27,7 @@ export interface CooChat {
    * D-020 — send one operator turn. `mentions` is the composer's picked list of
    * `@`-addressed units (0–8); when absent/empty the dock's explicit scope
    * (`dockTarget`, O-20) applies as the sole mention; when both are empty the
-   * COO's classifier routes. `attachments`, when its upload produced a set,
+   * the classifier routes. `attachments`, when its upload produced a set,
    * rides as `attachmentSetId`.
    */
   send: (text: string, mentions?: TaskTarget[], attachments?: TaskAttachmentSet) => void;
@@ -40,12 +40,12 @@ export interface CooChat {
   /** Dictated text not yet appended to the composer (fed to `CommandLine`'s
    *  `injectedText`); `undefined` once consumed. */
   dictated: string | undefined;
-  /** Clears {@link CooChat.dictated} once the composer has appended it. */
+  /** Clears {@link ChatDockEngine.dictated} once the composer has appended it. */
   consumeDictated: () => void;
 }
 
 /**
- * The COO dock's chat engine (ZB-12) — the one owner of the conversation stream
+ * The chat dock's engine (ZB-12) — the one owner of the conversation stream
  * app-wide. It reuses the engine the retired `/chat` page ran on unchanged
  * (`useChatStream` over `GET /api/chat/stream`, `useSendChatMessageMutation`,
  * the `claude --resume` conversation id from {@link ChatProvider}), so mounting
@@ -64,7 +64,7 @@ export interface CooChat {
  * stays live while a turn is in flight and is disarmed only while a reply is
  * being read aloud (echo guard: the mic must never transcribe ZIBBY's own voice).
  */
-export function useCooChat(): CooChat {
+export function useChatDock(): ChatDockEngine {
   const { conversationId, ensureConversation, setConversationId, setMessages, dockTarget } =
     useChat();
 

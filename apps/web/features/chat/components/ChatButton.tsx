@@ -9,7 +9,7 @@ export enum ChatButtonTestId {
 }
 
 /**
- * Top-bar entry point to the shell-global COO dock (ZB-12) — a ghost action
+ * Top-bar entry point to the shell-global chat dock (ZB-12) — a ghost action
  * mirroring the neighbouring New Task trigger, with a visible ⌘J shortcut
  * badge. `open()` mints a conversation (if this thread doesn't have one yet)
  * and opens the dock.

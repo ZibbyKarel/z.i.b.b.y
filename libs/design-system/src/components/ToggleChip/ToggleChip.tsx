@@ -12,7 +12,7 @@ export interface ToggleChipProps extends Omit<
   "className"
 > {
   pressed: boolean;
-  /** Small leading visual, e.g. an 18px AgentGlyph. */
+  /** Small leading visual, e.g. a small AgentBadge. */
   leading?: ReactNode;
   children: ReactNode;
   ref?: Ref<HTMLButtonElement>;

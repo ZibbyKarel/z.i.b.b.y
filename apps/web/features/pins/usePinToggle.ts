@@ -7,7 +7,7 @@ function pinKey(p: Pin) {
 }
 
 /** Read the current pin list and expose an is-pinned check + a toggle mutator,
- *  for the catalog-entity kinds (agent/workflow/employee). Page pins go
+ *  for the catalog-entity kinds (agent/workflow). Page pins go
  *  through `usePagePins` — they carry a label an entity pin doesn't. */
 export function usePinToggle() {
   const { data: pins = [] } = usePinsQuery();

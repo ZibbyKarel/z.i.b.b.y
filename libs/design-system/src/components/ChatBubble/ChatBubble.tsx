@@ -8,16 +8,16 @@ export enum ChatBubbleTestId {
 }
 
 export interface ChatBubbleProps extends Omit<HTMLAttributes<HTMLDivElement>, "className"> {
-  /** `you` = right-aligned inverted bubble; `coo` = left-aligned outlined bubble. */
-  author: "you" | "coo";
+  /** `you` = right-aligned inverted bubble; `assistant` = left-aligned outlined bubble. */
+  author: "you" | "assistant";
   children: ReactNode;
-  /** Action row under the text (coo bubbles), e.g. CREATE TASK / OPEN FORM. */
+  /** Action row under the text (assistant bubbles), e.g. CREATE TASK / OPEN FORM. */
   actions?: ReactNode;
   ref?: Ref<HTMLDivElement>;
 }
 
 /**
- * One chat message bubble of the COO dock — square corners, 13px/1.4 text.
+ * One chat message bubble of the chat dock — square corners, 13px/1.4 text.
  * Width caps resolve against the (full-width) message list / aligning parent.
  */
 export function ChatBubble({

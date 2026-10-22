@@ -1,23 +1,23 @@
 "use client";
 
 import type { TaskTarget } from "@zibby/contracts";
-import { Button, ChatBubble, ChatDock, Chip, Stack } from "@zibby/design-system";
+import { Button, ChatBubble, Chip, ChatDock as DockFrame, Stack } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect } from "react";
 import { CommandLine, type ScopeKind } from "../../tasks/components/CommandLine/CommandLine";
 import { useChat } from "../ChatContext";
-import { useCooChat } from "../hooks/useCooChat";
+import { useChatDock } from "../hooks/useChatDock";
 import { ChatHistorySidebar } from "./ChatHistorySidebar";
 import { ChatTranscript } from "./ChatTranscript";
 import { VoiceStatusStrip } from "./VoiceStatusStrip";
 import { VoiceToggleButton } from "./VoiceToggleButton";
 
-export enum CooDockTestId {
-  Send = "coo-dock-send",
-  Empty = "coo-dock-empty",
-  TargetChip = "coo-dock-target-chip",
+export enum ChatDockTestId {
+  Send = "app-chat-dock-send",
+  Empty = "app-chat-dock-empty",
+  TargetChip = "app-chat-dock-target-chip",
 }
 
 /** Composer auto-grows up to this many lines, then scrolls. */
@@ -32,13 +32,13 @@ function targetLabel(target: TaskTarget): string {
 }
 
 /**
- * ZB-12 — the shell-global COO dock: the DS {@link ChatDock} (positioned by
+ * ZB-12 — the shell-global chat dock: the DS {@link DockFrame} (positioned by
  * `AppFrame`'s `dock` slot on every route) wired to the chat engine
- * ({@link useCooChat}). It replaces the retired `/chat` page.
+ * ({@link useChatDock}). It replaces the retired `/chat` page.
  *
- * - **Target chip (O-20):** "→ COO" by default (the classifier routes). A
+ * - **Target chip (O-20):** no chip by default (the classifier routes). A
  *   department page opens the dock with an explicit department target; the chip
- *   then names it and can be cleared back to the COO. D-020: this scope is the
+ *   then names it and can be cleared back to automatic routing. D-020: this scope is the
  *   turn's SOLE mention when the composer's own `@`-mention row is empty
  *   (`useCooChat.send`'s fallback — mirrors the old single-target fallback,
  *   generalised to a list); a per-turn `@`-mention picked in the composer still
@@ -52,12 +52,12 @@ function targetLabel(target: TaskTarget): string {
  *   picks a skill for the turn (`setScope`/`setSkillId`, one-turn).
  * - **CREATE TASK** on a settled reply → `/work/tasks/new` prefilled with it.
  */
-export function CooDock() {
+export function ChatDock() {
   const t = useTranslations("chat");
   const router = useRouter();
   const { dockOpen, setDockOpen, dockTarget, setDockTarget, messages, newChat } = useChat();
   const { stream, thinking, send, setScope, setSkillId, voice, dictated, consumeDictated } =
-    useCooChat();
+    useChatDock();
 
   // Closing the dock (CLOSE, Esc) switches the mic off.
   const voiceOff = voice.off;
@@ -74,13 +74,13 @@ export function CooDock() {
     [dockTarget, router],
   );
 
-  // No chip for the COO default (O-20) — it's the obvious fallback with
-  // nothing to disambiguate; only an explicit non-COO target earns the chip.
+  // No chip for the automatic default (O-20) — it's the obvious fallback with
+  // nothing to disambiguate; only an explicit target earns the chip.
   const targetChip = dockTarget ? (
     <Chip
       closable
       closeLabel={t("dock.clearTarget")}
-      data-testid={CooDockTestId.TargetChip}
+      data-testid={ChatDockTestId.TargetChip}
       onClose={() => setDockTarget(null)}
       tone="thinking"
     >
@@ -90,7 +90,7 @@ export function CooDock() {
 
   const transcript =
     messages.length === 0 && !stream.streaming ? (
-      <ChatBubble author="coo" data-testid={CooDockTestId.Empty}>
+      <ChatBubble author="assistant" data-testid={ChatDockTestId.Empty}>
         {t("dock.empty")}
       </ChatBubble>
     ) : (
@@ -136,7 +136,7 @@ export function CooDock() {
           // Always filled per the design — an empty draft is ignored by `submit`
           // itself, so the button only greys out while a turn is in flight.
           <Button
-            data-testid={CooDockTestId.Send}
+            data-testid={ChatDockTestId.Send}
             disabled={thinking}
             intent="primary"
             onClick={submit}
@@ -152,7 +152,7 @@ export function CooDock() {
   );
 
   return (
-    <ChatDock
+    <DockFrame
       closeLabel={t("close")}
       collapseLabel={t("collapse")}
       composer={composer}

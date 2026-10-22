@@ -75,7 +75,7 @@ describe("NewTaskScreen (ZB-04b)", () => {
     expect(push).toHaveBeenCalledWith("/work/tasks");
   });
 
-  it("prefills the brief and a valid department entry from the COO dock's CREATE TASK (ZB-12)", () => {
+  it("prefills the brief and a valid department entry from the chat dock's CREATE TASK (ZB-12)", () => {
     searchParams = new URLSearchParams({ text: "Draft the release notes", entry: "dev" });
     render(<NewTaskScreen />);
     fireEvent.change(screen.getByLabelText("Název"), { target: { value: "Notes" } });
@@ -92,7 +92,7 @@ describe("NewTaskScreen (ZB-04b)", () => {
     );
   });
 
-  it("ignores an unknown entry and falls back to the COO", () => {
+  it("ignores an unknown entry and falls back to automatic", () => {
     searchParams = new URLSearchParams({ text: "x y z", entry: "not-a-department" });
     render(<NewTaskScreen />);
     fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
@@ -173,7 +173,7 @@ describe("NewTaskScreen (ZB-04b)", () => {
     await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-koder`));
     expect(screen.getByLabelText("Vstup")).toHaveTextContent("Kodér");
     fireEvent.change(screen.getByTestId(CommandLineTestId.Input), { target: { value: "go " } });
-    expect(screen.getByLabelText("Vstup")).toHaveTextContent("COO");
+    expect(screen.getByLabelText("Vstup")).toHaveTextContent("Automaticky");
     fireEvent.click(screen.getByText("Vytvořit úkol"));
     const body = createMutate.mock.calls[0]?.[0]?.body as { target?: unknown };
     expect(body.target).toBeUndefined();
@@ -191,7 +191,7 @@ describe("NewTaskScreen (ZB-04b)", () => {
     expect(body.target).toMatchObject({ kind: "department", id: "dev" });
   });
 
-  it("deleting an @-tag reverts the select to a manually picked entry, not the COO", async () => {
+  it("deleting an @-tag reverts the select to a manually picked entry, not automatic", async () => {
     const user = userEvent.setup();
     render(<NewTaskScreen />);
     fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });

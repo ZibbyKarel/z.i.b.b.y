@@ -222,7 +222,7 @@ describe("AppShell top menu sections", () => {
     ["/work/automations", "work"],
     ["/system/registries/skills", "system"],
     ["/system/settings/status", "system"],
-    ["/workforce/positions/writer", "workforce"],
+    ["/workforce/agents/writer", "workforce"],
     ["/governance/spend", "governance"],
   ])("highlights the %s top tab", (path, id) => {
     mockPath = path;

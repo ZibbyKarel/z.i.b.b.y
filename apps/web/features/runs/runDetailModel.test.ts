@@ -69,7 +69,6 @@ const threePhase = run({
       runId: "r1",
       attempt: 1,
       status: "done",
-      employeeName: "Architect",
       startedAt: "2026-10-20T10:00:00Z",
       finishedAt: "2026-10-20T10:01:42Z",
     },
@@ -82,7 +81,7 @@ describe("buildStageRail", () => {
   it("times done, live and queued phases", () => {
     const rail = buildStageRail(threePhase, "running", PHASES, NOW);
     expect(rail.map((r) => [r.n, r.name, r.stateKey, r.state, r.meta, r.current])).toEqual([
-      ["01", "Architect", "done", "done", "01:42", false],
+      ["01", "p1", "done", "done", "01:42", false],
       ["02", "p2", "running", "working", "01:05 · ⇄01", true],
       ["03", "p3", "queued", "idle", "—", false],
     ]);

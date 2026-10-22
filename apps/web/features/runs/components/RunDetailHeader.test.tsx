@@ -73,7 +73,7 @@ describe("RunDetailHeader", () => {
     await userEvent.click(screen.getByTestId(RunDetailHeaderTestId.TaskLink));
     expect(push).toHaveBeenLastCalledWith("/work/tasks/T-1");
     await userEvent.click(screen.getByTestId(RunDetailHeaderTestId.AgentLink));
-    expect(push).toHaveBeenLastCalledWith("/workforce/positions/coder");
+    expect(push).toHaveBeenLastCalledWith("/workforce/agents/coder");
   });
 
   it("a run with a project links to it", async () => {

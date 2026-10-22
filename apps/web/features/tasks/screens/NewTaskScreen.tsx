@@ -24,21 +24,21 @@ import { TaskAttachments } from "../components/TaskAttachments";
 import { useClassifyTaskMutation, useCreateTaskMutation } from "../mutations";
 import { type TaskTarget, extractPaths, targetKey, toApiTarget, toClientTarget } from "../task";
 
-const ENTRY_COO = "coo";
+const ENTRY_AUTO = "auto";
 
 /**
  * `/work/tasks/new` — ZB-04b: a simplified, dedicated create page (not the
  * classify-driven `NewTaskDialog`/`CommandLine`). The **entry** choice is the
- * hard override this deliverable calls for: COO auto-classifies, an explicit
+ * hard override this deliverable calls for: auto-classification, an explicit
  * department bypasses classification entirely (`TaskTargetSchema`'s
  * `{kind:"department"}`, DNA "explicit target overrides the classifier").
  */
 export function NewTaskScreen() {
   const t = useTranslations("tasksWork");
   const router = useRouter();
-  // ZB-12: the COO dock's "CREATE TASK" lands here prefilled — `?text=` seeds
+  // ZB-12: the chat dock's "CREATE TASK" lands here prefilled — `?text=` seeds
   // the description and `?entry=<departmentId>` the explicit entry (only a real
-  // department id is honoured; anything else falls back to the COO).
+  // department id is honoured; anything else falls back to automatic).
   const searchParams = useSearchParams();
   const prefillEntry = searchParams.get("entry");
   const { data: projects = [] } = useProjectsQuery();
@@ -53,7 +53,7 @@ export function NewTaskScreen() {
   const [mentionTarget, setMentionTarget] = useState<TaskTarget | undefined>();
   const [projectId, setProjectId] = useState("");
   const [entry, setEntry] = useState<string>(() =>
-    prefillEntry && departments.get(prefillEntry) ? prefillEntry : ENTRY_COO,
+    prefillEntry && departments.get(prefillEntry) ? prefillEntry : ENTRY_AUTO,
   );
   const [attachmentSet, setAttachmentSet] = useState<{
     attachmentSetId?: string;
@@ -72,7 +72,7 @@ export function NewTaskScreen() {
 
   const classify = useClassifyTaskMutation();
   useEffect(() => {
-    if (mentionTarget || entry !== ENTRY_COO || text.trim().length <= 2) return;
+    if (mentionTarget || entry !== ENTRY_AUTO || text.trim().length <= 2) return;
     const handle = setTimeout(() => classify.mutate({ body: { text, paths } }), 350);
     return () => clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- classify is a stable mutation ref
@@ -83,7 +83,7 @@ export function NewTaskScreen() {
   const department = departments.get(entry);
   const chosenTarget = mentionTarget
     ? toApiTarget(mentionTarget)
-    : entry !== ENTRY_COO && department
+    : entry !== ENTRY_AUTO && department
       ? { kind: "department" as const, id: department.id, name: department.name }
       : undefined;
   const previewTarget = chosenTarget
@@ -166,7 +166,7 @@ export function NewTaskScreen() {
                 setEntry(value);
               }}
               options={[
-                { value: ENTRY_COO, label: t("new.entry.coo") },
+                { value: ENTRY_AUTO, label: t("new.entry.auto") },
                 ...departments.list.map((d) => ({ value: d.id, label: d.name })),
                 ...(mentionOption ? [mentionOption] : []),
               ]}

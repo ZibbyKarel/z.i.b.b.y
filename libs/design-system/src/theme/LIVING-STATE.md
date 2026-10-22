@@ -75,7 +75,7 @@ Companion exports (all from `stateTone.ts`):
 
 - `STATE_ORDER` — canonical iteration order (`STATE_TONES` is a deprecated alias).
 - `stateToneVar[tone]` → the `var(--color-state-…)` string (for CSS/`style`) — used by
-  `LivingGlow`, `AgentGlyph`, `StatePill`, `CellStrip`.
+  `LivingGlow`, `StatePill`, `CellStrip`.
 - `stateToneHex[tone]` → hex fallback mirroring `globals.css`.
 - `resolveStateToneHex(tone)` → the **one** DOM-reading, cached hex resolver for
   non-CSS consumers (a WebGL uniform, a canvas). Accepts `AnyStateTone`. The Chat-UI
@@ -86,7 +86,7 @@ Companion exports (all from `stateTone.ts`):
 | Surface                                             | Type                                                     | Note                                                                 |
 | --------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------- |
 | `Card.tone` / `Card.edge` / `Corners`/`CornersTone` | `AnyStateTone`                                           | the border + corner tint + left-edge bar                             |
-| `AgentGlyph` / `StatePill` / `CellStrip`            | `StateTone`                                              | ZA-03 — the new canonical-only components, no legacy vocabulary      |
+| `StatePill` / `CellStrip`                           | `StateTone`                                              | ZA-03 — the new canonical-only components, no legacy vocabulary      |
 | approvals `UiTone`                                  | `Exclude<LegacyStateTone, "run">`                        | unchanged by ZA-01; Part B rewrites it onto the canonical vocabulary |
 | chat `SceneColorToken`                              | `Extract<LegacyStateTone, "accent"\|"run"\|"ok"\|"bad">` | the orb has no `warn` state; unchanged by ZA-01                      |
 
@@ -109,12 +109,12 @@ was renamed to `LegacyStateTone` in ZA-01 — see the plan) until Part B moves t
 
 The same tone shows up two ways. Pick by whether the thing is _genuinely in flight_.
 
-| Static (matte) — "it is in state X"            | Animated (living) — "it is actively X, right now"                               |
-| ---------------------------------------------- | ------------------------------------------------------------------------------- |
-| `Card`/`Corners` tone border + `toneGlow` ring | `Card living` / `Panel tone live` → `LivingGlow`                                |
-| `Tag` tone                                     | `StatusDot pulse` (glow + `animate-live`)                                       |
-| `StatusDot` (no `pulse`)                       | the Chat-UI orb (`CosmicScene`)                                                 |
-| `StatePill` (ZA-03)                            | `AgentGlyph`'s per-state motion (ZA-03 — working bobs+types, blocked shakes, …) |
+| Static (matte) — "it is in state X"            | Animated (living) — "it is actively X, right now"                 |
+| ---------------------------------------------- | ----------------------------------------------------------------- |
+| `Card`/`Corners` tone border + `toneGlow` ring | `Card living` / `Panel tone live` → `LivingGlow`                  |
+| `Tag` tone                                     | `StatusDot pulse` (glow + `animate-live`)                         |
+| `StatusDot` (no `pulse`)                       | the Chat-UI orb (`CosmicScene`)                                   |
+| `StatePill` (ZA-03)                            | `StatusDot`'s per-state motion (working breathes, blocked blinks) |
 
 **Rule of thumb:** matte by default. Reserve the animated form for running /
 awaiting / streaming / erroring — motion is expensive attention in a quiet control
@@ -149,23 +149,18 @@ legacy callers and every toned `LivingGlow`.
 
 ---
 
-## 4. The glyph family — `AgentGlyph` (ZA-03)
+## 4. The agent symbol — `AgentBadge`
 
-`libs/design-system/src/components/AgentGlyph/AgentGlyph.tsx` is a deterministic,
-seeded 12×12 pixel sprite (ported from `design/ZibbyCorp/zibby.js`), tinted by
-`stateToneVar` and animated per state with the `zb-*` keyframe family (DS.md §9):
-`zb-bob`/`zb-key` (working), `zb-breathe` (idle/thinking), `zb-shake` (error),
-`zb-hop` (done), `zb-blink` (idle/working/thinking eyes). All of it is wrapped in
-`@media (prefers-reduced-motion: no-preference)` in `globals.css`, so a reduced-motion
-user gets a static glyph for free (an `animation-name` with no matching `@keyframes`
-is a no-op) — no per-call-site `motion-reduce:` variant needed.
+`AgentBadge` is an `IconTile` (agent glyph, tinted with the department colour) with an
+optional `StatusDot` carrying the run state — living state reads through the dot, not a
+per-state sprite.
 
 ---
 
 ## The one rule
 
 > **Every new "is this alive and in what state" surface uses `StateTone` +
-> `LivingGlow` (or `AgentGlyph`/`StatePill`/`CellStrip` for the agent-facing ones). It
+> `LivingGlow` (or `AgentBadge`/`StatePill`/`CellStrip` for the agent-facing ones). It
 > does not declare a seventh colour, a second hex table, or a hand-rolled pulse.**
 
 If the six tones genuinely don't fit, that's a design-system conversation (extend

@@ -1,5 +1,5 @@
-import { PeopleScreen } from "../../../../features/departments/screens/PeopleScreen";
+import { RegistriesScreen } from "../../../../features/registries/screens/RegistriesScreen";
 
-export default function PeoplePage() {
-  return <PeopleScreen />;
+export default function AgentsPage() {
+  return <RegistriesScreen kind="agents" />;
 }

@@ -135,7 +135,7 @@ export function RunDetailActions({
     moreItems.push({
       id: "openAgent",
       label: t("detail.more.openAgent"),
-      onSelect: () => router.push(`/workforce/positions/${agentId}`),
+      onSelect: () => router.push(`/workforce/agents/${agentId}`),
     });
   if (workflow && onOpenFolder)
     moreItems.push({

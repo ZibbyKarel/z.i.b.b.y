@@ -60,11 +60,11 @@ describe("groupAndFilterEntries", () => {
     const entries: CommandPaletteEntry[] = [
       entry({ id: "g1", group: "gates", kind: "gate", label: "Floor" }),
       entry({ id: "s1", group: "settings", kind: "setting", label: "General" }),
-      entry({ id: "p1", group: "people", kind: "person", label: "Alice" }),
+      entry({ id: "p1", group: "agents", kind: "agent", label: "Alice" }),
     ];
     const groups = groupAndFilterEntries(entries, "");
     expect(groups.map((g) => g.group)).toEqual(
-      GROUP_ORDER.filter((g) => ["gates", "settings", "people"].includes(g)),
+      GROUP_ORDER.filter((g) => ["gates", "settings", "agents"].includes(g)),
     );
   });
 });

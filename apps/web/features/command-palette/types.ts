@@ -7,7 +7,7 @@ import type { Route } from "next";
  */
 export type CommandPaletteEntryKind =
   | "department"
-  | "person"
+  | "agent"
   | "task"
   | "goal"
   | "company"
@@ -28,7 +28,7 @@ export type CommandPaletteEntryKind =
 export type CommandPaletteGroupKey =
   | "actions"
   | "departments"
-  | "people"
+  | "agents"
   | "tasks"
   | "goals"
   | "companies"

@@ -14,7 +14,7 @@ import {
 } from "react";
 
 /**
- * Modifier shortcut that toggles the COO dock from anywhere. ⌘K is the command
+ * Modifier shortcut that toggles the chat dock from anywhere. ⌘K is the command
  * palette and bare `n` opens New Task, so chat takes ⌘/Ctrl+J (free).
  */
 export const CHAT_SHORTCUT_KEY = "j";
@@ -35,17 +35,17 @@ function readStoredConversationId(): string | null {
 
 interface ChatStore {
   /**
-   * Open the shell-global COO dock (ZB-12), minting a conversation if this thread
+   * Open the shell-global chat dock (ZB-12), minting a conversation if this thread
    * doesn't have one yet. `target` scopes the dock to an **explicit** destination
    * (O-20: a department page opens it pre-scoped to that department — "explicit
    * target overrides the classifier"); omitting it keeps whatever scope is set.
    */
   open: (target?: TaskTarget) => void;
-  /** Whether the COO dock is expanded (transcript visible). */
+  /** Whether the chat dock is expanded (transcript visible). */
   dockOpen: boolean;
   setDockOpen: (open: boolean) => void;
   /**
-   * The dock's explicit routing scope. `null` = the COO (the classifier routes).
+   * The dock's explicit routing scope. `null` = automatic (the classifier routes).
    * A per-turn `@`-mention in the composer still wins over this for that turn.
    */
   dockTarget: TaskTarget | null;
@@ -75,9 +75,9 @@ interface ChatStore {
 const ChatContext = createContext<ChatStore | null>(null);
 
 /**
- * Owns the chat conversation state and the COO dock's open/scope state, plus the
+ * Owns the chat conversation state and the chat dock's open/scope state, plus the
  * global ⌘/Ctrl+J shortcut. Mounted once in {@link AppShell}; the dock itself
- * (`CooDock`) renders in the shell's `dock` slot on every route (ZB-12 — the
+ * (`ChatDock`) renders in the shell's `dock` slot on every route (ZB-12 — the
  * `/chat` page is retired and redirects to `/dashboard`).
  */
 export function ChatProvider({ children }: { children: ReactNode }) {

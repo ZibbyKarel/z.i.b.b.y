@@ -6,7 +6,7 @@ import { GATE_SECTIONS, SETTINGS_SECTIONS } from "./staticSections";
 const LABELS: CommandPaletteLabels = {
   kind: {
     department: "Department",
-    person: "Person",
+    agent: "Agent",
     task: "Task",
     goal: "Goal",
     company: "Company",
@@ -26,7 +26,7 @@ const LABELS: CommandPaletteLabels = {
   group: {
     actions: "Actions",
     departments: "Departments",
-    people: "People",
+    agents: "Agents",
     tasks: "Tasks",
     goals: "Goals",
     companies: "Companies",
@@ -46,7 +46,7 @@ const LABELS: CommandPaletteLabels = {
 
 const EMPTY_SOURCES: CommandPaletteSources = {
   departments: [],
-  people: [],
+  agents: [],
   tasks: [],
   goals: [],
   companies: [],
@@ -94,16 +94,16 @@ describe("buildCommandPaletteIndex", () => {
     );
   });
 
-  it("routes a person to their profile", () => {
+  it("routes an agent to its detail page", () => {
     const entries = buildCommandPaletteIndex(
-      { ...EMPTY_SOURCES, people: [{ id: "alice", name: "Alice", department: "dev" }] },
+      { ...EMPTY_SOURCES, agents: [{ id: "alice", name: "Alice", department: "dev" }] },
       LABELS,
     );
     expect(entries).toContainEqual(
       expect.objectContaining({
         id: "alice",
-        group: "people",
-        kind: "person",
+        group: "agents",
+        kind: "agent",
         label: "Alice",
         meta: "dev",
         href: "/workforce/agents/alice",

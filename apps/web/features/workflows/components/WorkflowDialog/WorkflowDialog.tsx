@@ -1,4 +1,5 @@
 "use client";
+import { useDepartmentLookup } from "../../../departments/useDepartmentLookup";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type {
@@ -78,6 +79,7 @@ export function WorkflowDialog({
   const [budget, setBudget] = useState<number | null>(initial?.budget?.maxCostUsd ?? null);
   const [project, setProject] = useState(initial?.project ?? "");
   const { data: projects = [] } = useProjectsQuery();
+  const departments = useDepartmentLookup();
   const [fullscreen, setFullscreen] = useState(false);
   const [graph, setGraph] = useState<WorkflowGraph>(() => phasesToGraph(initial, agents));
 
@@ -266,7 +268,13 @@ export function WorkflowDialog({
             onAdd={(agentId) => addAgent(agentId)}
             onAddStep={addStep}
           />
-          <WorkflowCanvas agents={agents} graph={graph} onAddAgent={addAgent} setGraph={setGraph} />
+          <WorkflowCanvas
+            agents={agents}
+            departments={departments.list}
+            graph={graph}
+            onAddAgent={addAgent}
+            setGraph={setGraph}
+          />
           <StepSettings excludeWorkflowId={initial?.id} graph={graph} setGraph={setGraph} />
         </Container>
       </Container>

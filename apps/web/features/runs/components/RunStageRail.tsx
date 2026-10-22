@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  AgentGlyph,
+  AgentBadge,
   Container,
   Divider,
   Pressable,
@@ -12,6 +12,7 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
+import { useAgentSymbol } from "../../agents";
 import { toClientTarget } from "../../tasks";
 import type { RunView } from "../run";
 import type { StageRailRow } from "../runDetailModel";
@@ -57,6 +58,7 @@ export function RunStageRail({
 }: RunStageRailProps) {
   const t = useTranslations("runs.detail");
   const route = useRouteTrace(run);
+  const symbolOf = useAgentSymbol();
   const checkpoints = run.checkpoints ?? [];
   const selected = selectedPhaseId ?? rows.find((r) => r.current)?.phaseId ?? null;
   const showFolder = run.kind === "workflow" && onOpenFolder;
@@ -73,7 +75,7 @@ export function RunStageRail({
         <RailItem
           data-testid={`${RunStageRailTestId.Stage}-${row.phaseId}`}
           key={row.phaseId}
-          leading={<AgentGlyph glow={false} seed={row.name} size={30} state={row.state} />}
+          leading={<AgentBadge {...symbolOf(row.name)} />}
           meta={
             <>
               <StatusDot size="75" tone={row.state} />

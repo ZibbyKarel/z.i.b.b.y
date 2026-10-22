@@ -2,11 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { z } from "zod";
-import {
-  type CreateDepartmentInput,
-  CreateDepartmentInputSchema,
-  type Division,
-} from "@zibby/contracts";
+import { type CreateDepartmentInput, CreateDepartmentInputSchema } from "@zibby/contracts";
 import { Button, Dialog, type IconName, Stack, iconNames } from "@zibby/design-system";
 import {
   FormSelect,
@@ -33,7 +29,6 @@ const FormSchema = CreateDepartmentInputSchema.extend({ tierDefault: z.enum(TIER
 type FormValues = z.infer<typeof FormSchema>;
 
 export interface NewDepartmentDialogProps {
-  divisions: readonly Division[];
   onClose: () => void;
   /** Persist the parsed department; the caller owns the mutation. */
   onCreate: (input: CreateDepartmentInput) => void;
@@ -45,12 +40,7 @@ export interface NewDepartmentDialogProps {
  * operator can add one. Fields mirror the contract; `tierDefault` "none" maps to
  * `null`.
  */
-export function NewDepartmentDialog({
-  divisions,
-  onClose,
-  onCreate,
-  pending,
-}: NewDepartmentDialogProps) {
+export function NewDepartmentDialog({ onClose, onCreate, pending }: NewDepartmentDialogProps) {
   const t = useTranslations("departments.create");
   const tc = useTranslations("common");
   const { renderForm, submit } = useFormControls<FormValues>({
@@ -61,7 +51,8 @@ export function NewDepartmentDialog({
       tagline: "",
       mandate: "",
       color: "#5b8def",
-      division: divisions[0]?.id ?? "",
+      // TODO(phase A): drop `division` once the contract no longer requires it.
+      division: "engineering",
       icon: "grid",
       fallback: "primary",
       tierDefault: "none",
@@ -135,11 +126,6 @@ export function NewDepartmentDialog({
             hint={t("colorHint")}
             label={t("colorLabel")}
             name="color"
-          />
-          <FormSelect<string, FormValues>
-            label={t("divisionLabel")}
-            name="division"
-            options={divisions.map((d) => ({ value: d.id, label: d.name }))}
           />
         </Stack>
         <Stack direction="row" gap="150">

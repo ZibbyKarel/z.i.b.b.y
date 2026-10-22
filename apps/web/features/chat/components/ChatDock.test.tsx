@@ -1,13 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
-import { ChatDockTestId, ChipTestId, TypingDotsTestId } from "@zibby/design-system";
+import {
+  ChipTestId,
+  ChatDockTestId as DockFrameTestId,
+  TypingDotsTestId,
+} from "@zibby/design-system";
 import { useEffect } from "react";
 import { act, renderWithProviders, screen, within } from "../../../test/render";
 import { CommandLineTestId } from "../../tasks/components/CommandLine/CommandLine";
 import { ChatProvider, useChat } from "../ChatContext";
 import { ChatMessageTestId } from "./ChatMessage";
-import { CooDock, CooDockTestId } from "./CooDock";
+import { ChatDock, ChatDockTestId } from "./ChatDock";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -102,7 +106,7 @@ function renderDock(opts: { department?: boolean; open?: boolean } = {}) {
   return renderWithProviders(
     <ChatProvider>
       {opts.open !== false && <Opener department={opts.department} />}
-      <CooDock />
+      <ChatDock />
     </ChatProvider>,
   );
 }
@@ -110,10 +114,10 @@ function renderDock(opts: { department?: boolean; open?: boolean } = {}) {
 async function typeAndSend(text: string) {
   const user = userEvent.setup();
   await user.type(screen.getByTestId(CommandLineTestId.Input), text);
-  await user.click(screen.getByTestId(CooDockTestId.Send));
+  await user.click(screen.getByTestId(ChatDockTestId.Send));
 }
 
-describe("CooDock (ZB-12)", () => {
+describe("ChatDock (ZB-12)", () => {
   beforeEach(() => {
     push.mockClear();
     sendMutate.mockClear();
@@ -127,19 +131,19 @@ describe("CooDock (ZB-12)", () => {
     window.localStorage.clear();
   });
 
-  it("renders collapsed with no target chip for the COO default and the attach control back (D-020)", () => {
+  it("renders collapsed with no target chip for the automatic default and the attach control back (D-020)", () => {
     renderDock({ open: false });
-    expect(screen.getByTestId(ChatDockTestId.Root)).toBeInTheDocument();
-    expect(screen.queryByTestId(ChatDockTestId.Transcript)).not.toBeInTheDocument();
-    // No chip for the obvious default (item 28) — only an explicit non-COO
+    expect(screen.getByTestId(DockFrameTestId.Root)).toBeInTheDocument();
+    expect(screen.queryByTestId(DockFrameTestId.Transcript)).not.toBeInTheDocument();
+    // No chip for the obvious default (item 28) — only an explicit explicit
     // target earns one (see the department-scoped test below).
-    expect(screen.queryByTestId(CooDockTestId.TargetChip)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(ChatDockTestId.TargetChip)).not.toBeInTheDocument();
     // D-020: the chat send contract now carries attachmentSetId — the attach
     // control is back.
     expect(screen.getByTestId(CommandLineTestId.Attach)).toBeInTheDocument();
   });
 
-  it("sends through the COO classifier (no mentions) by default", async () => {
+  it("sends through the classifier (no mentions) by default", async () => {
     renderDock();
     await typeAndSend("Status of the release?");
     expect(sendMutate).toHaveBeenCalledTimes(1);
@@ -165,7 +169,7 @@ describe("CooDock (ZB-12)", () => {
 
   it("sends the dock's department scope as the turn's sole mention (O-20 / D-020)", async () => {
     renderDock({ department: true });
-    expect(screen.getByTestId(CooDockTestId.TargetChip)).toHaveTextContent("Development");
+    expect(screen.getByTestId(ChatDockTestId.TargetChip)).toHaveTextContent("Development");
     await typeAndSend("Ship the hotfix");
     const body = sendMutate.mock.calls[0]?.[0]?.body as {
       mentions?: Array<{ kind: string; id: string }>;
@@ -187,7 +191,7 @@ describe("CooDock (ZB-12)", () => {
       await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-${item}`));
     }
     await user.type(input, "go");
-    await user.click(screen.getByTestId(CooDockTestId.Send));
+    await user.click(screen.getByTestId(ChatDockTestId.Send));
     expect(sendMutate).toHaveBeenCalledTimes(1);
     expect(sendMutate.mock.calls[0]?.[0]?.body).toEqual(
       expect.objectContaining({
@@ -217,13 +221,13 @@ describe("CooDock (ZB-12)", () => {
     expect(body.attachmentSetId).toBe("set_1");
   });
 
-  it("clearing the target chip falls back to the COO", async () => {
+  it("clearing the target chip falls back to automatic routing", async () => {
     const user = userEvent.setup();
     renderDock({ department: true });
     await user.click(
-      within(screen.getByTestId(CooDockTestId.TargetChip)).getByTestId(ChipTestId.Close),
+      within(screen.getByTestId(ChatDockTestId.TargetChip)).getByTestId(ChipTestId.Close),
     );
-    expect(screen.queryByTestId(CooDockTestId.TargetChip)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(ChatDockTestId.TargetChip)).not.toBeInTheDocument();
     await typeAndSend("hello");
     const body = sendMutate.mock.calls[0]?.[0]?.body as Record<string, unknown>;
     expect(body).not.toHaveProperty("mentions");
@@ -268,13 +272,13 @@ describe("CooDock (ZB-12)", () => {
     renderDock();
     voiceState.off.mockClear();
     await userEvent.setup().keyboard("{Escape}");
-    expect(screen.queryByTestId(ChatDockTestId.Transcript)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(DockFrameTestId.Transcript)).not.toBeInTheDocument();
     expect(voiceState.off).toHaveBeenCalled();
   });
 
   it("passes localized expand/collapse labels to the header expand button", async () => {
     renderDock();
-    const button = screen.getByTestId(ChatDockTestId.ExpandButton);
+    const button = screen.getByTestId(DockFrameTestId.ExpandButton);
     expect(button).toHaveAccessibleName("Zvětšit chat");
     await userEvent.setup().click(button);
     expect(button).toHaveAccessibleName("Zmenšit chat");
@@ -290,7 +294,7 @@ describe("CooDock (ZB-12)", () => {
     const user = userEvent.setup();
     renderDock();
     await user.type(screen.getByTestId(CommandLineTestId.Input), "hello");
-    await user.click(screen.getByTestId(CooDockTestId.Send));
+    await user.click(screen.getByTestId(ChatDockTestId.Send));
     expect(screen.getByRole("status", { name: "ZIBBY píše…" })).toBeInTheDocument();
     expect(screen.getAllByTestId(TypingDotsTestId.Dot)).toHaveLength(3);
   });

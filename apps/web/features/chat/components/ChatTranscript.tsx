@@ -83,7 +83,7 @@ export function ChatTranscript({
           direction="col"
           gap="75"
         >
-          <ChatBubble author="coo">
+          <ChatBubble author="assistant">
             <TypingDots label={t("streaming")} />
           </ChatBubble>
         </Stack>

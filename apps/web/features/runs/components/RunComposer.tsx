@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  AgentGlyph,
+  AgentBadge,
   Button,
   Container,
   Stack,
@@ -12,6 +12,7 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
+import { useAgentSymbol } from "../../agents";
 import { useAnswerApprovalMutation, useReviseMutation } from "../../approvals";
 import type { DashboardApproval } from "../../approvals/approval";
 import { useNewTask } from "../../tasks";
@@ -34,7 +35,6 @@ export interface RunComposerCrewMember {
   /** The phase id a message is addressed to. */
   key: string;
   name: string;
-  seed?: string;
   state?: StateTone;
 }
 
@@ -134,6 +134,7 @@ export function RunComposer({
   resuming,
 }: RunComposerProps) {
   const t = useTranslations("runs.detail.composer");
+  const symbolOf = useAgentSymbol();
   const [text, setText] = useState("");
   const [to, setTo] = useState("all");
   // Two Enter presses can land before `isPending` re-renders — the ref closes that gap.
@@ -222,7 +223,7 @@ export function RunComposer({
               <ToggleChip
                 data-testid={`${RunComposerTestId.Recipient}-${c.key}`}
                 key={c.key}
-                leading={<AgentGlyph seed={c.seed ?? c.name} size={18} state={c.state ?? "idle"} />}
+                leading={<AgentBadge {...symbolOf(c.name)} size="xs" state={c.state ?? "idle"} />}
                 onClick={() => setTo(c.key)}
                 pressed={to === c.key}
               >

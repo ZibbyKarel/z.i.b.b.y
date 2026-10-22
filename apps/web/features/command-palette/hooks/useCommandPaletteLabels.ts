@@ -10,7 +10,7 @@ export function useCommandPaletteLabels(): CommandPaletteLabels {
   return {
     kind: {
       department: t("kind.department"),
-      person: t("kind.person"),
+      agent: t("kind.agent"),
       task: t("kind.task"),
       goal: t("kind.goal"),
       company: t("kind.company"),
@@ -30,7 +30,7 @@ export function useCommandPaletteLabels(): CommandPaletteLabels {
     group: {
       actions: t("group.actions"),
       departments: t("group.departments"),
-      people: t("group.people"),
+      agents: t("group.agents"),
       tasks: t("group.tasks"),
       goals: t("group.goals"),
       companies: t("group.companies"),

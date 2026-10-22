@@ -1,7 +1,7 @@
 "use client";
 import type { MouseEvent } from "react";
 import { useTranslations } from "next-intl";
-import type { Agent } from "@zibby/contracts";
+import type { Agent, Department } from "@zibby/contracts";
 import type { IconName } from "@zibby/design-system";
 import {
   Container,
@@ -13,6 +13,7 @@ import {
   Tag,
   Typography,
 } from "@zibby/design-system";
+import { agentSymbol } from "../../../agents/agentSymbol";
 import { ModelBadge, ThinkBadge } from "../../../../components/RuntimeBadges/RuntimeBadges";
 import { ACCENT, BAD, SURFACE, SURFACE_HI, mix } from "./canvas-tokens";
 import { type GraphNode, NODE_H, NODE_W } from "./workflow-graph";
@@ -32,6 +33,8 @@ export interface HoverTarget {
 export interface AgentNodeProps {
   node: GraphNode;
   agents: Agent[];
+  /** Department registry — tints agent tiles with their department colour. */
+  departments?: readonly Department[];
   pending: PendingEdge | null;
   hover: HoverTarget | null;
   dragging: boolean;
@@ -61,14 +64,21 @@ export interface AgentNodeProps {
   onNodeLeave: (nodeId: string) => void;
 }
 
-const glyphOf = (node: GraphNode, agents: Agent[]): IconName =>
+const symbolOf = (
+  node: GraphNode,
+  agents: Agent[],
+  departments: readonly Department[],
+): { glyph: IconName; color?: string } =>
   node.type === "verify"
-    ? "shield"
+    ? { glyph: "shield" }
     : node.type === "tool"
-      ? "gear"
+      ? { glyph: "gear" }
       : node.type === "workflow"
-        ? "flow"
-        : ((agents.find((a) => a.id === node.agent)?.glyph as IconName | undefined) ?? "bot");
+        ? { glyph: "flow" }
+        : agentSymbol(
+            agents.find((a) => a.id === node.agent),
+            departments,
+          );
 
 const avatarOf = (node: GraphNode, agents: Agent[]): string | undefined =>
   node.type === "agent" ? agents.find((a) => a.id === node.agent)?.avatar : undefined;
@@ -83,6 +93,7 @@ const stop = (e: MouseEvent) => e.stopPropagation();
 export function AgentNode({
   node,
   agents,
+  departments = [],
   pending,
   hover,
   dragging,
@@ -212,7 +223,7 @@ export function AgentNode({
       <Stack align="center" direction="row" gap="75">
         <IconTile
           alt={node.type === "agent" ? node.agent : undefined}
-          glyph={glyphOf(node, agents)}
+          {...symbolOf(node, agents, departments)}
           size="sm"
           src={avatarOf(node, agents)}
         />

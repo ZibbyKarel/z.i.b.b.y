@@ -13,7 +13,7 @@ export const Overview: Story = {
   render: () => (
     <div className="flex w-[380px] flex-col gap-2.5">
       <ChatBubble author="you">Ship the Kevin PR once green.</ChatBubble>
-      <ChatBubble author="coo">On it — I’ll ping you when checks pass.</ChatBubble>
+      <ChatBubble author="assistant">On it — I’ll ping you when checks pass.</ChatBubble>
       <ChatBubble
         actions={
           <>
@@ -25,7 +25,7 @@ export const Overview: Story = {
             </button>
           </>
         }
-        author="coo"
+        author="assistant"
       >
         This looks like a task. Want me to create it?
       </ChatBubble>

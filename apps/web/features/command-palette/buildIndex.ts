@@ -7,7 +7,7 @@ import { GATE_SECTIONS, SETTINGS_SECTIONS } from "./staticSections";
  * or a query hook and stays a pure function of its arguments. */
 export interface CommandPaletteSources {
   departments: Array<{ id: string; name: string }>;
-  people: Array<{ id: string; name: string; department?: string }>;
+  agents: Array<{ id: string; name: string; department?: string }>;
   tasks: Array<{ id: string; title: string; department?: string }>;
   goals: Array<{ id: string; name?: string; objective: string }>;
   companies: Array<{ id: string; name: string }>;
@@ -74,11 +74,11 @@ export function buildCommandPaletteIndex(
     });
   }
 
-  for (const p of sources.people) {
+  for (const p of sources.agents) {
     entries.push({
       id: p.id,
-      group: "people",
-      kind: "person",
+      group: "agents",
+      kind: "agent",
       label: p.name,
       meta: p.department,
       href: `/workforce/agents/${p.id}` as Route,

@@ -64,7 +64,7 @@ export interface ChatMessageProps {
   /** Marks the assistant turn that is still streaming (shows a live cursor). */
   streaming?: boolean;
   /**
-   * ZB-12 — "CREATE TASK" from a settled assistant reply: the host (the COO dock)
+   * ZB-12 — "CREATE TASK" from a settled assistant reply: the host (the chat dock)
    * opens `/work/tasks/new` prefilled with this turn's text. Omit for no action.
    */
   onCreateTask?: (text: string) => void;
@@ -222,7 +222,7 @@ export function ChatMessage({
               </>
             )
           }
-          author={isUser ? "you" : "coo"}
+          author={isUser ? "you" : "assistant"}
           data-testid={isUser ? ChatMessageTestId.UserBubble : ChatMessageTestId.AssistantBubble}
         >
           {isUser ? (

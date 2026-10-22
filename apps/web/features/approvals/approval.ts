@@ -277,7 +277,7 @@ export function approvalOrigin(
     case "agent-proposal":
       return {
         origin: "agent-factory",
-        href: `/workforce/positions/${encodeURIComponent(a.runId)}`,
+        href: `/workforce/agents/${encodeURIComponent(a.runId)}`,
         ...url,
       };
     case "review-rule": {

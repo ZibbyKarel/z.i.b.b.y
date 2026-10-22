@@ -78,7 +78,7 @@ export interface StageRailRow {
   phaseId: string;
   /** Two-digit ordinal, e.g. "01". */
   n: string;
-  /** `employeeName ?? phaseId`. */
+  /** The phase id (agent runs: the processor / owner name). */
   name: string;
   state: StateTone;
   stateKey: StageStateKey;
@@ -207,7 +207,7 @@ export function buildStageRail(
     return {
       phaseId: node.phaseId,
       n: pad2(i + 1),
-      name: main?.employeeName ?? node.phaseId,
+      name: node.phaseId,
       ...tone,
       meta: retries > 0 ? `${time} · ⇄${pad2(retries)}` : time,
       retries,

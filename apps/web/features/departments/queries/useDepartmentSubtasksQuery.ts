@@ -8,7 +8,7 @@ export function getDepartmentSubtasksQueryKey(id: string) {
 
 /**
  * `GET /api/departments/:id/subtasks` — every subtask stamped `department === id`.
- * Used by the department Subtasks tab and the ORG map focus panel; disabled while
+ * Used by the department Subtasks tab; disabled while
  * `id` is undefined so the map doesn't fan out a request per department.
  */
 export function useDepartmentSubtasksQuery(id: string | undefined) {

@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  AgentGlyph,
+  AgentBadge,
   ChatBubble,
   Container,
   Divider,
@@ -12,6 +12,7 @@ import {
   StatusDot,
   Typography,
 } from "@zibby/design-system";
+import { useAgentSymbol } from "../../agents";
 import { useLocale, useTranslations } from "next-intl";
 import type { DashboardApproval } from "../../approvals/approval";
 import type { RunView } from "../run";
@@ -62,10 +63,16 @@ function FeedDivider({ item }: { item: Item<"divider"> }) {
 }
 
 function FeedAgent({ item }: { item: Item<"agent"> }) {
+  const symbolOf = useAgentSymbol();
   return (
     <Container data-testid={RunLiveFeedTestId.Agent} maxWidth="760px">
       <Stack align="start" direction="row" gap="150">
-        <AgentGlyph seed={item.who} size={38} state={item.live ? "working" : "idle"} />
+        <AgentBadge
+          {...symbolOf(item.who)}
+          pulse={item.live}
+          size="md"
+          state={item.live ? "working" : "idle"}
+        />
         <Stack grow gap="75">
           <Typography as="span" type="labelSm">
             {item.who.toUpperCase()}

@@ -5,7 +5,7 @@ import type { CommandPaletteEntry, CommandPaletteGroupKey } from "./types";
 export const GROUP_ORDER: readonly CommandPaletteGroupKey[] = [
   "actions",
   "departments",
-  "people",
+  "agents",
   "tasks",
   "goals",
   "companies",

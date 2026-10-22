@@ -3,7 +3,7 @@
  *
  * ZibbyCorp (ZA-01) redefines the vocabulary to the six states an agent's work can be
  * in, in canonical order: `working → thinking → blocked → error → done → idle`. Every
- * "is this alive and in what state" surface — `AgentGlyph`, `StatePill`, `CellStrip`,
+ * "is this alive and in what state" surface — `AgentBadge`, `StatePill`, `CellStrip`,
  * the HUD `Card`/`Corners`/`StatusDot`/`Tag`/`Stat`, the approvals gate, and the
  * Chat-UI orb — resolves from this one type instead of re-declaring its own parallel
  * palette. See DS.md §2.2 and `theme/LIVING-STATE.md`.
@@ -90,7 +90,7 @@ export function normalizeToneLike<T extends string>(
 }
 
 /** Each tone's CSS custom property — the theme var a `style`/canvas consumer resolves
- * from (`LivingGlow`'s `--living-color`, `AgentGlyph`, `StatePill`, `CellStrip`). */
+ * from (`LivingGlow`'s `--living-color`, `StatePill`, `CellStrip`). */
 export const stateToneVar: Record<StateTone, string> = {
   working: "var(--color-state-work)",
   thinking: "var(--color-state-think)",

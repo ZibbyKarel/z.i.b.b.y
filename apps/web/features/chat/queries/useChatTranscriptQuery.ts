@@ -10,7 +10,7 @@ export function getChatTranscriptQueryKey(conversationId?: string) {
  * Read the persisted transcript (`GET /api/chat/transcript`) — a pure read of the
  * append-only JSONL the backend already keeps. Omitting `conversationId` resolves
  * the server's single active thread (`ChatTranscriptStore.ensureConversation`),
- * which is what `useCooChat`'s reload/cold-start hydration always wants — see its
+ * which is what `useChatDock`'s reload/cold-start hydration always wants — see its
  * own docblock for why it never passes an explicit id through here. `retry: false`
  * since a stale or unknown explicit id (a caller that does pass one) should fail
  * fast rather than hang retrying.

@@ -57,7 +57,7 @@ export interface ChatDockProps {
 }
 
 /**
- * DS.md §8's "COO dock" — a fixed-width panel `AppFrame`'s `dock` slot floats
+ * DS.md §8's chat dock — a fixed-width panel `AppFrame`'s `dock` slot floats
  * bottom-right over the main content. Collapsed it is only the bottom bar
  * (target chip + composer); focusing anything in the bar opens the 440px
  * conversation pane above it (header with NEW CHAT / CLOSE, scrolling messages).

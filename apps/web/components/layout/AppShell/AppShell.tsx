@@ -22,7 +22,8 @@ import {
 } from "@zibby/design-system";
 import { CatalogProvider } from "../../../state/store";
 import { NEW_TASK_PAGE_HREF, NewTaskProvider, useNewTaskPageHotkey } from "../../../features/tasks";
-import { ChatProvider, CooDock } from "../../../features/chat";
+import { useAgentSymbol } from "../../../features/agents";
+import { ChatDock, ChatProvider } from "../../../features/chat";
 import { CommandPaletteHost, useCommandPaletteHotkey } from "../../../features/command-palette";
 import {
   useApprovalsQuery,
@@ -294,6 +295,7 @@ function useHeaderTrailing() {
  * the click target that opens the full approval sheet. */
 function NeedsYouRail({ onOpenApproval }: { onOpenApproval: (id: string) => void }) {
   const t = useTranslations("shell");
+  const symbolOf = useAgentSymbol();
   const { data: approvals } = useApprovalsQuery();
   const approve = useApproveMutation();
   const reject = useRejectMutation();
@@ -323,7 +325,7 @@ function NeedsYouRail({ onOpenApproval }: { onOpenApproval: (id: string) => void
                 approvePending={approve.isPending && approve.variables?.params.id === a.id}
                 denyLabel={t("needsYouDeny")}
                 denyPending={reject.isPending && reject.variables?.params.id === a.id}
-                glyphSeed={a.skill}
+                {...symbolOf(a.skill)}
                 highRisk={highRisk}
                 key={a.id}
                 meta={a.kind}
@@ -369,8 +371,8 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   return (
     <PageBreadcrumbSlotProvider activeHrefs={activeSubHrefs} element={crumbSlot}>
       <AppFrame
-        dock={<CooDock />}
-        fullBleed={pathname === "/dashboard" || pathname === "/dashboard-old"}
+        dock={<ChatDock />}
+        fullBleed={pathname === "/dashboard"}
         header={
           <AppHeader
             homeHref="/dashboard"

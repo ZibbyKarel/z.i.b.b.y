@@ -1,14 +1,14 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Rail } from "./Rail";
-import { AgentGlyph } from "../AgentGlyph/AgentGlyph";
+import { AgentBadge } from "../AgentBadge/AgentBadge";
 import { Typography } from "../Typography/Typography";
 
 function ApprovalRow({ name }: { name: string }) {
   return (
     <div className="flex flex-col gap-2.5 border border-line-2 bg-background p-3">
       <div className="flex items-center gap-2.5">
-        <AgentGlyph seed={name} size={30} state="blocked" />
+        <AgentBadge color="#5b8def" glyph="bot" state="blocked" />
         <Typography type="body" weight="medium">
           {name}
         </Typography>

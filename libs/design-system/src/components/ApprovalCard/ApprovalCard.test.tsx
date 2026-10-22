@@ -2,25 +2,21 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "../../utils/testRender";
-import { AgentGlyphTestId } from "../AgentGlyph/AgentGlyph";
-import { minionAppearanceFromSeed } from "../Minion/minionAppearance";
+import { IconTileTestId } from "../IconTile/IconTile";
 import { ApprovalCard, ApprovalCardTestId } from "./ApprovalCard";
 
 describe("ApprovalCard", () => {
-  it("draws the glyph from glyphAppearance when given, else from the seed", () => {
-    const base = { agentName: "K", glyphSeed: "seed-a", meta: "m", request: "r", waited: "w" };
-    const { unmount } = render(<ApprovalCard {...base} />);
-    const seeded = screen.getByTestId(AgentGlyphTestId.Root).innerHTML;
-    unmount();
-    render(<ApprovalCard {...base} glyphAppearance={minionAppearanceFromSeed("zzz-other")} />);
-    expect(screen.getByTestId(AgentGlyphTestId.Root).innerHTML).not.toBe(seeded);
+  it("tints the symbol with the given color", () => {
+    render(
+      <ApprovalCard agentName="K" color="#5b8def" glyph="code" meta="m" request="r" waited="w" />,
+    );
+    expect(screen.getByTestId(IconTileTestId.Root).style.color).toBe("rgb(91, 141, 239)");
   });
 
   it("renders identity, meta, wait and request text (card density)", () => {
     render(
       <ApprovalCard
         agentName="Kevin"
-        glyphSeed="kevin-1"
         meta="TASK · RND"
         request="Research artifact ready for review."
         waited="12m"
@@ -35,20 +31,11 @@ describe("ApprovalCard", () => {
   });
 
   it("renders the taskRef line only when provided", () => {
-    const { rerender } = render(
-      <ApprovalCard agentName="Kevin" glyphSeed="s" meta="m" request="r" waited="w" />,
-    );
+    const { rerender } = render(<ApprovalCard agentName="Kevin" meta="m" request="r" waited="w" />);
     expect(screen.queryByTestId(ApprovalCardTestId.TaskRef)).toBeNull();
 
     rerender(
-      <ApprovalCard
-        agentName="Kevin"
-        glyphSeed="s"
-        meta="m"
-        request="r"
-        taskRef="TASK · dev-142"
-        waited="w"
-      />,
+      <ApprovalCard agentName="Kevin" meta="m" request="r" taskRef="TASK · dev-142" waited="w" />,
     );
     expect(screen.getByTestId(ApprovalCardTestId.TaskRef)).toHaveTextContent("TASK · dev-142");
   });
@@ -60,7 +47,6 @@ describe("ApprovalCard", () => {
     render(
       <ApprovalCard
         agentName="Kevin"
-        glyphSeed="s"
         meta="m"
         onApprove={onApprove}
         onDeny={onDeny}
@@ -83,7 +69,7 @@ describe("ApprovalCard", () => {
   });
 
   it("omits the whole-card click target when onOpen isn't given", () => {
-    render(<ApprovalCard agentName="Kevin" glyphSeed="s" meta="m" request="r" waited="w" />);
+    render(<ApprovalCard agentName="Kevin" meta="m" request="r" waited="w" />);
     expect(screen.queryByTestId(ApprovalCardTestId.Open)).toBeNull();
   });
 
@@ -93,7 +79,6 @@ describe("ApprovalCard", () => {
       <ApprovalCard
         highRisk
         agentName="Kevin"
-        glyphSeed="s"
         meta="m"
         onApprove={onApprove}
         request="r"
@@ -107,60 +92,31 @@ describe("ApprovalCard", () => {
   });
 
   it("shows a visible high-risk marker without gating approval behind a hold", () => {
-    render(
-      <ApprovalCard highRisk agentName="Kevin" glyphSeed="s" meta="m" request="r" waited="w" />,
-    );
+    render(<ApprovalCard highRisk agentName="Kevin" meta="m" request="r" waited="w" />);
     expect(screen.getByTestId(ApprovalCardTestId.HighRisk)).toHaveTextContent("High risk");
   });
 
   it("omits the high-risk marker by default", () => {
-    render(<ApprovalCard agentName="Kevin" glyphSeed="s" meta="m" request="r" waited="w" />);
+    render(<ApprovalCard agentName="Kevin" meta="m" request="r" waited="w" />);
     expect(screen.queryByTestId(ApprovalCardTestId.HighRisk)).toBeNull();
   });
 
   it("gives the approve/deny/open buttons accessible names", () => {
-    render(
-      <ApprovalCard
-        agentName="Kevin"
-        glyphSeed="s"
-        meta="m"
-        onOpen={() => {}}
-        request="r"
-        waited="w"
-      />,
-    );
+    render(<ApprovalCard agentName="Kevin" meta="m" onOpen={() => {}} request="r" waited="w" />);
     expect(screen.getByTestId(ApprovalCardTestId.Approve)).toHaveAccessibleName("Approve");
     expect(screen.getByTestId(ApprovalCardTestId.Deny)).toHaveAccessibleName("Deny");
     expect(screen.getByTestId(ApprovalCardTestId.Open)).toHaveAccessibleName("Open");
   });
 
   it("disables and shows a loading state on both actions while one is pending", () => {
-    render(
-      <ApprovalCard
-        approvePending
-        agentName="Kevin"
-        glyphSeed="s"
-        meta="m"
-        request="r"
-        waited="w"
-      />,
-    );
+    render(<ApprovalCard approvePending agentName="Kevin" meta="m" request="r" waited="w" />);
     expect(screen.getByTestId(ApprovalCardTestId.Approve)).toBeDisabled();
     expect(screen.getByTestId(ApprovalCardTestId.Approve)).toHaveAttribute("aria-busy", "true");
     expect(screen.getByTestId(ApprovalCardTestId.Deny)).toBeDisabled();
   });
 
   it("renders the compact row density with icon-only actions", () => {
-    render(
-      <ApprovalCard
-        agentName="Kevin"
-        density="row"
-        glyphSeed="s"
-        meta="m"
-        request="r"
-        waited="w"
-      />,
-    );
+    render(<ApprovalCard agentName="Kevin" density="row" meta="m" request="r" waited="w" />);
     expect(screen.getByTestId(ApprovalCardTestId.Root)).toHaveAttribute("data-density", "row");
     expect(screen.queryByTestId(ApprovalCardTestId.Request)).toBeNull();
   });
@@ -171,7 +127,6 @@ describe("ApprovalCard", () => {
         agentName="Kevin"
         approveLabel="Schválit"
         denyLabel="Zamítnout"
-        glyphSeed="s"
         meta="m"
         onOpen={() => {}}
         openLabel="Otevřít"
