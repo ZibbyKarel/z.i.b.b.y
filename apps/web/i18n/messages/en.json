@@ -3020,8 +3020,7 @@
         "optional": "Optional",
         "required": "Required",
         "cancel": "Cancel",
-        "failed": "Could not post the review.",
-        "refused": "GitHub refused: {reason}"
+        "failed": "Could not post the review."
       },
       "actions": {
         "reviewLevelsAria": "More code review levels",

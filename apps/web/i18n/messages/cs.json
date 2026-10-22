@@ -3020,8 +3020,7 @@
         "optional": "Nepovinné",
         "required": "Povinné",
         "cancel": "Zrušit",
-        "failed": "Review se nepodařilo odeslat.",
-        "refused": "GitHub odmítl: {reason}"
+        "failed": "Review se nepodařilo odeslat."
       },
       "actions": {
         "reviewLevelsAria": "Další úrovně code-review",

@@ -83,9 +83,23 @@ describe("PrReviewButton", () => {
     openDialog();
     fireEvent.click(screen.getByTestId(PrReviewButtonTestId.Submit));
     expect(screen.getByTestId(PrReviewButtonTestId.Dialog)).toBeTruthy();
-    expect(screen.getByTestId(PrReviewButtonTestId.Error).textContent).toContain(
+    expect(screen.getByTestId(PrReviewButtonTestId.Error).textContent).toBe(
       "Can not approve your own pull request",
     );
+  });
+
+  it("shows the generic text on a non-422 error and clears it on retry", () => {
+    submit.mockImplementationOnce((_v, opts) =>
+      opts.onError({ status: 502, body: { message: "x" } }),
+    );
+    renderWithProviders(<PrReviewButton pr={pr({})} />);
+    openDialog();
+    fireEvent.click(screen.getByTestId(PrReviewButtonTestId.Submit));
+    expect(screen.getByTestId(PrReviewButtonTestId.Error).textContent).toBe(
+      "Review se nepodařilo odeslat.",
+    );
+    fireEvent.click(screen.getByTestId(PrReviewButtonTestId.Submit));
+    expect(screen.queryByTestId(PrReviewButtonTestId.Error)).toBeNull();
   });
 
   it("resets to approve after submit", () => {

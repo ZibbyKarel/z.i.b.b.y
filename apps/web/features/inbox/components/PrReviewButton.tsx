@@ -6,6 +6,7 @@ import {
   Container,
   Dialog,
   DropDownButton,
+  Stack,
   TextAreaField,
   Typography,
 } from "@zibby/design-system";
@@ -49,7 +50,8 @@ export function PrReviewButton({ pr }: PrReviewButtonProps) {
     setError(null);
   };
 
-  const onSubmit = () =>
+  const onSubmit = () => {
+    setError(null);
     submit.mutate(
       {
         params: { projectId: pr.projectId, number: pr.number },
@@ -62,13 +64,10 @@ export function PrReviewButton({ pr }: PrReviewButtonProps) {
           setEvent("APPROVE");
         },
         onError: (err) =>
-          setError(
-            "status" in err && err.status === 422
-              ? t("refused", { reason: err.body.message })
-              : t("failed"),
-          ),
+          setError("status" in err && err.status === 422 ? err.body.message : t("failed")),
       },
     );
+  };
 
   return (
     <Container data-testid={PrReviewButtonTestId.Root}>
@@ -93,7 +92,7 @@ export function PrReviewButton({ pr }: PrReviewButtonProps) {
             </Button>
             <Button
               data-testid={PrReviewButtonTestId.Submit}
-              disabled={event !== "APPROVE" && !trimmed}
+              disabled={submit.isPending || (event !== "APPROVE" && !trimmed)}
               intent="primary"
               loading={submit.isPending}
               onClick={onSubmit}
@@ -107,7 +106,7 @@ export function PrReviewButton({ pr }: PrReviewButtonProps) {
         open={open}
         title={t("dialogTitle", { event: label, number: pr.number })}
       >
-        <div data-testid={PrReviewButtonTestId.Dialog}>
+        <Stack data-testid={PrReviewButtonTestId.Dialog} gap="100">
           <TextAreaField
             data-testid={PrReviewButtonTestId.Comment}
             hint={event === "APPROVE" ? t("optional") : t("required")}
@@ -117,11 +116,16 @@ export function PrReviewButton({ pr }: PrReviewButtonProps) {
             value={text}
           />
           {error && (
-            <Typography data-testid={PrReviewButtonTestId.Error} type="label" variant="secondary">
+            <Typography
+              data-testid={PrReviewButtonTestId.Error}
+              role="alert"
+              type="label"
+              variant="secondary"
+            >
               {error}
             </Typography>
           )}
-        </div>
+        </Stack>
       </Dialog>
     </Container>
   );

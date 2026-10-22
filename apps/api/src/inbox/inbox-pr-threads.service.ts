@@ -13,6 +13,7 @@ import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ResolvedProjectService } from "../projects/resolved-project.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { githubReason } from "./inbox-review.service";
+import { InboxService } from "./inbox.service";
 
 const GITHUB_GRAPHQL = "https://api.github.com/graphql";
 const GITHUB_TIMEOUT_MS = 15_000;
@@ -30,8 +31,9 @@ export class GithubThreadsError extends Error {
   constructor(
     public readonly status: number,
     detail: string,
+    what = "review threads",
   ) {
-    super(`GitHub review threads failed: ${detail}`);
+    super(`GitHub ${what} failed: ${detail}`);
     this.name = "GithubThreadsError";
   }
 }
@@ -72,6 +74,7 @@ export class InboxPrThreadsService {
     private readonly projects: ProjectsStorageService,
     private readonly resolvedProjects: ResolvedProjectService,
     private readonly credentials: CredentialsStore,
+    private readonly inbox: InboxService,
     @Optional() logger?: LoggerService,
     @Optional() private readonly activity?: ActivityLogService,
     @Optional() fetchImpl?: typeof fetch,
@@ -136,7 +139,11 @@ export class InboxPrThreadsService {
       },
     );
     if (!res.ok) {
-      throw new GithubThreadsError(res.status, `HTTP ${res.status}${await githubReason(res)}`);
+      throw new GithubThreadsError(
+        res.status,
+        `HTTP ${res.status}${await githubReason(res)}`,
+        "review",
+      );
     }
     const { id } = (await res.json()) as { id: number };
     void this.activity?.record({
@@ -145,6 +152,8 @@ export class InboxPrThreadsService {
       refs: { projectId },
     });
     this.log?.info(`reviewed ${repo}#${number}`, { event: input.event });
+    // The review changes the PR's section — don't serve the stale 30 s cache.
+    this.inbox.dropPrsCache();
     return { id };
   }
 
