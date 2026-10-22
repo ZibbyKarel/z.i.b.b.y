@@ -5,6 +5,7 @@ import { cn } from "../../utils/cn";
 export enum KpiStripTestId {
   Root = "kpi-strip-root",
   Lead = "kpi-strip-lead",
+  Kpis = "kpi-strip-kpis",
   /** Suffixed with the KPI's `id`: `kpi-strip-kpi-needs`. */
   Kpi = "kpi-strip-kpi",
   Value = "kpi-strip-value",
@@ -38,16 +39,25 @@ export interface KpiStripProps {
 export function KpiStrip({ kpis, lead, ref }: KpiStripProps) {
   return (
     <div
-      className="box-border flex h-full items-center gap-[32px] px-[var(--bridge-brief-px)] py-[var(--bridge-brief-py)]"
+      className="box-border flex h-full flex-wrap content-center items-center gap-x-[32px] gap-y-[12px] px-[var(--bridge-brief-px)] py-[var(--bridge-brief-py)]"
       data-testid={KpiStripTestId.Root}
       ref={ref}
     >
       {lead ? (
-        <div className="flex min-w-0 flex-1 flex-col gap-[4px]" data-testid={KpiStripTestId.Lead}>
+        <div
+          className="flex min-w-[240px] flex-1 flex-col gap-[4px]"
+          data-testid={KpiStripTestId.Lead}
+        >
           {lead}
         </div>
       ) : null}
-      <div className={cn("flex flex-none flex-wrap gap-x-0 gap-y-[10px]", !lead && "flex-1")}>
+      <div
+        className={cn(
+          "flex max-w-full min-w-0 flex-none flex-wrap gap-x-0 gap-y-[10px]",
+          !lead && "flex-1",
+        )}
+        data-testid={KpiStripTestId.Kpis}
+      >
         {kpis.map((k) => (
           <div
             className="flex flex-col gap-[4px] border-l border-line px-[var(--bridge-kpi-px)]"

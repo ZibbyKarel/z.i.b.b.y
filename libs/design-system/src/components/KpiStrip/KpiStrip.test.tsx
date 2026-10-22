@@ -16,4 +16,16 @@ describe("KpiStrip", () => {
     rerender(<KpiStrip kpis={kpis} lead={<p>Lead</p>} />);
     expect(screen.getByTestId(KpiStripTestId.Lead)).toHaveTextContent("Lead");
   });
+
+  it("wraps lead and counters on narrow widths", () => {
+    render(
+      <KpiStrip kpis={[{ id: "a", label: "A", value: "1", tone: "idle" }]} lead={<p>Lead</p>} />,
+    );
+    expect(screen.getByTestId(KpiStripTestId.Root)).toHaveClass("flex-wrap");
+    expect(screen.getByTestId(KpiStripTestId.Kpis)).toHaveClass(
+      "max-w-full",
+      "min-w-0",
+      "flex-wrap",
+    );
+  });
 });

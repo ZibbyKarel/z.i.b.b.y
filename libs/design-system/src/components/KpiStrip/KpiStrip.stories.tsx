@@ -33,4 +33,8 @@ export const Overview: Story = {
     />
   ),
 };
+export const Narrow: Story = {
+  decorators: [(Story) => <div className="w-[320px]">{Story()}</div>],
+  render: Overview.render,
+};
 export const Playground: Story = {};
