@@ -78,7 +78,7 @@ describe("IssueSheet", () => {
   });
 
   it("shows the fallback when the item has no description", () => {
-    hooks.items = [{ ...item("todo"), description: "" }];
+    hooks.items = [{ ...item("todo"), description: "  \n " }];
     renderWithProviders(<IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />);
     expect(screen.queryByTestId(MarkdownTestId.Root)).toBeNull();
     expect(screen.getByText("Zdroj nemá žádný popis.")).toBeInTheDocument();

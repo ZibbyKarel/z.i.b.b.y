@@ -115,7 +115,7 @@ export function IssueSheet({ id, anchor, onClose }: SheetProps) {
       ) : null}
       <SheetSection>
         <SheetBlock label={t("bridge.sheet.description")}>
-          {item.description ? (
+          {item.description?.trim() ? (
             <Markdown escapeHtml source={item.description} />
           ) : (
             <SheetText lines={[t("bridge.sheet.issue.noDescription")]} />
