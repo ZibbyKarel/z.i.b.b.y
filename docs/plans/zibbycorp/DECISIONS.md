@@ -338,6 +338,8 @@ committed.
 
 ## D-015 — Agents are positions; Employees are instances (refines D-002)
 
+> Superseded by D-023 (2026-10-22).
+
 The operator's analogy: *an employee relates to an agent as a process relates to a program.*
 
 **Agent = position / job definition** (prompt, tools, model).
@@ -428,6 +430,8 @@ positions held by employees plus pipelines.
 
 ## D-017 — Single-agent runs and the employee allocator (2026-09-24, orchestrator)
 
+> Superseded by D-023 (2026-10-22).
+
 Pipelines always have an owning department, so a stage with no employee of its position in
 that department **parks** (`no-employee`) and notifies (D-015). A single-agent task run
 leases an employee of that position from the task's department if known, else from any
@@ -436,6 +440,8 @@ the run proceeds unleased — Zibby (COO) does it directly — because a describ
 always executed (North Star: no silent no-op).
 
 ## D-018 — Name pool grows to 60 (2026-09-25, orchestrator)
+
+> Superseded by D-023 (2026-10-22).
 
 The real data has 50 agents with a department and the operator's seed list has 30 names, so
 the 1-employee-per-agent migration (D-015) could not run. The operator's 30 names stay first
@@ -522,6 +528,8 @@ unit's id.
 
 ## D-021 — Departments are grouped under divisions (2026-09-29, operator)
 
+> Superseded by D-023 (2026-10-22).
+
 The operator wants the org to read like a real large company: COO → division → department,
 without a board (no CTO/CFO/… nodes). This refines D-004: the eleven departments stay the
 closed set, and each one now names its division.
@@ -564,3 +572,21 @@ clauses of D-004, D-016 and D-021: the eleven departments are now only the first
   products, owns the `coloring-book` pipeline) and `dist` (Distribution: editions and
   marketplace packages, publishes only after operator approval). Both sit in the Business
   Operations division.
+
+## D-023 — No employees, no divisions, no COO; run slots are the only throttle (2026-10-22, operator)
+
+Supersedes D-015, D-017, D-018, D-021 and `staffing-driven-capacity.md`. Full record:
+`docs/plans/remove-employees.md`.
+
+- **Agents are spawned freely**, like in Claude Code — no headcount, no leases, no queue behind
+  "the one frontend developer". The employee model, name pool, Minion appearances and the
+  allocator are deleted, along with their data.
+- **Run slots.** One slot per dispatched run (single-agent, orchestrator, workflow, goal),
+  however many agents it spawns. Global cap `maxConcurrentRuns` (System settings) plus an
+  optional per-project `budget.maxConcurrent`. Everything that creates a run counts, including
+  tasks started from chat and agent/workflow automations; the chat conversation itself never
+  does. A run holds its slot until a terminal status, including while it awaits an approval.
+- **Departments stay** as a flat grouping of agents of the same kind (`Agent.department`).
+  Divisions are removed.
+- **Zibby / the COO is not an entity.** The chat stays; the persona, avatar and old org-map
+  dashboard are gone. An agent is shown by its DS icon tinted with its department colour.

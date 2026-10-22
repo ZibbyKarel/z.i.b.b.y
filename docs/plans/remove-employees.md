@@ -1,6 +1,6 @@
 # Remove employees, minions, the COO persona and divisions
 
-Status: in progress (operator decision 2026-10-22). Supersedes D-015, D-017, D-018, D-021 and
+Status: implemented 2026-10-22 (D-023). Supersedes D-015, D-017, D-018, D-021 and
 `docs/plans/zibbycorp/staffing-driven-capacity.md`.
 
 ## Decisions (operator, 2026-10-22)
