@@ -675,3 +675,6 @@ run is simply re-run. The old env names (`PIPELINES_DIR`, `PIPELINE_RUNS_DIR`,
 `WorkflowRunnerService.runFolder(runId)` returns the folder shown to the operator for a run
 (`<run dir>/book` when present, else the run root; `null` if unknown) — used by
 `POST /api/tasks/runs/:runId/open-folder` (see `docs/api/tasks.md`).
+`artifactPath(runId, name)` is `readArtifact`'s lookup without the read (same allowlist and
+candidate dirs, absolute path of the first existing file, else `null`) — the same route's
+`{ artifact }` body opens that file.

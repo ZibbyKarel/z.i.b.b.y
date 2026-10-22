@@ -186,6 +186,15 @@ export const SYSTEM_RULES: GlobalGateRule[] = [
   ),
   ask("send_email", "Odeslání e-mailu", "Odeslání e-mailu jde přes tebe."),
   ask("delete", "Mazání", "Mazání se neprovede bez tvého potvrzení."),
+  // Off by default (operator call, 2026-10-22): agents mostly rewrite their own files.
+  {
+    id: "floor-overwrite",
+    name: "Přepis souboru",
+    desc: "Přepis existujícího souboru proběhne bez ptaní.",
+    match: [{ type: "action", action: "overwrite" }],
+    decision: "allow",
+  },
+  ask("move", "Přesun souboru", "Přesun nebo přejmenování souboru čeká na tvé potvrzení."),
   ask(
     "jira.create_issue",
     "Založení Jira issue",

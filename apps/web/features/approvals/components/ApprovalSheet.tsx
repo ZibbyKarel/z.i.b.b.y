@@ -17,16 +17,22 @@ import {
   TextAreaField,
   Typography,
 } from "@zibby/design-system";
-import { type PrReviewEvent, PrReviewEventSchema } from "@zibby/contracts";
+import {
+  type OperatorThreadReply,
+  type PrReviewEvent,
+  PrReviewEventSchema,
+} from "@zibby/contracts";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useInboxPrThreadsQuery } from "../../inbox/queries";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { useTaskRunQuery } from "../../runs/queries/useTaskRunQuery";
 import { useCheckpointArtifact } from "../../runs/useCheckpointArtifact";
+import { useRunArtifacts } from "../../runs/useRunArtifacts";
 import { useTaskQuery } from "../../tasks/queries";
 import {
   HIGH_RISK_TYPES,
@@ -35,6 +41,11 @@ import {
   gateTitleKey,
   sourceLinkKind,
 } from "../approval";
+import {
+  AddressCommentsReview,
+  addressApproveReplies,
+  approveRequestBody,
+} from "./AddressCommentsReview";
 import { ApprovalPreview } from "./ApprovalPreview";
 import { isOperatorTokenError } from "../../../state/operatorToken";
 import { useApproveMutation, useRejectMutation, useReviseMutation } from "../mutations";
@@ -82,6 +93,12 @@ export function ApprovalSheet({
   // todo-10: the operator's review-type pick on a PR-review sign-off, keyed by approval
   // id so switching approvals in the open sheet falls back to the new suggestion.
   const [picked, setPicked] = useState<{ id: string; event: PrReviewEvent } | null>(null);
+  // The operator's edits to the address-comments reply drafts, by thread id, keyed by approval id.
+  const [edited, setEdited] = useState<{
+    id: string;
+    byThread: Record<string, OperatorThreadReply>;
+  } | null>(null);
+  const [now] = useState(() => Date.now());
   // A 401 means the operator token is unset/wrong — say so instead of a bare failure.
   const decisionErrorText = (error: unknown) =>
     isOperatorTokenError(error)
@@ -104,6 +121,22 @@ export function ApprovalSheet({
       state: s.state,
     })) ?? [];
 
+  // pr-address-comments: a reply for every shown open thread. Drafts come from the live threads
+  // joined with the report; while those load (or fail) the task's own drafts keep approve working.
+  const address = approval?.kind === "pr-address-comments" ? task?.prAddressComments : undefined;
+  const { data: addressThreads } = useInboxPrThreadsQuery(
+    address ? task?.projectId : undefined,
+    address?.number,
+  );
+  const addressReplies: OperatorThreadReply[] = address
+    ? addressApproveReplies(
+        address,
+        addressThreads,
+        edited && edited.id === approval?.id ? edited.byThread : {},
+      )
+    : [];
+  const filledReplies = addressReplies.filter((r) => r.body.trim()).length;
+
   const close = () => {
     setReason("");
     setMode(null);
@@ -125,6 +158,8 @@ export function ApprovalSheet({
     gateKey === "stage-approval" ? (approval?.runId ?? null) : null,
   );
   const checkpoint = useCheckpointArtifact(approval, gatedRun);
+  const artifacts = useRunArtifacts(gatedRun);
+  const tArtifacts = useTranslations("runs.artifacts");
   const origin = approval ? approvalOrigin(approval, task) : null;
   const body = !approvalId ? null : isPending ? (
     <QueryLoading />
@@ -171,6 +206,31 @@ export function ApprovalSheet({
         </Stack>
       )}
 
+      {artifacts.length > 0 && (
+        <Stack gap="50">
+          <Typography tracking="wider" type="labelSm" variant="tertiary">
+            {tArtifacts("title")}
+          </Typography>
+          <Row wrap gap="100">
+            {artifacts.map((a) =>
+              a.kind === "pr" ? (
+                <a href={a.href} key={a.kind} rel="noopener noreferrer" target="_blank">
+                  <Typography size="sm" tone="accent" type="text">
+                    {tArtifacts("openPr")} ↗
+                  </Typography>
+                </a>
+              ) : (
+                <Button intent="ghost" key={a.label} onClick={a.open} size="sm">
+                  {a.kind === "folder"
+                    ? tArtifacts("openFolder")
+                    : tArtifacts("openFile", { name: a.label })}
+                </Button>
+              ),
+            )}
+          </Row>
+        </Stack>
+      )}
+
       {/* Plain-text detail is the whole description — shown in full, line breaks kept. */}
       {approval.text != null && (
         <Container maxHeight="50vh" overflow="auto">
@@ -200,7 +260,29 @@ export function ApprovalSheet({
         </Container>
       )}
 
-      {approval.preview?.kind === "message" && (
+      {approval.kind === "pr-address-comments" && task?.prAddressComments && (
+        <AddressCommentsReview
+          now={now}
+          onRepliesChange={(next) => {
+            // Keep only the rows that changed; untouched rows keep following the baseline.
+            const changed = next.filter(
+              (r, i) =>
+                r.body !== addressReplies[i]?.body || r.resolve !== addressReplies[i]?.resolve,
+            );
+            setEdited({
+              id: approval.id,
+              byThread: {
+                ...(edited?.id === approval.id ? edited.byThread : {}),
+                ...Object.fromEntries(changed.map((r) => [r.threadId, r])),
+              },
+            });
+          }}
+          replies={addressReplies}
+          task={task}
+        />
+      )}
+
+      {approval.kind !== "pr-address-comments" && approval.preview?.kind === "message" && (
         <Container maxHeight="50vh" overflow="auto">
           <Markdown escapeHtml source={approval.preview.body} />
         </Container>
@@ -333,12 +415,19 @@ export function ApprovalSheet({
             loading={approve.isPending}
             onClick={() =>
               approve.mutate(
-                { params: { id: approval.id }, body: reviewEvent ? { reviewEvent } : {} },
+                {
+                  params: { id: approval.id },
+                  body: approveRequestBody(address ? addressReplies : undefined, reviewEvent),
+                },
                 { onSuccess: close },
               )
             }
           >
-            {t(reviewEvent ? "submitReview" : "approve")}
+            {address
+              ? tApprovals(address.fixedSha ? "approvePushReplies" : "approveReplies", {
+                  n: filledReplies,
+                })
+              : t(reviewEvent ? "submitReview" : "approve")}
           </Button>
           {gateKey === "stage-approval" && (
             <Button block intent="secondary" onClick={() => setMode("revise")}>

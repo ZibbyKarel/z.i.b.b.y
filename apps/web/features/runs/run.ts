@@ -182,7 +182,7 @@ export function runOutputHref(
  */
 export function approvalForRun<A extends Pick<Approval, "id" | "runId">>(
   queue: readonly A[],
-  run: Pick<RunView, "runId" | "kind" | "status" | "approvalId">,
+  run: Pick<RunView, "runId" | "kind" | "status" | "approvalId" | "taskId">,
 ): A | undefined {
   // A held dispatch points at its override approval by id (it is not "awaiting-approval"
   // — it hasn't run yet — but the gate decision is the same one queued elsewhere).
@@ -192,7 +192,10 @@ export function approvalForRun<A extends Pick<Approval, "id" | "runId">>(
   if (run.status !== "awaiting-approval") return undefined;
   return queue.find(
     (a) =>
-      a.runId === run.runId || (run.kind === "workflow" && a.runId.startsWith(`${run.runId}.`)),
+      a.runId === run.runId ||
+      // A PR-inbox gate raised after the run finished is keyed by the owning task.
+      (run.taskId !== undefined && a.runId === run.taskId) ||
+      (run.kind === "workflow" && a.runId.startsWith(`${run.runId}.`)),
   );
 }
 

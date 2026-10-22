@@ -17,12 +17,7 @@ import type { DashboardApproval } from "../../approvals/approval";
 import type { RunView } from "../run";
 import type { FeedItem, RunMode, StageRailRow } from "../runDetailModel";
 import { GoalDetailPanel } from "./GoalDetailPanel";
-import {
-  LimitPausedPanel,
-  RunApprovalBanner,
-  RunParkedBanner,
-  RunQuestionBanner,
-} from "./RunFeedBanners";
+import { LimitPausedPanel, RunParkedBanner, RunQuestionBanner } from "./RunFeedBanners";
 
 export enum RunLiveFeedTestId {
   Root = "run-live-feed",
@@ -39,8 +34,6 @@ export interface RunLiveFeedProps {
   items: FeedItem[];
   /** The stage rail rows — the parked banner names its stage from them. */
   rail?: StageRailRow[];
-  reviseOpen: boolean;
-  onToggleRevise: () => void;
 }
 
 type Item<K extends FeedItem["kind"]> = Extract<FeedItem, { kind: K }>;
@@ -114,16 +107,8 @@ function FeedYou({ item, stageLabel }: { item: Item<"you">; stageLabel?: string 
   );
 }
 
-/** The LIVE view: the mode's banner (approval / question / parked / limit), then the stage feed in order. */
-export function RunLiveFeed({
-  run,
-  mode,
-  approval,
-  items,
-  rail = [],
-  reviseOpen,
-  onToggleRevise,
-}: RunLiveFeedProps) {
+/** The LIVE view: the mode's banner (question / parked / limit), then the stage feed in order. The approval banner sits above the whole detail. */
+export function RunLiveFeed({ run, mode, approval, items, rail = [] }: RunLiveFeedProps) {
   if (run.kind === "goal") return <GoalDetailPanel run={run} />;
 
   const dividerLabel = new Map(
@@ -134,14 +119,6 @@ export function RunLiveFeed({
 
   return (
     <Stack data-testid={RunLiveFeedTestId.Root} gap="150">
-      {mode === "approval" && approval && (
-        <RunApprovalBanner
-          approval={approval}
-          diffstat={run.diffstat}
-          onToggleRevise={onToggleRevise}
-          reviseOpen={reviseOpen}
-        />
-      )}
       {mode === "question" && approval && (
         <RunQuestionBanner
           agentName={approval.skill}

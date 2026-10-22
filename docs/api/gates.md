@@ -36,6 +36,11 @@ optional `name`/`desc`, an optional `department` and the derived `system` flag.
   off. It still matches, so the fail-closed `ask` never kicks in, but it decides `allow`,
   and own or department rules can still harden it. Every system rule can be moved,
   `pr.merge` included; this was the operator's explicit choice.
+- File effects from the approval hook: `floor-delete` (ask), `floor-overwrite` (**allow**
+  by default, since agents mostly rewrite files they made themselves; this also covers a
+  Write/Edit outside the free zone, which is classified as `overwrite`) and `floor-move`
+  (ask). Before these rules existed, `overwrite`/`move` had no rule and fell through to
+  the fail-closed `ask`.
 - Agents and skills can carry `gateRuleIds: [...]` naming rules by id. This is
   **composed on the client** only, and the evaluator never reads `gateRuleIds`.
 

@@ -71,15 +71,7 @@ const items: FeedItem[] = [
 ];
 
 function renderFeed(over: Partial<RunView> = {}, mode: "running" | "parked" = "running") {
-  render(
-    <RunLiveFeed
-      items={items}
-      mode={mode}
-      onToggleRevise={vi.fn()}
-      reviseOpen={false}
-      run={{ ...run, ...over }}
-    />,
-  );
+  render(<RunLiveFeed items={items} mode={mode} run={{ ...run, ...over }} />);
 }
 
 describe("RunLiveFeed", () => {

@@ -21,7 +21,12 @@ import { useMemo, useState } from "react";
 import { useApprovalsQuery } from "../../../approvals";
 import { PrActionButtons } from "../../../inbox/components/PrActionButtons";
 import { prBaseLabel, prChildren } from "../../../inbox/inbox";
-import { useInboxPrDiffQuery, useInboxPrsQuery } from "../../../inbox/queries";
+import { PrThreads } from "../../../inbox/components/PrThreads";
+import {
+  useInboxPrDiffQuery,
+  useInboxPrThreadsQuery,
+  useInboxPrsQuery,
+} from "../../../inbox/queries";
 import { isMerge } from "../../../inbox/state/prActions";
 import { useElapsedLabel } from "../../../inbox/useElapsedLabel";
 import { diffFiles } from "../../state/diffFiles";
@@ -112,6 +117,7 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
   const pr = all.find((p) => p.url === id || String(p.number) === id);
   const { data: diff, isPending: diffPending } = useInboxPrDiffQuery(pr?.projectId, pr?.number);
   const files = useMemo(() => diffFiles(diff?.diff ?? ""), [diff]);
+  const { data: threads } = useInboxPrThreadsQuery(pr?.projectId, pr?.number);
 
   if (!pr) return null;
 
@@ -235,6 +241,11 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
           </SheetBlock>
         </div>
       </SheetColumns>
+      {threads?.length ? (
+        <SheetSection>
+          <PrThreads now={now} number={pr.number} projectId={pr.projectId} />
+        </SheetSection>
+      ) : null}
       {diff && diff.diff ? (
         <SheetSection>
           <SheetBlock label={t("bridge.sheet.pr.diff", { base: base.toUpperCase() })}>

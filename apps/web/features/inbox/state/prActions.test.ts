@@ -31,11 +31,11 @@ describe("handled", () => {
 
 describe("isReview", () => {
   const base = { bucket: "to-review" } as const;
-  it("offers a non-draft to-review PR", () => {
+  it("offers a to-review PR, draft or not", () => {
     expect(isReview(pr(base))).toBe(true);
+    expect(isReview(pr({ ...base, draft: true }))).toBe(true);
   });
-  it("not for drafts or other buckets", () => {
-    expect(isReview(pr({ ...base, draft: true }))).toBe(false);
+  it("not for other buckets", () => {
     expect(isReview(pr({ bucket: "mine" }))).toBe(false);
   });
   it("hides once the review is handled, returns after a later change", () => {
@@ -111,7 +111,7 @@ describe("hasPrActions", () => {
     expect(hasPrActions(pr({ rebase: run("failed") }))).toBe(true);
     expect(hasPrActions(pr({ rebase: run("done") }))).toBe(false);
   });
-  it("is false for a draft to-review PR with nothing else", () => {
-    expect(hasPrActions(pr({ bucket: "to-review", draft: true }))).toBe(false);
+  it("offers review on a draft to-review PR", () => {
+    expect(hasPrActions(pr({ bucket: "to-review", draft: true }))).toBe(true);
   });
 });

@@ -4,8 +4,10 @@ import { inboxContract } from "./inbox.contract";
 import {
   AddressInboxPrCommentsInputSchema,
   InboxPrSchema,
+  InboxPrThreadSchema,
   PR_REVIEW_LEVELS,
   RebaseInboxPrInputSchema,
+  ReplyInboxPrThreadInputSchema,
   ReviewInboxPrInputSchema,
 } from "./inbox.schema";
 
@@ -84,11 +86,45 @@ describe("address review comments (PR inbox redesign)", () => {
     ).toBe(false);
   });
 
-  it("a thread reply is a PRRT_ node id + a short non-empty body", () => {
+  it("a thread reply is a PRRT_ node id + a short body (empty allowed)", () => {
     const ok = { threadId: "PRRT_kwDOabc", body: "Good catch, fixed in abc1234." };
     expect(PrThreadReplySchema.safeParse(ok).success).toBe(true);
     expect(PrThreadReplySchema.safeParse({ ...ok, threadId: "IC_123" }).success).toBe(false);
-    expect(PrThreadReplySchema.safeParse({ ...ok, body: "  " }).success).toBe(false);
+    expect(PrThreadReplySchema.safeParse({ ...ok, body: "  " }).success).toBe(true);
     expect(PrThreadReplySchema.safeParse({ ...ok, body: "x".repeat(501) }).success).toBe(false);
+  });
+});
+
+describe("PR review threads", () => {
+  it("ReplyInboxPrThreadInputSchema needs a body or resolve:true", () => {
+    const ok = (v: unknown) => ReplyInboxPrThreadInputSchema.safeParse(v).success;
+    expect(ok({ body: "x" })).toBe(true);
+    expect(ok({ resolve: true })).toBe(true);
+    expect(ok({ body: "x", resolve: false })).toBe(true);
+    expect(ok({})).toBe(false);
+    expect(ok({ resolve: false })).toBe(false);
+    expect(ok({ body: "   " })).toBe(false);
+  });
+
+  it("InboxPrThreadSchema accepts null line and null author", () => {
+    const thread = {
+      id: "PRRT_abc",
+      isResolved: false,
+      isOutdated: false,
+      path: "a.ts",
+      line: null,
+      startLine: null,
+      diffHunk: "@@",
+      comments: [{ id: "c1", author: null, createdAt: "2026-10-22T10:00:00.000Z", body: "hi" }],
+    };
+    expect(InboxPrThreadSchema.safeParse(thread).success).toBe(true);
+    expect(InboxPrThreadSchema.safeParse({ ...thread, id: "x" }).success).toBe(false);
+  });
+
+  it("exposes the thread routes", () => {
+    expect(inboxContract.getInboxPrThreads.path).toBe("/api/inbox/prs/:projectId/:number/threads");
+    expect(inboxContract.replyInboxPrThread.path).toBe(
+      "/api/inbox/prs/:projectId/:number/threads/:threadId/reply",
+    );
   });
 });

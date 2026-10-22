@@ -302,7 +302,7 @@ describe("TasksWidget (task queue)", () => {
 });
 
 describe("RunsWidget", () => {
-  it("renders live runs with progress, state and issue; opens the task", async () => {
+  it("renders live runs with progress, state and issue; opens the run", async () => {
     d.runs = [
       {
         runId: "r1",
@@ -330,15 +330,15 @@ describe("RunsWidget", () => {
     expect(screen.getByTestId(BoardRowTestId.ColumnHeader)).toHaveTextContent("ÚKOL · KROK");
     await userEvent.click(row);
     expect(props.onOpen).toHaveBeenCalledWith({
-      kind: "task",
-      id: "t1",
+      kind: "run",
+      id: "r1",
       widgetId: "w-runs",
       key: "w-runs:r1",
     });
     expect(props.onEmptyChange).toHaveBeenLastCalledWith(false);
   });
 
-  it("a run without a task is a static row: no click, no data-rk, not a button", async () => {
+  it("a run without a task still opens its run sheet", async () => {
     d.runs = [
       {
         runId: "r9",
@@ -356,10 +356,14 @@ describe("RunsWidget", () => {
     const props = setup({ widget: widget("w-runs", "runs") });
     renderWithProviders(<RunsWidget {...props} />);
     const row = screen.getByTestId(BoardRowTestId.Root);
-    expect(row.tagName).toBe("DIV");
-    expect(row).not.toHaveAttribute("data-rk");
+    expect(row).toHaveAttribute("data-rk", "w-runs:r9");
     await userEvent.click(row);
-    expect(props.onOpen).not.toHaveBeenCalled();
+    expect(props.onOpen).toHaveBeenCalledWith({
+      kind: "run",
+      id: "r9",
+      widgetId: "w-runs",
+      key: "w-runs:r9",
+    });
   });
 
   it("splits active (no waiting) from the last finished, with state-coloured bars and headers", () => {

@@ -19,6 +19,7 @@ import { parentPr, prAncestors, prBaseLabel, prChildren, prState, prWaits } from
 import { useInboxPrDiffQuery } from "../queries";
 import { useElapsedLabel } from "../useElapsedLabel";
 import { PrStackPath } from "./PrStackPath";
+import { PrThreads } from "./PrThreads";
 import { ExternalAnchor, NavLink } from "./links";
 
 export enum PrDetailTestId {
@@ -213,6 +214,7 @@ export function PrDetail({ pr, all, projectName, now, item, onSelect }: PrDetail
           </CardContent>
         </Card>
       </Container>
+      <PrThreads now={now} number={pr.number} projectId={pr.projectId} />
       <Typography data-testid={PrDetailTestId.DiffLabel} type="labelSm">
         {t("diffVs", { base })}
       </Typography>

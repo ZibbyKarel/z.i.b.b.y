@@ -211,6 +211,39 @@ export type AddressInboxPrCommentsInput = RebaseInboxPrInput;
 export const InboxPrDiffSchema = z.object({ diff: z.string(), truncated: z.boolean() });
 export type InboxPrDiff = z.infer<typeof InboxPrDiffSchema>;
 
+export const InboxPrThreadCommentSchema = z.object({
+  id: z.string(),
+  author: z.object({ login: z.string(), avatarUrl: z.string() }).nullable(),
+  createdAt: IsoDateTimeSchema,
+  body: z.string(),
+});
+export type InboxPrThreadComment = z.infer<typeof InboxPrThreadCommentSchema>;
+
+/** One GitHub review thread (GraphQL node id `PRRT_…`). */
+export const InboxPrThreadSchema = z.object({
+  id: z.string().regex(/^PRRT_[\w-]+$/),
+  isResolved: z.boolean(),
+  isOutdated: z.boolean(),
+  path: z.string(),
+  line: z.number().int().nullable(),
+  startLine: z.number().int().nullable(),
+  diffHunk: z.string(),
+  comments: z.array(InboxPrThreadCommentSchema),
+});
+export type InboxPrThread = z.infer<typeof InboxPrThreadSchema>;
+export const InboxPrThreadsSchema = z.array(InboxPrThreadSchema);
+
+/** Reply to a thread and/or resolve it; at least one is required. */
+export const ReplyInboxPrThreadInputSchema = z
+  .object({
+    body: z.string().trim().min(1).max(65536).optional(),
+    resolve: z.boolean().optional(),
+  })
+  .refine((v) => v.body !== undefined || v.resolve === true, {
+    message: "Provide a body or resolve: true",
+  });
+export type ReplyInboxPrThreadInput = z.infer<typeof ReplyInboxPrThreadInputSchema>;
+
 /** Hide key: the item's source identity, stable across re-syncs. */
 export const InboxHiddenKeySchema = z.object({
   integrationId: z.string().min(1),

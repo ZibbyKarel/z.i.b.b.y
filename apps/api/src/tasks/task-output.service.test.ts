@@ -11,6 +11,7 @@ import {
   TaskOutputService,
   isAutoPushAddressComments,
   isAutoPushPrRebase,
+  parseThreadOutcomes,
   parseThreadReplies,
   suggestReviewEvent,
 } from "./task-output.service";
@@ -404,7 +405,10 @@ describe("TaskOutputService", () => {
             { threadId: "PRRT_a", body: "dup" },
           ]),
         ),
-      ).toEqual([{ threadId: "PRRT_a", body: "Good catch, fixed in abc1234." }]);
+      ).toEqual([
+        { threadId: "PRRT_a", body: "Good catch, fixed in abc1234." },
+        { threadId: "PRRT_c", body: "" },
+      ]);
       expect(
         parseThreadReplies(
           JSON.stringify([
@@ -415,6 +419,134 @@ describe("TaskOutputService", () => {
       ).toEqual([{ threadId: "PRRT_a", body: "Fixed.", resolve: true }]);
       const many = Array.from({ length: 60 }, (_, i) => ({ threadId: `PRRT_${i}`, body: "ok" }));
       expect(parseThreadReplies(JSON.stringify(many))).toHaveLength(50);
+    });
+
+    it("parseThreadOutcomes reads the real cms4#45851 report shape", () => {
+      const report = [
+        "Addressed: partial",
+        "",
+        "## Threads",
+        "",
+        "thread: PRRT_kwDOKnFCc86u2edZ",
+        "cms/.../AddonStatisticsService.php:35",
+        "Request: replace ... (non-blocking suggestion).",
+        "skipped: the reviewer marked it non-blocking ...",
+        "",
+        "thread: PRRT_kwDOKnFCc86u2fJY",
+        "tests/.../AddonUsabilityControllerTest.php:84",
+        "Request: add a case ...",
+        "done in f4d0a6d4f17",
+        "",
+        "thread: PRRT_kwDOKnFCc86u2mzw",
+        "frontend/.../StatisticsSubTabs.tsx:5",
+        "Request (blocking): wrap the comment",
+        "done in 8c18a95f758 and c6f993cd839",
+        "",
+        "thread: PRRT_q",
+        "question: was dropping the language requirement intended?",
+        "",
+        "thread: PRRT_n",
+        "just some text",
+      ].join("\n");
+      expect(parseThreadOutcomes(report)).toEqual([
+        {
+          threadId: "PRRT_kwDOKnFCc86u2edZ",
+          kind: "skipped",
+          note: "the reviewer marked it non-blocking ...",
+        },
+        { threadId: "PRRT_kwDOKnFCc86u2fJY", kind: "done", note: "f4d0a6d4f17" },
+        {
+          threadId: "PRRT_kwDOKnFCc86u2mzw",
+          kind: "done",
+          note: "8c18a95f758 and c6f993cd839",
+        },
+        {
+          threadId: "PRRT_q",
+          kind: "question",
+          note: "was dropping the language requirement intended?",
+        },
+        { threadId: "PRRT_n", kind: "skipped", note: "unreadable report line" },
+      ]);
+      expect(parseThreadOutcomes(undefined)).toEqual([]);
+    });
+
+    it("a question block is not misread when its Request line mentions done in", () => {
+      expect(
+        parseThreadOutcomes(
+          "thread: PRRT_q\nRequest: was this done in abc1234? skipped: maybe\nquestion: why?",
+        ),
+      ).toEqual([{ threadId: "PRRT_q", kind: "question", note: "why?" }]);
+    });
+
+    it("Addressed: all with a question thread never auto-pushes", async () => {
+      const task = await seed();
+      await service.parkPrAddressComments(
+        task,
+        "Addressed: all\nthread: PRRT_q\nquestion: intended?",
+        "/wt",
+      );
+      expect(approvals.approve).not.toHaveBeenCalled();
+      expect(approvals.requestApproval).toHaveBeenCalledWith(
+        expect.objectContaining({ risk: "high" }),
+      );
+    });
+
+    it("stores the outcomes parsed from the report", async () => {
+      const task = await seed();
+      await service.parkPrAddressComments(
+        task,
+        "Addressed: partial\nthread: PRRT_a\ndone in abc1234",
+        "/wt",
+      );
+      expect((await storage.get("t_fix")).prAddressComments?.outcomes).toEqual([
+        { threadId: "PRRT_a", kind: "done", note: "abc1234" },
+      ]);
+    });
+
+    it("parks a replies-only approval when there are no new commits but drafted replies", async () => {
+      workspace.rebaseFacts.mockResolvedValue({ sha: A, log: "", stat: "" });
+      const task = await seed();
+      const delivered = await service.parkPrAddressComments(
+        task,
+        "Addressed: all",
+        "/wt",
+        JSON.stringify([
+          { threadId: "PRRT_a", body: "Not needed, see the util." },
+          { threadId: "PRRT_e", body: "  " },
+        ]),
+      );
+      expect(approvals.requestApproval).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: "pr-address-comments",
+          action: "github.pr.comment",
+          risk: "high",
+        }),
+      );
+      const { detail } = approvals.requestApproval.mock.calls[0]?.[0] as { detail: string };
+      expect(detail.startsWith("Post review replies — acme/app#7")).toBe(true);
+      expect(detail).toContain("PRRT_a: Not needed, see the util.");
+      expect(detail).not.toContain("PRRT_e");
+      expect(approvals.approve).not.toHaveBeenCalled();
+      const stored = (await storage.get("t_fix")).prAddressComments;
+      expect(stored).toMatchObject({ state: "awaiting-approval", worktree: "/wt" });
+      expect(stored?.fixedSha).toBeUndefined();
+      expect(delivered.summary).toBe("Review komentáře acme/app#7: odpovědi čekají na schválení");
+    });
+
+    it('still fails "no new commits" when every draft is empty', async () => {
+      workspace.rebaseFacts.mockResolvedValue({ sha: A, log: "", stat: "" });
+      const task = await seed();
+      await service.parkPrAddressComments(
+        task,
+        "Addressed: partial",
+        "/wt",
+        JSON.stringify([{ threadId: "PRRT_a", body: "" }]),
+      );
+      expect(approvals.requestApproval).not.toHaveBeenCalled();
+      expect((await storage.get("t_fix")).prAddressComments).toMatchObject({
+        state: "failed",
+        note: "no new commits",
+      });
     });
 
     it("stores the replies and lists them in the approval detail", async () => {

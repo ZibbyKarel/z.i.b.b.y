@@ -106,6 +106,9 @@ interface ProjectNameMaps {
   byPath: ReadonlyMap<string, string>;
 }
 
+/** Artifact types `open` hands to a viewer/editor — never an executable (`.command`, `.app`, …). */
+const OPENABLE_ARTIFACT = /\.(md|markdown|txt|json|ya?ml|csv|log|pdf|png|jpe?g|svg)$/i;
+
 export type FolderOpener = (folder: string) => Promise<void>;
 const openInFinder: FolderOpener = async (folder) => {
   await promisify(execFile)("open", [folder]);
@@ -138,13 +141,21 @@ export class TaskRunsService {
   ) {}
 
   /**
-   * Open a workflow run's output folder on the operator's machine (macOS `open`).
-   * Read-only and operator-initiated, so no approval gate. Non-workflow / unknown
-   * runs → {@link TaskRunNotFoundError}.
+   * Open a workflow run's output folder on the operator's machine (macOS `open`) — or,
+   * with `artifact`, that whitelisted run artifact in its default app. Read-only and
+   * operator-initiated, so no approval gate. Non-workflow / unknown runs / a missing
+   * artifact → {@link TaskRunNotFoundError}.
    */
-  async openFolder(runId: string): Promise<{ path: string }> {
+  async openFolder(runId: string, artifact?: string): Promise<{ path: string }> {
     const kind = await this.kindOf(runId);
-    const folder = kind === "workflow" ? await this.workflowRunner.runFolder(runId) : null;
+    const folder =
+      kind !== "workflow"
+        ? null
+        : artifact
+          ? OPENABLE_ARTIFACT.test(artifact)
+            ? await this.workflowRunner.artifactPath(runId, artifact)
+            : null
+          : await this.workflowRunner.runFolder(runId);
     if (!folder) throw new TaskRunNotFoundError(runId);
     await this.opener(folder);
     return { path: folder };
@@ -798,8 +809,14 @@ function enrichRunWithTask(run: TaskRun, tasksById: ReadonlyMap<string, Schedule
   if (!run.taskId) return run;
   const task = tasksById.get(run.taskId);
   if (!task) return run;
+  // A finished run whose task still holds a PR-inbox gate (review post, rebase
+  // force-push, review-fix push) is waiting on the operator, not done.
+  const gated = [task.prReview, task.prRebase, task.prAddressComments].some(
+    (gate) => gate?.state === "awaiting-approval",
+  );
   return {
     ...run,
+    ...(gated && run.status === "done" ? { status: "awaiting-approval" as const } : {}),
     taskTitle: task.title || task.text,
     taskText: task.text,
     taskOutcome: task.outcome?.status,

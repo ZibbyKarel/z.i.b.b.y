@@ -137,6 +137,8 @@ function build() {
     onStageLogAppend: vi.fn(() => () => {}),
     readArtifact: vi.fn(async () => ({ name: "pr-draft.md", content: "PR" })),
     listRunFiles: vi.fn(async () => ({ entries: [], truncated: false })),
+    runFolder: vi.fn(async (): Promise<string | null> => "/runs/p"),
+    artifactPath: vi.fn(async (): Promise<string | null> => "/runs/p/02_plan/plan.md"),
     stop: vi.fn(async () => {}),
     resumeParked: vi.fn(async () => pipeP),
     requestPause: vi.fn(async () => pipeP),
@@ -170,6 +172,7 @@ function build() {
     createTask: vi.fn(async () => ({ outcome: "pending", task: scheduledS })),
   };
 
+  const opener = vi.fn(async () => {});
   const service = new TaskRunsService(
     agentRunner as unknown as AgentRunnerService,
     workflowRunner as unknown as WorkflowRunnerService,
@@ -180,9 +183,11 @@ function build() {
     projectsStore as unknown as ProjectsStorageService,
     scheduled as unknown as ScheduledTasksStorageService,
     scheduler as unknown as TaskSchedulerService,
+    opener,
   );
   return {
     service,
+    opener,
     agentRunner,
     workflowRunner,
     goalRunner,
@@ -578,6 +583,74 @@ describe("TaskRunsService", () => {
       scheduled.list.mockResolvedValue([{ ...scheduledS, id: "task1", status: "dispatched" }]);
       const run = await service.getTaskRun(agentA.runId);
       expect(run.taskOutcomeFinishedAt).toBeUndefined();
+    });
+  });
+
+  describe("PR-inbox gate after the run finished", () => {
+    const addressComments = (state: "awaiting-approval" | "pushed") => ({
+      repo: "acme/web",
+      number: 7,
+      url: "https://github.com/acme/web/pull/7",
+      head: "feat",
+      base: "main",
+      headSha: "abc",
+      state,
+    });
+
+    it("reads a done run as awaiting-approval while the task's push gate is open", async () => {
+      const { service, workflowRunner, scheduled } = build();
+      workflowRunner.listAll.mockResolvedValue([{ ...pipeP, status: "done", taskId: "task1" }]);
+      scheduled.list.mockResolvedValue([
+        {
+          ...scheduledS,
+          id: "task1",
+          status: "dispatched",
+          prAddressComments: addressComments("awaiting-approval"),
+        },
+      ]);
+      const run = await service.getTaskRun(pipeP.workflowRunId);
+      expect(run.status).toBe("awaiting-approval");
+    });
+
+    it("stays done once the gate is decided", async () => {
+      const { service, workflowRunner, scheduled } = build();
+      workflowRunner.listAll.mockResolvedValue([{ ...pipeP, status: "done", taskId: "task1" }]);
+      scheduled.list.mockResolvedValue([
+        {
+          ...scheduledS,
+          id: "task1",
+          status: "dispatched",
+          prAddressComments: addressComments("pushed"),
+        },
+      ]);
+      const run = await service.getTaskRun(pipeP.workflowRunId);
+      expect(run.status).toBe("done");
+    });
+  });
+
+  describe("openFolder", () => {
+    it("opens the run folder, or the named artifact instead", async () => {
+      const { service, workflowRunner, opener } = build();
+      await expect(service.openFolder(pipeP.workflowRunId)).resolves.toEqual({ path: "/runs/p" });
+      await expect(service.openFolder(pipeP.workflowRunId, "plan.md")).resolves.toEqual({
+        path: "/runs/p/02_plan/plan.md",
+      });
+      expect(workflowRunner.artifactPath).toHaveBeenCalledWith(pipeP.workflowRunId, "plan.md");
+      expect(opener.mock.calls).toEqual([["/runs/p"], ["/runs/p/02_plan/plan.md"]]);
+    });
+
+    it("is not found for a missing artifact or a non-workflow run", async () => {
+      const { service, workflowRunner, opener } = build();
+      workflowRunner.artifactPath.mockResolvedValue(null);
+      await expect(service.openFolder(pipeP.workflowRunId, "nope.md")).rejects.toThrow(
+        TaskRunNotFoundError,
+      );
+      await expect(service.openFolder(agentA.runId)).rejects.toThrow(TaskRunNotFoundError);
+      workflowRunner.artifactPath.mockResolvedValue("/runs/p/x.command");
+      await expect(service.openFolder(pipeP.workflowRunId, "x.command")).rejects.toThrow(
+        TaskRunNotFoundError,
+      );
+      expect(opener).not.toHaveBeenCalled();
     });
   });
 

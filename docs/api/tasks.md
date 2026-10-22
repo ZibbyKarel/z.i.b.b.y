@@ -752,7 +752,7 @@ POST   /api/tasks/runs/:runId/pause                           pause a running wo
                                                                 other kinds / states)
 POST   /api/tasks/runs/:runId/messages                        queue an operator message for the next agent stage of an open
                                                                 workflow run (409 for other kinds / finished runs)
-POST   /api/tasks/runs/:runId/open-folder                     open a workflow run's `book/` (else run root) folder in Finder; operator-initiated, no approval; 404 for non-workflow runs
+POST   /api/tasks/runs/:runId/open-folder                     open a workflow run's `book/` (else run root) folder in Finder, or with `{ artifact }` that run artifact (same allowlist as `artifacts/:name`; viewer file types only) in its default app; operator-initiated, no approval; 404 for non-workflow runs / missing artifacts
 POST   /api/tasks/runs/:runId/resume                          resume a parked/paused workflow or parked goal run (with a note;
                                                                 on a still-pausing run it withdraws the pause), or re-run an
                                                                 errored/interrupted agent run (with `--resume` if a session id

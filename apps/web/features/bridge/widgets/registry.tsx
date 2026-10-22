@@ -9,7 +9,7 @@ import { TasksWidget } from "./TasksWidget";
 
 /** What a row opens in the detail sheet. `key` is the row's `data-rk` value. */
 export interface BridgeSelection {
-  kind: "issue" | "task" | "pr";
+  kind: "issue" | "task" | "pr" | "run";
   id: string;
   /** Id of the widget the row lives in (J/K navigates within it). */
   widgetId: string;

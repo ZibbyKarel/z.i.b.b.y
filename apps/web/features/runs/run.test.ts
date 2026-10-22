@@ -53,6 +53,15 @@ describe("approvalForRun", () => {
     expect(approvalForRun(queue, run())).toBeUndefined();
   });
 
+  it("matches a post-run PR-inbox gate keyed by the owning task", () => {
+    const queue = [approval("task_1", "pr-address-comments")];
+    const found = approvalForRun(
+      queue,
+      run({ runId: "fix_1", kind: "workflow", taskId: "task_1" }),
+    );
+    expect(found?.id).toBe("appr-task_1");
+  });
+
   it("returns undefined unless the run is awaiting approval", () => {
     const queue = [approval("writer_123_42", "agent")];
     expect(approvalForRun(queue, run({ status: "running" }))).toBeUndefined();

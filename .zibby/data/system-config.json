@@ -12,5 +12,56 @@
   "ttsVoice": "cs_male_cv26_default",
   "maxWorkingAgents": 3,
   "roadmapTickMs": 900000,
-  "dockDoneTasksLimit": 20
+  "dockDoneTasksLimit": 20,
+  "ui": {
+    "density": "airy",
+    "bridge": {
+      "layout": [
+        {
+          "id": "briefing",
+          "type": "briefing",
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 3
+        },
+        {
+          "id": "issues",
+          "type": "issues",
+          "x": 0,
+          "y": 3,
+          "w": 4,
+          "h": 18
+        },
+        {
+          "id": "prs",
+          "type": "prs",
+          "x": 4,
+          "y": 3,
+          "w": 4,
+          "h": 18
+        },
+        {
+          "id": "tasks",
+          "type": "tasks",
+          "x": 8,
+          "y": 3,
+          "w": 4,
+          "h": 10
+        },
+        {
+          "id": "runs",
+          "type": "runs",
+          "x": 8,
+          "y": 13,
+          "w": 4,
+          "h": 8
+        }
+      ],
+      "preset": "DEFAULT",
+      "saved": {},
+      "collapsed": {},
+      "epicClosed": {}
+    }
+  }
 }

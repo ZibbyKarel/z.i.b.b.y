@@ -8,6 +8,7 @@ import {
   ArchivePageQuerySchema,
   ArchivePageSchema,
   AssignTaskRunProjectSchema,
+  OpenTaskRunFolderSchema,
   ResumeTaskRunSchema,
   RunFilesSchema,
   SendRunMessageSchema,
@@ -117,13 +118,13 @@ export const taskRunsContract = c.router(
       method: "POST",
       path: "/tasks/runs/:runId/open-folder",
       pathParams: RunIdParam,
-      body: EmptyBodySchema,
+      body: OpenTaskRunFolderSchema,
       responses: {
         200: z.object({ path: z.string() }),
         404: ErrorSchema,
       },
       summary:
-        "Open a workflow run's output folder (the book/ deliverable, else the run root) in Finder",
+        "Open a workflow run's output folder (the book/ deliverable, else the run root) in Finder, or one of its artifacts in the default app",
     },
 
     stopTaskRun: {

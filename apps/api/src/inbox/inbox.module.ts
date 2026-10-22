@@ -9,6 +9,7 @@ import { WorkspaceModule } from "../workspace/workspace.module";
 import { INBOX_STATE_FILE, InboxStateStore } from "./inbox-state.store";
 import { InboxAddressCommentsService } from "./inbox-address-comments.service";
 import { InboxPrDiffService } from "./inbox-pr-diff.service";
+import { InboxPrThreadsService } from "./inbox-pr-threads.service";
 import { InboxRebaseService } from "./inbox-rebase.service";
 import { InboxReviewService } from "./inbox-review.service";
 import { InboxController } from "./inbox.controller";
@@ -39,6 +40,7 @@ export function resolveInboxStateFile(): string {
     InboxRebaseService,
     InboxAddressCommentsService,
     InboxPrDiffService,
+    InboxPrThreadsService,
   ],
 })
 export class InboxModule {}

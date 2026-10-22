@@ -24,16 +24,18 @@ squash-and-merge through the projects merge route. UI spec: `docs/plans/inbox-ui
 
 ## Endpoints
 
-| Method | Path                                     | Body                                                                                                                               | Response                                                                                                                   |
-| ------ | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/api/roadmap/items`                     | —                                                                                                                                  | `InboxItemsResponse`                                                                                                       |
-| GET    | `/api/inbox/prs`                         | —                                                                                                                                  | `InboxPrsResponse`                                                                                                         |
-| POST   | `/api/inbox/prs/review`                  | `{ projectId, repo, number, title?, level? }` (strict; `level` = `quick` \| `thorough` \| `tested` \| `browser`, absent = `quick`) | 201 `{ taskId }`; 404 project; 422 no GitHub link / repo not the project's                                                 |
-| POST   | `/api/inbox/prs/rebase`                  | `{ projectId, repo, number, title? }` (strict)                                                                                     | 201 `{ taskId }`; 404 project; 422 no GitHub link / not the project's repo / fork / closed / head is base or default       |
-| POST   | `/api/inbox/prs/address-comments`        | `{ projectId, repo, number, title? }` (strict; same body as rebase)                                                                | 201 `{ taskId }`; 404 project; 422 no GitHub link / foreign repo / fork / closed / head is base or default / run in flight |
-| GET    | `/api/inbox/prs/:projectId/:number/diff` | —                                                                                                                                  | 200 `{ diff, truncated }`; 404 project/PR; 422 no GitHub link/token rejected; 502 GitHub error                             |
-| GET    | `/api/inbox/state`                       | —                                                                                                                                  | `InboxState`                                                                                                               |
-| PUT    | `/api/inbox/state`                       | `{ integrationId, externalId, hidden }` (strict)                                                                                   | `InboxState`                                                                                                               |
+| Method | Path                                                        | Body                                                                                                                               | Response                                                                                                                                                              |
+| ------ | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/roadmap/items`                                        | —                                                                                                                                  | `InboxItemsResponse`                                                                                                                                                  |
+| GET    | `/api/inbox/prs`                                            | —                                                                                                                                  | `InboxPrsResponse`                                                                                                                                                    |
+| POST   | `/api/inbox/prs/review`                                     | `{ projectId, repo, number, title?, level? }` (strict; `level` = `quick` \| `thorough` \| `tested` \| `browser`, absent = `quick`) | 201 `{ taskId }`; 404 project; 422 no GitHub link / repo not the project's                                                                                            |
+| POST   | `/api/inbox/prs/rebase`                                     | `{ projectId, repo, number, title? }` (strict)                                                                                     | 201 `{ taskId }`; 404 project; 422 no GitHub link / not the project's repo / fork / closed / head is base or default                                                  |
+| POST   | `/api/inbox/prs/address-comments`                           | `{ projectId, repo, number, title? }` (strict; same body as rebase)                                                                | 201 `{ taskId }`; 404 project; 422 no GitHub link / foreign repo / fork / closed / head is base or default / run in flight                                            |
+| GET    | `/api/inbox/prs/:projectId/:number/diff`                    | —                                                                                                                                  | 200 `{ diff, truncated }`; 404 project/PR; 422 no GitHub link/token rejected; 502 GitHub error                                                                        |
+| GET    | `/api/inbox/prs/:projectId/:number/threads`                 | —                                                                                                                                  | 200 `InboxPrThread[]`; 404 project/PR; 422 no GitHub link/token rejected; 502 GitHub error                                                                            |
+| POST   | `/api/inbox/prs/:projectId/:number/threads/:threadId/reply` | `{ body?, resolve? }` (at least one; `body` 1–65536 chars trimmed)                                                                 | 200 the updated `InboxPrThread`; 404 unknown project or PR/thread GitHub does not know; 422 no GitHub link / token rejected / thread not on this PR; 502 GitHub error |
+| GET    | `/api/inbox/state`                                          | —                                                                                                                                  | `InboxState`                                                                                                                                                          |
+| PUT    | `/api/inbox/state`                                          | `{ integrationId, externalId, hidden }` (strict)                                                                                   | `InboxState`                                                                                                                                                          |
 
 `/api/roadmap/items` has no `:projectId` segment, so it can't collide with the
 per-project `/api/projects/:projectId/roadmap/...` routes.
@@ -181,6 +183,24 @@ the cap and returned with `truncated: true`. The request times out after 15 s. E
 `GithubDiffError` carrying the upstream status): 404 unknown project or GitHub 404, 422 project has no
 GitHub link or GitHub 401/403, 502 any other GitHub failure.
 
+## Review threads (`GET /api/inbox/prs/:projectId/:number/threads`)
+
+Read-only (Tier 1). One GitHub GraphQL query (`InboxPrThreadsService.list`):
+`reviewThreads(first:100)` with `comments(first:30)` each — more are not returned.
+Each thread is `{ id, isResolved, isOutdated, path, line, startLine, diffHunk, comments }`;
+`diffHunk` is the first comment's hunk (it ends at the commented line), a comment is
+`{ id, author: { login, avatarUrl } | null, createdAt, body }`. Comment bodies are
+inbound data, rendered escaped.
+
+`POST …/threads/:threadId/reply` is the operator's own reply typed in the PR detail
+(operator token required, no approval — like clicking "Comment" on GitHub; ZIBBY never
+calls it by itself). The thread id is checked against this PR's threads first (not
+one of them → 422, nothing posted); then `resolveReviewThread` when `resolve` is true
+and, after it, `addPullRequestReviewThreadReply` when `body` is set (resolve first: it is
+idempotent, so a failed resolve posts nothing and a retry cannot duplicate the reply). Returns the thread re-read
+from GitHub. GraphQL errors (HTTP 200 with `errors`) and other GitHub failures → 502,
+GitHub 401/403 → 422, GitHub 404 (unknown PR/thread) → 404.
+
 ## Squash and merge
 
 Only in `ready-to-merge`, behind the hold-to-confirm `HoldButton`. It calls the
@@ -242,9 +262,10 @@ moved since the click is rejected as non-fast-forward). Reject → `discarded`. 
 empty, over-500-char and duplicate entries are dropped, max 50, listed in the approval
 `detail` under "Replies ZIBBY will post after the push") via GraphQL
 `addPullRequestReviewThreadReply` — only to threads a fresh `reviewThreads` read of this PR
-reports as unresolved. Then each posted reply flagged `resolve: true` whose thread the parked
-report also marks `done in` (`threadsMarkedDone`) gets GraphQL `resolveReviewThread` (a thread
-whose reply failed stays open), and review is re-requested via
+reports as unresolved; empty bodies are never posted. Then each open thread whose reply is
+flagged `resolve: true` and was just posted (or has an empty body) gets GraphQL
+`resolveReviewThread` — the operator's tick wins over the report's `done in`, which is only
+required when the operator sent no replies (a thread whose reply failed stays open), and review is re-requested via
 `POST /repos/{repo}/pulls/{n}/requested_reviewers` from every user whose latest review
 (`latestOpinionatedReviews`) is `CHANGES_REQUESTED`, excluding the PR author and bots.
 `replied` / `repliesNote` record what was posted and why the rest was skipped; `resolved`,
@@ -252,6 +273,19 @@ whose reply failed stays open), and review is re-requested via
 `pushed`, a push failure does nothing. A missing reply file never blocks the push. The Tier-2
 task outcome says how many replies reached GitHub, how many threads were resolved, who was
 asked to re-review, and any follow-up failure.
+
+Approving with `POST /api/approvals/:id/approve` may carry `{ replies: [{ threadId, body, resolve }] }`
+(`OperatorThreadReply`, body may be empty): they replace the parked drafts in the same claim
+(`push(taskId, replies)`), so the operator's edited text and resolve ticks are what is posted. The
+`Addressed: all` auto-approve (or a quick-approve with an empty body) passes none: it posts the agent's
+non-empty drafts and resolves only threads the report marks `done in` — the agent's `resolve` flag
+alone never resolves a thread unless the operator edited the replies.
+A run that made no new commits but drafted replies parks a **replies-only** approval (no
+`fixedSha`): approving it skips `pushFastForward`, settles `pushed` with note `replies only`
+and runs the same follow-up.
+
+A reply typed in the PR detail (`POST …/threads/:threadId/reply`) records a `channel-reply`
+activity entry.
 
 `GET /api/inbox/prs` rows carry `addressComments { taskId, state, finishedAt? }` (latest such task per PR; a
 `running` one whose task/run died reads `failed`).

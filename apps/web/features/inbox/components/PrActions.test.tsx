@@ -150,8 +150,8 @@ describe("PrActions review", () => {
     expect(screen.getByTestId(DropDownButtonTestId.Trigger)).toBeDisabled();
   });
 
-  it("a draft review request offers no review", () => {
-    expect(hasPrActions(pr(1, { ...toReview, draft: true }))).toBe(false);
+  it("a draft review request still offers review", () => {
+    expect(hasPrActions(pr(1, { ...toReview, draft: true }))).toBe(true);
   });
 });
 
@@ -273,7 +273,6 @@ describe("PrActions address / rebase", () => {
     rerender(<PrActions baseLabel="main" pr={pr(7, {})} />);
     expect(screen.queryByTestId(PrActionsTestId.Rebase)).toBeNull();
     expect(hasPrActions(pr(7, {}))).toBe(false);
-    expect(hasPrActions(pr(7, { ...toReview, mergeable: false, draft: true }))).toBe(false);
   });
 
   it("clicking Rebase starts it; a refusal shows the server's reason", () => {

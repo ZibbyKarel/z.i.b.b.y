@@ -24,6 +24,7 @@ vi.mock("../../../projects/mutations", () => ({
 }));
 vi.mock("../../../inbox/queries", () => ({
   useInboxPrsQuery: () => ({ data: { prs: hooks.prs, errors: [] } }),
+  useInboxPrThreadsQuery: () => ({ data: [] }),
   useInboxPrDiffQuery: () => ({
     data: { diff: hooks.diff, truncated: false },
     isPending: false,

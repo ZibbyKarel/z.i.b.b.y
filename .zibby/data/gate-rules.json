@@ -1,5 +1,32 @@
 [
   {
+    "id": "floor-overwrite",
+    "name": "Přepis souboru",
+    "desc": "Přepis existujícího souboru proběhne bez ptaní.",
+    "match": [
+      {
+        "type": "action",
+        "action": "overwrite"
+      }
+    ],
+    "decision": "allow"
+  },
+  {
+    "id": "floor-move",
+    "name": "Přesun souboru",
+    "desc": "Přesun nebo přejmenování souboru čeká na tvé potvrzení.",
+    "match": [
+      {
+        "type": "action",
+        "action": "move"
+      }
+    ],
+    "decision": "ask",
+    "resolve": {
+      "type": "human"
+    }
+  },
+  {
     "name": "Nákup",
     "desc": "Jakýkoli nákup čeká na tvé potvrzení.",
     "match": [

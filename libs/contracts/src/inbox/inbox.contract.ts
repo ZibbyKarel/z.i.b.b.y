@@ -5,9 +5,12 @@ import {
   AddressInboxPrCommentsInputSchema,
   InboxItemsResponseSchema,
   InboxPrDiffSchema,
+  InboxPrThreadSchema,
+  InboxPrThreadsSchema,
   InboxPrsResponseSchema,
   InboxStateSchema,
   RebaseInboxPrInputSchema,
+  ReplyInboxPrThreadInputSchema,
   ReviewInboxPrInputSchema,
   ReviewInboxPrResultSchema,
   SetInboxHiddenSchema,
@@ -92,6 +95,33 @@ export const inboxContract = c.router(
       },
       summary:
         "Get one PR's unified diff from GitHub (repo derived from the project's GitHub link)",
+    },
+    getInboxPrThreads: {
+      method: "GET",
+      path: "/inbox/prs/:projectId/:number/threads",
+      pathParams: z.object({
+        projectId: z.string().min(1),
+        number: z.coerce.number().int().positive(),
+      }),
+      responses: {
+        200: InboxPrThreadsSchema,
+        404: ErrorSchema,
+        422: ErrorSchema,
+        502: ErrorSchema,
+      },
+      summary: "List one PR's review threads from GitHub",
+    },
+    replyInboxPrThread: {
+      method: "POST",
+      path: "/inbox/prs/:projectId/:number/threads/:threadId/reply",
+      pathParams: z.object({
+        projectId: z.string().min(1),
+        number: z.coerce.number().int().positive(),
+        threadId: z.string().regex(/^PRRT_[\w-]+$/),
+      }),
+      body: ReplyInboxPrThreadInputSchema,
+      responses: { 200: InboxPrThreadSchema, 404: ErrorSchema, 422: ErrorSchema, 502: ErrorSchema },
+      summary: "Reply to and/or resolve one PR review thread; returns the updated thread",
     },
     getInboxState: {
       method: "GET",

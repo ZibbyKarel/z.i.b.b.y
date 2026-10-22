@@ -229,6 +229,13 @@ export const SendRunMessageSchema = z.object({
 });
 export type SendRunMessageInput = z.infer<typeof SendRunMessageSchema>;
 
+/** Body accepted by `openTaskRunFolder` — `artifact` opens that run artifact (same allowlist as
+ * `getTaskRunArtifact`) instead of the folder. */
+export const OpenTaskRunFolderSchema = z.object({
+  artifact: z.string().min(1).max(200).optional(),
+});
+export type OpenTaskRunFolderInput = z.infer<typeof OpenTaskRunFolderSchema>;
+
 /** One entry of a workflow run folder listing. */
 export const RunFileEntrySchema = z.object({
   /** POSIX path relative to the run root, e.g. "output/report.md". */

@@ -1,6 +1,7 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { ErrorSchema } from "../common.schema";
+import { OperatorThreadReplySchema } from "../tasks/task.schema";
 import { AnswerApprovalSchema, ApprovalSchema, PrReviewEventSchema } from "./approval.schema";
 
 const c = initContract();
@@ -37,7 +38,12 @@ export const approvalsContract = c.router(
       pathParams: ApprovalIdParam,
       // todo-10: the operator's pick of the GitHub review event on a PR-review sign-off.
       // Optional and additive — a caller that posts `{}` (or nothing) gets COMMENT.
-      body: z.object({ reviewEvent: PrReviewEventSchema.optional() }).optional(),
+      body: z
+        .object({
+          reviewEvent: PrReviewEventSchema.optional(),
+          replies: z.array(OperatorThreadReplySchema).max(100).optional(),
+        })
+        .optional(),
       responses: { 200: ApprovalSchema, 401: ErrorSchema, 404: ErrorSchema, 409: ErrorSchema },
       summary: "Approve a pending approval (resumes the gated run)",
     },

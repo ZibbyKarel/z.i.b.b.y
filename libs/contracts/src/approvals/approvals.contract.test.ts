@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ApprovalSchema, approvalsContract } from "../index";
+import { ApprovalSchema, PrThreadReplySchema, approvalsContract } from "../index";
 
 describe("approvalsContract", () => {
   it("exposes list/get/approve/reject under /api/approvals", () => {
@@ -118,5 +118,24 @@ describe("approval schema", () => {
       expect(parsed.success).toBe(true);
       if (parsed.success) expect(parsed.data.sourceUrl).toBeUndefined();
     });
+  });
+});
+
+describe("operator thread replies", () => {
+  it("approveApproval accepts replies with a valid threadId and empty body", () => {
+    const body = approvalsContract.approveApproval.body;
+    expect(
+      body.safeParse({ replies: [{ threadId: "PRRT_a", body: "", resolve: true }] }).success,
+    ).toBe(true);
+    expect(body.safeParse({ replies: [{ threadId: "x", body: "", resolve: true }] }).success).toBe(
+      false,
+    );
+  });
+
+  it("PrThreadReplySchema allows an empty body but caps at 500", () => {
+    expect(PrThreadReplySchema.safeParse({ threadId: "PRRT_a", body: "" }).success).toBe(true);
+    expect(
+      PrThreadReplySchema.safeParse({ threadId: "PRRT_a", body: "x".repeat(501) }).success,
+    ).toBe(false);
   });
 });

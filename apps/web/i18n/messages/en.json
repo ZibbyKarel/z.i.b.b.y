@@ -929,6 +929,12 @@
     "waiting": "waiting for output…"
   },
   "approvals": {
+    "addressSummary": "Fixed {done} of {total} threads · {question} questions · {skipped} skipped",
+    "addressReport": "Full report",
+    "addressAlreadyResolved": "Already resolved on GitHub",
+    "addressThreadsError": "Could not load the threads. The drafts below will be sent unchanged.",
+    "approvePushReplies": "Approve · push + {n} replies",
+    "approveReplies": "Approve · {n} replies",
     "operatorTokenMissing": "The operator token is missing or wrong — set it in Settings → General.",
     "wants": "wants to",
     "exactAction": "exactly what the agent will do",
@@ -1425,6 +1431,12 @@
         "body": "There is no run with ID {id}. It may have been deleted.",
         "back": "← ALL RUNS"
       }
+    },
+    "artifacts": {
+      "title": "Artifacts",
+      "openPr": "Open PR",
+      "openFolder": "Open folder",
+      "openFile": "Open {name}"
     }
   },
   "gates": {
@@ -2828,6 +2840,24 @@
       "h": "{n} h",
       "d": "{n} d"
     },
+    "threads": {
+      "outcome": {
+        "done": "fixed in {note}",
+        "skipped": "skipped",
+        "question": "question · waiting on you"
+      },
+      "outdated": "outdated",
+      "new": "new since the run",
+      "comment": "{login} · {age}",
+      "unknownAuthor": "unknown",
+      "reply": "Reply",
+      "resolve": "Resolve thread",
+      "send": "Send",
+      "summary": "Review threads · {open} unresolved · {resolved} resolved",
+      "showResolved": "show resolved",
+      "error": "Couldn't load review threads",
+      "replyError": "Couldn't send the reply"
+    },
     "sync": {
       "button": "Sync",
       "syncing": "Syncing…",
@@ -3164,7 +3194,10 @@
         "colTask": "TASK · STEP",
         "colProgress": "PROGRESS",
         "colIssue": "ISSUE",
-        "group": { "active": "RUNNING", "finished": "FINISHED" },
+        "group": {
+          "active": "RUNNING",
+          "finished": "FINISHED"
+        },
         "state": {
           "working": "WORKING",
           "thinking": "THINKING",
@@ -3212,7 +3245,8 @@
       "kind": {
         "issue": "ISSUE",
         "task": "TASK",
-        "pr": "PULL REQUEST"
+        "pr": "PULL REQUEST",
+        "run": "RUN"
       },
       "needsYou": "NEEDS YOU · {kind}",
       "waiting": "WAITING {wait}",
@@ -3297,6 +3331,11 @@
           "reviewRequested": "REVIEW REQUESTED",
           "draft": "DRAFT"
         }
+      },
+      "run": {
+        "open": "OPEN RUN ↗",
+        "openApproval": "FULL APPROVAL ↗",
+        "output": "PHASE OUTPUT"
       }
     }
   }

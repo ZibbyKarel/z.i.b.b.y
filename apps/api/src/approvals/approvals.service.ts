@@ -4,6 +4,7 @@ import {
   type ApprovalRunKind,
   type DepartmentId,
   OPERATOR_QUESTION_ACTION,
+  type OperatorThreadReply,
   type PrReviewEvent,
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
@@ -137,8 +138,11 @@ export class ApprovalsService {
   }
 
   /** Approve a pending approval and resume its gated run. `reviewEvent` — todo-10, the operator's PR-review pick. */
-  async approve(id: string, opts: { reviewEvent?: PrReviewEvent } = {}): Promise<Approval> {
-    const approval = await this.decide(id, "approved", undefined, opts.reviewEvent);
+  async approve(
+    id: string,
+    opts: { reviewEvent?: PrReviewEvent; replies?: OperatorThreadReply[] } = {},
+  ): Promise<Approval> {
+    const approval = await this.decide(id, "approved", undefined, opts.reviewEvent, opts.replies);
     this.log?.info("approval approved; resuming run", {
       id,
       runId: approval.runId,
@@ -247,6 +251,7 @@ export class ApprovalsService {
     status: Exclude<Approval["status"], "pending">,
     reason?: string,
     reviewEvent?: PrReviewEvent,
+    replies?: OperatorThreadReply[],
   ): Promise<Approval> {
     return withPathLock(`approval:${id}`, async () => {
       const approval = await this.storage.get(id);
@@ -258,6 +263,8 @@ export class ApprovalsService {
         ...(reason ? { reason } : {}),
         // todo-10: only a PR-review sign-off (it carries a suggestion) records a pick.
         ...(reviewEvent && approval.suggestedReviewEvent ? { reviewEvent } : {}),
+        // The operator's edited thread replies — only a pr-address-comments push approval takes them.
+        ...(replies && approval.kind === "pr-address-comments" ? { replies } : {}),
       };
       void this.activity?.record({
         kind: `approval-${status}`,

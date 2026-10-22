@@ -81,9 +81,9 @@ export class TaskRunsController {
         return { status: 200, body: artifact };
       },
 
-      openTaskRunFolder: async ({ params: { runId } }) => {
+      openTaskRunFolder: async ({ params: { runId }, body }) => {
         try {
-          return { status: 200, body: await this.runs.openFolder(runId) };
+          return { status: 200, body: await this.runs.openFolder(runId, body.artifact) };
         } catch (error) {
           if (isMissing(error)) return { status: 404, body: { message: notFound(runId) } };
           throw error;

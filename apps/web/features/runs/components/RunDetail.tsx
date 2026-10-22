@@ -1,9 +1,16 @@
 "use client";
 
-import { RailSplit, SegmentedControl, Stack, StatusDot, Typography } from "@zibby/design-system";
+import {
+  Container,
+  RailSplit,
+  SegmentedControl,
+  Stack,
+  StatusDot,
+  Typography,
+} from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useApprovalsQuery } from "../../approvals";
 import { useNewTask } from "../../tasks";
 import { useWorkflowsQuery } from "../../workflows";
@@ -22,6 +29,7 @@ import { useRunActions } from "../useRunActions";
 import { RunComposer } from "./RunComposer";
 import { RunDetailActions } from "./RunDetailActions";
 import { RunDetailHeader } from "./RunDetailHeader";
+import { RunApprovalBanner } from "./RunFeedBanners";
 import { RunInputView } from "./RunInputView";
 import { RunLiveFeed } from "./RunLiveFeed";
 import { RunOutputView, useContinueTaskContext } from "./RunOutputView";
@@ -35,6 +43,10 @@ export enum RunDetailTestId {
 
 export interface RunDetailProps {
   run: RunView;
+  /** Hosted in a detail sheet (the Bridge): compact header, stacked rail — same content as the page. */
+  embedded?: boolean;
+  /** Rendered right under the approval banner, above the header (the sheet's gated-phase output). */
+  children?: ReactNode;
 }
 
 type View = "live" | "input" | "output";
@@ -42,7 +54,7 @@ type View = "live" | "input" | "output";
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
 /** Run detail: header + metrics, then the stage rail beside the LIVE / INPUT / OUTPUT body and the composer. */
-export function RunDetail({ run }: RunDetailProps) {
+export function RunDetail({ run, embedded, children }: RunDetailProps) {
   const t = useTranslations("runs.detail");
   const router = useRouter();
   const [view, setView] = useState<View>("live");
@@ -139,6 +151,17 @@ export function RunDetail({ run }: RunDetailProps) {
 
   return (
     <Stack data-testid={RunDetailTestId.Root} gap="0">
+      {mode === "approval" && approval && (
+        <Container padding={["250", "300", "0", "300"]}>
+          <RunApprovalBanner
+            approval={approval}
+            diffstat={run.diffstat}
+            onToggleRevise={() => setReviseOpen((o) => !o)}
+            reviseOpen={reviseOpen}
+          />
+        </Container>
+      )}
+      {children}
       <RunDetailHeader
         actions={
           <RunDetailActions
@@ -156,6 +179,7 @@ export function RunDetail({ run }: RunDetailProps) {
           />
         }
         agent={agent}
+        compact={embedded}
         metrics={metrics}
         mode={mode}
         progressPct={progressPct}
@@ -187,6 +211,7 @@ export function RunDetail({ run }: RunDetailProps) {
             selectedPhaseId={selected?.phaseId ?? null}
           />
         }
+        stacked={embedded}
         toolbar={
           <Stack align="center" direction="row" gap="150" justify="between">
             <Stack data-testid={RunDetailTestId.ViewSwitch}>
@@ -218,15 +243,7 @@ export function RunDetail({ run }: RunDetailProps) {
         }
       >
         {view === "live" && (
-          <RunLiveFeed
-            approval={approval}
-            items={items}
-            mode={mode}
-            onToggleRevise={() => setReviseOpen((o) => !o)}
-            rail={rail}
-            reviseOpen={reviseOpen}
-            run={run}
-          />
+          <RunLiveFeed approval={approval} items={items} mode={mode} rail={rail} run={run} />
         )}
         {view === "input" && <RunInputView run={run} />}
         {view === "output" && (

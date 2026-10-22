@@ -2,9 +2,9 @@
 title: Vault lint
 tags:
   - report
-updated: '2026-10-21'
+updated: '2026-10-22'
 ---
-Generated 2026-10-21. Report only — no notes were modified.
+Generated 2026-10-22. Report only — no notes were modified.
 
 ## Broken wikilinks (15)
 - [[2026-07-30]] → `subsystem-forge-moc`

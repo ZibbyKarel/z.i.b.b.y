@@ -3,6 +3,7 @@ import { gateTitleKey } from "../approvals/approval";
 import { useWorkflowsQuery } from "../workflows";
 import { useRunArtifactQuery } from "./queries/useRunArtifactQuery";
 import type { RunView } from "./run";
+import { latestProduces } from "./useRunArtifacts";
 
 /** The run fields a checkpoint needs to locate the finished phase's output. */
 export type CheckpointRun = Pick<RunView, "kind" | "runId" | "owner" | "stageRuns">;
@@ -22,10 +23,7 @@ export function useCheckpointArtifact(
     run?.kind === "workflow" &&
     gateTitleKey(approval) === "stage-approval";
   const { data: workflows } = useWorkflowsQuery();
-  const phaseId = run?.stageRuns?.at(-1)?.phaseId;
-  const produces = isCheckpoint
-    ? workflows?.find((w) => w.id === run.owner)?.phases.find((p) => p.id === phaseId)?.produces
-    : undefined;
+  const produces = isCheckpoint ? latestProduces(run, workflows) : undefined;
   const { data } = useRunArtifactQuery(run?.runId ?? "", produces ?? "", Boolean(produces));
   return produces ? (data?.content ?? null) : null;
 }

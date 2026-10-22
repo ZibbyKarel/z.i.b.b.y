@@ -1299,6 +1299,13 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     workflowRunId: string,
     name: string,
   ): Promise<{ name: WorkflowRunArtifact["name"]; content: string } | null> {
+    const file = await this.artifactPath(workflowRunId, name);
+    const content = file ? await fs.readFile(file, "utf8").catch(() => null) : null;
+    return content === null ? null : { name: name as WorkflowRunArtifact["name"], content };
+  }
+
+  /** Absolute path of a whitelisted run artifact — the {@link readArtifact} lookup, without reading. */
+  async artifactPath(workflowRunId: string, name: string): Promise<string | null> {
     const root = this.resolveRunDir(workflowRunId);
     if (!root) return null;
     const run = this.runs.get(workflowRunId) ?? (await this.readAggregate(workflowRunId));
@@ -1314,7 +1321,6 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       name === fileOutputName ||
       producedNames.has(name);
     if (!isAllowed) return null;
-    const allowed = name as WorkflowRunArtifact["name"];
     // Candidate dirs: the run root (diffstat.txt) + the phase sandboxes. The
     // currently-executing phase is included too — a run parked on the PR gate has
     // already written its `produces` (pr-draft.md) but is not yet in `stageRuns`
@@ -1336,10 +1342,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     }
     const dirs = [root, ...[...phaseDirs].map((id) => path.join(root, id))];
     for (const dir of dirs) {
-      const file = this.resolveInside(dir, allowed);
-      if (!file) continue;
-      const content = await fs.readFile(file, "utf8").catch(() => null);
-      if (content !== null) return { name: allowed, content };
+      const file = this.resolveInside(dir, name);
+      if (file && (await fs.stat(file).catch(() => null))?.isFile()) return file;
     }
     return null;
   }

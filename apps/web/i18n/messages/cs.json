@@ -929,6 +929,12 @@
     "waiting": "čekání na výstup…"
   },
   "approvals": {
+    "addressSummary": "Opraveno {done} z {total} vláken · {question} otázek · {skipped} přeskočeno",
+    "addressReport": "Celý report",
+    "addressAlreadyResolved": "Už vyřešeno na GitHubu",
+    "addressThreadsError": "Vlákna se nepodařilo načíst. Níže uvedené odpovědi z reportu se odešlou beze změny.",
+    "approvePushReplies": "Schválit · push + {n} odpovědí",
+    "approveReplies": "Schválit · {n} odpovědí",
     "operatorTokenMissing": "Operátorský token chybí nebo je špatný — nastav ho v Nastavení → Obecné.",
     "wants": "chce",
     "exactAction": "přesně tohle agent udělá",
@@ -1425,6 +1431,12 @@
         "body": "Běh s ID {id} neexistuje. Možná byl smazán.",
         "back": "← VŠECHNY BĚHY"
       }
+    },
+    "artifacts": {
+      "title": "Artefakty",
+      "openPr": "Otevřít PR",
+      "openFolder": "Otevřít složku",
+      "openFile": "Otevřít {name}"
     }
   },
   "gates": {
@@ -2828,6 +2840,24 @@
       "h": "{n} h",
       "d": "{n} d"
     },
+    "threads": {
+      "outcome": {
+        "done": "opraveno v {note}",
+        "skipped": "přeskočeno",
+        "question": "otázka · čeká na tebe"
+      },
+      "outdated": "zastaralé",
+      "new": "nový od běhu",
+      "comment": "{login} · {age}",
+      "unknownAuthor": "neznámý",
+      "reply": "Odpověď",
+      "resolve": "Vyřešit thread",
+      "send": "Odeslat",
+      "summary": "Review thready · {open} nevyřešené · {resolved} vyřešených",
+      "showResolved": "zobrazit vyřešené",
+      "error": "Vlákna se nepodařilo načíst",
+      "replyError": "Odpověď se nepodařilo odeslat"
+    },
     "sync": {
       "button": "Synchronizovat",
       "syncing": "Synchronizuji…",
@@ -3164,7 +3194,10 @@
         "colTask": "ÚKOL · KROK",
         "colProgress": "POSTUP",
         "colIssue": "ISSUE",
-        "group": { "active": "BĚŽÍ", "finished": "UKONČENÉ" },
+        "group": {
+          "active": "BĚŽÍ",
+          "finished": "UKONČENÉ"
+        },
         "state": {
           "working": "PRACUJE",
           "thinking": "PŘEMÝŠLÍ",
@@ -3212,7 +3245,8 @@
       "kind": {
         "issue": "ISSUE",
         "task": "ÚKOL",
-        "pr": "PULL REQUEST"
+        "pr": "PULL REQUEST",
+        "run": "BĚH"
       },
       "needsYou": "ČEKÁ NA TEBE · {kind}",
       "waiting": "ČEKÁ {wait}",
@@ -3297,6 +3331,11 @@
           "reviewRequested": "ŽÁDOST O REVIEW",
           "draft": "DRAFT"
         }
+      },
+      "run": {
+        "open": "OTEVŘÍT BĚH ↗",
+        "openApproval": "CELÉ SCHVÁLENÍ ↗",
+        "output": "VÝSTUP FÁZE"
       }
     }
   }

@@ -562,12 +562,30 @@ export type PrAddressCommentsState = PrRebaseState;
 export const PrThreadReplySchema = z
   .object({
     threadId: z.string().regex(/^PRRT_[\w-]+$/),
-    body: z.string().trim().min(1).max(500),
+    body: z.string().trim().max(500),
     /** Only for a thread the `address` phase marked `done in <sha>`: ZIBBY resolves it after the reply. */
     resolve: z.boolean().optional(),
   })
   .strict();
 export type PrThreadReply = z.infer<typeof PrThreadReplySchema>;
+
+/** A reply the operator approved (possibly edited) for one review thread; empty body = resolve only. */
+export const OperatorThreadReplySchema = z
+  .object({
+    threadId: z.string().regex(/^PRRT_[\w-]+$/),
+    body: z.string().trim().max(65536),
+    resolve: z.boolean(),
+  })
+  .strict();
+export type OperatorThreadReply = z.infer<typeof OperatorThreadReplySchema>;
+
+/** What the address phase did with one review thread. */
+export const PrThreadOutcomeSchema = z.object({
+  threadId: z.string().regex(/^PRRT_[\w-]+$/),
+  kind: z.enum(["done", "skipped", "question"]),
+  note: z.string().max(500),
+});
+export type PrThreadOutcome = z.infer<typeof PrThreadOutcomeSchema>;
 
 /**
  * How a task's dispatched run ended: a terminal verdict plus a short, readable
@@ -814,7 +832,11 @@ export const ScheduledTaskSchema = z.object({
       approvalId: z.string().optional(),
       note: z.string().optional(),
       /** Thread replies `github-commenter` drafted (validated at park time); posted only after the push. */
-      replies: z.array(PrThreadReplySchema).max(50).optional(),
+      outcomes: z.array(PrThreadOutcomeSchema).max(100).optional(),
+      replies: z
+        .array(z.union([PrThreadReplySchema, OperatorThreadReplySchema]))
+        .max(100)
+        .optional(),
       /** When the push + follow-up finished (`pushed`) — the inbox hides "Address" until the PR changes after it. */
       finishedAt: IsoDateTimeSchema.optional(),
       /** How many replies reached GitHub, and why any did not. */

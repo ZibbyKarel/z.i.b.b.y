@@ -5,6 +5,7 @@ import {
   type AgentRun,
   type PrOutput,
   type PrReviewEvent,
+  type PrThreadOutcome,
   type PrThreadReply,
   PrThreadReplySchema,
   type ScheduledTask,
@@ -69,6 +70,34 @@ export function threadsMarkedDone(report: string | undefined): Set<string> {
     if (m[1] && /done in/i.test(block)) done.add(m[1]);
   });
   return done;
+}
+
+/**
+ * Per-thread outcome of the address report: each `thread: <id>` block is `done in <shas>`,
+ * `skipped: <why>`, `question: <what>` — or, when none matches, an unreadable `skipped`.
+ */
+export function parseThreadOutcomes(report: string | undefined): PrThreadOutcome[] {
+  const text = report ?? "";
+  const matches = [...text.matchAll(/thread:\s*`?([A-Za-z0-9_-]+)`?/g)];
+  const out: PrThreadOutcome[] = [];
+  matches.forEach((m, i) => {
+    const block = text.slice(m.index, matches[i + 1]?.index);
+    const done = /^[\s>*_-]*done in\s+([0-9a-f]{7,40}(?:\s+and\s+[0-9a-f]{7,40})*)/im.exec(block);
+    const skipped = /^[\s>*_-]*skipped:\s*(.+)/im.exec(block);
+    const question = /^[\s>*_-]*question:\s*(.+)/im.exec(block);
+    const [kind, note] = done
+      ? (["done", done[1]] as const)
+      : skipped
+        ? (["skipped", skipped[1]] as const)
+        : question
+          ? (["question", question[1]] as const)
+          : (["skipped", "unreadable report line"] as const);
+    // ponytail: 100 = contract cap on `outcomes`; threads beyond it get no outcome row.
+    if (m[1] && out.length < 100) {
+      out.push({ threadId: m[1], kind, note: (note ?? "").trim().slice(0, 500) });
+    }
+  });
+  return out;
 }
 
 /**
@@ -414,9 +443,41 @@ export class TaskOutputService implements OnModuleInit {
     if (typeof facts === "string") {
       return fail(`could not read the worktree: ${facts}`.slice(0, 300));
     }
-    if (facts.sha === fix.headSha) return fail("no new commits");
-    const autoPush = isAutoPushAddressComments(report);
     const replies = parseThreadReplies(rawReplies);
+    const outcomes = parseThreadOutcomes(report);
+    if (facts.sha === fix.headSha) {
+      // No new commits: only drafted replies are worth the operator's attention (empty drafts are not).
+      if (!replies.some((r) => r.body.trim())) return fail("no new commits");
+      const approval = await this.approvals.requestApproval({
+        runId: task.id,
+        kind: "pr-address-comments",
+        skill: "fullstack-developer",
+        action: "github.pr.comment",
+        detail: `Post review replies — ${ref}\n\n${report}\n\n## Replies ZIBBY will post\n\n${replies
+          .filter((r) => r.body.trim())
+          .map((r) => `${r.threadId}: ${r.body}`)
+          .join("\n")}`,
+        risk: "high",
+        sourceUrl: fix.url,
+      });
+      await this.storage.setPrAddressComments(task.id, (c) =>
+        c
+          ? {
+              ...c,
+              state: "awaiting-approval",
+              report,
+              worktree,
+              approvalId: approval.id,
+              replies,
+              ...(outcomes.length ? { outcomes } : {}),
+            }
+          : c,
+      );
+      return { summary: `Review komentáře ${ref}: odpovědi čekají na schválení` };
+    }
+    // A `question` always keeps the gate, whatever the first line claims.
+    const autoPush =
+      isAutoPushAddressComments(report) && !outcomes.some((o) => o.kind === "question");
     const done = threadsMarkedDone(report);
     const repliesBlock = replies.length
       ? `\n\n## Replies ZIBBY will post after the push\n\n${replies
@@ -449,6 +510,7 @@ export class TaskOutputService implements OnModuleInit {
             fixedSha: facts.sha,
             approvalId: approval.id,
             ...(replies.length ? { replies } : {}),
+            ...(outcomes.length ? { outcomes } : {}),
           }
         : c,
     );

@@ -6,6 +6,7 @@ import { findRow, useRowKeyNav } from "../state/useRowKeyNav";
 import type { BridgeSelection } from "../widgets/registry";
 import { IssueSheet } from "./sheets/IssueSheet";
 import { PrSheet } from "./sheets/PrSheet";
+import { RunSheet } from "./sheets/RunSheet";
 import { TaskSheet } from "./sheets/TaskSheet";
 
 export enum DetailSheetTestId {
@@ -82,6 +83,7 @@ export function DetailSheet({ selection, onClose, onSideChange }: DetailSheetPro
       {common && kind === "issue" ? <IssueSheet {...common} /> : null}
       {common && kind === "task" ? <TaskSheet {...common} /> : null}
       {common && kind === "pr" ? <PrSheet {...common} /> : null}
+      {common && kind === "run" ? <RunSheet {...common} /> : null}
     </>
   );
 }

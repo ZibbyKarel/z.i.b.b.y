@@ -117,6 +117,27 @@ describe("ApprovalsService", () => {
     );
   });
 
+  it("approve stores the operator's replies on the approval and hands them to the runner", async () => {
+    const resume = vi.fn();
+    service.register("pr-address-comments", { resume, cancel: vi.fn() });
+    const created = await service.requestApproval({
+      runId: "task_r2",
+      kind: "pr-address-comments",
+      skill: "fullstack-developer",
+      action: "github.pr.comment",
+      detail: "Push and reply",
+      risk: "medium",
+    });
+    const replies = [{ threadId: "PRRT_a", body: "Fixed.", resolve: true }];
+    const decided = await service.approve(created.id, { replies });
+    expect(decided.replies).toEqual(replies);
+    expect((await service.get(created.id)).replies).toEqual(replies);
+    expect(resume).toHaveBeenCalledWith("task_r2", expect.objectContaining({ replies }));
+    // any other kind ignores replies
+    const other = await request();
+    expect((await service.approve(other.id, { replies })).replies).toBeUndefined();
+  });
+
   it("todo-10: a reviewEvent on an approval without a suggestion is not recorded", async () => {
     const created = await request();
     const decided = await service.approve(created.id, { reviewEvent: "APPROVE" });

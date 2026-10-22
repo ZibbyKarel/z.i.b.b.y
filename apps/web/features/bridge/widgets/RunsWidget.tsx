@@ -34,7 +34,8 @@ const FINISHED_LIMIT = 10;
 /**
  * Running & finished: the active live runs (everything not waiting - those are the queue
  * widget's) as TASK · STEP / PROGRESS / ISSUE rows, then the last 10 finished runs with a
- * full bar in their outcome colour and their age. A group header is omitted when empty.
+ * full bar in their outcome colour and their age. A group header is omitted when empty. Every row
+ * opens the run sheet (approval, phase output, artifacts).
  */
 export function RunsWidget({
   widget,
@@ -84,10 +85,8 @@ export function RunsWidget({
 
   if (active.length + finished.length === 0) return null;
 
-  const open = (r: (typeof active)[number]) =>
-    r.id === null
-      ? undefined
-      : () => onOpen({ kind: "task", id: r.id as string, widgetId: widget.id, key: r.key });
+  const open = (r: (typeof active)[number]) => () =>
+    onOpen({ kind: "run", id: r.runId, widgetId: widget.id, key: r.key });
   const header = (group: "active" | "finished", count: number) =>
     count === 0 ? null : (
       <RowGroupHeader
@@ -117,7 +116,7 @@ export function RunsWidget({
             columns="run"
             key={r.key}
             onClick={open(r)}
-            rowKey={r.id === null ? undefined : r.key}
+            rowKey={r.key}
             selected={selection?.key === r.key}
             sheetSide={sheetSide}
             tone={r.tone}
@@ -153,7 +152,7 @@ export function RunsWidget({
             columns="run"
             key={r.key}
             onClick={open(r)}
-            rowKey={r.id === null ? undefined : r.key}
+            rowKey={r.key}
             selected={selection?.key === r.key}
             sheetSide={sheetSide}
             tone={r.tone}

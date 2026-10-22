@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { IsoDateTimeSchema, RiskSchema } from "../common.schema";
+import { OperatorThreadReplySchema } from "../tasks/task.schema";
 import { DepartmentIdSchema } from "../departments/department.schema";
 
 /**
@@ -179,6 +180,8 @@ export const ApprovalSchema = z.object({
   suggestedReviewEvent: PrReviewEventSchema.optional(),
   /** todo-10 — the review event the operator chose on approve; absent → posted as `COMMENT`. */
   reviewEvent: PrReviewEventSchema.optional(),
+  /** The thread replies the operator approved (pr-address-comments push approval). */
+  replies: z.array(OperatorThreadReplySchema).max(100).optional(),
 });
 export type Approval = z.infer<typeof ApprovalSchema>;
 

@@ -8,6 +8,7 @@ import { GithubDiffError, InboxPrDiffService } from "./inbox-pr-diff.service";
 import { ProjectNotFoundError } from "../projects/projects.errors";
 import { InboxAddressCommentsService } from "./inbox-address-comments.service";
 import { InboxRebaseService, PrRefusedError } from "./inbox-rebase.service";
+import { InboxPrThreadsService, ThreadNotOnPrError } from "./inbox-pr-threads.service";
 import { InboxReviewService } from "./inbox-review.service";
 import { InboxController } from "./inbox.controller";
 import { InboxService } from "./inbox.service";
@@ -41,6 +42,14 @@ describe("InboxController getInboxPrDiff GitHub error mapping", () => {
             start: async () => {
               if (addressError) throw addressError;
               return { taskId: "task_a1" };
+            },
+          },
+        },
+        {
+          provide: InboxPrThreadsService,
+          useValue: {
+            reply: async () => {
+              throw new ThreadNotOnPrError("PRRT_x", "acme/app", 7);
             },
           },
         },
@@ -122,5 +131,14 @@ describe("InboxController getInboxPrDiff GitHub error mapping", () => {
     await withOperator(request(app.getHttpServer()).post("/api/inbox/prs/address-comments"))
       .send({ projectId: "nope", repo: "acme/app", number: 7 })
       .expect(404);
+  });
+
+  it("replyInboxPrThread → 422 on ThreadNotOnPrError", async () => {
+    const res = await withOperator(
+      request(app.getHttpServer()).post("/api/inbox/prs/acme/7/threads/PRRT_x/reply"),
+    )
+      .send({ body: "hi" })
+      .expect(422);
+    expect(res.body.message).toContain("not on");
   });
 });

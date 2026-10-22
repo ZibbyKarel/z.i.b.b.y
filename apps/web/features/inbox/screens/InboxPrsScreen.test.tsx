@@ -40,6 +40,7 @@ vi.mock("../queries", () => ({
     refetch: vi.fn(),
   }),
   useInboxPrDiffQuery: () => hooks.diffQuery,
+  useInboxPrThreadsQuery: () => ({ data: [], isError: false }),
   useInboxPrsQuery: () => ({
     data: { prs: hooks.prs, errors: [] },
     isPending: false,

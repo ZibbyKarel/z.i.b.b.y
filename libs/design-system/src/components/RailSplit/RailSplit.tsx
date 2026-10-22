@@ -19,6 +19,9 @@ export interface RailSplitProps {
   footer?: ReactNode;
   /** The scrolling body element — a feed auto-scrolls it. */
   bodyRef?: Ref<HTMLDivElement>;
+  /** One column at every width (rail on top) and a fixed 70vh height — for a narrow host
+   * such as a detail sheet, where the viewport breakpoint says nothing about the room. */
+  stacked?: boolean;
   ref?: Ref<HTMLDivElement>;
 }
 
@@ -28,15 +31,31 @@ export interface RailSplitProps {
  * lg height = 100vh − 336px chrome above it (app bar, sub-nav, run header + metrics,
  * measured at 1440×900) − the 72px `AppFrame` keeps free under the content for the
  * floating chat dock — otherwise the footer (composer) sits under the dock. */
-export function RailSplit({ rail, toolbar, children, footer, bodyRef, ref }: RailSplitProps) {
+export function RailSplit({
+  rail,
+  toolbar,
+  children,
+  footer,
+  bodyRef,
+  stacked,
+  ref,
+}: RailSplitProps) {
   return (
     <div
-      className="grid min-h-[560px] grid-cols-1 border-b border-border lg:h-[calc(100vh-408px)] lg:min-h-[320px] lg:grid-cols-[260px_minmax(0,1fr)]"
+      className={
+        stacked
+          ? "grid h-[70vh] min-h-[480px] grid-cols-1 grid-rows-[auto_minmax(0,1fr)] border-b border-border"
+          : "grid min-h-[560px] grid-cols-1 border-b border-border lg:h-[calc(100vh-408px)] lg:min-h-[320px] lg:grid-cols-[260px_minmax(0,1fr)]"
+      }
       data-testid={RailSplitTestId.Root}
       ref={ref}
     >
       <div
-        className="flex max-h-[240px] min-h-0 flex-col overflow-auto border-b border-border lg:max-h-none lg:border-r lg:border-b-0"
+        className={
+          stacked
+            ? "flex max-h-[200px] min-h-0 flex-col overflow-auto border-b border-border"
+            : "flex max-h-[240px] min-h-0 flex-col overflow-auto border-b border-border lg:max-h-none lg:border-r lg:border-b-0"
+        }
         data-testid={RailSplitTestId.Rail}
       >
         {rail}

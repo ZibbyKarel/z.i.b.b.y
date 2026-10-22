@@ -22,8 +22,7 @@ export const handled = (pr: InboxPr, run?: { finishedAt?: string }) =>
   pr.updatedAt !== undefined &&
   Date.parse(pr.updatedAt) <= Date.parse(run.finishedAt) + SETTLE_MS;
 
-export const isReview = (pr: InboxPr) =>
-  pr.bucket === "to-review" && !pr.draft && !handled(pr, pr.codeReview);
+export const isReview = (pr: InboxPr) => pr.bucket === "to-review" && !handled(pr, pr.codeReview);
 /** Colleagues may review with comments only, so open threads count, not just CHANGES_REQUESTED. */
 export const hasThreadsToAddress = (pr: InboxPr) =>
   pr.unresolvedThreads === undefined

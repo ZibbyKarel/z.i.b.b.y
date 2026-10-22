@@ -80,8 +80,10 @@ export function RunDetailActions({
   const actions: ActionSpec[] = (() => {
     switch (mode) {
       case "running":
-      case "approval":
         return workflow ? [pause, stop] : [stop];
+      case "approval":
+        // A post-run gate (the task's outcome is already written) has nothing left to pause or stop.
+        return run.taskOutcome ? [] : workflow ? [pause, stop] : [stop];
       case "pausing":
         return [
           { id: "pausing", disabled: true, onClick: () => {} },

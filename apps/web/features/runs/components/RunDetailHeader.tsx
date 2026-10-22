@@ -42,6 +42,8 @@ export interface RunDetailHeaderProps {
   agent?: { id: string; name: string; role?: string; state: StateTone };
   /** The `RunDetailActions` slot, right of the title block. */
   actions: ReactNode;
+  /** Inside a detail sheet: the sheet header already carries breadcrumb and title, metrics fold to 3 columns. */
+  compact?: boolean;
 }
 
 function Sep() {
@@ -84,6 +86,7 @@ export function RunDetailHeader({
   progressPct,
   agent,
   actions,
+  compact,
 }: RunDetailHeaderProps) {
   const t = useTranslations("runs");
   const router = useRouter();
@@ -95,42 +98,46 @@ export function RunDetailHeader({
       <Container padding={["250", "300", "150", "300"]}>
         <Stack align="start" direction="row" gap="300">
           <Stack grow gap="150">
-            <Stack wrap align="center" direction="row" gap="100">
-              <Pressable
-                data-testid={RunDetailHeaderTestId.Back}
-                onClick={() => router.push("/activity/runs")}
-              >
-                <Typography as="span" type="labelSm" variant="secondary">
-                  {t("detail.backToRuns")}
+            {!compact && (
+              <Stack wrap align="center" direction="row" gap="100">
+                <Pressable
+                  data-testid={RunDetailHeaderTestId.Back}
+                  onClick={() => router.push("/activity/runs")}
+                >
+                  <Typography as="span" type="labelSm" variant="secondary">
+                    {t("detail.backToRuns")}
+                  </Typography>
+                </Pressable>
+                <Typography as="span" type="labelSm">
+                  /
                 </Typography>
-              </Pressable>
-              <Typography as="span" type="labelSm">
-                /
+                <Typography as="span" type="labelSm">
+                  {run.runId}
+                </Typography>
+                <Sep />
+                <Typography as="span" type="labelSm">
+                  {t(`kind.${run.kind}`).toUpperCase()}
+                </Typography>
+                {taskId && (
+                  <>
+                    <Sep />
+                    <Pressable
+                      data-testid={RunDetailHeaderTestId.TaskLink}
+                      onClick={() => router.push(`/work/tasks/${taskId}`)}
+                    >
+                      <Typography as="span" type="labelSm" variant="secondary">
+                        {`${taskId} →`}
+                      </Typography>
+                    </Pressable>
+                  </>
+                )}
+              </Stack>
+            )}
+            {!compact && (
+              <Typography data-testid={RunDetailHeaderTestId.Title} type="h1">
+                {runTitle(run)}
               </Typography>
-              <Typography as="span" type="labelSm">
-                {run.runId}
-              </Typography>
-              <Sep />
-              <Typography as="span" type="labelSm">
-                {t(`kind.${run.kind}`).toUpperCase()}
-              </Typography>
-              {taskId && (
-                <>
-                  <Sep />
-                  <Pressable
-                    data-testid={RunDetailHeaderTestId.TaskLink}
-                    onClick={() => router.push(`/work/tasks/${taskId}`)}
-                  >
-                    <Typography as="span" type="labelSm" variant="secondary">
-                      {`${taskId} →`}
-                    </Typography>
-                  </Pressable>
-                </>
-              )}
-            </Stack>
-            <Typography data-testid={RunDetailHeaderTestId.Title} type="h1">
-              {runTitle(run)}
-            </Typography>
+            )}
             <Stack wrap align="center" direction="row" gap="150">
               <StatePill
                 data-testid={RunDetailHeaderTestId.State}
@@ -195,7 +202,7 @@ export function RunDetailHeader({
       />
       <Container data-testid={RunDetailHeaderTestId.Metrics} padding={["0", "300"]}>
         <MetricStrip
-          columns={6}
+          columns={compact ? 3 : 6}
           items={metrics.map((m) => ({ label: t(`detail.metric.${m.key}`), value: m.value }))}
         />
       </Container>
