@@ -107,11 +107,11 @@ export const stateToneVar: Record<StateTone, string> = {
  * {@link resolveStateToneHex} prefers the live computed value and falls back to these.
  */
 export const stateToneHex: Record<StateTone, string> = {
-  working: "#4ce0a0",
+  working: "#c58ef0",
   thinking: "#8fb4f5",
   blocked: "#f0c14b",
   error: "#ff6b57",
-  done: "#c58ef0",
+  done: "#4ce0a0",
   idle: "#4a504b",
 };
 

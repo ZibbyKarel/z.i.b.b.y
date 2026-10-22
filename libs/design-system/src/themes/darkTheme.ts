@@ -29,11 +29,11 @@ export const darkTheme: Theme = {
   colorGrid: "rgba(236, 239, 234, 0.035)",
 
   // ---- ZibbyCorp state vocabulary (DS.md §2.2, dark) ----------------------
-  colorStateWork: "oklch(0.82 0.17 160)",
+  colorStateWork: "oklch(0.78 0.14 300)",
   colorStateThink: "oklch(0.78 0.13 245)",
   colorStateBlock: "oklch(0.84 0.15 80)",
   colorStateErr: "oklch(0.7 0.2 25)",
-  colorStateDone: "oklch(0.78 0.14 300)",
+  colorStateDone: "oklch(0.82 0.17 160)",
   colorStateIdle: "#4a504b",
 
   // ---- Effects (DS.md §2.3, dark) — only live status glows, only here -----
@@ -65,10 +65,10 @@ export const darkTheme: Theme = {
   colorAccentGlow: "oklch(0.78 0.13 245 / 40%)",
 
   // ---- Legacy status — LEGACY_TONE_MAP: ok→done, warn→blocked, bad→error, run→working
-  colorOk: "oklch(0.78 0.14 300)",
+  colorOk: "oklch(0.82 0.17 160)",
   colorWarn: "oklch(0.84 0.15 80)",
   colorDanger: "oklch(0.7 0.2 25)",
-  colorRun: "oklch(0.82 0.17 160)",
+  colorRun: "oklch(0.78 0.14 300)",
 
   // ---- Risk categories — the only categorical palette (unchanged by ZA-01) --
   colorRiskPayment: "#f0b429",
