@@ -6,6 +6,6 @@
 4. [x] U PRs které jsou neaktuální musím mít vždy tlačítko "rebase". (main@c962921d)
 5. [x] U PRs, u kterých selhává CI musím mít tlačítko "Fix CI", které pustí workflow (vytvoř ho), které zjistí v čem je problém a opraví to. (main@6e1c955d)
 6. [x] Při editaci layoutu na dashboardu - změna velikosti widgetu znamená "změna jeho maximální velikosti". Pokud nejsou data, který ve widgetu zobrazit, widget se automaticky zmenší. Resp má height auto a max-height je ta nastavená velikost (main@20c52ec9)
-7. [ ] tlačítko "uložit jako" při editaci layoutu na dashboardu by mělo zobrazit dialog s inputem na zadání jména layoutu. Zároveň musím mít možnost si layouty odstranit a označit jako favorites. Favorites layouty budou zobrazeny rovnou jako dnes "výchozí" a "review" a ostatní budou schované přes icon dropdown.
+7. [x] tlačítko "uložit jako" při editaci layoutu na dashboardu by mělo zobrazit dialog s inputem na zadání jména layoutu. Zároveň musím mít možnost si layouty odstranit a označit jako favorites. Favorites layouty budou zobrazeny rovnou jako dnes "výchozí" a "review" a ostatní budou schované přes icon dropdown. (main@3ab87673)
 8. [ ] Widget issues - u issue místo labelu JIRA zobrazíme přímo ikonku integrace na levé straně. ID tasku posuneme na řádek k názvu issue.
 9. [ ] Widget issues - popis tasku musí být formátovaný markdown
