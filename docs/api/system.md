@@ -39,15 +39,16 @@ system-config section — link there rather than duplicating the table here.
    in-memory copy, and calls every subscriber registered via `onChange()`.
    The schedulers use this to re-arm their interval timers immediately —
    most knobs (tick intervals, `limitResumeMax`, `goalVerifyTimeoutMs`,
-   `maxWorkingAgents`, `chatPersona`) take effect live, with one exception:
+   `maxConcurrentRuns`, `chatPersona`) take effect live, with one exception:
    `goalAutoResume` is only read at boot, so it applies on the _next_ start,
    not immediately.
-   - `maxWorkingAgents` is the machine fuse: the most task-system agents
-     (single-agent / orchestrator runs, workflow agent stages) working at once. It
-     defaults to **`3`** and is always set (never `null`). It replaced the removed
-     `maxConcurrentRuns`: a legacy `maxConcurrentRuns` value migrates to it on read
-     (`null` -> the default `3`). The fuse reads it live, so a save (or a raised cap)
-     admits waiters immediately. See [tasks.md](./tasks.md) → _Machine fuse_.
+   - `maxConcurrentRuns` is the global run-slot cap: the most task runs (a single-agent
+     run, an orchestrator run, a whole workflow run, a goal run) in flight at once. It
+     defaults to **`3`** and is always set (never `null`). A project can add its own lower
+     cap via `budget.maxConcurrent`. It reads live, so a save (or a raised cap) admits
+     queued tasks immediately. The interim key `maxWorkingAgents` migrates to it on read
+     (the file is rewritten in the new shape on the next save). See
+     [tasks.md](./tasks.md) → _Run slots_.
    - `dockDoneTasksLimit` (1–100, default `20`) is UI-only: how many of the
      newest archived runs the web shell's activity dock lists under "Hotové"
      (read via `GET /tasks/runs/archive?limit=N`). The API stores it, nothing

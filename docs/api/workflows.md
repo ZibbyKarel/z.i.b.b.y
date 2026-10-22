@@ -283,7 +283,7 @@ skipped). It never returns file contents; `null` for an unknown run.
 run (or one parked on a mid-stage `approval`); anything else throws
 `WorkflowRunNotPausableError` (→ 409). Nothing is killed: the current stage finishes,
 and at the top of the next `drive()` iteration (before the usage-limit/budget checks,
-and before any fuse slot is taken) the run parks
+and before the next stage starts) the run parks
 `parkedReason: "paused"` with `pendingGate = { cursor, handoffSource }`, so a pause
 that lands on a loop back-edge keeps the failure handoff. A just-settled sub-run stage
 is recorded first. `writeAggregate` drops the flag whenever the run parks for any
@@ -341,28 +341,23 @@ reachable from `stageRuns`).
 ### Phase: agent
 
 1. Loads the handoff file (`consumes`) from the previous phase (if any).
-2. **Takes a machine-fuse slot** (`WorkingAgentsFuse.take`, ranked by progress) —
-   before the sandbox is created.
-3. Builds the prompt = workflow prompt + phase instructions + the handoff file's content.
+2. Builds the prompt = workflow prompt + phase instructions + the handoff file's content.
    The stage task (`buildStageTask`, `build-stage-task.ts`) also names the run folder
    (`$ZIBBY_RUN_DIR`, via the `runDirAbs` option) so an agent without Bash can still
    reach earlier phases' artifacts in its subfolders.
-4. Calls `RunnerCore.spawn()` for a `workflow-stage` kind.
-5. Waits for it to finish (polling the sidecar status).
-6. Reads the output from the `produces` file (or the log's last N lines).
-7. Evaluates the result (success / failure).
-8. Releases the slot, on every terminal path.
+3. Calls `RunnerCore.spawn()` for a `workflow-stage` kind.
+4. Waits for it to finish (polling the sidecar status).
+5. Reads the output from the `produces` file (or the log's last N lines).
+6. Evaluates the result (success / failure).
 
 ### Wiring: workflow stage dispatch
 
-An `agent`-type phase takes one slot from the machine fuse (`apps/api/src/run-slots/`,
-see [tasks.md](./tasks.md) → _Machine fuse_) for the duration of the stage. When no slot
-is free the call blocks (FIFO, progress-ranked); `run.status` is untouched (stays
-`running`) and no `stageRuns` entry is appended until the slot lands. The slot is
-released in a `finally` around `runStage`, covering every terminal outcome (`done`,
-`error`, `interrupted`, `paused-limit`). A `verify`-type phase spawns no agent and never
-takes a slot. There is no per-stage employee lease, no `no-employee` park, and stage
-runs carry no `employeeId` / `employeeName`.
+A stage takes **no slot of its own**. The whole workflow run holds exactly one run slot,
+taken by the task scheduler at dispatch and released when the run reaches a terminal status
+(`done` / `failed` / `interrupted`; `parked` and `paused-limit` keep it) — however many
+stages, loop iterations or sub-workflows it runs. See [tasks.md](./tasks.md) → _Run
+slots_. There is no per-stage employee lease, no `no-employee` park, and stage runs carry
+no `employeeId` / `employeeName`.
 
 ### Phase: verify
 
@@ -622,9 +617,9 @@ their `pendingGate` / `pendingOutput` / `parked` detail is in the persisted aggr
 and the matching `workflow-gate` / `workflow-output` approval resumes them after the
 restart.
 
-A restart also drops every in-memory fuse slot — a stage found `running` with a dead
-PID reconciles to `interrupted` same as always, and a subsequent resume/retry takes a
-slot fresh rather than assuming one is still held.
+A restart also drops every in-memory run slot — a stage found `running` with a dead
+PID reconciles to `interrupted` same as always, and a resumed run is not counted against
+the limit until it is dispatched again.
 
 <!-- ZibbyCorp ZB-05a (2026-09-25): recordArtifact gains the chain-step emitter (fail-soft, like the scout emission). -->
 

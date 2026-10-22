@@ -1,13 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
-import type { Automation, Signal } from "@zibby/contracts";
+import type { Automation, Signal, TaskTarget } from "@zibby/contracts";
 import { AgentFactoryService } from "../agent-factory/agent-factory.service";
-import { AgentRunnerService } from "../agents/agent-runner.service";
 import { BriefingService } from "../briefing/briefing.service";
 import { VaultLintService } from "../memory/vault-lint.service";
 import { MemoryDistillerService } from "../memory/memory-distiller.service";
 import { PatternExtractorService } from "../patterns/pattern-extractor.service";
-import { WorkflowRunnerService } from "../workflows/workflow-runner.service";
 import { GapDetectorService } from "../gaps/gap-detector.service";
 import { WatcherHealthRegistry } from "../health/watcher-health.registry";
 import { ArchService } from "../arch/arch.service";
@@ -44,8 +42,6 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
 
   constructor(
     private readonly storage: AutomationsStorageService,
-    private readonly agentRunner: AgentRunnerService,
-    private readonly workflowRunner: WorkflowRunnerService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
     private readonly briefing: BriefingService,
@@ -162,25 +158,29 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
       : automation.prompt;
     this.log.info("dispatching automation", { id: automation.id, target: target.type });
     switch (target.type) {
-      case "agent": {
-        const run = await this.agentRunner.start(target.agentId, prompt ?? "", "automation");
-        return run.runId;
-      }
+      case "agent":
       case "workflow": {
-        // Phase 116b: the automation's free-text prompt rides as the workflow's
-        // first-phase input (`WorkflowRunnerService.start`'s trailing `input` param)
-        // — the same seam a workflow's input already uses. Absent for every
-        // automation predating a prompt (no behaviour change).
-        const run = await this.workflowRunner.start(
-          target.workflowId,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          prompt,
+        // Everything that creates a run instance counts toward the run-slot limit, so
+        // an agent / workflow automation goes through the task scheduler with an
+        // explicit target (skips classification). The workflow's first-phase input is
+        // the automation's free-text prompt (Phase 116b), as before.
+        const explicit: TaskTarget =
+          target.type === "agent"
+            ? { kind: "agent", id: target.agentId, name: target.agentId }
+            : { kind: "workflow", id: target.workflowId, name: target.workflowId };
+        const result = await this.taskScheduler.createTask(
+          {
+            text: prompt ?? "",
+            ...(signal ? { title: signal.title.slice(0, 200) } : {}),
+            target: explicit,
+            source: "automation",
+          },
+          Date.now(),
+          signal?.projectId,
+          explicit,
+          false,
         );
-        return run.workflowRunId;
+        return result.outcome === "dispatched" ? result.runRef : result.task.id;
       }
       case "briefing": {
         // Deterministic assembly, not a claude run — dispatch straight to the

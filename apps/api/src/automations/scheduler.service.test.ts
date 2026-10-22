@@ -109,7 +109,6 @@ function reviewLearnAutomation(over: Partial<Automation> = {}): Automation {
 function makeService(opts: {
   automation: Automation;
   detect?: ReturnType<typeof vi.fn>;
-  workflowRunner?: { start: ReturnType<typeof vi.fn> };
   taskScheduler?: { createTask: ReturnType<typeof vi.fn> };
   selfKnowledge?: { check: ReturnType<typeof vi.fn>; write: ReturnType<typeof vi.fn> };
   security?: { scan: ReturnType<typeof vi.fn> };
@@ -131,11 +130,8 @@ function makeService(opts: {
     },
     markFired: vi.fn(async () => opts.automation),
   };
-  const noRunner = { start: vi.fn() };
   const service = new SchedulerService(
     storage as never,
-    noRunner as never,
-    (opts.workflowRunner ?? noRunner) as never,
     fakeLogger as never,
     fakeTrace as never,
     { generate: vi.fn() } as never,
@@ -187,46 +183,83 @@ describe("SchedulerService — dispatch (Phase 4b: agent-factory case)", () => {
   });
 });
 
-describe("SchedulerService — dispatch (Phase 116b: workflow prompt forwarding)", () => {
-  it("forwards the automation's prompt into WorkflowRunnerService.start's input param", async () => {
-    const start = vi.fn(async () => ({ workflowRunId: "release_1" }));
+describe("SchedulerService — dispatch (agent / workflow targets ride the task scheduler)", () => {
+  const dispatched = (runRef: string) =>
+    vi.fn(async () => ({ outcome: "dispatched" as const, runRef, task: { id: "task_w" } }));
+
+  it("fires a workflow automation through createTask with an explicit target and the prompt as text", async () => {
+    const createTask = dispatched("release_1");
     const { service } = makeService({
       automation: workflowAutomation({ prompt: "focus on regressions" }),
-      workflowRunner: { start },
+      taskScheduler: { createTask },
     });
 
     const ref = await service.trigger("nightly-workflow");
 
-    expect(start).toHaveBeenCalledWith(
-      "release",
+    const explicit = { kind: "workflow", id: "release", name: "release" };
+    expect(createTask).toHaveBeenCalledWith(
+      { text: "focus on regressions", target: explicit, source: "automation" },
+      expect.any(Number),
       undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      "focus on regressions",
+      explicit,
+      false,
     );
     expect(ref).toBe("release_1");
   });
 
-  it("forwards undefined when the automation carries no prompt (no behaviour change)", async () => {
-    const start = vi.fn(async () => ({ workflowRunId: "release_2" }));
+  it("an empty prompt becomes empty task text (no behaviour change for prompt-less automations)", async () => {
+    const createTask = dispatched("release_2");
     const { service } = makeService({
       automation: workflowAutomation(),
-      workflowRunner: { start },
+      taskScheduler: { createTask },
     });
 
     await service.trigger("nightly-workflow");
 
-    expect(start).toHaveBeenCalledWith(
-      "release",
+    expect(createTask).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "" }),
+      expect.any(Number),
       undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
+      { kind: "workflow", id: "release", name: "release" },
+      false,
     );
+  });
+
+  it("fires an agent automation through createTask with a {kind: agent} target", async () => {
+    const createTask = dispatched("writer_1_1");
+    const { service } = makeService({
+      automation: workflowAutomation({
+        id: "nightly-agent",
+        target: { type: "agent", agentId: "writer" },
+        prompt: "tidy the docs",
+      }),
+      taskScheduler: { createTask },
+    });
+
+    const ref = await service.trigger("nightly-agent");
+
+    const explicit = { kind: "agent", id: "writer", name: "writer" };
+    expect(createTask).toHaveBeenCalledWith(
+      { text: "tidy the docs", target: explicit, source: "automation" },
+      expect.any(Number),
+      undefined,
+      explicit,
+      false,
+    );
+    expect(ref).toBe("writer_1_1");
+  });
+
+  it("refs the parked task's id when the run slots are full and the task queues", async () => {
+    const createTask = vi.fn(async () => ({
+      outcome: "scheduled" as const,
+      task: { id: "task_q", status: "queued" },
+    }));
+    const { service } = makeService({
+      automation: workflowAutomation(),
+      taskScheduler: { createTask },
+    });
+
+    expect(await service.trigger("nightly-workflow")).toBe("task_q");
   });
 });
 

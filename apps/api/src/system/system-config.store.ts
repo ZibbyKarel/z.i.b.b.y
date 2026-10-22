@@ -8,17 +8,17 @@ import { ensureDir, safeJson, writeFileAtomic } from "../shared/file-storage";
 export const SYSTEM_CONFIG_FILE = "SYSTEM_CONFIG_FILE";
 
 /**
- * Staffing-driven capacity: `maxConcurrentRuns` (whole runs at once) was replaced by
- * the `maxWorkingAgents` machine fuse. The schema is `.strict()`, so a file still
- * carrying the old key would otherwise fail to parse and drop EVERY knob back to its
- * default. Same number, new meaning; a legacy `null` (uncapped) takes the default —
- * the fuse always exists. The file is rewritten in the new shape on the next save.
+ * The global concurrency knob went `maxConcurrentRuns` → `maxWorkingAgents` (staffing-driven
+ * capacity) → back to `maxConcurrentRuns` (run slots, docs/plans/remove-employees.md). The
+ * schema is `.strict()`, so a file still carrying the interim key would otherwise fail to
+ * parse and drop EVERY knob back to its default. Same number; the file is rewritten in the
+ * current shape on the next save.
  */
 export function migrateLegacySystemConfig(raw: unknown): unknown {
-  if (!raw || typeof raw !== "object" || !("maxConcurrentRuns" in raw)) return raw;
-  const { maxConcurrentRuns, ...rest } = raw as Record<string, unknown>;
-  return typeof maxConcurrentRuns === "number" && !("maxWorkingAgents" in rest)
-    ? { ...rest, maxWorkingAgents: maxConcurrentRuns }
+  if (!raw || typeof raw !== "object" || !("maxWorkingAgents" in raw)) return raw;
+  const { maxWorkingAgents, ...rest } = raw as Record<string, unknown>;
+  return typeof maxWorkingAgents === "number" && !("maxConcurrentRuns" in rest)
+    ? { ...rest, maxConcurrentRuns: maxWorkingAgents }
     : rest;
 }
 

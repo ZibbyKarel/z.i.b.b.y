@@ -16,10 +16,10 @@ export const TEST_SYSTEM_CONFIG: SystemConfig = SystemConfigSchema.parse({
   automationTickMs: 0,
   limitResumeTickMs: 0,
   // Effectively unlimited in tests, deliberately UNLIKE the production default of 3:
-  // a suite that isn't ABOUT the machine fuse must not have its dispatches silently
-  // queued. A test about the fuse opts in with
-  // `fakeSystemConfigStore({ maxWorkingAgents: N })`.
-  maxWorkingAgents: 1000,
+  // a suite that isn't ABOUT run slots must not have its dispatches silently
+  // queued. A test about run slots opts in with
+  // `fakeSystemConfigStore({ maxConcurrentRuns: N })`.
+  maxConcurrentRuns: 1000,
   // 125h: off by default, same posture as every other tick — a suite drives
   // `RoadmapTickService.tick()` directly.
   roadmapTickMs: 0,

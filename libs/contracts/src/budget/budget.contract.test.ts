@@ -57,9 +57,11 @@ describe("ProjectBudgetSchema", () => {
     expect(ProjectBudgetSchema.safeParse({ dailyRuns: 2, weeklyRuns: 10 }).success).toBe(true);
   });
 
-  it("accepts a legacy maxConcurrent and drops it on read", () => {
+  it("keeps maxConcurrent (the per-project run-slot cap) as a positive int", () => {
     const parsed = ProjectBudgetSchema.parse({ dailyRuns: 2, maxConcurrent: 1 });
-    expect(JSON.parse(JSON.stringify(parsed))).toEqual({ dailyRuns: 2 });
+    expect(JSON.parse(JSON.stringify(parsed))).toEqual({ dailyRuns: 2, maxConcurrent: 1 });
+    expect(ProjectBudgetSchema.safeParse({ maxConcurrent: 0 }).success).toBe(false);
+    expect(ProjectBudgetSchema.safeParse({ maxConcurrent: 1.5 }).success).toBe(false);
   });
 
   it("accepts a partial budget (only one axis set)", () => {

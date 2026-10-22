@@ -66,11 +66,13 @@ company-merged "effective" context.
 ```
 
 `ProjectBudgetSchema` is `.strict()` (an unknown key can never smuggle in a
-fifth knob): `dailyRuns`/`weeklyRuns`/`monthlyRuns`, and
+fifth knob): `dailyRuns`/`weeklyRuns`/`monthlyRuns`, `maxConcurrent` (optional positive
+int — this project's own cap on runs in flight at once, on top of the global
+`maxConcurrentRuns`; see [tasks.md](./tasks.md) → _Run slots_), and
 (Phase 12) `dailyCostCapUsd`/`weeklyCostCapUsd`/`monthlyCostCapUsd` — priced
 off accumulated `costUsd`, not a run count. See `docs/api/budget.md` for the
-enforcement side. A legacy `maxConcurrent` key is silently dropped on read (it was
-removed; capacity is staffing-driven now).
+enforcement side. `maxConcurrent` is live again (it was dropped for a while under
+staffing-driven capacity; that design was superseded by `docs/plans/remove-employees.md`).
 
 `isValidGitRemote` (also re-exported as `apps/api/src/shared/git-exec.ts`'s
 `validateRemote`) is a fail-closed allowlist against clone-remote command

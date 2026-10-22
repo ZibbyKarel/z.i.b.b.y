@@ -170,8 +170,11 @@ when the config changes.
    - Event: fired only via the manual `trigger` path today (no event bus yet).
    - Signal: never due on a tick — fired only by the [signal bus](#signal-bus).
 3. When due, dispatches the target:
-   - `workflow` → `WorkflowRunnerService.start(workflowId, …, input: prompt)`
-   - `agent` → `AgentRunnerService.start(...)`
+   - `workflow` → `TaskSchedulerService.createTask(...)` with explicit target
+     `{ kind: "workflow", id }`, the prompt as the task text (the workflow's first-phase
+     input), `source: "automation"`, synchronous — so it takes a run slot like any task
+     and queues when the limit is full (ref = the run ref, or the task id when queued)
+   - `agent` → the same, with target `{ kind: "agent", id }`
    - `briefing` → `BriefingService.generate(...)`
    - `memory-distill` → `MemoryDistillerService.distill()`
    - `pattern-extract` → `PatternExtractorService.extract()`

@@ -36,7 +36,7 @@ import { type BudgetOverMetrics, BudgetService } from "../budget/budget.service"
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
 import { WatcherHealthRegistry } from "../health/watcher-health.registry";
 import { LimitsService } from "../limits/limits.service";
-import { type FuseSlot, WorkingAgentsFuse } from "../run-slots/working-agents-fuse";
+import { type RunSlot, RunSlots } from "../run-slots/run-slots.service";
 import { GoalRunnerService } from "../goals/goal-runner.service";
 import { WorkflowRunnerService } from "../workflows/workflow-runner.service";
 import { WorkflowsStorageService } from "../workflows/workflows.storage.service";
@@ -69,8 +69,8 @@ type CreateTaskInputResolved = CreateTaskInput & { attachments: Attachment[] };
 /** A dispatch that started a run. */
 type Dispatched = { runRef: string; target: TaskTarget; classification?: ClassificationTrace };
 /**
- * A dispatch that resolved its target but could not start it yet (no machine-fuse
- * slot). The caller persists it `queued` with the target, so the next attempt
+ * A dispatch that resolved its target but could not start it yet (no free run
+ * slot — global or project cap). The caller persists it `queued` with the target, so the next attempt
  * dispatches straight to it without re-classifying.
  */
 type QueuedDispatch = {
@@ -128,10 +128,15 @@ const ATTACHMENT_TTL_MS = 24 * 60 * 60 * 1000;
 
 /** Agent run statuses that free a concurrency slot. */
 const TERMINAL_AGENT = new Set<AgentRun["status"]>(["done", "error", "interrupted"]);
-/** Workflow run statuses that free a concurrency slot. */
-const TERMINAL_WORKFLOW = new Set<WorkflowRun["status"]>(["done", "failed"]);
-/** Goal run statuses that free a concurrency slot (Phase 10). */
-const TERMINAL_GOAL = new Set<GoalRun["status"]>(["done", "failed"]);
+/**
+ * Workflow / goal run statuses that free a run slot. `parked` and `paused-limit` keep
+ * it (the run is still in flight, waiting on the operator or the usage window).
+ * ponytail: an operator "continue" of a failed/interrupted run restarts it in place,
+ * outside dispatch, so it runs uncounted; route continues through the scheduler if
+ * that ever matters.
+ */
+const TERMINAL_WORKFLOW = new Set<WorkflowRun["status"]>(["done", "failed", "interrupted"]);
+const TERMINAL_GOAL = new Set<GoalRun["status"]>(["done", "failed", "interrupted"]);
 
 /**
  * The deferred-task daemon. {@link createTask} is the single action behind the New
@@ -146,7 +151,8 @@ const TERMINAL_GOAL = new Set<GoalRun["status"]>(["done", "failed"]);
  * a Tier-3 `spend-past-cap` approval (Law 3: no autonomous spend past budget).
  *
  * A task is QUEUED (no approval) only when it cannot start NOW — no
- * {@link WorkingAgentsFuse} slot. The queue drains when a fuse slot frees up:
+ * {@link RunSlots} slot (the global `maxConcurrentRuns` or the project's
+ * `budget.maxConcurrent` is full). The queue drains when a slot frees up:
  * round-robin across projects, FIFO inside one.
  *
  * The heartbeat mirrors the automations {@link SchedulerService}: a tick of 0 (the
@@ -169,12 +175,13 @@ export class TaskSchedulerService
    */
   private readonly budgetApproved = new Set<string>();
   /**
-   * The machine-fuse slot each in-flight single-agent / orchestrator run holds, keyed
-   * by `runId` — taken in {@link dispatch}, released on the run's terminal status.
-   * Goal runs take none (a lifetime slot would deadlock with the
-   * goal's own workflow stages); workflow stages take theirs in the workflow runner.
+   * The run slot each in-flight dispatched run holds, keyed by its run ref (agent
+   * `runId`, `workflowRunId` or `goalRunId`) — taken in {@link dispatch}, released on
+   * the run's terminal status. Runs a run starts itself (a workflow's sub-run, a
+   * goal's maker/verifier iterations) are not dispatched here and ride on the
+   * parent's slot.
    */
-  private readonly fuseSlots = new Map<string, FuseSlot>();
+  private readonly runSlots = new Map<string, RunSlot>();
   /** A drain is queued behind `scheduler:drain` but not started — see {@link requestDrain}. */
   private drainRequested = false;
 
@@ -186,8 +193,8 @@ export class TaskSchedulerService
     private readonly workflowsStore: WorkflowsStorageService,
     /** F2b — for {@link resolveDepartmentTargetOrNull}'s owned-roster count (workflows + agents). */
     private readonly agentsStore: AgentsStorageService,
-    /** The machine fuse every agent dispatch takes a slot from. */
-    private readonly fuse: WorkingAgentsFuse,
+    /** The run-slot limiter every dispatched run takes a slot from. */
+    private readonly slots: RunSlots,
     private readonly goalRunner: GoalRunnerService,
     private readonly logger: LoggerService,
     private readonly trace: TraceContextService,
@@ -226,21 +233,26 @@ export class TaskSchedulerService
       this.agentRunner.onRunStatus((run) => {
         if (run.taskId) void this.writeAgentOutcome(run.taskId, run);
         if (TERMINAL_AGENT.has(run.status)) {
-          // Release this run's fuse slot; the release notifies `onFreed` → drain.
-          this.fuseSlots.get(run.runId)?.();
-          this.fuseSlots.delete(run.runId);
+          // Release this run's slot; the release notifies `onFreed` → drain.
+          this.releaseRunSlot(run.runId);
           this.requestDrain();
         }
       }),
       this.workflowRunner.onRunStatus((run) => {
         if (run.taskId) void this.writeWorkflowOutcome(run.taskId, run);
-        if (TERMINAL_WORKFLOW.has(run.status)) this.requestDrain();
+        if (TERMINAL_WORKFLOW.has(run.status)) {
+          this.releaseRunSlot(run.workflowRunId);
+          this.requestDrain();
+        }
       }),
       this.goalRunner.onRunStatus((run) => {
         if (run.taskId) void this.writeGoalOutcome(run.taskId, run);
-        if (TERMINAL_GOAL.has(run.status)) this.requestDrain();
+        if (TERMINAL_GOAL.has(run.status)) {
+          this.releaseRunSlot(run.goalRunId);
+          this.requestDrain();
+        }
       }),
-      this.fuse.onFreed(() => this.requestDrain()),
+      this.slots.onFreed(() => this.requestDrain()),
     );
 
     // The kind-"task" runner: a held task's `spend-past-cap` approval resumes it
@@ -745,8 +757,8 @@ export class TaskSchedulerService
    * over-recording the ledger past its cap — a Law-3 violation).
    * `project-capacity:${projectId}` is disjoint from the `task:${id}` outcome-writer
    * lock and the global `scheduler:drain` sweep lock. An unattributed dispatch has no
-   * project budget, so it runs unlocked. The machine fuse needs
-   * no lock here: it is granted synchronously in-process, never check-then-act.
+   * project budget, so it runs unlocked. Run slots need
+   * no lock here: they are granted synchronously in-process, never check-then-act.
    *
    * Every real spend path for a project is guarded by this SAME key (Task 3c fix —
    * the set is now complete):
@@ -829,7 +841,7 @@ export class TaskSchedulerService
    * ({@link guardExisting}) immediately before the real dispatch, now properly
    * serialized (same lock, FIFO) against every other real dispatch for the project —
    * a task that loses this recheck flips `pending → held` instead of also
-   * dispatching. A dispatch that finds no fuse slot flips it
+   * dispatching. A dispatch that finds no free run slot flips it
    * `pending → queued`.
    */
   private async attemptCreate(
@@ -1059,7 +1071,7 @@ export class TaskSchedulerService
    * The guard for an EXISTING task record (the tick fire path, the queue drain, and
    * the release path). Returns the resulting state. `skipBudget` is the release-once
    * bypass — an operator-approved overage skips the budget check but still waits
-   * for a fuse slot. Records the budget ledger line on every actual dispatch.
+   * for a run slot. Records the budget ledger line on every actual dispatch.
    */
   private async attemptDispatch(
     task: ScheduledTask,
@@ -1080,7 +1092,7 @@ export class TaskSchedulerService
     const guard = await this.guardExisting(task, project, at, opts.skipBudget);
     if (guard !== "ok") return guard;
     // Phase 10: a task that already carries a target (e.g. a goal, never classifiable,
-    // or a task queued for a fuse slot after its classification) re-dispatches to it;
+    // or a task queued for a run slot after its classification) re-dispatches to it;
     // otherwise classify as before.
     const dispatched = await this.dispatch(
       task.text,
@@ -1190,20 +1202,20 @@ export class TaskSchedulerService
 
   /**
    * Fire-and-forget {@link drainQueues} from a listener that may run INSIDE a held
-   * lock (a fuse slot released mid-drain notifies `onFreed` synchronously) — started
+   * lock (a run slot released mid-drain notifies `onFreed` synchronously) — started
    * outside every lock so it queues behind `scheduler:drain` instead of re-entering
    * it inline (file-lock.ts CONTRACT).
    */
   private requestDrain(): void {
     // Coalesce: one drain already queued (not yet started) will see whatever this
-    // request would have — a run end fires fuse-release and terminal.
+    // request would have — a run end fires slot-release and terminal.
     if (this.drainRequested) return;
     this.drainRequested = true;
     outsideLocks(() => void this.drainQueues());
   }
 
   /**
-   * Drain the queue: dispatch queued tasks while the machine fuse has room,
+   * Drain the queue: dispatch queued tasks while run slots have room,
    * round-robin across projects (each project's 1st task, then each project's 2nd, …),
    * FIFO inside one. A normal queued task re-runs the full guard (budget first — it can become held if
    * the budget filled meanwhile); a released (budget-approved) task skips only the
@@ -1228,10 +1240,14 @@ export class TaskSchedulerService
         })
         .sort((a, b) => a.turn - b.turn || a.task.createdAt.localeCompare(b.task.createdAt));
       for (const { task } of ordered) {
-        if (!this.fuse.hasRoom()) return; // nothing can start anywhere right now
+        if (!this.slots.hasRoom()) return; // the global cap is full — nothing can start
         // Re-read: a concurrent cancel may have moved it on already.
         const fresh = await this.storage.get(task.id).catch((): ScheduledTask | null => null);
         if (!fresh || fresh.status !== "queued") continue;
+        // This project's cap is full — skip it, other projects may still start.
+        if (!this.slots.hasRoom(fresh.projectId, await this.projectRunCap(fresh.projectId))) {
+          continue;
+        }
         const project = fresh.projectId
           ? await this.projects.get(fresh.projectId).catch((): Project | null => null)
           : null;
@@ -1297,7 +1313,7 @@ export class TaskSchedulerService
     toolGrants?: string[],
     /**
      * The trace a previous attempt classified this task with (a task queued for
-     * a fuse slot persists its target + trace). Used with `explicitTarget` so the
+     * a run slot persists its target + trace). Used with `explicitTarget` so the
      * re-dispatch keeps its department and memory terms without re-classifying.
      */
     priorClassification?: ClassificationTrace,
@@ -1358,67 +1374,78 @@ export class TaskSchedulerService
         ...(stage2 ? { stage2 } : {}),
       };
     }
+    // One run slot per dispatched run, taken BEFORE any spawn and held until the
+    // run's terminal status (including while it awaits an approval).
+    const slot = await this.takeRunSlot(projectId);
+    if (!slot) return { queued: true, target, classification };
     if (target.kind === "agent") {
-      // Fuse slot, BEFORE any spawn; held until the run's terminal status.
-      const slot = this.fuse.tryTake({ projectId });
-      if (!slot) return { queued: true, target, classification };
-      let run: AgentRun;
-      try {
-        run = await this.agentRunner.start(
-          target.id,
-          text,
-          projectId ?? "",
-          paths,
-          title,
-          taskId,
-          matchedTerms,
-          undefined,
-          runAttachments,
-          toolGrants,
-        );
-      } catch (error) {
-        // The spawn itself failed (e.g. preflight) — the run never entered the
-        // registry, so it will never reach the terminal `onRunStatus` release path.
-        slot();
-        throw error;
-      }
-      this.holdUntilTerminal(run, slot);
+      const agentId = target.id;
+      const run = await this.startHolding(
+        slot,
+        () =>
+          this.agentRunner.start(
+            agentId,
+            text,
+            projectId ?? "",
+            paths,
+            title,
+            taskId,
+            matchedTerms,
+            undefined,
+            runAttachments,
+            toolGrants,
+          ),
+        (r) => r.runId,
+        (r) => TERMINAL_AGENT.has(this.liveStatus(() => this.agentRunner.get(r.runId), r)),
+      );
       return { runRef: run.runId, target, classification };
     }
     if (target.kind === "workflow") {
-      // Check (never reserve) fuse room: the workflow runner takes a fuse slot per stage itself.
-      if (!this.fuse.hasRoom()) return { queued: true, target, classification };
+      const workflowId = target.id;
       // Spending audit: the task's attachments ride along — the runner copies them into
       // the run's context/attachments/ and lists them in the first phase's input.
       // The task's text is the workflow's first-phase input (its `consumes`, e.g. a
       // brief) — without it every stage runs blind to what the operator asked for.
-      const run = await this.workflowRunner.start(
-        target.id,
-        taskId,
-        projectId,
-        matchedTerms,
-        undefined,
-        output,
-        text,
-        undefined,
-        runAttachments,
+      const run = await this.startHolding(
+        slot,
+        () =>
+          this.workflowRunner.start(
+            workflowId,
+            taskId,
+            projectId,
+            matchedTerms,
+            undefined,
+            output,
+            text,
+            undefined,
+            runAttachments,
+          ),
+        (r) => r.workflowRunId,
+        (r) =>
+          TERMINAL_WORKFLOW.has(this.liveStatus(() => this.workflowRunner.get(r.workflowRunId), r)),
       );
       return { runRef: run.workflowRunId, target, classification };
     }
     if (target.kind === "goal") {
+      const goalId = target.id;
       // Phase 10: route a goal-targeted task through the outer-loop runner. It flows
       // the projectId/taskId through so the goal writes its outcome back exactly like
-      // any other dispatched run. Not fuse-gated: a lifetime slot would deadlock with
-      // the goal's own workflow stages, which take theirs per stage.
-      const run = await this.goalRunner.start(
-        target.id,
-        text,
-        projectId ?? "",
-        paths,
-        title,
-        taskId,
-        matchedTerms,
-        runAttachments,
+      // any other dispatched run. Its maker/verifier iterations ride on this slot.
+      const run = await this.startHolding(
+        slot,
+        () =>
+          this.goalRunner.start(
+            goalId,
+            text,
+            projectId ?? "",
+            paths,
+            title,
+            taskId,
+            matchedTerms,
+            runAttachments,
+          ),
+        (r) => r.goalRunId,
+        (r) => TERMINAL_GOAL.has(this.liveStatus(() => this.goalRunner.get(r.goalRunId), r)),
       );
       return { runRef: run.goalRunId, target, classification };
     }
@@ -1436,47 +1463,72 @@ export class TaskSchedulerService
       });
     }
     // Terminal fallback: the orchestrator session self-delegates to the right
-    // subagent(s) or does the task directly — a task never no-ops. It holds a fuse
-    // slot.
-    const slot = this.fuse.tryTake({ projectId });
-    if (!slot) return { queued: true, target, classification };
-    let run: AgentRun;
+    // subagent(s) or does the task directly — a task never no-ops.
+    const run = await this.startHolding(
+      slot,
+      () =>
+        this.agentRunner.startOrchestrator(
+          text,
+          paths,
+          title,
+          taskId,
+          matchedTerms,
+          projectId ?? "",
+          runAttachments,
+        ),
+      (r) => r.runId,
+      (r) => TERMINAL_AGENT.has(this.liveStatus(() => this.agentRunner.get(r.runId), r)),
+    );
+    return { runRef: run.runId, target, classification };
+  }
+
+  /** The effective per-project run cap (company defaults merged), absent = global only. */
+  private async projectRunCap(projectId: string | undefined): Promise<number | undefined> {
+    return projectId ? this.budget.maxConcurrent(projectId) : undefined;
+  }
+
+  /** A run slot under the global + project cap, or null when either is full. */
+  private async takeRunSlot(projectId: string | undefined): Promise<RunSlot | null> {
+    return this.slots.tryTake(projectId, await this.projectRunCap(projectId));
+  }
+
+  private releaseRunSlot(runRef: string): void {
+    this.runSlots.get(runRef)?.();
+    this.runSlots.delete(runRef);
+  }
+
+  /**
+   * Start a run under an already-taken `slot` and record the slot for release on the
+   * run's terminal status. A spawn that throws never enters a registry, so the slot
+   * is released here. A run that ALREADY ended — a fast-failing child can emit its
+   * terminal status while `start()` is still awaiting (RunnerCore's sidecar write),
+   * so the `onRunStatus` release found nothing — releases it now instead of leaking.
+   */
+  private async startHolding<R>(
+    slot: RunSlot,
+    start: () => Promise<R>,
+    refOf: (run: R) => string,
+    endedAlready: (run: R) => boolean,
+  ): Promise<R> {
+    let run: R;
     try {
-      run = await this.agentRunner.startOrchestrator(
-        text,
-        paths,
-        title,
-        taskId,
-        matchedTerms,
-        projectId ?? "",
-        runAttachments,
-      );
+      run = await start();
     } catch (error) {
       slot();
       throw error;
     }
-    this.holdUntilTerminal(run, slot);
-    return { runRef: run.runId, target, classification };
+    if (endedAlready(run)) slot();
+    else this.runSlots.set(refOf(run), slot);
+    return run;
   }
 
-  /**
-   * Record a started run's fuse slot for release on its terminal status —
-   * unless the run ALREADY ended: a fast-failing child can emit its terminal status
-   * while `start()` is still awaiting (RunnerCore's sidecar write), so the
-   * `onRunStatus` release found nothing. Then release it now instead of leaking it.
-   */
-  private holdUntilTerminal(run: AgentRun, slot: FuseSlot): void {
-    let status = run.status;
+  /** The live registry status, or the returned snapshot's when already evicted. */
+  private liveStatus<S>(get: () => { status: S }, snapshot: { status: S }): S {
     try {
-      status = this.agentRunner.get(run.runId).status; // the live registry status
+      return get().status;
     } catch {
-      // Not in the registry (already evicted) — the returned snapshot is all we have.
+      return snapshot.status;
     }
-    if (TERMINAL_AGENT.has(status)) {
-      slot();
-      return;
-    }
-    this.fuseSlots.set(run.runId, slot);
   }
 
   /** Persist an immediately-dispatched task + its activity (the create path). */
@@ -1580,7 +1632,7 @@ export class TaskSchedulerService
   private recordQueued(task: ScheduledTask, project: Project | null): void {
     void this.activity.record({
       kind: "task-queued",
-      summary: `task queued — waiting for a machine-fuse slot${project ? ` (${project.name})` : ""}`,
+      summary: `task queued — waiting for a run slot${project ? ` (${project.name})` : ""}`,
       refs: { taskId: task.id, ...(task.projectId ? { projectId: task.projectId } : {}) },
     });
     this.log.info("task queued", { id: task.id, projectId: task.projectId });

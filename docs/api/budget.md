@@ -116,9 +116,11 @@ never counted separately (no double-counting). A run `paused-limit` on the usage
 window still holds its slot — releasing it early would let a queued task and the
 auto-resumed run both start at once when the window resets.
 
-There is no longer a global counterpart or a `maxConcurrent` cap (removed with the
-staffing-driven capacity change): concurrency is limited by staffing and the machine
-fuse, see [tasks.md](./tasks.md).
+`budget.maxConcurrent` (optional positive int, company defaults merged like the run-count
+caps) is the project's run-slot cap: `BudgetService.maxConcurrent(projectId)` feeds
+`RunSlots`, and a task over it is **queued** (not held behind an approval — it is not a
+spend cap). The global counterpart is the system config's `maxConcurrentRuns`. See
+[tasks.md](./tasks.md) → _Run slots_.
 
 Goal runs are not counted by `countRunning` (the readout's `running` figure).
 

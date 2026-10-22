@@ -5,7 +5,7 @@ import type { AgentRun, ScheduledTask, TaskTarget, WorkflowRun } from "@zibby/co
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ActivityInput } from "../activity/activity-log.service";
 import type { BudgetCheck } from "../budget/budget.service";
-import { WorkingAgentsFuse } from "../run-slots/working-agents-fuse";
+import { RunSlots } from "../run-slots/run-slots.service";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { AttachmentStorageService } from "./attachment-storage.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
@@ -103,6 +103,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     resolveResumeAt: ReturnType<typeof vi.fn>;
   };
   let fakeBudget: {
+    maxConcurrent: () => Promise<number | undefined>;
     check: ReturnType<typeof vi.fn<(projectId?: string, now?: Date) => Promise<BudgetCheck>>>;
     recordDispatch: () => Promise<void>;
     recordCost: ReturnType<
@@ -193,6 +194,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       check: vi.fn(async () => ({ ok: true }) as BudgetCheck),
       recordDispatch: async () => {},
       recordCost: vi.fn(async () => {}),
+      maxConcurrent: vi.fn(async (): Promise<number | undefined> => undefined),
     };
     fakeApprovals = {
       register: vi.fn(),
@@ -223,7 +225,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       workflowRunner as never,
       workflowsStore as never,
       agentsStore as never,
-      new WorkingAgentsFuse(fakeSystemConfigStore()),
+      new RunSlots(fakeSystemConfigStore()),
       goalRunner as never,
       fakeLogger as never,
       fakeTrace as never,
@@ -458,7 +460,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       workflowRunner as never,
       workflowsStore as never,
       agentsStore as never,
-      new WorkingAgentsFuse(fakeSystemConfigStore()),
+      new RunSlots(fakeSystemConfigStore()),
       goalRunner as never,
       fakeLogger as never,
       fakeTrace as never,
@@ -2018,6 +2020,7 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
       check: vi.fn(async () => ({ ok: true }) as BudgetCheck),
       recordDispatch: async () => {},
       recordCost: vi.fn(async () => {}),
+      maxConcurrent: vi.fn(async (): Promise<number | undefined> => undefined),
     };
     const fakeApprovals = {
       register: vi.fn(),
@@ -2054,7 +2057,7 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
       workflowRunner as never,
       workflowsStore as never,
       agentsStore as never,
-      new WorkingAgentsFuse(fakeSystemConfigStore()),
+      new RunSlots(fakeSystemConfigStore()),
       goalRunner as never,
       fakeLogger as never,
       fakeTrace as never,
@@ -2116,7 +2119,7 @@ describe("Task 3b — concurrent terminal handlers must not double-open a PR (fi
   });
 });
 
-describe("Task 3c — project-capacity lock closes the budget check→record race (#9); the machine fuse cannot be raced (#8)", () => {
+describe("Task 3c — project-capacity lock closes the budget check→record race (#9); run slots cannot be raced (#8)", () => {
   let dir: string;
   let storage: ScheduledTasksStorageService;
   let service: TaskSchedulerService;
@@ -2132,14 +2135,14 @@ describe("Task 3c — project-capacity lock closes the budget check→record rac
   const RESET_AT = Date.parse("2026-06-13T04:30:00.000Z");
 
   /**
-   * Builds a scheduler wired to a single project (or none), with a machine fuse of
-   * `maxWorkingAgents`. `agentRunner.start` resolves one tick later (`setImmediate`)
+   * Builds a scheduler wired to a single project (or none), with a run-slot cap of
+   * `maxConcurrentRuns`. `agentRunner.start` resolves one tick later (`setImmediate`)
    * — a real, non-instant async gap, wide enough that an unserialized check→record
    * would let two concurrent creates both read a stale snapshot under `Promise.all`.
    */
   function makeService(
     project: { id: string; name: string; budget?: Record<string, unknown> } | null,
-    maxWorkingAgents = 1000,
+    maxConcurrentRuns = 1000,
   ): {
     fakeBudget: {
       check: ReturnType<typeof vi.fn>;
@@ -2200,6 +2203,7 @@ describe("Task 3c — project-capacity lock closes the budget check→record rac
       check: vi.fn(async () => ({ ok: true }) as BudgetCheck),
       recordDispatch: vi.fn(async () => {}),
       recordCost: vi.fn(async () => {}),
+      maxConcurrent: vi.fn(async (): Promise<number | undefined> => undefined),
     };
     let registeredRunner:
       | { resume: (taskId: string) => void; cancel: (taskId: string) => void }
@@ -2225,7 +2229,7 @@ describe("Task 3c — project-capacity lock closes the budget check→record rac
       workflowRunner as never,
       workflowsStore as never,
       agentsStore as never,
-      new WorkingAgentsFuse(fakeSystemConfigStore({ maxWorkingAgents })),
+      new RunSlots(fakeSystemConfigStore({ maxConcurrentRuns })),
       goalRunner as never,
       fakeLogger as never,
       fakeTrace as never,
@@ -2263,7 +2267,7 @@ describe("Task 3c — project-capacity lock closes the budget check→record rac
     await fs.rm(dir, { recursive: true, force: true });
   });
 
-  it("fuse TOCTOU (#8): two concurrent background creates under a fuse of 1 dispatch exactly one, queue the other", async () => {
+  it("slot TOCTOU (#8): two concurrent background creates under a global cap of 1 dispatch exactly one, queue the other", async () => {
     makeService({ id: PROJECT_ID, name: "Proj" }, 1);
 
     const [a, b] = await Promise.all([
@@ -2283,7 +2287,7 @@ describe("Task 3c — project-capacity lock closes the budget check→record rac
     expect(agentRunner.start).toHaveBeenCalledTimes(1);
   });
 
-  it("fuse TOCTOU (#8): two concurrent SYNCHRONOUS creates under a fuse of 1 dispatch exactly one, queue the other", async () => {
+  it("slot TOCTOU (#8): two concurrent SYNCHRONOUS creates under a global cap of 1 dispatch exactly one, queue the other", async () => {
     makeService({ id: PROJECT_ID, name: "Proj" }, 1);
 
     const [a, b] = await Promise.all([
@@ -2356,7 +2360,7 @@ describe("Task 3c — project-capacity lock closes the budget check→record rac
   // (drainQueues), which the mandatory tests above do exercise indirectly via
   // guardExisting. See task-3c-report.md for the full writeup.
 
-  it("tick heartbeat path (finding #1): tick's dispatch of a due scheduled task racing dispatchPending's dispatch of a pending task, both under a fuse of 1, dispatch exactly one and queue the other", async () => {
+  it("tick heartbeat path (finding #1): tick's dispatch of a due scheduled task racing dispatchPending's dispatch of a pending task, both under a global cap of 1, dispatch exactly one and queue the other", async () => {
     const { fakeBudget } = makeService({ id: PROJECT_ID, name: "Proj" }, 1);
     const project = { id: PROJECT_ID, name: "Proj" };
     const now = Date.now();
@@ -2432,7 +2436,7 @@ describe("Task 3c — project-capacity lock closes the budget check→record rac
       const statuses = [a.status, b.status].sort();
       expect(statuses).toEqual(["dispatched", "queued"]);
     });
-    // The finding's own proof: with a fuse of 1, exactly one real dispatch may ever
+    // The finding's own proof: with a global cap of 1, exactly one real dispatch may ever
     // happen across the tick fire and the racing dispatchPending call.
     expect(agentRunner.start).toHaveBeenCalledTimes(1);
   });
@@ -2458,7 +2462,7 @@ describe("Task 3c — project-capacity lock closes the budget check→record rac
   });
 
   it("T7 — two overlapping timer-driven ticks: the second is skipped while the first is in flight, so a due task is dispatched exactly once", async () => {
-    // No fuse cap here — this regression is about TickingWatcherBase's
+    // No run-slot cap here — this regression is about TickingWatcherBase's
     // skip-if-in-flight guard on the timer-driven path itself (two `setInterval`
     // firings racing each other), not the T3c project-capacity lock exercised by
     // the test above. Before the guard, two independently-stale `storage.list()`
@@ -2509,12 +2513,14 @@ describe("Task 3c — project-capacity lock closes the budget check→record rac
   });
 });
 
-describe("machine fuse queue", () => {
+describe("run slots (global + per-project cap)", () => {
   let dir: string;
   let storage: ScheduledTasksStorageService;
   let service: TaskSchedulerService;
-  let fuse: WorkingAgentsFuse;
+  let slots: RunSlots;
   let agentListener: ((run: AgentRun) => void) | undefined;
+  let workflowListener: ((run: WorkflowRun) => void) | undefined;
+  let goalListener: ((run: { goalRunId: string; status: string }) => void) | undefined;
   let agentRunner: {
     start: ReturnType<typeof vi.fn>;
     startOrchestrator: ReturnType<typeof vi.fn>;
@@ -2523,6 +2529,11 @@ describe("machine fuse queue", () => {
     readLog: ReturnType<typeof vi.fn>;
   };
   let workflowRunner: {
+    start: ReturnType<typeof vi.fn>;
+    onRunStatus: ReturnType<typeof vi.fn>;
+    get: ReturnType<typeof vi.fn>;
+  };
+  let goalRunner: {
     start: ReturnType<typeof vi.fn>;
     onRunStatus: ReturnType<typeof vi.fn>;
     get: ReturnType<typeof vi.fn>;
@@ -2537,10 +2548,14 @@ describe("machine fuse queue", () => {
     { id: "proj_B", name: "B" },
   ];
   const RELEASE: TaskTarget = { kind: "workflow", id: "release", name: "Release" };
+  const GOAL: TaskTarget = { kind: "goal", id: "ship-it", name: "Ship it" };
 
-  /** A scheduler over a REAL fuse. */
-  function makeService(maxWorkingAgents = 1000): void {
-    fuse = new WorkingAgentsFuse(fakeSystemConfigStore({ maxWorkingAgents }));
+  /** A scheduler over REAL run slots; `caps` is the per-project `budget.maxConcurrent`. */
+  function makeService(
+    maxConcurrentRuns = 1000,
+    caps: Record<string, number | undefined> = {},
+  ): void {
+    slots = new RunSlots(fakeSystemConfigStore({ maxConcurrentRuns }));
     let runSeq = 0;
     agentRunner = {
       start: vi.fn(async () => agentRun({ runId: `koder_${++runSeq}`, agentId: "koder" })),
@@ -2553,9 +2568,20 @@ describe("machine fuse queue", () => {
       readLog: vi.fn(async () => ({ content: "", nextOffset: 0, done: true })),
     };
     workflowRunner = {
-      start: vi.fn(async () => workflowRun({})),
-      onRunStatus: vi.fn(() => () => {}),
+      start: vi.fn(async () => workflowRun({ workflowRunId: `release_${++runSeq}` })),
+      onRunStatus: vi.fn((l: (run: WorkflowRun) => void) => {
+        workflowListener = l;
+        return () => {};
+      }),
       get: vi.fn(() => workflowRun({})),
+    };
+    goalRunner = {
+      start: vi.fn(async () => ({ goalRunId: `goal_${++runSeq}` })),
+      onRunStatus: vi.fn((l: (run: { goalRunId: string; status: string }) => void) => {
+        goalListener = l;
+        return () => {};
+      }),
+      get: vi.fn(() => ({ status: "running" })),
     };
     classifier = {
       classify: vi.fn(async () => ({
@@ -2584,16 +2610,20 @@ describe("machine fuse queue", () => {
       workflowRunner as never,
       {
         list: async () => [
-          { id: "release", department: "dev", phases: [{ id: "code", agent: "koder" }] },
+          {
+            id: "release",
+            department: "dev",
+            phases: [
+              { id: "code", agent: "koder" },
+              { id: "review", agent: "reviewer" },
+              { id: "test", agent: "tester" },
+            ],
+          },
         ],
       } as never,
       { listActive: async () => [] } as never,
-      fuse,
-      {
-        start: vi.fn(async () => ({ goalRunId: "goal_1" })),
-        onRunStatus: vi.fn(() => () => {}),
-        get: vi.fn(),
-      } as never,
+      slots,
+      goalRunner as never,
       fakeLogger as never,
       fakeTrace as never,
       { record: vi.fn(async () => {}) } as never,
@@ -2602,6 +2632,7 @@ describe("machine fuse queue", () => {
         check: vi.fn(async () => ({ ok: true }) as BudgetCheck),
         recordDispatch: vi.fn(async () => {}),
         recordCost: vi.fn(async () => {}),
+        maxConcurrent: vi.fn(async (id: string) => caps[id]),
       } as never,
       { register: vi.fn(), requestApproval: async () => ({ id: "appr_1" }) } as never,
       { floor: async () => [], evaluate: vi.fn() } as never,
@@ -2616,11 +2647,32 @@ describe("machine fuse queue", () => {
     service.onModuleInit();
   }
 
+  /** Create a task and assert it dispatched; returns its run ref. */
+  async function dispatched(
+    text: string,
+    projectId?: string,
+    target?: TaskTarget,
+  ): Promise<string> {
+    const result = await service.createTask({ text, title: text }, undefined, projectId, target);
+    if (result.outcome !== "dispatched") throw new Error(`expected dispatched: ${result.outcome}`);
+    return result.runRef;
+  }
+
+  /** Create a task and assert it queued; returns its task id. */
+  async function queued(text: string, projectId?: string, target?: TaskTarget): Promise<string> {
+    const result = await service.createTask({ text, title: text }, undefined, projectId, target);
+    if (result.outcome !== "scheduled") throw new Error(`expected queued: ${result.outcome}`);
+    expect(result.task.status).toBe("queued");
+    return result.task.id;
+  }
+
   beforeEach(async () => {
-    dir = await fs.mkdtemp(path.join(os.tmpdir(), "task-sched-fuse-"));
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "task-sched-slots-"));
     storage = new ScheduledTasksStorageService(dir);
     await storage.onModuleInit();
     agentListener = undefined;
+    workflowListener = undefined;
+    goalListener = undefined;
   });
 
   afterEach(async () => {
@@ -2628,87 +2680,118 @@ describe("machine fuse queue", () => {
     await fs.rm(dir, { recursive: true, force: true });
   });
 
-  it("(a) fuse 1: the second task queues with its target; the run's end dispatches it without re-classifying", async () => {
+  it("cap 1: the second task queues with its target; the run's end dispatches it without re-classifying", async () => {
     makeService(1);
-    const first = await service.createTask({ text: "do A", title: "A" }, undefined, "proj_A");
-    const second = await service.createTask({ text: "do B", title: "B" }, undefined, "proj_B");
-    expect(first.outcome).toBe("dispatched");
-    if (second.outcome !== "scheduled") throw new Error(`expected queued, got ${second.outcome}`);
-    expect(second.task.status).toBe("queued");
-    expect(second.task.target).toMatchObject({ kind: "agent", id: "koder" });
+    const firstRef = await dispatched("do A", "proj_A");
+    const secondId = await queued("do B", "proj_B");
+    expect((await storage.get(secondId)).target).toMatchObject({ kind: "agent", id: "koder" });
     expect(classifier.classify).toHaveBeenCalledTimes(2);
 
-    if (first.outcome !== "dispatched") throw new Error("unreachable");
-    agentListener?.(agentRun({ runId: first.runRef, status: "done" }));
+    agentListener?.(agentRun({ runId: firstRef, status: "done" }));
     await vi.waitFor(async () => {
-      expect((await storage.get(second.task.id)).status).toBe("dispatched");
+      expect((await storage.get(secondId)).status).toBe("dispatched");
     });
     expect(classifier.classify).toHaveBeenCalledTimes(2); // the persisted target was reused
     expect(agentRunner.start).toHaveBeenCalledTimes(2);
-    expect(fuse.inUse()).toBe(1);
+    expect(slots.inUse()).toBe(1);
   });
 
-  it("(c) a spawn that throws gives back the fuse slot", async () => {
+  it("an agent run holds exactly one slot until its terminal status", async () => {
+    makeService();
+    const ref = await dispatched("do A");
+    expect(slots.inUse()).toBe(1);
+    agentListener?.(agentRun({ runId: ref, status: "done" }));
+    expect(slots.inUse()).toBe(0);
+  });
+
+  it("a workflow run holds exactly one slot for its lifetime, however many stages it has", async () => {
+    makeService(2);
+    const ref = await dispatched("ship it", undefined, RELEASE); // 3 phases, 3 agents
+    expect(slots.inUse()).toBe(1);
+    expect(workflowRunner.start).toHaveBeenCalledTimes(1);
+
+    await dispatched("small job"); // still room for a second run
+    expect(slots.inUse()).toBe(2);
+    await queued("third job"); // the global cap of 2 is now full
+
+    workflowListener?.(workflowRun({ workflowRunId: ref, status: "done" }));
+    await vi.waitFor(() => expect(agentRunner.start).toHaveBeenCalledTimes(2));
+    expect(slots.inUse()).toBe(2);
+  });
+
+  it("a goal run holds one slot; a second task queues until the goal ends", async () => {
+    makeService(1);
+    const ref = await dispatched("work towards it", undefined, GOAL);
+    expect(slots.inUse()).toBe(1);
+    const queuedId = await queued("do B");
+
+    goalListener?.({ goalRunId: ref, status: "done" });
+    await vi.waitFor(async () => {
+      expect((await storage.get(queuedId)).status).toBe("dispatched");
+    });
+  });
+
+  it("a run waiting on an approval (parked / paused-limit) keeps its slot; interrupted frees it", async () => {
+    makeService(1);
+    const ref = await dispatched("ship it", undefined, RELEASE);
+    const queuedId = await queued("do B");
+
+    workflowListener?.(workflowRun({ workflowRunId: ref, status: "parked" }));
+    workflowListener?.(workflowRun({ workflowRunId: ref, status: "paused-limit" }));
+    await new Promise((r) => setTimeout(r, 30));
+    expect(slots.inUse()).toBe(1);
+    expect((await storage.get(queuedId)).status).toBe("queued");
+
+    workflowListener?.(workflowRun({ workflowRunId: ref, status: "interrupted" }));
+    await vi.waitFor(async () => {
+      expect((await storage.get(queuedId)).status).toBe("dispatched");
+    });
+  });
+
+  it("a project at its budget.maxConcurrent queues while another project's task still dispatches", async () => {
+    makeService(10, { proj_A: 1 });
+    const a1 = await dispatched("A one", "proj_A");
+    const a2 = await queued("A two", "proj_A"); // global room, but A's cap of 1 is full
+    expect(slots.inUse("proj_A")).toBe(1);
+    await dispatched("B one", "proj_B"); // another project is unaffected
+    await dispatched("loose", undefined);
+    expect(slots.inUse()).toBe(3);
+
+    agentListener?.(agentRun({ runId: a1, status: "done" }));
+    await vi.waitFor(async () => {
+      expect((await storage.get(a2)).status).toBe("dispatched");
+    });
+    expect(slots.inUse("proj_A")).toBe(1);
+  });
+
+  it("a spawn that throws gives back the slot", async () => {
     makeService(1);
     agentRunner.start.mockRejectedValueOnce(new Error("preflight failed"));
     await expect(service.createTask({ text: "do A", title: "A" })).rejects.toThrow("preflight");
-    expect(fuse.inUse()).toBe(0);
+    expect(slots.inUse()).toBe(0);
   });
 
-  it("(d) a workflow with no fuse room queues and starts nothing", async () => {
-    makeService(1);
-    const held = fuse.tryTake();
-    const result = await service.createTask(
-      { text: "ship it", title: "Ship" },
-      undefined,
-      undefined,
-      RELEASE,
-    );
-    if (result.outcome !== "scheduled") throw new Error(`expected queued, got ${result.outcome}`);
-    expect(result.task.status).toBe("queued");
-    expect(workflowRunner.start).not.toHaveBeenCalled();
-    expect(fuse.inUse()).toBe(1); // a workflow dispatch only checks, never reserves
-
-    held!();
-    await vi.waitFor(async () => {
-      expect((await storage.get(result.task.id)).status).toBe("dispatched");
-    });
-    expect(workflowRunner.start).toHaveBeenCalledTimes(1);
-  });
-
-  it("(e) an agent run holds a fuse slot", async () => {
-    makeService();
-    const result = await service.createTask({ text: "do A", title: "A" });
-    expect(result.outcome).toBe("dispatched");
-    expect(agentRunner.start).toHaveBeenCalledTimes(1);
-    expect(fuse.inUse()).toBe(1);
-  });
-
-  it("(f) a run already terminal when start() resolves releases its slot at once", async () => {
+  it("a run already terminal when start() resolves releases its slot at once", async () => {
     makeService(1);
     // The fast-failing child emitted `error` during start()'s sidecar await — before
     // the scheduler had recorded anything for the terminal handler to release.
     agentRunner.start.mockResolvedValueOnce(agentRun({ runId: "koder_fast", status: "error" }));
     agentRunner.get.mockReturnValueOnce(agentRun({ runId: "koder_fast", status: "error" }));
-    const result = await service.createTask({ text: "do A", title: "A" });
-    expect(result.outcome).toBe("dispatched");
-    expect(fuse.inUse()).toBe(0);
+    await dispatched("do A");
+    expect(slots.inUse()).toBe(0);
   });
 
   it("a queued task cancelled before the drain never dispatches", async () => {
     makeService(1);
-    const first = await service.createTask({ text: "do A", title: "A" });
-    const second = await service.createTask({ text: "do B", title: "B" });
-    if (first.outcome !== "dispatched" || second.outcome !== "scheduled") {
-      throw new Error("expected dispatched + queued");
-    }
+    const firstRef = await dispatched("do A");
+    const secondId = await queued("do B");
 
-    await service.cancel(second.task.id);
-    expect((await storage.get(second.task.id)).status).toBe("cancelled");
+    await service.cancel(secondId);
+    expect((await storage.get(secondId)).status).toBe("cancelled");
 
-    agentListener?.(agentRun({ runId: first.runRef, status: "done" })); // frees the slot → drain
+    agentListener?.(agentRun({ runId: firstRef, status: "done" })); // frees the slot → drain
     await new Promise((r) => setTimeout(r, 50));
     expect(agentRunner.start).toHaveBeenCalledTimes(1);
-    expect((await storage.get(second.task.id)).status).toBe("cancelled");
+    expect((await storage.get(secondId)).status).toBe("cancelled");
   });
 });

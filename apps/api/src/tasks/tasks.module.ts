@@ -32,8 +32,8 @@ import { TasksController } from "./tasks.controller";
  * back Phase 8's project attribution and the budget/concurrency guard; the
  * scheduled-tasks store is its own module so BudgetModule can share it cycle-free.
  * The primary router is the `claude -p` AI categorizer; the keyword scorer is the
- * always-available fallback. Concurrency is decided by the
- * `maxWorkingAgents` machine fuse (RunSlotsModule), not by any project cap.
+ * always-available fallback. Concurrency is decided by run slots (RunSlotsModule):
+ * the global `maxConcurrentRuns` plus the project's optional `budget.maxConcurrent`.
  */
 @Module({
   imports: [

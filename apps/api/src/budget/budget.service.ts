@@ -118,6 +118,19 @@ export class BudgetService {
   }
 
   /**
+   * The project's effective run-slot cap (`budget.maxConcurrent`, company defaults
+   * merged — same resolution as the run-count caps); absent or unreadable → no
+   * per-project cap, only the global `maxConcurrentRuns` applies.
+   */
+  async maxConcurrent(projectId: string): Promise<number | undefined> {
+    const budget = await this.projects
+      .get(projectId)
+      .then((p) => this.resolved.resolveBudget(p))
+      .catch(() => undefined);
+    return budget?.maxConcurrent;
+  }
+
+  /**
    * Is this dispatch within budget? Checks the global account ceiling first (any
    * project, including unattributed), then the project's daily/weekly run caps. Any
    * read error → over("global") (fail-closed).

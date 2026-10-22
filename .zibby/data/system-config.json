@@ -10,7 +10,7 @@
   "chatPersona": "concise",
   "powerSaver": false,
   "ttsVoice": "cs_male_cv26_default",
-  "maxWorkingAgents": 3,
+  "maxConcurrentRuns": 3,
   "roadmapTickMs": 900000,
   "dockDoneTasksLimit": 20,
   "ui": {
@@ -103,18 +103,12 @@
           }
         ]
       },
-      "favorites": [
-        "Primary"
-      ],
+      "favorites": ["Primary"],
       "arranged": {
-        "shown": [
-          "Primary"
-        ],
+        "shown": ["Primary"],
         "hidden": []
       },
-      "removed": [
-        "REVIEW"
-      ],
+      "removed": ["REVIEW"],
       "collapsed": {},
       "epicClosed": {}
     }

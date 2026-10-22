@@ -1,3 +1,5 @@
+> Superseded by docs/plans/remove-employees.md (2026-10-22).
+
 # Staffing-driven capacity — replace the concurrency caps with headcount
 
 Status: implemented 2026-10-07 (agreed in a grilling session 2026-09-30). See

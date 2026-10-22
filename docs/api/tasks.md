@@ -13,7 +13,8 @@ scheduled    ← created with a future scheduledAt
     ↓
   tick()     ← daemon runs once per configured interval
     ↓
-queued       ← no capacity right now: the machine fuse (`maxWorkingAgents`) is full
+queued       ← no run slot free right now: the global `maxConcurrentRuns` or the project's
+                 `budget.maxConcurrent` is full
                  (no approval). Drained by project round-robin -> oldest first.
 held         ← spend exceeded the budget cap (waits for approval to release)
 pending      ← interactive path (dialog): accepted, classification + spawn run IN THE BACKGROUND
@@ -507,31 +508,43 @@ Before every dispatch (immediate or from the scheduler):
    - Once approved, the task re-enters dispatch (the budget check is skipped once for
      this id)
 
-## Machine fuse (run slots)
+## Run slots
 
-There is **no** project or system "parallel runs" cap any more (`maxConcurrent` and
-`maxConcurrentRuns` were removed), and no employees or leases. Whether a task starts is
-decided by one global cap: `WorkingAgentsFuse` (`apps/api/src/run-slots/`, provided by
-`RunSlotsModule`) limits how many task-system agents work at once (`maxWorkingAgents`,
-default `3`, live-read). A single-agent / orchestrator run holds a slot for its whole
-lifetime (including `awaiting-approval` / `paused-limit`); a workflow agent stage holds
-one per stage. Goal-loop iterations, chat and channel-triage agents are not counted. The
-fuse is in-memory: runs that survive an API restart are not counted. This is the interim
-global fuse; it is being reworked into per-run slots.
+The only concurrency throttle. `RunSlots` (`apps/api/src/run-slots/run-slots.service.ts`,
+provided by `RunSlotsModule`) hands out **one slot per run instance** the task system
+starts: a single-agent run, an orchestrator run, a whole workflow run (however many stages
+or agents it spawns inside) or a goal run. Two caps apply, both must have room:
 
-When no slot is free the task moves to **queued** (no approval). The queued task also
-persists its resolved `target` / `classification`, so a drain does not re-classify it.
-Waiting is a field, not a lifecycle status.
+- **global** — `systemConfig.maxConcurrentRuns` (default `3`, read live);
+- **per project** — the project's effective `budget.maxConcurrent` (company defaults
+  merged, `BudgetService.maxConcurrent(projectId)`), optional; empty = only the global cap.
 
-On every terminal run or fuse release the scheduler calls `drainQueues()`: queued tasks
-are tried by project round-robin, then oldest first. Progress ranking (furthest stage
-first, `grant-order.ts`) applies to the fuse waiters, not to the queue drain; the
-priority tier is a no-op until tasks carry a priority. Grant ordering is in-memory
-(`GrantQueue`) and re-established by the re-drive after a restart rather than recomputed
-from disk.
+`dispatch()` takes the slot (`tryTake`) **before** spawning and `startHolding()` records it
+by run ref (`runId` / `workflowRunId` / `goalRunId`). It is released on the run's terminal
+status (agent `done|error|interrupted`, workflow/goal `done|failed|interrupted`), or at
+once if the spawn throws or the run was already terminal when `start()` returned. A run
+**keeps its slot** while it waits on an approval (`awaiting-approval`), is `parked` or
+`paused-limit` — it is still in flight. Nested runs (a workflow's child workflow, a goal's
+maker/verifier iterations) ride on the parent's slot; chat conversation, channel triage
+and system automations (briefing, distill, …) take none. Everything that creates a run
+instance through the scheduler counts, including tasks started from chat and `agent` /
+`workflow` automations (see [automations.md](./automations.md)).
+
+Nothing waits inside `RunSlots`: when `tryTake` returns `null` the task moves to
+**queued** (no approval), persisting its resolved `target` / `classification` so a drain
+does not re-classify it. Waiting is a field, not a lifecycle status. The counts are
+in-memory: a run that survives an API restart is not counted until it ends, so the limit
+can briefly over-admit after a reboot. An operator "continue" of a failed/interrupted
+run restarts it outside `dispatch`, so it runs uncounted.
+
+On every terminal run, slot release or `maxConcurrentRuns` change the scheduler calls
+`drainQueues()`: queued tasks are tried by project round-robin, then oldest first; a task
+whose project cap is full is skipped (other projects still start), and the drain stops
+when the global cap is full. The priority tier is a no-op until tasks carry a priority.
 
 `withCapacityLock` (per project) serializes the budget read-then-dispatch window so two
-concurrent creates cannot both pass the budget check; the fuse is atomic in itself.
+concurrent creates cannot both pass the budget check; slots are granted synchronously
+in-process, so they are atomic in themselves.
 
 `budgetApproved: Set<string>` in memory — task ids that were released past the cap;
 a drain skips the budget check for these once, then removes them from the set.

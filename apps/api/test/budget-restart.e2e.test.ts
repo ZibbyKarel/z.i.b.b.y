@@ -7,7 +7,7 @@ import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
-import { WorkingAgentsFuse } from "../src/run-slots/working-agents-fuse";
+import { RunSlots } from "../src/run-slots/run-slots.service";
 import { SystemConfigStore } from "../src/system/system-config.store";
 import { withOperator } from "./operator-token";
 
@@ -105,7 +105,7 @@ describe("Budget restart (e2e)", () => {
       instructions: "Write code.",
       department: "dev",
     });
-    // alpha: dailyRuns 1 drives the HOLD path. beta has no budget, so the machine-fuse
+    // alpha: dailyRuns 1 drives the HOLD path. beta has no budget, so the run-slot
     // QUEUE path is exercised without the daily cap interfering.
     await request(server())
       .post("/api/projects")
@@ -169,12 +169,12 @@ describe("Budget restart (e2e)", () => {
   });
 
   it("a queued task drains on the bootstrap sweep after its blocking run is gone", async () => {
-    // Size the machine fuse so the blocker takes its LAST slot (runs left over from the
+    // Size the run-slot cap so the blocker takes its LAST slot (runs left over from the
     // previous test may still hold some). Persisted, so the rebooted app reads it too.
     const store = app.get(SystemConfigStore);
     await store.write({
       ...store.current(),
-      maxWorkingAgents: app.get(WorkingAgentsFuse).inUse() + 1,
+      maxConcurrentRuns: app.get(RunSlots).inUse() + 1,
     });
     // The blocker takes the slot, running (dispatch lands in the background — wait for
     // it so the next task queues).
@@ -196,7 +196,7 @@ describe("Budget restart (e2e)", () => {
     );
     expect(queuedTask?.status).toBe("queued");
 
-    // Reboot: the blocker's child dies with the API → on bootstrap the fuse is empty,
+    // Reboot: the blocker's child dies with the API → on bootstrap the run slots are empty,
     // and the queue-drain sweep dispatches the waiting task.
     await reboot();
     const after = await poll(

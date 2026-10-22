@@ -111,15 +111,14 @@ export const SystemConfigSchema = z
      */
     ttsVoice: z.string().min(1).nullable().default(null),
     /**
-     * Machine fuse: the ceiling on concurrently
-     * WORKING agents started by the task system — every single-agent / orchestrator task
-     * run and every workflow agent stage. A queued task (waiting for a slot) holds none; a single-agent / orchestrator run holds its slot
-     * until a terminal status, including `awaiting-approval` / `paused-limit`. In-memory:
-     * a run that survives an API restart is not counted until it ends. Read live (never cached) by
-     * `WorkingAgentsFuse`. Migrated from the removed `maxConcurrentRuns` on read
+     * The global run-slot cap (docs/plans/remove-employees.md): at most this many runs
+     * started by the task system (single-agent, orchestrator, workflow or goal — one slot
+     * per run, however many agents it spawns) are in flight at once; the rest queue. A run
+     * holds its slot until a terminal status, including while it awaits an approval. Read
+     * live by `RunSlots`. Migrated from the interim `maxWorkingAgents` on read
      * (`SystemConfigStore`).
      */
-    maxWorkingAgents: z.number().int().positive().default(3),
+    maxConcurrentRuns: z.number().int().positive().default(3),
     /**
      * Roadmap auto-sync + gate-poll heartbeat (ms, 125h) — each tick re-syncs
      * every project whose roadmap config has `autoSync: true`

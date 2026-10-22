@@ -5,8 +5,6 @@ import type { Workflow, WorkflowRun } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResumableRunner } from "../approvals/approvals.service";
 import { DuplicateNoteError } from "../memory/vault.service";
-import { WorkingAgentsFuse } from "../run-slots/working-agents-fuse";
-import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { WorkflowRunnerService, stageWebUrl, unmetRequirement } from "./workflow-runner.service";
 
 /**
@@ -97,8 +95,6 @@ async function makeService(
     // ProjectLocalService double (Phase 77): unused here since `projects.get`
     // always resolves null, so the git-worktree/clone-if-missing branch never runs.
     {} as never,
-    // Machine fuse: a real one, effectively uncapped.
-    new WorkingAgentsFuse(fakeSystemConfigStore()),
     signalBus as never,
   );
   (service as unknown as { core: { init: () => void; shutdown: () => void } }).core = {

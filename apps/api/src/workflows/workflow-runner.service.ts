@@ -32,7 +32,6 @@ import { AgentsStorageService } from "../agents/agents.storage.service";
 import { ApprovalsService } from "../approvals/approvals.service";
 import { SignalBusService } from "../automations/signal-bus.service";
 import { ArtifactsStorageService, artifactRecordId } from "../artifacts/artifacts.storage.service";
-import { type FuseSlot, WorkingAgentsFuse } from "../run-slots/working-agents-fuse";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
 import { GroundingService } from "../memory/grounding.service";
 import { DuplicateNoteError, VaultService } from "../memory/vault.service";
@@ -262,7 +261,6 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly activity: ActivityLogService,
     private readonly artifacts: ArtifactsStorageService,
     private readonly projectLocal: ProjectLocalService,
-    private readonly fuse: WorkingAgentsFuse,
     // R&D/QA deliveries are emitted as signals (a leaf module).
     private readonly signalBus: SignalBusService,
   ) {
@@ -998,7 +996,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     // (still resumable/deletable, and no longer reads as waiting on an approval).
     if (run?.status === "parked") {
       // An approval park still has a live stage child (drive() waits on it, holding the
-      // lease + fuse slot): kill it like a reject would, and drop its pending approval
+      // stage open): kill it like a reject would, and drop its pending approval
       // so a later approve can't release the old child.
       const stageRunId = run.parkedReason === "approval" ? run.currentStageRunId : undefined;
       if (stageRunId) {
@@ -1107,8 +1105,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * Ask a run to pause at its next stage boundary. Nothing is killed: the current
-   * stage finishes normally (a SIGSTOP would freeze the model stream and keep the
-   * fuse slot), then {@link drive} parks the run `paused` before the next stage.
+   * stage finishes normally (a SIGSTOP would freeze the model stream mid-turn), then {@link drive} parks the run `paused` before the next stage.
    * The flag is durable in `run.json`. Only a running run, or one parked on a
    * mid-stage approval (whose stage resumes after the decision), has a boundary
    * ahead → else {@link WorkflowRunNotPausableError}.
@@ -1400,7 +1397,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       settledChild = undefined;
 
       // Operator pause (D-PAUSE): the boundary is reached — park before spending the
-      // next stage. No fuse slot is held here. The exact cursor + handoff
+      // next stage. The exact cursor + handoff
       // are kept so the resume re-enters identically (a loop back-edge included).
       // A just-settled sub-run is recorded first; the next boundary parks it.
       if (!settled && run.pauseRequested) {
@@ -1458,12 +1455,6 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
 
       const attempt = (retries.get(phase.id) ?? 0) + 1;
 
-      // Ranked fuse waiting: progress → project round-robin → FIFO.
-      const rank = {
-        progress: this.progressOf(run, phaseIds, phase.id),
-        projectId: project?.id,
-      };
-
       // Sequential sandbox numbering: every dispatch appends exactly one `stageRuns`
       // entry when it settles (there is no same-entry retry path in this machine),
       // so `length + 1` numbers the folders in call order — a loop back-edge's
@@ -1507,24 +1498,16 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         if (!refused) return;
         stageRun = refused;
       } else {
-        // Machine fuse: a slot per spawned agent process.
-        let slot: FuseSlot | undefined;
-        try {
-          if (phase.agent) slot = await this.fuse.take(rank);
-          stageRun = await this.runStage(
-            run,
-            phase,
-            stageCwd,
-            attempt,
-            project,
-            stageResumeContext,
-            delegates,
-          );
-        } finally {
-          // Released on EVERY terminal path (done/error/interrupted/paused-limit) —
-          // `runStage` only returns once `waitForStage` sees one of those.
-          slot?.();
-        }
+        // No per-stage slot: the whole run holds one run slot, taken at dispatch.
+        stageRun = await this.runStage(
+          run,
+          phase,
+          stageCwd,
+          attempt,
+          project,
+          stageResumeContext,
+          delegates,
+        );
       }
       // The stage has reached a terminal/paused state and (when terminal) is about
       // to be appended to `stageRuns` — its log is readable from there now, so drop
@@ -2474,18 +2457,6 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       { phaseId: phase.id, sha: result.sha, at: new Date().toISOString() },
     ];
     await this.writeAggregate(run);
-  }
-
-  /**
-   * Grant-ordering progress (decision 5): the furthest phase this run ever reached,
-   * over the phase count — a loop-back (review → koder) keeps its reached progress.
-   */
-  private progressOf(run: WorkflowRun, phaseIds: readonly string[], phaseId: string): number {
-    const reached = Math.max(
-      phaseIds.indexOf(phaseId),
-      ...run.stageRuns.map((s) => phaseIds.indexOf(s.phaseId)),
-    );
-    return (reached + 1) / phaseIds.length;
   }
 
   /** Rewrite `<run cwd>/PROGRESS.md` from the aggregate (pure {@link renderProgress}). */

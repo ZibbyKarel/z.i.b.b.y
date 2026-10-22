@@ -32,7 +32,7 @@ const ENV_KEYS = [
 
 /**
  * Phase 8.2 engagement isolation & parallelism, end to end (the roadmap's stress
- * test). The machine fuse allows 2 working agents (staffing-driven capacity);
+ * test). The global run-slot cap allows 2 concurrent runs;
  * firing A1 and B1 fills it, so A2 queues (no approval) and drains the moment A1
  * reaches a terminal state. Each run keeps
  * its own run dir; the ledger and activity attribute every line to the right project.
@@ -100,7 +100,7 @@ describe("Parallel engagements (e2e)", () => {
     // task is posted (queue trigger), short enough to keep the test snappy.
     process.env.FAKE_CLAUDE_STEPS = "6";
     process.env.FAKE_CLAUDE_DELAY_MS = "90";
-    writeSystemConfig({ maxWorkingAgents: 2 });
+    writeSystemConfig({ maxConcurrentRuns: 2 });
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
@@ -140,8 +140,8 @@ describe("Parallel engagements (e2e)", () => {
     for (const k of ENV_KEYS) delete process.env[k];
   });
 
-  it("queues a task once the machine fuse is full and drains the queue on terminal", async () => {
-    // A1 and B1 dispatch and fill the fuse of 2. POST returns `pending` (background
+  it("queues a task once the run-slot cap is full and drains the queue on terminal", async () => {
+    // A1 and B1 dispatch and fill the cap of 2. POST returns `pending` (background
     // dispatch) — wait for each record to land before the next create.
     const a1 = await request(server()).post("/api/tasks").send({ text: "alpha first job" });
     const a1Task = await poll(
@@ -156,7 +156,7 @@ describe("Parallel engagements (e2e)", () => {
     );
     expect(b1Task?.projectId).toBe("beta");
 
-    // A's second task — the fuse is full → queued (no approval).
+    // A's second task — the cap is full → queued (no approval).
     const a2 = await request(server()).post("/api/tasks").send({ text: "alpha second job" });
     const a2Id = a2.body.task.id as string;
     const a2Task = await poll(
@@ -169,7 +169,7 @@ describe("Parallel engagements (e2e)", () => {
     // The budget readout shows A with one queued task.
     expect((await budgetRow("alpha"))?.queued).toBe(1);
 
-    // A1 (or B1) reaches a terminal state → the fuse frees → the queue drains → A2 dispatches.
+    // A1 (or B1) reaches a terminal state → the slot frees → the queue drains → A2 dispatches.
     const drained = await poll(
       () => taskById(a2Id),
       (t) => t?.status === "dispatched",

@@ -12,8 +12,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResumableRunner } from "../approvals/approvals.service";
 import { ProjectLocalUnresolvedError } from "../projects/projects.errors";
 import { RunNotFoundError } from "../runner/runner-core";
-import { WorkingAgentsFuse } from "../run-slots/working-agents-fuse";
-import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { WorkflowRunnerService } from "./workflow-runner.service";
 
 /** Minimal logger double matching the LoggerService surface the service uses. */
@@ -147,8 +145,6 @@ async function makeHarness(dir: string): Promise<Harness> {
     // resolves null, so the git-worktree/clone-if-missing branch never runs — see
     // workflow-runner.project-local.test.ts for its dedicated dispatch coverage.
     { resolveForRun: vi.fn() } as never,
-    // Machine fuse: a real one, effectively uncapped.
-    new WorkingAgentsFuse(fakeSystemConfigStore()),
     // A3: fake ModuleRef — HandoffService is resolved lazily (not constructor-
     // injected, see workflow-runner.service.ts's doc comment), so the double here
     // is a ModuleRef whose `.get()` hands back a fake HandoffService. This
@@ -1682,76 +1678,6 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
         const artifact = await h.service.readLatestArtifact(WORKFLOW_RUN_ID);
         expect(artifact).toBeNull();
       });
-    });
-  });
-
-  describe("ranked machine fuse", () => {
-    const staffedWorkflow = {
-      id: "release",
-      department: "engineering",
-      phases: [
-        {
-          id: "build",
-          type: "agent",
-          agent: "writer",
-          consumes: "in.md",
-          produces: "out.md",
-          model: "sonnet",
-          thinking: "medium",
-        },
-      ],
-      instructions: "ship",
-    };
-    const drive = (run: WorkflowRun) =>
-      (h.service as unknown as { drive(r: WorkflowRun, p: unknown): Promise<void> }).drive(
-        run,
-        staffedWorkflow,
-      );
-    const swap = (field: "fuse", value: unknown) => {
-      (h.service as unknown as Record<string, unknown>)[field] = value;
-    };
-    beforeEach(() => {
-      h.core.start.mockImplementation(async (spec: { ownerId: string }) => ({
-        runId: `${spec.ownerId}_0`,
-      }));
-      h.core.get.mockImplementation((runId: string) => ({ runId, status: "done" }));
-    });
-
-    it("progressOf keeps the furthest reached phase across a loop-back", () => {
-      const progressOf = (r: WorkflowRun, ids: string[], id: string) =>
-        (
-          h.service as unknown as {
-            progressOf(r: WorkflowRun, ids: readonly string[], id: string): number;
-          }
-        ).progressOf(r, ids, id);
-      const ids = ["koder", "review", "tester", "docs"];
-      const run = { stageRuns: [] } as unknown as WorkflowRun;
-      expect(progressOf(run, ids, "koder")).toBe(0.25);
-      // Reached tester, looped back to koder: progress stays at tester's 3/4.
-      const looped = {
-        stageRuns: [{ phaseId: "koder" }, { phaseId: "review" }, { phaseId: "tester" }],
-      } as unknown as WorkflowRun;
-      expect(progressOf(looped, ids, "koder")).toBe(0.75);
-    });
-
-    it("waits for a machine-fuse slot before spawning and frees it when the stage ends", async () => {
-      const run = h.runs.get(WORKFLOW_RUN_ID);
-      if (!run) throw new Error("missing run");
-      const fuse = new WorkingAgentsFuse(fakeSystemConfigStore({ maxWorkingAgents: 1 }));
-      swap("fuse", fuse);
-      const external = fuse.tryTake();
-      if (!external) throw new Error("fuse should have room");
-
-      const driving = drive(run);
-      await new Promise((r) => setTimeout(r, 20));
-      expect(h.core.start).not.toHaveBeenCalled();
-
-      external(); // the stage is granted the slot...
-      const externalAgain = fuse.take(); // ...so the external holder now queues behind it
-      await driving;
-      expect(h.core.start).toHaveBeenCalledTimes(1);
-      await externalAgain;
-      expect(fuse.inUse()).toBe(1);
     });
   });
 

@@ -178,13 +178,11 @@ export const ProjectBudgetSchema = z
     // cut on the Europe/Prague calendar month.
     monthlyRuns: z.number().int().positive().optional(),
     /**
-     * Removed: per-engagement concurrency is decided by project round-robin now. A legacy value is accepted and DROPPED on read
-     * (the schema stays `.strict()` for every other key) and disappears on the next write.
+     * Per-project run-slot cap (docs/plans/remove-employees.md): at most this many of the
+     * project's runs are in flight at once, on top of the global `maxConcurrentRuns`.
+     * Absent = only the global cap applies.
      */
-    maxConcurrent: z
-      .unknown()
-      .transform(() => undefined)
-      .optional(),
+    maxConcurrent: z.number().int().positive().optional(),
     /**
      * Phase 12: dollar caps, same windows as the run-count caps above but priced
      * off the accumulated `costUsd` of finished runs (`BudgetLedgerStore`'s `"cost"`
