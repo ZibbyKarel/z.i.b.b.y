@@ -5,10 +5,11 @@ import { resolveGithubToken } from "../projects/project-pr.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ResolvedProjectService } from "../projects/resolved-project.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
-import { ReviewCommentDistiller } from "./review-comment.distiller";
-import { ReviewCommentFetcher } from "./review-comment.fetcher";
+import { REWORK_SYSTEM_PROMPT, ReviewCommentDistiller } from "./review-comment.distiller";
+import { type FetchedComment, ReviewCommentFetcher } from "./review-comment.fetcher";
 import { ReviewRuleFlowService } from "./review-rule-flow.service";
 import { ReviewRulesStore } from "./review-rules.store";
+import { WorkflowReworkFetcher } from "./workflow-rework.fetcher";
 
 /** Excerpt kept on an occurrence — enough to judge the rule, not the whole thread. */
 const EXCERPT_LIMIT = 400;
@@ -41,6 +42,7 @@ export class ReviewLearningService {
     private readonly resolvedProjects: ResolvedProjectService,
     private readonly credentials: CredentialsStore,
     private readonly fetcher: ReviewCommentFetcher,
+    private readonly reworkFetcher: WorkflowReworkFetcher,
     private readonly distiller: ReviewCommentDistiller,
     private readonly store: ReviewRulesStore,
     private readonly flow: ReviewRuleFlowService,
@@ -63,6 +65,17 @@ export class ReviewLearningService {
         proposed += result.proposed;
       } catch (err) {
         this.log.warn("review learning failed for project — skipping", {
+          projectId: project.id,
+          error: String(err),
+        });
+      }
+      // Separate source, separate failure domain: neither may stop the other.
+      try {
+        const result = await this.learnReworkForProject(project, now);
+        observations += result.observations;
+        proposed += result.proposed;
+      } catch (err) {
+        this.log.warn("workflow rework learning failed for project — skipping", {
           projectId: project.id,
           error: String(err),
         });
@@ -103,58 +116,7 @@ export class ReviewLearningService {
     });
     if (comments.length === 0) return { observations: 0, proposed: 0 };
 
-    const known = (await this.store.list(project.id)).map((r) => ({ id: r.id, rule: r.rule }));
-    const distilled = await this.distiller.distill(comments, known);
-    if (distilled.status === "incomplete") {
-      // The distiller failed or never ran, so this window was never actually
-      // examined — held, exactly like a failed fetch endpoint below. Costs one
-      // replayed batch and loses nothing; the store's commentId dedup makes the
-      // replay free of double-counting.
-      this.log.warn("review distillation incomplete — cursor held", {
-        projectId: project.id,
-        reason: distilled.reason,
-        comments: comments.length,
-      });
-    } else if (distilled.observations.length === 0) {
-      // The OTHER zero-observation case, and the reason this branch exists: the
-      // distiller ran, read the window, and found nothing worth learning from
-      // (`LGTM`, `thanks`, `done`). That is a complete answer, not a failure —
-      // holding the cursor here would re-fetch and re-distil the same comments
-      // every night forever and strand every later comment behind
-      // MAX_COMMENTS_PER_PASS's oldest-first cap.
-      this.log.debug("nothing actionable in this window — cursor may advance", {
-        projectId: project.id,
-        comments: comments.length,
-      });
-    }
-
-    const byId = new Map(comments.map((c) => [c.commentId, c]));
-    let proposed = 0;
-    for (const observation of distilled.observations) {
-      const source = byId.get(observation.commentId);
-      if (!source) continue;
-      const promoted = await this.store.record(
-        project.id,
-        {
-          slug: observation.slug,
-          rule: observation.rule,
-          ...(observation.rationale ? { rationale: observation.rationale } : {}),
-          occurrence: {
-            commentId: source.commentId,
-            prUrl: source.prUrl,
-            commentUrl: source.commentUrl,
-            author: source.author,
-            at: source.at,
-            excerpt: source.body.slice(0, EXCERPT_LIMIT),
-          },
-        },
-        now,
-      );
-      if (promoted) {
-        await this.flow.propose(project.id, promoted);
-        proposed++;
-      }
-    }
+    const { observations, proposed, complete } = await this.ingest(project.id, comments, now);
 
     // A non-empty `failedEndpoints` means the fetch window is INCOMPLETE — some
     // endpoint's comments were never seen this pass. Advancing the cursor past a
@@ -171,11 +133,107 @@ export class ReviewLearningService {
       });
     }
 
-    if (distilled.status === "ok" && failedEndpoints.length === 0) {
+    if (complete && failedEndpoints.length === 0) {
       const newest = comments.reduce((max, c) => (c.at > max ? c.at : max), comments[0]?.at ?? "");
       if (newest) await this.store.setCursor(project.id, newest);
     }
 
-    return { observations: distilled.observations.length, proposed };
+    return { observations, proposed };
+  }
+
+  /** Workflow rework notes: a GitHub-less project still runs this source. */
+  private async learnReworkForProject(
+    project: Project,
+    now: Date,
+  ): Promise<{ observations: number; proposed: number }> {
+    if (!project.path) return { observations: 0, proposed: 0 };
+    const cursor = await this.store.cursor(project.id, "reworkCursor");
+    const { comments } = await this.reworkFetcher.fetchNew({
+      projectId: project.id,
+      projectPath: project.path,
+      ...(cursor ? { cursor } : {}),
+    });
+    if (comments.length === 0) return { observations: 0, proposed: 0 };
+
+    const { observations, proposed, complete } = await this.ingest(
+      project.id,
+      comments,
+      now,
+      REWORK_SYSTEM_PROMPT,
+    );
+    if (complete) {
+      const newest = comments.reduce((max, c) => (c.at > max ? c.at : max), comments[0]?.at ?? "");
+      if (newest) await this.store.setCursor(project.id, newest, "reworkCursor");
+    }
+    return { observations, proposed };
+  }
+
+  /** known rules -> distil -> record -> park an approval for each newly proposed rule. */
+  private async ingest(
+    projectId: string,
+    comments: FetchedComment[],
+    now: Date,
+    system?: string,
+  ): Promise<{ observations: number; proposed: number; complete: boolean }> {
+    const known = (await this.store.list(projectId)).map((r) => ({ id: r.id, rule: r.rule }));
+    const distilled = system
+      ? await this.distiller.distill(comments, known, system)
+      : await this.distiller.distill(comments, known);
+    if (distilled.status === "incomplete") {
+      // The distiller failed or never ran, so this window was never actually
+      // examined — held, exactly like a failed fetch endpoint below. Costs one
+      // replayed batch and loses nothing; the store's commentId dedup makes the
+      // replay free of double-counting.
+      this.log.warn("review distillation incomplete — cursor held", {
+        projectId,
+        reason: distilled.reason,
+        comments: comments.length,
+      });
+    } else if (distilled.observations.length === 0) {
+      // The OTHER zero-observation case, and the reason this branch exists: the
+      // distiller ran, read the window, and found nothing worth learning from
+      // (`LGTM`, `thanks`, `done`). That is a complete answer, not a failure —
+      // holding the cursor here would re-fetch and re-distil the same comments
+      // every night forever and strand every later comment behind
+      // MAX_COMMENTS_PER_PASS's oldest-first cap.
+      this.log.debug("nothing actionable in this window — cursor may advance", {
+        projectId,
+        comments: comments.length,
+      });
+    }
+
+    const byId = new Map(comments.map((c) => [c.commentId, c]));
+    let proposed = 0;
+    for (const observation of distilled.observations) {
+      const source = byId.get(observation.commentId);
+      if (!source) continue;
+      const promoted = await this.store.record(
+        projectId,
+        {
+          slug: observation.slug,
+          rule: observation.rule,
+          ...(observation.rationale ? { rationale: observation.rationale } : {}),
+          occurrence: {
+            commentId: source.commentId,
+            prUrl: source.prUrl,
+            commentUrl: source.commentUrl,
+            author: source.author,
+            at: source.at,
+            excerpt: source.body.slice(0, EXCERPT_LIMIT),
+          },
+        },
+        now,
+      );
+      if (promoted) {
+        await this.flow.propose(projectId, promoted);
+        proposed++;
+      }
+    }
+
+    return {
+      observations: distilled.observations.length,
+      proposed,
+      complete: distilled.status === "ok",
+    };
   }
 }

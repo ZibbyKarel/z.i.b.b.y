@@ -106,6 +106,15 @@ describe("ReviewRuleFlowService", () => {
     expect(JSON.stringify(detail)).toContain("pull/9");
   });
 
+  it("propose omits sourceUrl for a workflow-run occurrence", async () => {
+    const { flow, approvals } = makeFlow();
+    const occ = RULE.occurrences.map((o) => ({ ...o, prUrl: "workflow-run:x" }));
+    await flow.propose("acme", { ...RULE, occurrences: occ });
+    const input = approvals.requestApproval.mock.calls[0]?.[0];
+    expect(input).toBeDefined();
+    expect(input).not.toHaveProperty("sourceUrl");
+  });
+
   it("approve activates the rule, stamps the approving approval, and re-renders the project note", async () => {
     const { flow, store, vault } = makeFlow();
 

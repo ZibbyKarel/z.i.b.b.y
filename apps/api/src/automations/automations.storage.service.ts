@@ -108,7 +108,7 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
     id: REVIEW_LEARN_AUTOMATION_ID,
     name: "Učení z review",
     description:
-      "Stáhne review komentáře z PR, které ZIBBY otevřel, a vydestiluje z nich kandidátní pravidla; při druhém výskytu je předloží ke schválení.",
+      "Stáhne review komentáře z PR, které ZIBBY otevřel, a poznámky operátora k přepracování z workflow runů a vydestiluje z nich kandidátní pravidla; při druhém výskytu je předloží ke schválení.",
     // 3:15 — after the 3:00 distill, before the 3:30 self-knowledge refresh.
     trigger: { type: "cron", expr: "15 3 * * *" },
     target: { type: "review-learn" },

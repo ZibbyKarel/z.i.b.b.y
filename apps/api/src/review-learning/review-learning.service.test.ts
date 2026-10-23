@@ -4,6 +4,7 @@ import * as path from "node:path";
 import type { Project } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DistillIncompleteReason, DistillOutcome } from "./review-comment.distiller";
+import { REWORK_SYSTEM_PROMPT } from "./review-comment.distiller";
 import type { FetchedComment } from "./review-comment.fetcher";
 import { ReviewLearningService } from "./review-learning.service";
 import { ReviewRulesStore } from "./review-rules.store";
@@ -57,6 +58,8 @@ describe("ReviewLearningService", () => {
     token?: { repo: string; token: string } | null;
     /** Makes `resolveLink` throw for this one project id, to prove `learn()` fails open. */
     rejectProjectId?: string;
+    reworkComments?: FetchedComment[];
+    reworkThrows?: boolean;
   }) {
     const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() };
     const logger = { child: () => log };
@@ -65,6 +68,12 @@ describe("ReviewLearningService", () => {
         comments: opts.comments,
         failedEndpoints: opts.failedEndpoints ?? [],
       })),
+    };
+    const reworkFetcher = {
+      fetchNew: vi.fn(async () => {
+        if (opts.reworkThrows) throw new Error("rework boom");
+        return { comments: opts.reworkComments ?? [] };
+      }),
     };
     const outcome: DistillOutcome = opts.distillFailed
       ? { status: "incomplete", observations: opts.observations, reason: opts.distillFailed }
@@ -76,6 +85,7 @@ describe("ReviewLearningService", () => {
       { resolveIntegrations: async () => [] } as never,
       { read: async () => ({ token: "ghp_x" }) } as never,
       fetcher as never,
+      reworkFetcher as never,
       distiller as never,
       store,
       flow as never,
@@ -87,7 +97,7 @@ describe("ReviewLearningService", () => {
         return opts.token === undefined ? { repo: "acme/app", token: "ghp_x" } : opts.token;
       },
     );
-    return { service, fetcher, distiller, flow, log };
+    return { service, fetcher, reworkFetcher, distiller, flow, log };
   }
 
   it("files an observation and advances the cursor to the newest comment", async () => {
@@ -291,5 +301,98 @@ describe("ReviewLearningService", () => {
     const excerpt = (await store.list("acme"))[0]?.occurrences[0]?.excerpt;
     expect(excerpt).toHaveLength(400);
     expect(longBody.startsWith(excerpt ?? "")).toBe(true);
+  });
+
+  describe("workflow rework source", () => {
+    const wfProject = { id: "acme", name: "Acme", path: "/tmp/acme" } as Project;
+    const note = (id: string, at: string, body: string) =>
+      comment({ commentId: id, at, body, prNumber: undefined, prUrl: "workflow-run:r1" });
+    const NOTES = [
+      note("wf-1", "2026-07-29T09:00:00.000Z", "2 - Prase má tři oči"),
+      note("wf-2", "2026-07-29T10:00:00.000Z", "17 - opět tři oči"),
+    ];
+    const OBS = NOTES.map((n) => ({
+      commentId: n.commentId,
+      slug: "animals-two-eyes",
+      rule: "Draw every animal with exactly two eyes.",
+      scopeHint: "project" as const,
+    }));
+
+    it("second recurring note proposes once, using the rework prompt", async () => {
+      const { service, flow, distiller } = makeService({
+        projects: [wfProject],
+        token: null,
+        comments: [],
+        reworkComments: NOTES,
+        observations: OBS,
+      });
+      const result = await service.learn(NOW);
+      expect(result.proposed).toBe(1);
+      expect(flow.propose).toHaveBeenCalledTimes(1);
+      const rule = flow.propose.mock.calls[0]?.[1] as { status: string; occurrences: unknown[] };
+      expect(rule.status).toBe("proposed");
+      expect(rule.occurrences).toHaveLength(2);
+      expect((distiller.distill.mock.calls[0] as unknown[])[2]).toBe(REWORK_SYSTEM_PROMPT);
+    });
+
+    it("rework cursor advances on ok, held on incomplete; GitHub cursor untouched", async () => {
+      const held = makeService({
+        projects: [wfProject],
+        token: null,
+        comments: [],
+        reworkComments: NOTES,
+        observations: OBS,
+        distillFailed: "cli-failed",
+      });
+      await held.service.learn(NOW);
+      expect(await store.cursor("acme", "reworkCursor")).toBeUndefined();
+
+      const ok = makeService({
+        projects: [wfProject],
+        token: null,
+        comments: [],
+        reworkComments: NOTES,
+        observations: OBS,
+      });
+      await ok.service.learn(NOW);
+      expect(await store.cursor("acme", "reworkCursor")).toBe("2026-07-29T10:00:00.000Z");
+      expect(await store.cursor("acme")).toBeUndefined();
+    });
+
+    it("runs for a project without a GitHub link", async () => {
+      const { service, reworkFetcher } = makeService({
+        projects: [wfProject],
+        token: null,
+        comments: [],
+        observations: [],
+      });
+      await service.learn(NOW);
+      expect(reworkFetcher.fetchNew).toHaveBeenCalledTimes(1);
+    });
+
+    it("a throwing rework fetcher does not stop the GitHub pass", async () => {
+      const { service } = makeService({
+        projects: [wfProject],
+        reworkThrows: true,
+        comments: [comment()],
+        observations: [{ commentId: "rc-1", slug: "x-rule", rule: "R.", scopeHint: "project" }],
+      });
+      const result = await service.learn(NOW);
+      expect(result.observations).toBe(1);
+    });
+
+    it("replay does not double count", async () => {
+      const opts = {
+        projects: [wfProject],
+        token: null,
+        comments: [],
+        reworkComments: NOTES,
+        observations: OBS,
+      };
+      const { service, flow } = makeService(opts);
+      await service.learn(NOW);
+      await service.learn(NOW);
+      expect(flow.propose).toHaveBeenCalledTimes(1);
+    });
   });
 });

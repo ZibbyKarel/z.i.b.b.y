@@ -14,6 +14,8 @@ import { ReviewRuleFlowService } from "./review-rule-flow.service";
 import { REVIEW_RULES_DIR, ReviewRulesStore } from "./review-rules.store";
 import { ReviewRulesVaultService } from "./review-rules.vault.service";
 import { ReviewLearningService } from "./review-learning.service";
+import { WORKFLOW_RUNS_DIR } from "../workflows/workflow-runner.service";
+import { WorkflowReworkFetcher } from "./workflow-rework.fetcher";
 import { ZibbyPrLocator } from "./zibby-pr.locator";
 
 /** Default review-rules dir, anchored to `ZIBBY_DATA_DIR/review-rules`. */
@@ -51,7 +53,16 @@ export function resolveReviewRulesDir(): string {
     { provide: VAULT_DIR, useFactory: () => process.env.VAULT_DIR ?? dataDir("vault") },
     ReviewRulesStore,
     ZibbyPrLocator,
+    {
+      provide: WORKFLOW_RUNS_DIR,
+      // Same resolution as WorkflowsModule (re-provided locally, like VAULT_DIR).
+      useFactory: () =>
+        process.env.WORKFLOW_RUNS_DIR ??
+        process.env.PIPELINE_RUNS_DIR ??
+        dataDir("workflows", "runs"),
+    },
     ReviewCommentFetcher,
+    WorkflowReworkFetcher,
     ReviewCommentDistiller,
     ReviewRulesVaultService,
     ReviewRuleFlowService,
