@@ -7,7 +7,6 @@ import {
   Icon,
   Panel,
   Stack,
-  StatusDot,
   Toggle,
   Typography,
 } from "@zibby/design-system";
@@ -23,6 +22,8 @@ import { ChatSection } from "./components/ChatSection";
 import { OperatorTokenSection } from "./components/OperatorTokenSection";
 import { MachineSection } from "./components/MachineSection";
 import { SystemSection } from "./components/SystemSection";
+import { InfoRow } from "./components/InfoRow";
+import { SelfDevelopmentPanel } from "./components/SelfDevelopmentPanel";
 import { WatcherRows } from "./components/WatcherRows";
 import type { SettingsSection } from "./settingsSections";
 
@@ -62,23 +63,6 @@ function SettingRow({
         </Stack>
       </Container>
       <Container shrink={false}>{control}</Container>
-    </Stack>
-  );
-}
-
-/** A mono key/value info row for the status panel. */
-function InfoRow({ label, value, tone }: { label: string; value: string; tone?: "ok" }) {
-  return (
-    <Stack align="center" direction="row" gap="150" justify="between">
-      <Typography mono size="sm" type="note" variant="tertiary">
-        {label}
-      </Typography>
-      <Stack align="center" direction="row" gap="75">
-        {tone === "ok" && <StatusDot tone="ok" />}
-        <Typography mono size="sm" tone={tone} type="note" weight="semibold">
-          {value}
-        </Typography>
-      </Stack>
     </Stack>
   );
 }
@@ -174,27 +158,30 @@ export function SettingsScreen({ section }: SettingsScreenProps) {
           {section === "runtime" && <SystemSection />}
 
           {section === "status" && (
-            <Panel header={t("system")} padding="300">
-              <Stack gap="150">
-                <InfoRow label={t("daemon")} value={DAEMON} />
-                <Divider />
-                <InfoRow label={t("host")} value={HOST} />
-                <Divider />
-                <InfoRow label={t("uptime")} value={health ? formatUptime(health.uptime) : "—"} />
-                <Divider />
-                <InfoRow
-                  label={t("status")}
-                  tone={isSuccess ? "ok" : undefined}
-                  value={isSuccess ? t("online") : t("offline")}
-                />
-                {health?.watchers && health.watchers.length > 0 && (
-                  <>
-                    <Divider />
-                    <WatcherRows watchers={health.watchers} />
-                  </>
-                )}
-              </Stack>
-            </Panel>
+            <Stack gap="250">
+              <Panel header={t("system")} padding="300">
+                <Stack gap="150">
+                  <InfoRow label={t("daemon")} value={DAEMON} />
+                  <Divider />
+                  <InfoRow label={t("host")} value={HOST} />
+                  <Divider />
+                  <InfoRow label={t("uptime")} value={health ? formatUptime(health.uptime) : "—"} />
+                  <Divider />
+                  <InfoRow
+                    label={t("status")}
+                    tone={isSuccess ? "ok" : undefined}
+                    value={isSuccess ? t("online") : t("offline")}
+                  />
+                  {health?.watchers && health.watchers.length > 0 && (
+                    <>
+                      <Divider />
+                      <WatcherRows watchers={health.watchers} />
+                    </>
+                  )}
+                </Stack>
+              </Panel>
+              <SelfDevelopmentPanel />
+            </Stack>
           )}
 
           <Stack align="center">

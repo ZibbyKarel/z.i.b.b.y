@@ -1095,6 +1095,21 @@
       "remove": "Odebrat úroveň",
       "emptyTitle": "Žádné mapování",
       "emptyDesc": "Zatím žádné mapování pro tento zdroj. Přidej první řádek ručně, nebo počkej, až se objeví při syncu."
+    },
+    "selfDev": {
+      "title": "Vývoj ZIBBY",
+      "branch": "Větev",
+      "sync": "Vůči origin",
+      "syncValue": "↓{behind} / ↑{ahead}",
+      "dirty": "Neuložené změny",
+      "yes": "ano",
+      "no": "ne",
+      "openPrs": "Otevřené PR",
+      "noPrs": "žádné",
+      "explain": "ZIBBY se upravuje v samostatném klonu jako projekt; změny přicházejí jako draft PR a merge je na tobě.",
+      "openProject": "Otevřít projekt ZIBBY",
+      "ensureProject": "Upravovat ZIBBY jako projekt",
+      "failed": "Registrace projektu ZIBBY se nepovedla"
     }
   },
   "runs": {

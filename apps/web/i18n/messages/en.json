@@ -1095,6 +1095,21 @@
       "remove": "Remove level",
       "emptyTitle": "No mapping yet",
       "emptyDesc": "No mapping for this source yet. Add the first row by hand, or wait for it to show up on sync."
+    },
+    "selfDev": {
+      "title": "ZIBBY development",
+      "branch": "Branch",
+      "sync": "Vs origin",
+      "syncValue": "↓{behind} / ↑{ahead}",
+      "dirty": "Uncommitted changes",
+      "yes": "yes",
+      "no": "no",
+      "openPrs": "Open PRs",
+      "noPrs": "none",
+      "explain": "ZIBBY edits itself in a separate clone as a project; changes arrive as draft PRs and you merge.",
+      "openProject": "Open ZIBBY project",
+      "ensureProject": "Edit ZIBBY as a project",
+      "failed": "Registering the ZIBBY project failed"
     }
   },
   "runs": {
