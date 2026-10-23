@@ -15,6 +15,7 @@ import { compactAgo } from "../../../utils/time";
 import { useInvalidateOnTerminalRun, useLiveRuns } from "../../runs/components/TasksDockPanel";
 import { useRecentArchivedRunsQuery } from "../../runs/queries/useRecentArchivedRunsQuery";
 import { WAITING_STATES } from "../../runs/run";
+import { useWorkflowsQuery } from "../../workflows";
 import { runRows } from "../state/rows";
 import type { BridgeWidgetProps } from "./registry";
 import { useWidgetReport } from "./useWidgetReport";
@@ -32,7 +33,8 @@ const FINISHED_LIMIT = 10;
 
 /**
  * Runs (running & finished): the active live runs (everything not waiting - those are the queue
- * widget's) as TASK · STEP / PROGRESS / ISSUE rows, then the last 10 finished runs with a
+ * widget's) as TASK · STEP / PROGRESS / ISSUE rows (fill = completed phases; indeterminate when
+ * the run has no phase list), then the last 10 finished runs with a
  * full bar in their outcome colour and their age. A group header is omitted when empty. Every row
  * opens the run sheet (approval, phase output, artifacts).
  */
@@ -52,13 +54,25 @@ export function RunsWidget({
   const { data: archived, isPending } = useRecentArchivedRunsQuery(FINISHED_LIMIT);
   const [closed, setClosed] = useState<Record<string, boolean>>({});
 
+  const { data: workflows } = useWorkflowsQuery();
+  const phasesByWorkflow = useMemo(
+    () =>
+      new Map(
+        (workflows ?? []).map((w) => [
+          w.id,
+          w.phases.map((p) => p.id).filter((id): id is string => !!id),
+        ]),
+      ),
+    [workflows],
+  );
   const active = useMemo(
     () =>
       runRows(
         widget.id,
         live.filter((r) => !WAITING_STATES.has(r.status)),
+        phasesByWorkflow,
       ),
-    [widget.id, live],
+    [widget.id, live, phasesByWorkflow],
   );
   const finished = useMemo(() => {
     const runs = (archived ?? []).slice(0, FINISHED_LIMIT);
@@ -116,10 +130,11 @@ export function RunsWidget({
             <RunTitle step={r.step} title={r.title} />
             <BoardLine direction="col" gap="5">
               {r.pct === null ? (
-                <Progress indeterminate height="25" />
+                <Progress indeterminate height="25" label={t("progressLabel")} />
               ) : (
                 <Progress
                   height="25"
+                  label={t("progressLabel")}
                   pulse={r.tone === "working"}
                   tone={PROGRESS_TONE[r.tone] ?? "idle"}
                   value={r.pct}
@@ -130,7 +145,7 @@ export function RunsWidget({
                   {t(`state.${r.tone}`)}
                 </BoardText>
                 <BoardText tabular kind="meta">
-                  {r.pct === null ? "—" : `${r.pct}%`}
+                  {r.stages && r.pct !== null ? t("stages", { ...r.stages, pct: r.pct }) : "—"}
                 </BoardText>
               </BoardLine>
             </BoardLine>

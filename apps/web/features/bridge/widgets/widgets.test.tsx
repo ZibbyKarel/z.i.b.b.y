@@ -1,5 +1,10 @@
 import type { InboxPr, InboxRoadmapItem } from "@zibby/contracts";
-import { BoardRowTestId, KpiStripTestId, RowGroupHeaderTestId } from "@zibby/design-system";
+import {
+  BoardRowTestId,
+  KpiStripTestId,
+  ProgressTestId,
+  RowGroupHeaderTestId,
+} from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen, within } from "../../../test/render";
@@ -17,6 +22,7 @@ const d = vi.hoisted(() => ({
   prs: [] as unknown[],
   tasks: [] as unknown[],
   runs: [] as unknown[],
+  workflows: [] as unknown[],
   archived: [] as unknown[],
   archivedPending: false,
   approvals: [] as unknown[],
@@ -37,6 +43,7 @@ vi.mock("../../runs/components/TasksDockPanel", () => ({
   useLiveRuns: () => d.runs,
   useInvalidateOnTerminalRun: () => undefined,
 }));
+vi.mock("../../workflows", () => ({ useWorkflowsQuery: () => ({ data: d.workflows }) }));
 vi.mock("../../runs/queries/useRecentArchivedRunsQuery", () => ({
   useRecentArchivedRunsQuery: () => ({ data: d.archived, isPending: d.archivedPending }),
 }));
@@ -123,6 +130,7 @@ beforeEach(() => {
     prs: [],
     tasks: [],
     runs: [],
+    workflows: [],
     archived: [],
     archivedPending: false,
     approvals: [],
@@ -370,7 +378,17 @@ describe("RunsWidget", () => {
     expect(row).toHaveAttribute("data-rk", "w-runs:r1");
     expect(row).toHaveTextContent("Fix checkout");
     expect(row).toHaveTextContent("Pracuje");
-    expect(row).toHaveTextContent("40%");
+    expect(row).not.toHaveTextContent("40%");
+    expect(row).toHaveTextContent("—");
+    expect(
+      within(screen.getByTestId(BoardRowTestId.Root)).getByTestId(ProgressTestId.Fill),
+    ).not.toHaveAttribute("style");
+    expect(
+      within(screen.getByTestId(BoardRowTestId.Root)).getByTestId(ProgressTestId.Root),
+    ).toHaveAccessibleName("Průběh běhu");
+    expect(
+      within(screen.getByTestId(BoardRowTestId.Root)).getByTestId(ProgressTestId.Root),
+    ).not.toHaveAttribute("aria-valuenow");
     expect(row).toHaveTextContent("ZB-9 ↗");
     expect(screen.queryByTestId(BoardRowTestId.ColumnHeader)).toBeNull();
     await userEvent.click(row);
@@ -381,6 +399,59 @@ describe("RunsWidget", () => {
       key: "w-runs:r1",
     });
     expect(props.onEmptyChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it("a workflow run fills by completed phases", () => {
+    d.workflows = [
+      { id: "delivery", phases: [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }] },
+    ];
+    d.runs = [
+      {
+        runId: "r2",
+        kind: "workflow",
+        owner: "delivery",
+        status: "running",
+        pct: null,
+        title: "Ship",
+        prompt: "",
+        project: "shop",
+        startedAt: "",
+        logBase: "workflows",
+        currentStage: "b",
+        stageRuns: [{ phaseId: "a", runId: "s", attempt: 1, status: "done" }],
+      },
+    ];
+    renderWithProviders(<RunsWidget {...setup({ widget: widget("w-runs", "runs") })} />);
+    expect(screen.getByTestId(BoardRowTestId.Root)).toHaveTextContent("1/4 fází · 25 %");
+    expect(
+      within(screen.getByTestId(BoardRowTestId.Root)).getByTestId(ProgressTestId.Root),
+    ).toHaveAttribute("aria-valuenow", "25");
+    expect(
+      within(screen.getByTestId(BoardRowTestId.Root)).getByTestId(ProgressTestId.Fill),
+    ).toHaveStyle({ width: "25%" });
+  });
+
+  it("a workflow with no known phases is indeterminate", () => {
+    d.runs = [
+      {
+        runId: "r3",
+        kind: "workflow",
+        owner: "delivery",
+        status: "running",
+        pct: null,
+        title: "Ship",
+        prompt: "",
+        project: "shop",
+        startedAt: "",
+        logBase: "workflows",
+        currentStage: null,
+      },
+    ];
+    renderWithProviders(<RunsWidget {...setup({ widget: widget("w-runs", "runs") })} />);
+    expect(
+      within(screen.getByTestId(BoardRowTestId.Root)).getByTestId(ProgressTestId.Root),
+    ).not.toHaveAttribute("aria-valuenow");
+    expect(screen.getByTestId(BoardRowTestId.Root)).toHaveTextContent("—");
   });
 
   it("a run without a task still opens its run sheet", async () => {

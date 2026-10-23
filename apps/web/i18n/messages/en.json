@@ -3115,6 +3115,8 @@
       },
       "runs": {
         "colTask": "Task · step",
+        "progressLabel": "Run progress",
+        "stages": "{done}/{total} phases · {pct}%",
         "colProgress": "Progress",
         "colIssue": "Issue",
         "group": {
