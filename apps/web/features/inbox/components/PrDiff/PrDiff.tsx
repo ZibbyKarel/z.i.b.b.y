@@ -11,5 +11,15 @@ export interface PrDiffProps {
 /** The PR diff, with cs/en labels over the DS FileDiffView. */
 export function PrDiff({ diff }: PrDiffProps) {
   const t = useTranslations("inboxPage.prs");
-  return <FileDiffView diff={diff} emptyLabel={t("diff.empty")} noHunksLabel={t("diff.noHunks")} />;
+  return (
+    <FileDiffView
+      fileList
+      collapseLabel={t("diff.collapseFiles")}
+      diff={diff}
+      emptyLabel={t("diff.empty")}
+      expandLabel={t("diff.expandFiles")}
+      filesLabel={t("diff.files")}
+      noHunksLabel={t("diff.noHunks")}
+    />
+  );
 }

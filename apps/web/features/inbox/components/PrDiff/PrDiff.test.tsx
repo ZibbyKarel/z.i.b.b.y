@@ -20,4 +20,12 @@ describe("PrDiff", () => {
       messages.inboxPage.prs.diff.noHunks,
     );
   });
+
+  it("shows the localized file list", () => {
+    renderWithProviders(<PrDiff diff={BINARY} />);
+    expect(screen.getByTestId(FileDiffViewTestId.FileList)).toBeInTheDocument();
+    expect(screen.getByTestId(FileDiffViewTestId.FileListToggle)).toHaveAccessibleName(
+      messages.inboxPage.prs.diff.collapseFiles,
+    );
+  });
 });

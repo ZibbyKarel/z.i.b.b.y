@@ -24,3 +24,4 @@ Binary files a/img.png and b/img.png differ
 
 export const Playground: Story = { args: { diff: DIFF } };
 export const Empty: Story = { args: { diff: "" } };
+export const WithFileList: Story = { args: { diff: DIFF, fileList: true } };
