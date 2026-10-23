@@ -49,6 +49,7 @@ import {
 } from "../../../features/pins";
 import { PageActionsSlotProvider } from "../PageActions";
 import { PageBreadcrumbSlotProvider } from "../PageBreadcrumb";
+import { SelfUpgrade } from "../SelfUpgrade";
 import { ThemeToggle } from "../ThemeToggle/ThemeToggle";
 import { useDockState } from "./useDockState";
 import { SECTIONS, type SectionId, type SubTabConfig, sectionForPath } from "../../../state/config";
@@ -271,20 +272,23 @@ function useHeaderTrailing() {
 
   return {
     limits: (
-      <UsagePanel
-        items={[
-          {
-            label: "5H",
-            value: limits?.rolling.usedPct ?? 0,
-            resetsIn: resetsIn(limits?.rolling.resetsAt),
-          },
-          {
-            label: t("week"),
-            value: limits?.weekly.usedPct ?? 0,
-            resetsIn: resetsIn(limits?.weekly.resetsAt),
-          },
-        ]}
-      />
+      <Stack align="center" direction="row" gap="100">
+        <SelfUpgrade />
+        <UsagePanel
+          items={[
+            {
+              label: "5H",
+              value: limits?.rolling.usedPct ?? 0,
+              resetsIn: resetsIn(limits?.rolling.resetsAt),
+            },
+            {
+              label: t("week"),
+              value: limits?.weekly.usedPct ?? 0,
+              resetsIn: resetsIn(limits?.weekly.resetsAt),
+            },
+          ]}
+        />
+      </Stack>
     ),
   };
 }

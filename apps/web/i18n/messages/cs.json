@@ -2415,7 +2415,16 @@
     "pinnedKindPage": "Stránka",
     "pinnedUnpinAria": "Odepnout {name}",
     "pagePinAria": "Připnout stránku",
-    "pageUnpinAria": "Odepnout stránku"
+    "pageUnpinAria": "Odepnout stránku",
+    "selfUpgrade": {
+      "label": "Upgrade",
+      "labelBehind": "Upgrade ↓{count}",
+      "aria": "Aktualizovat ZIBBY (větev {branch}, {behind} za origin)",
+      "dirty": "Neuložené změny — aktualizace zablokována",
+      "updated": "Aktualizováno",
+      "upToDate": "Aktuální",
+      "failed": "Aktualizace se nepovedla"
+    }
   },
   "activityLog": {
     "title": "Živý log",

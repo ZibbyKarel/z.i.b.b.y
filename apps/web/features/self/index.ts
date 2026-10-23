@@ -2,3 +2,4 @@
 // Other features import from here, not from self/queries|mutations/* internals.
 export * from "./queries";
 export * from "./mutations";
+export { updateErrorMessage } from "./updateErrorMessage";
