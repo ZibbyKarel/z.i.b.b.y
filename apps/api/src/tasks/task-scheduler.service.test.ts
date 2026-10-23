@@ -2527,9 +2527,11 @@ describe("run slots (global + per-project cap)", () => {
     onRunStatus: ReturnType<typeof vi.fn>;
     get: ReturnType<typeof vi.fn>;
     readLog: ReturnType<typeof vi.fn>;
+    rerun: ReturnType<typeof vi.fn>;
   };
   let workflowRunner: {
     start: ReturnType<typeof vi.fn>;
+    continueFailed: ReturnType<typeof vi.fn>;
     onRunStatus: ReturnType<typeof vi.fn>;
     get: ReturnType<typeof vi.fn>;
   };
@@ -2566,9 +2568,11 @@ describe("run slots (global + per-project cap)", () => {
       }),
       get: vi.fn(() => agentRun({})),
       readLog: vi.fn(async () => ({ content: "", nextOffset: 0, done: true })),
+      rerun: vi.fn(async () => agentRun({ runId: "koder_rerun", agentId: "koder" })),
     };
     workflowRunner = {
       start: vi.fn(async () => workflowRun({ workflowRunId: `release_${++runSeq}` })),
+      continueFailed: vi.fn(async (runRef: string) => workflowRun({ workflowRunId: runRef })),
       onRunStatus: vi.fn((l: (run: WorkflowRun) => void) => {
         workflowListener = l;
         return () => {};
@@ -2793,5 +2797,63 @@ describe("run slots (global + per-project cap)", () => {
     await new Promise((r) => setTimeout(r, 50));
     expect(agentRunner.start).toHaveBeenCalledTimes(1);
     expect((await storage.get(secondId)).status).toBe("cancelled");
+  });
+
+  describe("operator continue (queueContinue)", () => {
+    /** Dispatch a task on `target`, fail its run (slot freed); returns the task id + run ref. */
+    async function failedRun(target?: TaskTarget): Promise<{ taskId: string; runRef: string }> {
+      const runRef = await dispatched("do A", undefined, target);
+      if (target) workflowListener?.(workflowRun({ workflowRunId: runRef, status: "failed" }));
+      else agentListener?.(agentRun({ runId: runRef, status: "error" }));
+      const [task] = await storage.list();
+      return { taskId: task!.id, runRef };
+    }
+
+    it("continues the workflow run in place under a free slot and clears the marker", async () => {
+      makeService(1);
+      const { taskId, runRef } = await failedRun(RELEASE);
+      await service.queueContinue(taskId, { kind: "workflow", runRef, note: "fix lint" });
+      await vi.waitFor(async () => expect((await storage.get(taskId)).status).toBe("dispatched"));
+      expect(workflowRunner.continueFailed).toHaveBeenCalledWith(runRef, "fix lint");
+      const task = await storage.get(taskId);
+      expect(task.runRef).toBe(runRef);
+      expect(task.continueRun).toBeUndefined();
+      expect(slots.inUse()).toBe(1);
+    });
+
+    it("stays queued while the global cap is full, then continues once a slot frees", async () => {
+      makeService(1);
+      const { taskId, runRef } = await failedRun(RELEASE);
+      const holder = await dispatched("do B");
+      await service.queueContinue(taskId, { kind: "workflow", runRef });
+      await new Promise((r) => setTimeout(r, 30));
+      expect((await storage.get(taskId)).status).toBe("queued");
+      expect(workflowRunner.continueFailed).not.toHaveBeenCalled();
+
+      agentListener?.(agentRun({ runId: holder, status: "done" }));
+      await vi.waitFor(async () => expect((await storage.get(taskId)).status).toBe("dispatched"));
+      expect(workflowRunner.continueFailed).toHaveBeenCalledWith(runRef, undefined);
+    });
+
+    it("falls back to a fresh dispatch with the note appended when there is nothing to continue", async () => {
+      makeService(1);
+      const { taskId, runRef } = await failedRun(RELEASE);
+      workflowRunner.continueFailed.mockResolvedValueOnce(null);
+      await service.queueContinue(taskId, { kind: "workflow", runRef, note: "use v2" });
+      await vi.waitFor(async () => expect((await storage.get(taskId)).status).toBe("dispatched"));
+      expect(workflowRunner.start).toHaveBeenCalledTimes(2);
+      expect(JSON.stringify(workflowRunner.start.mock.calls[1])).toContain("Operator note: use v2");
+      expect((await storage.get(taskId)).continueRun).toBeUndefined();
+      expect(slots.inUse()).toBe(1);
+    });
+
+    it("re-runs an agent run and re-points the task at the new run", async () => {
+      makeService(1);
+      const { taskId, runRef } = await failedRun();
+      await service.queueContinue(taskId, { kind: "agent", runRef, note: "try again" });
+      await vi.waitFor(async () => expect((await storage.get(taskId)).status).toBe("dispatched"));
+      expect(agentRunner.rerun).toHaveBeenCalledWith(runRef, { note: "try again" });
+      expect((await storage.get(taskId)).runRef).toBe("koder_rerun");
+    });
   });
 });

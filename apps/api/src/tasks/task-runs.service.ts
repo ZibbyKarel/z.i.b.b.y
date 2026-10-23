@@ -357,11 +357,12 @@ export class TaskRunsService {
   /**
    * Resume a run. A parked workflow/goal run resumes in place with an operator note.
    * Phase 49: an errored/interrupted AGENT run is instead re-run — a NEW run spawns
-   * (with `--resume <sessionId>` when the errored run captured one, else fresh) and is
-   * returned, so the caller navigates to it. An errored/interrupted workflow/goal run
-   * CONTINUES in place from the phase/iteration it stopped on (finished work is kept);
-   * only when there is nothing to continue at is it re-run as a fresh task
-   * ({@link rerunTask}). Any other kind/state → 409.
+   * (with `--resume <sessionId>` when the errored run captured one, else fresh). An
+   * errored/interrupted workflow/goal run CONTINUES in place from the phase/iteration
+   * it stopped on (finished work is kept); only when there is nothing to continue at
+   * is it re-run fresh. A task-backed continue goes through the queue
+   * (`TaskSchedulerService.queueContinue`): the run reads `queued` until a run slot
+   * frees. Any other kind/state → 409.
    *
    * `mode: "fresh"` throws the old context away: a NEW task from the original inputs
    * (also for a `done` run), a stopped-then-rebuilt parked workflow, or an agent re-run
@@ -381,13 +382,17 @@ export class TaskRunsService {
       }
       if (run.status === "done") throw new TaskRunNotResumableError(runId);
       if (run.status === "error" || run.status === "interrupted") {
+        // A task-backed run waits in the queue for a run slot like any dispatch.
+        if (run.taskId) {
+          await this.scheduler.queueContinue(run.taskId, { kind, runRef: runId, note });
+          return this.getTaskRun(runId);
+        }
+        // ponytail: a run with no backing task (a self-dev goal) continues uncounted.
         const continued =
           kind === "workflow"
             ? await this.workflowRunner.continueFailed(runId, note)
             : await this.goalRunner.continueFailed(runId);
         if (!continued) return this.rerunTask(run, note);
-        // The task's failed outcome is cleared so this run's terminal writes back again.
-        if (run.taskId) await this.scheduled.reassignRun(run.taskId, runId);
         return this.getTaskRun(runId);
       }
     }
@@ -431,21 +436,21 @@ export class TaskRunsService {
 
   /**
    * Phase 49: re-run an agent run that ended in error/interrupted (a running or
-   * otherwise-stated agent run has nothing to re-run → 409). Spawns a NEW run through
-   * the agent runner's shared spawn/pgid/timeout/registry governance (with `--resume`
-   * when a session id was captured), then re-points the originating task at the new
-   * run — clearing the prior errored outcome so the fresh run's terminal writes back
-   * and the original task's output/PR gate still fires. Operator-initiated, so it is
-   * allowed like any task launch; no autonomous commit/push is introduced. Returns the
-   * NEW run.
+   * otherwise-stated agent run has nothing to re-run → 409). A task-backed run is
+   * queued for a run slot and re-run by the scheduler (`--resume` when a session id was
+   * captured), which re-points the task at the NEW run; the queued old run is returned.
+   * A run with no task re-runs at once and the NEW run is returned.
    */
   private async rerunAgent(runId: string, note?: string): Promise<TaskRun> {
     const run = await this.getTaskRun(runId);
     if (run.status !== "error" && run.status !== "interrupted") {
       throw new TaskRunNotResumableError(runId);
     }
+    if (run.taskId) {
+      await this.scheduler.queueContinue(run.taskId, { kind: "agent", runRef: runId, note });
+      return this.getTaskRun(runId);
+    }
     const newRun = await this.agentRunner.rerun(runId, { note });
-    if (run.taskId) await this.scheduled.reassignRun(run.taskId, newRun.runId);
     return this.getTaskRun(newRun.runId);
   }
 
@@ -607,8 +612,10 @@ export class TaskRunsService {
         // `pending` is the brief window between the runner exposing the run and
         // `markDispatched` flipping the task: both exist, the run is the truth. Only
         // `pending` is suppressed — queued/held/scheduled are genuine waits (a re-queued
-        // task keeps its place), and `reassignRun` marks the task `dispatched` at once.
+        // task keeps its place).
         if (t.status === "pending" && taskIdsWithRun.has(t.id)) return [];
+        // A queued continue is shown on its run (see `enrichRunWithTask`).
+        if (t.continueRun && taskIdsWithRun.has(t.id)) return [];
         const view = scheduledTaskToView(t);
         return view ? [resolveProjectDisplay(view, projectNames)] : [];
       }),
@@ -812,9 +819,12 @@ function enrichRunWithTask(run: TaskRun, tasksById: ReadonlyMap<string, Schedule
   const gated = [task.prReview, task.prRebase, task.prAddressComments, task.prFixCi].some(
     (gate) => gate?.state === "awaiting-approval",
   );
+  // An operator "continue" waiting for a run slot reads as queued on the run itself.
+  const continuing = task.status === "queued" && task.continueRun?.runRef === run.runId;
   return {
     ...run,
     ...(gated && run.status === "done" ? { status: "awaiting-approval" as const } : {}),
+    ...(continuing ? { status: "queued" as const } : {}),
     taskTitle: task.title || task.text,
     taskText: task.text,
     taskOutcome: task.outcome?.status,

@@ -83,6 +83,12 @@ function isQueued(x: Dispatched | QueuedDispatch): x is QueuedDispatch {
   return "queued" in x;
 }
 
+/** The task text, plus the operator's note when a queued continue fell back to a fresh run. */
+function continuedText(task: ScheduledTask): string {
+  const note = task.continueRun?.note?.trim();
+  return note ? `${task.text}\n\nOperator note: ${note}` : task.text;
+}
+
 /** See {@link TaskSchedulerService.resolveDepartmentTargetOrNull}. */
 interface DepartmentResolution {
   target: TaskTarget;
@@ -130,10 +136,8 @@ const ATTACHMENT_TTL_MS = 24 * 60 * 60 * 1000;
 const TERMINAL_AGENT = new Set<AgentRun["status"]>(["done", "error", "interrupted"]);
 /**
  * Workflow / goal run statuses that free a run slot. `parked` and `paused-limit` keep
- * it (the run is still in flight, waiting on the operator or the usage window).
- * ponytail: an operator "continue" of a failed/interrupted run restarts it in place,
- * outside dispatch, so it runs uncounted; route continues through the scheduler if
- * that ever matters.
+ * it (the run is still in flight, waiting on the operator or the usage window). An
+ * operator "continue" re-queues the task and takes a new slot ({@link queueContinue}).
  */
 const TERMINAL_WORKFLOW = new Set<WorkflowRun["status"]>(["done", "failed", "interrupted"]);
 const TERMINAL_GOAL = new Set<GoalRun["status"]>(["done", "failed", "interrupted"]);
@@ -1094,19 +1098,21 @@ export class TaskSchedulerService
     // Phase 10: a task that already carries a target (e.g. a goal, never classifiable,
     // or a task queued for a run slot after its classification) re-dispatches to it;
     // otherwise classify as before.
-    const dispatched = await this.dispatch(
-      task.text,
-      task.paths,
-      task.title,
-      task.id,
-      task.projectId,
-      task.target,
-      task.output,
-      task.attachmentSetId,
-      task.attachments,
-      task.toolGrants,
-      task.classification,
-    );
+    const dispatched =
+      (task.continueRun && (await this.dispatchContinue(task, task.continueRun))) ||
+      (await this.dispatch(
+        continuedText(task),
+        task.paths,
+        task.title,
+        task.id,
+        task.projectId,
+        task.target,
+        task.output,
+        task.attachmentSetId,
+        task.attachments,
+        task.toolGrants,
+        task.classification,
+      ));
     if (!dispatched) {
       await this.storage.markFailed(task.id, "No agents or workflows available to route to");
       this.log.warn("task failed: empty catalog", { id: task.id });
@@ -1480,6 +1486,73 @@ export class TaskSchedulerService
       (r) => TERMINAL_AGENT.has(this.liveStatus(() => this.agentRunner.get(r.runId), r)),
     );
     return { runRef: run.runId, target, classification };
+  }
+
+  /**
+   * Queue an operator "continue" of a task's failed/interrupted run. It waits for a
+   * run slot like any dispatch; the drain then continues it via {@link dispatchContinue}.
+   */
+  async queueContinue(
+    taskId: string,
+    continueRun: NonNullable<ScheduledTask["continueRun"]>,
+  ): Promise<void> {
+    const task = await this.storage.get(taskId);
+    await this.withCapacityLock(task.projectId, () =>
+      this.storage.markQueuedContinue(taskId, continueRun),
+    );
+    this.requestDrain();
+  }
+
+  /**
+   * Continue a queued run under a fresh run slot: a workflow/goal continues in place,
+   * an agent re-runs (`--resume` when it captured a session). Null when there is no
+   * phase/iteration left to continue at — the caller then dispatches the task fresh
+   * (the note appended to its text; `markDispatched` drops the marker).
+   */
+  private async dispatchContinue(
+    task: ScheduledTask,
+    { kind, runRef, note }: NonNullable<ScheduledTask["continueRun"]>,
+  ): Promise<Dispatched | QueuedDispatch | null> {
+    const target = task.target ?? ORCHESTRATOR_TARGET;
+    const classification = task.classification;
+    const slot = await this.takeRunSlot(task.projectId);
+    if (!slot) return { queued: true, target, classification };
+    const hold = <R>(
+      start: () => Promise<R | null>,
+      refOf: (r: R) => string,
+      ended: (r: R) => boolean,
+    ) =>
+      this.startHolding(
+        slot,
+        start,
+        (r) => (r ? refOf(r) : ""),
+        (r) => !r || ended(r),
+      );
+    let ref: string | undefined;
+    if (kind === "workflow") {
+      const run = await hold(
+        () => this.workflowRunner.continueFailed(runRef, note),
+        (r) => r.workflowRunId,
+        (r) =>
+          TERMINAL_WORKFLOW.has(this.liveStatus(() => this.workflowRunner.get(r.workflowRunId), r)),
+      );
+      ref = run?.workflowRunId;
+    } else if (kind === "goal") {
+      const run = await hold(
+        () => this.goalRunner.continueFailed(runRef),
+        (r) => r.goalRunId,
+        (r) => TERMINAL_GOAL.has(this.liveStatus(() => this.goalRunner.get(r.goalRunId), r)),
+      );
+      ref = run?.goalRunId;
+    } else {
+      const run = await hold(
+        () => this.agentRunner.rerun(runRef, { note }),
+        (r) => r.runId,
+        (r) => TERMINAL_AGENT.has(this.liveStatus(() => this.agentRunner.get(r.runId), r)),
+      );
+      ref = run?.runId;
+    }
+    return ref ? { runRef: ref, target, classification } : null;
   }
 
   /** The effective per-project run cap (company defaults merged), absent = global only. */

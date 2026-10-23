@@ -493,7 +493,7 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
     department?: DepartmentId,
   ): Promise<ScheduledTask> {
     return this.updateEntity(id, (existing) => {
-      return {
+      const merged: ScheduledTask = {
         ...existing,
         status: "dispatched",
         runRef,
@@ -501,20 +501,22 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
         ...(classification ? { classification } : {}),
         ...(department ? { department } : {}),
       };
+      delete merged.continueRun;
+      return merged;
     });
   }
 
   /**
-   * Phase 49: re-point a task at a re-run's NEW run, clearing the prior (errored)
-   * outcome so the fresh run's terminal writes back and its PR/output gate can fire —
-   * `writeOutcome` is first-write-wins, so a stale outcome would otherwise block it.
-   * Drops back to `dispatched` and clears the stale `error` string; the operator's
-   * chosen `output` and every other field are untouched, so the original task's output
-   * gate is preserved. The scheduler's global `onRunStatus` handles the rest.
+   * Queue an operator "continue" of the task's failed/interrupted run: back to
+   * `queued` with the {@link ScheduledTask.continueRun} marker, the prior outcome and
+   * error cleared so the continued run's terminal writes back (first-write-wins).
    */
-  async reassignRun(id: string, runRef: string): Promise<ScheduledTask> {
+  async markQueuedContinue(
+    id: string,
+    continueRun: NonNullable<ScheduledTask["continueRun"]>,
+  ): Promise<ScheduledTask> {
     return this.updateEntity(id, (existing) => {
-      const merged: ScheduledTask = { ...existing, status: "dispatched", runRef };
+      const merged: ScheduledTask = { ...existing, status: "queued", continueRun };
       delete merged.outcome;
       delete merged.error;
       return merged;

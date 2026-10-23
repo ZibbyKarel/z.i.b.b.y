@@ -661,6 +661,19 @@ export const ScheduledTaskSchema = z.object({
    */
   roadmapItemId: z.string().optional(),
   /**
+   * An operator "continue" of this task's failed/interrupted run, waiting in the
+   * queue for a run slot like any dispatch (status `queued`). The drain continues
+   * `runRef` in place (a workflow/goal) or re-runs it (an agent) instead of starting
+   * a fresh run; cleared once dispatched.
+   */
+  continueRun: z
+    .object({
+      kind: z.enum(["agent", "workflow", "goal"]),
+      runRef: z.string().min(1),
+      note: z.string().optional(),
+    })
+    .optional(),
+  /**
    * Human label for {@link roadmapItemId}, snapshotted at release time: the
    * item's external key when it has one (`CZ3TDR1-524`), else its name. Stored
    * rather than resolved so the run stays self-describing — the archive can

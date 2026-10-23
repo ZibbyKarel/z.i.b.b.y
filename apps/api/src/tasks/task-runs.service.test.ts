@@ -166,10 +166,10 @@ function build() {
   const scheduled = {
     list: vi.fn(async () => [scheduledS]),
     get: vi.fn(async () => scheduledS),
-    reassignRun: vi.fn(async () => scheduledS),
   };
   const scheduler = {
     createTask: vi.fn(async () => ({ outcome: "pending", task: scheduledS })),
+    queueContinue: vi.fn(async () => {}),
   };
 
   const opener = vi.fn(async () => {});
@@ -772,34 +772,50 @@ describe("TaskRunsService", () => {
       await expect(service.resume("researcher_1")).rejects.toBeInstanceOf(TaskRunNotResumableError);
     });
 
-    it("continues a failed workflow run in place, clearing the task's failed outcome", async () => {
-      const { service, workflowRunner, scheduler, scheduled } = build();
-      const failed: WorkflowRun = { ...pipeP, status: "failed", taskId: "task9" };
-      workflowRunner.listAll.mockResolvedValue([failed]);
-      workflowRunner.get.mockReturnValue(failed);
-      workflowRunner.continueFailed.mockResolvedValue(failed);
-      const res = await service.resume("delivery_3");
-      expect(workflowRunner.continueFailed).toHaveBeenCalledWith("delivery_3", undefined);
-      expect(scheduler.createTask).not.toHaveBeenCalled();
-      expect(scheduled.reassignRun).toHaveBeenCalledWith("task9", "delivery_3");
-      expect(res.runId).toBe("delivery_3");
-    });
-
-    it("re-runs a failed workflow run as a new task when there is nothing to continue", async () => {
+    it("queues a continue of a failed task-backed workflow run instead of continuing directly", async () => {
       const { service, workflowRunner, scheduler } = build();
       const failed: WorkflowRun = { ...pipeP, status: "failed", taskId: "task9" };
       workflowRunner.listAll.mockResolvedValue([failed]);
       workflowRunner.get.mockReturnValue(failed);
       const res = await service.resume("delivery_3");
-      expect(workflowRunner.resumeParked).not.toHaveBeenCalled();
-      expect(scheduler.createTask).toHaveBeenCalledWith(
-        expect.objectContaining({ text: "do it later", target: scheduledS.target }),
-        undefined,
-        undefined,
-        undefined,
-        true,
-      );
-      expect(res.runId).toBe("task9");
+      expect(scheduler.queueContinue).toHaveBeenCalledWith("task9", {
+        kind: "workflow",
+        runRef: "delivery_3",
+        note: undefined,
+      });
+      expect(workflowRunner.continueFailed).not.toHaveBeenCalled();
+      expect(scheduler.createTask).not.toHaveBeenCalled();
+      expect(res.runId).toBe("delivery_3");
+    });
+
+    it("continues a task-less failed workflow run directly; nothing to continue is 409", async () => {
+      const { service, workflowRunner, scheduler } = build();
+      const failed: WorkflowRun = { ...pipeP, status: "failed", taskId: undefined };
+      workflowRunner.listAll.mockResolvedValue([failed]);
+      workflowRunner.get.mockReturnValue(failed);
+      workflowRunner.continueFailed.mockResolvedValueOnce(failed);
+      const res = await service.resume("delivery_3");
+      expect(workflowRunner.continueFailed).toHaveBeenCalledWith("delivery_3", undefined);
+      expect(scheduler.queueContinue).not.toHaveBeenCalled();
+      expect(res.runId).toBe("delivery_3");
+      await expect(service.resume("delivery_3")).rejects.toBeInstanceOf(TaskRunNotResumableError);
+    });
+
+    it("lists a failed run once, as queued, while its task waits to continue it", async () => {
+      const { service, workflowRunner, scheduled } = build();
+      const failed: WorkflowRun = { ...pipeP, status: "failed", taskId: "task9" };
+      workflowRunner.listAll.mockResolvedValue([failed]);
+      const queued = {
+        ...scheduledS,
+        id: "task9",
+        status: "queued" as const,
+        continueRun: { kind: "workflow" as const, runRef: "delivery_3" },
+      };
+      scheduled.list.mockResolvedValue([queued]);
+      const feed = await service.listTaskRuns();
+      expect(feed.filter((r) => r.runId === "delivery_3" || r.runId === "task9")).toEqual([
+        expect.objectContaining({ runId: "delivery_3", status: "queued" }),
+      ]);
     });
 
     describe("resume modes (D-RESUME)", () => {
@@ -830,11 +846,19 @@ describe("TaskRunsService", () => {
         );
       });
 
-      it("continue on an errored agent run resumes its session with the note", async () => {
-        const { service, agentRunner } = build();
-        agentRunner.listAll.mockResolvedValue([{ ...agentA, status: "error" }, makerChild]);
+      it("continue on an errored agent run queues a session-resuming re-run with the note", async () => {
+        const { service, agentRunner, scheduler } = build();
+        agentRunner.listAll.mockResolvedValue([
+          { ...agentA, status: "error", taskId: "task9" },
+          makerChild,
+        ]);
         await service.resume("researcher_1", { note: "try again" });
-        expect(agentRunner.rerun).toHaveBeenCalledWith("researcher_1", { note: "try again" });
+        expect(scheduler.queueContinue).toHaveBeenCalledWith("task9", {
+          kind: "agent",
+          runRef: "researcher_1",
+          note: "try again",
+        });
+        expect(agentRunner.rerun).not.toHaveBeenCalled();
       });
 
       it("fresh on an errored agent run re-runs its task, else a session-less agent re-run", async () => {
@@ -860,13 +884,16 @@ describe("TaskRunsService", () => {
         });
       });
 
-      it("continue on a failed workflow passes the note to continueFailed", async () => {
-        const { service, workflowRunner } = build();
+      it("continue on a failed workflow passes the note to the queued continue", async () => {
+        const { service, workflowRunner, scheduler } = build();
         const failed: WorkflowRun = { ...pipeP, status: "failed", taskId: "task9" };
         workflowRunner.listAll.mockResolvedValue([failed]);
-        workflowRunner.continueFailed.mockResolvedValue(failed);
         await service.resume("delivery_3", { note: "fix lint" });
-        expect(workflowRunner.continueFailed).toHaveBeenCalledWith("delivery_3", "fix lint");
+        expect(scheduler.queueContinue).toHaveBeenCalledWith("task9", {
+          kind: "workflow",
+          runRef: "delivery_3",
+          note: "fix lint",
+        });
       });
 
       it("fresh on a failed workflow skips continueFailed and re-runs the task", async () => {

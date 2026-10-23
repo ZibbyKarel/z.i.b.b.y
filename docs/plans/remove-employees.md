@@ -59,4 +59,7 @@ stops using employee/division contracts first, then the backend deletes them.
   dispatched run (agent, orchestrator, workflow, goal), released on terminal status; parked /
   paused-limit / awaiting-approval keep it. Automations with `agent` / `workflow` targets now go
   through `createTask`. Known ceilings: counts are in-memory (over-admit briefly after a
-  reboot) and an operator "continue" of a failed run restarts uncounted.
+  reboot).
+- **Continue through the queue (2026-10-23).** An operator "continue" of a failed /
+  interrupted task-backed run re-queues the task (`continueRun` marker) and the drain
+  continues it under a new slot, so it counts like any dispatch.

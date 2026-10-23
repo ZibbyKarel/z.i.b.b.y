@@ -534,8 +534,15 @@ Nothing waits inside `RunSlots`: when `tryTake` returns `null` the task moves to
 **queued** (no approval), persisting its resolved `target` / `classification` so a drain
 does not re-classify it. Waiting is a field, not a lifecycle status. The counts are
 in-memory: a run that survives an API restart is not counted until it ends, so the limit
-can briefly over-admit after a reboot. An operator "continue" of a failed/interrupted
-run restarts it outside `dispatch`, so it runs uncounted.
+can briefly over-admit after a reboot.
+
+An operator "continue" of a failed/interrupted run (resume `mode: "continue"`) goes
+through the same queue: `queueContinue` marks the task **queued** with a
+`continueRun: { kind, runRef, note? }` marker (clearing the old outcome), and the drain
+takes a slot and continues the workflow/goal in place or re-runs the agent. Until then
+the run itself reads `queued` in the feed (no separate task row). A run with nothing
+left to continue at is dispatched fresh from the same task, with the note appended. A
+run with no backing task (a self-dev goal) still continues at once, uncounted.
 
 On every terminal run, slot release or `maxConcurrentRuns` change the scheduler calls
 `drainQueues()`: queued tasks are tried by project round-robin, then oldest first; a task
@@ -702,6 +709,8 @@ workflow → 409 (`TaskRunNotMessageableError`). Nothing replies on the agent's 
 `continue` keeps the old context: a parked/paused workflow resumes in place, a failed
 workflow/goal continues from where it stopped, an errored agent run re-runs with
 `--resume <sessionId>` (the note, when given, is the `-p` prompt of that resumed turn).
+A failed/errored/interrupted task-backed run is queued for a run slot first (see Run
+slots) and the call returns the run as `queued`.
 `fresh` throws the context away: a `done`, errored or interrupted run is re-run as a
 NEW task from the original inputs (an agent run with no backing task re-runs without
 `--resume`); a parked/paused workflow is stopped (kept as `interrupted` history) and
@@ -744,9 +753,9 @@ POST   /api/tasks/runs/:runId/resume                          resume a parked/pa
                                                                 was captured, else a fresh run of the same task), or CONTINUE an
                                                                 errored/interrupted workflow/goal run in place from the phase /
                                                                 iteration it stopped on (finished phases are kept; fresh retry
-                                                                budget). Nothing to continue at (failed before any stage, or
-                                                                every phase finished) → re-run as a NEW task from the original
-                                                                task's inputs (needs a backing task, else 409). `mode: "fresh"`
+                                                                budget) — a task-backed run waits `queued` for a run slot
+                                                                first. Nothing to continue at (failed before any stage, or
+                                                                every phase finished) → the same task is dispatched fresh. `mode: "fresh"`
                                                                 re-runs as a new task instead (also for `done` runs) — see
                                                                 Resume modes above
 DELETE /api/tasks/runs/:runId                                  delete a run and its artifacts
