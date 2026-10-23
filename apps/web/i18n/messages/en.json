@@ -3160,6 +3160,20 @@
           "awaiting-merge": "Awaiting merge",
           "external": "In progress outside ZIBBY"
         }
+      },
+      "quickActions": {
+        "run": "Run",
+        "runLabel": "Run {label}",
+        "remove": "Remove",
+        "removeLabel": "Remove {label}",
+        "auto": "Auto",
+        "queued": "Queued",
+        "label": "Label",
+        "labelPlaceholder": "E.g. Deploy staging",
+        "text": "Task",
+        "textPlaceholder": "What should be done…",
+        "target": "Target",
+        "add": "Add"
       }
     },
     "you": "{n} you",
@@ -3191,6 +3205,10 @@
       "todo": {
         "label": "TODO",
         "desc": "Quick-add items to implement into a project"
+      },
+      "quickActions": {
+        "label": "Quick actions",
+        "desc": "One-click tasks — straight into the queue"
       }
     },
     "sheet": {

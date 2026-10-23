@@ -5,6 +5,7 @@ import { BriefingWidget } from "./BriefingWidget";
 import { IssuesWidget } from "./IssuesWidget";
 import { PinsWidget } from "./PinsWidget";
 import { PrsWidget } from "./PrsWidget";
+import { QuickActionsWidget } from "./QuickActionsWidget";
 import { RunsWidget } from "./RunsWidget";
 import { TasksWidget } from "./TasksWidget";
 import { TodoWidget } from "./TodoWidget";
@@ -98,6 +99,11 @@ export const WIDGETS: Record<WidgetType, WidgetDefinition> = {
     labelKey: "bridge.widget.todo.label",
     descKey: "bridge.widget.todo.desc",
     Component: TodoWidget,
+  },
+  quickActions: {
+    labelKey: "bridge.widget.quickActions.label",
+    descKey: "bridge.widget.quickActions.desc",
+    Component: QuickActionsWidget,
   },
 };
 

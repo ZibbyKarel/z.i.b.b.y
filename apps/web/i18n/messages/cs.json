@@ -3160,6 +3160,20 @@
           "awaiting-merge": "Čeká na merge",
           "external": "Rozpracováno mimo ZIBBY"
         }
+      },
+      "quickActions": {
+        "run": "Spustit",
+        "runLabel": "Spustit {label}",
+        "remove": "Odebrat",
+        "removeLabel": "Odebrat {label}",
+        "auto": "Automaticky",
+        "queued": "Zařazeno do fronty",
+        "label": "Název",
+        "labelPlaceholder": "Např. Nasadit staging",
+        "text": "Zadání",
+        "textPlaceholder": "Co se má udělat…",
+        "target": "Cíl",
+        "add": "Přidat"
       }
     },
     "you": "{n} ty",
@@ -3191,6 +3205,10 @@
       "todo": {
         "label": "TODO",
         "desc": "Rychlé přidání položek k implementaci do projektu"
+      },
+      "quickActions": {
+        "label": "Rychlé akce",
+        "desc": "Úlohy spustitelné jedním tlačítkem — rovnou do fronty"
       }
     },
     "sheet": {
