@@ -73,7 +73,7 @@ export async function bakeoff(argv: string[], ctx: Ctx): Promise<number> {
     for (const r of results) {
       const file = path.join(dir, `${r.key}.png`);
       const proc = await processImage(r.file, file, threshold, true);
-      const px = pixelQa(proc.pixels, 2550, proc.rawGrayRatio, proc.box, th, false);
+      const px = pixelQa(proc.pixels, 2550, proc.rawGrayRatio, proc.box, th);
       rows.push({
         config: cfg.id,
         key: r.key,

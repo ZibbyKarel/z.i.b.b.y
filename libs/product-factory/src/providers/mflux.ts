@@ -5,7 +5,7 @@ import { assertLicensed, imageModelOf, lorasOf } from "./licence.ts";
 import { ollamaHost, ollamaUnloadAll } from "./ollama.ts";
 import { run as defaultRun } from "./proc.ts";
 import type { Run } from "./proc.ts";
-import { COLORING_SUFFIX } from "./image.ts";
+import { promptFor } from "./image.ts";
 import type { ImageProvider, ImageResult } from "./image.ts";
 
 export const mfluxPython = (env: NodeJS.ProcessEnv): string =>
@@ -38,7 +38,7 @@ export function createMfluxImageProvider(
         loras,
         items: items.map((i) => ({
           key: i.key,
-          prompt: `${i.prompt}. ${COLORING_SUFFIX}`,
+          prompt: promptFor(i),
           seed: i.seed,
           width: i.width,
           height: i.height,

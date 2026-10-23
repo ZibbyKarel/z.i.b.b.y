@@ -54,6 +54,14 @@ describe("produce", () => {
       path.join(ctx.cwd, "book", "illustrations", "01", "01-approved.png"),
     ).metadata();
     expect([m.width, m.height, m.hasAlpha]).toEqual([2550, 3300, false]);
+    const c = await sharp(path.join(ctx.cwd, "book", "cover-art", "approved.png")).metadata();
+    expect([c.width, c.height, c.channels, c.hasAlpha]).toEqual([2588, 3375, 3, false]);
+    const coverQaFile = JSON.parse(read(ctx, "book", "qa", "00.json")) as {
+      passed: boolean;
+      pixel: { colorRatio: number };
+    };
+    expect(coverQaFile.passed).toBe(true);
+    expect(coverQaFile.pixel.colorRatio).toBeGreaterThan(0.25);
     expect(fs.readdirSync(path.join(ctx.cwd, "book", "illustrations", "01")).sort()).toEqual([
       "01-approved.png",
       "01-attempt-001.png",
@@ -67,6 +75,19 @@ describe("produce", () => {
     expect(attempts(ctx, "02")).toEqual(["02-attempt-001.png", "02-attempt-002.png"]);
     expect(attempts(ctx, "01")).toEqual(["01-attempt-001.png"]);
     expect(read(ctx, "produce-report.md")).toContain("<verdict>pass</verdict>");
+  });
+
+  it("rejects a black-and-white cover and retries it in colour", async () => {
+    const ctx = await prepared({ PF_MOCK_FAIL_PAGES: "0" });
+    expect(await produce([jobs, "--rounds", "1"], ctx)).toBe(2);
+    expect(read(ctx, "produce-report.md")).toMatch(/page cover:\n  - \[high\] not-colorful/);
+    expect(await produce([jobs, "--rounds", "1"], ctx)).toBe(0);
+    expect(fs.readdirSync(path.join(ctx.cwd, "book", "cover-art")).sort()).toEqual([
+      "approved.png",
+      "attempt-001.png",
+      "attempt-002.png",
+      "meta.json",
+    ]);
   });
 
   it("exits 2 with a gap verdict when rounds run out", async () => {

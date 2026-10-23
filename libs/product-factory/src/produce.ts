@@ -4,9 +4,9 @@ import { parseArgs } from "node:util";
 import { readJsonArtifact } from "./artifact.ts";
 import { appendCost, bookDirOf, envNum, nn, pageFile, readJson, writeJson } from "./ctx.ts";
 import type { Ctx } from "./ctx.ts";
-import { processImage } from "./image-proc.ts";
+import { COVER_H, COVER_W, processCover, processImage } from "./image-proc.ts";
 import { createImageProvider, createVisionProvider } from "./providers/index.ts";
-import { DEFAULT_THRESHOLDS, pixelQa } from "./qa/pixel.ts";
+import { DEFAULT_THRESHOLDS, coverQa, pixelQa } from "./qa/pixel.ts";
 import { JobsSchema, PlanSchema } from "./schemas.ts";
 import type { QaIssue, QaResult } from "./schemas.ts";
 
@@ -52,7 +52,12 @@ export const thresholdsOf = (ctx: Ctx): typeof DEFAULT_THRESHOLDS => ({
   minInk: envNum(ctx, "PF_MIN_INK", DEFAULT_THRESHOLDS.minInk),
   maxInk: envNum(ctx, "PF_MAX_INK", DEFAULT_THRESHOLDS.maxInk),
   maxMarginInk: envNum(ctx, "PF_MAX_MARGIN_INK", DEFAULT_THRESHOLDS.maxMarginInk),
+  minColor: envNum(ctx, "PF_MIN_COLOR", DEFAULT_THRESHOLDS.minColor),
+  maxWhite: envNum(ctx, "PF_MAX_WHITE", DEFAULT_THRESHOLDS.maxWhite),
 });
+
+/** Portrait generation size for the cover (front-cover aspect, multiple of 16 for flux). */
+const coverGenWidth = (size: number): number => Math.round((size * COVER_W) / COVER_H / 16) * 16;
 
 export async function produce(argv: string[], ctx: Ctx): Promise<number> {
   const { values, positionals } = parseArgs({
@@ -131,7 +136,7 @@ export async function produce(argv: string[], ctx: Ctx): Promise<number> {
         key: u.isCover ? "cover" : `p${nn(u.pageNumber)}`,
         prompt: u.prompt,
         seed,
-        width: size,
+        width: u.isCover ? coverGenWidth(size) : size,
         height: size,
         referenceImages: u.referenceImages,
         attempt,
@@ -172,23 +177,32 @@ export async function produce(argv: string[], ctx: Ctx): Promise<number> {
         pageFile(u.pageNumber, `attempt-${String(attempt).padStart(3, "0")}.png`),
       );
       if (fs.existsSync(file)) throw new Error(`refusing to overwrite ${file}`);
-      const proc = await processImage(res.file, file, threshold, !u.isCover);
-      const px = pixelQa(proc.pixels, 2550, proc.rawGrayRatio, proc.box, th, u.isCover);
+      let pixel: QaResult["pixel"];
+      let issues: QaIssue[];
+      if (u.isCover) {
+        const c = await processCover(res.file, file);
+        issues = coverQa(c.colorRatio, c.whiteRatio, th);
+        pixel = { grayRatio: 0, inkRatio: 0, openRegions: 0, marginInk: 0, ...c };
+      } else {
+        const proc = await processImage(res.file, file, threshold, true);
+        const px = pixelQa(proc.pixels, 2550, proc.rawGrayRatio, proc.box, th);
+        issues = px.issues;
+        pixel = {
+          grayRatio: px.grayRatio,
+          inkRatio: px.inkRatio,
+          openRegions: px.openRegions,
+          marginInk: px.marginInk,
+        };
+      }
       u.attempts = attempt;
-      u.issues = px.issues;
+      u.issues = issues;
       u.judge = "pixel";
-      const pixel = {
-        grayRatio: px.grayRatio,
-        inkRatio: px.inkRatio,
-        openRegions: px.openRegions,
-        marginInk: px.marginInk,
-      };
       const qa: QaResult = {
         pageNumber: u.pageNumber,
         attempt,
-        passed: px.issues.length === 0,
+        passed: issues.length === 0,
         pixel,
-        issues: px.issues,
+        issues,
         judge: "pixel",
       };
       judged.push({

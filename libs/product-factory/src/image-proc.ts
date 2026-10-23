@@ -73,3 +73,38 @@ export async function processImage(
     .toFile(outFile);
   return { pixels, rawGrayRatio, box: useBox ? SAFE_BOX : null };
 }
+
+/** Front cover with bleed (8.625x11.25 in) at 300 DPI — the art is drawn full-bleed. */
+export const COVER_W = 2588;
+export const COVER_H = 3375;
+
+export interface ProcessedCover {
+  /** Share of saturated pixels (max-min channel spread > 60). */
+  colorRatio: number;
+  /** Share of near-white pixels (every channel > 235). */
+  whiteRatio: number;
+}
+
+/** Full-colour cover art: crop-fill to the front cover with bleed, flatten to opaque RGB. No thresholding. */
+export async function processCover(srcFile: string, outFile: string): Promise<ProcessedCover> {
+  const { data, info } = await sharp(srcFile)
+    .flatten({ background: "#ffffff" })
+    .removeAlpha()
+    .resize(COVER_W, COVER_H, { fit: "cover" })
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  let color = 0;
+  let white = 0;
+  const px = info.width * info.height;
+  for (let i = 0; i < px; i++) {
+    const r = data[i * 3] ?? 255;
+    const g = data[i * 3 + 1] ?? 255;
+    const b = data[i * 3 + 2] ?? 255;
+    if (Math.max(r, g, b) - Math.min(r, g, b) > 60) color++;
+    if (r > 235 && g > 235 && b > 235) white++;
+  }
+  await sharp(data, { raw: { width: info.width, height: info.height, channels: 3 } })
+    .png({ compressionLevel: 9 })
+    .toFile(outFile);
+  return { colorRatio: color / (px || 1), whiteRatio: white / (px || 1) };
+}

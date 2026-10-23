@@ -52,7 +52,13 @@ A short Markdown intro, then ONE fenced ```json block that is exactly this shape
   "title": "…",
   "subtitle": "…",
   "styleGuide": "≤ 2000 chars: the Visual Bible's style spec as prompt phrases",
-  "cover": { "scene": "… rich multi-character storybook scene: hero + 4–8 supporting characters + setting + story moment, top fifth empty for the title" },
+  "cover": {
+    "scene": "… rich multi-character storybook scene: hero + 4–6 supporting characters + setting + story moment, calm top third for the title",
+    "background": "#ffd23f",
+    "titleFill": "#ffffff",
+    "titleOutline": "#1f2a44",
+    "badges": ["Věk 3–5", "30 obrázků"]
+  },
   "pages": [
     {
       "pageNumber": 1,
@@ -69,6 +75,9 @@ Rules: `pages.length` equals `brief.pageCount`, numbered 1..N; every scene is
 visually distinct (no two pages with the same subject + action); 1–3 subjects per
 page for ages ≤ 4; difficulty 1–3 rising gently; captions short, simple, correctly
 spelled, in the brief's language; no brands, trademarks or licensed characters.
+Copy `cover.background`, `cover.titleFill`, `cover.titleOutline` (hex `#rrggbb`) and
+`cover.badges` (≤ 3, each ≤ 24 chars, in the brief's language) from the Visual Bible's
+`## Cover concept`; the cover is full colour, the pages stay line art.
 Copy `brief` from the Visual Bible's `## Brief` block, including `personalFor` when it
 is there. For a personal book add a top-level `"ownerLine"` (≤ 80 chars) with the
 Visual Bible's title-page line. With `storyMode` the pages tell

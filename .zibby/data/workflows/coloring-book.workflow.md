@@ -134,14 +134,18 @@ tržiště dělá operátor ručně.
    **illustrate** (2×), pak park.
 6. **visual-audit** (`kids-book-qa`, qualify) — audit celé knihy; vadné strany
    vrátí přes `product-factory reject` → **illustrate**; mimo koncept → **concept**.
-7. **render** (tool) — interiér a obálka v PDF, 8.5×11", 300 DPI.
+7. **render** (tool) — interiér a obálka v PDF, 8.5×11", 300 DPI. Obálka je
+   **plnobarevná** (barevná ilustrace přes celou přední stranu, barevný hřbet a záda,
+   titulek s obrysem a kulaté odznaky); vnitřek zůstává černobílý, titulní strana
+   interiéru je jen text. Barvy a odznaky obálky určuje `cover` v plánu, který
+   vychází ze sekce „OBÁLKA“ v zadání.
 8. **preflight** (tool) — kontrola KDP (rozměry, DPI, fonty, prázdné strany).
 9. **listing** (`listing-specialist`) — text listingu pro KDP.
 10. **finalize** (tool) — `README.md` knihy, součet nákladů, cesta ke složce.
 11. **review** (`book-reviewer`, qualify, `approval: ask`) — poslední krok: běh
     zaparkuje a čeká na operátora s hotovým `interior.pdf` a `cover.pdf`. „Schválit“
     ukončí běh; „Požádat o změny“ s poznámkou ji agent převede na `product-factory
-    reject` (0 = titulka) a kniha se vrací přes **illustrate** → produce → render →
+reject` (0 = titulka) a kniha se vrací přes **illustrate** → produce → render →
     … → review. Navazující workflow pak bude knihu publikovat na Amazon KDP.
 
 ## Nastavení

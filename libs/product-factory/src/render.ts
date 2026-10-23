@@ -4,10 +4,11 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, degrees, rgb } from "pdf-lib";
-import type { PDFFont, PDFPage } from "pdf-lib";
+import type { Color, PDFFont, PDFPage } from "pdf-lib";
 import { bookDirOf, nn, pageFile, readJson, writeJson } from "./ctx.ts";
 import type { Ctx } from "./ctx.ts";
 import { PlanSchema } from "./schemas.ts";
+import type { Cover } from "./schemas.ts";
 
 export const PT = 72;
 export const PAGE_W_PT = 8.5 * PT;
@@ -16,6 +17,8 @@ export const SPINE_PER_PAGE_IN = 0.002252;
 export const BLEED_IN = 0.125;
 const FONT_FILE = fileURLToPath(new URL("../fonts/NotoSans-Regular.ttf", import.meta.url));
 const FIXED_DATE = new Date("2000-01-01T00:00:00Z");
+/** Cover colours when the plan leaves them out: sunny yellow wrap, white title with a navy outline. */
+const COVER_DEFAULTS = { background: "#ffd23f", titleFill: "#ffffff", titleOutline: "#1f2a44" };
 
 export interface ManifestImage {
   pdfPage: number;
@@ -82,19 +85,66 @@ function centered(
   cx: number,
   topY: number,
   gap = 1.25,
+  color: Color = rgb(0, 0, 0),
 ): number {
   let y = topY;
   for (const l of lines) {
-    page.drawText(l, {
-      x: cx - font.widthOfTextAtSize(l, size) / 2,
-      y,
-      size,
-      font,
-      color: rgb(0, 0, 0),
-    });
+    page.drawText(l, { x: cx - font.widthOfTextAtSize(l, size) / 2, y, size, font, color });
     y -= size * gap;
   }
   return y;
+}
+
+const hexRgb = (hex: string): Color =>
+  rgb(
+    parseInt(hex.slice(1, 3), 16) / 255,
+    parseInt(hex.slice(3, 5), 16) / 255,
+    parseInt(hex.slice(5, 7), 16) / 255,
+  );
+
+/** Centered lines with a thick outline: the outline colour stamped in 16 directions, the fill on top. */
+function outlined(
+  page: PDFPage,
+  font: PDFFont,
+  lines: string[],
+  size: number,
+  cx: number,
+  topY: number,
+  fill: Color,
+  outline: Color,
+): number {
+  const r = Math.max(1.5, size * 0.08);
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * 2 * Math.PI;
+    centered(page, font, lines, size, cx + r * Math.cos(a), topY + r * Math.sin(a), 1.1, outline);
+  }
+  return centered(page, font, lines, size, cx, topY, 1.1, fill);
+}
+
+/** The largest title size (56 down to 32) that wraps into at most three lines. */
+function fitTitle(font: PDFFont, text: string, maxW: number): { lines: string[]; size: number } {
+  for (let size = 56; size > 32; size -= 4) {
+    const lines = wrap(font, text, size, maxW);
+    if (lines.length <= 3) return { lines, size };
+  }
+  return { lines: wrap(font, text, 32, maxW), size: 32 };
+}
+
+/** Round sticker: white disc with an outline ring, label wrapped inside. */
+function badge(
+  page: PDFPage,
+  font: PDFFont,
+  label: string,
+  cx: number,
+  cy: number,
+  r: number,
+  ink: Color,
+): void {
+  page.drawCircle({ x: cx, y: cy, size: r, color: rgb(1, 1, 1), borderColor: ink, borderWidth: 4 });
+  const size = 12;
+  const lines = wrap(font, label, size, r * 1.5).slice(0, 3);
+  const top = cy + ((lines.length - 1) * size * 1.15) / 2 - size * 0.35;
+  centered(page, font, lines, size, cx, top, 1.15, ink);
 }
 
 async function newDoc(title: string): Promise<PDFDocument> {
@@ -140,15 +190,10 @@ export async function render(argv: string[], ctx: Ctx): Promise<number> {
   const safe = makeSafe(font, warnings);
   const images: ManifestImage[] = [];
 
-  // Title page: the full-page cover illustration (it leaves the top fifth empty), title drawn over it.
+  // Title page: text only — the cover art is full colour and the interior prints black and white.
   const title = interior.addPage([PAGE_W_PT, PAGE_H_PT]);
   const cx = PAGE_W_PT / 2;
-  const titleArt = path.join(book, "cover-art", "approved.png");
-  if (fs.existsSync(titleArt)) {
-    const art = await interior.embedPng(fs.readFileSync(titleArt));
-    title.drawImage(art, { x: 0, y: 0, width: PAGE_W_PT, height: PAGE_H_PT });
-  } else warnings.add("no cover-art/approved.png — title page has text only");
-  const ty = centered(title, font, wrap(font, safe(plan.title), 44, 460), 44, cx, 735, 1.2);
+  const ty = centered(title, font, wrap(font, safe(plan.title), 44, 460), 44, cx, 520, 1.2);
   if (plan.subtitle)
     centered(title, font, wrap(font, safe(plan.subtitle), 20, 460), 20, cx, ty - 6);
 
@@ -183,22 +228,74 @@ export async function render(argv: string[], ctx: Ctx): Promise<number> {
   const backCx = bleed + (8.5 * PT) / 2;
   const frontCx = frontX + (8.5 * PT) / 2;
   const coverTop = heightIn * PT - bleed;
-  centered(cp, cfont, wrap(cfont, csafe(plan.title), 40, 440), 40, frontCx, coverTop - 70);
+  const colors: Required<Omit<Cover, "scene" | "badges">> = { ...COVER_DEFAULTS, ...plan.cover };
+  const bg = hexRgb(colors.background);
+  const ink = hexRgb(colors.titleOutline);
+  const titleFill = hexRgb(colors.titleFill);
+  // Whole wrap in the background colour, then the full-colour art full-bleed over the front panel.
+  cp.drawRectangle({ x: 0, y: 0, width: widthIn * PT, height: heightIn * PT, color: bg });
   const artFile = path.join(book, "cover-art", "approved.png");
   let coverArt: ManifestImage | undefined;
   if (fs.existsSync(artFile)) {
     const art = await cover.embedPng(fs.readFileSync(artFile));
-    const h = 7.6 * PT;
-    const w = (h * 2550) / 3300;
-    cp.drawImage(art, { x: frontCx - w / 2, y: bleed + 0.4 * PT, width: w, height: h });
+    const w = 8.5 * PT + bleed;
+    const h = heightIn * PT;
+    cp.drawImage(art, { x: frontX, y: 0, width: w, height: h });
     coverArt = { pdfPage: 1, file: artFile, drawnWidthPt: w, drawnHeightPt: h };
   } else warnings.add("no cover-art/approved.png — cover has title only");
+  const { lines: titleLines, size: titleSize } = fitTitle(cfont, csafe(plan.title), 500);
+  const subY = outlined(
+    cp,
+    cfont,
+    titleLines,
+    titleSize,
+    frontCx,
+    coverTop - 0.5 * PT - titleSize,
+    titleFill,
+    ink,
+  );
+  if (plan.subtitle)
+    outlined(
+      cp,
+      cfont,
+      wrap(cfont, csafe(plan.subtitle), 18, 460),
+      18,
+      frontCx,
+      subY - 4,
+      titleFill,
+      ink,
+    );
+  const r = 44;
+  (plan.cover.badges ?? []).forEach((label, i) =>
+    badge(
+      cp,
+      cfont,
+      csafe(label),
+      frontX + 8.5 * PT - 0.375 * PT - r,
+      bleed + 0.375 * PT + r + i * (2 * r + 8),
+      r,
+      ink,
+    ),
+  );
+
+  // Back: a white panel with the blurb at the top (the bottom right stays free for the KDP barcode).
   const back: string[] = [];
-  if (plan.subtitle) back.push(...wrap(cfont, csafe(plan.subtitle), 20, 400), "");
+  if (plan.subtitle) back.push(...wrap(cfont, csafe(plan.subtitle), 20, 440), "");
   back.push(
     csafe(`A coloring book for ages ${plan.brief.targetAge.min}-${plan.brief.targetAge.max}`),
   );
-  centered(cp, cfont, back, 20, backCx, coverTop - 140);
+  const panelTop = coverTop - 0.75 * PT;
+  const panelH = back.length * 20 * 1.25 + 40;
+  cp.drawRectangle({
+    x: bleed + 0.5 * PT,
+    y: panelTop - panelH,
+    width: 7.5 * PT,
+    height: panelH,
+    color: rgb(1, 1, 1),
+    borderColor: ink,
+    borderWidth: 4,
+  });
+  centered(cp, cfont, back, 20, backCx, panelTop - 20 - 20, 1.25, ink);
   if (interiorPages >= 79) {
     const size = Math.min(14, spineIn * PT * 0.6);
     const t = csafe(plan.title);
@@ -208,7 +305,7 @@ export async function render(argv: string[], ctx: Ctx): Promise<number> {
       size,
       font: cfont,
       rotate: degrees(-90),
-      color: rgb(0, 0, 0),
+      color: ink,
     });
   } else warnings.add(`no spine text: ${interiorPages} pages < 79 (KDP rule)`);
   fs.writeFileSync(path.join(book, "cover.pdf"), await cover.save({ useObjectStreams: false }));

@@ -40,6 +40,10 @@ look for what a per-page check cannot see.
 3. Mascot consistency (if the plan has one).
 4. Scene ↔ plan — each page shows its planned subjects.
 5. Age fit and safety — nothing scary, no text or letters, no brand look-alikes.
+6. The cover — it is **full colour** (only the pages are line art): saturated flat
+   colours, a coloured background, the hero and mascot match the pages, a calm top
+   third for the title, no text or garbled letters. Reject it (`0`) when it is
+   black-and-white, washed out, mostly white, or the hero does not match the book.
 
 ## Severity — reject only blocking defects
 

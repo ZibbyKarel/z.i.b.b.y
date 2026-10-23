@@ -56,9 +56,13 @@ visual QA) follows.
   publishing project), choose an evergreen toddler theme that is NOT listed there
   and differs clearly from the last few, then add one line
   `- <YYYY-MM-DD> · <theme> · <title>` to `books.md` with the Edit tool (Write if it is missing).
-- Style rules that always hold: thick uniform black outlines, pure white
-  background, closed contours, no gray, no shading, no text inside images, one main
-  subject per page for ages ≤ 4, nothing within 0.5 in of the page edge.
+- Style rules that always hold **for the interior pages**: thick uniform black
+  outlines, pure white background, closed contours, no gray, no shading, no text
+  inside images, one main subject per page for ages ≤ 4, nothing within 0.5 in of the
+  page edge. The **cover is the exception — it is full colour** (see `## Cover concept`).
+- Cover instructions in the brief (an "OBÁLKA" / "cover" section: colours, background,
+  badges, what the hero does) are authoritative — carry them into `## Cover concept`
+  and fill in only what they leave open.
 
 ## What to write (the file you are told to produce, Markdown)
 
@@ -73,12 +77,26 @@ defaults filled in, `listPriceUsd`, `breakEvenCopies: 5`; `personalFor` only whe
    images, white background, margins, composition. Written as reusable prompt
    phrases the illustrator can paste.
 5. `## Mascot` (optional) — one recurring character with a fixed description.
-6. `## Cover concept` — a rich, eye-catching storybook scene (NOT a single animal on
-   white): a hero (the child or mascot) in front of the book's setting, with 4–8
-   supporting characters peeking in or waving, and an obvious story moment (e.g. a girl
-   before the zoo gate with animals leaning over it; a farm with a fence, a crowd of
-   animals and a farmer with a pitchfork). The top fifth of the page stays empty
-   for the title, which the renderer draws.
+6. `## Cover concept` — the cover is **full colour** (like every best-selling kids'
+   coloring book on Amazon; only the inside is black-and-white line art). It must stop
+   a parent scrolling past a thumbnail:
+   - **Scene:** a rich storybook scene (NOT a single animal on white): the hero (the
+     child or mascot) large in the lower middle, looking at the viewer, in front of the
+     book's setting, with 4–6 supporting characters peeking in or waving and an obvious
+     story moment (a girl before the zoo gate with animals leaning over it; a farm with
+     a fence, a crowd of animals and a farmer).
+   - **Style:** flat vector, cute (kawaii) characters, bold dark outlines, vibrant
+     saturated flat colours, no gradients or photo-real shading, no text in the image.
+   - **Colours:** one dominant background colour matching the theme (farm = sunny
+     yellow/green, space = deep blue/purple, sea = turquoise, zoo = orange/green) plus
+     3–4 accents, at most 5 colours. Give them as hex: `background` (the wrap — back
+     cover and spine), `titleFill` and `titleOutline` (the title is drawn by the
+     renderer as light letters with a thick dark outline, so pick a high-contrast pair).
+   - **Layout:** the top third is a calmer area (sky, plain colour) for the title;
+     nothing important within 0.5 in of the edge; the bottom-right corner stays calm
+     for the badges.
+   - **Badges:** up to 3 short round stickers in the book's language, e.g.
+     "Věk 3–5", "30 obrázků", "Jednostranné" (each ≤ 24 characters).
 7. `## Avoid` — trademarked characters, brands, licensed IP, scary or unsafe scenes.
 
 Never use real brands, franchises or characters. Use WebSearch at most a few times,

@@ -12,6 +12,9 @@ export interface PixelThresholds {
   minInk: number;
   maxInk: number;
   maxMarginInk: number;
+  /** Cover: minimum share of saturated pixels / maximum share of near-white pixels. */
+  minColor: number;
+  maxWhite: number;
 }
 
 export const DEFAULT_THRESHOLDS: PixelThresholds = {
@@ -19,6 +22,8 @@ export const DEFAULT_THRESHOLDS: PixelThresholds = {
   minInk: 0.01,
   maxInk: 0.35,
   maxMarginInk: 0.0005,
+  minColor: 0.25,
+  maxWhite: 0.45,
 };
 
 export interface PixelResult {
@@ -36,9 +41,31 @@ export function grayRatioOf(gray: Uint8Array): number {
   return n / (gray.length || 1);
 }
 
+/** QA over the full-colour cover art: it must read as a colourful cover, not white line art. */
+export function coverQa(
+  colorRatio: number,
+  whiteRatio: number,
+  t: PixelThresholds = DEFAULT_THRESHOLDS,
+): QaIssue[] {
+  const issues: QaIssue[] = [];
+  if (colorRatio < t.minColor)
+    issues.push({
+      type: "not-colorful",
+      severity: "high",
+      description: `colour ratio ${colorRatio.toFixed(3)} < ${t.minColor} (cover must be full colour)`,
+    });
+  if (whiteRatio > t.maxWhite)
+    issues.push({
+      type: "not-colorful",
+      severity: "high",
+      description: `white ratio ${whiteRatio.toFixed(3)} > ${t.maxWhite} (cover needs a coloured background)`,
+    });
+  return issues;
+}
+
 /**
  * QA over the processed (pure black/white) page. `rawGrayRatio` comes from the raw generated image.
- * `box` is the content box; ink outside it counts as margin violation. `box: null` + `grayOnly` = cover art.
+ * `box` is the content box; ink outside it counts as margin violation.
  */
 export function pixelQa(
   processed: Uint8Array,
@@ -46,7 +73,6 @@ export function pixelQa(
   rawGrayRatio: number,
   box: Box | null,
   t: PixelThresholds = DEFAULT_THRESHOLDS,
-  grayOnly = false,
 ): PixelResult {
   let ink = 0;
   let marginInkPx = 0;
@@ -70,26 +96,24 @@ export function pixelQa(
       severity: "high",
       description: `gray ratio ${rawGrayRatio.toFixed(3)} > ${t.maxGray} (shading instead of line art)`,
     });
-  if (!grayOnly) {
-    if (inkRatio < t.minInk)
-      issues.push({
-        type: "too-sparse",
-        severity: "high",
-        description: `ink ratio ${inkRatio.toFixed(4)} < ${t.minInk}`,
-      });
-    if (inkRatio > t.maxInk)
-      issues.push({
-        type: "too-complex",
-        severity: "medium",
-        description: `ink ratio ${inkRatio.toFixed(3)} > ${t.maxInk}`,
-      });
-    if (marginInk > t.maxMarginInk)
-      issues.push({
-        type: "margin-violation",
-        severity: "medium",
-        description: `ink in margin area: ${marginInk.toFixed(5)} > ${t.maxMarginInk}`,
-      });
-  }
+  if (inkRatio < t.minInk)
+    issues.push({
+      type: "too-sparse",
+      severity: "high",
+      description: `ink ratio ${inkRatio.toFixed(4)} < ${t.minInk}`,
+    });
+  if (inkRatio > t.maxInk)
+    issues.push({
+      type: "too-complex",
+      severity: "medium",
+      description: `ink ratio ${inkRatio.toFixed(3)} > ${t.maxInk}`,
+    });
+  if (marginInk > t.maxMarginInk)
+    issues.push({
+      type: "margin-violation",
+      severity: "medium",
+      description: `ink in margin area: ${marginInk.toFixed(5)} > ${t.maxMarginInk}`,
+    });
   // ponytail: contour closure needs flood-fill analysis (white region touching the border = open shape); add when QA lets open shapes through.
   return { grayRatio: rawGrayRatio, inkRatio, openRegions: 0, marginInk, issues };
 }

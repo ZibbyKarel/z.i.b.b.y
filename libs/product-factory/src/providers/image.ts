@@ -2,6 +2,14 @@
 export const COLORING_SUFFIX =
   "black and white coloring book page, thick clean black outlines, pure white background, no shading, no gray, no color, no text";
 
+/** Appended to the cover prompt instead: the cover is the one full-colour image. */
+export const COVER_SUFFIX =
+  "full-colour children's book cover illustration, vibrant saturated flat colours, coloured background edge to edge, bold dark outlines, no text, no letters, no words";
+
+/** The prompt a real provider sends: the item's prompt plus the page or cover suffix. */
+export const promptFor = (item: { key: string; prompt: string }): string =>
+  `${item.prompt}. ${item.key === "cover" ? COVER_SUFFIX : COLORING_SUFFIX}`;
+
 export interface ImageItem {
   key: string;
   prompt: string;

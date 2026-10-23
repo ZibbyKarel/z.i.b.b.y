@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { PAGE_H, PAGE_W, SAFE_BOX, processImage } from "../image-proc.ts";
 import { createMockImageProvider } from "../providers/mock.ts";
 import { tmpCtx } from "../testkit.ts";
-import { grayRatioOf, pixelQa } from "./pixel.ts";
+import { coverQa, grayRatioOf, pixelQa } from "./pixel.ts";
 
 const N = PAGE_W * PAGE_H;
 const types = (r: ReturnType<typeof pixelQa>): string[] => r.issues.map((i) => i.type);
@@ -39,5 +39,14 @@ describe("pixelQa", () => {
     const r = pixelQa(proc.pixels, PAGE_W, proc.rawGrayRatio, proc.box);
     expect(r.issues).toEqual([]);
     expect(r.inkRatio).toBeGreaterThan(0.01);
+  });
+});
+
+describe("coverQa", () => {
+  it("passes a colourful cover", () => {
+    expect(coverQa(0.6, 0.05)).toEqual([]);
+  });
+  it("flags white line art as not-colorful", () => {
+    expect(coverQa(0.01, 0.9).map((i) => i.type)).toEqual(["not-colorful", "not-colorful"]);
   });
 });

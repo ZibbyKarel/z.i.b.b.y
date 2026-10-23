@@ -54,17 +54,21 @@ change the seed. No brands or licensed characters, ever. Never put a name or any
 word in a prompt as text to draw — describe the child only by looks (e.g. "a little
 girl with two pigtails and a striped dress"); prompts are always in English.
 
-## The cover prompt (`cover.prompt`) — NOT a normal page
+## The cover prompt (`cover.prompt`) — NOT a normal page, and in FULL COLOUR
 
 The cover is the book's shop window: it must make a parent stop scrolling. It is the
-one image in the book that is rich and complex — a full storybook scene, not a single
-centered subject. Do NOT use the "large simple forms / one centered subject / generous
-margins" recipe for it. Build it from `plan.cover.scene` and the Visual Bible's
-`## Cover concept` like this (one paragraph, English):
+one image in the book that is rich, complex and **coloured** — a full storybook scene,
+not a single centered subject, and never black-and-white line art. Do NOT use the
+"large simple forms / one centered subject / generous margins / white background"
+recipe for it. Build it from `plan.cover.scene`, `plan.cover.background` and the
+Visual Bible's `## Cover concept` like this (one paragraph, English):
 
-1. Open with: "beautiful children's coloring book cover illustration, full-page
-   storybook scene, clean confident black outlines of varied weight, pure white
-   background, no shading, no gray, no filled black areas, no text, no letters, no words".
+1. Open with: "vibrant full-colour children's book cover illustration, full-page
+   storybook scene, flat vector style, cute kawaii characters, bold dark outlines,
+   saturated flat colours, no gradients, no text, no letters, no words". Name the
+   palette in words (e.g. "sunny yellow sky, grass green, barn red, sky blue") so the
+   dominant colour matches `plan.cover.background`; the background is coloured
+   edge to edge, never white.
 2. The scene, as a layered composition: a clear **foreground hero** (the main
    character or the mascot, large, expressive, looking at the viewer), a
    **middle ground** with several supporting characters/animals peeking in, waving
@@ -76,12 +80,13 @@ margins" recipe for it. Build it from `plan.cover.scene` and the Visual Bible's
    waves in front of the big zoo gate while a giraffe, an elephant, a lion cub and a
    monkey lean over the gate and wave back") — joy, curiosity, a friendly crowd.
 4. Layout: "portrait orientation, composition fills the whole page edge to edge, the
-   top fifth of the page is an empty white sky area (no drawing there) reserved for
-   the title, the hero sits in the lower-middle, characters framed in a gentle
-   arch around the hero".
+   top third is a calm plain sky area (no characters there) reserved for the title,
+   the hero sits large in the lower-middle, characters framed in a gentle arch around
+   the hero, the bottom-right corner calm" — the renderer draws the title and the
+   round badges on top.
 5. Keep the mascot / child description word-for-word identical to the page prompts.
    No brands, no licensed characters, no text to draw, describe a named child only by looks.
 
 Never reuse a page prompt as the cover prompt. On a retry for a cover blocked by QA
-(`gray-area` → "pure line art, no tone, no hatching, no fill"), keep the richness and
-change the seed.
+(`not-colorful` → "fully coloured, saturated colours everywhere, coloured background
+edge to edge, no white areas"), keep the richness and change the seed.

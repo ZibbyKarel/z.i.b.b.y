@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { COLORING_SUFFIX } from "./image.ts";
+import { promptFor } from "./image.ts";
 import type { ImageProvider, ImageResult } from "./image.ts";
 
 const ENDPOINT = "https://fal.run/fal-ai/flux-2/klein/4b";
@@ -25,7 +25,7 @@ export function createFalImageProvider(
       for (const item of items) {
         const t0 = performance.now();
         const body = JSON.stringify({
-          prompt: `${item.prompt}. ${COLORING_SUFFIX}`,
+          prompt: promptFor(item),
           seed: item.seed,
           image_size: { width: item.width, height: item.height },
           num_images: 1,

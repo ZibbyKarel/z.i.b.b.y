@@ -22,7 +22,11 @@ Written by the content planner agent.
   "subtitle": "A Big Coloring Book of Farm Animals",
   "styleGuide": "Thick uniform black outlines on pure white. Large simple shapes, no shading, no gray fills, no text, closed contours, one main subject centered with generous empty space.",
   "cover": {
-    "scene": "a cow, a pig and a hen waving in front of a red barn"
+    "scene": "a cow, a pig and a hen waving in front of a red barn",
+    "background": "#6cc24a",
+    "titleFill": "#ffd23f",
+    "titleOutline": "#1f2a44",
+    "badges": ["Ages 2-4", "4 pages"]
   },
   "pages": [
     {

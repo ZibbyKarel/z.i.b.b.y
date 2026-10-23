@@ -30,6 +30,20 @@ export const PageSchema = z.strictObject({
 });
 export type Page = z.infer<typeof PageSchema>;
 
+const HexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, "expected a #rrggbb colour");
+
+/** The full-colour cover: the art is generated, title/badges/colours are drawn by the renderer. */
+export const CoverSchema = z.strictObject({
+  scene: z.string(),
+  /** Wrap background (back cover + spine), usually the art's dominant colour. */
+  background: HexColor.optional(),
+  titleFill: HexColor.optional(),
+  titleOutline: HexColor.optional(),
+  /** Short round stickers on the front ("Ages 3-5", "30 pages"); the brief's language. */
+  badges: z.array(z.string().min(1).max(24)).max(3).optional(),
+});
+export type Cover = z.infer<typeof CoverSchema>;
+
 export const PlanSchema = z.strictObject({
   brief: BriefSchema,
   title: z.string(),
@@ -38,7 +52,7 @@ export const PlanSchema = z.strictObject({
   ownerLine: z.string().max(80).optional(),
   /** Visual rules the illustrator must follow. */
   styleGuide: z.string().max(2000),
-  cover: z.strictObject({ scene: z.string() }),
+  cover: CoverSchema,
   pages: z.array(PageSchema),
 });
 export type Plan = z.infer<typeof PlanSchema>;
@@ -65,6 +79,7 @@ export const QaIssueSchema = z.strictObject({
     "open-contour",
     "too-complex",
     "too-sparse",
+    "not-colorful",
     "wrong-subject",
     "text-artifact",
     "margin-violation",
@@ -85,6 +100,9 @@ export const QaResultSchema = z.strictObject({
     inkRatio: z.number(),
     openRegions: z.number(),
     marginInk: z.number(),
+    /** Cover only: share of saturated pixels and of near-white pixels. */
+    colorRatio: z.number().optional(),
+    whiteRatio: z.number().optional(),
   }),
   issues: z.array(QaIssueSchema),
   judge: z.enum(["pixel", "ollama", "haiku", "mock"]),

@@ -42,9 +42,10 @@ End with exactly `<verdict>pass</verdict>`.
 
 ## With an Operator note
 
-The note is authoritative. Map it to pages (`0` = the cover/title page, `1..N` =
+The note is authoritative. Map it to pages (`0` = the full-colour cover art, `1..N` =
 coloring pages; "all pages" = every page, "title" / "titulka" / "obálka" = `0`;
-captions or title text belong to the plan, so for a text change edit
+captions, title text, cover colours (`cover.background` / `titleFill` /
+`titleOutline`) and badges belong to the plan, so for such a change edit
 `$ZIBBY_RUN_DIR/book/plan.json` with Edit and keep it valid JSON, no page rejected
 needed). Then un-approve the pages it names:
 `product-factory reject 0,7 --reason "the operator's wording, one line, no < or > characters"`.
