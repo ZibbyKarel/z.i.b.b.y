@@ -21,6 +21,20 @@ describe("RailItem", () => {
     expect(screen.getByTestId(RailItemTestId.Root)).not.toHaveAttribute("aria-current");
   });
 
+  it("running row gets the run-coloured border and data-running", () => {
+    render(<RailItem running title="x" />);
+    const root = screen.getByTestId(RailItemTestId.Root);
+    expect(root).toHaveAttribute("data-running", "true");
+    expect(root.className).toContain("border-run");
+  });
+
+  it("non-running row has no data-running or run border", () => {
+    render(<RailItem selected title="x" />);
+    const root = screen.getByTestId(RailItemTestId.Root);
+    expect(root).not.toHaveAttribute("data-running");
+    expect(root.className).not.toContain("border-run");
+  });
+
   it("omits the meta row without meta", () => {
     render(<RailItem title="x" />);
     expect(screen.queryByTestId(RailItemTestId.Meta)).toBeNull();

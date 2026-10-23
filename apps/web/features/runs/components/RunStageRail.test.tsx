@@ -80,6 +80,13 @@ describe("RunStageRail", () => {
     expect(stage("phase1")).not.toHaveAttribute("aria-current");
   });
 
+  it("only the working stage is flagged running", () => {
+    renderRail();
+    expect(stage("phase2")).toHaveAttribute("data-running", "true");
+    expect(stage("phase1")).not.toHaveAttribute("data-running");
+    expect(stage("phase3")).not.toHaveAttribute("data-running");
+  });
+
   it("clicking a row selects its phase", async () => {
     const { onSelect } = renderRail();
     await userEvent.click(stage("phase2"));

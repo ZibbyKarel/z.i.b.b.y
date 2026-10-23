@@ -19,20 +19,27 @@ export interface RailItemProps extends Omit<
   /** Small mono caption under the title (e.g. a StateDot + text). */
   meta?: ReactNode;
   selected?: boolean;
+  /** The phase is running right now: 4px `run`-coloured bar and a tinted background. */
+  running?: boolean;
   ref?: Ref<HTMLButtonElement>;
 }
 
 /** A selectable row of a vertical rail (Run Detail stage list). The selected
  * row gets a 2px ink bar on the left and a raised background. */
-export function RailItem({ leading, title, meta, selected, ref, ...rest }: RailItemProps) {
+export function RailItem({ leading, title, meta, selected, running, ref, ...rest }: RailItemProps) {
   return (
     <button
       aria-current={selected || undefined}
       className={cn(
         "grid w-full cursor-pointer grid-cols-[30px_minmax(0,1fr)] items-center gap-[10px] border-l-2 py-[9px] pr-4 pl-[14px] text-left hover:bg-elevated",
-        selected ? "border-foreground bg-elevated" : "border-transparent",
+        running
+          ? "border-l-4 border-run bg-[color-mix(in_srgb,var(--color-run)_12%,transparent)]"
+          : selected
+            ? "border-foreground bg-elevated"
+            : "border-transparent",
         focusRingInset,
       )}
+      data-running={running || undefined}
       data-testid={RailItemTestId.Root}
       ref={ref}
       type="button"

@@ -78,6 +78,7 @@ export function RunStageRail({ run, rows, selectedPhaseId, onSelect }: RunStageR
             </>
           }
           onClick={() => onSelect(row.phaseId)}
+          running={row.state === "working"}
           selected={row.phaseId === selected}
           title={`${row.n} · ${row.name}`}
         />
