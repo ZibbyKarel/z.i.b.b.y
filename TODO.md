@@ -2,7 +2,7 @@
 
 1. [x] widgety - pokud widget načítá nějaká data poprvé, měl bych vidět loader aby DOM nebyl prázdný (widget pull-requests) (main@a66a40d7)
 2. [x] widget právě běží a ukončené - musíme předělat animaci když widget pracuje. Měl bych vidět progressbar odpovídající procentům fází, které jsou hotové. Pokud se jedná o single agent run tak musíme něco vymyslet tam nejsme schopni odhadnout jak dlouho bude práce trvat nebo kolik procent je již hotovo. (main@96488552)
-3. [ ] detail pull requestu
+3. [x] detail pull requestu (main@32c0c169)
    - tlačítka jako rebase, fix CI, merge, zapracovat komentáře, merge na githubu musejí být zobrazena jen pro MOJE PRs. Pullrequesty ostatních můžeme jen dělat code-review.
    - panel s detaily je redundantní. Všechny informace už máme v hlavičce.
    - title bude odkaz a povede na github na novém tabu (stejně tak uděláme i title u Issue v detailu - ten povede na JIRU v novém tabu) a můžeme smazat tlačítka otevírající github protože už máme title jako proklik
