@@ -12,6 +12,8 @@ export enum AnchoredSheetTestId {
   Hint = "anchored-sheet-hint",
   Close = "anchored-sheet-close",
   Title = "anchored-sheet-title",
+  TitleLink = "anchored-sheet-title-link",
+  Actions = "anchored-sheet-actions",
   Chip = "anchored-sheet-chip",
   Body = "anchored-sheet-body",
   Footer = "anchored-sheet-footer",
@@ -28,6 +30,10 @@ export interface AnchoredSheetProps {
   title: string;
   /** Makes the title a link-style button (e.g. open the full page of what the sheet shows). */
   onTitleClick?: () => void;
+  /** Title opens this URL in a new tab (wins over `onTitleClick`). */
+  titleHref?: string;
+  /** Right of the title, top of the sheet (run-detail placement). Wraps as one group. */
+  actions?: ReactNode;
   /** Meta chips under the title. */
   chips?: readonly string[];
   /** Colour of the 4px top border. */
@@ -64,6 +70,8 @@ export function AnchoredSheet({
   hint,
   title,
   onTitleClick,
+  titleHref,
+  actions,
   chips = [],
   tone = "neutral",
   onClose,
@@ -132,21 +140,41 @@ export function AnchoredSheet({
               ×
             </button>
           </div>
-          <div
-            className="text-[22px] font-medium leading-[1.2] tracking-[-.01em] [text-wrap:pretty]"
-            data-testid={AnchoredSheetTestId.Title}
-          >
-            {onTitleClick ? (
-              <button
-                className="cursor-pointer bg-transparent p-0 text-left font-[inherit] text-[length:inherit] leading-[inherit] tracking-[inherit] hover:underline"
-                onClick={onTitleClick}
-                type="button"
+          <div className="flex items-start gap-[12px]">
+            <div
+              className="min-w-0 flex-1 text-[22px] font-medium leading-[1.2] tracking-[-.01em] [text-wrap:pretty]"
+              data-testid={AnchoredSheetTestId.Title}
+            >
+              {titleHref ? (
+                <a
+                  className="hover:underline"
+                  data-testid={AnchoredSheetTestId.TitleLink}
+                  href={titleHref}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  {title}
+                </a>
+              ) : onTitleClick ? (
+                <button
+                  className="cursor-pointer bg-transparent p-0 text-left font-[inherit] text-[length:inherit] leading-[inherit] tracking-[inherit] hover:underline"
+                  onClick={onTitleClick}
+                  type="button"
+                >
+                  {title}
+                </button>
+              ) : (
+                title
+              )}
+            </div>
+            {actions ? (
+              <div
+                className="flex flex-none flex-wrap items-center gap-[6px]"
+                data-testid={AnchoredSheetTestId.Actions}
               >
-                {title}
-              </button>
-            ) : (
-              title
-            )}
+                {actions}
+              </div>
+            ) : null}
           </div>
           {chips.length > 0 ? (
             <div className="flex flex-wrap gap-[6px]">

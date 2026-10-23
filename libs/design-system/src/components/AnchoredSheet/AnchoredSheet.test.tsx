@@ -61,6 +61,46 @@ describe("AnchoredSheet", () => {
     expect(screen.queryByTestId(AnchoredSheetTestId.Footer)).toBeNull();
   });
 
+  it("renders the title as an external link when titleHref is set", () => {
+    render(
+      <AnchoredSheet
+        closeLabel="x"
+        kind="k"
+        onClose={() => {}}
+        title="T"
+        titleHref="https://x.test/1"
+        {...geo}
+      />,
+    );
+    const link = screen.getByTestId(AnchoredSheetTestId.TitleLink);
+    expect(link).toHaveAttribute("href", "https://x.test/1");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    expect(link).toHaveAccessibleName("T");
+  });
+
+  it("renders actions in the header", () => {
+    render(
+      <AnchoredSheet
+        actions={<button type="button">Go</button>}
+        closeLabel="x"
+        kind="k"
+        onClose={() => {}}
+        title="t"
+        {...geo}
+      />,
+    );
+    const actions = screen.getByTestId(AnchoredSheetTestId.Actions);
+    expect(screen.getByTestId(AnchoredSheetTestId.Header)).toContainElement(actions);
+    expect(actions).toHaveTextContent("Go");
+  });
+
+  it("no actions container without actions", () => {
+    render(<AnchoredSheet closeLabel="x" kind="k" onClose={() => {}} title="t" {...geo} />);
+    expect(screen.queryByTestId(AnchoredSheetTestId.Actions)).toBeNull();
+    expect(screen.queryByTestId(AnchoredSheetTestId.TitleLink)).toBeNull();
+  });
+
   it("closes from the overlay and the × button", async () => {
     const onClose = vi.fn();
     render(<AnchoredSheet closeLabel="Close" kind="k" onClose={onClose} title="t" {...geo} />);

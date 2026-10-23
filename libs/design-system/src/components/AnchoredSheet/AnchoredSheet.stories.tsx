@@ -80,6 +80,18 @@ export const Overview: Story = {
   ),
 };
 
+export const WithActionsAndLink: Story = {
+  render: (args) => (
+    <AnchoredSheet
+      {...args}
+      actions={<SheetAction intent="primary">MERGE</SheetAction>}
+      titleHref="https://github.com"
+    >
+      {body}
+    </AnchoredSheet>
+  ),
+};
+
 export const Playground: Story = {
   render: (args) => <AnchoredSheet {...args}>{body}</AnchoredSheet>,
 };
