@@ -187,5 +187,9 @@ export const UpdateAutomationSchema = AutomationSchema.omit({
   id: true,
   lastFiredAt: true,
   system: true,
-}).partial();
+})
+  // An update may send `""` to clear the description (an omitted field can't);
+  // the storage layer drops the empty value.
+  .extend({ description: z.string().optional() })
+  .partial();
 export type UpdateAutomationInput = z.infer<typeof UpdateAutomationSchema>;

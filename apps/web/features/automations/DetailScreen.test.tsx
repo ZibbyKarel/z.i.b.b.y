@@ -3,7 +3,7 @@ import type { Automation } from "@zibby/contracts";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders as render, screen } from "../../test/render";
 import { AutomationDetailScreenTestId, DetailScreen } from "./DetailScreen";
-import { CommandLineTestId } from "../tasks/components/CommandLine/CommandLine";
+import { MarkdownEditorTestId } from "@zibby/design-system";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -59,41 +59,6 @@ vi.mock("./mutations", () => ({
   useDeleteAutomationMutation: () => ({ mutate: hooks.del, isPending: false }),
   useTriggerAutomationMutation: () => ({ mutate: hooks.trigger, isPending: false }),
 }));
-// The `task` edit surface mounts the REAL `CommandLine` (not a stub) — mirrors
-// Screen.test.tsx's / ChatScreen.test.tsx's own mocking pattern for the same
-// component: stub every query/mutation it reads so mounting never hits the
-// network, but let the component itself run for real.
-vi.mock("../agents/queries", () => ({ useAgentsQuery: () => ({ data: [] }) }));
-vi.mock("../workflows/queries", () => ({ useWorkflowsQuery: () => ({ data: [] }) }));
-vi.mock("../departments/queries/useDepartmentsQuery", () => ({
-  useDepartmentsQuery: () => ({ data: [] }),
-  getDepartmentsQueryKey: () => ["departments"],
-}));
-vi.mock("../projects/queries/useProjectsQuery", () => ({
-  useProjectsQuery: () => ({ data: [] }),
-  getProjectsQueryKey: () => ["projects"],
-}));
-vi.mock("../limits/queries/useLimitsQuery", () => ({
-  useLimitsQuery: () => ({
-    data: {
-      rolling: { usedPct: 10, resetsAt: null },
-      weekly: { usedPct: 5, resetsAt: null },
-      capturedAt: Date.now(),
-      stale: false,
-    },
-  }),
-  getLimitsQueryKey: () => ["limits"],
-}));
-vi.mock("../tasks/mutations/useUploadTaskAttachmentsMutation", () => ({
-  useUploadTaskAttachmentsMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-}));
-// I1 fix round: a team WITH a name matching an `@` query, so the discriminating
-// test below actually exercises the mention catalog rather than passing by
-// accident because the catalog was empty either way.
-vi.mock("../teams", () => ({
-  useTeamsQuery: () => ({ data: [{ id: "devrel", name: "DevRel" }] }),
-}));
-
 describe("automations DetailScreen (N4f grammar)", () => {
   beforeEach(() => {
     push.mockClear();
@@ -109,12 +74,12 @@ describe("automations DetailScreen (N4f grammar)", () => {
   });
 
   describe("legacy (non-task, non-system) target — schedule-only fallback", () => {
-    it("Save persists ONLY the schedule (trigger) — the retired target picker never comes back", async () => {
+    it("Save persists the schedule + name/description — the retired target picker never comes back", async () => {
       render(<DetailScreen automationId="on-file" />);
       await userEvent.click(screen.getByTestId(AutomationDetailScreenTestId.Save));
       expect(hooks.update).toHaveBeenCalledTimes(1);
       const body = hooks.update.mock.calls[0]![0].body;
-      expect(Object.keys(body)).toEqual(["trigger"]);
+      expect(Object.keys(body)).toEqual(["trigger", "name", "description"]);
       expect(body.trigger).toEqual({ type: "event", events: ["file.created", "pr.opened"] });
     });
   });
@@ -167,7 +132,7 @@ describe("automations DetailScreen (N4f grammar)", () => {
     });
   });
 
-  describe("task automation — the CommandLine edit surface", () => {
+  describe("task automation — the Markdown edit surface", () => {
     beforeEach(() => {
       hooks.automation = {
         data: taskAutomation,
@@ -177,54 +142,47 @@ describe("automations DetailScreen (N4f grammar)", () => {
       };
     });
 
-    it("has NO top-right Save — CommandLine's own send action is the save", () => {
+    it("seeds the Markdown editor with the stored text", () => {
       render(<DetailScreen automationId="check-prs" />);
-      expect(screen.queryByTestId(AutomationDetailScreenTestId.Save)).toBeNull();
-    });
-
-    it("seeds CommandLine with the stored text and @-mentioned target", () => {
-      render(<DetailScreen automationId="check-prs" />);
-      expect(screen.getByTestId(CommandLineTestId.Input)).toHaveValue(
-        "@Builder Zkontroluj otevřené PR",
+      expect(screen.getByTestId(MarkdownEditorTestId.Control)).toHaveValue(
+        "Zkontroluj otevřené PR",
       );
     });
 
-    it("has no project selector — this edit surface is the generic CommandLine (send-delegation), not the task-launch container (Phase 118d)", () => {
-      render(<DetailScreen automationId="check-prs" />);
-      expect(screen.queryByTestId("task-command-line-project-selector")).not.toBeInTheDocument();
-    });
-
-    it("I1 fix round: does not surface a team row for an @ query that would match one — a task automation doesn't reach a run's KB scope yet", async () => {
+    it("Save persists the edited Markdown, keeping target + attachmentSetId, and the text stays in the editor", async () => {
       const user = userEvent.setup();
       render(<DetailScreen automationId="check-prs" />);
-      const input = screen.getByTestId(CommandLineTestId.Input);
+      const input = screen.getByTestId(MarkdownEditorTestId.Control);
       await user.clear(input);
-      await user.type(input, "@DevRel");
-
-      expect(
-        screen.queryByTestId(`${CommandLineTestId.MentionItem}-team-devrel`),
-      ).not.toBeInTheDocument();
-    });
-
-    it("saving via CommandLine issues a task-target update preserving the attachmentSetId when no new files are attached", async () => {
-      const user = userEvent.setup();
-      render(<DetailScreen automationId="check-prs" />);
-      const input = screen.getByTestId(CommandLineTestId.Input);
-      await user.clear(input);
-      await user.type(input, "Zkontroluj i draft PR");
-      await user.click(screen.getByTestId(CommandLineTestId.Send));
+      await user.type(input, "## Zkontroluj i draft PR");
+      await user.click(screen.getByTestId(AutomationDetailScreenTestId.Save));
 
       expect(hooks.update).toHaveBeenCalledTimes(1);
       const call = hooks.update.mock.calls[0]![0];
       expect(call.params).toEqual({ id: "check-prs" });
       expect(call.body.target).toEqual({
-        type: "task",
-        text: "Zkontroluj i draft PR",
-        target: undefined,
-        attachmentSetId: "set-1",
+        ...taskAutomation.target,
+        text: "## Zkontroluj i draft PR",
       });
       expect(call.body.enabled).toBe(true);
       expect(call.body.trigger).toEqual({ type: "cron", expr: expect.any(String) });
+      expect(screen.getByTestId(MarkdownEditorTestId.Control)).toHaveValue(
+        "## Zkontroluj i draft PR",
+      );
+    });
+
+    it("saves the edited name + description alongside the text", async () => {
+      const user = userEvent.setup();
+      render(<DetailScreen automationId="check-prs" />);
+      const name = screen.getByTestId(AutomationDetailScreenTestId.Name);
+      await user.clear(name);
+      await user.type(name, "Revize PR");
+      await user.type(screen.getByTestId(AutomationDetailScreenTestId.Description), "Denní revize");
+      await user.click(screen.getByTestId(AutomationDetailScreenTestId.Save));
+
+      const call = hooks.update.mock.calls[0]![0];
+      expect(call.body.name).toBe("Revize PR");
+      expect(call.body.description).toBe("Denní revize");
     });
   });
 });

@@ -148,7 +148,7 @@ target ignores the top-level `prompt` — its own `text` field is the prompt.
 
 `description` is an optional one- or two-sentence summary of what the
 automation does, shown on its card. Every system automation is seeded with one
-(server-owned, like `name`); an operator automation may set it via create/PATCH.
+(server-owned, like `name`); an operator automation may set it via create/PATCH. On PATCH, `description: ""` clears it (the stored value is trimmed; an empty one is dropped), since an omitted field cannot.
 
 ## SchedulerService
 

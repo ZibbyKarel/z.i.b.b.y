@@ -9,9 +9,12 @@ import {
   Card,
   Container,
   Icon,
+  MarkdownEditor,
   Panel,
   Stack,
   type SubNavLinkComponent,
+  TextAreaField,
+  TextInputField,
   Typography,
 } from "@zibby/design-system";
 import { PageBreadcrumb } from "../../components/layout/PageBreadcrumb";
@@ -20,9 +23,6 @@ import type { Automation } from "@zibby/contracts";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
-import { CommandLine } from "../tasks/components/CommandLine/CommandLine";
-import type { TaskAttachmentSet } from "../tasks/components/TaskAttachments";
-import { type TaskTarget, toClientTarget } from "../tasks";
 import { AutomationFormFields, useAutomationFormState } from "./components/AutomationFormFields";
 import { TriggerFields } from "./components/TriggerFields";
 import {
@@ -36,6 +36,8 @@ export enum AutomationDetailScreenTestId {
   Save = "automation-detail-save",
   Run = "automation-detail-run",
   Delete = "automation-detail-delete",
+  Name = "automation-detail-name",
+  Description = "automation-detail-description",
 }
 
 export interface AutomationDetailScreenProps {
@@ -76,6 +78,11 @@ function AutomationEditor({ automation }: { automation: Automation }) {
   const triggerAutomation = useTriggerAutomationMutation();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const form = useAutomationFormState(automation);
+  const [nameDraft, setNameDraft] = useState(automation.name ?? "");
+  const [descriptionDraft, setDescriptionDraft] = useState(automation.description ?? "");
+  const [taskText, setTaskText] = useState(
+    automation.target.type === "task" ? automation.target.text : "",
+  );
 
   const isSystem = automation.system ?? false;
   const target = automation.target;
@@ -87,27 +94,25 @@ function AutomationEditor({ automation }: { automation: Automation }) {
   const saveSchedule = () => {
     updateAutomation.mutate({
       params: { id: automation.id },
-      body: { trigger: form.buildTrigger() },
+      body: {
+        trigger: form.buildTrigger(),
+        // A system automation's name/description are server-owned (the server 409s a change).
+        ...(isSystem ? {} : { name: nameDraft.trim(), description: descriptionDraft.trim() }),
+      },
     });
   };
 
-  // The `task` automation's own save path — CommandLine's send action calls this
-  // directly (send-delegation mode) instead of a top-right Save button.
-  const saveTask = (text: string, tgt?: TaskTarget, attachments?: TaskAttachmentSet) => {
+  // The `task` automation's own save path: the instruction is edited as Markdown,
+  // and the stored routing target + attachments are preserved as-is.
+  const saveTask = () => {
     if (target.type !== "task") return;
     updateAutomation.mutate({
       params: { id: automation.id },
       body: {
         trigger: form.buildTrigger(),
-        target: {
-          type: "task",
-          text: text.trim(),
-          target: tgt,
-          // CommandLine has no `initialAttachments` — a re-save without attaching new
-          // files preserves whatever was already stored rather than dropping it. Known
-          // limitation: editing can ADD files, never remove one individually.
-          attachmentSetId: attachments?.attachmentSetId ?? target.attachmentSetId,
-        },
+        name: nameDraft.trim(),
+        description: descriptionDraft.trim(),
+        target: { ...target, text: taskText.trim() },
         enabled: automation.enabled,
         approval: form.buildApproval(),
       },
@@ -149,55 +154,72 @@ function AutomationEditor({ automation }: { automation: Automation }) {
                   {tk("common.delete")}
                 </Button>
               )}
-              {/* A `task` automation saves via CommandLine's own send action below —
-                  no top-right Save for it. */}
-              {!isTask && (
-                <Button
-                  data-testid={AutomationDetailScreenTestId.Save}
-                  disabled={!form.canSave()}
-                  icon="check"
-                  intent="primary"
-                  loading={updateAutomation.isPending}
-                  onClick={saveSchedule}
-                  size="sm"
-                >
-                  {t("save")}
-                </Button>
-              )}
+              <Button
+                data-testid={AutomationDetailScreenTestId.Save}
+                disabled={
+                  !form.canSave() ||
+                  (!isSystem && nameDraft.trim().length === 0) ||
+                  (isTask && taskText.trim().length === 0)
+                }
+                icon="check"
+                intent="primary"
+                loading={updateAutomation.isPending}
+                onClick={isTask ? saveTask : saveSchedule}
+                size="sm"
+              >
+                {t("save")}
+              </Button>
             </Stack>
           </Stack>
 
           <Panel header={t("formEditTitle")} padding="200">
-            {isSystem ? (
-              <AutomationFormFields isSystem form={form} />
-            ) : target.type === "task" ? (
-              <Stack gap="200">
-                <TriggerFields form={form} />
-                <CommandLine
-                  showAttach
-                  chrome={false}
-                  disabled={!form.canSave()}
-                  initialTarget={target.target ? toClientTarget(target.target) : undefined}
-                  initialText={target.text}
-                  onSubmit={saveTask}
-                  submitLabel={tk("common.save")}
-                />
-              </Stack>
-            ) : (
-              <Stack gap="200">
-                <Card background="background" radius="default">
-                  <Container padding="150">
-                    <Stack align="start" direction="row" gap="100">
-                      <Icon name="shield" size="sm" tone="accent" />
-                      <Typography leading="snug" size="caption" type="note" variant="secondary">
-                        {t("legacyEditNote")}
-                      </Typography>
-                    </Stack>
-                  </Container>
-                </Card>
-                <TriggerFields form={form} />
-              </Stack>
-            )}
+            <Stack gap="200">
+              {!isSystem && (
+                <Stack gap="150">
+                  <TextInputField
+                    data-testid={AutomationDetailScreenTestId.Name}
+                    label={t("nameLabel")}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    value={nameDraft}
+                  />
+                  <TextAreaField
+                    data-testid={AutomationDetailScreenTestId.Description}
+                    hint={t("descriptionHint")}
+                    label={t("descriptionLabel")}
+                    onChange={(e) => setDescriptionDraft(e.target.value)}
+                    rows={2}
+                    value={descriptionDraft}
+                  />
+                </Stack>
+              )}
+              {isSystem ? (
+                <AutomationFormFields isSystem form={form} />
+              ) : target.type === "task" ? (
+                <Stack gap="200">
+                  <TriggerFields form={form} />
+                  <MarkdownEditor
+                    ariaLabel={t("instructionLabel")}
+                    label={t("instructionLabel")}
+                    onChange={setTaskText}
+                    value={taskText}
+                  />
+                </Stack>
+              ) : (
+                <Stack gap="200">
+                  <Card background="background" radius="default">
+                    <Container padding="150">
+                      <Stack align="start" direction="row" gap="100">
+                        <Icon name="shield" size="sm" tone="accent" />
+                        <Typography leading="snug" size="caption" type="note" variant="secondary">
+                          {t("legacyEditNote")}
+                        </Typography>
+                      </Stack>
+                    </Container>
+                  </Card>
+                  <TriggerFields form={form} />
+                </Stack>
+              )}
+            </Stack>
           </Panel>
         </Stack>
       </PageContainer>

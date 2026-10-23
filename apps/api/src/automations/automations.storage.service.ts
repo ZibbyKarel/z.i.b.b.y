@@ -325,7 +325,11 @@ export class AutomationsStorageService extends EntityFileStore<Automation> {
         );
         if (touchesLockedField) throw new SystemAutomationError(id);
       }
-      return { ...existing, ...patch, id: existing.id, system: existing.system };
+      const next = { ...existing, ...patch, id: existing.id, system: existing.system };
+      const description = next.description?.trim();
+      if (description) next.description = description;
+      else delete next.description;
+      return next;
     });
   }
 
