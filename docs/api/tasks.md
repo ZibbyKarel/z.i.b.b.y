@@ -379,8 +379,8 @@ agent's config), applied to capability.
 
 **Every agent is dropped, and that is deliberate rather than an omission.** A task that
 must produce a PR is never routed to a lone agent. The rung that looks like "one
-implementer agent" already exists as a workflow — dev's `quick-fix` (`light`: a single
-`fullstack-developer` phase plus a declared `pr` output) — so the invariant costs no
+implementer agent" already exists as a workflow — dev's `quick-fix` (`light`: a
+`fullstack-developer` phase gated by a `code-reviewer` phase, plus a declared `pr` output) — so the invariant costs no
 expressiveness while keeping review, verification and a real sink in the path. The
 motivating misroute landed on `documentation-engineer`, an agent whose tool list has no
 `Bash`: no build, no test, no commit, so the `pr` sink was an unsatisfiable contract.
