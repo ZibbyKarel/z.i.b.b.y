@@ -159,4 +159,16 @@ describe("WidgetFrame", () => {
       screen.getByText("rows"),
     );
   });
+
+  it("renders a loader with role=status and the loadingLabel when loading", () => {
+    render(<WidgetFrame loading label="X" loadingLabel="Loading…" />);
+    const loader = screen.getByTestId(WidgetFrameTestId.Loading);
+    expect(loader).toHaveRole("status");
+    expect(loader).toHaveAccessibleName("Loading…");
+  });
+
+  it("renders no loader when not loading", () => {
+    render(<WidgetFrame label="X" />);
+    expect(screen.queryByTestId(WidgetFrameTestId.Loading)).toBeNull();
+  });
 });

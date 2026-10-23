@@ -25,6 +25,8 @@ export enum WidgetFrameTestId {
   Content = "widget-frame-content",
   /** The dashed "nothing here" box shown for an empty widget in edit mode. */
   Empty = "widget-frame-empty",
+  /** The first-load spinner row (role=status) shown above the children while `loading`. */
+  Loading = "widget-frame-loading",
   Size = "widget-frame-size",
   Resize = "widget-frame-resize",
 }
@@ -50,6 +52,10 @@ export interface WidgetFrameProps {
    *  header only; in edit mode a dashed `emptyText` box is shown. */
   empty?: boolean;
   emptyText?: string;
+  /** The widget is fetching for the first time: shows a spinner row above the children. */
+  loading?: boolean;
+  /** Accessible name of the loader. */
+  loadingLabel?: string;
   /** `W × H` label shown bottom-left in edit mode. */
   sizeLabel?: string;
   onRemove?: () => void;
@@ -90,6 +96,8 @@ export function WidgetFrame({
   dragging = false,
   empty = false,
   emptyText,
+  loading = false,
+  loadingLabel,
   sizeLabel,
   onRemove,
   removeLabel,
@@ -223,6 +231,16 @@ export function WidgetFrame({
         hidden={!open}
       >
         <div className="flow-root" data-testid={WidgetFrameTestId.Content} ref={contentRef}>
+          {loading ? (
+            <div
+              aria-label={loadingLabel}
+              className="px-[var(--bridge-head-px)] py-[10px]"
+              data-testid={WidgetFrameTestId.Loading}
+              role="status"
+            >
+              <span className="block h-3 w-3 rounded-full border-[1.5px] border-ink-2/30 border-t-ink-2 animate-spinner motion-reduce:animate-none" />
+            </div>
+          ) : null}
           {children}
           {editing && empty ? (
             <div
