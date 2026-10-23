@@ -139,7 +139,7 @@ export function Dialog({
         aria-label={ariaLabel}
         aria-labelledby={title && !ariaLabel ? titleId : undefined}
         className={cn(
-          "relative flex max-h-[calc(100vh-64px)] flex-col bg-surface border border-ink rounded-none animate-scale-in",
+          "relative flex max-h-[calc(100vh-64px)] flex-col bg-surface border border-border rounded-lg shadow-modal animate-scale-in",
           focusRing,
         )}
         data-testid={DialogTestId.Root}

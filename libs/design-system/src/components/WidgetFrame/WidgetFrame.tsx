@@ -142,7 +142,7 @@ export function WidgetFrame({
   return (
     <section
       className={cn(
-        "absolute box-border flex min-w-0 flex-col border bg-panel shadow-[var(--bridge-shadow)]",
+        "absolute box-border flex min-w-0 flex-col rounded-lg border bg-panel shadow-[var(--bridge-shadow)]",
         "transition-[left,top,width,height] duration-150 ease-out motion-reduce:transition-none",
         editing
           ? dragging
@@ -157,7 +157,7 @@ export function WidgetFrame({
     >
       <header
         className={cn(
-          "box-content flex h-[var(--bridge-head-h)] flex-none select-none items-center gap-[8px] border-b pl-[var(--bridge-head-px)] pr-[10px] font-mono text-[10px] tracking-[.14em] whitespace-nowrap",
+          "box-content flex h-[var(--bridge-head-h)] flex-none select-none items-center gap-[8px] border-b pl-[var(--bridge-head-px)] pr-[10px] font-sans text-[11px] font-semibold tracking-[.06em] whitespace-nowrap",
           open ? "border-line" : "border-transparent",
           editing ? "cursor-move" : "cursor-default",
         )}
@@ -175,7 +175,7 @@ export function WidgetFrame({
         ) : null}
         {you ? (
           <span
-            className="border border-ink px-[5px] py-px text-ink"
+            className="rounded-sm border border-ink px-[5px] py-px text-ink"
             data-testid={WidgetFrameTestId.You}
           >
             {you}

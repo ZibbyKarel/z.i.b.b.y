@@ -101,18 +101,18 @@ export const stateToneVar: Record<StateTone, string> = {
 };
 
 /**
- * Hex fallbacks mirroring the dark-theme oklch values in `theme/globals.css`, for the
+ * Hex fallbacks mirroring the dark-theme values in `theme/globals.css`, for the
  * rare consumer that can't take a CSS var — a WebGL uniform (the Chat-UI orb) or an
  * early/SSR read. Kept in lockstep with the `--color-state-*` tokens;
  * {@link resolveStateToneHex} prefers the live computed value and falls back to these.
  */
 export const stateToneHex: Record<StateTone, string> = {
-  working: "#c58ef0",
-  thinking: "#8fb4f5",
-  blocked: "#f0c14b",
-  error: "#ff6b57",
-  done: "#4ce0a0",
-  idle: "#4a504b",
+  working: "#a78bfa",
+  thinking: "#38bdf8",
+  blocked: "#f59e0b",
+  error: "#f43f5e",
+  done: "#10b981",
+  idle: "#555a66",
 };
 
 let hexCache: Partial<Record<StateTone, string>> = {};

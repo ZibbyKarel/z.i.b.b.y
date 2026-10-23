@@ -1,97 +1,99 @@
 /**
- * ZibbyCorp dark theme — "instrument paper" (DS.md §2.4).
+ * Zibby 2.0 dark theme — adopted from the "Zibby-2.0 Dashboard" design
+ * (claude.ai/design project `Zibby-2.0`, `Zibby-2.0-Dashboard-Standalone.html`).
  *
- * Monochrome and technical: squared corners, 1px hairlines, mono labels. The only
- * color is status. Every neutral/state value here is the single source of truth —
- * `globals.css`'s `[data-theme="dark"]` block mirrors this table (kept in lockstep;
- * see the comment there) so a CSS-only (no-JS/SSR) paint matches this at runtime.
+ * Cool graphite neutrals, soft 10px corners, a single amber brand accent and a
+ * Tailwind-ish status palette (violet / sky / amber / rose / emerald). Every value
+ * here is the single source of truth — `globals.css`'s `[data-theme="dark"]` block
+ * (and the `@theme` defaults) mirror this table so a CSS-only (no-JS/SSR) paint
+ * matches it at runtime. Keep them in lockstep.
  *
- * The pre-ZibbyCorp fields (`colorAccent`, `colorOk`, `colorWarn`, `colorDanger`,
- * `colorRun`, `colorBackground*`, `colorForeground*`, `colorBorder*`) are **not**
- * removed — dozens of existing components/app call sites still read them via
- * Tailwind classes (`bg-surface`, `text-accent`, `border-run`, …). Their *values*
- * now derive from the new DS.md neutrals/state colors via `LEGACY_TONE_MAP`
- * (`stateTone.ts`) so every old surface automatically repaints in the new palette
- * without a single Tailwind class changing — see ZA-01 plan.
+ * Design → token mapping: `--bg-0` → bg, `--bg-1` → panel, `--bg-2` → panel2
+ * (cards), `--bg-3` → raised, `--bg-hover` → hover, `--border`/`--border-2` →
+ * line/line2, `--text-0/1/2` → ink/ink2/ink3, `--text-3` → idle.
+ *
+ * The legacy fields (`colorOk`, `colorWarn`, `colorDanger`, `colorRun`,
+ * `colorBackground*`, `colorForeground*`, `colorBorder*`) keep deriving from the
+ * state colors via `LEGACY_TONE_MAP` (`stateTone.ts`). `colorAccent` no longer
+ * aliases a state: it is the design's brand accent. Density is untouched — it
+ * lives in `--sp-*` / `[data-density]`, independent of the theme.
  */
 import type { Theme } from "../tokens";
 
 export const darkTheme: Theme = {
-  // ---- ZibbyCorp neutrals (DS.md §2.1, dark) ------------------------------
-  colorBg: "#0a0b0b",
-  colorPanel: "#101211",
-  colorPanel2: "#161917",
-  colorLine: "#232725",
-  colorLine2: "#343936",
-  colorInk: "#ecefea",
-  colorInk2: "#a2a8a2",
-  colorInk3: "#666c67",
-  colorGrid: "rgba(236, 239, 234, 0.035)",
+  // ---- Neutrals ---------------------------------------------------------------
+  colorBg: "#0a0b0d",
+  colorPanel: "#0f1114",
+  colorPanel2: "#151820",
+  colorLine: "#22262f",
+  colorLine2: "#2d323d",
+  colorInk: "#e6e8ec",
+  colorInk2: "#b4b8c2",
+  colorInk3: "#7a8090",
+  // The design has no background grid — kept as a token, painted transparent.
+  colorGrid: "transparent",
 
-  // ---- ZibbyCorp state vocabulary (DS.md §2.2, dark) ----------------------
-  colorStateWork: "oklch(0.78 0.14 300)",
-  colorStateThink: "oklch(0.78 0.13 245)",
-  colorStateBlock: "oklch(0.84 0.15 80)",
-  colorStateErr: "oklch(0.7 0.2 25)",
-  colorStateDone: "oklch(0.82 0.17 160)",
-  colorStateIdle: "#4a504b",
+  // ---- State vocabulary (working → thinking → blocked → error → done → idle) --
+  colorStateWork: "#a78bfa",
+  colorStateThink: "#38bdf8",
+  colorStateBlock: "#f59e0b",
+  colorStateErr: "#f43f5e",
+  colorStateDone: "#10b981",
+  colorStateIdle: "#555a66",
 
-  // ---- Effects (DS.md §2.3, dark) — only live status glows, only here -----
+  // ---- Effects — only live status glows, only in dark -------------------------
   glowWidth: "8px",
-  dotRadius: "0",
+  dotRadius: "9999px",
 
-  // ---- Legacy backgrounds — the app's 6-level naming, now flattened onto the
-  // 3 ZibbyCorp neutrals (bg / panel / panel2) ------------------------------
-  colorBackgroundDeep: "#0a0b0b", // --bg
-  colorBackground: "#0a0b0b", // --bg
-  colorSurface: "#101211", // --panel
-  colorElevated: "#161917", // --panel2
-  colorRaised: "#161917", // --panel2
-  colorHover: "#161917", // --panel2
+  // ---- Legacy backgrounds -----------------------------------------------------
+  colorBackgroundDeep: "#0a0b0d", // --bg
+  colorBackground: "#0a0b0d", // --bg
+  colorSurface: "#0f1114", // --panel
+  colorElevated: "#151820", // --panel2
+  colorRaised: "#1b1f28", // design --bg-3
+  colorHover: "#1e222c", // design --bg-hover
 
-  // ---- Legacy foreground — mapped onto ink/ink2/ink3 ----------------------
-  colorForeground: "#ecefea", // --ink
-  colorForegroundDim: "#a2a8a2", // --ink2
-  colorForegroundFaint: "#666c67", // --ink3
+  // ---- Legacy foreground — mapped onto ink/ink2/ink3 --------------------------
+  colorForeground: "#e6e8ec", // --ink
+  colorForegroundDim: "#b4b8c2", // --ink2
+  colorForegroundFaint: "#7a8090", // --ink3
 
-  // ---- Legacy borders — mapped onto line/line2 ----------------------------
-  colorBorder: "#232725", // --line
-  colorBorderStrong: "#343936", // --line2
+  // ---- Legacy borders — mapped onto line/line2 --------------------------------
+  colorBorder: "#22262f", // --line
+  colorBorderStrong: "#2d323d", // --line2
 
-  // ---- Legacy accent — LEGACY_TONE_MAP: accent → thinking -----------------
-  colorAccent: "oklch(0.78 0.13 245)",
-  colorAccentDim: "rgba(143, 180, 245, 0.14)",
-  colorAccentContrast: "#101211", // ink-on-accent ≈ inverse pairing (panel on ink)
-  colorAccentGlow: "oklch(0.78 0.13 245 / 40%)",
+  // ---- Brand accent -----------------------------------------------------------
+  colorAccent: "#f59e0b",
+  colorAccentDim: "rgba(245, 158, 11, 0.12)",
+  colorAccentContrast: "#0a0b0d",
+  colorAccentGlow: "rgba(245, 158, 11, 0.35)",
 
   // ---- Legacy status — LEGACY_TONE_MAP: ok→done, warn→blocked, bad→error, run→working
-  colorOk: "oklch(0.82 0.17 160)",
-  colorWarn: "oklch(0.84 0.15 80)",
-  colorDanger: "oklch(0.7 0.2 25)",
-  colorRun: "oklch(0.78 0.14 300)",
+  colorOk: "#10b981",
+  colorWarn: "#f59e0b",
+  colorDanger: "#f43f5e",
+  colorRun: "#a78bfa",
 
-  // ---- Risk categories — the only categorical palette (unchanged by ZA-01) --
+  // ---- Risk categories — the only categorical palette -------------------------
   colorRiskPayment: "#f0b429",
   colorRiskDeletion: "#ff6b6b",
   colorRiskPush: "#b07cff",
   colorRiskSend: "#56c4d6",
 
-  // ---- Border radii — DS.md §6: 0 everywhere; radiusFull survives only for
-  // the sanctioned round exceptions (status pod, flow packet). ---------------
-  radiusDefault: "0px",
-  radiusSm: "0px",
-  radiusMd: "0px",
-  radiusLg: "0px",
+  // ---- Border radii — design `--radius` 10px / `--radius-sm` 6px --------------
+  radiusDefault: "10px",
+  radiusSm: "6px",
+  radiusMd: "8px",
+  radiusLg: "12px",
   radiusFull: "9999px",
 
-  // ---- Shadows — DS.md §1.2/§6: no drop shadows. The one exception is the
-  // live-status glow, which reuses `--gw` (0 in light, 8px in dark) so it
-  // auto-disables in light without a second flag. ---------------------------
-  shadowCard: "none",
-  shadowModal: "none",
-  shadowGlowAccent: "0 0 8px oklch(0.78 0.13 245 / 45%)",
+  // ---- Shadows — design `--shadow-1` (cards) / `--shadow-2` (overlays) --------
+  shadowCard: "0 1px 2px rgba(0, 0, 0, 0.35)",
+  shadowModal: "0 8px 24px rgba(0, 0, 0, 0.45)",
+  shadowGlowAccent: "0 0 8px rgba(245, 158, 11, 0.45)",
 
-  // ---- Fonts — Geist / Geist Mono (DS.md §3) ------------------------------
-  fontSans: "var(--font-sans, Geist, -apple-system, BlinkMacSystemFont, system-ui, sans-serif)",
-  fontMono: "var(--font-mono, 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace)",
+  // ---- Fonts — Inter / JetBrains Mono -----------------------------------------
+  fontSans: "var(--font-sans, Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif)",
+  fontMono:
+    "var(--font-mono, 'JetBrains Mono', ui-monospace, 'SF Mono', SFMono-Regular, Menlo, monospace)",
 };

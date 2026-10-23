@@ -63,7 +63,7 @@ export function Toggle({
       aria-invalid={invalid}
       aria-label={label}
       className={cn(
-        "inline-flex shrink-0 items-center rounded-none border transition-colors duration-150",
+        "inline-flex shrink-0 items-center rounded-full border transition-colors duration-150",
         focusRing,
         track[size],
         checked
@@ -81,7 +81,7 @@ export function Toggle({
     >
       <span
         className={cn(
-          "rounded-none transition-all duration-150",
+          "rounded-full transition-all duration-150",
           thumb[size],
           checked ? "bg-accent" : "bg-foreground-faint",
         )}

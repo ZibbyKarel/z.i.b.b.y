@@ -191,13 +191,13 @@ export function Tab({ value, children, ref, ...rest }: TabProps) {
         focusRingInset,
         variant === "mono"
           ? cn(
-              "font-mono uppercase tracking-wider text-[11px] h-full px-[14px] flex items-center",
+              "font-sans font-medium text-[13px] h-full px-[14px] flex items-center",
               isActive
                 ? "border-b border-ink text-ink"
                 : "border-b border-transparent text-ink-3 hover:text-ink-2",
             )
           : cn(
-              "font-mono text-base px-[14px] pt-2 pb-[7px]",
+              "font-sans text-base px-[14px] pt-2 pb-[7px]",
               isActive
                 ? "border-b-2 border-ink text-ink font-semibold"
                 : "border-b-2 border-transparent text-foreground-dim hover:text-foreground",

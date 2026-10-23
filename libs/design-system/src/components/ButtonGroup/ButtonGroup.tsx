@@ -73,7 +73,7 @@ export function ButtonGroup({
       aria-describedby={ariaDescribedby}
       aria-label={ariaLabelledby ? undefined : ariaLabel}
       aria-labelledby={ariaLabelledby}
-      className="inline-block rounded-none border border-border-strong bg-background p-0.5"
+      className="inline-block rounded-md border border-border-strong bg-background p-0.5"
       data-testid={ButtonGroupTestId.Root}
       role="group"
     >
@@ -84,10 +84,10 @@ export function ButtonGroup({
             <button
               aria-pressed={active}
               className={cn(
-                "inline-flex items-center gap-2 rounded-none border-none px-[10px] py-[6px] font-mono text-[10px] font-normal tracking-wider uppercase transition-all",
+                "inline-flex items-center gap-2 rounded-sm border-none px-[10px] py-[5px] font-sans text-[12px] font-medium transition-all",
                 focusRing,
                 active
-                  ? "bg-ink text-panel"
+                  ? "bg-raised text-ink shadow-card"
                   : "bg-transparent text-foreground-faint hover:text-foreground",
               )}
               data-testid={`${ButtonGroupTestId.Option}-${o.id}`}

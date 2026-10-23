@@ -31,7 +31,7 @@ export function ChatBubble({
   return (
     <div
       className={cn(
-        "rounded-none px-[11px] py-[9px] text-[13px] leading-[1.4]",
+        "rounded-lg px-[11px] py-[9px] text-[13px] leading-[1.4]",
         author === "you"
           ? "max-w-[80%] self-end bg-ink whitespace-pre-line text-panel"
           : "flex max-w-[86%] flex-col gap-2 self-start border border-line-2 bg-background",

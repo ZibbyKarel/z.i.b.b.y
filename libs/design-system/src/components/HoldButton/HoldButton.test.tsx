@@ -51,17 +51,17 @@ describe("HoldButton", () => {
     const { rerender } = render(<HoldButton label="Podržet" />);
     // md (default) — the standalone approval footprint.
     expect(screen.getByTestId(HoldButtonTestId.Root)).toHaveClass(
-      "px-[14px]",
-      "py-[10px]",
-      "text-[11px]",
+      "px-[12px]",
+      "py-[7px]",
+      "text-[13px]",
     );
     // sm — the same recipe as Button size="sm" so it sits flush beside its peers
     // in dense chrome like the top bar or a PR row.
     rerender(<HoldButton label="Podržet" size="sm" />);
     expect(screen.getByTestId(HoldButtonTestId.Root)).toHaveClass(
       "px-[10px]",
-      "py-[6px]",
-      "text-[10px]",
+      "py-[5px]",
+      "text-[12px]",
     );
   });
 
@@ -184,7 +184,10 @@ describe("HoldButton", () => {
 
   it("renders as a primary button whose hold fill grows in state-work", () => {
     render(<HoldButton label="HOLD TO APPROVE" />);
-    expect(screen.getByTestId(HoldButtonTestId.Root)).toHaveClass("bg-ink", "text-panel");
+    expect(screen.getByTestId(HoldButtonTestId.Root)).toHaveClass(
+      "bg-accent",
+      "text-accent-contrast",
+    );
     expect(screen.getByTestId(HoldButtonTestId.Fill)).toHaveClass("bg-state-work");
   });
 });

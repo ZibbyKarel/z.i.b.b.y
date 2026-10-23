@@ -45,7 +45,7 @@ export interface SubNavProps {
 
 const itemClass = (active: boolean, responsive: boolean) =>
   cn(
-    "flex items-center whitespace-nowrap font-mono text-[11px] uppercase tracking-wider",
+    "flex items-center whitespace-nowrap font-sans text-[13px] font-medium",
     "border-b transition-colors",
     focusRingInset,
     responsive

@@ -207,7 +207,7 @@ export function EntityHero({
         <div className="absolute top-3 right-3 z-10 flex gap-2">
           <button
             aria-label={uploadLabel}
-            className="grid size-7 place-items-center rounded-none border border-border bg-surface text-foreground"
+            className="grid size-7 place-items-center rounded-md border border-border bg-surface text-foreground"
             data-testid={EntityHeroTestId.UploadButton}
             onClick={() => inputRef.current?.click()}
             title={uploadLabel}
@@ -218,7 +218,7 @@ export function EntityHero({
           {image && (
             <button
               aria-label={removeLabel}
-              className="grid size-7 place-items-center rounded-none border border-bad/50 bg-surface text-bad"
+              className="grid size-7 place-items-center rounded-md border border-bad/50 bg-surface text-bad"
               data-testid={EntityHeroTestId.RemoveButton}
               onClick={() => onRemove?.()}
               title={removeLabel}

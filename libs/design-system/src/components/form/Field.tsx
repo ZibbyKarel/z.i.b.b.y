@@ -68,7 +68,7 @@ const errorClass = "font-mono text-xs text-bad";
  * preference that doesn't override it.
  */
 export const fieldControlClass =
-  "w-full rounded-none border border-border-strong bg-background px-3.5 py-2.5 font-sans text-md " +
+  "w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 font-sans text-md " +
   "text-foreground transition-colors placeholder:text-foreground-faint " +
   `${focusRing} focus-visible:border-ink ` +
   'aria-[invalid="true"]:border-bad aria-[invalid="true"]:focus-visible:ring-bad';

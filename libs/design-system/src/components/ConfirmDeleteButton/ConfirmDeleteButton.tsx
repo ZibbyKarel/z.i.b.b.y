@@ -68,7 +68,7 @@ export function ConfirmDeleteButton({
       aria-label={armed ? undefined : ariaLabel}
       aria-live="polite"
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-none border font-mono font-semibold uppercase tracking-wider",
+        "inline-flex items-center gap-1.5 rounded-md border font-mono font-semibold uppercase tracking-wider",
         "cursor-pointer px-[10px] py-[6px] text-[11px] transition-colors duration-150",
         focusRingOffset,
         disabledClasses,

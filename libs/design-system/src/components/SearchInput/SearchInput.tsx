@@ -46,7 +46,7 @@ export function SearchInput({
   return (
     <div
       className={cn(
-        "flex h-[36px] w-full items-center gap-2.5 rounded-none px-3.5 transition-colors",
+        "flex h-[36px] w-full items-center gap-2.5 rounded-md px-3.5 transition-colors",
         surface === "transparent"
           ? // No border/ring of its own — the surrounding surface already
             // draws the one visible boundary; a focus border on top would

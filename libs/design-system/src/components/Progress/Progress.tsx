@@ -59,7 +59,7 @@ export function Progress({
       aria-valuemax={label && !indeterminate ? 100 : undefined}
       aria-valuemin={label && !indeterminate ? 0 : undefined}
       aria-valuenow={label && !indeterminate ? pct : undefined}
-      className="relative overflow-hidden rounded-none bg-border"
+      className="relative overflow-hidden rounded-full bg-border"
       data-testid={ProgressTestId.Root}
       ref={ref}
       role={label ? "progressbar" : undefined}
@@ -69,7 +69,7 @@ export function Progress({
       {indeterminate ? (
         <div
           className={cn(
-            "absolute inset-y-0 left-0 w-1/3 rounded-none bg-ink",
+            "absolute inset-y-0 left-0 w-1/3 rounded-full bg-ink",
             "animate-progress-indeterminate motion-reduce:w-full motion-reduce:animate-none",
           )}
           data-testid={ProgressTestId.Fill}
@@ -77,7 +77,7 @@ export function Progress({
       ) : (
         <div
           className={cn(
-            "absolute inset-y-0 left-0 rounded-none transition-[width] duration-300",
+            "absolute inset-y-0 left-0 rounded-full transition-[width] duration-300",
             toneBar[tone],
             pulse && "animate-zb-live",
           )}

@@ -1,83 +1,87 @@
 /**
- * ZibbyCorp light theme — "instrument paper" (DS.md §2.4).
+ * Zibby 2.0 light theme — the light half of the "Zibby-2.0 Dashboard" design.
  *
- * See `darkTheme.ts` for the full rationale (this is the light half of the same
- * table). No shadow, no blur, no glow in light — `--gw` is `0px`.
+ * See `darkTheme.ts` for the rationale and the design → token mapping. The design
+ * reuses its dark-mode status hues on white; here they step down one shade
+ * (Tailwind 600) so status text keeps WCAG AA contrast on the light panels.
+ * No glow in light — `--gw` is `0px`.
  */
 import type { Theme } from "../tokens";
 
 export const lightTheme: Theme = {
-  // ---- ZibbyCorp neutrals (DS.md §2.1, light) -----------------------------
-  colorBg: "#f3f4f2",
-  colorPanel: "#fafaf8",
-  colorPanel2: "#edeeeb",
-  colorLine: "#d9dbd6",
-  colorLine2: "#bfc2bc",
-  colorInk: "#111312",
-  colorInk2: "#50544f",
-  colorInk3: "#8a8e88",
-  colorGrid: "rgba(17, 19, 18, 0.05)",
+  // ---- Neutrals ---------------------------------------------------------------
+  colorBg: "#f6f6f4",
+  colorPanel: "#ffffff",
+  colorPanel2: "#fafaf8",
+  colorLine: "#e6e6e2",
+  colorLine2: "#d4d4d0",
+  colorInk: "#0e0f12",
+  colorInk2: "#3a3e48",
+  colorInk3: "#6b7280",
+  // The design has no background grid — kept as a token, painted transparent.
+  colorGrid: "transparent",
 
-  // ---- ZibbyCorp state vocabulary (DS.md §2.2, light) ---------------------
-  colorStateWork: "oklch(0.56 0.15 300)",
-  colorStateThink: "oklch(0.58 0.14 250)",
-  colorStateBlock: "oklch(0.7 0.15 70)",
-  colorStateErr: "oklch(0.58 0.2 25)",
-  colorStateDone: "oklch(0.6 0.14 160)",
-  colorStateIdle: "#a9ada7",
+  // ---- State vocabulary -------------------------------------------------------
+  colorStateWork: "#7c3aed",
+  colorStateThink: "#0284c7",
+  colorStateBlock: "#d97706",
+  colorStateErr: "#e11d48",
+  colorStateDone: "#059669",
+  colorStateIdle: "#9aa0ac",
 
-  // ---- Effects (DS.md §2.3, light) — nothing glows in light ---------------
+  // ---- Effects — nothing glows in light ---------------------------------------
   glowWidth: "0px",
-  dotRadius: "0",
+  dotRadius: "9999px",
 
-  // ---- Legacy backgrounds — flattened onto bg / panel / panel2 ------------
-  colorBackgroundDeep: "#f3f4f2", // --bg
-  colorBackground: "#f3f4f2", // --bg
-  colorSurface: "#fafaf8", // --panel
-  colorElevated: "#edeeeb", // --panel2
-  colorRaised: "#edeeeb", // --panel2
-  colorHover: "#edeeeb", // --panel2
+  // ---- Legacy backgrounds -----------------------------------------------------
+  colorBackgroundDeep: "#f6f6f4", // --bg
+  colorBackground: "#f6f6f4", // --bg
+  colorSurface: "#ffffff", // --panel
+  colorElevated: "#fafaf8", // --panel2
+  colorRaised: "#f0f0ec", // design --bg-3
+  colorHover: "#ececea", // design --bg-hover
 
-  // ---- Legacy foreground — mapped onto ink/ink2/ink3 ----------------------
-  colorForeground: "#111312", // --ink
-  colorForegroundDim: "#50544f", // --ink2
-  colorForegroundFaint: "#8a8e88", // --ink3
+  // ---- Legacy foreground — mapped onto ink/ink2/ink3 --------------------------
+  colorForeground: "#0e0f12", // --ink
+  colorForegroundDim: "#3a3e48", // --ink2
+  colorForegroundFaint: "#6b7280", // --ink3
 
-  // ---- Legacy borders — mapped onto line/line2 ----------------------------
-  colorBorder: "#d9dbd6", // --line
-  colorBorderStrong: "#bfc2bc", // --line2
+  // ---- Legacy borders — mapped onto line/line2 --------------------------------
+  colorBorder: "#e6e6e2", // --line
+  colorBorderStrong: "#d4d4d0", // --line2
 
-  // ---- Legacy accent — LEGACY_TONE_MAP: accent → thinking -----------------
-  colorAccent: "oklch(0.58 0.14 250)",
-  colorAccentDim: "rgba(80, 84, 79, 0.1)",
-  colorAccentContrast: "#fafaf8", // ink-on-accent ≈ inverse pairing (panel on ink)
-  colorAccentGlow: "oklch(0.58 0.14 250 / 35%)",
+  // ---- Brand accent -----------------------------------------------------------
+  colorAccent: "#d97706",
+  colorAccentDim: "rgba(217, 119, 6, 0.12)",
+  colorAccentContrast: "#ffffff",
+  colorAccentGlow: "rgba(217, 119, 6, 0.35)",
 
   // ---- Legacy status — LEGACY_TONE_MAP: ok→done, warn→blocked, bad→error, run→working
-  colorOk: "oklch(0.6 0.14 160)",
-  colorWarn: "oklch(0.7 0.15 70)",
-  colorDanger: "oklch(0.58 0.2 25)",
-  colorRun: "oklch(0.56 0.15 300)",
+  colorOk: "#059669",
+  colorWarn: "#d97706",
+  colorDanger: "#e11d48",
+  colorRun: "#7c3aed",
 
-  // ---- Risk categories — the only categorical palette (unchanged by ZA-01) --
+  // ---- Risk categories — the only categorical palette -------------------------
   colorRiskPayment: "#c9890a",
   colorRiskDeletion: "#e03030",
   colorRiskPush: "#7c3fb0",
   colorRiskSend: "#1d8fa5",
 
-  // ---- Border radii — DS.md §6: 0 everywhere ------------------------------
-  radiusDefault: "0px",
-  radiusSm: "0px",
-  radiusMd: "0px",
-  radiusLg: "0px",
+  // ---- Border radii -----------------------------------------------------------
+  radiusDefault: "10px",
+  radiusSm: "6px",
+  radiusMd: "8px",
+  radiusLg: "12px",
   radiusFull: "9999px",
 
-  // ---- Shadows — none in light; glow is `--gw` (0px) so it's a no-op here --
-  shadowCard: "none",
-  shadowModal: "none",
+  // ---- Shadows ----------------------------------------------------------------
+  shadowCard: "0 1px 2px rgba(0, 0, 0, 0.06)",
+  shadowModal: "0 12px 28px rgba(0, 0, 0, 0.1)",
   shadowGlowAccent: "none",
 
-  // ---- Fonts — Geist / Geist Mono (DS.md §3) ------------------------------
-  fontSans: "var(--font-sans, Geist, -apple-system, BlinkMacSystemFont, system-ui, sans-serif)",
-  fontMono: "var(--font-mono, 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace)",
+  // ---- Fonts — Inter / JetBrains Mono -----------------------------------------
+  fontSans: "var(--font-sans, Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif)",
+  fontMono:
+    "var(--font-mono, 'JetBrains Mono', ui-monospace, 'SF Mono', SFMono-Regular, Menlo, monospace)",
 };

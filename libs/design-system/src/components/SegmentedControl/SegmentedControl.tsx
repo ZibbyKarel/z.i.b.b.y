@@ -98,12 +98,12 @@ export function SegmentedControl({
           <button
             aria-checked={active}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-none border-none font-mono uppercase transition-colors",
-              plain ? "font-normal tracking-[inherit]" : "font-semibold tracking-wider",
+              "inline-flex items-center gap-1.5 rounded-sm border-none font-sans transition-colors",
+              plain ? "font-normal" : "font-medium",
               focusRingInset,
               sizeClass[size],
               active
-                ? "bg-ink text-panel"
+                ? "bg-raised text-ink shadow-card"
                 : "bg-transparent text-foreground-faint hover:text-foreground",
             )}
             data-testid={`${SegmentedControlTestId.Item}-${item.value}`}

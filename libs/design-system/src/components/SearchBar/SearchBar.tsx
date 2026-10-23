@@ -50,7 +50,7 @@ export function SearchBar({
         surface === "transparent"
           ? "bg-transparent border border-transparent"
           : "bg-background border border-border-strong",
-        "rounded-none text-foreground-faint",
+        "rounded-sm text-foreground-faint",
         "transition-colors",
         "hover:border-ink hover:text-foreground-dim",
         focusRing,
@@ -63,7 +63,7 @@ export function SearchBar({
     >
       <Icon data-testid={SearchBarTestId.Icon} name="search" size="sm" />
       <span
-        className="flex-1 min-w-0 text-left font-mono text-xs tracking-wider uppercase truncate"
+        className="flex-1 min-w-0 text-left font-sans text-sm truncate"
         data-testid={SearchBarTestId.Placeholder}
       >
         {placeholder}

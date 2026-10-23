@@ -56,7 +56,7 @@ export function GateToggle({ mode, onChange, ariaLabel = "Gate mode", ref }: Gat
             aria-disabled={readOnly || undefined}
             aria-pressed={readOnly ? undefined : active}
             className={cn(
-              "rounded-none border-none px-[10px] py-[5px] font-mono text-[10px] font-semibold tracking-wider uppercase transition-colors",
+              "rounded-sm border-none px-[10px] py-[5px] font-mono text-[10px] font-semibold tracking-wider uppercase transition-colors",
               !readOnly && focusRingInset,
               active ? "bg-ink text-panel" : "bg-transparent text-foreground-faint",
               !readOnly && !active && "cursor-pointer hover:text-foreground",

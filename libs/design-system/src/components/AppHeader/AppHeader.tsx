@@ -131,8 +131,8 @@ export function AppHeader({
             aria-label={searchLabel}
             className={cn(
               "inline-flex h-8 w-[340px] max-w-full items-center justify-between gap-3.5",
-              "border border-line-2 bg-background px-3",
-              "font-mono text-[11px] uppercase tracking-wider text-ink-2 transition-colors",
+              "rounded-md border border-line-2 bg-background px-3",
+              "font-sans text-[12px] text-ink-3 transition-colors",
               "hover:border-ink",
               focusRing,
             )}
