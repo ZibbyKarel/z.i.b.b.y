@@ -19,7 +19,7 @@
        b. [ ] Widget: seznam položek + dole input s výběrem cílů (firmy, projekty, týmy, agenti, workflows), krátký text, Enter nebo tlačítko přidá položku; edit vpravo nahoře dle interaction grammar
        c. [ ] U položky tlačítko, které otevře New task dialog s předvyplněným textem a cílem delegace (jde změnit); po spuštění se položka naváže na run/task a označí se jako delegovaná
        d. [ ] Testy: contract/e2e pro API, komponentové testy widgetu s test-id, i18n klíče cs/en
-9. [ ] Widget QuickActions: úlohy spustitelné jedním tlačítkem, které se rovnou zařadí do fronty
+9. [x] Widget QuickActions: úlohy spustitelné jedním tlačítkem, které se rovnou zařadí do fronty (main@225766d4)
     a. [ ] Definice akce stejným formulářem jako nová automatizace (název, popis, prompt, volitelně workflow, agent, cíl: firma/projekt/tým a další pole); sdílet formulářové komponenty a schema s automatizacemi, ne duplikovat
     b. [ ] Úložiště: akce jako verzované soubory v repu (stejně jako TODO a automatizace), contract-first v libs/contracts, CRUD
     c. [ ] Widget: mřížka tlačítek s názvem a popisem; klik vytvoří task a zařadí ho do fronty bez dialogu, s potvrzením a odkazem na run; edit vpravo nahoře, přidání nové akce dle interaction grammar
