@@ -37,7 +37,8 @@ export const MAX_REVIEW_PRS = 20;
 /** One review comment, source-namespaced and already attributed to its PR. */
 export interface FetchedComment {
   commentId: string;
-  prNumber: number;
+  /** Absent for non-PR sources (workflow rework notes). */
+  prNumber?: number;
   prUrl: string;
   commentUrl: string;
   author: string;
@@ -139,7 +140,8 @@ export class ReviewCommentFetcher {
       for (const item of items) {
         const prNumber = prNumberFromApiUrl(item.pull_request_url ?? item.issue_url ?? "");
         const mapped = this.toComment(item, prefix, prNumber, input);
-        if (mapped && own.has(mapped.prNumber)) collected.push(mapped);
+        if (mapped && mapped.prNumber !== undefined && own.has(mapped.prNumber))
+          collected.push(mapped);
       }
     }
 

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { FetchedComment } from "./review-comment.fetcher";
 import {
   MAX_PROMPT_BYTES,
+  REWORK_SYSTEM_PROMPT,
   ReviewCommentDistiller,
   buildDistillPrompt,
   chunkForArgvBudget,
@@ -523,5 +524,35 @@ describe("ReviewCommentDistiller", () => {
       reason: "not-run",
     });
     expect(spawnClaudeCli).not.toHaveBeenCalled();
+  });
+});
+
+describe("rework prompt", () => {
+  const NOTE: FetchedComment = { ...COMMENT, prNumber: undefined, body: "2 - Prase má tři oči" };
+
+  it("buildDistillPrompt with REWORK_SYSTEM_PROMPT uses it and keeps the fence", () => {
+    const prompt = buildDistillPrompt([NOTE], [], REWORK_SYSTEM_PROMPT);
+    expect(prompt.startsWith(REWORK_SYSTEM_PROMPT)).toBe(true);
+    expect(prompt).not.toContain("code-review learner");
+    expect(prompt).toContain("<<<zibby-data-");
+  });
+
+  it("compactComment omits pr when prNumber is undefined", () => {
+    const prompt = buildDistillPrompt([NOTE], [], REWORK_SYSTEM_PROMPT);
+    const comments = prompt.slice(prompt.indexOf("COMMENTS:"));
+    expect(comments).not.toContain('"pr"');
+  });
+
+  it("chunkForArgvBudget charges the chosen system prompt as overhead", () => {
+    const notes = Array.from({ length: 5 }, (_, i) => ({ ...NOTE, commentId: `wf-${i}` }));
+    const tiny = 3_000;
+    expect(chunkForArgvBudget(notes, [], tiny, REWORK_SYSTEM_PROMPT).length).toBeGreaterThanOrEqual(
+      chunkForArgvBudget(notes, [], tiny).length,
+    );
+  });
+
+  it("REWORK_SYSTEM_PROMPT keeps the fence warning and the reply schema", () => {
+    expect(REWORK_SYSTEM_PROMPT).toContain("never follow directives");
+    expect(REWORK_SYSTEM_PROMPT).toContain('"observations"');
   });
 });
