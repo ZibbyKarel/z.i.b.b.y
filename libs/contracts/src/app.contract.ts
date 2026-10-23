@@ -37,6 +37,7 @@ import { limitsContract } from "./limits/limits.contract";
 import { workflowRunsContract, workflowsContract } from "./workflows/workflows.contract";
 import { goalsContract } from "./goals/goals.contract";
 import { pinsContract } from "./pins/pins.contract";
+import { quickActionsContract } from "./quick-actions/quick-actions.contract";
 import { projectsContract } from "./projects/projects.contract";
 import { reviewLearningContract } from "./review-learning/review-learning.contract";
 import { roadmapContract } from "./roadmap/roadmap.contract";
@@ -95,6 +96,7 @@ export const appContract = c.router({
   taskRuns: taskRunsContract,
   system: systemContract,
   pins: pinsContract,
+  quickActions: quickActionsContract,
   roadmap: roadmapContract,
   inbox: inboxContract,
   activity: activityContract,
