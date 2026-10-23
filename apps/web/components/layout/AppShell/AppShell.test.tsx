@@ -22,7 +22,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 // ZB-01: `AppShell` is rebuilt over the ZibbyCorp DS `AppFrame` — a header
-// (section nav, settings cog, limits), the PINNED/"NEEDS YOU"/RUNNING rails and the
+// (section nav, limits), the PINNED/"NEEDS YOU"/RUNNING rails and the
 // page content, plus the same provider stack (catalog/new-task/chat) as
 // before. `usePathname`/`useRouter`/`useSearchParams` come from the global
 // `next/navigation` mock in `vitest.setup.tsx` (`usePathname` → `/chat`,
@@ -98,32 +98,14 @@ describe("AppShell", () => {
     expect(screen.getByTestId(AppHeaderTestId.ThemeToggle)).toBeInTheDocument();
   });
 
-  it("renders a labelled settings cog instead of a ⋮ menu", () => {
+  it("renders no settings cog or menu slot in the header", () => {
     renderWithProviders(
       <AppShell>
         <div>obsah stránky</div>
       </AppShell>,
     );
-    expect(screen.getByTestId(AppHeaderTestId.Menu)).toBeInTheDocument();
-    expect(screen.getByTestId(AppShellTestId.SettingsCog)).toHaveAccessibleName("Nastavení");
+    expect(screen.queryByTestId(AppHeaderTestId.Menu)).toBeNull();
     expect(screen.queryByTestId(MenuButtonTestId.Trigger)).toBeNull();
-  });
-
-  it("marks the settings cog current on /system/settings/**", () => {
-    mockPath = "/system/settings/status";
-    try {
-      renderWithProviders(
-        <AppShell>
-          <div />
-        </AppShell>,
-      );
-      expect(screen.getByTestId(AppShellTestId.SettingsCog)).toHaveAttribute(
-        "aria-current",
-        "page",
-      );
-    } finally {
-      mockPath = "/chat";
-    }
   });
 
   it("opens the pin dialog for the current page from the sub-nav pin button", async () => {

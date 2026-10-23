@@ -2410,7 +2410,6 @@
     "pinnedEmpty": "Pin any page with the pin button in the sub-menu.",
     "pinnedKindPage": "Page",
     "pinnedUnpinAria": "Unpin {name}",
-    "settingsAria": "Settings",
     "pagePinAria": "Pin page",
     "pageUnpinAria": "Unpin page"
   },

@@ -55,7 +55,6 @@ import { SECTIONS, type SectionId, type SubTabConfig, sectionForPath } from "../
 
 export enum AppShellTestId {
   NewTask = "app-shell-new-task",
-  SettingsCog = "app-shell-settings-cog",
   PinToggle = "app-shell-pin-toggle",
   PageActions = "app-shell-page-actions",
 }
@@ -161,26 +160,6 @@ function activeSubNavHref(
   pathname: string,
 ): string | null {
   return activeSubNavTab(tabs, pathname)?.tab.href ?? null;
-}
-
-/** Header cog → Settings → General. A plain ghost button (DS `Button` renders a
- *  `<button>`, no link mode, hence `router.push`); `aria-current` marks `/system/settings/**`. */
-function SettingsCog() {
-  const t = useTranslations("shell");
-  const pathname = usePathname();
-  const router = useRouter();
-  const onSettings = pathname === "/system/settings" || pathname.startsWith("/system/settings/");
-  return (
-    <Button
-      aria-current={onSettings ? "page" : undefined}
-      aria-label={t("settingsAria")}
-      data-testid={AppShellTestId.SettingsCog}
-      icon="gear"
-      intent="ghost"
-      onClick={() => router.push("/system/settings/general" as Route)}
-      size="sm"
-    />
-  );
 }
 
 /** Sub-nav page-pin toggle — pins unpinned pages via `PinPageDialog`
@@ -401,7 +380,6 @@ function AppShellChrome({ children }: { children: ReactNode }) {
               homeHref="/dashboard"
               limits={trailing.limits}
               linkComponent={NavLink}
-              menu={<SettingsCog />}
               nav={<SectionNav active={active} />}
               notifications={<NotificationBell />}
               onSearchClick={() => setPaletteOpen(true)}
