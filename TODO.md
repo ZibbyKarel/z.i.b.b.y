@@ -14,7 +14,7 @@
 5. [x] Learn from operator rework notes: distil recurring revised-gate notes (approval reason, <phase>.note.md, book/rejections.md) into rules via review-learning (2nd occurrence → approval → vault note grounded into illustrator/creative-director/kids-book-qa); add a workflow source next to the GitHub PR fetcher. Example: coloring-book_1792627255797 (three eyes, malformed animals, unfinished lines) (main@a073456f)
 6. [x] stránku Agenti změníme na stránku AI a v subMenu pak budou Agenti, a Skills, Commands a MCPs, které přesuneme ze záložky System. Záložka System se pak stává záložkou nastavení kde se položky z tabů (Obecné, runtime, aktivita, stav) posunou o level výše a budou tedy v submenu. V topPanelu úplně nahoře v pravo můžeme odstranit ozubené kolečko směřující na stránku nastavení (main@bd38c744)
 7. [ ] widget issues - ikonka zdroje (jira) zabírá dva řádky a je vycentrovaná vertikálně na střed těch dvou řádků
-8. [ ] Widget TODO na dashboardu: rychlé přidávání položek k implementaci s přiřazením cíle
+8. [x] Widget TODO na dashboardu: rychlé přidávání položek k implementaci s přiřazením cíle (main@99e130b8)
        a. [ ] Úložiště: seznam TODO jako verzované soubory v repu (jedna položka = jeden soubor nebo JSONL, human-readable, bez UI-only stavu); contract-first v libs/contracts, resource todos s CRUD + SSE nebo invalidace
        b. [ ] Widget: seznam položek + dole input s výběrem cílů (firmy, projekty, týmy, agenti, workflows), krátký text, Enter nebo tlačítko přidá položku; edit vpravo nahoře dle interaction grammar
        c. [ ] U položky tlačítko, které otevře New task dialog s předvyplněným textem a cílem delegace (jde změnit); po spuštění se položka naváže na run/task a označí se jako delegovaná
