@@ -19,6 +19,8 @@ export interface BridgeSelection {
 
 /** Header info a widget body reports to its frame (all optional). */
 export interface BridgeWidgetInfo {
+  /** First fetch still in flight — the frame shows a loader. */
+  loading?: boolean;
   /** Item count, shown zero-padded next to the label. */
   count?: number;
   /** Items needing the operator — shown as the `N YOU` badge when > 0. */

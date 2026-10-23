@@ -3077,6 +3077,7 @@
     "resize": "Resize",
     "emptyWidget": "Nothing here. Outside edit mode this widget collapses to its header.",
     "allClear": "All clear",
+    "loading": "Loading…",
     "widgets": {
       "issues": {
         "state": {

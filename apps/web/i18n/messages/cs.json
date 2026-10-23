@@ -3077,6 +3077,7 @@
     "resize": "Změnit velikost",
     "emptyWidget": "Tady nic není. Mimo režim úprav se widget sbalí na hlavičku.",
     "allClear": "Vše v pořádku",
+    "loading": "Načítání…",
     "widgets": {
       "issues": {
         "state": {

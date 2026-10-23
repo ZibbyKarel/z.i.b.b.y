@@ -56,6 +56,8 @@ function BridgeWidgetHost({
       empty={empty}
       emptyText={t("bridge.emptyWidget")}
       label={t(def.labelKey)}
+      loading={info?.loading}
+      loadingLabel={t("bridge.loading")}
       onMovePointerDown={(e) => onDragStart(id, "move", e)}
       onNaturalHeight={onNaturalHeight}
       onRemove={() => state.remove(id)}

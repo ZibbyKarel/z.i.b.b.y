@@ -19,5 +19,5 @@ export function useWidgetReport(
 ) {
   const empty = !loading && !count;
   useEffect(() => onEmptyChange(empty), [empty, onEmptyChange]);
-  useEffect(() => onCountChange?.({ count, you }), [count, you, onCountChange]);
+  useEffect(() => onCountChange?.({ count, you, loading }), [count, you, loading, onCountChange]);
 }

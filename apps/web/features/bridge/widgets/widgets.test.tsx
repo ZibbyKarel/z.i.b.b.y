@@ -182,7 +182,12 @@ describe("IssuesWidget", () => {
     });
 
     expect(props.onEmptyChange).toHaveBeenLastCalledWith(false);
-    expect(props.onCountChange).toHaveBeenLastCalledWith({ count: 2, you: 1, aside: undefined });
+    expect(props.onCountChange).toHaveBeenLastCalledWith({
+      count: 2,
+      you: 1,
+      aside: undefined,
+      loading: false,
+    });
 
     await userEvent.click(screen.getByTestId(RowGroupHeaderTestId.Root));
     expect(props.onEpicToggle).toHaveBeenCalledWith("e1", true);
@@ -267,6 +272,23 @@ describe("PrsWidget", () => {
     renderWithProviders(<PrsWidget {...props} />);
     expect(props.onEmptyChange).toHaveBeenLastCalledWith(true);
   });
+
+  it("useWidgetReport reports loading: true while the query is pending and false after", () => {
+    d.pending = true;
+    const pending = setup({ widget: widget("w", "prs") });
+    const first = renderWithProviders(<PrsWidget {...pending} />);
+    expect(pending.onCountChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ loading: true }),
+    );
+    first.unmount();
+
+    d.pending = false;
+    const loaded = setup({ widget: widget("w", "prs") });
+    renderWithProviders(<PrsWidget {...loaded} />);
+    expect(loaded.onCountChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ loading: false }),
+    );
+  });
 });
 
 const run = (runId: string, status: string, over: Record<string, unknown> = {}) => ({
@@ -308,7 +330,12 @@ describe("TasksWidget (task queue)", () => {
       widgetId: "w-tasks",
       key: "w-tasks:s",
     });
-    expect(props.onCountChange).toHaveBeenLastCalledWith({ count: 3, you: 0, aside: undefined });
+    expect(props.onCountChange).toHaveBeenLastCalledWith({
+      count: 3,
+      you: 0,
+      aside: undefined,
+      loading: false,
+    });
   });
 
   it("is empty when nothing waits", () => {
@@ -399,7 +426,12 @@ describe("RunsWidget", () => {
     ]);
     expect(rows[1]).toHaveTextContent("hotovo");
     expect(rows[2]).toHaveTextContent("chyba");
-    expect(props.onCountChange).toHaveBeenLastCalledWith({ count: 3, you: 0, aside: undefined });
+    expect(props.onCountChange).toHaveBeenLastCalledWith({
+      count: 3,
+      you: 0,
+      aside: undefined,
+      loading: false,
+    });
   });
 
   it("omits the header of an empty group", () => {
