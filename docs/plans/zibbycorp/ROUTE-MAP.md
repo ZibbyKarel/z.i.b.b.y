@@ -9,11 +9,11 @@ Eight top tabs, all always visible (`apps/web/state/config.ts` `SECTIONS`):
 | dashboard | map `/dashboard`, inbox `/dashboard/inbox`, issues `/dashboard/inbox/issues` (+ `/[projectId]/[itemId]`), pull-requests `/dashboard/inbox/pull-requests`, briefings `/dashboard/briefings` |
 | work | tasks `/work/tasks`, goals `/work/goals`, workflows `/work/workflows`, automations `/work/automations` (+ `/[id]`) |
 | companies | companies `/companies`, teams `/teams`, projects `/projects` |
-| workforce | agents `/workforce/agents`, positions `/workforce/positions`; departments `/workforce/departments/[id]/...` (no tab, entered from the dashboard map) |
+| workforce (labelled **AI**) | agents `/workforce/agents`, skills/commands/mcp/hooks (`/system/registries/<kind>` — routes unchanged, section ownership only); positions `/workforce/positions`; departments `/workforce/departments/[id]/...` (no tab, entered from the dashboard map) |
 | activity | log `/activity/log`, runs `/activity/runs`, channels `/activity/channels` |
 | knowledge | vault, graph, distill (`/knowledge/*`) |
 | governance | approvals, gates, patterns, budgets, spend (`/governance/<id>`) |
-| system | skills, mcp, hooks, commands (`/system/registries/<kind>`), settings `/system/settings/{general,activity,runtime,status}` (section row inside the screen) |
+| system (labelled **Settings**) | general, runtime, activity, status (`/system/settings/<section>`) as sub-nav items; no in-screen tab row |
 
 Old routes were **removed without redirects** (they 404): `/org`, `/org/people`,
 `/org/departments`, `/inbox/*`, `/policy/*`, `/ledger/*`, `/automations`,
@@ -95,7 +95,7 @@ The design reference for each area:
 
 **Shell (every route), ZB-01 and ZB-12:**
 - **Header:** wordmark, section nav, operator ("CEO") name, active-run count,
-  5H/WEEK bars (ex-LimitsRings), ⌘K trigger, ⚙ → `/system/settings`.
+  5H/WEEK bars (ex-LimitsRings), ⌘K trigger (no settings gear — Settings is a section).
 - **Sub-nav:** the section's tabs, plus a global `+ NEW TASK`.
 - **Left rail:** NEEDS YOU, i.e. pending approvals as ApprovalCards.
 - **COO dock:** a floating chat composer (ex-`/chat` ChatDock engine) with voice.

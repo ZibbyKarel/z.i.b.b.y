@@ -291,7 +291,8 @@ features/
 ├── pins/           Quick-launch pins
 ├── workflows/      Workflow editor + history
 ├── projects/       Project portfolio
-├── registries/     ZB-11 — `/system/registries/[kind]` (skills/mcp/hooks/commands):
+├── registries/     ZB-11 — `/system/registries/[kind]` (skills/mcp/hooks/commands) — routes unchanged,
+│                   listed under the AI nav section:
 │                   a `DataTable` per kind with a derived "Bound in" department
 │                   column (`GET /api/registries/bindings`, O-09); detail/new pages
 │                   reuse each domain's own unchanged create dialog + edit form
@@ -304,7 +305,8 @@ features/
 ├── runs/           Run history + log viewer, plus the shared SSE hooks
 │                   (`runEvents`, `useRunLogStream`)
 ├── settings/       `/system/settings/[section]` (ZB-11) — general, appearance,
-│                   coo, activity, automations, runtime, machine, status
+│                   coo, activity, automations, runtime, machine, status;
+│                   general/runtime/activity/status are Settings sub-nav items
 ├── skills/         Skill inventory
 ├── speech/         `speakd` voices/status queries (settings voice picker);
 │                   the synthesize mutation itself stays in `features/chat`

@@ -15,11 +15,11 @@ test("the section nav renders all eight sections and navigates on click", async 
     ["dashboard", "Dashboard"],
     ["work", "Work"],
     ["companies", "Companies"],
-    ["workforce", "Workforce"],
+    ["workforce", "AI"],
     ["activity", "Activity"],
     ["knowledge", "Knowledge"],
     ["governance", "Governance"],
-    ["system", "System"],
+    ["system", "Settings"],
   ];
   for (const [id, label] of sections) {
     await expect(nav.getByTestId(`tabs-tab-${id}`)).toHaveText(label);
@@ -34,15 +34,23 @@ test("the section nav renders all eight sections and navigates on click", async 
   await nav.getByTestId("tabs-tab-governance").click();
   await expect(page).toHaveURL(/\/governance\/approvals$/);
   await nav.getByTestId("tabs-tab-system").click();
-  await expect(page).toHaveURL(/\/system\/registries\/skills$/);
+  await expect(page).toHaveURL(/\/system\/settings\/general$/);
 });
 
-test("the header cog opens Settings and the screen lists its sections", async ({ page }) => {
-  await page.goto("/dashboard");
-  await page.getByTestId("app-shell-settings-cog").click();
-  await expect(page).toHaveURL(/\/system\/settings\/general$/);
-  await expect(page.getByRole("tab", { name: "General" })).toBeVisible();
-  await expect(page.getByRole("tab", { name: "Status" })).toBeVisible();
+test("AI and Settings sub-menus list their items; no header cog", async ({ page }) => {
+  await page.goto("/workforce/agents");
+  const subnav = page.getByTestId("subnav-root");
+  for (const label of ["Agents", "Skills", "Commands", "MCP", "Hooks"]) {
+    await expect(subnav).toContainText(label);
+  }
+
+  await page.goto("/system/settings/general");
+  for (const label of ["General", "Activity", "Runtime", "Status"]) {
+    await expect(subnav).toContainText(label);
+  }
+  await subnav.getByTestId("subnav-item-/system/settings/status").click();
+  await expect(page).toHaveURL(/\/system\/settings\/status$/);
+  await expect(page.getByTestId("app-shell-settings-cog")).toHaveCount(0);
 });
 
 test("the sub-nav lists the active section's tabs and offers + New task", async ({ page }) => {
