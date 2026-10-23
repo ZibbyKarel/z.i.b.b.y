@@ -3,11 +3,8 @@
 import type { InboxPr } from "@zibby/contracts";
 import {
   AnchoredSheet,
-  DetailTable,
-  type DetailTableRow,
   SheetAction,
   SheetBlock,
-  SheetColumns,
   SheetSection,
   type SheetTone,
   StackCrumbs,
@@ -29,7 +26,6 @@ import {
   useInboxPrsQuery,
 } from "../../../inbox/queries";
 import { isMerge, isMine } from "../../../inbox/state/prActions";
-import { useElapsedLabel } from "../../../inbox/useElapsedLabel";
 import { diffFiles } from "../../state/diffFiles";
 import {
   type PrStatusKey,
@@ -101,22 +97,20 @@ function reviewCell(pr: InboxPr): {
 }
 
 /**
- * PR detail: REVIEW / CHECKS / CHANGES stat cells, STACK breadcrumb, details, CI, files and the
- * diff (`useInboxPrDiffQuery`). Footer: the inbox's `PrActionButtons` (code
- * review for others' PRs; address / fix CI / rebase / merge only on my own, decided by the shared predicates) and — only when
- * the PR is not `ready-to-merge` — `MERGE ON GITHUB` (the note says why in-app merge is off).
- * The PR list carries no description, review comments or per-check list, so those blocks are
- * not shown; CI is the single aggregate row.
+ * PR detail: REVIEW / CHECKS / CHANGES stat cells (the header summary), STACK breadcrumb, review
+ * threads and the diff with its file sidebar (`useInboxPrDiffQuery`). The title links to GitHub.
+ * Header actions: the inbox's `PrActionButtons` (code review for others' PRs; address / fix CI /
+ * rebase / merge only on my own, decided by the shared predicates) and — on my PR that is not
+ * `ready-to-merge` — `MERGE ON GITHUB` (the footer note says why in-app merge is off).
  */
 export function PrSheet({ id, anchor, onClose }: SheetProps) {
   const t = useTranslations();
-  const elapsed = useElapsedLabel();
   const { data } = useInboxPrsQuery();
   const { data: approvals = [] } = useApprovalsQuery();
   const [now] = useState(() => Date.now());
   const all = useMemo(() => data?.prs ?? [], [data]);
   const pr = all.find((p) => p.url === id || String(p.number) === id);
-  const { data: diff, isPending: diffPending } = useInboxPrDiffQuery(pr?.projectId, pr?.number);
+  const { data: diff } = useInboxPrDiffQuery(pr?.projectId, pr?.number);
   const files = useMemo(() => diffFiles(diff?.diff ?? ""), [diff]);
   const { data: threads } = useInboxPrThreadsQuery(pr?.projectId, pr?.number);
 
@@ -140,44 +134,12 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
   const merge = isMerge(pr);
   const dash = "—";
 
-  const detailRows: DetailTableRow[] = [
-    { cells: [t("bridge.sheet.pr.branch"), `${pr.headRef ?? dash} → ${base}`] },
-    { cells: [t("bridge.sheet.pr.author"), pr.author] },
-    { cells: [t("bridge.sheet.pr.opened"), elapsed(pr.createdAt, now)] },
-    ...(pr.updatedAt
-      ? [{ cells: [t("bridge.sheet.pr.updated"), elapsed(pr.updatedAt, now)] }]
-      : []),
-    {
-      cells: [
-        t("bridge.sheet.pr.mergeable"),
-        pr.mergeable === null
-          ? t("bridge.sheet.pr.unknown")
-          : pr.mergeable
-            ? t("bridge.sheet.pr.yes")
-            : t("bridge.sheet.pr.no"),
-      ],
-    },
-    ...(pr.unresolvedThreads === undefined
-      ? []
-      : [{ cells: [t("bridge.sheet.pr.threads"), String(pr.unresolvedThreads)] }]),
-  ];
   const ciValue = t(`bridge.sheet.pr.ci.${pr.ci}`);
-  const fileRows: DetailTableRow[] = files.map((f) => ({
-    cells: [f.path, `+${f.added} −${f.removed}`],
-  }));
 
   return (
     <AnchoredSheet
       {...geometry(anchor)}
-      chips={[
-        pr.repo,
-        `${pr.headRef ?? dash} → ${base}`,
-        t("bridge.sheet.pr.by", {
-          who: pr.bucket === "mine" ? t("bridge.sheet.pr.you") : pr.author,
-        }),
-      ]}
-      closeLabel={t("bridge.sheet.close")}
-      footerEnd={
+      actions={
         <>
           <PrReviewButton pr={pr} />
           <PrActionButtons baseLabel={base} pr={pr} />
@@ -188,6 +150,14 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
           )}
         </>
       }
+      chips={[
+        pr.repo,
+        `${pr.headRef ?? dash} → ${base}`,
+        t("bridge.sheet.pr.by", {
+          who: pr.bucket === "mine" ? t("bridge.sheet.pr.you") : pr.author,
+        }),
+      ]}
+      closeLabel={t("bridge.sheet.close")}
       footerNote={t(`bridge.sheet.pr.note.${NOTE_KEY[key]}`)}
       kind={`${t("bridge.sheet.kind.pr")} · #${pr.number}`}
       onClose={onClose}
@@ -221,32 +191,6 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
           label={t("bridge.sheet.pr.stack")}
         />
       ) : null}
-      <SheetColumns>
-        <div>
-          <SheetBlock label={t("bridge.sheet.details")}>
-            <DetailTable rows={detailRows} />
-          </SheetBlock>
-        </div>
-        <div>
-          <SheetBlock label={t("bridge.sheet.pr.checks")}>
-            <DetailTable
-              rows={[{ cells: [t("bridge.sheet.pr.ciRow"), ciValue], tone: CI_TONE[pr.ci] }]}
-              variant="check"
-            />
-          </SheetBlock>
-          <SheetBlock
-            label={t("bridge.sheet.pr.files", { n: String(files.length).padStart(2, "0") })}
-          >
-            <DetailTable
-              emptyText={
-                diffPending ? t("bridge.sheet.pr.diffLoading") : t("bridge.sheet.pr.noFiles")
-              }
-              rows={fileRows}
-              variant="file"
-            />
-          </SheetBlock>
-        </div>
-      </SheetColumns>
       {threads?.length ? (
         <SheetSection>
           <PrThreads now={now} number={pr.number} projectId={pr.projectId} />

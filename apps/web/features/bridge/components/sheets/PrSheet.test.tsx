@@ -1,7 +1,7 @@
 import type { InboxPr } from "@zibby/contracts";
 import { AnchoredSheetTestId, StackCrumbsTestId, StatCellTestId } from "@zibby/design-system";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renderWithProviders, screen } from "../../../../test/render";
+import { renderWithProviders, screen, within } from "../../../../test/render";
 import { PrActionsTestId } from "../../../inbox/components/PrActionButtons";
 import { PrSheet } from "./PrSheet";
 
@@ -137,6 +137,18 @@ describe("PrSheet action buttons", () => {
   });
 });
 
+describe("PrSheet header actions", () => {
+  it("puts the action buttons in the sheet header, not the footer", () => {
+    show(pr(14, { ci: "failing", headRef: "feat" }));
+    expect(
+      within(screen.getByTestId(AnchoredSheetTestId.Actions)).getByTestId(PrActionsTestId.FixCi),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId(AnchoredSheetTestId.Footer)).queryAllByRole("button"),
+    ).toHaveLength(0);
+  });
+});
+
 describe("PrSheet content", () => {
   it("renders status, stat cells, the diff file list and the stack breadcrumb", () => {
     hooks.diff = ["diff --git a/x.ts b/x.ts", "@@ -1 +1,2 @@", "-a", "+b", "+c"].join("\n");
@@ -153,7 +165,6 @@ describe("PrSheet content", () => {
     expect(values).toEqual(["Požadovány změny", "Selhává", "+2 −1"]);
     expect(screen.getByTestId(`${StackCrumbsTestId.Crumb}-${top.url}`)).toHaveTextContent("#11");
     expect(screen.getByTestId(`${StackCrumbsTestId.Crumb}-${base.url}`)).toHaveTextContent("#10");
-    expect(screen.getByText("x.ts")).toBeInTheDocument();
     expect(screen.getByTestId("pr-diff")).toBeInTheDocument();
   });
 
@@ -164,6 +175,13 @@ describe("PrSheet content", () => {
     expect(link).toHaveAttribute("href", p.url);
     expect(link).toHaveAttribute("target", "_blank");
     expect(screen.queryByText(/Otevřít na GitHubu/)).toBeNull();
+  });
+
+  it("has no details or checks panel", () => {
+    show(pr(13, { ci: "failing" }));
+    expect(screen.queryByText("Detaily")).toBeNull();
+    expect(screen.queryByText(/Větev/)).toBeNull();
+    expect(screen.getAllByTestId(StatCellTestId.Value)).toHaveLength(3);
   });
 
   it("renders nothing for an unknown PR", () => {
