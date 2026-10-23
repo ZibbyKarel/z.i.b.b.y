@@ -7,13 +7,13 @@ top-bar freshness indicator. Unlike every other resource, this is about the ZIBB
 
 ## Pieces
 
-| Piece      | File                                       | Role                                                                                                       |
-| ---------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| Contract   | `libs/contracts/src/self/self.schema.ts`   | `SelfPrSchema`, `SelfStatusSchema`, `SelfUpdateResultSchema`                                               |
-| Contract   | `libs/contracts/src/self/self.contract.ts` | `selfContract` — `getSelfStatus` (`GET /api/self/status`), `updateSelf` (`POST /api/self/update`, 200/409) |
-| Service    | `apps/api/src/self/self.service.ts`        | `SelfService` — git/`gh` reads via bounded `execFile`, all soft-fail                                       |
-| Controller | `apps/api/src/self/self.controller.ts`     | implements `selfContract`; maps the two refusal errors to 409                                              |
-| Module     | `apps/api/src/self/self.module.ts`         | standalone — no dependency on any other module                                                             |
+| Piece      | File                                       | Role                                                                                                                                                                |
+| ---------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contract   | `libs/contracts/src/self/self.schema.ts`   | `SelfPrSchema`, `SelfStatusSchema`, `SelfUpdateResultSchema`                                                                                                        |
+| Contract   | `libs/contracts/src/self/self.contract.ts` | `selfContract` — `getSelfStatus` (`GET /api/self/status`), `updateSelf` (`POST /api/self/update`, 200/409), `ensureSelfProject` (`POST /api/self/project`, 200/409) |
+| Service    | `apps/api/src/self/self.service.ts`        | `SelfService` — git/`gh` reads via bounded `execFile`, all soft-fail                                                                                                |
+| Controller | `apps/api/src/self/self.controller.ts`     | implements `selfContract`; maps the two refusal errors to 409                                                                                                       |
+| Module     | `apps/api/src/self/self.module.ts`         | imports `ProjectsModule` + `MachineConfigModule` (for `ensureSelfProject` only)                                                                                     |
 
 ## `getSelfStatus` (polled STATE, like `health`/`limits`)
 
@@ -45,6 +45,21 @@ back to `--force`/`reset --hard`:
 - Non-fast-forward / any pull failure → 409 (`SelfUpdateConflictError`) with a
   readable message.
 - Successful pull → 200, `{ updated: true, behind: 0 }`.
+
+## `ensureSelfProject` — register ZIBBY as its own project
+
+`POST /api/self/project` (empty body) registers the install as project `zibby`
+so ZIBBY edits itself in a **separate clone** (`<cloneRoot>/zibby`) and lands
+changes as **draft PRs** (Builder != Subject, see `docs/ops/self-development.md`).
+`getSelfStatus` gains an optional `projectId` (`"zibby"`) once that project exists.
+
+- Origin is read with `git remote get-url origin` in `installRoot()`; the new
+  project is `{ id: "zibby", name: "ZIBBY", desc, gitRemote: <origin>, prOpenMode: "draft" }`
+  — never a `path`, and no git state is mutated.
+- Idempotent: `zibby` already at the same remote -> 200 `{ projectId, created: false }`.
+- 409 (`SelfProjectConflictError`, `{ message }`) when: origin missing or not a
+  valid remote; `zibby` exists with a different remote (never overwritten);
+  `<cloneRoot>/zibby` resolves to the install root itself.
 
 ## Frontend
 

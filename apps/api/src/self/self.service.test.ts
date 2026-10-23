@@ -33,7 +33,6 @@ import type { Project } from "@zibby/contracts";
 import { installRoot } from "../shared/data-dir";
 
 import {
-  SELF_PROJECT_ID,
   SelfDirtyError,
   SelfProjectConflictError,
   SelfService,
