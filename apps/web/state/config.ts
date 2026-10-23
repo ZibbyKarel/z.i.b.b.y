@@ -12,7 +12,7 @@ export interface SubTabConfig {
   id: string;
   href: Route;
   /** Path prefix owning this tab when `href` is only its first sub-page
-   *  (e.g. settings → `/system/settings`); defaults to `href`. */
+   *  (e.g. `/foo` for a tab at `/foo/first`); defaults to `href`. */
   matchPrefix?: string;
 }
 
@@ -70,7 +70,14 @@ export const SECTIONS = [
     glyph: "bot",
     href: "/workforce/agents" as Route,
     // Departments have no tab — the dashboard map is their entry point.
-    tabs: [{ id: "agents", href: "/workforce/agents" as Route }],
+    // Registries keep their `/system/registries/*` routes but belong to this section.
+    tabs: [
+      { id: "agents", href: "/workforce/agents" as Route },
+      { id: "skills", href: "/system/registries/skills" as Route },
+      { id: "commands", href: "/system/registries/commands" as Route },
+      { id: "mcp", href: "/system/registries/mcp" as Route },
+      { id: "hooks", href: "/system/registries/hooks" as Route },
+    ],
   },
   {
     id: "activity",
@@ -107,18 +114,13 @@ export const SECTIONS = [
   {
     id: "system",
     glyph: "gear",
-    href: "/system/registries/skills" as Route,
+    href: "/system/settings/general" as Route,
+    // The four settings sections, promoted from the old in-screen tab row.
     tabs: [
-      { id: "skills", href: "/system/registries/skills" as Route },
-      { id: "mcp", href: "/system/registries/mcp" as Route },
-      { id: "hooks", href: "/system/registries/hooks" as Route },
-      { id: "commands", href: "/system/registries/commands" as Route },
-      // Its four sections render as a secondary tab row inside the screen.
-      {
-        id: "settings",
-        href: "/system/settings/general" as Route,
-        matchPrefix: "/system/settings",
-      },
+      { id: "general", href: "/system/settings/general" as Route },
+      { id: "runtime", href: "/system/settings/runtime" as Route },
+      { id: "activity", href: "/system/settings/activity" as Route },
+      { id: "status", href: "/system/settings/status" as Route },
     ],
   },
 ] as const satisfies readonly SectionConfig[];
@@ -140,6 +142,7 @@ const PATH_SECTION: readonly (readonly [prefix: string, section: SectionId])[] =
   ["/activity", "activity"],
   ["/knowledge", "knowledge"],
   ["/governance", "governance"],
+  ["/system/registries", "workforce"],
   ["/system", "system"],
 ];
 

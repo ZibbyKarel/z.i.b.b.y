@@ -79,6 +79,16 @@ describe("AppShell", () => {
     expect(screen.queryByTestId(AppHeaderTestId.ActiveCount)).toBeNull();
   });
 
+  it("labels the AI and Settings sections", () => {
+    renderWithProviders(
+      <AppShell>
+        <div>obsah stránky</div>
+      </AppShell>,
+    );
+    expect(screen.getByTestId(`${TabsTestId.Tab}-workforce`)).toHaveTextContent("AI");
+    expect(screen.getByTestId(`${TabsTestId.Tab}-system`)).toHaveTextContent("Nastavení");
+  });
+
   it("renders the light/dark toggle in the header", () => {
     renderWithProviders(
       <AppShell>
@@ -177,7 +187,8 @@ describe("AppShell", () => {
 
   it.each([
     ["/system/registries/hooks/foo", "/system/registries/hooks"],
-    ["/system/settings/status", "/system/settings/general"],
+    ["/system/settings/status", "/system/settings/status"],
+    ["/system/registries/mcp/x", "/system/registries/mcp"],
   ])("highlights the owning sub-tab for %s", (path, tabHref) => {
     mockPath = path;
     try {
@@ -220,7 +231,7 @@ describe("AppShell", () => {
 describe("AppShell top menu sections", () => {
   it.each([
     ["/work/automations", "work"],
-    ["/system/registries/skills", "system"],
+    ["/system/registries/skills", "workforce"],
     ["/system/settings/status", "system"],
     ["/workforce/agents/writer", "workforce"],
     ["/governance/spend", "governance"],

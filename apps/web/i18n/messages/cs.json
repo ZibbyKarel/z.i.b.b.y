@@ -39,14 +39,9 @@
         "distill": "Destilace"
       },
       "system": {
-        "skills": "Dovednosti",
-        "mcp": "MCP",
-        "hooks": "Hooky",
-        "commands": "Příkazy",
-        "settings": "Nastavení",
         "general": "Obecné",
-        "activity": "Aktivita",
         "runtime": "Runtime",
+        "activity": "Aktivita",
         "status": "Stav"
       },
       "dashboard": {
@@ -62,7 +57,11 @@
         "projects": "Projekty"
       },
       "workforce": {
-        "agents": "Agenti"
+        "agents": "Agenti",
+        "skills": "Dovednosti",
+        "commands": "Příkazy",
+        "mcp": "MCP",
+        "hooks": "Hooky"
       },
       "governance": {
         "approvals": "Schválení",
@@ -73,9 +72,9 @@
       }
     },
     "dashboard": "Přehled",
-    "workforce": "Agenti",
+    "workforce": "AI",
     "governance": "Pravidla",
-    "system": "Systém"
+    "system": "Nastavení"
   },
   "memory": {
     "title": "Paměť",

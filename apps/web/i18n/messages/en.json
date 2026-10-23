@@ -39,14 +39,9 @@
         "distill": "Distill"
       },
       "system": {
-        "skills": "Skills",
-        "mcp": "MCP",
-        "hooks": "Hooks",
-        "commands": "Commands",
-        "settings": "Settings",
         "general": "General",
-        "activity": "Activity",
         "runtime": "Runtime",
+        "activity": "Activity",
         "status": "Status"
       },
       "dashboard": {
@@ -62,7 +57,11 @@
         "projects": "Projects"
       },
       "workforce": {
-        "agents": "Agents"
+        "agents": "Agents",
+        "skills": "Skills",
+        "commands": "Commands",
+        "mcp": "MCP",
+        "hooks": "Hooks"
       },
       "governance": {
         "approvals": "Approvals",
@@ -73,9 +72,9 @@
       }
     },
     "dashboard": "Dashboard",
-    "workforce": "Workforce",
+    "workforce": "AI",
     "governance": "Governance",
-    "system": "System"
+    "system": "Settings"
   },
   "memory": {
     "title": "Memory",
