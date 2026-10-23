@@ -22,8 +22,10 @@ Defined in `libs/contracts/src/review-learning/review-rule.schema.ts`:
   `commentId` (namespaced by GitHub source — `rc-`/`ic-`/`rv-` — since the three
   comment endpoints can collide), `prUrl`, `commentUrl`, `author`, `at`, `excerpt`
   (max 400 chars).
-- `ReviewRulesFile` — one project's on-disk shape: `{ rules, cursor? }`. `cursor`
-  is the repo-wide "since" watermark for the last successful ingest pass.
+- `ReviewRulesFile` — one project's on-disk shape: `{ rules, cursor?, reworkCursor? }`. `cursor`
+  is the repo-wide "since" watermark for the last successful GitHub ingest pass;
+  `reworkCursor` is the independent watermark of the workflow rework-note source
+  (newest ingested item `at`), so neither source can strand the other.
 
 ## `ReviewRulesStore` (`review-rules.store.ts`)
 
@@ -67,8 +69,11 @@ has exactly one implementation:
   project's.
 - `listGrounded(projectId)` returns `{ project, global }` — `status === "active"`
   rules only, split by scope — the read path a future grounding step consumes.
-- `cursor(projectId)` / `setCursor(projectId, cursor)` round-trip the per-project
-  ingest watermark.
+- `cursor(projectId, key = "cursor")` / `setCursor(projectId, value, key = "cursor")`
+  round-trip a per-project ingest watermark; `key` is `ReviewCursorKey`
+  (`"cursor"` for GitHub, `"reworkCursor"` for workflow rework notes). Each key is
+  validated on its own on read (a malformed one is dropped, rules and the other
+  cursor kept), and `record()`/`setStatus()` preserve both.
 
 ## `ZibbyPrLocator` (`zibby-pr.locator.ts`)
 
@@ -292,6 +297,44 @@ dropped)` — a small standalone function so it's testable without the
   testable, and keeps the guarantee `MAX_COMMENTS_PER_PASS`'s carry-over relies
   on: no comment is ever silently dropped.
 
+## `WorkflowReworkFetcher` (`workflow-rework.fetcher.ts`)
+
+The second source, next to `ReviewCommentFetcher`: the operator's rework notes on
+a project's workflow runs, mapped onto `FetchedComment` so the distiller, store and
+approval flow run unchanged. `fetchNew({ projectId, projectPath, cursor? })` returns
+`{ comments, incomplete }`.
+
+- **Runs:** every directory under `WORKFLOW_RUNS_DIR` whose `run.json` parses as a
+  `WorkflowRun` and whose `projectPath` resolves to the project's path. A run with
+  no registered project is never read (grounding is keyed by project id).
+- **Sources per run:** (a) `workflow-gate` approvals with `status: "revised"` and a
+  `reason` (author `operator`, `at` = `decidedAt`, `commentUrl: approval:<id>`);
+  (b) the run root's `*.note.md` files (resume-parked notes exist only there);
+  (c) `book/rejections.md` (author `visual-audit`), minus lines matching
+  `pages N: operator review:` — those are model-written restatements of (a).
+  Files are read only when they are regular files (`lstat`, no symlinks); `at` is
+  the file mtime.
+- **Units:** one non-empty line (trimmed, leading `- ` stripped, under 4 chars
+  dropped) is one occurrence.
+- **Ids:** `commentId = "wf-" + sha1(workflowRunId + "\n" + lowercased,
+whitespace-collapsed line).slice(0, 16)`. A gate-revise reason and its `.note.md`
+  copy therefore collapse to one id (first source wins, approval before note), and
+  `ReviewRulesStore.record` dedups replays across passes.
+- **Occurrence shape:** `prUrl = "workflow-run:<workflowRunId>"`, no `prNumber`.
+  `ReviewRuleFlowService.propose` passes `sourceUrl` to the approval only when the
+  latest `prUrl` is `http(s)`, so this marker never renders as a link.
+- **Cursor filter:** items are kept when `at > cursor`, sorted by `(at, commentId)`.
+- **`incomplete`:** true when `approvals.list` rejected, the runs dir could not be
+  read (a missing dir is an empty window), or a per-run scan threw. Comments read
+  before the failure are still returned. Never throws.
+
+`REWORK_SYSTEM_PROMPT` (in `review-comment.distiller.ts`) is the distiller prompt for
+this source: it turns a page-specific defect ("2 - Prase má tři oči") into a
+page-independent illustration rule, marks taste-only and header lines
+`actionable: false`, and keeps the same reply schema and untrusted-fence paragraph
+as the PR prompt. `buildDistillPrompt`, `chunkForArgvBudget` and `distill` take the
+system prompt as an optional last argument (default: the PR prompt).
+
 ## `ReviewRulesVaultService` (`review-rules.vault.service.ts`)
 
 Renders `listGrounded`'s `active` rules into the vault notes `GroundingService`
@@ -434,7 +477,12 @@ the stored cursor, fetches new review comments, distils them against that
 project's known slugs, files each observation as an occurrence via
 `store.record`, and calls `flow.propose` for every rule `record` promotes —
 i.e. every rule that just reached its second occurrence. Returns
-`{ observations, proposed }`.
+`{ observations, proposed }`. After the GitHub pass, each project also gets a
+rework pass (`learnReworkForProject`) in its own try/catch: it runs only when the
+project has a `path` (a GitHub-less project still runs it), fetches via
+`WorkflowReworkFetcher`, and ingests with `REWORK_SYSTEM_PROMPT`. Both passes share
+`ingest` (known rules → distil → record → propose). Neither source's failure stops
+the other or another project.
 
 Fail-open per project: one unreachable repo or one bad credential never stops
 the others.
@@ -466,6 +514,11 @@ pass:
   and re-distilled (and re-paid for) every night, and because `fetchNew` always
   keeps the OLDEST `MAX_COMMENTS_PER_PASS`, every genuinely actionable comment
   created after those was unreachable **forever**.
+
+Rework cursor discipline — `reworkCursor` advances to the newest emitted item `at`
+only when the distiller returned `status: "ok"` **and** the fetcher reported
+`incomplete: false`; otherwise it is held (logged at warn) and the window replays,
+which the commentId dedup makes free. It never touches the GitHub `cursor`.
 
 `selfLogin` is deliberately left unpassed to `fetchNew`. ZIBBY opens its PRs
 with the operator's own GitHub token, so ZIBBY's author identity _is_ the
