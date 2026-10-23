@@ -116,7 +116,11 @@ export function BridgeBoard({ state, density, sheetSide = "right" }: BridgeBoard
     (id: string, i: BridgeWidgetInfo) =>
       setInfo((p) => {
         const prev = p[id];
-        return prev && prev.count === i.count && prev.you === i.you && prev.aside === i.aside
+        return prev &&
+          prev.count === i.count &&
+          prev.you === i.you &&
+          prev.aside === i.aside &&
+          prev.loading === i.loading
           ? p
           : { ...p, [id]: i };
       }),
