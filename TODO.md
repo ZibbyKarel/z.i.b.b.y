@@ -11,6 +11,6 @@
    - akční tlačítka přesuneme nahoru tak jak to máme v detailu behu třeba
 4. [x] Detail běhu (main@41333769)
    - je málo výrazná fáze, která zrovna běží. Můžná by to chtělo výraznější border v běrve running a nebo výraznější kontrast pozadí
-5. [ ] Learn from operator rework notes: distil recurring revised-gate notes (approval reason, <phase>.note.md, book/rejections.md) into rules via review-learning (2nd occurrence → approval → vault note grounded into illustrator/creative-director/kids-book-qa); add a workflow source next to the GitHub PR fetcher. Example: coloring-book_1792627255797 (three eyes, malformed animals, unfinished lines)
+5. [x] Learn from operator rework notes: distil recurring revised-gate notes (approval reason, <phase>.note.md, book/rejections.md) into rules via review-learning (2nd occurrence → approval → vault note grounded into illustrator/creative-director/kids-book-qa); add a workflow source next to the GitHub PR fetcher. Example: coloring-book_1792627255797 (three eyes, malformed animals, unfinished lines) (main@a073456f)
 6. [ ] stránku Agenti změníme na stránku AI a v subMenu pak budou Agenti, a Skills, Commands a MCPs, které přesuneme ze záložky System. Záložka System se pak stává záložkou nastavení kde se položky z tabů (Obecné, runtime, aktivita, stav) posunou o level výše a budou tedy v submenu. V topPanelu úplně nahoře v pravo můžeme odstranit ozubené kolečko směřující na stránku nastavení
 7. [ ] widget issues - ikonka zdroje (jira) zabírá dva řádky a je vycentrovaná vertikálně na střed těch dvou řádků
