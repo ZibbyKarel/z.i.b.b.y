@@ -244,4 +244,33 @@ describe("ReviewRulesStore", () => {
     const rules = await store.list("acme");
     expect(rules.map((r) => r.id)).toEqual(["good-a"]);
   });
+
+  describe("reworkCursor", () => {
+    const T1 = "2026-07-01T00:00:00.000Z";
+    const T2 = "2026-07-02T00:00:00.000Z";
+
+    it("setCursor(..., reworkCursor) keeps the GitHub cursor", async () => {
+      await store.setCursor("acme", T1);
+      await store.setCursor("acme", T2, "reworkCursor");
+      expect(await store.cursor("acme")).toBe(T1);
+      expect(await store.cursor("acme", "reworkCursor")).toBe(T2);
+    });
+
+    it("record() preserves reworkCursor", async () => {
+      await store.setCursor("acme", T2, "reworkCursor");
+      await store.record("acme", { ...INPUT, occurrence: occurrence("rc-1") }, NOW);
+      expect(await store.cursor("acme", "reworkCursor")).toBe(T2);
+    });
+
+    it("malformed reworkCursor is dropped, rules and cursor kept", async () => {
+      await store.record("acme", { ...INPUT, occurrence: occurrence("rc-1") }, NOW);
+      await store.setCursor("acme", T1);
+      const file = path.join(dir, "acme.json");
+      const obj = JSON.parse(await fs.readFile(file, "utf8")) as Record<string, unknown>;
+      await fs.writeFile(file, JSON.stringify({ ...obj, reworkCursor: "nope" }));
+      expect(await store.cursor("acme", "reworkCursor")).toBeUndefined();
+      expect(await store.cursor("acme")).toBe(T1);
+      expect(await store.list("acme")).toHaveLength(1);
+    });
+  });
 });

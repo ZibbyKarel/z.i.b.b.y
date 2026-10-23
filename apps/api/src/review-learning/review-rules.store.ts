@@ -32,6 +32,15 @@ const SCOPE_KEY_REGEX = /^[a-zA-Z0-9_](?:[a-zA-Z0-9._-]*[a-zA-Z0-9_])?$/;
 /** Occurrences needed before a rule is worth the operator's attention. */
 const PROPOSE_AT = 2;
 
+/** Which per-project cursor: the GitHub `since` one, or the workflow rework-note one. */
+export type ReviewCursorKey = "cursor" | "reworkCursor";
+
+interface RulesFileShape {
+  rules: ReviewRule[];
+  cursor?: string;
+  reworkCursor?: string;
+}
+
 /** What one distilled comment contributes. */
 export interface ReviewRuleInput {
   slug: string;
@@ -157,13 +166,17 @@ export class ReviewRulesStore {
   }
 
   /** The repo-wide `since` cursor for this project's last successful pass. */
-  async cursor(projectId: string): Promise<string | undefined> {
-    return (await this.read(projectId)).cursor;
+  async cursor(projectId: string, key: ReviewCursorKey = "cursor"): Promise<string | undefined> {
+    return (await this.read(projectId))[key];
   }
 
-  async setCursor(projectId: string, cursor: string): Promise<void> {
+  async setCursor(
+    projectId: string,
+    value: string,
+    key: ReviewCursorKey = "cursor",
+  ): Promise<void> {
     const file = await this.read(projectId);
-    file.cursor = cursor;
+    file[key] = value;
     await this.write(projectId, file);
   }
 
@@ -175,7 +188,7 @@ export class ReviewRulesStore {
    * at all — never for "one of N rules happens to be invalid", since the next
    * write would otherwise silently discard every other still-valid rule.
    */
-  private async read(scopeKey: string): Promise<{ rules: ReviewRule[]; cursor?: string }> {
+  private async read(scopeKey: string): Promise<RulesFileShape> {
     const raw = await fs.readFile(this.fileOf(scopeKey), "utf8").catch(() => null);
     if (raw === null) return { rules: [] };
     const parsed = safeJson(raw);
@@ -191,10 +204,7 @@ export class ReviewRulesStore {
     return { rules, ...cursorOf(obj) };
   }
 
-  private async write(
-    scopeKey: string,
-    file: { rules: ReviewRule[]; cursor?: string },
-  ): Promise<void> {
+  private async write(scopeKey: string, file: RulesFileShape): Promise<void> {
     await ensureDir(this.dir);
     await writeFileAtomic(this.fileOf(scopeKey), JSON.stringify(file, null, 2));
   }
@@ -230,7 +240,11 @@ function hasComment(rule: ReviewRule, commentId: string): boolean {
  * GitHub `since` query parameter downstream, so silently keeping a garbage
  * value would turn into a broken fetch, not just a cosmetic issue.
  */
-function cursorOf(obj: Record<string, unknown>): { cursor?: string } {
-  const result = IsoDateTimeSchema.safeParse(obj.cursor);
-  return result.success ? { cursor: result.data } : {};
+function cursorOf(obj: Record<string, unknown>): { cursor?: string; reworkCursor?: string } {
+  const out: { cursor?: string; reworkCursor?: string } = {};
+  for (const key of ["cursor", "reworkCursor"] as const) {
+    const result = IsoDateTimeSchema.safeParse(obj[key]);
+    if (result.success) out[key] = result.data;
+  }
+  return out;
 }

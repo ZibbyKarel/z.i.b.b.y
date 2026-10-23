@@ -56,5 +56,7 @@ export type ReviewRule = z.infer<typeof ReviewRuleSchema>;
 export const ReviewRulesFileSchema = z.object({
   rules: z.array(ReviewRuleSchema).default([]),
   cursor: IsoDateTimeSchema.optional(),
+  /** Workflow rework-note source cursor (newest ingested item `at`). */
+  reworkCursor: IsoDateTimeSchema.optional(),
 });
 export type ReviewRulesFile = z.infer<typeof ReviewRulesFileSchema>;
