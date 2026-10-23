@@ -7,6 +7,7 @@ import { PinsWidget } from "./PinsWidget";
 import { PrsWidget } from "./PrsWidget";
 import { RunsWidget } from "./RunsWidget";
 import { TasksWidget } from "./TasksWidget";
+import { TodoWidget } from "./TodoWidget";
 
 /** What a row opens in the detail sheet. `key` is the row's `data-rk` value. */
 export interface BridgeSelection {
@@ -92,6 +93,11 @@ export const WIDGETS: Record<WidgetType, WidgetDefinition> = {
     labelKey: "bridge.widget.pins.label",
     descKey: "bridge.widget.pins.desc",
     Component: PinsWidget,
+  },
+  todo: {
+    labelKey: "bridge.widget.todo.label",
+    descKey: "bridge.widget.todo.desc",
+    Component: TodoWidget,
   },
 };
 

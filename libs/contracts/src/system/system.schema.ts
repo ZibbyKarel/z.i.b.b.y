@@ -12,7 +12,7 @@ export type Density = z.infer<typeof DensitySchema>;
 export const BridgeWidgetSchema = z.object({
   id: z.string().min(1),
   /** Catalog entry this widget renders. */
-  type: z.enum(["briefing", "issues", "prs", "tasks", "runs", "pins"]),
+  type: z.enum(["briefing", "issues", "prs", "tasks", "runs", "pins", "todo"]),
   x: z.number().int().min(0).max(11),
   y: z.number().int().min(0),
   w: z.number().int().min(2).max(12),
