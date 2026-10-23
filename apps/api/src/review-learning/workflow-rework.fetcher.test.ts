@@ -126,4 +126,46 @@ describe("WorkflowReworkFetcher", () => {
   it("corrupt run.json is skipped, not thrown", async () => {
     await expect(fetchNew()).resolves.toBeDefined();
   });
+
+  it("reports incomplete when approvals.list rejects", async () => {
+    list.mockRejectedValue(new Error("boom"));
+    const res = await fetchNew();
+    expect(res.incomplete).toBe(true);
+    expect(res.comments.length).toBeGreaterThan(0); // files still read
+  });
+
+  it("reports incomplete when a run scan throws", async () => {
+    const note = path.join(dir, "run-a", "visual-audit.note.md");
+    await fs.chmod(note, 0o000);
+    try {
+      expect((await fetchNew()).incomplete).toBe(true);
+    } finally {
+      await fs.chmod(note, 0o644);
+    }
+  });
+
+  it("is complete on a clean scan, with a missing runs dir counting as empty", async () => {
+    expect((await fetchNew()).incomplete).toBe(false);
+    const missing = new WorkflowReworkFetcher(
+      path.join(dir, "nope"),
+      { list } as never,
+      logger as never,
+    );
+    expect(await missing.fetchNew({ projectId: "p", projectPath: PROJECT })).toEqual({
+      comments: [],
+      incomplete: false,
+    });
+  });
+
+  it("ignores symlinked note files and rejections.md", async () => {
+    const a = path.join(dir, "run-a");
+    const outside = path.join(dir, "outside.txt");
+    await fs.writeFile(outside, "secret outside line");
+    await fs.symlink(outside, path.join(a, "evil.note.md"));
+    await fs.rm(path.join(a, "book", "rejections.md"));
+    await fs.symlink(outside, path.join(a, "book", "rejections.md"));
+    const res = await fetchNew();
+    expect(res.incomplete).toBe(false);
+    expect(res.comments.some((c) => c.body.includes("secret outside"))).toBe(false);
+  });
 });

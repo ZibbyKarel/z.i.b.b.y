@@ -148,7 +148,7 @@ export class ReviewLearningService {
   ): Promise<{ observations: number; proposed: number }> {
     if (!project.path) return { observations: 0, proposed: 0 };
     const cursor = await this.store.cursor(project.id, "reworkCursor");
-    const { comments } = await this.reworkFetcher.fetchNew({
+    const { comments, incomplete } = await this.reworkFetcher.fetchNew({
       projectId: project.id,
       projectPath: project.path,
       ...(cursor ? { cursor } : {}),
@@ -161,7 +161,10 @@ export class ReviewLearningService {
       now,
       REWORK_SYSTEM_PROMPT,
     );
-    if (complete) {
+    if (incomplete) {
+      this.log.warn("workflow rework scan incomplete — cursor held", { projectId: project.id });
+    }
+    if (complete && !incomplete) {
       const newest = comments.reduce((max, c) => (c.at > max ? c.at : max), comments[0]?.at ?? "");
       if (newest) await this.store.setCursor(project.id, newest, "reworkCursor");
     }
@@ -176,9 +179,7 @@ export class ReviewLearningService {
     system?: string,
   ): Promise<{ observations: number; proposed: number; complete: boolean }> {
     const known = (await this.store.list(projectId)).map((r) => ({ id: r.id, rule: r.rule }));
-    const distilled = system
-      ? await this.distiller.distill(comments, known, system)
-      : await this.distiller.distill(comments, known);
+    const distilled = await this.distiller.distill(comments, known, system);
     if (distilled.status === "incomplete") {
       // The distiller failed or never ran, so this window was never actually
       // examined — held, exactly like a failed fetch endpoint below. Costs one

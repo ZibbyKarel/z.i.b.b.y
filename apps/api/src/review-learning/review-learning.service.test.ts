@@ -60,6 +60,7 @@ describe("ReviewLearningService", () => {
     rejectProjectId?: string;
     reworkComments?: FetchedComment[];
     reworkThrows?: boolean;
+    reworkIncomplete?: boolean;
   }) {
     const log = { info: vi.fn(), warn: vi.fn(), debug: vi.fn(), error: vi.fn() };
     const logger = { child: () => log };
@@ -72,7 +73,7 @@ describe("ReviewLearningService", () => {
     const reworkFetcher = {
       fetchNew: vi.fn(async () => {
         if (opts.reworkThrows) throw new Error("rework boom");
-        return { comments: opts.reworkComments ?? [] };
+        return { comments: opts.reworkComments ?? [], incomplete: opts.reworkIncomplete ?? false };
       }),
     };
     const outcome: DistillOutcome = opts.distillFailed
@@ -357,6 +358,21 @@ describe("ReviewLearningService", () => {
       await ok.service.learn(NOW);
       expect(await store.cursor("acme", "reworkCursor")).toBe("2026-07-29T10:00:00.000Z");
       expect(await store.cursor("acme")).toBeUndefined();
+    });
+
+    it("holds the rework cursor when the fetcher reports an incomplete window", async () => {
+      const { service, flow } = makeService({
+        projects: [wfProject],
+        token: null,
+        comments: [],
+        reworkComments: NOTES,
+        reworkIncomplete: true,
+        observations: OBS,
+      });
+      await service.learn(NOW);
+      expect(await store.cursor("acme", "reworkCursor")).toBeUndefined();
+      // observations that did arrive are still recorded and proposed
+      expect(flow.propose).toHaveBeenCalledTimes(1);
     });
 
     it("runs for a project without a GitHub link", async () => {

@@ -15,6 +15,12 @@ export interface FetchReworkInput {
   cursor?: string;
 }
 
+export interface FetchReworkResult {
+  comments: FetchedComment[];
+  /** True when part of the window could not be read — the caller must hold its cursor. */
+  incomplete: boolean;
+}
+
 /** A line shorter than this is noise ("ok", "-"), not a note. */
 const MIN_LINE_CHARS = 4;
 
@@ -68,21 +74,36 @@ export class WorkflowReworkFetcher {
     this.log = logger.child(WorkflowReworkFetcher.name);
   }
 
-  async fetchNew(input: FetchReworkInput): Promise<{ comments: FetchedComment[] }> {
+  async fetchNew(input: FetchReworkInput): Promise<FetchReworkResult> {
     const byId = new Map<string, FetchedComment>();
+    let incomplete = false;
     const revised = await this.approvals.list("revised").catch((err: unknown) => {
-      this.log.warn("could not list revised approvals", { error: String(err) });
+      this.log.warn("could not list revised approvals — window incomplete", {
+        error: String(err),
+      });
+      incomplete = true;
       return [] as Approval[];
     });
     const entries = await fs
       .readdir(this.runsDir, { withFileTypes: true })
-      .catch(() => [] as import("node:fs").Dirent[]);
+      .catch((err: unknown) => {
+        // A runs dir that does not exist yet is an empty window, not a failure.
+        if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+          this.log.warn("could not read workflow runs dir — window incomplete", {
+            error: String(err),
+          });
+          incomplete = true;
+        }
+        return [] as import("node:fs").Dirent[];
+      });
 
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
       try {
         const runDir = path.join(this.runsDir, entry.name);
-        const raw = await fs.readFile(path.join(runDir, "run.json"), "utf8");
+        // A dir without a run.json is not a run: skipped, not a failure.
+        const raw = await fs.readFile(path.join(runDir, "run.json"), "utf8").catch(() => null);
+        if (raw === null) continue;
         const run = WorkflowRunSchema.safeParse(safeJson(raw));
         if (!run.success || !run.data.projectPath) continue;
         if (path.resolve(run.data.projectPath) !== path.resolve(input.projectPath)) continue;
@@ -102,20 +123,17 @@ export class WorkflowReworkFetcher {
         for (const file of (await fs.readdir(runDir))
           .filter((f) => f.endsWith(".note.md"))
           .sort()) {
-          sources.push(await this.fileSource(runDir, file, `${runId}/${file}`, "operator"));
+          const src = await this.fileSource(runDir, file, `${runId}/${file}`, "operator");
+          if (src) sources.push(src);
         }
         const rejections = path.join("book", "rejections.md");
-        if (await fs.stat(path.join(runDir, rejections)).catch(() => null)) {
-          sources.push({
-            ...(await this.fileSource(
-              runDir,
-              rejections,
-              `${runId}/book/rejections.md`,
-              "visual-audit",
-            )),
-            skip: (l) => OPERATOR_RESTATEMENT.test(l),
-          });
-        }
+        const rej = await this.fileSource(
+          runDir,
+          rejections,
+          `${runId}/book/rejections.md`,
+          "visual-audit",
+        );
+        if (rej) sources.push({ ...rej, skip: (l) => OPERATOR_RESTATEMENT.test(l) });
 
         for (const s of sources) {
           if (input.cursor && s.at <= input.cursor) continue;
@@ -134,7 +152,8 @@ export class WorkflowReworkFetcher {
           }
         }
       } catch (err) {
-        this.log.warn("workflow rework scan failed for run — skipping", {
+        incomplete = true;
+        this.log.warn("workflow rework scan failed for run — window incomplete", {
           run: entry.name,
           error: String(err),
         });
@@ -144,7 +163,7 @@ export class WorkflowReworkFetcher {
     const comments = [...byId.values()].sort(
       (a, b) => a.at.localeCompare(b.at) || a.commentId.localeCompare(b.commentId),
     );
-    return { comments };
+    return { comments, incomplete };
   }
 
   private async fileSource(
@@ -152,9 +171,16 @@ export class WorkflowReworkFetcher {
     rel: string,
     commentUrl: string,
     author: string,
-  ): Promise<Source> {
+  ): Promise<Source | null> {
     const file = path.join(runDir, rel);
-    const [text, stat] = await Promise.all([fs.readFile(file, "utf8"), fs.stat(file)]);
-    return { at: stat.mtime.toISOString(), author, commentUrl, text };
+    // Regular files only: a symlink must never pull in a file from outside the run dir.
+    const stat = await fs.lstat(file).catch(() => null);
+    if (!stat?.isFile()) return null;
+    return {
+      at: stat.mtime.toISOString(),
+      author,
+      commentUrl,
+      text: await fs.readFile(file, "utf8"),
+    };
   }
 }
