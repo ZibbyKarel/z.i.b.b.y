@@ -36,6 +36,8 @@ export const SelfStatusSchema = z.object({
   prs: z.array(SelfPrSchema),
   fetchedAt: IsoDateTimeSchema.optional(),
   ghAvailable: z.boolean(),
+  /** Present when a project with id `zibby` exists (ZIBBY registered as its own project). */
+  projectId: z.string().optional(),
 });
 export type SelfStatus = z.infer<typeof SelfStatusSchema>;
 
@@ -53,3 +55,13 @@ export const SelfUpdateResultSchema = z.object({
   message: z.string().optional(),
 });
 export type SelfUpdateResult = z.infer<typeof SelfUpdateResultSchema>;
+
+/**
+ * Result of `ensureSelfProject` — registers the ZIBBY install as the project
+ * `zibby` (idempotent). `created` is `false` when it already pointed at origin.
+ */
+export const EnsureSelfProjectResultSchema = z.object({
+  projectId: z.string(),
+  created: z.boolean(),
+});
+export type EnsureSelfProjectResult = z.infer<typeof EnsureSelfProjectResultSchema>;

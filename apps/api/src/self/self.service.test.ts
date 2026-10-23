@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const { realInstallRoot } = vi.hoisted(() => ({ realInstallRoot: { fn: (): string => "" } }));
+vi.mock("../shared/data-dir", async (orig) => {
+  const actual = await orig<typeof import("../shared/data-dir")>();
+  realInstallRoot.fn = actual.installRoot;
+  return { ...actual, installRoot: vi.fn(() => actual.installRoot()) };
+});
+
 // `SelfService` calls `promisify(execFile)`. Node's real `child_process.execFile`
 // carries a `util.promisify.custom` implementation that resolves `{ stdout, stderr }`;
 // a bare `vi.fn()` replacement lacks it, so generic `promisify` would instead resolve
@@ -13,21 +20,25 @@ vi.mock("node:child_process", () => {
   Object.defineProperty(execFileMock, customPromisify, {
     value: (file: string, args: string[], options: unknown) =>
       new Promise((resolve, reject) => {
-        execFileMock(
-          file,
-          args,
-          options,
-          (error: Error | null, stdout: string, stderr: string) => {
-            if (error) reject(error);
-            else resolve({ stdout, stderr });
-          },
-        );
+        execFileMock(file, args, options, (error: Error | null, stdout: string, stderr: string) => {
+          if (error) reject(error);
+          else resolve({ stdout, stderr });
+        });
       }),
   });
   return { execFile: execFileMock };
 });
 
-import { SelfDirtyError, SelfService, SelfUpdateConflictError } from "./self.service";
+import type { Project } from "@zibby/contracts";
+import { installRoot } from "../shared/data-dir";
+
+import {
+  SELF_PROJECT_ID,
+  SelfDirtyError,
+  SelfProjectConflictError,
+  SelfService,
+  SelfUpdateConflictError,
+} from "./self.service";
 
 type Resp = { stdout?: string } | { error: Error };
 
@@ -186,7 +197,11 @@ describe("SelfService.update", () => {
     mockGit({ ...CLEAN_UP_TO_DATE, [BEHIND]: { stdout: "0\n" } });
     const result = await new SelfService().update();
     expect(result).toEqual({ updated: false, behind: 0, message: "already up to date" });
-    expect(execFileMock).not.toHaveBeenCalledWith("git", ["pull", "--ff-only", "origin", "main"], expect.anything());
+    expect(execFileMock).not.toHaveBeenCalledWith(
+      "git",
+      ["pull", "--ff-only", "origin", "main"],
+      expect.anything(),
+    );
   });
 
   it("pulls fast-forward-only and reports updated:true on success", async () => {
@@ -226,5 +241,93 @@ describe("SelfService.update", () => {
     mockGit({ [REPO_OK]: { error: new Error("not a git repository") } });
     const result = await new SelfService().update();
     expect(result).toEqual({ updated: false, behind: 0, message: "not a git repository" });
+  });
+});
+
+describe("SelfService.ensureSelfProject / status.projectId", () => {
+  const ORIGIN = "git remote get-url origin";
+  const SSH = "git@github.com:me/zibby.git";
+
+  const makeService = (existing: Partial<Project>[] = [], cloneRoot = "/tmp/zibby-clones") => {
+    const create = vi.fn(async (input: unknown) => input);
+    const list = vi.fn(async () => existing);
+    const read = vi.fn(async () => ({ cloneRoot }));
+    const service = new SelfService(undefined, { list, create } as never, { read } as never);
+    return { service, create, list };
+  };
+
+  beforeEach(() => {
+    execFileMock.mockReset();
+  });
+
+  it("creates the zibby project from origin", async () => {
+    mockGit({ [ORIGIN]: { stdout: `${SSH}\n` } });
+    const { service, create } = makeService();
+    await expect(service.ensureSelfProject()).resolves.toEqual({
+      projectId: "zibby",
+      created: true,
+    });
+    expect(create).toHaveBeenCalledTimes(1);
+    const arg = create.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(arg).toEqual({
+      id: "zibby",
+      name: "ZIBBY",
+      desc: "ZIBBY itself — self-development. Changes happen in a separate clone and land as draft PRs; the operator merges.",
+      gitRemote: SSH,
+      prOpenMode: "draft",
+    });
+    expect("path" in arg).toBe(false);
+  });
+
+  it("is idempotent when zibby already points at origin", async () => {
+    mockGit({ [ORIGIN]: { stdout: SSH } });
+    const { service, create } = makeService([{ id: "zibby", gitRemote: SSH }]);
+    await expect(service.ensureSelfProject()).resolves.toEqual({
+      projectId: "zibby",
+      created: false,
+    });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("409 when zibby exists with another remote (not overwritten)", async () => {
+    mockGit({ [ORIGIN]: { stdout: SSH } });
+    const { service, create } = makeService([{ id: "zibby", gitRemote: "git@github.com:x/y.git" }]);
+    await expect(service.ensureSelfProject()).rejects.toBeInstanceOf(SelfProjectConflictError);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("409 when origin is missing", async () => {
+    mockGit({ [ORIGIN]: { error: new Error("No such remote 'origin'") } });
+    const { service, create } = makeService();
+    await expect(service.ensureSelfProject()).rejects.toBeInstanceOf(SelfProjectConflictError);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("409 when origin is not a valid remote", async () => {
+    mockGit({ [ORIGIN]: { stdout: "file:///tmp/x\n" } });
+    const { service, create } = makeService();
+    await expect(service.ensureSelfProject()).rejects.toBeInstanceOf(SelfProjectConflictError);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("409 when <cloneRoot>/zibby is the install root", async () => {
+    mockGit({ [ORIGIN]: { stdout: SSH } });
+    vi.mocked(installRoot).mockReturnValue("/tmp/zibby-clones/zibby");
+    try {
+      const { service, create } = makeService([], "/tmp/zibby-clones");
+      await expect(service.ensureSelfProject()).rejects.toBeInstanceOf(SelfProjectConflictError);
+      expect(create).not.toHaveBeenCalled();
+    } finally {
+      vi.mocked(installRoot).mockReset();
+      vi.mocked(installRoot).mockImplementation(() => realInstallRoot.fn());
+    }
+  });
+
+  it("status carries projectId when zibby exists, omits it otherwise", async () => {
+    mockGit(CLEAN_UP_TO_DATE);
+    const withProject = makeService([{ id: "zibby" }]).service;
+    expect((await withProject.status()).projectId).toBe("zibby");
+    const without = makeService([{ id: "other" }]).service;
+    expect("projectId" in (await without.status())).toBe(false);
   });
 });

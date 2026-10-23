@@ -1,7 +1,12 @@
 import { Controller } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { selfContract } from "@zibby/contracts";
-import { SelfDirtyError, SelfService, SelfUpdateConflictError } from "./self.service";
+import {
+  SelfDirtyError,
+  SelfProjectConflictError,
+  SelfService,
+  SelfUpdateConflictError,
+} from "./self.service";
 
 /**
  * Implements `selfContract` against {@link SelfService}. `getSelfStatus` never
@@ -23,6 +28,17 @@ export class SelfController {
           return { status: 200, body: await this.self.update() };
         } catch (error) {
           if (error instanceof SelfDirtyError || error instanceof SelfUpdateConflictError) {
+            return { status: 409, body: { message: error.message } };
+          }
+          throw error;
+        }
+      },
+
+      ensureSelfProject: async () => {
+        try {
+          return { status: 200, body: await this.self.ensureSelfProject() };
+        } catch (error) {
+          if (error instanceof SelfProjectConflictError) {
             return { status: 409, body: { message: error.message } };
           }
           throw error;

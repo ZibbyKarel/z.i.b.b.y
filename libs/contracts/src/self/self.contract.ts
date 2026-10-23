@@ -1,6 +1,10 @@
 import { initContract } from "@ts-rest/core";
 import { EmptyBodySchema, ErrorSchema } from "../common.schema";
-import { SelfStatusSchema, SelfUpdateResultSchema } from "./self.schema";
+import {
+  EnsureSelfProjectResultSchema,
+  SelfStatusSchema,
+  SelfUpdateResultSchema,
+} from "./self.schema";
 
 const c = initContract();
 
@@ -32,6 +36,17 @@ export const selfContract = c.router(
         409: ErrorSchema,
       },
       summary: "Fast-forward-only pull of the ZIBBY install repo (refuses dirty/non-ff)",
+    },
+    ensureSelfProject: {
+      method: "POST",
+      path: "/self/project",
+      body: EmptyBodySchema,
+      responses: {
+        200: EnsureSelfProjectResultSchema,
+        409: ErrorSchema,
+      },
+      summary:
+        "Register the ZIBBY install as its own project (idempotent; separate clone, draft PRs)",
     },
   },
   {

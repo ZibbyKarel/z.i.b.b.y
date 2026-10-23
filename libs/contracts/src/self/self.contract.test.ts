@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { EmptyBodySchema } from "../common.schema";
-import { SelfPrSchema, SelfStatusSchema, SelfUpdateResultSchema, selfContract } from "../index";
+import {
+  EnsureSelfProjectResultSchema,
+  SelfPrSchema,
+  SelfStatusSchema,
+  SelfUpdateResultSchema,
+  selfContract,
+} from "../index";
 
 const okStatus = {
   currentBranch: "main",
@@ -26,6 +32,25 @@ describe("selfContract", () => {
     expect(selfContract.updateSelf.path).toBe("/api/self/update");
     expect(selfContract.updateSelf.responses).toHaveProperty("200");
     expect(selfContract.updateSelf.responses).toHaveProperty("409");
+  });
+
+  it("exposes POST /api/self/project returning 200/409 ({ message } on 409)", () => {
+    expect(selfContract.ensureSelfProject.method).toBe("POST");
+    expect(selfContract.ensureSelfProject.path).toBe("/api/self/project");
+    expect(selfContract.ensureSelfProject.body).toBe(EmptyBodySchema);
+    expect(selfContract.ensureSelfProject.responses).toHaveProperty("200");
+    expect(selfContract.ensureSelfProject.responses).toHaveProperty("409");
+    expect(
+      selfContract.ensureSelfProject.responses[409].safeParse({ message: "no origin" }).success,
+    ).toBe(true);
+  });
+
+  it("status accepts an optional projectId; ensure result requires both fields", () => {
+    expect(SelfStatusSchema.safeParse({ ...okStatus, projectId: "zibby" }).success).toBe(true);
+    expect(
+      EnsureSelfProjectResultSchema.safeParse({ projectId: "zibby", created: true }).success,
+    ).toBe(true);
+    expect(EnsureSelfProjectResultSchema.safeParse({ projectId: "zibby" }).success).toBe(false);
   });
 
   it("updateSelf's empty body IS the shared EmptyBodySchema (T11 dedup, finding #37)", () => {

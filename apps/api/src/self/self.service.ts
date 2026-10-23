@@ -1,5 +1,14 @@
+import * as path from "node:path";
 import { Injectable, Optional } from "@nestjs/common";
-import type { SelfPr, SelfStatus, SelfUpdateResult } from "@zibby/contracts";
+import {
+  type EnsureSelfProjectResult,
+  type SelfPr,
+  type SelfStatus,
+  type SelfUpdateResult,
+  isValidGitRemote,
+} from "@zibby/contracts";
+import { MachineConfigStore } from "../machine/machine-config.store";
+import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { installRoot } from "../shared/data-dir";
 import {
   GIT_NETWORK_TIMEOUT_MS,
@@ -8,6 +17,12 @@ import {
   isGitRepo as isGitRepoAt,
 } from "../shared/git-exec";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
+
+/** The id ZIBBY registers itself under as a project. */
+export const SELF_PROJECT_ID = "zibby";
+
+const SELF_PROJECT_DESC =
+  "ZIBBY itself — self-development. Changes happen in a separate clone and land as draft PRs; the operator merges.";
 
 /** `gh` CLI calls — local process, but network-backed under the hood; bounded
  * generously without hanging the status endpoint on a slow GitHub API. */
@@ -46,6 +61,16 @@ export class SelfUpdateConflictError extends Error {
   }
 }
 
+/** Raised when `ensureSelfProject` can't safely register ZIBBY as a project
+ * (no/invalid origin, a conflicting `zibby` project, clone == install tree).
+ * Maps to a 409 in the controller. */
+export class SelfProjectConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SelfProjectConflictError";
+  }
+}
+
 /**
  * Phase 79 — the ZIBBY install repo's own freshness vs. `origin`, backing the
  * top-bar indicator. Every git/gh call is bounded and soft-fails (logs + a safe
@@ -58,8 +83,25 @@ export class SelfUpdateConflictError extends Error {
 export class SelfService {
   private readonly log?: ScopedLogger;
 
-  constructor(@Optional() logger?: LoggerService) {
+  constructor(
+    @Optional() logger?: LoggerService,
+    @Optional() private readonly projects?: ProjectsStorageService,
+    @Optional() private readonly machineConfig?: MachineConfigStore,
+  ) {
     this.log = logger?.child(SelfService.name);
+  }
+
+  /** The `zibby` project id when that project exists; soft-fails to undefined. */
+  private async selfProjectId(): Promise<string | undefined> {
+    try {
+      const all = (await this.projects?.list()) ?? [];
+      return all.some((p) => p.id === SELF_PROJECT_ID) ? SELF_PROJECT_ID : undefined;
+    } catch (error) {
+      this.log?.warn("self project lookup failed (soft)", {
+        err: error instanceof Error ? error.message : String(error),
+      });
+      return undefined;
+    }
   }
 
   private cwd(): string {
@@ -159,7 +201,9 @@ export class SelfService {
    * returns {@link NOT_A_REPO_STATUS} outright.
    */
   async status(): Promise<SelfStatus> {
-    if (!(await this.isGitRepo())) return NOT_A_REPO_STATUS;
+    const projectId = await this.selfProjectId();
+    const projectField = projectId ? { projectId } : {};
+    if (!(await this.isGitRepo())) return { ...NOT_A_REPO_STATUS, ...projectField };
 
     const fetched = await this.fetchOrigin();
     const [defaultBranch, currentBranch, dirty] = await Promise.all([
@@ -184,7 +228,60 @@ export class SelfService {
       prs,
       ghAvailable,
       ...(fetched ? { fetchedAt: new Date().toISOString() } : {}),
+      ...projectField,
     };
+  }
+
+  /**
+   * Register the ZIBBY install as the project `zibby` so it can edit itself in
+   * a SEPARATE clone (`<cloneRoot>/zibby`, draft PRs) — Builder ≠ Subject.
+   * Idempotent; never writes a `path`, never mutates git state, never
+   * overwrites an existing `zibby` project. Refusals throw
+   * {@link SelfProjectConflictError} (409).
+   */
+  async ensureSelfProject(): Promise<EnsureSelfProjectResult> {
+    if (!this.projects || !this.machineConfig) {
+      throw new Error("SelfService: projects storage / machine config not wired");
+    }
+    const origin = await exec("git", ["remote", "get-url", "origin"], {
+      cwd: this.cwd(),
+      timeout: GIT_TIMEOUT_MS,
+    })
+      .then((r) => r.stdout.trim())
+      .catch(() => "");
+    if (!origin) {
+      throw new SelfProjectConflictError("The ZIBBY install has no `origin` remote to register.");
+    }
+    if (!isValidGitRemote(origin)) {
+      throw new SelfProjectConflictError(
+        `The ZIBBY \`origin\` remote is not a valid git remote: ${origin}`,
+      );
+    }
+
+    const existing = (await this.projects.list()).find((p) => p.id === SELF_PROJECT_ID);
+    if (existing) {
+      if (existing.gitRemote === origin) return { projectId: SELF_PROJECT_ID, created: false };
+      throw new SelfProjectConflictError(
+        `A project "${SELF_PROJECT_ID}" already exists with a different remote (${existing.gitRemote ?? "none"}); not overwriting it.`,
+      );
+    }
+
+    const { cloneRoot } = await this.machineConfig.read();
+    if (path.resolve(cloneRoot, SELF_PROJECT_ID) === path.resolve(this.cwd())) {
+      throw new SelfProjectConflictError(
+        `<cloneRoot>/${SELF_PROJECT_ID} is the running ZIBBY install itself — pick a different clone root so the clone is separate from the builder.`,
+      );
+    }
+
+    await this.projects.create({
+      id: SELF_PROJECT_ID,
+      name: "ZIBBY",
+      desc: SELF_PROJECT_DESC,
+      gitRemote: origin,
+      prOpenMode: "draft",
+    });
+    this.log?.info("self project registered", { id: SELF_PROJECT_ID });
+    return { projectId: SELF_PROJECT_ID, created: true };
   }
 
   /**
