@@ -266,10 +266,10 @@ describe("PrActions address / rebase", () => {
     );
   });
 
-  it("a colleague's behind PR shows Review and Rebase", () => {
+  it("a colleague's behind PR shows Review only", () => {
     renderWithProviders(<PrActions baseLabel="main" pr={pr(7, { ...toReview, behind: true })} />);
     expect(screen.getByTestId(DropDownButtonTestId.Root)).toBeInTheDocument();
-    expect(screen.getByTestId(PrActionsTestId.Rebase)).toBeInTheDocument();
+    expect(screen.queryByTestId(PrActionsTestId.Rebase)).toBeNull();
   });
 
   it("my conflicting PR with threads shows Address and Rebase", () => {

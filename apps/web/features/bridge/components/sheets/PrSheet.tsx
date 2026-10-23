@@ -28,7 +28,7 @@ import {
   useInboxPrThreadsQuery,
   useInboxPrsQuery,
 } from "../../../inbox/queries";
-import { isMerge } from "../../../inbox/state/prActions";
+import { isMerge, isMine } from "../../../inbox/state/prActions";
 import { useElapsedLabel } from "../../../inbox/useElapsedLabel";
 import { diffFiles } from "../../state/diffFiles";
 import {
@@ -103,7 +103,7 @@ function reviewCell(pr: InboxPr): {
 /**
  * PR detail: REVIEW / CHECKS / CHANGES stat cells, STACK breadcrumb, details, CI, files and the
  * diff (`useInboxPrDiffQuery`). Footer: `OPEN ON GITHUB`, the inbox's `PrActionButtons` (code
- * review / address comments / rebase / merge, decided by the shared predicates) and — only when
+ * review for others' PRs; address / fix CI / rebase / merge only on my own, decided by the shared predicates) and — only when
  * the PR is not `ready-to-merge` — `MERGE ON GITHUB` (the note says why in-app merge is off).
  * The PR list carries no description, review comments or per-check list, so those blocks are
  * not shown; CI is the single aggregate row.
@@ -181,7 +181,7 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
         <>
           <PrReviewButton pr={pr} />
           <PrActionButtons baseLabel={base} pr={pr} />
-          {merge ? null : (
+          {!isMine(pr) || merge ? null : (
             <SheetAction href={pr.url} intent="primary" title={t("bridge.sheet.pr.mergeBlocked")}>
               {t("bridge.sheet.pr.mergeOnGithub")}
             </SheetAction>

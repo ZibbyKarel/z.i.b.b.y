@@ -90,7 +90,9 @@ describe("isRebase", () => {
   });
   it("shows alongside fix and review", () => {
     expect(isRebase(pr({ mergeable: false, headRef: "f", unresolvedThreads: 1 }))).toBe(true);
-    expect(isRebase(pr({ bucket: "to-review", behind: true }))).toBe(true);
+  });
+  it("not on someone else's PR", () => {
+    expect(isRebase(pr({ bucket: "to-review", behind: true }))).toBe(false);
   });
   it("not while GitHub is computing", () => {
     expect(isRebase(pr({ mergeable: null }))).toBe(false);
@@ -102,9 +104,11 @@ describe("isFixCi", () => {
   it("offers a failing PR of mine", () => {
     expect(isFixCi(pr(base))).toBe(true);
   });
-  it("offers a colleague's to-review PR; never a fork head", () => {
-    expect(isFixCi(pr({ ...base, bucket: "to-review" }))).toBe(true);
+  it("never a fork head", () => {
     expect(isFixCi(pr({ ...base, headRef: undefined }))).toBe(false);
+  });
+  it("not on a colleague's PR", () => {
+    expect(isFixCi(pr({ ...base, bucket: "to-review" }))).toBe(false);
   });
   it("not for passing / pending / unknown CI", () => {
     for (const ci of ["passing", "pending", "unknown"] as const) {
@@ -126,6 +130,9 @@ describe("isMerge", () => {
   it("is the ready-to-merge section", () => {
     expect(isMerge(pr({ section: "ready-to-merge" }))).toBe(true);
     expect(isMerge(pr({}))).toBe(false);
+  });
+  it("only my ready-to-merge PR", () => {
+    expect(isMerge(pr({ bucket: "to-review", section: "ready-to-merge" }))).toBe(false);
   });
 });
 

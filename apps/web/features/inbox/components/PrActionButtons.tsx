@@ -64,7 +64,7 @@ export interface PrActionButtonsProps {
 }
 
 /**
- * A PR card's action row, each an explicit operator click:
+ * A PR card's action row, each an explicit operator click (only my PRs get anything but Review):
  * - a review request → split "Review · <mode>": the primary click runs the selected mode
  *   (quick / thorough = `tested` / thorough + browser), the menu only picks the mode
  *   (remembered per PR url for the session). Posting to GitHub waits on a Tier-3 approval;

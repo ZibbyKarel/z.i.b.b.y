@@ -30,18 +30,21 @@ export const hasThreadsToAddress = (pr: InboxPr) =>
   pr.unresolvedThreads === undefined
     ? pr.blocker === "changes-requested" // unknown count: only a changes-requested PR still offers it
     : pr.unresolvedThreads > 0;
+/** Write actions (fix / rebase / fix-CI / merge) are for my own PRs; colleagues' PRs get review only. */
+export const isMine = (pr: InboxPr) => pr.bucket === "mine";
 export const isFix = (pr: InboxPr) =>
   !isReview(pr) &&
-  pr.bucket === "mine" &&
+  isMine(pr) &&
   pr.headRef !== undefined &&
   hasThreadsToAddress(pr) &&
   !handled(pr, pr.addressComments);
-/** todo-11 — offered on any outdated PR (conflicting or behind its base), alongside Review/Address. */
-export const isRebase = (pr: InboxPr) => pr.mergeable === false || pr.behind === true;
-/** Offered on any PR with failing checks (never a fork head); independent of Address/Rebase. */
+/** todo-11 — offered on my outdated PR (conflicting or behind its base), alongside Address. */
+export const isRebase = (pr: InboxPr) =>
+  isMine(pr) && (pr.mergeable === false || pr.behind === true);
+/** Offered on my PR with failing checks (never a fork head); independent of Address/Rebase. */
 export const isFixCi = (pr: InboxPr) =>
-  pr.ci === "failing" && pr.headRef !== undefined && !handled(pr, pr.fixCi);
-export const isMerge = (pr: InboxPr) => pr.section === "ready-to-merge";
+  isMine(pr) && pr.ci === "failing" && pr.headRef !== undefined && !handled(pr, pr.fixCi);
+export const isMerge = (pr: InboxPr) => isMine(pr) && pr.section === "ready-to-merge";
 
 /** The PR's ZIBBY runs, address → fix-ci → rebase → review (the order the label prefers). */
 export function runsOf(pr: InboxPr): Run[] {

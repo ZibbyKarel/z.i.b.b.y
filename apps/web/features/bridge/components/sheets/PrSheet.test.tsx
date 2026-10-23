@@ -99,6 +99,27 @@ describe("PrSheet action buttons", () => {
     expect(screen.queryByTestId(PrActionsTestId.Address)).toBeNull();
   });
 
+  it("shows only review actions on someone else's PR", () => {
+    show(
+      pr(20, {
+        bucket: "to-review",
+        ci: "failing",
+        behind: true,
+        section: "ready-to-merge",
+        headRef: "f",
+      }),
+    );
+    for (const id of [
+      PrActionsTestId.Rebase,
+      PrActionsTestId.FixCi,
+      PrActionsTestId.Merge,
+      PrActionsTestId.Address,
+    ])
+      expect(screen.queryByTestId(id)).toBeNull();
+    expect(screen.getByTestId(PrActionsTestId.Review)).toBeInTheDocument();
+    expect(screen.queryByText(/Merge na GitHubu/)).toBeNull();
+  });
+
   it("offers the in-app merge only when ready-to-merge; otherwise only MERGE ON GITHUB", () => {
     const { unmount } = show(
       pr(5, { section: "ready-to-merge", blocker: "ready-to-merge", review: "approved" }),
