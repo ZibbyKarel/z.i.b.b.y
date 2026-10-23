@@ -184,7 +184,8 @@ describe("runs", () => {
       id: "t1",
       tone: "working",
       step: "delivery · coder",
-      pct: 42,
+      pct: 0,
+      stages: { done: 0, total: 1 },
       issue: "ZB-9",
     });
     expect(b).toMatchObject({
@@ -194,6 +195,56 @@ describe("runs", () => {
       issue: null,
       step: "Delivery · workflow",
     });
+  });
+
+  const done = (phaseId: string, attempt = 1, status = "done") => ({
+    phaseId,
+    runId: `s-${phaseId}-${attempt}`,
+    attempt,
+    status,
+  });
+  const phases = (...ids: string[]) => new Map([["delivery", ids]]);
+
+  it("workflow pct = done phases / defined phases", () => {
+    const [a] = runRows(
+      "runs",
+      [run({ currentStage: "coder", stageRuns: [done("architect")] } as Partial<RunView>)],
+      phases("architect", "coder", "review", "test"),
+    );
+    expect(a).toMatchObject({ stages: { done: 1, total: 4 }, pct: 25 });
+  });
+
+  it("0 stages -> null", () => {
+    const [a] = runRows("runs", [run({ currentStage: null })]);
+    expect(a).toMatchObject({ stages: null, pct: null });
+  });
+
+  it("all phases done while still running -> 100", () => {
+    const [a] = runRows(
+      "runs",
+      [run({ currentStage: null, stageRuns: [done("a"), done("b")] } as Partial<RunView>)],
+      phases("a", "b"),
+    );
+    expect(a?.pct).toBe(100);
+  });
+
+  it("a retried phase counts once", () => {
+    const [a] = runRows(
+      "runs",
+      [
+        run({
+          currentStage: null,
+          stageRuns: [done("coder"), done("review", 1, "error"), done("review", 2)],
+        } as Partial<RunView>),
+      ],
+      phases("coder", "review"),
+    );
+    expect(a?.stages).toEqual({ done: 2, total: 2 });
+  });
+
+  it("single-agent run is indeterminate even with pct", () => {
+    const [a] = runRows("runs", [run({ kind: "agent", pct: 40 })]);
+    expect(a).toMatchObject({ stages: null, pct: null });
   });
 });
 

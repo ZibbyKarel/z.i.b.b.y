@@ -23,6 +23,7 @@ import {
   zibbyStatus,
 } from "../../inbox/inbox";
 import { type RunView, runTitle } from "../../runs/run";
+import { buildPhaseNodes } from "../../runs/stagePhases";
 import { runStateTone } from "../../runs/run";
 import { type PrStatusKey, prStatusKey } from "./prStatus";
 
@@ -243,7 +244,9 @@ export interface RunRowVm {
   /** `PROCESSOR · STAGE`. */
   step: string;
   tone: StateTone;
-  /** 0-100, or null when the run reports no progress (workflow / goal / queued). */
+  /** Completed / total workflow phases — null when the run has no phase list. */
+  stages: RunStages | null;
+  /** 0-100 stage percentage for workflows; null = indeterminate. */
   pct: number | null;
   /** Roadmap item label (`ZB-12`) — null when the run has no issue. */
   issue: string | null;
@@ -251,8 +254,31 @@ export interface RunRowVm {
   project: string;
 }
 
-export function runRows(widgetId: string, runs: RunView[]): RunRowVm[] {
+export interface RunStages {
+  done: number;
+  total: number;
+}
+
+/** Phases done / total, counted like the run-detail stage rail; null for non-workflows or 0 phases. */
+export function runStages(run: RunView, definedPhaseIds: string[] | undefined): RunStages | null {
+  if (run.kind !== "workflow") return null;
+  const nodes = buildPhaseNodes(
+    run.stageRuns,
+    run.currentStage,
+    run.status === "running",
+    definedPhaseIds,
+  );
+  if (nodes.length === 0) return null;
+  return { done: nodes.filter((n) => n.main?.status === "done").length, total: nodes.length };
+}
+
+export function runRows(
+  widgetId: string,
+  runs: RunView[],
+  phasesByWorkflow?: ReadonlyMap<string, string[]>,
+): RunRowVm[] {
   return runs.map((r) => {
+    const stages = runStages(r, phasesByWorkflow?.get(r.owner));
     const stage = r.currentStage ?? r.processor?.kind ?? r.kind;
     return {
       key: rowKey(widgetId, r.runId),
@@ -261,7 +287,8 @@ export function runRows(widgetId: string, runs: RunView[]): RunRowVm[] {
       title: runTitle(r),
       step: [r.processor?.name ?? r.owner, stage].filter(Boolean).join(" · "),
       tone: normalizeStateTone(runStateTone(r.status) ?? "idle"),
-      pct: r.pct === null ? null : Math.round(r.pct),
+      stages,
+      pct: stages ? Math.round((stages.done / stages.total) * 100) : null,
       issue: r.roadmapItemLabel ?? null,
       project: r.projectId ?? r.project,
     };
