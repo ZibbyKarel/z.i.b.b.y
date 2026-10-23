@@ -3105,7 +3105,12 @@
         },
         "you": "Ty · {wait}",
         "on": "Na {base}",
-        "waitsOn": "· Čeká na {prs}"
+        "waitsOn": "· Čeká na {prs}",
+        "section": {
+          "mine": "Moje",
+          "toReview": "K review",
+          "toggle": "Sbalit / rozbalit {title}"
+        }
       },
       "runs": {
         "colTask": "Úkol · krok",
@@ -3152,13 +3157,12 @@
         "desc": "PR od agentů i vaše, včetně stacků"
       },
       "runs": {
-        "label": "Právě běží a ukončené",
+        "label": "Běhy",
         "desc": "Aktivní běhy a posledních 10 ukončených"
       }
     },
     "sheet": {
       "close": "Zavřít panel",
-      "hint": "J / K · ESC",
       "kind": {
         "issue": "Issue",
         "task": "Úkol",
@@ -3197,7 +3201,6 @@
         "from": "Z {source}",
         "noDepartment": "Bez oddělení",
         "noProject": "Bez projektu",
-        "open": "Otevřít úkol ↗",
         "openApproval": "Otevřít schválení ↗"
       },
       "pr": {

@@ -235,16 +235,20 @@ describe("PrsWidget", () => {
     const props = setup({ widget: widget("w-prs", "prs") });
     renderWithProviders(<PrsWidget {...props} />);
 
+    const headers = screen.getAllByTestId(RowGroupHeaderTestId.Root);
+    expect(headers).toHaveLength(2); // own PRs first, review requests in their own section
+    expect(headers[0]).toHaveTextContent("Moje");
+    expect(headers[1]).toHaveTextContent("K review");
     const rows = screen.getAllByTestId(BoardRowTestId.Root);
     expect(rows).toHaveLength(3);
-    expect(rows[0]).toHaveAttribute("data-rk", "w-prs:https://github.com/o/r/pull/3"); // review request first
-    expect(rows[0]).toHaveTextContent("Žádost o review");
-    expect(rows[0]).toHaveTextContent("jana");
+    expect(rows[2]).toHaveAttribute("data-rk", "w-prs:https://github.com/o/r/pull/3");
+    expect(rows[2]).toHaveTextContent("Žádost o review");
+    expect(rows[2]).toHaveTextContent("jana");
     const kid = screen.getByText("PR 2").closest("button") as HTMLElement;
     expect(kid).toHaveTextContent("CI selhává");
     expect(kid).toHaveTextContent("Na #1");
     expect(kid).toHaveTextContent("Čeká na #1");
-    expect(within(rows[0] as HTMLElement).queryAllByRole("button")).toHaveLength(0); // no action buttons
+    expect(within(rows[2] as HTMLElement).queryAllByRole("button")).toHaveLength(0); // no action buttons
 
     await userEvent.click(kid);
     expect(props.onOpen).toHaveBeenCalledWith({
@@ -254,7 +258,7 @@ describe("PrsWidget", () => {
       key: "w-prs:https://github.com/o/r/pull/2",
     });
     expect(props.onCountChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({ count: 3, you: 2 }),
+      expect.objectContaining({ count: 3, you: 0 }),
     );
   });
 
@@ -341,7 +345,7 @@ describe("RunsWidget", () => {
     expect(row).toHaveTextContent("Pracuje");
     expect(row).toHaveTextContent("40%");
     expect(row).toHaveTextContent("ZB-9 ↗");
-    expect(screen.getByTestId(BoardRowTestId.ColumnHeader)).toHaveTextContent("Úkol · krok");
+    expect(screen.queryByTestId(BoardRowTestId.ColumnHeader)).toBeNull();
     await userEvent.click(row);
     expect(props.onOpen).toHaveBeenCalledWith({
       kind: "run",

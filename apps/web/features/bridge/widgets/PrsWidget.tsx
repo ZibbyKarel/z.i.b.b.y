@@ -1,6 +1,6 @@
 "use client";
 
-import { BoardLine, BoardRow, BoardTag, BoardText, IndentRail } from "@zibby/design-system";
+import { BoardLine, BoardRow, BoardText, IndentRail, RowGroupHeader } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { Fragment, useMemo } from "react";
 import { useNow } from "../../../hooks/useNow";
@@ -23,6 +23,8 @@ export function PrsWidget({
   selection,
   onOpen,
   sheetSide,
+  epicClosed,
+  onEpicToggle,
 }: BridgeWidgetProps) {
   const t = useTranslations("bridge.widgets.prs");
   const now = useNow(60_000);
@@ -38,7 +40,7 @@ export function PrsWidget({
     {
       loading: prsQuery.isPending,
       count: prsQuery.isPending ? undefined : visible.length,
-      you: groups.reduce((n, g) => n + [g.root, ...g.kids].filter((r) => r.needsYou).length, 0),
+      you: 0,
     },
     { onEmptyChange, onCountChange },
   );
@@ -46,7 +48,6 @@ export function PrsWidget({
   const card = (r: PrRowVm) => (
     <BoardRow
       key={r.key}
-      needsYou={!!r.needsYou}
       onClick={() => onOpen({ kind: "pr", id: r.id, widgetId: widget.id, key: r.key })}
       padding="pr"
       rowKey={r.key}
@@ -57,7 +58,6 @@ export function PrsWidget({
       <BoardLine baseline gap="8">
         <BoardText kind="prNum">{r.number}</BoardText>
         <BoardText kind="prTitle">{r.title}</BoardText>
-        {r.needsYou ? <BoardTag variant="you">{t("you", { wait: r.needsYou })}</BoardTag> : null}
       </BoardLine>
       <BoardLine wrap gap="6">
         <BoardText kind="prMeta">{r.meta}</BoardText>
@@ -83,12 +83,36 @@ export function PrsWidget({
 
   return (
     <>
-      {groups.map((g) => (
-        <Fragment key={g.root.key}>
-          {card(g.root)}
-          {g.kids.length > 0 ? <IndentRail>{g.kids.map(card)}</IndentRail> : null}
-        </Fragment>
-      ))}
+      {groups.map((g, i) => {
+        const first = i === 0 || g.mine !== groups[i - 1]?.mine;
+        const sectionKey = `${widget.id}:${g.mine ? "mine" : "review"}`;
+        const closed = !!epicClosed[sectionKey];
+        const title = t(g.mine ? "section.mine" : "section.toReview");
+        return (
+          <Fragment key={g.root.key}>
+            {first ? (
+              <RowGroupHeader
+                closed={closed}
+                count={String(
+                  groups
+                    .filter((x) => x.mine === g.mine)
+                    .reduce((n, x) => n + 1 + x.kids.length, 0),
+                )}
+                groupKey=""
+                label={t("section.toggle", { title })}
+                onToggle={() => onEpicToggle(sectionKey, !closed)}
+                title={title}
+              />
+            ) : null}
+            {closed ? null : (
+              <>
+                {card(g.root)}
+                {g.kids.length > 0 ? <IndentRail>{g.kids.map(card)}</IndentRail> : null}
+              </>
+            )}
+          </Fragment>
+        );
+      })}
     </>
   );
 }

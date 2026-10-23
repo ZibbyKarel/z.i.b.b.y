@@ -82,13 +82,7 @@ describe("RunLiveFeed", () => {
     )
       .map((el) => el.getAttribute("data-testid"))
       .filter((id) => id !== RunLiveFeedTestId.Delivery);
-    expect(ids).toEqual([
-      RunLiveFeedTestId.Divider,
-      RunLiveFeedTestId.Divider,
-      RunLiveFeedTestId.Agent,
-      RunLiveFeedTestId.You,
-      RunLiveFeedTestId.You,
-    ]);
+    expect(ids).toEqual([RunLiveFeedTestId.Agent, RunLiveFeedTestId.You, RunLiveFeedTestId.You]);
   });
 
   it("captions delivery: delivered names the stage, undelivered says NOT DELIVERED", () => {

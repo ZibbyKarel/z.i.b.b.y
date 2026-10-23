@@ -26,6 +26,8 @@ export interface AnchoredSheetProps {
   /** Right-aligned hint, e.g. `J / K · ESC`. */
   hint?: string;
   title: string;
+  /** Makes the title a link-style button (e.g. open the full page of what the sheet shows). */
+  onTitleClick?: () => void;
   /** Meta chips under the title. */
   chips?: readonly string[];
   /** Colour of the 4px top border. */
@@ -61,6 +63,7 @@ export function AnchoredSheet({
   stateLabel,
   hint,
   title,
+  onTitleClick,
   chips = [],
   tone = "neutral",
   onClose,
@@ -133,7 +136,17 @@ export function AnchoredSheet({
             className="text-[22px] font-medium leading-[1.2] tracking-[-.01em] [text-wrap:pretty]"
             data-testid={AnchoredSheetTestId.Title}
           >
-            {title}
+            {onTitleClick ? (
+              <button
+                className="cursor-pointer bg-transparent p-0 text-left font-[inherit] text-[length:inherit] leading-[inherit] tracking-[inherit] hover:underline"
+                onClick={onTitleClick}
+                type="button"
+              >
+                {title}
+              </button>
+            ) : (
+              title
+            )}
           </div>
           {chips.length > 0 ? (
             <div className="flex flex-wrap gap-[6px]">

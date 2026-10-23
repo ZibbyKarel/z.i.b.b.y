@@ -13,7 +13,7 @@ export const findRow = (root: ParentNode, key: string) =>
   [...root.querySelectorAll<HTMLElement>("[data-rk]")].find((el) => el.dataset.rk === key) ?? null;
 
 /**
- * J / ArrowDown → next row, K / ArrowUp → previous row, within the selected row's widget.
+ * ArrowDown → next row, ArrowUp → previous row, within the selected row's widget.
  * Rows are the `[data-rk]` elements inside the widget frame (DOM order); the neighbour is
  * opened by clicking it — a row's click is what opens the sheet, so selection stays the
  * widgets' business. Ignored while typing and at the ends (no wrap).
@@ -27,8 +27,7 @@ export function useRowKeyNav(
     if (!selection) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
-      const d =
-        e.key === "j" || e.key === "ArrowDown" ? 1 : e.key === "k" || e.key === "ArrowUp" ? -1 : 0;
+      const d = e.key === "ArrowDown" ? 1 : e.key === "ArrowUp" ? -1 : 0;
       if (!d) return;
       const cur = root.current ? findRow(root.current, selection.key) : null;
       const frame = cur?.closest(`[data-testid="${WidgetFrameTestId.Root}"]`);

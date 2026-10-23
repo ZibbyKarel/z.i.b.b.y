@@ -1,7 +1,7 @@
 import { renderWithProviders as render, screen } from "../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { OPERATOR_QUESTION_ACTION } from "@zibby/contracts";
-import { SegmentedControlTestId } from "@zibby/design-system";
+import { TabsTestId } from "@zibby/design-system";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DashboardApproval } from "../../approvals/approval";
 import type { RunView } from "../run";
@@ -119,7 +119,7 @@ describe("RunDetail", () => {
 
   it("switching to OUTPUT renders the output view", async () => {
     render(<RunDetail run={workflowRun} />);
-    await userEvent.click(screen.getByTestId(`${SegmentedControlTestId.Item}-output`));
+    await userEvent.click(screen.getByTestId(`${TabsTestId.Tab}-output`));
     expect(screen.getByTestId(RunOutputViewTestId.Root)).toBeInTheDocument();
     expect(screen.queryByTestId(RunLiveFeedTestId.Root)).not.toBeInTheDocument();
   });

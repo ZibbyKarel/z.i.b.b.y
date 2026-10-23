@@ -43,8 +43,10 @@ export interface RunDetailHeaderProps {
   agent?: { id: string; name: string; role?: string; state: StateTone };
   /** The `RunDetailActions` slot, right of the title block. */
   actions: ReactNode;
-  /** Inside a detail sheet: the sheet header already carries breadcrumb and title, metrics fold to 3 columns. */
+  /** Inside a detail sheet: the sheet header already carries breadcrumb and title, metrics fold to 3 columns, no progress hairline. */
   compact?: boolean;
+  /** Rendered under the metrics strip (the sheet's approval banner). */
+  afterMetrics?: ReactNode;
 }
 
 function Sep() {
@@ -88,6 +90,7 @@ export function RunDetailHeader({
   agent,
   actions,
   compact,
+  afterMetrics,
 }: RunDetailHeaderProps) {
   const t = useTranslations("runs");
   const router = useRouter();
@@ -182,7 +185,7 @@ export function RunDetailHeader({
               ) : (
                 <AssignProject runId={run.runId} />
               )}
-              {run.kind === "workflow" && (
+              {run.kind === "workflow" && !compact && (
                 <>
                   <Sep />
                   <Typography as="span" type="label" variant="secondary">
@@ -195,19 +198,23 @@ export function RunDetailHeader({
           {actions}
         </Stack>
       </Container>
-      <Progress
-        data-testid={RunDetailHeaderTestId.Progress}
-        height="25"
-        label={t("detail.metric.progress")}
-        tone={mode === "running" ? "run" : "accent"}
-        value={progressPct}
-      />
+      {/* In the sheet the PROGRESS metric already says it. */}
+      {!compact && (
+        <Progress
+          data-testid={RunDetailHeaderTestId.Progress}
+          height="25"
+          label={t("detail.metric.progress")}
+          tone={mode === "running" ? "run" : "accent"}
+          value={progressPct}
+        />
+      )}
       <Container data-testid={RunDetailHeaderTestId.Metrics} padding={["0", "300"]}>
         <MetricStrip
           columns={compact ? 3 : 6}
           items={metrics.map((m) => ({ label: t(`detail.metric.${m.key}`), value: m.value }))}
         />
       </Container>
+      {afterMetrics}
     </Stack>
   );
 }

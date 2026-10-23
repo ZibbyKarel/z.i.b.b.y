@@ -190,7 +190,6 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
       }
       footerNote={t(`bridge.sheet.pr.note.${NOTE_KEY[key]}`)}
       footerStart={<SheetAction href={pr.url}>{t("bridge.sheet.pr.openGithub")}</SheetAction>}
-      hint={t("bridge.sheet.hint")}
       kind={`${t("bridge.sheet.kind.pr")} · #${pr.number}`}
       onClose={onClose}
       stateLabel={status.label}

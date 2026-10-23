@@ -103,30 +103,34 @@ describe("DetailSheet", () => {
     expect(anchor).toMatchObject({ side: "l", left: 0, width: 701, eL: 699 });
   });
 
-  it("J / ArrowDown open the next row, K / ArrowUp the previous, within the widget only", () => {
+  it("ArrowDown / ArrowUp open the next / previous row, within the widget only", () => {
     render(<Harness initial="a" />);
     stubRects();
     fireEvent.click(screen.getByTestId("row-a"));
     expect(screen.getByTestId("issue-sheet").dataset.id).toBe("a");
-    fireEvent.keyDown(window, { key: "j" });
+    fireEvent.keyDown(window, { key: "ArrowDown" });
     expect(screen.getByTestId("issue-sheet").dataset.id).toBe("b");
     fireEvent.keyDown(window, { key: "ArrowDown" });
     expect(screen.getByTestId("issue-sheet").dataset.id).toBe("c");
-    fireEvent.keyDown(window, { key: "j" }); // end of the widget: stays (never the next widget's row)
+    fireEvent.keyDown(window, { key: "ArrowDown" }); // end of the widget: stays (never the next widget's row)
     expect(screen.getByTestId("issue-sheet").dataset.id).toBe("c");
-    fireEvent.keyDown(window, { key: "k" });
+    fireEvent.keyDown(window, { key: "ArrowUp" });
     expect(screen.getByTestId("issue-sheet").dataset.id).toBe("b");
     fireEvent.keyDown(window, { key: "ArrowUp" });
     expect(screen.getByTestId("issue-sheet").dataset.id).toBe("a");
+    // J / K no longer navigate
+    fireEvent.keyDown(window, { key: "j" });
+    fireEvent.keyDown(window, { key: "k" });
+    expect(screen.getByTestId("issue-sheet").dataset.id).toBe("a");
   });
 
-  it("ignores J / K while typing in a textarea, and does nothing with no selection", () => {
+  it("ignores arrows while typing in a textarea, and does nothing with no selection", () => {
     render(<Harness />);
     stubRects();
-    fireEvent.keyDown(window, { key: "j" });
+    fireEvent.keyDown(window, { key: "ArrowDown" });
     expect(screen.queryByTestId("issue-sheet")).toBeNull();
     fireEvent.click(screen.getByTestId("row-a"));
-    fireEvent.keyDown(screen.getByTestId("ta"), { key: "j" });
+    fireEvent.keyDown(screen.getByTestId("ta"), { key: "ArrowDown" });
     expect(screen.getByTestId("issue-sheet").dataset.id).toBe("a");
   });
 

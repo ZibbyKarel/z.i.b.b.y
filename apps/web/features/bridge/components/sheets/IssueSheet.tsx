@@ -97,7 +97,6 @@ export function IssueSheet({ id, anchor, onClose }: SheetProps) {
           </SheetAction>
         ) : null
       }
-      hint={t("bridge.sheet.hint")}
       kind={`${t("bridge.sheet.kind.issue")} · ${source} · ${itemKey(item)}`}
       onClose={onClose}
       stateLabel={stateLabel}

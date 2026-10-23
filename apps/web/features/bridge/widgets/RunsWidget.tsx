@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  BoardColumnHeader,
   BoardLine,
   BoardRow,
   BoardText,
@@ -32,7 +31,7 @@ const PROGRESS_TONE: Record<string, ProgressBarTone> = {
 const FINISHED_LIMIT = 10;
 
 /**
- * Running & finished: the active live runs (everything not waiting - those are the queue
+ * Runs (running & finished): the active live runs (everything not waiting - those are the queue
  * widget's) as TASK · STEP / PROGRESS / ISSUE rows, then the last 10 finished runs with a
  * full bar in their outcome colour and their age. A group header is omitted when empty. Every row
  * opens the run sheet (approval, phase output, artifacts).
@@ -102,13 +101,6 @@ export function RunsWidget({
 
   return (
     <>
-      <BoardColumnHeader columns="run">
-        <BoardText kind="colHead">{t("colTask")}</BoardText>
-        <BoardText kind="colHead">{t("colProgress")}</BoardText>
-        <BoardText align="right" kind="colHead">
-          {t("colIssue")}
-        </BoardText>
-      </BoardColumnHeader>
       {header("active", active.length)}
       {!closed["active"] &&
         active.map((r) => (

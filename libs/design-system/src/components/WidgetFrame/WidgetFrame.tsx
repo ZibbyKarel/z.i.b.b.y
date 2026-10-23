@@ -157,8 +157,10 @@ export function WidgetFrame({
     >
       <header
         className={cn(
-          "box-content flex h-[var(--bridge-head-h)] flex-none select-none items-center gap-[8px] border-b pl-[var(--bridge-head-px)] pr-[10px] font-sans text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap",
-          open ? "border-line" : "border-transparent",
+          "flex select-none items-center gap-[8px] pl-[var(--bridge-head-px)] pr-[10px] font-sans text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap",
+          open
+            ? "box-content h-[var(--bridge-head-h)] flex-none border-b border-line"
+            : "box-border h-[calc(var(--bridge-rh)-2px)] flex-none",
           editing ? "cursor-move" : "cursor-default",
         )}
         data-testid={WidgetFrameTestId.Header}

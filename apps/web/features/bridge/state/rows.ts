@@ -171,6 +171,8 @@ export interface PrRowVm {
 }
 
 export interface PrGroupVm {
+  /** Own PRs (`bucket === "mine"`) vs PRs waiting on the operator's review. */
+  mine: boolean;
   root: PrRowVm;
   kids: PrRowVm[];
 }
@@ -219,9 +221,12 @@ export function prGroups(
 ): { groups: PrGroupVm[]; visible: InboxPr[] } {
   const visible = all.filter((p) => passesFilters(filters, p));
   const groups = groupPrStacks(all, visible).map((g) => ({
+    mine: g.root.bucket === "mine",
     root: prRow(widgetId, g.root, all, ago),
     kids: g.kids.map((k) => prRow(widgetId, k, all, ago)),
   }));
+  // Own PRs first; the sort is stable, so the urgency order within each section is kept.
+  groups.sort((a, b) => Number(b.mine) - Number(a.mine));
   return { groups, visible };
 }
 

@@ -16,8 +16,8 @@ export interface RowGroupHeaderProps {
   groupKey: string;
   /** `done/total` text. */
   count: string;
-  /** 0–100 for the 2px ink progress bar. */
-  progress: number;
+  /** 0–100 for the 2px ink progress bar; omit for a group without progress (the column stays empty). */
+  progress?: number;
   closed: boolean;
   onToggle: () => void;
   /** Accessible name of the toggle. */
@@ -55,7 +55,7 @@ export function RowGroupHeader({
       <span className="flex" data-testid={RowGroupHeaderTestId.Title}>
         <BoardText kind="title">{title}</BoardText>
       </span>
-      <Progress height="25" tone="ink" value={progress} />
+      {progress === undefined ? <span /> : <Progress height="25" tone="ink" value={progress} />}
       <span className="flex" data-testid={RowGroupHeaderTestId.Count}>
         <BoardText tabular kind="meta">
           {count}

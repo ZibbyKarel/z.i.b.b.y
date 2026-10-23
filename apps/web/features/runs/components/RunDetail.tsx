@@ -3,9 +3,11 @@
 import {
   Container,
   RailSplit,
-  SegmentedControl,
   Stack,
   StatusDot,
+  Tab,
+  TabList,
+  Tabs,
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
@@ -45,7 +47,7 @@ export interface RunDetailProps {
   run: RunView;
   /** Hosted in a detail sheet (the Bridge): compact header, stacked rail — same content as the page. */
   embedded?: boolean;
-  /** Rendered right under the approval banner, above the header (the sheet's gated-phase output). */
+  /** Rendered under the approval banner (the sheet's gated-phase output). */
   children?: ReactNode;
 }
 
@@ -53,7 +55,11 @@ type View = "live" | "input" | "output";
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
-/** Run detail: header + metrics, then the stage rail beside the LIVE / INPUT / OUTPUT body and the composer. */
+/**
+ * Run detail: status row + metrics, then the stage rail beside the LIVE / INPUT / OUTPUT body and
+ * the composer. Embedded (sheet): status row, metrics, approval card (with the gated phase's output inside), then the tabs panel
+ * with the rail as the LIVE tab's sidebar.
+ */
 export function RunDetail({ run, embedded, children }: RunDetailProps) {
   const t = useTranslations("runs.detail");
   const router = useRouter();
@@ -139,9 +145,12 @@ export function RunDetail({ run, embedded, children }: RunDetailProps) {
         }
       : undefined;
 
+  // The sheet's status row already carries the state, so its LIVE tab drops the meta.
   const viewMeta =
     view === "live"
-      ? t("view.metaLive", { state: t(`mode.${mode}`), n: pad2(items.length) })
+      ? embedded
+        ? null
+        : t("view.metaLive", { state: t(`mode.${mode}`), n: pad2(items.length) })
       : view === "input"
         ? t("view.metaInput", {
             task: run.taskId ?? run.runId,
@@ -149,19 +158,24 @@ export function RunDetail({ run, embedded, children }: RunDetailProps) {
           })
         : null;
 
+  const banner =
+    mode === "approval" && approval ? (
+      <Container padding={embedded ? ["200", "300", "0", "300"] : ["250", "300", "0", "300"]}>
+        <RunApprovalBanner
+          approval={approval}
+          diffstat={run.diffstat}
+          onToggleRevise={() => setReviseOpen((o) => !o)}
+          reviseOpen={reviseOpen}
+        >
+          {embedded ? children : null}
+        </RunApprovalBanner>
+      </Container>
+    ) : null;
+
   return (
     <Stack data-testid={RunDetailTestId.Root} gap="0">
-      {mode === "approval" && approval && (
-        <Container padding={["250", "300", "0", "300"]}>
-          <RunApprovalBanner
-            approval={approval}
-            diffstat={run.diffstat}
-            onToggleRevise={() => setReviseOpen((o) => !o)}
-            reviseOpen={reviseOpen}
-          />
-        </Container>
-      )}
-      {children}
+      {!embedded && banner}
+      {!embedded && children}
       <RunDetailHeader
         actions={
           <RunDetailActions
@@ -177,6 +191,14 @@ export function RunDetail({ run, embedded, children }: RunDetailProps) {
             pending={actions.stopping || actions.pausing || actions.resuming || actions.deleting}
             run={run}
           />
+        }
+        afterMetrics={
+          embedded ? (
+            <>
+              {banner}
+              {!banner && children}
+            </>
+          ) : undefined
         }
         agent={agent}
         compact={embedded}
@@ -201,33 +223,37 @@ export function RunDetail({ run, embedded, children }: RunDetailProps) {
           />
         }
         rail={
-          <RunStageRail
-            onOpenFolder={openFolder}
-            onSelect={setSelectedPhaseId}
-            rows={rail}
-            run={run}
-            selectedPhaseId={selected?.phaseId ?? null}
-          />
+          // In the sheet the phases are a sidebar of the LIVE tab only; the tabs stay put above it.
+          embedded && view !== "live" ? undefined : (
+            <RunStageRail
+              onSelect={setSelectedPhaseId}
+              rows={rail}
+              run={run}
+              selectedPhaseId={selected?.phaseId ?? null}
+            />
+          )
         }
         stacked={embedded}
         toolbar={
           <Stack align="center" direction="row" gap="150" justify="between">
             <Stack data-testid={RunDetailTestId.ViewSwitch}>
-              <SegmentedControl
-                ariaLabel={t("view.live")}
-                items={[
-                  { value: "live", label: t("view.live"), dot: MODE_TONE[mode] },
-                  { value: "input", label: t("view.input") },
-                  {
-                    value: "output",
-                    label: t("view.output"),
-                    ...(mode === "done" && { dot: "done" as const }),
-                  },
-                ]}
-                onChange={(v) => setView(v as View)}
-                size="sm"
-                value={view}
-              />
+              <Tabs onValueChange={(v) => setView(v as View)} value={view}>
+                <TabList>
+                  <Tab value="live">
+                    <Stack inline align="center" direction="row" gap="75">
+                      <StatusDot size="75" tone={MODE_TONE[mode]} />
+                      {t("view.live")}
+                    </Stack>
+                  </Tab>
+                  <Tab value="input">{t("view.input")}</Tab>
+                  <Tab value="output">
+                    <Stack inline align="center" direction="row" gap="75">
+                      {mode === "done" && <StatusDot size="75" tone="done" />}
+                      {t("view.output")}
+                    </Stack>
+                  </Tab>
+                </TabList>
+              </Tabs>
             </Stack>
             {viewMeta && (
               <Stack inline align="center" direction="row" gap="75">

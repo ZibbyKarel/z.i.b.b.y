@@ -114,8 +114,13 @@
       "removed": [
         "REVIEW"
       ],
-      "collapsed": {},
-      "epicClosed": {}
+      "collapsed": {
+        "prs": false,
+        "issues": false
+      },
+      "epicClosed": {
+        "shoptet-dev-rel-jira-cz3tdr1-592": false
+      }
     }
   }
 }

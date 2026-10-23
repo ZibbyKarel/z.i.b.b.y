@@ -44,17 +44,16 @@ const rows = [
   row("phase3", { n: "03" }),
 ];
 
-function renderRail(over: Partial<RunView> = {}, onSelect = vi.fn(), onOpenFolder = vi.fn()) {
+function renderRail(over: Partial<RunView> = {}, onSelect = vi.fn()) {
   render(
     <RunStageRail
-      onOpenFolder={onOpenFolder}
       onSelect={onSelect}
       rows={rows}
       run={{ ...run, ...over }}
       selectedPhaseId={null}
     />,
   );
-  return { onSelect, onOpenFolder };
+  return { onSelect };
 }
 
 const stage = (id: string) => screen.getByTestId(`${RunStageRailTestId.Stage}-${id}`);
@@ -105,16 +104,5 @@ describe("RunStageRail", () => {
       },
     });
     expect(screen.getByTestId(RunStageRailTestId.Routed)).toHaveTextContent("Delivery · 91%");
-  });
-
-  it("open folder fires for workflow runs, absent for agent runs", async () => {
-    const { onOpenFolder } = renderRail();
-    await userEvent.click(screen.getByTestId(RunStageRailTestId.OpenFolder));
-    expect(onOpenFolder).toHaveBeenCalledOnce();
-  });
-
-  it("agent kind → no open folder", () => {
-    renderRail({ kind: "agent" });
-    expect(screen.queryByTestId(RunStageRailTestId.OpenFolder)).not.toBeInTheDocument();
   });
 });

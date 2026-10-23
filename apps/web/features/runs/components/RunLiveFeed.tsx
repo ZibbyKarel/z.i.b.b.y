@@ -1,18 +1,14 @@
 "use client";
 
 import {
-  AgentBadge,
   ChatBubble,
   Container,
-  Divider,
   LogStream,
   Markdown,
   Panel,
   Stack,
-  StatusDot,
   Typography,
 } from "@zibby/design-system";
-import { useAgentSymbol } from "../../agents";
 import { useLocale, useTranslations } from "next-intl";
 import type { DashboardApproval } from "../../approvals/approval";
 import type { RunView } from "../run";
@@ -22,7 +18,6 @@ import { LimitPausedPanel, RunParkedBanner, RunQuestionBanner } from "./RunFeedB
 
 export enum RunLiveFeedTestId {
   Root = "run-live-feed",
-  Divider = "run-feed-divider",
   Agent = "run-feed-agent",
   You = "run-feed-you",
   Delivery = "run-feed-delivery",
@@ -39,51 +34,19 @@ export interface RunLiveFeedProps {
 
 type Item<K extends FeedItem["kind"]> = Extract<FeedItem, { kind: K }>;
 
-function FeedDivider({ item }: { item: Item<"divider"> }) {
-  const t = useTranslations("runs.detail.stage");
-  const text = [item.label, t(item.stateKey), item.meta !== "—" ? item.meta : null]
-    .filter(Boolean)
-    .join(" · ");
-  return (
-    <Stack align="center" data-testid={RunLiveFeedTestId.Divider} direction="row" gap="150">
-      <Container grow>
-        <Divider />
-      </Container>
-      <Stack inline align="center" direction="row" gap="75">
-        <StatusDot size="75" tone={item.state} />
-        <Typography as="span" type="labelSm">
-          {text}
-        </Typography>
-      </Stack>
-      <Container grow>
-        <Divider />
-      </Container>
-    </Stack>
-  );
-}
-
 function FeedAgent({ item }: { item: Item<"agent"> }) {
-  const symbolOf = useAgentSymbol();
   return (
     <Container data-testid={RunLiveFeedTestId.Agent} maxWidth="760px">
-      <Stack align="start" direction="row" gap="150">
-        <AgentBadge
-          {...symbolOf(item.who)}
-          pulse={item.live}
-          size="md"
-          state={item.live ? "working" : "idle"}
-        />
-        <Stack grow gap="75">
-          <Typography as="span" type="labelSm">
-            {item.who}
-          </Typography>
-          {item.markdown && <Markdown escapeHtml source={item.markdown} />}
-          {item.tools.length > 0 && (
-            <Panel padding={["100", "150"]}>
-              <LogStream lines={item.tools} paused={!item.live} />
-            </Panel>
-          )}
-        </Stack>
+      <Stack gap="75">
+        <Typography as="span" type="labelSm">
+          {item.who}
+        </Typography>
+        {item.markdown && <Markdown escapeHtml source={item.markdown} />}
+        {item.tools.length > 0 && (
+          <Panel padding={["100", "150"]}>
+            <LogStream lines={item.tools} paused={!item.live} />
+          </Panel>
+        )}
       </Stack>
     </Container>
   );
@@ -137,7 +100,7 @@ export function RunLiveFeed({ run, mode, approval, items, rail = [] }: RunLiveFe
       {items.map((item) => {
         switch (item.kind) {
           case "divider":
-            return <FeedDivider item={item} key={`d-${item.phaseId}`} />;
+            return null; // the stage rail already names each phase with its state and time
           case "agent":
             return <FeedAgent item={item} key={`a-${item.phaseId}`} />;
           case "you":

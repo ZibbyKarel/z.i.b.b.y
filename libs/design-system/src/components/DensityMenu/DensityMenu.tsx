@@ -1,6 +1,7 @@
 "use client";
 
 import { type Ref, useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { DENSITIES, type Density } from "../../tokens";
 import { cn } from "../../utils/cn";
 
@@ -45,18 +46,28 @@ export interface DensityMenuProps {
 /**
  * Density picker: a trigger showing the current density's four-line glyph + ▾ and a
  * 160px rounded menu listing compact / comfort / airy / open, each with its glyph.
- * Closes on selection, outside click and Escape.
+ * Closes on selection, outside click and Escape. The menu is a fixed-position portal so a
+ * scrolling / clipping ancestor (the sub-nav bar) never hides it.
  */
 export function DensityMenu({ value, onChange, labels, label, ref }: DensityMenuProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [rect, setRect] = useState<DOMRect | null>(null);
   const menuId = useId();
 
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (!rootRef.current?.contains(target) && !menuRef.current?.contains(target)) setOpen(false);
     };
+    const reposition = () => {
+      if (rootRef.current) setRect(rootRef.current.getBoundingClientRect());
+    };
+    reposition();
+    window.addEventListener("resize", reposition);
+    window.addEventListener("scroll", reposition, true);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
@@ -65,6 +76,8 @@ export function DensityMenu({ value, onChange, labels, label, ref }: DensityMenu
     return () => {
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", reposition);
+      window.removeEventListener("scroll", reposition, true);
     };
   }, [open]);
 
@@ -92,35 +105,40 @@ export function DensityMenu({ value, onChange, labels, label, ref }: DensityMenu
         <Glyph density={value} />
         <span className="text-[9px] text-ink-3">▾</span>
       </button>
-      {open ? (
-        <div
-          className="absolute right-0 top-[calc(100%+6px)] z-50 flex w-[160px] flex-col gap-0.5 rounded-lg border border-line-2 bg-panel p-1 font-sans text-[13px] tracking-normal shadow-dropdown"
-          data-testid={DensityMenuTestId.Menu}
-          id={menuId}
-          role="listbox"
-        >
-          {DENSITIES.map((d) => (
-            <button
-              aria-selected={d === value}
-              className={cn(
-                "flex cursor-pointer items-center gap-[10px] rounded-sm px-[10px] py-[7px] text-left hover:bg-hover",
-                d === value ? "bg-raised text-ink" : "text-ink-2",
-              )}
-              data-testid={`${DensityMenuTestId.Option}-${d}`}
-              key={d}
-              onClick={() => {
-                onChange(d);
-                setOpen(false);
-              }}
-              role="option"
-              type="button"
+      {open && rect
+        ? createPortal(
+            <div
+              className="fixed z-50 flex w-[160px] flex-col gap-0.5 rounded-lg border border-line-2 bg-panel p-1 font-sans text-[13px] tracking-normal shadow-dropdown"
+              data-testid={DensityMenuTestId.Menu}
+              id={menuId}
+              ref={menuRef}
+              role="listbox"
+              style={{ top: rect.bottom + 6, right: window.innerWidth - rect.right }}
             >
-              <Glyph density={d} />
-              <span>{labels[d]}</span>
-            </button>
-          ))}
-        </div>
-      ) : null}
+              {DENSITIES.map((d) => (
+                <button
+                  aria-selected={d === value}
+                  className={cn(
+                    "flex cursor-pointer items-center gap-[10px] rounded-sm px-[10px] py-[7px] text-left hover:bg-hover",
+                    d === value ? "bg-raised text-ink" : "text-ink-2",
+                  )}
+                  data-testid={`${DensityMenuTestId.Option}-${d}`}
+                  key={d}
+                  onClick={() => {
+                    onChange(d);
+                    setOpen(false);
+                  }}
+                  role="option"
+                  type="button"
+                >
+                  <Glyph density={d} />
+                  <span>{labels[d]}</span>
+                </button>
+              ))}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

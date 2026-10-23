@@ -3105,7 +3105,12 @@
         },
         "you": "You · {wait}",
         "on": "On {base}",
-        "waitsOn": "· Waits on {prs}"
+        "waitsOn": "· Waits on {prs}",
+        "section": {
+          "mine": "Mine",
+          "toReview": "To review",
+          "toggle": "Toggle {title}"
+        }
       },
       "runs": {
         "colTask": "Task · step",
@@ -3152,13 +3157,12 @@
         "desc": "Agent PRs and your own, with stacks"
       },
       "runs": {
-        "label": "Running & finished",
+        "label": "Runs",
         "desc": "Active runs and the last 10 finished ones"
       }
     },
     "sheet": {
       "close": "Close sheet",
-      "hint": "J / K · ESC",
       "kind": {
         "issue": "Issue",
         "task": "Task",
@@ -3197,7 +3201,6 @@
         "from": "From {source}",
         "noDepartment": "No department",
         "noProject": "No project",
-        "open": "Open task ↗",
         "openApproval": "Open approval ↗"
       },
       "pr": {

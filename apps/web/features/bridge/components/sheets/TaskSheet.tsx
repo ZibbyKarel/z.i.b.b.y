@@ -101,14 +101,9 @@ export function TaskSheet({ id, anchor, onClose }: SheetProps) {
           </SheetAction>
         ) : null
       }
-      footerStart={
-        <SheetAction onClick={() => router.push(`/work/tasks/${task.id}` as Route)}>
-          {t("bridge.sheet.task.open")}
-        </SheetAction>
-      }
-      hint={t("bridge.sheet.hint")}
       kind={`${t("bridge.sheet.kind.task")} · TSK-${task.id.slice(-4).toUpperCase()}`}
       onClose={onClose}
+      onTitleClick={() => router.push(`/work/tasks/${task.id}` as Route)}
       stateLabel={stateLabel}
       title={title}
       tone={state}

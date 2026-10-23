@@ -16,7 +16,7 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { ConfirmDeleteDialog } from "../../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import { resumeEta } from "../../../utils/time";
 import { useApproveMutation, useRejectMutation, useReviseMutation } from "../../approvals";
@@ -47,6 +47,8 @@ export interface RunApprovalBannerProps {
   reviseOpen: boolean;
   onToggleRevise: () => void;
   onApproved?: () => void;
+  /** The gated phase's output — part of the approval, so it lives inside the card. */
+  children?: ReactNode;
 }
 
 /** NEEDS YOU — hold to approve, revise (stage approvals only) or reject; the run's pending diffstat underneath. */
@@ -56,6 +58,7 @@ export function RunApprovalBanner({
   reviseOpen,
   onToggleRevise,
   onApproved,
+  children,
 }: RunApprovalBannerProps) {
   const t = useTranslations("runs.detail");
   const tApprovals = useTranslations("approvals");
@@ -80,29 +83,31 @@ export function RunApprovalBanner({
     <Card corners borderTone="ink" data-testid={RunFeedBannersTestId.Approval}>
       <Container padding={["150", "200"]}>
         <Stack direction="row" gap="250">
-          <Stack grow gap="100">
-            <Stack align="center" direction="row" gap="100">
-              <StatusDot tone="blocked" />
-              <Typography as="span" type="labelSm" variant="primary">
-                {t("banner.approvalHead", {
-                  sev: approval.risk,
-                  risk: risk,
+          <Container grow minW0>
+            <Stack gap="100">
+              <Stack align="center" direction="row" gap="100">
+                <StatusDot tone="blocked" />
+                <Typography as="span" type="labelSm" variant="primary">
+                  {t("banner.approvalHead", {
+                    sev: approval.risk,
+                    risk: risk,
+                  })}
+                </Typography>
+              </Stack>
+              <Typography type="title">{title}</Typography>
+              {consequence && (
+                <Typography type="bodySm" variant="secondary">
+                  {consequence}
+                </Typography>
+              )}
+              <Typography as="span" type="labelSm">
+                {t("banner.approvalMeta", {
+                  at,
+                  via: approval.via ?? approval.skill,
                 })}
               </Typography>
             </Stack>
-            <Typography type="title">{title}</Typography>
-            {consequence && (
-              <Typography type="bodySm" variant="secondary">
-                {consequence}
-              </Typography>
-            )}
-            <Typography as="span" type="labelSm">
-              {t("banner.approvalMeta", {
-                at,
-                via: approval.via ?? approval.skill,
-              })}
-            </Typography>
-          </Stack>
+          </Container>
           <Container shrink={false} width="280px">
             <Stack gap="75" justify="center">
               <HoldButton
@@ -179,6 +184,12 @@ export function RunApprovalBanner({
             </Stack>
           </Stack>
         </Container>
+      )}
+      {children && (
+        <>
+          <Divider />
+          <Container padding={["100", "200", "150", "200"]}>{children}</Container>
+        </>
       )}
       {diffstat && diffstat.files.length > 0 && (
         <>

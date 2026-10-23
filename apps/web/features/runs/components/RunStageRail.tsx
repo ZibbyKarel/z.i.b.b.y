@@ -4,7 +4,6 @@ import {
   AgentBadge,
   Container,
   Divider,
-  Pressable,
   RailItem,
   Stack,
   StatusDot,
@@ -24,7 +23,6 @@ export enum RunStageRailTestId {
   Stage = "run-stage-rail-stage",
   Routed = "run-stage-rail-routed",
   Checkpoint = "run-stage-rail-checkpoint",
-  OpenFolder = "run-stage-rail-open-folder",
 }
 
 export interface RunStageRailProps {
@@ -32,7 +30,6 @@ export interface RunStageRailProps {
   rows: StageRailRow[];
   selectedPhaseId: string | null;
   onSelect: (phaseId: string) => void;
-  onOpenFolder?: () => void;
 }
 
 /** `SWITCHBOARD → {dept} → {unit} · {pct}%` — the switchboard's routing trace, or null when the run was never classified. */
@@ -49,14 +46,8 @@ function useRouteTrace(run: RunView): string | null {
     .join(" → ");
 }
 
-/** The run's stage list (one RailItem per phase) with the ROUTED / CHECKPOINTS / OPEN TASK FOLDER footer. */
-export function RunStageRail({
-  run,
-  rows,
-  selectedPhaseId,
-  onSelect,
-  onOpenFolder,
-}: RunStageRailProps) {
+/** The run's stage list (one RailItem per phase) with the ROUTED / CHECKPOINTS footer. */
+export function RunStageRail({ run, rows, selectedPhaseId, onSelect }: RunStageRailProps) {
   const t = useTranslations("runs.detail");
   const route = useRouteTrace(run);
   const symbolOf = useAgentSymbol();
@@ -66,14 +57,13 @@ export function RunStageRail({
   const agentOf = (phaseId: string) => phases?.find((p) => p.id === phaseId)?.agent ?? phaseId;
   const checkpoints = run.checkpoints ?? [];
   const selected = selectedPhaseId ?? rows.find((r) => r.current)?.phaseId ?? null;
-  const showFolder = run.kind === "workflow" && onOpenFolder;
-  const hasFooter = route || checkpoints.length > 0 || showFolder;
+  const hasFooter = route || checkpoints.length > 0;
 
   return (
     <Stack grow data-testid={RunStageRailTestId.Root} gap="0">
       <Container padding={["150", "200", "100", "200"]}>
         <Typography as="span" type="labelSm">
-          {`${t("rail.title", { n: String(rows.length).padStart(2, "0") })} · ${run.owner}`}
+          {t("rail.title", { n: String(rows.length).padStart(2, "0") })}
         </Typography>
       </Container>
       {rows.map((row) => (
@@ -128,16 +118,6 @@ export function RunStageRail({
                   </Typography>
                 </Stack>
               ))}
-              {showFolder && (
-                // Row wrapper: a stretched <button> centres its label; the design left-aligns it.
-                <Stack direction="row">
-                  <Pressable data-testid={RunStageRailTestId.OpenFolder} onClick={onOpenFolder}>
-                    <Typography as="span" type="labelSm" variant="primary">
-                      {t("rail.openFolder")}
-                    </Typography>
-                  </Pressable>
-                </Stack>
-              )}
             </Stack>
           </Container>
         </>
