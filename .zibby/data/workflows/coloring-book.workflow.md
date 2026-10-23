@@ -58,7 +58,6 @@ phases:
       escalate: false
       then: park
       driftTo: concept
-    approval: ask
   - id: render
     type: tool
     consumes: visual-audit.md
@@ -84,10 +83,25 @@ phases:
     produces: book.md
     commands:
       - product-factory finalize listing.md --report book.md
+  - id: review
+    type: agent
+    agent: book-reviewer
+    consumes: book.md
+    produces: review.md
+    model: haiku
+    thinking: low
+    qualify: true
+    loop:
+      to: illustrate
+      maxRetries: 1
+      escalate: false
+      then: park
+    approval: ask
 desc: >-
   Autonomní výroba dětské omalovánky: koncept → plán stran → kontrola plánu →
   prompty → generování a QA obrázků → vizuální audit knihy → PDF (interiér +
-  obálka) → preflight KDP → listing. Výstup: složka `book/` v běhu s PDF.
+  obálka) → preflight KDP → listing → schválení operátorem nad hotovým PDF.
+  Výstup: složka `book/` v běhu s PDF.
 department: pub
 complexity: standard
 budget:
@@ -124,6 +138,11 @@ tržiště dělá operátor ručně.
 8. **preflight** (tool) — kontrola KDP (rozměry, DPI, fonty, prázdné strany).
 9. **listing** (`listing-specialist`) — text listingu pro KDP.
 10. **finalize** (tool) — `README.md` knihy, součet nákladů, cesta ke složce.
+11. **review** (`book-reviewer`, qualify, `approval: ask`) — poslední krok: běh
+    zaparkuje a čeká na operátora s hotovým `interior.pdf` a `cover.pdf`. „Schválit“
+    ukončí běh; „Požádat o změny“ s poznámkou ji agent převede na `product-factory
+    reject` (0 = titulka) a kniha se vrací přes **illustrate** → produce → render →
+    … → review. Navazující workflow pak bude knihu publikovat na Amazon KDP.
 
 ## Nastavení
 

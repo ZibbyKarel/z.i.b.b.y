@@ -1,9 +1,1 @@
-{
-  "id": "review-learn",
-  "name": "Učení z review",
-  "trigger": { "type": "cron", "expr": "15 3 * * *" },
-  "target": { "type": "review-learn" },
-  "enabled": false,
-  "system": true,
-  "description": "Stáhne review komentáře z PR, které ZIBBY otevřel, a vydestiluje z nich kandidátní pravidla; při druhém výskytu je předloží ke schválení."
-}
+{"id":"review-learn","name":"Učení z review","description":"Stáhne review komentáře z PR, které ZIBBY otevřel, a poznámky operátora k přepracování z workflow runů a vydestiluje z nich kandidátní pravidla; při druhém výskytu je předloží ke schválení.","trigger":{"type":"cron","expr":"15 3 * * *"},"target":{"type":"review-learn"},"enabled":false,"system":true}

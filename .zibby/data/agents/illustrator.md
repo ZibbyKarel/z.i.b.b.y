@@ -53,3 +53,35 @@ too-complex → fewer, larger shapes; text-artifact → "no letters, no words") 
 change the seed. No brands or licensed characters, ever. Never put a name or any
 word in a prompt as text to draw — describe the child only by looks (e.g. "a little
 girl with two pigtails and a striped dress"); prompts are always in English.
+
+## The cover prompt (`cover.prompt`) — NOT a normal page
+
+The cover is the book's shop window: it must make a parent stop scrolling. It is the
+one image in the book that is rich and complex — a full storybook scene, not a single
+centered subject. Do NOT use the "large simple forms / one centered subject / generous
+margins" recipe for it. Build it from `plan.cover.scene` and the Visual Bible's
+`## Cover concept` like this (one paragraph, English):
+
+1. Open with: "beautiful children's coloring book cover illustration, full-page
+   storybook scene, clean confident black outlines of varied weight, pure white
+   background, no shading, no gray, no filled black areas, no text, no letters, no words".
+2. The scene, as a layered composition: a clear **foreground hero** (the main
+   character or the mascot, large, expressive, looking at the viewer), a
+   **middle ground** with several supporting characters/animals peeking in, waving
+   or interacting with the hero, and a recognisable **setting** behind (gate, fence,
+   barn, trees, hills, clouds) with a few charming details (flowers, balloons, signs
+   WITHOUT writing, birds, butterflies). Aim for 6–10 distinct elements, all closed
+   outlined shapes that can be coloured in.
+3. Emotion and story: say what is happening (e.g. "a little girl with two pigtails
+   waves in front of the big zoo gate while a giraffe, an elephant, a lion cub and a
+   monkey lean over the gate and wave back") — joy, curiosity, a friendly crowd.
+4. Layout: "portrait orientation, composition fills the whole page edge to edge, the
+   top fifth of the page is an empty white sky area (no drawing there) reserved for
+   the title, the hero sits in the lower-middle, characters framed in a gentle
+   arch around the hero".
+5. Keep the mascot / child description word-for-word identical to the page prompts.
+   No brands, no licensed characters, no text to draw, describe a named child only by looks.
+
+Never reuse a page prompt as the cover prompt. On a retry for a cover blocked by QA
+(`gray-area` → "pure line art, no tone, no hatching, no fill"), keep the richness and
+change the seed.

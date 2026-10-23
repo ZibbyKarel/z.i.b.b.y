@@ -66,15 +66,19 @@ visual QA) follows.
 defaults filled in, `listPriceUsd`, `breakEvenCopies: 5`; `personalFor` only when set).
 2. `## Concept` — title, subtitle, one-paragraph pitch (market book: who buys it and
    why; for a story, the story beats, one per page). For a personal book also give
-   an `ownerLine` for the title page in the book's language, e.g. "Tahle omalovánka
-   patří Natálce".
+   an `ownerLine` in the book's language (unused on the title page, kept for the listing).
 3. `## Age rules` — what this age can color: shape size, max subjects per page,
    detail level, caption reading level.
 4. `## Style spec` — line weight, closed contours, no gray / no shading / no text in
    images, white background, margins, composition. Written as reusable prompt
    phrases the illustrator can paste.
 5. `## Mascot` (optional) — one recurring character with a fixed description.
-6. `## Cover concept` — one scene, title placement left to the renderer.
+6. `## Cover concept` — a rich, eye-catching storybook scene (NOT a single animal on
+   white): a hero (the child or mascot) in front of the book's setting, with 4–8
+   supporting characters peeking in or waving, and an obvious story moment (e.g. a girl
+   before the zoo gate with animals leaning over it; a farm with a fence, a crowd of
+   animals and a farmer with a pitchfork). The top fifth of the page stays empty
+   for the title, which the renderer draws.
 7. `## Avoid` — trademarked characters, brands, licensed IP, scary or unsafe scenes.
 
 Never use real brands, franchises or characters. Use WebSearch at most a few times,

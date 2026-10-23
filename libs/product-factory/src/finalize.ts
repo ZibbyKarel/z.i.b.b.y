@@ -27,6 +27,8 @@ export async function finalize(argv: string[], ctx: Ctx): Promise<number> {
   if (!listing) throw new Error("usage: product-factory finalize <listing.md> [--report book.md]");
   const book = bookDirOf(ctx);
   const plan = PlanSchema.parse(readJson(path.join(book, "plan.json")));
+  // A rework pass re-copies: the previous copy inherited the read-only mode of its source.
+  fs.rmSync(path.join(book, "listing.md"), { force: true });
   fs.copyFileSync(path.resolve(ctx.cwd, listing), path.join(book, "listing.md"));
 
   const costs = collectCosts(ctx.env.ZIBBY_RUN_DIR ?? ctx.cwd);

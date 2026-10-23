@@ -3162,6 +3162,10 @@
       "runs": {
         "label": "Runs",
         "desc": "Active runs and the last 10 finished ones"
+      },
+      "pins": {
+        "label": "Pinned pages",
+        "desc": "Pages pinned from the sub-menu"
       }
     },
     "sheet": {

@@ -94,13 +94,13 @@ describe("render + preflight + finalize", () => {
     expect(fs.readFileSync(path.join(ctx.cwd, "book", "cover.pdf")).equals(firstCover)).toBe(true);
 
     const interior = await PDFDocument.load(first);
-    expect(interior.getPageCount()).toBe(1 + 4 * 2);
+    expect(interior.getPageCount()).toBe(1 + 4);
     expect(interior.getPage(3).getSize()).toEqual({ width: 612, height: 792 });
-    const { widthIn, heightIn } = coverSizeIn(9);
+    const { widthIn, heightIn } = coverSizeIn(5);
     const cs = (await PDFDocument.load(firstCover)).getPage(0).getSize();
     expect(cs.width / 72).toBeCloseTo(widthIn, 3);
     expect(cs.height / 72).toBeCloseTo(heightIn, 3);
-    expect(widthIn).toBeCloseTo(17 + 9 * 0.002252 + 0.25, 6);
+    expect(widthIn).toBeCloseTo(17 + 5 * 0.002252 + 0.25, 6);
   });
 
   it("passes preflight (with the <24 pages warning), then fails on a low-DPI image", async () => {

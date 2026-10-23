@@ -6,6 +6,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { ApprovalsService } from "../src/approvals/approvals.service";
 import { AppModule } from "../src/app.module";
 import { WorkflowRunnerService } from "../src/workflows/workflow-runner.service";
 
@@ -23,7 +24,6 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 describe("coloring-book workflow (e2e, mock providers)", () => {
   let app: INestApplication;
   const dirs: string[] = [];
-  let booksDir = "";
   const tmp = async (p: string) => {
     const d = await fs.mkdtemp(path.join(os.tmpdir(), p));
     dirs.push(d);
@@ -56,6 +56,7 @@ describe("coloring-book workflow (e2e, mock providers)", () => {
       "visual-audit.md",
       "All pages consistent.\n\n<verdict>pass</verdict>\n",
     );
+    await put("review", "review.md", "# Book ready for your review\n\n<verdict>pass</verdict>\n");
     await put(
       "listing",
       "listing.md",
@@ -63,15 +64,10 @@ describe("coloring-book workflow (e2e, mock providers)", () => {
     );
     process.env.WORKFLOW_DEMO_FIXTURE_DIR = fixtures;
 
-    // Redirect the folder sink away from the real ~/Workspace/zibby-publishing.
-    booksDir = await tmp("cb-books-");
-    const workflowMd = await fs.readFile(
+    await fs.copyFile(
       path.join(REPO, ".zibby", "data", "workflows", "coloring-book.workflow.md"),
-      "utf8",
+      path.join(workflowsDir, "coloring-book.workflow.md"),
     );
-    const redirected = workflowMd.replace("~/Workspace/zibby-publishing/books", booksDir);
-    expect(redirected).not.toBe(workflowMd);
-    await fs.writeFile(path.join(workflowsDir, "coloring-book.workflow.md"), redirected);
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
@@ -127,6 +123,18 @@ describe("coloring-book workflow (e2e, mock providers)", () => {
       await sleep(100);
       run = runner.get(start.workflowRunId);
     }
+    // The last phase (`review`) parks for the operator's sign-off over the finished PDFs.
+    expect({ status: run.status, reason: run.parkedReason }).toEqual({
+      status: "parked",
+      reason: "gate",
+    });
+    const approvals = app.get(ApprovalsService);
+    const [gate] = (await approvals.list("pending")).filter((a) => a.runId === start.workflowRunId);
+    await approvals.approve(gate!.id);
+    for (let t = Date.now(); run.status !== "done" && Date.now() - t < 20_000; ) {
+      await sleep(100);
+      run = runner.get(start.workflowRunId);
+    }
     const trail = run.stageRuns.map((s) => `${s.phaseId}:${s.status}`);
     expect({ status: run.status, trail }).toMatchObject({ status: "done" });
     expect(run.stageRuns.map((s) => s.phaseId)).toEqual([
@@ -140,14 +148,11 @@ describe("coloring-book workflow (e2e, mock providers)", () => {
       "preflight",
       "listing",
       "finalize",
+      "review",
     ]);
     const book = path.join(run.cwd, "book");
     for (const f of ["interior.pdf", "cover.pdf", "listing.md", "README.md", "plan.json"])
       expect((await fs.stat(path.join(book, f))).size).toBeGreaterThan(0);
-    // folder sink: book/ copied to <booksDir>/<workflowRunId>/
-    const delivered = path.join(booksDir, run.workflowRunId);
-    for (const f of ["interior.pdf", "cover.pdf", "listing.md"])
-      expect((await fs.stat(path.join(delivered, f))).size).toBeGreaterThan(0);
     expect(await fs.readFile(path.join(run.cwd, "01_concept", "brief.md"), "utf8")).toContain(
       "farm animals",
     );

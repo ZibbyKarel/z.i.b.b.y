@@ -52,7 +52,7 @@ A short Markdown intro, then ONE fenced ```json block that is exactly this shape
   "title": "…",
   "subtitle": "…",
   "styleGuide": "≤ 2000 chars: the Visual Bible's style spec as prompt phrases",
-  "cover": { "scene": "…" },
+  "cover": { "scene": "… rich multi-character storybook scene: hero + 4–8 supporting characters + setting + story moment, top fifth empty for the title" },
   "pages": [
     {
       "pageNumber": 1,

@@ -8,7 +8,6 @@ import type { PDFFont, PDFPage } from "pdf-lib";
 import { bookDirOf, nn, pageFile, readJson, writeJson } from "./ctx.ts";
 import type { Ctx } from "./ctx.ts";
 import { PlanSchema } from "./schemas.ts";
-import type { Plan } from "./schemas.ts";
 
 export const PT = 72;
 export const PAGE_W_PT = 8.5 * PT;
@@ -43,16 +42,6 @@ export const coverSizeIn = (
 };
 
 /** Keep only glyphs the embedded font has (Noto latin subset); strip diacritics as a fallback. */
-/** Default title-page owner line per brief language. */
-const OWNER_LINE: Record<Plan["brief"]["language"], string> = {
-  en: "This book belongs to:",
-  de: "Dieses Buch gehört:",
-  fr: "Ce livre appartient à :",
-  es: "Este libro pertenece a:",
-  it: "Questo libro appartiene a:",
-  cs: "Tahle omalovánka patří:",
-};
-
 function makeSafe(font: PDFFont, warnings: Set<string>) {
   const set = new Set(font.getCharacterSet());
   return (text: string): string => {
@@ -126,7 +115,7 @@ export async function render(argv: string[], ctx: Ctx): Promise<number> {
   });
   const book = bookDirOf(ctx);
   const plan = PlanSchema.parse(readJson(path.join(book, "plan.json")));
-  const singleSided = (ctx.env.PF_SINGLE_SIDED ?? "true") !== "false";
+  const singleSided = ctx.env.PF_SINGLE_SIDED === "true";
   const warnings = new Set<string>();
 
   const approved = plan.pages.map((p) => ({
@@ -151,18 +140,17 @@ export async function render(argv: string[], ctx: Ctx): Promise<number> {
   const safe = makeSafe(font, warnings);
   const images: ManifestImage[] = [];
 
+  // Title page: the full-page cover illustration (it leaves the top fifth empty), title drawn over it.
   const title = interior.addPage([PAGE_W_PT, PAGE_H_PT]);
-  const y = centered(title, font, wrap(font, safe(plan.title), 36, 468), 36, PAGE_W_PT / 2, 560);
+  const cx = PAGE_W_PT / 2;
+  const titleArt = path.join(book, "cover-art", "approved.png");
+  if (fs.existsSync(titleArt)) {
+    const art = await interior.embedPng(fs.readFileSync(titleArt));
+    title.drawImage(art, { x: 0, y: 0, width: PAGE_W_PT, height: PAGE_H_PT });
+  } else warnings.add("no cover-art/approved.png — title page has text only");
+  const ty = centered(title, font, wrap(font, safe(plan.title), 44, 460), 44, cx, 735, 1.2);
   if (plan.subtitle)
-    centered(title, font, wrap(font, safe(plan.subtitle), 18, 468), 18, PAGE_W_PT / 2, y - 12);
-  centered(
-    title,
-    font,
-    [safe(plan.ownerLine ?? `${OWNER_LINE[plan.brief.language]} ____________________`)],
-    16,
-    PAGE_W_PT / 2,
-    160,
-  );
+    centered(title, font, wrap(font, safe(plan.subtitle), 20, 460), 20, cx, ty - 6);
 
   for (const { page, file } of approved) {
     const pdfPage = interior.addPage([PAGE_W_PT, PAGE_H_PT]);

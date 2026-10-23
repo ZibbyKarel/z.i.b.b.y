@@ -3,6 +3,7 @@ import type { WidgetType } from "../grid/layout";
 import type { BridgeWidget } from "../grid/layout";
 import { BriefingWidget } from "./BriefingWidget";
 import { IssuesWidget } from "./IssuesWidget";
+import { PinsWidget } from "./PinsWidget";
 import { PrsWidget } from "./PrsWidget";
 import { RunsWidget } from "./RunsWidget";
 import { TasksWidget } from "./TasksWidget";
@@ -86,6 +87,11 @@ export const WIDGETS: Record<WidgetType, WidgetDefinition> = {
     labelKey: "bridge.widget.runs.label",
     descKey: "bridge.widget.runs.desc",
     Component: RunsWidget,
+  },
+  pins: {
+    labelKey: "bridge.widget.pins.label",
+    descKey: "bridge.widget.pins.desc",
+    Component: PinsWidget,
   },
 };
 

@@ -3162,6 +3162,10 @@
       "runs": {
         "label": "Běhy",
         "desc": "Aktivní běhy a posledních 10 ukončených"
+      },
+      "pins": {
+        "label": "Připnuté stránky",
+        "desc": "Stránky připnuté z podmenu"
       }
     },
     "sheet": {
