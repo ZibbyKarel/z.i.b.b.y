@@ -90,7 +90,7 @@ describe("BridgeHeader", () => {
     await userEvent.click(
       within(screen.getByTestId(BridgeHeaderTestId.Cancel)).getByRole("button"),
     );
-    await userEvent.click(screen.getByText("+ WIDGET"));
+    await userEvent.click(screen.getByText("+ Widget"));
     expect(onSave).toHaveBeenCalled();
     expect(onCancel).toHaveBeenCalled();
     expect(onToggleCatalog).toHaveBeenCalled();

@@ -494,6 +494,8 @@ export type { BudgetMeterProps } from "./components/BudgetMeter/BudgetMeter";
 
 export { LimitBar, LimitBarTestId } from "./components/LimitBar/LimitBar";
 export type { LimitBarProps } from "./components/LimitBar/LimitBar";
+export { UsagePanel, UsagePanelTestId } from "./components/UsagePanel/UsagePanel";
+export type { UsagePanelItem, UsagePanelProps } from "./components/UsagePanel/UsagePanel";
 
 export { Slider, SliderTestId } from "./components/Slider/Slider";
 export type { SliderProps } from "./components/Slider/Slider";

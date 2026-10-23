@@ -3055,22 +3055,22 @@
     }
   },
   "bridge": {
-    "title": "MŮSTEK",
-    "layout": "ROZLOŽENÍ",
+    "title": "Můstek",
+    "layout": "Rozložení",
     "preset": {
-      "DEFAULT": "VÝCHOZÍ",
-      "REVIEW": "REVIEW",
-      "CUSTOM": "VLASTNÍ"
+      "DEFAULT": "Výchozí",
+      "REVIEW": "Review",
+      "CUSTOM": "Vlastní"
     },
     "density": {
       "label": "Hustota",
-      "compact": "KOMPAKTNÍ",
-      "comfort": "POHODLNÁ",
-      "airy": "VZDUŠNÁ",
-      "open": "OTEVŘENÁ"
+      "compact": "Kompaktní",
+      "comfort": "Pohodlná",
+      "airy": "Vzdušná",
+      "open": "Otevřená"
     },
-    "addWidget": "+ WIDGET",
-    "editLayout": "UPRAVIT ROZLOŽENÍ",
+    "addWidget": "+ Widget",
+    "editLayout": "Upravit rozložení",
     "catalog": {
       "title": "KATALOG WIDGETŮ",
       "add": "PŘIDAT",

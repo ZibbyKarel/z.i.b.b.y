@@ -40,6 +40,22 @@ export function formatDuration(ms: number): string {
   return `${s}s`;
 }
 
+/**
+ * Time left until a deadline as a coarse countdown ("3d 6h" / "2h 22m" / "41m" /
+ * "now") — the top bar's limit-reset readout. A day or more drops the minutes,
+ * under an hour drops the hours; an already-past span reads "now".
+ */
+export function formatCountdown(ms: number): string {
+  if (!Number.isFinite(ms) || ms <= 0) return "now";
+  const totalMin = Math.floor(ms / MINUTE_MS);
+  const d = Math.floor(totalMin / (24 * 60));
+  const h = Math.floor((totalMin % (24 * 60)) / 60);
+  const m = totalMin % 60;
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${Math.max(1, m)}m`;
+}
+
 /** Wall-clock "HH:MM" in the viewer's local timezone (fixes the UTC-slice bug). */
 export function clockTime(iso: string, locale: string): string {
   const ms = Date.parse(iso);

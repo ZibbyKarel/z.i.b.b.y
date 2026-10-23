@@ -3055,22 +3055,22 @@
     }
   },
   "bridge": {
-    "title": "BRIDGE",
-    "layout": "LAYOUT",
+    "title": "Bridge",
+    "layout": "Layout",
     "preset": {
-      "DEFAULT": "DEFAULT",
-      "REVIEW": "REVIEW",
-      "CUSTOM": "CUSTOM"
+      "DEFAULT": "Default",
+      "REVIEW": "Review",
+      "CUSTOM": "Custom"
     },
     "density": {
       "label": "Density",
-      "compact": "COMPACT",
-      "comfort": "COMFORT",
-      "airy": "AIRY",
-      "open": "OPEN"
+      "compact": "Compact",
+      "comfort": "Comfort",
+      "airy": "Airy",
+      "open": "Open"
     },
-    "addWidget": "+ WIDGET",
-    "editLayout": "EDIT LAYOUT",
+    "addWidget": "+ Widget",
+    "editLayout": "Edit layout",
     "catalog": {
       "title": "WIDGET CATALOG",
       "add": "ADD",

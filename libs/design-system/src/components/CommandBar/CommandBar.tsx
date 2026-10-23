@@ -23,22 +23,19 @@ export interface CommandBarProps {
 }
 
 /**
- * A 48px screen header bar: `--color-panel`, bottom hairline, mono 10px/.12em. Logo +
+ * A 48px screen header bar: `--color-panel`, bottom hairline, sans 12px. Logo +
  * title on the left, a spacer, then the controls. Sits above a `WidgetBoard`.
  */
 export function CommandBar({ title, subtitle, logo = true, children, ref }: CommandBarProps) {
   return (
     <header
-      className="flex h-[48px] flex-none items-center gap-[20px] border-b border-line bg-panel px-[16px] font-mono text-[10px] tracking-[.12em] whitespace-nowrap leading-[normal]"
+      className="flex h-[48px] flex-none items-center gap-[20px] border-b border-line bg-panel px-[16px] font-sans text-[12px] whitespace-nowrap leading-[normal]"
       data-testid={CommandBarTestId.Root}
       ref={ref}
     >
       <div className="flex items-center gap-[10px]">
         {logo ? <BrandMark size={24} /> : null}
-        <span
-          className="text-[13px] font-semibold tracking-[.18em]"
-          data-testid={CommandBarTestId.Title}
-        >
+        <span className="text-[14px] font-semibold" data-testid={CommandBarTestId.Title}>
           {title}
         </span>
         {subtitle ? (
@@ -84,17 +81,17 @@ export interface CommandBarButtonProps {
 }
 
 const BUTTON_LOOK = {
-  tool: "border-line-2 px-[10px] py-[6px] text-ink-2 hover:bg-panel-2 hover:text-ink",
-  edit: "border-ink px-[12px] py-[6px] text-ink hover:bg-panel-2",
-  done: "border-ink bg-ink px-[12px] py-[6px] text-panel",
+  tool: "border-line-2 bg-panel px-[10px] py-[5px] text-ink-2 hover:bg-hover hover:text-ink",
+  edit: "border-line-2 bg-panel px-[12px] py-[5px] text-ink hover:bg-hover",
+  done: "border-accent bg-accent px-[12px] py-[5px] text-accent-contrast hover:bg-accent/90",
 } as const;
 
-/** A literal command-bar button: 1px border, mono 10px at the bar's own tracking. */
+/** A command-bar button: 1px border, 8px radius, sans 12px medium. */
 export function CommandBarButton({ look = "tool", onClick, children }: CommandBarButtonProps) {
   return (
     <button
       className={cn(
-        "cursor-pointer border border-solid bg-transparent",
+        "cursor-pointer rounded-md border border-solid font-medium transition-colors",
         BUTTON_LOOK[look],
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
       )}

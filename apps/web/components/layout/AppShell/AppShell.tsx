@@ -11,14 +11,13 @@ import {
   AppHeader,
   ApprovalCard,
   Button,
-  LimitBar,
   Rail,
-  Stack,
   SubNav,
   Tab,
   TabList,
   Tabs,
   Typography,
+  UsagePanel,
 } from "@zibby/design-system";
 import { CatalogProvider } from "../../../state/store";
 import { NEW_TASK_PAGE_HREF, NewTaskProvider, useNewTaskPageHotkey } from "../../../features/tasks";
@@ -36,6 +35,8 @@ import { HIGH_RISK_TYPES, formatWaited } from "../../../features/approvals/appro
 import { counterSuffix } from "../../../features/inbox/inbox";
 import { useInboxCounts } from "../../../features/inbox/useInboxCounts";
 import { useLimitsQuery } from "../../../features/limits";
+import { useNow } from "../../../hooks/useNow";
+import { MINUTE_MS, formatCountdown } from "../../../utils/time";
 import { NotificationBell } from "../../../features/notifications";
 import {
   PinPageDialog,
@@ -278,13 +279,26 @@ function SectionSubNav({
 function useHeaderTrailing() {
   const t = useTranslations("shell");
   const { data: limits } = useLimitsQuery();
+  const now = useNow(MINUTE_MS);
+  const resetsIn = (resetsAt: number | null | undefined) =>
+    resetsAt == null ? undefined : formatCountdown(resetsAt - now);
 
   return {
     limits: (
-      <Stack gap="50">
-        <LimitBar label="5H" max={100} value={limits?.rolling.usedPct ?? 0} />
-        <LimitBar label={t("week")} max={100} value={limits?.weekly.usedPct ?? 0} />
-      </Stack>
+      <UsagePanel
+        items={[
+          {
+            label: "5H",
+            value: limits?.rolling.usedPct ?? 0,
+            resetsIn: resetsIn(limits?.rolling.resetsAt),
+          },
+          {
+            label: t("week"),
+            value: limits?.weekly.usedPct ?? 0,
+            resetsIn: resetsIn(limits?.weekly.resetsAt),
+          },
+        ]}
+      />
     ),
   };
 }

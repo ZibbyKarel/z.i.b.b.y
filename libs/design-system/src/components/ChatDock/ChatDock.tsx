@@ -135,7 +135,7 @@ export function ChatDock({
   return (
     <div
       className={cn(
-        "flex max-w-[calc(100vw-40px)] flex-col border border-ink bg-panel",
+        "flex max-w-[calc(100vw-40px)] flex-col overflow-hidden rounded-xl border border-line-2 bg-panel shadow-modal",
         // Expanded: 33% of the AppFrame dock area (never under 420px), three quarters of its height but
         // never shorter than the normal dock (pane basis 440px grows into the 75%), capped to the area.
         isOpen && isExpanded

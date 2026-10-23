@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { clockTime, compactAgo, formatDuration, relativeTime } from "./time";
+import {
+  DAY_MS,
+  HOUR_MS,
+  MINUTE_MS,
+  clockTime,
+  compactAgo,
+  formatCountdown,
+  formatDuration,
+  relativeTime,
+} from "./time";
 
 const T0 = Date.parse("2026-06-10T12:00:00Z");
 const iso = (msAgo: number) => new Date(T0 - msAgo).toISOString();
@@ -74,5 +83,20 @@ describe("formatDuration", () => {
   it("clamps a negative or non-finite span to 0s", () => {
     expect(formatDuration(-1000)).toBe("0s");
     expect(formatDuration(Number.NaN)).toBe("0s");
+  });
+});
+
+describe("formatCountdown", () => {
+  it("reads days+hours, hours+minutes, then minutes", () => {
+    expect(formatCountdown(3 * DAY_MS + 6 * HOUR_MS + 5 * MINUTE_MS)).toBe("3d 6h");
+    expect(formatCountdown(2 * HOUR_MS + 22 * MINUTE_MS)).toBe("2h 22m");
+    expect(formatCountdown(41 * MINUTE_MS + 10_000)).toBe("41m");
+    expect(formatCountdown(20_000)).toBe("1m");
+  });
+
+  it("reads 'now' for a past or invalid span", () => {
+    expect(formatCountdown(0)).toBe("now");
+    expect(formatCountdown(-5)).toBe("now");
+    expect(formatCountdown(Number.NaN)).toBe("now");
   });
 });

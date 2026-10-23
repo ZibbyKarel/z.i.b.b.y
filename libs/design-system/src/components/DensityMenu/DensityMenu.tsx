@@ -35,7 +35,7 @@ function Glyph({ density }: { density: Density }) {
 export interface DensityMenuProps {
   value: Density;
   onChange: (density: Density) => void;
-  /** Option labels (UPPERCASE in the Bridge design). */
+  /** Option labels. */
   labels: Record<Density, string>;
   /** Accessible name / tooltip of the trigger. */
   label: string;
@@ -44,7 +44,7 @@ export interface DensityMenuProps {
 
 /**
  * Density picker: a trigger showing the current density's four-line glyph + ▾ and a
- * 150px square menu listing COMPACT / COMFORT / AIRY / OPEN, each with its glyph.
+ * 160px rounded menu listing compact / comfort / airy / open, each with its glyph.
  * Closes on selection, outside click and Escape.
  */
 export function DensityMenu({ value, onChange, labels, label, ref }: DensityMenuProps) {
@@ -83,7 +83,7 @@ export function DensityMenu({ value, onChange, labels, label, ref }: DensityMenu
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label={label}
-        className="flex cursor-pointer items-center gap-[6px] border border-line-2 px-[8px] py-[5px] text-ink hover:bg-panel-2"
+        className="flex cursor-pointer items-center gap-[6px] rounded-md border border-line-2 bg-panel px-[8px] py-[5px] text-ink hover:bg-hover"
         data-testid={DensityMenuTestId.Trigger}
         onClick={() => setOpen((o) => !o)}
         title={label}
@@ -94,7 +94,7 @@ export function DensityMenu({ value, onChange, labels, label, ref }: DensityMenu
       </button>
       {open ? (
         <div
-          className="absolute right-0 top-[calc(100%+6px)] z-50 flex w-[150px] flex-col border border-ink bg-panel"
+          className="absolute right-0 top-[calc(100%+6px)] z-50 flex w-[160px] flex-col gap-0.5 rounded-lg border border-line-2 bg-panel p-1 font-sans text-[13px] tracking-normal shadow-dropdown"
           data-testid={DensityMenuTestId.Menu}
           id={menuId}
           role="listbox"
@@ -103,8 +103,8 @@ export function DensityMenu({ value, onChange, labels, label, ref }: DensityMenu
             <button
               aria-selected={d === value}
               className={cn(
-                "flex cursor-pointer items-center gap-[10px] px-[12px] py-[9px] text-left hover:bg-panel-2",
-                d === value ? "bg-panel-2 text-ink" : "text-ink-2",
+                "flex cursor-pointer items-center gap-[10px] rounded-sm px-[10px] py-[7px] text-left hover:bg-hover",
+                d === value ? "bg-raised text-ink" : "text-ink-2",
               )}
               data-testid={`${DensityMenuTestId.Option}-${d}`}
               key={d}

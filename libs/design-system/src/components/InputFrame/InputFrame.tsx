@@ -20,7 +20,7 @@ export interface InputFrameProps {
 export function InputFrame({ start, end, children, ref }: InputFrameProps) {
   return (
     <div
-      className="flex min-h-[34px] min-w-0 flex-1 items-center border border-line-2 bg-background"
+      className="flex min-h-[34px] min-w-0 flex-1 items-center rounded-md border border-line-2 bg-background transition-colors focus-within:border-accent"
       data-testid={InputFrameTestId.Root}
       ref={ref}
     >
