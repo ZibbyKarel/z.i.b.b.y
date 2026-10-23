@@ -197,6 +197,10 @@ describe("TodoWidget", () => {
 
     const implement = screen.getByTestId(TodoWidgetTestId.Implement);
     expect(implement).toHaveAccessibleName("Implementovat: Item a");
+    // The action takes its own slot in the row (BoardRow `action`), never inside the row button.
+    const row = screen.getByTestId(BoardRowTestId.Root);
+    expect(row.contains(implement)).toBe(false);
+    expect(screen.getByTestId(BoardRowTestId.Action)).toContainElement(implement);
     await userEvent.click(implement);
 
     expect(d.play).toHaveBeenCalledTimes(1);

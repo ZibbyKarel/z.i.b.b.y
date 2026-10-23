@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { BoardTag } from "../BoardTag/BoardTag";
+import { Button } from "../Button/Button";
 import { BoardText } from "../BoardText/BoardText";
 import { IconTile } from "../IconTile/IconTile";
 import { BoardColumnHeader, BoardGrid, BoardLine, BoardRow } from "./BoardRow";
@@ -49,6 +50,34 @@ export const Overview: Story = {
       </BoardRow>
       <BoardRow selected tone="working">
         {issue()}
+      </BoardRow>
+      <BoardRow
+        action={
+          <Button icon="play" intent="ghost" size="sm">
+            Implement
+          </Button>
+        }
+        onClick={() => {}}
+        tone="idle"
+      >
+        <BoardText kind="title">
+          A long manual task title that truncates before the action
+        </BoardText>
+        <BoardLine
+          end={
+            <BoardText kind="meta" tone="ink3">
+              1H
+            </BoardText>
+          }
+          gap="6"
+        >
+          <BoardText kind="meta" tone="ink">
+            TO DO
+          </BoardText>
+          <BoardText kind="meta" tone="ink3">
+            · SHOP
+          </BoardText>
+        </BoardLine>
       </BoardRow>
       <BoardRow columns="run" tone="working">
         <BoardText kind="body">Refactor billing</BoardText>

@@ -190,8 +190,8 @@ interface TodoRowProps {
 
 /**
  * One TODO row. Its own component so each row binds `usePlayRoadmapItemMutation` to its own
- * project. The Implement button sits over the row (a sibling, not nested — a button can't
- * contain a button) and never triggers the row's navigation.
+ * project. The Implement button is the row's `action` (its own slot beside the row button —
+ * a button can't contain a button) and never triggers the row's navigation.
  */
 function TodoRow({ item, rowKey, age }: TodoRowProps) {
   const t = useTranslations("bridge.widgets.todo");
@@ -205,32 +205,9 @@ function TodoRow({ item, rowKey, age }: TodoRowProps) {
   };
 
   return (
-    <Container position="relative">
-      <BoardRow
-        onClick={() => router.push(`/projects/${item.projectId}/roadmap` as Route)}
-        rowKey={rowKey}
-        tone={lifecycle ? TONE[lifecycle] : "neutral"}
-      >
-        <BoardText kind="title">{item.name}</BoardText>
-        <BoardLine
-          end={
-            <BoardText kind="meta" tone="ink3">
-              {age}
-            </BoardText>
-          }
-          gap="6"
-          indent={false}
-        >
-          <BoardText kind="meta" tone="ink">
-            {lifecycle ? t(`state.${lifecycle}`) : item.lifecycle}
-          </BoardText>
-          <BoardText kind="meta" tone="ink3">
-            · {item.project.name}
-          </BoardText>
-        </BoardLine>
-      </BoardRow>
-      {lifecycle === "todo" ? (
-        <Container position="absolute" right="var(--bridge-row-px)" top="var(--bridge-row-py)">
+    <BoardRow
+      action={
+        lifecycle === "todo" ? (
           <Button
             aria-label={t("implementLabel", { name: item.name })}
             data-testid={TodoWidgetTestId.Implement}
@@ -242,8 +219,29 @@ function TodoRow({ item, rowKey, age }: TodoRowProps) {
           >
             {t("implement")}
           </Button>
-        </Container>
-      ) : null}
-    </Container>
+        ) : undefined
+      }
+      onClick={() => router.push(`/projects/${item.projectId}/roadmap` as Route)}
+      rowKey={rowKey}
+      tone={lifecycle ? TONE[lifecycle] : "neutral"}
+    >
+      <BoardText kind="title">{item.name}</BoardText>
+      <BoardLine
+        end={
+          <BoardText kind="meta" tone="ink3">
+            {age}
+          </BoardText>
+        }
+        gap="6"
+        indent={false}
+      >
+        <BoardText kind="meta" tone="ink">
+          {lifecycle ? t(`state.${lifecycle}`) : item.lifecycle}
+        </BoardText>
+        <BoardText kind="meta" tone="ink3">
+          · {item.project.name}
+        </BoardText>
+      </BoardLine>
+    </BoardRow>
   );
 }

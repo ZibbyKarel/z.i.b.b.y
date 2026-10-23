@@ -108,4 +108,51 @@ describe("BoardRow", () => {
     );
     expect(screen.getByTestId(BoardRowTestId.Line)).toHaveClass("pl-[24px]");
   });
+
+  it("renders an action beside the row button, never inside it", async () => {
+    const onClick = vi.fn();
+    const onAction = vi.fn();
+    render(
+      <BoardRow
+        needsYou
+        action={
+          <button onClick={onAction} type="button">
+            Play
+          </button>
+        }
+        onClick={onClick}
+        rowKey="todo:p1/a"
+        tone="idle"
+      >
+        row
+      </BoardRow>,
+    );
+    const frame = screen.getByTestId(BoardRowTestId.Frame);
+    const row = screen.getByTestId(BoardRowTestId.Root);
+    const action = screen.getByTestId(BoardRowTestId.Action);
+
+    expect(row).toHaveRole("button");
+    expect(row).toHaveAttribute("data-rk", "todo:p1/a");
+    expect(row).toHaveClass("min-w-0", "flex-1");
+    expect(action).toHaveTextContent("Play");
+    expect(row.contains(action)).toBe(false);
+    expect(frame.contains(row) && frame.contains(action)).toBe(true);
+    // The visual chrome (bar + rings) lives on the frame, not the shrinking body.
+    expect(frame).toHaveClass("border-l-[color:var(--color-state-idle)]");
+    expect(frame).toHaveClass("shadow-[inset_0_0_0_1px_var(--color-ink)]");
+    expect(row).not.toHaveClass("bg-panel");
+
+    await userEvent.click(row);
+    expect(onClick).toHaveBeenCalledOnce();
+    await userEvent.click(action.firstElementChild as HTMLElement);
+    expect(onAction).toHaveBeenCalledOnce();
+    expect(onClick).toHaveBeenCalledOnce();
+  });
+
+  it("renders no frame without an action", () => {
+    render(<BoardRow tone="idle">x</BoardRow>);
+    expect(screen.queryByTestId(BoardRowTestId.Frame)).toBeNull();
+    expect(screen.queryByTestId(BoardRowTestId.Action)).toBeNull();
+    expect(screen.getByTestId(BoardRowTestId.Root)).toHaveClass("bg-panel");
+  });
 });
