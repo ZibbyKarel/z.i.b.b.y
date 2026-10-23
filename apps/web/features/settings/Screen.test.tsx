@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders as render, screen } from "../../test/render";
 import { AppearanceProvider } from "../../state/appearance";
+import { TabsTestId } from "@zibby/design-system";
 import { SettingsScreen } from "./Screen";
 
 const refresh = vi.fn();
@@ -30,6 +31,11 @@ describe("SettingsScreen — /system/settings/[section]", () => {
   it("renders the settings title", () => {
     render(<SettingsScreen section="general" />);
     expect(screen.getByText("Nastavení systému")).toBeInTheDocument();
+  });
+
+  it("has no secondary section tab row — sections live in the sub-nav", () => {
+    render(<SettingsScreen section="general" />);
+    expect(screen.queryByTestId(TabsTestId.List)).toBeNull();
   });
 
   it("shows the general section's content without its own sub-nav", () => {

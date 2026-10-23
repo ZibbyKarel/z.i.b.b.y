@@ -8,14 +8,10 @@ import {
   Panel,
   Stack,
   StatusDot,
-  Tab,
-  TabList,
-  Tabs,
   Toggle,
   Typography,
 } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
-import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
@@ -28,7 +24,7 @@ import { OperatorTokenSection } from "./components/OperatorTokenSection";
 import { MachineSection } from "./components/MachineSection";
 import { SystemSection } from "./components/SystemSection";
 import { WatcherRows } from "./components/WatcherRows";
-import { SETTINGS_SECTIONS, type SettingsSection } from "./settingsSections";
+import type { SettingsSection } from "./settingsSections";
 
 type Locale = "cs" | "en";
 
@@ -100,7 +96,7 @@ export interface SettingsScreenProps {
 
 /**
  * `/system/settings/[section]` (ZB-11, ROUTE-MAP §3) — the settings sections
- * router; the section tabs are a secondary `Tabs` row at the top of this screen. `general`
+ * router; the sections are the shell sub-nav items (`SECTIONS.system`). `general`
  * stacks General, Appearance, Machine and chat persona. Each former `/settings?tab=` is now its own route; the "gates" and
  * "mandate" tabs already moved to `/governance/gates` (ZB-08), "automations" to the top-level `/work/automations`
  * page, "selfKnowledge" to
@@ -110,7 +106,6 @@ export interface SettingsScreenProps {
  */
 export function SettingsScreen({ section }: SettingsScreenProps) {
   const t = useTranslations("settings");
-  const tNav = useTranslations("nav");
   const locale = useLocale() as Locale;
   const router = useRouter();
   const { data: health, isSuccess } = useHealthQuery();
@@ -133,20 +128,6 @@ export function SettingsScreen({ section }: SettingsScreenProps) {
       <PageContainer>
         <Stack direction="col" gap="250">
           <Typography type="title">{t("title")}</Typography>
-
-          <Tabs
-            onValueChange={(id) => router.push(`/system/settings/${id}` as Route)}
-            value={section}
-            variant="mono"
-          >
-            <TabList>
-              {SETTINGS_SECTIONS.map((id) => (
-                <Tab key={id} value={id}>
-                  {tNav(`subtab.system.${id}`)}
-                </Tab>
-              ))}
-            </TabList>
-          </Tabs>
 
           {section === "general" && (
             <Stack gap="250">
