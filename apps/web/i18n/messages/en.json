@@ -3143,6 +3143,23 @@
         "spend": "Spend today",
         "kicker": "{date} · briefing",
         "fallback": "Nothing to report yet."
+      },
+      "todo": {
+        "placeholder": "What to implement…",
+        "input": "New item to implement",
+        "target": "Target",
+        "add": "Add",
+        "implement": "Implement",
+        "implementLabel": "Implement: {name}",
+        "noProjects": "Create a project first",
+        "state": {
+          "todo": "To do",
+          "enqueued": "Queued",
+          "running": "Running",
+          "failed": "Failed",
+          "awaiting-merge": "Awaiting merge",
+          "external": "In progress outside ZIBBY"
+        }
       }
     },
     "you": "{n} you",
@@ -3170,6 +3187,10 @@
       "pins": {
         "label": "Pinned pages",
         "desc": "Pages pinned from the sub-menu"
+      },
+      "todo": {
+        "label": "TODO",
+        "desc": "Quick-add items to implement into a project"
       }
     },
     "sheet": {

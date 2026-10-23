@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../../state/api";
+import { getTodoItemsQueryKey } from "../../inbox/queries/useTodoItemsQuery";
 import { getRoadmapItemsQueryKey } from "../queries/useRoadmapItemsQuery";
 
 /**
@@ -8,13 +9,14 @@ import { getRoadmapItemsQueryKey } from "../queries/useRoadmapItemsQuery";
  * /api/projects/:projectId/roadmap/items/:itemId/play`. Invalidates the
  * project's item list on success so the card's lifecycle (`enqueued` or
  * `running`, depending on whether the gate released it immediately) reflects
- * at once.
+ * at once; also invalidates the cross-project TODO list (Bridge TODO widget).
  */
 export function usePlayRoadmapItemMutation(projectId: string) {
   const qc = useQueryClient();
   return apiClient.roadmap.playRoadmapItem.useMutation({
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: getRoadmapItemsQueryKey(projectId) });
+      void qc.invalidateQueries({ queryKey: getTodoItemsQueryKey() });
     },
   });
 }

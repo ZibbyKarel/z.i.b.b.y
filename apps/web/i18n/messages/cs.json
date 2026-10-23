@@ -3143,6 +3143,23 @@
         "spend": "Dnešní výdaje",
         "kicker": "{date} · přehled",
         "fallback": "Zatím není co hlásit."
+      },
+      "todo": {
+        "placeholder": "Co implementovat…",
+        "input": "Nová položka k implementaci",
+        "target": "Cíl",
+        "add": "Přidat",
+        "implement": "Implementovat",
+        "implementLabel": "Implementovat: {name}",
+        "noProjects": "Nejdřív založ projekt",
+        "state": {
+          "todo": "K implementaci",
+          "enqueued": "Ve frontě",
+          "running": "Běží",
+          "failed": "Selhalo",
+          "awaiting-merge": "Čeká na merge",
+          "external": "Rozpracováno mimo ZIBBY"
+        }
       }
     },
     "you": "{n} ty",
@@ -3170,6 +3187,10 @@
       "pins": {
         "label": "Připnuté stránky",
         "desc": "Stránky připnuté z podmenu"
+      },
+      "todo": {
+        "label": "TODO",
+        "desc": "Rychlé přidání položek k implementaci do projektu"
       }
     },
     "sheet": {
