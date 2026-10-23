@@ -37,6 +37,7 @@ export class InboxController {
   handler() {
     return tsRestHandler(inboxContract, {
       listInboxItems: async () => ({ status: 200, body: await this.inbox.listItems() }),
+      listTodoItems: async () => ({ status: 200, body: await this.inbox.listTodoItems() }),
       listInboxPrs: async () => ({ status: 200, body: await this.inbox.listPrs() }),
       reviewInboxPr: async ({ body }) => {
         try {

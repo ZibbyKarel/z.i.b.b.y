@@ -17,6 +17,7 @@ import {
   SetInboxHiddenSchema,
   SubmitInboxPrReviewInputSchema,
   SubmitInboxPrReviewResultSchema,
+  TodoItemsResponseSchema,
 } from "./inbox.schema";
 
 const c = initContract();
@@ -35,6 +36,12 @@ export const inboxContract = c.router(
       path: "/roadmap/items",
       responses: { 200: InboxItemsResponseSchema },
       summary: "List roadmap tasks in the operator's scope across all projects",
+    },
+    listTodoItems: {
+      method: "GET",
+      path: "/roadmap/todo",
+      responses: { 200: TodoItemsResponseSchema },
+      summary: "List open manual roadmap tasks across all projects, newest first (TODO widget)",
     },
     listInboxPrs: {
       method: "GET",

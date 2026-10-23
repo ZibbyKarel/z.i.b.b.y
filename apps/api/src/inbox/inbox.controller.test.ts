@@ -31,7 +31,10 @@ describe("InboxController getInboxPrDiff GitHub error mapping", () => {
       providers: [
         OperatorTokenService,
         OperatorTokenGuard,
-        { provide: InboxService, useValue: {} },
+        {
+          provide: InboxService,
+          useValue: { listTodoItems: async () => ({ items: [] }) },
+        },
         { provide: InboxReviewService, useValue: {} },
         {
           provide: InboxRebaseService,
@@ -97,6 +100,11 @@ describe("InboxController getInboxPrDiff GitHub error mapping", () => {
     upstream = gh;
     const res = await request(app.getHttpServer()).get("/api/inbox/prs/acme/7/diff").expect(mapped);
     expect(res.body.message).toContain(String(gh));
+  });
+
+  it("GET /roadmap/todo returns the service body", async () => {
+    const res = await request(app.getHttpServer()).get("/api/roadmap/todo").expect(200);
+    expect(res.body).toEqual({ items: [] });
   });
 
   it.each(["/api/inbox/prs/rebase", "/api/inbox/prs/address-comments", "/api/inbox/prs/fix-ci"])(

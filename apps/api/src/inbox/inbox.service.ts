@@ -17,6 +17,7 @@ import type {
   RoadmapItem,
   ScheduledTask,
   SetInboxHidden,
+  TodoItemsResponse,
 } from "@zibby/contracts";
 import { ActivityEventsService } from "../activity/activity-events.service";
 import { CredentialsStore } from "../integrations/credentials.store";
@@ -191,6 +192,25 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
 
   setHidden(body: SetInboxHidden): Promise<InboxState> {
     return this.state.setHidden(body);
+  }
+
+  /** Open manual roadmap tasks across all projects, newest first — the Bridge TODO widget. */
+  async listTodoItems(): Promise<TodoItemsResponse> {
+    const items: InboxRoadmapItem[] = [];
+    for (const project of await this.projects.list()) {
+      for (const item of await this.roadmap.list(project.id)) {
+        if (item.source.kind !== "manual" || item.level !== "task") continue;
+        if (item.lifecycle === "archived" || item.lifecycle === "done") continue;
+        items.push({
+          ...item,
+          project: { id: project.id, name: project.name },
+          ...orgOf(project),
+          hidden: false,
+        });
+      }
+    }
+    items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return { items };
   }
 
   async listItems(): Promise<InboxItemsResponse> {
