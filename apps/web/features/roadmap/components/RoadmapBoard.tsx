@@ -109,7 +109,7 @@ export function RoadmapBoard({ epic, items, onSelectItem, onSelectEpic }: Roadma
           >
             <Stack align="center" direction="row" gap="100">
               <Container shrink={false} style={hueDotStyle(epicHue(epic.id))} />
-              <Typography mono uppercase size="xs" tracking="wider" type="label">
+              <Typography uppercase size="xs" type="label">
                 {t("board.header", { name: epic.name })}
               </Typography>
             </Stack>
@@ -117,7 +117,7 @@ export function RoadmapBoard({ epic, items, onSelectItem, onSelectEpic }: Roadma
         ) : (
           <Stack align="center" direction="row" gap="100">
             <Container shrink={false} style={hueDotStyle(NEUTRAL_DOT_HUE)} />
-            <Typography mono uppercase size="xs" tracking="wider" type="label">
+            <Typography uppercase size="xs" type="label">
               {t("board.allTasks")}
             </Typography>
           </Stack>
@@ -135,7 +135,7 @@ export function RoadmapBoard({ epic, items, onSelectItem, onSelectEpic }: Roadma
                  the far edge (`headerEnd`) read as an unrelated second field. */
               header={
                 <Stack align="baseline" direction="row" gap="100">
-                  <Typography mono uppercase size="xs" tracking="wider" type="label">
+                  <Typography uppercase size="xs" type="label">
                     {columnLabel[column]}
                   </Typography>
                   <Typography mono size="xs" type="note" variant="tertiary">

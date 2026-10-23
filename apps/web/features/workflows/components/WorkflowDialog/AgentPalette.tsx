@@ -55,7 +55,7 @@ export function AgentPalette({ agents, onAdd, onAddStep, onClose, closeLabel }: 
     >
       <Stack align="start" direction="row" gap="50" justify="between">
         <Container padding={["50", "100", "100", "100"]}>
-          <Typography mono uppercase size="2xs" tracking="widest" type="note" variant="tertiary">
+          <Typography uppercase size="2xs" type="note" variant="tertiary">
             {t("paletteTitle")}
           </Typography>
           <Typography mono size="2xs" type="note" variant="tertiary">

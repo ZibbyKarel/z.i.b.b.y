@@ -25,7 +25,7 @@ export function ToggleChip({ pressed, leading, children, ref, ...rest }: ToggleC
     <button
       aria-pressed={pressed}
       className={cn(
-        "flex cursor-pointer items-center gap-1.5 border py-[3px] pr-2 font-mono text-[10px] tracking-[0.12em] uppercase",
+        "flex cursor-pointer items-center gap-1.5 rounded-sm border py-[3px] pr-2 font-sans text-[12px] font-medium",
         leading ? "pl-1" : "pl-2",
         pressed ? "border-foreground text-foreground" : "border-border-strong text-foreground-dim",
         focusRing,

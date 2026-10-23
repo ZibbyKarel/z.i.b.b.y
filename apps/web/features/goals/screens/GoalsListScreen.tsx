@@ -62,7 +62,7 @@ export function GoalsListScreen() {
                 : t("noProject");
               return (
                 <GoalCard
-                  eyebrow={`${goal.id} · ${projectLabel.toUpperCase()}`}
+                  eyebrow={`${goal.id} · ${projectLabel}`}
                   iterationSummary={run ? latestIterationSummary(run.iterations ?? []) : undefined}
                   key={goal.id}
                   makerLabel={goal.maker.id}

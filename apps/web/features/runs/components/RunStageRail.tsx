@@ -73,7 +73,7 @@ export function RunStageRail({
     <Stack grow data-testid={RunStageRailTestId.Root} gap="0">
       <Container padding={["150", "200", "100", "200"]}>
         <Typography as="span" type="labelSm">
-          {`${t("rail.title", { n: String(rows.length).padStart(2, "0") })} · ${run.owner.toUpperCase()}`}
+          {`${t("rail.title", { n: String(rows.length).padStart(2, "0") })} · ${run.owner}`}
         </Typography>
       </Container>
       {rows.map((row) => (

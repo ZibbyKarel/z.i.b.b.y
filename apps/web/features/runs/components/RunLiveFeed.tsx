@@ -75,7 +75,7 @@ function FeedAgent({ item }: { item: Item<"agent"> }) {
         />
         <Stack grow gap="75">
           <Typography as="span" type="labelSm">
-            {item.who.toUpperCase()}
+            {item.who}
           </Typography>
           {item.markdown && <Markdown escapeHtml source={item.markdown} />}
           {item.tools.length > 0 && (
@@ -95,14 +95,14 @@ function FeedYou({ item, stageLabel }: { item: Item<"you">; stageLabel?: string 
   const at = new Date(item.at).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
   const delivery =
     item.delivery === "delivered"
-      ? t("delivered", { stage: stageLabel ?? item.deliveredPhaseId?.toUpperCase() ?? "—" })
+      ? t("delivered", { stage: stageLabel ?? item.deliveredPhaseId ?? "—" })
       : item.delivery === "queued"
         ? t("queued")
         : t("notDelivered");
   return (
     <Stack align="end" data-testid={RunLiveFeedTestId.You} gap="50">
       <Typography as="span" type="labelSm">
-        {t("youTo", { to: item.to.toUpperCase(), t: at })}
+        {t("youTo", { to: item.to, t: at })}
       </Typography>
       <Container maxWidth="520px">
         <ChatBubble author="you">{item.text}</ChatBubble>

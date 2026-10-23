@@ -280,7 +280,7 @@ export function Card({
 export function CardHeader({ children }: { children: ReactNode }) {
   return (
     <div
-      className="px-[14px] py-3 border-b border-border font-mono font-semibold text-base tracking-wide text-foreground-dim"
+      className="px-[14px] py-3 border-b border-border font-sans font-semibold uppercase tracking-wider text-[11px] text-foreground-dim"
       data-testid={CardTestId.Header}
     >
       {children}

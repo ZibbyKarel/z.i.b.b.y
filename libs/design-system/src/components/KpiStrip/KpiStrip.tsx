@@ -64,7 +64,7 @@ export function KpiStrip({ kpis, lead, ref }: KpiStripProps) {
             data-testid={`${KpiStripTestId.Kpi}-${k.id}`}
             key={k.id}
           >
-            <span className="flex items-center gap-[6px] font-mono text-[10px] tracking-[.12em] whitespace-nowrap text-ink-3">
+            <span className="flex items-center gap-[6px] font-sans font-semibold uppercase tracking-wider text-[10px] whitespace-nowrap text-ink-3">
               <span className={cn("h-[7px] w-[7px]", DOT[k.tone])} />
               {k.label}
             </span>

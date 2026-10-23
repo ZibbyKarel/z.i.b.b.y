@@ -47,7 +47,7 @@ describe("ActivityRunDetailScreen", () => {
     setHooks({ isError: true, error: { status: 404 } });
     render(<ActivityRunDetailScreen runId="r_gone" />);
     const empty = screen.getByTestId(EmptyStateTestId.Root);
-    expect(empty).toHaveTextContent("BĚH NENALEZEN");
+    expect(empty).toHaveTextContent("Běh nenalezen");
     expect(empty).toHaveTextContent("r_gone");
   });
 });

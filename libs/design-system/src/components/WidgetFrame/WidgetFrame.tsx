@@ -157,7 +157,7 @@ export function WidgetFrame({
     >
       <header
         className={cn(
-          "box-content flex h-[var(--bridge-head-h)] flex-none select-none items-center gap-[8px] border-b pl-[var(--bridge-head-px)] pr-[10px] font-sans text-[11px] font-semibold tracking-[.06em] whitespace-nowrap",
+          "box-content flex h-[var(--bridge-head-h)] flex-none select-none items-center gap-[8px] border-b pl-[var(--bridge-head-px)] pr-[10px] font-sans text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap",
           open ? "border-line" : "border-transparent",
           editing ? "cursor-move" : "cursor-default",
         )}
@@ -165,7 +165,7 @@ export function WidgetFrame({
         onPointerDown={editing ? onMovePointerDown : undefined}
         ref={headerRef}
       >
-        <span className="font-medium text-ink" data-testid={WidgetFrameTestId.Label}>
+        <span className="text-ink" data-testid={WidgetFrameTestId.Label}>
           {label}
         </span>
         {count ? (
@@ -235,7 +235,7 @@ export function WidgetFrame({
       {editing ? (
         <>
           <span
-            className="absolute bottom-[6px] left-[12px] bg-panel px-[4px] py-[2px] font-mono text-[10px] tracking-[.1em] text-ink-3"
+            className="absolute bottom-[6px] left-[12px] rounded-sm bg-panel px-[4px] py-[2px] font-mono text-[10px] text-ink-3"
             data-testid={WidgetFrameTestId.Size}
           >
             {sizeLabel}

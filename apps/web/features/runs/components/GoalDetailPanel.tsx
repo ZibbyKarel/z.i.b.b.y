@@ -165,14 +165,7 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
                     <Stack gap="100">
                       {it.makerKind === "agent" && it.makerRunRef ? (
                         <Stack gap="50">
-                          <Typography
-                            mono
-                            uppercase
-                            size="2xs"
-                            tracking="wide"
-                            type="note"
-                            variant="tertiary"
-                          >
+                          <Typography uppercase size="2xs" type="note" variant="tertiary">
                             {t("goalMakerLog")}
                           </Typography>
                           <RunLogStream
@@ -205,14 +198,7 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
 
                       {it.verifier.runRef && (
                         <Stack gap="50">
-                          <Typography
-                            mono
-                            uppercase
-                            size="2xs"
-                            tracking="wide"
-                            type="note"
-                            variant="tertiary"
-                          >
+                          <Typography uppercase size="2xs" type="note" variant="tertiary">
                             {t("goalVerifierLog")}
                           </Typography>
                           <RunLogStream
@@ -228,14 +214,7 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
 
                       {it.verifier.output && (
                         <Stack gap="50">
-                          <Typography
-                            mono
-                            uppercase
-                            size="2xs"
-                            tracking="wide"
-                            type="note"
-                            variant="tertiary"
-                          >
+                          <Typography uppercase size="2xs" type="note" variant="tertiary">
                             {t("goalVerifierVerdict")}
                           </Typography>
                           <CodeBlock maxHeight="md" text={it.verifier.output} />

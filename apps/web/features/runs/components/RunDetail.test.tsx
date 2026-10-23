@@ -134,7 +134,7 @@ describe("RunDetail", () => {
     queueRef.current = [{ ...approval, action: OPERATOR_QUESTION_ACTION }];
     render(<RunDetail run={{ ...workflowRun, status: "awaiting-approval" }} />);
     expect(screen.getByTestId(RunFeedBannersTestId.Question)).toBeInTheDocument();
-    expect(screen.getByTestId(RunComposerTestId.Send)).toHaveTextContent("ODPOVĚDĚT ↵");
+    expect(screen.getByTestId(RunComposerTestId.Send)).toHaveTextContent("Odpovědět ↵");
   });
 
   it("a paused run offers RESUME", () => {

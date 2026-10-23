@@ -77,8 +77,8 @@ describe("RunDetailActions", () => {
     await userEvent.click(screen.getByTestId(`${RunDetailActionsTestId.Action}-stop`));
     expect(onStop).not.toHaveBeenCalled();
     const dialog = screen.getByRole("dialog");
-    expect(within(dialog).getByText("ZASTAVIT delivery_42")).toBeInTheDocument();
-    await userEvent.click(within(dialog).getByRole("button", { name: "ZASTAVIT" }));
+    expect(within(dialog).getByText("Zastavit delivery_42")).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Zastavit" }));
     expect(onStop).toHaveBeenCalledOnce();
   });
 
@@ -110,8 +110,8 @@ describe("RunDetailActions", () => {
     await userEvent.click(screen.getByTestId(MenuButtonTestId.Trigger));
     await userEvent.click(screen.getByTestId(`${MenuButtonTestId.Item}-delete`));
     const dialog = screen.getByRole("dialog");
-    expect(within(dialog).getByText("SMAZAT delivery_42")).toBeInTheDocument();
-    await userEvent.click(within(dialog).getByRole("button", { name: "SMAZAT BĚH" }));
+    expect(within(dialog).getByText("Smazat delivery_42")).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Smazat běh" }));
     expect(onDelete).toHaveBeenCalledOnce();
   });
 });

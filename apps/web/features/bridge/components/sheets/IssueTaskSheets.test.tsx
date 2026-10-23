@@ -65,8 +65,8 @@ describe("IssueSheet", () => {
     hooks.items = [item("todo")];
     renderWithProviders(<IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />);
     expect(screen.getByTestId(AnchoredSheetTestId.Title)).toHaveTextContent("Fix login");
-    expect(screen.getByText(/OTEVŘÍT V JIRA/)).toHaveAttribute("href", "https://jira.test/ZB-1");
-    fireEvent.click(screen.getByText("ZPRACOVAT DO ÚKOLU"));
+    expect(screen.getByText(/Otevřít v Jira/)).toHaveAttribute("href", "https://jira.test/ZB-1");
+    fireEvent.click(screen.getByText("Zpracovat do úkolu"));
     expect(process).toHaveBeenCalledOnce();
   });
 
@@ -87,7 +87,7 @@ describe("IssueSheet", () => {
   it("has no process action once the item is running", () => {
     hooks.items = [item("running")];
     renderWithProviders(<IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />);
-    expect(screen.queryByText("ZPRACOVAT DO ÚKOLU")).toBeNull();
+    expect(screen.queryByText("Zpracovat do úkolu")).toBeNull();
   });
 });
 

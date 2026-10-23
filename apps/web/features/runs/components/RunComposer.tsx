@@ -188,7 +188,7 @@ export function RunComposer({
                 onClick={() => setTo(c.key)}
                 pressed={to === c.key}
               >
-                {c.name.toUpperCase()}
+                {c.name}
               </ToggleChip>
             ))}
           </>

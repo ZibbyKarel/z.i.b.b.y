@@ -293,9 +293,7 @@ export function MenuButton({
                     "w-full flex items-center gap-2.5 rounded-sm cursor-pointer border-none text-left",
                     focusRingInset,
                     "transition-colors duration-100",
-                    bordered
-                      ? "px-3 py-[9px] font-mono text-[11px] uppercase tracking-wider"
-                      : "px-[11px] py-[9px]",
+                    bordered ? "px-3 py-[9px] font-sans text-[13px]" : "px-[11px] py-[9px]",
                     item.disabled
                       ? "cursor-not-allowed opacity-50"
                       : cn(

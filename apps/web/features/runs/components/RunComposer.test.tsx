@@ -101,7 +101,7 @@ describe("RunComposer", () => {
   it("paused shows the paused hint", () => {
     renderComposer("paused");
     expect(screen.getByTestId(RunComposerTestId.Hint)).toHaveTextContent(
-      "BĚH JE POZASTAVEN · ZPRÁVY ČEKAJÍ",
+      "Běh je pozastaven · zprávy čekají",
     );
   });
 
@@ -117,7 +117,7 @@ describe("RunComposer", () => {
 
   it("question answers the approval", async () => {
     renderComposer("question", { status: "awaiting-approval" });
-    expect(screen.getByTestId(RunComposerTestId.Send)).toHaveTextContent("ODPOVĚDĚT ↵");
+    expect(screen.getByTestId(RunComposerTestId.Send)).toHaveTextContent("Odpovědět ↵");
     await typeAndSend("yes, use v2");
     expect(m.answer).toHaveBeenCalledWith(
       { params: { id: "ap_1" }, body: { answer: "yes, use v2" } },

@@ -42,13 +42,12 @@ export function TasksWidget({
         title: runTitle(run),
         meta: [run.projectId ?? run.project, run.processor?.name ?? run.owner]
           .filter(Boolean)
-          .join(" · ")
-          .toUpperCase(),
-        state: t(`state.${run.status}`).toUpperCase(),
+          .join(" · "),
+        state: t(`state.${run.status}`),
         when:
           run.status === "scheduled"
             ? clockTime(run.startedAt, locale)
-            : compactAgo(run.startedAt, now).toUpperCase(),
+            : compactAgo(run.startedAt, now),
       };
     });
   }, [widget.id, live, t, locale, now]);

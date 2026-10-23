@@ -160,7 +160,7 @@ export function Tab({ value, children, ref, ...rest }: TabProps) {
         {...rest}
         aria-selected={isActive}
         className={cn(
-          "bg-transparent border-none cursor-pointer font-mono text-sm text-left w-full px-4 py-[9px]",
+          "bg-transparent border-none cursor-pointer font-sans text-sm text-left w-full px-4 py-[9px]",
           "transition-[color,border-color]",
           focusRingInset,
           isActive

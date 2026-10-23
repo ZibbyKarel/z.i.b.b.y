@@ -42,7 +42,7 @@ export function SeverityMeter({ severity, label, showLabel = false }: SeverityMe
         ))}
       </Stack>
       {showLabel && label && (
-        <Typography mono uppercase size="caption" tone={sev.tone} type="note" weight="bold">
+        <Typography uppercase size="caption" tone={sev.tone} type="note" weight="bold">
           {label}
         </Typography>
       )}

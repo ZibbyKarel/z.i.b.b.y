@@ -85,8 +85,8 @@ export function RunApprovalBanner({
               <StatusDot tone="blocked" />
               <Typography as="span" type="labelSm" variant="primary">
                 {t("banner.approvalHead", {
-                  sev: approval.risk.toUpperCase(),
-                  risk: risk.toUpperCase(),
+                  sev: approval.risk,
+                  risk: risk,
                 })}
               </Typography>
             </Stack>
@@ -99,7 +99,7 @@ export function RunApprovalBanner({
             <Typography as="span" type="labelSm">
               {t("banner.approvalMeta", {
                 at,
-                via: (approval.via ?? approval.skill).toUpperCase(),
+                via: approval.via ?? approval.skill,
               })}
             </Typography>
           </Stack>
@@ -233,7 +233,7 @@ export function RunQuestionBanner({ question, agentName }: RunQuestionBannerProp
           <Stack align="center" direction="row" gap="100">
             <StatusDot tone="blocked" />
             <Typography as="span" type="labelSm" variant="primary">
-              {t("questionHead", { agent: agentName.toUpperCase() })}
+              {t("questionHead", { agent: agentName })}
             </Typography>
           </Stack>
           <Typography type="bodyLg">{question}</Typography>
@@ -264,7 +264,7 @@ export function RunParkedBanner({ run, stage }: RunParkedBannerProps) {
             <Typography as="span" type="labelSm" variant="primary">
               {t("parkedHead", {
                 n: stage?.n ?? "—",
-                name: (stage?.name ?? run.parked?.phaseId ?? "").toUpperCase(),
+                name: stage?.name ?? run.parked?.phaseId ?? "",
                 att: `${attempts}/${attempts}`,
               })}
             </Typography>

@@ -36,7 +36,7 @@ export function PipelineChips({ chips, ref }: PipelineChipsProps) {
       {chips.map((c, i) => (
         <span
           className={cn(
-            "border-b-2 bg-bg px-[4px] pb-px pt-[2px] font-mono text-[9px] tracking-[.08em]",
+            "border-b-2 bg-bg px-[4px] pb-px pt-[2px] font-sans font-semibold uppercase tracking-wider text-[9px]",
             c.state === "idle" ? "text-ink-3" : "text-ink",
             UNDERLINE[c.state],
           )}

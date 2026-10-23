@@ -177,14 +177,7 @@ export function NoteView({ note, onSelect, readOnly = false }: NoteViewProps) {
 
             {note.links.length > 0 && (
               <Stack gap="50">
-                <Typography
-                  mono
-                  uppercase
-                  size="2xs"
-                  tracking="wide"
-                  type="note"
-                  variant="tertiary"
-                >
+                <Typography uppercase size="2xs" type="note" variant="tertiary">
                   {t("noteLinks")}
                 </Typography>
                 <LinkChips ids={note.links} kind="link" onSelect={onSelect} />
@@ -193,14 +186,7 @@ export function NoteView({ note, onSelect, readOnly = false }: NoteViewProps) {
 
             {note.backlinks && note.backlinks.length > 0 && (
               <Stack gap="50">
-                <Typography
-                  mono
-                  uppercase
-                  size="2xs"
-                  tracking="wide"
-                  type="note"
-                  variant="tertiary"
-                >
+                <Typography uppercase size="2xs" type="note" variant="tertiary">
                   {t("noteBacklinks")}
                 </Typography>
                 <LinkChips ids={note.backlinks} kind="backlink" onSelect={onSelect} />

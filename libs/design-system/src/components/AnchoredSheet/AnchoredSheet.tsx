@@ -108,7 +108,7 @@ export function AnchoredSheet({
           className="flex flex-none flex-col gap-[10px] border-b border-line px-[20px] py-[14px]"
           data-testid={AnchoredSheetTestId.Header}
         >
-          <div className="flex items-center gap-[10px] font-mono text-[10px] tracking-[.14em] text-ink-3">
+          <div className="flex items-center gap-[10px] font-sans uppercase tracking-wider text-[10px] text-ink-3">
             <span className="text-ink-2" data-testid={AnchoredSheetTestId.Kind}>
               {kind}
             </span>
@@ -139,7 +139,7 @@ export function AnchoredSheet({
             <div className="flex flex-wrap gap-[6px]">
               {chips.map((c) => (
                 <span
-                  className="border border-line-2 px-[8px] py-[4px] font-mono text-[10px] tracking-[.1em] text-ink-2"
+                  className="rounded-sm border border-line-2 px-[8px] py-[4px] font-sans uppercase tracking-wider text-[10px] text-ink-2"
                   data-testid={AnchoredSheetTestId.Chip}
                   key={c}
                 >
@@ -154,7 +154,7 @@ export function AnchoredSheet({
         </div>
         {hasFooter ? (
           <div
-            className="flex flex-none flex-wrap items-center gap-[6px] border-t border-line px-[20px] py-[12px] font-mono text-[10px] tracking-[.12em]"
+            className="flex flex-none flex-wrap items-center gap-[6px] border-t border-line px-[20px] py-[12px] font-sans text-[12px]"
             data-testid={AnchoredSheetTestId.Footer}
           >
             {footerStart}

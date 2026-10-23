@@ -146,14 +146,7 @@ function LocalVault() {
           <List>
             {groups.map((g) => (
               <Stack gap="100" key={g.tier}>
-                <Typography
-                  mono
-                  uppercase
-                  size="2xs"
-                  tracking="wide"
-                  type="note"
-                  variant="tertiary"
-                >
+                <Typography uppercase size="2xs" type="note" variant="tertiary">
                   {tm(`tier.${g.tier}`)}
                 </Typography>
                 {g.shelves.map((shelf) => {

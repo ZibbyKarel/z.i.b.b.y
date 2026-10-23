@@ -56,10 +56,10 @@ export function NeedsYouCard({
 }: NeedsYouCardProps) {
   return (
     <div
-      className="mx-[20px] mt-[16px] flex flex-col gap-[8px] border border-l-4 border-ink border-l-state-block bg-bg p-[12px]"
+      className="mx-[20px] mt-[16px] flex flex-col gap-[8px] rounded-lg border border-l-4 border-line-2 border-l-state-block bg-bg p-[12px]"
       data-testid={NeedsYouCardTestId.Root}
     >
-      <div className="flex items-center gap-[8px] font-mono text-[10px] tracking-[.14em]">
+      <div className="flex items-center gap-[8px] font-sans uppercase tracking-wider text-[10px]">
         <span className="font-semibold" data-testid={NeedsYouCardTestId.Heading}>
           {heading}
         </span>
@@ -80,7 +80,7 @@ export function NeedsYouCard({
       ) : null}
       {rule ? (
         <div
-          className="font-mono text-[10px] tracking-[.1em] text-ink-3"
+          className="font-sans uppercase tracking-wider text-[10px] text-ink-3"
           data-testid={NeedsYouCardTestId.Rule}
         >
           {rule}
@@ -88,7 +88,7 @@ export function NeedsYouCard({
       ) : null}
       {diff && diff.length > 0 ? (
         <div
-          className="overflow-x-auto border border-line bg-panel px-[10px] py-[8px] font-mono text-[11px] leading-[1.5]"
+          className="overflow-x-auto rounded-md border border-line bg-panel px-[10px] py-[8px] font-mono text-[11px] leading-[1.5]"
           data-testid={NeedsYouCardTestId.Diff}
         >
           {diff.map((l, i) => (
@@ -100,10 +100,10 @@ export function NeedsYouCard({
       ) : null}
       {children}
       {onApprove || onDeny ? (
-        <div className="flex gap-[6px] font-mono text-[10px] tracking-[.12em]">
+        <div className="flex gap-[6px] font-sans text-[12px] font-medium">
           {onApprove ? (
             <button
-              className="flex-[2] cursor-pointer bg-ink p-[8px] text-center text-panel disabled:cursor-not-allowed disabled:opacity-35"
+              className="flex-[2] cursor-pointer rounded-md bg-accent p-[8px] text-center text-accent-contrast disabled:cursor-not-allowed disabled:opacity-35"
               data-testid={NeedsYouCardTestId.Approve}
               disabled={pending}
               onClick={onApprove}
@@ -114,7 +114,7 @@ export function NeedsYouCard({
           ) : null}
           {onDeny ? (
             <button
-              className="flex-1 cursor-pointer border border-line-2 p-[8px] text-center text-ink-2 hover:bg-panel-2 hover:text-ink disabled:cursor-not-allowed disabled:opacity-35"
+              className="flex-1 cursor-pointer rounded-md border border-line-2 bg-panel p-[8px] text-center text-ink hover:bg-hover disabled:cursor-not-allowed disabled:opacity-35"
               data-testid={NeedsYouCardTestId.Deny}
               disabled={pending}
               onClick={onDeny}

@@ -68,7 +68,7 @@ export function AccordionSummary({
       aria-expanded={expanded}
       className={cn(
         "flex w-full items-center justify-between px-3.5 py-2.5",
-        "bg-transparent border-none cursor-pointer font-mono font-medium text-base text-foreground text-left",
+        "bg-transparent border-none cursor-pointer font-sans font-medium text-base text-foreground text-left",
         focusRingInset,
         expanded && "border-b border-border",
       )}

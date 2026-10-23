@@ -76,7 +76,7 @@ describe("GoalsListScreen (ZB-06)", () => {
     hooks.goals = [goal];
     render(<GoalsListScreen />);
     expect(screen.getByTestId(GoalCardTestId.Title)).toHaveTextContent("Ship feature Y green");
-    expect(screen.getByTestId(GoalCardTestId.Eyebrow)).toHaveTextContent("CLIENT PORTAL");
+    expect(screen.getByTestId(GoalCardTestId.Eyebrow)).toHaveTextContent("Client Portal");
   });
 
   it("opens the goal detail on the card's Open action", async () => {

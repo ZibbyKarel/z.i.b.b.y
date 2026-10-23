@@ -29,7 +29,7 @@ export function SkipLink({ label = "Skip to main content", targetId, ref }: Skip
       className={cn(
         "sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100]",
         "focus:border focus:border-ink focus:bg-panel focus:px-4 focus:py-2",
-        "focus:font-mono focus:text-[11px] focus:uppercase focus:tracking-wider focus:text-ink",
+        "focus:font-sans focus:text-[12px] focus:font-medium focus:text-ink",
         focusRingOffset,
       )}
       data-testid={SkipLinkTestId.Root}

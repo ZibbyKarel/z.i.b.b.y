@@ -106,7 +106,7 @@ describe("CompanyDetailScreen (ZB-06)", () => {
 
   it("links to /work/tasks?company=<id>", () => {
     render(<CompanyDetailScreen companyId="acme" />);
-    expect(screen.getByText("VŠECHNY ÚKOLY TÉTO FIRMY →")).toBeInTheDocument();
+    expect(screen.getByText("Všechny úkoly této firmy →")).toBeInTheDocument();
   });
 
   describe("new company mode", () => {

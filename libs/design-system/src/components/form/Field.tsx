@@ -55,9 +55,10 @@ export interface FieldProps {
   ref?: Ref<HTMLElement>;
 }
 
-const labelClass = "font-mono text-sm uppercase tracking-wider text-foreground-faint";
-const hintClass = "font-mono text-xs text-foreground-faint";
-const errorClass = "font-mono text-xs text-bad";
+const labelClass =
+  "font-sans font-semibold uppercase tracking-wider text-[11px] text-foreground-faint";
+const hintClass = "font-sans text-xs text-foreground-faint";
+const errorClass = "font-sans text-xs text-bad";
 
 /**
  * Shared control chrome for the text-like inputs (`TextInput`, `TextArea`,

@@ -88,7 +88,7 @@ function ProjectRulesSection() {
         ariaLabel={t("projectPicker")}
         items={[
           { value: "", label: t("allProjects") },
-          ...projects.map((p) => ({ value: p.id, label: p.name.toUpperCase() })),
+          ...projects.map((p) => ({ value: p.id, label: p.name })),
         ]}
         onChange={setSelected}
         value={selected}

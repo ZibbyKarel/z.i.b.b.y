@@ -104,14 +104,12 @@ const typePreset: Record<TypographyType, TypePreset> = {
     mono: true,
     variant: "secondary",
   },
-  // DS.md §3.2 `label` (11 / 400–600, tracking 0.14em) — already matched by the
-  // existing `xs` / `wider` tokens (11px, 0.14em); left as-is bar this note.
+  // Zibby 2.0 caps label (11 / 600 / .1em, sans) — see the caps rule in `Typography`.
   label: {
     tag: "span",
     size: "xs",
-    weight: "medium",
+    weight: "semibold",
     leading: 1.2,
-    mono: true,
     uppercase: true,
     tracking: "wider",
     variant: "tertiary",
@@ -156,7 +154,7 @@ const typePreset: Record<TypographyType, TypePreset> = {
     tabularNums: true,
   },
 
-  // --- DS.md §3.2 mono scale (system voice, uppercase unless noted) ---
+  // --- DS.md §3.2 system voice (caps presets render sans — see the caps rule) ---
   wordmark: {
     tag: "span",
     fontSizePx: 13,
@@ -169,11 +167,10 @@ const typePreset: Record<TypographyType, TypePreset> = {
   labelSm: {
     tag: "span",
     fontSizePx: 10,
-    weight: "normal",
+    weight: "semibold",
     leading: 1.2,
-    mono: true,
     uppercase: true,
-    letterSpacingEm: 0.12,
+    tracking: "wider",
     variant: "tertiary",
   },
   // Agent names, IDs, log lines — deliberately NOT uppercased (DS.md §3.2).
@@ -262,6 +259,10 @@ export function Typography({
 }: TypographyProps) {
   const preset = typePreset[type];
   const Element = as ?? preset.tag;
+  // The caps rule (Zibby 2.0): uppercase text is always a sans label at 600 / .1em —
+  // never mono, and a caller's `tracking` is ignored (only a preset's own exact
+  // spacing, e.g. the wordmark's, survives). Mono stays for machine data (IDs, numbers, logs).
+  const caps = uppercase ?? preset.uppercase ?? false;
 
   // A caller-supplied `size`/`tracking` always wins (named-token overrides); otherwise
   // an exact DS.md px value (`fontSizePx`/`letterSpacingEm`) wins over a named token,
@@ -274,13 +275,17 @@ export function Typography({
         ? `${preset.fontSizePx}px`
         : `var(--text-${preset.size})`
       : undefined;
-  const resolvedLetterSpacing = tracking
-    ? `var(--tracking-${tracking})`
-    : preset.letterSpacingEm !== undefined
+  const resolvedLetterSpacing = caps
+    ? preset.letterSpacingEm !== undefined
       ? `${preset.letterSpacingEm}em`
-      : preset.tracking
-        ? `var(--tracking-${preset.tracking})`
-        : undefined;
+      : "var(--tracking-wider)"
+    : tracking
+      ? `var(--tracking-${tracking})`
+      : preset.letterSpacingEm !== undefined
+        ? `${preset.letterSpacingEm}em`
+        : preset.tracking
+          ? `var(--tracking-${preset.tracking})`
+          : undefined;
 
   const computedStyle: CSSProperties = {
     fontSize: resolvedFontSize,
@@ -294,10 +299,9 @@ export function Typography({
   return (
     <Element
       className={cn(
-        weightClass[weight ?? preset.weight],
+        weightClass[weight ?? (caps ? "semibold" : preset.weight)],
         tone ? toneClass[tone] : variantClass[variant ?? preset.variant ?? "primary"],
-        (mono ?? preset.mono) && "font-mono",
-        (uppercase ?? preset.uppercase) && "uppercase",
+        caps ? "font-sans uppercase" : (mono ?? preset.mono) && "font-mono",
         truncate && "truncate",
         nowrap && "whitespace-nowrap",
         wrapAnywhere && "wrap-anywhere",

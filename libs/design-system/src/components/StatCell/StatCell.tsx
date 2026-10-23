@@ -73,7 +73,7 @@ export function StatCell({
     >
       {label ? (
         <span
-          className="font-mono text-[10px] tracking-[.12em] text-ink-3"
+          className="font-sans font-semibold uppercase tracking-wider text-[10px] text-ink-3"
           data-testid={StatCellTestId.Label}
         >
           {label}
@@ -91,7 +91,7 @@ export function StatCell({
       ) : null}
       {meta ? (
         <span
-          className="font-mono text-[10px] tracking-[.1em] text-ink-2"
+          className="font-sans uppercase tracking-wider text-[10px] text-ink-2"
           data-testid={StatCellTestId.Meta}
         >
           {meta}
@@ -99,7 +99,7 @@ export function StatCell({
       ) : null}
       {status ? (
         <span
-          className="font-mono text-[10px] font-semibold tracking-[.12em]"
+          className="font-sans font-semibold uppercase tracking-wider text-[10px]"
           data-testid={StatCellTestId.Status}
         >
           {status}

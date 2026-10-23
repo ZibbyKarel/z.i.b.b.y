@@ -69,7 +69,7 @@ export function Breadcrumb({ items, linkComponent, leadingSeparator }: Breadcrum
               </Typography>
             ) : (
               <Link
-                className="font-mono text-[10px] uppercase tracking-wider text-foreground-faint transition-colors hover:text-foreground-dim"
+                className="font-sans text-[12px] text-foreground-faint transition-colors hover:text-foreground-dim"
                 data-testid={`${BreadcrumbTestId.Item}-${index}`}
                 href={item.href}
               >

@@ -87,7 +87,7 @@ export function DropZone({
     >
       <input {...getInputProps()} data-testid={DropZoneTestId.Input} />
       <Icon aria-hidden name="file" size="lg" stroke="thin" tone={iconTone} />
-      <span className="font-mono text-sm text-foreground-faint" data-testid={DropZoneTestId.Hint}>
+      <span className="font-sans text-sm text-foreground-faint" data-testid={DropZoneTestId.Hint}>
         {isDragActive ? (isDragReject ? rejectedLabel : activeLabel) : idleLabel}
       </span>
     </div>

@@ -47,7 +47,7 @@ export function StepSettings({ graph, setGraph, excludeWorkflowId }: StepSetting
       width="280px"
     >
       <Container padding={["50", "100", "100", "100"]}>
-        <Typography mono uppercase size="2xs" tracking="widest" type="note" variant="tertiary">
+        <Typography uppercase size="2xs" type="note" variant="tertiary">
           {t("stepsTitle")}
         </Typography>
       </Container>

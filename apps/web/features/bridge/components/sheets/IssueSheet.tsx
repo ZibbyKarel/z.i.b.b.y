@@ -50,8 +50,8 @@ export function IssueSheet({ id, anchor, onClose }: SheetProps) {
   const taskId = latestTaskId(item);
   const source = t(`inboxPage.source.${item.source.kind}`);
   const none = t("bridge.sheet.none");
-  const stateLabel = t(`inboxPage.status.${status}`).toUpperCase();
-  const updated = compactAgo(item.updatedAt, now).toUpperCase();
+  const stateLabel = t(`inboxPage.status.${status}`);
+  const updated = compactAgo(item.updatedAt, now);
 
   const rows: DetailTableRow[] = [
     { cells: [t("bridge.sheet.issue.epic"), epic ? `${epic.key ?? ""} · ${epic.title}` : "—"] },
@@ -80,11 +80,9 @@ export function IssueSheet({ id, anchor, onClose }: SheetProps) {
     <AnchoredSheet
       {...geometry(anchor)}
       chips={[
-        item.sourceStatus
-          ? `${source.toUpperCase()} · ${item.sourceStatus.name.toUpperCase()}`
-          : source.toUpperCase(),
+        item.sourceStatus ? `${source} · ${item.sourceStatus.name}` : source,
         `ZIBBY · ${stateLabel}`,
-        item.project.name.toUpperCase(),
+        item.project.name,
         epic
           ? t("bridge.sheet.issue.epicChip", { key: epic.key ?? epic.title })
           : t("bridge.sheet.issue.noEpic"),
@@ -95,12 +93,12 @@ export function IssueSheet({ id, anchor, onClose }: SheetProps) {
       footerStart={
         item.source.url ? (
           <SheetAction href={item.source.url}>
-            {t("bridge.sheet.issue.openIn", { source: source.toUpperCase() })}
+            {t("bridge.sheet.issue.openIn", { source: source })}
           </SheetAction>
         ) : null
       }
       hint={t("bridge.sheet.hint")}
-      kind={`${t("bridge.sheet.kind.issue")} · ${source.toUpperCase()} · ${itemKey(item)}`}
+      kind={`${t("bridge.sheet.kind.issue")} · ${source} · ${itemKey(item)}`}
       onClose={onClose}
       stateLabel={stateLabel}
       title={item.name}
@@ -108,7 +106,7 @@ export function IssueSheet({ id, anchor, onClose }: SheetProps) {
     >
       {status === "waiting" && item.lastFailureReason ? (
         <NeedsYouCard
-          heading={t("bridge.sheet.needsYou", { kind: item.lifecycle.toUpperCase() })}
+          heading={t("bridge.sheet.needsYou", { kind: item.lifecycle })}
           text={item.lastFailureReason}
           wait={t("bridge.sheet.waiting", { wait: updated })}
         />

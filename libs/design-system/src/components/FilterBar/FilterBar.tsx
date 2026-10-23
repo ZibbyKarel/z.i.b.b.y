@@ -37,7 +37,7 @@ export function FilterBar({ children, onClear, actions, ref }: FilterBarProps) {
           className={cn(
             "box-border flex h-8 items-center border border-border-strong px-[10px]",
             // Secondary-button look (DS.md §8) at the 32px filter-control height.
-            "font-mono text-[10px] uppercase tracking-wider text-ink-2",
+            "font-sans font-semibold uppercase tracking-wider text-[10px] text-ink-2",
             "hover:bg-panel-2 hover:text-ink",
             focusRing,
           )}

@@ -12,13 +12,13 @@ export interface BoardTagProps extends Omit<HTMLAttributes<HTMLSpanElement>, "cl
   ref?: Ref<HTMLSpanElement>;
 }
 
-/** A square mono tag: `YOU · 2H` (ink outline) or a source chip (`JIRA`, `GITHUB`). */
+/** A caps tag: `YOU · 2H` (ink outline) or a source chip (`JIRA`, `GITHUB`). */
 export function BoardTag({ variant, children, ref, ...props }: BoardTagProps) {
   return (
     <span
       className={cn(
-        "inline-block flex-none border px-[5px] py-px font-mono text-[10px] whitespace-nowrap text-ink",
-        variant === "you" ? "border-ink tracking-[.1em]" : "border-line-2 tracking-[.08em]",
+        "inline-block flex-none rounded-sm border px-[5px] py-px font-sans text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap text-ink",
+        variant === "you" ? "border-ink" : "border-line-2",
       )}
       data-testid={BoardTagTestId.Root}
       ref={ref}

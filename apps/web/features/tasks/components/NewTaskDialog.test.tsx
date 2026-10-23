@@ -236,7 +236,7 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
 
   it("renders one description field, no mode tabs", () => {
     render(<NewTaskDialog onClose={() => {}} />);
-    expect(screen.getByRole("dialog", { name: "NOVÝ TASK" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Nový task" })).toBeInTheDocument();
     // The Standard/Loop tabs are gone — the mode is inferred, not chosen.
     expect(screen.queryByRole("tab")).not.toBeInTheDocument();
     expect(screen.getByLabelText(/Zadání/)).toBeInTheDocument();
@@ -490,7 +490,7 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
     );
     // It's the standard composer (not a locked mode) with the workflow pre-assigned: the
     // CommandLine seeds the target as an inline `@Delivery` mention (no top chip — Phase 59).
-    expect(screen.getByRole("dialog", { name: "NOVÝ TASK" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Nový task" })).toBeInTheDocument();
     expect(screen.getByTestId<HTMLTextAreaElement>(CommandLineTestId.Input).value).toContain(
       "@Delivery",
     );

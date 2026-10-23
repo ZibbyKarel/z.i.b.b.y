@@ -104,15 +104,15 @@ describe("PrSheet action buttons", () => {
       pr(5, { section: "ready-to-merge", blocker: "ready-to-merge", review: "approved" }),
     );
     expect(screen.getByTestId(PrActionsTestId.Merge)).toBeInTheDocument();
-    expect(screen.queryByText(/MERGE NA GITHUBU/)).toBeNull();
+    expect(screen.queryByText(/Merge na GitHubu/)).toBeNull();
     unmount();
     show(pr(6, {}));
     expect(screen.queryByTestId(PrActionsTestId.Merge)).toBeNull();
-    expect(screen.getByText(/MERGE NA GITHUBU/)).toHaveAttribute(
+    expect(screen.getByText(/Merge na GitHubu/)).toHaveAttribute(
       "href",
       "https://github.com/acme/api/pull/6",
     );
-    expect(screen.queryByText("MERGE")).toBeNull();
+    expect(screen.queryByText("Merge")).toBeNull();
   });
 });
 
@@ -129,7 +129,7 @@ describe("PrSheet content", () => {
     show(top, [base, top]);
     expect(screen.getByTestId(AnchoredSheetTestId.State)).toHaveTextContent("CI FAILING");
     const values = screen.getAllByTestId(StatCellTestId.Value).map((v) => v.textContent);
-    expect(values).toEqual(["POŽADOVÁNY ZMĚNY", "SELHÁVÁ", "+2 −1"]);
+    expect(values).toEqual(["Požadovány změny", "Selhává", "+2 −1"]);
     expect(screen.getByTestId(`${StackCrumbsTestId.Crumb}-${top.url}`)).toHaveTextContent("#11");
     expect(screen.getByTestId(`${StackCrumbsTestId.Crumb}-${base.url}`)).toHaveTextContent("#10");
     expect(screen.getByText("x.ts")).toBeInTheDocument();

@@ -95,7 +95,7 @@ export function PrDetail({ pr, all, projectName, now, item, onSelect }: PrDetail
       })
     : parentPr(pr, all)
       ? t("waitText.below")
-      : t("waitText.bottom", { base: base.toUpperCase() });
+      : t("waitText.bottom", { base: base });
   const elapsedLabel = useElapsedLabel();
   const { data, isPending, isError, refetch } = useInboxPrDiffQuery(pr.projectId, pr.number);
 

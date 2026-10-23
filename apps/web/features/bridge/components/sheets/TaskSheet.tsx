@@ -52,8 +52,8 @@ export function TaskSheet({ id, anchor, onClose }: SheetProps) {
   const title = task.title || task.text.slice(0, 120);
   const dept = (d: DepartmentId | undefined) => (d ? departments.name(d) : "—");
   const code = (d: DepartmentId | undefined) => (d ?? "?").toUpperCase();
-  const stateText = (s: TaskParentState) => t(`tasksWork.state.${s}`).toUpperCase();
-  const stateLabel = t(`tasksWork.state.${state}`).toUpperCase();
+  const stateText = (s: TaskParentState) => t(`tasksWork.state.${s}`);
+  const stateLabel = t(`tasksWork.state.${state}`);
   const none = t("bridge.sheet.none");
 
   const subRows: DetailTableRow[] = task.subtasks.map((s) => ({
@@ -85,12 +85,10 @@ export function TaskSheet({ id, anchor, onClose }: SheetProps) {
     <AnchoredSheet
       {...geometry(anchor)}
       chips={[
-        task.department ? dept(task.department).toUpperCase() : t("bridge.sheet.task.noDepartment"),
-        (task.projectId ?? t("bridge.sheet.task.noProject")).toUpperCase(),
-        ...(task.source
-          ? [t("bridge.sheet.task.from", { source: task.source.toUpperCase() })]
-          : []),
-        t("bridge.sheet.created", { when: compactAgo(task.createdAt, now).toUpperCase() }),
+        task.department ? dept(task.department) : t("bridge.sheet.task.noDepartment"),
+        task.projectId ?? t("bridge.sheet.task.noProject"),
+        ...(task.source ? [t("bridge.sheet.task.from", { source: task.source })] : []),
+        t("bridge.sheet.created", { when: compactAgo(task.createdAt, now) }),
       ]}
       closeLabel={t("bridge.sheet.close")}
       footerEnd={

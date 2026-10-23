@@ -191,7 +191,7 @@ export function PrActionButtons({ pr, baseLabel }: PrActionButtonsProps) {
         >
           <Row gap="75">
             <StatusDot pulse size="75" tone="working" />
-            <Typography mono uppercase type="label" variant="secondary">
+            <Typography uppercase type="label" variant="secondary">
               {runLabel(running)}
             </Typography>
           </Row>
@@ -251,7 +251,7 @@ export function PrActionButtons({ pr, baseLabel }: PrActionButtonsProps) {
               onClick={onRebase}
               size="sm"
             >
-              {t("rebaseOn", { base: baseLabel.toUpperCase() })}
+              {t("rebaseOn", { base: baseLabel })}
             </Button>
           )}
           {isMerge(pr) && (

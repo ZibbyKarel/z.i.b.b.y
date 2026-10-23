@@ -213,7 +213,7 @@ export function SearchMenu({
                   <p
                     className={cn(
                       "px-3.5 pt-1.5 pb-1",
-                      "text-xs font-medium uppercase tracking-wide text-foreground-faint",
+                      "font-sans font-semibold uppercase tracking-wider text-[10px] text-foreground-faint",
                     )}
                     data-testid={`${SearchMenuTestId.SectionLabel}-${section.id}`}
                   >

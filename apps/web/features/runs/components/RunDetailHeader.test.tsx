@@ -60,7 +60,7 @@ describe("RunDetailHeader", () => {
     expect(screen.getByTestId(RunDetailHeaderTestId.Title)).toHaveTextContent("Fix login");
     expect(
       within(screen.getByTestId(RunDetailHeaderTestId.State)).getByTestId(StatePillTestId.Label),
-    ).toHaveTextContent("BĚŽÍ");
+    ).toHaveTextContent("Běží");
     expect(screen.getByTestId("actions-slot")).toBeInTheDocument();
     const strip = screen.getByTestId(RunDetailHeaderTestId.Metrics);
     expect(within(strip).getAllByTestId(new RegExp(`^${MetricStripTestId.Item}-`))).toHaveLength(6);

@@ -34,12 +34,12 @@ export function SheetColumns({ children }: { children: ReactNode }) {
   );
 }
 
-/** A labelled block: mono 11 / .14em section label over its content (8px apart). */
+/** A labelled block: caps 10 / .1em section label over its content (8px apart). */
 export function SheetBlock({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-[8px]" data-testid={SheetPartsTestId.Block}>
       <span
-        className="font-mono text-[11px] tracking-[.14em] text-ink-3"
+        className="font-sans font-semibold uppercase tracking-wider text-[10px] text-ink-3"
         data-testid={SheetPartsTestId.BlockLabel}
       >
         {label}
@@ -90,10 +90,10 @@ export function SheetAction({
   "data-testid": testId,
 }: SheetActionProps) {
   const cls = cn(
-    "whitespace-nowrap no-underline",
+    "whitespace-nowrap rounded-md font-medium no-underline transition-colors",
     intent === "primary"
-      ? "bg-ink px-[16px] py-[8px] text-panel"
-      : "border border-line-2 px-[12px] py-[8px] text-ink-2 hover:bg-panel-2 hover:text-ink",
+      ? "border border-accent bg-accent px-[14px] py-[7px] text-accent-contrast"
+      : "border border-line-2 bg-panel px-[12px] py-[7px] text-ink hover:bg-hover",
     disabled
       ? "cursor-not-allowed opacity-35 hover:bg-transparent hover:text-ink-2"
       : "cursor-pointer",

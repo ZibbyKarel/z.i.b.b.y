@@ -50,7 +50,7 @@ export function RailItem({ leading, title, meta, selected, ref, ...rest }: RailI
         </span>
         {meta && (
           <span
-            className="flex items-center gap-1.5 font-mono text-[10px] tracking-[0.1em] text-foreground-faint"
+            className="flex items-center gap-1.5 font-sans uppercase tracking-wider text-[10px] text-foreground-faint"
             data-testid={RailItemTestId.Meta}
           >
             {meta}

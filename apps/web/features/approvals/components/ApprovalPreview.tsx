@@ -88,7 +88,7 @@ export function ApprovalPreview({ preview, labels }: ApprovalPreviewProps) {
         <div style={{ background: "rgba(240,180,41,0.06)" }}>
           <Container padding={["150", "150"]}>
             <Stack align="baseline" direction="row" justify="between">
-              <Typography mono uppercase size="xs" type="note" variant="secondary">
+              <Typography uppercase size="xs" type="note" variant="secondary">
                 {labels.total}
               </Typography>
               <Typography mono size="lg" tone="warn" type="note" weight="bold">
@@ -162,7 +162,7 @@ export function ApprovalPreview({ preview, labels }: ApprovalPreviewProps) {
         <CodeBlock text={`$ ${preview.cmd}`} />
         <Divider />
         <Container padding={["100", "150"]}>
-          <Typography mono uppercase size="2xs" type="note" variant="tertiary">
+          <Typography uppercase size="2xs" type="note" variant="tertiary">
             {labels.targets}
           </Typography>
           <Container padding={["75", "0", "0", "0"]}>

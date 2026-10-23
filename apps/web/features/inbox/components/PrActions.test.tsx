@@ -289,7 +289,7 @@ describe("PrActions address / rebase", () => {
     );
     expect(screen.getByTestId(PrActionsTestId.Rebase)).toHaveTextContent("Rebase na #12");
     rerender(<PrActions baseLabel="main" pr={pr(7, { mergeable: false })} />);
-    expect(screen.getByTestId(PrActionsTestId.Rebase)).toHaveTextContent("Rebase na MAIN");
+    expect(screen.getByTestId(PrActionsTestId.Rebase)).toHaveTextContent("Rebase na main");
     rerender(<PrActions baseLabel="main" pr={pr(7, {})} />);
     expect(screen.queryByTestId(PrActionsTestId.Rebase)).toBeNull();
     expect(hasPrActions(pr(7, {}))).toBe(false);

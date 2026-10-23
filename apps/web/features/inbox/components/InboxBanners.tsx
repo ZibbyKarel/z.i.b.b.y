@@ -45,7 +45,7 @@ export function InboxBanners({ errors }: { errors: InboxSourceError[] }) {
             <Stack gap="50">
               <Typography type="bodySm">{error.message}</Typography>
               <TextLink href={`/projects/${error.projectId}`} linkComponent={NavLink}>
-                <Typography mono uppercase size="2xs" tracking="wider" type="note">
+                <Typography uppercase size="2xs" type="note">
                   {t("banner.reconnect")}
                 </Typography>
               </TextLink>

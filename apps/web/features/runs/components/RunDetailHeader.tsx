@@ -113,12 +113,12 @@ export function RunDetailHeader({
                 <Typography as="span" type="labelSm">
                   /
                 </Typography>
-                <Typography as="span" type="labelSm">
+                <Typography as="span" type="code">
                   {run.runId}
                 </Typography>
                 <Sep />
                 <Typography as="span" type="labelSm">
-                  {t(`kind.${run.kind}`).toUpperCase()}
+                  {t(`kind.${run.kind}`)}
                 </Typography>
                 {taskId && (
                   <>
@@ -127,7 +127,7 @@ export function RunDetailHeader({
                       data-testid={RunDetailHeaderTestId.TaskLink}
                       onClick={() => router.push(`/work/tasks/${taskId}`)}
                     >
-                      <Typography as="span" type="labelSm" variant="secondary">
+                      <Typography as="span" type="code">
                         {`${taskId} →`}
                       </Typography>
                     </Pressable>
@@ -186,7 +186,7 @@ export function RunDetailHeader({
                 <>
                   <Sep />
                   <Typography as="span" type="label" variant="secondary">
-                    {t("detail.workflow", { name: run.owner.toUpperCase() })}
+                    {t("detail.workflow", { name: run.owner })}
                   </Typography>
                 </>
               )}

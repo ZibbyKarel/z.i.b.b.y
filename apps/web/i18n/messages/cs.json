@@ -195,7 +195,7 @@
     "skipToContent": "Přeskočit na obsah"
   },
   "tasks": {
-    "dialogTitle": "NOVÝ TASK",
+    "dialogTitle": "Nový task",
     "dialogSubtitle": "Popiš zadání — ZIBBY ho zařadí a předá agentovi",
     "cancel": "Zrušit",
     "classifyRun": "Spustit",
@@ -969,7 +969,7 @@
       "title": "Osobnost chatu",
       "hint": "Jak ZIBBY zní, když si s ním povídáš. Mění se jen tón — pravidla, kdy odpovědět / doptat se / spustit úkol, zůstávají stejná. Projeví se v další konverzaci.",
       "persona": {
-        "jarvis": "JARVIS",
+        "jarvis": "Jarvis",
         "concise": "Stručný",
         "formal": "Profesionální"
       },
@@ -1042,7 +1042,7 @@
     "uptime": "Uptime",
     "status": "Stav",
     "online": "NOMINAL · online",
-    "offline": "OFFLINE",
+    "offline": "Offline",
     "watchers": {
       "title": "Hlídače",
       "ok": "OK",
@@ -1263,108 +1263,108 @@
     "bookFolder": "Složka knihy",
     "stageExternalCost": "+{cost} externí",
     "detail": {
-      "backToRuns": "← BĚHY",
-      "assignProject": "+ PŘIŘADIT PROJEKT",
-      "workflow": "WORKFLOW · {name}",
+      "backToRuns": "← Běhy",
+      "assignProject": "+ Přiřadit projekt",
+      "workflow": "Workflow · {name}",
       "action": {
-        "pause": "POZASTAVIT",
-        "pausing": "POZASTAVUJI…",
-        "resume": "POKRAČOVAT",
-        "stop": "ZASTAVIT",
-        "rerunFresh": "SPUSTIT OD NULY",
-        "continueSession": "POKRAČOVAT V RELACI",
-        "rerun": "SPUSTIT ZNOVU",
-        "continueTask": "NAVÁZAT ÚKOLEM →"
+        "pause": "Pozastavit",
+        "pausing": "Pozastavuji…",
+        "resume": "Pokračovat",
+        "stop": "Zastavit",
+        "rerunFresh": "Spustit od nuly",
+        "continueSession": "Pokračovat v relaci",
+        "rerun": "Spustit znovu",
+        "continueTask": "Navázat úkolem →"
       },
       "more": {
-        "openTask": "OTEVŘÍT ÚKOL →",
-        "openAgent": "OTEVŘÍT AGENTA →",
-        "openFolder": "OTEVŘÍT SLOŽKU",
-        "copyId": "ZKOPÍROVAT ID",
-        "delete": "SMAZAT BĚH"
+        "openTask": "Otevřít úkol →",
+        "openAgent": "Otevřít agenta →",
+        "openFolder": "Otevřít složku",
+        "copyId": "Zkopírovat ID",
+        "delete": "Smazat běh"
       },
       "metric": {
-        "progress": "PRŮBĚH",
-        "elapsed": "UPLYNULO",
-        "stage": "FÁZE",
-        "retries": "POKUSY",
-        "cost": "CENA",
-        "confidence": "JISTOTA"
+        "progress": "Průběh",
+        "elapsed": "Uplynulo",
+        "stage": "Fáze",
+        "retries": "Pokusy",
+        "cost": "Cena",
+        "confidence": "Jistota"
       },
       "mode": {
-        "running": "BĚŽÍ",
-        "pausing": "POZASTAVUJI · PO TÉTO FÁZI",
-        "paused": "POZASTAVENO",
-        "approval": "ČEKÁ NA SCHVÁLENÍ",
-        "question": "ČEKÁ NA ODPOVĚĎ",
-        "parked": "ZAPARKOVÁNO · POKUSY VYČERPÁNY",
-        "limit": "POZASTAVENO · LIMIT",
-        "stopped": "ZASTAVENO",
-        "error": "SELHALO",
-        "done": "HOTOVO",
-        "waiting": "ČEKÁ"
+        "running": "Běží",
+        "pausing": "Pozastavuji · po této fázi",
+        "paused": "Pozastaveno",
+        "approval": "Čeká na schválení",
+        "question": "Čeká na odpověď",
+        "parked": "Zaparkováno · pokusy vyčerpány",
+        "limit": "Pozastaveno · limit",
+        "stopped": "Zastaveno",
+        "error": "Selhalo",
+        "done": "Hotovo",
+        "waiting": "Čeká"
       },
       "stage": {
-        "done": "HOTOVO",
-        "running": "BĚŽÍ",
-        "waiting": "ČEKÁ",
-        "parked": "ZAPARKOVÁNO",
-        "queued": "VE FRONTĚ",
-        "stopped": "ZASTAVENO"
+        "done": "Hotovo",
+        "running": "Běží",
+        "waiting": "Čeká",
+        "parked": "Zaparkováno",
+        "queued": "Ve frontě",
+        "stopped": "Zastaveno"
       },
       "rail": {
-        "title": "FÁZE · {n}",
-        "routed": "SMĚROVÁNO",
-        "switchboard": "SWITCHBOARD",
-        "checkpoints": "CHECKPOINTY",
-        "openFolder": "OTEVŘÍT SLOŽKU →"
+        "title": "Fáze · {n}",
+        "routed": "Směrováno",
+        "switchboard": "Switchboard",
+        "checkpoints": "Checkpointy",
+        "openFolder": "Otevřít složku →"
       },
       "view": {
-        "live": "ŽIVĚ",
-        "input": "VSTUP",
-        "output": "VÝSTUP",
-        "metaLive": "{state} · {n} UDÁLOSTÍ",
-        "metaInput": "{task} · {n} PŘÍLOH"
+        "live": "Živě",
+        "input": "Vstup",
+        "output": "Výstup",
+        "metaLive": "{state} · {n} událostí",
+        "metaInput": "{task} · {n} příloh"
       },
       "banner": {
-        "approvalHead": "POTŘEBUJE TĚ · ZÁVAŽNOST {sev} · {risk}",
-        "approvalMeta": "VYŽÁDÁNO {at} · PŘES {via} · PŘED PROVEDENÍM ZKONTROLOVÁNO",
-        "hold": "PODRŽ PRO SCHVÁLENÍ",
-        "holding": "DRŽÍM…",
-        "revise": "PŘEPRACOVAT",
-        "reject": "ZAMÍTNOUT",
-        "wouldPublish": "ZVEŘEJNÍ · {files} SOUBORŮ · +{add} −{del}",
-        "questionHead": "POTŘEBUJE TĚ · OTÁZKA OD {agent}",
-        "questionHint": "ODPOVĚZ NÍŽE · BĚH POKRAČUJE PO ODPOVĚDI",
-        "parkedHead": "ZAPARKOVÁNO · FÁZE {n} {name} · {att} POKUSŮ",
+        "approvalHead": "Potřebuje tě · závažnost {sev} · {risk}",
+        "approvalMeta": "Vyžádáno {at} · přes {via} · před provedením zkontrolováno",
+        "hold": "Podrž pro schválení",
+        "holding": "Držím…",
+        "revise": "Přepracovat",
+        "reject": "Zamítnout",
+        "wouldPublish": "Zveřejní · {files} souborů · +{add} −{del}",
+        "questionHead": "Potřebuje tě · otázka od {agent}",
+        "questionHint": "Odpověz níže · běh pokračuje po odpovědi",
+        "parkedHead": "Zaparkováno · fáze {n} {name} · {att} pokusů",
         "parkedBody": "Pokusy jsou vyčerpány. Poslední chyba: {error}.",
-        "parkedHint": "PŘIDEJ POZNÁMKU NÍŽE A POKRAČUJ, NEBO SPUSŤ ZNOVU"
+        "parkedHint": "Přidej poznámku níže a pokračuj, nebo spusť znovu"
       },
       "feed": {
-        "youTo": "TY → {to} · {t}",
-        "queued": "VE FRONTĚ",
-        "delivered": "DORUČENO → {stage}",
-        "notDelivered": "NEDORUČENO"
+        "youTo": "Ty → {to} · {t}",
+        "queued": "Ve frontě",
+        "delivered": "Doručeno → {stage}",
+        "notDelivered": "Nedoručeno"
       },
       "output": {
         "prTitle": "Pull request #{n}",
-        "prMeta": "{state} · {files} SOUBORŮ · +{add} −{del}",
-        "folderMeta": "SLOŽKA ÚKOLU · {n} SOUBORŮ",
-        "openPr": "OTEVŘÍT PR ↗",
-        "openOutput": "OTEVŘÍT VÝSTUP ↗",
-        "openFolder": "OTEVŘÍT SLOŽKU ↗",
+        "prMeta": "{state} · {files} souborů · +{add} −{del}",
+        "folderMeta": "Složka úkolu · {n} souborů",
+        "openPr": "Otevřít PR ↗",
+        "openOutput": "Otevřít výstup ↗",
+        "openFolder": "Otevřít složku ↗",
         "pending": {
-          "running": "PROBÍHÁ · ČÁSTEČNÝ VÝSTUP Z POSLEDNÍHO CHECKPOINTU",
-          "approval": "NEZVEŘEJNĚNO · ČEKÁ NA SCHVÁLENÍ",
-          "question": "POZASTAVENO · ČEKÁ NA ODPOVĚĎ",
-          "paused": "POZASTAVENO · ČÁSTEČNÝ VÝSTUP ZACHOVÁN",
-          "parked": "ČÁSTEČNÉ · POSLEDNÍ DOBRÝ CHECKPOINT",
-          "stopped": "ZASTAVENO · ČÁSTEČNÝ VÝSTUP ZACHOVÁN"
+          "running": "Probíhá · částečný výstup z posledního checkpointu",
+          "approval": "Nezveřejněno · čeká na schválení",
+          "question": "Pozastaveno · čeká na odpověď",
+          "paused": "Pozastaveno · částečný výstup zachován",
+          "parked": "Částečné · poslední dobrý checkpoint",
+          "stopped": "Zastaveno · částečný výstup zachován"
         }
       },
       "composer": {
-        "to": "KOMU",
-        "all": "VŠICHNI · {n}",
+        "to": "Komu",
+        "all": "Všichni · {n}",
         "inputLabel": "Zpráva",
         "ph": {
           "running": "Napiš posádce. Dostane to do kontextu v dalším kroku.",
@@ -1376,34 +1376,34 @@
           "agentRunning": "Agentní běh přijme poznámku, až v něm budeš pokračovat."
         },
         "send": {
-          "send": "ODESLAT ↵",
-          "answer": "ODPOVĚDĚT ↵",
-          "resume": "POKRAČOVAT ↵",
-          "rerun": "SPUSTIT ↵",
-          "newTask": "NOVÝ ÚKOL ↵"
+          "send": "Odeslat ↵",
+          "answer": "Odpovědět ↵",
+          "resume": "Pokračovat ↵",
+          "rerun": "Spustit ↵",
+          "newTask": "Nový úkol ↵"
         },
         "hint": {
-          "running": "DORUČENO MEZI KROKY",
-          "paused": "BĚH JE POZASTAVEN · ZPRÁVY ČEKAJÍ",
-          "approval": "BĚH ČEKÁ U BRÁNY",
-          "question": "BĚH POKRAČUJE PO ODPOVĚDI",
-          "parked": "POZNÁMKA PŮJDE DO KONTEXTU",
-          "stopped": "BĚH JE ZASTAVEN",
-          "done": "BĚH SKONČIL"
+          "running": "Doručeno mezi kroky",
+          "paused": "Běh je pozastaven · zprávy čekají",
+          "approval": "Běh čeká u brány",
+          "question": "Běh pokračuje po odpovědi",
+          "parked": "Poznámka půjde do kontextu",
+          "stopped": "Běh je zastaven",
+          "done": "Běh skončil"
         }
       },
       "confirm": {
-        "stopTitle": "ZASTAVIT {id}",
+        "stopTitle": "Zastavit {id}",
         "stopBody": "Aktuální fáze ({stage}) se zruší. Částečný výstup a checkpointy zůstanou a běh můžeš spustit znovu.",
-        "rejectTitle": "ZAMÍTNOUT ŽÁDOST",
+        "rejectTitle": "Zamítnout žádost",
         "rejectBody": "Posádka neprovede: {action}. Běh se zastaví a ponechá částečný výstup.",
-        "deleteTitle": "SMAZAT {id}",
+        "deleteTitle": "Smazat {id}",
         "deleteBody": "Běh, jeho logy a checkpointy se odstraní. Úkol a jeho zapsaný výstup zůstanou."
       },
       "notFound": {
-        "title": "BĚH NENALEZEN",
+        "title": "Běh nenalezen",
         "body": "Běh s ID {id} neexistuje. Možná byl smazán.",
-        "back": "← VŠECHNY BĚHY"
+        "back": "← Všechny běhy"
       }
     },
     "artifacts": {
@@ -1782,12 +1782,12 @@
       "columnProject": "Projekt",
       "columnRepo": "Repo"
     },
-    "allTasksLink": "VŠECHNY ÚKOLY TÉTO FIRMY →",
+    "allTasksLink": "Všechny úkoly této firmy →",
     "contactsTitle": "Kontakty",
     "metrics": {
-      "projects": "PROJEKTY",
-      "contacts": "KONTAKTY",
-      "budget": "ROZPOČET / MĚS"
+      "projects": "Projekty",
+      "contacts": "Kontakty",
+      "budget": "Rozpočet / měs"
     },
     "tabs": {
       "overview": "Přehled",
@@ -1873,7 +1873,7 @@
       "columnRepo": "Repo"
     },
     "metrics": {
-      "projects": "PROJEKTY"
+      "projects": "Projekty"
     }
   },
   "automations": {
@@ -2036,8 +2036,8 @@
     "voice": {
       "start": "Zapnout hlasový režim",
       "stop": "Vypnout hlasový režim",
-      "listening": "POSLOUCHÁM",
-      "paused": "HLASOVÝ REŽIM",
+      "listening": "Poslouchám",
+      "paused": "Hlasový režim",
       "error": "Rozpoznávání řeči selhalo, hlasový režim je vypnutý.",
       "errorMicDenied": "Prohlížeč zablokoval přístup k mikrofonu — povolte ho v nastavení stránky."
     },
@@ -2393,7 +2393,7 @@
     "newTask": "Nový úkol",
     "operatorFallback": "CEO",
     "active": "aktivních",
-    "week": "TÝDEN",
+    "week": "Týden",
     "needsYou": "Potřebuje tě",
     "needsYouEmpty": "Nic na tebe nečeká",
     "dockAria": "Dok",
@@ -2591,8 +2591,8 @@
     "title": "${amount} utraceno dnes",
     "state": {
       "ok": "OK",
-      "warn": "VAROVÁNÍ",
-      "stop": "ZASTAVENO"
+      "warn": "Varování",
+      "stop": "Zastaveno"
     },
     "resetsIn": "reset za {time}",
     "resetUnknown": "čas resetu neznámý",
@@ -2816,7 +2816,7 @@
     },
     "row": {
       "source": "Zdroj",
-      "zibby": "ZIBBY",
+      "zibby": "Zibby",
       "differs": "Liší se od zdroje",
       "differsHint": "ZIBBY a zdroj se neshodují. ZIBBY nikdy nezapisuje zpět.",
       "hidden": "Skryto",
@@ -3072,8 +3072,8 @@
     "addWidget": "+ Widget",
     "editLayout": "Upravit rozložení",
     "catalog": {
-      "title": "KATALOG WIDGETŮ",
-      "add": "PŘIDAT",
+      "title": "Katalog widgetů",
+      "add": "Přidat",
       "close": "Zavřít",
       "empty": "Všechny widgety už jsou na plochě."
     },
@@ -3081,83 +3081,83 @@
     "remove": "Odebrat widget",
     "resize": "Změnit velikost",
     "emptyWidget": "Tady nic není. Mimo režim úprav se widget sbalí na hlavičku.",
-    "allClear": "VŠE V POŘÁDKU",
+    "allClear": "Vše v pořádku",
     "widgets": {
       "issues": {
         "state": {
-          "new": "NOVÉ VE ZDROJI",
-          "waiting": "ČEKÁ NA TEBE",
-          "running": "BĚŽÍ",
-          "done": "HOTOVO"
+          "new": "Nové ve zdroji",
+          "waiting": "Čeká na tebe",
+          "running": "Běží",
+          "done": "Hotovo"
         },
         "noEpic": "Bez epicu",
-        "you": "TY · {wait}",
+        "you": "Ty · {wait}",
         "epicToggle": "Přepnout epic {title}"
       },
       "prs": {
         "status": {
-          "reviewRequested": "ŽÁDOST O REVIEW",
-          "draft": "KONCEPT",
-          "ciFailing": "CI SELHÁVÁ",
-          "mergeConflict": "KONFLIKT PŘI MERGI",
-          "changesRequested": "POŽADOVANÉ ZMĚNY",
-          "checksRunning": "KONTROLY BĚŽÍ",
-          "approved": "SCHVÁLENO",
-          "awaitingReview": "ČEKÁ NA REVIEW"
+          "reviewRequested": "Žádost o review",
+          "draft": "Koncept",
+          "ciFailing": "CI selhává",
+          "mergeConflict": "Konflikt při mergi",
+          "changesRequested": "Požadované změny",
+          "checksRunning": "Kontroly běží",
+          "approved": "Schváleno",
+          "awaitingReview": "Čeká na review"
         },
         "need": {
-          "merge": "MERGE"
+          "merge": "Merge"
         },
-        "you": "TY · {wait}",
-        "on": "NA {base}",
-        "waitsOn": "· ČEKÁ NA {prs}"
+        "you": "Ty · {wait}",
+        "on": "Na {base}",
+        "waitsOn": "· Čeká na {prs}"
       },
       "runs": {
-        "colTask": "ÚKOL · KROK",
-        "colProgress": "POSTUP",
-        "colIssue": "ISSUE",
+        "colTask": "Úkol · krok",
+        "colProgress": "Postup",
+        "colIssue": "Issue",
         "group": {
-          "active": "BĚŽÍ",
-          "finished": "UKONČENÉ"
+          "active": "Běží",
+          "finished": "Ukončené"
         },
         "state": {
-          "working": "PRACUJE",
-          "thinking": "PŘEMÝŠLÍ",
-          "blocked": "BLOKOVÁNO",
-          "error": "CHYBA",
-          "done": "HOTOVO",
-          "idle": "NEČINNÝ"
+          "working": "Pracuje",
+          "thinking": "Přemýšlí",
+          "blocked": "Blokováno",
+          "error": "Chyba",
+          "done": "Hotovo",
+          "idle": "Nečinný"
         }
       },
       "briefing": {
-        "needs": "POTŘEBUJE TĚ",
-        "running": "BĚŽÍ TEĎ",
-        "prs": "OTEVŘENÉ PR",
-        "spend": "DNEŠNÍ VÝDAJE",
-        "kicker": "{date} · PŘEHLED",
+        "needs": "Potřebuje tě",
+        "running": "Běží teď",
+        "prs": "Otevřené PR",
+        "spend": "Dnešní výdaje",
+        "kicker": "{date} · přehled",
         "fallback": "Zatím není co hlásit."
       }
     },
-    "you": "{n} TY",
+    "you": "{n} ty",
     "widget": {
       "briefing": {
-        "label": "PŘEHLED",
+        "label": "Přehled",
         "desc": "Dnešek v jednom odstavci a klíčové ukazatele"
       },
       "issues": {
-        "label": "ISSUES",
+        "label": "Issues",
         "desc": "Položky z Jiry a GitHubu seskupené pod epiky"
       },
       "tasks": {
-        "label": "FRONTA ÚKOLŮ",
+        "label": "Fronta úkolů",
         "desc": "Běhy čekající na start: ve frontě, naplánované, pozdržené"
       },
       "prs": {
-        "label": "PULL REQUESTY",
+        "label": "Pull requesty",
         "desc": "PR od agentů i vaše, včetně stacků"
       },
       "runs": {
-        "label": "PRÁVĚ BĚŽÍ A UKONČENÉ",
+        "label": "Právě běží a ukončené",
         "desc": "Aktivní běhy a posledních 10 ukončených"
       }
     },
@@ -3165,104 +3165,104 @@
       "close": "Zavřít panel",
       "hint": "J / K · ESC",
       "kind": {
-        "issue": "ISSUE",
-        "task": "ÚKOL",
-        "pr": "PULL REQUEST",
-        "run": "BĚH"
+        "issue": "Issue",
+        "task": "Úkol",
+        "pr": "Pull request",
+        "run": "Běh"
       },
-      "needsYou": "ČEKÁ NA TEBE · {kind}",
-      "waiting": "ČEKÁ {wait}",
-      "approve": "SCHVÁLIT",
-      "deny": "ZAMÍTNOUT",
-      "holdRule": "PRAVIDLO · SCHVÁLENÍ VYŽADUJE PODRŽENÍ NA STRÁNCE ÚKOLU",
-      "description": "POPIS",
-      "details": "DETAILY",
+      "needsYou": "Čeká na tebe · {kind}",
+      "waiting": "Čeká {wait}",
+      "approve": "Schválit",
+      "deny": "Zamítnout",
+      "holdRule": "Pravidlo · schválení vyžaduje podržení na stránce úkolu",
+      "description": "Popis",
+      "details": "Detaily",
       "none": "Zatím nic.",
-      "updated": "AKTUALIZOVÁNO {when}",
-      "created": "VYTVOŘENO {when}",
+      "updated": "Aktualizováno {when}",
+      "created": "Vytvořeno {when}",
       "issue": {
-        "epic": "EPIC",
-        "team": "TÝM",
-        "source": "ZDROJ",
-        "pr": "PULL REQUEST",
+        "epic": "Epic",
+        "team": "Tým",
+        "source": "Zdroj",
+        "pr": "Pull request",
         "noTeam": "Bez týmu",
-        "noEpic": "BEZ EPICU",
-        "epicChip": "EPIC {key}",
+        "noEpic": "Bez epicu",
+        "epicChip": "Epic {key}",
         "noDescription": "Zdroj nemá žádný popis.",
-        "openIn": "OTEVŘÍT V {source} ↗",
-        "process": "ZPRACOVAT DO ÚKOLU",
-        "respond": "ODPOVĚDĚT",
-        "viewRun": "ZOBRAZIT BĚH"
+        "openIn": "Otevřít v {source} ↗",
+        "process": "Zpracovat do úkolu",
+        "respond": "Odpovědět",
+        "viewRun": "Zobrazit běh"
       },
       "task": {
-        "chain": "ŘETĚZEC · {n}",
-        "subtasks": "PODÚKOLY",
-        "artifacts": "ARTEFAKTY",
-        "step": "KROK {n}",
+        "chain": "Řetězec · {n}",
+        "subtasks": "Podúkoly",
+        "artifacts": "Artefakty",
+        "step": "Krok {n}",
         "from": "Z {source}",
-        "noDepartment": "BEZ ODDĚLENÍ",
-        "noProject": "BEZ PROJEKTU",
-        "open": "OTEVŘÍT ÚKOL ↗",
-        "openApproval": "OTEVŘÍT SCHVÁLENÍ ↗"
+        "noDepartment": "Bez oddělení",
+        "noProject": "Bez projektu",
+        "open": "Otevřít úkol ↗",
+        "openApproval": "Otevřít schválení ↗"
       },
       "pr": {
-        "review": "REVIEW",
-        "checks": "KONTROLY",
-        "changes": "ZMĚNY",
-        "stack": "STACK",
+        "review": "Review",
+        "checks": "Kontroly",
+        "changes": "Změny",
+        "stack": "Stack",
         "reviewValue": {
-          "approved": "SCHVÁLENO",
-          "changesRequested": "POŽADOVÁNY ZMĚNY",
-          "pending": "ČEKÁ",
-          "yourReview": "TVOJE REVIEW",
-          "draft": "DRAFT"
+          "approved": "Schváleno",
+          "changesRequested": "Požadovány změny",
+          "pending": "Čeká",
+          "yourReview": "Tvoje review",
+          "draft": "Draft"
         },
         "ci": {
-          "passing": "PROŠLO",
-          "failing": "SELHÁVÁ",
-          "pending": "BĚŽÍ",
-          "unknown": "NEZNÁMÉ"
+          "passing": "Prošlo",
+          "failing": "Selhává",
+          "pending": "Běží",
+          "unknown": "Neznámé"
         },
         "ciRow": "CI",
-        "branch": "VĚTEV",
-        "author": "AUTOR",
-        "opened": "OTEVŘENO",
-        "updated": "AKTUALIZOVÁNO",
-        "mergeable": "SLUČITELNÉ",
+        "branch": "Větev",
+        "author": "Autor",
+        "opened": "Otevřeno",
+        "updated": "Aktualizováno",
+        "mergeable": "Slučitelné",
         "yes": "Ano",
         "no": "Ne — konflikty",
         "unknown": "Neznámé",
-        "threads": "OTEVŘENÁ VLÁKNA",
-        "files": "SOUBORY · {n}",
+        "threads": "Otevřená vlákna",
+        "files": "Soubory · {n}",
         "noFiles": "Žádné soubory.",
         "diffLoading": "Načítám změny…",
-        "diff": "DIFF · VŮČI {base}",
-        "by": "OD {who}",
+        "diff": "Diff · vůči {base}",
+        "by": "Od {who}",
         "you": "Ty",
-        "openGithub": "OTEVŘÍT NA GITHUBU ↗",
-        "mergeOnGithub": "MERGE NA GITHUBU ↗",
+        "openGithub": "Otevřít na GitHubu ↗",
+        "mergeOnGithub": "Merge na GitHubu ↗",
         "mergeBlocked": "Merge se v aplikaci nabízí, jen když je PR připravený ke sloučení",
         "note": {
-          "ready": "PŘIPRAVENO KE SLOUČENÍ",
-          "approved": "SCHVÁLENO",
-          "checksRunning": "KONTROLY BĚŽÍ",
-          "ciFailing": "CI SELHÁVÁ",
-          "conflict": "KONFLIKT PŘI SLUČOVÁNÍ",
-          "changesRequested": "POŽADOVÁNY ZMĚNY",
-          "needsApproval": "VYŽADUJE SCHVÁLENÍ",
-          "reviewRequested": "ŽÁDOST O REVIEW",
-          "draft": "DRAFT"
+          "ready": "Připraveno ke sloučení",
+          "approved": "Schváleno",
+          "checksRunning": "Kontroly běží",
+          "ciFailing": "CI selhává",
+          "conflict": "Konflikt při slučování",
+          "changesRequested": "Požadovány změny",
+          "needsApproval": "Vyžaduje schválení",
+          "reviewRequested": "Žádost o review",
+          "draft": "Draft"
         }
       },
       "run": {
-        "open": "OTEVŘÍT BĚH ↗",
-        "openApproval": "CELÉ SCHVÁLENÍ ↗",
-        "output": "VÝSTUP FÁZE"
+        "open": "Otevřít běh ↗",
+        "openApproval": "Celé schválení ↗",
+        "output": "Výstup fáze"
       }
     },
     "moreLayouts": "Další layouty",
-    "deleteLayout": "SMAZAT",
-    "deleteLayoutConfirm": "OPRAVDU SMAZAT",
+    "deleteLayout": "Smazat",
+    "deleteLayoutConfirm": "Opravdu smazat",
     "save": "Uložit",
     "layoutNameError": {
       "required": "Zadej název.",
@@ -3272,7 +3272,7 @@
     },
     "manage": {
       "title": "Správa rozložení",
-      "active": "AKTIVNÍ",
+      "active": "Aktivní",
       "moveUp": "Posunout {name} nahoru",
       "moveDown": "Posunout {name} dolů",
       "edit": "Upravit",

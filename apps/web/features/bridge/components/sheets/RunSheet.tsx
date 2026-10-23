@@ -42,10 +42,10 @@ export function RunSheet({ id, anchor, onClose }: SheetProps) {
     <AnchoredSheet
       {...geometry(anchor)}
       chips={[
-        (run.processor?.name ?? run.owner).toUpperCase(),
-        (run.projectId ?? run.project).toUpperCase(),
-        ...(run.currentStage ? [run.currentStage.toUpperCase()] : []),
-        t("bridge.sheet.created", { when: compactAgo(run.startedAt, now).toUpperCase() }),
+        run.processor?.name ?? run.owner,
+        run.projectId ?? run.project,
+        ...(run.currentStage ? [run.currentStage] : []),
+        t("bridge.sheet.created", { when: compactAgo(run.startedAt, now) }),
       ]}
       closeLabel={t("bridge.sheet.close")}
       footerEnd={
@@ -71,9 +71,9 @@ export function RunSheet({ id, anchor, onClose }: SheetProps) {
         </>
       }
       hint={t("bridge.sheet.hint")}
-      kind={`${t("bridge.sheet.kind.run")} · ${run.kind.toUpperCase()}`}
+      kind={`${t("bridge.sheet.kind.run")} · ${run.kind}`}
       onClose={onClose}
-      stateLabel={t(`runs.state.${run.status}`).toUpperCase()}
+      stateLabel={t(`runs.state.${run.status}`)}
       title={runTitle(run)}
       tone={normalizeStateTone(runStateTone(run.status) ?? "idle")}
     >

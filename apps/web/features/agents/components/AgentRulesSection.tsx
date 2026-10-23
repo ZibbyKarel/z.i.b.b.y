@@ -45,7 +45,7 @@ function GroupHeading({
   return (
     <Stack align="center" direction="row" gap="100">
       <Icon name={icon} size="xs" tone={tone} />
-      <Typography mono uppercase size="2xs" tone={tone} tracking="widest" type="note" weight="bold">
+      <Typography uppercase size="2xs" tone={tone} type="note" weight="bold">
         {title}
       </Typography>
       {count !== undefined && (

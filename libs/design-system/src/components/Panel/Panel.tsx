@@ -78,7 +78,7 @@ export function Panel({
       {!tone && live && <Corners inset="100" tone={liveTone} />}
       {(header || headerEnd) && (
         <div
-          className="flex items-center gap-2 border-b border-border px-4 py-2.5 font-mono text-xs font-medium uppercase tracking-wider text-foreground-faint"
+          className="flex items-center gap-2 border-b border-border px-4 py-2.5 font-sans font-semibold uppercase tracking-wider text-[11px] text-foreground-faint"
           data-testid={PanelTestId.Header}
         >
           {header}

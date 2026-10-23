@@ -94,7 +94,7 @@ describe("RunOutputView", () => {
       />,
     );
     expect(screen.getByTestId(RunOutputViewTestId.Pending)).toHaveTextContent(
-      "PROBÍHÁ · ČÁSTEČNÝ VÝSTUP Z POSLEDNÍHO CHECKPOINTU",
+      "Probíhá · částečný výstup z posledního checkpointu",
     );
     expect(screen.queryByTestId(RunOutputViewTestId.ContinueTask)).not.toBeInTheDocument();
   });

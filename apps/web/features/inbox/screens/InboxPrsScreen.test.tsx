@@ -312,7 +312,7 @@ describe("InboxPrsScreen master–detail", () => {
     hooks.search = `pr=${encodeURIComponent(urlOf(1))}`;
     const first = renderWithProviders(<InboxPrsScreen />);
     expect(screen.getByTestId(PrDetailTestId.WaitText)).toHaveTextContent(
-      "Spodek stacku. Cílí na MAIN.",
+      "Spodek stacku. Cílí na main.",
     );
     first.unmount();
     hooks.search = `pr=${encodeURIComponent(urlOf(2))}`;

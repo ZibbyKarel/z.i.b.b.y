@@ -37,7 +37,7 @@ export function ApprovalNeed({ approval: a }: ApprovalNeedProps) {
       approveLabel={t("bridge.sheet.approve")}
       denyLabel={t("bridge.sheet.deny")}
       diff={approvalDiffLines(a)}
-      heading={t("bridge.sheet.needsYou", { kind: a.kind.toUpperCase() })}
+      heading={t("bridge.sheet.needsYou", { kind: a.kind })}
       onApprove={
         isHighRisk(a) ? undefined : () => approve.mutate({ params: { id: a.id }, body: {} })
       }
@@ -45,7 +45,7 @@ export function ApprovalNeed({ approval: a }: ApprovalNeedProps) {
       pending={pending}
       rule={isHighRisk(a) ? t("bridge.sheet.holdRule") : undefined}
       text={a.summary ?? a.text ?? a.detail}
-      wait={t("bridge.sheet.waiting", { wait: formatWaited(a.requestedAt).toUpperCase() })}
+      wait={t("bridge.sheet.waiting", { wait: formatWaited(a.requestedAt) })}
     />
   );
 }

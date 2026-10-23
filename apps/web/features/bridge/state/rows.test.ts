@@ -88,9 +88,9 @@ describe("issues", () => {
       code: "ZB-a",
       tone: "blocked",
       needsYou: "ago:2026-10-01",
-      source: "JIRA",
+      source: "Jira",
       sourceKind: "jira",
-      project: "SHOP",
+      project: "Shop",
       pr: null,
     });
     expect(groups[1]).toMatchObject({ count: "01", progress: 0, epic: null });
@@ -183,7 +183,7 @@ describe("runs", () => {
       key: "runs:r1",
       id: "t1",
       tone: "working",
-      step: "DELIVERY · CODER",
+      step: "delivery · coder",
       pct: 42,
       issue: "ZB-9",
     });
@@ -192,7 +192,7 @@ describe("runs", () => {
       tone: "blocked",
       pct: null,
       issue: null,
-      step: "DELIVERY · WORKFLOW",
+      step: "Delivery · workflow",
     });
   });
 });

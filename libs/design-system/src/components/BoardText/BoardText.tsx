@@ -13,37 +13,38 @@ export type BoardTextKind =
   | "title"
   /** Row title, regular weight (Tasks / Running). */
   | "body"
-  /** Mono 10 / .08em metadata. */
+  /** Caps 10 / .1em metadata. */
   | "meta"
   /** PR number — mono 11. */
   | "prNum"
   /** PR title — 13 / 500 / 1.35, wraps. */
   | "prTitle"
-  /** PR meta + status lines — mono 10 / .1em. */
+  /** PR meta + status lines — caps 10 / .1em. */
   | "prMeta"
   /** Briefing lead paragraph — 14 / 1.45. */
   | "lead"
-  /** Mono 10 / .12em kicker (briefing date). */
+  /** Caps 10 / .1em / 600 kicker (briefing date). */
   | "kicker"
-  /** Mono 10 / .14em column header. */
+  /** Caps 10 / .1em / 600 column header. */
   | "colHead"
-  /** Mono 10 / .06em, one line, ellipsis (issue link). */
+  /** Mono 10, one line, ellipsis (issue link). */
   | "link";
 
 export type BoardTextTone = "ink" | "ink2" | "ink3";
 
 const KIND: Record<BoardTextKind, string> = {
-  id: "font-mono text-[10px] tracking-[.06em] whitespace-nowrap text-ink-2",
+  id: "font-mono text-[10px] whitespace-nowrap text-ink-2",
   title: "block min-w-0 truncate text-[13px] font-medium text-ink",
   body: "block min-w-0 truncate text-[13px] text-ink",
-  meta: "font-mono text-[10px] tracking-[.08em] whitespace-nowrap text-ink-2",
+  meta: "font-sans uppercase tracking-wider text-[10px] whitespace-nowrap text-ink-2",
   prNum: "flex-none font-mono text-[11px] text-ink-2",
   prTitle: "min-w-0 flex-1 text-[13px] font-medium leading-[1.35] [text-wrap:pretty] text-ink",
-  prMeta: "font-mono text-[10px] tracking-[.1em] text-ink-2",
+  prMeta: "font-sans uppercase tracking-wider text-[10px] text-ink-2",
   lead: "m-0 block text-[14px] leading-[1.45] [text-wrap:pretty] text-ink-2",
-  kicker: "font-mono text-[10px] tracking-[.12em] text-ink-3",
-  colHead: "font-mono text-[10px] tracking-[.14em] whitespace-nowrap text-ink-3",
-  link: "block truncate font-mono text-[10px] tracking-[.06em] whitespace-nowrap text-ink",
+  kicker: "font-sans font-semibold uppercase tracking-wider text-[10px] text-ink-3",
+  colHead:
+    "font-sans font-semibold uppercase tracking-wider text-[10px] whitespace-nowrap text-ink-3",
+  link: "block truncate font-mono text-[10px] whitespace-nowrap text-ink",
 };
 
 const TONE: Record<BoardTextTone, string> = {

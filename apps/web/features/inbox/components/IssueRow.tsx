@@ -221,14 +221,7 @@ export function IssueRow({
               {item.sourceStatus && (
                 <Row gap="50">
                   <Typography type="label">{t("row.source")}</Typography>
-                  <Typography
-                    mono
-                    uppercase
-                    size="2xs"
-                    tracking="wider"
-                    type="note"
-                    variant="secondary"
-                  >
+                  <Typography uppercase size="2xs" type="note" variant="secondary">
                     {item.sourceStatus.name}
                   </Typography>
                 </Row>

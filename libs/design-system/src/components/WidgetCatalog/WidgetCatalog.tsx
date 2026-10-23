@@ -45,11 +45,11 @@ export function WidgetCatalog({
 }: WidgetCatalogProps) {
   return (
     <div
-      className="absolute right-[150px] top-[54px] z-40 flex w-[280px] flex-col border border-ink bg-panel leading-[normal]"
+      className="absolute right-[150px] top-[54px] z-40 flex w-[280px] flex-col overflow-hidden rounded-lg border border-line-2 bg-panel leading-[normal] shadow-dropdown"
       data-testid={WidgetCatalogTestId.Root}
       ref={ref}
     >
-      <div className="flex justify-between border-b border-line px-[12px] py-[10px] font-mono text-[10px] tracking-[.14em] text-ink-3">
+      <div className="flex justify-between border-b border-line px-[12px] py-[10px] font-sans font-semibold uppercase tracking-wider text-[10px] text-ink-3">
         <span>{title}</span>
         <button
           aria-label={closeLabel}
@@ -68,11 +68,11 @@ export function WidgetCatalog({
           key={entry.id}
         >
           <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
-            <span className="font-mono text-[11px] tracking-[.12em]">{entry.label}</span>
+            <span className="text-[13px] font-medium">{entry.label}</span>
             <span className="text-[12px] text-ink-2">{entry.description}</span>
           </div>
           <button
-            className="cursor-pointer border border-line-2 bg-transparent px-[9px] py-[5px] font-mono text-[10px] tracking-[.12em] text-ink-2 hover:bg-panel-2 hover:text-ink"
+            className="cursor-pointer rounded-md border border-line-2 bg-panel px-[10px] py-[5px] font-sans text-[12px] font-medium text-ink transition-colors hover:bg-hover"
             data-testid={`${WidgetCatalogTestId.Add}-${entry.id}`}
             onClick={() => onAdd(entry.id)}
             type="button"

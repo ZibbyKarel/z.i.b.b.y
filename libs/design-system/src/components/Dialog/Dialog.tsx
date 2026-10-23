@@ -191,7 +191,7 @@ function DialogHeader({
     >
       <Row gap="150" justify="between">
         <div
-          className="font-mono font-semibold text-md text-foreground"
+          className="font-sans font-semibold text-md text-foreground"
           data-testid={DialogTestId.Title}
           id={titleId}
         >

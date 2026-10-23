@@ -59,7 +59,7 @@ export function IssuesWidget({
   const groups = useMemo(
     () =>
       issueGroups(widget.id, list, itemsQuery.data?.epics ?? [], prsQuery.data?.prs ?? [], (iso) =>
-        compactAgo(iso, now).toUpperCase(),
+        compactAgo(iso, now),
       ),
     [widget.id, list, itemsQuery.data, prsQuery.data, now],
   );

@@ -69,7 +69,7 @@ export function RunsWidget({
       return {
         ...r,
         status: run?.status ?? "done",
-        age: compactAgo(run?.taskOutcomeFinishedAt ?? run?.startedAt ?? "", now).toUpperCase(),
+        age: compactAgo(run?.taskOutcomeFinishedAt ?? run?.startedAt ?? "", now),
       };
     });
   }, [widget.id, archived, now]);
@@ -162,7 +162,7 @@ export function RunsWidget({
               <Progress height="25" tone={PROGRESS_TONE[r.tone] ?? "idle"} value={100} />
               <BoardLine between gap="5">
                 <BoardText tabular kind="meta">
-                  {tRuns(`state.${r.status}`).toUpperCase()}
+                  {tRuns(`state.${r.status}`)}
                 </BoardText>
                 <BoardText tabular kind="meta">
                   {r.age}
@@ -190,7 +190,7 @@ function RunTitle({ title, step }: { title: string; step: string }) {
 function RunIssue({ issue, project }: { issue: string | null; project: string }) {
   return (
     <BoardText align="right" kind="link" tone={issue ? "ink" : "ink3"} underline={!!issue}>
-      {issue ? `${issue} ↗` : project.toUpperCase()}
+      {issue ? `${issue} ↗` : project}
     </BoardText>
   );
 }

@@ -65,17 +65,31 @@ describe("Typography", () => {
     expect(screen.getByTestId(TypographyTestId.Root).tagName).toBe("SPAN");
   });
 
-  it("applies size, mono, uppercase and truncate", () => {
+  it("applies size, mono and truncate", () => {
     render(
-      <Typography mono truncate uppercase size="xs" type="note">
+      <Typography mono truncate size="xs" type="note">
         A
       </Typography>,
     );
     const el = screen.getByTestId(TypographyTestId.Root);
     expect(el.className).toContain("font-mono");
-    expect(el.className).toContain("uppercase");
+    expect(el.className).not.toContain("uppercase");
     expect(el.className).toContain("truncate");
     expect(el.style.fontSize).toBe("var(--text-xs)");
+  });
+
+  it("renders caps as a sans 600 / .1em label, overriding mono and tracking", () => {
+    render(
+      <Typography mono uppercase size="2xs" tracking="wide" type="note">
+        A
+      </Typography>,
+    );
+    const el = screen.getByTestId(TypographyTestId.Root);
+    expect(el.className).toContain("uppercase");
+    expect(el.className).toContain("font-sans");
+    expect(el.className).not.toContain("font-mono");
+    expect(el.className).toContain("font-semibold");
+    expect(el.style.letterSpacing).toBe("var(--tracking-wider)");
   });
 
   it("forwards a ref", () => {
@@ -119,10 +133,10 @@ describe("Typography", () => {
     expect(el.style.fontVariantNumeric).toBe("tabular-nums");
   });
 
-  it("renders the DS.md §3.2 mono scale, uppercase except `code`", () => {
+  it("renders the system voice: a sans caps wordmark, a mono un-capped `code`", () => {
     const { rerender } = render(<Typography type="wordmark">Zibbycorp</Typography>);
     let el = screen.getByTestId(TypographyTestId.Root);
-    expect(el.className).toContain("font-mono");
+    expect(el.className).toContain("font-sans");
     expect(el.className).toContain("uppercase");
     expect(el.style.fontSize).toBe("13px");
     expect(el.style.letterSpacing).toBe("0.18em");

@@ -32,7 +32,7 @@ export function RunInputView({ run }: RunInputViewProps) {
           <Stack gap="75">
             <Divider />
             <Typography as="span" type="labelSm">
-              {t("sectionTitle").toUpperCase()}
+              {t("sectionTitle")}
             </Typography>
             {attachments.map((a) => (
               <Container data-testid={RunInputViewTestId.Attachment} key={a.name}>

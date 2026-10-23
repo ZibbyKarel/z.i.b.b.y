@@ -41,7 +41,7 @@ export function WorkflowStepStrip({ phases, current, ref }: WorkflowStepStripPro
           <span
             className={cn(
               "inline-flex items-center gap-1.5 border bg-background px-[9px] py-[6px]",
-              "font-mono text-[10px] font-semibold tracking-wider uppercase",
+              "font-sans font-semibold uppercase tracking-wider text-[10px]",
               i === current ? "border-ink" : "border-border",
             )}
             data-testid={`${WorkflowStepStripTestId.Step}-${i}`}

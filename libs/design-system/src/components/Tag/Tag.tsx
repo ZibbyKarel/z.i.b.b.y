@@ -47,7 +47,7 @@ const tag = cva(
         md: "px-2.5 py-1.5",
       },
       solid: { true: "", false: "" },
-      uppercase: { true: "uppercase", false: "" },
+      uppercase: { true: "font-sans uppercase tracking-wider", false: "" },
     },
     compoundVariants: [
       {

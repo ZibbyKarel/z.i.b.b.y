@@ -30,10 +30,7 @@ export function PrsWidget({
   const prsQuery = useInboxPrsQuery();
 
   const { groups, visible } = useMemo(
-    () =>
-      prGroups(widget.id, prsQuery.data?.prs ?? [], filters, (iso) =>
-        compactAgo(iso, now).toUpperCase(),
-      ),
+    () => prGroups(widget.id, prsQuery.data?.prs ?? [], filters, (iso) => compactAgo(iso, now)),
     [widget.id, prsQuery.data, filters, now],
   );
 

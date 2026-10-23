@@ -54,10 +54,11 @@ export function BriefingWidget({ onEmptyChange, onCountChange }: BridgeWidgetPro
     [t, approvals, live.length, prs, filters, budget],
   );
 
-  const date = new Date(briefing?.generatedAt ?? now)
-    .toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short" })
-    .toUpperCase();
-
+  const date = new Date(briefing?.generatedAt ?? now).toLocaleDateString(locale, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
   return (
     <KpiStrip
       kpis={kpis}

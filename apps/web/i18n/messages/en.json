@@ -195,7 +195,7 @@
     "skipToContent": "Skip to content"
   },
   "tasks": {
-    "dialogTitle": "NEW TASK",
+    "dialogTitle": "New task",
     "dialogSubtitle": "Describe the task — ZIBBY classifies it and hands it to an agent",
     "cancel": "Cancel",
     "classifyRun": "Run",
@@ -969,7 +969,7 @@
       "title": "Chat personality",
       "hint": "How ZIBBY sounds when you talk to it. Only the tone changes — the rules for when to answer / ask / dispatch a task stay the same. Applies to the next conversation.",
       "persona": {
-        "jarvis": "JARVIS",
+        "jarvis": "Jarvis",
         "concise": "Concise",
         "formal": "Professional"
       },
@@ -1042,7 +1042,7 @@
     "uptime": "Uptime",
     "status": "Status",
     "online": "NOMINAL · online",
-    "offline": "OFFLINE",
+    "offline": "Offline",
     "watchers": {
       "title": "Watchers",
       "ok": "OK",
@@ -1263,108 +1263,108 @@
     "bookFolder": "Book folder",
     "stageExternalCost": "+{cost} external",
     "detail": {
-      "backToRuns": "← RUNS",
-      "assignProject": "+ ASSIGN PROJECT",
-      "workflow": "WORKFLOW · {name}",
+      "backToRuns": "← Runs",
+      "assignProject": "+ Assign project",
+      "workflow": "Workflow · {name}",
       "action": {
-        "pause": "PAUSE",
-        "pausing": "PAUSING…",
-        "resume": "RESUME",
-        "stop": "STOP",
-        "rerunFresh": "RE-RUN FRESH",
-        "continueSession": "CONTINUE SESSION",
-        "rerun": "RE-RUN",
-        "continueTask": "CONTINUE TASK →"
+        "pause": "Pause",
+        "pausing": "Pausing…",
+        "resume": "Resume",
+        "stop": "Stop",
+        "rerunFresh": "Re-run fresh",
+        "continueSession": "Continue session",
+        "rerun": "Re-run",
+        "continueTask": "Continue task →"
       },
       "more": {
-        "openTask": "OPEN TASK →",
-        "openAgent": "OPEN AGENT →",
-        "openFolder": "OPEN TASK FOLDER",
-        "copyId": "COPY RUN ID",
-        "delete": "DELETE RUN"
+        "openTask": "Open task →",
+        "openAgent": "Open agent →",
+        "openFolder": "Open task folder",
+        "copyId": "Copy run ID",
+        "delete": "Delete run"
       },
       "metric": {
-        "progress": "PROGRESS",
-        "elapsed": "ELAPSED",
-        "stage": "STAGE",
-        "retries": "RETRIES",
-        "cost": "COST",
-        "confidence": "CONFIDENCE"
+        "progress": "Progress",
+        "elapsed": "Elapsed",
+        "stage": "Stage",
+        "retries": "Retries",
+        "cost": "Cost",
+        "confidence": "Confidence"
       },
       "mode": {
-        "running": "RUNNING",
-        "pausing": "PAUSING · AFTER THIS STAGE",
-        "paused": "PAUSED",
-        "approval": "WAITING ON APPROVAL",
-        "question": "NEEDS YOUR ANSWER",
-        "parked": "PARKED · RETRIES EXHAUSTED",
-        "limit": "PAUSED · USAGE LIMIT",
-        "stopped": "STOPPED",
-        "error": "FAILED",
-        "done": "DONE",
-        "waiting": "WAITING"
+        "running": "Running",
+        "pausing": "Pausing · after this stage",
+        "paused": "Paused",
+        "approval": "Waiting on approval",
+        "question": "Needs your answer",
+        "parked": "Parked · retries exhausted",
+        "limit": "Paused · usage limit",
+        "stopped": "Stopped",
+        "error": "Failed",
+        "done": "Done",
+        "waiting": "Waiting"
       },
       "stage": {
-        "done": "DONE",
-        "running": "RUNNING",
-        "waiting": "WAITING",
-        "parked": "PARKED",
-        "queued": "QUEUED",
-        "stopped": "STOPPED"
+        "done": "Done",
+        "running": "Running",
+        "waiting": "Waiting",
+        "parked": "Parked",
+        "queued": "Queued",
+        "stopped": "Stopped"
       },
       "rail": {
-        "title": "STAGES · {n}",
-        "routed": "ROUTED",
-        "switchboard": "SWITCHBOARD",
-        "checkpoints": "CHECKPOINTS",
-        "openFolder": "OPEN TASK FOLDER →"
+        "title": "Stages · {n}",
+        "routed": "Routed",
+        "switchboard": "Switchboard",
+        "checkpoints": "Checkpoints",
+        "openFolder": "Open task folder →"
       },
       "view": {
-        "live": "LIVE",
-        "input": "INPUT",
-        "output": "OUTPUT",
-        "metaLive": "{state} · {n} EVENTS",
-        "metaInput": "{task} · {n} ATTACHMENTS"
+        "live": "Live",
+        "input": "Input",
+        "output": "Output",
+        "metaLive": "{state} · {n} events",
+        "metaInput": "{task} · {n} attachments"
       },
       "banner": {
-        "approvalHead": "NEEDS YOU · SEVERITY {sev} · {risk}",
-        "approvalMeta": "REQUESTED {at} · VIA {via} · REVIEWED BEFORE IT TAKES EFFECT",
-        "hold": "HOLD TO APPROVE",
-        "holding": "HOLD…",
-        "revise": "REVISE",
-        "reject": "REJECT",
-        "wouldPublish": "WOULD PUBLISH · {files} FILES · +{add} −{del}",
-        "questionHead": "NEEDS YOU · QUESTION FROM {agent}",
-        "questionHint": "ANSWER BELOW · THE RUN RESUMES WHEN YOU REPLY",
-        "parkedHead": "PARKED · STAGE {n} {name} · {att} ATTEMPTS",
+        "approvalHead": "Needs you · severity {sev} · {risk}",
+        "approvalMeta": "Requested {at} · via {via} · reviewed before it takes effect",
+        "hold": "Hold to approve",
+        "holding": "Hold…",
+        "revise": "Revise",
+        "reject": "Reject",
+        "wouldPublish": "Would publish · {files} files · +{add} −{del}",
+        "questionHead": "Needs you · question from {agent}",
+        "questionHint": "Answer below · the run resumes when you reply",
+        "parkedHead": "Parked · stage {n} {name} · {att} attempts",
         "parkedBody": "Retries are exhausted. The last error was: {error}.",
-        "parkedHint": "ADD A NOTE BELOW TO RESUME, OR RE-RUN FROM THE MENU"
+        "parkedHint": "Add a note below to resume, or re-run from the menu"
       },
       "feed": {
-        "youTo": "YOU → {to} · {t}",
-        "queued": "QUEUED",
-        "delivered": "DELIVERED → {stage}",
-        "notDelivered": "NOT DELIVERED"
+        "youTo": "You → {to} · {t}",
+        "queued": "Queued",
+        "delivered": "Delivered → {stage}",
+        "notDelivered": "Not delivered"
       },
       "output": {
         "prTitle": "Pull request #{n}",
-        "prMeta": "{state} · {files} FILES · +{add} −{del}",
-        "folderMeta": "TASK FOLDER · {n} FILES",
-        "openPr": "OPEN PR ↗",
-        "openOutput": "OPEN OUTPUT ↗",
-        "openFolder": "OPEN FOLDER ↗",
+        "prMeta": "{state} · {files} files · +{add} −{del}",
+        "folderMeta": "Task folder · {n} files",
+        "openPr": "Open PR ↗",
+        "openOutput": "Open output ↗",
+        "openFolder": "Open folder ↗",
         "pending": {
-          "running": "IN PROGRESS · PARTIAL OUTPUT FROM LAST CHECKPOINT",
-          "approval": "NOT PUBLISHED · WAITING ON YOUR APPROVAL",
-          "question": "PAUSED · WAITING ON YOUR ANSWER",
-          "paused": "PAUSED · PARTIAL OUTPUT KEPT",
-          "parked": "PARTIAL · LAST GOOD CHECKPOINT",
-          "stopped": "STOPPED · PARTIAL OUTPUT KEPT"
+          "running": "In progress · partial output from last checkpoint",
+          "approval": "Not published · waiting on your approval",
+          "question": "Paused · waiting on your answer",
+          "paused": "Paused · partial output kept",
+          "parked": "Partial · last good checkpoint",
+          "stopped": "Stopped · partial output kept"
         }
       },
       "composer": {
-        "to": "TO",
-        "all": "ALL · {n}",
+        "to": "To",
+        "all": "All · {n}",
         "inputLabel": "Message",
         "ph": {
           "running": "Message the crew. It lands in their context on the next step.",
@@ -1376,34 +1376,34 @@
           "agentRunning": "Agent runs take notes when you continue them."
         },
         "send": {
-          "send": "SEND ↵",
-          "answer": "ANSWER ↵",
-          "resume": "RESUME ↵",
-          "rerun": "RE-RUN ↵",
-          "newTask": "NEW TASK ↵"
+          "send": "Send ↵",
+          "answer": "Answer ↵",
+          "resume": "Resume ↵",
+          "rerun": "Re-run ↵",
+          "newTask": "New task ↵"
         },
         "hint": {
-          "running": "DELIVERED BETWEEN STEPS",
-          "paused": "RUN IS PAUSED · MESSAGES QUEUE",
-          "approval": "RUN IS HELD AT THE GATE",
-          "question": "RUN RESUMES ON REPLY",
-          "parked": "NOTE IS ADDED TO CONTEXT",
-          "stopped": "RUN IS STOPPED",
-          "done": "RUN FINISHED"
+          "running": "Delivered between steps",
+          "paused": "Run is paused · messages queue",
+          "approval": "Run is held at the gate",
+          "question": "Run resumes on reply",
+          "parked": "Note is added to context",
+          "stopped": "Run is stopped",
+          "done": "Run finished"
         }
       },
       "confirm": {
-        "stopTitle": "STOP {id}",
+        "stopTitle": "Stop {id}",
         "stopBody": "The current stage ({stage}) is cancelled. Partial output and checkpoints are kept, and you can re-run later.",
-        "rejectTitle": "REJECT REQUEST",
+        "rejectTitle": "Reject request",
         "rejectBody": "The crew will not {action}. The run stops and keeps its partial output.",
-        "deleteTitle": "DELETE {id}",
+        "deleteTitle": "Delete {id}",
         "deleteBody": "The run, its logs and checkpoints are removed. The task and its written-back output stay."
       },
       "notFound": {
-        "title": "RUN NOT FOUND",
+        "title": "Run not found",
         "body": "There is no run with ID {id}. It may have been deleted.",
-        "back": "← ALL RUNS"
+        "back": "← All runs"
       }
     },
     "artifacts": {
@@ -1782,12 +1782,12 @@
       "columnProject": "Project",
       "columnRepo": "Repo"
     },
-    "allTasksLink": "ALL TASKS FOR THIS COMPANY →",
+    "allTasksLink": "All tasks for this company →",
     "contactsTitle": "Contacts",
     "metrics": {
-      "projects": "PROJECTS",
-      "contacts": "CONTACTS",
-      "budget": "BUDGET / MO"
+      "projects": "Projects",
+      "contacts": "Contacts",
+      "budget": "Budget / mo"
     },
     "tabs": {
       "overview": "Overview",
@@ -1873,7 +1873,7 @@
       "columnRepo": "Repo"
     },
     "metrics": {
-      "projects": "PROJECTS"
+      "projects": "Projects"
     }
   },
   "automations": {
@@ -2036,8 +2036,8 @@
     "voice": {
       "start": "Turn on voice mode",
       "stop": "Turn off voice mode",
-      "listening": "LISTENING",
-      "paused": "VOICE MODE",
+      "listening": "Listening",
+      "paused": "Voice mode",
       "error": "Voice recognition failed, voice mode is off.",
       "errorMicDenied": "The browser blocked microphone access — allow it in the site settings."
     },
@@ -2393,7 +2393,7 @@
     "newTask": "New task",
     "operatorFallback": "CEO",
     "active": "active",
-    "week": "WEEK",
+    "week": "Week",
     "needsYou": "Needs you",
     "needsYouEmpty": "Nothing is waiting for you",
     "dockAria": "Dock",
@@ -2591,8 +2591,8 @@
     "title": "${amount} spent today",
     "state": {
       "ok": "OK",
-      "warn": "WARNING",
-      "stop": "STOPPED"
+      "warn": "Warning",
+      "stop": "Stopped"
     },
     "resetsIn": "resets in {time}",
     "resetUnknown": "reset time unknown",
@@ -2816,7 +2816,7 @@
     },
     "row": {
       "source": "Source",
-      "zibby": "ZIBBY",
+      "zibby": "Zibby",
       "differs": "Differs from source",
       "differsHint": "ZIBBY and the source disagree. ZIBBY never writes back.",
       "hidden": "Hidden",
@@ -3072,8 +3072,8 @@
     "addWidget": "+ Widget",
     "editLayout": "Edit layout",
     "catalog": {
-      "title": "WIDGET CATALOG",
-      "add": "ADD",
+      "title": "Widget catalog",
+      "add": "Add",
       "close": "Close",
       "empty": "Every widget is already on the board."
     },
@@ -3081,83 +3081,83 @@
     "remove": "Remove widget",
     "resize": "Resize",
     "emptyWidget": "Nothing here. Outside edit mode this widget collapses to its header.",
-    "allClear": "ALL CLEAR",
+    "allClear": "All clear",
     "widgets": {
       "issues": {
         "state": {
-          "new": "NEW IN SOURCE",
-          "waiting": "WAITING FOR YOU",
-          "running": "RUNNING",
-          "done": "DONE"
+          "new": "New in source",
+          "waiting": "Waiting for you",
+          "running": "Running",
+          "done": "Done"
         },
         "noEpic": "No epic",
-        "you": "YOU · {wait}",
+        "you": "You · {wait}",
         "epicToggle": "Toggle epic {title}"
       },
       "prs": {
         "status": {
-          "reviewRequested": "REVIEW REQUESTED",
-          "draft": "DRAFT",
-          "ciFailing": "CI FAILING",
-          "mergeConflict": "MERGE CONFLICT",
-          "changesRequested": "CHANGES REQUESTED",
-          "checksRunning": "CHECKS RUNNING",
-          "approved": "APPROVED",
-          "awaitingReview": "AWAITING REVIEW"
+          "reviewRequested": "Review requested",
+          "draft": "Draft",
+          "ciFailing": "CI failing",
+          "mergeConflict": "Merge conflict",
+          "changesRequested": "Changes requested",
+          "checksRunning": "Checks running",
+          "approved": "Approved",
+          "awaitingReview": "Awaiting review"
         },
         "need": {
-          "merge": "MERGE"
+          "merge": "Merge"
         },
-        "you": "YOU · {wait}",
-        "on": "ON {base}",
-        "waitsOn": "· WAITS ON {prs}"
+        "you": "You · {wait}",
+        "on": "On {base}",
+        "waitsOn": "· Waits on {prs}"
       },
       "runs": {
-        "colTask": "TASK · STEP",
-        "colProgress": "PROGRESS",
-        "colIssue": "ISSUE",
+        "colTask": "Task · step",
+        "colProgress": "Progress",
+        "colIssue": "Issue",
         "group": {
-          "active": "RUNNING",
-          "finished": "FINISHED"
+          "active": "Running",
+          "finished": "Finished"
         },
         "state": {
-          "working": "WORKING",
-          "thinking": "THINKING",
-          "blocked": "BLOCKED",
-          "error": "ERROR",
-          "done": "DONE",
-          "idle": "IDLE"
+          "working": "Working",
+          "thinking": "Thinking",
+          "blocked": "Blocked",
+          "error": "Error",
+          "done": "Done",
+          "idle": "Idle"
         }
       },
       "briefing": {
-        "needs": "NEEDS YOU",
-        "running": "RUNNING NOW",
-        "prs": "OPEN PRS",
-        "spend": "SPEND TODAY",
-        "kicker": "{date} · BRIEFING",
+        "needs": "Needs you",
+        "running": "Running now",
+        "prs": "Open PRs",
+        "spend": "Spend today",
+        "kicker": "{date} · briefing",
         "fallback": "Nothing to report yet."
       }
     },
-    "you": "{n} YOU",
+    "you": "{n} you",
     "widget": {
       "briefing": {
-        "label": "BRIEFING",
+        "label": "Briefing",
         "desc": "Today in one paragraph plus the key counters"
       },
       "issues": {
-        "label": "ISSUES",
+        "label": "Issues",
         "desc": "Jira and GitHub items, grouped under their epic"
       },
       "tasks": {
-        "label": "TASK QUEUE",
+        "label": "Task queue",
         "desc": "Runs waiting to start: queued, scheduled, held"
       },
       "prs": {
-        "label": "PULL REQUESTS",
+        "label": "Pull requests",
         "desc": "Agent PRs and your own, with stacks"
       },
       "runs": {
-        "label": "RUNNING & FINISHED",
+        "label": "Running & finished",
         "desc": "Active runs and the last 10 finished ones"
       }
     },
@@ -3165,104 +3165,104 @@
       "close": "Close sheet",
       "hint": "J / K · ESC",
       "kind": {
-        "issue": "ISSUE",
-        "task": "TASK",
-        "pr": "PULL REQUEST",
-        "run": "RUN"
+        "issue": "Issue",
+        "task": "Task",
+        "pr": "Pull request",
+        "run": "Run"
       },
-      "needsYou": "NEEDS YOU · {kind}",
-      "waiting": "WAITING {wait}",
-      "approve": "APPROVE",
-      "deny": "DENY",
-      "holdRule": "RULE · APPROVAL NEEDS HOLD-TO-CONFIRM ON THE TASK PAGE",
-      "description": "DESCRIPTION",
-      "details": "DETAILS",
+      "needsYou": "Needs you · {kind}",
+      "waiting": "Waiting {wait}",
+      "approve": "Approve",
+      "deny": "Deny",
+      "holdRule": "Rule · approval needs hold-to-confirm on the task page",
+      "description": "Description",
+      "details": "Details",
       "none": "None yet.",
-      "updated": "UPDATED {when}",
-      "created": "CREATED {when}",
+      "updated": "Updated {when}",
+      "created": "Created {when}",
       "issue": {
-        "epic": "EPIC",
-        "team": "TEAM",
-        "source": "SOURCE",
-        "pr": "PULL REQUEST",
+        "epic": "Epic",
+        "team": "Team",
+        "source": "Source",
+        "pr": "Pull request",
         "noTeam": "No team",
-        "noEpic": "NO EPIC",
-        "epicChip": "EPIC {key}",
+        "noEpic": "No epic",
+        "epicChip": "Epic {key}",
         "noDescription": "No description in the source.",
-        "openIn": "OPEN IN {source} ↗",
-        "process": "PROCESS INTO A TASK",
-        "respond": "RESPOND",
-        "viewRun": "VIEW RUN"
+        "openIn": "Open in {source} ↗",
+        "process": "Process into a task",
+        "respond": "Respond",
+        "viewRun": "View run"
       },
       "task": {
-        "chain": "CHAIN · {n}",
-        "subtasks": "SUBTASKS",
-        "artifacts": "ARTIFACTS",
-        "step": "STEP {n}",
-        "from": "FROM {source}",
-        "noDepartment": "NO DEPARTMENT",
-        "noProject": "NO PROJECT",
-        "open": "OPEN TASK ↗",
-        "openApproval": "OPEN APPROVAL ↗"
+        "chain": "Chain · {n}",
+        "subtasks": "Subtasks",
+        "artifacts": "Artifacts",
+        "step": "Step {n}",
+        "from": "From {source}",
+        "noDepartment": "No department",
+        "noProject": "No project",
+        "open": "Open task ↗",
+        "openApproval": "Open approval ↗"
       },
       "pr": {
-        "review": "REVIEW",
-        "checks": "CHECKS",
-        "changes": "CHANGES",
-        "stack": "STACK",
+        "review": "Review",
+        "checks": "Checks",
+        "changes": "Changes",
+        "stack": "Stack",
         "reviewValue": {
-          "approved": "APPROVED",
-          "changesRequested": "CHANGES REQUESTED",
-          "pending": "PENDING",
-          "yourReview": "YOUR REVIEW",
-          "draft": "DRAFT"
+          "approved": "Approved",
+          "changesRequested": "Changes requested",
+          "pending": "Pending",
+          "yourReview": "Your review",
+          "draft": "Draft"
         },
         "ci": {
-          "passing": "PASSING",
-          "failing": "FAILING",
-          "pending": "RUNNING",
-          "unknown": "UNKNOWN"
+          "passing": "Passing",
+          "failing": "Failing",
+          "pending": "Running",
+          "unknown": "Unknown"
         },
         "ciRow": "CI",
-        "branch": "BRANCH",
-        "author": "AUTHOR",
-        "opened": "OPENED",
-        "updated": "UPDATED",
-        "mergeable": "MERGEABLE",
+        "branch": "Branch",
+        "author": "Author",
+        "opened": "Opened",
+        "updated": "Updated",
+        "mergeable": "Mergeable",
         "yes": "Yes",
         "no": "No — conflicts",
         "unknown": "Unknown",
-        "threads": "OPEN THREADS",
-        "files": "FILES · {n}",
+        "threads": "Open threads",
+        "files": "Files · {n}",
         "noFiles": "No files.",
         "diffLoading": "Loading changes…",
-        "diff": "DIFF · VS {base}",
-        "by": "BY {who}",
+        "diff": "Diff · vs {base}",
+        "by": "By {who}",
         "you": "You",
-        "openGithub": "OPEN ON GITHUB ↗",
-        "mergeOnGithub": "MERGE ON GITHUB ↗",
+        "openGithub": "Open on GitHub ↗",
+        "mergeOnGithub": "Merge on GitHub ↗",
         "mergeBlocked": "Merge is offered in the app only when the PR is ready to merge",
         "note": {
-          "ready": "READY TO MERGE",
-          "approved": "APPROVED",
-          "checksRunning": "CHECKS RUNNING",
-          "ciFailing": "CI FAILING",
-          "conflict": "MERGE CONFLICT",
-          "changesRequested": "CHANGES REQUESTED",
-          "needsApproval": "NEEDS APPROVAL",
-          "reviewRequested": "REVIEW REQUESTED",
-          "draft": "DRAFT"
+          "ready": "Ready to merge",
+          "approved": "Approved",
+          "checksRunning": "Checks running",
+          "ciFailing": "CI failing",
+          "conflict": "Merge conflict",
+          "changesRequested": "Changes requested",
+          "needsApproval": "Needs approval",
+          "reviewRequested": "Review requested",
+          "draft": "Draft"
         }
       },
       "run": {
-        "open": "OPEN RUN ↗",
-        "openApproval": "FULL APPROVAL ↗",
-        "output": "PHASE OUTPUT"
+        "open": "Open run ↗",
+        "openApproval": "Full approval ↗",
+        "output": "Phase output"
       }
     },
     "moreLayouts": "More layouts",
-    "deleteLayout": "DELETE",
-    "deleteLayoutConfirm": "CONFIRM DELETE",
+    "deleteLayout": "Delete",
+    "deleteLayoutConfirm": "Confirm delete",
     "save": "Save",
     "layoutNameError": {
       "required": "Enter a name.",
@@ -3272,7 +3272,7 @@
     },
     "manage": {
       "title": "Manage layouts",
-      "active": "ACTIVE",
+      "active": "Active",
       "moveUp": "Move {name} up",
       "moveDown": "Move {name} down",
       "edit": "Edit",

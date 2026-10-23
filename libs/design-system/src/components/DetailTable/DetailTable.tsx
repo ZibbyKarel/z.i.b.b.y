@@ -24,15 +24,15 @@ export interface DetailTableRow {
 const rowBase: Record<DetailTableVariant, string> = {
   kv: "grid grid-cols-[110px_minmax(0,1fr)] gap-[10px] py-[8px]",
   subtask:
-    "grid grid-cols-[96px_44px_minmax(0,1fr)_90px_minmax(0,1fr)] items-center gap-[10px] border-l-[3px] py-[8px] pl-[10px] font-mono text-[10px] tracking-[.1em]",
+    "grid grid-cols-[96px_44px_minmax(0,1fr)_90px_minmax(0,1fr)] items-center gap-[10px] border-l-[3px] py-[8px] pl-[10px] font-sans uppercase tracking-wider text-[10px]",
   check:
-    "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-[10px] border-l-[3px] py-[7px] pl-[10px] font-mono text-[10px] tracking-[.1em]",
-  file: "grid grid-cols-[minmax(0,1fr)_auto] gap-[10px] py-[7px] font-mono text-[11px] tracking-[.02em]",
+    "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-[10px] border-l-[3px] py-[7px] pl-[10px] font-sans uppercase tracking-wider text-[10px]",
+  file: "grid grid-cols-[minmax(0,1fr)_auto] gap-[10px] py-[7px] font-mono text-[11px]",
 };
 
 // Per-column classes (index = cell position).
 const cellCls: Record<DetailTableVariant, readonly string[]> = {
-  kv: ["font-mono text-[10px] tracking-[.12em] text-ink-3", "text-[13px]"],
+  kv: ["font-sans font-semibold uppercase tracking-wider text-[10px] text-ink-3", "text-[13px]"],
   subtask: [
     "text-ink-2",
     "",

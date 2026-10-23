@@ -5,12 +5,12 @@ import { VoiceStatusStrip, VoiceStatusStripTestId } from "./VoiceStatusStrip";
 describe("VoiceStatusStrip", () => {
   it("shows the listening label while the mic is live", () => {
     renderWithProviders(<VoiceStatusStrip listening interim="" />);
-    expect(screen.getByTestId(VoiceStatusStripTestId.Root)).toHaveTextContent("POSLOUCHÁM");
+    expect(screen.getByTestId(VoiceStatusStripTestId.Root)).toHaveTextContent("Poslouchám");
   });
 
   it("shows the paused label when the mic is not live", () => {
     renderWithProviders(<VoiceStatusStrip interim="" listening={false} />);
-    expect(screen.getByTestId(VoiceStatusStripTestId.Root)).toHaveTextContent("HLASOVÝ REŽIM");
+    expect(screen.getByTestId(VoiceStatusStripTestId.Root)).toHaveTextContent("Hlasový režim");
   });
 
   it("renders the interim transcript when present", () => {

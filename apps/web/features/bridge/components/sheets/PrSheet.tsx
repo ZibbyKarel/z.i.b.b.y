@@ -170,10 +170,10 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
     <AnchoredSheet
       {...geometry(anchor)}
       chips={[
-        pr.repo.toUpperCase(),
-        `${(pr.headRef ?? dash).toUpperCase()} → ${base.toUpperCase()}`,
+        pr.repo,
+        `${pr.headRef ?? dash} → ${base}`,
         t("bridge.sheet.pr.by", {
-          who: (pr.bucket === "mine" ? t("bridge.sheet.pr.you") : pr.author).toUpperCase(),
+          who: pr.bucket === "mine" ? t("bridge.sheet.pr.you") : pr.author,
         }),
       ]}
       closeLabel={t("bridge.sheet.close")}
@@ -255,7 +255,7 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
       ) : null}
       {diff && diff.diff ? (
         <SheetSection>
-          <SheetBlock label={t("bridge.sheet.pr.diff", { base: base.toUpperCase() })}>
+          <SheetBlock label={t("bridge.sheet.pr.diff", { base: base })}>
             <PrDiff diff={diff.diff} />
             {diff.truncated ? (
               <Typography type="note" variant="secondary">

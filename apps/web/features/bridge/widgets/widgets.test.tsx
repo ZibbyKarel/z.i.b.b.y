@@ -135,8 +135,8 @@ describe("IssuesWidget", () => {
   it("issue rows show the integration icon instead of the source chip", () => {
     d.items = [item("a")];
     renderWithProviders(<IssuesWidget {...setup({ widget: widget("w", "issues") })} />);
-    expect(screen.getByTestId(IssuesWidgetTestId.Source)).toHaveAccessibleName("JIRA");
-    expect(screen.queryByText("JIRA")).toBeNull();
+    expect(screen.getByTestId(IssuesWidgetTestId.Source)).toHaveAccessibleName("Jira");
+    expect(screen.queryByText("Jira")).toBeNull();
   });
 
   it("the issue id sits on the title line", () => {
@@ -170,7 +170,7 @@ describe("IssuesWidget", () => {
     expect(rows).toHaveLength(2); // done hidden
     expect(rows[0]).toHaveAttribute("data-rk", "w-issues:p1/a"); // waiting first
     expect(rows[0]).toHaveTextContent("ZB-a");
-    expect(rows[0]).toHaveTextContent("TY · 1H");
+    expect(rows[0]).toHaveTextContent("Ty · 1h");
     expect(screen.getByTestId(RowGroupHeaderTestId.Title)).toHaveTextContent("Checkout");
 
     await userEvent.click(rows[0] as HTMLElement);
@@ -238,12 +238,12 @@ describe("PrsWidget", () => {
     const rows = screen.getAllByTestId(BoardRowTestId.Root);
     expect(rows).toHaveLength(3);
     expect(rows[0]).toHaveAttribute("data-rk", "w-prs:https://github.com/o/r/pull/3"); // review request first
-    expect(rows[0]).toHaveTextContent("ŽÁDOST O REVIEW");
-    expect(rows[0]).toHaveTextContent("JANA");
+    expect(rows[0]).toHaveTextContent("Žádost o review");
+    expect(rows[0]).toHaveTextContent("jana");
     const kid = screen.getByText("PR 2").closest("button") as HTMLElement;
-    expect(kid).toHaveTextContent("CI SELHÁVÁ");
-    expect(kid).toHaveTextContent("NA #1");
-    expect(kid).toHaveTextContent("ČEKÁ NA #1");
+    expect(kid).toHaveTextContent("CI selhává");
+    expect(kid).toHaveTextContent("Na #1");
+    expect(kid).toHaveTextContent("Čeká na #1");
     expect(within(rows[0] as HTMLElement).queryAllByRole("button")).toHaveLength(0); // no action buttons
 
     await userEvent.click(kid);
@@ -294,8 +294,8 @@ describe("TasksWidget (task queue)", () => {
     const rows = screen.getAllByTestId(BoardRowTestId.Root);
     expect(rows).toHaveLength(3);
     expect(rows[0]).toHaveTextContent("Run q");
-    expect(rows[0]).toHaveTextContent("VE FRONTĚ");
-    expect(rows[1]).toHaveTextContent("NAPLÁNOVÁNO");
+    expect(rows[0]).toHaveTextContent("ve frontě");
+    expect(rows[1]).toHaveTextContent("naplánováno");
     expect(rows[2]?.tagName).toBe("DIV");
     await userEvent.click(rows[1] as HTMLElement);
     expect(props.onOpen).toHaveBeenCalledWith({
@@ -338,10 +338,10 @@ describe("RunsWidget", () => {
     const row = screen.getByTestId(BoardRowTestId.Root);
     expect(row).toHaveAttribute("data-rk", "w-runs:r1");
     expect(row).toHaveTextContent("Fix checkout");
-    expect(row).toHaveTextContent("PRACUJE");
+    expect(row).toHaveTextContent("Pracuje");
     expect(row).toHaveTextContent("40%");
     expect(row).toHaveTextContent("ZB-9 ↗");
-    expect(screen.getByTestId(BoardRowTestId.ColumnHeader)).toHaveTextContent("ÚKOL · KROK");
+    expect(screen.getByTestId(BoardRowTestId.ColumnHeader)).toHaveTextContent("Úkol · krok");
     await userEvent.click(row);
     expect(props.onOpen).toHaveBeenCalledWith({
       kind: "run",
@@ -386,15 +386,15 @@ describe("RunsWidget", () => {
     const props = setup({ widget: widget("w-runs", "runs") });
     renderWithProviders(<RunsWidget {...props} />);
     const headers = screen.getAllByTestId(RowGroupHeaderTestId.Title);
-    expect(headers.map((h) => h.textContent)).toEqual(["BĚŽÍ", "UKONČENÉ"]);
+    expect(headers.map((h) => h.textContent)).toEqual(["Běží", "Ukončené"]);
     const rows = screen.getAllByTestId(BoardRowTestId.Root);
     expect(rows.map((r) => r.getAttribute("data-rk"))).toEqual([
       "w-runs:a",
       "w-runs:d",
       "w-runs:e",
     ]);
-    expect(rows[1]).toHaveTextContent("HOTOVO");
-    expect(rows[2]).toHaveTextContent("CHYBA");
+    expect(rows[1]).toHaveTextContent("hotovo");
+    expect(rows[2]).toHaveTextContent("chyba");
     expect(props.onCountChange).toHaveBeenLastCalledWith({ count: 3, you: 0, aside: undefined });
   });
 
@@ -403,14 +403,14 @@ describe("RunsWidget", () => {
     const props = setup({ widget: widget("w-runs", "runs") });
     const { unmount } = renderWithProviders(<RunsWidget {...props} />);
     expect(screen.getAllByTestId(RowGroupHeaderTestId.Title).map((h) => h.textContent)).toEqual([
-      "BĚŽÍ",
+      "Běží",
     ]);
     unmount();
     d.runs = [];
     d.archived = [run("d", "done")];
     renderWithProviders(<RunsWidget {...props} />);
     expect(screen.getAllByTestId(RowGroupHeaderTestId.Title).map((h) => h.textContent)).toEqual([
-      "UKONČENÉ",
+      "Ukončené",
     ]);
   });
 

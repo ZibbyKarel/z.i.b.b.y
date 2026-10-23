@@ -42,7 +42,7 @@ function PatternRow({
           : undefined
       }
       rule={rule.rule}
-      scope={`${rule.scope.toUpperCase()} · ${rule.status.toUpperCase()}`}
+      scope={`${rule.scope} · ${rule.status}`}
     />
   );
 }

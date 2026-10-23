@@ -113,7 +113,7 @@ describe("RunApprovalBanner", () => {
     await userEvent.click(screen.getByTestId(RunFeedBannersTestId.Reject));
     expect(rejectMutate).not.toHaveBeenCalled();
     const dialog = screen.getByRole("dialog");
-    await userEvent.click(within(dialog).getByRole("button", { name: "ZAMÍTNOUT" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Zamítnout" }));
     expect(rejectMutate).toHaveBeenCalledWith({ params: { id: "ap-1" }, body: {} });
   });
 

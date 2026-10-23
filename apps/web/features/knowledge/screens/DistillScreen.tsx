@@ -181,14 +181,7 @@ function LocalDistill() {
                       {t("distill.metricsUnavailable")}
                     </Typography>
 
-                    <Typography
-                      mono
-                      uppercase
-                      size="2xs"
-                      tracking="wide"
-                      type="note"
-                      variant="tertiary"
-                    >
+                    <Typography uppercase size="2xs" type="note" variant="tertiary">
                       {t("distill.log")}
                     </Typography>
                     <Stack gap="75">
@@ -208,7 +201,7 @@ function LocalDistill() {
           )}
 
           <Stack gap="150">
-            <Typography mono uppercase size="2xs" tracking="wide" type="note" variant="tertiary">
+            <Typography uppercase size="2xs" type="note" variant="tertiary">
               {t("distill.selfModel.title")}
             </Typography>
             <SelfKnowledgeSection />

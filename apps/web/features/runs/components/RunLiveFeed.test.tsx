@@ -94,8 +94,8 @@ describe("RunLiveFeed", () => {
   it("captions delivery: delivered names the stage, undelivered says NOT DELIVERED", () => {
     renderFeed();
     const captions = screen.getAllByTestId(RunLiveFeedTestId.Delivery);
-    expect(captions[0]).toHaveTextContent("DORUČENO → 02 CODER");
-    expect(captions[1]).toHaveTextContent("NEDORUČENO");
+    expect(captions[0]).toHaveTextContent("Doručeno → 02 CODER");
+    expect(captions[1]).toHaveTextContent("Nedoručeno");
   });
 
   it("a parked run shows the parked banner", () => {

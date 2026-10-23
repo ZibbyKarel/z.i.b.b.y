@@ -27,7 +27,7 @@ export interface StackCrumbsProps {
 export function StackCrumbs({ label, crumbs }: StackCrumbsProps) {
   return (
     <div
-      className="mx-[20px] mt-[12px] flex flex-wrap items-center gap-[6px] font-mono text-[10px] tracking-[.1em]"
+      className="mx-[20px] mt-[12px] flex flex-wrap items-center gap-[6px] font-sans uppercase tracking-wider text-[10px]"
       data-testid={StackCrumbsTestId.Root}
     >
       <span className="mr-[4px] text-ink-3" data-testid={StackCrumbsTestId.Label}>

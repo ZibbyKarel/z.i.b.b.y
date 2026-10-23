@@ -104,7 +104,7 @@ export function DataTable<T>({
           {columns.map((col) => (
             <th
               className={cn(
-                "px-[14px] py-[9px] font-mono text-[10px] font-medium tracking-wider text-foreground-faint uppercase",
+                "px-[14px] py-[9px] font-sans font-semibold uppercase tracking-wider text-[10px] text-foreground-faint",
                 alignClass[col.align ?? "left"],
               )}
               data-testid={`${DataTableTestId.HeaderCell}-${col.key}`}

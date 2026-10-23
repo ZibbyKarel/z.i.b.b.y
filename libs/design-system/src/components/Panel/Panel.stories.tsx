@@ -20,7 +20,7 @@ export default meta;
 type Story = StoryObj<typeof Panel>;
 
 const Label = ({ children }: { children: string }) => (
-  <Typography mono uppercase size="2xs" tracking="wide" type="note" variant="secondary">
+  <Typography uppercase size="2xs" type="note" variant="secondary">
     {children}
   </Typography>
 );

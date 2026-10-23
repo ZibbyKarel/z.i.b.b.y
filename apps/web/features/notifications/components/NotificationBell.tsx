@@ -90,9 +90,7 @@ export function NotificationBell() {
                     <Stack gap="0">
                       <Typography type="labelSm">{n.title}</Typography>
                       <Typography type="note" variant="tertiary">
-                        {[n.department?.toUpperCase(), formatWaited(n.failedAt)]
-                          .filter(Boolean)
-                          .join(" · ")}
+                        {[n.department, formatWaited(n.failedAt)].filter(Boolean).join(" · ")}
                       </Typography>
                     </Stack>
                   </Row>

@@ -139,8 +139,8 @@ function StepChip({
 }) {
   const clickable = Boolean(onStepClick);
   const className = cn(
-    "inline-flex items-center gap-1.5 border px-[6px] py-[3px]",
-    "font-mono text-[10px] tracking-wider",
+    "inline-flex items-center gap-1.5 rounded-sm border px-[6px] py-[3px]",
+    "font-sans uppercase tracking-wider text-[10px]",
     step.selected ? "border-ink" : "border-border-strong",
     clickable && cn("cursor-pointer hover:border-ink", focusRing),
   );
@@ -264,7 +264,7 @@ function GateMarker({
   return (
     <Tag
       className={cn(
-        "flex shrink-0 items-center font-mono text-[10px] tracking-wider text-foreground-faint",
+        "flex shrink-0 items-center font-sans uppercase tracking-wider text-[10px] text-foreground-faint",
         vertical ? "flex-col gap-1 self-center py-1.5" : "w-[58px] flex-col gap-1 justify-center",
         gate.onClick && cn("cursor-pointer hover:text-foreground", focusRing),
       )}

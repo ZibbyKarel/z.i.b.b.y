@@ -245,7 +245,9 @@ export function EntityHero({
       {editable && !image && (
         <div className="absolute top-3.5 left-4 flex items-center gap-2 text-accent">
           <Icon name="film" size="sm" />
-          <span className="font-mono text-[10px] tracking-wider uppercase">{placeholder}</span>
+          <span className="font-sans font-semibold uppercase tracking-wider text-[10px]">
+            {placeholder}
+          </span>
         </div>
       )}
 
@@ -258,7 +260,7 @@ export function EntityHero({
           <div className="absolute right-5 bottom-3.5 left-5 z-[1]">
             {tag && <div className="mb-1.5">{tag}</div>}
             {idLine && (
-              <div className="mb-1 font-mono text-[11px] tracking-wider text-foreground-faint uppercase">
+              <div className="mb-1 font-sans font-semibold uppercase tracking-wider text-[11px] text-foreground-faint">
                 {idLine}
               </div>
             )}

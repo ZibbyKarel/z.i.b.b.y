@@ -68,7 +68,7 @@ export function RunLogStream({
       header={
         <>
           <Icon name="pulse" size="sm" tone={live ? "accent" : "faint"} />
-          <Typography mono uppercase size="2xs" tracking="wide" type="note" variant="secondary">
+          <Typography uppercase size="2xs" type="note" variant="secondary">
             {live ? liveLabel : logLabel}
           </Typography>
         </>

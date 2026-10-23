@@ -351,7 +351,7 @@ export function buildLiveFeed(args: {
     items.push({
       kind: "divider",
       phaseId: row.phaseId,
-      label: `${row.n} ${row.name.toUpperCase()}`,
+      label: `${row.n} ${row.name}`,
       stateKey: row.stateKey,
       meta: row.meta,
       state: row.state,

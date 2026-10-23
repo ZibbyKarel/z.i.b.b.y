@@ -96,7 +96,7 @@ export function TeamKbIngest({ teamId }: { teamId: string }) {
         <Typography size="sm" type="note" variant="secondary">
           {t("description")}
         </Typography>
-        <Typography mono uppercase size="2xs" tracking="wide" type="note" variant="tertiary">
+        <Typography uppercase size="2xs" type="note" variant="tertiary">
           {t("log")}
         </Typography>
         <Stack data-testid={TeamKbIngestTestId.Log} gap="75">

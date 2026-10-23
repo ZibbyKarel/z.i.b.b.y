@@ -31,6 +31,13 @@ export type RowTone = StateTone | "neutral";
 
 const rowKey = (widgetId: string, id: string) => `${widgetId}:${id}`;
 
+/** Display name of an issue source — brand-cased; the row's CSS decides caps. */
+const SOURCE_NAME: Record<RoadmapSourceKind, string> = {
+  jira: "Jira",
+  github: "GitHub",
+  manual: "Manual",
+};
+
 /** Compact age in the board's voice (`2H`, `NOW`). */
 export type Ago = (iso: string) => string;
 
@@ -103,9 +110,9 @@ export function issueRow(
     tone: ISSUE_TONE[status],
     status,
     needsYou: status === "waiting" ? age : null,
-    source: item.source.kind.toUpperCase(),
+    source: SOURCE_NAME[item.source.kind],
     sourceKind: item.source.kind,
-    project: item.project.name.toUpperCase(),
+    project: item.project.name,
     pr: pr ? `#${pr.number}` : null,
     age,
   };
@@ -191,7 +198,7 @@ export function prRow(widgetId: string, pr: InboxPr, all: InboxPr[], ago: Ago): 
     title: pr.title,
     meta: [
       pr.repo.split("/")[1] ?? pr.repo,
-      pr.bucket === "mine" ? "YOU" : pr.author.toUpperCase(),
+      pr.bucket === "mine" ? "YOU" : pr.author,
       ago(pr.createdAt),
     ].join(" · "),
     tone: PR_TONE[statusKey],
@@ -247,7 +254,7 @@ export function runRows(widgetId: string, runs: RunView[]): RunRowVm[] {
       runId: r.runId,
       id: r.taskId ?? null,
       title: runTitle(r),
-      step: [r.processor?.name ?? r.owner, stage].filter(Boolean).join(" · ").toUpperCase(),
+      step: [r.processor?.name ?? r.owner, stage].filter(Boolean).join(" · "),
       tone: normalizeStateTone(runStateTone(r.status) ?? "idle"),
       pct: r.pct === null ? null : Math.round(r.pct),
       issue: r.roadmapItemLabel ?? null,

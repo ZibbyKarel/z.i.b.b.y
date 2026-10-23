@@ -156,6 +156,16 @@ The `Theme` object is available in context for the rare case where a raw JS valu
 
 Never hardcode token values — always use Tailwind classes or `var(--)`.
 
+### Type voices — the caps rule (Zibby 2.0)
+
+- **Caps labels** (eyebrows, section/column headers, metric labels, status words, tags) are
+  `font-sans font-semibold uppercase tracking-wider` (.1em) — never mono. `Typography` enforces
+  it: `uppercase` drops `mono` and ignores a caller's `tracking`.
+- **Mono** is for machine data only (IDs, numbers, hashes, paths, durations) and is never caps.
+- **Controls** (buttons, segmented items, menus, breadcrumbs) are sentence-case sans.
+- **Catalog strings are sentence case.** Caps come from CSS, never from an ALL-CAPS i18n value
+  or a JS `.toUpperCase()` on display text (codes like department `DEV` / `TSK-…` excepted).
+
 ---
 
 ## Tailwind v4

@@ -73,7 +73,7 @@ function StageLog({
       header={
         <>
           <Icon name="pulse" size="sm" tone="accent" />
-          <Typography mono uppercase size="2xs" tracking="wide" type="note" variant="secondary">
+          <Typography uppercase size="2xs" type="note" variant="secondary">
             live log
           </Typography>
         </>
