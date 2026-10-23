@@ -3173,7 +3173,8 @@
         "text": "Task",
         "textPlaceholder": "What should be done…",
         "target": "Target",
-        "add": "Add"
+        "add": "Add",
+        "targetMissing": "Target no longer exists"
       }
     },
     "you": "{n} you",

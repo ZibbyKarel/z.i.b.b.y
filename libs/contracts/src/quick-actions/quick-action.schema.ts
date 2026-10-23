@@ -12,7 +12,7 @@ export type QuickActionTarget = z.infer<typeof QuickActionTargetSchema>;
 export const QuickActionSchema = z.object({
   id: z.string().min(1).max(64),
   label: z.string().trim().min(1).max(80),
-  text: z.string().min(1).max(8000),
+  text: z.string().trim().min(1).max(8000),
   target: QuickActionTargetSchema.optional(),
 });
 export type QuickAction = z.infer<typeof QuickActionSchema>;

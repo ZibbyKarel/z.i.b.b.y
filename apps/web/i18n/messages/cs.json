@@ -3173,7 +3173,8 @@
         "text": "Zadání",
         "textPlaceholder": "Co se má udělat…",
         "target": "Cíl",
-        "add": "Přidat"
+        "add": "Přidat",
+        "targetMissing": "Cíl už neexistuje"
       }
     },
     "you": "{n} ty",

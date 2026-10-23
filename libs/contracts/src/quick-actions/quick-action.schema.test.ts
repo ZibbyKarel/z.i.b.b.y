@@ -17,6 +17,10 @@ describe("QuickActionSchema", () => {
     expect(QuickActionSchema.safeParse({ ...base, label: "   " }).success).toBe(false);
   });
 
+  it("rejects a whitespace-only text", () => {
+    expect(QuickActionSchema.safeParse({ ...base, text: "   " }).success).toBe(false);
+  });
+
   it("rejects a goal target", () => {
     const target = { kind: "goal", id: "g", name: "G" };
     expect(QuickActionSchema.safeParse({ ...base, target }).success).toBe(false);
