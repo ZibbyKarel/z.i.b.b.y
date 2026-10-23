@@ -6,6 +6,7 @@ import { getApprovalsQueryKey } from "../approvals/queries/keys";
 import { getWorkflowRunQueryKey } from "../workflows/queries/keys";
 import { getInboxItemsQueryKey } from "../inbox/queries/useInboxItemsQuery";
 import { getInboxPrsQueryKey } from "../inbox/queries/useInboxPrsQuery";
+import { getTodoItemsQueryKey } from "../inbox/queries/useTodoItemsQuery";
 import { getCiStatusQueryKey } from "../projects/queries/keys";
 
 // `API_URL` gates the provider (no URL → no stream); pin it so the EventSource opens.
@@ -64,6 +65,23 @@ describe("RunEventsProvider — SSE-driven invalidation (N1)", () => {
     });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: getInboxPrsQueryKey() });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: getInboxItemsQueryKey() });
+  });
+
+  it.each(["roadmap-item-dispatched", "roadmap-item-outcome", "task-outcome", "roadmap-sync"])(
+    "a %s activity event refreshes the TODO list (manual roadmap tasks change lifecycle)",
+    (kind) => {
+      act(() => {
+        mock.last().emit({ scope: "activity", kind, at: "2026-10-23" });
+      });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: getTodoItemsQueryKey() });
+    },
+  );
+
+  it("other activity leaves the TODO list alone", () => {
+    act(() => {
+      mock.last().emit({ scope: "activity", kind: "task-created", at: "2026-10-23" });
+    });
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: getTodoItemsQueryKey() });
   });
 
   it("other activity leaves the inbox alone", () => {
