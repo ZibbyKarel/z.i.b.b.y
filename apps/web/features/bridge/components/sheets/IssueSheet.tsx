@@ -90,17 +90,11 @@ export function IssueSheet({ id, anchor, onClose }: SheetProps) {
       ]}
       closeLabel={t("bridge.sheet.close")}
       footerEnd={primary}
-      footerStart={
-        item.source.url ? (
-          <SheetAction href={item.source.url}>
-            {t("bridge.sheet.issue.openIn", { source: source })}
-          </SheetAction>
-        ) : null
-      }
       kind={`${t("bridge.sheet.kind.issue")} · ${source} · ${itemKey(item)}`}
       onClose={onClose}
       stateLabel={stateLabel}
       title={item.name}
+      titleHref={item.source.url ?? undefined}
       tone={STATUS_TONE[status]}
     >
       {status === "waiting" && item.lastFailureReason ? (

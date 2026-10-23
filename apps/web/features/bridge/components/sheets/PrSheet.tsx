@@ -102,7 +102,7 @@ function reviewCell(pr: InboxPr): {
 
 /**
  * PR detail: REVIEW / CHECKS / CHANGES stat cells, STACK breadcrumb, details, CI, files and the
- * diff (`useInboxPrDiffQuery`). Footer: `OPEN ON GITHUB`, the inbox's `PrActionButtons` (code
+ * diff (`useInboxPrDiffQuery`). Footer: the inbox's `PrActionButtons` (code
  * review for others' PRs; address / fix CI / rebase / merge only on my own, decided by the shared predicates) and — only when
  * the PR is not `ready-to-merge` — `MERGE ON GITHUB` (the note says why in-app merge is off).
  * The PR list carries no description, review comments or per-check list, so those blocks are
@@ -189,11 +189,11 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
         </>
       }
       footerNote={t(`bridge.sheet.pr.note.${NOTE_KEY[key]}`)}
-      footerStart={<SheetAction href={pr.url}>{t("bridge.sheet.pr.openGithub")}</SheetAction>}
       kind={`${t("bridge.sheet.kind.pr")} · #${pr.number}`}
       onClose={onClose}
       stateLabel={status.label}
       title={pr.title}
+      titleHref={pr.url}
       tone={tone}
     >
       {approval ? <ApprovalNeed approval={approval} /> : null}

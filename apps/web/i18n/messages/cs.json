@@ -3007,7 +3007,6 @@
     "detail": {
       "back": "← Issues",
       "crumb": "Položka · {key}",
-      "openIn": "Otevřít v {source} ↗",
       "sourceStatus": "Stav ve zdroji · {source}",
       "execution": "Provedení · ZIBBY",
       "lastChange": "Poslední změna",
@@ -3191,7 +3190,6 @@
         "noEpic": "Bez epicu",
         "epicChip": "Epic {key}",
         "noDescription": "Zdroj nemá žádný popis.",
-        "openIn": "Otevřít v {source} ↗",
         "process": "Zpracovat do úkolu",
         "respond": "Odpovědět",
         "viewRun": "Zobrazit běh"
@@ -3240,7 +3238,6 @@
         "diff": "Diff · vůči {base}",
         "by": "Od {who}",
         "you": "Ty",
-        "openGithub": "Otevřít na GitHubu ↗",
         "mergeOnGithub": "Merge na GitHubu ↗",
         "mergeBlocked": "Merge se v aplikaci nabízí, jen když je PR připravený ke sloučení",
         "note": {

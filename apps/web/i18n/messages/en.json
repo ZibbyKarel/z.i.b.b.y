@@ -3007,7 +3007,6 @@
     "detail": {
       "back": "← Issues",
       "crumb": "Item · {key}",
-      "openIn": "Open in {source} ↗",
       "sourceStatus": "Source status · {source}",
       "execution": "Execution · ZIBBY",
       "lastChange": "Last change",
@@ -3191,7 +3190,6 @@
         "noEpic": "No epic",
         "epicChip": "Epic {key}",
         "noDescription": "No description in the source.",
-        "openIn": "Open in {source} ↗",
         "process": "Process into a task",
         "respond": "Respond",
         "viewRun": "View run"
@@ -3240,7 +3238,6 @@
         "diff": "Diff · vs {base}",
         "by": "By {who}",
         "you": "You",
-        "openGithub": "Open on GitHub ↗",
         "mergeOnGithub": "Merge on GitHub ↗",
         "mergeBlocked": "Merge is offered in the app only when the PR is ready to merge",
         "note": {

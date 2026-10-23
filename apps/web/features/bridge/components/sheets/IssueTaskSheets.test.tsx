@@ -61,13 +61,22 @@ afterEach(() => {
 });
 
 describe("IssueSheet", () => {
-  it("offers process for a new item and links to the source", () => {
+  it("offers process for a new item; the title links to the source", () => {
     hooks.items = [item("todo")];
     renderWithProviders(<IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />);
     expect(screen.getByTestId(AnchoredSheetTestId.Title)).toHaveTextContent("Fix login");
-    expect(screen.getByText(/Otevřít v Jira/)).toHaveAttribute("href", "https://jira.test/ZB-1");
+    const link = screen.getByTestId(AnchoredSheetTestId.TitleLink);
+    expect(link).toHaveAttribute("href", "https://jira.test/ZB-1");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(screen.queryByText(/Otevřít v Jira/)).toBeNull();
     fireEvent.click(screen.getByText("Zpracovat do úkolu"));
     expect(process).toHaveBeenCalledOnce();
+  });
+
+  it("plain title without a source url", () => {
+    hooks.items = [{ ...item("todo"), source: { kind: "jira", externalKey: "ZB-1" } }];
+    renderWithProviders(<IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />);
+    expect(screen.queryByTestId(AnchoredSheetTestId.TitleLink)).toBeNull();
   });
 
   it("renders the description as markdown with raw HTML escaped", () => {

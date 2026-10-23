@@ -46,7 +46,6 @@ export enum InboxItemScreenTestId {
   Root = "inbox-item-root",
   Title = "inbox-item-title",
   Back = "inbox-item-back",
-  OpenSource = "inbox-item-open-source",
   Hide = "inbox-item-hide",
   Process = "inbox-item-process",
   ViewRun = "inbox-item-view-run",
@@ -244,22 +243,21 @@ function InboxItemView({ item: it }: { item: InboxRoadmapItem }) {
               <Typography type="label">{t("detail.back")}</Typography>
             </TextLink>
             <Typography type="label">{[key, sourceName, it.project.name].join(" · ")}</Typography>
-            <Typography data-testid={InboxItemScreenTestId.Title} type="h1">
-              {it.name}
-            </Typography>
-          </Stack>
-          <Row wrap gap="100">
-            {it.source.url && (
+            {it.source.url ? (
               <TextLink
-                data-testid={InboxItemScreenTestId.OpenSource}
+                data-testid={InboxItemScreenTestId.Title}
                 href={it.source.url}
                 linkComponent={ExternalAnchor}
               >
-                <Tag uppercase size="md" tone="neutral">
-                  {t("detail.openIn", { source: sourceName })}
-                </Tag>
+                <Typography type="h1">{it.name}</Typography>
               </TextLink>
+            ) : (
+              <Typography data-testid={InboxItemScreenTestId.Title} type="h1">
+                {it.name}
+              </Typography>
             )}
+          </Stack>
+          <Row wrap gap="100">
             {canHide && (
               <Button
                 data-testid={InboxItemScreenTestId.Hide}

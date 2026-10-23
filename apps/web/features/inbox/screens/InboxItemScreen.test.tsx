@@ -113,3 +113,19 @@ describe("InboxItemScreen meta panel", () => {
     expect(meta).not.toHaveTextContent("Zdroj");
   });
 });
+
+describe("InboxItemScreen title", () => {
+  it("links to the source in a new tab when it has a url", () => {
+    setData([item({ source: { ...item({}).source, url: "https://jira.test/API-1" } })]);
+    renderWithProviders(<InboxItemScreen itemId="i1" projectId="api" />);
+    const title = screen.getByTestId(InboxItemScreenTestId.Title);
+    expect(title).toHaveAttribute("href", "https://jira.test/API-1");
+    expect(title).toHaveAttribute("target", "_blank");
+  });
+
+  it("is plain text without a source url", () => {
+    setData([item({})]);
+    renderWithProviders(<InboxItemScreen itemId="i1" projectId="api" />);
+    expect(screen.getByTestId(InboxItemScreenTestId.Title)).not.toHaveAttribute("href");
+  });
+});

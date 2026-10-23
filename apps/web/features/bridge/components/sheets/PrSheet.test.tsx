@@ -157,6 +157,15 @@ describe("PrSheet content", () => {
     expect(screen.getByTestId("pr-diff")).toBeInTheDocument();
   });
 
+  it("title links to GitHub in a new tab; no open-on-GitHub button", () => {
+    const p = pr(12, {});
+    show(p);
+    const link = screen.getByTestId(AnchoredSheetTestId.TitleLink);
+    expect(link).toHaveAttribute("href", p.url);
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(screen.queryByText(/Otevřít na GitHubu/)).toBeNull();
+  });
+
   it("renders nothing for an unknown PR", () => {
     hooks.prs = [];
     renderWithProviders(<PrSheet anchor={anchor} id="nope" onClose={() => {}} />);

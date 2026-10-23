@@ -423,7 +423,9 @@ describe("InboxPrsScreen master–detail", () => {
     const detail = screen.getByTestId(PrDetailTestId.Root);
     expect(detail).toHaveTextContent("#2");
     expect(detail).toHaveTextContent("PR 2");
-    expect(screen.getByTestId(PrDetailTestId.GitHub)).toHaveAttribute("href", urlOf(2));
+    const title = screen.getByTestId(PrDetailTestId.Title);
+    expect(title).toHaveAttribute("href", urlOf(2));
+    expect(title).toHaveAttribute("target", "_blank");
   });
 
   it("shows the diff loading state", () => {

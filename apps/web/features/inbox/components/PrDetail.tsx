@@ -27,7 +27,7 @@ export enum PrDetailTestId {
   Root = "inbox-pr-detail",
   Header = "inbox-pr-detail-header",
   Body = "inbox-pr-detail-body",
-  GitHub = "inbox-pr-detail-github",
+  Title = "inbox-pr-detail-title",
   Loading = "inbox-pr-detail-loading",
   Error = "inbox-pr-detail-error",
   Retry = "inbox-pr-detail-retry",
@@ -161,21 +161,18 @@ export function PrDetail({ pr, all, projectName, now, item, onSelect }: PrDetail
                       ].join(" · ")}
                     </Typography>
                     {/* Design: 20px — `xl` (21px) is the nearest DS step. */}
-                    <Typography wrapAnywhere size="xl" type="h3">
-                      {pr.title}
-                    </Typography>
+                    <TextLink
+                      data-testid={PrDetailTestId.Title}
+                      href={pr.url}
+                      linkComponent={ExternalAnchor}
+                    >
+                      <Typography wrapAnywhere size="xl" type="h3">
+                        {pr.title}
+                      </Typography>
+                    </TextLink>
                   </Stack>
                 </Container>
                 <PrReviewButton pr={pr} />
-                <TextLink
-                  data-testid={PrDetailTestId.GitHub}
-                  href={pr.url}
-                  linkComponent={ExternalAnchor}
-                >
-                  <Tag uppercase size="md" tone="neutral">
-                    {t("openGithub")} ↗
-                  </Tag>
-                </TextLink>
               </Row>
               <Row wrap gap="75">
                 <Tag uppercase data-testid={PrDetailTestId.StateChip}>
