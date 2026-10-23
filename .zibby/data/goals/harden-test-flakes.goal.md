@@ -5,9 +5,8 @@ maker:
   kind: workflow
   id: delivery
 verifier:
-  kind: checks
-  commands:
-    - "pnpm api:test"
+  kind: claude
+  agent: code-reviewer
 maxIterations: 5
 budget:
   dailyRuns: 10

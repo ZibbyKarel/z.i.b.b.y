@@ -35,7 +35,6 @@ describe("System config API (e2e)", () => {
       automationTickMs: 0,
       limitResumeTickMs: 60_000,
       limitResumeMax: 3,
-      goalVerifyTimeoutMs: 600_000,
       goalAutoResume: false,
     });
   });
@@ -49,7 +48,6 @@ describe("System config API (e2e)", () => {
         automationTickMs: 0,
         limitResumeTickMs: 0,
         limitResumeMax: 5,
-        goalVerifyTimeoutMs: 120_000,
         goalAutoResume: true,
       })
       .expect(200);
@@ -59,7 +57,7 @@ describe("System config API (e2e)", () => {
     expect(res.body.goalAutoResume).toBe(true);
     // Persisted to disk.
     const onDisk = JSON.parse(await fs.readFile(configFile, "utf8"));
-    expect(onDisk.goalVerifyTimeoutMs).toBe(120_000);
+    expect(onDisk.limitResumeMax).toBe(5);
   });
 
   // The contract body is the strict schema itself, so ts-rest rejects a malformed
@@ -73,7 +71,6 @@ describe("System config API (e2e)", () => {
         automationTickMs: 0,
         limitResumeTickMs: 0,
         limitResumeMax: 3,
-        goalVerifyTimeoutMs: 600_000,
         goalAutoResume: false,
         sneaky: true,
       })
@@ -89,7 +86,6 @@ describe("System config API (e2e)", () => {
         automationTickMs: 0,
         limitResumeTickMs: 0,
         limitResumeMax: 3,
-        goalVerifyTimeoutMs: 600_000,
         goalAutoResume: false,
       })
       .expect(400);

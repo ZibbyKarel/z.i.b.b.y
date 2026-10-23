@@ -10,9 +10,9 @@ const sampleInput = {
   id: "ship-feature",
   objective: "Ship feature Y green",
   maker: { kind: "workflow" as const, id: "delivery" },
-  verifier: { kind: "checks" as const, commands: ["pnpm test"] },
+  verifier: { kind: "claude" as const, agent: "code-reviewer" },
   maxIterations: 4,
-  instructions: "Iterate until the checks pass.",
+  instructions: "Iterate until the reviewer passes it.",
 };
 
 const fileFor = (dir: string, id: string) => path.join(dir, `${id}.goal.md`);
@@ -41,8 +41,8 @@ describe("GoalsStorageService", () => {
     expect(parsed.data.objective).toBe("Ship feature Y green");
     expect(parsed.data.maxIterations).toBe(4);
     expect(parsed.data.maker).toEqual({ kind: "workflow", id: "delivery" });
-    expect(parsed.data.verifier).toEqual({ kind: "checks", commands: ["pnpm test"] });
-    expect(parsed.content.trim()).toBe("Iterate until the checks pass.");
+    expect(parsed.data.verifier).toEqual({ kind: "claude", agent: "code-reviewer" });
+    expect(parsed.content.trim()).toBe("Iterate until the reviewer passes it.");
   });
 
   it("round-trips through get (frontmatter ↔ Goal)", async () => {
@@ -51,7 +51,7 @@ describe("GoalsStorageService", () => {
     expect(fetched).toEqual({ ...sampleInput, name: "ship-feature" });
   });
 
-  it("round-trips a claude verifier", async () => {
+  it("round-trips a claude verifier with a model override", async () => {
     await service.create({
       ...sampleInput,
       id: "claude-goal",
@@ -74,7 +74,7 @@ describe("GoalsStorageService", () => {
     const raw = matter.stringify("\nbody\n", {
       objective: "x",
       maxIterations: 2,
-      verifier: { kind: "checks" },
+      verifier: { kind: "claude", agent: "code-reviewer" },
     });
     await fs.writeFile(fileFor(dir, "broken"), raw, "utf8");
     await expect(service.get("broken")).rejects.toBeInstanceOf(CorruptGoalFileError);

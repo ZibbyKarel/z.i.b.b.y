@@ -1,6 +1,5 @@
 import type { Agent } from "@zibby/contracts";
 import { Card, Container, Divider, Icon, IconTile, Stack, Typography } from "@zibby/design-system";
-import { useTranslations } from "next-intl";
 import { Fragment } from "react";
 import { type Workflow, glyphForPhase } from "../../../../domain";
 import { WorkflowOwnerChip } from "./WorkflowOwnerChip";
@@ -18,7 +17,6 @@ export interface WorkflowCardProps {
 
 /** Grid card for a workflow: name, phase chips + owner. Fills its grid cell. */
 export function WorkflowCard({ workflow, showPhases, agents, onSelect }: WorkflowCardProps) {
-  const t = useTranslations("workflows");
   return (
     <Card
       interactive
@@ -48,11 +46,7 @@ export function WorkflowCard({ workflow, showPhases, agents, onSelect }: Workflo
                   <Stack inline align="center" direction="row" gap="50">
                     <Icon name={glyphForPhase(ph, agents)} size="xs" tone="accent" />
                     <Typography mono size="xs" type="note" variant="secondary">
-                      {ph.type === "verify"
-                        ? t("verify")
-                        : ph.type === "workflow"
-                          ? ph.workflow
-                          : ph.agent}
+                      {ph.type === "workflow" ? ph.workflow : ph.agent}
                     </Typography>
                   </Stack>
                   {i < workflow.phases.length - 1 && <Icon name="arrow" size="xs" tone="faint" />}

@@ -25,7 +25,6 @@ describe("SystemConfigStore", () => {
       automationTickMs: 0,
       limitResumeTickMs: 60_000,
       limitResumeMax: 3,
-      goalVerifyTimeoutMs: 600_000,
       goalAutoResume: false,
     });
   });
@@ -45,6 +44,13 @@ describe("SystemConfigStore", () => {
     const store = new SystemConfigStore(file);
     expect(store.current().maxConcurrentRuns).toBe(7);
     expect(store.current().taskTickMs).toBe(5);
+  });
+
+  it("drops the retired goalVerifyTimeoutMs key instead of failing the strict parse", async () => {
+    await fs.writeFile(file, JSON.stringify({ taskTickMs: 5, goalVerifyTimeoutMs: 600_000 }));
+    const store = new SystemConfigStore(file);
+    expect(store.current().taskTickMs).toBe(5);
+    expect(store.current()).not.toHaveProperty("goalVerifyTimeoutMs");
   });
 
   it("a non-numeric maxWorkingAgents is dropped and takes the default", async () => {

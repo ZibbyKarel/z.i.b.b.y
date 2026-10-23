@@ -13,7 +13,7 @@ const goal: Goal = {
   id: "ship-feature",
   objective: "Ship feature Y green",
   maker: { kind: "workflow", id: "delivery" },
-  verifier: { kind: "checks" },
+  verifier: { kind: "claude", agent: "reviewer" },
   maxIterations: 10,
   instructions: "Keep going.",
   projectId: "client-portal",

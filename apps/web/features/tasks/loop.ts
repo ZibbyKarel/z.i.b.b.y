@@ -4,19 +4,13 @@ import { slug } from "../../utils/slug";
 /** The two kinds of work a loop iteration can run — an agent or a whole workflow. */
 export type MakerKind = "agent" | "workflow";
 
-/** How a loop iteration is judged "done": shell checks, or a Claude reviewer agent. */
-export type VerifierKind = "checks" | "claude";
-
 /** The Loop tab's controlled form state, lifted into the dialog. */
 export interface LoopFormState {
   /** The outcome the loop drives toward (the human goal statement). */
   objective: string;
   /** The maker selection, encoded as `"<kind>:<id>"` for a single Select. */
   maker: string;
-  verifierKind: VerifierKind;
-  /** Newline-separated shell commands for the `checks` verifier (empty → project default). */
-  commands: string;
-  /** Agent id that judges each iteration for the `claude` verifier. */
+  /** Agent id of the Claude reviewer that judges each iteration. */
   reviewer: string;
   /** Hard fuse: the loop parks after this many verified iterations. */
   maxIterations: string;
@@ -28,8 +22,6 @@ export interface LoopFormState {
 export const INITIAL_LOOP_STATE: LoopFormState = {
   objective: "",
   maker: "",
-  verifierKind: "checks",
-  commands: "",
   reviewer: "",
   maxIterations: "5",
   instructions: "",
@@ -39,16 +31,14 @@ export const INITIAL_LOOP_STATE: LoopFormState = {
  * Phase 11: seed the Loop form (the "Edit" disclosure) from the classifier's
  * synthesized {@link ProposedGoal}. Lossless with {@link buildCreateGoalBody}: an
  * unedited submit reproduces the same goal the preview implied — encode the maker,
- * map the verifier kind, stringify the iteration cap. The dialog re-seeds this
+ * map the reviewer, stringify the iteration cap. The dialog re-seeds this
  * whenever a fresh proposal arrives and the operator hasn't manually edited it.
  */
 export function proposedGoalToLoopState(goal: ProposedGoal): LoopFormState {
   return {
     objective: goal.objective,
     maker: encodeMaker(goal.maker.kind, goal.maker.id),
-    verifierKind: goal.verifier.kind,
-    commands: goal.verifier.kind === "checks" ? (goal.verifier.commands ?? []).join("\n") : "",
-    reviewer: goal.verifier.kind === "claude" ? goal.verifier.agent : "",
+    reviewer: goal.verifier.agent,
     maxIterations: String(goal.maxIterations),
     instructions: goal.instructions,
   };
@@ -89,21 +79,11 @@ export function makeGoalId(seed: string, nowMs: number): string {
   return `${slug}-${nowMs.toString(36)}`;
 }
 
-/** Split the commands textarea into trimmed, non-empty shell commands. */
-export function parseCommands(text: string): string[] {
-  return text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-}
-
 /** Whether the current Loop form can be submitted (mirrors the contract's required fields). */
 export function canSubmitLoop(state: LoopFormState): boolean {
   if (state.objective.trim().length < 3) return false;
   if (decodeMaker(state.maker) === null) return false;
-  if (state.verifierKind === "claude" && state.reviewer.length === 0) {
-    return false;
-  }
+  if (state.reviewer.length === 0) return false;
   const iterations = Number(state.maxIterations);
   return Number.isInteger(iterations) && iterations > 0;
 }
@@ -121,19 +101,13 @@ export function buildCreateGoalBody(
   if (!maker) throw new Error("buildCreateGoalBody called with invalid maker");
 
   const objective = state.objective.trim();
-  const commands = parseCommands(state.commands);
-
-  const verifier: CreateGoalInput["verifier"] =
-    state.verifierKind === "claude"
-      ? { kind: "claude", agent: state.reviewer }
-      : { kind: "checks", ...(commands.length > 0 ? { commands } : {}) };
 
   return {
     id: goalId,
     name: title.trim() || undefined,
     objective,
     maker,
-    verifier,
+    verifier: { kind: "claude", agent: state.reviewer },
     maxIterations: Number(state.maxIterations),
     // `instructions` is required (min 1) — fall back to the objective when the
     // operator leaves the extra-instructions field empty.

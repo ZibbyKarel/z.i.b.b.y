@@ -18,6 +18,7 @@ import type { LoggerService } from "../shared/logging/logger.service";
 import { KeywordScorer } from "./keyword-scorer";
 import {
   DEFAULT_GOAL_ITERATIONS,
+  DEFAULT_GOAL_VERIFIER_AGENT,
   ROUTER_AMBIGUOUS_MARGIN,
   ROUTER_CONFIDENCE_FLOOR,
   TaskClassifierService,
@@ -191,13 +192,16 @@ const catalogWorkflows = [
 ];
 
 describe("TaskClassifierService — Phase 11 loop synthesis", () => {
-  it("flips a loop-cued delivery task to mode:loop with a checks verifier + the routed maker", async () => {
+  it("flips a loop-cued delivery task to mode:loop with a claude verifier + the routed maker", async () => {
     const svc = makeService({ agents: catalogAgents, workflows: catalogWorkflows });
     const r = await svc.classify({ text: "fix the failing test and keep going until it's green" });
     expect(r).not.toBeNull();
     expect(r?.mode).toBe("loop");
     expect(r?.proposedGoal?.maker).toEqual({ kind: "workflow", id: "delivery" });
-    expect(r?.proposedGoal?.verifier).toEqual({ kind: "checks" });
+    expect(r?.proposedGoal?.verifier).toEqual({
+      kind: "claude",
+      agent: DEFAULT_GOAL_VERIFIER_AGENT,
+    });
     expect(r?.proposedGoal?.maxIterations).toBe(DEFAULT_GOAL_ITERATIONS);
     // The target stays the maker — never a synthesized goal target (Decision 1).
     expect(r?.target.kind).not.toBe("goal");

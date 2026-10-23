@@ -34,13 +34,6 @@ phases:
         - model: opus
           thinking: high
       driftTo: architekt
-  - id: verify
-    type: verify
-    loop:
-      to: koder
-      maxRetries: 3
-      escalate: true
-      then: park
   - id: dokumentator
     type: agent
     agent: dokumentator
@@ -65,7 +58,7 @@ complexity: standard
 
 # Delivery
 
-Doručovací smyčka ZIBBY: **Architekt → Kodér ⇄ Code-Review → verify (Tester) →
+Doručovací smyčka ZIBBY: **Architekt → Kodér ⇄ Code-Review →
 Dokumentátor**. Ohraničený stavový automat — opakuje s eskalací, a místo mlácení
 hlavou o zeď zaparkuje pro lidskou poznámku.
 
@@ -73,14 +66,13 @@ hlavou o zeď zaparkuje pro lidskou poznámku.
 
 1. **architekt** — `task.md` → `plan.md`: rozpad zadání na kroky a kontrakt změn.
 2. **koder** — `plan.md` → `implementation.md`: provede změny v cílovém projektu,
-   sepíše shrnutí změn (soubory, rozhodnutí, jak testovat).
+   spustí vlastní zdokumentované kontroly repa (CLAUDE.md / AGENTS.md / README /
+   package skripty) a sepíše shrnutí změn (soubory, rozhodnutí, výsledky kontrol).
 3. **review** — `implementation.md` → `review.md`: oponentura; selhání vrací práci
-   Kodérovi s kontextem, eskalace zvedá model/thinking, vyčerpání → park.
-4. **verify** — deterministické kontroly projektu (lint, typecheck, testy) přímo
-   v checkoutu; červená vrací práci Kodérovi, vyčerpání → park. Tester JE tahle
-   fáze — žádný LLM, jen exit kódy.
-5. **dokumentator** — `review.md` → `docs.md`: changelog a poznámky pro PR.
-6. **pr-autor** — `docs.md` → `pr-draft.md`: složí titulek + tělo PR, pak se
+   Kodérovi s kontextem, eskalace zvedá model/thinking, vyčerpání → park. Review je poslední
+   kontrola před PR.
+4. **dokumentator** — `review.md` → `docs.md`: changelog a poznámky pro PR.
+5. **pr-autor** — `docs.md` → `pr-draft.md`: složí titulek + tělo PR, pak se
    pokusí o jediný gated řetězec `git push -u origin <branch> && gh pr create …`.
    Push i otevření PR jsou Tier-3: hook ohlásí `pr.open`, běh zaparkuje na
    schválení. **PR je brána** — vše před ním se už stalo na větvi `zibby/*`.

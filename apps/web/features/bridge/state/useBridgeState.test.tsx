@@ -3,7 +3,7 @@ import { UiSettingsSchema } from "@zibby/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_LAYOUT, REVIEW_LAYOUT } from "../grid/presets";
 import { compact } from "../grid/layout";
-import { useBridgeState } from "./useBridgeState";
+import { selectionFromParams, useBridgeState } from "./useBridgeState";
 
 const setBridge = vi.fn();
 let ui = UiSettingsSchema.parse({});
@@ -12,7 +12,12 @@ vi.mock("../../system", () => ({
   useUiSettings: () => ({ ui, setDensity: vi.fn(), setBridge }),
 }));
 
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(window.location.search),
+}));
+
 beforeEach(() => {
+  window.history.replaceState(null, "", "/dashboard");
   setBridge.mockReset();
   ui = UiSettingsSchema.parse({});
 });
@@ -247,5 +252,37 @@ describe("useBridgeState", () => {
     esc();
     expect(result.current.editing).toBe(false);
     expect(result.current.layout).toEqual(compact(REVIEW_LAYOUT));
+  });
+
+  it("mirrors the open sheet into the URL and restores it, keeping other params", () => {
+    window.history.replaceState(null, "", "/dashboard?company=a");
+    const { result } = renderHook(() => useBridgeState());
+    const pr = {
+      kind: "pr",
+      id: "https://github.com/o/r/pull/2",
+      widgetId: "prs",
+      key: "prs:https://github.com/o/r/pull/2",
+    } as const;
+    act(() => result.current.setSelection(pr));
+    expect(window.location.search).toBe(`?company=a&pull-request=${encodeURIComponent(pr.id)}`);
+    expect(renderHook(() => useBridgeState()).result.current.selection).toEqual(pr);
+    act(() =>
+      result.current.setSelection({ kind: "task", id: "t", widgetId: "tasks", key: "tasks:r" }),
+    );
+    expect(window.location.search).toBe("?company=a");
+    act(() => result.current.closeSelection());
+    expect(window.location.search).toBe("?company=a");
+  });
+
+  it("selectionFromParams reads issue / run and ignores unknown params", () => {
+    expect(selectionFromParams(new URLSearchParams("run=r1"))).toEqual({
+      kind: "run",
+      id: "r1",
+      widgetId: "runs",
+      key: "runs:r1",
+    });
+    expect(selectionFromParams(new URLSearchParams("issue=p1/a"))?.key).toBe("issues:p1/a");
+    expect(selectionFromParams(new URLSearchParams("task=t"))).toBeNull();
+    expect(selectionFromParams(null)).toBeNull();
   });
 });

@@ -14,7 +14,6 @@ const DEFAULTS: SystemConfig = {
   limitResumeMax: 3,
   maxConcurrentRuns: 3,
   dockDoneTasksLimit: 20,
-  goalVerifyTimeoutMs: 600000,
   goalAutoResume: false,
   chatPersona: "jarvis",
   powerSaver: false,
@@ -40,7 +39,6 @@ describe("SystemSection", () => {
     render(<SystemSection />);
     // 30 s displays rounded up to 1 min — never as 0 (= off).
     expect(screen.getByTestId(`${SystemSectionTestId.TaskTick}-minutes`)).toHaveValue(1);
-    expect(screen.getByTestId(`${SystemSectionTestId.GoalVerifyTimeout}-minutes`)).toHaveValue(10);
     expect(screen.getByTestId(SystemSectionTestId.LimitResumeMax)).toHaveValue(3);
   });
 

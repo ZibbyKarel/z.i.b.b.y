@@ -57,7 +57,6 @@ import { type WorkflowStageRecord, workflowStageStrategy } from "./workflow-stag
 import { renderProgress } from "./progress";
 import { buildOperatorMessagesBlock, buildResumeContext } from "./resume-context";
 import { parseStageVerdict } from "./stage-verdict";
-import { buildVerifyCommand, resolveVerifyChecks } from "./verify-command";
 
 /** DI token carrying the absolute path of the directory that holds workflow run artifacts. */
 export const WORKFLOW_RUNS_DIR = "WORKFLOW_RUNS_DIR";
@@ -194,7 +193,7 @@ export class WorkflowRunNotMessageableError extends Error {
 
 /** Only an agent phase reads the resume-context channel messages ride on. */
 function readsStageContext(phase: WorkflowPhase): boolean {
-  return phase.type !== "verify" && phase.type !== "tool" && phase.type !== "workflow";
+  return phase.type === "agent";
 }
 
 /**
@@ -280,7 +279,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       logger.child("RunnerCore:workflow"),
       // Flatten each claude stream-json event back into readable log text, so a
       // stage's log shows the agent's whole run (thinking + tool calls), not just
-      // its final message. Pass-through on any non-stream-json line, so verify
+      // its final message. Pass-through on any non-stream-json line, so tool
       // shell stages and demo stages are unaffected (mirrors the agent runner).
       formatClaudeStreamLine,
       // Phase 9: resolve a limit-paused stage's resume epoch so the core stamps it on
@@ -361,9 +360,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
   /**
    * Start a run of `workflowId`. Returns immediately; phases run in the background.
    * `project` (id or name from the request) resolves against the registry: its
-   * `path` becomes the spawn cwd of claude stages and the verify-phase cwd, and
-   * its `checks` the verify fallback. Unresolvable → sandbox-only (deterministic
-   * for demo/e2e).
+   * `path` becomes the spawn cwd of claude stages. Unresolvable → sandbox-only
+   * (deterministic for demo/e2e).
    */
   async start(
     workflowId: string,
@@ -609,8 +607,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
   /**
    * Re-resolve a run's project from its persisted `projectPath` (for resume
    * after restart). A registry record deleted in the meantime degrades to a
-   * synthetic project carrying just the path — cwd still applies, checks fall
-   * back to the defaults.
+   * synthetic project carrying just the path — cwd still applies.
    */
   private async projectForRun(run: WorkflowRun): Promise<Project | null> {
     if (!run.projectPath) return null;
@@ -1571,25 +1568,6 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       await this.accrueStageCost(run, stageRun, stageCwd);
       run.stageRuns.push(stageRun);
       this.updateSpend(run);
-      // A finished verify phase leaves runner-captured evidence (real exit code + the
-      // HEAD it checked) — the dev → rel PR gate in openPrOutput reads it, fail-closed.
-      if (phase.type === "verify" && (stageRun.status === "done" || stageRun.status === "error")) {
-        const sha = run.workspace
-          ? await this.workspace.headSha(run.workspace.path).catch(() => undefined)
-          : undefined;
-        run.verifyEvidence = {
-          phaseId: phase.id,
-          stageRunId: stageRun.runId,
-          commands: resolveVerifyChecks({
-            commands: phase.commands,
-            projectChecks: project?.checks,
-          }),
-          exitCode: this.core.get(stageRun.runId)?.exitCode ?? null,
-          ...(sha ? { sha } : {}),
-          cleanCheckout: phase.checkout === "clean" && !!run.workspace,
-          at: new Date().toISOString(),
-        };
-      }
       await this.writeAggregate(run);
 
       // Phase 45: a `qualify` agent phase that ran clean is graded on the verdict it
@@ -1613,24 +1591,13 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
 
       if (stageRun.status === "done" && !qualifyFail) {
         this.log.info("workflow phase done", { phase: phase.id, attempt });
-        // Phase 12.6: a `verify` phase passed → record the commands it ran (runner-set
-        // from real execution, not an agent claim) so a goal maker can skip an identical
-        // second verification (goal-runner.makerAlreadyVerified).
-        if (phase.type === "verify") {
-          run.verifyCommands = resolveVerifyChecks({
-            commands: phase.commands,
-            projectChecks: project?.checks,
-          });
-        }
         // Phase 9.3: checkpoint the green phase on the run branch (worktree only;
         // a clean tree / non-git run → no-op). Records the sha on the aggregate.
         // checkpointPhase only READS `phase.produces` (for the commit summary's first
         // line) and commits the WORKTREE, a separate tree from this stage's sandbox —
         // it never writes the produces file, so ordering the chmod after it is safe
         // either way; kept after regardless, per the plan's conservative default.
-        // Not after `verify`: checks transform nothing, and committing files they left
-        // behind would move HEAD past the verified sha and block the PR.
-        if (phase.type !== "verify") await this.checkpointPhase(run, phase, stageCwd, attempt);
+        await this.checkpointPhase(run, phase, stageCwd, attempt);
         // P1-T2: the produces file is now final for this dispatch — make it read-only
         // so a later phase can't corrupt it retroactively through the symlink handoff
         // (each retry/loop dispatch gets its own fresh numbered folder, so this never
@@ -1641,8 +1608,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
             // is not fatal here — nothing to protect.
           });
         }
-        // A verify phase transforms nothing: it leaves the handoff untouched, so
-        // the next phase consumes the last *producing* phase's output.
+        // A phase without `produces` leaves the handoff untouched, so the next
+        // phase consumes the last *producing* phase's output.
         if (phase.produces) handoffSource = path.join(stageCwd, phase.produces);
         const idx = order.findIndex((p) => p.id === phase.id);
         cursor = order[idx + 1]?.id ?? null;
@@ -1784,8 +1751,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       const output = outputs[i];
       if (!output) continue;
       if (output.type === "pr") {
-        if (!(await this.openPrOutput(run, workflow, output)))
-          return this.failBlockedPr(run, phaseIds);
+        await this.openPrOutput(run, workflow, output);
         continue;
       }
       if (output.type === "folder") {
@@ -2320,10 +2286,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       delete run.pendingOutput;
       await this.writeAggregate(run);
       if (decision === "approved" && output?.type === "pr") {
-        if (!(await this.openPrOutput(run, workflow, output))) {
-          await this.failBlockedPr(run, phaseIds);
-          return;
-        }
+        await this.openPrOutput(run, workflow, output);
       } else {
         this.log.info("PR output declined — branch work left without a PR", { workflowRunId });
       }
@@ -2337,41 +2300,14 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /** A PR hop blocked by the verify gate fails the run; later outputs are not delivered. */
-  private async failBlockedPr(run: WorkflowRun, phaseIds: string[]): Promise<void> {
-    run.status = "failed";
-    run.currentStage = null;
-    await this.writeAggregate(run);
-    await this.writeProgress(run, phaseIds);
-    this.log.info("workflow run finished", { status: run.status, stages: run.stageRuns.length });
-  }
-
-  /**
-   * The dev → rel hop: a `dev`-owned run with a worktree opens its PR only on green
-   * verify evidence for the exact HEAD being pushed. Returns the block reason, or
-   * null when the hop may proceed (fail-closed: an unreadable HEAD blocks).
-   */
-  private async verifyGateBlock(run: WorkflowRun, workflow: Workflow): Promise<string | null> {
-    if (workflow.department !== "dev" || !run.workspace) return null;
-    const head = await this.workspace.headSha(run.workspace.path).catch(() => undefined);
-    const ev = run.verifyEvidence;
-    if (!ev) return "no verify evidence";
-    if (ev.exitCode !== 0) return `verify exited ${ev.exitCode}`;
-    if (!head) return "HEAD unreadable";
-    if (!ev.sha) return "verify evidence has no sha";
-    if (ev.sha !== head) return `HEAD ${head} is not the verified ${ev.sha}`;
-    return null;
-  }
-
   /**
    * Execute an approved `pr` output: write the PR draft and run the gated push.
-   * Returns false when the verify gate blocked the hop (the caller fails the run).
    */
   private async openPrOutput(
     run: WorkflowRun,
     workflow: Workflow,
     output: Extract<WorkflowOutput, { type: "pr" }>,
-  ): Promise<boolean> {
+  ): Promise<void> {
     const source = await this.resolveOutputSource(run, workflow, output.from);
     const content = source ? await fs.readFile(source, "utf8").catch(() => "") : "";
     const { title } = this.parsePrMarkdown(content);
@@ -2384,17 +2320,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       this.log.warn("PR output approved but run has no worktree; nothing pushed", {
         workflowRunId: run.workflowRunId,
       });
-      return true;
-    }
-    const blocked = await this.verifyGateBlock(run, workflow);
-    if (blocked) {
-      run.prBlockedReason = blocked;
-      this.log.warn("PR output blocked by the verify gate", {
-        workflowRunId: run.workflowRunId,
-        reason: blocked,
-      });
-      await this.writeAggregate(run);
-      return false;
+      return;
     }
     // NS2 F0b — per-project draft PR mode; a project-less run (no match on
     // `projectForRun`) stays `"ready"`, same as an absent `prOpenMode`.
@@ -2423,7 +2349,6 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         workflowRunId: run.workflowRunId,
       });
     }
-    return true;
   }
 
   /**
@@ -2548,10 +2473,10 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     const department = stageWorkflow?.department;
     // Materialize enabled custom commands as a ZIBBY-owned plugin in the stage's
     // sandbox (never the client worktree), loaded via `--plugin-dir`; best-effort
-    // (a falsy result → no plugin). Only claude agent stages load it — verify/tool
+    // (a falsy result → no plugin). Only claude agent stages load it — tool
     // phases never spawn claude, and a tool's artifacts must not sweep it up.
     const commandsPlugin =
-      phase.type !== "verify" && phase.type !== "tool" && process.env.AGENT_RUNNER_MODE === "claude"
+      phase.type !== "tool" && process.env.AGENT_RUNNER_MODE === "claude"
         ? await this.commandMaterializer.materialize(stageCwd)
         : null;
     const { command, args, spawnCwd } = await this.buildStageCommand(
@@ -2664,7 +2589,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       const workflow = await this.workflows.get(run.workflowId);
       const phase = workflow.phases.find((p) => p.id === rec.phaseId);
       if (!phase) throw new Error(`Phase "${rec.phaseId}" not found in "${run.workflowId}"`);
-      // Verify phases never spawn claude, so they can't raise intents — an
+      // Tool phases never spawn claude, so they can't raise intents — an
       // agent-less phase here is a malformed signal; the catch denies it.
       if (!phase.agent) throw new Error(`Phase "${rec.phaseId}" carries no agent`);
       const agent = await this.agents.get(phase.agent);
@@ -2767,7 +2692,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     stageCwd: string,
     phase: WorkflowPhase,
   ): Promise<void> {
-    // A verify phase declares no `consumes` — it checks the project, not a file.
+    // A phase without `consumes` starts with no input file.
     if (!source || !phase.consumes) return;
     const dest = this.resolveInside(stageCwd, phase.consumes);
     if (!dest) return;
@@ -2987,8 +2912,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     escalation: PhaseEscalation | null = null,
     /**
      * The run's worktree path (Phase 3.1) when the git project got one — every
-     * stage spawns there so verify checks koder's *committed* changes and review
-     * sees them. Falls back to the project checkout (non-git / projectless: Phase 2).
+     * stage spawns there so review sees koder's *committed* changes. Falls back to the project checkout (non-git / projectless: Phase 2).
      */
     worktreePath?: string,
     /** Persisted classifier terms (Phase 4) — drive memory-grounding MOC selection. */
@@ -3015,29 +2939,15 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     webUrl?: string,
   ): Promise<{ command: string; args: string[]; spawnCwd?: string }> {
     const spawnCwd = worktreePath ?? project?.path;
-    // Verify phases are deterministic shell checks — identical in demo and
-    // claude mode (no model, no tokens, no intents, no preflight). They run in
-    // the run's worktree (or project checkout) when one was resolved, else the sandbox.
-    if (phase.type === "verify") {
-      // Phase 10.2: the verify-command assembly is lifted into a shared helper so the
-      // workflow verify stage and the goal `checks` verifier resolve checks identically.
-      return buildVerifyCommand({
-        commands: phase.commands,
-        projectChecks: project?.checks,
-        spawnCwd,
-        // A clean checkout needs a run branch to check out — only with a worktree.
-        cleanCheckout: phase.checkout === "clean" && worktreePath !== undefined,
-      });
-    }
     // P1-01: a tool phase is a deterministic transform of the handoff — it runs IN
     // THE STAGE SANDBOX (its `consumes` symlink and `produces` file live there), never
-    // in the project checkout, and never falls back to project/default checks.
+    // in the project checkout. Its `commands` run joined with `&&` under one shell.
     if (phase.type === "tool") {
-      return buildVerifyCommand({
-        commands: phase.commands,
-        projectChecks: undefined,
+      return {
+        command: "/bin/sh",
+        args: ["-c", (phase.commands ?? []).join(" && ")],
         spawnCwd: cwd,
-      });
+      };
     }
     if (process.env.AGENT_RUNNER_MODE === "claude") {
       // The phase's agent drives the stage: its instructions become the session

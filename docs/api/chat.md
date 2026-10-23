@@ -249,3 +249,5 @@ Branches/sub-threads and resuming an earlier thread from `/transcript` are a
 deferred increment (spec §2).
 
 <!-- ZibbyCorp ZB-04a (2026-09-25): reviewed alongside the parent/source/department task stamps. -->
+
+<!-- Last reviewed 2026-10-23: still accurate after the verify-phase / project-checks removal (D-024). -->

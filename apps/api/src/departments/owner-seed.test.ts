@@ -84,8 +84,14 @@ describe("owner-seed (NS2 F1b, pure)", () => {
       expect(agentOwnersFromWorkflows(workflows).size).toBe(0);
     });
 
-    it("ignores verify-type phases (no agent field)", () => {
-      const workflows = [workflowFixture("delivery", [{ id: "check", type: "verify" }], "dev")];
+    it("ignores tool-type phases (no agent field)", () => {
+      const workflows = [
+        workflowFixture(
+          "delivery",
+          [{ id: "check", type: "tool", commands: ["true"], produces: "out.txt" }],
+          "dev",
+        ),
+      ];
       expect(agentOwnersFromWorkflows(workflows).size).toBe(0);
     });
 

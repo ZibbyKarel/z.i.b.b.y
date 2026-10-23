@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { UiSettings } from "@zibby/contracts";
 import { useUiSettings } from "../../system";
@@ -31,6 +32,27 @@ export const CUSTOM_PRESET = "CUSTOM";
 type BridgeUi = UiSettings["bridge"];
 
 /**
+ * Detail-sheet kinds mirrored in the URL (`?issue=<project>/<item>`, `?pull-request=<url>`,
+ * `?run=<runId>`) so an open sheet survives a reload and can be linked. Widget ids equal their
+ * type, so the row key is derivable. A task row keys by its run, not the task id — it stays local.
+ */
+const SELECTION_PARAMS = { issue: "issue", pr: "pull-request", run: "run" } as const;
+const SELECTION_WIDGETS = { issue: "issues", pr: "prs", run: "runs" } as const;
+const URL_KINDS = Object.keys(SELECTION_PARAMS) as (keyof typeof SELECTION_PARAMS)[];
+
+export function selectionFromParams(
+  params: Pick<URLSearchParams, "get"> | null,
+): BridgeSelection | null {
+  for (const kind of URL_KINDS) {
+    const id = params?.get(SELECTION_PARAMS[kind]);
+    if (!id) continue;
+    const widgetId = SELECTION_WIDGETS[kind];
+    return { kind, id, widgetId, key: `${widgetId}:${id}` };
+  }
+  return null;
+}
+
+/**
  * Bridge screen state. Persisted bits (layout / preset / saved / arranged / removed / collapsed /
  * epicClosed) live in `ui.bridge` (server, debounced by `useUiSettings.setBridge`); a local overlay
  * keeps every change instant so drags and toggles don't wait for the round trip. The edit target,
@@ -49,7 +71,10 @@ export function useBridgeState() {
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   /** The open detail-sheet row; null until the sheet task wires rows to `setSelection`. */
-  const [selection, setSelection] = useState<BridgeSelection | null>(null);
+  const searchParams = useSearchParams();
+  const [selection, setSelection] = useState<BridgeSelection | null>(() =>
+    selectionFromParams(searchParams),
+  );
 
   const bridge = { ...ui.bridge, ...local };
   const { preset, saved, removed, collapsed, epicClosed } = bridge;
@@ -197,6 +222,18 @@ export function useBridgeState() {
     const settled = compact(cur);
     if (JSON.stringify(settled) !== JSON.stringify(cur)) commitLayout(settled);
   }, [commitLayout]);
+
+  useEffect(() => {
+    // `history.replaceState` (not the router): Next syncs it into `useSearchParams` without a
+    // navigation, and other query params (filters) stay as they are.
+    const params = new URLSearchParams(window.location.search);
+    for (const kind of URL_KINDS) params.delete(SELECTION_PARAMS[kind]);
+    if (selection && selection.kind !== "task")
+      params.set(SELECTION_PARAMS[selection.kind], selection.id);
+    const qs = params.toString();
+    if (`?${qs}` === window.location.search || (!qs && !window.location.search)) return;
+    window.history.replaceState(window.history.state, "", qs ? `?${qs}` : window.location.pathname);
+  }, [selection]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

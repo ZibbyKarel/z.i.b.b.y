@@ -6,8 +6,7 @@
 
 A **goal** is the 4th `TaskTarget` kind (alongside `agent`, `workflow`, `orchestrator`):
 a stored `.goal.md` recipe naming a maker (an existing agent or workflow, dispatched
-through its own runner **unchanged**) and a verifier (a deterministic `checks` shell or
-a fresh `claude` judge run). `GoalRunnerService` is the outer loop that dispatches the
+through its own runner **unchanged**) and a verifier (a fresh `claude` judge run). `GoalRunnerService` is the outer loop that dispatches the
 maker, runs the verifier, and either finishes, parks for the operator, or feeds the
 verifier's output back into the next iteration as resume-context. This is deliberately
 thin glue over delivered machinery — no new dispatch path, no new session model.
@@ -67,31 +66,20 @@ immediately; `drive()` runs the loop in the background.
 
 `drive()` is the outer loop, keyed by iteration index (not a phase id):
 
-1. **Pre-flight scope guard** (Phase 12.1/12.2, `checks` verifier only): before
-   spending a single maker iteration, refuse to run if the verifier has no resolvable
-   scope (no explicit `commands` and no project `checks` — this would otherwise fall
-   through to the full-monorepo `DEFAULT_VERIFY_CHECKS`) or no safe cwd (no worktree
-   and no project path — the only fallback would be `run.cwd`, which climbs to the
-   monorepo root). Either failure parks the goal immediately with reason
-   `verifier-scope`.
-2. **Budget check** — both the project's own daily/weekly/monthly run cap
+1. **Budget check** — both the project's own daily/weekly/monthly run cap
    (`BudgetService.check`, see `docs/api/budget.md`) and the goal's _own_ windowed
    budget (`goalBudgetExceeded`, Phase 13.1: a rolling count of the goal's own
    iteration `startedAt` timestamps against `goal.budget.dailyRuns`/`weeklyRuns`).
    Either over-cap parks with reason `budget`, before the maker ever dispatches.
-3. **Dispatch the maker** — `dispatchMaker` calls `AgentRunnerService.start` or
+2. **Dispatch the maker** — `dispatchMaker` calls `AgentRunnerService.start` or
    `WorkflowRunnerService.start` verbatim (with the run's worktree as cwd), so the
    inner runner's own mid-run approval gate and usage-limit handling apply unchanged.
-4. **Wait for the maker** (`waitForMaker`) — polls the maker run to a terminal state.
+3. **Wait for the maker** (`waitForMaker`) — polls the maker run to a terminal state.
    A maker that pauses on the usage limit does **not** burn the iteration: the goal
    reflects `paused-limit` (with the maker's `resumeAt`) and keeps polling; the
    maker's own auto-resume (Phase 9.2) respawns it, and the same iteration completes
    when it does — no re-dispatch.
-5. **Run the verifier** — a `checks` verifier runs the resolved shell command
-   (`buildVerifyCommand`) under Phase 12.3 resource governance (detached process
-   group so a kill reaps the whole tree, a wall-clock deadline that SIGTERMs then
-   escalates to SIGKILL after a grace period, a capped rolling output tail); satisfied
-   on exit 0. A `claude` verifier is a **fresh** agent run on its own model with no
+4. **Run the verifier** — the `claude` verifier is a **fresh** agent run on its own model with no
    shared session, graded on the `<verdict>pass|fail</verdict>` tag it writes into its
    own log (`parseGoalVerdict`, last tag wins) — **not** on its exit code. It is
    fail-closed: no parseable verdict, or a judge that never finished, is not satisfied.
@@ -103,12 +91,10 @@ immediately; `drive()` runs the loop in the background.
    never carry a complete, literal opening-verdict-tag/word/closing-verdict-tag
    example in its own instructions: that example would sit in the log next to
    whatever the judge actually rules, and if the judge omits its own tag, the
-   instruction's example becomes the deciding verdict instead.
-   **Phase 12.6 shortcut:** if the maker
-   was a workflow that already ran its own deterministic verify phase with the exact
-   same commands the goal's `checks` verifier would run, the runner synthesizes a
-   satisfied verdict instead of re-running the suite.
-6. **Decide** (`decideStop`, pure): satisfied → checkpoint the worktree (a local,
+   instruction's example becomes the deciding verdict instead. The judge runs the
+   target repo's own documented checks (its CLAUDE.md / AGENTS.md / README / package
+   scripts) as needed.
+5. **Decide** (`decideStop`, pure): satisfied → checkpoint the worktree (a local,
    ungated, never-pushed commit) and finish `done`. Not satisfied and this was the
    last allowed attempt (`maxIterations`) → park with reason `iterations`. Otherwise
    → compose the next iteration's resume-context from the verdict output
@@ -122,7 +108,7 @@ survives an API restart.
 A goal definition is one `<id>.goal.md` file (`GoalsStorageService`, extending the
 same `MarkdownEntityStore` agents/workflows use): YAML frontmatter carries `name`,
 `desc`, `objective`, `maker` (`{kind: "agent"|"workflow", id}`), `verifier`
-(`{kind: "checks", commands?}` or `{kind: "claude", agent, model?, thinking?}`),
+(`{kind: "claude", agent, model?, thinking?}`),
 `maxIterations`, an optional `budget`, and an optional `projectId` (O-16 — the
 project the goal is scoped to; the `/work/goals` screens show it, a goal may stand
 alone); the Markdown body is `instructions` —
@@ -145,8 +131,6 @@ operator resume, unless the `GOAL_AUTO_RESUME=1` daemon flag is set (see
 A parked run (`GoalParkedReason`) is always durable and resumable with an operator
 note: `iterations` (the `maxIterations` fuse blew), `budget` (a project or per-goal
 cap went over), `limit` (the usage-limit auto-resume flapped past its cap),
-`verifier-scope` (a `checks` verifier had no resolvable scope or safe cwd —
-a misconfiguration to fix, not a retryable failure), or `awaiting-resume` (rehydrated
-on boot, pending an explicit operator decision). `resumeParked(goalRunId, note)`
+or `awaiting-resume` (rehydrated on boot, pending an explicit operator decision). `resumeParked(goalRunId, note)`
 re-enters `drive()` at the parked iteration index with a resume-context built from the
 parked verdict plus the operator's note.

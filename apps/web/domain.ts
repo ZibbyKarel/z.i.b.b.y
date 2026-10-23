@@ -70,8 +70,8 @@ export interface PhaseLoop {
 export interface WorkflowPhase {
   /** Phase id from the definition (loop targets reference it); editing needs it. */
   id?: string;
-  /** What the phase executes: an agent session, deterministic verify checks, or a sandbox tool. */
-  type: "agent" | "verify" | "tool" | "workflow";
+  /** What the phase executes: an agent session, a sub-workflow, or a sandbox tool. */
+  type: "agent" | "tool" | "workflow";
   /** `workflow` phase: the id of the child workflow run as a sub-run. */
   workflow?: string;
   agent?: string;
@@ -166,9 +166,8 @@ export function glyphForAgent(name: string | undefined, agents: Agent[]): IconNa
   return (agents.find((a) => a.name === name)?.glyph as IconName | undefined) ?? "bot";
 }
 
-/** Glyph for a workflow phase: verify → shield, tool → gear, agents their glyph. */
+/** Glyph for a workflow phase: tool → gear, agents their glyph. */
 export function glyphForPhase(phase: WorkflowPhase, agents: Agent[]): IconName {
-  if (phase.type === "verify") return "shield";
   if (phase.type === "tool") return "gear";
   if (phase.type === "workflow") return "flow";
   return glyphForAgent(phase.agent, agents);

@@ -13,9 +13,6 @@ never starts a run; only an operator approval dispatches a candidate via the nor
 
 ## Signals scanned
 
-- **Failing checks** — for each registered project that *declares* `checks`, the
-  checks are run; a non-zero exit becomes a "Fix failing checks in <project>"
-  candidate (the failing output is quoted as data).
 - **MEMORY.md open items** — each `- [ ]` line becomes a candidate (the item text
   quoted as data).
 

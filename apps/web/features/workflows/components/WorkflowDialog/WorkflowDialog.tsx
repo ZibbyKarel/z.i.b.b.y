@@ -97,7 +97,7 @@ export function WorkflowDialog({
     });
   };
 
-  const addStep = (type: "verify" | "tool" | "workflow") =>
+  const addStep = (type: "tool" | "workflow") =>
     setGraph((g) => {
       const i = g.nodes.length;
       return { ...g, nodes: [...g.nodes, makeStepNode(type, i + 1, 60 + i * 26, 150 + i * 18)] };

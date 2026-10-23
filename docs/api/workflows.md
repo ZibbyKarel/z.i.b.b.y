@@ -55,17 +55,8 @@ phases:
     agent: code-reviewer
     consumes: diff.patch
     then:
-      pass: tester # on OK → go to tester
+      pass: dokumentátor # on OK → go to dokumentátor
       fail: kodér # on FAIL → back to kodér
-
-  - id: tester
-    type: verify # deterministic phase, no tokens
-    commands:
-      - pnpm check:types
-      - pnpm test
-    then:
-      pass: dokumentátor
-      fail: kodér
 
   - id: dokumentátor
     type: agent
@@ -93,9 +84,8 @@ names none (an automation, a manual start); the runner resolves
 example which image provider a `tool` phase uses) and its checkout as the agent cwd.
 An explicit project on the start request still wins.
 
-**Phase types.** `type` is `agent` (default), `verify` or `tool`. Schema rules: an
-`agent` phase requires `agent`/`model`/`thinking`/`consumes`/`produces`; a `verify`
-phase must not name an agent; a `tool` phase requires `commands` and `produces` and must
+**Phase types.** `type` is `agent` (default) or `tool`. Schema rules: an
+`agent` phase requires `agent`/`model`/`thinking`/`consumes`/`produces`; a `tool` phase requires `commands` and `produces` and must
 not set `agent`/`model`/`thinking`.
 
 ### Ownership (`department`) and the ladder rung (`complexity`)
@@ -162,7 +152,7 @@ What happens to finished work is **not done by any agent** (it used to be a
 `pr-autor` agent), but is workflow-level configuration instead. `outputs` is
 an array of terminal sinks the runner processes after the phase loop goes
 green — deterministic, system-owned (no agent, no model, no tokens; the
-output-side counterpart of the `verify` phase). A workflow can have more than
+output-side counterpart of the `tool` phase). A workflow can have more than
 one (open a PR _and_ write a report). Each sink draws from `from` — a
 relative path some phase `produces`.
 
@@ -298,7 +288,7 @@ a pause that has not landed. STOP on a paused run lands it `interrupted`.
 phases). When `drive()` starts an agent stage it takes the undelivered messages
 addressed to `all` or to that phase, appends them as a `### Messages from the
 operator` block (`buildOperatorMessagesBlock`) to the stage's resume context, and
-stamps `deliveredAt` / `deliveredPhaseId` before the stage spawns. Verify, tool and
+stamps `deliveredAt` / `deliveredPhaseId` before the stage spawns. Tool and
 sub-run phases read no context, so their messages wait for the next agent phase; a
 loop back-edge never re-delivers a message. A sub-run settle re-entry delivers
 nothing (no stage starts).
@@ -359,39 +349,13 @@ stages, loop iterations or sub-workflows it runs. See [tasks.md](./tasks.md) →
 slots_. There is no per-stage employee lease, no `no-employee` park, and stage runs carry
 no `employeeId` / `employeeName`.
 
-### Phase: verify
-
-Deterministic commands — no agent, no tokens, no intents:
-
-1. Runs each command from the `commands` array (in sequence).
-2. Exit code 0 = pass, anything else = fail.
-3. Command logs are appended to the workflow run log.
-
-**`checkout: clean`** runs the checks in a detached, throwaway checkout of the run
-branch's committed HEAD (worktree runs only), so untracked or uncommitted leftovers
-cannot make a red tree look green. A green `verify` phase is never checkpointed:
-checks transform nothing, and a commit would move HEAD past the verified sha.
-
-**Evidence.** After every finished `verify` phase the runner records
-`WorkflowRun.verifyEvidence` (`phaseId`, `stageRunId`, `commands`, real `exitCode`,
-the worktree `sha` it checked, `cleanCheckout`, `at`) — runner-captured, not an agent
-claim.
-
-**Dev PR gate.** A `department: dev` workflow with a worktree opens its `pr` output
-(the dev → rel hop) only if `verifyEvidence.exitCode === 0` and `verifyEvidence.sha`
-equals the worktree HEAD at push time. Otherwise the run fails and
-`WorkflowRun.prBlockedReason` says why: `no verify evidence`, `verify exited <code>`,
-`HEAD unreadable`, `verify evidence has no sha`, or `HEAD <head> is not the verified
-<sha>`. The shipped `delivery` workflow ends with a clean-checkout `verify` that loops
-back to the coder.
-
 ### Phase: tool
 
 A deterministic **transform** between agents — no model, no tokens, no intents.
-Where `verify` checks the project checkout, `tool` runs its `commands` **in the stage
+A `tool` phase runs its own explicit `commands` (joined with `&&` via `/bin/sh`) **in the stage
 sandbox** (`consumes` → `commands` → `produces`): the `consumes` symlink and the
-`produces` file live there, never in the project checkout, and it never falls back to
-project/default checks.
+`produces` file live there, never in the project checkout. A project's own verification
+lives in its repo (CLAUDE.md / AGENTS.md / README / package scripts), not in ZIBBY.
 
 - Requires `commands` (max 50) and `produces`; `agent`/`model`/`thinking` are rejected.
 - Supports `consumes`, `loop` (back-edge on failure, same retry/escalation machinery
@@ -474,7 +438,7 @@ An optional per-run spend cap: `budget: { maxCostUsd, warnAtPct }` (`maxCostUsd 
 ### Phase: qualify (an agent's verdict drives the loop, Phase 45)
 
 An agent phase with `qualify: true` is a _subjective_ gate (a complement to
-the objective `verify`). When the phase finishes `done`, the runner parses
+the repo's own checks, which the agents run themselves). When the phase finishes `done`, the runner parses
 the last `<verdict>pass|gap|drift</verdict>` tag (case-insensitive) out of
 its `produces` artifact and drives an **existing** back-edge from it:
 

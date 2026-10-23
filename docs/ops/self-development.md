@@ -42,9 +42,6 @@ The autonomy contract (`CLAUDE.md`'s "Laws") previously only addressed autonomy 
 **judgment** (tiers, gate, approval-first). Phase 12 adds autonomy of **execution** —
 how much compute a single run may consume — as an equally load-bearing floor:
 
-- **Per-call ceiling:** `goalVerifyTimeoutMs` (12.3, runtime system config) plus an
-  output cap; every verifier shell is a detached process group, killed at the
-  deadline (`SIGTERM`→`SIGKILL`).
 - **Per-run/per-goal budget:** Phase 8.1's `BudgetService` — daily/weekly
   token/run-count caps; exceeding one parks the dispatch behind a Tier-3 approval.
 - **OS-level ceiling (recommended, outside the process):** run the subject's
@@ -76,7 +73,6 @@ No single layer is sufficient — safety is their sum:
 ```bash
 # 1) Builder: a pinned run from a separate checkout (NOT ts-node-dev --respawn),
 #    with its own data dir and worktrees outside the subject.
-#    (set goalVerifyTimeoutMs in data/system-config.json, or via /settings)
 ZIBBY_DATA_DIR=/var/zibby/builder-data \
 ZIBBY_WORKTREE_ROOT=/var/zibby/worktrees \
 AGENT_RUNNER_MODE=claude \

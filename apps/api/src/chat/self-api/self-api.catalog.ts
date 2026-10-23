@@ -121,7 +121,7 @@ export const SELF_API_ALLOWLIST: SelfApiAllowlist = {
     getResolvedProject: "read",
     getProjectLocalState: "read",
     getProjectPrs: "read",
-    // Not allowed: autonomy_policy, budget, checks (shell), env, plugins, prOpenMode.
+    // Not allowed: autonomy_policy, budget, env, plugins, prOpenMode.
     createProject: {
       tier: "write",
       allowKeys: ["id", "path", "gitRemote", "companyId", ...PROJECT_SAFE_KEYS],

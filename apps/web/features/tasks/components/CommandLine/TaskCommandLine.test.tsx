@@ -321,8 +321,6 @@ describe("TaskCommandLine (Phase 118b task-launch container)", () => {
         loop={{
           objective: "",
           maker: "",
-          verifierKind: "checks",
-          commands: "",
           reviewer: "",
           maxIterations: "5",
           instructions: "",
@@ -341,9 +339,7 @@ describe("TaskCommandLine (Phase 118b task-launch container)", () => {
         loop={{
           objective: "fix it",
           maker: "workflow:delivery",
-          verifierKind: "checks",
-          commands: "",
-          reviewer: "",
+          reviewer: "reviewer",
           maxIterations: "5",
           instructions: "",
         }}

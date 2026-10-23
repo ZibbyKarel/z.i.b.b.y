@@ -45,21 +45,13 @@ export type PhaseLoop = z.infer<typeof PhaseLoopSchema>;
 
 /**
  * What a phase executes. `agent` (the default, so every committed `.workflow.md`
- * parses unchanged) spawns the phase agent; `verify` runs deterministic shell
- * checks in the project checkout (no model, no tokens, no intents) — the "tester"
- * of the delivery loop; `tool` runs deterministic shell `commands` IN THE STAGE
+ * parses unchanged) spawns the phase agent; `tool` runs deterministic shell `commands` IN THE STAGE
  * SANDBOX (consumes → commands → produces) — a transform step between agents;
  * `workflow` runs another workflow as a child run (sub-run): `consumes` is its input,
  * its latest produced file comes back as `produces`.
  */
-export const WorkflowPhaseTypeSchema = z.enum(["agent", "verify", "tool", "workflow"]);
+export const WorkflowPhaseTypeSchema = z.enum(["agent", "tool", "workflow"]);
 export type WorkflowPhaseType = z.infer<typeof WorkflowPhaseTypeSchema>;
-
-/**
- * Default verify-phase checks, shared by the API runner (fallback when neither
- * the phase nor the project declares its own) and the web display.
- */
-export const DEFAULT_VERIFY_CHECKS = ["pnpm lint", "npx tsc --noEmit", "pnpm test"] as const;
 
 /**
  * One stage of a workflow. Taken 1:1 from the dashboard's `WorkflowPhase`, plus an
@@ -69,8 +61,10 @@ export const DEFAULT_VERIFY_CHECKS = ["pnpm lint", "npx tsc --noEmit", "pnpm tes
  *
  * Field requirements depend on `type` (enforced by the workflow-level
  * superRefine): an `agent` phase requires `agent`/`model`/`thinking` and
- * `consumes`/`produces`; a `verify` phase forbids `agent` and may carry
- * `commands` (per-phase override of the project's checks).
+ * `consumes`/`produces`; a `tool` phase requires `commands` + `produces`; a
+ * `workflow` phase requires `workflow`/`consumes`/`produces`. How a target repo
+ * verifies itself lives in that repo (its CLAUDE.md / AGENTS.md / scripts), never
+ * in a workflow phase (D-024).
  */
 export const WorkflowPhaseSchema = z.object({
   id: z.string().min(1),
@@ -82,10 +76,8 @@ export const WorkflowPhaseSchema = z.object({
   produces: z.string().min(1).optional(),
   model: AgentModelSchema.optional(),
   thinking: AgentThinkingSchema.optional(),
-  /** Verify/tool phases: shell commands run with `&&` (verify: override project checks). */
+  /** Tool phase only: shell commands run with `&&` in the stage sandbox. */
   commands: z.array(z.string().min(1)).max(50).optional(),
-  /** Verify phase only: `clean` runs the checks in a fresh checkout of the run branch's HEAD. */
-  checkout: z.enum(["clean"]).optional(),
   /** Agent phase only: parse a <verdict> from `produces`; non-`pass` takes the back-edge. */
   qualify: z.boolean().optional(),
   loop: PhaseLoopSchema.optional(),
@@ -103,7 +95,7 @@ export type WorkflowPhase = z.infer<typeof WorkflowPhaseSchema>;
  * What a workflow does with its finished work — a terminal *delivery sink*,
  * configured at the workflow level rather than baked into an agent. Sinks are
  * deterministic and system-owned (no agent, no model, no tokens), the output-side
- * counterpart of the `verify` phase. A workflow may declare several (e.g. open a PR
+ * counterpart of the `tool` phase. A workflow may declare several (e.g. open a PR
  * *and* drop a report file). Each names a `from` artifact — the relative path a
  * phase `produces` — as its source.
  *
@@ -269,12 +261,6 @@ function refineWorkflow(p: z.infer<typeof WorkflowObject>, ctx: z.RefinementCtx)
     });
   }
   p.phases.forEach((ph, i) => {
-    if (ph.checkout !== undefined && ph.type !== "verify")
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "checkout is for verify phases only",
-        path: ["phases", i, "checkout"],
-      });
     if (ph.type === "agent") {
       for (const key of ["agent", "model", "thinking", "consumes", "produces"] as const) {
         if (ph[key] === undefined) {
@@ -308,7 +294,7 @@ function refineWorkflow(p: z.infer<typeof WorkflowObject>, ctx: z.RefinementCtx)
             path: ["phases", i, key],
           });
       }
-    } else if (ph.type === "workflow") {
+    } else {
       // workflow: a sub-run — it names the child, hands it a file and takes one back.
       for (const key of ["workflow", "consumes", "produces"] as const) {
         if (ph[key] === undefined)
@@ -332,18 +318,9 @@ function refineWorkflow(p: z.infer<typeof WorkflowObject>, ctx: z.RefinementCtx)
           message: "a workflow phase cannot run its own workflow",
           path: ["phases", i, "workflow"],
         });
-    } else {
-      // verify: deterministic checks — an agent makes no sense here.
-      if (ph.agent !== undefined) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "a verify phase must not name an agent",
-          path: ["phases", i, "agent"],
-        });
-      }
     }
     // A qualify gate is meaningless without a back-edge to take, makes no sense on a
-    // deterministic verify phase, and its drift target must resolve like to/then.
+    // deterministic phase, and its drift target must resolve like to/then.
     if (ph.qualify) {
       if (ph.type !== "agent")
         ctx.addIssue({

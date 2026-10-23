@@ -28,7 +28,7 @@ A PR output pushes from, and opens against, the **run's project repo** (`project
 
 (add via Projects UI or `POST /api/projects`). Optionally set `project: devrel-knowledgebase` in the workflow frontmatter so a run binds to it by default; it is left unset so the same workflow serves other teams' KB projects.
 
-Prerequisites: the checkout is clean on its default branch (the KB currently has an uncommitted `_meta/log.md` change; the run branches from committed HEAD, so commit or stash it first or the log entry may conflict), `gh` is authenticated for `shoptet/devrel-knowledgebase`, and no verify command is needed (the workflow has no verify phase).
+Prerequisites: the checkout is clean on its default branch (the KB currently has an uncommitted `_meta/log.md` change; the run branches from committed HEAD, so commit or stash it first or the log entry may conflict), `gh` is authenticated for `shoptet/devrel-knowledgebase`.
 
 ## Running it
 

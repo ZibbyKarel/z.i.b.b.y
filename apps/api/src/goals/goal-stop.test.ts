@@ -56,7 +56,7 @@ describe("renderGoalProgress", () => {
       {
         index: 0,
         makerKind: "workflow",
-        verifier: { kind: "checks", satisfied: false, output: "red" },
+        verifier: { kind: "claude", satisfied: false, output: "red" },
         startedAt: new Date().toISOString(),
         status: "failed",
       },

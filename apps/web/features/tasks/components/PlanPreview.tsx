@@ -10,7 +10,7 @@ export interface PlanPreviewProps {
  * The compact "ZIBBY will…" preview the unified composer renders from the live
  * classify verdict (Phase 11.2) — the mode is shown, never chosen. A `single`
  * verdict reads as one dispatch to the routed target; a `loop` verdict reads as a
- * synthesized goal (maker · project-checks verifier · iteration cap). The advanced
+ * synthesized goal (maker · reviewer agent · iteration cap). The advanced
  * controls live behind the "Edit" disclosure; this is read-only signal.
  */
 export function PlanPreview({ routing }: PlanPreviewProps) {

@@ -17,7 +17,7 @@ export interface AgentPaletteProps {
   /** Add the agent as a node (palette click — the keyboard/non-drag path). */
   onAdd: (agentId: string) => void;
   /** Add a deterministic verify/tool step (omitted = no step buttons). */
-  onAddStep?: (type: "verify" | "tool" | "workflow") => void;
+  onAddStep?: (type: "tool" | "workflow") => void;
   /**
    * Manual dismissal — the inline editor auto-closes the palette after an agent
    * is added, but the operator can also close it without adding one. Omitted in
@@ -69,15 +69,6 @@ export function AgentPalette({ agents, onAdd, onAddStep, onClose, closeLabel }: 
       {onAddStep && (
         <Container padding={["0", "100", "100", "100"]}>
           <Stack wrap direction="row" gap="50">
-            <Button
-              data-testid="palette-step-verify"
-              icon="shield"
-              intent="ghost"
-              onClick={() => onAddStep("verify")}
-              size="sm"
-            >
-              {t("addVerify")}
-            </Button>
             <Button
               data-testid="palette-step-tool"
               icon="gear"

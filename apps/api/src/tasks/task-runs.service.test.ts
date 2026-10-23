@@ -88,7 +88,7 @@ const goalG: GoalRun = {
       index: 0,
       makerKind: "agent",
       makerRunRef: "koder_2",
-      verifier: { kind: "checks", satisfied: false, output: "" },
+      verifier: { kind: "claude", satisfied: false, output: "" },
       startedAt: "2026-06-16T00:01:00.000Z",
       status: "running",
     },

@@ -12,9 +12,9 @@ const baseGoal = {
   id: "ship-feature",
   objective: "Ship feature Y green",
   maker: { kind: "workflow" as const, id: "delivery" },
-  verifier: { kind: "checks" as const },
+  verifier: { kind: "claude" as const, agent: "code-reviewer" },
   maxIterations: 5,
-  instructions: "Keep iterating until the checks pass.",
+  instructions: "Keep iterating until the reviewer passes it.",
 };
 
 describe("goalsContract", () => {
@@ -29,7 +29,7 @@ describe("goalsContract", () => {
 });
 
 describe("GoalSchema", () => {
-  it("accepts a well-formed goal with a checks verifier", () => {
+  it("accepts a well-formed goal with a claude verifier", () => {
     expect(GoalSchema.safeParse(baseGoal).success).toBe(true);
   });
 
@@ -58,11 +58,11 @@ describe("GoalSchema", () => {
 });
 
 describe("VerifierSpecSchema", () => {
-  it("discriminates checks vs claude", () => {
-    expect(VerifierSpecSchema.safeParse({ kind: "checks", commands: ["pnpm test"] }).success).toBe(
-      true,
-    );
+  it("accepts claude and rejects the removed shell checks verifier (D-024)", () => {
     expect(VerifierSpecSchema.safeParse({ kind: "claude", agent: "judge" }).success).toBe(true);
+    expect(VerifierSpecSchema.safeParse({ kind: "checks", commands: ["pnpm test"] }).success).toBe(
+      false,
+    );
   });
 
   it("rejects a claude verifier without an agent", () => {
@@ -82,7 +82,7 @@ describe("GoalRunSchema", () => {
           index: 0,
           makerKind: "workflow",
           makerRunRef: "delivery_1",
-          verifier: { kind: "checks", satisfied: false, output: "1 failing" },
+          verifier: { kind: "claude", satisfied: false, output: "1 failing" },
           startedAt: new Date().toISOString(),
           status: "running",
         },

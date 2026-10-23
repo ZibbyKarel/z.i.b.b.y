@@ -24,7 +24,7 @@ const LOOP: TaskRouting = {
   proposedGoal: {
     objective: "keep going until green",
     maker: { kind: "workflow", id: "delivery" },
-    verifier: { kind: "checks" },
+    verifier: { kind: "claude", agent: "reviewer" },
     maxIterations: 6,
     instructions: "keep going until green",
   },
@@ -38,7 +38,7 @@ describe("PlanPreview", () => {
     expect(screen.getByText(/single reason/)).toBeInTheDocument();
   });
 
-  it("renders a loop verdict with maker + checks verifier + iteration cap", () => {
+  it("renders a loop verdict with maker + reviewer + iteration cap", () => {
     render(<PlanPreview routing={LOOP} />);
     expect(screen.getByText(/Loop · vykonavatel Delivery/)).toBeInTheDocument();
     expect(screen.getByText(/až 6 iterací/)).toBeInTheDocument();

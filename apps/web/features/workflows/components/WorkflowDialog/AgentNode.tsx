@@ -69,16 +69,14 @@ const symbolOf = (
   agents: Agent[],
   departments: readonly Department[],
 ): { glyph: IconName; color?: string } =>
-  node.type === "verify"
-    ? { glyph: "shield" }
-    : node.type === "tool"
-      ? { glyph: "gear" }
-      : node.type === "workflow"
-        ? { glyph: "flow" }
-        : agentSymbol(
-            agents.find((a) => a.id === node.agent),
-            departments,
-          );
+  node.type === "tool"
+    ? { glyph: "gear" }
+    : node.type === "workflow"
+      ? { glyph: "flow" }
+      : agentSymbol(
+          agents.find((a) => a.id === node.agent),
+          departments,
+        );
 
 const avatarOf = (node: GraphNode, agents: Agent[]): string | undefined =>
   node.type === "agent" ? agents.find((a) => a.id === node.agent)?.avatar : undefined;
@@ -115,13 +113,11 @@ export function AgentNode({
 }: AgentNodeProps) {
   const t = useTranslations("forms.workflow");
   const label =
-    node.type === "verify"
-      ? t("typeVerify")
-      : node.type === "tool"
-        ? t("typeTool")
-        : node.type === "workflow"
-          ? node.workflow || t("typeWorkflow")
-          : node.agent;
+    node.type === "tool"
+      ? t("typeTool")
+      : node.type === "workflow"
+        ? node.workflow || t("typeWorkflow")
+        : node.agent;
   const clickable = readOnly && Boolean(onNodeClick);
 
   const flowTarget = pending?.kind === "flow" && pending.from !== node.id;
@@ -277,13 +273,12 @@ export function AgentNode({
             ? node.workflow
               ? t("typeWorkflow")
               : t("workflowNone")
-            : node.commands.split("\n").filter((c) => c.trim()).length ||
-              (node.type === "tool" ? t("commandsNone") : t("checksDefault"))}
+            : node.commands.split("\n").filter((c) => c.trim()).length || t("commandsNone")}
         </Typography>
       )}
 
       {/* Terminal agent node: its output file has no arrow to carry it. */}
-      {node.type !== "verify" && !hasOutgoing && (
+      {!hasOutgoing && (
         <Stack align="center" direction="row" gap="25" style={{ marginTop: 6 }}>
           <Icon name="file" size="xs" tone="faint" />
           {readOnly ? (

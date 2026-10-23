@@ -56,7 +56,32 @@ function isDroppedJsonLine(line: string): boolean {
   );
 }
 
-export function parseTranscript(text: string): TranscriptSegment[] {
+/** SGR colour codes — a non-claude stage CLI (pnpm, tsc, vitest) writes them to its log. */
+ 
+const ANSI = /\u001b\[[0-9;]*m/g;
+const GLYPH_LINE = /^(▶ |💭 |● |─── | {2}⎿)/m;
+/** pnpm install chatter: the `Progress:` ticker and the `+++` added-packages bar. */
+const INSTALL_NOISE = /^(Progress: |\+{3,}$)/;
+
+/**
+ * A glyph-less log carrying colour codes or install noise is raw stage-CLI output
+ * (e.g. `verify`), not agent prose — rendering it as markdown mangles `+++`,
+ * `---`, `#` and `*`. Show it as one mono row, minus both kinds of noise.
+ */
+function parseRawLog(text: string): TranscriptSegment[] {
+  const body = text
+    .split("\n")
+    .map((l) => l.replace(/\r+$/, ""))
+    .filter((l) => !INSTALL_NOISE.test(l))
+    .join("\n")
+    .trim();
+  return body ? [{ kind: "result", text: body }] : [];
+}
+
+export function parseTranscript(rawText: string): TranscriptSegment[] {
+  const text = rawText.replace(ANSI, "");
+  const hasNoise = text !== rawText || /^Progress: /m.test(text);
+  if (hasNoise && !GLYPH_LINE.test(text)) return parseRawLog(text);
   const segments: TranscriptSegment[] = [];
   let textBuf: string[] = [];
   let resultBuf: string[] | null = null;

@@ -207,3 +207,22 @@ describe("groupTranscript", () => {
     expect(groupTranscript([])).toEqual([]);
   });
 });
+
+describe("parseTranscript — raw stage log", () => {
+  it("renders a glyph-less log as one raw row without ANSI or pnpm progress noise", () => {
+    const raw = [
+      "verify: clean checkout of abc",
+      "\u001b[32m✓\u001b[39m Lockfile ok",
+      "Progress: resolved \u001b[96m1\u001b[39m, reused 0",
+      "\u001b[32m+++++\u001b[39m",
+      "---",
+      "# not a heading",
+    ].join("\n");
+    expect(parseTranscript(raw)).toEqual([
+      {
+        kind: "result",
+        text: "verify: clean checkout of abc\n✓ Lockfile ok\n---\n# not a heading",
+      },
+    ]);
+  });
+});

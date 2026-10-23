@@ -1,16 +1,10 @@
 "use client";
-import {
-  SegmentPickerField,
-  SelectField,
-  Stack,
-  TextAreaField,
-  TextInputField,
-} from "@zibby/design-system";
+import { SelectField, Stack, TextAreaField, TextInputField } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useMemo } from "react";
 import { useAgentsQuery } from "../../agents";
 import { useWorkflowsQuery } from "../../workflows";
-import { type LoopFormState, type VerifierKind, encodeMaker } from "../loop";
+import { type LoopFormState, encodeMaker } from "../loop";
 
 export interface LoopComposerProps {
   state: LoopFormState;
@@ -19,7 +13,7 @@ export interface LoopComposerProps {
 
 /**
  * The Loop tab body: capture a goal (objective), pick the maker that does the work,
- * choose how each iteration is verified, and cap the iterations. Submitting creates a
+ * pick the reviewer agent that judges each iteration, and cap the iterations. Submitting creates a
  * goal definition and starts its run — the maker ⇄ verifier loop in the goals engine.
  */
 export function LoopComposer({ state, onChange }: LoopComposerProps) {
@@ -49,14 +43,6 @@ export function LoopComposer({ state, onChange }: LoopComposerProps) {
     [agents, t],
   );
 
-  const verifierOptions = useMemo(
-    () => [
-      { value: "checks", label: t("loop.verifier.checks") },
-      { value: "claude", label: t("loop.verifier.claude") },
-    ],
-    [t],
-  );
-
   return (
     <Stack gap="150">
       <TextAreaField
@@ -76,32 +62,13 @@ export function LoopComposer({ state, onChange }: LoopComposerProps) {
         value={state.maker}
       />
 
-      <SegmentPickerField
-        hint={t("loop.verifier.hint")}
-        label={t("loop.verifier.label")}
-        onValueChange={(value) => onChange({ verifierKind: value as VerifierKind })}
-        options={verifierOptions}
-        value={state.verifierKind}
+      <SelectField
+        hint={t("loop.reviewer.hint")}
+        label={t("loop.reviewer.label")}
+        onValueChange={(reviewer) => onChange({ reviewer })}
+        options={reviewerOptions}
+        value={state.reviewer}
       />
-
-      {state.verifierKind === "checks" ? (
-        <TextAreaField
-          hint={t("loop.commands.hint")}
-          label={t("loop.commands.label")}
-          onChange={(e) => onChange({ commands: e.target.value })}
-          placeholder={t("loop.commands.placeholder")}
-          rows={3}
-          value={state.commands}
-        />
-      ) : (
-        <SelectField
-          hint={t("loop.reviewer.hint")}
-          label={t("loop.reviewer.label")}
-          onValueChange={(reviewer) => onChange({ reviewer })}
-          options={reviewerOptions}
-          value={state.reviewer}
-        />
-      )}
 
       <TextInputField
         inputMode="numeric"

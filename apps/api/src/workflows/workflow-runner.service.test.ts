@@ -2,7 +2,6 @@ import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import {
-  DEFAULT_VERIFY_CHECKS,
   type IntendedAction,
   type Project,
   type WorkflowPhase,
@@ -412,8 +411,8 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
 
     it("reads a terminal phase from its recorded stageRuns entry", async () => {
       const run = h.runs.get(WORKFLOW_RUN_ID)!;
-      run.currentStage = "verify";
-      run.currentStageRunId = "release_100.verify_1";
+      run.currentStage = "publish";
+      run.currentStageRunId = "release_100.publish_1";
       run.stageRuns = [
         { phaseId: "build", runId: "release_100.build_1", attempt: 1, status: "done" },
       ];
@@ -496,7 +495,6 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
       id: "demo-proj",
       name: "Demo project",
       path: "/srv/checkouts/demo",
-      checks: ["pnpm check:one", "pnpm check:two"],
     };
 
     const build = (phase: WorkflowPhase, project: Project | null) =>
@@ -509,12 +507,6 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
           ): Promise<{ command: string; args: string[]; spawnCwd?: string }>;
         }
       ).buildStageCommand(phase, "/sandbox/stage", project);
-
-    const verifyPhase = (over: Partial<WorkflowPhase> = {}): WorkflowPhase => ({
-      id: "verify",
-      type: "verify",
-      ...over,
-    });
 
     const agentPhase = (over: Partial<WorkflowPhase> = {}): WorkflowPhase => ({
       id: "build",
@@ -531,57 +523,6 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
       delete process.env.AGENT_RUNNER_MODE;
     });
 
-    const buildIn = (phase: WorkflowPhase, worktreePath?: string) =>
-      (
-        h.service as unknown as {
-          buildStageCommand(
-            phase: WorkflowPhase,
-            cwd: string,
-            project: Project | null,
-            escalation: null,
-            worktreePath?: string,
-          ): Promise<{ command: string; args: string[]; spawnCwd?: string }>;
-        }
-      ).buildStageCommand(phase, "/sandbox/stage", PROJECT, null, worktreePath);
-
-    it("verify: checkout clean + a worktree runs the checks in a detached clean checkout", async () => {
-      const cmd = await buildIn(verifyPhase({ checkout: "clean" }), "/wt/run");
-      expect(cmd.args[1]).toContain("worktree add --detach");
-      expect(cmd.spawnCwd).toBe("/wt/run");
-    });
-
-    it("verify: checkout clean without a worktree stays in-place", async () => {
-      const cmd = await buildIn(verifyPhase({ checkout: "clean" }));
-      expect(cmd.args).toEqual(["-c", "pnpm check:one && pnpm check:two"]);
-    });
-
-    it("verify: a phase-level commands override wins", async () => {
-      const cmd = await build(verifyPhase({ commands: ["make test"] }), PROJECT);
-      expect(cmd).toEqual({
-        command: "/bin/sh",
-        args: ["-c", "make test"],
-        spawnCwd: "/srv/checkouts/demo",
-      });
-    });
-
-    it("verify: falls back to the project's checks, joined with &&", async () => {
-      const cmd = await build(verifyPhase(), PROJECT);
-      expect(cmd.args).toEqual(["-c", "pnpm check:one && pnpm check:two"]);
-      expect(cmd.spawnCwd).toBe("/srv/checkouts/demo");
-    });
-
-    it("verify: falls back to the shared defaults in the sandbox without a project", async () => {
-      const cmd = await build(verifyPhase(), null);
-      expect(cmd.args).toEqual(["-c", DEFAULT_VERIFY_CHECKS.join(" && ")]);
-      expect(cmd.spawnCwd).toBeUndefined();
-    });
-
-    it("verify runs identically in claude mode (no model, no preflight)", async () => {
-      process.env.AGENT_RUNNER_MODE = "claude";
-      const cmd = await build(verifyPhase(), PROJECT);
-      expect(cmd.command).toBe("/bin/sh");
-    });
-
     it("tool: runs its commands in the stage sandbox, even with a project checkout (P1-01)", async () => {
       process.env.AGENT_RUNNER_MODE = "claude";
       const cmd = await build(
@@ -593,6 +534,14 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
         args: ["-c", "product-factory render"],
         spawnCwd: "/sandbox/stage",
       });
+    });
+
+    it("tool: joins several commands with && under one shell", async () => {
+      const cmd = await build(
+        { id: "render", type: "tool", commands: ["a --x", "b"], produces: "r.md" },
+        null,
+      );
+      expect(cmd.args).toEqual(["-c", "a --x && b"]);
     });
 
     it("claude: a project-targeted stage with a consumes handoff grants the whole run root (P1-T2)", async () => {
@@ -2039,49 +1988,6 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
       expect(workspaceDouble().createWorktree).not.toHaveBeenCalled();
     });
   });
-
-  describe("verify phase is not checkpointed", () => {
-    it("never commits after a green verify phase (HEAD must stay the verified sha)", async () => {
-      const svc = h.service as unknown as {
-        runStage: unknown;
-        projects: { get: ReturnType<typeof vi.fn> };
-        workspace: {
-          headSha: unknown;
-          createWorktree: ReturnType<typeof vi.fn>;
-          checkpoint: ReturnType<typeof vi.fn>;
-        };
-        workflows: { get: ReturnType<typeof vi.fn> };
-        projectLocal: { resolveForRun: ReturnType<typeof vi.fn> };
-      };
-      svc.workspace.headSha = vi.fn(async () => "abc");
-      svc.workflows.get.mockResolvedValue({
-        id: "release",
-        phases: [{ id: "verify", type: "verify" }],
-        instructions: "ship",
-      });
-      svc.projects.get.mockResolvedValue({ id: "proj-1", name: "P", path: "/repo/p" });
-      svc.projectLocal.resolveForRun = vi
-        .fn()
-        .mockResolvedValue({ path: "/repo/p", isGitRepo: true });
-      svc.workspace.createWorktree.mockResolvedValue({
-        branch: "zibby/x",
-        path: "/wt/x",
-        baseRef: "abc123",
-      });
-      svc.runStage = vi.fn(async (_r: unknown, p: { id: string }, _c: string, attempt: number) => ({
-        phaseId: p.id,
-        runId: `${WORKFLOW_RUN_ID}.${p.id}_${attempt}`,
-        attempt,
-        status: "done" as const,
-      }));
-
-      const run = await h.service.start("release", undefined, "proj-1");
-      await vi.waitFor(() => expect(run.status).toBe("done"));
-
-      expect(run.workspace?.path).toBe("/wt/x"); // guard: the worktree path was exercised
-      expect(svc.workspace.checkpoint).not.toHaveBeenCalled();
-    });
-  });
 });
 
 describe("operator pause (D-PAUSE)", () => {
@@ -2534,7 +2440,11 @@ describe("operator messages (D-MSG)", () => {
     const run = runOf();
     const workflow = {
       ...threePhases,
-      phases: [phase("phase1"), { id: "check", type: "verify" }, phase("phase3")],
+      phases: [
+        phase("phase1"),
+        { id: "check", type: "tool", commands: ["true"], produces: "c.txt" },
+        phase("phase3"),
+      ],
     };
     const seen: { id: string; ctx: string }[] = [];
     scriptStages(seen, async (id) => {

@@ -258,3 +258,5 @@ model, per the design doc).
   single-param route. `DepartmentsService.subtasks(id)` first validates the id via `find(id)`
   (the existing `DepartmentNotFoundError` 404), then delegates to `TaskParentsService` — the
   ONE parent/subtask read model, not a second implementation.
+
+<!-- Last reviewed 2026-10-23: still accurate after the verify-phase / project-checks removal (D-024). -->

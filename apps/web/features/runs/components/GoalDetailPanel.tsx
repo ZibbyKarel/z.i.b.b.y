@@ -71,9 +71,7 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
   // Phase 14.1 — a human-legible park reason (was a raw enum) + an optional next-step hint.
   const parkedReason = run.goalParkedReason ?? "iterations";
   const parkedHint =
-    parkedReason === "verifier-scope" || parkedReason === "awaiting-resume"
-      ? t(`goalParkedHint.${parkedReason}`)
-      : null;
+    parkedReason === "awaiting-resume" ? t("goalParkedHint.awaiting-resume") : null;
 
   return (
     <Stack gap="200">
@@ -205,7 +203,7 @@ export function GoalDetailPanel({ run }: GoalDetailPanelProps) {
                         )
                       ) : null}
 
-                      {it.verifier.kind === "claude" && it.verifier.runRef && (
+                      {it.verifier.runRef && (
                         <Stack gap="50">
                           <Typography
                             mono

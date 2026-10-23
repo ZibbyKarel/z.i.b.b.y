@@ -78,7 +78,7 @@ describe("toClientRouting (Phase 11 fields)", () => {
       proposedGoal: {
         objective: "go until green",
         maker: { kind: "workflow", id: "delivery" },
-        verifier: { kind: "checks" },
+        verifier: { kind: "claude", agent: "reviewer" },
         maxIterations: 6,
         instructions: "go until green",
       },

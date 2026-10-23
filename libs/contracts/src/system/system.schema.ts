@@ -81,8 +81,6 @@ export const SystemConfigSchema = z
     limitResumeTickMs: z.number().int().min(0).default(60_000),
     /** Max auto-resume cycles a limit-paused run gets before it is parked/failed. */
     limitResumeMax: z.number().int().min(1).default(3),
-    /** Verifier shell wall-clock deadline (ms) for a goal `checks` verifier. */
-    goalVerifyTimeoutMs: z.number().int().positive().default(600_000),
     /**
      * On boot, auto-re-dispatch `running`/`paused-limit` goals (unattended/headless
      * mode). Default `false` → goals are parked `awaiting-resume` for an explicit

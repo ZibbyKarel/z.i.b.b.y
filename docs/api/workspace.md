@@ -108,3 +108,5 @@ method above is called in-process by the runners.
   is documented in `../ops/self-development.md`.
 - The `pr` task/workflow output kind that drives `checkpoint` → `diffstat` →
   (gate approval) → `openPr` is documented in `./tasks.md` and `./workflows.md`.
+
+<!-- Last reviewed 2026-10-23: still accurate after the verify-phase / project-checks removal (D-024). -->

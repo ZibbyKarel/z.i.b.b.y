@@ -44,8 +44,12 @@ const existing: Workflow = {
     },
     {
       id: "verify",
-      type: "verify",
-      commands: ["pnpm test"],
+      type: "agent",
+      agent: "writer",
+      consumes: "implementation.md",
+      produces: "verdict.md",
+      model: "sonnet",
+      thinking: "medium",
       loop: { to: "koder", maxRetries: 2, escalate: true, then: "fail" },
     },
   ],
@@ -148,8 +152,7 @@ describe("graphToPhases", () => {
     });
     expect(phases[1]).toMatchObject({
       id: "verify",
-      type: "verify",
-      commands: ["pnpm test"],
+      type: "agent",
       loop: { to: "koder", maxRetries: 2, escalate: true, then: "fail" },
     });
     const input = {
@@ -167,36 +170,6 @@ describe("graphToPhases", () => {
     const phases = graphToPhases(chainGraph(), INITIAL_ASSIGNMENT);
     expect(phases[0]).not.toHaveProperty("loop");
     expect(phases[1]).not.toHaveProperty("loop");
-  });
-
-  it("threads consumes THROUGH a mid-chain verify (agent→verify→agent)", () => {
-    const workflow: Workflow = {
-      ...existing,
-      phases: [
-        {
-          id: "a1",
-          type: "agent",
-          agent: "writer",
-          consumes: "task.md",
-          produces: "draft.md",
-          model: "opus",
-          thinking: "high",
-        },
-        { id: "v", type: "verify", commands: ["pnpm test"] },
-        {
-          id: "a2",
-          type: "agent",
-          agent: "tester",
-          consumes: "draft.md",
-          produces: "final.md",
-          model: "sonnet",
-          thinking: "low",
-        },
-      ],
-    };
-    const phases = graphToPhases(phasesToGraph(workflow, agents), "task.md");
-    // The post-verify agent still consumes the pre-verify agent's output.
-    expect(phases[2]).toMatchObject({ id: "a2", consumes: "draft.md" });
   });
 
   it("round-trips a workflow (sub-run) step and validates the chosen child", () => {
@@ -259,8 +232,12 @@ describe("graphToPhases", () => {
         },
         {
           id: "v",
-          type: "verify",
-          commands: ["pnpm test"],
+          type: "agent",
+          agent: "writer",
+          consumes: "draft.md",
+          produces: "verdict.md",
+          model: "sonnet",
+          thinking: "medium",
           loop: { to: "fail", maxRetries: 1, escalate: false, then: "fail" },
         },
       ],
@@ -381,7 +358,6 @@ describe("tool + approval round-trip", () => {
         commands: ["gen --all", "zip out"],
         approval: "ask",
       },
-      { id: "v", type: "verify", commands: ["pnpm test"] },
     ],
   };
 
@@ -400,7 +376,6 @@ describe("tool + approval round-trip", () => {
       commands: ["gen --all", "zip out"],
       approval: "ask",
     });
-    expect(phases[3]).toEqual({ id: "v", type: "verify", commands: ["pnpm test"] });
   });
 
   it("requires commands and produces on a tool node", () => {

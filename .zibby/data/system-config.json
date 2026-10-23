@@ -20,7 +20,7 @@
         {
           "id": "briefing",
           "type": "briefing",
-          "x": 8,
+          "x": 9,
           "y": 0,
           "w": 3,
           "h": 11
@@ -30,7 +30,7 @@
           "type": "issues",
           "x": 0,
           "y": 18,
-          "w": 4,
+          "w": 3,
           "h": 18
         },
         {
@@ -38,23 +38,23 @@
           "type": "prs",
           "x": 0,
           "y": 0,
-          "w": 4,
+          "w": 3,
           "h": 18
         },
         {
           "id": "tasks",
           "type": "tasks",
-          "x": 4,
+          "x": 3,
           "y": 12,
-          "w": 4,
+          "w": 3,
           "h": 10
         },
         {
           "id": "runs",
           "type": "runs",
-          "x": 4,
+          "x": 3,
           "y": 0,
-          "w": 4,
+          "w": 3,
           "h": 12
         }
       ],
@@ -64,7 +64,7 @@
           {
             "id": "briefing",
             "type": "briefing",
-            "x": 8,
+            "x": 9,
             "y": 0,
             "w": 3,
             "h": 11
@@ -74,7 +74,7 @@
             "type": "issues",
             "x": 0,
             "y": 18,
-            "w": 4,
+            "w": 3,
             "h": 18
           },
           {
@@ -82,33 +82,39 @@
             "type": "prs",
             "x": 0,
             "y": 0,
-            "w": 4,
+            "w": 3,
             "h": 18
           },
           {
             "id": "tasks",
             "type": "tasks",
-            "x": 4,
+            "x": 3,
             "y": 12,
-            "w": 4,
+            "w": 3,
             "h": 10
           },
           {
             "id": "runs",
             "type": "runs",
-            "x": 4,
+            "x": 3,
             "y": 0,
-            "w": 4,
+            "w": 3,
             "h": 12
           }
         ]
       },
-      "favorites": ["Primary"],
+      "favorites": [
+        "Primary"
+      ],
       "arranged": {
-        "shown": ["Primary"],
+        "shown": [
+          "Primary"
+        ],
         "hidden": []
       },
-      "removed": ["REVIEW"],
+      "removed": [
+        "REVIEW"
+      ],
       "collapsed": {},
       "epicClosed": {}
     }

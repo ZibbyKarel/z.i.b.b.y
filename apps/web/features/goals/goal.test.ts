@@ -21,7 +21,7 @@ describe("latestIterationSummary", () => {
   const base: GoalIteration = {
     index: 0,
     makerKind: "agent",
-    verifier: { kind: "checks", satisfied: false, output: "" },
+    verifier: { kind: "claude", satisfied: false, output: "" },
     startedAt: "2026-01-01T00:00:00.000Z",
     status: "done",
   };

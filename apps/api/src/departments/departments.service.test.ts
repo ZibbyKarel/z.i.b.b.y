@@ -21,7 +21,7 @@ const LATER = "2026-07-08T01:00:00.000Z";
 function workflowFixture(id: string, department?: Workflow["department"]): Workflow {
   return {
     id,
-    phases: [{ id: "p0", type: "verify" }],
+    phases: [{ id: "p0", type: "tool", commands: ["true"], produces: "out.txt" }],
     outputs: [],
     instructions: "do the thing",
     // NS2 F9 — schema-defaulted, so non-optional on a parsed entity.

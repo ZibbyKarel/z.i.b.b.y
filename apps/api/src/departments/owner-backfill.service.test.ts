@@ -77,7 +77,7 @@ describe("OwnerBackfillService (NS2 F1b)", () => {
   it("skips an already-owned entity (idempotent — never overwrites an existing owner)", async () => {
     await workflows.create({
       id: "delivery",
-      phases: [{ id: "a", type: "verify" }],
+      phases: [{ id: "a", type: "tool", commands: ["true"], produces: "out.txt" }],
       outputs: [],
       instructions: "x",
       department: "qa", // deliberately NOT what the seed table would pick
@@ -92,7 +92,7 @@ describe("OwnerBackfillService (NS2 F1b)", () => {
   it("running onModuleInit twice is a no-op the second time (idempotent)", async () => {
     await workflows.create({
       id: "delivery",
-      phases: [{ id: "a", type: "verify" }],
+      phases: [{ id: "a", type: "tool", commands: ["true"], produces: "out.txt" }],
       outputs: [],
       instructions: "x",
       complexity: "standard",
@@ -140,7 +140,7 @@ describe("OwnerBackfillService (NS2 F1b)", () => {
     );
     await workflows.create({
       id: "delivery",
-      phases: [{ id: "a", type: "verify" }],
+      phases: [{ id: "a", type: "tool", commands: ["true"], produces: "out.txt" }],
       outputs: [],
       instructions: "x",
       complexity: "standard",

@@ -60,14 +60,6 @@ phases:
     produces: docs.md
     model: sonnet
     thinking: low
-  - id: verify
-    type: verify
-    checkout: clean
-    loop:
-      to: koder
-      maxRetries: 2
-      escalate: true
-      then: park
 outputs:
   - type: pr
     from: docs.md
@@ -82,10 +74,11 @@ complexity: deep
 
 # Delivery
 
-Doručovací smyčka ZIBBY: **Architekt → Kodér ⇄ Code-Review ⇄ Testy → Dokumentátor → Verify**.
-Kodér si kontroly projektu (lint/typecheck/testy) spouští sám, než předá práci — ale
-jeho slovo není poslední: poslední slovo má **deterministická fáze verify v čistém
-checkoutu** větve. Cestou jsou navíc **review i n-9 hodnotící brány** (`qualify`). Runner
+Doručovací smyčka ZIBBY: **Architekt → Kodér ⇄ Code-Review ⇄ Testy → Dokumentátor**.
+Kodér i testovací agent spouští **vlastní zdokumentované kontroly cílového repa**
+(z jeho CLAUDE.md / AGENTS.md / README / package skriptů) a hlásí výsledky — ZIBBY
+žádné ověřovací skripty nedrží. Poslední kontrolou před PR jsou **review i n-9
+hodnotící brány** (`qualify`). Runner
 si z jejich výstupu přečte verdikt (`<verdict>pass|gap|drift</verdict>`) a podle něj
 rozhodne, ne podle exit kódu procesu. Chybějící tag se počítá jako `gap` —
 fail-closed. Ohraničený stavový automat: opakuje s eskalací, a místo mlácení hlavou
@@ -95,8 +88,8 @@ o zeď zaparkuje pro lidskou poznámku.
 
 1. **architekt** — `task.md` → `plan.md`: rozpad zadání na kroky a kontrakt změn.
 2. **koder** — `plan.md` → `implementation.md`: provede změny v cílovém projektu,
-   pak **spustí kontroly kvality projektu** (lint/typecheck/testy podle konvencí
-   repa) a opraví je do zelené, než označí práci za hotovou. Co spustil a s jakým
+   pak **spustí vlastní zdokumentované kontroly repa** (CLAUDE.md / AGENTS.md /
+   README / package skripty) a opraví je do zelené, než označí práci za hotovou. Co spustil a s jakým
    výsledkem zapíše do shrnutí; co nedokázal dotáhnout do zelené, přizná.
 3. **review** — `implementation.md` → `review.md`: oponentura, a **brána**
    (`qualify: true`). `pass` pustí práci dál; `gap` (chybí část zadání) ji vrátí
@@ -105,14 +98,11 @@ o zeď zaparkuje pro lidskou poznámku.
    model/thinking, vyčerpání → park.
 4. **n-9** — `review.md` → `test-automator.md`: doplní a spustí testy, a je to
    rovněž **brána** (`qualify: true`) se stejnou logikou verdiktu — `gap` zpět
-   Kodérovi, `drift` Architektovi, vyčerpání → park. Bez ní byl reviewerův souhlas
-   poslední kontrolou před PR.
+   Kodérovi, `drift` Architektovi, vyčerpání → park. Spouští kontroly
+   repa podle jeho vlastní dokumentace a hlásí výsledky. Bez ní byl reviewerův
+   souhlas poslední kontrolou před PR.
 5. **dokumentator** — `test-automator.md` → `docs.md`: changelog a poznámky pro PR
    (`docs.md` má tvar `# titulek` + tělo — to je vstup pro PR výstup).
-6. **verify** — deterministické kontroly projektu (bez modelu a bez tokenů) v
-   **čistém checkoutu** větve (`checkout: clean`), takže výsledek nezávisí na tom, co
-   po sobě nechal pracovní strom. Skutečný exit kód a SHA zapíše runner jako důkaz
-   (`verifyEvidence`). Červená vrací práci **Kodérovi** (2× s eskalací), pak park.
 
 ## Výstup
 
@@ -121,9 +111,7 @@ na úrovni workflow (`outputs`). Tato workflow má jeden výstup `type: pr`: sys
 z `docs.md` složí titulek + tělo a otevře PR jediným gated řetězcem
 `git push -u origin <branch> && gh pr create …`. Push i otevření PR jsou Tier-3:
 běh zaparkuje na schválení. **PR je brána** — vše před ním se už stalo na větvi
-`zibby/*`, a bránu vynucuje systém, ne dobrá vůle agenta. Hop dev → rel navíc otevře PR jen se
-zeleným důkazem z verify pro aktuální HEAD (`verifyEvidence.exitCode === 0` a
-`sha` = HEAD při pushi); jinak běh selže s `prBlockedReason`.
+`zibby/*`, a bránu vynucuje systém, ne dobrá vůle agenta.
 
 Handoff je vždy jeden soubor; selhání předává ocas logu jako kontext dalšímu
 pokusu (plus případnou poznámku operátora po resume).

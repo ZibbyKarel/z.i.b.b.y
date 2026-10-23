@@ -7,7 +7,6 @@ import {
   decodeMaker,
   encodeMaker,
   makeGoalId,
-  parseCommands,
   slugify,
 } from "./loop";
 
@@ -17,6 +16,7 @@ function loop(overrides: Partial<LoopFormState> = {}): LoopFormState {
     ...INITIAL_LOOP_STATE,
     objective: "All e2e tests pass",
     maker: encodeMaker("agent", "koder"),
+    reviewer: "reviewer",
     ...overrides,
   };
 }
@@ -62,17 +62,8 @@ describe("slugify / makeGoalId", () => {
   });
 });
 
-describe("parseCommands", () => {
-  it("trims lines and drops blanks", () => {
-    expect(parseCommands("  pnpm test \n\n pnpm typecheck \n")).toEqual([
-      "pnpm test",
-      "pnpm typecheck",
-    ]);
-  });
-});
-
 describe("canSubmitLoop", () => {
-  it("accepts a complete checks-verifier form", () => {
+  it("accepts a complete form", () => {
     expect(canSubmitLoop(loop())).toBe(true);
   });
 
@@ -81,9 +72,8 @@ describe("canSubmitLoop", () => {
     expect(canSubmitLoop(loop({ maker: "" }))).toBe(false);
   });
 
-  it("requires a reviewer only for the claude verifier", () => {
-    expect(canSubmitLoop(loop({ verifierKind: "claude", reviewer: "" }))).toBe(false);
-    expect(canSubmitLoop(loop({ verifierKind: "claude", reviewer: "reviewer" }))).toBe(true);
+  it("requires a reviewer", () => {
+    expect(canSubmitLoop(loop({ reviewer: "" }))).toBe(false);
   });
 
   it("rejects a non-positive or non-integer iteration cap", () => {
@@ -94,39 +84,26 @@ describe("canSubmitLoop", () => {
 });
 
 describe("buildCreateGoalBody", () => {
-  it("maps a checks form, omitting empty commands and defaulting instructions to the objective", () => {
+  it("maps the form to a claude-verified goal, defaulting instructions to the objective", () => {
     const body = buildCreateGoalBody(loop(), "goal-1", "  ");
     expect(body).toEqual({
       id: "goal-1",
       name: undefined,
       objective: "All e2e tests pass",
       maker: { kind: "agent", id: "koder" },
-      verifier: { kind: "checks" },
+      verifier: { kind: "claude", agent: "reviewer" },
       maxIterations: 5,
       instructions: "All e2e tests pass",
     });
   });
 
-  it("includes parsed commands and a trimmed title/instructions when present", () => {
+  it("trims the title and instructions when present", () => {
     const body = buildCreateGoalBody(
-      loop({ commands: "pnpm test\npnpm lint", instructions: " follow CLAUDE.md " }),
+      loop({ instructions: " follow CLAUDE.md " }),
       "goal-2",
       " Green CI ",
     );
     expect(body.name).toBe("Green CI");
-    expect(body.verifier).toEqual({
-      kind: "checks",
-      commands: ["pnpm test", "pnpm lint"],
-    });
     expect(body.instructions).toBe("follow CLAUDE.md");
-  });
-
-  it("maps a claude verifier to its reviewer agent", () => {
-    const body = buildCreateGoalBody(
-      loop({ verifierKind: "claude", reviewer: "reviewer" }),
-      "goal-3",
-      "",
-    );
-    expect(body.verifier).toEqual({ kind: "claude", agent: "reviewer" });
   });
 });

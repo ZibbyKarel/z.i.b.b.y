@@ -590,3 +590,25 @@ Supersedes D-015, D-017, D-018, D-021 and `staffing-driven-capacity.md`. Full re
   Divisions are removed.
 - **Zibby / the COO is not an entity.** The chat stays; the persona, avatar and old org-map
   dashboard are gone. An agent is shown by its DS icon tinted with its department colour.
+
+## D-024 — A project's verification lives in its own repo; ZIBBY holds no verify scripts (2026-10-23, operator)
+
+Trigger: a run parked after 3 verify failures because the default `npx tsc --noEmit` found no
+root `tsconfig` in a foreign repo.
+
+- **How a project verifies itself ALWAYS lives in that project's own repo** — its `CLAUDE.md` /
+  `AGENTS.md` / `README` / package scripts / CI. ZIBBY does not hold verify scripts for it.
+  Agents working in a repo pick its checks up automatically: their sessions spawn inside the
+  checkout, so the repo's own `CLAUDE.md` loads.
+- **Removed:** the workflow phase `type: verify` and its `checkout: clean` option;
+  `DEFAULT_VERIFY_CHECKS`; the verify-evidence PR gate (`verifyEvidence`, `verifyCommands`,
+  `prBlockedReason`, `verifyGateBlock` — the dev → rel PR hop opens without an evidence check, the
+  PR still parks for operator approval); project `checks`; the goal verifier `kind: "checks"`
+  (goals have only the `claude` verifier; the `verifier-scope` park reason and the
+  `goalVerifyTimeoutMs` system setting are gone); `buildVerifyCommand` / `verify-command.ts`. The
+  task classifier's synthesized loop proposal uses `{ kind: "claude", agent: "code-reviewer" }`.
+- **Tool phases keep their explicit `commands`** — they run them joined with `&&` via `/bin/sh` in
+  the stage sandbox, nothing inherited from the project.
+- **Shipped workflows** (`delivery`, `patch`, `quick-fix`, `release-prep`) lost their verify stage:
+  the Kodér (and the test agent) run the repo's own documented checks and report the results; the
+  review / n-9 `qualify` gates are the last check before the PR.

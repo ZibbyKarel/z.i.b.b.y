@@ -874,7 +874,7 @@ ignores them):
   assembles a `proposedGoal` (`synthesizeGoal`): `objective`/`instructions` = the raw
   task text (Law 4 — data, not a command), `maker` = the chosen agent/workflow
   (orchestrator → the first workflow in the catalog, otherwise `mode` falls back to
-  `single`), `verifier: { kind: "checks" }` (the project's default checks),
+  `single`), `verifier: { kind: "claude", agent: "code-reviewer" }`,
   `maxIterations = DEFAULT_GOAL_ITERATIONS`. **Nothing is written** — the `.goal.md`
   is only created on submit from the web (`createGoal` → `startGoalRun`; for a
   scheduled loop, `createGoal` → `createTask` with `target: goal`).

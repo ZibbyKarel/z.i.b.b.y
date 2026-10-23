@@ -232,11 +232,6 @@ export const ProjectSchema = z.object({
   desc: z.string().optional(),
   category: z.string().optional(),
   /**
-   * Shell commands a workflow verify phase runs against this project (in
-   * `path`), joined with `&&`. Absent → the shared default checks apply.
-   */
-  checks: z.array(z.string().min(1)).optional(),
-  /**
    * NS2 F0b — whether this project's `pr` output sink opens a GitHub draft PR
    * instead of a ready-for-review one. Absent → `"ready"` (today's behavior).
    * Never gates the PR open itself (still Tier-2, immediate) and never touches

@@ -19,11 +19,6 @@ const FAKE_CLAUDE = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "fixtures/fake-claude.mjs",
 );
-/** Check script that fails on its first invocation, then passes (see fixtures/flaky-check.mjs). */
-const FLAKY_CHECK = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "fixtures/flaky-check.mjs",
-);
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 // Generous default (Phase 13.4): demo workflow runs are timing-sensitive, and under
@@ -351,66 +346,6 @@ describe("Workflows API (e2e)", () => {
     // A re-ran because of the back-edge.
     const aAttempts = final.stageRuns.filter((s: { phaseId: string }) => s.phaseId === "a").length;
     expect(aAttempts).toBeGreaterThanOrEqual(2);
-  });
-
-  it("a verify phase runs the project checks: red → loop back → green → done", async () => {
-    const projectDir = await fs.mkdtemp(path.join(os.tmpdir(), "verify-proj-"));
-    const marker = path.join(projectDir, "fixed.marker");
-    const check = `${JSON.stringify(process.execPath)} ${JSON.stringify(FLAKY_CHECK)} ${JSON.stringify(marker)}`;
-
-    await request(app.getHttpServer())
-      .post("/api/projects")
-      .send({ id: "verify-proj", name: "Verify project", path: projectDir, checks: [check] })
-      .expect(201);
-
-    await request(app.getHttpServer())
-      .post("/api/workflows")
-      .send({
-        id: "verified",
-        phases: [
-          phase("a"),
-          {
-            id: "v",
-            type: "verify",
-            loop: { to: "a", maxRetries: 1, escalate: false, then: "fail" },
-          },
-          phase("b"),
-        ],
-        instructions: "agent → verify → agent",
-        department: "dev",
-      })
-      .expect(201);
-
-    const start = await app.get(WorkflowRunnerService).start("verified", undefined, "verify-proj");
-    expect(start.projectPath).toBe(projectDir);
-    const { workflowRunId } = start;
-
-    const final = await until(async () => {
-      const res = app.get(WorkflowRunnerService).get(workflowRunId);
-      return res.status !== "running" ? res : null;
-    });
-
-    expect(final.status).toBe("done");
-    // First verify ran red (creating the marker), looped back to `a`, then green.
-    expect(
-      final.stageRuns.map((s: { phaseId: string; status: string }) => `${s.phaseId}:${s.status}`),
-    ).toEqual(["a:done", "v:error", "a:done", "v:done", "b:done"]);
-    // The green verify left runner-captured evidence (real exit code, no worktree →
-    // no sha, in-place); it overwrote the red attempt's evidence.
-    expect(final.verifyEvidence).toMatchObject({
-      phaseId: "v",
-      commands: [check],
-      exitCode: 0,
-      cleanCheckout: false,
-    });
-    expect(final.verifyEvidence?.sha).toBeUndefined();
-
-    // Handoff passthrough: verify transforms nothing, so `b` still consumed `a`'s
-    // output. Five dispatches ran before it (a, v, a, v), so `b` is the fifth folder.
-    const handoff = await fs.readFile(path.join(final.cwd, "05_b", "b.in"), "utf8");
-    expect(handoff).toContain("output of a");
-
-    await fs.rm(projectDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   });
 
   it("a tool phase transforms the handoff in its sandbox: red → loop back → green → its produces feeds the next phase (P1-01)", async () => {
@@ -826,7 +761,7 @@ describe("Workflows API (e2e)", () => {
 
     await request(app.getHttpServer())
       .post("/api/projects")
-      .send({ id: "git-proj", name: "Git project", path: repo, checks: ["true"] })
+      .send({ id: "git-proj", name: "Git project", path: repo })
       .expect(201);
 
     const start = await app.get(WorkflowRunnerService).start("release", undefined, "git-proj");
@@ -926,11 +861,10 @@ describe("Workflows API (e2e)", () => {
     });
 
     it(
-      "runs the chain through verify + the qualify review, finishing done",
+      "runs the chain through the qualify review, finishing done",
       async () => {
         // This workflow declares no `outputs:`, so a green chain finishes `done` directly
-        // (the `pr` sink behaviour is covered by workflow-runner.outputs.test.ts). A project
-        // with a trivially-passing check lets the deterministic `verify` phase go green; the
+        // (the `pr` sink behaviour is covered by workflow-runner.outputs.test.ts). The
         // GAP lever makes the qualify `review` return gap once (loop back to Kodér) then pass.
         process.env.WORKFLOW_DEMO_GAP_PHASES = "review";
         const projectDir = await fs.mkdtemp(path.join(os.tmpdir(), "delivery-proj-"));
@@ -940,7 +874,6 @@ describe("Workflows API (e2e)", () => {
             id: "delivery-proj",
             name: "Delivery project",
             path: projectDir,
-            checks: ["true"],
           })
           .expect(201);
 
@@ -949,9 +882,8 @@ describe("Workflows API (e2e)", () => {
           .start("delivery", undefined, "delivery-proj");
         const { workflowRunId } = start as { workflowRunId: string };
 
-        // architekt → koder → review (qualify) → verify → dokumentator → pr-autor,
-        // green → done (the current seed: verify IS the deterministic Tester; the old
-        // n-9 test-automator phase no longer exists). Poll to any TERMINAL state, not
+        // architekt → koder → review (qualify) → dokumentator → pr-autor,
+        // green → done. Poll to any TERMINAL state, not
         // just `done`: a spurious park (e.g. a stage child that died on transient CI
         // load) then fails fast with the real status instead of burning the whole
         // window on an opaque `until: timed out`. The 50s budget stays under this
@@ -974,15 +906,15 @@ describe("Workflows API (e2e)", () => {
         }
         expect(done.status).toBe("done");
 
-        // The full handoff chain exists in the run tree (verify produces nothing).
+        // The full handoff chain exists in the run tree.
         // Sandboxes are numbered in dispatch order; the gap loop re-ran koder and
         // review, so their LATEST folders are 04/05 (03_review holds the gap attempt).
         for (const [dir, file] of [
           ["01_architekt", "plan.md"],
           ["04_koder", "implementation.md"],
           ["05_review", "review.md"],
-          ["07_dokumentator", "docs.md"],
-          ["08_pr-autor", "pr-draft.md"],
+          ["06_dokumentator", "docs.md"],
+          ["07_pr-autor", "pr-draft.md"],
         ] as const) {
           await fs.access(path.join(done.cwd, dir, file));
         }
@@ -996,8 +928,7 @@ describe("Workflows API (e2e)", () => {
     );
 
     it("a persistently failing review exhausts its retries and parks", async () => {
-      // verify passes (trivial project check) so the run reaches review; review then
-      // fails on every attempt and exhausts its loop → durable park at review.
+      // review fails on every attempt and exhausts its loop → durable park at review.
       process.env.WORKFLOW_DEMO_FAIL_PHASES = "review";
       const projectDir = await fs.mkdtemp(path.join(os.tmpdir(), "delivery-proj-park-"));
       await request(app.getHttpServer())
@@ -1006,7 +937,6 @@ describe("Workflows API (e2e)", () => {
           id: "delivery-proj-park",
           name: "Delivery park",
           path: projectDir,
-          checks: ["true"],
         })
         .expect(201);
 
@@ -1318,7 +1248,7 @@ describe("PR gate on a git project (claude mode, e2e)", () => {
       .expect(201);
     await request(app.getHttpServer())
       .post("/api/projects")
-      .send({ id: "pr-proj", name: "PR project", path: repo, checks: ["true"] })
+      .send({ id: "pr-proj", name: "PR project", path: repo })
       .expect(201);
     await request(app.getHttpServer())
       .post("/api/workflows")

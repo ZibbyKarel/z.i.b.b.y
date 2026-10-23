@@ -282,13 +282,7 @@ export function WorkflowStageTimeline({
             const agent = agentId ? agentsById.get(agentId) : undefined;
             const glyph: IconName =
               (agent?.glyph as IconName | undefined) ??
-              (phaseDef?.type === "tool"
-                ? "gear"
-                : phaseDef?.type === "verify"
-                  ? "check"
-                  : phaseDef?.type === "workflow"
-                    ? "flow"
-                    : "bot");
+              (phaseDef?.type === "tool" ? "gear" : phaseDef?.type === "workflow" ? "flow" : "bot");
             const agentName = agent?.name ?? agentId ?? phaseDef?.workflow ?? node.phaseId;
             const running = displayStatus === "running";
 
@@ -302,10 +296,7 @@ export function WorkflowStageTimeline({
             const isOpen = hasLog && openKey === key;
             const logId = `stage-log-${key.replace("#", "-")}`;
 
-            const produced =
-              displayStatus === "done" && phaseDef?.type !== "verify"
-                ? phaseDef?.produces
-                : undefined;
+            const produced = displayStatus === "done" ? phaseDef?.produces : undefined;
 
             const escalated = !isPlaceholder && parked?.phaseId === node.phaseId;
             const showRetry = node.priorAttempts.length > 0 || escalated;

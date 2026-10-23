@@ -3,15 +3,7 @@
 import { type ChangeEvent } from "react";
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Button,
-  IconTile,
-  Panel,
-  SelectField,
-  Stack,
-  TextAreaField,
-  Typography,
-} from "@zibby/design-system";
+import { Button, IconTile, Panel, SelectField, Stack, Typography } from "@zibby/design-system";
 import type { Category, PrOpenMode, Project } from "@zibby/contracts";
 import { Controller, FormTextInput, useFormControls } from "@zibby/forms";
 import { toastBus } from "../../../components/Toaster/toastBus";
@@ -26,7 +18,7 @@ const NO_CATEGORY = "";
  */
 const LOGO_MAX_DATA_URI_LENGTH = 280_000;
 
-/** The core project record fields this panel edits (name/category/desc/logo/budget/checks/env). */
+/** The core project record fields this panel edits (name/category/desc/logo/budget/env). */
 export interface ProjectBasicsBody {
   name: string;
   desc?: string;
@@ -46,7 +38,6 @@ export interface ProjectBasicsBody {
     weeklyCostCapUsd?: number;
     monthlyCostCapUsd?: number;
   };
-  checks?: string[];
   env?: Record<string, string>;
   /** NS2 F0b — draft-PR mode; omitted when `"ready"` (today's default behavior). */
   prOpenMode?: PrOpenMode;
@@ -106,8 +97,8 @@ function toPositiveFloat(raw: string): number | undefined {
 }
 
 /**
- * The core-record editor for a project (name, category, description, budget,
- * verify checks and env vars). Lives on the project detail page — there is
+ * The core-record editor for a project (name, category, description, budget
+ * and env vars). Lives on the project detail page — there is
  * no project dialog; the same panel creates a new project (`isNew`) and edits an
  * existing one. Mount with `key={project?.id ?? "new"}` so switching projects
  * resets the captured form defaults.
@@ -122,8 +113,6 @@ export function ProjectBasicsPanel({
 }: ProjectBasicsPanelProps) {
   const t = useTranslations("projects");
   const [envRows, setEnvRows] = useState<KeyValueRow[]>(toRows(project?.env));
-  // Verify-phase shell commands, one per line (joined with && by the runner).
-  const [checksText, setChecksText] = useState((project?.checks ?? []).join("\n"));
   const [logo, setLogo] = useState<string | undefined>(project?.logo);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
@@ -195,10 +184,6 @@ export function ProjectBasicsPanel({
               ...(monthlyCostCapUsd != null ? { monthlyCostCapUsd } : {}),
             }
           : undefined;
-      const checks = checksText
-        .split("\n")
-        .map((c) => c.trim())
-        .filter(Boolean);
       onSave({
         name: values.name.trim(),
         desc: values.desc.trim() || undefined,
@@ -206,7 +191,6 @@ export function ProjectBasicsPanel({
         gitRemote: values.gitRemote.trim() || undefined,
         logo,
         budget,
-        checks: checks.length > 0 ? checks : undefined,
         env: fromRows(envRows),
         prOpenMode: values.prOpenMode === "draft" ? "draft" : undefined,
       });
@@ -384,23 +368,6 @@ export function ProjectBasicsPanel({
               placeholder="—"
             />
           </Stack>
-        </Stack>
-
-        <Stack gap="75">
-          <Typography mono size="sm" type="note" variant="secondary">
-            {t("fields.checks")}
-          </Typography>
-          <Typography size="xs" type="note" variant="tertiary">
-            {t("fields.checksHint")}
-          </Typography>
-          <TextAreaField
-            data-testid="project-checks"
-            label={t("fields.checks")}
-            onChange={(e) => setChecksText(e.target.value)}
-            placeholder={"pnpm lint\npnpm test"}
-            rows={3}
-            value={checksText}
-          />
         </Stack>
 
         <Stack gap="75">

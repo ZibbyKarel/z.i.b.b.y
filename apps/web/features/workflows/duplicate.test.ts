@@ -21,7 +21,13 @@ const workflow: Workflow = {
       thinking: "medium",
       loop: { to: "koder", maxRetries: 1, escalate: false, then: "park" },
     },
-    { id: "verify", type: "verify", commands: ["pnpm test"] },
+    {
+      id: "verify",
+      type: "tool",
+      consumes: "implementation.md",
+      produces: "report.md",
+      commands: ["pnpm test"],
+    },
   ],
   outputs: [{ type: "pr", from: "implementation.md" }],
 };
@@ -43,7 +49,7 @@ describe("duplicateWorkflowBody", () => {
     expect(body.name).toBe("Delivery (copy)");
     expect(body.phases).toHaveLength(2);
     expect(body.phases[0]).toMatchObject({ id: "koder", agent: "writer" });
-    expect(body.phases[1]).toMatchObject({ id: "verify", type: "verify" });
+    expect(body.phases[1]).toMatchObject({ id: "verify", type: "tool" });
     // Delivery sinks carry into the copy unchanged.
     expect(body.outputs).toEqual([{ type: "pr", from: "implementation.md" }]);
     expect(CreateWorkflowSchema.safeParse(body).success).toBe(true);

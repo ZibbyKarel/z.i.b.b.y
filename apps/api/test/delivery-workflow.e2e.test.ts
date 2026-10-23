@@ -12,19 +12,17 @@ const DATA_WORKFLOWS_DIR = path.resolve(
 /**
  * Phase 45 — guard the production delivery workflow DATA FILE against drift. Loaded
  * through the real store/parser (a corrupt or schema-invalid file throws on read), so
- * a clean read already proves it validates; the assertions then pin the two gates the
- * phase wired in: the objective `verify` (loops to Kodér) and the subjective `review`
- * qualify gate (`gap` → Kodér via `to`, `drift` → Architekt via `driftTo`).
+ * a clean read already proves it validates; the assertions then pin the `review`
+ * qualify gate (`gap` → Kodér via `to`, `drift` → Architekt via `driftTo`) and that no
+ * ZIBBY-side verify phase is back (the target repo verifies itself, D-024).
  */
 describe("Production delivery workflow (e2e parse guard)", () => {
-  it("validates and wires the objective verify + subjective qualify gates", async () => {
+  it("validates and wires the qualify gates (no verify phase)", async () => {
     const store = new WorkflowsStorageService(DATA_WORKFLOWS_DIR);
     const delivery = await store.get("delivery");
 
-    // Objective gate: a deterministic verify phase that loops failures back to Kodér.
-    const verify = delivery.phases.find((p) => p.id === "verify");
-    expect(verify?.type).toBe("verify");
-    expect(verify?.loop?.to).toBe("koder");
+    // No ZIBBY-side verify phase: the repo verifies itself (D-024).
+    expect(delivery.phases.some((p) => p.id === "verify")).toBe(false);
 
     // Subjective gate: review is a qualify phase; gap → Kodér (to), drift → Architekt.
     const review = delivery.phases.find((p) => p.id === "review");

@@ -35,14 +35,14 @@ export const INITIAL_ASSIGNMENT = "task.md";
 export interface GraphNode {
   /** Durable phase id — loop targets reference it; an edited workflow keeps it. */
   id: string;
-  type: "agent" | "verify" | "tool" | "workflow";
+  type: "agent" | "tool" | "workflow";
   /** `workflow` step: the child workflow id this step runs as a sub-run ("" = not chosen yet). */
   workflow?: string;
-  /** Agent id (empty for verify/tool phases). */
+  /** Agent id (empty for tool/workflow phases). */
   agent: string;
   /** Output file this node writes (= the `consumes` of its flow successor). */
   produces: string;
-  /** Verify/tool commands, one per line (verify: "" = project/default checks). */
+  /** Tool commands, one per line. */
   commands: string;
   /** Human checkpoint after this phase (`"ask"`); absent = autonomous. */
   approval?: "ask";
@@ -115,9 +115,9 @@ export function makeNode(agent: Agent, index: number, x: number, y: number): Gra
   };
 }
 
-/** A fresh verify, tool or sub-workflow (`workflow`) node (no agent) from the palette. */
+/** A fresh tool or sub-workflow (`workflow`) node (no agent) from the palette. */
 export function makeStepNode(
-  type: "verify" | "tool" | "workflow",
+  type: "tool" | "workflow",
   index: number,
   x: number,
   y: number,
@@ -127,7 +127,7 @@ export function makeStepNode(
     type,
     agent: "",
     ...(type === "workflow" ? { workflow: "" } : {}),
-    produces: type === "verify" ? "" : `step-${index}.md`,
+    produces: `step-${index}.md`,
     commands: "",
     model: "sonnet",
     thinking: "medium",
@@ -154,8 +154,7 @@ export function phasesToGraph(initial: Workflow | undefined, agents: Agent[]): W
     type: ph.type,
     ...(ph.type === "workflow" ? { workflow: ph.workflow ?? "" } : {}),
     agent: ph.type === "agent" ? (ph.agent ?? agents[0]?.id ?? "") : "",
-    produces:
-      ph.produces ?? (ph.type === "verify" ? "" : defaultProduces(ph.agent ?? "output", i + 1)),
+    produces: ph.produces ?? defaultProduces(ph.agent ?? "output", i + 1),
     commands: (ph.commands ?? []).join("\n"),
     ...(ph.approval ? { approval: ph.approval } : {}),
     ...(ph.qualify ? { qualify: ph.qualify } : {}),
@@ -252,9 +251,7 @@ export function graphToPhases(graph: WorkflowGraph, assignment: string): Contrac
     return node.looseLoop;
   };
 
-  // Thread the hand-off file along the chain. A verify phase passes the current
-  // hand-off through untouched (it produces no artifact), so the agent after a
-  // verify still consumes the previous agent's output — matching the old dialog.
+  // Thread the hand-off file along the chain.
   let handoff = assign;
   return order.map((node) => {
     // A chain head (no incoming flow) restarts from the assignment file.
@@ -262,17 +259,6 @@ export function graphToPhases(graph: WorkflowGraph, assignment: string): Contrac
     const loop = loopOf(node);
 
     const approval = node.approval ? { approval: node.approval } : {};
-    if (node.type === "verify") {
-      const commands = splitCommands(node.commands);
-      return {
-        id: node.id,
-        type: "verify" as const,
-        ...(commands.length > 0 ? { commands } : {}),
-        ...(loop ? { loop } : {}),
-        ...approval,
-      };
-    }
-
     const consumes = handoff;
     const produces = node.produces.trim();
     handoff = produces || handoff;

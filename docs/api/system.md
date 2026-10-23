@@ -38,7 +38,7 @@ system-config section — link there rather than duplicating the table here.
    the server no longer honors), persists it atomically, updates the
    in-memory copy, and calls every subscriber registered via `onChange()`.
    The schedulers use this to re-arm their interval timers immediately —
-   most knobs (tick intervals, `limitResumeMax`, `goalVerifyTimeoutMs`,
+   most knobs (tick intervals, `limitResumeMax`,
    `maxConcurrentRuns`, `chatPersona`) take effect live, with one exception:
    `goalAutoResume` is only read at boot, so it applies on the _next_ start,
    not immediately.

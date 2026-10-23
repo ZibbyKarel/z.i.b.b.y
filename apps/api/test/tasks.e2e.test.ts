@@ -375,7 +375,7 @@ describe("Tasks API (e2e)", () => {
 
   // ── Phase 11 ────────────────────────────────────────────────────────────
   describe("Phase 11 — loop synthesis + path scoping", () => {
-    it("classifies a loop-cued task to mode:loop with a checks verifier proposal", async () => {
+    it("classifies a loop-cued task to mode:loop with a claude verifier proposal", async () => {
       await seedCatalog();
       const res = await request(app.getHttpServer())
         .post(CLASSIFY)
@@ -384,7 +384,7 @@ describe("Tasks API (e2e)", () => {
       expect(res.status).toBe(200);
       expect(res.body.mode).toBe("loop");
       expect(res.body.proposedGoal).toBeTruthy();
-      expect(res.body.proposedGoal.verifier).toEqual({ kind: "checks" });
+      expect(res.body.proposedGoal.verifier).toEqual({ kind: "claude", agent: "code-reviewer" });
       expect(["agent", "workflow"]).toContain(res.body.proposedGoal.maker.kind);
       // The target stays the maker — never a synthesized goal target (Decision 1).
       expect(res.body.target.kind).not.toBe("goal");

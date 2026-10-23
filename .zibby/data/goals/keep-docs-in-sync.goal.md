@@ -5,9 +5,8 @@ maker:
   kind: agent
   id: ai-engineer
 verifier:
-  kind: checks
-  commands:
-    - "pnpm check:types"
+  kind: claude
+  agent: code-reviewer
 maxIterations: 3
 desc: Drift between the ts-rest contracts and the prose docs is a recurring papercut.
 ---

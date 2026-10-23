@@ -59,7 +59,7 @@ type CompanyEditValues = {
  * creates a new company (`isNew`) and edits an existing one. Mount with
  * `key={company?.id ?? "new"}` so switching companies resets the captured form
  * defaults. Mirrors `ProjectBasicsPanel`, trimmed to the fields a company owns
- * (no category/logo/checks/env — those are project-only).
+ * (no category/logo/env — those are project-only).
  */
 export function CompanyBasicsPanel({
   company,

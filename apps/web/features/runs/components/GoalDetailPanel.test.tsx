@@ -38,7 +38,7 @@ vi.mock("../../goals/queries", () => ({
         id: "g1",
         objective: "do it",
         maker: { kind: "workflow", id: "delivery" },
-        verifier: { kind: "checks" },
+        verifier: { kind: "claude", agent: "reviewer" },
         maxIterations: 5,
         budget: { dailyRuns: 2 },
         instructions: "iterate",
@@ -51,7 +51,7 @@ const ISO = (msAgo: number) => new Date(Date.now() - msAgo).toISOString();
 const iter = (index: number, msAgo: number) => ({
   index,
   makerKind: "workflow" as const,
-  verifier: { kind: "checks" as const, satisfied: false, output: `verdict ${index}` },
+  verifier: { kind: "claude" as const, satisfied: false, output: `verdict ${index}` },
   startedAt: ISO(msAgo),
   status: "done" as const,
 });
@@ -76,14 +76,6 @@ function parkedGoal(reason: RunView["goalParkedReason"]): RunView {
 }
 
 describe("GoalDetailPanel (14.1)", () => {
-  it("renders a friendly park reason + hint for verifier-scope (not the raw enum)", () => {
-    render(<GoalDetailPanel run={parkedGoal("verifier-scope")} />);
-    expect(screen.getByText("Verifier nemá scope")).toBeInTheDocument();
-    expect(screen.getByText(/Zadej cíli explicitní verifier commands/)).toBeInTheDocument();
-    // The raw enum value is never shown to the operator.
-    expect(screen.queryByText("verifier-scope")).not.toBeInTheDocument();
-  });
-
   it("labels awaiting-resume (Law 3 restart park) with its hint", () => {
     render(<GoalDetailPanel run={parkedGoal("awaiting-resume")} />);
     expect(screen.getByText("Pozastaveno po restartu — čeká na tvé svolení")).toBeInTheDocument();
@@ -181,7 +173,7 @@ describe("GoalDetailPanel (27) — open the folded child run log", () => {
       index: 0,
       makerKind: "workflow" as const,
       makerRunRef: "delivery_run_0",
-      verifier: { kind: "checks" as const, satisfied: true, output: "" },
+      verifier: { kind: "claude" as const, satisfied: true, output: "" },
       startedAt: ISO(10_000),
       status: "done" as const,
     };

@@ -8,15 +8,16 @@ import { ensureDir, safeJson, writeFileAtomic } from "../shared/file-storage";
 export const SYSTEM_CONFIG_FILE = "SYSTEM_CONFIG_FILE";
 
 /**
- * The global concurrency knob went `maxConcurrentRuns` → `maxWorkingAgents` (staffing-driven
- * capacity) → back to `maxConcurrentRuns` (run slots, docs/plans/remove-employees.md). The
- * schema is `.strict()`, so a file still carrying the interim key would otherwise fail to
- * parse and drop EVERY knob back to its default. Same number; the file is rewritten in the
- * current shape on the next save.
+ * The schema is `.strict()`, so a file still carrying a retired key would otherwise fail
+ * to parse and drop EVERY knob back to its default. Legacy keys are migrated or dropped
+ * here; the file is rewritten in the current shape on the next save.
+ * - `maxWorkingAgents` → `maxConcurrentRuns` (run slots, docs/plans/remove-employees.md).
+ * - `goalVerifyTimeoutMs` dropped with the goal `checks` verifier (D-024).
  */
 export function migrateLegacySystemConfig(raw: unknown): unknown {
-  if (!raw || typeof raw !== "object" || !("maxWorkingAgents" in raw)) return raw;
+  if (!raw || typeof raw !== "object") return raw;
   const { maxWorkingAgents, ...rest } = raw as Record<string, unknown>;
+  delete rest.goalVerifyTimeoutMs;
   return typeof maxWorkingAgents === "number" && !("maxConcurrentRuns" in rest)
     ? { ...rest, maxConcurrentRuns: maxWorkingAgents }
     : rest;
@@ -33,7 +34,7 @@ export type SystemConfigListener = (config: SystemConfig) => void;
  *
  * The config is held IN MEMORY and exposed synchronously via {@link current}, because
  * the consumers are sync call-sites: `AdapterRegistry.resolve()` (hot per-integration
- * path), `GoalRunnerService.shellTimeoutMs()`, the schedulers' arm logic. The initial
+ * path), `GoalRunnerService`'s auto-resume check, the schedulers' arm logic. The initial
  * load is a synchronous `readFileSync` in the constructor — `@Global` gives the store
  * visibility but NOT init-order guarantees, so a consumer's `onModuleInit` may run
  * before any async load would have resolved; a sync load at construction sidesteps that

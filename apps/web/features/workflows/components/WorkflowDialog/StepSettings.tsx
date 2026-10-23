@@ -19,7 +19,7 @@ export interface StepSettingsProps {
 
 /**
  * Right rail of the workflow editor: per-step settings that don't fit on a canvas
- * card — the commands of a verify/tool step (one per line) and the "human check
+ * card — the commands of a tool step (one per line) and the "human check
  * after this step" checkpoint. Steps are listed in flow order.
  */
 export function StepSettings({ graph, setGraph, excludeWorkflowId }: StepSettingsProps) {
@@ -53,13 +53,7 @@ export function StepSettings({ graph, setGraph, excludeWorkflowId }: StepSetting
       </Container>
       {nodes.map((n, i) => {
         const name =
-          n.type === "verify"
-            ? t("typeVerify")
-            : n.type === "tool"
-              ? t("typeTool")
-              : n.type === "workflow"
-                ? t("typeWorkflow")
-                : n.agent;
+          n.type === "tool" ? t("typeTool") : n.type === "workflow" ? t("typeWorkflow") : n.agent;
         return (
           <Container data-testid={`step-settings-${n.id}`} key={n.id} padding={["100", "100"]}>
             <Typography mono truncate size="xs" type="note" weight="bold">
@@ -75,10 +69,10 @@ export function StepSettings({ graph, setGraph, excludeWorkflowId }: StepSetting
                 />
               </Container>
             )}
-            {(n.type === "verify" || n.type === "tool") && (
+            {n.type === "tool" && (
               <TextAreaField
                 data-testid={`step-commands-${n.id}`}
-                hint={n.type === "verify" ? t("commandsHintVerify") : t("commandsHintTool")}
+                hint={t("commandsHintTool")}
                 label={t("commandsLabel")}
                 onChange={(e) => patch(n.id, { commands: e.target.value })}
                 placeholder={t("commandsPlaceholder")}

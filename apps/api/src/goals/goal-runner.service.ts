@@ -1,10 +1,8 @@
-import { type ChildProcess, spawn } from "node:child_process";
-import { agentBaseEnv } from "../shared/agent-env";
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
-import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import {
   GOAL_RUN_ARTIFACTS,
   type Goal,
@@ -29,8 +27,7 @@ import { ProjectLocalService } from "../projects/project-local.service";
 import { ProjectLocalUnresolvedError } from "../projects/projects.errors";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { buildResumeContext } from "../workflows/resume-context";
-import { buildVerifyCommand } from "../workflows/verify-command";
-import { RunNotFoundError, isAlive, killGroup } from "../runner/runner-core";
+import { RunNotFoundError } from "../runner/runner-core";
 import { prepareWorktreeDir } from "../shared/worktree-root";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TraceContextService } from "../shared/logging/trace-context.service";
@@ -76,36 +73,6 @@ function stripVerdictTags(text: string): string {
 }
 
 /**
- * Phase 12.1/12.2 — decide whether a goal `checks` verifier is safe to run, the
- * single predicate shared by the `drive()` pre-flight park and the `runVerifier`
- * floor. Returns a readable refusal reason, or `null` when it is safe to run.
- *
- * - 12.1 (no scope): neither explicit `commands` nor the project's own `checks` →
- *   the shared {@link buildVerifyCommand} would fall through to the full-monorepo
- *   `DEFAULT_VERIFY_CHECKS` (`pnpm lint && tsc && pnpm test`). Refuse it for goals.
- * - 12.2 (no safe cwd): no worktree and no project path → the only fallback is
- *   `run.cwd` (inside this repo), from which `pnpm test` climbs to the monorepo
- *   root. Refuse rather than run checks inside the repo.
- *
- * Scope is checked first so the bombed case (no scope AND no cwd) reports the root
- * misconfiguration. A scoped command with no cwd still refuses (12.2).
- */
-export function checksVerifierBlocker(
-  commands: string[] | undefined,
-  projectChecks: string[] | undefined,
-  spawnCwd: string | undefined,
-): string | null {
-  const hasScope = (commands?.length ?? 0) > 0 || (projectChecks?.length ?? 0) > 0;
-  if (!hasScope) {
-    return "no verifier scope — set goal.verifier.commands or a project's checks (refusing the full-repo default suite)";
-  }
-  if (!spawnCwd) {
-    return "no workspace or project — refusing to run checks with cwd inside the repo";
-  }
-  return null;
-}
-
-/**
  * Phase 13.1 — has the goal's OWN budget (a windowed run-count) been reached? A goal
  * iteration IS one maker run, so the iteration records are the run ledger — count those
  * whose `startedAt` falls in the rolling daily / weekly window. No budget or no caps →
@@ -134,19 +101,6 @@ const MAX_LISTED = 50;
 const AGGREGATE_FILE = "run.json";
 
 /**
- * Phase 12.3 — resource governance for the deterministic `checks` verifier shell.
- * A hung command (a runaway suite, a watcher that never exits) must not wedge the
- * outer loop or accumulate RAM forever, and a kill/respawn must reap it.
- */
-/** Grace after SIGTERM before escalating the process group to SIGKILL. */
-const SHELL_KILL_GRACE_MS = 5000;
-/** Cap the captured output (rolling tail); the verdict keeps only {@link VERDICT_MAX_CHARS} anyway. */
-const SHELL_OUTPUT_CAP = 1_000_000;
-
-/** Exit code recorded for a verifier shell killed by the `goalVerifyTimeoutMs` deadline. */
-const SHELL_TIMEOUT_CODE = 124;
-
-/**
  * The outer loop engine. A goal run iterates a *maker* (an existing agent or
  * workflow, dispatched through its own runner untouched) against a *verifier*
  * (Phase 10.2), persisting every iteration to disk and parking when bounded
@@ -160,14 +114,12 @@ const SHELL_TIMEOUT_CODE = 124;
  * {@link WorkflowRunnerService} pattern with `iterations[]` replacing `stageRuns[]`.
  */
 @Injectable()
-export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
+export class GoalRunnerService implements OnModuleInit {
   private readonly dir: string;
   private readonly runs = new Map<string, GoalRun>();
   /** The base prompt for each live run's maker (not persisted — recomputed from objective on restart). */
   private readonly prompts = new Map<string, string>();
   private readonly events = new EventEmitter();
-  /** In-flight verifier shells (Phase 12.3) — tracked so `onModuleDestroy` reaps them. */
-  private readonly liveShells = new Set<ChildProcess>();
   /**
    * Phase 43 — goal run ids with an operator-requested stop in flight. Set by
    * {@link stop} right before killing the current iteration's live maker; consumed
@@ -200,18 +152,6 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit(): Promise<void> {
     await fs.mkdir(this.dir, { recursive: true }).catch(() => {});
     await this.reconstruct();
-  }
-
-  /**
-   * Phase 12.3 — reap every in-flight verifier shell on shutdown (mirror of
-   * {@link RunnerCore.shutdown}). GoalRunnerService was the only background service
-   * without this hook, so a `checks` verifier child was orphaned on kill/respawn —
-   * exactly the meta-circular RAM accumulation the phase exists to close. (Requires
-   * `app.enableShutdownHooks()` so it also fires on SIGTERM, not just `app.close()`.)
-   */
-  onModuleDestroy(): void {
-    for (const child of this.liveShells) killGroup(child.pid ?? 0);
-    this.liveShells.clear();
   }
 
   /**
@@ -326,7 +266,7 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
    *     budget.check → over-cap? park (budget)                       [8.1]
    *     dispatch maker (agent|workflow .start, cwd = worktree)       [inner loop]
    *     wait for maker terminal                                      [9.1 shape in 10.4]
-   *     run verifier (deterministic checks ± claude pass)            [10.2]
+   *     run verifier (claude pass)                                   [10.2]
    *     decideStop:
    *       satisfied → checkpoint commit, status done, return         [9.3]
    *       park-iterations → park, return                             [10.2]
@@ -353,22 +293,6 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
     // Restart re-attach: the FIRST turn waits on an existing in-flight maker run
     // instead of dispatching a fresh one (continuation, not restart).
     let attachRunRef = resume?.attachRunRef;
-
-    // Phase 12.1/12.2: a `checks` verifier that can never run safely (no scope, or
-    // no worktree/project to run it in) makes the goal structurally unsatisfiable —
-    // refuse and park BEFORE spending a single maker iteration, rather than spawning
-    // makers whose work could never be verified (and never the full-repo suite).
-    if (goal.verifier.kind === "checks") {
-      const blocker = checksVerifierBlocker(
-        goal.verifier.commands,
-        project?.checks,
-        run.workspace?.path ?? project?.path,
-      );
-      if (blocker) {
-        await this.parkVerifierScope(run, blocker, index);
-        return;
-      }
-    }
 
     for (;;) {
       // Per-iteration budget guard (decision 6): the maker counts as one run against
@@ -432,12 +356,7 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      // Phase 12.6: a workflow maker that passed its OWN deterministic verify phase
-      // already ran the very checks the goal's checks verifier would — skip the
-      // redundant second suite. Otherwise verify normally.
-      const verdict =
-        this.makerAlreadyVerified(goal, project, makerStatus, makerRunRef) ??
-        (await this.runVerifier(run, goal, project, index));
+      const verdict = await this.runVerifier(run, goal, project, index);
       iteration.verifier = {
         kind: verdict.kind,
         ...(verdict.runRef ? { runRef: verdict.runRef } : {}),
@@ -550,18 +469,6 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
       .catch(() => {});
   }
 
-  /**
-   * Phase 12.1/12.2: park a goal whose `checks` verifier has no resolvable scope or
-   * no safe cwd. Writes the readable reason as the iteration verdict so the operator
-   * sees WHY in `RunDetail`, then parks with `verifier-scope` — a misconfiguration to
-   * fix (add commands / a project), not a retryable failure.
-   */
-  private async parkVerifierScope(run: GoalRun, reason: string, index: number): Promise<void> {
-    const verdictFile = path.join(run.cwd, `iteration-${index}.verdict.txt`);
-    await fs.writeFile(verdictFile, `checks verifier refused: ${reason}\n`, "utf8").catch(() => {});
-    await this.parkGoal(run, "verifier-scope", index, verdictFile);
-  }
-
   /** Park the goal for the operator — durable, resumable with a note (decision 4). */
   private async parkGoal(
     run: GoalRun,
@@ -599,54 +506,12 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Phase 12.6 — eliminate double verification. The delivery workflow maker already
-   * runs its OWN `verify` phase (the runner records the exact commands it executed on
-   * the workflow run's `verifyCommands` — a real-execution marker, never an agent
-   * claim). When the goal's verifier is a `checks` verifier that would resolve to the
-   * SAME commands, re-running them is pure waste — return a synthesized satisfied
-   * verdict instead. Anything not provably identical (a `claude` verifier, different
-   * commands, a maker with no passed verify) → `null`, so `drive()` verifies normally.
-   */
-  private makerAlreadyVerified(
-    goal: Goal,
-    project: Project | null,
-    makerStatus: GoalIterationStatus,
-    makerRunRef: string,
-  ): VerifierVerdict | null {
-    if (goal.maker.kind !== "workflow" || makerStatus !== "done") return null;
-    if (goal.verifier.kind !== "checks") return null;
-    let verifiedWith: string[] | undefined;
-    try {
-      verifiedWith = this.workflowRunner.get(makerRunRef).verifyCommands;
-    } catch {
-      return null; // maker run already pruned — verify normally
-    }
-    if (!verifiedWith?.length) return null;
-    const goalChecks = goal.verifier.commands ?? project?.checks;
-    if (!goalChecks?.length) return null;
-    if (JSON.stringify(goalChecks) !== JSON.stringify(verifiedWith)) return null;
-    this.log.info("goal verifier skipped — maker workflow already verified (12.6)", {
-      goalId: goal.id,
-      commands: verifiedWith,
-    });
-    return {
-      kind: "checks",
-      satisfied: true,
-      output:
-        "satisfied by the maker workflow's own verify phase (12.6: skipped a redundant re-run)",
-    };
-  }
-
-  /**
-   * Run the goal's verifier for iteration `index`. A `checks` verifier runs the
-   * deterministic shell command (shared {@link buildVerifyCommand}) in the worktree
-   * and is satisfied on exit 0. A `claude` verifier is a FRESH agent run on its own
+   * Run the goal's verifier for iteration `index`. The `claude` verifier is a FRESH agent run on its own
    * (cheaper) model — a separate spawn with no shared session (decision 3/8) —
    * graded on the `<verdict>pass|fail</verdict>` tag it writes into its own log
    * (`parseGoalVerdict`, literal last tag wins), not on its exit code, and is
    * fail-closed: no parseable verdict, or a judge that never finished, is not
-   * satisfied. Either way the captured output (the failing tail / the verdict
-   * text) feeds the next iteration's resume-context.
+   * satisfied. The captured verdict text feeds the next iteration's resume-context.
    */
   protected async runVerifier(
     run: GoalRun,
@@ -655,27 +520,6 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
     index: number,
   ): Promise<VerifierVerdict> {
     const spec = goal.verifier;
-    if (spec.kind === "checks") {
-      // Phase 12.1/12.2 floor: never run the full-repo DEFAULT_VERIFY_CHECKS for a
-      // goal, and never run checks with cwd inside this repo (run.cwd is
-      // apps/api/data/goals/runs/<id>, which climbs to the monorepo root). `drive()`
-      // pre-empts both with a `verifier-scope` park before any maker spawns; this is
-      // the defense-in-depth floor for any direct caller. A resolvable scope =
-      // explicit commands OR the project's own checks; a safe cwd = a worktree or
-      // the project checkout — NOT run.cwd.
-      const spawnCwd = run.workspace?.path ?? project?.path;
-      const blocker = checksVerifierBlocker(spec.commands, project?.checks, spawnCwd);
-      if (blocker)
-        return { kind: "checks", satisfied: false, output: `checks verifier refused: ${blocker}` };
-
-      const { command, args } = buildVerifyCommand({
-        commands: spec.commands,
-        projectChecks: project?.checks,
-        spawnCwd,
-      });
-      const { code, output } = await this.runShell(command, args, spawnCwd as string);
-      return { kind: "checks", satisfied: code === 0, output: tailOf(output) };
-    }
     // claude verifier: a fresh agent run handed the goal + iteration context. It is
     // graded on the verdict it WRITES, not on its exit code — a judge that rules FAIL
     // and exits 0 has not satisfied anything. Fail-closed on a missing/unparseable
@@ -722,77 +566,6 @@ export class GoalRunnerService implements OnModuleInit, OnModuleDestroy {
       this.log.info("goal claude verifier graded", logFields);
     }
     return { kind: "claude", runRef: r.runId, satisfied, output };
-  }
-
-  /** The verifier shell deadline (operator-owned config; tests seed a short one). */
-  private shellTimeoutMs(): number {
-    return this.systemConfig.current().goalVerifyTimeoutMs;
-  }
-
-  /**
-   * Run a verifier shell, capturing combined stdout/stderr and the exit code, under
-   * Phase 12.3 resource governance:
-   * - `detached` → the child leads its own process group, so a kill reaps the whole
-   *   tree (the suite + everything it spawned), not just the `/bin/sh` parent.
-   * - tracked in {@link liveShells} for `onModuleDestroy` reaping; removed on settle.
-   * - a wall-clock deadline ({@link shellTimeoutMs}) SIGTERMs the group, then escalates
-   *   to SIGKILL after {@link SHELL_KILL_GRACE_MS} if it ignores the term — a hung
-   *   suite must never wedge `drive()` forever.
-   * - the output accumulator is capped to a rolling {@link SHELL_OUTPUT_CAP}-char tail.
-   */
-  private runShell(
-    command: string,
-    args: string[],
-    cwd: string,
-  ): Promise<{ code: number; output: string }> {
-    return new Promise((resolve) => {
-      let output = "";
-      let settled = false;
-      const child = spawn(command, args, {
-        cwd,
-        env: agentBaseEnv(),
-        detached: true,
-        stdio: ["ignore", "pipe", "pipe"],
-      });
-      const pgid = child.pid ?? 0;
-      this.liveShells.add(child);
-
-      const append = (d: Buffer): void => {
-        output += d.toString();
-        if (output.length > SHELL_OUTPUT_CAP)
-          output = output.slice(output.length - SHELL_OUTPUT_CAP);
-      };
-
-      const finish = (code: number, extra = ""): void => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        this.liveShells.delete(child);
-        resolve({ code, output: extra ? `${output}\n${extra}` : output });
-      };
-
-      const timer = setTimeout(() => {
-        const ms = this.shellTimeoutMs();
-        killGroup(pgid);
-        // Escalate to SIGKILL on the group if SIGTERM was trapped/ignored.
-        setTimeout(() => {
-          if (isAlive(pgid)) {
-            try {
-              process.kill(-pgid, "SIGKILL");
-            } catch {
-              // already gone
-            }
-          }
-        }, SHELL_KILL_GRACE_MS).unref?.();
-        finish(SHELL_TIMEOUT_CODE, `[verifier timed out after ${ms}ms — process group killed]`);
-      }, this.shellTimeoutMs());
-      timer.unref?.();
-
-      child.stdout.on("data", append);
-      child.stderr.on("data", append);
-      child.on("error", (err) => finish(1, err.message));
-      child.on("close", (code) => finish(code ?? 1));
-    });
   }
 
   /**

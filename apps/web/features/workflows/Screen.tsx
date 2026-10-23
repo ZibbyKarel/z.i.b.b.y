@@ -150,7 +150,7 @@ export function Screen({ selectedId: routeId, basePath = "/work/workflows" }: Sc
     });
     setShowPalette(false);
   };
-  const addStepToEdit = (type: "verify" | "tool" | "workflow") => {
+  const addStepToEdit = (type: "tool" | "workflow") => {
     setEditGraph((g) => {
       const i = g.nodes.length;
       return { ...g, nodes: [...g.nodes, makeStepNode(type, i + 1, 60 + i * 26, 150 + i * 18)] };

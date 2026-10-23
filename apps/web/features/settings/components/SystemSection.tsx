@@ -26,7 +26,6 @@ export enum SystemSectionTestId {
   LimitResumeMax = "system-limit-resume-max",
   MaxConcurrentRuns = "system-max-concurrent-runs",
   DockDoneTasksLimit = "system-dock-done-tasks-limit",
-  GoalVerifyTimeout = "system-goal-verify-timeout",
   GoalAutoResume = "system-goal-auto-resume",
   Save = "system-save",
 }
@@ -65,9 +64,6 @@ function SystemEditor({ config }: { config: SystemConfig }) {
   const [dockDoneTasksLimit, setDockDoneTasksLimit] = useState<number | null>(
     config.dockDoneTasksLimit,
   );
-  const [goalVerifyTimeoutMs, setGoalVerifyTimeoutMs] = useState<number | null>(
-    config.goalVerifyTimeoutMs,
-  );
   const [goalAutoResume, setGoalAutoResume] = useState(config.goalAutoResume);
 
   /** Coerce a possibly-cleared tick to a non-negative integer (empty → 0 = disabled). */
@@ -90,7 +86,6 @@ function SystemEditor({ config }: { config: SystemConfig }) {
         limitResumeMax: positive(limitResumeMax, 1),
         maxConcurrentRuns: positive(maxConcurrentRuns, 1),
         dockDoneTasksLimit: Math.min(100, positive(dockDoneTasksLimit, 1)),
-        goalVerifyTimeoutMs: positive(goalVerifyTimeoutMs, 1),
         goalAutoResume,
       },
     });
@@ -171,13 +166,6 @@ function SystemEditor({ config }: { config: SystemConfig }) {
           min={1}
           onValueChange={setDockDoneTasksLimit}
           value={dockDoneTasksLimit}
-        />
-        <DurationField
-          data-testid={SystemSectionTestId.GoalVerifyTimeout}
-          hint={t("runtime.goalVerifyTimeoutHint")}
-          label={t("runtime.goalVerifyTimeout")}
-          onValueChange={setGoalVerifyTimeoutMs}
-          valueMs={goalVerifyTimeoutMs}
         />
 
         <Divider />

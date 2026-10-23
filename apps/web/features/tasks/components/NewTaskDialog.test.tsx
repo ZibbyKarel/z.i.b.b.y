@@ -56,7 +56,7 @@ function apiRouting(
       proposedGoal: {
         objective: text,
         maker: { kind: "workflow", id: "delivery" },
-        verifier: { kind: "checks" },
+        verifier: { kind: "claude", agent: "reviewer" },
         maxIterations: 6,
         instructions: text,
       },
@@ -341,7 +341,7 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
       screen.getByLabelText(/Zadání/),
       "fix the failing test and keep going until it's green",
     );
-    // The loop preview summarizes maker + checks verifier + iteration cap.
+    // The loop preview summarizes maker + reviewer + iteration cap.
     expect(await screen.findByText(/Loop · vykonavatel Delivery/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Spustit loop/ }));
@@ -349,7 +349,7 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
     expect(createGoal).toHaveBeenCalledTimes(1);
     const goalBody = createGoal.mock.calls[0]?.[0].body as Record<string, unknown>;
     expect(goalBody.maker).toEqual({ kind: "workflow", id: "delivery" });
-    expect(goalBody.verifier).toEqual({ kind: "checks" });
+    expect(goalBody.verifier).toEqual({ kind: "claude", agent: "reviewer" });
     expect(goalBody.maxIterations).toBe(6);
 
     // Only a task runs: the immediate loop enters through createTask with a goal target
@@ -378,7 +378,7 @@ describe("NewTaskDialog (Phase 11 unified composer, on the Phase 26 CommandLine)
     expect(goalBody.maxIterations).toBe(9);
     // Unedited fields round-trip losslessly from the proposal.
     expect(goalBody.maker).toEqual({ kind: "workflow", id: "delivery" });
-    expect(goalBody.verifier).toEqual({ kind: "checks" });
+    expect(goalBody.verifier).toEqual({ kind: "claude", agent: "reviewer" });
   });
 
   it("shows a low-confidence hint on the preview for a vague single verdict", async () => {

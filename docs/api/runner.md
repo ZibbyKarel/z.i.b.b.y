@@ -87,7 +87,7 @@ This is the only place a wrapper injects its own fields (`agentId`, `prompt`,
 - The run id is `${ownerId}_${startedMs}_${pid}`; the log file is
   `<dir>/<runId>.log` (append mode); the sidecar is `<dir>/<runId>.json`.
 - The child's `exit`/`error` listeners are wired **synchronously, before any
-  await** — a trivially fast child (e.g. a verify phase's `/bin/sh -c "true"`)
+  await** — a trivially fast child (e.g. a tool phase's `/bin/sh -c "true"`)
   can exit during the sidecar write, and `exit` is a one-shot event a
   post-await listener would miss (this hung runs `running` forever under CI
   timing before the fix).

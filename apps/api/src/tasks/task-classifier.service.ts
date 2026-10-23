@@ -107,6 +107,13 @@ export type RouteResult =
 export const DEFAULT_GOAL_ITERATIONS = 6;
 
 /**
+ * The reviewer a synthesized loop proposes as its `claude` verifier. The operator
+ * can swap it in the dialog's "Edit" disclosure; a goal has no shell-checks verifier
+ * (a project verifies itself through its own repo, D-024).
+ */
+export const DEFAULT_GOAL_VERIFIER_AGENT = "code-reviewer";
+
+/**
  * The complexity-ladder rule appended to every scoped stage-2 router preamble
  * ({@link TaskClassifierService.buildDepartmentPreamble}).
  *
@@ -584,8 +591,7 @@ export class TaskClassifierService {
 
   /**
    * Build an in-memory goal proposal from the routed maker + the raw task text. The
-   * verifier defaults to project `checks` (no `commands` → the goal runner resolves
-   * the project's checks then `DEFAULT_VERIFY_CHECKS`); objective/instructions are
+   * verifier is a `claude` reviewer ({@link DEFAULT_GOAL_VERIFIER_AGENT}); objective/instructions are
    * the operator's text verbatim (Law 4 — data, never a command). Returns `null` when
    * no concrete maker can be resolved (an orchestrator pick with no workflow to
    * iterate), so the caller falls back to `mode: "single"` rather than minting a
@@ -601,7 +607,7 @@ export class TaskClassifierService {
     return {
       objective: input.text,
       maker,
-      verifier: { kind: "checks" },
+      verifier: { kind: "claude", agent: DEFAULT_GOAL_VERIFIER_AGENT },
       maxIterations: DEFAULT_GOAL_ITERATIONS,
       instructions: input.text,
     };

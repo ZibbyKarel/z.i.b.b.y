@@ -164,14 +164,16 @@ describe("workflow schema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rejects qualify on a verify phase (qualify is for agent phases only)", () => {
+  it("rejects qualify on a tool phase (qualify is for agent phases only)", () => {
     const result = WorkflowSchema.safeParse({
       id: "delivery",
       phases: [
         phase("koder"),
         {
-          id: "verify",
-          type: "verify",
+          id: "render",
+          type: "tool",
+          commands: ["true"],
+          produces: "r.md",
           qualify: true,
           loop: { to: "koder", maxRetries: 1, escalate: false, then: "fail" },
         },
@@ -325,18 +327,19 @@ describe("workflow run schema", () => {
 });
 
 describe("T11 finding #36 — WorkflowPhaseSchema.commands array cap (50, no per-string max)", () => {
+  const tool = (commands: string[]) => ({ id: "v", type: "tool", commands, produces: "out.txt" });
   it("50 commands passes, 51 rejects", () => {
     expect(
       WorkflowSchema.safeParse({
         id: "release",
-        phases: [phase("v", { type: "verify", agent: undefined, commands: Array(50).fill("x") })],
+        phases: [tool(Array(50).fill("x"))],
         instructions: "x",
       }).success,
     ).toBe(true);
     expect(
       WorkflowSchema.safeParse({
         id: "release",
-        phases: [phase("v", { type: "verify", agent: undefined, commands: Array(51).fill("x") })],
+        phases: [tool(Array(51).fill("x"))],
         instructions: "x",
       }).success,
     ).toBe(false);
@@ -418,60 +421,32 @@ describe("NS2 F9 — the workflow complexity ladder", () => {
   });
 });
 
-describe("verify evidence contract", () => {
-  const wf = (verify: Record<string, unknown>) =>
-    WorkflowSchema.safeParse({
-      id: "delivery",
-      phases: [phase("koder"), { id: "verify", type: "verify", ...verify }],
-      instructions: "x",
-    });
-
-  it("accepts checkout: clean on a verify phase", () => {
-    const result = wf({ checkout: "clean" });
-    expect(result.success).toBe(true);
-    // Zod strips unknown keys — success alone would not prove the field survived.
-    expect(result.data?.phases[1]?.checkout).toBe("clean");
-  });
-
-  it("rejects checkout on an agent phase", () => {
+describe("removed verify phase (D-024)", () => {
+  it("rejects a legacy type: verify phase", () => {
     const result = WorkflowSchema.safeParse({
       id: "delivery",
-      phases: [phase("koder", { checkout: "clean" })],
+      phases: [phase("koder"), { id: "verify", type: "verify" }],
       instructions: "x",
     });
     expect(result.success).toBe(false);
-    if (!result.success)
-      expect(
-        result.error.issues.some((i) => i.message === "checkout is for verify phases only"),
-      ).toBe(true);
   });
 
-  it("round-trips verifyEvidence and prBlockedReason on a WorkflowRun", () => {
-    const verifyEvidence = {
-      phaseId: "verify",
-      stageRunId: "release_1.verify_1",
-      commands: ["pnpm test"],
-      exitCode: 0,
-      sha: "abc123",
-      cleanCheckout: true,
-      at: new Date().toISOString(),
-    };
+  it("an old run.json still carrying verifyEvidence/verifyCommands/prBlockedReason parses (keys stripped)", () => {
     const parsed = WorkflowRunSchema.safeParse({
       workflowRunId: "release_1",
       workflowId: "release",
-      status: "running",
-      currentStage: "verify",
+      status: "done",
+      currentStage: null,
       stageRuns: [],
       startedAt: new Date().toISOString(),
       cwd: "/tmp/release_1",
-      verifyEvidence,
+      verifyEvidence: { phaseId: "verify", exitCode: 0 },
+      verifyCommands: ["pnpm test"],
       prBlockedReason: "no verify evidence",
     });
     expect(parsed.success).toBe(true);
-    if (parsed.success) {
-      expect(parsed.data.verifyEvidence).toEqual(verifyEvidence);
-      expect(parsed.data.prBlockedReason).toBe("no verify evidence");
-    }
+    expect(parsed.data).not.toHaveProperty("verifyEvidence");
+    expect(parsed.data).not.toHaveProperty("prBlockedReason");
   });
 });
 

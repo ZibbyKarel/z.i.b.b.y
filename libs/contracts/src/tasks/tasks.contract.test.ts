@@ -96,7 +96,7 @@ describe("TaskRoutingSchema", () => {
       proposedGoal: {
         objective: "fix the failing test until it's green",
         maker: { kind: "workflow", id: "delivery" },
-        verifier: { kind: "checks" },
+        verifier: { kind: "claude", agent: "code-reviewer" },
         maxIterations: 6,
         instructions: "fix the failing test until it's green",
       },
@@ -119,7 +119,7 @@ describe("ProposedGoalSchema (Phase 11)", () => {
   const valid = {
     objective: "keep going until tests pass",
     maker: { kind: "agent" as const, id: "coder" },
-    verifier: { kind: "checks" as const },
+    verifier: { kind: "claude" as const, agent: "code-reviewer" },
     maxIterations: 6,
     instructions: "keep going until tests pass",
   };

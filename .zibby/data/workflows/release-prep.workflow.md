@@ -15,13 +15,6 @@ phases:
     produces: build.md
     model: sonnet
     thinking: medium
-  - id: verify
-    type: verify
-    loop:
-      to: build
-      maxRetries: 2
-      escalate: true
-      then: park
   - id: readiness
     type: agent
     agent: deployment-engineer
@@ -53,7 +46,7 @@ outputs:
     dest: vault
     to: release-prep-plan
 desc: >-
-  Plná příprava vydání: hygiena větví a tagů → ověření buildu → posudek
+  Plná příprava vydání: hygiena větví a tagů → build → posudek
   připravenosti k nasazení → plán vydání s rollback krokem. Připrav release,
   příprava vydání, release prep, deploy readiness, připravit nasazení, tag,
   verzování, semver, rollback plán, release checklist, jde to vydat. Končí u
@@ -65,9 +58,8 @@ complexity: deep
 
 # Release Prep
 
-Nejvyšší příčka maestra: **hygiena → build → verify → readiness ⇄ hygiena →
-plán**. Pět fází, deterministické ověření buildu a kvalifikační brána
-připravenosti. Linka vydání **připraví**, nikdy ho nevydá.
+Nejvyšší příčka maestra: **hygiena → build → readiness ⇄ hygiena → plán**.
+Čtyři fáze a kvalifikační brána připravenosti. Linka vydání **připraví**, nikdy ho nevydá.
 
 ## Zákon 3 — kde tahle linka končí
 
@@ -84,22 +76,16 @@ je dokument, který operátorovi předloží jedno jasné rozhodnutí. Neodvratn
    odůvodněním) a seznam nesrovnalostí, které by vydání blokovaly.
 2. **build** — `hygiene.md` → `build.md`: připraví repo do stavu, ze kterého jde
    vydat — verze, lockfile, build skripty, artefakty. Sepíše, co změnil a čím
-   si to sám předběžně ověřil. `verify` je pak nezávislé potvrzení, ne první
-   kontakt s buildem.
-3. **verify** — deterministické kontroly projektu přímo v checkoutu. Žádný model,
-   žádné tokeny, jen exit kódy. **Že build prošel, tvrdí exit kód, ne agent.**
-   Červená vrací práci na **build** (2× s eskalací), vyčerpání → park.
-   `commands` fáze neuvádí, takže se dědí kontroly nastavené na projektu — build
-   se jmenuje v každém repu jinak, takže patří do `checks` projektu, ne
-   nadrátovaný do uložené workflow (vlastní `commands` by kontroly projektu
-   přebily, ne doplnily).
-4. **readiness** — `build.md` → `readiness.md`: posudek připravenosti k nasazení —
+   si to ověřil — build a kontroly spouští podle **vlastní dokumentace cílového
+   repa** (CLAUDE.md / AGENTS.md / README / package skripty), protože build se
+   jmenuje v každém repu jinak a ZIBBY ho nedrží.
+3. **readiness** — `build.md` → `readiness.md`: posudek připravenosti k nasazení —
    migrace, konfigurace a tajemství, feature flagy, závislosti prostředí,
    rollback cesta, rizika. Fáze je `qualify`: nese `<verdict>`. Cokoli jiného
    než `pass` vrací práci na **hygiene** (2× s eskalací sonnet/high → opus/high),
    pak park. Park je správný konec — „ještě to není k vydání“ je informace pro
    operátora, ne důvod linku natahovat.
-5. **plan** — `readiness.md` → `release-plan.md`: plán vydání ve tvaru
+4. **plan** — `readiness.md` → `release-plan.md`: plán vydání ve tvaru
    `# titulek` + tělo — pořadí kroků, kdo je dělá, ověření po nasazení a
    rollback. Kroky jsou napsané pro operátora k provedení, ne k automatickému
    spuštění.

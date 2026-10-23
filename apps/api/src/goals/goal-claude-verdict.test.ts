@@ -59,12 +59,10 @@ function makeService(opts: { log: string | "throw"; status: GoalIterationStatus 
   return { svc, startCalls };
 }
 
-// Shape copied verbatim from `goal-double-verify.test.ts`, which is known to typecheck.
 const PROJECT: Project = {
   id: "proj",
   name: "proj",
   path: "/tmp/proj",
-  checks: ["pnpm --filter app test"],
 };
 
 const GOAL: Goal = {
