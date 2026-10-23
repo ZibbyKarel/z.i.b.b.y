@@ -40,8 +40,8 @@ export type RoutableTarget = (CatalogTaskTarget | DepartmentTaskTarget) & {
    * Deliberately absent (falsy) on every AGENT candidate, and that is the whole
    * point rather than an omission: a task that must produce a PR is never routed to
    * a lone agent. The rung that looks like "one implementer agent" already exists as
-   * a workflow — dev's `quick-fix` (light: a single `fullstack-developer` phase
-   * plus a declared `pr` output) — so the invariant costs no expressiveness while
+   * a workflow — dev's `quick-fix` (light: a `fullstack-developer` phase gated by a
+   * `code-reviewer` phase, plus a declared `pr` output) — so the invariant costs no expressiveness while
    * keeping review, verification and a real sink in the path.
    */
   deliversPr?: boolean;
