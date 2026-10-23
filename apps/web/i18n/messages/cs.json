@@ -1393,7 +1393,6 @@
           "parked": "Pokračuj s poznámkou, třeba co zkusit jinak",
           "stopped": "Přidej poznámku a spusť znovu",
           "done": "Zeptej se dál. Založí nový úkol s tímto výstupem jako kontextem.",
-          "revise": "Co se má změnit před zveřejněním?",
           "agentRunning": "Agentní běh přijme poznámku, až v něm budeš pokračovat."
         },
         "send": {
@@ -1401,8 +1400,7 @@
           "answer": "ODPOVĚDĚT ↵",
           "resume": "POKRAČOVAT ↵",
           "rerun": "SPUSTIT ↵",
-          "newTask": "NOVÝ ÚKOL ↵",
-          "sendBack": "VRÁTIT ↵"
+          "newTask": "NOVÝ ÚKOL ↵"
         },
         "hint": {
           "running": "DORUČENO MEZI KROKY",
@@ -1411,8 +1409,7 @@
           "question": "BĚH POKRAČUJE PO ODPOVĚDI",
           "parked": "POZNÁMKA PŮJDE DO KONTEXTU",
           "stopped": "BĚH JE ZASTAVEN",
-          "done": "BĚH SKONČIL",
-          "revise": "PŘEPRACOVÁNÍ · POSÁDKA TO PŘEDĚLÁ A ZEPTÁ SE ZNOVU"
+          "done": "BĚH SKONČIL"
         }
       },
       "confirm": {

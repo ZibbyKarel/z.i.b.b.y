@@ -194,11 +194,9 @@ export function RunDetail({ run, embedded, children }: RunDetailProps) {
               workflow ? rail.map((r) => ({ key: r.phaseId, name: r.name, state: r.state })) : []
             }
             mode={mode}
-            onRevised={() => setReviseOpen(false)}
             onSent={() => setView("live")}
             resume={actions.resume}
             resuming={actions.resuming}
-            reviseOpen={reviseOpen}
             run={run}
           />
         }

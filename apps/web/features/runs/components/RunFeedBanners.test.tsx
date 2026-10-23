@@ -11,13 +11,15 @@ import {
   RunQuestionBanner,
 } from "./RunFeedBanners";
 
-const { approveMutate, rejectMutate } = vi.hoisted(() => ({
+const { approveMutate, rejectMutate, reviseMutate } = vi.hoisted(() => ({
+  reviseMutate: vi.fn(),
   approveMutate: vi.fn(),
   rejectMutate: vi.fn(),
 }));
 vi.mock("../../approvals", () => ({
   useApproveMutation: () => ({ mutate: approveMutate, isPending: false }),
   useRejectMutation: () => ({ mutate: rejectMutate, isPending: false }),
+  useReviseMutation: () => ({ mutate: reviseMutate, isPending: false }),
 }));
 
 const approval: DashboardApproval = {
@@ -49,13 +51,17 @@ function mockFrames(frameTime: number) {
   vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => undefined);
 }
 
-function renderApproval(over: Partial<DashboardApproval> = {}, diffstat?: RunView["diffstat"]) {
+function renderApproval(
+  over: Partial<DashboardApproval> = {},
+  diffstat?: RunView["diffstat"],
+  reviseOpen = false,
+) {
   render(
     <RunApprovalBanner
       approval={{ ...approval, ...over }}
       diffstat={diffstat}
       onToggleRevise={vi.fn()}
-      reviseOpen={false}
+      reviseOpen={reviseOpen}
     />,
   );
 }
@@ -70,6 +76,23 @@ describe("RunApprovalBanner", () => {
   it("a stage approval offers REVISE", () => {
     renderApproval();
     expect(screen.getByTestId(RunFeedBannersTestId.Revise)).toBeInTheDocument();
+  });
+
+  it("an open revise shows the note field; sending calls revise with the note", async () => {
+    renderApproval({}, undefined, true);
+    const send = screen.getByTestId(RunFeedBannersTestId.ReviseSend);
+    expect(send).toBeDisabled();
+    await userEvent.type(screen.getByTestId(RunFeedBannersTestId.ReviseNote), " tighten tests ");
+    await userEvent.click(send);
+    expect(reviseMutate).toHaveBeenCalledWith(
+      { params: { id: "ap-1" }, body: { note: "tighten tests" } },
+      expect.anything(),
+    );
+  });
+
+  it("a closed revise shows no note field", () => {
+    renderApproval();
+    expect(screen.queryByTestId(RunFeedBannersTestId.ReviseNote)).not.toBeInTheDocument();
   });
 
   it("a git.push approval does not", () => {

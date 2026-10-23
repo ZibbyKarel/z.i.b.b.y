@@ -13,7 +13,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { useAgentSymbol } from "../../agents";
-import { useAnswerApprovalMutation, useReviseMutation } from "../../approvals";
+import { useAnswerApprovalMutation } from "../../approvals";
 import type { DashboardApproval } from "../../approvals/approval";
 import { useNewTask } from "../../tasks";
 import { useSendTaskRunMessageMutation } from "../mutations";
@@ -44,47 +44,24 @@ export interface RunComposerProps {
   approval?: DashboardApproval;
   /** The workflow's phases — the TO chips after ALL. */
   crew: RunComposerCrewMember[];
-  reviseOpen: boolean;
-  /** Closes revise mode after a revision is sent. */
-  onRevised: () => void;
   /** The parent switches the view to LIVE. */
   onSent: () => void;
   resume: RunActions["resume"];
   resuming: boolean;
 }
 
-type Action = "revise" | "message" | "answer" | "resume" | "rerun" | "newTask" | "none";
+type Action = "message" | "answer" | "resume" | "rerun" | "newTask" | "none";
 
 interface Row {
   action: Action;
-  ph:
-    | "revise"
-    | "running"
-    | "approval"
-    | "agentRunning"
-    | "question"
-    | "parked"
-    | "stopped"
-    | "done"
-    | null;
-  send: "send" | "answer" | "resume" | "rerun" | "newTask" | "sendBack" | null;
-  hint:
-    | "running"
-    | "paused"
-    | "approval"
-    | "question"
-    | "parked"
-    | "stopped"
-    | "done"
-    | "revise"
-    | null;
+  ph: "running" | "approval" | "agentRunning" | "question" | "parked" | "stopped" | "done" | null;
+  send: "send" | "answer" | "resume" | "rerun" | "newTask" | null;
+  hint: "running" | "paused" | "approval" | "question" | "parked" | "stopped" | "done" | null;
   disabled?: boolean;
 }
 
-function composerRow(run: RunView, mode: RunMode, reviseOpen: boolean): Row {
+function composerRow(run: RunView, mode: RunMode): Row {
   const workflow = run.kind === "workflow";
-  if (mode === "approval" && reviseOpen)
-    return { action: "revise", ph: "revise", send: "sendBack", hint: "revise" };
   switch (mode) {
     case "running":
     case "pausing":
@@ -121,14 +98,12 @@ function composerRow(run: RunView, mode: RunMode, reviseOpen: boolean): Row {
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
-/** The run's one input: messages the crew, answers a question, revises a gate, resumes or follows up — by mode. */
+/** The run's one input: messages the crew, answers a question, resumes or follows up — by mode. */
 export function RunComposer({
   run,
   mode,
   approval,
   crew,
-  reviseOpen,
-  onRevised,
   onSent,
   resume,
   resuming,
@@ -140,14 +115,13 @@ export function RunComposer({
   // Two Enter presses can land before `isPending` re-renders — the ref closes that gap.
   const inFlight = useRef(false);
 
-  const revise = useReviseMutation();
   const send = useSendTaskRunMessageMutation();
   const answer = useAnswerApprovalMutation();
   const { open: openNewTask } = useNewTask();
   const continueContext = useContinueTaskContext(run);
 
-  const row = composerRow(run, mode, reviseOpen);
-  const pending = revise.isPending || send.isPending || answer.isPending || resuming;
+  const row = composerRow(run, mode);
+  const pending = send.isPending || answer.isPending || resuming;
   const trimmed = text.trim();
   const canSend = !row.disabled && row.action !== "none" && !!trimmed && !pending;
 
@@ -164,19 +138,6 @@ export function RunComposer({
     if (!canSend || inFlight.current) return;
     inFlight.current = true;
     switch (row.action) {
-      case "revise":
-        if (!approval) return settled();
-        revise.mutate(
-          { params: { id: approval.id }, body: { note: trimmed } },
-          {
-            onSuccess: () => {
-              done();
-              onRevised();
-            },
-            onSettled: settled,
-          },
-        );
-        return;
       case "message":
         send.mutate({ params: { runId: run.runId }, body: { text: trimmed, to } }, callbacks);
         return;

@@ -7,13 +7,11 @@ import type { RunMode } from "../runDetailModel";
 import { RunComposer, RunComposerTestId } from "./RunComposer";
 
 const m = vi.hoisted(() => ({
-  revise: vi.fn(),
   send: vi.fn(),
   answer: vi.fn(),
   openNewTask: vi.fn(),
 }));
 vi.mock("../../approvals", () => ({
-  useReviseMutation: () => ({ mutate: m.revise, isPending: false }),
   useAnswerApprovalMutation: () => ({ mutate: m.answer, isPending: false }),
 }));
 vi.mock("../mutations", () => ({
@@ -51,19 +49,16 @@ const crew = [
 
 let resume: ReturnType<typeof vi.fn>;
 let onSent: ReturnType<typeof vi.fn>;
-let onRevised: ReturnType<typeof vi.fn>;
 
-function renderComposer(mode: RunMode, over: Partial<RunView> = {}, reviseOpen = false) {
+function renderComposer(mode: RunMode, over: Partial<RunView> = {}) {
   render(
     <RunComposer
       approval={approval}
       crew={crew}
       mode={mode}
-      onRevised={onRevised}
       onSent={onSent}
       resume={resume}
       resuming={false}
-      reviseOpen={reviseOpen}
       run={{ ...workflowRun, ...over }}
     />,
   );
@@ -78,20 +73,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   resume = vi.fn();
   onSent = vi.fn();
-  onRevised = vi.fn();
 });
 
 describe("RunComposer", () => {
-  it("approval + revise sends the note back through revise", async () => {
-    renderComposer("approval", { status: "awaiting-approval" }, true);
-    await typeAndSend("tighten the tests");
-    expect(m.revise).toHaveBeenCalledWith(
-      { params: { id: "ap_1" }, body: { note: "tighten the tests" } },
-      expect.anything(),
-    );
-    expect(m.send).not.toHaveBeenCalled();
-  });
-
   it.each<RunMode>(["running", "pausing", "paused", "approval"])(
     "workflow %s queues a message to ALL by default",
     async (mode) => {

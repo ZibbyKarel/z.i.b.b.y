@@ -12,13 +12,14 @@ import {
   Panel,
   Stack,
   StatusDot,
+  TextAreaField,
   Typography,
 } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { ConfirmDeleteDialog } from "../../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import { resumeEta } from "../../../utils/time";
-import { useApproveMutation, useRejectMutation } from "../../approvals";
+import { useApproveMutation, useRejectMutation, useReviseMutation } from "../../approvals";
 import { type DashboardApproval, RISK_META } from "../../approvals/approval";
 import type { RunView } from "../run";
 import type { StageRailRow } from "../runDetailModel";
@@ -29,6 +30,8 @@ export enum RunFeedBannersTestId {
   Parked = "run-banner-parked",
   Hold = "run-banner-hold",
   Revise = "run-banner-revise",
+  ReviseNote = "run-banner-revise-note",
+  ReviseSend = "run-banner-revise-send",
   Reject = "run-banner-reject",
   Diff = "run-banner-diff",
 }
@@ -60,7 +63,13 @@ export function RunApprovalBanner({
   const locale = useLocale();
   const approve = useApproveMutation();
   const reject = useRejectMutation();
+  const revise = useReviseMutation();
   const [confirmReject, setConfirmReject] = useState(false);
+  const [note, setNote] = useState("");
+  const closeRevise = () => {
+    setNote("");
+    onToggleRevise();
+  };
 
   const title = approvalTitle(approval);
   const risk = approval.riskType ? RISK_META[approval.riskType].label : approval.action;
@@ -137,6 +146,40 @@ export function RunApprovalBanner({
           </Container>
         </Stack>
       </Container>
+      {reviseOpen && (
+        <Container padding={["0", "200", "150", "200"]}>
+          <Stack gap="100">
+            <TextAreaField
+              autoFocus
+              data-testid={RunFeedBannersTestId.ReviseNote}
+              hint={tApprovals("reviseHint")}
+              label={tApprovals("reviseLabel")}
+              onChange={(e) => setNote(e.target.value)}
+              value={note}
+            />
+            <Stack direction="row" gap="100" justify="end">
+              <Button intent="secondary" onClick={closeRevise} size="sm">
+                {tk("common.cancel")}
+              </Button>
+              <Button
+                data-testid={RunFeedBannersTestId.ReviseSend}
+                disabled={!note.trim()}
+                intent="primary"
+                loading={revise.isPending}
+                onClick={() =>
+                  revise.mutate(
+                    { params: { id: approval.id }, body: { note: note.trim() } },
+                    { onSuccess: closeRevise },
+                  )
+                }
+                size="sm"
+              >
+                {tApprovals("confirmRevise")}
+              </Button>
+            </Stack>
+          </Stack>
+        </Container>
+      )}
       {diffstat && diffstat.files.length > 0 && (
         <>
           <Divider />

@@ -1393,7 +1393,6 @@
           "parked": "Resume with a note, e.g. what to try differently",
           "stopped": "Add a note and start again",
           "done": "Ask a follow-up. Starts a new task with this output as context.",
-          "revise": "What should change before this is published?",
           "agentRunning": "Agent runs take notes when you continue them."
         },
         "send": {
@@ -1401,8 +1400,7 @@
           "answer": "ANSWER ↵",
           "resume": "RESUME ↵",
           "rerun": "RE-RUN ↵",
-          "newTask": "NEW TASK ↵",
-          "sendBack": "SEND BACK ↵"
+          "newTask": "NEW TASK ↵"
         },
         "hint": {
           "running": "DELIVERED BETWEEN STEPS",
@@ -1411,8 +1409,7 @@
           "question": "RUN RESUMES ON REPLY",
           "parked": "NOTE IS ADDED TO CONTEXT",
           "stopped": "RUN IS STOPPED",
-          "done": "RUN FINISHED",
-          "revise": "REVISION · THE CREW REWORKS BEFORE ASKING AGAIN"
+          "done": "RUN FINISHED"
         }
       },
       "confirm": {
