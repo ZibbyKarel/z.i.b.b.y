@@ -105,9 +105,6 @@ export type {
   IconTileTone,
 } from "./components/IconTile/IconTile";
 
-export { EntityHero, EntityHeroTestId } from "./components/EntityHero/EntityHero";
-export type { EntityHeroProps } from "./components/EntityHero/EntityHero";
-
 export { EntityCard, EntityCardTestId } from "./components/EntityCard/EntityCard";
 export type { EntityCardProps } from "./components/EntityCard/EntityCard";
 
@@ -473,6 +470,7 @@ export {
 export type {
   ChainRouteStripGate,
   ChainRouteStripProps,
+  GateMode,
   ChainRouteStripSize,
   ChainRouteStripStep,
 } from "./components/ChainRouteStrip/ChainRouteStrip";
@@ -486,8 +484,8 @@ export type {
   WorkflowStepStripProps,
 } from "./components/WorkflowStepStrip/WorkflowStepStrip";
 
-export { GateToggle, GateToggleTestId } from "./components/GateToggle/GateToggle";
-export type { GateMode, GateToggleProps } from "./components/GateToggle/GateToggle";
+export { OptionToggle, OptionToggleTestId } from "./components/OptionToggle/OptionToggle";
+export type { OptionToggleOption, OptionToggleProps } from "./components/OptionToggle/OptionToggle";
 
 export { BudgetMeter, BudgetMeterTestId } from "./components/BudgetMeter/BudgetMeter";
 export type { BudgetMeterProps } from "./components/BudgetMeter/BudgetMeter";

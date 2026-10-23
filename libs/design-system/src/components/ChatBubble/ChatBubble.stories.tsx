@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { Button } from "../Button/Button";
 import { ChatBubble } from "./ChatBubble";
 
 const meta: Meta<typeof ChatBubble> = {
@@ -17,12 +18,12 @@ export const Overview: Story = {
       <ChatBubble
         actions={
           <>
-            <button className="border border-ink bg-ink px-2.5 py-1.5 text-panel" type="button">
-              CREATE TASK
-            </button>
-            <button className="border border-line-2 px-2.5 py-1.5 text-ink-2" type="button">
-              OPEN FORM →
-            </button>
+            <Button intent="primary" size="sm">
+              Create task
+            </Button>
+            <Button intent="secondary" size="sm">
+              Open form
+            </Button>
           </>
         }
         author="assistant"
@@ -31,4 +32,9 @@ export const Overview: Story = {
       </ChatBubble>
     </div>
   ),
+};
+
+export const Playground: Story = {
+  args: { author: "assistant", children: "On it — I’ll ping you when checks pass." },
+  argTypes: { author: { control: "inline-radio", options: ["you", "assistant"] } },
 };

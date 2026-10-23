@@ -9,7 +9,7 @@ export default meta;
 
 type Story = StoryObj<typeof BrandMark>;
 
-export const Sizes: Story = {
+export const Overview: Story = {
   render: () => (
     <div className="flex items-end gap-6">
       <BrandMark size={16} />

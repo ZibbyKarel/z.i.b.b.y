@@ -10,6 +10,13 @@ describe("Button", () => {
     expect(screen.getByTestId(ButtonTestId.Root)).toHaveAccessibleName("Spustit");
   });
 
+  it("squares the joined side of a split-button segment", () => {
+    render(<Button joined="start">Run</Button>);
+    const root = screen.getByTestId(ButtonTestId.Root);
+    expect(root).toHaveClass("rounded-md", "rounded-r-none");
+    expect(root).not.toHaveClass("rounded-l-none");
+  });
+
   it("outline keeps an ink hairline", () => {
     render(<Button intent="outline">Edit</Button>);
     expect(screen.getByTestId(ButtonTestId.Root)).toHaveClass("border-ink", "text-ink");

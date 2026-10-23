@@ -570,11 +570,7 @@
     "deleteEmptyCategory": "Delete",
     "deleteEmptyCategoryAria": "Delete empty category {name}",
     "emptyCategory": "Empty category — add an agent or delete it.",
-    "uncategorized": "Uncategorized",
-    "uploadImage": "Upload image",
-    "removeImage": "Remove image",
-    "uploadAgentAvatar": "Upload agent image",
-    "avatarTooLarge": "Image is too large (max ~200 KB)."
+    "uncategorized": "Uncategorized"
   },
   "integrations": {
     "addIntegration": "Add integration",
@@ -3055,7 +3051,6 @@
     }
   },
   "bridge": {
-    "title": "Bridge",
     "layout": "Layout",
     "preset": {
       "DEFAULT": "Default",

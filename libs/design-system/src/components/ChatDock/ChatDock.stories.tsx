@@ -1,25 +1,43 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { ChatDock } from "./ChatDock";
+import { Button } from "../Button/Button";
+import { ChatBubble } from "../ChatBubble/ChatBubble";
 import { Chip } from "../Chip/Chip";
+import { InputFrame } from "../InputFrame/InputFrame";
 
 const composer = (
-  <input
-    aria-label="Message"
-    className="h-8 w-full border border-line-2 bg-background px-2.5 text-[13px] outline-none"
-    placeholder="Ask Zibby…"
-  />
+  <InputFrame
+    end={
+      <span className="pr-1">
+        <Button intent="primary" size="sm">
+          Send
+        </Button>
+      </span>
+    }
+  >
+    <input
+      aria-label="Message"
+      className="h-8 w-full bg-transparent px-1.5 text-[13px] text-ink outline-none placeholder:text-foreground-faint"
+      placeholder="Ask Zibby…"
+    />
+  </InputFrame>
 );
 
 const transcript = (
-  <div className="flex flex-col gap-2.5">
-    <div className="self-end max-w-[80%] bg-ink px-2.5 py-2 text-[13px] text-panel">
-      Ship the Kevin PR once green.
-    </div>
-    <div className="self-start max-w-[86%] border border-line-2 bg-background px-2.5 py-2 text-[13px]">
+  <>
+    <ChatBubble author="you">Ship the Kevin PR once green.</ChatBubble>
+    <ChatBubble
+      actions={
+        <Button intent="primary" size="sm">
+          Create task
+        </Button>
+      }
+      author="assistant"
+    >
       On it — I’ll ping you when checks pass.
-    </div>
-  </div>
+    </ChatBubble>
+  </>
 );
 
 const meta: Meta<typeof ChatDock> = {
@@ -33,31 +51,23 @@ type Story = StoryObj<typeof ChatDock>;
 
 export const Overview: Story = {
   render: () => (
-    <div className="flex flex-wrap items-end gap-8">
-      <ChatDock composer={composer} />
-      <ChatDock defaultOpen composer={composer} onNewChat={() => {}} transcript={transcript} />
-      <ChatDock composer={composer} targetChip={<Chip>Dept: dev</Chip>} />
-    </div>
-  ),
-};
-
-export const Expanded: Story = {
-  render: () => (
-    <div className="flex h-[640px] items-end">
-      <ChatDock defaultExpanded defaultOpen composer={composer} transcript={transcript} />
-    </div>
-  ),
-};
-
-export const WithSidebar: Story = {
-  render: () => (
-    <div className="flex h-[640px] w-[1200px] items-end">
-      <ChatDock
-        defaultOpen
-        composer={composer}
-        sidebar={<div className="text-[13px]">Recent conversations…</div>}
-        transcript={transcript}
-      />
+    <div className="flex flex-col gap-10">
+      <div className="flex flex-wrap items-end gap-8">
+        <ChatDock composer={composer} />
+        <ChatDock defaultOpen composer={composer} onNewChat={() => {}} transcript={transcript} />
+        <ChatDock composer={composer} targetChip={<Chip>Dept: dev</Chip>} />
+      </div>
+      <div className="flex h-[640px] items-end">
+        <ChatDock defaultExpanded defaultOpen composer={composer} transcript={transcript} />
+      </div>
+      <div className="flex h-[640px] w-[1200px] items-end">
+        <ChatDock
+          defaultOpen
+          composer={composer}
+          sidebar={<div className="text-[13px]">Recent conversations…</div>}
+          transcript={transcript}
+        />
+      </div>
     </div>
   ),
 };

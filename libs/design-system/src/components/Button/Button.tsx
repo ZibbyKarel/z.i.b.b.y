@@ -14,6 +14,8 @@ import { StatusDot } from "../StatusDot/StatusDot";
  *   ghost     — secondary without the hairline (quietest action)
  *   danger    — secondary + a leading `--s-err` dot, never a red fill
  * An icon-only button (no children): 9px side padding.
+ * `joined` squares the inner corners of a split-button segment (`DropDownButton`)
+ * so the pair reads as one control.
  */
 const button = cva(
   [
@@ -37,8 +39,15 @@ const button = cva(
       },
       iconOnly: { true: "px-[9px]", false: "" },
       block: { true: "w-full", false: "" },
+      joined: { start: "rounded-r-none", end: "rounded-l-none", none: "" },
     },
-    defaultVariants: { intent: "primary", size: "md", iconOnly: false, block: false },
+    defaultVariants: {
+      intent: "primary",
+      size: "md",
+      iconOnly: false,
+      block: false,
+      joined: "none",
+    },
   },
 );
 
@@ -82,6 +91,7 @@ export function Button({
   intent = "primary",
   size = "md",
   block,
+  joined,
   icon,
   loading = false,
   children,
@@ -96,7 +106,7 @@ export function Button({
   return (
     <button
       aria-busy={loading || undefined}
-      className={button({ intent, size, block, iconOnly: children == null })}
+      className={button({ intent, size, block, joined, iconOnly: children == null })}
       data-testid={ButtonTestId.Root}
       disabled={disabled}
       onClick={loading ? undefined : onClick}

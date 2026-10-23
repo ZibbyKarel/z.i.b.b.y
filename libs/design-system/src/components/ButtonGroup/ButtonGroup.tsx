@@ -73,7 +73,7 @@ export function ButtonGroup({
       aria-describedby={ariaDescribedby}
       aria-label={ariaLabelledby ? undefined : ariaLabel}
       aria-labelledby={ariaLabelledby}
-      className="inline-block rounded-md border border-border-strong bg-background p-0.5"
+      className="inline-block w-fit max-w-full rounded-md border border-border-strong bg-background p-0.5"
       data-testid={ButtonGroupTestId.Root}
       role="group"
     >
@@ -103,7 +103,7 @@ export function ButtonGroup({
                   {o.leading}
                 </span>
               )}
-              {o.tone && <span className={cn("h-1.5 w-1.5", toneSwatch[o.tone])} />}
+              {o.tone && <span className={cn("h-1.5 w-1.5 rounded-full", toneSwatch[o.tone])} />}
               {o.label}
               {!!o.trailing && (
                 <span
@@ -120,7 +120,7 @@ export function ButtonGroup({
           <button
             aria-label={addLabel}
             className={cn(
-              "flex px-2 py-1.5 text-foreground-faint hover:text-foreground",
+              "flex rounded-sm px-2 py-1.5 text-foreground-faint hover:bg-hover hover:text-foreground",
               focusRing,
             )}
             data-testid={ButtonGroupTestId.Add}

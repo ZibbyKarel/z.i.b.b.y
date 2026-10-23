@@ -4,10 +4,11 @@ import { render } from "../../utils/testRender";
 import { ChatBubble, ChatBubbleTestId } from "./ChatBubble";
 
 describe("ChatBubble", () => {
-  it("renders a right-aligned inverted bubble for you", () => {
+  it("renders a right-aligned accent-tinted bubble for you", () => {
     render(<ChatBubble author="you">Hi</ChatBubble>);
     const root = screen.getByTestId(ChatBubbleTestId.Root);
-    expect(root).toHaveClass("self-end", "bg-ink");
+    expect(root).toHaveClass("self-end", "bg-accent-dim");
+    expect(root).not.toHaveClass("bg-ink");
     expect(screen.getByTestId(ChatBubbleTestId.Body)).toHaveTextContent("Hi");
     expect(screen.queryByTestId(ChatBubbleTestId.Actions)).toBeNull();
   });

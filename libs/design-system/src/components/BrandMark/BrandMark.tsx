@@ -17,10 +17,11 @@ export interface BrandMarkProps {
 }
 
 /**
- * The ZibbyCorp company logo — an ink crest with a panel-coloured notch and
- * "Z" cut-out. Ink and cut-out follow the `--color-ink` / `--color-panel`
- * tokens, so it themes with light/dark. Static favicons in `apps/web/app` are
- * rendered from the same geometry.
+ * The Zibby 2.0 logo — an ink rounded tile (the dashboard's 10px card radius at
+ * 32px scale) with a "Z" cut out in the panel colour and its diagonal stroked in
+ * the amber brand accent. Ink, cut-out and accent follow the `--color-ink` /
+ * `--color-panel` / `--color-accent` tokens, so it themes with light/dark.
+ * Static favicons in `apps/web/app` are rendered from the same geometry.
  */
 export function BrandMark({ size = 30, label, ref }: BrandMarkProps) {
   return (
@@ -35,16 +36,11 @@ export function BrandMark({ size = 30, label, ref }: BrandMarkProps) {
       viewBox="0 0 32 32"
       width={size}
     >
-      <polygon fill="var(--color-ink)" points="1,3 11,8.5 16,1 21,8.5 31,3 27,18 16,31 5,18" />
-      <polygon fill="var(--color-panel)" points="16,5.5 18.5,10 13.5,10" />
-      <path
-        d="M10.5 12.5H21.5L11.5 22H21.5"
-        fill="none"
-        stroke="var(--color-panel)"
-        strokeLinejoin="miter"
-        strokeMiterlimit={10}
-        strokeWidth={2.6}
-      />
+      <rect fill="var(--color-ink)" height="32" rx="8" width="32" />
+      <g fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth={3.2}>
+        <path d="M21.5 10.5L10.5 21.5" stroke="var(--color-accent)" />
+        <path d="M10.5 10.5H21.5M10.5 21.5H21.5" stroke="var(--color-panel)" />
+      </g>
     </svg>
   );
 }

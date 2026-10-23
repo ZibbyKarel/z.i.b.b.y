@@ -83,7 +83,7 @@ describe("ChatMessage", () => {
     expect(screen.queryByText("ZIBBY")).not.toBeInTheDocument();
 
     renderWithProviders(<ChatMessage role="user" text="Ahoj" />);
-    expect(screen.getByTestId(ChatMessageTestId.UserBubble).className).toContain("bg-ink");
+    expect(screen.getByTestId(ChatMessageTestId.UserBubble).className).toContain("bg-accent-dim");
   });
 
   it("shows the streaming cursor only while streaming", () => {

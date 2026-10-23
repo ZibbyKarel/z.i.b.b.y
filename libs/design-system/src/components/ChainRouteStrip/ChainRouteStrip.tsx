@@ -3,9 +3,12 @@ import type { Ref } from "react";
 import type { StateTone } from "../../stateTone";
 import { cn } from "../../utils/cn";
 import { focusRing } from "../../utils/focus";
-import type { GateMode } from "../GateToggle/GateToggle";
 import { StateDot } from "../StatePill/StatePill";
 import { Typography } from "../Typography/Typography";
+
+/** The three gate dispositions a handoff rule can resolve to — DS.md §8's
+ * `AUTO`/`ASK` pill, plus `silent` (act without surfacing at all). */
+export type GateMode = "auto" | "ask" | "silent";
 
 export interface ChainRouteStripStep {
   code: string;
@@ -184,7 +187,7 @@ function CompactStep({
   return (
     <Tag
       className={cn(
-        "flex flex-col gap-1.5 border bg-background px-3 py-2.5 text-left",
+        "flex flex-col gap-1.5 rounded-md border bg-background px-3 py-2.5 text-left",
         step.selected ? "border-ink" : "border-border",
         clickable && cn("cursor-pointer hover:border-ink", focusRing),
       )}
@@ -224,7 +227,7 @@ function FullStep({
   return (
     <Tag
       className={cn(
-        "flex min-w-0 flex-1 flex-col gap-2 border p-3 text-left",
+        "flex min-w-0 flex-1 flex-col gap-2 rounded-lg border p-3 text-left",
         step.selected ? "border-ink bg-surface-panel" : "border-border bg-background",
         clickable && cn("cursor-pointer hover:border-ink", focusRing),
       )}
@@ -264,7 +267,7 @@ function GateMarker({
   return (
     <Tag
       className={cn(
-        "flex shrink-0 items-center font-sans uppercase tracking-wider text-[10px] text-foreground-faint",
+        "flex shrink-0 items-center rounded-sm font-sans uppercase tracking-wider text-[10px] text-foreground-faint",
         vertical ? "flex-col gap-1 self-center py-1.5" : "w-[58px] flex-col gap-1 justify-center",
         gate.onClick && cn("cursor-pointer hover:text-foreground", focusRing),
       )}

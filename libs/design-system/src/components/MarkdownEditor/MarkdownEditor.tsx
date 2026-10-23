@@ -3,11 +3,14 @@
 import { type CSSProperties, useId } from "react";
 import MDEditor, { commands } from "@uiw/react-md-editor";
 import "@uiw/react-md-editor/markdown-editor.css";
+import { useResolvedTheme } from "../../DesignSystemContext/hooks";
 import { Stack } from "../Stack/Stack";
 
 export enum MarkdownEditorTestId {
   Root = "markdown-editor-root",
   Label = "markdown-editor-label",
+  /** Wrapper carrying the editor's `data-color-mode` (follows the DS theme). */
+  Frame = "markdown-editor-frame",
   Control = "markdown-editor-control",
   Hint = "markdown-editor-hint",
 }
@@ -17,22 +20,33 @@ const labelClass =
 
 /**
  * Map the third-party editor's GitHub-primer colour variables onto the live
- * z.i.b.b.y tokens so the rich editor inherits the HUD palette (background,
- * borders, accent, foreground) instead of shipping its own default skin.
+ * z.i.b.b.y tokens so the rich editor inherits the Zibby 2.0 palette instead of
+ * shipping its own skin. Applied inline on the editor root and the preview pane
+ * themselves: the library re-declares these vars on `.wmde-markdown-var` per
+ * `data-color-mode`, so values inherited from a wrapper would lose to GitHub's
+ * near-black dark canvas. The canvas is transparent — the editor sits on
+ * whatever surface hosts it — and the frame is a rounded `--line2` hairline.
  * The cast keeps the CSS custom properties type-safe in `style`.
  */
 const themeVars = {
-  "--color-canvas-default": "var(--color-background)",
-  "--color-canvas-subtle": "var(--color-surface)",
-  "--color-border-default": "var(--color-border)",
-  "--color-border-muted": "var(--color-border)",
+  "--color-canvas-default": "transparent",
+  "--color-canvas-subtle": "var(--color-panel-2)",
+  "--color-border-default": "var(--color-line-2)",
+  "--color-border-muted": "var(--color-line)",
   "--color-fg-default": "var(--color-foreground)",
   "--color-fg-muted": "var(--color-foreground-dim)",
   "--color-fg-subtle": "var(--color-foreground-faint)",
   "--color-accent-fg": "var(--color-accent)",
   "--color-accent-emphasis": "var(--color-accent)",
-  "--color-neutral-muted": "var(--color-surface)",
+  "--color-neutral-muted": "var(--color-hover)",
+  "--md-editor-font-family": "var(--font-sans)",
+} as CSSProperties;
+
+/** The editor root: the vars above plus the rounded card frame (`--radius`). */
+const editorStyle = {
+  ...themeVars,
   borderRadius: "var(--radius)",
+  overflow: "hidden",
 } as CSSProperties;
 
 export interface MarkdownEditorProps {
@@ -63,6 +77,7 @@ export function MarkdownEditor({
   ariaLabel,
 }: MarkdownEditorProps) {
   const id = useId();
+  const theme = useResolvedTheme();
   // Declared (not an inline literal) so the extra `data-testid`, absent from
   // the third-party `ITextAreaProps`, passes structural assignability instead
   // of tripping the excess-property check.
@@ -80,12 +95,14 @@ export function MarkdownEditor({
           {label}
         </label>
       )}
-      <div data-color-mode="dark" style={themeVars}>
+      <div data-color-mode={theme} data-testid={MarkdownEditorTestId.Frame}>
         <MDEditor
           extraCommands={[commands.codeEdit, commands.codePreview]}
           height={420}
           onChange={(next) => onChange(next ?? "")}
           preview="edit"
+          previewOptions={{ style: themeVars }}
+          style={editorStyle}
           textareaProps={textareaProps}
           value={value}
           visibleDragbar={false}

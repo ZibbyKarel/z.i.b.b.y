@@ -23,6 +23,11 @@ describe("ButtonGroup", () => {
     );
   });
 
+  it("sizes to its options instead of stretching in a column parent", () => {
+    render(<ButtonGroup ariaLabel="Context" onChange={() => {}} options={options} value="home" />);
+    expect(screen.getByTestId(ButtonGroupTestId.Root)).toHaveClass("w-fit");
+  });
+
   it("calls onChange on click", async () => {
     const onChange = vi.fn();
     render(<ButtonGroup ariaLabel="Context" onChange={onChange} options={options} value="home" />);

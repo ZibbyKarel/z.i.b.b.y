@@ -2,7 +2,7 @@ import { renderWithProviders as render, screen } from "../../test/render";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { Agent, UpdateWorkflowInput } from "@zibby/contracts";
-import { DialogTestId, EntityHeroTestId } from "@zibby/design-system";
+import { DialogTestId } from "@zibby/design-system";
 import type { Workflow } from "../../domain";
 import { WorkflowCardTestId } from "./components/WorkflowCard/WorkflowCard";
 import { Screen, ScreenTestId } from "./Screen";
@@ -90,14 +90,6 @@ vi.mock("../departments/useDepartmentLookup", () => ({
     get: (id: string) => (id === "delivery" ? { name: "Delivery", color: "#fff" } : undefined),
   }),
 }));
-
-describe("workflows Screen — no images", () => {
-  it("renders no hero image in the detail dialog", () => {
-    hooks.workflows = { data: [WORKFLOW], isPending: false, isError: false, refetch: vi.fn() };
-    render(<Screen selectedId="build-feature" />);
-    expect(screen.queryByTestId(EntityHeroTestId.Root)).toBeNull();
-  });
-});
 
 const OWNED: Workflow = { ...WORKFLOW, id: "ship", name: "Ship", department: "delivery" };
 

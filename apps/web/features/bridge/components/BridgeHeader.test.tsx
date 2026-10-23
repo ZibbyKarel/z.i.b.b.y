@@ -72,6 +72,15 @@ describe("BridgeHeader", () => {
     expect(onManage).toHaveBeenCalled();
   });
 
+  it("manage is an icon-only button named by its label, with no title or caption", () => {
+    renderWithProviders(<BridgeHeader {...props} />);
+    const manage = within(screen.getByTestId(BridgeHeaderTestId.Manage)).getByRole("button");
+    expect(manage).toHaveAccessibleName("Upravit rozložení");
+    expect(manage).not.toHaveTextContent("Upravit rozložení");
+    expect(screen.queryByText("Rozložení")).toBeNull();
+    expect(screen.queryByText("Můstek")).toBeNull();
+  });
+
   it("edit mode shows add widget, cancel and save, not manage", async () => {
     const onSave = vi.fn();
     const onCancel = vi.fn();

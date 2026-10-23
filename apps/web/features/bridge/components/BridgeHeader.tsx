@@ -1,10 +1,9 @@
 "use client";
 
 import {
-  CommandBar,
+  Button,
   CommandBarButton,
   CommandBarGroup,
-  CommandBarText,
   Container,
   DENSITIES,
   DensityMenu,
@@ -12,6 +11,7 @@ import {
   SegmentedControl,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import { PageActions } from "../../../components/layout/PageActions";
 import { useUiSettings } from "../../system";
 import { CUSTOM_PRESET } from "../state/useBridgeState";
 
@@ -34,7 +34,8 @@ export interface BridgeHeaderProps {
   onCancel: () => void;
 }
 
-/** The Bridge header: layout presets, density (system-wide) and the edit controls. */
+/** The Bridge controls — layout presets, density (system-wide) and the edit
+ *  controls — portalled into the shell's sub-menu row before "+ NEW TASK". */
 export function BridgeHeader({
   preset,
   layouts,
@@ -64,9 +65,8 @@ export function BridgeHeader({
   ];
 
   return (
-    <CommandBar logo={false} title={t("title")}>
+    <PageActions>
       <CommandBarGroup>
-        <CommandBarText faint>{t("layout")}</CommandBarText>
         <SegmentedControl
           plain
           ariaLabel={t("layout")}
@@ -108,11 +108,16 @@ export function BridgeHeader({
         </CommandBarGroup>
       ) : (
         <Container data-testid={BridgeHeaderTestId.Manage}>
-          <CommandBarButton look="edit" onClick={onManage}>
-            {t("editLayout")}
-          </CommandBarButton>
+          <Button
+            aria-label={t("editLayout")}
+            icon="layout"
+            intent="secondary"
+            onClick={onManage}
+            size="sm"
+            title={t("editLayout")}
+          />
         </Container>
       )}
-    </CommandBar>
+    </PageActions>
   );
 }

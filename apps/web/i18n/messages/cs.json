@@ -570,11 +570,7 @@
     "deleteEmptyCategory": "Smazat",
     "deleteEmptyCategoryAria": "Smazat prázdnou kategorii {name}",
     "emptyCategory": "Prázdná kategorie — přidej sem agenta, nebo ji smaž.",
-    "uncategorized": "Bez kategorie",
-    "uploadImage": "Nahrát obrázek",
-    "removeImage": "Odebrat obrázek",
-    "uploadAgentAvatar": "Nahraj obrázek agenta",
-    "avatarTooLarge": "Obrázek je příliš velký (max ~200 KB)."
+    "uncategorized": "Bez kategorie"
   },
   "integrations": {
     "addIntegration": "Přidat integraci",
@@ -3055,7 +3051,6 @@
     }
   },
   "bridge": {
-    "title": "Můstek",
     "layout": "Rozložení",
     "preset": {
       "DEFAULT": "Výchozí",

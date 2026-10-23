@@ -8,16 +8,16 @@ export enum ChatBubbleTestId {
 }
 
 export interface ChatBubbleProps extends Omit<HTMLAttributes<HTMLDivElement>, "className"> {
-  /** `you` = right-aligned inverted bubble; `assistant` = left-aligned outlined bubble. */
+  /** `you` = right-aligned accent-tinted bubble; `assistant` = left-aligned outlined bubble. */
   author: "you" | "assistant";
   children: ReactNode;
-  /** Action row under the text (assistant bubbles), e.g. CREATE TASK / OPEN FORM. */
+  /** Action row under the text (assistant bubbles) — DS `Button`s, e.g. "Create task" / "Open form". */
   actions?: ReactNode;
   ref?: Ref<HTMLDivElement>;
 }
 
 /**
- * One chat message bubble of the chat dock — square corners, 13px/1.4 text.
+ * One chat message bubble of the chat dock — rounded corners, 13px/1.4 text.
  * Width caps resolve against the (full-width) message list / aligning parent.
  */
 export function ChatBubble({
@@ -33,7 +33,7 @@ export function ChatBubble({
       className={cn(
         "rounded-lg px-[11px] py-[9px] text-[13px] leading-[1.4]",
         author === "you"
-          ? "max-w-[80%] self-end bg-ink whitespace-pre-line text-panel"
+          ? "max-w-[80%] self-end border border-accent/25 bg-accent-dim whitespace-pre-line text-ink"
           : "flex max-w-[86%] flex-col gap-2 self-start border border-line-2 bg-background",
       )}
       data-author={author}

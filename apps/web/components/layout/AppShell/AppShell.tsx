@@ -12,6 +12,7 @@ import {
   ApprovalCard,
   Button,
   Rail,
+  Stack,
   SubNav,
   Tab,
   TabList,
@@ -46,6 +47,7 @@ import {
   pinHrefFor,
   usePagePins,
 } from "../../../features/pins";
+import { PageActionsSlotProvider } from "../PageActions";
 import { PageBreadcrumbSlotProvider } from "../PageBreadcrumb";
 import { ThemeToggle } from "../ThemeToggle/ThemeToggle";
 import { useDockState } from "./useDockState";
@@ -55,6 +57,7 @@ export enum AppShellTestId {
   NewTask = "app-shell-new-task",
   SettingsCog = "app-shell-settings-cog",
   PinToggle = "app-shell-pin-toggle",
+  PageActions = "app-shell-page-actions",
 }
 
 /** `/<kind>/<id>` (and its sub-tabs) — a company/project/team detail
@@ -208,12 +211,15 @@ function PagePinToggle({
 function SectionSubNav({
   active,
   trail,
+  pageActions,
   currentHref,
   onPinRequested,
 }: {
   active: SectionId;
   /** The page-breadcrumb portal target, rendered after the tabs. */
   trail: ReactNode;
+  /** The page-actions portal target, rendered first in the actions slot. */
+  pageActions: ReactNode;
   currentHref: string;
   onPinRequested: () => void;
 }) {
@@ -238,6 +244,7 @@ function SectionSubNav({
     <SubNav
       actions={
         <>
+          {pageActions}
           {/* Spec step 5: a company/project/team detail page (never /new) gets
            *  a "+ PIN"/"PINNED" toggle before "+ NEW TASK". */}
           {entity ? (
@@ -368,6 +375,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
   const [crumbSlot, setCrumbSlot] = useState<HTMLElement | null>(null);
+  const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null);
   const activeTab = activeSubNavTab<SubTabConfig>(
     SECTIONS.find((s) => s.id === active)?.tabs ?? [],
     pathname,
@@ -384,71 +392,82 @@ function AppShellChrome({ children }: { children: ReactNode }) {
 
   return (
     <PageBreadcrumbSlotProvider activeHrefs={activeSubHrefs} element={crumbSlot}>
-      <AppFrame
-        dock={<ChatDock />}
-        fullBleed={pathname === "/dashboard"}
-        header={
-          <AppHeader
-            homeHref="/dashboard"
-            limits={trailing.limits}
-            linkComponent={NavLink}
-            menu={<SettingsCog />}
-            nav={<SectionNav active={active} />}
-            notifications={<NotificationBell />}
-            onSearchClick={() => setPaletteOpen(true)}
-            themeToggle={<ThemeToggle />}
+      <PageActionsSlotProvider element={actionsSlot}>
+        <AppFrame
+          dock={<ChatDock />}
+          fullBleed={pathname === "/dashboard"}
+          header={
+            <AppHeader
+              homeHref="/dashboard"
+              limits={trailing.limits}
+              linkComponent={NavLink}
+              menu={<SettingsCog />}
+              nav={<SectionNav active={active} />}
+              notifications={<NotificationBell />}
+              onSearchClick={() => setPaletteOpen(true)}
+              themeToggle={<ThemeToggle />}
+            />
+          }
+          rail={
+            <ActivityDock
+              activeId={dockActive}
+              ariaLabel={tShell("dockAria")}
+              items={[
+                {
+                  id: "pinned",
+                  icon: "pin",
+                  label: tShell("dockPinned"),
+                  body: <PinnedRail currentHref={currentHref} />,
+                },
+                {
+                  id: "needs-you",
+                  icon: "shield",
+                  label: tShell("dockNeedsYou"),
+                  badge: approvals?.length,
+                  body: <NeedsYouRail onOpenApproval={approvalSheet.open} />,
+                },
+                {
+                  id: "tasks",
+                  icon: "pulse",
+                  label: tShell("dockTasks"),
+                  badge: liveCount,
+                  body: <TasksDockPanel />,
+                },
+              ]}
+              onActiveChange={setDockActive}
+            />
+          }
+          skipLinkLabel={t("skipToContent")}
+          subnav={
+            <SectionSubNav
+              active={active}
+              currentHref={currentHref}
+              onPinRequested={() => setPinDialogOpen(true)}
+              pageActions={
+                // `display: contents` — the portalled controls join the actions
+                // row's own flex gap; an empty slot takes no room.
+                <Stack
+                  data-testid={AppShellTestId.PageActions}
+                  ref={setActionsSlot}
+                  style={{ display: "contents" }}
+                />
+              }
+              trail={<div ref={setCrumbSlot} />}
+            />
+          }
+        >
+          {children}
+          <ApprovalSheet approvalId={approvalSheet.approvalId} onClose={approvalSheet.close} />
+          <CommandPaletteHost
+            onOpenApproval={approvalSheet.open}
+            onOpenChange={setPaletteOpen}
+            open={paletteOpen}
           />
-        }
-        rail={
-          <ActivityDock
-            activeId={dockActive}
-            ariaLabel={tShell("dockAria")}
-            items={[
-              {
-                id: "pinned",
-                icon: "pin",
-                label: tShell("dockPinned"),
-                body: <PinnedRail currentHref={currentHref} />,
-              },
-              {
-                id: "needs-you",
-                icon: "shield",
-                label: tShell("dockNeedsYou"),
-                badge: approvals?.length,
-                body: <NeedsYouRail onOpenApproval={approvalSheet.open} />,
-              },
-              {
-                id: "tasks",
-                icon: "pulse",
-                label: tShell("dockTasks"),
-                badge: liveCount,
-                body: <TasksDockPanel />,
-              },
-            ]}
-            onActiveChange={setDockActive}
-          />
-        }
-        skipLinkLabel={t("skipToContent")}
-        subnav={
-          <SectionSubNav
-            active={active}
-            currentHref={currentHref}
-            onPinRequested={() => setPinDialogOpen(true)}
-            trail={<div ref={setCrumbSlot} />}
-          />
-        }
-      >
-        {children}
-        <ApprovalSheet approvalId={approvalSheet.approvalId} onClose={approvalSheet.close} />
-        <CommandPaletteHost
-          onOpenApproval={approvalSheet.open}
-          onOpenChange={setPaletteOpen}
-          open={paletteOpen}
-        />
-        {pinDialogOpen && (
-          <PinPageDialog href={currentHref} onClose={() => setPinDialogOpen(false)} />
-        )}
-      </AppFrame>
+          {pinDialogOpen && (
+            <PinPageDialog href={currentHref} onClose={() => setPinDialogOpen(false)} />
+          )}
+        </AppFrame>
+      </PageActionsSlotProvider>
     </PageBreadcrumbSlotProvider>
   );
 }

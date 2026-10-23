@@ -169,15 +169,17 @@ export function DropDownButton({
           disabled={disabled}
           icon={icon}
           intent={intent}
+          joined="start"
           loading={loading}
           onClick={onClick}
           size={size}
         >
           {label}
         </Button>
-        {/* The ▾ segment shares the Button recipe; on primary a 1px `--ink2` left
-            edge is the divider (Inbox design), on hairline intents it overlaps the
-            primary segment's right border so the seam stays 1px. */}
+        {/* The ▾ segment shares the Button recipe with the inner corners squared
+            (`joined`), so the pair reads as one control. On the filled primary a
+            translucent accent-contrast left edge is the divider; on hairline intents
+            it overlaps the primary segment's right border so the seam stays 1px. */}
         <button
           aria-activedescendant={open && activeRow >= 0 ? itemId(activeRow) : undefined}
           aria-controls={`${baseId}-menu`}
@@ -185,8 +187,8 @@ export function DropDownButton({
           aria-haspopup="menu"
           aria-label={menuAriaLabel}
           className={cn(
-            buttonClasses({ intent, size, iconOnly: true }),
-            intent === "primary" ? "border-l-ink-2 disabled:border-l-border" : "-ml-px",
+            buttonClasses({ intent, size, iconOnly: true, joined: "end" }),
+            intent === "primary" ? "border-l-accent-contrast/25" : "-ml-px",
           )}
           data-testid={DropDownButtonTestId.Trigger}
           disabled={disabled}

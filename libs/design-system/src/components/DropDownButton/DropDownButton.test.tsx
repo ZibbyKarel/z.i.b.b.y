@@ -31,6 +31,12 @@ describe("DropDownButton", () => {
     expect(onClick).toHaveBeenCalledOnce();
   });
 
+  it("squares the inner corners so both segments read as one control", () => {
+    render(<DropDownButton label="Spustit" menuItems={ITEMS} onClick={vi.fn()} />);
+    expect(screen.getByTestId(DropDownButtonTestId.Primary)).toHaveClass("rounded-r-none");
+    expect(screen.getByTestId(DropDownButtonTestId.Trigger)).toHaveClass("rounded-l-none");
+  });
+
   it("is collapsed by default with the chevron trigger closed", () => {
     render(<DropDownButton label="Spustit" menuItems={ITEMS} onClick={vi.fn()} />);
     const trigger = screen.getByTestId(DropDownButtonTestId.Trigger);

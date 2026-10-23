@@ -7,8 +7,6 @@ import { useRouter } from "next/navigation";
 import {
   Button,
   Container,
-  EntityHero,
-  type IconName,
   Panel,
   Stack,
   type SubNavLinkComponent,
@@ -18,9 +16,7 @@ import {
 import { PageBreadcrumb } from "../../components/layout/PageBreadcrumb";
 import { ConfirmDeleteDialog } from "../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import type { Agent, GateRuleInput } from "@zibby/contracts";
-import { AVATAR_MAX } from "@zibby/contracts";
 import { useFormControls } from "@zibby/forms";
-import { toastBus } from "../../components/Toaster/toastBus";
 import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
@@ -159,32 +155,6 @@ function AgentEditor({ agent }: { agent: Agent }) {
               </Button>
             </Stack>
           </Stack>
-
-          {/* D13 (docs/hud2chat/DECISIONS.md, resolved F6b): the page header
-              above already shows the agent's name — showIdentity={false} keeps the hero
-              to a bare image/glyph band instead of repeating it. */}
-          <EntityHero
-            editable
-            desc={agent.description}
-            glyph={(agent.glyph as IconName | undefined) ?? "bot"}
-            height="md"
-            image={agent.avatar}
-            name={name}
-            onRemove={() =>
-              updateAgent.mutate({ params: { id: agent.id }, body: { avatar: null } })
-            }
-            onUpload={(dataUri) => {
-              if (dataUri.length > AVATAR_MAX) {
-                toastBus.emit({ message: t("avatarTooLarge") });
-                return;
-              }
-              updateAgent.mutate({ params: { id: agent.id }, body: { avatar: dataUri } });
-            }}
-            placeholder={t("uploadAgentAvatar")}
-            removeLabel={t("removeImage")}
-            showIdentity={false}
-            uploadLabel={t("uploadImage")}
-          />
 
           <Panel header={t("tabBasics")} padding="200">
             <AgentEditBasics categories={categories} control={form.control} />

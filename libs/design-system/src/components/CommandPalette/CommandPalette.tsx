@@ -150,7 +150,7 @@ export function CommandPalette({
       <div
         aria-modal
         aria-label={ariaLabel}
-        className="relative flex h-fit w-[600px] max-w-[calc(100vw-32px)] flex-col border border-ink bg-panel"
+        className="relative flex h-fit w-[600px] max-w-[calc(100vw-32px)] flex-col overflow-hidden rounded-xl border border-line-2 bg-panel shadow-modal"
         data-testid={CommandPaletteTestId.Root}
         ref={rootRef}
         role="dialog"
@@ -166,8 +166,9 @@ export function CommandPalette({
             autoComplete="off"
             className={cn(
               "h-12 flex-1 min-w-0 bg-transparent text-base text-foreground",
-              "placeholder:text-foreground-faint",
-              focusRingInset,
+              // The input is the palette's only, always-focused field (caret shows
+              // focus) — a square inset ring would just box the header row.
+              "placeholder:text-foreground-faint outline-none",
             )}
             data-testid={CommandPaletteTestId.Input}
             onChange={(e) => {
@@ -189,7 +190,7 @@ export function CommandPalette({
         </div>
 
         <div
-          className="max-h-[420px] overflow-y-auto py-1.5"
+          className="max-h-[420px] overflow-y-auto p-1.5"
           data-testid={CommandPaletteTestId.List}
           id={listboxId}
           role="listbox"
@@ -197,7 +198,7 @@ export function CommandPalette({
           {showEmpty ? (
             <Typography
               data-testid={CommandPaletteTestId.Empty}
-              style={{ padding: "8px 14px" }}
+              style={{ padding: "8px 8px" }}
               type="bodySm"
               variant="tertiary"
             >
@@ -210,7 +211,7 @@ export function CommandPalette({
                 <div data-testid={`${CommandPaletteTestId.Group}-${group.label}`} key={group.label}>
                   <Typography
                     data-testid={`${CommandPaletteTestId.GroupLabel}-${group.label}`}
-                    style={{ padding: "6px 14px 4px" }}
+                    style={{ padding: "6px 8px 4px" }}
                     type="labelSm"
                   >
                     {group.label}
@@ -226,7 +227,7 @@ export function CommandPalette({
                       <button
                         aria-selected={active}
                         className={cn(
-                          "grid w-full grid-cols-[90px_minmax(0,1fr)_auto] items-center gap-3 px-3.5 py-2.5 text-left",
+                          "grid w-full grid-cols-[90px_minmax(0,1fr)_auto] items-center gap-3 rounded-md px-2 py-2 text-left transition-colors",
                           active ? "bg-hover" : "",
                           focusRingInset,
                         )}
