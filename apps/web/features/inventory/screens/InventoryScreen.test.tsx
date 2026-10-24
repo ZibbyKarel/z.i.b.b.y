@@ -6,6 +6,7 @@ import { InventoryScreen, InventoryScreenTestId } from "./InventoryScreen";
 const refetch = vi.fn();
 const mutate = vi.fn();
 let inventory: unknown;
+let queryState: Record<string, unknown> = {};
 let mutation: Record<string, unknown>;
 
 vi.mock("../queries", () => ({
@@ -15,6 +16,7 @@ vi.mock("../queries", () => ({
     isError: false,
     isFetching: false,
     refetch,
+    ...queryState,
   }),
 }));
 vi.mock("../mutations", () => ({
@@ -36,6 +38,7 @@ const full = {
 beforeEach(() => {
   inventory = full;
   mutation = {};
+  queryState = {};
   mutate.mockReset();
   refetch.mockReset();
 });
@@ -80,7 +83,7 @@ describe("InventoryScreen", () => {
       InventoryScreenTestId.Install,
     ) as HTMLButtonElement[];
     expect(first!.disabled).toBe(true);
-    expect(second!.disabled).toBe(false);
+    expect(second!.disabled).toBe(true);
   });
 
   it("renders a row error on mutation failure", () => {
@@ -110,5 +113,39 @@ describe("InventoryScreen", () => {
     render(<InventoryScreen />);
     fireEvent.click(screen.getByTestId(InventoryScreenTestId.Refresh));
     expect(refetch).toHaveBeenCalled();
+  });
+
+  it("shows no empty copy while loading", () => {
+    inventory = undefined;
+    queryState = { isPending: true };
+    render(<InventoryScreen />);
+    expect(screen.queryByText("Nic nenalezeno.")).toBeNull();
+  });
+
+  it("renders the query error with a working retry", () => {
+    inventory = undefined;
+    queryState = { isError: true };
+    render(<InventoryScreen />);
+    fireEvent.click(screen.getByText("Zkusit znovu"));
+    expect(refetch).toHaveBeenCalled();
+  });
+
+  it("shows the row error only on the failing row", () => {
+    mutation = {
+      isError: true,
+      variables: { params: { skillId: "b" } },
+      error: { body: { message: "boom" } },
+    };
+    render(<InventoryScreen />);
+    expect(screen.getAllByTestId(InventoryScreenTestId.RowError)).toHaveLength(1);
+    const cell = screen.getByTestId(InventoryScreenTestId.RowError).closest("tr")!;
+    expect(cell.textContent).toContain("Beta");
+  });
+
+  it("disables every install button while any install is pending", () => {
+    mutation = { isPending: true, variables: { params: { skillId: "a" } } };
+    render(<InventoryScreen />);
+    const buttons = screen.getAllByTestId(InventoryScreenTestId.Install) as HTMLButtonElement[];
+    expect(buttons.every((b) => b.disabled)).toBe(true);
   });
 });

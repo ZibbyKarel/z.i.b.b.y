@@ -79,7 +79,6 @@ function CatalogSection() {
   const query = useInventoryQuery();
   const install = useInstallSkillMutation();
   const rows = query.data?.catalog ?? [];
-  const pendingId = install.isPending ? install.variables?.params.skillId : undefined;
   const failedId = install.isError ? install.variables?.params.skillId : undefined;
 
   const columns: DataTableColumn<InventoryCatalogEntry>[] = [
@@ -100,7 +99,7 @@ function CatalogSection() {
           {(r.status === "not-installed" || r.status === "outdated") && (
             <Button
               data-testid={InventoryScreenTestId.Install}
-              disabled={pendingId === r.skillId}
+              disabled={install.isPending}
               intent="secondary"
               onClick={() => install.mutate({ params: { skillId: r.skillId }, body: {} })}
               size="sm"
@@ -140,7 +139,8 @@ function CatalogSection() {
 
 function McpSection() {
   const t = useTranslations("inventory");
-  const rows = useInventoryQuery().data?.mcp ?? [];
+  const query = useInventoryQuery();
+  const rows = query.data?.mcp ?? [];
   const columns: DataTableColumn<InventoryMcpServer>[] = [
     { key: "name", label: t("columns.name"), width: "lg", render: (r) => r.name },
     { key: "scope", label: t("columns.scope"), width: "sm", render: (r) => r.scope },
@@ -153,6 +153,7 @@ function McpSection() {
       columns={columns}
       empty={<span data-testid={InventoryScreenTestId.Empty}>{t("empty")}</span>}
       getRowKey={(r) => `${r.scope}:${r.plugin ?? ""}:${r.name}`}
+      loading={query.isPending}
       rows={rows}
     />
   );
@@ -160,7 +161,8 @@ function McpSection() {
 
 function SkillsSection() {
   const t = useTranslations("inventory");
-  const rows = useInventoryQuery().data?.skills ?? [];
+  const query = useInventoryQuery();
+  const rows = query.data?.skills ?? [];
   const columns: DataTableColumn<InventorySkill>[] = [
     {
       key: "name",
@@ -194,6 +196,7 @@ function SkillsSection() {
       columns={columns}
       empty={<span data-testid={InventoryScreenTestId.Empty}>{t("empty")}</span>}
       getRowKey={(r) => `${r.source}:${r.plugin ?? ""}:${r.id}`}
+      loading={query.isPending}
       rows={rows}
     />
   );
@@ -201,7 +204,8 @@ function SkillsSection() {
 
 function PluginsSection() {
   const t = useTranslations("inventory");
-  const rows = useInventoryQuery().data?.plugins ?? [];
+  const query = useInventoryQuery();
+  const rows = query.data?.plugins ?? [];
   const columns: DataTableColumn<InventoryPlugin>[] = [
     { key: "id", label: t("columns.name"), width: "lg", render: (r) => r.id },
     { key: "version", label: t("columns.version"), width: "sm", render: (r) => r.version ?? "" },
@@ -225,6 +229,7 @@ function PluginsSection() {
       columns={columns}
       empty={<span data-testid={InventoryScreenTestId.Empty}>{t("empty")}</span>}
       getRowKey={(r) => r.id}
+      loading={query.isPending}
       rows={rows}
     />
   );
