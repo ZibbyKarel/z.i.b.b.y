@@ -305,6 +305,17 @@ describe("AgentFactoryService.detect", () => {
       expect(after.status).toBe("rejected");
       await vi.waitFor(() => expect(agents.delete).toHaveBeenCalledWith("auto-deploy-staging"));
       expect(await proposals.list()).toEqual([]);
+
+      // Rerun with the same evidence: the dismissal is durable — no new approval,
+      // the proposal stays dismissed and keeps its original approvalId.
+      await vi.waitFor(() => expect(stored.has("auto-deploy-staging")).toBe(false));
+      const rerun = await svc.detect(new Date());
+      expect(rerun.proposed).toEqual([]);
+      expect(await approvals.list("pending")).toEqual([]);
+      expect(await approvals.list()).toHaveLength(1);
+      const record = (await proposals.decisions("agent-factory")).get(id);
+      expect(record?.status).toBe("dismissed");
+      expect(record?.provenance.approvalId).toBe(pending?.id);
     });
   });
 });

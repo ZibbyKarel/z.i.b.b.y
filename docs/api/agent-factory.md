@@ -95,7 +95,9 @@ candidate).
 Every parked candidate is also upserted as an `agent-factory` proposal (dedupe key
 = candidate id, provenance `{ agentId, approvalId }`, `occurrences` = the fallback
 count). A later run that still sees a candidate pending approval only refreshes its
-proposal (never re-proposes). Dismissing the proposal (`PATCH /api/proposals/:id`)
+proposal (never re-proposes). A candidate whose proposal was **dismissed** is never
+re-proposed either. The run only refreshes `lastSeenAt` and keeps the original
+`approvalId`. Dismissing the proposal (`PATCH /api/proposals/:id`)
 calls `ApprovalsService.reject` on the pending approval — the same path as the
 approvals page, so `cancel(agentId)` deletes the candidate the same way. Editing it
 is a 409 (the candidate is edited on the agent page). Once the approval is decided

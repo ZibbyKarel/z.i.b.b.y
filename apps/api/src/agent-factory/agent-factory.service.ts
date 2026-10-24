@@ -1,9 +1,9 @@
 import { Injectable } from "@nestjs/common";
-import type { Agent } from "@zibby/contracts";
+import type { Agent, Proposal } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { ApprovalsService } from "../approvals/approvals.service";
-import { ProposalsService } from "../proposals/proposals.service";
+import { ProposalsService, proposalId } from "../proposals/proposals.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { AgentProposalFlowService } from "./agent-proposal-flow.service";
 import {
@@ -55,7 +55,8 @@ export interface AgentFactoryDetectResult {
  * `agent-factory` proposal (key = candidate id, provenance `{ agentId,
  * approvalId }`); a candidate still pending approval on a later run only
  * refreshes its proposal. Dismissing that proposal rejects the approval
- * (`ProposalsService.decide` → `ApprovalsService.reject`).
+ * (`ProposalsService.decide` → `ApprovalsService.reject`), and a dismissed
+ * candidate is never re-proposed on a later run (its proposal is only refreshed).
  */
 @Injectable()
 export class AgentFactoryService {
@@ -105,6 +106,10 @@ export class AgentFactoryService {
     // dup-guard must see a candidate that's already been drafted, not just live ones.
     const existingAgents = await this.agents.list().catch((): Agent[] => []);
     const pendingProposalIds = await this.pendingProposalIds();
+    // TODO 14: the operator's decisions — a dismissed candidate is never re-proposed.
+    const decisions = await this.proposals
+      .decisions("agent-factory")
+      .catch((): Map<string, Proposal> => new Map());
 
     const proposed: string[] = [];
     for (const [normalizedSummary, tally] of qualifying) {
@@ -120,6 +125,18 @@ export class AgentFactoryService {
         continue;
       }
       const id = candidateAgentId(group);
+      const decided = decisions.get(proposalId("agent-factory", id));
+      if (decided?.status === "dismissed") {
+        this.log.debug("agent-factory candidate skipped (proposal dismissed)", { id });
+        // Still seen → refresh lastSeenAt, keeping the original approval as provenance.
+        await this.upsertProposal(
+          generateCandidateAgent(group),
+          group.count,
+          decided.provenance.approvalId,
+          now,
+        );
+        continue;
+      }
       if (existingAgents.some((a) => a.id === id)) {
         this.log.debug("agent-factory candidate skipped (id already exists)", { id });
         continue;
@@ -163,7 +180,7 @@ export class AgentFactoryService {
   private async upsertProposal(
     candidate: Agent,
     occurrences: number,
-    approvalId: string,
+    approvalId: string | undefined,
     now: Date,
   ): Promise<void> {
     const label = candidate.name ? `"${candidate.name}" (${candidate.id})` : candidate.id;
@@ -177,7 +194,7 @@ export class AgentFactoryService {
         text,
         occurrences,
         minOccurrences: MIN_OCCURRENCES,
-        provenance: { agentId: candidate.id, approvalId },
+        provenance: { agentId: candidate.id, ...(approvalId ? { approvalId } : {}) },
         now,
       })
       .catch((err: unknown) => {

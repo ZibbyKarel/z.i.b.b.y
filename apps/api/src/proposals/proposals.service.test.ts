@@ -53,7 +53,11 @@ describe("ProposalsService", () => {
   let dir: string;
   let store: ProposalsStore;
   let activity: { record: ReturnType<typeof vi.fn> };
-  let approvals: { get: ReturnType<typeof vi.fn>; reject: ReturnType<typeof vi.fn> };
+  let approvals: {
+    get: ReturnType<typeof vi.fn>;
+    reject: ReturnType<typeof vi.fn>;
+    list: ReturnType<typeof vi.fn>;
+  };
   let svc: ProposalsService;
 
   beforeEach(async () => {
@@ -62,6 +66,7 @@ describe("ProposalsService", () => {
     activity = { record: vi.fn(async () => {}) };
     approvals = {
       get: vi.fn(async (id: string) => pendingApproval(id, "agent-x")),
+      list: vi.fn(async () => [pendingApproval("appr_1", "agent-x")]),
       reject: vi.fn(async (id: string) => ({
         ...pendingApproval(id, "agent-x"),
         status: "rejected",
@@ -255,12 +260,12 @@ describe("ProposalsService", () => {
 
     it("is hidden from the list once its approval is no longer pending", async () => {
       await agent();
-      approvals.get.mockResolvedValueOnce({
-        ...pendingApproval("appr_1", "agent-x"),
-        status: "rejected",
-      });
+      approvals.list.mockResolvedValueOnce([]);
       expect(await svc.list(NOW)).toEqual([]);
       expect(await svc.list(NOW)).toHaveLength(1);
+      approvals.list.mockRejectedValueOnce(new Error("disk"));
+      expect(await svc.list(NOW)).toHaveLength(1);
+      expect(approvals.list).toHaveBeenCalledWith("pending");
     });
   });
 });

@@ -55,13 +55,35 @@ describe("ProposalsStore", () => {
     expect(await store.readAll()).toEqual([]);
   });
 
-  it("skips individually invalid records", async () => {
-    await fs.mkdir(path.join(dir, "proposals"), { recursive: true });
-    await fs.writeFile(
-      path.join(dir, "proposals", "proposals.json"),
-      JSON.stringify([P, { id: "bad" }]),
-    );
-    expect(await store.readAll()).toEqual([P]);
+  it.each([
+    ["unparseable", "{ nope"],
+    ["not an array", '{"not":"an array"}'],
+    ["an invalid record", JSON.stringify([P, { id: "bad" }])],
+  ])(
+    "quarantines a corrupt file (%s) before writing over it — original bytes kept",
+    async (_label, bytes) => {
+      const pdir = path.join(dir, "proposals");
+      await fs.mkdir(pdir, { recursive: true });
+      await fs.writeFile(path.join(pdir, "proposals.json"), bytes);
+      expect(await store.readAll()).toEqual([]);
+
+      const fresh = { ...P, id: "prop_00000000000f" };
+      await store.mutate((all) => ({ next: [...all, fresh], result: undefined }));
+
+      const names = await fs.readdir(pdir);
+      const quarantined = names.filter((n) => /^proposals\.json\.corrupt-[0-9TZ.-]+$/.test(n));
+      expect(quarantined).toHaveLength(1);
+      expect(await fs.readFile(path.join(pdir, quarantined[0] ?? ""), "utf8")).toBe(bytes);
+      expect(await store.readAll()).toEqual([fresh]);
+    },
+  );
+
+  it("refuses to write when the file exists but cannot be read (no silent overwrite)", async () => {
+    const pdir = path.join(dir, "proposals");
+    // A directory where the file should be: readFile fails with EISDIR, not ENOENT.
+    await fs.mkdir(path.join(pdir, "proposals.json"), { recursive: true });
+    expect(await store.readAll()).toEqual([]);
+    await expect(store.mutate(() => ({ next: [P], result: undefined }))).rejects.toThrow();
   });
 
   it("serializes concurrent mutations (no lost update)", async () => {

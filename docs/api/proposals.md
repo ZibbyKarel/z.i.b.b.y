@@ -18,7 +18,8 @@ Contract: `libs/contracts/src/proposals/` (`proposalsContract`, mounted as
 
 - `GET` lists the **open, unexpired** proposals, sorted by confidence (high first),
   then `lastSeenAt` newest first. An `agent-factory` proposal whose approval was
-  already decided on the approvals page (or no longer exists) is hidden too.
+  already decided on the approvals page (or no longer exists) is hidden too. One `list("pending")` read
+  decides this. If that read fails, nothing is hidden.
 - `404`: unknown id. `409`: `edit` of an `agent-factory` proposal (edit the
   candidate on its agent page), or any action on a dismissed proposal.
 
@@ -51,9 +52,16 @@ Contract: `libs/contracts/src/proposals/` (`proposalsContract`, mounted as
 ## Store
 
 One JSON array at `<data>/proposals/proposals.json` (`PROPOSALS_DIR` overrides the
-directory). Writes are atomic (tmp + rename) and serialized in-process. A missing,
-unreadable or garbage file reads as `[]` (never a 500); individually invalid records
-are skipped.
+directory). Writes are atomic (tmp + rename) and serialized in-process.
+
+- **Reads fail open.** A missing, unreadable or corrupt file reads as `[]`, never a 500.
+  A file counts as corrupt when it is unparseable, not an array, or has any record that
+  fails the schema.
+- **Writes never destroy evidence.** Before writing over a corrupt file, the store
+  renames it to `proposals.json.corrupt-<ISO ts without colons>` (original bytes kept)
+  and logs a warning. An unreadable file (any error other than ENOENT) makes the write
+  fail, so it is never overwritten. The producers' notes are still written, because
+  `syncNoteLines` fails open.
 
 ## Producers
 

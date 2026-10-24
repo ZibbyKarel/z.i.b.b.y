@@ -164,11 +164,16 @@ export class ProposalsService {
     const open = (await this.store.readAll()).filter(
       (p) => p.status === "open" && p.expiresAt > nowIso,
     );
-    const visible: Proposal[] = [];
-    for (const p of open) {
-      if (await this.isResolvedAgentProposal(p)) continue;
-      visible.push(p);
-    }
+    const pending = await this.pendingApprovalIds(open);
+    const visible = open.filter(
+      (p) =>
+        !(
+          pending &&
+          p.source === "agent-factory" &&
+          p.provenance.approvalId &&
+          !pending.has(p.provenance.approvalId)
+        ),
+    );
     return visible.sort(
       (a, b) =>
         CONFIDENCE_RANK[a.confidence] - CONFIDENCE_RANK[b.confidence] ||
@@ -233,15 +238,16 @@ export class ProposalsService {
     }
   }
 
-  private async isResolvedAgentProposal(p: Proposal): Promise<boolean> {
-    if (p.source !== "agent-factory" || !p.provenance.approvalId) return false;
-    try {
-      const approval = await this.approvals.get(p.provenance.approvalId);
-      return approval.status !== "pending";
-    } catch (err) {
-      // A vanished approval resolves the candidate; any other read failure keeps it visible.
-      return err instanceof ApprovalNotFoundError;
-    }
+  /**
+   * Pending approval ids — one `list("pending")` read, only when an agent-factory
+   * proposal needs it. null on a read failure (then nothing is hidden).
+   */
+  private async pendingApprovalIds(open: Proposal[]): Promise<Set<string> | null> {
+    if (!open.some((p) => p.source === "agent-factory" && p.provenance.approvalId)) return null;
+    return this.approvals
+      .list("pending")
+      .then((all) => new Set(all.map((a) => a.id)))
+      .catch(() => null);
   }
 }
 

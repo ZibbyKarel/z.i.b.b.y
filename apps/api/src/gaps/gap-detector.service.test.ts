@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -154,6 +154,27 @@ describe("GapDetectorService", () => {
       });
       await svc.detect(new Date());
       expect(writtenBody(vault)).toContain("- [ ] Nightly staging deploy automation");
+    });
+
+    it("a corrupt proposals.json is quarantined (bytes kept) and the note is still written", async () => {
+      const dir = mkdtempSync(path.join(os.tmpdir(), "gaps-corrupt-"));
+      tmpDirs.push(dir);
+      writeFileSync(path.join(dir, "proposals.json"), "{ corrupt");
+      const logger = { child: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn() }) };
+      const proposals = new ProposalsService(
+        new ProposalsStore(dir),
+        { record: vi.fn(async () => {}) } as never,
+        {} as never,
+        logger as never,
+      );
+      expect(await proposals.list()).toEqual([]);
+      const { svc, vault } = makeService(recurring("Deploy to staging", 3), "", proposals);
+      await svc.detect(new Date());
+      const quarantined = readdirSync(dir).filter((n) => n.startsWith("proposals.json.corrupt-"));
+      expect(quarantined).toHaveLength(1);
+      expect(readFileSync(path.join(dir, quarantined[0] ?? ""), "utf8")).toBe("{ corrupt");
+      expect(await proposals.list()).toHaveLength(1);
+      expect(writtenBody(vault)).toContain("Deploy to staging");
     });
   });
 });
