@@ -24,6 +24,7 @@ export const BridgeWidgetSchema = z.object({
     "quickActions",
     "teamKb",
     "proposals",
+    "budgets",
   ]),
   x: z.number().int().min(0).max(11),
   y: z.number().int().min(0),

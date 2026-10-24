@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { WidgetType } from "../grid/layout";
 import type { BridgeWidget } from "../grid/layout";
 import { BriefingWidget } from "./BriefingWidget";
+import { BudgetsWidget } from "./BudgetsWidget";
 import { IssuesWidget } from "./IssuesWidget";
 import { PinsWidget } from "./PinsWidget";
 import { PrsWidget } from "./PrsWidget";
@@ -118,6 +119,11 @@ export const WIDGETS: Record<WidgetType, WidgetDefinition> = {
     labelKey: "bridge.widget.proposals.label",
     descKey: "bridge.widget.proposals.desc",
     Component: ProposalsWidget,
+  },
+  budgets: {
+    labelKey: "bridge.widget.budgets.label",
+    descKey: "bridge.widget.budgets.desc",
+    Component: BudgetsWidget,
   },
 };
 
