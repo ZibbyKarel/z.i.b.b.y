@@ -1,0 +1,1 @@
+export { useInstallSkillMutation } from "./useInstallSkillMutation";
