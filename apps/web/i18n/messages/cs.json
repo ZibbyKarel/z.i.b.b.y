@@ -1542,6 +1542,8 @@
       "notChecked": "Zatím nezkontrolováno.",
       "checkNow": "Zkontrolovat teď",
       "analyze": "Analyzovat",
+      "analyzeAgain": "Analyzovat znovu",
+      "intervalInvalid": "Interval musí být 30–3600 s",
       "analysisStarted": "Analýza spuštěna",
       "actionFailed": "Akce se nezdařila.",
       "urlLabel": "Health URL",
@@ -2764,7 +2766,10 @@
     "markRead": "Označit jako přečtené",
     "markAllRead": "Označit vše jako přečtené",
     "healthDown": "{name} — nedostupné od {since}",
-    "healthAnalyze": "Analyzovat"
+    "healthAnalyze": "Analyzovat",
+    "healthAnalyzeAgain": "Analyzovat znovu",
+    "healthAnalysisStarted": "Analýza spuštěna",
+    "healthActionFailed": "Akce se nezdařila."
   },
   "inboxPage": {
     "kicker": {

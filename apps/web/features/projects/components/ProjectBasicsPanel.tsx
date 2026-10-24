@@ -52,11 +52,13 @@ const HEALTH_INTERVAL_DEFAULT_SEC = 300;
 const HEALTH_INTERVAL_MIN_SEC = 30;
 const HEALTH_INTERVAL_MAX_SEC = 3600;
 
-/** Parse the interval field, clamped to the contract range; blank/invalid → the 5 min default. */
-function toHealthInterval(raw: string): number {
-  const n = Number.parseInt(raw.trim(), 10);
-  if (!Number.isInteger(n)) return HEALTH_INTERVAL_DEFAULT_SEC;
-  return Math.min(HEALTH_INTERVAL_MAX_SEC, Math.max(HEALTH_INTERVAL_MIN_SEC, n));
+/** Parse the interval field: blank → default; an integer in range → itself; else `null` (invalid). */
+function toHealthInterval(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (trimmed === "") return HEALTH_INTERVAL_DEFAULT_SEC;
+  if (!/^\d+$/.test(trimmed)) return null;
+  const n = Number.parseInt(trimmed, 10);
+  return n >= HEALTH_INTERVAL_MIN_SEC && n <= HEALTH_INTERVAL_MAX_SEC ? n : null;
 }
 
 export interface ProjectBasicsPanelProps {
@@ -206,8 +208,13 @@ export function ProjectBasicsPanel({
             }
           : undefined;
       const healthUrl = values.healthUrl.trim();
+      const intervalSec = toHealthInterval(values.healthIntervalSec);
+      if (healthUrl && intervalSec == null) {
+        form.setError("healthIntervalSec", { message: tHealth("intervalInvalid") });
+        return;
+      }
       const healthCheck = healthUrl
-        ? { url: healthUrl, intervalSec: toHealthInterval(values.healthIntervalSec) }
+        ? { url: healthUrl, intervalSec: intervalSec ?? HEALTH_INTERVAL_DEFAULT_SEC }
         : project?.healthCheck
           ? null
           : undefined;

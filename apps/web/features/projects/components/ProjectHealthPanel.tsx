@@ -10,7 +10,9 @@ import {
   useAnalyzeProjectHealthMutation,
   useCheckProjectHealthMutation,
 } from "../../project-health/mutations";
+import { formatWhen } from "../../project-health/formatWhen";
 import { useProjectHealthQuery } from "../../project-health/queries";
+import { apiErrorMessage } from "../../../state/apiErrorMessage";
 
 export enum ProjectHealthPanelTestId {
   Root = "project-health-panel",
@@ -27,15 +29,6 @@ export interface ProjectHealthPanelProps {
   healthCheck?: Project["healthCheck"];
 }
 
-function formatWhen(iso: string): string {
-  return new Date(iso).toLocaleString([], {
-    day: "numeric",
-    month: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 /**
  * Monitoring panel on the project detail: the last known health of the project's
  * health URL — STATE, not an event (the watcher overwrites it each check). Down
@@ -47,8 +40,11 @@ export function ProjectHealthPanel({ projectId, healthCheck }: ProjectHealthPane
   const { data } = useProjectHealthQuery();
   const check = useCheckProjectHealthMutation();
   const analyze = useAnalyzeProjectHealthMutation();
-  const [startedTaskId, setStartedTaskId] = useState<string | null>(null);
-
+  // Pinned to the outage (`sinceAt`) it was started for, so a link from an old click never
+  // outlives a recovery.
+  const [started, setStarted] = useState<{ taskId: string; sinceAt: string } | null>(null);
+  // The most recent action failure only — cleared when the next action starts.
+  const [actionError, setActionError] = useState<string | null>(null);
   if (!healthCheck) {
     return (
       <Panel data-testid={ProjectHealthPanelTestId.Root} header={t("title")} padding="200">
@@ -66,7 +62,9 @@ export function ProjectHealthPanel({ projectId, healthCheck }: ProjectHealthPane
 
   const status = (data ?? []).find((s) => s.projectId === projectId);
   const down = status?.state === "down";
-  const taskId = startedTaskId ?? (down ? status?.analysisTaskId : undefined);
+  const startedTaskId = started && started.sinceAt === status?.sinceAt ? started.taskId : undefined;
+  const taskId = down ? (status?.analysisTaskId ?? startedTaskId) : undefined;
+  const failed = (error: unknown) => setActionError(apiErrorMessage(error) ?? t("actionFailed"));
 
   return (
     <Panel
@@ -78,7 +76,10 @@ export function ProjectHealthPanel({ projectId, healthCheck }: ProjectHealthPane
           disabled={check.isPending}
           icon="retry"
           intent="ghost"
-          onClick={() => check.mutate({ params: { projectId }, body: {} })}
+          onClick={() => {
+            setActionError(null);
+            check.mutate({ params: { projectId }, body: {} }, { onError: failed });
+          }}
           size="sm"
         >
           {t("checkNow")}
@@ -132,15 +133,20 @@ export function ProjectHealthPanel({ projectId, healthCheck }: ProjectHealthPane
               disabled={analyze.isPending}
               icon="search"
               intent="primary"
-              onClick={() =>
+              onClick={() => {
+                setActionError(null);
                 analyze.mutate(
                   { params: { projectId }, body: {} },
-                  { onSuccess: (res) => setStartedTaskId(res.body.taskId) },
-                )
-              }
+                  {
+                    onSuccess: (res) =>
+                      setStarted({ taskId: res.body.taskId, sinceAt: status?.sinceAt ?? "" }),
+                    onError: failed,
+                  },
+                );
+              }}
               size="sm"
             >
-              {t("analyze")}
+              {taskId ? t("analyzeAgain") : t("analyze")}
             </Button>
             {taskId && (
               <TextLink
@@ -153,9 +159,9 @@ export function ProjectHealthPanel({ projectId, healthCheck }: ProjectHealthPane
             )}
           </Stack>
         )}
-        {(analyze.isError || check.isError) && (
+        {actionError && (
           <Typography role="alert" size="xs" type="note" variant="secondary">
-            {t("actionFailed")}
+            {actionError}
           </Typography>
         )}
       </Stack>

@@ -1,11 +1,23 @@
 "use client";
 
-import { Button, CellStrip, EmptyState, Row, Sheet, Stack, Typography } from "@zibby/design-system";
+import { useState } from "react";
+import {
+  Button,
+  CellStrip,
+  EmptyState,
+  Row,
+  Sheet,
+  Stack,
+  TextLink,
+  Typography,
+} from "@zibby/design-system";
 import type { Route } from "next";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { formatWaited } from "../../approvals/approval";
+import { formatWhen } from "../../project-health/formatWhen";
+import { apiErrorMessage } from "../../../state/apiErrorMessage";
 import { useAnalyzeProjectHealthMutation } from "../../project-health/mutations";
 import { useProjectHealthQuery } from "../../project-health/queries";
 import { useProjectsQuery } from "../../projects/queries";
@@ -19,19 +31,12 @@ export enum NotificationBellTestId {
   MarkAllRead = "notification-bell-mark-all-read",
   HealthItem = "notification-bell-health-item",
   HealthAnalyze = "notification-bell-health-analyze",
+  HealthLink = "notification-bell-health-link",
+  HealthTaskLink = "notification-bell-health-task-link",
 }
 
 /** The search param that opens the bell's sheet — so any link (e.g. an error Zibby) can open it. */
 export const NOTIFICATIONS_PARAM = "notifications";
-
-function formatSince(iso: string): string {
-  return new Date(iso).toLocaleString([], {
-    day: "numeric",
-    month: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 /**
  * The header bell: unread failed runs, each linking to its run detail with its
@@ -48,6 +53,23 @@ export function NotificationBell() {
   const { data: healthStatuses = [] } = useProjectHealthQuery();
   const { data: projects = [] } = useProjectsQuery();
   const analyze = useAnalyzeProjectHealthMutation();
+  // Per-row Analyze feedback, keyed by project: the started task or the last failure.
+  const [feedback, setFeedback] = useState<Record<string, { taskId?: string; error?: string }>>({});
+  const analyzeProject = (projectId: string) => {
+    setFeedback((f) => ({ ...f, [projectId]: {} }));
+    analyze.mutate(
+      { params: { projectId }, body: {} },
+      {
+        onSuccess: (res) =>
+          setFeedback((f) => ({ ...f, [projectId]: { taskId: res.body.taskId } })),
+        onError: (error) =>
+          setFeedback((f) => ({
+            ...f,
+            [projectId]: { error: apiErrorMessage(error) ?? t("healthActionFailed") },
+          })),
+      },
+    );
+  };
   const downProjects = healthStatuses.filter((s) => s.state === "down");
   const total = items.length + downProjects.length;
   const markRead = useMarkNotificationsReadMutation();
@@ -98,33 +120,50 @@ export function NotificationBell() {
           <Stack gap="100">
             {downProjects.map((s) => {
               const name = projects.find((p) => p.id === s.projectId)?.name ?? s.projectId;
+              const fb = feedback[s.projectId];
+              const taskId = s.analysisTaskId ?? fb?.taskId;
+              const rowAnalyzing =
+                analyze.isPending && analyze.variables?.params.projectId === s.projectId;
               return (
-                <Row
-                  align="center"
-                  data-testid={NotificationBellTestId.HealthItem}
-                  gap="100"
-                  justify="between"
-                  key={s.projectId}
-                >
-                  <Link href={`/projects/${s.projectId}` as Route}>
-                    <Row align="center" gap="100">
-                      <CellStrip cells={["error"]} />
-                      <Typography type="labelSm">
-                        {t("healthDown", { name, since: formatSince(s.sinceAt) })}
-                      </Typography>
-                    </Row>
-                  </Link>
-                  <Button
-                    data-testid={NotificationBellTestId.HealthAnalyze}
-                    disabled={analyze.isPending}
-                    icon="search"
-                    intent="ghost"
-                    onClick={() => analyze.mutate({ params: { projectId: s.projectId }, body: {} })}
-                    size="sm"
-                  >
-                    {t("healthAnalyze")}
-                  </Button>
-                </Row>
+                <Stack data-testid={NotificationBellTestId.HealthItem} gap="25" key={s.projectId}>
+                  <Row align="center" gap="100" justify="between">
+                    <Link
+                      data-testid={NotificationBellTestId.HealthLink}
+                      href={`/projects/${s.projectId}` as Route}
+                    >
+                      <Row align="center" gap="100">
+                        <CellStrip cells={["error"]} />
+                        <Typography type="labelSm">
+                          {t("healthDown", { name, since: formatWhen(s.sinceAt) })}
+                        </Typography>
+                      </Row>
+                    </Link>
+                    <Button
+                      data-testid={NotificationBellTestId.HealthAnalyze}
+                      disabled={rowAnalyzing}
+                      icon="search"
+                      intent="ghost"
+                      onClick={() => analyzeProject(s.projectId)}
+                      size="sm"
+                    >
+                      {taskId ? t("healthAnalyzeAgain") : t("healthAnalyze")}
+                    </Button>
+                  </Row>
+                  {taskId && (
+                    <TextLink
+                      data-testid={NotificationBellTestId.HealthTaskLink}
+                      href={`/work/tasks/${taskId}` as Route}
+                      linkComponent={Link}
+                    >
+                      {t("healthAnalysisStarted")}
+                    </TextLink>
+                  )}
+                  {fb?.error && (
+                    <Typography role="alert" size="xs" type="note" variant="secondary">
+                      {fb.error}
+                    </Typography>
+                  )}
+                </Stack>
               );
             })}
             {items.map((n) => (

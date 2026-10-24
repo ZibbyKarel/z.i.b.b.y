@@ -338,4 +338,37 @@ describe("ProjectBasicsPanel health check (TODO 11)", () => {
 
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ healthCheck: null }));
   });
+
+  it.each(["5", "4000", "abc", "90.5"])(
+    "blocks the save with a field error for the invalid interval %s",
+    async (value) => {
+      const onSave = vi.fn();
+      render(<ProjectBasicsPanel isNew categories={[]} onSave={onSave} />);
+
+      await userEvent.type(screen.getByPlaceholderText("media-vault"), "Alpha");
+      await userEvent.type(screen.getByLabelText("Health URL"), "https://alpha.test/health");
+      await userEvent.clear(screen.getByLabelText("Interval kontroly (s)"));
+      await userEvent.type(screen.getByLabelText("Interval kontroly (s)"), value);
+      await userEvent.click(screen.getByTestId("save-basics"));
+
+      expect(onSave).not.toHaveBeenCalled();
+      expect(await screen.findByText("Interval musí být 30–3600 s")).toBeInTheDocument();
+    },
+  );
+
+  it("defaults a blank interval to 300", async () => {
+    const onSave = vi.fn();
+    render(<ProjectBasicsPanel isNew categories={[]} onSave={onSave} />);
+
+    await userEvent.type(screen.getByPlaceholderText("media-vault"), "Alpha");
+    await userEvent.type(screen.getByLabelText("Health URL"), "https://alpha.test/health");
+    await userEvent.clear(screen.getByLabelText("Interval kontroly (s)"));
+    await userEvent.click(screen.getByTestId("save-basics"));
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        healthCheck: { url: "https://alpha.test/health", intervalSec: 300 },
+      }),
+    );
+  });
 });

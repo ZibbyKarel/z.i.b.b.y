@@ -1542,6 +1542,8 @@
       "notChecked": "Not checked yet.",
       "checkNow": "Check now",
       "analyze": "Analyze",
+      "analyzeAgain": "Analyze again",
+      "intervalInvalid": "Interval must be 30–3600 s",
       "analysisStarted": "Analysis started",
       "actionFailed": "The action failed.",
       "urlLabel": "Health URL",
@@ -2764,7 +2766,10 @@
     "markRead": "Mark as read",
     "markAllRead": "Mark all as read",
     "healthDown": "{name} — down since {since}",
-    "healthAnalyze": "Analyze"
+    "healthAnalyze": "Analyze",
+    "healthAnalyzeAgain": "Analyze again",
+    "healthAnalysisStarted": "Analysis started",
+    "healthActionFailed": "The action failed."
   },
   "inboxPage": {
     "kicker": {
