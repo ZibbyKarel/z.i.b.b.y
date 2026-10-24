@@ -1836,7 +1836,11 @@
       "autoSync": "Auto-sync",
       "autoSyncHint": "Periodically pulls new Jira and GitHub issues into the roadmap of inheriting projects.",
       "autoPlay": "Auto-implement",
-      "autoPlayHint": "Unblocked items of inheriting projects start on their own. ZIBBY opens a PR and stops — the merge stays yours."
+      "autoPlayHint": "Unblocked items of inheriting projects start on their own. ZIBBY opens a PR and stops — the merge stays yours.",
+      "autoReview": "Automatic PR review",
+      "autoReviewHint": "Incoming PRs to review run a workflow chosen from their content. Comments are posted only after your approval.",
+      "autoAddressComments": "Automatic comment handling",
+      "autoAddressCommentsHint": "Fixes review comments on your PRs with changes requested. The push waits for your approval."
     },
     "levelMapping": {
       "title": "Level mapping overrides",
@@ -2331,6 +2335,10 @@
       "autoSyncHint": "Periodically pulls new Jira and GitHub issues into the roadmap. Starts nothing — it only adds what appeared.",
       "autoPlay": "Auto-implement",
       "autoPlayHint": "Unblocked items start on their own, and a childless epic decomposes itself. ZIBBY opens a PR and stops — the merge stays yours. How many run at once is set in Settings → Runtime.",
+      "autoReview": "Automatic PR review",
+      "autoReviewHint": "Incoming PRs to review run a workflow chosen from their content. Comments are posted only after your approval.",
+      "autoAddressComments": "Automatic comment handling",
+      "autoAddressCommentsHint": "Fixes review comments on your PRs with changes requested. The push waits for your approval.",
       "state": {
         "inherit": "Inherit",
         "on": "On",
@@ -2979,6 +2987,7 @@
       "actions": {
         "reviewLevelsAria": "More code review levels",
         "reviewFailed": "Could not start the code review.",
+        "auto": "auto",
         "reviewState": {
           "running": "Review running",
           "awaiting-approval": "Review awaiting approval",

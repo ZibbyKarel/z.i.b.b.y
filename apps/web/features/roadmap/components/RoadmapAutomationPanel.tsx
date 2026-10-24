@@ -11,8 +11,12 @@ export enum RoadmapAutomationPanelTestId {
   Root = "roadmap-automation-panel",
   AutoSync = "roadmap-automation-auto-sync",
   AutoPlay = "roadmap-automation-auto-play",
+  AutoReview = "roadmap-automation-auto-review",
+  AutoAddressComments = "roadmap-automation-auto-address-comments",
   AutoSyncEffective = "roadmap-automation-auto-sync-effective",
   AutoPlayEffective = "roadmap-automation-auto-play-effective",
+  AutoReviewEffective = "roadmap-automation-auto-review-effective",
+  AutoAddressCommentsEffective = "roadmap-automation-auto-address-comments-effective",
 }
 
 export interface RoadmapAutomationPanelProps {
@@ -22,7 +26,7 @@ export interface RoadmapAutomationPanelProps {
 }
 
 type TriState = "inherit" | "on" | "off";
-type ToggleKey = "autoSync" | "autoPlay";
+type ToggleKey = "autoSync" | "autoPlay" | "autoReview" | "autoAddressComments";
 
 const toTriState = (value: boolean | null | undefined): TriState =>
   value === true ? "on" : value === false ? "off" : "inherit";
@@ -147,6 +151,30 @@ export function RoadmapAutomationPanel({ projectId, companyName }: RoadmapAutoma
             testId={RoadmapAutomationPanelTestId.AutoPlay}
             toggle="autoPlay"
             value={config?.autoPlay}
+          />
+          <TriStateField
+            companyName={companyName}
+            disabled={busy}
+            effective={config?.effective}
+            effectiveTestId={RoadmapAutomationPanelTestId.AutoReviewEffective}
+            onChange={(autoReview) =>
+              setConfig.mutate({ params: { projectId }, body: { autoReview } })
+            }
+            testId={RoadmapAutomationPanelTestId.AutoReview}
+            toggle="autoReview"
+            value={config?.autoReview}
+          />
+          <TriStateField
+            companyName={companyName}
+            disabled={busy}
+            effective={config?.effective}
+            effectiveTestId={RoadmapAutomationPanelTestId.AutoAddressCommentsEffective}
+            onChange={(autoAddressComments) =>
+              setConfig.mutate({ params: { projectId }, body: { autoAddressComments } })
+            }
+            testId={RoadmapAutomationPanelTestId.AutoAddressComments}
+            toggle="autoAddressComments"
+            value={config?.autoAddressComments}
           />
         </Stack>
       )}

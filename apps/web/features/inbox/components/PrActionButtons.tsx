@@ -48,6 +48,7 @@ export enum PrActionsTestId {
   Merge = "inbox-pr-merge",
   DeleteBranch = "inbox-pr-delete-branch",
   Message = "inbox-pr-action-message",
+  AutoMarker = "inbox-pr-auto",
 }
 
 /** The review modes the menu offers (`thorough` stays in the API for old clients only). */
@@ -178,6 +179,11 @@ export function PrActionButtons({ pr, baseLabel }: PrActionButtonsProps) {
       },
     );
 
+  const autoMarker = (
+    <Typography data-testid={PrActionsTestId.AutoMarker} type="labelSm" variant="tertiary">
+      {t("auto")}
+    </Typography>
+  );
   const running = runsOf(pr).find(inFlight);
   const failed = runsOf(pr).find((r) => r.state === "failed");
 
@@ -194,6 +200,7 @@ export function PrActionButtons({ pr, baseLabel }: PrActionButtonsProps) {
             <Typography uppercase type="label" variant="secondary">
               {runLabel(running)}
             </Typography>
+            {running.auto && autoMarker}
           </Row>
         </TextLink>
       ) : (
@@ -285,6 +292,7 @@ export function PrActionButtons({ pr, baseLabel }: PrActionButtonsProps) {
               <Tag uppercase tone="bad">
                 {runLabel(failed)} →
               </Tag>
+              {failed.auto && autoMarker}
             </TextLink>
           )}
         </>

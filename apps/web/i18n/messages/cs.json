@@ -1836,7 +1836,11 @@
       "autoSync": "Automatická synchronizace",
       "autoSyncHint": "Pravidelně natahuje nová issues z Jiry a GitHubu do roadmapy dědících projektů.",
       "autoPlay": "Automatická implementace",
-      "autoPlayHint": "Nezablokované úlohy dědících projektů se rozjedou samy. ZIBBY otevře PR a zastaví se — merge zůstává na tobě."
+      "autoPlayHint": "Nezablokované úlohy dědících projektů se rozjedou samy. ZIBBY otevře PR a zastaví se — merge zůstává na tobě.",
+      "autoReview": "Automatické review PR",
+      "autoReviewHint": "Nové PR k review projde workflow vybrané podle obsahu. Komentáře se odešlou až po tvém schválení.",
+      "autoAddressComments": "Automatické zpracování komentářů",
+      "autoAddressCommentsHint": "Na tvých PR s požadovanými změnami opraví komentáře. Push čeká na tvé schválení."
     },
     "levelMapping": {
       "title": "Přepisy mapování úrovní",
@@ -2331,6 +2335,10 @@
       "autoSyncHint": "Pravidelně natahuje nová issues z Jiry a GitHubu do roadmapy. Nic nespouští — jen doplňuje, co přibylo.",
       "autoPlay": "Automatická implementace",
       "autoPlayHint": "Nezablokované úlohy se rozjedou samy a epik bez potomků se sám rozfázuje. ZIBBY otevře PR a zastaví se — merge zůstává na tobě. Kolik úloh běží najednou, řídí Nastavení → Běhové parametry.",
+      "autoReview": "Automatické review PR",
+      "autoReviewHint": "Nové PR k review projde workflow vybrané podle obsahu. Komentáře se odešlou až po tvém schválení.",
+      "autoAddressComments": "Automatické zpracování komentářů",
+      "autoAddressCommentsHint": "Na tvých PR s požadovanými změnami opraví komentáře. Push čeká na tvé schválení.",
       "state": {
         "inherit": "Dědit",
         "on": "Zapnuto",
@@ -2979,6 +2987,7 @@
       "actions": {
         "reviewLevelsAria": "Další úrovně code-review",
         "reviewFailed": "Code-review se nepodařilo spustit.",
+        "auto": "auto",
         "reviewState": {
           "running": "Review běží",
           "awaiting-approval": "Review čeká na schválení",

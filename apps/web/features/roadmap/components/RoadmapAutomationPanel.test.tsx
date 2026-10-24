@@ -105,6 +105,35 @@ describe("RoadmapAutomationPanel (tri-state)", () => {
     });
   });
 
+  it.each([
+    [RoadmapAutomationPanelTestId.AutoReview, "autoReview"],
+    [RoadmapAutomationPanelTestId.AutoAddressComments, "autoAddressComments"],
+  ] as const)("renders the %s toggle and patches only its key", async (testId, key) => {
+    render(<RoadmapAutomationPanel projectId="proj-1" />);
+
+    await userEvent.click(item(testId, "on"));
+
+    expect(hooks.setConfig.mutate).toHaveBeenCalledWith({
+      params: { projectId: "proj-1" },
+      body: { [key]: true },
+    });
+  });
+
+  it("names the company as the source of the PR toggles", () => {
+    hooks.config.data = config({
+      effective: {
+        ...config().effective,
+        autoReview: true,
+        source: { ...config().effective.source, autoReview: "company" },
+      },
+    });
+    render(<RoadmapAutomationPanel companyName="Shoptet" projectId="proj-1" />);
+
+    expect(screen.getByTestId(RoadmapAutomationPanelTestId.AutoReviewEffective)).toHaveTextContent(
+      "Shoptet",
+    );
+  });
+
   it("saves Inherit as null", async () => {
     hooks.config.data = config({ autoPlay: true });
     render(<RoadmapAutomationPanel projectId="proj-1" />);
