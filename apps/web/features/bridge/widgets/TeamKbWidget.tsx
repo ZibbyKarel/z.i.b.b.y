@@ -14,7 +14,8 @@ import {
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useMemo } from "react";
-import { useTeamKbDigestQuery, useTeamsQuery } from "../../teams/queries";
+import { QueryError } from "../../../components/LoadError/QueryError";
+import { isNoKbError, useTeamKbDigestQuery, useTeamsQuery } from "../../teams/queries";
 import type { BridgeWidgetProps } from "./registry";
 import { useWidgetReport } from "./useWidgetReport";
 
@@ -51,7 +52,9 @@ export function TeamKbWidget({
   const teamName = teams.find((x) => x.id === teamId)?.name;
 
   const digest = digestQuery.data;
-  const loading = teamId !== undefined && digestQuery.isPending && !digestQuery.isNoKb;
+  const noKb = isNoKbError(digestQuery.error);
+  const failed = digestQuery.isError && !noKb;
+  const loading = teamId !== undefined && digestQuery.isPending;
   const count =
     teamId === undefined || loading
       ? undefined
@@ -59,7 +62,10 @@ export function TeamKbWidget({
         ? digest.questions.length + digest.decisions.length
         : 0;
   // Header aside: the team name (the frame shows ALL CLEAR itself when empty).
-  useWidgetReport({ loading, count, you: 0, aside: teamName }, { onEmptyChange, onCountChange });
+  useWidgetReport(
+    { loading, count, you: 0, aside: teamName, failed },
+    { onEmptyChange, onCountChange },
+  );
 
   return (
     <>
@@ -77,8 +83,10 @@ export function TeamKbWidget({
       ) : null}
       {teamId === undefined ? (
         <Note testId={TeamKbWidgetTestId.Pick}>{t("pick")}</Note>
-      ) : digestQuery.isNoKb ? (
+      ) : noKb ? (
         <Note testId={TeamKbWidgetTestId.NoKb}>{t("noKb")}</Note>
+      ) : failed ? (
+        <QueryError onRetry={() => void digestQuery.refetch()} />
       ) : digest ? (
         <>
           <Group

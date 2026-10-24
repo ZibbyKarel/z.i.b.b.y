@@ -12,14 +12,16 @@ interface Report {
   you: number;
   /** Right-aligned header note. */
   aside?: string;
+  /** The fetch failed — an error state is shown, so the widget must not collapse as empty. */
+  failed?: boolean;
 }
 
 /** Feeds the frame: emptiness (never while loading) and the count / YOU / aside header info. */
 export function useWidgetReport(
-  { loading, count, you, aside }: Report,
+  { loading, count, you, aside, failed }: Report,
   { onEmptyChange, onCountChange }: Pick<BridgeWidgetProps, "onEmptyChange" | "onCountChange">,
 ) {
-  const empty = !loading && !count;
+  const empty = !loading && !count && !failed;
   useEffect(() => onEmptyChange(empty), [empty, onEmptyChange]);
   useEffect(
     () => onCountChange?.({ count, you, loading, aside }),

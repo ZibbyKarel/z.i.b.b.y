@@ -1,3 +1,4 @@
+import { LoadErrorTestId } from "../../../components/LoadError/LoadError";
 import { DropdownTestId } from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,13 +10,20 @@ import { TeamKbWidget, TeamKbWidgetTestId } from "./TeamKbWidget";
 const d = vi.hoisted(() => ({
   teams: [] as { id: string; name: string }[],
   digest: undefined as unknown,
-  noKb: false,
+  error: null as unknown,
   pending: false,
 }));
 
-vi.mock("../../teams/queries", () => ({
+vi.mock("../../teams/queries", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../teams/queries")>()),
   useTeamsQuery: () => ({ data: d.teams }),
-  useTeamKbDigestQuery: () => ({ data: d.digest, isNoKb: d.noKb, isPending: d.pending }),
+  useTeamKbDigestQuery: () => ({
+    data: d.digest,
+    error: d.error,
+    isError: d.error !== null,
+    isPending: d.pending,
+    refetch: vi.fn(),
+  }),
 }));
 
 const widget = (scope?: BridgeWidget["scope"]): BridgeWidget => ({
@@ -46,7 +54,7 @@ beforeEach(() => {
     { id: "sales", name: "Sales" },
   ];
   d.digest = undefined;
-  d.noKb = false;
+  d.error = null;
   d.pending = false;
 });
 
@@ -72,11 +80,20 @@ describe("TeamKbWidget", () => {
   });
 
   it("a 404 digest shows the no-KB copy", () => {
-    d.noKb = true;
+    d.error = { status: 404 };
     renderWithProviders(<TeamKbWidget {...setup()} />);
     expect(screen.getByTestId(TeamKbWidgetTestId.NoKb)).toHaveTextContent(
       "Tým nemá znalostní bázi.",
     );
+  });
+
+  it("a non-404 error shows the error state and does not report empty", () => {
+    d.error = { status: 500 };
+    const props = setup();
+    renderWithProviders(<TeamKbWidget {...props} />);
+    expect(screen.getByTestId(LoadErrorTestId.Root)).toBeInTheDocument();
+    expect(screen.queryByTestId(TeamKbWidgetTestId.NoKb)).not.toBeInTheDocument();
+    expect(props.onEmptyChange).toHaveBeenLastCalledWith(false);
   });
 
   it("renders questions and agreements as links, with count and team name in the header", () => {
@@ -109,5 +126,8 @@ describe("TeamKbWidget", () => {
       expect.objectContaining({ count: 3, aside: "DevRel" }),
     );
     expect(props.onEmptyChange).toHaveBeenLastCalledWith(false);
+    expect(screen.queryByTestId(TeamKbWidgetTestId.TeamSelect)).not.toBeInTheDocument();
+    expect(screen.getByText("Otevřené otázky")).toBeInTheDocument();
+    expect(screen.getByText("Dohody")).toBeInTheDocument();
   });
 });
