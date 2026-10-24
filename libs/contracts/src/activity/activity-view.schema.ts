@@ -76,6 +76,9 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   // watcher discoveries (monitor-alert) rather than a new group for one kind.
   "department-scan": "integrations",
   "machine-action": "approvals",
+  // TODO 14: the operator's review decision on an automation proposal — reads with
+  // the other operator decisions.
+  "proposal-decided": "approvals",
   "briefing-generated": "briefing",
   // NS2 F7b-2: the merge loop's head + its post-merge CI outcome — read with the
   // other watcher discoveries (monitor-alert/department-scan) rather than a new

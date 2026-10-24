@@ -1,0 +1,84 @@
+# System proposals — review, dismiss, edit (TODO 14)
+
+Automations that "propose without acting" write one structured **proposal record**
+per suggestion, with provenance, confidence and expiry. The operator lists them,
+dismisses one or rewrites its wording; producers respect those decisions on their
+next run. The producers keep writing their existing vault notes, so the briefing is
+unchanged.
+
+Contract: `libs/contracts/src/proposals/` (`proposalsContract`, mounted as
+`appContract.proposals`). Implementation: `apps/api/src/proposals/`.
+
+## Endpoints
+
+| Method | Path                 | Body                                                                       | Result                         |
+| ------ | -------------------- | -------------------------------------------------------------------------- | ------------------------------ |
+| GET    | `/api/proposals`     | —                                                                          | `200 Proposal[]`               |
+| PATCH  | `/api/proposals/:id` | `{ action: "dismiss" } \| { action: "edit", text }` (1–500 chars, trimmed) | `200 Proposal` / `404` / `409` |
+
+- `GET` lists the **open, unexpired** proposals, sorted by confidence (high first),
+  then `lastSeenAt` newest first. An `agent-factory` proposal whose approval was
+  already decided on the approvals page (or no longer exists) is hidden too.
+- `404`: unknown id. `409`: `edit` of an `agent-factory` proposal (edit the
+  candidate on its agent page), or any action on a dismissed proposal.
+
+## The record
+
+```ts
+{
+  id: string;                 // "prop_" + 12 hex of sha256(source, dedupe key) — stable across reruns
+  source: "pattern-extract" | "gap-detect" | "agent-factory";
+  text: string;               // ≤ 500, the producer's current wording
+  editedText?: string;        // ≤ 500, the operator's wording — wins everywhere
+  confidence: "low" | "medium" | "high";
+  occurrences: number;        // evidence count the producer saw
+  provenance: { automationId?; noteId?; approvalId?; agentId? };
+  createdAt; lastSeenAt; expiresAt: string; // ISO
+  status: "open" | "dismissed";
+  decidedAt?: string;
+}
+```
+
+- **Confidence**, against the producer's own minimum `m` (all three use `m = 3`):
+  `low` ≤ m, `medium` ≤ 2m, `high` otherwise.
+- **Expiry**: `expiresAt = lastSeenAt + 30 days`. Each producer run that still sees
+  the proposal refreshes both. Expired records are not listed but are kept on disk.
+- **Upsert** (`ProposalsService.upsert`): a new id is created `open`; an existing one
+  gets new `text`, `occurrences`, `confidence`, `lastSeenAt`, `expiresAt`,
+  `provenance` and keeps `status`, `editedText`, `decidedAt`, `createdAt`. A
+  dismissed proposal is never re-opened.
+
+## Store
+
+One JSON array at `<data>/proposals/proposals.json` (`PROPOSALS_DIR` overrides the
+directory). Writes are atomic (tmp + rename) and serialized in-process. A missing,
+unreadable or garbage file reads as `[]` (never a 500); individually invalid records
+are skipped.
+
+## Producers
+
+| Source            | Dedupe key              | Provenance                                                | Note                          |
+| ----------------- | ----------------------- | --------------------------------------------------------- | ----------------------------- |
+| `pattern-extract` | `action:decision`       | `{ automationId, noteId: "patterns/suggestions" }`        | `patterns/suggestions`        |
+| `gap-detect`      | normalised task summary | `{ automationId, noteId: "suggestions/automation-gaps" }` | `suggestions/automation-gaps` |
+| `agent-factory`   | candidate agent id      | `{ agentId, approvalId }`                                 | — (approval queue)            |
+
+`automationId` is the firing automation's id, passed by the scheduler
+(`extract(now, { automationId })` / `detect(now, { automationId })`); an unattributed
+run omits it. The note writers go through `ProposalsService.syncNoteLines`: dismissed
+items are skipped and edited ones are written with `editedText`. It fails open, so a
+proposals-store error falls back to the producer's own text.
+
+**Dismissing an `agent-factory` proposal** rejects its pending `agent-proposal`
+approval through `ApprovalsService.reject` (the approvals page's
+`POST /api/approvals/:id/reject` path), so the registered runner deletes the
+candidate agent the same way. If the approval is already decided, dismissal only
+updates the record.
+
+## Activity
+
+Dismiss and edit record `proposal-decided` (group `approvals`), summary
+`"dismissed <source> proposal"` / `"edited <source> proposal"`, refs
+`{ itemId: <proposal id>, action: "dismiss" | "edit", noteId?, agentId?, approvalId?, automationId? }`.
+The producers record no run-completion activity of their own. A new agent-factory
+candidate shows up as `approval-requested` (refs.status `agent-proposal`).

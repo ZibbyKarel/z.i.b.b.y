@@ -64,6 +64,7 @@ type ActivityKind =
   | "integration-retry-exhausted" // a channel poll exhausted its retry budget
   | "monitor-alert" // a CI/CD monitor ingested a red status
   | "machine-action" // an approved machine action executed (or failed)
+  | "proposal-decided" // TODO 14: the operator dismissed/edited an automation proposal (refs.itemId)
   | "task-dead-lettered" // a task's dispatch exhausted its retry budget
   | "automation-dispatched" // a signal-triggered automation dispatched (refs.automationId)
   | "budget-warn" // ZB-10/O-08: account usage crossed a warn (non-blocking) threshold

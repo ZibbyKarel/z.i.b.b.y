@@ -77,8 +77,9 @@ describe("AgentProposalFlowService", () => {
   describe("propose", () => {
     it("writes the candidate as status: proposed, then parks a pending approval with enrichment JSON detail", async () => {
       const { svc, agents, approvals } = makeService({});
-      await svc.propose(CANDIDATE);
+      const parked = await svc.propose(CANDIDATE);
 
+      expect(parked?.id).toBe("appr_1");
       expect(agents.create).toHaveBeenCalledWith(expect.objectContaining({ status: "proposed" }));
       expect(approvals.requestApproval).toHaveBeenCalledTimes(1);
       const call = approvals.requestApproval.mock.calls[0]![0];
@@ -114,7 +115,7 @@ describe("AgentProposalFlowService", () => {
 
     it("discards the candidate file (no approval parked) when the gate denies", async () => {
       const { svc, agents, approvals } = makeService({ evaluateDecision: "deny" });
-      await svc.propose(CANDIDATE);
+      expect(await svc.propose(CANDIDATE)).toBeNull();
       expect(approvals.requestApproval).not.toHaveBeenCalled();
       expect(agents.delete).toHaveBeenCalledWith("auto-deploy-staging");
     });

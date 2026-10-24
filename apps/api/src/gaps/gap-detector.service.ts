@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { VaultService } from "../memory/vault.service";
+import { ProposalsService } from "../proposals/proposals.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 
 /** Minimum repeats of a normalised task summary to qualify as an automation gap. */
@@ -25,7 +26,13 @@ export interface AutomationGap {
 
 export interface GapDetectResult {
   gaps: AutomationGap[];
+  /** The lines written to the note — dismissed proposals dropped, edited ones reworded. */
   suggestions: string[];
+}
+
+export interface GapDetectOptions {
+  /** The automation that fired this run (provenance) — omitted for an unattributed run. */
+  automationId?: string;
 }
 
 /**
@@ -37,6 +44,10 @@ export interface GapDetectResult {
  *
  * Deterministic — no LLM call. *Proposes ≠ acts*: it only writes a vault note; it
  * never creates an automation. Reading only + an idempotent vault overwrite.
+ *
+ * TODO 14: each gap is also upserted as a structured `gap-detect` proposal (key =
+ * the normalized pattern); the note skips proposals the operator dismissed and
+ * writes edited ones in the operator's wording.
  */
 @Injectable()
 export class GapDetectorService {
@@ -46,12 +57,13 @@ export class GapDetectorService {
     private readonly activity: ActivityLogService,
     private readonly vault: VaultService,
     logger: LoggerService,
+    private readonly proposals: ProposalsService,
   ) {
     this.log = logger.child(GapDetectorService.name);
   }
 
   /** Scan recurring task creation → draft automation-gap suggestions in the vault. */
-  async detect(now: Date = new Date()): Promise<GapDetectResult> {
+  async detect(now: Date = new Date(), opts: GapDetectOptions = {}): Promise<GapDetectResult> {
     const since = new Date(now.getTime() - WINDOW_DAYS * 24 * 60 * 60 * 1000);
     const entries = await this.activity.readRange(since, now).catch(() => []);
 
@@ -69,9 +81,22 @@ export class GapDetectorService {
       .filter((g) => g.count >= MIN_OCCURRENCES)
       .sort((a, b) => b.count - a.count)
       .slice(0, MAX_GAPS);
-    const suggestions = gaps.map(toSuggestion);
+    const suggestions = await this.proposals.syncNoteLines(
+      "gap-detect",
+      gaps.map((g) => ({ key: g.pattern, text: toSuggestion(g), occurrences: g.count })),
+      {
+        minOccurrences: MIN_OCCURRENCES,
+        provenance: {
+          ...(opts.automationId ? { automationId: opts.automationId } : {}),
+          noteId: NOTE_ID,
+        },
+        now,
+      },
+    );
 
-    if (suggestions.length > 0) {
+    // Rewrite whenever gaps exist — even if every one was dismissed — so a
+    // dismissed line leaves the note on this run.
+    if (gaps.length > 0) {
       await this.writeGaps(suggestions, now).catch((err) => {
         this.log.warn("failed to write automation gaps to vault", {
           error: (err as Error).message,

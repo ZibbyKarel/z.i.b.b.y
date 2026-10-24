@@ -198,13 +198,17 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
       case "pattern-extract": {
         // M4 nightly job: scan 30 days of approval-decision activity, draft rule
         // proposals into vault/patterns/suggestions.md; ref = `patterns:<count>`.
-        const { proposals } = await this.patterns.extract();
+        const { proposals } = await this.patterns.extract(new Date(), {
+          automationId: automation.id,
+        });
         return `patterns:${proposals.length}`;
       }
       case "gap-detect": {
         // M5: scan recurring task creation for automatable manual work, draft
         // suggestions into the vault. Deterministic; ref = `gaps:<count>`.
-        const { suggestions } = await this.gaps.detect();
+        const { suggestions } = await this.gaps.detect(new Date(), {
+          automationId: automation.id,
+        });
         return `gaps:${suggestions.length}`;
       }
       case "agent-factory": {

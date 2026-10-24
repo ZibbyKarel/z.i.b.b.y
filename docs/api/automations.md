@@ -177,8 +177,9 @@ when the config changes.
    - `agent` → the same, with target `{ kind: "agent", id }`
    - `briefing` → `BriefingService.generate(...)`
    - `memory-distill` → `MemoryDistillerService.distill()`
-   - `pattern-extract` → `PatternExtractorService.extract()`
-   - `gap-detect` → `GapDetectorService.detect()`
+   - `pattern-extract` → `PatternExtractorService.extract(now, { automationId })`
+   - `gap-detect` → `GapDetectorService.detect(now, { automationId })` — both pass the
+     firing automation's id as proposal provenance (TODO 14, `docs/api/proposals.md`)
    - `agent-factory` → `AgentFactoryService.detect()`
    - `review-learn` → `ReviewLearningService.learn()`, ref `review-rules:<observations>`
    - `task` → `TaskSchedulerService.createTask({ text, target, attachmentSetId, output, toolGrants, source: "automation" }, now, undefined, target, background: false)`

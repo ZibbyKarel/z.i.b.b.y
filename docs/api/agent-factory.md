@@ -87,6 +87,20 @@ Deterministic — **no LLM call**, fully unit-testable.
 3. **`cancel(agentId)`** (reject) — deletes the candidate file; the approval
    record itself remains as the durable trace of the decision.
 
+`propose()` returns the parked `Approval` (or `null` when the gate discarded the
+candidate).
+
+## Structured proposals (TODO 14)
+
+Every parked candidate is also upserted as an `agent-factory` proposal (dedupe key
+= candidate id, provenance `{ agentId, approvalId }`, `occurrences` = the fallback
+count). A later run that still sees a candidate pending approval only refreshes its
+proposal (never re-proposes). Dismissing the proposal (`PATCH /api/proposals/:id`)
+calls `ApprovalsService.reject` on the pending approval — the same path as the
+approvals page, so `cancel(agentId)` deletes the candidate the same way. Editing it
+is a 409 (the candidate is edited on the agent page). Once the approval is decided
+elsewhere, the proposal drops out of the list. See `docs/api/proposals.md`.
+
 ## Scheduling
 
 Dispatched by the `agent-factory` system automation target
