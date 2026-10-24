@@ -92,6 +92,10 @@ export class PrAutomationService
   }
 
   async tick(): Promise<{ started: number }> {
+    const configs = new Map<string, Promise<EffectiveRoadmapConfig>>();
+    // Idle installs never touch GitHub: the inbox sweep runs only while some project has a
+    // toggle effectively on. The resolved configs are reused for the PRs below.
+    if (!(await this.anyAutomationOn(configs))) return { started: 0 };
     let prs: InboxPr[];
     let tasks: ScheduledTask[];
     try {
@@ -105,7 +109,6 @@ export class PrAutomationService
     }
     const reviewRuns = runsOf(tasks, (t) => t.prReview);
     const addressRuns = runsOf(tasks, (t) => t.prAddressComments);
-    const configs = new Map<string, Promise<EffectiveRoadmapConfig>>();
     let started = 0;
     for (const pr of prs) {
       if (started >= PR_AUTOMATION_MAX_STARTS_PER_TICK) break;
@@ -137,8 +140,26 @@ export class PrAutomationService
     return { started };
   }
 
+  /** Resolve every project's effective config into `configs`; true when any toggle is on. */
+  private async anyAutomationOn(
+    configs: Map<string, Promise<EffectiveRoadmapConfig>>,
+  ): Promise<boolean> {
+    const projects = await this.projects.list().catch((error: unknown) => {
+      this.log.warn("pr automation: projects unreadable — tick skipped", { error: errMsg(error) });
+      return [];
+    });
+    const resolved = await Promise.all(
+      projects.map((project) => {
+        const config = this.effectiveConfig(project.id);
+        configs.set(project.id, config);
+        return config.catch(() => null);
+      }),
+    );
+    return resolved.some((c) => c?.autoReview === true || c?.autoAddressComments === true);
+  }
+
   private async startReview(pr: InboxPr): Promise<void> {
-    const level: PrReviewLevel = await this.reviews
+    const byContent: PrReviewLevel = await this.reviews
       .listPrFiles(pr.projectId, pr.repo, pr.number)
       .then(selectReviewLevel)
       .catch((error: unknown) => {
@@ -149,6 +170,11 @@ export class PrAutomationService
         });
         return "quick" as const;
       });
+    // Security floor: `tested` / `browser` install and run the PR's code with the project's
+    // secrets. Nobody looked at an auto-started PR, so a fork head (no `headRef` — InboxService
+    // sets it only for same-repo heads) is capped at `thorough`, which only reads the code.
+    const level: PrReviewLevel =
+      !pr.headRef && (byContent === "tested" || byContent === "browser") ? "thorough" : byContent;
     const { taskId } = await this.reviews.start(
       { projectId: pr.projectId, repo: pr.repo, number: pr.number, title: pr.title, level },
       { auto: true, headSha: pr.headSha },

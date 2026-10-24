@@ -34,6 +34,7 @@ function pr(over: Partial<InboxPr> = {}): InboxPr {
     section: "needs-your-review",
     projectId: "p1",
     headSha: A,
+    headRef: "feat",
     ...over,
   };
 }
@@ -121,7 +122,11 @@ describe("PrAutomationService (todo-16)", () => {
           };
         },
       } as never,
-      { get: async (id: string) => ({ id, name: id, path: `/repos/${id}` }) } as never,
+      {
+        get: async (id: string) => ({ id, name: id, path: `/repos/${id}` }),
+        list: async () =>
+          Object.keys(configs).map((id) => ({ id, name: id, path: `/repos/${id}` })),
+      } as never,
       { resolveCompany: async () => company } as never,
       activity as never,
       fakeSystemConfigStore(sys),
@@ -224,11 +229,33 @@ describe("PrAutomationService (todo-16)", () => {
       },
     );
 
-    it("starts again once the head changed", async () => {
-      tasks = [reviewTask(B, "posted")];
-      await make().tick();
-      expect(review.start).toHaveBeenCalledTimes(1);
-    });
+    it.each(["posted", "failed", "discarded"] as const)(
+      "starts again once the head changed (old head %s)",
+      async (state) => {
+        tasks = [reviewTask(B, state)];
+        await make().tick();
+        expect(review.start).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    it.each([
+      ["a fork PR with a UI file", undefined, "src/App.tsx", "thorough"],
+      ["a fork PR with code", undefined, "src/util.ts", "thorough"],
+      ["a same-repo PR with a UI file", "feat", "src/App.tsx", "browser"],
+      ["a same-repo PR with code", "feat", "src/util.ts", "tested"],
+      ["a fork PR with docs only", undefined, "README.md", "quick"],
+    ] as const)(
+      "I1 — %s (head ref %s, file %s) → %s: an auto review never runs fork PR code",
+      async (_label, headRef, filename, level) => {
+        prs = [pr({ headRef })];
+        review.listPrFiles.mockResolvedValue([{ filename, additions: 1, deletions: 0 }]);
+        await make().tick();
+        expect(review.start).toHaveBeenCalledWith(expect.objectContaining({ level }), {
+          auto: true,
+          headSha: A,
+        });
+      },
+    );
 
     it("a review of another PR does not block this one", async () => {
       const other = reviewTask(A, "running");
@@ -329,6 +356,29 @@ describe("PrAutomationService (todo-16)", () => {
     expect(review.start.mock.calls.map((c) => (c[0] as { number: number }).number)).toEqual([
       1, 2, 3,
     ]);
+    // The first three are now in flight; the next tick starts the other two.
+    tasks = [1, 2, 3].map((number) => ({
+      ...reviewTask(A, "running"),
+      id: `t_${number}`,
+      prReview: { repo: "acme/app", number, url: "u", state: "running" as const, headSha: A },
+    }));
+    expect(await make().tick()).toEqual({ started: 2 });
+    expect(
+      review.start.mock.calls.slice(3).map((c) => (c[0] as { number: number }).number),
+    ).toEqual([4, 5]);
+  });
+
+  it("m1 — no project has either toggle on → GitHub is not queried at all", async () => {
+    configs = { p1: { autoReview: false }, p2: {} };
+    expect(await make().tick()).toEqual({ started: 0 });
+    expect(inbox.listPrs).not.toHaveBeenCalled();
+  });
+
+  it("m1 — a company default alone switches the inbox read on", async () => {
+    configs = { p1: {} };
+    company = { id: "co", name: "Co", roadmapDefaults: { autoAddressComments: true } };
+    await make().tick();
+    expect(inbox.listPrs).toHaveBeenCalledTimes(1);
   });
 
   it("fails open per PR: one start throwing does not stop the tick", async () => {
@@ -363,7 +413,7 @@ describe("PrAutomationService (todo-16)", () => {
         },
       } as never,
       { readConfig: async () => ({ autoReview: true }) } as never,
-      { get: async (id: string) => ({ id }) } as never,
+      { get: async (id: string) => ({ id }), list: async () => [{ id: "p1" }] } as never,
       { resolveCompany: async () => undefined } as never,
       activity as never,
       fakeSystemConfigStore(),

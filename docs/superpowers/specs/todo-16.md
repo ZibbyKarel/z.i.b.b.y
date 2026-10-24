@@ -104,6 +104,8 @@ What stays gated:
      4. **`quick`**: otherwise (docs/config only), including an empty list.
    - If the files fetch fails, the level is `quick`. Ruling: cheapest, and the operator can rerun
      it at a higher level.
+   - **Fork cap (final-review ruling):** an auto-started review of a fork PR (no `headRef`) never
+     runs at `tested` or `browser` — those execute the PR's code — and is capped at `thorough`.
 5. **Auto address-comments never auto-pushes.**
    - `AddressInboxPrCommentsInput` gains `auto?: boolean`, which is set only server-side by the
      automation. The HTTP route keeps ignoring or rejecting it, so a client cannot set it.
