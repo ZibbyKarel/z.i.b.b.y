@@ -203,6 +203,25 @@ describe("PatternExtractorService", () => {
       expect(rerun.proposals).toHaveLength(1);
     });
 
+    it("rewrites the note without a dismissed line when nothing qualifies any more", async () => {
+      const proposals = makeProposals();
+      await makeService(deploys(), "", proposals).svc.extract(new Date());
+      const dismissed = (await proposals.list())[0];
+      if (!dismissed) throw new Error("no proposal");
+      await proposals.decide(dismissed.id, { action: "dismiss" });
+      const body = `- [ ] ${dismissed.text}\n- [ ] Stale but not dismissed\n`;
+      const { svc, vault } = makeService([], body, proposals);
+      await svc.extract(new Date());
+      expect(writtenBody(vault)).not.toContain('"deploy"');
+      expect(writtenBody(vault)).toContain("- [ ] Stale but not dismissed");
+    });
+
+    it("does not touch the note when nothing qualifies and nothing is dismissed", async () => {
+      const { svc, vault } = makeService([], "- [ ] Stale but not dismissed\n");
+      await svc.extract(new Date());
+      expect(vault.updateNote).not.toHaveBeenCalled();
+    });
+
     it("an edited proposal is written with editedText (producer text still refreshed)", async () => {
       const { svc, vault, proposals } = makeService(deploys());
       await svc.extract(new Date());

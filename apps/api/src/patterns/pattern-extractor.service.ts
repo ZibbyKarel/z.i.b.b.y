@@ -117,6 +117,17 @@ export class PatternExtractorService {
           error: (err as Error).message,
         });
       });
+    } else {
+      // Nothing qualifies any more, but the note may still carry dismissed lines.
+      const existing = await this.readProposals();
+      const kept = await this.proposalsService.withoutDismissed("pattern-extract", existing);
+      if (kept.length !== existing.length) {
+        await this.writeSuggestions(kept, now).catch((err) => {
+          this.log.warn("failed to write pattern suggestions to vault", {
+            error: (err as Error).message,
+          });
+        });
+      }
     }
 
     this.log.info("pattern extraction complete", {

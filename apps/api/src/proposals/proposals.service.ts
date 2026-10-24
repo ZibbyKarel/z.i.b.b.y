@@ -148,6 +148,23 @@ export class ProposalsService {
     return lines;
   }
 
+  /**
+   * Of the existing note bullet `lines`, those that are NOT a dismissed proposal of
+   * `source` (matched on the producer text or the operator's edited wording). Used
+   * when a producer has nothing qualifying but must still drop dismissed lines.
+   * Fail-open: a store failure keeps every line.
+   */
+  async withoutDismissed(source: ProposalSource, lines: string[]): Promise<string[]> {
+    const dismissed = await this.decisions(source).catch(() => new Map<string, Proposal>());
+    const hidden = new Set<string>();
+    for (const p of dismissed.values()) {
+      if (p.status !== "dismissed") continue;
+      hidden.add(p.text);
+      if (p.editedText) hidden.add(p.editedText);
+    }
+    return lines.filter((l) => !hidden.has(l));
+  }
+
   /** Every stored record of `source` (any status, expired included), keyed by id. */
   async decisions(source: ProposalSource): Promise<Map<string, Proposal>> {
     const all = await this.store.readAll();
@@ -188,10 +205,6 @@ export class ProposalsService {
     assertDecidable(current, input);
     const editedText = input.action === "edit" ? validEditText(input.text) : undefined;
 
-    if (input.action === "dismiss" && current.source === "agent-factory") {
-      await this.rejectPendingApproval(current.provenance.approvalId);
-    }
-
     const decidedAt = now.toISOString();
     const decided = await this.store.mutate((all) => {
       const latest = all.find((p) => p.id === id);
@@ -203,6 +216,19 @@ export class ProposalsService {
           : { ...latest, editedText, decidedAt };
       return { next: all.map((p) => (p.id === id ? record : p)), result: record };
     });
+
+    // Persist first: the approval reject is irreversible, so the dismissal must be
+    // on disk before it — a store failure then leaves the approval pending, not a
+    // candidate that is re-proposed despite the operator's dismissal.
+    if (input.action === "dismiss" && decided.source === "agent-factory") {
+      await this.rejectPendingApproval(decided.provenance.approvalId).catch((err: unknown) => {
+        this.log.warn("proposal dismissed but its approval could not be rejected", {
+          id,
+          approvalId: decided.provenance.approvalId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
+    }
 
     const verb = input.action === "dismiss" ? "dismissed" : "edited";
     void this.activity.record({
@@ -263,7 +289,7 @@ function assertDecidable(p: Proposal, input: DecideProposalInput): void {
 }
 
 function validEditText(text: string): string {
-  const trimmed = text.trim();
+  const trimmed = text.replace(/\s+/g, " ").trim();
   if (trimmed.length < 1 || trimmed.length > PROPOSAL_TEXT_MAX) {
     throw new InvalidProposalTextError();
   }

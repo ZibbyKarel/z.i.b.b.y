@@ -102,6 +102,17 @@ export class GapDetectorService {
           error: (err as Error).message,
         });
       });
+    } else {
+      // Nothing qualifies any more, but the note may still carry dismissed lines.
+      const existing = await this.readGaps();
+      const kept = await this.proposals.withoutDismissed("gap-detect", existing);
+      if (kept.length !== existing.length) {
+        await this.writeGaps(kept, now).catch((err) => {
+          this.log.warn("failed to write automation gaps to vault", {
+            error: (err as Error).message,
+          });
+        });
+      }
     }
     this.log.info("gap detection complete", { scanned: entries.length, gaps: gaps.length });
     return { gaps, suggestions };

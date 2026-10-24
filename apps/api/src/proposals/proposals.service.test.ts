@@ -185,6 +185,21 @@ describe("ProposalsService", () => {
     ).rejects.toThrow();
   });
 
+  it("edit collapses internal whitespace/newlines to single spaces", async () => {
+    const p = await gap();
+    const edited = await svc.decide(
+      p.id,
+      { action: "edit", text: " line1\n- [ ] line2\t x " },
+      at(1),
+    );
+    expect(edited.editedText).toBe("line1 - [ ] line2 x");
+    // length is checked after collapsing: 501 raw chars of padding collapse to fit
+    const padded = `a${" ".repeat(600)}b`;
+    expect((await svc.decide(p.id, { action: "edit", text: padded }, at(2))).editedText).toBe(
+      "a b",
+    );
+  });
+
   it("decide dismiss sets status + decidedAt and records activity", async () => {
     const p = await gap();
     const dismissed = await svc.decide(p.id, { action: "dismiss" }, at(1));
@@ -240,6 +255,25 @@ describe("ProposalsService", () => {
       expect(res.status).toBe("dismissed");
       expect(approvals.reject).toHaveBeenCalledTimes(1);
       expect(approvals.reject.mock.calls[0]?.[0]).toBe("appr_1");
+    });
+
+    it("dismiss persists the dismissal before rejecting the approval", async () => {
+      const p = await agent();
+      let statusAtReject: string | undefined;
+      approvals.reject.mockImplementationOnce(async (id: string) => {
+        statusAtReject = (await store.readAll()).find((r) => r.id === p.id)?.status;
+        return { ...pendingApproval(id, "agent-x"), status: "rejected" };
+      });
+      await svc.decide(p.id, { action: "dismiss" });
+      expect(statusAtReject).toBe("dismissed");
+    });
+
+    it("a failed approval reject after persisting still returns the dismissed record", async () => {
+      approvals.reject.mockRejectedValueOnce(new Error("boom"));
+      const p = await agent();
+      const res = await svc.decide(p.id, { action: "dismiss" });
+      expect(res.status).toBe("dismissed");
+      expect((await store.readAll()).find((r) => r.id === p.id)?.status).toBe("dismissed");
     });
 
     it("dismiss with an already-decided approval only updates the record", async () => {

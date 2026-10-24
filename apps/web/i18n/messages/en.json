@@ -3254,6 +3254,9 @@
           "approval": "Approval"
         },
         "dismiss": "Dismiss",
+        "dismissArmed": "Hold to dismiss",
+        "dismissDone": "Dismissed",
+        "actionError": "The action could not be completed.",
         "dismissLabel": "Dismiss: {text}",
         "edit": "Edit",
         "editLabel": "Edit: {text}",

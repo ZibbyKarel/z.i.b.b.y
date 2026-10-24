@@ -7,6 +7,7 @@ import {
   BoardText,
   Button,
   Container,
+  HoldButton,
   Stack,
   TextAreaField,
   TextLink,
@@ -45,8 +46,17 @@ export const proposalExpiryDays = (expiresAt: string, now: number): number =>
 
 type Provenance = { kind: "note" | "agent" | "approval"; href: Route };
 
-/** The one provenance link a row shows: note, then agent, then approval. */
-export function proposalProvenance(p: Proposal["provenance"]): Provenance | null {
+/**
+ * The one provenance link a row shows: note, then agent, then approval. An agent-factory
+ * candidate with an approval links to the approvals page instead — that is where it is decided.
+ */
+export function proposalProvenance(
+  p: Proposal["provenance"],
+  source?: Proposal["source"],
+): Provenance | null {
+  if (source === "agent-factory" && p.approvalId) {
+    return { kind: "approval", href: "/governance/approvals" as Route };
+  }
   if (p.noteId) {
     return {
       kind: "note",
@@ -110,7 +120,7 @@ function ProposalRow({ proposal, now }: ProposalRowProps) {
   const shown = proposal.editedText ?? proposal.text;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(shown);
-  const provenance = proposalProvenance(proposal.provenance);
+  const provenance = proposalProvenance(proposal.provenance, proposal.source);
   const editable = proposal.source !== "agent-factory";
   const trimmed = draft.trim();
 
@@ -120,6 +130,10 @@ function ProposalRow({ proposal, now }: ProposalRowProps) {
       { params: { id: proposal.id }, body: { action: "edit", text: trimmed } },
       { onSuccess: () => setEditing(false) },
     );
+  const cancelEdit = () => {
+    decide.reset();
+    setEditing(false);
+  };
   const startEdit = () => {
     setDraft(shown);
     setEditing(true);
@@ -142,16 +156,29 @@ function ProposalRow({ proposal, now }: ProposalRowProps) {
                   {t("edit")}
                 </Button>
               ) : null}
-              <Button
-                aria-label={t("dismissLabel", { text: shown })}
-                data-testid={ProposalsWidgetTestId.Dismiss}
-                disabled={decide.isPending}
-                intent="ghost"
-                onClick={dismiss}
-                size="sm"
-              >
-                {t("dismiss")}
-              </Button>
+              {editable ? (
+                <Button
+                  aria-label={t("dismissLabel", { text: shown })}
+                  data-testid={ProposalsWidgetTestId.Dismiss}
+                  disabled={decide.isPending}
+                  intent="ghost"
+                  onClick={dismiss}
+                  size="sm"
+                >
+                  {t("dismiss")}
+                </Button>
+              ) : (
+                <HoldButton
+                  aria-label={t("dismissLabel", { text: shown })}
+                  armedLabel={t("dismissArmed")}
+                  data-testid={ProposalsWidgetTestId.Dismiss}
+                  disabled={decide.isPending}
+                  doneLabel={t("dismissDone")}
+                  label={t("dismiss")}
+                  onConfirm={dismiss}
+                  size="sm"
+                />
+              )}
             </Stack>
           )
         }
@@ -181,7 +208,7 @@ function ProposalRow({ proposal, now }: ProposalRowProps) {
               <Button
                 data-testid={ProposalsWidgetTestId.Cancel}
                 intent="ghost"
-                onClick={() => setEditing(false)}
+                onClick={cancelEdit}
                 size="sm"
               >
                 {t("cancel")}
@@ -217,7 +244,7 @@ function ProposalRow({ proposal, now }: ProposalRowProps) {
           <Container padding={["50", "0"]}>
             <span data-testid={ProposalsWidgetTestId.RowError} role="alert">
               <BoardText kind="meta" tone="ink">
-                {t("error")}
+                {decide.variables?.body.action === "edit" ? t("error") : t("actionError")}
               </BoardText>
             </span>
           </Container>

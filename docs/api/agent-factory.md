@@ -138,3 +138,7 @@ automation's ref. Deterministic — no `claude` run, same posture as
   but nothing stops the SAME pattern (same `normalizedSummary`) from being
   re-grouped and re-proposed with a fresh candidate id on a later run, since
   the group key isn't itself remembered as "previously rejected".
+- Dismissing a candidate from the Bridge "Návrhy" widget permanently suppresses it
+  (the dismissed proposal record is remembered), whereas rejecting its approval on the
+  approvals page leaves no such memory, so the same pattern can be re-proposed on a
+  later run. Reject there only when you want it to be eligible again.

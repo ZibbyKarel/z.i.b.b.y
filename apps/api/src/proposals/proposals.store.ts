@@ -19,7 +19,7 @@ const FILE_NAME = "proposals.json";
 /** What is on disk: no file yet, a valid array, a corrupt file, or an unreadable one. */
 type FileState =
   | { kind: "missing" }
-  | { kind: "ok"; records: Proposal[] }
+  | { kind: "ok"; records: Proposal[]; rejected: unknown[] }
   | { kind: "corrupt" }
   | { kind: "unreadable"; error: Error };
 
@@ -32,8 +32,10 @@ type FileState =
  *
  * Reads are fail-open: a missing, unreadable or corrupt file reads as `[]` (never
  * a 500). Writes never destroy evidence: a corrupt file (unparseable, not an
- * array, or ANY record failing the schema) is renamed to
- * `proposals.json.corrupt-<ts>` with a warning before the fresh write, and an
+ * array) is renamed to
+ * `proposals.json.corrupt-<ts>` with a warning before the fresh write. A valid
+ * array with some invalid records is salvaged per record: the valid ones are kept
+ * and the invalid raw items go to `proposals.json.rejected-<ts>` on the next write. An
  * unreadable (non-ENOENT) file makes the write fail instead of overwriting it.
  */
 @Injectable()
@@ -63,6 +65,7 @@ export class ProposalsStore {
       const state = await this.readState();
       if (state.kind === "unreadable") throw state.error;
       if (state.kind === "corrupt") await this.quarantine();
+      if (state.kind === "ok" && state.rejected.length > 0) await this.saveRejected(state.rejected);
       const { next, result } = fn(state.kind === "ok" ? state.records : []);
       const validated = next.map((p) => ProposalSchema.parse(p));
       await ensureDir(this.dir);
@@ -82,12 +85,24 @@ export class ProposalsStore {
     const parsed: unknown = safeJson(raw);
     if (!Array.isArray(parsed)) return { kind: "corrupt" };
     const records: Proposal[] = [];
+    const rejected: unknown[] = [];
     for (const item of parsed) {
       const one = ProposalSchema.safeParse(item);
-      if (!one.success) return { kind: "corrupt" };
-      records.push(one.data);
+      if (one.success) records.push(one.data);
+      else rejected.push(item);
     }
-    return { kind: "ok", records };
+    return { kind: "ok", records, rejected };
+  }
+
+  /** Keep the invalid raw records beside the file (never dropped silently). */
+  private async saveRejected(rejected: unknown[]): Promise<void> {
+    const stamp = new Date().toISOString().replace(/:/g, "");
+    const target = `${this.file}.rejected-${stamp}`;
+    await fs.writeFile(target, `${JSON.stringify(rejected, null, 2)}\n`, "utf8");
+    this.log?.warn("invalid proposal records set aside before write", {
+      rejected: rejected.length,
+      sidecar: target,
+    });
   }
 
   /** Move the corrupt file aside (original bytes kept) so the next write starts fresh. */

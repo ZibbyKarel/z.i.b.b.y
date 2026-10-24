@@ -145,6 +145,26 @@ describe("GapDetectorService", () => {
       expect(rerun.suggestions).toHaveLength(1);
     });
 
+    it("rewrites the note without a dismissed line when nothing qualifies any more", async () => {
+      const proposals = makeProposals();
+      await makeService(recurring("Deploy to staging", 3), "", proposals).svc.detect(new Date());
+      const dismissed = (await proposals.list())[0];
+      if (!dismissed) throw new Error("no proposal");
+      await proposals.decide(dismissed.id, { action: "dismiss" });
+      const body = `- [ ] ${dismissed.text}\n- [ ] Stale but not dismissed\n`;
+      const { svc, vault } = makeService([], body, proposals);
+      await svc.detect(new Date());
+      expect(writtenBody(vault)).not.toContain("Deploy to staging");
+      expect(writtenBody(vault)).toContain("- [ ] Stale but not dismissed");
+    });
+
+    it("does not touch the note when nothing qualifies and nothing is dismissed", async () => {
+      const { svc, vault } = makeService([], "- [ ] Stale but not dismissed\n");
+      await svc.detect(new Date());
+      expect(vault.updateNote).not.toHaveBeenCalled();
+      expect(vault.createNote).not.toHaveBeenCalled();
+    });
+
     it("an edited proposal is written with editedText", async () => {
       const { svc, vault, proposals } = makeService(recurring("Deploy to staging", 3));
       await svc.detect(new Date());

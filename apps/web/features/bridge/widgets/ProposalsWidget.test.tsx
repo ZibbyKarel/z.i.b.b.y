@@ -1,7 +1,7 @@
 import type { Proposal } from "@zibby/contracts";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { renderWithProviders, screen, within } from "../../../test/render";
+import { fireEvent, renderWithProviders, screen, within } from "../../../test/render";
 import type { BridgeWidget } from "../grid/layout";
 import { ProposalsWidget, ProposalsWidgetTestId, proposalExpiryDays } from "./ProposalsWidget";
 import type { BridgeWidgetProps } from "./registry";
@@ -11,6 +11,8 @@ const d = vi.hoisted(() => ({
   pending: false,
   mutate: vi.fn(),
   isError: false,
+  variables: undefined as unknown,
+  reset: vi.fn(),
 }));
 
 vi.mock("../../proposals/queries", () => ({
@@ -22,7 +24,13 @@ vi.mock("../../proposals/queries", () => ({
   }),
 }));
 vi.mock("../../proposals/mutations", () => ({
-  useDecideProposalMutation: () => ({ mutate: d.mutate, isPending: false, isError: d.isError }),
+  useDecideProposalMutation: () => ({
+    mutate: d.mutate,
+    reset: d.reset,
+    isPending: false,
+    isError: d.isError,
+    variables: d.variables,
+  }),
 }));
 
 const NOW = Date.parse("2026-10-24T12:00:00.000Z");
@@ -60,7 +68,9 @@ beforeEach(() => {
   d.proposals = [];
   d.pending = false;
   d.isError = false;
+  d.variables = undefined;
   d.mutate.mockReset();
+  d.reset.mockReset();
 });
 afterEach(() => vi.useRealTimers());
 
@@ -95,6 +105,15 @@ describe("ProposalsWidget", () => {
     expect(screen.getByTestId(ProposalsWidgetTestId.Provenance).getAttribute("href")).toBe(href);
   });
 
+  it("an agent-factory row with an approval links to the approvals page, not the agent", () => {
+    d.proposals = [
+      proposal("a", { source: "agent-factory", provenance: { agentId: "bob", approvalId: "ap1" } }),
+    ];
+    const href = "/governance/approvals";
+    renderWithProviders(<ProposalsWidget {...setup()} />);
+    expect(screen.getByTestId(ProposalsWidgetTestId.Provenance).getAttribute("href")).toBe(href);
+  });
+
   it("has no provenance link when there is none", () => {
     d.proposals = [proposal("a")];
     renderWithProviders(<ProposalsWidget {...setup()} />);
@@ -105,6 +124,22 @@ describe("ProposalsWidget", () => {
     d.proposals = [proposal("a")];
     renderWithProviders(<ProposalsWidget {...setup()} />);
     await userEvent.click(screen.getByTestId(ProposalsWidgetTestId.Dismiss));
+    expect(d.mutate).toHaveBeenCalledWith({ params: { id: "a" }, body: { action: "dismiss" } });
+  });
+
+  it("agent-factory Dismiss is a hold-to-confirm: a single press does not dismiss", () => {
+    d.proposals = [proposal("a", { source: "agent-factory" })];
+    renderWithProviders(<ProposalsWidget {...setup()} />);
+    const button = screen.getByTestId(ProposalsWidgetTestId.Dismiss);
+    fireEvent.pointerDown(button);
+    fireEvent.pointerUp(button);
+    expect(d.mutate).not.toHaveBeenCalled();
+    vi.spyOn(performance, "now").mockReturnValue(1000);
+    vi.spyOn(window, "requestAnimationFrame").mockImplementationOnce((cb) => {
+      cb(2000);
+      return 1;
+    });
+    fireEvent.pointerDown(button);
     expect(d.mutate).toHaveBeenCalledWith({ params: { id: "a" }, body: { action: "dismiss" } });
   });
 
@@ -163,6 +198,23 @@ describe("ProposalsWidget", () => {
     await userEvent.click(screen.getByTestId(ProposalsWidgetTestId.Save));
     expect((editor as HTMLTextAreaElement).value).toBe("Text a!");
     expect(screen.getByTestId(ProposalsWidgetTestId.RowError)).toBeTruthy();
+  });
+
+  it("a failed dismiss shows the neutral action error; Cancel on an edit clears the row error", async () => {
+    d.proposals = [proposal("a")];
+    d.isError = true;
+    d.variables = { params: { id: "a" }, body: { action: "dismiss" } };
+    const { unmount } = renderWithProviders(<ProposalsWidget {...setup()} />);
+    expect(screen.getByTestId(ProposalsWidgetTestId.RowError).textContent).toBe(
+      "Akci se nepodařilo provést.",
+    );
+    unmount();
+    d.variables = { params: { id: "a" }, body: { action: "edit", text: "x" } };
+    renderWithProviders(<ProposalsWidget {...setup()} />);
+    expect(screen.getByTestId(ProposalsWidgetTestId.RowError).textContent).toContain("uložit");
+    await userEvent.click(screen.getByTestId(ProposalsWidgetTestId.Edit));
+    await userEvent.click(screen.getByTestId(ProposalsWidgetTestId.Cancel));
+    expect(d.reset).toHaveBeenCalled();
   });
 
   it("reports the count and shows the empty copy", () => {

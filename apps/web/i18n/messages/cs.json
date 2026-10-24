@@ -3254,6 +3254,9 @@
           "approval": "Schválení"
         },
         "dismiss": "Zamítnout",
+        "dismissArmed": "Držte pro zamítnutí",
+        "dismissDone": "Zamítnuto",
+        "actionError": "Akci se nepodařilo provést.",
         "dismissLabel": "Zamítnout: {text}",
         "edit": "Upravit",
         "editLabel": "Upravit: {text}",

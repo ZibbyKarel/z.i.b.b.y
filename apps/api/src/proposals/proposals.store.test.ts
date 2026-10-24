@@ -58,7 +58,6 @@ describe("ProposalsStore", () => {
   it.each([
     ["unparseable", "{ nope"],
     ["not an array", '{"not":"an array"}'],
-    ["an invalid record", JSON.stringify([P, { id: "bad" }])],
   ])(
     "quarantines a corrupt file (%s) before writing over it — original bytes kept",
     async (_label, bytes) => {
@@ -77,6 +76,26 @@ describe("ProposalsStore", () => {
       expect(await store.readAll()).toEqual([fresh]);
     },
   );
+
+  it("salvages valid records around an invalid one; the invalid raw item goes to a .rejected sidecar on write", async () => {
+    const pdir = path.join(dir, "proposals");
+    await fs.mkdir(pdir, { recursive: true });
+    const bad = { id: "bad", source: "security-scan" };
+    await fs.writeFile(path.join(pdir, "proposals.json"), JSON.stringify([P, bad]));
+    expect(await store.readAll()).toEqual([P]);
+
+    const fresh = { ...P, id: "prop_00000000000f" };
+    await store.mutate((all) => ({ next: [...all, fresh], result: undefined }));
+
+    expect(await store.readAll()).toEqual([P, fresh]);
+    const names = await fs.readdir(pdir);
+    expect(names.filter((n) => n.includes(".corrupt-"))).toEqual([]);
+    const sidecars = names.filter((n) => /^proposals\.json\.rejected-[0-9TZ.-]+$/.test(n));
+    expect(sidecars).toHaveLength(1);
+    expect(JSON.parse(await fs.readFile(path.join(pdir, sidecars[0] ?? ""), "utf8"))).toEqual([
+      bad,
+    ]);
+  });
 
   it("refuses to write when the file exists but cannot be read (no silent overwrite)", async () => {
     const pdir = path.join(dir, "proposals");
