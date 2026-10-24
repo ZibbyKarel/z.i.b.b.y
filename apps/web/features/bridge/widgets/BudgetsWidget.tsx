@@ -100,7 +100,16 @@ export function BudgetsWidget({ onEmptyChange, onCountChange }: BridgeWidgetProp
     { onEmptyChange, onCountChange },
   );
 
-  if (failed) return <QueryError onRetry={() => void budgetQuery.refetch()} />;
+  if (failed)
+    return (
+      <QueryError
+        onRetry={() => {
+          void budgetQuery.refetch();
+          void projectsQuery.refetch();
+          void companiesQuery.refetch();
+        }}
+      />
+    );
   if (loading || !built) return null;
   if (rows.length === 0) {
     return (
@@ -146,7 +155,8 @@ function BudgetRow({ row }: BudgetRowProps) {
       : row.cap > 0
         ? `${amount(row.used)}/${amount(row.cap)} ${axisLabel}`
         : `${amount(row.used)} ${axisLabel}`;
-  const pct = Math.round(row.ratio * 100);
+  // Floor, so the shown percent never crosses a threshold the badge hasn't (79.6 % ≠ "80 %").
+  const pct = Math.floor(row.ratio * 100);
 
   return (
     <BoardRow
