@@ -3235,6 +3235,26 @@
         "questions": "Open questions",
         "decisions": "Agreements"
       },
+      "budgets": {
+        "empty": "No budgets or limits are set.",
+        "limit5h": "5h limit",
+        "limitWeekly": "Weekly limit",
+        "exhausted": "exhausted",
+        "near": "running low",
+        "held": "{n} held over cap",
+        "asideExhausted": "{n} exhausted",
+        "asideUnknown": "limits unknown",
+        "axis": {
+          "daily": "today",
+          "weekly": "week",
+          "monthly": "month",
+          "dailyCost": "today $",
+          "weeklyCost": "week $",
+          "monthlyCost": "month $",
+          "rolling": "5 h",
+          "weeklyLimit": "week"
+        }
+      },
       "proposals": {
         "empty": "No proposals to review.",
         "source": {
@@ -3307,6 +3327,10 @@
       "proposals": {
         "label": "Proposals",
         "desc": "Suggestions from automations to review — dismiss or edit the insight."
+      },
+      "budgets": {
+        "label": "Budgets & limits",
+        "desc": "Budget and limit usage per project and company — highlights what is running out."
       }
     },
     "sheet": {

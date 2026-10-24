@@ -8,6 +8,10 @@ describe("BridgeWidgetSchema scope", () => {
     expect(BridgeWidgetSchema.safeParse({ ...base, type: "proposals" }).success).toBe(true);
   });
 
+  it("accepts a budgets widget", () => {
+    expect(BridgeWidgetSchema.safeParse({ ...base, type: "budgets" }).success).toBe(true);
+  });
+
   it("accepts a teamKb widget scoped to a team", () => {
     const w = BridgeWidgetSchema.parse({ ...base, type: "teamKb", scope: { teamId: "devrel" } });
     expect(w.scope).toEqual({ teamId: "devrel" });
