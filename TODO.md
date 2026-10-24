@@ -29,7 +29,7 @@
         b. [ ] Vypnutý projekt: žádný ingest kanálů, žádné autonomní runy, žádný zápis do paměti z jeho dat; UI to jasně ukazuje (štítek, bez akcí)
         c. [ ] Ochrana proti prolínání: poznatky v paměti označené firmou/účtem; ingest na stroji nikdy nenačte do paměti data projektu, který je tam vypnutý
         d. [ ] Vlastnictví kanálů/úkolů mezi stroji (lease se zápisem do sdíleného místa a expirací), aby oba stroje neodpověděly na stejnou zprávu nebo neotevřely duplicitní PR; widget stavu strojů (kdo žije, co běží, poslední sync) -->
-10. [ ] Self-edit + upgrade: ZIBBY upravuje sám sebe přes worktree a PR, tlačítko Upgrade vedle limitů aktualizuje větev
+10. [x] Self-edit + upgrade: ZIBBY upravuje sám sebe přes worktree a PR, tlačítko Upgrade vedle limitů aktualizuje větev (main@394ab9a8)
         a. [ ] Projekt ZIBBY jako vlastní cíl: úkol běží ve worktree repa, otevře PR, merge zůstává na operátorovi (Tier-3); nahradí duplicitní projekt ZIBBY Copy
         b. [ ] Periodický check main (git fetch) a stav: běžíme na aktuální/zaostáváme o N commitů; tlačítko Upgrade vedle limitů se zobrazí jen pokud je main novější
         c. [ ] Upgrade akce přes gate: kontrola čistého working tree a běžících runů, fast-forward, reinstall závislostí při změně lockfile, restart dev serveru; nikdy nepřepsat lokální necommitnuté změny (včetně paměti)
