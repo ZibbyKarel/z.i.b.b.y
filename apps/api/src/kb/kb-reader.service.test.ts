@@ -252,6 +252,11 @@ describe("extractDigestSections", () => {
     expect(extractDigestSections(body).questions).toEqual(["one", "two"]);
   });
 
+  it("handles CRLF line endings", () => {
+    const body = "## Open questions\r\n- A?\r\n- B?\r\n## Decisions\r\n1. Ship\r\n";
+    expect(extractDigestSections(body)).toEqual({ questions: ["A?", "B?"], decisions: ["Ship"] });
+  });
+
   it("caps item text at 300 chars", () => {
     const out = extractDigestSections(`## Decisions\n- ${"x".repeat(400)}\n`);
     expect(out.decisions[0]).toHaveLength(300);

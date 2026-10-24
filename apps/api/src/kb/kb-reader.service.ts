@@ -119,7 +119,7 @@ export function extractDigestSections(body: string): { questions: string[]; deci
   let kind: "questions" | "decisions" | null = null;
   let level = 0;
   let fenced = false;
-  for (const line of body.split("\n")) {
+  for (const line of body.split(/\r?\n/)) {
     if (/^\s*(```|~~~)/.test(line)) {
       fenced = !fenced;
       continue;
