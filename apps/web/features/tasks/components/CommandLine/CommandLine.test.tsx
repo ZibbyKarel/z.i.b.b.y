@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -354,6 +355,29 @@ describe("CommandLine (Phase 118d generic composer)", () => {
           onTargetChange={onTargetChange}
         />,
       );
+      expect(onTargetChange).not.toHaveBeenCalled();
+    });
+
+    it("adds the chip once even when effects run twice (StrictMode)", () => {
+      const onSubmit = vi.fn();
+      render(
+        <StrictMode>
+          <CommandLine multipleTargets initialText="@Builder fix it" onSubmit={onSubmit} />
+        </StrictMode>,
+      );
+      fireEvent.click(screen.getByTestId(CommandLineTestId.Send));
+      expect(onSubmit.mock.calls[0]?.[3]).toHaveLength(1);
+    });
+
+    it("a submit before the catalog arrives ends the pending adoption", () => {
+      fx.data.agents = [];
+      const onTargetChange = vi.fn();
+      const props = { initialText: "@Builder fix it", onSubmit: vi.fn(), onTargetChange };
+      const view = render(<CommandLine {...props} />);
+      fireEvent.click(screen.getByTestId(CommandLineTestId.Send));
+      onTargetChange.mockClear();
+      fx.data.agents = [{ id: "builder", name: "Builder" }];
+      view.rerender(<CommandLine {...props} />);
       expect(onTargetChange).not.toHaveBeenCalled();
     });
 

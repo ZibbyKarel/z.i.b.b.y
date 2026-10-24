@@ -59,6 +59,22 @@ describe("TODO API (e2e)", () => {
     expect((await request(http).delete("/api/todo/" + a.body.id)).status).toBe(404);
   });
 
+  it("a task created with todoId removes that note", async () => {
+    const http = app.getHttpServer();
+    const note = await request(http).post("/api/todo").send({ text: "ship the thing" });
+    expect(note.status).toBe(201);
+    const keep = await request(http).post("/api/todo").send({ text: "leave me" });
+
+    const task = await request(http)
+      .post("/api/tasks")
+      .send({ title: "Ship", text: "ship the thing", todoId: note.body.id });
+    expect(task.status).toBe(201);
+
+    const ids = (await request(http).get("/api/todo")).body.items.map((i: { id: string }) => i.id);
+    expect(ids).not.toContain(note.body.id);
+    expect(ids).toContain(keep.body.id);
+  });
+
   it("rejects blank text with 400", async () => {
     const res = await request(app.getHttpServer()).post("/api/todo").send({ text: "   " });
     expect(res.status).toBe(400);

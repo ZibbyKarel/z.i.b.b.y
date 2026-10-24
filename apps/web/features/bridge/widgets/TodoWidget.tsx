@@ -5,7 +5,7 @@ import { BoardRow, BoardText, Button, Container, Stack } from "@zibby/design-sys
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { type MouseEvent, useEffect, useMemo } from "react";
+import { type MouseEvent, useEffect, useMemo, useState } from "react";
 import { useNow } from "../../../hooks/useNow";
 import { compactAgo } from "../../../utils/time";
 import { CommandLine, type ScopeKind } from "../../tasks/components/CommandLine/CommandLine";
@@ -36,6 +36,8 @@ export function TodoWidget({ widget, onEmptyChange, onCountChange }: BridgeWidge
   const query = useTodoQuery();
   const create = useCreateTodoMutation();
   const remove = useDeleteTodoMutation();
+  // Bumped on a SUCCESSFUL add to remount (clear) the composer; a failed POST keeps the text.
+  const [composerKey, setComposerKey] = useState(0);
 
   const items = useMemo(() => query.data?.items ?? [], [query.data]);
   const loading = query.isPending;
@@ -97,10 +99,15 @@ export function TodoWidget({ widget, onEmptyChange, onCountChange }: BridgeWidge
           hideLabel
           multipleTargets
           chrome={false}
+          key={composerKey}
           label={t("input")}
           onSubmit={(text) => {
             const trimmed = text.trim();
-            if (trimmed && !create.isPending) create.mutate({ body: { text: trimmed } });
+            if (trimmed && !create.isPending)
+              create.mutate(
+                { body: { text: trimmed } },
+                { onSuccess: () => setComposerKey((k) => k + 1) },
+              );
           }}
           placeholder={t("placeholder")}
           renderTrailing={({ canSubmit, submit }) => (
@@ -114,6 +121,7 @@ export function TodoWidget({ widget, onEmptyChange, onCountChange }: BridgeWidge
               {t("add")}
             </Button>
           )}
+          resetOnSubmit={false}
           scopeKinds={TODO_SCOPE_KINDS}
           showAttach={false}
         />

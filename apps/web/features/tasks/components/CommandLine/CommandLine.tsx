@@ -726,6 +726,7 @@ export function CommandLine({
   if (injectedTarget !== prevInjectedTarget) {
     setPrevInjectedTarget(injectedTarget);
     if (injectedTarget) {
+      setSeedPending(false);
       const mentionText = `@${injectedTarget.name} `;
       const next =
         text.length > 0 ? `${text}${text.endsWith(" ") ? "" : " "}${mentionText}` : mentionText;
@@ -740,6 +741,7 @@ export function CommandLine({
   if (injectedText !== prevInjectedText) {
     setPrevInjectedText(injectedText);
     if (injectedText) {
+      setSeedPending(false);
       const next =
         text.length > 0 ? `${text}${text.endsWith(" ") ? "" : " "}${injectedText}` : injectedText;
       setText(next);
@@ -812,6 +814,7 @@ export function CommandLine({
     if (!canRun) return;
     const trimmed = text.trim();
     if (!trimmed) return;
+    setSeedPending(false);
     const attachmentPayload = attachments.files.length > 0 ? attachments : undefined;
     if (multipleTargets) {
       onSubmit(
@@ -1150,10 +1153,6 @@ export function CommandLine({
       .slice(0, 50);
   }, [mention, atCandidates, scopeKinds, scopeSources, skills]);
 
-  // Adopt a typed `@Name` of the prefilled brief (`initialText`) as the target once the
-  // async catalogs resolve it, or never if the operator edits first. (`#Name` is pick-only.)
-  // Adopt a typed `@Name` of the prefilled brief (`initialText`) as the target once the
-  // async catalogs resolve it; never after the operator edits. (`#Name` is pick-only.)
   // Clamp at read time so a result list that shrank between renders never
   // leaves the keyboard highlight out of range.
   const activeMentionIndex =
@@ -1185,6 +1184,11 @@ export function CommandLine({
       : { top: caretRect.bottom + MENTION_GAP, ...horizontal, maxHeight };
   }, [caretRect]);
 
+  // Adopt a typed `@Name` of the prefilled brief (`initialText`) as the target once the
+  // async catalogs resolve it; never after the operator edits, submits or injects.
+  // (`#Name` is pick-only.) KEEP THIS CALL LAST among the hooks: placed right after the
+  // `atCandidates` memo, React Compiler bails out of the component (lint
+  // preserve-manual-memoization on `atCandidates`).
   useSeededMentionAdoption(
     seedPending,
     atCandidates,
@@ -1194,8 +1198,12 @@ export function CommandLine({
     (adopted) => {
       setSeedPending(false);
       if (multipleTargets) {
-        setMentionTargets((prev) => [...prev, adopted as MultiMentionTarget]);
-      } else {
+        setMentionTargets((prev) =>
+          prev.some((t) => t.kind === adopted.kind && "id" in adopted && t.id === adopted.id)
+            ? prev
+            : [...prev, adopted as MultiMentionTarget],
+        );
+      } else if (!target) {
         setTarget(adopted);
         onTargetChange?.(adopted);
       }

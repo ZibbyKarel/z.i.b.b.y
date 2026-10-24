@@ -1,7 +1,7 @@
 import { BoardRowTestId } from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renderWithProviders, screen, within } from "../../../test/render";
+import { act, renderWithProviders, screen, within } from "../../../test/render";
 import { CommandLineTestId } from "../../tasks/components/CommandLine/CommandLine";
 import type { BridgeWidget } from "../grid/layout";
 import type { BridgeWidgetProps } from "./registry";
@@ -91,6 +91,21 @@ describe("TodoWidget", () => {
     await user.click(screen.getByTestId(TodoWidgetTestId.Add));
     expect(d.create).toHaveBeenCalledTimes(1);
     expect(d.create.mock.calls[0]?.[0]).toEqual({ body: { text: "ship it @Kodér for #Acme" } });
+  });
+
+  it("keeps the typed note when the POST fails and clears it on success", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<TodoWidget {...props()} />);
+    const input = screen.getByTestId(CommandLineTestId.Input);
+    await user.type(input, "keep me");
+    await user.click(screen.getByTestId(TodoWidgetTestId.Add));
+    expect(d.create).toHaveBeenCalledTimes(1);
+    // 409 / network error: onSuccess never fires.
+    expect(screen.getByTestId(CommandLineTestId.Input)).toHaveValue("keep me");
+
+    const opts = d.create.mock.calls[0]?.[1] as { onSuccess: () => void };
+    act(() => opts.onSuccess());
+    expect(screen.getByTestId(CommandLineTestId.Input)).toHaveValue("");
   });
 
   it("Delete calls DELETE for that id only and fires nothing else", async () => {
