@@ -36,6 +36,13 @@ vi.mock("../../departments/queries/useDepartmentsQuery", async () => {
   return { useDepartmentsQuery: () => ({ data: DEPARTMENTS }) };
 });
 
+const invalidate = vi.fn();
+vi.mock("@tanstack/react-query", async (orig) => ({
+  ...(await orig<typeof import("@tanstack/react-query")>()),
+  useQueryClient: () => ({ invalidateQueries: invalidate }),
+}));
+vi.mock("../../todo/queries/useTodoQuery", () => ({ getTodoQueryKey: () => ["todo"] }));
+
 const classifyMutate = vi.fn();
 const createMutate = vi.fn();
 vi.mock("../mutations", () => ({
@@ -48,6 +55,7 @@ describe("NewTaskScreen (ZB-04b)", () => {
     push.mockClear();
     classifyMutate.mockClear();
     createMutate.mockClear();
+    invalidate.mockClear();
     searchParams = new URLSearchParams();
   });
 
@@ -221,5 +229,48 @@ describe("NewTaskScreen (ZB-04b)", () => {
     fireEvent.click(screen.getByText("Vytvořit úkol"));
     const body = createMutate.mock.calls[0]?.[0]?.body as { target?: unknown };
     expect(body.target).toMatchObject({ kind: "department", id: "dev" });
+  });
+
+  it("seeds the title from ?title= (TODO 17)", () => {
+    searchParams = new URLSearchParams({ text: "Do it", title: "Do it now" });
+    render(<NewTaskScreen />);
+    expect(screen.getByLabelText("Název")).toHaveValue("Do it now");
+  });
+
+  it("sends ?todo= as todoId and refreshes the TODO list before navigating", () => {
+    searchParams = new URLSearchParams({ text: "Do it", title: "T", todo: "todo_7" });
+    createMutate.mockImplementation((_vars, opts) =>
+      opts.onSuccess({ body: { task: { id: "task-1" } } }),
+    );
+    render(<NewTaskScreen />);
+    fireEvent.click(screen.getByText("Vytvořit úkol"));
+    expect(createMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ body: expect.objectContaining({ todoId: "todo_7" }) }),
+      expect.anything(),
+    );
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["todo"] });
+    expect(push).toHaveBeenCalledWith("/work/tasks/task-1");
+    expect(invalidate.mock.invocationCallOrder[0]).toBeLessThan(
+      push.mock.invocationCallOrder[0] as number,
+    );
+    createMutate.mockReset();
+  });
+
+  it("omits todoId when there is no ?todo=", () => {
+    render(<NewTaskScreen />);
+    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
+    fireEvent.change(screen.getByLabelText("Zadání"), { target: { value: "x y z" } });
+    fireEvent.click(screen.getByText("Vytvořit úkol"));
+    const body = createMutate.mock.calls[0]?.[0]?.body as { todoId?: string };
+    expect(body.todoId).toBeUndefined();
+  });
+
+  it("pins current behaviour: a typed @Name in a PREFILLED brief is NOT adopted as a target (CommandLine resolves typed names only on change) — routing falls back to classification", () => {
+    searchParams = new URLSearchParams({ text: "fix it @Kodér", title: "T" });
+    render(<NewTaskScreen />);
+    fireEvent.click(screen.getByText("Vytvořit úkol"));
+    const body = createMutate.mock.calls[0]?.[0]?.body as { text: string; target?: unknown };
+    expect(body.text).toBe("fix it @Kodér");
+    expect(body.target).toBeUndefined();
   });
 });

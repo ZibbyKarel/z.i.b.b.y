@@ -1,34 +1,33 @@
 "use client";
 
 import type { TodoItem } from "@zibby/contracts";
-import {
-  BoardRow,
-  BoardText,
-  Button,
-  Container,
-  Stack,
-  TextInputField,
-} from "@zibby/design-system";
+import { BoardRow, BoardText, Button, Container, Stack } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { type FormEvent, type MouseEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type MouseEvent, useEffect, useMemo } from "react";
 import { useNow } from "../../../hooks/useNow";
 import { compactAgo } from "../../../utils/time";
+import { CommandLine, type ScopeKind } from "../../tasks/components/CommandLine/CommandLine";
 import { useCreateTodoMutation, useDeleteTodoMutation } from "../../todo/mutations";
 import { useTodoQuery } from "../../todo/queries";
+import { todoTaskTitle } from "../../todo/todoTaskTitle";
 import type { BridgeWidgetProps } from "./registry";
 
 export enum TodoWidgetTestId {
-  Input = "todo-widget-input",
   Add = "todo-widget-add",
   Implement = "todo-widget-implement",
   Delete = "todo-widget-delete",
 }
 
+/** `#` offers the same scope kinds as the chat composer. */
+const TODO_SCOPE_KINDS: readonly ScopeKind[] = ["company", "team", "project"];
+
 /**
- * TODO: the operator's quick notes (`/api/todo`). Interim minimal shape — the full
- * composer with mentions is Task 2. Implement opens `/work/tasks/new` prefilled.
+ * TODO: the operator's quick notes (`/api/todo`) — rows (oldest first) above a chat-style
+ * composer (`@` agents/workflows/departments, `#` company/team/project, `/` skills). The mention
+ * tokens stay in the note's text. Implement opens `/work/tasks/new` prefilled; the task created
+ * there removes the note server-side.
  */
 export function TodoWidget({ widget, onEmptyChange, onCountChange }: BridgeWidgetProps) {
   const t = useTranslations("bridge.widgets.todo");
@@ -37,35 +36,19 @@ export function TodoWidget({ widget, onEmptyChange, onCountChange }: BridgeWidge
   const query = useTodoQuery();
   const create = useCreateTodoMutation();
   const remove = useDeleteTodoMutation();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [text, setText] = useState("");
 
   const items = useMemo(() => query.data?.items ?? [], [query.data]);
   const loading = query.isPending;
   const count = loading ? undefined : items.length;
+  // Never empty: the composer is always available.
   useEffect(() => onEmptyChange(false), [onEmptyChange]);
   useEffect(() => onCountChange?.({ count, you: 0, loading }), [count, loading, onCountChange]);
-
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    const trimmed = text.trim();
-    if (!trimmed || create.isPending) return;
-    create.mutate(
-      { body: { text: trimmed } },
-      {
-        onSuccess: () => {
-          setText("");
-          inputRef.current?.focus();
-        },
-      },
-    );
-  };
 
   const implement = (e: MouseEvent, item: TodoItem) => {
     e.stopPropagation();
     const q = new URLSearchParams({
       text: item.text,
-      title: item.text.slice(0, 80),
+      title: todoTaskTitle(item.text),
       todo: item.id,
     });
     router.push(`/work/tasks/new?${q.toString()}` as Route);
@@ -84,9 +67,7 @@ export function TodoWidget({ widget, onEmptyChange, onCountChange }: BridgeWidge
                 intent="ghost"
                 onClick={(e) => implement(e, item)}
                 size="sm"
-              >
-                {t("implement")}
-              </Button>
+              />
               <Button
                 aria-label={t("deleteLabel", { name: item.text })}
                 data-testid={TodoWidgetTestId.Delete}
@@ -110,29 +91,32 @@ export function TodoWidget({ widget, onEmptyChange, onCountChange }: BridgeWidge
           </BoardText>
         </BoardRow>
       ))}
-      <Container as="form" onSubmit={submit} padding={["100", "150"]}>
-        <Stack align="center" direction="row" gap="100">
-          <Container grow minW0>
-            <TextInputField
-              hideLabel
-              data-testid={TodoWidgetTestId.Input}
-              label={t("input")}
-              onChange={(e) => setText(e.target.value)}
-              placeholder={t("placeholder")}
-              ref={inputRef}
-              value={text}
-            />
-          </Container>
-          <Button
-            data-testid={TodoWidgetTestId.Add}
-            disabled={!text.trim()}
-            intent="secondary"
-            loading={create.isPending}
-            type="submit"
-          >
-            {t("add")}
-          </Button>
-        </Stack>
+      <Container padding={["100", "150"]}>
+        <CommandLine
+          allowSkillMentions
+          hideLabel
+          multipleTargets
+          chrome={false}
+          label={t("input")}
+          onSubmit={(text) => {
+            const trimmed = text.trim();
+            if (trimmed) create.mutate({ body: { text: trimmed } });
+          }}
+          placeholder={t("placeholder")}
+          renderTrailing={({ canSubmit, submit }) => (
+            <Button
+              data-testid={TodoWidgetTestId.Add}
+              disabled={!canSubmit || create.isPending}
+              intent="secondary"
+              onClick={submit}
+              size="sm"
+            >
+              {t("add")}
+            </Button>
+          )}
+          scopeKinds={TODO_SCOPE_KINDS}
+          showAttach={false}
+        />
       </Container>
     </>
   );
