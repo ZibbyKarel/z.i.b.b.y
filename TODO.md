@@ -55,7 +55,7 @@
         b. [ ] Katalog vlastních skills s verzemi a akce Nainstalovat na tento stroj (přes gate s náhledem změny)
     <!-- 15. [ ] Widget Slack: probíhající konverzace s kolegy a návrhy odpovědí (Socket Mode/Events API, jen mine-and-mentions; odeslání zůstává Tier-3; bez konkrétní odpovědi jen notify-only), nice to have -->
     <!-- 16. [ ] Sentry jako druhý MonitorAdapter a živé metriky nasazených webů ve widgetu monitoringu -->
-14. [ ] Revize Návrhy: widget co zobrazí systémové návrhy vzniklé z automatizací, s možností zamítnout nebo upravit poznatek (provenance, jistota, expirace) - například z automatizace Továrna agentů, Návrhy na automatizaci, Extrakce vzorů a dalších
+14. [x] Revize Návrhy: widget co zobrazí systémové návrhy vzniklé z automatizací, s možností zamítnout nebo upravit poznatek (provenance, jistota, expirace) - například z automatizace Továrna agentů, Návrhy na automatizaci, Extrakce vzorů a dalších (main@742a0718)
 15. [ ] Widget co zobrazuje budgety a limity per project / firmu a zvýraznuje ty, které se blíží k vyčerpání nebo jsou vyčerpány
 16. [ ] Automatické review a zpracování komentářů u PR per firma/projekt (vedle auto synchronizace a auto implementace), s výběrem workflow podle obsahu PR
         a. [ ] Přepínače autoReview a autoComments na firmě i projektu (dědění firma → projekt, přepis na projektu), stejný model a UI jako autoPlay a sync; respektují zapnutí projektu na daném stroji
