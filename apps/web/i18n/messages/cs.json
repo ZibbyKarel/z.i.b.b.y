@@ -526,6 +526,8 @@
     "countSummary": "{count, plural, =0 {žádní agenti} one {# agent} few {# agenti} other {# agentů}} · sdílený pool pro workflow",
     "run": "Spustit",
     "openAria": "Otevřít {name}",
+    "noDepartment": "Bez oddělení",
+    "departmentPlaceholder": "Vyber oddělení…",
     "workflowUsage": "{count} workflow",
     "usedInWorkflows": "Použito v workflow",
     "notInWorkflow": "Zatím v žádném workflow — volný k použití.",

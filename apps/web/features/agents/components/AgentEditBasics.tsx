@@ -87,6 +87,7 @@ export function AgentEditBasics({ control, categories }: AgentEditBasicsProps) {
               label={t("fields.department")}
               name="department"
               options={departments.list.map((s) => ({ value: s.id, label: s.name }))}
+              placeholder={t("departmentPlaceholder")}
             />
 
             <Stack direction="row" gap="150">

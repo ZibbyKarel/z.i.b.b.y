@@ -1,6 +1,6 @@
 import { Controller } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import { agentsContract } from "@zibby/contracts";
+import { type UpdateAgentInput, agentsContract } from "@zibby/contracts";
 import { unknownDepartment422 } from "../departments/departments.errors";
 import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { makeErrorMapper } from "../shared/http/error-mapping";
@@ -26,6 +26,24 @@ export class AgentsController {
     private readonly departments: DepartmentsStorageService,
   ) {}
 
+  /**
+   * Department guard for an update, mirroring create: an update that would leave an
+   * agent that has a department with none → 422; an unknown department → 422. The patch
+   * is a merge, so an update that does not mention `department` keeps the stored one;
+   * only an explicit empty/undefined value would clear it. An agent that has no
+   * department (pre-backfill) stays updatable. Returns the 422 response or null.
+   * Throws the storage not-found error for an unknown id (only when it has to read).
+   */
+  async departmentUpdateGuard(id: string, body: UpdateAgentInput) {
+    if (!("department" in body)) return null;
+    if (body.department) {
+      const missing = await this.departments.firstMissing([body.department]);
+      return missing ? unknownDepartment422(missing) : null;
+    }
+    const existing = await this.storage.get(id);
+    return existing.department ? unprocessable("department is required") : null;
+  }
+
   @TsRestHandler(agentsContract)
   handler() {
     return tsRestHandler(agentsContract, {
@@ -50,8 +68,16 @@ export class AgentsController {
 
       getAgent: ({ params: { id } }) => errors.or404(id, () => this.storage.get(id)),
 
-      updateAgent: ({ params: { id }, body }) =>
-        errors.or404(id, () => this.storage.update(id, body)),
+      updateAgent: async ({ params: { id }, body }) => {
+        try {
+          const refused = await this.departmentUpdateGuard(id, body);
+          if (refused) return refused;
+        } catch (error) {
+          if (errors.isMissing(error)) return errors.notFound(id);
+          throw error;
+        }
+        return errors.or404(id, () => this.storage.update(id, body));
+      },
 
       deleteAgent: ({ params: { id } }) =>
         errors.or404(id, async () => {

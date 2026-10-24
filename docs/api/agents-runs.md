@@ -44,11 +44,21 @@ The body of the `.md` file is the system prompt passed to the claude CLI.
 GET    /api/agents              list every agent
 POST   /api/agents              create an agent
 GET    /api/agents/:id          agent detail
-PUT    /api/agents/:id          update an agent
+PATCH  /api/agents/:id          update an agent (partial merge)
 DELETE /api/agents/:id          delete an agent
 GET    /api/agents/search?q=    full-text search (id / name / description / category)
 GET    /api/agents/categories   list categories
 ```
+
+**Department is required at every write.** Create returns 422
+(`department is required`) without a `department`. `PATCH /api/agents/:id` is a
+merge, so an update that omits `department` keeps the stored one; the guard
+refuses (422, same message) an explicit empty/undefined `department` on an agent
+that has one. An agent with no department (pre-backfill) can still be updated.
+Both create and update return the unknown-department 422 for an id not in the
+departments registry. The web Agents page groups agents into department
+sections (a trailing "No department" section catches any without one) and its
+create dialog requires a department.
 
 ## Agent Run — dispatch
 

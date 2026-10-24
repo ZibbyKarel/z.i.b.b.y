@@ -1,6 +1,6 @@
 "use client";
 
-import type { Agent, RegistryBindings } from "@zibby/contracts";
+import type { RegistryBindings } from "@zibby/contracts";
 import { type DepartmentId } from "@zibby/contracts";
 import {
   Button,
@@ -21,9 +21,10 @@ import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { PageContainer } from "../../../components/PageContainer/PageContainer";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { slug } from "../../../utils/slug";
+import { AgentsByDepartment } from "../../agents/components/AgentsByDepartment";
 import { NewAgentDialog } from "../../agents/components/NewAgentDialog";
 import { useCreateAgentMutation } from "../../agents/mutations";
-import { useAgentsQuery, useCategoriesQuery } from "../../agents/queries";
+import { useCategoriesQuery } from "../../agents/queries";
 import { AddCommandModal } from "../../commands/components/AddCommandModal/AddCommandModal";
 import { useCreateCommandMutation } from "../../commands/mutations";
 import { useCommandsQuery } from "../../commands/queries";
@@ -123,7 +124,7 @@ export function RegistriesScreen({ kind, openCreateOnMount }: RegistriesScreenPr
             </Button>
           </Stack>
 
-          {kind === "agents" && <AgentsTable />}
+          {kind === "agents" && <AgentsByDepartment />}
           {kind === "skills" && <SkillsTable bindings={bindings?.skills} />}
           {kind === "mcp" && <McpTable bindings={bindings?.mcp} />}
           {kind === "hooks" && <HooksTable bindings={bindings?.hooks} />}
@@ -143,52 +144,6 @@ export function RegistriesScreen({ kind, openCreateOnMount }: RegistriesScreenPr
 // ---------------------------------------------------------------------------
 // Per-kind tables
 // ---------------------------------------------------------------------------
-
-function AgentsTable() {
-  const t = useTranslations("registries");
-  const query = useAgentsQuery();
-  const rows = query.data ?? [];
-  if (query.isError) return <QueryError onRetry={() => void query.refetch()} />;
-
-  const columns: DataTableColumn<Agent>[] = [
-    {
-      key: "name",
-      label: t("columns.name"),
-      width: "lg",
-      render: (a) => a.displayName ?? a.name ?? a.id,
-    },
-    {
-      key: "desc",
-      label: t("columns.description"),
-      width: "flex",
-      render: (a) => a.description ?? a.title ?? "",
-    },
-    {
-      key: "meta",
-      label: t("metaHeader.agents"),
-      width: "sm",
-      render: (a) => a.category ?? "—",
-    },
-    {
-      key: "boundIn",
-      label: t("columns.boundIn"),
-      width: "xl",
-      render: (a) => (
-        <BoundInCell departmentIds={a.department ? [a.department] : []} kind="agents" />
-      ),
-    },
-  ];
-  return (
-    <DataTable
-      columns={columns}
-      empty={t("emptyAgents")}
-      getRowKey={(a) => a.id}
-      loading={query.isPending}
-      rowHref={(a) => registryHref("agents", a.id)}
-      rows={rows}
-    />
-  );
-}
 
 function SkillsTable({ bindings }: { bindings?: Record<string, DepartmentId[]> }) {
   const t = useTranslations("registries");

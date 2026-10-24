@@ -12,6 +12,8 @@ export interface SelectFieldSingleProps<T extends string = string> extends Selec
   multi?: false;
   value: T;
   onValueChange: (value: T) => void;
+  /** Shown in the control while nothing is selected (`value` matches no option). */
+  placeholder?: string;
 }
 
 export interface SelectFieldMultiProps<T extends string = string> extends SelectFieldBaseProps<T> {
@@ -76,6 +78,7 @@ export function SelectField<T extends string = string>(props: SelectFieldProps<T
             invalid={invalid}
             onChange={props.onValueChange}
             options={options}
+            placeholder={props.placeholder}
             value={props.value}
             variant="field"
           />

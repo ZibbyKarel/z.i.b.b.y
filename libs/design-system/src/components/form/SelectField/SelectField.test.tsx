@@ -11,6 +11,19 @@ const OPTIONS = [
 ];
 
 describe("SelectField", () => {
+  it("shows the placeholder while the single value matches no option", () => {
+    render(
+      <SelectField
+        label="Model"
+        onValueChange={vi.fn()}
+        options={OPTIONS}
+        placeholder="Pick one…"
+        value=""
+      />,
+    );
+    expect(screen.getByTestId(DropdownTestId.Trigger)).toHaveTextContent("Pick one…");
+  });
+
   it("opens the dropdown and reports the chosen value", async () => {
     const user = userEvent.setup();
     const onValueChange = vi.fn();

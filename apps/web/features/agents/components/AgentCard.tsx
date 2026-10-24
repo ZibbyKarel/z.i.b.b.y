@@ -12,7 +12,7 @@ export interface AgentCardProps {
 
 export function AgentCard({ agent, workflowCount = 0, onClick }: AgentCardProps) {
   const t = useTranslations("agents");
-  const name = agent.name ?? agent.id;
+  const name = agent.displayName ?? agent.name ?? agent.id;
   const tools = agent.tools ?? [];
 
   return (
