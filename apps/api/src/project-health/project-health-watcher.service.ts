@@ -5,7 +5,12 @@ import {
   type OnModuleInit,
   Optional,
 } from "@nestjs/common";
-import type { Project, ProjectHealthCheck, ProjectHealthStatus } from "@zibby/contracts";
+import type {
+  Project,
+  ProjectHealthCheck,
+  ProjectHealthQuery,
+  ProjectHealthStatus,
+} from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { WatcherHealthRegistry } from "../health/watcher-health.registry";
 import { ProjectNotFoundError } from "../projects/projects.errors";
@@ -14,11 +19,16 @@ import { LoggerService, type ScopedLogger } from "../shared/logging/logger.servi
 import { TickingWatcherBase } from "../shared/ticking-watcher-base";
 import { SystemConfigStore } from "../system/system-config.store";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
-import { checkUrl } from "./check-url";
+import { CHECK_URL_TIMEOUT_MS, checkUrl } from "./check-url";
 import { ProjectHealthStore } from "./project-health.store";
 
 /** DI token for the `fetch` the watcher checks with (tests inject a fake). */
 export const PROJECT_HEALTH_FETCH = "PROJECT_HEALTH_FETCH";
+/** DI token for the per-check timeout (ms); defaults to {@link CHECK_URL_TIMEOUT_MS}. */
+export const PROJECT_HEALTH_TIMEOUT_MS = "PROJECT_HEALTH_TIMEOUT_MS";
+
+/** How many due checks a tick runs at once — N unreachable hosts cost ~N/4 × timeout. */
+export const PROJECT_HEALTH_CONCURRENCY = 4;
 
 /** No status to act on — unknown project, no `healthCheck`, or never checked. */
 export class ProjectHealthNotFoundError extends Error {
@@ -33,6 +43,21 @@ export class ProjectHealthConflictError extends Error {
   constructor(public readonly projectId: string) {
     super(`Project "${projectId}" is up — nothing to analyze`);
     this.name = "ProjectHealthConflictError";
+  }
+}
+
+/** The investigation task could not be created (empty catalog, claude down, …) → 503. */
+export class ProjectHealthDispatchError extends Error {
+  constructor(
+    public readonly projectId: string,
+    cause: unknown,
+  ) {
+    super(
+      `Could not create the analysis task for "${projectId}": ${
+        cause instanceof Error ? cause.message : String(cause)
+      }`,
+    );
+    this.name = "ProjectHealthDispatchError";
   }
 }
 
@@ -54,6 +79,8 @@ export const PROJECT_HEALTH_INSTRUCTION =
  * transitions are recorded (`project-health-down` / `project-health-recovered`);
  * a first check that comes back down counts as a transition. A down result
  * NEVER dispatches a task — {@link analyze} (the operator's click) does.
+ * Due checks run with bounded concurrency ({@link PROJECT_HEALTH_CONCURRENCY}),
+ * so a few hanging hosts can't make the tick outlive its interval.
  * Per-project try/catch: one failing project never stops the others.
  */
 @Injectable()
@@ -65,6 +92,7 @@ export class ProjectHealthWatcherService
   protected readonly log: ScopedLogger;
   protected readonly watcherId = "project-health" as const;
   private readonly fetchImpl: typeof fetch;
+  private readonly timeoutMs: number;
   /**
    * Per-project serialization — a tick, a `checkNow` and an `analyze` on the
    * same project read-modify-write the same file; chaining them keeps an
@@ -81,10 +109,12 @@ export class ProjectHealthWatcherService
     private readonly watcherHealthRegistry: WatcherHealthRegistry,
     logger: LoggerService,
     @Optional() @Inject(PROJECT_HEALTH_FETCH) fetchImpl?: typeof fetch,
+    @Optional() @Inject(PROJECT_HEALTH_TIMEOUT_MS) timeoutMs?: number,
   ) {
     super();
     this.log = logger.child(ProjectHealthWatcherService.name);
     this.fetchImpl = fetchImpl ?? ((input, init) => fetch(input, init));
+    this.timeoutMs = timeoutMs ?? CHECK_URL_TIMEOUT_MS;
   }
 
   onModuleInit(): void {
@@ -118,27 +148,40 @@ export class ProjectHealthWatcherService
     this.unsubscribe?.();
   }
 
-  /** Check every due project once, then drop statuses no project owns any more. */
+  /**
+   * Check every due project once (at most {@link PROJECT_HEALTH_CONCURRENCY} at a
+   * time), then drop statuses no project owns any more.
+   */
   async tick(now: Date = new Date()): Promise<void> {
     const projects = await this.projects.list();
     const monitored = new Set<string>();
+    const queue: Array<{ project: Project; healthCheck: ProjectHealthCheck }> = [];
     for (const project of projects) {
-      const healthCheck = project.healthCheck;
-      if (!healthCheck) continue;
+      if (!project.healthCheck) continue;
       monitored.add(project.id);
-      try {
-        await this.withLock(project.id, async () => {
-          const previous = await this.store.read(project.id);
-          if (!isDue(previous, healthCheck, now)) return;
-          await this.checkProject(project, healthCheck, previous, now);
-        });
-      } catch (err) {
-        this.log.warn("project health check failed", {
-          projectId: project.id,
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
+      queue.push({ project, healthCheck: project.healthCheck });
     }
+
+    const worker = async (): Promise<void> => {
+      for (let next = queue.shift(); next; next = queue.shift()) {
+        const { project, healthCheck } = next;
+        try {
+          await this.withLock(project.id, async () => {
+            const previous = await this.store.read(project.id);
+            if (!isDue(previous, healthCheck, now)) return;
+            await this.checkProject(project, healthCheck, previous, now);
+          });
+        } catch (err) {
+          this.log.warn("project health check failed", {
+            projectId: project.id,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+    };
+    await Promise.all(
+      Array.from({ length: Math.min(PROJECT_HEALTH_CONCURRENCY, queue.length) }, worker),
+    );
 
     // A removed healthCheck or a deleted project → its status disappears.
     for (const status of await this.store.list().catch(() => [] as ProjectHealthStatus[])) {
@@ -168,34 +211,63 @@ export class ProjectHealthWatcherService
   }
 
   /**
+   * Stored statuses that still belong to a live check — the project exists, has a
+   * `healthCheck`, and its url matches. Without this a removed check would ghost-list
+   * until the next tick (forever while `projectHealthTickMs` is 0).
+   */
+  async list(query: ProjectHealthQuery = {}): Promise<ProjectHealthStatus[]> {
+    const urls = new Map(
+      (await this.projects.list()).flatMap((p) =>
+        p.healthCheck ? [[p.id, p.healthCheck.url] as const] : [],
+      ),
+    );
+    return (await this.store.list(query)).filter((s) => urls.get(s.projectId) === s.url);
+  }
+
+  /**
    * The operator's "Analyzovat" click: one ordinary investigation task through
    * the scheduler (classifier, budget/limit guards and the PR gate all apply),
    * attributed to the project. Every click creates a new task — an explicit
    * operator action. The check result is framed as data (Law 4).
+   *
+   * `createTask` runs OUTSIDE the per-project lock (a slow classifier must not
+   * stall that project's checks); the lock is taken only to stamp
+   * `analysisTaskId`, after a re-read — and only if the status is still the same
+   * check (same url) and still down.
    */
   async analyze(projectId: string): Promise<{ taskId: string }> {
-    return this.withLock(projectId, async () => {
-      const status = await this.store.read(projectId);
-      if (!status) throw new ProjectHealthNotFoundError(projectId);
-      if (status.state === "up") throw new ProjectHealthConflictError(projectId);
-      const name = await this.projects
-        .get(projectId)
-        .then((p) => p.name)
-        .catch(() => projectId);
+    const status = await this.store.read(projectId);
+    if (!status) throw new ProjectHealthNotFoundError(projectId);
+    const project = await this.projects.get(projectId).catch((err: unknown) => {
+      if (err instanceof ProjectNotFoundError) throw new ProjectHealthNotFoundError(projectId);
+      throw err;
+    });
+    if (project.healthCheck?.url !== status.url) throw new ProjectHealthNotFoundError(projectId);
+    if (status.state === "up") throw new ProjectHealthConflictError(projectId);
 
+    let taskId: string;
+    try {
       const result = await this.scheduler.createTask(
         {
-          title: `Health check failing: ${name}`,
-          text: analysisText(name, status),
+          title: `Health check failing: ${project.name}`,
+          text: analysisText(project.name, status),
           paths: [],
         },
         Date.now(),
         projectId,
       );
-      const taskId = result.task.id;
-      await this.store.write({ ...status, analysisTaskId: taskId });
-      return { taskId };
+      taskId = result.task.id;
+    } catch (err) {
+      throw new ProjectHealthDispatchError(projectId, err);
+    }
+
+    await this.withLock(projectId, async () => {
+      const latest = await this.store.read(projectId);
+      if (latest && latest.url === status.url && latest.state === "down") {
+        await this.store.write({ ...latest, analysisTaskId: taskId });
+      }
     });
+    return { taskId };
   }
 
   /**
@@ -210,7 +282,7 @@ export class ProjectHealthWatcherService
     now: Date,
   ): Promise<ProjectHealthStatus> {
     const prior = previous && previous.url === healthCheck.url ? previous : null;
-    const result = await checkUrl(healthCheck.url, this.fetchImpl);
+    const result = await checkUrl(healthCheck.url, this.fetchImpl, this.timeoutMs);
     const state = result.ok ? "up" : "down";
     const checkedAt = now.toISOString();
     const unchanged = prior?.state === state;

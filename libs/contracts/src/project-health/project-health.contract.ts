@@ -32,6 +32,8 @@ export const projectHealthContract = c.router(
         200: AnalyzeProjectHealthResultSchema,
         404: ErrorSchema,
         409: ErrorSchema,
+        /** The task could not be created (empty catalog, claude unavailable, …). */
+        503: ErrorSchema,
       },
       summary: "Create an investigation task for a down project",
     },

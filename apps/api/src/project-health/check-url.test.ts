@@ -57,6 +57,12 @@ describe("checkUrl", () => {
     expect(result.httpStatus).toBeUndefined();
   });
 
+  it("a fetch that ignores the abort signal still resolves as a timeout", async () => {
+    const fetchImpl = vi.fn(() => new Promise<Response>(() => {}));
+    const result = await checkUrl(URL_, fetchImpl as unknown as typeof fetch, 20);
+    expect(result).toMatchObject({ ok: false, error: "timeout after 20 ms" });
+  });
+
   it("caps a long network error message at 500 chars", async () => {
     const fetchImpl = vi.fn(async () => {
       throw new Error("x".repeat(2000));

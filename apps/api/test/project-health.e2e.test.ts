@@ -107,6 +107,17 @@ describe("Project health API (e2e)", () => {
       .send({ healthCheck: null });
     expect(res.status).toBe(200);
     expect(res.body.healthCheck).toBeUndefined();
+    // The tick is disabled in tests, so the status file is still on disk — the list
+    // must not ghost-list it.
+    const list = await request(app.getHttpServer()).get("/api/project-health");
+    expect(list.body).toEqual([]);
+  });
+
+  it("rejects a health url carrying credentials", async () => {
+    const res = await request(app.getHttpServer())
+      .post("/api/projects")
+      .send({ id: "creds", name: "Creds", healthCheck: { url: "https://u:p@acme.dev/h" } });
+    expect(res.status).toBe(400);
   });
 
   it("rejects a non-http health url on create", async () => {

@@ -5,8 +5,10 @@ import type { Project } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ProjectNotFoundError } from "../projects/projects.errors";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
+import type { SystemConfigStore } from "../system/system-config.store";
 import {
   ProjectHealthConflictError,
+  ProjectHealthDispatchError,
   ProjectHealthNotFoundError,
   ProjectHealthWatcherService,
 } from "./project-health-watcher.service";
@@ -41,16 +43,19 @@ describe("ProjectHealthWatcherService", () => {
   let responses: Map<string, number | Error>;
   let fetchImpl: ReturnType<typeof vi.fn>;
 
-  const makeWatcher = () =>
+  const makeWatcher = (
+    opts: { systemConfig?: SystemConfigStore; timeoutMs?: number; register?: () => void } = {},
+  ) =>
     new ProjectHealthWatcherService(
       projects as never,
       store,
       scheduler as never,
       activity as never,
-      fakeSystemConfigStore(),
-      { register: () => {} } as never,
+      opts.systemConfig ?? fakeSystemConfigStore(),
+      { register: opts.register ?? (() => {}) } as never,
       fakeLogger as never,
       fetchImpl as unknown as typeof fetch,
+      opts.timeoutMs,
     );
 
   const kinds = () => activity.record.mock.calls.map(([entry]) => (entry as { kind: string }).kind);
@@ -284,6 +289,71 @@ describe("ProjectHealthWatcherService", () => {
       expect(scheduler.createTask).not.toHaveBeenCalled();
     });
 
+    it("project deleted since the last check → NotFound, no task", async () => {
+      responses.set("https://acme.dev/health", 503);
+      const watcher = makeWatcher();
+      await watcher.tick(T0);
+      projectList = [];
+      await expect(watcher.analyze("acme")).rejects.toBeInstanceOf(ProjectHealthNotFoundError);
+      expect(scheduler.createTask).not.toHaveBeenCalled();
+    });
+
+    it("healthCheck removed or url changed since the last check → NotFound, no task", async () => {
+      responses.set("https://acme.dev/health", 503);
+      const watcher = makeWatcher();
+      await watcher.tick(T0);
+      projectList = [{ id: "acme", name: "Acme Shop" }];
+      await expect(watcher.analyze("acme")).rejects.toBeInstanceOf(ProjectHealthNotFoundError);
+      projectList = [{ ...ACME, healthCheck: { url: "https://acme.dev/v2", intervalSec: 300 } }];
+      await expect(watcher.analyze("acme")).rejects.toBeInstanceOf(ProjectHealthNotFoundError);
+      expect(scheduler.createTask).not.toHaveBeenCalled();
+    });
+
+    it("a createTask failure → ProjectHealthDispatchError, analysisTaskId untouched", async () => {
+      responses.set("https://acme.dev/health", 503);
+      const watcher = makeWatcher();
+      await watcher.tick(T0);
+      scheduler.createTask.mockRejectedValueOnce(new Error("catalog is empty"));
+      await expect(watcher.analyze("acme")).rejects.toBeInstanceOf(ProjectHealthDispatchError);
+      expect((await store.read("acme"))?.analysisTaskId).toBeUndefined();
+    });
+
+    it("createTask runs outside the lock — a slow dispatch does not block checkNow", async () => {
+      responses.set("https://acme.dev/health", 503);
+      const watcher = makeWatcher();
+      await watcher.tick(T0);
+      let release: (v: unknown) => void = () => {};
+      scheduler.createTask.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            release = resolve;
+          }),
+      );
+      const pending = watcher.analyze("acme");
+      await vi.waitFor(() => expect(scheduler.createTask).toHaveBeenCalled());
+      // The check completes while the dispatch is still pending.
+      const status = await watcher.checkNow("acme", after(5));
+      expect(status.checkedAt).toBe(after(5).toISOString());
+      release({ outcome: "dispatched", task: { id: "task_slow" } });
+      expect(await pending).toEqual({ taskId: "task_slow" });
+      expect((await store.read("acme"))?.analysisTaskId).toBe("task_slow");
+    });
+
+    it("does not stamp analysisTaskId when the project recovered during dispatch", async () => {
+      responses.set("https://acme.dev/health", 503);
+      const watcher = makeWatcher();
+      await watcher.tick(T0);
+      scheduler.createTask.mockImplementationOnce(async () => {
+        responses.set("https://acme.dev/health", 200);
+        await watcher.checkNow("acme", after(5));
+        return { outcome: "dispatched", task: { id: "task_late" } };
+      });
+      expect(await watcher.analyze("acme")).toEqual({ taskId: "task_late" });
+      const status = await store.read("acme");
+      expect(status?.state).toBe("up");
+      expect(status?.analysisTaskId).toBeUndefined();
+    });
+
     it("on unknown (no status) → ProjectHealthNotFoundError", async () => {
       await expect(makeWatcher().analyze("ghost")).rejects.toBeInstanceOf(
         ProjectHealthNotFoundError,
@@ -298,6 +368,99 @@ describe("ProjectHealthWatcherService", () => {
     await watcher.tick(T0);
     await watcher.tick(after(300));
     expect(scheduler.createTask).not.toHaveBeenCalled();
+  });
+
+  describe("list", () => {
+    it("hides statuses whose project is gone, has no healthCheck, or a different url", async () => {
+      projectList = [
+        ACME,
+        BETA,
+        { id: "gamma", name: "Gamma", healthCheck: { url: "https://g.dev/h", intervalSec: 60 } },
+      ];
+      const watcher = makeWatcher();
+      await watcher.tick(T0);
+      expect((await watcher.list()).map((s) => s.projectId)).toEqual(["acme", "beta", "gamma"]);
+
+      // No tick runs (tick disabled) — the stale files are still on disk.
+      projectList = [
+        { id: "acme", name: "Acme Shop" },
+        { id: "gamma", name: "Gamma", healthCheck: { url: "https://g.dev/v2", intervalSec: 60 } },
+      ];
+      expect(await store.list()).toHaveLength(3);
+      expect(await watcher.list()).toEqual([]);
+    });
+
+    it("filters by projectId", async () => {
+      projectList = [ACME, BETA];
+      const watcher = makeWatcher();
+      await watcher.tick(T0);
+      expect((await watcher.list({ projectId: "beta" })).map((s) => s.projectId)).toEqual(["beta"]);
+    });
+  });
+
+  it("a never-resolving fetch for one project does not block another's check within the tick", async () => {
+    projectList = [ACME, BETA];
+    fetchImpl.mockImplementation((url: string) =>
+      url === "https://acme.dev/health"
+        ? new Promise<Response>(() => {})
+        : Promise.resolve(new Response(null, { status: 200 })),
+    );
+    await makeWatcher({ timeoutMs: 50 }).tick(T0);
+    expect((await store.read("beta"))?.state).toBe("up");
+    expect(await store.read("acme")).toMatchObject({ state: "down", error: "timeout after 50 ms" });
+  });
+
+  it("runs due checks concurrently, at most 4 at a time", async () => {
+    projectList = Array.from({ length: 9 }, (_, i) => ({
+      id: `p${i}`,
+      name: `P${i}`,
+      healthCheck: { url: `https://p${i}.dev/h`, intervalSec: 60 },
+    }));
+    let inFlight = 0;
+    let peak = 0;
+    fetchImpl.mockImplementation(async () => {
+      inFlight += 1;
+      peak = Math.max(peak, inFlight);
+      await new Promise((r) => setTimeout(r, 10));
+      inFlight -= 1;
+      return new Response(null, { status: 200 });
+    });
+    await makeWatcher().tick(T0);
+    expect(peak).toBe(4);
+    expect(await store.list()).toHaveLength(9);
+  });
+
+  describe("timer lifecycle", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("re-arms on a systemConfig change and tears down on destroy", async () => {
+      vi.useFakeTimers();
+      const systemConfig = fakeSystemConfigStore({ projectHealthTickMs: 0 });
+      const register = vi.fn();
+      const watcher = makeWatcher({ systemConfig, register });
+      const tick = vi.spyOn(watcher, "tick").mockResolvedValue(undefined);
+
+      watcher.onModuleInit();
+      expect(register).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(tick).not.toHaveBeenCalled(); // 0 = disabled
+
+      await systemConfig.write({ ...systemConfig.current(), projectHealthTickMs: 1_000 });
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(tick).toHaveBeenCalledTimes(1);
+      expect(watcher.watcherHealth().status).toBe("ok");
+
+      watcher.onModuleDestroy();
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(tick).toHaveBeenCalledTimes(1);
+
+      // Unsubscribed: a later config change no longer re-arms.
+      await systemConfig.write({ ...systemConfig.current(), projectHealthTickMs: 500 });
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(tick).toHaveBeenCalledTimes(1);
+    });
   });
 
   it("reports watcher health under the project-health id (disabled at tick 0)", () => {

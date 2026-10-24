@@ -218,7 +218,12 @@ export const ProjectHealthCheckSchema = z
     url: z
       .string()
       .url()
-      .refine((u) => /^https?:\/\//i.test(u), { message: "healthCheck.url must be http(s)" }),
+      .refine((u) => /^https?:\/\//i.test(u), { message: "healthCheck.url must be http(s)" })
+      // No credentials: the url is stored in the status file and copied into the
+      // Analyze task text (an agent prompt).
+      .refine((u) => !URL.canParse(u) || (!new URL(u).username && !new URL(u).password), {
+        message: "healthCheck.url must not contain credentials",
+      }),
     intervalSec: z.number().int().min(30).max(3600).default(300),
   })
   .strict();

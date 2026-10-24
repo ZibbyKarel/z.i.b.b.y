@@ -28,6 +28,16 @@ describe("ProjectHealthCheckSchema", () => {
     }
   });
 
+  it("rejects a url carrying a username or password", () => {
+    for (const url of [
+      "https://user:pass@acme.dev/health",
+      "https://user@acme.dev/health",
+      "http://:secret@acme.dev/health",
+    ]) {
+      expect(ProjectHealthCheckSchema.safeParse({ url }).success).toBe(false);
+    }
+  });
+
   it("bounds intervalSec to 30..3600 integer seconds", () => {
     const at = (intervalSec: number) =>
       ProjectHealthCheckSchema.safeParse({ url: "https://acme.dev/h", intervalSec }).success;
@@ -113,6 +123,12 @@ describe("projectHealthContract", () => {
     expect(projectHealthContract.listProjectHealth.method).toBe("GET");
     expect(projectHealthContract.listProjectHealth.path).toBe("/api/project-health");
     expect(projectHealthContract.analyzeProjectHealth.method).toBe("POST");
+    expect(Object.keys(projectHealthContract.analyzeProjectHealth.responses).sort()).toEqual([
+      "200",
+      "404",
+      "409",
+      "503",
+    ]);
     expect(projectHealthContract.analyzeProjectHealth.path).toBe(
       "/api/project-health/:projectId/analyze",
     );

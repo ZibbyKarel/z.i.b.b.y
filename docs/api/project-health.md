@@ -14,10 +14,10 @@ alongside it instead.
 `ProjectSchema.healthCheck` (`libs/contracts/src/projects/project.schema.ts`) is
 `ProjectHealthCheckSchema`, `.strict()`:
 
-| Field         | Rule                                                     |
-| ------------- | -------------------------------------------------------- |
-| `url`         | `z.string().url()`, refined to `http:`/`https:` only     |
-| `intervalSec` | int, `30`–`3600`, default `300` (never faster than 30 s) |
+| Field         | Rule                                                                                                                                              |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `url`         | `z.string().url()`, refined to `http:`/`https:` only, and rejected if it carries a username or password (it is copied into the Analyze task text) |
+| `intervalSec` | int, `30`–`3600`, default `300` (never faster than 30 s)                                                                                          |
 
 `UpdateProjectSchema` re-widens it to accept `null`, which clears the health check
 (the same absent-vs-null rule as `companyId`/`teamId`/`logo`; `ProjectsStorageService.update`
@@ -51,8 +51,9 @@ join.
 `checkUrl(url, fetchImpl, timeoutMs = 10_000)` (`apps/api/src/project-health/check-url.ts`)
 sends one `GET` with `redirect: "follow"` and an `AbortController` timeout. It never
 throws: a non-2xx, a timeout, or a network error (including a synchronous throw from
-`fetch`) all return `{ ok: false, error }`. It never reads or stores the response
-body.
+`fetch`) all return `{ ok: false, error }`. The fetch is raced against the abort, so
+the timeout holds even if an injected `fetch` ignores its signal. It never reads or
+stores the response body.
 
 ## Watcher
 
@@ -79,9 +80,11 @@ Each tick:
 4. Deletes the status file of any project whose `healthCheck` was removed or that
    was deleted.
 
-Each project runs in its own try/catch, so one failure never stops the others. A
-per-project lock serializes the tick, `check` and `analyze`, so a slow check can't
-clobber an `analysisTaskId` written while it ran.
+Due checks run with bounded concurrency (4 at a time, a simple worker pool), so a
+few hanging hosts can't make one tick outlive its interval. Each project runs in its
+own try/catch, so one failure never stops the others. A per-project lock serializes
+the tick's check, `check` and `analyze`'s `analysisTaskId` write, so a slow check
+can't clobber an `analysisTaskId` written while it ran.
 
 **A down result never dispatches a task.** Otherwise a server outage would spawn a
 task on every tick. The notification is the down state itself (the header bell, the
@@ -89,11 +92,11 @@ project detail page), and it clears on recovery.
 
 ## Endpoints (`projectHealthContract`, `/api/project-health`)
 
-| Route                                         | Behaviour                                                                                                          |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `GET /api/project-health?projectId=`          | `200 ProjectHealthStatus[]`: one per project that has a health check and has been checked at least once            |
-| `POST /api/project-health/:projectId/check`   | Runs one check now (ignores the interval) → `200 ProjectHealthStatus`; `404` when the project has no `healthCheck` |
-| `POST /api/project-health/:projectId/analyze` | The operator's Analyze click → `200 { taskId }`; `404` with no status; `409` when the state is `up`                |
+| Route                                         | Behaviour                                                                                                                                                                                                                                                                                                        |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/project-health?projectId=`          | `200 ProjectHealthStatus[]`: one per project that has a health check and has been checked at least once. Filtered against the live projects: a status whose project is gone, has no `healthCheck`, or has a different url is hidden, even before the next tick deletes its file (and while the tick is disabled) |
+| `POST /api/project-health/:projectId/check`   | Runs one check now (ignores the interval) → `200 ProjectHealthStatus`; `404` when the project has no `healthCheck`                                                                                                                                                                                               |
+| `POST /api/project-health/:projectId/analyze` | The operator's Analyze click → `200 { taskId }`; `404` with no status, when the project is gone, or when its current `healthCheck.url` differs from the status url; `409` when the state is `up`; `503 { message }` when the task could not be created (empty catalog, Claude unavailable, …)                    |
 
 `analyze` creates one ordinary investigation task through
 `TaskSchedulerService.createTask`, with the project as `trustedProjectId`. The
@@ -105,6 +108,10 @@ watcher's dispatch.
   error) as **data**, not instructions (Law 4). It ends with: "Investigate why the
   project's health check is failing, find the root cause, and prepare a fix on its
   own branch. Do not push or merge — the PR is the gate."
+- `createTask` runs outside the per-project lock, so a slow classifier never stalls
+  that project's checks. The lock is taken afterwards only to write `analysisTaskId`,
+  after re-reading the status. It is written only if the status still has the same
+  url and is still down.
 - Each click creates a new task, even when `analysisTaskId` is already set, because
   it is an explicit operator action. The web disables the button while that task
   runs.
@@ -115,4 +122,5 @@ watcher's dispatch.
 imports `ProjectsModule` and `TasksModule`, provides the store and the watcher,
 and exposes the controller. It is registered in `AppModule` next to `MonitorsModule`.
 The `fetch` the watcher uses can be overridden through the `PROJECT_HEALTH_FETCH`
-token, which is optional and defaults to the global `fetch`.
+token, which is optional and defaults to the global `fetch`. The per-check timeout can
+be overridden through `PROJECT_HEALTH_TIMEOUT_MS` (default `10_000`).
