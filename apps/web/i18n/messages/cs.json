@@ -1532,6 +1532,23 @@
     "deleteEmptyCategory": "Smazat",
     "deleteEmptyCategoryAria": "Smazat prázdnou kategorii {name}",
     "newProject": "Nový projekt",
+    "health": {
+      "title": "Monitoring",
+      "empty": "Nastav health URL a ZIBBY ji bude pravidelně kontrolovat.",
+      "up": "V pořádku",
+      "down": "Nedostupné",
+      "since": "od {when}",
+      "checkedAt": "zkontrolováno {when}",
+      "notChecked": "Zatím nezkontrolováno.",
+      "checkNow": "Zkontrolovat teď",
+      "analyze": "Analyzovat",
+      "analysisStarted": "Analýza spuštěna",
+      "actionFailed": "Akce se nezdařila.",
+      "urlLabel": "Health URL",
+      "urlHint": "ZIBBY tuto adresu pravidelně kontroluje (http/https). Prázdné = monitoring vypnut.",
+      "intervalLabel": "Interval kontroly (s)",
+      "intervalHint": "30–3600 sekund, výchozí 300."
+    },
     "ci": {
       "red": "CI červené od {since}",
       "green": "CI zelené"

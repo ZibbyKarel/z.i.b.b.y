@@ -1532,6 +1532,23 @@
     "deleteEmptyCategory": "Delete",
     "deleteEmptyCategoryAria": "Delete empty category {name}",
     "newProject": "New project",
+    "health": {
+      "title": "Monitoring",
+      "empty": "Set a health URL and ZIBBY will check it periodically.",
+      "up": "Up",
+      "down": "Down",
+      "since": "since {when}",
+      "checkedAt": "checked {when}",
+      "notChecked": "Not checked yet.",
+      "checkNow": "Check now",
+      "analyze": "Analyze",
+      "analysisStarted": "Analysis started",
+      "actionFailed": "The action failed.",
+      "urlLabel": "Health URL",
+      "urlHint": "ZIBBY checks this address periodically (http/https). Empty = monitoring off.",
+      "intervalLabel": "Check interval (s)",
+      "intervalHint": "30–3600 seconds, default 300."
+    },
     "ci": {
       "red": "CI red since {since}",
       "green": "CI green"

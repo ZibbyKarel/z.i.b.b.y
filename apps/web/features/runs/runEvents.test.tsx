@@ -8,6 +8,7 @@ import { getInboxItemsQueryKey } from "../inbox/queries/useInboxItemsQuery";
 import { getInboxPrsQueryKey } from "../inbox/queries/useInboxPrsQuery";
 import { getTodoItemsQueryKey } from "../inbox/queries/useTodoItemsQuery";
 import { getCiStatusQueryKey } from "../projects/queries/keys";
+import { getProjectHealthQueryKey } from "../project-health/queries/useProjectHealthQuery";
 
 // `API_URL` gates the provider (no URL → no stream); pin it so the EventSource opens.
 vi.mock("../../state/api", () => ({ API_URL: "http://localhost:3333" }));
@@ -58,6 +59,16 @@ describe("RunEventsProvider — SSE-driven invalidation (N1)", () => {
     });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: getCiStatusQueryKey() });
   });
+
+  it.each(["project-health-down", "project-health-recovered"])(
+    "a %s activity event refreshes the project health status",
+    (kind) => {
+      act(() => {
+        mock.last().emit({ scope: "activity", kind, at: "2026-10-24" });
+      });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: getProjectHealthQueryKey() });
+    },
+  );
 
   it("an inbox-refresh activity kind (a task finished) refreshes the inbox PRs and issues", () => {
     act(() => {

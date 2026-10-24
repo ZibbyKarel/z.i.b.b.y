@@ -38,6 +38,7 @@ import { LevelMappingSection } from "../../roadmap/components/LevelMappingSectio
 import { RoadmapAutomationPanel } from "../../roadmap/components/RoadmapAutomationPanel";
 import { RoadmapPanel } from "../../roadmap/components/RoadmapPanel";
 import { type ProjectBasicsBody, ProjectBasicsPanel } from "../components/ProjectBasicsPanel";
+import { ProjectHealthPanel } from "../components/ProjectHealthPanel";
 import { ProjectCiStatusChip } from "../components/ProjectCiStatusChip";
 import { ProjectCompanyPanel } from "../components/ProjectCompanyPanel";
 import { ProjectIntegrationActivityPanel } from "../components/ProjectIntegrationActivityPanel";
@@ -263,8 +264,17 @@ export function ProjectDetailScreen({ projectId, tab = "overview" }: ProjectDeta
   function saveBasics(body: ProjectBasicsBody) {
     if (isNew) {
       const newId = slug(body.name) || `project-${Date.now()}`;
+      // A brand-new project has nothing to clear — `null` is update-only.
+      const { healthCheck, ...rest } = body;
       createProject.mutate(
-        { body: { ...body, id: newId, ...(linkCompanyId ? { companyId: linkCompanyId } : {}) } },
+        {
+          body: {
+            ...rest,
+            ...(healthCheck ? { healthCheck } : {}),
+            id: newId,
+            ...(linkCompanyId ? { companyId: linkCompanyId } : {}),
+          },
+        },
         { onSuccess: () => router.replace(`/projects/${newId}` as Route) },
       );
     } else {
@@ -634,6 +644,7 @@ export function ProjectDetailScreen({ projectId, tab = "overview" }: ProjectDeta
                   <ProjectCompanyPanel companyId={project.companyId} projectId={id} />
                   <ProjectTeamPanel projectId={id} teamId={project.teamId} />
                   <ProjectRunSummary projectId={id} />
+                  <ProjectHealthPanel healthCheck={project.healthCheck} projectId={id} />
                   <ProjectPullRequestsPanel projectId={id} />
                 </Stack>
               )}

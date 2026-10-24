@@ -41,6 +41,22 @@ export interface ProjectBasicsBody {
   env?: Record<string, string>;
   /** NS2 F0b — draft-PR mode; omitted when `"ready"` (today's default behavior). */
   prOpenMode?: PrOpenMode;
+  /**
+   * TODO 11 — health monitoring. A `{ url, intervalSec }` sets it; `null` clears an
+   * existing one (`UpdateProjectSchema` accepts null); absent when none was ever set.
+   */
+  healthCheck?: { url: string; intervalSec: number } | null;
+}
+
+const HEALTH_INTERVAL_DEFAULT_SEC = 300;
+const HEALTH_INTERVAL_MIN_SEC = 30;
+const HEALTH_INTERVAL_MAX_SEC = 3600;
+
+/** Parse the interval field, clamped to the contract range; blank/invalid → the 5 min default. */
+function toHealthInterval(raw: string): number {
+  const n = Number.parseInt(raw.trim(), 10);
+  if (!Number.isInteger(n)) return HEALTH_INTERVAL_DEFAULT_SEC;
+  return Math.min(HEALTH_INTERVAL_MAX_SEC, Math.max(HEALTH_INTERVAL_MIN_SEC, n));
 }
 
 export interface ProjectBasicsPanelProps {
@@ -75,6 +91,8 @@ type ProjectEditValues = {
   gitRemote: string;
   /** NS2 F0b — draft-PR mode; `"ready"` (default) or `"draft"`. */
   prOpenMode: PrOpenMode;
+  healthUrl: string;
+  healthIntervalSec: string;
   budgetDailyRuns: string;
   budgetWeeklyRuns: string;
   budgetMonthlyRuns: string;
@@ -112,6 +130,7 @@ export function ProjectBasicsPanel({
   onDelete,
 }: ProjectBasicsPanelProps) {
   const t = useTranslations("projects");
+  const tHealth = useTranslations("projects.health");
   const [envRows, setEnvRows] = useState<KeyValueRow[]>(toRows(project?.env));
   const [logo, setLogo] = useState<string | undefined>(project?.logo);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -144,6 +163,8 @@ export function ProjectBasicsPanel({
       category: project?.category ?? categories[0]?.name ?? "",
       gitRemote: project?.gitRemote ?? "",
       prOpenMode: project?.prOpenMode ?? "ready",
+      healthUrl: project?.healthCheck?.url ?? "",
+      healthIntervalSec: String(project?.healthCheck?.intervalSec ?? HEALTH_INTERVAL_DEFAULT_SEC),
       budgetDailyRuns: project?.budget?.dailyRuns != null ? String(project.budget.dailyRuns) : "",
       budgetWeeklyRuns:
         project?.budget?.weeklyRuns != null ? String(project.budget.weeklyRuns) : "",
@@ -184,6 +205,12 @@ export function ProjectBasicsPanel({
               ...(monthlyCostCapUsd != null ? { monthlyCostCapUsd } : {}),
             }
           : undefined;
+      const healthUrl = values.healthUrl.trim();
+      const healthCheck = healthUrl
+        ? { url: healthUrl, intervalSec: toHealthInterval(values.healthIntervalSec) }
+        : project?.healthCheck
+          ? null
+          : undefined;
       onSave({
         name: values.name.trim(),
         desc: values.desc.trim() || undefined,
@@ -193,6 +220,7 @@ export function ProjectBasicsPanel({
         budget,
         env: fromRows(envRows),
         prOpenMode: values.prOpenMode === "draft" ? "draft" : undefined,
+        ...(healthCheck !== undefined ? { healthCheck } : {}),
       });
     },
   });
@@ -254,6 +282,22 @@ export function ProjectBasicsPanel({
             />
           )}
         />
+
+        <Stack direction="row" gap="150">
+          <FormTextInput<ProjectEditValues>
+            hint={tHealth("urlHint")}
+            label={tHealth("urlLabel")}
+            name="healthUrl"
+            placeholder="https://example.com/health"
+          />
+          <FormTextInput<ProjectEditValues>
+            hint={tHealth("intervalHint")}
+            inputMode="numeric"
+            label={tHealth("intervalLabel")}
+            name="healthIntervalSec"
+            placeholder="300"
+          />
+        </Stack>
 
         {categories.length > 0 && (
           <Controller<ProjectEditValues, "category">

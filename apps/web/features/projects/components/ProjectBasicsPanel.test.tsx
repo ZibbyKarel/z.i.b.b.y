@@ -276,3 +276,66 @@ describe("ProjectBasicsPanel gitRemote field (Phase 77)", () => {
     );
   });
 });
+
+describe("ProjectBasicsPanel health check (TODO 11)", () => {
+  const existing = {
+    id: "alpha",
+    name: "Alpha",
+    path: "~/Projects/alpha",
+    healthCheck: { url: "https://alpha.test/health", intervalSec: 120 },
+  };
+
+  it("saves healthCheck { url, intervalSec } when both are entered", async () => {
+    const onSave = vi.fn();
+    render(<ProjectBasicsPanel isNew categories={[]} onSave={onSave} />);
+
+    await userEvent.type(screen.getByPlaceholderText("media-vault"), "Alpha");
+    await userEvent.type(screen.getByLabelText("Health URL"), "https://alpha.test/health");
+    await userEvent.clear(screen.getByLabelText("Interval kontroly (s)"));
+    await userEvent.type(screen.getByLabelText("Interval kontroly (s)"), "90");
+    await userEvent.click(screen.getByTestId("save-basics"));
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        healthCheck: { url: "https://alpha.test/health", intervalSec: 90 },
+      }),
+    );
+  });
+
+  it("defaults the interval to 300 when only a URL is entered", async () => {
+    const onSave = vi.fn();
+    render(<ProjectBasicsPanel isNew categories={[]} onSave={onSave} />);
+
+    await userEvent.type(screen.getByPlaceholderText("media-vault"), "Alpha");
+    await userEvent.type(screen.getByLabelText("Health URL"), "https://alpha.test/health");
+    await userEvent.click(screen.getByTestId("save-basics"));
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        healthCheck: { url: "https://alpha.test/health", intervalSec: 300 },
+      }),
+    );
+  });
+
+  it("omits healthCheck when no URL was ever set", async () => {
+    const onSave = vi.fn();
+    render(<ProjectBasicsPanel isNew categories={[]} onSave={onSave} />);
+
+    await userEvent.type(screen.getByPlaceholderText("media-vault"), "Alpha");
+    await userEvent.click(screen.getByTestId("save-basics"));
+
+    expect(onSave.mock.calls[0]?.[0]).not.toHaveProperty("healthCheck");
+  });
+
+  it("prefills from the project and saves null when the URL is cleared", async () => {
+    const onSave = vi.fn();
+    render(<ProjectBasicsPanel categories={[]} isNew={false} onSave={onSave} project={existing} />);
+    expect(screen.getByLabelText("Health URL")).toHaveValue("https://alpha.test/health");
+    expect(screen.getByLabelText("Interval kontroly (s)")).toHaveValue("120");
+
+    await userEvent.clear(screen.getByLabelText("Health URL"));
+    await userEvent.click(screen.getByTestId("save-basics"));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ healthCheck: null }));
+  });
+});

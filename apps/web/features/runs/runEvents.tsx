@@ -6,6 +6,7 @@ import { getRunningAgentsQueryKey } from "../agents/queries/keys";
 import { type ActivityEntry, INBOX_REFRESH_ACTIVITY_KINDS } from "@zibby/contracts";
 import { getApprovalsQueryKey } from "../approvals/queries/keys";
 import { getBudgetQueryKey, getCiStatusQueryKey } from "../projects/queries/keys";
+import { getProjectHealthQueryKey } from "../project-health/queries/useProjectHealthQuery";
 import { getActivityQueryKey } from "../activity/queries/useActivityQuery";
 import { prependActivityEntry } from "../activity/queries/useActivityFeedInfiniteQuery";
 import { getBriefingQueryKey } from "../briefing/queries/useBriefingQuery";
@@ -178,6 +179,11 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         // slow interval (which exists for the silent green recovery).
         if (parsed.kind === "monitor-alert") {
           void qc.invalidateQueries({ queryKey: getCiStatusQueryKey() });
+        }
+        // A project's health check flipped (down / recovered) — state, so refresh the
+        // status now instead of waiting for its 60 s poll.
+        if (parsed.kind === "project-health-down" || parsed.kind === "project-health-recovered") {
+          void qc.invalidateQueries({ queryKey: getProjectHealthQueryKey() });
         }
         // A ZIBBY action changed PRs/issues (task opened a PR, merge, roadmap sync) —
         // refresh the inbox now; otherwise it waits for its 15-min poll. The TODO list
