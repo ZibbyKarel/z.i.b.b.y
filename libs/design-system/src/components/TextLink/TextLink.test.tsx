@@ -48,6 +48,20 @@ describe("TextLink", () => {
     expect(link).toHaveAttribute("rel", "noreferrer");
   });
 
+  it("leaves a linkComponent's own target/rel alone when none are passed", () => {
+    function ExternalAnchor(props: { href: string }) {
+      return <a rel="noopener noreferrer" target="_blank" {...props} />;
+    }
+    render(
+      <TextLink href="https://jira.test/A-1" linkComponent={ExternalAnchor}>
+        A-1
+      </TextLink>,
+    );
+    const link = screen.getByTestId(TextLinkTestId.Root);
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
   it("accepts a custom data-testid", () => {
     render(
       <TextLink data-testid="pinned-rail-link" href="/org">

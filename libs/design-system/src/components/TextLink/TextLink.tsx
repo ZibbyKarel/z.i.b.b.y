@@ -49,8 +49,10 @@ export function TextLink({
       className={cn("rounded-sm no-underline", truncate && "block truncate", focusRing)}
       data-testid={testId}
       href={href}
-      rel={rel}
-      target={target}
+      // Forwarded only when set — an explicit `undefined` would clobber the
+      // defaults a custom `linkComponent` (e.g. an external-anchor adapter) spreads.
+      {...(rel !== undefined && { rel })}
+      {...(target !== undefined && { target })}
     >
       {children}
     </Link>
