@@ -82,6 +82,7 @@ const setup = (over: Partial<BridgeWidgetProps> & { widget: BridgeWidget }) => {
     onOpen: vi.fn(),
     epicClosed: {},
     onEpicToggle: vi.fn(),
+    onScopeChange: vi.fn(),
     ...over,
   };
   return props;

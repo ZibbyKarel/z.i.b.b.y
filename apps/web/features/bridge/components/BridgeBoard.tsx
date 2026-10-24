@@ -43,7 +43,11 @@ function BridgeWidgetHost({
   const onEmptyChange = useCallback((e: boolean) => onEmpty(id, e), [onEmpty, id]);
   const onNaturalHeight = useCallback((px: number) => onNatural(id, px), [onNatural, id]);
   const onCountChange = useCallback((i: BridgeWidgetInfo) => onInfo(id, i), [onInfo, id]);
-  const { editing, selection } = state;
+  const { editing, selection, configure } = state;
+  const onScopeChange = useCallback(
+    (scope: BridgeWidget["scope"]) => configure(id, scope),
+    [configure, id],
+  );
 
   return (
     <WidgetFrame
@@ -76,6 +80,7 @@ function BridgeWidgetHost({
         onEmptyChange={onEmptyChange}
         onEpicToggle={state.setEpicClosed}
         onOpen={state.setSelection}
+        onScopeChange={onScopeChange}
         selection={selection}
         sheetSide={sheetSide}
         widget={widget}

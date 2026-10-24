@@ -10,14 +10,19 @@ interface Report {
   count: number | undefined;
   /** Items needing the operator. */
   you: number;
+  /** Right-aligned header note. */
+  aside?: string;
 }
 
 /** Feeds the frame: emptiness (never while loading) and the count / YOU / aside header info. */
 export function useWidgetReport(
-  { loading, count, you }: Report,
+  { loading, count, you, aside }: Report,
   { onEmptyChange, onCountChange }: Pick<BridgeWidgetProps, "onEmptyChange" | "onCountChange">,
 ) {
   const empty = !loading && !count;
   useEffect(() => onEmptyChange(empty), [empty, onEmptyChange]);
-  useEffect(() => onCountChange?.({ count, you, loading }), [count, you, loading, onCountChange]);
+  useEffect(
+    () => onCountChange?.({ count, you, loading, aside }),
+    [count, you, loading, aside, onCountChange],
+  );
 }

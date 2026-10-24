@@ -8,6 +8,7 @@ import { PrsWidget } from "./PrsWidget";
 import { QuickActionsWidget } from "./QuickActionsWidget";
 import { RunsWidget } from "./RunsWidget";
 import { TasksWidget } from "./TasksWidget";
+import { TeamKbWidget } from "./TeamKbWidget";
 import { TodoWidget } from "./TodoWidget";
 
 /** What a row opens in the detail sheet. `key` is the row's `data-rk` value. */
@@ -55,6 +56,8 @@ export interface BridgeWidgetProps {
   /** Collapsed epic groups (`ui.bridge.epicClosed`), keyed by epic id (`none` = no epic). */
   epicClosed: Record<string, boolean>;
   onEpicToggle: (key: string, closed: boolean) => void;
+  /** Set this widget's scope (edit mode) — saved with the layout. */
+  onScopeChange: (scope: BridgeWidget["scope"]) => void;
 }
 
 export interface WidgetDefinition {
@@ -104,6 +107,11 @@ export const WIDGETS: Record<WidgetType, WidgetDefinition> = {
     labelKey: "bridge.widget.quickActions.label",
     descKey: "bridge.widget.quickActions.desc",
     Component: QuickActionsWidget,
+  },
+  teamKb: {
+    labelKey: "bridge.widget.teamKb.label",
+    descKey: "bridge.widget.teamKb.desc",
+    Component: TeamKbWidget,
   },
 };
 

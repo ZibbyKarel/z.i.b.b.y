@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ChatPersonaSchema } from "../chat/chat.schema";
+import { TeamIdSchema } from "../teams/team.schema";
 
 /** Bridge board density — scales the design-system spacing tokens system-wide. */
 export const DensitySchema = z.enum(["compact", "comfort", "airy", "open"]);
@@ -12,11 +13,23 @@ export type Density = z.infer<typeof DensitySchema>;
 export const BridgeWidgetSchema = z.object({
   id: z.string().min(1),
   /** Catalog entry this widget renders. */
-  type: z.enum(["briefing", "issues", "prs", "tasks", "runs", "pins", "todo", "quickActions"]),
+  type: z.enum([
+    "briefing",
+    "issues",
+    "prs",
+    "tasks",
+    "runs",
+    "pins",
+    "todo",
+    "quickActions",
+    "teamKb",
+  ]),
   x: z.number().int().min(0).max(11),
   y: z.number().int().min(0),
   w: z.number().int().min(2).max(12),
   h: z.number().int().min(1),
+  /** Optional scope; only the `teamKb` widget reads it (`teamId` = the team it shows). */
+  scope: z.object({ teamId: TeamIdSchema.optional() }).strict().optional(),
 });
 export type BridgeWidget = z.infer<typeof BridgeWidgetSchema>;
 

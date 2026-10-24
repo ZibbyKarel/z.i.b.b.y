@@ -211,6 +211,13 @@ export function useBridgeState() {
     [commitLayout],
   );
 
+  /** Set one widget's scope (e.g. the team of a `teamKb` widget) — lands in the edit draft. */
+  const configure = useCallback(
+    (id: string, scope: BridgeWidget["scope"]) =>
+      commitLayout(layoutRef.current.map((w) => (w.id === id ? { ...w, scope } : w))),
+    [commitLayout],
+  );
+
   const toggleCatalog = useCallback(() => setCatalogOpen((o) => !o), []);
   const closeCatalog = useCallback(() => setCatalogOpen(false), []);
   const closeSelection = useCallback(() => setSelection(null), []);
@@ -282,6 +289,7 @@ export function useBridgeState() {
     resize,
     add,
     remove,
+    configure,
     beginDrag,
     endDrag,
     toggleCatalog,

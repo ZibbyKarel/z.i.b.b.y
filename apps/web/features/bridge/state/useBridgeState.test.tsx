@@ -133,6 +133,23 @@ describe("useBridgeState", () => {
     expect(result.current.saved).toEqual({});
   });
 
+  it("configure sets one widget's scope in the draft and saveEdit persists it", () => {
+    const { result } = renderHook(() => useBridgeState());
+    act(() => result.current.startEditing("REVIEW"));
+    act(() => result.current.add("teamKb"));
+    const id = result.current.layout.find((w) => w.type === "teamKb")?.id ?? "";
+    setBridge.mockClear();
+    act(() => result.current.configure(id, { teamId: "t" }));
+    expect(setBridge).not.toHaveBeenCalled();
+    const scoped = result.current.layout.filter((w) => w.scope);
+    expect(scoped.map((w) => w.id)).toEqual([id]);
+    expect(scoped[0]?.scope).toEqual({ teamId: "t" });
+    act(() => result.current.saveEdit());
+    expect(result.current.saved["REVIEW"]?.find((w) => w.id === id)?.scope).toEqual({
+      teamId: "t",
+    });
+  });
+
   it("editing REVIEW saves an override of the built-in", () => {
     const { result } = renderHook(() => useBridgeState());
     act(() => result.current.startEditing("REVIEW"));

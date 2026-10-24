@@ -3225,6 +3225,13 @@
         "target": "Target",
         "add": "Add",
         "targetMissing": "Target no longer exists"
+      },
+      "teamKb": {
+        "team": "Team",
+        "pick": "Pick a team in edit mode.",
+        "noKb": "This team has no knowledge base.",
+        "questions": "Open questions",
+        "decisions": "Agreements"
       }
     },
     "you": "{n} you",
@@ -3260,6 +3267,10 @@
       "quickActions": {
         "label": "Quick actions",
         "desc": "One-click tasks — straight into the queue"
+      },
+      "teamKb": {
+        "label": "Team knowledge",
+        "desc": "Open questions and agreements from the team knowledge base."
       }
     },
     "sheet": {

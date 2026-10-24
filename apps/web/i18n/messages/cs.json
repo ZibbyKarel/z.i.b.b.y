@@ -3225,6 +3225,13 @@
         "target": "Cíl",
         "add": "Přidat",
         "targetMissing": "Cíl už neexistuje"
+      },
+      "teamKb": {
+        "team": "Tým",
+        "pick": "Vyber tým v režimu úprav.",
+        "noKb": "Tým nemá znalostní bázi.",
+        "questions": "Otevřené otázky",
+        "decisions": "Dohody"
       }
     },
     "you": "{n} ty",
@@ -3260,6 +3267,10 @@
       "quickActions": {
         "label": "Rychlé akce",
         "desc": "Úlohy spustitelné jedním tlačítkem — rovnou do fronty"
+      },
+      "teamKb": {
+        "label": "Tým — znalosti",
+        "desc": "Otevřené otázky a dohody z týmové znalostní báze."
       }
     },
     "sheet": {
