@@ -34,7 +34,7 @@
         b. [ ] Periodický check main (git fetch) a stav: běžíme na aktuální/zaostáváme o N commitů; tlačítko Upgrade vedle limitů se zobrazí jen pokud je main novější
         c. [ ] Upgrade akce přes gate: kontrola čistého working tree a běžících runů, fast-forward, reinstall závislostí při změně lockfile, restart dev serveru; nikdy nepřepsat lokální necommitnuté změny (včetně paměti)
         d. [ ] Bezpečnostní síť: rollback na předchozí commit, pokud se systém po upgradu nenastartuje; záznam do activity logu
-11. [ ] Monitoring per projekt: health endpoint se periodicky volá, při chybě notifikace a tlačítko Analyzovat
+11. [x] Monitoring per projekt: health endpoint se periodicky volá, při chybě notifikace a tlačítko Analyzovat (main@13be31b3)
         a. [ ] Konfigurace projektu: health URL (volitelně metoda, očekávaný status, interval, timeout); nový druh monitoru přes existující MonitorAdapter, stav jako STATE, ne událost
         b. [ ] Sonda: periodické volání, debounce (N selhání po sobě), detekce recovery; historie výsledků v souborech, latence a uptime
         c. [ ] Notifikace při chybě (jen když je to opravdu relevantní) + widget monitoringu s aktuálním stavem projektů
