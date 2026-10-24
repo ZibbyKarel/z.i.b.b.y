@@ -16,7 +16,7 @@ carries the same `@Name` / `#Name` / `/Name` mention tokens the chat composer wr
 
 ## Endpoints
 
-- `GET /api/todo` → 200 `{ items }`, oldest `createdAt` first. A missing or corrupt file is `[]`.
+- `GET /api/todo` → 200 `{ items }`, oldest `createdAt` first. A missing file is `[]`; invalid records are skipped.
 - `POST /api/todo` `{ text }` → 201 `TodoItem` (id `todo_<hex>`); blank text → 400; past 200 notes → 409.
 - `DELETE /api/todo/:id` → 204, or 404 when the note does not exist.
 
@@ -25,3 +25,9 @@ carries the same `@Name` / `#Name` / `/Name` mention tokens the chat composer wr
 `POST /api/tasks` accepts an optional `todoId`. After the task is created (whatever state it
 starts in) `TaskSchedulerService` calls `TodoStore.remove(todoId)`; a missing note is ignored and
 a failure is logged, never thrown. See `docs/api/tasks.md`.
+
+## Damaged file
+
+Reads salvage valid records one by one. Before a write replaces a file that was unparseable
+(renamed to `items.json.corrupt-<ts>`) or held invalid records (copied to the same sidecar name),
+the original is preserved and a warning is logged.

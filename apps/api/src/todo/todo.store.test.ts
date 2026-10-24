@@ -57,4 +57,32 @@ describe("TodoStore", () => {
     await Promise.all([store.create("a"), store.create("b")]);
     expect((await store.list()).map((i) => i.text).sort()).toEqual(["a", "b"]);
   });
+
+  it("keeps valid entries and preserves the file when one entry is invalid", async () => {
+    const good = { id: "todo_a", text: "keep", createdAt: "2026-10-24T10:00:00.000Z" };
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    await fs.writeFile(file, JSON.stringify([good, { id: "bad" }]));
+    const store = new TodoStore(file);
+    expect(await store.list()).toEqual([good]);
+    await store.create("new");
+    expect((await store.list()).map((i) => i.text)).toEqual(["keep", "new"]);
+    const aside = (await fs.readdir(path.dirname(file))).filter((f) => f.includes(".corrupt-"));
+    expect(aside).toHaveLength(1);
+    expect(await fs.readFile(path.join(path.dirname(file), aside[0] as string), "utf8")).toContain(
+      '"bad"',
+    );
+  });
+
+  it("renames an unparseable file aside instead of overwriting it", async () => {
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    await fs.writeFile(file, "{ not json");
+    const store = new TodoStore(file);
+    await store.create("fresh");
+    expect((await store.list()).map((i) => i.text)).toEqual(["fresh"]);
+    const aside = (await fs.readdir(path.dirname(file))).filter((f) => f.includes(".corrupt-"));
+    expect(aside).toHaveLength(1);
+    expect(await fs.readFile(path.join(path.dirname(file), aside[0] as string), "utf8")).toBe(
+      "{ not json",
+    );
+  });
 });
