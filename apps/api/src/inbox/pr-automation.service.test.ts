@@ -72,6 +72,7 @@ function addressTask(
   headSha: string,
   state: NonNullable<ScheduledTask["prAddressComments"]>["state"],
   over: Partial<ScheduledTask> = {},
+  fix: Partial<NonNullable<ScheduledTask["prAddressComments"]>> = {},
 ): ScheduledTask {
   return {
     id: `t_a_${state}_${headSha}`,
@@ -85,6 +86,7 @@ function addressTask(
       base: "main",
       headSha,
       state,
+      ...fix,
     },
     ...over,
   } as ScheduledTask;
@@ -295,6 +297,19 @@ describe("PrAutomationService (todo-16)", () => {
 
     it("a running address task whose task died no longer blocks a new head", async () => {
       tasks = [addressTask(B, "running", { status: "failed" })];
+      await make().tick();
+      expect(address.start).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not restart on the head its own approved push created (fixedSha)", async () => {
+      tasks = [addressTask(B, "pushed", {}, { fixedSha: A })];
+      await make().tick();
+      expect(address.start).not.toHaveBeenCalled();
+    });
+
+    it("restarts when someone pushed a later head after its own push", async () => {
+      const C = "c".repeat(40);
+      tasks = [addressTask(B, "pushed", {}, { fixedSha: C })];
       await make().tick();
       expect(address.start).toHaveBeenCalledTimes(1);
     });

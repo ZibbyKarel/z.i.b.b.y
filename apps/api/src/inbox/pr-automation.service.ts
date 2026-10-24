@@ -23,7 +23,8 @@ import { selectReviewLevel } from "./select-review-level";
 /** At most this many auto starts per tick, across all projects, in inbox order. */
 export const PR_AUTOMATION_MAX_STARTS_PER_TICK = 3;
 
-type PrRun = { repo: string; number: number; state: string; headSha?: string };
+/** `fixedSha` — the head ZIBBY's own approved address-comments push created (never new work). */
+type PrRun = { repo: string; number: number; state: string; headSha?: string; fixedSha?: string };
 
 const errMsg = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
@@ -206,10 +207,17 @@ function runsOf(
   return runs;
 }
 
-/** No run for this head in any state, and none of the PR in flight. */
+/** No run for this head (nor one whose approved push produced it) in any state, and none of the PR in flight. */
 function isFresh(pr: InboxPr, runs: Map<string, PrRun[]>): boolean {
   const past = runs.get(`${pr.repo.toLowerCase()}#${pr.number}`) ?? [];
   return !past.some(
-    (r) => r.headSha === pr.headSha || r.state === "running" || r.state === "awaiting-approval",
+    (r) =>
+      r.headSha === pr.headSha ||
+      // A head ZIBBY itself pushed (an approved fix) is not new work: the reviewer's
+      // CHANGES_REQUESTED and the skipped threads outlive the push, so without this the
+      // next tick would re-run on its own output.
+      (r.fixedSha !== undefined && r.fixedSha === pr.headSha) ||
+      r.state === "running" ||
+      r.state === "awaiting-approval",
   );
 }

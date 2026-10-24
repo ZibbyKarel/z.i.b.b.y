@@ -37,6 +37,10 @@ describe("selectReviewLevel (todo-16)", () => {
     expect(selectReviewLevel([f("src/big.ts", 300, 201)])).toBe("thorough");
   });
 
+  it("the 500-line limit counts the whole PR, not one file", () => {
+    expect(selectReviewLevel([f("src/a.ts", 300, 0), f("src/b.ts", 300, 0)])).toBe("thorough");
+  });
+
   it("exactly 500 changed lines on an innocuous path → tested", () => {
     expect(selectReviewLevel([f("src/big.ts", 300, 200)])).toBe("tested");
   });

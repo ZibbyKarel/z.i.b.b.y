@@ -315,7 +315,9 @@ Each tick reads `InboxService.listPrs()` and the tasks store, then walks the PRs
   the `pr-review` approval, unchanged.
 - **Auto address comments** — effective `autoAddressComments`, `bucket === "mine"`,
   `review === "changes-requested"`, `unresolvedThreads > 0`, a known head, the same head dedupe
-  against `prAddressComments.headSha`, nothing in flight. It calls
+  against `prAddressComments.headSha` — and against `prAddressComments.fixedSha`, so the head
+  ZIBBY's own approved push created is never treated as new work (the reviewer's
+  CHANGES_REQUESTED and any skipped threads outlive the push) — nothing in flight. It calls
   `InboxAddressCommentsService.start({ projectId, repo, number, title }, { auto: true })`, which
   stamps `prAddressComments.auto: true`. **Such a run never auto-pushes:**
   `TaskOutputService.parkPrAddressComments` parks the push approval (Tier 3, risk high) even on
