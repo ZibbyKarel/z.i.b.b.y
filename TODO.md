@@ -39,7 +39,7 @@
         b. [ ] Sonda: periodické volání, debounce (N selhání po sobě), detekce recovery; historie výsledků v souborech, latence a uptime
         c. [ ] Notifikace při chybě (jen když je to opravdu relevantní) + widget monitoringu s aktuálním stavem projektů
         d. [ ] Tlačítko Analyzovat: spustí read-only analytický run (logy, poslední změny, CI, deploy) a výsledek uloží jako artefakt; žádná autonomní oprava bez schválení
-12. [ ] Týmy a scope widgetů: entita Team a týmový widget znalostní báze (otevřené otázky a dohody)
+12. [x] Týmy a scope widgetů: entita Team a týmový widget znalostní báze (otevřené otázky a dohody) (main@90440914)
     a. [ ] Entita Team (členové, zdroje: Jira/GitHub projekt, Slack kanál) vedle Company; contract + soubory + UI správy dle interaction grammar
     b. [ ] Společný model widget scope (osobní / tým / firma) + filtr zdroje v nastavení widgetu; ingest strop zůstává mine-and-mentions
     c. [ ] KB widget: otevřené otázky a dohody týmu čtené z týmové znalostní báze (zdroj upřesnit: Confluence/Notion), s odkazem na zdrojovou stránku
