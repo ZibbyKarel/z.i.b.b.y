@@ -24,8 +24,9 @@
      - It returns `200 TeamKbDigest`.
      - It returns `404 ErrorSchema` when the team is unknown or has no `knowledgeBase`, mirroring
        the other `kb/*` routes.
-   - Schemas: - `TeamKbDigestItemSchema = { text: string (max 300), noteId: string (repo-relative path),
-noteTitle: string, date?: string }`. - `TeamKbDigestSchema = { questions: TeamKbDigestItem[], decisions: TeamKbDigestItem[] }`.
+   - Schemas:
+     - `TeamKbDigestItemSchema = { text: string (max 300), noteId: string (KB-relative path), noteTitle: string, date?: string }`.
+     - `TeamKbDigestSchema = { questions: TeamKbDigestItem[], decisions: TeamKbDigestItem[] }`.
    - `BridgeWidgetSchema`:
      - `type` gains `"teamKb"`;
      - add an optional `scope: z.object({ teamId: TeamIdSchema.optional() }).strict().optional()`.
