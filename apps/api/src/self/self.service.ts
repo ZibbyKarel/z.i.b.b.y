@@ -1,15 +1,18 @@
+import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Injectable, Optional } from "@nestjs/common";
 import {
   type EnsureSelfProjectResult,
+  type Project,
   type SelfPr,
   type SelfStatus,
   type SelfUpdateResult,
   isValidGitRemote,
 } from "@zibby/contracts";
 import { MachineConfigStore } from "../machine/machine-config.store";
+import { ProjectConflictError } from "../projects/projects.errors";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
-import { installRoot } from "../shared/data-dir";
+import { installRoot, resolveDataRoot } from "../shared/data-dir";
 import {
   GIT_NETWORK_TIMEOUT_MS,
   GIT_TIMEOUT_MS,
@@ -17,6 +20,7 @@ import {
   isGitRepo as isGitRepoAt,
 } from "../shared/git-exec";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
+import { normalizeRemote, redactRemote } from "./self-remote";
 
 /** The id ZIBBY registers itself under as a project. */
 export const SELF_PROJECT_ID = "zibby";
@@ -71,6 +75,36 @@ export class SelfProjectConflictError extends Error {
   }
 }
 
+/** `fs.realpath`, falling back to `path.resolve` when the path doesn't exist. */
+async function realpathOr(p: string): Promise<string> {
+  return fs.realpath(p).catch(() => path.resolve(p));
+}
+
+/** `child` is `parent` itself or sits inside it (both already resolved). */
+function isSameOrInside(child: string, parent: string): boolean {
+  const rel = path.relative(parent, child);
+  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
+}
+
+/**
+ * The paths a `git status --porcelain` listing reports (both sides of a
+ * rename, surrounding quotes stripped), relative to the repo root.
+ */
+function porcelainPaths(stdout: string): string[] {
+  return stdout
+    .split("\n")
+    .filter((line) => line.trim().length > 0)
+    .flatMap((line) => line.slice(3).split(" -> "))
+    .map((p) => p.trim().replace(/^"(.*)"$/, "$1"));
+}
+
+/** An existing project recognised as ZIBBY itself. */
+interface SelfProjectMatch {
+  project: Project;
+  /** Its `path` resolves to the running install root or somewhere inside it. */
+  usesInstallTree: boolean;
+}
+
 /**
  * Phase 79 — the ZIBBY install repo's own freshness vs. `origin`, backing the
  * top-bar indicator. Every git/gh call is bounded and soft-fails (logs + a safe
@@ -91,11 +125,49 @@ export class SelfService {
     this.log = logger?.child(SelfService.name);
   }
 
-  /** The `zibby` project id when that project exists; soft-fails to undefined. */
-  private async selfProjectId(): Promise<string | undefined> {
+  /** The install's `origin` URL, or `""` when there is none / not a repo. */
+  private async originUrl(): Promise<string> {
+    return exec("git", ["remote", "get-url", "origin"], {
+      cwd: this.cwd(),
+      timeout: GIT_TIMEOUT_MS,
+    })
+      .then((r) => r.stdout.trim())
+      .catch(() => "");
+  }
+
+  /**
+   * Find an existing project that IS ZIBBY: its `gitRemote` normalises to the
+   * same `host/owner/repo` as `origin` (ssh vs https, `.git`, trailing `/`), or
+   * its `path` realpath-resolves to the install root. A `zibby`-id project wins
+   * a tie; otherwise the first match in registry order.
+   */
+  private async matchSelfProject(
+    projects: readonly Project[],
+    origin: string,
+  ): Promise<SelfProjectMatch | undefined> {
+    const originKey = normalizeRemote(origin);
+    const root = await realpathOr(this.cwd());
+    const matches: SelfProjectMatch[] = [];
+    for (const project of projects) {
+      const resolved = project.path ? await realpathOr(project.path) : undefined;
+      const byRemote = originKey !== undefined && normalizeRemote(project.gitRemote) === originKey;
+      const byPath = resolved !== undefined && resolved === root;
+      if (byRemote || byPath) {
+        matches.push({
+          project,
+          usesInstallTree: resolved !== undefined && isSameOrInside(resolved, root),
+        });
+      }
+    }
+    return matches.find((m) => m.project.id === SELF_PROJECT_ID) ?? matches[0];
+  }
+
+  /** The matched self project for the status readout; soft-fails to undefined. */
+  private async selfProjectMatch(): Promise<SelfProjectMatch | undefined> {
     try {
       const all = (await this.projects?.list()) ?? [];
-      return all.some((p) => p.id === SELF_PROJECT_ID) ? SELF_PROJECT_ID : undefined;
+      if (all.length === 0) return undefined;
+      return await this.matchSelfProject(all, await this.originUrl());
     } catch (error) {
       this.log?.warn("self project lookup failed (soft)", {
         err: error instanceof Error ? error.message : String(error),
@@ -131,9 +203,30 @@ export class SelfService {
       .catch(() => "");
   }
 
+  /**
+   * The data dir relative to the install root (`.zibby/data` by default), in
+   * git's `/` form — or `undefined` when the data dir lives outside the install.
+   */
+  private runtimeDataPrefix(): string | undefined {
+    const rel = path.relative(this.cwd(), resolveDataRoot());
+    if (rel === "" || rel.startsWith("..") || path.isAbsolute(rel)) return undefined;
+    return rel.split(path.sep).join("/");
+  }
+
+  /**
+   * Uncommitted changes in the install tree, IGNORING ZIBBY's own runtime writes
+   * under the data dir (registry, gate rules, …) when that dir sits inside the
+   * install. Upgrade stays safe regardless: `git pull --ff-only` itself refuses
+   * a fast-forward that would overwrite a locally modified file.
+   */
   private async isDirty(): Promise<boolean> {
+    const prefix = this.runtimeDataPrefix();
     return exec("git", ["status", "--porcelain"], { cwd: this.cwd(), timeout: GIT_TIMEOUT_MS })
-      .then((r) => r.stdout.trim().length > 0)
+      .then((r) =>
+        porcelainPaths(r.stdout).some(
+          (p) => prefix === undefined || (p !== prefix && !p.startsWith(`${prefix}/`)),
+        ),
+      )
       .catch(() => false);
   }
 
@@ -201,8 +294,10 @@ export class SelfService {
    * returns {@link NOT_A_REPO_STATUS} outright.
    */
   async status(): Promise<SelfStatus> {
-    const projectId = await this.selfProjectId();
-    const projectField = projectId ? { projectId } : {};
+    const match = await this.selfProjectMatch();
+    const projectField = match
+      ? { projectId: match.project.id, projectUsesInstallTree: match.usesInstallTree }
+      : {};
     if (!(await this.isGitRepo())) return { ...NOT_A_REPO_STATUS, ...projectField };
 
     const fetched = await this.fetchOrigin();
@@ -235,53 +330,75 @@ export class SelfService {
   /**
    * Register the ZIBBY install as the project `zibby` so it can edit itself in
    * a SEPARATE clone (`<cloneRoot>/zibby`, draft PRs) — Builder ≠ Subject.
-   * Idempotent; never writes a `path`, never mutates git state, never
-   * overwrites an existing `zibby` project. Refusals throw
-   * {@link SelfProjectConflictError} (409).
+   * Idempotent: an existing project that already IS ZIBBY (same normalised
+   * remote, or its `path` is the install root — e.g. a hand-made `zibby-self`)
+   * is recognised and returned untouched, never duplicated or modified. Never
+   * writes a `path`, never mutates git state, never persists or echoes origin
+   * credentials. Refusals throw {@link SelfProjectConflictError} (409).
    */
   async ensureSelfProject(): Promise<EnsureSelfProjectResult> {
     if (!this.projects || !this.machineConfig) {
       throw new Error("SelfService: projects storage / machine config not wired");
     }
-    const origin = await exec("git", ["remote", "get-url", "origin"], {
-      cwd: this.cwd(),
-      timeout: GIT_TIMEOUT_MS,
-    })
-      .then((r) => r.stdout.trim())
-      .catch(() => "");
-    if (!origin) {
+    const rawOrigin = await this.originUrl();
+    if (!rawOrigin) {
       throw new SelfProjectConflictError("The ZIBBY install has no `origin` remote to register.");
     }
-    if (!isValidGitRemote(origin)) {
+    // Validate the remote AS CONFIGURED (redaction's URL round-trip could
+    // percent-encode an invalid remote into a valid-looking one), then only ever
+    // persist / echo the credential-free form.
+    if (!isValidGitRemote(rawOrigin)) {
       throw new SelfProjectConflictError(
-        `The ZIBBY \`origin\` remote is not a valid git remote: ${origin}`,
+        `The ZIBBY \`origin\` remote is not a valid git remote: ${redactRemote(rawOrigin)}`,
       );
     }
+    const origin = redactRemote(rawOrigin);
 
-    const existing = (await this.projects.list()).find((p) => p.id === SELF_PROJECT_ID);
-    if (existing) {
-      if (existing.gitRemote === origin) return { projectId: SELF_PROJECT_ID, created: false };
-      throw new SelfProjectConflictError(
-        `A project "${SELF_PROJECT_ID}" already exists with a different remote (${existing.gitRemote ?? "none"}); not overwriting it.`,
-      );
-    }
+    const all = await this.projects.list();
+    const match = await this.matchSelfProject(all, origin);
+    if (match) return { projectId: match.project.id, created: false };
+
+    const foreign = all.find((p) => p.id === SELF_PROJECT_ID);
+    if (foreign) throw this.foreignConflict(foreign);
 
     const { cloneRoot } = await this.machineConfig.read();
-    if (path.resolve(cloneRoot, SELF_PROJECT_ID) === path.resolve(this.cwd())) {
+    const clonePath = path.join(await realpathOr(cloneRoot), SELF_PROJECT_ID);
+    if (clonePath === (await realpathOr(this.cwd()))) {
       throw new SelfProjectConflictError(
         `<cloneRoot>/${SELF_PROJECT_ID} is the running ZIBBY install itself — pick a different clone root so the clone is separate from the builder.`,
       );
     }
 
-    await this.projects.create({
-      id: SELF_PROJECT_ID,
-      name: "ZIBBY",
-      desc: SELF_PROJECT_DESC,
-      gitRemote: origin,
-      prOpenMode: "draft",
-    });
+    try {
+      await this.projects.create({
+        id: SELF_PROJECT_ID,
+        name: "ZIBBY",
+        desc: SELF_PROJECT_DESC,
+        gitRemote: origin,
+        prOpenMode: "draft",
+      });
+    } catch (error) {
+      if (!(error instanceof ProjectConflictError)) throw error;
+      // Lost a create race (double click / two tabs): whoever won may well be
+      // ZIBBY itself — re-match before calling it a conflict.
+      const after = await this.projects.list();
+      const raced = await this.matchSelfProject(after, origin);
+      if (raced) return { projectId: raced.project.id, created: false };
+      const winner = after.find((p) => p.id === SELF_PROJECT_ID);
+      throw winner
+        ? this.foreignConflict(winner)
+        : new SelfProjectConflictError(`A project "${SELF_PROJECT_ID}" already exists.`);
+    }
     this.log?.info("self project registered", { id: SELF_PROJECT_ID });
     return { projectId: SELF_PROJECT_ID, created: true };
+  }
+
+  /** 409 for a `zibby` project that points somewhere else (credentials redacted). */
+  private foreignConflict(existing: Project): SelfProjectConflictError {
+    const remote = existing.gitRemote ? redactRemote(existing.gitRemote) : "none";
+    return new SelfProjectConflictError(
+      `A project "${SELF_PROJECT_ID}" already exists with a different remote (${remote}); not overwriting it.`,
+    );
   }
 
   /**

@@ -9,9 +9,10 @@ top-bar freshness indicator. Unlike every other resource, this is about the ZIBB
 
 | Piece      | File                                       | Role                                                                                                                                                                |
 | ---------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Contract   | `libs/contracts/src/self/self.schema.ts`   | `SelfPrSchema`, `SelfStatusSchema`, `SelfUpdateResultSchema`                                                                                                        |
+| Contract   | `libs/contracts/src/self/self.schema.ts`   | `SelfPrSchema`, `SelfStatusSchema` (incl. `projectId`, `projectUsesInstallTree`), `SelfUpdateResultSchema`, `EnsureSelfProjectResultSchema`                         |
 | Contract   | `libs/contracts/src/self/self.contract.ts` | `selfContract` — `getSelfStatus` (`GET /api/self/status`), `updateSelf` (`POST /api/self/update`, 200/409), `ensureSelfProject` (`POST /api/self/project`, 200/409) |
 | Service    | `apps/api/src/self/self.service.ts`        | `SelfService` — git/`gh` reads via bounded `execFile`, all soft-fail                                                                                                |
+| Helpers    | `apps/api/src/self/self-remote.ts`         | `normalizeRemote` (match key `host/owner/repo`), `redactRemote` (strip credentials)                                                                                 |
 | Controller | `apps/api/src/self/self.controller.ts`     | implements `selfContract`; maps the two refusal errors to 409                                                                                                       |
 | Module     | `apps/api/src/self/self.module.ts`         | imports `ProjectsModule` + `MachineConfigModule` (for `ensureSelfProject` only)                                                                                     |
 
@@ -26,7 +27,12 @@ Reads local git state in `installRoot()`:
 - `defaultBranch` via `git symbolic-ref --short refs/remotes/origin/HEAD`
   (fallback `"main"`); `currentBranch` via `git branch --show-current`.
 - `behind`/`ahead` via `git rev-list --count` against `origin/<default>`;
-  `upToDate = behind === 0`; `dirty` via `git status --porcelain`.
+  `upToDate = behind === 0`; `dirty` via `git status --porcelain`, with paths
+  under the data dir (`.zibby/data/` by default, derived from `resolveDataRoot()`
+  relative to `installRoot()`) filtered out — ZIBBY's own runtime writes never
+  block Upgrade. `git pull --ff-only` still refuses to overwrite a modified file.
+- `projectId` / `projectUsesInstallTree` — see `ensureSelfProject` below; the
+  same matcher recognises the self project (needs `git remote get-url origin`).
 - Open PRs via `gh pr list --state open --json number,title,url` when the `gh`
   CLI is available (`gh --version` succeeds) — any `gh` failure (missing, not
   authenticated, API error) soft-fails to `ghAvailable: false, prs: []`, never
@@ -51,15 +57,39 @@ back to `--force`/`reset --hard`:
 `POST /api/self/project` (empty body) registers the install as project `zibby`
 so ZIBBY edits itself in a **separate clone** (`<cloneRoot>/zibby`) and lands
 changes as **draft PRs** (Builder != Subject, see `docs/ops/self-development.md`).
-`getSelfStatus` gains an optional `projectId` (`"zibby"`) once that project exists.
 
-- Origin is read with `git remote get-url origin` in `installRoot()`; the new
-  project is `{ id: "zibby", name: "ZIBBY", desc, gitRemote: <origin>, prOpenMode: "draft" }`
-  — never a `path`, and no git state is mutated.
-- Idempotent: `zibby` already at the same remote -> 200 `{ projectId, created: false }`.
+**Recognising an existing self project.** Before creating anything, every
+project in the registry is matched against the install:
+
+- `normalizeRemote(project.gitRemote) === normalizeRemote(origin)` —
+  `apps/api/src/self/self-remote.ts` maps `git@host:o/r(.git)`,
+  `ssh://git@host/o/r(.git)` and `https://[userinfo@]host/o/r(.git)` to
+  `host/o/r` (host lowercased, `.git` and trailing `/` stripped); or
+- `realpath(project.path) === realpath(installRoot())` (falls back to
+  `path.resolve` when the path doesn't exist).
+
+A match (a `zibby`-id project wins a tie) returns 200
+`{ projectId: <match.id>, created: false }` and writes nothing — so a
+hand-registered project such as `zibby-self` is reused, never duplicated or
+modified. `getSelfStatus` uses the same matcher for its optional `projectId`,
+plus `projectUsesInstallTree: boolean` — `true` when the matched project's
+`path` resolves to the install root or inside it (runs would then work in the
+builder's own tree; the Settings panel warns and asks the operator to change the
+project's path — no runtime guard, that stays an operator decision).
+
+**Creating it.** Without a match the new project is
+`{ id: "zibby", name: "ZIBBY", desc, gitRemote: <origin>, prOpenMode: "draft" }`
+— never a `path`, and no git state is mutated. Origin credentials are stripped
+first (`redactRemote`: `https://` drops all userinfo, `ssh://` drops the
+password, scp-like has none), so a token never lands in the git-tracked registry
+or in an error message.
+
 - 409 (`SelfProjectConflictError`, `{ message }`) when: origin missing or not a
-  valid remote; `zibby` exists with a different remote (never overwritten);
-  `<cloneRoot>/zibby` resolves to the install root itself.
+  valid remote; a `zibby` project exists with a different remote (never
+  overwritten); `<cloneRoot>/zibby` realpath-resolves to the install root itself.
+- Create race: if `projects.create` throws `ProjectConflictError`, the matcher
+  re-runs — a match returns `created: false`, anything else is the 409 above.
+  `apps/api/src/self/self.controller.e2e.test.ts` pins every refusal → 409.
 
 ## Frontend
 

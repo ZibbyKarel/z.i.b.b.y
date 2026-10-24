@@ -53,6 +53,19 @@ describe("selfContract", () => {
     expect(EnsureSelfProjectResultSchema.safeParse({ projectId: "zibby" }).success).toBe(false);
   });
 
+  it("status accepts an optional boolean projectUsesInstallTree", () => {
+    expect(
+      SelfStatusSchema.safeParse({
+        ...okStatus,
+        projectId: "zibby-self",
+        projectUsesInstallTree: true,
+      }).success,
+    ).toBe(true);
+    expect(SelfStatusSchema.safeParse({ ...okStatus, projectUsesInstallTree: "yes" }).success).toBe(
+      false,
+    );
+  });
+
   it("updateSelf's empty body IS the shared EmptyBodySchema (T11 dedup, finding #37)", () => {
     expect(selfContract.updateSelf.body).toBe(EmptyBodySchema);
   });

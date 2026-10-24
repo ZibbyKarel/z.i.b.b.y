@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { realInstallRoot } = vi.hoisted(() => ({ realInstallRoot: { fn: (): string => "" } }));
 vi.mock("../shared/data-dir", async (orig) => {
@@ -29,7 +29,11 @@ vi.mock("node:child_process", () => {
   return { execFile: execFileMock };
 });
 
+import { promises as fs } from "node:fs";
+import * as os from "node:os";
+import * as nodePath from "node:path";
 import type { Project } from "@zibby/contracts";
+import { ProjectConflictError } from "../projects/projects.errors";
 import { installRoot } from "../shared/data-dir";
 
 import {
@@ -322,11 +326,208 @@ describe("SelfService.ensureSelfProject / status.projectId", () => {
     }
   });
 
-  it("status carries projectId when zibby exists, omits it otherwise", async () => {
-    mockGit(CLEAN_UP_TO_DATE);
-    const withProject = makeService([{ id: "zibby" }]).service;
+  it("status carries projectId when a project matches origin, omits it otherwise", async () => {
+    mockGit({ ...CLEAN_UP_TO_DATE, [ORIGIN]: { stdout: SSH } });
+    const withProject = makeService([{ id: "zibby", gitRemote: SSH }]).service;
     expect((await withProject.status()).projectId).toBe("zibby");
-    const without = makeService([{ id: "other" }]).service;
-    expect("projectId" in (await without.status())).toBe(false);
+    const without = makeService([{ id: "other", gitRemote: "git@github.com:x/y.git" }]).service;
+    const status = await without.status();
+    expect("projectId" in status).toBe(false);
+    expect("projectUsesInstallTree" in status).toBe(false);
+  });
+
+  it("matches an existing https project when origin is ssh (no duplicate created)", async () => {
+    mockGit({ [ORIGIN]: { stdout: `${SSH}\n` } });
+    const { service, create } = makeService([
+      { id: "zibby-self", gitRemote: "https://github.com/me/zibby" },
+    ]);
+    await expect(service.ensureSelfProject()).resolves.toEqual({
+      projectId: "zibby-self",
+      created: false,
+    });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("status.projectId recognises the https self project by normalised remote", async () => {
+    mockGit({ ...CLEAN_UP_TO_DATE, [ORIGIN]: { stdout: SSH } });
+    const { service } = makeService([
+      { id: "zibby-self", gitRemote: "https://github.com/me/zibby/" },
+    ]);
+    const status = await service.status();
+    expect(status.projectId).toBe("zibby-self");
+    expect(status.projectUsesInstallTree).toBe(false);
+  });
+
+  describe("with a real install root on disk", () => {
+    let root: string;
+
+    beforeEach(async () => {
+      root = await fs.mkdtemp(nodePath.join(os.tmpdir(), "self-install-"));
+      vi.mocked(installRoot).mockReturnValue(root);
+    });
+
+    afterEach(async () => {
+      vi.mocked(installRoot).mockReset();
+      vi.mocked(installRoot).mockImplementation(() => realInstallRoot.fn());
+      await fs.rm(root, { recursive: true, force: true });
+    });
+
+    it("matches by path equal to the install root (realpath), whatever its remote", async () => {
+      mockGit({ [ORIGIN]: { stdout: SSH } });
+      const link = `${root}-link`;
+      await fs.symlink(root, link);
+      try {
+        const { service, create } = makeService([
+          { id: "zibby-self", path: link, gitRemote: "https://github.com/someone/fork" },
+        ]);
+        await expect(service.ensureSelfProject()).resolves.toEqual({
+          projectId: "zibby-self",
+          created: false,
+        });
+        expect(create).not.toHaveBeenCalled();
+      } finally {
+        await fs.rm(link, { force: true });
+      }
+    });
+
+    it("computes projectUsesInstallTree: true for a path at the install root", async () => {
+      mockGit({ ...CLEAN_UP_TO_DATE, [ORIGIN]: { stdout: SSH } });
+      const { service } = makeService([
+        { id: "zibby-self", path: root, gitRemote: "https://github.com/me/zibby" },
+      ]);
+      const status = await service.status();
+      expect(status.projectId).toBe("zibby-self");
+      expect(status.projectUsesInstallTree).toBe(true);
+    });
+
+    it("computes projectUsesInstallTree: true for a path inside the install root", async () => {
+      mockGit({ ...CLEAN_UP_TO_DATE, [ORIGIN]: { stdout: SSH } });
+      const inner = nodePath.join(root, "nested", "clone");
+      await fs.mkdir(inner, { recursive: true });
+      const { service } = makeService([{ id: "zibby", path: inner, gitRemote: SSH }]);
+      expect((await service.status()).projectUsesInstallTree).toBe(true);
+    });
+
+    it("computes projectUsesInstallTree: false for a separate clone", async () => {
+      mockGit({ ...CLEAN_UP_TO_DATE, [ORIGIN]: { stdout: SSH } });
+      const sibling = await fs.mkdtemp(nodePath.join(os.tmpdir(), "self-clone-"));
+      try {
+        const { service } = makeService([{ id: "zibby", path: sibling, gitRemote: SSH }]);
+        expect((await service.status()).projectUsesInstallTree).toBe(false);
+      } finally {
+        await fs.rm(sibling, { recursive: true, force: true });
+      }
+    });
+  });
+
+  it("strips origin credentials before storing gitRemote", async () => {
+    mockGit({ [ORIGIN]: { stdout: "https://user:tok@github.com/me/z.git\n" } });
+    const { service, create } = makeService();
+    await service.ensureSelfProject();
+    const arg = create.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(arg.gitRemote).toBe("https://github.com/me/z.git");
+    expect(JSON.stringify(arg)).not.toContain("tok");
+  });
+
+  it("never echoes origin credentials in a conflict message", async () => {
+    mockGit({ [ORIGIN]: { stdout: "https://user:tok@github.com/me/z.git" } });
+    const { service } = makeService([
+      { id: "zibby", gitRemote: "https://bob:tok@github.com/other/repo.git" },
+    ]);
+    const error = await service.ensureSelfProject().catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(SelfProjectConflictError);
+    expect((error as Error).message).not.toContain("tok");
+  });
+
+  it("never echoes origin credentials when origin is invalid", async () => {
+    mockGit({ [ORIGIN]: { stdout: "https://user:tok@github.com/has space" } });
+    const { service } = makeService();
+    const error = await service.ensureSelfProject().catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(SelfProjectConflictError);
+    expect((error as Error).message).not.toContain("tok");
+  });
+
+  it("a lost create race that produced ZIBBY itself returns created:false", async () => {
+    mockGit({ [ORIGIN]: { stdout: SSH } });
+    const create = vi.fn(async () => {
+      throw new ProjectConflictError("zibby");
+    });
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: "zibby", gitRemote: SSH }]);
+    const read = vi.fn(async () => ({ cloneRoot: "/tmp/zibby-clones" }));
+    const service = new SelfService(undefined, { list, create } as never, { read } as never);
+    await expect(service.ensureSelfProject()).resolves.toEqual({
+      projectId: "zibby",
+      created: false,
+    });
+  });
+
+  it("a lost create race to a foreign zibby is a 409 conflict, not a 500", async () => {
+    mockGit({ [ORIGIN]: { stdout: SSH } });
+    const create = vi.fn(async () => {
+      throw new ProjectConflictError("zibby");
+    });
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: "zibby", gitRemote: "git@github.com:x/y.git" }]);
+    const read = vi.fn(async () => ({ cloneRoot: "/tmp/zibby-clones" }));
+    const service = new SelfService(undefined, { list, create } as never, { read } as never);
+    await expect(service.ensureSelfProject()).rejects.toBeInstanceOf(SelfProjectConflictError);
+  });
+});
+
+describe("SelfService dirty readout ignores runtime data (R3)", () => {
+  const previous = process.env.ZIBBY_DATA_DIR;
+
+  beforeEach(() => {
+    execFileMock.mockReset();
+    // installRoot() derives from the data root → "/repo"; data dir = ".zibby/data".
+    process.env.ZIBBY_DATA_DIR = "/repo/.zibby/data";
+  });
+
+  afterEach(() => {
+    process.env.ZIBBY_DATA_DIR = previous;
+  });
+
+  it("only .zibby/data changes → dirty:false", async () => {
+    mockGit({
+      ...CLEAN_UP_TO_DATE,
+      [STATUS_PORCELAIN]: {
+        stdout: " M .zibby/data/projects/_projects.json\n?? .zibby/data/runs/r1/\n",
+      },
+    });
+    expect((await new SelfService().status()).dirty).toBe(false);
+  });
+
+  it("a source change (apps/x.ts) → dirty:true", async () => {
+    mockGit({
+      ...CLEAN_UP_TO_DATE,
+      [STATUS_PORCELAIN]: { stdout: " M .zibby/data/gate-rules.json\n M apps/x.ts\n" },
+    });
+    expect((await new SelfService().status()).dirty).toBe(true);
+  });
+
+  it("a look-alike prefix (.zibby/data-test) still counts as dirty", async () => {
+    mockGit({ ...CLEAN_UP_TO_DATE, [STATUS_PORCELAIN]: { stdout: "?? .zibby/data-test/x\n" } });
+    expect((await new SelfService().status()).dirty).toBe(true);
+  });
+
+  it("updateSelf applies the same rule: runtime data only → pulls, source change → refuses", async () => {
+    mockGit({
+      ...CLEAN_UP_TO_DATE,
+      [STATUS_PORCELAIN]: { stdout: " M .zibby/data/mandate.json\n" },
+      [BEHIND]: { stdout: "1\n" },
+      [PULL]: { stdout: "Fast-forward\n" },
+    });
+    await expect(new SelfService().update()).resolves.toEqual({ updated: true, behind: 0 });
+
+    mockGit({
+      ...CLEAN_UP_TO_DATE,
+      [STATUS_PORCELAIN]: { stdout: " M .zibby/data/mandate.json\n M apps/x.ts\n" },
+    });
+    await expect(new SelfService().update()).rejects.toBeInstanceOf(SelfDirtyError);
   });
 });

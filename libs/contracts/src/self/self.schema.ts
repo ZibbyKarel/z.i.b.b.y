@@ -19,7 +19,8 @@ export type SelfPr = z.infer<typeof SelfPrSchema>;
  * git state; `behind`/`ahead` are the commit counts vs. `origin/<defaultBranch>`
  * (0 when unknown — e.g. offline with no prior fetch, or not a git checkout at
  * all). `dirty` is `true` when the operator's tree has uncommitted changes —
- * `updateSelf` refuses to touch it. `upToDate` is `behind === 0`. `prs` is the
+ * `updateSelf` refuses to touch it; ZIBBY's own runtime writes under its data
+ * dir (`.zibby/data/` by default) don't count. `upToDate` is `behind === 0`. `prs` is the
  * open PRs on the repo (via `gh pr list`) when the `gh` CLI is available
  * (`ghAvailable`); empty otherwise — never a failure. `fetchedAt` is when the
  * last successful `git fetch origin` completed (absent when offline or the
@@ -36,8 +37,19 @@ export const SelfStatusSchema = z.object({
   prs: z.array(SelfPrSchema),
   fetchedAt: IsoDateTimeSchema.optional(),
   ghAvailable: z.boolean(),
-  /** Present when a project with id `zibby` exists (ZIBBY registered as its own project). */
+  /**
+   * Present when an existing project is recognised as ZIBBY itself — its
+   * `gitRemote` normalises to the install's `origin` (ssh/https, `.git`, `/`
+   * insensitive) or its `path` is the install root. Usually `zibby`, but a
+   * hand-registered project (e.g. `zibby-self`) is recognised too.
+   */
   projectId: z.string().optional(),
+  /**
+   * Present alongside `projectId`: `true` when that project's `path` resolves
+   * to the running install root or inside it — runs would then work in the
+   * builder's own tree instead of a separate clone (Builder ≠ Subject risk).
+   */
+  projectUsesInstallTree: z.boolean().optional(),
 });
 export type SelfStatus = z.infer<typeof SelfStatusSchema>;
 
