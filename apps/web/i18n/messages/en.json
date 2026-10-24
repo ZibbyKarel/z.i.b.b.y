@@ -3234,6 +3234,36 @@
         "noKb": "This team has no knowledge base.",
         "questions": "Open questions",
         "decisions": "Agreements"
+      },
+      "proposals": {
+        "empty": "No proposals to review.",
+        "source": {
+          "pattern-extract": "Pattern extraction",
+          "gap-detect": "Automation ideas",
+          "agent-factory": "Agent factory"
+        },
+        "confidence": {
+          "low": "low confidence",
+          "medium": "medium confidence",
+          "high": "high confidence"
+        },
+        "expires": "expires in {days} d",
+        "provenance": {
+          "note": "Note",
+          "agent": "Agent",
+          "approval": "Approval"
+        },
+        "dismiss": "Dismiss",
+        "dismissArmed": "Hold to dismiss",
+        "dismissDone": "Dismissed",
+        "actionError": "The action could not be completed.",
+        "dismissLabel": "Dismiss: {text}",
+        "edit": "Edit",
+        "editLabel": "Edit: {text}",
+        "editor": "Proposal text",
+        "save": "Save",
+        "cancel": "Cancel",
+        "error": "Could not save the change. Try again."
       }
     },
     "you": "{n} you",
@@ -3273,6 +3303,10 @@
       "teamKb": {
         "label": "Team knowledge",
         "desc": "Open questions and agreements from the team knowledge base."
+      },
+      "proposals": {
+        "label": "Proposals",
+        "desc": "Suggestions from automations to review — dismiss or edit the insight."
       }
     },
     "sheet": {

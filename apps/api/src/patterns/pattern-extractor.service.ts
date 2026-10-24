@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { VaultService } from "../memory/vault.service";
+import { ProposalsService } from "../proposals/proposals.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 
 /** Minimum occurrences of the same action+decision pair to qualify as a pattern. */
@@ -8,6 +9,9 @@ const MIN_OCCURRENCES = 3;
 
 /** Max proposals written to the suggestions vault note. */
 const MAX_PROPOSALS = 10;
+
+/** The vault note the proposals are written to (read by the briefing). */
+const NOTE_ID = "patterns/suggestions";
 
 export interface ApprovalPattern {
   action: string;
@@ -17,7 +21,13 @@ export interface ApprovalPattern {
 
 export interface PatternExtractResult {
   patterns: ApprovalPattern[];
+  /** The lines written to the note — dismissed proposals dropped, edited ones reworded. */
   proposals: string[];
+}
+
+export interface PatternExtractOptions {
+  /** The automation that fired this run (provenance) — omitted for an unattributed run. */
+  automationId?: string;
 }
 
 /**
@@ -28,6 +38,10 @@ export interface PatternExtractResult {
  *
  * Deterministic — no LLM call. Reading only; the vault write is idempotent
  * (overwrites the suggestions note).
+ *
+ * TODO 14: each pattern is also upserted as a structured `pattern-extract`
+ * proposal (key `action:decision`); the note skips proposals the operator
+ * dismissed and writes edited ones in the operator's wording.
  */
 @Injectable()
 export class PatternExtractorService {
@@ -37,6 +51,7 @@ export class PatternExtractorService {
     private readonly activity: ActivityLogService,
     private readonly vault: VaultService,
     logger: LoggerService,
+    private readonly proposalsService: ProposalsService,
   ) {
     this.log = logger.child(PatternExtractorService.name);
   }
@@ -45,7 +60,10 @@ export class PatternExtractorService {
    * Run the extraction: read 30 days of approval activity, tally patterns,
    * write proposals to the vault, return the summary.
    */
-  async extract(now: Date = new Date()): Promise<PatternExtractResult> {
+  async extract(
+    now: Date = new Date(),
+    opts: PatternExtractOptions = {},
+  ): Promise<PatternExtractResult> {
     const since = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const entries = await this.activity.readRange(since, now).catch(() => []);
 
@@ -74,14 +92,42 @@ export class PatternExtractorService {
       .sort((a, b) => b.count - a.count)
       .slice(0, MAX_PROPOSALS);
 
-    const proposals = patterns.map((p) => toProposal(p));
+    const proposals = await this.proposalsService.syncNoteLines(
+      "pattern-extract",
+      patterns.map((p) => ({
+        key: `${p.action}:${p.decision}`,
+        text: toProposal(p),
+        occurrences: p.count,
+      })),
+      {
+        minOccurrences: MIN_OCCURRENCES,
+        provenance: {
+          ...(opts.automationId ? { automationId: opts.automationId } : {}),
+          noteId: NOTE_ID,
+        },
+        now,
+      },
+    );
 
-    if (proposals.length > 0) {
+    // Rewrite whenever patterns exist — even if every one was dismissed — so a
+    // dismissed line leaves the note on this run.
+    if (patterns.length > 0) {
       await this.writeSuggestions(proposals, now).catch((err) => {
         this.log.warn("failed to write pattern suggestions to vault", {
           error: (err as Error).message,
         });
       });
+    } else {
+      // Nothing qualifies any more, but the note may still carry dismissed lines.
+      const existing = await this.readProposals();
+      const kept = await this.proposalsService.withoutDismissed("pattern-extract", existing);
+      if (kept.length !== existing.length) {
+        await this.writeSuggestions(kept, now).catch((err) => {
+          this.log.warn("failed to write pattern suggestions to vault", {
+            error: (err as Error).message,
+          });
+        });
+      }
     }
 
     this.log.info("pattern extraction complete", {
@@ -95,7 +141,7 @@ export class PatternExtractorService {
   /** Read the latest proposals from the vault suggestions note (for briefing). */
   async readProposals(): Promise<string[]> {
     try {
-      const note = await this.vault.note("patterns/suggestions");
+      const note = await this.vault.note(NOTE_ID);
       return parseProposalsFromNote(note.body ?? "");
     } catch {
       return [];
@@ -114,12 +160,11 @@ export class PatternExtractorService {
       "_Approve each line to turn it into a gate rule._",
     ].join("\n");
 
-    const noteId = "patterns/suggestions";
     try {
-      await this.vault.updateNote(noteId, { body });
+      await this.vault.updateNote(NOTE_ID, { body });
     } catch {
       await this.vault.createNote({
-        id: noteId,
+        id: NOTE_ID,
         title: "Pattern Suggestions",
         tier: "memory",
         body,

@@ -32,6 +32,7 @@ import { RunRecorderModule } from "./memory/run-recorder.module";
 import { MachineModule } from "./machine/machine.module";
 import { MonitorsModule } from "./monitors/monitors.module";
 import { InventoryModule } from "./inventory/inventory.module";
+import { ProposalsModule } from "./proposals/proposals.module";
 import { ProjectHealthModule } from "./project-health/project-health.module";
 import { WorkflowsModule } from "./workflows/workflows.module";
 import { ProjectsModule } from "./projects/projects.module";
@@ -100,6 +101,8 @@ import { TeamsModule } from "./teams/teams.module";
     ProjectHealthModule,
     // TODO 13: read-only machine inventory (Claude Code MCP/skills/plugins) + skill install.
     InventoryModule,
+    // TODO 14: structured automation proposals (list / dismiss / edit).
+    ProposalsModule,
     ReleaseModule,
     ReviewLearningModule,
     HealthModule,

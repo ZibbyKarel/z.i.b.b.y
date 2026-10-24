@@ -1,5 +1,5 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
-import type { Agent } from "@zibby/contracts";
+import type { Agent, Approval } from "@zibby/contracts";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
@@ -92,8 +92,11 @@ export class AgentProposalFlowService implements OnModuleInit, ResumableRunner {
     this.approvals.register("agent-proposal", this);
   }
 
-  /** Write the candidate `.md`, gate it, and park a Tier-3 approval (or discard on deny). */
-  async propose(candidate: Agent): Promise<void> {
+  /**
+   * Write the candidate `.md`, gate it, and park a Tier-3 approval (or discard on
+   * deny). Returns the parked approval, or null when the gate discarded the candidate.
+   */
+  async propose(candidate: Agent): Promise<Approval | null> {
     const written = await this.agents.create({ ...candidate, status: "proposed" });
     const floor = await this.gate.floor();
     const evaluation = this.gate.evaluate(floor, {
@@ -105,7 +108,7 @@ export class AgentProposalFlowService implements OnModuleInit, ResumableRunner {
     if (evaluation.decision === "deny") {
       await this.agents.delete(written.id).catch(() => {});
       this.log.info("agent proposal denied by gate; candidate discarded", { id: written.id });
-      return;
+      return null;
     }
     if (evaluation.decision !== "ask") {
       // The locked floor guarantees `ask` for `agent.propose_new` — reaching a
@@ -117,7 +120,7 @@ export class AgentProposalFlowService implements OnModuleInit, ResumableRunner {
       });
     }
 
-    await this.approvals.requestApproval({
+    const approval = await this.approvals.requestApproval({
       runId: written.id,
       kind: "agent-proposal",
       skill: "agent-factory",
@@ -126,6 +129,7 @@ export class AgentProposalFlowService implements OnModuleInit, ResumableRunner {
       risk: "medium",
     });
     this.log.info("agent proposal parked for approval", { id: written.id });
+    return approval;
   }
 
   /** Approve → flip the candidate's status to active (read-through storage — no restart needed). */

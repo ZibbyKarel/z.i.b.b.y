@@ -12,10 +12,10 @@ only as a scheduled automation and is read back through the vault note it writes
 
 ## Pieces
 
-| Piece    | File                                                       | Role                                                                            |
-| -------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| Service  | `apps/api/src/patterns/pattern-extractor.service.ts`         | `extract()` tallies patterns and writes proposals; `readProposals()` reads them back |
-| Module   | `apps/api/src/patterns/patterns.module.ts`                   | imports `MemoryModule` (vault write); `ActivityLogService`/`LoggerService` come from global modules |
+| Piece   | File                                                 | Role                                                                                                |
+| ------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Service | `apps/api/src/patterns/pattern-extractor.service.ts` | `extract()` tallies patterns and writes proposals; `readProposals()` reads them back                |
+| Module  | `apps/api/src/patterns/patterns.module.ts`           | imports `MemoryModule` (vault write); `ActivityLogService`/`LoggerService` come from global modules |
 
 ## Flow
 
@@ -27,7 +27,7 @@ only as a scheduled automation and is read back through the vault note it writes
    two separate patterns — one `approved`, one `rejected` — if both cross the
    threshold independently.
 3. Each pattern becomes a proposal sentence: `Always allow "<action>" (approved N×
-   in the past 30 days)` or the `deny` equivalent for rejected patterns.
+in the past 30 days)` or the `deny` equivalent for rejected patterns.
 4. Non-empty proposal lists are written as `- [ ] …` bullets to the vault note
    `patterns/suggestions` (`updateNote`, falling back to `createNote`).
 5. `readProposals()` parses the `- [ ]` / `- [x]` bullet lines back out of the note
@@ -39,6 +39,17 @@ actual rule is an operator decision
 — "Approve each line to turn it into a gate rule" is the note's own closing line.
 Reading is the only side effect on the activity log; the vault write is idempotent
 (it always overwrites the whole suggestions note, never appends).
+
+## Structured proposals (TODO 14)
+
+Each pattern is also upserted as a `pattern-extract` proposal
+(`ProposalsService.syncNoteLines`, dedupe key `action:decision`, provenance
+`{ automationId, noteId: "patterns/suggestions" }` — `automationId` is the firing
+automation's id, passed by the scheduler). When writing the note, a proposal the
+operator dismissed is skipped and an edited one is written with its `editedText`.
+The note is rewritten whenever patterns exist, even if all were dismissed; when
+none qualify, the existing note is still cleaned of dismissed lines. A
+proposals-store failure falls back to the plain text. See `docs/api/proposals.md`.
 
 ## Scheduling
 

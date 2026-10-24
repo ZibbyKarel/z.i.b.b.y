@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { AgentsModule } from "../agents/agents.module";
 import { ApprovalsModule } from "../approvals/approvals.module";
 import { GatesModule } from "../gates/gates.module";
+import { ProposalsModule } from "../proposals/proposals.module";
 import { AgentFactoryService } from "./agent-factory.service";
 import { AgentProposalFlowService } from "./agent-proposal-flow.service";
 
@@ -18,7 +19,7 @@ import { AgentProposalFlowService } from "./agent-proposal-flow.service";
  * explicit import needed.
  */
 @Module({
-  imports: [AgentsModule, ApprovalsModule, GatesModule],
+  imports: [AgentsModule, ApprovalsModule, GatesModule, ProposalsModule],
   providers: [AgentProposalFlowService, AgentFactoryService],
   exports: [AgentFactoryService],
 })

@@ -1,0 +1,1 @@
+export { useDecideProposalMutation } from "./useDecideProposalMutation";

@@ -5,6 +5,7 @@ import { BriefingWidget } from "./BriefingWidget";
 import { IssuesWidget } from "./IssuesWidget";
 import { PinsWidget } from "./PinsWidget";
 import { PrsWidget } from "./PrsWidget";
+import { ProposalsWidget } from "./ProposalsWidget";
 import { QuickActionsWidget } from "./QuickActionsWidget";
 import { RunsWidget } from "./RunsWidget";
 import { TasksWidget } from "./TasksWidget";
@@ -112,6 +113,11 @@ export const WIDGETS: Record<WidgetType, WidgetDefinition> = {
     labelKey: "bridge.widget.teamKb.label",
     descKey: "bridge.widget.teamKb.desc",
     Component: TeamKbWidget,
+  },
+  proposals: {
+    labelKey: "bridge.widget.proposals.label",
+    descKey: "bridge.widget.proposals.desc",
+    Component: ProposalsWidget,
   },
 };
 

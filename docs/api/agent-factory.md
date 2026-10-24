@@ -87,6 +87,22 @@ Deterministic — **no LLM call**, fully unit-testable.
 3. **`cancel(agentId)`** (reject) — deletes the candidate file; the approval
    record itself remains as the durable trace of the decision.
 
+`propose()` returns the parked `Approval` (or `null` when the gate discarded the
+candidate).
+
+## Structured proposals (TODO 14)
+
+Every parked candidate is also upserted as an `agent-factory` proposal (dedupe key
+= candidate id, provenance `{ agentId, approvalId }`, `occurrences` = the fallback
+count). A later run that still sees a candidate pending approval only refreshes its
+proposal (never re-proposes). A candidate whose proposal was **dismissed** is never
+re-proposed either. The run only refreshes `lastSeenAt` and keeps the original
+`approvalId`. Dismissing the proposal (`PATCH /api/proposals/:id`)
+calls `ApprovalsService.reject` on the pending approval — the same path as the
+approvals page, so `cancel(agentId)` deletes the candidate the same way. Editing it
+is a 409 (the candidate is edited on the agent page). Once the approval is decided
+elsewhere, the proposal drops out of the list. See `docs/api/proposals.md`.
+
 ## Scheduling
 
 Dispatched by the `agent-factory` system automation target
@@ -122,3 +138,7 @@ automation's ref. Deterministic — no `claude` run, same posture as
   but nothing stops the SAME pattern (same `normalizedSummary`) from being
   re-grouped and re-proposed with a fresh candidate id on a later run, since
   the group key isn't itself remembered as "previously rejected".
+- Dismissing a candidate from the Bridge "Návrhy" widget permanently suppresses it
+  (the dismissed proposal record is remembered), whereas rejecting its approval on the
+  approvals page leaves no such memory, so the same pattern can be re-proposed on a
+  later run. Reject there only when you want it to be eligible again.

@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { MemoryModule } from "../memory/memory.module";
+import { ProposalsModule } from "../proposals/proposals.module";
 import { PatternExtractorService } from "./pattern-extractor.service";
 
 /**
@@ -12,7 +13,7 @@ import { PatternExtractorService } from "./pattern-extractor.service";
  * needed. LoggerService is also @Global().
  */
 @Module({
-  imports: [MemoryModule],
+  imports: [MemoryModule, ProposalsModule],
   providers: [PatternExtractorService],
   exports: [PatternExtractorService],
 })

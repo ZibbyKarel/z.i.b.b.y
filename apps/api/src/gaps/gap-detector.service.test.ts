@@ -1,6 +1,28 @@
-import { describe, expect, it, vi } from "vitest";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ActivityEntry } from "@zibby/contracts";
+import { ProposalsService, proposalId } from "../proposals/proposals.service";
+import { ProposalsStore } from "../proposals/proposals.store";
 import { GapDetectorService } from "./gap-detector.service";
+
+const tmpDirs: string[] = [];
+afterEach(() => {
+  for (const d of tmpDirs.splice(0)) rmSync(d, { recursive: true, force: true });
+});
+
+function makeProposals(): ProposalsService {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "gaps-proposals-"));
+  tmpDirs.push(dir);
+  const logger = { child: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn() }) };
+  return new ProposalsService(
+    new ProposalsStore(dir),
+    { record: vi.fn(async () => {}) } as never,
+    {} as never,
+    logger as never,
+  );
+}
 
 function taskCreated(summary: string, daysAgo = 1, i = 0): ActivityEntry {
   return {
@@ -12,7 +34,11 @@ function taskCreated(summary: string, daysAgo = 1, i = 0): ActivityEntry {
   };
 }
 
-function makeService(entries: ActivityEntry[] = [], vaultBody = "") {
+function makeService(
+  entries: ActivityEntry[] = [],
+  vaultBody = "",
+  proposals: ProposalsService = makeProposals(),
+) {
   const activity = { readRange: vi.fn(async () => entries) };
   const vault = {
     note: vi.fn(async () => {
@@ -28,7 +54,11 @@ function makeService(entries: ActivityEntry[] = [], vaultBody = "") {
     createNote: vi.fn(async () => ({}) as never),
   };
   const logger = { child: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn() }) };
-  return { svc: new GapDetectorService(activity as never, vault as never, logger as never), vault };
+  return {
+    svc: new GapDetectorService(activity as never, vault as never, logger as never, proposals),
+    vault,
+    proposals,
+  };
 }
 
 describe("GapDetectorService", () => {
@@ -76,5 +106,95 @@ describe("GapDetectorService", () => {
       '*Updated: 2026-06-17*\n\n- [ ] You created 3 similar tasks ("X") — automate it?\n';
     const { svc } = makeService([], body);
     expect(await svc.readGaps()).toEqual(['You created 3 similar tasks ("X") — automate it?']);
+  });
+
+  describe("proposals (TODO 14)", () => {
+    const recurring = (summary: string, n: number) =>
+      Array.from({ length: n }, (_, i) => taskCreated(summary, i + 1, i));
+    const writtenBody = (vault: ReturnType<typeof makeService>["vault"]): string => {
+      const call = vault.updateNote.mock.calls.at(-1) as unknown as [string, { body: string }];
+      return call[1].body;
+    };
+
+    it("upserts one proposal per gap keyed by the normalized pattern", async () => {
+      const { svc, proposals } = makeService(recurring("Deploy to staging", 7));
+      await svc.detect(new Date(), { automationId: "gap-detect" });
+      const listed = await proposals.list();
+      expect(listed).toHaveLength(1);
+      expect(listed[0]).toMatchObject({
+        id: proposalId("gap-detect", "deploy to staging"),
+        source: "gap-detect",
+        occurrences: 7,
+        confidence: "high",
+        provenance: { automationId: "gap-detect", noteId: "suggestions/automation-gaps" },
+      });
+    });
+
+    it("a dismissed proposal is omitted from the note on rerun", async () => {
+      const { svc, vault, proposals } = makeService([
+        ...recurring("Deploy to staging", 3),
+        ...recurring("Rotate logs", 3),
+      ]);
+      await svc.detect(new Date());
+      await proposals.decide(proposalId("gap-detect", "deploy to staging"), {
+        action: "dismiss",
+      });
+      const rerun = await svc.detect(new Date());
+      expect(writtenBody(vault)).not.toContain("Deploy to staging");
+      expect(writtenBody(vault)).toContain("Rotate logs");
+      expect(rerun.suggestions).toHaveLength(1);
+    });
+
+    it("rewrites the note without a dismissed line when nothing qualifies any more", async () => {
+      const proposals = makeProposals();
+      await makeService(recurring("Deploy to staging", 3), "", proposals).svc.detect(new Date());
+      const dismissed = (await proposals.list())[0];
+      if (!dismissed) throw new Error("no proposal");
+      await proposals.decide(dismissed.id, { action: "dismiss" });
+      const body = `- [ ] ${dismissed.text}\n- [ ] Stale but not dismissed\n`;
+      const { svc, vault } = makeService([], body, proposals);
+      await svc.detect(new Date());
+      expect(writtenBody(vault)).not.toContain("Deploy to staging");
+      expect(writtenBody(vault)).toContain("- [ ] Stale but not dismissed");
+    });
+
+    it("does not touch the note when nothing qualifies and nothing is dismissed", async () => {
+      const { svc, vault } = makeService([], "- [ ] Stale but not dismissed\n");
+      await svc.detect(new Date());
+      expect(vault.updateNote).not.toHaveBeenCalled();
+      expect(vault.createNote).not.toHaveBeenCalled();
+    });
+
+    it("an edited proposal is written with editedText", async () => {
+      const { svc, vault, proposals } = makeService(recurring("Deploy to staging", 3));
+      await svc.detect(new Date());
+      await proposals.decide(proposalId("gap-detect", "deploy to staging"), {
+        action: "edit",
+        text: "Nightly staging deploy automation",
+      });
+      await svc.detect(new Date());
+      expect(writtenBody(vault)).toContain("- [ ] Nightly staging deploy automation");
+    });
+
+    it("a corrupt proposals.json is quarantined (bytes kept) and the note is still written", async () => {
+      const dir = mkdtempSync(path.join(os.tmpdir(), "gaps-corrupt-"));
+      tmpDirs.push(dir);
+      writeFileSync(path.join(dir, "proposals.json"), "{ corrupt");
+      const logger = { child: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn() }) };
+      const proposals = new ProposalsService(
+        new ProposalsStore(dir),
+        { record: vi.fn(async () => {}) } as never,
+        {} as never,
+        logger as never,
+      );
+      expect(await proposals.list()).toEqual([]);
+      const { svc, vault } = makeService(recurring("Deploy to staging", 3), "", proposals);
+      await svc.detect(new Date());
+      const quarantined = readdirSync(dir).filter((n) => n.startsWith("proposals.json.corrupt-"));
+      expect(quarantined).toHaveLength(1);
+      expect(readFileSync(path.join(dir, quarantined[0] ?? ""), "utf8")).toBe("{ corrupt");
+      expect(await proposals.list()).toHaveLength(1);
+      expect(writtenBody(vault)).toContain("Deploy to staging");
+    });
   });
 });

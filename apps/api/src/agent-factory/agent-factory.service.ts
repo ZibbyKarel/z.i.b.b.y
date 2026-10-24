@@ -1,8 +1,9 @@
 import { Injectable } from "@nestjs/common";
-import type { Agent } from "@zibby/contracts";
+import type { Agent, Proposal } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { ApprovalsService } from "../approvals/approvals.service";
+import { ProposalsService, proposalId } from "../proposals/proposals.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { AgentProposalFlowService } from "./agent-proposal-flow.service";
 import {
@@ -49,6 +50,13 @@ export interface AgentFactoryDetectResult {
  * Deterministic — no LLM call. *Detects ≠ activates*: this only writes a
  * proposed candidate + parks an approval; only an approved decision makes the
  * agent dispatchable (Phase 4c/4d).
+ *
+ * TODO 14: every parked candidate is also upserted as a structured
+ * `agent-factory` proposal (key = candidate id, provenance `{ agentId,
+ * approvalId }`); a candidate still pending approval on a later run only
+ * refreshes its proposal. Dismissing that proposal rejects the approval
+ * (`ProposalsService.decide` → `ApprovalsService.reject`), and a dismissed
+ * candidate is never re-proposed on a later run (its proposal is only refreshed).
  */
 @Injectable()
 export class AgentFactoryService {
@@ -60,6 +68,7 @@ export class AgentFactoryService {
     private readonly approvals: ApprovalsService,
     private readonly flow: AgentProposalFlowService,
     logger: LoggerService,
+    private readonly proposals: ProposalsService,
   ) {
     this.log = logger.child(AgentFactoryService.name);
   }
@@ -80,7 +89,10 @@ export class AgentFactoryService {
       }
       tally.count += 1;
       if (tally.samples.length < MAX_SAMPLES_PER_GROUP) tally.samples.push(entry.summary);
-      for (const term of (entry.refs.terms ?? "").split(",").map((t) => t.trim()).filter(Boolean)) {
+      for (const term of (entry.refs.terms ?? "")
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean)) {
         tally.termCounts.set(term, (tally.termCounts.get(term) ?? 0) + 1);
       }
     }
@@ -94,6 +106,10 @@ export class AgentFactoryService {
     // dup-guard must see a candidate that's already been drafted, not just live ones.
     const existingAgents = await this.agents.list().catch((): Agent[] => []);
     const pendingProposalIds = await this.pendingProposalIds();
+    // TODO 14: the operator's decisions — a dismissed candidate is never re-proposed.
+    const decisions = await this.proposals
+      .decisions("agent-factory")
+      .catch((): Map<string, Proposal> => new Map());
 
     const proposed: string[] = [];
     for (const [normalizedSummary, tally] of qualifying) {
@@ -109,18 +125,39 @@ export class AgentFactoryService {
         continue;
       }
       const id = candidateAgentId(group);
+      const decided = decisions.get(proposalId("agent-factory", id));
+      if (decided?.status === "dismissed") {
+        this.log.debug("agent-factory candidate skipped (proposal dismissed)", { id });
+        // Still seen → refresh lastSeenAt, keeping the original approval as provenance.
+        await this.upsertProposal(
+          generateCandidateAgent(group),
+          group.count,
+          decided.provenance.approvalId,
+          now,
+        );
+        continue;
+      }
       if (existingAgents.some((a) => a.id === id)) {
         this.log.debug("agent-factory candidate skipped (id already exists)", { id });
         continue;
       }
-      if (pendingProposalIds.has(id)) {
+      const pendingApprovalId = pendingProposalIds.get(id);
+      if (pendingApprovalId) {
         this.log.debug("agent-factory candidate skipped (pending proposal)", { id });
+        // Still seen → refresh the proposal's lastSeenAt/expiry; never re-propose.
+        await this.upsertProposal(
+          generateCandidateAgent(group),
+          group.count,
+          pendingApprovalId,
+          now,
+        );
         continue;
       }
 
       const candidate = generateCandidateAgent(group);
-      await this.flow.propose(candidate);
+      const approval = await this.flow.propose(candidate);
       proposed.push(candidate.id);
+      if (approval) await this.upsertProposal(candidate, group.count, approval.id, now);
     }
 
     this.log.info("agent-factory detection complete", {
@@ -131,9 +168,40 @@ export class AgentFactoryService {
     return { proposed };
   }
 
-  /** Candidate ids with an already-pending `agent-proposal` approval. */
-  private async pendingProposalIds(): Promise<Set<string>> {
+  /** Candidate id → its already-pending `agent-proposal` approval id. */
+  private async pendingProposalIds(): Promise<Map<string, string>> {
     const pending = await this.approvals.list("pending").catch(() => []);
-    return new Set(pending.filter((a) => a.kind === "agent-proposal").map((a) => a.runId));
+    return new Map(
+      pending.filter((a) => a.kind === "agent-proposal").map((a) => [a.runId, a.id] as const),
+    );
+  }
+
+  /** Fail-open: a proposals-store failure never breaks the detector run. */
+  private async upsertProposal(
+    candidate: Agent,
+    occurrences: number,
+    approvalId: string | undefined,
+    now: Date,
+  ): Promise<void> {
+    const label = candidate.name ? `"${candidate.name}" (${candidate.id})` : candidate.id;
+    const text = candidate.description
+      ? `New agent ${label} — ${candidate.description}`
+      : `New agent ${label}`;
+    await this.proposals
+      .upsert({
+        source: "agent-factory",
+        key: candidate.id,
+        text,
+        occurrences,
+        minOccurrences: MIN_OCCURRENCES,
+        provenance: { agentId: candidate.id, ...(approvalId ? { approvalId } : {}) },
+        now,
+      })
+      .catch((err: unknown) => {
+        this.log.warn("agent-factory proposal upsert failed", {
+          id: candidate.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
   }
 }

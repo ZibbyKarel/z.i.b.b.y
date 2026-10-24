@@ -75,6 +75,10 @@ export const ActivityKindSchema = z.enum([
   // TODO 13 (machine inventory, Tier-2 — act, then report). The operator installed a ZIBBY
   // library skill into their Claude Code skills dir. Rides `itemId` = the skill id.
   "skill-installed",
+  // TODO 14 (system proposals, Tier-1 — the operator's own decision, recorded). The
+  // operator dismissed or edited an automation proposal. Rides `itemId` = the proposal
+  // id and `action` = dismiss | edit; producers respect it on their next run.
+  "proposal-decided",
   // N5a: an approved machine action was executed (or failed) — the gate's
   // act-then-report line; the proposal itself rides approval-requested.
   "machine-action",

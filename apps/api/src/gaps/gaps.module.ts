@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { MemoryModule } from "../memory/memory.module";
+import { ProposalsModule } from "../proposals/proposals.module";
 import { GapDetectorService } from "./gap-detector.service";
 
 /**
@@ -12,7 +13,7 @@ import { GapDetectorService } from "./gap-detector.service";
  * @Global() — no explicit import needed.
  */
 @Module({
-  imports: [MemoryModule],
+  imports: [MemoryModule, ProposalsModule],
   providers: [GapDetectorService],
   exports: [GapDetectorService],
 })
