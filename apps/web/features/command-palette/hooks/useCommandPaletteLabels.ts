@@ -46,6 +46,7 @@ export function useCommandPaletteLabels(): CommandPaletteLabels {
     settingsSection: Object.fromEntries(
       SETTINGS_SECTIONS.map((id) => [id, t(`settingsSection.${id}`)]),
     ),
+    inventory: t("inventory"),
     gateSection: Object.fromEntries(GATE_SECTIONS.map((id) => [id, t(`gateSection.${id}`)])),
     actions: {
       newTask: t("actions.newTask"),

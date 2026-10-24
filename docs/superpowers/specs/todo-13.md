@@ -61,7 +61,7 @@
      - `409 ErrorSchema` when the result would be `conflict`.
      - Install writes `<claudeDir>/skills/<skillId>/SKILL.md`. It creates the dir if needed and
        overwrites only when the existing file is zibby-managed.
-     - The content is YAML frontmatter `name`, `description` (the skill's `desc` or `name`) and
+     - The content is YAML frontmatter `name` (the skill id), `description` (the skill's `desc` or `name`) and
        `managed-by: zibby`, then a blank line, then the skill's `instructions`.
      - The write is atomic: write a temp file in the same dir, then rename.
    - Installing records an activity entry, kind `skill-installed`, with the skill id, so the

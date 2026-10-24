@@ -41,6 +41,7 @@ const LABELS: CommandPaletteLabels = {
   },
   settingsSection: Object.fromEntries(SETTINGS_SECTIONS.map((s) => [s, s])),
   gateSection: Object.fromEntries(GATE_SECTIONS.map((s) => [s, s])),
+  inventory: "Machine inventory",
   actions: { newTask: "New task", approveNext: "Approve next", toggleTheme: "Toggle theme" },
 };
 
@@ -169,7 +170,11 @@ describe("buildCommandPaletteIndex", () => {
     const entries = buildCommandPaletteIndex(EMPTY_SOURCES, LABELS);
     const settingsIds = entries.filter((e) => e.group === "settings").map((e) => e.id);
     const gateIds = entries.filter((e) => e.group === "gates").map((e) => e.id);
-    expect(settingsIds).toEqual([...SETTINGS_SECTIONS]);
+    expect(settingsIds).toEqual([...SETTINGS_SECTIONS, "inventory"]);
+    expect(entries.find((e) => e.id === "inventory")).toMatchObject({
+      label: "Machine inventory",
+      href: "/system/inventory",
+    });
     expect(gateIds).toEqual([...GATE_SECTIONS]);
     expect(entries.find((e) => e.id === "general" && e.group === "settings")?.href).toBe(
       "/system/settings/general",

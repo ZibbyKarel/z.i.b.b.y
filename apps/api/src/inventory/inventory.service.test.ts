@@ -250,10 +250,13 @@ describe("InventoryService", () => {
       expect(await service.installSkill("demo")).toEqual({ skillId: "demo", status: "installed" });
       expect(await fs.readFile(file(), "utf8")).toBe(renderInstalledSkill(skill));
       expect(renderInstalledSkill(skill)).toBe(
-        '---\nname: "Demo"\ndescription: "A demo"\nmanaged-by: zibby\n---\n\nDo the demo.\n',
+        '---\nname: "demo"\ndescription: "A demo"\nmanaged-by: zibby\n---\n\nDo the demo.\n',
       );
       expect(record).toHaveBeenCalledWith(
         expect.objectContaining({ kind: "skill-installed", refs: { itemId: "demo" } }),
+      );
+      expect(renderInstalledSkill({ ...skill, name: "Plan & Orchestrate" })).toContain(
+        'name: "demo"',
       );
       library = [{ ...skill, instructions: "Updated." }];
       await service.installSkill("demo");

@@ -49,11 +49,11 @@ async function readJson(file: string): Promise<unknown> {
  * frontmatter. Also what "installed" is compared against.
  */
 export function renderInstalledSkill(skill: Skill): string {
-  const name = skill.name ?? skill.id;
-  const description = skill.desc ?? name;
+  // Claude Code skill names are lowercase letters/digits/hyphens — the id, not the display name.
+  const description = skill.desc ?? skill.name ?? skill.id;
   return [
     "---",
-    `name: ${JSON.stringify(name)}`,
+    `name: ${JSON.stringify(skill.id)}`,
     `description: ${JSON.stringify(description)}`,
     "managed-by: zibby",
     "---",

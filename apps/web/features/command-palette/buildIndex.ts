@@ -220,6 +220,14 @@ export function buildCommandPaletteIndex(
     });
   }
 
+  entries.push({
+    id: "inventory",
+    group: "settings",
+    kind: "setting",
+    label: labels.inventory,
+    href: "/system/inventory" as Route,
+  });
+
   for (const section of GATE_SECTIONS) {
     entries.push({
       id: section,

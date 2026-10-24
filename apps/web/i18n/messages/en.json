@@ -2714,7 +2714,8 @@
       "newTask": "New task",
       "approveNext": "Approve next",
       "toggleTheme": "Toggle theme"
-    }
+    },
+    "inventory": "Machine inventory"
   },
   "registries": {
     "title": "Global libraries",

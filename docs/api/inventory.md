@@ -50,7 +50,7 @@ server exposes only `name`, `scope`, `transport` and a sanitised `target`: the c
 
 Install writes `<claudeDir>/skills/<skillId>/SKILL.md` only (id validated with `AGENT_ID_REGEX`),
 atomically (temp file + rename), and never over a `SKILL.md` without `managed-by: zibby`
-frontmatter. Content: frontmatter `name`, `description` (the skill's `desc`, else name),
+frontmatter. Content: frontmatter `name` (the skill id, a valid Claude Code skill name), `description` (the skill's `desc`, else name),
 `managed-by: zibby`, a blank line, then the skill's `instructions`. Success records a
 `skill-installed` activity entry (`refs.itemId` = skill id; display group `integrations`).
 
