@@ -50,13 +50,20 @@ export function NewAgentDialog({ categories, onClose, onCreate, pending }: NewAg
 
   const draft = newAgentDraft(categories[0]?.name);
   const { renderForm, submit, form } = useFormControls<AgentEditValues>({
-    defaultValues: toFormValues(draft),
+    // No default department: the select is placeholder-first and Submit waits for a choice.
+    defaultValues: { ...toFormValues(draft), department: "" },
     onSubmit: (values) => onCreate(applyFormValues(draft, values)),
   });
 
-  const [watchedName, watchedInstructions] = form.watch(["name", "instructions"]);
+  const [watchedName, watchedInstructions, watchedDepartment] = form.watch([
+    "name",
+    "instructions",
+    "department",
+  ]);
   const canCreate =
-    (watchedName ?? "").trim().length > 0 && (watchedInstructions ?? "").trim().length > 0;
+    (watchedName ?? "").trim().length > 0 &&
+    (watchedInstructions ?? "").trim().length > 0 &&
+    (watchedDepartment ?? "").length > 0;
 
   const watchedGlyph = form.watch("glyph");
   const watchedGates = form.watch("gates") ?? [];

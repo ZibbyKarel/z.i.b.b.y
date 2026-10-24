@@ -68,6 +68,8 @@ export const agentsContract = c.router(
       responses: {
         200: AgentSchema,
         404: ErrorSchema,
+        // An update may not leave an agent without a department, nor name an unknown one.
+        422: ErrorSchema,
       },
       summary: "Partially update an existing agent",
     },

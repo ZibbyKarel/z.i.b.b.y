@@ -6,6 +6,7 @@ import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
+import { AgentsStorageService } from "../src/agents/agents.storage.service";
 
 const BASE = "/api/agents";
 
@@ -203,5 +204,62 @@ describe("Agents API (e2e)", () => {
     const res = await request(app.getHttpServer()).post(BASE).send(validBody);
     expect(res.status).toBe(201);
     expect(res.body.department).toBe("dev");
+  });
+
+  describe("update department guard", () => {
+    it("rejects an empty department at the schema (400) and keeps the stored one", async () => {
+      await request(app.getHttpServer()).post(BASE).send(validBody).expect(201);
+      const res = await request(app.getHttpServer())
+        .patch(`${BASE}/writer`)
+        .send({ department: "" });
+      expect(res.status).toBe(400);
+      const got = await request(app.getHttpServer()).get(`${BASE}/writer`);
+      expect(got.body.department).toBe("dev");
+    });
+
+    it("404s a missing agent before checking the department", async () => {
+      const res = await request(app.getHttpServer())
+        .patch(`${BASE}/nobody`)
+        .send({ department: "ghost" });
+      expect(res.status).toBe(404);
+    });
+
+    it("rejects an update naming an unknown department (422)", async () => {
+      await request(app.getHttpServer()).post(BASE).send(validBody).expect(201);
+      const res = await request(app.getHttpServer())
+        .patch(`${BASE}/writer`)
+        .send({ department: "ghost" });
+      expect(res.status).toBe(422);
+      expect(res.body.message).toContain("ghost");
+    });
+
+    it("still updates a department-less (pre-backfill) agent (200)", async () => {
+      await app
+        .get(AgentsStorageService)
+        .create({ id: "legacy", description: "Old", instructions: "Old body." });
+      const res = await request(app.getHttpServer())
+        .patch(`${BASE}/legacy`)
+        .send({ instructions: "New body." });
+      expect(res.status).toBe(200);
+      expect(res.body.instructions).toBe("New body.");
+      expect(res.body.department).toBeUndefined();
+    });
+
+    it("still rejects an unknown department on a department-less agent (422)", async () => {
+      await app.get(AgentsStorageService).create({ id: "legacy", instructions: "Old body." });
+      const res = await request(app.getHttpServer())
+        .patch(`${BASE}/legacy`)
+        .send({ department: "ghost" });
+      expect(res.status).toBe(422);
+    });
+
+    it("applies a normal update, including moving to another known department (200)", async () => {
+      await request(app.getHttpServer()).post(BASE).send(validBody).expect(201);
+      const res = await request(app.getHttpServer())
+        .patch(`${BASE}/writer`)
+        .send({ department: "qa" });
+      expect(res.status).toBe(200);
+      expect(res.body.department).toBe("qa");
+    });
   });
 });

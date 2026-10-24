@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DataTableTestId, SubNavTestId } from "@zibby/design-system";
-import { renderWithProviders as render, screen } from "../../../test/render";
+import { DataTableTestId, EntityCardTestId, SubNavTestId } from "@zibby/design-system";
+import { renderWithProviders as render, screen, within } from "../../../test/render";
+import { AgentsByDepartmentTestId } from "../../agents/components/AgentsByDepartment";
 import { RegistriesScreen } from "./RegistriesScreen";
 
 const push = vi.fn();
@@ -85,10 +86,18 @@ describe("RegistriesScreen — /system/registries/[kind]", () => {
     expect(screen.getByText("QA")).toBeInTheDocument();
   });
 
-  it("renders the agents table with Bound in derived from the department", () => {
+  it("renders agents as department sections of cards, not a table", () => {
     render(<RegistriesScreen kind="agents" />);
-    expect(screen.getByText("Kevin")).toBeInTheDocument();
-    expect(screen.getByText("DEV")).toBeInTheDocument();
+    expect(screen.queryByTestId(DataTableTestId.Root)).toBeNull();
+    const section = screen.getByTestId(`${AgentsByDepartmentTestId.Section}-dev`);
+    expect(within(section).getByTestId(EntityCardTestId.Root)).toBeInTheDocument();
+    expect(within(section).getByText(/DEV · 1/)).toBeInTheDocument();
+  });
+
+  it("the agent create dialog starts placeholder-first with Submit disabled", () => {
+    render(<RegistriesScreen openCreateOnMount kind="agents" />);
+    expect(screen.getByLabelText("Vlastnící oddělení")).toHaveTextContent("Vyber oddělení…");
+    expect(screen.getByRole("button", { name: "Vytvořit agenta" })).toBeDisabled();
   });
 
   it("leaves kind navigation to the shell sub-nav (no inline SubNav)", () => {
