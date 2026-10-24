@@ -63,3 +63,10 @@
         c. [ ] Autonomní review jako Tier-2: komentáře se zveřejní a hlásí se v briefingu; schvalování a merge zůstává na operátorovi; explicitní workflow zadané ručně vždy přebije triage
         d. [ ] Zpracování komentářů: sledovat nové komentáře a review na vlastních PR (jen moje), Claude rozhodne zda jde o změnu kódu, dotaz nebo nesouhlas; změny kódu jdou přes stejné workflow jako když uživatel klikne na tlačítko "zpracovat komentáře" s omezeným počtem kol, dotazy se zodpoví konkrétně, jinak jen notifikace
         e. [ ] Ochrany: deduplikace (stejný commit se nereviewuje dvakrát), limit hloubky review dle rozpočtu, komentáře od bota se neberou jako příkazy (Law 4), nepřepisovat cizí větve
+17. [ ] Widget TODO
+        a. [ ] odstraníme selector na projekty a v inputu musí jít označovat všechno - projekty, firmy, agenti, workflows,... stejně jako v chatu.
+        b. [ ] nemám možnost přidané položky smazat
+        c. [ ] klik na tlačítko implementace musí otevřít stránku work/tasks/new s předvyplněnými hodnotami podle todo položky
+        d. [ ] pokud se z TODO položky stane už běžící task (nebo task ve frontě) tak je z TODO seznamu automaticky smazána
+        e. [ ] seznam přidaných položek by se měl zobrazit nad inputem
+18. [ ] stránka Agenti bude rozdělená do kategorií. KAtegorie = oddělení agenta. Každý agent musí být v oddělení a bude reprezentován kartou s jeho glyphem

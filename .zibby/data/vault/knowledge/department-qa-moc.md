@@ -6,7 +6,7 @@ tags:
   - department
   - arch
   - moc
-updated: '2026-10-21'
+updated: '2026-10-24'
 ---
 
 QA & Architecture owns proactive code quality: scheduled architecture and dead-code
@@ -21,3 +21,4 @@ tooling already exists in the repo.
 - [[distilled-2026-10-17]] — Destilace — 2026-10-17
 - [[distilled-2026-10-20]] — Destilace — 2026-10-20
 - [[distilled-2026-10-21]] — Destilace — 2026-10-21
+- [[distilled-2026-10-24]] — Destilace — 2026-10-24
