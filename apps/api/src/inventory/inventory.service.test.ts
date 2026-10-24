@@ -99,6 +99,23 @@ describe("InventoryService", () => {
       expect(json).not.toContain("/v1");
     });
 
+    it("never leaks arguments embedded in a stdio command line", async () => {
+      await writeJson(loc.userConfigFile, {
+        mcpServers: {
+          a: { command: "npx -y @acme/mcp --token=SECRET" },
+          b: { command: "docker run -e API_KEY=SECRET img" },
+          c: { command: "API_KEY=SECRET node server.js" },
+        },
+      });
+      const inv = await service.getInventory();
+      expect(inv.mcp).toEqual([
+        { name: "a", scope: "user", transport: "stdio", target: "npx" },
+        { name: "b", scope: "user", transport: "stdio", target: "docker" },
+        { name: "c", scope: "user", transport: "stdio" },
+      ]);
+      expect(JSON.stringify(inv)).not.toContain("SECRET");
+    });
+
     it("marks an unparsable url as transport http with no target", async () => {
       await writeJson(loc.userConfigFile, {
         mcpServers: { bad: { type: "http", url: "not a url" } },
@@ -259,6 +276,35 @@ describe("InventoryService", () => {
       await expect(service.installSkill("../evil")).rejects.toThrow();
       await expect(fs.readdir(path.join(loc.claudeDir, "skills"))).rejects.toThrow();
       expect(record).not.toHaveBeenCalled();
+    });
+
+    it("refuses (409) a symlinked skill dir, a dangling one, and a symlinked SKILL.md", async () => {
+      library = [skill];
+      const skillsDir = path.join(loc.claudeDir, "skills");
+      await fs.mkdir(skillsDir, { recursive: true });
+      const outside = path.join(tmp, "outside");
+      await writeText(path.join(outside, "SKILL.md"), "---\nmanaged-by: zibby\n---\nx");
+      await fs.symlink(outside, path.join(skillsDir, "demo"), "dir");
+      await expect(service.installSkill("demo")).rejects.toBeInstanceOf(
+        InventorySkillConflictError,
+      );
+      expect(await fs.readFile(path.join(outside, "SKILL.md"), "utf8")).toContain("x");
+
+      await fs.rm(path.join(skillsDir, "demo"));
+      await fs.symlink(path.join(tmp, "nowhere"), path.join(skillsDir, "demo"), "dir");
+      await expect(service.installSkill("demo")).rejects.toBeInstanceOf(
+        InventorySkillConflictError,
+      );
+      await expect(fs.stat(path.join(tmp, "nowhere"))).rejects.toThrow();
+      const inv = await service.getInventory();
+      expect(inv.catalog[0]?.status).toBe("conflict");
+
+      await fs.rm(path.join(skillsDir, "demo"));
+      await fs.mkdir(path.join(skillsDir, "demo"));
+      await fs.symlink(path.join(outside, "SKILL.md"), file());
+      await expect(service.installSkill("demo")).rejects.toBeInstanceOf(
+        InventorySkillConflictError,
+      );
     });
 
     it("throws not-found for an unknown library skill", async () => {

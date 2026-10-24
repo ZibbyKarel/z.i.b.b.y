@@ -17,7 +17,7 @@ export interface ClaudeLocations {
 
 /** Resolve the locations from the environment (tests override the provider instead). */
 export function resolveClaudeLocations(): ClaudeLocations {
-  const override = process.env.CLAUDE_CONFIG_DIR;
+  const override = process.env.CLAUDE_CONFIG_DIR || undefined;
   return {
     claudeDir: override ?? join(homedir(), ".claude"),
     userConfigFile: override ? join(override, ".claude.json") : join(homedir(), ".claude.json"),

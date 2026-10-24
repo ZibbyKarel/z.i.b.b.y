@@ -1,7 +1,11 @@
 import { Controller } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { inventoryContract } from "@zibby/contracts";
-import { InvalidSkillIdError, SkillNotFoundError } from "../skills/skills.errors";
+import {
+  CorruptSkillFileError,
+  InvalidSkillIdError,
+  SkillNotFoundError,
+} from "../skills/skills.errors";
 import { InventoryService, InventorySkillConflictError } from "./inventory.service";
 
 /** Implements `inventoryContract` (TODO 13). */
@@ -18,7 +22,11 @@ export class InventoryController {
         try {
           return { status: 200, body: await this.inventory.installSkill(skillId) };
         } catch (err) {
-          if (err instanceof SkillNotFoundError || err instanceof InvalidSkillIdError) {
+          if (
+            err instanceof SkillNotFoundError ||
+            err instanceof InvalidSkillIdError ||
+            err instanceof CorruptSkillFileError
+          ) {
             return { status: 404, body: { message: err.message } };
           }
           if (err instanceof InventorySkillConflictError) {

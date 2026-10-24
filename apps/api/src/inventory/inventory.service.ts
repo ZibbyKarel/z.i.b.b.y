@@ -1,4 +1,4 @@
-import { promises as fs } from "node:fs";
+import { type Stats, promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Inject, Injectable } from "@nestjs/common";
 import {
@@ -97,7 +97,11 @@ function mcpRows(
     else if (type === undefined && command) transport = "stdio";
     let target: string | undefined;
     if (transport === "stdio" && command) {
-      target = path.basename(command) || undefined;
+      // `command` may hold a whole command line: take only the first token, so
+      // arguments (which can carry secrets) never reach the response.
+      const first = command.trim().split(/\s+/)[0] ?? "";
+      const base = first.split(/[\\/]/).pop() ?? "";
+      target = base && !base.includes("=") ? base : undefined;
     } else if ((transport === "http" || transport === "sse") && url) {
       try {
         const origin = new URL(url).origin;
@@ -206,11 +210,19 @@ export class InventoryService {
     if (path.dirname(dir) !== skillsRoot) throw new InvalidSkillIdError(skillId);
     const file = path.join(dir, "SKILL.md");
 
+    // lstat, never stat: a symlinked skill dir / SKILL.md (dangling or not) is not
+    // ours — refuse rather than write through it.
+    const dirStat = await this.lstatOrNull(dir);
+    if (dirStat && (dirStat.isSymbolicLink() || !dirStat.isDirectory())) {
+      throw new InventorySkillConflictError(skill.id);
+    }
+    const fileStat = await this.lstatOrNull(file);
+    if (fileStat?.isSymbolicLink()) throw new InventorySkillConflictError(skill.id);
     const existing = await this.readSkillFile(dir);
     if (existing !== null && !isManaged(existing)) {
       throw new InventorySkillConflictError(skill.id);
     }
-    if (existing === null && (await this.dirExists(dir))) {
+    if (existing === null && dirStat) {
       // A directory with no (readable) SKILL.md is not ours either.
       throw new InventorySkillConflictError(skill.id);
     }
@@ -224,12 +236,11 @@ export class InventoryService {
     return { skillId: skill.id, status: "installed" };
   }
 
-  private async dirExists(dir: string): Promise<boolean> {
+  private async lstatOrNull(target: string): Promise<Stats | null> {
     try {
-      await fs.stat(dir);
-      return true;
+      return await fs.lstat(target);
     } catch {
-      return false;
+      return null;
     }
   }
 
@@ -249,8 +260,8 @@ export class InventoryService {
       const raw = await this.readSkillFile(dir);
       let status: InventoryCatalogStatus;
       if (raw === null) {
-        status = (await this.dirExists(dir)) ? "conflict" : "not-installed";
-      } else if (!isManaged(raw)) {
+        status = (await this.lstatOrNull(dir)) ? "conflict" : "not-installed";
+      } else if (!isManaged(raw) || (await this.lstatOrNull(dir))?.isSymbolicLink()) {
         status = "conflict";
       } else {
         status = raw === renderInstalledSkill(skill) ? "installed" : "outdated";
