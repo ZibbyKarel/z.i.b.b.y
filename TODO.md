@@ -50,7 +50,7 @@
         c. [ ] Zachovat approval gate: každý adaptér musí garantovat schválení před akcí (jinak jen read-only nebo se nepoužije); capability matrix per adaptér
         d. [ ] Druhý adaptér (OpenCode jako první kandidát; ověřit podmínky použití předplatného) a fallback řetězec při vyčerpání limitu s viditelným přepnutím v briefingu a respektem k rozpočtu
         e. [ ] Srovnávací sada zlatých úkolů pro porovnání kvality adaptérů a tierů -->
-13. [ ] Inventář MCP, skills a pluginů na stroji + katalog vlastních skills ZIBBY k instalaci
+13. [x] Inventář MCP, skills a pluginů na stroji + katalog vlastních skills ZIBBY k instalaci (main@4c13e173)
         a. [ ] Inventář: co je nainstalováno a kde (user/projekt/plugin), zdravé/nefunkční, kdo to používá; zobrazit v sekci AI
         b. [ ] Katalog vlastních skills s verzemi a akce Nainstalovat na tento stroj (přes gate s náhledem změny)
     <!-- 15. [ ] Widget Slack: probíhající konverzace s kolegy a návrhy odpovědí (Socket Mode/Events API, jen mine-and-mentions; odeslání zůstává Tier-3; bez konkrétní odpovědi jen notify-only), nice to have -->
