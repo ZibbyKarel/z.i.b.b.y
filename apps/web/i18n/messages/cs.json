@@ -2762,7 +2762,9 @@
     "emptyTitle": "Vše přečteno",
     "empty": "Žádné nepřečtené chybné běhy.",
     "markRead": "Označit jako přečtené",
-    "markAllRead": "Označit vše jako přečtené"
+    "markAllRead": "Označit vše jako přečtené",
+    "healthDown": "{name} — nedostupné od {since}",
+    "healthAnalyze": "Analyzovat"
   },
   "inboxPage": {
     "kicker": {

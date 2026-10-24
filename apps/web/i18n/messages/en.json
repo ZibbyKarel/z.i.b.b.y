@@ -2762,7 +2762,9 @@
     "emptyTitle": "All caught up",
     "empty": "No unread failed runs.",
     "markRead": "Mark as read",
-    "markAllRead": "Mark all as read"
+    "markAllRead": "Mark all as read",
+    "healthDown": "{name} — down since {since}",
+    "healthAnalyze": "Analyze"
   },
   "inboxPage": {
     "kicker": {
