@@ -94,7 +94,7 @@ export interface DropdownSingleProps<T extends string = string> extends Dropdown
   multi?: false;
   value: T;
   onChange: (value: T) => void;
-  /** Shown (faint) in the trigger while `value` matches no option (e.g. `""`) —
+  /** Shown (faint) in the trigger while `value` is `""` —
    * the placeholder-first state of a required select. */
   placeholder?: string;
   /** Trigger shows only the option `code` (falls back to `label` when no code),

@@ -1,7 +1,7 @@
 "use client";
 
 import { EmptyState, Grid, SectionLabel, Stack } from "@zibby/design-system";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { QueryError } from "../../../components/LoadError/QueryError";
@@ -26,6 +26,7 @@ export enum AgentsByDepartmentTestId {
 export function AgentsByDepartment() {
   const t = useTranslations("agents");
   const tr = useTranslations("registries");
+  const locale = useLocale();
   const router = useRouter();
   const departments = useDepartmentLookup();
   const query = useAgentsQuery();
@@ -33,7 +34,7 @@ export function AgentsByDepartment() {
   if (query.isPending) return <QueryLoading />;
   if (query.isError) return <QueryError onRetry={() => void query.refetch()} />;
 
-  const sections = groupAgentsByDepartment(query.data ?? [], [...departments.list]);
+  const sections = groupAgentsByDepartment(query.data ?? [], [...departments.list], locale);
   if (sections.length === 0) {
     return <EmptyState data-testid={AgentsByDepartmentTestId.Empty} title={tr("emptyAgents")} />;
   }

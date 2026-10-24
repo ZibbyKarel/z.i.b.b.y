@@ -52,9 +52,11 @@ GET    /api/agents/categories   list categories
 
 **Department is required at every write.** Create returns 422
 (`department is required`) without a `department`. `PATCH /api/agents/:id` is a
-merge, so an update that omits `department` keeps the stored one; the guard
-refuses (422, same message) an explicit empty/undefined `department` on an agent
-that has one. An agent with no department (pre-backfill) can still be updated.
+merge, so an update that omits `department` keeps the stored one. An explicit empty
+`department` is rejected by the schema (400) before the handler runs; the controller
+guard (422, same message) is defence-in-depth for explicit falsy values that reach it
+in-process, on an agent that has a department. An unknown agent id is a 404, checked
+before the department. An agent with no department (pre-backfill) can still be updated.
 Both create and update return the unknown-department 422 for an id not in the
 departments registry. The web Agents page groups agents into department
 sections (a trailing "No department" section catches any without one) and its

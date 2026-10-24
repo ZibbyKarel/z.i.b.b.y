@@ -217,6 +217,13 @@ describe("Agents API (e2e)", () => {
       expect(got.body.department).toBe("dev");
     });
 
+    it("404s a missing agent before checking the department", async () => {
+      const res = await request(app.getHttpServer())
+        .patch(`${BASE}/nobody`)
+        .send({ department: "ghost" });
+      expect(res.status).toBe(404);
+    });
+
     it("rejects an update naming an unknown department (422)", async () => {
       await request(app.getHttpServer()).post(BASE).send(validBody).expect(201);
       const res = await request(app.getHttpServer())

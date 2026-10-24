@@ -1,7 +1,8 @@
 import type { Agent } from "@zibby/contracts";
-import { EntityCardTestId, IconTileTestId } from "@zibby/design-system";
+import { EntityCardTestId, IconTestId } from "@zibby/design-system";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, renderWithProviders as render, screen, within } from "../../../test/render";
+import { LoadErrorTestId } from "../../../components/LoadError/LoadError";
 import { AgentsByDepartment, AgentsByDepartmentTestId } from "./AgentsByDepartment";
 
 const push = vi.fn();
@@ -47,12 +48,21 @@ describe("AgentsByDepartment", () => {
     expect(within(qa).getByText("Kvalita · QA · 1")).toBeInTheDocument();
   });
 
-  it("shows each agent's glyph on its card", () => {
-    state.data = [agent("a", "dev", "compass")];
-    render(<AgentsByDepartment />);
-    const card = screen.getByTestId(EntityCardTestId.Root);
-    expect(within(card).getByTestId(EntityCardTestId.Glyph)).toBeInTheDocument();
-    expect(within(card).getByTestId(IconTileTestId.Root)).toBeInTheDocument();
+  it("shows each agent's own glyph, falling back to bot", () => {
+    const glyphOf = (a: Agent) => {
+      state.data = [a];
+      const { unmount } = render(<AgentsByDepartment />);
+      const html = within(screen.getByTestId(EntityCardTestId.Glyph)).getByTestId(
+        IconTestId.Root,
+      ).innerHTML;
+      unmount();
+      return html;
+    };
+    const compass = glyphOf(agent("a", "dev", "compass"));
+    const bot = glyphOf(agent("a", "dev", "bot"));
+    const fallback = glyphOf(agent("a", "dev"));
+    expect(compass).not.toBe(bot);
+    expect(fallback).toBe(bot);
   });
 
   it("puts agents with an absent or unknown department last, under 'Bez oddělení'", () => {
@@ -74,7 +84,7 @@ describe("AgentsByDepartment", () => {
   it("shows a retryable error", () => {
     state = { isPending: false, isError: true };
     render(<AgentsByDepartment />);
-    fireEvent.click(screen.getByRole("button", { name: /znovu/i }));
+    fireEvent.click(screen.getByTestId(LoadErrorTestId.Retry));
     expect(refetch).toHaveBeenCalled();
   });
 

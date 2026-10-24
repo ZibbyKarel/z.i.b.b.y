@@ -32,15 +32,18 @@ export class AgentsController {
    * is a merge, so an update that does not mention `department` keeps the stored one;
    * only an explicit empty/undefined value would clear it. An agent that has no
    * department (pre-backfill) stays updatable. Returns the 422 response or null.
-   * Throws the storage not-found error for an unknown id (only when it has to read).
+   * Throws the storage not-found error for an unknown id (read whenever the body names a
+   * `department`). An empty `department` never reaches here over HTTP (schema 400); this
+   * is defence-in-depth for in-process callers.
    */
   async departmentUpdateGuard(id: string, body: UpdateAgentInput) {
     if (!("department" in body)) return null;
+    // Existence first, so a missing agent is a 404 whatever department the body names.
+    const existing = await this.storage.get(id);
     if (body.department) {
       const missing = await this.departments.firstMissing([body.department]);
       return missing ? unknownDepartment422(missing) : null;
     }
-    const existing = await this.storage.get(id);
     return existing.department ? unprocessable("department is required") : null;
   }
 

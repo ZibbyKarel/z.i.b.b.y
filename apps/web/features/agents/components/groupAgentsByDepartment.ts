@@ -7,7 +7,6 @@ export interface AgentDepartmentSection {
 }
 
 const label = (a: Agent) => a.displayName ?? a.name ?? a.id;
-const byLabel = (a: Agent, b: Agent) => label(a).localeCompare(label(b));
 
 /**
  * Groups agents into department sections in the department list order. Empty
@@ -17,7 +16,11 @@ const byLabel = (a: Agent, b: Agent) => label(a).localeCompare(label(b));
 export function groupAgentsByDepartment(
   agents: Agent[],
   departments: { id: string }[],
+  /** Sort locale (the UI locale); defaults to the runtime's. */
+  locale?: string,
 ): AgentDepartmentSection[] {
+  const collator = new Intl.Collator(locale);
+  const byLabel = (a: Agent, b: Agent) => collator.compare(label(a), label(b));
   const known = new Set(departments.map((d) => d.id));
   const sections: AgentDepartmentSection[] = departments
     .map((d) => ({

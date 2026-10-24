@@ -40,6 +40,15 @@ describe("groupAgentsByDepartment", () => {
     expect(out[0]?.agents.map((a) => a.id)).toEqual(["c", "b", "z-id"]);
   });
 
+  it("sorts with the given locale's collation (Czech: Ch after H)", () => {
+    const out = groupAgentsByDepartment(
+      [agent("a", "dev", "Chata"), agent("b", "dev", "Hrad"), agent("c", "dev", "Cyril")],
+      departments,
+      "cs",
+    );
+    expect(out[0]?.agents.map((x) => x.id)).toEqual(["c", "b", "a"]);
+  });
+
   it("returns no sections for no agents", () => {
     expect(groupAgentsByDepartment([], departments)).toEqual([]);
   });

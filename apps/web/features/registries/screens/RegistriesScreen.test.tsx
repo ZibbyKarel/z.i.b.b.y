@@ -94,9 +94,10 @@ describe("RegistriesScreen — /system/registries/[kind]", () => {
     expect(within(section).getByText(/DEV · 1/)).toBeInTheDocument();
   });
 
-  it("the agent create dialog carries a department", () => {
+  it("the agent create dialog starts placeholder-first with Submit disabled", () => {
     render(<RegistriesScreen openCreateOnMount kind="agents" />);
-    expect(screen.getByLabelText("Vlastnící oddělení")).toBeInTheDocument();
+    expect(screen.getByLabelText("Vlastnící oddělení")).toHaveTextContent("Vyber oddělení…");
+    expect(screen.getByRole("button", { name: "Vytvořit agenta" })).toBeDisabled();
   });
 
   it("leaves kind navigation to the shell sub-nav (no inline SubNav)", () => {

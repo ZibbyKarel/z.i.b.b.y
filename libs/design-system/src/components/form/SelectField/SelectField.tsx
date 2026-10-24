@@ -12,7 +12,7 @@ export interface SelectFieldSingleProps<T extends string = string> extends Selec
   multi?: false;
   value: T;
   onValueChange: (value: T) => void;
-  /** Shown in the control while nothing is selected (`value` matches no option). */
+  /** Shown in the control while `value` is `""`. */
   placeholder?: string;
 }
 
