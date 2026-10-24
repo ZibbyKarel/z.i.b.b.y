@@ -47,11 +47,6 @@ export const InboxSourceErrorSchema = z.object({
 });
 export type InboxSourceError = z.infer<typeof InboxSourceErrorSchema>;
 
-export const TodoItemsResponseSchema = z.object({
-  items: z.array(InboxRoadmapItemSchema),
-});
-export type TodoItemsResponse = z.infer<typeof TodoItemsResponseSchema>;
-
 export const InboxItemsResponseSchema = z.object({
   items: z.array(InboxRoadmapItemSchema),
   epics: z.array(InboxEpicSchema),

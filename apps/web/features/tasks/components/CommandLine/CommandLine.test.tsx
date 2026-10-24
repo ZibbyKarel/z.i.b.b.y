@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -293,6 +294,100 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       fireEvent.change(input, { target: { value: "@Builder and @Delivery" } });
 
       expect(onTargetChange).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("a prefilled brief adopts its typed @Name (TODO 17)", () => {
+    it("adopts the target once the catalog arrives, and only once", () => {
+      fx.data.agents = [];
+      const onTargetChange = vi.fn();
+      const view = render(
+        <CommandLine
+          initialText="@Builder fix it"
+          onSubmit={vi.fn()}
+          onTargetChange={onTargetChange}
+        />,
+      );
+      expect(onTargetChange).not.toHaveBeenCalled();
+
+      fx.data.agents = [{ id: "builder", name: "Builder" }];
+      view.rerender(
+        <CommandLine
+          initialText="@Builder fix it"
+          onSubmit={vi.fn()}
+          onTargetChange={onTargetChange}
+        />,
+      );
+      expect(onTargetChange).toHaveBeenCalledTimes(1);
+      expect(onTargetChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ kind: "agent", id: "builder" }),
+      );
+
+      fx.data.agents = [{ id: "builder", name: "Builder" }];
+      view.rerender(
+        <CommandLine
+          initialText="@Builder fix it"
+          onSubmit={vi.fn()}
+          onTargetChange={onTargetChange}
+        />,
+      );
+      expect(onTargetChange).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not adopt after the operator edited the text before the catalog arrived", () => {
+      fx.data.agents = [];
+      const onTargetChange = vi.fn();
+      const view = render(
+        <CommandLine
+          initialText="@Builder fix it"
+          onSubmit={vi.fn()}
+          onTargetChange={onTargetChange}
+        />,
+      );
+      fireEvent.change(screen.getByTestId(CommandLineTestId.Input), {
+        target: { value: "@Builder fix it now" },
+      });
+      fx.data.agents = [{ id: "builder", name: "Builder" }];
+      view.rerender(
+        <CommandLine
+          initialText="@Builder fix it"
+          onSubmit={vi.fn()}
+          onTargetChange={onTargetChange}
+        />,
+      );
+      expect(onTargetChange).not.toHaveBeenCalled();
+    });
+
+    it("adds the chip once even when effects run twice (StrictMode)", () => {
+      const onSubmit = vi.fn();
+      render(
+        <StrictMode>
+          <CommandLine multipleTargets initialText="@Builder fix it" onSubmit={onSubmit} />
+        </StrictMode>,
+      );
+      fireEvent.click(screen.getByTestId(CommandLineTestId.Send));
+      expect(onSubmit.mock.calls[0]?.[3]).toHaveLength(1);
+    });
+
+    it("a submit before the catalog arrives ends the pending adoption", () => {
+      fx.data.agents = [];
+      const onTargetChange = vi.fn();
+      const props = { initialText: "@Builder fix it", onSubmit: vi.fn(), onTargetChange };
+      const view = render(<CommandLine {...props} />);
+      fireEvent.click(screen.getByTestId(CommandLineTestId.Send));
+      onTargetChange.mockClear();
+      fx.data.agents = [{ id: "builder", name: "Builder" }];
+      view.rerender(<CommandLine {...props} />);
+      expect(onTargetChange).not.toHaveBeenCalled();
+    });
+
+    it("adds a chip in multipleTargets mode", () => {
+      const onSubmit = vi.fn();
+      render(<CommandLine multipleTargets initialText="@Builder fix it" onSubmit={onSubmit} />);
+      fireEvent.click(screen.getByTestId(CommandLineTestId.Send));
+      expect(onSubmit).toHaveBeenCalledWith("@Builder fix it", undefined, undefined, [
+        expect.objectContaining({ kind: "agent", id: "builder" }),
+      ]);
     });
   });
 

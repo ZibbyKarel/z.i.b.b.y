@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import type { Attachment } from "@zibby/contracts";
 import {
   Button,
@@ -18,6 +19,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { useProjectsQuery } from "../../projects";
+import { getTodoQueryKey } from "../../todo/queries/useTodoQuery";
 import { CommandLine } from "../components/CommandLine/CommandLine";
 import { TASK_SCOPE_KINDS } from "../components/CommandLine/TaskCommandLine";
 import { TaskAttachments } from "../components/TaskAttachments";
@@ -41,10 +43,14 @@ export function NewTaskScreen() {
   // department id is honoured; anything else falls back to automatic).
   const searchParams = useSearchParams();
   const prefillEntry = searchParams.get("entry");
+  // TODO 17: the TODO widget's Implement lands here with `?title=` + `?todo=<id>`; the id rides
+  // the create body so the server removes the note once the task exists.
+  const todoId = searchParams.get("todo") ?? undefined;
+  const queryClient = useQueryClient();
   const { data: projects = [] } = useProjectsQuery();
   const departments = useDepartmentLookup();
 
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(() => searchParams.get("title") ?? "");
   const [initialText] = useState(() => searchParams.get("text") ?? "");
   const [text, setText] = useState(initialText);
   // An `@`-mention in the brief (picked or typed) is an explicit target — it wins
@@ -104,10 +110,14 @@ export function NewTaskScreen() {
           paths,
           attachmentSetId: attachmentSet.attachmentSetId,
           target: chosenTarget,
+          todoId,
         },
       },
       {
-        onSuccess: (res) => router.push(`/work/tasks/${res.body.task.id}` as Route),
+        onSuccess: (res) => {
+          if (todoId) void queryClient.invalidateQueries({ queryKey: getTodoQueryKey() });
+          router.push(`/work/tasks/${res.body.task.id}` as Route);
+        },
       },
     );
   }

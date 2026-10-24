@@ -43,6 +43,7 @@ import { LoggingModule } from "./shared/logging/logging.module";
 import { InboxModule } from "./inbox/inbox.module";
 import { PinsModule } from "./pins/pins.module";
 import { QuickActionsModule } from "./quick-actions/quick-actions.module";
+import { TodoModule } from "./todo/todo.module";
 import { RoadmapModule } from "./roadmap/roadmap.module";
 import { SelfModule } from "./self/self.module";
 import { SelfKnowledgeModule } from "./self-knowledge/self-knowledge.module";
@@ -68,6 +69,7 @@ import { TeamsModule } from "./teams/teams.module";
     SystemModule,
     PinsModule,
     QuickActionsModule,
+    TodoModule,
     RoadmapModule,
     InboxModule,
     ActivityLogModule,

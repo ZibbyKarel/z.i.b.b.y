@@ -3206,21 +3206,11 @@
         "fallback": "Nothing to report yet."
       },
       "todo": {
-        "placeholder": "What to implement…",
+        "placeholder": "What to implement… (@ agent, # project)",
         "input": "New item to implement",
-        "target": "Target",
         "add": "Add",
-        "implement": "Implement",
-        "implementLabel": "Implement: {name}",
-        "noProjects": "Create a project first",
-        "state": {
-          "todo": "To do",
-          "enqueued": "Queued",
-          "running": "Running",
-          "failed": "Failed",
-          "awaiting-merge": "Awaiting merge",
-          "external": "In progress outside ZIBBY"
-        }
+        "implementLabel": "Implement “{name}”",
+        "deleteLabel": "Delete “{name}”"
       },
       "quickActions": {
         "run": "Run",
@@ -3323,7 +3313,7 @@
       },
       "todo": {
         "label": "TODO",
-        "desc": "Quick-add items to implement into a project"
+        "desc": "Quick notes to implement, with mentions like in chat"
       },
       "quickActions": {
         "label": "Quick actions",

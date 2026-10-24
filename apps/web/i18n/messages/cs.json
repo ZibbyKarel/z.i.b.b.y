@@ -3206,21 +3206,11 @@
         "fallback": "Zatím není co hlásit."
       },
       "todo": {
-        "placeholder": "Co implementovat…",
+        "placeholder": "Co implementovat… (@ agent, # projekt)",
         "input": "Nová položka k implementaci",
-        "target": "Cíl",
         "add": "Přidat",
-        "implement": "Implementovat",
-        "implementLabel": "Implementovat: {name}",
-        "noProjects": "Nejdřív založ projekt",
-        "state": {
-          "todo": "K implementaci",
-          "enqueued": "Ve frontě",
-          "running": "Běží",
-          "failed": "Selhalo",
-          "awaiting-merge": "Čeká na merge",
-          "external": "Rozpracováno mimo ZIBBY"
-        }
+        "implementLabel": "Implementovat „{name}“",
+        "deleteLabel": "Smazat „{name}“"
       },
       "quickActions": {
         "run": "Spustit",
@@ -3323,7 +3313,7 @@
       },
       "todo": {
         "label": "TODO",
-        "desc": "Rychlé přidání položek k implementaci do projektu"
+        "desc": "Rychlé poznámky k implementaci se zmínkami jako v chatu"
       },
       "quickActions": {
         "label": "Rychlé akce",

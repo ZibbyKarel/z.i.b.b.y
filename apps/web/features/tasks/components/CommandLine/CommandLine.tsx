@@ -39,6 +39,7 @@ import { useSkillsQuery } from "../../../skills";
 import { useUploadTaskAttachmentsMutation } from "../../mutations/useUploadTaskAttachmentsMutation";
 import { type DepartmentId, type TaskTarget, extractPathRanges } from "../../task";
 import type { TaskAttachmentSet } from "../TaskAttachments";
+import { useSeededMentionAdoption } from "./useSeededMentionAdoption";
 
 export enum CommandLineTestId {
   Root = "command-line-root",
@@ -267,6 +268,54 @@ const SCOPE_GLYPH: Record<ScopeKind, IconName> = {
 
 /** D-020 — mirrors the contract's `MAX_CHAT_MENTIONS` cap on `multipleTargets`. */
 const MAX_MENTION_TARGETS = 8;
+
+/** An `@` row → its `TaskTarget` (shared by a picked row and a typed `@Name`).
+ *  A per-kind switch (not a generic `{ kind: result.kind, ... }` object) so each
+ *  branch's literal `kind` matches `TaskTarget`'s properly-distributed union —
+ *  see `toApiTarget`'s doc comment in `task.ts` for why a unioned-kind
+ *  construction stops being assignable once there are enough branches. A
+ *  department row's `id` is cast to `DepartmentId`: `MentionResult.id` is a plain
+ *  `string` (shared with agent/workflow rows), but for a `kind: "department"` row
+ *  it always came from `useDepartmentsQuery()`'s own `DepartmentId`-typed id. */
+function toPickedTarget(result: MentionResult): TaskTarget {
+  return result.kind === "agent"
+    ? { kind: "agent", id: result.id, name: result.name, glyph: result.glyph }
+    : result.kind === "workflow"
+      ? { kind: "workflow", id: result.id, name: result.name, glyph: result.glyph }
+      : {
+          kind: "department",
+          id: result.id as DepartmentId,
+          name: result.name,
+          glyph: result.glyph,
+        };
+}
+
+/** The longest known `@Name` typed in full in `value`, or `undefined`. */
+function longestTypedAt(candidates: MentionResult[], value: string): MentionResult | undefined {
+  return candidates
+    .filter((r) => hasMentionFor(value, "@", r.name))
+    .reduce<
+      MentionResult | undefined
+    >((best, r) => (!best || r.name.length > best.name.length ? r : best), undefined);
+}
+
+/** Single-target resolution of a TYPED `@Name`: keep `current` while its mention
+ *  survives, adopt a typed name when nothing survives or as a longer extension of
+ *  it, so a picked target is never swapped for an unrelated typed name. */
+function resolveTypedTarget(
+  candidates: MentionResult[],
+  value: string,
+  current: TaskTarget | undefined,
+) {
+  const kept = current && hasMentionFor(value, "@", current.name) ? current : undefined;
+  const typed = longestTypedAt(candidates, value);
+  return typed &&
+    (!kept ||
+      (typed.name.length > kept.name.length &&
+        typed.name.toLowerCase().startsWith(kept.name.toLowerCase())))
+    ? toPickedTarget(typed)
+    : kept;
+}
 
 /** D-020 — the only kinds `multipleTargets` mode's mention picker ever produces
  *  (mirrors `ChatMentionTarget` in `@zibby/contracts`) — every member has `id`. */
@@ -555,6 +604,9 @@ export function CommandLine({
   const [attachments, setAttachments] = useState<TaskAttachmentSet>({ files: [] });
   const [attachError, setAttachError] = useState<string | null>(null);
   const hasDraftRef = useRef(false);
+  // A prefilled brief (`initialText`, no `initialTarget`) still owes its typed `@Name` an
+  // adoption once the catalog arrives; cleared on the first adoption or user edit.
+  const [seedPending, setSeedPending] = useState(Boolean(initialText) && !initialTarget);
   // Mirrors the `injectedTarget` prop so a NEW value (including the same target
   // picked again after a round-trip through `undefined` once consumed) can be
   // told apart from a re-render with the same one — ported from `ChatComposer`.
@@ -674,6 +726,7 @@ export function CommandLine({
   if (injectedTarget !== prevInjectedTarget) {
     setPrevInjectedTarget(injectedTarget);
     if (injectedTarget) {
+      setSeedPending(false);
       const mentionText = `@${injectedTarget.name} `;
       const next =
         text.length > 0 ? `${text}${text.endsWith(" ") ? "" : " "}${mentionText}` : mentionText;
@@ -688,6 +741,7 @@ export function CommandLine({
   if (injectedText !== prevInjectedText) {
     setPrevInjectedText(injectedText);
     if (injectedText) {
+      setSeedPending(false);
       const next =
         text.length > 0 ? `${text}${text.endsWith(" ") ? "" : " "}${injectedText}` : injectedText;
       setText(next);
@@ -760,6 +814,7 @@ export function CommandLine({
     if (!canRun) return;
     const trimmed = text.trim();
     if (!trimmed) return;
+    setSeedPending(false);
     const attachmentPayload = attachments.files.length > 0 ? attachments : undefined;
     if (multipleTargets) {
       onSubmit(
@@ -832,6 +887,7 @@ export function CommandLine({
 
   function handleChange(e: ChangeEvent<HTMLTextAreaElement>) {
     const nextValue = e.target.value;
+    setSeedPending(false);
     setText(nextValue);
     onTextChange?.(nextValue);
     notifyDraftChange(nextValue);
@@ -846,21 +902,7 @@ export function CommandLine({
       // longest matching name wins. It is adopted only with no surviving target, or
       // as a longer extension of it ("@Coloring" → "@Coloring Book"), so a picked
       // target is never swapped for an unrelated typed name.
-      const kept = target && hasMentionFor(nextValue, "@", target.name) ? target : undefined;
-      const typed = atCandidates
-        .flat()
-        .filter((r) => hasMentionFor(nextValue, "@", r.name))
-        .reduce<MentionResult | undefined>(
-          (best, r) => (!best || r.name.length > best.name.length ? r : best),
-          undefined,
-        );
-      const adopt =
-        typed &&
-        (!kept ||
-          (typed.name.length > kept.name.length &&
-            typed.name.toLowerCase().startsWith(kept.name.toLowerCase())))
-          ? toPickedTarget(typed)
-          : kept;
+      const adopt = resolveTypedTarget(atCandidates.flat(), nextValue, target);
       if (adopt !== target) {
         setTarget(adopt);
         onTargetChange?.(adopt);
@@ -937,27 +979,6 @@ export function CommandLine({
       e.preventDefault();
       submit();
     }
-  }
-
-  /** An `@` row → its `TaskTarget` (shared by a picked row and a typed `@Name`).
-   *  A per-kind switch (not a generic `{ kind: result.kind, ... }` object) so each
-   *  branch's literal `kind` matches `TaskTarget`'s properly-distributed union —
-   *  see `toApiTarget`'s doc comment in `task.ts` for why a unioned-kind
-   *  construction stops being assignable once there are enough branches. A
-   *  department row's `id` is cast to `DepartmentId`: `MentionResult.id` is a plain
-   *  `string` (shared with agent/workflow rows), but for a `kind: "department"` row
-   *  it always came from `useDepartmentsQuery()`'s own `DepartmentId`-typed id. */
-  function toPickedTarget(result: MentionResult): TaskTarget {
-    return result.kind === "agent"
-      ? { kind: "agent", id: result.id, name: result.name, glyph: result.glyph }
-      : result.kind === "workflow"
-        ? { kind: "workflow", id: result.id, name: result.name, glyph: result.glyph }
-        : {
-            kind: "department",
-            id: result.id as DepartmentId,
-            name: result.name,
-            glyph: result.glyph,
-          };
   }
 
   function pickMentionResult(result: MentionResult) {
@@ -1131,6 +1152,7 @@ export function CommandLine({
       .flatMap((rows) => rows.filter((r) => matchesQuery(q, r.name, r.id)).slice(0, perKind))
       .slice(0, 50);
   }, [mention, atCandidates, scopeKinds, scopeSources, skills]);
+
   // Clamp at read time so a result list that shrank between renders never
   // leaves the keyboard highlight out of range.
   const activeMentionIndex =
@@ -1161,6 +1183,32 @@ export function CommandLine({
       ? { bottom: viewportH - caretRect.top + MENTION_GAP, ...horizontal, maxHeight }
       : { top: caretRect.bottom + MENTION_GAP, ...horizontal, maxHeight };
   }, [caretRect]);
+
+  // Adopt a typed `@Name` of the prefilled brief (`initialText`) as the target once the
+  // async catalogs resolve it; never after the operator edits, submits or injects.
+  // (`#Name` is pick-only.) KEEP THIS CALL LAST among the hooks: placed right after the
+  // `atCandidates` memo, React Compiler bails out of the component (lint
+  // preserve-manual-memoization on `atCandidates`).
+  useSeededMentionAdoption(
+    seedPending,
+    atCandidates,
+    initialText ?? "",
+    (value, name) => hasMentionFor(value, "@", name),
+    toPickedTarget,
+    (adopted) => {
+      setSeedPending(false);
+      if (multipleTargets) {
+        setMentionTargets((prev) =>
+          prev.some((t) => t.kind === adopted.kind && "id" in adopted && t.id === adopted.id)
+            ? prev
+            : [...prev, adopted as MultiMentionTarget],
+        );
+      } else if (!target) {
+        setTarget(adopted);
+        onTargetChange?.(adopted);
+      }
+    },
+  );
 
   const openFilePicker = () => fileInputRef.current?.click();
 

@@ -991,6 +991,12 @@ export const CreateTaskInputSchema = z.object({
    * `department` for an explicit `@department` target).
    */
   source: TaskSourceSchema.exclude(["chain", "handoff"]).optional(),
+  /**
+   * The TODO note this task was created from (`/work/tasks/new?todo=<id>`). After the
+   * task is created the server deletes that note — a missing note is ignored and a
+   * failed delete never fails the create. Not persisted on the task.
+   */
+  todoId: z.string().min(1).optional(),
 });
 export type CreateTaskInput = z.infer<typeof CreateTaskInputSchema>;
 
