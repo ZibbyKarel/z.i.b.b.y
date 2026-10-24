@@ -34,7 +34,7 @@
    over the same browsable notes (`.vtt` and `_templates/` excluded).
    - **Section detection.** A markdown heading of any level whose text, after trimming,
      stripping a trailing `:` and lowercasing, matches:
-     - questions: `open questions`, `open question`, `otevřené otázky`, `otázky`, `questions`;
+     - questions: `open questions`, `open question`, `otevřené otázky`, `otázky`, `questions`, `open items`, `otevřené body`, `registr otevřených otázek`;
      - decisions: `decisions`, `decision`, `agreements`, `rozhodnutí`, `dohody`, `dohodnuto`.
      - A section runs until the next heading of the same or higher level.
    - **Items.** List lines inside a section: `-`, `*`, `+`, `1.` and `- [ ]`.
@@ -43,7 +43,7 @@
      - Empty items are skipped.
      - Nested list lines (indented) are skipped. Only top-level items are taken.
      - Frontmatter is ignored when detecting sections.
-   - **Date.** The note's frontmatter `date` (a string, or a Date which is ISO-formatted), when
+   - **Date.** The note's frontmatter `date` (falling back to `last_compiled`, which compiled KB notes carry) (a string, or a Date which is ISO-formatted), when
      present.
    - **Order.** Newest-dated notes first. Undated notes come after, ordered by `noteId`
      descending. Within a note, items keep their document order.

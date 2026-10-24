@@ -94,6 +94,9 @@ const QUESTION_HEADINGS = new Set([
   "otevřené otázky",
   "otázky",
   "questions",
+  "open items",
+  "otevřené body",
+  "registr otevřených otázek",
 ]);
 const DECISION_HEADINGS = new Set([
   "decisions",
@@ -152,9 +155,15 @@ export function extractDigestSections(body: string): { questions: string[]; deci
   return out;
 }
 
-/** A frontmatter `date` as a string (a YAML-parsed Date is ISO-formatted, date part only). */
+/**
+ * A frontmatter `date` — falling back to `last_compiled`, which compiled KB notes carry instead —
+ * as a string (a YAML-parsed Date is ISO-formatted, date part only).
+ */
 function dateOf(frontmatter: Record<string, unknown>): string | undefined {
-  const raw = frontmatter.date;
+  return dateValue(frontmatter.date) ?? dateValue(frontmatter.last_compiled);
+}
+
+function dateValue(raw: unknown): string | undefined {
   if (raw instanceof Date)
     return Number.isNaN(raw.getTime()) ? undefined : raw.toISOString().slice(0, 10);
   return typeof raw === "string" && raw.trim().length > 0 ? raw.trim() : undefined;

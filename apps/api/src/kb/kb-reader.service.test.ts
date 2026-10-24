@@ -242,6 +242,11 @@ describe("extractDigestSections", () => {
     expect(extractDigestSections(body).decisions).toEqual(["parent"]);
   });
 
+  it("matches the compiled-KB open-item headings", () => {
+    const body = "## Otevřené body\n- A\n### Registr otevřených otázek\n- B\n## Open items\n- C\n";
+    expect(extractDigestSections(body).questions).toEqual(["A", "B", "C"]);
+  });
+
   it("does not treat a longer heading as a section", () => {
     const body = "## Questions about pricing\n- nope\n";
     expect(extractDigestSections(body)).toEqual({ questions: [], decisions: [] });
@@ -300,6 +305,11 @@ describe("KbReaderService.digest", () => {
     });
     expect(out.decisions[3]?.date).toBeUndefined();
     expect(out.questions).toEqual([]);
+  });
+
+  it("falls back to frontmatter last_compiled when there is no date", async () => {
+    await write("c.md", "---\ntitle: C\nlast_compiled: 2026-10-22\n---\n## Otevřené body\n- q\n");
+    expect((await reader.digest(src())).questions[0]?.date).toBe("2026-10-22");
   });
 
   it("caps each list at 30", async () => {
