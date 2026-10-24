@@ -306,8 +306,8 @@ export const UpdateRoadmapItemSchema = z.object({
 export type UpdateRoadmapItemInput = z.infer<typeof UpdateRoadmapItemSchema>;
 
 /**
- * Per-project roadmap config (`<projectId>/_config.json`): the two automation
- * toggles, both surfaced on the project's Integrations tab ("Automatizace
+ * Per-project roadmap config (`<projectId>/_config.json`): the automation
+ * toggles (`autoSync`/`autoPlay` surfaced on the project's Integrations tab ("Automatizace
  * roadmapy"). Independent of each other — `autoPlay` without `autoSync` simply
  * works through whatever the operator synced by hand.
  *
@@ -327,6 +327,17 @@ export const RoadmapConfigSchema = z.object({
    * create — the roadmap has no cap of its own.
    */
   autoPlay: z.boolean().nullable().default(null),
+  /**
+   * Auto PR review (`PrAutomationService`): review incoming PRs (the "to-review"
+   * bucket) on the tick. Posting the review stays behind the approval gate.
+   */
+  autoReview: z.boolean().nullable().default(null),
+  /**
+   * Auto address-comments (`PrAutomationService`): address unresolved review
+   * comments on the operator's own PRs on the tick. The push always parks as an
+   * approval (Tier 3).
+   */
+  autoAddressComments: z.boolean().nullable().default(null),
 });
 export type RoadmapConfig = z.infer<typeof RoadmapConfigSchema>;
 
@@ -334,6 +345,8 @@ export type RoadmapConfig = z.infer<typeof RoadmapConfigSchema>;
 export const RoadmapDefaultsSchema = z.object({
   autoSync: z.boolean().optional(),
   autoPlay: z.boolean().optional(),
+  autoReview: z.boolean().optional(),
+  autoAddressComments: z.boolean().optional(),
 });
 export type RoadmapDefaults = z.infer<typeof RoadmapDefaultsSchema>;
 
@@ -345,9 +358,13 @@ export type RoadmapConfigSource = z.infer<typeof RoadmapConfigSourceSchema>;
 export const EffectiveRoadmapConfigSchema = z.object({
   autoSync: z.boolean(),
   autoPlay: z.boolean(),
+  autoReview: z.boolean(),
+  autoAddressComments: z.boolean(),
   source: z.object({
     autoSync: RoadmapConfigSourceSchema,
     autoPlay: RoadmapConfigSourceSchema,
+    autoReview: RoadmapConfigSourceSchema,
+    autoAddressComments: RoadmapConfigSourceSchema,
   }),
 });
 export type EffectiveRoadmapConfig = z.infer<typeof EffectiveRoadmapConfigSchema>;
@@ -358,18 +375,26 @@ export const RoadmapConfigResponseSchema = RoadmapConfigSchema.extend({
 });
 export type RoadmapConfigResponse = z.infer<typeof RoadmapConfigResponseSchema>;
 
+/** The tri-state automation toggles a project config / company default can carry. */
+export type RoadmapToggleKey = "autoSync" | "autoPlay" | "autoReview" | "autoAddressComments";
+
 /** Global fallback when neither project nor company decides. */
-export const GLOBAL_ROADMAP_DEFAULTS = { autoSync: false, autoPlay: false } as const;
+export const GLOBAL_ROADMAP_DEFAULTS = {
+  autoSync: false,
+  autoPlay: false,
+  autoReview: false,
+  autoAddressComments: false,
+} as const;
 
 /**
  * Pure inheritance resolver: project explicit value (non-null) wins, then the
  * company default, then the global default (`false`).
  */
 export function resolveRoadmapConfig(
-  projectConfig: RoadmapConfig | { autoSync?: boolean | null; autoPlay?: boolean | null },
+  projectConfig: Partial<RoadmapConfig>,
   companyDefaults?: RoadmapDefaults,
 ): EffectiveRoadmapConfig {
-  const pick = (key: "autoSync" | "autoPlay"): [boolean, RoadmapConfigSource] => {
+  const pick = (key: RoadmapToggleKey): [boolean, RoadmapConfigSource] => {
     const own = projectConfig[key];
     if (typeof own === "boolean") return [own, "project"];
     const inherited = companyDefaults?.[key];
@@ -378,7 +403,20 @@ export function resolveRoadmapConfig(
   };
   const [autoSync, syncSource] = pick("autoSync");
   const [autoPlay, playSource] = pick("autoPlay");
-  return { autoSync, autoPlay, source: { autoSync: syncSource, autoPlay: playSource } };
+  const [autoReview, reviewSource] = pick("autoReview");
+  const [autoAddressComments, addressSource] = pick("autoAddressComments");
+  return {
+    autoSync,
+    autoPlay,
+    autoReview,
+    autoAddressComments,
+    source: {
+      autoSync: syncSource,
+      autoPlay: playSource,
+      autoReview: reviewSource,
+      autoAddressComments: addressSource,
+    },
+  };
 }
 /** Pre-defaults shape — what a full-replace writer may hand in (see `RoadmapStore.writeConfig`). */
 export type RoadmapConfigInput = z.input<typeof RoadmapConfigSchema>;
@@ -398,6 +436,11 @@ export type RoadmapConfigInput = z.input<typeof RoadmapConfigSchema>;
  * patch has no defaults at all, by construction.
  */
 export const RoadmapConfigPatchSchema = z
-  .object({ autoSync: z.boolean().nullable(), autoPlay: z.boolean().nullable() })
+  .object({
+    autoSync: z.boolean().nullable(),
+    autoPlay: z.boolean().nullable(),
+    autoReview: z.boolean().nullable(),
+    autoAddressComments: z.boolean().nullable(),
+  })
   .partial();
 export type RoadmapConfigPatch = z.infer<typeof RoadmapConfigPatchSchema>;

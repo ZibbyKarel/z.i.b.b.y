@@ -35,6 +35,8 @@ export const WatcherIdSchema = z.enum([
   "limit-resume",
   "roadmap",
   "project-health",
+  // todo-16 — the PR automation heartbeat (shares `roadmapTickMs`).
+  "pr-automation",
 ]);
 export type WatcherId = z.infer<typeof WatcherIdSchema>;
 

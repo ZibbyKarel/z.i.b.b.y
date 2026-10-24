@@ -54,7 +54,14 @@ One file per item: `.zibby/data/roadmap/<projectId>/<itemId>.json`. A sibling
 `<projectId>/_config.json` holds the project's roadmap config — the two
 automation toggles `autoSync` (pull issues on the tick) and `autoPlay`
 (dispatch unblocked work on the tick), both `false` until the operator opts
-in, and independent of each other. A global `_level-mapping.json` sits at the
+in, and independent of each other. Two more tri-state toggles, `autoReview`
+(auto-review incoming PRs) and `autoAddressComments` (auto-address review
+comments on the operator's own PRs), sit beside them; they are consumed by
+`PrAutomationService` (TODO 16 — `./inbox.md` "Automatic review & comment
+handling"; it shares `roadmapTickMs`), not the roadmap tick. All four are
+`boolean | null` (`null` = inherit from `Company.roadmapDefaults`, then the
+global `false`); an old `_config.json` without the new keys reads them as
+`null`. A global `_level-mapping.json` sits at the
 roadmap root (not per-project).
 
 `PUT .../roadmap/config` is a **patch**, not a replace: an omitted toggle is
@@ -1149,7 +1156,7 @@ Per-project (`/api/projects/:projectId/roadmap/...`):
 - `DELETE /projects/:projectId/roadmap/items/:itemId` — delete (404 if
   missing).
 - `GET|PUT /projects/:projectId/roadmap/config` — the per-project
-  `{ autoSync, autoPlay }` automation toggles. The PUT is a **patch** (omitted
+  `{ autoSync, autoPlay, autoReview, autoAddressComments }` automation toggles. The PUT is a **patch** (omitted
   toggle = leave it alone), not a replace.
 - `POST /projects/:projectId/roadmap/sync` (125b) — pulls the project's
   resolved Jira/GitHub integrations and upserts their items via

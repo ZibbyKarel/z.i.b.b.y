@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   ROADMAP_ITEM_ID_REGEX,
+  RoadmapConfigPatchSchema,
   RoadmapConfigSchema,
+  RoadmapDefaultsSchema,
   RoadmapItemSchema,
   resolveRoadmapConfig,
   roadmapItemIdForSource,
@@ -96,8 +98,34 @@ describe("RoadmapConfigSchema (tri-state)", () => {
     expect(RoadmapConfigSchema.parse({ autoSync: true, autoPlay: false })).toEqual({
       autoSync: true,
       autoPlay: false,
+      autoReview: null,
+      autoAddressComments: null,
     });
-    expect(RoadmapConfigSchema.parse({})).toEqual({ autoSync: null, autoPlay: null });
+    expect(RoadmapConfigSchema.parse({})).toEqual({
+      autoSync: null,
+      autoPlay: null,
+      autoReview: null,
+      autoAddressComments: null,
+    });
+  });
+});
+
+describe("RoadmapConfigPatchSchema", () => {
+  it("keeps omitted keys absent and accepts null for the PR toggles", () => {
+    expect(RoadmapConfigPatchSchema.parse({ autoReview: true })).toEqual({ autoReview: true });
+    expect(RoadmapConfigPatchSchema.parse({ autoAddressComments: null })).toEqual({
+      autoAddressComments: null,
+    });
+  });
+});
+
+describe("RoadmapDefaultsSchema", () => {
+  it("accepts the PR toggles as optional booleans", () => {
+    expect(RoadmapDefaultsSchema.parse({ autoReview: true, autoAddressComments: false })).toEqual({
+      autoReview: true,
+      autoAddressComments: false,
+    });
+    expect(RoadmapDefaultsSchema.parse({})).toEqual({});
   });
 });
 
@@ -108,16 +136,42 @@ describe("resolveRoadmapConfig", () => {
     ).toEqual({
       autoSync: false,
       autoPlay: true,
-      source: { autoSync: "project", autoPlay: "company" },
-    });
-    expect(resolveRoadmapConfig({ autoSync: null, autoPlay: null }, { autoSync: true })).toEqual({
-      autoSync: true,
-      autoPlay: false,
-      source: { autoSync: "company", autoPlay: "global" },
+      autoReview: false,
+      autoAddressComments: false,
+      source: {
+        autoSync: "project",
+        autoPlay: "company",
+        autoReview: "global",
+        autoAddressComments: "global",
+      },
     });
     expect(resolveRoadmapConfig({}, undefined).source).toEqual({
       autoSync: "global",
       autoPlay: "global",
+      autoReview: "global",
+      autoAddressComments: "global",
+    });
+  });
+
+  it("resolves autoReview / autoAddressComments: project explicit, then company, then false", () => {
+    expect(
+      resolveRoadmapConfig(
+        { autoReview: false, autoAddressComments: null },
+        { autoReview: true, autoAddressComments: true },
+      ),
+    ).toMatchObject({
+      autoReview: false,
+      autoAddressComments: true,
+      source: { autoReview: "project", autoAddressComments: "company" },
+    });
+    expect(resolveRoadmapConfig({ autoReview: true }, { autoReview: false })).toMatchObject({
+      autoReview: true,
+      source: { autoReview: "project" },
+    });
+    expect(resolveRoadmapConfig({ autoReview: null }, { autoReview: true })).toMatchObject({
+      autoReview: true,
+      autoAddressComments: false,
+      source: { autoReview: "company", autoAddressComments: "global" },
     });
   });
 });

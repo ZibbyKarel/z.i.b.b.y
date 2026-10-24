@@ -32,6 +32,7 @@ describe("TaskOutputService", () => {
     diffStats: ReturnType<typeof vi.fn>;
     openPr: ReturnType<typeof vi.fn>;
     rebaseFacts: ReturnType<typeof vi.fn>;
+    pushFastForward: ReturnType<typeof vi.fn>;
   };
   let vault: { createNote: ReturnType<typeof vi.fn>; updateNote: ReturnType<typeof vi.fn> };
   let approvals: {
@@ -61,6 +62,7 @@ describe("TaskOutputService", () => {
         log: "fff0001 feat: thing",
         stat: " a.ts | 2 +-",
       })),
+      pushFastForward: vi.fn(async () => "pushed"),
     };
     vault = { createNote: vi.fn(async () => ({})), updateNote: vi.fn(async () => ({})) };
     approvals = {
@@ -490,6 +492,32 @@ describe("TaskOutputService", () => {
       expect(approvals.requestApproval).toHaveBeenCalledWith(
         expect.objectContaining({ risk: "high" }),
       );
+    });
+
+    it("todo-16 — an AUTO-started run's `Addressed: all` parks the push, never approves it", async () => {
+      const task = await seed();
+      const auto = await storage.setPrAddressComments(task.id, (c) =>
+        c ? { ...c, auto: true } : c,
+      );
+      const delivered = await service.parkPrAddressComments(
+        auto,
+        "Addressed: all\n\n- a.ts:3 done",
+        "/wt",
+      );
+      expect(approvals.requestApproval).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: "pr-address-comments", action: "git.push", risk: "high" }),
+      );
+      const { detail } = approvals.requestApproval.mock.calls[0]?.[0] as { detail: string };
+      expect(detail).not.toContain("authorised by the click");
+      expect(approvals.approve).not.toHaveBeenCalled();
+      expect(workspace.pushFastForward).not.toHaveBeenCalled();
+      expect((await storage.get("t_fix")).prAddressComments).toMatchObject({
+        state: "awaiting-approval",
+        auto: true,
+        fixedSha: B,
+        approvalId: "appr_1",
+      });
+      expect(delivered.summary).toMatch(/čeká na schválení/);
     });
 
     it("stores the outcomes parsed from the report", async () => {

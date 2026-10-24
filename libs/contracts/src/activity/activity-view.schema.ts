@@ -101,6 +101,9 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   // ZB-10 / O-08: a warn-threshold crossing on the budget guard — reads with the
   // other dispatch-time run signals (run-paused-limit/run-resumed-limit).
   "budget-warn": "runs",
+  // todo-16: a heartbeat-started PR review / address-comments run — reads with the other
+  // watcher-initiated dispatches and PR events (automation-dispatched/merge-completed).
+  "pr-automation-started": "integrations",
 };
 
 /**

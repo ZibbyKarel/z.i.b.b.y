@@ -7,10 +7,10 @@ import type {
 } from "@zibby/contracts";
 
 export type Run =
-  | { kind: "review"; taskId: string; state: PrReviewState }
-  | { kind: "rebase"; taskId: string; state: PrRebaseState }
-  | { kind: "address"; taskId: string; state: PrAddressCommentsState }
-  | { kind: "fix-ci"; taskId: string; state: PrFixCiState };
+  | { kind: "review"; taskId: string; state: PrReviewState; auto?: true | undefined }
+  | { kind: "rebase"; taskId: string; state: PrRebaseState; auto?: undefined }
+  | { kind: "address"; taskId: string; state: PrAddressCommentsState; auto?: true | undefined }
+  | { kind: "fix-ci"; taskId: string; state: PrFixCiState; auto?: undefined };
 
 /**
  * ZIBBY's own writes (the review, the push, thread replies, re-requests) bump GitHub's

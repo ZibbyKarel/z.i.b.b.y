@@ -551,7 +551,7 @@ export type PrRebaseState = z.infer<typeof PrRebaseStateSchema>;
  * PR inbox redesign — lifecycle of "Address review comments" (`ScheduledTask.prAddressComments`):
  * same states as a rebase. `running` → the agent commits fixes in the run's worktree;
  * `awaiting-approval` → its report is parked as a `pr-address-comments` push approval (approved
- * on the spot for `Addressed: all`); `pushed` → fast-forwarded onto the PR head; `discarded`;
+ * on the spot for `Addressed: all` on a clicked run; never for an auto-started one, todo-16); `pushed` → fast-forwarded onto the PR head; `discarded`;
  * `failed` → errored, no report, no new commits, or the push was refused.
  */
 export const PrAddressCommentsStateSchema = PrRebaseStateSchema;
@@ -789,6 +789,11 @@ export const ScheduledTaskSchema = z.object({
         .optional(),
       /** When the review reached GitHub (`posted`) — the inbox hides "Review" until the PR changes after it. */
       finishedAt: IsoDateTimeSchema.optional(),
+      /**
+       * todo-16 — started by the PR automation heartbeat (`autoReview`), not an operator click.
+       * Server-written only; posting stays behind the same `pr-review` approval gate.
+       */
+      auto: z.literal(true).optional(),
     })
     .optional(),
   /**
@@ -860,6 +865,12 @@ export const ScheduledTaskSchema = z.object({
       reviewersRequested: z.array(z.string()).optional(),
       /** Why resolving or re-requesting review (partly) failed. */
       followUpNote: z.string().optional(),
+      /**
+       * todo-16 — started by the PR automation heartbeat (`autoAddressComments`), not an operator
+       * click. Server-written only. Such a run never auto-pushes: even `Addressed: all` parks the
+       * push approval (Tier 3 — nobody clicked).
+       */
+      auto: z.literal(true).optional(),
     })
     .optional(),
   /**

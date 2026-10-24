@@ -37,7 +37,7 @@ const TARGET: TaskTarget = {
  * The run's brief (`task.md`): the `address` phase, then the `reply` phase. The PR title and
  * every review comment are inbound content — data only, never instructions.
  */
-export function addressCommentsTaskText(p: RebaseBrief): string {
+export function addressCommentsTaskText(p: RebaseBrief, auto = false): string {
   const [owner, name] = p.repo.split("/");
   return [
     `Address the unresolved review comments on GitHub pull request ${p.repo}#${p.number} (${p.url}), branch \`${p.head}\` — a ZIBBY pr-address-comments workflow run.`,
@@ -51,7 +51,11 @@ export function addressCommentsTaskText(p: RebaseBrief): string {
     "",
     `Write your report to \`${PR_ADDRESS_COMMENTS_ARTIFACT}\`. Its FIRST line is exactly one of: \`Addressed: all\` ONLY when every unresolved comment is fixed (or was already fixed in the code) and the quick checks pass; \`Addressed: partial\` when you skipped or declined any comment; \`Addressed: checks failed\` when a quick check still fails; \`Addressed: aborted\` plus the reason when you stopped. Then, per unresolved thread: \`thread: <id>\` (the GraphQL node id, \`PRRT_…\`), path:line, the reviewer's request in one line, and the outcome: \`done in <short sha>\`, \`skipped: <reason>\` or \`question: <what is asked, one line>\` (a comment that asks rather than requests a change). Any \`question\` makes the report \`Addressed: partial\`. Then every check you ran with pass/fail, then \`git log --oneline ${p.headSha}..HEAD\`.`,
     "",
-    `Do NOT push, do not reply to, resolve or create review comments, do not open, merge or comment on PRs, and never touch \`${p.base}\`. ZIBBY pushes your commits itself (fast-forward only) right after an \`Addressed: all\` report; any other report waits for the operator.`,
+    `Do NOT push, do not reply to, resolve or create review comments, do not open, merge or comment on PRs, and never touch \`${p.base}\`. ${
+      auto
+        ? "This run was started automatically, so ZIBBY pushes nothing on its own: every report waits for the operator, who approves the push (fast-forward only)."
+        : "ZIBBY pushes your commits itself (fast-forward only) right after an `Addressed: all` report; any other report waits for the operator."
+    }`,
     "",
     "## Phase `reply`",
     `Read \`${PR_ADDRESS_COMMENTS_ARTIFACT}\`. For every thread marked \`done in <sha>\`, write the reply the operator would post on it, in your usual voice (e.g. "Good catch, fixed in abc1234."). Write a draft for EVERY thread in the report. \`done in\`: what was fixed, citing the sha. \`skipped\`: the reason in one plain sentence. \`question\`: answer it from facts in the code, the diff and the commit messages; where the answer depends on the author's intent, state the facts and leave the intent to the operator — never guess it. When nothing concrete can be said, use \`"body": ""\`. The operator reviews and edits every draft before anything is posted. Write ONLY \`${PR_REPLIES_ARTIFACT}\`: a JSON array \`[{ "threadId": "PRRT_…", "body": "…", "resolve": true }]\` (ids exactly as in the report, body under 500 characters; \`"resolve": true\` ONLY on a thread marked \`done in <sha>\` — never on a skipped one). ZIBBY posts them after the push, resolves the threads you marked \`resolve\` and re-requests review from whoever requested changes; you never post, resolve or run any \`gh\` write.`,
@@ -65,7 +69,8 @@ export function addressCommentsTaskText(p: RebaseBrief): string {
  * refs from GitHub (`readPushablePr`), refuses a second in-flight run, creates a task with the
  * explicit `pr-address-comments` workflow target and stamps `ScheduledTask.prAddressComments`.
  * When the run ends, `TaskOutputService.parkPrAddressComments` records the `pr-address-comments`
- * approval (approved on the spot for `Addressed: all`). This service is that kind's runner:
+ * approval (approved on the spot for `Addressed: all` — only on a clicked run; an auto-started
+ * one, todo-16, always waits for the operator). This service is that kind's runner:
  * approve → `WorkspaceService.pushFastForward`, reject → discard.
  */
 @Injectable()
@@ -96,7 +101,15 @@ export class InboxAddressCommentsService implements OnModuleInit {
     });
   }
 
-  async start(input: AddressInboxPrCommentsInput): Promise<ReviewInboxPrResult> {
+  /**
+   * `opts.auto` (todo-16) is passed only by `PrAutomationService`, never by the controller (the
+   * HTTP body is strict, so a client cannot send it). It stamps `prAddressComments.auto`, which
+   * makes `TaskOutputService.parkPrAddressComments` park the push even on `Addressed: all`.
+   */
+  async start(
+    input: AddressInboxPrCommentsInput,
+    opts: { auto?: boolean } = {},
+  ): Promise<ReviewInboxPrResult> {
     const project = await this.projects.get(input.projectId); // ProjectNotFoundError → 404
     const link = await resolveGithubToken(this.resolvedProjects, this.credentials, project);
     if (!link) throw new NoGithubLinkError(project.id);
@@ -125,15 +138,18 @@ export class InboxAddressCommentsService implements OnModuleInit {
     const result = await this.scheduler.createTask(
       {
         title: `Address review comments: ${ref}${title ? ` ${title}` : ""}`.slice(0, 200),
-        text: addressCommentsTaskText({
-          repo: link.repo,
-          number: input.number,
-          url,
-          title,
-          head,
-          base,
-          headSha,
-        }),
+        text: addressCommentsTaskText(
+          {
+            repo: link.repo,
+            number: input.number,
+            url,
+            title,
+            head,
+            base,
+            headSha,
+          },
+          opts.auto === true,
+        ),
       },
       Date.now(),
       project.id,
@@ -148,11 +164,13 @@ export class InboxAddressCommentsService implements OnModuleInit {
       base,
       headSha,
       state: "running",
+      ...(opts.auto ? { auto: true as const } : {}),
     }));
     this.log?.info("pr address-comments task started", {
       taskId: result.task.id,
       repo: link.repo,
       head,
+      auto: opts.auto === true,
     });
     return { taskId: result.task.id };
   }

@@ -8,6 +8,8 @@ import { useUpdateCompanyMutation } from "../mutations";
 export enum CompanyRoadmapDefaultsTestId {
   AutoSync = "company-roadmap-defaults-auto-sync",
   AutoPlay = "company-roadmap-defaults-auto-play",
+  AutoReview = "company-roadmap-defaults-auto-review",
+  AutoAddressComments = "company-roadmap-defaults-auto-address-comments",
 }
 
 export interface CompanyRoadmapDefaultsPanelProps {
@@ -26,7 +28,10 @@ export function CompanyRoadmapDefaultsPanel({ company }: CompanyRoadmapDefaultsP
   const updateCompany = useUpdateCompanyMutation();
   const defaults = company.roadmapDefaults ?? {};
 
-  const set = (key: "autoSync" | "autoPlay", value: boolean) =>
+  const set = (
+    key: "autoSync" | "autoPlay" | "autoReview" | "autoAddressComments",
+    value: boolean,
+  ) =>
     updateCompany.mutate({
       params: { id: company.id },
       body: { roadmapDefaults: { ...defaults, [key]: value } },
@@ -53,6 +58,22 @@ export function CompanyRoadmapDefaultsPanel({ company }: CompanyRoadmapDefaultsP
           hint={t("autoPlayHint")}
           label={t("autoPlay")}
           onChange={(v) => set("autoPlay", v)}
+        />
+        <ToggleField
+          checked={defaults.autoReview ?? false}
+          data-testid={CompanyRoadmapDefaultsTestId.AutoReview}
+          disabled={updateCompany.isPending}
+          hint={t("autoReviewHint")}
+          label={t("autoReview")}
+          onChange={(v) => set("autoReview", v)}
+        />
+        <ToggleField
+          checked={defaults.autoAddressComments ?? false}
+          data-testid={CompanyRoadmapDefaultsTestId.AutoAddressComments}
+          disabled={updateCompany.isPending}
+          hint={t("autoAddressCommentsHint")}
+          label={t("autoAddressComments")}
+          onChange={(v) => set("autoAddressComments", v)}
         />
       </Stack>
     </Panel>

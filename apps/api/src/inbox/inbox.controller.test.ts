@@ -24,6 +24,8 @@ describe("InboxController getInboxPrDiff GitHub error mapping", () => {
   let upstream = 500;
   let rebaseError: Error = new PrRefusedError("acme/app#7 comes from a fork");
   let addressError: Error | null = null;
+  const addressCalls: unknown[][] = [];
+  const reviewCalls: unknown[][] = [];
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -35,7 +37,15 @@ describe("InboxController getInboxPrDiff GitHub error mapping", () => {
           provide: InboxService,
           useValue: { listTodoItems: async () => ({ items: [] }) },
         },
-        { provide: InboxReviewService, useValue: {} },
+        {
+          provide: InboxReviewService,
+          useValue: {
+            start: async (...args: unknown[]) => {
+              reviewCalls.push(args);
+              return { taskId: "task_r1" };
+            },
+          },
+        },
         {
           provide: InboxRebaseService,
           useValue: {
@@ -47,7 +57,8 @@ describe("InboxController getInboxPrDiff GitHub error mapping", () => {
         {
           provide: InboxAddressCommentsService,
           useValue: {
-            start: async () => {
+            start: async (...args: unknown[]) => {
+              addressCalls.push(args);
               if (addressError) throw addressError;
               return { taskId: "task_a1" };
             },
@@ -139,6 +150,34 @@ describe("InboxController getInboxPrDiff GitHub error mapping", () => {
       .send({ projectId: "acme", repo: "acme/app", number: 7 })
       .expect(201);
     expect(res.body).toEqual({ taskId: "task_a1" });
+  });
+
+  it("todo-16 — `auto` in an address-comments body is rejected (400) and never reaches start", async () => {
+    addressError = null;
+    addressCalls.length = 0;
+    await withOperator(request(app.getHttpServer()).post("/api/inbox/prs/address-comments"))
+      .send({ projectId: "acme", repo: "acme/app", number: 7, auto: true })
+      .expect(400);
+    expect(addressCalls).toEqual([]);
+    await withOperator(request(app.getHttpServer()).post("/api/inbox/prs/address-comments"))
+      .send({ projectId: "acme", repo: "acme/app", number: 7 })
+      .expect(201);
+    expect(addressCalls).toHaveLength(1);
+    // The controller passes the body only — never an `{ auto }` opts argument.
+    expect(addressCalls[0]).toHaveLength(1);
+  });
+
+  it("todo-16 — `auto` in a review body is rejected (400) and never reaches start", async () => {
+    reviewCalls.length = 0;
+    await withOperator(request(app.getHttpServer()).post("/api/inbox/prs/review"))
+      .send({ projectId: "acme", repo: "acme/app", number: 7, auto: true })
+      .expect(400);
+    expect(reviewCalls).toEqual([]);
+    await withOperator(request(app.getHttpServer()).post("/api/inbox/prs/review"))
+      .send({ projectId: "acme", repo: "acme/app", number: 7 })
+      .expect(201);
+    expect(reviewCalls).toHaveLength(1);
+    expect(reviewCalls[0]).toHaveLength(1);
   });
 
   it("fixInboxPrCi → 422 on PrRefusedError", async () => {

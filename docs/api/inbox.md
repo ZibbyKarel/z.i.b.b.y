@@ -289,8 +289,78 @@ and runs the same follow-up.
 A reply typed in the PR detail (`POST …/threads/:threadId/reply`) records a `channel-reply`
 activity entry.
 
-`GET /api/inbox/prs` rows carry `addressComments { taskId, state, finishedAt? }` (latest such task per PR; a
-`running` one whose task/run died reads `failed`).
+`GET /api/inbox/prs` rows carry `addressComments { taskId, state, finishedAt?, auto? }` (latest such task per PR; a
+`running` one whose task/run died reads `failed`; `auto: true` = started by the PR automation, below).
+
+The HTTP route never starts an auto run: the body schema is strict, so `{ …, auto: true }` is a
+400, and the controller calls `start(body)` with no options.
+
+## Automatic review & comment handling (todo-16)
+
+`PrAutomationService` (`apps/api/src/inbox/pr-automation.service.ts`) is a heartbeat that starts
+the two actions above on its own, per the project's roadmap automation toggles `autoReview` and
+`autoAddressComments` (`../api/roadmap.md` — tri-state, own value → the company's
+`roadmapDefaults` → global `false`, via `resolveRoadmapConfig`). It shares the roadmap heartbeat
+knob `systemConfig.roadmapTickMs` (read live, `0` disables; no separate knob) and reports on
+`/api/health` as watcher `pr-automation`.
+
+Each tick first resolves every project's effective config; when no project has `autoReview` or
+`autoAddressComments` on, it ends there and never queries GitHub. Otherwise it reads
+`InboxService.listPrs()` and the tasks store, then walks the PRs in inbox order:
+
+- **Auto review** — effective `autoReview`, `bucket === "to-review"`, not a draft, a known
+  `headSha`, no review task of the PR whose `prReview.headSha` is that head (any state — a failed
+  or discarded review of the same head is not retried), and no review task of the PR `running` or
+  `awaiting-approval`. It calls `InboxReviewService.start({ projectId, repo, number, title, level }, { auto: true, headSha })`,
+  which stamps `prReview.auto: true` (and uses the inbox's head as the pin if its own head read
+  fails, so the dedupe always has a head). Posting stays behind the workflow's `comment` gate and
+  the `pr-review` approval, unchanged.
+- **Auto address comments** — effective `autoAddressComments`, `bucket === "mine"`,
+  `review === "changes-requested"`, `unresolvedThreads > 0`, a known head, the same head dedupe
+  against `prAddressComments.headSha` — and against `prAddressComments.fixedSha`, so the head
+  ZIBBY's own approved push created is never treated as new work (the reviewer's
+  CHANGES_REQUESTED and any skipped threads outlive the push) — nothing in flight. It calls
+  `InboxAddressCommentsService.start({ projectId, repo, number, title }, { auto: true })`, which
+  stamps `prAddressComments.auto: true`. **Such a run never auto-pushes:**
+  `TaskOutputService.parkPrAddressComments` parks the push approval (Tier 3, risk high) even on
+  `Addressed: all`, and the run's brief tells the agent every report waits for the operator.
+  Everything after the operator approves is unchanged. On a public repo anyone can leave a
+  CHANGES_REQUESTED review, so a stranger can trigger such a run; it costs a run, and its push
+  still waits for the operator.
+
+A dead task's `running` state counts as `failed`: it no longer blocks a new head, but the same
+head is still not retried. At most
+`PR_AUTOMATION_MAX_STARTS_PER_TICK` = 3 starts per tick across all projects; the rest wait for the
+next tick. Fail open per PR (logged and skipped); a `listPrs` failure, or an unreadable tasks
+store (no dedupe possible), ends the tick with nothing started.
+
+**Review level by content** — `selectReviewLevel(files)` (`select-review-level.ts`) over
+`InboxReviewService.listPrFiles` (`GET /repos/{repo}/pulls/{n}/files?per_page=100` with the
+project's token; throws on failure → `quick`). First match wins:
+
+1. `browser` — any file matching `/\.(tsx|jsx|vue|svelte|css|scss|html)$/i`;
+2. `thorough` — any path matching
+   `/(auth|security|secret|token|crypto|permission|migration|contract|schema)/i` or ending in
+   `.sql`, more than 500 changed lines (additions + deletions, summed over the PR), or more than 20
+   files;
+3. `tested` — any file that is not docs/config (`/\.(md|mdx|txt|rst|ya?ml|json|toml|ini|lock)$/i`
+   or a path under `docs/`);
+4. `quick` — otherwise, including an empty list.
+
+**Fork cap (security floor).** `tested` and `browser` install and run the PR's code (with the
+project's secrets in the run's environment). Nobody looked at an auto-started PR, so when its
+head is not in the project's own repo (a fork — `headRef` absent, since `InboxService` sets it
+only for same-repo heads) an auto review is capped at `thorough`, which reads the code without
+running it. Docs-only (`quick`) and `thorough` are unaffected; an operator-clicked review runs at
+whatever level the operator picks.
+
+Each start records activity `pr-automation-started` (group `integrations`, also an
+`INBOX_REFRESH_ACTIVITY_KINDS` member) with summary `auto review (<level>) <repo>#<n>` or
+`auto address comments <repo>#<n>` and refs `{ projectId, taskId, itemId: "<repo>#<n>" }`.
+
+`GET /api/inbox/prs` rows carry `headSha` (40-hex, from the pull fetch; absent when GitHub did not
+report a valid one) and `codeReview.auto` / `addressComments.auto` (`true` when the latest task was
+auto-started).
 
 ## Fix CI (`POST /api/inbox/prs/fix-ci`)
 

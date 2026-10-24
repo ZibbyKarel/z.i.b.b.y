@@ -128,6 +128,11 @@ export const ActivityKindSchema = z.enum([
   // (below the hard `pauseAt*` — dispatches keep flowing). Non-blocking, so it never
   // rides `approval-requested`; the Ledger spend meter is the durable read.
   "budget-warn",
+  // todo-16 (PR automation heartbeat, Tier-1 — silent + recorded). The heartbeat started a
+  // PR-inbox code review (`autoReview`) or "Address review comments" (`autoAddressComments`)
+  // on its own. Rides `projectId`, `taskId` and `itemId` = `<repo>#<n>`. Posting the review
+  // and pushing the fixes both stay behind their approvals.
+  "pr-automation-started",
 ]);
 export type ActivityKind = z.infer<typeof ActivityKindSchema>;
 

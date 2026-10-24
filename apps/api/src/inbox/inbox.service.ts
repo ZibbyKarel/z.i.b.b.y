@@ -330,6 +330,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
           taskId: task.id,
           state: review.state === "running" && dead ? "failed" : review.state,
           ...(review.finishedAt ? { finishedAt: review.finishedAt } : {}),
+          ...(review.auto ? { auto: true as const } : {}),
         });
       }
       if (rebase) {
@@ -343,6 +344,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
           taskId: task.id,
           state: fix.state === "running" && dead ? "failed" : fix.state,
           ...(fix.finishedAt ? { finishedAt: fix.finishedAt } : {}),
+          ...(fix.auto ? { auto: true as const } : {}),
         });
       }
       const ci = task.prFixCi;
@@ -461,6 +463,10 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
             ? { headRef: pull.head.ref }
             : {}),
           ...(pull.base?.ref ? { baseRef: pull.base.ref } : {}),
+          // todo-16 — the head the PR automation dedupes on; only a real 40-hex sha.
+          ...(pull.head?.sha && /^[0-9a-f]{40}$/.test(pull.head.sha)
+            ? { headSha: pull.head.sha }
+            : {}),
           ...(unresolvedThreads !== undefined ? { unresolvedThreads } : {}),
           ...bucket,
           blocker: blockerOf({ ci, review, mergeable }),

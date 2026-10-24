@@ -23,10 +23,19 @@ function config(partial: Partial<RoadmapConfigResponse> = {}): RoadmapConfigResp
   return {
     autoSync: null,
     autoPlay: null,
+    autoReview: null,
+    autoAddressComments: null,
     effective: {
       autoSync: false,
       autoPlay: false,
-      source: { autoSync: "global", autoPlay: "global" },
+      autoReview: false,
+      autoAddressComments: false,
+      source: {
+        autoSync: "global",
+        autoPlay: "global",
+        autoReview: "global",
+        autoAddressComments: "global",
+      },
     },
     ...partial,
   };
@@ -60,7 +69,14 @@ describe("RoadmapAutomationPanel (tri-state)", () => {
       effective: {
         autoSync: true,
         autoPlay: false,
-        source: { autoSync: "company", autoPlay: "global" },
+        autoReview: false,
+        autoAddressComments: false,
+        source: {
+          autoSync: "company",
+          autoPlay: "global",
+          autoReview: "global",
+          autoAddressComments: "global",
+        },
       },
     });
     render(<RoadmapAutomationPanel companyName="Shoptet" projectId="proj-1" />);
@@ -87,6 +103,35 @@ describe("RoadmapAutomationPanel (tri-state)", () => {
       params: { projectId: "proj-1" },
       body: { autoSync: true },
     });
+  });
+
+  it.each([
+    [RoadmapAutomationPanelTestId.AutoReview, "autoReview"],
+    [RoadmapAutomationPanelTestId.AutoAddressComments, "autoAddressComments"],
+  ] as const)("renders the %s toggle and patches only its key", async (testId, key) => {
+    render(<RoadmapAutomationPanel projectId="proj-1" />);
+
+    await userEvent.click(item(testId, "on"));
+
+    expect(hooks.setConfig.mutate).toHaveBeenCalledWith({
+      params: { projectId: "proj-1" },
+      body: { [key]: true },
+    });
+  });
+
+  it("names the company as the source of the PR toggles", () => {
+    hooks.config.data = config({
+      effective: {
+        ...config().effective,
+        autoReview: true,
+        source: { ...config().effective.source, autoReview: "company" },
+      },
+    });
+    render(<RoadmapAutomationPanel companyName="Shoptet" projectId="proj-1" />);
+
+    expect(screen.getByTestId(RoadmapAutomationPanelTestId.AutoReviewEffective)).toHaveTextContent(
+      "Shoptet",
+    );
   });
 
   it("saves Inherit as null", async () => {

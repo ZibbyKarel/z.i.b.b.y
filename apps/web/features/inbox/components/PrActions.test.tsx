@@ -338,6 +338,31 @@ describe("PrActions runs", () => {
     },
   );
 
+  it.each([
+    [
+      "codeReview",
+      { codeReview: { taskId: "t1", state: "running" as const, auto: true as const } },
+    ],
+    [
+      "addressComments",
+      { addressComments: { taskId: "t1", state: "running" as const, auto: true as const } },
+    ],
+  ])("an auto-started %s run shows the auto marker", (_k, over) => {
+    renderWithProviders(<PrActions baseLabel="main" pr={pr(7, { ...over, ...toReview })} />);
+    expect(screen.getByTestId(PrActionsTestId.AutoMarker)).toHaveTextContent("auto");
+  });
+
+  it("a click-started run shows no auto marker", () => {
+    renderWithProviders(
+      <PrActions
+        baseLabel="main"
+        pr={pr(7, { ...toReview, codeReview: { taskId: "t1", state: "running" as const } })}
+      />,
+    );
+    expect(screen.getByTestId(PrActionsTestId.Running)).toBeInTheDocument();
+    expect(screen.queryByTestId(PrActionsTestId.AutoMarker)).toBeNull();
+  });
+
   it("a failed run keeps the action and adds a failed link to its task", () => {
     renderWithProviders(
       <PrActions

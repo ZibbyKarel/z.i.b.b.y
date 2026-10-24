@@ -209,7 +209,7 @@ describe("RoadmapTickService", () => {
       .spyOn(store, "readConfig")
       .mockImplementation(async (projectId: string) => {
         if (projectId === "broken") throw new Error("unreadable");
-        return { autoSync: true, autoPlay: false };
+        return { autoSync: true, autoPlay: false, autoReview: null, autoAddressComments: null };
       });
     await fs.mkdir(path.join(dir, "broken"), { recursive: true });
     const tick = makeTick();
