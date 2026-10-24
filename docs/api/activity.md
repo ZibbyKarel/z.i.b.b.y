@@ -68,6 +68,7 @@ type ActivityKind =
   | "task-dead-lettered" // a task's dispatch exhausted its retry budget
   | "automation-dispatched" // a signal-triggered automation dispatched (refs.automationId)
   | "budget-warn" // ZB-10/O-08: account usage crossed a warn (non-blocking) threshold
+  | "pr-automation-started" // todo-16: the PR heartbeat auto-started a review / address-comments run (refs.projectId, taskId, itemId = "<repo>#<n>")
   | "orchestrator-fallback"; // Fáze 4a: the classifier itself chose the orchestrator (no explicit override)
 ```
 

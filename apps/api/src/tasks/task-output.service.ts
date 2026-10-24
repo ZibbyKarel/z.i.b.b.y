@@ -420,7 +420,8 @@ export class TaskOutputService implements OnModuleInit {
    * `pr-address-comments` approval ("Push review fixes"). `Addressed: all` was authorised by
    * the click (Tier-2: fast-forward commits onto the operator's own PR only request review), so
    * it is approved on the spot and the runner (`InboxAddressCommentsService`) pushes; any other
-   * first line stays pending (Tier-3, risk high). The `github-commenter` thread replies
+   * first line stays pending (Tier-3, risk high). todo-16: a run the PR automation started
+   * (`prAddressComments.auto`) had no click, so even `Addressed: all` stays pending. The `github-commenter` thread replies
    * (`rawReplies`, parsed by {@link parseThreadReplies}) ride on the same approval — same tier as
    * the push, posted by the runner only after it. The worktree HEAD ZIBBY reads here is stored
    * as `fixedSha` — the only sha the runner pushes. No report / no worktree / an unreadable
@@ -484,9 +485,12 @@ export class TaskOutputService implements OnModuleInit {
       );
       return { summary: `Review komentáře ${ref}: odpovědi čekají na schválení` };
     }
-    // A `question` always keeps the gate, whatever the first line claims.
+    // A `question` always keeps the gate, whatever the first line claims. todo-16: so does an
+    // auto-started run — nobody clicked, so nothing authorised the push (Tier 3).
     const autoPush =
-      isAutoPushAddressComments(report) && !outcomes.some((o) => o.kind === "question");
+      !fix.auto &&
+      isAutoPushAddressComments(report) &&
+      !outcomes.some((o) => o.kind === "question");
     const done = threadsMarkedDone(report);
     const repliesBlock = replies.length
       ? `\n\n## Replies ZIBBY will post after the push\n\n${replies
@@ -504,7 +508,11 @@ export class TaskOutputService implements OnModuleInit {
       skill: "fullstack-developer",
       action: "git.push",
       detail: `Push review fixes onto ${fix.head} — ${ref}${
-        autoPush ? " (all comments addressed, checks green — authorised by the click)" : ""
+        autoPush
+          ? " (all comments addressed, checks green — authorised by the click)"
+          : fix.auto
+            ? " (started automatically — the push waits for your approval)"
+            : ""
       }\n\n${report}${followUpBlock}\n\n## Verified by ZIBBY\n\nHEAD ${facts.sha}\n\ngit diff --stat ${fix.headSha} HEAD:\n${facts.stat || "(no changes)"}`,
       risk: autoPush ? "medium" : "high",
       sourceUrl: fix.url,

@@ -2,6 +2,7 @@ import { Injectable, type OnModuleInit, Optional } from "@nestjs/common";
 import type {
   PrReviewEvent,
   PrReviewLevel,
+  Project,
   ReviewInboxPrInput,
   ReviewInboxPrResult,
   TaskTarget,
@@ -16,6 +17,7 @@ import { InboxService } from "./inbox.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
 import { foldComments, parsePrReviewDoc } from "./pr-review-doc";
+import type { PrFileChange } from "./select-review-level";
 import { PR_REVIEW_ARTIFACT } from "../tasks/task-output.service";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
 
@@ -142,19 +144,25 @@ export class InboxReviewService implements OnModuleInit {
     });
   }
 
-  async start(input: ReviewInboxPrInput): Promise<ReviewInboxPrResult> {
-    const project = await this.projects.get(input.projectId); // ProjectNotFoundError → 404
-    const link = await resolveGithubToken(this.resolvedProjects, this.credentials, project);
-    if (!link) throw new NoGithubLinkError(project.id);
-    if (link.repo.toLowerCase() !== input.repo.toLowerCase()) {
-      throw new ReviewRepoMismatchError(project.id, input.repo);
-    }
+  /**
+   * `opts.auto` (todo-16) is passed only by `PrAutomationService`, never by the controller (the
+   * HTTP body is strict and has no such field); it stamps `prReview.auto`. Posting stays behind
+   * the same `pr-review` approval either way. `opts.headSha` — the head the automation just read
+   * from GitHub — is the fallback pin when the fresh read fails, so its head dedupe always holds.
+   */
+  async start(
+    input: ReviewInboxPrInput,
+    opts: { auto?: boolean; headSha?: string } = {},
+  ): Promise<ReviewInboxPrResult> {
+    const { project, link } = await this.projectLink(input.projectId, input.repo);
     // The url is derived, never taken from the client.
     const url = `https://github.com/${link.repo}/pull/${input.number}`;
     const title = input.title?.trim() ?? "";
     const level = input.level ?? "quick";
     const label = level === "quick" ? "Code review" : `Code review (${level})`;
-    const headSha = await this.readHeadSha(link.repo, input.number, link.token);
+    const headSha =
+      (await this.readHeadSha(link.repo, input.number, link.token)) ??
+      (opts.headSha && /^[0-9a-f]{40}$/.test(opts.headSha) ? opts.headSha : undefined);
     const result = await this.scheduler.createTask(
       {
         title: `${label}: ${link.repo}#${input.number}${title ? ` ${title}` : ""}`.slice(0, 200),
@@ -173,13 +181,53 @@ export class InboxReviewService implements OnModuleInit {
       url,
       state: "running",
       ...(headSha ? { headSha } : {}),
+      ...(opts.auto ? { auto: true as const } : {}),
     }));
     this.log?.info("pr review task started", {
       taskId: result.task.id,
       repo: link.repo,
       level,
+      auto: opts.auto === true,
     });
     return { taskId: result.task.id };
+  }
+
+  /** The project and its GitHub link; the PR's repo must be the project's own (→ 422 otherwise). */
+  private async projectLink(
+    projectId: string,
+    repo: string,
+  ): Promise<{ project: Project; link: { repo: string; token: string } }> {
+    const project = await this.projects.get(projectId); // ProjectNotFoundError → 404
+    const link = await resolveGithubToken(this.resolvedProjects, this.credentials, project);
+    if (!link) throw new NoGithubLinkError(project.id);
+    if (link.repo.toLowerCase() !== repo.toLowerCase()) {
+      throw new ReviewRepoMismatchError(project.id, repo);
+    }
+    return { project, link };
+  }
+
+  /**
+   * todo-16 — the PR's changed files (`GET /repos/{repo}/pulls/{n}/files`, first 100 — more than
+   * 20 already means `thorough`), read with the project's token, for `selectReviewLevel`. Throws on
+   * any failure; the caller falls back to `quick`.
+   */
+  async listPrFiles(projectId: string, repo: string, number: number): Promise<PrFileChange[]> {
+    const { link } = await this.projectLink(projectId, repo);
+    const res = await this.fetchImpl(
+      `${GITHUB_API}/repos/${link.repo}/pulls/${number}/files?per_page=100`,
+      { headers: { authorization: `Bearer ${link.token}`, accept: "application/vnd.github+json" } },
+    );
+    if (!res.ok) throw new Error(`github pull files: HTTP ${res.status}`);
+    const body: unknown = await res.json();
+    if (!Array.isArray(body)) throw new Error("github pull files: not a list");
+    return body.flatMap((f: unknown) => {
+      const { filename, additions, deletions } = (f ?? {}) as Record<string, unknown>;
+      return typeof filename === "string" &&
+        typeof additions === "number" &&
+        typeof deletions === "number"
+        ? [{ filename, additions, deletions }]
+        : [];
+    });
   }
 
   /** todo-22 — the PR head sha the review pins to; any failure → undefined (review runs unpinned). */

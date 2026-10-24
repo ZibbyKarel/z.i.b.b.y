@@ -124,7 +124,17 @@ export const InboxPrSchema = z.object({
       taskId: z.string().min(1),
       state: PrReviewStateSchema,
       finishedAt: IsoDateTimeSchema.optional(),
+      /** todo-16 — the task was started by the PR automation heartbeat, not a click. */
+      auto: z.literal(true).optional(),
     })
+    .optional(),
+  /**
+   * todo-16 — the PR head commit from the pull fetch (40-hex). Absent when GitHub did not report
+   * a valid one; the PR automation skips such a PR.
+   */
+  headSha: z
+    .string()
+    .regex(/^[0-9a-f]{40}$/)
     .optional(),
   /**
    * todo-11 — GitHub's `mergeable_state === "behind"`: the head lacks base commits.
@@ -152,6 +162,8 @@ export const InboxPrSchema = z.object({
       taskId: z.string().min(1),
       state: PrAddressCommentsStateSchema,
       finishedAt: IsoDateTimeSchema.optional(),
+      /** todo-16 — the task was started by the PR automation heartbeat, not a click. */
+      auto: z.literal(true).optional(),
     })
     .optional(),
   /** The latest ZIBBY "Fix CI" task of this PR. */
@@ -218,7 +230,11 @@ export const RebaseInboxPrInputSchema = z
   .strict();
 export type RebaseInboxPrInput = z.infer<typeof RebaseInboxPrInputSchema>;
 
-/** Body of `POST /api/inbox/prs/address-comments` — same shape as a rebase; refs are read from GitHub server-side. */
+/**
+ * Body of `POST /api/inbox/prs/address-comments` — same shape as a rebase; refs are read from GitHub
+ * server-side. Strict, so a client can never send `auto` (400): todo-16's auto flag is a separate
+ * server-side argument of `InboxAddressCommentsService.start`, never part of the HTTP body.
+ */
 export const AddressInboxPrCommentsInputSchema = RebaseInboxPrInputSchema;
 export type AddressInboxPrCommentsInput = RebaseInboxPrInput;
 
@@ -308,4 +324,6 @@ export const INBOX_REFRESH_ACTIVITY_KINDS: readonly ActivityKind[] = [
   "roadmap-sync",
   "roadmap-item-dispatched",
   "roadmap-item-outcome",
+  // todo-16 — an auto-started review / address-comments task changes the PR's chip.
+  "pr-automation-started",
 ];

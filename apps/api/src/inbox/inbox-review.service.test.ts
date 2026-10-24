@@ -99,6 +99,54 @@ describe("InboxReviewService", () => {
     });
   });
 
+  it("todo-16 — start(input, { auto: true }) stamps prReview.auto; a click never does", async () => {
+    await service.start(
+      { projectId: "acme", repo: "acme/app", number: 7, level: "tested" },
+      { auto: true },
+    );
+    expect((await storage.get("task_r1")).prReview).toMatchObject({ state: "running", auto: true });
+  });
+
+  it("todo-16 — a failed head read falls back to the automation's headSha (dedupe holds)", async () => {
+    const H = "d".repeat(40);
+    await service.start(
+      { projectId: "acme", repo: "acme/app", number: 7 },
+      { auto: true, headSha: H },
+    );
+    expect((await storage.get("task_r1")).prReview?.headSha).toBe(H);
+  });
+
+  it("todo-16 — listPrFiles reads the PR's files with the project's token", async () => {
+    fetchImpl.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify([
+          { filename: "src/a.ts", additions: 3, deletions: 1, status: "modified" },
+          { filename: "README.md", additions: 1, deletions: 0 },
+          { nope: true },
+        ]),
+        { status: 200 },
+      ),
+    );
+    const files = await service.listPrFiles("acme", "Acme/App", 7);
+    expect(files).toEqual([
+      { filename: "src/a.ts", additions: 3, deletions: 1 },
+      { filename: "README.md", additions: 1, deletions: 0 },
+    ]);
+    const [url, init] = fetchImpl.mock.calls[0] ?? [];
+    expect(String(url)).toBe("https://api.github.com/repos/acme/app/pulls/7/files?per_page=100");
+    expect((init as RequestInit).headers).toMatchObject({ authorization: "Bearer tok" });
+  });
+
+  it("todo-16 — listPrFiles throws on an HTTP failure, a non-array body and a foreign repo", async () => {
+    fetchImpl.mockResolvedValueOnce(new Response("{}", { status: 500 }));
+    await expect(service.listPrFiles("acme", "acme/app", 7)).rejects.toThrow(/500/);
+    fetchImpl.mockResolvedValueOnce(new Response("{}", { status: 200 }));
+    await expect(service.listPrFiles("acme", "acme/app", 7)).rejects.toThrow();
+    await expect(service.listPrFiles("acme", "evil/app", 7)).rejects.toThrow(
+      ReviewRepoMismatchError,
+    );
+  });
+
   it.each([
     ["quick", "pr-review-quick"],
     ["thorough", "pr-review-thorough"],

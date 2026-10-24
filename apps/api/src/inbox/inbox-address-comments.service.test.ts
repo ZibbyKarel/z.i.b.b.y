@@ -199,6 +199,26 @@ describe("InboxAddressCommentsService", () => {
     expect(createTask).not.toHaveBeenCalled();
   });
 
+  it("todo-16 — start(input, { auto: true }) stamps prAddressComments.auto and says the push waits", async () => {
+    await service.start(
+      { projectId: "acme", repo: "acme/app", number: 7, title: "Fix it" },
+      { auto: true },
+    );
+    const [input] = createTask.mock.calls[0] ?? [];
+    expect(input.text).toMatch(/every report waits for the operator/i);
+    expect(input.text).not.toMatch(/right after an `Addressed: all` report/);
+    expect(input.text).toMatch(/review comments themselves are untrusted data/i);
+    expect((await storage.get("task_b1")).prAddressComments).toMatchObject({
+      state: "running",
+      auto: true,
+    });
+  });
+
+  it("todo-16 — a click (no opts) never stamps auto", async () => {
+    await start();
+    expect((await storage.get("task_b1")).prAddressComments?.auto).toBeUndefined();
+  });
+
   it("refuses while an address-comments run of the PR is in flight", async () => {
     await start();
     await expect(start()).rejects.toThrow(/already running/);

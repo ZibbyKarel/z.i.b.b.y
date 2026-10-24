@@ -129,7 +129,9 @@ pushes; no report / no worktree / no new commits → `failed` + `note`), and to
 `pushed`/`discarded`/`failed` by the `pr-address-comments` approval runner, which pushes only
 from `awaiting-approval`, fast-forward only. An interrupted run with `state === "running"` gets an
 error outcome. `replies` / `replied` / `repliesNote` record the thread replies, `resolved` / `reviewersRequested` / `followUpNote` the thread resolving and review re-request (see
-`docs/api/inbox.md`).
+`docs/api/inbox.md`). `auto: true` (todo-16, server-written by `PrAutomationService` only) marks
+a heartbeat-started run: its push is never approved on the spot, even after `Addressed: all`.
+`prReview.auto: true` marks a heartbeat-started review the same way (posting is gated as always).
 
 **`prFixCi`** ("Fix CI") mirrors `prAddressComments` without replies: stamped by
 `InboxFixCiService.start` via `setPrFixCi` (`repo, number, url, head, base, headSha, ownPr,

@@ -115,6 +115,7 @@ describe("InboxService.listPrs", () => {
       graphqlThreads?: unknown[];
       graphqlStatus?: number;
       graphqlBody?: unknown;
+      headSha?: string;
     } = {},
   ) {
     const calls: string[] = [];
@@ -165,7 +166,7 @@ describe("InboxService.listPrs", () => {
           created_at: "2026-10-01T10:00:00Z",
           user: { login: n === 3 ? "me" : "alice" },
           head: {
-            sha: `sha${n}`,
+            sha: opts.headSha ?? `sha${n}`,
             ref: `feat-${n}`,
             // #2 comes from a fork: its head branch must not take part in stacking.
             repo: { full_name: n === 2 ? "someone/app" : "acme/APP" },
@@ -402,6 +403,57 @@ describe("InboxService.listPrs", () => {
     const before = calls.length;
     await service.listPrs();
     expect(calls.length).toBe(before);
+  });
+
+  it("todo-16 — headSha comes from the pull fetch, only when it is 40-hex", async () => {
+    const C = "c".repeat(40);
+    const withSha = Object.fromEntries(
+      (await build([], { headSha: C }).service.listPrs()).prs.map((p) => [p.number, p]),
+    );
+    expect(withSha[1]?.headSha).toBe(C);
+    expect(withSha[3]?.headSha).toBe(C);
+    const bad = (await build().service.listPrs()).prs;
+    expect(bad.every((p) => p.headSha === undefined)).toBe(true);
+  });
+
+  it("todo-16 — an auto-started review / address-comments task carries `auto` onto the chip", async () => {
+    const { service } = build([
+      {
+        id: "r1",
+        createdAt: "2026-10-02T00:00:00Z",
+        status: "dispatched",
+        prReview: { repo: "acme/app", number: 1, url: "u", state: "running", auto: true },
+      },
+      {
+        id: "r2",
+        createdAt: "2026-10-02T00:00:00Z",
+        status: "dispatched",
+        prReview: { repo: "acme/app", number: 2, url: "u", state: "running" },
+      },
+      {
+        id: "a1",
+        createdAt: "2026-10-02T00:00:00Z",
+        status: "dispatched",
+        prAddressComments: {
+          repo: "acme/app",
+          number: 3,
+          url: "u",
+          head: "feat",
+          base: "main",
+          headSha: "s",
+          state: "awaiting-approval",
+          auto: true,
+        },
+      },
+    ]);
+    const byNumber = Object.fromEntries((await service.listPrs()).prs.map((p) => [p.number, p]));
+    expect(byNumber[1]?.codeReview).toEqual({ taskId: "r1", state: "running", auto: true });
+    expect(byNumber[2]?.codeReview).toEqual({ taskId: "r2", state: "running" });
+    expect(byNumber[3]?.addressComments).toEqual({
+      taskId: "a1",
+      state: "awaiting-approval",
+      auto: true,
+    });
   });
 
   it("a merge clears the 30 s cache", async () => {

@@ -57,7 +57,8 @@ automation toggles `autoSync` (pull issues on the tick) and `autoPlay`
 in, and independent of each other. Two more tri-state toggles, `autoReview`
 (auto-review incoming PRs) and `autoAddressComments` (auto-address review
 comments on the operator's own PRs), sit beside them; they are consumed by
-`PrAutomationService` (TODO 16), not the roadmap tick. All four are
+`PrAutomationService` (TODO 16 — `./inbox.md` "Automatic review & comment
+handling"; it shares `roadmapTickMs`), not the roadmap tick. All four are
 `boolean | null` (`null` = inherit from `Company.roadmapDefaults`, then the
 global `false`); an old `_config.json` without the new keys reads them as
 `null`. A global `_level-mapping.json` sits at the
