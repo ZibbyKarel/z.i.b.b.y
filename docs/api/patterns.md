@@ -47,7 +47,8 @@ Each pattern is also upserted as a `pattern-extract` proposal
 `{ automationId, noteId: "patterns/suggestions" }` — `automationId` is the firing
 automation's id, passed by the scheduler). When writing the note, a proposal the
 operator dismissed is skipped and an edited one is written with its `editedText`.
-The note is rewritten whenever patterns exist, even if all were dismissed. A
+The note is rewritten whenever patterns exist, even if all were dismissed; when
+none qualify, the existing note is still cleaned of dismissed lines. A
 proposals-store failure falls back to the plain text. See `docs/api/proposals.md`.
 
 ## Scheduling

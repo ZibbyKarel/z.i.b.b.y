@@ -27,7 +27,8 @@ automation or dispatches anything. Approving a suggestion is an operator action.
 Each gap is also upserted as a `gap-detect` proposal (dedupe key = the normalised
 pattern, provenance `{ automationId, noteId: "suggestions/automation-gaps" }`).
 Dismissed proposals are left out of the note; edited ones are written with their
-`editedText`. See `docs/api/proposals.md`.
+`editedText`. When no gap qualifies, the existing note is still cleaned of
+dismissed lines. See `docs/api/proposals.md`.
 
 ## Scheduling
 
