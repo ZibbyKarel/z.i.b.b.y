@@ -12,6 +12,8 @@ import {
 export enum SelfUpgradeTestId {
   Button = "self-upgrade-button",
   Error = "self-upgrade-error",
+  /** Polite live region announcing the result ("Updated"/"Up to date") or the 409. */
+  Status = "self-upgrade-status",
 }
 
 /** How long the "Updated" / "Up to date" confirmation replaces the label. */
@@ -24,6 +26,10 @@ type UpdateResult = "updated" | "upToDate";
  * fast-forward-only pull of the ZIBBY install (`POST /api/self/update`; never
  * autonomous, never forced). Hidden for a non-git install. A 409 (dirty tree /
  * diverged history) shows the server's message inline until the next click.
+ * The result ("Updated"/"Up to date", for a few seconds) and the error render
+ * beside the button inside an always-mounted polite live region, so screen
+ * readers hear them; the button's accessible name always starts with its
+ * visible "Upgrade" (WCAG 2.5.3 label-in-name).
  */
 export function SelfUpgrade() {
   const t = useTranslations("shell.selfUpgrade");
@@ -54,17 +60,12 @@ export function SelfUpgrade() {
     );
   };
 
-  const label =
-    result === "updated"
-      ? t("updated")
-      : result === "upToDate"
-        ? t("upToDate")
-        : status.behind > 0
-          ? t("labelBehind", { count: status.behind })
-          : t("label");
+  const label = status.behind > 0 ? t("labelBehind", { count: status.behind }) : t("label");
   const aria = status.dirty
-    ? t("dirty")
+    ? t("ariaDirty")
     : t("aria", { branch: status.currentBranch, behind: status.behind });
+  const resultText =
+    result === "updated" ? t("updated") : result === "upToDate" ? t("upToDate") : null;
 
   return (
     <Stack align="center" direction="row" gap="100">
@@ -79,11 +80,30 @@ export function SelfUpgrade() {
       >
         {label}
       </Button>
-      {error && (
-        <Typography data-testid={SelfUpgradeTestId.Error} size="xs" tone="bad" type="note">
-          {error}
-        </Typography>
-      )}
+      <Typography
+        aria-live="polite"
+        as="span"
+        data-testid={SelfUpgradeTestId.Status}
+        role="status"
+        size="xs"
+        tone={error ? "bad" : undefined}
+        type="note"
+        variant={error ? undefined : "tertiary"}
+      >
+        {error ? (
+          <Typography
+            as="span"
+            data-testid={SelfUpgradeTestId.Error}
+            size="xs"
+            tone="bad"
+            type="note"
+          >
+            {error}
+          </Typography>
+        ) : (
+          resultText
+        )}
+      </Typography>
     </Stack>
   );
 }

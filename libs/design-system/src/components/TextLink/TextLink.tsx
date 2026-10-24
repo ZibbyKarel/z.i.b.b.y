@@ -16,6 +16,10 @@ export interface TextLinkProps {
   linkComponent?: SubNavLinkComponent;
   /** Truncates to one line with an ellipsis instead of wrapping. */
   truncate?: boolean;
+  /** Anchor `target` — e.g. `"_blank"` for an external link opened in a new tab. */
+  target?: string;
+  /** Anchor `rel` — pair `target="_blank"` with `"noreferrer"`. */
+  rel?: string;
   /** Accessible name when the visible text carries decorative glyphs. */
   "aria-label"?: string;
   "data-testid"?: string;
@@ -33,6 +37,8 @@ export function TextLink({
   children,
   linkComponent,
   truncate,
+  target,
+  rel,
   "aria-label": ariaLabel,
   "data-testid": testId = TextLinkTestId.Root,
 }: TextLinkProps) {
@@ -43,6 +49,8 @@ export function TextLink({
       className={cn("rounded-sm no-underline", truncate && "block truncate", focusRing)}
       data-testid={testId}
       href={href}
+      rel={rel}
+      target={target}
     >
       {children}
     </Link>

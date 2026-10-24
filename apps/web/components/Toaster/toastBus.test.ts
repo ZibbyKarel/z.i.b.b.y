@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { toastBus } from "./toastBus";
+import { isInlineErrorMutation, toastBus } from "./toastBus";
 
 describe("toastBus (43)", () => {
   it("delivers emits to a subscriber (with an id)", () => {
@@ -24,5 +24,14 @@ describe("toastBus (43)", () => {
     toastBus.emit({ message: "boom" });
     expect(fn.mock.calls[0]?.[0].message).toBe("boom");
     unsub();
+  });
+});
+
+describe("isInlineErrorMutation (W1 — no double toast)", () => {
+  it("is true only for meta.inlineError === true", () => {
+    expect(isInlineErrorMutation({ options: { meta: { inlineError: true } } })).toBe(true);
+    expect(isInlineErrorMutation({ options: { meta: { inlineError: "yes" } } })).toBe(false);
+    expect(isInlineErrorMutation({ options: {} })).toBe(false);
+    expect(isInlineErrorMutation(undefined)).toBe(false);
   });
 });

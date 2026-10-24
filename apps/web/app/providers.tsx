@@ -8,7 +8,7 @@ import { AppearanceProvider } from "../state/appearance";
 import { RunEventsProvider } from "../features/runs/runEvents";
 import { BootSplash } from "../components/layout/BootSplash/BootSplash";
 import { Toaster } from "../components/Toaster/Toaster";
-import { emitMutationError } from "../components/Toaster/toastBus";
+import { emitMutationError, isInlineErrorMutation } from "../components/Toaster/toastBus";
 
 /** `AppearanceProvider` fed the operator's density from the system config. Undefined
  *  until it loads, so `ThemeScript`'s cached value stays on screen meanwhile. */
@@ -27,8 +27,13 @@ export function Providers({ children }: { children: ReactNode }) {
         // Always-answerable for writes: one wiring point surfaces every mutation error
         // (network / server / schema-drift — the cases ts-rest throws on) as a toast, so a
         // failed delete / create / toggle is never silent. The copy is localized in Toaster.
+        // A mutation that renders its own inline error opts out with
+        // `meta: { inlineError: true }` (no duplicate generic toast).
         mutationCache: new MutationCache({
-          onError: emitMutationError,
+          onError: (error, _variables, _context, mutation) => {
+            if (isInlineErrorMutation(mutation)) return;
+            emitMutationError(error);
+          },
         }),
       }),
   );

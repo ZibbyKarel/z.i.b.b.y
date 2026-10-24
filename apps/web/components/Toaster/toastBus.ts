@@ -43,6 +43,22 @@ export const toastBus = {
   },
 };
 
+/** The slice of a TanStack `Mutation` the toast rule reads. */
+export interface MutationMetaCarrier {
+  options: { meta?: Record<string, unknown> };
+}
+
+/**
+ * `true` when the mutation opted out of the global toast via
+ * `meta: { inlineError: true }` — its call site already renders the specific
+ * refusal inline (e.g. the self-update / ensure-self-project 409 `message`), so
+ * a generic "not saved, try again" toast on top would be duplicate and
+ * misleading.
+ */
+export function isInlineErrorMutation(mutation: MutationMetaCarrier | undefined): boolean {
+  return mutation?.options.meta?.inlineError === true;
+}
+
 /** `MutationCache.onError`: every failed write toasts; a 401 gets the operator-token copy. */
 export function emitMutationError(error: unknown): void {
   toastBus.emit({ operatorToken: isOperatorTokenError(error) });

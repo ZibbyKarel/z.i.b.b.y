@@ -51,10 +51,26 @@ describe("SelfUpgrade", () => {
     expect(screen.getByTestId(SelfUpgradeTestId.Button)).toHaveTextContent("↓3");
   });
 
-  it("describes branch and behind in the aria-label", () => {
+  it("accessible name starts with the visible word and describes branch + behind", () => {
     statusRef.value = { ...BASE, behind: 3, upToDate: false };
     renderWithProviders(<SelfUpgrade />);
-    expect(screen.getByTestId(SelfUpgradeTestId.Button)).toHaveAccessibleName(/main.*3/);
+    expect(screen.getByTestId(SelfUpgradeTestId.Button)).toHaveAccessibleName(
+      "Upgrade — aktualizovat ZIBBY (větev main, 3 za origin)",
+    );
+  });
+
+  it("dirty accessible name still starts with the visible word", () => {
+    statusRef.value = { ...BASE, dirty: true };
+    renderWithProviders(<SelfUpgrade />);
+    expect(screen.getByTestId(SelfUpgradeTestId.Button)).toHaveAccessibleName(/^Upgrade — /);
+  });
+
+  it("has an always-mounted polite live region", () => {
+    renderWithProviders(<SelfUpgrade />);
+    const region = screen.getByTestId(SelfUpgradeTestId.Status);
+    expect(region).toHaveRole("status");
+    expect(region).toHaveAttribute("aria-live", "polite");
+    expect(region).toBeEmptyDOMElement();
   });
 
   it("is disabled with a dirty title when the tree is dirty", () => {
@@ -65,28 +81,29 @@ describe("SelfUpgrade", () => {
     expect(button).toHaveAttribute("title", "Neuložené změny — aktualizace zablokována");
   });
 
-  it("updates on click and shows Updated / Up to date", async () => {
+  it("updates on click and announces Updated / Up to date in the live region", async () => {
     renderWithProviders(<SelfUpgrade />);
     await userEvent.click(screen.getByTestId(SelfUpgradeTestId.Button));
     expect(mutateMock).toHaveBeenCalledWith({ body: {} }, expect.any(Object));
     const options = mutateMock.mock.calls[0]?.[1] as Options;
     act(() => options.onSuccess?.({ status: 200, body: { updated: true, behind: 0 } }));
-    expect(screen.getByTestId(SelfUpgradeTestId.Button)).toHaveTextContent("Aktualizováno");
+    expect(screen.getByTestId(SelfUpgradeTestId.Status)).toHaveTextContent("Aktualizováno");
+    expect(screen.getByTestId(SelfUpgradeTestId.Button)).toHaveAccessibleName(/^Upgrade/);
     act(() => options.onSuccess?.({ status: 200, body: { updated: false, behind: 0 } }));
-    expect(screen.getByTestId(SelfUpgradeTestId.Button)).toHaveTextContent("Aktuální");
+    expect(screen.getByTestId(SelfUpgradeTestId.Status)).toHaveTextContent("Aktuální");
   });
 
-  it("reverts the Updated label after 5 s", async () => {
+  it("clears the Updated announcement after 5 s", async () => {
     renderWithProviders(<SelfUpgrade />);
     await userEvent.click(screen.getByTestId(SelfUpgradeTestId.Button));
     const options = mutateMock.mock.calls[0]?.[1] as Options;
     vi.useFakeTimers();
     act(() => options.onSuccess?.({ status: 200, body: { updated: true, behind: 0 } }));
-    expect(screen.getByTestId(SelfUpgradeTestId.Button)).toHaveTextContent("Aktualizováno");
+    expect(screen.getByTestId(SelfUpgradeTestId.Status)).toHaveTextContent("Aktualizováno");
     act(() => {
       vi.advanceTimersByTime(5000);
     });
-    expect(screen.getByTestId(SelfUpgradeTestId.Button)).toHaveTextContent("Upgrade");
+    expect(screen.getByTestId(SelfUpgradeTestId.Status)).toBeEmptyDOMElement();
   });
 
   it("shows the 409 server message inline", async () => {
@@ -95,5 +112,8 @@ describe("SelfUpgrade", () => {
     const options = mutateMock.mock.calls[0]?.[1] as Options;
     act(() => options.onError?.({ status: 409, body: { message: "dirty" } }));
     expect(screen.getByTestId(SelfUpgradeTestId.Error)).toHaveTextContent("dirty");
+    expect(screen.getByTestId(SelfUpgradeTestId.Status)).toContainElement(
+      screen.getByTestId(SelfUpgradeTestId.Error),
+    );
   });
 });

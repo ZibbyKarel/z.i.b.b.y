@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { Button, Divider, Panel, Stack, Typography } from "@zibby/design-system";
+import { Button, Divider, Panel, Stack, TextLink, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { updateErrorMessage, useEnsureSelfProjectMutation, useSelfStatusQuery } from "../../self";
 import { InfoRow } from "./InfoRow";
@@ -12,7 +12,11 @@ export enum SelfDevelopmentPanelTestId {
   Root = "self-dev-panel",
   Action = "self-dev-action",
   Error = "self-dev-error",
+  /** Polite live region wrapping the inline error. */
+  Status = "self-dev-status",
   PrLink = "self-dev-pr",
+  /** Shown when the matched self project's path is the running install itself. */
+  InstallTreeWarning = "self-dev-install-tree-warning",
 }
 
 function projectHref(projectId: string): Route {
@@ -23,7 +27,9 @@ function projectHref(projectId: string): Route {
  * Settings → status: ZIBBY's own repo freshness + open PRs, and the one-click
  * way to register ZIBBY as its own project (self-edit happens in a separate
  * clone and lands as draft PRs; the operator merges). Hidden for a non-git
- * install.
+ * install. Warns when the recognised self project's `path` points at the
+ * running install (`projectUsesInstallTree`) — the runbook's Builder ≠ Subject
+ * rule wants a separate clone; fixing the path is the operator's call.
  */
 export function SelfDevelopmentPanel() {
   const t = useTranslations("settings.selfDev");
@@ -73,7 +79,7 @@ export function SelfDevelopmentPanel() {
             </Typography>
           ) : (
             status.prs.map((pr) => (
-              <a
+              <TextLink
                 data-testid={SelfDevelopmentPanelTestId.PrLink}
                 href={pr.url}
                 key={pr.number}
@@ -83,7 +89,7 @@ export function SelfDevelopmentPanel() {
                 <Typography mono size="sm" type="note" weight="semibold">
                   #{pr.number} {pr.title}
                 </Typography>
-              </a>
+              </TextLink>
             ))
           )}
         </Stack>
@@ -91,6 +97,17 @@ export function SelfDevelopmentPanel() {
         <Typography leading="snug" size="sm" type="note" variant="tertiary">
           {t("explain")}
         </Typography>
+        {status.projectUsesInstallTree && (
+          <Typography
+            data-testid={SelfDevelopmentPanelTestId.InstallTreeWarning}
+            leading="snug"
+            size="sm"
+            tone="warn"
+            type="note"
+          >
+            {t("installTreeWarning")}
+          </Typography>
+        )}
         <Stack align="center" direction="row" gap="150">
           <Button
             data-testid={SelfDevelopmentPanelTestId.Action}
@@ -101,16 +118,26 @@ export function SelfDevelopmentPanel() {
           >
             {status.projectId ? t("openProject") : t("ensureProject")}
           </Button>
-          {error && (
-            <Typography
-              data-testid={SelfDevelopmentPanelTestId.Error}
-              size="xs"
-              tone="bad"
-              type="note"
-            >
-              {error}
-            </Typography>
-          )}
+          <Typography
+            aria-live="polite"
+            as="span"
+            data-testid={SelfDevelopmentPanelTestId.Status}
+            role="status"
+            size="xs"
+            type="note"
+          >
+            {error && (
+              <Typography
+                as="span"
+                data-testid={SelfDevelopmentPanelTestId.Error}
+                size="xs"
+                tone="bad"
+                type="note"
+              >
+                {error}
+              </Typography>
+            )}
+          </Typography>
         </Stack>
       </Stack>
     </Panel>

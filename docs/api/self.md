@@ -94,18 +94,27 @@ or in an error message.
 ## Frontend
 
 `apps/web/features/self/` — `useSelfStatusQuery` polls `getSelfStatus` (~2m,
-`select: selectApiResponseBody`); `useSelfUpdateMutation` wraps `updateSelf` via
-`makeInvalidatingMutation`, invalidating the status key on any response.
+`select: selectApiResponseBody`). `useSelfUpdateMutation` (`updateSelf`) and
+`useEnsureSelfProjectMutation` (`ensureSelfProject`) both invalidate the status
+key in `onSettled` (any outcome, so a refusal refreshes `dirty`/`projectId` at
+once) and set `meta: { inlineError: true }`: ts-rest throws on any non-2xx, so a
+409 lands in `onError`, the call site shows the body's `message` inline
+(`updateErrorMessage`), and `providers.tsx`'s `MutationCache.onError` skips the
+generic toast for such mutations (`isInlineErrorMutation`, `toastBus.ts`).
 
-`apps/web/components/layout/TopBar/SelfFreshness.tsx` — mounted directly in
-`TopBar.tsx` (like `LanguageSwitcher`): a calm ok `StatusDot` paired with an
-"Aktuální" label when up to date; a pulsing warn dot + "Upgrade" label +
-behind-count + "Aktualizovat" button otherwise. The label is colour-matched to
-the dot (ok green / warn amber) so the state reads at a glance without hover.
-Hovering/focusing the
-control reveals a popover listing the open PRs as external links
-(`target="_blank" rel="noreferrer"`) straight to GitHub. A 409 from the update
-mutation (ts-rest routes any declared non-2xx status to `onError`, not
-`onSuccess`) surfaces its message as an inline note next to the button.
+`apps/web/components/layout/SelfUpgrade/SelfUpgrade.tsx` — the header
+"Upgrade ↓N" button next to the limits (hidden for a non-git install, disabled on
+a dirty tree). Its accessible name starts with the visible word ("Upgrade —
+update ZIBBY (branch …, N behind origin)", WCAG 2.5.3). The result ("Updated" /
+"Up to date", 5 s) and any 409 message render beside it in an always-mounted
+`role="status"` / `aria-live="polite"` region.
+
+`apps/web/features/settings/components/SelfDevelopmentPanel.tsx` — Settings
+panel: branch, ↓/↑ vs origin, dirty, open PRs (DS `TextLink`,
+`target="_blank" rel="noreferrer"`), and the "Edit ZIBBY as a project" /
+"Open ZIBBY project" action. When `projectUsesInstallTree` is true it shows a
+warning that the self project points at the running install and the runbook
+(Builder ≠ Subject) wants a separate clone. The inline error sits in a polite
+live region too.
 
 <!-- Last reviewed 2026-09-24 (ZibbyCorp rename): module code changed only by the subsystem → department rename; this doc has no subsystem references. -->

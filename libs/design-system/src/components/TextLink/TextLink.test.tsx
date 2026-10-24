@@ -37,6 +37,17 @@ describe("TextLink", () => {
     expect(link).toHaveAttribute("href", "/org/people");
   });
 
+  it("forwards target and rel for an external link", () => {
+    render(
+      <TextLink href="https://github.com/o/r/pull/1" rel="noreferrer" target="_blank">
+        #1
+      </TextLink>,
+    );
+    const link = screen.getByTestId(TextLinkTestId.Root);
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noreferrer");
+  });
+
   it("accepts a custom data-testid", () => {
     render(
       <TextLink data-testid="pinned-rail-link" href="/org">

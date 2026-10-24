@@ -53,6 +53,24 @@ describe("SelfDevelopmentPanel", () => {
     expect(links).toHaveLength(2);
     expect(links[0]).toHaveAttribute("href", "https://github.com/o/r/pull/12");
     expect(links[0]).toHaveAttribute("target", "_blank");
+    expect(links[0]).toHaveAttribute("rel", "noreferrer");
+    expect(links[0]).toHaveRole("link");
+  });
+
+  it("warns when the self project points at the running install", () => {
+    statusRef.value = { ...BASE, projectId: "zibby-self", projectUsesInstallTree: true };
+    renderWithProviders(<SelfDevelopmentPanel />);
+    expect(screen.getByTestId(SelfDevelopmentPanelTestId.InstallTreeWarning)).toHaveTextContent(
+      "Projekt ZIBBY ukazuje přímo na běžící instalaci — runbook (Builder ≠ Subject) doporučuje samostatný klon. Uprav cestu projektu.",
+    );
+  });
+
+  it("shows no install-tree warning for a separate clone", () => {
+    statusRef.value = { ...BASE, projectId: "zibby", projectUsesInstallTree: false };
+    renderWithProviders(<SelfDevelopmentPanel />);
+    expect(
+      screen.queryByTestId(SelfDevelopmentPanelTestId.InstallTreeWarning),
+    ).not.toBeInTheDocument();
   });
 
   it("with a projectId the action opens the project without ensuring", async () => {
@@ -78,6 +96,10 @@ describe("SelfDevelopmentPanel", () => {
     const options = ensureMock.mock.calls[0]?.[1] as Options;
     act(() => options.onError?.({ status: 409, body: { message: "no origin" } }));
     expect(screen.getByTestId(SelfDevelopmentPanelTestId.Error)).toHaveTextContent("no origin");
+    const region = screen.getByTestId(SelfDevelopmentPanelTestId.Status);
+    expect(region).toHaveRole("status");
+    expect(region).toHaveAttribute("aria-live", "polite");
+    expect(region).toContainElement(screen.getByTestId(SelfDevelopmentPanelTestId.Error));
   });
 
   it("is hidden when not a git install", () => {

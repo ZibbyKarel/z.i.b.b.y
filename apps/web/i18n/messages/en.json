@@ -1109,7 +1109,8 @@
       "explain": "ZIBBY edits itself in a separate clone as a project; changes arrive as draft PRs and you merge.",
       "openProject": "Open ZIBBY project",
       "ensureProject": "Edit ZIBBY as a project",
-      "failed": "Registering the ZIBBY project failed"
+      "failed": "Registering the ZIBBY project failed",
+      "installTreeWarning": "The ZIBBY project points at the running install itself — the runbook (Builder ≠ Subject) recommends a separate clone. Change the project's path."
     }
   },
   "runs": {
@@ -2434,7 +2435,8 @@
     "selfUpgrade": {
       "label": "Upgrade",
       "labelBehind": "Upgrade ↓{count}",
-      "aria": "Update ZIBBY (branch {branch}, {behind} behind origin)",
+      "aria": "Upgrade — update ZIBBY (branch {branch}, {behind} behind origin)",
+      "ariaDirty": "Upgrade — uncommitted changes, update blocked",
       "dirty": "Uncommitted changes — update blocked",
       "updated": "Updated",
       "upToDate": "Up to date",

@@ -1109,7 +1109,8 @@
       "explain": "ZIBBY se upravuje v samostatném klonu jako projekt; změny přicházejí jako draft PR a merge je na tobě.",
       "openProject": "Otevřít projekt ZIBBY",
       "ensureProject": "Upravovat ZIBBY jako projekt",
-      "failed": "Registrace projektu ZIBBY se nepovedla"
+      "failed": "Registrace projektu ZIBBY se nepovedla",
+      "installTreeWarning": "Projekt ZIBBY ukazuje přímo na běžící instalaci — runbook (Builder ≠ Subject) doporučuje samostatný klon. Uprav cestu projektu."
     }
   },
   "runs": {
@@ -2434,7 +2435,8 @@
     "selfUpgrade": {
       "label": "Upgrade",
       "labelBehind": "Upgrade ↓{count}",
-      "aria": "Aktualizovat ZIBBY (větev {branch}, {behind} za origin)",
+      "aria": "Upgrade — aktualizovat ZIBBY (větev {branch}, {behind} za origin)",
+      "ariaDirty": "Upgrade — neuložené změny, aktualizace zablokována",
       "dirty": "Neuložené změny — aktualizace zablokována",
       "updated": "Aktualizováno",
       "upToDate": "Aktuální",
