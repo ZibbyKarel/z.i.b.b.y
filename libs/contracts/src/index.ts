@@ -69,6 +69,7 @@ export * from "./limits/limits.contract";
 export * from "./system/system.schema";
 export * from "./system/system.contract";
 export * from "./pins/pin.schema";
+export * from "./project-health";
 export * from "./pins/pins.contract";
 export * from "./quick-actions/quick-action.schema";
 export * from "./quick-actions/quick-actions.contract";

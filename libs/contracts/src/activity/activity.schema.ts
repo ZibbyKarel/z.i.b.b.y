@@ -66,6 +66,12 @@ export const ActivityKindSchema = z.enum([
   // and dispatched the investigation task riding its `taskId` ref — act-then-report:
   // the fix run surfaces on the runs feed and, when parked at the PR gate, in needs-you.
   "monitor-alert",
+  // TODO 11 (project health, Tier-1 — silent + recorded). A project's health check
+  // TRANSITIONED: up→down (or a first check that came back down) / down→up. Health
+  // is state — a project that stays down records nothing more. Rides `projectId`;
+  // never dispatches a task (the operator's "Analyzovat" click does).
+  "project-health-down",
+  "project-health-recovered",
   // N5a: an approved machine action was executed (or failed) — the gate's
   // act-then-report line; the proposal itself rides approval-requested.
   "machine-action",

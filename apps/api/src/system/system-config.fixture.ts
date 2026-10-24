@@ -13,6 +13,7 @@ export const TEST_SYSTEM_CONFIG: SystemConfig = SystemConfigSchema.parse({
   taskTickMs: 0,
   channelTickMs: 0,
   monitorTickMs: 0,
+  projectHealthTickMs: 0,
   automationTickMs: 0,
   limitResumeTickMs: 0,
   // Effectively unlimited in tests, deliberately UNLIKE the production default of 3:

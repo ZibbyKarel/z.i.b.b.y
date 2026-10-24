@@ -48,6 +48,7 @@ export const API_MODULE_DOC_MAP = {
   monitors: "docs/api/monitors.md",
   patterns: "docs/api/patterns.md",
   pins: "docs/api/pins.md",
+  "project-health": "docs/api/project-health.md",
   "quick-actions": "docs/api/quick-actions.md",
   workflows: "docs/api/workflows.md",
   projects: "docs/api/projects.md",

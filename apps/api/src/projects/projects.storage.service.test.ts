@@ -93,6 +93,30 @@ describe("ProjectsStorageService", () => {
     });
   });
 
+  describe("healthCheck set/clear (TODO 11)", () => {
+    const healthCheck = { url: "https://media.dev/health", intervalSec: 60 };
+
+    it("sets healthCheck via a normal patch and persists it", async () => {
+      await service.create(base);
+      const updated = await service.update("media-vault", { healthCheck });
+      expect(updated.healthCheck).toEqual(healthCheck);
+      expect((await service.get("media-vault")).healthCheck).toEqual(healthCheck);
+    });
+
+    it("clears healthCheck when the patch sends `null`", async () => {
+      await service.create({ ...base, healthCheck });
+      const updated = await service.update("media-vault", { healthCheck: null });
+      expect(updated.healthCheck).toBeUndefined();
+      expect((await service.get("media-vault")).healthCheck).toBeUndefined();
+    });
+
+    it("leaves healthCheck untouched when the patch omits the key", async () => {
+      await service.create({ ...base, healthCheck });
+      const updated = await service.update("media-vault", { name: "x" });
+      expect(updated.healthCheck).toEqual(healthCheck);
+    });
+  });
+
   it("throws when updating or getting a missing project", async () => {
     await expect(service.get("nope")).rejects.toBeInstanceOf(ProjectNotFoundError);
     await expect(service.update("nope", { name: "x" })).rejects.toBeInstanceOf(

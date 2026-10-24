@@ -207,6 +207,24 @@ export const PrOpenModeSchema = z.enum(["ready", "draft"]);
 export type PrOpenMode = z.infer<typeof PrOpenModeSchema>;
 
 /**
+ * TODO 11 — a project's health endpoint, polled by the project-health watcher.
+ * The project is `up` on a 2xx and `down` on anything else (non-2xx, timeout,
+ * network error). http(s) only — `file:`/`javascript:`/`ftp:` never reach `fetch`.
+ * `intervalSec` is per-project cadence, never faster than 30 s (default 5 min).
+ * `.strict()` so an unknown key (a method, headers, a body) can't sneak in.
+ */
+export const ProjectHealthCheckSchema = z
+  .object({
+    url: z
+      .string()
+      .url()
+      .refine((u) => /^https?:\/\//i.test(u), { message: "healthCheck.url must be http(s)" }),
+    intervalSec: z.number().int().min(30).max(3600).default(300),
+  })
+  .strict();
+export type ProjectHealthCheck = z.infer<typeof ProjectHealthCheckSchema>;
+
+/**
  * A target directory agents and skills can run against — the catalog of run
  * destinations the RunModal offers (instead of a hard-coded list). Projects live
  * in a registry the backend owns (`_projects.json`), not as files on disk, so
@@ -258,6 +276,11 @@ export const ProjectSchema = z.object({
         .transform((u) => new URL(u).href),
     })
     .optional(),
+  /**
+   * TODO 11 — the optional health URL ZIBBY GETs every `intervalSec`. Absent →
+   * the project is not monitored (and any stale status file is deleted).
+   */
+  healthCheck: ProjectHealthCheckSchema.optional(),
   /** Per-engagement run-count budget + concurrency cap (Phase 8.1). */
   budget: ProjectBudgetSchema.optional(),
   /**
@@ -361,7 +384,8 @@ export type CreateProjectInput = z.infer<typeof CreateProjectSchema>;
  * `null` is the explicit "unlink the company" signal the storage layer acts on,
  * while `undefined`/absent still means "leave the current link alone". `logo` is
  * likewise re-widened to accept `null` (Phase 113, parity with agents/workflows'
- * `avatar`) as the explicit "clear the logo" signal.
+ * `avatar`) as the explicit "clear the logo" signal. `healthCheck` (TODO 11)
+ * follows the same pattern: `null` stops monitoring the project.
  */
 export const UpdateProjectSchema = ProjectSchema.omit({ id: true, hasSecrets: true })
   .partial()
@@ -369,6 +393,7 @@ export const UpdateProjectSchema = ProjectSchema.omit({ id: true, hasSecrets: tr
     companyId: z.string().optional().nullable(),
     teamId: z.string().optional().nullable(),
     logo: AvatarSchema.optional().nullable(),
+    healthCheck: ProjectHealthCheckSchema.optional().nullable(),
   });
 export type UpdateProjectInput = z.infer<typeof UpdateProjectSchema>;
 

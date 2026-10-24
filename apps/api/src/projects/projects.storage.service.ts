@@ -119,13 +119,17 @@ export class ProjectsStorageService {
     // with agents/workflows' `avatar: null`) — distinct from an absent `logo`
     // key, which leaves the current value alone.
     const hasLogo = "logo" in patch;
-    const { companyId, teamId, logo, ...rest } = patch;
+    // `healthCheck: null` (TODO 11) is the explicit "stop monitoring" signal —
+    // same absent-vs-null distinction as the three above.
+    const hasHealthCheck = "healthCheck" in patch;
+    const { companyId, teamId, logo, healthCheck, ...rest } = patch;
     const merged = ProjectSchema.parse({
       ...existing,
       ...rest,
       ...(hasCompanyId ? { companyId: companyId === null ? undefined : companyId } : {}),
       ...(hasTeamId ? { teamId: teamId === null ? undefined : teamId } : {}),
       ...(hasLogo ? { logo: logo === null ? undefined : logo } : {}),
+      ...(hasHealthCheck ? { healthCheck: healthCheck === null ? undefined : healthCheck } : {}),
       id: existing.id,
     });
     await this.writeAtomic(projects.map((p) => (p.id === id ? merged : p)));

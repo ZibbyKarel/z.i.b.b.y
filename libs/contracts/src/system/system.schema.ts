@@ -75,6 +75,11 @@ export const SystemConfigSchema = z
     channelTickMs: z.number().int().min(0).default(30_000),
     /** Monitor watcher poll interval (ms) — CI status alerts (N3). `0` disables. */
     monitorTickMs: z.number().int().min(0).default(60_000),
+    /**
+     * Project-health watcher tick (ms, TODO 11). Each tick checks every project whose
+     * own `healthCheck.intervalSec` has elapsed. `0` disables.
+     */
+    projectHealthTickMs: z.number().int().min(0).default(30_000),
     /** Automation scheduler loop interval (ms). `0` disables (the historical default). */
     automationTickMs: z.number().int().min(0).default(0),
     /** Limit-resume daemon scan interval (ms). `0` disables. */

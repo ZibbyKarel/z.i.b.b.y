@@ -66,11 +66,13 @@ describe("Health API (e2e) — claude available", () => {
     const watchers = res.body.watchers as Array<{ id: string; status: string }>;
     // Exhaustive on purpose: a new ticker that forgets to self-register is invisible
     // to /api/health, so this list is meant to be updated deliberately when one is
-    // added — `roadmap` (phase 125h) is the auto-sync + gate-poll tick.
+    // added — `roadmap` (phase 125h) is the auto-sync + gate-poll tick,
+    // `project-health` (TODO 11) the per-project health-check tick.
     expect(watchers.map((w) => w.id).sort()).toEqual([
       "channel",
       "limit-resume",
       "monitor",
+      "project-health",
       "roadmap",
       "scheduler",
       "task-scheduler",

@@ -8,6 +8,7 @@ const DEFAULTS: SystemConfig = {
   taskTickMs: 30000,
   channelTickMs: 30000,
   monitorTickMs: 60000,
+  projectHealthTickMs: 30000,
   automationTickMs: 0,
   limitResumeTickMs: 60000,
   roadmapTickMs: 60000,

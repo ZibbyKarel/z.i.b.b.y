@@ -67,6 +67,9 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   "self-api-write": "tasks",
   // N3: a monitor alert rides the integration that watches the source (same PAT/config).
   "monitor-alert": "integrations",
+  // TODO 11: a project health transition reads with the other watcher discoveries.
+  "project-health-down": "integrations",
+  "project-health-recovered": "integrations",
   // NS2 F5a/F5c: Security/Arch's scheduled-scan finding — reads with the other
   // watcher discoveries (monitor-alert) rather than a new group for one kind.
   "department-scan": "integrations",

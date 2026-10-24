@@ -31,6 +31,7 @@ import { MemoryModule } from "./memory/memory.module";
 import { RunRecorderModule } from "./memory/run-recorder.module";
 import { MachineModule } from "./machine/machine.module";
 import { MonitorsModule } from "./monitors/monitors.module";
+import { ProjectHealthModule } from "./project-health/project-health.module";
 import { WorkflowsModule } from "./workflows/workflows.module";
 import { ProjectsModule } from "./projects/projects.module";
 import { RegistriesModule } from "./registries/registries.module";
@@ -94,6 +95,8 @@ import { TeamsModule } from "./teams/teams.module";
     ChannelsModule,
     MachineModule,
     MonitorsModule,
+    // TODO 11: per-project health checks (state + transition activity).
+    ProjectHealthModule,
     ReleaseModule,
     ReviewLearningModule,
     HealthModule,

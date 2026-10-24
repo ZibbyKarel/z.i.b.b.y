@@ -62,6 +62,7 @@ company-merged "effective" context.
   companyId?: string;           // Phase 68 link — see resolved-project.service.ts
   gitRemote?: string;           // Phase 76 clone source, validated (see below)
   web?: { url: string };        // TODO 13 web-project marker; http(s) only — gates `requires: ["web"]` workflows
+  healthCheck?: { url: string; intervalSec: number }; // TODO 11 — polled health URL, http(s) only, 30–3600 s (default 300); see project-health.md
 }
 ```
 
@@ -86,9 +87,9 @@ disk read (`ProjectSchema.gitRemote.refine`), so a hand-edited malicious value
 on disk is caught before any run tries to clone it.
 
 `CreateProjectSchema` = the full entity minus `hasSecrets`. `UpdateProjectSchema`
-makes everything but `id`/`hasSecrets` optional, and re-widens `companyId`/`logo`
+makes everything but `id`/`hasSecrets` optional, and re-widens `companyId`/`teamId`/`logo`/`healthCheck`
 to accept an explicit `null` — the JSON-PATCH-can't-express-"unset" problem: a
-present `null` means "clear the link/logo", an absent key means "leave it".
+present `null` means "clear the link/logo/health check", an absent key means "leave it".
 
 ## `ProjectsStorageService`
 

@@ -34,6 +34,7 @@ export const WatcherIdSchema = z.enum([
   "task-scheduler",
   "limit-resume",
   "roadmap",
+  "project-health",
 ]);
 export type WatcherId = z.infer<typeof WatcherIdSchema>;
 

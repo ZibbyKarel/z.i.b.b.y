@@ -52,6 +52,7 @@ excluding the composite `app.contract.ts` and the shared `common.schema.ts`):
 | `limits/`          | `LimitsSchema`                                                                                                                   | Budget and rate limits                                                                                                    |
 | `system/`          | system-config schemas                                                                                                            | Runtime system config + policy floor                                                                                      |
 | `pins/`            | `PinSchema`                                                                                                                      | Quick-launch pins                                                                                                         |
+| `project-health/`  | `ProjectHealthStatusSchema`, `ProjectHealthQuerySchema`, `AnalyzeProjectHealthResultSchema`                                      | Per-project health-check state + analyze (TODO 11, see `docs/api/project-health.md`)                                      |
 | `quick-actions/`   | `QuickActionSchema`                                                                                                              | Bridge one-click task definitions (see `docs/api/quick-actions.md`)                                                       |
 | `roadmap/`         | `RoadmapItemSchema`, `LevelMappingSchema`, `RoutingProposalSchema`                                                               | Per-project delivery roadmap (Phase 125) + the global level-mapping table + NS2 F10's parked Tier-3 routing question      |
 | `inbox/`           | `InboxRoadmapItemSchema`, `InboxPrSchema`, `InboxStateSchema`                                                                    | Cross-project Inbox: scoped roadmap items, the operator's GitHub PRs, hidden state (see `docs/api/inbox.md`)              |
@@ -237,6 +238,7 @@ export const appContract = c.router({
   taskRuns: taskRunsContract, // unified run surface: /api/tasks/runs/*
   system: systemContract,
   pins: pinsContract,
+  projectHealth: projectHealthContract,
   quickActions: quickActionsContract,
   activity: activityContract,
   activityView: activityViewContract,
