@@ -3,7 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { KnowledgeBaseSource } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { KbReaderService } from "./kb-reader.service";
+import { KbReaderService, extractDigestSections } from "./kb-reader.service";
 
 describe("KbReaderService", () => {
   let base: string;
@@ -221,5 +221,100 @@ describe("KbReaderService source (structural)", () => {
     // primitives to say they're absent, which would otherwise self-trigger.
     const code = raw.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
     expect(code).not.toMatch(/fs\.(writeFile|mkdir|rename|unlink|appendFile|rm|rmdir|copyFile)\(/);
+  });
+});
+
+describe("extractDigestSections", () => {
+  it("takes top-level bullets, plain and unchecked tasks; skips checked tasks", () => {
+    const body = "## Open questions\n\n- A?\n- [ ] B?\n- [x] C?\n* D?\n+ E?\n1. F?\n";
+    expect(extractDigestSections(body).questions).toEqual(["A?", "B?", "D?", "E?", "F?"]);
+  });
+
+  it("matches czech headings of any level, trailing colon, case-insensitively", () => {
+    const body = "### Rozhodnutí:\n\n1. Ship v2\n\n#### OTEVŘENÉ OTÁZKY\n- Kdy?\n";
+    const out = extractDigestSections(body);
+    expect(out.decisions).toEqual(["Ship v2"]);
+    expect(out.questions).toEqual(["Kdy?"]);
+  });
+
+  it("excludes nested list lines and empty items", () => {
+    const body = "## Decisions\n- parent\n  - child\n\t- tab child\n- \n";
+    expect(extractDigestSections(body).decisions).toEqual(["parent"]);
+  });
+
+  it("does not treat a longer heading as a section", () => {
+    const body = "## Questions about pricing\n- nope\n";
+    expect(extractDigestSections(body)).toEqual({ questions: [], decisions: [] });
+  });
+
+  it("ends a section at a sibling heading but not at a deeper one", () => {
+    const body = "## Questions\n- one\n### Detail\n- two\n## Other\n- three\n";
+    expect(extractDigestSections(body).questions).toEqual(["one", "two"]);
+  });
+
+  it("caps item text at 300 chars", () => {
+    const out = extractDigestSections(`## Decisions\n- ${"x".repeat(400)}\n`);
+    expect(out.decisions[0]).toHaveLength(300);
+  });
+});
+
+describe("KbReaderService.digest", () => {
+  let root: string;
+  const reader = new KbReaderService();
+  const src = (): KnowledgeBaseSource => ({ kind: "vault", path: root, readOnly: true });
+  const write = async (rel: string, content: string): Promise<void> => {
+    await fs.mkdir(path.dirname(path.join(root, rel)), { recursive: true });
+    await fs.writeFile(path.join(root, rel), content, "utf8");
+  };
+
+  beforeEach(async () => {
+    root = await fs.mkdtemp(path.join(os.tmpdir(), "kb-digest-test-"));
+  });
+  afterEach(async () => {
+    await fs.rm(root, { recursive: true, force: true });
+  });
+
+  it("orders newest-dated first, undated last by noteId descending, items in document order", async () => {
+    await write(
+      "meetings/old.md",
+      "---\ntitle: Old\ndate: 2026-10-01\n---\n## Decisions\n- d-old\n",
+    );
+    await write(
+      "meetings/new.md",
+      "---\ntitle: New\ndate: 2026-10-20\n---\n## Decisions\n- d1\n- d2\n",
+    );
+    await write("meetings/a.md", "## Decisions\n- d-a\n");
+    await write("meetings/z.md", "## Decisions\n- d-z\n");
+    const out = await reader.digest(src());
+    expect(out.decisions.map((d) => d.text)).toEqual(["d1", "d2", "d-old", "d-z", "d-a"]);
+    expect(out.decisions[0]).toEqual({
+      text: "d1",
+      noteId: "meetings/new.md",
+      noteTitle: "New",
+      date: "2026-10-20",
+    });
+    expect(out.decisions[3]?.date).toBeUndefined();
+    expect(out.questions).toEqual([]);
+  });
+
+  it("caps each list at 30", async () => {
+    const items = Array.from({ length: 40 }, (_, i) => `- Q${i}?`).join("\n");
+    await write("m.md", `## Open questions\n${items}\n`);
+    expect((await reader.digest(src())).questions).toHaveLength(30);
+  });
+
+  it("ignores .vtt and _templates/", async () => {
+    await write("_templates/meeting.md", "## Decisions\n- template\n");
+    await write("m.vtt", "## Decisions\n- vtt\n");
+    expect(await reader.digest(src())).toEqual({ questions: [], decisions: [] });
+  });
+
+  it("yields empty lists for a missing root", async () => {
+    const out = await reader.digest({
+      kind: "vault",
+      path: path.join(root, "nope"),
+      readOnly: true,
+    });
+    expect(out).toEqual({ questions: [], decisions: [] });
   });
 });

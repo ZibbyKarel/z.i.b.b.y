@@ -96,6 +96,13 @@ export class TeamsController {
         return { status: 200 as const, body: note };
       },
 
+      getTeamKbDigest: async ({ params: { id } }) => {
+        const kb = await this.kbOf(id);
+        if (!kb)
+          return { status: 404 as const, body: { message: `Team "${id}" has no knowledge base` } };
+        return { status: 200 as const, body: await this.kbReader.digest(kb) };
+      },
+
       getTeamKbIngest: async ({ params: { id } }) => {
         const kb = await this.kbOf(id);
         if (!kb)

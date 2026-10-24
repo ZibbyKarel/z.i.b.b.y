@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { KnowledgeBaseSourceSchema, TeamSchema, UpdateTeamSchema } from "./team.schema";
+import {
+  KnowledgeBaseSourceSchema,
+  TeamKbDigestSchema,
+  TeamSchema,
+  UpdateTeamSchema,
+} from "./team.schema";
 
 describe("TeamSchema", () => {
   it("accepts a minimal team", () => {
@@ -103,5 +108,19 @@ describe("UpdateTeamSchema clear semantics (companyId, knowledgeBase)", () => {
   it("accepts a patch with no knowledgeBase key at all (leave it alone)", () => {
     const parsed = UpdateTeamSchema.parse({ desc: "moved" });
     expect(parsed.knowledgeBase).toBeUndefined();
+  });
+});
+
+describe("TeamKbDigestSchema", () => {
+  it("accepts items with and without a date", () => {
+    const item = { text: "Ship?", noteId: "m/a.md", noteTitle: "A" };
+    expect(
+      TeamKbDigestSchema.parse({ questions: [item], decisions: [{ ...item, date: "2026-10-20" }] }),
+    ).toBeTruthy();
+  });
+
+  it("rejects item text over 300 chars", () => {
+    const item = { text: "x".repeat(301), noteId: "a.md", noteTitle: "A" };
+    expect(TeamKbDigestSchema.safeParse({ questions: [item], decisions: [] }).success).toBe(false);
   });
 });

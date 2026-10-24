@@ -87,6 +87,37 @@ describe("Teams API (e2e)", () => {
     await fs.rm(kb, { recursive: true, force: true });
   });
 
+  it("serves a KB digest: 404 for unknown team / no KB, 200 with a temp KB", async () => {
+    const kb = await fs.mkdtemp(path.join(os.tmpdir(), "teams-e2e-kb-digest-"));
+    await fs.writeFile(
+      path.join(kb, "m.md"),
+      "---\ntitle: Sync\ndate: 2026-10-20\n---\n## Open questions\n- Who?\n## Decisions\n- Ship\n",
+    );
+    const http = app.getHttpServer();
+    await request(http)
+      .post(BASE)
+      .send({
+        id: "digestteam",
+        name: "D",
+        desc: "d",
+        knowledgeBase: { kind: "vault", path: kb, readOnly: true },
+      })
+      .expect(201);
+    await request(http).post(BASE).send({ id: "digestnokb", name: "N", desc: "d" }).expect(201);
+
+    await request(http).get(`${BASE}/ghost/kb/digest`).expect(404);
+    await request(http).get(`${BASE}/digestnokb/kb/digest`).expect(404);
+    const ok = await request(http).get(`${BASE}/digestteam/kb/digest`).expect(200);
+    expect(ok.body).toEqual({
+      questions: [{ text: "Who?", noteId: "m.md", noteTitle: "Sync", date: "2026-10-20" }],
+      decisions: [{ text: "Ship", noteId: "m.md", noteTitle: "Sync", date: "2026-10-20" }],
+    });
+
+    await request(http).delete(`${BASE}/digestteam`).expect(200);
+    await request(http).delete(`${BASE}/digestnokb`).expect(200);
+    await fs.rm(kb, { recursive: true, force: true });
+  });
+
   it("browses a team KB read-only: list, open note, 404s, no escape", async () => {
     const kb = await fs.mkdtemp(path.join(os.tmpdir(), "teams-e2e-kb-browse-"));
     const outside = path.join(path.dirname(kb), `outside-${path.basename(kb)}.md`);

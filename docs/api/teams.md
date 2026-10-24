@@ -93,6 +93,12 @@ GET    /teams/:id/kb/notes  markdown notes of the team KB, [{ id: relPath, title
                           (no .vtt, no _templates/); 404 if no team or no KB
 GET    /teams/:id/kb/note?path=<relPath>  one note { id, title, body, links }
                           (body capped like the MCP read; `..`/absolute/unknown path -> 404)
+GET    /teams/:id/kb/digest { questions, decisions } — open questions and agreements
+                          lifted from meeting-note sections (headings like "Open questions" /
+                          "Otevřené otázky", "Decisions" / "Agreements" / "Rozhodnutí"; top-level
+                          list items only, checked `- [x]` skipped); items
+                          { text (≤300), noteId, noteTitle, date? }, newest-dated notes first,
+                          undated last by noteId desc, max 30 per list; 404 if no team or no KB
 GET    /teams/:id/kb/ingest { projectId | null, log: [{ line }] } — the registered
                           project whose realpath equals the KB path, and the last 20
                           non-empty lines of `_meta/log.md` (each capped at 300 chars)

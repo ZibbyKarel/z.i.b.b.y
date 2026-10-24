@@ -101,6 +101,23 @@ export const TeamKbNoteSchema = z.object({
 });
 export type TeamKbNote = z.infer<typeof TeamKbNoteSchema>;
 
+/** One open question or agreement lifted from a meeting note (`GET /teams/:id/kb/digest`). */
+export const TeamKbDigestItemSchema = z.object({
+  text: z.string().max(300),
+  /** Repo-relative path of the source note (KB-relative, forward-slash-joined). */
+  noteId: z.string(),
+  noteTitle: z.string(),
+  /** The note's frontmatter `date`, when present. */
+  date: z.string().optional(),
+});
+export type TeamKbDigestItem = z.infer<typeof TeamKbDigestItemSchema>;
+
+export const TeamKbDigestSchema = z.object({
+  questions: z.array(TeamKbDigestItemSchema),
+  decisions: z.array(TeamKbDigestItemSchema),
+});
+export type TeamKbDigest = z.infer<typeof TeamKbDigestSchema>;
+
 /**
  * Ingest status of a team KB (`GET /teams/:id/kb/ingest`): the registered project
  * whose path IS the KB repo (the `team-kb-ingest` workflow runs on it; null when none)

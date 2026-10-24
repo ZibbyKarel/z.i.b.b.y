@@ -1,7 +1,12 @@
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Injectable } from "@nestjs/common";
-import type { KnowledgeBaseSource, MemoryGraph } from "@zibby/contracts";
+import type {
+  KnowledgeBaseSource,
+  MemoryGraph,
+  TeamKbDigest,
+  TeamKbDigestItem,
+} from "@zibby/contracts";
 import matter from "gray-matter";
 import { tokenize } from "../tasks/keyword-scorer";
 
@@ -78,6 +83,81 @@ interface ScannedNote extends KbEntry {
   /** "" for `.vtt` — those are indexed by filename only, never parsed. */
   body: string;
   links: string[];
+}
+
+/** Max items per digest list. */
+export const KB_DIGEST_MAX_ITEMS = 30;
+
+const QUESTION_HEADINGS = new Set([
+  "open questions",
+  "open question",
+  "otevřené otázky",
+  "otázky",
+  "questions",
+]);
+const DECISION_HEADINGS = new Set([
+  "decisions",
+  "decision",
+  "agreements",
+  "rozhodnutí",
+  "dohody",
+  "dohodnuto",
+]);
+const HEADING_LINE = /^(#{1,6})\s+(.*?)\s*#*\s*$/;
+const LIST_LINE = /^(?:[-*+]|\d+[.)])\s+(.*)$/;
+const CHECKED_TASK = /^\[[xX]\](?:\s|$)/;
+const OPEN_TASK = /^\[ \](?:\s|$)/;
+
+/**
+ * Pure section parser for the team-KB digest: top-level list items under
+ * "open questions" / "decisions" style headings (any level; a section runs to
+ * the next heading of the same or higher level). Checked tasks, nested and
+ * empty items are skipped; text is capped at {@link KB_LINE_MAX_CHARS}.
+ */
+export function extractDigestSections(body: string): { questions: string[]; decisions: string[] } {
+  const out = { questions: [] as string[], decisions: [] as string[] };
+  let kind: "questions" | "decisions" | null = null;
+  let level = 0;
+  let fenced = false;
+  for (const line of body.split("\n")) {
+    if (/^\s*(```|~~~)/.test(line)) {
+      fenced = !fenced;
+      continue;
+    }
+    if (fenced) continue;
+    const heading = HEADING_LINE.exec(line);
+    if (heading) {
+      const lvl = heading[1]?.length ?? 0;
+      const name = (heading[2] ?? "").trim().replace(/:$/, "").trim().toLowerCase();
+      if (QUESTION_HEADINGS.has(name)) {
+        kind = "questions";
+        level = lvl;
+      } else if (DECISION_HEADINGS.has(name)) {
+        kind = "decisions";
+        level = lvl;
+      } else if (kind !== null && lvl <= level) {
+        kind = null;
+      }
+      continue;
+    }
+    if (kind === null) continue;
+    const item = LIST_LINE.exec(line);
+    if (!item) continue;
+    let text = (item[1] ?? "").trim();
+    if (CHECKED_TASK.test(text)) continue;
+    if (OPEN_TASK.test(text)) text = text.slice(3).trim();
+    if (text.length === 0) continue;
+    out[kind].push(text.slice(0, KB_LINE_MAX_CHARS));
+  }
+  return out;
+}
+
+/** A frontmatter `date` as a string (a YAML-parsed Date is ISO-formatted, date part only). */
+function dateOf(frontmatter: Record<string, unknown>): string | undefined {
+  const raw = frontmatter.date;
+  if (raw instanceof Date)
+    return Number.isNaN(raw.getTime()) ? undefined : raw.toISOString().slice(0, 10);
+  return typeof raw === "string" && raw.trim().length > 0 ? raw.trim() : undefined;
 }
 
 /** A frontmatter `tags` value, filtered down to actual strings (tolerant of foreign data). */
@@ -224,6 +304,42 @@ export class KbReaderService {
         .slice(-Math.max(0, count))
         .map((l) => l.slice(0, KB_LINE_MAX_CHARS))
     );
+  }
+
+  /**
+   * Open questions and agreements lifted from the meeting-note sections of the
+   * browsable notes. Newest-dated notes first, undated after (noteId desc);
+   * items keep document order within a note; each list capped at
+   * {@link KB_DIGEST_MAX_ITEMS}. Fails soft to empty lists.
+   */
+  async digest(source: KnowledgeBaseSource): Promise<TeamKbDigest> {
+    const notes = (await this.browsable(source)).map((n) => ({
+      note: n,
+      date: dateOf(n.frontmatter),
+    }));
+    notes.sort((a, b) => {
+      if (a.date && b.date && a.date !== b.date) return a.date < b.date ? 1 : -1;
+      if (a.date && !b.date) return -1;
+      if (!a.date && b.date) return 1;
+      return a.note.relPath < b.note.relPath ? 1 : a.note.relPath > b.note.relPath ? -1 : 0;
+    });
+    const questions: TeamKbDigestItem[] = [];
+    const decisions: TeamKbDigestItem[] = [];
+    for (const { note, date } of notes) {
+      const sections = extractDigestSections(note.body);
+      const toItem = (text: string): TeamKbDigestItem => ({
+        text,
+        noteId: note.relPath,
+        noteTitle: note.title,
+        ...(date ? { date } : {}),
+      });
+      questions.push(...sections.questions.map(toItem));
+      decisions.push(...sections.decisions.map(toItem));
+    }
+    return {
+      questions: questions.slice(0, KB_DIGEST_MAX_ITEMS),
+      decisions: decisions.slice(0, KB_DIGEST_MAX_ITEMS),
+    };
   }
 
   private async browsable(source: KnowledgeBaseSource): Promise<ScannedNote[]> {

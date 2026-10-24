@@ -5,6 +5,7 @@ import { EmptyBodySchema, ErrorSchema } from "../common.schema";
 import {
   CreateTeamSchema,
   TeamIdSchema,
+  TeamKbDigestSchema,
   TeamKbIngestSchema,
   TeamKbNoteSchema,
   TeamKbNoteSummarySchema,
@@ -77,6 +78,14 @@ export const teamsContract = c.router(
       responses: { 200: TeamKbNoteSchema, 404: ErrorSchema },
       summary:
         "One KB note by repo-relative path (capped body + wikilink targets); 404 for a missing team/KB/note or an escaping path",
+    },
+    getTeamKbDigest: {
+      method: "GET",
+      path: "/teams/:id/kb/digest",
+      pathParams: z.object({ id: TeamIdSchema }),
+      responses: { 200: TeamKbDigestSchema, 404: ErrorSchema },
+      summary:
+        "Open questions and agreements lifted from the team KB's meeting-note sections (newest first, max 30 each); 404 when the team or its KB is missing",
     },
     getTeamKbIngest: {
       method: "GET",
