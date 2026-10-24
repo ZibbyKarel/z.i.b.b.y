@@ -121,6 +121,7 @@ export const SECTIONS = [
       { id: "runtime", href: "/system/settings/runtime" as Route },
       { id: "activity", href: "/system/settings/activity" as Route },
       { id: "status", href: "/system/settings/status" as Route },
+      { id: "inventory", href: "/system/inventory" as Route },
     ],
   },
 ] as const satisfies readonly SectionConfig[];

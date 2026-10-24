@@ -67,6 +67,8 @@ export interface CommandPaletteLabels {
   group: Record<CommandPaletteGroupKey, string>;
   settingsSection: Record<string, string>;
   gateSection: Record<string, string>;
+  /** Label of the static `/system/inventory` page entry. */
+  inventory: string;
   actions: {
     newTask: string;
     approveNext: string;

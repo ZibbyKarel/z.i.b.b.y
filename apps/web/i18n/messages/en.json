@@ -42,7 +42,8 @@
         "general": "General",
         "runtime": "Runtime",
         "activity": "Activity",
-        "status": "Status"
+        "status": "Status",
+        "inventory": "Machine inventory"
       },
       "dashboard": {
         "map": "Bridge",
@@ -2713,7 +2714,8 @@
       "newTask": "New task",
       "approveNext": "Approve next",
       "toggleTheme": "Toggle theme"
-    }
+    },
+    "inventory": "Machine inventory"
   },
   "registries": {
     "title": "Global libraries",
@@ -3381,5 +3383,44 @@
       "dropEnd": "Drop here to put last in the dropdown"
     },
     "cancel": "Cancel"
+  },
+  "inventory": {
+    "title": "Machine inventory",
+    "refresh": "Refresh",
+    "install": "Install",
+    "update": "Update",
+    "empty": "Nothing found.",
+    "conflictHint": "A skill with this name already exists on this machine and is not managed by ZIBBY.",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "counts": "{skills} skills · {mcp} MCP",
+    "sections": {
+      "catalog": "ZIBBY skill catalog",
+      "mcp": "MCP servers",
+      "skills": "Skills on this machine",
+      "plugins": "Plugins"
+    },
+    "status": {
+      "not-installed": "Not installed",
+      "installed": "Installed",
+      "outdated": "Outdated",
+      "conflict": "Conflict"
+    },
+    "source": {
+      "user": "User",
+      "plugin": "Plugin"
+    },
+    "columns": {
+      "name": "Name",
+      "description": "Description",
+      "status": "Status",
+      "scope": "Scope",
+      "transport": "Transport",
+      "target": "Target",
+      "plugin": "Plugin",
+      "source": "Source",
+      "version": "Version",
+      "counts": "Contents"
+    }
   }
 }

@@ -42,7 +42,8 @@
         "general": "Obecné",
         "runtime": "Runtime",
         "activity": "Aktivita",
-        "status": "Stav"
+        "status": "Stav",
+        "inventory": "Inventář stroje"
       },
       "dashboard": {
         "map": "Můstek",
@@ -2713,7 +2714,8 @@
       "newTask": "Nový úkol",
       "approveNext": "Schválit další",
       "toggleTheme": "Přepnout motiv"
-    }
+    },
+    "inventory": "Inventář stroje"
   },
   "registries": {
     "title": "Globální knihovny",
@@ -3381,5 +3383,44 @@
       "dropEnd": "Pusť sem pro přesun na konec nabídky"
     },
     "cancel": "Zrušit"
+  },
+  "inventory": {
+    "title": "Inventář stroje",
+    "refresh": "Obnovit",
+    "install": "Nainstalovat",
+    "update": "Aktualizovat",
+    "empty": "Nic nenalezeno.",
+    "conflictHint": "Na stroji už existuje skill se stejným názvem, který nespravuje ZIBBY.",
+    "enabled": "Zapnuto",
+    "disabled": "Vypnuto",
+    "counts": "{skills} skills · {mcp} MCP",
+    "sections": {
+      "catalog": "Katalog ZIBBY skills",
+      "mcp": "MCP servery",
+      "skills": "Skills na stroji",
+      "plugins": "Pluginy"
+    },
+    "status": {
+      "not-installed": "Nenainstalováno",
+      "installed": "Nainstalováno",
+      "outdated": "Zastaralé",
+      "conflict": "Konflikt"
+    },
+    "source": {
+      "user": "Uživatel",
+      "plugin": "Plugin"
+    },
+    "columns": {
+      "name": "Název",
+      "description": "Popis",
+      "status": "Stav",
+      "scope": "Rozsah",
+      "transport": "Transport",
+      "target": "Cíl",
+      "plugin": "Plugin",
+      "source": "Zdroj",
+      "version": "Verze",
+      "counts": "Obsah"
+    }
   }
 }

@@ -34,7 +34,7 @@ describe("SECTIONS sub-menus", () => {
   it("groups AI and Settings sub-menus", () => {
     const ids = (id: string) => SECTIONS.find((s) => s.id === id)?.tabs.map((t) => t.id);
     expect(ids("workforce")).toEqual(["agents", "skills", "commands", "mcp", "hooks"]);
-    expect(ids("system")).toEqual(["general", "runtime", "activity", "status"]);
+    expect(ids("system")).toEqual(["general", "runtime", "activity", "status", "inventory"]);
     expect(SECTIONS.find((s) => s.id === "system")?.href).toBe("/system/settings/general");
   });
 });
