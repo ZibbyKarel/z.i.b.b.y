@@ -122,11 +122,23 @@ describe("Roadmap API (e2e)", () => {
     const initial = await request(app.getHttpServer())
       .get("/api/projects/other-project/roadmap/config")
       .expect(200);
-    expect(initial.body).toMatchObject({ autoSync: null, autoPlay: null });
+    expect(initial.body).toMatchObject({
+      autoSync: null,
+      autoPlay: null,
+      autoReview: null,
+      autoAddressComments: null,
+    });
     expect(initial.body.effective).toEqual({
       autoSync: false,
       autoPlay: false,
-      source: { autoSync: "global", autoPlay: "global" },
+      autoReview: false,
+      autoAddressComments: false,
+      source: {
+        autoSync: "global",
+        autoPlay: "global",
+        autoReview: "global",
+        autoAddressComments: "global",
+      },
     });
 
     const updated = await request(app.getHttpServer())
@@ -155,6 +167,32 @@ describe("Roadmap API (e2e)", () => {
       .send({ autoSync: true })
       .expect(200);
     expect(merged.body).toMatchObject({ autoSync: true, autoPlay: true });
+  });
+
+  it("PUT config { autoReview: true } changes only that key; GET returns effective values", async () => {
+    await request(app.getHttpServer())
+      .put("/api/projects/review-project/roadmap/config")
+      .send({ autoSync: true })
+      .expect(200);
+    const updated = await request(app.getHttpServer())
+      .put("/api/projects/review-project/roadmap/config")
+      .send({ autoReview: true })
+      .expect(200);
+    expect(updated.body).toMatchObject({
+      autoSync: true,
+      autoPlay: null,
+      autoReview: true,
+      autoAddressComments: null,
+    });
+    const reread = await request(app.getHttpServer())
+      .get("/api/projects/review-project/roadmap/config")
+      .expect(200);
+    expect(reread.body.effective).toMatchObject({
+      autoSync: true,
+      autoReview: true,
+      autoAddressComments: false,
+      source: { autoReview: "project", autoAddressComments: "global" },
+    });
   });
 
   it("POST sync on a project with no Jira/GitHub integration returns an all-zero summary, not an error", async () => {

@@ -167,26 +167,63 @@ describe("RoadmapStore", () => {
   });
 
   describe("config", () => {
+    const NULL_CONFIG = {
+      autoSync: null,
+      autoPlay: null,
+      autoReview: null,
+      autoAddressComments: null,
+    };
+
+    it("updateConfig() patches only the PR toggles and an old file reads them as null", async () => {
+      await fs.mkdir(path.join(dir, "proj-1"), { recursive: true });
+      await fs.writeFile(
+        path.join(dir, "proj-1", "_config.json"),
+        JSON.stringify({ autoSync: true, autoPlay: false }),
+      );
+      expect(await store.readConfig("proj-1")).toEqual({
+        ...NULL_CONFIG,
+        autoSync: true,
+        autoPlay: false,
+      });
+      expect(await store.updateConfig("proj-1", { autoReview: true })).toEqual({
+        ...NULL_CONFIG,
+        autoSync: true,
+        autoPlay: false,
+        autoReview: true,
+      });
+      expect(await store.updateConfig("proj-1", { autoReview: null })).toMatchObject({
+        autoReview: null,
+      });
+    });
+
     it("round-trips the per-project config", async () => {
-      expect(await store.readConfig("proj-1")).toEqual({ autoSync: null, autoPlay: null });
+      expect(await store.readConfig("proj-1")).toEqual(NULL_CONFIG);
       await store.writeConfig("proj-1", { autoSync: true, autoPlay: true });
-      expect(await store.readConfig("proj-1")).toEqual({ autoSync: true, autoPlay: true });
+      expect(await store.readConfig("proj-1")).toEqual({
+        ...NULL_CONFIG,
+        autoSync: true,
+        autoPlay: true,
+      });
       // A fresh store instance over the same dir sees the persisted config.
       const fresh = new RoadmapStore(dir);
       await fresh.onModuleInit();
-      expect(await fresh.readConfig("proj-1")).toEqual({ autoSync: true, autoPlay: true });
+      expect(await fresh.readConfig("proj-1")).toEqual({
+        ...NULL_CONFIG,
+        autoSync: true,
+        autoPlay: true,
+      });
     });
 
     it("falls back to the default config on a corrupt _config.json", async () => {
       await fs.mkdir(path.join(dir, "proj-1"), { recursive: true });
       await fs.writeFile(path.join(dir, "proj-1", "_config.json"), "{ not json");
-      expect(await store.readConfig("proj-1")).toEqual({ autoSync: null, autoPlay: null });
+      expect(await store.readConfig("proj-1")).toEqual(NULL_CONFIG);
     });
 
     it("writeConfig() REPLACES — an omitted toggle falls back to its default", async () => {
       await store.writeConfig("proj-1", { autoSync: true, autoPlay: true });
       await store.writeConfig("proj-1", { autoSync: true });
-      expect(await store.readConfig("proj-1")).toEqual({ autoSync: true, autoPlay: null });
+      expect(await store.readConfig("proj-1")).toEqual({ ...NULL_CONFIG, autoSync: true });
     });
 
     it("updateConfig() MERGES — flipping one toggle leaves the other alone", async () => {
@@ -195,13 +232,17 @@ describe("RoadmapStore", () => {
       const merged = await store.updateConfig("proj-1", { autoSync: true });
 
       // The whole point of the patch route: auto-play survives an auto-sync flip.
-      expect(merged).toEqual({ autoSync: true, autoPlay: true });
-      expect(await store.readConfig("proj-1")).toEqual({ autoSync: true, autoPlay: true });
+      expect(merged).toEqual({ ...NULL_CONFIG, autoSync: true, autoPlay: true });
+      expect(await store.readConfig("proj-1")).toEqual({
+        ...NULL_CONFIG,
+        autoSync: true,
+        autoPlay: true,
+      });
     });
 
     it("updateConfig() on a project with no config yet writes defaults plus the patch", async () => {
       expect(await store.updateConfig("proj-1", { autoPlay: true })).toEqual({
-        autoSync: null,
+        ...NULL_CONFIG,
         autoPlay: true,
       });
     });
@@ -209,7 +250,7 @@ describe("RoadmapStore", () => {
     it("updateConfig() with null resets a toggle to inherit", async () => {
       await store.writeConfig("proj-1", { autoSync: true, autoPlay: true });
       expect(await store.updateConfig("proj-1", { autoSync: null })).toEqual({
-        autoSync: null,
+        ...NULL_CONFIG,
         autoPlay: true,
       });
     });

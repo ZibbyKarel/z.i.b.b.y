@@ -23,10 +23,19 @@ function config(partial: Partial<RoadmapConfigResponse> = {}): RoadmapConfigResp
   return {
     autoSync: null,
     autoPlay: null,
+    autoReview: null,
+    autoAddressComments: null,
     effective: {
       autoSync: false,
       autoPlay: false,
-      source: { autoSync: "global", autoPlay: "global" },
+      autoReview: false,
+      autoAddressComments: false,
+      source: {
+        autoSync: "global",
+        autoPlay: "global",
+        autoReview: "global",
+        autoAddressComments: "global",
+      },
     },
     ...partial,
   };
@@ -60,7 +69,14 @@ describe("RoadmapAutomationPanel (tri-state)", () => {
       effective: {
         autoSync: true,
         autoPlay: false,
-        source: { autoSync: "company", autoPlay: "global" },
+        autoReview: false,
+        autoAddressComments: false,
+        source: {
+          autoSync: "company",
+          autoPlay: "global",
+          autoReview: "global",
+          autoAddressComments: "global",
+        },
       },
     });
     render(<RoadmapAutomationPanel companyName="Shoptet" projectId="proj-1" />);
