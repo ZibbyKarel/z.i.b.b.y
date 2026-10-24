@@ -43,6 +43,7 @@ import { WorkflowsStorageService } from "../workflows/workflows.storage.service"
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { matchProject } from "../projects/project-matcher";
 import { outsideLocks, withPathLock } from "../shared/file-storage";
+import { TodoStore } from "../todo/todo.store";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { normalizeSummary } from "../shared/text/normalize-summary";
 import { TraceContextService } from "../shared/logging/trace-context.service";
@@ -224,6 +225,8 @@ export class TaskSchedulerService
     @Optional()
     @Inject(ATTACHMENT_SET_REF_PROVIDER)
     private readonly attachmentRefProviders: AttachmentSetRefProvider[] = [],
+    /** The TODO notes — a task created with `todoId` removes its note. Optional like the above. */
+    @Optional() private readonly todoStore?: TodoStore,
   ) {
     super();
     this.log = logger.child(TaskSchedulerService.name);
@@ -365,6 +368,39 @@ export class TaskSchedulerService
      * fail-fast (`EmptyCatalogError`/`runRef`) semantics intact.
      */
     background = false,
+  ): Promise<CreateTaskResult> {
+    const result = await this.createTaskInner(
+      input,
+      now,
+      trustedProjectId,
+      explicitTarget,
+      background,
+    );
+    // The task exists — whatever state it started in (queued, running, scheduled, held
+    // for approval) — so the TODO note it came from is spent. Never fails the create.
+    if (input.todoId) await this.removeTodoNote(input.todoId);
+    return result;
+  }
+
+  /** Delete the TODO note a task was created from; a missing note is fine, a failure is only logged. */
+  private async removeTodoNote(todoId: string): Promise<void> {
+    try {
+      await this.todoStore?.remove(todoId);
+    } catch (error) {
+      this.log.warn(
+        `Could not remove TODO note ${todoId} after creating its task: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  }
+
+  private async createTaskInner(
+    input: CreateTaskInput,
+    now: number,
+    trustedProjectId: string | undefined,
+    explicitTarget: TaskTarget | undefined,
+    background: boolean,
   ): Promise<CreateTaskResult> {
     // A task with no operator-given name gets one derived from its description (Haiku,
     // with a deterministic fallback) so the feed never shows an untitled task. The

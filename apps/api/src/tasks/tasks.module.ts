@@ -9,6 +9,7 @@ import { LimitsModule } from "../limits/limits.module";
 import { MemoryModule } from "../memory/memory.module";
 import { WorkflowsModule } from "../workflows/workflows.module";
 import { ProjectsModule } from "../projects/projects.module";
+import { TodoModule } from "../todo/todo.module";
 import { WorkspaceModule } from "../workspace/workspace.module";
 import { AttachmentStorageService } from "./attachment-storage.service";
 import { ClaudeCliRouter } from "./claude-cli-router";
@@ -47,6 +48,7 @@ import { TasksController } from "./tasks.controller";
     GatesModule,
     LimitsModule,
     WorkspaceModule,
+    TodoModule,
     MemoryModule,
     ScheduledTasksStorageModule,
   ],

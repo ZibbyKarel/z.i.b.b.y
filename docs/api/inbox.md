@@ -427,3 +427,10 @@ interrupted run → `failed`.
 `GET /api/inbox/prs` rows carry `behind: true` (only when GitHub says so) and `rebase { taskId, state }` (latest rebase task per PR; a `running` one whose task/run died reads `failed`).
 They also carry `headRef` / `baseRef` (todo-13, from the same `GET /pulls/<n>`; `headRef` is omitted for a fork head) — the web joins them to show stacked PRs (B's `baseRef` = A's `headRef`, same repo).
 Rows of my own PRs (`mine`) also carry `unresolvedThreads` (todo-21; GraphQL `reviewThreads.isResolved`, first 100 threads, omitted when the read fails or the PR isn't `mine`). The web offers the address-comments button when it is `> 0`.
+
+## Removed: `GET /api/roadmap/todo`
+
+The Bridge TODO widget no longer reads manual roadmap items. `inboxContract.listTodoItems`
+(`GET /api/roadmap/todo`) and `InboxService.listTodoItems()` were removed; the widget's notes are
+their own file-backed list (`docs/api/todo.md`). Manual roadmap items are untouched and stay on
+their project's roadmap page.

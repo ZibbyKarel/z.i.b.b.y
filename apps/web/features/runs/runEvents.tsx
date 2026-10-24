@@ -13,7 +13,6 @@ import { prependActivityEntry } from "../activity/queries/useActivityFeedInfinit
 import { getBriefingQueryKey } from "../briefing/queries/useBriefingQuery";
 import { getInboxItemsQueryKey } from "../inbox/queries/useInboxItemsQuery";
 import { getInboxPrsQueryKey } from "../inbox/queries/useInboxPrsQuery";
-import { getTodoItemsQueryKey } from "../inbox/queries/useTodoItemsQuery";
 import { getChannelItemsQueryKey } from "../integrations/queries/useChannelItemsQuery";
 import { getWorkflowRunQueryKey } from "../workflows/queries/keys";
 import { getScheduledTasksQueryKey } from "../tasks/queries/useScheduledTasksQuery";
@@ -201,7 +200,6 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         ) {
           void qc.invalidateQueries({ queryKey: getInboxPrsQueryKey() });
           void qc.invalidateQueries({ queryKey: getInboxItemsQueryKey() });
-          void qc.invalidateQueries({ queryKey: getTodoItemsQueryKey() });
         }
       }
       // A new run may be a scheduled task firing (scheduled → dispatched); refresh

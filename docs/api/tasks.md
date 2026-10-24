@@ -61,6 +61,8 @@ Body: {
   paths?: string[]            # files / directories (max 64)
   attachmentSetId?: string    # a previously-uploaded attachment set (POST /api/tasks/attachments)
                               # a workflow target gets it in <run>/context/attachments/
+  todoId?: string              # the TODO note (docs/api/todo.md) this task was created
+                               # from; deleted after the task is created (best-effort)
   scheduledAt?: number         # epoch ms; absent or in the past → immediate dispatch
   output?: TaskOutput          # what happens to the finished work (PR / file / void).
                                # Absent = inherit (a workflow target keeps its own
@@ -141,6 +143,11 @@ ZIBBY read — the only sha the runner pushes; no report / no worktree / no new 
 `note`), and to `pushed`/`discarded`/`failed` by the `pr-fix-ci` approval runner, fast-forward
 only. An interrupted run with `state === "running"` gets an error outcome; a finished run whose
 `prFixCi` awaits approval reads `awaiting-approval` in the run list.
+
+`todoId` (from `/work/tasks/new?todo=<id>`) names a TODO note: once the task exists — in any
+starting state (queued, running, scheduled, held) — `createTask` deletes the note from the TODO
+list. A missing note is ignored; a failed delete is logged and never fails the create. The id
+is not stored on the task.
 
 `scheduledAt` absent or in the past → `createTask` runs classification + dispatch
 immediately. From the dialog (`background = true`), dispatch happens in the

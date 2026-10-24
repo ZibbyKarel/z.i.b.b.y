@@ -3212,6 +3212,7 @@
         "add": "Add",
         "implement": "Implement",
         "implementLabel": "Implement: {name}",
+        "deleteLabel": "Delete “{name}”",
         "noProjects": "Create a project first",
         "state": {
           "todo": "To do",

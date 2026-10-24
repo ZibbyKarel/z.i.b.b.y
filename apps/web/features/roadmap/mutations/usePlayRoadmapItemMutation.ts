@@ -1,6 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../../state/api";
-import { getTodoItemsQueryKey } from "../../inbox/queries/useTodoItemsQuery";
 import { getRoadmapItemsQueryKey } from "../queries/useRoadmapItemsQuery";
 
 /**
@@ -16,7 +15,6 @@ export function usePlayRoadmapItemMutation(projectId: string) {
   return apiClient.roadmap.playRoadmapItem.useMutation({
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: getRoadmapItemsQueryKey(projectId) });
-      void qc.invalidateQueries({ queryKey: getTodoItemsQueryKey() });
     },
   });
 }

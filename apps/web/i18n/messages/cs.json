@@ -3212,6 +3212,7 @@
         "add": "Přidat",
         "implement": "Implementovat",
         "implementLabel": "Implementovat: {name}",
+        "deleteLabel": "Smazat „{name}“",
         "noProjects": "Nejdřív založ projekt",
         "state": {
           "todo": "K implementaci",

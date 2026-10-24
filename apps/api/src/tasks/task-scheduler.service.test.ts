@@ -440,6 +440,84 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     expect(await attachmentStorage.list(referenced)).toHaveLength(1);
   });
 
+  describe("todoId (a task created from a TODO note removes the note)", () => {
+    function withTodo(todo: { remove: (id: string) => Promise<boolean> }, warn = vi.fn()) {
+      const logger = { child: () => ({ info: vi.fn(), warn, error: vi.fn(), debug: vi.fn() }) };
+      return new TaskSchedulerService(
+        storage,
+        classifier as never,
+        agentRunner as never,
+        workflowRunner as never,
+        workflowsStore as never,
+        agentsStore as never,
+        new RunSlots(fakeSystemConfigStore()),
+        goalRunner as never,
+        logger as never,
+        fakeTrace as never,
+        activity as never,
+        {
+          list: async () => [],
+          get: async () => {
+            throw new Error("no project");
+          },
+        } as never,
+        fakeBudget as never,
+        fakeApprovals as never,
+        fakeGates as never,
+        fakeLimits as never,
+        taskOutput as never,
+        systemConfig,
+        { name: async () => null } as never,
+        attachmentStorage,
+        { register: () => {} } as never,
+        undefined,
+        todo as never,
+      );
+    }
+
+    it("removes the referenced note after the task is created", async () => {
+      const remove = vi.fn(async () => true);
+      const result = await withTodo({ remove }).createTask({
+        text: "do the thing",
+        title: "Thing",
+        todoId: "todo_abc",
+      });
+      expect(result.outcome).toBeDefined();
+      expect(remove).toHaveBeenCalledWith("todo_abc");
+    });
+
+    it("still creates the task when the note no longer exists", async () => {
+      const remove = vi.fn(async () => false);
+      const result = await withTodo({ remove }).createTask({
+        text: "do the thing",
+        title: "Thing",
+        todoId: "todo_gone",
+      });
+      expect(result.outcome).toBeDefined();
+      expect(remove).toHaveBeenCalledWith("todo_gone");
+    });
+
+    it("returns the created task and logs when the delete throws", async () => {
+      const warn = vi.fn();
+      const remove = vi.fn(async () => {
+        throw new Error("disk full");
+      });
+      const result = await withTodo({ remove }, warn).createTask({
+        text: "do the thing",
+        title: "Thing",
+        todoId: "todo_abc",
+      });
+      expect(result.outcome).toBeDefined();
+      expect(warn).toHaveBeenCalled();
+    });
+
+    it("never touches the store without a todoId", async () => {
+      const remove = vi.fn(async () => true);
+      await withTodo({ remove }).createTask({ text: "do the thing", title: "Thing" });
+      expect(remove).not.toHaveBeenCalled();
+    });
+  });
+
   it("Phase 116b — a registered AttachmentSetRefProvider keeps its referenced set alive past the sweep", async () => {
     // No ScheduledTask references either set — a `task`-target automation's set
     // would otherwise age out between cron fires (it never becomes a ScheduledTask
