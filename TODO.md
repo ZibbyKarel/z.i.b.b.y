@@ -69,4 +69,4 @@
         c. [ ] klik na tlačítko implementace musí otevřít stránku work/tasks/new s předvyplněnými hodnotami podle todo položky
         d. [ ] pokud se z TODO položky stane už běžící task (nebo task ve frontě) tak je z TODO seznamu automaticky smazána
         e. [ ] seznam přidaných položek by se měl zobrazit nad inputem
-18. [ ] stránka Agenti bude rozdělená do kategorií. KAtegorie = oddělení agenta. Každý agent musí být v oddělení a bude reprezentován kartou s jeho glyphem
+18. [x] stránka Agenti bude rozdělená do kategorií. KAtegorie = oddělení agenta. Každý agent musí být v oddělení a bude reprezentován kartou s jeho glyphem (main@1bb6f6a5)
