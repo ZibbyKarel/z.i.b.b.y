@@ -100,7 +100,7 @@ export function TodoWidget({ widget, onEmptyChange, onCountChange }: BridgeWidge
           label={t("input")}
           onSubmit={(text) => {
             const trimmed = text.trim();
-            if (trimmed) create.mutate({ body: { text: trimmed } });
+            if (trimmed && !create.isPending) create.mutate({ body: { text: trimmed } });
           }}
           placeholder={t("placeholder")}
           renderTrailing={({ canSubmit, submit }) => (

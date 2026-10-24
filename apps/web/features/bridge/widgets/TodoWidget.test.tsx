@@ -99,7 +99,8 @@ describe("TodoWidget", () => {
     const p = props();
     renderWithProviders(<TodoWidget {...p} />);
     const second = screen.getAllByTestId(BoardRowTestId.Root)[1] as HTMLElement;
-    const frame = second.closest(`[data-testid="${BoardRowTestId.Frame}"]`) ?? second.parentElement;
+    const frame = second.closest(`[data-testid="${BoardRowTestId.Frame}"]`);
+    expect(frame).not.toBeNull();
     await user.click(within(frame as HTMLElement).getByTestId(TodoWidgetTestId.Delete));
     expect(d.remove).toHaveBeenCalledTimes(1);
     expect(d.remove).toHaveBeenCalledWith({ params: { id: "todo_2" } });

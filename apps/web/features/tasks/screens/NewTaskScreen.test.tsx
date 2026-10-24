@@ -54,7 +54,7 @@ describe("NewTaskScreen (ZB-04b)", () => {
   beforeEach(() => {
     push.mockClear();
     classifyMutate.mockClear();
-    createMutate.mockClear();
+    createMutate.mockReset();
     invalidate.mockClear();
     searchParams = new URLSearchParams();
   });
@@ -253,7 +253,6 @@ describe("NewTaskScreen (ZB-04b)", () => {
     expect(invalidate.mock.invocationCallOrder[0]).toBeLessThan(
       push.mock.invocationCallOrder[0] as number,
     );
-    createMutate.mockReset();
   });
 
   it("omits todoId when there is no ?todo=", () => {
@@ -265,12 +264,12 @@ describe("NewTaskScreen (ZB-04b)", () => {
     expect(body.todoId).toBeUndefined();
   });
 
-  it("pins current behaviour: a typed @Name in a PREFILLED brief is NOT adopted as a target (CommandLine resolves typed names only on change) — routing falls back to classification", () => {
+  it("adopts a typed @Agent in the prefilled brief as the explicit target", () => {
     searchParams = new URLSearchParams({ text: "fix it @Kodér", title: "T" });
     render(<NewTaskScreen />);
     fireEvent.click(screen.getByText("Vytvořit úkol"));
     const body = createMutate.mock.calls[0]?.[0]?.body as { text: string; target?: unknown };
     expect(body.text).toBe("fix it @Kodér");
-    expect(body.target).toBeUndefined();
+    expect(body.target).toEqual(expect.objectContaining({ kind: "agent", id: "koder" }));
   });
 });

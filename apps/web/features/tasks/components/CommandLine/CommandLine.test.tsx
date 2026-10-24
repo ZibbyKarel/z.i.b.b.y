@@ -296,6 +296,77 @@ describe("CommandLine (Phase 118d generic composer)", () => {
     });
   });
 
+  describe("a prefilled brief adopts its typed @Name (TODO 17)", () => {
+    it("adopts the target once the catalog arrives, and only once", () => {
+      fx.data.agents = [];
+      const onTargetChange = vi.fn();
+      const view = render(
+        <CommandLine
+          initialText="@Builder fix it"
+          onSubmit={vi.fn()}
+          onTargetChange={onTargetChange}
+        />,
+      );
+      expect(onTargetChange).not.toHaveBeenCalled();
+
+      fx.data.agents = [{ id: "builder", name: "Builder" }];
+      view.rerender(
+        <CommandLine
+          initialText="@Builder fix it"
+          onSubmit={vi.fn()}
+          onTargetChange={onTargetChange}
+        />,
+      );
+      expect(onTargetChange).toHaveBeenCalledTimes(1);
+      expect(onTargetChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ kind: "agent", id: "builder" }),
+      );
+
+      fx.data.agents = [{ id: "builder", name: "Builder" }];
+      view.rerender(
+        <CommandLine
+          initialText="@Builder fix it"
+          onSubmit={vi.fn()}
+          onTargetChange={onTargetChange}
+        />,
+      );
+      expect(onTargetChange).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not adopt after the operator edited the text before the catalog arrived", () => {
+      fx.data.agents = [];
+      const onTargetChange = vi.fn();
+      const view = render(
+        <CommandLine
+          initialText="@Builder fix it"
+          onSubmit={vi.fn()}
+          onTargetChange={onTargetChange}
+        />,
+      );
+      fireEvent.change(screen.getByTestId(CommandLineTestId.Input), {
+        target: { value: "@Builder fix it now" },
+      });
+      fx.data.agents = [{ id: "builder", name: "Builder" }];
+      view.rerender(
+        <CommandLine
+          initialText="@Builder fix it"
+          onSubmit={vi.fn()}
+          onTargetChange={onTargetChange}
+        />,
+      );
+      expect(onTargetChange).not.toHaveBeenCalled();
+    });
+
+    it("adds a chip in multipleTargets mode", () => {
+      const onSubmit = vi.fn();
+      render(<CommandLine multipleTargets initialText="@Builder fix it" onSubmit={onSubmit} />);
+      fireEvent.click(screen.getByTestId(CommandLineTestId.Send));
+      expect(onSubmit).toHaveBeenCalledWith("@Builder fix it", undefined, undefined, [
+        expect.objectContaining({ kind: "agent", id: "builder" }),
+      ]);
+    });
+  });
+
   describe("Phase 91 — department @-mentions (roster-only, explicit target)", () => {
     it("lists a roster-bearing department (≥1 owned workflow) as a colored-dot row, never a capability-less one", async () => {
       const user = userEvent.setup();
