@@ -31,6 +31,7 @@ import { MemoryModule } from "./memory/memory.module";
 import { RunRecorderModule } from "./memory/run-recorder.module";
 import { MachineModule } from "./machine/machine.module";
 import { MonitorsModule } from "./monitors/monitors.module";
+import { InventoryModule } from "./inventory/inventory.module";
 import { ProjectHealthModule } from "./project-health/project-health.module";
 import { WorkflowsModule } from "./workflows/workflows.module";
 import { ProjectsModule } from "./projects/projects.module";
@@ -97,6 +98,8 @@ import { TeamsModule } from "./teams/teams.module";
     MonitorsModule,
     // TODO 11: per-project health checks (state + transition activity).
     ProjectHealthModule,
+    // TODO 13: read-only machine inventory (Claude Code MCP/skills/plugins) + skill install.
+    InventoryModule,
     ReleaseModule,
     ReviewLearningModule,
     HealthModule,

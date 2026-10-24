@@ -72,6 +72,9 @@ export const ActivityKindSchema = z.enum([
   // never dispatches a task (the operator's "Analyzovat" click does).
   "project-health-down",
   "project-health-recovered",
+  // TODO 13 (machine inventory, Tier-2 — act, then report). The operator installed a ZIBBY
+  // library skill into their Claude Code skills dir. Rides `itemId` = the skill id.
+  "skill-installed",
   // N5a: an approved machine action was executed (or failed) — the gate's
   // act-then-report line; the proposal itself rides approval-requested.
   "machine-action",
