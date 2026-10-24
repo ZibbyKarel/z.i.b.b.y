@@ -3234,6 +3234,33 @@
         "noKb": "Tým nemá znalostní bázi.",
         "questions": "Otevřené otázky",
         "decisions": "Dohody"
+      },
+      "proposals": {
+        "empty": "Žádné návrhy ke kontrole.",
+        "source": {
+          "pattern-extract": "Extrakce vzorů",
+          "gap-detect": "Návrhy na automatizaci",
+          "agent-factory": "Továrna agentů"
+        },
+        "confidence": {
+          "low": "nízká jistota",
+          "medium": "střední jistota",
+          "high": "vysoká jistota"
+        },
+        "expires": "vyprší za {days} d",
+        "provenance": {
+          "note": "Poznámka",
+          "agent": "Agent",
+          "approval": "Schválení"
+        },
+        "dismiss": "Zamítnout",
+        "dismissLabel": "Zamítnout: {text}",
+        "edit": "Upravit",
+        "editLabel": "Upravit: {text}",
+        "editor": "Text návrhu",
+        "save": "Uložit",
+        "cancel": "Zrušit",
+        "error": "Změnu se nepodařilo uložit. Zkus to znovu."
       }
     },
     "you": "{n} ty",
@@ -3273,6 +3300,10 @@
       "teamKb": {
         "label": "Tým — znalosti",
         "desc": "Otevřené otázky a dohody z týmové znalostní báze."
+      },
+      "proposals": {
+        "label": "Návrhy",
+        "desc": "Návrhy z automatizací ke kontrole — zamítni nebo uprav poznatek."
       }
     },
     "sheet": {

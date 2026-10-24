@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, createContext, useContext, useEffect, useState } from "react";
 import { getRunningAgentsQueryKey } from "../agents/queries/keys";
 import { type ActivityEntry, INBOX_REFRESH_ACTIVITY_KINDS } from "@zibby/contracts";
+import { getProposalsQueryKey } from "../proposals/queries/useProposalsQuery";
 import { getApprovalsQueryKey } from "../approvals/queries/keys";
 import { getBudgetQueryKey, getCiStatusQueryKey } from "../projects/queries/keys";
 import { getProjectHealthQueryKey } from "../project-health/queries/useProjectHealthQuery";
@@ -173,6 +174,11 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         // pending queue off it so the gate surfaces without waiting for a poll.
         if (parsed.kind?.startsWith("approval-")) {
           void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
+        }
+        // Bridge "Návrhy": a decided proposal, or an agent-factory candidate's approval
+        // being requested / decided, changes the open-proposals list.
+        if (parsed.kind === "proposal-decided" || parsed.kind?.startsWith("approval-")) {
+          void qc.invalidateQueries({ queryKey: getProposalsQueryKey() });
         }
         // N4b: a monitor alert means the watcher just refreshed the CI status
         // sidecar too — refresh the project-detail chip without waiting for its
