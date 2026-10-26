@@ -194,8 +194,10 @@ describe("ChatSessionService", () => {
     expect(args[args.indexOf("--permission-mode") + 1]).toBe("dontAsk");
     // isolation: --setting-sources with an empty value
     expect(args[args.indexOf("--setting-sources") + 1]).toBe("");
-    // built-in tools disabled — chat acts only via the zibby MCP tools
-    expect(args[args.indexOf("--tools") + 1]).toBe("");
+    // built-in tools hidden via a denylist — `--tools` would also drop claude.ai connectors
+    expect(args).not.toContain("--tools");
+    const hidden = (args[args.indexOf("--disallowedTools") + 1] ?? "").split(",");
+    expect(hidden).toEqual(expect.arrayContaining(["Bash", "Read", "Write", "Edit", "Grep"]));
     expect(args).not.toContain("--resume");
   });
 
@@ -212,7 +214,13 @@ describe("ChatSessionService", () => {
     const args = await svc.buildArgs("ahoj", null, "c1");
     // Task 8: widened to cover BOTH mounted servers — a permission-list PROMPTING
     // hint (commit eb525567), not what makes either server reachable.
-    expect(args[args.indexOf("--allowedTools") + 1]).toBe("mcp__zibby__*,mcp__zibby-kb__*");
+    const allowed = (args[args.indexOf("--allowedTools") + 1] ?? "").split(",");
+    expect(allowed.slice(0, 2)).toEqual(["mcp__zibby__*", "mcp__zibby-kb__*"]);
+    // claude.ai Slack connector: read + draft only, never send.
+    expect(allowed).toContain("mcp__claude_ai_Slack__slack_search_public_and_private");
+    expect(allowed).toContain("mcp__claude_ai_Slack__slack_send_message_draft");
+    expect(allowed).not.toContain("mcp__claude_ai_Slack__slack_send_message");
+    expect(allowed).not.toContain("mcp__claude_ai_Slack__*");
     // T9: the config is now spilled to a file — the argv value is a PATH, not inline JSON.
     const configPath = args[args.indexOf("--mcp-config") + 1] ?? "";
     expect(configPath).toMatch(/\.json$/);

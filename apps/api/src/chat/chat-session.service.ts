@@ -47,6 +47,68 @@ export interface ChatTurnTags {
 /** Hard ceiling on one turn; a stuck `claude` is killed and the turn ends in error. */
 const TURN_TIMEOUT_MS = 120_000;
 
+/** Built-in CLI tools a chat turn must never see (see `--disallowedTools` in buildArgs). */
+export const CHAT_HIDDEN_BUILTIN_TOOLS = [
+  "Agent",
+  "Task",
+  "Bash",
+  "Read",
+  "Glob",
+  "Grep",
+  "Edit",
+  "Write",
+  "NotebookEdit",
+  "LSP",
+  "WebFetch",
+  "WebSearch",
+  "Skill",
+  "Workflow",
+  "TodoWrite",
+  "ListAgents",
+  "SendMessage",
+  "TaskStop",
+  "Monitor",
+  "ScheduleWakeup",
+  "CronCreate",
+  "CronDelete",
+  "CronList",
+  "RemoteTrigger",
+  "PushNotification",
+  "EnterWorktree",
+  "ExitWorktree",
+  "EnterPlanMode",
+  "ExitPlanMode",
+  "ReportFindings",
+  "ShareOnboardingGuide",
+  "PublishPlugin",
+  "DesignSync",
+  "ListMcpResourcesTool",
+  "ReadMcpResourceTool",
+  "ReadMcpResourceDirTool",
+].join(",");
+
+/**
+ * The operator's claude.ai Slack connector, read + draft only. Sending, scheduling
+ * and editing canvases/lists commit the operator to the outside world (Tier-3), so
+ * they stay off this list and `dontAsk` denies them.
+ */
+export const CHAT_SLACK_TOOLS = [
+  "slack_read_channel",
+  "slack_read_thread",
+  "slack_read_user_profile",
+  "slack_read_canvas",
+  "slack_read_file",
+  "slack_read_list",
+  "slack_search_public",
+  "slack_search_public_and_private",
+  "slack_search_users",
+  "slack_search_channels",
+  "slack_list_user_channels",
+  "slack_list_channel_members",
+  "slack_get_reactions",
+  "slack_send_message_draft",
+].map((name) => `mcp__claude_ai_Slack__${name}`);
+
 /** D-020 — the only kinds a chat `@mention` may carry (mirrors `ChatMentionTargetSchema`);
  *  narrows the legacy, broader `SendChatMessageBody.target` before folding it into
  *  `mentions`, which the contract types strictly. */
@@ -261,12 +323,17 @@ export class ChatSessionService {
       text,
       "--setting-sources",
       "",
-      // Disable ALL built-in tools (Bash/Write/Edit/…). ZIBBY chat is a conversational
+      // Hide the built-in tools (Bash/Write/Edit/…). ZIBBY chat is a conversational
       // butler, not a coding agent: its only way to ACT is the `zibby` MCP tools
       // (create_task delegates real work to the workflow). Without this the model
       // tries to build things itself with Bash/Write instead of dispatching a task.
-      "--tools",
-      "",
+      // A denylist, not `--tools ""`: with `--setting-sources ""`, ANY `--tools` value
+      // also drops the operator's claude.ai connectors (verified CLI behaviour), which
+      // the Slack allowlist below needs. Read-only built-ins (Read/Glob/Grep) run
+      // without a permission prompt, so they MUST stay on this list; everything else
+      // is also denied by `dontAsk` + `--allowedTools`.
+      "--disallowedTools",
+      CHAT_HIDDEN_BUILTIN_TOOLS,
       // Persona (tone) is operator-selectable and read live from SystemConfig; the
       // answer/ask/act governor inside is constant across personas.
       "--append-system-prompt",
@@ -338,6 +405,11 @@ export class ChatSessionService {
    * Per commit `eb525567`, this list is a PROMPTING hint, not a toolset filter — a
    * tool left off it still exists and still executes — so what actually makes the
    * KB tools reachable at all is the `mcpServers` entry above, not this list.
+   * (Verified 2026-10-26 for MCP tools under `dontAsk`: an off-list claude.ai
+   * connector tool IS denied — which is what keeps Slack send off-limits.)
+   *
+   * {@link CHAT_SLACK_TOOLS} adds the operator's claude.ai Slack connector, which the
+   * CLI loads from the operator's login (not from `mcpServers`), read + draft only.
    */
   protected async toolArgs(conversationId: string, teamId?: string): Promise<string[]> {
     const config = {
@@ -357,7 +429,12 @@ export class ChatSessionService {
     await ensureDir(this.chatDir);
     const file = path.join(this.chatDir, `${collisionResistantId("mcp-config")}.json`);
     await fs.writeFile(file, JSON.stringify(config), { mode: 0o600 });
-    return ["--mcp-config", file, "--allowedTools", "mcp__zibby__*,mcp__zibby-kb__*"];
+    return [
+      "--mcp-config",
+      file,
+      "--allowedTools",
+      ["mcp__zibby__*", "mcp__zibby-kb__*", ...CHAT_SLACK_TOOLS].join(","),
+    ];
   }
 
   /** The real spawn; overridden in tests. Isolated stdin, piped stdout/stderr. */

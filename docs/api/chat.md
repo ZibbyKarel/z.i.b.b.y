@@ -54,10 +54,11 @@ subscription). The verified recipe (spike, see spec §7):
 
 ```
 claude -p <msg> [--resume <sid>] \
-  --setting-sources "" --tools "" --append-system-prompt <persona> \
+  --setting-sources "" --disallowedTools <built-ins> --append-system-prompt <persona> \
   --output-format stream-json --include-partial-messages --verbose \
   --model sonnet --permission-mode dontAsk \
-  --mcp-config {zibby:{type:http,url:.../api/chat/mcp}} --allowedTools mcp__zibby__*
+  --mcp-config <0600 file: zibby + zibby-kb> \
+  --allowedTools mcp__zibby__*,mcp__zibby-kb__*,<claude.ai Slack read+draft tools>
 ```
 
 - **Token streaming** requires `--include-partial-messages` (otherwise whole
@@ -70,11 +71,20 @@ claude -p <msg> [--resume <sid>] \
   global hooks/plugins (which could inject foreign context) never fire — but
   auth (keychain) still works. (`CLAUDE_CONFIG_DIR` breaks auth — do not use
   it.)
-- **`--tools ""`** turns off every built-in tool (Bash/Write/Edit/…). ZIBBY
-  chat is a conversational butler, not a coding agent — it may only act through
-  the `zibby` MCP tools (`create_task` delegates the work to a workflow).
-  Without this, the model tries to build the app itself via Bash/Write instead
-  of dispatching. (Verified with a live eval.)
+- **`--disallowedTools <built-ins>`** (`CHAT_HIDDEN_BUILTIN_TOOLS`) hides every
+  built-in tool (Bash/Read/Write/Edit/…). ZIBBY chat is a conversational butler,
+  not a coding agent — it may only act through the `zibby` MCP tools
+  (`create_task` delegates the work to a workflow). Without this, the model tries
+  to build the app itself via Bash/Write instead of dispatching. (Verified with a
+  live eval.) It is a denylist rather than `--tools ""` because, together with
+  `--setting-sources ""`, any `--tools` value also drops the operator's claude.ai
+  connectors (verified 2026-10-26). Read-only built-ins (Read/Glob/Grep) run
+  without a permission prompt, so they must stay on the denylist.
+- **Slack connector (read + draft).** The CLI loads the operator's claude.ai
+  connectors from the login. `CHAT_SLACK_TOOLS` allow-lists the Slack connector's
+  read/search tools plus `slack_send_message_draft`; sending, scheduling and
+  canvas/list edits are left off, and `dontAsk` denies any off-list MCP tool
+  (verified), so chat can never post to Slack on its own.
 - The model is overridable via `ZIBBY_CHAT_MODEL` (default `sonnet`).
 
 Chat spawns get their env from `agentBaseEnv()`, which strips the operator-token env vars
@@ -161,8 +171,8 @@ more than once, once per addressed unit.
 **Attachments reach the work.** `create_task` forwards the turn's
 `attachmentSetId` straight through to `TaskSchedulerService.createTask`, so
 the dispatched run gets the files through the existing run-attachments path.
-The chat model itself never reads the files — it has no built-in tools
-(`--tools ""`) — so the system prompt (`ChatSessionService.buildArgs`, via
+The chat model itself never reads the files — its built-in tools are hidden
+(`--disallowedTools`) — so the system prompt (`ChatSessionService.buildArgs`, via
 `chat-attachment-prompt.ts`'s `buildAttachmentPromptSection`) lists every
 attachment by name/type/size, and additionally INLINES UTF-8 text files (up to
 a shared 32 KB total budget, first-fit in upload order) inside a block that
