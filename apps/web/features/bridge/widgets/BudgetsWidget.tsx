@@ -7,6 +7,7 @@ import {
   BoardText,
   Progress,
   type ProgressBarTone,
+  type SubNavLinkComponent,
   TextLink,
 } from "@zibby/design-system";
 import type { Route } from "next";
@@ -162,7 +163,11 @@ function BudgetRow({ row }: BudgetRowProps) {
     <BoardRow
       tone={row.status === "exhausted" ? "error" : row.status === "near" ? "blocked" : "neutral"}
     >
-      <TextLink data-testid={BudgetsWidgetTestId.Row} href={rowHref(row)} linkComponent={Link}>
+      <TextLink
+        data-testid={BudgetsWidgetTestId.Row}
+        href={rowHref(row)}
+        linkComponent={Link as SubNavLinkComponent}
+      >
         <BoardLine between gap="6" indent={false}>
           <span data-testid={BudgetsWidgetTestId.Name}>
             <BoardText kind="title">{name}</BoardText>

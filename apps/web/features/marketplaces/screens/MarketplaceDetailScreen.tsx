@@ -12,6 +12,7 @@ import {
   Stack,
   type SubNavLinkComponent,
   Tag,
+  TextLink,
   Typography,
 } from "@zibby/design-system";
 import type { MarketplaceDetail } from "@zibby/contracts";
@@ -30,6 +31,14 @@ import {
   useUpdateMarketplaceMutation,
 } from "../mutations";
 import { useMarketplaceQuery } from "../queries";
+
+/** Web URL of a marketplace source: an http(s) URL as-is, a GitHub `owner/repo` shorthand
+ *  expanded; a local path or other remote has none. */
+export function sourceHref(source: string): string | undefined {
+  if (/^https?:\/\//.test(source)) return source;
+  if (/^[\w.-]+\/[\w.-]+$/.test(source)) return `https://github.com/${source}`;
+  return undefined;
+}
 
 export enum MarketplaceDetailScreenTestId {
   Update = "marketplace-detail-update",
@@ -63,6 +72,7 @@ function MarketplaceDetail({ marketplace }: { marketplace: MarketplaceDetail }) 
   const uninstall = useUninstallPluginMutation();
   const remove = useRemoveMarketplaceMutation();
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const href = sourceHref(marketplace.source);
   // The alert reflects only the most recently started action, never a stale failure.
   const mutations = { update, installAll, install, uninstall, remove };
   const [last, setLast] = useState<keyof typeof mutations>();
@@ -100,15 +110,28 @@ function MarketplaceDetail({ marketplace }: { marketplace: MarketplaceDetail }) 
                   {marketplace.devMode ? t("modeDev") : t("modeNormal")}
                 </Tag>
               </Stack>
-              <Typography
-                mono
-                data-testid={MarketplaceDetailScreenTestId.Source}
-                size="sm"
-                type="note"
-                variant="secondary"
-              >
-                {marketplace.source}
-              </Typography>
+              {href ? (
+                <TextLink
+                  data-testid={MarketplaceDetailScreenTestId.Source}
+                  href={href}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <Typography mono size="sm" type="note" variant="secondary">
+                    {marketplace.source}
+                  </Typography>
+                </TextLink>
+              ) : (
+                <Typography
+                  mono
+                  data-testid={MarketplaceDetailScreenTestId.Source}
+                  size="sm"
+                  type="note"
+                  variant="secondary"
+                >
+                  {marketplace.source}
+                </Typography>
+              )}
             </Stack>
             <Stack align="center" direction="row" gap="100">
               <Button

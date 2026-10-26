@@ -3,7 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MarketplaceDetail } from "@zibby/contracts";
 import { MarketplacePluginPanelTestId } from "../components/MarketplacePluginPanel";
-import { MarketplaceDetailScreen, MarketplaceDetailScreenTestId } from "./MarketplaceDetailScreen";
+import {
+  MarketplaceDetailScreen,
+  MarketplaceDetailScreenTestId,
+  sourceHref,
+} from "./MarketplaceDetailScreen";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -143,5 +147,15 @@ describe("MarketplaceDetailScreen", () => {
     // A newer action starts — the stale uninstall failure no longer shows.
     await userEvent.click(screen.getByTestId(MarketplaceDetailScreenTestId.Update));
     expect(screen.queryByTestId(MarketplaceDetailScreenTestId.Error)).toBeNull();
+  });
+});
+
+describe("sourceHref", () => {
+  it("links http(s) URLs and GitHub shorthands, not local paths", () => {
+    expect(sourceHref("https://github.com/ZibbyKarel/skills")).toBe(
+      "https://github.com/ZibbyKarel/skills",
+    );
+    expect(sourceHref("ZibbyKarel/skills")).toBe("https://github.com/ZibbyKarel/skills");
+    expect(sourceHref("/repo/skills")).toBeUndefined();
   });
 });

@@ -9,6 +9,7 @@ import {
   Container,
   HoldButton,
   Stack,
+  type SubNavLinkComponent,
   TextAreaField,
   TextLink,
 } from "@zibby/design-system";
@@ -232,7 +233,7 @@ function ProposalRow({ proposal, now }: ProposalRowProps) {
             <TextLink
               data-testid={ProposalsWidgetTestId.Provenance}
               href={provenance.href}
-              linkComponent={Link}
+              linkComponent={Link as SubNavLinkComponent}
             >
               <BoardText underline kind="meta" tone="ink">
                 {t(`provenance.${provenance.kind}`)}

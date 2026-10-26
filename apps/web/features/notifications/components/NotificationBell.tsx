@@ -8,6 +8,7 @@ import {
   Row,
   Sheet,
   Stack,
+  type SubNavLinkComponent,
   TextLink,
   Typography,
 } from "@zibby/design-system";
@@ -153,7 +154,7 @@ export function NotificationBell() {
                     <TextLink
                       data-testid={NotificationBellTestId.HealthTaskLink}
                       href={`/work/tasks/${taskId}` as Route}
-                      linkComponent={Link}
+                      linkComponent={Link as SubNavLinkComponent}
                     >
                       {t("healthAnalysisStarted")}
                     </TextLink>

@@ -9,6 +9,7 @@ import {
   SectionLabel,
   SelectField,
   Stack,
+  type SubNavLinkComponent,
   TextLink,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
@@ -138,7 +139,7 @@ function Group({ title, items, teamId, testId }: GroupProps) {
           <TextLink
             data-testid={TeamKbWidgetTestId.Row}
             href={teamNoteHref(teamId, item.noteId)}
-            linkComponent={Link}
+            linkComponent={Link as SubNavLinkComponent}
           >
             <BoardText kind="title">{item.text}</BoardText>
             <BoardLine gap="6" indent={false}>

@@ -5,7 +5,15 @@ import Link from "next/link";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import type { Project } from "@zibby/contracts";
-import { Button, Panel, Stack, StatusDot, TextLink, Typography } from "@zibby/design-system";
+import {
+  Button,
+  Panel,
+  Stack,
+  StatusDot,
+  type SubNavLinkComponent,
+  TextLink,
+  Typography,
+} from "@zibby/design-system";
 import {
   useAnalyzeProjectHealthMutation,
   useCheckProjectHealthMutation,
@@ -152,7 +160,7 @@ export function ProjectHealthPanel({ projectId, healthCheck }: ProjectHealthPane
               <TextLink
                 data-testid={ProjectHealthPanelTestId.AnalysisLink}
                 href={`/work/tasks/${taskId}` as Route}
-                linkComponent={Link}
+                linkComponent={Link as SubNavLinkComponent}
               >
                 {t("analysisStarted")}
               </TextLink>
