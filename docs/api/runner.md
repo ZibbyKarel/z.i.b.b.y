@@ -318,7 +318,9 @@ Key assembled pieces:
   hooks and skills never load.
 - **`--plugin-dir`** — the only way a plugin reaches a run. One flag per entry,
   in order: the agent's `plugins[]`, then the project's `plugins[]`, then ZIBBY's
-  own `zibby` commands plugin. Entries are absolute paths (a missing one is
+  own `zibby` commands plugin, then the user-scope `installPath` of every plugin
+  installed from a ZIBBY-managed marketplace (`docs/api/marketplaces.md`;
+  deduped, fail-open). Entries are absolute paths (a missing one is
   silently ignored by the CLI);
   ZIBBY vendors no third-party plugin tree. The args are persisted in the run
   spec, so the loaded plugins are the trace and approval-resume replays them.

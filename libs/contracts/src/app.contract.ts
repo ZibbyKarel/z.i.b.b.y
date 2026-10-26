@@ -41,6 +41,7 @@ import { projectHealthContract } from "./project-health/project-health.contract"
 import { inventoryContract } from "./inventory/inventory.contract";
 import { proposalsContract } from "./proposals/proposals.contract";
 import { quickActionsContract } from "./quick-actions/quick-actions.contract";
+import { marketplacesContract } from "./marketplaces/marketplaces.contract";
 import { todoContract } from "./todo/todo.contract";
 import { projectsContract } from "./projects/projects.contract";
 import { reviewLearningContract } from "./review-learning/review-learning.contract";
@@ -104,6 +105,7 @@ export const appContract = c.router({
   inventory: inventoryContract,
   proposals: proposalsContract,
   quickActions: quickActionsContract,
+  marketplaces: marketplacesContract,
   todo: todoContract,
   roadmap: roadmapContract,
   inbox: inboxContract,

@@ -5,6 +5,11 @@ import { COMMANDS_DIR, CommandsStorageService } from "../commands/commands.stora
 import { HOOKS_DIR, HooksStorageService } from "../hooks/hooks.storage.service";
 import { KbAuthModule } from "../kb/kb-auth.module";
 import { KbMcpAuthGuard } from "../kb/kb-mcp-auth.guard";
+import {
+  MARKETPLACES_FILE,
+  MarketplacesStore,
+  resolveMarketplacesFile,
+} from "../marketplaces/marketplaces.store";
 import { MCP_CREDENTIALS_DIR, McpCredentialsStore } from "../mcp/mcp-credentials.store";
 import { MCP_DIR, McpServersStorageService } from "../mcp/mcp.storage.service";
 import { dataDir } from "../shared/data-dir";
@@ -58,6 +63,9 @@ import { RunMcpController } from "./run-mcp.controller";
     McpServersStorageService,
     McpCredentialsStore,
     CommandsStorageService,
+    // Re-read per call, so this second instance always sees MarketplacesModule's writes.
+    { provide: MARKETPLACES_FILE, useFactory: resolveMarketplacesFile },
+    MarketplacesStore,
     ClaudeRunCommandService,
     ClaudePreflightService,
     CommandMaterializerService,
