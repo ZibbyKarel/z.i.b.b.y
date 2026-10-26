@@ -1,9 +1,11 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
 import type { Agent, Hook, McpServer, Skill } from "@zibby/contracts";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { HooksStorageService } from "../hooks/hooks.storage.service";
+import { managedPluginDirs, resolveClaudePluginsDir } from "../marketplaces/marketplace-catalog";
+import { MarketplacesStore } from "../marketplaces/marketplaces.store";
 import { McpCredentialsStore } from "../mcp/mcp-credentials.store";
 import { ENTITY_MCP_SERVER_ID, McpServersStorageService } from "../mcp/mcp.storage.service";
 import { ISOLATED_SETTING_SOURCES } from "../shared/spawn-claude-cli";
@@ -458,6 +460,8 @@ export class ClaudeRunCommandService {
     private readonly hooks: HooksStorageService,
     private readonly mcp: McpServersStorageService,
     private readonly mcpCredentials: McpCredentialsStore,
+    // Optional so direct constructions (tests) without marketplaces still work.
+    @Optional() private readonly marketplaces?: MarketplacesStore,
   ) {}
 
   async buildClaudeCommand(opts: ClaudeRunOptions): Promise<{
@@ -542,7 +546,12 @@ export class ClaudeRunCommandService {
     // Grant access to dirs outside the sandbox (e.g. the Cleaner's target).
     for (const dir of opts.grantDirs ?? []) args.push("--add-dir", dir);
     if (opts.contextDir) args.push("--add-dir", opts.contextDir);
-    for (const dir of opts.pluginDirs ?? []) args.push("--plugin-dir", dir);
+    // Plugins installed from ZIBBY-managed marketplaces ride every run too (deduped).
+    const pluginDirs = new Set([
+      ...(opts.pluginDirs ?? []),
+      ...(await this.marketplacePluginDirs()),
+    ]);
+    for (const dir of pluginDirs) args.push("--plugin-dir", dir);
     // Phase 49: continue a captured session (re-run of an errored/interrupted run)
     // instead of a cold start — the conversation history carries the prior context.
     if (opts.resumeSessionId) args.push("--resume", opts.resumeSessionId);
@@ -554,6 +563,24 @@ export class ClaudeRunCommandService {
     // `CLAUDE_BIN` is a test seam (point it at a stub binary); production runs the
     // real `claude` CLI. The command/args are always the real claude shape.
     return { command: process.env.CLAUDE_BIN ?? "claude", args, catalogAgentIds };
+  }
+
+  /**
+   * installPaths of the user-scope plugins of every ZIBBY-managed marketplace —
+   * minus plugins disabled in `~/.claude/settings.json` (`enabledPlugins`), missing
+   * installPaths, and every plugin that ships hooks: runs use `--setting-sources ""`
+   * so Claude would apply neither the disable flag nor any review of those hooks,
+   * and a third-party PreToolUse hook in an autonomous run could pre-empt ZIBBY's
+   * approval gate (Laws 1 and 4). See `managedPluginDirs`.
+   * Fail-open: any read failure yields none — it never blocks a run.
+   */
+  private async marketplacePluginDirs(): Promise<string[]> {
+    if (!this.marketplaces) return [];
+    try {
+      return await managedPluginDirs(await this.marketplaces.list(), resolveClaudePluginsDir());
+    } catch {
+      return [];
+    }
   }
 
   /**

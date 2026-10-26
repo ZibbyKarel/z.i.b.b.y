@@ -78,6 +78,8 @@ export * from "./pins/pin.schema";
 export * from "./pins/pins.contract";
 export * from "./quick-actions/quick-action.schema";
 export * from "./quick-actions/quick-actions.contract";
+export * from "./marketplaces/marketplace.schema";
+export * from "./marketplaces/marketplaces.contract";
 export * from "./todo/todo.schema";
 export * from "./todo/todo.contract";
 export * from "./roadmap/roadmap-item.schema";

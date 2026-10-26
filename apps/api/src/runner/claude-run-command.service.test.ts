@@ -1,10 +1,18 @@
-import type { Agent, Hook, McpCredentialsInput, McpServer, Skill } from "@zibby/contracts";
+import type {
+  Agent,
+  Hook,
+  Marketplace,
+  McpCredentialsInput,
+  McpServer,
+  Skill,
+} from "@zibby/contracts";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { AgentsStorageService } from "../agents/agents.storage.service";
 import type { HooksStorageService } from "../hooks/hooks.storage.service";
+import type { MarketplacesStore } from "../marketplaces/marketplaces.store";
 import type { McpCredentialsStore } from "../mcp/mcp-credentials.store";
 import type { McpServersStorageService } from "../mcp/mcp.storage.service";
 import type { SkillsStorageService } from "../skills/skills.storage.service";
@@ -23,6 +31,8 @@ interface ServiceOpts {
   hooks?: Hook[];
   mcpServers?: McpServer[];
   mcpCredentials?: Record<string, McpCredentialsInput>;
+  /** ZIBBY-managed marketplace records; a function lets a test make `list` throw. */
+  marketplaces?: Marketplace[] | (() => Promise<Marketplace[]>);
 }
 
 /** Build the service over fixed in-memory catalogs (only `list`/`read` are exercised). */
@@ -45,7 +55,20 @@ function makeService(
   const mcpCreds = {
     read: async (id: string) => opts.mcpCredentials?.[id] ?? null,
   } as unknown as McpCredentialsStore;
-  return new ClaudeRunCommandService(agentStore, skillStore, hookStore, mcpStore, mcpCreds);
+  const { marketplaces } = opts;
+  const marketplaceStore = marketplaces
+    ? ({
+        list: typeof marketplaces === "function" ? marketplaces : async () => marketplaces,
+      } as unknown as MarketplacesStore)
+    : undefined;
+  return new ClaudeRunCommandService(
+    agentStore,
+    skillStore,
+    hookStore,
+    mcpStore,
+    mcpCreds,
+    marketplaceStore,
+  );
 }
 
 /** Value following a flag in an argv array (single-valued flags). */
@@ -919,5 +942,91 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
       task: "do it",
     });
     expect(args).not.toContain("--plugin-dir");
+  });
+
+  describe("marketplace plugins", () => {
+    let pluginsDir: string;
+    const record = (id: string): Marketplace => ({
+      id,
+      source: `owner/${id}`,
+      devMode: false,
+      managedClone: false,
+      addedAt: "2026-10-26T10:00:00.000Z",
+    });
+
+    beforeEach(async () => {
+      pluginsDir = await fs.mkdtemp(path.join(os.tmpdir(), "run-marketplace-plugins-"));
+      process.env.CLAUDE_PLUGINS_DIR = pluginsDir;
+      for (const p of ["/cache/mine/zibby/1", "/cache/mine/hooked/1", "/cache/foreign/other/1"]) {
+        await fs.mkdir(path.join(pluginsDir, p), { recursive: true });
+      }
+      await fs.mkdir(path.join(pluginsDir, "/cache/mine/hooked/1/hooks"));
+      await fs.writeFile(path.join(pluginsDir, "/cache/mine/hooked/1/hooks/hooks.json"), "{}");
+      // installPaths under the tmp dir; `/opt/plugins/a` (the explicit pluginDir) stays literal.
+      const install = (p: string, scope = "user") => [
+        { scope, installPath: p.startsWith("/cache") ? path.join(pluginsDir, p) : p, version: "1" },
+      ];
+      await fs.writeFile(
+        path.join(pluginsDir, "installed_plugins.json"),
+        JSON.stringify({
+          version: 2,
+          plugins: {
+            "zibby@mine": install("/cache/mine/zibby/1"),
+            "dup@mine": install("/opt/plugins/a"),
+            "hooked@mine": install("/cache/mine/hooked/1"),
+            "missing@mine": install("/cache/mine/missing/1"),
+            "proj@mine": install("/cache/mine/proj/1", "project"),
+            "other@foreign": install("/cache/foreign/other/1"),
+          },
+        }),
+      );
+    });
+    afterEach(async () => {
+      delete process.env.CLAUDE_PLUGINS_DIR;
+      await fs.rm(pluginsDir, { recursive: true, force: true });
+    });
+
+    const pluginDirsOf = (args: string[]) =>
+      args.flatMap((a, i) => (a === "--plugin-dir" ? [args[i + 1]] : []));
+
+    it("appends existing, hook-free user-scope plugins of managed marketplaces only", async () => {
+      const { args } = await makeService([CODER], [], {
+        marketplaces: [record("mine")],
+      }).buildClaudeCommand({ instructions: "x", task: "do it", pluginDirs: ["/opt/plugins/a"] });
+      // `hooked` ships hooks (could pre-empt the approval gate), `missing` has no dir,
+      // `dup` (/opt/plugins/a) does not exist either — but it is passed explicitly.
+      expect(pluginDirsOf(args)).toEqual([
+        "/opt/plugins/a",
+        path.join(pluginsDir, "/cache/mine/zibby/1"),
+      ]);
+    });
+
+    it("skips a plugin disabled in the sibling settings.json", async () => {
+      // settings.json sits next to the plugins dir, so nest one under the tmp dir.
+      const claudeDir = path.join(pluginsDir, "claude");
+      await fs.mkdir(path.join(claudeDir, "plugins"), { recursive: true });
+      process.env.CLAUDE_PLUGINS_DIR = path.join(claudeDir, "plugins");
+      await fs.rename(
+        path.join(pluginsDir, "installed_plugins.json"),
+        path.join(claudeDir, "plugins", "installed_plugins.json"),
+      );
+      await fs.writeFile(
+        path.join(claudeDir, "settings.json"),
+        JSON.stringify({ enabledPlugins: { "zibby@mine": false } }),
+      );
+      const { args } = await makeService([CODER], [], {
+        marketplaces: [record("mine")],
+      }).buildClaudeCommand({ instructions: "x", task: "do it" });
+      expect(args).not.toContain("--plugin-dir");
+    });
+
+    it("fails open when the record cannot be read", async () => {
+      const { args } = await makeService([CODER], [], {
+        marketplaces: async () => {
+          throw new Error("boom");
+        },
+      }).buildClaudeCommand({ instructions: "x", task: "do it" });
+      expect(args).not.toContain("--plugin-dir");
+    });
   });
 });

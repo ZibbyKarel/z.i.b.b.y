@@ -29,6 +29,24 @@ vi.mock("../../quick-actions/mutations", () => ({
 vi.mock("../../tasks/mutations", () => ({
   useCreateTaskMutation: () => ({ mutate: d.create, isPending: d.createPending }),
 }));
+// The real CommandLine pulls a dozen catalogs; a plain textarea with its contract
+// (onTextChange mirror, Enter → onSubmit) is enough here.
+vi.mock("../../tasks/components/CommandLine/CommandLine", () => ({
+  CommandLine: (p: {
+    onTextChange?: (t: string) => void;
+    onSubmit: (t: string) => void;
+    allowSkillMentions?: boolean;
+  }) => (
+    <textarea
+      data-allow-skills={String(p.allowSkillMentions)}
+      data-testid="cl-input"
+      onChange={(e) => p.onTextChange?.(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") p.onSubmit(e.currentTarget.value);
+      }}
+    />
+  ),
+}));
 vi.mock("../../agents/queries", () => ({
   useAgentsQuery: () => ({ data: d.agents }),
 }));
@@ -122,7 +140,7 @@ describe("QuickActionsWidget", () => {
   it("editing: Add appends a trimmed action with the chosen target", async () => {
     renderWithProviders(<QuickActionsWidget {...setup({ editing: true })} />);
     await userEvent.type(screen.getByTestId(QuickActionsWidgetTestId.Label), " Deploy ");
-    await userEvent.type(screen.getByTestId(QuickActionsWidgetTestId.Text), " Run deploy ");
+    await userEvent.type(screen.getByTestId("cl-input"), " Run deploy ");
     const target = screen.getByTestId(QuickActionsWidgetTestId.Target);
     await userEvent.click(within(target).getByTestId(DropdownTestId.Trigger));
     const option = screen
@@ -140,23 +158,34 @@ describe("QuickActionsWidget", () => {
   it("editing: blank label or text disables Add and a real submit is ignored", async () => {
     renderWithProviders(<QuickActionsWidget {...setup({ editing: true })} />);
     await userEvent.type(screen.getByTestId(QuickActionsWidgetTestId.Label), "  ");
-    await userEvent.type(screen.getByTestId(QuickActionsWidgetTestId.Text), "something");
+    await userEvent.type(screen.getByTestId("cl-input"), "something");
     expect(screen.getByTestId(QuickActionsWidgetTestId.Add)).toBeDisabled();
     fireEvent.submit(screen.getByTestId(QuickActionsWidgetTestId.Form));
     expect(d.set).not.toHaveBeenCalled();
   });
 
-  it("editing: label and text forward their length limits", () => {
+  it("editing: the label forwards its length limit; the text field offers / skills", () => {
     renderWithProviders(<QuickActionsWidget {...setup({ editing: true })} />);
     expect(screen.getByTestId(QuickActionsWidgetTestId.Label)).toHaveAttribute("maxlength", "80");
-    expect(screen.getByTestId(QuickActionsWidgetTestId.Text)).toHaveAttribute("maxlength", "8000");
+    expect(screen.getByTestId(QuickActionsWidgetTestId.Text)).toContainElement(
+      screen.getByTestId("cl-input"),
+    );
+    expect(screen.getByTestId("cl-input")).toHaveAttribute("data-allow-skills", "true");
+  });
+
+  it("editing: Enter in the text field adds the action like the Add button", async () => {
+    renderWithProviders(<QuickActionsWidget {...setup({ editing: true })} />);
+    await userEvent.type(screen.getByTestId(QuickActionsWidgetTestId.Label), "Standup");
+    await userEvent.type(screen.getByTestId("cl-input"), "/zibby:standup-post{Enter}");
+    const body = d.set.mock.calls[0]?.[0].body as QuickAction[];
+    expect(body[2]).toMatchObject({ label: "Standup", text: "/zibby:standup-post" });
   });
 
   it("editing: Add is disabled at 50 actions", async () => {
     d.actions = Array.from({ length: 50 }, (_, i) => ({ id: `a${i}`, label: `L${i}`, text: "t" }));
     renderWithProviders(<QuickActionsWidget {...setup({ editing: true })} />);
     await userEvent.type(screen.getByTestId(QuickActionsWidgetTestId.Label), "x");
-    await userEvent.type(screen.getByTestId(QuickActionsWidgetTestId.Text), "y");
+    await userEvent.type(screen.getByTestId("cl-input"), "y");
     expect(screen.getByTestId(QuickActionsWidgetTestId.Add)).toBeDisabled();
   });
 
@@ -166,7 +195,7 @@ describe("QuickActionsWidget", () => {
     for (const b of screen.getAllByTestId(QuickActionsWidgetTestId.Remove))
       expect(b).toBeDisabled();
     await userEvent.type(screen.getByTestId(QuickActionsWidgetTestId.Label), "x");
-    await userEvent.type(screen.getByTestId(QuickActionsWidgetTestId.Text), "y");
+    await userEvent.type(screen.getByTestId("cl-input"), "y");
     expect(screen.getByTestId(QuickActionsWidgetTestId.Add)).toBeDisabled();
   });
 

@@ -35,6 +35,7 @@ import { useDepartmentsQuery } from "../../../departments/queries/useDepartments
 import { useTeamsQuery } from "../../../teams";
 import { useCompaniesQuery } from "../../../companies";
 import { useProjectsQuery } from "../../../projects";
+import { useMarketplaceSkillsQuery } from "../../../marketplaces";
 import { useSkillsQuery } from "../../../skills";
 import { useUploadTaskAttachmentsMutation } from "../../mutations/useUploadTaskAttachmentsMutation";
 import { type DepartmentId, type TaskTarget, extractPathRanges } from "../../task";
@@ -254,6 +255,9 @@ interface MentionRow {
   name: string;
   glyph: IconName;
   color?: string;
+  /** A marketplace skill row — it inserts its `/plugin:skill` text but never sets
+   *  the `skill` tag (its id is no ZIBBY skill id; sending it would 404). */
+  marketplace?: boolean;
 }
 type MentionResult = MentionRow & {
   kind: "agent" | "workflow" | "department" | ScopeKind | "skill";
@@ -660,7 +664,24 @@ export function CommandLine({
   const { data: teams = [] } = useTeamsQuery();
   const { data: companies = [] } = useCompaniesQuery();
   const { data: projects = [] } = useProjectsQuery();
-  const { data: skills = [] } = useSkillsQuery();
+  const { data: zibbySkills = [] } = useSkillsQuery();
+  const { data: marketplaceSkills = [] } = useMarketplaceSkillsQuery();
+  // `/` offers ZIBBY skills plus installed marketplace ones (`plugin:skill`), deduped by name.
+  const skills = useMemo(() => {
+    const seen = new Set(zibbySkills.map((s) => s.name));
+    return [
+      ...zibbySkills.map((s) => ({ ...s, marketplace: false })),
+      ...marketplaceSkills
+        .filter((s) => !seen.has(s.name))
+        .map((s) => ({
+          id: s.id,
+          name: s.name,
+          glyph: "spark" as const,
+          desc: s.desc ?? "",
+          marketplace: true,
+        })),
+    ];
+  }, [zibbySkills, marketplaceSkills]);
 
   const hasScope = scopeKinds.length > 0;
   const enabledTriggers = useMemo<ReadonlySet<Trigger>>(
@@ -998,8 +1019,11 @@ export function CommandLine({
       setScopeTags((prev) => ({ ...prev, [kind]: { id: result.id, name: result.name } }));
       onScopeChange?.(kind, result.id);
     } else if (result.kind === "skill") {
-      setSkill({ id: result.id, name: result.name });
-      onSkillChange?.(result.id);
+      // A marketplace skill is just its inserted `/plugin:skill` text.
+      if (!result.marketplace) {
+        setSkill({ id: result.id, name: result.name });
+        onSkillChange?.(result.id);
+      }
     } else {
       const picked = toPickedTarget(result);
       if (multipleTargets) {
@@ -1145,7 +1169,13 @@ export function CommandLine({
     if (mention.trigger === "/") {
       return skills
         .filter((sk) => matchesQuery(q, sk.name, sk.id))
-        .map((sk) => ({ kind: "skill" as const, id: sk.id, name: sk.name, glyph: sk.glyph }))
+        .map((sk) => ({
+          kind: "skill" as const,
+          id: sk.id,
+          name: sk.name,
+          glyph: sk.glyph,
+          marketplace: sk.marketplace,
+        }))
         .slice(0, 50);
     }
     return atCandidates
