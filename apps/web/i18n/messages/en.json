@@ -915,6 +915,7 @@
     "addressThreadsError": "Could not load the threads. The drafts below will be sent unchanged.",
     "approvePushReplies": "Approve · push + {n} replies",
     "approveReplies": "Approve · {n} replies",
+    "sheetClose": "Close sheet",
     "operatorTokenMissing": "The operator token is missing or wrong — set it in Settings → General.",
     "wants": "wants to",
     "exactAction": "exactly what the agent will do",
@@ -1341,6 +1342,7 @@
         "metaInput": "{task} · {n} attachments"
       },
       "banner": {
+        "openDetail": "Open detail",
         "approvalHead": "Needs you · severity {sev} · {risk}",
         "approvalMeta": "Requested {at} · via {via} · reviewed before it takes effect",
         "hold": "Hold to approve",

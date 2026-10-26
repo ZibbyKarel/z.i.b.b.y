@@ -244,6 +244,7 @@ export interface RunRowVm {
   /** `PROCESSOR · STAGE`. */
   step: string;
   tone: StateTone;
+  status: RunView["status"];
   /** Completed / total workflow phases — null when the run has no phase list. */
   stages: RunStages | null;
   /** 0-100 stage percentage for workflows; null = indeterminate. */
@@ -287,6 +288,7 @@ export function runRows(
       title: runTitle(r),
       step: [r.processor?.name ?? r.owner, stage].filter(Boolean).join(" · "),
       tone: normalizeStateTone(runStateTone(r.status) ?? "idle"),
+      status: r.status,
       stages,
       pct: stages ? Math.round((stages.done / stages.total) * 100) : null,
       issue: r.roadmapItemLabel ?? null,

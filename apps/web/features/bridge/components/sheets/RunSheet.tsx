@@ -1,15 +1,11 @@
 "use client";
 
-import {
-  AnchoredSheet,
-  Markdown,
-  SheetBlock,
-  normalizeStateTone,
-} from "@zibby/design-system";
+import { AnchoredSheet, Markdown, SheetBlock, normalizeStateTone } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useApprovalsQuery } from "../../../approvals";
+import { useApprovalSheetParam } from "../../../approvals/useApprovalSheetParam";
 import { useTaskRunQuery } from "../../../runs/queries/useTaskRunQuery";
 import { RunDetail } from "../../../runs/components/RunDetail";
 import { approvalForRun, runStateTone } from "../../../runs/run";
@@ -25,6 +21,7 @@ import { type SheetProps, geometry } from "./sheetTypes";
 export function RunSheet({ id, anchor, onClose }: SheetProps) {
   const t = useTranslations();
   const router = useRouter();
+  const approvalSheet = useApprovalSheetParam();
   const { data: run } = useTaskRunQuery(id);
   const { data: approvals = [] } = useApprovalsQuery();
   const approval = run ? approvalForRun(approvals, run) : undefined;
@@ -46,7 +43,7 @@ export function RunSheet({ id, anchor, onClose }: SheetProps) {
       title={run.title || run.taskTitle || run.runId}
       tone={normalizeStateTone(runStateTone(run.status) ?? "idle")}
     >
-      <RunDetail embedded run={run}>
+      <RunDetail embedded onOpenApproval={approvalSheet.open} run={run}>
         {checkpoint ? (
           <SheetBlock label={t("bridge.sheet.run.output")}>
             <Markdown escapeHtml source={checkpoint} />

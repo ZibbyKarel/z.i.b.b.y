@@ -47,6 +47,8 @@ export interface RunApprovalBannerProps {
   reviseOpen: boolean;
   onToggleRevise: () => void;
   onApproved?: () => void;
+  /** Opens the full approval detail sheet (the approval's own sheet). */
+  onOpenDetail?: () => void;
   /** The gated phase's output — part of the approval, so it lives inside the card. */
   children?: ReactNode;
 }
@@ -58,6 +60,7 @@ export function RunApprovalBanner({
   reviseOpen,
   onToggleRevise,
   onApproved,
+  onOpenDetail,
   children,
 }: RunApprovalBannerProps) {
   const t = useTranslations("runs.detail");
@@ -125,6 +128,11 @@ export function RunApprovalBanner({
                 }
               />
               <Stack direction="row" gap="75">
+                {onOpenDetail && (
+                  <Button block intent="ghost" onClick={onOpenDetail} size="sm">
+                    {t("banner.openDetail")}
+                  </Button>
+                )}
                 {approval.action === "stage-approval" && (
                   <Button
                     block

@@ -5,7 +5,7 @@ import {
   Button,
   Card,
   Checkbox,
-  DiffView,
+  FileDiffView,
   Markdown,
   Stack,
   Tag,
@@ -49,14 +49,26 @@ export interface ReviewThreadProps {
 
 const SNIPPET_LINES = 4;
 
-/** The hunk without its `@@` header, last 4 lines (the last one is the commented line). */
-function snippetOf(diffHunk: string): string {
-  return diffHunk
-    .replace(/\n+$/, "")
-    .split("\n")
-    .filter((l) => !l.startsWith("@@"))
-    .slice(-SNIPPET_LINES)
-    .join("\n");
+/**
+ * The last 4 lines of the thread's diff hunk (the last one is the commented line) as a one-file
+ * unified diff for `FileDiffView`; the `@@` header is re-based so its line numbers stay right.
+ */
+export function snippetDiff(path: string, diffHunk: string): string {
+  const [header = "", ...rest] = diffHunk.replace(/\n+$/, "").split("\n");
+  const lines = rest.filter((l) => !l.startsWith("@@"));
+  const kept = lines.slice(-SNIPPET_LINES);
+  const skipped = lines.slice(0, lines.length - kept.length);
+  const m = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(header);
+  const count = (ls: string[], sign: "+" | "-") =>
+    ls.filter((l) => !l.startsWith(sign) && !l.startsWith("\\")).length;
+  const oldStart = Number(m?.[1] ?? 1) + count(skipped, "+");
+  const newStart = Number(m?.[2] ?? 1) + count(skipped, "-");
+  return [
+    `--- a/${path}`,
+    `+++ b/${path}`,
+    `@@ -${oldStart},${count(kept, "+")} +${newStart},${count(kept, "-")} @@`,
+    ...kept,
+  ].join("\n");
 }
 
 /** One GitHub review thread: file, code context, comments and an optional reply box. */
@@ -94,7 +106,7 @@ export function ReviewThread({ thread, outcome, isNew, reply, now }: ReviewThrea
           ) : null}
         </Stack>
         <div data-testid={ReviewThreadTestId.Snippet}>
-          <DiffView unified={snippetOf(thread.diffHunk)} />
+          <FileDiffView diff={snippetDiff(thread.path, thread.diffHunk)} showFileName={false} />
         </div>
         {thread.comments.map((c) => (
           <Stack data-testid={ReviewThreadTestId.Comment} gap="100" key={c.id}>

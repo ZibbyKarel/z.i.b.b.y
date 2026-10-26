@@ -30,7 +30,11 @@ import {
   useApproveMutation,
   useRejectMutation,
 } from "../../../features/approvals";
-import { ApprovalSheet } from "../../../features/approvals/components/ApprovalSheet";
+import {
+  ApprovalSheet,
+  approvalRowKey,
+} from "../../../features/approvals/components/ApprovalSheet";
+import { useApprovalSheetParam } from "../../../features/approvals/useApprovalSheetParam";
 import { TasksDockPanel, useLiveRuns } from "../../../features/runs/components/TasksDockPanel";
 import { HIGH_RISK_TYPES, formatWaited } from "../../../features/approvals/approval";
 import { counterSuffix } from "../../../features/inbox/inbox";
@@ -70,28 +74,6 @@ function matchEntityDetail(
   const [, kind, id] = match as unknown as [string, SubnavPinEntityKind, string];
   if (!id || id === "new") return null;
   return { kind, id, href: `/${kind}/${id}` };
-}
-
-/** Sets (or clears) the shell's `?approval=` search param over whatever page
- *  is mounted — the ZB-08 sheet reads it directly, so opening it never
- *  navigates away from the current page. */
-function useApprovalSheetParam() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const approvalId = searchParams.get("approval");
-  const open = (id: string) => {
-    const next = new URLSearchParams(searchParams);
-    next.set("approval", id);
-    router.push(`${pathname}?${next.toString()}` as Route);
-  };
-  const close = () => {
-    const next = new URLSearchParams(searchParams);
-    next.delete("approval");
-    const qs = next.toString();
-    router.push((qs ? `${pathname}?${qs}` : pathname) as Route);
-  };
-  return { approvalId, open, close };
 }
 
 /**
@@ -327,6 +309,7 @@ function NeedsYouRail({ onOpenApproval }: { onOpenApproval: (id: string) => void
                 agentName={a.skill}
                 approveLabel={t("needsYouApprove")}
                 approvePending={approve.isPending && approve.variables?.params.id === a.id}
+                data-rk={approvalRowKey(a.id)}
                 denyLabel={t("needsYouDeny")}
                 denyPending={reject.isPending && reject.variables?.params.id === a.id}
                 {...symbolOf(a.skill)}

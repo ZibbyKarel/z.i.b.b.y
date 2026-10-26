@@ -142,7 +142,9 @@ export function RunsWidget({
               )}
               <BoardLine between gap="5">
                 <BoardText tabular kind="meta">
-                  {t(`state.${r.tone}`)}
+                  {r.status === "awaiting-approval"
+                    ? tRuns("state.awaiting-approval")
+                    : t(`state.${r.tone}`)}
                 </BoardText>
                 <BoardText tabular kind="meta">
                   {r.stages && r.pct !== null ? t("stages", { ...r.stages, pct: r.pct }) : "—"}

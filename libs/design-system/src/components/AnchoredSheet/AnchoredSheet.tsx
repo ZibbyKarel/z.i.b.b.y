@@ -53,6 +53,8 @@ export interface AnchoredSheetProps {
   footerStart?: ReactNode;
   footerNote?: string;
   footerEnd?: ReactNode;
+  /** Free-form footer (a form, not just actions) — rendered full-width instead of the start / note / end row. */
+  footer?: ReactNode;
   /** Scrolling body — compose with `SheetSection` / `SheetBlock` / the other detail primitives. */
   children?: ReactNode;
   ref?: Ref<HTMLDivElement>;
@@ -86,6 +88,7 @@ export function AnchoredSheet({
   footerStart,
   footerNote,
   footerEnd,
+  footer,
   children,
   ref,
 }: AnchoredSheetProps) {
@@ -193,7 +196,14 @@ export function AnchoredSheet({
         <div className="min-h-0 flex-1 overflow-y-auto" data-testid={AnchoredSheetTestId.Body}>
           {children}
         </div>
-        {hasFooter ? (
+        {footer ? (
+          <div
+            className="flex-none border-t border-line px-[20px] py-[12px]"
+            data-testid={AnchoredSheetTestId.Footer}
+          >
+            {footer}
+          </div>
+        ) : hasFooter ? (
           <div
             className="flex flex-none flex-wrap items-center gap-[6px] border-t border-line px-[20px] py-[12px] font-sans text-[12px]"
             data-testid={AnchoredSheetTestId.Footer}

@@ -7,6 +7,7 @@ import { RunSheet } from "./RunSheet";
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
   usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock("../../../runs/queries/useTaskRunQuery", () => ({
   useTaskRunQuery: () => ({

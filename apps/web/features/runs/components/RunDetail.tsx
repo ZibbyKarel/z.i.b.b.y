@@ -47,6 +47,8 @@ export interface RunDetailProps {
   run: RunView;
   /** Hosted in a detail sheet (the Bridge): compact header, stacked rail — same content as the page. */
   embedded?: boolean;
+  /** Opens the approval's detail sheet from its card. */
+  onOpenApproval?: (approvalId: string) => void;
   /** Rendered under the approval banner (the sheet's gated-phase output). */
   children?: ReactNode;
 }
@@ -60,7 +62,7 @@ const pad2 = (n: number) => String(n).padStart(2, "0");
  * the composer. Embedded (sheet): status row, metrics, approval card (with the gated phase's output inside), then the tabs panel
  * with the rail as the LIVE tab's sidebar.
  */
-export function RunDetail({ run, embedded, children }: RunDetailProps) {
+export function RunDetail({ run, embedded, onOpenApproval, children }: RunDetailProps) {
   const t = useTranslations("runs.detail");
   const router = useRouter();
   const [view, setView] = useState<View>("live");
@@ -164,6 +166,7 @@ export function RunDetail({ run, embedded, children }: RunDetailProps) {
         <RunApprovalBanner
           approval={approval}
           diffstat={run.diffstat}
+          onOpenDetail={onOpenApproval && (() => onOpenApproval(approval.id))}
           onToggleRevise={() => setReviseOpen((o) => !o)}
           reviseOpen={reviseOpen}
         >

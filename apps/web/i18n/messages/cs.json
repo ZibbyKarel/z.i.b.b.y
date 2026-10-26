@@ -915,6 +915,7 @@
     "addressThreadsError": "Vlákna se nepodařilo načíst. Níže uvedené odpovědi z reportu se odešlou beze změny.",
     "approvePushReplies": "Schválit · push + {n} odpovědí",
     "approveReplies": "Schválit · {n} odpovědí",
+    "sheetClose": "Zavřít detail",
     "operatorTokenMissing": "Operátorský token chybí nebo je špatný — nastav ho v Nastavení → Obecné.",
     "wants": "chce",
     "exactAction": "přesně tohle agent udělá",
@@ -1341,6 +1342,7 @@
         "metaInput": "{task} · {n} příloh"
       },
       "banner": {
+        "openDetail": "Otevřít detail",
         "approvalHead": "Potřebuje tě · závažnost {sev} · {risk}",
         "approvalMeta": "Vyžádáno {at} · přes {via} · před provedením zkontrolováno",
         "hold": "Podrž pro schválení",

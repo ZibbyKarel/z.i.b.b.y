@@ -1,6 +1,9 @@
 "use client";
 
 import {
+  AnchoredSheet,
+  AnchoredSheetTestId,
+  AppFrameTestId,
   Button,
   ChainRouteStrip,
   type ChainRouteStripStep,
@@ -25,7 +28,14 @@ import {
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { RunFeedBannersTestId } from "../../runs/components/RunFeedBanners";
+import {
+  type RectLike,
+  type SheetAnchor,
+  anchorChanged,
+  measureSheet,
+} from "../../bridge/state/measure";
 import { useInboxPrThreadsQuery } from "../../inbox/queries";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
@@ -60,6 +70,60 @@ function toDsHunks(hunks: { h: string; lines: [kind: "add" | "del" | "ctx", text
       lines: hunk.lines.map(([kind, text]) => ({ type: kindMap[kind], text })),
     }),
   );
+}
+
+/** `data-rk` of the rail card an approval sheet grows out of (set in `AppShell`'s NEEDS YOU rail). */
+export const approvalRowKey = (id: string) => `approval:${id}`;
+
+/**
+ * Where the sheet sits: right of the approval's rail card, over the page (same geometry as the
+ * Bridge's detail sheets). With no card on screen (collapsed dock, deep link) it hangs off the rail
+ * itself; null when the shell isn't mounted (the caller falls back to the side `Sheet`).
+ */
+function useRailAnchor(id: string | null): SheetAnchor | null {
+  const [anchor, setAnchor] = useState<SheetAnchor | null>(null);
+  const last = useRef<SheetAnchor | null>(null);
+  useLayoutEffect(() => {
+    const main = document.querySelector<HTMLElement>(`[data-testid="${AppFrameTestId.Main}"]`);
+    const root = main?.offsetParent;
+    if (!id || !main || !root) {
+      last.current = null;
+      return;
+    }
+    const measure = () => {
+      // Opened from a run sheet's approval card: sit beside that sheet, level with the card.
+      const banner = document.querySelector(`[data-testid="${RunFeedBannersTestId.Approval}"]`);
+      const runSheet = banner?.closest(`[data-testid="${AnchoredSheetTestId.Root}"]`);
+      const card = document.querySelector(`[data-rk="${CSS.escape(approvalRowKey(id))}"]`);
+      const rail = document.querySelector(`[data-testid="${AppFrameTestId.Rail}"]`);
+      let row: RectLike | undefined =
+        card?.getBoundingClientRect() ?? rail?.getBoundingClientRect();
+      if (banner && runSheet) {
+        const b = banner.getBoundingClientRect();
+        const r = runSheet.getBoundingClientRect();
+        row = { left: r.left, right: r.right, top: b.top, bottom: b.bottom, height: b.height };
+      }
+      if (!row) return;
+      const next = measureSheet(root.getBoundingClientRect(), row, main.getBoundingClientRect());
+      if (!card && !banner) next.eH = 0;
+      if (!anchorChanged(next, last.current)) return;
+      last.current = next;
+      setAnchor(next);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(root);
+    // The run sheet's card appears once its run has loaded.
+    const mo = new MutationObserver(measure);
+    mo.observe(root, { childList: true, subtree: true });
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      mo.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [id]);
+  return id ? anchor : null;
 }
 
 /**
@@ -99,6 +163,7 @@ export function ApprovalSheet({
     byThread: Record<string, OperatorThreadReply>;
   } | null>(null);
   const [now] = useState(() => Date.now());
+  const anchor = useRailAnchor(approvalId);
   // A 401 means the operator token is unset/wrong — say so instead of a bare failure.
   const decisionErrorText = (error: unknown) =>
     isOperatorTokenError(error)
@@ -324,6 +389,80 @@ export function ApprovalSheet({
     </Stack>
   );
 
+  // Approve / revise / deny (+ the PR-review type picker). `compact` = the anchored sheet's header.
+  const decision = (compact: boolean) =>
+    approval && (
+      <Stack gap="150">
+        {/* todo-10: a PR-review sign-off — the server's suggestion is preselected; nothing
+          but this approve posts APPROVE / REQUEST_CHANGES. */}
+        {reviewEvent && (
+          <Stack gap="50">
+            <Typography id="review-event-label" tracking="wider" type="labelSm" variant="tertiary">
+              {t("reviewEvent.label")}
+            </Typography>
+            <SegmentedControl
+              ariaLabel={t("reviewEvent.label")}
+              ariaLabelledby="review-event-label"
+              items={PrReviewEventSchema.options.map((value) => ({
+                value,
+                label: t(`reviewEvent.${value}`),
+              }))}
+              onChange={(value) =>
+                setPicked({ id: approval.id, event: PrReviewEventSchema.parse(value) })
+              }
+              value={reviewEvent}
+            />
+          </Stack>
+        )}
+        <Row wrap gap="100">
+          <Button
+            block={!compact}
+            intent="primary"
+            loading={approve.isPending}
+            onClick={() =>
+              approve.mutate(
+                {
+                  params: { id: approval.id },
+                  body: approveRequestBody(address ? addressReplies : undefined, reviewEvent),
+                },
+                { onSuccess: close },
+              )
+            }
+            size={compact ? "sm" : undefined}
+          >
+            {address
+              ? tApprovals(address.fixedSha ? "approvePushReplies" : "approveReplies", {
+                  n: filledReplies,
+                })
+              : t(reviewEvent ? "submitReview" : "approve")}
+          </Button>
+          {gateKey === "stage-approval" && (
+            <Button
+              block={!compact}
+              intent="secondary"
+              onClick={() => setMode("revise")}
+              size={compact ? "sm" : undefined}
+            >
+              {t("revise")}
+            </Button>
+          )}
+          <Button
+            block={!compact}
+            intent="secondary"
+            onClick={() => setMode("deny")}
+            size={compact ? "sm" : undefined}
+          >
+            {t("deny")}
+          </Button>
+        </Row>
+        {!compact && approve.isError && (
+          <Typography data-testid="approval-approve-error" size="sm" tone="bad" type="text">
+            {decisionErrorText(approve.error)}
+          </Typography>
+        )}
+      </Stack>
+    );
+
   // The note field lives in the footer, not the scrolling body — below a long
   // checkpoint output it would open out of sight.
   const footer =
@@ -386,65 +525,46 @@ export function ApprovalSheet({
         )}
       </Stack>
     ) : (
-      <Stack gap="150">
-        {/* todo-10: a PR-review sign-off — the server's suggestion is preselected; nothing
-          but this approve posts APPROVE / REQUEST_CHANGES. */}
-        {reviewEvent && (
-          <Stack gap="50">
-            <Typography id="review-event-label" tracking="wider" type="labelSm" variant="tertiary">
-              {t("reviewEvent.label")}
-            </Typography>
-            <SegmentedControl
-              ariaLabel={t("reviewEvent.label")}
-              ariaLabelledby="review-event-label"
-              items={PrReviewEventSchema.options.map((value) => ({
-                value,
-                label: t(`reviewEvent.${value}`),
-              }))}
-              onChange={(value) =>
-                setPicked({ id: approval.id, event: PrReviewEventSchema.parse(value) })
-              }
-              value={reviewEvent}
-            />
-          </Stack>
-        )}
-        <Row gap="100">
-          <Button
-            block
-            intent="primary"
-            loading={approve.isPending}
-            onClick={() =>
-              approve.mutate(
-                {
-                  params: { id: approval.id },
-                  body: approveRequestBody(address ? addressReplies : undefined, reviewEvent),
-                },
-                { onSuccess: close },
-              )
-            }
-          >
-            {address
-              ? tApprovals(address.fixedSha ? "approvePushReplies" : "approveReplies", {
-                  n: filledReplies,
-                })
-              : t(reviewEvent ? "submitReview" : "approve")}
-          </Button>
-          {gateKey === "stage-approval" && (
-            <Button block intent="secondary" onClick={() => setMode("revise")}>
-              {t("revise")}
-            </Button>
-          )}
-          <Button block intent="secondary" onClick={() => setMode("deny")}>
-            {t("deny")}
-          </Button>
-        </Row>
-        {approve.isError && (
-          <Typography data-testid="approval-approve-error" size="sm" tone="bad" type="text">
-            {decisionErrorText(approve.error)}
-          </Typography>
-        )}
-      </Stack>
+      decision(false)
     );
+
+  useEffect(() => {
+    if (!anchor) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
+  if (anchor && approvalId) {
+    return (
+      <AnchoredSheet
+        actions={approval && approval.status === "pending" && !mode ? decision(true) : undefined}
+        closeLabel={tApprovals("sheetClose")}
+        eraserHeight={anchor.eH}
+        eraserLeft={anchor.eL}
+        eraserTop={anchor.eT}
+        footer={
+          mode ? (
+            footer
+          ) : approve.isError ? (
+            <Typography data-testid="approval-approve-error" size="sm" tone="bad" type="text">
+              {decisionErrorText(approve.error)}
+            </Typography>
+          ) : undefined
+        }
+        height={anchor.height}
+        kind={approval?.kind ?? t("title")}
+        left={anchor.left}
+        onClose={close}
+        title={approval ? approval.skill : t("title")}
+        tone={approval?.status === "pending" ? "blocked" : "neutral"}
+        top={anchor.top}
+        width={anchor.width}
+      >
+        <Container padding={["150", "250"]}>{body}</Container>
+      </AnchoredSheet>
+    );
+  }
 
   return (
     <Sheet

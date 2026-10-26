@@ -32,6 +32,8 @@ export interface FileDiffViewProps {
   filesLabel?: string;
   collapseLabel?: string;
   expandLabel?: string;
+  /** Show each file's name above its hunks (default). Off when the caller already names the file. */
+  showFileName?: boolean;
 }
 
 const DEV_NULL = "/dev/null";
@@ -51,6 +53,7 @@ export function FileDiffView({
   filesLabel = "Files changed",
   collapseLabel = "Collapse file list",
   expandLabel = "Expand file list",
+  showFileName = true,
 }: FileDiffViewProps) {
   // parseDiff("") yields one phantom empty file, so blank input is short-circuited.
   const files = useMemo(() => (diff.trim() ? parseDiff(diff) : []), [diff]);
@@ -79,9 +82,11 @@ export function FileDiffView({
             sections.current[i] = el;
           }}
         >
-          <Typography mono data-testid={FileDiffViewTestId.FileName} type="data">
-            {fileLabel(file.oldPath, file.newPath)}
-          </Typography>
+          {showFileName && (
+            <Typography mono data-testid={FileDiffViewTestId.FileName} type="data">
+              {fileLabel(file.oldPath, file.newPath)}
+            </Typography>
+          )}
           {file.hunks.length === 0 ? (
             <Typography data-testid={FileDiffViewTestId.NoHunks} type="note" variant="secondary">
               {noHunksLabel}

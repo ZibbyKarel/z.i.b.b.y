@@ -65,7 +65,7 @@ describe("ReviewThread", () => {
     );
     expect(screen.getByTestId(ReviewThreadTestId.OutdatedTag)).toBeInTheDocument();
     expect(screen.getByTestId(ReviewThreadTestId.File)).toHaveTextContent(/^src\/a\.ts$/);
-    expect(screen.getByTestId(ReviewThreadTestId.Snippet)).toHaveTextContent("+b");
+    expect(screen.getByTestId(ReviewThreadTestId.Snippet)).toHaveTextContent("b");
   });
 
   it("reply input reports edits via onChange", () => {

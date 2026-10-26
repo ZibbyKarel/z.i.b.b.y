@@ -45,7 +45,7 @@
           "id": "tasks",
           "type": "tasks",
           "x": 3,
-          "y": 12,
+          "y": 18,
           "w": 3,
           "h": 10
         },
@@ -53,7 +53,7 @@
           "id": "runs",
           "type": "runs",
           "x": 3,
-          "y": 0,
+          "y": 6,
           "w": 3,
           "h": 12
         },
@@ -76,18 +76,18 @@
         {
           "id": "quickActions",
           "type": "quickActions",
-          "x": 6,
-          "y": 17,
-          "w": 4,
+          "x": 3,
+          "y": 0,
+          "w": 3,
           "h": 6
         },
         {
           "id": "teamKb",
           "type": "teamKb",
-          "x": 6,
+          "x": 7,
           "y": 11,
-          "w": 4,
-          "h": 6,
+          "w": 3,
+          "h": 9,
           "scope": {
             "teamId": "devrel"
           }
@@ -124,7 +124,7 @@
             "id": "tasks",
             "type": "tasks",
             "x": 3,
-            "y": 12,
+            "y": 18,
             "w": 3,
             "h": 10
           },
@@ -132,7 +132,7 @@
             "id": "runs",
             "type": "runs",
             "x": 3,
-            "y": 0,
+            "y": 6,
             "w": 3,
             "h": 12
           },
@@ -155,18 +155,18 @@
           {
             "id": "quickActions",
             "type": "quickActions",
-            "x": 6,
-            "y": 17,
-            "w": 4,
+            "x": 3,
+            "y": 0,
+            "w": 3,
             "h": 6
           },
           {
             "id": "teamKb",
             "type": "teamKb",
-            "x": 6,
+            "x": 7,
             "y": 11,
-            "w": 4,
-            "h": 6,
+            "w": 3,
+            "h": 9,
             "scope": {
               "teamId": "devrel"
             }
@@ -189,7 +189,8 @@
         "prs": false,
         "issues": false,
         "pins": false,
-        "runs": false
+        "runs": false,
+        "teamKb": false
       },
       "epicClosed": {
         "shoptet-dev-rel-jira-cz3tdr1-592": false
