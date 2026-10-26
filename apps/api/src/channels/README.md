@@ -29,8 +29,8 @@ still costs a triage call.
 (assigned to / reported by / watched by them) plus messages that explicitly
 `@`-mention them. Everything else is out of scope by construction.
 
-**How close to that ceiling an adapter sits is decided by its unit,** and the two
-existing adapters deliberately differ:
+**How close to that ceiling an adapter sits is decided by its unit,** and the
+adapters deliberately differ:
 
 - **`github.adapter.ts` — mentions + assignee** (`q=repo:{repo} is:open mentions:{username}`
   and `assignee:{username}`; the latter was dropped in phase 126a and restored by the
@@ -39,6 +39,11 @@ existing adapters deliberately differ:
   — for the operator's teams in the repo owner's org only, discovered via `GET /user/teams`
   (needs `read:org`; cached an hour; on failure polling stays personal-only and the watcher
   logs a warn). Never a team's whole visible activity.
+- **`slack.adapter.ts` — DMs + mentions.** Needs a Slack user token. Ingests every human
+  message in the operator's 1:1 IMs and group MPIMs (`users.conversations` +
+  `conversations.history` from the cursor), plus explicit `<@operator>` mentions anywhere
+  they can see (`search.messages`). `config.channels` is an optional allowlist that
+  narrows the mention leg only; DMs are never narrowed. Never a channel's whole history.
 - **`jira.adapter.ts` — owner legs plus mentions.** Jira's unit is the _comment_, and
   someone commenting on an issue the operator owns is in practice addressing them.
   The wider owner scope is safe precisely because the unit is narrow.

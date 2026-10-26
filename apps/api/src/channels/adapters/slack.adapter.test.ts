@@ -1,135 +1,217 @@
-import { promises as fs } from "node:fs";
-import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 import type { Integration } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
 import { SlackChannelAdapter } from "./slack.adapter";
 
-const FIXTURES = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "../../../test/fixtures/slack",
-);
+const ME = "UME";
+const creds = { token: "xoxp-1" };
 
-const slack: Integration = {
-  id: "team-slack",
-  kind: "slack",
-  projectId: "acme-app",
-  enabled: true,
-  config: { kind: "slack", channels: ["C123"] },
-  status: "disconnected",
-  hasCredentials: true,
-};
-
-/** Build a fetch stub that returns the given JSON body (status 200 by default). */
-function jsonFetch(body: unknown, status = 200): typeof fetch {
-  return vi.fn(
-    async () =>
-      new Response(JSON.stringify(body), {
-        status,
-        headers: { "content-type": "application/json" },
-      }),
-  ) as unknown as typeof fetch;
+function slack(channels: string[] = []): Integration {
+  return {
+    id: "team-slack",
+    kind: "slack",
+    projectId: "acme-app",
+    enabled: true,
+    config: { kind: "slack", channels },
+    status: "disconnected",
+    hasCredentials: true,
+  };
 }
 
-describe("SlackChannelAdapter", () => {
-  it("normalizes human messages, skips bot/system, derives ids and advances the cursor", async () => {
-    const history = JSON.parse(await fs.readFile(path.join(FIXTURES, "history.json"), "utf8"));
-    const adapter = new SlackChannelAdapter(jsonFetch(history));
-
-    const { items, cursor } = await adapter.poll(slack, { token: "xoxb-1" }, undefined);
-
-    // Only the two human messages survive (channel_join + bot_id dropped).
-    expect(items.map((i) => i.from)).toEqual(["U123", "U456"]);
-    // Deterministic id: <channel>-<ts with . → ->.
-    expect(items[0]!.id).toBe("C123-1700000100-000200");
-    expect(items[0]!.externalRef).toMatchObject({ channel: "C123", ts: "1700000100.000200" });
-    expect(items[0]!.text).toContain("crashes on login");
-    // Cursor advanced to the newest human ts.
-    expect(cursor).toBe("1700000200.000300");
+const json = (body: unknown, status = 200): Response =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
   });
 
-  it("sets url from a successful chat.getPermalink lookup, per message", async () => {
-    const history = JSON.parse(await fs.readFile(path.join(FIXTURES, "history.json"), "utf8"));
-    const fetchImpl = vi.fn(async (input: string | URL) => {
-      const url = new URL(String(input));
-      if (url.pathname.endsWith("/chat.getPermalink")) {
-        const ts = url.searchParams.get("message_ts");
-        return new Response(
-          JSON.stringify({ ok: true, permalink: `https://acme.slack.com/archives/C123/p${ts}` }),
-          { status: 200, headers: { "content-type": "application/json" } },
-        );
-      }
-      return new Response(JSON.stringify(history), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      });
-    }) as unknown as typeof fetch;
-    const adapter = new SlackChannelAdapter(fetchImpl);
-    const { items } = await adapter.poll(slack, { token: "xoxb-1" }, undefined);
-    expect(items[0]!.url).toBe("https://acme.slack.com/archives/C123/p1700000100.000200");
-  });
+interface World {
+  dms?: Record<string, unknown[]>; // channel id -> history messages
+  matches?: unknown[];
+  auth?: Record<string, unknown>;
+}
 
-  it("omits url (never throws) when the permalink lookup fails", async () => {
-    const history = JSON.parse(await fs.readFile(path.join(FIXTURES, "history.json"), "utf8"));
-    const fetchImpl = vi.fn(async (input: string | URL) => {
-      const url = new URL(String(input));
-      if (url.pathname.endsWith("/chat.getPermalink")) {
-        return new Response(JSON.stringify({ ok: false, error: "message_not_found" }), {
-          status: 200,
-          headers: { "content-type": "application/json" },
+/** Fake Slack: routes by Web API method name; records every call. */
+function fakeSlack(w: World = {}) {
+  const calls: URL[] = [];
+  const fetchImpl = vi.fn(async (input: string | URL) => {
+    const url = new URL(String(input));
+    calls.push(url);
+    const method = url.pathname.split("/").pop();
+    switch (method) {
+      case "auth.test":
+        return json({ ok: true, user_id: ME, user: "karel", team: "Acme", ...w.auth });
+      case "users.conversations":
+        return json({ ok: true, channels: Object.keys(w.dms ?? {}).map((id) => ({ id })) });
+      case "conversations.history":
+        return json({ ok: true, messages: w.dms?.[url.searchParams.get("channel") ?? ""] ?? [] });
+      case "search.messages":
+        return json({ ok: true, messages: { matches: w.matches ?? [] } });
+      case "chat.getPermalink":
+        return json({
+          ok: true,
+          permalink: `https://acme.slack.com/archives/${url.searchParams.get("channel")}/p${url.searchParams.get("message_ts")}`,
         });
-      }
-      return new Response(JSON.stringify(history), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      });
-    }) as unknown as typeof fetch;
-    const adapter = new SlackChannelAdapter(fetchImpl);
-    const { items } = await adapter.poll(slack, { token: "xoxb-1" }, undefined);
-    expect(items[0]!.url).toBeUndefined();
-  });
+      default:
+        return json({ ok: false, error: "unknown_method" });
+    }
+  }) as unknown as typeof fetch;
+  return { adapter: new ClockedAdapter(fetchImpl), calls, fetchImpl };
+}
 
-  it("omits url (never throws) when the permalink lookup itself throws", async () => {
-    const history = JSON.parse(await fs.readFile(path.join(FIXTURES, "history.json"), "utf8"));
-    const fetchImpl = vi.fn(async (input: string | URL) => {
-      const url = new URL(String(input));
-      if (url.pathname.endsWith("/chat.getPermalink")) throw new Error("network down");
-      return new Response(JSON.stringify(history), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      });
-    }) as unknown as typeof fetch;
-    const adapter = new SlackChannelAdapter(fetchImpl);
-    const { items } = await adapter.poll(slack, { token: "xoxb-1" }, undefined);
-    expect(items[0]!.url).toBeUndefined();
-  });
+/** Adapter with a settable clock (DM sweep throttle + cursor-advance tests). */
+class ClockedAdapter extends SlackChannelAdapter {
+  clock = NOW_MS;
+  protected override now(): number {
+    return this.clock;
+  }
+}
 
-  it("passes the cursor as `oldest` on a subsequent poll", async () => {
-    const fetchImpl = jsonFetch({ ok: true, messages: [] });
-    const adapter = new SlackChannelAdapter(fetchImpl);
-    await adapter.poll(slack, { token: "xoxb-1" }, "1700000200.000300");
-    const url = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls[0]![0] as string;
-    expect(url).toContain("oldest=1700000200.000300");
-  });
+const T1 = "1700000100.000200";
+const T2 = "1700000200.000300";
+const T3 = "1700000300.000400";
+/** Well outside the mention leg's search-lag overlap behind T2. */
+const T_OLD = "1699990000.000100";
+const NOW_MS = 1_700_010_000_000;
 
-  it("surfaces a 429 as an error rather than throwing out of the loop silently", async () => {
-    const adapter = new SlackChannelAdapter(jsonFetch({ ok: false }, 429));
-    await expect(adapter.poll(slack, { token: "xoxb-1" }, undefined)).rejects.toThrow(
-      /rate limited/,
-    );
-  });
-
-  it("auth.test maps ok/err to a TestResult", async () => {
-    const ok = new SlackChannelAdapter(jsonFetch({ ok: true, team: "Acme" }));
-    expect(await ok.test(slack, { token: "xoxb-1" })).toEqual({
+describe("SlackChannelAdapter", () => {
+  it("test() accepts a user token and rejects a bot token", async () => {
+    const ok = fakeSlack();
+    expect(await ok.adapter.test(slack(), creds)).toEqual({
       ok: true,
-      detail: "authenticated as Acme",
+      detail: "authenticated as karel in Acme",
     });
-    const bad = new SlackChannelAdapter(jsonFetch({ ok: false, error: "invalid_auth" }));
-    expect(await bad.test(slack, { token: "xoxb-1" })).toEqual({
+    const botId = fakeSlack({ auth: { bot_id: "B1" } });
+    expect((await botId.adapter.test(slack(), creds)).detail).toMatch(/user token/);
+    const xoxb = fakeSlack();
+    expect(await xoxb.adapter.test(slack(), { token: "xoxb-1" })).toEqual({
       ok: false,
-      detail: "invalid_auth",
+      detail: "needs a Slack user token (xoxp-…), not a bot token",
     });
+    const bad = new SlackChannelAdapter(
+      vi.fn(async () => json({ ok: false, error: "invalid_auth" })) as unknown as typeof fetch,
+    );
+    expect(await bad.test(slack(), creds)).toEqual({ ok: false, detail: "invalid_auth" });
+  });
+
+  it("DM leg: ingests human messages, skips own/bot/system, adds permalink and ids", async () => {
+    const { adapter, calls } = fakeSlack({
+      dms: {
+        D1: [
+          { user: "UBOB", text: "ping", ts: T1 },
+          { user: ME, text: "my reply", ts: T2 },
+          { user: "UBOB", bot_id: "B1", text: "bot", ts: T2 },
+          { subtype: "channel_join", user: "UBOB", ts: T2 },
+        ],
+      },
+    });
+    const { items, cursor } = await adapter.poll(slack(), creds, "1700000000.000000");
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      id: "D1-1700000100-000200",
+      from: "UBOB",
+      text: "ping",
+      externalRef: { channel: "D1", ts: T1 },
+      url: `https://acme.slack.com/archives/D1/p${T1}`,
+    });
+    // The cursor is the DM leg's high-water mark — every message seen, own ones included.
+    expect(cursor).toBe(T2);
+    const hist = calls.find((c) => c.pathname.endsWith("/conversations.history"))!;
+    expect(hist.searchParams.get("oldest")).toBe("1700000000.000000");
+  });
+
+  it("mention leg: uses the search permalink, skips own/bot, cuts by ts > cursor - overlap", async () => {
+    const { adapter, calls } = fakeSlack({
+      matches: [
+        {
+          user: "UBOB",
+          text: `hi <@${ME}>`,
+          ts: T3,
+          channel: { id: "C9" },
+          permalink: "https://p/3",
+        },
+        { user: ME, text: `<@${ME}> self`, ts: T3, channel: { id: "C9" } },
+        { user: "UBOB", bot_id: "B1", text: `<@${ME}>`, ts: T3, channel: { id: "C9" } },
+        // indexed late but within the overlap behind the cursor → still ingested
+        { user: "UBOB", text: `<@${ME}> lagged`, ts: T1, channel: { id: "C9" }, permalink: "p1" },
+        { user: "UBOB", text: `<@${ME}> old`, ts: T_OLD, channel: { id: "C9" } },
+      ],
+    });
+    const { items } = await adapter.poll(slack(), creds, T2);
+    expect(items.map((i) => [i.id, i.url])).toEqual([
+      ["C9-1700000300-000400", "https://p/3"],
+      ["C9-1700000100-000200", "p1"],
+    ]);
+    expect(calls.some((c) => c.pathname.endsWith("/chat.getPermalink"))).toBe(false);
+    const search = calls.find((c) => c.pathname.endsWith("/search.messages"))!;
+    expect(search.searchParams.get("query")).toBe(`<@${ME}>`);
+    expect(search.searchParams.get("sort")).toBe("timestamp");
+  });
+
+  it("config.channels narrows mentions only, never DMs", async () => {
+    const world: World = {
+      dms: { D1: [{ user: "UBOB", text: "dm", ts: T1 }] },
+      matches: [
+        { user: "UBOB", text: "in", ts: T2, channel: { id: "C1" }, permalink: "p1" },
+        { user: "UBOB", text: "out", ts: T3, channel: { id: "C2" }, permalink: "p2" },
+      ],
+    };
+    const { items } = await fakeSlack(world).adapter.poll(slack(["C1"]), creds, "1");
+    expect(items.map((i) => i.externalRef.channel).sort()).toEqual(["C1", "D1"]);
+    const all = await fakeSlack(world).adapter.poll(slack(), creds, "1");
+    expect(all.items).toHaveLength(3);
+  });
+
+  it("de-dups a DM message that also mentions the operator", async () => {
+    const { adapter } = fakeSlack({
+      dms: { D1: [{ user: "UBOB", text: `<@${ME}> hey`, ts: T1 }] },
+      matches: [
+        { user: "UBOB", text: `<@${ME}> hey`, ts: T1, channel: { id: "D1" }, permalink: "p" },
+      ],
+    });
+    const { items } = await adapter.poll(slack(), creds, "1");
+    expect(items).toHaveLength(1);
+  });
+
+  it("a quiet DM sweep advances the cursor to the sweep time minus the overlap", async () => {
+    const { adapter } = fakeSlack();
+    const { cursor } = await adapter.poll(slack(), creds, T2);
+    expect(cursor).toBe(String(NOW_MS / 1000 - 15 * 60));
+  });
+
+  it("throttles the DM sweep, never moves the cursor without one, caches the operator id", async () => {
+    const { adapter, calls } = fakeSlack({
+      matches: [{ user: "UBOB", text: `<@${ME}>`, ts: T3, channel: { id: "C9" }, permalink: "p" }],
+    });
+    const sweeps = () => calls.filter((c) => c.pathname.endsWith("/users.conversations")).length;
+    await adapter.poll(slack(), creds, T2);
+    adapter.clock += 60_000;
+    const skipped = await adapter.poll(slack(), creds, T2);
+    expect(sweeps()).toBe(1);
+    expect(skipped.cursor).toBe(T2); // a mention alone never advances it
+    expect(skipped.items).toHaveLength(1);
+    adapter.clock += 60_000;
+    await adapter.poll(slack(), creds, T2);
+    expect(sweeps()).toBe(2);
+    expect(calls.filter((c) => c.pathname.endsWith("/auth.test"))).toHaveLength(1);
+  });
+
+  it("first poll without a cursor only looks back ~24h", async () => {
+    const { adapter, calls } = fakeSlack({ dms: { D1: [] } });
+    await adapter.poll(slack(), creds, undefined);
+    const oldest = Number(
+      calls.find((c) => c.pathname.endsWith("/conversations.history"))!.searchParams.get("oldest"),
+    );
+    expect(oldest).toBe(NOW_MS / 1000 - 24 * 60 * 60);
+  });
+
+  it("surfaces a 429 as an error", async () => {
+    const adapter = new SlackChannelAdapter(
+      vi.fn(async (input: string | URL) =>
+        String(input).includes("auth.test")
+          ? json({ ok: true, user_id: ME })
+          : json({ ok: false }, 429),
+      ) as unknown as typeof fetch,
+    );
+    await expect(adapter.poll(slack(), creds, undefined)).rejects.toThrow(/rate limited/);
   });
 
   it("send posts to the thread and rejects on a slack error", async () => {
@@ -143,9 +225,8 @@ describe("SlackChannelAdapter", () => {
       raw: {},
       state: "triaged" as const,
     };
-    const fetchImpl = jsonFetch({ ok: true });
-    const adapter = new SlackChannelAdapter(fetchImpl);
-    await adapter.send(slack, { token: "xoxb-1" }, item, "on it");
+    const fetchImpl = vi.fn(async () => json({ ok: true })) as unknown as typeof fetch;
+    await new SlackChannelAdapter(fetchImpl).send(slack(), creds, item, "on it");
     const init = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock
       .calls[0]![1] as RequestInit;
     expect(JSON.parse(init.body as string)).toMatchObject({
@@ -153,15 +234,9 @@ describe("SlackChannelAdapter", () => {
       thread_ts: "1.2",
       text: "on it",
     });
-
-    const failing = new SlackChannelAdapter(jsonFetch({ ok: false, error: "channel_not_found" }));
-    await expect(
-      failing.send(
-        slack,
-        { token: "xoxb-1" },
-        { ...item, externalRef: { channel: "C9", ts: "1.2" } },
-        "hi",
-      ),
-    ).rejects.toThrow(/channel_not_found/);
+    const failing = new SlackChannelAdapter(
+      vi.fn(async () => json({ ok: false, error: "channel_not_found" })) as unknown as typeof fetch,
+    );
+    await expect(failing.send(slack(), creds, item, "hi")).rejects.toThrow(/channel_not_found/);
   });
 });

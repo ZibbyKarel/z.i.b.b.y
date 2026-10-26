@@ -26,8 +26,10 @@ export const IntegrationKindSchema = z.enum([
 export type IntegrationKind = z.infer<typeof IntegrationKindSchema>;
 
 /**
- * Slack channel config — the conversation ids to poll. Non-secret by construction:
- * the bot token lives in the separate credentials store, never here. `.strict()`
+ * Slack config — optional allowlist of conversation ids that narrows the @-mention
+ * leg only (empty/absent = mentions everywhere); DMs are never narrowed. Non-secret by
+ * construction: the user token (`xoxp-…`) lives in the separate credentials store,
+ * never here. `.strict()`
  * so a token/password-shaped key can never sneak into the committed entity file.
  */
 export const SlackConfigSchema = z

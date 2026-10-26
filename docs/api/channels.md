@@ -117,12 +117,22 @@ worth reading if every row is a real answer awaiting a yes. Binds every channel.
 
 ### Slack adapter
 
-- Poll: Slack API Conversations History since the cursor (timestamp)
-- Cursor = `ts` of the last processed message
+- Needs a Slack **user** token (`xoxp-…`; user scopes `im:history`,
+  `mpim:history`, `channels:history`, `groups:history`, `search:read`,
+  `chat:write`, `users:read`). `test()` rejects a bot token. Replies post as the
+  operator.
+- Scope = "mine and mentions": every human message in the operator's IMs/MPIMs
+  (`users.conversations` + `conversations.history`, at most 50 conversations,
+  swept at most every 2 min for the rate limit) plus explicit `<@operator>`
+  mentions anywhere (`search.messages`, every tick). `config.channels` is an
+  optional allowlist for the mention leg only.
+- Cursor = the DM leg's high-water `ts` (advances only on a DM sweep); the
+  mention leg re-reads 15 min behind it for search index lag — the item store
+  dedups by id. First poll (no cursor) looks back 24 h.
 - Returns `ChannelItem[]` with `user`, `text`, `channel`
-- `url` (Phase 127): a best-effort `chat.getPermalink` call per newly ingested
-  message (needs no OAuth scope) — a failed lookup just omits `url`, never
-  fails the poll.
+- `url`: search matches carry their own permalink; DMs get a best-effort
+  `chat.getPermalink` call per newly ingested message — a failed lookup just
+  omits `url`, never fails the poll.
 
 ### Jira adapter
 
@@ -539,7 +549,7 @@ POST   /api/integrations/:id/test            test the connection
 Credentials are stored separately under `data/credentials/` (never under
 `data/integrations/`). The secret's shape follows the kind
 (`credentialMatchesKind`): email → `{password}`, everything else → `{token}`
-(Slack bot token, Jira/GitHub API token, Calendar = the whole service-account
+(Slack user token, Jira/GitHub API token, Calendar = the whole service-account
 JSON key as `token`). The entity returned to clients never carries the secret —
 only the computed `hasCredentials` flag.
 
