@@ -60,7 +60,14 @@ const PluginJsonSchema = z.object({
   description: z.string().optional(),
   version: z.string().optional(),
   mcpServers: z.unknown().optional(),
+  hooks: z.unknown().optional(),
 });
+
+/**
+ * A marketplace/plugin name safe to put in `claude plugin` argv (`<plugin>@<marketplace>`,
+ * `marketplace remove <name>`): no leading `-`, no path separators. Entries failing it are dropped.
+ */
+export const PLUGIN_NAME_RE = /^[a-z0-9][a-z0-9._-]*$/i;
 
 const InstalledPluginsSchema = z.object({
   plugins: z.record(
@@ -144,6 +151,7 @@ export async function readPluginComponents(pluginDir: string): Promise<PluginCom
     mcpJson && typeof mcpJson === "object" && "mcpServers" in mcpJson
       ? mcpJson.mcpServers
       : mcpJson;
+  const pluginHooks = pluginJson.success && pluginJson.data.hooks !== undefined;
   const mcpServers = new Set([
     ...objectKeys(mcpRoot),
     ...objectKeys(pluginJson.success ? pluginJson.data.mcpServers : undefined),
@@ -152,7 +160,7 @@ export async function readPluginComponents(pluginDir: string): Promise<PluginCom
     skills: await readSkills(pluginDir),
     agents: await readMarkdownDir(path.join(pluginDir, "agents")),
     commands: await readMarkdownDir(path.join(pluginDir, "commands")),
-    hooks: await fileExists(path.join(pluginDir, "hooks", "hooks.json")),
+    hooks: pluginHooks || (await fileExists(path.join(pluginDir, "hooks", "hooks.json"))),
     mcpServers: [...mcpServers],
   };
 }
@@ -164,22 +172,37 @@ export function isInside(child: string, root: string): boolean {
 }
 
 /**
+ * `child` is inside `root` after resolving symlinks on both — a symlink inside a
+ * cloned third-party repo must not lead out of it. False when either is missing.
+ */
+export async function isRealInside(child: string, root: string): Promise<boolean> {
+  try {
+    return isInside(await fs.realpath(child), await fs.realpath(root));
+  } catch {
+    return false;
+  }
+}
+
+/**
  * A marketplace's catalog from `<dir>/.claude-plugin/marketplace.json`, or null
- * when there is none. A plugin whose `source` is not a relative path string (or
- * points outside the marketplace) is listed with empty components and no `dir`.
+ * when there is none (or its name is not argv-safe, {@link PLUGIN_NAME_RE}). A plugin
+ * whose `source` is not a relative path string (or points outside the marketplace,
+ * lexically or through a symlink) is listed with empty components and no `dir`;
+ * a plugin with an unsafe name is dropped.
  */
 export async function readCatalog(marketplaceDir: string): Promise<Catalog | null> {
   const parsed = MarketplaceJsonSchema.safeParse(
     await readJson(path.join(marketplaceDir, ".claude-plugin", "marketplace.json")),
   );
-  if (!parsed.success) return null;
+  if (!parsed.success || !PLUGIN_NAME_RE.test(parsed.data.name)) return null;
   const { name, description, metadata, plugins } = parsed.data;
   const pluginRoot = path.resolve(marketplaceDir, metadata?.pluginRoot ?? ".");
   const out: CatalogPlugin[] = [];
   for (const entry of plugins) {
+    if (!PLUGIN_NAME_RE.test(entry.name)) continue;
     const dir =
       typeof entry.source === "string" ? path.resolve(pluginRoot, entry.source) : undefined;
-    if (!dir || !isInside(dir, marketplaceDir)) {
+    if (!dir || !isInside(dir, marketplaceDir) || !(await isRealInside(dir, marketplaceDir))) {
       out.push({
         name: entry.name,
         description: entry.description,
@@ -231,15 +254,49 @@ export function splitPluginKey(key: string): { plugin: string; marketplace: stri
   return { plugin: key.slice(0, at), marketplace: key.slice(at + 1) };
 }
 
-/** installPaths of every user-scope plugin installed from one of `records`. */
+/** Plugin keys set to `false` in `enabledPlugins` of the `settings.json` next to `pluginsDir`. */
+async function disabledPlugins(pluginsDir: string): Promise<Set<string>> {
+  const settings = await readJson(path.join(path.dirname(pluginsDir), "settings.json"));
+  const enabled =
+    settings && typeof settings === "object" && "enabledPlugins" in settings
+      ? settings.enabledPlugins
+      : undefined;
+  if (!enabled || typeof enabled !== "object") return new Set();
+  return new Set(
+    Object.entries(enabled)
+      .filter(([, on]) => on === false)
+      .map(([key]) => key),
+  );
+}
+
+/**
+ * installPaths of the user-scope plugins installed from one of `records` that are
+ * safe to load into a run. Skipped: plugins disabled in `~/.claude/settings.json`
+ * (`enabledPlugins["p@m"] === false`; the settings file is the sibling of
+ * `pluginsDir`, unreadable reads as "none disabled"), installPaths that no longer
+ * exist, and plugins that ship hooks (`hooks/hooks.json` or `hooks` in plugin.json)
+ * — a third-party PreToolUse hook in an autonomous run could pre-empt ZIBBY's
+ * approval gate (Laws 1 and 4), so hook plugins never ride a run.
+ */
 export async function managedPluginDirs(
   records: readonly Marketplace[],
   pluginsDir: string,
 ): Promise<string[]> {
   if (records.length === 0) return [];
   const ids = new Set(records.map((r) => r.id));
-  const installed = await readInstalledPlugins(pluginsDir);
-  return [...installed]
-    .filter(([key]) => ids.has(splitPluginKey(key).marketplace))
-    .map(([, install]) => install.installPath);
+  const disabled = await disabledPlugins(pluginsDir);
+  const out: string[] = [];
+  for (const [key, { installPath }] of await readInstalledPlugins(pluginsDir)) {
+    if (!ids.has(splitPluginKey(key).marketplace) || disabled.has(key)) continue;
+    if (
+      !(await fs.stat(installPath).then(
+        (s) => s.isDirectory(),
+        () => false,
+      ))
+    )
+      continue;
+    if ((await readPluginComponents(installPath)).hooks) continue;
+    out.push(installPath);
+  }
+  return out;
 }

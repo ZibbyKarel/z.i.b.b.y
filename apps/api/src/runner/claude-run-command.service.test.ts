@@ -957,7 +957,15 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     beforeEach(async () => {
       pluginsDir = await fs.mkdtemp(path.join(os.tmpdir(), "run-marketplace-plugins-"));
       process.env.CLAUDE_PLUGINS_DIR = pluginsDir;
-      const install = (p: string, scope = "user") => [{ scope, installPath: p, version: "1" }];
+      for (const p of ["/cache/mine/zibby/1", "/cache/mine/hooked/1", "/cache/foreign/other/1"]) {
+        await fs.mkdir(path.join(pluginsDir, p), { recursive: true });
+      }
+      await fs.mkdir(path.join(pluginsDir, "/cache/mine/hooked/1/hooks"));
+      await fs.writeFile(path.join(pluginsDir, "/cache/mine/hooked/1/hooks/hooks.json"), "{}");
+      // installPaths under the tmp dir; `/opt/plugins/a` (the explicit pluginDir) stays literal.
+      const install = (p: string, scope = "user") => [
+        { scope, installPath: p.startsWith("/cache") ? path.join(pluginsDir, p) : p, version: "1" },
+      ];
       await fs.writeFile(
         path.join(pluginsDir, "installed_plugins.json"),
         JSON.stringify({
@@ -965,6 +973,8 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
           plugins: {
             "zibby@mine": install("/cache/mine/zibby/1"),
             "dup@mine": install("/opt/plugins/a"),
+            "hooked@mine": install("/cache/mine/hooked/1"),
+            "missing@mine": install("/cache/mine/missing/1"),
             "proj@mine": install("/cache/mine/proj/1", "project"),
             "other@foreign": install("/cache/foreign/other/1"),
           },
@@ -979,11 +989,35 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     const pluginDirsOf = (args: string[]) =>
       args.flatMap((a, i) => (a === "--plugin-dir" ? [args[i + 1]] : []));
 
-    it("appends user-scope plugins of managed marketplaces only, deduped with pluginDirs", async () => {
+    it("appends existing, hook-free user-scope plugins of managed marketplaces only", async () => {
       const { args } = await makeService([CODER], [], {
         marketplaces: [record("mine")],
       }).buildClaudeCommand({ instructions: "x", task: "do it", pluginDirs: ["/opt/plugins/a"] });
-      expect(pluginDirsOf(args)).toEqual(["/opt/plugins/a", "/cache/mine/zibby/1"]);
+      // `hooked` ships hooks (could pre-empt the approval gate), `missing` has no dir,
+      // `dup` (/opt/plugins/a) does not exist either — but it is passed explicitly.
+      expect(pluginDirsOf(args)).toEqual([
+        "/opt/plugins/a",
+        path.join(pluginsDir, "/cache/mine/zibby/1"),
+      ]);
+    });
+
+    it("skips a plugin disabled in the sibling settings.json", async () => {
+      // settings.json sits next to the plugins dir, so nest one under the tmp dir.
+      const claudeDir = path.join(pluginsDir, "claude");
+      await fs.mkdir(path.join(claudeDir, "plugins"), { recursive: true });
+      process.env.CLAUDE_PLUGINS_DIR = path.join(claudeDir, "plugins");
+      await fs.rename(
+        path.join(pluginsDir, "installed_plugins.json"),
+        path.join(claudeDir, "plugins", "installed_plugins.json"),
+      );
+      await fs.writeFile(
+        path.join(claudeDir, "settings.json"),
+        JSON.stringify({ enabledPlugins: { "zibby@mine": false } }),
+      );
+      const { args } = await makeService([CODER], [], {
+        marketplaces: [record("mine")],
+      }).buildClaudeCommand({ instructions: "x", task: "do it" });
+      expect(args).not.toContain("--plugin-dir");
     });
 
     it("fails open when the record cannot be read", async () => {

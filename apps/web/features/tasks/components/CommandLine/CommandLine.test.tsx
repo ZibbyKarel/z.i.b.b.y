@@ -573,8 +573,9 @@ describe("CommandLine (Phase 118d generic composer)", () => {
     });
 
     it("/ also offers marketplace skills, deduped by name against ZIBBY skills", async () => {
+      const onSkillChange = vi.fn();
       const user = userEvent.setup();
-      render(<CommandLine allowSkillMentions onSubmit={vi.fn()} />);
+      render(<CommandLine allowSkillMentions onSkillChange={onSkillChange} onSubmit={vi.fn()} />);
       const input = screen.getByTestId(CommandLineTestId.Input);
       await user.type(input, "/");
       expect(screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-tdd`)).toBeInTheDocument();
@@ -583,6 +584,8 @@ describe("CommandLine (Phase 118d generic composer)", () => {
         screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-zibby:standup-post`),
       );
       expect(input).toHaveValue("/zibby:standup-post ");
+      // Not a ZIBBY skill id — it must never reach `body.skillId`.
+      expect(onSkillChange).not.toHaveBeenCalled();
     });
 
     it.each(["see ~/zibby/x", "a/b"])(

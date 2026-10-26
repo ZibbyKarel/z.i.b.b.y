@@ -15,7 +15,7 @@ ZIBBY run. Design: `docs/plans/2026-10-26-marketplaces.md`.
 | Catalog    | `apps/api/src/marketplaces/marketplace-catalog.ts`         | reads `marketplace.json` + plugin components and `installed_plugins.json` (`$CLAUDE_PLUGINS_DIR`)                                                            |
 | CLI        | `apps/api/src/marketplaces/marketplace-cli.ts`             | `MarketplaceCli` — the only `claude plugin` / `git` seam (env via `agentBaseEnv`); tests use a fake                                                          |
 | Service    | `apps/api/src/marketplaces/marketplaces.service.ts`        | add / update / install / uninstall / remove, dev links                                                                                                       |
-| Controller | `apps/api/src/marketplaces/marketplaces.controller.ts`     | 404 unknown marketplace/plugin, 400 bad source, 409 duplicate id, 502 CLI failure (its stderr)                                                               |
+| Controller | `apps/api/src/marketplaces/marketplaces.controller.ts`     | 404 unknown marketplace/plugin, 400 bad source, 409 duplicate id / already-installed plugin, 422 refused path (guard), 502 CLI failure (its stderr)          |
 
 ## Rules
 
@@ -28,6 +28,18 @@ ZIBBY run. Design: `docs/plans/2026-10-26-marketplaces.md`.
   default `~/.zibby/marketplaces`). Removals are guarded: a link is only replaced inside
   `<CLAUDE_PLUGINS_DIR>/cache/`, a link is swapped for an empty dir before
   `claude plugin uninstall`, only a managed clone is pulled or deleted (inside the clone
-  root). The operator's own checkout is never modified or deleted.
+  root). The operator's own checkout is never modified or deleted. Plugin dirs must
+  stay inside the marketplace after `realpath` (a symlink in a cloned repo cannot
+  escape), and marketplace/plugin names must match `^[a-z0-9][a-z0-9._-]*$` (others
+  are dropped) since they go into `claude plugin` argv. `marketplace update` runs with
+  the links dropped and relinks afterwards; a failed uninstall restores its link.
+- A connect is all-or-nothing: every guard (incl. dev links) runs before the record is
+  written, and on failure ZIBBY undoes its own `claude plugin marketplace add` (never
+  an adopted one) and a clone it made. `remove` checks the clone guard before any
+  mutation and skips the CLI for a marketplace already removed in the terminal.
+- Installing an already-installed plugin makes no CLI call (dev: relink; normal: 409).
+  The list stays up (counts read 0) when the CLI is unavailable.
 - Runs: `ClaudeRunCommandService` appends `--plugin-dir` for every installed plugin of
-  every managed marketplace (see `docs/api/runner.md`).
+  every managed marketplace, except plugins disabled in `settings.json`
+  (`enabledPlugins`, the sibling of `$CLAUDE_PLUGINS_DIR`), missing installPaths and
+  plugins that ship hooks (see `docs/api/runner.md`).

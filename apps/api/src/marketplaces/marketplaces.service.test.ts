@@ -5,7 +5,9 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { MarketplaceCli } from "./marketplace-cli";
 import {
   InvalidMarketplaceSourceError,
+  MarketplaceCliError,
   MarketplaceConflictError,
+  MarketplacePluginInstalledError,
   UnsafeMarketplacePathError,
 } from "./marketplaces.errors";
 import { MarketplacesService } from "./marketplaces.service";
@@ -52,6 +54,10 @@ class FakeCli implements Pick<MarketplaceCli, "plugin" | "git"> {
   onAdd?: (source: string) => Promise<Known>;
   /** Was the installPath a symlink at the moment `uninstall` ran? */
   uninstallSawLink: boolean[] = [];
+  /** Was any installPath a symlink at the moment `marketplace update` ran? */
+  updateSawLink: boolean[] = [];
+  /** Make a call fail (after recording it), like a non-zero CLI exit. */
+  failOn?: (args: string[]) => boolean;
 
   constructor(
     private readonly pluginsDir: string,
@@ -74,6 +80,7 @@ class FakeCli implements Pick<MarketplaceCli, "plugin" | "git"> {
 
   async plugin(args: string[]): Promise<string> {
     this.calls.push(args);
+    if (this.failOn?.(args)) throw new MarketplaceCliError(`claude plugin ${args[0]}: boom`);
     const [cmd, sub, arg] = args;
     if (cmd === "marketplace" && sub === "list") return JSON.stringify(this.known);
     if (cmd === "marketplace" && sub === "add" && arg) {
@@ -88,6 +95,12 @@ class FakeCli implements Pick<MarketplaceCli, "plugin" | "git"> {
           }
         : await this.onAdd!(arg);
       this.known.push(entry);
+    }
+    if (cmd === "marketplace" && sub === "update") {
+      for (const [install] of Object.values(this.installed)) {
+        if (install)
+          this.updateSawLink.push((await fs.lstat(install.installPath)).isSymbolicLink());
+      }
     }
     if (cmd === "marketplace" && sub === "remove") {
       this.known = this.known.filter((m) => m.name !== arg);
@@ -227,13 +240,60 @@ describe("MarketplacesService", () => {
     ]);
   });
 
-  it("refuses to replace an installPath outside the plugins cache", async () => {
+  it("refuses to replace an installPath outside the plugins cache — and rolls the add back", async () => {
     const outside = path.join(root, "elsewhere", "zibby");
     await cli.seedInstall("zibby@zibby-skills", outside);
     await expect(svc.add({ source: checkout, devMode: true })).rejects.toBeInstanceOf(
       UnsafeMarketplacePathError,
     );
     expect(await fs.readFile(path.join(outside, "copied.txt"), "utf8")).toBe("cache copy");
+    // The guard ran before the record was written; our own CLI add is undone.
+    expect(await svc.list()).toEqual([]);
+    expect(cli.calls).toContainEqual(["marketplace", "remove", "zibby-skills"]);
+    expect(cli.known).toEqual([]);
+  });
+
+  it("a failed adopt connect never removes the marketplace Claude already had", async () => {
+    cli.known = [
+      { name: "zibby-skills", source: "directory", path: checkout, installLocation: checkout },
+    ];
+    await cli.seedInstall("zibby@zibby-skills", path.join(root, "elsewhere", "zibby"));
+    await expect(svc.add({ source: checkout, devMode: true })).rejects.toBeInstanceOf(
+      UnsafeMarketplacePathError,
+    );
+    expect(cliVerbs()).not.toContain("marketplace remove");
+    expect(await svc.list()).toEqual([]);
+  });
+
+  it("a failed dev clone connect deletes the clone and our CLI add", async () => {
+    await cli.seedInstall("zibby@cloned-mkt", path.join(root, "elsewhere", "zibby"));
+    await expect(
+      svc.add({ source: "https://github.com/owner/cloned.git", devMode: true }),
+    ).rejects.toBeInstanceOf(UnsafeMarketplacePathError);
+    expect(await exists(path.join(cloneDir, "cloned"))).toBe(false);
+    expect(cli.calls).toContainEqual(["marketplace", "remove", "cloned-mkt"]);
+  });
+
+  it("guards the nearest existing ancestor: no link through a symlinked cache subdir", async () => {
+    const outside = path.join(root, "outside");
+    await fs.mkdir(outside);
+    await fs.symlink(outside, path.join(pluginsDir, "cache", "evil"), "dir");
+    // The parent (`evil/sub`) does not exist; its ancestor `evil` leads out of the cache.
+    cli.installed["zibby@zibby-skills"] = [
+      {
+        scope: "user",
+        installPath: path.join(pluginsDir, "cache", "evil", "sub", "1"),
+        version: "0.1.0",
+      },
+    ];
+    await fs.writeFile(
+      path.join(pluginsDir, "installed_plugins.json"),
+      JSON.stringify({ version: 2, plugins: cli.installed }),
+    );
+    await expect(svc.add({ source: checkout, devMode: true })).rejects.toBeInstanceOf(
+      UnsafeMarketplacePathError,
+    );
+    expect(await fs.readdir(outside)).toEqual([]);
   });
 
   it("dev uninstall unlinks before the CLI deletes, so the checkout survives", async () => {
@@ -271,6 +331,124 @@ describe("MarketplacesService", () => {
 
     await svc.remove("cloned-mkt");
     expect(await exists(clone)).toBe(false);
+  });
+
+  it("install of an installed plugin: dev just links, normal refuses — no CLI install", async () => {
+    await svc.add({ source: checkout, devMode: true });
+    await svc.install("zibby-skills", "zibby");
+    const installPath = path.join(pluginsDir, "cache", "zibby-skills", "zibby", "0.1.1");
+    await fs.unlink(installPath);
+    await fs.mkdir(installPath);
+    const installs = () => cli.calls.filter((c) => c[0] === "install").length;
+
+    const detail = await svc.install("zibby-skills", "zibby");
+    expect(installs()).toBe(1);
+    expect(detail.plugins[0]).toMatchObject({ installed: true, linked: true });
+
+    cli.onAdd = async () => ({
+      name: "remote-mkt",
+      source: "github",
+      repo: "owner/remote",
+      installLocation: checkout,
+    });
+    await svc.add({ source: "owner/remote", devMode: false });
+    await svc.install("remote-mkt", "zibby");
+    await expect(svc.install("remote-mkt", "zibby")).rejects.toBeInstanceOf(
+      MarketplacePluginInstalledError,
+    );
+    expect(installs()).toBe(2);
+  });
+
+  it("dev update runs the CLI with every link dropped, then relinks (even on failure)", async () => {
+    await svc.add({ source: checkout, devMode: true });
+    await svc.install("zibby-skills", "zibby");
+    const installPath = path.join(pluginsDir, "cache", "zibby-skills", "zibby", "0.1.1");
+
+    await svc.update("zibby-skills");
+    expect(cli.updateSawLink).toEqual([false]);
+    expect(await fs.realpath(installPath)).toBe(checkout);
+
+    cli.failOn = (args) => args[1] === "update";
+    await expect(svc.update("zibby-skills")).rejects.toBeInstanceOf(MarketplaceCliError);
+    expect(await fs.realpath(installPath)).toBe(checkout);
+  });
+
+  it("a failed dev uninstall restores the link", async () => {
+    await svc.add({ source: checkout, devMode: true });
+    await svc.install("zibby-skills", "zibby");
+    const installPath = path.join(pluginsDir, "cache", "zibby-skills", "zibby", "0.1.1");
+    cli.failOn = (args) => args[0] === "uninstall";
+
+    await expect(svc.uninstall("zibby-skills", "zibby")).rejects.toBeInstanceOf(
+      MarketplaceCliError,
+    );
+    expect((await fs.lstat(installPath)).isSymbolicLink()).toBe(true);
+    await expect(svc.remove("zibby-skills")).rejects.toBeInstanceOf(MarketplaceCliError);
+    expect((await fs.lstat(installPath)).isSymbolicLink()).toBe(true);
+  });
+
+  it("remove skips the CLI for a marketplace already removed in the terminal", async () => {
+    await svc.add({ source: checkout, devMode: true });
+    cli.known = [];
+    await svc.remove("zibby-skills");
+    expect(cliVerbs()).not.toContain("marketplace remove");
+    expect(await svc.list()).toEqual([]);
+  });
+
+  it("remove checks the clone guard before touching anything", async () => {
+    await svc.add({ source: "https://github.com/owner/cloned.git", devMode: true });
+    await svc.install("cloned-mkt", "zibby");
+    // A tampered record pointing the clone outside the clone root.
+    const store = new MarketplacesStore(path.join(root, "marketplaces.json"));
+    const record = await store.get("cloned-mkt");
+    await store.add({ ...record!, localPath: checkout });
+    const before = cli.calls.length;
+
+    await expect(svc.remove("cloned-mkt")).rejects.toBeInstanceOf(UnsafeMarketplacePathError);
+    expect(cli.calls.length).toBe(before);
+    expect(await store.get("cloned-mkt")).toBeDefined();
+    expect(await exists(checkout)).toBe(true);
+  });
+
+  it("normal add rolls back its own CLI add when the id is already connected", async () => {
+    const store = new MarketplacesStore(path.join(root, "marketplaces.json"));
+    await store.add({
+      id: "remote-mkt",
+      source: "owner/old",
+      devMode: false,
+      managedClone: false,
+      addedAt: "2026-10-26T10:00:00.000Z",
+    });
+    cli.onAdd = async () => ({
+      name: "remote-mkt",
+      source: "github",
+      repo: "owner/new",
+      installLocation: checkout,
+    });
+    await expect(svc.add({ source: "owner/new", devMode: false })).rejects.toBeInstanceOf(
+      MarketplaceConflictError,
+    );
+    expect(cli.calls).toContainEqual(["marketplace", "remove", "remote-mkt"]);
+    expect(cli.known).toEqual([]);
+  });
+
+  it("normal add finds a known marketplace by its installLocation (no second CLI add)", async () => {
+    cli.known = [{ name: "local-mkt", source: "directory", installLocation: checkout }];
+    const detail = await svc.add({ source: checkout, devMode: false });
+    expect(detail.id).toBe("local-mkt");
+    expect(cliVerbs()).not.toContain("marketplace add");
+  });
+
+  it("list stays up when the CLI is unavailable", async () => {
+    cli.onAdd = async () => ({
+      name: "remote-mkt",
+      source: "github",
+      repo: "owner/repo",
+      installLocation: checkout,
+    });
+    await svc.add({ source: "owner/repo", devMode: false });
+    cli.failOn = () => true;
+    expect(await svc.list()).toMatchObject([{ id: "remote-mkt", pluginCount: 0 }]);
   });
 
   it("dev update pulls only a managed clone", async () => {

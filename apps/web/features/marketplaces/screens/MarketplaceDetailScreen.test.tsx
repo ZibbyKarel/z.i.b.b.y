@@ -133,11 +133,15 @@ describe("MarketplaceDetailScreen", () => {
     expect(push).toHaveBeenCalledWith("/workforce/marketplaces");
   });
 
-  it("surfaces a CLI failure message", () => {
+  it("surfaces the failure of the most recent action only", async () => {
     hooks.failing = true;
     render(<MarketplaceDetailScreen marketplaceId="zibby-skills" />);
+    await userEvent.click(screen.getByTestId(MarketplacePluginPanelTestId.Uninstall));
     expect(screen.getByTestId(MarketplaceDetailScreenTestId.Error)).toHaveTextContent(
       "claude: uninstall failed",
     );
+    // A newer action starts — the stale uninstall failure no longer shows.
+    await userEvent.click(screen.getByTestId(MarketplaceDetailScreenTestId.Update));
+    expect(screen.queryByTestId(MarketplaceDetailScreenTestId.Error)).toBeNull();
   });
 });

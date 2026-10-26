@@ -7,7 +7,9 @@ import {
   MarketplaceCliError,
   MarketplaceConflictError,
   MarketplaceNotFoundError,
+  MarketplacePluginInstalledError,
   MarketplacePluginNotFoundError,
+  UnsafeMarketplacePathError,
 } from "./marketplaces.errors";
 import { MarketplacesService } from "./marketplaces.service";
 
@@ -27,10 +29,29 @@ const cliOr404 = (error: unknown) => {
   return undefined;
 };
 
-/** Connect: a bad source → 400, a CLI failure → 502 (a duplicate id → 409 via the mapper). */
+/** Any mutation: a refused path → 422, else as {@link cliOr404}. */
+const mutationErrors = (error: unknown) => {
+  if (error instanceof UnsafeMarketplacePathError) {
+    return { status: 422 as const, body: message(error) };
+  }
+  return cliOr404(error);
+};
+
+/** Install: an already-installed plugin → 409, else as {@link mutationErrors}. */
+const installErrors = (error: unknown) => {
+  if (error instanceof MarketplacePluginInstalledError) {
+    return { status: 409 as const, body: message(error) };
+  }
+  return mutationErrors(error);
+};
+
+/** Connect: a bad source → 400, a refused path → 422, a CLI failure → 502 (a duplicate id → 409 via the mapper). */
 const addErrors = (error: unknown) => {
   if (error instanceof InvalidMarketplaceSourceError) {
     return { status: 400 as const, body: message(error) };
+  }
+  if (error instanceof UnsafeMarketplacePathError) {
+    return { status: 422 as const, body: message(error) };
   }
   if (error instanceof MarketplaceCliError) return { status: 502 as const, body: message(error) };
   return undefined;
@@ -52,19 +73,19 @@ export class MarketplacesController {
         errors.or404(id, () => this.marketplaces.get(id), cliOr404),
 
       removeMarketplace: ({ params: { id } }) =>
-        errors.or404(id, () => this.marketplaces.remove(id), cliOr404),
+        errors.or404(id, () => this.marketplaces.remove(id), mutationErrors),
 
       updateMarketplace: ({ params: { id } }) =>
-        errors.or404(id, () => this.marketplaces.update(id), cliOr404),
+        errors.or404(id, () => this.marketplaces.update(id), mutationErrors),
 
       installAllPlugins: ({ params: { id } }) =>
-        errors.or404(id, () => this.marketplaces.installAll(id), cliOr404),
+        errors.or404(id, () => this.marketplaces.installAll(id), mutationErrors),
 
       installPlugin: ({ params: { id, plugin } }) =>
-        errors.or404(id, () => this.marketplaces.install(id, plugin), cliOr404),
+        errors.or404(id, () => this.marketplaces.install(id, plugin), installErrors),
 
       uninstallPlugin: ({ params: { id, plugin } }) =>
-        errors.or404(id, () => this.marketplaces.uninstall(id, plugin), cliOr404),
+        errors.or404(id, () => this.marketplaces.uninstall(id, plugin), mutationErrors),
 
       listMarketplaceSkills: async () => ({ status: 200, body: await this.marketplaces.skills() }),
     });

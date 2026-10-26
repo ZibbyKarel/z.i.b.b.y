@@ -63,6 +63,9 @@ function MarketplaceDetail({ marketplace }: { marketplace: MarketplaceDetail }) 
   const uninstall = useUninstallPluginMutation();
   const remove = useRemoveMarketplaceMutation();
   const [confirmRemove, setConfirmRemove] = useState(false);
+  // The alert reflects only the most recently started action, never a stale failure.
+  const mutations = { update, installAll, install, uninstall, remove };
+  const [last, setLast] = useState<keyof typeof mutations>();
 
   const id = marketplace.id;
   const busy =
@@ -71,7 +74,8 @@ function MarketplaceDetail({ marketplace }: { marketplace: MarketplaceDetail }) 
     install.isPending ||
     uninstall.isPending ||
     remove.isPending;
-  const failure = [update, installAll, install, uninstall, remove].find((m) => m.isError)?.error;
+  const lastMutation = last ? mutations[last] : undefined;
+  const failure = lastMutation?.isError ? lastMutation.error : undefined;
 
   return (
     <Container padding={["300", "350"]}>
@@ -113,7 +117,10 @@ function MarketplaceDetail({ marketplace }: { marketplace: MarketplaceDetail }) 
                 icon="retry"
                 intent="secondary"
                 loading={update.isPending}
-                onClick={() => update.mutate({ params: { id } })}
+                onClick={() => {
+                  setLast("update");
+                  update.mutate({ params: { id } });
+                }}
                 size="sm"
               >
                 {t("update")}
@@ -124,7 +131,10 @@ function MarketplaceDetail({ marketplace }: { marketplace: MarketplaceDetail }) 
                 icon="plus"
                 intent="secondary"
                 loading={installAll.isPending}
-                onClick={() => installAll.mutate({ params: { id } })}
+                onClick={() => {
+                  setLast("installAll");
+                  installAll.mutate({ params: { id } });
+                }}
                 size="sm"
               >
                 {t("installAll")}
@@ -156,8 +166,14 @@ function MarketplaceDetail({ marketplace }: { marketplace: MarketplaceDetail }) 
             marketplace.plugins.map((plugin) => (
               <MarketplacePluginPanel
                 key={plugin.name}
-                onInstall={(name) => install.mutate({ params: { id, plugin: name } })}
-                onUninstall={(name) => uninstall.mutate({ params: { id, plugin: name } })}
+                onInstall={(name) => {
+                  setLast("install");
+                  install.mutate({ params: { id, plugin: name } });
+                }}
+                onUninstall={(name) => {
+                  setLast("uninstall");
+                  uninstall.mutate({ params: { id, plugin: name } });
+                }}
                 pending={busy}
                 plugin={plugin}
               />
@@ -172,12 +188,13 @@ function MarketplaceDetail({ marketplace }: { marketplace: MarketplaceDetail }) 
           cancelLabel={tc("cancel")}
           confirmLabel={t("remove")}
           onCancel={() => setConfirmRemove(false)}
-          onConfirm={() =>
+          onConfirm={() => {
+            setLast("remove");
             remove.mutate(
               { params: { id } },
               { onSuccess: () => router.push("/workforce/marketplaces" as Route) },
-            )
-          }
+            );
+          }}
           pending={remove.isPending}
           title={t("removeTitle")}
         />

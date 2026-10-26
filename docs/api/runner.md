@@ -320,7 +320,9 @@ Key assembled pieces:
   in order: the agent's `plugins[]`, then the project's `plugins[]`, then ZIBBY's
   own `zibby` commands plugin, then the user-scope `installPath` of every plugin
   installed from a ZIBBY-managed marketplace (`docs/api/marketplaces.md`;
-  deduped, fail-open). Entries are absolute paths (a missing one is
+  deduped, fail-open; skipped when disabled in `~/.claude/settings.json`
+  `enabledPlugins`, when the installPath is missing, or when the plugin ships hooks
+  — a third-party `PreToolUse` hook could pre-empt the approval gate). Entries are absolute paths (a missing one is
   silently ignored by the CLI);
   ZIBBY vendors no third-party plugin tree. The args are persisted in the run
   spec, so the loaded plugins are the trace and approval-resume replays them.

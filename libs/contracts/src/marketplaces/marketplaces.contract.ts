@@ -16,7 +16,8 @@ const pluginParams = z.object({ id: z.string().min(1), plugin: z.string().min(1)
 /**
  * Claude Code plugin marketplaces connected to ZIBBY. Mutations drive the
  * `claude plugin` CLI (user scope); a CLI failure surfaces as 502 carrying the
- * CLI's own message.
+ * CLI's own message, a filesystem guard refusing a path (e.g. an install dir
+ * outside the plugins cache) as 422, re-installing an installed plugin as 409.
  */
 export const marketplacesContract = c.router(
   {
@@ -34,6 +35,7 @@ export const marketplacesContract = c.router(
         201: MarketplaceDetailSchema,
         400: ErrorSchema,
         409: ErrorSchema,
+        422: ErrorSchema,
         502: ErrorSchema,
       },
       summary: "Connect a marketplace",
@@ -49,7 +51,12 @@ export const marketplacesContract = c.router(
       method: "DELETE",
       path: "/marketplaces/:id",
       pathParams: idParams,
-      responses: { 200: z.object({ id: z.string() }), 404: ErrorSchema, 502: ErrorSchema },
+      responses: {
+        200: z.object({ id: z.string() }),
+        404: ErrorSchema,
+        422: ErrorSchema,
+        502: ErrorSchema,
+      },
       summary: "Uninstall its plugins and disconnect a marketplace",
     },
     updateMarketplace: {
@@ -57,7 +64,12 @@ export const marketplacesContract = c.router(
       path: "/marketplaces/:id/update",
       pathParams: idParams,
       body: c.noBody(),
-      responses: { 200: MarketplaceDetailSchema, 404: ErrorSchema, 502: ErrorSchema },
+      responses: {
+        200: MarketplaceDetailSchema,
+        404: ErrorSchema,
+        422: ErrorSchema,
+        502: ErrorSchema,
+      },
       summary: "Pull the newest versions of the installed plugins",
     },
     installAllPlugins: {
@@ -65,7 +77,12 @@ export const marketplacesContract = c.router(
       path: "/marketplaces/:id/install-all",
       pathParams: idParams,
       body: c.noBody(),
-      responses: { 200: MarketplaceDetailSchema, 404: ErrorSchema, 502: ErrorSchema },
+      responses: {
+        200: MarketplaceDetailSchema,
+        404: ErrorSchema,
+        422: ErrorSchema,
+        502: ErrorSchema,
+      },
       summary: "Install every plugin of a marketplace",
     },
     installPlugin: {
@@ -73,14 +90,25 @@ export const marketplacesContract = c.router(
       path: "/marketplaces/:id/plugins/:plugin/install",
       pathParams: pluginParams,
       body: c.noBody(),
-      responses: { 200: MarketplaceDetailSchema, 404: ErrorSchema, 502: ErrorSchema },
+      responses: {
+        200: MarketplaceDetailSchema,
+        404: ErrorSchema,
+        409: ErrorSchema,
+        422: ErrorSchema,
+        502: ErrorSchema,
+      },
       summary: "Install one plugin",
     },
     uninstallPlugin: {
       method: "DELETE",
       path: "/marketplaces/:id/plugins/:plugin",
       pathParams: pluginParams,
-      responses: { 200: MarketplaceDetailSchema, 404: ErrorSchema, 502: ErrorSchema },
+      responses: {
+        200: MarketplaceDetailSchema,
+        404: ErrorSchema,
+        422: ErrorSchema,
+        502: ErrorSchema,
+      },
       summary: "Uninstall one plugin",
     },
     listMarketplaceSkills: {

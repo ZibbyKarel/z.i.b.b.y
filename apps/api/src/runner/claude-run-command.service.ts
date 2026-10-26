@@ -566,7 +566,12 @@ export class ClaudeRunCommandService {
   }
 
   /**
-   * installPaths of the user-scope plugins of every ZIBBY-managed marketplace.
+   * installPaths of the user-scope plugins of every ZIBBY-managed marketplace —
+   * minus plugins disabled in `~/.claude/settings.json` (`enabledPlugins`), missing
+   * installPaths, and every plugin that ships hooks: runs use `--setting-sources ""`
+   * so Claude would apply neither the disable flag nor any review of those hooks,
+   * and a third-party PreToolUse hook in an autonomous run could pre-empt ZIBBY's
+   * approval gate (Laws 1 and 4). See `managedPluginDirs`.
    * Fail-open: any read failure yields none — it never blocks a run.
    */
   private async marketplacePluginDirs(): Promise<string[]> {

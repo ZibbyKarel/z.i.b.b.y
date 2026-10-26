@@ -52,3 +52,14 @@ export class UnsafeMarketplacePathError extends Error {
     this.name = "UnsafeMarketplacePathError";
   }
 }
+
+/** Raised when installing a plugin that is already installed (normal mode). */
+export class MarketplacePluginInstalledError extends Error {
+  constructor(
+    public readonly id: string,
+    public readonly plugin: string,
+  ) {
+    super(`Plugin "${plugin}" of marketplace "${id}" is already installed`);
+    this.name = "MarketplacePluginInstalledError";
+  }
+}

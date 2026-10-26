@@ -88,16 +88,70 @@ describe("marketplace catalog", () => {
     const installed = await readInstalledPlugins(dir);
     expect([...installed.keys()]).toEqual(["zibby@zibby-skills", "other@elsewhere"]);
     expect(installed.get("zibby@zibby-skills")).toEqual({ installPath: "/u", version: "0.1.0" });
+  });
 
+  it("managedPluginDirs: only existing, enabled, hook-free plugins of managed marketplaces", async () => {
+    const plugins = path.join(dir, "plugins");
+    const at = (name: string) => path.join(plugins, "cache", "mkt", name, "1");
+    const install = (p: string) => [{ scope: "user", installPath: p, version: "1" }];
+    for (const name of ["ok", "off", "hooked", "inline-hooks"]) {
+      await fs.mkdir(at(name), { recursive: true });
+    }
+    await write(path.join(at("hooked"), "hooks/hooks.json"), {});
+    await write(path.join(at("inline-hooks"), ".claude-plugin/plugin.json"), { hooks: {} });
+    await write(path.join(dir, "settings.json"), {
+      enabledPlugins: { "off@mkt": false, "ok@mkt": true },
+    });
+    await write(path.join(plugins, "installed_plugins.json"), {
+      version: 2,
+      plugins: {
+        "ok@mkt": install(at("ok")),
+        "off@mkt": install(at("off")),
+        "hooked@mkt": install(at("hooked")),
+        "inline-hooks@mkt": install(at("inline-hooks")),
+        "gone@mkt": install(at("gone")),
+        "other@elsewhere": install(at("ok")),
+      },
+    });
     const record = {
-      id: "zibby-skills",
+      id: "mkt",
       source: "s",
       devMode: false,
       managedClone: false,
       addedAt: "2026-10-26T10:00:00.000Z",
     };
-    expect(await managedPluginDirs([record], dir)).toEqual(["/u"]);
-    expect(await managedPluginDirs([], dir)).toEqual([]);
+    expect(await managedPluginDirs([record], plugins)).toEqual([at("ok")]);
+    expect(await managedPluginDirs([], plugins)).toEqual([]);
+
+    // An unreadable settings.json fails open: nothing counts as disabled.
+    await write(path.join(dir, "settings.json"), "{ nope");
+    expect(await managedPluginDirs([record], plugins)).toEqual([at("ok"), at("off")]);
+  });
+
+  it("drops a plugin dir that escapes through a symlink and argv-unsafe names", async () => {
+    const outside = path.join(dir, "outside");
+    const mkt = path.join(dir, "mkt");
+    await write(path.join(outside, "skills/x/SKILL.md"), "---\nname: x\n---\n");
+    await fs.mkdir(path.join(mkt, "plugins"), { recursive: true });
+    await fs.symlink(outside, path.join(mkt, "plugins", "evil"), "dir");
+    await write(path.join(mkt, ".claude-plugin/marketplace.json"), {
+      name: "mkt",
+      plugins: [
+        { name: "evil", source: "./plugins/evil" },
+        { name: "-rf", source: "./" },
+        { name: "../up", source: "./" },
+      ],
+    });
+    const catalog = await readCatalog(mkt);
+    expect(catalog?.plugins.map((p) => p.name)).toEqual(["evil"]);
+    expect(catalog?.plugins[0]).toMatchObject({ skills: [] });
+    expect(catalog?.plugins[0]?.dir).toBeUndefined();
+
+    await write(path.join(mkt, ".claude-plugin/marketplace.json"), {
+      name: "--evil",
+      plugins: [],
+    });
+    expect(await readCatalog(mkt)).toBeNull();
   });
 
   it("reads a missing or corrupt installed_plugins.json as nothing installed", async () => {
