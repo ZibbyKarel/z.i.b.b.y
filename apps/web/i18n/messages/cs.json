@@ -62,7 +62,8 @@
         "skills": "Dovednosti",
         "commands": "Příkazy",
         "mcp": "MCP",
-        "hooks": "Hooky"
+        "hooks": "Hooky",
+        "marketplaces": "Marketplace"
       },
       "governance": {
         "approvals": "Schválení",
@@ -3481,5 +3482,47 @@
       "version": "Verze",
       "counts": "Obsah"
     }
+  },
+  "marketplaces": {
+    "title": "Marketplace",
+    "countSummary": "{count, plural, =0 {žádné marketplace} one {# marketplace} few {# marketplace} other {# marketplace}} · katalogy pluginů Claude Code",
+    "connect": "Připojit marketplace",
+    "openAria": "Otevřít {name}",
+    "installedOf": "Nainstalováno {installed} z {total} pluginů",
+    "devBadge": "dev",
+    "normalBadge": "běžný",
+    "emptyTitle": "Žádná připojená marketplace",
+    "emptyDescription": "Připoj marketplace pluginů Claude Code a jeho skilly, agenti a příkazy budou dostupné ZIBBY.",
+    "connectTitle": "Připojit marketplace",
+    "sourceLabel": "Zdroj",
+    "sourcePlaceholder": "owner/repo, git URL nebo /absolutní/cesta",
+    "devModeLabel": "Vývojářský režim",
+    "devModeHint": "Lokální cesta se použije tak, jak je, git URL se naklonuje; nainstalované pluginy se prolinkují na checkout.",
+    "connectAction": "Připojit",
+    "connectFailed": "Marketplace se nepodařilo připojit.",
+    "breadcrumb": "Marketplace",
+    "update": "Aktualizovat",
+    "installAll": "Nainstalovat vše",
+    "remove": "Odebrat",
+    "actionFailed": "Akce selhala.",
+    "removeTitle": "Odebrat marketplace?",
+    "removeBody": "Odinstaluje všechny pluginy {name} a odpojí ji. Tuto akci nelze vrátit.",
+    "modeDev": "Vývojářský režim",
+    "modeNormal": "Běžný",
+    "noPlugins": "Tato marketplace nemá žádné pluginy.",
+    "installed": "Nainstalováno",
+    "notInstalled": "Nenainstalováno",
+    "linked": "Prolinkováno",
+    "install": "Nainstalovat",
+    "uninstall": "Odinstalovat",
+    "version": "v{version}",
+    "skills": "Skilly",
+    "agents": "Agenti",
+    "commands": "Příkazy",
+    "hooks": "Hooky",
+    "mcpServers": "MCP servery",
+    "hooksYes": "Ano",
+    "hooksNo": "Ne",
+    "none": "Žádné"
   }
 }

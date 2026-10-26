@@ -71,6 +71,15 @@ vi.mock("../../../skills", () => ({
   useSkillsQuery: () => ({ data: [{ id: "tdd", name: "Test Driven", glyph: "spark" }] }),
 }));
 
+vi.mock("../../../marketplaces", () => ({
+  useMarketplaceSkillsQuery: () => ({
+    data: [
+      { id: "zibby:standup-post", name: "zibby:standup-post", marketplace: "m", plugin: "zibby" },
+      { id: "dup", name: "Test Driven", marketplace: "m", plugin: "zibby" },
+    ],
+  }),
+}));
+
 const uploadMutateAsync = vi.fn().mockResolvedValue({
   attachmentSetId: "set_1",
   files: [{ name: "a.txt", size: 2 }],
@@ -561,6 +570,19 @@ describe("CommandLine (Phase 118d generic composer)", () => {
 
       await user.type(input, "go{Enter}");
       expect(onSkillChange).toHaveBeenLastCalledWith(undefined);
+    });
+
+    it("/ also offers marketplace skills, deduped by name against ZIBBY skills", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine allowSkillMentions onSubmit={vi.fn()} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "/");
+      expect(screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-tdd`)).toBeInTheDocument();
+      expect(screen.queryByTestId(`${CommandLineTestId.MentionItem}-skill-dup`)).toBeNull();
+      await user.click(
+        screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-zibby:standup-post`),
+      );
+      expect(input).toHaveValue("/zibby:standup-post ");
     });
 
     it.each(["see ~/zibby/x", "a/b"])(

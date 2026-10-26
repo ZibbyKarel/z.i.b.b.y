@@ -62,7 +62,8 @@
         "skills": "Skills",
         "commands": "Commands",
         "mcp": "MCP",
-        "hooks": "Hooks"
+        "hooks": "Hooks",
+        "marketplaces": "Marketplaces"
       },
       "governance": {
         "approvals": "Approvals",
@@ -3481,5 +3482,47 @@
       "version": "Version",
       "counts": "Contents"
     }
+  },
+  "marketplaces": {
+    "title": "Marketplaces",
+    "countSummary": "{count, plural, =0 {no marketplaces} one {# marketplace} other {# marketplaces}} · Claude Code plugin catalogs",
+    "connect": "Connect marketplace",
+    "openAria": "Open {name}",
+    "installedOf": "{installed} of {total} plugins installed",
+    "devBadge": "dev",
+    "normalBadge": "normal",
+    "emptyTitle": "No marketplace connected",
+    "emptyDescription": "Connect a Claude Code plugin marketplace and its skills, agents and commands become available to ZIBBY.",
+    "connectTitle": "Connect marketplace",
+    "sourceLabel": "Source",
+    "sourcePlaceholder": "owner/repo, git URL or /absolute/path",
+    "devModeLabel": "Dev mode",
+    "devModeHint": "A local path is used as-is, a git URL is cloned; installed plugins are linked to the checkout.",
+    "connectAction": "Connect",
+    "connectFailed": "Could not connect the marketplace.",
+    "breadcrumb": "Marketplaces",
+    "update": "Update",
+    "installAll": "Install all",
+    "remove": "Remove",
+    "actionFailed": "The action failed.",
+    "removeTitle": "Remove marketplace?",
+    "removeBody": "Uninstalls all plugins of {name} and disconnects it. This cannot be undone.",
+    "modeDev": "Dev mode",
+    "modeNormal": "Normal",
+    "noPlugins": "This marketplace has no plugins.",
+    "installed": "Installed",
+    "notInstalled": "Not installed",
+    "linked": "Linked",
+    "install": "Install",
+    "uninstall": "Uninstall",
+    "version": "v{version}",
+    "skills": "Skills",
+    "agents": "Agents",
+    "commands": "Commands",
+    "hooks": "Hooks",
+    "mcpServers": "MCP servers",
+    "hooksYes": "Yes",
+    "hooksNo": "No",
+    "none": "None"
   }
 }

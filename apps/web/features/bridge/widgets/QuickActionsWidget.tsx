@@ -9,7 +9,6 @@ import {
   Container,
   Dropdown,
   Stack,
-  TextAreaField,
   TextInputField,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
@@ -18,6 +17,7 @@ import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useAgentsQuery } from "../../agents/queries";
 import { useSetQuickActionsMutation } from "../../quick-actions/mutations";
 import { getQuickActionsQueryKey, useQuickActionsQuery } from "../../quick-actions/queries";
+import { CommandLine } from "../../tasks/components/CommandLine/CommandLine";
 import { useCreateTaskMutation } from "../../tasks/mutations";
 import { useWorkflowsQuery } from "../../workflows/queries";
 import type { BridgeWidgetProps } from "./registry";
@@ -102,6 +102,7 @@ type NamedEntity = { id: string; name?: string | undefined };
 /** Visible hide of the "Queued" hint after a run. */
 const QUEUED_MS = 5000;
 const MAX_ACTIONS = 50;
+const MAX_TEXT = 8000;
 
 interface QuickActionRowProps {
   action: QuickAction;
@@ -205,6 +206,8 @@ function QuickActionAdd({ agents, workflows, full, pending, update }: QuickActio
   const t = useTranslations("bridge.widgets.quickActions");
   const [label, setLabel] = useState("");
   const [text, setText] = useState("");
+  // Bumped after a successful add to remount (and so clear) the CommandLine.
+  const [textKey, setTextKey] = useState(0);
   const [choice, setChoice] = useState("");
 
   const { options, targets } = useMemo(() => {
@@ -223,23 +226,28 @@ function QuickActionAdd({ agents, workflows, full, pending, update }: QuickActio
     return { options: opts, targets };
   }, [agents, workflows, t]);
 
-  const blank = !label.trim() || !text.trim() || full;
+  const blank = !label.trim() || !text.trim() || text.length > MAX_TEXT || full;
 
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    if (blank || pending) return;
+  /** Add the action; `body` overrides the mirrored `text` when Enter in the CommandLine submits. */
+  const add = (body: string) => {
+    if (!label.trim() || !body.trim() || body.length > MAX_TEXT || full || pending) return;
     const target = targets.get(choice);
     update(
       (latest) => [
         ...latest,
-        { id: newId(), label: label.trim(), text: text.trim(), ...(target ? { target } : {}) },
+        { id: newId(), label: label.trim(), text: body.trim(), ...(target ? { target } : {}) },
       ],
       () => {
         setLabel("");
         setText("");
+        setTextKey((k) => k + 1);
         setChoice("");
       },
     );
+  };
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    add(text);
   };
 
   return (
@@ -259,14 +267,20 @@ function QuickActionAdd({ agents, workflows, full, pending, update }: QuickActio
           placeholder={t("labelPlaceholder")}
           value={label}
         />
-        <TextAreaField
-          data-testid={QuickActionsWidgetTestId.Text}
-          label={t("text")}
-          maxLength={8000}
-          onChange={(e) => setText(e.target.value)}
-          placeholder={t("textPlaceholder")}
-          value={text}
-        />
+        <Container data-testid={QuickActionsWidgetTestId.Text}>
+          <CommandLine
+            allowSkillMentions
+            chrome={false}
+            key={textKey}
+            label={t("text")}
+            onSubmit={add}
+            onTextChange={setText}
+            placeholder={t("textPlaceholder")}
+            renderTrailing={() => null}
+            resetOnSubmit={false}
+            showAttach={false}
+          />
+        </Container>
         <Stack align="center" direction="row" gap="100">
           <Stack data-testid={QuickActionsWidgetTestId.Target}>
             <Dropdown

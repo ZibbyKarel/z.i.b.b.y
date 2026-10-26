@@ -77,6 +77,7 @@ export const SECTIONS = [
       { id: "commands", href: "/system/registries/commands" as Route },
       { id: "mcp", href: "/system/registries/mcp" as Route },
       { id: "hooks", href: "/system/registries/hooks" as Route },
+      { id: "marketplaces", href: "/workforce/marketplaces" as Route },
     ],
   },
   {

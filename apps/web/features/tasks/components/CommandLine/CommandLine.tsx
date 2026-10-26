@@ -35,6 +35,7 @@ import { useDepartmentsQuery } from "../../../departments/queries/useDepartments
 import { useTeamsQuery } from "../../../teams";
 import { useCompaniesQuery } from "../../../companies";
 import { useProjectsQuery } from "../../../projects";
+import { useMarketplaceSkillsQuery } from "../../../marketplaces";
 import { useSkillsQuery } from "../../../skills";
 import { useUploadTaskAttachmentsMutation } from "../../mutations/useUploadTaskAttachmentsMutation";
 import { type DepartmentId, type TaskTarget, extractPathRanges } from "../../task";
@@ -660,7 +661,18 @@ export function CommandLine({
   const { data: teams = [] } = useTeamsQuery();
   const { data: companies = [] } = useCompaniesQuery();
   const { data: projects = [] } = useProjectsQuery();
-  const { data: skills = [] } = useSkillsQuery();
+  const { data: zibbySkills = [] } = useSkillsQuery();
+  const { data: marketplaceSkills = [] } = useMarketplaceSkillsQuery();
+  // `/` offers ZIBBY skills plus installed marketplace ones (`plugin:skill`), deduped by name.
+  const skills = useMemo(() => {
+    const seen = new Set(zibbySkills.map((s) => s.name));
+    return [
+      ...zibbySkills,
+      ...marketplaceSkills
+        .filter((s) => !seen.has(s.name))
+        .map((s) => ({ id: s.id, name: s.name, glyph: "spark" as const, desc: s.desc ?? "" })),
+    ];
+  }, [zibbySkills, marketplaceSkills]);
 
   const hasScope = scopeKinds.length > 0;
   const enabledTriggers = useMemo<ReadonlySet<Trigger>>(
