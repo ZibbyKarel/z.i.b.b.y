@@ -330,3 +330,54 @@ describe("ChatProvider — about (todo-29)", () => {
     uuid.mockRestore();
   });
 });
+
+describe("ChatProvider — model (todo-30)", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  function renderStore() {
+    return renderHook(() => useChat(), {
+      wrapper: ({ children }) => <ChatProvider>{children}</ChatProvider>,
+    });
+  }
+
+  it("defaults to sonnet on fresh storage", () => {
+    expect(renderStore().result.current.model).toBe("sonnet");
+  });
+
+  it("persists the pick and a remounted provider starts from it", () => {
+    const first = renderStore();
+    act(() => first.result.current.setModel("opus"));
+    expect(window.localStorage.getItem("zibby.chat.model")).toBe("opus");
+    first.unmount();
+    expect(renderStore().result.current.model).toBe("opus");
+  });
+
+  it("falls back to sonnet for an unknown stored value", () => {
+    window.localStorage.setItem("zibby.chat.model", "gpt");
+    expect(renderStore().result.current.model).toBe("sonnet");
+  });
+
+  it("survives throwing storage", () => {
+    const get = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    const set = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    const { result } = renderStore();
+    expect(result.current.model).toBe("sonnet");
+    act(() => result.current.setModel("haiku"));
+    expect(result.current.model).toBe("haiku");
+    get.mockRestore();
+    set.mockRestore();
+  });
+
+  it("newChat keeps the model", () => {
+    const { result } = renderStore();
+    act(() => result.current.setModel("fable"));
+    act(() => result.current.newChat());
+    expect(result.current.model).toBe("fable");
+  });
+});

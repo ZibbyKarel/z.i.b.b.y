@@ -139,6 +139,15 @@ NestJS `CanActivate` guard in this codebase. It enforces two checks independentl
 `GET /api/chat/mcp` (`rejectGet`) carries no tool surface, so it stays unguarded —
 it only ever returns a 405.
 
+### todo-30 — per-turn model
+
+`SendChatMessageBody.model?: "haiku" | "sonnet" | "opus" | "fable"` picks the
+model for that turn (`claude --model <model>`); omitted → `sonnet`
+(`DEFAULT_CHAT_MODEL`). The persisted assistant `ChatMessage` carries the same
+`model?` so the transcript records what answered. The dock keeps the pick
+sticky in `localStorage` (`zibby.chat.model`); it applies from the next turn and
+the thread (`--resume`) is kept.
+
 ### D-020 — attachments + several `@`-mentions
 
 The dock's composer reuses the existing task-attachment upload

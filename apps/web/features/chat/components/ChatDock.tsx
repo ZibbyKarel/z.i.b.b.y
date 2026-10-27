@@ -1,7 +1,16 @@
 "use client";
 
-import type { TaskTarget } from "@zibby/contracts";
-import { Button, ChatBubble, Chip, ChatDock as DockFrame, Row, Stack } from "@zibby/design-system";
+import { CHAT_MODELS, type ChatModel, type TaskTarget } from "@zibby/contracts";
+import {
+  Button,
+  ChatBubble,
+  Chip,
+  Container,
+  ChatDock as DockFrame,
+  Dropdown,
+  Row,
+  Stack,
+} from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -20,7 +29,17 @@ export enum ChatDockTestId {
   Empty = "app-chat-dock-empty",
   TargetChip = "app-chat-dock-target-chip",
   AboutChip = "app-chat-dock-about-chip",
+  ModelPicker = "app-chat-dock-model",
 }
+
+const MODEL_LABEL: Record<ChatModel, string> = {
+  haiku: "Haiku",
+  sonnet: "Sonnet",
+  opus: "Opus",
+  fable: "Fable",
+};
+
+const MODEL_OPTIONS = CHAT_MODELS.map((m) => ({ value: m, label: MODEL_LABEL[m] }));
 
 /** Composer auto-grows up to this many lines, then scrolls. */
 const COMPOSER_MAX_ROWS = 6;
@@ -69,6 +88,8 @@ export function ChatDock() {
     messages,
     newChat,
     conversationId,
+    model,
+    setModel,
   } = useChat();
   const { stream, thinking, send, setScope, setSkillId, voice, dictated, consumeDictated } =
     useChatDock();
@@ -175,7 +196,19 @@ export function ChatDock() {
         injectedText={dictated}
         label={t("composer.label")}
         leadingActions={
-          voice.supported && <VoiceToggleButton active={voice.active} onToggle={voice.toggle} />
+          <>
+            {voice.supported && <VoiceToggleButton active={voice.active} onToggle={voice.toggle} />}
+            <Container data-testid={ChatDockTestId.ModelPicker}>
+              <Dropdown
+                aria-label={t("composer.model")}
+                onChange={setModel}
+                options={MODEL_OPTIONS}
+                size="sm"
+                value={model}
+                variant="inline"
+              />
+            </Container>
+          </>
         }
         maxRows={COMPOSER_MAX_ROWS}
         onInjectedTextConsumed={consumeDictated}
