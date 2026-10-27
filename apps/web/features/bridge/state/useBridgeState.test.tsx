@@ -154,6 +154,25 @@ describe("useBridgeState", () => {
     expect(result.current.preset).toBe("REVIEW");
   });
 
+  it("deleting the active layout falls back to the saved DEFAULT, not the built-in", () => {
+    const mine = [{ id: "prs", type: "prs" as const, x: 0, y: 0, w: 4, h: 4 }];
+    ui = UiSettingsSchema.parse({ bridge: { saved: { DEFAULT: mine, Mine: [] }, preset: "Mine" } });
+    const { result } = renderHook(() => useBridgeState());
+    act(() => result.current.deleteLayout("Mine"));
+    expect(result.current.layout).toEqual(compact(mine));
+    expect(setBridge).toHaveBeenLastCalledWith(
+      expect.objectContaining({ preset: "DEFAULT", layout: compact(mine) }),
+    );
+  });
+
+  it("applyPreset drops an in-progress drag layout", () => {
+    const { result } = renderHook(() => useBridgeState());
+    act(() => result.current.beginDrag("issues"));
+    act(() => result.current.move("issues", { x: 0, y: 3, w: 4, h: 18 }, 4, 0));
+    act(() => result.current.applyPreset("REVIEW"));
+    expect(result.current.layout).toEqual(compact(REVIEW_LAYOUT));
+  });
+
   it("collapse toggles instantly and persists via setBridge", () => {
     const { result } = renderHook(() => useBridgeState());
     act(() => result.current.toggleCollapsed("prs"));

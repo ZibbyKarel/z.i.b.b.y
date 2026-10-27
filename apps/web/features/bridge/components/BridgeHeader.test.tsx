@@ -70,8 +70,7 @@ describe("BridgeHeader", () => {
       within(screen.getByTestId(BridgeHeaderTestId.Manage)).getByRole("button"),
     );
     expect(onManage).toHaveBeenCalled();
-    expect(screen.queryByRole("button", { name: "Uložit" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Zrušit" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /save|cancel|uložit|zrušit/i })).toBeNull();
   });
 
   it("manage is an icon-only button named by its label, with no title or caption", () => {

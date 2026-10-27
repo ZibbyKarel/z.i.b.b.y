@@ -117,4 +117,27 @@ describe("BridgeBoard", () => {
     fireEvent.click(screen.getByTestId(WidgetFrameTestId.Configure));
     expect(screen.getByTestId("cfg")).toHaveTextContent("true");
   });
+
+  it("a header click without movement starts no drag", () => {
+    vi.stubGlobal("PointerEvent", MouseEvent);
+    const layout = [{ id: "prs", type: "prs", x: 0, y: 0, w: 6, h: 4 }];
+    const beginDrag = vi.fn();
+    const move = vi.fn();
+    const endDrag = vi.fn();
+    const clickState = {
+      ...state,
+      layout,
+      layoutRef: { current: layout },
+      beginDrag,
+      endDrag,
+      move,
+    } as unknown as BridgeState;
+    renderWithProviders(<BridgeBoard density="comfort" state={clickState} />);
+    fireEvent.pointerDown(screen.getByTestId(WidgetFrameTestId.Header), { button: 0 });
+    fireEvent.pointerMove(window, { clientX: 2, clientY: 1 });
+    fireEvent.pointerUp(window);
+    expect(beginDrag).not.toHaveBeenCalled();
+    expect(move).not.toHaveBeenCalled();
+    expect(endDrag).not.toHaveBeenCalled();
+  });
 });

@@ -296,6 +296,8 @@ export function WidgetFrame({
             aria-label={name}
             className={cn(
               "absolute box-border h-[12px] w-[12px] border-ink",
+              "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+              dragging && "opacity-100",
               RESIZE_HANDLES[corner],
             )}
             data-testid={`${WidgetFrameTestId.Resize}-${corner}`}

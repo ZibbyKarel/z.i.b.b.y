@@ -116,7 +116,12 @@ export function useBridgeState() {
 
   /** Switch layout. */
   const applyPreset = useCallback(
-    (name: string) => update({ layout: presetLayout(name, saved), preset: name }),
+    (name: string) => {
+      const next = presetLayout(name, saved);
+      layoutRef.current = next;
+      setDragLayout(null);
+      update({ layout: next, preset: name });
+    },
     [update, saved],
   );
 
@@ -149,7 +154,7 @@ export function useBridgeState() {
           ? { removed: [...removed, name] }
           : {}),
         ...(preset === name
-          ? { preset: DEFAULT_PRESET, layout: presetLayout(DEFAULT_PRESET, {}) }
+          ? { preset: DEFAULT_PRESET, layout: presetLayout(DEFAULT_PRESET, rest) }
           : {}),
       });
     },
@@ -200,12 +205,18 @@ export function useBridgeState() {
   const closeSelection = useCallback(() => setSelection(null), []);
   const beginDrag = useCallback((id: string) => setDraggingId(id), []);
   /** Drag end: a final compact WITHOUT priority (reference parity), then persist if anything moved. */
+  // Read through a ref: the pointerup listener holds the `endDrag` from drag start.
+  const latest = useRef({ commitLayout, persistedLayout });
+  useEffect(() => {
+    latest.current = { commitLayout, persistedLayout };
+  }, [commitLayout, persistedLayout]);
   const endDrag = useCallback(() => {
     setDraggingId(null);
     const settled = compact(layoutRef.current);
-    if (JSON.stringify(settled) !== JSON.stringify(persistedLayout)) commitLayout(settled);
+    if (JSON.stringify(settled) !== JSON.stringify(latest.current.persistedLayout))
+      latest.current.commitLayout(settled);
     else setDragLayout(null);
-  }, [commitLayout, persistedLayout]);
+  }, []);
 
   useEffect(() => {
     // `history.replaceState` (not the router): Next syncs it into `useSearchParams` without a

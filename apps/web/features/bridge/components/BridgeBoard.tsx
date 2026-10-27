@@ -9,6 +9,9 @@ import { type BridgeWidgetInfo, WIDGETS } from "../widgets/registry";
 import { boardHeight, colWidth, rowsFor, widgetRect } from "../grid/positions";
 import type { Density, ResizeCorner } from "@zibby/design-system";
 
+/** Pointer travel (px) before a header/corner press becomes a drag. */
+const DRAG_THRESHOLD = 4;
+
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
 interface HostProps {
@@ -23,6 +26,7 @@ interface HostProps {
   onNatural: (id: string, px: number) => void;
   onInfo: (id: string, info: BridgeWidgetInfo) => void;
   onConfigure: (id: string) => void;
+  onRemove: (id: string) => void;
   onDragStart: (id: string, mode: "move" | ResizeCorner, e: PointerEvent<HTMLElement>) => void;
 }
 
@@ -39,6 +43,7 @@ function BridgeWidgetHost({
   onNatural,
   onInfo,
   onConfigure,
+  onRemove,
   onDragStart,
 }: HostProps) {
   const t = useTranslations();
@@ -69,7 +74,7 @@ function BridgeWidgetHost({
       onConfigure={def.configurable ? () => onConfigure(id) : undefined}
       onMovePointerDown={(e) => onDragStart(id, "move", e)}
       onNaturalHeight={onNaturalHeight}
-      onRemove={() => state.remove(id)}
+      onRemove={() => onRemove(id)}
       onResizePointerDown={(e, corner) => onDragStart(id, corner, e)}
       onToggleCollapse={() => state.toggleCollapsed(id)}
       removeLabel={t("bridge.remove")}
@@ -130,6 +135,14 @@ export function BridgeBoard({ state, density, sheetSide = "right" }: BridgeBoard
     (id: string, px: number) => setNatural((p) => (p[id] === px ? p : { ...p, [id]: px })),
     [],
   );
+  // Forget the configure toggle of a removed widget (re-adding it starts unconfigured).
+  const onRemove = useCallback(
+    (id: string) => {
+      setConfiguring((p) => Object.fromEntries(Object.entries(p).filter(([k]) => k !== id)));
+      state.remove(id);
+    },
+    [state],
+  );
   const onConfigure = useCallback(
     (id: string) => setConfiguring((p) => ({ ...p, [id]: !p[id] })),
     [],
@@ -173,7 +186,14 @@ export function BridgeBoard({ state, density, sheetSide = "right" }: BridgeBoard
       mode === "move"
         ? state.move
         : (i: string, o: DragOrigin, dx: number, dy: number) => state.resize(i, o, dx, dy, mode);
+    let started = false;
+    // A plain click must not flip the board to the raw layout: drag only after DRAG_THRESHOLD px.
     const onMove = (ev: globalThis.PointerEvent) => {
+      if (!started) {
+        if (Math.hypot(ev.clientX - sx, ev.clientY - sy) < DRAG_THRESHOLD) return;
+        started = true;
+        state.beginDrag(id);
+      }
       const { dx, dy } = toCells(ev.clientX - sx, ev.clientY - sy, colW, gap, rowHeight);
       apply(id, origin, dx, dy);
     };
@@ -181,9 +201,8 @@ export function BridgeBoard({ state, density, sheetSide = "right" }: BridgeBoard
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
-      state.endDrag();
+      if (started) state.endDrag();
     };
-    state.beginDrag(id);
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onUp);
@@ -211,6 +230,7 @@ export function BridgeBoard({ state, density, sheetSide = "right" }: BridgeBoard
                 onEmpty={onEmpty}
                 onInfo={onInfo}
                 onNatural={onNatural}
+                onRemove={onRemove}
                 sheetSide={sheetSide}
                 state={state}
                 style={{

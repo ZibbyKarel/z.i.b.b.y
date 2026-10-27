@@ -77,6 +77,7 @@ describe("WidgetFrame", () => {
       expect(onResize).toHaveBeenLastCalledWith(expect.anything(), c);
     }
     expect(names.size).toBe(4);
+    expect(screen.getByTestId(resizeId("nw"))).toHaveClass("opacity-0", "group-hover:opacity-100");
     expect(onMove).toHaveBeenCalledOnce();
     await userEvent.click(screen.getByTestId(WidgetFrameTestId.Remove));
     expect(onRemove).toHaveBeenCalledOnce();
