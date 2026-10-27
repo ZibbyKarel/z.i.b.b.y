@@ -3455,6 +3455,7 @@
       "newName": "Název nového rozložení",
       "add": "Přidat",
       "deleteNamed": "Smazat {name}",
+      "moveHint": "Alt+↑/↓ pro přesun",
       "dropEnd": "Pusť sem pro přesun na konec nabídky"
     }
   },

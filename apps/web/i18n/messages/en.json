@@ -3455,6 +3455,7 @@
       "newName": "New layout name",
       "add": "Add",
       "deleteNamed": "Delete {name}",
+      "moveHint": "Alt+↑/↓ to move",
       "dropEnd": "Drop here to put last in the dropdown"
     }
   },

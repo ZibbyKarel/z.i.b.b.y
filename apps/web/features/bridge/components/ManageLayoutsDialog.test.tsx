@@ -1,5 +1,6 @@
 import { ConfirmDeleteButtonTestId, DividerTestId, FieldTestId } from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, renderWithProviders, screen, within } from "../../../test/render";
 import {
@@ -26,6 +27,17 @@ describe("moveLayout", () => {
   });
 });
 
+const baseProps: ManageLayoutsDialogProps = {
+  open: true,
+  preset: "A",
+  layouts: arr,
+  nextName: "MY LAYOUT 01",
+  saved: { A: [], B: [], C: [], D: [] },
+  onArrange: vi.fn(),
+  onAdd: vi.fn(() => true),
+  onDelete: vi.fn(),
+  onClose: vi.fn(),
+};
 const setup = (over: Partial<ManageLayoutsDialogProps> = {}) => {
   const props: ManageLayoutsDialogProps = {
     open: true,
@@ -79,6 +91,34 @@ describe("ManageLayoutsDialog", () => {
     };
     fireEvent.drop(screen.getByTestId(Id.Divider), { dataTransfer });
     expect(p.onArrange).toHaveBeenCalledWith({ shown: ["A"], hidden: ["DEFAULT", "C"] });
+  });
+
+  it("Alt+ArrowDown on the last shown row moves it first into hidden and keeps focus", () => {
+    const p = setup();
+    const r = row("B");
+    expect(r).toHaveAttribute("tabindex", "0");
+    r.focus();
+    fireEvent.keyDown(r, { key: "ArrowDown", altKey: true });
+    expect(p.onArrange).toHaveBeenCalledWith({ shown: ["A"], hidden: ["B", "C", "D"] });
+  });
+
+  it("Alt+ArrowUp crosses the divider upwards; plain arrows do nothing", () => {
+    const p = setup();
+    fireEvent.keyDown(row("C"), { key: "ArrowUp" });
+    expect(p.onArrange).not.toHaveBeenCalled();
+    fireEvent.keyDown(row("C"), { key: "ArrowUp", altKey: true });
+    expect(p.onArrange).toHaveBeenCalledWith({ shown: ["A", "B", "C"], hidden: ["D"] });
+  });
+
+  it("focus stays on the moved row after it crosses the divider", () => {
+    function Stateful() {
+      const [layouts, setLayouts] = useState(arr);
+      return <ManageLayoutsDialog {...baseProps} layouts={layouts} onArrange={setLayouts} />;
+    }
+    renderWithProviders(<Stateful />);
+    row("B").focus();
+    fireEvent.keyDown(row("B"), { key: "ArrowDown", altKey: true });
+    expect(document.activeElement).toBe(row("B"));
   });
 
   it("delete needs two clicks", async () => {

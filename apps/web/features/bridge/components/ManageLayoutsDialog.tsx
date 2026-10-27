@@ -11,8 +11,8 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { type DragEvent, useId, useState } from "react";
-import { type Arrangement, layoutNameError } from "../grid/presets";
+import { type DragEvent, type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
+import { type Arrangement, DEFAULT_PRESET, layoutNameError } from "../grid/presets";
 
 /** Drag-data MIME carrying the dragged layout's name. */
 const LAYOUT_DND_TYPE = "application/x-zibby-bridge-layout";
@@ -100,7 +100,7 @@ function ManageLayouts({
   }
 
   const flat = [...layouts.shown, ...layouts.hidden];
-  const label = (n: string) => (n === "DEFAULT" || n === "REVIEW" ? t(`preset.${n}`) : n);
+  const label = (n: string) => (n === DEFAULT_PRESET || n === "REVIEW" ? t(`preset.${n}`) : n);
 
   const drop = (e: DragEvent, target: string | null) => {
     e.preventDefault();
@@ -115,49 +115,69 @@ function ManageLayouts({
     e.dataTransfer.dropEffect = "move";
   };
 
-  const row = (n: string) => {
-    return (
-      <div
-        draggable
-        data-testid={`${ManageLayoutsDialogTestId.Row}-${n}`}
-        key={n}
-        onDragOver={over}
-        onDragStart={(e) => {
-          e.dataTransfer.effectAllowed = "move";
-          e.dataTransfer.setData(LAYOUT_DND_TYPE, n);
-        }}
-        onDrop={(e) => drop(e, n)}
-      >
-        <Panel padding="100">
-          <Stack align="center" direction="row" gap="100">
-            <Typography aria-hidden mono type="note" variant="tertiary">
-              ⠿
-            </Typography>
-            <Stack grow direction="row" gap="75">
-              <Typography mono size="sm" type="note">
-                {label(n)}
-              </Typography>
-              {n === preset ? (
-                <Typography mono size="2xs" type="note" variant="tertiary">
-                  {t("manage.active")}
-                </Typography>
-              ) : null}
-            </Stack>
-            {n === "DEFAULT" ? null : (
-              <div data-testid={`${ManageLayoutsDialogTestId.Delete}-${n}`}>
-                <ConfirmDeleteButton
-                  ariaLabel={t("manage.deleteNamed", { name: label(n) })}
-                  confirmLabel={t("deleteLayoutConfirm")}
-                  label={t("deleteLayout")}
-                  onConfirm={() => onDelete(n)}
-                />
-              </div>
-            )}
-          </Stack>
-        </Panel>
-      </div>
-    );
+  // Rows remount when they cross the divider, so the moved row is re-focused after the render.
+  const refocus = useRef<string | null>(null);
+  useEffect(() => {
+    if (!refocus.current) return;
+    document
+      .querySelector<HTMLElement>(
+        `[data-testid="${ManageLayoutsDialogTestId.Row}-${refocus.current}"]`,
+      )
+      ?.focus();
+    refocus.current = null;
+  });
+  const key = (e: KeyboardEvent, n: string) => {
+    if (!e.altKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+    e.preventDefault();
+    const cur = [...layouts.shown, DIVIDER, ...layouts.hidden].indexOf(n);
+    refocus.current = n;
+    onArrange(moveLayout(layouts, n, cur + (e.key === "ArrowUp" ? -1 : 1)));
   };
+
+  const row = (n: string) => (
+    <div
+      draggable
+      aria-description={t("manage.moveHint")}
+      data-testid={`${ManageLayoutsDialogTestId.Row}-${n}`}
+      key={n}
+      onDragOver={over}
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData(LAYOUT_DND_TYPE, n);
+      }}
+      onDrop={(e) => drop(e, n)}
+      onKeyDown={(e) => key(e, n)}
+      tabIndex={0}
+    >
+      <Panel padding="100">
+        <Stack align="center" direction="row" gap="100">
+          <Typography aria-hidden mono type="note" variant="tertiary">
+            ⠿
+          </Typography>
+          <Stack grow direction="row" gap="75">
+            <Typography mono size="sm" type="note">
+              {label(n)}
+            </Typography>
+            {n === preset ? (
+              <Typography mono size="2xs" type="note" variant="tertiary">
+                {t("manage.active")}
+              </Typography>
+            ) : null}
+          </Stack>
+          {n === DEFAULT_PRESET ? null : (
+            <div data-testid={`${ManageLayoutsDialogTestId.Delete}-${n}`}>
+              <ConfirmDeleteButton
+                ariaLabel={t("manage.deleteNamed", { name: label(n) })}
+                confirmLabel={t("deleteLayoutConfirm")}
+                label={t("deleteLayout")}
+                onConfirm={() => onDelete(n)}
+              />
+            </div>
+          )}
+        </Stack>
+      </Panel>
+    </div>
+  );
 
   const emptyZone = (testId: ManageLayoutsDialogTestId, target: string | null, text: string) => (
     <div data-testid={testId} onDragOver={over} onDrop={(e) => drop(e, target)}>

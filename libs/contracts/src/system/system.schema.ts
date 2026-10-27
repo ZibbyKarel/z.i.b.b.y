@@ -54,8 +54,9 @@ export const UiSettingsSchema = z.object({
       /** Legacy: saved layouts shown in the header, read only while `arranged` is null. */
       favorites: z.array(z.string()).default([]),
       /**
-       * Layout order from the layout manager: `shown` sit in the header after DEFAULT, `hidden`
-       * behind its dropdown. `null` = never arranged (REVIEW + `favorites` shown).
+       * Layout order from the layout manager: `shown` sit in the header in order, `hidden`
+       * behind its dropdown; DEFAULT is a layout like any other. `null` = never arranged (DEFAULT, REVIEW
+       * + `favorites` shown).
        */
       arranged: z
         .object({ shown: z.array(z.string()), hidden: z.array(z.string()) })
