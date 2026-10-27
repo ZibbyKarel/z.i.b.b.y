@@ -37,6 +37,7 @@ const row = (phaseId: string, over: Partial<StageRailRow> = {}): StageRailRow =>
   stateKey: "queued",
   meta: "—",
   retries: 0,
+  rounds: [],
   current: false,
   ...over,
 });

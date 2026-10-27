@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  Accordion,
+  AccordionItem,
   ChatBubble,
   Container,
   LogStream,
@@ -9,10 +11,13 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
+import type { LogStreamLine } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
 import type { DashboardApproval } from "../../approvals/approval";
 import type { RunView } from "../run";
+import { agentBody } from "../runDetailModel";
 import type { FeedItem, RunMode, StageRailRow } from "../runDetailModel";
+import { useStageRunLogQuery } from "../queries/useStageRunLogQuery";
 import { GoalDetailPanel } from "./GoalDetailPanel";
 import {
   LimitPausedPanel,
@@ -26,6 +31,7 @@ export enum RunLiveFeedTestId {
   Agent = "run-feed-agent",
   You = "run-feed-you",
   Delivery = "run-feed-delivery",
+  Round = "run-feed-round",
 }
 
 export interface RunLiveFeedProps {
@@ -39,18 +45,82 @@ export interface RunLiveFeedProps {
 
 type Item<K extends FeedItem["kind"]> = Extract<FeedItem, { kind: K }>;
 
-function FeedAgent({ item }: { item: Item<"agent"> }) {
+function AgentBody({
+  markdown,
+  tools,
+  live,
+}: {
+  markdown: string;
+  tools: LogStreamLine[];
+  live: boolean;
+}) {
+  return (
+    <Stack gap="75">
+      {markdown && <Markdown escapeHtml source={markdown} />}
+      {tools.length > 0 && (
+        <Panel padding={["100", "150"]}>
+          <LogStream lines={tools} paused={!live} />
+        </Panel>
+      )}
+    </Stack>
+  );
+}
+
+/** An earlier round: its finished log is fetched only once the section is opened (details mount lazily). */
+function PriorRoundLog({
+  runId,
+  phaseId,
+  stageRunId,
+  raw,
+}: {
+  runId: string;
+  phaseId: string;
+  stageRunId: string;
+  raw: boolean;
+}) {
+  const { data } = useStageRunLogQuery(runId, phaseId, stageRunId);
+  const body = agentBody(phaseId, data?.content ?? "", raw);
+  return (
+    <Container data-testid={RunLiveFeedTestId.Round}>
+      <AgentBody {...body} live={false} />
+    </Container>
+  );
+}
+
+function FeedAgent({ item, runId }: { item: Item<"agent">; runId: string }) {
+  const t = useTranslations("runs.detail.feed");
+  const { rounds } = item;
+  const body = <AgentBody live={item.live} markdown={item.markdown} tools={item.tools} />;
   return (
     <Container data-testid={RunLiveFeedTestId.Agent} maxWidth="760px">
       <Stack gap="75">
         <Typography as="span" type="labelSm">
           {item.who}
         </Typography>
-        {item.markdown && <Markdown escapeHtml source={item.markdown} />}
-        {item.tools.length > 0 && (
-          <Panel padding={["100", "150"]}>
-            <LogStream lines={item.tools} paused={!item.live} />
-          </Panel>
+        {rounds.length < 2 ? (
+          body
+        ) : (
+          // key: a new round remounts the accordion so the newest one opens
+          <Accordion single key={rounds.length}>
+            {rounds.map((r, i) => (
+              <AccordionItem
+                defaultExpanded={i === rounds.length - 1}
+                key={r.n}
+                summary={t("round", { n: r.n })}
+              >
+                {i === rounds.length - 1 ? (
+                  <Container data-testid={RunLiveFeedTestId.Round}>{body}</Container>
+                ) : (
+                  <PriorRoundLog
+                    phaseId={item.phaseId}
+                    raw={!!item.raw}
+                    runId={runId}
+                    stageRunId={r.stageRunId}
+                  />
+                )}
+              </AccordionItem>
+            ))}
+          </Accordion>
         )}
       </Stack>
     </Container>
@@ -110,7 +180,7 @@ export function RunLiveFeed({ run, mode, approval, items, rail = [] }: RunLiveFe
           case "divider":
             return null; // the stage rail already names each phase with its state and time
           case "agent":
-            return <FeedAgent item={item} key={`a-${item.phaseId}`} />;
+            return <FeedAgent item={item} key={`a-${item.phaseId}`} runId={run.runId} />;
           case "you":
             return (
               <FeedYou

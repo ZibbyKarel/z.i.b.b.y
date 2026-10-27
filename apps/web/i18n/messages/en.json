@@ -1360,6 +1360,7 @@
         "parkedHint": "Add a note below to resume, or re-run from the menu"
       },
       "feed": {
+        "round": "Round {n}",
         "youTo": "You → {to} · {t}",
         "queued": "Queued",
         "delivered": "Delivered → {stage}",

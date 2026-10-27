@@ -1360,6 +1360,7 @@
         "parkedHint": "Přidej poznámku níže a pokračuj, nebo spusť znovu"
       },
       "feed": {
+        "round": "Kolo {n}",
         "youTo": "Ty → {to} · {t}",
         "queued": "Ve frontě",
         "delivered": "Doručeno → {stage}",

@@ -8,7 +8,7 @@ import type { LogStreamLine, StateTone } from "@zibby/design-system";
 import { formatCostUsd } from "../../utils/cost";
 import { formatDuration } from "../../utils/time";
 import type { RunView } from "./run";
-import { type StageRunEntry, buildPhaseNodes } from "./stagePhases";
+import { LIVE_STAGE_RUN_ID, type StageRunEntry, buildPhaseNodes } from "./stagePhases";
 import { groupTranscript, parseTranscript, rawLogLines } from "./transcript";
 
 /** What the run detail screen is showing — one value drives header, actions, banners and composer. */
@@ -74,6 +74,13 @@ export const MODE_TONE: Record<RunMode, StateTone> = {
 
 export type StageStateKey = "done" | "running" | "waiting" | "parked" | "queued" | "stopped";
 
+/** One execution of a phase, numbered by execution order. `stageRunId` is "" for the live row. */
+export interface StageRound {
+  n: number;
+  stageRunId: string;
+  live: boolean;
+}
+
 export interface StageRailRow {
   phaseId: string;
   /** Two-digit ordinal, e.g. "01". */
@@ -86,6 +93,8 @@ export interface StageRailRow {
   meta: string;
   /** Earlier attempts of this phase (loop retries). */
   retries: number;
+  /** Every execution of this phase in order; empty for an unreached phase or an agent run. */
+  rounds: StageRound[];
   current: boolean;
 }
 
@@ -183,6 +192,7 @@ export function buildStageRail(
         ...agentRowState(mode),
         meta,
         retries: 0,
+        rounds: [],
         current: true,
       },
     ];
@@ -211,6 +221,13 @@ export function buildStageRail(
       ...tone,
       meta: retries > 0 ? `${time} · ⇄${pad2(retries)}` : time,
       retries,
+      rounds: main
+        ? [...node.priorAttempts, main].map((s, k) => ({
+            n: k + 1,
+            stageRunId: s.runId,
+            live: s.runId === LIVE_STAGE_RUN_ID,
+          }))
+        : [],
       current,
     };
   });
@@ -290,6 +307,9 @@ export type FeedItem =
       markdown: string;
       tools: LogStreamLine[];
       live: boolean;
+      rounds: StageRound[];
+      /** A tool phase: its rounds' logs are raw CLI output, not agent transcripts. */
+      raw?: boolean;
     }
   | {
       kind: "you";
@@ -314,19 +334,22 @@ const youItem = (m: OperatorMessage, terminal: boolean): FeedItem => ({
 // `product-factory:` is the CLI's stderr prefix for a failure line (e.g. "fal 500").
 const ERROR_LINE = /\b(error|rejected|blocked)\b|^product-factory:/i;
 
-function agentItem(row: StageRailRow, transcript: string, raw: boolean): FeedItem | null {
-  const live = row.stateKey === "running";
-  if (!transcript.trim() && !live) return null;
+/** Markdown + tool lines of one round's log (`raw`: a tool phase, CLI output instead of a transcript). */
+export function agentBody(
+  phaseId: string,
+  transcript: string,
+  raw: boolean,
+): { markdown: string; tools: LogStreamLine[] } {
   if (raw) {
     const tools = rawLogLines(transcript).map(
       (text, i): LogStreamLine => ({
-        id: `${row.phaseId}-${i}`,
+        id: `${phaseId}-${i}`,
         ts: pad2(i + 1),
         text,
         ...(ERROR_LINE.test(text) && { state: "error" as const }),
       }),
     );
-    return { kind: "agent", phaseId: row.phaseId, who: row.name, markdown: "", tools, live };
+    return { markdown: "", tools };
   }
   const groups = groupTranscript(parseTranscript(transcript));
   const markdown = groups
@@ -337,13 +360,27 @@ function agentItem(row: StageRailRow, transcript: string, raw: boolean): FeedIte
     .flatMap((g) => (g.kind === "toolCall" ? [g] : []))
     .map(
       (g, i): LogStreamLine => ({
-        id: `${row.phaseId}-${i}`,
+        id: `${phaseId}-${i}`,
         // The log has no timestamps — a two-digit ordinal stands in.
         ts: pad2(i + 1),
         text: g.result ? `${g.tool} → ${g.result}` : g.tool,
       }),
     );
-  return { kind: "agent", phaseId: row.phaseId, who: row.name, markdown, tools, live };
+  return { markdown, tools };
+}
+
+function agentItem(row: StageRailRow, transcript: string, raw: boolean): FeedItem | null {
+  const live = row.stateKey === "running";
+  if (!transcript.trim() && !live) return null;
+  return {
+    kind: "agent",
+    phaseId: row.phaseId,
+    who: row.name,
+    ...agentBody(row.phaseId, transcript, raw),
+    live,
+    rounds: row.rounds,
+    ...(raw && { raw }),
+  };
 }
 
 export function buildLiveFeed(args: {

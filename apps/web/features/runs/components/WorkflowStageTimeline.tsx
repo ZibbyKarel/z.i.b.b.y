@@ -22,7 +22,7 @@ import { useAgentsQuery } from "../../agents";
 import { useWorkflowsQuery } from "../../workflows";
 import { useStageRunLogQuery } from "../queries/useStageRunLogQuery";
 import { type FeedStatus, RUN_STATE, type RunView } from "../run";
-import { type StageRunEntry, buildPhaseNodes } from "../stagePhases";
+import { LIVE_STAGE_RUN_ID, type StageRunEntry, buildPhaseNodes } from "../stagePhases";
 import { useStageRunLogStream } from "../useRunLogStream";
 import { RunStateBadge } from "./RunStateBadge";
 import { RunTranscript } from "./RunTranscript";
@@ -161,13 +161,13 @@ function RetryBlock({ attempts, maxRetries, loopTo, escalated }: RetryBlockProps
       }}
     >
       <Stack gap="50">
-        {attempts.map((a) => (
+        {attempts.map((a, i) => (
           <Stack
             align="center"
             direction="row"
             gap="75"
             justify="between"
-            key={`${a.phaseId}-${a.attempt}`}
+            key={a.runId || `${a.phaseId}-${i}`}
           >
             <Stack align="center" direction="row" gap="75">
               <Icon name="retry" size="xs" tone="bad" />
@@ -249,15 +249,12 @@ export function WorkflowStageTimeline({
     [stageRuns, currentStage, live, definedPhaseIds],
   );
 
-  // Which stage's log is expanded (`"${phaseId}#${attempt}"`), or null. Single open ⇒
+  // Which stage's log is expanded (`"${phaseId}#${runId}"`), or null. Single open ⇒
   // at most one stage-log fetch live.
   const [openLog, setOpenLog] = useState<string | null>(null);
   // The live phase opens by default so its log streams without a click; an explicit
   // toggle takes over from there (collapsing it falls back to the live phase again).
-  const liveKey =
-    live && currentStage
-      ? `${currentStage}#${(stageRuns ?? []).filter((s) => s.phaseId === currentStage).length + 1}`
-      : null;
+  const liveKey = live && currentStage ? `${currentStage}#${LIVE_STAGE_RUN_ID}` : null;
   const openKey = openLog ?? liveKey;
 
   return (
@@ -292,7 +289,7 @@ export function WorkflowStageTimeline({
             const externalTotal = attempts.reduce((sum, a) => sum + (a.externalCostUsd ?? 0), 0);
 
             const hasLog = !isPlaceholder;
-            const key = node.main ? `${node.phaseId}#${node.main.attempt}` : node.phaseId;
+            const key = node.main ? `${node.phaseId}#${node.main.runId}` : node.phaseId;
             const isOpen = hasLog && openKey === key;
             const logId = `stage-log-${key.replace("#", "-")}`;
 

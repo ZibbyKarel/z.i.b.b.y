@@ -726,7 +726,18 @@ describe("TaskRunsService", () => {
     it("routes stage logs to the workflow runner", async () => {
       const { service, workflowRunner } = build();
       await service.getStageLog("delivery_3", "kodér", 0);
-      expect(workflowRunner.readStageLog).toHaveBeenCalledWith("delivery_3", "kodér", 0);
+      expect(workflowRunner.readStageLog).toHaveBeenCalledWith("delivery_3", "kodér", 0, undefined);
+    });
+
+    it("passes a stageRunId through to the workflow runner", async () => {
+      const { service, workflowRunner } = build();
+      await service.getStageLog("delivery_3", "kodér", 0, "delivery_3.kodér_a");
+      expect(workflowRunner.readStageLog).toHaveBeenCalledWith(
+        "delivery_3",
+        "kodér",
+        0,
+        "delivery_3.kodér_a",
+      );
     });
 
     it("routes stage-log append subscriptions to the workflow runner (SSE tail wake signal)", () => {

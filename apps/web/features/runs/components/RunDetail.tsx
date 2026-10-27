@@ -160,6 +160,8 @@ export function RunDetail({ run, embedded, onOpenApproval, children }: RunDetail
   const { data: stageLog } = useStageRunLogQuery(
     run.runId,
     workflow && !selectedLive ? selected?.phaseId : undefined,
+    // fetch the finished last round by id, so a stale "latest" cache never shows an earlier round
+    selected?.rounds.at(-1)?.stageRunId || undefined,
   );
   const agentStream = useRunLogStream(!workflow && run.logBase ? run.runId : null);
   const transcript = workflow

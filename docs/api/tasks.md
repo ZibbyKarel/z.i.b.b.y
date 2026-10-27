@@ -743,7 +743,7 @@ GET    /api/tasks/runs/archive/counts                          per-department ar
 GET    /api/tasks/runs/:runId                                a single run's detail
 GET    /api/tasks/runs/:runId/logs?offset=                   log chunk from a byte offset
 GET    /api/tasks/runs/:runId/logs/stream                    SSE tail (falls back to the offset-poll above)
-GET    /api/tasks/runs/:runId/stages/:phaseId/logs?offset=    one workflow stage's log
+GET    /api/tasks/runs/:runId/stages/:phaseId/logs?offset=&stageRunId=  one workflow stage's log
 GET    /api/tasks/runs/:runId/stages/:phaseId/logs/stream     SSE tail for a workflow stage's log
 GET    /api/tasks/runs/:runId/artifacts/:name                a whitelisted artifact (pr-draft.md, verdict.txt, …)
 GET    /api/tasks/runs/:runId/files                          a workflow run's folder tree (read-only; no dotfiles, depth <= 4,

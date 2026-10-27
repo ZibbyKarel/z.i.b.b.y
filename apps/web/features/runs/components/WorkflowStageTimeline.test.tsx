@@ -182,6 +182,24 @@ describe("WorkflowStageTimeline (36)", () => {
     expect(screen.getByText("chyba")).toBeInTheDocument();
   });
 
+  it("renders prior attempts with reset attempt numbers without duplicate keys", () => {
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    render(
+      timeline({
+        currentStage: "build",
+        live: true,
+        stageRuns: [
+          { phaseId: "build", runId: "d.build_a", attempt: 1, status: "error" },
+          { phaseId: "verify", runId: "d.verify_a", attempt: 1, status: "done" },
+          { phaseId: "build", runId: "d.build_b", attempt: 1, status: "error" },
+        ],
+      }),
+    );
+    const dupKey = err.mock.calls.some((c) => String(c[0]).includes("same key"));
+    err.mockRestore();
+    expect(dupKey).toBe(false);
+  });
+
   it("shows the loop's maxRetries + loopTo on the retry block when the workflow definition is known", () => {
     workflowsMock.mockReturnValue({ data: [WORKFLOW] });
     agentsMock.mockReturnValue({ data: AGENTS });

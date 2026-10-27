@@ -1219,8 +1219,17 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     return { entries, truncated };
   }
 
-  /** Read a stage's log by phase id (the most recent attempt of that phase). */
-  async readStageLog(workflowRunId: string, phaseId: string, offset: number): Promise<RunLogChunk> {
+  /**
+   * Read a stage's log by phase id (the most recent attempt of that phase), or —
+   * with `stageRunId` — one specific recorded execution of it. The id is only ever
+   * matched against the run's own `stageRuns`, never used as a path.
+   */
+  async readStageLog(
+    workflowRunId: string,
+    phaseId: string,
+    offset: number,
+    stageRunId?: string,
+  ): Promise<RunLogChunk> {
     // Fall back to the on-disk aggregate (like delete/readArtifact/resume): a finished
     // run is evicted from the in-memory registry once it ages past RETENTION_MS, but
     // its aggregate + per-stage logs persist — so the detail view can still tail them.
@@ -1229,10 +1238,12 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     // The in-flight stage isn't in `stageRuns` yet (that append is terminal-only),
     // so while this phase is the one executing, tail it by the live
     // `currentStageRunId` — that is the running attempt, not a stale earlier one.
-    if (run.currentStage === phaseId && run.currentStageRunId) {
+    if (!stageRunId && run.currentStage === phaseId && run.currentStageRunId) {
       return this.core.readLog(run.currentStageRunId, offset);
     }
-    const stage = [...run.stageRuns].reverse().find((s) => s.phaseId === phaseId);
+    const stage = stageRunId
+      ? run.stageRuns.find((s) => s.phaseId === phaseId && s.runId === stageRunId)
+      : [...run.stageRuns].reverse().find((s) => s.phaseId === phaseId);
     if (!stage) throw new WorkflowRunNotFoundError(`${workflowRunId}/${phaseId}`);
     return this.core.readLog(stage.runId, offset);
   }

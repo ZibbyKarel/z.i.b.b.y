@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResumableRunner } from "../approvals/approvals.service";
 import { ProjectLocalUnresolvedError } from "../projects/projects.errors";
 import { RunNotFoundError } from "../runner/runner-core";
-import { WorkflowRunnerService } from "./workflow-runner.service";
+import { WorkflowRunNotFoundError, WorkflowRunnerService } from "./workflow-runner.service";
 
 /** Minimal logger double matching the LoggerService surface the service uses. */
 const fakeLogger = {
@@ -443,6 +443,71 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
       // Not in memory — the registry only has WORKFLOW_RUN_ID.
       expect(h.runs.has(goneId)).toBe(false);
       await h.service.readStageLog(goneId, "build", 0);
+      expect(h.core.readLog).toHaveBeenCalledWith(`${goneId}.build_1`, 0);
+    });
+  });
+
+  describe("readStageLog (explicit stageRunId)", () => {
+    it("reads an earlier round by its stageRunId", async () => {
+      const run = h.runs.get(WORKFLOW_RUN_ID)!;
+      run.currentStage = null;
+      run.currentStageRunId = undefined;
+      run.stageRuns = [
+        { phaseId: "build", runId: "release_100.build_a", attempt: 1, status: "done" },
+        { phaseId: "build", runId: "release_100.build_b", attempt: 1, status: "done" },
+      ];
+      await h.service.readStageLog(WORKFLOW_RUN_ID, "build", 0, "release_100.build_a");
+      expect(h.core.readLog).toHaveBeenCalledWith("release_100.build_a", 0);
+    });
+
+    it("skips the live shortcut when a stageRunId is given", async () => {
+      const run = h.runs.get(WORKFLOW_RUN_ID)!;
+      run.currentStage = "build";
+      run.currentStageRunId = "release_100.build_live";
+      run.stageRuns = [
+        { phaseId: "build", runId: "release_100.build_a", attempt: 1, status: "done" },
+      ];
+      await h.service.readStageLog(WORKFLOW_RUN_ID, "build", 0, "release_100.build_a");
+      expect(h.core.readLog).toHaveBeenCalledWith("release_100.build_a", 0);
+    });
+
+    it("rejects a stageRunId of another phase, an unknown one, or a traversal attempt", async () => {
+      const run = h.runs.get(WORKFLOW_RUN_ID)!;
+      run.currentStage = null;
+      run.currentStageRunId = undefined;
+      run.stageRuns = [
+        { phaseId: "build", runId: "release_100.build_a", attempt: 1, status: "done" },
+        { phaseId: "test", runId: "release_100.test_a", attempt: 1, status: "done" },
+      ];
+      for (const id of ["release_100.test_a", "nope", "../../etc/passwd"]) {
+        await expect(
+          h.service.readStageLog(WORKFLOW_RUN_ID, "build", 0, id),
+        ).rejects.toBeInstanceOf(WorkflowRunNotFoundError);
+      }
+      expect(h.core.readLog).not.toHaveBeenCalled();
+    });
+
+    it("reads an earlier round of an evicted run from the aggregate", async () => {
+      const goneId = "evicted_1780000000098";
+      const root = path.join(dir, goneId);
+      await fs.mkdir(root, { recursive: true });
+      await fs.writeFile(
+        path.join(root, "run.json"),
+        JSON.stringify({
+          workflowRunId: goneId,
+          workflowId: "release",
+          status: "done",
+          currentStage: null,
+          stageRuns: [
+            { phaseId: "build", runId: `${goneId}.build_1`, attempt: 1, status: "done" },
+            { phaseId: "build", runId: `${goneId}.build_2`, attempt: 1, status: "done" },
+          ],
+          startedAt: new Date().toISOString(),
+          cwd: root,
+        }),
+        "utf8",
+      );
+      await h.service.readStageLog(goneId, "build", 0, `${goneId}.build_1`);
       expect(h.core.readLog).toHaveBeenCalledWith(`${goneId}.build_1`, 0);
     });
   });
