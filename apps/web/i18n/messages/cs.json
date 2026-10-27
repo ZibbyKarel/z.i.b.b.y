@@ -2970,6 +2970,7 @@
       "ci": "CI {symbol} {state}",
       "reason": {
         "direct": "Přímo",
+        "reviewed": "Zrevidováno tebou",
         "team": "Přes tým {team}"
       },
       "mine": "Moje",
@@ -3061,6 +3062,9 @@
         "draft": "Koncept",
         "review-requested": "Žádost o review",
         "team-review": "Týmové review · {team}",
+        "reviewed-approved": "Schváleno tebou · čeká na ostatní",
+        "reviewed-changes-requested": "Požadoval jsi změny · čeká na autora",
+        "reviewed-commented": "Okomentováno tebou · čeká na ostatní",
         "ci-failing": "CI selhává",
         "changes-requested": "Požadovány změny",
         "merge-conflict": "Konflikt",

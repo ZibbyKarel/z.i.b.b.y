@@ -138,9 +138,11 @@ export function InboxOverviewScreen() {
                   pr.repo,
                   pr.bucket === "mine"
                     ? t("prs.mine")
-                    : pr.reviewReason === "team"
-                      ? t("prs.reason.team", { team: pr.reviewTeam ?? "" })
-                      : t("prs.reason.direct"),
+                    : pr.bucket === "reviewed"
+                      ? t("prs.reason.reviewed")
+                      : pr.reviewReason === "team"
+                        ? t("prs.reason.team", { team: pr.reviewTeam ?? "" })
+                        : t("prs.reason.direct"),
                 ].join(" · ")}
                 testId={`${InboxOverviewScreenTestId.Prs}-${pr.number}`}
                 title={pr.title}

@@ -2970,6 +2970,7 @@
       "ci": "CI {symbol} {state}",
       "reason": {
         "direct": "Directly",
+        "reviewed": "Reviewed by you",
         "team": "Via team {team}"
       },
       "mine": "Mine",
@@ -3061,6 +3062,9 @@
         "draft": "Draft",
         "review-requested": "Review requested",
         "team-review": "Team review · {team}",
+        "reviewed-approved": "You approved · waiting on others",
+        "reviewed-changes-requested": "You requested changes · waiting on author",
+        "reviewed-commented": "You commented · waiting on others",
         "ci-failing": "CI failing",
         "changes-requested": "Changes requested",
         "merge-conflict": "Merge conflict",
