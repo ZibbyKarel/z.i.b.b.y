@@ -6,7 +6,7 @@ import {
   ChatDockTestId as DockFrameTestId,
   TypingDotsTestId,
 } from "@zibby/design-system";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { act, renderWithProviders, screen, within } from "../../../test/render";
 import { CommandLineTestId } from "../../tasks/components/CommandLine/CommandLine";
 import { ChatProvider, useChat } from "../ChatContext";
@@ -104,15 +104,8 @@ function Opener({ department, about }: { department?: boolean; about?: ChatAbout
   const { open, openAbout } = useChat();
   useEffect(() => {
     open(department ? { kind: "department", id: "dev", name: "Development" } : undefined);
-  }, [open, department]);
-  // Once on mount: `openAbout` changes identity with `about`, so it can't be an effect dep.
-  const aboutOpened = useRef(false);
-  useEffect(() => {
-    if (about && !aboutOpened.current) {
-      aboutOpened.current = true;
-      openAbout(about);
-    }
-  }, [openAbout, about]);
+    if (about) openAbout(about);
+  }, [open, openAbout, department, about]);
   return null;
 }
 

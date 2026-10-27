@@ -10,6 +10,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -99,7 +100,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [dockOpen, setDockOpen] = useState(false);
   const [dockTarget, setDockTarget] = useState<TaskTarget | null>(null);
-  const [about, setAbout] = useState<ChatAbout | null>(null);
+  const [about, setAboutState] = useState<ChatAbout | null>(null);
+  // Mirror of `about` that is current synchronously, so `openAbout` can stay
+  // identity-stable and never read a stale closure between two calls.
+  const aboutRef = useRef<ChatAbout | null>(null);
+  const setAbout = useCallback<Dispatch<SetStateAction<ChatAbout | null>>>((value) => {
+    const next = typeof value === "function" ? value(aboutRef.current) : value;
+    aboutRef.current = next;
+    setAboutState(next);
+  }, []);
 
   // Keep localStorage in sync so the NEXT full reload finds this id — cleared
   // entirely when there's no conversation (nothing to resume).
@@ -135,15 +144,16 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setMessages([]);
     setAbout(null);
     setConversationId(`conv_${crypto.randomUUID()}`);
-  }, []);
+  }, [setAbout]);
 
   const openAbout = useCallback(
     (next: ChatAbout) => {
-      if (!(about?.kind === next.kind && about.id === next.id)) newChat();
+      const current = aboutRef.current;
+      if (!(current?.kind === next.kind && current.id === next.id)) newChat();
       setAbout(next);
       setDockOpen(true);
     },
-    [about, newChat],
+    [newChat, setAbout],
   );
 
   useEffect(() => {
@@ -187,6 +197,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       messages,
       newChat,
       about,
+      setAbout,
       openAbout,
     ],
   );

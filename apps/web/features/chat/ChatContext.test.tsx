@@ -298,4 +298,35 @@ describe("ChatProvider — about (todo-29)", () => {
     const { result } = renderHook(() => useOptionalChat());
     expect(result.current).toBeNull();
   });
+
+  it("openAbout keeps a stable identity across a call", () => {
+    const { result } = renderStore();
+    const before = result.current.openAbout;
+    act(() => result.current.openAbout(A));
+    expect(result.current.openAbout).toBe(before);
+  });
+
+  it("two back-to-back calls for the same thing start one chat", () => {
+    const { result } = renderStore();
+    const uuid = vi.spyOn(crypto, "randomUUID");
+    act(() => {
+      result.current.openAbout(A);
+      result.current.openAbout({ ...A, details: "two" });
+    });
+    expect(uuid).toHaveBeenCalledTimes(1);
+    expect(result.current.about?.details).toBe("two");
+    uuid.mockRestore();
+  });
+
+  it("back-to-back calls for different things start a new chat each", () => {
+    const { result } = renderStore();
+    const uuid = vi.spyOn(crypto, "randomUUID");
+    act(() => {
+      result.current.openAbout(A);
+      result.current.openAbout({ kind: "pr", id: "v", label: "PR #2" });
+    });
+    expect(uuid).toHaveBeenCalledTimes(2);
+    expect(result.current.about?.id).toBe("v");
+    uuid.mockRestore();
+  });
 });
