@@ -1,7 +1,7 @@
 import { WidgetFrameTestId } from "@zibby/design-system";
 import { act, fireEvent } from "@testing-library/react";
 import { useEffect, useState } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen } from "../../../test/render";
 import type { BridgeState } from "../state/useBridgeState";
 import type { BridgeWidgetProps } from "../widgets/registry";
@@ -51,6 +51,11 @@ const state = {
 } as unknown as BridgeState;
 
 describe("BridgeBoard", () => {
+  afterEach(() => {
+    fireEvent.pointerUp(window);
+    vi.unstubAllGlobals();
+  });
+
   it("drops the loader when only `loading` flips true to false", () => {
     renderWithProviders(<BridgeBoard density="comfort" state={state} />);
     expect(screen.getByTestId(WidgetFrameTestId.Loading)).toBeInTheDocument();
@@ -82,7 +87,5 @@ describe("BridgeBoard", () => {
       expect.any(Number),
       "nw",
     );
-    fireEvent.pointerUp(window);
-    vi.unstubAllGlobals();
   });
 });

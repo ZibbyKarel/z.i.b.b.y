@@ -68,6 +68,12 @@ function BridgeWidgetHost({
       onResizePointerDown={(e, corner) => onDragStart(id, corner, e)}
       onToggleCollapse={() => state.toggleCollapsed(id)}
       removeLabel={t("bridge.remove")}
+      resizeCornerLabels={{
+        nw: t("bridge.resizeNw"),
+        ne: t("bridge.resizeNe"),
+        sw: t("bridge.resizeSw"),
+        se: t("bridge.resizeSe"),
+      }}
       resizeLabel={t("bridge.resize")}
       sizeLabel={`${widget.w} × ${widget.h}`}
       style={style}

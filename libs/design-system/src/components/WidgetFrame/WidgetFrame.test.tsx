@@ -82,15 +82,18 @@ describe("WidgetFrame", () => {
     // no collapse caret in edit mode
     expect(screen.queryByTestId(WidgetFrameTestId.Collapse)).toBeNull();
     fireEvent.pointerDown(screen.getByTestId(WidgetFrameTestId.Header));
+    const names = new Set<string>();
     for (const c of CORNERS) {
       const handle = screen.getByTestId(resizeId(c));
       expect(handle).toHaveRole("separator");
-      expect(handle).toHaveAccessibleName("Resize");
+      expect(handle).toHaveAccessibleName(expect.stringMatching(/^Resize \(/));
+      names.add(handle.getAttribute("aria-label") ?? "");
+      fireEvent.pointerDown(handle);
+      expect(onResize).toHaveBeenLastCalledWith(expect.anything(), c);
     }
-    fireEvent.pointerDown(screen.getByTestId(resizeId("nw")));
+    expect(names.size).toBe(4);
     expect(onMove).toHaveBeenCalledOnce();
-    expect(onResize).toHaveBeenCalledOnce();
-    expect(onResize).toHaveBeenCalledWith(expect.anything(), "nw");
+    expect(onResize).toHaveBeenCalledTimes(4);
     await userEvent.click(screen.getByTestId(WidgetFrameTestId.Remove));
     expect(onRemove).toHaveBeenCalledOnce();
     // the × must not start a move drag
