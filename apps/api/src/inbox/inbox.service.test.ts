@@ -177,6 +177,8 @@ describe("InboxService.listPrs", () => {
       graphqlBody?: unknown;
       headSha?: string;
       reviewed?: boolean;
+      reviewedNumbers?: number[];
+      reviewedStatus?: number;
       userStatus?: number;
     } = {},
   ) {
@@ -211,6 +213,10 @@ describe("InboxService.listPrs", () => {
         return json({ login: "me" }, opts.userStatus ?? 200);
       }
       if (u.pathname === "/search/issues") {
+        if (q.includes("reviewed-by:@me") && opts.reviewedStatus)
+          return json({}, opts.reviewedStatus);
+        if (q.includes("reviewed-by:@me") && opts.reviewedNumbers)
+          return json({ items: opts.reviewedNumbers.map((number) => ({ number })) });
         if (q.includes("reviewed-by:@me"))
           return json({ items: opts.reviewed ? [{ number: 7 }, { number: 8 }] : [] });
         if (q.includes("author:@me")) return json({ items: [{ number: 3 }] });
@@ -297,6 +303,23 @@ describe("InboxService.listPrs", () => {
     });
     expect(byNumber[8]).toMatchObject({ bucket: "to-review", reviewReason: "direct" });
     expect(byNumber[8]?.myReview).toBeUndefined();
+  });
+
+  it("a failing reviewed-by search drops only those PRs", async () => {
+    const { service } = build([], { reviewedStatus: 500 });
+    const numbers = (await service.listPrs()).prs.map((p) => p.number).sort();
+    expect(numbers).toEqual([1, 2, 3]);
+  });
+
+  it("a PR in both the team and reviewed-by searches stays a team review", async () => {
+    const { service } = build([], { reviewedNumbers: [2] });
+    const pr = (await service.listPrs()).prs.find((p) => p.number === 2);
+    expect(pr).toMatchObject({
+      bucket: "to-review",
+      reviewReason: "team",
+      reviewTeam: "acme/core",
+    });
+    expect(pr?.myReview).toBeUndefined();
   });
 
   it("without a viewer login a reviewed PR reads commented", async () => {
