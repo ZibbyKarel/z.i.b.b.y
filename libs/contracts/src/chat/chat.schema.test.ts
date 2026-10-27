@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Briefing } from "../briefing/briefing.schema";
 import { TaskTargetSchema } from "../tasks/task.schema";
 import {
+  ChatAboutRefSchema,
   ChatMentionTargetSchema,
   ChatMessageSchema,
   ChatToolEventSchema,
@@ -224,5 +225,47 @@ describe("SendChatMessageBodySchema — # and / tags (TODO 13)", () => {
     expect(SendChatMessageBodySchema.safeParse({ text: "hi", [key]: "../etc" }).success).toBe(
       false,
     );
+  });
+});
+
+describe("ChatAbout (todo-29)", () => {
+  const about = {
+    kind: "pr",
+    id: "https://github.com/o/r/pull/1",
+    label: "PR #1 · Fix",
+    details: "x",
+  };
+
+  it("accepts and keeps `about` on the send body", () => {
+    expect(SendChatMessageBodySchema.parse({ text: "hi", about }).about).toEqual(about);
+  });
+
+  it.each([
+    ["kind uppercase", { kind: "PR" }],
+    ["kind empty", { kind: "" }],
+    ["kind too long", { kind: "a".repeat(33) }],
+    ["label too long", { label: "x".repeat(201) }],
+    ["details too long", { details: "x".repeat(24_001) }],
+    ["newline in id", { id: "a\nkind: x" }],
+    ["newline in label", { label: "a\r\nb" }],
+    ["newline in href", { href: "http://x\nb" }],
+  ])("rejects %s", (_name, override) => {
+    expect(
+      SendChatMessageBodySchema.safeParse({ text: "hi", about: { ...about, ...override } }).success,
+    ).toBe(false);
+  });
+
+  it("parses a user message with an about ref, and an old line without one", () => {
+    const base = { id: "m", role: "user", text: "t", at: "2026-10-27T00:00:00Z" };
+    expect(
+      ChatMessageSchema.parse({ ...base, about: { kind: "pr", id: "1", label: "L" } }).about,
+    ).toEqual({ kind: "pr", id: "1", label: "L" });
+    expect(ChatMessageSchema.parse(base)).not.toHaveProperty("about");
+  });
+
+  it("ChatAboutRefSchema strips details", () => {
+    expect(
+      ChatAboutRefSchema.parse({ kind: "pr", id: "1", label: "L", details: "x" }),
+    ).not.toHaveProperty("details");
   });
 });

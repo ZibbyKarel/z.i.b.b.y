@@ -1,6 +1,6 @@
 "use client";
 
-import type { ChatMessage as ChatMessageType, TaskTarget } from "@zibby/contracts";
+import type { ChatAbout, ChatMessage as ChatMessageType, TaskTarget } from "@zibby/contracts";
 import {
   type Dispatch,
   type ReactNode,
@@ -10,6 +10,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -68,8 +69,19 @@ interface ChatStore {
   /** The transcript, lifted here so it survives the dock collapsing. */
   messages: ChatMessageType[];
   setMessages: Dispatch<SetStateAction<ChatMessageType[]>>;
-  /** Start a fresh thread: clears the transcript and mints a new conversation id. */
+  /** Start a fresh thread: clears the transcript, `about`, and mints a new conversation id. */
   newChat: () => void;
+  /**
+   * What the thread is about (todo-29) — sticky like `dockTarget`: sent with every
+   * turn until the operator clears the chip or starts a new chat.
+   */
+  about: ChatAbout | null;
+  setAbout: Dispatch<SetStateAction<ChatAbout | null>>;
+  /**
+   * Open the dock about `next`. The same item (kind + id) keeps the thread and
+   * only refreshes its details; a different item starts a fresh conversation.
+   */
+  openAbout: (next: ChatAbout) => void;
 }
 
 const ChatContext = createContext<ChatStore | null>(null);
@@ -88,6 +100,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [dockOpen, setDockOpen] = useState(false);
   const [dockTarget, setDockTarget] = useState<TaskTarget | null>(null);
+  const [about, setAboutState] = useState<ChatAbout | null>(null);
+  // Mirror of `about` that is current synchronously, so `openAbout` can stay
+  // identity-stable and never read a stale closure between two calls.
+  const aboutRef = useRef<ChatAbout | null>(null);
+  const setAbout = useCallback<Dispatch<SetStateAction<ChatAbout | null>>>((value) => {
+    const next = typeof value === "function" ? value(aboutRef.current) : value;
+    aboutRef.current = next;
+    setAboutState(next);
+  }, []);
 
   // Keep localStorage in sync so the NEXT full reload finds this id — cleared
   // entirely when there's no conversation (nothing to resume).
@@ -121,8 +142,19 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   // clean `claude` session (no `--resume`).
   const newChat = useCallback(() => {
     setMessages([]);
+    setAbout(null);
     setConversationId(`conv_${crypto.randomUUID()}`);
-  }, []);
+  }, [setAbout]);
+
+  const openAbout = useCallback(
+    (next: ChatAbout) => {
+      const current = aboutRef.current;
+      if (!(current?.kind === next.kind && current.id === next.id)) newChat();
+      setAbout(next);
+      setDockOpen(true);
+    },
+    [newChat, setAbout],
+  );
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -152,8 +184,22 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       messages,
       setMessages,
       newChat,
+      about,
+      setAbout,
+      openAbout,
     }),
-    [open, dockOpen, dockTarget, conversationId, ensureConversation, messages, newChat],
+    [
+      open,
+      dockOpen,
+      dockTarget,
+      conversationId,
+      ensureConversation,
+      messages,
+      newChat,
+      about,
+      setAbout,
+      openAbout,
+    ],
   );
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
@@ -163,4 +209,9 @@ export function useChat(): ChatStore {
   const ctx = useContext(ChatContext);
   if (!ctx) throw new Error("useChat must be used within ChatProvider");
   return ctx;
+}
+
+/** Like {@link useChat} but `null` outside a provider — for drop-in affordances. */
+export function useOptionalChat(): ChatStore | null {
+  return useContext(ChatContext);
 }

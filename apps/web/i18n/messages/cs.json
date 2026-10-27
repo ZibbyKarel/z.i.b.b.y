@@ -2065,7 +2065,13 @@
   },
   "chat": {
     "createTask": "Vytvořit úkol",
+    "about": {
+      "button": "Probrat v chatu",
+      "buttonTitle": "Otevřít chat s touto věcí jako kontextem"
+    },
     "dock": {
+      "aboutChip": "O čem: {label}",
+      "clearAbout": "Odebrat kontext",
       "targetExplicit": "→ {name}",
       "clearTarget": "Zrušit cíl (zpět na automatické směrování)",
       "empty": "Zeptejte se na cokoli, nebo předejte úkol."

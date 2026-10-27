@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import type { ChatMessage as ChatMessageType } from "@zibby/contracts";
+import type { ChatAbout, ChatMessage as ChatMessageType } from "@zibby/contracts";
 import {
   ChipTestId,
   ChatDockTestId as DockFrameTestId,
@@ -100,18 +100,19 @@ vi.mock("../hooks/useVoiceMode", () => ({
 
 /** Opens the dock (optionally pre-scoped) on mount, the way the shell / a
  *  department page would. */
-function Opener({ department }: { department?: boolean }) {
-  const { open } = useChat();
+function Opener({ department, about }: { department?: boolean; about?: ChatAbout }) {
+  const { open, openAbout } = useChat();
   useEffect(() => {
     open(department ? { kind: "department", id: "dev", name: "Development" } : undefined);
-  }, [open, department]);
+    if (about) openAbout(about);
+  }, [open, openAbout, department, about]);
   return null;
 }
 
-function renderDock(opts: { department?: boolean; open?: boolean } = {}) {
+function renderDock(opts: { department?: boolean; open?: boolean; about?: ChatAbout } = {}) {
   return renderWithProviders(
     <ChatProvider>
-      {opts.open !== false && <Opener department={opts.department} />}
+      {opts.open !== false && <Opener about={opts.about} department={opts.department} />}
       <ChatDock />
     </ChatProvider>,
   );
@@ -148,6 +149,37 @@ describe("ChatDock (ZB-12)", () => {
     // D-020: the chat send contract now carries attachmentSetId — the attach
     // control is back.
     expect(screen.getByTestId(CommandLineTestId.Attach)).toBeInTheDocument();
+  });
+
+  describe("about chip (todo-29)", () => {
+    const about: ChatAbout = { kind: "pr", id: "u", label: "PR #7 · Fix login", details: "d" };
+
+    it("shows the chip and sends about on every turn", async () => {
+      renderDock({ about });
+      expect(screen.getByTestId(ChatDockTestId.AboutChip)).toHaveTextContent("PR #7 · Fix login");
+      await typeAndSend("one");
+      await typeAndSend("two");
+      expect(sendMutate).toHaveBeenCalledTimes(2);
+      for (const call of sendMutate.mock.calls) {
+        expect((call[0] as { body: { about?: ChatAbout } }).body.about).toEqual(about);
+      }
+    });
+
+    it("clearing the chip drops about from the next send", async () => {
+      renderDock({ about });
+      await userEvent
+        .setup()
+        .click(within(screen.getByTestId(ChatDockTestId.AboutChip)).getByTestId(ChipTestId.Close));
+      expect(screen.queryByTestId(ChatDockTestId.AboutChip)).not.toBeInTheDocument();
+      await typeAndSend("go");
+      expect(sendMutate.mock.calls[0]?.[0]?.body).not.toHaveProperty("about");
+    });
+
+    it("renders both chips with a department target", () => {
+      renderDock({ about, department: true });
+      expect(screen.getByTestId(ChatDockTestId.AboutChip)).toBeInTheDocument();
+      expect(screen.getByTestId(ChatDockTestId.TargetChip)).toBeInTheDocument();
+    });
   });
 
   it("sends through the classifier (no mentions) by default", async () => {

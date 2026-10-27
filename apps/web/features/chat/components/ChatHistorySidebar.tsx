@@ -20,7 +20,7 @@ export enum ChatHistorySidebarTestId {
 export function ChatHistorySidebar() {
   const t = useTranslations("chat.history");
   const locale = useLocale();
-  const { conversationId, setConversationId, setMessages } = useChat();
+  const { conversationId, setConversationId, setMessages, setAbout } = useChat();
   const [search, setSearch] = useState("");
   const q = useDeferredValue(search.trim());
   const { data } = useChatConversationsQuery(q || undefined);
@@ -31,6 +31,8 @@ export function ChatHistorySidebar() {
     if (res.status !== 200) return;
     setConversationId(res.body.conversationId);
     setMessages(res.body.messages);
+    // The sticky context belongs to the thread it was opened for, not the one picked here.
+    setAbout(null);
   };
 
   return (

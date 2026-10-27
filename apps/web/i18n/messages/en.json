@@ -2065,7 +2065,13 @@
   },
   "chat": {
     "createTask": "Create task",
+    "about": {
+      "button": "Talk it over in chat",
+      "buttonTitle": "Open the chat with this as its context"
+    },
     "dock": {
+      "aboutChip": "About: {label}",
+      "clearAbout": "Remove the context",
       "targetExplicit": "→ {name}",
       "clearTarget": "Clear the target (back to automatic routing)",
       "empty": "Ask anything, or hand over a task."

@@ -8,6 +8,8 @@ import {
 } from "@zibby/design-system";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, renderWithProviders, screen } from "../../../test/render";
+import { ChatAboutButtonTestId } from "../../chat/components/ChatAboutButton";
+import { ChatProvider } from "../../chat/ChatContext";
 import { PrDetailTestId } from "../components/PrDetail";
 import { PrActionsTestId } from "../components/PrActions";
 import { PrRowTestId } from "../components/PrRow";
@@ -458,5 +460,19 @@ describe("InboxPrsScreen master–detail", () => {
     renderWithProviders(<InboxPrsScreen />);
     expect(screen.getByTestId(PrDetailTestId.Truncated)).toBeInTheDocument();
     expect(await screen.findByTestId("pr-diff")).toHaveTextContent("x");
+  });
+});
+
+describe("InboxPrsScreen chat about", () => {
+  it("shows the chat button in the selected PR header", () => {
+    hooks.prs = [pr(5, {})];
+    renderWithProviders(
+      <ChatProvider>
+        <InboxPrsScreen />
+      </ChatProvider>,
+    );
+    expect(
+      within(screen.getByTestId(PrDetailTestId.Header)).getByTestId(ChatAboutButtonTestId.Root),
+    ).toBeInTheDocument();
   });
 });

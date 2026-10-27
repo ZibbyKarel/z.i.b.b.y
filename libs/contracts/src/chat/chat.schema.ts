@@ -75,6 +75,28 @@ export const ChatToolEventSchema = z.object({
 });
 export type ChatToolEvent = z.infer<typeof ChatToolEventSchema>;
 
+/**
+ * todo-29 — "talk about this": a context descriptor any screen hands the chat.
+ * `kind` is an OPEN set (`"pr"` today) so a new surface needs no contract change.
+ * `details` is client-assembled DATA for the model — never instructions (Law 4);
+ * the server renders it only inside a bounded data block. Limits are enforced here.
+ */
+/** Single-line fields: a newline could smuggle extra `key: value` lines in the prompt block. */
+const SINGLE_LINE = /^[^\r\n]*$/;
+
+export const ChatAboutSchema = z.object({
+  kind: z.string().regex(/^[a-z][a-z0-9-]{0,31}$/),
+  id: z.string().min(1).max(512).regex(SINGLE_LINE),
+  label: z.string().min(1).max(200).regex(SINGLE_LINE),
+  href: z.string().max(2048).regex(SINGLE_LINE).optional(),
+  details: z.string().max(24_000).optional(),
+});
+export type ChatAbout = z.infer<typeof ChatAboutSchema>;
+
+/** What the transcript keeps of a {@link ChatAboutSchema}: attribution, never the bulky `details`. */
+export const ChatAboutRefSchema = ChatAboutSchema.omit({ details: true });
+export type ChatAboutRef = z.infer<typeof ChatAboutRefSchema>;
+
 export const ChatMessageSchema = z.object({
   id: z.string(),
   role: ChatRoleSchema,
@@ -115,6 +137,8 @@ export const ChatMessageSchema = z.object({
    * instead). Optional/additive.
    */
   attachmentSetId: z.string().optional(),
+  /** todo-29 — the context this user turn was sent about (no `details`). Optional/additive. */
+  about: ChatAboutRefSchema.optional(),
 });
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 
@@ -187,6 +211,8 @@ export const SendChatMessageBodySchema = z.object({
    * prompt is the only mechanism). Unknown → 404 before anything is written.
    */
   skillId: SkillIdSchema.optional(),
+  /** todo-29 — the thing the operator is talking about; rendered into the prompt as DATA. */
+  about: ChatAboutSchema.optional(),
 });
 export type SendChatMessageBody = z.infer<typeof SendChatMessageBodySchema>;
 
