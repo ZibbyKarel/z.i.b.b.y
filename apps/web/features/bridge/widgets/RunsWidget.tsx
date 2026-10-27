@@ -4,9 +4,13 @@ import {
   BoardLine,
   BoardRow,
   BoardText,
+  Icon,
+  type IconName,
+  type IconTone,
   Progress,
   type ProgressBarTone,
   RowGroupHeader,
+  type StateTone,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
@@ -29,13 +33,26 @@ const PROGRESS_TONE: Record<string, ProgressBarTone> = {
   idle: "idle",
 };
 
+const STATE_ICON: Record<StateTone, { name: IconName; tone: IconTone }> = {
+  done: { name: "check", tone: "ok" },
+  error: { name: "x", tone: "bad" },
+  blocked: { name: "pause", tone: "warn" },
+  thinking: { name: "wait", tone: "accent" },
+  working: { name: "run", tone: "run" },
+  idle: { name: "stop", tone: "dim" },
+};
+
+export enum RunsWidgetTestId {
+  StateIcon = "runs-widget-state-icon",
+  Progress = "runs-widget-progress",
+}
+
 const FINISHED_LIMIT = 10;
 
 /**
  * Runs (running & finished): the active live runs (everything not waiting - those are the queue
- * widget's) as TASK · STEP / PROGRESS / ISSUE rows (fill = completed phases; indeterminate when
- * the run has no phase list), then the last 10 finished runs with a
- * full bar in their outcome colour and their age. A group header is omitted when empty. Every row
+ * widget's) as TASK · STEP / PROGRESS / ISSUE rows (a bar only while running: fill = completed phases, indeterminate without a phase list; a state icon otherwise), then the last 10 finished runs with a
+ * state icon in their outcome colour and their age. A group header is omitted when empty. Every row
  * opens the run sheet (approval, phase output, artifacts).
  */
 export function RunsWidget({
@@ -129,16 +146,22 @@ export function RunsWidget({
           >
             <RunTitle step={r.step} title={r.title} />
             <BoardLine direction="col" gap="5">
-              {r.pct === null ? (
-                <Progress indeterminate height="25" label={t("progressLabel")} />
+              {r.status === "running" ? (
+                <span data-testid={`${RunsWidgetTestId.Progress}-${r.key}`}>
+                  {r.pct === null ? (
+                    <Progress indeterminate height="25" label={t("progressLabel")} />
+                  ) : (
+                    <Progress
+                      height="25"
+                      label={t("progressLabel")}
+                      pulse={r.tone === "working"}
+                      tone={PROGRESS_TONE[r.tone] ?? "idle"}
+                      value={r.pct}
+                    />
+                  )}
+                </span>
               ) : (
-                <Progress
-                  height="25"
-                  label={t("progressLabel")}
-                  pulse={r.tone === "working"}
-                  tone={PROGRESS_TONE[r.tone] ?? "idle"}
-                  value={r.pct}
-                />
+                <RunStateIcon runKey={r.key} tone={r.tone} />
               )}
               <BoardLine between gap="5">
                 <BoardText tabular kind="meta">
@@ -168,7 +191,7 @@ export function RunsWidget({
           >
             <RunTitle step={r.step} title={r.title} />
             <BoardLine direction="col" gap="5">
-              <Progress height="25" tone={PROGRESS_TONE[r.tone] ?? "idle"} value={100} />
+              <RunStateIcon runKey={r.key} tone={r.tone} />
               <BoardLine between gap="5">
                 <BoardText tabular kind="meta">
                   {tRuns(`state.${r.status}`)}
@@ -182,6 +205,16 @@ export function RunsWidget({
           </BoardRow>
         ))}
     </>
+  );
+}
+
+/** Non-running rows show their state as an icon in the state colour (the text beside it names it). */
+function RunStateIcon({ tone, runKey }: { tone: StateTone; runKey: string }) {
+  const { name, tone: iconTone } = STATE_ICON[tone] ?? STATE_ICON.idle;
+  return (
+    <span data-testid={`${RunsWidgetTestId.StateIcon}-${runKey}`}>
+      <Icon aria-hidden name={name} size="sm" tone={iconTone} />
+    </span>
   );
 }
 
