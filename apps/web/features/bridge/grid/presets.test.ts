@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { compact } from "./layout";
 import {
+  DEFAULT_LAYOUT,
   REVIEW_LAYOUT,
   arrangement,
   layoutNameError,
@@ -18,6 +19,11 @@ describe("presets", () => {
     expect(presetLayout("MY LAYOUT 01", saved)).toEqual(compact(saved["MY LAYOUT 01"]));
     expect(presetLayout("MY LAYOUT 01", saved)[0]?.y).toBe(0);
     expect(presetLayout("nope", {})).toEqual([]);
+  });
+  it("DEFAULT reads saved.DEFAULT, compacted", () => {
+    const w = { id: "prs", type: "prs" as const, x: 0, y: 7, w: 4, h: 3 };
+    expect(presetLayout("DEFAULT", { DEFAULT: [w] })).toEqual(compact([w]));
+    expect(presetLayout("DEFAULT", {})).toEqual(compact(DEFAULT_LAYOUT));
   });
   it("nextSavedName fills gaps", () => {
     expect(nextSavedName({})).toBe("MY LAYOUT 01");
@@ -38,6 +44,10 @@ describe("layoutNames / arrangement", () => {
     expect(layoutNames({ A: [] }, [])).toEqual(["REVIEW", "A"]);
     expect(layoutNames({ A: [] }, ["REVIEW"])).toEqual(["A"]);
     expect(layoutNames({ A: [], REVIEW: [] }, [])).toEqual(["A", "REVIEW"]);
+  });
+
+  it("never lists DEFAULT", () => {
+    expect(layoutNames({ DEFAULT: [], X: [] }, [])).toEqual(["REVIEW", "X"]);
   });
 
   it("drops stale names and appends unknown ones to hidden", () => {

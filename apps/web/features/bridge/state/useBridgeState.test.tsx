@@ -103,75 +103,55 @@ describe("useBridgeState", () => {
     expect(setBridge).not.toHaveBeenCalled();
   });
 
-  it("startEditing selects the layout; edits stay a draft until saveEdit writes them", () => {
+  it("add persists straight into the active layout", () => {
     const { result } = renderHook(() => useBridgeState());
-    act(() => void result.current.addLayout("Mine"));
-    act(() => result.current.startEditing("Mine"));
-    expect(result.current.editing).toBe(true);
-    expect(result.current.editTarget).toBe("Mine");
-    expect(result.current.preset).toBe("Mine");
+    act(() => result.current.applyPreset("REVIEW"));
     setBridge.mockClear();
+    act(() => result.current.add("teamKb"));
+    const saved = setBridge.mock.lastCall?.[0].saved.REVIEW;
+    expect(saved.some((w: { type: string }) => w.type === "teamKb")).toBe(true);
+    expect(setBridge).toHaveBeenLastCalledWith(expect.objectContaining({ layout: saved }));
+    expect(result.current.layout).toEqual(saved);
+  });
+
+  it("remove on DEFAULT persists under saved.DEFAULT", () => {
+    const { result } = renderHook(() => useBridgeState());
     act(() => result.current.remove("runs"));
-    expect(result.current.layout.some((w) => w.id === "runs")).toBe(false);
+    const saved = setBridge.mock.lastCall?.[0].saved.DEFAULT;
+    expect(saved.some((w: { id: string }) => w.id === "runs")).toBe(false);
+    expect(result.current.layouts).toEqual({ shown: ["REVIEW"], hidden: [] });
+  });
+
+  it("move stays local; endDrag persists", () => {
+    const { result } = renderHook(() => useBridgeState());
+    const origin = { x: 0, y: 0, w: 4, h: 18 };
+    act(() => result.current.beginDrag("issues"));
+    act(() => result.current.move("issues", origin, 40, 0));
     expect(setBridge).not.toHaveBeenCalled();
-    act(() => result.current.saveEdit());
-    expect(result.current.editing).toBe(false);
-    expect(result.current.preset).toBe("Mine");
-    expect(result.current.saved["Mine"]?.some((w) => w.id === "runs")).toBe(false);
-    expect(setBridge).toHaveBeenLastCalledWith(
-      expect.objectContaining({ preset: "Mine", layout: result.current.layout }),
+    act(() => result.current.endDrag());
+    expect(setBridge).toHaveBeenCalledWith(
+      expect.objectContaining({ saved: { DEFAULT: result.current.layout } }),
     );
   });
 
-  it("cancelEdit drops the draft", () => {
+  it("configure sets one widget's scope and persists", () => {
     const { result } = renderHook(() => useBridgeState());
-    act(() => result.current.startEditing("REVIEW"));
-    act(() => result.current.remove("runs"));
-    act(() => result.current.cancelEdit());
-    expect(result.current.editing).toBe(false);
-    expect(result.current.layout).toEqual(compact(REVIEW_LAYOUT));
-    expect(result.current.saved).toEqual({});
-  });
-
-  it("configure sets one widget's scope in the draft and saveEdit persists it", () => {
-    const { result } = renderHook(() => useBridgeState());
-    act(() => result.current.startEditing("REVIEW"));
+    act(() => result.current.applyPreset("REVIEW"));
     act(() => result.current.add("teamKb"));
     const id = result.current.layout.find((w) => w.type === "teamKb")?.id ?? "";
     setBridge.mockClear();
     act(() => result.current.configure(id, { teamId: "t" }));
-    expect(setBridge).not.toHaveBeenCalled();
-    const scoped = result.current.layout.filter((w) => w.scope);
-    expect(scoped.map((w) => w.id)).toEqual([id]);
-    expect(scoped[0]?.scope).toEqual({ teamId: "t" });
-    act(() => result.current.saveEdit());
     expect(result.current.saved["REVIEW"]?.find((w) => w.id === id)?.scope).toEqual({
       teamId: "t",
     });
+    expect(setBridge).toHaveBeenCalledTimes(1);
   });
 
-  it("editing REVIEW saves an override of the built-in", () => {
+  it("applyPreset always works", () => {
     const { result } = renderHook(() => useBridgeState());
-    act(() => result.current.startEditing("REVIEW"));
-    act(() => result.current.remove("runs"));
-    act(() => result.current.saveEdit());
-    expect(result.current.saved["REVIEW"]?.some((w) => w.id === "runs")).toBe(false);
-    expect(result.current.layouts).toEqual({ shown: ["REVIEW"], hidden: [] });
-  });
-
-  it("applyPreset is ignored while editing", () => {
-    const { result } = renderHook(() => useBridgeState());
-    act(() => result.current.startEditing("REVIEW"));
-    act(() => result.current.applyPreset("Mine"));
+    act(() => result.current.add("teamKb"));
+    act(() => result.current.applyPreset("REVIEW"));
     expect(result.current.preset).toBe("REVIEW");
-    act(() => result.current.saveEdit());
-    expect(result.current.saved["REVIEW"]).toEqual(compact(REVIEW_LAYOUT));
-  });
-
-  it("DEFAULT is not editable", () => {
-    const { result } = renderHook(() => useBridgeState());
-    act(() => result.current.startEditing("DEFAULT"));
-    expect(result.current.editing).toBe(false);
   });
 
   it("collapse toggles instantly and persists via setBridge", () => {
@@ -185,7 +165,7 @@ describe("useBridgeState", () => {
 
   it("Esc is ignored while typing in an input, textarea or contenteditable", () => {
     const { result } = renderHook(() => useBridgeState());
-    act(() => result.current.startEditing("REVIEW"));
+    act(() => result.current.toggleCatalog());
     const ta = document.createElement("textarea");
     const ce = document.createElement("div");
     // jsdom has no isContentEditable; emulate it
@@ -195,14 +175,13 @@ describe("useBridgeState", () => {
       act(
         () => void el.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })),
       );
-    expect(result.current.editing).toBe(true);
+    expect(result.current.catalogOpen).toBe(true);
     ta.remove();
     ce.remove();
   });
 
   it("Esc inside an aria-modal element is ignored; inside a non-modal dialog it closes the selection", () => {
     const { result } = renderHook(() => useBridgeState());
-    act(() => result.current.startEditing("REVIEW"));
     act(() => result.current.setSelection({ kind: "pr", id: "1", widgetId: "prs", key: "pr:1" }));
     const modal = document.createElement("div");
     modal.setAttribute("role", "dialog");
@@ -216,7 +195,6 @@ describe("useBridgeState", () => {
         () => void el.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })),
       );
     esc(modal);
-    expect(result.current.editing).toBe(true);
     expect(result.current.selection).not.toBeNull();
     esc(sheet);
     expect(result.current.selection).toBeNull();
@@ -224,7 +202,7 @@ describe("useBridgeState", () => {
     sheet.remove();
   });
 
-  it("endDrag settles with a final compact into the draft only if something moved", () => {
+  it("endDrag settles with a final compact only if something moved", () => {
     ui = UiSettingsSchema.parse({
       bridge: {
         saved: {
@@ -236,7 +214,7 @@ describe("useBridgeState", () => {
       },
     });
     const { result } = renderHook(() => useBridgeState());
-    act(() => result.current.startEditing("X"));
+    act(() => result.current.applyPreset("X"));
     act(() => result.current.beginDrag("prs"));
     act(() => result.current.endDrag());
     expect(result.current.draggingId).toBeNull();
@@ -252,11 +230,10 @@ describe("useBridgeState", () => {
     expect(setBridge).not.toHaveBeenCalled();
   });
 
-  it("Esc closes the selection, then the catalog, then edit mode", () => {
+  it("Esc closes the selection, then the catalog", () => {
     const { result } = renderHook(() => useBridgeState());
     const esc = () =>
       act(() => void window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })));
-    act(() => result.current.startEditing("REVIEW"));
     act(() => result.current.toggleCatalog());
     act(() => result.current.setSelection({ kind: "pr", id: "1", widgetId: "prs", key: "pr:1" }));
     esc();
@@ -264,11 +241,6 @@ describe("useBridgeState", () => {
     expect(result.current.catalogOpen).toBe(true);
     esc();
     expect(result.current.catalogOpen).toBe(false);
-    expect(result.current.editing).toBe(true);
-    act(() => result.current.remove("runs"));
-    esc();
-    expect(result.current.editing).toBe(false);
-    expect(result.current.layout).toEqual(compact(REVIEW_LAYOUT));
   });
 
   it("mirrors the open sheet into the URL and restores it, keeping other params", () => {

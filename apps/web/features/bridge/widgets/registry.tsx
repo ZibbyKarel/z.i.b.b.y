@@ -40,7 +40,7 @@ export interface BridgeWidgetInfo {
  *
  * Contract for widget implementations:
  * - Call `onEmptyChange(true|false)` (in an effect, as data changes). Empty widgets collapse
- *   to their header outside edit mode; the body stays mounted (hidden) so it keeps reporting.
+ *   to their header; the body stays mounted (hidden) so it keeps reporting.
  * - Call `onCountChange({ count, you, aside })` to drive the header.
  * - Every clickable row MUST carry `data-rk={key}` (same string as `BridgeSelection.key`) —
  *   the detail sheet measures `[data-rk="…"]` to anchor itself next to the row. Rows call
@@ -48,6 +48,7 @@ export interface BridgeWidgetInfo {
  */
 export interface BridgeWidgetProps {
   widget: BridgeWidget;
+  /** This widget is being configured (its header gear toggle is on): show its settings UI. */
   editing: boolean;
   onEmptyChange: (empty: boolean) => void;
   onCountChange?: (info: BridgeWidgetInfo) => void;
@@ -58,7 +59,7 @@ export interface BridgeWidgetProps {
   /** Collapsed epic groups (`ui.bridge.epicClosed`), keyed by epic id (`none` = no epic). */
   epicClosed: Record<string, boolean>;
   onEpicToggle: (key: string, closed: boolean) => void;
-  /** Set this widget's scope (edit mode) — saved with the layout. */
+  /** Set this widget's scope (configure mode) — saved with the layout. */
   onScopeChange: (scope: BridgeWidget["scope"]) => void;
 }
 
@@ -67,6 +68,8 @@ export interface WidgetDefinition {
   labelKey: `bridge.widget.${WidgetType}.label`;
   descKey: `bridge.widget.${WidgetType}.desc`;
   Component: (props: BridgeWidgetProps) => ReactNode;
+  /** Has a settings UI behind the header gear toggle (`BridgeWidgetProps.editing`). */
+  configurable?: true;
 }
 
 export const WIDGETS: Record<WidgetType, WidgetDefinition> = {
@@ -109,11 +112,13 @@ export const WIDGETS: Record<WidgetType, WidgetDefinition> = {
     labelKey: "bridge.widget.quickActions.label",
     descKey: "bridge.widget.quickActions.desc",
     Component: QuickActionsWidget,
+    configurable: true,
   },
   teamKb: {
     labelKey: "bridge.widget.teamKb.label",
     descKey: "bridge.widget.teamKb.desc",
     Component: TeamKbWidget,
+    configurable: true,
   },
   proposals: {
     labelKey: "bridge.widget.proposals.label",

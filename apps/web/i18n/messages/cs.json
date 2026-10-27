@@ -3141,6 +3141,7 @@
       "open": "Otevřená"
     },
     "addWidget": "+ Widget",
+    "configure": "Nastavit",
     "editLayout": "Upravit rozložení",
     "catalog": {
       "title": "Katalog widgetů",
@@ -3155,7 +3156,6 @@
     "resizeNe": "vpravo nahoře",
     "resizeSw": "vlevo dole",
     "resizeSe": "vpravo dole",
-    "emptyWidget": "Tady nic není. Mimo režim úprav se widget sbalí na hlavičku.",
     "allClear": "Vše v pořádku",
     "loading": "Načítání…",
     "widgets": {
@@ -3440,7 +3440,6 @@
     "moreLayouts": "Další layouty",
     "deleteLayout": "Smazat",
     "deleteLayoutConfirm": "Opravdu smazat",
-    "save": "Uložit",
     "layoutNameError": {
       "required": "Zadej název.",
       "tooLong": "Nejvýš 40 znaků.",
@@ -3452,17 +3451,14 @@
       "active": "Aktivní",
       "moveUp": "Posunout {name} nahoru",
       "moveDown": "Posunout {name} dolů",
-      "edit": "Upravit",
       "divider": "V liště nahoře ↑ · v nabídce ↓",
       "dropShown": "Pusť sem pro zobrazení v liště",
       "dropHidden": "Pusť sem pro přesun do nabídky",
       "newName": "Název nového rozložení",
       "add": "Přidat",
-      "editNamed": "Upravit {name}",
       "deleteNamed": "Smazat {name}",
       "dropEnd": "Pusť sem pro přesun na konec nabídky"
-    },
-    "cancel": "Zrušit"
+    }
   },
   "inventory": {
     "title": "Inventář stroje",

@@ -34,7 +34,7 @@ describe("WidgetFrame", () => {
     expect(screen.getByTestId(WidgetFrameTestId.Collapse)).toHaveTextContent("▸");
   });
 
-  it("hides the body (but keeps it mounted) when collapsed or empty outside edit mode", () => {
+  it("hides the body (but keeps it mounted) when collapsed or empty", () => {
     const { rerender } = render(
       <WidgetFrame collapsed label="X">
         <p>rows</p>
@@ -51,36 +51,21 @@ describe("WidgetFrame", () => {
     expect(screen.queryByTestId(WidgetFrameTestId.Collapse)).toBeNull();
   });
 
-  it("has no edit affordances outside edit mode", () => {
-    render(<WidgetFrame label="X" onRemove={vi.fn()} sizeLabel="4 × 6" />);
-    for (const id of [WidgetFrameTestId.Remove, WidgetFrameTestId.Size, WidgetFrameTestId.Empty])
-      expect(screen.queryByTestId(id)).toBeNull();
-    for (const c of CORNERS) expect(screen.queryByTestId(resizeId(c))).toBeNull();
-  });
-
-  it("shows edit affordances, the dashed empty box and drag callbacks in edit mode", async () => {
+  it("always renders the corner handles and the remove button; size label only while dragging", async () => {
     const onMove = vi.fn();
     const onResize = vi.fn();
     const onRemove = vi.fn();
-    render(
+    const { rerender } = render(
       <WidgetFrame
-        editing
-        empty
-        emptyText="Nothing here"
         label="X"
         onMovePointerDown={onMove}
         onRemove={onRemove}
         onResizePointerDown={onResize}
-        onToggleCollapse={vi.fn()}
         resizeLabel="Resize"
         sizeLabel="4 × 6"
       />,
     );
-    expect(screen.getByTestId(WidgetFrameTestId.Size)).toHaveTextContent("4 × 6");
-    expect(screen.getByTestId(WidgetFrameTestId.Empty)).toHaveTextContent("Nothing here");
-    expect(screen.getByTestId(WidgetFrameTestId.Body)).toBeVisible();
-    // no collapse caret in edit mode
-    expect(screen.queryByTestId(WidgetFrameTestId.Collapse)).toBeNull();
+    expect(screen.queryByTestId(WidgetFrameTestId.Size)).toBeNull();
     fireEvent.pointerDown(screen.getByTestId(WidgetFrameTestId.Header));
     const names = new Set<string>();
     for (const c of CORNERS) {
@@ -93,15 +78,46 @@ describe("WidgetFrame", () => {
     }
     expect(names.size).toBe(4);
     expect(onMove).toHaveBeenCalledOnce();
-    expect(onResize).toHaveBeenCalledTimes(4);
     await userEvent.click(screen.getByTestId(WidgetFrameTestId.Remove));
     expect(onRemove).toHaveBeenCalledOnce();
     // the × must not start a move drag
     expect(onMove).toHaveBeenCalledOnce();
+    rerender(<WidgetFrame dragging label="X" sizeLabel="4 × 6" />);
+    expect(screen.getByTestId(WidgetFrameTestId.Size)).toHaveTextContent("4 × 6");
+  });
+
+  it("renders a configure toggle reflecting `configuring`, forces the body open, and does not start a move", async () => {
+    const onConfigure = vi.fn();
+    const onMove = vi.fn();
+    const { rerender } = render(
+      <WidgetFrame
+        empty
+        configureLabel="Configure"
+        label="X"
+        onConfigure={onConfigure}
+        onMovePointerDown={onMove}
+      >
+        <p>rows</p>
+      </WidgetFrame>,
+    );
+    const btn = screen.getByTestId(WidgetFrameTestId.Configure);
+    expect(btn).toHaveAttribute("aria-pressed", "false");
+    expect(btn).toHaveAccessibleName("Configure");
+    expect(screen.getByTestId(WidgetFrameTestId.Body)).not.toBeVisible();
+    await userEvent.click(btn);
+    expect(onConfigure).toHaveBeenCalledOnce();
+    expect(onMove).not.toHaveBeenCalled();
+    rerender(
+      <WidgetFrame configuring empty label="X" onConfigure={onConfigure}>
+        <p>rows</p>
+      </WidgetFrame>,
+    );
+    expect(screen.getByTestId(WidgetFrameTestId.Configure)).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId(WidgetFrameTestId.Body)).toBeVisible();
   });
 
   it("marks dragging with an ink border and passes geometry through", () => {
-    render(<WidgetFrame dragging editing label="X" style={{ left: 10, top: 20 }} />);
+    render(<WidgetFrame dragging label="X" style={{ left: 10, top: 20 }} />);
     const root = screen.getByTestId(WidgetFrameTestId.Root);
     expect(root).toHaveClass("border-ink");
     expect(root).toHaveStyle({ left: "10px", top: "20px" });

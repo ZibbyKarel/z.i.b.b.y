@@ -22,23 +22,23 @@ export const DEFAULT_LAYOUT: BridgeWidget[] = fromArr(DEFAULT_TUPLES);
 export const REVIEW_LAYOUT: BridgeWidget[] = fromArr(REVIEW_TUPLES);
 
 /**
- * Compacted layout for a preset name: DEFAULT, a saved layout, the built-in REVIEW (a saved
+ * Compacted layout for a preset name: DEFAULT (a saved `DEFAULT` overrides the built-in), a saved layout, the built-in REVIEW (a saved
  * `REVIEW` — written when it is edited — overrides it), else empty.
  */
 export function presetLayout(
   name: string,
   saved: Readonly<Record<string, readonly BridgeWidget[]>>,
 ): BridgeWidget[] {
-  if (name === DEFAULT_PRESET) return compact(DEFAULT_LAYOUT);
+  if (name === DEFAULT_PRESET) return compact(saved.DEFAULT ?? DEFAULT_LAYOUT);
   return compact(saved[name] ?? (name === REVIEW_PRESET ? REVIEW_LAYOUT : []));
 }
 
-/** Every layout name except DEFAULT: the built-in REVIEW (unless removed), then saved names. */
+/** Every layout name except DEFAULT (whose edits live in `saved.DEFAULT`): the built-in REVIEW (unless removed), then saved names. */
 export function layoutNames(
   saved: Readonly<Record<string, unknown>>,
   removed: readonly string[],
 ): string[] {
-  const names = Object.keys(saved);
+  const names = Object.keys(saved).filter((n) => n !== DEFAULT_PRESET);
   return removed.includes(REVIEW_PRESET) || names.includes(REVIEW_PRESET)
     ? names
     : [REVIEW_PRESET, ...names];

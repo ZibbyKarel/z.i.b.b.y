@@ -13,12 +13,9 @@ vi.mock("../../system", () => ({
 const props: BridgeHeaderProps = {
   preset: "DEFAULT",
   layouts: { shown: [], hidden: [] },
-  editing: false,
   onPreset: vi.fn(),
   onManage: vi.fn(),
   onToggleCatalog: vi.fn(),
-  onSave: vi.fn(),
-  onCancel: vi.fn(),
 };
 const item = (v: string) => `${SegmentedControlTestId.Item}-${v}`;
 const two = { shown: ["A"], hidden: ["B"] };
@@ -61,15 +58,20 @@ describe("BridgeHeader", () => {
     expect(onPreset).not.toHaveBeenCalled();
   });
 
-  it("view mode shows manage only; it calls onManage", async () => {
+  it("always shows add widget and manage, never save/cancel; manage calls onManage", async () => {
     const onManage = vi.fn();
-    renderWithProviders(<BridgeHeader {...props} onManage={onManage} />);
-    expect(screen.queryByTestId(BridgeHeaderTestId.Save)).toBeNull();
-    expect(screen.queryByTestId(BridgeHeaderTestId.Cancel)).toBeNull();
+    const onToggleCatalog = vi.fn();
+    renderWithProviders(
+      <BridgeHeader {...props} onManage={onManage} onToggleCatalog={onToggleCatalog} />,
+    );
+    await userEvent.click(screen.getByText("+ Widget"));
+    expect(onToggleCatalog).toHaveBeenCalled();
     await userEvent.click(
       within(screen.getByTestId(BridgeHeaderTestId.Manage)).getByRole("button"),
     );
     expect(onManage).toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Uložit" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Zrušit" })).toBeNull();
   });
 
   it("manage is an icon-only button named by its label, with no title or caption", () => {
@@ -79,38 +81,6 @@ describe("BridgeHeader", () => {
     expect(manage).not.toHaveTextContent("Upravit rozložení");
     expect(screen.queryByText("Rozložení")).toBeNull();
     expect(screen.queryByText("Můstek")).toBeNull();
-  });
-
-  it("edit mode shows add widget, cancel and save, not manage", async () => {
-    const onSave = vi.fn();
-    const onCancel = vi.fn();
-    const onToggleCatalog = vi.fn();
-    renderWithProviders(
-      <BridgeHeader
-        {...props}
-        editing
-        onCancel={onCancel}
-        onSave={onSave}
-        onToggleCatalog={onToggleCatalog}
-      />,
-    );
-    expect(screen.queryByTestId(BridgeHeaderTestId.Manage)).toBeNull();
-    await userEvent.click(within(screen.getByTestId(BridgeHeaderTestId.Save)).getByRole("button"));
-    await userEvent.click(
-      within(screen.getByTestId(BridgeHeaderTestId.Cancel)).getByRole("button"),
-    );
-    await userEvent.click(screen.getByText("+ Widget"));
-    expect(onSave).toHaveBeenCalled();
-    expect(onCancel).toHaveBeenCalled();
-    expect(onToggleCatalog).toHaveBeenCalled();
-  });
-
-  it("while editing, layouts cannot be switched and the kebab is hidden", async () => {
-    const onPreset = vi.fn();
-    renderWithProviders(<BridgeHeader {...props} editing layouts={two} onPreset={onPreset} />);
-    expect(screen.queryByTestId(BridgeHeaderTestId.More)).toBeNull();
-    await userEvent.click(screen.getByTestId(item("A")));
-    expect(onPreset).not.toHaveBeenCalled();
   });
 
   it("hidden layouts sit in the kebab menu", async () => {

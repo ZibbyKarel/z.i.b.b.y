@@ -10,6 +10,7 @@ import {
   useRef,
 } from "react";
 import { cn } from "../../utils/cn";
+import { Icon } from "../Icon/Icon";
 
 export enum WidgetFrameTestId {
   Root = "widget-frame-root",
@@ -20,11 +21,11 @@ export enum WidgetFrameTestId {
   Aside = "widget-frame-aside",
   Collapse = "widget-frame-collapse",
   Remove = "widget-frame-remove",
+  /** The per-widget "configure" toggle (aria-pressed). */
+  Configure = "widget-frame-configure",
   Body = "widget-frame-body",
   /** Plain wrapper around the children (and empty box) inside the body; its height is the content's natural height. */
   Content = "widget-frame-content",
-  /** The dashed "nothing here" box shown for an empty widget in edit mode. */
-  Empty = "widget-frame-empty",
   /** The first-load spinner row (role=status) shown above the children while `loading`. */
   Loading = "widget-frame-loading",
   Size = "widget-frame-size",
@@ -45,28 +46,30 @@ export interface WidgetFrameProps {
   aside?: string;
   /** Body hidden, header only. */
   collapsed?: boolean;
-  /** Shows the ▾/▸ caret (outside edit mode, for non-empty widgets) when provided. */
+  /** Shows the ▾/▸ caret (for non-empty widgets) when provided. */
   onToggleCollapse?: () => void;
   collapseLabel?: string;
-  /** Edit mode: move cursor on the header, `×`, size label, resize handle. */
-  editing?: boolean;
   /** Being dragged/resized: ink border, no geometry transition, raised z-index. */
   dragging?: boolean;
-  /** The widget has nothing to show. Outside edit mode the body collapses to the
-   *  header only; in edit mode a dashed `emptyText` box is shown. */
+  /** The widget has nothing to show: the body collapses to the header only. */
   empty?: boolean;
-  emptyText?: string;
   /** The widget is fetching for the first time: shows a spinner row above the children. */
   loading?: boolean;
   /** Accessible name of the loader. */
   loadingLabel?: string;
-  /** `W × H` label shown bottom-left in edit mode. */
+  /** `W × H` label shown bottom-left while `dragging`. */
   sizeLabel?: string;
+  /** Shows the `×` (on header hover / focus-within). */
   onRemove?: () => void;
   removeLabel?: string;
-  /** Header pointer-down — start a move drag (edit mode only). */
+  /** Shows a header "configure" toggle (gear, `aria-pressed={configuring}`). */
+  onConfigure?: () => void;
+  /** The widget is being configured: toggle pressed, body forced open. */
+  configuring?: boolean;
+  configureLabel?: string;
+  /** Header pointer-down — start a move drag. */
   onMovePointerDown?: (e: PointerEvent<HTMLElement>) => void;
-  /** Resize handle pointer-down — start a resize drag from `corner` (edit mode only). */
+  /** Resize handle pointer-down — start a resize drag from `corner`. */
   onResizePointerDown?: (e: PointerEvent<HTMLElement>, corner: ResizeCorner) => void;
   resizeLabel?: string;
   /** Corner names appended to `resizeLabel` so each handle has a distinct accessible name. */
@@ -100,8 +103,8 @@ const headerBtn = "cursor-pointer bg-transparent px-[6px] py-[2px] text-ink-3 ho
 
 /**
  * A board widget's chrome: square panel, header (label · count · YOU badge · aside ·
- * caret · ×), scrolling body, and the edit-mode affordances (move cursor, size label,
- * resize handle). Positioned `absolute` — the caller supplies geometry via `style`
+ * caret · configure · ×), scrolling body, and the always-on affordances (header move
+ * cursor, four corner resize handles; size label while dragging). Positioned `absolute` — the caller supplies geometry via `style`
  * inside a `WidgetBoard`. Sizes read the `--bridge-*` density variables.
  */
 export function WidgetFrame({
@@ -112,15 +115,16 @@ export function WidgetFrame({
   collapsed = false,
   onToggleCollapse,
   collapseLabel,
-  editing = false,
   dragging = false,
   empty = false,
-  emptyText,
   loading = false,
   loadingLabel,
   sizeLabel,
   onRemove,
   removeLabel,
+  onConfigure,
+  configuring = false,
+  configureLabel,
   onMovePointerDown,
   onResizePointerDown,
   resizeLabel,
@@ -130,7 +134,7 @@ export function WidgetFrame({
   onNaturalHeight,
   ref,
 }: WidgetFrameProps) {
-  const open = editing ? true : !(empty || collapsed);
+  const open = configuring || !(empty || collapsed);
   const rootRef = useRef<HTMLElement | null>(null);
   const headerRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -166,19 +170,14 @@ export function WidgetFrame({
     },
     [ref],
   );
-  const canToggle = !!onToggleCollapse && !editing && !empty;
+  const canToggle = !!onToggleCollapse && !empty;
 
   return (
     <section
       className={cn(
-        "absolute box-border flex min-w-0 flex-col rounded-lg border bg-panel shadow-[var(--bridge-shadow)]",
+        "group absolute box-border flex min-w-0 flex-col rounded-lg border bg-panel shadow-[var(--bridge-shadow)]",
         "transition-[left,top,width,height] duration-150 ease-out motion-reduce:transition-none",
-        editing
-          ? dragging
-            ? "border-ink"
-            : "border-line-2"
-          : "border-[color:var(--bridge-border)]",
-        dragging && "z-[5] transition-none",
+        dragging ? "z-[5] border-ink transition-none" : "border-[color:var(--bridge-border)]",
       )}
       data-testid={WidgetFrameTestId.Root}
       ref={setRoot}
@@ -190,10 +189,10 @@ export function WidgetFrame({
           open
             ? "box-content h-[var(--bridge-head-h)] flex-none border-b border-line"
             : "box-border h-[calc(var(--bridge-rh)-2px)] flex-none",
-          editing ? "cursor-move" : "cursor-default",
+          "cursor-move",
         )}
         data-testid={WidgetFrameTestId.Header}
-        onPointerDown={editing ? onMovePointerDown : undefined}
+        onPointerDown={onMovePointerDown}
         ref={headerRef}
       >
         <span className="text-ink" data-testid={WidgetFrameTestId.Label}>
@@ -232,10 +231,27 @@ export function WidgetFrame({
             {collapsed ? "▸" : "▾"}
           </button>
         ) : null}
-        {editing && onRemove ? (
+        {onConfigure ? (
+          <button
+            aria-label={configureLabel ?? "Configure"}
+            aria-pressed={configuring}
+            className={cn(headerBtn, configuring && "text-ink")}
+            data-testid={WidgetFrameTestId.Configure}
+            onClick={onConfigure}
+            onPointerDown={(e) => e.stopPropagation()}
+            title={configureLabel ?? "Configure"}
+            type="button"
+          >
+            <Icon name="gear" size="sm" />
+          </button>
+        ) : null}
+        {onRemove ? (
           <button
             aria-label={removeLabel}
-            className={headerBtn}
+            className={cn(
+              headerBtn,
+              "opacity-0 focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100",
+            )}
             data-testid={WidgetFrameTestId.Remove}
             onClick={onRemove}
             onPointerDown={(e) => e.stopPropagation()}
@@ -263,43 +279,33 @@ export function WidgetFrame({
             </div>
           ) : null}
           {children}
-          {editing && empty ? (
-            <div
-              className="mx-[12px] my-[10px] border border-dashed border-line-2 px-[12px] py-[10px] text-[12px] text-ink-2"
-              data-testid={WidgetFrameTestId.Empty}
-            >
-              {emptyText}
-            </div>
-          ) : null}
         </div>
       </div>
-      {editing ? (
-        <>
-          <span
-            className="absolute bottom-[6px] left-[12px] rounded-sm bg-panel px-[4px] py-[2px] font-mono text-[10px] text-ink-3"
-            data-testid={WidgetFrameTestId.Size}
-          >
-            {sizeLabel}
-          </span>
-          {(Object.keys(RESIZE_HANDLES) as ResizeCorner[]).map((corner) => {
-            const name = `${resizeLabel ?? "Resize"} (${resizeCornerLabels?.[corner] ?? CORNER_NAMES[corner]})`;
-            return (
-              <div
-                aria-label={name}
-                className={cn(
-                  "absolute box-border h-[12px] w-[12px] border-ink",
-                  RESIZE_HANDLES[corner],
-                )}
-                data-testid={`${WidgetFrameTestId.Resize}-${corner}`}
-                key={corner}
-                onPointerDown={(e) => onResizePointerDown?.(e, corner)}
-                role="separator"
-                title={name}
-              />
-            );
-          })}
-        </>
+      {dragging ? (
+        <span
+          className="absolute bottom-[6px] left-[12px] rounded-sm bg-panel px-[4px] py-[2px] font-mono text-[10px] text-ink-3"
+          data-testid={WidgetFrameTestId.Size}
+        >
+          {sizeLabel}
+        </span>
       ) : null}
+      {(Object.keys(RESIZE_HANDLES) as ResizeCorner[]).map((corner) => {
+        const name = `${resizeLabel ?? "Resize"} (${resizeCornerLabels?.[corner] ?? CORNER_NAMES[corner]})`;
+        return (
+          <div
+            aria-label={name}
+            className={cn(
+              "absolute box-border h-[12px] w-[12px] border-ink",
+              RESIZE_HANDLES[corner],
+            )}
+            data-testid={`${WidgetFrameTestId.Resize}-${corner}`}
+            key={corner}
+            onPointerDown={(e) => onResizePointerDown?.(e, corner)}
+            role="separator"
+            title={name}
+          />
+        );
+      })}
     </section>
   );
 }

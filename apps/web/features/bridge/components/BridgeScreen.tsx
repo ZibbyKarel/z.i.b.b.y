@@ -37,12 +37,9 @@ export function BridgeScreen() {
       style={{ height: "100%", position: "relative" }}
     >
       <BridgeHeader
-        editing={state.editing}
         layouts={state.layouts}
-        onCancel={state.cancelEdit}
         onManage={() => setManageOpen(true)}
         onPreset={state.applyPreset}
-        onSave={state.saveEdit}
         onToggleCatalog={state.toggleCatalog}
         preset={state.preset}
       />
@@ -62,10 +59,6 @@ export function BridgeScreen() {
         onArrange={state.arrange}
         onClose={() => setManageOpen(false)}
         onDelete={state.deleteLayout}
-        onEdit={(name) => {
-          state.startEditing(name);
-          setManageOpen(false);
-        }}
         open={manageOpen}
         preset={state.preset}
         saved={state.saved}

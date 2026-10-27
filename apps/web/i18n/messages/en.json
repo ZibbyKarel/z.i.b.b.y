@@ -3141,6 +3141,7 @@
       "open": "Open"
     },
     "addWidget": "+ Widget",
+    "configure": "Configure",
     "editLayout": "Edit layout",
     "catalog": {
       "title": "Widget catalog",
@@ -3155,7 +3156,6 @@
     "resizeNe": "top right",
     "resizeSw": "bottom left",
     "resizeSe": "bottom right",
-    "emptyWidget": "Nothing here. Outside edit mode this widget collapses to its header.",
     "allClear": "All clear",
     "loading": "Loading…",
     "widgets": {
@@ -3440,7 +3440,6 @@
     "moreLayouts": "More layouts",
     "deleteLayout": "Delete",
     "deleteLayoutConfirm": "Confirm delete",
-    "save": "Save",
     "layoutNameError": {
       "required": "Enter a name.",
       "tooLong": "At most 40 characters.",
@@ -3452,17 +3451,14 @@
       "active": "Active",
       "moveUp": "Move {name} up",
       "moveDown": "Move {name} down",
-      "edit": "Edit",
       "divider": "Shown in the header above · in the dropdown below",
       "dropShown": "Drop here to show in the header",
       "dropHidden": "Drop here to move to the dropdown",
       "newName": "New layout name",
       "add": "Add",
-      "editNamed": "Edit {name}",
       "deleteNamed": "Delete {name}",
       "dropEnd": "Drop here to put last in the dropdown"
-    },
-    "cancel": "Cancel"
+    }
   },
   "inventory": {
     "title": "Machine inventory",
