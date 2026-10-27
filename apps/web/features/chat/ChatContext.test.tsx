@@ -3,7 +3,9 @@ import { act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders, screen } from "../../test/render";
 
-import { ChatProvider, useChat } from "./ChatContext";
+import type { ChatAbout } from "@zibby/contracts";
+import { renderHook } from "@testing-library/react";
+import { ChatProvider, useChat, useOptionalChat } from "./ChatContext";
 
 // A minimal harness exposing every store action + the conversation/dock state as
 // text, so tests can assert on the state the shell-global chat dock reads.
@@ -231,5 +233,69 @@ describe("ChatProvider", () => {
     const id = screen.getByTestId("conversation-id").textContent;
 
     expect(window.localStorage.getItem("zibby.chat.conversationId")).toBe(id);
+  });
+});
+
+describe("ChatProvider — about (todo-29)", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+  const A: ChatAbout = { kind: "pr", id: "u", label: "PR #1", details: "one" };
+
+  function renderStore() {
+    return renderHook(() => useChat(), {
+      wrapper: ({ children }) => <ChatProvider>{children}</ChatProvider>,
+    });
+  }
+
+  it("openAbout opens the dock, sets about and mints a conversation", () => {
+    const { result } = renderStore();
+    act(() => result.current.openAbout(A));
+    expect(result.current.dockOpen).toBe(true);
+    expect(result.current.about).toEqual(A);
+    expect(result.current.conversationId).toMatch(/^conv_/);
+  });
+
+  it("re-opening the same item keeps the thread and refreshes details", () => {
+    const { result } = renderStore();
+    act(() => result.current.openAbout(A));
+    const id = result.current.conversationId;
+    act(() =>
+      result.current.setMessages([
+        { id: "m", role: "user", text: "t", at: "2026-10-27T00:00:00Z" },
+      ]),
+    );
+    act(() => result.current.openAbout({ ...A, details: "two" }));
+    expect(result.current.conversationId).toBe(id);
+    expect(result.current.messages).toHaveLength(1);
+    expect(result.current.about?.details).toBe("two");
+  });
+
+  it("a different item starts a fresh conversation", () => {
+    const { result } = renderStore();
+    act(() => result.current.openAbout(A));
+    const id = result.current.conversationId;
+    act(() =>
+      result.current.setMessages([
+        { id: "m", role: "user", text: "t", at: "2026-10-27T00:00:00Z" },
+      ]),
+    );
+    const B: ChatAbout = { kind: "pr", id: "v", label: "PR #2" };
+    act(() => result.current.openAbout(B));
+    expect(result.current.conversationId).not.toBe(id);
+    expect(result.current.messages).toHaveLength(0);
+    expect(result.current.about).toEqual(B);
+  });
+
+  it("newChat clears about", () => {
+    const { result } = renderStore();
+    act(() => result.current.openAbout(A));
+    act(() => result.current.newChat());
+    expect(result.current.about).toBeNull();
+  });
+
+  it("useOptionalChat returns null outside the provider", () => {
+    const { result } = renderHook(() => useOptionalChat());
+    expect(result.current).toBeNull();
   });
 });

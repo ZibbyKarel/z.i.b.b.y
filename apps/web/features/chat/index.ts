@@ -2,7 +2,7 @@
 // (ZB-13 deleted the old `Screen`/`ChatScreen` full-page view entirely, along
 // with the rest of the pre-ZB-12 chat chrome) — a barrel this narrow can't
 // drag a whole view graph into every consumer or risk cycles.
-export { ChatProvider, useChat, CHAT_SHORTCUT_KEY } from "./ChatContext";
+export { ChatProvider, useChat, useOptionalChat, CHAT_SHORTCUT_KEY } from "./ChatContext";
 export { ChatButton } from "./components/ChatButton";
 export { ChatDock } from "./components/ChatDock";
 export { useSendChatMessageMutation } from "./mutations";

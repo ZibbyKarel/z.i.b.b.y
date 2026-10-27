@@ -2066,6 +2066,8 @@
   "chat": {
     "createTask": "Vytvořit úkol",
     "dock": {
+      "aboutChip": "O čem: {label}",
+      "clearAbout": "Odebrat kontext",
       "targetExplicit": "→ {name}",
       "clearTarget": "Zrušit cíl (zpět na automatické směrování)",
       "empty": "Zeptejte se na cokoli, nebo předejte úkol."

@@ -2066,6 +2066,8 @@
   "chat": {
     "createTask": "Create task",
     "dock": {
+      "aboutChip": "About: {label}",
+      "clearAbout": "Remove the context",
       "targetExplicit": "→ {name}",
       "clearTarget": "Clear the target (back to automatic routing)",
       "empty": "Ask anything, or hand over a task."

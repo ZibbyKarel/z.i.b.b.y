@@ -1,7 +1,7 @@
 "use client";
 
 import type { TaskTarget } from "@zibby/contracts";
-import { Button, ChatBubble, Chip, ChatDock as DockFrame, Stack } from "@zibby/design-system";
+import { Button, ChatBubble, Chip, ChatDock as DockFrame, Row, Stack } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -19,6 +19,7 @@ export enum ChatDockTestId {
   Send = "app-chat-dock-send",
   Empty = "app-chat-dock-empty",
   TargetChip = "app-chat-dock-target-chip",
+  AboutChip = "app-chat-dock-about-chip",
 }
 
 /** Composer auto-grows up to this many lines, then scrolls. */
@@ -58,8 +59,17 @@ function targetLabel(target: TaskTarget): string {
 export function ChatDock() {
   const t = useTranslations("chat");
   const router = useRouter();
-  const { dockOpen, setDockOpen, dockTarget, setDockTarget, messages, newChat, conversationId } =
-    useChat();
+  const {
+    dockOpen,
+    setDockOpen,
+    dockTarget,
+    setDockTarget,
+    about,
+    setAbout,
+    messages,
+    newChat,
+    conversationId,
+  } = useChat();
   const { stream, thinking, send, setScope, setSkillId, voice, dictated, consumeDictated } =
     useChatDock();
 
@@ -99,7 +109,7 @@ export function ChatDock() {
 
   // No chip for the automatic default (O-20) — it's the obvious fallback with
   // nothing to disambiguate; only an explicit target earns the chip.
-  const targetChip = dockTarget ? (
+  const targetChipEl = dockTarget ? (
     <Chip
       closable
       closeLabel={t("dock.clearTarget")}
@@ -110,6 +120,26 @@ export function ChatDock() {
       {t("dock.targetExplicit", { name: targetLabel(dockTarget) })}
     </Chip>
   ) : undefined;
+
+  const aboutChipEl = about ? (
+    <Chip
+      closable
+      closeLabel={t("dock.clearAbout")}
+      data-testid={ChatDockTestId.AboutChip}
+      onClose={() => setAbout(null)}
+      tone="working"
+    >
+      {t("dock.aboutChip", { label: about.label })}
+    </Chip>
+  ) : undefined;
+
+  const targetChip =
+    aboutChipEl || targetChipEl ? (
+      <Row wrap gap="75">
+        {aboutChipEl}
+        {targetChipEl}
+      </Row>
+    ) : undefined;
 
   const transcript =
     messages.length === 0 && !stream.streaming ? (

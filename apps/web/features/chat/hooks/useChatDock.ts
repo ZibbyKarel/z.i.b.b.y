@@ -65,7 +65,7 @@ export interface ChatDockEngine {
  * being read aloud (echo guard: the mic must never transcribe ZIBBY's own voice).
  */
 export function useChatDock(): ChatDockEngine {
-  const { conversationId, ensureConversation, setConversationId, setMessages, dockTarget } =
+  const { conversationId, ensureConversation, setConversationId, setMessages, dockTarget, about } =
     useChat();
 
   // Deliberately NOT `conversationId ?? undefined`: `ChatContext`'s `open()`/⌘J
@@ -183,12 +183,13 @@ export function useChatDock(): ChatDockEngine {
           ...(tags.projectId ? { projectId: tags.projectId } : {}),
           ...(tags.companyId ? { companyId: tags.companyId } : {}),
           ...(tags.skillId ? { skillId: tags.skillId } : {}),
+          ...(about ? { about } : {}),
         },
       });
       // Tags are one-turn (ported from PR #69).
       setTags({});
     },
-    [conversationId, dockTarget, setMessages, sendMessage, tags],
+    [conversationId, dockTarget, about, setMessages, sendMessage, tags],
   );
 
   const speaking = useAnyAudioPlaying();
