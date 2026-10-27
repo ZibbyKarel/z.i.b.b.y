@@ -2096,6 +2096,7 @@
     },
     "composer": {
       "label": "Message",
+      "model": "Chat model",
       "placeholder": "Ask Zibby or describe a task",
       "listening": "Listening…",
       "send": "Send"

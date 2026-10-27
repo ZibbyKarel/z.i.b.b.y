@@ -84,6 +84,15 @@ export type ChatToolEvent = z.infer<typeof ChatToolEventSchema>;
 /** Single-line fields: a newline could smuggle extra `key: value` lines in the prompt block. */
 const SINGLE_LINE = /^[^\r\n]*$/;
 
+/**
+ * todo-30 — the model a chat turn runs on: the Claude CLI aliases, operator-selectable
+ * per turn.
+ */
+export const CHAT_MODELS = ["haiku", "sonnet", "opus", "fable"] as const;
+export const ChatModelSchema = z.enum(CHAT_MODELS);
+export type ChatModel = z.infer<typeof ChatModelSchema>;
+export const DEFAULT_CHAT_MODEL: ChatModel = "sonnet";
+
 export const ChatAboutSchema = z.object({
   kind: z.string().regex(/^[a-z][a-z0-9-]{0,31}$/),
   id: z.string().min(1).max(512).regex(SINGLE_LINE),
@@ -139,6 +148,8 @@ export const ChatMessageSchema = z.object({
   attachmentSetId: z.string().optional(),
   /** todo-29 — the context this user turn was sent about (no `details`). Optional/additive. */
   about: ChatAboutRefSchema.optional(),
+  /** todo-30 — the model that produced this assistant turn. Optional/additive. */
+  model: ChatModelSchema.optional(),
 });
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 
@@ -213,6 +224,8 @@ export const SendChatMessageBodySchema = z.object({
   skillId: SkillIdSchema.optional(),
   /** todo-29 — the thing the operator is talking about; rendered into the prompt as DATA. */
   about: ChatAboutSchema.optional(),
+  /** todo-30 — the model to run this turn on; omitted → {@link DEFAULT_CHAT_MODEL}. */
+  model: ChatModelSchema.optional(),
 });
 export type SendChatMessageBody = z.infer<typeof SendChatMessageBodySchema>;
 

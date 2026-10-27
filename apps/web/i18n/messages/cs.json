@@ -2096,6 +2096,7 @@
     },
     "composer": {
       "label": "Zpráva",
+      "model": "Model chatu",
       "placeholder": "Zeptej se Zibbyho nebo popiš úkol",
       "listening": "Poslouchám…",
       "send": "Odeslat"

@@ -4,6 +4,7 @@ import type { ChatAbout, ChatMessage as ChatMessageType } from "@zibby/contracts
 import {
   ChipTestId,
   ChatDockTestId as DockFrameTestId,
+  DropdownTestId,
   TypingDotsTestId,
 } from "@zibby/design-system";
 import { useEffect } from "react";
@@ -179,6 +180,45 @@ describe("ChatDock (ZB-12)", () => {
       renderDock({ about, department: true });
       expect(screen.getByTestId(ChatDockTestId.AboutChip)).toBeInTheDocument();
       expect(screen.getByTestId(ChatDockTestId.TargetChip)).toBeInTheDocument();
+    });
+  });
+
+  describe("model picker (todo-30)", () => {
+    const trigger = () =>
+      within(screen.getByTestId(ChatDockTestId.ModelPicker)).getByTestId(DropdownTestId.Trigger);
+
+    it("shows Sonnet with an accessible name", () => {
+      renderDock();
+      expect(trigger()).toHaveTextContent("Sonnet");
+      expect(trigger()).toHaveAccessibleName("Model chatu");
+    });
+
+    it("lists Haiku, Sonnet, Opus, Fable in order", async () => {
+      renderDock();
+      await userEvent.setup().click(trigger());
+      expect(screen.getAllByTestId(DropdownTestId.Option).map((o) => o.textContent)).toEqual([
+        "Haiku",
+        "Sonnet",
+        "Opus",
+        "Fable",
+      ]);
+    });
+
+    it("sends the default, then the picked model on the same conversation", async () => {
+      renderDock();
+      await typeAndSend("one");
+      const user = userEvent.setup();
+      await user.click(trigger());
+      const fable = screen
+        .getAllByTestId(DropdownTestId.Option)
+        .find((o) => o.textContent === "Fable");
+      if (!fable) throw new Error("Fable option missing");
+      await user.click(fable);
+      await typeAndSend("two");
+      const [a, b] = sendMutate.mock.calls.map((c) => c[0].body as Record<string, unknown>);
+      expect(a?.model).toBe("sonnet");
+      expect(b?.model).toBe("fable");
+      expect(b?.conversationId).toBe(a?.conversationId);
     });
   });
 

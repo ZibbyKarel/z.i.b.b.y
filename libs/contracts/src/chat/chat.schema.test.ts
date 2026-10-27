@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Briefing } from "../briefing/briefing.schema";
 import { TaskTargetSchema } from "../tasks/task.schema";
 import {
+  CHAT_MODELS,
   ChatAboutRefSchema,
   ChatMentionTargetSchema,
   ChatMessageSchema,
@@ -267,5 +268,20 @@ describe("ChatAbout (todo-29)", () => {
     expect(
       ChatAboutRefSchema.parse({ kind: "pr", id: "1", label: "L", details: "x" }),
     ).not.toHaveProperty("details");
+  });
+});
+
+describe("ChatModel (todo-30)", () => {
+  it("lists the CLI aliases", () => {
+    expect([...CHAT_MODELS]).toEqual(["haiku", "sonnet", "opus", "fable"]);
+  });
+  it("accepts a model on send and rejects an unknown one", () => {
+    expect(SendChatMessageBodySchema.parse({ text: "hi", model: "fable" }).model).toBe("fable");
+    expect(SendChatMessageBodySchema.safeParse({ text: "hi", model: "gpt-4" }).success).toBe(false);
+  });
+  it("parses an assistant line with and without model", () => {
+    const base = { id: "m1", role: "assistant", text: "x", at: "2026-07-07T13:11:49.031Z" };
+    expect(ChatMessageSchema.parse({ ...base, model: "opus" }).model).toBe("opus");
+    expect(ChatMessageSchema.parse(base).model).toBeUndefined();
   });
 });

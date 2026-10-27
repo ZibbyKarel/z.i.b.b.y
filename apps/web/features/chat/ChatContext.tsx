@@ -1,6 +1,13 @@
 "use client";
 
-import type { ChatAbout, ChatMessage as ChatMessageType, TaskTarget } from "@zibby/contracts";
+import {
+  type ChatAbout,
+  type ChatMessage as ChatMessageType,
+  type ChatModel,
+  ChatModelSchema,
+  DEFAULT_CHAT_MODEL,
+  type TaskTarget,
+} from "@zibby/contracts";
 import {
   type Dispatch,
   type ReactNode,
@@ -31,6 +38,20 @@ function readStoredConversationId(): string | null {
     return window.localStorage.getItem(CHAT_CONVERSATION_KEY);
   } catch {
     return null;
+  }
+}
+
+/** localStorage key the operator's model pick survives a reload under. */
+const CHAT_MODEL_KEY = "zibby.chat.model";
+
+/** Stored pick if valid, else the default — storage that throws also lands on the default. */
+function readStoredModel(): ChatModel {
+  if (typeof window === "undefined") return DEFAULT_CHAT_MODEL;
+  try {
+    const parsed = ChatModelSchema.safeParse(window.localStorage.getItem(CHAT_MODEL_KEY));
+    return parsed.success ? parsed.data : DEFAULT_CHAT_MODEL;
+  } catch {
+    return DEFAULT_CHAT_MODEL;
   }
 }
 
@@ -82,6 +103,9 @@ interface ChatStore {
    * only refreshes its details; a different item starts a fresh conversation.
    */
   openAbout: (next: ChatAbout) => void;
+  /** The model the next turn runs on (todo-30) — sticky, survives `newChat` and reloads. */
+  model: ChatModel;
+  setModel: (model: ChatModel) => void;
 }
 
 const ChatContext = createContext<ChatStore | null>(null);
@@ -100,6 +124,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [dockOpen, setDockOpen] = useState(false);
   const [dockTarget, setDockTarget] = useState<TaskTarget | null>(null);
+  const [model, setModelState] = useState<ChatModel>(DEFAULT_CHAT_MODEL);
   const [about, setAboutState] = useState<ChatAbout | null>(null);
   // Mirror of `about` that is current synchronously, so `openAbout` can stay
   // identity-stable and never read a stale closure between two calls.
@@ -124,6 +149,23 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       // Storage unavailable — the thread still works, it just won't survive a reload.
     }
   }, [conversationId]);
+
+  // Read storage after mount (not in the initialiser) so the server render and
+  // the first client render agree; the pick is written only by `setModel`, so
+  // mount never clobbers a stored (even invalid) value.
+  useEffect(() => {
+    // Deliberate post-mount hydration from storage (SSR-safe).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setModelState(readStoredModel());
+  }, []);
+  const setModel = useCallback((next: ChatModel) => {
+    setModelState(next);
+    try {
+      window.localStorage.setItem(CHAT_MODEL_KEY, next);
+    } catch {
+      // Storage unavailable — the pick still applies, it just won't survive a reload.
+    }
+  }, []);
 
   const ensureConversation = useCallback(() => {
     setConversationId((id) => id ?? `conv_${crypto.randomUUID()}`);
@@ -187,6 +229,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       about,
       setAbout,
       openAbout,
+      model,
+      setModel,
     }),
     [
       open,
@@ -199,6 +243,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       about,
       setAbout,
       openAbout,
+      model,
+      setModel,
     ],
   );
 

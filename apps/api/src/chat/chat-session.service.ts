@@ -9,6 +9,8 @@ import {
   ChatAboutRefSchema,
   type ChatMentionTarget,
   type ChatMessage,
+  type ChatModel,
+  ChatModelSchema,
   type ChatToolEvent,
   type SendChatMessageBody,
   type SendChatMessageResult,
@@ -47,6 +49,8 @@ export interface ChatTurnTags {
   company?: { id: string; name: string };
   /** todo-29 — the thing the chat was opened about (full descriptor incl. `details`). */
   about?: ChatAbout;
+  /** todo-30 — the model the operator picked for this turn. */
+  model?: ChatModel;
 }
 
 /** Hard ceiling on one turn; a stuck `claude` is killed and the turn ends in error. */
@@ -221,6 +225,7 @@ export class ChatSessionService {
       ...(project ? { project: { id: project.id, name: project.name, path: project.path } } : {}),
       ...(company ? { company: { id: company.id, name: company.name } } : {}),
       ...(body.about ? { about: body.about } : {}),
+      ...(body.model ? { model: body.model } : {}),
     };
     // A tagged project scopes the KB to its own team unless a team is tagged explicitly.
     const teamId = body.teamId ?? project?.teamId;
@@ -357,7 +362,7 @@ export class ChatSessionService {
       "--include-partial-messages",
       "--verbose",
       "--model",
-      this.model,
+      this.effectiveModel(tags),
       "--permission-mode",
       "dontAsk",
     ];
@@ -618,15 +623,22 @@ export class ChatSessionService {
       return;
     }
 
+    // A non-enum ZIBBY_CHAT_MODEL env value still runs, but is not recorded.
+    const model = ChatModelSchema.safeParse(this.effectiveModel(tags));
     const assistant: ChatMessage = {
       id: collisionResistantId("msg"),
       role: "assistant",
       text: accumulated,
       at: now.toISOString(),
+      ...(model.success ? { model: model.data } : {}),
       ...(toolEvents.length > 0 ? { toolEvents } : {}),
     };
     await this.store.appendMessage(conversationId, assistant);
     this.events.emit({ conversationId, turnId, type: "done", text: accumulated });
+  }
+
+  private effectiveModel(tags?: ChatTurnTags): string {
+    return tags?.model ?? this.model;
   }
 
   /**

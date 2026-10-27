@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders, screen } from "../../test/render";
@@ -328,5 +328,71 @@ describe("ChatProvider — about (todo-29)", () => {
     expect(uuid).toHaveBeenCalledTimes(2);
     expect(result.current.about?.id).toBe("v");
     uuid.mockRestore();
+  });
+});
+
+describe("ChatProvider — model (todo-30)", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function renderStore() {
+    return renderHook(() => useChat(), {
+      wrapper: ({ children }) => <ChatProvider>{children}</ChatProvider>,
+    });
+  }
+
+  it("defaults to sonnet on fresh storage", () => {
+    expect(renderStore().result.current.model).toBe("sonnet");
+  });
+
+  it("persists the pick and a remounted provider starts from it", () => {
+    const first = renderStore();
+    act(() => first.result.current.setModel("opus"));
+    expect(window.localStorage.getItem("zibby.chat.model")).toBe("opus");
+    first.unmount();
+    expect(renderStore().result.current.model).toBe("opus");
+  });
+
+  it("falls back to sonnet for an unknown stored value", () => {
+    window.localStorage.setItem("zibby.chat.model", "gpt");
+    expect(renderStore().result.current.model).toBe("sonnet");
+  });
+
+  it("hydrates a stored pick after mount without clobbering storage", () => {
+    window.localStorage.setItem("zibby.chat.model", "opus");
+    expect(renderStore().result.current.model).toBe("opus");
+    expect(window.localStorage.getItem("zibby.chat.model")).toBe("opus");
+  });
+
+  it("does not overwrite an invalid stored value on mount", () => {
+    window.localStorage.setItem("zibby.chat.model", "gpt");
+    renderStore();
+    expect(window.localStorage.getItem("zibby.chat.model")).toBe("gpt");
+  });
+
+  it("survives throwing storage", () => {
+    const get = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    const set = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    const { result } = renderStore();
+    expect(result.current.model).toBe("sonnet");
+    act(() => result.current.setModel("haiku"));
+    expect(result.current.model).toBe("haiku");
+    expect(get).toHaveBeenCalled();
+    expect(set).toHaveBeenCalled();
+  });
+
+  it("newChat keeps the model", () => {
+    const { result } = renderStore();
+    act(() => result.current.setModel("fable"));
+    act(() => result.current.newChat());
+    expect(result.current.model).toBe("fable");
   });
 });
