@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { FileDiffView, FileDiffViewTestId } from "./FileDiffView";
 
 const TWO_FILES = `diff --git a/src/a.ts b/src/a.ts
@@ -90,6 +90,68 @@ describe("FileDiffView", () => {
       );
       fireEvent.click(screen.getByTestId(FileDiffViewTestId.FileListToggle));
       expect(screen.getByTestId(FileDiffViewTestId.FileList)).toBeInTheDocument();
+    });
+
+    describe("resizable rail", () => {
+      // jsdom has no PointerEvent, so clientX would be dropped; MouseEvent carries it.
+      beforeAll(() => {
+        if (!("PointerEvent" in window)) {
+          Object.defineProperty(window, "PointerEvent", { value: MouseEvent, configurable: true });
+        }
+      });
+
+      const setup = () => {
+        render(<FileDiffView fileList diff={TWO_FILES} />);
+        const grid = screen.getByTestId(FileDiffViewTestId.FileList).parentElement as HTMLElement;
+        const resizer = screen.getByTestId(FileDiffViewTestId.FileListResizer);
+        return { grid, resizer };
+      };
+
+      it("defaults the file list to 25% width", () => {
+        const { grid, resizer } = setup();
+        expect(grid.style.gridTemplateColumns).toContain("25%");
+        expect(resizer).toHaveRole("separator");
+        expect(resizer).toHaveAttribute("aria-orientation", "vertical");
+        expect(resizer).toHaveAttribute("aria-valuenow", "25");
+        expect(resizer).toHaveAttribute("aria-valuemin", "15");
+        expect(resizer).toHaveAttribute("aria-valuemax", "60");
+        expect(resizer).toHaveAccessibleName("Resize file list");
+      });
+
+      it("arrow keys resize and clamp", () => {
+        const { resizer } = setup();
+        fireEvent.keyDown(resizer, { key: "ArrowRight" });
+        expect(resizer).toHaveAttribute("aria-valuenow", "27");
+        for (let i = 0; i < 30; i++) fireEvent.keyDown(resizer, { key: "ArrowRight" });
+        expect(resizer).toHaveAttribute("aria-valuenow", "60");
+        for (let i = 0; i < 40; i++) fireEvent.keyDown(resizer, { key: "ArrowLeft" });
+        expect(resizer).toHaveAttribute("aria-valuenow", "15");
+      });
+
+      it("drag resizes relative to the container", () => {
+        const { grid, resizer } = setup();
+        grid.getBoundingClientRect = () => ({ left: 0, width: 1000 }) as DOMRect;
+        fireEvent.pointerDown(resizer, { clientX: 250 });
+        fireEvent.pointerMove(resizer, { clientX: 400 });
+        expect(resizer).toHaveAttribute("aria-valuenow", "40");
+        fireEvent.pointerMove(resizer, { clientX: 900 });
+        expect(resizer).toHaveAttribute("aria-valuenow", "60");
+        fireEvent.pointerUp(resizer);
+        fireEvent.pointerMove(resizer, { clientX: 200 });
+        expect(resizer).toHaveAttribute("aria-valuenow", "60");
+      });
+
+      it("keeps the width across collapse", () => {
+        const { resizer } = setup();
+        fireEvent.keyDown(resizer, { key: "ArrowRight" });
+        fireEvent.click(screen.getByTestId(FileDiffViewTestId.FileListToggle));
+        expect(screen.queryByTestId(FileDiffViewTestId.FileListResizer)).toBeNull();
+        fireEvent.click(screen.getByTestId(FileDiffViewTestId.FileListToggle));
+        expect(screen.getByTestId(FileDiffViewTestId.FileListResizer)).toHaveAttribute(
+          "aria-valuenow",
+          "27",
+        );
+      });
     });
   });
 });

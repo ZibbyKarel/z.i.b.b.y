@@ -2964,7 +2964,8 @@
         "tooLarge": "The diff is too large to display. Open the PR on GitHub.",
         "files": "Files changed",
         "collapseFiles": "Collapse file list",
-        "expandFiles": "Expand file list"
+        "expandFiles": "Expand file list",
+        "resizeFiles": "Resize file list"
       },
       "ci": "CI {symbol} {state}",
       "reason": {

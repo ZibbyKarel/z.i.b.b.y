@@ -20,6 +20,7 @@ export function PrDiff({ diff }: PrDiffProps) {
       expandLabel={t("diff.expandFiles")}
       filesLabel={t("diff.files")}
       noHunksLabel={t("diff.noHunks")}
+      resizeLabel={t("diff.resizeFiles")}
     />
   );
 }

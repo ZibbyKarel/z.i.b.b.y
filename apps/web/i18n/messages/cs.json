@@ -2964,7 +2964,8 @@
         "tooLarge": "Diff je příliš velký na zobrazení. Otevři PR na GitHubu.",
         "files": "Změněné soubory",
         "collapseFiles": "Sbalit seznam souborů",
-        "expandFiles": "Rozbalit seznam souborů"
+        "expandFiles": "Rozbalit seznam souborů",
+        "resizeFiles": "Změnit šířku seznamu souborů"
       },
       "ci": "CI {symbol} {state}",
       "reason": {

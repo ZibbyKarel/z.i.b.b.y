@@ -18,6 +18,7 @@ export enum FileDiffViewTestId {
   FileListItem = "file-diff-view-file-list-item",
   FileListToggle = "file-diff-view-file-list-toggle",
   FileListStrip = "file-diff-view-file-list-strip",
+  FileListResizer = "file-diff-view-file-list-resizer",
 }
 
 export interface FileDiffViewProps {
@@ -32,9 +33,14 @@ export interface FileDiffViewProps {
   filesLabel?: string;
   collapseLabel?: string;
   expandLabel?: string;
+  resizeLabel?: string;
   /** Show each file's name above its hunks (default). Off when the caller already names the file. */
   showFileName?: boolean;
 }
+
+const MIN_WIDTH = 15;
+const MAX_WIDTH = 60;
+const clampWidth = (n: number) => Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, Math.round(n)));
 
 const DEV_NULL = "/dev/null";
 
@@ -53,6 +59,7 @@ export function FileDiffView({
   filesLabel = "Files changed",
   collapseLabel = "Collapse file list",
   expandLabel = "Expand file list",
+  resizeLabel = "Resize file list",
   showFileName = true,
 }: FileDiffViewProps) {
   // parseDiff("") yields one phantom empty file, so blank input is short-circuited.
@@ -60,6 +67,9 @@ export function FileDiffView({
 
   const sections = useRef<(HTMLElement | null)[]>([]);
   const [collapsed, setCollapsed] = useState(false);
+  const [width, setWidth] = useState(25);
+  const grid = useRef<HTMLDivElement | null>(null);
+  const dragging = useRef(false);
 
   if (files.length === 0) {
     return (
@@ -118,9 +128,11 @@ export function FileDiffView({
   return (
     <div
       className={cn(
-        "grid items-start gap-[12px]",
-        collapsed ? "grid-cols-[28px_minmax(0,1fr)]" : "grid-cols-[220px_minmax(0,1fr)]",
+        "grid items-start",
+        collapsed ? "grid-cols-[28px_minmax(0,1fr)] gap-[12px]" : "gap-x-[3px]",
       )}
+      ref={grid}
+      style={collapsed ? undefined : { gridTemplateColumns: `${width}% 6px minmax(0,1fr)` }}
     >
       {collapsed ? (
         <div
@@ -161,6 +173,35 @@ export function FileDiffView({
             );
           })}
         </nav>
+      )}
+      {!collapsed && (
+        <div
+          aria-label={resizeLabel}
+          aria-orientation="vertical"
+          aria-valuemax={MAX_WIDTH}
+          aria-valuemin={MIN_WIDTH}
+          aria-valuenow={width}
+          className="sticky top-0 h-[70vh] cursor-col-resize hover:bg-line"
+          data-testid={FileDiffViewTestId.FileListResizer}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowLeft") setWidth((w) => clampWidth(w - 2));
+            else if (e.key === "ArrowRight") setWidth((w) => clampWidth(w + 2));
+          }}
+          onPointerCancel={() => (dragging.current = false)}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.currentTarget.setPointerCapture?.(e.pointerId);
+            dragging.current = true;
+          }}
+          onPointerMove={(e) => {
+            const rect = grid.current?.getBoundingClientRect();
+            if (!dragging.current || !rect || rect.width === 0) return;
+            setWidth(clampWidth(((e.clientX - rect.left) / rect.width) * 100));
+          }}
+          onPointerUp={() => (dragging.current = false)}
+          role="separator"
+          tabIndex={0}
+        />
       )}
       {sectionsView}
     </div>
