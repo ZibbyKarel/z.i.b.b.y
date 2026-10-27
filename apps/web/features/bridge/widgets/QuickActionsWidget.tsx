@@ -26,7 +26,7 @@ const newId = () => `qa-${Date.now().toString(36)}-${Math.random().toString(36).
 
 /**
  * Quick actions: operator-saved one-click tasks. Run enqueues the stored task straight into
- * the run queue (createTask); in edit mode a row offers Remove and an add form appears below.
+ * the run queue (createTask); while the widget is being configured a row offers Remove and an add form appears below.
  */
 export function QuickActionsWidget({
   widget,
@@ -41,7 +41,7 @@ export function QuickActionsWidget({
   const agentsQuery = useAgentsQuery();
   const workflowsQuery = useWorkflowsQuery();
   const t = useTranslations("bridge.widgets.quickActions");
-  // Lets the operator add an action without entering layout edit mode.
+  // The "New" button reveals the add form without opening the configure toggle.
   const [adding, setAdding] = useState(false);
   const actions = useMemo(() => query.data ?? [], [query.data]);
   const agents = agentsQuery.data;

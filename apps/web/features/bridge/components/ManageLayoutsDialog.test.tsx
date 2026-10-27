@@ -42,7 +42,6 @@ const setup = (over: Partial<ManageLayoutsDialogProps> = {}) => {
     saved: { A: [], B: [], C: [], D: [] },
     onArrange: vi.fn(),
     onAdd: vi.fn(() => true),
-    onEdit: vi.fn(),
     onDelete: vi.fn(),
     onClose: vi.fn(),
     ...over,
@@ -60,14 +59,12 @@ describe("ManageLayoutsDialog", () => {
     );
     expect(order).toEqual([`${Id.Row}-A`, `${Id.Row}-B`, Id.Divider, `${Id.Row}-C`, `${Id.Row}-D`]);
     expect(within(screen.getByTestId(Id.Divider)).getByTestId(DividerTestId.Root)).toBeVisible();
-    expect(screen.getAllByTestId(new RegExp(`^${Id.Edit}-`))).toHaveLength(4);
+    expect(screen.queryAllByTestId(/^manage-layouts-edit-/)).toHaveLength(0);
     expect(screen.getAllByTestId(ConfirmDeleteButtonTestId.Root)).toHaveLength(4);
   });
 
-  it("edit calls onEdit; delete needs two clicks", async () => {
+  it("delete needs two clicks", async () => {
     const p = setup();
-    await userEvent.click(screen.getByTestId(`${Id.Edit}-C`));
-    expect(p.onEdit).toHaveBeenCalledWith("C");
     const del = within(screen.getByTestId(`${Id.Delete}-B`)).getByTestId(
       ConfirmDeleteButtonTestId.Root,
     );
@@ -151,7 +148,6 @@ describe("ManageLayoutsDialog", () => {
 
   it("row actions name the layout", () => {
     setup();
-    expect(screen.getByTestId(`${Id.Edit}-B`)).toHaveAccessibleName("Upravit B");
     expect(screen.getByTestId(`${Id.Up}-B`)).toHaveAccessibleName("Posunout B nahoru");
     expect(screen.getByTestId(`${Id.Down}-B`)).toHaveAccessibleName("Posunout B dolů");
     expect(
@@ -168,7 +164,6 @@ describe("ManageLayoutsDialog", () => {
       saved: { A: [] },
       onArrange: vi.fn(),
       onAdd: vi.fn(() => true),
-      onEdit: vi.fn(),
       onDelete: vi.fn(),
       onClose: vi.fn(),
     };

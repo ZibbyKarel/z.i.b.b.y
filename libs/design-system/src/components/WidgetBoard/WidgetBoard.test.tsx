@@ -14,10 +14,10 @@ describe("WidgetBoard", () => {
     expect(screen.getByText("child")).toBeInTheDocument();
   });
 
-  it("draws column guides only while editing", () => {
+  it("draws column guides only with `guides`", () => {
     const { rerender } = render(<WidgetBoard colWidth={80} gap={12} height={400} />);
     expect(screen.getByTestId(WidgetBoardTestId.Inner).style.backgroundImage).toBe("");
-    rerender(<WidgetBoard editing colWidth={80} gap={12} height={400} />);
+    rerender(<WidgetBoard guides colWidth={80} gap={12} height={400} />);
     expect(screen.getByTestId(WidgetBoardTestId.Inner).style.backgroundImage).toContain(
       "repeating-linear-gradient",
     );

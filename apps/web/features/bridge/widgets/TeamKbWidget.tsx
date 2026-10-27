@@ -40,8 +40,8 @@ export const parseNoteSelectionId = (id: string) => {
 /**
  * Team knowledge: the open questions and agreements lifted from a team's KB meeting notes. A row
  * opens its source note in the detail sheet.
- * Scoped to a team (`widget.scope.teamId`), chosen in edit mode. Empty (collapsed) outside edit
- * mode until a team is chosen.
+ * Scoped to a team (`widget.scope.teamId`), chosen via the header configure toggle. Empty (collapsed)
+ * until a team is chosen.
  */
 export function TeamKbWidget({
   widget,

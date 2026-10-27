@@ -30,7 +30,6 @@ export enum ManageLayoutsDialogTestId {
   /** Suffixed with the layout name. */
   Up = "manage-layouts-up",
   Down = "manage-layouts-down",
-  Edit = "manage-layouts-edit",
   Delete = "manage-layouts-delete",
   Input = "manage-layouts-input",
   Add = "manage-layouts-add",
@@ -71,12 +70,11 @@ export interface ManageLayoutsDialogProps {
   onArrange: (next: Arrangement) => void;
   /** Returns false when the name is rejected. */
   onAdd: (name: string) => boolean;
-  onEdit: (name: string) => void;
   onDelete: (name: string) => void;
   onClose: () => void;
 }
 
-/** Manage the Bridge layouts: reorder (drag or arrows), header vs dropdown, edit, delete, add. */
+/** Manage the Bridge layouts: reorder (drag or arrows), header vs dropdown, delete, add. */
 export function ManageLayoutsDialog({ open, ...rest }: ManageLayoutsDialogProps) {
   return open ? <ManageLayouts {...rest} /> : null;
 }
@@ -88,7 +86,6 @@ function ManageLayouts({
   saved,
   onArrange,
   onAdd,
-  onEdit,
   onDelete,
   onClose,
 }: Omit<ManageLayoutsDialogProps, "open">) {
@@ -170,15 +167,6 @@ function ManageLayouts({
               size="sm"
             >
               ↓
-            </Button>
-            <Button
-              aria-label={t("manage.editNamed", { name: label(n) })}
-              data-testid={`${ManageLayoutsDialogTestId.Edit}-${n}`}
-              intent="ghost"
-              onClick={() => onEdit(n)}
-              size="sm"
-            >
-              {t("manage.edit")}
             </Button>
             <div data-testid={`${ManageLayoutsDialogTestId.Delete}-${n}`}>
               <ConfirmDeleteButton

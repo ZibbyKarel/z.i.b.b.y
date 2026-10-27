@@ -9,8 +9,8 @@ export enum WidgetBoardTestId {
 }
 
 export interface WidgetBoardProps {
-  /** Edit mode draws faint column guides behind the widgets. */
-  editing?: boolean;
+  /** Draws faint column guides behind the widgets (e.g. while a drag is active). */
+  guides?: boolean;
   /** Column width in px (without gap) — used for the guides. */
   colWidth: number;
   /** Gap between columns in px. */
@@ -32,7 +32,7 @@ export interface WidgetBoardProps {
  * fills the remaining height.
  */
 export function WidgetBoard({
-  editing = false,
+  guides: showGuides = false,
   colWidth,
   gap,
   height,
@@ -55,7 +55,7 @@ export function WidgetBoard({
   }, [onMeasure]);
 
   const step = colWidth + gap;
-  const guides = editing
+  const guides = showGuides
     ? `repeating-linear-gradient(90deg, color-mix(in oklch, var(--color-ink) 5%, transparent) 0 ${colWidth.toFixed(2)}px, transparent ${colWidth.toFixed(2)}px ${step.toFixed(2)}px)`
     : undefined;
 

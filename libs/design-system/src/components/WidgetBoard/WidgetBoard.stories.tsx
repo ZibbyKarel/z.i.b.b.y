@@ -5,7 +5,7 @@ const meta: Meta<typeof WidgetBoard> = {
   title: "DesignSystem/WidgetBoard",
   component: WidgetBoard,
   parameters: { layout: "fullscreen" },
-  args: { colWidth: 90, gap: 14, height: 300, editing: false },
+  args: { colWidth: 90, gap: 14, height: 300, guides: false },
 };
 export default meta;
 
@@ -19,4 +19,4 @@ export const View: Story = {
   ),
 };
 
-export const Editing: Story = { ...View, args: { editing: true } };
+export const Guides: Story = { ...View, args: { guides: true } };
