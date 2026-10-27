@@ -70,7 +70,7 @@
         d. [ ] pokud se z TODO položky stane už běžící task (nebo task ve frontě) tak je z TODO seznamu automaticky smazána
         e. [ ] seznam přidaných položek by se měl zobrazit nad inputem
 18. [x] stránka Agenti bude rozdělená do kategorií. KAtegorie = oddělení agenta. Každý agent musí být v oddělení a bude reprezentován kartou s jeho glyphem (main@1bb6f6a5)
-19. [ ] PullRequest detail - seznam souborů by měl být možný dragand dropem rozšířit a zúžit. Defaultní šířka bude 25%
+19. [x] PullRequest detail - seznam souborů by měl být možný dragand dropem rozšířit a zúžit. Defaultní šířka bude 25% (main@5579357d)
 20. [ ] Detail běhu - u každé fáze jako první musím vidět jaký o model se jedná.
 21. [ ] u Pull requestů, které jsou ke schválení musíme rozllišit zde čeká na schválení ode mě (případně mého týmu) nebo zda čeká na schválení od někoho jiného a já (případně můj tým) už code-review udělal a dal na pull request aproove nebo require-changes
 22. [ ] Widgety musí jít zmenšovat a zvětšovat z každého rohu a né jen z pravého spodního
