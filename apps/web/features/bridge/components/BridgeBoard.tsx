@@ -3,11 +3,11 @@
 import { BRIDGE_DENSITY, WidgetBoard, WidgetFrame } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { type PointerEvent, useCallback, useMemo, useState } from "react";
-import { type BridgeWidget, toCells, viewLayout } from "../grid/layout";
+import { type BridgeWidget, type DragOrigin, toCells, viewLayout } from "../grid/layout";
 import type { BridgeState } from "../state/useBridgeState";
 import { type BridgeWidgetInfo, WIDGETS } from "../widgets/registry";
 import { boardHeight, colWidth, rowsFor, widgetRect } from "../grid/positions";
-import type { Density } from "@zibby/design-system";
+import type { Density, ResizeCorner } from "@zibby/design-system";
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
@@ -21,7 +21,7 @@ interface HostProps {
   onEmpty: (id: string, empty: boolean) => void;
   onNatural: (id: string, px: number) => void;
   onInfo: (id: string, info: BridgeWidgetInfo) => void;
-  onDragStart: (id: string, mode: "move" | "resize", e: PointerEvent<HTMLElement>) => void;
+  onDragStart: (id: string, mode: "move" | ResizeCorner, e: PointerEvent<HTMLElement>) => void;
 }
 
 /** One widget: its frame chrome + the registry body, wired to board state. */
@@ -65,7 +65,7 @@ function BridgeWidgetHost({
       onMovePointerDown={(e) => onDragStart(id, "move", e)}
       onNaturalHeight={onNaturalHeight}
       onRemove={() => state.remove(id)}
-      onResizePointerDown={(e) => onDragStart(id, "resize", e)}
+      onResizePointerDown={(e, corner) => onDragStart(id, corner, e)}
       onToggleCollapse={() => state.toggleCollapsed(id)}
       removeLabel={t("bridge.remove")}
       resizeLabel={t("bridge.resize")}
@@ -143,14 +143,17 @@ export function BridgeBoard({ state, density, sheetSide = "right" }: BridgeBoard
 
   const colW = colWidth(width, gap);
 
-  const onDragStart = (id: string, mode: "move" | "resize", e: PointerEvent<HTMLElement>) => {
+  const onDragStart = (id: string, mode: "move" | ResizeCorner, e: PointerEvent<HTMLElement>) => {
     if (!editing || e.button !== 0) return;
     e.preventDefault();
     const it = state.layoutRef.current.find((w) => w.id === id);
     if (!it) return;
     const origin = { x: it.x, y: it.y, w: it.w, h: it.h };
     const [sx, sy] = [e.clientX, e.clientY];
-    const apply = mode === "move" ? state.move : state.resize;
+    const apply =
+      mode === "move"
+        ? state.move
+        : (i: string, o: DragOrigin, dx: number, dy: number) => state.resize(i, o, dx, dy, mode);
     const onMove = (ev: globalThis.PointerEvent) => {
       const { dx, dy } = toCells(ev.clientX - sx, ev.clientY - sy, colW, gap, rowHeight);
       apply(id, origin, dx, dy);

@@ -4,6 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 import { render } from "../../utils/testRender";
 import { WidgetFrame, WidgetFrameTestId } from "./WidgetFrame";
 
+const CORNERS = ["nw", "ne", "sw", "se"] as const;
+const resizeId = (c: string) => `${WidgetFrameTestId.Resize}-${c}`;
+
 describe("WidgetFrame", () => {
   it("renders header parts and body", () => {
     render(
@@ -50,13 +53,9 @@ describe("WidgetFrame", () => {
 
   it("has no edit affordances outside edit mode", () => {
     render(<WidgetFrame label="X" onRemove={vi.fn()} sizeLabel="4 × 6" />);
-    for (const id of [
-      WidgetFrameTestId.Remove,
-      WidgetFrameTestId.Size,
-      WidgetFrameTestId.Resize,
-      WidgetFrameTestId.Empty,
-    ])
+    for (const id of [WidgetFrameTestId.Remove, WidgetFrameTestId.Size, WidgetFrameTestId.Empty])
       expect(screen.queryByTestId(id)).toBeNull();
+    for (const c of CORNERS) expect(screen.queryByTestId(resizeId(c))).toBeNull();
   });
 
   it("shows edit affordances, the dashed empty box and drag callbacks in edit mode", async () => {
@@ -73,6 +72,7 @@ describe("WidgetFrame", () => {
         onRemove={onRemove}
         onResizePointerDown={onResize}
         onToggleCollapse={vi.fn()}
+        resizeLabel="Resize"
         sizeLabel="4 × 6"
       />,
     );
@@ -82,9 +82,15 @@ describe("WidgetFrame", () => {
     // no collapse caret in edit mode
     expect(screen.queryByTestId(WidgetFrameTestId.Collapse)).toBeNull();
     fireEvent.pointerDown(screen.getByTestId(WidgetFrameTestId.Header));
-    fireEvent.pointerDown(screen.getByTestId(WidgetFrameTestId.Resize));
+    for (const c of CORNERS) {
+      const handle = screen.getByTestId(resizeId(c));
+      expect(handle).toHaveRole("separator");
+      expect(handle).toHaveAccessibleName("Resize");
+    }
+    fireEvent.pointerDown(screen.getByTestId(resizeId("nw")));
     expect(onMove).toHaveBeenCalledOnce();
     expect(onResize).toHaveBeenCalledOnce();
+    expect(onResize).toHaveBeenCalledWith(expect.anything(), "nw");
     await userEvent.click(screen.getByTestId(WidgetFrameTestId.Remove));
     expect(onRemove).toHaveBeenCalledOnce();
     // the × must not start a move drag
