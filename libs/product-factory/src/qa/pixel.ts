@@ -117,3 +117,46 @@ export function pixelQa(
   // ponytail: contour closure needs flood-fill analysis (white region touching the border = open shape); add when QA lets open shapes through.
   return { grayRatio: rawGrayRatio, inkRatio, openRegions: 0, marginInk, issues };
 }
+
+/**
+ * How busy a cover zone is: the share of pixels far (RGB L1 > 90) from the zone's dominant colour.
+ * Calm sky under the title scores ~0.1; a character's face scores well above 0.2.
+ */
+export function busyRatio(rgb: Uint8Array, width: number, box: Box): number {
+  const hist = new Map<number, number>();
+  const at = (x: number, y: number): number => (y * width + x) * 3;
+  for (let y = box.y; y < box.y + box.h; y += 2)
+    for (let x = box.x; x < box.x + box.w; x += 2) {
+      const i = at(x, y);
+      const key =
+        ((rgb[i] ?? 0) >> 3) * 1024 + ((rgb[i + 1] ?? 0) >> 3) * 32 + ((rgb[i + 2] ?? 0) >> 3);
+      hist.set(key, (hist.get(key) ?? 0) + 1);
+    }
+  let mode = 0;
+  let best = -1;
+  for (const [k, n] of hist) if (n > best) [mode, best] = [k, n];
+  const dom = [((mode >> 10) << 3) + 4, (((mode >> 5) & 31) << 3) + 4, ((mode & 31) << 3) + 4];
+  let far = 0;
+  let all = 0;
+  for (let y = box.y; y < box.y + box.h; y += 2)
+    for (let x = box.x; x < box.x + box.w; x += 2) {
+      const i = at(x, y);
+      const d =
+        Math.abs((rgb[i] ?? 0) - (dom[0] ?? 0)) +
+        Math.abs((rgb[i + 1] ?? 0) - (dom[1] ?? 0)) +
+        Math.abs((rgb[i + 2] ?? 0) - (dom[2] ?? 0));
+      if (d > 90) far++;
+      all++;
+    }
+  return far / (all || 1);
+}
+
+export function busyZoneQa(zones: { name: string; ratio: number }[], max: number): QaIssue[] {
+  return zones
+    .filter((z) => z.ratio > max)
+    .map((z) => ({
+      type: "busy-zone" as const,
+      severity: "high" as const,
+      description: `${z.name} zone is busy (${z.ratio.toFixed(3)} > ${max}): keep that area plain background, move characters and objects away from it`,
+    }));
+}

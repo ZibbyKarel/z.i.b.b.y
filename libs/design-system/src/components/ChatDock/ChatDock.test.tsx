@@ -56,58 +56,20 @@ describe("ChatDock", () => {
     expect(screen.queryByTestId(ChatDockTestId.Transcript)).toBeNull();
   });
 
-  it("expand button toggles aria-pressed, label and the expanded classes (uncontrolled)", async () => {
-    const user = userEvent.setup();
-    render(
-      <ChatDock defaultOpen collapseLabel="Zmenšit" composer={composer} expandLabel="Zvětšit" />,
-    );
-    const button = screen.getByTestId(ChatDockTestId.ExpandButton);
-    expect(screen.getByTestId(ChatDockTestId.Header)).toContainElement(button);
-    expect(button).toHaveAccessibleName("Zvětšit");
-    expect(button).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByTestId(ChatDockTestId.Root)).toHaveClass("w-[420px]");
-    expect(screen.getByTestId(ChatDockTestId.Transcript)).toHaveClass("h-[440px]");
-    await user.click(button);
-    expect(button).toHaveAccessibleName("Zmenšit");
-    expect(button).toHaveAttribute("aria-pressed", "true");
+  it("opens straight to the full-size dock — no mini state, no expand toggle", () => {
+    render(<ChatDock defaultOpen composer={composer} />);
     expect(screen.getByTestId(ChatDockTestId.Root)).toHaveClass(
       "max-h-full",
       "min-h-3/4",
       "w-[max(420px,33%)]",
     );
     expect(screen.getByTestId(ChatDockTestId.Transcript)).toHaveClass("grow", "basis-[440px]");
+    expect(screen.queryByTestId("chat-dock-expand-button")).toBeNull();
   });
 
-  it("uses English default expand/collapse labels", async () => {
-    render(<ChatDock defaultOpen composer={composer} />);
-    const button = screen.getByTestId(ChatDockTestId.ExpandButton);
-    expect(button).toHaveAccessibleName("Expand");
-  });
-
-  it("is controlled via expanded + onExpandedChange, and survives close/reopen", async () => {
-    const onExpandedChange = vi.fn();
-    const user = userEvent.setup();
-    const { rerender } = render(
-      <ChatDock
-        defaultOpen
-        composer={composer}
-        expanded={false}
-        onExpandedChange={onExpandedChange}
-      />,
-    );
-    await user.click(screen.getByTestId(ChatDockTestId.ExpandButton));
-    expect(onExpandedChange).toHaveBeenCalledWith(true);
-    expect(screen.getByTestId(ChatDockTestId.ExpandButton)).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
-    rerender(
-      <ChatDock defaultOpen expanded composer={composer} onExpandedChange={onExpandedChange} />,
-    );
-    expect(screen.getByTestId(ChatDockTestId.ExpandButton)).toHaveAttribute("aria-pressed", "true");
-    await user.keyboard("{Escape}");
-    await user.click(screen.getByLabelText("Message"));
-    expect(screen.getByTestId(ChatDockTestId.ExpandButton)).toHaveAttribute("aria-pressed", "true");
+  it("is only the 420px bar while closed", () => {
+    render(<ChatDock composer={composer} />);
+    expect(screen.getByTestId(ChatDockTestId.Root)).toHaveClass("w-[420px]");
   });
 
   it("renders the target chip slot when provided", () => {
@@ -115,14 +77,12 @@ describe("ChatDock", () => {
     expect(screen.getByTestId(ChatDockTestId.TargetChip)).toHaveTextContent("Dept: dev");
   });
 
-  it("sidebar toggle opens the sidebar, expands the dock; collapsing closes the sidebar", async () => {
+  it("sidebar toggle opens and closes the sidebar, widening the dock", async () => {
     const user = userEvent.setup();
-    const onExpandedChange = vi.fn();
     render(
       <ChatDock
         defaultOpen
         composer={composer}
-        onExpandedChange={onExpandedChange}
         sidebar={<div>History</div>}
         sidebarLabel="Historie"
       />,
@@ -135,12 +95,11 @@ describe("ChatDock", () => {
     await user.click(toggle);
     expect(screen.getByTestId(ChatDockTestId.Sidebar)).toHaveTextContent("History");
     expect(toggle).toHaveAttribute("aria-pressed", "true");
-    expect(onExpandedChange).toHaveBeenLastCalledWith(true);
     expect(screen.getByTestId(ChatDockTestId.Root)).toHaveClass("w-[max(660px,45%)]", "flex-row");
 
-    await user.click(screen.getByTestId(ChatDockTestId.ExpandButton));
+    await user.click(toggle);
     expect(screen.queryByTestId(ChatDockTestId.Sidebar)).toBeNull();
-    expect(screen.getByTestId(ChatDockTestId.Root)).toHaveClass("w-[420px]");
+    expect(screen.getByTestId(ChatDockTestId.Root)).toHaveClass("w-[max(420px,33%)]");
   });
 
   it("omits the sidebar toggle without a sidebar", () => {

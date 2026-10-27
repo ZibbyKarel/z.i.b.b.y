@@ -2,13 +2,16 @@ import fs from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { readJsonArtifact } from "./artifact.ts";
+import sharp from "sharp";
+import { castImage, characterBlock, pageCharacters } from "./characters.ts";
+import { coverLayout } from "./cover-layout.ts";
 import { appendCost, bookDirOf, envNum, nn, pageFile, readJson, writeJson } from "./ctx.ts";
 import type { Ctx } from "./ctx.ts";
 import { COVER_H, COVER_W, processCover, processImage } from "./image-proc.ts";
 import { createImageProvider, createVisionProvider } from "./providers/index.ts";
-import { DEFAULT_THRESHOLDS, coverQa, pixelQa } from "./qa/pixel.ts";
+import { DEFAULT_THRESHOLDS, busyRatio, busyZoneQa, coverQa, pixelQa } from "./qa/pixel.ts";
 import { JobsSchema, PlanSchema } from "./schemas.ts";
-import type { QaIssue, QaResult } from "./schemas.ts";
+import type { Plan, QaIssue, QaResult } from "./schemas.ts";
 
 /** One thing to illustrate: a coloring page, or the cover art (pageNumber 0). */
 interface Unit {
@@ -56,6 +59,23 @@ export const thresholdsOf = (ctx: Ctx): typeof DEFAULT_THRESHOLDS => ({
   maxWhite: envNum(ctx, "PF_MAX_WHITE", DEFAULT_THRESHOLDS.maxWhite),
 });
 
+/**
+ * Recurring characters ride along as one reference image (their approved sheets side by side)
+ * plus their spec appended to the prompt, so the model redraws the same character every time.
+ */
+async function withCharacters(
+  book: string,
+  plan: Plan,
+  prompt: string,
+  ids: string[],
+): Promise<{ prompt: string; referenceImages?: string[] }> {
+  if (ids.length === 0) return { prompt };
+  return {
+    prompt: `${prompt}. ${characterBlock(pageCharacters(plan, ids))}`,
+    referenceImages: [await castImage(book, ids)],
+  };
+}
+
 /** Portrait generation size for the cover (front-cover aspect, multiple of 16 for flux). */
 const coverGenWidth = (size: number): number => Math.round((size * COVER_W) / COVER_H / 16) * 16;
 
@@ -79,6 +99,7 @@ export async function produce(argv: string[], ctx: Ctx): Promise<number> {
   const threshold = envNum(ctx, "PF_THRESHOLD", 160);
   const size = envNum(ctx, "PF_IMAGE_SIZE", 1024);
   const th = thresholdsOf(ctx);
+  const maxBusy = envNum(ctx, "PF_MAX_BUSY", 0.15);
 
   const plan = PlanSchema.parse(readJson(path.join(book, "plan.json")));
   const jobs = JobsSchema.parse(readJsonArtifact(path.resolve(ctx.cwd, jobsFile)));
@@ -93,6 +114,7 @@ export async function produce(argv: string[], ctx: Ctx): Promise<number> {
     if (!job) throw new Error(`jobs file has no job for page ${page.pageNumber}`);
     units.push({
       ...job,
+      ...(await withCharacters(book, plan, job.prompt, page.characters)),
       subjects: page.subjects,
       dir: path.join(book, "illustrations", nn(page.pageNumber)),
       isCover: false,
@@ -106,6 +128,7 @@ export async function produce(argv: string[], ctx: Ctx): Promise<number> {
     units.push({
       pageNumber: 0,
       ...jobs.cover,
+      ...(await withCharacters(book, plan, jobs.cover.prompt, plan.cover.characters)),
       subjects: [],
       dir: path.join(book, "cover-art"),
       isCover: true,
@@ -181,7 +204,17 @@ export async function produce(argv: string[], ctx: Ctx): Promise<number> {
       let issues: QaIssue[];
       if (u.isCover) {
         const c = await processCover(res.file, file);
-        issues = coverQa(c.colorRatio, c.whiteRatio, th);
+        // The renderer lays the title and badges over these zones: the art must stay calm there.
+        const layout = coverLayout(plan);
+        const rgb = new Uint8Array(await sharp(file).removeAlpha().raw().toBuffer());
+        const topPct = Math.round(((layout.titleZone.y + layout.titleZone.h) / COVER_H) * 100);
+        const zones = [
+          { name: `title (top ${topPct}% of the cover)`, box: layout.titleZone },
+          ...(layout.badgeZone
+            ? [{ name: "badge (bottom-right corner)", box: layout.badgeZone }]
+            : []),
+        ].map((z) => ({ name: z.name, ratio: busyRatio(rgb, COVER_W, z.box) }));
+        issues = [...coverQa(c.colorRatio, c.whiteRatio, th), ...busyZoneQa(zones, maxBusy)];
         pixel = { grayRatio: 0, inkRatio: 0, openRegions: 0, marginInk: 0, ...c };
       } else {
         const proc = await processImage(res.file, file, threshold, true);
@@ -254,6 +287,7 @@ export async function produce(argv: string[], ctx: Ctx): Promise<number> {
         model: image.model,
         seed: j.seed,
         prompt: j.u.prompt,
+        ...(j.u.referenceImages ? { referenceImages: j.u.referenceImages } : {}),
         attempt: j.attempt,
         durationMs: j.durationMs,
         costUsd: j.costUsd,

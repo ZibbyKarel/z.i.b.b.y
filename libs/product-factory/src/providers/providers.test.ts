@@ -9,6 +9,7 @@ import { assertLicensed } from "./licence.ts";
 import { createMfluxImageProvider } from "./mflux.ts";
 import { createOllamaVisionProvider, ollamaUnloadAll } from "./ollama.ts";
 import type { Run } from "./proc.ts";
+import { qaPrompt, strictVerdict } from "./qa-prompt.ts";
 
 const tmp = (): string => fs.mkdtempSync(path.join(os.tmpdir(), "pf-prov-"));
 const item = { key: "p01", prompt: "a cat", seed: 7, width: 1024, height: 1024 };
@@ -53,7 +54,10 @@ describe("mflux", () => {
     });
     const unload = vi.fn(async () => undefined);
     const prov = createMfluxImageProvider({ PF_MFLUX_PYTHON: "/py" }, run, unload);
-    const res = await prov.generateBatch([item, { ...item, key: "p02" }], dir);
+    const res = await prov.generateBatch(
+      [item, { ...item, key: "p02", referenceImages: ["/cast.png"] }],
+      dir,
+    );
     expect(unload).toHaveBeenCalledOnce();
     expect(run).toHaveBeenCalledOnce();
     const call = run.mock.calls[0];
@@ -63,6 +67,8 @@ describe("mflux", () => {
     expect(payload).toMatchObject({ model: "flux2-klein-4b", quantize: 4, steps: 4 });
     expect(payload.items[0].prompt).toContain("thick clean black outlines");
     expect(payload.items[0].out).toBe(path.join(dir, "p01.png"));
+    expect(payload.items[0].images).toBeUndefined();
+    expect(payload.items[1].images).toEqual(["/cast.png"]);
     expect(res.map((r) => r.key)).toEqual(["p01", "p02"]);
     expect(res[0]?.costUsd).toBe(0);
   });
@@ -88,6 +94,19 @@ describe("fal", () => {
     expect(res[0]?.costUsd).toBeCloseTo(0.005 * 1.048576, 6);
     const headers = f.mock.calls[0]?.[1]?.headers as Record<string, string>;
     expect(headers.Authorization).toBe("Key k");
+  });
+  it("sends reference images to the edit endpoint as data URIs", async () => {
+    const ref = await png(path.join(tmp(), "cast.png"));
+    const f = vi.fn<typeof fetch>(async (url) =>
+      String(url).includes("fal.run") ? json({ images: [{ url: "https://cdn/x.png" }] }) : imgRes(),
+    );
+    await createFalImageProvider({ FAL_KEY: "k" }, f, 0).generateBatch(
+      [{ ...item, referenceImages: [ref] }],
+      tmp(),
+    );
+    expect(String(f.mock.calls[0]?.[0])).toMatch(/klein\/4b\/edit$/);
+    const body = JSON.parse(String(f.mock.calls[0]?.[1]?.body)) as { image_urls: string[] };
+    expect(body.image_urls[0]).toMatch(/^data:image\/png;base64,/);
   });
   it("retries 429 then succeeds; PF_FAL_PRICE_USD overrides", async () => {
     let n = 0;
@@ -242,5 +261,39 @@ describe("haiku", () => {
     });
     expect(v.issues[0]?.type).toBe("judge-error");
     expect(v.costUsd).toBe(0.001);
+  });
+});
+
+describe("sheet verdict counts", () => {
+  it("turns a blind miscount into an off-model issue even when the judge passed it", () => {
+    const v = strictVerdict(
+      {
+        counts: [
+          { feature: "Buttons ", seen: 2 },
+          { feature: "eyes", seen: 2 },
+        ],
+        passed: true,
+        issues: [],
+      },
+      { buttons: 3, eyes: 2, antennae: 2 },
+    );
+    expect(v.passed).toBe(false);
+    expect(v.issues).toEqual([
+      { type: "off-model", severity: "high", description: "buttons: spec says 3, drawn 2" },
+    ]);
+  });
+
+  it("never shows the judge the expected numbers", () => {
+    const p = qaPrompt({
+      file: "f",
+      pageNumber: 0,
+      expectedSubjects: [],
+      styleGuide: "",
+      characterSpec: "a suit with exactly 3 buttons and two antennae",
+      characterCounts: { buttons: 3 },
+    });
+    expect(p).toContain("a suit with buttons and antennae");
+    expect(p).not.toMatch(/\b3\b|two antennae/);
+    expect(p).toContain("- buttons");
   });
 });

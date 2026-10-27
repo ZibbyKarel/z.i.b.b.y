@@ -65,9 +65,11 @@ export interface ChatMessageProps {
   streaming?: boolean;
   /**
    * ZB-12 — "CREATE TASK" from a settled assistant reply: the host (the chat dock)
-   * opens `/work/tasks/new` prefilled with this turn's text. Omit for no action.
+   * hands the conversation up to this turn to a new task. Omit for no action.
    */
-  onCreateTask?: (text: string) => void;
+  onCreateTask?: () => void;
+  /** The hand-off is being prepared (the conversation may be compacting). */
+  createTaskPending?: boolean;
 }
 
 /** Map a tool event status onto the DS StatusDot tone. */
@@ -184,6 +186,7 @@ export function ChatMessage({
   briefing,
   streaming,
   onCreateTask,
+  createTaskPending,
 }: ChatMessageProps) {
   const t = useTranslations("chat");
   const isUser = role === "user";
@@ -211,8 +214,10 @@ export function ChatMessage({
                 {onCreateTask && (
                   <Button
                     data-testid={ChatMessageTestId.CreateTaskButton}
+                    disabled={createTaskPending}
                     intent="primary"
-                    onClick={() => onCreateTask(text)}
+                    loading={createTaskPending}
+                    onClick={onCreateTask}
                     size="sm"
                   >
                     {t("createTask")}

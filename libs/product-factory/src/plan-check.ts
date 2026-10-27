@@ -22,6 +22,8 @@ const jaccard = (a: string, b: string): number => {
   return inter / (A.size + B.size - inter || 1);
 };
 
+export const MAX_SPEC_CHARS_PER_IMAGE = 1400;
+
 const escapeRe = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /** Pure validation of an already-schema-valid plan; returns every problem found. */
@@ -44,7 +46,33 @@ export function checkPlan(plan: Plan): string[] {
         problems.push(`duplicate scenes: page ${a.n} and page ${b.n}`);
     }
 
+  const ids = new Set<string>();
+  for (const c of plan.characters) {
+    if (ids.has(c.id)) problems.push(`duplicate character id "${c.id}"`);
+    ids.add(c.id);
+  }
+  const refs: [string, string[]][] = [
+    ...pages.map((p): [string, string[]] => [`page ${p.pageNumber}`, p.characters]),
+    ["cover", plan.cover.characters],
+    ["cover.titleBuddies", plan.cover.titleBuddies.map((b) => b.character)],
+  ];
+  for (const [where, list] of refs)
+    for (const id of list) if (!ids.has(id)) problems.push(`${where}: unknown character "${id}"`);
+  // The text encoder reads ~512 tokens; specs are appended to the page prompt, keep room for it.
+  const specOf = new Map(plan.characters.map((c) => [c.id, c.spec.length]));
+  for (const [where, list] of refs.slice(0, -1)) {
+    const total = list.reduce((n, id) => n + (specOf.get(id) ?? 0), 0);
+    if (total > MAX_SPEC_CHARS_PER_IMAGE)
+      problems.push(
+        `${where}: character specs total ${total} chars > ${MAX_SPEC_CHARS_PER_IMAGE} (shorten specs or draw fewer recurring characters)`,
+      );
+  }
+
   const fields: [string, string][] = [
+    ...plan.characters.flatMap((c): [string, string][] => [
+      [`character ${c.id} label`, c.label],
+      [`character ${c.id} spec`, c.spec],
+    ]),
     ["brief.theme", brief.theme],
     ["brief.title", brief.title ?? ""],
     ["title", plan.title],

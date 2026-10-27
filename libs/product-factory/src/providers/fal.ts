@@ -24,8 +24,15 @@ export function createFalImageProvider(
       const out: ImageResult[] = [];
       for (const item of items) {
         const t0 = performance.now();
+        const refs = item.referenceImages ?? [];
         const body = JSON.stringify({
           prompt: promptFor(item),
+          // ponytail: inline data URIs (no upload step); switch to fal storage uploads if requests get too large
+          ...(refs.length > 0 && {
+            image_urls: refs.map(
+              (f) => `data:image/png;base64,${fs.readFileSync(f).toString("base64")}`,
+            ),
+          }),
           seed: item.seed,
           image_size: { width: item.width, height: item.height },
           num_images: 1,
@@ -34,7 +41,7 @@ export function createFalImageProvider(
         });
         let res: Response | undefined;
         for (let attempt = 0; attempt <= 2; attempt++) {
-          res = await f(ENDPOINT, {
+          res = await f(refs.length > 0 ? `${ENDPOINT}/edit` : ENDPOINT, {
             method: "POST",
             headers: { Authorization: `Key ${key}`, "content-type": "application/json" },
             body,

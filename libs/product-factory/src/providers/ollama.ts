@@ -1,5 +1,6 @@
 import sharp from "sharp";
 import {
+  SHEET_VERDICT_JSON_SCHEMA,
   VERDICT_JSON_SCHEMA,
   VerdictSchema,
   judgeError,
@@ -47,11 +48,11 @@ export function createOllamaVisionProvider(
   const host = ollamaHost(env);
   const model = env.PF_OLLAMA_MODEL || "qwen3-vl:8b-instruct";
 
-  async function ask(b64: string, prompt: string): Promise<string> {
+  async function ask(b64: string, prompt: string, sheet: boolean): Promise<string> {
     const res = await post(f, host, "/api/chat", {
       model,
       stream: false,
-      format: VERDICT_JSON_SCHEMA,
+      format: sheet ? SHEET_VERDICT_JSON_SCHEMA : VERDICT_JSON_SCHEMA,
       // A verdict needs no chain of thought. Thinking builds of qwen3-vl ignore this and
       // can leave `content` empty (live run, 2026-10-01) — prefer an `-instruct` model.
       think: false,
@@ -80,8 +81,10 @@ export function createOllamaVisionProvider(
       let err = "";
       for (let attempt = 0; attempt < 2 && !result; attempt++) {
         try {
-          const parsed = VerdictSchema.safeParse(JSON.parse(await ask(b64, prompt)));
-          if (parsed.success) result = strictVerdict(parsed.data);
+          const parsed = VerdictSchema.safeParse(
+            JSON.parse(await ask(b64, prompt, Object.keys(input.characterCounts ?? {}).length > 0)),
+          );
+          if (parsed.success) result = strictVerdict(parsed.data, input.characterCounts);
           else err = parsed.error.message;
         } catch (e) {
           err = e instanceof Error ? e.message : String(e);

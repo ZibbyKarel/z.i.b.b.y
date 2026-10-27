@@ -1,11 +1,14 @@
 import path from "node:path";
 import { run as defaultRun } from "./proc.ts";
 import type { Run } from "./proc.ts";
-import { VerdictSchema, judgeError, qaPrompt } from "./qa-prompt.ts";
+import { VerdictSchema, countIssues, judgeError, qaPrompt } from "./qa-prompt.ts";
 import type { VisionProvider, VisionVerdict } from "./vision.ts";
 
 /** claude -p envelope -> verdict. `result` holds the model text containing one ```json block (or raw JSON). */
-export function parseEnvelope(stdout: string): {
+export function parseEnvelope(
+  stdout: string,
+  expectedCounts: Record<string, number> = {},
+): {
   verdict: ReturnType<typeof judgeError> | { passed: boolean; issues: VisionVerdict["issues"] };
   cost: number;
 } {
@@ -16,7 +19,11 @@ export function parseEnvelope(stdout: string): {
     const text = env.result ?? "";
     const m = /```json[^\n]*\n([\s\S]*?)```/i.exec(text);
     const parsed = VerdictSchema.safeParse(JSON.parse(m ? (m[1] ?? "") : text));
-    if (parsed.success) return { verdict: parsed.data, cost };
+    if (parsed.success) {
+      const issues = [...parsed.data.issues, ...countIssues(parsed.data.counts, expectedCounts)];
+      const passed = parsed.data.passed && issues.length === parsed.data.issues.length;
+      return { verdict: { passed, issues }, cost };
+    }
     return {
       verdict: judgeError(`haiku reply invalid: ${parsed.error.message.slice(0, 200)}`),
       cost,
@@ -59,7 +66,7 @@ export function createHaikuVisionProvider(
       );
       const { verdict, cost } =
         r.code === 0
-          ? parseEnvelope(r.stdout)
+          ? parseEnvelope(r.stdout, input.characterCounts)
           : { verdict: judgeError(`claude exited ${r.code}: ${r.stderr.slice(0, 200)}`), cost: 0 };
       return { ...verdict, durationMs: Math.round(performance.now() - t0), costUsd: cost };
     },

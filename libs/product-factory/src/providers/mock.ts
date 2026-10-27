@@ -20,6 +20,11 @@ function coverSvgFor(item: ImageItem): string {
 <polygon points="${w * 0.75},${h * 0.4} ${w * 0.95},${h * 0.66} ${w * 0.55},${h * 0.66}" fill="#f78fb3"/></g></svg>`;
 }
 
+/** Title-buddy sticker: one coloured, outlined blob on white, well inside the frame. */
+const BUDDY_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024"><rect width="1024" height="1024" fill="white"/>
+<g stroke="#1f2a44" stroke-width="20"><ellipse cx="512" cy="560" rx="260" ry="300" fill="#7ee081"/>
+<circle cx="430" cy="470" r="40" fill="white"/><circle cx="594" cy="470" r="40" fill="white"/></g></svg>`;
+
 function svgFor(item: ImageItem): string {
   const h = hash(`${item.key}:${item.seed}`);
   const shapes = [
@@ -57,18 +62,20 @@ export function createMockImageProvider(env: NodeJS.ProcessEnv): ImageProvider {
         const first = (item.attempt ?? 1) === 1;
         const fail = page && failPages.has(Number(page[1])) && first;
         const cover = item.key === "cover";
-        const img = cover
-          ? sharp(Buffer.from(failPages.has(0) && first ? svgFor(item) : coverSvgFor(item)))
-          : fail
-            ? sharp({
-                create: {
-                  width: 1024,
-                  height: 1024,
-                  channels: 3,
-                  background: { r: 128, g: 128, b: 128 },
-                },
-              })
-            : sharp(Buffer.from(svgFor(item)));
+        const img = item.key.startsWith("buddy-")
+          ? sharp(Buffer.from(BUDDY_SVG))
+          : cover
+            ? sharp(Buffer.from(failPages.has(0) && first ? svgFor(item) : coverSvgFor(item)))
+            : fail
+              ? sharp({
+                  create: {
+                    width: 1024,
+                    height: 1024,
+                    channels: 3,
+                    background: { r: 128, g: 128, b: 128 },
+                  },
+                })
+              : sharp(Buffer.from(svgFor(item)));
         const file = path.join(outDir, `${item.key}.png`);
         await img.png().toFile(file);
         out.push({

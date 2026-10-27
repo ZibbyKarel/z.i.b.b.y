@@ -9,15 +9,12 @@ import {
   SectionLabel,
   SelectField,
   Stack,
-  type SubNavLinkComponent,
-  TextLink,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import Link from "next/link";
 import { useMemo } from "react";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { isNoKbError, useTeamKbDigestQuery, useTeamsQuery } from "../../teams/queries";
-import type { BridgeWidgetProps } from "./registry";
+import type { BridgeSelection, BridgeWidgetProps } from "./registry";
 import { useWidgetReport } from "./useWidgetReport";
 
 export enum TeamKbWidgetTestId {
@@ -33,8 +30,16 @@ export enum TeamKbWidgetTestId {
 export const teamNoteHref = (teamId: string, noteId: string) =>
   `/knowledge/vault?source=${encodeURIComponent(`team:${teamId}`)}&note=${encodeURIComponent(noteId)}`;
 
+/** `BridgeSelection.id` of a note row: `<teamId>:<noteId>` (team ids are slugs, so the first `:` splits). */
+export const noteSelectionId = (teamId: string, noteId: string) => `${teamId}:${noteId}`;
+export const parseNoteSelectionId = (id: string) => {
+  const i = id.indexOf(":");
+  return { teamId: id.slice(0, i), noteId: id.slice(i + 1) };
+};
+
 /**
- * Team knowledge: the open questions and agreements lifted from a team's KB meeting notes.
+ * Team knowledge: the open questions and agreements lifted from a team's KB meeting notes. A row
+ * opens its source note in the detail sheet.
  * Scoped to a team (`widget.scope.teamId`), chosen in edit mode. Empty (collapsed) outside edit
  * mode until a team is chosen.
  */
@@ -44,6 +49,9 @@ export function TeamKbWidget({
   onEmptyChange,
   onCountChange,
   onScopeChange,
+  selection,
+  onOpen,
+  sheetSide,
 }: BridgeWidgetProps) {
   const t = useTranslations("bridge.widgets.teamKb");
   const teamId = widget.scope?.teamId;
@@ -91,16 +99,26 @@ export function TeamKbWidget({
       ) : digest ? (
         <>
           <Group
+            group="questions"
             items={digest.questions}
+            onOpen={onOpen}
+            selection={selection}
+            sheetSide={sheetSide}
             teamId={teamId}
             testId={TeamKbWidgetTestId.Questions}
             title={t("questions")}
+            widgetId={widget.id}
           />
           <Group
+            group="decisions"
             items={digest.decisions}
+            onOpen={onOpen}
+            selection={selection}
+            sheetSide={sheetSide}
             teamId={teamId}
             testId={TeamKbWidgetTestId.Decisions}
             title={t("decisions")}
+            widgetId={widget.id}
           />
         </>
       ) : null}
@@ -122,39 +140,63 @@ function Note({ testId, children }: { testId: string; children: string }) {
 
 interface GroupProps {
   title: string;
+  group: "questions" | "decisions";
   items: TeamKbDigestItem[];
   teamId: string;
   testId: string;
+  widgetId: string;
+  selection: BridgeSelection | null;
+  onOpen: (selection: BridgeSelection) => void;
+  sheetSide: BridgeWidgetProps["sheetSide"];
 }
 
-function Group({ title, items, teamId, testId }: GroupProps) {
+function Group({
+  title,
+  group,
+  items,
+  teamId,
+  testId,
+  widgetId,
+  selection,
+  onOpen,
+  sheetSide,
+}: GroupProps) {
   if (items.length === 0) return null;
   return (
     <div data-testid={testId}>
       <Container padding={["100", "150"]}>
         <SectionLabel>{title}</SectionLabel>
       </Container>
-      {items.map((item, i) => (
-        <BoardRow key={`${item.noteId}:${i}`} tone="neutral">
-          <TextLink
-            data-testid={TeamKbWidgetTestId.Row}
-            href={teamNoteHref(teamId, item.noteId)}
-            linkComponent={Link as SubNavLinkComponent}
+      {items.map((item, i) => {
+        // One note can source several items: the key is per item, the sheet per note.
+        const key = `${widgetId}:${group}:${i}`;
+        return (
+          <BoardRow
+            key={key}
+            onClick={() =>
+              onOpen({ kind: "note", id: noteSelectionId(teamId, item.noteId), widgetId, key })
+            }
+            rowKey={key}
+            selected={selection?.key === key}
+            sheetSide={sheetSide}
+            tone="neutral"
           >
-            <BoardText kind="title">{item.text}</BoardText>
-            <BoardLine gap="6" indent={false}>
-              <BoardText kind="meta" tone="ink">
-                {item.noteTitle}
-              </BoardText>
-              {item.date ? (
-                <BoardText kind="meta" tone="ink3">
-                  · {item.date}
+            <span data-testid={TeamKbWidgetTestId.Row}>
+              <BoardText kind="title">{item.text}</BoardText>
+              <BoardLine gap="6" indent={false}>
+                <BoardText kind="meta" tone="ink">
+                  {item.noteTitle}
                 </BoardText>
-              ) : null}
-            </BoardLine>
-          </TextLink>
-        </BoardRow>
-      ))}
+                {item.date ? (
+                  <BoardText kind="meta" tone="ink3">
+                    · {item.date}
+                  </BoardText>
+                ) : null}
+              </BoardLine>
+            </span>
+          </BoardRow>
+        );
+      })}
     </div>
   );
 }

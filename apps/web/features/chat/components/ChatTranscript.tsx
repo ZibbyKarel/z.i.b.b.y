@@ -22,8 +22,10 @@ export interface ChatTranscriptProps {
    *  the {@link TypingDots} placeholder for the gap before any token or tool
    *  event has arrived yet (ZB-12b). */
   thinking?: boolean;
-  /** ZB-12 — forwarded to each settled assistant turn's "CREATE TASK" action. */
-  onCreateTask?: (text: string) => void;
+  /** ZB-12 — each settled assistant turn's "CREATE TASK" action, called with its id. */
+  onCreateTask?: (messageId: string) => void;
+  /** The message whose hand-off is being prepared, if any. */
+  creatingTaskFor?: string;
 }
 
 /**
@@ -40,6 +42,7 @@ export function ChatTranscript({
   streaming,
   thinking,
   onCreateTask,
+  creatingTaskFor,
 }: ChatTranscriptProps) {
   const t = useTranslations("chat");
   const hasLive =
@@ -56,9 +59,10 @@ export function ChatTranscript({
         <ChatMessage
           attachments={message.attachments}
           briefing={message.briefing}
+          createTaskPending={creatingTaskFor === message.id}
           key={message.id}
           mentions={message.mentions}
-          onCreateTask={onCreateTask}
+          onCreateTask={onCreateTask && (() => onCreateTask(message.id))}
           role={message.role}
           text={message.text}
           toolEvents={message.toolEvents}

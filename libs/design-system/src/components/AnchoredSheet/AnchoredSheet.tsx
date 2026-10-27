@@ -32,7 +32,10 @@ export interface AnchoredSheetProps {
   onTitleClick?: () => void;
   /** Title opens this URL in a new tab (wins over `onTitleClick`). */
   titleHref?: string;
-  /** Right of the title, top of the sheet (run-detail placement). Wraps as one group. */
+  /**
+   * The sheet's ONLY action slot: right of the title, top-right of the sheet. Every sheet puts
+   * its buttons here so they sit in the same place whatever the body shows. Wraps as one group.
+   */
   actions?: ReactNode;
   /** Meta chips under the title. */
   chips?: readonly string[];
@@ -49,11 +52,9 @@ export interface AnchoredSheetProps {
   eraserLeft: number;
   eraserTop: number;
   eraserHeight: number;
-  /** Footer: leading actions, a flexible mono note, trailing actions. Footer hidden when none given. */
-  footerStart?: ReactNode;
+  /** Mono status note in the footer (no actions — those go in `actions`). Footer hidden when absent. */
   footerNote?: string;
-  footerEnd?: ReactNode;
-  /** Free-form footer (a form, not just actions) — rendered full-width instead of the start / note / end row. */
+  /** Free-form footer (an inline form, e.g. a reject reason) — rendered full-width instead of the note. */
   footer?: ReactNode;
   /** Scrolling body — compose with `SheetSection` / `SheetBlock` / the other detail primitives. */
   children?: ReactNode;
@@ -63,7 +64,7 @@ export interface AnchoredSheetProps {
 /**
  * A detail sheet pinned beside a row: a dimming overlay (`--bg` 74%, click closes) plus a
  * `--panel` sheet with a 1px ink border, a 4px tone top border, a header (kind · state · hint · ×,
- * title, chips), a scrolling body and an optional footer. Geometry is supplied by the caller
+ * title + actions top-right, chips), a scrolling body and an optional footer note. Geometry is supplied by the caller
  * (see the Bridge's `measure`). Render inside a `relative` container.
  */
 export function AnchoredSheet({
@@ -85,14 +86,11 @@ export function AnchoredSheet({
   eraserLeft,
   eraserTop,
   eraserHeight,
-  footerStart,
   footerNote,
-  footerEnd,
   footer,
   children,
   ref,
 }: AnchoredSheetProps) {
-  const hasFooter = footerStart || footerNote || footerEnd;
   return (
     <>
       <div
@@ -172,7 +170,7 @@ export function AnchoredSheet({
             </div>
             {actions ? (
               <div
-                className="flex flex-none flex-wrap items-center gap-[6px]"
+                className="flex flex-none flex-wrap items-center gap-[6px] font-sans text-[12px]"
                 data-testid={AnchoredSheetTestId.Actions}
               >
                 {actions}
@@ -203,25 +201,12 @@ export function AnchoredSheet({
           >
             {footer}
           </div>
-        ) : hasFooter ? (
+        ) : footerNote ? (
           <div
-            className="flex flex-none flex-wrap items-center gap-[6px] border-t border-line px-[20px] py-[12px] font-sans text-[12px]"
+            className="flex-none overflow-hidden text-ellipsis whitespace-nowrap border-t border-line px-[20px] py-[12px] font-sans text-[12px] text-ink-3"
             data-testid={AnchoredSheetTestId.Footer}
           >
-            {footerStart}
-            <span
-              className="min-w-[80px] flex-[1_1_0%] overflow-hidden text-ellipsis whitespace-nowrap px-[8px] text-ink-3"
-              data-testid={AnchoredSheetTestId.FooterNote}
-            >
-              {footerNote}
-            </span>
-            {/* One unbreakable group: if space runs out the whole group drops to its own
-             * line (right-aligned) — the buttons never wrap one by one or mid-label. */}
-            {footerEnd ? (
-              <div className="ml-auto flex flex-none items-center gap-[6px] whitespace-nowrap">
-                {footerEnd}
-              </div>
-            ) : null}
+            <span data-testid={AnchoredSheetTestId.FooterNote}>{footerNote}</span>
           </div>
         ) : null}
       </div>

@@ -14,6 +14,11 @@ export const QuickActionSchema = z.object({
   label: z.string().trim().min(1).max(80),
   text: z.string().trim().min(1).max(8000),
   target: QuickActionTargetSchema.optional(),
+  /**
+   * Pinned from an automation: label/text/target are then read live from it (the stored
+   * values are only a fallback for when the automation is gone), so edits propagate.
+   */
+  automationId: z.string().min(1).max(200).optional(),
 });
 export type QuickAction = z.infer<typeof QuickActionSchema>;
 

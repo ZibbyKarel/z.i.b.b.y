@@ -3,6 +3,8 @@ import { z } from "zod";
 import { ErrorSchema } from "../common.schema";
 import {
   ChatConversationSummarySchema,
+  ChatHandoffBodySchema,
+  ChatHandoffSchema,
   ChatTranscriptSchema,
   SendChatMessageBodySchema,
   SendChatMessageResultSchema,
@@ -42,6 +44,13 @@ export const chatContract = c.router(
       query: z.object({ q: z.string().optional() }),
       responses: { 200: z.array(ChatConversationSummarySchema) },
       summary: "List past conversations, newest first (pure read)",
+    },
+    createHandoff: {
+      method: "POST",
+      path: "/chat/handoff",
+      body: ChatHandoffBodySchema,
+      responses: { 200: ChatHandoffSchema, 404: ErrorSchema },
+      summary: "Build a task description that carries the conversation's context",
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },

@@ -8,7 +8,6 @@ export enum ChatDockTestId {
   Root = "chat-dock-root",
   Transcript = "chat-dock-transcript",
   Header = "chat-dock-header",
-  ExpandButton = "chat-dock-expand-button",
   NewChatButton = "chat-dock-new-chat-button",
   CloseButton = "chat-dock-close-button",
   Messages = "chat-dock-messages",
@@ -35,16 +34,9 @@ export interface ChatDockProps {
   onNewChat?: () => void;
   newChatLabel?: string;
   closeLabel?: string;
-  /** Controlled expanded (larger) state — omit to let `ChatDock` manage it internally. */
-  expanded?: boolean;
-  /** Initial expanded state when uncontrolled. */
-  defaultExpanded?: boolean;
-  onExpandedChange?: (expanded: boolean) => void;
-  expandLabel?: string;
-  collapseLabel?: string;
   /**
    * Left sidebar content (e.g. conversation history). When provided, the header
-   * gets a toggle; opening the sidebar also expands the dock.
+   * gets a toggle that widens the dock to fit it.
    */
   sidebar?: ReactNode;
   /** Controlled sidebar state — omit to let `ChatDock` manage it internally. */
@@ -59,8 +51,9 @@ export interface ChatDockProps {
 /**
  * DS.md §8's chat dock — a fixed-width panel `AppFrame`'s `dock` slot floats
  * bottom-right over the main content. Collapsed it is only the bottom bar
- * (target chip + composer); focusing anything in the bar opens the 440px
- * conversation pane above it (header with NEW CHAT / CLOSE, scrolling messages).
+ * (target chip + composer); focusing anything in the bar opens the conversation
+ * pane above it, always at full size (header with NEW CHAT / CLOSE, scrolling
+ * messages) — there is no small "mini chat" state.
  * Presentational only: transcript, composer and target chip are slots.
  */
 export function ChatDock({
@@ -73,11 +66,6 @@ export function ChatDock({
   onNewChat,
   newChatLabel = "Clear",
   closeLabel = "Close",
-  expanded,
-  defaultExpanded = false,
-  onExpandedChange,
-  expandLabel = "Expand",
-  collapseLabel = "Collapse",
   sidebar,
   sidebarOpen,
   onSidebarOpenChange,
@@ -87,27 +75,13 @@ export function ChatDock({
 }: ChatDockProps) {
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const isOpen = open ?? internalOpen;
-  const [internalExpanded, setInternalExpanded] = useState(defaultExpanded);
-  const isExpanded = expanded ?? internalExpanded;
   const [internalSidebarOpen, setInternalSidebarOpen] = useState(false);
   const isSidebarOpen = sidebar != null && (sidebarOpen ?? internalSidebarOpen);
   const setSidebar = (next: boolean) => {
     setInternalSidebarOpen(next);
     onSidebarOpenChange?.(next);
   };
-  const setExpanded = (next: boolean) => {
-    setInternalExpanded(next);
-    onExpandedChange?.(next);
-  };
-  // The sidebar only fits the expanded dock: opening it expands, collapsing closes it.
-  const toggleExpanded = () => {
-    if (isExpanded && isSidebarOpen) setSidebar(false);
-    setExpanded(!isExpanded);
-  };
-  const toggleSidebar = () => {
-    if (!isSidebarOpen && !isExpanded) setExpanded(true);
-    setSidebar(!isSidebarOpen);
-  };
+  const toggleSidebar = () => setSidebar(!isSidebarOpen);
   const messagesRef = useRef<HTMLDivElement>(null);
   const setOpen = (next: boolean) => {
     setInternalOpen(next);
@@ -136,9 +110,9 @@ export function ChatDock({
     <div
       className={cn(
         "flex max-w-[calc(100vw-40px)] flex-col overflow-hidden rounded-xl border border-line-2 bg-panel shadow-modal",
-        // Expanded: 33% of the AppFrame dock area (never under 420px), three quarters of its height but
-        // never shorter than the normal dock (pane basis 440px grows into the 75%), capped to the area.
-        isOpen && isExpanded
+        // Open: 33% of the AppFrame dock area (never under 420px), three quarters of its height
+        // (pane basis 440px grows into the 75%), capped to the area. Closed: just the 420px bar.
+        isOpen
           ? isSidebarOpen
             ? "max-h-full min-h-3/4 w-[max(660px,45%)]"
             : "max-h-full min-h-3/4 w-[max(420px,33%)]"
@@ -159,10 +133,7 @@ export function ChatDock({
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {isOpen && (
           <div
-            className={cn(
-              "flex flex-col border-b border-line",
-              isExpanded ? "min-h-0 grow basis-[440px]" : "h-[440px]",
-            )}
+            className="flex min-h-0 grow basis-[440px] flex-col border-b border-line"
             data-testid={ChatDockTestId.Transcript}
           >
             <div
@@ -181,16 +152,6 @@ export function ChatDock({
                   title={sidebarLabel}
                 />
               )}
-              <Button
-                aria-label={isExpanded ? collapseLabel : expandLabel}
-                aria-pressed={isExpanded}
-                data-testid={ChatDockTestId.ExpandButton}
-                icon={isExpanded ? "collapse" : "expand"}
-                intent="ghost"
-                onClick={toggleExpanded}
-                size="sm"
-                title={isExpanded ? collapseLabel : expandLabel}
-              />
               <div className="flex-1" />
               {onNewChat && (
                 <Button

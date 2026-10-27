@@ -50,3 +50,36 @@ describe("plan check", () => {
     expect(r.md).toMatch(/pageCount/);
   });
 });
+
+describe("plan check: recurring characters", () => {
+  const withCast = (): Plan => {
+    const p = base();
+    p.characters = [
+      { id: "hero", label: "the round green alien", spec: "a round body, 2 eyes", counts: {} },
+    ];
+    p.pages[0] = { ...p.pages[0]!, characters: ["hero"] };
+    return p;
+  };
+
+  it("accepts known character ids", async () => {
+    expect((await check(withCast())).code).toBe(0);
+  });
+
+  it("rejects unknown ids, duplicates and over-long spec totals", async () => {
+    const p = withCast();
+    p.characters.push({ id: "hero", label: "x", spec: "y", counts: {} });
+    p.cover.titleBuddies = [{ character: "ghost", pose: "sits", anchor: "on-top", at: 0.5 }];
+    const long = "z".repeat(600);
+    p.characters.push(
+      { id: "a", label: "a", spec: long, counts: {} },
+      { id: "b", label: "b", spec: long, counts: {} },
+      { id: "c", label: "c", spec: long, counts: {} },
+    );
+    p.pages[1] = { ...p.pages[1]!, characters: ["a", "b", "c"] };
+    const { code, md } = await check(p);
+    expect(code).toBe(1);
+    expect(md).toContain('duplicate character id "hero"');
+    expect(md).toContain('cover.titleBuddies: unknown character "ghost"');
+    expect(md).toMatch(/page 2: character specs total 1800 chars > 1400/);
+  });
+});

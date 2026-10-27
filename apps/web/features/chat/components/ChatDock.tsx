@@ -9,6 +9,7 @@ import { useCallback, useEffect } from "react";
 import { CommandLine, type ScopeKind } from "../../tasks/components/CommandLine/CommandLine";
 import { useChat } from "../ChatContext";
 import { useChatDock } from "../hooks/useChatDock";
+import { useCreateChatHandoffMutation } from "../mutations";
 import { ChatHistorySidebar } from "./ChatHistorySidebar";
 import { ChatTranscript } from "./ChatTranscript";
 import { VoiceStatusStrip } from "./VoiceStatusStrip";
@@ -50,12 +51,15 @@ function targetLabel(target: TaskTarget): string {
  *   chat send contract now carries `mentions` + `attachmentSetId`, so there's no
  *   longer anything to silently drop. `#` tags a company/team/project and `/`
  *   picks a skill for the turn (`setScope`/`setSkillId`, one-turn).
- * - **CREATE TASK** on a settled reply → `/work/tasks/new` prefilled with it.
+ * - **CREATE TASK** on a settled reply → `/work/tasks/new` prefilled with a
+ *   hand-off of the conversation up to that reply (the server compacts a long
+ *   thread and references the full transcript), never just the reply's text.
  */
 export function ChatDock() {
   const t = useTranslations("chat");
   const router = useRouter();
-  const { dockOpen, setDockOpen, dockTarget, setDockTarget, messages, newChat } = useChat();
+  const { dockOpen, setDockOpen, dockTarget, setDockTarget, messages, newChat, conversationId } =
+    useChat();
   const { stream, thinking, send, setScope, setSkillId, voice, dictated, consumeDictated } =
     useChatDock();
 
@@ -65,13 +69,32 @@ export function ChatDock() {
     if (!dockOpen) voiceOff();
   }, [dockOpen, voiceOff]);
 
+  const handoff = useCreateChatHandoffMutation();
+  const handoffMutate = handoff.mutate;
   const createTask = useCallback(
-    (text: string) => {
-      const params = new URLSearchParams({ text });
-      if (dockTarget?.kind === "department") params.set("entry", dockTarget.id);
-      router.push(`/work/tasks/new?${params.toString()}` as Route);
+    (messageId: string) => {
+      if (!conversationId) return;
+      const goToNewTask = (text: string) => {
+        const params = new URLSearchParams({ text });
+        if (dockTarget?.kind === "department") params.set("entry", dockTarget.id);
+        router.push(`/work/tasks/new?${params.toString()}` as Route);
+      };
+      handoffMutate(
+        { body: { conversationId, upToMessageId: messageId } },
+        {
+          onSuccess: (res) => {
+            if (res.status === 200) goToNewTask(res.body.text);
+          },
+          // The hand-off couldn't be built — still open the form with the reply and a
+          // pointer to the conversation, so the context isn't silently dropped.
+          onError: () => {
+            const reply = messages.find((m) => m.id === messageId)?.text ?? "";
+            goToNewTask(`${reply}\n\nContext: ZIBBY chat conversation ${conversationId}.`);
+          },
+        },
+      );
     },
-    [dockTarget, router],
+    [conversationId, dockTarget, handoffMutate, messages, router],
   );
 
   // No chip for the automatic default (O-20) — it's the obvious fallback with
@@ -95,6 +118,7 @@ export function ChatDock() {
       </ChatBubble>
     ) : (
       <ChatTranscript
+        creatingTaskFor={handoff.isPending ? handoff.variables?.body.upToMessageId : undefined}
         liveText={stream.text}
         liveToolEvents={stream.toolEvents}
         messages={messages}
@@ -154,9 +178,7 @@ export function ChatDock() {
   return (
     <DockFrame
       closeLabel={t("close")}
-      collapseLabel={t("collapse")}
       composer={composer}
-      expandLabel={t("expand")}
       newChatLabel={t("newChat")}
       onNewChat={newChat}
       onOpenChange={setDockOpen}

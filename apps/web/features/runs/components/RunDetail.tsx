@@ -55,6 +55,50 @@ export interface RunDetailProps {
 
 type View = "live" | "input" | "output";
 
+/**
+ * The run's mode-dependent action buttons + ··· menu, self-wired (mode, mutations, current
+ * stage). `RunDetail` renders them in its header; a detail sheet passes them to its `actions`.
+ */
+export function RunHeaderActions({ run }: { run: RunView }) {
+  const router = useRouter();
+  const { data: queue = [] } = useApprovalsQuery();
+  const mode = deriveRunMode(run, approvalForRun(queue, run));
+  const actions = useRunActions(
+    (id) => router.push(`/activity/runs/${id}`),
+    () => router.push("/activity/runs"),
+  );
+  const openFolderMutation = useOpenTaskRunFolderMutation();
+  const { open: openNewTask } = useNewTask();
+  const continueContext = useContinueTaskContext(run);
+  const { data: workflows } = useWorkflowsQuery();
+  const workflowDef =
+    run.kind === "workflow" ? workflows?.find((w) => w.id === run.owner) : undefined;
+  const definedPhaseIds = workflowDef?.phases.map((p) => p.id).filter((id): id is string => !!id);
+  // Only the current stage's name is read (STOP confirm) — no ticking clock needed.
+  const [now] = useState(Date.now);
+  const current = buildStageRail(run, mode, definedPhaseIds, now).find((r) => r.current);
+
+  return (
+    <RunDetailActions
+      agentId={run.kind === "agent" ? run.owner : undefined}
+      currentStageName={current?.name}
+      mode={mode}
+      onContinueTask={() => openNewTask(undefined, undefined, continueContext)}
+      onDelete={() => actions.remove(run.runId, run.kind)}
+      onOpenFolder={
+        run.kind === "workflow"
+          ? () => openFolderMutation.mutate({ params: { runId: run.runId }, body: {} })
+          : undefined
+      }
+      onPause={() => actions.pause(run)}
+      onResume={(opts) => actions.resume(run, opts)}
+      onStop={() => actions.stop(run)}
+      pending={actions.stopping || actions.pausing || actions.resuming || actions.deleting}
+      run={run}
+    />
+  );
+}
+
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
 /**
@@ -180,21 +224,8 @@ export function RunDetail({ run, embedded, onOpenApproval, children }: RunDetail
       {!embedded && banner}
       {!embedded && children}
       <RunDetailHeader
-        actions={
-          <RunDetailActions
-            agentId={agent?.id}
-            currentStageName={current?.name}
-            mode={mode}
-            onContinueTask={continueTask}
-            onDelete={() => actions.remove(run.runId, run.kind)}
-            onOpenFolder={openFolder}
-            onPause={() => actions.pause(run)}
-            onResume={(opts) => actions.resume(run, opts)}
-            onStop={() => actions.stop(run)}
-            pending={actions.stopping || actions.pausing || actions.resuming || actions.deleting}
-            run={run}
-          />
-        }
+        // In a sheet the actions sit in the sheet header (`RunHeaderActions`), like every sheet.
+        actions={embedded ? null : <RunHeaderActions run={run} />}
         afterMetrics={
           embedded ? (
             <>

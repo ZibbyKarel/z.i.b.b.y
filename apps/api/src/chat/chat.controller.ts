@@ -7,6 +7,7 @@ import { ProjectNotFoundError } from "../projects/projects.errors";
 import { InvalidSkillIdError, SkillNotFoundError } from "../skills/skills.errors";
 import { TeamNotFoundError } from "../teams/teams.errors";
 import { ChatEventsService } from "./chat-events.service";
+import { ChatHandoffService } from "./chat-handoff.service";
 import { ChatSessionService } from "./chat-session.service";
 import { ChatTranscriptStore } from "./chat-transcript.store";
 
@@ -23,6 +24,7 @@ export class ChatController {
     private readonly session: ChatSessionService,
     private readonly store: ChatTranscriptStore,
     private readonly events: ChatEventsService,
+    private readonly handoff: ChatHandoffService,
   ) {}
 
   @TsRestHandler(chatContract)
@@ -57,6 +59,15 @@ export class ChatController {
         status: 200 as const,
         body: await this.store.listConversations(query.q),
       }),
+      createHandoff: async ({ body }) => {
+        const handoff = await this.handoff.build(body);
+        return handoff
+          ? { status: 200 as const, body: handoff }
+          : {
+              status: 404 as const,
+              body: { message: `Conversation ${body.conversationId} has no messages` },
+            };
+      },
     });
   }
 

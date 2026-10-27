@@ -10,6 +10,7 @@ import { SkillsModule } from "../skills/skills.module";
 import { TasksModule } from "../tasks/tasks.module";
 import { TeamsModule } from "../teams/teams.module";
 import { dataDir } from "../shared/data-dir";
+import { ChatHandoffService } from "./chat-handoff.service";
 import { ChatController } from "./chat.controller";
 import { ChatEventsService } from "./chat-events.service";
 import { ChatMcpAuthGuard } from "./chat-mcp-auth.guard";
@@ -71,6 +72,7 @@ export function resolveChatDir(): string {
     ChatTranscriptStore,
     ChatEventsService,
     ChatSessionService,
+    ChatHandoffService,
     ChatToolsService,
     ChatToolResultRegistry,
     // Single source of truth for the per-boot MCP bearer token — injected into both

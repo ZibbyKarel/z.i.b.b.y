@@ -71,9 +71,13 @@ export const Overview: Story = {
   render: (args) => (
     <AnchoredSheet
       {...args}
-      footerEnd={<SheetAction intent="primary">MERGE</SheetAction>}
+      actions={
+        <>
+          <SheetAction href="https://github.com">OPEN ON GITHUB ↗</SheetAction>
+          <SheetAction intent="primary">MERGE</SheetAction>
+        </>
+      }
       footerNote="NEEDS APPROVAL"
-      footerStart={<SheetAction href="https://github.com">OPEN ON GITHUB ↗</SheetAction>}
     >
       {body}
     </AnchoredSheet>

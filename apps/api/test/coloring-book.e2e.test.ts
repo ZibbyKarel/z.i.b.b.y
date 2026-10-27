@@ -141,6 +141,7 @@ describe("coloring-book workflow (e2e, mock providers)", () => {
       "concept",
       "plan",
       "plan-check",
+      "cast",
       "illustrate",
       "produce",
       "visual-audit",
@@ -151,7 +152,14 @@ describe("coloring-book workflow (e2e, mock providers)", () => {
       "review",
     ]);
     const book = path.join(run.cwd, "book");
-    for (const f of ["interior.pdf", "cover.pdf", "listing.md", "README.md", "plan.json"])
+    for (const f of [
+      "interior.pdf",
+      "cover.pdf",
+      "cover-front.png",
+      "listing.md",
+      "README.md",
+      "plan.json",
+    ])
       expect((await fs.stat(path.join(book, f))).size).toBeGreaterThan(0);
     expect(await fs.readFile(path.join(run.cwd, "01_concept", "brief.md"), "utf8")).toContain(
       "farm animals",

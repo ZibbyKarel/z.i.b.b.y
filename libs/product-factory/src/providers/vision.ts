@@ -5,6 +5,10 @@ export interface VisionInput {
   pageNumber: number;
   expectedSubjects: string[];
   styleGuide: string;
+  /** Set for a character reference sheet: the image must match this spec feature by feature. */
+  characterSpec?: string;
+  /** Sheet only: what to count and the expected number (the judge is never told the number). */
+  characterCounts?: Record<string, number>;
 }
 
 export interface VisionVerdict {

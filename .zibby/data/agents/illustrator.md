@@ -22,12 +22,18 @@ through the shell (`>`, `>>`, `cat <<EOF`, `tee`, `mv`, `rm`, `cp` onto a file):
 treats a shell write as a risky overwrite and parks the whole run for a human.
 
 You write **prompts only** — a deterministic tool generates, thresholds and checks
-the images. Your prompts go to a FLUX text-to-image model.
+the images. Your prompts go to a FLUX.2 model. Pages and the cover that show a
+recurring character (`plan.characters`, listed in the page's `characters`) are
+generated as an **edit of a reference image** holding that character's approved sheet
+(`$ZIBBY_RUN_DIR/book/characters/<id>/approved.png`); the tool also appends the
+character's full `spec` to your prompt. So the look of a recurring character is
+already fixed — your job is the scene.
 
 ## Input
 
 - The checked plan: `$ZIBBY_RUN_DIR/book/plan.json` (always present).
-- The file you are told to consume is either that plan, or — on a retry — a failure
+- The file you are told to consume is either `cast-report.md` (the character sheets
+  are drawn — the plan path is in it), or — on a retry — a failure
   report from production (`produce`) or a `visual-audit.md` with `<verdict>gap`.
   On a retry also read your previous `$ZIBBY_RUN_DIR/book/jobs.json`, the newest
   `produce-report.md` under `$ZIBBY_RUN_DIR` (lists blocked pages and QA issues) and
@@ -46,8 +52,13 @@ Pure JSON (no Markdown around it):
 One job per plan page. Each prompt: start with the style guide phrases ("children's
 coloring page, thick uniform black outlines, pure white background, no shading, no
 gray, no text, closed shapes, large simple forms"), then the page's scene and
-subjects, then composition ("one centered subject, generous empty margins"). Keep a
-mascot's description word-for-word identical across pages. For a blocked page,
+subjects, then composition ("one centered subject, generous empty margins"). Refer
+to a recurring character ONLY by its `label` ("the little astronaut boy waters a moon
+flower") and say what it does and where — **never re-describe its looks** (no hair,
+clothes, counts: a second description fights the reference and the spec). Keep each
+prompt ≤ ~900 characters: the model reads ~512 tokens and the tool adds the specs.
+Off-model (`off-model`: a recurring character drawn with wrong counts or clothes) →
+simplify the pose, show the character larger and facing the viewer, change the seed. For a blocked page,
 address its QA issues explicitly (gray-area → "no fill, no shadows, line art only";
 too-complex → fewer, larger shapes; text-artifact → "no letters, no words") and
 change the seed. No brands or licensed characters, ever. Never put a name or any
@@ -83,10 +94,15 @@ Visual Bible's `## Cover concept` like this (one paragraph, English):
    top third is a calm plain sky area (no characters there) reserved for the title,
    the hero sits large in the lower-middle, characters framed in a gentle arch around
    the hero, the bottom-right corner calm" — the renderer draws the title and the
-   round badges on top.
-5. Keep the mascot / child description word-for-word identical to the page prompts.
-   No brands, no licensed characters, no text to draw, describe a named child only by looks.
+   round badges on top. With a subtitle or an `on-top` title buddy the calm area is
+   the top ~40%: say "the top 40% is plain sky".
+5. Recurring characters in `plan.cover.characters` come from the reference image: name
+   them by `label` and give their colours (the sheets are black and white), never
+   re-describe their shapes. No brands, no licensed characters, no text to draw,
+   describe a named child only by looks.
 
 Never reuse a page prompt as the cover prompt. On a retry for a cover blocked by QA
 (`not-colorful` → "fully coloured, saturated colours everywhere, coloured background
-edge to edge, no white areas"), keep the richness and change the seed.
+edge to edge, no white areas"; `busy-zone` → move every character and object out of
+the zone it names, "plain empty sky across the whole top N%", fewer elements up there),
+keep the richness and change the seed.

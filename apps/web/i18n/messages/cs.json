@@ -1351,6 +1351,7 @@
         "revise": "Přepracovat",
         "reject": "Zamítnout",
         "wouldPublish": "Zveřejní · {files} souborů · +{add} −{del}",
+        "errorHead": "Selhalo",
         "questionHead": "Potřebuje tě · otázka od {agent}",
         "questionHint": "Odpověz níže · běh pokračuje po odpovědi",
         "parkedHead": "Zaparkováno · fáze {n} {name} · {att} pokusů",
@@ -1929,6 +1930,8 @@
     "active": "aktivní",
     "off": "vypnuto",
     "edit": "Upravit",
+    "pinQuickAction": "Připnout do rychlých akcí",
+    "unpinQuickAction": "Odepnout z rychlých akcí",
     "runNow": "Spustit teď",
     "lastRun": "poslední {ago}",
     "neverRun": "zatím neběželo",
@@ -2069,8 +2072,6 @@
     "title": "Chat se ZIBBY",
     "close": "Zavřít",
     "newChat": "Vymazat",
-    "expand": "Zvětšit chat",
-    "collapse": "Zmenšit chat",
     "triggerLabel": "Chat",
     "triggerAria": "Otevřít chat se ZIBBY",
     "triggerTitle": "Chat se ZIBBY",
@@ -3218,6 +3219,9 @@
         "deleteLabel": "Smazat „{name}“"
       },
       "quickActions": {
+        "edit": "Upravit",
+        "save": "Uložit",
+        "kind": "Rychlá akce",
         "run": "Spustit",
         "runLabel": "Spustit {label}",
         "remove": "Odebrat",
@@ -3230,6 +3234,8 @@
         "textPlaceholder": "Co se má udělat…",
         "target": "Cíl",
         "add": "Přidat",
+        "new": "Nová akce",
+        "cancel": "Zrušit",
         "targetMissing": "Cíl už neexistuje"
       },
       "teamKb": {
@@ -3343,7 +3349,8 @@
         "issue": "Issue",
         "task": "Úkol",
         "pr": "Pull request",
-        "run": "Běh"
+        "run": "Běh",
+        "note": "Poznámka"
       },
       "needsYou": "Čeká na tebe · {kind}",
       "waiting": "Čeká {wait}",

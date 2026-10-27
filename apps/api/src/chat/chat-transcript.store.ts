@@ -226,6 +226,11 @@ export class ChatTranscriptStore implements AttachmentSetRefProvider {
     return out;
   }
 
+  /** Absolute path of a conversation's `<id>.jsonl` (handed to tasks as the full-context reference). */
+  transcriptPath(conversationId: string): string {
+    return path.resolve(this.fileFor(conversationId));
+  }
+
   private fileFor(conversationId: string): string {
     return path.join(this.dir, `${conversationId}.jsonl`);
   }

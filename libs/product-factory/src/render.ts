@@ -7,8 +7,11 @@ import { PDFDocument, degrees, rgb } from "pdf-lib";
 import type { Color, PDFFont, PDFPage } from "pdf-lib";
 import { bookDirOf, nn, pageFile, readJson, writeJson } from "./ctx.ts";
 import type { Ctx } from "./ctx.ts";
+import sharp from "sharp";
+import { buddyFile } from "./characters.ts";
+import { FRONT_H, FRONT_W, coverLayout } from "./cover-layout.ts";
 import { PlanSchema } from "./schemas.ts";
-import type { Cover } from "./schemas.ts";
+import type { Plan } from "./schemas.ts";
 
 export const PT = 72;
 export const PAGE_W_PT = 8.5 * PT;
@@ -17,8 +20,8 @@ export const SPINE_PER_PAGE_IN = 0.002252;
 export const BLEED_IN = 0.125;
 const FONT_FILE = fileURLToPath(new URL("../fonts/NotoSans-Regular.ttf", import.meta.url));
 const FIXED_DATE = new Date("2000-01-01T00:00:00Z");
-/** Cover colours when the plan leaves them out: sunny yellow wrap, white title with a navy outline. */
-const COVER_DEFAULTS = { background: "#ffd23f", titleFill: "#ffffff", titleOutline: "#1f2a44" };
+/** Wrap colours when the plan leaves them out: sunny yellow wrap, navy ink (title: cover-layout.ts). */
+const COVER_DEFAULTS = { background: "#ffd23f", titleOutline: "#1f2a44" };
 
 export interface ManifestImage {
   pdfPage: number;
@@ -102,49 +105,48 @@ const hexRgb = (hex: string): Color =>
     parseInt(hex.slice(5, 7), 16) / 255,
   );
 
-/** Centered lines with a thick outline: the outline colour stamped in 16 directions, the fill on top. */
-function outlined(
-  page: PDFPage,
-  font: PDFFont,
-  lines: string[],
-  size: number,
-  cx: number,
-  topY: number,
-  fill: Color,
-  outline: Color,
-): number {
-  const r = Math.max(1.5, size * 0.08);
-  for (let i = 0; i < 16; i++) {
-    const a = (i / 16) * 2 * Math.PI;
-    centered(page, font, lines, size, cx + r * Math.cos(a), topY + r * Math.sin(a), 1.1, outline);
-  }
-  return centered(page, font, lines, size, cx, topY, 1.1, fill);
-}
-
-/** The largest title size (56 down to 32) that wraps into at most three lines. */
-function fitTitle(font: PDFFont, text: string, maxW: number): { lines: string[]; size: number } {
-  for (let size = 56; size > 32; size -= 4) {
-    const lines = wrap(font, text, size, maxW);
-    if (lines.length <= 3) return { lines, size };
-  }
-  return { lines: wrap(font, text, 32, maxW), size: 32 };
-}
-
-/** Round sticker: white disc with an outline ring, label wrapped inside. */
-function badge(
-  page: PDFPage,
-  font: PDFFont,
-  label: string,
-  cx: number,
-  cy: number,
-  r: number,
-  ink: Color,
-): void {
-  page.drawCircle({ x: cx, y: cy, size: r, color: rgb(1, 1, 1), borderColor: ink, borderWidth: 4 });
-  const size = 12;
-  const lines = wrap(font, label, size, r * 1.5).slice(0, 3);
-  const top = cy + ((lines.length - 1) * size * 1.15) / 2 - size * 0.35;
-  centered(page, font, lines, size, cx, top, 1.15, ink);
+/**
+ * The front panel as one flat PNG: cover art, the playful title and badges on top, then the
+ * title buddies sitting on (or hanging from) the letters. Flattened, as KDP rejects alpha.
+ */
+async function composeFront(
+  book: string,
+  plan: Plan,
+  artFile: string | null,
+  background: string,
+  outFile: string,
+): Promise<void> {
+  const layout = coverLayout(plan);
+  const buddies = await Promise.all(
+    layout.buddies.flatMap((box, i) => {
+      const file = buddyFile(book, i + 1);
+      if (!fs.existsSync(file)) return [];
+      const anchor = plan.cover.titleBuddies[i]?.anchor;
+      return [
+        sharp(file)
+          .resize(box.w, box.h, {
+            fit: "contain",
+            position: anchor === "hanging" ? "north" : "south",
+            background: { r: 0, g: 0, b: 0, alpha: 0 },
+          })
+          .png()
+          .toBuffer()
+          .then((input) => ({ input, left: box.x, top: box.y })),
+      ];
+    }),
+  );
+  const base = artFile
+    ? sharp(artFile)
+    : sharp({ create: { width: FRONT_W, height: FRONT_H, channels: 3, background } });
+  const composed = await base
+    .composite([{ input: Buffer.from(layout.svg), left: 0, top: 0 }, ...buddies])
+    .png()
+    .toBuffer();
+  await sharp(composed)
+    .flatten({ background })
+    .removeAlpha()
+    .png({ compressionLevel: 9 })
+    .toFile(outFile);
 }
 
 async function newDoc(title: string): Promise<PDFDocument> {
@@ -226,57 +228,35 @@ export async function render(argv: string[], ctx: Ctx): Promise<number> {
   const bleed = BLEED_IN * PT;
   const frontX = bleed + 8.5 * PT + spineIn * PT; // left edge of the front cover trim
   const backCx = bleed + (8.5 * PT) / 2;
-  const frontCx = frontX + (8.5 * PT) / 2;
   const coverTop = heightIn * PT - bleed;
-  const colors: Required<Omit<Cover, "scene" | "badges">> = { ...COVER_DEFAULTS, ...plan.cover };
+  const colors = {
+    background: plan.cover.background ?? COVER_DEFAULTS.background,
+    titleOutline: plan.cover.titleOutline ?? COVER_DEFAULTS.titleOutline,
+  };
   const bg = hexRgb(colors.background);
   const ink = hexRgb(colors.titleOutline);
-  const titleFill = hexRgb(colors.titleFill);
-  // Whole wrap in the background colour, then the full-colour art full-bleed over the front panel.
+  // Whole wrap in the background colour, then the composed front (art + title + buddies) full-bleed.
   cp.drawRectangle({ x: 0, y: 0, width: widthIn * PT, height: heightIn * PT, color: bg });
   const artFile = path.join(book, "cover-art", "approved.png");
-  let coverArt: ManifestImage | undefined;
-  if (fs.existsSync(artFile)) {
-    const art = await cover.embedPng(fs.readFileSync(artFile));
-    const w = 8.5 * PT + bleed;
-    const h = heightIn * PT;
-    cp.drawImage(art, { x: frontX, y: 0, width: w, height: h });
-    coverArt = { pdfPage: 1, file: artFile, drawnWidthPt: w, drawnHeightPt: h };
-  } else warnings.add("no cover-art/approved.png — cover has title only");
-  const { lines: titleLines, size: titleSize } = fitTitle(cfont, csafe(plan.title), 500);
-  const subY = outlined(
-    cp,
-    cfont,
-    titleLines,
-    titleSize,
-    frontCx,
-    coverTop - 0.5 * PT - titleSize,
-    titleFill,
-    ink,
+  if (!fs.existsSync(artFile)) warnings.add("no cover-art/approved.png — front has title only");
+  const frontFile = path.join(book, "cover-front.png");
+  await composeFront(
+    book,
+    plan,
+    fs.existsSync(artFile) ? artFile : null,
+    colors.background,
+    frontFile,
   );
-  if (plan.subtitle)
-    outlined(
-      cp,
-      cfont,
-      wrap(cfont, csafe(plan.subtitle), 18, 460),
-      18,
-      frontCx,
-      subY - 4,
-      titleFill,
-      ink,
-    );
-  const r = 44;
-  (plan.cover.badges ?? []).forEach((label, i) =>
-    badge(
-      cp,
-      cfont,
-      csafe(label),
-      frontX + 8.5 * PT - 0.375 * PT - r,
-      bleed + 0.375 * PT + r + i * (2 * r + 8),
-      r,
-      ink,
-    ),
-  );
+  const front = await cover.embedPng(fs.readFileSync(frontFile));
+  const fw = 8.5 * PT + bleed;
+  const fh = heightIn * PT;
+  cp.drawImage(front, { x: frontX, y: 0, width: fw, height: fh });
+  const coverArt: ManifestImage = {
+    pdfPage: 1,
+    file: frontFile,
+    drawnWidthPt: fw,
+    drawnHeightPt: fh,
+  };
 
   // Back: a white panel with the blurb at the top (the bottom right stays free for the KDP barcode).
   const back: string[] = [];
@@ -317,7 +297,7 @@ export async function render(argv: string[], ctx: Ctx): Promise<number> {
     spineIn,
     coverWidthIn: widthIn,
     coverHeightIn: heightIn,
-    images: [...images, ...(coverArt ? [coverArt] : [])],
+    images: [...images, coverArt],
   };
   writeJson(path.join(book, "render-manifest.json"), manifest);
 

@@ -28,6 +28,7 @@ export enum RunFeedBannersTestId {
   Approval = "run-banner-approval",
   Question = "run-banner-question",
   Parked = "run-banner-parked",
+  Error = "run-banner-error",
   Hold = "run-banner-hold",
   Revise = "run-banner-revise",
   ReviseNote = "run-banner-revise-note",
@@ -259,6 +260,26 @@ export function RunQuestionBanner({ question, agentName }: RunQuestionBannerProp
           <Typography as="span" type="labelSm">
             {t("questionHint")}
           </Typography>
+        </Stack>
+      </Container>
+    </Card>
+  );
+}
+
+/** ERROR — why the run failed, from the task outcome (a run that died before any phase has no log to show it). */
+export function RunErrorBanner({ reason }: { reason: string }) {
+  const t = useTranslations("runs.detail.banner");
+  return (
+    <Card borderTone="ink" data-testid={RunFeedBannersTestId.Error}>
+      <Container padding={["150", "200"]}>
+        <Stack gap="75">
+          <Stack align="center" direction="row" gap="100">
+            <StatusDot size="75" tone="error" />
+            <Typography as="span" type="labelSm" variant="primary">
+              {t("errorHead")}
+            </Typography>
+          </Stack>
+          <Typography type="bodyLg">{reason}</Typography>
         </Stack>
       </Container>
     </Card>

@@ -24,7 +24,9 @@
       }
     ],
     "roadmapDefaults": {
-      "autoSync": true
+      "autoSync": true,
+      "autoReview": true,
+      "autoAddressComments": true
     }
   },
   {

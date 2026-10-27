@@ -108,3 +108,56 @@ export async function processCover(srcFile: string, outFile: string): Promise<Pr
     .toFile(outFile);
   return { colorRatio: color / (px || 1), whiteRatio: white / (px || 1) };
 }
+
+export interface CutOut {
+  /** Share of the frame the character covers (tiny = the fill leaked through a gap in the outline). */
+  opaqueRatio: number;
+  /** The character touches the frame edge (it was cropped by the generator). */
+  touchesEdge: boolean;
+}
+
+/**
+ * Sticker cut-out: flood-fill the near-white background from the frame edge to transparent,
+ * then trim to the character. White inside the character survives because the fill can't
+ * cross its closed dark outline.
+ */
+export async function cutOut(srcFile: string, outFile: string): Promise<CutOut> {
+  const { data, info } = await sharp(srcFile)
+    .flatten({ background: "#ffffff" })
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const { width: w, height: h } = info;
+  const white = (i: number): boolean =>
+    Math.min(data[i * 3] ?? 0, data[i * 3 + 1] ?? 0, data[i * 3 + 2] ?? 0) >= 200;
+  const bg = new Uint8Array(w * h);
+  const stack: number[] = [];
+  let touchesEdge = false;
+  for (let x = 0; x < w; x++) stack.push(x, (h - 1) * w + x);
+  for (let y = 0; y < h; y++) stack.push(y * w, y * w + w - 1);
+  for (const i of stack) if (!white(i)) touchesEdge = true;
+  while (stack.length > 0) {
+    const i = stack.pop() ?? 0;
+    if (bg[i] || !white(i)) continue;
+    bg[i] = 1;
+    const x = i % w;
+    if (x > 0) stack.push(i - 1);
+    if (x < w - 1) stack.push(i + 1);
+    if (i >= w) stack.push(i - w);
+    if (i < w * (h - 1)) stack.push(i + w);
+  }
+  const rgba = Buffer.alloc(w * h * 4);
+  let opaque = 0;
+  for (let i = 0; i < w * h; i++) {
+    rgba[i * 4] = data[i * 3] ?? 0;
+    rgba[i * 4 + 1] = data[i * 3 + 1] ?? 0;
+    rgba[i * 4 + 2] = data[i * 3 + 2] ?? 0;
+    rgba[i * 4 + 3] = bg[i] ? 0 : 255;
+    if (!bg[i]) opaque++;
+  }
+  await sharp(rgba, { raw: { width: w, height: h, channels: 4 } })
+    .trim({ threshold: 0 })
+    .png()
+    .toFile(outFile);
+  return { opaqueRatio: opaque / (w * h || 1), touchesEdge };
+}

@@ -235,8 +235,8 @@ export function useBridgeState() {
     // navigation, and other query params (filters) stay as they are.
     const params = new URLSearchParams(window.location.search);
     for (const kind of URL_KINDS) params.delete(SELECTION_PARAMS[kind]);
-    if (selection && selection.kind !== "task")
-      params.set(SELECTION_PARAMS[selection.kind], selection.id);
+    if (selection && selection.kind in SELECTION_PARAMS)
+      params.set(SELECTION_PARAMS[selection.kind as keyof typeof SELECTION_PARAMS], selection.id);
     const qs = params.toString();
     if (`?${qs}` === window.location.search || (!qs && !window.location.search)) return;
     window.history.replaceState(window.history.state, "", qs ? `?${qs}` : window.location.pathname);

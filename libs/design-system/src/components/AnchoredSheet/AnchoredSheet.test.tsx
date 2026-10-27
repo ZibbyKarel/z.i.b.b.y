@@ -19,11 +19,10 @@ describe("AnchoredSheet", () => {
   it("renders header parts, chips, body and footer", () => {
     render(
       <AnchoredSheet
+        actions={<SheetAction intent="primary">GO</SheetAction>}
         chips={["A", "B"]}
         closeLabel="Close"
-        footerEnd={<SheetAction intent="primary">GO</SheetAction>}
         footerNote="NOTE"
-        footerStart={<SheetAction href="https://x.test">OPEN ↗</SheetAction>}
         hint="J / K · ESC"
         kind="PULL REQUEST · #1"
         onClose={() => {}}
@@ -44,6 +43,7 @@ describe("AnchoredSheet", () => {
     expect(screen.getAllByTestId(AnchoredSheetTestId.Chip)).toHaveLength(2);
     expect(screen.getAllByTestId(SheetPartsTestId.Text)).toHaveLength(2);
     expect(screen.getByTestId(AnchoredSheetTestId.FooterNote)).toHaveTextContent("NOTE");
+    expect(screen.getByTestId(AnchoredSheetTestId.Actions)).toHaveTextContent("GO");
     expect(screen.getByTestId(AnchoredSheetTestId.Root)).toHaveRole("dialog");
     expect(screen.getByTestId(AnchoredSheetTestId.Root)).toHaveAccessibleName("Fix it");
     expect(screen.getByTestId(AnchoredSheetTestId.Root).className).toContain("border-t-state-err");

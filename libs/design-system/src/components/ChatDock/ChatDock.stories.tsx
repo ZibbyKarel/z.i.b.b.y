@@ -54,11 +54,10 @@ export const Overview: Story = {
     <div className="flex flex-col gap-10">
       <div className="flex flex-wrap items-end gap-8">
         <ChatDock composer={composer} />
-        <ChatDock defaultOpen composer={composer} onNewChat={() => {}} transcript={transcript} />
         <ChatDock composer={composer} targetChip={<Chip>Dept: dev</Chip>} />
       </div>
       <div className="flex h-[640px] items-end">
-        <ChatDock defaultExpanded defaultOpen composer={composer} transcript={transcript} />
+        <ChatDock defaultOpen composer={composer} onNewChat={() => {}} transcript={transcript} />
       </div>
       <div className="flex h-[640px] w-[1200px] items-end">
         <ChatDock

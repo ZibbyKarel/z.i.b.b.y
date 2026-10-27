@@ -2,20 +2,18 @@
 title: Vault lint
 tags:
   - report
-updated: '2026-10-24'
+updated: '2026-10-27'
 ---
-Generated 2026-10-24. Report only — no notes were modified.
+Generated 2026-10-27. Report only — no notes were modified.
 
-## Broken wikilinks (17)
-- [[2026-06-12]] → `fixture-proj`
-- [[2026-06-12]] → `pr-proj`
-- [[2026-06-12]] → `alpha`
-- [[2026-06-12]] → `beta`
-- [[2026-06-13]] → `fixture-proj`
-- [[2026-06-13]] → `pr-proj`
-- [[2026-06-13]] → `alpha`
-- [[2026-06-13]] → `beta`
-- [[2026-06-24]] → `users`
+## Broken wikilinks (15)
+- [[2026-07-30]] → `subsystem-forge-moc`
+- [[2026-08-25]] → `subsystem-herald-moc`
+- [[2026-08-31]] → `subsystem-forge-moc`
+- [[2026-09-01]] → `subsystem-forge-moc`
+- [[2026-09-07]] → `subsystem-forge-moc`
+- [[2026-09-24]] → `subsystem-forge-moc`
+- [[2026-09-24]] → `subsystem-maestro-moc`
 - [[department-qa-moc]] → `suggestions/quality-findings`
 - [[department-sec-moc]] → `suggestions/security-findings`
 - [[zibby-index]] → `wiki-links`
@@ -28,18 +26,18 @@ Generated 2026-10-24. Report only — no notes were modified.
 ## Orphans (8)
 - [[code-audit-report]]
 - [[coloring-book-latest]]
-- [[devrel-knowledgebase]]
-- [[publishing]]
 - [[spec-created-note]]
-- [[cms4]]
+- [[spending-audit]]
+- [[kzphoto]]
 - [[portfolio]]
-- [[shoptet-partner-cli]]
+- [[test-project]]
+- [[zibby-self]]
 
 ## Stale notes, updated over 90 days ago (0)
 - none
 
-## Missing `updated` (19)
-19 notes have no `updated` stamp yet.
+## Missing `updated` (22)
+22 notes have no `updated` stamp yet.
 
 ## More than 15 tags (0)
 - none

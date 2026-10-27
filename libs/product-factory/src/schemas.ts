@@ -21,10 +21,30 @@ export const BriefSchema = z.strictObject({
 });
 export type Brief = z.infer<typeof BriefSchema>;
 
+/**
+ * A recurring character, drawn ONCE as a reference sheet (`product-factory cast`) and then
+ * handed to the image model as a reference image on every page it appears on.
+ */
+export const CharacterSchema = z.strictObject({
+  id: z.string().regex(/^[a-z0-9][a-z0-9-]{0,31}$/, "lowercase slug, e.g. hero or robot-buddy"),
+  /** Short looks phrase the page prompts use for it ("the astronaut boy"); never a name. */
+  label: z.string().min(1).max(80),
+  /** Exhaustive, countable design: shapes, proportions, every count (eyes, fingers, buttons...), clothes. */
+  spec: z.string().min(1).max(600),
+  /**
+   * The spec's numbers, keyed by what to count ("buttons on the chest": 3). The sheet judge
+   * counts these blind (it never sees the expected number) and the tool compares.
+   */
+  counts: z.record(z.string().min(1).max(60), z.number().int().min(0).max(20)).default({}),
+});
+export type Character = z.infer<typeof CharacterSchema>;
+
 export const PageSchema = z.strictObject({
   pageNumber: z.number().int().min(1),
   scene: z.string(),
   subjects: z.array(z.string()),
+  /** Ids of the recurring characters drawn on this page (their sheets become the reference image). */
+  characters: z.array(z.string()).max(4).default([]),
   caption: z.string().max(120).optional(),
   difficulty: z.number().int().min(1).max(3),
 });
@@ -41,6 +61,24 @@ export const CoverSchema = z.strictObject({
   titleOutline: HexColor.optional(),
   /** Short round stickers on the front ("Ages 3-5", "30 pages"); the brief's language. */
   badges: z.array(z.string().min(1).max(24)).max(3).optional(),
+  /** Title letters cycle through these colours (default: titleFill only). */
+  titlePalette: z.array(HexColor).min(1).max(5).optional(),
+  /** Recurring characters in the cover art (reference image, like a page). */
+  characters: z.array(z.string()).max(4).default([]),
+  /** Characters drawn as cut-out stickers playing with the title (sitting on it, hanging from it). */
+  titleBuddies: z
+    .array(
+      z.strictObject({
+        character: z.string(),
+        /** Pose and colours, e.g. "sits with legs dangling and waves; mint green body, coral button". */
+        pose: z.string().min(1).max(300),
+        anchor: z.enum(["on-top", "hanging"]),
+        /** Horizontal position along the title, 0 = left end, 1 = right end. */
+        at: z.number().min(0).max(1).default(0.5),
+      }),
+    )
+    .max(2)
+    .default([]),
 });
 export type Cover = z.infer<typeof CoverSchema>;
 
@@ -52,6 +90,7 @@ export const PlanSchema = z.strictObject({
   ownerLine: z.string().max(80).optional(),
   /** Visual rules the illustrator must follow. */
   styleGuide: z.string().max(2000),
+  characters: z.array(CharacterSchema).max(6).default([]),
   cover: CoverSchema,
   pages: z.array(PageSchema),
 });
@@ -61,7 +100,6 @@ export const JobSchema = z.strictObject({
   pageNumber: z.number().int().min(1),
   prompt: z.string().min(1).max(2000),
   seed: z.number().int().optional(),
-  referenceImages: z.array(z.string()).optional(),
 });
 export type Job = z.infer<typeof JobSchema>;
 
@@ -84,6 +122,8 @@ export const QaIssueSchema = z.strictObject({
     "text-artifact",
     "margin-violation",
     "unsafe",
+    "off-model",
+    "busy-zone",
     "judge-error",
   ]),
   severity: z.enum(["low", "medium", "high"]),

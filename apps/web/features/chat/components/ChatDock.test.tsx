@@ -62,6 +62,13 @@ const sendMutate = vi.fn();
 vi.mock("../mutations/useSendChatMessageMutation", () => ({
   useSendChatMessageMutation: () => ({ mutate: sendMutate, isPending: false }),
 }));
+type HandoffOptions = { onSuccess: (res: unknown) => void; onError: () => void };
+const handoffMutate = vi.fn((_vars: unknown, opts: HandoffOptions) =>
+  opts.onSuccess({ status: 200, body: { text: "HANDOFF BRIEF", compacted: false } }),
+);
+vi.mock("../mutations/useCreateChatHandoffMutation", () => ({
+  useCreateChatHandoffMutation: () => ({ mutate: handoffMutate, isPending: false }),
+}));
 vi.mock("../mutations/useSynthesizeSpeechMutation", () => ({
   useSynthesizeSpeechMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
@@ -120,6 +127,7 @@ describe("ChatDock (ZB-12)", () => {
   beforeEach(() => {
     push.mockClear();
     sendMutate.mockClear();
+    handoffMutate.mockClear();
     voiceOptions.length = 0;
     transcriptState.data = undefined;
     transcriptState.isSuccess = false;
@@ -251,8 +259,27 @@ describe("ChatDock (ZB-12)", () => {
       "Write the migration notes",
     );
     await user.click(screen.getByTestId(ChatMessageTestId.CreateTaskButton));
+    // The whole conversation up to the clicked reply is handed off — not just its text.
+    expect(handoffMutate).toHaveBeenCalledWith(
+      { body: { conversationId: "conv_server", upToMessageId: "a1" } },
+      expect.anything(),
+    );
     expect(push).toHaveBeenCalledWith(
-      `/work/tasks/new?${new URLSearchParams({ text: "Write the migration notes" }).toString()}`,
+      `/work/tasks/new?${new URLSearchParams({ text: "HANDOFF BRIEF" }).toString()}`,
+    );
+  });
+
+  it("CREATE TASK falls back to the reply plus a conversation pointer when the hand-off fails", async () => {
+    transcriptState.data = {
+      conversationId: "conv_server",
+      messages: [{ id: "a1", role: "assistant", text: "Fix it", at: "2026-09-25T10:00:00Z" }],
+    };
+    handoffMutate.mockImplementationOnce((_vars, opts) => opts.onError());
+    const user = userEvent.setup();
+    renderDock();
+    await user.click(screen.getByTestId(ChatMessageTestId.CreateTaskButton));
+    expect(push).toHaveBeenCalledWith(
+      `/work/tasks/new?${new URLSearchParams({ text: "Fix it\n\nContext: ZIBBY chat conversation conv_server." }).toString()}`,
     );
   });
 
@@ -264,7 +291,7 @@ describe("ChatDock (ZB-12)", () => {
     const user = userEvent.setup();
     renderDock({ department: true });
     await user.click(screen.getByTestId(ChatMessageTestId.CreateTaskButton));
-    expect(push).toHaveBeenCalledWith("/work/tasks/new?text=Fix+it&entry=dev");
+    expect(push).toHaveBeenCalledWith("/work/tasks/new?text=HANDOFF+BRIEF&entry=dev");
   });
 
   it("switches the mic off when the dock closes (CLOSE or Esc)", async () => {
@@ -273,14 +300,6 @@ describe("ChatDock (ZB-12)", () => {
     await userEvent.setup().keyboard("{Escape}");
     expect(screen.queryByTestId(DockFrameTestId.Transcript)).not.toBeInTheDocument();
     expect(voiceState.off).toHaveBeenCalled();
-  });
-
-  it("passes localized expand/collapse labels to the header expand button", async () => {
-    renderDock();
-    const button = screen.getByTestId(DockFrameTestId.ExpandButton);
-    expect(button).toHaveAccessibleName("Zvětšit chat");
-    await userEvent.setup().click(button);
-    expect(button).toHaveAccessibleName("Zmenšit chat");
   });
 
   it("keeps the mic idle-gated: voice is not suspended while idle", () => {

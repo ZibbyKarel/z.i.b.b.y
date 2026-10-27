@@ -1,4 +1,5 @@
 import { bakeoff } from "./bakeoff.ts";
+import { cast } from "./characters.ts";
 import { doctor } from "./doctor.ts";
 import { finalize } from "./finalize.ts";
 import { planCheck } from "./plan-check.ts";
@@ -11,6 +12,7 @@ import type { Ctx } from "./ctx.ts";
 const HELP = `product-factory <command>
 
   plan check <content-plan.md> [--out plan.json]
+  cast [--report f] [--rounds N]        (character sheets + title buddies)
   produce <jobs.json> [--report f] [--rounds N] [--pages a-b]
   render [--report f]
   reject <pages e.g. 3,5 (0 = cover)> [--reason text]
@@ -30,6 +32,7 @@ export async function main(argv: string[], ctx: Ctx): Promise<number> {
     return 0;
   }
   const commands: Record<string, Command> = {
+    cast,
     produce,
     reject,
     render,

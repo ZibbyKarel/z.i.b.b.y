@@ -31,7 +31,7 @@ const STATUS_TONE: Record<ReturnType<typeof zibbyStatus>, SheetTone> = {
   done: "done",
 };
 
-/** Issue detail: description, details table, `OPEN IN <SRC>` + the Issues screen's primary action. */
+/** Issue detail: description, details table; the Issues screen's primary action sits top-right. */
 export function IssueSheet({ id, anchor, onClose }: SheetProps) {
   const t = useTranslations();
   const router = useRouter();
@@ -79,6 +79,7 @@ export function IssueSheet({ id, anchor, onClose }: SheetProps) {
   return (
     <AnchoredSheet
       {...geometry(anchor)}
+      actions={primary}
       chips={[
         item.sourceStatus ? `${source} · ${item.sourceStatus.name}` : source,
         `ZIBBY · ${stateLabel}`,
@@ -89,7 +90,6 @@ export function IssueSheet({ id, anchor, onClose }: SheetProps) {
         t("bridge.sheet.updated", { when: updated }),
       ]}
       closeLabel={t("bridge.sheet.close")}
-      footerEnd={primary}
       kind={`${t("bridge.sheet.kind.issue")} · ${source} · ${itemKey(item)}`}
       onClose={onClose}
       stateLabel={stateLabel}

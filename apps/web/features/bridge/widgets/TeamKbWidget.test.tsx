@@ -96,7 +96,7 @@ describe("TeamKbWidget", () => {
     expect(props.onEmptyChange).toHaveBeenLastCalledWith(false);
   });
 
-  it("renders questions and agreements as links, with count and team name in the header", () => {
+  it("renders questions and agreements as rows that open the note sheet, with count and team name in the header", async () => {
     d.digest = {
       questions: [
         { text: "Q1", noteId: "meetings/a b.md", noteTitle: "Sync A", date: "2026-10-01" },
@@ -118,10 +118,13 @@ describe("TeamKbWidget", () => {
     ).toHaveLength(1);
     const rows = screen.getAllByTestId(TeamKbWidgetTestId.Row);
     expect(rows).toHaveLength(3);
-    expect(rows[0]).toHaveAttribute(
-      "href",
-      `/knowledge/vault?source=team%3Adevrel&note=${encodeURIComponent("meetings/a b.md")}`,
-    );
+    await userEvent.click(rows[2]!);
+    expect(props.onOpen).toHaveBeenCalledWith({
+      kind: "note",
+      id: "devrel:meetings/a b.md",
+      widgetId: "w-kb",
+      key: "w-kb:decisions:0",
+    });
     expect(props.onCountChange).toHaveBeenLastCalledWith(
       expect.objectContaining({ count: 3, aside: "DevRel" }),
     );

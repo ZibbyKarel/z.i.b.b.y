@@ -1,36 +1,25 @@
 "use client";
 
 import type { QuickAction, QuickActionTarget } from "@zibby/contracts";
-import {
-  BoardLine,
-  BoardRow,
-  BoardText,
-  Button,
-  Container,
-  Dropdown,
-  Stack,
-  TextInputField,
-} from "@zibby/design-system";
+import { BoardLine, BoardRow, BoardText, Button, Container } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAgentsQuery } from "../../agents/queries";
-import { useSetQuickActionsMutation } from "../../quick-actions/mutations";
-import { getQuickActionsQueryKey, useQuickActionsQuery } from "../../quick-actions/queries";
-import { CommandLine } from "../../tasks/components/CommandLine/CommandLine";
+import { useResolvedQuickActions } from "../../quick-actions/useResolvedQuickActions";
+import {
+  type UpdateQuickActions,
+  useUpdateQuickActions,
+} from "../../quick-actions/useUpdateQuickActions";
 import { useCreateTaskMutation } from "../../tasks/mutations";
 import { useWorkflowsQuery } from "../../workflows/queries";
+import { type NamedEntity, QuickActionForm } from "./QuickActionForm";
 import type { BridgeWidgetProps } from "./registry";
 import { useWidgetReport } from "./useWidgetReport";
 
 export enum QuickActionsWidgetTestId {
   Run = "quick-actions-run",
   Remove = "quick-actions-remove",
-  Label = "quick-actions-label",
-  Text = "quick-actions-text",
-  Target = "quick-actions-target",
-  Add = "quick-actions-add",
-  Form = "quick-actions-form",
+  New = "quick-actions-new",
 }
 
 const newId = () => `qa-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -44,26 +33,25 @@ export function QuickActionsWidget({
   editing,
   onEmptyChange,
   onCountChange,
+  selection,
+  onOpen,
+  sheetSide,
 }: BridgeWidgetProps) {
-  const query = useQuickActionsQuery();
+  const query = useResolvedQuickActions();
   const agentsQuery = useAgentsQuery();
   const workflowsQuery = useWorkflowsQuery();
-  const set = useSetQuickActionsMutation();
-  const queryClient = useQueryClient();
+  const t = useTranslations("bridge.widgets.quickActions");
+  // Lets the operator add an action without entering layout edit mode.
+  const [adding, setAdding] = useState(false);
   const actions = useMemo(() => query.data ?? [], [query.data]);
   const agents = agentsQuery.data;
   const workflows = workflowsQuery.data;
+  const { update, pending } = useUpdateQuickActions(actions);
 
   useWidgetReport(
-    { loading: query.isPending, count: actions.length, you: 0 },
+    { loading: query.isPending, count: actions.length, you: 0, keepOpen: true },
     { onEmptyChange, onCountChange },
   );
-
-  /** Apply `change` to the latest cached list (not the possibly stale rendered one) and PUT it. */
-  const update: UpdateActions = (change, onSuccess) => {
-    const cached = queryClient.getQueryData<{ body: QuickAction[] }>(getQuickActionsQueryKey());
-    set.mutate({ body: change(cached?.body ?? actions) }, { onSuccess });
-  };
 
   return (
     <>
@@ -73,36 +61,61 @@ export function QuickActionsWidget({
           agents={agents}
           editing={editing}
           key={a.id}
-          pending={set.isPending}
+          onOpen={() =>
+            onOpen({
+              kind: "quickAction",
+              id: a.id,
+              widgetId: widget.id,
+              key: `${widget.id}:${a.id}`,
+            })
+          }
+          pending={pending}
           rowKey={`${widget.id}:${a.id}`}
+          selected={selection?.key === `${widget.id}:${a.id}`}
+          sheetSide={sheetSide}
           update={update}
           workflows={workflows}
         />
       ))}
-      {editing ? (
-        <QuickActionAdd
+      {editing || adding ? (
+        <QuickActionForm
           agents={agents ?? []}
-          full={actions.length >= MAX_ACTIONS}
-          pending={set.isPending}
-          update={update}
+          disabled={actions.length >= MAX_ACTIONS}
+          onSubmit={(values, done) =>
+            update(
+              (latest) => [...latest, { id: newId(), ...values }],
+              () => {
+                done();
+                setAdding(false);
+              },
+            )
+          }
+          pending={pending}
+          submitLabel={t("add")}
           workflows={workflows ?? []}
         />
       ) : null}
+      {editing ? null : (
+        <Container padding={["100", "150"]}>
+          <Button
+            data-testid={QuickActionsWidgetTestId.New}
+            disabled={actions.length >= MAX_ACTIONS}
+            icon={adding ? "x" : "plus"}
+            intent="ghost"
+            onClick={() => setAdding((v) => !v)}
+            size="sm"
+          >
+            {adding ? t("cancel") : t("new")}
+          </Button>
+        </Container>
+      )}
     </>
   );
 }
 
-type UpdateActions = (
-  change: (latest: QuickAction[]) => QuickAction[],
-  onSuccess?: () => void,
-) => void;
-
-type NamedEntity = { id: string; name?: string | undefined };
-
 /** Visible hide of the "Queued" hint after a run. */
 const QUEUED_MS = 5000;
 const MAX_ACTIONS = 50;
-const MAX_TEXT = 8000;
 
 interface QuickActionRowProps {
   action: QuickAction;
@@ -111,7 +124,10 @@ interface QuickActionRowProps {
   editing: boolean;
   pending: boolean;
   rowKey: string;
-  update: UpdateActions;
+  selected: boolean;
+  sheetSide: BridgeWidgetProps["sheetSide"];
+  onOpen: () => void;
+  update: UpdateQuickActions;
 }
 
 function QuickActionRow({
@@ -121,6 +137,9 @@ function QuickActionRow({
   editing,
   pending,
   rowKey,
+  selected,
+  sheetSide,
+  onOpen,
   update,
 }: QuickActionRowProps) {
   const t = useTranslations("bridge.widgets.quickActions");
@@ -181,7 +200,10 @@ function QuickActionRow({
           </Button>
         )
       }
+      onClick={editing ? undefined : onOpen}
       rowKey={rowKey}
+      selected={selected}
+      sheetSide={sheetSide}
       tone="idle"
     >
       <BoardText kind="title">{a.label}</BoardText>
@@ -191,116 +213,5 @@ function QuickActionRow({
         </BoardText>
       </BoardLine>
     </BoardRow>
-  );
-}
-
-interface QuickActionAddProps {
-  agents: NamedEntity[];
-  workflows: NamedEntity[];
-  full: boolean;
-  pending: boolean;
-  update: UpdateActions;
-}
-
-function QuickActionAdd({ agents, workflows, full, pending, update }: QuickActionAddProps) {
-  const t = useTranslations("bridge.widgets.quickActions");
-  const [label, setLabel] = useState("");
-  const [text, setText] = useState("");
-  // Bumped after a successful add to remount (and so clear) the CommandLine.
-  const [textKey, setTextKey] = useState(0);
-  const [choice, setChoice] = useState("");
-
-  const { options, targets } = useMemo(() => {
-    const targets = new Map<string, QuickActionTarget>();
-    const opts = [{ value: "", label: t("auto") }];
-    for (const a of agents) {
-      const name = a.name ?? a.id;
-      targets.set(`agent:${a.id}`, { kind: "agent", id: a.id, name });
-      opts.push({ value: `agent:${a.id}`, label: name });
-    }
-    for (const w of workflows) {
-      const name = w.name ?? w.id;
-      targets.set(`workflow:${w.id}`, { kind: "workflow", id: w.id, name });
-      opts.push({ value: `workflow:${w.id}`, label: name });
-    }
-    return { options: opts, targets };
-  }, [agents, workflows, t]);
-
-  const blank = !label.trim() || !text.trim() || text.length > MAX_TEXT || full;
-
-  /** Add the action; `body` overrides the mirrored `text` when Enter in the CommandLine submits. */
-  const add = (body: string) => {
-    if (!label.trim() || !body.trim() || body.length > MAX_TEXT || full || pending) return;
-    const target = targets.get(choice);
-    update(
-      (latest) => [
-        ...latest,
-        { id: newId(), label: label.trim(), text: body.trim(), ...(target ? { target } : {}) },
-      ],
-      () => {
-        setLabel("");
-        setText("");
-        setTextKey((k) => k + 1);
-        setChoice("");
-      },
-    );
-  };
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    add(text);
-  };
-
-  return (
-    <Container
-      as="form"
-      data-testid={QuickActionsWidgetTestId.Form}
-      onSubmit={submit}
-      padding={["100", "150"]}
-    >
-      <Stack gap="100">
-        <TextInputField
-          hideLabel
-          data-testid={QuickActionsWidgetTestId.Label}
-          label={t("label")}
-          maxLength={80}
-          onChange={(e) => setLabel(e.target.value)}
-          placeholder={t("labelPlaceholder")}
-          value={label}
-        />
-        <Container data-testid={QuickActionsWidgetTestId.Text}>
-          <CommandLine
-            allowSkillMentions
-            chrome={false}
-            key={textKey}
-            label={t("text")}
-            onSubmit={add}
-            onTextChange={setText}
-            placeholder={t("textPlaceholder")}
-            renderTrailing={() => null}
-            resetOnSubmit={false}
-            showAttach={false}
-          />
-        </Container>
-        <Stack align="center" direction="row" gap="100">
-          <Stack data-testid={QuickActionsWidgetTestId.Target}>
-            <Dropdown
-              aria-label={t("target")}
-              onChange={setChoice}
-              options={options}
-              value={choice}
-            />
-          </Stack>
-          <Button
-            data-testid={QuickActionsWidgetTestId.Add}
-            disabled={blank || pending}
-            intent="secondary"
-            loading={pending}
-            type="submit"
-          >
-            {t("add")}
-          </Button>
-        </Stack>
-      </Stack>
-    </Container>
   );
 }

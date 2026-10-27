@@ -32,8 +32,9 @@ Do NOT judge the images yourself. Read `$ZIBBY_RUN_DIR/book/plan.json`,
 `$ZIBBY_RUN_DIR/book/preflight.json` and write the file you are told to produce:
 
 - `# Book ready for your review`
-- the absolute paths `$ZIBBY_RUN_DIR/book/interior.pdf` and `$ZIBBY_RUN_DIR/book/cover.pdf`
-  (expand `$ZIBBY_RUN_DIR` to the real path),
+- the absolute paths `$ZIBBY_RUN_DIR/book/interior.pdf`, `$ZIBBY_RUN_DIR/book/cover.pdf`
+  and `$ZIBBY_RUN_DIR/book/cover-front.png` (the front cover as an image, for a quick
+  look; expand `$ZIBBY_RUN_DIR` to the real path),
 - title, page count, preflight result (pass/warnings) in two or three lines,
 - one line: "Approve to finish. To change something, send it back with a note
   (e.g. `cover: more animals`, `page 7: dog is scary`, `all pages: thicker lines`)."
@@ -45,10 +46,13 @@ End with exactly `<verdict>pass</verdict>`.
 The note is authoritative. Map it to pages (`0` = the full-colour cover art, `1..N` =
 coloring pages; "all pages" = every page, "title" / "titulka" / "obálka" = `0`;
 captions, title text, cover colours (`cover.background` / `titleFill` /
-`titleOutline`) and badges belong to the plan, so for such a change edit
+`titleOutline` / `titlePalette`), where a title buddy sits (`titleBuddies[].at` /
+`anchor`) and badges belong to the plan, so for such a change edit
 `$ZIBBY_RUN_DIR/book/plan.json` with Edit and keep it valid JSON, no page rejected
 needed). Then un-approve the pages it names:
 `product-factory reject 0,7 --reason "the operator's wording, one line, no < or > characters"`.
-Change nothing the note does not ask for. Write a short list of what you did to the
+A character's looks (`characters[].spec`) and a title buddy's `pose` are drawn by the
+cast phase, which a send-back does not re-run: say in your file that such a change needs
+a new run, and do not edit them. Change nothing the note does not ask for. Write a short list of what you did to the
 file you are told to produce and end with `<verdict>gap</verdict>` when you rejected
 pages, or `<verdict>pass</verdict>` when only text in the plan changed.

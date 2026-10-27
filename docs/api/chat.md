@@ -15,6 +15,7 @@ of the conversation.
 | `POST`       | `/api/chat/messages`                   | Adds the operator's turn and starts the streaming reply. Body: see [Send body](#send-body) → `{ conversationId, turnId }` (returns immediately; tokens arrive over SSE).                                                                                    |
 | `GET`        | `/api/chat/transcript?conversationId=` | Plain read of the conversation transcript (`{ conversationId, sessionId, messages }`). Without `conversationId` → the active thread.                                                                                                                        |
 | `GET`        | `/api/chat/conversations?q=`           | Past conversations for the history sidebar, newest first: `[{ conversationId, title, messageCount, updatedAt }]`. `title` = first operator turn (truncated to 80 chars); empty threads skipped; `q` = case-insensitive substring over every message's text. |
+| `POST`       | `/api/chat/handoff`                    | "Create task" from chat. Body `{ conversationId, upToMessageId? }` → `{ text, compacted, transcriptPath }`: a task description carrying the conversation up to that reply — see [Hand-off](#hand-off-create-task-from-chat). No messages → 404.             |
 | `GET`        | `/api/chat/stream?conversationId=`     | **SSE** (raw `@Sse()`, outside ts-rest) — live tokens. Each `data` is a JSON `ChatTurnEvent`.                                                                                                                                                               |
 | `POST`/`GET` | `/api/chat/mcp`                        | In-process **MCP server** (Streamable HTTP) exposing ZIBBY's tools. Called by the spawned `claude` process, not the frontend — gated by `ChatMcpAuthGuard` (see below); `GET` is an unguarded 405 (no server-initiated streaming needed).                   |
 
@@ -37,6 +38,19 @@ of the conversation.
 An unknown `teamId` / `projectId` / `companyId` / `skillId` → **404**, before
 anything is written. The tags are one-turn: the web composer clears them after
 every send (`useCooChat`).
+
+### Hand-off (create task from chat)
+
+`ChatHandoffService` (`chat-handoff.service.ts`) builds the New Task description
+for the dock's "Create task" button, so a task never gets only the clicked reply.
+It renders the transcript up to (and including) `upToMessageId` as
+`**Operator:**` / `**ZIBBY:**` blocks (text only). Up to
+`HANDOFF_COMPACT_THRESHOLD_CHARS` (8000) it goes in verbatim; a longer thread is
+compacted by a one-shot `claude -p --model sonnet` call into an implementation
+brief (`compacted: true`). If compaction fails, the last 8000 characters are used
+instead. The description always references the full `<id>.jsonl`
+(`ChatTranscriptStore.transcriptPath`); the New Task form detects that path and
+attaches it to the task. A pure read — nothing is written.
 
 ### `ChatTurnEvent` (SSE payload)
 
@@ -251,6 +265,11 @@ in ZB-13 — see `docs/web/overview.md`'s ZB-12/ZB-13 notes.
   `mentions`. The dock's O-20 department scope, when set, is used as the
   turn's sole mention whenever the composer's own picked list is empty
   (`useCooChat.send`'s fallback) — a per-turn `@`-mention still wins outright.
+- The dock has no small "mini chat" state: once open it is always full size
+  (the DS `ChatDock` expand/collapse toggle was removed 2026-10-26).
+- "Create task" on a settled reply calls `POST /api/chat/handoff` and opens
+  `/work/tasks/new` prefilled with the hand-off text; if that call fails, the
+  form gets the reply plus a pointer to the conversation id.
 
 ## MVP scope
 

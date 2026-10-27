@@ -1,0 +1,1 @@
+{"id":"shoptet-outlook-mail","kind":"email","companyId":"shoptet","name":"Outlook Mail","enabled":false,"config":{"kind":"email","imapHost":"outlook.office365.com","imapPort":993,"smtpHost":"smtp.office365.com","smtpPort":587,"user":"zibar@shoptet.cz","mailbox":"zibar@shoptet.cz"}}

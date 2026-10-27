@@ -1351,6 +1351,7 @@
         "revise": "Revise",
         "reject": "Reject",
         "wouldPublish": "Would publish · {files} files · +{add} −{del}",
+        "errorHead": "Failed",
         "questionHead": "Needs you · question from {agent}",
         "questionHint": "Answer below · the run resumes when you reply",
         "parkedHead": "Parked · stage {n} {name} · {att} attempts",
@@ -1929,6 +1930,8 @@
     "active": "active",
     "off": "off",
     "edit": "Edit",
+    "pinQuickAction": "Pin to quick actions",
+    "unpinQuickAction": "Unpin from quick actions",
     "runNow": "Run now",
     "lastRun": "last run {ago}",
     "neverRun": "never run",
@@ -2069,8 +2072,6 @@
     "title": "Chat with ZIBBY",
     "close": "Close",
     "newChat": "Clear",
-    "expand": "Expand chat",
-    "collapse": "Collapse chat",
     "triggerLabel": "Chat",
     "triggerAria": "Open chat with ZIBBY",
     "triggerTitle": "Chat with ZIBBY",
@@ -3218,6 +3219,9 @@
         "deleteLabel": "Delete “{name}”"
       },
       "quickActions": {
+        "edit": "Edit",
+        "save": "Save",
+        "kind": "Quick action",
         "run": "Run",
         "runLabel": "Run {label}",
         "remove": "Remove",
@@ -3230,6 +3234,8 @@
         "textPlaceholder": "What should be done…",
         "target": "Target",
         "add": "Add",
+        "new": "New action",
+        "cancel": "Cancel",
         "targetMissing": "Target no longer exists"
       },
       "teamKb": {
@@ -3343,7 +3349,8 @@
         "issue": "Issue",
         "task": "Task",
         "pr": "Pull request",
-        "run": "Run"
+        "run": "Run",
+        "note": "Note"
       },
       "needsYou": "Needs you · {kind}",
       "waiting": "Waiting {wait}",

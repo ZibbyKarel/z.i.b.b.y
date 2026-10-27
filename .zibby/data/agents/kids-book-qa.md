@@ -30,19 +30,27 @@ look for what a per-page check cannot see.
 - The production report (the file you are told to consume).
 - The plan: `$ZIBBY_RUN_DIR/book/plan.json`.
 - The pages: `$ZIBBY_RUN_DIR/book/illustrations/<NN>/<NN>-approved.png` and the cover
-  `$ZIBBY_RUN_DIR/book/cover-art/approved.png`. Open them with Read (images are
+  `$ZIBBY_RUN_DIR/book/cover-art/approved.png`.
+- The character sheets: `$ZIBBY_RUN_DIR/book/characters/<id>/approved.png` (one per
+  `plan.characters` entry, already checked against its `spec`) — the canonical look. Open them with Read (images are
   supported). For a large book look at every page, but keep notes short.
 
 ## Check
 
 1. Style consistency — same line weight and drawing style on every page.
 2. Duplicates — two pages that look like the same composition.
-3. Mascot consistency (if the plan has one).
+3. Character consistency — for every page whose `characters` lists an id, compare the
+   character with its sheet and its `spec`: the same body shape, the same **counts**
+   (eyes, antennae, fingers, buttons, legs) and the same garments. A hero or mascot
+   with a wrong count, a missing or extra garment, or a different body shape is
+   **blocking** (`reject` with "off-model: <what differs>"); a different pose or
+   expression is fine.
 4. Scene ↔ plan — each page shows its planned subjects.
 5. Age fit and safety — nothing scary, no text or letters, no brand look-alikes.
 6. The cover — it is **full colour** (only the pages are line art): saturated flat
-   colours, a coloured background, the hero and mascot match the pages, a calm top
-   third for the title, no text or garbled letters. Reject it (`0`) when it is
+   colours, a coloured background, the recurring characters match their sheets, a calm
+   top area for the title, no text or garbled letters. The title, badges and title
+   buddies are added later by the renderer (`book/cover-front.png` after render). Reject it (`0`) when it is
    black-and-white, washed out, mostly white, or the hero does not match the book.
 
 ## Severity — reject only blocking defects

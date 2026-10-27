@@ -31,11 +31,14 @@ import {
   useUpdateAutomationMutation,
 } from "./mutations";
 import { useAutomationQuery } from "./queries";
+import { useQuickActionsQuery } from "../quick-actions/queries";
+import { useUpdateQuickActions } from "../quick-actions/useUpdateQuickActions";
 
 export enum AutomationDetailScreenTestId {
   Save = "automation-detail-save",
   Run = "automation-detail-run",
   Delete = "automation-detail-delete",
+  Pin = "automation-detail-pin",
   Name = "automation-detail-name",
   Description = "automation-detail-description",
 }
@@ -77,6 +80,10 @@ function AutomationEditor({ automation }: { automation: Automation }) {
   const deleteAutomation = useDeleteAutomationMutation();
   const triggerAutomation = useTriggerAutomationMutation();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const quickActions = useQuickActionsQuery().data;
+  const { update: updateQuickActions, pending: pinPending } = useUpdateQuickActions(
+    quickActions ?? [],
+  );
   const form = useAutomationFormState(automation);
   const [nameDraft, setNameDraft] = useState(automation.name ?? "");
   const [descriptionDraft, setDescriptionDraft] = useState(automation.description ?? "");
@@ -88,6 +95,24 @@ function AutomationEditor({ automation }: { automation: Automation }) {
   const target = automation.target;
   const isTask = target.type === "task";
   const name = automation.name ?? automation.id;
+  // Only a `task` automation carries a prompt, so only it can be pinned as a quick action.
+  const pinId = `automation:${automation.id}`;
+  const pinned = quickActions?.some((x) => x.id === pinId) ?? false;
+  const togglePin = () =>
+    updateQuickActions((latest) => {
+      if (latest.some((x) => x.id === pinId)) return latest.filter((x) => x.id !== pinId);
+      if (target.type !== "task") return latest;
+      // Label/text are a fallback copy — the widget reads the live ones via `automationId`.
+      return [
+        ...latest,
+        {
+          id: pinId,
+          automationId: automation.id,
+          label: name.slice(0, 80),
+          text: target.text.slice(0, 8000),
+        },
+      ];
+    });
   // System AND the legacy schedule-only fallback both persist ONLY the trigger —
   // the target/name (system: server-owned; legacy: no picker to edit it with) never
   // moves through this path.
@@ -143,6 +168,18 @@ function AutomationEditor({ automation }: { automation: Automation }) {
               >
                 {t("runNow")}
               </Button>
+              {isTask && quickActions && (
+                <Button
+                  data-testid={AutomationDetailScreenTestId.Pin}
+                  icon="pin"
+                  intent="ghost"
+                  loading={pinPending}
+                  onClick={togglePin}
+                  size="sm"
+                >
+                  {pinned ? t("unpinQuickAction") : t("pinQuickAction")}
+                </Button>
+              )}
               {!isSystem && (
                 <Button
                   data-testid={AutomationDetailScreenTestId.Delete}

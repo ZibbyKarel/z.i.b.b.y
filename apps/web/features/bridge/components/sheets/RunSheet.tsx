@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useApprovalsQuery } from "../../../approvals";
 import { useApprovalSheetParam } from "../../../approvals/useApprovalSheetParam";
 import { useTaskRunQuery } from "../../../runs/queries/useTaskRunQuery";
-import { RunDetail } from "../../../runs/components/RunDetail";
+import { RunDetail, RunHeaderActions } from "../../../runs/components/RunDetail";
 import { approvalForRun, runStateTone } from "../../../runs/run";
 import { useCheckpointArtifact } from "../../../runs/useCheckpointArtifact";
 import { type SheetProps, geometry } from "./sheetTypes";
@@ -15,7 +15,7 @@ import { type SheetProps, geometry } from "./sheetTypes";
 /**
  * Run detail from `GET /api/tasks/runs/:id`: the very same `RunDetail` the run page renders
  * (approval banner, phases, metrics, LIVE / INPUT / OUTPUT, composer) — one source, so the two
- * never drift — with the gated phase's output (a stage checkpoint) slotted inside the approval card. The
+ * never drift; its action buttons sit top-right in the sheet header like every sheet's — with the gated phase's output (a stage checkpoint) slotted inside the approval card. The
  * run / task pages are one footer click away.
  */
 export function RunSheet({ id, anchor, onClose }: SheetProps) {
@@ -32,6 +32,7 @@ export function RunSheet({ id, anchor, onClose }: SheetProps) {
   return (
     <AnchoredSheet
       {...geometry(anchor)}
+      actions={<RunHeaderActions run={run} />}
       closeLabel={t("bridge.sheet.close")}
       kind={
         run.kind === "workflow"

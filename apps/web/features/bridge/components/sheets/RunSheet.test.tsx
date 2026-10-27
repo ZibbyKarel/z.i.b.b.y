@@ -44,6 +44,7 @@ vi.mock("../../../runs/components/RunDetail", () => ({
       {children}
     </div>
   ),
+  RunHeaderActions: () => <button type="button">Stop</button>,
 }));
 vi.mock("../../../workflows", () => ({
   useWorkflowsQuery: () => ({
@@ -88,5 +89,10 @@ describe("RunSheet", () => {
     expect(screen.queryByTestId(NeedsYouCardTestId.Root)).not.toBeInTheDocument();
     expect(screen.getByTestId("run-detail")).toHaveTextContent("wf_1 embedded");
     expect(screen.getByTestId("run-detail")).toHaveTextContent("Audit report");
+  });
+
+  it("puts the run actions in the sheet header", () => {
+    renderWithProviders(<RunSheet anchor={anchor} id="wf_1" onClose={() => {}} />);
+    expect(screen.getByTestId(AnchoredSheetTestId.Actions)).toHaveTextContent("Stop");
   });
 });

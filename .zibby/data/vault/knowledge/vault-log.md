@@ -40,3 +40,8 @@ tags:
 - 2026-10-24 03:00 | index | [[department-qa-moc]]
 - 2026-10-24 03:00 | index | [[department-dev-moc]]
 - 2026-10-24 03:00 | index | [[department-rnd-moc]]
+- 2026-10-27 03:00 | create | [[distilled-2026-10-27]]
+- 2026-10-27 03:00 | index | [[publishing]]
+- 2026-10-27 03:00 | index | [[department-dev-moc]]
+- 2026-10-27 03:00 | index | [[department-qa-moc]]
+- 2026-10-27 03:00 | index | [[department-pub-moc]]

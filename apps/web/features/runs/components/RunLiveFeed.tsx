@@ -14,7 +14,12 @@ import type { DashboardApproval } from "../../approvals/approval";
 import type { RunView } from "../run";
 import type { FeedItem, RunMode, StageRailRow } from "../runDetailModel";
 import { GoalDetailPanel } from "./GoalDetailPanel";
-import { LimitPausedPanel, RunParkedBanner, RunQuestionBanner } from "./RunFeedBanners";
+import {
+  LimitPausedPanel,
+  RunErrorBanner,
+  RunParkedBanner,
+  RunQuestionBanner,
+} from "./RunFeedBanners";
 
 export enum RunLiveFeedTestId {
   Root = "run-live-feed",
@@ -94,6 +99,9 @@ export function RunLiveFeed({ run, mode, approval, items, rail = [] }: RunLiveFe
           agentName={approval.skill}
           question={approval.summary ?? approval.text ?? approval.detail}
         />
+      )}
+      {mode === "error" && run.taskOutcomeSummary && (
+        <RunErrorBanner reason={run.taskOutcomeSummary} />
       )}
       {mode === "parked" && <RunParkedBanner run={run} stage={parkedStage} />}
       {mode === "limit" && <LimitPausedPanel run={run} />}

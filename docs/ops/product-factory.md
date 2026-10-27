@@ -42,6 +42,7 @@ Put them in the project **env** unless marked **secret**.
 | `PF_THRESHOLD`                                                    | 160                                        | black/white threshold                                                                          |
 | `PF_MAX_GRAY` / `PF_MIN_INK` / `PF_MAX_INK` / `PF_MAX_MARGIN_INK` | 0.08 / 0.01 / 0.35 / 0.0005                | pixel QA limits                                                                                |
 | `PF_MIN_COLOR` / `PF_MAX_WHITE`                                   | 0.25 / 0.45                                | cover QA: min saturated / max near-white share                                                 |
+| `PF_MAX_BUSY`                                                     | 0.15                                       | cover QA: max busy share under the title / badges                                              |
 | `PF_CONCURRENCY`                                                  | 1                                          | vision QA concurrency                                                                          |
 | `PF_IMAGE_PROVIDER`                                               | `mock`                                     | `mock`, `mflux`, `fal`                                                                         |
 | `PF_VISION_PROVIDER`                                              | `none`                                     | `none`, `mock`, `ollama`, `haiku`                                                              |
@@ -66,6 +67,10 @@ Two models resident at once swaps the machine to death, so phases never overlap:
 
 1. Before an mflux batch the provider asks Ollama to unload every loaded model (`/api/ps` + `keep_alive: 0`).
 2. The Python driver (`py/mflux_batch.py`) loads the image model once and generates the whole round, then exits.
+   A round with reference images (recurring characters, title buddies) runs in two passes inside the
+   same process: text-to-image items with `Flux2Klein`, then the edit items with `Flux2KleinEdit`
+   (the edit class cannot run without `image_paths`). Only one model is resident at a time.
+   Edit is FLUX.2 klein only; `z-image-turbo` with reference images fails the batch.
 3. Vision QA runs after the whole round (`keep_alive: 10m` while judging); the provider unloads the model afterwards (`dispose()`).
 4. Keep `PF_CONCURRENCY=1`. Never run `mflux` by hand while a vision pass is running.
 

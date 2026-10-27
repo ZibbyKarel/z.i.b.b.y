@@ -42,6 +42,7 @@ export function createMfluxImageProvider(
           seed: i.seed,
           width: i.width,
           height: i.height,
+          ...(i.referenceImages?.length ? { images: i.referenceImages } : {}),
           out: path.join(outDir, `${i.key}.png`),
         })),
       };

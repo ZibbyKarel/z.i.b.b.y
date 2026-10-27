@@ -73,3 +73,12 @@
 19. [ ] PullRequest detail - seznam souborů by měl být možný dragand dropem rozšířit a zúžit. Defaultní šířka bude 25%
 20. [ ] Detail běhu - u každé fáze jako první musím vidět jaký o model se jedná.
 21. [ ] u Pull requestů, které jsou ke schválení musíme rozllišit zde čeká na schválení ode mě (případně mého týmu) nebo zda čeká na schválení od někoho jiného a já (případně můj tým) už code-review udělal a dal na pull request aproove nebo require-changes
+22. [ ] Widgety musí jít zmenšovat a zvětšovat z každého rohu a né jen z pravého spodního
+23. [ ] Widgety je možné editovat vždy. Smažeme možnost přechodu do editačního režumu a widgety pujdou vždy přesouvat a zvětšovat/zmenšovat
+24. [ ] Výchozí layout pujde v dialogu správy layoutů přesunout pod čaru + v dialogu smažeme čipky na přesun a layoouty pujdou vždy jen přesouvat pomocí drag and dropu
+25. [ ] na detailu PR smažeme tlačítko "Metge na githubu"
+26. [ ] widget běhy - smažeme progress bary tam kde není stav runnyng. Potřebuju progress bar jen když běh reálně běží. U ostatních stavů zobrazíme místo progress baru ikonku v barvě stavu - error, waiting, success a další
+27. [ ] coloring-book workflow - ve fázi produkce nemám žádný log. Chci vidět průběh produkce (co se zrovna generuje, výstupy, chyby) v detailu běhu.
+28. [ ] pokud ve workflow existuje zpětný krok kdy se práce vrací z fáze B do fáze A na přepracování - musím pak u fáze A vidět v logu dvě sekce "Kolo 1" a "Kolo 2" kde defaultně bude vždy poslední kolo rozbalené a ostatní kola budou v accordion komponentě sbalené. Accordion bude vždy mít rozbalenou jen jedno kolo
+29. [ ] Nová feature - ChatAboutThis - idea je taková, že u čehoholiv v systému můžu kliknout na ikonku chatu u toho a můžu mluvit v chatu o tom. Musíme tedy zajistit předání správného contextu do okna chatu. Zkus to zatím udělat u detailu PR. U detailu PR tedy přibude tlačítko "Chat" - zkus to nějak odlišit aby to nebylo jen jako ikonka chatu ale působilo to opravdu jako "pojďme si o tomto promluvit v chatu" a po kliku se otevře chatovací okno, kde bude načten kontext. Chceme to udělat obecně protože tuto fíčuru budeme chtít používat napříč webem a ani teď sáme nevím u čeho všeho ji budeme chtít.
+30. [ ] v chatovacím okně jdou měnit modely Haiku/Sonnet/Opus/Fable tak jak je to u claude code normální

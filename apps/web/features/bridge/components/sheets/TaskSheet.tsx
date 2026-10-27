@@ -84,14 +84,7 @@ export function TaskSheet({ id, anchor, onClose }: SheetProps) {
   return (
     <AnchoredSheet
       {...geometry(anchor)}
-      chips={[
-        task.department ? dept(task.department) : t("bridge.sheet.task.noDepartment"),
-        task.projectId ?? t("bridge.sheet.task.noProject"),
-        ...(task.source ? [t("bridge.sheet.task.from", { source: task.source })] : []),
-        t("bridge.sheet.created", { when: compactAgo(task.createdAt, now) }),
-      ]}
-      closeLabel={t("bridge.sheet.close")}
-      footerEnd={
+      actions={
         approval && isHighRisk(approval) ? (
           <SheetAction
             intent="primary"
@@ -101,6 +94,13 @@ export function TaskSheet({ id, anchor, onClose }: SheetProps) {
           </SheetAction>
         ) : null
       }
+      chips={[
+        task.department ? dept(task.department) : t("bridge.sheet.task.noDepartment"),
+        task.projectId ?? t("bridge.sheet.task.noProject"),
+        ...(task.source ? [t("bridge.sheet.task.from", { source: task.source })] : []),
+        t("bridge.sheet.created", { when: compactAgo(task.createdAt, now) }),
+      ]}
+      closeLabel={t("bridge.sheet.close")}
       kind={`${t("bridge.sheet.kind.task")} · TSK-${task.id.slice(-4).toUpperCase()}`}
       onClose={onClose}
       onTitleClick={() => router.push(`/work/tasks/${task.id}` as Route)}

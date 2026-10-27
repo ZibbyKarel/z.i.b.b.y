@@ -196,3 +196,27 @@ export const SendChatMessageResultSchema = z.object({
   turnId: z.string(),
 });
 export type SendChatMessageResult = z.infer<typeof SendChatMessageResultSchema>;
+
+/**
+ * "Create task" from chat — hand the WHOLE conversation to a task, not just the
+ * clicked reply. The server reads the transcript up to (and including)
+ * `upToMessageId`, compacts it with a one-shot `claude` call when it's long, and
+ * returns a ready task description that carries the context inline plus a
+ * reference to the full on-disk transcript.
+ */
+export const ChatHandoffBodySchema = z.object({
+  conversationId: z.string().min(1),
+  /** The reply the operator clicked "Create task" on; later turns are left out. */
+  upToMessageId: z.string().optional(),
+});
+export type ChatHandoffBody = z.infer<typeof ChatHandoffBodySchema>;
+
+export const ChatHandoffSchema = z.object({
+  /** The prefilled task description (instruction + context + transcript reference). */
+  text: z.string(),
+  /** True when the context was compacted rather than carried verbatim. */
+  compacted: z.boolean(),
+  /** Absolute path of the full `<id>.jsonl` transcript the description references. */
+  transcriptPath: z.string(),
+});
+export type ChatHandoff = z.infer<typeof ChatHandoffSchema>;

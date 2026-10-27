@@ -5,7 +5,9 @@ import { type SheetAnchor, anchorChanged, measureSheet } from "../state/measure"
 import { findRow, useRowKeyNav } from "../state/useRowKeyNav";
 import type { BridgeSelection } from "../widgets/registry";
 import { IssueSheet } from "./sheets/IssueSheet";
+import { NoteSheet } from "./sheets/NoteSheet";
 import { PrSheet } from "./sheets/PrSheet";
+import { QuickActionSheet } from "./sheets/QuickActionSheet";
 import { RunSheet } from "./sheets/RunSheet";
 import { TaskSheet } from "./sheets/TaskSheet";
 
@@ -84,6 +86,8 @@ export function DetailSheet({ selection, onClose, onSideChange }: DetailSheetPro
       {common && kind === "task" ? <TaskSheet {...common} /> : null}
       {common && kind === "pr" ? <PrSheet {...common} /> : null}
       {common && kind === "run" ? <RunSheet {...common} /> : null}
+      {common && kind === "quickAction" ? <QuickActionSheet {...common} /> : null}
+      {common && kind === "note" ? <NoteSheet {...common} /> : null}
     </>
   );
 }

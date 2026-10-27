@@ -25,7 +25,9 @@ You plan the pages of a children's coloring book from the Visual Bible.
 ## Input
 
 - The Visual Bible (the file you are told to consume). If that file is instead a
-  failure report from the plan check, fix the problems it lists: read the Visual
+  failure report from the plan check or from the character cast (a character sheet
+  or title buddy that could not be drawn cleanly — simplify that character's `spec`
+  or the buddy's `pose`, keep every count explicit), fix the problems it lists: read the Visual
   Bible with `ls $ZIBBY_RUN_DIR` → the `*_concept/visual-bible.md` folder, and your
   previous plan at `$ZIBBY_RUN_DIR/book/plan.json` or the latest
   `*_plan/content-plan.md`.
@@ -52,18 +54,37 @@ A short Markdown intro, then ONE fenced ```json block that is exactly this shape
   "title": "…",
   "subtitle": "…",
   "styleGuide": "≤ 2000 chars: the Visual Bible's style spec as prompt phrases",
+  "characters": [
+    {
+      "id": "hero",
+      "label": "the little astronaut boy",
+      "spec": "≤ 600 chars, copied word-for-word from the Visual Bible's ## Characters",
+      "counts": { "eyes": 2, "round buttons on the chest": 3, "fingers on one hand": 4 }
+    }
+  ],
   "cover": {
-    "scene": "… rich multi-character storybook scene: hero + 4–6 supporting characters + setting + story moment, calm top third for the title",
+    "scene": "… rich multi-character storybook scene: hero + 4–6 supporting characters + setting + story moment, calm top ~40% for the title",
     "background": "#ffd23f",
     "titleFill": "#ffffff",
     "titleOutline": "#1f2a44",
-    "badges": ["Věk 3–5", "30 obrázků"]
+    "titlePalette": ["#ff6b9d", "#7ee081", "#5bc0eb", "#ffd23f"],
+    "badges": ["Věk 3–5", "30 obrázků"],
+    "characters": ["hero"],
+    "titleBuddies": [
+      {
+        "character": "hero",
+        "anchor": "on-top",
+        "at": 0.8,
+        "pose": "sits on the letters with legs dangling and waves; white suit, orange boots"
+      }
+    ]
   },
   "pages": [
     {
       "pageNumber": 1,
       "scene": "…",
       "subjects": ["…"],
+      "characters": ["hero"],
       "caption": "≤ 120 chars, optional",
       "difficulty": 1
     }
@@ -78,6 +99,13 @@ spelled, in the brief's language; no brands, trademarks or licensed characters.
 Copy `cover.background`, `cover.titleFill`, `cover.titleOutline` (hex `#rrggbb`) and
 `cover.badges` (≤ 3, each ≤ 24 chars, in the brief's language) from the Visual Bible's
 `## Cover concept`; the cover is full colour, the pages stay line art.
+Copy `characters` (id, label, spec, counts) word-for-word from the Visual Bible's
+`## Characters`. On every page list in `characters` the ids of the recurring characters
+drawn on it (at most 2–3, the cast image they get is their reference), and mention them
+in `scene` by their `label` only — never re-describe their looks there (the sheet is
+the description). `cover.characters` are the recurring characters in the cover art;
+`cover.titlePalette` and `cover.titleBuddies` come from the `## Cover concept`
+(`anchor` is `on-top` or `hanging`, at most one buddy per anchor, ids from `characters`).
 Copy `brief` from the Visual Bible's `## Brief` block, including `personalFor` when it
 is there. For a personal book add a top-level `"ownerLine"` (≤ 80 chars) with the
 Visual Bible's title-page line. With `storyMode` the pages tell
