@@ -124,7 +124,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [dockOpen, setDockOpen] = useState(false);
   const [dockTarget, setDockTarget] = useState<TaskTarget | null>(null);
-  const [model, setModel] = useState<ChatModel>(readStoredModel);
+  const [model, setModelState] = useState<ChatModel>(DEFAULT_CHAT_MODEL);
   const [about, setAboutState] = useState<ChatAbout | null>(null);
   // Mirror of `about` that is current synchronously, so `openAbout` can stay
   // identity-stable and never read a stale closure between two calls.
@@ -150,13 +150,22 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }, [conversationId]);
 
+  // Read storage after mount (not in the initialiser) so the server render and
+  // the first client render agree; the pick is written only by `setModel`, so
+  // mount never clobbers a stored (even invalid) value.
   useEffect(() => {
+    // Deliberate post-mount hydration from storage (SSR-safe).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setModelState(readStoredModel());
+  }, []);
+  const setModel = useCallback((next: ChatModel) => {
+    setModelState(next);
     try {
-      window.localStorage.setItem(CHAT_MODEL_KEY, model);
+      window.localStorage.setItem(CHAT_MODEL_KEY, next);
     } catch {
       // Storage unavailable — the pick still applies, it just won't survive a reload.
     }
-  }, [model]);
+  }, []);
 
   const ensureConversation = useCallback(() => {
     setConversationId((id) => id ?? `conv_${crypto.randomUUID()}`);
@@ -235,6 +244,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       setAbout,
       openAbout,
       model,
+      setModel,
     ],
   );
 

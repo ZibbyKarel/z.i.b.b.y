@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders, screen } from "../../test/render";
@@ -335,6 +335,9 @@ describe("ChatProvider — model (todo-30)", () => {
   beforeEach(() => {
     window.localStorage.clear();
   });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   function renderStore() {
     return renderHook(() => useChat(), {
@@ -359,6 +362,18 @@ describe("ChatProvider — model (todo-30)", () => {
     expect(renderStore().result.current.model).toBe("sonnet");
   });
 
+  it("hydrates a stored pick after mount without clobbering storage", () => {
+    window.localStorage.setItem("zibby.chat.model", "opus");
+    expect(renderStore().result.current.model).toBe("opus");
+    expect(window.localStorage.getItem("zibby.chat.model")).toBe("opus");
+  });
+
+  it("does not overwrite an invalid stored value on mount", () => {
+    window.localStorage.setItem("zibby.chat.model", "gpt");
+    renderStore();
+    expect(window.localStorage.getItem("zibby.chat.model")).toBe("gpt");
+  });
+
   it("survives throwing storage", () => {
     const get = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
       throw new Error("blocked");
@@ -370,8 +385,8 @@ describe("ChatProvider — model (todo-30)", () => {
     expect(result.current.model).toBe("sonnet");
     act(() => result.current.setModel("haiku"));
     expect(result.current.model).toBe("haiku");
-    get.mockRestore();
-    set.mockRestore();
+    expect(get).toHaveBeenCalled();
+    expect(set).toHaveBeenCalled();
   });
 
   it("newChat keeps the model", () => {

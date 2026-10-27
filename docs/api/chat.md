@@ -34,6 +34,7 @@ of the conversation.
 | `projectId`       | `#`-tagged project: named in the turn's system prompt; its team becomes the KB ceiling when no `teamId` is tagged.                                                                                                                                    |
 | `companyId`       | `#`-tagged company: named in the turn's system prompt.                                                                                                                                                                                                |
 | `skillId`         | `/`-picked skill: its instructions are appended to the system prompt after the governor.                                                                                                                                                              |
+| `model`           | Model for this turn: `haiku` / `sonnet` / `opus` / `fable`; omitted → `ZIBBY_CHAT_MODEL ?? "sonnet"`.                                                                                                                                                 |
 | `about`           | "Talk about this" context `{ kind, id, label, href?, details? }` (single-line fields; `details` ≤ 24k): rendered into the system prompt as a random-boundary DATA block, never instructions. The stored user message keeps the ref without `details`. |
 
 An unknown `teamId` / `projectId` / `companyId` / `skillId` → **404**, before
@@ -142,8 +143,8 @@ it only ever returns a 405.
 ### todo-30 — per-turn model
 
 `SendChatMessageBody.model?: "haiku" | "sonnet" | "opus" | "fable"` picks the
-model for that turn (`claude --model <model>`); omitted → `sonnet`
-(`DEFAULT_CHAT_MODEL`). The persisted assistant `ChatMessage` carries the same
+model for that turn (`claude --model <model>`); omitted → the API
+falls back to `ZIBBY_CHAT_MODEL ?? "sonnet"`. The persisted assistant `ChatMessage` carries the same
 `model?` so the transcript records what answered. The dock keeps the pick
 sticky in `localStorage` (`zibby.chat.model`); it applies from the next turn and
 the thread (`--resume`) is kept.

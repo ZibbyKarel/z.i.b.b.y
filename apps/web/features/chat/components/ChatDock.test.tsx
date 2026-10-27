@@ -4,11 +4,11 @@ import type { ChatAbout, ChatMessage as ChatMessageType } from "@zibby/contracts
 import {
   ChipTestId,
   ChatDockTestId as DockFrameTestId,
+  DropdownTestId,
   TypingDotsTestId,
 } from "@zibby/design-system";
 import { useEffect } from "react";
 import { act, renderWithProviders, screen, within } from "../../../test/render";
-import { DropdownTestId } from "@zibby/design-system";
 import { CommandLineTestId } from "../../tasks/components/CommandLine/CommandLine";
 import { ChatProvider, useChat } from "../ChatContext";
 import { ChatMessageTestId } from "./ChatMessage";
@@ -209,9 +209,11 @@ describe("ChatDock (ZB-12)", () => {
       await typeAndSend("one");
       const user = userEvent.setup();
       await user.click(trigger());
-      await user.click(
-        screen.getAllByTestId(DropdownTestId.Option).find((o) => o.textContent === "Fable")!,
-      );
+      const fable = screen
+        .getAllByTestId(DropdownTestId.Option)
+        .find((o) => o.textContent === "Fable");
+      if (!fable) throw new Error("Fable option missing");
+      await user.click(fable);
       await typeAndSend("two");
       const [a, b] = sendMutate.mock.calls.map((c) => c[0].body as Record<string, unknown>);
       expect(a?.model).toBe("sonnet");
