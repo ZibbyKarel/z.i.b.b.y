@@ -120,7 +120,7 @@ describe("FileDiffView", () => {
 
       it("arrow keys resize and clamp", () => {
         const { resizer } = setup();
-        fireEvent.keyDown(resizer, { key: "ArrowRight" });
+        expect(fireEvent.keyDown(resizer, { key: "ArrowRight" })).toBe(false);
         expect(resizer).toHaveAttribute("aria-valuenow", "27");
         for (let i = 0; i < 30; i++) fireEvent.keyDown(resizer, { key: "ArrowRight" });
         expect(resizer).toHaveAttribute("aria-valuenow", "60");

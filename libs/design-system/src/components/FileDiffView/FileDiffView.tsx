@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { Diff, Hunk, parseDiff } from "react-diff-view";
 import { cn } from "../../utils/cn";
+import { focusRingInset } from "../../utils/focus";
 import { Panel } from "../Panel/Panel";
 import { Stack } from "../Stack/Stack";
 import { Typography } from "../Typography/Typography";
@@ -33,6 +34,7 @@ export interface FileDiffViewProps {
   filesLabel?: string;
   collapseLabel?: string;
   expandLabel?: string;
+  /** Accessible name of the drag handle between the rail and the diff. */
   resizeLabel?: string;
   /** Show each file's name above its hunks (default). Off when the caller already names the file. */
   showFileName?: boolean;
@@ -181,13 +183,19 @@ export function FileDiffView({
           aria-valuemax={MAX_WIDTH}
           aria-valuemin={MIN_WIDTH}
           aria-valuenow={width}
-          className="sticky top-0 h-[70vh] cursor-col-resize hover:bg-line"
+          className={cn(
+            "sticky top-0 h-[70vh] cursor-col-resize touch-none hover:bg-line",
+            focusRingInset,
+          )}
           data-testid={FileDiffViewTestId.FileListResizer}
           onKeyDown={(e) => {
-            if (e.key === "ArrowLeft") setWidth((w) => clampWidth(w - 2));
-            else if (e.key === "ArrowRight") setWidth((w) => clampWidth(w + 2));
+            if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+            e.preventDefault();
+            setWidth((w) => clampWidth(w + (e.key === "ArrowLeft" ? -2 : 2)));
           }}
-          onPointerCancel={() => (dragging.current = false)}
+          onPointerCancel={() => {
+            dragging.current = false;
+          }}
           onPointerDown={(e) => {
             e.preventDefault();
             e.currentTarget.setPointerCapture?.(e.pointerId);
@@ -198,7 +206,9 @@ export function FileDiffView({
             if (!dragging.current || !rect || rect.width === 0) return;
             setWidth(clampWidth(((e.clientX - rect.left) / rect.width) * 100));
           }}
-          onPointerUp={() => (dragging.current = false)}
+          onPointerUp={() => {
+            dragging.current = false;
+          }}
           role="separator"
           tabIndex={0}
         />
