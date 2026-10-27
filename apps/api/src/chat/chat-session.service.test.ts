@@ -887,4 +887,58 @@ describe("ChatSessionService", () => {
       expect(block).toContain("big");
     });
   });
+
+  describe("todo-30 — chat model", () => {
+    const modelOf = (args: string[]): string | undefined => args[args.indexOf("--model") + 1];
+    const delta = (text: string): string =>
+      line({
+        type: "stream_event",
+        event: { type: "content_block_delta", delta: { type: "text_delta", text } },
+      });
+    const assistantOf = async (conversationId: string) =>
+      (await store.readTranscript(conversationId)).messages.find((m) => m.role === "assistant");
+
+    it("uses the tagged model for --model, falling back to the default", async () => {
+      const svc = new TestSession(store, events, []);
+      expect(modelOf(await svc.buildArgs("ahoj", null, "c1", undefined, { model: "fable" }))).toBe(
+        "fable",
+      );
+      expect(modelOf(await svc.buildArgs("ahoj", null, "c1"))).toBe("sonnet");
+      const resumed = await svc.buildArgs("ahoj", "sess-1", "c1", undefined, { model: "opus" });
+      expect(resumed[resumed.indexOf("--resume") + 1]).toBe("sess-1");
+      expect(modelOf(resumed)).toBe("opus");
+    });
+
+    it("stamps the assistant message with the turn's model", async () => {
+      const lines = [
+        line({ type: "system", subtype: "init", session_id: "s" }),
+        delta("Ahoj"),
+        line({ type: "result", is_error: false, result: "Ahoj" }),
+      ];
+      const picked = new TestSession(store, events, lines);
+      const r1 = await picked.sendMessage(
+        { conversationId: "c-m1", text: "go", model: "haiku" },
+        NOW,
+      );
+      await settled(r1.turnId);
+      expect((await assistantOf(r1.conversationId))?.model).toBe("haiku");
+      const plain = new TestSession(store, events, lines);
+      const r2 = await plain.sendMessage({ conversationId: "c-m2", text: "go" }, NOW);
+      await settled(r2.turnId);
+      expect((await assistantOf(r2.conversationId))?.model).toBe("sonnet");
+    });
+
+    it("stamps a partial turn (text then error) too", async () => {
+      const svc = new TestSession(store, events, [
+        line({ type: "system", subtype: "init", session_id: "s" }),
+        delta("Půl odpovědi"),
+        line({ type: "result", is_error: true, result: "boom" }),
+      ]);
+      const r = await svc.sendMessage({ text: "go", model: "opus" }, NOW);
+      await settled(r.turnId);
+      const msg = await assistantOf(r.conversationId);
+      expect(msg?.text).toContain("Půl odpovědi");
+      expect(msg?.model).toBe("opus");
+    });
+  });
 });
