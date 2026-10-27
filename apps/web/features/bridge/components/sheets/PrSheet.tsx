@@ -3,7 +3,6 @@
 import type { InboxPr } from "@zibby/contracts";
 import {
   AnchoredSheet,
-  SheetAction,
   SheetBlock,
   SheetSection,
   type SheetTone,
@@ -25,7 +24,6 @@ import {
   useInboxPrThreadsQuery,
   useInboxPrsQuery,
 } from "../../../inbox/queries";
-import { isMerge, isMine } from "../../../inbox/state/prActions";
 import { diffFiles } from "../../state/diffFiles";
 import {
   type PrStatusKey,
@@ -100,8 +98,7 @@ function reviewCell(pr: InboxPr): {
  * PR detail: REVIEW / CHECKS / CHANGES stat cells (the header summary), STACK breadcrumb, review
  * threads and the diff with its file sidebar (`useInboxPrDiffQuery`). The title links to GitHub.
  * Header actions: the inbox's `PrActionButtons` (code review for others' PRs; address / fix CI /
- * rebase / merge only on my own, decided by the shared predicates) and — on my PR that is not
- * `ready-to-merge` — `MERGE ON GITHUB` (the footer note says why in-app merge is off).
+ * rebase / merge only on my own, decided by the shared predicates).
  */
 export function PrSheet({ id, anchor, onClose }: SheetProps) {
   const t = useTranslations();
@@ -131,7 +128,6 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
   const added = files.reduce((n, f) => n + f.added, 0);
   const removed = files.reduce((n, f) => n + f.removed, 0);
   const base = prBaseLabel(pr, all);
-  const merge = isMerge(pr);
   const dash = "—";
 
   const ciValue = t(`bridge.sheet.pr.ci.${pr.ci}`);
@@ -143,11 +139,6 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
         <>
           <PrReviewButton pr={pr} />
           <PrActionButtons baseLabel={base} pr={pr} />
-          {!isMine(pr) || merge ? null : (
-            <SheetAction href={pr.url} intent="primary" title={t("bridge.sheet.pr.mergeBlocked")}>
-              {t("bridge.sheet.pr.mergeOnGithub")}
-            </SheetAction>
-          )}
         </>
       }
       chips={[

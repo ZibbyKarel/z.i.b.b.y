@@ -3408,8 +3408,6 @@
         "diff": "Diff · vůči {base}",
         "by": "Od {who}",
         "you": "Ty",
-        "mergeOnGithub": "Merge na GitHubu ↗",
-        "mergeBlocked": "Merge se v aplikaci nabízí, jen když je PR připravený ke sloučení",
         "note": {
           "ready": "Připraveno ke sloučení",
           "approved": "Schváleno",

@@ -120,7 +120,7 @@ describe("PrSheet action buttons", () => {
     expect(screen.queryByText(/Merge na GitHubu/)).toBeNull();
   });
 
-  it("offers the in-app merge only when ready-to-merge; otherwise only MERGE ON GITHUB", () => {
+  it("offers the in-app merge only when ready-to-merge; otherwise no merge action (no GitHub link)", () => {
     const { unmount } = show(
       pr(5, { section: "ready-to-merge", blocker: "ready-to-merge", review: "approved" }),
     );
@@ -129,10 +129,8 @@ describe("PrSheet action buttons", () => {
     unmount();
     show(pr(6, {}));
     expect(screen.queryByTestId(PrActionsTestId.Merge)).toBeNull();
-    expect(screen.getByText(/Merge na GitHubu/)).toHaveAttribute(
-      "href",
-      "https://github.com/acme/api/pull/6",
-    );
+    expect(screen.queryByText(/Merge na GitHubu/)).toBeNull();
+    expect(screen.queryByRole("link", { name: /merge/i })).toBeNull();
     expect(screen.queryByText("Merge")).toBeNull();
   });
 });

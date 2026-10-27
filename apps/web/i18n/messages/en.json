@@ -3408,8 +3408,6 @@
         "diff": "Diff · vs {base}",
         "by": "By {who}",
         "you": "You",
-        "mergeOnGithub": "Merge on GitHub ↗",
-        "mergeBlocked": "Merge is offered in the app only when the PR is ready to merge",
         "note": {
           "ready": "Ready to merge",
           "approved": "Approved",
