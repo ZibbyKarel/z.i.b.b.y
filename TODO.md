@@ -75,7 +75,7 @@
 21. [x] u Pull requestů, které jsou ke schválení musíme rozllišit zde čeká na schválení ode mě (případně mého týmu) nebo zda čeká na schválení od někoho jiného a já (případně můj tým) už code-review udělal a dal na pull request aproove nebo require-changes (main@62b42707)
 22. [x] Widgety musí jít zmenšovat a zvětšovat z každého rohu a né jen z pravého spodního (main@ff323b1b)
 23. [x] Widgety je možné editovat vždy. Smažeme možnost přechodu do editačního režumu a widgety pujdou vždy přesouvat a zvětšovat/zmenšovat (main@873f8f65)
-24. [ ] Výchozí layout pujde v dialogu správy layoutů přesunout pod čaru + v dialogu smažeme čipky na přesun a layoouty pujdou vždy jen přesouvat pomocí drag and dropu
+24. [x] Výchozí layout pujde v dialogu správy layoutů přesunout pod čaru + v dialogu smažeme čipky na přesun a layoouty pujdou vždy jen přesouvat pomocí drag and dropu (main@40341c5c)
 25. [x] na detailu PR smažeme tlačítko "Metge na githubu" (main@38eb974e)
 26. [x] widget běhy - smažeme progress bary tam kde není stav runnyng. Potřebuju progress bar jen když běh reálně běží. U ostatních stavů zobrazíme místo progress baru ikonku v barvě stavu - error, waiting, success a další (main@c4acb451)
 27. [x] coloring-book workflow - ve fázi produkce nemám žádný log. Chci vidět průběh produkce (co se zrovna generuje, výstupy, chyby) v detailu běhu. (main@16341b89)
