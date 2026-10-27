@@ -95,7 +95,11 @@ export const taskRunsContract = c.router(
       method: "GET",
       path: "/tasks/runs/:runId/stages/:phaseId/logs",
       pathParams: z.object({ runId: z.string(), phaseId: z.string() }),
-      query: z.object({ offset: z.coerce.number().int().nonnegative().optional() }),
+      query: z.object({
+        offset: z.coerce.number().int().nonnegative().optional(),
+        // One specific execution (round) of the phase; must be a recorded stage run of it.
+        stageRunId: z.string().min(1).optional(),
+      }),
       responses: {
         200: RunLogChunkSchema,
         404: ErrorSchema,

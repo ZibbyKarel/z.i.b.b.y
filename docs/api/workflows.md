@@ -254,7 +254,7 @@ on the unified `/api/tasks/runs/*` (see [tasks.md](./tasks.md)):
 
 ```
 GET  /api/tasks/runs/:runId                              run state (+ stageRuns[])
-GET  /api/tasks/runs/:runId/stages/:phaseId/logs?offset= a single phase's log (per phase)
+GET  /api/tasks/runs/:runId/stages/:phaseId/logs?offset=&stageRunId= a single phase's log (per phase)
 GET  /api/tasks/runs/:runId/stages/:phaseId/logs/stream  SSE tail of the currently running phase's log
 GET  /api/tasks/runs/:runId/artifacts/:name              a whitelisted artifact (pr-draft.md, …)
 GET  /api/tasks/runs/:runId/files                        the run root as a read-only tree (`listRunFiles`)

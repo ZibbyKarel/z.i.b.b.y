@@ -264,10 +264,15 @@ export class TaskRunsService {
   }
 
   /** Read a workflow run's stage log by phase id, from a byte offset. */
-  async getStageLog(runId: string, phaseId: string, offset: number): Promise<RunLogChunk> {
+  async getStageLog(
+    runId: string,
+    phaseId: string,
+    offset: number,
+    stageRunId?: string,
+  ): Promise<RunLogChunk> {
     const kind = await this.kindOf(runId);
     if (kind !== "workflow") throw new TaskRunNotFoundError(runId);
-    return this.workflowRunner.readStageLog(runId, phaseId, offset);
+    return this.workflowRunner.readStageLog(runId, phaseId, offset, stageRunId);
   }
 
   /**

@@ -61,9 +61,15 @@ export class TaskRunsController {
         }
       },
 
-      getTaskRunStageLogs: async ({ params: { runId, phaseId }, query: { offset } }) => {
+      getTaskRunStageLogs: async ({
+        params: { runId, phaseId },
+        query: { offset, stageRunId },
+      }) => {
         try {
-          return { status: 200, body: await this.runs.getStageLog(runId, phaseId, offset ?? 0) };
+          return {
+            status: 200,
+            body: await this.runs.getStageLog(runId, phaseId, offset ?? 0, stageRunId),
+          };
         } catch (error) {
           if (isMissing(error)) return { status: 404, body: { message: notFound(runId) } };
           throw error;
