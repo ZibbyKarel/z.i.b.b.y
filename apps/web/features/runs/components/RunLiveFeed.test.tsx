@@ -1,5 +1,8 @@
+import { AccordionTestId } from "@zibby/design-system";
+import { fireEvent } from "@testing-library/react";
 import { renderWithProviders as render, screen } from "../../../test/render";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useStageRunLogQuery } from "../queries/useStageRunLogQuery";
 import type { RunView } from "../run";
 import type { FeedItem } from "../runDetailModel";
 import { RunFeedBannersTestId } from "./RunFeedBanners";
@@ -8,6 +11,9 @@ import { RunLiveFeed, RunLiveFeedTestId } from "./RunLiveFeed";
 vi.mock("../../approvals", () => ({
   useApproveMutation: () => ({ mutate: vi.fn(), isPending: false }),
   useRejectMutation: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+vi.mock("../queries/useStageRunLogQuery", () => ({
+  useStageRunLogQuery: vi.fn(() => ({ data: { content: "Round one text." } })),
 }));
 vi.mock("./GoalDetailPanel", () => ({
   GoalDetailPanel: () => <div data-testid="goal-detail" />,
@@ -105,5 +111,62 @@ describe("RunLiveFeed", () => {
     renderFeed({ kind: "goal" });
     expect(screen.getByTestId("goal-detail")).toBeInTheDocument();
     expect(screen.queryByTestId(RunLiveFeedTestId.Root)).not.toBeInTheDocument();
+  });
+
+  describe("phase rounds", () => {
+    const wfRun = { ...run, runId: "wf_1" };
+    const roundsItem = (n: number): FeedItem => ({
+      kind: "agent",
+      phaseId: "illustrate",
+      who: "illustrate",
+      markdown: "Latest text.",
+      tools: [],
+      live: false,
+      rounds: Array.from({ length: n }, (_, i) => ({
+        n: i + 1,
+        stageRunId: `s${i + 1}`,
+        live: false,
+      })),
+    });
+    beforeEach(() => vi.mocked(useStageRunLogQuery).mockClear());
+
+    it("shows one section per round with only the latest expanded", () => {
+      render(<RunLiveFeed items={[roundsItem(2)]} mode="running" run={wfRun} />);
+      const summaries = screen.getAllByTestId(AccordionTestId.Summary);
+      expect(summaries[0]).toHaveTextContent("Kolo 1");
+      expect(summaries[1]).toHaveTextContent("Kolo 2");
+      expect(summaries[1]).toHaveAttribute("aria-expanded", "true");
+      expect(summaries[0]).toHaveAttribute("aria-expanded", "false");
+      expect(screen.getByTestId(RunLiveFeedTestId.Round)).toHaveTextContent("Latest text.");
+      expect(useStageRunLogQuery).not.toHaveBeenCalled();
+    });
+
+    it("opening an earlier round collapses the latest and fetches that round", () => {
+      render(<RunLiveFeed items={[roundsItem(2)]} mode="running" run={wfRun} />);
+      const summaries = screen.getAllByTestId(AccordionTestId.Summary);
+      fireEvent.click(summaries[0]!);
+      expect(summaries[0]).toHaveAttribute("aria-expanded", "true");
+      expect(summaries[1]).toHaveAttribute("aria-expanded", "false");
+      expect(useStageRunLogQuery).toHaveBeenCalledWith("wf_1", "illustrate", "s1");
+      expect(screen.getByTestId(RunLiveFeedTestId.Round)).toHaveTextContent("Round one text.");
+    });
+
+    it("a new round re-expands the latest", () => {
+      const { rerender } = render(
+        <RunLiveFeed items={[roundsItem(2)]} mode="running" run={wfRun} />,
+      );
+      fireEvent.click(screen.getAllByTestId(AccordionTestId.Summary)[0]!);
+      rerender(<RunLiveFeed items={[roundsItem(3)]} mode="running" run={wfRun} />);
+      const summaries = screen.getAllByTestId(AccordionTestId.Summary);
+      expect(summaries).toHaveLength(3);
+      expect(summaries[2]).toHaveAttribute("aria-expanded", "true");
+      expect(summaries[0]).toHaveAttribute("aria-expanded", "false");
+    });
+
+    it("a single round renders without an accordion", () => {
+      render(<RunLiveFeed items={[roundsItem(1)]} mode="running" run={wfRun} />);
+      expect(screen.queryAllByTestId(AccordionTestId.Root)).toHaveLength(0);
+      expect(screen.getByText("Latest text.")).toBeInTheDocument();
+    });
   });
 });

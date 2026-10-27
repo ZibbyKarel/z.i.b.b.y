@@ -308,6 +308,8 @@ export type FeedItem =
       tools: LogStreamLine[];
       live: boolean;
       rounds: StageRound[];
+      /** A tool phase: its rounds' logs are raw CLI output, not agent transcripts. */
+      raw?: boolean;
     }
   | {
       kind: "you";
@@ -377,6 +379,7 @@ function agentItem(row: StageRailRow, transcript: string, raw: boolean): FeedIte
     ...agentBody(row.phaseId, transcript, raw),
     live,
     rounds: row.rounds,
+    ...(raw && { raw }),
   };
 }
 
