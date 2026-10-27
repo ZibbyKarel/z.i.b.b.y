@@ -165,6 +165,9 @@ export async function produce(argv: string[], ctx: Ctx): Promise<number> {
         attempt,
       };
     });
+    console.log(
+      `produce: round ${round}/${rounds}: generating ${items.length} image(s): ${items.map((i) => i.key).join(", ")} [${image.id}/${image.model}]`,
+    );
     const results = await image.generateBatch(items, tmp);
     await image.dispose?.();
 
@@ -279,6 +282,10 @@ export async function produce(argv: string[], ctx: Ctx): Promise<number> {
     }
 
     for (const j of judged) {
+      const key = j.u.isCover ? "cover" : `p${nn(j.u.pageNumber)}`;
+      console.log(
+        `produce: ${key} attempt ${j.attempt} ${j.qa.passed ? "approved" : `rejected: ${[...new Set(j.qa.issues.map((i) => i.type))].join(", ")}`}`,
+      );
       writeJson(path.join(book, "qa", `${nn(j.u.pageNumber)}.json`), j.qa);
       if (!j.qa.passed) continue;
       fs.copyFileSync(j.file, path.join(j.u.dir, pageFile(j.u.pageNumber, "approved.png")));

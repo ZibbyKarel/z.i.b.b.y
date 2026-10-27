@@ -90,6 +90,26 @@ describe("produce", () => {
     ]);
   });
 
+  it("logs each batch and each judged image", async () => {
+    const ctx = await prepared();
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    expect(await produce([jobs, "--rounds", "1"], ctx)).toBe(0);
+    const lines = log.mock.calls.map((c) => String(c[0]));
+    log.mockRestore();
+    expect(lines[0]).toMatch(/^produce: round 1\/1: generating \d+ image\(s\): p01, /);
+    expect(lines).toContain("produce: p01 attempt 1 approved");
+    expect(lines.at(-1)).toMatch(/^produce: \d+\/\d+ approved, \d+ generated$/);
+  });
+
+  it("logs a rejected image with its issue types", async () => {
+    const ctx = await prepared({ PF_MOCK_FAIL_PAGES: "0" });
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    await produce([jobs, "--rounds", "1"], ctx);
+    const lines = log.mock.calls.map((c) => String(c[0]));
+    log.mockRestore();
+    expect(lines).toContain("produce: cover attempt 1 rejected: not-colorful");
+  });
+
   it("exits 2 with a gap verdict when rounds run out", async () => {
     const ctx = await prepared({ PF_MOCK_FAIL_PAGES: "2" });
     expect(await produce([jobs, "--rounds", "1"], ctx)).toBe(2);

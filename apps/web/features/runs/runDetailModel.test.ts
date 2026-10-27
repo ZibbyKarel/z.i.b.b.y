@@ -175,4 +175,49 @@ describe("buildLiveFeed", () => {
       live: true,
     });
   });
+
+  it("renders a tool phase's log as raw rows, errors flagged", () => {
+    const agent = buildLiveFeed({
+      rail,
+      selectedPhaseId: null,
+      messages: [],
+      terminal: false,
+      toolPhaseIds: new Set(["p2"]),
+      transcript:
+        "produce: round 1/3: generating 2 image(s): p01, p02 [mock/mock]\r 50%|█| 2/4\nproduce: p01 attempt 1 rejected: too-gray\nproduct-factory: fal 500\n",
+    }).find((i) => i.kind === "agent");
+    expect(agent).toMatchObject({
+      markdown: "",
+      tools: [
+        { id: "p2-0", ts: "01", text: " 50%|█| 2/4" },
+        { id: "p2-1", ts: "02", text: "produce: p01 attempt 1 rejected: too-gray", state: "error" },
+        { id: "p2-2", ts: "03", text: "product-factory: fal 500", state: "error" },
+      ],
+    });
+  });
+
+  it("a tqdm-only live tool log still shows rows", () => {
+    const agent = buildLiveFeed({
+      rail,
+      selectedPhaseId: null,
+      messages: [],
+      terminal: false,
+      toolPhaseIds: new Set(["p2"]),
+      transcript: "\r 25%|▎| 1/4\r 50%|█| 2/4",
+    }).find((i) => i.kind === "agent");
+    expect(agent).toMatchObject({ tools: [{ text: " 50%|█| 2/4" }] });
+  });
+
+  it("a blank tool log on a finished phase yields no agent item", () => {
+    expect(
+      buildLiveFeed({
+        rail,
+        selectedPhaseId: "p1",
+        messages: [],
+        terminal: false,
+        toolPhaseIds: new Set(["p1"]),
+        transcript: "  \n",
+      }).some((i) => i.kind === "agent"),
+    ).toBe(false);
+  });
 });

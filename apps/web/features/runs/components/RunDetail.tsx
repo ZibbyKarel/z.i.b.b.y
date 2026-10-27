@@ -168,7 +168,11 @@ export function RunDetail({ run, embedded, onOpenApproval, children }: RunDetail
       : (stageLog?.content ?? "")
     : agentStream.text;
 
+  const toolPhaseIds = new Set(
+    workflowDef?.phases.filter((p) => p.type === "tool").flatMap((p) => (p.id ? [p.id] : [])),
+  );
   const items = buildLiveFeed({
+    toolPhaseIds,
     rail,
     selectedPhaseId: selected?.phaseId ?? null,
     transcript,
