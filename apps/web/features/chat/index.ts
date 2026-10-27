@@ -5,6 +5,8 @@
 export { ChatProvider, useChat, useOptionalChat, CHAT_SHORTCUT_KEY } from "./ChatContext";
 export { ChatButton } from "./components/ChatButton";
 export { ChatDock } from "./components/ChatDock";
+export { ChatAboutButton } from "./components/ChatAboutButton";
+export type { ChatAboutButtonProps } from "./components/ChatAboutButton";
 export { useSendChatMessageMutation } from "./mutations";
 export { useChatTranscriptQuery, getChatTranscriptQueryKey } from "./queries";
 export { useChatStream } from "./hooks/useChatStream";

@@ -2065,6 +2065,10 @@
   },
   "chat": {
     "createTask": "Vytvořit úkol",
+    "about": {
+      "button": "Probrat v chatu",
+      "buttonTitle": "Otevřít chat s touto věcí jako kontextem"
+    },
     "dock": {
       "aboutChip": "O čem: {label}",
       "clearAbout": "Odebrat kontext",

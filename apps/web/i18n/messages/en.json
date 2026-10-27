@@ -2065,6 +2065,10 @@
   },
   "chat": {
     "createTask": "Create task",
+    "about": {
+      "button": "Talk it over in chat",
+      "buttonTitle": "Open the chat with this as its context"
+    },
     "dock": {
       "aboutChip": "About: {label}",
       "clearAbout": "Remove the context",
