@@ -59,7 +59,10 @@ export function prChatAbout(
     if (files.length > shown) lines.push(`… and ${files.length - shown} more`);
     const head = `${lines.join("\n")}\n\nDiff:\n`;
     // The diff gets whatever the header and stats leave, never more than PR_CHAT_DIFF_MAX.
-    const room = Math.min(PR_CHAT_DIFF_MAX, DETAILS_MAX - head.length - MARKER.length - 1);
+    const room = Math.max(
+      0,
+      Math.min(PR_CHAT_DIFF_MAX, DETAILS_MAX - head.length - MARKER.length - 1),
+    );
     const raw = opts.diff.diff;
     const cut = raw.length > room;
     const body = cut ? safeSlice(raw, room) : raw;
@@ -74,6 +77,6 @@ function build(pr: InboxPr, details: string): ChatAbout {
     id: pr.url,
     href: pr.url,
     label: safeSlice(oneLine(`PR #${pr.number} · ${pr.title}`), LABEL_MAX),
-    details,
+    details: safeSlice(details, DETAILS_MAX),
   };
 }

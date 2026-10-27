@@ -81,4 +81,11 @@ describe("prChatAbout", () => {
     const l = prChatAbout({ ...pr, title: "😀".repeat(300) });
     expect(l.label).not.toMatch(/[\uD800-\uDBFF]$/);
   });
+
+  it("clamps a huge header on every path", () => {
+    const title = "t".repeat(30_000);
+    expect(prChatAbout({ ...pr, title }).details?.length).toBeLessThanOrEqual(24_000);
+    const a = prChatAbout({ ...pr, title }, { diff: { diff: smallDiff, truncated: false } });
+    expect(a.details?.length).toBeLessThanOrEqual(24_000);
+  });
 });
