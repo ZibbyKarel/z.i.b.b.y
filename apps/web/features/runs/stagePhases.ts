@@ -1,5 +1,8 @@
 import type { RunView } from "./run";
 
+/** `runId` of the synthesized live row (the running attempt is not in `stageRuns` yet). */
+export const LIVE_STAGE_RUN_ID = "";
+
 export type StageRunEntry = NonNullable<RunView["stageRuns"]>[number];
 
 /**
@@ -43,7 +46,7 @@ export function buildPhaseNodes(
     live && currentStage
       ? {
           phaseId: currentStage,
-          runId: "",
+          runId: LIVE_STAGE_RUN_ID,
           attempt: terminalStages.filter((s) => s.phaseId === currentStage).length + 1,
           status: "running",
         }

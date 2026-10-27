@@ -8,7 +8,7 @@ import type { LogStreamLine, StateTone } from "@zibby/design-system";
 import { formatCostUsd } from "../../utils/cost";
 import { formatDuration } from "../../utils/time";
 import type { RunView } from "./run";
-import { type StageRunEntry, buildPhaseNodes } from "./stagePhases";
+import { LIVE_STAGE_RUN_ID, type StageRunEntry, buildPhaseNodes } from "./stagePhases";
 import { groupTranscript, parseTranscript, rawLogLines } from "./transcript";
 
 /** What the run detail screen is showing — one value drives header, actions, banners and composer. */
@@ -225,7 +225,7 @@ export function buildStageRail(
         ? [...node.priorAttempts, main].map((s, k) => ({
             n: k + 1,
             stageRunId: s.runId,
-            live: s.runId === "",
+            live: s.runId === LIVE_STAGE_RUN_ID,
           }))
         : [],
       current,

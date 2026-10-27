@@ -124,6 +124,26 @@ describe("rounds", () => {
     ]);
   });
 
+  it("a recorded attempt plus the live one give a feed item two rounds, live last", () => {
+    const r = run({
+      currentStage: "p1",
+      stageRuns: [{ phaseId: "p1", runId: "r1", attempt: 1, status: "error" }],
+    });
+    const agent = buildLiveFeed({
+      rail: buildStageRail(r, "running", PHASES, NOW),
+      selectedPhaseId: null,
+      transcript: "Working.\n",
+      messages: [],
+      terminal: false,
+    }).find((i) => i.kind === "agent");
+    expect(agent).toMatchObject({
+      rounds: [
+        { n: 1, stageRunId: "r1", live: false },
+        { n: 2, stageRunId: "", live: true },
+      ],
+    });
+  });
+
   it("a single-execution phase has one round and the feed item carries it", () => {
     const single = run({
       currentStage: "p2",
