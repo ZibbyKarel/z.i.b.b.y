@@ -20,8 +20,9 @@ export interface PhaseNode {
 /**
  * Groups `stageRuns` by `phaseId` — the runner records one entry per (phase, attempt),
  * so a phase retried by a loop back-edge (or re-qualified) has several entries under the
- * same id. Each group's last entry is the phase's current node; earlier entries become
- * its nested retry rows. When the workflow DEFINITION is known, phases are laid out in
+ * same id. Entries stay in recorded (execution) order — a loop resets `attempt`, so it is
+ * not a sort key. Each group's last entry is the phase's current node; earlier entries
+ * become its nested retry rows. When the workflow DEFINITION is known, phases are laid out in
  * its declared order and any not-yet-reached phase (after the furthest one with a
  * recorded attempt) gets a placeholder ("waiting") node — but only while the run hasn't
  * finished (`currentStage` still set; the backend nulls it once done/errored/interrupted,
@@ -58,7 +59,6 @@ export function buildPhaseNodes(
     }
     groups.get(r.phaseId)?.push(r);
   }
-  for (const g of groups.values()) g.sort((a, b) => a.attempt - b.attempt);
 
   if (!definedPhaseIds || definedPhaseIds.length === 0) {
     return order.map((phaseId) => {

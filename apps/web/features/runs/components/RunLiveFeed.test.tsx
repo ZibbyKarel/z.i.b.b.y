@@ -50,6 +50,7 @@ const items: FeedItem[] = [
     markdown: "Working on it",
     tools: [{ id: "p2-0", ts: "01", text: "Read → ok" }],
     live: true,
+    rounds: [],
   },
   {
     kind: "you",

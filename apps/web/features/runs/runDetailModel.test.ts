@@ -102,6 +102,46 @@ describe("buildStageRail", () => {
   });
 });
 
+describe("rounds", () => {
+  it("numbers rounds chronologically, live round last", () => {
+    const r = run({
+      currentStage: "illustrate",
+      status: "running",
+      stageRuns: [
+        { phaseId: "illustrate", runId: "i1", attempt: 1, status: "done" },
+        { phaseId: "produce", runId: "p1", attempt: 1, status: "error" },
+        { phaseId: "illustrate", runId: "i2", attempt: 1, status: "done" },
+        { phaseId: "produce", runId: "p2", attempt: 2, status: "error" },
+      ],
+    });
+    const row = buildStageRail(r, "running", ["illustrate", "produce"], NOW).find(
+      (x) => x.phaseId === "illustrate",
+    );
+    expect(row?.rounds).toEqual([
+      { n: 1, stageRunId: "i1", live: false },
+      { n: 2, stageRunId: "i2", live: false },
+      { n: 3, stageRunId: "", live: true },
+    ]);
+  });
+
+  it("a single-execution phase has one round and the feed item carries it", () => {
+    const single = run({
+      currentStage: "p2",
+      stageRuns: [{ phaseId: "p1", runId: "r1", attempt: 1, status: "done" }],
+    });
+    const rail = buildStageRail(single, "running", PHASES, NOW);
+    const agent = buildLiveFeed({
+      rail,
+      selectedPhaseId: null,
+      transcript: "Working.\n",
+      messages: [],
+      terminal: false,
+    }).find((i) => i.kind === "agent");
+    expect(agent).toMatchObject({ rounds: [{ n: 1, stageRunId: "", live: true }] });
+    expect(rail.find((x) => x.phaseId === "p3")?.rounds).toEqual([]);
+  });
+});
+
 describe("buildRunMetrics", () => {
   const value = (metrics: ReturnType<typeof buildRunMetrics>, key: string) =>
     metrics.find((m) => m.key === key)?.value;
