@@ -15,6 +15,8 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
+import { ChatAboutButton } from "../../chat/components/ChatAboutButton";
+import { prChatAbout } from "../prChatAbout";
 import { parentPr, prAncestors, prBaseLabel, prChildren, prState, prWaits } from "../inbox";
 import { PrReviewButton } from "./PrReviewButton";
 import { useInboxPrDiffQuery } from "../queries";
@@ -172,6 +174,9 @@ export function PrDetail({ pr, all, projectName, now, item, onSelect }: PrDetail
                     </TextLink>
                   </Stack>
                 </Container>
+                <ChatAboutButton
+                  about={prChatAbout(pr, { baseLabel: base, ...(data && { diff: data }) })}
+                />
                 <PrReviewButton pr={pr} />
               </Row>
               <Row wrap gap="75">

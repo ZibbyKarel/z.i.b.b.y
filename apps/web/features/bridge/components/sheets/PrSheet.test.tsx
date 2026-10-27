@@ -1,7 +1,9 @@
 import type { InboxPr } from "@zibby/contracts";
 import { AnchoredSheetTestId, StackCrumbsTestId, StatCellTestId } from "@zibby/design-system";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renderWithProviders, screen, within } from "../../../../test/render";
+import { ChatAboutButtonTestId } from "../../../chat/components/ChatAboutButton";
+import { ChatProvider, useChat } from "../../../chat/ChatContext";
+import { fireEvent, renderWithProviders, screen, within } from "../../../../test/render";
 import { PrActionsTestId } from "../../../inbox/components/PrActionButtons";
 import { PrSheet } from "./PrSheet";
 
@@ -186,5 +188,23 @@ describe("PrSheet content", () => {
     hooks.prs = [];
     renderWithProviders(<PrSheet anchor={anchor} id="nope" onClose={() => {}} />);
     expect(screen.queryByTestId(AnchoredSheetTestId.Root)).toBeNull();
+  });
+});
+
+describe("PrSheet chat about", () => {
+  it("opens the chat about the PR", () => {
+    const p = pr(7, { headRef: "feat" });
+    hooks.prs = [p];
+    function Probe() {
+      return <span data-testid="probe">{useChat().about?.id ?? ""}</span>;
+    }
+    renderWithProviders(
+      <ChatProvider>
+        <PrSheet anchor={anchor} id={p.url} onClose={() => {}} />
+        <Probe />
+      </ChatProvider>,
+    );
+    fireEvent.click(screen.getByTestId(ChatAboutButtonTestId.Root));
+    expect(screen.getByTestId("probe")).toHaveTextContent(p.url);
   });
 });

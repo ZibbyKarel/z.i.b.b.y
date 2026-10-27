@@ -15,9 +15,11 @@ import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { useApprovalsQuery } from "../../../approvals";
+import { ChatAboutButton } from "../../../chat/components/ChatAboutButton";
 import { PrActionButtons } from "../../../inbox/components/PrActionButtons";
 import { PrReviewButton } from "../../../inbox/components/PrReviewButton";
 import { prBaseLabel, prChildren } from "../../../inbox/inbox";
+import { prChatAbout } from "../../../inbox/prChatAbout";
 import { PrThreads } from "../../../inbox/components/PrThreads";
 import {
   useInboxPrDiffQuery,
@@ -140,6 +142,7 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
       {...geometry(anchor)}
       actions={
         <>
+          <ChatAboutButton about={prChatAbout(pr, { baseLabel: base, ...(diff && { diff }) })} />
           <PrReviewButton pr={pr} />
           <PrActionButtons baseLabel={base} pr={pr} />
         </>
