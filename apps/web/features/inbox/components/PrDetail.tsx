@@ -15,6 +15,7 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
+import { useMemo } from "react";
 import { ChatAboutButton } from "../../chat/components/ChatAboutButton";
 import { prChatAbout } from "../prChatAbout";
 import { parentPr, prAncestors, prBaseLabel, prChildren, prState, prWaits } from "../inbox";
@@ -101,6 +102,11 @@ export function PrDetail({ pr, all, projectName, now, item, onSelect }: PrDetail
   const elapsedLabel = useElapsedLabel();
   const { data, isPending, isError, refetch } = useInboxPrDiffQuery(pr.projectId, pr.number);
 
+  const about = useMemo(
+    () => prChatAbout(pr, { baseLabel: base, ...(data && { diff: data }) }),
+    [pr, base, data],
+  );
+
   let body;
   if (isPending) body = <DiffLoading />;
   else if (isError)
@@ -174,9 +180,7 @@ export function PrDetail({ pr, all, projectName, now, item, onSelect }: PrDetail
                     </TextLink>
                   </Stack>
                 </Container>
-                <ChatAboutButton
-                  about={prChatAbout(pr, { baseLabel: base, ...(data && { diff: data }) })}
-                />
+                <ChatAboutButton about={about} />
                 <PrReviewButton pr={pr} />
               </Row>
               <Row wrap gap="75">

@@ -62,4 +62,23 @@ describe("prChatAbout", () => {
     expect(a.label.length).toBeLessThanOrEqual(200);
     expect(ChatAboutSchema.safeParse(a).success).toBe(true);
   });
+
+  it("stays within the schema cap with many long paths and a huge diff", () => {
+    const paths = Array.from({ length: 120 }, (_, i) => `${"d".repeat(300)}${i}.ts`);
+    const diff = paths
+      .map((f) => `diff --git a/${f} b/${f}\n@@ -1 +1 @@\n-a\n+b\n`)
+      .join("")
+      .concat("y".repeat(40_000));
+    const a = prChatAbout(pr, { diff: { diff, truncated: false } });
+    expect(a.details?.length).toBeLessThanOrEqual(24_000);
+    expect(ChatAboutSchema.safeParse(a).success).toBe(true);
+    expect(a.details).toContain("[diff truncated]");
+  });
+
+  it("does not split a surrogate pair when cutting", () => {
+    const a = prChatAbout(pr, { diff: { diff: "😀".repeat(20_000), truncated: false } });
+    expect(a.details).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/);
+    const l = prChatAbout({ ...pr, title: "😀".repeat(300) });
+    expect(l.label).not.toMatch(/[\uD800-\uDBFF]$/);
+  });
 });

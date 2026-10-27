@@ -116,7 +116,13 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
   const files = useMemo(() => diffFiles(diff?.diff ?? ""), [diff]);
   const { data: threads } = useInboxPrThreadsQuery(pr?.projectId, pr?.number);
 
-  if (!pr) return null;
+  const base = pr ? prBaseLabel(pr, all) : "";
+  const about = useMemo(
+    () => (pr ? prChatAbout(pr, { baseLabel: base, ...(diff && { diff }) }) : null),
+    [pr, base, diff],
+  );
+
+  if (!pr || !about) return null;
 
   const status = prStatus(pr);
   const tone = TONE[status.tone];
@@ -132,7 +138,6 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
   const approval = approvals.find((a) => taskIds.includes(a.runId));
   const added = files.reduce((n, f) => n + f.added, 0);
   const removed = files.reduce((n, f) => n + f.removed, 0);
-  const base = prBaseLabel(pr, all);
   const dash = "—";
 
   const ciValue = t(`bridge.sheet.pr.ci.${pr.ci}`);
@@ -142,7 +147,7 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
       {...geometry(anchor)}
       actions={
         <>
-          <ChatAboutButton about={prChatAbout(pr, { baseLabel: base, ...(diff && { diff }) })} />
+          <ChatAboutButton about={about} />
           <PrReviewButton pr={pr} />
           <PrActionButtons baseLabel={base} pr={pr} />
         </>

@@ -41,8 +41,16 @@ vi.mock("../../../state/api", () => ({
 }));
 
 function Probe() {
-  const { conversationId, messages } = useChat();
-  return <output data-testid="probe">{`${conversationId}:${messages.length}`}</output>;
+  const { conversationId, messages, about, setAbout } = useChat();
+  return (
+    <>
+      <output data-testid="probe">{`${conversationId}:${messages.length}`}</output>
+      <output data-testid="about">{about?.id ?? "none"}</output>
+      <button onClick={() => setAbout({ kind: "pr", id: "p1", label: "PR" })} type="button">
+        set-about
+      </button>
+    </>
+  );
 }
 
 describe("ChatHistorySidebar", () => {
@@ -63,5 +71,19 @@ describe("ChatHistorySidebar", () => {
     expect(transcriptQuery).toHaveBeenCalledWith({ query: { conversationId: "c1" } });
     await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent("c1:1"));
     expect(screen.getByTestId(`${ListTestId.Item}-c1`)).toHaveAttribute("aria-current", "page");
+  });
+
+  it("clears the chat context when an older conversation is opened", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <ChatProvider>
+        <ChatHistorySidebar />
+        <Probe />
+      </ChatProvider>,
+    );
+    await user.click(screen.getByText("set-about"));
+    expect(screen.getByTestId("about")).toHaveTextContent("p1");
+    await user.click(screen.getByTestId(`${ListTestId.Item}-c1`));
+    await waitFor(() => expect(screen.getByTestId("about")).toHaveTextContent("none"));
   });
 });
