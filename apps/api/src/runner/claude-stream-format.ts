@@ -53,10 +53,21 @@ export function formatClaudeStreamLine(raw: string): string | null {
   }
 }
 
-/** `system`/init carries the session's model; everything else is housekeeping we drop. */
+/**
+ * `system`/init carries the session's model plus any plugin the CLI refused to load
+ * (`plugin_errors` — e.g. an unsatisfied dependency, otherwise silent); everything
+ * else is housekeeping we drop.
+ */
 function formatSystem(event: Record<string, unknown>): string | null {
   if (event.subtype !== "init") return null;
-  return typeof event.model === "string" ? `▶ ${event.model}` : "▶ session started";
+  const head = typeof event.model === "string" ? `▶ ${event.model}` : "▶ session started";
+  const errors = Array.isArray(event.plugin_errors) ? event.plugin_errors.filter(isRecord) : [];
+  return [
+    head,
+    ...errors.map(
+      (e) => `⚠ plugin ${String(e.plugin ?? "?")}: ${String(e.message ?? e.type ?? "")}`,
+    ),
+  ].join("\n");
 }
 
 /**

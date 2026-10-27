@@ -128,6 +128,60 @@ describe("marketplace catalog", () => {
     expect(await managedPluginDirs([record], plugins)).toEqual([at("ok"), at("off")]);
   });
 
+  it("managedPluginDirs: pulls in declared dependencies, admitting SessionStart-only hooks", async () => {
+    const plugins = path.join(dir, "plugins");
+    const at = (mkt: string, name: string) => path.join(plugins, "cache", mkt, name, "1");
+    const install = (p: string) => [{ scope: "user", installPath: p, version: "1" }];
+    for (const [mkt, name] of [
+      ["mkt", "main"],
+      ["mkt", "starter"],
+      ["official", "superpowers"],
+      ["official", "base"],
+      ["official", "gate-hook"],
+    ] as const) {
+      await fs.mkdir(at(mkt, name), { recursive: true });
+    }
+    await write(path.join(at("mkt", "main"), ".claude-plugin/plugin.json"), {
+      dependencies: ["superpowers@official", "gate-hook", "missing@nowhere"],
+    });
+    // A managed plugin whose own hooks are SessionStart-only now rides too.
+    await write(path.join(at("mkt", "starter"), "hooks/hooks.json"), {
+      hooks: { SessionStart: [] },
+    });
+    await write(path.join(at("official", "superpowers"), "hooks/hooks.json"), {
+      hooks: { SessionStart: [] },
+    });
+    await write(path.join(at("official", "superpowers"), ".claude-plugin/plugin.json"), {
+      dependencies: ["base@official"],
+    });
+    await write(path.join(at("official", "gate-hook"), "hooks/hooks.json"), {
+      hooks: { SessionStart: [], PreToolUse: [] },
+    });
+    await write(path.join(plugins, "installed_plugins.json"), {
+      version: 2,
+      plugins: {
+        "main@mkt": install(at("mkt", "main")),
+        "starter@mkt": install(at("mkt", "starter")),
+        "superpowers@official": install(at("official", "superpowers")),
+        "base@official": install(at("official", "base")),
+        "gate-hook@official": install(at("official", "gate-hook")),
+      },
+    });
+    const record = {
+      id: "mkt",
+      source: "s",
+      devMode: false,
+      managedClone: false,
+      addedAt: "2026-10-26T10:00:00.000Z",
+    };
+    expect(await managedPluginDirs([record], plugins)).toEqual([
+      at("mkt", "main"),
+      at("mkt", "starter"),
+      at("official", "superpowers"),
+      at("official", "base"),
+    ]);
+  });
+
   it("drops a plugin dir that escapes through a symlink and argv-unsafe names", async () => {
     const outside = path.join(dir, "outside");
     const mkt = path.join(dir, "mkt");

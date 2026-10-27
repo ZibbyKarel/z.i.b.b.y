@@ -40,6 +40,9 @@ ZIBBY run. Design: `docs/plans/2026-10-26-marketplaces.md`.
 - Installing an already-installed plugin makes no CLI call (dev: relink; normal: 409).
   The list stays up (counts read 0) when the CLI is unavailable.
 - Runs: `ClaudeRunCommandService` appends `--plugin-dir` for every installed plugin of
-  every managed marketplace, except plugins disabled in `settings.json`
+  every managed marketplace plus their plugin.json `dependencies` (transitively, any
+  marketplace — under `--setting-sources ""` an unloaded dependency makes the CLI drop
+  the plugin as `dependency-unsatisfied`), except plugins disabled in `settings.json`
   (`enabledPlugins`, the sibling of `$CLAUDE_PLUGINS_DIR`), missing installPaths and
-  plugins that ship hooks (see `docs/api/runner.md`).
+  plugins with hooks other than `SessionStart` (see `docs/api/runner.md`). The run
+  log prints the init event's `plugin_errors` as `⚠ plugin …` lines.

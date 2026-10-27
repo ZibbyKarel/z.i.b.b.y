@@ -119,6 +119,20 @@ describe("formatClaudeStreamLine", () => {
     expect(out).toBe("▶ claude-haiku");
   });
 
+  it("surfaces plugin load errors from the init line", () => {
+    const out = formatClaudeStreamLine(
+      line({
+        type: "system",
+        subtype: "init",
+        model: "m",
+        plugin_errors: [
+          { plugin: "zibby@inline", type: "dependency-unsatisfied", message: "Dep missing" },
+        ],
+      }),
+    );
+    expect(out).toBe("▶ m\n⚠ plugin zibby@inline: Dep missing");
+  });
+
   it("drops non-init system events", () => {
     expect(formatClaudeStreamLine(line({ type: "system", subtype: "other" }))).toBeNull();
   });

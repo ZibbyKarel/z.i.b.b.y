@@ -61,7 +61,15 @@ const PluginJsonSchema = z.object({
   version: z.string().optional(),
   mcpServers: z.unknown().optional(),
   hooks: z.unknown().optional(),
+  dependencies: z.array(z.string()).optional(),
 });
+
+/**
+ * Hook events that cannot steer a tool call, so they can't pre-empt the approval gate.
+ * A plugin whose hooks are all in here may ride a run (e.g. superpowers' context-only
+ * `SessionStart`); anything else — `PreToolUse` above all — keeps it out.
+ */
+const GATE_SAFE_HOOK_EVENTS = new Set(["SessionStart"]);
 
 /**
  * A marketplace/plugin name safe to put in `claude plugin` argv (`<plugin>@<marketplace>`,
@@ -270,13 +278,41 @@ async function disabledPlugins(pluginsDir: string): Promise<Set<string>> {
 }
 
 /**
+ * True when the plugin ships no hook that could pre-empt the approval gate: no hooks at
+ * all, or a `hooks/hooks.json` whose events are all {@link GATE_SAFE_HOOK_EVENTS}. Inline
+ * `hooks` in plugin.json (object or path) are not inspected — treated as unsafe.
+ */
+async function gateSafeHooks(pluginDir: string): Promise<boolean> {
+  const pluginJson = PluginJsonSchema.safeParse(
+    await readJson(path.join(pluginDir, ".claude-plugin", "plugin.json")),
+  );
+  if (pluginJson.success && pluginJson.data.hooks !== undefined) return false;
+  const file = path.join(pluginDir, "hooks", "hooks.json");
+  if (!(await fileExists(file))) return true;
+  const json = await readJson(file);
+  const events = json && typeof json === "object" && "hooks" in json ? json.hooks : undefined;
+  if (!events || typeof events !== "object" || Array.isArray(events)) return false;
+  return Object.keys(events).every((e) => GATE_SAFE_HOOK_EVENTS.has(e));
+}
+
+/** `dependencies` declared in a plugin's plugin.json (`"<plugin>@<marketplace>"` or bare name). */
+async function pluginDependencies(pluginDir: string): Promise<string[]> {
+  const pluginJson = PluginJsonSchema.safeParse(
+    await readJson(path.join(pluginDir, ".claude-plugin", "plugin.json")),
+  );
+  return pluginJson.success ? (pluginJson.data.dependencies ?? []) : [];
+}
+
+/**
  * installPaths of the user-scope plugins installed from one of `records` that are
- * safe to load into a run. Skipped: plugins disabled in `~/.claude/settings.json`
+ * safe to load into a run, plus their declared `dependencies` (transitively, from any
+ * marketplace) — runs use `--setting-sources ""`, so an unloaded dependency makes the
+ * CLI silently drop the plugin. Skipped: plugins disabled in `~/.claude/settings.json`
  * (`enabledPlugins["p@m"] === false`; the settings file is the sibling of
  * `pluginsDir`, unreadable reads as "none disabled"), installPaths that no longer
- * exist, and plugins that ship hooks (`hooks/hooks.json` or `hooks` in plugin.json)
- * — a third-party PreToolUse hook in an autonomous run could pre-empt ZIBBY's
- * approval gate (Laws 1 and 4), so hook plugins never ride a run.
+ * exist, and plugins with gate-relevant hooks ({@link gateSafeHooks}) — a third-party
+ * PreToolUse hook in an autonomous run could pre-empt ZIBBY's approval gate (Laws 1
+ * and 4), so such plugins never ride a run.
  */
 export async function managedPluginDirs(
   records: readonly Marketplace[],
@@ -285,18 +321,35 @@ export async function managedPluginDirs(
   if (records.length === 0) return [];
   const ids = new Set(records.map((r) => r.id));
   const disabled = await disabledPlugins(pluginsDir);
+  const installed = await readInstalledPlugins(pluginsDir);
+  const resolve = (dep: string): string | undefined =>
+    dep.includes("@")
+      ? installed.has(dep)
+        ? dep
+        : undefined
+      : [...installed.keys()].find((k) => splitPluginKey(k).plugin === dep);
+  const queue = [...installed.keys()].filter((k) => ids.has(splitPluginKey(k).marketplace));
+  const seen = new Set<string>();
   const out: string[] = [];
-  for (const [key, { installPath }] of await readInstalledPlugins(pluginsDir)) {
-    if (!ids.has(splitPluginKey(key).marketplace) || disabled.has(key)) continue;
+  // for-of also visits the dependency keys pushed onto `queue` during the loop.
+  for (const key of queue) {
+    if (seen.has(key) || disabled.has(key)) continue;
+    seen.add(key);
+    const installPath = installed.get(key)?.installPath;
     if (
+      !installPath ||
       !(await fs.stat(installPath).then(
         (s) => s.isDirectory(),
         () => false,
       ))
     )
       continue;
-    if ((await readPluginComponents(installPath)).hooks) continue;
+    if (!(await gateSafeHooks(installPath))) continue;
     out.push(installPath);
+    for (const dep of await pluginDependencies(installPath)) {
+      const depKey = resolve(dep);
+      if (depKey) queue.push(depKey);
+    }
   }
   return out;
 }
