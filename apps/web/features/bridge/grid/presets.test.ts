@@ -53,12 +53,24 @@ describe("layoutNames / arrangement", () => {
   it("drops stale names and appends unknown ones to hidden", () => {
     expect(
       arrangement(["REVIEW", "A", "B"], { shown: ["B", "gone"], hidden: ["REVIEW"] }, []),
-    ).toEqual({ shown: ["B"], hidden: ["REVIEW", "A"] });
+    ).toEqual({ shown: ["DEFAULT", "B"], hidden: ["REVIEW", "A"] });
+  });
+
+  it("DEFAULT goes first in shown unless already placed", () => {
+    expect(arrangement(["REVIEW"], null, [])).toEqual({ shown: ["DEFAULT", "REVIEW"], hidden: [] });
+    expect(arrangement(["REVIEW", "A"], { shown: ["A"], hidden: ["REVIEW"] }, [])).toEqual({
+      shown: ["DEFAULT", "A"],
+      hidden: ["REVIEW"],
+    });
+    expect(arrangement(["REVIEW"], { shown: ["REVIEW"], hidden: ["DEFAULT"] }, [])).toEqual({
+      shown: ["REVIEW"],
+      hidden: ["DEFAULT"],
+    });
   });
 
   it("never arranged: REVIEW and favorites are shown", () => {
     expect(arrangement(["REVIEW", "A", "B"], null, ["B"])).toEqual({
-      shown: ["REVIEW", "B"],
+      shown: ["DEFAULT", "REVIEW", "B"],
       hidden: ["A"],
     });
   });

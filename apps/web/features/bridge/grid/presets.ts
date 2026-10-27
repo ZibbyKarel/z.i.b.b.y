@@ -44,27 +44,33 @@ export function layoutNames(
     : [REVIEW_PRESET, ...names];
 }
 
-/** Which layouts sit in the header (`shown`, after DEFAULT) and which behind its dropdown. */
+/** Which layouts sit in the header (`shown`, in order) and which behind its dropdown. DEFAULT is one of them. */
 export interface Arrangement {
   shown: string[];
   hidden: string[];
 }
 
 /**
- * The effective arrangement of `names`. Never arranged (`null`): REVIEW and the legacy favorites
- * are shown. Otherwise stale names are dropped and names it doesn't know yet go last in hidden.
+ * The effective arrangement of DEFAULT + `layouts`. Never arranged (`null`): DEFAULT, REVIEW and the
+ * legacy favorites are shown. Otherwise stale names are dropped and names it doesn't know yet go last in hidden.
  */
 export function arrangement(
-  names: readonly string[],
+  layouts: readonly string[],
   arranged: Arrangement | null,
   favorites: readonly string[],
 ): Arrangement {
+  const names = [DEFAULT_PRESET, ...layouts];
   if (!arranged) {
-    const shown = names.filter((n) => n === REVIEW_PRESET || favorites.includes(n));
+    const shown = names.filter(
+      (n) => n === DEFAULT_PRESET || n === REVIEW_PRESET || favorites.includes(n),
+    );
     return { shown, hidden: names.filter((n) => !shown.includes(n)) };
   }
   const shown = arranged.shown.filter((n) => names.includes(n));
   const hidden = arranged.hidden.filter((n) => names.includes(n) && !shown.includes(n));
+  // A persisted arrangement from before DEFAULT was movable has no DEFAULT: it leads the header.
+  if (!shown.includes(DEFAULT_PRESET) && !hidden.includes(DEFAULT_PRESET))
+    shown.unshift(DEFAULT_PRESET);
   const rest = names.filter((n) => !shown.includes(n) && !hidden.includes(n));
   return { shown, hidden: [...hidden, ...rest] };
 }

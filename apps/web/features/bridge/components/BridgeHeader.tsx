@@ -22,7 +22,7 @@ export enum BridgeHeaderTestId {
 
 export interface BridgeHeaderProps {
   preset: string;
-  /** Non-DEFAULT layouts: `shown` sit in the header, `hidden` behind the dropdown. */
+  /** All layouts incl. DEFAULT: `shown` sit in the header, `hidden` behind the dropdown. */
   layouts: { shown: readonly string[]; hidden: readonly string[] };
   onPreset: (name: string) => void;
   onManage: () => void;
@@ -50,7 +50,6 @@ export function BridgeHeader({
           ? t("preset.CUSTOM")
           : name;
   const names = [
-    "DEFAULT",
     ...layouts.shown,
     ...(layouts.hidden.includes(preset) ? [preset] : []),
     ...(preset === CUSTOM_PRESET ? [CUSTOM_PRESET] : []),

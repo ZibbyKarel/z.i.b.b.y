@@ -3449,8 +3449,6 @@
     "manage": {
       "title": "Správa rozložení",
       "active": "Aktivní",
-      "moveUp": "Posunout {name} nahoru",
-      "moveDown": "Posunout {name} dolů",
       "divider": "V liště nahoře ↑ · v nabídce ↓",
       "dropShown": "Pusť sem pro zobrazení v liště",
       "dropHidden": "Pusť sem pro přesun do nabídky",

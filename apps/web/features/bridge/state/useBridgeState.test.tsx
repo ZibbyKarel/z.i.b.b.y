@@ -42,12 +42,12 @@ describe("useBridgeState", () => {
 
   it("starts with REVIEW shown and nothing hidden; legacy favorites are shown too", () => {
     const { result } = renderHook(() => useBridgeState());
-    expect(result.current.layouts).toEqual({ shown: ["REVIEW"], hidden: [] });
+    expect(result.current.layouts).toEqual({ shown: ["DEFAULT", "REVIEW"], hidden: [] });
     ui = UiSettingsSchema.parse({
       bridge: { saved: { A: [], B: [] }, favorites: ["B"] },
     });
     const { result: legacy } = renderHook(() => useBridgeState());
-    expect(legacy.current.layouts).toEqual({ shown: ["REVIEW", "B"], hidden: ["A"] });
+    expect(legacy.current.layouts).toEqual({ shown: ["DEFAULT", "REVIEW", "B"], hidden: ["A"] });
   });
 
   it("addLayout copies DEFAULT as the last hidden layout without selecting it", () => {
@@ -56,7 +56,7 @@ describe("useBridgeState", () => {
     act(() => void (ok = result.current.addLayout("  Mine ")));
     expect(ok).toBe(true);
     expect(result.current.saved["Mine"]).toEqual(compact(DEFAULT_LAYOUT));
-    expect(result.current.layouts).toEqual({ shown: ["REVIEW"], hidden: ["Mine"] });
+    expect(result.current.layouts).toEqual({ shown: ["DEFAULT", "REVIEW"], hidden: ["Mine"] });
     expect(result.current.preset).toBe("DEFAULT");
   });
 
@@ -76,7 +76,7 @@ describe("useBridgeState", () => {
     const { result } = renderHook(() => useBridgeState());
     act(() => void result.current.addLayout("Mine"));
     act(() => result.current.arrange({ shown: ["Mine"], hidden: ["REVIEW"] }));
-    expect(result.current.layouts).toEqual({ shown: ["Mine"], hidden: ["REVIEW"] });
+    expect(result.current.layouts).toEqual({ shown: ["DEFAULT", "Mine"], hidden: ["REVIEW"] });
     expect(setBridge).toHaveBeenLastCalledWith({
       arranged: { shown: ["Mine"], hidden: ["REVIEW"] },
     });
@@ -90,13 +90,13 @@ describe("useBridgeState", () => {
     expect(result.current.saved).toEqual({});
     expect(result.current.preset).toBe("DEFAULT");
     expect(result.current.layout).toEqual(compact(DEFAULT_LAYOUT));
-    expect(result.current.layouts).toEqual({ shown: ["REVIEW"], hidden: [] });
+    expect(result.current.layouts).toEqual({ shown: ["DEFAULT", "REVIEW"], hidden: [] });
   });
 
   it("REVIEW is deletable and stays gone; DEFAULT is not", () => {
     const { result } = renderHook(() => useBridgeState());
     act(() => result.current.deleteLayout("REVIEW"));
-    expect(result.current.layouts).toEqual({ shown: [], hidden: [] });
+    expect(result.current.layouts).toEqual({ shown: ["DEFAULT"], hidden: [] });
     expect(setBridge).toHaveBeenLastCalledWith(expect.objectContaining({ removed: ["REVIEW"] }));
     setBridge.mockClear();
     act(() => result.current.deleteLayout("DEFAULT"));
@@ -119,7 +119,7 @@ describe("useBridgeState", () => {
     act(() => result.current.remove("runs"));
     const saved = setBridge.mock.lastCall?.[0].saved.DEFAULT;
     expect(saved.some((w: { id: string }) => w.id === "runs")).toBe(false);
-    expect(result.current.layouts).toEqual({ shown: ["REVIEW"], hidden: [] });
+    expect(result.current.layouts).toEqual({ shown: ["DEFAULT", "REVIEW"], hidden: [] });
   });
 
   it("move stays local; endDrag persists", () => {

@@ -27,9 +27,6 @@ export enum ManageLayoutsDialogTestId {
   DropHidden = "manage-layouts-drop-hidden",
   /** Thin zone after the last hidden row: appends to the end of the dropdown. */
   DropEnd = "manage-layouts-drop-end",
-  /** Suffixed with the layout name. */
-  Up = "manage-layouts-up",
-  Down = "manage-layouts-down",
   Delete = "manage-layouts-delete",
   Input = "manage-layouts-input",
   Add = "manage-layouts-add",
@@ -46,15 +43,13 @@ export function moveLayout(arr: Arrangement, name: string, toIndex: number): Arr
   return { shown: flat.slice(0, d), hidden: flat.slice(d + 1) };
 }
 
-/** Moves `name` one step up (-1) or down (+1) in the flat sequence; crossing the divider swaps sides. */
-export function stepLayout(arr: Arrangement, name: string, step: -1 | 1): Arrangement {
-  const cur = [...arr.shown, DIVIDER, ...arr.hidden].indexOf(name);
-  return cur < 0 ? arr : moveLayout(arr, name, cur + step);
-}
-
-/** Flat index (name removed) to insert before `target` (a name, DIVIDER, or null = very end). */
+/**
+ * Flat index (name removed) to insert before `target` (a name, DIVIDER, or null = very end).
+ * Dropping on the divider crosses it: a shown row lands first in hidden, a hidden row last in shown.
+ */
 function dropIndex(arr: Arrangement, name: string, target: string | null): number {
   const flat = [...arr.shown, DIVIDER, ...arr.hidden].filter((n) => n !== name);
+  if (target === DIVIDER && arr.shown.includes(name)) return flat.indexOf(DIVIDER) + 1;
   return target === null ? flat.length : flat.indexOf(target);
 }
 
@@ -74,7 +69,7 @@ export interface ManageLayoutsDialogProps {
   onClose: () => void;
 }
 
-/** Manage the Bridge layouts: reorder (drag or arrows), header vs dropdown, delete, add. */
+/** Manage the Bridge layouts: reorder (drag and drop), header vs dropdown, delete, add. */
 export function ManageLayoutsDialog({ open, ...rest }: ManageLayoutsDialogProps) {
   return open ? <ManageLayouts {...rest} /> : null;
 }
@@ -105,7 +100,7 @@ function ManageLayouts({
   }
 
   const flat = [...layouts.shown, ...layouts.hidden];
-  const label = (n: string) => (n === "REVIEW" ? t("preset.REVIEW") : n);
+  const label = (n: string) => (n === "DEFAULT" || n === "REVIEW" ? t(`preset.${n}`) : n);
 
   const drop = (e: DragEvent, target: string | null) => {
     e.preventDefault();
@@ -148,34 +143,16 @@ function ManageLayouts({
                 </Typography>
               ) : null}
             </Stack>
-            <Button
-              aria-label={t("manage.moveUp", { name: label(n) })}
-              data-testid={`${ManageLayoutsDialogTestId.Up}-${n}`}
-              disabled={layouts.shown[0] === n}
-              intent="ghost"
-              onClick={() => onArrange(stepLayout(layouts, n, -1))}
-              size="sm"
-            >
-              ↑
-            </Button>
-            <Button
-              aria-label={t("manage.moveDown", { name: label(n) })}
-              data-testid={`${ManageLayoutsDialogTestId.Down}-${n}`}
-              disabled={layouts.hidden.at(-1) === n}
-              intent="ghost"
-              onClick={() => onArrange(stepLayout(layouts, n, 1))}
-              size="sm"
-            >
-              ↓
-            </Button>
-            <div data-testid={`${ManageLayoutsDialogTestId.Delete}-${n}`}>
-              <ConfirmDeleteButton
-                ariaLabel={t("manage.deleteNamed", { name: label(n) })}
-                confirmLabel={t("deleteLayoutConfirm")}
-                label={t("deleteLayout")}
-                onConfirm={() => onDelete(n)}
-              />
-            </div>
+            {n === "DEFAULT" ? null : (
+              <div data-testid={`${ManageLayoutsDialogTestId.Delete}-${n}`}>
+                <ConfirmDeleteButton
+                  ariaLabel={t("manage.deleteNamed", { name: label(n) })}
+                  confirmLabel={t("deleteLayoutConfirm")}
+                  label={t("deleteLayout")}
+                  onConfirm={() => onDelete(n)}
+                />
+              </div>
+            )}
           </Stack>
         </Panel>
       </div>
@@ -196,12 +173,6 @@ function ManageLayouts({
     <Dialog open closeLabel={tc("close")} onClose={onClose} title={t("manage.title")} width="lg">
       <Stack gap="150">
         <Stack gap="75">
-          <Panel padding="100">
-            <Typography mono size="sm" type="note">
-              {t("preset.DEFAULT")}
-              {preset === "DEFAULT" ? ` · ${t("manage.active")}` : ""}
-            </Typography>
-          </Panel>
           {layouts.shown.length === 0
             ? emptyZone(ManageLayoutsDialogTestId.DropShown, DIVIDER, t("manage.dropShown"))
             : layouts.shown.map(row)}

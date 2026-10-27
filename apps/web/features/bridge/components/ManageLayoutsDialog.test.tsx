@@ -7,12 +7,11 @@ import {
   ManageLayoutsDialog,
   type ManageLayoutsDialogProps,
   moveLayout,
-  stepLayout,
 } from "./ManageLayoutsDialog";
 
 const arr = { shown: ["A", "B"], hidden: ["C", "D"] };
 
-describe("moveLayout / stepLayout", () => {
+describe("moveLayout", () => {
   it("inserts before a target index of the sequence without the moved name", () => {
     // flat without D: A B DIV C -> insert at 0 puts D first
     expect(moveLayout(arr, "D", 0)).toEqual({ shown: ["D", "A", "B"], hidden: ["C"] });
@@ -24,12 +23,6 @@ describe("moveLayout / stepLayout", () => {
   it("can empty either side", () => {
     expect(moveLayout({ shown: ["A"], hidden: [] }, "A", 1)).toEqual({ shown: [], hidden: ["A"] });
     expect(moveLayout({ shown: [], hidden: ["A"] }, "A", 0)).toEqual({ shown: ["A"], hidden: [] });
-  });
-
-  it("steps swap sides across the divider", () => {
-    expect(stepLayout(arr, "B", 1)).toEqual({ shown: ["A"], hidden: ["B", "C", "D"] });
-    expect(stepLayout(arr, "C", -1)).toEqual({ shown: ["A", "B", "C"], hidden: ["D"] });
-    expect(stepLayout(arr, "A", 1)).toEqual({ shown: ["B", "A"], hidden: ["C", "D"] });
   });
 });
 
@@ -63,6 +56,31 @@ describe("ManageLayoutsDialog", () => {
     expect(screen.getAllByTestId(ConfirmDeleteButtonTestId.Root)).toHaveLength(4);
   });
 
+  it("DEFAULT is a draggable row without delete; no up/down buttons", () => {
+    setup({
+      layouts: { shown: ["DEFAULT", "A"], hidden: ["C"] },
+      saved: { A: [], C: [] },
+    });
+    expect(row("DEFAULT")).toHaveAttribute("draggable", "true");
+    expect(screen.queryByTestId(`${Id.Delete}-DEFAULT`)).toBeNull();
+    expect(screen.queryAllByTestId(/^manage-layouts-(up|down)/)).toHaveLength(0);
+  });
+
+  it("dropping DEFAULT on the divider puts it first in hidden", () => {
+    const p = setup({
+      layouts: { shown: ["DEFAULT", "A"], hidden: ["C"] },
+      saved: { A: [], C: [] },
+    });
+    const data = new Map<string, string>([["application/x-zibby-bridge-layout", "DEFAULT"]]);
+    const dataTransfer = {
+      setData: vi.fn(),
+      getData: (k: string) => data.get(k) ?? "",
+      types: [...data.keys()],
+    };
+    fireEvent.drop(screen.getByTestId(Id.Divider), { dataTransfer });
+    expect(p.onArrange).toHaveBeenCalledWith({ shown: ["A"], hidden: ["DEFAULT", "C"] });
+  });
+
   it("delete needs two clicks", async () => {
     const p = setup();
     const del = within(screen.getByTestId(`${Id.Delete}-B`)).getByTestId(
@@ -72,14 +90,6 @@ describe("ManageLayoutsDialog", () => {
     expect(p.onDelete).not.toHaveBeenCalled();
     await userEvent.click(del);
     expect(p.onDelete).toHaveBeenCalledWith("B");
-  });
-
-  it("ends are disabled; move-down of the last shown row moves it to hidden", async () => {
-    const p = setup();
-    expect(screen.getByTestId(`${Id.Up}-A`)).toBeDisabled();
-    expect(screen.getByTestId(`${Id.Down}-D`)).toBeDisabled();
-    await userEvent.click(screen.getByTestId(`${Id.Down}-B`));
-    expect(p.onArrange).toHaveBeenCalledWith({ shown: ["A"], hidden: ["B", "C", "D"] });
   });
 
   it("dragging a row onto another inserts it before; onto the divider ends shown", () => {
@@ -112,28 +122,6 @@ describe("ManageLayoutsDialog", () => {
     expect(p.onArrange).toHaveBeenCalledWith({ shown: [], hidden: ["A"] });
   });
 
-  it("up/down edges: shown[0] up and last hidden down are disabled; middle ones are not", () => {
-    setup();
-    expect(screen.getByTestId(`${Id.Up}-A`)).toBeDisabled();
-    expect(screen.getByTestId(`${Id.Up}-C`)).toBeEnabled();
-    expect(screen.getByTestId(`${Id.Down}-B`)).toBeEnabled();
-    expect(screen.getByTestId(`${Id.Down}-D`)).toBeDisabled();
-  });
-
-  it("empty shown: first hidden row moves up into shown", async () => {
-    const p = setup({ layouts: { shown: [], hidden: ["C", "D"] } });
-    expect(screen.getByTestId(`${Id.Up}-C`)).toBeEnabled();
-    await userEvent.click(screen.getByTestId(`${Id.Up}-C`));
-    expect(p.onArrange).toHaveBeenCalledWith({ shown: ["C"], hidden: ["D"] });
-  });
-
-  it("empty hidden: last shown row moves down into hidden", async () => {
-    const p = setup({ layouts: { shown: ["A", "B"], hidden: [] } });
-    expect(screen.getByTestId(`${Id.Down}-B`)).toBeEnabled();
-    await userEvent.click(screen.getByTestId(`${Id.Down}-B`));
-    expect(p.onArrange).toHaveBeenCalledWith({ shown: ["A"], hidden: ["B"] });
-  });
-
   it("dropping on the end zone appends to hidden", () => {
     const p = setup();
     const data = new Map<string, string>([["application/x-zibby-bridge-layout", "A"]]);
@@ -148,8 +136,6 @@ describe("ManageLayoutsDialog", () => {
 
   it("row actions name the layout", () => {
     setup();
-    expect(screen.getByTestId(`${Id.Up}-B`)).toHaveAccessibleName("Posunout B nahoru");
-    expect(screen.getByTestId(`${Id.Down}-B`)).toHaveAccessibleName("Posunout B dolů");
     expect(
       within(screen.getByTestId(`${Id.Delete}-B`)).getByTestId(ConfirmDeleteButtonTestId.Root),
     ).toHaveAccessibleName("Smazat B");

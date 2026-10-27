@@ -91,6 +91,20 @@ describe("BridgeHeader", () => {
     expect(onPreset).toHaveBeenCalledWith("B");
   });
 
+  it("renders shown in order without a hard-coded DEFAULT; DEFAULT can live in the kebab", async () => {
+    renderWithProviders(
+      <BridgeHeader
+        {...props}
+        layouts={{ shown: ["REVIEW"], hidden: ["DEFAULT"] }}
+        preset="REVIEW"
+      />,
+    );
+    expect(screen.getByTestId(item("REVIEW"))).toBeInTheDocument();
+    expect(screen.queryByTestId(item("DEFAULT"))).toBeNull();
+    await userEvent.click(screen.getByTestId(MenuButtonTestId.Trigger));
+    expect(screen.getByTestId(`${MenuButtonTestId.Item}-DEFAULT`)).toBeInTheDocument();
+  });
+
   it("no menu without hidden layouts", () => {
     renderWithProviders(<BridgeHeader {...props} layouts={{ shown: ["A"], hidden: [] }} />);
     expect(screen.queryByTestId(BridgeHeaderTestId.More)).toBeNull();

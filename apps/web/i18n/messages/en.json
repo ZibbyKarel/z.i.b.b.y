@@ -3449,8 +3449,6 @@
     "manage": {
       "title": "Manage layouts",
       "active": "Active",
-      "moveUp": "Move {name} up",
-      "moveDown": "Move {name} down",
       "divider": "Shown in the header above · in the dropdown below",
       "dropShown": "Drop here to show in the header",
       "dropHidden": "Drop here to move to the dropdown",
