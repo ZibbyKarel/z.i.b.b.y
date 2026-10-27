@@ -333,7 +333,14 @@ export function groupPrStacks(
     );
 }
 
-export type PrStateKey = "draft" | "review-requested" | "team-review" | InboxPrBlocker;
+export type PrStateKey =
+  | "draft"
+  | "review-requested"
+  | "team-review"
+  | "reviewed-approved"
+  | "reviewed-changes-requested"
+  | "reviewed-commented"
+  | InboxPrBlocker;
 export type PrStateTone = "neutral" | "thinking" | "error" | "blocked" | "idle" | "working";
 
 const BLOCKER_TONE: Record<InboxPrBlocker, PrStateTone> = {
@@ -347,6 +354,13 @@ const BLOCKER_TONE: Record<InboxPrBlocker, PrStateTone> = {
 /** The single state a card shows (label key + stripe tone): draft, then a pending review request, then the blocker. */
 export function prState(pr: InboxPr): { key: PrStateKey; tone: PrStateTone } {
   if (pr.draft) return { key: "draft", tone: "neutral" };
+  if (pr.bucket === "reviewed") {
+    const review = pr.myReview ?? "commented";
+    return {
+      key: `reviewed-${review}`,
+      tone: review === "approved" ? "working" : review === "changes-requested" ? "blocked" : "idle",
+    };
+  }
   if (pr.bucket === "to-review" && pr.blocker !== "ready-to-merge") {
     return {
       key: pr.reviewReason === "team" ? "team-review" : "review-requested",

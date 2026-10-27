@@ -144,6 +144,30 @@ describe("pull requests", () => {
     expect(groups[0]?.root.meta).toBe("orders · YOU · ago:2026-10-01");
   });
 
+  it("puts PRs you reviewed in their own group after to-review, with a reviewed status", () => {
+    const { groups } = prGroups(
+      "prs",
+      [
+        pr({ number: 1, bucket: "reviewed", myReview: "changes-requested" }),
+        pr({ number: 2, bucket: "to-review", blocker: "awaiting-review" }),
+        pr({ number: 3, bucket: "reviewed" }),
+      ],
+      { company: [], team: [], project: [] },
+      ago,
+    );
+    expect(groups.map((g) => [g.root.number, g.section])).toEqual([
+      ["#2", "review"],
+      ["#1", "reviewed"],
+      ["#3", "reviewed"],
+    ]);
+    expect(groups[1]?.root).toMatchObject({
+      statusKey: "reviewedChangesRequested",
+      tone: "blocked",
+      need: null,
+    });
+    expect(groups[2]?.root).toMatchObject({ statusKey: "reviewedCommented", tone: "idle" });
+  });
+
   it("applies the inbox filters to the visible set only", () => {
     const { groups } = prGroups(
       "prs",

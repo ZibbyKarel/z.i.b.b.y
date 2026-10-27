@@ -3062,6 +3062,9 @@
         "draft": "Draft",
         "review-requested": "Review requested",
         "team-review": "Team review · {team}",
+        "reviewed-approved": "You approved · waiting on others",
+        "reviewed-changes-requested": "You requested changes · waiting on author",
+        "reviewed-commented": "You commented · waiting on others",
         "ci-failing": "CI failing",
         "changes-requested": "Changes requested",
         "merge-conflict": "Merge conflict",
@@ -3176,7 +3179,10 @@
           "changesRequested": "Changes requested",
           "checksRunning": "Checks running",
           "approved": "Approved",
-          "awaitingReview": "Awaiting review"
+          "awaitingReview": "Awaiting review",
+          "reviewedApproved": "You approved",
+          "reviewedChangesRequested": "You requested changes",
+          "reviewedCommented": "You commented"
         },
         "need": {
           "merge": "Merge"
@@ -3187,6 +3193,7 @@
         "section": {
           "mine": "Mine",
           "toReview": "To review",
+          "reviewed": "Reviewed by you",
           "toggle": "Toggle {title}"
         }
       },

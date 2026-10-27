@@ -227,6 +227,16 @@ describe("pull requests", () => {
     expect(toReview.map((p) => p.number)).toEqual([4]);
   });
 
+  it("leaves reviewed PRs out of both buckets", () => {
+    const prs = [
+      makePr({ number: 1, bucket: "to-review" }),
+      makePr({ number: 2, bucket: "reviewed" }),
+    ];
+    const { mine, toReview } = splitPrs(prs, EMPTY_INBOX_FILTERS);
+    expect(toReview).toHaveLength(1);
+    expect(mine).toHaveLength(0);
+  });
+
   it("applies the shared filters", () => {
     const prs = [makePr({ number: 1 }), makePr({ number: 2, projectId: "web" })];
     expect(splitPrs(prs, { ...EMPTY_INBOX_FILTERS, project: ["web"] }).mine).toHaveLength(1);
@@ -455,6 +465,19 @@ describe("prState", () => {
     [{ blocker: "merge-conflict" as const }, "merge-conflict", "error"],
     [{ blocker: "awaiting-review" as const }, "awaiting-review", "idle"],
     [{ blocker: "ready-to-merge" as const }, "ready-to-merge", "working"],
+    [
+      { bucket: "reviewed" as const, myReview: "approved" as const },
+      "reviewed-approved",
+      "working",
+    ],
+    [
+      { bucket: "reviewed" as const, myReview: "changes-requested" as const },
+      "reviewed-changes-requested",
+      "blocked",
+    ],
+    [{ bucket: "reviewed" as const, myReview: "commented" as const }, "reviewed-commented", "idle"],
+    [{ bucket: "reviewed" as const }, "reviewed-commented", "idle"],
+    [{ draft: true, bucket: "reviewed" as const }, "draft", "neutral"],
   ])("%j → %s / %s", (over, key, tone) => {
     expect(prState(pr(1, over))).toEqual({ key, tone });
   });

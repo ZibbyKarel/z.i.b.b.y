@@ -1,9 +1,69 @@
 import type { Integration, Project } from "@zibby/contracts";
 import { Subject } from "rxjs";
 import { describe, expect, it } from "vitest";
-import { InboxService, blockerOf, ciState, reviewState, sectionOf } from "./inbox.service";
+import {
+  InboxService,
+  blockerOf,
+  ciState,
+  myReviewState,
+  reviewState,
+  sectionOf,
+} from "./inbox.service";
 
 describe("PR classification", () => {
+  it("myReviewState: your latest APPROVED/CHANGES_REQUESTED, else commented", () => {
+    const me = { login: "me" };
+    expect(
+      myReviewState(
+        [
+          { user: me, state: "APPROVED" },
+          { user: me, state: "COMMENTED" },
+        ],
+        "me",
+      ),
+    ).toBe("approved");
+    expect(
+      myReviewState(
+        [
+          { user: me, state: "CHANGES_REQUESTED" },
+          { user: me, state: "APPROVED" },
+        ],
+        "me",
+      ),
+    ).toBe("approved");
+    expect(
+      myReviewState(
+        [
+          { user: me, state: "APPROVED" },
+          { user: me, state: "DISMISSED" },
+        ],
+        "me",
+      ),
+    ).toBe("approved");
+    expect(
+      myReviewState(
+        [
+          { user: { login: "other" }, state: "APPROVED" },
+          { user: me, state: "COMMENTED" },
+        ],
+        "me",
+      ),
+    ).toBe("commented");
+    expect(myReviewState([{ user: me, state: "APPROVED" }], undefined)).toBe("commented");
+  });
+
+  it("sectionOf: a reviewed PR is reviewed-by-you", () => {
+    expect(
+      sectionOf({
+        bucket: "reviewed",
+        ci: "passing",
+        review: "approved",
+        mergeable: true,
+        draft: false,
+      }),
+    ).toBe("reviewed-by-you");
+  });
+
   it("reviewState: latest non-COMMENTED review per reviewer, changes-requested beats approved", () => {
     expect(reviewState([])).toBe("none");
     expect(reviewState([{ user: { login: "a" }, state: "COMMENTED" }])).toBe("none");
@@ -116,6 +176,10 @@ describe("InboxService.listPrs", () => {
       graphqlStatus?: number;
       graphqlBody?: unknown;
       headSha?: string;
+      reviewed?: boolean;
+      reviewedNumbers?: number[];
+      reviewedStatus?: number;
+      userStatus?: number;
     } = {},
   ) {
     const calls: string[] = [];
@@ -145,10 +209,21 @@ describe("InboxService.listPrs", () => {
           { slug: "other", organization: { login: "elsewhere" } },
         ]);
       }
+      if (u.pathname === "/user") {
+        return json({ login: "me" }, opts.userStatus ?? 200);
+      }
       if (u.pathname === "/search/issues") {
+        if (q.includes("reviewed-by:@me") && opts.reviewedStatus)
+          return json({}, opts.reviewedStatus);
+        if (q.includes("reviewed-by:@me") && opts.reviewedNumbers)
+          return json({ items: opts.reviewedNumbers.map((number) => ({ number })) });
+        if (q.includes("reviewed-by:@me"))
+          return json({ items: opts.reviewed ? [{ number: 7 }, { number: 8 }] : [] });
         if (q.includes("author:@me")) return json({ items: [{ number: 3 }] });
         if (q.includes("user-review-requested:@me"))
-          return json({ items: [{ number: 1 }, { number: 3 }] });
+          return json({
+            items: [{ number: 1 }, { number: 3 }, ...(opts.reviewed ? [{ number: 8 }] : [])],
+          });
         if (q.includes("team-review-requested:acme/core"))
           return json({ items: [{ number: 1 }, { number: 2 }] });
         throw new Error(`unexpected search ${q}`);
@@ -175,6 +250,8 @@ describe("InboxService.listPrs", () => {
         });
       }
       if (u.pathname.endsWith("/reviews")) {
+        if (u.pathname.includes("/pulls/7/"))
+          return json([{ user: { login: "me" }, state: "CHANGES_REQUESTED" }]);
         return json(
           u.pathname.includes("/pulls/3/")
             ? [
@@ -215,6 +292,41 @@ describe("InboxService.listPrs", () => {
     );
     return { service, calls, gqlInits, merged, activity };
   }
+
+  it("keeps a PR you reviewed as reviewed-by-you; a direct request still wins", async () => {
+    const { service } = build([], { reviewed: true });
+    const byNumber = Object.fromEntries((await service.listPrs()).prs.map((p) => [p.number, p]));
+    expect(byNumber[7]).toMatchObject({
+      bucket: "reviewed",
+      myReview: "changes-requested",
+      section: "reviewed-by-you",
+    });
+    expect(byNumber[8]).toMatchObject({ bucket: "to-review", reviewReason: "direct" });
+    expect(byNumber[8]?.myReview).toBeUndefined();
+  });
+
+  it("a failing reviewed-by search drops only those PRs", async () => {
+    const { service } = build([], { reviewedStatus: 500 });
+    const numbers = (await service.listPrs()).prs.map((p) => p.number).sort();
+    expect(numbers).toEqual([1, 2, 3]);
+  });
+
+  it("a PR in both the team and reviewed-by searches stays a team review", async () => {
+    const { service } = build([], { reviewedNumbers: [2] });
+    const pr = (await service.listPrs()).prs.find((p) => p.number === 2);
+    expect(pr).toMatchObject({
+      bucket: "to-review",
+      reviewReason: "team",
+      reviewTeam: "acme/core",
+    });
+    expect(pr?.myReview).toBeUndefined();
+  });
+
+  it("without a viewer login a reviewed PR reads commented", async () => {
+    const { service } = build([], { reviewed: true, userStatus: 500 });
+    const byNumber = Object.fromEntries((await service.listPrs()).prs.map((p) => [p.number, p]));
+    expect(byNumber[7]).toMatchObject({ bucket: "reviewed", myReview: "commented" });
+  });
 
   it("an inbox-refresh activity kind clears the 30 s cache; other kinds don't", async () => {
     const { service, calls, activity } = build();

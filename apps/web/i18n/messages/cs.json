@@ -3062,6 +3062,9 @@
         "draft": "Koncept",
         "review-requested": "Žádost o review",
         "team-review": "Týmové review · {team}",
+        "reviewed-approved": "Schváleno tebou · čeká na ostatní",
+        "reviewed-changes-requested": "Požadoval jsi změny · čeká na autora",
+        "reviewed-commented": "Okomentováno tebou · čeká na ostatní",
         "ci-failing": "CI selhává",
         "changes-requested": "Požadovány změny",
         "merge-conflict": "Konflikt",
@@ -3176,7 +3179,10 @@
           "changesRequested": "Požadované změny",
           "checksRunning": "Kontroly běží",
           "approved": "Schváleno",
-          "awaitingReview": "Čeká na review"
+          "awaitingReview": "Čeká na review",
+          "reviewedApproved": "Schváleno tebou",
+          "reviewedChangesRequested": "Požadoval jsi změny",
+          "reviewedCommented": "Okomentováno tebou"
         },
         "need": {
           "merge": "Merge"
@@ -3187,6 +3193,7 @@
         "section": {
           "mine": "Moje",
           "toReview": "K review",
+          "reviewed": "Zrevidováno tebou",
           "toggle": "Sbalit / rozbalit {title}"
         }
       },

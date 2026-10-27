@@ -73,6 +73,9 @@ const NOTE_KEY: Record<
   checksRunning: "checksRunning",
   approved: "approved",
   awaitingReview: "needsApproval",
+  reviewedApproved: "approved",
+  reviewedChangesRequested: "changesRequested",
+  reviewedCommented: "needsApproval",
 };
 
 const CI_TONE: Record<InboxPr["ci"], SheetTone> = {

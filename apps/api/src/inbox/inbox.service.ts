@@ -68,6 +68,18 @@ export function reviewState(reviews: readonly GhReview[]): InboxPrReview {
   return states.includes("APPROVED") ? "approved" : "none";
 }
 
+/** The operator's own latest APPROVED/CHANGES_REQUESTED review (DISMISSED/PENDING ignored), else "commented". */
+export function myReviewState(
+  reviews: readonly GhReview[],
+  login: string | undefined,
+): "approved" | "changes-requested" | "commented" {
+  const mine = login ? reviews.filter((r) => r.user?.login === login) : [];
+  const verdict = mine
+    .filter((r) => r.state === "APPROVED" || r.state === "CHANGES_REQUESTED")
+    .at(-1);
+  return verdict?.state === "APPROVED" ? "approved" : verdict ? "changes-requested" : "commented";
+}
+
 /** CI from check-runs only (no combined commit status). */
 export function ciState(runs: readonly GhCheckRun[]): InboxPrCi {
   if (runs.some((r) => ["failure", "cancelled", "timed_out"].includes(r.conclusion ?? ""))) {
@@ -99,6 +111,7 @@ export function sectionOf(pr: {
   mergeable: boolean | null;
   draft: boolean;
 }): InboxPrSection {
+  if (pr.bucket === "reviewed") return "reviewed-by-you";
   if (pr.bucket === "to-review") {
     return pr.reviewReason === "team" ? "needs-team-review" : "needs-your-review";
   }
@@ -347,6 +360,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
     }
 
     const teamsByToken = new Map<string, Promise<{ teams: string[]; note?: string }>>();
+    const loginByToken = new Map<string, Promise<string | undefined>>();
     const prs: InboxPr[] = [];
     const errors: InboxSourceError[] = [];
     for (const [repo, { project, token }] of repos) {
@@ -357,6 +371,8 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
         if (note && !errors.some((e) => e.message === note)) {
           errors.push({ projectId: project.id, source: "github", message: note });
         }
+        let login = loginByToken.get(token);
+        if (!login) loginByToken.set(token, (login = this.viewerLogin(token)));
         const owner = repo.split("/")[0]?.toLowerCase() ?? "";
         prs.push(
           ...(await this.repoPrs(
@@ -364,6 +380,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
             project,
             token,
             all.filter((t) => t.toLowerCase().startsWith(`${owner}/`)),
+            await login,
           )),
         );
       } catch (error) {
@@ -387,14 +404,20 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
     project: Project,
     token: string,
     teams: string[],
+    login: string | undefined,
   ): Promise<InboxPr[]> {
     const base = `is:pr is:open repo:${repo}`;
     const mine = await this.search(token, `${base} author:@me`);
     const direct = await this.search(token, `${base} user-review-requested:@me`);
+    // Others' PRs you reviewed; a failing search degrades to none. Set first so every other bucket overwrites it.
+    const reviewed = await this.search(token, `${base} reviewed-by:@me -author:@me`).catch(
+      () => [],
+    );
     const buckets = new Map<number, Pick<InboxPr, "bucket" | "reviewReason" | "reviewTeam">>();
+    for (const n of reviewed) buckets.set(n, { bucket: "reviewed" });
     for (const team of teams) {
       for (const n of await this.search(token, `${base} team-review-requested:${team}`)) {
-        if (!buckets.has(n))
+        if (!buckets.has(n) || buckets.get(n)?.bucket === "reviewed")
           buckets.set(n, { bucket: "to-review", reviewReason: "team", reviewTeam: team });
       }
     }
@@ -449,6 +472,9 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
             : {}),
           ...(unresolvedThreads !== undefined ? { unresolvedThreads } : {}),
           ...bucket,
+          ...(bucket.bucket === "reviewed"
+            ? { myReview: myReviewState(Array.isArray(reviews) ? reviews : [], login) }
+            : {}),
           blocker: blockerOf({ ci, review, mergeable }),
           section: sectionOf({ ...bucket, ci, review, mergeable, draft: pull.draft === true }),
           projectId: project.id,
@@ -457,6 +483,14 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
       }),
     );
     return settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+  }
+
+  /** Login of the token's user; any failure → undefined (reviewed PRs then read "commented"). */
+  private async viewerLogin(token: string): Promise<string | undefined> {
+    return this.gh<{ login?: string }>(token, "/user").then(
+      (u) => u.login,
+      () => undefined,
+    );
   }
 
   /** `org/slug` of every team the token's user belongs to; 401/403/404 → none + a note (token lacks read:org). */

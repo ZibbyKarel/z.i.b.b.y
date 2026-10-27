@@ -76,7 +76,8 @@ export type InboxPrBlocker = z.infer<typeof InboxPrBlockerSchema>;
 /**
  * Phase 129 P1 — GitHub-style section of one PR, computed server-side. The array
  * order IS the display order. `needs-your-review` = review requested from you
- * directly; `needs-team-review` = via one of your teams only. Your own PRs:
+ * directly; `needs-team-review` = via one of your teams only; `reviewed-by-you` =
+ * others' open PRs you already reviewed (no request pending). Your own PRs:
  * `needs-action` (changes requested, CI failing, merge conflict or draft),
  * `ready-to-merge` (approved + CI passing + not conflicting + not draft),
  * `waiting` (everything else — review or checks pending).
@@ -84,6 +85,7 @@ export type InboxPrBlocker = z.infer<typeof InboxPrBlockerSchema>;
 export const INBOX_PR_SECTIONS = [
   "needs-your-review",
   "needs-team-review",
+  "reviewed-by-you",
   "waiting",
   "needs-action",
   "ready-to-merge",
@@ -107,7 +109,9 @@ export const InboxPrSchema = z.object({
   review: InboxPrReviewSchema,
   /** `null` while GitHub is still computing mergeability. */
   mergeable: z.boolean().nullable(),
-  bucket: z.enum(["to-review", "mine"]),
+  bucket: z.enum(["to-review", "mine", "reviewed"]),
+  /** Your own latest review verdict; set only on `bucket: "reviewed"`. */
+  myReview: z.enum(["approved", "changes-requested", "commented"]).optional(),
   reviewReason: z.enum(["direct", "team"]).optional(),
   /** `org/team` slug when `reviewReason === "team"`. */
   reviewTeam: z.string().min(1).optional(),
