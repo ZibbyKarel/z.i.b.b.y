@@ -204,6 +204,7 @@ describe("PrAutomationService (todo-16)", () => {
     it.each([
       ["a draft", { draft: true }],
       ["the operator's own PR", { bucket: "mine" as const }],
+      ["a PR already reviewed by you", { bucket: "reviewed" as const }],
       ["an unknown head", { headSha: undefined }],
     ])("skips %s", async (_label, over) => {
       prs = [pr(over)];

@@ -88,6 +88,29 @@ describe("address review comments (PR inbox redesign)", () => {
     ).toBe(false);
   });
 
+  it("InboxPr accepts a reviewed-by-you PR with myReview", () => {
+    const pr = {
+      source: "github",
+      number: 7,
+      title: "x",
+      url: "https://github.com/acme/app/pull/7",
+      repo: "acme/app",
+      author: "alice",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      draft: false,
+      ci: "passing",
+      review: "approved",
+      mergeable: true,
+      bucket: "reviewed",
+      myReview: "approved",
+      blocker: "ready-to-merge",
+      section: "reviewed-by-you",
+      projectId: "acme",
+    };
+    expect(InboxPrSchema.parse(pr).myReview).toBe("approved");
+    expect(InboxPrSchema.safeParse({ ...pr, myReview: "nope" }).success).toBe(false);
+  });
+
   it("a thread reply is a PRRT_ node id + a short body (empty allowed)", () => {
     const ok = { threadId: "PRRT_kwDOabc", body: "Good catch, fixed in abc1234." };
     expect(PrThreadReplySchema.safeParse(ok).success).toBe(true);
