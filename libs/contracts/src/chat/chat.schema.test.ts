@@ -246,6 +246,9 @@ describe("ChatAbout (todo-29)", () => {
     ["kind too long", { kind: "a".repeat(33) }],
     ["label too long", { label: "x".repeat(201) }],
     ["details too long", { details: "x".repeat(24_001) }],
+    ["newline in id", { id: "a\nkind: x" }],
+    ["newline in label", { label: "a\r\nb" }],
+    ["newline in href", { href: "http://x\nb" }],
   ])("rejects %s", (_name, override) => {
     expect(
       SendChatMessageBodySchema.safeParse({ text: "hi", about: { ...about, ...override } }).success,

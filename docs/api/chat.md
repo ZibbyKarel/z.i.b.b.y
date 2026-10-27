@@ -23,17 +23,18 @@ of the conversation.
 
 `POST /api/chat/messages` — every field except `text` is optional.
 
-| Field             | Meaning                                                                                                             |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `conversationId`  | Thread to continue; omitted → a new one.                                                                            |
-| `text`            | The operator's turn.                                                                                                |
-| `mentions`        | 0-8 `@`-addressed `agent` / `department` / `workflow` units (the composer's `@` resolves an employee to its agent). |
-| `target`          | Legacy single mention; normalised to `mentions` server-side.                                                        |
-| `attachmentSetId` | Set id from `POST /api/tasks/attachments`.                                                                          |
-| `teamId`          | `#`-tagged team: the `zibby-kb` knowledge-base ceiling for the turn.                                                |
-| `projectId`       | `#`-tagged project: named in the turn's system prompt; its team becomes the KB ceiling when no `teamId` is tagged.  |
-| `companyId`       | `#`-tagged company: named in the turn's system prompt.                                                              |
-| `skillId`         | `/`-picked skill: its instructions are appended to the system prompt after the governor.                            |
+| Field             | Meaning                                                                                                                                                                                                                                               |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `conversationId`  | Thread to continue; omitted → a new one.                                                                                                                                                                                                              |
+| `text`            | The operator's turn.                                                                                                                                                                                                                                  |
+| `mentions`        | 0-8 `@`-addressed `agent` / `department` / `workflow` units (the composer's `@` resolves an employee to its agent).                                                                                                                                   |
+| `target`          | Legacy single mention; normalised to `mentions` server-side.                                                                                                                                                                                          |
+| `attachmentSetId` | Set id from `POST /api/tasks/attachments`.                                                                                                                                                                                                            |
+| `teamId`          | `#`-tagged team: the `zibby-kb` knowledge-base ceiling for the turn.                                                                                                                                                                                  |
+| `projectId`       | `#`-tagged project: named in the turn's system prompt; its team becomes the KB ceiling when no `teamId` is tagged.                                                                                                                                    |
+| `companyId`       | `#`-tagged company: named in the turn's system prompt.                                                                                                                                                                                                |
+| `skillId`         | `/`-picked skill: its instructions are appended to the system prompt after the governor.                                                                                                                                                              |
+| `about`           | "Talk about this" context `{ kind, id, label, href?, details? }` (single-line fields; `details` ≤ 24k): rendered into the system prompt as a random-boundary DATA block, never instructions. The stored user message keeps the ref without `details`. |
 
 An unknown `teamId` / `projectId` / `companyId` / `skillId` → **404**, before
 anything is written. The tags are one-turn: the web composer clears them after

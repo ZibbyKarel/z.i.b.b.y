@@ -81,11 +81,14 @@ export type ChatToolEvent = z.infer<typeof ChatToolEventSchema>;
  * `details` is client-assembled DATA for the model — never instructions (Law 4);
  * the server renders it only inside a bounded data block. Limits are enforced here.
  */
+/** Single-line fields: a newline could smuggle extra `key: value` lines in the prompt block. */
+const SINGLE_LINE = /^[^\r\n]*$/;
+
 export const ChatAboutSchema = z.object({
   kind: z.string().regex(/^[a-z][a-z0-9-]{0,31}$/),
-  id: z.string().min(1).max(512),
-  label: z.string().min(1).max(200),
-  href: z.string().max(2048).optional(),
+  id: z.string().min(1).max(512).regex(SINGLE_LINE),
+  label: z.string().min(1).max(200).regex(SINGLE_LINE),
+  href: z.string().max(2048).regex(SINGLE_LINE).optional(),
   details: z.string().max(24_000).optional(),
 });
 export type ChatAbout = z.infer<typeof ChatAboutSchema>;

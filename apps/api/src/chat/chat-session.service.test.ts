@@ -862,17 +862,16 @@ describe("ChatSessionService", () => {
   });
 
   describe("todo-29 — about", () => {
-    const promptOf = (svc: TestSession): string =>
-      svc.lastArgs[svc.lastArgs.indexOf("--append-system-prompt") + 1] ?? "";
+    const promptOf = (args: string[]): string =>
+      args[args.indexOf("--append-system-prompt") + 1] ?? "";
     const about = { kind: "pr", id: "u", label: "PR #1", details: "big" };
 
     it("adds an about data block to the prompt only when about is given", async () => {
       const svc = new TestSession(store, events, [], "jarvis");
       const withAbout = await svc.buildArgs("ahoj", null, "c1", undefined, { about });
-      const prompt = (args: string[]) => args[args.indexOf("--append-system-prompt") + 1] ?? "";
-      expect(prompt(withAbout)).toContain("<about-");
-      expect(prompt(withAbout)).toContain("label: PR #1");
-      expect(prompt(await svc.buildArgs("ahoj", null, "c1"))).not.toContain("<about-");
+      expect(promptOf(withAbout)).toContain("<about-");
+      expect(promptOf(withAbout)).toContain("label: PR #1");
+      expect(promptOf(await svc.buildArgs("ahoj", null, "c1"))).not.toContain("<about-");
     });
 
     it("persists the about ref without details and passes the full about to the turn", async () => {
@@ -883,7 +882,9 @@ describe("ChatSessionService", () => {
         (m) => m.role === "user",
       );
       expect(user?.about).toEqual({ kind: "pr", id: "u", label: "PR #1" });
-      expect(promptOf(svc)).toContain("big");
+      const prompt = promptOf(svc.lastArgs);
+      const block = prompt.slice(prompt.indexOf("<about-"), prompt.lastIndexOf("</about-"));
+      expect(block).toContain("big");
     });
   });
 });
