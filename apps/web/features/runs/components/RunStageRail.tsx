@@ -12,10 +12,13 @@ import {
 import { useTranslations } from "next-intl";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { useAgentSymbol } from "../../agents";
+import { useAgentsQuery } from "../../agents/queries";
+import { ModelBadge } from "../../../components/RuntimeBadges/RuntimeBadges";
 import { toClientTarget } from "../../tasks";
 import { useWorkflowsQuery } from "../../workflows/queries";
 import type { RunView } from "../run";
 import type { StageRailRow } from "../runDetailModel";
+import { stageModel } from "../stageModel";
 
 export enum RunStageRailTestId {
   Root = "run-stage-rail",
@@ -23,6 +26,8 @@ export enum RunStageRailTestId {
   Stage = "run-stage-rail-stage",
   Routed = "run-stage-rail-routed",
   Checkpoint = "run-stage-rail-checkpoint",
+  /** Suffixed with the phase id, e.g. `run-stage-rail-model-coder`. */
+  Model = "run-stage-rail-model",
 }
 
 export interface RunStageRailProps {
@@ -55,6 +60,16 @@ export function RunStageRail({ run, rows, selectedPhaseId, onSelect }: RunStageR
   const { data: workflows } = useWorkflowsQuery();
   const phases = run.kind === "workflow" ? workflows?.find((w) => w.id === run.owner)?.phases : [];
   const agentOf = (phaseId: string) => phases?.find((p) => p.id === phaseId)?.agent ?? phaseId;
+  const { data: agents } = useAgentsQuery();
+  const modelOf = (row: StageRailRow) => {
+    const phase = phases?.find((p) => p.id === row.phaseId);
+    const agentId = run.kind === "agent" ? run.owner : agentOf(row.phaseId);
+    return stageModel(
+      phase,
+      agents?.find((a) => a.id === agentId),
+      row.retries + 1,
+    );
+  };
   const checkpoints = run.checkpoints ?? [];
   const selected = selectedPhaseId ?? rows.find((r) => r.current)?.phaseId ?? null;
   const hasFooter = route || checkpoints.length > 0;
@@ -73,6 +88,9 @@ export function RunStageRail({ run, rows, selectedPhaseId, onSelect }: RunStageR
           leading={<AgentBadge {...symbolOf(agentOf(row.phaseId))} />}
           meta={
             <>
+              <span data-testid={`${RunStageRailTestId.Model}-${row.phaseId}`}>
+                <ModelBadge model={modelOf(row) ?? t("rail.defaultModel")} />
+              </span>
               <StatusDot size="75" tone={row.state} />
               {`${t(`stage.${row.stateKey}`)} · ${row.meta}`}
             </>

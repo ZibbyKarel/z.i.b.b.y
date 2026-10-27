@@ -3,13 +3,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import type { RunView } from "../run";
 import type { StageRailRow } from "../runDetailModel";
+import { RailItemTestId } from "@zibby/design-system";
 import { RunStageRail, RunStageRailTestId } from "./RunStageRail";
 
-const { symbolOfMock, workflowsMock } = vi.hoisted(() => ({
+const { symbolOfMock, workflowsMock, agentsMock } = vi.hoisted(() => ({
+  agentsMock: vi.fn(),
   symbolOfMock: vi.fn((_id?: string) => ({ glyph: "bot" as const })),
   workflowsMock: vi.fn(),
 }));
 vi.mock("../../agents", () => ({ useAgentSymbol: () => symbolOfMock }));
+vi.mock("../../agents/queries", () => ({ useAgentsQuery: agentsMock }));
 vi.mock("../../workflows/queries", () => ({ useWorkflowsQuery: workflowsMock }));
 
 const run: RunView = {
@@ -62,6 +65,7 @@ describe("RunStageRail", () => {
   beforeEach(() => {
     symbolOfMock.mockClear();
     workflowsMock.mockReturnValue({ data: undefined });
+    agentsMock.mockReturnValue({ data: undefined });
   });
 
   it("resolves a workflow stage's symbol from the phase's agent, not the phase id", () => {
@@ -111,5 +115,47 @@ describe("RunStageRail", () => {
       },
     });
     expect(screen.getByTestId(RunStageRailTestId.Routed)).toHaveTextContent("Delivery · 91%");
+  });
+
+  describe("model badge", () => {
+    const model = (id: string) => screen.getByTestId(`${RunStageRailTestId.Model}-${id}`);
+
+    it("shows phase model, agent fallback, then the default label", () => {
+      workflowsMock.mockReturnValue({
+        data: [
+          {
+            id: "delivery",
+            phases: [
+              { id: "phase1", agent: "coder", model: "sonnet" },
+              { id: "phase2", agent: "reviewer" },
+            ],
+          },
+        ],
+      });
+      agentsMock.mockReturnValue({ data: [{ id: "reviewer", model: "opus" }] });
+      renderRail();
+      expect(model("phase1")).toHaveTextContent("sonnet");
+      expect(model("phase2")).toHaveTextContent("opus");
+      expect(model("phase3")).toHaveTextContent("výchozí");
+    });
+
+    it("is the first child of the row's meta", () => {
+      renderRail();
+      const meta = stage("phase1").querySelector(`[data-testid="${RailItemTestId.Meta}"]`);
+      expect(meta?.firstElementChild).toBe(model("phase1"));
+    });
+
+    it("uses the agent's model for a single agent run", () => {
+      agentsMock.mockReturnValue({ data: [{ id: "coder", model: "haiku" }] });
+      render(
+        <RunStageRail
+          onSelect={vi.fn()}
+          rows={[row("delivery_42")]}
+          run={{ ...run, kind: "agent", owner: "coder" }}
+          selectedPhaseId={null}
+        />,
+      );
+      expect(model("delivery_42")).toHaveTextContent("haiku");
+    });
   });
 });

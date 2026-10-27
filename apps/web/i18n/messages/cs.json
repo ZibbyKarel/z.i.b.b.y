@@ -1332,6 +1332,7 @@
         "title": "Fáze · {n}",
         "routed": "Směrováno",
         "switchboard": "Switchboard",
+        "defaultModel": "výchozí",
         "checkpoints": "Checkpointy",
         "openFolder": "Otevřít složku →"
       },

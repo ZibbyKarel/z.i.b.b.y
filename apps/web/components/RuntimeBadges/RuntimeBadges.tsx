@@ -12,7 +12,7 @@ import { useTranslations } from "next-intl";
  */
 
 /** Per-run model badge (opus / sonnet / haiku …). */
-export function ModelBadge({ model }: { model: Agent["model"] }) {
+export function ModelBadge({ model }: { model: string }) {
   const t = useTranslations("phase");
   return (
     <Tag title={t("modelTitle")} tone="accent">

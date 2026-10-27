@@ -1332,6 +1332,7 @@
         "title": "Stages · {n}",
         "routed": "Routed",
         "switchboard": "Switchboard",
+        "defaultModel": "default",
         "checkpoints": "Checkpoints",
         "openFolder": "Open task folder →"
       },
