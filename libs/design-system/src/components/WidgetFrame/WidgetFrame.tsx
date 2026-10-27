@@ -31,6 +31,9 @@ export enum WidgetFrameTestId {
   Resize = "widget-frame-resize",
 }
 
+/** Which corner a resize drag started from. */
+export type ResizeCorner = "nw" | "ne" | "sw" | "se";
+
 export interface WidgetFrameProps {
   label: string;
   /** Item count, shown tabular next to the label. */

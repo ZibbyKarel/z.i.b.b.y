@@ -1,4 +1,5 @@
 import type { BridgeWidget } from "@zibby/contracts";
+import type { ResizeCorner } from "@zibby/design-system";
 
 export type { BridgeWidget };
 export type WidgetType = BridgeWidget["type"];
@@ -79,16 +80,30 @@ export function dragMove(
   });
 }
 
+/** Resize from `corner`; the opposite edge stays anchored. Min 2x2, inside the board. */
 export function dragResize(
   layout: readonly BridgeWidget[],
   id: string,
   origin: DragOrigin,
   dx: number,
   dy: number,
+  corner: ResizeCorner = "se",
 ): BridgeWidget[] {
   return withTarget(layout, id, (t) => {
-    t.w = Math.max(2, Math.min(COLS - t.x, origin.w + dx));
-    t.h = Math.max(2, origin.h + dy);
+    if (corner.endsWith("w")) {
+      const right = origin.x + origin.w;
+      t.x = Math.max(0, Math.min(right - 2, origin.x + dx));
+      t.w = right - t.x;
+    } else {
+      t.w = Math.max(2, Math.min(COLS - origin.x, origin.w + dx));
+    }
+    if (corner.startsWith("n")) {
+      const bottom = origin.y + origin.h;
+      t.y = Math.max(0, Math.min(bottom - 2, origin.y + dy));
+      t.h = bottom - t.y;
+    } else {
+      t.h = Math.max(2, origin.h + dy);
+    }
   });
 }
 

@@ -570,7 +570,7 @@ export type { FileDiffViewProps } from "./components/FileDiffView/FileDiffView";
 export { WidgetBoard, WidgetBoardTestId } from "./components/WidgetBoard/WidgetBoard";
 export type { WidgetBoardProps } from "./components/WidgetBoard/WidgetBoard";
 export { WidgetFrame, WidgetFrameTestId } from "./components/WidgetFrame/WidgetFrame";
-export type { WidgetFrameProps } from "./components/WidgetFrame/WidgetFrame";
+export type { ResizeCorner, WidgetFrameProps } from "./components/WidgetFrame/WidgetFrame";
 export {
   CommandBar,
   CommandBarButton,
