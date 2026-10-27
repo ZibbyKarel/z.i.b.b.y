@@ -28,8 +28,12 @@ export enum WidgetFrameTestId {
   /** The first-load spinner row (role=status) shown above the children while `loading`. */
   Loading = "widget-frame-loading",
   Size = "widget-frame-size",
+  /** Resize handle prefix; each corner handle is suffixed `-nw|ne|sw|se`. */
   Resize = "widget-frame-resize",
 }
+
+/** Which corner a resize drag started from. */
+export type ResizeCorner = "nw" | "ne" | "sw" | "se";
 
 export interface WidgetFrameProps {
   label: string;
@@ -62,9 +66,11 @@ export interface WidgetFrameProps {
   removeLabel?: string;
   /** Header pointer-down — start a move drag (edit mode only). */
   onMovePointerDown?: (e: PointerEvent<HTMLElement>) => void;
-  /** Resize handle pointer-down — start a resize drag (edit mode only). */
-  onResizePointerDown?: (e: PointerEvent<HTMLElement>) => void;
+  /** Resize handle pointer-down — start a resize drag from `corner` (edit mode only). */
+  onResizePointerDown?: (e: PointerEvent<HTMLElement>, corner: ResizeCorner) => void;
   resizeLabel?: string;
+  /** Corner names appended to `resizeLabel` so each handle has a distinct accessible name. */
+  resizeCornerLabels?: Partial<Record<ResizeCorner, string>>;
   /** Geometry passthrough — `left/top/width/height` set by the board. */
   style?: CSSProperties;
   /** Widget content. Always mounted (hidden while closed) so the widget keeps
@@ -75,6 +81,20 @@ export interface WidgetFrameProps {
   onNaturalHeight?: (px: number) => void;
   ref?: Ref<HTMLElement>;
 }
+
+const RESIZE_HANDLES: Record<ResizeCorner, string> = {
+  nw: "-left-px -top-px cursor-nwse-resize border-l-2 border-t-2",
+  ne: "-right-px -top-px cursor-nesw-resize border-r-2 border-t-2",
+  sw: "-bottom-px -left-px cursor-nesw-resize border-b-2 border-l-2",
+  se: "-bottom-px -right-px cursor-nwse-resize border-b-2 border-r-2",
+};
+
+const CORNER_NAMES: Record<ResizeCorner, string> = {
+  nw: "top left",
+  ne: "top right",
+  sw: "bottom left",
+  se: "bottom right",
+};
 
 const headerBtn = "cursor-pointer bg-transparent px-[6px] py-[2px] text-ink-3 hover:text-ink";
 
@@ -104,6 +124,7 @@ export function WidgetFrame({
   onMovePointerDown,
   onResizePointerDown,
   resizeLabel,
+  resizeCornerLabels,
   style,
   children,
   onNaturalHeight,
@@ -260,14 +281,23 @@ export function WidgetFrame({
           >
             {sizeLabel}
           </span>
-          <div
-            aria-label={resizeLabel}
-            className="absolute -bottom-px -right-px box-border h-[12px] w-[12px] cursor-nwse-resize border-b-2 border-r-2 border-ink"
-            data-testid={WidgetFrameTestId.Resize}
-            onPointerDown={onResizePointerDown}
-            role="separator"
-            title={resizeLabel}
-          />
+          {(Object.keys(RESIZE_HANDLES) as ResizeCorner[]).map((corner) => {
+            const name = `${resizeLabel ?? "Resize"} (${resizeCornerLabels?.[corner] ?? CORNER_NAMES[corner]})`;
+            return (
+              <div
+                aria-label={name}
+                className={cn(
+                  "absolute box-border h-[12px] w-[12px] border-ink",
+                  RESIZE_HANDLES[corner],
+                )}
+                data-testid={`${WidgetFrameTestId.Resize}-${corner}`}
+                key={corner}
+                onPointerDown={(e) => onResizePointerDown?.(e, corner)}
+                role="separator"
+                title={name}
+              />
+            );
+          })}
         </>
       ) : null}
     </section>

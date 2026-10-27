@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { UiSettings } from "@zibby/contracts";
+import type { ResizeCorner } from "@zibby/design-system";
 import { useUiSettings } from "../../system";
 import {
   type BridgeWidget,
@@ -198,8 +199,8 @@ export function useBridgeState() {
     [commitLayout],
   );
   const resize = useCallback(
-    (id: string, origin: DragOrigin, dx: number, dy: number) =>
-      commitLayout(dragResize(layoutRef.current, id, origin, dx, dy)),
+    (id: string, origin: DragOrigin, dx: number, dy: number, corner?: ResizeCorner) =>
+      commitLayout(dragResize(layoutRef.current, id, origin, dx, dy, corner)),
     [commitLayout],
   );
   const add = useCallback(

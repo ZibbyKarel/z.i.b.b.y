@@ -1,7 +1,7 @@
 import { WidgetFrameTestId } from "@zibby/design-system";
-import { act } from "@testing-library/react";
+import { act, fireEvent } from "@testing-library/react";
 import { useEffect, useState } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen } from "../../../test/render";
 import type { BridgeState } from "../state/useBridgeState";
 import type { BridgeWidgetProps } from "../widgets/registry";
@@ -51,10 +51,41 @@ const state = {
 } as unknown as BridgeState;
 
 describe("BridgeBoard", () => {
+  afterEach(() => {
+    fireEvent.pointerUp(window);
+    vi.unstubAllGlobals();
+  });
+
   it("drops the loader when only `loading` flips true to false", () => {
     renderWithProviders(<BridgeBoard density="comfort" state={state} />);
     expect(screen.getByTestId(WidgetFrameTestId.Loading)).toBeInTheDocument();
     act(() => h.setLoading(false));
     expect(screen.queryByTestId(WidgetFrameTestId.Loading)).toBeNull();
+  });
+
+  it("starts a resize from the pressed corner", () => {
+    // jsdom has no PointerEvent; MouseEvent carries the button/clientX the handler reads.
+    vi.stubGlobal("PointerEvent", MouseEvent);
+    const layout = [{ id: "prs", type: "prs", x: 0, y: 0, w: 6, h: 4 }];
+    const resize = vi.fn();
+    const editState = {
+      ...state,
+      editing: true,
+      layout,
+      layoutRef: { current: layout },
+      beginDrag: vi.fn(),
+      endDrag: vi.fn(),
+      resize,
+    } as unknown as BridgeState;
+    renderWithProviders(<BridgeBoard density="comfort" state={editState} />);
+    fireEvent.pointerDown(screen.getByTestId(`${WidgetFrameTestId.Resize}-nw`), { button: 0 });
+    fireEvent.pointerMove(window, { clientX: 200, clientY: 100 });
+    expect(resize).toHaveBeenCalledWith(
+      "prs",
+      { x: 0, y: 0, w: 6, h: 4 },
+      expect.any(Number),
+      expect.any(Number),
+      "nw",
+    );
   });
 });

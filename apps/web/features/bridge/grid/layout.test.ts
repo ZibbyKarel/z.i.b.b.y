@@ -83,6 +83,24 @@ describe("drag", () => {
   });
 });
 
+describe("dragResize corners", () => {
+  const solo = fromArr([["prs", 4, 4, 4, 4]]);
+  const o = { x: 4, y: 4, w: 4, h: 4 };
+  const run = (dx: number, dy: number, c: "nw" | "ne" | "sw" | "se") =>
+    get(dragResize(solo, "prs", o, dx, dy, c), "prs");
+  it.each([
+    ["se", 1, 1, { x: 4, y: 4, w: 5, h: 5 }],
+    ["sw", -2, 1, { x: 2, y: 4, w: 6, h: 5 }],
+    ["ne", 1, -2, { x: 4, y: 2, w: 5, h: 6 }],
+    ["nw", -1, -1, { x: 3, y: 3, w: 5, h: 5 }],
+    ["nw", 5, 5, { x: 6, y: 6, w: 2, h: 2 }],
+    ["sw", -10, 0, { x: 0, w: 8 }],
+    ["nw", 0, -10, { y: 0, h: 8 }],
+  ] as const)("%s (%i,%i)", (c, dx, dy, want) => {
+    expect(run(dx, dy, c)).toMatchObject(want);
+  });
+});
+
 describe("toCells", () => {
   it("rounds to whole cells", () => {
     expect(toCells(110, -30, 80, 10, 20)).toEqual({ dx: 1, dy: -1 });
