@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupTranscript, parseTranscript } from "./transcript";
+import { groupTranscript, parseTranscript, rawLogLines } from "./transcript";
 
 /**
  * Golden fixtures lifted verbatim from real run logs under
@@ -224,5 +224,15 @@ describe("parseTranscript — raw stage log", () => {
         text: "verify: clean checkout of abc\n✓ Lockfile ok\n---\n# not a heading",
       },
     ]);
+  });
+});
+
+describe("rawLogLines", () => {
+  it("keeps every line verbatim, final tqdm state, no blanks or ANSI", () => {
+    expect(
+      rawLogLines(
+        "\u001b[32mok\u001b[0m\n\r  0%|  | 0/4\r100%|██| 4/4\n\n# Produce report\n  - [high] x\n",
+      ),
+    ).toEqual(["ok", "100%|██| 4/4", "# Produce report", "  - [high] x"]);
   });
 });

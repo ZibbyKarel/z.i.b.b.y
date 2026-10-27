@@ -57,7 +57,7 @@ function isDroppedJsonLine(line: string): boolean {
 }
 
 /** SGR colour codes — a non-claude stage CLI (pnpm, tsc, vitest) writes them to its log. */
- 
+
 const ANSI = /\u001b\[[0-9;]*m/g;
 const GLYPH_LINE = /^(▶ |💭 |● |─── | {2}⎿)/m;
 /** pnpm install chatter: the `Progress:` ticker and the `+++` added-packages bar. */
@@ -76,6 +76,22 @@ function parseRawLog(text: string): TranscriptSegment[] {
     .join("\n")
     .trim();
   return body ? [{ kind: "result", text: body }] : [];
+}
+
+/**
+ * A tool phase's log (a non-claude stage CLI) as raw mono rows: ANSI stripped, a
+ * `\r` redraw keeps only its final state, install noise and blank lines dropped,
+ * leading indentation kept.
+ */
+export function rawLogLines(rawText: string): string[] {
+  return rawText
+    .replace(ANSI, "")
+    .split("\n")
+    .map((l) => {
+      const crlf = l.replace(/\r+$/, "");
+      return crlf.slice(crlf.lastIndexOf("\r") + 1);
+    })
+    .filter((l) => l.trim() && !INSTALL_NOISE.test(l));
 }
 
 export function parseTranscript(rawText: string): TranscriptSegment[] {

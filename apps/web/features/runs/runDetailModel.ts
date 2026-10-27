@@ -9,7 +9,7 @@ import { formatCostUsd } from "../../utils/cost";
 import { formatDuration } from "../../utils/time";
 import type { RunView } from "./run";
 import { type StageRunEntry, buildPhaseNodes } from "./stagePhases";
-import { groupTranscript, parseTranscript } from "./transcript";
+import { groupTranscript, parseTranscript, rawLogLines } from "./transcript";
 
 /** What the run detail screen is showing — one value drives header, actions, banners and composer. */
 export type RunMode =
@@ -311,9 +311,23 @@ const youItem = (m: OperatorMessage, terminal: boolean): FeedItem => ({
   ...(m.deliveredPhaseId && { deliveredPhaseId: m.deliveredPhaseId }),
 });
 
-function agentItem(row: StageRailRow, transcript: string): FeedItem | null {
+// `product-factory:` is the CLI's stderr prefix for a failure line (e.g. "fal 500").
+const ERROR_LINE = /\b(error|rejected|blocked)\b|^product-factory:/i;
+
+function agentItem(row: StageRailRow, transcript: string, raw: boolean): FeedItem | null {
   const live = row.stateKey === "running";
   if (!transcript.trim() && !live) return null;
+  if (raw) {
+    const tools = rawLogLines(transcript).map(
+      (text, i): LogStreamLine => ({
+        id: `${row.phaseId}-${i}`,
+        ts: pad2(i + 1),
+        text,
+        ...(ERROR_LINE.test(text) && { state: "error" as const }),
+      }),
+    );
+    return { kind: "agent", phaseId: row.phaseId, who: row.name, markdown: "", tools, live };
+  }
   const groups = groupTranscript(parseTranscript(transcript));
   const markdown = groups
     .flatMap((g) => (g.kind === "text" ? [g.markdown.trim()] : []))
@@ -339,8 +353,10 @@ export function buildLiveFeed(args: {
   transcript: string;
   messages: OperatorMessage[];
   terminal: boolean;
+  /** Phases of workflow type `tool` — their log is raw CLI output, not an agent transcript. */
+  toolPhaseIds?: ReadonlySet<string>;
 }): FeedItem[] {
-  const { rail, transcript, terminal } = args;
+  const { rail, transcript, terminal, toolPhaseIds } = args;
   const selected = args.selectedPhaseId ?? rail.find((r) => r.current)?.phaseId ?? null;
   const messages = [...args.messages].sort((a, b) => a.at.localeCompare(b.at));
   const placed = new Set<string>();
@@ -357,7 +373,7 @@ export function buildLiveFeed(args: {
       state: row.state,
     });
     if (row.phaseId === selected) {
-      const agent = agentItem(row, transcript);
+      const agent = agentItem(row, transcript, !!toolPhaseIds?.has(row.phaseId));
       if (agent) items.push(agent);
     }
     for (const m of messages) {
