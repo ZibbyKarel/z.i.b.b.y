@@ -2,6 +2,7 @@ import { AccordionTestId } from "@zibby/design-system";
 import { fireEvent } from "@testing-library/react";
 import { renderWithProviders as render, screen } from "../../../test/render";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LIVE_STAGE_RUN_ID } from "../stagePhases";
 import { useStageRunLogQuery } from "../queries/useStageRunLogQuery";
 import type { RunView } from "../run";
 import type { FeedItem } from "../runDetailModel";
@@ -160,6 +161,33 @@ describe("RunLiveFeed", () => {
       const summaries = screen.getAllByTestId(AccordionTestId.Summary);
       expect(summaries).toHaveLength(3);
       expect(summaries[2]).toHaveAttribute("aria-expanded", "true");
+      expect(summaries[0]).toHaveAttribute("aria-expanded", "false");
+    });
+
+    it("keeps the latest round open when the live round becomes recorded", () => {
+      const withLast = (stageRunId: string, live: boolean): FeedItem => {
+        const base = roundsItem(2);
+        if (base.kind !== "agent") throw new Error("agent expected");
+        return {
+          ...base,
+          live,
+          rounds: [
+            { n: 1, stageRunId: "s1", live: false },
+            { n: 2, stageRunId, live },
+          ],
+        };
+      };
+      const { rerender } = render(
+        <RunLiveFeed items={[withLast(LIVE_STAGE_RUN_ID, true)]} mode="running" run={wfRun} />,
+      );
+      expect(screen.getAllByTestId(AccordionTestId.Summary)[1]).toHaveAttribute(
+        "aria-expanded",
+        "true",
+      );
+      expect(useStageRunLogQuery).not.toHaveBeenCalled();
+      rerender(<RunLiveFeed items={[withLast("s2", false)]} mode="running" run={wfRun} />);
+      const summaries = screen.getAllByTestId(AccordionTestId.Summary);
+      expect(summaries[1]).toHaveAttribute("aria-expanded", "true");
       expect(summaries[0]).toHaveAttribute("aria-expanded", "false");
     });
 

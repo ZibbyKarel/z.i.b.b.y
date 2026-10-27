@@ -105,7 +105,7 @@ function FeedAgent({ item, runId }: { item: Item<"agent">; runId: string }) {
             {rounds.map((r, i) => (
               <AccordionItem
                 defaultExpanded={i === rounds.length - 1}
-                key={r.stageRunId || "live"}
+                key={r.n}
                 summary={t("round", { n: r.n })}
               >
                 {i === rounds.length - 1 ? (

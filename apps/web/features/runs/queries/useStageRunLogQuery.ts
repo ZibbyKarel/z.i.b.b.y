@@ -29,6 +29,8 @@ export function useStageRunLogQuery(
       query: stageRunId ? { stageRunId } : {},
     },
     enabled: Boolean(phaseId),
+    // a finished attempt never changes
+    ...(stageRunId && { staleTime: Infinity }),
     select: selectApiResponseBody,
   });
 }
