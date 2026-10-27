@@ -5,6 +5,8 @@ import * as path from "node:path";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import {
   type Attachment,
+  type ChatAbout,
+  ChatAboutRefSchema,
   type ChatMentionTarget,
   type ChatMessage,
   type ChatToolEvent,
@@ -20,6 +22,7 @@ import { collisionResistantId, ensureDir } from "../shared/file-storage";
 import { SystemConfigStore } from "../system/system-config.store";
 import { TeamsStorageService } from "../teams/teams.storage.service";
 import { AttachmentStorageService } from "../tasks/attachment-storage.service";
+import { buildAboutPromptSection } from "./chat-about-prompt";
 import { buildAttachmentPromptSection } from "./chat-attachment-prompt";
 import { ChatEventsService } from "./chat-events.service";
 import { ChatMcpAuthService } from "./chat-mcp-auth.service";
@@ -42,6 +45,8 @@ export interface ChatTurnTags {
   skill?: { name: string; instructions: string };
   project?: { id: string; name: string; path?: string };
   company?: { id: string; name: string };
+  /** todo-29 — the thing the chat was opened about (full descriptor incl. `details`). */
+  about?: ChatAbout;
 }
 
 /** Hard ceiling on one turn; a stuck `claude` is killed and the turn ends in error. */
@@ -215,6 +220,7 @@ export class ChatSessionService {
         : {}),
       ...(project ? { project: { id: project.id, name: project.name, path: project.path } } : {}),
       ...(company ? { company: { id: company.id, name: company.name } } : {}),
+      ...(body.about ? { about: body.about } : {}),
     };
     // A tagged project scopes the KB to its own team unless a team is tagged explicitly.
     const teamId = body.teamId ?? project?.teamId;
@@ -240,6 +246,7 @@ export class ChatSessionService {
       text: body.text,
       at: now.toISOString(),
       ...(mentions.length > 0 ? { mentions } : {}),
+      ...(body.about ? { about: ChatAboutRefSchema.parse(body.about) } : {}),
       ...(attachments.length > 0 ? { attachments, attachmentSetId: body.attachmentSetId } : {}),
     };
     await this.store.appendMessage(conversationId, userMessage);
@@ -315,7 +322,14 @@ export class ChatSessionService {
       ? `Operátor pro tuto zprávu vybral skill "${tags.skill.name}" (/skill). Řiď se jeho instrukcemi — ` +
         `doplňují pravidla výše, nikdy je nenahrazují:\n\n${tags.skill.instructions}`
       : undefined;
-    const prompt = [persona, mentionLine, scopeLine, attachmentSection, skillSection]
+    const prompt = [
+      persona,
+      mentionLine,
+      scopeLine,
+      tags?.about ? buildAboutPromptSection(tags.about) : undefined,
+      attachmentSection,
+      skillSection,
+    ]
       .filter(Boolean)
       .join("\n\n");
     const args = [
