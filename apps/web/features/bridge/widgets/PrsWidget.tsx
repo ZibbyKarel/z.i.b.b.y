@@ -84,10 +84,10 @@ export function PrsWidget({
   return (
     <>
       {groups.map((g, i) => {
-        const first = i === 0 || g.mine !== groups[i - 1]?.mine;
-        const sectionKey = `${widget.id}:${g.mine ? "mine" : "review"}`;
+        const first = i === 0 || g.section !== groups[i - 1]?.section;
+        const sectionKey = `${widget.id}:${g.section}`;
         const closed = !!epicClosed[sectionKey];
-        const title = t(g.mine ? "section.mine" : "section.toReview");
+        const title = t(g.section === "review" ? "section.toReview" : `section.${g.section}`);
         return (
           <Fragment key={g.root.key}>
             {first ? (
@@ -95,7 +95,7 @@ export function PrsWidget({
                 closed={closed}
                 count={String(
                   groups
-                    .filter((x) => x.mine === g.mine)
+                    .filter((x) => x.section === g.section)
                     .reduce((n, x) => n + 1 + x.kids.length, 0),
                 )}
                 groupKey=""

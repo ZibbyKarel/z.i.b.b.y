@@ -12,7 +12,10 @@ export type PrStatusKey =
   | "changesRequested"
   | "checksRunning"
   | "approved"
-  | "awaitingReview";
+  | "awaitingReview"
+  | "reviewedApproved"
+  | "reviewedChangesRequested"
+  | "reviewedCommented";
 
 const STATUS: Record<PrStatusKey, { tone: PrTone; label: string }> = {
   reviewRequested: { tone: "think", label: "REVIEW REQUESTED" },
@@ -23,6 +26,9 @@ const STATUS: Record<PrStatusKey, { tone: PrTone; label: string }> = {
   checksRunning: { tone: "think", label: "CHECKS RUNNING" },
   approved: { tone: "work", label: "APPROVED" },
   awaitingReview: { tone: "idle", label: "AWAITING REVIEW" },
+  reviewedApproved: { tone: "work", label: "YOU APPROVED" },
+  reviewedChangesRequested: { tone: "block", label: "YOU REQUESTED CHANGES" },
+  reviewedCommented: { tone: "idle", label: "YOU COMMENTED" },
 };
 
 /**
@@ -41,6 +47,10 @@ const STATUS: Record<PrStatusKey, { tone: PrTone; label: string }> = {
 export function prStatusKey(pr: InboxPr): PrStatusKey {
   if (pr.bucket === "to-review" && pr.blocker !== "ready-to-merge") return "reviewRequested";
   if (pr.draft) return "draft";
+  if (pr.bucket === "reviewed") {
+    if (pr.myReview === "approved") return "reviewedApproved";
+    return pr.myReview === "changes-requested" ? "reviewedChangesRequested" : "reviewedCommented";
+  }
   if (pr.ci === "failing") return "ciFailing";
   if (pr.blocker === "merge-conflict" || pr.mergeable === false) return "mergeConflict";
   if (pr.review === "changes-requested") return "changesRequested";

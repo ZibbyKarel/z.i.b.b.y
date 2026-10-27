@@ -172,8 +172,8 @@ export interface PrRowVm {
 }
 
 export interface PrGroupVm {
-  /** Own PRs (`bucket === "mine"`) vs PRs waiting on the operator's review. */
-  mine: boolean;
+  /** Own PRs, PRs waiting on the operator's review, or PRs the operator already reviewed. */
+  section: "mine" | "review" | "reviewed";
   root: PrRowVm;
   kids: PrRowVm[];
 }
@@ -187,7 +187,13 @@ const PR_TONE: Record<ReturnType<typeof prStatusKey>, RowTone> = {
   checksRunning: "thinking",
   approved: "working",
   awaitingReview: "idle",
+  reviewedApproved: "working",
+  reviewedChangesRequested: "blocked",
+  reviewedCommented: "idle",
 };
+
+const PR_SECTION = { mine: "mine", "to-review": "review", reviewed: "reviewed" } as const;
+const SECTION_ORDER = { mine: 0, review: 1, reviewed: 2 };
 
 export function prRow(widgetId: string, pr: InboxPr, all: InboxPr[], ago: Ago): PrRowVm {
   const statusKey = prStatusKey(pr);
@@ -222,12 +228,12 @@ export function prGroups(
 ): { groups: PrGroupVm[]; visible: InboxPr[] } {
   const visible = all.filter((p) => passesFilters(filters, p));
   const groups = groupPrStacks(all, visible).map((g) => ({
-    mine: g.root.bucket === "mine",
+    section: PR_SECTION[g.root.bucket],
     root: prRow(widgetId, g.root, all, ago),
     kids: g.kids.map((k) => prRow(widgetId, k, all, ago)),
   }));
-  // Own PRs first; the sort is stable, so the urgency order within each section is kept.
-  groups.sort((a, b) => Number(b.mine) - Number(a.mine));
+  // Own PRs first, then to-review, then reviewed; the sort is stable, so the urgency order within each section is kept.
+  groups.sort((a, b) => SECTION_ORDER[a.section] - SECTION_ORDER[b.section]);
   return { groups, visible };
 }
 

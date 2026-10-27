@@ -2970,7 +2970,6 @@
       "ci": "CI {symbol} {state}",
       "reason": {
         "direct": "Directly",
-        "reviewed": "Reviewed by you",
         "team": "Via team {team}"
       },
       "mine": "Mine",
@@ -3175,7 +3174,10 @@
           "changesRequested": "Changes requested",
           "checksRunning": "Checks running",
           "approved": "Approved",
-          "awaitingReview": "Awaiting review"
+          "awaitingReview": "Awaiting review",
+          "reviewedApproved": "You approved",
+          "reviewedChangesRequested": "You requested changes",
+          "reviewedCommented": "You commented"
         },
         "need": {
           "merge": "Merge"
@@ -3186,6 +3188,7 @@
         "section": {
           "mine": "Mine",
           "toReview": "To review",
+          "reviewed": "Reviewed by you",
           "toggle": "Toggle {title}"
         }
       },

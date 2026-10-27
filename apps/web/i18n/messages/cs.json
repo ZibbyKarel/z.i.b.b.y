@@ -2970,7 +2970,6 @@
       "ci": "CI {symbol} {state}",
       "reason": {
         "direct": "Přímo",
-        "reviewed": "Zrevidováno tebou",
         "team": "Přes tým {team}"
       },
       "mine": "Moje",
@@ -3175,7 +3174,10 @@
           "changesRequested": "Požadované změny",
           "checksRunning": "Kontroly běží",
           "approved": "Schváleno",
-          "awaitingReview": "Čeká na review"
+          "awaitingReview": "Čeká na review",
+          "reviewedApproved": "Schváleno tebou",
+          "reviewedChangesRequested": "Požadoval jsi změny",
+          "reviewedCommented": "Okomentováno tebou"
         },
         "need": {
           "merge": "Merge"
@@ -3186,6 +3188,7 @@
         "section": {
           "mine": "Moje",
           "toReview": "K review",
+          "reviewed": "Zrevidováno tebou",
           "toggle": "Sbalit / rozbalit {title}"
         }
       },
