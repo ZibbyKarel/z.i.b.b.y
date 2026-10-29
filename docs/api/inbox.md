@@ -47,22 +47,30 @@ missing or wrong → 401) — see _Operator token_ in `docs/api/approvals.md`.
 
 ## Items (`GET /api/roadmap/items`)
 
-Every project's roadmap tasks where `level === "task"`, `lifecycle !== "archived"`,
-`source.kind` is jira/github and `scopeReasons` (sync-owned, see
-`docs/api/roadmap.md`) is non-empty. `done` items are kept — the client hides
-them unless "Show done". Each item is joined with `project {id, name}`,
-`companyId`/`teamId` from the project, and `hidden` from the state file. `parentId`
-is flattened to the nearest epic.
+Issues **assigned to the operator**, fetched live from Jira (`assignee = currentUser() AND
+statusCategory != Done`, one query per integration, deduped across projects) and GitHub
+(`is:issue is:open assignee:@me repo:<repo>` per project repo) — nothing is copied to disk
+(`docs/plans/live-issues-plan.md`, `InboxIssuesService`). Item ids are
+`roadmapItemIdForSource(integrationId, key)`. A roadmap-store item with the same id is ZIBBY's
+work record and overlays `runs`, `lastFailureReason`, `dependsOn` and a ZIBBY lifecycle
+(`enqueued`/`running`/`awaiting-merge`/`failed`); on-disk items missing from the live list are
+ignored. `linkedPr` is matched from the cached PR list by issue key.
 
-- `epics` — the epics the returned items belong to; `done/total` counts **every**
-  non-archived child task (same rule as the web's `epicProgress`), not only the
-  scoped ones.
+- Cached 60 s (dropped on `INBOX_REFRESH_ACTIVITY_KINDS`); `?refresh=true` bypasses it, and
+  the PR cache too.
+- `epics` — Jira parents of type Epic (or `hierarchyLevel` 1); `done/total` come from one extra
+  `parent in (...)` query per integration.
 - `syncProjectIds` — projects whose resolved integrations include Jira or GitHub
   (empty = "no integrations" state).
-- `syncedAt` — the oldest per-project last sync (max `item.syncedAt`) across
-  `syncProjectIds`.
-- `errors` — each source's last sync failure (`RoadmapSourceService.lastFailures()`),
-  cleared by that source's next clean sync. In memory only: lost on restart.
+- `syncedAt` — when the live list was fetched.
+- `errors` — per project and source failure of this fetch; one failing integration does not
+  fail the list.
+
+## Process (`POST /api/inbox/items/process`)
+
+Body `{projectId, itemId}`. Finds the item in the live list (404 when absent), writes a minimal
+local roadmap record if none exists, then plays it via `RoadmapGateService.play` (201 with the
+roadmap item; 422 when the gate refuses, e.g. already in flight or `external`).
 
 ## PRs (`GET /api/inbox/prs`)
 

@@ -47,12 +47,26 @@ export const InboxSourceErrorSchema = z.object({
 });
 export type InboxSourceError = z.infer<typeof InboxSourceErrorSchema>;
 
+/**
+ * `?refresh=true` on `listInboxItems` / `listInboxPrs` bypasses the server cache. A string enum,
+ * not `z.coerce.boolean()` (which would read "false" as true).
+ */
+export const InboxRefreshQuerySchema = z.object({ refresh: z.enum(["true", "false"]).optional() });
+export type InboxRefreshQuery = z.infer<typeof InboxRefreshQuerySchema>;
+
+/** Body of `POST /api/inbox/items/process`: one live issue the operator hands to ZIBBY. */
+export const ProcessInboxItemInputSchema = z.object({
+  projectId: z.string().min(1),
+  itemId: z.string().min(1),
+});
+export type ProcessInboxItemInput = z.infer<typeof ProcessInboxItemInputSchema>;
+
 export const InboxItemsResponseSchema = z.object({
   items: z.array(InboxRoadmapItemSchema),
   epics: z.array(InboxEpicSchema),
-  /** Projects with a Jira/GitHub integration — what the `Sync` button syncs. Empty = "no integrations" state. */
+  /** Projects with a Jira/GitHub integration. Empty = "no integrations" state. */
   syncProjectIds: z.array(z.string().min(1)),
-  /** Oldest last-sync across the synced projects (absent before the first sync). */
+  /** When the live list was fetched. */
   syncedAt: IsoDateTimeSchema.optional(),
   errors: z.array(InboxSourceErrorSchema),
 });

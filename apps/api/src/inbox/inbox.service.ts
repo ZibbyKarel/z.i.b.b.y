@@ -2,7 +2,6 @@ import { Injectable, type OnModuleDestroy, type OnModuleInit, Optional } from "@
 import type { Subscription } from "rxjs";
 import { INBOX_REFRESH_ACTIVITY_KINDS } from "@zibby/contracts";
 import type {
-  InboxEpic,
   InboxItemsResponse,
   InboxPr,
   InboxPrBlocker,
@@ -10,7 +9,6 @@ import type {
   InboxPrReview,
   InboxPrSection,
   InboxPrsResponse,
-  InboxRoadmapItem,
   InboxSourceError,
   InboxState,
   Project,
@@ -23,9 +21,8 @@ import { CredentialsStore } from "../integrations/credentials.store";
 import { ProjectPrService, resolveGithubToken } from "../projects/project-pr.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ResolvedProjectService } from "../projects/resolved-project.service";
-import { RoadmapSourceService } from "../roadmap/roadmap-source.service";
-import { RoadmapStore } from "../roadmap/roadmap.store";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
+import { InboxIssuesService, InboxItemNotFoundError } from "./inbox-issues.service";
 import { InboxStateStore } from "./inbox-state.store";
 
 const GITHUB_API = "https://api.github.com";
@@ -128,22 +125,6 @@ export function sectionOf(pr: {
   return pr.review === "approved" && pr.ci !== "pending" ? "ready-to-merge" : "waiting";
 }
 
-const hiddenKey = (integrationId: string, externalId: string) =>
-  `${integrationId}\u0000${externalId}`;
-
-/** Walk `parentId` up to the nearest epic (depth-capped against a cycle). */
-function nearestEpic(
-  item: RoadmapItem,
-  byId: ReadonlyMap<string, RoadmapItem>,
-): RoadmapItem | undefined {
-  let current = item.parentId ? byId.get(item.parentId) : undefined;
-  for (let depth = 0; current && depth < 25; depth += 1) {
-    if (current.level === "epic") return current;
-    current = current.parentId ? byId.get(current.parentId) : undefined;
-  }
-  return undefined;
-}
-
 /** `companyId`/`teamId` of a project, omitted when unset. */
 function orgOf(project: Project): { companyId?: string; teamId?: string } {
   return {
@@ -153,9 +134,8 @@ function orgOf(project: Project): { companyId?: string; teamId?: string } {
 }
 
 /**
- * The Inbox (docs/api/inbox.md): a read-only view over the synced roadmap cache
- * narrowed to the operator's scope, plus the operator's GitHub PRs. Never writes
- * to Jira/GitHub. `fetchImpl` is injectable like `ProjectPrService`'s.
+ * The Inbox (docs/api/inbox.md): the operator's live assigned issues (`InboxIssuesService`)
+ * plus the operator's GitHub PRs. Never writes to Jira/GitHub. `fetchImpl` is injectable like `ProjectPrService`'s.
  */
 @Injectable()
 export class InboxService implements OnModuleInit, OnModuleDestroy {
@@ -167,8 +147,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
     private readonly projects: ProjectsStorageService,
     private readonly resolvedProjects: ResolvedProjectService,
     private readonly credentials: CredentialsStore,
-    private readonly roadmap: RoadmapStore,
-    private readonly roadmapSource: RoadmapSourceService,
+    private readonly issues: InboxIssuesService,
     private readonly state: InboxStateStore,
     private readonly tasks: ScheduledTasksStorageService,
     private readonly projectPrs: ProjectPrService,
@@ -196,6 +175,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
   /** Drop the 30 s PR cache so the next read reaches GitHub. */
   dropPrsCache(): void {
     this.prsCache = null;
+    this.issues.dropCache(); // the issue list carries ZIBBY's overlay and linked PRs
   }
 
   getState(): Promise<InboxState> {
@@ -206,70 +186,22 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
     return this.state.setHidden(body);
   }
 
-  async listItems(): Promise<InboxItemsResponse> {
-    const [projects, state] = await Promise.all([this.projects.list(), this.state.read()]);
-    const hidden = new Set(state.hidden.map((k) => hiddenKey(k.integrationId, k.externalId)));
-    const items: InboxRoadmapItem[] = [];
-    const epics = new Map<string, InboxEpic>();
-    const syncProjectIds: string[] = [];
-    let syncedAt: string | undefined;
+  listItems(refresh = false): Promise<InboxItemsResponse> {
+    return this.issues.list(refresh, () => this.cachedPrs(refresh));
+  }
 
-    for (const project of projects) {
-      const integrations = await this.resolvedProjects.resolveIntegrations(project);
-      const all = await this.roadmap.list(project.id);
-      if (integrations.some((i) => i.config.kind === "jira" || i.config.kind === "github")) {
-        syncProjectIds.push(project.id);
-        const last = all.reduce<string | undefined>(
-          (max, i) => (i.syncedAt && (!max || i.syncedAt > max) ? i.syncedAt : max),
-          undefined,
-        );
-        if (last && (!syncedAt || last < syncedAt)) syncedAt = last;
-      }
-
-      const byId = new Map(all.map((i) => [i.id, i]));
-      for (const item of all) {
-        const { source } = item;
-        if (item.level !== "task" || item.lifecycle === "archived") continue;
-        if (source.kind === "manual" || !item.scopeReasons?.length) continue;
-        const epic = nearestEpic(item, byId);
-        items.push({
-          ...item,
-          parentId: epic?.id, // deeper chains flattened to the nearest epic
-          project: { id: project.id, name: project.name },
-          ...orgOf(project),
-          hidden: hidden.has(hiddenKey(source.integrationId ?? "", source.externalId ?? "")),
-        });
-        if (!epic || epics.has(`${project.id}/${epic.id}`)) continue;
-        // Same rule as the web's `epicProgress`: every non-archived child task.
-        const children = all.filter(
-          (c) => c.level === "task" && c.parentId === epic.id && c.lifecycle !== "archived",
-        );
-        epics.set(`${project.id}/${epic.id}`, {
-          id: epic.id,
-          projectId: project.id,
-          ...(epic.source.externalKey ? { key: epic.source.externalKey } : {}),
-          title: epic.name,
-          source: epic.source.kind,
-          ...(epic.source.url ? { url: epic.source.url } : {}),
-          done: children.filter((c) => c.lifecycle === "done").length,
-          total: children.length,
-        });
-      }
-    }
-
-    return {
-      items,
-      epics: [...epics.values()],
-      syncProjectIds,
-      ...(syncedAt ? { syncedAt } : {}),
-      errors: this.roadmapSource.lastFailures().filter((e) => syncProjectIds.includes(e.projectId)),
-    };
+  /** Hand one live issue to ZIBBY: local record if missing, then the roadmap gate's play. */
+  async processItem(projectId: string, itemId: string): Promise<RoadmapItem> {
+    const { items } = await this.listItems();
+    const item = items.find((i) => i.projectId === projectId && i.id === itemId);
+    if (!item) throw new InboxItemNotFoundError(projectId, itemId);
+    return this.issues.process(item);
   }
 
   /** Cached GitHub classification + the (uncached, local) review/rebase/address-comments task state per PR. */
-  async listPrs(): Promise<InboxPrsResponse> {
+  async listPrs(refresh = false): Promise<InboxPrsResponse> {
     const [result, { reviews, rebases, addressings, fixes }] = await Promise.all([
-      this.cachedPrs(),
+      this.cachedPrs(refresh),
       this.prTaskStates(),
     ]);
     return {
@@ -291,11 +223,16 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-  private cachedPrs(): Promise<InboxPrsResponse> {
-    if (this.prsCache && Date.now() - this.prsCache.at < PRS_TTL_MS) return this.prsCache.value;
+  private cachedPrs(refresh = false): Promise<InboxPrsResponse> {
+    if (!refresh && this.prsCache && Date.now() - this.prsCache.at < PRS_TTL_MS) {
+      return this.prsCache.value;
+    }
     const value = this.fetchPrs();
-    this.prsCache = { at: Date.now(), value };
-    value.catch(() => (this.prsCache = null));
+    const entry = { at: Date.now(), value };
+    this.prsCache = entry;
+    value.catch(() => {
+      if (this.prsCache === entry) this.prsCache = null;
+    });
     return value;
   }
 

@@ -1,6 +1,5 @@
 import { Injectable, Optional } from "@nestjs/common";
 import type {
-  CredentialsInput,
   GitHubConfig,
   Integration,
   JiraConfig,
@@ -23,6 +22,7 @@ import {
   roadmapItemIdForSource,
 } from "@zibby/contracts";
 import { CredentialsStore } from "../integrations/credentials.store";
+import { jiraAuthHeader, searchJira, tokenOf } from "../integrations/jira-client";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ResolvedProjectService } from "../projects/resolved-project.service";
 import { AttachmentStorageService } from "../tasks/attachment-storage.service";
@@ -129,14 +129,6 @@ interface JiraSearchIssue {
     labels?: string[];
   };
 }
-interface JiraSearchResponse {
-  issues?: JiraSearchIssue[];
-  /** Cursor pagination (`/search/jql`): the token for the NEXT page, absent on the last. */
-  nextPageToken?: string;
-  /** True on the final page. The `/search/jql` endpoint returns NO `total`. */
-  isLast?: boolean;
-  errorMessages?: string[];
-}
 
 // --- GitHub wire shapes ------------------------------------------------------
 
@@ -164,11 +156,6 @@ interface GitHubPull {
   html_url?: string;
   title?: string;
   head?: { ref?: string };
-}
-
-/** PAT/API-token from the closed credentials union (null if absent) — same helper every adapter has. */
-function tokenOf(creds: CredentialsInput | null): string | null {
-  return creds && "token" in creds ? creds.token : null;
 }
 
 type JiraIntegration = Integration & { config: JiraConfig };
@@ -672,7 +659,7 @@ export class RoadmapSourceService {
     // — a `source: "jira"` sync must still be able to link an existing PR.
     const pullsOf = await this.pullsByProject(writeTo, results);
 
-    const authHeader = `Basic ${Buffer.from(`${integration.config.email}:${token}`).toString("base64")}`;
+    const authHeader = jiraAuthHeader(integration.config, token);
     const me = await this.fetchJiraAccountId(integration.config.baseUrl, authHeader);
     const primaryIssues = await this.fetchAllJiraIssues(
       integration.config.baseUrl,
@@ -869,32 +856,13 @@ export class RoadmapSourceService {
       (projectKey
         ? `project = ${projectKey} ORDER BY created ASC`
         : `assignee = currentUser() ORDER BY created ASC`);
-    const out: JiraSearchIssue[] = [];
-    let nextPageToken: string | undefined;
-    for (let page = 0; page < MAX_PAGES; page += 1) {
-      const params = new URLSearchParams({
-        jql: clause,
-        maxResults: String(PAGE_SIZE),
-        fields:
-          "summary,description,issuetype,parent,issuelinks,attachment,status,assignee,reporter,watches,components,labels",
-      });
-      if (nextPageToken) params.set("nextPageToken", nextPageToken);
-      const res = await this.fetchImpl(`${baseUrl}/rest/api/3/search/jql?${params}`, {
-        headers: { authorization: authHeader, accept: "application/json" },
-      });
-      if (res.status === 429) {
-        throw new Error(`jira rate limited (retry_after ${res.headers.get("retry-after") ?? "?"})`);
-      }
-      const body = (await res.json()) as JiraSearchResponse;
-      if (!res.ok) {
-        throw new Error(`jira search: ${body.errorMessages?.join("; ") ?? `HTTP ${res.status}`}`);
-      }
-      const issues = body.issues ?? [];
-      out.push(...issues);
-      if (issues.length === 0 || body.isLast || !body.nextPageToken) break;
-      nextPageToken = body.nextPageToken;
-    }
-    return out;
+    return (await searchJira(
+      this.fetchImpl,
+      baseUrl,
+      authHeader,
+      clause,
+      "summary,description,issuetype,parent,issuelinks,attachment,status,assignee,reporter,watches,components,labels",
+    )) as JiraSearchIssue[];
   }
 
   /** The operator's Jira accountId for `scopeReasons`; any failure → unknown, never a failed sync. */

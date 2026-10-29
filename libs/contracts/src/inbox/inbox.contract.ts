@@ -1,6 +1,7 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { ErrorSchema } from "../common.schema";
+import { RoadmapItemSchema } from "../roadmap/roadmap-item.schema";
 import {
   AddressInboxPrCommentsInputSchema,
   FixInboxPrCiInputSchema,
@@ -9,7 +10,9 @@ import {
   InboxPrThreadSchema,
   InboxPrThreadsSchema,
   InboxPrsResponseSchema,
+  InboxRefreshQuerySchema,
   InboxStateSchema,
+  ProcessInboxItemInputSchema,
   RebaseInboxPrInputSchema,
   ReplyInboxPrThreadInputSchema,
   ReviewInboxPrInputSchema,
@@ -22,9 +25,9 @@ import {
 const c = initContract();
 
 /**
- * Inbox (docs/plans/inbox-ui-spec.md). `listInboxItems` is the cross-project
- * roadmap list, already narrowed to the operator's scope on the server (from
- * the sync's `scopeReasons`); filtering and search run on the client.
+ * Inbox (docs/plans/inbox-ui-spec.md). `listInboxItems` is the cross-project list of issues
+ * assigned to the operator, fetched live (docs/plans/live-issues-plan.md); filtering and
+ * search run on the client.
  * `/roadmap/items` has no `:projectId` segment, so it cannot collide with the
  * per-project `/projects/:projectId/roadmap/...` routes.
  */
@@ -33,12 +36,29 @@ export const inboxContract = c.router(
     listInboxItems: {
       method: "GET",
       path: "/roadmap/items",
+      query: InboxRefreshQuerySchema,
       responses: { 200: InboxItemsResponseSchema },
-      summary: "List roadmap tasks in the operator's scope across all projects",
+      summary:
+        "List the issues assigned to the operator, fetched live from Jira/GitHub across all projects (cached 60 s; refresh=true bypasses)",
+    },
+    processInboxItem: {
+      method: "POST",
+      path: "/inbox/items/process",
+      body: ProcessInboxItemInputSchema,
+      responses: {
+        201: RoadmapItemSchema,
+        // 404: the item is not in the live list (or its project is gone).
+        404: ErrorSchema,
+        // 422: the roadmap gate refused it (already in flight, not startable).
+        422: ErrorSchema,
+      },
+      summary:
+        "Process one live issue: write a local roadmap record if none exists, then play it through the roadmap gate",
     },
     listInboxPrs: {
       method: "GET",
       path: "/inbox/prs",
+      query: InboxRefreshQuerySchema,
       responses: { 200: InboxPrsResponseSchema },
       summary: "List GitHub PRs awaiting the operator's review and the operator's own open PRs",
     },

@@ -278,8 +278,7 @@ describe("InboxService.listPrs", () => {
       { list: async () => [project] } as never,
       { resolveIntegrations: async () => [github] } as never,
       { read: async () => ({ token: "tok" }) } as never,
-      {} as never,
-      {} as never,
+      { dropCache: () => undefined } as never,
       {} as never,
       { list: async () => tasks } as never,
       {

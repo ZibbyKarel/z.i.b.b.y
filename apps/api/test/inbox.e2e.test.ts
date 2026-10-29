@@ -86,28 +86,15 @@ describe("Inbox API (e2e)", () => {
     delete process.env.INBOX_STATE_FILE;
   });
 
-  it("lists only scoped, non-archived tasks with their epic's progress over all children", async () => {
-    const res = await request(app.getHttpServer()).get("/api/roadmap/items").expect(200);
-    expect(res.body.items.map((i: { id: string }) => i.id)).toEqual(["task-mine"]);
-    expect(res.body.items[0]).toMatchObject({
-      parentId: "epic-1",
-      project: { id: "acme", name: "Acme" },
-      hidden: false,
-    });
-    expect(res.body.epics).toEqual([
-      {
-        id: "epic-1",
-        projectId: "acme",
-        key: "EPIC-1",
-        title: "Rollout",
-        source: "jira",
-        url: "https://acme.atlassian.net/browse/EPIC-1",
-        done: 1,
-        total: 2,
-      },
-    ]);
-    expect(res.body.syncProjectIds).toEqual([]); // no Jira/GitHub integration configured
-    expect(res.body.errors).toEqual([]);
+  it("lists live issues only: items synced to disk earlier are not listed, refresh=true is accepted", async () => {
+    // No Jira/GitHub integration is configured, so the live list is empty even though
+    // roadmap items sit on disk (old sync leftovers are ignored, never shown twice).
+    for (const query of ["", "?refresh=true"]) {
+      const res = await request(app.getHttpServer()).get(`/api/roadmap/items${query}`).expect(200);
+      expect(res.body).toMatchObject({ items: [], epics: [], syncProjectIds: [], errors: [] });
+      expect(typeof res.body.syncedAt).toBe("string");
+    }
+    await request(app.getHttpServer()).get("/api/roadmap/items?refresh=maybe").expect(400);
   });
 
   it("hides an item via PUT /api/inbox/state and reports it as hidden", async () => {
@@ -119,12 +106,15 @@ describe("Inbox API (e2e)", () => {
     expect((await request(app.getHttpServer()).get("/api/inbox/state").expect(200)).body).toEqual({
       hidden: [key],
     });
-    const res = await request(app.getHttpServer()).get("/api/roadmap/items").expect(200);
-    expect(res.body.items[0].hidden).toBe(true);
-
     await withOperator(request(app.getHttpServer()).put("/api/inbox/state"))
       .send({ ...key, hidden: false, extra: 1 })
       .expect(400); // strict body
+  });
+
+  it("POST /api/inbox/items/process is 404 for an item that is not in the live list", async () => {
+    await withOperator(request(app.getHttpServer()).post("/api/inbox/items/process"))
+      .send({ projectId: "acme", itemId: "task-mine" })
+      .expect(404);
   });
 
   it("GET /api/inbox/prs/:projectId/:number/diff is 404 for an unknown project", async () => {

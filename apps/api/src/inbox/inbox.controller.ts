@@ -13,6 +13,8 @@ import {
   ThreadNotOnPrError,
 } from "./inbox-pr-threads.service";
 import { InboxReviewService, ReviewRepoMismatchError } from "./inbox-review.service";
+import { RoadmapItemLifecycleError, RoadmapItemNotFoundError } from "../roadmap/roadmap.errors";
+import { InboxItemNotFoundError } from "./inbox-issues.service";
 import { InboxService } from "./inbox.service";
 
 /**
@@ -36,8 +38,34 @@ export class InboxController {
   @TsRestHandler(inboxContract)
   handler() {
     return tsRestHandler(inboxContract, {
-      listInboxItems: async () => ({ status: 200, body: await this.inbox.listItems() }),
-      listInboxPrs: async () => ({ status: 200, body: await this.inbox.listPrs() }),
+      listInboxItems: async ({ query }) => ({
+        status: 200,
+        body: await this.inbox.listItems(query.refresh === "true"),
+      }),
+      processInboxItem: async ({ body }) => {
+        try {
+          return {
+            status: 201 as const,
+            body: await this.inbox.processItem(body.projectId, body.itemId),
+          };
+        } catch (error) {
+          if (
+            error instanceof InboxItemNotFoundError ||
+            error instanceof RoadmapItemNotFoundError ||
+            error instanceof ProjectNotFoundError
+          ) {
+            return { status: 404 as const, body: { message: error.message } };
+          }
+          if (error instanceof RoadmapItemLifecycleError) {
+            return { status: 422 as const, body: { message: error.message } };
+          }
+          throw error;
+        }
+      },
+      listInboxPrs: async ({ query }) => ({
+        status: 200,
+        body: await this.inbox.listPrs(query.refresh === "true"),
+      }),
       reviewInboxPr: async ({ body }) => {
         try {
           return { status: 201 as const, body: await this.reviews.start(body) };

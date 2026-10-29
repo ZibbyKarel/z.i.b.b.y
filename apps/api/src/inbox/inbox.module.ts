@@ -9,6 +9,7 @@ import { WorkspaceModule } from "../workspace/workspace.module";
 import { INBOX_STATE_FILE, InboxStateStore } from "./inbox-state.store";
 import { InboxAddressCommentsService } from "./inbox-address-comments.service";
 import { InboxFixCiService } from "./inbox-fix-ci.service";
+import { InboxIssuesService } from "./inbox-issues.service";
 import { InboxPrDiffService } from "./inbox-pr-diff.service";
 import { InboxPrThreadsService } from "./inbox-pr-threads.service";
 import { InboxRebaseService } from "./inbox-rebase.service";
@@ -21,7 +22,7 @@ export function resolveInboxStateFile(): string {
   return process.env.INBOX_STATE_FILE ?? dataDir("inbox-state.json");
 }
 
-/** Inbox (docs/api/inbox.md). `RoadmapStore`/`RoadmapSourceService` come from the @Global RoadmapModule. */
+/** Inbox (docs/api/inbox.md). `RoadmapStore`/`RoadmapGateService` come from the @Global RoadmapModule. */
 @Module({
   // TasksModule + ApprovalsModule + WorkspaceModule (todo-11): the rebase and address-comments flows also push from a run's worktree.
   // (Phase 129 P2: the review flow creates a task and runs the `pr-review` approval kind.) None import this module — no cycle.
@@ -37,6 +38,7 @@ export function resolveInboxStateFile(): string {
   providers: [
     { provide: INBOX_STATE_FILE, useFactory: resolveInboxStateFile },
     InboxStateStore,
+    InboxIssuesService,
     InboxService,
     InboxReviewService,
     InboxRebaseService,

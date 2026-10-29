@@ -11,9 +11,9 @@ export function useInboxItemActions() {
   const hideMutation = useSetInboxHiddenMutation();
   return {
     process: (item: InboxRoadmapItem) =>
-      processMutation.mutate({ params: { projectId: item.projectId, itemId: item.id }, body: {} }),
+      processMutation.mutate({ body: { projectId: item.projectId, itemId: item.id } }),
     isProcessing: (item: InboxRoadmapItem) =>
-      processMutation.isPending && processMutation.variables?.params.itemId === item.id,
+      processMutation.isPending && processMutation.variables?.body.itemId === item.id,
     toggleHidden: (item: InboxRoadmapItem) => {
       const { integrationId, externalId } = item.source;
       if (!integrationId || !externalId) return;
