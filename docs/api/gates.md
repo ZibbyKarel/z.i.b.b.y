@@ -42,8 +42,10 @@ optional `name`/`desc`, an optional `department` and the derived `system` flag.
   (ask). Before these rules existed, `overwrite`/`move` had no rule and fell through to
   the fail-closed `ask`.
 - `floor-gh.pr_comment` (ask) covers the hook's `gh.pr_comment` intent: a `gh api` POST
-  of a PR review comment, a comment reply, a `COMMENT` (or event-less) review, or an
-  issue/PR comment. APPROVE/REQUEST_CHANGES reviews and other writes stay `gh.api_write`.
+  of a PR review comment, a comment reply, or an issue/PR comment, with its fields given
+  inline (an `--input` body stays `gh.api_write`). Every review POST (`/pulls/<n>/reviews`)
+  and every other write stays `gh.api_write`. `gh.pr_comment` is a subclass of
+  `gh.api_write`: any rule matching action `gh.api_write` also matches a comment.
 - **Autopilot overlay** (Phase 4, `docs/api/autopilot.md`). While it is on, a matching
   `ask` from `floor-gh.pr_comment`, or from `floor-git.push` onto a `zibby/*` branch,
   resolves as `notify` with `via: "autopilot"`. The overlay applies only to these locked

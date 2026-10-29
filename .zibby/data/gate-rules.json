@@ -1,6 +1,20 @@
 [
   {
-    "id": "floor-overwrite",
+    "id": "floor-gh.pr_comment",
+    "name": "Komentář na GitHubu",
+    "desc": "Komentář, odpověď nebo review na PR čeká na tvůj souhlas.",
+    "match": [
+      {
+        "type": "action",
+        "action": "gh.pr_comment"
+      }
+    ],
+    "decision": "ask",
+    "resolve": {
+      "type": "human"
+    }
+  },
+  {
     "name": "Přepis souboru",
     "desc": "Přepis existujícího souboru proběhne bez ptaní.",
     "match": [
@@ -9,10 +23,10 @@
         "action": "overwrite"
       }
     ],
-    "decision": "allow"
+    "decision": "allow",
+    "id": "floor-overwrite"
   },
   {
-    "id": "floor-move",
     "name": "Přesun souboru",
     "desc": "Přesun nebo přejmenování souboru čeká na tvé potvrzení.",
     "match": [
@@ -24,7 +38,8 @@
     "decision": "ask",
     "resolve": {
       "type": "human"
-    }
+    },
+    "id": "floor-move"
   },
   {
     "name": "Nákup",

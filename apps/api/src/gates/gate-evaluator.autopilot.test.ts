@@ -179,6 +179,47 @@ describe("GateEvaluatorService — autopilot overlay", () => {
     expect(await evalFloor(action, allow)).toMatchObject({ decision: "notify", via: "autopilot" });
   });
 
+  it("an existing gh.api_write rule still hits a comment POST (gh.pr_comment is its subclass)", async () => {
+    const rule = await catalog.create({
+      name: "No GitHub writes",
+      match: [{ type: "action", action: "gh.api_write" }],
+      decision: "deny",
+    });
+    for (const level of ["off", "full"] as const) {
+      await autopilot.set(level, "operator");
+      expect((await evalFloor({ action: "gh.pr_comment" })).decision, level).toBe("deny");
+    }
+    await catalog.update(rule.id, {
+      name: rule.name,
+      match: rule.match,
+      decision: "ask",
+      resolve: { type: "human" },
+    });
+    for (const level of ["off", "full"] as const) {
+      await autopilot.set(level, "operator");
+      expect((await evalFloor({ action: "gh.pr_comment" })).decision, level).toBe("ask");
+    }
+    // An agent's own gh.api_write ask also still covers comments.
+    const own = {
+      gates: [
+        {
+          match: [{ type: "action" as const, action: "gh.api_write" }],
+          decision: "ask" as const,
+          resolve: { type: "human" as const },
+        },
+      ],
+    };
+    expect((await evalFloor({ action: "gh.pr_comment" }, own)).decision).toBe("ask");
+  });
+
+  it("the system gh.api_write rule moved to deny also denies comments under autopilot", async () => {
+    const sys = (await catalog.list()).find((r) => r.id === "floor-gh.api_write");
+    if (!sys) throw new Error("floor-gh.api_write missing");
+    await catalog.update(sys.id, { name: sys.name, match: sys.match, decision: "deny" });
+    await autopilot.set("full", "operator");
+    expect((await evalFloor({ action: "gh.pr_comment" })).decision).toBe("deny");
+  });
+
   it("a department's own ask still wins", async () => {
     await catalog.create({
       name: "Dev asks on comments",

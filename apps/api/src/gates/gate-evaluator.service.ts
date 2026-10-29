@@ -20,6 +20,18 @@ import { LoggerService, type ScopedLogger } from "../shared/logging/logger.servi
 import { DECISION_RANK } from "./decision-rank";
 import { PolicyStorageService } from "./policy.storage.service";
 
+/**
+ * Phase 4 — `gh.pr_comment` was split out of `gh.api_write`, so it stays its subclass:
+ * a rule on `gh.api_write` also matches a comment POST (an existing tightening keeps
+ * holding without migrating stored rules).
+ */
+const ACTION_PARENT: Readonly<Record<string, string>> = { "gh.pr_comment": "gh.api_write" };
+
+/** Whether intent `action` falls under a rule's `ruleAction` (itself or its parent class). */
+function actionInClass(action: string, ruleAction: string): boolean {
+  return action === ruleAction || ACTION_PARENT[action] === ruleAction;
+}
+
 /** What a runner/controller passes to assemble an agent's effective rule list. */
 export interface AgentPolicyInput {
   gates?: GateRuleInput[];
@@ -345,7 +357,7 @@ export class GateEvaluatorService {
       case "tool":
         return action.tool === cond.tool;
       case "action":
-        if (action.action !== cond.action) return false;
+        if (!actionInClass(action.action, cond.action)) return false;
         if (cond.branch === undefined || cond.branch === "*") return true;
         return action.branch === cond.branch || (action.branches ?? []).includes(cond.branch);
       case "scope":
@@ -411,7 +423,9 @@ export class GateEvaluatorService {
     if (actionsA.length > 0 && actionsB.length > 0) {
       const overlap = actionsA.some((ca) =>
         actionsB.some(
-          (cb) => ca.action === cb.action && this.branchesOverlap(ca.branch, cb.branch),
+          (cb) =>
+            (actionInClass(ca.action, cb.action) || actionInClass(cb.action, ca.action)) &&
+            this.branchesOverlap(ca.branch, cb.branch),
         ),
       );
       if (!overlap) return true;

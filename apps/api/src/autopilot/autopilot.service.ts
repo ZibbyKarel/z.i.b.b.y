@@ -35,6 +35,9 @@ export const AUTOPILOT_COVERED_RULES: Readonly<
   Record<string, (action: IntendedAction) => boolean>
 > = {
   "floor-gh.pr_comment": (a) => a.action === "gh.pr_comment",
+  // A comment also matches its parent class's system rule (`gh.pr_comment` ⊂ `gh.api_write`);
+  // only that rule's `ask` is lifted, and only for a comment — a deny there still wins.
+  "floor-gh.api_write": (a) => a.action === "gh.pr_comment",
   "floor-git.push": (a) => a.action === "git.push" && isZibbyBranch(a.branch),
 };
 
