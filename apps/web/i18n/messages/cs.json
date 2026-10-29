@@ -3320,6 +3320,10 @@
       "budgets": {
         "label": "Budgety a limity",
         "desc": "Čerpání budgetů a limitů po projektech a firmách — zvýrazní, co dochází."
+      },
+      "mentions": {
+        "label": "Zmínky",
+        "desc": "Jira, GitHub, Slack a e-maily, které se týkají tebe"
       }
     },
     "sheet": {

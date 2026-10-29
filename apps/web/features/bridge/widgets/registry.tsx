@@ -5,6 +5,7 @@ import type { BridgeWidget } from "../grid/layout";
 import { BriefingWidget } from "./BriefingWidget";
 import { BudgetsWidget } from "./BudgetsWidget";
 import { IssuesWidget } from "./IssuesWidget";
+import { MentionsWidget } from "./MentionsWidget";
 import { PinsWidget } from "./PinsWidget";
 import { PrsWidget } from "./PrsWidget";
 import { ProposalsWidget } from "./ProposalsWidget";
@@ -147,6 +148,12 @@ export const WIDGETS: Record<WidgetType, WidgetDefinition> = {
     descKey: "bridge.widget.budgets.desc",
     icon: "dollar",
     Component: BudgetsWidget,
+  },
+  mentions: {
+    labelKey: "bridge.widget.mentions.label",
+    descKey: "bridge.widget.mentions.desc",
+    icon: "chat",
+    Component: MentionsWidget,
   },
 };
 

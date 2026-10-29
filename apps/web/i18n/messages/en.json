@@ -3320,6 +3320,10 @@
       "budgets": {
         "label": "Budgets & limits",
         "desc": "Budget and limit usage per project and company — highlights what is running out."
+      },
+      "mentions": {
+        "label": "Mentions",
+        "desc": "Jira, GitHub, Slack and email items addressed to you"
       }
     },
     "sheet": {

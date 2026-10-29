@@ -7,4 +7,9 @@ describe("sourceIcon", () => {
     expect(sourceIcon("github")).toEqual({ glyph: "branch" });
     expect(sourceIcon("manual")).toEqual({ glyph: "edit" });
   });
+
+  it("covers the channel kinds", () => {
+    expect(sourceIcon("slack")).toEqual({ glyph: "plug" });
+    expect(sourceIcon("email")).toEqual({ glyph: "server" });
+  });
 });
