@@ -133,9 +133,12 @@ export interface CommandLineProps {
   onScopeChange?: (kind: ScopeKind, id: string | undefined) => void;
   /** Offer the `/` skill picker — default `false`. */
   allowSkillMentions?: boolean;
-  /** Seeds the `/` skill tag (mirrors `initialTarget` for `@`): `/Name ` is prepended
-   *  unless `initialText` already carries it. */
+  /** Seeds the `/` skill tag of a prefilled `initialText` that carries its `/Name`
+   *  (nothing is prepended — a tag whose token is missing drops on the first edit). */
   initialSkill?: { id: string; name: string };
+  /** Focus the input on mount — default `true`. A host rendering several composers
+   *  at once (the workflow step rail) passes `false`. */
+  autoFocus?: boolean;
   /** Offer the `@` target picker (and typed-`@Name` adoption) — default `true`. A host
    *  whose submit path carries no routing target (a workflow step prompt) passes `false`. */
   allowTargetMentions?: boolean;
@@ -566,6 +569,7 @@ export function CommandLine({
   onScopeChange,
   allowSkillMentions = false,
   initialSkill,
+  autoFocus = true,
   allowTargetMentions = true,
   onSkillChange,
   multipleTargets = false,
@@ -592,10 +596,7 @@ export function CommandLine({
   // the `handleChange` reconciliation (which clears a target whose `@Name` no longer
   // appears in the text) doesn't nuke it the moment the operator types.
   const [text, setText] = useState(() => {
-    let base = initialText ?? "";
-    if (initialSkill && !hasMentionFor(base, "/", initialSkill.name)) {
-      base = `/${initialSkill.name} ${base}`;
-    }
+    const base = initialText ?? "";
     if (!initialTarget) return base;
     const mention = `@${initialTarget.name} `;
     return base.length > 0 ? `${mention}${base}` : mention;
@@ -1385,7 +1386,7 @@ export function CommandLine({
       ) : (
         <Container position="relative">
           <HighlightTextAreaField
-            autoFocus
+            autoFocus={autoFocus}
             data-testid={CommandLineTestId.Input}
             disabled={disabled}
             frameless={frameless}

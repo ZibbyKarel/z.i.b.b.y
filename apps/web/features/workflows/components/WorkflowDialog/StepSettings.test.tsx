@@ -8,7 +8,11 @@ import type { GraphNode, WorkflowGraph } from "./workflow-graph";
 
 vi.mock("../../../skills", () => ({
   useSkillsQuery: () => ({
-    data: [{ id: "security-audit", name: "security-audit", glyph: "spark", desc: "" }],
+    isSuccess: true,
+    data: [
+      { id: "security-audit", name: "security-audit", glyph: "spark", desc: "" },
+      { id: "tdd", name: "Test Driven", glyph: "spark", desc: "" },
+    ],
   }),
 }));
 vi.mock("../../../marketplaces", () => ({ useMarketplaceSkillsQuery: () => ({ data: [] }) }));
@@ -61,9 +65,13 @@ describe("StepSettings — agent prompt", () => {
   it("picking /security-audit patches skill; deleting the token clears it", async () => {
     const user = userEvent.setup();
     const { node, input } = renderSteps([agentNode()]);
-    await user.type(input(), "/secu");
+    const before = input();
+    await user.type(before, "/secu");
     await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-skill-security-audit`));
     expect(node()?.skill).toBe("security-audit");
+    // The pick must not remount the composer (undo history, caret, focus survive).
+    expect(input()).toBe(before);
+    expect(before).toHaveFocus();
     expect(node()?.prompt).toBe("/security-audit ");
     await user.clear(input());
     expect(node()?.skill).toBeUndefined();
@@ -77,5 +85,27 @@ describe("StepSettings — agent prompt", () => {
     expect(input()).toHaveValue("/security-audit check auth");
     await user.clear(input());
     expect(node()?.skill).toBeUndefined();
+  });
+
+  it("reopens a skill whose name differs from its id with the tag intact", async () => {
+    const user = userEvent.setup();
+    const { node, input } = renderSteps([agentNode({ prompt: "/Test Driven go", skill: "tdd" })]);
+    expect(input()).toHaveValue("/Test Driven go");
+    await user.type(input(), "!");
+    expect(node()).toMatchObject({ prompt: "/Test Driven go!", skill: "tdd" });
+  });
+
+  it("an uninstalled skill never corrupts the saved prompt; the first edit drops it", async () => {
+    const user = userEvent.setup();
+    const { node, input } = renderSteps([agentNode({ prompt: "/Old Name go", skill: "gone" })]);
+    expect(input()).toHaveValue("/Old Name go");
+    await user.type(input(), "!");
+    expect(node()?.prompt).toBe("/Old Name go!");
+    expect(node()?.skill).toBeUndefined();
+  });
+
+  it("does not steal focus on mount", () => {
+    const { input } = renderSteps([agentNode()]);
+    expect(input()).not.toHaveFocus();
   });
 });

@@ -22,12 +22,13 @@ export interface StepSettingsProps {
 /**
  * Right rail of the workflow editor: per-step settings that don't fit on a canvas
  * card — the custom prompt of an agent step (with a `/skill` tag), the commands of
- * a tool step (one per line) and the "human check after this step" checkpoint. Steps are listed in flow order.
+ * a tool step (one per line) and the "human check after this step" checkpoint.
+ * Steps are listed in flow order.
  */
 export function StepSettings({ graph, setGraph, excludeWorkflowId }: StepSettingsProps) {
   const t = useTranslations("forms.workflow");
   const { data: workflows = [] } = useWorkflowsQuery();
-  const { data: skills = [] } = useSkillsQuery();
+  const { data: skills = [], isSuccess: skillsReady } = useSkillsQuery();
   const skillName = (id: string) => skills.find((s) => s.id === id)?.name ?? id;
   const childOptions = workflows
     .filter((p) => p.id !== excludeWorkflowId)
@@ -76,13 +77,14 @@ export function StepSettings({ graph, setGraph, excludeWorkflowId }: StepSetting
             {n.type === "agent" && (
               <Container
                 data-testid={`step-prompt-${n.id}`}
-                // Remount once the skill catalog resolves the saved skill's name, so
-                // the seeded `/Name` tag matches the text.
-                key={n.skill ? skillName(n.skill) : ""}
+                // Remount once, when the skill catalog resolves the saved skill's name,
+                // so the seeded `/Name` tag matches the text (never on a pick/clear).
+                key={skillsReady ? "ready" : "loading"}
               >
                 <CommandLine
                   allowSkillMentions
                   allowTargetMentions={false}
+                  autoFocus={false}
                   chrome={false}
                   initialSkill={n.skill ? { id: n.skill, name: skillName(n.skill) } : undefined}
                   initialText={n.prompt}

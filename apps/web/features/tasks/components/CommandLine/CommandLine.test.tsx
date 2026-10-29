@@ -590,16 +590,28 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       expect(onSkillChange).toHaveBeenLastCalledWith(undefined);
     });
 
-    it("initialSkill whose token is missing from initialText is prepended, like initialTarget", () => {
+    it("initialSkill whose token is missing from initialText is not prepended and drops on the first edit", async () => {
+      const onSkillChange = vi.fn();
+      const user = userEvent.setup();
       render(
         <CommandLine
           allowSkillMentions
-          initialSkill={{ id: "tdd", name: "Test Driven" }}
-          initialText="go"
+          initialSkill={{ id: "gone", name: "gone" }}
+          initialText="/Old Name go"
+          onSkillChange={onSkillChange}
           onSubmit={vi.fn()}
         />,
       );
-      expect(screen.getByTestId(CommandLineTestId.Input)).toHaveValue("/Test Driven go");
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      expect(input).toHaveValue("/Old Name go");
+      await user.type(input, "!");
+      expect(input).toHaveValue("/Old Name go!");
+      expect(onSkillChange).toHaveBeenLastCalledWith(undefined);
+    });
+
+    it("autoFocus={false} leaves focus alone on mount", () => {
+      render(<CommandLine autoFocus={false} onSubmit={vi.fn()} />);
+      expect(screen.getByTestId(CommandLineTestId.Input)).not.toHaveFocus();
     });
 
     it("allowTargetMentions={false} opens no @ picker", async () => {
