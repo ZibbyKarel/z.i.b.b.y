@@ -94,15 +94,13 @@ describe("RoadmapItemSchema", () => {
 });
 
 describe("RoadmapConfigSchema (tri-state)", () => {
-  it("parses legacy booleans unchanged and defaults absent to null (inherit)", () => {
+  it("parses booleans unchanged, strips the retired `autoSync` key, and defaults absent to null (inherit)", () => {
     expect(RoadmapConfigSchema.parse({ autoSync: true, autoPlay: false })).toEqual({
-      autoSync: true,
       autoPlay: false,
       autoReview: null,
       autoAddressComments: null,
     });
     expect(RoadmapConfigSchema.parse({})).toEqual({
-      autoSync: null,
       autoPlay: null,
       autoReview: null,
       autoAddressComments: null,
@@ -131,22 +129,17 @@ describe("RoadmapDefaultsSchema", () => {
 
 describe("resolveRoadmapConfig", () => {
   it("project > company > global, with provenance", () => {
-    expect(
-      resolveRoadmapConfig({ autoSync: false, autoPlay: null }, { autoSync: true, autoPlay: true }),
-    ).toEqual({
-      autoSync: false,
+    expect(resolveRoadmapConfig({ autoPlay: null }, { autoPlay: true })).toEqual({
       autoPlay: true,
       autoReview: false,
       autoAddressComments: false,
       source: {
-        autoSync: "project",
         autoPlay: "company",
         autoReview: "global",
         autoAddressComments: "global",
       },
     });
     expect(resolveRoadmapConfig({}, undefined).source).toEqual({
-      autoSync: "global",
       autoPlay: "global",
       autoReview: "global",
       autoAddressComments: "global",

@@ -9,11 +9,9 @@ import { useRoadmapConfigQuery } from "../queries";
 
 export enum RoadmapAutomationPanelTestId {
   Root = "roadmap-automation-panel",
-  AutoSync = "roadmap-automation-auto-sync",
   AutoPlay = "roadmap-automation-auto-play",
   AutoReview = "roadmap-automation-auto-review",
   AutoAddressComments = "roadmap-automation-auto-address-comments",
-  AutoSyncEffective = "roadmap-automation-auto-sync-effective",
   AutoPlayEffective = "roadmap-automation-auto-play-effective",
   AutoReviewEffective = "roadmap-automation-auto-review-effective",
   AutoAddressCommentsEffective = "roadmap-automation-auto-address-comments-effective",
@@ -26,7 +24,7 @@ export interface RoadmapAutomationPanelProps {
 }
 
 type TriState = "inherit" | "on" | "off";
-type ToggleKey = "autoSync" | "autoPlay" | "autoReview" | "autoAddressComments";
+type ToggleKey = "autoPlay" | "autoReview" | "autoAddressComments";
 
 const toTriState = (value: boolean | null | undefined): TriState =>
   value === true ? "on" : value === false ? "off" : "inherit";
@@ -102,12 +100,10 @@ function TriStateField({
 }
 
 /**
- * The four per-project automation toggles (two on the issue sources, two on
- * PRs — todo-16), on the project's Integrations tab rather than the roadmap tab
- * itself: they answer "what may ZIBBY do on its own with this project's issue
- * sources and PRs", which is the same question the
- * channels above them answer — and unlike the Sync button, neither shows its
- * result on the board, so neither earns a place in the board's header.
+ * The three per-project automation toggles (one on the roadmap, two on PRs —
+ * todo-16), on the project's Integrations tab rather than the roadmap tab
+ * itself: they answer "what may ZIBBY do on its own with this project's roadmap
+ * and PRs", which is the same question the channels above them answer.
  *
  * Each toggle is tri-state (Phase 128, D8): Inherit (the company default, else
  * the global default), or an explicit On / Off for this project. Saving Inherit
@@ -133,16 +129,6 @@ export function RoadmapAutomationPanel({ projectId, companyName }: RoadmapAutoma
           <Typography size="xs" type="note" variant="tertiary">
             {t("hint")}
           </Typography>
-          <TriStateField
-            companyName={companyName}
-            disabled={busy}
-            effective={config?.effective}
-            effectiveTestId={RoadmapAutomationPanelTestId.AutoSyncEffective}
-            onChange={(autoSync) => setConfig.mutate({ params: { projectId }, body: { autoSync } })}
-            testId={RoadmapAutomationPanelTestId.AutoSync}
-            toggle="autoSync"
-            value={config?.autoSync}
-          />
           <TriStateField
             companyName={companyName}
             disabled={busy}

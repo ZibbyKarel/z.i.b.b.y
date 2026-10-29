@@ -14,9 +14,8 @@ import { z } from "zod";
  * validate it against its siblings), so it is checked separately by the
  * deterministic ingest (`apps/api/src/roadmap/decomposition-ingest.ts`),
  * which drops an invalid edge rather than rejecting the whole item — the same
- * graceful-degradation posture `RoadmapSourceService`'s Jira/GitHub import
- * takes toward a malformed field from an external system (Law 4: agent output
- * is exactly as untrusted as an imported issue body).
+ * graceful-degradation posture toward a malformed field from an external system
+ * (Law 4: agent output is exactly as untrusted as an imported issue body).
  *
  * Capped at 200 entries — the same order of magnitude `PlayRoadmapItemsSchema`
  * caps a bulk play at; generous headroom over any epic a human would

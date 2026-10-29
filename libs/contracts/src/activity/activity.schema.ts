@@ -116,13 +116,6 @@ export const ActivityKindSchema = z.enum([
   // artifact's successful run) or `failed` (no artifact / an errored run), riding
   // `status`.
   "roadmap-item-outcome",
-  // Phase 125h (auto-sync tick, Tier-1 — silent + recorded). The periodic tick's
-  // pull from Jira/GitHub imported or archived at least one item for a project.
-  // Deliberately NOT recorded for a routine field-only update or a no-op tick
-  // (noise discipline — "a butler's briefing, not a firehose"); a manual click of
-  // the Sync button doesn't ride this either, since the operator already sees the
-  // result directly in the response.
-  "roadmap-sync",
   // ZB-10 / O-08 (Ledger, Tier-1 — silent + recorded). The account's rolling-5h or
   // weekly utilization crossed the operator's `warnAtRollingPct`/`warnAtWeeklyPct`
   // (below the hard `pauseAt*` — dispatches keep flowing). Non-blocking, so it never

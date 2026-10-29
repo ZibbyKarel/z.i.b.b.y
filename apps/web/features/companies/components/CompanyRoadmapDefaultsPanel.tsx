@@ -6,7 +6,6 @@ import type { Company } from "@zibby/contracts";
 import { useUpdateCompanyMutation } from "../mutations";
 
 export enum CompanyRoadmapDefaultsTestId {
-  AutoSync = "company-roadmap-defaults-auto-sync",
   AutoPlay = "company-roadmap-defaults-auto-play",
   AutoReview = "company-roadmap-defaults-auto-review",
   AutoAddressComments = "company-roadmap-defaults-auto-address-comments",
@@ -28,10 +27,7 @@ export function CompanyRoadmapDefaultsPanel({ company }: CompanyRoadmapDefaultsP
   const updateCompany = useUpdateCompanyMutation();
   const defaults = company.roadmapDefaults ?? {};
 
-  const set = (
-    key: "autoSync" | "autoPlay" | "autoReview" | "autoAddressComments",
-    value: boolean,
-  ) =>
+  const set = (key: "autoPlay" | "autoReview" | "autoAddressComments", value: boolean) =>
     updateCompany.mutate({
       params: { id: company.id },
       body: { roadmapDefaults: { ...defaults, [key]: value } },
@@ -43,14 +39,6 @@ export function CompanyRoadmapDefaultsPanel({ company }: CompanyRoadmapDefaultsP
         <Typography size="xs" type="note" variant="tertiary">
           {t("hint")}
         </Typography>
-        <ToggleField
-          checked={defaults.autoSync ?? false}
-          data-testid={CompanyRoadmapDefaultsTestId.AutoSync}
-          disabled={updateCompany.isPending}
-          hint={t("autoSyncHint")}
-          label={t("autoSync")}
-          onChange={(v) => set("autoSync", v)}
-        />
         <ToggleField
           checked={defaults.autoPlay ?? false}
           data-testid={CompanyRoadmapDefaultsTestId.AutoPlay}

@@ -1081,26 +1081,6 @@
         "briefing": "Briefing"
       }
     },
-    "tasks": {
-      "title": "Level mapping",
-      "hint": "An external level the sync sees for the first time appends itself to the table with the target \"task\".",
-      "kind": {
-        "jira": "Jira",
-        "github": "GitHub"
-      },
-      "level": "External level",
-      "levelPlaceholder": "e.g. Story",
-      "target": {
-        "label": "Target",
-        "epic": "Epic",
-        "task": "Task",
-        "ignore": "Ignore"
-      },
-      "add": "Add level",
-      "remove": "Remove level",
-      "emptyTitle": "No mapping yet",
-      "emptyDesc": "No mapping for this source yet. Add the first row by hand, or wait for it to show up on sync."
-    },
     "selfDev": {
       "title": "ZIBBY development",
       "branch": "Branch",
@@ -1841,23 +1821,12 @@
     "roadmapDefaults": {
       "title": "Roadmap defaults",
       "hint": "Inherited by every project of this company unless the project sets its own Inherit / On / Off.",
-      "autoSync": "Auto-sync",
-      "autoSyncHint": "Periodically pulls new Jira and GitHub issues into the roadmap of inheriting projects.",
       "autoPlay": "Auto-implement",
       "autoPlayHint": "Unblocked items of inheriting projects start on their own. ZIBBY opens a PR and stops — the merge stays yours.",
       "autoReview": "Automatic PR review",
       "autoReviewHint": "Incoming PRs to review run a workflow chosen from their content. Comments are posted only after your approval.",
       "autoAddressComments": "Automatic comment handling",
       "autoAddressCommentsHint": "Fixes review comments on your PRs with changes requested. The push waits for your approval."
-    },
-    "levelMapping": {
-      "title": "Level mapping overrides",
-      "hint": "Override how this company's external levels map to epic / task / ignore. Anything not overridden follows the global table (Settings → Tasks).",
-      "useGlobal": "Global",
-      "global": "Global: {target}",
-      "companyOnly": "Company only",
-      "override": "Company override",
-      "reset": "Reset to global"
     }
   },
   "teams": {
@@ -2334,20 +2303,9 @@
     "hint": "Pick an epic to see its tasks on the right.",
     "emptyEpicsTitle": "No epics yet",
     "emptyEpicsDescription": "This project has no roadmap yet — import it from a source, or create epics by hand.",
-    "sync": {
-      "button": "Sync all",
-      "toast": "{imported} imported, {updated} updated, {archived} archived",
-      "sourceMenuAria": "Choose source",
-      "source": {
-        "jira": "Jira",
-        "github": "GitHub"
-      }
-    },
     "automation": {
       "title": "Roadmap automation",
       "hint": "What ZIBBY may do on its own for this project. Inherit takes the company default, then the global default (off).",
-      "autoSync": "Auto-sync",
-      "autoSyncHint": "Periodically pulls new Jira and GitHub issues into the roadmap. Starts nothing — it only adds what appeared.",
       "autoPlay": "Auto-implement",
       "autoPlayHint": "Unblocked items start on their own, and a childless epic decomposes itself. ZIBBY opens a PR and stops — the merge stays yours. How many run at once is set in Settings → Runtime.",
       "autoReview": "Automatic PR review",

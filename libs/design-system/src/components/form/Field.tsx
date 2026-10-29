@@ -45,8 +45,8 @@ export interface FieldProps {
    * Visually hide the label (`sr-only`) while keeping the real, associated
    * `<label htmlFor>` in the DOM — the control still has a proper accessible
    * name, it just doesn't repeat visibly. For repeated rows of the same field
-   * in a hand-rolled table (there is no DS `Table` — see `KeyValueEditor`/
-   * `LevelMappingTable`), where a header row already shows the label once and
+   * in a hand-rolled table (there is no DS `Table` — see `KeyValueEditor`),
+   * where a header row already shows the label once and
    * six stacked "forms" would otherwise read like six stacked labels.
    */
   hideLabel?: boolean;

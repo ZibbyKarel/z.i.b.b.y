@@ -3,13 +3,10 @@
 The **roadmap** is the per-project delivery backlog — epics + tasks, imported
 from Jira/GitHub or created manually, with a dependency graph that gates when
 a task is safe to dispatch. This doc covers **125a** (the data model, the
-per-project item store, the global level-mapping table, and the CRUD
-endpoints), **125b** (`RoadmapSourceService`'s Jira/GitHub import and the
-manual `POST .../roadmap/sync` route), **125e** (play, the dependency gate,
+per-project item store and the CRUD endpoints), **125e** (play, the dependency gate,
 merge signals, lifecycle completion, Tier-3 override, restart/resume),
 **125g** (epic decomposition: the artifact contract, the dedicated agent, the
-deterministic ingest) and **125h** (the auto-sync + gate-poll tick, the
-roadmap tab's Sync button, and — layered on top — auto-pickup: the `autoPlay`
+deterministic ingest) and **125h** (the gate-poll tick and — layered on top — auto-pickup: the `autoPlay`
 toggle and the "Automatizace roadmapy" panel on the project's Integrations
 tab). See
 `docs/plans/phase-125-project-roadmap.md` for the full master plan (the UI in
@@ -21,20 +18,15 @@ tab). See
 | ---------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | Contract   | `libs/contracts/src/roadmap/roadmap-item.schema.ts`           | `RoadmapItemSchema`, `Create`/`UpdateRoadmapItemSchema`, `RoadmapConfigSchema`                                                                 |
 | Contract   | `libs/contracts/src/roadmap/roadmap-readiness.ts`             | Pure `isBlocked()` / `readiness()` helpers (derived board state)                                                                               |
-| Contract   | `libs/contracts/src/roadmap/level-mapping.schema.ts`          | `LevelMappingSchema`, `DEFAULT_LEVEL_MAPPING`, `resolveLevel()`                                                                                |
 | Contract   | `libs/contracts/src/roadmap/roadmap-play.schema.ts`           | `PlayRoadmapItemsSchema` (bulk play body), `OverrideRoadmapItemSchema` (125e)                                                                  |
-| Contract   | `libs/contracts/src/roadmap/roadmap.contract.ts`              | `roadmapContract` — item CRUD, config, level-mapping, sync, play/override/restart/resume, `/api`                                               |
-| Contract   | `libs/contracts/src/roadmap/roadmap-sync.schema.ts`           | `RoadmapSyncResultSchema` — the sync endpoint's response                                                                                       |
+| Contract   | `libs/contracts/src/roadmap/roadmap.contract.ts`              | `roadmapContract` — item CRUD, config, play/override/restart/resume, `/api`                                                                    |
 | Contract   | `libs/contracts/src/roadmap/decomposition-artifact.schema.ts` | `DecompositionArtifactSchema` (125g) — the decomposition agent's ONLY allowed output shape                                                     |
 | Store      | `apps/api/src/roadmap/roadmap.store.ts`                       | `RoadmapStore` — two-level file store + per-project config                                                                                     |
-| Store      | `apps/api/src/roadmap/level-mapping.store.ts`                 | `LevelMappingStore` — single global JSON document                                                                                              |
 | Provider   | `apps/api/src/roadmap/roadmap-attachment-ref.provider.ts`     | `AttachmentSetRefProvider` for the orphan-attachment sweep                                                                                     |
-| Service    | `apps/api/src/roadmap/roadmap-source.service.ts`              | `RoadmapSourceService` (125b) — Jira/GitHub import + upsert                                                                                    |
 | Service    | `apps/api/src/roadmap/roadmap-gate.service.ts`                | `RoadmapGateService` (125e) — play/override/restart/resume, the FIFO drain, release signals                                                    |
 | Service    | `apps/api/src/roadmap/roadmap-decomposition.service.ts`       | `RoadmapDecompositionService` (125g) — dispatch + reconcile for Play on a childless epic                                                       |
-| Service    | `apps/api/src/roadmap/roadmap-tick.service.ts`                | `RoadmapTickService` (125h) — the `roadmapTickMs` heartbeat: auto-sync + gate poll                                                             |
+| Service    | `apps/api/src/roadmap/roadmap-tick.service.ts`                | `RoadmapTickService` (125h) — the `roadmapTickMs` heartbeat: gate poll + auto-pickup                                                           |
 | Pure fn    | `apps/api/src/roadmap/adf-to-markdown.ts`                     | `adfToMarkdown()` — Jira ADF `description` → markdown, bounded + never throws                                                                  |
-| Pure fn    | `apps/api/src/roadmap/merge-depends-on.ts`                    | `mergeDependsOn()` — the re-sync `dependsOn` ownership-split merge                                                                             |
 | Pure fn    | `apps/api/src/roadmap/roadmap-task-text.ts`                   | `buildRoadmapTaskText()` (125e) — name + description + footer (for the RUN); `buildRoadmapRoutingText()` — the same, footer-free (for ROUTING) |
 | Pure fn    | `apps/api/src/roadmap/decomposition-task-text.ts`             | `buildDecompositionTaskText()` (125g) — epic name + description + the Law-4 instructions footer                                                |
 | Pure fn    | `apps/api/src/roadmap/decomposition-artifact.ts`              | `extractDecompositionArtifact()` (125g) — a run log → a validated artifact, bounded + never throws                                             |
@@ -52,25 +44,24 @@ release signal) — see "Release signals" below.
 
 One file per item: `.zibby/data/roadmap/<projectId>/<itemId>.json`. A sibling
 `<projectId>/_config.json` holds the project's roadmap config — the two
-automation toggles `autoSync` (pull issues on the tick) and `autoPlay`
-(dispatch unblocked work on the tick), both `false` until the operator opts
-in, and independent of each other. Two more tri-state toggles, `autoReview`
+automation toggle `autoPlay` (dispatch unblocked work on the tick), `false`
+until the operator opts in. Two more tri-state toggles, `autoReview`
 (auto-review incoming PRs) and `autoAddressComments` (auto-address review
 comments on the operator's own PRs), sit beside them; they are consumed by
 `PrAutomationService` (TODO 16 — `./inbox.md` "Automatic review & comment
-handling"; it shares `roadmapTickMs`), not the roadmap tick. All four are
+handling"; it shares `roadmapTickMs`), not the roadmap tick. All three are
 `boolean | null` (`null` = inherit from `Company.roadmapDefaults`, then the
 global `false`); an old `_config.json` without the new keys reads them as
-`null`. A global `_level-mapping.json` sits at the
-roadmap root (not per-project).
+`null`, and a retired `autoSync` key in one is stripped on parse. A leftover global
+`_level-mapping.json` at the roadmap root is no longer read.
 
 `PUT .../roadmap/config` is a **patch**, not a replace: an omitted toggle is
 left alone (`RoadmapStore.updateConfig`, a locked read-modify-write). The body
 schema is `RoadmapConfigPatchSchema` and it deliberately is NOT
 `RoadmapConfigSchema.partial()` — under Zod 4 an optional field whose inner
 type carries a `.default()` still materialises that default for a missing key,
-so `.partial()` would turn `{ autoSync: true }` into
-`{ autoSync: true, autoPlay: false }` and reset the toggle the client never
+so `.partial()` would turn `{ autoPlay: true }` into
+`{ autoPlay: true, autoReview: false }` and reset the toggle the client never
 mentioned. Covered end-to-end in `roadmap.e2e.test.ts`.
 
 `RoadmapItemSchema` (full shape lands in 125a; several fields are written
@@ -144,275 +135,19 @@ something that will never arrive. **The board (125d) must mark an archived
 blocker distinctly on the dependency badge**, so the only escape — the Tier-3
 `overrideBlocked` — is a visible choice rather than a guess.
 
-### Ownership split on re-sync (125b enforces this; 125a's schema reserves the shape for it)
+## Jira/GitHub issues are not in the roadmap store
 
-The **source** owns `name`, `description`, `externalLevel`, `attachments`,
-`source.url`, `parentId`, and `dependsOnFromSource`. **ZIBBY** owns
-`lifecycle`, `runs`, `overrideBlocked`, `origin`, and any edge in `dependsOn`
-that is not in `dependsOnFromSource`. A re-sync never touches the second
-group. `UpdateRoadmapItemSchema` (the operator-facing PATCH body) currently
-allows editing `name`/`description`/`level`/`parentId`/`dependsOn` in
-addition to the ZIBBY-owned `overrideBlocked` — for a `manual` item the
-operator is the only owner of those fields; for an **imported** item, an
-operator edit is a local override that a subsequent re-sync (125b) will
-overwrite back to the source's value. `lifecycle` is never operator-editable.
-
-## Level mapping
-
-`libs/contracts/src/roadmap/level-mapping.schema.ts`:
-
-```
-LevelMappingEntrySchema = { kind: "jira" | "github", externalLevel: string, target: "epic" | "task" | "ignore" }
-LevelMappingSchema = { entries: LevelMappingEntrySchema[] }
-```
-
-`DEFAULT_LEVEL_MAPPING` seeds: Jira `Epic→epic`, `Story|Task|Bug|Sub-task→task`,
-`Initiative→ignore`; GitHub `Milestone→epic`, `Issue→task`.
-`resolveLevel(mapping, kind, externalLevel)` looks a level up
-**case-insensitively** (both the stored entry and the lookup are
-trimmed + lowercased before comparing) — an external system's casing isn't a
-guaranteed contract, and an operator hand-editing the table shouldn't have
-to match case exactly. The _stored_ casing is never altered, only the
-comparison folds case. Returns `undefined` for a never-seen pair; the sync
-tick (125b) calls `LevelMappingStore.ensureLevels(kind, externalLevels[])`,
-which appends every unseen level with `target: "task"` (deduped, existing
-entries untouched) so the table populates itself from reality.
-
-`LevelMappingStore` loads synchronously in its constructor (same posture as
-`PinsStore`/`SystemConfigStore`) and fails open to `DEFAULT_LEVEL_MAPPING` on
-a missing **or** corrupt file — a garbled mapping table must never block a
-sync tick or the settings page.
-
-## Import & sync (125b)
-
-`RoadmapSourceService` pulls items from the project's **effective** integrations —
-resolved through `ResolvedProjectService.resolveIntegrations(project)`, never a raw
-`integrations.list().filter(...)`, so a company-level Jira/GitHub integration is
-visible to its projects. Credentials come from `CredentialsStore` and are never
-logged. `fetchImpl` is injectable (`@Optional()`), so the fetchers are testable
-without network.
-
-It deliberately does **not** reuse `ChannelAdapter.poll`: the channel adapters fetch
-a message-shaped subset (`JiraChannelAdapter` doesn't even request `description`),
-while the import needs full fields, links and attachments. It also deliberately
-**backfills** — the channel adapters seed their cursor to "now" and ingest nothing on
-a first poll, which would leave a fresh roadmap empty. Both fetchers paginate
-(Jira via the `nextPageToken` cursor, GitHub via `page`), each capped at `MAX_PAGES`
-(20 pages of 100) so a full backfill still terminates deterministically against a very
-large project/repo.
-
-### Jira
-
-`GET /rest/api/3/search/jql`, requesting
-`summary,description,issuetype,parent,issuelinks,attachment,status`.
-
-> Atlassian **removed** the legacy `/rest/api/3/search` (May 2025, CHANGE-2046); it now
-> answers `410 Gone`, so every sync against it silently imported nothing. The
-> replacement `/search/jql` paginates by an opaque `nextPageToken` cursor and returns
-> **no** `total` — a page is the last when it reports `isLast` or omits `nextPageToken`.
-
-- **Scope is the whole project when `projectKey` is set.** A custom `config.jql` is
-  used VERBATIM (the operator already declared the exact set they want — never
-  augmented). Otherwise the default clause is `project = <projectKey>` — the sync must
-  see work already started elsewhere in the project, so it can keep ZIBBY off it.
-  Without a `projectKey` it falls back to `assignee = currentUser()` — widening it
-  there would pull an operator's whole Jira site. `ORDER BY created ASC` in every case.
-  GitHub import stays `assignee:<username>`-scoped regardless (GitHub issues carry no
-  in-progress signal, so widening there would import exactly the duplicate-work risk
-  this rule exists to avoid).
-- **Epic-preservation.** The default clause returns my tasks/stories (or the whole
-  project's) but not necessarily their parent epics (an epic outside the primary batch,
-  e.g. a cross-project parent), so a plain fetch can leave an owned issue unparented —
-  `resolveEpicParent` finds no ancestor in the batch. `expandWithAncestorEpics` fixes
-  this: after the primary fetch, it walks the owned issues' `fields.parent.key` chain,
-  collects ancestor keys not already in the
-  batch, and does bounded (cap 5 iterations) supplementary `key in (<keys>) ORDER BY
-created ASC` fetches — repeating because a newly-fetched ancestor can itself have a
-  missing parent (the multi-hop task → story → epic chain) — until no new ancestor key
-  appears. These supplementary issues join `byKey`/`levelOf` so parent resolution works
-  over the union, but are only ever UPSERTED (and added to the "seen" set) when their
-  resolved level is `"epic"` — an ancestor that resolves to `"task"` (an intermediate
-  story) is silently dropped, never imported and never counted in `skipped` (importing
-  it would put someone else's story on the board). Skipped entirely when a custom `jql`
-  is set. Net effect: the board shows my issues plus exactly the epics that contain
-  them.
-- `description` arrives as **ADF JSON, not text** — `adf-to-markdown.ts` flattens it
-  (paragraphs, headings, lists, code blocks, links, inline marks). It is bounded by
-  an explicit depth cap and degrades unknown nodes to their text content; it never
-  throws, including on `null`, a bare string, or absurdly deep input.
-- **Edge direction is the sharp edge here.** A link exposes its direction by which of
-  `inwardIssue` / `outwardIssue` is present, each paired with its own phrase
-  (`type.inward` / `type.outward`) describing _this_ issue's relationship to the
-  referenced one. For the stock "Blocks" type that is
-  `{ inward: "is blocked by", outward: "blocks" }` — so an `outwardIssue` entry means
-  this issue **blocks** the other and must **not** become a dependency. Only the
-  "blocked by" phrase creates an edge, whichever side carries it. Inverting this
-  would gate the wrong item, which is precisely the failure this phase exists to
-  prevent, so it is tested from both directions
-  (`roadmap-source.service.test.ts`'s Jira fixture).
-- Hierarchy (`parentId`) is resolved by walking `fields.parent` up to the nearest
-  ancestor whose level-mapping target is `"epic"` (`resolveEpicParent`), capped at 25
-  hops against a malformed/cyclic chain. One walk covers BOTH the classic "Sub-task
-  flattens to `task`, inherits the parent's epic" case (the immediate parent is a
-  Story, which itself has an epic parent) and a team-managed Story/Task that names
-  its epic directly via `parent` (one hop) — deliberately NOT keyed off
-  `issuetype.hierarchyLevel`, so the operator-editable level-mapping table stays the
-  single source of truth for what counts as an epic. A parent outside the current
-  sync's batch (not returned by the same search) leaves the item unparented rather
-  than erroring.
-
-### GitHub
-
-Repo (Phase 129): a repo-less company GitHub integration syncs once per distinct repo
-of its write-target projects (each from its `gitRemote` via `githubRepoFor`), writing
-only to the projects on that repo; a project without a GitHub remote gets a note.
-
-`GET /search/issues?q=repo:{repo} assignee:{username}` (the `username` on
-`GitHubConfig` is required — scope is always "mine"), paginated via `page`/`per_page=100`
-up to `MAX_PAGES`, spanning **all** states (no `is:open` qualifier — unlike
-`GitHubChannelAdapter.searchMineOrMentioned`'s channel-poll scope, the roadmap tracks
-done/closed items too). Entries carrying `pull_request` are dropped, because the Search
-API returns PRs too.
-
-Milestones (epics) are scoped to **only those that parent ≥1 of my imported issues**:
-my issues are fetched first, their referenced `milestone.number`s collected, then
-`GET /repos/{repo}/milestones?state=all` is fetched and filtered down to just the
-referenced numbers before the existing `milestoneTarget`/`isRoadmapLevel` gating runs.
-A milestone that doesn't parent any of my issues is never upserted and never joins the
-"seen" set — it counts toward the summary's `skipped`, and `archiveMissing` prunes it if
-a prior sync had imported it (Milestone → epic, Issue → task; a milestone's own
-`parentId` is unset, an issue's `parentId` is its milestone's item, when it has one).
-Bodies are already markdown, no flattening needed. Edges come from two sources, unioned:
-
-- `Depends on #N` / `Blocked by #N` parsed from the body — case-insensitive, and
-  tolerant of a list on one line (`Blocked by #12, #14 and #16`) via a phrase-then-
-  numbers regex that only reads `#N`s actually named by the phrase, not every
-  issue-number mentioned in the prose.
-- Best-effort native sub-issues (`GET /issues/{n}/sub_issues`, a newer GitHub
-  hierarchy API): a parent issue depends on each of its declared native sub-issues —
-  the same "not really done until its children are" relationship Jira's flattened
-  sub-tasks carry implicitly. A 404/410 (an older API without the endpoint) — or any
-  other failure — degrades to "no native sub-issues" rather than erroring; this is a
-  best-effort ENRICHMENT, not a fetch the sync depends on.
-
-GitHub issues expose attachments only as inline markdown links in the body, with no
-listing/download endpoint the way Jira's `fields.attachment` is a structured array —
-downloading GitHub attachments is out of scope for this sub-phase.
-
-### Level mapping
-
-Each item's level goes through `resolveLevel(mapping, kind, externalLevel)`, and every
-level seen in a fetch is fed to `LevelMappingStore.ensureLevels` so unseen levels
-append themselves as `task`. A level whose target is `"ignore"` is parsed but never
-becomes an item — it counts toward the summary's `skipped`.
-
-### Attachments
-
-Bytes are downloaded into a new set via `AttachmentStorageService`. Caps are **25 MB
-per file and 10 files per item**; anything over is skipped and recorded on the item's
-`syncNotes` rather than silently dropped. A download failure skips that one file with
-a note instead of failing the whole sync.
-
-`syncNotes` is a field on the item, **not** text appended to `description` — the
-description is source-owned and a re-sync overwrites it, so a note parked there would
-vanish on the next tick.
-
-**Re-download avoidance rule.** A within-cap attachment list is only (re)downloaded
-when it differs from what's already stored: both lists are reduced to a
-`name:size` signature (sorted, joined), and an unchanged signature reuses the
-existing `attachmentSetId`/`attachments` as-is — no bytes are re-fetched just because
-a sync ran again. A changed signature (an attachment added, removed, or resized)
-downloads the WHOLE within-cap set fresh and gets a new `attachmentSetId`; the old
-set is simply no longer referenced (not eagerly deleted) and ages out through the
-existing 24h orphan-attachment sweep once nothing points at it, same as everywhere
-else that sweep applies.
-
-### Upsert and the ownership split
-
-Keyed by `(integrationId, externalId)` through `roadmapItemIdForSource`, so re-import
-is idempotent and one issue never becomes two items.
-
-A re-sync writes only `name`, `description`, `externalLevel`, `attachments`,
-`source.url`, `parentId`, `dependsOnFromSource`, `syncNotes`, `syncedAt`,
-`linkedPr`, `sourceStatus` and `scopeReasons` — plus the sanctioned lifecycle transitions below. It never touches
-`runs`, `overrideBlocked`, `origin` — or any manual `dependsOn` edge.
-
-That last one is subtle enough to live in its own pure, separately-tested function,
-`mergeDependsOn(current, oldFromSource, newFromSource)`: `dependsOn` is the union of
-source-declared and operator-added edges, so a re-sync must drop source edges the
-source removed, pick up newly-declared ones, and leave every manual edge alone. It is
-the one place a bug silently loses an operator's dependency, which is why it is not
-buried in the upsert's read-modify-write.
-
-**Safe-to-start classification (Jira).** Only Jira's `"new"` status category (To Do,
-Backlog, Open, Selected for Development, …) is safe for ZIBBY to start — that maps to
-`lifecycle: "todo"`. A done status (`"done"` category, or a status name matching
-`/^(done|closed|resolved)$/i`) maps to `"done"`. Anything else — `"indeterminate"` (In
-Progress, Code Review, In Test, …), a missing category, or an unrecognised one — maps
-to `"external"`: someone may already be on it, and an unrecognised status is treated
-as NOT safe (fail-closed). An open GitHub PR whose title or head branch names the
-item's Jira key as a whole token (case-insensitive: `PROJ-1` matches "PROJ-1: fix" or
-"proj-1-login", never "PROJ-12") also forces a not-done item to `"external"`, whatever
-the Jira status says — recorded on the item as `linkedPr: { number, url, title }`. The
-PR lookup (`GET /repos/<repo>/pulls?state=open`) is best-effort: no GitHub integration,
-no token, or an HTTP failure all mean no `linkedPr` and no failure of the Jira sync
-itself — an HTTP failure additionally adds one `summary.notes` entry ("github PR lookup
-failed: …"). GitHub issue import has no such classification — a GitHub issue is `"done"`
-when closed, `"todo"` otherwise.
-
-An item the source stops returning → `lifecycle: "archived"`, **never deleted** (and
-note the archived-blocker consequence above). For an item still in a sync-owned
-lifecycle (`todo`/`external`/`archived`), the sync moves it to `todo` or `external` per
-the remote work state above — including a plain reappearance of an archived item,
-which lands wherever its current remote state says. A done source status always wins
-and moves the item to `"done"` from ANY lifecycle — that transition pre-dates this sync
-and is unrelated to it. Otherwise, `enqueued`/`running`/`awaiting-merge`/`failed` are
-untouched, with one exception: an `enqueued` item whose remote work state is
-`"external"` also moves to `"external"` (nothing has started on it yet, so the same
-not-safe-to-start signal that keeps a `todo` item from being played keeps it from being
-released while it still sits in the queue — its `enqueuedAt` is cleared along with the
-move). A remote `"todo"` state leaves an `enqueued` item alone. A `"done"` item never
-moves back out of `"done"`. For an item in a sync-owned lifecycle — now including an
-`enqueued` item moving to `external` — `linkedPr` is written only while the resulting
-lifecycle is `"external"` and cleared as soon as the item returns to `"todo"` or moves
-to `"done"` (rather than left stale on the card); any other gate-owned item keeps its
-`linkedPr` untouched.
-
-An item whose level-mapping `target` resolves to `"ignore"` is parsed but never
-turned into a roadmap item (counted in `skipped`), and is deliberately excluded from
-the "seen this sync" set too — so a PREVIOUSLY imported item whose external level
-later gets remapped to `"ignore"` archives on its next sync, exactly as if the source
-had stopped returning it. A source-level failure (network, rate limit, a malformed
-response) is caught per source and recorded as a `notes` entry keyed by the
-integration's id rather than aborting the other configured source's sync.
-
-### The endpoint
-
-`POST /projects/:projectId/roadmap/sync`, body `SyncRoadmapItemsSchema` (`{ source? }`,
-`.strict()`) → `RoadmapSyncResultSchema`: `{ imported, updated, archived, skipped,
-notes[] }`. Absent `source` syncs every configured source (today's default); `"jira"`
-or `"github"` (the source-picker split button) restricts `RoadmapSourceService.sync` to
-just that one. A project with **no** Jira/GitHub integration — or missing the
-specifically REQUESTED source's integration — returns all-zero counts rather than an
-error, mirroring `ProjectPrService.listOpen`'s "no link is not an error" posture.
-
-Sync is **read-only toward Jira and GitHub** — nothing is ever written back (Law 3),
-and imported issue bodies are data, never instructions (Law 4).
-
-### Company-owned integrations (Phase 128)
-
-Sync runs **per integration**: one fetch, then each item is distributed to projects.
-A project-owned integration sends every item to its project (unchanged). A company-owned
-one feeds the company's projects that don't override its kind with their own integration;
-once any of them has an `integrationRouting` rule for it, `matchRouting` decides per item —
-exactly one matching project or the item is not imported (`skipped` + a note; ≥2 matches
-is never first-match). Until then every inheriting project receives everything (the
-pre-routing behaviour). A Jira rule's `jql` runs server-side AND'ed with the
-integration's own scope, so routing only ever narrows what the integration fetches.
-The project-scoped `POST .../roadmap/sync` fetches the whole integration but writes only
-that project's share. Level mapping is the global table with the integration's company
-`levelMapping` overrides on top (owning company, or the owning project's effective
-company); `ensureLevels` still appends unseen levels to the global table only.
+Issues assigned to the operator are fetched **live** from Jira/GitHub by
+`InboxIssuesService` (`./inbox.md`, `docs/plans/live-issues-plan.md`) and are not
+mirrored here. The former disk sync (`RoadmapSourceService`, the
+`POST .../roadmap/sync` route, `autoSync`, the global level-mapping table) is gone.
+A roadmap item with `source.kind !== "manual"` is only a ZIBBY work record written
+when the operator hands a live issue to ZIBBY (`POST /inbox/items/process`), or a
+leftover synced copy from before the removal. Leftover copies are never refreshed,
+so `autoPickup` only considers `source.kind === "manual"` items; an operator Play
+still works on any item. The sync-era fields (`syncedAt`, `scopeReasons`,
+`externalLevel`, `syncNotes`, `dependsOnFromSource`) stay in `RoadmapItemSchema` so
+old files and the live overlay keep parsing.
 
 ## Play + the dependency gate (125e)
 
@@ -781,40 +516,37 @@ item whose task now carries an `outcome`:
 - `outcome.status === "done"` with neither of the above (a `pr` output that
   never produced one) → **no artifact**, `failed` — never silently `done`.
 
-A periodic call to `reconcileRunning` is **125h's job** (the auto-sync tick);
+A periodic call to `reconcileRunning` is **125h's job** (the roadmap tick);
 this sub-phase ships the fully-tested mechanism, not the ticker.
 
-## The auto-sync tick (125h) — `RoadmapTickService`
+## The roadmap tick (125h) — `RoadmapTickService`
 
 Driven by `roadmapTickMs` (`SystemConfigSchema`, see [system.md](./system.md)), re-armed
-live like every other `*TickMs`. The default is 15 minutes (`900_000`); `0` disables it.
-Item files (`.zibby/data/roadmap/<project>/<id>.json`) are a sync cache of Jira/GitHub and are
-gitignored; only the `_`-prefixed settings files (`_config.json`, `_level-mapping.json`) are
-versioned. Each tick:
+live like every other `*TickMs` (`PrAutomationService` shares it). The default is
+15 minutes (`900_000`); `0` disables it. Item files
+(`.zibby/data/roadmap/<project>/<id>.json`) are ZIBBY's own work records and are
+gitignored; only the `_`-prefixed settings file `_config.json` is versioned. Each tick,
+per project with a roadmap:
 
-1. re-syncs every project whose EFFECTIVE `autoSync` is true (own toggle, else its
-   company's `roadmapDefaults`, else off) via `RoadmapSourceService.syncProjects` —
-   each integration once per tick, writing only to opted-in projects (projects that
-   never opted in are skipped, but still polled — see below);
-2. drives `reconcileRunning` + `reconcileAwaitingMerge`;
-3. runs `RoadmapGateService.autoPickup` for every project whose effective `autoPlay`
+1. drives `reconcileRunning` + `reconcileAwaitingMerge`;
+2. runs `RoadmapGateService.autoPickup` for every project whose effective `autoPlay`
    is true (a company default `autoPlay: true` enables it for inheriting projects).
 
-Step 2 is the **poll half** of the two release signals, and it runs regardless of
-`autoSync`. It is what catches a PR **merged directly on GitHub**, where the eager
-`recordMerge` hook never fires at all — without it the gate silently stalls for any
-operator who merges outside ZIBBY.
+Step 1 is the **poll half** of the two release signals. It is what catches a PR
+**merged directly on GitHub**, where the eager `recordMerge` hook never fires at all —
+without it the gate silently stalls for any operator who merges outside ZIBBY.
 
-Step 3 is **last on purpose**: sync has just imported whatever is new, and both
-reconcile passes have just freed the slots of everything that finished, so pickup
-sees the most current picture the tick can offer.
+Step 2 is **last on purpose**: both reconcile passes have just freed the slots of
+everything that finished, so pickup sees the most current picture the tick can offer.
 
-One project's failure never aborts the rest: a throwing sync, a throwing reconcile, a
-throwing pickup, and a throwing `readConfig` are each caught per project.
+One project's failure never aborts the rest: a throwing reconcile, a throwing pickup,
+and a throwing `readConfig` are each caught per project.
 
 ### Auto-pickup (`autoPlay`) — `RoadmapGateService.autoPickup`
 
-For an opted-in project, one pass does two things:
+For an opted-in project, one pass does two things, both limited to items with
+`source.kind === "manual"` (a leftover synced Jira/GitHub copy is stale and never
+auto-started):
 
 - **`playBulk` every unblocked `todo` task.** Everything eligible is picked up at
   once — pickup itself is not rationed. How many of those tasks actually _execute_
@@ -839,16 +571,10 @@ may open a PR (Tier-2, act-then-report). The merge gate is untouched — nothing
 merges, pushes to a shared branch, or deploys, and the operator still reviews every
 opened PR.
 
-**Activity is deliberately quiet.** An entry is recorded only when a sync actually
-imported or archived something (`roadmap-sync`, `ActivityKindSchema`), and a no-op tick
-records nothing — the master plan asks for a butler's briefing, not a firehose, and a
-ticker that logged every pass would bury the entries that matter. This is on top of, not
-instead of, the two entries `RoadmapGateService` already records on its own the moment a
-poll actually changes an item's lifecycle (`roadmap-item-dispatched` on release,
-`roadmap-item-outcome` on `done`/`failed`) — the tick doesn't duplicate those. A manual
-click of the roadmap tab's Sync button does **not** ride `roadmap-sync` either: that
-route's response already tells the operator the result directly, so logging it too would
-double the same news.
+**Activity is deliberately quiet.** The tick itself records nothing — the master
+plan asks for a butler's briefing, not a firehose. `RoadmapGateService` already records
+its own entries the moment a poll actually changes an item's lifecycle
+(`roadmap-item-dispatched` on release, `roadmap-item-outcome` on `done`/`failed`).
 
 Registers under the health probe's `roadmap` watcher id (`WatcherIdSchema`), same
 `arm()`/`stopTimer()`/`watcherHealth()` shape as every other `TickingWatcherBase`
@@ -859,17 +585,13 @@ report it like the rest.
 
 The two surfaces are split by what they _are_, not by what they touch:
 
-- **Roadmap tab** — `RoadmapPanel.tsx` renders a small header above BOTH the epic
-  list/board and the empty state (Sync is exactly how an empty roadmap gets its first
-  items) holding only the **Sync split button**, backed by `POST .../roadmap/sync`
-  (`useSyncRoadmapItemsMutation`): the primary action syncs every configured source,
-  the dropdown syncs one. A toast reports the `{ imported, updated, archived }`
-  summary; the item list refreshes via the mutation's own query invalidation. This is
-  an _action_, so it sits with the work.
+- **Roadmap tab** — `RoadmapPanel.tsx` renders a small header above the epic
+  list/board holding the "Nový task" action. There is no Sync button: Jira/GitHub
+  issues are listed live in the Inbox.
 - **Integrations tab** — `RoadmapAutomationPanel.tsx` ("Automatizace roadmapy"), a
-  `HudPanel` holding both standing-consent toggles, `autoSync` and `autoPlay`, backed
-  by `useRoadmapConfigQuery`/`useSetRoadmapConfigMutation`. These are _settings about
-  what ZIBBY may do with the connected sources unattended_, so they belong next to the
+  `HudPanel` holding the standing-consent toggles (`autoPlay`, `autoReview`,
+  `autoAddressComments`), backed by `useRoadmapConfigQuery`/`useSetRoadmapConfigMutation`.
+  These are _settings about what ZIBBY may do unattended_, so they belong next to the
   sources themselves. Each toggle sends a one-key patch body — which is precisely why
   the PUT had to become a merge (see "Data model").
 
@@ -1109,23 +831,13 @@ check `git status` afterwards — otherwise fixture churn ends up in your diff.
 
 ### Concurrency — who takes which lock
 
-Both stores serialize their read-modify-write windows with `withPathLock`, keyed
+`RoadmapStore` serializes its read-modify-write windows with `withPathLock`, keyed
 on the resolved file path.
 
 - `RoadmapStore.put` / `update` / `delete` all take the item file's key. `delete`
   is included deliberately: without it, a `delete` interleaving with an in-flight
   `update` lets the update's atomic rename land _after_ the unlink and resurrect
   the item.
-- `LevelMappingStore.write` and `ensureLevels` take the mapping file's key — the
-  **same** key, so an operator saving the table from `/settings?tab=tasks` and a
-  sync tick appending newly-seen levels cannot clobber each other. Both paths
-  read the whole document into memory and write it back, so without shared
-  exclusion whichever landed second would win wholesale.
-- `withPathLock` is **reentrant**: a nested call for a key already held runs
-  inline, _unprotected_. So `ensureLevels` calls a private `writeUnlocked()`
-  rather than the public, locked `write()` — the nested call would otherwise
-  look like it takes the lock while silently skipping it. Any future method that
-  needs to write from inside a held section must do the same.
 
 ## Attachment sweep
 
@@ -1156,14 +868,8 @@ Per-project (`/api/projects/:projectId/roadmap/...`):
 - `DELETE /projects/:projectId/roadmap/items/:itemId` — delete (404 if
   missing).
 - `GET|PUT /projects/:projectId/roadmap/config` — the per-project
-  `{ autoSync, autoPlay, autoReview, autoAddressComments }` automation toggles. The PUT is a **patch** (omitted
+  `{ autoPlay, autoReview, autoAddressComments }` automation toggles. The PUT is a **patch** (omitted
   toggle = leave it alone), not a replace.
-- `POST /projects/:projectId/roadmap/sync` (125b) — pulls the project's
-  resolved Jira/GitHub integrations and upserts their items via
-  `RoadmapSourceService`; returns `RoadmapSyncResultSchema`
-  (`{ imported, updated, archived, skipped, notes[] }`). No integration
-  configured → an all-zero summary, not an error; only an unresolvable
-  `projectId` 404s. See "Import & sync (125b)" above.
 - `POST /projects/:projectId/roadmap/items/:itemId/play` (125e) — enqueue a
   `todo` item; the gate releases it immediately if unblocked. 404 unknown
   item; 409 if the item isn't `todo` ("already in flight").
@@ -1179,11 +885,6 @@ Per-project (`/api/projects/:projectId/roadmap/...`):
   vše"); body `{ itemIds: string[] }` → the items actually moved to
   `enqueued` (non-`todo` ids are silently skipped, never a partial-batch
   error). See "Play records intent only" above.
-
-Global:
-
-- `GET|PUT /roadmap/level-mapping` — the external-level → epic/task/ignore
-  table shown at `/settings?tab=tasks` (UI lands in a later sub-phase).
 
 ### Error mapping
 
@@ -1208,7 +909,7 @@ response union carries no 409.
 
 The project-id error is deliberately its own class rather than reusing
 `InvalidRoadmapItemIdError`: a malformed project id reported as
-`RoadmapItem "…" not found` sends whoever is debugging a failed sync looking
+`RoadmapItem "…" not found` sends whoever is debugging a failure looking
 for a missing item that was never the problem.
 
 `CorruptRoadmapItemFileError` is raised by **`get()`** — a file that reads and

@@ -3,7 +3,5 @@ export { useDeleteRoadmapItemMutation } from "./useDeleteRoadmapItemMutation";
 export { usePlayRoadmapItemMutation } from "./usePlayRoadmapItemMutation";
 export { useResumeRoadmapItemMutation } from "./useResumeRoadmapItemMutation";
 export { useRestartRoadmapItemMutation } from "./useRestartRoadmapItemMutation";
-export { useSetLevelMappingMutation } from "./useSetLevelMappingMutation";
 export { useSetRoadmapConfigMutation } from "./useSetRoadmapConfigMutation";
-export { useSyncRoadmapItemsMutation } from "./useSyncRoadmapItemsMutation";
 export { useUpdateRoadmapItemMutation } from "./useUpdateRoadmapItemMutation";

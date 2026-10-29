@@ -4,7 +4,7 @@ import { getRoadmapConfigQueryKey } from "../queries/useRoadmapConfigQuery";
 
 /**
  * Replace a project's roadmap config (`PUT /api/projects/:projectId/roadmap/config`)
- * — today just the `autoSync` toggle next to the roadmap tab's Sync button (125h).
+ * — the automation toggles.
  */
 export function useSetRoadmapConfigMutation(projectId: string) {
   const qc = useQueryClient();

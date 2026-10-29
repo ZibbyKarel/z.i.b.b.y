@@ -189,7 +189,7 @@ export const RoadmapItemSchema = z.object({
   /** Markdown body. */
   description: z.string().default(""),
   source: RoadmapSourceSchema,
-  /** Raw source level ("Story", "Sub-task", "Milestone") — feeds the level-mapping table + re-sync. */
+  /** Raw source level ("Story", "Sub-task", "Milestone") — set by the retired sync; kept for old files. */
   externalLevel: z.string().min(1).optional(),
   /** The uploaded/imported attachment set this item references, if any. */
   attachmentSetId: z.string().min(1).optional(),
@@ -307,19 +307,17 @@ export type UpdateRoadmapItemInput = z.infer<typeof UpdateRoadmapItemSchema>;
 
 /**
  * Per-project roadmap config (`<projectId>/_config.json`): the automation
- * toggles (`autoSync`/`autoPlay` surfaced on the project's Integrations tab ("Automatizace
- * roadmapy"). Independent of each other — `autoPlay` without `autoSync` simply
- * works through whatever the operator synced by hand.
+ * toggles surfaced on the project's Integrations tab ("Automatizace
+ * roadmapy"). Independent of each other. A legacy `autoSync` key in an old
+ * `_config.json` is simply stripped on parse (the Jira/GitHub disk sync is gone).
  *
- * Both default to `false`: a fresh project's roadmap neither polls third-party
- * issues nor dispatches work on its own until the operator opts in per project.
- * That opt-in is what licenses the tick to dispatch at all — see
+ * All default to `false`: a fresh project's roadmap does not dispatch work on
+ * its own until the operator opts in per project. That opt-in is what licenses the tick to dispatch at all — see
  * `RoadmapGateService`'s docblock for the full provenance rule.
  */
 export const RoadmapConfigSchema = z.object({
-  /** Tri-state (Phase 128): `true`/`false` = explicit project choice; `null`/absent = inherit. */
-  autoSync: z.boolean().nullable().default(null),
   /**
+   * Tri-state (Phase 128): `true`/`false` = explicit project choice; `null`/absent = inherit.
    * Auto-pickup (`RoadmapTickService`): every tick, enqueue every unblocked
    * `todo` TASK and dispatch a decomposition for every childless epic that has
    * never been decomposed. How many of those actually start at once is decided
@@ -343,7 +341,6 @@ export type RoadmapConfig = z.infer<typeof RoadmapConfigSchema>;
 
 /** Company-level defaults (`Company.roadmapDefaults`) a project inherits when its own toggle is `null`. */
 export const RoadmapDefaultsSchema = z.object({
-  autoSync: z.boolean().optional(),
   autoPlay: z.boolean().optional(),
   autoReview: z.boolean().optional(),
   autoAddressComments: z.boolean().optional(),
@@ -356,12 +353,10 @@ export type RoadmapConfigSource = z.infer<typeof RoadmapConfigSourceSchema>;
 
 /** The resolved (inheritance applied) toggles plus their provenance — what the UI shows. */
 export const EffectiveRoadmapConfigSchema = z.object({
-  autoSync: z.boolean(),
   autoPlay: z.boolean(),
   autoReview: z.boolean(),
   autoAddressComments: z.boolean(),
   source: z.object({
-    autoSync: RoadmapConfigSourceSchema,
     autoPlay: RoadmapConfigSourceSchema,
     autoReview: RoadmapConfigSourceSchema,
     autoAddressComments: RoadmapConfigSourceSchema,
@@ -376,11 +371,10 @@ export const RoadmapConfigResponseSchema = RoadmapConfigSchema.extend({
 export type RoadmapConfigResponse = z.infer<typeof RoadmapConfigResponseSchema>;
 
 /** The tri-state automation toggles a project config / company default can carry. */
-export type RoadmapToggleKey = "autoSync" | "autoPlay" | "autoReview" | "autoAddressComments";
+export type RoadmapToggleKey = "autoPlay" | "autoReview" | "autoAddressComments";
 
 /** Global fallback when neither project nor company decides. */
 export const GLOBAL_ROADMAP_DEFAULTS = {
-  autoSync: false,
   autoPlay: false,
   autoReview: false,
   autoAddressComments: false,
@@ -401,17 +395,14 @@ export function resolveRoadmapConfig(
     if (typeof inherited === "boolean") return [inherited, "company"];
     return [GLOBAL_ROADMAP_DEFAULTS[key], "global"];
   };
-  const [autoSync, syncSource] = pick("autoSync");
   const [autoPlay, playSource] = pick("autoPlay");
   const [autoReview, reviewSource] = pick("autoReview");
   const [autoAddressComments, addressSource] = pick("autoAddressComments");
   return {
-    autoSync,
     autoPlay,
     autoReview,
     autoAddressComments,
     source: {
-      autoSync: syncSource,
       autoPlay: playSource,
       autoReview: reviewSource,
       autoAddressComments: addressSource,
@@ -429,15 +420,14 @@ export type RoadmapConfigInput = z.input<typeof RoadmapConfigSchema>;
  * Spelled out rather than derived as `RoadmapConfigSchema.partial()` — under
  * Zod 4 an optional field whose inner type carries a `.default()` STILL
  * materialises that default for a missing key, so `.partial()` would hand the
- * handler `{ autoSync: true, autoPlay: false }` for a body of
- * `{ autoSync: true }` and clobber the very toggle it was meant to preserve.
+ * handler `{ autoPlay: true, autoReview: false }` for a body of
+ * `{ autoPlay: true }` and clobber the very toggle it was meant to preserve.
  * `null` is an explicit "reset to inherit" (Phase 128).
  * The defaults belong to {@link RoadmapConfigSchema} (the stored shape); a
  * patch has no defaults at all, by construction.
  */
 export const RoadmapConfigPatchSchema = z
   .object({
-    autoSync: z.boolean().nullable(),
     autoPlay: z.boolean().nullable(),
     autoReview: z.boolean().nullable(),
     autoAddressComments: z.boolean().nullable(),

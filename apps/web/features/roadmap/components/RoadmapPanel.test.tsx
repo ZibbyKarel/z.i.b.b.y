@@ -1,5 +1,4 @@
 import type { RoadmapItem } from "@zibby/contracts";
-import { DropDownButtonTestId } from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen, within } from "../../../test/render";
@@ -48,11 +47,10 @@ const { hooks } = vi.hoisted(() => ({
       refetch: vi.fn(),
     },
     config: {
-      data: undefined as { autoSync: boolean } | undefined,
+      data: undefined as { autoPlay: boolean } | undefined,
       isPending: false,
     },
     setConfig: { mutate: vi.fn(), isPending: false },
-    sync: { mutate: vi.fn(), isPending: false },
     create: { mutate: vi.fn(), isPending: false, isError: false, error: null as unknown },
     update: { mutate: vi.fn(), isPending: false, isError: false, error: null as unknown },
     play: { mutate: vi.fn(), isPending: false },
@@ -71,7 +69,6 @@ vi.mock("../queries", () => ({
 // on the mock" rather than anything that points at the real cause.
 vi.mock("../mutations", () => ({
   useSetRoadmapConfigMutation: () => hooks.setConfig,
-  useSyncRoadmapItemsMutation: () => hooks.sync,
   useCreateRoadmapItemMutation: () => hooks.create,
   useUpdateRoadmapItemMutation: () => hooks.update,
   usePlayRoadmapItemMutation: () => hooks.play,
@@ -81,9 +78,8 @@ describe("RoadmapPanel", () => {
   beforeEach(() => {
     search.current = "";
     hooks.items = { data: undefined, isPending: false, isError: false, refetch: vi.fn() };
-    hooks.config = { data: { autoSync: false }, isPending: false };
+    hooks.config = { data: { autoPlay: false }, isPending: false };
     hooks.setConfig = { mutate: vi.fn(), isPending: false };
-    hooks.sync = { mutate: vi.fn(), isPending: false };
     hooks.create = { mutate: vi.fn(), isPending: false, isError: false, error: null };
     hooks.update = { mutate: vi.fn(), isPending: false, isError: false, error: null };
     hooks.play = { mutate: vi.fn(), isPending: false };
@@ -95,54 +91,7 @@ describe("RoadmapPanel", () => {
     expect(screen.getByTestId(RoadmapPanelTestId.Empty)).toBeInTheDocument();
   });
 
-  it("renders the Sync split button even on the empty state", () => {
-    hooks.items.data = [];
-    render(<RoadmapPanel projectId="proj-1" />);
-    expect(screen.getByTestId(DropDownButtonTestId.Primary)).toBeInTheDocument();
-  });
-
-  it("clicking the primary Sync action calls the sync mutation for every source", async () => {
-    hooks.items.data = [item({ id: "e1", level: "epic", name: "Epic A", parentId: undefined })];
-    render(<RoadmapPanel projectId="proj-1" />);
-
-    await userEvent.click(screen.getByTestId(DropDownButtonTestId.Primary));
-
-    expect(hooks.sync.mutate).toHaveBeenCalledWith(
-      { params: { projectId: "proj-1" }, body: {} },
-      expect.anything(),
-    );
-  });
-
-  it("picking Jira from the source menu syncs only Jira", async () => {
-    hooks.items.data = [item({ id: "e1", level: "epic", name: "Epic A", parentId: undefined })];
-    render(<RoadmapPanel projectId="proj-1" />);
-
-    await userEvent.click(screen.getByTestId(DropDownButtonTestId.Trigger));
-    await userEvent.click(screen.getByTestId(`${DropDownButtonTestId.Item}-jira`));
-
-    expect(hooks.sync.mutate).toHaveBeenCalledWith(
-      { params: { projectId: "proj-1" }, body: { source: "jira" } },
-      expect.anything(),
-    );
-  });
-
-  it("picking GitHub from the source menu syncs only GitHub", async () => {
-    hooks.items.data = [item({ id: "e1", level: "epic", name: "Epic A", parentId: undefined })];
-    render(<RoadmapPanel projectId="proj-1" />);
-
-    await userEvent.click(screen.getByTestId(DropDownButtonTestId.Trigger));
-    await userEvent.click(screen.getByTestId(`${DropDownButtonTestId.Item}-github`));
-
-    expect(hooks.sync.mutate).toHaveBeenCalledWith(
-      { params: { projectId: "proj-1" }, body: { source: "github" } },
-      expect.anything(),
-    );
-  });
-
-  // The auto-sync/auto-play toggles moved to `RoadmapAutomationPanel` on the
-  // Integrations tab — their behaviour is covered by that component's own suite.
-
-  describe("Nový task (in the header row, level with Sync)", () => {
+  describe("Nový task (in the header row)", () => {
     const epicA = item({ id: "e1", level: "epic", name: "Epic A", parentId: undefined });
 
     it("sits in the panel header, not in the board's own header line", () => {

@@ -272,16 +272,13 @@ describe("ResolvedProjectService", () => {
       ]);
     });
 
-    it("integrationCompany: the owner company, or the owning project's effective company", async () => {
-      const co: Company = { id: "co", name: "Co" };
+    it("inheritingProjects: a project-owned integration feeds no other project", async () => {
       const service = build({
-        companies: [co],
+        companies: [{ id: "co", name: "Co" }],
         projects: [project({ id: "p", companyId: "co" })],
       });
       const own = integration({ id: "own", kind: "jira", projectId: "p" });
 
-      expect(await service.integrationCompany(companyJira)).toEqual(co);
-      expect(await service.integrationCompany(own)).toEqual(co);
       expect(await service.inheritingProjects(own)).toEqual([]);
     });
   });

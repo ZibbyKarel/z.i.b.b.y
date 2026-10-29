@@ -190,7 +190,7 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         if (parsed.kind === "project-health-down" || parsed.kind === "project-health-recovered") {
           void qc.invalidateQueries({ queryKey: getProjectHealthQueryKey() });
         }
-        // A ZIBBY action changed PRs/issues (task opened a PR, merge, roadmap sync) —
+        // A ZIBBY action changed PRs/issues (task opened a PR, merge, roadmap dispatch) —
         // refresh the inbox now; otherwise it waits for its 15-min poll. The TODO list
         // (open manual roadmap tasks) rides the same kinds: the gate's
         // `roadmap-item-dispatched` / `roadmap-item-outcome` are its lifecycle changes.

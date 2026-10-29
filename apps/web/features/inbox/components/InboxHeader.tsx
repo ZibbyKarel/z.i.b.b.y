@@ -3,7 +3,7 @@
 import { Button, Container, Row, Stack, StatusDot, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useNow } from "../../../hooks/useNow";
-import { useSyncInboxMutation } from "../mutations";
+import { useRefreshInboxMutation } from "../mutations";
 import { useElapsedLabel } from "../useElapsedLabel";
 
 export enum InboxHeaderTestId {
@@ -17,22 +17,22 @@ export type InboxView = "overview" | "issues" | "prs";
 
 export interface InboxHeaderProps {
   view: InboxView;
-  /** Projects the `Sync` button syncs (`InboxItemsResponse.syncProjectIds`). */
+  /** Projects with an issue integration (`InboxItemsResponse.syncProjectIds`); `Sync` is disabled without any. */
   syncProjectIds?: string[] | undefined;
-  /** Oldest last-sync across those projects. */
+  /** When the issue list was last fetched. */
   syncedAt?: string | undefined;
 }
 
 /**
  * The shared Inbox page header (spec "Information architecture"): a mono kicker,
- * the title, "Synced N min ago" and the `Sync` button — the existing per-project
- * roadmap sync for every integrated project.
+ * the title, "Synced N min ago" and the `Sync` button, which refetches the live
+ * issue and PR lists past the API cache.
  */
 export function InboxHeader({ view, syncProjectIds, syncedAt }: InboxHeaderProps) {
   const t = useTranslations("inboxPage");
   const now = useNow(30_000);
   const elapsedLabel = useElapsedLabel();
-  const sync = useSyncInboxMutation();
+  const sync = useRefreshInboxMutation();
   const canSync = (syncProjectIds?.length ?? 0) > 0;
 
   return (
@@ -61,7 +61,7 @@ export function InboxHeader({ view, syncProjectIds, syncedAt }: InboxHeaderProps
               disabled={!canSync || sync.isPending}
               intent="secondary"
               loading={sync.isPending}
-              onClick={() => sync.mutate(syncProjectIds ?? [])}
+              onClick={() => sync.mutate()}
               size="sm"
             >
               {t("sync.button")}

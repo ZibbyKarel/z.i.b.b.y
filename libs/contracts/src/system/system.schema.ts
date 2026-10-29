@@ -139,13 +139,11 @@ export const SystemConfigSchema = z
      */
     maxConcurrentRuns: z.number().int().positive().default(3),
     /**
-     * Roadmap auto-sync + gate-poll heartbeat (ms, 125h) — each tick re-syncs
-     * every project whose roadmap config has `autoSync: true`
-     * (`RoadmapSourceService.sync`) and, for every project with a roadmap,
-     * drives `RoadmapGateService.reconcileRunning`/`reconcileAwaitingMerge`
-     * (the poll half of the two release signals — a PR merged directly on
-     * GitHub still releases its dependents even with auto-sync off), then runs
-     * auto-pickup for every project with `autoPlay: true`. `0` disables.
+     * Roadmap gate-poll heartbeat (ms, 125h) — each tick drives, for every project
+     * with a roadmap, `RoadmapGateService.reconcileRunning`/`reconcileAwaitingMerge`
+     * (the poll half of the two release signals — a PR merged directly on GitHub
+     * still releases its dependents), then runs auto-pickup for every project with
+     * `autoPlay: true`. Also paces `PrAutomationService`. `0` disables.
      * Editable from `/settings?tab=runtime`; read live (never cached) via
      * `SystemConfigStore.current()`.
      */

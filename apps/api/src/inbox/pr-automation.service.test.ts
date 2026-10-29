@@ -114,7 +114,6 @@ describe("PrAutomationService (todo-16)", () => {
         readConfig: async (id: string) => {
           if (id === "broken") throw new Error("unsafe id");
           return {
-            autoSync: null,
             autoPlay: null,
             autoReview: null,
             autoAddressComments: null,

@@ -1,7 +1,7 @@
 # Inbox
 
 One place that answers "what do I have to process?" — a read-only view over the
-synced roadmap cache narrowed to the operator's scope, plus the operator's GitHub
+live list of the issues assigned to the operator, plus the operator's GitHub
 PRs. Jira/GitHub stay the source of truth for the _task_; the Inbox never edits
 titles or descriptions. Three PR actions exist, all operator-clicked: a code review
 posted only after a Tier-3 approval (Phase 129), a rebase onto the base branch
@@ -57,7 +57,8 @@ work record and overlays `runs`, `lastFailureReason`, `dependsOn` and a ZIBBY li
 ignored. `linkedPr` is matched from the cached PR list by issue key.
 
 - Cached 60 s (dropped on `INBOX_REFRESH_ACTIVITY_KINDS`); `?refresh=true` bypasses it, and
-  the PR cache too.
+  the PR cache too. The web's Sync buttons call both list routes with `refresh=true`
+  (`useRefreshInboxMutation`) and write the responses into their query caches.
 - `epics` — Jira parents of type Epic (or `hierarchyLevel` 1); `done/total` come from one extra
   `parent in (...)` query per integration.
 - `syncProjectIds` — projects whose resolved integrations include Jira or GitHub

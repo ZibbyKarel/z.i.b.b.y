@@ -1,6 +1,6 @@
 export { useProcessInboxItemMutation } from "./useProcessInboxItemMutation";
 export { useSetInboxHiddenMutation } from "./useSetInboxHiddenMutation";
-export { useSyncInboxMutation } from "./useSyncInboxMutation";
+export { useRefreshInboxMutation } from "./useRefreshInboxMutation";
 export { useReviewInboxPrMutation } from "./useReviewInboxPrMutation";
 export { useFixInboxPrCiMutation } from "./useFixInboxPrCiMutation";
 export { useRebaseInboxPrMutation } from "./useRebaseInboxPrMutation";

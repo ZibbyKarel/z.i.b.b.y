@@ -1,15 +1,13 @@
 "use client";
 
 import type { RoadmapItemLevel } from "@zibby/contracts";
-import { Button, DropDownButton, Grid, Stack } from "@zibby/design-system";
+import { Button, Grid, Stack } from "@zibby/design-system";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { EmptyState } from "../../../components/EmptyState/EmptyState";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
-import { toastBus } from "../../../components/Toaster/toastBus";
-import { useSyncRoadmapItemsMutation } from "../mutations";
 import { useRoadmapItemsQuery } from "../queries";
 import { RoadmapBoard } from "./RoadmapBoard";
 import { RoadmapEpicList } from "./RoadmapEpicList";
@@ -24,50 +22,16 @@ export enum RoadmapPanelTestId {
 }
 
 /**
- * The roadmap tab header (125h, source-picker split button per the 2026-07-29
- * design): the manual Sync split button, backed by the 125b `syncRoadmapItems`
- * route — present above BOTH the empty state and the epic list/board, since
- * Sync is exactly how an empty roadmap gets its first items. The primary
- * segment syncs every configured source; the chevron menu offers Jira/GitHub
- * individually (both always shown — syncing an unconfigured source is a
- * harmless all-zero no-op, so no extra integrations query is needed to decide
- * which to list). A toast reports the sync summary; the item list itself
- * refreshes via the mutation's own query invalidation.
- *
- * "Nový task" rides in the same row (its own optional slot, since the empty
- * state has no board to create into): both are actions ON the board, and split
- * across two stacked rows they read as unrelated. The board's own header line
- * is then just the dot + epic name, which is what the design mock shows.
- *
- * The auto-sync/auto-play toggles used to sit here and now live in
- * `RoadmapAutomationPanel` on the Integrations tab: Sync stays because its
- * result lands on this very board, while a standing automation setting has
- * nothing to show here.
+ * The roadmap tab header: the "Nový task" action ON the board, right-aligned.
+ * Only shown with a board — the empty state has nothing to create a task into.
+ * (Jira/GitHub issues are no longer synced into this roadmap; the Inbox lists them live.)
  */
-function RoadmapSyncHeader({
-  projectId,
+function RoadmapHeader({
   createTask,
 }: {
-  projectId: string;
-  /** Omitted on the empty state — there is no board to add a task to yet. */
-  createTask?: { onCreate: () => void; disabled: boolean };
+  createTask: { onCreate: () => void; disabled: boolean };
 }) {
   const t = useTranslations("roadmap");
-  const syncMutation = useSyncRoadmapItemsMutation(projectId);
-
-  const runSync = (source?: "jira" | "github") =>
-    syncMutation.mutate(
-      { params: { projectId }, body: source ? { source } : {} },
-      {
-        onSuccess: (result) => {
-          const { imported, updated, archived } = result.body;
-          toastBus.emit({
-            message: t("sync.toast", { imported, updated, archived }),
-            severity: "ok",
-          });
-        },
-      },
-    );
 
   return (
     <Stack
@@ -83,32 +47,16 @@ function RoadmapSyncHeader({
           to hand over; enabled, it would open a dialog whose submit can only
           produce a parentless task. Disabled with a hint is the honest state until
           an epic picker exists (126c follow-up). */}
-      {createTask && (
-        <Button
-          data-testid={RoadmapPanelTestId.CreateTask}
-          disabled={createTask.disabled}
-          icon="plus"
-          intent="ghost"
-          onClick={createTask.onCreate}
-          size="sm"
-        >
-          {t("create.newTask")}
-        </Button>
-      )}
-      <DropDownButton
-        disabled={syncMutation.isPending}
-        icon="retry"
+      <Button
+        data-testid={RoadmapPanelTestId.CreateTask}
+        disabled={createTask.disabled}
+        icon="plus"
         intent="ghost"
-        label={t("sync.button")}
-        loading={syncMutation.isPending}
-        menuAriaLabel={t("sync.sourceMenuAria")}
-        menuItems={[
-          { id: "jira", label: t("sync.source.jira"), onSelect: () => runSync("jira") },
-          { id: "github", label: t("sync.source.github"), onSelect: () => runSync("github") },
-        ]}
-        onClick={() => runSync()}
+        onClick={createTask.onCreate}
         size="sm"
-      />
+      >
+        {t("create.newTask")}
+      </Button>
     </Stack>
   );
 }
@@ -154,7 +102,6 @@ export function RoadmapPanel({ projectId }: RoadmapPanelProps) {
   if (epics.length === 0) {
     return (
       <Stack data-testid={RoadmapPanelTestId.Empty} gap="200">
-        <RoadmapSyncHeader projectId={projectId} />
         <EmptyState
           actionLabel={t("create.newEpic")}
           description={t("emptyEpicsDescription")}
@@ -187,12 +134,11 @@ export function RoadmapPanel({ projectId }: RoadmapPanelProps) {
 
   return (
     <Stack data-testid={RoadmapPanelTestId.Root} gap="200">
-      <RoadmapSyncHeader
+      <RoadmapHeader
         createTask={{
           onCreate: () => setCreateTarget({ level: "task", parentId: selectedEpic?.id }),
           disabled: !selectedEpic,
         }}
-        projectId={projectId}
       />
       {/* `left-wide` (~33%), not the fixed 320px: an epic row carries a real
           name plus a description, and at 320px both truncated on every row

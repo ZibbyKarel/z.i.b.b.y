@@ -3,7 +3,6 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import { DEFAULT_LEVEL_MAPPING } from "@zibby/contracts";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
@@ -22,14 +21,6 @@ describe("Roadmap API (e2e)", () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
     await app.init();
-
-    // The sync route (125b) needs a REAL project (it resolves the project's
-    // integrations) — the CRUD routes above don't, so this is seeded only
-    // for the sync tests below.
-    await request(app.getHttpServer())
-      .post("/api/projects")
-      .send({ id: "no-integrations-project", name: "No Integrations" })
-      .expect(201);
   });
 
   afterAll(async () => {
@@ -123,18 +114,15 @@ describe("Roadmap API (e2e)", () => {
       .get("/api/projects/other-project/roadmap/config")
       .expect(200);
     expect(initial.body).toMatchObject({
-      autoSync: null,
       autoPlay: null,
       autoReview: null,
       autoAddressComments: null,
     });
     expect(initial.body.effective).toEqual({
-      autoSync: false,
       autoPlay: false,
       autoReview: false,
       autoAddressComments: false,
       source: {
-        autoSync: "global",
         autoPlay: "global",
         autoReview: "global",
         autoAddressComments: "global",
@@ -143,15 +131,15 @@ describe("Roadmap API (e2e)", () => {
 
     const updated = await request(app.getHttpServer())
       .put("/api/projects/other-project/roadmap/config")
-      .send({ autoSync: true })
+      .send({ autoPlay: true })
       .expect(200);
-    expect(updated.body).toMatchObject({ autoSync: true, autoPlay: null });
-    expect(updated.body.effective.autoSync).toBe(true);
+    expect(updated.body).toMatchObject({ autoPlay: true, autoReview: null });
+    expect(updated.body.effective.autoPlay).toBe(true);
 
     const reread = await request(app.getHttpServer())
       .get("/api/projects/other-project/roadmap/config")
       .expect(200);
-    expect(reread.body).toMatchObject({ autoSync: true, autoPlay: null });
+    expect(reread.body).toMatchObject({ autoPlay: true, autoReview: null });
   });
 
   it("PUT config MERGES — patching one toggle never resets the other", async () => {
@@ -161,26 +149,25 @@ describe("Roadmap API (e2e)", () => {
       .expect(200);
 
     // The regression: a replacing PUT would default `autoPlay` back to false
-    // here, silently switching auto-implement off on an auto-sync flip.
+    // here, silently switching auto-implement off on an auto-review flip.
     const merged = await request(app.getHttpServer())
       .put("/api/projects/merge-project/roadmap/config")
-      .send({ autoSync: true })
+      .send({ autoReview: true })
       .expect(200);
-    expect(merged.body).toMatchObject({ autoSync: true, autoPlay: true });
+    expect(merged.body).toMatchObject({ autoReview: true, autoPlay: true });
   });
 
   it("PUT config { autoReview: true } changes only that key; GET returns effective values", async () => {
     await request(app.getHttpServer())
       .put("/api/projects/review-project/roadmap/config")
-      .send({ autoSync: true })
+      .send({ autoPlay: true })
       .expect(200);
     const updated = await request(app.getHttpServer())
       .put("/api/projects/review-project/roadmap/config")
       .send({ autoReview: true })
       .expect(200);
     expect(updated.body).toMatchObject({
-      autoSync: true,
-      autoPlay: null,
+      autoPlay: true,
       autoReview: true,
       autoAddressComments: null,
     });
@@ -188,45 +175,10 @@ describe("Roadmap API (e2e)", () => {
       .get("/api/projects/review-project/roadmap/config")
       .expect(200);
     expect(reread.body.effective).toMatchObject({
-      autoSync: true,
+      autoPlay: true,
       autoReview: true,
       autoAddressComments: false,
       source: { autoReview: "project", autoAddressComments: "global" },
     });
-  });
-
-  it("POST sync on a project with no Jira/GitHub integration returns an all-zero summary, not an error", async () => {
-    // `.send({})` — "sync every configured source". The route's body became a
-    // real schema with the source-picker split button, so a body-less POST is
-    // now a 400 at validation and never reaches the handler.
-    const synced = await request(app.getHttpServer())
-      .post("/api/projects/no-integrations-project/roadmap/sync")
-      .send({})
-      .expect(200);
-    expect(synced.body).toEqual({ imported: 0, updated: 0, archived: 0, skipped: 0, notes: [] });
-  });
-
-  it("POST sync 404s for a project id that doesn't resolve to a real project", async () => {
-    await request(app.getHttpServer())
-      .post("/api/projects/nonexistent-project/roadmap/sync")
-      .send({})
-      .expect(404);
-  });
-
-  it("GET level-mapping returns the seed, and PUT round-trips a replacement", async () => {
-    const seeded = await request(app.getHttpServer()).get("/api/roadmap/level-mapping").expect(200);
-    expect(seeded.body).toEqual(DEFAULT_LEVEL_MAPPING);
-
-    const replacement = {
-      entries: [{ kind: "jira", externalLevel: "Spike", target: "task" }],
-    };
-    const put = await request(app.getHttpServer())
-      .put("/api/roadmap/level-mapping")
-      .send(replacement)
-      .expect(200);
-    expect(put.body).toEqual(replacement);
-
-    const reread = await request(app.getHttpServer()).get("/api/roadmap/level-mapping").expect(200);
-    expect(reread.body).toEqual(replacement);
   });
 });

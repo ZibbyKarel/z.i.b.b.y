@@ -79,19 +79,17 @@ describe("company schema", () => {
 });
 
 describe("Phase 128 schema additions", () => {
-  it("company accepts roadmapDefaults and levelMapping overrides", () => {
+  it("company accepts roadmapDefaults", () => {
     const parsed = CompanySchema.parse({
       id: "c",
       name: "C",
       roadmapDefaults: { autoPlay: true, autoReview: true, autoAddressComments: false },
-      levelMapping: { entries: [{ kind: "jira", externalLevel: "Story", target: "epic" }] },
     });
     expect(parsed.roadmapDefaults).toEqual({
       autoPlay: true,
       autoReview: true,
       autoAddressComments: false,
     });
-    expect(parsed.levelMapping?.entries).toHaveLength(1);
   });
 
   it("project update accepts integrationRouting and rejects a keyless jira rule", () => {

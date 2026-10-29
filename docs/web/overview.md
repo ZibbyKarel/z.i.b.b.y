@@ -298,10 +298,8 @@ features/
 │                   reuse each domain's own unchanged create dialog + edit form
 ├── release/       Release department surfaces (merge queue card)
 ├── research/       Research workflow surfacing
-├── roadmap/        Per-project delivery backlog (phase 125) — the global
-│                   external-level mapping table now lives at
-│                   `/system/settings/general` (ZB-11); the project board lands
-│                   on `/work/projects/<id>/roadmap`
+├── roadmap/        Per-project delivery backlog (phase 125) — the project
+│                   board lands on `/work/projects/<id>/roadmap`
 ├── runs/           Run history + log viewer, plus the shared SSE hooks
 │                   (`runEvents`, `useRunLogStream`)
 ├── settings/       `/system/settings/[section]` (ZB-11) — general, appearance,

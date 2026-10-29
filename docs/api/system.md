@@ -55,10 +55,9 @@ system-config section — link there rather than duplicating the table here.
      server-side reads it; a stored file without the key reads back as `20`.
    - `roadmapTickMs` (Phase 125h) is `RoadmapTickService`'s heartbeat —
      `900_000` (15 min) by default, `0` disables, re-arms live via `onChange()` like the
-     other `*TickMs` knobs. Each tick re-syncs every project whose roadmap
-     config has `autoSync: true`, then drives
+     other `*TickMs` knobs. Each tick drives
      `RoadmapGateService.reconcileRunning`/`reconcileAwaitingMerge` for every
-     project with a roadmap (independent of `autoSync` — this is the **poll**
+     project with a roadmap (this is the **poll**
      half of the roadmap's two release signals, the one that catches a PR
      merged directly on GitHub, where the eager `recordMerge` hook never
      fires), then runs auto-pickup for every project with `autoPlay: true`.

@@ -21,11 +21,11 @@ describe("CompanyRoadmapDefaultsPanel", () => {
       />,
     );
 
-    await userEvent.click(screen.getByTestId(TestId.AutoSync));
+    await userEvent.click(screen.getByTestId(TestId.AutoReview));
 
     expect(hooks.mutate).toHaveBeenCalledWith({
       params: { id: "shoptet" },
-      body: { roadmapDefaults: { autoPlay: true, autoSync: true } },
+      body: { roadmapDefaults: { autoPlay: true, autoReview: true } },
     });
   });
 
@@ -35,7 +35,7 @@ describe("CompanyRoadmapDefaultsPanel", () => {
   ] as const)("the %s switch writes its key next to the existing defaults", async (testId, key) => {
     render(
       <CompanyRoadmapDefaultsPanel
-        company={{ id: "shoptet", name: "Shoptet", roadmapDefaults: { autoSync: true } }}
+        company={{ id: "shoptet", name: "Shoptet", roadmapDefaults: { autoPlay: true } }}
       />,
     );
 
@@ -43,7 +43,7 @@ describe("CompanyRoadmapDefaultsPanel", () => {
 
     expect(hooks.mutate).toHaveBeenCalledWith({
       params: { id: "shoptet" },
-      body: { roadmapDefaults: { autoSync: true, [key]: true } },
+      body: { roadmapDefaults: { autoPlay: true, [key]: true } },
     });
   });
 });

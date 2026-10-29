@@ -34,7 +34,6 @@ import { PageContainer } from "../../../components/PageContainer/PageContainer";
 import { slug } from "../../../utils/slug";
 import { useCompaniesQuery } from "../../companies";
 import { InboxPanel } from "../../integrations/components/InboxPanel";
-import { LevelMappingSection } from "../../roadmap/components/LevelMappingSection";
 import { RoadmapAutomationPanel } from "../../roadmap/components/RoadmapAutomationPanel";
 import { RoadmapPanel } from "../../roadmap/components/RoadmapPanel";
 import { type ProjectBasicsBody, ProjectBasicsPanel } from "../components/ProjectBasicsPanel";
@@ -693,12 +692,7 @@ export function ProjectDetailScreen({ projectId, tab = "overview" }: ProjectDeta
                 </Stack>
               )}
 
-              {tab === "roadmap" && (
-                <Stack gap="300">
-                  <RoadmapPanel projectId={id} />
-                  <LevelMappingSection />
-                </Stack>
-              )}
+              {tab === "roadmap" && <RoadmapPanel projectId={id} />}
             </>
           ) : null}
         </Stack>

@@ -12,12 +12,9 @@ const fakeLogger = {
   child: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 };
 
-const ZERO_SUMMARY = { imported: 0, updated: 0, archived: 0, skipped: 0, notes: [] };
-
 describe("RoadmapTickService", () => {
   let dir: string;
   let store: RoadmapStore;
-  let source: { syncProjects: ReturnType<typeof vi.fn> };
   let gate: {
     reconcileRunning: ReturnType<typeof vi.fn>;
     reconcileAwaitingMerge: ReturnType<typeof vi.fn>;
@@ -31,9 +28,7 @@ describe("RoadmapTickService", () => {
   const makeTick = () =>
     new RoadmapTickService(
       store,
-      source as never,
       gate as never,
-      activity as never,
       fakeSystemConfigStore(),
       { register: () => {} } as never,
       projects as never,
@@ -45,11 +40,6 @@ describe("RoadmapTickService", () => {
     dir = await fs.mkdtemp(path.join(os.tmpdir(), "roadmap-tick-"));
     store = new RoadmapStore(dir);
     await store.onModuleInit();
-    source = {
-      syncProjects: vi.fn(
-        async (ids: string[]) => new Map(ids.map((id) => [id, { ...ZERO_SUMMARY }])),
-      ),
-    };
     company = undefined;
     gate = {
       reconcileRunning: vi.fn(async () => {}),
@@ -63,86 +53,49 @@ describe("RoadmapTickService", () => {
     await fs.rm(dir, { recursive: true, force: true });
   });
 
-  it("skips sync for a project with autoSync: false, but still polls the gate", async () => {
-    await store.writeConfig("acme", { autoSync: false });
+  it("polls the gate for a project, with every toggle off", async () => {
+    await store.writeConfig("acme", {});
     const tick = makeTick();
 
     await tick.tick();
 
-    expect(source.syncProjects).not.toHaveBeenCalled();
     expect(gate.reconcileRunning).toHaveBeenCalledWith("acme");
     expect(gate.reconcileAwaitingMerge).toHaveBeenCalledWith("acme");
-  });
-
-  it("syncs a project with autoSync: true", async () => {
-    await store.writeConfig("acme", { autoSync: true });
-    const tick = makeTick();
-
-    await tick.tick();
-
-    expect(source.syncProjects).toHaveBeenCalledWith(["acme"]);
-  });
-
-  it("skips auto-pickup for a project with autoPlay: false — the default", async () => {
-    await store.writeConfig("acme", { autoSync: true });
-    const tick = makeTick();
-
-    await tick.tick();
-
     expect(gate.autoPickup).not.toHaveBeenCalled();
   });
 
-  it("picks up work for a project with autoPlay: true, independently of autoSync", async () => {
-    await store.writeConfig("acme", { autoSync: false, autoPlay: true });
+  it("picks up work for a project with autoPlay: true", async () => {
+    await store.writeConfig("acme", { autoPlay: true });
     const tick = makeTick();
 
     await tick.tick();
 
-    expect(source.syncProjects).not.toHaveBeenCalled();
     expect(gate.autoPickup).toHaveBeenCalledWith("acme");
   });
 
-  it("inherits autoPlay/autoSync from the company's roadmapDefaults when the project says null (D8)", async () => {
-    await store.writeConfig("acme", { autoSync: null, autoPlay: null });
-    company = { id: "co", name: "Co", roadmapDefaults: { autoSync: true, autoPlay: true } };
+  it("inherits autoPlay from the company's roadmapDefaults when the project says null (D8)", async () => {
+    await store.writeConfig("acme", { autoPlay: null });
+    company = { id: "co", name: "Co", roadmapDefaults: { autoPlay: true } };
     const tick = makeTick();
 
     await tick.tick();
 
-    expect(source.syncProjects).toHaveBeenCalledWith(["acme"]);
     expect(gate.autoPickup).toHaveBeenCalledWith("acme");
   });
 
   it("a project's explicit false beats the company default", async () => {
-    await store.writeConfig("acme", { autoSync: false, autoPlay: false });
-    company = { id: "co", name: "Co", roadmapDefaults: { autoSync: true, autoPlay: true } };
+    await store.writeConfig("acme", { autoPlay: false });
+    company = { id: "co", name: "Co", roadmapDefaults: { autoPlay: true } };
     const tick = makeTick();
 
     await tick.tick();
 
-    expect(source.syncProjects).not.toHaveBeenCalled();
     expect(gate.autoPickup).not.toHaveBeenCalled();
   });
 
-  it("syncs all opted-in projects in ONE syncProjects call (each integration fetched once)", async () => {
-    await store.writeConfig("a", { autoSync: true });
-    await store.writeConfig("b", { autoSync: true });
-    await store.writeConfig("c", { autoSync: false });
-    const tick = makeTick();
-
-    await tick.tick();
-
-    expect(source.syncProjects).toHaveBeenCalledTimes(1);
-    expect(source.syncProjects).toHaveBeenCalledWith(["a", "b"]);
-  });
-
-  it("picks up LAST — after the sync and both reconcile passes have run", async () => {
-    await store.writeConfig("acme", { autoSync: true, autoPlay: true });
+  it("picks up LAST — after both reconcile passes have run", async () => {
+    await store.writeConfig("acme", { autoPlay: true });
     const order: string[] = [];
-    source.syncProjects.mockImplementation(async () => {
-      order.push("sync");
-      return new Map();
-    });
     gate.reconcileRunning.mockImplementation(async () => void order.push("reconcileRunning"));
     gate.reconcileAwaitingMerge.mockImplementation(
       async () => void order.push("reconcileAwaitingMerge"),
@@ -152,9 +105,8 @@ describe("RoadmapTickService", () => {
 
     await tick.tick();
 
-    // Pickup must see the freshly imported items and the slots the reconcile
-    // passes just freed — anything earlier works off a stale picture.
-    expect(order).toEqual(["sync", "reconcileRunning", "reconcileAwaitingMerge", "autoPickup"]);
+    // Pickup must see the slots the reconcile passes just freed.
+    expect(order).toEqual(["reconcileRunning", "reconcileAwaitingMerge", "autoPickup"]);
   });
 
   it("one project's auto-pickup failure never blocks another project's tick", async () => {
@@ -171,24 +123,9 @@ describe("RoadmapTickService", () => {
     expect(gate.autoPickup).toHaveBeenCalledWith("fine");
   });
 
-  it("one project's sync failure never blocks another project's tick", async () => {
-    await store.writeConfig("broken", { autoSync: true });
-    await store.writeConfig("fine", { autoSync: true });
-    source.syncProjects.mockRejectedValue(new Error("jira down"));
-    const tick = makeTick();
-
-    await tick.tick();
-
-    expect(source.syncProjects).toHaveBeenCalledWith(["broken", "fine"]);
-    // The broken project's OWN reconcile pass still runs — a sync failure
-    // doesn't skip the poll step for the same project either.
-    expect(gate.reconcileRunning).toHaveBeenCalledWith("broken");
-    expect(gate.reconcileRunning).toHaveBeenCalledWith("fine");
-  });
-
   it("one project's reconcile failure never blocks another project's tick", async () => {
-    await store.writeConfig("broken", { autoSync: false });
-    await store.writeConfig("fine", { autoSync: false });
+    await store.writeConfig("broken", {});
+    await store.writeConfig("fine", {});
     gate.reconcileRunning.mockImplementation(async (projectId: string) => {
       if (projectId === "broken") throw new Error("boom");
     });
@@ -201,7 +138,7 @@ describe("RoadmapTickService", () => {
   });
 
   it("a project whose readConfig itself throws never blocks another project's tick", async () => {
-    await store.writeConfig("fine", { autoSync: true });
+    await store.writeConfig("fine", { autoPlay: true });
     // "broken" has no _config.json at all but IS a real directory under the
     // root (readConfig degrades to defaults for a missing file, so simulate a
     // harder failure — projectIds() lists a dir that readConfig then rejects).
@@ -209,45 +146,18 @@ describe("RoadmapTickService", () => {
       .spyOn(store, "readConfig")
       .mockImplementation(async (projectId: string) => {
         if (projectId === "broken") throw new Error("unreadable");
-        return { autoSync: true, autoPlay: false, autoReview: null, autoAddressComments: null };
+        return { autoPlay: true, autoReview: null, autoAddressComments: null };
       });
     await fs.mkdir(path.join(dir, "broken"), { recursive: true });
     const tick = makeTick();
 
     await tick.tick();
 
-    expect(source.syncProjects).toHaveBeenCalledWith(["fine"]);
     // "broken"'s readConfig threw, so its whole tickProject step aborted —
     // but "fine" still ran to completion.
     expect(gate.reconcileRunning).toHaveBeenCalledWith("fine");
+    expect(gate.reconcileRunning).not.toHaveBeenCalledWith("broken");
     readConfigSpy.mockRestore();
-  });
-
-  it("records roadmap-sync activity only when a sync actually imports or archives something", async () => {
-    await store.writeConfig("acme", { autoSync: true });
-    source.syncProjects.mockResolvedValue(
-      new Map([["acme", { imported: 2, updated: 1, archived: 1, skipped: 0, notes: [] }]]),
-    );
-    const tick = makeTick();
-
-    await tick.tick();
-
-    expect(activity.record).toHaveBeenCalledWith(
-      expect.objectContaining({
-        kind: "roadmap-sync",
-        refs: { projectId: "acme" },
-      }),
-    );
-  });
-
-  it("records no activity for a no-op tick (nothing imported/archived, nothing to reconcile)", async () => {
-    await store.writeConfig("acme", { autoSync: true });
-    source.syncProjects.mockResolvedValue(new Map([["acme", { ...ZERO_SUMMARY }]]));
-    const tick = makeTick();
-
-    await tick.tick();
-
-    expect(activity.record).not.toHaveBeenCalled();
   });
 
   describe("poll path — a PR merged directly on GitHub (real RoadmapGateService)", () => {
@@ -283,8 +193,8 @@ describe("RoadmapTickService", () => {
       } as ScheduledTask;
     }
 
-    it("releases a dependent whose blocker's PR was merged directly on GitHub, with autoSync off", async () => {
-      await store.writeConfig("acme", { autoSync: false });
+    it("releases a dependent whose blocker's PR was merged directly on GitHub, with no toggles on", async () => {
+      await store.writeConfig("acme", {});
       await store.put(
         realItem({
           id: "blocker",
@@ -351,9 +261,7 @@ describe("RoadmapTickService", () => {
 
       const tick = new RoadmapTickService(
         store,
-        source as never,
         realGate,
-        activity as never,
         fakeSystemConfigStore(),
         { register: () => {} } as never,
         projects as never,
@@ -368,8 +276,6 @@ describe("RoadmapTickService", () => {
       expect(blocker.lifecycle).toBe("done");
       const dependent = await store.get("acme", "dependent");
       expect(dependent.lifecycle).toBe("running");
-      // Auto-sync stayed off — the poll release is independent of it.
-      expect(source.syncProjects).not.toHaveBeenCalled();
     });
   });
 });

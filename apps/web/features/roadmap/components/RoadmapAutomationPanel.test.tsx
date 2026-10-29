@@ -21,17 +21,14 @@ vi.mock("../mutations", () => ({ useSetRoadmapConfigMutation: () => hooks.setCon
 
 function config(partial: Partial<RoadmapConfigResponse> = {}): RoadmapConfigResponse {
   return {
-    autoSync: null,
     autoPlay: null,
     autoReview: null,
     autoAddressComments: null,
     effective: {
-      autoSync: false,
       autoPlay: false,
       autoReview: false,
       autoAddressComments: false,
       source: {
-        autoSync: "global",
         autoPlay: "global",
         autoReview: "global",
         autoAddressComments: "global",
@@ -51,10 +48,10 @@ describe("RoadmapAutomationPanel (tri-state)", () => {
   });
 
   it("reads null as Inherit and explicit booleans as On / Off", () => {
-    hooks.config.data = config({ autoSync: true, autoPlay: false });
+    hooks.config.data = config({ autoReview: true, autoPlay: false });
     render(<RoadmapAutomationPanel projectId="proj-1" />);
 
-    expect(item(RoadmapAutomationPanelTestId.AutoSync, "on")).toHaveAttribute(
+    expect(item(RoadmapAutomationPanelTestId.AutoReview, "on")).toHaveAttribute(
       "aria-checked",
       "true",
     );
@@ -67,13 +64,11 @@ describe("RoadmapAutomationPanel (tri-state)", () => {
   it("selects Inherit for a null toggle and names the company as the source", () => {
     hooks.config.data = config({
       effective: {
-        autoSync: true,
-        autoPlay: false,
+        autoPlay: true,
         autoReview: false,
         autoAddressComments: false,
         source: {
-          autoSync: "company",
-          autoPlay: "global",
+          autoPlay: "company",
           autoReview: "global",
           autoAddressComments: "global",
         },
@@ -81,15 +76,15 @@ describe("RoadmapAutomationPanel (tri-state)", () => {
     });
     render(<RoadmapAutomationPanel companyName="Shoptet" projectId="proj-1" />);
 
-    expect(item(RoadmapAutomationPanelTestId.AutoSync, "inherit")).toHaveAttribute(
+    expect(item(RoadmapAutomationPanelTestId.AutoPlay, "inherit")).toHaveAttribute(
       "aria-checked",
       "true",
     );
-    expect(screen.getByTestId(RoadmapAutomationPanelTestId.AutoSyncEffective)).toHaveTextContent(
+    expect(screen.getByTestId(RoadmapAutomationPanelTestId.AutoPlayEffective)).toHaveTextContent(
       "Shoptet",
     );
     expect(
-      screen.getByTestId(RoadmapAutomationPanelTestId.AutoPlayEffective),
+      screen.getByTestId(RoadmapAutomationPanelTestId.AutoReviewEffective),
     ).not.toHaveTextContent("Shoptet");
   });
 
@@ -97,11 +92,11 @@ describe("RoadmapAutomationPanel (tri-state)", () => {
     hooks.config.data = config({ autoPlay: true });
     render(<RoadmapAutomationPanel projectId="proj-1" />);
 
-    await userEvent.click(item(RoadmapAutomationPanelTestId.AutoSync, "on"));
+    await userEvent.click(item(RoadmapAutomationPanelTestId.AutoReview, "on"));
 
     expect(hooks.setConfig.mutate).toHaveBeenCalledWith({
       params: { projectId: "proj-1" },
-      body: { autoSync: true },
+      body: { autoReview: true },
     });
   });
 
@@ -150,7 +145,7 @@ describe("RoadmapAutomationPanel (tri-state)", () => {
     hooks.setConfig.isPending = true;
     render(<RoadmapAutomationPanel projectId="proj-1" />);
 
-    await userEvent.click(item(RoadmapAutomationPanelTestId.AutoSync, "on"));
+    await userEvent.click(item(RoadmapAutomationPanelTestId.AutoPlay, "on"));
 
     expect(hooks.setConfig.mutate).not.toHaveBeenCalled();
   });

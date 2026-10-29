@@ -61,11 +61,9 @@ Two rules follow:
   fetch wider and filter inside the adapter. The ingested set must come out the same
   either way.
 
-Related but **not** the same question: `RoadmapSourceService` is not a channel and
-answers a different question: with a Jira `projectKey` it imports the whole project
-backlog (so it can see work already started elsewhere and keep ZIBBY off it); GitHub
-import and a key-less Jira stay `assignee:`-scoped. Do not align it with the channel
-adapters.
+Related but **not** the same question: `InboxIssuesService` (the live Issues widget)
+is not a channel and answers a different question: it lists the issues assigned to the
+operator. Do not align it with the channel adapters.
 
 ## No filler drafts — a reply is concrete or it is not drafted
 

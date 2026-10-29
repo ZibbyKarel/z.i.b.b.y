@@ -13,9 +13,7 @@ import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ResolvedProjectService } from "../projects/resolved-project.service";
 import { collisionResistantId } from "../shared/file-storage";
 import { makeErrorMapper } from "../shared/http/error-mapping";
-import { LevelMappingStore } from "./level-mapping.store";
 import { RoadmapGateService } from "./roadmap-gate.service";
-import { RoadmapSourceService } from "./roadmap-source.service";
 import {
   InvalidRoadmapItemIdError,
   InvalidRoadmapProjectIdError,
@@ -35,10 +33,6 @@ const errors = makeErrorMapper("RoadmapItem", {
   conflict: [RoadmapItemConflictError],
 });
 
-// 125b — syncRoadmapItems 404s only when the PROJECT id itself doesn't
-// resolve (RoadmapSourceService.sync's `this.projects.get` throws this before
-// anything else); a project with no Jira/GitHub integration is handled inside
-// the service itself (an all-zero summary, never an error).
 const projectErrors = makeErrorMapper("Project", { missing: [ProjectNotFoundError] });
 
 const unprocessable = (message: string) => ({ status: 422 as const, body: { message } });
@@ -74,8 +68,6 @@ function overrideExtra(projectId: string) {
 export class RoadmapController {
   constructor(
     private readonly roadmap: RoadmapStore,
-    private readonly levelMapping: LevelMappingStore,
-    private readonly roadmapSource: RoadmapSourceService,
     private readonly roadmapGate: RoadmapGateService,
     private readonly projects: ProjectsStorageService,
     private readonly resolvedProjects: ResolvedProjectService,
@@ -200,9 +192,6 @@ export class RoadmapController {
         body: await this.roadmapGate.playBulk(projectId, body.itemIds),
       }),
 
-      syncRoadmapItems: ({ params: { projectId }, body }) =>
-        projectErrors.or404(projectId, () => this.roadmapSource.sync(projectId, body.source)),
-
       getRoadmapConfig: async ({ params: { projectId } }) => ({
         status: 200,
         body: await this.withEffective(projectId, await this.roadmap.readConfig(projectId)),
@@ -212,16 +201,6 @@ export class RoadmapController {
         status: 200,
         // Patch, not replace — see the route's own comment in the contract.
         body: await this.withEffective(projectId, await this.roadmap.updateConfig(projectId, body)),
-      }),
-
-      getLevelMapping: async () => ({
-        status: 200,
-        body: await this.levelMapping.read(),
-      }),
-
-      putLevelMapping: async ({ body }) => ({
-        status: 200,
-        body: await this.levelMapping.write(body),
       }),
     });
   }

@@ -151,7 +151,7 @@ describe("RoadmapStore", () => {
 
   it("list() skips the sibling _config.json file", async () => {
     await store.put(item({ id: "a" }));
-    await store.writeConfig("proj-1", { autoSync: true });
+    await store.writeConfig("proj-1", { autoReview: true });
     const items = await store.list("proj-1");
     expect(items.map((i) => i.id)).toEqual(["a"]);
   });
@@ -168,26 +168,20 @@ describe("RoadmapStore", () => {
 
   describe("config", () => {
     const NULL_CONFIG = {
-      autoSync: null,
       autoPlay: null,
       autoReview: null,
       autoAddressComments: null,
     };
 
-    it("updateConfig() patches only the PR toggles and an old file reads them as null", async () => {
+    it("updateConfig() patches only the PR toggles; an old file reads them as null and drops the retired autoSync key", async () => {
       await fs.mkdir(path.join(dir, "proj-1"), { recursive: true });
       await fs.writeFile(
         path.join(dir, "proj-1", "_config.json"),
         JSON.stringify({ autoSync: true, autoPlay: false }),
       );
-      expect(await store.readConfig("proj-1")).toEqual({
-        ...NULL_CONFIG,
-        autoSync: true,
-        autoPlay: false,
-      });
+      expect(await store.readConfig("proj-1")).toEqual({ ...NULL_CONFIG, autoPlay: false });
       expect(await store.updateConfig("proj-1", { autoReview: true })).toEqual({
         ...NULL_CONFIG,
-        autoSync: true,
         autoPlay: false,
         autoReview: true,
       });
@@ -198,10 +192,10 @@ describe("RoadmapStore", () => {
 
     it("round-trips the per-project config", async () => {
       expect(await store.readConfig("proj-1")).toEqual(NULL_CONFIG);
-      await store.writeConfig("proj-1", { autoSync: true, autoPlay: true });
+      await store.writeConfig("proj-1", { autoReview: true, autoPlay: true });
       expect(await store.readConfig("proj-1")).toEqual({
         ...NULL_CONFIG,
-        autoSync: true,
+        autoReview: true,
         autoPlay: true,
       });
       // A fresh store instance over the same dir sees the persisted config.
@@ -209,7 +203,7 @@ describe("RoadmapStore", () => {
       await fresh.onModuleInit();
       expect(await fresh.readConfig("proj-1")).toEqual({
         ...NULL_CONFIG,
-        autoSync: true,
+        autoReview: true,
         autoPlay: true,
       });
     });
@@ -221,21 +215,21 @@ describe("RoadmapStore", () => {
     });
 
     it("writeConfig() REPLACES — an omitted toggle falls back to its default", async () => {
-      await store.writeConfig("proj-1", { autoSync: true, autoPlay: true });
-      await store.writeConfig("proj-1", { autoSync: true });
-      expect(await store.readConfig("proj-1")).toEqual({ ...NULL_CONFIG, autoSync: true });
+      await store.writeConfig("proj-1", { autoReview: true, autoPlay: true });
+      await store.writeConfig("proj-1", { autoReview: true });
+      expect(await store.readConfig("proj-1")).toEqual({ ...NULL_CONFIG, autoReview: true });
     });
 
     it("updateConfig() MERGES — flipping one toggle leaves the other alone", async () => {
-      await store.writeConfig("proj-1", { autoSync: false, autoPlay: true });
+      await store.writeConfig("proj-1", { autoReview: false, autoPlay: true });
 
-      const merged = await store.updateConfig("proj-1", { autoSync: true });
+      const merged = await store.updateConfig("proj-1", { autoReview: true });
 
-      // The whole point of the patch route: auto-play survives an auto-sync flip.
-      expect(merged).toEqual({ ...NULL_CONFIG, autoSync: true, autoPlay: true });
+      // The whole point of the patch route: auto-play survives an auto-review flip.
+      expect(merged).toEqual({ ...NULL_CONFIG, autoReview: true, autoPlay: true });
       expect(await store.readConfig("proj-1")).toEqual({
         ...NULL_CONFIG,
-        autoSync: true,
+        autoReview: true,
         autoPlay: true,
       });
     });
@@ -248,8 +242,8 @@ describe("RoadmapStore", () => {
     });
 
     it("updateConfig() with null resets a toggle to inherit", async () => {
-      await store.writeConfig("proj-1", { autoSync: true, autoPlay: true });
-      expect(await store.updateConfig("proj-1", { autoSync: null })).toEqual({
+      await store.writeConfig("proj-1", { autoReview: true, autoPlay: true });
+      expect(await store.updateConfig("proj-1", { autoReview: null })).toEqual({
         ...NULL_CONFIG,
         autoPlay: true,
       });
@@ -268,7 +262,7 @@ describe("RoadmapStore", () => {
       await expect(store.readConfig("../escape")).rejects.toBeInstanceOf(
         InvalidRoadmapProjectIdError,
       );
-      await expect(store.writeConfig("../escape", { autoSync: true })).rejects.toBeInstanceOf(
+      await expect(store.writeConfig("../escape", { autoReview: true })).rejects.toBeInstanceOf(
         InvalidRoadmapProjectIdError,
       );
       await expect(store.delete("../escape", "item-1")).rejects.toBeInstanceOf(

@@ -9,9 +9,7 @@ export interface DecompositionIngestResult {
    * `dependsOn` ordinals dropped rather than resolved: out of range, a
    * self-reference, or a duplicate within the same entry. Never fails the
    * whole ingest — Law 4 treats the artifact exactly as strictly as an
-   * imported issue body (`RoadmapSourceService`'s Jira/GitHub edges degrade
-   * the same way: an unresolvable reference is dropped, not trusted, and
-   * never aborts the rest of the item).
+   * imported issue body.
    */
   droppedEdges: number;
 }

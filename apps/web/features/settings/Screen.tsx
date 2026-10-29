@@ -15,7 +15,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { useHealthQuery } from "../health";
-import { LevelMappingSection } from "../roadmap/components/LevelMappingSection";
 import { ActivitySection } from "./components/ActivitySection";
 import { AppearanceSection } from "./components/AppearanceSection";
 import { ChatSection } from "./components/ChatSection";
@@ -83,10 +82,8 @@ export interface SettingsScreenProps {
  * router; the sections are the shell sub-nav items (`SECTIONS.system`). `general`
  * stacks General, Appearance, Machine and chat persona. Each former `/settings?tab=` is now its own route; the "gates" and
  * "mandate" tabs already moved to `/governance/gates` (ZB-08), "automations" to the top-level `/work/automations`
- * page, "selfKnowledge" to
- * `/knowledge/distill` (ZB-09), and the per-project "tasks" level mapping to
- * `/projects/[id]/roadmap` (ZB-06) — only the GLOBAL DEFAULT level mapping
- * stays here, under `general`.
+ * page, and "selfKnowledge" to
+ * `/knowledge/distill` (ZB-09).
  */
 export function SettingsScreen({ section }: SettingsScreenProps) {
   const t = useTranslations("settings");
@@ -146,7 +143,6 @@ export function SettingsScreen({ section }: SettingsScreenProps) {
                   />
                 </Stack>
               </Panel>
-              <LevelMappingSection />
               <AppearanceSection />
               <MachineSection />
               <ChatSection />

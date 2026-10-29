@@ -90,7 +90,7 @@ export function parsePrNumberFromUrl(url: string): number | undefined {
  * NOT by a hook from `TaskSchedulerService` (that would need a second circular
  * provider edge on top of the one `ProjectPrService` already carries for the merge
  * signal; reading the task back by id avoids it entirely). Wiring a periodic call
- * to `reconcileRunning`/`reconcileAwaitingMerge` is 125h's job (the auto-sync tick);
+ * to `reconcileRunning`/`reconcileAwaitingMerge` is 125h's job (the roadmap tick);
  * this service ships the fully-tested mechanism now.
  *
  * **Release signals** (`awaiting-merge` → `done`): {@link onMerge} is
@@ -317,6 +317,8 @@ export class RoadmapGateService {
    * each tick for a project whose `RoadmapConfig.autoPlay` is on. The caller owns
    * that check; this method assumes consent and only decides WHAT is eligible.
    *
+   * Only `source.kind === "manual"` items are eligible (see the filter below).
+   *
    * Two passes, tasks before epics — existing ready work is always preferred over
    * generating more of it:
    *
@@ -343,12 +345,17 @@ export class RoadmapGateService {
     const items = await this.roadmap.list(projectId);
     const get = (id: string) => items.find((i) => i.id === id);
 
-    const todoTaskIds = items
+    // Only ZIBBY's own (manual) items: Jira/GitHub issues are fetched live and no
+    // longer mirrored to disk, so a synced copy left over here is stale and must
+    // never be started on a timer.
+    const own = items.filter((i) => i.source.kind === "manual");
+
+    const todoTaskIds = own
       .filter((i) => i.level !== "epic" && i.lifecycle === "todo" && !isBlocked(i, get))
       .map((i) => i.id);
     if (todoTaskIds.length > 0) await this.playBulk(projectId, todoTaskIds);
 
-    for (const epic of items) {
+    for (const epic of own) {
       if (epic.level !== "epic") continue;
       // `archived`: gone from the source. `external`/`done`: someone (or the
       // source itself) is already on it — the same not-safe-to-start guard a

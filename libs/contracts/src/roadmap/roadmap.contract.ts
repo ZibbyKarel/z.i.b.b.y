@@ -2,7 +2,6 @@ import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { DeleteResponseSchema, EmptyBodySchema, ErrorSchema } from "../common.schema";
 import { ProjectIdSchema } from "../projects/project.schema";
-import { LevelMappingSchema } from "./level-mapping.schema";
 import {
   CreateRoadmapItemSchema,
   RoadmapConfigPatchSchema,
@@ -12,23 +11,20 @@ import {
   UpdateRoadmapItemSchema,
 } from "./roadmap-item.schema";
 import { OverrideRoadmapItemSchema, PlayRoadmapItemsSchema } from "./roadmap-play.schema";
-import { RoadmapSyncResultSchema, SyncRoadmapItemsSchema } from "./roadmap-sync.schema";
 
 const c = initContract();
 
 /**
- * The per-project roadmap: item CRUD + the auto-sync config toggle (125a),
- * the manual Jira/GitHub sync route (125b), the play/gate actions (125e),
- * plus the global level-mapping table (`/settings?tab=tasks`, not
- * project-scoped — it applies across every project's sync). Each sub-phase's
+ * The per-project roadmap: item CRUD + the automation config toggles (125a)
+ * and the play/gate actions (125e). Each sub-phase's
  * routes landed on this same router in their own diff (see DECISIONS.md D-005).
  *
  * Route ordering: `/projects/:projectId/roadmap/items` (static) is declared
  * before `/projects/:projectId/roadmap/items/:itemId` (param) for the same
  * reason `agentsContract` orders `/agents/search` before `/agents/:id` — a
  * literal segment must never be shadowed by an adjacent `:param` route.
- * `/roadmap/sync`, `/roadmap/config` and `/roadmap/level-mapping` each sit in
- * their own static segment so none can collide with `:itemId` either.
+ * `/roadmap/config` sits in its own static segment so it cannot collide with
+ * `:itemId` either.
  *
  * 125e adds the play/override/restart/resume actions, all suffixed onto
  * `/items/:itemId` (a different segment COUNT than `/items/:itemId` itself,
@@ -174,26 +170,6 @@ export const roadmapContract = c.router(
       summary: 'Bulk play ("zařadit vše") — enqueue several items at once, FIFO by array order',
     },
 
-    // 125b: pulls the project's resolved Jira/GitHub integrations and upserts
-    // their issues as roadmap items (see `RoadmapSourceService`). A project
-    // with no Jira/GitHub integration configured is NOT an error — the
-    // handler returns an all-zero `RoadmapSyncResultSchema`, mirroring
-    // `ProjectPrService.listOpen`'s "no link is not an error" posture. 404
-    // only for a project id that doesn't resolve to a real project at all.
-    // Optional `source` (source-picker split button): absent syncs every
-    // configured source, `"jira"`/`"github"` syncs only that one.
-    syncRoadmapItems: {
-      method: "POST",
-      path: "/projects/:projectId/roadmap/sync",
-      pathParams: z.object({ projectId: ProjectIdSchema }),
-      body: SyncRoadmapItemsSchema,
-      responses: {
-        200: RoadmapSyncResultSchema,
-        404: ErrorSchema,
-      },
-      summary: "Pull the project's Jira/GitHub roadmap items and upsert them (optional source)",
-    },
-
     getRoadmapConfig: {
       method: "GET",
       path: "/projects/:projectId/roadmap/config",
@@ -201,7 +177,7 @@ export const roadmapContract = c.router(
       responses: {
         200: RoadmapConfigResponseSchema,
       },
-      summary: "Get a project's roadmap config (the auto-sync toggle)",
+      summary: "Get a project's roadmap config (the automation toggles)",
     },
 
     putRoadmapConfig: {
@@ -210,8 +186,8 @@ export const roadmapContract = c.router(
       pathParams: z.object({ projectId: ProjectIdSchema }),
       // A PATCH on purpose — the body is merged over the stored config, not a
       // replacement. With more than one toggle in there, a replace would reset
-      // every toggle the client didn't send, so flipping auto-sync from a
-      // control that only knows about auto-sync would silently switch auto-play
+      // every toggle the client didn't send, so flipping one toggle from a
+      // control that only knows about it would silently switch the others
       // back off. Omitted field = "leave it alone". (Not
       // `RoadmapConfigSchema.partial()` — see that schema's sibling for why
       // that would reintroduce exactly the clobber it looks like it prevents.)
@@ -220,25 +196,6 @@ export const roadmapContract = c.router(
         200: RoadmapConfigResponseSchema,
       },
       summary: "Update a project's roadmap config (partial merge)",
-    },
-
-    getLevelMapping: {
-      method: "GET",
-      path: "/roadmap/level-mapping",
-      responses: {
-        200: LevelMappingSchema,
-      },
-      summary: "Get the global external-level -> epic/task/ignore mapping table",
-    },
-
-    putLevelMapping: {
-      method: "PUT",
-      path: "/roadmap/level-mapping",
-      body: LevelMappingSchema,
-      responses: {
-        200: LevelMappingSchema,
-      },
-      summary: "Replace the global level-mapping table",
     },
   },
   {

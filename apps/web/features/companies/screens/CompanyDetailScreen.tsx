@@ -31,7 +31,6 @@ import { slug } from "../../../utils/slug";
 import { useProjectsQuery } from "../../projects";
 import { type CompanyBasicsBody, CompanyBasicsPanel } from "../components/CompanyBasicsPanel";
 import { CompanyIntegrationsPanel } from "../components/CompanyIntegrationsPanel";
-import { CompanyLevelMappingPanel } from "../components/CompanyLevelMappingPanel";
 import { CompanyRoadmapDefaultsPanel } from "../components/CompanyRoadmapDefaultsPanel";
 import { LinkProjectDialog } from "../components/LinkProjectDialog";
 import {
@@ -191,7 +190,6 @@ export function CompanyDetailScreen({ companyId }: CompanyDetailScreenProps) {
           <Stack gap="250">
             <CompanyIntegrationsPanel companyId={id} />
             <CompanyRoadmapDefaultsPanel company={company} />
-            <CompanyLevelMappingPanel company={company} />
           </Stack>
         )}
 

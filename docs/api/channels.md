@@ -212,11 +212,9 @@ sets below, and nothing else:
    hour. If the token lacks the scope the poll stays personal-only and the watcher logs
    a warn; a transient failure fails the poll so it retries.
 
-Never a team's whole visible activity. `RoadmapSourceService` is not a channel and
-answers a different question: with a Jira
-`projectKey` it imports the whole project backlog (so it can see work already started
-elsewhere and keep ZIBBY off it); GitHub import and a key-less Jira stay
-`assignee:`-scoped. Do not "fix" it to match this adapter.
+Never a team's whole visible activity. `InboxIssuesService` (the live Issues widget) is not a
+channel and answers a different question: it lists the issues assigned to the operator.
+Do not "fix" it to match this adapter.
 
 Set 3 does **not** use `author:{username}`. ZIBBY opens PRs with the operator's
 credentials, so `author:` cannot tell a ZIBBY PR from one the operator opened by hand.

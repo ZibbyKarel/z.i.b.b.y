@@ -35,7 +35,7 @@ const CONFIG_FILE = "_config.json";
 
 /**
  * Two-level file store for roadmap items: `<root>/<projectId>/<itemId>.json`,
- * with a sibling `_config.json` per project (the auto-sync toggle) —
+ * with a sibling `_config.json` per project (the automation toggles) —
  * modeled directly on `ChannelItemStore`
  * (`<root>/<integrationId>/<itemId>.json` + `cursor.json`), the precedent for
  * a two-level store (`EntityFileStore` is flat-dir only). Resolution is
@@ -210,7 +210,7 @@ export class RoadmapStore implements OnModuleInit {
    * by the config file (the same read-modify-write posture {@link update} uses
    * for an item). This is what the PUT route runs on: with more than one toggle
    * in the config, a full replace would silently reset every toggle the client
-   * didn't happen to send, so flipping auto-sync would quietly switch auto-play
+   * didn't happen to send, so flipping one toggle would quietly switch the others
    * back off.
    */
   async updateConfig(projectId: string, patch: RoadmapConfigPatch): Promise<RoadmapConfig> {

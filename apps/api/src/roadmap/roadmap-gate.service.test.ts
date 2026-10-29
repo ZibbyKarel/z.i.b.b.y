@@ -547,6 +547,19 @@ describe("RoadmapGateService", () => {
       expect((await store.get("acme", "blocked")).lifecycle).toBe("todo");
     });
 
+    it("never auto-starts a stale Jira/GitHub copy — manual items only", async () => {
+      const jira = { kind: "jira" as const, integrationId: "jira-1", externalId: "ZB-1" };
+      await store.put(item({ id: "stale-task", source: jira }));
+      await store.put(item({ id: "stale-epic", level: "epic", name: "Epic", source: jira }));
+      const gate = makeGate();
+
+      await gate.autoPickup("acme");
+
+      expect(taskScheduler.createTask).not.toHaveBeenCalled();
+      expect(decomposition.dispatch).not.toHaveBeenCalled();
+      expect((await store.get("acme", "stale-task")).lifecycle).toBe("todo");
+    });
+
     it("leaves an item that is already in flight alone", async () => {
       await store.put(item({ id: "a", lifecycle: "running" }));
       await store.put(item({ id: "b", lifecycle: "failed" }));

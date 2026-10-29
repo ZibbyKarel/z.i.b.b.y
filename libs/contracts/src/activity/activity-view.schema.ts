@@ -94,10 +94,6 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   // group for two kinds.
   "roadmap-item-dispatched": "tasks",
   "roadmap-item-outcome": "tasks",
-  // Phase 125h: the auto-sync tick's own import/archive summary — reads with the
-  // other watcher discoveries (monitor-alert/merge-completed/post-merge-outcome)
-  // rather than a new group for one kind.
-  "roadmap-sync": "integrations",
   // ZB-10 / O-08: a warn-threshold crossing on the budget guard — reads with the
   // other dispatch-time run signals (run-paused-limit/run-resumed-limit).
   "budget-warn": "runs",
