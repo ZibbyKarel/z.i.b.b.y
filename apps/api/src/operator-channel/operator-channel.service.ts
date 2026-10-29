@@ -6,7 +6,12 @@ import type {
 } from "@zibby/contracts";
 import type { CredentialsStore } from "../integrations/credentials.store";
 import { FakeOperatorChannel } from "./fake-operator-channel";
-import type { MessageRef, OperatorChannel, OperatorNotification } from "./operator-channel.port";
+import type {
+  MessageRef,
+  OperatorChannel,
+  OperatorInboundHandler,
+  OperatorNotification,
+} from "./operator-channel.port";
 import { OperatorChannelStore } from "./operator-channel.store";
 import { SlackOperatorChannel } from "./slack-operator-channel";
 
@@ -26,7 +31,8 @@ const tokenOf = (creds: unknown): string | null =>
 /**
  * Owns the live channel: builds the transport (fake or Slack from the stored tokens),
  * connects it lazily (resolving + persisting the operator DM), and reports status.
- * Any settings/credential change drops the connection so the next send reconnects.
+ * Any settings/credential change drops the connection so the next send reconnects;
+ * the inbound listener (registered once via {@link listen}) is restarted with it.
  * Error text is the transport's own (`<method>: <slack error>`) — never a token.
  */
 @Injectable()
@@ -37,29 +43,67 @@ export class OperatorChannelService {
   private channel: OperatorChannel | null = null;
   private workspace: string | undefined;
   private lastError: string | undefined;
+  private handler: OperatorInboundHandler | null = null;
+  private listening = false;
 
   constructor(
     private readonly store: OperatorChannelStore,
     @Inject(OPERATOR_CREDENTIALS) private readonly credentials: CredentialsStore,
   ) {}
 
-  /** Forget the connection (settings/token changed). */
-  reset(): void {
+  /** Forget the connection (settings/token changed) and restart the inbound listener. */
+  async reset(): Promise<void> {
+    await this.channel?.stop();
     this.channel = null;
     this.workspace = undefined;
     this.lastError = undefined;
+    this.listening = false;
+    if (this.handler) await this.listen(this.handler);
   }
 
   async setCredential(kind: OperatorCredentialKind, token: string): Promise<void> {
     await this.credentials.write(kind, { token });
-    this.reset();
+    await this.reset();
+  }
+
+  /**
+   * Register the inbound handler and, when the channel is enabled, open the
+   * transport's listener (Slack: Socket Mode). Never throws — a failure lands in
+   * `lastError` and the next {@link reset} (settings/token change) retries.
+   */
+  async listen(handler: OperatorInboundHandler): Promise<void> {
+    this.handler = handler;
+    const settings = await this.store.readSettings();
+    if (!settings.enabled) return;
+    try {
+      const channel = await this.connected(settings);
+      await channel.start(handler);
+      this.listening = true;
+    } catch (error) {
+      this.lastError = error instanceof Error ? error.message : String(error);
+    }
+  }
+
+  /** Stop listening for good (module shutdown). */
+  async stop(): Promise<void> {
+    this.handler = null;
+    this.listening = false;
+    await this.channel?.stop();
   }
 
   private async build(): Promise<OperatorChannel> {
     if (this.mode === "fake") return this.fake;
     const bot = tokenOf(await this.credentials.read("slack-bot"));
     if (!bot) throw new Error("no slack bot token stored");
-    return new SlackOperatorChannel(bot, tokenOf(await this.credentials.read("slack-app")));
+    return new SlackOperatorChannel(
+      bot,
+      tokenOf(await this.credentials.read("slack-app")),
+      fetch,
+      undefined,
+      (message) => {
+        this.lastError = message;
+      },
+    );
   }
 
   /** Connect if needed: resolve the DM with the first allowlisted operator, persist it. */
@@ -94,6 +138,17 @@ export class OperatorChannelService {
     }
   }
 
+  /** Replace a sent message (the chat reply's placeholder → milestones → final answer). */
+  async update(ref: MessageRef, notification: OperatorNotification): Promise<void> {
+    const channel = await this.connected(await this.store.readSettings());
+    try {
+      await channel.update(ref, notification);
+    } catch (error) {
+      this.lastError = error instanceof Error ? error.message : String(error);
+      throw error;
+    }
+  }
+
   async status(): Promise<OperatorChannelStatus> {
     const settings = await this.store.readSettings();
     const [lastDelivery] = await this.store.recentDeliveries(1);
@@ -106,6 +161,7 @@ export class OperatorChannelService {
         app: await this.credentials.has("slack-app"),
       },
       connected: this.channel !== null,
+      listening: this.listening,
       ...(this.workspace ? { workspace: this.workspace } : {}),
       dmResolved: Boolean(settings.dmChannelId),
       ...(this.lastError ? { lastError: this.lastError } : {}),

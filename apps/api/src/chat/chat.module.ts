@@ -82,6 +82,7 @@ export function resolveChatDir(): string {
     SelfApiExecutor,
     { provide: SELF_API_CLIENT, useFactory: () => createLoopbackSelfApiClient() },
   ],
-  exports: [ChatSessionService, ChatTranscriptStore],
+  // ChatEventsService: the operator channel (Slack DM) follows its turns' events.
+  exports: [ChatSessionService, ChatTranscriptStore, ChatEventsService],
 })
 export class ChatModule {}

@@ -45,7 +45,7 @@ export class OperatorChannelController {
           ...parsed.data,
           ...(sameOperator && current.dmChannelId ? { dmChannelId: current.dmChannelId } : {}),
         });
-        this.channel.reset();
+        await this.channel.reset();
         return { status: 200 as const, body: next };
       },
 

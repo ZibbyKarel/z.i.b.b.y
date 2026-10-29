@@ -2,6 +2,7 @@ import * as path from "node:path";
 import { Module } from "@nestjs/common";
 import { ApprovalsModule } from "../approvals/approvals.module";
 import { ApprovalsService } from "../approvals/approvals.service";
+import { ChatModule } from "../chat/chat.module";
 import { CredentialsStore } from "../integrations/credentials.store";
 import { resolveCredentialsDir } from "../integrations/integrations.module";
 import { ScheduledTasksStorageModule } from "../tasks/scheduled-tasks-storage.module";
@@ -12,14 +13,17 @@ import { OperatorChannelStoreModule } from "./operator-channel-store.module";
 import { OperatorChannelController } from "./operator-channel.controller";
 import { OPERATOR_CREDENTIALS, OperatorChannelService } from "./operator-channel.service";
 import type { OperatorEventLookups } from "./operator-events";
+import { OperatorInboundService } from "./operator-inbound.service";
 import { OPERATOR_EVENT_LOOKUPS, OperatorNotifier } from "./operator-notifier.service";
 
 /**
- * The Slack operator channel (Phase 1 — outbound). The notifier rides the global
+ * The Slack operator channel. Outbound (Phase 1): the notifier rides the global
  * activity stream; the lookups read the task, approval and workflow-run stores
  * read-only to enrich an entry (PR url, park reason). Tokens live in their own
  * gitignored `credentials/operator-channel/` dir (a scoped {@link CredentialsStore}),
  * never next to an integration's secret and never in the settings file.
+ * Inbound (Phase 2): {@link OperatorInboundService} feeds the operator's DMs into the
+ * chat session (`ChatModule` — a one-way edge, chat never imports this module).
  */
 @Module({
   imports: [
@@ -27,6 +31,7 @@ import { OPERATOR_EVENT_LOOKUPS, OperatorNotifier } from "./operator-notifier.se
     ApprovalsModule,
     ScheduledTasksStorageModule,
     WorkflowsModule,
+    ChatModule,
   ],
   controllers: [OperatorChannelController],
   providers: [
@@ -56,6 +61,7 @@ import { OPERATOR_EVENT_LOOKUPS, OperatorNotifier } from "./operator-notifier.se
     },
     OperatorChannelService,
     OperatorNotifier,
+    OperatorInboundService,
   ],
   exports: [OperatorChannelService, OperatorNotifier],
 })

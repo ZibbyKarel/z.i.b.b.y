@@ -2,6 +2,7 @@ import type {
   MessageRef,
   OperatorChannel,
   OperatorChannelConnection,
+  OperatorInboundEvent,
   OperatorInboundHandler,
   OperatorNotification,
 } from "./operator-channel.port";
@@ -11,7 +12,8 @@ import type {
  * on (`CHANNEL_FAKE_DIR`, which the test harness always sets, or
  * `CHANNEL_ADAPTER_MODE=fake`). Nothing leaves the process: sends are recorded in
  * {@link sent}, so a test asserts exactly what the operator would have received.
- * {@link failNext} queues errors (e.g. a `RateLimitedError`) for the next sends.
+ * {@link failNext} queues errors (e.g. a `RateLimitedError`) for the next sends;
+ * {@link receive} plays an inbound event as if Slack had delivered it.
  */
 export class FakeOperatorChannel implements OperatorChannel {
   readonly capabilities = { threads: true, buttons: true, edit: true };
@@ -47,5 +49,10 @@ export class FakeOperatorChannel implements OperatorChannel {
   stop(): Promise<void> {
     this.handler = null;
     return Promise.resolve();
+  }
+
+  /** Deliver an inbound event to the registered handler (no handler → dropped, like a closed socket). */
+  async receive(event: OperatorInboundEvent): Promise<void> {
+    await this.handler?.(event);
   }
 }

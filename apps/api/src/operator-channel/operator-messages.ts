@@ -26,6 +26,23 @@ const cs = {
   openInZibby: "Otevřít v ZIBBY",
   more: "… a další ({n})",
   test: "Testovací zpráva ze ZIBBY — kanál funguje.",
+  chat: {
+    thinking: "…",
+    working: "Pracuji: {tool}…",
+    run: "Úkol {taskId} · běh {runRef}",
+    openRun: "Otevřít běh",
+    yes: "Ano",
+    no: "Ne",
+    yesText: "Ano.",
+    noText: "Ne.",
+    answered: "→ {text}",
+    truncated: "(Tvoje zpráva byla zkrácena na {n} znaků.)",
+    perMinute: "Zpomalím — víc než {n} zpráv za minutu. Zkus to za chvíli.",
+    perDay: "Dnešní limit {n} zpráv je vyčerpaný. Pokračuj prosím v ZIBBY.",
+    busy: "Ještě zpracovávám předchozí zprávy — tuhle jsem nepřijal, pošli ji za chvíli.",
+    error: "Něco se pokazilo: {message}",
+    empty: "(bez odpovědi)",
+  },
 };
 
 const en: typeof cs = {
@@ -45,6 +62,23 @@ const en: typeof cs = {
   openInZibby: "Open in ZIBBY",
   more: "… and {n} more",
   test: "Test message from ZIBBY — the channel works.",
+  chat: {
+    thinking: "…",
+    working: "Working: {tool}…",
+    run: "Task {taskId} · run {runRef}",
+    openRun: "Open run",
+    yes: "Yes",
+    no: "No",
+    yesText: "Yes.",
+    noText: "No.",
+    answered: "→ {text}",
+    truncated: "(Your message was cut to {n} characters.)",
+    perMinute: "Slowing down — more than {n} messages a minute. Try again in a moment.",
+    perDay: "Today's limit of {n} messages is used up. Please continue in ZIBBY.",
+    busy: "Still working on your earlier messages — this one wasn't taken, send it again shortly.",
+    error: "Something went wrong: {message}",
+    empty: "(no answer)",
+  },
 };
 
 export const OPERATOR_MESSAGES: Record<Locale, typeof cs> = { cs, en };
@@ -54,7 +88,7 @@ const MAX_LINES = 5;
 /** Slack truncates long sections; keep each context line short. */
 const MAX_LINE = 280;
 
-const fill = (tpl: string, vars: Record<string, string | number>): string =>
+export const fill = (tpl: string, vars: Record<string, string | number>): string =>
   tpl.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m));
 
 /** Slack mrkdwn control characters — inbound-derived text must never form a link/mention. */
@@ -63,7 +97,7 @@ export const escapeMrkdwn = (s: string): string =>
 
 const clip = (s: string): string => (s.length > MAX_LINE ? `${s.slice(0, MAX_LINE - 1)}…` : s);
 
-function zibbyLink(base: string | undefined, path: string | undefined): string | null {
+export function zibbyLink(base: string | undefined, path: string | undefined): string | null {
   if (!base || !path) return null;
   return `${base.replace(/\/+$/, "")}${path}`;
 }

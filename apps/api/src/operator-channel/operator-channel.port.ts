@@ -6,13 +6,19 @@ import type { OperatorEventKind } from "@zibby/contracts";
  * fallback; a later SMS/Telegram adapter would render the same fields its own way.
  */
 export interface OperatorNotification {
-  kind: OperatorEventKind | "test";
+  /** `chat` — a chat reply to an inbound operator message (Phase 2): no headline, body in `lines`. */
+  kind: OperatorEventKind | "test" | "chat";
   tier: 2 | 3;
   headline: string;
   /** 0–5 short context lines (mrkdwn-safe: the builder escapes them). */
   lines: string[];
   /** Link buttons only — the channel never carries an action that decides anything. */
   links: { label: string; url: string }[];
+  /**
+   * Reply buttons (Phase 2, chat replies only): a click sends `text` back into the
+   * conversation as the operator's next turn. Never an approval, never an action.
+   */
+  replies?: { label: string; text: string }[];
 }
 
 /** Where a sent message lives, so it can be updated (and, from Phase 3, threaded). */
@@ -29,25 +35,55 @@ export interface OperatorChannelConnection {
 }
 
 /**
- * Phase 2 inbound shape (declared now so the port is stable): a message the
- * transport received in the bot DM. Authentication (allowlisted user id) happens
- * in the inbound handler, never in the transport.
+ * A message the transport received (Slack: a `message` event over Socket Mode). The
+ * transport forwards it RAW — sender, channel type, bot/subtype markers included —
+ * and never authenticates: the inbound handler checks the allowlisted user id, the
+ * bot DM and the markers (`OperatorInboundService`), so a transport can't widen trust.
  */
 export interface OperatorInboundMessage {
+  kind: "message";
+  /** Dedupe key: Slack's `client_msg_id`, else the envelope's `event_id` (stable across redelivery). */
   eventId: string;
   userId: string;
   channelId: string;
+  /** Slack `channel_type` — only `"im"` is accepted. */
+  channelType: string;
   text: string;
   ts: string;
   threadTs?: string;
+  /** Set on bot-authored messages (including ZIBBY's own) — always dropped. */
+  botId?: string;
+  /** Set on edits/deletes/joins/… — always dropped; only plain new messages count. */
+  subtype?: string;
 }
 
-export type OperatorInboundHandler = (message: OperatorInboundMessage) => Promise<void>;
+/**
+ * A reply-button click (Slack `block_actions`). It carries the button's `text`, which
+ * the handler feeds into the chat as the operator's next turn — it never decides an
+ * approval or runs anything by itself. Authenticated exactly like a message.
+ */
+export interface OperatorInboundAction {
+  kind: "action";
+  /** Dedupe key: one answer per prompt message (`action:<message ts>`), so a double tap runs once. */
+  eventId: string;
+  userId: string;
+  channelId: string;
+  /** The prompt message the buttons were on (updated to drop them once answered). */
+  messageTs: string;
+  /** The prompt's own text, as Slack stored it (already mrkdwn-escaped). */
+  messageText: string;
+  /** The operator turn this button stands for. */
+  text: string;
+}
+
+export type OperatorInboundEvent = OperatorInboundMessage | OperatorInboundAction;
+
+export type OperatorInboundHandler = (event: OperatorInboundEvent) => Promise<void>;
 
 /**
  * The channel-agnostic operator channel. `connect` resolves the destination (Slack:
  * `conversations.open` with the operator's user id); `send`/`update` post to it;
- * `start`/`stop` own the inbound connection (Socket Mode — Phase 2).
+ * `start`/`stop` own the inbound connection (Slack: Socket Mode).
  */
 export interface OperatorChannel {
   readonly capabilities: { threads: boolean; buttons: boolean; edit: boolean };

@@ -14,6 +14,11 @@ export const OPERATOR_CHANNEL_DIR = "OPERATOR_CHANNEL_DIR";
 
 const SETTINGS_FILE = "operator-channel.json";
 const DELIVERIES_FILE = "deliveries.jsonl";
+const INBOUND_SEEN_FILE = "inbound-seen.json";
+
+/** Inbound dedupe window: Slack redelivers within minutes; a day is plenty, 1000 ids bound the file. */
+const SEEN_WINDOW_MS = 24 * 60 * 60 * 1000;
+const SEEN_MAX = 1000;
 
 /**
  * The operator channel's files: the settings document (no secrets — tokens live in
@@ -28,6 +33,7 @@ const DELIVERIES_FILE = "deliveries.jsonl";
 @Injectable()
 export class OperatorChannelStore {
   private cached: OperatorChannelSettings | null = null;
+  private seen: Map<string, number> | null = null;
 
   constructor(@Inject(OPERATOR_CHANNEL_DIR) private readonly dir: string) {}
 
@@ -69,5 +75,35 @@ export class OperatorChannelStore {
       if (parsed.success) out.push(parsed.data);
     }
     return out;
+  }
+
+  /**
+   * Inbound dedupe (Slack redelivers an envelope it thinks wasn't handled): record
+   * `id` and return `true` the first time, `false` for a repeat. Persisted to
+   * `inbound-seen.json` (atomic rewrite) so a redelivery after a restart is still
+   * caught; bounded to {@link SEEN_WINDOW_MS} and {@link SEEN_MAX} ids.
+   */
+  async markInboundSeen(id: string, now: Date = new Date()): Promise<boolean> {
+    const file = path.join(this.dir, INBOUND_SEEN_FILE);
+    if (!this.seen) {
+      const raw = safeJson(await fs.readFile(file, "utf8").catch(() => "{}"));
+      this.seen = new Map(
+        Object.entries(raw && typeof raw === "object" ? raw : {}).filter(
+          (e): e is [string, number] => typeof e[1] === "number",
+        ),
+      );
+    }
+    const at = now.getTime();
+    for (const [k, t] of this.seen) if (at - t >= SEEN_WINDOW_MS) this.seen.delete(k);
+    if (this.seen.has(id)) return false;
+    this.seen.set(id, at);
+    while (this.seen.size > SEEN_MAX) {
+      const oldest = this.seen.keys().next().value;
+      if (oldest === undefined) break;
+      this.seen.delete(oldest);
+    }
+    await ensureDir(this.dir);
+    await writeFileAtomic(file, `${JSON.stringify(Object.fromEntries(this.seen))}\n`);
+    return true;
   }
 }
