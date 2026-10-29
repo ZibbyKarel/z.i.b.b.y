@@ -31,6 +31,8 @@ export function parseGitHubSkillUrl(url: string): {
   owner: string;
   repo: string;
   remote: string;
+  /** Branch/tag from `/tree/<ref>/…`; absent = the default branch. */
+  ref?: string;
   subpath?: string;
 } {
   const bad = () => new InvalidSkillRepoUrlError(url);
@@ -44,14 +46,19 @@ export function parseGitHubSkillUrl(url: string): {
   // Raw string check: URL() would silently resolve ".." segments away.
   if (url.split(/[/\\]/).includes("..")) throw bad();
   const parts = u.pathname.split("/").filter(Boolean);
-  const [owner, rawRepo, kind, , ...rest] = parts;
+  const [owner, rawRepo, kind, ref, ...rest] = parts;
   const repo = rawRepo?.replace(/\.git$/, "");
   if (!owner || !repo || !NAME_RE.test(owner) || !NAME_RE.test(repo)) throw bad();
   // Known limitation: a ref containing "/" in /tree/<ref>/... is mis-split (ref = first segment).
   if (parts.length > 2 && kind !== "tree") throw bad();
   if (kind === "tree" && parts.length < 4) throw bad();
-  const out = { owner, repo, remote: `https://github.com/${owner}/${repo}.git` };
-  return rest.length ? { ...out, subpath: rest.join("/") } : out;
+  return {
+    owner,
+    repo,
+    remote: `https://github.com/${owner}/${repo}.git`,
+    ...(ref ? { ref } : {}),
+    ...(rest.length ? { subpath: rest.join("/") } : {}),
+  };
 }
 
 const refuseCode = () => {

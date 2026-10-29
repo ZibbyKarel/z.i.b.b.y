@@ -30,7 +30,14 @@ describe("externalSkillsContract", () => {
 
   it("a skill may carry its provenance, but a create body may not", () => {
     expect(SkillSchema.safeParse({ id: "x", instructions: "b", source }).success).toBe(true);
+    const withRef = SkillSchema.safeParse({
+      id: "x",
+      instructions: "b",
+      source: { ...source, ref: "dev" },
+    });
+    expect(withRef.success && withRef.data.source?.ref).toBe("dev");
     const parsed = CreateSkillSchema.safeParse({ id: "x", instructions: "b", source });
+    expect(parsed.success).toBe(true);
     expect(parsed.success && "source" in parsed.data).toBe(false);
   });
 });

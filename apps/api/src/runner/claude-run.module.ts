@@ -1,3 +1,7 @@
+import { Module } from "@nestjs/common";
+import { AGENTS_DIR, AgentsStorageService } from "../agents/agents.storage.service";
+import { ApprovalsModule } from "../approvals/approvals.module";
+import { COMMANDS_DIR, CommandsStorageService } from "../commands/commands.storage.service";
 import {
   EXTERNAL_SKILLS_DIR,
   EXTERNAL_SKILLS_FILE,
@@ -5,10 +9,6 @@ import {
   resolveExternalSkillsDir,
   resolveExternalSkillsFile,
 } from "../external-skills/external-skills.store";
-import { Module } from "@nestjs/common";
-import { AGENTS_DIR, AgentsStorageService } from "../agents/agents.storage.service";
-import { ApprovalsModule } from "../approvals/approvals.module";
-import { COMMANDS_DIR, CommandsStorageService } from "../commands/commands.storage.service";
 import { HOOKS_DIR, HooksStorageService } from "../hooks/hooks.storage.service";
 import { KbAuthModule } from "../kb/kb-auth.module";
 import { KbMcpAuthGuard } from "../kb/kb-mcp-auth.guard";

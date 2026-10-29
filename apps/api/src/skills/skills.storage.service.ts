@@ -12,11 +12,12 @@ import {
 } from "@zibby/contracts";
 import {
   EXTERNAL_SKILLS_DIR,
+  EXTERNAL_SKILLS_LOCK,
   ExternalSkillsStore,
   externalSkillDir,
 } from "../external-skills/external-skills.store";
 import { parseSkillMd } from "../external-skills/skill-repo";
-import { MarkdownEntityStore, searchByText } from "../shared/file-storage";
+import { MarkdownEntityStore, searchByText, withPathLock } from "../shared/file-storage";
 import {
   CorruptSkillFileError,
   InvalidSkillIdError,
@@ -83,14 +84,17 @@ export class SkillsStorageService extends MarkdownEntityStore<Skill> {
     await super.delete(id);
   }
 
+  /** Under the external-skills lock, so a create can't race an install of the same id. */
   async create(input: CreateSkillInput): Promise<Skill> {
     const file = this.resolveFile(input.id);
-    if ((await this.fileExists(file)) || (await this.externals.get(input.id))) {
-      throw new SkillConflictError(input.id);
-    }
-    const skill: Skill = { ...input, name: input.name ?? input.id };
-    await this.writeEntity(skill);
-    return skill;
+    return withPathLock(EXTERNAL_SKILLS_LOCK, async () => {
+      if ((await this.fileExists(file)) || (await this.externals.get(input.id))) {
+        throw new SkillConflictError(input.id);
+      }
+      const skill: Skill = { ...input, name: input.name ?? input.id };
+      await this.writeEntity(skill);
+      return skill;
+    });
   }
 
   /** Free-text search over the catalog by id, name, desc and category. */

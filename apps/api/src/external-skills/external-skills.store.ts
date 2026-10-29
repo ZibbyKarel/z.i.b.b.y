@@ -18,6 +18,9 @@ export function resolveExternalSkillsDir(): string {
   return process.env.EXTERNAL_SKILLS_DIR ?? dataDir("skills-external");
 }
 
+/** Serializes every install/update/remove of external skills and own-skill creates. */
+export const EXTERNAL_SKILLS_LOCK = "external-skills";
+
 /** The folder an external skill lives in. `id` must already match `AGENT_ID_REGEX`. */
 export function externalSkillDir(id: string, root = resolveExternalSkillsDir()): string {
   return path.join(root, id);

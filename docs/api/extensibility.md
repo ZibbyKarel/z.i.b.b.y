@@ -91,7 +91,8 @@ the four entity schemas) — see `registry-bindings.schema.ts`'s docblock.
 
 Skills installed from a public GitHub repo (`apps/api/src/external-skills/`).
 Only `https://github.com/<owner>/<repo>` URLs are accepted (optionally `.git` or
-`/tree/<ref>/<path>`).
+`/tree/<ref>/<path>`). A `/tree/<ref>` URL clones that branch/tag (stored as
+`source.ref`) and scans only `<path>`; a raw commit sha is rejected by git → 502.
 
 - `POST /api/skills/external/scan` `{ url }` — shallow-clones the repo into a temp
   dir (always deleted), lists every folder holding a `SKILL.md` with

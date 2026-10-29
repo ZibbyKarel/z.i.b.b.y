@@ -26,6 +26,12 @@ describe("parseGitHubSkillUrl", () => {
       "skills/x",
     );
     expect(parseGitHubSkillUrl("https://github.com/a/b/tree/main")).not.toHaveProperty("subpath");
+    expect(parseGitHubSkillUrl("https://github.com/a/b/tree/dev/skills/x")).toMatchObject({
+      ref: "dev",
+      subpath: "skills/x",
+    });
+    expect(parseGitHubSkillUrl("https://github.com/a/b/tree/v1")).toMatchObject({ ref: "v1" });
+    expect(parseGitHubSkillUrl("https://github.com/a/b")).not.toHaveProperty("ref");
   });
   it("rejects odd owner/repo characters", () => {
     expect(() => parseGitHubSkillUrl("https://github.com/a%20b/c")).toThrow(

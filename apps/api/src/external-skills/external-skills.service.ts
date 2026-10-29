@@ -10,14 +10,12 @@ import { SkillsStorageService } from "../skills/skills.storage.service";
 import { NoSkillsFoundError, SkillRepoGitError } from "./external-skills.errors";
 import {
   EXTERNAL_SKILLS_DIR,
+  EXTERNAL_SKILLS_LOCK,
   ExternalSkillsStore,
   externalSkillDir,
 } from "./external-skills.store";
 import { type SkillCandidate, parseGitHubSkillUrl, scanSkillDir } from "./skill-repo";
 import { SkillRepoGit } from "./skill-repo-git";
-
-/** Serializes every install/update/remove of external skills. */
-export const EXTERNAL_SKILLS_LOCK = "external-skills";
 
 /**
  * Copy a skill folder from a clone into `destDir`, replacing what is there.
@@ -68,7 +66,7 @@ export class ExternalSkillsService {
 
   async install(url: string, paths: string[]): Promise<Skill[]> {
     return withPathLock(EXTERNAL_SKILLS_LOCK, () =>
-      this.withClone(url, async ({ owner, repo, sha, candidates, dir }) => {
+      this.withClone(url, async ({ owner, repo, ref, sha, candidates, dir }) => {
         const chosen = [...new Set(paths)].map((p) => {
           const hit = candidates.find((c) => c.path === p);
           if (!hit) throw new NoSkillsFoundError(`No SKILL.md at "${p}" in ${owner}/${repo}`);
@@ -83,19 +81,27 @@ export class ExternalSkillsService {
         for (const c of chosen) {
           const treeSha = await this.git.treeSha(dir, c.path);
           if (!treeSha) throw new SkillRepoGitError(`git rev-parse: no tree for "${c.path}"`);
-          await copySkillFolder(join(dir, c.path), externalSkillDir(c.id, this.root));
-          await this.store.upsert({
-            id: c.id,
-            owner,
-            repo,
-            url,
-            path: c.path,
-            sha,
-            treeSha,
-            installedAt: now,
-            updatedAt: now,
-            checkedAt: now,
-          });
+          const dest = externalSkillDir(c.id, this.root);
+          await copySkillFolder(join(dir, c.path), dest);
+          await this.store
+            .upsert({
+              id: c.id,
+              owner,
+              repo,
+              url,
+              ...(ref ? { ref } : {}),
+              path: c.path,
+              sha,
+              treeSha,
+              installedAt: now,
+              updatedAt: now,
+              checkedAt: now,
+            })
+            .catch(async (error: unknown) => {
+              // No record → nothing would ever own this folder; don't leave it behind.
+              await rm(dest, { recursive: true, force: true });
+              throw error;
+            });
         }
         return Promise.all(chosen.map((c) => this.skills.get(c.id)));
       }),
@@ -119,19 +125,20 @@ export class ExternalSkillsService {
     fn: (repo: {
       owner: string;
       repo: string;
+      ref?: string;
       sha: string;
       candidates: SkillCandidate[];
       dir: string;
     }) => Promise<T>,
   ): Promise<T> {
-    const { owner, repo, remote, subpath } = parseGitHubSkillUrl(url);
+    const { owner, repo, remote, ref, subpath } = parseGitHubSkillUrl(url);
     const tmp = await mkdtemp(join(tmpdir(), "zibby-skill-repo-"));
     try {
       const dir = join(tmp, "repo");
-      const sha = await this.git.clone(remote, dir);
+      const sha = await this.git.clone(remote, dir, ref);
       const candidates = await scanSkillDir(dir, subpath, repo);
       if (candidates.length === 0) throw new NoSkillsFoundError();
-      return await fn({ owner, repo, sha, candidates, dir });
+      return await fn({ owner, repo, ...(ref ? { ref } : {}), sha, candidates, dir });
     } finally {
       await rm(tmp, { recursive: true, force: true });
     }

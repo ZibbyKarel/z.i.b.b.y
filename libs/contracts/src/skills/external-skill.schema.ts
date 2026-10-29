@@ -11,6 +11,8 @@ export const SkillSourceSchema = z.object({
   repo: z.string(),
   /** The URL as the operator pasted it. */
   url: z.string(),
+  /** Branch/tag from a `/tree/<ref>` URL; absent = the repo's default branch. */
+  ref: z.string().optional(),
   /** Repo-relative folder holding the SKILL.md; "" for the repo root. */
   path: z.string(),
   sha: z.string(),
