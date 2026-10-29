@@ -110,6 +110,8 @@ export const OperatorChannelStatusSchema = z.object({
   mode: z.enum(["slack", "fake"]),
   credentials: z.object({ bot: z.boolean(), app: z.boolean() }),
   connected: z.boolean(),
+  /** Inbound (Phase 2): the transport is receiving the operator's DMs (Slack: Socket Mode open). */
+  listening: z.boolean(),
   workspace: z.string().optional(),
   dmResolved: z.boolean(),
   lastError: z.string().optional(),

@@ -19,6 +19,7 @@ const STATUS: OperatorChannelStatus = {
   mode: "fake",
   credentials: { bot: true, app: false },
   connected: true,
+  listening: false,
   workspace: "Zibby's",
   dmResolved: true,
 };
