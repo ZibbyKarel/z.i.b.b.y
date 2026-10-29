@@ -10,6 +10,7 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { PageActions } from "../../../components/layout/PageActions";
+import { AutopilotToggle } from "../../autopilot";
 import { useUiSettings } from "../../system";
 import { CUSTOM_PRESET } from "../state/useBridgeState";
 
@@ -26,7 +27,7 @@ export interface BridgeHeaderProps {
   onToggleCatalog: () => void;
 }
 
-/** The Bridge controls — layout presets, density (system-wide) and the edit
+/** The Bridge controls — the Autopilot switch, layout presets, density (system-wide) and the edit
  *  controls (Add widget, manage layouts) — portalled into the shell's sub-menu row before "+ NEW TASK". */
 export function BridgeHeader({
   preset,
@@ -54,6 +55,7 @@ export function BridgeHeader({
 
   return (
     <PageActions>
+      <AutopilotToggle />
       <CommandBarGroup>
         <SegmentedControl
           plain

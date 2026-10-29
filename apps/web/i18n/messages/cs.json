@@ -3579,5 +3579,17 @@
     "hooksYes": "Ano",
     "hooksNo": "Ne",
     "none": "Žádné"
+  },
+  "autopilot": {
+    "label": "Autopilot",
+    "turnOn": "Zapnout autopilota",
+    "turnOff": "Vypnout autopilota",
+    "status": "Autopilot zapnutý · čeká {pending}",
+    "confirm": "Zapnout",
+    "dialogTitle": "Zapnout autopilota?",
+    "dialogBody": "Dokud je zapnutý, ZIBBY bez ptaní posílá review a komentáře na PR, pushuje do svých větví zibby/* a odesílá konkrétní odpovědi v kanálech, a o každé akci dá vědět. Merge, deploy, platby, mazání, force push a push do sdílených větví dál čekají na tebe.",
+    "dialogPending": "Schválení, která už čekají, čekají dál: {pending}.",
+    "operatorTokenMissing": "Zapnutí autopilota vyžaduje operátorský token. Nejdřív ho nastav v Nastavení.",
+    "failed": "Autopilota se nepodařilo přepnout."
   }
 }

@@ -3579,5 +3579,17 @@
     "hooksYes": "Yes",
     "hooksNo": "No",
     "none": "None"
+  },
+  "autopilot": {
+    "label": "Autopilot",
+    "turnOn": "Turn autopilot on",
+    "turnOff": "Autopilot off",
+    "status": "Autopilot on · {pending} pending",
+    "confirm": "Turn on",
+    "dialogTitle": "Turn autopilot on?",
+    "dialogBody": "While it is on, ZIBBY posts PR reviews and comments, pushes to its own zibby/* PR branches and sends concrete channel replies without asking, and reports each one. Merge, deploy, payments, deletes, force pushes and pushes to shared branches still wait for you.",
+    "dialogPending": "Approvals already waiting stay waiting: {pending}.",
+    "operatorTokenMissing": "Turning autopilot on needs the operator token. Set it in Settings first.",
+    "failed": "Could not switch autopilot."
   }
 }
