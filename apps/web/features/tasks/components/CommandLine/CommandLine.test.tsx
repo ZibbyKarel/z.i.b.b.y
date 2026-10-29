@@ -572,6 +572,43 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       expect(onSkillChange).toHaveBeenLastCalledWith(undefined);
     });
 
+    it("initialSkill seeds the / tag of a prefilled initialText; deleting the token clears it", async () => {
+      const onSkillChange = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <CommandLine
+          allowSkillMentions
+          initialSkill={{ id: "tdd", name: "Test Driven" }}
+          initialText="/Test Driven go"
+          onSkillChange={onSkillChange}
+          onSubmit={vi.fn()}
+        />,
+      );
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      expect(input).toHaveValue("/Test Driven go");
+      await user.clear(input);
+      expect(onSkillChange).toHaveBeenLastCalledWith(undefined);
+    });
+
+    it("initialSkill whose token is missing from initialText is prepended, like initialTarget", () => {
+      render(
+        <CommandLine
+          allowSkillMentions
+          initialSkill={{ id: "tdd", name: "Test Driven" }}
+          initialText="go"
+          onSubmit={vi.fn()}
+        />,
+      );
+      expect(screen.getByTestId(CommandLineTestId.Input)).toHaveValue("/Test Driven go");
+    });
+
+    it("allowTargetMentions={false} opens no @ picker", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine allowTargetMentions={false} onSubmit={vi.fn()} />);
+      await user.type(screen.getByTestId(CommandLineTestId.Input), "@");
+      expect(screen.queryByTestId(CommandLineTestId.MentionMenu)).not.toBeInTheDocument();
+    });
+
     it("/ also offers marketplace skills, deduped by name against ZIBBY skills", async () => {
       const onSkillChange = vi.fn();
       const user = userEvent.setup();

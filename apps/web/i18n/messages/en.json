@@ -896,6 +896,8 @@
       "commandsLabel": "Commands",
       "commandsHintTool": "One per line, run in the stage sandbox.",
       "commandsPlaceholder": "pnpm test",
+      "promptLabel": "Prompt for this step",
+      "promptPlaceholder": "Custom instructions for the agent… / picks a skill",
       "approvalLabel": "Human check after this step",
       "approvalTag": "review",
       "approvalTagTitle": "The run stops after this step and waits for your review.",

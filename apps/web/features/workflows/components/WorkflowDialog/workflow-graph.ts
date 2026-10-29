@@ -48,6 +48,10 @@ export interface GraphNode {
   approval?: "ask";
   /** Agent phase verdict gate — not editable here, preserved on round-trip. */
   qualify?: boolean;
+  /** Agent phase only: the operator's custom prompt (may contain a `/skill` token). */
+  prompt?: string;
+  /** Agent phase only: the skill id picked via `/` in the prompt. */
+  skill?: string;
   model: AgentModel;
   thinking: AgentThinking;
   /**
@@ -158,6 +162,8 @@ export function phasesToGraph(initial: Workflow | undefined, agents: Agent[]): W
     commands: (ph.commands ?? []).join("\n"),
     ...(ph.approval ? { approval: ph.approval } : {}),
     ...(ph.qualify ? { qualify: ph.qualify } : {}),
+    ...(ph.prompt ? { prompt: ph.prompt } : {}),
+    ...(ph.skill ? { skill: ph.skill } : {}),
     model: ph.model ?? "sonnet",
     thinking: ph.thinking ?? "medium",
     x: LAYOUT_X0 + i * (NODE_W + GAP_X),
@@ -293,6 +299,8 @@ export function graphToPhases(graph: WorkflowGraph, assignment: string): Contrac
       model: node.model,
       thinking: node.thinking,
       ...(node.qualify ? { qualify: true } : {}),
+      ...(node.prompt?.trim() ? { prompt: node.prompt } : {}),
+      ...(node.skill ? { skill: node.skill } : {}),
       ...(loop ? { loop } : {}),
       ...approval,
     };

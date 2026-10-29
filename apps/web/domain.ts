@@ -89,6 +89,10 @@ export interface WorkflowPhase {
   approval?: "ask";
   /** Agent phase: parse a verdict from `produces`; carried so an edit round-trip keeps it. */
   qualify?: boolean;
+  /** Agent phase: the operator's custom prompt (may contain a `/skill` token). */
+  prompt?: string;
+  /** Agent phase: the skill id picked via `/` in the prompt. */
+  skill?: string;
 }
 
 export type WorkflowState = "done" | "parked" | "failed" | "running";

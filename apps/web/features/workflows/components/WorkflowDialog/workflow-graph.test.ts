@@ -385,3 +385,57 @@ describe("tool + approval round-trip", () => {
     expect(validateGraph(bad, "x")).toEqual({ ok: false, reason: "commands" });
   });
 });
+
+describe("agent prompt + skill round-trip", () => {
+  const withPrompt: Workflow = {
+    ...existing,
+    phases: [
+      {
+        id: "audit",
+        type: "agent",
+        agent: "writer",
+        consumes: "task.md",
+        produces: "audit.md",
+        model: "sonnet",
+        thinking: "medium",
+        prompt: "/security-audit check the auth module",
+        skill: "security-audit",
+      },
+      {
+        id: "img",
+        type: "tool",
+        consumes: "audit.md",
+        produces: "images.md",
+        commands: ["gen"],
+      },
+    ],
+  };
+
+  it("keeps prompt and skill on an agent step and never emits them on a tool step", () => {
+    const g = phasesToGraph(withPrompt, agents);
+    expect(g.nodes[0]).toMatchObject({
+      prompt: "/security-audit check the auth module",
+      skill: "security-audit",
+    });
+    // A stray prompt/skill on a tool node (e.g. a stale graph) must not leak out.
+    const stray = {
+      ...g,
+      nodes: g.nodes.map((n) => (n.id === "img" ? { ...n, prompt: "x", skill: "y" } : n)),
+    };
+    const phases = graphToPhases(stray, INITIAL_ASSIGNMENT);
+    expect(phases[0]).toMatchObject({
+      prompt: "/security-audit check the auth module",
+      skill: "security-audit",
+    });
+    expect(phases[1]).not.toHaveProperty("prompt");
+    expect(phases[1]).not.toHaveProperty("skill");
+    const input = { id: "d", name: "D", desc: "d", instructions: "d", outputs: [], phases };
+    expect(CreateWorkflowSchema.safeParse(input).success).toBe(true);
+  });
+
+  it("omits prompt and skill when the agent step has none", () => {
+    const phases = graphToPhases(phasesToGraph(existing, agents), INITIAL_ASSIGNMENT);
+    expect(phases[0]).not.toHaveProperty("prompt");
+    expect(phases[0]).not.toHaveProperty("skill");
+  });
+});

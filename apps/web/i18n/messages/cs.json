@@ -896,6 +896,8 @@
       "commandsLabel": "Příkazy",
       "commandsHintTool": "Jeden na řádek, spouští se v sandboxu fáze.",
       "commandsPlaceholder": "pnpm test",
+      "promptLabel": "Prompt pro tento krok",
+      "promptPlaceholder": "Vlastní pokyny pro agenta… / vybere skill",
       "approvalLabel": "Lidská kontrola po tomto kroku",
       "approvalTag": "kontrola",
       "approvalTagTitle": "Po tomto kroku se běh zastaví a čeká na tvou kontrolu.",

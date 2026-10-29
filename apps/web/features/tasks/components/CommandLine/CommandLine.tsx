@@ -133,6 +133,12 @@ export interface CommandLineProps {
   onScopeChange?: (kind: ScopeKind, id: string | undefined) => void;
   /** Offer the `/` skill picker — default `false`. */
   allowSkillMentions?: boolean;
+  /** Seeds the `/` skill tag (mirrors `initialTarget` for `@`): `/Name ` is prepended
+   *  unless `initialText` already carries it. */
+  initialSkill?: { id: string; name: string };
+  /** Offer the `@` target picker (and typed-`@Name` adoption) — default `true`. A host
+   *  whose submit path carries no routing target (a workflow step prompt) passes `false`. */
+  allowTargetMentions?: boolean;
   /** Fires with the picked skill id, or `undefined` when its `/Name` leaves the text
    *  / on reset. */
   onSkillChange?: (skillId: string | undefined) => void;
@@ -559,6 +565,8 @@ export function CommandLine({
   scopeKinds = NO_SCOPE_KINDS,
   onScopeChange,
   allowSkillMentions = false,
+  initialSkill,
+  allowTargetMentions = true,
   onSkillChange,
   multipleTargets = false,
   onAttachmentsChange,
@@ -584,7 +592,10 @@ export function CommandLine({
   // the `handleChange` reconciliation (which clears a target whose `@Name` no longer
   // appears in the text) doesn't nuke it the moment the operator types.
   const [text, setText] = useState(() => {
-    const base = initialText ?? "";
+    let base = initialText ?? "";
+    if (initialSkill && !hasMentionFor(base, "/", initialSkill.name)) {
+      base = `/${initialSkill.name} ${base}`;
+    }
     if (!initialTarget) return base;
     const mention = `@${initialTarget.name} `;
     return base.length > 0 ? `${mention}${base}` : mention;
@@ -604,13 +615,15 @@ export function CommandLine({
   const [scopeTags, setScopeTags] = useState<
     Partial<Record<ScopeKind, { id: string; name: string }>>
   >({});
-  const [skill, setSkill] = useState<{ id: string; name: string } | undefined>(undefined);
+  const [skill, setSkill] = useState<{ id: string; name: string } | undefined>(initialSkill);
   const [attachments, setAttachments] = useState<TaskAttachmentSet>({ files: [] });
   const [attachError, setAttachError] = useState<string | null>(null);
   const hasDraftRef = useRef(false);
   // A prefilled brief (`initialText`, no `initialTarget`) still owes its typed `@Name` an
   // adoption once the catalog arrives; cleared on the first adoption or user edit.
-  const [seedPending, setSeedPending] = useState(Boolean(initialText) && !initialTarget);
+  const [seedPending, setSeedPending] = useState(
+    allowTargetMentions && Boolean(initialText) && !initialTarget,
+  );
   // Mirrors the `injectedTarget` prop so a NEW value (including the same target
   // picked again after a round-trip through `undefined` once consumed) can be
   // told apart from a re-render with the same one — ported from `ChatComposer`.
@@ -687,11 +700,11 @@ export function CommandLine({
   const enabledTriggers = useMemo<ReadonlySet<Trigger>>(
     () =>
       new Set<Trigger>([
-        "@",
+        ...(allowTargetMentions ? (["@"] as const) : []),
         ...(hasScope ? (["#"] as const) : []),
         ...(allowSkillMentions ? (["/"] as const) : []),
       ]),
-    [hasScope, allowSkillMentions],
+    [allowTargetMentions, hasScope, allowSkillMentions],
   );
   const scopeSources = useMemo<Record<ScopeKind, { id: string; name: string }[]>>(
     () => ({ company: companies, team: teams, project: projects }),
@@ -918,7 +931,7 @@ export function CommandLine({
     // target once its mention is deleted.
     if (multipleTargets) {
       setMentionTargets((prev) => prev.filter((t) => hasMentionFor(nextValue, "@", t.name)));
-    } else {
+    } else if (allowTargetMentions) {
       // A known `@Name` TYPED in full (not picked) resolves the target too — the
       // longest matching name wins. It is adopted only with no surviving target, or
       // as a longer extension of it ("@Coloring" → "@Coloring Book"), so a picked
