@@ -129,6 +129,13 @@ export const ActivityKindSchema = z.enum([
   // on its own. Rides `projectId`, `taskId` and `itemId` = `<repo>#<n>`. Posting the review
   // and pushing the fixes both stay behind their approvals.
   "pr-automation-started",
+  // Phase 4 (Autopilot, Tier-2 — act, then report). The autopilot overlay let a covered
+  // `ask` through without the operator click (a gate intent or an approval it approved,
+  // riding `action` and `approvalId`/`status` = the gate rule id).
+  "autopilot-action",
+  // Phase 4. The operator turned autopilot on or off (`status` = the new level,
+  // `decision` = who: operator | chat).
+  "autopilot-changed",
 ]);
 export type ActivityKind = z.infer<typeof ActivityKindSchema>;
 

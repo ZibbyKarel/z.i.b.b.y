@@ -119,6 +119,8 @@ export const GateEvaluationSchema = z.object({
   /** Id of the rule that matched, or undefined for the default `allow`. */
   ruleId: z.string().optional(),
   resolve: ResolveSchema.optional(),
+  /** Phase 4 — set when the autopilot overlay turned a covered `ask` into act-then-report. */
+  via: z.literal("autopilot").optional(),
 });
 export type GateEvaluation = z.infer<typeof GateEvaluationSchema>;
 

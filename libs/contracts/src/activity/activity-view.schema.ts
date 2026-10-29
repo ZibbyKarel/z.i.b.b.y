@@ -102,6 +102,10 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   // todo-16: a heartbeat-started PR review / address-comments run — reads with the other
   // watcher-initiated dispatches and PR events (automation-dispatched/merge-completed).
   "pr-automation-started": "integrations",
+  // Phase 4: autopilot's let-through decisions and its on/off switch read with the
+  // other gate decisions.
+  "autopilot-action": "approvals",
+  "autopilot-changed": "approvals",
 };
 
 /**

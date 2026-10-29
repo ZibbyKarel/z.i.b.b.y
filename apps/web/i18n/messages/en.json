@@ -1075,7 +1075,8 @@
         "run-parked": "Run parked",
         "budget-cap": "Budget cap reached",
         "ci-red": "CI red (being fixed)",
-        "briefing": "Daily briefing"
+        "briefing": "Daily briefing",
+        "autopilot-action": "Autopilot actions"
       }
     },
     "selfKnowledge": {

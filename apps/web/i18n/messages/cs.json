@@ -1075,7 +1075,8 @@
         "run-parked": "Zaparkovaný běh",
         "budget-cap": "Dosažený rozpočtový limit",
         "ci-red": "Červené CI (opravuje se)",
-        "briefing": "Denní briefing"
+        "briefing": "Denní briefing",
+        "autopilot-action": "Akce autopilota"
       }
     },
     "selfKnowledge": {

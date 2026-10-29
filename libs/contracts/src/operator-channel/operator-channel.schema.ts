@@ -25,6 +25,8 @@ export const OperatorEventKindSchema = z.enum([
   "ci-red",
   /** Tier-2 — the daily briefing was generated (the optional digest). */
   "briefing",
+  /** Tier-2 — autopilot let a covered action through, or was turned on/off (Phase 4). */
+  "autopilot-action",
 ]);
 export type OperatorEventKind = z.infer<typeof OperatorEventKindSchema>;
 

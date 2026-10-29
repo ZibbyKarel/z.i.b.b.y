@@ -183,6 +183,8 @@ export const ApprovalSchema = z.object({
   reviewEvent: PrReviewEventSchema.optional(),
   /** The thread replies the operator approved (pr-address-comments push approval). */
   replies: z.array(OperatorThreadReplySchema).max(100).optional(),
+  /** Phase 4 — set when the autopilot overlay approved it (no operator click). */
+  decidedBy: z.literal("autopilot").optional(),
 });
 export type Approval = z.infer<typeof ApprovalSchema>;
 
