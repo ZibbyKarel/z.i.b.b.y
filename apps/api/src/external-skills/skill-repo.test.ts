@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -26,6 +26,11 @@ describe("parseGitHubSkillUrl", () => {
       "skills/x",
     );
     expect(parseGitHubSkillUrl("https://github.com/a/b/tree/main")).not.toHaveProperty("subpath");
+  });
+  it("rejects odd owner/repo characters", () => {
+    expect(() => parseGitHubSkillUrl("https://github.com/a%20b/c")).toThrow(
+      InvalidSkillRepoUrlError,
+    );
   });
   it("rejects non-github and traversal", () => {
     for (const u of [
@@ -57,6 +62,31 @@ describe("scanSkillDir", () => {
     await put(fx, "SKILL.md", "---\nname: root\n---\nhi");
     expect((await scanSkillDir(fx))[0]?.path).toBe("");
   });
+  it("returns [] for a missing or symlinked subpath", async () => {
+    const fx = await mkdtemp(join(tmpdir(), "skills-"));
+    const outside = await mkdtemp(join(tmpdir(), "outside-"));
+    await put(outside, "SKILL.md", "---\nname: evil\n---\n");
+    await symlink(outside, join(fx, "x"));
+    expect(await scanSkillDir(fx, "x")).toEqual([]);
+    expect(await scanSkillDir(fx, "nope/here")).toEqual([]);
+  });
+  it("slugifies dir fallback and uses repoName for the root", async () => {
+    const fx = await mkdtemp(join(tmpdir(), "skills-"));
+    await put(fx, "My Skill/SKILL.md", "no frontmatter");
+    await put(fx, "SKILL.md", "no frontmatter");
+    const got = await scanSkillDir(fx, undefined, "Cool Repo");
+    expect(got.map((c) => [c.path, c.id])).toEqual([
+      ["", "cool-repo"],
+      ["My Skill", "my-skill"],
+    ]);
+  });
+  it("skips ---js frontmatter without executing it", async () => {
+    const fx = await mkdtemp(join(tmpdir(), "skills-"));
+    await put(fx, "evil/SKILL.md", "---js\n(globalThis.__pwned = true, {name: 'evil'})\n---\nbody");
+    await put(fx, "ok/SKILL.md", "---\nname: ok\n---\n");
+    expect((await scanSkillDir(fx)).map((c) => c.id)).toEqual(["ok"]);
+    expect((globalThis as Record<string, unknown>).__pwned).toBeUndefined();
+  });
   it("honours subpath", async () => {
     const fx = await mkdtemp(join(tmpdir(), "skills-"));
     await put(fx, "a/SKILL.md", "---\nname: a\n---\n");
@@ -66,6 +96,10 @@ describe("scanSkillDir", () => {
 });
 
 describe("parseSkillMd", () => {
+  it("throws on ---js frontmatter and does not run it", () => {
+    expect(() => parseSkillMd("---js\n(globalThis.__pwned2 = true, {})\n---\nbody", "d")).toThrow();
+    expect((globalThis as Record<string, unknown>).__pwned2).toBeUndefined();
+  });
   it("slugifies a non-id name and falls back to the dir name", () => {
     expect(parseSkillMd("---\nname: Security Audit\n---\nbody", "dir").id).toBe("security-audit");
     expect(parseSkillMd("---\nname: ✨\n---\nbody", "my-dir").id).toBe("my-dir");

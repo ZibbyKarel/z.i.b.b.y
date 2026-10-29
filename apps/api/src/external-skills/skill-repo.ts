@@ -1,5 +1,5 @@
-import { readFile, readdir } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { lstat, readFile, readdir, realpath } from "node:fs/promises";
+import { basename, join, sep } from "node:path";
 import { AGENT_ID_REGEX } from "@zibby/contracts";
 import matter from "gray-matter";
 
@@ -18,6 +18,14 @@ export type SkillCandidate = {
   desc?: string;
   instructions: string;
 };
+
+const NAME_RE = /^[A-Za-z0-9_.-]+$/;
+
+const slugify = (v: string): string =>
+  v
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
 export function parseGitHubSkillUrl(url: string): {
   owner: string;
@@ -38,36 +46,62 @@ export function parseGitHubSkillUrl(url: string): {
   const parts = u.pathname.split("/").filter(Boolean);
   const [owner, rawRepo, kind, , ...rest] = parts;
   const repo = rawRepo?.replace(/\.git$/, "");
-  if (!owner || !repo) throw bad();
+  if (!owner || !repo || !NAME_RE.test(owner) || !NAME_RE.test(repo)) throw bad();
+  // Known limitation: a ref containing "/" in /tree/<ref>/... is mis-split (ref = first segment).
   if (parts.length > 2 && kind !== "tree") throw bad();
   if (kind === "tree" && parts.length < 4) throw bad();
   const out = { owner, repo, remote: `https://github.com/${owner}/${repo}.git` };
   return rest.length ? { ...out, subpath: rest.join("/") } : out;
 }
 
+const refuseCode = () => {
+  throw new Error("Executable frontmatter is not allowed in SKILL.md");
+};
+
 export function parseSkillMd(
   text: string,
   fallbackId: string,
 ): { id: string; name: string; desc?: string; instructions: string } {
-  const parsed = matter(text);
+  // Repo content is untrusted: gray-matter's default js engine would eval `---js` frontmatter.
+  const parsed = matter(text, {
+    engines: { js: refuseCode, javascript: refuseCode },
+  });
   const fm = parsed.data as Record<string, unknown>;
   const name = typeof fm.name === "string" && fm.name.trim() ? fm.name.trim() : fallbackId;
-  const slug = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  const id = AGENT_ID_REGEX.test(slug) ? slug : fallbackId;
+  const fromName = slugify(name);
+  const id = AGENT_ID_REGEX.test(fromName) ? fromName : slugify(fallbackId);
+  if (!AGENT_ID_REGEX.test(id)) throw new Error(`No valid skill id for "${name}"`);
   const desc =
     typeof fm.description === "string" && fm.description.trim() ? fm.description.trim() : undefined;
   return { id, name, ...(desc ? { desc } : {}), instructions: parsed.content.trim() };
 }
 
-export async function scanSkillDir(root: string, subpath?: string): Promise<SkillCandidate[]> {
+/** Is `<root>/<subpath>` a real directory inside root, with no symlinked segment? */
+async function subpathIsSafe(root: string, subpath: string): Promise<boolean> {
+  try {
+    let cur = root;
+    for (const seg of subpath.split("/")) {
+      cur = join(cur, seg);
+      if ((await lstat(cur)).isSymbolicLink()) return false;
+    }
+    const [real, realRoot] = await Promise.all([realpath(cur), realpath(root)]);
+    return real === realRoot || real.startsWith(realRoot + sep);
+  } catch {
+    return false; // missing subpath
+  }
+}
+
+export async function scanSkillDir(
+  root: string,
+  subpath?: string,
+  repoName?: string,
+): Promise<SkillCandidate[]> {
   if (subpath && subpath.split("/").some((s) => s === ".." || s === "")) {
     throw new InvalidSkillRepoUrlError(subpath);
   }
+  if (subpath && !(await subpathIsSafe(root, subpath))) return [];
   const found: SkillCandidate[] = [];
-  const rootName = basename(root);
+  const rootName = repoName ?? basename(root);
   async function walk(rel: string): Promise<void> {
     const entries = await readdir(join(root, rel), { withFileTypes: true });
     for (const e of entries) {
@@ -78,10 +112,14 @@ export async function scanSkillDir(root: string, subpath?: string): Promise<Skil
       } else if (e.isFile() && e.name === "SKILL.md") {
         const text = await readFile(join(root, rel, e.name), "utf8");
         const dir = rel ? basename(rel) : rootName;
-        found.push({ path: rel, ...parseSkillMd(text, dir) });
+        try {
+          found.push({ path: rel, ...parseSkillMd(text, dir) });
+        } catch {
+          // ponytail: unparseable / unsafe SKILL.md is skipped silently; surface per-skill errors if needed
+        }
       }
     }
   }
   await walk(subpath ?? "");
-  return found.sort((a, b) => a.path.localeCompare(b.path));
+  return found.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }
