@@ -130,6 +130,9 @@ const MAX_DISPATCH_ATTEMPTS = 3;
 /** M8: base backoff (ms) for a retried dispatch; the nth retry waits `base * 2^(n-1)`. */
 const DISPATCH_BACKOFF_MS = 30_000;
 
+/** Release no-op handed to an `immediate` run: it never touched `RunSlots`. */
+const UNCOUNTED_SLOT: RunSlot = () => {};
+
 /** Task 9: an attachment set with no referencing task is orphaned once past this age. */
 const ATTACHMENT_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -963,6 +966,8 @@ export class TaskSchedulerService
       input.attachmentSetId,
       input.attachments,
       input.toolGrants,
+      undefined,
+      input.immediate,
     );
     if (!dispatched) throw new EmptyCatalogError();
     if (isQueued(dispatched)) {
@@ -1032,6 +1037,8 @@ export class TaskSchedulerService
             task.attachmentSetId,
             task.attachments,
             task.toolGrants,
+            undefined,
+            task.immediate,
           );
           if (!dispatched) {
             await this.failPending(
@@ -1148,6 +1155,7 @@ export class TaskSchedulerService
         task.attachments,
         task.toolGrants,
         task.classification,
+        task.immediate,
       ));
     if (!dispatched) {
       await this.storage.markFailed(task.id, "No agents or workflows available to route to");
@@ -1359,6 +1367,8 @@ export class TaskSchedulerService
      * re-dispatch keeps its department and memory terms without re-classifying.
      */
     priorClassification?: ClassificationTrace,
+    /** Quick-action "run immediately": skip the run-slot cap (see {@link takeRunSlot}). */
+    immediate?: boolean,
   ): Promise<Dispatched | QueuedDispatch | null> {
     // Build the run-attachments reference ONCE: an absolute dir (from storage) plus
     // the filenames, or undefined when the task carries no attachment set.
@@ -1418,7 +1428,7 @@ export class TaskSchedulerService
     }
     // One run slot per dispatched run, taken BEFORE any spawn and held until the
     // run's terminal status (including while it awaits an approval).
-    const slot = await this.takeRunSlot(projectId);
+    const slot = await this.takeRunSlot(projectId, immediate);
     if (!slot) return { queued: true, target, classification };
     if (target.kind === "agent") {
       const agentId = target.id;
@@ -1551,7 +1561,7 @@ export class TaskSchedulerService
   ): Promise<Dispatched | QueuedDispatch | null> {
     const target = task.target ?? ORCHESTRATOR_TARGET;
     const classification = task.classification;
-    const slot = await this.takeRunSlot(task.projectId);
+    const slot = await this.takeRunSlot(task.projectId, task.immediate);
     if (!slot) return { queued: true, target, classification };
     const hold = <R>(
       start: () => Promise<R | null>,
@@ -1597,7 +1607,13 @@ export class TaskSchedulerService
   }
 
   /** A run slot under the global + project cap, or null when either is full. */
-  private async takeRunSlot(projectId: string | undefined): Promise<RunSlot | null> {
+  private async takeRunSlot(
+    projectId: string | undefined,
+    immediate?: boolean,
+  ): Promise<RunSlot | null> {
+    // ponytail: an immediate run is invisible to RunSlots, so any "N running" figure
+    // derived from inUse() will not include it.
+    if (immediate) return UNCOUNTED_SLOT;
     return this.slots.tryTake(projectId, await this.projectRunCap(projectId));
   }
 

@@ -2438,6 +2438,22 @@ describe("Task 3c — project-capacity lock closes the budget check→record rac
   // (drainQueues), which the mandatory tests above do exercise indirectly via
   // guardExisting. See task-3c-report.md for the full writeup.
 
+  it("an immediate task over budget is still held behind approval", async () => {
+    const { fakeBudget } = makeService({ id: PROJECT_ID, name: "Proj" }, 1);
+    fakeBudget.check.mockResolvedValue({
+      ok: false,
+      over: "project-daily",
+      detail: "daily run cap reached",
+    });
+    const r = await service.createTask(
+      { text: "now", title: "now", immediate: true },
+      undefined,
+      PROJECT_ID,
+    );
+    expect(r.outcome).toBe("scheduled");
+    expect(r.task.status).toBe("held");
+  });
+
   it("tick heartbeat path (finding #1): tick's dispatch of a due scheduled task racing dispatchPending's dispatch of a pending task, both under a global cap of 1, dispatch exactly one and queue the other", async () => {
     const { fakeBudget } = makeService({ id: PROJECT_ID, name: "Proj" }, 1);
     const project = { id: PROJECT_ID, name: "Proj" };
@@ -2799,6 +2815,42 @@ describe("run slots (global + per-project cap)", () => {
     workflowListener?.(workflowRun({ workflowRunId: ref, status: "done" }));
     await vi.waitFor(() => expect(agentRunner.start).toHaveBeenCalledTimes(2));
     expect(slots.inUse()).toBe(2);
+  });
+
+  it("an immediate task dispatches past a full global cap and holds no slot (background path)", async () => {
+    makeService(1);
+    await dispatched("do A");
+    const r = await service.createTask(
+      { text: "now", title: "now", immediate: true },
+      undefined,
+      undefined,
+      undefined,
+      true,
+    );
+    expect(r.outcome).toBe("pending");
+    await vi.waitFor(async () => expect((await storage.get(r.task.id)).status).toBe("dispatched"));
+    expect((await storage.get(r.task.id)).immediate).toBe(true);
+    expect(slots.inUse()).toBe(1);
+  });
+
+  it("an immediate run does not take the slot a normal task needs", async () => {
+    makeService(1);
+    const r = await service.createTask({ text: "now", title: "now", immediate: true });
+    expect(r.outcome).toBe("dispatched");
+    expect(slots.inUse()).toBe(0);
+    await dispatched("do B"); // the cap of 1 is still free
+  });
+
+  it("an immediate task also bypasses a full per-project cap", async () => {
+    makeService(1000, { proj_A: 1 });
+    await dispatched("do A", "proj_A");
+    const r = await service.createTask(
+      { text: "now", title: "now", immediate: true },
+      undefined,
+      "proj_A",
+    );
+    expect(r.outcome).toBe("dispatched");
+    expect(slots.inUse("proj_A")).toBe(1);
   });
 
   it("a goal run holds one slot; a second task queues until the goal ends", async () => {
