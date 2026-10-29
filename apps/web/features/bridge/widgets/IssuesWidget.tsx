@@ -10,11 +10,12 @@ import {
   RowGroupHeader,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { Fragment, useMemo } from "react";
+import { Fragment, useCallback, useMemo } from "react";
 import { sourceIcon } from "../../integrations/kindIcon";
 import { useNow } from "../../../hooks/useNow";
 import { compactAgo } from "../../../utils/time";
 import { visibleItems } from "../../inbox/inbox";
+import { useRefreshInboxMutation } from "../../inbox/mutations";
 import { useInboxItemsQuery, useInboxPrsQuery } from "../../inbox/queries";
 import { issueGroups } from "../state/rows";
 import { useBridgeInboxFilters } from "../state/useBridgeInboxFilters";
@@ -43,6 +44,10 @@ export function IssuesWidget({
   const t = useTranslations("bridge.widgets.issues");
   const now = useNow(60_000);
   const filters = useBridgeInboxFilters();
+  const refresh = useRefreshInboxMutation();
+  const { mutate } = refresh;
+  // A failed sync just re-enables the button; the previous data stays on screen.
+  const onRefresh = useCallback(() => mutate(), [mutate]);
   const itemsQuery = useInboxItemsQuery();
   const prsQuery = useInboxPrsQuery();
 
@@ -67,6 +72,8 @@ export function IssuesWidget({
   const you = groups.reduce((n, g) => n + g.rows.filter((r) => r.needsYou).length, 0);
   useWidgetReport(
     {
+      onRefresh,
+      refreshing: refresh.isPending,
       loading: itemsQuery.isPending,
       count: itemsQuery.isPending ? undefined : list.length,
       you,

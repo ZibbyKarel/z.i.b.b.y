@@ -117,6 +117,28 @@ describe("WidgetFrame", () => {
     expect(screen.getByTestId(WidgetFrameTestId.Body)).toBeVisible();
   });
 
+  it("renders a sync button only with a handler; disabled while refreshing; no move drag", async () => {
+    const onRefresh = vi.fn();
+    const onMove = vi.fn();
+    const { rerender } = render(<WidgetFrame label="X" />);
+    expect(screen.queryByTestId(WidgetFrameTestId.Refresh)).toBeNull();
+    rerender(
+      <WidgetFrame
+        label="X"
+        onMovePointerDown={onMove}
+        onRefresh={onRefresh}
+        refreshLabel="Sync"
+      />,
+    );
+    const btn = screen.getByTestId(WidgetFrameTestId.Refresh);
+    expect(btn).toHaveAccessibleName("Sync");
+    await userEvent.click(btn);
+    expect(onRefresh).toHaveBeenCalledOnce();
+    expect(onMove).not.toHaveBeenCalled();
+    rerender(<WidgetFrame refreshing label="X" onRefresh={onRefresh} refreshLabel="Sync" />);
+    expect(screen.getByTestId(WidgetFrameTestId.Refresh)).toBeDisabled();
+  });
+
   it("marks dragging with an ink border and passes geometry through", () => {
     render(<WidgetFrame dragging label="X" style={{ left: 10, top: 20 }} />);
     const root = screen.getByTestId(WidgetFrameTestId.Root);

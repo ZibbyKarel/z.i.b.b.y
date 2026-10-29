@@ -16,6 +16,11 @@ import type { BridgeWidgetProps } from "./registry";
 import { RunsWidget } from "./RunsWidget";
 import { TasksWidget } from "./TasksWidget";
 
+const refreshMutate = vi.hoisted(() => vi.fn());
+vi.mock("../../inbox/mutations", () => ({
+  useRefreshInboxMutation: () => ({ mutate: refreshMutate, isPending: false }),
+}));
+
 const d = vi.hoisted(() => ({
   items: [] as unknown[],
   epics: [] as unknown[],
@@ -125,6 +130,7 @@ const pr = (number: number, over: Partial<InboxPr> = {}): InboxPr => ({
 });
 
 beforeEach(() => {
+  refreshMutate.mockClear();
   Object.assign(d, {
     items: [],
     epics: [],
@@ -191,12 +197,9 @@ describe("IssuesWidget", () => {
     });
 
     expect(props.onEmptyChange).toHaveBeenLastCalledWith(false);
-    expect(props.onCountChange).toHaveBeenLastCalledWith({
-      count: 2,
-      you: 1,
-      aside: undefined,
-      loading: false,
-    });
+    expect(props.onCountChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ count: 2, you: 1, aside: undefined, loading: false }),
+    );
 
     await userEvent.click(screen.getByTestId(RowGroupHeaderTestId.Root));
     expect(props.onEpicToggle).toHaveBeenCalledWith("e1", true);
@@ -236,6 +239,20 @@ describe("IssuesWidget", () => {
     const loaded = setup({ widget: widget("w", "issues") });
     renderWithProviders(<IssuesWidget {...loaded} />);
     expect(loaded.onEmptyChange).toHaveBeenLastCalledWith(true);
+  });
+});
+
+describe("header sync button", () => {
+  it.each([
+    ["Issues", "issues", IssuesWidget],
+    ["Prs", "prs", PrsWidget],
+  ] as const)("%s widget reports a refresh action that triggers a sync", (_n, type, Widget) => {
+    const props = setup({ widget: widget("w", type) });
+    renderWithProviders(<Widget {...props} />);
+    const info = vi.mocked(props.onCountChange!).mock.lastCall![0];
+    expect(info.refreshing).toBe(false);
+    info.onRefresh!();
+    expect(refreshMutate).toHaveBeenCalledOnce();
   });
 });
 

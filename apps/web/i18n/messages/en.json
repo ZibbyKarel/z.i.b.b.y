@@ -3121,6 +3121,7 @@
     "resizeNe": "top right",
     "resizeSw": "bottom left",
     "resizeSe": "bottom right",
+    "refresh": "Sync",
     "allClear": "All clear",
     "loading": "Loading…",
     "widgets": {

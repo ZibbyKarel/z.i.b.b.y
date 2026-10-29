@@ -74,9 +74,12 @@ function BridgeWidgetHost({
       onConfigure={def.configurable ? () => onConfigure(id) : undefined}
       onMovePointerDown={(e) => onDragStart(id, "move", e)}
       onNaturalHeight={onNaturalHeight}
+      onRefresh={info?.onRefresh}
       onRemove={() => onRemove(id)}
       onResizePointerDown={(e, corner) => onDragStart(id, corner, e)}
       onToggleCollapse={() => state.toggleCollapsed(id)}
+      refreshLabel={t("bridge.refresh")}
+      refreshing={info?.refreshing}
       removeLabel={t("bridge.remove")}
       resizeCornerLabels={{
         nw: t("bridge.resizeNw"),
@@ -155,6 +158,8 @@ export function BridgeBoard({ state, density, sheetSide = "right" }: BridgeBoard
           prev.count === i.count &&
           prev.you === i.you &&
           prev.aside === i.aside &&
+          prev.onRefresh === i.onRefresh &&
+          prev.refreshing === i.refreshing &&
           prev.loading === i.loading
           ? p
           : { ...p, [id]: i };

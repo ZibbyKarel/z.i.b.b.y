@@ -19,6 +19,8 @@ export enum WidgetFrameTestId {
   Count = "widget-frame-count",
   You = "widget-frame-you",
   Aside = "widget-frame-aside",
+  /** The per-widget "sync" button (disabled + spinning while `refreshing`). */
+  Refresh = "widget-frame-refresh",
   Collapse = "widget-frame-collapse",
   Remove = "widget-frame-remove",
   /** The per-widget "configure" toggle (aria-pressed). */
@@ -44,6 +46,10 @@ export interface WidgetFrameProps {
   you?: string;
   /** Right-aligned header note (e.g. `ALL CLEAR`). */
   aside?: string;
+  /** Shows a header sync button left of the caret; disabled and spinning while `refreshing`. */
+  onRefresh?: () => void;
+  refreshing?: boolean;
+  refreshLabel?: string;
   /** Body hidden, header only. */
   collapsed?: boolean;
   /** Shows the ▾/▸ caret (for non-empty widgets) when provided. */
@@ -112,6 +118,9 @@ export function WidgetFrame({
   count,
   you,
   aside,
+  onRefresh,
+  refreshing = false,
+  refreshLabel,
   collapsed = false,
   onToggleCollapse,
   collapseLabel,
@@ -216,6 +225,24 @@ export function WidgetFrame({
           <span className="text-ink-3" data-testid={WidgetFrameTestId.Aside}>
             {aside}
           </span>
+        ) : null}
+        {onRefresh ? (
+          <button
+            aria-label={refreshLabel ?? "Sync"}
+            className={cn(headerBtn, "disabled:cursor-default disabled:opacity-60")}
+            data-testid={WidgetFrameTestId.Refresh}
+            disabled={refreshing}
+            onClick={onRefresh}
+            onPointerDown={(e) => e.stopPropagation()}
+            title={refreshLabel ?? "Sync"}
+            type="button"
+          >
+            <span
+              className={cn("block", refreshing && "animate-spinner motion-reduce:animate-none")}
+            >
+              <Icon name="retry" size="sm" />
+            </span>
+          </button>
         ) : null}
         {canToggle ? (
           <button

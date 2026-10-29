@@ -33,6 +33,10 @@ export interface BridgeWidgetInfo {
   you?: number;
   /** Right-aligned header note. The frame shows `ALL CLEAR` itself when empty. */
   aside?: string;
+  /** Sync button in the frame header (must be referentially stable). */
+  onRefresh?: () => void;
+  /** The sync is running — the button is disabled and spins. */
+  refreshing?: boolean;
 }
 
 /**

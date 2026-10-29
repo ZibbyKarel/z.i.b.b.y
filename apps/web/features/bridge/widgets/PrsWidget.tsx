@@ -2,9 +2,10 @@
 
 import { BoardLine, BoardRow, BoardText, IndentRail, RowGroupHeader } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { Fragment, useMemo } from "react";
+import { Fragment, useCallback, useMemo } from "react";
 import { useNow } from "../../../hooks/useNow";
 import { compactAgo } from "../../../utils/time";
+import { useRefreshInboxMutation } from "../../inbox/mutations";
 import { useInboxPrsQuery } from "../../inbox/queries";
 import { type PrRowVm, prGroups } from "../state/rows";
 import { useBridgeInboxFilters } from "../state/useBridgeInboxFilters";
@@ -29,6 +30,10 @@ export function PrsWidget({
   const t = useTranslations("bridge.widgets.prs");
   const now = useNow(60_000);
   const filters = useBridgeInboxFilters();
+  const refresh = useRefreshInboxMutation();
+  const { mutate } = refresh;
+  // A failed sync just re-enables the button; the previous data stays on screen.
+  const onRefresh = useCallback(() => mutate(), [mutate]);
   const prsQuery = useInboxPrsQuery();
 
   const { groups, visible } = useMemo(
@@ -38,6 +43,8 @@ export function PrsWidget({
 
   useWidgetReport(
     {
+      onRefresh,
+      refreshing: refresh.isPending,
       loading: prsQuery.isPending,
       count: prsQuery.isPending ? undefined : visible.length,
       you: 0,
