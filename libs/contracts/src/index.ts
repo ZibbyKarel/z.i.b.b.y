@@ -112,4 +112,6 @@ export * from "./speech/speech.schema";
 export * from "./speech/speech.contract";
 export * from "./registries/registry-bindings.schema";
 export * from "./registries/registries.contract";
+export * from "./operator-channel/operator-channel.schema";
+export * from "./operator-channel/operator-channel.contract";
 export * from "./app.contract";
