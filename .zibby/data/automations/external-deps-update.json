@@ -1,0 +1,9 @@
+{
+  "id": "external-deps-update",
+  "name": "Aktualizace externích závislostí",
+  "description": "Týdně zkontroluje nainstalované externí skills na GitHubu a změněné složky aktualizuje; každou aktualizaci zapíše do aktivity a briefingu.",
+  "trigger": { "type": "cron", "expr": "0 4 * * 1" },
+  "target": { "type": "external-skills-sync" },
+  "enabled": true,
+  "system": true
+}
