@@ -5,8 +5,10 @@ import { type DepartmentId } from "@zibby/contracts";
 import {
   Button,
   Container,
-  DataTable,
-  type DataTableColumn,
+  EmptyState,
+  EntityCard,
+  Grid,
+  type IconName,
   Stack,
   StatusDot,
   Tag,
@@ -16,10 +18,11 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { PageContainer } from "../../../components/PageContainer/PageContainer";
 import { QueryError } from "../../../components/LoadError/QueryError";
+import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { slug } from "../../../utils/slug";
 import { AgentsByDepartment } from "../../agents/components/AgentsByDepartment";
 import { NewAgentDialog } from "../../agents/components/NewAgentDialog";
@@ -49,6 +52,8 @@ import { type RegistryKindParam, registryHref } from "../registryKinds";
 export enum RegistriesScreenTestId {
   SyncAllSkills = "registries-sync-all-skills",
   InstallSkills = "registries-install-skills",
+  Empty = "registries-empty",
+  BoundIn = "registries-bound-in",
 }
 
 export interface RegistriesScreenProps {
@@ -67,25 +72,39 @@ const DEPARTMENT_TAB: Partial<Record<RegistryKindParam, string>> = {
   hooks: "hooks",
 };
 
-function BoundInCell({
+/** The card footer for an item bound in departments, or none — an empty footer would still draw its divider. */
+function boundIn(kind: RegistryKindParam, departmentIds?: DepartmentId[]) {
+  return departmentIds && departmentIds.length > 0 ? (
+    <BoundIn departmentIds={departmentIds} kind={kind} />
+  ) : undefined;
+}
+
+/**
+ * The "Bound in" card footer: department codes linking to the department tab that
+ * binds the item. Lives in the card's `actions` slot, outside its open target, so
+ * the links never nest inside the card's button.
+ */
+function BoundIn({
   kind,
-  departmentIds,
+  departmentIds: ids,
 }: {
   kind: RegistryKindParam;
-  departmentIds?: DepartmentId[];
+  departmentIds: DepartmentId[];
 }) {
+  const t = useTranslations("registries");
   const departments = useDepartmentLookup();
-  const ids = departmentIds ?? [];
-  if (ids.length === 0) {
-    return (
-      <Typography mono size="xs" type="note" variant="tertiary">
-        —
-      </Typography>
-    );
-  }
   const tab = DEPARTMENT_TAB[kind];
   return (
-    <Stack wrap direction="row" gap="50">
+    <Stack
+      wrap
+      align="center"
+      data-testid={RegistriesScreenTestId.BoundIn}
+      direction="row"
+      gap="50"
+    >
+      <Typography mono size="xs" type="note" variant="tertiary">
+        {t("columns.boundIn")}
+      </Typography>
       {ids.map((id) => {
         const code = departments.get(id)?.code ?? id;
         const tag = <Tag key={id}>{code}</Tag>;
@@ -101,10 +120,42 @@ function BoundInCell({
   );
 }
 
+interface RegistryCardsQuery<T> {
+  data?: T[];
+  isPending: boolean;
+  isError: boolean;
+  refetch: () => unknown;
+}
+
+/** Loading / error / empty states around a card grid laid out like the Agents and Marketplace pages. */
+function RegistryCards<T>({
+  query,
+  empty,
+  renderCard,
+}: {
+  query: RegistryCardsQuery<T>;
+  empty: string;
+  renderCard: (row: T) => ReactNode;
+}) {
+  if (query.isPending) return <QueryLoading />;
+  if (query.isError) return <QueryError onRetry={() => void query.refetch()} />;
+  const rows = query.data ?? [];
+  if (rows.length === 0)
+    return <EmptyState data-testid={RegistriesScreenTestId.Empty} title={empty} />;
+  return (
+    <Grid cols={1} gap="150" lg={3} md={2}>
+      {rows.map(renderCard)}
+    </Grid>
+  );
+}
+
 /**
- * `/system/registries/[kind]` (ZB-11, ROUTE-MAP §1/§3): a `DataTable` per global
- * library kind (skills, mcp, hooks, commands), kind switching lives in the shell's sub-nav row (`AppShell`), and a "Bound in" column derived from `GET /api/registries/bindings`
- * (O-09 — read-only, no stored binding); agents show their department. Row click navigates to the unchanged
+ * `/system/registries/[kind]` (ZB-11, ROUTE-MAP §1/§3): a card grid per global
+ * library kind (skills, mcp, hooks, commands), the same `EntityCard` layout as the
+ * Agents and Marketplace pages; kind switching lives in the shell's sub-nav row
+ * (`AppShell`). Each card footer shows "Bound in" derived from
+ * `GET /api/registries/bindings` (O-09 — read-only, no stored binding); agents show
+ * their department. A card click navigates to the unchanged
  * `/system/registries/<kind>/[id]` detail form; creation reuses each domain's
  * existing create-only dialog (N4d/N4e grammar) unchanged.
  */
@@ -136,10 +187,10 @@ export function RegistriesScreen({ kind, openCreateOnMount }: RegistriesScreenPr
           </Stack>
 
           {kind === "agents" && <AgentsByDepartment />}
-          {kind === "skills" && <SkillsTable bindings={bindings?.skills} />}
-          {kind === "mcp" && <McpTable bindings={bindings?.mcp} />}
-          {kind === "hooks" && <HooksTable bindings={bindings?.hooks} />}
-          {kind === "commands" && <CommandsTable bindings={bindings?.commands} />}
+          {kind === "skills" && <SkillsCards bindings={bindings?.skills} />}
+          {kind === "mcp" && <McpCards bindings={bindings?.mcp} />}
+          {kind === "hooks" && <HooksCards bindings={bindings?.hooks} />}
+          {kind === "commands" && <CommandsCards bindings={bindings?.commands} />}
         </Stack>
       </PageContainer>
 
@@ -197,164 +248,125 @@ function ExternalSkillActions() {
 }
 
 // ---------------------------------------------------------------------------
-// Per-kind tables
+// Per-kind card grids
 // ---------------------------------------------------------------------------
 
-function SkillsTable({ bindings }: { bindings?: Record<string, DepartmentId[]> }) {
-  const t = useTranslations("registries");
-  const query = useSkillsQuery();
-  const rows = query.data ?? [];
-  if (query.isError) return <QueryError onRetry={() => void query.refetch()} />;
+type Bindings = Record<string, DepartmentId[]>;
 
-  const columns: DataTableColumn<(typeof rows)[number]>[] = [
-    { key: "name", label: t("columns.name"), width: "lg", render: (s) => s.name },
-    { key: "desc", label: t("columns.description"), width: "flex", render: (s) => s.desc },
-    {
-      key: "meta",
-      label: t("metaHeader.skills"),
-      width: "sm",
-      render: (s) =>
-        s.source ? (
-          <ExternalSkillSource source={s.source} />
-        ) : (
-          (s.category ?? t("skillTypeFallback"))
-        ),
-    },
-    {
-      key: "boundIn",
-      label: t("columns.boundIn"),
-      width: "xl",
-      render: (s) => <BoundInCell departmentIds={bindings?.[s.id]} kind="skills" />,
-    },
-  ];
+function SkillsCards({ bindings }: { bindings?: Bindings }) {
+  const t = useTranslations("registries");
+  const router = useRouter();
   return (
-    <DataTable
-      columns={columns}
+    <RegistryCards
       empty={t("emptySkills")}
-      getRowKey={(s) => s.id}
-      loading={query.isPending}
-      rowHref={(s) => `/system/registries/skills/${s.id}`}
-      rows={rows}
+      query={useSkillsQuery()}
+      renderCard={(s) => (
+        <EntityCard
+          actions={boundIn("skills", bindings?.[s.id])}
+          badges={[
+            [
+              s.source ? (
+                <ExternalSkillSource key="source" source={s.source} />
+              ) : (
+                <Tag key="category">{s.category ?? t("skillTypeFallback")}</Tag>
+              ),
+            ],
+          ]}
+          description={s.desc}
+          glyph={(s.glyph as IconName | undefined) ?? "brain"}
+          key={s.id}
+          onClick={() => router.push(registryHref("skills", s.id) as Route)}
+          openLabel={t("openAria", { name: s.name })}
+          subtitle={s.id !== s.name ? s.id : undefined}
+          title={s.name}
+        />
+      )}
     />
   );
 }
 
-function McpTable({ bindings }: { bindings?: Record<string, DepartmentId[]> }) {
+function McpCards({ bindings }: { bindings?: Bindings }) {
   const t = useTranslations("registries");
-  const query = useMcpServersQuery();
-  const rows = query.data ?? [];
-  if (query.isError) return <QueryError onRetry={() => void query.refetch()} />;
-
-  const columns: DataTableColumn<(typeof rows)[number]>[] = [
-    { key: "name", label: t("columns.name"), width: "lg", render: (s) => s.name ?? s.id },
-    {
-      key: "desc",
-      label: t("columns.description"),
-      width: "flex",
-      render: (s) => s.desc ?? (s.type === "stdio" ? s.command : s.url) ?? s.type,
-    },
-    {
-      key: "meta",
-      label: t("metaHeader.mcp"),
-      width: "sm",
-      render: (s) => (
-        <Stack align="center" direction="row" gap="75">
-          <StatusDot size="75" tone={s.enabled ? "ok" : "idle"} />
-          <Typography mono size="xs" type="note">
-            {s.enabled ? t("status.enabled") : t("status.disabled")}
-          </Typography>
-        </Stack>
-      ),
-    },
-    {
-      key: "boundIn",
-      label: t("columns.boundIn"),
-      width: "xl",
-      render: (s) => <BoundInCell departmentIds={bindings?.[s.id]} kind="mcp" />,
-    },
-  ];
+  const router = useRouter();
   return (
-    <DataTable
-      columns={columns}
+    <RegistryCards
       empty={t("emptyMcp")}
-      getRowKey={(s) => s.id}
-      loading={query.isPending}
-      rowHref={(s) => `/system/registries/mcp/${s.id}`}
-      rows={rows}
+      query={useMcpServersQuery()}
+      renderCard={(s) => (
+        <EntityCard
+          actions={boundIn("mcp", bindings?.[s.id])}
+          aside={
+            <Stack align="center" direction="row" gap="75">
+              <StatusDot size="75" tone={s.enabled ? "ok" : "idle"} />
+              <Typography mono size="xs" type="note">
+                {s.enabled ? t("status.enabled") : t("status.disabled")}
+              </Typography>
+            </Stack>
+          }
+          badges={[[<Tag key="type">{s.type}</Tag>]]}
+          description={s.desc}
+          glyph="server"
+          key={s.id}
+          onClick={() => router.push(registryHref("mcp", s.id) as Route)}
+          openLabel={t("openAria", { name: s.name ?? s.id })}
+          subtitle={(s.type === "stdio" ? s.command : s.url) ?? s.id}
+          title={s.name ?? s.id}
+        />
+      )}
     />
   );
 }
 
-function HooksTable({ bindings }: { bindings?: Record<string, DepartmentId[]> }) {
+function HooksCards({ bindings }: { bindings?: Bindings }) {
   const t = useTranslations("registries");
-  const query = useHooksQuery();
-  const rows = query.data ?? [];
-  if (query.isError) return <QueryError onRetry={() => void query.refetch()} />;
-
-  const columns: DataTableColumn<(typeof rows)[number]>[] = [
-    { key: "name", label: t("columns.name"), width: "lg", render: (h) => h.name ?? h.id },
-    {
-      key: "desc",
-      label: t("columns.description"),
-      width: "flex",
-      render: (h) => h.desc ?? h.command,
-    },
-    { key: "meta", label: t("metaHeader.hooks"), width: "sm", render: (h) => h.event },
-    {
-      key: "boundIn",
-      label: t("columns.boundIn"),
-      width: "xl",
-      render: (h) => <BoundInCell departmentIds={bindings?.[h.id]} kind="hooks" />,
-    },
-  ];
+  const router = useRouter();
   return (
-    <DataTable
-      columns={columns}
+    <RegistryCards
       empty={t("emptyHooks")}
-      getRowKey={(h) => h.id}
-      loading={query.isPending}
-      rowHref={(h) => `/system/registries/hooks/${h.id}`}
-      rows={rows}
+      query={useHooksQuery()}
+      renderCard={(h) => (
+        <EntityCard
+          actions={boundIn("hooks", bindings?.[h.id])}
+          badges={[[<Tag key="event">{h.event}</Tag>]]}
+          description={h.desc}
+          glyph="bolt"
+          key={h.id}
+          onClick={() => router.push(registryHref("hooks", h.id) as Route)}
+          openLabel={t("openAria", { name: h.name ?? h.id })}
+          subtitle={h.command}
+          title={h.name ?? h.id}
+        />
+      )}
     />
   );
 }
 
-function CommandsTable({ bindings }: { bindings?: Record<string, DepartmentId[]> }) {
+function CommandsCards({ bindings }: { bindings?: Bindings }) {
   const t = useTranslations("registries");
-  const query = useCommandsQuery();
-  const rows = query.data ?? [];
-  if (query.isError) return <QueryError onRetry={() => void query.refetch()} />;
-
-  const columns: DataTableColumn<(typeof rows)[number]>[] = [
-    { key: "name", label: t("columns.name"), width: "lg", render: (c) => `/${c.id}` },
-    {
-      key: "desc",
-      label: t("columns.description"),
-      width: "flex",
-      render: (c) => c.description ?? c["argument-hint"] ?? "",
-    },
-    {
-      key: "meta",
-      label: t("metaHeader.commands"),
-      width: "sm",
-      render: (c) =>
-        c["disable-model-invocation"] ? t("commandScope.manual") : t("commandScope.auto"),
-    },
-    {
-      key: "boundIn",
-      label: t("columns.boundIn"),
-      width: "xl",
-      render: (c) => <BoundInCell departmentIds={bindings?.[c.id]} kind="commands" />,
-    },
-  ];
+  const router = useRouter();
   return (
-    <DataTable
-      columns={columns}
+    <RegistryCards
       empty={t("emptyCommands")}
-      getRowKey={(c) => c.id}
-      loading={query.isPending}
-      rowHref={(c) => `/system/registries/commands/${c.id}`}
-      rows={rows}
+      query={useCommandsQuery()}
+      renderCard={(c) => (
+        <EntityCard
+          actions={boundIn("commands", bindings?.[c.id])}
+          badges={[
+            [
+              <Tag key="scope">
+                {c["disable-model-invocation"] ? t("commandScope.manual") : t("commandScope.auto")}
+              </Tag>,
+            ],
+          ]}
+          description={c.description}
+          glyph="code"
+          key={c.id}
+          onClick={() => router.push(registryHref("commands", c.id) as Route)}
+          openLabel={t("openAria", { name: `/${c.id}` })}
+          subtitle={c["argument-hint"]}
+          title={`/${c.id}`}
+        />
+      )}
     />
   );
 }

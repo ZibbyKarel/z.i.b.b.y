@@ -2769,7 +2769,8 @@
     "emptyMcp": "Zatím žádné MCP servery.",
     "emptyHooks": "Zatím žádné hooky.",
     "emptyCommands": "Zatím žádné příkazy.",
-    "emptyAgents": "Zatím žádní agenti."
+    "emptyAgents": "Zatím žádní agenti.",
+    "openAria": "Otevřít {name}"
   },
   "notifications": {
     "title": "Notifikace",

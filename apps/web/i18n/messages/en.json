@@ -2769,7 +2769,8 @@
     "emptyMcp": "No MCP servers yet.",
     "emptyHooks": "No hooks yet.",
     "emptyCommands": "No commands yet.",
-    "emptyAgents": "No agents yet."
+    "emptyAgents": "No agents yet.",
+    "openAria": "Open {name}"
   },
   "notifications": {
     "title": "Notifications",

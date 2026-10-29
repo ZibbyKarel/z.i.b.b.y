@@ -106,13 +106,26 @@ beforeEach(() => {
 });
 
 describe("RegistriesScreen — /system/registries/[kind]", () => {
-  it("renders the skills table with a derived Bound in column", () => {
+  it("renders skills as cards with a derived Bound in footer, not a table", () => {
     render(<RegistriesScreen kind="skills" />);
-    expect(screen.getByTestId(DataTableTestId.Root)).toBeInTheDocument();
-    expect(screen.getByText("Code review")).toBeInTheDocument();
-    // Derived from the mocked bindings — department codes render as Tags.
-    expect(screen.getByText("DEV")).toBeInTheDocument();
-    expect(screen.getByText("QA")).toBeInTheDocument();
+    expect(screen.queryByTestId(DataTableTestId.Root)).toBeNull();
+    const cards = screen.getAllByTestId(EntityCardTestId.Root);
+    expect(cards).toHaveLength(2);
+    expect(within(cards[0]!).getByText("Code review")).toBeInTheDocument();
+    // Derived from the mocked bindings — department codes render as Tags in the footer.
+    const boundIn = within(cards[0]!).getByTestId(RegistriesScreenTestId.BoundIn);
+    expect(within(boundIn).getByText("DEV")).toBeInTheDocument();
+    expect(within(boundIn).getByText("QA")).toBeInTheDocument();
+    // An unbound skill draws no footer.
+    expect(within(cards[1]!).queryByTestId(RegistriesScreenTestId.BoundIn)).toBeNull();
+  });
+
+  it("a card click opens the skill's detail page", async () => {
+    render(<RegistriesScreen kind="skills" />);
+    const [first] = screen.getAllByTestId(EntityCardTestId.Open);
+    expect(first).toHaveAccessibleName("Otevřít Code review");
+    await userEvent.click(first!);
+    expect(push).toHaveBeenCalledWith("/system/registries/skills/code-review");
   });
 
   it("renders agents as department sections of cards, not a table", () => {
@@ -139,12 +152,16 @@ describe("RegistriesScreen — /system/registries/[kind]", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
-  it("renders an empty MCP table without crashing", () => {
-    render(<RegistriesScreen kind="mcp" />);
-    expect(screen.getByTestId(DataTableTestId.Empty)).toBeInTheDocument();
-  });
+  it.each(["mcp", "hooks", "commands"] as const)(
+    "renders an empty %s list as an empty state",
+    (kind) => {
+      render(<RegistriesScreen kind={kind} />);
+      expect(screen.getByTestId(RegistriesScreenTestId.Empty)).toBeInTheDocument();
+      expect(screen.queryByTestId(DataTableTestId.Root)).toBeNull();
+    },
+  );
 
-  it("an external skill row shows its owner and last update", () => {
+  it("an external skill card shows its owner and last update", () => {
     render(<RegistriesScreen kind="skills" />);
     expect(screen.getByText("security-audit")).toBeInTheDocument();
     expect(screen.getByText("cloudflare")).toBeInTheDocument();
