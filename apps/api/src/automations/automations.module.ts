@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { AgentFactoryModule } from "../agent-factory/agent-factory.module";
 import { AgentsModule } from "../agents/agents.module";
 import { BriefingModule } from "../briefing/briefing.module";
+import { ExternalSkillsModule } from "../external-skills/external-skills.module";
 import { GapsModule } from "../gaps/gaps.module";
 import { ArchModule } from "../arch/arch.module";
 import { ReleaseModule } from "../release/release.module";
@@ -49,13 +50,16 @@ export function resolveAutomationsDir(): string {
  * imports Projects/ResolvedProject/Integrations/Artifacts/ScheduledTasksStorage/
  * Approvals, none of which import this module back (verified transitively —
  * only `attachment-set-refs.module.ts` and `health.module.ts` import
- * `AutomationsModule`, and neither sits on this chain).
+ * `AutomationsModule`, and neither sits on this chain). External skills: also imports
+ * `ExternalSkillsModule` so `external-skills-sync` dispatches to `syncAll` — a leaf
+ * (it only imports `SkillsModule`).
  */
 @Module({
   imports: [
     AgentFactoryModule,
     AgentsModule,
     BriefingModule,
+    ExternalSkillsModule,
     GapsModule,
     ArchModule,
     ReleaseModule,

@@ -77,6 +77,15 @@ describe("External skills API (e2e)", () => {
       .expect(409);
   });
 
+  it("syncs one skill and all skills; unknown id → 404", async () => {
+    const server = app.getHttpServer();
+    const one = await request(server).post("/api/skills/external/security-audit/sync").expect(200);
+    expect(one.body).toMatchObject({ id: "security-audit", source: { latestSha: "abc" } });
+    const all = await request(server).post("/api/skills/external/sync").expect(200);
+    expect(all.body).toEqual({ checked: 1, updated: [], failed: [] });
+    await request(server).post("/api/skills/external/nope/sync").expect(404);
+  });
+
   it("maps bad url → 400 and unknown path → 422", async () => {
     const server = app.getHttpServer();
     await request(server)

@@ -8,6 +8,7 @@ import {
   AutomationConflictError,
   AutomationNotFoundError,
   AutomationsStorageService,
+  EXTERNAL_DEPS_UPDATE_AUTOMATION_ID,
   InvalidAutomationIdError,
   MEMORY_DISTILL_AUTOMATION_ID,
   POST_MERGE_WATCH_AUTOMATION_ID,
@@ -261,6 +262,21 @@ describe("AutomationsStorageService", () => {
       SystemAutomationError,
     );
     expect((await service.get(ARCH_AUDIT_AUTOMATION_ID)).system).toBe(true);
+  });
+
+  it("seeds the weekly external-deps-update automation, also into an existing install", async () => {
+    const seeded = await service.get(EXTERNAL_DEPS_UPDATE_AUTOMATION_ID);
+    expect(seeded).toMatchObject({
+      name: "Aktualizace externích závislostí",
+      trigger: { type: "cron", expr: "0 4 * * 1" },
+      target: { type: "external-skills-sync" },
+      enabled: true,
+      system: true,
+    });
+    // An installation from before this automation existed gets it on next boot.
+    await fs.rm(path.join(dir, `${EXTERNAL_DEPS_UPDATE_AUTOMATION_ID}.json`));
+    await new AutomationsStorageService(dir).onModuleInit();
+    expect((await service.get(EXTERNAL_DEPS_UPDATE_AUTOMATION_ID)).system).toBe(true);
   });
 
   it("NS2 F7b-2: seeds the post-merge-watch system automation on init, enabled by default", async () => {

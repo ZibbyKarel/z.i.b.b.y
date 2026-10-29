@@ -54,6 +54,8 @@ export const ARCH_AUDIT_AUTOMATION_ID = "arch-audit";
 export const POST_MERGE_WATCH_AUTOMATION_ID = "post-merge-watch";
 /** Stable id of the nightly PR-review-learning system automation (v1). */
 export const REVIEW_LEARN_AUTOMATION_ID = "review-learn";
+/** Stable id of the weekly external-skills update system automation. */
+export const EXTERNAL_DEPS_UPDATE_AUTOMATION_ID = "external-deps-update";
 
 /**
  * System automations ZIBBY owns and seeds on boot. They embody capabilities that
@@ -183,6 +185,18 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
       "Každých 10 minut zkontroluje CI na cílové větvi po merge, který ZIBBY provedl; při červené připraví opravu.",
     trigger: { type: "cron", expr: "*/10 * * * *" },
     target: { type: "post-merge-watch" },
+    enabled: true,
+    system: true,
+  },
+  {
+    // Weekly pull of installed external (GitHub) skills. Network-only, read-only
+    // upstream; an unreachable repo just records `lastError`.
+    id: EXTERNAL_DEPS_UPDATE_AUTOMATION_ID,
+    name: "Aktualizace externích závislostí",
+    description:
+      "Týdně zkontroluje nainstalované externí skills na GitHubu a změněné složky aktualizuje; každou aktualizaci zapíše do aktivity a briefingu.",
+    trigger: { type: "cron", expr: "0 4 * * 1" },
+    target: { type: "external-skills-sync" },
     enabled: true,
     system: true,
   },

@@ -9,5 +9,7 @@ import { SkillRepoGit } from "./skill-repo-git";
   imports: [SkillsModule],
   controllers: [ExternalSkillsController],
   providers: [SkillRepoGit, ExternalSkillsService],
+  // The weekly `external-skills-sync` automation dispatches to `syncAll`.
+  exports: [ExternalSkillsService],
 })
 export class ExternalSkillsModule {}

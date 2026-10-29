@@ -72,6 +72,8 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   "project-health-recovered": "integrations",
   // TODO 13: a skill installed into the operator's Claude Code.
   "skill-installed": "integrations",
+  // An external skill auto-updated from its GitHub repo.
+  "skill-updated": "integrations",
   // NS2 F5a/F5c: Security/Arch's scheduled-scan finding — reads with the other
   // watcher discoveries (monitor-alert) rather than a new group for one kind.
   "department-scan": "integrations",

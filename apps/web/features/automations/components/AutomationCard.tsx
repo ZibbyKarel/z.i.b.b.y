@@ -54,6 +54,8 @@ const TARGET_GLYPH = {
   // PR review learning v1 — "brain" again: same learning/memory domain as
   // `memory-distill`/`self-knowledge`, no dedicated glyph exists for it.
   "review-learn": "brain",
+  // Weekly external-skills update: the DS "retry" (refresh) glyph.
+  "external-skills-sync": "retry",
 } as const satisfies Record<Exclude<Target["type"], "task">, IconName>;
 
 /** A `task` automation's glyph mirrors its @-mentioned run target (Screen.tsx's
@@ -142,9 +144,11 @@ export function AutomationCard({
                   ? t("targetPostMergeWatch")
                   : target.type === "review-learn"
                     ? t("targetReviewLearn")
-                    : target.type === "task"
-                      ? (targetName ?? target.target?.name ?? t("targetTask"))
-                      : (targetName ?? targetIdOf(target));
+                    : target.type === "external-skills-sync"
+                      ? t("targetExternalSkillsSync")
+                      : target.type === "task"
+                        ? (targetName ?? target.target?.name ?? t("targetTask"))
+                        : (targetName ?? targetIdOf(target));
 
   return (
     <Card background="surface" data-testid={AutomationCardTestId.Root}>
@@ -313,7 +317,8 @@ function targetKindKey(
   | "targetSentinelScan"
   | "targetLoomAudit"
   | "targetPostMergeWatch"
-  | "targetReviewLearn" {
+  | "targetReviewLearn"
+  | "targetExternalSkillsSync" {
   switch (type) {
     case "agent":
       return "targetAgent";
@@ -343,5 +348,7 @@ function targetKindKey(
       return "targetPostMergeWatch";
     case "review-learn":
       return "targetReviewLearn";
+    case "external-skills-sync":
+      return "targetExternalSkillsSync";
   }
 }

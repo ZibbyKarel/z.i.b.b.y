@@ -104,6 +104,21 @@ Only `https://github.com/<owner>/<repo>` URLs are accepted (optionally `.git` or
 - Errors: 400 bad URL, 409 id taken (own or external), 422 no `SKILL.md` / unknown
   path, 502 git failed.
 
+- `POST /api/skills/external/:id/sync` — checks one skill: `git ls-remote` of its
+  repo/ref sets `checkedAt` + `latestSha`; same sha → done. Otherwise it clones and
+  compares the folder's tree: same tree → only `sha` moves; new tree → the folder
+  is replaced (temp + rename), `sha`/`treeSha`/`updatedAt` move and a
+  `skill-updated` activity entry is recorded (shown in the briefing's "did for
+  you"). Folder gone upstream → copy kept, `lastError: "skill folder missing
+upstream"`. Unreachable repo → copy kept, `lastError` set, 502. 404 = not an
+  installed external skill. `latestSha !== sha` means an update is pending.
+- `POST /api/skills/external/sync` — the same for every external skill, one clone
+  per repo + ref; a failing repo never stops the rest. Returns
+  `{ checked, updated: id[], failed: id[] }`.
+- The system automation `external-deps-update` ("Aktualizace externích
+  závislostí", target `external-skills-sync`, cron `0 4 * * 1`, enabled) runs the
+  sync-all weekly; its ref is `external-skills:<updated count>`.
+
 `GET /api/skills` / `GET /api/skills/:id` return external skills next to own
 ones, with a `source` field. They are read-only: `PATCH`/`DELETE` → 409. A broken
 external folder is logged and left out of the list. `SKILL.md` frontmatter is

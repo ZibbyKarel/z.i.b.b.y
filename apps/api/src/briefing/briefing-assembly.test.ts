@@ -66,6 +66,20 @@ const entry = (over: Partial<ActivityEntry>): ActivityEntry => ({
 });
 
 describe("assembleBriefing", () => {
+  it("reports an auto-updated external skill as done for you", () => {
+    const briefing = assembleBriefing({
+      now: NOW,
+      since: SINCE,
+      approvals: [],
+      parkedRuns: [],
+      channelItems: [],
+      activity: [entry({ kind: "skill-updated", summary: "Skill x aktualizován z a/b (abc→def)" })],
+    });
+    expect(briefing.didForYou.map((d) => d.summary)).toEqual([
+      "Skill x aktualizován z a/b (abc→def)",
+    ]);
+  });
+
   it("partitions state into the briefing's sections with correct counts", () => {
     const briefing = assembleBriefing({
       now: NOW,

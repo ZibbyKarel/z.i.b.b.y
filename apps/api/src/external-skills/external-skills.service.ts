@@ -3,7 +3,13 @@ import { cp, lstat, mkdir, mkdtemp, rename, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { Inject, Injectable } from "@nestjs/common";
-import type { ExternalSkillScan, Skill } from "@zibby/contracts";
+import type {
+  ExternalSkillRecord,
+  ExternalSkillScan,
+  ExternalSkillsSyncResult,
+  Skill,
+} from "@zibby/contracts";
+import { ActivityLogService } from "../activity/activity-log.service";
 import { withPathLock } from "../shared/file-storage";
 import { SkillConflictError, SkillNotFoundError } from "../skills/skills.errors";
 import { SkillsStorageService } from "../skills/skills.storage.service";
@@ -45,6 +51,7 @@ export class ExternalSkillsService {
     private readonly git: SkillRepoGit,
     private readonly skills: SkillsStorageService,
     @Inject(EXTERNAL_SKILLS_DIR) private readonly root: string,
+    private readonly activity: ActivityLogService,
   ) {}
 
   async scan(url: string): Promise<ExternalSkillScan> {
@@ -108,6 +115,140 @@ export class ExternalSkillsService {
     );
   }
 
+  /**
+   * Check one external skill upstream and apply a change. A git failure is recorded
+   * as `lastError` and rethrown (→ 502); a folder gone upstream only sets `lastError`.
+   */
+  async sync(id: string): Promise<Skill> {
+    return withPathLock(EXTERNAL_SKILLS_LOCK, async () => {
+      const record = await this.store.get(id);
+      if (!record) throw new SkillNotFoundError(id);
+      const { remote, ref } = parseGitHubSkillUrl(record.url);
+      const { error } = await this.syncGroup(remote, ref, [record]);
+      if (error) throw error;
+      return this.skills.get(id);
+    });
+  }
+
+  /** Check every external skill; one clone per `remote`+`ref`, a failing repo never stops the rest. */
+  async syncAll(): Promise<ExternalSkillsSyncResult> {
+    // ponytail: holds the lock for the whole (network-bound) run; per-group locking if own-skill creates stall.
+    return withPathLock(EXTERNAL_SKILLS_LOCK, async () => {
+      const records = await this.store.list();
+      const updated: string[] = [];
+      const failed: string[] = [];
+      const groups = new Map<
+        string,
+        { remote: string; ref?: string; records: ExternalSkillRecord[] }
+      >();
+      for (const r of records) {
+        let parsed: ReturnType<typeof parseGitHubSkillUrl>;
+        try {
+          parsed = parseGitHubSkillUrl(r.url);
+        } catch {
+          failed.push(r.id); // a hand-edited record; nothing to fetch
+          continue;
+        }
+        const { remote, ref } = parsed;
+        const key = `${remote}\0${ref ?? ""}`;
+        const group = groups.get(key) ?? { remote, ...(ref ? { ref } : {}), records: [] };
+        group.records.push(r);
+        groups.set(key, group);
+      }
+      for (const { remote, ref, records: group } of groups.values()) {
+        const result = await this.syncGroup(remote, ref, group);
+        updated.push(...result.updated);
+        failed.push(...result.failed);
+      }
+      return { checked: records.length, updated, failed };
+    });
+  }
+
+  /**
+   * `ls-remote` → records already at the head only move `checkedAt`; the rest share
+   * one clone: missing folder → `lastError`, same tree → just move `sha`, new tree →
+   * replace the folder and report `skill-updated`. A git failure stamps `lastError`
+   * on every record not yet handled, lists them in `failed` and is returned as
+   * `error` (never thrown). Caller holds the lock.
+   */
+  private async syncGroup(
+    remote: string,
+    ref: string | undefined,
+    records: ExternalSkillRecord[],
+  ): Promise<{ updated: string[]; failed: string[]; error?: unknown }> {
+    const checkedAt = new Date().toISOString();
+    // Every save clears a stale `lastError` unless the patch sets a new one.
+    const save = (r: ExternalSkillRecord, patch: Partial<ExternalSkillRecord>) => {
+      const next = { ...r, checkedAt, ...patch };
+      if (patch.lastError === undefined) delete next.lastError;
+      return this.store.upsert(next);
+    };
+    const updated: string[] = [];
+    const failed: string[] = [];
+    const fail = async (targets: ExternalSkillRecord[], error: unknown) => {
+      const lastError = error instanceof Error ? error.message : String(error);
+      for (const r of targets) await save(r, { lastError });
+      failed.push(...targets.map((r) => r.id));
+      return { updated, failed, error };
+    };
+
+    let head: string;
+    try {
+      head = await this.git.lsRemoteHead(remote, ref);
+    } catch (error) {
+      return fail(records, error);
+    }
+    const stale = records.filter((r) => r.sha !== head);
+    for (const r of records) if (r.sha === head) await save(r, { latestSha: head });
+    if (stale.length === 0) return { updated, failed };
+
+    try {
+      await this.inTempClone(remote, ref, async (dir, sha) => {
+        for (const r of stale) {
+          const treeSha = await this.git.treeSha(dir, r.path);
+          if (!treeSha) {
+            await save(r, { latestSha: sha, lastError: "skill folder missing upstream" });
+            failed.push(r.id);
+          } else if (treeSha === r.treeSha) {
+            await save(r, { sha, latestSha: sha });
+          } else {
+            try {
+              await copySkillFolder(join(dir, r.path), externalSkillDir(r.id, this.root));
+            } catch (error) {
+              await save(r, { latestSha: sha, lastError: `copy failed: ${String(error)}` });
+              failed.push(r.id);
+              continue;
+            }
+            await save(r, { sha, latestSha: sha, treeSha, updatedAt: checkedAt });
+            updated.push(r.id);
+            await this.reportUpdate(r, sha);
+          }
+        }
+      });
+    } catch (error) {
+      const done = new Set([...updated, ...failed]);
+      return fail(
+        stale.filter((r) => !done.has(r.id)),
+        error,
+      );
+    }
+    return { updated, failed };
+  }
+
+  private async reportUpdate(r: ExternalSkillRecord, sha: string): Promise<void> {
+    let name = r.id;
+    try {
+      name = (await this.skills.get(r.id)).name ?? r.id;
+    } catch {
+      // A skill that no longer parses is still reported by id.
+    }
+    await this.activity.record({
+      kind: "skill-updated",
+      summary: `Skill ${name} aktualizován z ${r.owner}/${r.repo} (${r.sha.slice(0, 7)}→${sha.slice(0, 7)})`,
+      refs: { itemId: r.id },
+    });
+  }
+
   /** Is `id` used by an own or an external skill (even a corrupt one)? */
   private async taken(id: string): Promise<boolean> {
     try {
@@ -119,7 +260,7 @@ export class ExternalSkillsService {
     }
   }
 
-  /** Shallow-clone `url` into a temp dir, scan it, run `fn`, always delete the clone. */
+  /** Shallow-clone `url`, scan it, run `fn`, always delete the clone. */
   private async withClone<T>(
     url: string,
     fn: (repo: {
@@ -132,13 +273,23 @@ export class ExternalSkillsService {
     }) => Promise<T>,
   ): Promise<T> {
     const { owner, repo, remote, ref, subpath } = parseGitHubSkillUrl(url);
+    return this.inTempClone(remote, ref, async (dir, sha) => {
+      const candidates = await scanSkillDir(dir, subpath, repo);
+      if (candidates.length === 0) throw new NoSkillsFoundError();
+      return fn({ owner, repo, ...(ref ? { ref } : {}), sha, candidates, dir });
+    });
+  }
+
+  /** Shallow-clone `remote` at `ref` into a temp dir, run `fn(dir, headSha)`, always delete it. */
+  private async inTempClone<T>(
+    remote: string,
+    ref: string | undefined,
+    fn: (dir: string, sha: string) => Promise<T>,
+  ): Promise<T> {
     const tmp = await mkdtemp(join(tmpdir(), "zibby-skill-repo-"));
     try {
       const dir = join(tmp, "repo");
-      const sha = await this.git.clone(remote, dir, ref);
-      const candidates = await scanSkillDir(dir, subpath, repo);
-      if (candidates.length === 0) throw new NoSkillsFoundError();
-      return await fn({ owner, repo, ...(ref ? { ref } : {}), sha, candidates, dir });
+      return await fn(dir, await this.git.clone(remote, dir, ref));
     } finally {
       await rm(tmp, { recursive: true, force: true });
     }

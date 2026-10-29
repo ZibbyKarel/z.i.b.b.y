@@ -4,11 +4,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { withPathLock } from "../shared/file-storage";
-import { ReadOnlySkillError, SkillConflictError } from "../skills/skills.errors";
+import {
+  ReadOnlySkillError,
+  SkillConflictError,
+  SkillNotFoundError,
+} from "../skills/skills.errors";
 import { SkillsStorageService } from "../skills/skills.storage.service";
-import { NoSkillsFoundError } from "./external-skills.errors";
+import { NoSkillsFoundError, SkillRepoGitError } from "./external-skills.errors";
 import { ExternalSkillsService } from "./external-skills.service";
 import { EXTERNAL_SKILLS_LOCK, ExternalSkillsStore } from "./external-skills.store";
+import { parseGitHubSkillUrl } from "./skill-repo";
 import type { SkillRepoGit } from "./skill-repo-git";
 
 const url = "https://github.com/cloudflare/security-audit-skill";
@@ -59,7 +64,9 @@ describe("ExternalSkillsService", () => {
     refs = [];
     skills = new SkillsStorageService(join(tmp, "skills"), store, extDir);
     await skills.onModuleInit();
-    svc = new ExternalSkillsService(store, fixtureGit(fixture, refs), skills, extDir);
+    svc = new ExternalSkillsService(store, fixtureGit(fixture, refs), skills, extDir, {
+      record: vi.fn(),
+    } as never);
   });
 
   afterEach(async () => {
@@ -173,5 +180,169 @@ describe("ExternalSkillsService", () => {
     await rm(join(extDir, "security-audit"), { recursive: true });
     await skills.create({ id: "mine", instructions: "x" });
     expect((await skills.list()).map((s) => s.id)).toEqual(["mine"]);
+  });
+});
+
+describe("ExternalSkillsService — sync", () => {
+  const T0 = new Date("2026-10-20T04:00:00.000Z");
+  const T1 = new Date("2026-10-27T04:00:00.000Z");
+  const path = "skills/security-audit";
+  const remote = parseGitHubSkillUrl(url).remote;
+  let tmp: string;
+  let fixture: string;
+  let extDir: string;
+  let store: ExternalSkillsStore;
+  let svc: ExternalSkillsService;
+  let activity: { record: ReturnType<typeof vi.fn> };
+  /** Mutable upstream state the git double reads. */
+  let up: { head: string; trees: Record<string, string | null>; clones: string[]; down: string[] };
+
+  beforeEach(async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(T0);
+    tmp = await mkdtemp(join(tmpdir(), "ext-skills-sync-"));
+    fixture = join(tmp, "repo");
+    extDir = join(tmp, "skills-external");
+    await put(fixture, `${path}/SKILL.md`, "---\nname: security-audit\n---\nHunt bugs.\n");
+    await put(fixture, `${path}/HUNTING.md`, "v1");
+    await put(fixture, "skills/other/SKILL.md", "---\nname: other\n---\nOther.\n");
+    up = { head: "abc1234567", trees: {}, clones: [], down: [] };
+    const reach = (r: string) => {
+      if (up.down.includes(r)) throw new SkillRepoGitError(`git: unreachable ${r}`);
+    };
+    const git = {
+      clone: async (r: string, dest: string) => {
+        reach(r);
+        up.clones.push(r);
+        await cp(fixture, dest, { recursive: true });
+        return up.head;
+      },
+      lsRemoteHead: async (r: string) => {
+        reach(r);
+        return up.head;
+      },
+      treeSha: async (_dir: string, p: string) => (p in up.trees ? (up.trees[p] ?? null) : "tree1"),
+    } as unknown as SkillRepoGit;
+    store = new ExternalSkillsStore(join(tmp, "external-skills.json"));
+    const skills = new SkillsStorageService(join(tmp, "skills"), store, extDir);
+    await skills.onModuleInit();
+    activity = { record: vi.fn(async () => {}) };
+    svc = new ExternalSkillsService(store, git, skills, extDir, activity as never);
+    await svc.install(url, [path]);
+    up.clones = [];
+    vi.setSystemTime(T1);
+  });
+
+  afterEach(async () => {
+    vi.useRealTimers();
+    await rm(tmp, { recursive: true, force: true });
+  });
+
+  const hunting = () => readFile(join(extDir, "security-audit", "HUNTING.md"), "utf8");
+
+  it("same remote sha: only checkedAt moves", async () => {
+    const s = await svc.sync("security-audit");
+    expect(s.source).toMatchObject({
+      sha: "abc1234567",
+      latestSha: "abc1234567",
+      checkedAt: T1.toISOString(),
+      updatedAt: T0.toISOString(),
+    });
+    expect(up.clones).toEqual([]);
+    expect(activity.record).not.toHaveBeenCalled();
+  });
+
+  it("new commit, same tree: sha moves, updatedAt and files unchanged, no activity", async () => {
+    up.head = "def7654321";
+    await put(fixture, `${path}/HUNTING.md`, "v2");
+    const s = await svc.sync("security-audit");
+    expect(s.source).toMatchObject({
+      sha: "def7654321",
+      latestSha: "def7654321",
+      treeSha: "tree1",
+      updatedAt: T0.toISOString(),
+      checkedAt: T1.toISOString(),
+    });
+    expect(await hunting()).toBe("v1");
+    expect(activity.record).not.toHaveBeenCalled();
+  });
+
+  it("new tree: folder replaced, updatedAt moves, records skill-updated", async () => {
+    up.head = "def7654321";
+    up.trees[path] = "tree2";
+    await put(fixture, `${path}/HUNTING.md`, "v2");
+    const s = await svc.sync("security-audit");
+    expect(s.source).toMatchObject({
+      sha: "def7654321",
+      treeSha: "tree2",
+      updatedAt: T1.toISOString(),
+    });
+    expect(s.source?.lastError).toBeUndefined();
+    expect(await hunting()).toBe("v2");
+    expect(activity.record).toHaveBeenCalledWith({
+      kind: "skill-updated",
+      summary:
+        "Skill security-audit aktualizován z cloudflare/security-audit-skill (abc1234→def7654)",
+      refs: { itemId: "security-audit" },
+    });
+  });
+
+  it("unreachable remote: copy untouched, lastError set, syncAll continues", async () => {
+    const otherUrl = "https://github.com/acme/tools";
+    await put(extDir, "other/SKILL.md", "---\nname: other\n---\nOld.\n");
+    await store.upsert({
+      id: "other",
+      owner: "acme",
+      repo: "tools",
+      url: otherUrl,
+      path: "skills/other",
+      sha: "old0000000",
+      treeSha: "treeOld",
+      installedAt: T0.toISOString(),
+      updatedAt: T0.toISOString(),
+      checkedAt: T0.toISOString(),
+    });
+    up.head = "def7654321";
+    up.trees[path] = "tree2";
+    up.down = [remote];
+    await put(fixture, `${path}/HUNTING.md`, "v2");
+
+    expect(await svc.syncAll()).toEqual({
+      checked: 2,
+      updated: ["other"],
+      failed: ["security-audit"],
+    });
+    const rec = await store.get("security-audit");
+    expect(rec).toMatchObject({ sha: "abc1234567", checkedAt: T1.toISOString() });
+    expect(rec?.lastError).toContain("unreachable");
+    expect(await hunting()).toBe("v1");
+    await expect(svc.sync("security-audit")).rejects.toThrow(SkillRepoGitError);
+  });
+
+  it("folder gone upstream: copy untouched, lastError 'skill folder missing upstream'", async () => {
+    up.head = "def7654321";
+    up.trees[path] = null;
+    const s = await svc.sync("security-audit");
+    expect(s.source).toMatchObject({
+      sha: "abc1234567",
+      latestSha: "def7654321",
+      lastError: "skill folder missing upstream",
+    });
+    expect(await hunting()).toBe("v1");
+    expect(activity.record).not.toHaveBeenCalled();
+  });
+
+  it("syncAll clones each repo once for several skills from it", async () => {
+    await svc.install(url, ["skills/other"]);
+    up.clones = [];
+    up.head = "def7654321";
+    up.trees = { [path]: "tree2", "skills/other": "tree3" };
+    const result = await svc.syncAll();
+    expect(up.clones).toEqual([remote]);
+    expect(result).toEqual({ checked: 2, updated: ["security-audit", "other"], failed: [] });
+  });
+
+  it("an unknown id throws SkillNotFoundError", async () => {
+    await expect(svc.sync("nope")).rejects.toThrow(SkillNotFoundError);
   });
 });

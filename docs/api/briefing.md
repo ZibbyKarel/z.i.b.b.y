@@ -63,7 +63,7 @@ of `generate`:
      one-time notification is a separate monitor alert (`docs/api/monitors.md`).
    - **`didForYou`** — the last 10 activity entries of kinds that count as "ZIBBY
      did this for you" (`task-outcome`, `channel-reply`, `run-finished`,
-     `workflow-finished`, `approval-approved`).
+     `workflow-finished`, `approval-approved`, `self-api-write`, `skill-updated`).
    - **`watching`** — channel integrations with new items, workflow runs paused on
      the usage limit, and in-flight/paused goal runs — things ZIBBY is doing or
      tracking, not decisions waiting on the operator.

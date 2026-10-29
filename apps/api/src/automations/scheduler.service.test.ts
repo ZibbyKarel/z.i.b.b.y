@@ -115,6 +115,7 @@ function makeService(opts: {
   arch?: { audit: ReturnType<typeof vi.fn> };
   postMergeWatch?: { poll: ReturnType<typeof vi.fn> };
   reviewLearning?: { learn: ReturnType<typeof vi.fn> };
+  externalSkills?: { syncAll: ReturnType<typeof vi.fn> };
 }): {
   service: SchedulerService;
   storage: { markFired: ReturnType<typeof vi.fn> };
@@ -158,6 +159,9 @@ function makeService(opts: {
       },
     } as never,
     { run: vi.fn(async () => ({ brokenLinks: 0, orphans: 0, stale: 0 })) } as never,
+    (opts.externalSkills ?? {
+      syncAll: vi.fn(async () => ({ checked: 0, updated: [], failed: [] })),
+    }) as never,
   );
   return { service, storage, registered: () => registered };
 }
@@ -426,6 +430,26 @@ describe("SchedulerService — dispatch (NS2 F5a: security-scan target)", () => 
   it("refs a zero count on a green (no-findings) scan", async () => {
     const { service } = makeService({ automation: securityScanAutomation() });
     expect(await service.trigger("security-scan")).toBe("security:0");
+  });
+});
+
+describe("SchedulerService — dispatch (external-skills-sync target)", () => {
+  it("scheduler dispatches external-skills-sync to syncAll", async () => {
+    const syncAll = vi.fn(async () => ({ checked: 3, updated: ["a", "b"], failed: ["c"] }));
+    const { service } = makeService({
+      automation: {
+        id: "external-deps-update",
+        name: "Aktualizace externích závislostí",
+        trigger: { type: "cron", expr: "0 4 * * 1" },
+        target: { type: "external-skills-sync" },
+        enabled: true,
+        system: true,
+      },
+      externalSkills: { syncAll },
+    });
+
+    expect(await service.trigger("external-deps-update")).toBe("external-skills:2");
+    expect(syncAll).toHaveBeenCalledTimes(1);
   });
 });
 

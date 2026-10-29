@@ -228,23 +228,26 @@ agent. Such automations have `system: true`:
   page.
 
 Definitions live in the `SYSTEM_AUTOMATIONS` constant
-(`apps/api/src/automations/automations.storage.service.ts`). Today it seeds eleven:
+(`apps/api/src/automations/automations.storage.service.ts`). Today it seeds twelve:
 
-| id (data file)          | target.type       | default schedule                                         | enabled |
-| ----------------------- | ----------------- | -------------------------------------------------------- | ------- |
-| `morning-briefing`      | `briefing`        | `0 7 * * *`                                              | yes     |
-| `memory-distill`        | `memory-distill`  | `0 3 * * *`                                              | yes     |
-| `nightly-patterns`      | `pattern-extract` | `0 23 * * *`                                             | yes     |
-| `gap-detect`            | `gap-detect`      | `0 23 * * *`                                             | no      |
-| `agent-factory`         | `agent-factory`   | `0 4 * * 1`                                              | no      |
-| `review-learn`          | `review-learn`    | `15 3 * * *`                                             | no      |
-| `signal-cve-critical`   | `task` (dev)      | signal `cve` from `sec`, `minSeverity: critical`         | yes     |
-| `signal-post-merge-red` | `task` (dev)      | signal `post-merge-red` from `rel`                       | yes     |
-| `signal-arch-audit`     | `task` (dev)      | signal `audit-batch` from `qa`, `approval: "ask"`        | yes     |
-| `signal-qa-findings`    | `task` (dev)      | signal `qa-findings` from `qa`, `approval: "ask"`        | yes     |
-| `signal-research`       | `task` (dev)      | signal `research-artifact` from `rnd`, `approval: "ask"` | yes     |
+| id (data file)          | target.type            | default schedule                                         | enabled |
+| ----------------------- | ---------------------- | -------------------------------------------------------- | ------- |
+| `morning-briefing`      | `briefing`             | `0 7 * * *`                                              | yes     |
+| `memory-distill`        | `memory-distill`       | `0 3 * * *`                                              | yes     |
+| `nightly-patterns`      | `pattern-extract`      | `0 23 * * *`                                             | yes     |
+| `gap-detect`            | `gap-detect`           | `0 23 * * *`                                             | no      |
+| `agent-factory`         | `agent-factory`        | `0 4 * * 1`                                              | no      |
+| `review-learn`          | `review-learn`         | `15 3 * * *`                                             | no      |
+| `external-deps-update`  | `external-skills-sync` | `0 4 * * 1`                                              | yes     |
+| `signal-cve-critical`   | `task` (dev)           | signal `cve` from `sec`, `minSeverity: critical`         | yes     |
+| `signal-post-merge-red` | `task` (dev)           | signal `post-merge-red` from `rel`                       | yes     |
+| `signal-arch-audit`     | `task` (dev)           | signal `audit-batch` from `qa`, `approval: "ask"`        | yes     |
+| `signal-qa-findings`    | `task` (dev)           | signal `qa-findings` from `qa`, `approval: "ask"`        | yes     |
+| `signal-research`       | `task` (dev)           | signal `research-artifact` from `rnd`, `approval: "ask"` | yes     |
 
-The `signal-*` automations are each a `task` target at department `dev`. Four
+`external-deps-update` is the weekly external-skills update — see
+[External skills](extensibility.md#external-skills-apiskillsexternal). The
+`signal-*` automations are each a `task` target at department `dev`. Four
 replaced the removed handoff rules; `signal-qa-findings` came with the web-qa
 workflow. See [Signal bus](#signal-bus).
 

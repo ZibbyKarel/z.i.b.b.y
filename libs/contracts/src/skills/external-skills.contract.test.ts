@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { CreateSkillSchema, SkillSchema, appContract, externalSkillsContract } from "../index";
+import {
+  ACTIVITY_GROUP_OF,
+  ActivityKindSchema,
+  CreateSkillSchema,
+  SkillSchema,
+  TargetSchema,
+  appContract,
+  externalSkillsContract,
+} from "../index";
 
 const source = {
   owner: "cloudflare",
@@ -20,6 +28,25 @@ describe("externalSkillsContract", () => {
     expect(externalSkillsContract.installExternalSkills.method).toBe("POST");
     expect(externalSkillsContract.installExternalSkills.path).toBe("/api/skills/external");
     expect(appContract.externalSkills.installExternalSkills.path).toBe("/api/skills/external");
+  });
+
+  it("exposes per-skill sync and sync-all", () => {
+    expect(externalSkillsContract.syncExternalSkill.method).toBe("POST");
+    expect(externalSkillsContract.syncExternalSkill.path).toBe("/api/skills/external/:id/sync");
+    expect(externalSkillsContract.syncAllExternalSkills.path).toBe("/api/skills/external/sync");
+    const all = externalSkillsContract.syncAllExternalSkills.responses[200];
+    expect(all.safeParse({ checked: 2, updated: ["a"], failed: [] }).success).toBe(true);
+    expect(Object.keys(externalSkillsContract.syncExternalSkill.responses)).toEqual([
+      "200",
+      "404",
+      "502",
+    ]);
+  });
+
+  it("adds the skill-updated activity kind and the external-skills-sync target", () => {
+    expect(ActivityKindSchema.options).toContain("skill-updated");
+    expect(ACTIVITY_GROUP_OF["skill-updated"]).toBeDefined();
+    expect(TargetSchema.safeParse({ type: "external-skills-sync" }).success).toBe(true);
   });
 
   it("install requires at least one path", () => {

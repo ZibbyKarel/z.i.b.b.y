@@ -54,3 +54,11 @@ export const InstallExternalSkillsSchema = z.object({
   paths: z.array(z.string()).min(1),
 });
 export type InstallExternalSkillsInput = z.infer<typeof InstallExternalSkillsSchema>;
+
+/** Result of `POST /skills/external/sync`: ids updated / failed out of `checked` records. */
+export const ExternalSkillsSyncResultSchema = z.object({
+  checked: z.number().int().nonnegative(),
+  updated: z.array(z.string()),
+  failed: z.array(z.string()),
+});
+export type ExternalSkillsSyncResult = z.infer<typeof ExternalSkillsSyncResultSchema>;

@@ -104,6 +104,9 @@ export const TargetSchema = z.discriminatedUnion("type", [
   // distilled into candidate rules; a rule's 2nd occurrence parks a `review-rule`
   // approval. Proposes ≠ activates. ref = `review-rules:<new observations>`.
   z.object({ type: z.literal("review-learn") }),
+  // External skills: weekly check of every installed GitHub skill; a changed folder
+  // is replaced and reported as `skill-updated`. ref = `external-skills:<updated>`.
+  z.object({ type: z.literal("external-skills-sync") }),
   /**
    * Phase 116b — the "prompt automation" shape: a full task spec that fires through
    * the EXISTING task workflow (`TaskSchedulerService.createTask`) exactly like the

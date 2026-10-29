@@ -3,6 +3,7 @@ import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/com
 import type { Automation, Signal, TaskTarget } from "@zibby/contracts";
 import { AgentFactoryService } from "../agent-factory/agent-factory.service";
 import { BriefingService } from "../briefing/briefing.service";
+import { ExternalSkillsService } from "../external-skills/external-skills.service";
 import { VaultLintService } from "../memory/vault-lint.service";
 import { MemoryDistillerService } from "../memory/memory-distiller.service";
 import { PatternExtractorService } from "../patterns/pattern-extractor.service";
@@ -59,6 +60,7 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
     private readonly reviewLearning: ReviewLearningService,
     private readonly signalBus: SignalBusService,
     private readonly vaultLint: VaultLintService,
+    private readonly externalSkills: ExternalSkillsService,
   ) {
     super();
     this.log = logger.child(SchedulerService.name);
@@ -294,6 +296,12 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
         // hit its 2nd occurrence. Proposes ≠ activates; ref = `review-rules:<count>`.
         const { observations } = await this.reviewLearning.learn();
         return `review-rules:${observations}`;
+      }
+      case "external-skills-sync": {
+        // Weekly: check every installed GitHub skill, replace changed folders (each
+        // reported as `skill-updated`). Per-repo failures land in `lastError`.
+        const { updated } = await this.externalSkills.syncAll();
+        return `external-skills:${updated.length}`;
       }
     }
   }
