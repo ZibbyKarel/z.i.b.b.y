@@ -44,7 +44,7 @@ A dashboard button "Autopilot" (bridge dashboard, the only screen the operator u
 
 - [x] Phase 1 — outbound notifications
 - [x] Phase 2 — inbound operator messages
-- [ ] Phase 3 — thread feedback
+- [x] Phase 3 — thread feedback
 - [ ] Phase 4 — autopilot
 - [ ] Final: project-wide checks, merge to main, push
 
@@ -108,4 +108,33 @@ service, Socket Mode, dedupe, guards, tests + e2e), and docs. Reference:
   - A `via: slack` marker on transcript messages.
   - Rate-limit counters don't survive a restart (in memory).
   - Escaping runs before splitting, so in rare cases a chunk boundary can split a `&amp;`.
+
+## Phase 3 notes
+
+Shipped on `feat/operator-channel`: API (thread bindings, in-thread replies, follow-up
+routing, tests + e2e) and docs. Reference: `docs/api/operator-channel.md#thread-feedback-phase-3`.
+No contract change (the binding is an internal file, no new endpoint).
+
+- **Loop entry.** No existing entry fits: a "PR opened" run is `done` (terminal); the loop
+  takes new input only while live (`addOperatorMessage`) or parked (`resumeParked`), and the
+  chat can't call resume (self-API denylist). Feedback therefore becomes a follow-up task via
+  the normal `create_task` path. Its own workflow runs the existing bounded loop, unchanged.
+  Linked by `followUpTaskIds` in `thread-bindings.json`, flagged by the task text prefix
+  `Navazující úkol k: …`.
+- **Conversation id.** `slack-thread-<thread_ts>`, one per bound thread. Top-level DM stays
+  `slack-dm-<dmChannelId>`; unbound thread replies use the DM one (Phase-2 behaviour).
+- **Clarifying question** is a line in the `about` details, not a classifier.
+- **Binding scope.** Only single-event messages bind; coalesced ones don't.
+- **e2e root cause (Phase 2 flake).** The "spusť úlohu" test's dispatched run reports
+  `run-completed` up to the 3 s coalesce window later, so it landed inside the next tests
+  (coalesced with their messages or becoming `sent.at(-1)`). That test now waits for the
+  delivery line of its own task. 12/12 green after the fix.
+- **Deferred.**
+  - Resuming a *parked* run from its `run-parked` thread (`resumeParked` with the reply as the
+    operator note). It needs a chat tool, which the self-API deliberately denies today; the
+    thread gets the `about` context, and resume stays on the dashboard.
+  - The flag is in the task text, not a structured `followUpOf` field on `ScheduledTask`.
+  - `branch` is usually absent on `pr-opened` (the pending output is cleared on push); the PR
+    url is the reference.
+  - Notices (rate limit / busy) are still posted top-level, even for a thread reply.
 

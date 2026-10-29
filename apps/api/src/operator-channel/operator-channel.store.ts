@@ -8,6 +8,7 @@ import {
   OperatorDeliveryEntrySchema,
 } from "@zibby/contracts";
 import { ensureDir, safeJson, writeFileAtomic } from "../shared/file-storage";
+import { ThreadBindingStore } from "./thread-binding.store";
 
 /** DI token for the directory holding `operator-channel.json` + `deliveries.jsonl`. */
 export const OPERATOR_CHANNEL_DIR = "OPERATOR_CHANNEL_DIR";
@@ -34,8 +35,12 @@ const SEEN_MAX = 1000;
 export class OperatorChannelStore {
   private cached: OperatorChannelSettings | null = null;
   private seen: Map<string, number> | null = null;
+  /** Phase 3 — notification threads → the run/PR they are about (same dir). */
+  readonly threads: ThreadBindingStore;
 
-  constructor(@Inject(OPERATOR_CHANNEL_DIR) private readonly dir: string) {}
+  constructor(@Inject(OPERATOR_CHANNEL_DIR) private readonly dir: string) {
+    this.threads = new ThreadBindingStore(dir);
+  }
 
   async readSettings(): Promise<OperatorChannelSettings> {
     if (this.cached) return this.cached;

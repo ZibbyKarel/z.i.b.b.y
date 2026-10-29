@@ -9,11 +9,16 @@ import type {
 import type { Subscription } from "rxjs";
 import { ActivityEventsService } from "../activity/activity-events.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
-import { type OperatorNotification, RateLimitedError } from "./operator-channel.port";
+import {
+  type MessageRef,
+  type OperatorNotification,
+  RateLimitedError,
+} from "./operator-channel.port";
 import { OperatorChannelService } from "./operator-channel.service";
 import { OperatorChannelStore } from "./operator-channel.store";
 import { type OperatorEvent, type OperatorEventLookups, toOperatorEvent } from "./operator-events";
 import { buildNotification, buildTestNotification } from "./operator-messages";
+import { threadConversationId } from "./thread-binding.store";
 
 /** DI token for the {@link OperatorEventLookups} the mapping enriches entries with. */
 export const OPERATOR_EVENT_LOOKUPS = "OPERATOR_EVENT_LOOKUPS";
@@ -177,18 +182,62 @@ export class OperatorNotifier implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    const notification = buildNotification(send, settings, quiet);
+    // A task that already has a thread (announced there, or started from it) is
+    // answered in that thread, one message each; the rest go out as before.
+    const top: OperatorEvent[] = [];
+    for (const e of send) {
+      const thread = e.taskId ? await this.store.threads.forTask(e.taskId) : null;
+      if (thread) await this.deliver([e], settings, quiet, now, thread.threadTs);
+      else top.push(e);
+    }
+    if (top.length > 0) await this.deliver(top, settings, quiet, now);
+  }
+
+  private async deliver(
+    events: OperatorEvent[],
+    settings: OperatorChannelSettings,
+    quiet: boolean,
+    now: Date,
+    threadTs?: string,
+  ): Promise<void> {
+    const notification = {
+      ...buildNotification(events, settings, quiet),
+      ...(threadTs ? { threadTs } : {}),
+    };
     try {
       const ref = await this.sendWithBackoff(notification);
       this.sentAt.push(this.now().getTime());
-      for (const e of send) await this.record(e, "sent", now, ref.ts);
+      for (const e of events) await this.record(e, "sent", now, ref.ts);
+      const [only] = events;
+      if (!threadTs && only && events.length === 1) await this.bindThread(only, ref, now);
     } catch (error) {
       this.log.warn("operator notification failed", {
         kind: notification.kind,
         err: errText(error),
       });
-      for (const e of send) await this.record(e, "failed", now, undefined, errText(error));
+      for (const e of events) await this.record(e, "failed", now, undefined, errText(error));
     }
+  }
+
+  /**
+   * Phase 3 — a single-event message about a run/PR becomes a thread a reply can be
+   * feedback on. A coalesced message names several things, so it binds nothing.
+   */
+  private async bindThread(e: OperatorEvent, ref: MessageRef, now: Date): Promise<void> {
+    if (!e.taskId && !e.runId && !e.prUrl) return;
+    await this.store.threads
+      .bind({
+        channel: ref.channel,
+        threadTs: ref.ts,
+        conversationId: threadConversationId(ref.ts),
+        title: e.title,
+        at: now.toISOString(),
+        ...(e.taskId ? { taskId: e.taskId } : {}),
+        ...(e.runId ? { runId: e.runId } : {}),
+        ...(e.prUrl ? { prRef: e.prUrl } : {}),
+        ...(e.branch ? { branch: e.branch } : {}),
+      })
+      .catch((error: unknown) => this.log.warn("thread bind failed", { err: errText(error) }));
   }
 
   /** One send through the serial queue's spacing, retrying a 429 after `Retry-After`. */

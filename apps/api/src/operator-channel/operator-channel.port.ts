@@ -19,9 +19,11 @@ export interface OperatorNotification {
    * conversation as the operator's next turn. Never an approval, never an action.
    */
   replies?: { label: string; text: string }[];
+  /** Phase 3 — post as a reply in this thread (the parent message's `ts`), not top-level. */
+  threadTs?: string;
 }
 
-/** Where a sent message lives, so it can be updated (and, from Phase 3, threaded). */
+/** Where a sent message lives, so it can be updated and replied to in its thread. */
 export interface MessageRef {
   channel: string;
   ts: string;
@@ -74,6 +76,8 @@ export interface OperatorInboundAction {
   messageText: string;
   /** The operator turn this button stands for. */
   text: string;
+  /** Set when the prompt sits in a thread (Slack `container.thread_ts`). */
+  threadTs?: string;
 }
 
 export type OperatorInboundEvent = OperatorInboundMessage | OperatorInboundAction;

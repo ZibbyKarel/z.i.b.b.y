@@ -56,6 +56,16 @@ describe("SlackOperatorChannel", () => {
     expect(calls.find((c) => c.method === "conversations.open")?.body).toEqual({ users: "U123" });
   });
 
+  it("send() posts a threaded notification as a reply (thread_ts), top-level otherwise", async () => {
+    const { channel, calls } = fakeSlack();
+    await channel.connect("U123");
+    await channel.send(note);
+    await channel.send({ ...note, threadTs: "1700000000.000001" });
+    const posts = calls.filter((c) => c.method === "chat.postMessage").map((c) => c.body);
+    expect(posts[0]).not.toHaveProperty("thread_ts");
+    expect(posts[1]?.thread_ts).toBe("1700000000.000001");
+  });
+
   it("send() posts Block Kit with link buttons plus a plain text fallback to the DM", async () => {
     const { channel, calls } = fakeSlack();
     await channel.connect("U123");
@@ -240,6 +250,9 @@ describe("toInboundEvent", () => {
       messageText: "Mám?",
       text: "Ano.",
     });
+    const inThread = click("reply-0", "Ano.");
+    Object.assign(inThread.payload.container, { thread_ts: "1.1" });
+    expect(toInboundEvent(inThread)).toMatchObject({ kind: "action", threadTs: "1.1" });
     expect(toInboundEvent(click("link-0"))).toBeNull();
     expect(toInboundEvent({ type: "slash_commands", payload: {} })).toBeNull();
   });

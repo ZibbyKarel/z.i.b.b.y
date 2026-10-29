@@ -46,6 +46,7 @@ const lookups: OperatorEventLookups = {
     Promise.resolve(
       id === "t-pr"
         ? task(id, {
+            runRef: "run-pr",
             outcome: {
               status: "done",
               summary: "3 stages green",
@@ -276,6 +277,43 @@ describe("OperatorNotifier — policy", () => {
     await feed(h, MAPPED[0]![1]);
     const [logged] = await h.store.recentDeliveries();
     expect(logged).toMatchObject({ status: "failed", detail: "channel_not_found" });
+  });
+});
+
+describe("OperatorNotifier — thread bindings (Phase 3)", () => {
+  it("a single PR-opened message binds its thread to the task, run and PR", async () => {
+    const h = await harness();
+    await feed(h, MAPPED[0]![1]);
+    const { ref } = h.service.fake.sent[0]!;
+    expect(await h.store.threads.get(ref.channel, ref.ts)).toMatchObject({
+      channel: "D-FAKE-U1",
+      threadTs: ref.ts,
+      conversationId: `slack-thread-${ref.ts}`,
+      title: "Task t-pr",
+      taskId: "t-pr",
+      runId: "run-pr",
+      prRef: "https://github.com/acme/app/pull/7",
+    });
+  });
+
+  it("a coalesced message binds nothing (several things, no single subject)", async () => {
+    const h = await harness();
+    await h.notifier.onActivity(MAPPED[0]![1]);
+    await h.notifier.onActivity(MAPPED[1]![1]);
+    await h.notifier.idle();
+    const { ref } = h.service.fake.sent[0]!;
+    expect(await h.store.threads.get(ref.channel, ref.ts)).toBeNull();
+  });
+
+  it("a follow-up task's result is posted into its thread and binds no new thread", async () => {
+    const h = await harness();
+    await feed(h, MAPPED[0]![1]);
+    const parent = h.service.fake.sent[0]!.ref;
+    await h.store.threads.addFollowUp(parent.channel, parent.ts, "t-plain");
+    await feed(h, MAPPED[1]![1]);
+    const reply = h.service.fake.sent[1]!;
+    expect(reply.notification).toMatchObject({ kind: "run-completed", threadTs: parent.ts });
+    expect(await h.store.threads.get(reply.ref.channel, reply.ref.ts)).toBeNull();
   });
 });
 

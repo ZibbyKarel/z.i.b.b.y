@@ -33,6 +33,10 @@ export interface OperatorEvent {
   /** Optional short context (the run's outcome summary — never a model call). */
   detail?: string;
   prUrl?: string;
+  /** Phase 3 — the task/run (and run branch, when still known) the notification's thread binds to. */
+  taskId?: string;
+  runId?: string;
+  branch?: string;
   /** ZIBBY web path for "Open in ZIBBY" (joined to `publicBaseUrl`). */
   path?: string;
 }
@@ -82,9 +86,31 @@ export async function toOperatorEvent(
       const detail = task.outcome?.summary;
       const pr = task.outcome?.pr?.url;
       const path = `/work/tasks/${task.id}`;
+      const bind = {
+        taskId: task.id,
+        ...(task.runRef ? { runId: task.runRef } : {}),
+        ...(task.pendingOutput?.branch ? { branch: task.pendingOutput.branch } : {}),
+      };
       return pr
-        ? event({ kind: "pr-opened", target: pr, state: "open", title, detail, prUrl: pr, path })
-        : event({ kind: "run-completed", target: task.id, state: "done", title, detail, path });
+        ? event({
+            kind: "pr-opened",
+            target: pr,
+            state: "open",
+            title,
+            detail,
+            prUrl: pr,
+            path,
+            ...bind,
+          })
+        : event({
+            kind: "run-completed",
+            target: task.id,
+            state: "done",
+            title,
+            detail,
+            path,
+            ...bind,
+          });
     }
     case "approval-requested": {
       const path = "/governance/approvals";
@@ -137,6 +163,7 @@ export async function toOperatorEvent(
         target: refs.runRef,
         state: `parked:${reason}`,
         title: entry.summary,
+        runId: refs.runRef,
         path: `/activity/runs/${refs.runRef}`,
       });
     }
@@ -147,6 +174,7 @@ export async function toOperatorEvent(
         target: refs.goalRunId,
         state: "parked",
         title: entry.summary,
+        runId: refs.goalRunId,
         ...(refs.goalId ? { path: `/work/goals/${refs.goalId}` } : {}),
       });
     }
@@ -166,6 +194,7 @@ export async function toOperatorEvent(
         target: `${refs.projectId ?? ""}/${refs.itemId ?? refs.taskId}`,
         state: "fixing",
         title: entry.summary,
+        taskId: refs.taskId,
         path: `/work/tasks/${refs.taskId}`,
       });
     case "briefing-generated":

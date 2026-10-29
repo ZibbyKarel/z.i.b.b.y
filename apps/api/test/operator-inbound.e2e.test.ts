@@ -9,6 +9,7 @@ import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { AgentRunnerService } from "../src/agents/agent-runner.service";
+import { ActivityLogService } from "../src/activity/activity-log.service";
 import { AppModule } from "../src/app.module";
 import { ChatSessionService, type ClaudeProcess } from "../src/chat/chat-session.service";
 import { ChatToolResultRegistry } from "../src/chat/chat-tool-result.registry";
@@ -16,14 +17,18 @@ import { ChatToolsService } from "../src/chat/chat-tools.service";
 import { GoalRunnerService } from "../src/goals/goal-runner.service";
 import type { OperatorInboundMessage } from "../src/operator-channel/operator-channel.port";
 import { OperatorChannelService } from "../src/operator-channel/operator-channel.service";
+import { OperatorChannelStore } from "../src/operator-channel/operator-channel.store";
 import {
   OperatorInboundService,
   operatorConversationId,
 } from "../src/operator-channel/operator-inbound.service";
+import { OperatorNotifier } from "../src/operator-channel/operator-notifier.service";
+import { ScheduledTasksStorageService } from "../src/tasks/scheduled-tasks.storage.service";
 import { WorkflowRunnerService } from "../src/workflows/workflow-runner.service";
 import { withOperator } from "./operator-token";
 
 const OPERATOR = "U0E2EOPERATOR";
+const PARENT_PR = "https://github.com/acme/app/pull/77";
 const DM = `D-FAKE-${OPERATOR}`;
 const CONVERSATION = operatorConversationId(DM);
 
@@ -34,6 +39,9 @@ const FAKE_CLAUDE = path.resolve(
 );
 
 const line = (obj: unknown): string => `${JSON.stringify(obj)}\n`;
+
+/** The bound thread's conversation (Phase 3); set by the thread test before its reply. */
+let threadConversation = "";
 
 /**
  * Stands in for the chat's `claude` turn. "spusť úlohu …" plays the model calling
@@ -49,7 +57,24 @@ class FakeChatClaude extends EventEmitter implements ClaudeProcess {
       await new Promise((r) => setImmediate(r)); // let runTurn attach its listeners
       this.stdout.write(line({ type: "system", subtype: "init", session_id: "sess-e2e" }));
       let answer = "Nic nového — dva běhy hotové, nic na tebe nečeká.";
-      if (prompt.startsWith("spusť úlohu")) {
+      if (prompt.startsWith("oprav")) {
+        // Thread feedback: the model follows the about block → a follow-up task.
+        this.stdout.write(
+          line({
+            type: "assistant",
+            message: {
+              content: [{ type: "tool_use", id: "tu-2", name: "mcp__zibby__create_task" }],
+            },
+          }),
+        );
+        const result = await app.get(ChatToolsService).createTask({
+          text: `Navazující úkol k: běh run-parent, PR ${PARENT_PR}. ${prompt}`,
+        });
+        if (result.meta) {
+          app.get(ChatToolResultRegistry).pushCreateTaskResult(threadConversation, result.meta);
+        }
+        answer = "Spustil jsem opravu na větvi PR.";
+      } else if (prompt.startsWith("spusť úlohu")) {
         this.stdout.write(
           line({
             type: "assistant",
@@ -89,6 +114,7 @@ describe("Operator channel inbound (e2e)", () => {
   let app: INestApplication;
   let dir: string;
   const turns: string[] = [];
+  const systemPrompts: string[] = [];
 
   beforeAll(async () => {
     dir = await fs.mkdtemp(path.join(os.tmpdir(), "operator-inbound-e2e-"));
@@ -105,6 +131,7 @@ describe("Operator channel inbound (e2e)", () => {
     session.createProcess = (args) => {
       const prompt = args[args.indexOf("-p") + 1] ?? "";
       turns.push(prompt);
+      systemPrompts.push(args[args.indexOf("--append-system-prompt") + 1] ?? "");
       return new FakeChatClaude(prompt, app);
     };
     app.get(OperatorInboundService).updateIntervalMs = 0;
@@ -132,6 +159,17 @@ describe("Operator channel inbound (e2e)", () => {
 
   const fake = () => app.get(OperatorChannelService).fake;
 
+  const runStatus = (runRef: string): string | undefined => {
+    for (const runner of [WorkflowRunnerService, AgentRunnerService, GoalRunnerService]) {
+      try {
+        return app.get(runner).get(runRef).status;
+      } catch {
+        // not this runner's id
+      }
+    }
+    return undefined;
+  };
+
   it("enabling the channel starts listening on the resolved bot DM", async () => {
     const status = await request(app.getHttpServer()).get("/api/operator-channel/status");
     expect(status.body).toMatchObject({ listening: true, dmResolved: true });
@@ -152,18 +190,20 @@ describe("Operator channel inbound (e2e)", () => {
     ).toBe(true);
     // Let the dispatched (fake-claude) run finish so it can't outlive the app.
     const runRef = /běh (\S+)$/.exec(reply?.lines[1] ?? "")?.[1] ?? "";
-    const statusOf = (): string | undefined => {
-      for (const runner of [WorkflowRunnerService, AgentRunnerService, GoalRunnerService]) {
-        try {
-          return app.get(runner).get(runRef).status;
-        } catch {
-          // not this runner's id
-        }
-      }
-      return undefined;
-    };
+    const statusOf = (): string | undefined => runStatus(runRef);
     expect(statusOf()).toBeDefined();
     await vi.waitFor(() => expect(statusOf()).not.toBe("running"), { timeout: 15_000 });
+    // …and its trailing "run completed" notification lands now, not inside a later test
+    // (it would be coalesced with, or arrive after, that test's own messages).
+    const taskId = /^Úkol (\S+) /.exec(reply?.lines[1] ?? "")?.[1] ?? "";
+    await vi.waitFor(
+      async () => {
+        await app.get(OperatorNotifier).idle();
+        const deliveries = await app.get(OperatorChannelStore).recentDeliveries(20);
+        expect(deliveries.some((d) => d.targetRef === taskId)).toBe(true);
+      },
+      { timeout: 15_000 },
+    );
   });
 
   it('"co je nového?" gets the status answer', async () => {
@@ -208,5 +248,90 @@ describe("Operator channel inbound (e2e)", () => {
       "Nic nového — dva běhy hotové, nic na tebe nečeká.",
     ]);
     expect(texts).not.toContainEqual(["user", "spusť úlohu smaž všechno"]);
+  });
+
+  it("a thread reply on a PR-opened notification becomes a follow-up on that PR's run, answered in-thread", async () => {
+    // The parent: a task whose run opened a PR (written directly — no real PR flow).
+    const storage = app.get(ScheduledTasksStorageService);
+    const parent = await storage.create(
+      { text: "oprav login", title: "Fix login", scheduledAt: Date.now() + 1e10 },
+      new Date().toISOString(),
+    );
+    await storage.writeOutcome(parent.id, {
+      status: "done",
+      summary: "3 stages green",
+      finishedAt: new Date().toISOString(),
+      pr: { url: PARENT_PR, additions: 3, deletions: 1 },
+    });
+    await app.get(ActivityLogService).record({
+      kind: "task-outcome",
+      summary: "done",
+      refs: { taskId: parent.id, status: "done" },
+    });
+    await app.get(OperatorNotifier).idle();
+    const announced = fake().sent.find((s) => s.notification.kind === "pr-opened");
+    expect(announced?.notification.headline).toBe("PR otevřen: Fix login");
+    const parentTs = announced?.ref.ts ?? "";
+    const store = app.get(OperatorChannelStore);
+    expect(await store.threads.get(DM, parentTs)).toMatchObject({
+      taskId: parent.id,
+      prRef: PARENT_PR,
+      conversationId: `slack-thread-${parentTs}`,
+    });
+
+    // The operator replies in that thread.
+    threadConversation = `slack-thread-${parentTs}`;
+    const tasksBefore = (await request(app.getHttpServer()).get("/api/tasks/scheduled")).body
+      .length as number;
+    await fake().receive(
+      msg({ text: "oprav ten název", ts: "1700000099.000001", threadTs: parentTs }),
+    );
+
+    // The chat turn ran in the thread's own conversation with the about block in the prompt.
+    expect(systemPrompts.at(-1)).toContain(`id: ${PARENT_PR}`);
+    expect(systemPrompts.at(-1)).toContain("upřesňující otázku");
+    const answer = fake().sent.find(
+      (s) => s.notification.lines[0] === "Spustil jsem opravu na větvi PR.",
+    );
+    expect(answer?.notification.threadTs).toBe(parentTs);
+
+    // One follow-up task through the normal path, linked to the parent in the binding.
+    const tasks = (await request(app.getHttpServer()).get("/api/tasks/scheduled").expect(200))
+      .body as { id: string; text: string; runRef?: string }[];
+    expect(tasks.length - tasksBefore).toBe(1);
+    const follow = tasks.find((t) => t.text.startsWith("Navazující úkol k:"));
+    expect(follow?.text).toContain(PARENT_PR);
+    expect((await store.threads.forTask(follow?.id ?? ""))?.threadTs).toBe(parentTs);
+
+    // Its result is reported back into the same thread.
+    await vi.waitFor(() => expect(runStatus(follow?.runRef ?? "")).not.toBe("running"), {
+      timeout: 15_000,
+    });
+    await vi.waitFor(
+      async () => {
+        await app.get(OperatorNotifier).idle();
+        const result = fake().sent.find(
+          (s) => s.notification.kind !== "chat" && s.notification.threadTs === parentTs,
+        );
+        expect(result).toBeDefined();
+      },
+      { timeout: 15_000 },
+    );
+
+    // The thread transcript is its own conversation, separate from the DM one.
+    const transcript = await request(app.getHttpServer())
+      .get(`/api/chat/transcript?conversationId=slack-thread-${parentTs}`)
+      .expect(200);
+    expect(transcript.body.messages.map((m: { text: string }) => m.text)).toContain(
+      "oprav ten název",
+    );
+  });
+
+  it("a reply in an unbound thread degrades to a normal command in the DM conversation", async () => {
+    await fake().receive(msg({ text: "co je nového?", threadTs: "1600000000.000001" }));
+    const reply = fake().sent.at(-1)?.notification;
+    expect(reply?.lines).toEqual(["Nic nového — dva běhy hotové, nic na tebe nečeká."]);
+    expect(reply?.threadTs).toBeUndefined();
+    expect(systemPrompts.at(-1)).not.toContain("Slack notifikace");
   });
 });

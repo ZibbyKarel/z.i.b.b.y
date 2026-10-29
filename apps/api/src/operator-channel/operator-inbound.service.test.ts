@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { SendChatMessageBody } from "@zibby/contracts";
+import { ChatAboutSchema, type SendChatMessageBody } from "@zibby/contracts";
 import { ChatEventsService } from "../chat/chat-events.service";
 import type { ChatSessionService } from "../chat/chat-session.service";
 import type { CredentialsStore } from "../integrations/credentials.store";
@@ -15,7 +15,9 @@ import {
   operatorConversationId,
   rejectReason,
   splitAnswer,
+  threadAbout,
 } from "./operator-inbound.service";
+import { threadConversationId } from "./thread-binding.store";
 
 const OPERATOR = "U0OPERATOR";
 const DM = `D-FAKE-${OPERATOR}`;
@@ -239,6 +241,123 @@ describe("OperatorInboundService", () => {
       lines: ["Spustil jsem úkol.", "Úkol task-1 · běh run-1"],
       links: [{ label: "Otevřít běh", url: "https://zibby.tail.ts.net/activity/runs/run-1" }],
     });
+  });
+});
+
+describe("OperatorInboundService — thread feedback (Phase 3)", () => {
+  let dir: string;
+  let store: OperatorChannelStore;
+  let channel: OperatorChannelService;
+  let session: FakeSession;
+  let events: ChatEventsService;
+
+  const THREAD = "1700000000.000042";
+  const PR = "https://github.com/acme/app/pull/7";
+
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "operator-inbound-thread-"));
+    store = new OperatorChannelStore(dir);
+    await store.writeSettings({
+      ...(await store.readSettings()),
+      enabled: true,
+      operatorUserIds: [OPERATOR],
+    });
+    channel = new OperatorChannelService(store, {
+      read: () => Promise.resolve(null),
+      has: () => Promise.resolve(false),
+    } as unknown as CredentialsStore);
+    events = new ChatEventsService();
+    session = new FakeSession(events);
+    const inbound = new OperatorInboundService(
+      channel,
+      store,
+      session as unknown as ChatSessionService,
+      events,
+      logger,
+    );
+    inbound.updateIntervalMs = 0;
+    await channel.listen((e) => inbound.handle(e));
+    await store.threads.bind({
+      channel: DM,
+      threadTs: THREAD,
+      conversationId: threadConversationId(THREAD),
+      title: "Fix login",
+      at: "2026-10-29T12:00:00.000Z",
+      taskId: "t-pr",
+      runId: "run-pr",
+      prRef: PR,
+      branch: "zibby/run-pr-fix-login",
+    });
+  });
+
+  afterEach(async () => {
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  it("a reply in a bound thread runs in the thread's conversation with an about block naming the run/PR/branch, answered in-thread", async () => {
+    await channel.fake.receive(msg({ text: "oprav ten název", threadTs: THREAD }));
+    const [call] = session.calls;
+    expect(call?.conversationId).toBe(`slack-thread-${THREAD}`);
+    expect(call?.text).toBe("oprav ten název");
+    expect(call?.about).toMatchObject({ kind: "pr", id: PR, label: "Fix login", href: PR });
+    expect(call?.about?.details).toContain("run: run-pr");
+    expect(call?.about?.details).toContain("branch: zibby/run-pr-fix-login");
+    expect(call?.about?.details).toContain("create_task");
+    expect(call?.about?.details).toContain("upřesňující otázku");
+    expect(ChatAboutSchema.safeParse(call?.about).success).toBe(true);
+    expect(channel.fake.sent[0]?.notification).toMatchObject({
+      lines: ["Re: oprav ten název"],
+      threadTs: THREAD,
+    });
+  });
+
+  it("a task started from the thread is recorded as its follow-up", async () => {
+    session.sendMessage = function (this: FakeSession, body) {
+      this.calls.push(body);
+      const conversationId = body.conversationId ?? "";
+      setImmediate(() => {
+        events.emit({
+          conversationId,
+          turnId: "t1",
+          type: "tool",
+          tool: { name: "create_task", status: "ok", runRef: "run-2", taskId: "t-follow" },
+        });
+        events.emit({ conversationId, turnId: "t1", type: "done", text: "Spustil jsem opravu." });
+      });
+      return Promise.resolve({ conversationId, turnId: "t1" });
+    };
+    await channel.fake.receive(msg({ text: "oprav ten název", threadTs: THREAD }));
+    expect((await store.threads.forTask("t-follow"))?.threadTs).toBe(THREAD);
+  });
+
+  it("an unbound thread reply degrades to a normal Phase-2 command (DM conversation, no about, top-level)", async () => {
+    await channel.fake.receive(msg({ text: "co je nového?", threadTs: "1700000000.999999" }));
+    expect(session.calls).toEqual([
+      { conversationId: operatorConversationId(DM), text: "co je nového?" },
+    ]);
+    expect(channel.fake.sent[0]?.notification.threadTs).toBeUndefined();
+  });
+
+  it("a top-level message is never bound, even with bindings present", async () => {
+    await channel.fake.receive(msg({ text: "ahoj" }));
+    expect(session.calls[0]?.conversationId).toBe(operatorConversationId(DM));
+    expect(session.calls[0]?.about).toBeUndefined();
+  });
+});
+
+describe("threadAbout", () => {
+  it("names the run when there is no PR and stays single-line in id/label", () => {
+    const about = threadAbout({
+      channel: DM,
+      threadTs: "1.1",
+      conversationId: "slack-thread-1.1",
+      title: "line one\nline two",
+      at: "2026-10-29T12:00:00.000Z",
+      runId: "wr-1",
+    });
+    expect(about).toMatchObject({ kind: "run", id: "wr-1", label: "line one line two" });
+    expect(about.href).toBeUndefined();
+    expect(ChatAboutSchema.safeParse(about).success).toBe(true);
   });
 });
 

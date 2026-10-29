@@ -21,16 +21,21 @@ export class FakeOperatorChannel implements OperatorChannel {
   readonly failNext: Error[] = [];
   handler: OperatorInboundHandler | null = null;
   private seq = 0;
+  private dmChannelId = "D-FAKE";
 
   connect(operatorUserId: string): Promise<OperatorChannelConnection> {
-    return Promise.resolve({ workspace: "fake", dmChannelId: `D-FAKE-${operatorUserId}` });
+    this.dmChannelId = `D-FAKE-${operatorUserId}`;
+    return Promise.resolve({ workspace: "fake", dmChannelId: this.dmChannelId });
   }
 
   send(notification: OperatorNotification): Promise<MessageRef> {
     const error = this.failNext.shift();
     if (error) return Promise.reject(error);
     this.seq += 1;
-    const ref = { channel: "D-FAKE", ts: `1700000000.${String(this.seq).padStart(6, "0")}` };
+    const ref = {
+      channel: this.dmChannelId,
+      ts: `1700000000.${String(this.seq).padStart(6, "0")}`,
+    };
     this.sent.push({ ref, notification });
     return Promise.resolve(ref);
   }

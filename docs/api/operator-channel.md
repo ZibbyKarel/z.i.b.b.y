@@ -158,8 +158,9 @@ retries up to 3 times. Then it logs `failed`.
 **Conversation id.** The top-level bot DM is one chat conversation:
 `slack-dm-<dmChannelId>`. `--resume` keeps context across Slack turns, and the web chat
 lists the thread with the others (`GET /api/chat/conversations`). Changing the operator
-(and so the DM) starts a new thread. Thread replies are Phase 3; for now a reply in a
-thread is handled like a top-level message.
+(and so the DM) starts a new thread. A reply in a **bound** notification thread runs in that
+thread's own conversation instead (see [Thread feedback](#thread-feedback-phase-3)); a reply in
+an unbound thread is handled like a top-level message.
 
 **Confirm buttons.** When an answer ends with `?`, the chat is asking. The last chunk gets
 **Ano / Ne** (en: Yes / No) reply buttons. A tap arrives as a `block_actions` payload, is
@@ -170,6 +171,56 @@ runs once. A button never decides anything itself. Link-button clicks also arriv
 `block_actions`; they are acked and ignored. Approvals are never answered from Slack. A
 turn that parks an approval is announced by the notifier (`approval-waiting`) with an
 "Open in ZIBBY" link.
+
+## Thread feedback (Phase 3)
+
+Replying in the thread of a notification is feedback on that exact work.
+
+1. **Binding.** When the notifier sends a message about exactly **one** event that names a
+   task, run or PR (`pr-opened`, `run-completed`, `run-parked`, `ci-red` with a fix task, an
+   approval carrying a PR url), it records the message in `thread-bindings.json` next to the
+   settings (`ThreadBindingStore`, `thread-binding.store.ts`):
+   `"<channel>:<ts>" → { channel, threadTs, conversationId, title, at, taskId?, runId?, prRef?, branch?, followUpTaskIds? }`.
+   A coalesced message lists several things, so it binds nothing. At most 500 bindings are
+   kept (oldest dropped). `branch` is filled only while the task still carries its pending
+   `pr` output; otherwise the PR url is the reference.
+2. **Conversation id.** Each bound thread is its own chat conversation:
+   `slack-thread-<thread_ts>`. Each piece of work keeps its own context and shows up as its
+   own thread in the web chat.
+3. **Reply.** A reply (`thread_ts` set) passes the same auth, dedupe and guards as any DM.
+   If `(channel, thread_ts)` is bound, the chat turn runs in the thread's conversation with
+   an `about` block (the existing todo-29 mechanism, a random-boundary DATA block):
+   `kind: pr|run`, `id` = PR url or run id, the title, and `details` naming task/run/PR/branch.
+   The details also carry the routing guidance (server-built from the binding, never from the
+   reply text):
+   - feedback on this work → `create_task` with text starting
+     `Navazující úkol k: běh …, PR …, větev ….` asking to commit onto the existing PR branch;
+     no new PR, no merge;
+   - an obviously unrelated request → a normal command;
+   - unclear whether feedback or a new task → **one short clarifying question**, nothing started.
+     The placeholder and the answer are posted **in the thread** (`thread_ts`), reply buttons
+     included; a tap in a thread (`container.thread_ts`) stays in that thread's conversation.
+4. **Follow-up link.** A `create_task` that succeeds during a bound turn is added to the
+   binding's `followUpTaskIds` the moment the tool reports it (before its run can finish).
+5. **Result in-thread.** When a notification is about a task that already has a thread
+   (announced there, or a follow-up started from it), the notifier posts it **as a reply in
+   that thread** (one message each, outside coalescing) and binds no new thread. The usual
+   headline + one-line summary + Open PR / Open in ZIBBY links.
+
+**How rework enters the loop.** A `pr-opened` task's run is `done` — terminal
+(`docs/run-states.md`). The bounded loop's only entries for new input are
+`addOperatorMessage` (a live run) and `resumeParked` (a retries/limit-parked run), and the
+chat cannot reach `resumeTaskRun` (denied in the self-API catalog as an execution trigger).
+So feedback becomes a **follow-up task** through the normal `create_task` path: it is
+classified and dispatched like any task, its workflow runs its own bounded
+Kodér ⇄ Code-Review ⇄ Tester loop (finite retries, escalating effort, then park), unchanged.
+It is linked to the parent by the binding (`followUpTaskIds`) and flagged by its text
+(`Navazující úkol k: …`). Pushing to the PR branch is the task's normal output path (Tier-2);
+nothing here merges.
+
+**Unbound threads.** A thread reply whose `(channel, thread_ts)` has no binding (an old
+message, a coalesced one, a chat answer) degrades to a normal Phase-2 command: the DM
+conversation, no `about`, answered top-level.
 
 ### Guards
 
@@ -212,6 +263,8 @@ reply or notice that hits a 429 waits for `Retry-After` and retries up to 3 time
   neither the chat nor this bridge has. Everything else stays data: other users, an mpim,
   channels, bots, edits. It is dropped here and never reaches the chat. Client DMs and
   @-mentions keep going through `envelopeInbound()` in the channels flow.
+- A thread binding never widens trust: the reply is authenticated exactly like any DM, and
+  the `about` block is built from ZIBBY's own binding file, never from message text.
 - Identity comes only from the Socket Mode envelope's user id, never from a name, display
   text or message content. The transport passes events through raw; only the inbound
   service authenticates.

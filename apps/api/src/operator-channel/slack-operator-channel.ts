@@ -98,6 +98,7 @@ export function toInboundEvent(envelope: unknown): OperatorInboundEvent | null {
     const channelId = str(container.channel_id) ?? str(obj(payload.channel).id);
     const userId = str(obj(payload.user).id);
     const text = str(action.value);
+    const threadTs = str(container.thread_ts);
     if (!str(action.action_id)?.startsWith(REPLY_ACTION) || !messageTs || !channelId || !text) {
       return null;
     }
@@ -109,6 +110,7 @@ export function toInboundEvent(envelope: unknown): OperatorInboundEvent | null {
       messageTs,
       messageText: str(obj(payload.message).text) ?? "",
       text,
+      ...(threadTs ? { threadTs } : {}),
     };
   }
   return null;
@@ -204,6 +206,7 @@ export class SlackOperatorChannel implements OperatorChannel {
         text: toSlackText(notification),
         blocks: toSlackBlocks(notification),
         unfurl_links: false,
+        ...(notification.threadTs ? { thread_ts: notification.threadTs } : {}),
       },
     );
     return { channel: res.channel ?? this.dmChannelId, ts: res.ts ?? "" };

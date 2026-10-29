@@ -1,5 +1,5 @@
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
-import type { ChatToolEvent, OperatorChannelSettings } from "@zibby/contracts";
+import type { ChatAbout, ChatToolEvent, OperatorChannelSettings } from "@zibby/contracts";
 import { filter } from "rxjs";
 import { ChatEventsService, type ChatTurnEvent } from "../chat/chat-events.service";
 import { ChatSessionService, mergeToolEvent } from "../chat/chat-session.service";
@@ -13,6 +13,7 @@ import {
 import { OperatorChannelService } from "./operator-channel.service";
 import { OperatorChannelStore } from "./operator-channel.store";
 import { OPERATOR_MESSAGES, escapeMrkdwn, fill, zibbyLink } from "./operator-messages";
+import type { ThreadBinding } from "./thread-binding.store";
 
 /** Slack section text tops out at 3000 chars; a chunk leaves room for the run/notice lines. */
 const CHUNK_CHARS = 2500;
@@ -22,7 +23,8 @@ const MAX_RATE_LIMIT_RETRIES = 3;
 /**
  * The stable chat conversation for the operator's top-level bot DM: one Slack DM =
  * one conversation, so `--resume` keeps context across Slack turns and the web chat
- * lists it like any other thread. Thread replies (Phase 3) will bind their own.
+ * lists it like any other thread. A reply in a BOUND notification thread runs in that
+ * thread's own conversation instead (`threadConversationId`, Phase 3).
  */
 export const operatorConversationId = (dmChannelId: string): string => `slack-dm-${dmChannelId}`;
 
@@ -65,8 +67,49 @@ export function splitAnswer(text: string, max: number = CHUNK_CHARS): string[] {
 
 const chatNote = (
   lines: string[],
-  extra: Partial<Pick<OperatorNotification, "links" | "replies">> = {},
+  extra: Partial<Pick<OperatorNotification, "links" | "replies" | "threadTs">> = {},
 ): OperatorNotification => ({ kind: "chat", tier: 2, headline: "", lines, links: [], ...extra });
+
+const oneLine = (s: string, max: number): string => s.replace(/[\r\n]+/g, " ").slice(0, max);
+
+/**
+ * Phase 3 — the `about` block for a reply in a bound notification thread: names the
+ * run/PR/branch so "oprav ten název" means that PR. Server-built from the binding
+ * (never from the reply text), rendered by the chat as a DATA block. The guidance
+ * routes feedback into a follow-up task on the same PR branch (the normal
+ * `create_task` path, its own bounded Kodér ⇄ Review ⇄ Tester loop) and has the
+ * model ask one short question when feedback vs. new task is unclear.
+ */
+export function threadAbout(b: ThreadBinding): ChatAbout {
+  const ref = [
+    b.runId ? `běh ${b.runId}` : b.taskId ? `úkol ${b.taskId}` : undefined,
+    b.prRef ? `PR ${b.prRef}` : undefined,
+    b.branch ? `větev ${b.branch}` : undefined,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const details = [
+    b.taskId ? `task: ${b.taskId}` : undefined,
+    b.runId ? `run: ${b.runId}` : undefined,
+    b.prRef ? `pr: ${b.prRef}` : undefined,
+    b.branch ? `branch: ${b.branch}` : undefined,
+    "",
+    "Operátor odpovídá ve vlákně Slack notifikace o této práci.",
+    "- Zpětná vazba k této práci (např. „oprav ten název“) se týká právě tohoto běhu/PR: " +
+      `zavolej create_task s textem začínajícím „Navazující úkol k: ${ref}.“ a požádej o ` +
+      "commit na stávající větev PR — nový PR neotvírej, nic nemerguj.",
+    "- Zjevně nový, nesouvisející úkol ber jako běžný příkaz.",
+    "- Není-li jasné, zda jde o zpětnou vazbu, nebo o nový úkol, polož jednu krátkou " +
+      "upřesňující otázku a nic nespouštěj.",
+  ].filter((l) => l !== undefined);
+  return {
+    kind: b.prRef ? "pr" : "run",
+    id: oneLine(b.prRef ?? b.runId ?? b.taskId ?? b.threadTs, 512),
+    label: oneLine(b.title, 200) || "?",
+    ...(b.prRef ? { href: oneLine(b.prRef, 2048) } : {}),
+    details: details.join("\n"),
+  };
+}
 
 type TurnOutcome = { text: string; tools: ChatToolEvent[] } | { error: string };
 
@@ -172,10 +215,15 @@ export class OperatorInboundService implements OnModuleInit, OnModuleDestroy {
       await this.notice(m.busy);
       return null;
     }
+    // A reply in a bound notification thread is feedback on that work (Phase 3); an
+    // unbound thread (or a top-level message) is a normal command, as in Phase 2.
+    const binding = event.threadTs
+      ? await this.store.threads.get(event.channelId, event.threadTs)
+      : null;
     this.accepted.push(this.now().getTime());
     this.pending += 1;
     const done = this.queue
-      .then(() => this.runTurn(event.text, settings))
+      .then(() => this.runTurn(event.text, settings, binding))
       .finally(() => {
         this.pending -= 1;
       });
@@ -199,14 +247,20 @@ export class OperatorInboundService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  /** Placeholder → chat turn → milestones → final answer, all in the operator DM. */
-  private async runTurn(raw: string, settings: OperatorChannelSettings): Promise<void> {
+  /** Placeholder → chat turn → milestones → final answer, in the DM or the bound thread. */
+  private async runTurn(
+    raw: string,
+    settings: OperatorChannelSettings,
+    binding: ThreadBinding | null,
+  ): Promise<void> {
     const m = OPERATOR_MESSAGES[settings.locale].chat;
-    const conversationId = operatorConversationId(settings.dmChannelId ?? "");
+    const conversationId =
+      binding?.conversationId ?? operatorConversationId(settings.dmChannelId ?? "");
+    const thread = binding ? { threadTs: binding.threadTs } : {};
     const truncated = raw.length > this.maxTextChars;
     const text = truncated ? raw.slice(0, this.maxTextChars) : raw;
 
-    const placeholder = await this.retry(() => this.channel.send(chatNote([m.thinking])));
+    const placeholder = await this.retry(() => this.channel.send(chatNote([m.thinking], thread)));
     let lastUpdate = this.now().getTime();
     let progress: Promise<void> = Promise.resolve();
     const milestone = (label: string): void => {
@@ -226,7 +280,7 @@ export class OperatorInboundService implements OnModuleInit, OnModuleDestroy {
         );
     };
 
-    const outcome = await this.chatTurn(conversationId, text, milestone);
+    const outcome = await this.chatTurn(conversationId, text, milestone, binding);
     await progress;
     const wait = this.updateIntervalMs - (this.now().getTime() - lastUpdate);
     if (wait > 0) await this.sleep(wait);
@@ -240,7 +294,7 @@ export class OperatorInboundService implements OnModuleInit, OnModuleDestroy {
       );
       return;
     }
-    await this.deliverAnswer(placeholder, outcome, settings, truncated);
+    await this.deliverAnswer(placeholder, outcome, settings, truncated, binding);
   }
 
   /** Start the turn through the chat session and wait for its `done`/`error` event. */
@@ -248,8 +302,10 @@ export class OperatorInboundService implements OnModuleInit, OnModuleDestroy {
     conversationId: string,
     text: string,
     milestone: (label: string) => void,
+    binding: ThreadBinding | null,
   ): Promise<TurnOutcome> {
     let turnId: string | null = null;
+    const binds: Promise<void>[] = [];
     let tools: ChatToolEvent[] = [];
     const early: ChatTurnEvent[] = [];
     let settle: (outcome: TurnOutcome) => void = () => undefined;
@@ -260,6 +316,17 @@ export class OperatorInboundService implements OnModuleInit, OnModuleDestroy {
       if (e.type === "tool") {
         tools = mergeToolEvent(tools, e.tool);
         milestone(e.tool.summary ?? e.tool.name);
+        // A task started from a bound thread is its follow-up: bound the moment it is
+        // created (before its run can finish), so its result is answered in-thread.
+        if (binding && e.tool.name === "create_task" && e.tool.status === "ok" && e.tool.taskId) {
+          binds.push(
+            this.store.threads
+              .addFollowUp(binding.channel, binding.threadTs, e.tool.taskId)
+              .catch((error: unknown) =>
+                this.log.warn("follow-up bind failed", { err: errText(error) }),
+              ),
+          );
+        }
       } else if (e.type === "done") settle({ text: e.text, tools });
       else if (e.type === "error") settle({ error: e.message });
     };
@@ -274,10 +341,16 @@ export class OperatorInboundService implements OnModuleInit, OnModuleDestroy {
     const timer = setTimeout(() => settle({ error: "timeout" }), this.turnTimeoutMs);
     timer.unref?.();
     try {
-      const res = await this.session.sendMessage({ conversationId, text });
+      const res = await this.session.sendMessage({
+        conversationId,
+        text,
+        ...(binding ? { about: threadAbout(binding) } : {}),
+      });
       turnId = res.turnId;
       for (const e of early) if (e.turnId === turnId) apply(e);
-      return await finished;
+      const outcome = await finished;
+      await Promise.all(binds);
+      return outcome;
     } catch (error) {
       return { error: errText(error) };
     } finally {
@@ -291,8 +364,10 @@ export class OperatorInboundService implements OnModuleInit, OnModuleDestroy {
     outcome: { text: string; tools: ChatToolEvent[] },
     settings: OperatorChannelSettings,
     truncated: boolean,
+    binding: ThreadBinding | null,
   ): Promise<void> {
     const m = OPERATOR_MESSAGES[settings.locale].chat;
+    const thread = binding ? { threadTs: binding.threadTs } : {};
     const answer = outcome.text.trim() || m.empty;
     const chunks = splitAnswer(escapeMrkdwn(answer));
     const runs = outcome.tools.filter((t) => t.name === "create_task" && t.status === "ok");
@@ -315,8 +390,8 @@ export class OperatorInboundService implements OnModuleInit, OnModuleDestroy {
     for (const [i, chunk] of chunks.entries()) {
       const last = i === chunks.length - 1;
       const note = last
-        ? chatNote([chunk, ...tail], { links: links.slice(0, 5), replies })
-        : chatNote([chunk]);
+        ? chatNote([chunk, ...tail], { links: links.slice(0, 5), replies, ...thread })
+        : chatNote([chunk], thread);
       if (i === 0) await this.retry(() => this.channel.update(placeholder, note));
       else await this.retry(() => this.channel.send(note));
     }
