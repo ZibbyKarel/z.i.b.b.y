@@ -43,6 +43,7 @@ my channels and handle what you can."
 **Channels, autonomy & approvals**
 
 - [Channels & autonomy](./api/channels.md) — email/Slack, triage, mandate
+- [Operator channel](./api/operator-channel.md) — Slack bot DM to the operator: outbound notifications, policy, trust model ([manifest](./api/operator-channel.slack-manifest.yml))
 - [Mandate](./api/mandate.md) — the per-channel autonomy scope
 - [Approval system](./api/approvals.md) — approval kinds, lifecycle
 - [Discovery](./api/discovery.md) — the proposals inbox for found-work candidates

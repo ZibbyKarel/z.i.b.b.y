@@ -37,6 +37,7 @@ export const API_MODULE_DOC_MAP = {
   kb: "docs/api/teams.md",
   "limits-resume": "docs/api/limits.md",
   limits: "docs/api/limits.md",
+  "operator-channel": "docs/api/operator-channel.md",
   arch: "docs/api/departments.md",
   inbox: "docs/api/inbox.md",
   machine: "docs/api/machine.md",

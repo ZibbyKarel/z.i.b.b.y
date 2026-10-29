@@ -44,6 +44,9 @@ adapters deliberately differ:
   `conversations.history` from the cursor), plus explicit `<@operator>` mentions anywhere
   they can see (`search.messages`). `config.channels` is an optional allowlist that
   narrows the mention leg only; DMs are never narrowed. Never a channel's whole history.
+  The operator-channel bot DM (`OperatorChannelStore` `dmChannelId`, see
+  `docs/api/operator-channel.md`) is skipped on both legs — ZIBBY never ingests its own
+  notifications as inbound work.
 - **`jira.adapter.ts` — owner legs plus mentions.** Jira's unit is the _comment_, and
   someone commenting on an issue the operator owns is in practice addressing them.
   The wider owner scope is safe precisely because the unit is narrow.

@@ -1,0 +1,31 @@
+# Slack app manifest for the ZIBBY operator channel (docs/api/operator-channel.md).
+# Bot DM only: no channel scopes, no slash commands. Socket Mode, so no public URL is needed.
+display_information:
+  name: ZIBBY
+  description: Your butler's DM line — PRs, approvals, parked runs, red CI.
+  background_color: "#0b0f14"
+features:
+  app_home:
+    home_tab_enabled: false
+    messages_tab_enabled: true
+    messages_tab_read_only_enabled: false
+  bot_user:
+    display_name: ZIBBY
+    always_online: true
+oauth_config:
+  scopes:
+    bot:
+      - chat:write
+      - im:history
+      - im:read
+      - im:write
+      - users:read
+settings:
+  event_subscriptions:
+    bot_events:
+      - message.im
+  interactivity:
+    is_enabled: true
+  org_deploy_enabled: false
+  socket_mode_enabled: true
+  token_rotation_enabled: false

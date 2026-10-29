@@ -42,8 +42,40 @@ A dashboard button "Autopilot" (bridge dashboard, the only screen the operator u
 
 ## Progress
 
-- [ ] Phase 1 — outbound notifications
+- [x] Phase 1 — outbound notifications
 - [ ] Phase 2 — inbound operator messages
 - [ ] Phase 3 — thread feedback
 - [ ] Phase 4 — autopilot
 - [ ] Final: project-wide checks, merge to main, push
+
+## Phase 1 notes
+
+Shipped on `feat/operator-channel`: contract (`3d0d1970`), API (`783eb6d8`), web settings card
+(`71479177`), docs (the doc commit after it). Reference: `docs/api/operator-channel.md`.
+
+- **Library choice.** No Slack SDK. Plain `fetch` to the Web API covers the four calls Phase 1
+  needs (`auth.test`, `conversations.open`, `chat.postMessage`, `chat.update`), following the
+  `slack.adapter.ts` precedent. For Phase 2 Socket Mode, `@slack/socket-mode` is preferred over
+  `@slack/bolt`, which pulls in express and receivers we don't need. Node's global `WebSocket`
+  on `apps.connections.open` is the zero-dependency fallback.
+- **Event mapping.** The notifier only subscribes to the activity stream and adds no new emit
+  points:
+  - `pr-opened` and `run-completed` come from `task-outcome` plus the task's `outcome.pr`.
+  - `review-finished`, `budget-cap` and `approval-waiting` come from `approval-requested`.
+  - `run-parked` comes from `workflow-parked` (retries/limit only) and `goal-parked`.
+  - `ci-red` comes from `monitor-alert` and from `post-merge-outcome` with a fix task.
+  - `briefing` comes from `briefing-generated`.
+  - Everything else is Tier-1 and is never sent.
+- **Gaps.** "PR opened" has no dedicated event. It is derived from the task outcome, so a PR
+  opened outside a task run (e.g. by a workflow's own `gh pr create`) isn't announced.
+  Failed or dead-lettered runs aren't mapped.
+- **Bot-DM exclusion.** It is implemented in `slack.adapter.ts`: both legs skip
+  `dmChannelId`.
+- **Deferred.**
+  - A `GET /deliveries` list endpoint (the status shows only the last delivery).
+  - Web editors for quiet hours, `maxPerHour`, `publicBaseUrl` and `operatorUserIds`, and token
+    entry. These go through the API for now.
+  - `deliveries.jsonl` rotation.
+  - Dedupe persistence across restarts (not needed while the stream doesn't replay).
+- **Open for the operator.** The real app in _Zibby's_ still needs the `im:*` and
+  `users:read` scopes added and a reinstall before the first real send.
