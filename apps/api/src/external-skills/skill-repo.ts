@@ -1,6 +1,6 @@
 import { lstat, readFile, readdir, realpath } from "node:fs/promises";
 import { basename, join, sep } from "node:path";
-import { AGENT_ID_REGEX } from "@zibby/contracts";
+import { AGENT_ID_REGEX, type Skill } from "@zibby/contracts";
 import matter from "gray-matter";
 
 export class InvalidSkillRepoUrlError extends Error {
@@ -129,4 +129,9 @@ export async function scanSkillDir(
   }
   await walk(subpath ?? "");
   return found.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+}
+
+/** The skill's instructions prefixed with a note on where its files (references, scripts) live. */
+export function externalSkillPrompt(skill: Skill, dir: string): string {
+  return `Soubory tohoto skillu (reference, skripty) jsou ve složce ${dir}. Relativní cesty v instrukcích se vztahují k ní.\n\n${skill.instructions}`;
 }

@@ -130,6 +130,11 @@ export class SkillsStorageService extends MarkdownEntityStore<Skill> {
     return null;
   }
 
+  /** Absolute folder of an installed external skill (honours the injected root). */
+  externalFolder(id: string): string {
+    return externalSkillDir(id, this.externalDir);
+  }
+
   protected idOf(skill: Skill): string {
     return skill.id;
   }

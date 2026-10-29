@@ -1,3 +1,4 @@
+import { externalSkillPrompt } from "../external-skills/skill-repo";
 import { type ChildProcess, spawn } from "node:child_process";
 import { agentBaseEnv } from "../shared/agent-env";
 import { promises as fs } from "node:fs";
@@ -220,7 +221,14 @@ export class ChatSessionService {
     ]);
     const tags: ChatTurnTags = {
       ...(skill
-        ? { skill: { name: skill.name ?? skill.id, instructions: skill.instructions } }
+        ? {
+            skill: {
+              name: skill.name ?? skill.id,
+              instructions: skill.source
+                ? externalSkillPrompt(skill, this.skills.externalFolder(skill.id))
+                : skill.instructions,
+            },
+          }
         : {}),
       ...(project ? { project: { id: project.id, name: project.name, path: project.path } } : {}),
       ...(company ? { company: { id: company.id, name: company.name } } : {}),

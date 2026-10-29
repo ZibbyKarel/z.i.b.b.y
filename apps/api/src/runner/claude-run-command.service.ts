@@ -1,3 +1,4 @@
+import { externalSkillPrompt } from "../external-skills/skill-repo";
 import { Injectable, Optional } from "@nestjs/common";
 import type { Agent, Hook, McpServer, Skill } from "@zibby/contracts";
 import * as fs from "node:fs/promises";
@@ -494,7 +495,7 @@ export class ClaudeRunCommandService {
               t === server.id || t === `mcp__${server.id}` || t.startsWith(`mcp__${server.id}__`),
           )),
     );
-    const { catalog, allowedTools, catalogAgentIds } = await this.buildCatalog(
+    const { catalog, allowedTools, catalogAgentIds, skillDirs } = await this.buildCatalog(
       opts.tools,
       mcpServers,
       opts.delegates,
@@ -548,7 +549,8 @@ export class ClaudeRunCommandService {
     // to readable log lines). `stream-json` requires `--verbose` in print mode.
     if (opts.streamTranscript) args.push("--output-format", "stream-json", "--verbose");
     // Grant access to dirs outside the sandbox (e.g. the Cleaner's target).
-    for (const dir of opts.grantDirs ?? []) args.push("--add-dir", dir);
+    for (const dir of new Set([...(opts.grantDirs ?? []), ...skillDirs]))
+      args.push("--add-dir", dir);
     if (opts.contextDir) args.push("--add-dir", opts.contextDir);
     // Plugins installed from ZIBBY-managed marketplaces ride every run too (deduped).
     const pluginDirs = new Set([
@@ -656,6 +658,8 @@ export class ClaudeRunCommandService {
     allowedTools: string[];
     /** The curated agent ids folded into `catalog` (skills excluded — see Fáze 2b). */
     catalogAgentIds: string[];
+    /** Folders of installed external skills in the catalog — granted via `--add-dir`. */
+    skillDirs: string[];
   }> {
     // Phase 4c: the delegation catalog is dispatchable by construction — a
     // `status: "proposed"` candidate awaiting its `agent-proposal` approval must
@@ -697,18 +701,30 @@ export class ClaudeRunCommandService {
         ...(agent.model ? { model: agent.model } : {}),
       };
     }
+    const skillDirs: string[] = [];
     for (const skill of skills) {
       if (catalog[skill.id]) continue;
+      let prompt = skill.instructions;
+      if (skill.source) {
+        const dir = this.skills.externalFolder(skill.id);
+        skillDirs.push(dir);
+        prompt = externalSkillPrompt(skill, dir);
+      }
       // Skills carry no structured tools — give them the conservative default.
       const tools = toSubagentTools(undefined);
       for (const t of mapTools(undefined)) allowed.add(t);
       catalog[skill.id] = {
         description: skill.desc?.trim() || skill.name || skill.id,
-        prompt: skill.instructions,
+        prompt,
         ...(tools ? { tools } : {}),
       };
     }
-    return { catalog, allowedTools: [...allowed], catalogAgentIds: agents.map((a) => a.id) };
+    return {
+      catalog,
+      allowedTools: [...allowed],
+      catalogAgentIds: agents.map((a) => a.id),
+      skillDirs,
+    };
   }
 
   /**

@@ -15,6 +15,7 @@ import type { HooksStorageService } from "../hooks/hooks.storage.service";
 import type { MarketplacesStore } from "../marketplaces/marketplaces.store";
 import type { McpCredentialsStore } from "../mcp/mcp-credentials.store";
 import type { McpServersStorageService } from "../mcp/mcp.storage.service";
+import { externalSkillPrompt } from "../external-skills/skill-repo";
 import type { SkillsStorageService } from "../skills/skills.storage.service";
 import {
   CORE_DELEGATE_IDS,
@@ -47,7 +48,10 @@ function makeService(
     // (status !== "proposed") so these tests exercise the same seam.
     listActive: async () => agents.filter((a) => a.status !== "proposed"),
   } as unknown as AgentsStorageService;
-  const skillStore = { list: async () => skills } as unknown as SkillsStorageService;
+  const skillStore = {
+    list: async () => skills,
+    externalFolder: (id: string) => `/ext/${id}`,
+  } as unknown as SkillsStorageService;
   const hookStore = { list: async () => opts.hooks ?? [] } as unknown as HooksStorageService;
   const mcpStore = {
     list: async () => opts.mcpServers ?? [],
@@ -892,6 +896,25 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     });
     const grants = args.filter((a, i) => args[i - 1] === "--add-dir");
     expect(grants).toEqual(["/tmp/a", "/tmp/b"]);
+  });
+
+  it("gives an external skill's catalog prompt the folder note and grants its folder", async () => {
+    const external: Skill = {
+      id: "security-audit",
+      name: "security-audit",
+      desc: "Audit",
+      instructions: "Audit it.",
+      source: { repo: "o/r", ref: "main", path: "s", sha: "abc" },
+    } as unknown as Skill;
+    const svc = makeService([CODER], [external, WRITER_SKILL]);
+    const { args } = await svc.buildClaudeCommand({ instructions: "x", task: "t" });
+    const catalog = JSON.parse(flagValue(args, "--agents") ?? "{}");
+    const dir = "/ext/security-audit";
+    expect(catalog["security-audit"].prompt).toBe(externalSkillPrompt(external, dir));
+    expect(catalog["security-audit"].prompt).toContain(dir);
+    expect(catalog["task-spec-writer"].prompt).toBe("Jsi spec writer.");
+    const grants = args.filter((a, i) => args[i - 1] === "--add-dir");
+    expect(grants).toEqual([dir]);
   });
 
   it("honours CLAUDE_BIN as the binary seam (defaults to claude)", async () => {
