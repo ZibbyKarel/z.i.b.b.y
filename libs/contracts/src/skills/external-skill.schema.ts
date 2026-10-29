@@ -62,3 +62,20 @@ export const ExternalSkillsSyncResultSchema = z.object({
   failed: z.array(z.string()),
 });
 export type ExternalSkillsSyncResult = z.infer<typeof ExternalSkillsSyncResultSchema>;
+
+/** A workflow whose phases name an external skill (`phase.skill`). */
+export const ExternalSkillUsageSchema = z.object({
+  workflowId: z.string(),
+  name: z.string(),
+  phaseIds: z.array(z.string()),
+});
+export type ExternalSkillUsage = z.infer<typeof ExternalSkillUsageSchema>;
+
+/**
+ * Body of `POST /skills/external/:id/uninstall`: per using workflow, delete the
+ * whole `"workflow"` or drop just the `"step"`(s) that use the skill.
+ */
+export const UninstallExternalSkillSchema = z.object({
+  workflows: z.record(z.string(), z.enum(["workflow", "step"])).default({}),
+});
+export type UninstallExternalSkillInput = z.infer<typeof UninstallExternalSkillSchema>;

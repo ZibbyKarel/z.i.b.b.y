@@ -120,6 +120,17 @@ Only `https://github.com/<owner>/<repo>` URLs are accepted (optionally `.git` or
 - The system automation `external-deps-update` ("Aktualizace externích
   závislostí", target `external-skills-sync`, cron `0 4 * * 1`, enabled) runs the
   sync-all weekly; its ref is `external-skills:<updated count>`.
+- `GET /api/skills/external/:id/usages` — workflows whose phases name the skill
+  (`phase.skill`): `[{ workflowId, name, phaseIds }]`.
+- `POST /api/skills/external/:id/uninstall` `{ workflows }` — a map
+  `workflowId → "workflow" | "step"`. Every using workflow needs a decision
+  (missing → 409, message lists them). `"workflow"` deletes it; `"step"` drops the using phases
+  (`removePhase`: the next phase inherits `consumes`, a loop whose `to` was the
+  phase is dropped with its `qualify`, a `then` falls back to `"fail"`, a
+  `driftTo` is removed). Every edit is validated first: an invalid result (no
+  phases left, a dangling output sink, …) → 422 naming the workflow, nothing
+  changed. Then the folder and the `external-skills.json` record are removed →
+  `{ id }`. Own skill / unknown id → 404. Runs under the external-skills lock.
 
 `GET /api/skills` / `GET /api/skills/:id` return external skills next to own
 ones, with a `source` field. They are read-only: `PATCH`/`DELETE` → 409. A broken

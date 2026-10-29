@@ -3,7 +3,8 @@ import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { externalSkillsContract } from "@zibby/contracts";
 import { makeErrorMapper } from "../shared/http/error-mapping";
 import { SkillConflictError, SkillNotFoundError } from "../skills/skills.errors";
-import { NoSkillsFoundError, SkillRepoGitError } from "./external-skills.errors";
+import { InvalidWorkflowError } from "../workflows/workflows.errors";
+import { NoSkillsFoundError, SkillInUseError, SkillRepoGitError } from "./external-skills.errors";
 import { ExternalSkillsService } from "./external-skills.service";
 import { InvalidSkillRepoUrlError } from "./skill-repo";
 
@@ -49,6 +50,19 @@ export class ExternalSkillsController {
             error instanceof SkillRepoGitError
               ? { status: 502 as const, body: { message: error.message } }
               : undefined,
+        ),
+      externalSkillUsages: ({ params: { id } }) => errors.or404(id, () => this.external.usages(id)),
+      uninstallExternalSkill: ({ params: { id }, body: { workflows } }) =>
+        errors.or404(
+          id,
+          () => this.external.uninstall(id, workflows),
+          (error) => {
+            if (!(error instanceof Error)) return undefined;
+            const body = { message: error.message };
+            if (error instanceof SkillInUseError) return { status: 409 as const, body };
+            if (error instanceof InvalidWorkflowError) return { status: 422 as const, body };
+            return undefined;
+          },
         ),
       syncAllExternalSkills: async () => ({
         status: 200 as const,

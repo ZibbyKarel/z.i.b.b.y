@@ -3,6 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
+import matter from "gray-matter";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppModule } from "../src/app.module";
@@ -25,6 +26,35 @@ describe("External skills API (e2e)", () => {
     process.env.SKILLS_DIR = path.join(tmp, "skills");
     process.env.EXTERNAL_SKILLS_FILE = path.join(tmp, "external-skills.json");
     process.env.EXTERNAL_SKILLS_DIR = path.join(tmp, "skills-external");
+    process.env.WORKFLOWS_DIR = path.join(tmp, "workflows");
+    await mkdir(process.env.WORKFLOWS_DIR, { recursive: true });
+    const phase = (id: string, consumes: string, produces: string, skill?: string) => ({
+      id,
+      agent: "coder",
+      model: "sonnet",
+      thinking: "low",
+      consumes,
+      produces,
+      ...(skill ? { skill } : {}),
+    });
+    await writeFile(
+      path.join(process.env.WORKFLOWS_DIR, "audit-only.workflow.md"),
+      matter.stringify("x\n", {
+        name: "Audit only",
+        phases: [phase("audit", "in.md", "a.md", "security-audit")],
+      }),
+    );
+    await writeFile(
+      path.join(process.env.WORKFLOWS_DIR, "build.workflow.md"),
+      matter.stringify("x\n", {
+        name: "Build",
+        phases: [
+          phase("plan", "in.md", "plan.md"),
+          phase("audit", "plan.md", "audit.md", "security-audit"),
+          phase("code", "audit.md", "code.md"),
+        ],
+      }),
+    );
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(SkillRepoGit)
@@ -47,6 +77,7 @@ describe("External skills API (e2e)", () => {
     delete process.env.SKILLS_DIR;
     delete process.env.EXTERNAL_SKILLS_FILE;
     delete process.env.EXTERNAL_SKILLS_DIR;
+    delete process.env.WORKFLOWS_DIR;
   });
 
   it("scans, installs, lists and refuses to edit an external skill", async () => {
@@ -96,5 +127,36 @@ describe("External skills API (e2e)", () => {
       .post("/api/skills/external")
       .send({ url, paths: ["skills/nope"] })
       .expect(422);
+  });
+
+  it("lists usages and uninstalls with per-workflow decisions", async () => {
+    const server = app.getHttpServer();
+    const usages = await request(server)
+      .get("/api/skills/external/security-audit/usages")
+      .expect(200);
+    expect(usages.body).toEqual([
+      { workflowId: "audit-only", name: "Audit only", phaseIds: ["audit"] },
+      { workflowId: "build", name: "Build", phaseIds: ["audit"] },
+    ]);
+    await request(server).get("/api/skills/external/nope/usages").expect(404);
+    await request(server).post("/api/skills/external/nope/uninstall").send({}).expect(404);
+
+    const uninstall = (workflows: Record<string, string>) =>
+      request(server).post("/api/skills/external/security-audit/uninstall").send({ workflows });
+    expect((await uninstall({ build: "step" }).expect(409)).body.message).toContain("audit-only");
+    expect(
+      (await uninstall({ "audit-only": "step", build: "step" }).expect(422)).body.message,
+    ).toContain("audit-only");
+    await request(server).get("/api/workflows/audit-only").expect(200);
+
+    expect((await uninstall({ "audit-only": "workflow", build: "step" }).expect(200)).body).toEqual(
+      {
+        id: "security-audit",
+      },
+    );
+    await request(server).get("/api/workflows/audit-only").expect(404);
+    const build = await request(server).get("/api/workflows/build").expect(200);
+    expect(build.body.phases.map((p: { id: string }) => p.id)).toEqual(["plan", "code"]);
+    await request(server).get("/api/skills/security-audit").expect(404);
   });
 });

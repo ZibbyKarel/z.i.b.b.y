@@ -13,3 +13,11 @@ export class SkillRepoGitError extends Error {
     this.name = "SkillRepoGitError";
   }
 }
+
+/** An uninstall left a workflow that uses the skill without a decision → 409. */
+export class SkillInUseError extends Error {
+  constructor(id: string, workflowIds: string[]) {
+    super(`Skill "${id}" is used by workflows without a decision: ${workflowIds.join(", ")}`);
+    this.name = "SkillInUseError";
+  }
+}

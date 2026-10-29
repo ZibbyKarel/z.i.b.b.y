@@ -10,7 +10,9 @@ import {
   SkillNotFoundError,
 } from "../skills/skills.errors";
 import { SkillsStorageService } from "../skills/skills.storage.service";
-import { NoSkillsFoundError, SkillRepoGitError } from "./external-skills.errors";
+import { InvalidWorkflowError } from "../workflows/workflows.errors";
+import { WorkflowsStorageService } from "../workflows/workflows.storage.service";
+import { NoSkillsFoundError, SkillInUseError, SkillRepoGitError } from "./external-skills.errors";
 import { ExternalSkillsService } from "./external-skills.service";
 import { EXTERNAL_SKILLS_LOCK, ExternalSkillsStore } from "./external-skills.store";
 import { parseGitHubSkillUrl } from "./skill-repo";
@@ -64,9 +66,16 @@ describe("ExternalSkillsService", () => {
     refs = [];
     skills = new SkillsStorageService(join(tmp, "skills"), store, extDir);
     await skills.onModuleInit();
-    svc = new ExternalSkillsService(store, fixtureGit(fixture, refs), skills, extDir, {
-      record: vi.fn(),
-    } as never);
+    svc = new ExternalSkillsService(
+      store,
+      fixtureGit(fixture, refs),
+      skills,
+      extDir,
+      {
+        record: vi.fn(),
+      } as never,
+      {} as never,
+    );
   });
 
   afterEach(async () => {
@@ -237,7 +246,7 @@ describe("ExternalSkillsService — sync", () => {
     const skills = new SkillsStorageService(join(tmp, "skills"), store, extDir);
     await skills.onModuleInit();
     activity = { record: vi.fn(async () => {}) };
-    svc = new ExternalSkillsService(store, git, skills, extDir, activity as never);
+    svc = new ExternalSkillsService(store, git, skills, extDir, activity as never, {} as never);
     await svc.install(url, [path]);
     up.clones = [];
     vi.setSystemTime(T1);
@@ -397,5 +406,130 @@ describe("ExternalSkillsService — sync", () => {
 
   it("an unknown id throws SkillNotFoundError", async () => {
     await expect(svc.sync("nope")).rejects.toThrow(SkillNotFoundError);
+  });
+});
+
+describe("ExternalSkillsService — uninstall", () => {
+  let tmp: string;
+  let extDir: string;
+  let store: ExternalSkillsStore;
+  let workflows: WorkflowsStorageService;
+  let svc: ExternalSkillsService;
+
+  const phase = (id: string, consumes: string, produces: string, skill?: string) => ({
+    id,
+    type: "agent" as const,
+    agent: "coder",
+    model: "sonnet" as const,
+    thinking: "low" as const,
+    consumes,
+    produces,
+    ...(skill ? { skill } : {}),
+  });
+  const wf = (id: string, phases: ReturnType<typeof phase>[], outputs: never[] = []) =>
+    workflows.create({
+      id,
+      name: id.toUpperCase(),
+      instructions: "x",
+      phases,
+      outputs,
+      complexity: "standard",
+    });
+
+  beforeEach(async () => {
+    tmp = await mkdtemp(join(tmpdir(), "ext-skills-uninstall-"));
+    const fixture = join(tmp, "repo");
+    extDir = join(tmp, "skills-external");
+    await put(fixture, "skills/security-audit/SKILL.md", "---\nname: security-audit\n---\nHunt.\n");
+    store = new ExternalSkillsStore(join(tmp, "external-skills.json"));
+    const skills = new SkillsStorageService(join(tmp, "skills"), store, extDir);
+    await skills.onModuleInit();
+    workflows = new WorkflowsStorageService(join(tmp, "workflows"));
+    await workflows.onModuleInit();
+    svc = new ExternalSkillsService(
+      store,
+      fixtureGit(fixture),
+      skills,
+      extDir,
+      {
+        record: vi.fn(),
+      } as never,
+      workflows,
+    );
+    await svc.install(url, ["skills/security-audit"]);
+    await wf("audit-only", [phase("audit", "in.md", "a.md", "security-audit")]);
+    await wf("build", [
+      phase("plan", "in.md", "plan.md"),
+      phase("audit", "plan.md", "audit.md", "security-audit"),
+      phase("code", "audit.md", "code.md"),
+    ]);
+    await wf("clean", [phase("plan", "in.md", "plan.md")]);
+  });
+
+  afterEach(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
+
+  it("lists the workflows whose phases use the skill", async () => {
+    expect(await svc.usages("security-audit")).toEqual([
+      { workflowId: "audit-only", name: "AUDIT-ONLY", phaseIds: ["audit"] },
+      { workflowId: "build", name: "BUILD", phaseIds: ["audit"] },
+    ]);
+  });
+
+  it("an own or unknown skill id → SkillNotFoundError", async () => {
+    await expect(svc.usages("nope")).rejects.toThrow(SkillNotFoundError);
+    await expect(svc.uninstall("nope", {})).rejects.toThrow(SkillNotFoundError);
+    await put(join(tmp, "skills"), "own.md", "---\nname: own\n---\nMine.\n");
+    await expect(svc.uninstall("own", {})).rejects.toThrow(SkillNotFoundError);
+    expect(existsSync(join(tmp, "skills", "own.md"))).toBe(true);
+  });
+
+  it("a usage without a decision → SkillInUseError, nothing changed", async () => {
+    await expect(svc.uninstall("security-audit", { build: "step" })).rejects.toThrow(
+      SkillInUseError,
+    );
+    expect(await store.get("security-audit")).toBeDefined();
+    expect(existsSync(join(extDir, "security-audit"))).toBe(true);
+    expect((await workflows.get("build")).phases).toHaveLength(3);
+  });
+
+  it("deletes a 'workflow', drops a 'step', then removes folder + record", async () => {
+    expect(
+      await svc.uninstall("security-audit", { "audit-only": "workflow", build: "step" }),
+    ).toEqual({ id: "security-audit" });
+    await expect(workflows.get("audit-only")).rejects.toThrow();
+    const build = await workflows.get("build");
+    expect(build.phases.map((p) => p.id)).toEqual(["plan", "code"]);
+    expect(build.phases[1]?.consumes).toBe("plan.md");
+    expect((await workflows.get("clean")).phases).toHaveLength(1);
+    expect(await store.get("security-audit")).toBeUndefined();
+    expect(existsSync(join(extDir, "security-audit"))).toBe(false);
+  });
+
+  it("a step removal that leaves a workflow invalid → 422-style error, nothing changed", async () => {
+    await expect(
+      svc.uninstall("security-audit", { "audit-only": "step", build: "step" }),
+    ).rejects.toThrow(InvalidWorkflowError);
+    await expect(
+      svc.uninstall("security-audit", { "audit-only": "step", build: "step" }),
+    ).rejects.toThrow(/audit-only/);
+    expect((await workflows.get("build")).phases).toHaveLength(3);
+    expect(await workflows.get("audit-only")).toBeDefined();
+    expect(await store.get("security-audit")).toBeDefined();
+    expect(existsSync(join(extDir, "security-audit"))).toBe(true);
+  });
+
+  it("an output sink left dangling by step removal → error naming the workflow", async () => {
+    await workflows.update("build", { outputs: [{ type: "pr", from: "code.md" }] });
+    await wf("tail", [
+      phase("plan", "in.md", "plan.md"),
+      phase("audit", "plan.md", "x.md", "security-audit"),
+    ]);
+    await workflows.update("tail", { outputs: [{ type: "pr", from: "x.md" }] });
+    await expect(
+      svc.uninstall("security-audit", { "audit-only": "workflow", build: "step", tail: "step" }),
+    ).rejects.toThrow(/tail/);
+    expect(await workflows.get("audit-only")).toBeDefined();
   });
 });

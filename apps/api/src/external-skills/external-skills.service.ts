@@ -3,17 +3,24 @@ import { cp, lstat, mkdir, mkdtemp, rename, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import type {
-  ExternalSkillRecord,
-  ExternalSkillScan,
-  ExternalSkillsSyncResult,
-  Skill,
+import {
+  type ExternalSkillRecord,
+  type ExternalSkillScan,
+  type ExternalSkillUsage,
+  type ExternalSkillsSyncResult,
+  type Skill,
+  type UninstallExternalSkillInput,
+  type Workflow,
+  WorkflowSchema,
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { withPathLock } from "../shared/file-storage";
 import { SkillConflictError, SkillNotFoundError } from "../skills/skills.errors";
 import { SkillsStorageService } from "../skills/skills.storage.service";
-import { NoSkillsFoundError, SkillRepoGitError } from "./external-skills.errors";
+import { removePhase } from "../workflows/remove-phase";
+import { InvalidWorkflowError } from "../workflows/workflows.errors";
+import { WorkflowsStorageService } from "../workflows/workflows.storage.service";
+import { NoSkillsFoundError, SkillInUseError, SkillRepoGitError } from "./external-skills.errors";
 import {
   EXTERNAL_SKILLS_DIR,
   EXTERNAL_SKILLS_LOCK,
@@ -54,6 +61,7 @@ export class ExternalSkillsService {
     private readonly skills: SkillsStorageService,
     @Inject(EXTERNAL_SKILLS_DIR) private readonly root: string,
     private readonly activity: ActivityLogService,
+    private readonly workflows: WorkflowsStorageService,
   ) {}
 
   async scan(url: string): Promise<ExternalSkillScan> {
@@ -246,6 +254,67 @@ export class ExternalSkillsService {
       );
     }
     return { updated, failed };
+  }
+
+  /** Workflows whose phases name external skill `id`; an own/unknown id → SkillNotFoundError. */
+  async usages(id: string): Promise<ExternalSkillUsage[]> {
+    if (!(await this.store.get(id))) throw new SkillNotFoundError(id);
+    return (await this.usingWorkflows(id)).map(({ workflow, phaseIds }) => ({
+      workflowId: workflow.id,
+      name: workflow.name ?? workflow.id,
+      phaseIds,
+    }));
+  }
+
+  /**
+   * Uninstall external skill `id`. Every using workflow needs a decision (else
+   * SkillInUseError): `"workflow"` deletes it, `"step"` drops the phases using the
+   * skill. Every edited workflow is validated before anything is written, so an
+   * InvalidWorkflowError (→ 422) leaves workflows, folder and record intact.
+   */
+  async uninstall(
+    id: string,
+    decisions: UninstallExternalSkillInput["workflows"],
+  ): Promise<{ id: string }> {
+    return withPathLock(EXTERNAL_SKILLS_LOCK, async () => {
+      if (!(await this.store.get(id))) throw new SkillNotFoundError(id);
+      const usages = await this.usingWorkflows(id);
+      const undecided = usages.filter((u) => !decisions[u.workflow.id]).map((u) => u.workflow.id);
+      if (undecided.length > 0) throw new SkillInUseError(id, undecided);
+
+      const edits = usages
+        .filter((u) => decisions[u.workflow.id] === "step")
+        .map(({ workflow, phaseIds }) => {
+          const phases = phaseIds.reduce(removePhase, workflow.phases);
+          if (phases.length === 0)
+            throw new InvalidWorkflowError(
+              `Workflow "${workflow.id}" would have no phases left; delete the workflow instead`,
+            );
+          const parsed = WorkflowSchema.safeParse({ ...workflow, phases });
+          if (!parsed.success)
+            throw new InvalidWorkflowError(
+              `Workflow "${workflow.id}": ${parsed.error.issues[0]?.message ?? "invalid workflow"}`,
+            );
+          return { id: workflow.id, phases };
+        });
+
+      // ponytail: not transactional — a disk error mid-way leaves earlier edits applied.
+      for (const u of usages)
+        if (decisions[u.workflow.id] === "workflow") await this.workflows.delete(u.workflow.id);
+      for (const e of edits) await this.workflows.update(e.id, { phases: e.phases });
+      await rm(this.skills.externalFolder(id), { recursive: true, force: true });
+      await this.store.remove(id);
+      return { id };
+    });
+  }
+
+  private async usingWorkflows(id: string): Promise<{ workflow: Workflow; phaseIds: string[] }[]> {
+    return (await this.workflows.list())
+      .map((workflow) => ({
+        workflow,
+        phaseIds: workflow.phases.filter((p) => p.skill === id).map((p) => p.id),
+      }))
+      .filter((u) => u.phaseIds.length > 0);
   }
 
   /** Upsert a failure record; a write error is logged, never thrown (syncAll keeps going). */
