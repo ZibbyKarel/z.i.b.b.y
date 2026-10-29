@@ -68,12 +68,49 @@ describe("InstallExternalSkillDialog", () => {
     expect(
       screen.getByTestId(`${InstallExternalSkillDialogTestId.Candidate}-deploy`),
     ).toBeDisabled();
-    expect(screen.getByTestId(InstallExternalSkillDialogTestId.Conflict)).toHaveTextContent(
-      "deploy",
-    );
+    expect(
+      screen.getByTestId(`${InstallExternalSkillDialogTestId.Conflict}-deploy`),
+    ).toHaveTextContent("deploy");
+    expect(screen.queryByTestId(`${InstallExternalSkillDialogTestId.Conflict}-workers`)).toBeNull();
   });
 
-  it("Instalovat sends only the checked paths and closes on 201", async () => {
+  it("preselects every non-conflicting candidate after the scan", async () => {
+    render(<InstallExternalSkillDialog onClose={vi.fn()} />);
+    expect(screen.getByTestId(InstallExternalSkillDialogTestId.Submit)).toBeDisabled();
+    await userEvent.type(screen.getByTestId(InstallExternalSkillDialogTestId.Url), URL);
+    await userEvent.click(screen.getByTestId(InstallExternalSkillDialogTestId.Scan));
+    const cb = (path: string) =>
+      screen.getByTestId(`${InstallExternalSkillDialogTestId.Candidate}-${path}`);
+    expect(cb("security-audit")).toHaveAttribute("aria-checked", "true");
+    expect(cb("workers")).toHaveAttribute("aria-checked", "true");
+    expect(cb("deploy")).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByTestId(InstallExternalSkillDialogTestId.Submit)).toBeEnabled();
+  });
+
+  it("editing the URL after a scan drops the candidates and disables install", async () => {
+    render(<InstallExternalSkillDialog onClose={vi.fn()} />);
+    const input = screen.getByTestId(InstallExternalSkillDialogTestId.Url);
+    await userEvent.type(input, URL);
+    await userEvent.click(screen.getByTestId(InstallExternalSkillDialogTestId.Scan));
+    await userEvent.type(input, "-evil");
+    expect(
+      screen.queryByTestId(`${InstallExternalSkillDialogTestId.Candidate}-workers`),
+    ).toBeNull();
+    expect(screen.getByTestId(InstallExternalSkillDialogTestId.Submit)).toBeDisabled();
+    expect(hooks.install).not.toHaveBeenCalled();
+  });
+
+  it("Zrušit closes without installing", async () => {
+    const onClose = vi.fn();
+    render(<InstallExternalSkillDialog onClose={onClose} />);
+    const cancel = screen.getByTestId(InstallExternalSkillDialogTestId.Cancel);
+    expect(cancel).toHaveAccessibleName("Zrušit");
+    await userEvent.click(cancel);
+    expect(onClose).toHaveBeenCalled();
+    expect(hooks.install).not.toHaveBeenCalled();
+  });
+
+  it("Instalovat sends only the checked paths of the scanned URL and closes on 201", async () => {
     const onClose = vi.fn();
     hooks.install.mockImplementation((_args, opts?: Opts) =>
       opts?.onSuccess?.({ status: 201, body: [] }),
@@ -82,9 +119,9 @@ describe("InstallExternalSkillDialog", () => {
     await userEvent.type(screen.getByTestId(InstallExternalSkillDialogTestId.Url), URL);
     await userEvent.click(screen.getByTestId(InstallExternalSkillDialogTestId.Scan));
 
-    expect(screen.getByTestId(InstallExternalSkillDialogTestId.Submit)).toBeDisabled();
+    // Untick the preselected security-audit, keep workers.
     await userEvent.click(
-      screen.getByTestId(`${InstallExternalSkillDialogTestId.Candidate}-workers`),
+      screen.getByTestId(`${InstallExternalSkillDialogTestId.Candidate}-security-audit`),
     );
     await userEvent.click(screen.getByTestId(InstallExternalSkillDialogTestId.Submit));
 

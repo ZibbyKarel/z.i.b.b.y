@@ -19,7 +19,9 @@ export enum UninstallExternalSkillDialogTestId {
   /** Each using workflow's row is suffixed with its workflow id. */
   Usage = "uninstall-external-skill-usage",
   Submit = "uninstall-external-skill-submit",
+  Cancel = "uninstall-external-skill-cancel",
   Error = "uninstall-external-skill-error",
+  UsagesError = "uninstall-external-skill-usages-error",
 }
 
 type Decision = "workflow" | "step";
@@ -59,7 +61,12 @@ export function UninstallExternalSkillDialog({
   const submit = () =>
     uninstall.mutate(
       { params: { id: skillId }, body: { workflows: choices } },
-      { onSuccess: () => onUninstalled?.() },
+      {
+        onSuccess: () => {
+          onUninstalled?.();
+          onClose();
+        },
+      },
     );
 
   return (
@@ -67,12 +74,16 @@ export function UninstallExternalSkillDialog({
       open
       actions={
         <>
-          <Button intent="ghost" onClick={onClose}>
+          <Button
+            data-testid={UninstallExternalSkillDialogTestId.Cancel}
+            intent="ghost"
+            onClick={onClose}
+          >
             {tc("cancel")}
           </Button>
           <Button
             data-testid={UninstallExternalSkillDialogTestId.Submit}
-            disabled={usagesQuery.isPending || !decided}
+            disabled={usagesQuery.isPending || usagesQuery.isError || !decided}
             icon="trash"
             intent="danger"
             loading={uninstall.isPending}
@@ -120,6 +131,11 @@ export function UninstallExternalSkillDialog({
             </Stack>
           </Container>
         ))}
+        {usagesQuery.isError && (
+          <Alert data-testid={UninstallExternalSkillDialogTestId.UsagesError} severity="error">
+            {apiErrorMessage(usagesQuery.error) ?? t("failed")}
+          </Alert>
+        )}
         {uninstall.isError && (
           <Alert data-testid={UninstallExternalSkillDialogTestId.Error} severity="error">
             {apiErrorMessage(uninstall.error) ?? t("failed")}

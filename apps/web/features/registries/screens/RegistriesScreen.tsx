@@ -46,6 +46,11 @@ import { useSkillCategoriesQuery, useSkillsQuery } from "../../skills/queries";
 import { useRegistryBindingsQuery } from "../queries";
 import { type RegistryKindParam, registryHref } from "../registryKinds";
 
+export enum RegistriesScreenTestId {
+  SyncAllSkills = "registries-sync-all-skills",
+  InstallSkills = "registries-install-skills",
+}
+
 export interface RegistriesScreenProps {
   kind: RegistryKindParam;
   /** `/system/registries/[kind]/new` — pre-opens the (unchanged) creation dialog;
@@ -171,10 +176,19 @@ function ExternalSkillActions() {
 
   return (
     <>
-      <Button icon="retry" loading={syncAll.isPending} onClick={sync}>
+      <Button
+        data-testid={RegistriesScreenTestId.SyncAllSkills}
+        icon="retry"
+        loading={syncAll.isPending}
+        onClick={sync}
+      >
         {t("syncAllAction")}
       </Button>
-      <Button icon="branch" onClick={() => setInstalling(true)}>
+      <Button
+        data-testid={RegistriesScreenTestId.InstallSkills}
+        icon="branch"
+        onClick={() => setInstalling(true)}
+      >
         {t("installAction")}
       </Button>
       {installing && <InstallExternalSkillDialog onClose={() => setInstalling(false)} />}

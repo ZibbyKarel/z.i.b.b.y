@@ -21,8 +21,10 @@ export enum InstallExternalSkillDialogTestId {
   Scan = "install-external-skill-scan",
   /** Each candidate checkbox is suffixed with its repo path. */
   Candidate = "install-external-skill-candidate",
+  /** Each conflict reason is suffixed with its repo path. */
   Conflict = "install-external-skill-conflict",
   Submit = "install-external-skill-submit",
+  Cancel = "install-external-skill-cancel",
   Error = "install-external-skill-error",
 }
 
@@ -32,8 +34,9 @@ export interface InstallExternalSkillDialogProps {
 
 /**
  * Create dialog: paste a GitHub repo URL, "Načíst" scans it for SKILL.md folders,
- * tick the ones to install. A candidate whose id is already taken is disabled
- * with the reason. Closes once the install returns 201.
+ * every non-conflicting candidate starts ticked. A candidate whose id is already
+ * taken is disabled with the reason. Install always sends the URL that was
+ * scanned (editing the field drops the scan). Closes once the install returns 201.
  */
 export function InstallExternalSkillDialog({ onClose }: InstallExternalSkillDialogProps) {
   const t = useTranslations("skills.external");
@@ -41,24 +44,41 @@ export function InstallExternalSkillDialog({ onClose }: InstallExternalSkillDial
   const scan = useScanExternalSkillsMutation();
   const install = useInstallExternalSkillsMutation();
   const [url, setUrl] = useState("");
-  const [result, setResult] = useState<ExternalSkillScan | null>(null);
+  // The scan result is bound to the exact URL it was made for.
+  const [scanned, setScanned] = useState<{ url: string; result: ExternalSkillScan } | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
+  const result = scanned?.result ?? null;
+
+  const changeUrl = (next: string) => {
+    setUrl(next);
+    setScanned(null);
+    setPicked([]);
+  };
 
   const load = () => {
-    setResult(null);
+    const scannedUrl = url.trim();
+    setScanned(null);
     setPicked([]);
     install.reset();
     scan.mutate(
-      { body: { url: url.trim() } },
-      { onSuccess: (res) => res.status === 200 && setResult(res.body) },
+      { body: { url: scannedUrl } },
+      {
+        onSuccess: (res) => {
+          if (res.status !== 200) return;
+          setScanned({ url: scannedUrl, result: res.body });
+          setPicked(res.body.candidates.filter((c) => !c.conflict).map((c) => c.path));
+        },
+      },
     );
   };
 
-  const submit = () =>
+  const submit = () => {
+    if (!scanned) return;
     install.mutate(
-      { body: { url: url.trim(), paths: picked } },
+      { body: { url: scanned.url, paths: picked } },
       { onSuccess: (res) => res.status === 201 && onClose() },
     );
+  };
 
   const toggle = (path: string, on: boolean) =>
     setPicked((prev) => (on ? [...prev, path] : prev.filter((p) => p !== path)));
@@ -70,12 +90,16 @@ export function InstallExternalSkillDialog({ onClose }: InstallExternalSkillDial
       open
       actions={
         <>
-          <Button intent="ghost" onClick={onClose}>
+          <Button
+            data-testid={InstallExternalSkillDialogTestId.Cancel}
+            intent="ghost"
+            onClick={onClose}
+          >
             {tc("cancel")}
           </Button>
           <Button
             data-testid={InstallExternalSkillDialogTestId.Submit}
-            disabled={picked.length === 0}
+            disabled={!scanned || picked.length === 0}
             icon="plus"
             intent="primary"
             loading={install.isPending}
@@ -97,7 +121,7 @@ export function InstallExternalSkillDialog({ onClose }: InstallExternalSkillDial
             <TextInputField
               data-testid={InstallExternalSkillDialogTestId.Url}
               label={t("urlLabel")}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={(e) => changeUrl(e.target.value)}
               placeholder={t("urlPlaceholder")}
               value={url}
             />
@@ -141,7 +165,7 @@ export function InstallExternalSkillDialog({ onClose }: InstallExternalSkillDial
               </Typography>
               {c.conflict && (
                 <Typography
-                  data-testid={InstallExternalSkillDialogTestId.Conflict}
+                  data-testid={`${InstallExternalSkillDialogTestId.Conflict}-${c.path}`}
                   size="xs"
                   tone="warn"
                   type="note"

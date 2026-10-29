@@ -9,12 +9,18 @@ import {
 const { hooks } = vi.hoisted(() => ({
   hooks: {
     usages: [] as unknown[],
+    usagesError: null as unknown,
     uninstall: vi.fn(),
   },
 }));
 
 vi.mock("../queries", () => ({
-  useExternalSkillUsagesQuery: () => ({ data: hooks.usages, isPending: false }),
+  useExternalSkillUsagesQuery: () => ({
+    data: hooks.usagesError ? undefined : hooks.usages,
+    isPending: false,
+    isError: hooks.usagesError !== null,
+    error: hooks.usagesError,
+  }),
 }));
 vi.mock("../mutations", () => ({
   useUninstallExternalSkillMutation: () => ({
@@ -31,6 +37,33 @@ describe("UninstallExternalSkillDialog", () => {
   beforeEach(() => {
     hooks.uninstall.mockReset();
     hooks.usages = [];
+    hooks.usagesError = null;
+  });
+
+  it("on success fires onUninstalled, then closes", async () => {
+    const onClose = vi.fn();
+    const onUninstalled = vi.fn();
+    hooks.uninstall.mockImplementation((_a, opts?: { onSuccess?: () => void }) =>
+      opts?.onSuccess?.(),
+    );
+    render(
+      <UninstallExternalSkillDialog
+        name="Security audit"
+        onClose={onClose}
+        onUninstalled={onUninstalled}
+        skillId="sa"
+      />,
+    );
+    await userEvent.click(screen.getByTestId(T.Submit));
+    expect(onUninstalled).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("a failed usages query shows the error and never submits", () => {
+    hooks.usagesError = { status: 404, body: { message: "not an external skill" } };
+    render(<UninstallExternalSkillDialog name="Security audit" onClose={vi.fn()} skillId="sa" />);
+    expect(screen.getByTestId(T.UsagesError)).toHaveTextContent("not an external skill");
+    expect(screen.getByTestId(T.Submit)).toBeDisabled();
   });
 
   it("without usages is a plain confirm that sends an empty decision map", async () => {
@@ -73,7 +106,9 @@ describe("UninstallExternalSkillDialog", () => {
   it("Zrušit closes without sending anything", async () => {
     const onClose = vi.fn();
     render(<UninstallExternalSkillDialog name="Security audit" onClose={onClose} skillId="sa" />);
-    await userEvent.click(screen.getByRole("button", { name: "Zrušit" }));
+    const cancel = screen.getByTestId(T.Cancel);
+    expect(cancel).toHaveAccessibleName("Zrušit");
+    await userEvent.click(cancel);
     expect(onClose).toHaveBeenCalled();
     expect(hooks.uninstall).not.toHaveBeenCalled();
   });

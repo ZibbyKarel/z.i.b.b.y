@@ -3,7 +3,7 @@ import { DataTableTestId, EntityCardTestId, SubNavTestId } from "@zibby/design-s
 import { renderWithProviders as render, screen, within } from "../../../test/render";
 import { AgentsByDepartmentTestId } from "../../agents/components/AgentsByDepartment";
 import userEvent from "@testing-library/user-event";
-import { RegistriesScreen } from "./RegistriesScreen";
+import { RegistriesScreen, RegistriesScreenTestId } from "./RegistriesScreen";
 
 const push = vi.fn();
 const replace = vi.fn();
@@ -156,13 +156,17 @@ describe("RegistriesScreen — /system/registries/[kind]", () => {
       opts?.onSuccess?.({ status: 200, body: { checked: 3, updated: ["a"], failed: ["b", "c"] } }),
     );
     render(<RegistriesScreen kind="skills" />);
-    await userEvent.click(screen.getByRole("button", { name: "Synchronizovat vše" }));
+    const syncButton = screen.getByTestId(RegistriesScreenTestId.SyncAllSkills);
+    expect(syncButton).toHaveAccessibleName("Synchronizovat vše");
+    await userEvent.click(syncButton);
     expect(syncAll).toHaveBeenCalledWith({ body: {} }, expect.anything());
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({ message: expect.stringMatching(/1.*2/) }),
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Přidat z repozitáře" }));
+    const installButton = screen.getByTestId(RegistriesScreenTestId.InstallSkills);
+    expect(installButton).toHaveAccessibleName("Přidat z repozitáře");
+    await userEvent.click(installButton);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 });
