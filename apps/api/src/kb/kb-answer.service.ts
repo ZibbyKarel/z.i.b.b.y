@@ -8,6 +8,7 @@ import type {
   TeamKbAnswer,
 } from "@zibby/contracts";
 import matter from "gray-matter";
+import { localDate } from "../memory/vault.service";
 import { KB_ANSWER_TAG, KB_INBOX_DIR, KbReaderService } from "./kb-reader.service";
 
 /** The question is already answered, or the KB's `inbox/` cannot be written safely (→ 409). */
@@ -45,10 +46,14 @@ export class KbAnswerService {
   async resolve(
     source: KnowledgeBaseSource,
     input: ResolveTeamKbQuestionInput,
-    today: string = new Date().toISOString().slice(0, 10),
+    today: string = localDate(),
   ): Promise<TeamKbAnswer> {
     const inbox = path.join(path.resolve(source.path), KB_INBOX_DIR);
     const name = answerFileName(input.noteId, input.question);
+    const stat = await fs.lstat(inbox).catch(() => null);
+    if (stat && (stat.isSymbolicLink() || !stat.isDirectory())) {
+      throw new KbAnswerConflictError(`${KB_INBOX_DIR}/ is not a plain directory`);
+    }
     // Trust boundary: only a question the digest really lists (with its real source) is written.
     // An answered question is no longer listed, so its existing answer file means 409, not 404.
     const { questions } = await this.reader.digest(source);
@@ -61,10 +66,6 @@ export class KbAnswerService {
       );
     }
 
-    const stat = await fs.lstat(inbox).catch(() => null);
-    if (stat && (stat.isSymbolicLink() || !stat.isDirectory())) {
-      throw new KbAnswerConflictError(`${KB_INBOX_DIR}/ is not a plain directory`);
-    }
     if (!stat) await fs.mkdir(inbox, { recursive: true });
 
     const sourceName = path.basename(input.noteId, ".md");

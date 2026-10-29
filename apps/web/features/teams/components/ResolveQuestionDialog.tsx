@@ -90,9 +90,10 @@ export function ResolveQuestionDialog({ teamId, item, onClose }: ResolveQuestion
       {errorText ? (
         <Typography
           data-testid={ResolveQuestionDialogTestId.Error}
+          role="alert"
           size="sm"
+          tone="bad"
           type="note"
-          variant="tertiary"
         >
           {errorText}
         </Typography>

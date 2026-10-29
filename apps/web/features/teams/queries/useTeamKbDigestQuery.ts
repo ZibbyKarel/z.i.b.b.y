@@ -1,8 +1,13 @@
 import { apiClient } from "../../../state/api";
 import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
 
+/** Prefix of every cache entry under a team's KB (digest, notes, graph, ingest). */
+export function getTeamKbQueryKeyPrefix(teamId: string) {
+  return ["teams", teamId, "kb"] as const;
+}
+
 export function getTeamKbDigestQueryKey(teamId: string) {
-  return ["teams", teamId, "kb", "digest"] as const;
+  return [...getTeamKbQueryKeyPrefix(teamId), "digest"] as const;
 }
 
 /** True for the 404 (no team / no KB) — a state to render, not a failure. */

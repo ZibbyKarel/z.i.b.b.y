@@ -91,6 +91,7 @@ export const KB_DIGEST_MAX_ITEMS = 30;
 export const KB_INBOX_DIR = "inbox";
 /** Frontmatter tag marking an inbox note as the answer to an open question. */
 export const KB_ANSWER_TAG = "answer";
+const isAnswerNote = (n: ScannedNote): boolean => tagsOf(n.frontmatter).includes(KB_ANSWER_TAG);
 
 const QUESTION_HEADINGS = new Set([
   "open questions",
@@ -336,21 +337,17 @@ export class KbReaderService {
       if (!a.date && b.date) return 1;
       return a.note.relPath < b.note.relPath ? 1 : a.note.relPath > b.note.relPath ? -1 : 0;
     });
-    // An answer note (inbox/, tagged) names the question as its title and the asking note in `sources`.
+    // An answer note (tagged, anywhere: it may be triaged out of inbox/) names the question as its title and the asking note in `sources`.
     const answered = new Set<string>();
     for (const { note } of notes) {
       const sources = note.frontmatter.sources;
-      if (
-        !note.relPath.startsWith(`${KB_INBOX_DIR}/`) ||
-        !tagsOf(note.frontmatter).includes(KB_ANSWER_TAG) ||
-        !Array.isArray(sources)
-      )
-        continue;
+      if (!isAnswerNote(note) || !Array.isArray(sources)) continue;
       for (const s of sources) if (typeof s === "string") answered.add(`${s}\n${note.title}`);
     }
     const questions: TeamKbDigestItem[] = [];
     const decisions: TeamKbDigestItem[] = [];
     for (const { note, date } of notes) {
+      if (isAnswerNote(note)) continue; // answers are data, never a source of questions/decisions
       const sections = extractDigestSections(note.body);
       const toItem = (text: string): TeamKbDigestItem => ({
         text,

@@ -3231,7 +3231,7 @@
           "subtitle": "Odpověď se uloží jako poznámka do inboxu týmové KB, prolinkovaná s {note}.",
           "answer": "Odpověď",
           "submit": "Uložit odpověď",
-          "notFound": "Otázka už v knowledge base není. Obnov widget.",
+          "notFound": "Otázka už v knowledge base není.",
           "conflict": "Tahle otázka už odpověď má.",
           "failed": "Uložení odpovědi selhalo."
         }

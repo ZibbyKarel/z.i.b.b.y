@@ -106,7 +106,8 @@ POST   /teams/:id/kb/sync  fast-forward the team KB git clone (`git pull --ff-on
                           200 { updated, before, after }, 404 no team/KB, 409 pull failed
 POST   /teams/:id/kb/questions/resolve  { noteId, question, answer } — writes ONE new answer note
                           to the KB `inbox/` (tagged `answer`, `sources: [noteId]`); the digest then stops
-                          listing that question; 201 { id: "inbox/answer-<slug>-<hash>.md", title },
+                          listing that question (any note tagged `answer` with `sources` counts, even once triaged out of
+                          `inbox/`; answer notes never feed the digest themselves); 201 { id: "inbox/answer-<slug>-<hash>.md", title },
                           404 no team/KB or question not in the digest, 409 already answered / `inbox/` unsafe
 PATCH  /teams/:id         partial update
 DELETE /teams/:id         delete (allowed with linked projects — no cascade)

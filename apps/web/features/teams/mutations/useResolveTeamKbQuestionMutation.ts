@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { getTeamKbQueryKeyPrefix } from "../queries";
 import { apiClient } from "../../../state/api";
 
 /**
@@ -8,8 +9,9 @@ import { apiClient } from "../../../state/api";
 export function useResolveTeamKbQuestionMutation(teamId: string) {
   const queryClient = useQueryClient();
   return apiClient.teams.resolveTeamKbQuestion.useMutation({
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["teams", teamId, "kb"] });
+    // onSettled: a 404/409 means the widget row is stale, so refresh on errors too.
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: getTeamKbQueryKeyPrefix(teamId) });
     },
   });
 }

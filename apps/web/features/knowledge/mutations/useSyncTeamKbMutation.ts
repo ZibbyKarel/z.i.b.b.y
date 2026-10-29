@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../../state/api";
+import { getTeamKbQueryKeyPrefix } from "../../teams/queries";
 import { getTeamKbGraphQueryKey } from "../queries/useTeamKbGraphQuery";
 import { getTeamKbIngestQueryKey } from "../queries/useTeamKbIngestQuery";
 import { getTeamKbNotesQueryKey } from "../queries/useTeamKbNotesQuery";
@@ -15,7 +16,7 @@ export function useSyncTeamKbMutation() {
       const id = variables.params.id;
       void qc.invalidateQueries({ queryKey: getTeamKbGraphQueryKey(id) });
       void qc.invalidateQueries({ queryKey: getTeamKbNotesQueryKey(id) });
-      void qc.invalidateQueries({ queryKey: ["teams", id, "kb", "note"] });
+      void qc.invalidateQueries({ queryKey: [...getTeamKbQueryKeyPrefix(id), "note"] });
       void qc.invalidateQueries({ queryKey: getTeamKbIngestQueryKey(id) });
     },
   });

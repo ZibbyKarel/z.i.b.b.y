@@ -3231,7 +3231,7 @@
           "subtitle": "The answer is saved as a note in the team KB inbox, linked to {note}.",
           "answer": "Answer",
           "submit": "Save answer",
-          "notFound": "This question is no longer in the knowledge base. Refresh the widget.",
+          "notFound": "This question is no longer in the knowledge base.",
           "conflict": "This question already has an answer note.",
           "failed": "Saving the answer failed."
         }

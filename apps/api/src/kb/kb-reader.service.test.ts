@@ -367,8 +367,16 @@ describe("KbReaderService.digest — answered questions", () => {
     expect(await texts()).toHaveLength(3);
   });
 
-  it("ignores an answer note outside inbox/", async () => {
+  it("counts an answer note outside inbox/ (triaged into wiki/)", async () => {
     await write("wiki/a.md", answer("tags: [answer]\n"));
-    expect(await texts()).toHaveLength(3);
+    expect(await texts()).toEqual(["Who? n.md", "When? m.md"]);
+  });
+
+  it("does not extract questions from an answer note", async () => {
+    await write(
+      "inbox/a.md",
+      `---\ntitle: "Who?"\ntags: [answer]\nsources: ["m.md"]\n---\n## Open questions\n- Injected?\n`,
+    );
+    expect(await texts()).not.toContain("Injected? inbox/a.md");
   });
 });

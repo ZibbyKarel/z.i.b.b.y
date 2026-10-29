@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
+import cs from "../../../i18n/messages/cs.json";
 import { renderWithProviders as render, screen } from "../../../test/render";
 import { ResolveQuestionDialog, ResolveQuestionDialogTestId } from "./ResolveQuestionDialog";
 
@@ -56,7 +57,23 @@ describe("ResolveQuestionDialog", () => {
     m.error = { status: 404 };
     setup();
     expect(screen.getByTestId(ResolveQuestionDialogTestId.Error)).toHaveTextContent(
-      "Otázka už v knowledge base není. Obnov widget.",
+      "Otázka už v knowledge base není.",
+    );
+  });
+
+  it("shows the conflict message on 409", () => {
+    m.error = { status: 409 };
+    setup();
+    expect(screen.getByTestId(ResolveQuestionDialogTestId.Error)).toHaveTextContent(
+      cs.bridge.widgets.teamKb.resolveDialog.conflict,
+    );
+  });
+
+  it("shows the failed message on 500", () => {
+    m.error = { status: 500 };
+    setup();
+    expect(screen.getByTestId(ResolveQuestionDialogTestId.Error)).toHaveTextContent(
+      cs.bridge.widgets.teamKb.resolveDialog.failed,
     );
   });
 });
