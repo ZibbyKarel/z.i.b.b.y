@@ -26,6 +26,7 @@ const { hooks } = vi.hoisted(() => ({
     },
     update: vi.fn(),
     del: vi.fn(),
+    sync: vi.fn(),
   },
 }));
 
@@ -33,10 +34,13 @@ vi.mock("./queries", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useSkillQuery: () => hooks.skill,
   useSkillCategoriesQuery: () => ({ data: [{ name: "Ops", glyph: "spark" }] }),
+  useExternalSkillUsagesQuery: () => ({ data: [], isPending: false }),
 }));
 vi.mock("./mutations", () => ({
   useUpdateSkillMutation: () => ({ mutate: hooks.update, isPending: false }),
   useDeleteSkillMutation: () => ({ mutate: hooks.del, isPending: false }),
+  useSyncExternalSkillMutation: () => ({ mutate: hooks.sync, isPending: false }),
+  useUninstallExternalSkillMutation: () => ({ mutate: vi.fn(), isPending: false, isError: false }),
 }));
 
 describe("skills DetailScreen (N4d grammar)", () => {
@@ -44,6 +48,7 @@ describe("skills DetailScreen (N4d grammar)", () => {
     push.mockClear();
     hooks.update.mockClear();
     hooks.del.mockClear();
+    hooks.sync.mockClear();
     hooks.skill = { data: SKILL, isPending: false, isError: false, refetch: vi.fn() };
   });
 
@@ -81,5 +86,41 @@ describe("skills DetailScreen (N4d grammar)", () => {
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     );
     expect(push).toHaveBeenCalledWith("/system/registries/skills");
+  });
+
+  it("an external skill is read-only: no Save/Delete, sync + uninstall instead", async () => {
+    hooks.skill = {
+      data: {
+        ...SKILL,
+        source: {
+          owner: "cloudflare",
+          repo: "skills",
+          url: "https://github.com/cloudflare/skills",
+          path: "deploy",
+          sha: "aaa",
+          treeSha: "t",
+          installedAt: "2026-10-01T00:00:00Z",
+          updatedAt: "2026-10-01T00:00:00Z",
+          checkedAt: "2026-10-01T00:00:00Z",
+        },
+      },
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    };
+    render(<DetailScreen skillId="deploy" />);
+    expect(screen.queryByTestId(SkillDetailScreenTestId.Save)).toBeNull();
+    expect(screen.queryByTestId(SkillDetailScreenTestId.Delete)).toBeNull();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.getByText("cloudflare")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId(SkillDetailScreenTestId.Sync));
+    expect(hooks.sync).toHaveBeenCalledWith(
+      { params: { id: "deploy" }, body: {} },
+      expect.anything(),
+    );
+
+    await userEvent.click(screen.getByTestId(SkillDetailScreenTestId.Uninstall));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 });

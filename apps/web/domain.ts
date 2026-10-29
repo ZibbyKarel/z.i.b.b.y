@@ -3,6 +3,7 @@ import type {
   AgentModel,
   AgentThinking,
   DepartmentId,
+  SkillSource,
   WorkflowComplexity,
 } from "@zibby/contracts";
 import type { IconName } from "@zibby/design-system";
@@ -28,6 +29,8 @@ export interface Skill {
   file: string;
   /** Ids of linked global gate rules (the "Pravidla schvalování" catalog). */
   gateRuleIds?: string[];
+  /** Set for a skill installed from a GitHub repo (read-only in the library). */
+  source?: SkillSource;
 }
 
 export interface Approval {

@@ -3,3 +3,8 @@ export { useUpdateSkillMutation } from "./useUpdateSkillMutation";
 export { useDeleteSkillMutation } from "./useDeleteSkillMutation";
 export { useCreateSkillCategoryMutation } from "./useCreateSkillCategoryMutation";
 export { useDeleteSkillCategoryMutation } from "./useDeleteSkillCategoryMutation";
+export { useScanExternalSkillsMutation } from "./useScanExternalSkillsMutation";
+export { useInstallExternalSkillsMutation } from "./useInstallExternalSkillsMutation";
+export { useSyncExternalSkillMutation } from "./useSyncExternalSkillMutation";
+export { useSyncAllExternalSkillsMutation } from "./useSyncAllExternalSkillsMutation";
+export { useUninstallExternalSkillMutation } from "./useUninstallExternalSkillMutation";

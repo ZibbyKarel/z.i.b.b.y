@@ -513,7 +513,34 @@
       "subtitle": "název + glyph"
     },
     "deleteTitle": "Smazat skill?",
-    "deleteBody": "Opravdu smazat skill {name}? Smaže se i soubor {file}. Tuto akci nelze vrátit."
+    "deleteBody": "Opravdu smazat skill {name}? Smaže se i soubor {file}. Tuto akci nelze vrátit.",
+    "external": {
+      "installAction": "Přidat z repozitáře",
+      "syncAllAction": "Synchronizovat vše",
+      "syncAllDone": "Zkontrolováno {checked} · aktualizováno {updated} · selhalo {failed}",
+      "installTitle": "Přidat skilly z repozitáře",
+      "urlLabel": "GitHub repozitář",
+      "urlPlaceholder": "https://github.com/owner/repo",
+      "scanAction": "Načíst",
+      "noCandidates": "V repozitáři není žádný SKILL.md.",
+      "conflict": "Id {id} už existuje",
+      "install": "Instalovat",
+      "failed": "Akce se nepovedla.",
+      "owner": "Zdroj",
+      "updated": "aktualizováno {when}",
+      "updateAvailable": "Dostupná aktualizace",
+      "readOnly": "Externí skill je jen pro čtení — mění se jen aktualizací z repozitáře.",
+      "sync": "Zkontrolovat aktualizace",
+      "syncUpdated": "Skill aktualizován na nejnovější verzi.",
+      "syncCurrent": "Skill je aktuální.",
+      "uninstall": "Odinstalovat",
+      "uninstallTitle": "Odinstalovat skill?",
+      "uninstallBody": "Skill {name} se odebere z knihovny i se svou složkou.",
+      "uninstallUsages": "Tyto workflow skill používají — u každého vyber, co s ním:",
+      "phases": "kroky: {phases}",
+      "choiceWorkflow": "Smazat celý workflow",
+      "choiceStep": "Odebrat jen krok"
+    }
   },
   "agents": {
     "addAgent": "Přidat agenta",

@@ -28,6 +28,7 @@ function selectSkills(response: { body: ContractSkill[] }): Skill[] {
     category: s.category,
     file: skillFile(s.id),
     gateRuleIds: s.gateRuleIds,
+    source: s.source,
   }));
 }
 

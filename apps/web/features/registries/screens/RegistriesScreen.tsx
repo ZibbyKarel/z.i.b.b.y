@@ -37,8 +37,11 @@ import {
 } from "../../mcp/components/McpServerFormDialog";
 import { useCreateMcpServerMutation, useSetMcpCredentialsMutation } from "../../mcp/mutations";
 import { useMcpServersQuery } from "../../mcp/queries";
+import { toastBus } from "../../../components/Toaster/toastBus";
 import { AddSkillModal } from "../../skills/components/AddSkillModal/AddSkillModal";
-import { useCreateSkillMutation } from "../../skills/mutations";
+import { ExternalSkillSource } from "../../skills/components/ExternalSkillSource";
+import { InstallExternalSkillDialog } from "../../skills/components/InstallExternalSkillDialog";
+import { useCreateSkillMutation, useSyncAllExternalSkillsMutation } from "../../skills/mutations";
 import { useSkillCategoriesQuery, useSkillsQuery } from "../../skills/queries";
 import { useRegistryBindingsQuery } from "../queries";
 import { type RegistryKindParam, registryHref } from "../registryKinds";
@@ -119,9 +122,12 @@ export function RegistriesScreen({ kind, openCreateOnMount }: RegistriesScreenPr
         <Stack gap="250">
           <Stack align="baseline" direction="row" gap="150" justify="between">
             <Typography type="title">{t("title")}</Typography>
-            <Button icon="plus" intent="primary" onClick={() => setCreating(true)}>
-              {t(`add.${kind}`)}
-            </Button>
+            <Stack align="center" direction="row" gap="100">
+              {kind === "skills" && <ExternalSkillActions />}
+              <Button icon="plus" intent="primary" onClick={() => setCreating(true)}>
+                {t(`add.${kind}`)}
+              </Button>
+            </Stack>
           </Stack>
 
           {kind === "agents" && <AgentsByDepartment />}
@@ -138,6 +144,41 @@ export function RegistriesScreen({ kind, openCreateOnMount }: RegistriesScreenPr
       {creating && kind === "hooks" && <CreateHookDialog onClose={closeCreate} />}
       {creating && kind === "commands" && <CreateCommandDialog onClose={closeCreate} />}
     </Container>
+  );
+}
+
+/** Skills-only header actions: install from a GitHub repo, and sync every external skill. */
+function ExternalSkillActions() {
+  const t = useTranslations("skills.external");
+  const syncAll = useSyncAllExternalSkillsMutation();
+  const [installing, setInstalling] = useState(false);
+
+  const sync = () =>
+    syncAll.mutate(
+      { body: {} },
+      {
+        onSuccess: ({ body }) =>
+          toastBus.emit({
+            severity: body.failed.length > 0 ? "error" : "ok",
+            message: t("syncAllDone", {
+              checked: body.checked,
+              updated: body.updated.length,
+              failed: body.failed.length,
+            }),
+          }),
+      },
+    );
+
+  return (
+    <>
+      <Button icon="retry" loading={syncAll.isPending} onClick={sync}>
+        {t("syncAllAction")}
+      </Button>
+      <Button icon="branch" onClick={() => setInstalling(true)}>
+        {t("installAction")}
+      </Button>
+      {installing && <InstallExternalSkillDialog onClose={() => setInstalling(false)} />}
+    </>
   );
 }
 
@@ -158,7 +199,12 @@ function SkillsTable({ bindings }: { bindings?: Record<string, DepartmentId[]> }
       key: "meta",
       label: t("metaHeader.skills"),
       width: "sm",
-      render: (s) => s.category ?? t("skillTypeFallback"),
+      render: (s) =>
+        s.source ? (
+          <ExternalSkillSource source={s.source} />
+        ) : (
+          (s.category ?? t("skillTypeFallback"))
+        ),
     },
     {
       key: "boundIn",

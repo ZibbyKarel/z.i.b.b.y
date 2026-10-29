@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DataTableTestId, EntityCardTestId, SubNavTestId } from "@zibby/design-system";
 import { renderWithProviders as render, screen, within } from "../../../test/render";
 import { AgentsByDepartmentTestId } from "../../agents/components/AgentsByDepartment";
+import userEvent from "@testing-library/user-event";
 import { RegistriesScreen } from "./RegistriesScreen";
 
 const push = vi.fn();
@@ -24,16 +25,44 @@ vi.mock("../queries", () => ({
 
 vi.mock("../../skills/queries", () => ({
   useSkillsQuery: () => ({
-    data: [{ id: "code-review", name: "Code review", desc: "Reviews PRs", category: "quality" }],
+    data: [
+      { id: "code-review", name: "Code review", desc: "Reviews PRs", category: "quality" },
+      {
+        id: "security-audit",
+        name: "security-audit",
+        desc: "Audits code",
+        source: {
+          owner: "cloudflare",
+          repo: "skills",
+          url: "https://github.com/cloudflare/skills",
+          path: "security-audit",
+          sha: "aaa",
+          treeSha: "t",
+          installedAt: "2026-10-01T00:00:00Z",
+          updatedAt: "2026-10-01T00:00:00Z",
+          checkedAt: "2026-10-01T00:00:00Z",
+        },
+      },
+    ],
     isPending: false,
     isError: false,
   }),
   useSkillCategoriesQuery: () => ({ data: [{ name: "quality" }] }),
 }));
 
+const { syncAll, toast } = vi.hoisted(() => ({ syncAll: vi.fn(), toast: vi.fn() }));
 vi.mock("../../skills/mutations", () => ({
   useCreateSkillMutation: () => ({ mutate: vi.fn(), isPending: false }),
+  useSyncAllExternalSkillsMutation: () => ({ mutate: syncAll, isPending: false }),
+  useScanExternalSkillsMutation: () => ({ mutate: vi.fn(), isPending: false, isError: false }),
+  useInstallExternalSkillsMutation: () => ({
+    mutate: vi.fn(),
+    reset: vi.fn(),
+    isPending: false,
+    isError: false,
+  }),
 }));
+vi.mock("../../../components/Toaster/toastBus", () => ({ toastBus: { emit: toast } }));
 
 vi.mock("../../mcp/queries", () => ({
   useMcpServersQuery: () => ({ data: [], isPending: false, isError: false }),
@@ -113,5 +142,27 @@ describe("RegistriesScreen — /system/registries/[kind]", () => {
   it("renders an empty MCP table without crashing", () => {
     render(<RegistriesScreen kind="mcp" />);
     expect(screen.getByTestId(DataTableTestId.Empty)).toBeInTheDocument();
+  });
+
+  it("an external skill row shows its owner and last update", () => {
+    render(<RegistriesScreen kind="skills" />);
+    expect(screen.getByText("security-audit")).toBeInTheDocument();
+    expect(screen.getByText("cloudflare")).toBeInTheDocument();
+    expect(screen.getByTestId("external-skill-source-updated")).not.toBeEmptyDOMElement();
+  });
+
+  it("the skills header installs from a repo and syncs all with a counting toast", async () => {
+    syncAll.mockImplementation((_args, opts?: { onSuccess?: (res: unknown) => void }) =>
+      opts?.onSuccess?.({ status: 200, body: { checked: 3, updated: ["a"], failed: ["b", "c"] } }),
+    );
+    render(<RegistriesScreen kind="skills" />);
+    await userEvent.click(screen.getByRole("button", { name: "Synchronizovat vše" }));
+    expect(syncAll).toHaveBeenCalledWith({ body: {} }, expect.anything());
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({ message: expect.stringMatching(/1.*2/) }),
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Přidat z repozitáře" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 });

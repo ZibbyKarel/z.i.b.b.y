@@ -513,7 +513,34 @@
       "subtitle": "name + glyph"
     },
     "deleteTitle": "Delete skill?",
-    "deleteBody": "Really delete skill {name}? Its file {file} is deleted too. This cannot be undone."
+    "deleteBody": "Really delete skill {name}? Its file {file} is deleted too. This cannot be undone.",
+    "external": {
+      "installAction": "Add from repository",
+      "syncAllAction": "Sync all",
+      "syncAllDone": "Checked {checked} · updated {updated} · failed {failed}",
+      "installTitle": "Add skills from a repository",
+      "urlLabel": "GitHub repository",
+      "urlPlaceholder": "https://github.com/owner/repo",
+      "scanAction": "Load",
+      "noCandidates": "The repository holds no SKILL.md.",
+      "conflict": "Id {id} already exists",
+      "install": "Install",
+      "failed": "The action failed.",
+      "owner": "Source",
+      "updated": "updated {when}",
+      "updateAvailable": "Update available",
+      "readOnly": "An external skill is read-only — it only changes through a repository update.",
+      "sync": "Check for updates",
+      "syncUpdated": "Skill updated to the latest version.",
+      "syncCurrent": "Skill is up to date.",
+      "uninstall": "Uninstall",
+      "uninstallTitle": "Uninstall skill?",
+      "uninstallBody": "Skill {name} will be removed from the library along with its folder.",
+      "uninstallUsages": "These workflows use the skill — choose what happens to each:",
+      "phases": "steps: {phases}",
+      "choiceWorkflow": "Delete the whole workflow",
+      "choiceStep": "Remove just the step"
+    }
   },
   "agents": {
     "addAgent": "Add agent",

@@ -137,6 +137,14 @@ ones, with a `source` field. They are read-only: `PATCH`/`DELETE` → 409. A bro
 external folder is logged and left out of the list. `SKILL.md` frontmatter is
 parsed YAML-only (gray-matter's JS engine is disabled — repo content is untrusted).
 
+UI (`/system/registries/skills`): the header has "Přidat z repozitáře" (paste a
+URL, "Načíst" scans, tick candidates; a conflicting id is disabled with the
+reason) and "Synchronizovat vše" (toast with checked/updated/failed counts). An
+external row shows the owner, last update and an "update available" badge. Its
+detail page is read-only: "Zkontrolovat aktualizace" runs the single sync and
+"Odinstalovat" opens a dialog that asks per using workflow "Smazat celý workflow"
+/ "Odebrat jen krok" before it submits.
+
 ## Data directories / env knobs
 
 | Store           | Dir (env override)                                                                                   | Git        |
