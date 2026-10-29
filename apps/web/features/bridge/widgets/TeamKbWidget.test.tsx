@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen, within } from "../../../test/render";
 import type { BridgeWidget } from "../grid/layout";
 import type { BridgeWidgetProps } from "./registry";
+import { ResolveQuestionDialogTestId } from "../../teams/components/ResolveQuestionDialog";
 import { TeamKbWidget, TeamKbWidgetTestId } from "./TeamKbWidget";
 
 const d = vi.hoisted(() => ({
@@ -24,6 +25,10 @@ vi.mock("../../teams/queries", async (importOriginal) => ({
     isPending: d.pending,
     refetch: vi.fn(),
   }),
+}));
+
+vi.mock("../../teams/mutations", () => ({
+  useResolveTeamKbQuestionMutation: () => ({ mutate: vi.fn(), isPending: false, error: null }),
 }));
 
 const widget = (scope?: BridgeWidget["scope"]): BridgeWidget => ({
@@ -132,5 +137,34 @@ describe("TeamKbWidget", () => {
     expect(screen.queryByTestId(TeamKbWidgetTestId.TeamSelect)).not.toBeInTheDocument();
     expect(screen.getByText("Otevřené otázky")).toBeInTheDocument();
     expect(screen.getByText("Dohody")).toBeInTheDocument();
+  });
+
+  describe("resolve action", () => {
+    beforeEach(() => {
+      d.digest = {
+        questions: [{ text: "Who?", noteId: "m.md", noteTitle: "Sync" }],
+        decisions: [{ text: "D1", noteId: "m.md", noteTitle: "Sync" }],
+      };
+    });
+
+    it("renders a Resolve action only on question rows", () => {
+      renderWithProviders(<TeamKbWidget {...setup()} />);
+      const buttons = screen.getAllByTestId(TeamKbWidgetTestId.Resolve);
+      expect(buttons).toHaveLength(1);
+      expect(buttons[0]).toHaveAccessibleName("Vyřešit: Who?");
+    });
+
+    it("Resolve opens the dialog without opening the sheet", async () => {
+      const props = setup();
+      renderWithProviders(<TeamKbWidget {...props} />);
+      await userEvent.click(screen.getByTestId(TeamKbWidgetTestId.Resolve));
+      expect(screen.getByTestId(ResolveQuestionDialogTestId.Answer)).toBeInTheDocument();
+      expect(props.onOpen).not.toHaveBeenCalled();
+    });
+
+    it("hides Resolve in edit mode", () => {
+      renderWithProviders(<TeamKbWidget {...setup({ editing: true })} />);
+      expect(screen.queryAllByTestId(TeamKbWidgetTestId.Resolve)).toHaveLength(0);
+    });
   });
 });

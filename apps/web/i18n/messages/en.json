@@ -3223,7 +3223,18 @@
         "pick": "Pick a team in edit mode.",
         "noKb": "This team has no knowledge base.",
         "questions": "Open questions",
-        "decisions": "Agreements"
+        "decisions": "Agreements",
+        "resolve": "Resolve",
+        "resolveLabel": "Resolve: {text}",
+        "resolveDialog": {
+          "title": "Resolve question",
+          "subtitle": "The answer is saved as a note in the team KB inbox, linked to {note}.",
+          "answer": "Answer",
+          "submit": "Save answer",
+          "notFound": "This question is no longer in the knowledge base. Refresh the widget.",
+          "conflict": "This question already has an answer note.",
+          "failed": "Saving the answer failed."
+        }
       },
       "budgets": {
         "empty": "No budgets or limits are set.",

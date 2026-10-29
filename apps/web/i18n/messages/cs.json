@@ -3223,7 +3223,18 @@
         "pick": "Vyber tým v režimu úprav.",
         "noKb": "Tým nemá znalostní bázi.",
         "questions": "Otevřené otázky",
-        "decisions": "Dohody"
+        "decisions": "Dohody",
+        "resolve": "Vyřešit",
+        "resolveLabel": "Vyřešit: {text}",
+        "resolveDialog": {
+          "title": "Vyřešit otázku",
+          "subtitle": "Odpověď se uloží jako poznámka do inboxu týmové KB, prolinkovaná s {note}.",
+          "answer": "Odpověď",
+          "submit": "Uložit odpověď",
+          "notFound": "Otázka už v knowledge base není. Obnov widget.",
+          "conflict": "Tahle otázka už odpověď má.",
+          "failed": "Uložení odpovědi selhalo."
+        }
       },
       "budgets": {
         "empty": "Žádné budgety ani limity nejsou nastavené.",

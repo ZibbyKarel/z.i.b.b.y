@@ -5,14 +5,16 @@ import {
   BoardLine,
   BoardRow,
   BoardText,
+  Button,
   Container,
   SectionLabel,
   SelectField,
   Stack,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { QueryError } from "../../../components/LoadError/QueryError";
+import { ResolveQuestionDialog } from "../../teams/components/ResolveQuestionDialog";
 import { isNoKbError, useTeamKbDigestQuery, useTeamsQuery } from "../../teams/queries";
 import type { BridgeSelection, BridgeWidgetProps } from "./registry";
 import { useWidgetReport } from "./useWidgetReport";
@@ -24,6 +26,7 @@ export enum TeamKbWidgetTestId {
   Questions = "team-kb-widget-questions",
   Decisions = "team-kb-widget-decisions",
   Row = "team-kb-widget-row",
+  Resolve = "team-kb-widget-resolve",
 }
 
 /** The team-note viewer URL (same route the knowledge graph opens notes in). */
@@ -58,6 +61,7 @@ export function TeamKbWidget({
   const teamsQuery = useTeamsQuery();
   const digestQuery = useTeamKbDigestQuery(teamId);
   const teams = useMemo(() => teamsQuery.data ?? [], [teamsQuery.data]);
+  const [resolving, setResolving] = useState<TeamKbDigestItem | null>(null);
   const teamName = teams.find((x) => x.id === teamId)?.name;
 
   const digest = digestQuery.data;
@@ -99,9 +103,11 @@ export function TeamKbWidget({
       ) : digest ? (
         <>
           <Group
+            editing={editing}
             group="questions"
             items={digest.questions}
             onOpen={onOpen}
+            onResolve={setResolving}
             selection={selection}
             sheetSide={sheetSide}
             teamId={teamId}
@@ -110,9 +116,11 @@ export function TeamKbWidget({
             widgetId={widget.id}
           />
           <Group
+            editing={editing}
             group="decisions"
             items={digest.decisions}
             onOpen={onOpen}
+            onResolve={setResolving}
             selection={selection}
             sheetSide={sheetSide}
             teamId={teamId}
@@ -121,6 +129,13 @@ export function TeamKbWidget({
             widgetId={widget.id}
           />
         </>
+      ) : null}
+      {resolving && teamId !== undefined ? (
+        <ResolveQuestionDialog
+          item={resolving}
+          onClose={() => setResolving(null)}
+          teamId={teamId}
+        />
       ) : null}
     </>
   );
@@ -146,7 +161,9 @@ interface GroupProps {
   testId: string;
   widgetId: string;
   selection: BridgeSelection | null;
+  editing: boolean;
   onOpen: (selection: BridgeSelection) => void;
+  onResolve: (item: TeamKbDigestItem) => void;
   sheetSide: BridgeWidgetProps["sheetSide"];
 }
 
@@ -158,9 +175,12 @@ function Group({
   testId,
   widgetId,
   selection,
+  editing,
   onOpen,
+  onResolve,
   sheetSide,
 }: GroupProps) {
+  const t = useTranslations("bridge.widgets.teamKb");
   if (items.length === 0) return null;
   return (
     <div data-testid={testId}>
@@ -172,6 +192,19 @@ function Group({
         const key = `${widgetId}:${group}:${i}`;
         return (
           <BoardRow
+            action={
+              group === "questions" && !editing ? (
+                <Button
+                  aria-label={t("resolveLabel", { text: item.text })}
+                  data-testid={TeamKbWidgetTestId.Resolve}
+                  intent="ghost"
+                  onClick={() => onResolve(item)}
+                  size="sm"
+                >
+                  {t("resolve")}
+                </Button>
+              ) : undefined
+            }
             key={key}
             onClick={() =>
               onOpen({ kind: "note", id: noteSelectionId(teamId, item.noteId), widgetId, key })
