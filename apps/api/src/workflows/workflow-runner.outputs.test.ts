@@ -94,6 +94,8 @@ async function makeService(
     // always resolves null, so the git-worktree/clone-if-missing branch never runs.
     {} as never,
     signalBus as never,
+    // SkillsStorageService double: a phase `/skill` is resolved per stage.
+    { get: vi.fn(), externalFolder: vi.fn() } as never,
   );
   (service as unknown as { core: { init: () => void; shutdown: () => void } }).core = {
     init: vi.fn(),

@@ -15,9 +15,13 @@ export function buildStageTask(opts: {
   runDirAbs?: string;
   /** TODO 13: the run project's `web.url` — the address a browser-driving agent tests. */
   webUrl?: string;
+  /** The phase's own brief — appended as `## Zadání kroku`. */
+  prompt?: string;
+  /** The phase's `/skill` — appended after the brief as `## Skill /<name>`. */
+  skill?: { name: string; body: string };
 }): string {
-  const { phaseId, consumesAbs, producesAbs, qualify, runDirAbs, webUrl } = opts;
-  return [
+  const { phaseId, consumesAbs, producesAbs, qualify, runDirAbs, webUrl, prompt, skill } = opts;
+  const base = [
     `Proveď fázi workflow "${phaseId}".`,
     consumesAbs
       ? `Vstup (pokud existuje) najdeš v "${consumesAbs}" — jde o READ-ONLY odkaz na výstup ` +
@@ -41,4 +45,11 @@ export function buildStageTask(opts: {
   ]
     .filter(Boolean)
     .join(" ");
+  return [
+    base,
+    prompt ? `## Zadání kroku\n${prompt}` : "",
+    skill ? `## Skill /${skill.name}\n${skill.body}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }

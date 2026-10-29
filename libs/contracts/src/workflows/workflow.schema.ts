@@ -2,6 +2,7 @@ import { z } from "zod";
 import { AgentIdSchema, AgentModelSchema, AgentThinkingSchema } from "../agents/agent.schema";
 import { AvatarSchema } from "../common.schema";
 import { DepartmentIdSchema } from "../departments/department.schema";
+import { SkillIdSchema } from "../skills/skill.schema";
 
 /**
  * A workflow's `id` — same restrictive filename-safe shape as `AgentIdSchema`
@@ -80,6 +81,10 @@ export const WorkflowPhaseSchema = z.object({
   commands: z.array(z.string().min(1)).max(50).optional(),
   /** Agent phase only: parse a <verdict> from `produces`; non-`pass` takes the back-edge. */
   qualify: z.boolean().optional(),
+  /** Agent phase only: a step-specific brief appended to the stage task. */
+  prompt: z.string().min(1).max(20_000).optional(),
+  /** Agent phase only: one skill (own or external) whose body rides the stage task. */
+  skill: SkillIdSchema.optional(),
   loop: PhaseLoopSchema.optional(),
   /**
    * P1-02 — an optional human checkpoint: once this phase lands green (its
@@ -286,7 +291,7 @@ function refineWorkflow(p: z.infer<typeof WorkflowObject>, ctx: z.RefinementCtx)
           message: 'a tool phase requires "produces"',
           path: ["phases", i, "produces"],
         });
-      for (const key of ["agent", "model", "thinking"] as const) {
+      for (const key of ["agent", "model", "thinking", "prompt", "skill"] as const) {
         if (ph[key] !== undefined)
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -304,7 +309,7 @@ function refineWorkflow(p: z.infer<typeof WorkflowObject>, ctx: z.RefinementCtx)
             path: ["phases", i, key],
           });
       }
-      for (const key of ["agent", "model", "thinking", "commands"] as const) {
+      for (const key of ["agent", "model", "thinking", "commands", "prompt", "skill"] as const) {
         if (ph[key] !== undefined)
           ctx.addIssue({
             code: z.ZodIssueCode.custom,

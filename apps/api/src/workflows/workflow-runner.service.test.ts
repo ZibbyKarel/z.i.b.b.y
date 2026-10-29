@@ -151,6 +151,8 @@ async function makeHarness(dir: string): Promise<Harness> {
     // never calls `.get()` at all; see workflow-runner.outputs.test.ts for the
     // Research-owned dispatch coverage.
     { get: vi.fn(() => ({ evaluate: vi.fn(async () => ({ action: "none" })) })) } as never,
+    // SkillsStorageService double: a phase `/skill` is resolved per stage.
+    { get: vi.fn(), externalFolder: vi.fn() } as never,
   );
 
   // Swap the real core (which spawns processes) for a scriptable double.
@@ -721,6 +723,68 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
       const sandboxOpts = buildClaude.mock.calls[0]?.[0] as { grantDirs?: readonly string[] };
       // The process's own cwd already IS the sandbox — nothing extra to grant.
       expect(sandboxOpts.grantDirs).toBeUndefined();
+    });
+
+    describe("phase prompt + /skill", () => {
+      const stub = (skill: unknown) => {
+        process.env.AGENT_RUNNER_MODE = "claude";
+        const buildClaude = vi.fn(async (opts: { task: string }) => ({
+          command: "claude",
+          args: ["-p", opts.task],
+        }));
+        const svc = h.service as unknown as Record<string, unknown>;
+        svc.claude = { buildClaudeCommand: buildClaude };
+        svc.agents = { get: vi.fn(async () => ({ id: "writer", instructions: "write" })) };
+        svc.skills = {
+          get: vi.fn(async (id: string) => {
+            if (!skill) throw new Error(`no ${id}`);
+            return skill;
+          }),
+          externalFolder: vi.fn((id: string) => `/ext/${id}`),
+        };
+        return () => buildClaude.mock.calls[0]?.[0] as { task: string; grantDirs?: string[] };
+      };
+
+      it("an external skill adds its folder to grantDirs and its prompt to the task", async () => {
+        const opts = stub({
+          id: "security-audit",
+          name: "Security audit",
+          instructions: "AUDIT BODY",
+          source: { repo: "https://github.com/o/r" },
+        });
+        await build(agentPhase({ prompt: "Check auth.", skill: "security-audit" }), null);
+        const { task, grantDirs } = opts();
+        expect(grantDirs).toEqual(["/sandbox", "/ext/security-audit"]);
+        expect(task).toContain("## Zadání kroku\nCheck auth.");
+        expect(task).toContain("## Skill /Security audit\n");
+        expect(task).toContain("ve složce /ext/security-audit");
+        expect(task).toContain("AUDIT BODY");
+      });
+
+      it("an own skill passes its instructions with no extra grant", async () => {
+        const opts = stub({ id: "mine", instructions: "OWN BODY" });
+        await build(agentPhase({ skill: "mine" }), null);
+        const { task, grantDirs } = opts();
+        expect(grantDirs).toEqual(["/sandbox"]);
+        expect(task).toContain("## Skill /mine\nOWN BODY");
+        expect(task).not.toContain("## Zadání kroku");
+      });
+
+      it("an unknown skill fails the stage instead of running without it", async () => {
+        stub(null);
+        await expect(build(agentPhase({ skill: "nope" }), null)).rejects.toThrow(
+          'Skill "nope" not found',
+        );
+        const run = { workflowRunId: "r_1", workflowId: "w" } as Record<string, unknown>;
+        const stage = await (
+          h.service as unknown as {
+            runStage(...a: unknown[]): Promise<{ status: string }>;
+          }
+        ).runStage(run, agentPhase({ skill: "nope" }), "/sandbox/stage", 1, null);
+        expect(stage.status).toBe("error");
+        expect(run.failedReason).toBe('Skill "nope" not found');
+        expect(h.core.start).not.toHaveBeenCalled();
+      });
     });
   });
 

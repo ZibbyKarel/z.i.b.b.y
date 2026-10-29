@@ -7,6 +7,7 @@ import { LimitsModule } from "../limits/limits.module";
 import { MemoryModule } from "../memory/memory.module";
 import { ProjectsModule } from "../projects/projects.module";
 import { ClaudeRunModule } from "../runner/claude-run.module";
+import { SkillsModule } from "../skills/skills.module";
 import { SignalBusModule } from "../automations/signal-bus.module";
 import { WorkspaceModule } from "../workspace/workspace.module";
 import { dataDir } from "../shared/data-dir";
@@ -44,6 +45,7 @@ export function resolveWorkflowRunsDir(): string {
     MemoryModule,
     ProjectsModule,
     SignalBusModule,
+    SkillsModule,
     WorkspaceModule,
   ],
   // WorkflowRunsController is declared before WorkflowsController so its static

@@ -249,6 +249,35 @@ describe("workflow schema", () => {
   });
 });
 
+describe("agent phase custom prompt + skill", () => {
+  const agentPh = {
+    id: "a",
+    agent: "writer",
+    model: "sonnet",
+    thinking: "medium",
+    consumes: "in.md",
+    produces: "out.md",
+  };
+  const parse = (ph: Record<string, unknown>) =>
+    WorkflowSchema.safeParse({ id: "w", phases: [ph], instructions: "x" });
+
+  it("accepts prompt + skill on an agent phase", () => {
+    expect(parse({ ...agentPh, prompt: "Do it well.", skill: "security-audit" }).success).toBe(
+      true,
+    );
+  });
+
+  it("rejects prompt on a tool phase", () => {
+    const result = parse({ id: "t", type: "tool", commands: ["x"], produces: "r.md", prompt: "p" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects skill on a workflow phase", () => {
+    const ph = { id: "s", type: "workflow", workflow: "c", consumes: "i", produces: "o" };
+    expect(parse({ ...ph, skill: "security-audit" }).success).toBe(false);
+  });
+});
+
 describe("workflow phase type `workflow` (sub-run)", () => {
   const sub = (extra: Record<string, unknown> = {}) => ({
     id: "sub",

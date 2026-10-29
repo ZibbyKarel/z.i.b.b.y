@@ -29,6 +29,8 @@ import {
 import { type RunAttachments } from "../agents/agent-runner.service";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { AgentsStorageService } from "../agents/agents.storage.service";
+import { externalSkillPrompt } from "../external-skills/skill-repo";
+import { SkillsStorageService } from "../skills/skills.storage.service";
 import { ApprovalsService } from "../approvals/approvals.service";
 import { SignalBusService } from "../automations/signal-bus.service";
 import { ArtifactsStorageService, artifactRecordId } from "../artifacts/artifacts.storage.service";
@@ -262,6 +264,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly projectLocal: ProjectLocalService,
     // R&D/QA deliveries are emitted as signals (a leaf module).
     private readonly signalBus: SignalBusService,
+    // A phase's `/skill` (own or external) is resolved per stage.
+    private readonly skills: SkillsStorageService,
   ) {
     this.dir = path.resolve(dir);
     this.log = logger.child(WorkflowRunnerService.name);
@@ -2490,20 +2494,37 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       phase.type !== "tool" && process.env.AGENT_RUNNER_MODE === "claude"
         ? await this.commandMaterializer.materialize(stageCwd)
         : null;
-    const { command, args, spawnCwd } = await this.buildStageCommand(
-      phase,
-      stageCwd,
-      project,
-      escalation,
-      run.workspace?.path,
-      run.matchedTerms,
-      resumeContext,
-      delegates,
-      department,
-      run.workflowRunId,
-      commandsPlugin,
-      stageWebUrl(stageWorkflow, project),
-    );
+    let built: Awaited<ReturnType<WorkflowRunnerService["buildStageCommand"]>>;
+    try {
+      built = await this.buildStageCommand(
+        phase,
+        stageCwd,
+        project,
+        escalation,
+        run.workspace?.path,
+        run.matchedTerms,
+        resumeContext,
+        delegates,
+        department,
+        run.workflowRunId,
+        commandsPlugin,
+        stageWebUrl(stageWorkflow, project),
+      );
+    } catch (error) {
+      // A stage that can't even be built (unknown /skill, missing agent) fails here
+      // with the reason on the aggregate — never a hung run, never a skill-less run.
+      const reason = error instanceof Error ? error.message : String(error);
+      this.log.error("workflow stage could not be built", { phase: phase.id, err: reason });
+      run.failedReason = reason;
+      return {
+        phaseId: phase.id,
+        runId: `${run.workflowRunId}.${phase.id}.unbuilt`,
+        attempt,
+        status: "error",
+        dir: path.basename(stageCwd),
+      };
+    }
+    const { command, args, spawnCwd } = built;
     // Per-project env + secrets injected into this stage's process (Phase D), plus
     // the run/stage folders (P1-01) so a tool can write run-wide artifacts (e.g. the
     // `book/` folder) and any stage can find them after a loop re-dispatch. A tool
@@ -2971,6 +2992,21 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       // so anything sandbox-relative would silently resolve against the repo.
       const consumesAbs = phase.consumes ? path.join(cwd, phase.consumes) : null;
       const producesAbs = phase.produces ? path.join(cwd, phase.produces) : null;
+      // The phase's `/skill`: an unknown id fails the stage rather than running
+      // without it. An external skill's body points at its installed folder,
+      // which the session is then granted to read.
+      let skill: { name: string; body: string } | undefined;
+      let skillDir: string | undefined;
+      if (phase.skill) {
+        const id = phase.skill;
+        const found = await this.skills.get(id).catch(() => null);
+        if (!found) throw new Error(`Skill "${id}" not found`);
+        if (found.source) skillDir = this.skills.externalFolder(found.id);
+        skill = {
+          name: found.name ?? found.id,
+          body: skillDir ? externalSkillPrompt(found, skillDir) : found.instructions,
+        };
+      }
       const task = buildStageTask({
         phaseId: phase.id,
         consumesAbs,
@@ -2978,6 +3014,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         qualify: phase.qualify,
         runDirAbs: path.dirname(cwd),
         ...(webUrl ? { webUrl } : {}),
+        ...(phase.prompt ? { prompt: phase.prompt } : {}),
+        ...(skill ? { skill } : {}),
       });
       // Memory grounding (Phase 4): per-stage so each phase's agent gets the North
       // Star + relevant MOCs + the project note. Fail-open ("" on any error).
@@ -2995,7 +3033,9 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       // narrower existing grant (just this stage's own sandbox, so the session can
       // still write `produces` back into it) applies when the session spawns
       // elsewhere (worktree/project).
-      const grantDirs = phase.consumes ? [path.dirname(cwd)] : spawnCwd ? [cwd] : undefined;
+      const baseGrant = phase.consumes ? [path.dirname(cwd)] : spawnCwd ? [cwd] : [];
+      const allGrants = skillDir ? [...baseGrant, skillDir] : baseGrant;
+      const grantDirs = allGrants.length > 0 ? allGrants : undefined;
       const built = await this.claude.buildClaudeCommand({
         instructions: agent.instructions,
         task,

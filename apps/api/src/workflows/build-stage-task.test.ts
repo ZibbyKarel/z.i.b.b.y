@@ -61,3 +61,19 @@ describe("buildStageTask", () => {
     );
   });
 });
+
+describe("buildStageTask prompt + skill", () => {
+  it("appends the step prompt and then the skill section", () => {
+    const task = buildStageTask({
+      phaseId: "x",
+      consumesAbs: null,
+      producesAbs: null,
+      prompt: "Zkontroluj bezpečnost.",
+      skill: { name: "security-audit", body: "Audit body" },
+    });
+    const p = task.indexOf("## Zadání kroku\nZkontroluj bezpečnost.");
+    const s = task.indexOf("## Skill /security-audit\nAudit body");
+    expect(p).toBeGreaterThan(task.indexOf('Proveď fázi workflow "x".'));
+    expect(s).toBeGreaterThan(p);
+  });
+});

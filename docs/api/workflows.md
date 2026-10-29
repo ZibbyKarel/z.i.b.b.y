@@ -335,6 +335,12 @@ reachable from `stageRuns`).
    The stage task (`buildStageTask`, `build-stage-task.ts`) also names the run folder
    (`$ZIBBY_RUN_DIR`, via the `runDirAbs` option) so an agent without Bash can still
    reach earlier phases' artifacts in its subfolders.
+   An agent phase may carry a custom `prompt` (≤ 20 000 chars, appended as
+   `## Zadání kroku`) and one `skill` id (appended after it as `## Skill /<name>` with
+   the skill's body). An external skill's body points at its installed folder, which is
+   added to the stage's `grantDirs`. An unknown `skill` fails the stage with
+   `Skill "<id>" not found` (recorded as the run's `failedReason`) — it never runs
+   without it. Both fields are rejected on `tool` / `workflow` phases.
 3. Calls `RunnerCore.spawn()` for a `workflow-stage` kind.
 4. Waits for it to finish (polling the sidecar status).
 5. Reads the output from the `produces` file (or the log's last N lines).
