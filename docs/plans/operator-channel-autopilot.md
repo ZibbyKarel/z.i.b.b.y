@@ -46,7 +46,7 @@ A dashboard button "Autopilot" (bridge dashboard, the only screen the operator u
 - [x] Phase 2 — inbound operator messages
 - [x] Phase 3 — thread feedback
 - [x] Phase 4 — autopilot
-- [ ] Final: project-wide checks, merge to main, push
+- [x] Final: project-wide checks, merge to main, push (2026-10-29; review findings 1–7 fixed first)
 
 ## Phase 1 notes
 
