@@ -588,13 +588,12 @@ setInterval(() => tick(), systemConfig.current().taskTickMs);
 
 ## Routing and dispatch
 
-| Target         | Dispatcher                                                                                                                                                                                                |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `agent`        | `AgentRunnerService.startRun(agentId, { prompt, project })`                                                                                                                                               |
-| `workflow`     | `WorkflowRunnerService.startRun(workflowId, { prompt, project })`                                                                                                                                         |
-| `department`   | Resolved to a concrete `agent`/`workflow` target first (stage 2, see above), then dispatched like any other — never reaches a runner directly                                                             |
-| `immediate`    | Quick-action "Run immediately": persisted only when `true` (absent otherwise). Operator-set via `CreateTaskInput.immediate`; no server-side creator sets it. The run takes no run slot (see "Run slots"). |
-| `orchestrator` | `AgentRunnerService.startRun(ORCHESTRATOR_ID, { prompt })`                                                                                                                                                |
+| Target         | Dispatcher                                                                                                                                    |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `agent`        | `AgentRunnerService.startRun(agentId, { prompt, project })`                                                                                   |
+| `workflow`     | `WorkflowRunnerService.startRun(workflowId, { prompt, project })`                                                                             |
+| `department`   | Resolved to a concrete `agent`/`workflow` target first (stage 2, see above), then dispatched like any other — never reaches a runner directly |
+| `orchestrator` | `AgentRunnerService.startRun(ORCHESTRATOR_ID, { prompt })`                                                                                    |
 
 After dispatch, `runRef` is written back to the task record.
 
@@ -631,7 +630,7 @@ chat message references is never deleted.
 
 ## Parent/subtask read model (ZB-04a §5)
 
-A `ScheduledTask` carries five additive, server-derived fields (`parentTaskId` and `chain` are legacy: they still parse read-only but nothing writes them any more) —
+A `ScheduledTask` carries four additive, server-derived fields, plus the operator-set `immediate` (`parentTaskId` and `chain` are legacy: they still parse read-only but nothing writes them any more) —
 
 | Field          | Set by                                                                                                                                                                                                                          |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -639,6 +638,7 @@ A `ScheduledTask` carries five additive, server-derived fields (`parentTaskId` a
 | `chain`        | Legacy (chains removed): `{ id, step }`. Parses read-only; no longer written.                                                                                                                                                   |
 | `source`       | O-18: who created the task — `operator` \| `department` \| `channel` \| `automation` (legacy values `chain` / `handoff` still parse). Stamped once, at creation (never re-derived).                                             |
 | `department`   | O-06: the department that owns the DISPATCHED unit. Stamped at dispatch time (not creation — a scheduled/held/queued task has no resolved unit yet), from the classifier's stage-1 verdict or an explicit `@department` target. |
+| `immediate`    | Quick-action "Run immediately": persisted only when `true` (absent otherwise). Operator-set via `CreateTaskInput.immediate`; no server-side creator sets it. The run takes no run slot (see "Run slots").                       |
 
 **Source stamping per creation leg** — `source` is server-derived, never client-asserted for
 the automatic legs (Law 4):
