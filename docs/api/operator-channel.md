@@ -102,16 +102,20 @@ Only events ZIBBY **already records** are mapped. The notifier subscribes to the
 stream and adds no new emit points. Every activity kind not listed here is Tier-1 and is
 never sent.
 
-| Event              | Tier | Comes from (activity entry)                                                            |
-| ------------------ | ---- | -------------------------------------------------------------------------------------- |
-| `pr-opened`        | 2    | `task-outcome` done, where the task's outcome has a `pr` url                           |
-| `run-completed`    | 2    | `task-outcome` done without a PR (PR-inbox tasks excluded; they report via approvals)  |
-| `review-finished`  | 3    | `approval-requested` with status `pr-review`                                           |
-| `approval-waiting` | 3    | any other `approval-requested` (including the roadmap question without an approval id) |
-| `budget-cap`       | 3    | `approval-requested` with action `spend-past-cap`                                      |
-| `run-parked`       | 3    | `workflow-parked` (reason `retries`/`limit` only) and `goal-parked`                    |
-| `ci-red`           | 2    | `monitor-alert`, and a `post-merge-outcome` that dispatched a fix task                 |
-| `briefing`         | 2    | `briefing-generated` (off by default)                                                  |
+| Event              | Tier | Comes from (activity entry)                                                                                                          |
+| ------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `pr-opened`        | 2    | `task-outcome` done, where the task's outcome has a `pr` url                                                                         |
+| `run-completed`    | 2    | `task-outcome` done without a PR (PR-inbox tasks excluded; they report via approvals)                                                |
+| `review-finished`  | 3    | `approval-requested` with status `pr-review`                                                                                         |
+| `approval-waiting` | 3    | any other `approval-requested` (including the roadmap question without an approval id). Skipped when autopilot decided it            |
+| `budget-cap`       | 3    | `approval-requested` with action `spend-past-cap`                                                                                    |
+| `run-parked`       | 3    | `workflow-parked` (reason `retries`/`limit` only) and `goal-parked`                                                                  |
+| `ci-red`           | 2    | `monitor-alert`, and a `post-merge-outcome` that dispatched a fix task                                                               |
+| `briefing`         | 2    | `briefing-generated` (off by default)                                                                                                |
+| `autopilot-action` | 2    | `autopilot-action` (a gate or approval autopilot let through) and `autopilot-changed` (switched on/off). See `docs/api/autopilot.md` |
+
+`autopilot-action` is on by default for new settings. Settings saved before Phase 4 keep
+their explicit `notify.events` list, so add `autopilot-action` there to receive it.
 
 Not mapped on purpose: failed or dead-lettered runs (not in the Phase 1 list) and
 `task-held` (its approval already raises `budget-cap`).

@@ -45,7 +45,7 @@ A dashboard button "Autopilot" (bridge dashboard, the only screen the operator u
 - [x] Phase 1 — outbound notifications
 - [x] Phase 2 — inbound operator messages
 - [x] Phase 3 — thread feedback
-- [ ] Phase 4 — autopilot
+- [x] Phase 4 — autopilot
 - [ ] Final: project-wide checks, merge to main, push
 
 ## Phase 1 notes
@@ -138,3 +138,37 @@ No contract change (the binding is an internal file, no new endpoint).
     url is the reference.
   - Notices (rate limit / busy) are still posted top-level, even for a thread reply.
 
+## Phase 4 notes
+
+Shipped on `feat/operator-channel`: contracts (`autopilot` resource, activity and event
+kinds, `via` / `decidedBy` markers), API (service, controller, gate overlay, park-site
+approvals, `autopilot_off` chat tool, notifier mapping, tests and e2e), web (the bridge
+header toggle) and docs. Reference: `docs/api/autopilot.md`.
+
+- **Allowlist, two seams.** Gate seam: `AUTOPILOT_COVERED_RULES` is keyed by system rule
+  id (`floor-gh.pr_comment`, and `floor-git.push` onto `zibby/*` only), and the intent is
+  re-checked. Approval seam: `autopilotCoversApproval` covers `pr-review`, the pr-review
+  `workflow-gate`, `pr-address-comments` replies plus a push onto `zibby/*`, a `pr-fix-ci`
+  push onto `zibby/*`, and `channel` replies.
+- **New hook action `gh.pr_comment`.** Before this, PR comments were part of
+  `gh.api_write`, which was too broad to lift. A new system ask rule
+  (`floor-gh.pr_comment`) keeps the default behaviour the same (ask).
+- **Tightening is preserved by construction.** The overlay only rewrites a locked
+  global hit, and only when that result is strictly stricter than what the floor already
+  has. The evaluator's strictest-of-buckets pick then lets any agent, department or other
+  global `ask`/`deny` win.
+- **Reviews are posted as `COMMENT`.** Autopilot never chooses APPROVE or REQUEST_CHANGES.
+- **Deferred.**
+  - The `approval-requested` ping is skipped only if the notifier's lookup already sees
+    `decidedBy: autopilot`. In a race, a stale "waiting" ping can still go out before the
+    autopilot approval.
+  - The `gh pr comment` / `gh pr review` CLI subcommands are not classified (same as before
+    this phase). Only `gh api` POSTs map to `gh.pr_comment`.
+  - A hand edit of `autopilot.json` only takes effect after a restart (the state is cached).
+  - Saved `notify.events` lists don't include `autopilot-action` (documented).
+  - The Comms ledger entry stays pending for a reply autopilot sends. This is deliberate: it
+    doesn't count toward graduation.
+  - A department whose `tierDefault` is `ask` (or one with its own ask rule) blocks the
+    overlay for that department. That is the intended tightening, but worth knowing.
+  - There is no runner-level test for the workflow-gate approve. The coverage predicate is
+    unit-tested, and the wiring is the same one-liner the other park sites use.
