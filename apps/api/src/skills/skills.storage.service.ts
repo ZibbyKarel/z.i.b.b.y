@@ -1,16 +1,26 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { promises as fs } from "node:fs";
+import * as path from "node:path";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import {
   AGENT_ID_REGEX,
   type CreateSkillInput,
+  type ExternalSkillRecord,
   RiskSchema,
   type Skill,
   SkillSchema,
   type UpdateSkillInput,
 } from "@zibby/contracts";
+import {
+  EXTERNAL_SKILLS_DIR,
+  ExternalSkillsStore,
+  externalSkillDir,
+} from "../external-skills/external-skills.store";
+import { parseSkillMd } from "../external-skills/skill-repo";
 import { MarkdownEntityStore, searchByText } from "../shared/file-storage";
 import {
   CorruptSkillFileError,
   InvalidSkillIdError,
+  ReadOnlySkillError,
   SkillConflictError,
   SkillNotFoundError,
 } from "./skills.errors";
@@ -23,19 +33,59 @@ export const SKILLS_DIR = "SKILLS_DIR";
  * skill, named `<id>.md`, inside a configurable data directory. Same shape and
  * guarantees as {@link AgentsStorageService} — frontmatter (`name`, `glyph`,
  * `desc`) plus the `instructions` body — there is intentionally no database.
+ *
+ * `list`/`get` also return the skills installed from GitHub repos
+ * (`ExternalSkillsStore` + `<EXTERNAL_SKILLS_DIR>/<id>/SKILL.md`), carrying
+ * `source`; those are read-only here (`ReadOnlySkillError`).
  */
 @Injectable()
 export class SkillsStorageService extends MarkdownEntityStore<Skill> {
   protected readonly fileExt = ".md";
   protected readonly idRegex = AGENT_ID_REGEX;
 
-  constructor(@Inject(SKILLS_DIR) dir: string) {
+  private readonly logger = new Logger(SkillsStorageService.name);
+
+  constructor(
+    @Inject(SKILLS_DIR) dir: string,
+    private readonly externals: ExternalSkillsStore,
+    @Inject(EXTERNAL_SKILLS_DIR) private readonly externalDir: string,
+  ) {
     super(dir);
+  }
+
+  override async list(): Promise<Skill[]> {
+    const own = await super.list();
+    const ownIds = new Set(own.map((s) => s.id));
+    const external = await Promise.all(
+      (await this.externals.list())
+        .filter((r) => !ownIds.has(r.id))
+        .map((r) => this.readExternal(r)),
+    );
+    return [...own, ...external.filter((s): s is Skill => s !== null)].sort((a, b) =>
+      this.compare(a, b),
+    );
+  }
+
+  override async get(id: string): Promise<Skill> {
+    try {
+      return await super.get(id);
+    } catch (error) {
+      if (!(error instanceof SkillNotFoundError)) throw error;
+      const record = await this.externals.get(id);
+      const skill = record ? await this.readExternal(record) : null;
+      if (!skill) throw error;
+      return skill;
+    }
+  }
+
+  override async delete(id: string): Promise<void> {
+    await this.assertWritable(id);
+    await super.delete(id);
   }
 
   async create(input: CreateSkillInput): Promise<Skill> {
     const file = this.resolveFile(input.id);
-    if (await this.fileExists(file)) {
+    if ((await this.fileExists(file)) || (await this.externals.get(input.id))) {
       throw new SkillConflictError(input.id);
     }
     const skill: Skill = { ...input, name: input.name ?? input.id };
@@ -49,10 +99,31 @@ export class SkillsStorageService extends MarkdownEntityStore<Skill> {
   }
 
   async update(id: string, patch: UpdateSkillInput): Promise<Skill> {
+    await this.assertWritable(id);
     const existing = await this.get(id);
     const merged: Skill = { ...existing, ...patch, id: existing.id };
     await this.writeEntity(merged);
     return merged;
+  }
+
+  private async assertWritable(id: string): Promise<void> {
+    if (await this.externals.get(id)) throw new ReadOnlySkillError(id);
+  }
+
+  /** An installed external skill, or null (logged) when its folder is broken. */
+  private async readExternal(record: ExternalSkillRecord): Promise<Skill | null> {
+    const { id, ...source } = record;
+    try {
+      const file = path.join(externalSkillDir(id, this.externalDir), "SKILL.md");
+      // parseSkillMd keeps gray-matter's js engine disabled — repo content is untrusted.
+      const { name, desc, instructions } = parseSkillMd(await fs.readFile(file, "utf8"), id);
+      const result = SkillSchema.safeParse({ id, name, desc, instructions, source });
+      if (result.success) return result.data;
+      this.logger.warn(`External skill "${id}" is invalid: ${result.error.message}`);
+    } catch (error) {
+      this.logger.warn(`External skill "${id}" is unreadable: ${(error as Error).message}`);
+    }
+    return null;
   }
 
   protected idOf(skill: Skill): string {

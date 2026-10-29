@@ -6,6 +6,8 @@ export * from "./categories/category.schema";
 export * from "./categories/categories.contract";
 export * from "./skills/skill.schema";
 export * from "./skills/skills.contract";
+export * from "./skills/external-skill.schema";
+export * from "./skills/external-skills.contract";
 export * from "./hooks/hook.schema";
 export * from "./hooks/hooks.contract";
 export * from "./mcp/mcp.schema";

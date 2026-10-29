@@ -87,12 +87,34 @@ DepartmentId[]>`:
 A single cross-cutting endpoint (rather than a computed field added to each of
 the four entity schemas) — see `registry-bindings.schema.ts`'s docblock.
 
+## External skills (`/api/skills/external`)
+
+Skills installed from a public GitHub repo (`apps/api/src/external-skills/`).
+Only `https://github.com/<owner>/<repo>` URLs are accepted (optionally `.git` or
+`/tree/<ref>/<path>`).
+
+- `POST /api/skills/external/scan` `{ url }` — shallow-clones the repo into a temp
+  dir (always deleted), lists every folder holding a `SKILL.md` with
+  `conflict: true` when its id is already taken.
+- `POST /api/skills/external` `{ url, paths }` — installs the chosen folders into
+  `data/skills-external/<id>/` (no `.git`, symlinks never copied or followed) and
+  records provenance (`owner`, `repo`, `path`, pinned `sha`, folder `treeSha`) in
+  `data/external-skills.json`.
+- Errors: 400 bad URL, 409 id taken (own or external), 422 no `SKILL.md` / unknown
+  path, 502 git failed.
+
+`GET /api/skills` / `GET /api/skills/:id` return external skills next to own
+ones, with a `source` field. They are read-only: `PATCH`/`DELETE` → 409. A broken
+external folder is logged and left out of the list. `SKILL.md` frontmatter is
+parsed YAML-only (gray-matter's JS engine is disabled — repo content is untrusted).
+
 ## Data directories / env knobs
 
-| Store           | Dir (env override)                             | Git        |
-| --------------- | ---------------------------------------------- | ---------- |
-| Commands        | `data/commands` (`COMMANDS_DIR`)               | committed  |
-| MCP servers     | `data/mcp-servers` (`MCP_DIR`)                 | committed  |
-| MCP credentials | `data/mcp-credentials` (`MCP_CREDENTIALS_DIR`) | gitignored |
-| Hooks           | `data/hooks` (`HOOKS_DIR`)                     | committed  |
-| Project secrets | `data/project-secrets` (`PROJECT_SECRETS_DIR`) | gitignored |
+| Store           | Dir (env override)                                                                                   | Git        |
+| --------------- | ---------------------------------------------------------------------------------------------------- | ---------- |
+| Commands        | `data/commands` (`COMMANDS_DIR`)                                                                     | committed  |
+| MCP servers     | `data/mcp-servers` (`MCP_DIR`)                                                                       | committed  |
+| MCP credentials | `data/mcp-credentials` (`MCP_CREDENTIALS_DIR`)                                                       | gitignored |
+| Hooks           | `data/hooks` (`HOOKS_DIR`)                                                                           | committed  |
+| Project secrets | `data/project-secrets` (`PROJECT_SECRETS_DIR`)                                                       | gitignored |
+| External skills | `data/skills-external` (`EXTERNAL_SKILLS_DIR`), `data/external-skills.json` (`EXTERNAL_SKILLS_FILE`) | committed  |

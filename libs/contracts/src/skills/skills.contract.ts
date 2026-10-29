@@ -45,14 +45,15 @@ export const skillsContract = c.router(
       path: "/skills/:id",
       pathParams: z.object({ id: SkillIdSchema }),
       body: UpdateSkillSchema,
-      responses: { 200: SkillSchema, 404: ErrorSchema },
+      // 409: the skill was installed from a GitHub repo and is read-only.
+      responses: { 200: SkillSchema, 404: ErrorSchema, 409: ErrorSchema },
       summary: "Partially update an existing skill",
     },
     deleteSkill: {
       method: "DELETE",
       path: "/skills/:id",
       pathParams: z.object({ id: SkillIdSchema }),
-      responses: { 200: z.object({ id: SkillIdSchema }), 404: ErrorSchema },
+      responses: { 200: z.object({ id: SkillIdSchema }), 404: ErrorSchema, 409: ErrorSchema },
       summary: "Delete a skill",
     },
   },

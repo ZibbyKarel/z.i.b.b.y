@@ -47,6 +47,7 @@ import { projectsContract } from "./projects/projects.contract";
 import { reviewLearningContract } from "./review-learning/review-learning.contract";
 import { roadmapContract } from "./roadmap/roadmap.contract";
 import { inboxContract } from "./inbox/inbox.contract";
+import { externalSkillsContract } from "./skills/external-skills.contract";
 import { skillsContract } from "./skills/skills.contract";
 import { speechContract } from "./speech/speech.contract";
 import { systemContract } from "./system/system.contract";
@@ -67,6 +68,7 @@ export const appContract = c.router({
   agentRuns: agentRunsContract,
   categories: categoriesContract,
   skills: skillsContract,
+  externalSkills: externalSkillsContract,
   skillCategories: skillCategoriesContract,
   hooks: hooksContract,
   commands: commandsContract,

@@ -29,3 +29,11 @@ export class CorruptSkillFileError extends Error {
     this.name = "CorruptSkillFileError";
   }
 }
+
+/** Raised when updating/deleting a skill installed from a GitHub repo → 409. */
+export class ReadOnlySkillError extends Error {
+  constructor(public readonly id: string) {
+    super(`Skill "${id}" was installed from a repository and is read-only`);
+    this.name = "ReadOnlySkillError";
+  }
+}

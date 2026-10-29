@@ -1,4 +1,11 @@
 import { Module } from "@nestjs/common";
+import {
+  EXTERNAL_SKILLS_DIR,
+  EXTERNAL_SKILLS_FILE,
+  ExternalSkillsStore,
+  resolveExternalSkillsDir,
+  resolveExternalSkillsFile,
+} from "../external-skills/external-skills.store";
 import { dataDir } from "../shared/data-dir";
 import { SkillCategoriesController } from "./skill-categories.controller";
 import { SkillCategoriesStorageService } from "./skill-categories.storage.service";
@@ -19,9 +26,19 @@ export function resolveSkillsDir(): string {
   controllers: [SkillCategoriesController, SkillsController],
   providers: [
     { provide: SKILLS_DIR, useFactory: resolveSkillsDir },
+    // Provided (and exported) here, not in ExternalSkillsModule, so the storage
+    // service can merge external skills without a module cycle.
+    { provide: EXTERNAL_SKILLS_FILE, useFactory: resolveExternalSkillsFile },
+    { provide: EXTERNAL_SKILLS_DIR, useFactory: resolveExternalSkillsDir },
+    ExternalSkillsStore,
     SkillsStorageService,
     SkillCategoriesStorageService,
   ],
-  exports: [SkillsStorageService, SkillCategoriesStorageService],
+  exports: [
+    SkillsStorageService,
+    SkillCategoriesStorageService,
+    ExternalSkillsStore,
+    EXTERNAL_SKILLS_DIR,
+  ],
 })
 export class SkillsModule {}

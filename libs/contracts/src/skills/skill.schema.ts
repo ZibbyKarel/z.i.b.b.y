@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { AgentIdSchema } from "../agents/agent.schema";
 import { RiskSchema } from "../common.schema";
+import { SkillSourceSchema } from "./external-skill.schema";
 
 /**
  * A skill is the same on-disk shape as an agent — a `SKILL.md` file with YAML
@@ -29,13 +30,15 @@ export const SkillSchema = z.object({
   /** Ids of linked global rules (the "Pravidla schvalování" catalog); see {@link AgentSchema}. */
   gateRuleIds: z.array(z.string()).optional(),
   instructions: z.string().min(1),
+  /** Set only on a skill installed from a GitHub repo — such a skill is read-only. */
+  source: SkillSourceSchema.optional(),
 });
 export type Skill = z.infer<typeof SkillSchema>;
 
 /** Body accepted by `createSkill` — full entity (`id` + `instructions` required). */
-export const CreateSkillSchema = SkillSchema;
+export const CreateSkillSchema = SkillSchema.omit({ source: true });
 export type CreateSkillInput = z.infer<typeof CreateSkillSchema>;
 
 /** Body accepted by `updateSkill` — every field optional (partial), id excluded. */
-export const UpdateSkillSchema = SkillSchema.omit({ id: true }).partial();
+export const UpdateSkillSchema = SkillSchema.omit({ id: true, source: true }).partial();
 export type UpdateSkillInput = z.infer<typeof UpdateSkillSchema>;

@@ -43,6 +43,7 @@ import { LoggingModule } from "./shared/logging/logging.module";
 import { InboxModule } from "./inbox/inbox.module";
 import { PinsModule } from "./pins/pins.module";
 import { QuickActionsModule } from "./quick-actions/quick-actions.module";
+import { ExternalSkillsModule } from "./external-skills/external-skills.module";
 import { MarketplacesModule } from "./marketplaces/marketplaces.module";
 import { TodoModule } from "./todo/todo.module";
 import { RoadmapModule } from "./roadmap/roadmap.module";
@@ -78,6 +79,7 @@ import { TeamsModule } from "./teams/teams.module";
     ActivityViewModule,
     AgentsModule,
     SkillsModule,
+    ExternalSkillsModule,
     ProjectsModule,
     CompaniesModule,
     TeamsModule,

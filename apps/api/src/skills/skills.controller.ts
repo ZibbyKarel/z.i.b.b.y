@@ -2,13 +2,24 @@ import { Controller } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { skillsContract } from "@zibby/contracts";
 import { makeErrorMapper } from "../shared/http/error-mapping";
-import { InvalidSkillIdError, SkillConflictError, SkillNotFoundError } from "./skills.errors";
+import {
+  InvalidSkillIdError,
+  ReadOnlySkillError,
+  SkillConflictError,
+  SkillNotFoundError,
+} from "./skills.errors";
 import { SkillsStorageService } from "./skills.storage.service";
 
 const errors = makeErrorMapper("Skill", {
   missing: [SkillNotFoundError, InvalidSkillIdError],
   conflict: [SkillConflictError],
 });
+
+/** Editing/deleting a GitHub-installed skill → 409. */
+const readOnly = (error: unknown) =>
+  error instanceof ReadOnlySkillError
+    ? { status: 409 as const, body: { message: error.message } }
+    : undefined;
 
 /**
  * Implements `skillsContract` against the file-backed storage service. Mirrors
@@ -34,13 +45,17 @@ export class SkillsController {
       getSkill: ({ params: { id } }) => errors.or404(id, () => this.storage.get(id)),
 
       updateSkill: ({ params: { id }, body }) =>
-        errors.or404(id, () => this.storage.update(id, body)),
+        errors.or404(id, () => this.storage.update(id, body), readOnly),
 
       deleteSkill: ({ params: { id } }) =>
-        errors.or404(id, async () => {
-          await this.storage.delete(id);
-          return { id };
-        }),
+        errors.or404(
+          id,
+          async () => {
+            await this.storage.delete(id);
+            return { id };
+          },
+          readOnly,
+        ),
     });
   }
 }

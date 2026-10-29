@@ -3,6 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import matter from "gray-matter";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { ExternalSkillsStore } from "../external-skills/external-skills.store";
 import { InvalidSkillIdError, SkillConflictError, SkillNotFoundError } from "./skills.errors";
 import { SkillsStorageService } from "./skills.storage.service";
 
@@ -15,7 +16,11 @@ describe("SkillsStorageService", () => {
 
   beforeEach(async () => {
     dir = await fs.mkdtemp(path.join(os.tmpdir(), "skills-test-"));
-    service = new SkillsStorageService(dir);
+    service = new SkillsStorageService(
+      dir,
+      new ExternalSkillsStore(path.join(dir, "external-skills.json")),
+      path.join(dir, "external"),
+    );
     await service.onModuleInit();
   });
   afterEach(async () => {

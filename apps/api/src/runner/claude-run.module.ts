@@ -1,3 +1,10 @@
+import {
+  EXTERNAL_SKILLS_DIR,
+  EXTERNAL_SKILLS_FILE,
+  ExternalSkillsStore,
+  resolveExternalSkillsDir,
+  resolveExternalSkillsFile,
+} from "../external-skills/external-skills.store";
 import { Module } from "@nestjs/common";
 import { AGENTS_DIR, AgentsStorageService } from "../agents/agents.storage.service";
 import { ApprovalsModule } from "../approvals/approvals.module";
@@ -50,6 +57,10 @@ import { RunMcpController } from "./run-mcp.controller";
     KbMcpAuthGuard,
     { provide: AGENTS_DIR, useFactory: () => process.env.AGENTS_DIR ?? dataDir("agents") },
     { provide: SKILLS_DIR, useFactory: () => process.env.SKILLS_DIR ?? dataDir("skills") },
+    // SkillsStorageService merges external (GitHub-installed) skills; re-read per call.
+    { provide: EXTERNAL_SKILLS_FILE, useFactory: resolveExternalSkillsFile },
+    { provide: EXTERNAL_SKILLS_DIR, useFactory: resolveExternalSkillsDir },
+    ExternalSkillsStore,
     { provide: HOOKS_DIR, useFactory: () => process.env.HOOKS_DIR ?? dataDir("hooks") },
     { provide: MCP_DIR, useFactory: () => process.env.MCP_DIR ?? dataDir("mcp-servers") },
     {
