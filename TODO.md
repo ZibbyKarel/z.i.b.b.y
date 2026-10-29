@@ -84,4 +84,4 @@
 30. [x] v chatovacím okně jdou měnit modely Haiku/Sonnet/Opus/Fable tak jak je to u claude code normální (main@0e0108bd)
 31. [x] Add "Mentions" widget: list of mentions from all sources (JIRA, GitHub, other channels), list only first, replying later (main@dfe6ebe8)
 32. [x] widget quick actions - u vytváření rychlých akcí, bych měl mít možnost začkrtnout "spustit okamžitě" (stejně tak i v editaci). Pokud zaškrtnu tak se spuštěná akce provede okamžitě aniž by se počítala do celkového stropu běžících úloh (main@d4bf6406)
-33. [ ] Widget Otevřené Otázky - měl bych mít u otázek možnost kliknout na tlačíko "vyřešit", to by otevřelo plachtu nebo dialog s text areou kam bych zapsal odpověď na otázku. To by v knowledge base vytvořilo novou poznámku a prolinkovalo to s původním dokumentem, ze kterého otázka vznikla.
+33. [x] Widget Otevřené Otázky - měl bych mít u otázek možnost kliknout na tlačíko "vyřešit", to by otevřelo plachtu nebo dialog s text areou kam bych zapsal odpověď na otázku. To by v knowledge base vytvořilo novou poznámku a prolinkovalo to s původním dokumentem, ze kterého otázka vznikla. (main@c9f7ef39)
