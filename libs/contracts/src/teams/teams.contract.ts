@@ -4,7 +4,9 @@ import { MemoryGraphSchema } from "../memory/memory.schema";
 import { EmptyBodySchema, ErrorSchema } from "../common.schema";
 import {
   CreateTeamSchema,
+  ResolveTeamKbQuestionSchema,
   TeamIdSchema,
+  TeamKbAnswerSchema,
   TeamKbDigestSchema,
   TeamKbIngestSchema,
   TeamKbNoteSchema,
@@ -86,6 +88,15 @@ export const teamsContract = c.router(
       responses: { 200: TeamKbDigestSchema, 404: ErrorSchema },
       summary:
         "Open questions and agreements lifted from the team KB's meeting-note sections (newest first, max 30 each); 404 when the team or its KB is missing",
+    },
+    resolveTeamKbQuestion: {
+      method: "POST",
+      path: "/teams/:id/kb/questions/resolve",
+      pathParams: z.object({ id: TeamIdSchema }),
+      body: ResolveTeamKbQuestionSchema,
+      responses: { 201: TeamKbAnswerSchema, 404: ErrorSchema, 409: ErrorSchema },
+      summary:
+        "Resolve an open question: writes an answer note to the KB inbox/ so the digest stops listing it; 404 when the team, KB or question is missing, 409 when it is already answered",
     },
     getTeamKbIngest: {
       method: "GET",

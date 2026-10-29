@@ -25,8 +25,9 @@ function isAbsoluteHostPath(p: string): boolean {
  * must not disturb `kind: "vault"`.
  *
  * `readOnly` is a literal `true`, not a boolean: read-only is structural (Law 1),
- * not a setting an operator can weaken. Nothing in the system can write to a
- * knowledge base, because no write tool exists.
+ * not a setting an operator can weaken. ZIBBY agents never write; the only app writes are
+ * operator-triggered: `kb/sync` (ff pull) and `kb/questions/resolve` (one new file in the
+ * gitignored `inbox/`).
  */
 export const KnowledgeBaseSourceSchema = z.discriminatedUnion("kind", [
   z
@@ -117,6 +118,18 @@ export const TeamKbDigestSchema = z.object({
   decisions: z.array(TeamKbDigestItemSchema),
 });
 export type TeamKbDigest = z.infer<typeof TeamKbDigestSchema>;
+
+/** Resolve one open question (`POST /teams/:id/kb/questions/resolve`): writes an answer note to the KB `inbox/`. */
+export const ResolveTeamKbQuestionSchema = z.object({
+  noteId: z.string().min(1),
+  question: z.string().min(1).max(300),
+  answer: z.string().trim().min(1).max(20000),
+});
+export type ResolveTeamKbQuestionInput = z.infer<typeof ResolveTeamKbQuestionSchema>;
+
+/** The written answer note; `id` is its KB-relative path (e.g. `inbox/answer-who-1a2b3c.md`). */
+export const TeamKbAnswerSchema = z.object({ id: z.string(), title: z.string() });
+export type TeamKbAnswer = z.infer<typeof TeamKbAnswerSchema>;
 
 /**
  * Ingest status of a team KB (`GET /teams/:id/kb/ingest`): the registered project

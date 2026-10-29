@@ -103,6 +103,12 @@ export class TeamsController {
         return { status: 200 as const, body: await this.kbReader.digest(kb) };
       },
 
+      // Placeholder until KbAnswerService lands in the next commit (keeps the contract type-complete).
+      resolveTeamKbQuestion: async () => ({
+        status: 404 as const,
+        body: { message: "Not implemented" },
+      }),
+
       getTeamKbIngest: async ({ params: { id } }) => {
         const kb = await this.kbOf(id);
         if (!kb)

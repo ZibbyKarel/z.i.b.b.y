@@ -87,6 +87,10 @@ interface ScannedNote extends KbEntry {
 
 /** Max items per digest list. */
 export const KB_DIGEST_MAX_ITEMS = 30;
+/** Directory (KB-relative) that holds operator-written answer notes. */
+export const KB_INBOX_DIR = "inbox";
+/** Frontmatter tag marking an inbox note as the answer to an open question. */
+export const KB_ANSWER_TAG = "answer";
 
 const QUESTION_HEADINGS = new Set([
   "open questions",
@@ -332,6 +336,18 @@ export class KbReaderService {
       if (!a.date && b.date) return 1;
       return a.note.relPath < b.note.relPath ? 1 : a.note.relPath > b.note.relPath ? -1 : 0;
     });
+    // An answer note (inbox/, tagged) names the question as its title and the asking note in `sources`.
+    const answered = new Set<string>();
+    for (const { note } of notes) {
+      const sources = note.frontmatter.sources;
+      if (
+        !note.relPath.startsWith(`${KB_INBOX_DIR}/`) ||
+        !tagsOf(note.frontmatter).includes(KB_ANSWER_TAG) ||
+        !Array.isArray(sources)
+      )
+        continue;
+      for (const s of sources) if (typeof s === "string") answered.add(`${s}\n${note.title}`);
+    }
     const questions: TeamKbDigestItem[] = [];
     const decisions: TeamKbDigestItem[] = [];
     for (const { note, date } of notes) {
@@ -342,7 +358,9 @@ export class KbReaderService {
         noteTitle: note.title,
         ...(date ? { date } : {}),
       });
-      questions.push(...sections.questions.map(toItem));
+      questions.push(
+        ...sections.questions.filter((q) => !answered.has(`${note.relPath}\n${q}`)).map(toItem),
+      );
       decisions.push(...sections.decisions.map(toItem));
     }
     return {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   KnowledgeBaseSourceSchema,
+  ResolveTeamKbQuestionSchema,
   TeamKbDigestSchema,
   TeamSchema,
   UpdateTeamSchema,
@@ -122,5 +123,31 @@ describe("TeamKbDigestSchema", () => {
   it("rejects item text over 300 chars", () => {
     const item = { text: "x".repeat(301), noteId: "a.md", noteTitle: "A" };
     expect(TeamKbDigestSchema.safeParse({ questions: [item], decisions: [] }).success).toBe(false);
+  });
+});
+
+describe("ResolveTeamKbQuestionSchema", () => {
+  it("accepts a valid body", () => {
+    expect(
+      ResolveTeamKbQuestionSchema.safeParse({ noteId: "m.md", question: "Who?", answer: "Pavel" })
+        .success,
+    ).toBe(true);
+  });
+
+  it("rejects a blank answer", () => {
+    expect(
+      ResolveTeamKbQuestionSchema.safeParse({ noteId: "m.md", question: "Who?", answer: "   " })
+        .success,
+    ).toBe(false);
+  });
+
+  it("rejects a question over 300 chars", () => {
+    expect(
+      ResolveTeamKbQuestionSchema.safeParse({
+        noteId: "m.md",
+        question: "x".repeat(301),
+        answer: "a",
+      }).success,
+    ).toBe(false);
   });
 });

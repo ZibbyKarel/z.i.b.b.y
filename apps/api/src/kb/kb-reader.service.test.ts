@@ -333,3 +333,42 @@ describe("KbReaderService.digest", () => {
     expect(out).toEqual({ questions: [], decisions: [] });
   });
 });
+
+describe("KbReaderService.digest — answered questions", () => {
+  let root: string;
+  const reader = new KbReaderService();
+  const src = (): KnowledgeBaseSource => ({ kind: "vault", path: root, readOnly: true });
+  const write = async (rel: string, content: string): Promise<void> => {
+    await fs.mkdir(path.dirname(path.join(root, rel)), { recursive: true });
+    await fs.writeFile(path.join(root, rel), content, "utf8");
+  };
+  const answer = (tags: string): string =>
+    `---\ntitle: "Who?"\n${tags}sources: ["m.md"]\n---\n# Who?\n\nPavel\n`;
+
+  beforeEach(async () => {
+    root = await fs.mkdtemp(path.join(os.tmpdir(), "kb-answered-test-"));
+    await write("m.md", "## Open questions\n- Who?\n- When?\n");
+    await write("n.md", "## Open questions\n- Who?\n");
+  });
+  afterEach(async () => {
+    await fs.rm(root, { recursive: true, force: true });
+  });
+
+  const texts = async (): Promise<string[]> =>
+    (await reader.digest(src())).questions.map((q) => `${q.text} ${q.noteId}`);
+
+  it("skips a question answered by an inbox answer note", async () => {
+    await write("inbox/a.md", answer("tags: [answer]\n"));
+    expect(await texts()).toEqual(["Who? n.md", "When? m.md"]);
+  });
+
+  it("ignores an inbox note without the answer tag", async () => {
+    await write("inbox/a.md", answer(""));
+    expect(await texts()).toHaveLength(3);
+  });
+
+  it("ignores an answer note outside inbox/", async () => {
+    await write("wiki/a.md", answer("tags: [answer]\n"));
+    expect(await texts()).toHaveLength(3);
+  });
+});
