@@ -9,3 +9,4 @@ Ideas that are agreed in principle but not scheduled. Each note is self-containe
 
 - [[session-hub]] — provider-agnostic hub of AI sessions, grouped by topic, resumable, with summaries
 - [[chat-multi-pane]] — chat page with several conversations open side by side
+- [[external-skills-private-repos]] — install external skills from private repos (e.g. shoptet/skills)
