@@ -104,6 +104,10 @@ GET    /teams/:id/kb/ingest { projectId | null, log: [{ line }] } — the regist
                           non-empty lines of `_meta/log.md` (each capped at 300 chars)
 POST   /teams/:id/kb/sync  fast-forward the team KB git clone (`git pull --ff-only`);
                           200 { updated, before, after }, 404 no team/KB, 409 pull failed
+POST   /teams/:id/kb/questions/resolve  { noteId, question, answer } — writes ONE new answer note
+                          to the KB `inbox/` (tagged `answer`, `sources: [noteId]`); the digest then stops
+                          listing that question; 201 { id: "inbox/answer-<slug>-<hash>.md", title },
+                          404 no team/KB or question not in the digest, 409 already answered / `inbox/` unsafe
 PATCH  /teams/:id         partial update
 DELETE /teams/:id         delete (allowed with linked projects — no cascade)
 ```
@@ -125,7 +129,12 @@ failure (not a repo, diverged, network) maps to 409 with git's trimmed stderr
 (max 400 chars). Remote-access failures (`Repository not found`, `Permission
 denied`, auth errors) are prefixed with a plain-language hint (wrong account /
 missing org access / SSO) before git's own text.
-`readOnly` means ZIBBY never authors into the KB; a ff pull only syncs it.
+`POST /teams/:id/kb/questions/resolve` (`KbAnswerService`) is the second operator-triggered
+write: it creates exactly one new file in the KB's gitignored `inbox/` (`wx` flag, never
+overwrites; a symlinked or non-directory `inbox/` is refused) and only for a question the
+digest really lists. The source note is never modified.
+`readOnly` means ZIBBY agents never author into the KB; the only app writes are these two
+operator-triggered ones (a ff pull and one new inbox note).
 
 `TeamsController` mirrors `CompaniesController` in shape: `deleteTeam` reads
 the team first (`storage.get(id)`) so a 404 surfaces before any side effect,

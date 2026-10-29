@@ -7,6 +7,11 @@ import { teamsContract } from "@zibby/contracts";
 import { ModuleRef } from "@nestjs/core";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { makeErrorMapper } from "../shared/http/error-mapping";
+import {
+  KbAnswerConflictError,
+  KbAnswerService,
+  KbQuestionNotFoundError,
+} from "../kb/kb-answer.service";
 import { KbReaderService } from "../kb/kb-reader.service";
 import { TeamKbSyncError, TeamKbSyncService } from "./team-kb-sync.service";
 import { TeamConflictError, TeamNotFoundError } from "./teams.errors";
@@ -39,6 +44,7 @@ export class TeamsController {
     private readonly storage: TeamsStorageService,
     private readonly kbReader: KbReaderService,
     private readonly kbSync: TeamKbSyncService,
+    private readonly kbAnswer: KbAnswerService,
     // Lazy, global lookup (not an injection): importing ProjectsModule would close the
     // teams <-> resolved-project module cycle, and a second ProjectsStorageService
     // instance would re-run its startup manifest cleanup against the same dir.
@@ -103,11 +109,22 @@ export class TeamsController {
         return { status: 200 as const, body: await this.kbReader.digest(kb) };
       },
 
-      // Placeholder until KbAnswerService lands in the next commit (keeps the contract type-complete).
-      resolveTeamKbQuestion: async () => ({
-        status: 404 as const,
-        body: { message: "Not implemented" },
-      }),
+      resolveTeamKbQuestion: async ({ params: { id }, body }) => {
+        const kb = await this.kbOf(id);
+        if (!kb)
+          return { status: 404 as const, body: { message: `Team "${id}" has no knowledge base` } };
+        try {
+          return { status: 201 as const, body: await this.kbAnswer.resolve(kb, body) };
+        } catch (e) {
+          if (e instanceof KbQuestionNotFoundError) {
+            return { status: 404 as const, body: { message: e.message } };
+          }
+          if (e instanceof KbAnswerConflictError) {
+            return { status: 409 as const, body: { message: e.message } };
+          }
+          throw e;
+        }
+      },
 
       getTeamKbIngest: async ({ params: { id } }) => {
         const kb = await this.kbOf(id);

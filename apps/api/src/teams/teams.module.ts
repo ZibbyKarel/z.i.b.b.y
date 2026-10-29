@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { KbAnswerService } from "../kb/kb-answer.service";
 import { KbReaderService } from "../kb/kb-reader.service";
 import { dataDir } from "../shared/data-dir";
 import { TeamKbSyncService } from "./team-kb-sync.service";
@@ -21,6 +22,7 @@ export function resolveTeamsDir(): string {
     { provide: TEAMS_DIR, useFactory: resolveTeamsDir },
     TeamsStorageService,
     KbReaderService,
+    KbAnswerService,
     TeamKbSyncService,
   ],
   exports: [TeamsStorageService],

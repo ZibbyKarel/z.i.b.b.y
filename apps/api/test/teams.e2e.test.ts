@@ -118,6 +118,38 @@ describe("Teams API (e2e)", () => {
     await fs.rm(kb, { recursive: true, force: true });
   });
 
+  it("resolves an open question into the KB inbox", async () => {
+    const kb = await fs.mkdtemp(path.join(os.tmpdir(), "teams-e2e-kb-resolve-"));
+    await fs.writeFile(path.join(kb, "m.md"), "## Open questions\n- Who?\n");
+    const http = app.getHttpServer();
+    await request(http)
+      .post(BASE)
+      .send({
+        id: "resolveteam",
+        name: "R",
+        desc: "d",
+        knowledgeBase: { kind: "vault", path: kb, readOnly: true },
+      })
+      .expect(201);
+    const url = `${BASE}/resolveteam/kb/questions/resolve`;
+    const body = { noteId: "m.md", question: "Who?", answer: "Me" };
+
+    const ok = await request(http).post(url).send(body).expect(201);
+    expect(ok.body.id).toMatch(/^inbox\/answer-who-[0-9a-f]{6}\.md$/);
+    const digest = await request(http).get(`${BASE}/resolveteam/kb/digest`).expect(200);
+    expect(digest.body.questions).toEqual([]);
+
+    await request(http).post(url).send(body).expect(409);
+    await request(http).post(`${BASE}/ghost/kb/questions/resolve`).send(body).expect(404);
+    await request(http)
+      .post(url)
+      .send({ ...body, question: "Nope?" })
+      .expect(404);
+
+    await request(http).delete(`${BASE}/resolveteam`).expect(200);
+    await fs.rm(kb, { recursive: true, force: true });
+  });
+
   it("browses a team KB read-only: list, open note, 404s, no escape", async () => {
     const kb = await fs.mkdtemp(path.join(os.tmpdir(), "teams-e2e-kb-browse-"));
     const outside = path.join(path.dirname(kb), `outside-${path.basename(kb)}.md`);
