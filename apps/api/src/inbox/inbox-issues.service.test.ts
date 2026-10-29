@@ -1,6 +1,6 @@
 import type { InboxPrsResponse, Integration, Project, RoadmapItem } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
-import { RoadmapItemNotFoundError } from "../roadmap/roadmap.errors";
+import { RoadmapItemConflictError, RoadmapItemNotFoundError } from "../roadmap/roadmap.errors";
 import { InboxIssuesService, InboxItemNotFoundError } from "./inbox-issues.service";
 import { InboxService } from "./inbox.service";
 
@@ -96,9 +96,17 @@ function build(opts: Opts = {}) {
       return found;
     },
     put: vi.fn(async (item: RoadmapItem) => {
+      if (store.has(item.id)) throw new RoadmapItemConflictError(item.projectId, item.id);
       store.set(item.id, item);
       return item;
     }),
+    update: vi.fn(
+      async (projectId: string, id: string, mutate: (c: RoadmapItem) => RoadmapItem) => {
+        const next = mutate(await roadmap.get(projectId, id));
+        store.set(id, next);
+        return next;
+      },
+    ),
   };
   const gate = { play: vi.fn(async (projectId: string, id: string) => roadmap.get(projectId, id)) };
   const prs: InboxPrsResponse = { prs: opts.prs ?? [], errors: [] };
@@ -378,11 +386,26 @@ describe("InboxIssuesService.process / InboxService.processItem", () => {
     expect(gate.play).toHaveBeenCalledWith("acme", "j1-acme-5");
   });
 
-  it("keeps an existing local record untouched", async () => {
-    const { service, roadmap, gate } = build({ local: [localItem("j1-acme-5")] });
+  it("refreshes a stale existing record (old sync snapshot) from the live issue before playing", async () => {
+    const stale = localItem("j1-acme-5", { name: "Old", lifecycle: "external" });
+    const { service, roadmap, gate } = build({ local: [stale] });
     await service.process(live);
-    expect(roadmap.put).not.toHaveBeenCalled();
+    await expect(roadmap.get("acme", "j1-acme-5")).resolves.toMatchObject({
+      name: "Summary ACME-5",
+      description: "Body",
+      lifecycle: "todo",
+    });
     expect(gate.play).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves a record ZIBBY is working on untouched", async () => {
+    const running = localItem("j1-acme-5", { name: "Mine", lifecycle: "running" });
+    const { service, roadmap } = build({ local: [running] });
+    await service.process({ ...(live as object), lifecycle: "running" } as never);
+    await expect(roadmap.get("acme", "j1-acme-5")).resolves.toMatchObject({
+      name: "Mine",
+      lifecycle: "running",
+    });
   });
 
   it("processItem 404s (InboxItemNotFoundError) for an item that is not in the live list", async () => {

@@ -21,7 +21,7 @@ import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ResolvedProjectService } from "../projects/resolved-project.service";
 import { adfToMarkdown } from "../roadmap/adf-to-markdown";
 import { RoadmapGateService } from "../roadmap/roadmap-gate.service";
-import { RoadmapItemConflictError, RoadmapItemNotFoundError } from "../roadmap/roadmap.errors";
+import { RoadmapItemConflictError } from "../roadmap/roadmap.errors";
 import { RoadmapStore } from "../roadmap/roadmap.store";
 import { InboxStateStore } from "./inbox-state.store";
 
@@ -144,34 +144,38 @@ export class InboxIssuesService {
     };
   }
 
-  /** Write a minimal local work record for a live issue if none exists, then play it. */
+  /**
+   * Write (or refresh) the local work record for a live issue, then play it. The record is a
+   * snapshot of the live issue — nothing refreshes it from the source anymore — so an existing
+   * one outside a ZIBBY lifecycle takes the live name/description/lifecycle first. `item.lifecycle`
+   * is already the overlay: a ZIBBY state when ZIBBY is on it, else the live `todo`/`external`
+   * (fail-closed: an issue someone else is on stays `external`, so play refuses it).
+   */
   async process(item: InboxRoadmapItem): Promise<RoadmapItem> {
+    const now = new Date().toISOString();
+    const snapshot = { name: item.name, description: item.description, updatedAt: now };
     try {
-      await this.roadmap.get(item.projectId, item.id);
+      await this.roadmap.put({
+        id: item.id,
+        projectId: item.projectId,
+        level: "task",
+        source: item.source,
+        attachments: [],
+        dependsOn: [],
+        dependsOnFromSource: [],
+        lifecycle: item.lifecycle,
+        runs: [],
+        syncNotes: [],
+        createdAt: now,
+        ...snapshot,
+      });
     } catch (error) {
-      if (!(error instanceof RoadmapItemNotFoundError)) throw error;
-      const now = new Date().toISOString();
-      await this.roadmap
-        .put({
-          id: item.id,
-          projectId: item.projectId,
-          level: "task",
-          name: item.name,
-          description: item.description,
-          source: item.source,
-          attachments: [],
-          dependsOn: [],
-          dependsOnFromSource: [],
-          // Fail-closed like the old sync: an issue someone else is on stays `external`, so play refuses it.
-          lifecycle: item.lifecycle === "external" ? "external" : "todo",
-          runs: [],
-          syncNotes: [],
-          createdAt: now,
-          updatedAt: now,
-        })
-        .catch((e: unknown) => {
-          if (!(e instanceof RoadmapItemConflictError)) throw e;
-        });
+      if (!(error instanceof RoadmapItemConflictError)) throw error;
+      await this.roadmap.update(item.projectId, item.id, (current) =>
+        ZIBBY_LIFECYCLES.includes(current.lifecycle)
+          ? current
+          : { ...current, ...snapshot, lifecycle: item.lifecycle },
+      );
     }
     return this.gate.play(item.projectId, item.id);
   }
@@ -395,13 +399,14 @@ export class InboxIssuesService {
     const progress = new Map<string, { done: number; total: number }>();
     if (keys.length === 0) return progress;
     // ponytail: one query for every epic; split by chunks if an operator ever has hundreds of epics.
+    // Progress is decoration: its failure leaves 0/0 rather than dropping the issues themselves.
     const children = await searchJira(
       this.fetchImpl,
       baseUrl,
       auth,
       `parent in (${keys.join(",")})`,
       "status,parent",
-    );
+    ).catch((): JiraIssue[] => []);
     for (const child of children) {
       const parentKey = child.fields?.parent?.key;
       if (!parentKey) continue;
