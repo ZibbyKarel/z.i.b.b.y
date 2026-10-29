@@ -77,6 +77,9 @@ Body: {
                                # the other legs stamp it server-side, see below); absent
                                # defaults to "operator", or "department" when the target
                                # is an explicit @department mention.
+  immediate?: boolean          # Operator-set only (quick action "Run immediately"): the run
+                               # takes no run slot, so it bypasses the global and per-project
+                               # concurrency caps. Budget hold, usage limits and gates still apply.
 }
 ```
 
@@ -539,6 +542,10 @@ and system automations (briefing, distill, …) take none. Everything that creat
 instance through the scheduler counts, including tasks started from chat and `agent` /
 `workflow` automations (see [automations.md](./automations.md)).
 
+A task with `immediate: true` takes **no slot**: `takeRunSlot` returns an uncounted no-op
+slot, so it dispatches past both caps and `RunSlots.inUse()` does not count it. A rerun of
+such a run does not carry the flag.
+
 Nothing waits inside `RunSlots`: when `tryTake` returns `null` the task moves to
 **queued** (no approval), persisting its resolved `target` / `classification` so a drain
 does not re-classify it. Waiting is a field, not a lifecycle status. The counts are
@@ -581,12 +588,13 @@ setInterval(() => tick(), systemConfig.current().taskTickMs);
 
 ## Routing and dispatch
 
-| Target         | Dispatcher                                                                                                                                    |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `agent`        | `AgentRunnerService.startRun(agentId, { prompt, project })`                                                                                   |
-| `workflow`     | `WorkflowRunnerService.startRun(workflowId, { prompt, project })`                                                                             |
-| `department`   | Resolved to a concrete `agent`/`workflow` target first (stage 2, see above), then dispatched like any other — never reaches a runner directly |
-| `orchestrator` | `AgentRunnerService.startRun(ORCHESTRATOR_ID, { prompt })`                                                                                    |
+| Target         | Dispatcher                                                                                                                                                                                                |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `agent`        | `AgentRunnerService.startRun(agentId, { prompt, project })`                                                                                                                                               |
+| `workflow`     | `WorkflowRunnerService.startRun(workflowId, { prompt, project })`                                                                                                                                         |
+| `department`   | Resolved to a concrete `agent`/`workflow` target first (stage 2, see above), then dispatched like any other — never reaches a runner directly                                                             |
+| `immediate`    | Quick-action "Run immediately": persisted only when `true` (absent otherwise). Operator-set via `CreateTaskInput.immediate`; no server-side creator sets it. The run takes no run slot (see "Run slots"). |
+| `orchestrator` | `AgentRunnerService.startRun(ORCHESTRATOR_ID, { prompt })`                                                                                                                                                |
 
 After dispatch, `runRef` is written back to the task record.
 
@@ -623,7 +631,7 @@ chat message references is never deleted.
 
 ## Parent/subtask read model (ZB-04a §5)
 
-A `ScheduledTask` carries four additive, server-derived fields (`parentTaskId` and `chain` are legacy: they still parse read-only but nothing writes them any more) —
+A `ScheduledTask` carries five additive, server-derived fields (`parentTaskId` and `chain` are legacy: they still parse read-only but nothing writes them any more) —
 
 | Field          | Set by                                                                                                                                                                                                                          |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

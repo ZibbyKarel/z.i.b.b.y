@@ -2951,6 +2951,25 @@ describe("run slots (global + per-project cap)", () => {
       expect(slots.inUse()).toBe(1);
     });
 
+    it("an immediate task continues past a full global cap and takes no slot", async () => {
+      makeService(1);
+      const r = await service.createTask(
+        { text: "do A", title: "do A", immediate: true },
+        undefined,
+        undefined,
+        RELEASE,
+      );
+      if (r.outcome !== "dispatched") throw new Error(`expected dispatched: ${r.outcome}`);
+      workflowListener?.(workflowRun({ workflowRunId: r.runRef, status: "failed" }));
+      await dispatched("do B"); // fills the cap of 1
+      await service.queueContinue(r.task.id, { kind: "workflow", runRef: r.runRef });
+      await vi.waitFor(async () =>
+        expect((await storage.get(r.task.id)).status).toBe("dispatched"),
+      );
+      expect(workflowRunner.continueFailed).toHaveBeenCalledWith(r.runRef, undefined);
+      expect(slots.inUse()).toBe(1);
+    });
+
     it("stays queued while the global cap is full, then continues once a slot frees", async () => {
       makeService(1);
       const { taskId, runRef } = await failedRun(RELEASE);

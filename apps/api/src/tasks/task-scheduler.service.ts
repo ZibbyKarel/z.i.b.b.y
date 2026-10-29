@@ -1290,13 +1290,16 @@ export class TaskSchedulerService
         })
         .sort((a, b) => a.turn - b.turn || a.task.createdAt.localeCompare(b.task.createdAt));
       for (const { task } of ordered) {
-        if (!this.slots.hasRoom()) return; // the global cap is full — nothing can start
         // Re-read: a concurrent cancel may have moved it on already.
         const fresh = await this.storage.get(task.id).catch((): ScheduledTask | null => null);
         if (!fresh || fresh.status !== "queued") continue;
-        // This project's cap is full — skip it, other projects may still start.
-        if (!this.slots.hasRoom(fresh.projectId, await this.projectRunCap(fresh.projectId))) {
-          continue;
+        // An immediate task (a queued continue of one) ignores both caps.
+        if (!fresh.immediate) {
+          if (!this.slots.hasRoom()) return; // the global cap is full — nothing can start
+          // This project's cap is full — skip it, other projects may still start.
+          if (!this.slots.hasRoom(fresh.projectId, await this.projectRunCap(fresh.projectId))) {
+            continue;
+          }
         }
         const project = fresh.projectId
           ? await this.projects.get(fresh.projectId).catch((): Project | null => null)
