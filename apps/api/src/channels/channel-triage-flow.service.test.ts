@@ -136,7 +136,9 @@ describe("ChannelTriageFlowService", () => {
       jiraFlow as never,
       opts.comms as never,
       undefined,
-      (opts.autopilot ? { coversApproval: autopilotCoversApproval } : undefined) as never,
+      (opts.autopilot
+        ? { isOn: () => true, coversApproval: autopilotCoversApproval }
+        : undefined) as never,
     );
     return flow;
   }
@@ -759,6 +761,45 @@ describe("ChannelTriageFlowService", () => {
     expect(requestApproval).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
     expect(out.state).toBe("triaged");
+  });
+
+  describe("autopilot never sends a draft that parked for another reason", () => {
+    const acme = (policy: Project["autonomy_policy"], people?: Project["identity"]): Project => ({
+      id: "acme-app",
+      name: "Acme",
+      path: "/work/acme",
+      autonomy_policy: policy,
+      ...(people ? { identity: people } : {}),
+    });
+    const cases: Array<[string, Parameters<typeof makeFlow>[0], Partial<ChannelItem>?]> = [
+      ["mandate reply:false", { verdict: scope, mandate: MANDATE_NO_REPLY }],
+      ["respond_as draft_only", { verdict: scope, projects: [acme({ respond_as: "draft_only" })] }],
+      [
+        "VIP escalation",
+        {
+          verdict: scope,
+          projects: [
+            acme({ vip_escalation: true }, { people: [{ name: "bob", role: "CEO", vip: true }] }),
+          ],
+        },
+        { from: "bob@corp.com" },
+      ],
+      ["actionable:false", { verdict: { ...scope, actionable: false } }],
+      ["below the confidence floor", { verdict: { ...scope, confidence: 0.3 } }],
+      ["gate ask on channel-reply", { verdict: scope, decision: "ask" }],
+      ["gate deny on channel-reply", { verdict: scope, decision: "deny" }],
+      ["Tier-2 draft gated to ask", { verdict: question, decision: "ask" }],
+    ];
+    for (const [name, opts, over] of cases) {
+      it(name, async () => {
+        const flow = makeFlow({ ...opts, autopilot: true });
+        const out = await researched(flow, item(over), "the real answer");
+        expect(requestApproval).toHaveBeenCalledTimes(1);
+        expect(send).not.toHaveBeenCalled();
+        expect(out.state).toBe("triaged");
+        expect(out.approvalId).toBe("appr_1");
+      });
+    }
   });
 
   it("VIP sender without vip_escalation flag does NOT force Tier 3", async () => {

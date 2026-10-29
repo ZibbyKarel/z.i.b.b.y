@@ -520,8 +520,9 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
       : verdict;
 
     // Tier 2, or a graduated Tier-3 pair, may auto-send — still through the gate.
+    let decision: Decision | undefined;
     if ((verdict.tier === 2 || graduated) && verdict.actionable && replyAllowed) {
-      const decision = await this.evaluateReply(item.integrationId, item.kind);
+      decision = await this.evaluateReply(item.integrationId, item.kind);
       if (decision === "deny") {
         const ignored: ChannelItem = { ...withDraft, state: "ignored" };
         await this.store.update(ignored);
@@ -540,7 +541,20 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
       }
     }
 
-    return this.parkForApproval(withDraft, verdict, draft);
+    // Phase 4 — autopilot may send a parked draft only when the tier alone parked it:
+    // actionable, confident, reply allowed by the mandate, not forced to Tier 3 by the
+    // project policy (draft_only / VIP), and no ask/deny on the reply gate.
+    const autopilotEligible =
+      this.autopilot?.isOn() === true &&
+      verdict.actionable &&
+      verdict.confidence >= TRIAGE_CONFIDENCE_FLOOR &&
+      replyAllowed &&
+      !(await this.forcedTier3(item)) &&
+      ["allow", "notify"].includes(
+        decision ?? (await this.evaluateReply(item.integrationId, item.kind)),
+      );
+
+    return this.parkForApproval(withDraft, verdict, draft, autopilotEligible);
   }
 
   /**
@@ -592,6 +606,7 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     item: ChannelItem,
     verdict: TriageVerdict,
     draft: string,
+    autopilotEligible = false,
   ): Promise<ChannelItem> {
     const integration = await this.integrations.get(item.integrationId).catch(() => null);
     const approval = await this.approvals.requestApproval({
@@ -628,8 +643,9 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
       approvalId: approval.id,
     });
     // Phase 4 — autopilot removes the click on a concrete draft (a parked approval always
-    // carries one); approving routes through resume() like the operator's approve.
-    if (this.autopilot?.coversApproval(approval)) {
+    // carries one) that parked only for its tier; approving routes through resume() like
+    // the operator's approve.
+    if (autopilotEligible && this.autopilot?.coversApproval(approval)) {
       try {
         await this.approvals.approve(approval.id, { decidedBy: "autopilot" });
         return (await this.store.get(item.integrationId, item.id)) ?? parked;
