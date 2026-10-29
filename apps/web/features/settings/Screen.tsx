@@ -18,6 +18,7 @@ import { useHealthQuery } from "../health";
 import { ActivitySection } from "./components/ActivitySection";
 import { AppearanceSection } from "./components/AppearanceSection";
 import { ChatSection } from "./components/ChatSection";
+import { OperatorChannelSection } from "./components/OperatorChannelSection";
 import { OperatorTokenSection } from "./components/OperatorTokenSection";
 import { MachineSection } from "./components/MachineSection";
 import { SystemSection } from "./components/SystemSection";
@@ -147,6 +148,7 @@ export function SettingsScreen({ section }: SettingsScreenProps) {
               <MachineSection />
               <ChatSection />
               <OperatorTokenSection />
+              <OperatorChannelSection />
             </Stack>
           )}
 

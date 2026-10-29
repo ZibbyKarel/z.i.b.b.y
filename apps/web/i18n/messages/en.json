@@ -1052,6 +1052,32 @@
       "cloneRootHint": "Where ZIBBY clones a project on this machine when it isn't already present locally (root/project id). This setting is per-machine and never syncs between machines.",
       "save": "Save"
     },
+    "operatorChannel": {
+      "title": "Operator channel (Slack)",
+      "hint": "ZIBBY DMs you in Slack when something worth your attention happens — a PR opened, a review or approval waiting, a parked run, red CI. Silent (Tier-1) work is never sent. Bot and app tokens are stored via the API, never here.",
+      "test": "Send test",
+      "mode": "Mode",
+      "connection": "Connection",
+      "connected": "connected",
+      "notConnected": "not connected",
+      "credentials": "Tokens",
+      "lastDelivery": "Last delivery",
+      "lastError": "Last error",
+      "testOk": "Test sent",
+      "testFailed": "Test failed",
+      "enabled": "Send notifications",
+      "events": "Notify me about",
+      "event": {
+        "pr-opened": "PR opened",
+        "review-finished": "Code review finished",
+        "run-completed": "Run completed",
+        "approval-waiting": "Approval waiting",
+        "run-parked": "Run parked",
+        "budget-cap": "Budget cap reached",
+        "ci-red": "CI red (being fixed)",
+        "briefing": "Daily briefing"
+      }
+    },
     "selfKnowledge": {
       "title": "Self-Knowledge",
       "hint": "A machine-generated note of what ZIBBY knows about itself — agents, workflows, gate rules, channels. Produced by `pnpm self-knowledge:generate`; this is a read-only preview. The same note is also visible in Memory as an ordinary vault note.",

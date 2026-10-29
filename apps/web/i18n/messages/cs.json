@@ -1052,6 +1052,32 @@
       "cloneRootHint": "Kam ZIBBY na tomto stroji klonuje projekty, které tu ještě nemají lokální kopii (kořen/id projektu). Toto nastavení je per-stroj a nikdy se nesynchronizuje mezi stroji.",
       "save": "Uložit"
     },
+    "operatorChannel": {
+      "title": "Kanál operátora (Slack)",
+      "hint": "ZIBBY ti napíše do Slacku, když se stane něco, co stojí za tvou pozornost — otevřené PR, čekající review nebo schválení, zaparkovaný běh, červené CI. Tichá práce (Tier-1) se nikdy neposílá. Tokeny bota a aplikace se ukládají přes API, nikdy ne zde.",
+      "test": "Poslat test",
+      "mode": "Režim",
+      "connection": "Připojení",
+      "connected": "připojeno",
+      "notConnected": "nepřipojeno",
+      "credentials": "Tokeny",
+      "lastDelivery": "Poslední doručení",
+      "lastError": "Poslední chyba",
+      "testOk": "Test odeslán",
+      "testFailed": "Test selhal",
+      "enabled": "Posílat notifikace",
+      "events": "Upozorňovat na",
+      "event": {
+        "pr-opened": "Otevřené PR",
+        "review-finished": "Dokončené code review",
+        "run-completed": "Dokončený běh",
+        "approval-waiting": "Čekající schválení",
+        "run-parked": "Zaparkovaný běh",
+        "budget-cap": "Dosažený rozpočtový limit",
+        "ci-red": "Červené CI (opravuje se)",
+        "briefing": "Denní briefing"
+      }
+    },
     "selfKnowledge": {
       "title": "Self-Knowledge",
       "hint": "Strojově generovaná poznámka o tom, co ZIBBY o sobě ví — agenti, workflow, gate pravidla, kanály. Vytváří se příkazem `pnpm self-knowledge:generate`; tady je jen náhled pro čtení. Stejná poznámka je vidět i v Paměti jako běžná vault poznámka.",
