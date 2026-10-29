@@ -626,6 +626,32 @@ describe("claude approval hook — classify (gh api mutations, Fáze 17.1)", () 
     expect(classify("gh api repos/o/r/collaborators/bob -X PUT")?.action).toBe("gh.api_write");
   });
 
+  it("maps a POSTed PR comment, review comment, reply or COMMENT review to gh.pr_comment", () => {
+    expect(classify("gh api repos/o/r/issues/7/comments -f body=hi")?.action).toBe("gh.pr_comment");
+    expect(classify("gh api repos/o/r/pulls/7/comments -X POST -f body=x")?.action).toBe(
+      "gh.pr_comment",
+    );
+    expect(classify("gh api repos/o/r/pulls/7/comments/9/replies -f body=x")?.action).toBe(
+      "gh.pr_comment",
+    );
+    expect(classify("gh api /repos/o/r/pulls/7/reviews -f event=COMMENT -f body=x")?.action).toBe(
+      "gh.pr_comment",
+    );
+  });
+
+  it("keeps an APPROVE / REQUEST_CHANGES review and a comment edit or delete on gh.api_write", () => {
+    expect(classify("gh api repos/o/r/pulls/7/reviews -f event=APPROVE")?.action).toBe(
+      "gh.api_write",
+    );
+    expect(classify("gh api repos/o/r/pulls/7/reviews -f event=REQUEST_CHANGES")?.action).toBe(
+      "gh.api_write",
+    );
+    expect(classify("gh api repos/o/r/issues/comments/9 -X PATCH -f body=x")?.action).toBe(
+      "gh.api_write",
+    );
+    expect(classify("gh api repos/o/r/issues/7/comments -X DELETE")?.action).toBe("gh.api_write");
+  });
+
   it("does not classify a plain GET, with or without --paginate", () => {
     expect(classify("gh api repos/o/r/pulls")).toBeNull();
     expect(classify("gh api repos/o/r/issues --paginate")).toBeNull();

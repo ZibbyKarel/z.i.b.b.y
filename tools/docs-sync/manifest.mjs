@@ -38,6 +38,7 @@ export const API_MODULE_DOC_MAP = {
   "limits-resume": "docs/api/limits.md",
   limits: "docs/api/limits.md",
   "operator-channel": "docs/api/operator-channel.md",
+  autopilot: "docs/api/autopilot.md",
   arch: "docs/api/departments.md",
   inbox: "docs/api/inbox.md",
   machine: "docs/api/machine.md",

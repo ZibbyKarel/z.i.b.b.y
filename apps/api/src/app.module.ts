@@ -6,6 +6,7 @@ import { ActivityViewModule } from "./activity-view/activity-view.module";
 import { AgentsModule } from "./agents/agents.module";
 import { ApprovalsModule } from "./approvals/approvals.module";
 import { ArtifactsModule } from "./artifacts/artifacts.module";
+import { AutopilotModule } from "./autopilot/autopilot.module";
 import { AutomationsModule } from "./automations/automations.module";
 import { BriefingModule } from "./briefing/briefing.module";
 import { BriefingTranscriptSinkModule } from "./briefing/briefing-transcript-sink.module";
@@ -77,6 +78,7 @@ import { TeamsModule } from "./teams/teams.module";
     RoadmapModule,
     InboxModule,
     ActivityLogModule,
+    AutopilotModule,
     ActivityViewModule,
     AgentsModule,
     SkillsModule,

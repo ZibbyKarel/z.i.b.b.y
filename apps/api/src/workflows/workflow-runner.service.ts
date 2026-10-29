@@ -4,7 +4,13 @@ import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import matter from "gray-matter";
-import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
+import {
+  Inject,
+  Injectable,
+  type OnModuleDestroy,
+  type OnModuleInit,
+  Optional,
+} from "@nestjs/common";
 import {
   type ArtifactKind,
   type DepartmentId,
@@ -33,6 +39,7 @@ import { externalSkillPrompt } from "../external-skills/skill-repo";
 import { SkillNotFoundError } from "../skills/skills.errors";
 import { SkillsStorageService } from "../skills/skills.storage.service";
 import { ApprovalsService } from "../approvals/approvals.service";
+import { AutopilotService } from "../autopilot/autopilot.service";
 import { SignalBusService } from "../automations/signal-bus.service";
 import { ArtifactsStorageService, artifactRecordId } from "../artifacts/artifacts.storage.service";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
@@ -283,6 +290,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly signalBus: SignalBusService,
     // A phase's `/skill` (own or external) is resolved per stage.
     private readonly skills: SkillsStorageService,
+    // Phase 4 — autopilot signs off a pr-review comment gate at creation.
+    @Optional() private readonly autopilot?: AutopilotService,
   ) {
     this.dir = path.resolve(dir);
     this.log = logger.child(WorkflowRunnerService.name);
@@ -2143,12 +2152,22 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     await this.writeAggregate(run);
     await this.writeProgress(run, at.phaseIds);
     const { department, ...approval } = at.approval;
-    await this.approvals.requestApproval({
+    const parked = await this.approvals.requestApproval({
       runId: run.workflowRunId,
       kind: "workflow-gate",
       ...approval,
       ...(department ? { department } : {}),
     });
+    // Phase 4 — a covered gate (the pr-review sign-off) is approved by autopilot at
+    // creation, posted as COMMENT (autopilot never picks APPROVE / REQUEST_CHANGES).
+    if (this.autopilot?.coversApproval(parked)) {
+      void this.approvals.approve(parked.id, { decidedBy: "autopilot" }).catch((err: unknown) =>
+        this.log.warn("autopilot gate approve failed — left pending", {
+          approvalId: parked.id,
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      );
+    }
     this.log.info("workflow run parked at a gate", {
       workflowRunId: run.workflowRunId,
       reason,

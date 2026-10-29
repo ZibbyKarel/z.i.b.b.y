@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import type { AgentRun, ScheduledTask, TaskOutput, Workspace } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { autopilotCoversApproval } from "../autopilot/autopilot.service";
 import { DuplicateNoteError } from "../memory/vault.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
 import {
@@ -1015,6 +1016,107 @@ describe("TaskOutputService", () => {
       expect(delivered?.summary).toMatch(PR_REVIEW_ARTIFACT);
       expect(approvals.requestApproval).not.toHaveBeenCalled();
       expect((await storage.get("t_review")).prReview?.state).toBe("failed");
+    });
+  });
+
+  describe("autopilot (Phase 4)", () => {
+    const A = "a".repeat(40);
+    const B = "b".repeat(40);
+    let on: TaskOutputService;
+    beforeEach(() => {
+      approvals.requestApproval.mockImplementation(async (input: object) => ({
+        id: "appr_1",
+        ...input,
+      }));
+      workspace.rebaseFacts.mockResolvedValue({ sha: B, log: "b1 fix", stat: " a.ts | 2 +-" });
+      const autopilot = { coversApproval: autopilotCoversApproval };
+      on = new TaskOutputService(
+        storage,
+        workspace as never,
+        vault as never,
+        approvals as never,
+        projects as never,
+        { record: vi.fn() } as never,
+        fakeLogger as never,
+        autopilot as never,
+      );
+    });
+    const pr = { repo: "acme/app", number: 7, url: "https://github.com/acme/app/pull/7" };
+    const create = (id: string) =>
+      storage.createDispatched(
+        id,
+        { text: "x" },
+        "run_1",
+        { kind: "agent", id: "a", name: "a" },
+        Date.now(),
+        "p1",
+      );
+
+    it("posts a fresh PR review without the click, marked decidedBy autopilot", async () => {
+      const task = await create("t_r");
+      await storage.setPrReview(task.id, () => ({ ...pr, state: "running" }));
+      const delivered = await on.parkPrReview(await storage.get("t_r"), "looks fine");
+      expect(approvals.approve).toHaveBeenCalledWith("appr_1", { decidedBy: "autopilot" });
+      expect(delivered.summary).toMatch(/odesláno na GitHub \(autopilot\)/);
+    });
+
+    it("pushes address-comments fixes only onto a zibby/* head, and never past a question", async () => {
+      const seed = async (id: string, head: string) => {
+        await create(id);
+        return storage.setPrAddressComments(id, () => ({
+          ...pr,
+          head,
+          base: "main",
+          headSha: A,
+          state: "running",
+          auto: true,
+        }));
+      };
+      await on.parkPrAddressComments(
+        await seed("t_z", "zibby/run-1-x"),
+        "Addressed: partial",
+        "/wt",
+      );
+      expect(approvals.approve).toHaveBeenCalledWith("appr_1", { decidedBy: "autopilot" });
+      approvals.approve.mockClear();
+      const other = await on.parkPrAddressComments(
+        await seed("t_f", "feat"),
+        "Addressed: partial",
+        "/wt",
+      );
+      expect(approvals.approve).not.toHaveBeenCalled();
+      expect(other.summary).toMatch(/čeká na schválení/);
+      const q = await on.parkPrAddressComments(
+        await seed("t_q", "zibby/run-1-x"),
+        "Addressed: partial\nthread: T1\nquestion: which API?",
+        "/wt",
+      );
+      expect(approvals.approve).not.toHaveBeenCalled();
+      expect(q.summary).toMatch(/čeká na schválení/);
+    });
+
+    it("pushes a CI fix only onto a zibby/* head of the operator's own PR", async () => {
+      const seed = async (id: string, head: string, ownPr: boolean) => {
+        await create(id);
+        return storage.setPrFixCi(id, () => ({
+          ...pr,
+          head,
+          base: "main",
+          headSha: A,
+          ownPr,
+          state: "running",
+        }));
+      };
+      await on.parkPrFixCi(await seed("c1", "zibby/run-1-x", true), "Fixed: partial", "/wt");
+      expect(approvals.approve).toHaveBeenCalledWith("appr_1", { decidedBy: "autopilot" });
+      approvals.approve.mockClear();
+      await on.parkPrFixCi(await seed("c2", "zibby/run-1-x", false), "Fixed: partial", "/wt");
+      await on.parkPrFixCi(await seed("c3", "feat", true), "Fixed: partial", "/wt");
+      expect(approvals.approve).not.toHaveBeenCalled();
+    });
+
+    it("leaves the force-push rebase approval alone", () => {
+      expect(autopilotCoversApproval({ kind: "pr-rebase", action: "git.force_push" })).toBe(false);
     });
   });
 });

@@ -3,6 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { ChannelItem, Integration, Mandate, Project, TriageVerdict } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { autopilotCoversApproval } from "../autopilot/autopilot.service";
 import { ChannelItemStore } from "./channel-item.store";
 import { ChannelTriageFlowService } from "./channel-triage-flow.service";
 
@@ -63,6 +64,8 @@ describe("ChannelTriageFlowService", () => {
       recordProposal: ReturnType<typeof vi.fn>;
       recordDecision: ReturnType<typeof vi.fn>;
     };
+    /** Phase 4 — autopilot on: parked approvals are approved through resume(). */
+    autopilot?: boolean;
   }) {
     createTask = vi.fn(async () => ({
       outcome: "dispatched",
@@ -102,10 +105,19 @@ describe("ChannelTriageFlowService", () => {
     const registry = {
       resolve: () => ({ send, ...(opts.readOnly ? { readOnly: true as const } : {}) }),
     };
-    const approvals = { register, requestApproval };
+    if (opts.autopilot)
+      requestApproval.mockImplementation(async (input: object) => ({ id: "appr_1", ...input }));
+    const approvals = {
+      register,
+      requestApproval,
+      approve: vi.fn(async (_id: string, o: { decidedBy?: "autopilot" }) => {
+        const runId = (requestApproval.mock.calls.at(-1)?.[0] as { runId: string }).runId;
+        await flow.resume(runId, { decidedBy: o.decidedBy } as never);
+      }),
+    };
     const jiraFlow = opts.jiraPropose ? { propose: opts.jiraPropose } : undefined;
 
-    return new ChannelTriageFlowService(
+    const flow: ChannelTriageFlowService = new ChannelTriageFlowService(
       triage as never,
       mandate as never,
       tasks as never,
@@ -123,7 +135,10 @@ describe("ChannelTriageFlowService", () => {
       { record: async () => {} } as never,
       jiraFlow as never,
       opts.comms as never,
+      undefined,
+      (opts.autopilot ? { coversApproval: autopilotCoversApproval } : undefined) as never,
     );
+    return flow;
   }
 
   beforeEach(async () => {
@@ -726,6 +741,24 @@ describe("ChannelTriageFlowService", () => {
     );
     await flow.cancel("team/C1-200");
     expect(comms.recordDecision).toHaveBeenCalledWith("C1-200", "team", "request", "rejected");
+  });
+
+  it("autopilot sends a parked concrete draft without the click and keeps it out of the graduation streak", async () => {
+    const comms = makeHerald(false);
+    const flow = makeFlow({ verdict: scope, comms, autopilot: true });
+    const out = await researched(flow, item(), "the real answer");
+    expect(requestApproval).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(out.state).toBe("handled");
+    expect(comms.recordDecision).not.toHaveBeenCalled();
+  });
+
+  it("autopilot never makes a missing draft sendable", async () => {
+    const flow = makeFlow({ verdict: scope, autopilot: true });
+    const out = await researched(flow, item(), null);
+    expect(requestApproval).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+    expect(out.state).toBe("triaged");
   });
 
   it("VIP sender without vip_escalation flag does NOT force Tier 3", async () => {

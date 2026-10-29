@@ -137,12 +137,40 @@ export class ApprovalsService {
     return this.storage.get(id);
   }
 
-  /** Approve a pending approval and resume its gated run. `reviewEvent` — todo-10, the operator's PR-review pick. */
+  /**
+   * Approve a pending approval and resume its gated run. `reviewEvent` — todo-10, the
+   * operator's PR-review pick. `decidedBy: "autopilot"` (Phase 4) — the autopilot overlay
+   * approved it with no operator click: stamped on the record and reported as
+   * `autopilot-action`. Only server-side park sites pass it; the HTTP route never does.
+   */
   async approve(
     id: string,
-    opts: { reviewEvent?: PrReviewEvent; replies?: OperatorThreadReply[] } = {},
+    opts: {
+      reviewEvent?: PrReviewEvent;
+      replies?: OperatorThreadReply[];
+      decidedBy?: "autopilot";
+    } = {},
   ): Promise<Approval> {
-    const approval = await this.decide(id, "approved", undefined, opts.reviewEvent, opts.replies);
+    const approval = await this.decide(
+      id,
+      "approved",
+      undefined,
+      opts.reviewEvent,
+      opts.replies,
+      opts.decidedBy,
+    );
+    if (opts.decidedBy === "autopilot") {
+      void this.activity?.record({
+        kind: "autopilot-action",
+        summary: `autopilot approved: ${approval.skill} · ${approval.action}`,
+        refs: {
+          approvalId: id,
+          runRef: approval.runId,
+          action: approval.action,
+          decision: "approved",
+        },
+      });
+    }
     this.log?.info("approval approved; resuming run", {
       id,
       runId: approval.runId,
@@ -252,6 +280,7 @@ export class ApprovalsService {
     reason?: string,
     reviewEvent?: PrReviewEvent,
     replies?: OperatorThreadReply[],
+    decidedBy?: "autopilot",
   ): Promise<Approval> {
     return withPathLock(`approval:${id}`, async () => {
       const approval = await this.storage.get(id);
@@ -265,6 +294,7 @@ export class ApprovalsService {
         ...(reviewEvent && approval.suggestedReviewEvent ? { reviewEvent } : {}),
         // The operator's edited thread replies — only a pr-address-comments push approval takes them.
         ...(replies && approval.kind === "pr-address-comments" ? { replies } : {}),
+        ...(decidedBy ? { decidedBy } : {}),
       };
       void this.activity?.record({
         kind: `approval-${status}`,

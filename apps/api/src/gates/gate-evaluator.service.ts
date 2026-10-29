@@ -10,6 +10,7 @@ import type {
   PolicyViolation,
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
+import { AutopilotService } from "../autopilot/autopilot.service";
 import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import {
   GateRulesStorageService,
@@ -62,6 +63,8 @@ export class GateEvaluatorService {
     // D-022 — the department store, the source of each department's `tierDefault`.
     // Optional like `catalog`: absence = no tier-default catch-all.
     @Optional() private readonly departments?: DepartmentsStorageService,
+    // Phase 4 — the autopilot overlay. Optional: absence = autopilot off.
+    @Optional() private readonly autopilot?: AutopilotService,
   ) {
     this.log = logger?.child(GateEvaluatorService.name);
   }
@@ -229,6 +232,17 @@ export class GateEvaluatorService {
         resolve: rule.resolve,
       };
       if (rule.locked) {
+        // Phase 4 — the autopilot overlay, applied ONLY to a matching global rule on
+        // its allowlist (never to an agent's or a department's own rule, never to a
+        // deny): a covered `ask` becomes act-then-report. The stored rule is never
+        // touched, and the strictest-of-buckets below still lets any other matching
+        // `ask`/`deny` (global, department or agent) win over it.
+        if (hit.decision === "ask" && this.autopilot?.coversRule(rule.id, action)) {
+          const lifted: GateEvaluation = { decision: "notify", ruleId: rule.id, via: "autopilot" };
+          if (!floor || DECISION_RANK[lifted.decision] > DECISION_RANK[floor.decision])
+            floor = lifted;
+          continue;
+        }
         // The global bucket shows on the gates board as decision columns with no
         // cross-column order, so the STRICTEST matching global rule wins, not the first.
         if (!floor || DECISION_RANK[hit.decision] > DECISION_RANK[floor.decision]) floor = hit;
@@ -266,6 +280,14 @@ export class GateEvaluatorService {
       void this.activity?.record({
         kind: "gate-decision",
         summary: `gate ${evaluation.decision} on ${action.action}`,
+        refs: { action: action.action, decision: evaluation.decision, status: evaluation.ruleId },
+      });
+    }
+    // Phase 4 — every action the overlay let through is reported (Tier 2).
+    if (evaluation.via === "autopilot") {
+      void this.activity?.record({
+        kind: "autopilot-action",
+        summary: `autopilot let ${action.action}${action.branch ? ` (${action.branch})` : ""} through without asking`,
         refs: { action: action.action, decision: evaluation.decision, status: evaluation.ruleId },
       });
     }

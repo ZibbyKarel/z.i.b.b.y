@@ -1,9 +1,10 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { Controller, Get, Logger, Post, Req, Res, UseGuards } from "@nestjs/common";
+import { Controller, Get, Logger, Optional, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { DepartmentIdSchema, type TaskTarget } from "@zibby/contracts";
 import { z } from "zod";
+import { AutopilotService } from "../autopilot/autopilot.service";
 import { ChatMcpAuthGuard } from "./chat-mcp-auth.guard";
 import { ChatToolResultRegistry } from "./chat-tool-result.registry";
 import { ChatToolsService } from "./chat-tools.service";
@@ -119,6 +120,7 @@ export class ChatMcpController {
     private readonly tools: ChatToolsService,
     private readonly toolResults: ChatToolResultRegistry,
     private readonly selfApi: SelfApiExecutor,
+    @Optional() private readonly autopilot?: AutopilotService,
   ) {}
 
   @Post("api/chat/mcp")
@@ -382,6 +384,26 @@ export class ChatMcpController {
           ...(body !== undefined ? { body } : {}),
         });
         return res.ok ? text(res.text) : errorText(res.text);
+      },
+    );
+
+    // Phase 4 — anyone in the operator chat may switch autopilot OFF. There is
+    // deliberately no "on" tool: turning it on needs the operator token (the UI).
+    server.registerTool(
+      "autopilot_off",
+      {
+        description:
+          "Switch ZIBBY's autopilot OFF, so every covered gate asks the operator again. " +
+          "Call when the operator asks to stop autopilot. There is no way to turn it on " +
+          "from chat — tell the operator to use the dashboard toggle for that.",
+        inputSchema: {},
+      },
+      async () => {
+        if (!this.autopilot) return errorText("Autopilot is not available.");
+        const status = await this.autopilot.set("off", "chat");
+        return text(
+          `Autopilot is off. Pending approvals waiting for the operator: ${status.pendingApprovals}.`,
+        );
       },
     );
 

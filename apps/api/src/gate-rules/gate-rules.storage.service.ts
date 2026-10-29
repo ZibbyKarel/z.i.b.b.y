@@ -182,7 +182,14 @@ export const SYSTEM_RULES: GlobalGateRule[] = [
   ask(
     "gh.api_write",
     "Zápis přes GitHub API",
-    "Zápis přes GitHub API (komentáře, labely…) potřebuje souhlas.",
+    "Zápis přes GitHub API (labely, nastavení…) potřebuje souhlas.",
+  ),
+  // Phase 4 — the narrow comment/review class split out of gh.api_write (same default),
+  // so autopilot can cover PR comments without touching the rest of the GitHub API.
+  ask(
+    "gh.pr_comment",
+    "Komentář na GitHubu",
+    "Komentář, odpověď nebo review na PR čeká na tvůj souhlas.",
   ),
   ask("send_email", "Odeslání e-mailu", "Odeslání e-mailu jde přes tebe."),
   ask("delete", "Mazání", "Mazání se neprovede bez tvého potvrzení."),

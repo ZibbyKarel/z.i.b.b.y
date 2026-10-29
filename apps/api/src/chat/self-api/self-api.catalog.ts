@@ -201,6 +201,8 @@ const DENIED_ROUTERS = new Set([
   "mandate",
   "budget",
   "approvals",
+  // Phase 4 — autopilot ON is operator-token only; OFF has its own chat tool.
+  "autopilot",
   "self",
   "selfKnowledge",
   "mcpServers",

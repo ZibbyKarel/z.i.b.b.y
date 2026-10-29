@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { Injectable, type OnModuleInit } from "@nestjs/common";
+import { Injectable, type OnModuleInit, Optional } from "@nestjs/common";
 import {
   type AgentRun,
   type PrOutput,
@@ -13,6 +13,7 @@ import {
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { ApprovalsService } from "../approvals/approvals.service";
+import { AutopilotService } from "../autopilot/autopilot.service";
 import { DuplicateNoteError, VaultService } from "../memory/vault.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
@@ -187,6 +188,8 @@ export class TaskOutputService implements OnModuleInit {
     private readonly projects: ProjectsStorageService,
     private readonly activity: ActivityLogService,
     logger: LoggerService,
+    // Phase 4 — the autopilot overlay on the PR approvals. Optional: absence = off.
+    @Optional() private readonly autopilot?: AutopilotService,
   ) {
     this.log = logger.child(TaskOutputService.name);
   }
@@ -299,10 +302,15 @@ export class TaskOutputService implements OnModuleInit {
       ref,
       approvalId: approval.id,
     });
-    if (signedOffAtGate) {
+    // Phase 4 — autopilot posts a fresh review itself (as COMMENT: no review-type pick).
+    const byAutopilot = !signedOffAtGate && !!this.autopilot?.coversApproval(approval);
+    if (signedOffAtGate || byAutopilot) {
       // A failed post already marks the review `failed` with the GitHub error.
       const posted = await this.approvals
-        .approve(approval.id, reviewEvent ? { reviewEvent } : {})
+        .approve(approval.id, {
+          ...(reviewEvent ? { reviewEvent } : {}),
+          ...(byAutopilot ? { decidedBy: "autopilot" as const } : {}),
+        })
         .then(
           () => true,
           (error: unknown) => {
@@ -315,7 +323,7 @@ export class TaskOutputService implements OnModuleInit {
         );
       return {
         summary: posted
-          ? `Code review ${ref} odesláno na GitHub`
+          ? `Code review ${ref} odesláno na GitHub${byAutopilot ? " (autopilot)" : ""}`
           : `Code review ${ref}: odeslání na GitHub selhalo`,
       };
     }
@@ -483,6 +491,21 @@ export class TaskOutputService implements OnModuleInit {
             }
           : c,
       );
+      if (this.autopilot?.coversApproval(approval)) {
+        const posted = await this.approvals.approve(approval.id, { decidedBy: "autopilot" }).then(
+          () => true,
+          (error: unknown) => {
+            this.log.warn("pr address-comments replies by autopilot failed", {
+              taskId: task.id,
+              err: error instanceof Error ? error.message : String(error),
+            });
+            return false;
+          },
+        );
+        return {
+          summary: `Review komentáře ${ref}: ${posted ? "odpovědi odeslány (autopilot)" : "odeslání odpovědí selhalo"}`,
+        };
+      }
       return { summary: `Review komentáře ${ref}: odpovědi čekají na schválení` };
     }
     // A `question` always keeps the gate, whatever the first line claims. todo-16: so does an
@@ -531,9 +554,20 @@ export class TaskOutputService implements OnModuleInit {
           }
         : c,
     );
-    if (!autoPush) return { summary: `Review komentáře ${ref}: push oprav čeká na schválení` };
+    // Phase 4 — autopilot pushes onto ZIBBY's own `zibby/*` head; a `question` still waits.
+    const byAutopilot =
+      !autoPush &&
+      !outcomes.some((o) => o.kind === "question") &&
+      !!this.autopilot?.coversApproval(approval, fix.head);
+    if (!autoPush && !byAutopilot) {
+      return { summary: `Review komentáře ${ref}: push oprav čeká na schválení` };
+    }
     // A failed push already marks the task `failed` with git's reason (the runner).
-    const pushed = await this.approvals.approve(approval.id).then(
+    const pushed = await (
+      byAutopilot
+        ? this.approvals.approve(approval.id, { decidedBy: "autopilot" })
+        : this.approvals.approve(approval.id)
+    ).then(
       () => true,
       (error: unknown) => {
         this.log.warn("pr address-comments push after the click failed", {
@@ -615,9 +649,18 @@ export class TaskOutputService implements OnModuleInit {
           }
         : c,
     );
-    if (!autoPush) return { summary: `Oprava CI ${ref}: push opravy čeká na schválení` };
+    // Phase 4 — autopilot pushes onto ZIBBY's own `zibby/*` head of the operator's own PR.
+    const byAutopilot =
+      !autoPush && fix.ownPr === true && !!this.autopilot?.coversApproval(approval, fix.head);
+    if (!autoPush && !byAutopilot) {
+      return { summary: `Oprava CI ${ref}: push opravy čeká na schválení` };
+    }
     // A failed push already marks the task `failed` with git's reason (the runner).
-    const pushed = await this.approvals.approve(approval.id).then(
+    const pushed = await (
+      byAutopilot
+        ? this.approvals.approve(approval.id, { decidedBy: "autopilot" })
+        : this.approvals.approve(approval.id)
+    ).then(
       () => true,
       (error: unknown) => {
         this.log.warn("pr fix-ci push after the click failed", {

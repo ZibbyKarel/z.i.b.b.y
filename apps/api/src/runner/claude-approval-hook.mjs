@@ -17,8 +17,9 @@
 //        - git publish: `git push` (→ git.push) and force variants (→ git.force_push);
 //        - PRs: `gh pr create` (→ pr.open) and `gh pr merge` (→ pr.merge);
 //        - mutating `gh api …` calls (Fáze 17.1): PUT/POST/PATCH/DELETE (or a field
-//          flag implying POST) → `pr.merge`/`pr.open` when the path matches, else
-//          the generic `gh.api_write`;
+//          flag implying POST) → `pr.merge`/`pr.open` when the path matches, a POST
+//          of a PR/issue comment, review comment, reply or COMMENT review →
+//          `gh.pr_comment` (Phase 4), else the generic `gh.api_write`;
 //        - EVERY `Task` call (an orchestrator delegating to a subagent) → `agent.delegate`
 //          (Fáze 2a). Delegation happens entirely inside this one `claude -p` process, so
 //          this hook is the only realtime signal the backend gets of a handoff — there is
@@ -107,9 +108,10 @@ const ACTION_RANK = {
   move: 0,
   "git.push": 1,
   "pr.open": 2,
-  "gh.api_write": 3,
-  "git.force_push": 4,
-  "pr.merge": 5,
+  "gh.pr_comment": 3,
+  "gh.api_write": 4,
+  "git.force_push": 5,
+  "pr.merge": 6,
 };
 
 /** Czech presentation per push/PR action (delete carries its own, target-aware copy). */
@@ -129,6 +131,10 @@ const ACTION_META = {
   "pr.merge": {
     summary: "Sloučit pull request do cílové větve",
     consequence: "Sloučení je nevratná publikace — systémový floor ho zakazuje (deny).",
+  },
+  "gh.pr_comment": {
+    summary: "Komentář nebo review na PR (gh api)",
+    consequence: "Na GitHubu se objeví komentář nebo review pod tvým účtem.",
   },
   "gh.api_write": {
     summary: "Mutační volání GitHub API (gh api)",
@@ -305,7 +311,23 @@ function classifyGhApi(tokens, startIdx) {
   const path = (pathArg ?? "").replace(/\?.*$/, "").replace(/\/$/, "");
   if (path.includes("/merges")) return { action: "pr.merge" };
   if (/^POST$/i.test(effectiveMethod) && path.endsWith("/pulls")) return { action: "pr.open" };
+  if (isPrCommentPost(effectiveMethod, path, tokens)) return { action: "gh.pr_comment" };
   return { action: "gh.api_write" };
+}
+
+/** Phase 4 — the REST paths that post a PR/issue comment, a review comment, a thread reply or a review. */
+const PR_COMMENT_PATH =
+  /^\/?repos\/[^/]+\/[^/]+\/(?:pulls\/\d+\/(?:reviews|comments(?:\/\d+\/replies)?)|issues\/\d+\/comments)$/;
+
+/**
+ * A POST that only adds a comment or a COMMENT review gets its own `gh.pr_comment`
+ * intent (the narrow class autopilot may let through). A review carrying
+ * `event=APPROVE` / `REQUEST_CHANGES` is a verdict on someone's PR, not a comment —
+ * it stays the generic `gh.api_write`.
+ */
+function isPrCommentPost(method, path, tokens) {
+  if (!/^POST$/i.test(method) || !PR_COMMENT_PATH.test(path)) return false;
+  return !tokens.some((t) => /^event=(?!COMMENT$)/i.test(t ?? ""));
 }
 
 /** Classify a `gh …` segment as opening/merging a PR, or a mutating `gh api` call. */

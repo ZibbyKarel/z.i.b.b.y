@@ -6,6 +6,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import type { TaskTarget } from "@zibby/contracts";
 import request from "supertest";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { AutopilotService } from "../autopilot/autopilot.service";
 import { ChatMcpAuthGuard } from "./chat-mcp-auth.guard";
 import { ChatMcpAuthService } from "./chat-mcp-auth.service";
 import { ChatMcpController } from "./chat-mcp.controller";
@@ -23,6 +24,7 @@ const proposeRename = vi.fn();
 const proposeOpenMaps = vi.fn();
 const proposeOpenFolder = vi.fn();
 const capturePersonalNote = vi.fn<() => Promise<string>>();
+const autopilotSet = vi.fn();
 
 /**
  * HTTP e2e for the chat MCP endpoint's NEW auth guard (T9). Same real-listening-port
@@ -57,6 +59,7 @@ describe("POST /api/chat/mcp — ChatMcpAuthGuard", () => {
           provide: SelfApiExecutor,
           useValue: { list: selfApiList, describe: selfApiDescribe, call: selfApiCall },
         },
+        { provide: AutopilotService, useValue: { set: autopilotSet } },
         ChatToolResultRegistry,
         ChatMcpAuthService,
         ChatMcpAuthGuard,
@@ -138,6 +141,7 @@ describe("POST /api/chat/mcp — ChatMcpAuthGuard", () => {
       "api_call",
       "api_describe_operation",
       "api_list_operations",
+      "autopilot_off",
       "capture_note",
       "create_task",
       "get_status",
@@ -177,6 +181,24 @@ describe("POST /api/chat/mcp — ChatMcpAuthGuard", () => {
       title: "Zubař",
     });
 
+    await client.close();
+  });
+
+  it("Phase 4: autopilot_off switches it off as `chat`; there is no on tool", async () => {
+    autopilotSet.mockResolvedValue({ level: "off", pendingApprovals: 2 });
+    const transport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/api/chat/mcp`), {
+      requestInit: { headers: { Authorization: `Bearer ${auth.bearerToken}` } },
+    });
+    const client = new Client({ name: "chat-mcp-test-client", version: "1.0.0" });
+    await client.connect(transport);
+    const { tools } = await client.listTools();
+    expect(tools.filter((t) => t.name.startsWith("autopilot")).map((t) => t.name)).toEqual([
+      "autopilot_off",
+    ]);
+    const result = await client.callTool({ name: "autopilot_off", arguments: {} });
+    const content = (result as { content: Array<{ type: "text"; text: string }> }).content;
+    expect(content[0]?.text).toContain("2");
+    expect(autopilotSet).toHaveBeenCalledWith("off", "chat");
     await client.close();
   });
 

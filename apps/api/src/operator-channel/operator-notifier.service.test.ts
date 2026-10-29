@@ -74,6 +74,7 @@ const lookups: OperatorEventLookups = {
       skill: "deploy",
       action: "ship",
       detail: "why\nmore",
+      ...(id === "ap-auto" ? { decidedBy: "autopilot" as const } : {}),
     } as Approval),
   workflowRun: (id) =>
     ({ workflowRunId: id, parkedReason: id === "wr-gate" ? "gate" : "retries" }) as WorkflowRun,
@@ -98,6 +99,8 @@ const MAPPED: [string, ActivityEntry][] = [
   ["run-parked", entry("workflow-parked", { runRef: "wr-1", status: "parked" })],
   ["ci-red", entry("monitor-alert", { itemId: "ci-1", integrationId: "gh" })],
   ["briefing", entry("briefing-generated", { noteId: "brief-1" })],
+  ["autopilot-action", entry("autopilot-action", { approvalId: "ap-auto", decision: "approved" })],
+  ["autopilot-action", entry("autopilot-changed", { status: "full", decision: "operator" })],
 ];
 
 interface Harness {
@@ -203,6 +206,8 @@ describe("OperatorNotifier — mapping", () => {
       entry("workflow-parked", { runRef: "wr-gate", status: "parked" }),
       // a PR-review task's outcome reports through its approval
       entry("task-outcome", { taskId: "t-review", status: "done" }),
+      // Phase 4 — an approval autopilot decided reports as autopilot-action, not "waiting"
+      entry("approval-requested", { approvalId: "ap-auto", action: "ship", status: "channel" }),
     );
     expect(h.service.fake.sent).toHaveLength(0);
   });

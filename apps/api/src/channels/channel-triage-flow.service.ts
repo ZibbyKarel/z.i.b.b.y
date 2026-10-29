@@ -1,6 +1,7 @@
 import { Injectable, type OnModuleInit, Optional } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 import {
+  type Approval,
   type ChannelItem,
   type Decision,
   type GateRule,
@@ -14,6 +15,7 @@ import {
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service";
+import { AutopilotService } from "../autopilot/autopilot.service";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
 import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.service";
 import { CommsService } from "../comms/comms.service";
@@ -139,6 +141,8 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     // flow seam. Optional so the unit tests' manual construction still works; absent
     // moduleRef simply means `sweepDrafts()` is a no-op.
     @Optional() private readonly moduleRef?: ModuleRef,
+    // Phase 4 — the autopilot overlay sends a parked concrete draft itself. Optional: absence = off.
+    @Optional() private readonly autopilot?: AutopilotService,
   ) {
     this.log = logger.child(ChannelTriageFlowService.name);
   }
@@ -623,13 +627,26 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
       outcome: "pending",
       approvalId: approval.id,
     });
+    // Phase 4 — autopilot removes the click on a concrete draft (a parked approval always
+    // carries one); approving routes through resume() like the operator's approve.
+    if (this.autopilot?.coversApproval(approval)) {
+      try {
+        await this.approvals.approve(approval.id, { decidedBy: "autopilot" });
+        return (await this.store.get(item.integrationId, item.id)) ?? parked;
+      } catch (error) {
+        this.log.warn("autopilot channel reply failed — the approval stays for the operator", {
+          itemId: item.id,
+          err: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
     return parked;
   }
 
   // ---- ResumableRunner (kind "channel") ---------------------------------------
 
   /** Approve → send the reviewed draft and stamp the reply + handled. */
-  async resume(runId: string): Promise<void> {
+  async resume(runId: string, approval?: Approval): Promise<void> {
     const item = await this.itemFromRef(runId);
     if (!item) {
       this.log.warn("channel approval resume: item missing", { runId });
@@ -645,7 +662,9 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     await this.sendReply(item, draft);
     // NS2 F6a — the parked draft was approved UNEDITED and sent: patch the ledger
     // entry (this is the graduation streak's only positive signal). Best-effort.
-    this.recordLedgerDecision(item, "approved");
+    // Phase 4 — an autopilot approval is not the operator's judgment, so it never
+    // feeds the graduation streak.
+    if (approval?.decidedBy !== "autopilot") this.recordLedgerDecision(item, "approved");
   }
 
   /** Reject → ignore the item without sending. */
