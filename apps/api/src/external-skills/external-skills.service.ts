@@ -35,13 +35,14 @@ import { SkillRepoGit } from "./skill-repo-git";
  * files/config — a granted folder's `CLAUDE.md` would load into the run as
  * project instructions (third-party content steering ZIBBY, Law 4).
  */
+// Lowercase: matched case-insensitively, a case-insensitive FS (macOS) loads `claude.md` as `CLAUDE.md`.
 const SKIPPED_ON_COPY = new Set([
   ".git",
   "node_modules",
   ".claude",
-  "CLAUDE.md",
-  "CLAUDE.local.md",
-  "AGENTS.md",
+  "claude.md",
+  "claude.local.md",
+  "agents.md",
 ]);
 
 /**
@@ -58,7 +59,7 @@ export async function copySkillFolder(src: string, destDir: string): Promise<voi
       recursive: true,
       verbatimSymlinks: true,
       filter: async (from) =>
-        (from === src || !SKIPPED_ON_COPY.has(basename(from))) &&
+        (from === src || !SKIPPED_ON_COPY.has(basename(from).toLowerCase())) &&
         !(await lstat(from)).isSymbolicLink(),
     });
     await rm(destDir, { recursive: true, force: true });

@@ -221,6 +221,21 @@ describe("ExternalSkillsService", () => {
     expect(at("SKILL.md")).toBe(true);
   });
 
+  it("matches the strip list case-insensitively (macOS FS loads claude.md as CLAUDE.md)", async () => {
+    const dir = "skills/security-audit";
+    for (const f of [
+      "a/claude.md",
+      "b/.Claude/settings.json",
+      "c/Agents.md",
+      "d/Node_Modules/x.js",
+    ])
+      await put(fixture, `${dir}/${f}`, "x");
+    await svc.install(url, [dir]);
+    const at = (f: string) => existsSync(join(extDir, "security-audit", f));
+    for (const f of ["a/claude.md", "b/.Claude", "c/Agents.md", "d/Node_Modules"])
+      expect(at(f), f).toBe(false);
+  });
+
   it("flags repeated ids within one scan, so the default selection installs", async () => {
     await put(
       fixture,

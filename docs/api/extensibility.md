@@ -99,7 +99,7 @@ Only `https://github.com/<owner>/<repo>` URLs are accepted (optionally `.git` or
   `conflict: true` when its id is already taken or repeats an earlier candidate
   in the same repo (only the first of a repeated id is installable).
 - `POST /api/skills/external` `{ url, paths }` — installs the chosen folders into
-  `data/skills-external/<id>/` (never copied, at any depth: symlinks, `.git`,
+  `data/skills-external/<id>/` (never copied, at any depth and in any letter case: symlinks, `.git`,
   `node_modules/`, `.claude/`, `CLAUDE.md`, `CLAUDE.local.md`, `AGENTS.md`) and
   records provenance (`owner`, `repo`, `path`, pinned `sha`, folder `treeSha`) in
   `data/external-skills.json`.

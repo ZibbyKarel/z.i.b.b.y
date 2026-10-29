@@ -330,7 +330,8 @@ Key assembled pieces:
   run's `--agents` catalog with a prompt naming their folder, but a catalog pick
   (or a chat `/skill` tag, whose body is inlined) can't read the folder's extra
   files. The install/sync copy strips `CLAUDE.md`, `CLAUDE.local.md`,
-  `AGENTS.md`, `.claude/`, `node_modules/` and `.git` at any depth, so a granted
+  `AGENTS.md`, `.claude/`, `node_modules/` and `.git` at any depth and in any
+  letter case, so a granted
   folder never loads third-party instructions.
 - **`--plugin-dir`** — the only way a plugin reaches a run. One flag per entry,
   in order: the agent's `plugins[]`, then the project's `plugins[]`, then ZIBBY's
