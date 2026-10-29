@@ -41,7 +41,7 @@ describe("prStatus precedence", () => {
       "CHANGES REQUESTED",
     );
     expect(prStatus(pr({ ci: "pending", review: "approved" })).label).toBe("CHECKS RUNNING");
-    expect(prStatus(pr({ review: "approved" }))).toEqual({ tone: "work", label: "APPROVED" });
+    expect(prStatus(pr({ review: "approved" }))).toEqual({ tone: "done", label: "APPROVED" });
     expect(prStatus(pr())).toEqual({ tone: "idle", label: "AWAITING REVIEW" });
   });
   it("a to-review PR that is ready to merge falls through", () => {

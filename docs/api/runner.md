@@ -296,9 +296,16 @@ Key assembled pieces:
 - **`--allowedTools`** — the union of the primary's tools, every catalog
   subagent's tools, each enabled MCP server's `mcp__<id>__*` wildcard, and
   (Phase 108) resolved tool grants (`resolveGrantId`) — under
-  `--permission-mode dontAsk`, allow rules are **session-wide**, so a
-  delegated worker needs its tools on the session list or its calls are denied
-  regardless of its own declared tools.
+  `--permission-mode auto`, allow rules are **session-wide**, so a
+  delegated worker needs its tools on the session list or its calls fall to the
+  auto-mode classifier regardless of its own declared tools.
+- **`--permission-mode auto`** — runs use the same mode as the operator's
+  terminal (was `dontAsk`): the allow-list pre-approves, the classifier decides
+  the rest, and the approval hook below still gates destructive commands.
+- **`ZIBBY_STATUS: blocked <why>`** — `OPERATING_CONTRACT` tells an agent that
+  cannot finish for lack of permission to end with this line instead of
+  reporting success. `RunnerCore` marks an exit-0 run carrying it `error` and
+  logs `✖ blocked: <why>`.
 - **`--setting-sources ""`** (isolation) — on every run and every one-shot
   (router, task-namer, briefer, memory distiller, triager, review-comment
   distiller, reply-draft researcher via `spawnClaudeCli`'s
@@ -355,7 +362,7 @@ Key assembled pieces:
 ### The gate deadline (`GATE_DEADLINE_S`)
 
 24 hours. Claude Code kills a hook at its configured timeout and treats the
-kill as a **non-decision** — under `dontAsk` that lets the pending command run
+kill as a **non-decision** — under `auto`/`dontAsk` that lets the pending command run
 as if approved. So the hook takes its own shorter fail-closed deadline as
 argv, denying before the CLI can kill it; the registered hook `timeout` sits
 `HOOK_KILL_MARGIN_S` (5 min) above that so the CLI never kills a
@@ -386,7 +393,7 @@ tool call's own `cwd`):
 4. `RunnerCore.watchIntentRequest` picks up the request file and drives it
    through the same `IntentHandler` as a stdout `INTENT` line.
 5. Emit the decision as `hookSpecificOutput` (`permissionDecision: "allow" |
-"deny"`) — this overrides `--permission-mode dontAsk`. Timeout → deny,
+"deny"`) — this overrides `--permission-mode`. Timeout → deny,
    fail-safe.
 
 Fails **open** on a classifier exception (an unclassified command falls

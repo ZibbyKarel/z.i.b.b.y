@@ -25,6 +25,8 @@ import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { PageBreadcrumb } from "../../../components/layout/PageBreadcrumb";
 import { useNow } from "../../../hooks/useNow";
+import { issueChatAbout } from "../../chat/chatAbout";
+import { ChatAboutButton } from "../../chat/components/ChatAboutButton";
 import { useCompaniesQuery } from "../../companies";
 import { useTeamsQuery } from "../../teams";
 import { ExternalAnchor, NavLink } from "../components/links";
@@ -258,6 +260,7 @@ function InboxItemView({ item: it }: { item: InboxRoadmapItem }) {
             )}
           </Stack>
           <Row wrap gap="100">
+            <ChatAboutButton about={issueChatAbout(it, key)} />
             {canHide && (
               <Button
                 data-testid={InboxItemScreenTestId.Hide}

@@ -2822,7 +2822,6 @@
       },
       "outdated": "zastaralé",
       "new": "nový od běhu",
-      "comment": "{login} · {age}",
       "unknownAuthor": "neznámý",
       "reply": "Odpověď",
       "resolve": "Vyřešit thread",
@@ -3148,7 +3147,7 @@
       "airy": "Vzdušná",
       "open": "Otevřená"
     },
-    "addWidget": "+ Widget",
+    "addWidget": "Přidat widget",
     "configure": "Nastavit",
     "editLayout": "Upravit rozložení",
     "catalog": {
@@ -3426,7 +3425,7 @@
         },
         "diff": "Diff · vůči {base}",
         "by": "Od {who}",
-        "you": "Ty",
+        "mine": "Tvoje",
         "note": {
           "ready": "Připraveno ke sloučení",
           "approved": "Schváleno",

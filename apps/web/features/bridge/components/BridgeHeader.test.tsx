@@ -1,4 +1,4 @@
-import { DensityMenuTestId, MenuButtonTestId, SegmentedControlTestId } from "@zibby/design-system";
+import { DensityMenuTestId, SegmentedControlTestId } from "@zibby/design-system";
 import { UiSettingsSchema } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen, within } from "../../../test/render";
@@ -64,7 +64,7 @@ describe("BridgeHeader", () => {
     renderWithProviders(
       <BridgeHeader {...props} onManage={onManage} onToggleCatalog={onToggleCatalog} />,
     );
-    await userEvent.click(screen.getByText("+ Widget"));
+    await userEvent.click(screen.getByRole("button", { name: "Přidat widget" }));
     expect(onToggleCatalog).toHaveBeenCalled();
     await userEvent.click(
       within(screen.getByTestId(BridgeHeaderTestId.Manage)).getByRole("button"),
@@ -82,32 +82,9 @@ describe("BridgeHeader", () => {
     expect(screen.queryByText("Můstek")).toBeNull();
   });
 
-  it("hidden layouts sit in the kebab menu", async () => {
-    const onPreset = vi.fn();
-    renderWithProviders(<BridgeHeader {...props} layouts={two} onPreset={onPreset} />);
+  it("hidden layouts are not offered in the header", () => {
+    renderWithProviders(<BridgeHeader {...props} layouts={two} />);
     expect(screen.queryByTestId(item("B"))).toBeNull();
-    await userEvent.click(screen.getByTestId(MenuButtonTestId.Trigger));
-    await userEvent.click(screen.getByTestId(`${MenuButtonTestId.Item}-B`));
-    expect(onPreset).toHaveBeenCalledWith("B");
-  });
-
-  it("renders shown in order without a hard-coded DEFAULT; DEFAULT can live in the kebab", async () => {
-    renderWithProviders(
-      <BridgeHeader
-        {...props}
-        layouts={{ shown: ["REVIEW"], hidden: ["DEFAULT"] }}
-        preset="REVIEW"
-      />,
-    );
-    expect(screen.getByTestId(item("REVIEW"))).toBeInTheDocument();
-    expect(screen.queryByTestId(item("DEFAULT"))).toBeNull();
-    await userEvent.click(screen.getByTestId(MenuButtonTestId.Trigger));
-    expect(screen.getByTestId(`${MenuButtonTestId.Item}-DEFAULT`)).toBeInTheDocument();
-  });
-
-  it("no menu without hidden layouts", () => {
-    renderWithProviders(<BridgeHeader {...props} layouts={{ shown: ["A"], hidden: [] }} />);
-    expect(screen.queryByTestId(BridgeHeaderTestId.More)).toBeNull();
   });
 
   it("the active hidden layout shows in the segmented control", () => {

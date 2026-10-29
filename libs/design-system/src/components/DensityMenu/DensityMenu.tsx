@@ -96,7 +96,7 @@ export function DensityMenu({ value, onChange, labels, label, ref }: DensityMenu
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label={label}
-        className="flex cursor-pointer items-center gap-[6px] rounded-md border border-line-2 bg-panel px-[8px] py-[5px] text-ink hover:bg-hover"
+        className="flex cursor-pointer items-center gap-[6px] rounded-md border border-line-2 bg-panel px-[8px] py-[6px] text-ink hover:bg-hover"
         data-testid={DensityMenuTestId.Trigger}
         onClick={() => setOpen((o) => !o)}
         title={label}

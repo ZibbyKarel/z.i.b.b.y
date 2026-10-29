@@ -16,6 +16,8 @@ import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ChatAboutButton } from "../../../chat/components/ChatAboutButton";
+import { issueChatAbout } from "../../../chat/chatAbout";
 import { useInboxItemActions } from "../../../inbox/useInboxItemActions";
 import { useInboxItemsQuery } from "../../../inbox/queries";
 import { chainKey, itemKey, latestTaskId, linkedPrOf, zibbyStatus } from "../../../inbox/inbox";
@@ -79,7 +81,12 @@ export function IssueSheet({ id, anchor, onClose }: SheetProps) {
   return (
     <AnchoredSheet
       {...geometry(anchor)}
-      actions={primary}
+      actions={
+        <>
+          <ChatAboutButton about={issueChatAbout(item, itemKey(item))} />
+          {primary}
+        </>
+      }
       chips={[
         item.sourceStatus ? `${source} · ${item.sourceStatus.name}` : source,
         `ZIBBY · ${stateLabel}`,

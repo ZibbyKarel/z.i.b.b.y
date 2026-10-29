@@ -180,6 +180,9 @@ export const OPERATING_CONTRACT = [
   "- If you are blocked on a fact only the operator knows (not a permission or a",
   "  confirmation), call `mcp__zibby-run__ask_operator` once with one concrete question,",
   "  then continue with the answer.",
+  "- If a tool call is denied for lack of permission and you cannot finish the task without",
+  "  it, do NOT report success. End your final message with a line of exactly",
+  "  `ZIBBY_STATUS: blocked <tool and why>` — the run is then marked failed for the operator.",
   "",
   "## Workspace",
   "",
@@ -443,8 +446,9 @@ const THINKING_TO_EFFORT: Record<NonNullable<Agent["thinking"]>, string> = {
  * `--agents` JSON (each delegatable through the Agent tool with its own
  * prompt/tools/model — bounded by {@link MAX_CATALOG_AGENTS} so the whole library
  * never overflows the OS argv limit, spawn E2BIG), and permissions via
- * `--permission-mode dontAsk` + `--allowedTools` mapped from the entity's `tools`.
- * This runs under the Max subscription with no extra API/classifier cost.
+ * `--permission-mode auto` (same as the operator's terminal) + `--allowedTools` mapped
+ * from the entity's `tools`. The allow-list pre-approves; everything else is decided by
+ * the auto-mode classifier, and the approval hook still gates destructive commands.
  *
  * Every run is isolated from ambient settings (`--setting-sources ""`): only declared
  * `--plugin-dir`s and the `--add-dir` context repo's CLAUDE.md reach the session.
@@ -519,7 +523,7 @@ export class ClaudeRunCommandService {
       // preamble fights OPERATING_CONTRACT and a client repo's hooks run in a dontAsk run.
       ...ISOLATED_SETTING_SOURCES,
       "--permission-mode",
-      "dontAsk",
+      "auto",
       "--allowedTools",
       ...allowedTools,
       ...systemPromptArgs,

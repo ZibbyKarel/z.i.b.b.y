@@ -33,6 +33,9 @@ export type IntentHandler = (
 ) => void | Promise<void>;
 
 /** The decision file a paused child polls for, written into its sandbox `cwd`. */
+/** An agent's own "I could not finish" line, at the start of a log line (OPERATING_CONTRACT). */
+const BLOCKED_STATUS = /^ZIBBY_STATUS:\s*blocked\b(.*)$/m;
+
 const INTENT_DECISION_FILE = "intent-decision.json";
 
 /**
@@ -971,6 +974,9 @@ export class RunnerCore<R extends BaseRun> {
     if (!child || !log) return;
 
     let limitSeen = false;
+    // The reason from an agent's `ZIBBY_STATUS: blocked <why>` line (see OPERATING_CONTRACT):
+    // exit 0 is not success when the agent says it could not finish for lack of permission.
+    let blockedReason: string | null = null;
     // The reset epoch (ms) the first limit line named, stashed for classification.
     let limitResetsAt: number | null = null;
     // Buffer partial lines across chunks: a control line (PROGRESS / INTENT) split
@@ -989,7 +995,11 @@ export class RunnerCore<R extends BaseRun> {
       for (const raw of lines) {
         if (this.formatLine) {
           const formatted = this.formatLine(raw);
-          if (formatted !== null) log.write(`${formatted}\n`);
+          if (formatted !== null) {
+            log.write(`${formatted}\n`);
+            const blocked = BLOCKED_STATUS.exec(formatted);
+            if (blocked) blockedReason = blocked[1]?.trim() || "blocked";
+          }
           // Cena z `result` eventu se akumuluje přes respawny (limit-pause
           // resume spouští stejný runId znovu bez `--resume`). Jen na reálném
           // claude běhu (formatLine wired), ne na demo/test výstupu.
@@ -1114,6 +1124,10 @@ export class RunnerCore<R extends BaseRun> {
       // A run torn down on purpose (denied / rejected mid-run intent) exits non-zero
       // but its terminal state is `interrupted`, not `error`.
       if (handle.interrupting) return finalize("interrupted");
+      if (code === 0 && blockedReason) {
+        log.write(`✖ blocked: ${blockedReason}\n`);
+        return finalize("error");
+      }
       finalize(code === 0 ? "done" : "error");
     });
   }

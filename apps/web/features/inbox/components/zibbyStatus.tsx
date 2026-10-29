@@ -12,12 +12,12 @@ export const ZIBBY_STATUS_TONE: Record<ZibbyStatus, DotTone> = {
 };
 
 /** PR blocker → tone, the design's `BL` table. */
-export const PR_BLOCKER_TONE: Record<InboxPrBlocker, "idle" | "blocked" | "working" | "error"> = {
+export const PR_BLOCKER_TONE: Record<InboxPrBlocker, "idle" | "blocked" | "done" | "error"> = {
   "ci-failing": "error",
   "changes-requested": "blocked",
   "merge-conflict": "error",
   "awaiting-review": "idle",
-  "ready-to-merge": "working",
+  "ready-to-merge": "done",
 };
 
 export enum ZibbyStatusLabelTestId {

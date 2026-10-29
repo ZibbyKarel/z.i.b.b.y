@@ -64,7 +64,6 @@ export function RunsWidget({
   sheetSide,
 }: BridgeWidgetProps) {
   const t = useTranslations("bridge.widgets.runs");
-  const tRuns = useTranslations("runs");
   const now = useNow(60_000);
   const live = useLiveRuns();
   useInvalidateOnTerminalRun(FINISHED_LIMIT);
@@ -145,8 +144,8 @@ export function RunsWidget({
             tone={r.tone}
           >
             <RunTitle step={r.step} title={r.title} />
-            <BoardLine direction="col" gap="5">
-              {r.status === "running" ? (
+            {r.status === "running" ? (
+              <BoardLine direction="col" gap="5">
                 <span data-testid={`${RunsWidgetTestId.Progress}-${r.key}`}>
                   {r.pct === null ? (
                     <Progress indeterminate height="25" label={t("progressLabel")} />
@@ -160,20 +159,18 @@ export function RunsWidget({
                     />
                   )}
                 </span>
-              ) : (
-                <RunStateIcon runKey={r.key} tone={r.tone} />
-              )}
-              <BoardLine between gap="5">
-                <BoardText tabular kind="meta">
-                  {r.status === "awaiting-approval"
-                    ? tRuns("state.awaiting-approval")
-                    : t(`state.${r.tone}`)}
-                </BoardText>
                 <BoardText tabular kind="meta">
                   {r.stages && r.pct !== null ? t("stages", { ...r.stages, pct: r.pct }) : "—"}
                 </BoardText>
               </BoardLine>
-            </BoardLine>
+            ) : (
+              <BoardLine between gap="5">
+                <RunStateIcon runKey={r.key} tone={r.tone} />
+                <BoardText tabular kind="meta">
+                  {r.stages && r.pct !== null ? t("stages", { ...r.stages, pct: r.pct }) : "—"}
+                </BoardText>
+              </BoardLine>
+            )}
             <RunIssue issue={r.issue} project={r.project} />
           </BoardRow>
         ))}
@@ -190,16 +187,11 @@ export function RunsWidget({
             tone={r.tone}
           >
             <RunTitle step={r.step} title={r.title} />
-            <BoardLine direction="col" gap="5">
+            <BoardLine between gap="5">
               <RunStateIcon runKey={r.key} tone={r.tone} />
-              <BoardLine between gap="5">
-                <BoardText tabular kind="meta">
-                  {tRuns(`state.${r.status}`)}
-                </BoardText>
-                <BoardText tabular kind="meta">
-                  {r.age}
-                </BoardText>
-              </BoardLine>
+              <BoardText tabular kind="meta">
+                {r.age}
+              </BoardText>
             </BoardLine>
             <RunIssue issue={r.issue} project={r.project} />
           </BoardRow>
@@ -208,12 +200,12 @@ export function RunsWidget({
   );
 }
 
-/** Non-running rows show their state as an icon in the state colour (the text beside it names it). */
+/** Non-running rows show their state as an icon in the state colour. */
 function RunStateIcon({ tone, runKey }: { tone: StateTone; runKey: string }) {
   const { name, tone: iconTone } = STATE_ICON[tone] ?? STATE_ICON.idle;
   return (
     <span data-testid={`${RunsWidgetTestId.StateIcon}-${runKey}`}>
-      <Icon aria-hidden name={name} size="sm" tone={iconTone} />
+      <Icon aria-hidden name={name} size="xl" tone={iconTone} />
     </span>
   );
 }

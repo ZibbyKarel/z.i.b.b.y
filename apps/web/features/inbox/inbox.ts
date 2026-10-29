@@ -341,14 +341,14 @@ export type PrStateKey =
   | "reviewed-changes-requested"
   | "reviewed-commented"
   | InboxPrBlocker;
-export type PrStateTone = "neutral" | "thinking" | "error" | "blocked" | "idle" | "working";
+export type PrStateTone = "neutral" | "thinking" | "error" | "blocked" | "idle" | "done";
 
 const BLOCKER_TONE: Record<InboxPrBlocker, PrStateTone> = {
   "ci-failing": "error",
   "changes-requested": "blocked",
   "merge-conflict": "error",
   "awaiting-review": "idle",
-  "ready-to-merge": "working",
+  "ready-to-merge": "done",
 };
 
 /** The single state a card shows (label key + stripe tone): draft, then a pending review request, then the blocker. */
@@ -358,7 +358,7 @@ export function prState(pr: InboxPr): { key: PrStateKey; tone: PrStateTone } {
     const review = pr.myReview ?? "commented";
     return {
       key: `reviewed-${review}`,
-      tone: review === "approved" ? "working" : review === "changes-requested" ? "blocked" : "idle",
+      tone: review === "approved" ? "done" : review === "changes-requested" ? "blocked" : "idle",
     };
   }
   if (pr.bucket === "to-review" && pr.blocker !== "ready-to-merge") {

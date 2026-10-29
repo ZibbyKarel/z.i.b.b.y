@@ -2822,7 +2822,6 @@
       },
       "outdated": "outdated",
       "new": "new since the run",
-      "comment": "{login} · {age}",
       "unknownAuthor": "unknown",
       "reply": "Reply",
       "resolve": "Resolve thread",
@@ -3148,7 +3147,7 @@
       "airy": "Airy",
       "open": "Open"
     },
-    "addWidget": "+ Widget",
+    "addWidget": "Add widget",
     "configure": "Configure",
     "editLayout": "Edit layout",
     "catalog": {
@@ -3426,7 +3425,7 @@
         },
         "diff": "Diff · vs {base}",
         "by": "By {who}",
-        "you": "You",
+        "mine": "Yours",
         "note": {
           "ready": "Ready to merge",
           "approved": "Approved",

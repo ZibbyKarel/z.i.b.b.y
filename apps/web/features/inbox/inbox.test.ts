@@ -458,18 +458,14 @@ describe("prState", () => {
     [
       { bucket: "to-review" as const, blocker: "ready-to-merge" as const },
       "ready-to-merge",
-      "working",
+      "done",
     ],
     [{ blocker: "ci-failing" as const }, "ci-failing", "error"],
     [{ blocker: "changes-requested" as const }, "changes-requested", "blocked"],
     [{ blocker: "merge-conflict" as const }, "merge-conflict", "error"],
     [{ blocker: "awaiting-review" as const }, "awaiting-review", "idle"],
-    [{ blocker: "ready-to-merge" as const }, "ready-to-merge", "working"],
-    [
-      { bucket: "reviewed" as const, myReview: "approved" as const },
-      "reviewed-approved",
-      "working",
-    ],
+    [{ blocker: "ready-to-merge" as const }, "ready-to-merge", "done"],
+    [{ bucket: "reviewed" as const, myReview: "approved" as const }, "reviewed-approved", "done"],
     [
       { bucket: "reviewed" as const, myReview: "changes-requested" as const },
       "reviewed-changes-requested",

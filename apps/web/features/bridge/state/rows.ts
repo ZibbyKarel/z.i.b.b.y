@@ -185,9 +185,9 @@ const PR_TONE: Record<ReturnType<typeof prStatusKey>, RowTone> = {
   mergeConflict: "error",
   changesRequested: "blocked",
   checksRunning: "thinking",
-  approved: "working",
+  approved: "done",
   awaitingReview: "idle",
-  reviewedApproved: "working",
+  reviewedApproved: "done",
   reviewedChangesRequested: "blocked",
   reviewedCommented: "idle",
 };

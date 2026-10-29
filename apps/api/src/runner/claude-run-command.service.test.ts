@@ -107,7 +107,7 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     else process.env.CLAUDE_BIN = savedClaudeBin;
   });
 
-  it("spawns claude in dontAsk mode with the task as the bare -p arg", async () => {
+  it("spawns claude in auto mode with the task as the bare -p arg", async () => {
     const svc = makeService([CODER], []);
     const { command, args } = await svc.buildClaudeCommand({
       instructions: CODER.instructions,
@@ -121,7 +121,7 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     // The task carries the user's prompt plus the execution directive (last word, so it
     // overrides an agent body that says "ask the user first").
     expect(flagValue(args, "-p")).toBe(`Naprav bug${EXECUTION_DIRECTIVE}`);
-    expect(flagValue(args, "--permission-mode")).toBe("dontAsk");
+    expect(flagValue(args, "--permission-mode")).toBe("auto");
     // The agent body is framed by the operating contract (prepended), which steers
     // the headless run to EXECUTE destructive actions through the gate instead of
     // asking for confirmation in chat (a dead end in non-interactive `-p` mode).

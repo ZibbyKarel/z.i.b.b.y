@@ -4,6 +4,8 @@ import { AnchoredSheet, Markdown, SheetBlock, SheetSection } from "@zibby/design
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import { ChatAboutButton } from "../../../chat/components/ChatAboutButton";
+import { noteChatAbout } from "../../../chat/chatAbout";
 import { useTeamKbNoteQuery } from "../../../knowledge/queries";
 import { useTeamsQuery } from "../../../teams/queries";
 import { parseNoteSelectionId, teamNoteHref } from "../../widgets/TeamKbWidget";
@@ -23,6 +25,7 @@ export function NoteSheet({ id, anchor, onClose }: SheetProps) {
   return (
     <AnchoredSheet
       {...geometry(anchor)}
+      actions={<ChatAboutButton about={noteChatAbout(note, team, teamNoteHref(teamId, noteId))} />}
       chips={[team, note.id]}
       closeLabel={t("bridge.sheet.close")}
       kind={t("bridge.sheet.kind.note")}

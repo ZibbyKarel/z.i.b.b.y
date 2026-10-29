@@ -155,9 +155,9 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
       chips={[
         pr.repo,
         `${pr.headRef ?? dash} → ${base}`,
-        t("bridge.sheet.pr.by", {
-          who: pr.bucket === "mine" ? t("bridge.sheet.pr.you") : pr.author,
-        }),
+        pr.bucket === "mine"
+          ? t("bridge.sheet.pr.mine")
+          : t("bridge.sheet.pr.by", { who: pr.author }),
       ]}
       closeLabel={t("bridge.sheet.close")}
       footerNote={t(`bridge.sheet.pr.note.${NOTE_KEY[key]}`)}

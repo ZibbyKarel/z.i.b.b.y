@@ -2,12 +2,10 @@
 
 import {
   Button,
-  CommandBarButton,
   CommandBarGroup,
   Container,
   DENSITIES,
   DensityMenu,
-  MenuButton,
   SegmentedControl,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
@@ -16,13 +14,12 @@ import { useUiSettings } from "../../system";
 import { CUSTOM_PRESET } from "../state/useBridgeState";
 
 export enum BridgeHeaderTestId {
-  More = "bridge-header-more",
   Manage = "bridge-header-manage",
 }
 
 export interface BridgeHeaderProps {
   preset: string;
-  /** All layouts incl. DEFAULT: `shown` sit in the header, `hidden` behind the dropdown. */
+  /** Layouts shown in the header; hidden ones are only reachable from the manage dialog. */
   layouts: { shown: readonly string[]; hidden: readonly string[] };
   onPreset: (name: string) => void;
   onManage: () => void;
@@ -63,21 +60,9 @@ export function BridgeHeader({
           ariaLabel={t("layout")}
           items={names.map((name) => ({ value: name, label: presetLabel(name) }))}
           onChange={(name) => name !== CUSTOM_PRESET && onPreset(name)}
+          size="sm"
           value={preset}
         />
-        {layouts.hidden.length > 0 ? (
-          <Container data-testid={BridgeHeaderTestId.More}>
-            <MenuButton
-              ariaLabel={t("moreLayouts")}
-              items={layouts.hidden.map((n) => ({
-                id: n,
-                label: presetLabel(n),
-                onSelect: () => onPreset(n),
-              }))}
-              variant="kebab"
-            />
-          </Container>
-        ) : null}
       </CommandBarGroup>
       <DensityMenu
         label={t("density.label")}
@@ -86,14 +71,21 @@ export function BridgeHeader({
         value={ui.density}
       />
       <CommandBarGroup>
-        <CommandBarButton onClick={onToggleCatalog}>{t("addWidget")}</CommandBarButton>
+        <Button
+          aria-label={t("addWidget")}
+          icon="plus"
+          intent="secondary"
+          onClick={onToggleCatalog}
+          size="md"
+          title={t("addWidget")}
+        />
         <Container data-testid={BridgeHeaderTestId.Manage}>
           <Button
             aria-label={t("editLayout")}
             icon="layout"
             intent="secondary"
             onClick={onManage}
-            size="sm"
+            size="md"
             title={t("editLayout")}
           />
         </Container>

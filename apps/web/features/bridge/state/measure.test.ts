@@ -13,8 +13,8 @@ const root = rect(100, 50, 1200, 800); // right 1300, bottom 850
 const board = rect(100, 98, 1200, 752);
 
 describe("measureSheet", () => {
-  it("opens right when >= 460px is free, flush to the row's right edge", () => {
-    const row = rect(120, 200, 400, 30); // right 520 -> 780 free
+  it("opens right when the right side has more room, flush to the row's right edge", () => {
+    const row = rect(120, 200, 400, 30); // 20 left, 780 right
     const a = measureSheet(root, row, board);
     expect(a).toEqual({
       side: "r",
@@ -28,8 +28,8 @@ describe("measureSheet", () => {
     });
   });
 
-  it("opens left when less than 460px is free on the right", () => {
-    const row = rect(900, 300, 380, 40); // right 1280 -> 20 free
+  it("opens left when the left side has more room, even if the right is wider than 460px", () => {
+    const row = rect(900, 300, 100, 40); // 800 left, 300 right
     const a = measureSheet(root, row, board);
     expect(a.side).toBe("l");
     expect(a.left).toBe(0);
@@ -38,9 +38,9 @@ describe("measureSheet", () => {
     expect(a.eT).toBe(300 - 98 - 4);
   });
 
-  it("switches sides exactly at the 460px threshold", () => {
-    expect(measureSheet(root, rect(0, 0, 1300 - 460 - 0, 10), board).side).toBe("r");
-    expect(measureSheet(root, rect(0, 0, 1300 - 459, 10), board).side).toBe("l");
+  it("prefers the right side on a tie and flips as soon as the left is wider", () => {
+    expect(measureSheet(root, rect(600, 0, 200, 10), board).side).toBe("r"); // 500 / 500
+    expect(measureSheet(root, rect(601, 0, 200, 10), board).side).toBe("l"); // 501 / 499
   });
 });
 

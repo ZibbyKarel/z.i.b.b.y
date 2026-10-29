@@ -63,13 +63,15 @@ export interface ManageLayoutsDialogProps {
   /** Saved layout names (for the duplicate check). */
   saved: Readonly<Record<string, unknown>>;
   onArrange: (next: Arrangement) => void;
+  /** Switch to a layout (clicking its row). */
+  onSelect: (name: string) => void;
   /** Returns false when the name is rejected. */
   onAdd: (name: string) => boolean;
   onDelete: (name: string) => void;
   onClose: () => void;
 }
 
-/** Manage the Bridge layouts: reorder (drag and drop), header vs dropdown, delete, add. */
+/** Manage the Bridge layouts: select, reorder (drag and drop), header vs hidden, delete, add. */
 export function ManageLayoutsDialog({ open, ...rest }: ManageLayoutsDialogProps) {
   return open ? <ManageLayouts {...rest} /> : null;
 }
@@ -80,6 +82,7 @@ function ManageLayouts({
   nextName,
   saved,
   onArrange,
+  onSelect,
   onAdd,
   onDelete,
   onClose,
@@ -127,6 +130,7 @@ function ManageLayouts({
     refocus.current = null;
   });
   const key = (e: KeyboardEvent, n: string) => {
+    if (e.key === "Enter" && e.target === e.currentTarget) return onSelect(n);
     if (!e.altKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
     e.preventDefault();
     const cur = [...layouts.shown, DIVIDER, ...layouts.hidden].indexOf(n);
@@ -140,6 +144,7 @@ function ManageLayouts({
       aria-description={t("manage.moveHint")}
       data-testid={`${ManageLayoutsDialogTestId.Row}-${n}`}
       key={n}
+      onClick={() => onSelect(n)}
       onDragOver={over}
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = "move";
@@ -165,7 +170,10 @@ function ManageLayouts({
             ) : null}
           </Stack>
           {n === DEFAULT_PRESET ? null : (
-            <div data-testid={`${ManageLayoutsDialogTestId.Delete}-${n}`}>
+            <div
+              data-testid={`${ManageLayoutsDialogTestId.Delete}-${n}`}
+              onClick={(e) => e.stopPropagation()}
+            >
               <ConfirmDeleteButton
                 ariaLabel={t("manage.deleteNamed", { name: label(n) })}
                 confirmLabel={t("deleteLayoutConfirm")}

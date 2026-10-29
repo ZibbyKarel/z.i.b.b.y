@@ -59,6 +59,7 @@ export function BridgeScreen() {
         onArrange={state.arrange}
         onClose={() => setManageOpen(false)}
         onDelete={state.deleteLayout}
+        onSelect={state.applyPreset}
         open={manageOpen}
         preset={state.preset}
         saved={state.saved}

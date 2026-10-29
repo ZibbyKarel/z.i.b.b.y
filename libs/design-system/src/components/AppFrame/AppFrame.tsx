@@ -145,7 +145,7 @@ export function AppFrame({
           </main>
 
           {dock && (
-            <div className="pointer-events-none absolute inset-0 z-20 flex items-end justify-end pr-5 pb-4">
+            <div className="pointer-events-none absolute inset-0 z-40 flex items-end justify-end pr-5 pb-4">
               {/* Full-size, click-through box so the dock can size itself in % of the
                   area; the dock itself (direct child) takes the pointer events. */}
               <div

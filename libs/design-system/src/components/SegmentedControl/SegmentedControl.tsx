@@ -37,7 +37,7 @@ export interface SegmentedControlProps {
 }
 
 const sizeClass: Record<SegmentedControlSize, string> = {
-  sm: "px-[8px] py-[5px] text-[10px]",
+  sm: "px-[8px] py-[4.5px] text-[10px]",
   md: "px-[10px] py-[6px] text-[10px]",
 };
 

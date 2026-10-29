@@ -20,17 +20,15 @@ export interface SheetAnchor {
   eH: number;
 }
 
-/** Minimum free width right of the row for the sheet to open to the right. */
-export const SHEET_MIN_RIGHT = 460;
-
 /**
- * Port of the reference `measure()`: open right of the row when >= 460px is free there (left
- * edge = row's right edge), else left of it (right edge = row's left edge). Vertical extent is
+ * Open on whichever side of the row has more room — right (left edge = row's right edge) on a tie,
+ * else left (right edge = row's left edge). Vertical extent is
  * the board top to the root bottom. The 3px eraser covers the shared edge at the row's height.
  */
 export function measureSheet(root: RectLike, row: RectLike, board: RectLike): SheetAnchor {
   const rightSpace = root.right - row.right;
-  const side = rightSpace >= SHEET_MIN_RIGHT ? "r" : "l";
+  const leftSpace = row.left - root.left;
+  const side = rightSpace >= leftSpace ? "r" : "l";
   const left = side === "r" ? row.right - root.left - 1 : 0;
   const width = side === "r" ? rightSpace + 1 : row.left - root.left + 1;
   return {

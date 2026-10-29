@@ -24,9 +24,9 @@ const STATUS: Record<PrStatusKey, { tone: PrTone; label: string }> = {
   mergeConflict: { tone: "err", label: "MERGE CONFLICT" },
   changesRequested: { tone: "block", label: "CHANGES REQUESTED" },
   checksRunning: { tone: "think", label: "CHECKS RUNNING" },
-  approved: { tone: "work", label: "APPROVED" },
+  approved: { tone: "done", label: "APPROVED" },
   awaitingReview: { tone: "idle", label: "AWAITING REVIEW" },
-  reviewedApproved: { tone: "work", label: "YOU APPROVED" },
+  reviewedApproved: { tone: "done", label: "YOU APPROVED" },
   reviewedChangesRequested: { tone: "block", label: "YOU REQUESTED CHANGES" },
   reviewedCommented: { tone: "idle", label: "YOU COMMENTED" },
 };

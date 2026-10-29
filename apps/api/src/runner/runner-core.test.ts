@@ -298,6 +298,35 @@ describe("RunnerCore", () => {
     expect(core.get(run.runId).pct).toBe(100);
   });
 
+  it("marks an exit-0 run as error when the agent reports ZIBBY_STATUS: blocked", async () => {
+    const core = new RunnerCore(
+      dir,
+      strategy,
+      undefined,
+      undefined,
+      undefined,
+      formatClaudeStreamLine,
+    );
+    await core.init();
+    const text = "Could not post.\nZIBBY_STATUS: blocked slack_read_channel denied";
+    const event = JSON.stringify({
+      type: "assistant",
+      message: { content: [{ type: "text", text }] },
+    });
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "blk",
+      command: NODE,
+      args: ["-e", `console.log(${JSON.stringify(event)});process.exit(0)`],
+      cwd: path.join(dir, "blk_sandbox"),
+      extra: { label: "x" },
+    });
+    for (let i = 0; i < 100 && core.get(run.runId).status === "running"; i++) await sleep(20);
+    expect(core.get(run.runId).status).toBe("error");
+    const { content } = await core.readLog(run.runId, 0);
+    expect(content).toContain("✖ blocked: slack_read_channel denied");
+  });
+
   it("spawns the child with the gate coordination dir pinned to its sandbox", async () => {
     // Regression: the approval hook must exchange its request/decision files in the
     // sandbox the core watches — not the granted target the destructive command runs

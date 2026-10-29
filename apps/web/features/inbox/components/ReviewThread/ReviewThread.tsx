@@ -6,10 +6,11 @@ import {
   Card,
   Checkbox,
   FileDiffView,
+  HighlightTextAreaField,
+  InputFrame,
   Markdown,
   Stack,
   Tag,
-  TextAreaField,
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
@@ -109,50 +110,61 @@ export function ReviewThread({ thread, outcome, isNew, reply, now }: ReviewThrea
           <FileDiffView diff={snippetDiff(thread.path, thread.diffHunk)} showFileName={false} />
         </div>
         {thread.comments.map((c) => (
-          <Stack data-testid={ReviewThreadTestId.Comment} gap="100" key={c.id}>
-            <Typography mono type="note" variant="secondary">
-              {t("comment", {
-                login: c.author?.login ?? t("unknownAuthor"),
-                age: elapsed(c.createdAt, now),
-              })}
-            </Typography>
+          <Stack data-testid={ReviewThreadTestId.Comment} gap="50" key={c.id}>
+            <Stack align="baseline" gap="100">
+              <Typography type="labelSm">{c.author?.login ?? t("unknownAuthor")}</Typography>
+              <Typography type="note" variant="tertiary">
+                {elapsed(c.createdAt, now)}
+              </Typography>
+            </Stack>
             <Markdown escapeHtml source={c.body} />
           </Stack>
         ))}
         {reply ? (
-          <Stack gap="150">
-            <TextAreaField
+          <InputFrame
+            end={
+              <Stack align="center" gap="100">
+                <label>
+                  <Stack align="center" gap="100">
+                    <Checkbox
+                      checked={reply.resolve}
+                      data-testid={ReviewThreadTestId.Resolve}
+                      label={t("resolve")}
+                      onChange={(next) => reply.onChange({ body: reply.body, resolve: next })}
+                    />
+                    <Typography aria-hidden="true" as="span" type="note">
+                      {t("resolve")}
+                    </Typography>
+                  </Stack>
+                </label>
+                {reply.onSend ? (
+                  <Button
+                    aria-label={t("send")}
+                    data-testid={ReviewThreadTestId.Send}
+                    disabled={(!reply.body.trim() && !reply.resolve) || reply.sending}
+                    icon="arrow"
+                    intent="primary"
+                    loading={reply.sending}
+                    onClick={reply.onSend}
+                    size="sm"
+                    title={t("send")}
+                  />
+                ) : null}
+              </Stack>
+            }
+          >
+            <HighlightTextAreaField
+              frameless
+              hideLabel
               data-testid={ReviewThreadTestId.ReplyInput}
+              highlights={[]}
               label={t("reply")}
               onChange={(e) => reply.onChange({ body: e.target.value, resolve: reply.resolve })}
+              placeholder={t("reply")}
+              rows={1}
               value={reply.body}
             />
-            <Stack align="center" gap="150" justify="between">
-              <label>
-                <Stack align="center" gap="100">
-                  <Checkbox
-                    checked={reply.resolve}
-                    data-testid={ReviewThreadTestId.Resolve}
-                    label={t("resolve")}
-                    onChange={(next) => reply.onChange({ body: reply.body, resolve: next })}
-                  />
-                  <Typography aria-hidden="true" as="span" type="note">
-                    {t("resolve")}
-                  </Typography>
-                </Stack>
-              </label>
-              {reply.onSend ? (
-                <Button
-                  data-testid={ReviewThreadTestId.Send}
-                  disabled={(!reply.body.trim() && !reply.resolve) || reply.sending}
-                  loading={reply.sending}
-                  onClick={reply.onSend}
-                >
-                  {t("send")}
-                </Button>
-              ) : null}
-            </Stack>
-          </Stack>
+          </InputFrame>
         ) : null}
       </Stack>
     </Card>

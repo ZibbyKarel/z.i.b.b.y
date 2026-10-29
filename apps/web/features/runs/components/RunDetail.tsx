@@ -3,6 +3,7 @@
 import {
   Container,
   RailSplit,
+  Row,
   Stack,
   StatusDot,
   Tab,
@@ -14,6 +15,8 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useApprovalsQuery } from "../../approvals";
+import { runChatAbout } from "../../chat/chatAbout";
+import { ChatAboutButton } from "../../chat/components/ChatAboutButton";
 import { useNewTask } from "../../tasks";
 import { useWorkflowsQuery } from "../../workflows";
 import { useOpenTaskRunFolderMutation } from "../mutations";
@@ -79,23 +82,26 @@ export function RunHeaderActions({ run }: { run: RunView }) {
   const current = buildStageRail(run, mode, definedPhaseIds, now).find((r) => r.current);
 
   return (
-    <RunDetailActions
-      agentId={run.kind === "agent" ? run.owner : undefined}
-      currentStageName={current?.name}
-      mode={mode}
-      onContinueTask={() => openNewTask(undefined, undefined, continueContext)}
-      onDelete={() => actions.remove(run.runId, run.kind)}
-      onOpenFolder={
-        run.kind === "workflow"
-          ? () => openFolderMutation.mutate({ params: { runId: run.runId }, body: {} })
-          : undefined
-      }
-      onPause={() => actions.pause(run)}
-      onResume={(opts) => actions.resume(run, opts)}
-      onStop={() => actions.stop(run)}
-      pending={actions.stopping || actions.pausing || actions.resuming || actions.deleting}
-      run={run}
-    />
+    <Row gap="75">
+      <ChatAboutButton about={runChatAbout(run)} />
+      <RunDetailActions
+        agentId={run.kind === "agent" ? run.owner : undefined}
+        currentStageName={current?.name}
+        mode={mode}
+        onContinueTask={() => openNewTask(undefined, undefined, continueContext)}
+        onDelete={() => actions.remove(run.runId, run.kind)}
+        onOpenFolder={
+          run.kind === "workflow"
+            ? () => openFolderMutation.mutate({ params: { runId: run.runId }, body: {} })
+            : undefined
+        }
+        onPause={() => actions.pause(run)}
+        onResume={(opts) => actions.resume(run, opts)}
+        onStop={() => actions.stop(run)}
+        pending={actions.stopping || actions.pausing || actions.resuming || actions.deleting}
+        run={run}
+      />
+    </Row>
   );
 }
 
