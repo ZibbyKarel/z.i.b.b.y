@@ -91,7 +91,16 @@ export class SlackChannelAdapter implements ChannelAdapter {
     return Date.now();
   }
 
-  constructor(private readonly fetchImpl: typeof fetch = fetch) {}
+  /**
+   * @param botDmChannelId the operator-channel bot DM (operator-channel settings), when
+   * known. That conversation belongs to the operator channel, not to triage: it is
+   * excluded from both legs so one message is never both a command and a triage item.
+   */
+  constructor(
+    private readonly fetchImpl: typeof fetch = fetch,
+    private readonly botDmChannelId: () => Promise<string | undefined> = () =>
+      Promise.resolve(undefined),
+  ) {}
 
   /** GET a Web API method; surfaces 429 and `ok:false` as errors, never sleeps. */
   private async call<T extends SlackResponse>(
@@ -174,6 +183,7 @@ export class SlackChannelAdapter implements ChannelAdapter {
     const allow = integration.config.channels;
 
     const me = await this.operatorId(token);
+    const botDm = await this.botDmChannelId().catch(() => undefined);
     // The cursor is the DM leg's high-water mark: it only advances on a DM sweep, so a
     // skipped sweep never lets the mention leg move it past unread DMs.
     // No cursor → don't import the whole history, only the last day.
@@ -213,6 +223,7 @@ export class SlackChannelAdapter implements ChannelAdapter {
         { types: "im,mpim", exclude_archived: "true", limit: String(MAX_DM_CONVERSATIONS) },
       );
       for (const { id: channel } of (convs.channels ?? []).slice(0, MAX_DM_CONVERSATIONS)) {
+        if (channel === botDm) continue;
         const hist = await this.call<SlackResponse & { messages?: SlackMessage[] }>(
           token,
           "conversations.history",
@@ -247,7 +258,7 @@ export class SlackChannelAdapter implements ChannelAdapter {
     const mentionsAfter = Number(oldest) - SEARCH_OVERLAP_S;
     for (const m of search.messages?.matches ?? []) {
       const channel = m.channel?.id;
-      if (!channel || !isHuman(m) || Number(m.ts) <= mentionsAfter) continue;
+      if (!channel || channel === botDm || !isHuman(m) || Number(m.ts) <= mentionsAfter) continue;
       if (allow.length > 0 && !allow.includes(channel)) continue;
       add(channel, m, m.permalink);
     }

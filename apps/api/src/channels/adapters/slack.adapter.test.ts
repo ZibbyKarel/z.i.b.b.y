@@ -194,6 +194,24 @@ describe("SlackChannelAdapter", () => {
     expect(calls.filter((c) => c.pathname.endsWith("/auth.test"))).toHaveLength(1);
   });
 
+  it("excludes the operator-channel bot DM from both legs", async () => {
+    const human = { type: "message", user: "UCLIENT", text: "hi", ts: T1 };
+    const { fetchImpl } = fakeSlack({
+      dms: { DBOT: [human], D1: [{ ...human, ts: T2 }] },
+      matches: [{ ...human, ts: T3, channel: { id: "DBOT" } }],
+    });
+    const calls: URL[] = [];
+    const recording = vi.fn(async (input: string | URL, init?: RequestInit) => {
+      calls.push(new URL(String(input)));
+      return fetchImpl(input, init);
+    }) as unknown as typeof fetch;
+    const adapter = new ClockedAdapter(recording, () => Promise.resolve("DBOT"));
+    const { items } = await adapter.poll(slack(), creds, undefined);
+    expect(items.map((i) => i.externalRef.channel)).toEqual(["D1"]);
+    const histories = calls.filter((c) => c.pathname.endsWith("/conversations.history"));
+    expect(histories.map((c) => c.searchParams.get("channel"))).toEqual(["D1"]);
+  });
+
   it("first poll without a cursor only looks back ~24h", async () => {
     const { adapter, calls } = fakeSlack({ dms: { D1: [] } });
     await adapter.poll(slack(), creds, undefined);

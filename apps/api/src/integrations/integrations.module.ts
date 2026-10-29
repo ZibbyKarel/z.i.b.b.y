@@ -1,5 +1,6 @@
 import { Module, forwardRef } from "@nestjs/common";
 import { AdapterRegistry } from "../channels/adapters/adapter-registry";
+import { OperatorChannelStoreModule } from "../operator-channel/operator-channel-store.module";
 import { ProjectsModule } from "../projects/projects.module";
 import { ResolvedProjectModule } from "../projects/resolved-project.module";
 import { dataDir } from "../shared/data-dir";
@@ -51,7 +52,12 @@ export function resolveCredentialsDir(): string {
  * "module at index [0] of imports is undefined" failure without it).
  */
 @Module({
-  imports: [forwardRef(() => ProjectsModule), forwardRef(() => ResolvedProjectModule)],
+  // OperatorChannelStoreModule: the Slack adapter excludes the operator-channel bot DM.
+  imports: [
+    forwardRef(() => ProjectsModule),
+    forwardRef(() => ResolvedProjectModule),
+    OperatorChannelStoreModule,
+  ],
   controllers: [IntegrationsController],
   providers: [
     { provide: INTEGRATIONS_DIR, useFactory: resolveIntegrationsDir },

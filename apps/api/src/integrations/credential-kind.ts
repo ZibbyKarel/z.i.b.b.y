@@ -1,4 +1,4 @@
-import type { CredentialsInput, IntegrationKind } from "@zibby/contracts";
+import type { CredentialsInput, IntegrationKind, OperatorCredentialKind } from "@zibby/contracts";
 
 /**
  * Whether a credential payload matches the kind an integration needs. Email
@@ -10,4 +10,18 @@ import type { CredentialsInput, IntegrationKind } from "@zibby/contracts";
  */
 export function credentialMatchesKind(kind: IntegrationKind, creds: CredentialsInput): boolean {
   return kind === "email" ? "password" in creds : "token" in creds;
+}
+
+/** Token prefix per operator-channel credential kind (Slack bot / app-level token). */
+const OPERATOR_TOKEN_PREFIX: Record<OperatorCredentialKind, string> = {
+  "slack-bot": "xoxb-",
+  "slack-app": "xapp-",
+};
+
+/**
+ * Whether a token is the kind the operator channel slot expects — a user token
+ * (`xoxp-`) in the bot slot, or the two swapped, is refused before it is stored.
+ */
+export function operatorTokenMatchesKind(kind: OperatorCredentialKind, token: string): boolean {
+  return token.startsWith(OPERATOR_TOKEN_PREFIX[kind]);
 }

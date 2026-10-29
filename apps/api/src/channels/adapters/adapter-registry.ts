@@ -1,6 +1,7 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
 import type { CredentialsInput, Integration, TestResult } from "@zibby/contracts";
 import type { ConnectionTester } from "../../integrations/connection-tester";
+import { OperatorChannelStore } from "../../operator-channel/operator-channel.store";
 import type { ChannelAdapter } from "./adapter";
 import { CalendarChannelAdapter } from "./calendar.adapter";
 import { EmailChannelAdapter } from "./email.adapter";
@@ -20,13 +21,21 @@ import { SlackChannelAdapter } from "./slack.adapter";
  */
 @Injectable()
 export class AdapterRegistry implements ConnectionTester {
-  private readonly slack = new SlackChannelAdapter();
+  private readonly slack: SlackChannelAdapter;
   private readonly email = new EmailChannelAdapter();
   private readonly jira = new JiraChannelAdapter();
   private readonly github = new GitHubChannelAdapter();
   private readonly calendar = new CalendarChannelAdapter();
   private readonly sentry = new SentryChannelAdapter();
   private readonly fake = new FakeChannelAdapter();
+
+  /** The operator-channel store is optional so unit tests can `new AdapterRegistry()`. */
+  constructor(@Optional() operatorChannel?: OperatorChannelStore) {
+    // The Slack adapter skips the operator-channel bot DM (read live from its settings).
+    this.slack = new SlackChannelAdapter(fetch, async () =>
+      operatorChannel ? (await operatorChannel.readSettings()).dmChannelId : undefined,
+    );
+  }
 
   /** Test-only fake-channel seam — on iff the harness set `CHANNEL_FAKE_DIR`. */
   private fakeMode(): boolean {
