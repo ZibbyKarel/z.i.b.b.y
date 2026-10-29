@@ -7,17 +7,20 @@ import { fileURLToPath } from "node:url";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import request from "supertest";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { AgentRunnerService } from "../src/agents/agent-runner.service";
 import { AppModule } from "../src/app.module";
 import { ChatSessionService, type ClaudeProcess } from "../src/chat/chat-session.service";
 import { ChatToolResultRegistry } from "../src/chat/chat-tool-result.registry";
 import { ChatToolsService } from "../src/chat/chat-tools.service";
+import { GoalRunnerService } from "../src/goals/goal-runner.service";
 import type { OperatorInboundMessage } from "../src/operator-channel/operator-channel.port";
 import { OperatorChannelService } from "../src/operator-channel/operator-channel.service";
 import {
   OperatorInboundService,
   operatorConversationId,
 } from "../src/operator-channel/operator-inbound.service";
+import { WorkflowRunnerService } from "../src/workflows/workflow-runner.service";
 import { withOperator } from "./operator-token";
 
 const OPERATOR = "U0E2EOPERATOR";
@@ -147,6 +150,20 @@ describe("Operator channel inbound (e2e)", () => {
     expect(
       tasks.body.some((t: { text?: string }) => t.text === "spusť úlohu X: oprav překlep v README"),
     ).toBe(true);
+    // Let the dispatched (fake-claude) run finish so it can't outlive the app.
+    const runRef = /běh (\S+)$/.exec(reply?.lines[1] ?? "")?.[1] ?? "";
+    const statusOf = (): string | undefined => {
+      for (const runner of [WorkflowRunnerService, AgentRunnerService, GoalRunnerService]) {
+        try {
+          return app.get(runner).get(runRef).status;
+        } catch {
+          // not this runner's id
+        }
+      }
+      return undefined;
+    };
+    expect(statusOf()).toBeDefined();
+    await vi.waitFor(() => expect(statusOf()).not.toBe("running"), { timeout: 15_000 });
   });
 
   it('"co je nového?" gets the status answer', async () => {
