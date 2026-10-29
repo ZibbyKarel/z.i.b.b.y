@@ -43,7 +43,7 @@ A dashboard button "Autopilot" (bridge dashboard, the only screen the operator u
 ## Progress
 
 - [x] Phase 1 — outbound notifications
-- [ ] Phase 2 — inbound operator messages
+- [x] Phase 2 — inbound operator messages
 - [ ] Phase 3 — thread feedback
 - [ ] Phase 4 — autopilot
 - [ ] Final: project-wide checks, merge to main, push
@@ -79,3 +79,33 @@ Shipped on `feat/operator-channel`: contract (`3d0d1970`), API (`783eb6d8`), web
   - Dedupe persistence across restarts (not needed while the stream doesn't replay).
 - **Open for the operator.** The real app in _Zibby's_ still needs the `im:*` and
   `users:read` scopes added and a reinstall before the first real send.
+
+## Phase 2 notes
+
+Shipped on `feat/operator-channel`: contract (`listening` in the status), API (inbound
+service, Socket Mode, dedupe, guards, tests + e2e), and docs. Reference:
+`docs/api/operator-channel.md#inbound-phase-2`.
+
+- **Transport.** Socket Mode runs on Node 24's global `WebSocket` with `apps.connections.open`
+  (app token). No new dependency. It acks before handling, refreshes on `disconnect` and
+  reconnects with a 1 s → 30 s backoff. `@slack/socket-mode` would add `ws`,
+  `@slack/web-api` and an event emitter for the same few lines.
+- **Conversation id.** It is `slack-dm-<dmChannelId>`, one stable thread for the top-level
+  DM. It is visible in the web chat history. Phase 3 binds thread replies to their own
+  conversation. Until then a thread reply is handled like a top-level message, and the
+  answer is posted top-level.
+- **Confirm buttons.** They are a heuristic: an answer ending with `?` gets Yes/No reply
+  buttons, and a tap is the operator's next chat turn (`Ano.` / `Ne.`). The chat has no
+  structured "confirm" signal, and adding one would mean changing the shared governor
+  prompt. A tap never decides an approval.
+- **Guards.** 6 turns per minute, 200 per day, 1 in flight per conversation plus 3 queued,
+  4000 characters to the model, 1 placeholder update per 2 s. These are instance fields
+  (test seams), not settings. Budget: tasks hit the scheduler's existing budget guard.
+- **Autopilot-off hook.** Skipped. Phase 4's chat/MCP tool will reach Slack through the
+  chat with no extra code.
+- **Deferred.**
+  - Per-turn delta streaming (milestones only, as briefed).
+  - A `via: slack` marker on transcript messages.
+  - Rate-limit counters don't survive a restart (in memory).
+  - Escaping runs before splitting, so in rare cases a chunk boundary can split a `&amp;`.
+

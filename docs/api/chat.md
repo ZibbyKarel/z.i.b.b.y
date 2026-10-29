@@ -244,6 +244,12 @@ change does not apply mid-way through a running `--resume` thread.
   the messages past the `<id>.distilled.json` marker (a message count) and
   advances the cursor. Important facts flow into vault markdown the same way
   runs do.
+- **Slack operator DM:** the [operator channel](./operator-channel.md#inbound-phase-2)
+  is a second caller of `ChatSessionService.sendMessage`. It always writes to the
+  fixed conversation `slack-dm-<dmChannelId>`, so a Slack thread is an ordinary
+  transcript: the history sidebar lists it and the web can continue it. Slack
+  turns send only `{ conversationId, text }`, with no tags, mentions or
+  attachments.
 
 ## Web dock (shell-global COO dock, ZB-12/ZB-13)
 
