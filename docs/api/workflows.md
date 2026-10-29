@@ -340,7 +340,9 @@ reachable from `stageRuns`).
    the skill's body). An external skill's body points at its installed folder, which is
    added to the stage's `grantDirs`. An unknown `skill` fails the stage with
    `Skill "<id>" not found` (recorded as the run's `failedReason`) — it never runs
-   without it. Both fields are rejected on `tool` / `workflow` phases.
+   without it. A stage that cannot be built (unknown skill, missing agent) is
+   deterministic, so it fails the run outright and never takes the `loop` back-edge.
+   Any other skill lookup error fails the stage with its own message. Both fields are rejected on `tool` / `workflow` phases.
 3. Calls `RunnerCore.spawn()` for a `workflow-stage` kind.
 4. Waits for it to finish (polling the sidecar status).
 5. Reads the output from the `produces` file (or the log's last N lines).

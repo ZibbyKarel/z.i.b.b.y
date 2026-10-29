@@ -11,7 +11,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResumableRunner } from "../approvals/approvals.service";
 import { ProjectLocalUnresolvedError } from "../projects/projects.errors";
 import { RunNotFoundError } from "../runner/runner-core";
-import { WorkflowRunNotFoundError, WorkflowRunnerService } from "./workflow-runner.service";
+import { SkillNotFoundError } from "../skills/skills.errors";
+import {
+  StageBuildError,
+  WorkflowRunNotFoundError,
+  WorkflowRunnerService,
+} from "./workflow-runner.service";
 
 /** Minimal logger double matching the LoggerService surface the service uses. */
 const fakeLogger = {
@@ -737,7 +742,8 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
         svc.agents = { get: vi.fn(async () => ({ id: "writer", instructions: "write" })) };
         svc.skills = {
           get: vi.fn(async (id: string) => {
-            if (!skill) throw new Error(`no ${id}`);
+            if (skill instanceof Error) throw skill;
+            if (!skill) throw new SkillNotFoundError(id);
             return skill;
           }),
           externalFolder: vi.fn((id: string) => `/ext/${id}`),
@@ -776,14 +782,22 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
           'Skill "nope" not found',
         );
         const run = { workflowRunId: "r_1", workflowId: "w" } as Record<string, unknown>;
-        const stage = await (
-          h.service as unknown as {
-            runStage(...a: unknown[]): Promise<{ status: string }>;
-          }
+        const staged = (
+          h.service as unknown as { runStage(...a: unknown[]): Promise<unknown> }
         ).runStage(run, agentPhase({ skill: "nope" }), "/sandbox/stage", 1, null);
-        expect(stage.status).toBe("error");
-        expect(run.failedReason).toBe('Skill "nope" not found');
+        await expect(staged).rejects.toBeInstanceOf(StageBuildError);
+        await expect(staged).rejects.toMatchObject({
+          message: 'Skill "nope" not found',
+          stage: { phaseId: "build", attempt: 1, status: "error", dir: "stage" },
+        });
         expect(h.core.start).not.toHaveBeenCalled();
+      });
+
+      it("a skill lookup error other than not-found keeps its own message", async () => {
+        stub(new Error("EACCES: skills dir"));
+        await expect(build(agentPhase({ skill: "mine" }), null)).rejects.toThrow(
+          "EACCES: skills dir",
+        );
       });
     });
   });
@@ -1251,6 +1265,52 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
         run,
         workflow,
       );
+
+    it("an unbuildable stage (unknown skill) fails the run without taking the loop back-edge", async () => {
+      const run = h.runs.get(WORKFLOW_RUN_ID);
+      if (!run) throw new Error("missing run");
+      process.env.AGENT_RUNNER_MODE = "claude";
+      try {
+        const svc = h.service as unknown as Record<string, unknown>;
+        svc.skills = {
+          get: vi.fn(async (id: string) => Promise.reject(new SkillNotFoundError(id))),
+        };
+        const workflow = {
+          id: "release",
+          phases: [
+            phase("a"),
+            phase("b", {
+              skill: "nope",
+              loop: { to: "a", maxRetries: 2, escalate: true, then: "fail" },
+            }),
+          ],
+          instructions: "ship",
+        };
+        const order: string[] = [];
+        scriptRunStage(order, () => null);
+        const scripted = svc.runStage as (...a: unknown[]) => Promise<unknown>;
+        const real = WorkflowRunnerService.prototype["runStage" as keyof WorkflowRunnerService] as (
+          ...a: unknown[]
+        ) => Promise<unknown>;
+        // Phase "a" is scripted green; phase "b" goes through the real runStage → build.
+        svc.runStage = (r: unknown, p: { id: string }, ...rest: unknown[]) =>
+          p.id === "b" ? real.call(h.service, r, p, ...rest) : scripted(r, p, ...rest);
+
+        await drive(run, workflow);
+
+        expect(order).toEqual(["a"]); // phase 1 dispatched exactly once
+        expect(run.status).toBe("failed");
+        expect(run.failedReason).toBe('Skill "nope" not found');
+        expect(run.stageRuns.map((s) => [s.phaseId, s.status])).toEqual([
+          ["a", "done"],
+          ["b", "error"],
+        ]);
+        expect(run.currentStage).toBeNull();
+        expect(h.core.start).not.toHaveBeenCalled();
+      } finally {
+        delete process.env.AGENT_RUNNER_MODE;
+      }
+    });
 
     it("gap loops the work back, then pass advances to the end", async () => {
       const run = h.runs.get(WORKFLOW_RUN_ID);

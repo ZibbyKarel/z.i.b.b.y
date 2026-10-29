@@ -30,6 +30,7 @@ import { type RunAttachments } from "../agents/agent-runner.service";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { externalSkillPrompt } from "../external-skills/skill-repo";
+import { SkillNotFoundError } from "../skills/skills.errors";
 import { SkillsStorageService } from "../skills/skills.storage.service";
 import { ApprovalsService } from "../approvals/approvals.service";
 import { SignalBusService } from "../automations/signal-bus.service";
@@ -190,6 +191,22 @@ export class WorkflowRunNotMessageableError extends Error {
   constructor(id: string, why = "the run is finished") {
     super(`Workflow run "${id}" cannot take a message (${why})`);
     this.name = "WorkflowRunNotMessageableError";
+  }
+}
+
+/**
+ * A stage that could not even be built (unknown `/skill`, missing agent). It is
+ * deterministic, so the driver fails the run outright — never the loop/retry path,
+ * which would re-run real (paid) earlier phases for nothing. Carries the `error`
+ * stage record to append.
+ */
+export class StageBuildError extends Error {
+  constructor(
+    message: string,
+    readonly stage: StageRun,
+  ) {
+    super(message);
+    this.name = "StageBuildError";
   }
 }
 
@@ -1511,15 +1528,28 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         stageRun = refused;
       } else {
         // No per-stage slot: the whole run holds one run slot, taken at dispatch.
-        stageRun = await this.runStage(
-          run,
-          phase,
-          stageCwd,
-          attempt,
-          project,
-          stageResumeContext,
-          delegates,
-        );
+        try {
+          stageRun = await this.runStage(
+            run,
+            phase,
+            stageCwd,
+            attempt,
+            project,
+            stageResumeContext,
+            delegates,
+          );
+        } catch (error) {
+          if (!(error instanceof StageBuildError)) throw error;
+          // Deterministic — skip the loop/then branch; fail the run with the reason.
+          this.log.error("workflow stage could not be built; failing run", {
+            phase: phase.id,
+            err: error.message,
+          });
+          run.stageRuns.push(error.stage);
+          run.status = "failed";
+          run.failedReason = error.message;
+          break;
+        }
       }
       // The stage has reached a terminal/paused state and (when terminal) is about
       // to be appended to `stageRuns` — its log is readable from there now, so drop
@@ -2511,18 +2541,15 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         stageWebUrl(stageWorkflow, project),
       );
     } catch (error) {
-      // A stage that can't even be built (unknown /skill, missing agent) fails here
-      // with the reason on the aggregate — never a hung run, never a skill-less run.
-      const reason = error instanceof Error ? error.message : String(error);
-      this.log.error("workflow stage could not be built", { phase: phase.id, err: reason });
-      run.failedReason = reason;
-      return {
+      // A stage that can't even be built (unknown /skill, missing agent): nothing
+      // spawns; drive() fails the run — never a hung run, never a skill-less run.
+      throw new StageBuildError(error instanceof Error ? error.message : String(error), {
         phaseId: phase.id,
         runId: `${run.workflowRunId}.${phase.id}.unbuilt`,
         attempt,
         status: "error",
         dir: path.basename(stageCwd),
-      };
+      });
     }
     const { command, args, spawnCwd } = built;
     // Per-project env + secrets injected into this stage's process (Phase D), plus
@@ -2999,8 +3026,10 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       let skillDir: string | undefined;
       if (phase.skill) {
         const id = phase.skill;
-        const found = await this.skills.get(id).catch(() => null);
-        if (!found) throw new Error(`Skill "${id}" not found`);
+        const found = await this.skills.get(id).catch((error: unknown) => {
+          if (error instanceof SkillNotFoundError) throw new Error(`Skill "${id}" not found`);
+          throw error;
+        });
         if (found.source) skillDir = this.skills.externalFolder(found.id);
         skill = {
           name: found.name ?? found.id,
