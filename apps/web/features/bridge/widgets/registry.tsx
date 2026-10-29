@@ -1,3 +1,4 @@
+import type { IconName } from "@zibby/design-system";
 import type { ReactNode } from "react";
 import type { WidgetType } from "../grid/layout";
 import type { BridgeWidget } from "../grid/layout";
@@ -43,8 +44,8 @@ export interface BridgeWidgetInfo {
  * Props every widget body receives.
  *
  * Contract for widget implementations:
- * - Call `onEmptyChange(true|false)` (in an effect, as data changes). Empty widgets collapse
- *   to their header; the body stays mounted (hidden) so it keeps reporting.
+ * - Call `onEmptyChange(true|false)` (in an effect, as data changes). Empty widgets show their
+ *   type icon; the body stays mounted (hidden) so it keeps reporting.
  * - Call `onCountChange({ count, you, aside })` to drive the header.
  * - Every clickable row MUST carry `data-rk={key}` (same string as `BridgeSelection.key`) —
  *   the detail sheet measures `[data-rk="…"]` to anchor itself next to the row. Rows call
@@ -71,6 +72,8 @@ export interface WidgetDefinition {
   /** i18n keys (next-intl, root namespace). */
   labelKey: `bridge.widget.${WidgetType}.label`;
   descKey: `bridge.widget.${WidgetType}.desc`;
+  /** Glyph of the widget type — shown in its empty state. */
+  icon: IconName;
   Component: (props: BridgeWidgetProps) => ReactNode;
   /** Has a settings UI behind the header gear toggle (`BridgeWidgetProps.editing`). */
   configurable?: true;
@@ -80,58 +83,69 @@ export const WIDGETS: Record<WidgetType, WidgetDefinition> = {
   briefing: {
     labelKey: "bridge.widget.briefing.label",
     descKey: "bridge.widget.briefing.desc",
+    icon: "coffee",
     Component: BriefingWidget,
   },
   issues: {
     labelKey: "bridge.widget.issues.label",
     descKey: "bridge.widget.issues.desc",
+    icon: "bug",
     Component: IssuesWidget,
   },
   tasks: {
     labelKey: "bridge.widget.tasks.label",
     descKey: "bridge.widget.tasks.desc",
+    icon: "check",
     Component: TasksWidget,
   },
   prs: {
     labelKey: "bridge.widget.prs.label",
     descKey: "bridge.widget.prs.desc",
+    icon: "branch",
     Component: PrsWidget,
   },
   runs: {
     labelKey: "bridge.widget.runs.label",
     descKey: "bridge.widget.runs.desc",
+    icon: "play",
     Component: RunsWidget,
   },
   pins: {
     labelKey: "bridge.widget.pins.label",
     descKey: "bridge.widget.pins.desc",
+    icon: "pin",
     Component: PinsWidget,
   },
   todo: {
     labelKey: "bridge.widget.todo.label",
     descKey: "bridge.widget.todo.desc",
+    icon: "pen",
     Component: TodoWidget,
   },
   quickActions: {
     labelKey: "bridge.widget.quickActions.label",
     descKey: "bridge.widget.quickActions.desc",
+    icon: "bolt",
     Component: QuickActionsWidget,
     configurable: true,
   },
   teamKb: {
     labelKey: "bridge.widget.teamKb.label",
     descKey: "bridge.widget.teamKb.desc",
+    icon: "book",
     Component: TeamKbWidget,
     configurable: true,
   },
   proposals: {
     labelKey: "bridge.widget.proposals.label",
     descKey: "bridge.widget.proposals.desc",
+    icon: "spark",
     Component: ProposalsWidget,
   },
   budgets: {
     labelKey: "bridge.widget.budgets.label",
     descKey: "bridge.widget.budgets.desc",
+    icon: "dollar",
     Component: BudgetsWidget,
   },
 };

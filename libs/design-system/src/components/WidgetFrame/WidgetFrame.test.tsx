@@ -34,21 +34,33 @@ describe("WidgetFrame", () => {
     expect(screen.getByTestId(WidgetFrameTestId.Collapse)).toHaveTextContent("▸");
   });
 
-  it("hides the body (but keeps it mounted) when collapsed or empty", () => {
-    const { rerender } = render(
+  it("hides the body (but keeps it mounted) when collapsed", () => {
+    render(
       <WidgetFrame collapsed label="X">
         <p>rows</p>
       </WidgetFrame>,
     );
     expect(screen.getByTestId(WidgetFrameTestId.Body)).not.toBeVisible();
     expect(screen.getByText("rows")).toBeInTheDocument();
-    rerender(
+  });
+
+  it("shows the empty state instead of the (still mounted) children when empty", () => {
+    const { rerender } = render(
       <WidgetFrame empty label="X">
         <p>rows</p>
       </WidgetFrame>,
     );
-    expect(screen.getByTestId(WidgetFrameTestId.Body)).not.toBeVisible();
+    expect(screen.getByTestId(WidgetFrameTestId.Empty)).toBeVisible();
+    expect(screen.getByText("rows")).toBeInTheDocument();
+    expect(screen.getByText("rows")).not.toBeVisible();
     expect(screen.queryByTestId(WidgetFrameTestId.Collapse)).toBeNull();
+    rerender(
+      <WidgetFrame configuring empty label="X">
+        <p>rows</p>
+      </WidgetFrame>,
+    );
+    expect(screen.queryByTestId(WidgetFrameTestId.Empty)).toBeNull();
+    expect(screen.getByText("rows")).toBeVisible();
   });
 
   it("always renders the corner handles and the remove button; size label only while dragging", async () => {
@@ -104,7 +116,6 @@ describe("WidgetFrame", () => {
     const btn = screen.getByTestId(WidgetFrameTestId.Configure);
     expect(btn).toHaveAttribute("aria-pressed", "false");
     expect(btn).toHaveAccessibleName("Configure");
-    expect(screen.getByTestId(WidgetFrameTestId.Body)).not.toBeVisible();
     await userEvent.click(btn);
     expect(onConfigure).toHaveBeenCalledOnce();
     expect(onMove).not.toHaveBeenCalled();
@@ -144,57 +155,6 @@ describe("WidgetFrame", () => {
     const root = screen.getByTestId(WidgetFrameTestId.Root);
     expect(root).toHaveClass("border-ink");
     expect(root).toHaveStyle({ left: "10px", top: "20px" });
-  });
-
-  /** Stubs root border (offset-client) and header/content rect heights; returns a restore fn. */
-  const stubHeights = (header: number, content: number) => {
-    const off = vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (
-      this: HTMLElement,
-    ) {
-      return this.dataset.testid === WidgetFrameTestId.Root ? 100 : 0;
-    });
-    const cli = vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (
-      this: HTMLElement,
-    ) {
-      return this.dataset.testid === WidgetFrameTestId.Root ? 98 : 0;
-    });
-    const rect = vi
-      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
-      .mockImplementation(function (this: HTMLElement) {
-        const id = this.dataset.testid;
-        const height =
-          id === WidgetFrameTestId.Header ? header : id === WidgetFrameTestId.Content ? content : 0;
-        return { height } as DOMRect;
-      });
-    return () => {
-      off.mockRestore();
-      cli.mockRestore();
-      rect.mockRestore();
-    };
-  };
-
-  it("reports its natural height on mount, ceiling sub-pixel heights", () => {
-    const restore = stubHeights(30.4, 49.5);
-    const onNaturalHeight = vi.fn();
-    render(<WidgetFrame label="X" onNaturalHeight={onNaturalHeight} />);
-    expect(onNaturalHeight).toHaveBeenCalledWith(2 + 31 + 50);
-    restore();
-  });
-
-  it("does not report while the open content measures 0px", () => {
-    const restore = stubHeights(30, 0);
-    const onNaturalHeight = vi.fn();
-    render(<WidgetFrame label="X" onNaturalHeight={onNaturalHeight} />);
-    expect(onNaturalHeight).not.toHaveBeenCalled();
-    restore();
-  });
-
-  it("reports header-only height when closed (empty)", () => {
-    const restore = stubHeights(30, 0);
-    const onNaturalHeight = vi.fn();
-    render(<WidgetFrame empty label="X" onNaturalHeight={onNaturalHeight} />);
-    expect(onNaturalHeight).toHaveBeenCalledWith(32);
-    restore();
   });
 
   it("wraps children in the content wrapper", () => {

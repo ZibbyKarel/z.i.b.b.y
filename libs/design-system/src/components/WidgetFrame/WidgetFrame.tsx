@@ -1,14 +1,7 @@
 "use client";
 
-import {
-  type CSSProperties,
-  type PointerEvent,
-  type ReactNode,
-  type Ref,
-  useCallback,
-  useLayoutEffect,
-  useRef,
-} from "react";
+import type { CSSProperties, PointerEvent, ReactNode, Ref } from "react";
+import type { IconName } from "../../assets/icons";
 import { cn } from "../../utils/cn";
 import { Icon } from "../Icon/Icon";
 
@@ -26,8 +19,10 @@ export enum WidgetFrameTestId {
   /** The per-widget "configure" toggle (aria-pressed). */
   Configure = "widget-frame-configure",
   Body = "widget-frame-body",
-  /** Plain wrapper around the children (and empty box) inside the body; its height is the content's natural height. */
+  /** Plain wrapper around the children inside the body (hidden while the empty state shows). */
   Content = "widget-frame-content",
+  /** The empty state (widget-type icon, centred in the body) shown while `empty`. */
+  Empty = "widget-frame-empty",
   /** The first-load spinner row (role=status) shown above the children while `loading`. */
   Loading = "widget-frame-loading",
   Size = "widget-frame-size",
@@ -57,8 +52,10 @@ export interface WidgetFrameProps {
   collapseLabel?: string;
   /** Being dragged/resized: ink border, no geometry transition, raised z-index. */
   dragging?: boolean;
-  /** The widget has nothing to show: the body collapses to the header only. */
+  /** The widget has nothing to show: the body shows `emptyIcon` instead of the (still mounted) children. */
   empty?: boolean;
+  /** Icon of the empty state (the widget's type glyph). */
+  emptyIcon?: IconName;
   /** The widget is fetching for the first time: shows a spinner row above the children. */
   loading?: boolean;
   /** Accessible name of the loader. */
@@ -85,9 +82,6 @@ export interface WidgetFrameProps {
   /** Widget content. Always mounted (hidden while closed) so the widget keeps
    *  reporting its own emptiness. */
   children?: ReactNode;
-  /** Reports the frame's height if it were `height: auto` (borders + header + content), on mount
-   *  and whenever the header or content resizes. */
-  onNaturalHeight?: (px: number) => void;
   ref?: Ref<HTMLElement>;
 }
 
@@ -111,7 +105,7 @@ const headerBtn = "cursor-pointer bg-transparent px-[6px] py-[2px] text-ink-3 ho
  * A board widget's chrome: square panel, header (label · count · YOU badge · aside ·
  * caret · configure · ×), scrolling body, and the always-on affordances (header move
  * cursor, four corner resize handles; size label while dragging). Positioned `absolute` — the caller supplies geometry via `style`
- * inside a `WidgetBoard`. Sizes read the `--bridge-*` density variables.
+ * (fixed width × height) inside a `WidgetBoard`. Sizes read the `--bridge-*` density variables.
  */
 export function WidgetFrame({
   label,
@@ -126,6 +120,7 @@ export function WidgetFrame({
   collapseLabel,
   dragging = false,
   empty = false,
+  emptyIcon = "check",
   loading = false,
   loadingLabel,
   sizeLabel,
@@ -140,45 +135,10 @@ export function WidgetFrame({
   resizeCornerLabels,
   style,
   children,
-  onNaturalHeight,
   ref,
 }: WidgetFrameProps) {
-  const open = configuring || !(empty || collapsed);
-  const rootRef = useRef<HTMLElement | null>(null);
-  const headerRef = useRef<HTMLElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    const root = rootRef.current;
-    const header = headerRef.current;
-    const content = contentRef.current;
-    if (!onNaturalHeight || !root || !header || !content) return;
-    const report = () => {
-      // Open widgets render nothing while loading; reporting 0 would collapse them.
-      const contentH = open ? Math.ceil(content.getBoundingClientRect().height) : 0;
-      if (open && contentH === 0) return;
-      onNaturalHeight(
-        root.offsetHeight -
-          root.clientHeight +
-          Math.ceil(header.getBoundingClientRect().height) +
-          contentH,
-      );
-    };
-    report();
-    if (typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(report);
-    ro.observe(header);
-    ro.observe(content);
-    return () => ro.disconnect();
-  }, [onNaturalHeight, open]);
-  const setRoot = useCallback(
-    (el: HTMLElement | null) => {
-      rootRef.current = el;
-      if (typeof ref === "function") ref(el);
-      else if (ref) ref.current = el;
-    },
-    [ref],
-  );
+  const open = configuring || !collapsed;
+  const showEmpty = empty && !configuring;
   const canToggle = !!onToggleCollapse && !empty;
 
   return (
@@ -189,7 +149,7 @@ export function WidgetFrame({
         dragging ? "z-[5] border-ink transition-none" : "border-[color:var(--bridge-border)]",
       )}
       data-testid={WidgetFrameTestId.Root}
-      ref={setRoot}
+      ref={ref}
       style={style}
     >
       <header
@@ -202,7 +162,6 @@ export function WidgetFrame({
         )}
         data-testid={WidgetFrameTestId.Header}
         onPointerDown={onMovePointerDown}
-        ref={headerRef}
       >
         <span className="text-ink" data-testid={WidgetFrameTestId.Label}>
           {label}
@@ -290,11 +249,19 @@ export function WidgetFrame({
         ) : null}
       </header>
       <div
-        className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
+        className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
         data-testid={WidgetFrameTestId.Body}
         hidden={!open}
       >
-        <div className="flow-root" data-testid={WidgetFrameTestId.Content} ref={contentRef}>
+        {showEmpty ? (
+          <div
+            className="absolute inset-0 flex items-center justify-center text-ink-3"
+            data-testid={WidgetFrameTestId.Empty}
+          >
+            <Icon name={emptyIcon} size="xl" />
+          </div>
+        ) : null}
+        <div className="flow-root" data-testid={WidgetFrameTestId.Content} hidden={showEmpty}>
           {loading ? (
             <div
               aria-label={loadingLabel}

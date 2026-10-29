@@ -130,15 +130,4 @@ describe("add/remove/view", () => {
     expect(get(l, "runs").y).toBe(4);
     expect(get(DEFAULT_LAYOUT, "tasks").h).toBe(10);
   });
-  it("fits a widget to its content rows and moves neighbours up", () => {
-    const l = viewLayout(DEFAULT_LAYOUT, new Set(), { tasks: 2 });
-    expect(get(l, "tasks").h).toBe(2);
-    expect(get(l, "runs").y).toBeLessThan(get(DEFAULT_LAYOUT, "runs").y);
-  });
-  it("fit never grows past the layout height", () => {
-    expect(get(viewLayout(DEFAULT_LAYOUT, new Set(), { tasks: 99 }), "tasks").h).toBe(10);
-  });
-  it("shrink wins over fit", () => {
-    expect(get(viewLayout(DEFAULT_LAYOUT, new Set(["tasks"]), { tasks: 3 }), "tasks").h).toBe(1);
-  });
 });
