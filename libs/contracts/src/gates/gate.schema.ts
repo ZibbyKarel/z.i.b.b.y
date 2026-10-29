@@ -107,6 +107,11 @@ export const IntendedActionSchema = z.object({
   tool: z.string().optional(),
   scope: z.string().optional(),
   branch: z.string().optional(),
+  /**
+   * Every destination branch of a push that names no single `branch` (several refspecs,
+   * `--delete`, `--tags`, …). A branch rule matches if any of them is its branch.
+   */
+  branches: z.array(z.string()).optional(),
   context: z.string().optional(),
   /** Numeric facts a `threshold` matcher reads, e.g. `{ "purchase.amount": 540 }`. */
   metrics: z.record(z.string(), z.number()).optional(),

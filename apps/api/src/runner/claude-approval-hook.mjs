@@ -217,24 +217,30 @@ function classifyGit(tokens) {
   }
   if (tokens[i] !== "push") return null;
   const rest = tokens.slice(i + 1);
-  const isForce = rest.some(
-    (t) =>
-      t === "--force" ||
-      t === "-f" ||
-      t === "--force-with-lease" ||
-      t.startsWith("--force-with-lease=") ||
-      t.startsWith("+"),
-  );
-  // Positional args after `push` are `[remote?, refspec…]`; the branch is the
-  // refspec's destination (after a `:`), with a leading force `+` stripped.
+  const isForce = rest.some((t) => t === "-f" || t.startsWith("--force") || t.startsWith("+"));
+  // Positional args after `push` are `[remote?, refspec…]` (`--repo=` names the remote,
+  // so then every positional is a refspec). `branches` is every destination ref (the part
+  // after `:`, `+` and `refs/heads/` stripped) so a branch rule (`gr-push-main`) sees all
+  // of them. `branch` — the one autopilot may cover — is set only for exactly one plain
+  // refspec and no flag that changes what gets pushed (`--all`/`--mirror`/`--tags`/
+  // `--delete`, push options, a `:dst` delete); anything else leaves it unset (fails closed).
   const positionals = rest.filter((t) => !t.startsWith("-"));
-  let branch;
-  if (positionals.length >= 2) {
-    let ref = positionals[1].replace(/^\+/, "");
-    if (ref.includes(":")) ref = ref.split(":").pop();
-    branch = ref || undefined;
-  }
-  return { action: isForce ? "git.force_push" : "git.push", branch };
+  const refspecs = rest.some((t) => t.startsWith("--repo")) ? positionals : positionals.slice(1);
+  const branches = refspecs
+    .map((r) => (r.includes(":") ? r.split(":").pop() : r.replace(/^\+/, "")))
+    .map((r) => r.replace(/^refs\/heads\//, ""))
+    .filter(Boolean);
+  const plainFlags = new Set(["-u", "--set-upstream", "-q", "--quiet", "-v", "--verbose"]);
+  const single =
+    refspecs.length === 1 &&
+    !refspecs[0].startsWith(":") &&
+    rest.every((t) => !t.startsWith("-") || plainFlags.has(t));
+  const branch = single ? branches[0] : undefined;
+  return {
+    action: isForce ? "git.force_push" : "git.push",
+    branch,
+    ...(branch === undefined && branches.length ? { branches } : {}),
+  };
 }
 
 /**
@@ -467,7 +473,10 @@ function classifySegment(segment, fullCommand) {
   if (!normalized) return null;
   const tokens = tokenize(normalized);
   const git = classifyGit(tokens);
-  if (git) return enrich(git.action, { branch: git.branch, command: fullCommand });
+  if (git) {
+    const c = enrich(git.action, { branch: git.branch, command: fullCommand });
+    return git.branches ? { ...c, branches: git.branches } : c;
+  }
   const gh = classifyGh(tokens);
   if (gh) return enrich(gh.action, { command: fullCommand });
   const fsKind = classifyFsCommand(tokens);
@@ -1136,6 +1145,7 @@ export function classifyEvent(input) {
     return {
       action: cls.action,
       ...(cls.branch ? { branch: cls.branch } : {}),
+      ...(cls.branches ? { branches: cls.branches } : {}),
       context: JSON.stringify({
         riskType: cls.riskType,
         summary: cls.summary,

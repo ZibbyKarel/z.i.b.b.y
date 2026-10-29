@@ -1,11 +1,13 @@
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { ActivityEntry, IntendedAction } from "@zibby/contracts";
+import { type ActivityEntry, type IntendedAction, IntendedActionSchema } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ActivityLogService } from "../activity/activity-log.service";
 import { AutopilotService } from "../autopilot/autopilot.service";
 import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.service";
+// @ts-expect-error — untyped .mjs seam (same as the hook's own test).
+import { classifyEvent } from "../runner/claude-approval-hook.mjs";
 import { GateEvaluatorService } from "./gate-evaluator.service";
 import { PolicyStorageService } from "./policy.storage.service";
 
@@ -93,6 +95,40 @@ describe("GateEvaluatorService — autopilot overlay", () => {
     expect(after).toEqual(before);
     expect(after.find((_, i) => untouched[i]?.action === "pr.merge")?.decision).toBe("deny");
     expect(after.every((e) => e.via === undefined)).toBe(true);
+  });
+
+  /** The real chain: hook classification → the runner's schema parse → evaluation. */
+  const pushIntent = (command: string): IntendedAction =>
+    IntendedActionSchema.parse(classifyEvent({ tool_name: "Bash", tool_input: { command } }));
+
+  it("a multi-refspec push that includes main is never lifted and a main rule still sees it", async () => {
+    await catalog.create({
+      name: "No push to main",
+      match: [{ type: "action", action: "git.push", branch: "main" }],
+      decision: "deny",
+    });
+    for (const level of ["off", "full"] as const) {
+      await autopilot.set(level, "operator");
+      for (const cmd of ["git push origin zibby/1-x main", "git push origin zibby/1-x HEAD:main"]) {
+        expect((await evalFloor(pushIntent(cmd))).decision, `${level}: ${cmd}`).toBe("deny");
+      }
+    }
+  });
+
+  it("only one plain refspec onto zibby/* is lifted", async () => {
+    await autopilot.set("full", "operator");
+    expect(await evalFloor(pushIntent("git push origin HEAD:zibby/1-x"))).toMatchObject({
+      decision: "notify",
+      via: "autopilot",
+    });
+    for (const cmd of [
+      "git push origin zibby/1-x zibby/2-y",
+      "git push --tags origin zibby/1-x",
+      "git push origin :zibby/1-x",
+      "git push -o ci.skip origin zibby/1-x",
+    ]) {
+      expect((await evalFloor(pushIntent(cmd))).decision, cmd).toBe("ask");
+    }
   });
 
   it("another matching global ask on the same push still wins (strictest global)", async () => {

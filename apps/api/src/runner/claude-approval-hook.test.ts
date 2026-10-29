@@ -553,6 +553,49 @@ describe("claude approval hook — classify (push / PR / chains)", () => {
     });
   });
 
+  it("a multi-refspec push names no single branch but lists every destination", () => {
+    const plain = classify("git push origin zibby/1-x main");
+    expect(plain).toMatchObject({ action: "git.push", branches: ["zibby/1-x", "main"] });
+    expect(plain?.branch).toBeUndefined();
+    const mapped = classify("git push origin zibby/1-x HEAD:main");
+    expect(mapped?.branches).toEqual(["zibby/1-x", "main"]);
+    expect(mapped?.branch).toBeUndefined();
+  });
+
+  it("names the branch only for one plain refspec (src:dst and refs/heads/ normalised)", () => {
+    expect(classify("git push origin HEAD:zibby/1-x")).toMatchObject({ branch: "zibby/1-x" });
+    expect(classify("git push -u origin refs/heads/zibby/1-x")).toMatchObject({
+      branch: "zibby/1-x",
+    });
+  });
+
+  it("names no branch for --all/--mirror/--tags/--delete/a delete refspec/push options/no refspec", () => {
+    for (const cmd of [
+      "git push --all origin zibby/1-x",
+      "git push --mirror origin zibby/1-x",
+      "git push --tags origin zibby/1-x",
+      "git push --delete origin zibby/1-x",
+      "git push -d origin zibby/1-x",
+      "git push origin :zibby/1-x",
+      "git push -o ci.skip origin zibby/1-x",
+      "git push --push-option=x origin zibby/1-x",
+      "git push --repo=origin zibby/1-x",
+      "git push origin",
+      "git push",
+    ]) {
+      expect(classify(cmd)?.branch, cmd).toBeUndefined();
+    }
+    expect(classify("git push --delete origin main")?.branches).toContain("main");
+    expect(classify("git push origin :main")?.branches).toContain("main");
+  });
+
+  it("classifies every --force* spelling as git.force_push", () => {
+    expect(classify("git push --force-if-includes origin zibby/1-x")?.action).toBe(
+      "git.force_push",
+    );
+    expect(classify("git push origin zibby/1-x +HEAD:main")?.action).toBe("git.force_push");
+  });
+
   it("reclassifies force variants as git.force_push", () => {
     expect(classify("git push --force origin main")?.action).toBe("git.force_push");
     expect(classify("git push -f origin main")?.action).toBe("git.force_push");

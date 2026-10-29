@@ -218,7 +218,8 @@ What an agent/runner declares before every action:
   action: string           // e.g. "git.push", "bash.execute", "file.edit"
   tool?: string            // MCP tool
   scope?: string           // path / namespace
-  branch?: string          // git branch (for git actions)
+  branch?: string          // git branch (for git actions); a push sets it only for one plain refspec
+  branches?: string[]      // every destination of a push with no single branch; a branch rule matches any
   context?: string         // free-form context
   metrics?: Record<string, number>  // for a threshold match
 }

@@ -347,7 +347,7 @@ export class GateEvaluatorService {
       case "action":
         if (action.action !== cond.action) return false;
         if (cond.branch === undefined || cond.branch === "*") return true;
-        return action.branch === cond.branch;
+        return action.branch === cond.branch || (action.branches ?? []).includes(cond.branch);
       case "scope":
         if (cond.scope.endsWith("*"))
           return (action.scope ?? "").startsWith(cond.scope.slice(0, -1));
