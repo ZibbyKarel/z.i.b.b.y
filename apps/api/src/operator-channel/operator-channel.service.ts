@@ -41,6 +41,12 @@ export class OperatorChannelService {
   /** The offline channel (fake mode); tests read `fake.sent`. */
   readonly fake = new FakeOperatorChannel();
   private channel: OperatorChannel | null = null;
+  /** The in-flight (or settled) connect, shared by concurrent callers — one channel, never two. */
+  private connecting: Promise<OperatorChannel> | null = null;
+  /** The channel the inbound listener was started on (the one holding the socket). */
+  private listener: OperatorChannel | null = null;
+  /** Bumped on every disconnect, so a connect/listen that settles afterwards is dropped. */
+  private generation = 0;
   private workspace: string | undefined;
   private lastError: string | undefined;
   private handler: OperatorInboundHandler | null = null;
@@ -53,12 +59,24 @@ export class OperatorChannelService {
 
   /** Forget the connection (settings/token changed) and restart the inbound listener. */
   async reset(): Promise<void> {
-    await this.channel?.stop();
-    this.channel = null;
+    await this.disconnect();
     this.workspace = undefined;
     this.lastError = undefined;
-    this.listening = false;
     if (this.handler) await this.listen(this.handler);
+  }
+
+  /** Drop the connection and stop every channel it opened (the listener's and the cached one). */
+  private async disconnect(): Promise<void> {
+    this.generation += 1;
+    const pending = this.connecting;
+    const listener = this.listener;
+    this.connecting = null;
+    this.channel = null;
+    this.listener = null;
+    this.listening = false;
+    const channel = await pending?.catch(() => null);
+    await listener?.stop();
+    if (channel && channel !== listener) await channel.stop();
   }
 
   async setCredential(kind: OperatorCredentialKind, token: string): Promise<void> {
@@ -75,8 +93,11 @@ export class OperatorChannelService {
     this.handler = handler;
     const settings = await this.store.readSettings();
     if (!settings.enabled) return;
+    const generation = this.generation;
     try {
       const channel = await this.connected(settings);
+      if (generation !== this.generation) return; // reset meanwhile: its own listen() runs
+      this.listener = channel;
       await channel.start(handler);
       this.listening = true;
     } catch (error) {
@@ -87,8 +108,7 @@ export class OperatorChannelService {
   /** Stop listening for good (module shutdown). */
   async stop(): Promise<void> {
     this.handler = null;
-    this.listening = false;
-    await this.channel?.stop();
+    await this.disconnect();
   }
 
   private async build(): Promise<OperatorChannel> {
@@ -106,9 +126,21 @@ export class OperatorChannelService {
     );
   }
 
-  /** Connect if needed: resolve the DM with the first allowlisted operator, persist it. */
-  private async connected(settings: OperatorChannelSettings): Promise<OperatorChannel> {
-    if (this.channel) return this.channel;
+  /** Connect if needed; concurrent callers share the one in-flight connect (a failure isn't cached). */
+  private connected(settings: OperatorChannelSettings): Promise<OperatorChannel> {
+    if (!this.connecting) {
+      const pending = this.connect(settings);
+      this.connecting = pending;
+      pending.catch(() => {
+        if (this.connecting === pending) this.connecting = null;
+      });
+    }
+    return this.connecting;
+  }
+
+  /** Resolve the DM with the first allowlisted operator, persist it. */
+  private async connect(settings: OperatorChannelSettings): Promise<OperatorChannel> {
+    const generation = this.generation;
     const operator = settings.operatorUserIds[0];
     if (!operator) throw new Error("no operator Slack user id configured");
     try {
@@ -119,7 +151,7 @@ export class OperatorChannelService {
       if (settings.dmChannelId !== conn.dmChannelId) {
         await this.store.writeSettings({ ...settings, dmChannelId: conn.dmChannelId });
       }
-      this.channel = channel;
+      if (generation === this.generation) this.channel = channel;
       return channel;
     } catch (error) {
       this.lastError = error instanceof Error ? error.message : String(error);
