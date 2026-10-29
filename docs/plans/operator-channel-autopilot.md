@@ -170,5 +170,24 @@ header toggle) and docs. Reference: `docs/api/autopilot.md`.
     doesn't count toward graduation.
   - A department whose `tierDefault` is `ask` (or one with its own ask rule) blocks the
     overlay for that department. That is the intended tightening, but worth knowing.
-  - There is no runner-level test for the workflow-gate approve. The coverage predicate is
-    unit-tested, and the wiring is the same one-liner the other park sites use.
+  - The workflow-gate approve has a runner-level unit test now (`parkAtGate` via the
+    harness), but no e2e: a positive e2e would post to GitHub.
+- **Review fixes.** These came out of the code review of Phase 4, one commit each:
+  - Push: the hook named the second positional as the branch, so
+    `git push origin zibby/1-x main` was lifted. Now `branch` is set only for one plain
+    refspec, and every other push lists its destinations in the new `IntendedAction.branches`.
+    A branch rule (`gr-push-main`) matches any of them.
+  - Reviews: `/pulls/<n>/reviews` is no longer `gh.pr_comment` (`--input`, `--field=event=…`
+    bypassed the verdict check). Any `--input` stays `gh.api_write`, and the `--field=` form
+    now counts as a POST.
+  - `gh.pr_comment` is a subclass of `gh.api_write` in the matcher, so existing
+    `gh.api_write` rules still hit comments. The overlay lifts the system `gh.api_write` `ask`
+    only for a comment.
+  - Channel replies: autopilot sends only an autopilot-eligible draft (actionable, confident,
+    mandate reply, not forced to Tier 3, reply gate allow/notify).
+  - Approval side: before approving, the park sites ask the gate evaluator for the run's
+    agents and department (`autopilotDecides`), and fail closed.
+  - Workflow gate: it is covered only when the run's task carries `prReview`, not because of
+    the artifact name.
+  - Operator channel: one in-flight connect is shared, and reset/stop close the listener's
+    socket too.

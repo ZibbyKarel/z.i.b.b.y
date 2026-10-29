@@ -42,12 +42,24 @@ has these ids. The intent itself is also checked, so editing a rule's match can 
 the overlay:
 
 - `floor-gh.pr_comment` for intent `gh.pr_comment`. The hook classifies a `gh api` POST as
-  this when it targets PR review comments, comment replies, a review whose `event` is absent
-  or `COMMENT`, or issue/PR comments. APPROVE and REQUEST_CHANGES reviews, PATCH and DELETE
-  all stay `gh.api_write`.
+  this when it targets a PR review comment, a comment reply, or an issue/PR comment, with
+  its fields given inline. Reviews (`/pulls/<n>/reviews`) are never `gh.pr_comment`: every
+  review POST, whatever its `event`, stays `gh.api_write` (ZIBBY posts its own reviews
+  server-side through the `pr-review` flow). An `--input` body (a file or `-`) can't be
+  inspected, so it stays `gh.api_write` too, as do PATCH and DELETE.
+- `floor-gh.api_write`, but only for intent `gh.pr_comment`. `gh.pr_comment` is a subclass
+  of `gh.api_write`, so a rule on action `gh.api_write` also matches a comment. The system
+  `gh.api_write` rule therefore also hits a comment, and its `ask` is lifted only for that
+  comment. If the operator moved it to `deny`, or any other rule on `gh.api_write` asks or
+  denies, that still wins.
 - `floor-git.push` for intent `git.push`, but only onto a `zibby/<…>` branch (ZIBBY's own run
-  branches). Pushes to `main`, a feature branch, or with no branch, plus every force push,
-  are not covered.
+  branches). The hook names that `branch` only for a push with exactly one refspec, with
+  `src:dst` and `refs/heads/` normalised (`HEAD:zibby/x` counts). These are not covered:
+  several refspecs, a `:dst` delete refspec, `--all`, `--mirror`, `--tags`, `--delete`/`-d`,
+  push options (`-o`/`--push-option`), `--repo`, any flag other than `-u`/`-q`/`-v`, no
+  refspec at all, and every force push (`-f`, `--force*`, a `+` refspec, which is
+  `git.force_push`). For those pushes the hook lists every destination in `branches`
+  instead, and a branch rule (`gr-push-main`) matches if any of them is its branch.
 
 A covered hit resolves as `notify` and carries `via: "autopilot"`. It is folded into the
 floor bucket only when it is strictly stricter than what is already there. The evaluator
@@ -56,18 +68,41 @@ floor. This means another global `ask` on the same intent still wins. An agent's
 department's `ask`, `deny` or `requires_approval` also still wins: agent tightening holds.
 
 **Approval side** (`autopilotCoversApproval`). A park site checks this right after it raises
-a fresh approval, and approves it immediately with `decidedBy: "autopilot"`:
+a fresh approval. A match alone is not enough: the park site then builds the gate intent the
+approval stands for (`autopilotIntentFor`: `gh.pr_comment` for a review or replies, or
+`git.push` with the exact head branch) and asks `GateEvaluatorService.autopilotDecides`. That
+call evaluates the intent for the run's own agents and department (an agent target: that
+agent; a workflow target: every phase agent and the workflow's department). It approves, with
+`decidedBy: "autopilot"`, only when every evaluation resolves through the overlay
+(`via: "autopilot"`). An operator, agent or department `ask`/`deny`, a department
+`tierDefault: ask`, an unresolvable target or a missing intent leave the approval pending.
 
-| Approval kind         | Covered when                                                                                          |
-| --------------------- | ----------------------------------------------------------------------------------------------------- |
-| `pr-review`           | action `github.pr.review`. Posted as `COMMENT`; autopilot never picks a review event                  |
-| `workflow-gate`       | it carries `suggestedReviewEvent` (the pr-review workflow's sign-off). Posted as `COMMENT`            |
-| `pr-address-comments` | action `github.pr.comment` (replies), or a `git.push` onto a `zibby/*` head that has no open question |
-| `pr-fix-ci`           | a `git.push` onto a `zibby/*` head of ZIBBY's own PR                                                  |
-| `channel`             | action `channel-reply`. A parked reply always has a concrete draft; no draft means no approval        |
+| Approval kind         | Covered when                                                                                                         |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `pr-review`           | action `github.pr.review`. Posted as `COMMENT`; autopilot never picks a review event                                 |
+| `workflow-gate`       | it carries `suggestedReviewEvent` and the run's task carries `prReview` (a real pr-review task). Posted as `COMMENT` |
+| `pr-address-comments` | action `github.pr.comment` (replies), or a `git.push` onto a `zibby/*` head that has no open question                |
+| `pr-fix-ci`           | a `git.push` onto a `zibby/*` head of ZIBBY's own PR                                                                 |
+| `channel`             | action `channel-reply`, and the draft is autopilot-eligible (below)                                                  |
+
+A workflow gate is never covered by its artifact name alone: a workflow whose last phase
+writes `zibby-pr-review.md` but whose run has no pr-review task keeps its operator checkpoint.
+
+**Channel replies.** A parked reply is sent by autopilot only when the tier alone parked it.
+`parkOrSurface` computes an explicit eligibility flag, and the park site approves only with it.
+The flag is set only when all of these hold:
+
+- the verdict is actionable and its confidence is at least the triage floor;
+- the mandate allows a reply for the integration;
+- the project policy didn't force Tier 3 (`respond_as: "draft_only"`, or a VIP sender with
+  `vip_escalation`);
+- the reply gate (`channel-reply`, plus `send_email` for email) resolves to `allow` or
+  `notify`, with no `ask` or `deny`.
+
+A parked reply always has a concrete draft; no draft means no approval.
 
 Everything else is not covered: merge, deploy, payments, spend past cap, deletes, force push
-and rebase, `gh.api_write`, email, operator questions, PR opening sign-off, Jira creates,
+and rebase, `gh.api_write` other than a comment, email, operator questions, PR opening sign-off, Jira creates,
 graduations, and so on.
 
 ## Guarantees
