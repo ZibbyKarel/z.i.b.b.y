@@ -195,7 +195,14 @@ describe("ExternalSkillsService — sync", () => {
   let svc: ExternalSkillsService;
   let activity: { record: ReturnType<typeof vi.fn> };
   /** Mutable upstream state the git double reads. */
-  let up: { head: string; trees: Record<string, string | null>; clones: string[]; down: string[] };
+  let up: {
+    head: string;
+    trees: Record<string, string | null>;
+    clones: string[];
+    down: string[];
+    /** A path whose `treeSha` throws (a git failure mid-group). */
+    treeFails?: string;
+  };
 
   beforeEach(async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
@@ -221,7 +228,10 @@ describe("ExternalSkillsService — sync", () => {
         reach(r);
         return up.head;
       },
-      treeSha: async (_dir: string, p: string) => (p in up.trees ? (up.trees[p] ?? null) : "tree1"),
+      treeSha: async (_dir: string, p: string) => {
+        if (p === up.treeFails) throw new SkillRepoGitError("git rev-parse: boom");
+        return p in up.trees ? (up.trees[p] ?? null) : "tree1";
+      },
     } as unknown as SkillRepoGit;
     store = new ExternalSkillsStore(join(tmp, "external-skills.json"));
     const skills = new SkillsStorageService(join(tmp, "skills"), store, extDir);
@@ -340,6 +350,49 @@ describe("ExternalSkillsService — sync", () => {
     const result = await svc.syncAll();
     expect(up.clones).toEqual([remote]);
     expect(result).toEqual({ checked: 2, updated: ["security-audit", "other"], failed: [] });
+  });
+
+  it("a git failure mid-group keeps the outcomes already saved", async () => {
+    await svc.install(url, ["skills/other"]);
+    up.head = "def7654321";
+    up.treeFails = "skills/other"; // security-audit (same tree) is handled first
+    expect(await svc.syncAll()).toEqual({ checked: 2, updated: [], failed: ["other"] });
+    const first = await store.get("security-audit");
+    expect(first).toMatchObject({ sha: "def7654321", latestSha: "def7654321" });
+    expect(first?.lastError).toBeUndefined();
+    expect((await store.get("other"))?.lastError).toContain("boom");
+  });
+
+  it("a record with an unparseable url is failed with lastError", async () => {
+    const rec = await store.get("security-audit");
+    await store.upsert({ ...rec!, id: "bad", url: "https://gitlab.com/a/b" });
+    const result = await svc.syncAll();
+    expect(result.failed).toEqual(["bad"]);
+    expect((await store.get("bad"))?.lastError).toBeTruthy();
+  });
+
+  it("a failing lastError write does not abort syncAll", async () => {
+    const otherUrl = "https://github.com/acme/tools";
+    await put(extDir, "other/SKILL.md", "---\nname: other\n---\nOld.\n");
+    await store.upsert({
+      id: "other",
+      owner: "acme",
+      repo: "tools",
+      url: otherUrl,
+      path: "skills/other",
+      sha: "old0000000",
+      treeSha: "treeOld",
+      installedAt: T0.toISOString(),
+      updatedAt: T0.toISOString(),
+      checkedAt: T0.toISOString(),
+    });
+    up.down = [remote];
+    vi.spyOn(store, "upsert").mockRejectedValueOnce(new Error("disk full"));
+    expect(await svc.syncAll()).toEqual({
+      checked: 2,
+      updated: ["other"],
+      failed: ["security-audit"],
+    });
   });
 
   it("an unknown id throws SkillNotFoundError", async () => {

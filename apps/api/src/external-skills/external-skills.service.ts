@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { cp, lstat, mkdir, mkdtemp, rename, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import type {
   ExternalSkillRecord,
   ExternalSkillScan,
@@ -46,6 +46,8 @@ export async function copySkillFolder(src: string, destDir: string): Promise<voi
 
 @Injectable()
 export class ExternalSkillsService {
+  private readonly logger = new Logger(ExternalSkillsService.name);
+
   constructor(
     private readonly store: ExternalSkillsStore,
     private readonly git: SkillRepoGit,
@@ -145,8 +147,14 @@ export class ExternalSkillsService {
         let parsed: ReturnType<typeof parseGitHubSkillUrl>;
         try {
           parsed = parseGitHubSkillUrl(r.url);
-        } catch {
-          failed.push(r.id); // a hand-edited record; nothing to fetch
+        } catch (error) {
+          // A hand-edited record; nothing to fetch.
+          await this.saveQuietly({
+            ...r,
+            checkedAt: new Date().toISOString(),
+            lastError: error instanceof Error ? error.message : String(error),
+          });
+          failed.push(r.id);
           continue;
         }
         const { remote, ref } = parsed;
@@ -185,9 +193,11 @@ export class ExternalSkillsService {
     };
     const updated: string[] = [];
     const failed: string[] = [];
+    /** Ids whose outcome is already saved — a later git failure must not overwrite them. */
+    const handled = new Set<string>();
     const fail = async (targets: ExternalSkillRecord[], error: unknown) => {
       const lastError = error instanceof Error ? error.message : String(error);
-      for (const r of targets) await save(r, { lastError });
+      for (const r of targets) await this.saveQuietly({ ...r, checkedAt, lastError });
       failed.push(...targets.map((r) => r.id));
       return { updated, failed, error };
     };
@@ -217,22 +227,34 @@ export class ExternalSkillsService {
             } catch (error) {
               await save(r, { latestSha: sha, lastError: `copy failed: ${String(error)}` });
               failed.push(r.id);
+              handled.add(r.id);
               continue;
             }
             await save(r, { sha, latestSha: sha, treeSha, updatedAt: checkedAt });
             updated.push(r.id);
+            handled.add(r.id);
             await this.reportUpdate(r, sha);
+            continue;
           }
+          handled.add(r.id);
         }
       });
     } catch (error) {
-      const done = new Set([...updated, ...failed]);
       return fail(
-        stale.filter((r) => !done.has(r.id)),
+        stale.filter((r) => !handled.has(r.id)),
         error,
       );
     }
     return { updated, failed };
+  }
+
+  /** Upsert a failure record; a write error is logged, never thrown (syncAll keeps going). */
+  private async saveQuietly(record: ExternalSkillRecord): Promise<void> {
+    try {
+      await this.store.upsert(record);
+    } catch (error) {
+      this.logger.warn(`could not record lastError for ${record.id}: ${String(error)}`);
+    }
   }
 
   private async reportUpdate(r: ExternalSkillRecord, sha: string): Promise<void> {
