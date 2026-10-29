@@ -2972,6 +2972,9 @@ describe("run slots (global + per-project cap)", () => {
 
     it("a full cap does not stop the drain reaching an immediate continue queued behind a normal task", async () => {
       makeService(1);
+      await dispatched("holder"); // fills the cap of 1
+      const normalId = await queued("normal"); // older createdAt: sorts AHEAD in the drain
+      await new Promise((r) => setTimeout(r, 5));
       const r = await service.createTask(
         { text: "do A", title: "do A", immediate: true },
         undefined,
@@ -2980,8 +2983,6 @@ describe("run slots (global + per-project cap)", () => {
       );
       if (r.outcome !== "dispatched") throw new Error(`expected dispatched: ${r.outcome}`);
       workflowListener?.(workflowRun({ workflowRunId: r.runRef, status: "failed" }));
-      await dispatched("holder"); // fills the cap of 1
-      const normalId = await queued("normal"); // queued AHEAD of the continue (older createdAt)
       await service.queueContinue(r.task.id, { kind: "workflow", runRef: r.runRef });
       await vi.waitFor(async () =>
         expect((await storage.get(r.task.id)).status).toBe("dispatched"),
