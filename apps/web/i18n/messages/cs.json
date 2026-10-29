@@ -3206,6 +3206,7 @@
         "remove": "Odebrat",
         "removeLabel": "Odebrat {label}",
         "auto": "Automaticky",
+        "immediate": "Spustit okamžitě",
         "queued": "Zařazeno do fronty",
         "label": "Název",
         "labelPlaceholder": "Např. Nasadit staging",

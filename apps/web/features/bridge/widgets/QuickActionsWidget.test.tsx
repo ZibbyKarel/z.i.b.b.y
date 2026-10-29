@@ -139,6 +139,24 @@ describe("QuickActionsWidget", () => {
     });
   });
 
+  it("Run sends immediate: true for an immediate action", async () => {
+    d.actions = [{ ...deploy, immediate: true }, lint];
+    renderWithProviders(<QuickActionsWidget {...setup()} />);
+    await userEvent.click(screen.getAllByTestId(QuickActionsWidgetTestId.Run)[0] as HTMLElement);
+    expect(d.create.mock.calls[0]?.[0].body).toMatchObject({ immediate: true });
+  });
+
+  it("editing: checking Run immediately stores immediate: true on the added action", async () => {
+    renderWithProviders(<QuickActionsWidget {...setup({ editing: true })} />);
+    await userEvent.type(screen.getByTestId(QuickActionFormTestId.Label), "Now");
+    await userEvent.type(screen.getByTestId("cl-input"), "do it");
+    const box = screen.getByTestId(QuickActionFormTestId.Immediate);
+    expect(box).toHaveAccessibleName("Spustit okamžitě");
+    await userEvent.click(box);
+    await userEvent.click(screen.getByTestId(QuickActionFormTestId.Submit));
+    expect((d.set.mock.calls[0]?.[0].body as QuickAction[])[2]).toMatchObject({ immediate: true });
+  });
+
   it("editing: Add appends a trimmed action with the chosen target", async () => {
     renderWithProviders(<QuickActionsWidget {...setup({ editing: true })} />);
     await userEvent.type(screen.getByTestId(QuickActionFormTestId.Label), " Deploy ");
@@ -154,6 +172,7 @@ describe("QuickActionsWidget", () => {
     const body = d.set.mock.calls[0]?.[0].body as QuickAction[];
     expect(body).toHaveLength(3);
     expect(body[2]).toMatchObject({ label: "Deploy", text: "Run deploy", target: KODER });
+    expect("immediate" in (body[2] as object)).toBe(false);
     expect(body[2]?.id).toMatch(/^qa-/);
   });
 

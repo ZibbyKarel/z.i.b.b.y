@@ -161,7 +161,14 @@ function QuickActionRow({
     clearTimeout(timer.current);
     setQueued(false);
     create.mutate(
-      { body: { title: a.label, text: a.text, ...(target ? { target } : {}) } },
+      {
+        body: {
+          title: a.label,
+          text: a.text,
+          ...(target ? { target } : {}),
+          ...(a.immediate ? { immediate: true } : {}),
+        },
+      },
       {
         onSuccess: () => {
           setQueued(true);

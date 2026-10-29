@@ -1,7 +1,15 @@
 "use client";
 
 import type { QuickAction, QuickActionTarget } from "@zibby/contracts";
-import { Button, Container, Dropdown, Stack, TextInputField } from "@zibby/design-system";
+import {
+  Button,
+  Checkbox,
+  Container,
+  Dropdown,
+  Stack,
+  TextInputField,
+  Typography,
+} from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useMemo, useState } from "react";
 import { CommandLine } from "../../tasks/components/CommandLine/CommandLine";
@@ -10,6 +18,7 @@ export enum QuickActionFormTestId {
   Label = "quick-actions-label",
   Text = "quick-actions-text",
   Target = "quick-actions-target",
+  Immediate = "quick-actions-immediate",
   Submit = "quick-actions-add",
   Form = "quick-actions-form",
   Cancel = "quick-actions-cancel",
@@ -23,6 +32,8 @@ export interface QuickActionFormValues {
   label: string;
   text: string;
   target?: QuickActionTarget;
+  /** Present only when checked. */
+  immediate?: true;
 }
 
 interface QuickActionFormProps {
@@ -56,6 +67,7 @@ export function QuickActionForm({
   // Bumped after a successful submit to remount (and so clear) the CommandLine.
   const [textKey, setTextKey] = useState(0);
   const [choice, setChoice] = useState(targetValue(initial?.target));
+  const [immediate, setImmediate] = useState(initial?.immediate === true);
 
   const { options, targets } = useMemo(() => {
     const targets = new Map<string, QuickActionTarget>();
@@ -79,15 +91,23 @@ export function QuickActionForm({
   const submit = (body: string) => {
     if (!label.trim() || !body.trim() || body.length > MAX_TEXT || disabled || pending) return;
     // An edited action keeps its stored target when that entity is gone from the catalog.
-    const target = targets.get(choice) ?? (choice === targetValue(initial?.target) ? initial?.target : undefined);
+    const target =
+      targets.get(choice) ??
+      (choice === targetValue(initial?.target) ? initial?.target : undefined);
     onSubmit(
-      { label: label.trim(), text: body.trim(), ...(target ? { target } : {}) },
+      {
+        label: label.trim(),
+        text: body.trim(),
+        ...(target ? { target } : {}),
+        ...(immediate ? { immediate: true as const } : {}),
+      },
       () => {
         if (initial) return;
         setLabel("");
         setText("");
         setTextKey((k) => k + 1);
         setChoice("");
+        setImmediate(false);
       },
     );
   };
@@ -137,6 +157,15 @@ export function QuickActionForm({
               value={choice}
             />
           </Stack>
+          <Checkbox
+            checked={immediate}
+            data-testid={QuickActionFormTestId.Immediate}
+            label={t("immediate")}
+            onChange={setImmediate}
+          />
+          <Typography type="note" variant="secondary">
+            {t("immediate")}
+          </Typography>
           <Button
             data-testid={QuickActionFormTestId.Submit}
             disabled={blank || pending}

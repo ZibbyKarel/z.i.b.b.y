@@ -8,10 +8,11 @@ import { QuickActionSheet } from "./QuickActionSheet";
 
 const d = vi.hoisted(() => ({ update: vi.fn() }));
 const action: QuickAction = { id: "a1", label: "Deploy", text: "Run deploy" };
+const immediateAction: QuickAction = { id: "a2", label: "Now", text: "go", immediate: true };
 
 vi.mock("../../../automations/queries", () => ({ useAutomationsQuery: () => ({ data: [] }) }));
 vi.mock("../../../quick-actions/queries", () => ({
-  useQuickActionsQuery: () => ({ data: [action] }),
+  useQuickActionsQuery: () => ({ data: [action, immediateAction] }),
 }));
 vi.mock("../../../quick-actions/useUpdateQuickActions", () => ({
   useUpdateQuickActions: () => ({ update: d.update, pending: false }),
@@ -46,6 +47,21 @@ describe("QuickActionSheet", () => {
     );
     expect(screen.getByTestId(QuickActionFormTestId.Label)).toHaveValue("Deploy");
     expect(screen.getByTestId("cl-input")).toHaveValue("Run deploy");
+  });
+
+  it("edit pre-checks Run immediately and unchecking drops it from the save", async () => {
+    renderWithProviders(<QuickActionSheet anchor={anchor} id="a2" onClose={vi.fn()} />);
+    await userEvent.click(
+      within(screen.getByTestId(AnchoredSheetTestId.Actions)).getByRole("button"),
+    );
+    const box = screen.getByTestId(QuickActionFormTestId.Immediate);
+    expect(box).toHaveAttribute("aria-checked", "true");
+    await userEvent.click(box);
+    await userEvent.click(screen.getByTestId(QuickActionFormTestId.Submit));
+    const next = (d.update.mock.calls[0]?.[0] as (l: QuickAction[]) => QuickAction[])([
+      immediateAction,
+    ]);
+    expect("immediate" in (next[0] as object)).toBe(false);
   });
 
   it("renders nothing for an unknown id", () => {

@@ -47,6 +47,7 @@ export function QuickActionSheet({ id, anchor, onClose }: SheetProps) {
         action.target
           ? `${action.target.kind} · ${action.target.name ?? action.target.id}`
           : q("auto"),
+        ...(action.immediate ? [q("immediate")] : []),
       ]}
       closeLabel={t("bridge.sheet.close")}
       kind={t("bridge.widgets.quickActions.kind")}

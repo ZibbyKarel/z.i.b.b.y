@@ -3206,6 +3206,7 @@
         "remove": "Remove",
         "removeLabel": "Remove {label}",
         "auto": "Auto",
+        "immediate": "Run immediately",
         "queued": "Queued",
         "label": "Label",
         "labelPlaceholder": "E.g. Deploy staging",
