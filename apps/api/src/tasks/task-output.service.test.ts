@@ -3,7 +3,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import type { AgentRun, ScheduledTask, TaskOutput, Workspace } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { autopilotCoversApproval } from "../autopilot/autopilot.service";
+import { AutopilotService, autopilotCoversApproval } from "../autopilot/autopilot.service";
+import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.service";
+import { GateEvaluatorService } from "../gates/gate-evaluator.service";
+import { PolicyStorageService } from "../gates/policy.storage.service";
 import { DuplicateNoteError } from "../memory/vault.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
 import {
@@ -1023,13 +1026,37 @@ describe("TaskOutputService", () => {
     const A = "a".repeat(40);
     const B = "b".repeat(40);
     let on: TaskOutputService;
-    beforeEach(() => {
+    let catalog: GateRulesStorageService;
+    /** The task's agent `a` (its own gates + department), read by the approval-side gate check. */
+    let agentA: { id: string; gates?: unknown[]; department?: string };
+    beforeEach(async () => {
       approvals.requestApproval.mockImplementation(async (input: object) => ({
         id: "appr_1",
         ...input,
       }));
       workspace.rebaseFacts.mockResolvedValue({ sha: B, log: "b1 fix", stat: " a.ts | 2 +-" });
-      const autopilot = { coversApproval: autopilotCoversApproval };
+      const gatesDir = path.join(dir, "gates");
+      await fs.mkdir(gatesDir, { recursive: true });
+      catalog = new GateRulesStorageService(gatesDir);
+      await catalog.onModuleInit();
+      const autopilot = new AutopilotService(gatesDir);
+      await autopilot.onModuleInit();
+      await autopilot.set("full", "operator");
+      const gates = new GateEvaluatorService(
+        new PolicyStorageService(catalog),
+        undefined,
+        undefined,
+        catalog,
+        undefined,
+        autopilot,
+      );
+      agentA = { id: "a" };
+      const agents = {
+        get: async (id: string) => {
+          if (id !== "a") throw new Error(`agent ${id} not found`);
+          return agentA;
+        },
+      };
       on = new TaskOutputService(
         storage,
         workspace as never,
@@ -1038,7 +1065,9 @@ describe("TaskOutputService", () => {
         projects as never,
         { record: vi.fn() } as never,
         fakeLogger as never,
-        autopilot as never,
+        autopilot,
+        gates,
+        agents as never,
       );
     });
     const pr = { repo: "acme/app", number: 7, url: "https://github.com/acme/app/pull/7" };
@@ -1113,6 +1142,81 @@ describe("TaskOutputService", () => {
       await on.parkPrFixCi(await seed("c2", "zibby/run-1-x", false), "Fixed: partial", "/wt");
       await on.parkPrFixCi(await seed("c3", "feat", true), "Fixed: partial", "/wt");
       expect(approvals.approve).not.toHaveBeenCalled();
+    });
+
+    describe("consults the gate for the run's agent and department first", () => {
+      const reviewTask = async () => {
+        const task = await create("t_g");
+        await storage.setPrReview(task.id, () => ({ ...pr, state: "running" }));
+        return storage.get("t_g");
+      };
+      const own = (action: string, decision: "ask" | "deny") => [
+        {
+          match: [{ type: "action", action }],
+          decision,
+          ...(decision === "ask" ? { resolve: { type: "human" } } : {}),
+        },
+      ];
+
+      it("an agent's own deny / ask on gh.pr_comment (or gh.api_write) keeps the review pending", async () => {
+        for (const gates of [
+          own("gh.pr_comment", "deny"),
+          own("gh.pr_comment", "ask"),
+          own("gh.api_write", "ask"),
+        ]) {
+          agentA.gates = gates;
+          const delivered = await on.parkPrReview(await reviewTask(), "looks fine");
+          expect(approvals.approve).not.toHaveBeenCalled();
+          expect(delivered.summary).toMatch(/čeká na schválení/);
+        }
+      });
+
+      it("a department ask keeps the review pending", async () => {
+        await catalog.create({
+          name: "Dev asks on comments",
+          match: [{ type: "action", action: "gh.pr_comment" }],
+          decision: "ask",
+          resolve: { type: "human" },
+          department: "dev",
+        });
+        agentA.department = "dev";
+        await on.parkPrReview(await reviewTask(), "looks fine");
+        expect(approvals.approve).not.toHaveBeenCalled();
+      });
+
+      it("an operator ask on the exact push branch keeps the push pending", async () => {
+        await catalog.create({
+          name: "Ask on this branch",
+          match: [{ type: "action", action: "git.push", branch: "zibby/run-1-x" }],
+          decision: "ask",
+          resolve: { type: "human" },
+        });
+        await create("t_p");
+        const task = await storage.setPrFixCi("t_p", () => ({
+          ...pr,
+          head: "zibby/run-1-x",
+          base: "main",
+          headSha: A,
+          ownPr: true,
+          state: "running",
+        }));
+        await on.parkPrFixCi(task, "Fixed: partial", "/wt");
+        expect(approvals.approve).not.toHaveBeenCalled();
+      });
+
+      it("fails closed when the run's agent can't be resolved", async () => {
+        const task = await storage.createDispatched(
+          "t_x",
+          { text: "x" },
+          "run_1",
+          { kind: "agent", id: "gone", name: "gone" },
+          Date.now(),
+          "p1",
+        );
+        await storage.setPrReview(task.id, () => ({ ...pr, state: "running" }));
+        await on.parkPrReview(await storage.get("t_x"), "looks fine");
+        expect(approvals.approve).not.toHaveBeenCalled();
+      });
     });
 
     it("leaves the force-push rebase approval alone", () => {

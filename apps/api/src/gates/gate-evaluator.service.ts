@@ -180,6 +180,25 @@ export class GateEvaluatorService {
   }
 
   /**
+   * Phase 4 — the approval-side autopilot check: true only when `action` resolves through
+   * the autopilot overlay (and nothing stricter) for EVERY given agent inside the
+   * department — an operator, agent or department ask/deny on it means false. A silent
+   * probe: the approval it gates records its own `autopilot-action`. No agents = the
+   * global rules plus the department bucket only.
+   */
+  async autopilotDecides(
+    action: IntendedAction,
+    agents: readonly AgentPolicyInput[],
+    departmentId?: DepartmentId,
+  ): Promise<boolean> {
+    for (const input of agents.length ? agents : [{}]) {
+      const rules = await this.rulesForAgentInDepartment(input, departmentId);
+      if (this.matchOnce(rules, action).via !== "autopilot") return false;
+    }
+    return true;
+  }
+
+  /**
    * Fáze 2b — orchestrator strictest-union. Delegation (the `Task` tool) runs
    * inside a single spawned `claude -p` process, so the backend only ever sees the
    * orchestrator's own identity — a subagent's own `gates`/`requires_approval`

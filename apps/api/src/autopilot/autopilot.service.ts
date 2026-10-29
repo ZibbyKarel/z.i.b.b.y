@@ -2,13 +2,16 @@ import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Inject, Injectable, type OnModuleInit, Optional } from "@nestjs/common";
 import {
+  type Agent,
   type Approval,
   type AutopilotActor,
   type AutopilotLevel,
   type AutopilotState,
   AutopilotStateSchema,
   type AutopilotStatus,
+  type DepartmentId,
   type IntendedAction,
+  type Workflow,
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { ApprovalsService } from "../approvals/approvals.service";
@@ -73,6 +76,60 @@ export function autopilotCoversApproval(
     default:
       return false;
   }
+}
+
+/**
+ * The gate intent a covered approval stands for, so the approval side can ask the gate
+ * evaluator the same question the hook side does (operator, agent and department rules
+ * included). `null` → no intent can be built, and autopilot leaves the approval alone.
+ */
+export function autopilotIntentFor(
+  approval: Pick<Approval, "kind" | "action">,
+  headBranch?: string,
+): IntendedAction | null {
+  if (approval.action === "git.push") {
+    return isZibbyBranch(headBranch) ? { action: "git.push", branch: headBranch } : null;
+  }
+  if (approval.kind === "pr-review" || approval.kind === "workflow-gate") {
+    return { action: "gh.pr_comment" };
+  }
+  if (approval.kind === "pr-address-comments" && approval.action === "github.pr.comment") {
+    return { action: "gh.pr_comment" };
+  }
+  return null;
+}
+
+/** The gate rules of a run's acting unit: its agents' own rules and its department. */
+export interface AutopilotActors {
+  agents: Pick<Agent, "gates" | "requires_approval">[];
+  department?: DepartmentId;
+}
+
+/**
+ * Resolve the agents and department a task target acts as: an agent (its own rules and
+ * department) or a workflow (every phase agent, the workflow's department). Any other
+ * target, or a missing agent/workflow, throws — the caller then fails closed.
+ */
+export async function autopilotActors(
+  target: { kind: string; id?: string } | undefined,
+  stores: {
+    agents: { get(id: string): Promise<Agent> };
+    workflows?: { get(id: string): Promise<Workflow> };
+  },
+): Promise<AutopilotActors> {
+  if (target?.kind === "agent" && target.id) {
+    const agent = await stores.agents.get(target.id);
+    return { agents: [agent], department: agent.department };
+  }
+  if (target?.kind === "workflow" && target.id && stores.workflows) {
+    const workflow = await stores.workflows.get(target.id);
+    const ids = workflow.phases.flatMap((p) => (p.agent ? [p.agent] : []));
+    return {
+      agents: await Promise.all(ids.map((id) => stores.agents.get(id))),
+      department: workflow.department,
+    };
+  }
+  throw new Error(`autopilot: no gate actors for a ${target?.kind ?? "missing"} target`);
 }
 
 /**

@@ -3,6 +3,7 @@ import path from "node:path";
 import { Injectable, type OnModuleInit, Optional } from "@nestjs/common";
 import {
   type AgentRun,
+  type Approval,
   type PrOutput,
   type PrReviewEvent,
   type PrThreadOutcome,
@@ -13,10 +14,17 @@ import {
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { ApprovalsService } from "../approvals/approvals.service";
-import { AutopilotService } from "../autopilot/autopilot.service";
+import { AgentsStorageService } from "../agents/agents.storage.service";
+import {
+  AutopilotService,
+  autopilotActors,
+  autopilotIntentFor,
+} from "../autopilot/autopilot.service";
+import { GateEvaluatorService } from "../gates/gate-evaluator.service";
 import { DuplicateNoteError, VaultService } from "../memory/vault.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
+import { WorkflowsStorageService } from "../workflows/workflows.storage.service";
 import { WorkspaceService } from "../workspace/workspace.service";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
 
@@ -190,8 +198,41 @@ export class TaskOutputService implements OnModuleInit {
     logger: LoggerService,
     // Phase 4 — the autopilot overlay on the PR approvals. Optional: absence = off.
     @Optional() private readonly autopilot?: AutopilotService,
+    // Phase 4 — the gate is consulted before autopilot approves (absent = never approves).
+    @Optional() private readonly gates?: GateEvaluatorService,
+    @Optional() private readonly agents?: AgentsStorageService,
+    @Optional() private readonly workflows?: WorkflowsStorageService,
   ) {
     this.log = logger.child(TaskOutputService.name);
+  }
+
+  /**
+   * Phase 4 — whether autopilot approves this fresh approval: it is on the allowlist AND
+   * the gate, evaluated for the run's own agents and department, resolves the matching
+   * intent through the overlay (no operator/agent/department ask or deny). Anything it
+   * can't establish — no intent, no evaluator, an unresolvable target — is false.
+   */
+  private async autopilotApproves(
+    task: ScheduledTask,
+    approval: Pick<Approval, "kind" | "action" | "suggestedReviewEvent">,
+    headBranch?: string,
+  ): Promise<boolean> {
+    if (!this.autopilot?.coversApproval(approval, headBranch)) return false;
+    const intent = autopilotIntentFor(approval, headBranch);
+    if (!intent || !this.gates || !this.agents) return false;
+    try {
+      const actors = await autopilotActors(task.target, {
+        agents: this.agents,
+        workflows: this.workflows,
+      });
+      return await this.gates.autopilotDecides(intent, actors.agents, actors.department);
+    } catch (error) {
+      this.log.warn("autopilot: gate check failed — leaving the approval for the operator", {
+        taskId: task.id,
+        err: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    }
   }
 
   onModuleInit(): void {
@@ -303,7 +344,7 @@ export class TaskOutputService implements OnModuleInit {
       approvalId: approval.id,
     });
     // Phase 4 — autopilot posts a fresh review itself (as COMMENT: no review-type pick).
-    const byAutopilot = !signedOffAtGate && !!this.autopilot?.coversApproval(approval);
+    const byAutopilot = !signedOffAtGate && (await this.autopilotApproves(task, approval));
     if (signedOffAtGate || byAutopilot) {
       // A failed post already marks the review `failed` with the GitHub error.
       const posted = await this.approvals
@@ -491,7 +532,7 @@ export class TaskOutputService implements OnModuleInit {
             }
           : c,
       );
-      if (this.autopilot?.coversApproval(approval)) {
+      if (await this.autopilotApproves(task, approval)) {
         const posted = await this.approvals.approve(approval.id, { decidedBy: "autopilot" }).then(
           () => true,
           (error: unknown) => {
@@ -558,7 +599,7 @@ export class TaskOutputService implements OnModuleInit {
     const byAutopilot =
       !autoPush &&
       !outcomes.some((o) => o.kind === "question") &&
-      !!this.autopilot?.coversApproval(approval, fix.head);
+      (await this.autopilotApproves(task, approval, fix.head));
     if (!autoPush && !byAutopilot) {
       return { summary: `Review komentáře ${ref}: push oprav čeká na schválení` };
     }
@@ -651,7 +692,7 @@ export class TaskOutputService implements OnModuleInit {
     );
     // Phase 4 — autopilot pushes onto ZIBBY's own `zibby/*` head of the operator's own PR.
     const byAutopilot =
-      !autoPush && fix.ownPr === true && !!this.autopilot?.coversApproval(approval, fix.head);
+      !autoPush && fix.ownPr === true && (await this.autopilotApproves(task, approval, fix.head));
     if (!autoPush && !byAutopilot) {
       return { summary: `Oprava CI ${ref}: push opravy čeká na schválení` };
     }
