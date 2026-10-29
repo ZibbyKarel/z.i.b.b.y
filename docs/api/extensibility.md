@@ -96,9 +96,11 @@ Only `https://github.com/<owner>/<repo>` URLs are accepted (optionally `.git` or
 
 - `POST /api/skills/external/scan` `{ url }` — shallow-clones the repo into a temp
   dir (always deleted), lists every folder holding a `SKILL.md` with
-  `conflict: true` when its id is already taken.
+  `conflict: true` when its id is already taken or repeats an earlier candidate
+  in the same repo (only the first of a repeated id is installable).
 - `POST /api/skills/external` `{ url, paths }` — installs the chosen folders into
-  `data/skills-external/<id>/` (no `.git`, symlinks never copied or followed) and
+  `data/skills-external/<id>/` (never copied, at any depth: symlinks, `.git`,
+  `node_modules/`, `.claude/`, `CLAUDE.md`, `CLAUDE.local.md`, `AGENTS.md`) and
   records provenance (`owner`, `repo`, `path`, pinned `sha`, folder `treeSha`) in
   `data/external-skills.json`.
 - Errors: 400 bad URL, 409 id taken (own or external), 422 no `SKILL.md` / unknown
@@ -109,8 +111,11 @@ Only `https://github.com/<owner>/<repo>` URLs are accepted (optionally `.git` or
   compares the folder's tree: same tree → only `sha` moves; new tree → the folder
   is replaced (temp + rename), `sha`/`treeSha`/`updatedAt` move and a
   `skill-updated` activity entry is recorded (shown in the briefing's "did for
-  you"). Folder gone upstream or a failed copy → previous copy kept, 200 with
-  `source.lastError` (`"skill folder missing upstream"` / `"copy failed: …"`).
+  you"). Folder gone upstream, a new `SKILL.md` that no longer parses or a failed
+  copy → previous copy kept, not reported as updated, 200 with `source.lastError`
+  (`"skill folder missing upstream"` / `"invalid SKILL.md upstream: …"` /
+  `"copy failed: …"`). A sync re-copies with the current filter, so a copy from
+  before the filter is cleaned on its next tree change.
   Unreachable repo → copy kept, `lastError` set, 502. 404 = not an installed
   external skill. `latestSha !== sha` means an update is pending.
 - `POST /api/skills/external/sync` — the same for every external skill, one clone

@@ -16,6 +16,7 @@ import type { MarketplacesStore } from "../marketplaces/marketplaces.store";
 import type { McpCredentialsStore } from "../mcp/mcp-credentials.store";
 import type { McpServersStorageService } from "../mcp/mcp.storage.service";
 import { externalSkillPrompt } from "../external-skills/skill-repo";
+import { freeDirs } from "./runner-core";
 import type { SkillsStorageService } from "../skills/skills.storage.service";
 import {
   CORE_DELEGATE_IDS,
@@ -898,7 +899,7 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     expect(grants).toEqual(["/tmp/a", "/tmp/b"]);
   });
 
-  it("gives an external skill's catalog prompt the folder note and grants its folder", async () => {
+  it("gives an external skill's catalog prompt the folder note but never grants its folder", async () => {
     const external: Skill = {
       id: "security-audit",
       name: "security-audit",
@@ -913,8 +914,10 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     expect(catalog["security-audit"].prompt).toBe(externalSkillPrompt(external, dir));
     expect(catalog["security-audit"].prompt).toContain(dir);
     expect(catalog["task-spec-writer"].prompt).toBe("Jsi spec writer.");
-    const grants = args.filter((a, i) => args[i - 1] === "--add-dir");
-    expect(grants).toEqual([dir]);
+    // Only a phase's own `/skill` is granted (WorkflowRunner) — a catalog skill folder
+    // in every run would be an ungated free zone and load its files as instructions.
+    expect(args).not.toContain("--add-dir");
+    expect(freeDirs({ cwd: "/sandbox", args })).not.toContain(dir);
   });
 
   it("honours CLAUDE_BIN as the binary seam (defaults to claude)", async () => {

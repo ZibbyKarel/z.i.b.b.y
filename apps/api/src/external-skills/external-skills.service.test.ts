@@ -190,6 +190,51 @@ describe("ExternalSkillsService", () => {
     await skills.create({ id: "mine", instructions: "x" });
     expect((await skills.list()).map((s) => s.id)).toEqual(["mine"]);
   });
+
+  it("never copies agent instruction files, .claude/ or node_modules/ (any depth)", async () => {
+    const dir = "skills/security-audit";
+    for (const f of [
+      "CLAUDE.md",
+      "CLAUDE.local.md",
+      "AGENTS.md",
+      ".claude/settings.json",
+      "node_modules/x/index.js",
+      "docs/CLAUDE.md",
+      "docs/.claude/agents/a.md",
+      "docs/node_modules/y.js",
+    ])
+      await put(fixture, `${dir}/${f}`, "x");
+    await svc.install(url, [dir]);
+    const at = (f: string) => existsSync(join(extDir, "security-audit", f));
+    for (const f of [
+      "CLAUDE.md",
+      "CLAUDE.local.md",
+      "AGENTS.md",
+      ".claude",
+      "node_modules",
+      "docs/CLAUDE.md",
+      "docs/.claude",
+      "docs/node_modules",
+    ])
+      expect(at(f), f).toBe(false);
+    expect(at("HUNTING.md")).toBe(true);
+    expect(at("SKILL.md")).toBe(true);
+  });
+
+  it("flags repeated ids within one scan, so the default selection installs", async () => {
+    await put(
+      fixture,
+      "plugins/x/skills/security-audit/SKILL.md",
+      "---\nname: security-audit\n---\nMirror.\n",
+    );
+    const { candidates } = await svc.scan(url);
+    expect(candidates.map((c) => [c.path, c.conflict])).toEqual([
+      ["plugins/x/skills/security-audit", false],
+      ["skills/security-audit", true],
+    ]);
+    const free = candidates.filter((c) => !c.conflict).map((c) => c.path);
+    await expect(svc.install(url, free)).resolves.toHaveLength(1);
+  });
 });
 
 describe("ExternalSkillsService — sync", () => {
@@ -304,6 +349,19 @@ describe("ExternalSkillsService — sync", () => {
         "Skill security-audit aktualizován z cloudflare/security-audit-skill (abc1234→def7654)",
       refs: { itemId: "security-audit" },
     });
+  });
+
+  it("new tree with an unparseable SKILL.md: copy kept, lastError set, not updated", async () => {
+    up.head = "def7654321";
+    up.trees[path] = "tree2";
+    await put(fixture, `${path}/SKILL.md`, "---js\n{ name: 'x' }\n---\nEvil.\n");
+    await put(fixture, `${path}/HUNTING.md`, "v2");
+    expect(await svc.syncAll()).toEqual({ checked: 1, updated: [], failed: ["security-audit"] });
+    expect(await hunting()).toBe("v1");
+    const r = await store.get("security-audit");
+    expect(r).toMatchObject({ sha: "abc1234567", treeSha: "tree1", latestSha: "def7654321" });
+    expect(r?.lastError).toMatch(/SKILL\.md/);
+    expect(activity.record).not.toHaveBeenCalled();
   });
 
   it("unreachable remote: copy untouched, lastError set, syncAll continues", async () => {

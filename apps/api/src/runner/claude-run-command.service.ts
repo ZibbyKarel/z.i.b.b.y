@@ -495,7 +495,7 @@ export class ClaudeRunCommandService {
               t === server.id || t === `mcp__${server.id}` || t.startsWith(`mcp__${server.id}__`),
           )),
     );
-    const { catalog, allowedTools, catalogAgentIds, skillDirs } = await this.buildCatalog(
+    const { catalog, allowedTools, catalogAgentIds } = await this.buildCatalog(
       opts.tools,
       mcpServers,
       opts.delegates,
@@ -549,8 +549,10 @@ export class ClaudeRunCommandService {
     // to readable log lines). `stream-json` requires `--verbose` in print mode.
     if (opts.streamTranscript) args.push("--output-format", "stream-json", "--verbose");
     // Grant access to dirs outside the sandbox (e.g. the Cleaner's target).
-    for (const dir of new Set([...(opts.grantDirs ?? []), ...skillDirs]))
-      args.push("--add-dir", dir);
+    // External skill folders are NOT granted here: every grant is a free zone and
+    // loads its CLAUDE.md, so only a workflow phase's own `/skill` folder rides
+    // `grantDirs` (WorkflowRunner).
+    for (const dir of new Set(opts.grantDirs ?? [])) args.push("--add-dir", dir);
     if (opts.contextDir) args.push("--add-dir", opts.contextDir);
     // Plugins installed from ZIBBY-managed marketplaces ride every run too (deduped).
     const pluginDirs = new Set([
@@ -658,8 +660,6 @@ export class ClaudeRunCommandService {
     allowedTools: string[];
     /** The curated agent ids folded into `catalog` (skills excluded — see Fáze 2b). */
     catalogAgentIds: string[];
-    /** Folders of installed external skills in the catalog — granted via `--add-dir`. */
-    skillDirs: string[];
   }> {
     // Phase 4c: the delegation catalog is dispatchable by construction — a
     // `status: "proposed"` candidate awaiting its `agent-proposal` approval must
@@ -701,15 +701,13 @@ export class ClaudeRunCommandService {
         ...(agent.model ? { model: agent.model } : {}),
       };
     }
-    const skillDirs: string[] = [];
     for (const skill of skills) {
       if (catalog[skill.id]) continue;
-      let prompt = skill.instructions;
-      if (skill.source) {
-        const dir = this.skills.externalFolder(skill.id);
-        skillDirs.push(dir);
-        prompt = externalSkillPrompt(skill, dir);
-      }
+      // ponytail: the folder is named but not granted — a catalog pick can't read the
+      // skill's extra files; grant per pick if that starts to matter.
+      const prompt = skill.source
+        ? externalSkillPrompt(skill, this.skills.externalFolder(skill.id))
+        : skill.instructions;
       // Skills carry no structured tools — give them the conservative default.
       const tools = toSubagentTools(undefined);
       for (const t of mapTools(undefined)) allowed.add(t);
@@ -723,7 +721,6 @@ export class ClaudeRunCommandService {
       catalog,
       allowedTools: [...allowed],
       catalogAgentIds: agents.map((a) => a.id),
-      skillDirs,
     };
   }
 

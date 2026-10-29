@@ -36,7 +36,7 @@ export const ExternalSkillCandidateSchema = z.object({
   id: z.string(),
   name: z.string(),
   desc: z.string().optional(),
-  /** The id is already taken by an own or an external skill. */
+  /** The id is already taken by an own or an external skill, or by an earlier candidate in this scan. */
   conflict: z.boolean(),
 });
 export type ExternalSkillCandidate = z.infer<typeof ExternalSkillCandidateSchema>;

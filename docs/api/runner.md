@@ -321,8 +321,17 @@ Key assembled pieces:
   (`contextDir`) plus `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1` set by
   `RunnerCore`. That env var makes the CLI load `CLAUDE.md` from EVERY
   `--add-dir` (contextDir, operator `files` grants, the attachments dir, a
-  workflow run-root grant) — passive text only; their `.claude/` settings,
-  hooks and skills never load.
+  workflow run-root grant, a phase's external skill folder) — passive text only;
+  their `.claude/` settings, hooks and skills never load.
+- **External skill folders** — granted per run, only when used. A workflow agent
+  phase whose `skill` is an installed external skill gets that one folder
+  (`data/skills-external/<id>/`) as `--add-dir` (so it is also in that run's free
+  zone); no other run gets any skill folder. External skills still ride every
+  run's `--agents` catalog with a prompt naming their folder, but a catalog pick
+  (or a chat `/skill` tag, whose body is inlined) can't read the folder's extra
+  files. The install/sync copy strips `CLAUDE.md`, `CLAUDE.local.md`,
+  `AGENTS.md`, `.claude/`, `node_modules/` and `.git` at any depth, so a granted
+  folder never loads third-party instructions.
 - **`--plugin-dir`** — the only way a plugin reaches a run. One flag per entry,
   in order: the agent's `plugins[]`, then the project's `plugins[]`, then ZIBBY's
   own `zibby` commands plugin, then the user-scope `installPath` of every plugin

@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { cp, lstat, mkdir, mkdtemp, rename, rm } from "node:fs/promises";
+import { cp, lstat, mkdir, mkdtemp, readFile, rename, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { Inject, Injectable, Logger } from "@nestjs/common";
@@ -27,22 +27,39 @@ import {
   ExternalSkillsStore,
   externalSkillDir,
 } from "./external-skills.store";
-import { type SkillCandidate, parseGitHubSkillUrl, scanSkillDir } from "./skill-repo";
+import { type SkillCandidate, parseGitHubSkillUrl, parseSkillMd, scanSkillDir } from "./skill-repo";
 import { SkillRepoGit } from "./skill-repo-git";
 
 /**
+ * Entries never copied, at any depth: VCS/dependency dirs, and agent instruction
+ * files/config — a granted folder's `CLAUDE.md` would load into the run as
+ * project instructions (third-party content steering ZIBBY, Law 4).
+ */
+const SKIPPED_ON_COPY = new Set([
+  ".git",
+  "node_modules",
+  ".claude",
+  "CLAUDE.md",
+  "CLAUDE.local.md",
+  "AGENTS.md",
+]);
+
+/**
  * Copy a skill folder from a clone into `destDir`, replacing what is there.
- * Never follows or copies a symlink, drops `.git`; lands via a sibling temp dir
- * + `rename`, so a failed copy leaves the previous folder intact.
+ * Never follows or copies a symlink, drops {@link SKIPPED_ON_COPY}; lands via a
+ * sibling temp dir + `rename`, so a failed copy leaves the previous folder intact.
  */
 export async function copySkillFolder(src: string, destDir: string): Promise<void> {
   const tmp = `${destDir}.tmp-${randomBytes(4).toString("hex")}`;
   await mkdir(dirname(destDir), { recursive: true });
   try {
+    // ponytail: no size/count cap — a root-level skill copies its whole repo; cap it if one bloats the data dir.
     await cp(src, tmp, {
       recursive: true,
       verbatimSymlinks: true,
-      filter: async (from) => basename(from) !== ".git" && !(await lstat(from)).isSymbolicLink(),
+      filter: async (from) =>
+        (from === src || !SKIPPED_ON_COPY.has(basename(from))) &&
+        !(await lstat(from)).isSymbolicLink(),
     });
     await rm(destDir, { recursive: true, force: true });
     await rename(tmp, destDir);
@@ -70,12 +87,14 @@ export class ExternalSkillsService {
       repo,
       sha,
       candidates: await Promise.all(
-        candidates.map(async ({ path, id, name, desc }) => ({
+        candidates.map(async ({ path, id, name, desc }, i) => ({
           path,
           id,
           name,
           ...(desc ? { desc } : {}),
-          conflict: await this.taken(id),
+          // A repeated id inside the repo (e.g. a mirrored skill) conflicts like a taken one:
+          // only the first is installable, so the default selection never 409s.
+          conflict: candidates.findIndex((c) => c.id === id) < i || (await this.taken(id)),
         })),
       ),
     }));
@@ -230,6 +249,18 @@ export class ExternalSkillsService {
           } else if (treeSha === r.treeSha) {
             await save(r, { sha, latestSha: sha });
           } else {
+            try {
+              // A new SKILL.md that no longer parses would drop the skill from list().
+              parseSkillMd(await readFile(join(dir, r.path, "SKILL.md"), "utf8"), r.id);
+            } catch (error) {
+              await save(r, {
+                latestSha: sha,
+                lastError: `invalid SKILL.md upstream: ${String(error)}`,
+              });
+              failed.push(r.id);
+              handled.add(r.id);
+              continue;
+            }
             try {
               await copySkillFolder(join(dir, r.path), externalSkillDir(r.id, this.root));
             } catch (error) {
