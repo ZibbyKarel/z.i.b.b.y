@@ -65,6 +65,7 @@ export const API_MODULE_DOC_MAP = {
   // cross-cutting infra (logging, storage base classes, text sanitization,
   // config bootstrapping) — not a feature, no dedicated doc expected.
   shared: null,
+  "external-skills": "docs/api/extensibility.md",
   skills: "docs/api/extensibility.md",
   speech: "docs/api/speech.md",
   departments: "docs/api/departments.md",
