@@ -302,6 +302,10 @@ function classifyGhApi(tokens, startIdx) {
       j += 1;
       continue;
     }
+    if (/^--(field|raw-field|input)=/.test(t)) {
+      hasFieldFlag = true; // the `--flag=value` spelling: same implicit POST body
+      continue;
+    }
     if (GH_API_VALUE_FLAGS.has(t)) {
       j += 1;
       continue;
@@ -321,19 +325,19 @@ function classifyGhApi(tokens, startIdx) {
   return { action: "gh.api_write" };
 }
 
-/** Phase 4 — the REST paths that post a PR/issue comment, a review comment, a thread reply or a review. */
+/** Phase 4 — the REST paths that post a PR/issue comment, a review comment or a thread reply. */
 const PR_COMMENT_PATH =
-  /^\/?repos\/[^/]+\/[^/]+\/(?:pulls\/\d+\/(?:reviews|comments(?:\/\d+\/replies)?)|issues\/\d+\/comments)$/;
+  /^\/?repos\/[^/]+\/[^/]+\/(?:pulls\/\d+\/comments(?:\/\d+\/replies)?|issues\/\d+\/comments)$/;
 
 /**
- * A POST that only adds a comment or a COMMENT review gets its own `gh.pr_comment`
- * intent (the narrow class autopilot may let through). A review carrying
- * `event=APPROVE` / `REQUEST_CHANGES` is a verdict on someone's PR, not a comment —
- * it stays the generic `gh.api_write`.
+ * A POST that only adds a comment gets its own `gh.pr_comment` intent (the narrow class
+ * autopilot may let through). Reviews (`/pulls/<n>/reviews`) are not here at all: a
+ * review carries a verdict, and ZIBBY posts its reviews server-side through the
+ * pr-review flow. An `--input` body can't be inspected, so it stays `gh.api_write`.
  */
 function isPrCommentPost(method, path, tokens) {
   if (!/^POST$/i.test(method) || !PR_COMMENT_PATH.test(path)) return false;
-  return !tokens.some((t) => /^event=(?!COMMENT$)/i.test(t ?? ""));
+  return !tokens.some((t) => t === "--input" || (t ?? "").startsWith("--input="));
 }
 
 /** Classify a `gh …` segment as opening/merging a PR, or a mutating `gh api` call. */

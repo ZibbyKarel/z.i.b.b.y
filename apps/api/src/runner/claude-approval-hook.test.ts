@@ -677,9 +677,21 @@ describe("claude approval hook — classify (gh api mutations, Fáze 17.1)", () 
     expect(classify("gh api repos/o/r/pulls/7/comments/9/replies -f body=x")?.action).toBe(
       "gh.pr_comment",
     );
-    expect(classify("gh api /repos/o/r/pulls/7/reviews -f event=COMMENT -f body=x")?.action).toBe(
-      "gh.pr_comment",
-    );
+  });
+
+  it("keeps every review POST and any --input body on gh.api_write (reviews go through pr-review)", () => {
+    for (const cmd of [
+      "gh api /repos/o/r/pulls/7/reviews -f event=COMMENT -f body=x",
+      "gh api repos/o/r/pulls/7/reviews -f body=x",
+      "gh api repos/o/r/pulls/7/reviews --input body.json",
+      "gh api repos/o/r/pulls/7/reviews --input -",
+      "gh api repos/o/r/pulls/7/reviews --field=event=APPROVE",
+      "gh api repos/o/r/pulls/7/reviews --raw-field=event=REQUEST_CHANGES",
+      "gh api repos/o/r/issues/7/comments --input body.json",
+      "gh api repos/o/r/pulls/7/comments --input -",
+    ]) {
+      expect(classify(cmd)?.action, cmd).toBe("gh.api_write");
+    }
   });
 
   it("keeps an APPROVE / REQUEST_CHANGES review and a comment edit or delete on gh.api_write", () => {
