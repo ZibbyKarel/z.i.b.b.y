@@ -19,6 +19,8 @@ export const QuickActionSchema = z.object({
    * values are only a fallback for when the automation is gone), so edits propagate.
    */
   automationId: z.string().min(1).max(200).optional(),
+  /** Run past the concurrency cap (no run slot). Budget, limits and gates still apply. */
+  immediate: z.boolean().optional(),
 });
 export type QuickAction = z.infer<typeof QuickActionSchema>;
 

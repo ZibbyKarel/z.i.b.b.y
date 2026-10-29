@@ -30,13 +30,14 @@ function queuedFields(extra: QueuedExtra): Partial<ScheduledTask> {
   };
 }
 
-/**
- * The provenance field every persisted-shape builder below carries straight from the
- * create input: `source` (O-18, resolved by the caller — `TaskSchedulerService.createTask`
- * — before any of these run).
- */
-function provenanceFields(input: CreateTaskInputWithAttachments): Pick<ScheduledTask, "source"> {
-  return input.source ? { source: input.source } : {};
+/** Fields carried verbatim from the create input onto every persisted shape. */
+function provenanceFields(
+  input: CreateTaskInputWithAttachments,
+): Pick<ScheduledTask, "source" | "immediate"> {
+  return {
+    ...(input.source ? { source: input.source } : {}),
+    ...(input.immediate ? { immediate: true as const } : {}),
+  };
 }
 
 export const TASKS_DIR = "TASKS_DIR";

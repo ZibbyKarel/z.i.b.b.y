@@ -48,7 +48,7 @@ describe("Quick actions API (e2e)", () => {
     expect(empty.body).toEqual([]);
 
     const actions = [
-      { id: "a", label: "Deploy", text: "Run deploy" },
+      { id: "a", label: "Deploy", text: "Run deploy", immediate: true },
       {
         id: "b",
         label: "Review",

@@ -700,6 +700,8 @@ export const ScheduledTaskSchema = z.object({
    * predates this field.
    */
   source: TaskSourceSchema.optional(),
+  /** Persisted only when true: this task ran past the concurrency cap. */
+  immediate: z.literal(true).optional(),
   /**
    * ZB-04a / O-06 — the department this task's dispatched unit belongs to,
    * stamped at DISPATCH time (never on creation — a scheduled/held/queued task
@@ -991,6 +993,11 @@ export const CreateTaskInputSchema = z.object({
    * `department` for an explicit `@department` target).
    */
   source: TaskSourceSchema.exclude(["chain", "handoff"]).optional(),
+  /**
+   * Run past the concurrency cap (no run slot). Budget, limits and gates still apply.
+   * Operator-set only. Server-side creators (triage, automations) never set it.
+   */
+  immediate: z.boolean().optional(),
   /**
    * The TODO note this task was created from (`/work/tasks/new?todo=<id>`). After the
    * task is created the server deletes that note — a missing note is ignored and a

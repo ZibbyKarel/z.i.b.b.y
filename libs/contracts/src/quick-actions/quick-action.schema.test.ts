@@ -21,6 +21,14 @@ describe("QuickActionSchema", () => {
     expect(QuickActionSchema.safeParse({ ...base, text: "   " }).success).toBe(false);
   });
 
+  it("accepts and keeps immediate: true", () => {
+    expect(QuickActionSchema.parse({ ...base, immediate: true }).immediate).toBe(true);
+  });
+
+  it("an action without immediate parses with it absent", () => {
+    expect("immediate" in QuickActionSchema.parse(base)).toBe(false);
+  });
+
   it("rejects a goal target", () => {
     const target = { kind: "goal", id: "g", name: "G" };
     expect(QuickActionSchema.safeParse({ ...base, target }).success).toBe(false);
