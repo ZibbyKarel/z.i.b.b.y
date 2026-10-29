@@ -12,6 +12,7 @@ import {
   Optional,
 } from "@nestjs/common";
 import {
+  type Approval,
   type ArtifactKind,
   type DepartmentId,
   type IntendedAction,
@@ -39,7 +40,11 @@ import { externalSkillPrompt } from "../external-skills/skill-repo";
 import { SkillNotFoundError } from "../skills/skills.errors";
 import { SkillsStorageService } from "../skills/skills.storage.service";
 import { ApprovalsService } from "../approvals/approvals.service";
-import { AutopilotService } from "../autopilot/autopilot.service";
+import {
+  AutopilotService,
+  autopilotActors,
+  autopilotIntentFor,
+} from "../autopilot/autopilot.service";
 import { SignalBusService } from "../automations/signal-bus.service";
 import { ArtifactsStorageService, artifactRecordId } from "../artifacts/artifacts.storage.service";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
@@ -56,6 +61,7 @@ import { ProjectLocalUnresolvedError } from "../projects/projects.errors";
 import { ProjectSecretsStore } from "../projects/project-secrets.store";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { writeFileAtomic } from "../shared/file-storage/file-utils";
+import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
 import { PR_REVIEW_ARTIFACT, suggestReviewEvent } from "../tasks/task-output.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TraceContextService } from "../shared/logging/trace-context.service";
@@ -292,6 +298,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     private readonly skills: SkillsStorageService,
     // Phase 4 — autopilot signs off a pr-review comment gate at creation.
     @Optional() private readonly autopilot?: AutopilotService,
+    // Phase 4 — the run's task, so only a real pr-review task's gate is signed off.
+    @Optional() private readonly tasks?: ScheduledTasksStorageService,
   ) {
     this.dir = path.resolve(dir);
     this.log = logger.child(WorkflowRunnerService.name);
@@ -2160,7 +2168,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     });
     // Phase 4 — a covered gate (the pr-review sign-off) is approved by autopilot at
     // creation, posted as COMMENT (autopilot never picks APPROVE / REQUEST_CHANGES).
-    if (this.autopilot?.coversApproval(parked)) {
+    if (await this.autopilotSignsOffGate(run, parked)) {
       void this.approvals.approve(parked.id, { decidedBy: "autopilot" }).catch((err: unknown) =>
         this.log.warn("autopilot gate approve failed — left pending", {
           approvalId: parked.id,
@@ -2174,6 +2182,32 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       phase: at.phaseId,
       next: at.cursor,
     });
+  }
+
+  /**
+   * Phase 4 — autopilot signs off a pr-review gate only for a real pr-review task (the
+   * run's task carries `prReview`; the artifact name alone proves nothing) and only when
+   * the gate, evaluated for this workflow's agents and department, resolves a PR comment
+   * through the overlay. Anything it can't establish → false (the gate waits).
+   */
+  private async autopilotSignsOffGate(run: WorkflowRun, parked: Approval): Promise<boolean> {
+    if (!this.autopilot?.coversApproval(parked) || !run.taskId || !this.tasks) return false;
+    const intent = autopilotIntentFor(parked);
+    if (!intent) return false;
+    try {
+      if (!(await this.tasks.get(run.taskId)).prReview) return false;
+      const actors = await autopilotActors(
+        { kind: "workflow", id: run.workflowId },
+        { agents: this.agents, workflows: this.workflows },
+      );
+      return await this.gates.autopilotDecides(intent, actors.agents, actors.department);
+    } catch (error) {
+      this.log.warn("autopilot gate check failed — left pending", {
+        approvalId: parked.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    }
   }
 
   /**

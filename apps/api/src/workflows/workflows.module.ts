@@ -9,6 +9,7 @@ import { ProjectsModule } from "../projects/projects.module";
 import { ClaudeRunModule } from "../runner/claude-run.module";
 import { SkillsModule } from "../skills/skills.module";
 import { SignalBusModule } from "../automations/signal-bus.module";
+import { ScheduledTasksStorageModule } from "../tasks/scheduled-tasks-storage.module";
 import { WorkspaceModule } from "../workspace/workspace.module";
 import { dataDir } from "../shared/data-dir";
 import { WORKFLOW_RUNS_DIR, WorkflowRunnerService } from "./workflow-runner.service";
@@ -47,6 +48,8 @@ export function resolveWorkflowRunsDir(): string {
     SignalBusModule,
     SkillsModule,
     WorkspaceModule,
+    // Phase 4 — a leaf store: autopilot reads the run's task (pr-review gate sign-off).
+    ScheduledTasksStorageModule,
   ],
   // WorkflowRunsController is declared before WorkflowsController so its static
   // routes (`/workflows/runs`, `/workflows/runs/:id`) register ahead of

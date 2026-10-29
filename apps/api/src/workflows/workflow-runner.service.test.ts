@@ -9,6 +9,7 @@ import {
 } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResumableRunner } from "../approvals/approvals.service";
+import { autopilotCoversApproval } from "../autopilot/autopilot.service";
 import { ProjectLocalUnresolvedError } from "../projects/projects.errors";
 import { RunNotFoundError } from "../runner/runner-core";
 import { SkillNotFoundError } from "../skills/skills.errors";
@@ -278,6 +279,92 @@ describe("WorkflowRunnerService — listRunFiles", () => {
 
   it("is null for an unknown run", async () => {
     expect(await h.service.listRunFiles("nope")).toBeNull();
+  });
+});
+
+describe("WorkflowRunnerService — autopilot pr-review gate (Phase 4)", () => {
+  let dir: string;
+  let h: Harness;
+  let approve: ReturnType<typeof vi.fn>;
+  let autopilotDecides: ReturnType<typeof vi.fn>;
+  const tasks: Record<string, { id: string; prReview?: object }> = {
+    t_review: { id: "t_review", prReview: { repo: "o/r", number: 7, state: "running" } },
+    t_plain: { id: "t_plain" },
+  };
+
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "pipe-runner-autopilot-"));
+    h = await makeHarness(dir);
+    approve = vi.fn(async () => undefined);
+    autopilotDecides = vi.fn(async () => true);
+    h.approvals.requestApproval.mockImplementation(async (input: object) => ({
+      id: "g1",
+      kind: "workflow-gate",
+      ...input,
+    }));
+    Object.assign(h.approvals, { approve });
+    Object.assign(h.gates, { autopilotDecides });
+    Object.assign(h.service as object, {
+      autopilot: { coversApproval: autopilotCoversApproval },
+      tasks: {
+        get: async (id: string) => {
+          const t = tasks[id];
+          if (!t) throw new Error(`task ${id} not found`);
+          return t;
+        },
+      },
+    });
+  });
+  afterEach(async () => {
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  /** Park the seeded run at its final gate as a pr-review sign-off (`suggestedReviewEvent` set). */
+  const parkReviewGate = async (taskId?: string) => {
+    const run = h.runs.get(WORKFLOW_RUN_ID);
+    if (!run) throw new Error("no run");
+    if (taskId) run.taskId = taskId;
+    await (
+      h.service as unknown as {
+        parkAtGate(r: WorkflowRun, reason: "gate", at: object): Promise<void>;
+      }
+    ).parkAtGate(run, "gate", {
+      phaseId: "build",
+      cursor: null,
+      handoffSource: null,
+      retries: new Map(),
+      phaseIds: ["build"],
+      approval: {
+        skill: "release",
+        action: "stage-approval",
+        detail: "review",
+        risk: "low",
+        suggestedReviewEvent: "COMMENT",
+      },
+    });
+    await new Promise((r) => setTimeout(r, 0));
+  };
+
+  it("signs off the gate of a real pr-review task when the gate resolves via autopilot", async () => {
+    await parkReviewGate("t_review");
+    expect(autopilotDecides).toHaveBeenCalledWith(
+      { action: "gh.pr_comment" },
+      [expect.objectContaining({ id: "writer" })],
+      undefined,
+    );
+    expect(approve).toHaveBeenCalledWith("g1", { decidedBy: "autopilot" });
+  });
+
+  it("leaves the gate pending for a run with no task or a task without prReview", async () => {
+    await parkReviewGate();
+    await parkReviewGate("t_plain");
+    expect(approve).not.toHaveBeenCalled();
+  });
+
+  it("leaves the gate pending when an agent/department/operator rule asks or denies", async () => {
+    autopilotDecides.mockResolvedValue(false);
+    await parkReviewGate("t_review");
+    expect(approve).not.toHaveBeenCalled();
   });
 });
 
