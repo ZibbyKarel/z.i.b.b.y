@@ -7,7 +7,7 @@ import { createFalImageProvider } from "./fal.ts";
 import { createHaikuVisionProvider } from "./haiku.ts";
 import { assertLicensed } from "./licence.ts";
 import { createMfluxImageProvider } from "./mflux.ts";
-import { createOllamaVisionProvider, ollamaUnloadAll } from "./ollama.ts";
+import { createLmstudioVisionProvider, lmstudioUnloadAll } from "./lmstudio.ts";
 import type { Run } from "./proc.ts";
 import { qaPrompt, strictVerdict } from "./qa-prompt.ts";
 
@@ -136,95 +136,6 @@ describe("fal", () => {
   });
 });
 
-describe("ollama", () => {
-  const input = async () => ({
-    file: await png(path.join(tmp(), "a.png")),
-    pageNumber: 1,
-    expectedSubjects: ["cat"],
-    styleGuide: "x",
-  });
-  const good = {
-    passed: false,
-    issues: [{ type: "wrong-subject", severity: "high", description: "a dog" }],
-  };
-  const chat = (content: string): Response => json({ message: { content } });
-
-  it("parses a good reply and sends schema, image, keep_alive", async () => {
-    const f = vi.fn<typeof fetch>(async () => chat(JSON.stringify(good)));
-    const v = await createOllamaVisionProvider({}, f).judge(await input());
-    expect(v.issues[0]?.type).toBe("wrong-subject");
-    expect(v.costUsd).toBe(0);
-    const body = JSON.parse(String(f.mock.calls[0]?.[1]?.body));
-    expect(body).toMatchObject({
-      model: "qwen3-vl:8b-instruct",
-      stream: false,
-      think: false,
-      keep_alive: "10m",
-      options: { temperature: 0 },
-    });
-    expect(body.messages[0].images).toHaveLength(1);
-    expect(body.format.required).toContain("passed");
-  });
-  it("drops low and pixel-owned issues and derives passed", async () => {
-    const reply = {
-      passed: false,
-      issues: [
-        { type: "margin-violation", severity: "high", description: "near top" },
-        { type: "text-artifact", severity: "low", description: "no text, fine" },
-      ],
-    };
-    const f = vi.fn<typeof fetch>(async () => chat(JSON.stringify(reply)));
-    expect(await createOllamaVisionProvider({}, f).judge(await input())).toMatchObject({
-      passed: true,
-      issues: [],
-    });
-  });
-  it("retries once on garbage, then reports judge-error", async () => {
-    const f = vi.fn<typeof fetch>(async () => chat("not json"));
-    const v = await createOllamaVisionProvider({}, f).judge(await input());
-    expect(f).toHaveBeenCalledTimes(2);
-    expect(v.passed).toBe(false);
-    expect(v.issues[0]?.type).toBe("judge-error");
-  });
-  it("falls back to message.thinking when content is empty", async () => {
-    const f = vi.fn<typeof fetch>(async () =>
-      json({ message: { content: "", thinking: JSON.stringify({ passed: true, issues: [] }) } }),
-    );
-    expect((await createOllamaVisionProvider({}, f).judge(await input())).passed).toBe(true);
-  });
-  it("extracts the verdict after a leaked <think> block", async () => {
-    const f = vi.fn<typeof fetch>(async () =>
-      chat('<think>\nchecking {"x":1}\n</think>\n{"passed":true,"issues":[]}'),
-    );
-    expect((await createOllamaVisionProvider({}, f).judge(await input())).passed).toBe(true);
-  });
-  it("recovers when the retry is valid", async () => {
-    let n = 0;
-    const f = vi.fn<typeof fetch>(async () =>
-      chat(++n === 1 ? "{" : JSON.stringify({ passed: true, issues: [] })),
-    );
-    expect((await createOllamaVisionProvider({}, f).judge(await input())).passed).toBe(true);
-  });
-  it("dispose and unloadAll send keep_alive 0", async () => {
-    const f = vi.fn<typeof fetch>(async (url) =>
-      String(url).endsWith("/api/ps") ? json({ models: [{ name: "m1" }] }) : json({}),
-    );
-    await createOllamaVisionProvider({}, f).dispose?.();
-    expect(JSON.parse(String(f.mock.calls[0]?.[1]?.body))).toEqual({
-      model: "qwen3-vl:8b-instruct",
-      keep_alive: 0,
-    });
-    f.mockClear();
-    await ollamaUnloadAll("http://h", f);
-    expect(JSON.parse(String(f.mock.calls[1]?.[1]?.body))).toEqual({ model: "m1", keep_alive: 0 });
-  });
-  it("unloadAll swallows connection errors", async () => {
-    await expect(
-      ollamaUnloadAll("http://h", async () => Promise.reject(new Error("down"))),
-    ).resolves.toBeUndefined();
-  });
-});
-
 describe("haiku", () => {
   it("parses envelope + fenced json, cost = total_cost_usd", async () => {
     const result =
@@ -295,5 +206,61 @@ describe("sheet verdict counts", () => {
     expect(p).toContain("a suit with buttons and antennae");
     expect(p).not.toMatch(/\b3\b|two antennae/);
     expect(p).toContain("- buttons");
+  });
+});
+
+describe("lmstudio", () => {
+  const input = async () => ({
+    file: await png(path.join(tmp(), "a.png")),
+    pageNumber: 1,
+    expectedSubjects: ["cat"],
+    styleGuide: "x",
+  });
+  const chat = (content: string): Response => json({ choices: [{ message: { content } }] });
+
+  it("sends an OpenAI chat request with json_schema + data-URI image and parses the verdict", async () => {
+    const reply = {
+      passed: false,
+      issues: [{ type: "wrong-subject", severity: "high", description: "a dog" }],
+    };
+    const f = vi.fn<typeof fetch>(async () => chat(JSON.stringify(reply)));
+    const v = await createLmstudioVisionProvider({}, f).judge(await input());
+    expect(v.issues[0]?.type).toBe("wrong-subject");
+    expect(v.costUsd).toBe(0);
+    expect(String(f.mock.calls[0]?.[0])).toBe("http://127.0.0.1:1234/v1/chat/completions");
+    const body = JSON.parse(String(f.mock.calls[0]?.[1]?.body));
+    expect(body).toMatchObject({ model: "qwen/qwen3-vl-8b", temperature: 0 });
+    expect(body.response_format.json_schema.schema.required).toContain("passed");
+    expect(body.messages[0].content[1].image_url.url).toMatch(/^data:image\/png;base64,/);
+  });
+  it("drops low and pixel-owned issues and derives passed", async () => {
+    const reply = {
+      passed: false,
+      issues: [
+        { type: "margin-violation", severity: "high", description: "near top" },
+        { type: "text-artifact", severity: "low", description: "no text, fine" },
+      ],
+    };
+    const f = vi.fn<typeof fetch>(async () => chat(JSON.stringify(reply)));
+    expect(await createLmstudioVisionProvider({}, f).judge(await input())).toMatchObject({
+      passed: true,
+      issues: [],
+    });
+  });
+  it("retries once on garbage, then reports judge-error", async () => {
+    const f = vi.fn<typeof fetch>(async () => chat("not json"));
+    const v = await createLmstudioVisionProvider({}, f).judge(await input());
+    expect(f).toHaveBeenCalledTimes(2);
+    expect(v.passed).toBe(false);
+    expect(v.issues[0]?.type).toBe("judge-error");
+  });
+  it("extracts the verdict after a leaked <think> block", async () => {
+    const f = vi.fn<typeof fetch>(async () =>
+      chat('<think>\nchecking {"x":1}\n</think>\n{"passed":true,"issues":[]}'),
+    );
+    expect((await createLmstudioVisionProvider({}, f).judge(await input())).passed).toBe(true);
+  });
+  it("unloadAll never throws when lms is missing", async () => {
+    await expect(lmstudioUnloadAll({ PF_LMS_BIN: "/nonexistent/lms" })).resolves.toBeUndefined();
   });
 });

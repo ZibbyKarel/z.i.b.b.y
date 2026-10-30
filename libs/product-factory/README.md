@@ -30,13 +30,13 @@ Reports end with `<verdict>pass</verdict>` or `<verdict>gap</verdict>`.
 | `PF_MAX_BUSY`                                                     | 0.15                                  | cover QA: max busy share under the title / badges                                              |
 | `PF_CONCURRENCY`                                                  | 1                                     | vision QA concurrency                                                                          |
 | `PF_IMAGE_PROVIDER`                                               | `mock`                                | `mock`, `mflux` (local), `fal` (cloud)                                                         |
-| `PF_VISION_PROVIDER`                                              | `none`                                | `none` (pixel QA only), `mock`, `ollama`, `haiku`                                              |
+| `PF_VISION_PROVIDER`                                              | `none`                                | `none` (pixel QA only), `mock`, `lmstudio`, `haiku`                                            |
 | `PF_MOCK_FAIL_PAGES`                                              | –                                     | e.g. `3,5`: mock emits a gray image for those pages on attempt 1; `0` = a white line-art cover |
 | `PF_SINGLE_SIDED`                                                 | `true`                                | blank back side after each coloring page                                                       |
 | `PF_CREATED_AT`                                                   | now                                   | timestamp in the book README                                                                   |
 
 Real-provider variables (`PF_IMAGE_MODEL`, `PF_IMAGE_SIZE`, `PF_MFLUX_*`, `FAL_KEY` (secret), `PF_FAL_PRICE_USD`,
-`OLLAMA_HOST`, `PF_OLLAMA_MODEL`, `PF_HAIKU_TIMEOUT_MS`), install steps, the 24 GB memory rules and licence
+`LMSTUDIO_HOST`, `PF_LMSTUDIO_MODEL`, `PF_HAIKU_TIMEOUT_MS`), install steps, the 24 GB memory rules and licence
 allow-list are in `docs/ops/product-factory.md`.
 
 ## Layout

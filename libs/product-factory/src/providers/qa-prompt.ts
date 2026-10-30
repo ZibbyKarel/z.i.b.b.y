@@ -11,7 +11,7 @@ export const VerdictSchema = z.object({
   issues: z.array(QaIssueSchema),
 });
 
-/** JSON schema handed to Ollama's `format`. */
+/** JSON schema handed to LM Studio's `response_format`. */
 export const VERDICT_JSON_SCHEMA = {
   type: "object",
   properties: {

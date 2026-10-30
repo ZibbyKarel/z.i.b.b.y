@@ -175,7 +175,7 @@ reject` (0 = titulka) a kniha se vrací přes **illustrate** → produce → ren
 ## Nastavení
 
 Poskytovatele volí projekt **publishing** (Projekty → publishing → env):
-`PF_IMAGE_PROVIDER` = `mflux` | `fal` | `mock`, `PF_VISION_PROVIDER` = `ollama` |
+`PF_IMAGE_PROVIDER` = `mflux` | `fal` | `mock`, `PF_VISION_PROVIDER` = `lmstudio` |
 `haiku` | `none`. Klíč `FAL_KEY` patří jen do tajemství projektu. Lidskou kontrolu
 po libovolné fázi zapne `approval: ask` u fáze (výchozí je plně autonomní).
 Rozpočet běhu hlídá `budget` — při překročení se běh zastaví a čeká na schválení.

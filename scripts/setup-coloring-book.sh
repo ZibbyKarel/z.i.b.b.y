@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs the local tooling the coloring-book factory needs: uv + mflux (images), Ollama + vision model (QA).
+# Installs the local tooling the coloring-book factory needs: uv + mflux (images), LM Studio + vision model (QA).
 # Idempotent. Run by hand (`pnpm setup:coloring-book`) or as `--auto` from postinstall.
 # Docs: docs/ops/product-factory.md
 set -uo pipefail
@@ -7,9 +7,10 @@ set -uo pipefail
 AUTO=0
 [[ "${1:-}" == "--auto" ]] && AUTO=1
 
-MODEL="${PF_OLLAMA_MODEL:-qwen3-vl:8b-instruct}"
-HOST="${OLLAMA_HOST:-http://127.0.0.1:11434}"
-[[ "$HOST" == http* ]] || HOST="http://$HOST"
+MODEL="${PF_LMSTUDIO_MODEL:-qwen/qwen3-vl-8b}"
+HOST="${LMSTUDIO_HOST:-http://127.0.0.1:1234}"
+PORT="${HOST##*:}"
+LMS="${PF_LMS_BIN:-$HOME/.lmstudio/bin/lms}"
 
 say() { echo "[coloring-book setup] $*"; }
 
@@ -42,22 +43,23 @@ else
   uv tool install mflux
 fi
 
-command -v ollama >/dev/null || { say "installing ollama"; brew install ollama; }
-
-if ! curl -fsS --max-time 3 "$HOST/api/tags" >/dev/null 2>&1; then
-  say "starting ollama service"
-  brew services start ollama
-  for _ in $(seq 1 20); do
-    curl -fsS --max-time 2 "$HOST/api/tags" >/dev/null 2>&1 && break
-    sleep 1
-  done
+if [[ ! -x "$LMS" ]]; then
+  say "installing LM Studio"
+  brew install --cask lm-studio
+  say "open LM Studio once so it installs the lms CLI, then re-run this script"
+  exit 1
 fi
 
-if ollama list 2>/dev/null | awk '{print $1}' | grep -qx "$MODEL"; then
-  say "$MODEL already pulled"
+if ! curl -fsS --max-time 3 "$HOST/v1/models" >/dev/null 2>&1; then
+  say "starting LM Studio server on port $PORT"
+  "$LMS" server start --port "$PORT"
+fi
+
+if "$LMS" ls 2>/dev/null | awk '{print $1}' | grep -qx "$MODEL"; then
+  say "$MODEL already downloaded"
 else
-  say "pulling $MODEL (~6 GB)"
-  ollama pull "$MODEL"
+  say "downloading $MODEL (~6 GB)"
+  "$LMS" get "$MODEL" --mlx -y
 fi
 
 say "done. FLUX.2 klein weights (several GB) download on the first image run."

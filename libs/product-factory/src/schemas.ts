@@ -145,6 +145,7 @@ export const QaResultSchema = z.strictObject({
     whiteRatio: z.number().optional(),
   }),
   issues: z.array(QaIssueSchema),
-  judge: z.enum(["pixel", "ollama", "haiku", "mock"]),
+  /** "ollama" only in records written before the switch to LM Studio (2026-10-30). */
+  judge: z.enum(["pixel", "ollama", "lmstudio", "haiku", "mock"]),
 });
 export type QaResult = z.infer<typeof QaResultSchema>;

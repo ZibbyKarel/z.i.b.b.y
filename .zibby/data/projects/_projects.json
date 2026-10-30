@@ -52,8 +52,8 @@
     "category": "Publishing",
     "env": {
       "PF_IMAGE_PROVIDER": "mflux",
-      "PF_VISION_PROVIDER": "ollama",
-      "PF_OLLAMA_MODEL": "qwen3-vl:8b-instruct"
+      "PF_VISION_PROVIDER": "lmstudio",
+      "PF_LMSTUDIO_MODEL": "qwen/qwen3-vl-8b"
     }
   },
   {
@@ -110,16 +110,8 @@
       ]
     },
     "autonomy_policy": {
-      "can_do_alone": [
-        "reply",
-        "create_task",
-        "summarize"
-      ],
-      "always_ask": [
-        "merge",
-        "deploy",
-        "delete"
-      ],
+      "can_do_alone": ["reply", "create_task", "summarize"],
+      "always_ask": ["merge", "deploy", "delete"],
       "vip_escalation": false,
       "respond_as": "autonomous"
     },

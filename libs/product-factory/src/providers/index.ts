@@ -2,7 +2,7 @@ import { createFalImageProvider } from "./fal.ts";
 import { createHaikuVisionProvider } from "./haiku.ts";
 import { createMfluxImageProvider } from "./mflux.ts";
 import { createMockImageProvider, mockVisionProvider } from "./mock.ts";
-import { createOllamaVisionProvider } from "./ollama.ts";
+import { createLmstudioVisionProvider } from "./lmstudio.ts";
 import type { ImageProvider } from "./image.ts";
 import type { VisionProvider } from "./vision.ts";
 
@@ -19,7 +19,7 @@ export function createVisionProvider(env: NodeJS.ProcessEnv): VisionProvider | n
   const id = env.PF_VISION_PROVIDER ?? "none";
   if (id === "none") return null;
   if (id === "mock") return mockVisionProvider;
-  if (id === "ollama") return createOllamaVisionProvider(env);
+  if (id === "lmstudio") return createLmstudioVisionProvider(env);
   if (id === "haiku") return createHaikuVisionProvider(env);
-  throw new Error(`unknown PF_VISION_PROVIDER "${id}" (none|mock|ollama|haiku)`);
+  throw new Error(`unknown PF_VISION_PROVIDER "${id}" (none|mock|lmstudio|haiku)`);
 }
