@@ -57,7 +57,10 @@ const rb = results[b] ?? [];
 const issueTypes = (r: VisionVerdict | undefined) => r?.issues.map((i) => i.type).join(",") || "-";
 const stat = (rs: VisionVerdict[]) => {
   const ms = rs.map((r) => r.durationMs).sort((x, y) => x - y);
-  return `pass ${rs.filter((r) => r.passed).length}/${rs.length}, judge-error ${rs.filter((r) => r.issues.some((i) => i.type === "judge-error")).length}, median ${((ms[ms.length >> 1] ?? 0) / 1000).toFixed(1)} s, total ${(ms.reduce((s, x) => s + x, 0) / 1000).toFixed(0)} s`;
+  // Rejected pages were un-approved by the book-level audit: a good judge fails them.
+  const caught = rs.slice(approved.length).filter((r) => !r.passed).length;
+  const kept = rs.slice(0, approved.length).filter((r) => r.passed).length;
+  return `approved kept ${kept}/${approved.length}, rejected caught ${caught}/${rs.length - approved.length}, judge-error ${rs.filter((r) => r.issues.some((i) => i.type === "judge-error")).length}, median ${((ms[ms.length >> 1] ?? 0) / 1000).toFixed(1)} s, total ${(ms.reduce((s, x) => s + x, 0) / 1000).toFixed(0)} s`;
 };
 const agree = ra.filter((r, i) => r.passed === rb[i]?.passed).length;
 console.log(
