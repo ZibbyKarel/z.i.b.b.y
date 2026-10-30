@@ -260,6 +260,29 @@ describe("lmstudio", () => {
     );
     expect((await createLmstudioVisionProvider({}, f).judge(await input())).passed).toBe(true);
   });
+  it("page with characters: sends the reference sheet as a second image and asks for off-model", async () => {
+    const f = vi.fn<typeof fetch>(async () => chat(JSON.stringify({ passed: true, issues: [] })));
+    const ref = await png(path.join(tmp(), "cast.png"));
+    await createLmstudioVisionProvider({}, f).judge({
+      ...(await input()),
+      characters: [{ label: "the mouse", spec: "2 round ears, no whiskers" }],
+      scene: "the mouse is tiny",
+      referenceImage: ref,
+    });
+    const content = JSON.parse(String(f.mock.calls[0]?.[1]?.body)).messages[0].content;
+    expect(content).toHaveLength(3);
+    expect(content[0].text).toContain("off-model");
+    expect(content[0].text).toContain("2 round ears, no whiskers");
+    expect(content[0].text).toContain("the mouse is tiny");
+  });
+  it("falls back to reasoning_content when content is empty", async () => {
+    const f = vi.fn<typeof fetch>(async () =>
+      json({
+        choices: [{ message: { content: "", reasoning_content: '{"passed":true,"issues":[]}' } }],
+      }),
+    );
+    expect((await createLmstudioVisionProvider({}, f).judge(await input())).passed).toBe(true);
+  });
   it("unloadAll never throws when lms is missing", async () => {
     await expect(lmstudioUnloadAll({ PF_LMS_BIN: "/nonexistent/lms" })).resolves.toBeUndefined();
   });

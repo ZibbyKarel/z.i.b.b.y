@@ -43,7 +43,7 @@ export function createHaikuVisionProvider(
     model: "haiku",
     async judge(input): Promise<VisionVerdict> {
       const t0 = performance.now();
-      const prompt = `${qaPrompt(input)}\n\nUse the Read tool to view the image at ${input.file} and judge it. Answer ONLY with one \`\`\`json block containing the JSON object, nothing else.`;
+      const prompt = `${qaPrompt(input)}\n\nUse the Read tool to view the image at ${input.file}${input.referenceImage ? ` (first image) and the reference sheet at ${input.referenceImage} (second image)` : ""} and judge it. Answer ONLY with one \`\`\`json block containing the JSON object, nothing else.`;
       const r = await run(
         "claude",
         [
@@ -61,6 +61,7 @@ export function createHaikuVisionProvider(
           "",
           "--add-dir",
           path.dirname(input.file),
+          ...(input.referenceImage ? ["--add-dir", path.dirname(input.referenceImage)] : []),
         ],
         { stdin: prompt, timeoutMs },
       );

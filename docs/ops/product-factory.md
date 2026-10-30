@@ -35,32 +35,33 @@ Every provider call is logged as one line in the stage's `costs.jsonl` (`source`
 
 Put them in the project **env** unless marked **secret**.
 
-| Var                                                               | Default                                    | Meaning                                                                                               |
-| ----------------------------------------------------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| `PF_BOOK_DIR`                                                     | `$ZIBBY_RUN_DIR/book` (else `./book`)      | durable output folder                                                                                 |
-| `ZIBBY_RUN_DIR`                                                   | cwd                                        | run root; `finalize` sums every `costs.jsonl` below it                                                |
-| `PF_ROUNDS`                                                       | 3                                          | produce rounds                                                                                        |
-| `PF_THRESHOLD`                                                    | 160                                        | black/white threshold                                                                                 |
-| `PF_MAX_GRAY` / `PF_MIN_INK` / `PF_MAX_INK` / `PF_MAX_MARGIN_INK` | 0.08 / 0.01 / 0.35 / 0.0005                | pixel QA limits                                                                                       |
-| `PF_MIN_COLOR` / `PF_MAX_WHITE`                                   | 0.25 / 0.45                                | cover QA: min saturated / max near-white share                                                        |
-| `PF_MAX_BUSY`                                                     | 0.15                                       | cover QA: max busy share under the title / badges                                                     |
-| `PF_CONCURRENCY`                                                  | 1                                          | vision QA concurrency                                                                                 |
-| `PF_IMAGE_PROVIDER`                                               | `mock`                                     | `mock`, `mflux`, `fal`                                                                                |
-| `PF_VISION_PROVIDER`                                              | `none`                                     | `none`, `mock`, `lmstudio`, `haiku`                                                                   |
-| `PF_IMAGE_MODEL`                                                  | `flux2-klein-4b`                           | mflux model; must be on the licence allow-list                                                        |
-| `PF_IMAGE_LORA`                                                   | –                                          | comma list; only allow-listed LoRAs (list is empty today)                                             |
-| `PF_IMAGE_SIZE`                                                   | 1024                                       | square generation size in px (produce upscales to 300 DPI later)                                      |
-| `PF_MFLUX_PYTHON`                                                 | `~/.local/share/uv/tools/mflux/bin/python` | python of the mflux tool venv                                                                         |
-| `PF_MFLUX_QUANTIZE`                                               | 4                                          | mflux `--quantize` bits                                                                               |
-| `PF_MFLUX_STEPS`                                                  | 4 (klein), 8 (z-image-turbo)               | inference steps                                                                                       |
-| `PF_FAL_PRICE_USD`                                                | `0.005 x megapixels`                       | per-image cost override for `costs.jsonl`                                                             |
-| `FAL_KEY`                                                         | –                                          | **secret** — fal.ai API key; never logged                                                             |
-| `LMSTUDIO_HOST`                                                   | `http://127.0.0.1:1234`                    | LM Studio server (`lms server status`)                                                                |
-| `PF_LMSTUDIO_MODEL`                                               | `qwen/qwen3-vl-8b`                         | vision model key (`lms ls`); judge comparison in docs/plans/publishing/judge-comparison-2026-10-30.md |
-| `PF_HAIKU_TIMEOUT_MS`                                             | 120000                                     | per-image timeout for the `claude -p` judge                                                           |
-| `PF_MOCK_FAIL_PAGES`                                              | –                                          | e.g. `3,5`: mock emits a gray image for those pages on attempt 1; `0` = a white line-art cover        |
-| `PF_SINGLE_SIDED`                                                 | `false`                                    | blank back side after each coloring page                                                              |
-| `PF_CREATED_AT`                                                   | now                                        | timestamp in the book README                                                                          |
+| Var                                                               | Default                                    | Meaning                                                                                                 |
+| ----------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `PF_BOOK_DIR`                                                     | `$ZIBBY_RUN_DIR/book` (else `./book`)      | durable output folder                                                                                   |
+| `ZIBBY_RUN_DIR`                                                   | cwd                                        | run root; `finalize` sums every `costs.jsonl` below it                                                  |
+| `PF_ROUNDS`                                                       | 3                                          | produce rounds                                                                                          |
+| `PF_THRESHOLD`                                                    | 160                                        | black/white threshold                                                                                   |
+| `PF_MAX_GRAY` / `PF_MIN_INK` / `PF_MAX_INK` / `PF_MAX_MARGIN_INK` | 0.08 / 0.01 / 0.35 / 0.0005                | pixel QA limits                                                                                         |
+| `PF_MIN_COLOR` / `PF_MAX_WHITE`                                   | 0.25 / 0.45                                | cover QA: min saturated / max near-white share                                                          |
+| `PF_MAX_BUSY`                                                     | 0.15                                       | cover QA: max busy share under the title / badges                                                       |
+| `PF_CONCURRENCY`                                                  | 1                                          | vision QA concurrency                                                                                   |
+| `PF_IMAGE_PROVIDER`                                               | `mock`                                     | `mock`, `mflux`, `fal`                                                                                  |
+| `PF_VISION_PROVIDER`                                              | `none`                                     | `none`, `mock`, `lmstudio`, `haiku`                                                                     |
+| `PF_IMAGE_MODEL`                                                  | `flux2-klein-4b`                           | mflux model; must be on the licence allow-list                                                          |
+| `PF_IMAGE_LORA`                                                   | –                                          | comma list; only allow-listed LoRAs (list is empty today)                                               |
+| `PF_IMAGE_SIZE`                                                   | 1024                                       | square generation size in px (produce upscales to 300 DPI later)                                        |
+| `PF_MFLUX_PYTHON`                                                 | `~/.local/share/uv/tools/mflux/bin/python` | python of the mflux tool venv                                                                           |
+| `PF_MFLUX_QUANTIZE`                                               | 4                                          | mflux `--quantize` bits                                                                                 |
+| `PF_MFLUX_STEPS`                                                  | 4 (klein), 8 (z-image-turbo)               | inference steps                                                                                         |
+| `PF_FAL_PRICE_USD`                                                | `0.005 x megapixels`                       | per-image cost override for `costs.jsonl`                                                               |
+| `FAL_KEY`                                                         | –                                          | **secret** — fal.ai API key; never logged                                                               |
+| `LMSTUDIO_HOST`                                                   | `http://127.0.0.1:1234`                    | LM Studio server (`lms server status`)                                                                  |
+| `PF_LMSTUDIO_MODEL`                                               | `qwen/qwen3-vl-8b`                         | vision model key (`lms ls`); judge comparison in docs/plans/publishing/judge-comparison-2026-10-30.md   |
+| `PF_LMSTUDIO_CONTEXT`                                             | –                                          | load the model up front with this context (e.g. `16384` for gemma-4-26b, whose auto-fit fails on 24 GB) |
+| `PF_HAIKU_TIMEOUT_MS`                                             | 120000                                     | per-image timeout for the `claude -p` judge                                                             |
+| `PF_MOCK_FAIL_PAGES`                                              | –                                          | e.g. `3,5`: mock emits a gray image for those pages on attempt 1; `0` = a white line-art cover          |
+| `PF_SINGLE_SIDED`                                                 | `false`                                    | blank back side after each coloring page                                                                |
+| `PF_CREATED_AT`                                                   | now                                        | timestamp in the book README                                                                            |
 
 ## 24 GB memory choreography
 

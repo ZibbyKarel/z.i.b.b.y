@@ -21,6 +21,9 @@ interface Unit {
   seed?: number;
   referenceImages?: string[];
   subjects: string[];
+  /** The job prompt before the character block: the scene the page judge checks against. */
+  scene: string;
+  characters: { label: string; spec: string }[];
   isCover: boolean;
   attempts: number;
   approved: boolean;
@@ -116,6 +119,8 @@ export async function produce(argv: string[], ctx: Ctx): Promise<number> {
       ...job,
       ...(await withCharacters(book, plan, job.prompt, page.characters)),
       subjects: page.subjects,
+      scene: job.prompt,
+      characters: pageCharacters(plan, page.characters),
       dir: path.join(book, "illustrations", nn(page.pageNumber)),
       isCover: false,
       attempts: 0,
@@ -130,6 +135,8 @@ export async function produce(argv: string[], ctx: Ctx): Promise<number> {
       ...jobs.cover,
       ...(await withCharacters(book, plan, jobs.cover.prompt, plan.cover.characters)),
       subjects: [],
+      scene: jobs.cover.prompt,
+      characters: [],
       dir: path.join(book, "cover-art"),
       isCover: true,
       attempts: 0,
@@ -263,6 +270,13 @@ export async function produce(argv: string[], ctx: Ctx): Promise<number> {
             pageNumber: j.u.pageNumber,
             expectedSubjects: j.u.subjects,
             styleGuide: plan.styleGuide,
+            ...(j.u.characters.length > 0
+              ? {
+                  characters: j.u.characters,
+                  scene: j.u.scene,
+                  ...(j.u.referenceImages?.[0] ? { referenceImage: j.u.referenceImages[0] } : {}),
+                }
+              : {}),
           });
           appendCost(ctx, {
             source: "vision",

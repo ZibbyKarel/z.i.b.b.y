@@ -23,12 +23,15 @@ export const verdictJson = (text: string): string => {
   return at < 0 ? text : text.slice(at, text.lastIndexOf("}") + 1);
 };
 
+const lms = (env: NodeJS.ProcessEnv, args: string[], timeout: number): Promise<void> =>
+  new Promise((resolve) => {
+    const bin = env.PF_LMS_BIN ?? path.join(os.homedir(), ".lmstudio/bin/lms");
+    execFile(bin, args, { timeout }, () => resolve());
+  });
+
 /** `lms unload --all` (memory choreography on 24 GB). Never throws. */
 export const lmstudioUnloadAll = (env: NodeJS.ProcessEnv = process.env): Promise<void> =>
-  new Promise((resolve) => {
-    const lms = env.PF_LMS_BIN ?? path.join(os.homedir(), ".lmstudio/bin/lms");
-    execFile(lms, ["unload", "--all"], { timeout: 15_000 }, () => resolve());
-  });
+  lms(env, ["unload", "--all"], 15_000);
 
 /** LM Studio's OpenAI-compatible server (`lms server start`); the model loads just-in-time. */
 export function createLmstudioVisionProvider(
@@ -37,8 +40,12 @@ export function createLmstudioVisionProvider(
 ): VisionProvider {
   const host = lmstudioHost(env);
   const model = env.PF_LMSTUDIO_MODEL || "qwen/qwen3-vl-8b";
+  // Big models (gemma-4-26b) fail LM Studio's just-in-time auto-fit on 24 GB; load them
+  // up front with a fixed context instead. A failed load surfaces as a judge-error below.
+  const context = env.PF_LMSTUDIO_CONTEXT;
+  let loaded: Promise<void> | undefined;
 
-  async function ask(b64: string, prompt: string, sheet: boolean): Promise<string> {
+  async function ask(images: string[], prompt: string, sheet: boolean): Promise<string> {
     const res = await f(new URL("/v1/chat/completions", host), {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -60,15 +67,22 @@ export function createLmstudioVisionProvider(
             role: "user",
             content: [
               { type: "text", text: prompt },
-              { type: "image_url", image_url: { url: `data:image/png;base64,${b64}` } },
+              ...images.map((b64) => ({
+                type: "image_url",
+                image_url: { url: `data:image/png;base64,${b64}` },
+              })),
             ],
           },
         ],
       }),
     });
     if (!res.ok) throw new Error(`lmstudio /v1/chat/completions ${res.status}`);
-    const body = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-    return verdictJson(body.choices?.[0]?.message?.content ?? "");
+    const body = (await res.json()) as {
+      choices?: { message?: { content?: string; reasoning_content?: string } }[];
+    };
+    const m = body.choices?.[0]?.message;
+    // Thinking models (qwen3.5) may land the whole answer in reasoning_content, content empty.
+    return verdictJson(m?.content || m?.reasoning_content || "");
   }
 
   return {
@@ -76,19 +90,26 @@ export function createLmstudioVisionProvider(
     model,
     async judge(input): Promise<VisionVerdict> {
       const t0 = performance.now();
-      const b64 = (
-        await sharp(input.file)
-          .resize(768, 768, { fit: "inside", withoutEnlargement: true })
-          .png()
-          .toBuffer()
-      ).toString("base64");
+      if (context) await (loaded ??= lms(env, ["load", model, "-c", context, "-y"], 300_000));
+      const images = await Promise.all(
+        [input.file, ...(input.referenceImage ? [input.referenceImage] : [])].map(async (f) =>
+          (
+            await sharp(f)
+              .resize(768, 768, { fit: "inside", withoutEnlargement: true })
+              .png()
+              .toBuffer()
+          ).toString("base64"),
+        ),
+      );
       const prompt = qaPrompt(input);
       let result: { passed: boolean; issues: VisionVerdict["issues"] } | undefined;
       let err = "";
       for (let attempt = 0; attempt < 2 && !result; attempt++) {
         try {
           const parsed = VerdictSchema.safeParse(
-            JSON.parse(await ask(b64, prompt, Object.keys(input.characterCounts ?? {}).length > 0)),
+            JSON.parse(
+              await ask(images, prompt, Object.keys(input.characterCounts ?? {}).length > 0),
+            ),
           );
           if (parsed.success) result = strictVerdict(parsed.data, input.characterCounts);
           else err = parsed.error.message;

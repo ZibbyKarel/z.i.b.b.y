@@ -56,3 +56,16 @@ Book: .zibby/data/workflows/runs/coloring-book_1793093305496/book — 24 approve
 | 12-rejected-001.png | pass (-) | pass (-) |
 | 13-rejected-001.png | pass (-) | pass (-) |
 | 15-rejected-001.png | pass (-) | pass (-) |
+
+## Round 2: character check on the page judge (same book, 24 approved + 43 rejected)
+
+The page judge now also gets the characters' design, the cast reference sheet as a second image
+and the generation prompt (scene size/count rules), and may report `off-model`. Rejected pages
+were un-approved by the book-level audit, so a good judge fails them.
+
+| judge | approved kept | rejected caught | median / page | notes |
+|---|---|---|---|---|
+| qwen/qwen3-vl-8b, old prompt | 24/24 | 0/43 | 2.2 s | |
+| qwen/qwen3-vl-8b, character check | 23/24 | 8/43 | 3.7 s | 2 judge-errors |
+| qwen3.5-9b-mlx | – | – | 9–170 s | thinking model: answer lands in `reasoning_content`, rambles inside the JSON until max_tokens, hallucinated a chef hat on page 2 — dropped |
+| google/gemma-4-26b-a4b-qat | 21/21 (first 21 pages) | – | ~10 s | needs `PF_LMSTUDIO_CONTEXT=16384` (auto-fit picks 4k, below its 16k minimum); 15.6 GB, LM Studio crashed mid-run and then refused to reload it with ~13 GB available |
