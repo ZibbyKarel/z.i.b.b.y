@@ -82,118 +82,122 @@ export function DataTable<T>({
   stickyHeader,
   ref,
 }: DataTableProps<T>) {
+  // On a phone the columns keep a readable width and the table scrolls sideways in
+  // its own box instead of squeezing every cell to a word per line.
   return (
-    <table
-      className="w-full table-fixed border-collapse border border-border bg-surface-panel"
-      data-testid={DataTableTestId.Root}
-      ref={ref}
-    >
-      <colgroup>
-        {columns.map((col) => (
-          <col
-            key={col.key}
-            style={col.width === "flex" ? undefined : { width: columnWidthPx[col.width] }}
-          />
-        ))}
-      </colgroup>
-      <thead
-        className={cn(stickyHeader && "sticky top-0 z-10 bg-surface-panel")}
-        data-testid={DataTableTestId.Header}
+    <div className="max-md:overflow-x-auto">
+      <table
+        className="w-full table-fixed border-collapse border border-border bg-surface-panel max-md:min-w-[640px]"
+        data-testid={DataTableTestId.Root}
+        ref={ref}
       >
-        <tr className="border-b border-border">
+        <colgroup>
           {columns.map((col) => (
-            <th
-              className={cn(
-                "px-[14px] py-[9px] font-sans font-semibold uppercase tracking-wider text-[10px] text-foreground-faint",
-                alignClass[col.align ?? "left"],
-              )}
-              data-testid={`${DataTableTestId.HeaderCell}-${col.key}`}
+            <col
               key={col.key}
-              scope="col"
-            >
-              {col.label}
-            </th>
+              style={col.width === "flex" ? undefined : { width: columnWidthPx[col.width] }}
+            />
           ))}
-        </tr>
-      </thead>
-      <tbody data-testid={DataTableTestId.Body}>
-        {loading ? (
-          <tr>
-            <td colSpan={columns.length}>
-              <div className="px-[14px] py-[14px]" data-testid={DataTableTestId.Loading}>
-                <Typography type="bodySm" variant="secondary">
-                  Loading…
-                </Typography>
-              </div>
-            </td>
-          </tr>
-        ) : rows.length === 0 ? (
-          <tr>
-            <td colSpan={columns.length}>
-              <div className="px-[14px] py-[14px]" data-testid={DataTableTestId.Empty}>
-                {typeof empty === "string" ? (
-                  <Typography type="bodySm" variant="secondary">
-                    {empty}
-                  </Typography>
-                ) : (
-                  empty
-                )}
-              </div>
-            </td>
-          </tr>
-        ) : (
-          rows.map((row) => {
-            const rowKey = getRowKey(row);
-            const href = rowHref?.(row);
-            const clickable = Boolean(onRowClick) && !href;
-            return (
-              <tr
+        </colgroup>
+        <thead
+          className={cn(stickyHeader && "sticky top-0 z-10 bg-surface-panel")}
+          data-testid={DataTableTestId.Header}
+        >
+          <tr className="border-b border-border">
+            {columns.map((col) => (
+              <th
                 className={cn(
-                  "border-b border-border last:border-b-0",
-                  (clickable || href) &&
-                    cn("relative cursor-pointer hover:bg-elevated", focusRingInset),
+                  "px-[14px] py-[9px] font-sans font-semibold uppercase tracking-wider text-[10px] text-foreground-faint",
+                  alignClass[col.align ?? "left"],
                 )}
-                data-testid={`${DataTableTestId.Row}-${rowKey}`}
-                key={rowKey}
-                onClick={clickable ? () => onRowClick?.(row) : undefined}
-                onKeyDown={
-                  clickable
-                    ? (e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          onRowClick?.(row);
-                        }
-                      }
-                    : undefined
-                }
-                role={clickable ? "button" : undefined}
-                tabIndex={clickable ? 0 : undefined}
+                data-testid={`${DataTableTestId.HeaderCell}-${col.key}`}
+                key={col.key}
+                scope="col"
               >
-                {columns.map((col, i) => (
-                  <td
-                    className={cn(
-                      "relative min-w-0 px-[14px] py-[10px] text-sm text-foreground",
-                      alignClass[col.align ?? "left"],
-                    )}
-                    data-testid={`${DataTableTestId.Cell}-${rowKey}-${col.key}`}
-                    key={col.key}
-                  >
-                    {i === 0 && href && (
-                      <a
-                        aria-label={rowKey}
-                        className="absolute inset-0"
-                        data-testid={DataTableTestId.RowLink}
-                        href={href}
-                      />
-                    )}
-                    {col.render ? col.render(row) : defaultCell(row, col.key)}
-                  </td>
-                ))}
-              </tr>
-            );
-          })
-        )}
-      </tbody>
-    </table>
+                {col.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody data-testid={DataTableTestId.Body}>
+          {loading ? (
+            <tr>
+              <td colSpan={columns.length}>
+                <div className="px-[14px] py-[14px]" data-testid={DataTableTestId.Loading}>
+                  <Typography type="bodySm" variant="secondary">
+                    Loading…
+                  </Typography>
+                </div>
+              </td>
+            </tr>
+          ) : rows.length === 0 ? (
+            <tr>
+              <td colSpan={columns.length}>
+                <div className="px-[14px] py-[14px]" data-testid={DataTableTestId.Empty}>
+                  {typeof empty === "string" ? (
+                    <Typography type="bodySm" variant="secondary">
+                      {empty}
+                    </Typography>
+                  ) : (
+                    empty
+                  )}
+                </div>
+              </td>
+            </tr>
+          ) : (
+            rows.map((row) => {
+              const rowKey = getRowKey(row);
+              const href = rowHref?.(row);
+              const clickable = Boolean(onRowClick) && !href;
+              return (
+                <tr
+                  className={cn(
+                    "border-b border-border last:border-b-0",
+                    (clickable || href) &&
+                      cn("relative cursor-pointer hover:bg-elevated", focusRingInset),
+                  )}
+                  data-testid={`${DataTableTestId.Row}-${rowKey}`}
+                  key={rowKey}
+                  onClick={clickable ? () => onRowClick?.(row) : undefined}
+                  onKeyDown={
+                    clickable
+                      ? (e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            onRowClick?.(row);
+                          }
+                        }
+                      : undefined
+                  }
+                  role={clickable ? "button" : undefined}
+                  tabIndex={clickable ? 0 : undefined}
+                >
+                  {columns.map((col, i) => (
+                    <td
+                      className={cn(
+                        "relative min-w-0 px-[14px] py-[10px] text-sm text-foreground",
+                        alignClass[col.align ?? "left"],
+                      )}
+                      data-testid={`${DataTableTestId.Cell}-${rowKey}-${col.key}`}
+                      key={col.key}
+                    >
+                      {i === 0 && href && (
+                        <a
+                          aria-label={rowKey}
+                          className="absolute inset-0"
+                          data-testid={DataTableTestId.RowLink}
+                          href={href}
+                        />
+                      )}
+                      {col.render ? col.render(row) : defaultCell(row, col.key)}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 }

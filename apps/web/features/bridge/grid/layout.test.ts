@@ -7,6 +7,7 @@ import {
   dragResize,
   fromArr,
   removeWidget,
+  stackLayout,
   toCells,
   viewLayout,
 } from "./layout";
@@ -129,5 +130,20 @@ describe("add/remove/view", () => {
     expect(get(l, "tasks").h).toBe(1);
     expect(get(l, "runs").y).toBe(4);
     expect(get(DEFAULT_LAYOUT, "tasks").h).toBe(10);
+  });
+});
+
+describe("stackLayout", () => {
+  it("stacks widgets full width in reading order, keeping each height", () => {
+    const l = fromArr([
+      ["prs", 6, 0, 6, 4],
+      ["runs", 0, 0, 6, 3],
+      ["todo", 0, 3, 12, 2],
+    ]);
+    expect(stackLayout(l).map(({ id, x, y, w, h }) => [id, x, y, w, h])).toEqual([
+      ["runs", 0, 0, 12, 3],
+      ["prs", 0, 3, 12, 4],
+      ["todo", 0, 7, 12, 2],
+    ]);
   });
 });

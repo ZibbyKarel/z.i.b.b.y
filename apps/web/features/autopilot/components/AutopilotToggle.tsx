@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Container, Dialog, Stack, StatePill, Typography } from "@zibby/design-system";
+import { Button, Container, Dialog, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { isOperatorTokenError } from "../../../state/operatorToken";
@@ -9,18 +9,15 @@ import { useAutopilotQuery } from "../queries";
 
 export enum AutopilotToggleTestId {
   Root = "autopilot-toggle",
-  TurnOn = "autopilot-toggle-on",
-  TurnOff = "autopilot-toggle-off",
-  Status = "autopilot-toggle-status",
+  Toggle = "autopilot-toggle-button",
   Confirm = "autopilot-toggle-confirm",
   Cancel = "autopilot-toggle-cancel",
   Error = "autopilot-toggle-error",
 }
 
 /**
- * Phase 4 — the bridge's Autopilot switch. OFF → a button that opens a confirm dialog
- * (ON needs the operator token); ON → a status pill with the pending count and a
- * one-click OFF.
+ * Phase 4 — the top-bar Autopilot switch, an icon toggle (`aria-pressed`). OFF → opens a
+ * confirm dialog (ON needs the operator token); ON → filled, one click turns it off.
  */
 export function AutopilotToggle() {
   const t = useTranslations("autopilot");
@@ -47,39 +44,17 @@ export function AutopilotToggle() {
 
   return (
     <Container data-testid={AutopilotToggleTestId.Root}>
-      {on ? (
-        <Stack align="center" direction="row" gap="100">
-          <StatePill
-            data-testid={AutopilotToggleTestId.Status}
-            label={t("status", { pending })}
-            state="working"
-          />
-          <Button
-            aria-label={t("turnOff")}
-            data-testid={AutopilotToggleTestId.TurnOff}
-            icon="stop"
-            intent="secondary"
-            loading={setAutopilot.isPending}
-            onClick={() => setAutopilot.mutate({ body: { level: "off" } })}
-            size="md"
-            title={t("turnOff")}
-          >
-            {t("turnOff")}
-          </Button>
-        </Stack>
-      ) : (
-        <Button
-          aria-label={t("turnOn")}
-          data-testid={AutopilotToggleTestId.TurnOn}
-          icon="bolt"
-          intent="secondary"
-          onClick={() => setConfirming(true)}
-          size="md"
-          title={t("turnOn")}
-        >
-          {t("label")}
-        </Button>
-      )}
+      <Button
+        aria-label={on ? t("status", { pending }) : t("turnOn")}
+        aria-pressed={on}
+        data-testid={AutopilotToggleTestId.Toggle}
+        icon="sparkles"
+        intent={on ? "primary" : "ghost"}
+        loading={on && setAutopilot.isPending}
+        onClick={() => (on ? setAutopilot.mutate({ body: { level: "off" } }) : setConfirming(true))}
+        size="sm"
+        title={on ? `${t("status", { pending })} — ${t("turnOff")}` : t("turnOn")}
+      />
       <Dialog
         actions={
           <>

@@ -82,7 +82,7 @@ export function RunHeaderActions({ run }: { run: RunView }) {
   const current = buildStageRail(run, mode, definedPhaseIds, now).find((r) => r.current);
 
   return (
-    <Row gap="75">
+    <Row wrap gap="75">
       <ChatAboutButton about={runChatAbout(run)} />
       <RunDetailActions
         agentId={run.kind === "agent" ? run.owner : undefined}

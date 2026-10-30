@@ -114,17 +114,21 @@ export function SubNav({
       // a no-op when an ancestor gives no height (e.g. Storybook in isolation).
       style={{ height: "100%" }}
     >
+      {/* Narrower than its content (a phone), the links scroll on their own axis
+          while the actions stay put at the right. */}
       {trail ? (
-        <div className="flex min-w-0 items-stretch">
+        <div className="flex min-w-0 items-stretch overflow-x-auto">
           {nav}
           {trailEl}
         </div>
-      ) : (
+      ) : responsive ? (
         nav
+      ) : (
+        <div className="flex min-w-0 items-stretch overflow-x-auto">{nav}</div>
       )}
       {actions && (
         <div
-          className={cn("flex items-center gap-2 px-3", responsive && "py-2")}
+          className={cn("flex shrink-0 items-center gap-2 px-3", responsive && "py-2")}
           data-testid={SubNavTestId.Actions}
         >
           {actions}

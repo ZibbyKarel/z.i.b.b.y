@@ -3,7 +3,13 @@
 import { BRIDGE_DENSITY, WidgetBoard, WidgetFrame } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { type PointerEvent, useCallback, useMemo, useState } from "react";
-import { type BridgeWidget, type DragOrigin, toCells, viewLayout } from "../grid/layout";
+import {
+  type BridgeWidget,
+  type DragOrigin,
+  stackLayout,
+  toCells,
+  viewLayout,
+} from "../grid/layout";
 import type { BridgeState } from "../state/useBridgeState";
 import { type BridgeWidgetInfo, WIDGETS } from "../widgets/registry";
 import { boardHeight, colWidth, widgetRect } from "../grid/positions";
@@ -26,7 +32,8 @@ interface HostProps {
   onInfo: (id: string, info: BridgeWidgetInfo) => void;
   onConfigure: (id: string) => void;
   onRemove: (id: string) => void;
-  onDragStart: (id: string, mode: "move" | ResizeCorner, e: PointerEvent<HTMLElement>) => void;
+  /** Omitted on the stacked phone board — no move/resize there. */
+  onDragStart?: (id: string, mode: "move" | ResizeCorner, e: PointerEvent<HTMLElement>) => void;
 }
 
 /** One widget: its frame chrome + the registry body, wired to board state. */
@@ -70,10 +77,10 @@ function BridgeWidgetHost({
       loading={info?.loading}
       loadingLabel={t("bridge.loading")}
       onConfigure={def.configurable ? () => onConfigure(id) : undefined}
-      onMovePointerDown={(e) => onDragStart(id, "move", e)}
+      onMovePointerDown={onDragStart && ((e) => onDragStart(id, "move", e))}
       onRefresh={info?.onRefresh}
       onRemove={() => onRemove(id)}
-      onResizePointerDown={(e, corner) => onDragStart(id, corner, e)}
+      onResizePointerDown={onDragStart && ((e, corner) => onDragStart(id, corner, e))}
       onToggleCollapse={() => state.toggleCollapsed(id)}
       refreshLabel={t("bridge.refresh")}
       refreshing={info?.refreshing}
@@ -109,6 +116,8 @@ export interface BridgeBoardProps {
   state: BridgeState;
   density: Density;
   sheetSide?: "left" | "right";
+  /** Phone view: widgets one under another, full width, no drag/resize. */
+  stacked?: boolean;
 }
 
 /**
@@ -116,7 +125,12 @@ export interface BridgeBoardProps {
  * and positions each widget at the fixed width × height from the layout. Collapsed widgets shrink
  * to one row (and the board compacts); while a drag is in progress it shows the raw layout. Header drag moves, corners resize — always on.
  */
-export function BridgeBoard({ state, density, sheetSide = "right" }: BridgeBoardProps) {
+export function BridgeBoard({
+  state,
+  density,
+  sheetSide = "right",
+  stacked = false,
+}: BridgeBoardProps) {
   const { gap, rowHeight } = BRIDGE_DENSITY[density];
   const { layout, collapsed, draggingId } = state;
   const dragging = draggingId !== null;
@@ -163,8 +177,9 @@ export function BridgeBoard({ state, density, sheetSide = "right" }: BridgeBoard
     const shrink = new Set(
       layout.filter((w) => !configuring[w.id] && collapsed[w.id]).map((w) => w.id),
     );
-    return viewLayout(layout, shrink);
-  }, [dragging, layout, collapsed, configuring]);
+    const view = viewLayout(layout, shrink);
+    return stacked ? stackLayout(view) : view;
+  }, [dragging, layout, collapsed, configuring, stacked]);
 
   const colW = colWidth(width, gap);
 
@@ -218,7 +233,7 @@ export function BridgeBoard({ state, density, sheetSide = "right" }: BridgeBoard
                 info={info[w.id]}
                 key={w.id}
                 onConfigure={onConfigure}
-                onDragStart={onDragStart}
+                onDragStart={stacked ? undefined : onDragStart}
                 onEmpty={onEmpty}
                 onInfo={onInfo}
                 onRemove={onRemove}

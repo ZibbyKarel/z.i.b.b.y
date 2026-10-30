@@ -3,6 +3,7 @@
 import { Stack, WidgetCatalog } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { useIsPhone } from "../../../hooks/useIsPhone";
 import { useUiSettings } from "../../system";
 import { useBridgeState } from "../state/useBridgeState";
 import { WIDGETS, WIDGET_TYPES } from "../widgets/registry";
@@ -20,6 +21,7 @@ export function BridgeScreen() {
   const t = useTranslations();
   const state = useBridgeState();
   const { ui } = useUiSettings();
+  const phone = useIsPhone();
   const [manageOpen, setManageOpen] = useState(false);
   const [sheetSide, setSheetSide] = useState<"left" | "right">("right");
 
@@ -36,15 +38,18 @@ export function BridgeScreen() {
       direction="col"
       style={{ height: "100%", position: "relative" }}
     >
-      <BridgeHeader
-        layouts={state.layouts}
-        onManage={() => setManageOpen(true)}
-        onPreset={state.applyPreset}
-        onToggleCatalog={state.toggleCatalog}
-        preset={state.preset}
-      />
+      {/* Phones get a stacked, read-only board — the layout controls don't apply. */}
+      {phone ? null : (
+        <BridgeHeader
+          layouts={state.layouts}
+          onManage={() => setManageOpen(true)}
+          onPreset={state.applyPreset}
+          onToggleCatalog={state.toggleCatalog}
+          preset={state.preset}
+        />
+      )}
       <Stack grow minH0 direction="col" style={{ position: "relative" }}>
-        <BridgeBoard density={ui.density} sheetSide={sheetSide} state={state} />
+        <BridgeBoard density={ui.density} sheetSide={sheetSide} stacked={phone} state={state} />
         {/* Sheet layer: the detail-sheet task renders its overlay here, over the board. */}
         <DetailSheet
           onClose={state.closeSelection}

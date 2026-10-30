@@ -126,3 +126,5 @@ graduations, and so on.
 - Both kinds map to the operator-channel event `autopilot-action` (Tier 2, on by default,
   toggled in `notify.events`). An approval that autopilot decided does not also send an
   `approval-waiting` ping.
+- Outbound Slack notifications only go out while autopilot is on (see the policy in
+  `docs/api/operator-channel.md`). Switching off is therefore not announced on Slack.

@@ -10,8 +10,6 @@ vi.mock("../../system", () => ({
   useUiSettings: () => ({ ui: UiSettingsSchema.parse({}), setDensity, setBridge: vi.fn() }),
 }));
 
-vi.mock("../../autopilot", () => ({ AutopilotToggle: () => null }));
-
 const props: BridgeHeaderProps = {
   preset: "DEFAULT",
   layouts: { shown: [], hidden: [] },

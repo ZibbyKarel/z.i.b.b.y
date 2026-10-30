@@ -136,6 +136,9 @@ Not mapped on purpose: failed or dead-lettered runs (not in the Phase 1 list) an
 Applied in this order, per event:
 
 1. **Toggle.** The channel must be `enabled` and the kind must be in `notify.events`.
+   Autopilot must also be on. With autopilot off nothing is pushed, except an event
+   whose task already has a bound Slack thread (a task started or announced on Slack),
+   which is still answered in that thread. Inbound (listening) is never gated.
 2. **Dedupe.** `kind + target + state` is sent once per 24 h. This is in memory only,
    which is safe because the activity stream doesn't replay after a restart.
 3. **Coalesce.** Events that land within 3 s of each other go out as one message: a

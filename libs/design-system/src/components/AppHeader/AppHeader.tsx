@@ -3,7 +3,6 @@ import { LAYOUT } from "../../tokens";
 import { cn } from "../../utils/cn";
 import { focusRing, focusRingInset } from "../../utils/focus";
 import { BrandMark } from "../BrandMark/BrandMark";
-import { Container } from "../Container/Container";
 import { Row } from "../Stack/Stack";
 import type { SubNavLinkComponent } from "../SubNav/SubNav";
 import { Wordmark } from "../Wordmark/Wordmark";
@@ -16,6 +15,7 @@ export enum AppHeaderTestId {
   Operator = "app-header-operator",
   ActiveCount = "app-header-active-count",
   Limits = "app-header-limits",
+  Autopilot = "app-header-autopilot",
   ThemeToggle = "app-header-theme-toggle",
   Notifications = "app-header-notifications",
   Search = "app-header-search",
@@ -39,6 +39,9 @@ export interface AppHeaderProps {
   activeCount?: ReactNode;
   /** 5H / WEEK usage readout slot (a `LimitBar` pair), trailing cluster. */
   limits?: ReactNode;
+  /** Autopilot switch slot (an app-composed icon toggle), first in the trailing
+   *  cluster — kept on every width. */
+  autopilot?: ReactNode;
   /** Light/dark toggle slot (an app-composed icon `Button`), trailing cluster —
    *  just before the notification bell. */
   themeToggle?: ReactNode;
@@ -78,6 +81,7 @@ export function AppHeader({
   operator,
   activeCount,
   limits,
+  autopilot,
   themeToggle,
   notifications,
   menu,
@@ -90,21 +94,17 @@ export function AppHeader({
   const mark = wordmark ?? (
     <Row align="center" style={{ gap: 10 }}>
       <BrandMark />
-      <Wordmark />
+      <span className="hidden md:inline-flex">
+        <Wordmark />
+      </span>
     </Row>
   );
   return (
-    <Row
-      align="center"
-      as="header"
+    <header
+      className="flex items-center gap-3 border-b border-line px-3 md:gap-4 md:px-5"
       data-testid={AppHeaderTestId.Root}
-      gap="200"
       ref={ref}
-      style={{
-        height: LAYOUT.headerHeight,
-        padding: "0 20px",
-        borderBottom: "1px solid var(--color-line)",
-      }}
+      style={{ height: LAYOUT.headerHeight }}
     >
       <div data-testid={AppHeaderTestId.Wordmark}>
         {homeHref ? (
@@ -121,11 +121,16 @@ export function AppHeader({
         )}
       </div>
 
-      <Container data-testid={AppHeaderTestId.Nav} height="100%" shrink={false}>
+      {/* Below `md` the nav takes the free width and scrolls on its own axis; the
+          search trigger, usage readout and theme toggle step aside. */}
+      <div
+        className="h-full min-w-0 flex-1 overflow-x-auto md:flex-none md:shrink-0 md:overflow-visible"
+        data-testid={AppHeaderTestId.Nav}
+      >
         {nav}
-      </Container>
+      </div>
 
-      <Container grow minW0 style={{ display: "flex", justifyContent: "center" }}>
+      <div className="hidden min-w-0 flex-1 justify-center md:flex">
         {onSearchClick && (
           <button
             aria-label={searchLabel}
@@ -146,16 +151,25 @@ export function AppHeader({
             </span>
           </button>
         )}
-      </Container>
+      </div>
 
       <Row align="center" gap="150" shrink={false}>
         {operator && <span data-testid={AppHeaderTestId.Operator}>{operator}</span>}
         {activeCount && <span data-testid={AppHeaderTestId.ActiveCount}>{activeCount}</span>}
-        {limits && <span data-testid={AppHeaderTestId.Limits}>{limits}</span>}
-        {themeToggle && <span data-testid={AppHeaderTestId.ThemeToggle}>{themeToggle}</span>}
+        {limits && (
+          <span className="hidden md:inline" data-testid={AppHeaderTestId.Limits}>
+            {limits}
+          </span>
+        )}
+        {autopilot && <span data-testid={AppHeaderTestId.Autopilot}>{autopilot}</span>}
+        {themeToggle && (
+          <span className="hidden md:inline" data-testid={AppHeaderTestId.ThemeToggle}>
+            {themeToggle}
+          </span>
+        )}
         {notifications && <span data-testid={AppHeaderTestId.Notifications}>{notifications}</span>}
         {menu && <span data-testid={AppHeaderTestId.Menu}>{menu}</span>}
       </Row>
-    </Row>
+    </header>
   );
 }

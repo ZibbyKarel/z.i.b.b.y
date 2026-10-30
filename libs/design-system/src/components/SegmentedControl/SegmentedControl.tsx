@@ -87,7 +87,7 @@ export function SegmentedControl({
     <div
       aria-label={ariaLabelledby ? undefined : ariaLabel}
       aria-labelledby={ariaLabelledby}
-      className="inline-flex gap-0.5 rounded-md border border-line-2 bg-panel p-0.5"
+      className="inline-flex max-w-full gap-0.5 overflow-x-auto rounded-md border border-line-2 bg-panel p-0.5"
       data-testid={SegmentedControlTestId.Root}
       ref={ref}
       role="radiogroup"

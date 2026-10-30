@@ -100,7 +100,7 @@ function LocalVault() {
   const backlinks = note?.backlinks ?? [];
 
   const actions = (
-    <Stack align="center" direction="row" gap="100">
+    <Stack wrap align="center" direction="row" gap="100">
       <Button
         data-testid="vault-quickcapture-toggle"
         icon="bolt"

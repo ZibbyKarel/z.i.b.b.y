@@ -88,7 +88,12 @@ export function TabList({ children }: { children: ReactNode }) {
     );
   }
   return (
-    <div className={cn("shrink-0", variant === "mono" ? "h-full" : "border-b border-border")}>
+    <div
+      className={cn(
+        "shrink-0",
+        variant === "mono" ? "h-full" : "max-w-full overflow-x-auto border-b border-border",
+      )}
+    >
       <Row
         align="stretch"
         data-testid={TabsTestId.List}

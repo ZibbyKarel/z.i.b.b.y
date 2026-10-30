@@ -19,6 +19,7 @@ import { RateLimitedError } from "./operator-channel.port";
 import { OperatorChannelService } from "./operator-channel.service";
 import { OperatorChannelStore } from "./operator-channel.store";
 import type { OperatorEventLookups } from "./operator-events";
+import type { AutopilotService } from "../autopilot/autopilot.service";
 import { OperatorNotifier, inQuietHours } from "./operator-notifier.service";
 import { SlackOperatorChannel } from "./slack-operator-channel";
 
@@ -114,11 +115,14 @@ interface Harness {
 let dir: string;
 
 beforeEach(async () => {
+  autopilotOn = true;
   dir = await fs.mkdtemp(path.join(os.tmpdir(), "operator-notifier-"));
 });
 afterEach(async () => {
   await fs.rm(dir, { recursive: true, force: true });
 });
+
+let autopilotOn = true;
 
 async function harness(settings: OperatorChannelSettingsInput = {}): Promise<Harness> {
   const store = new OperatorChannelStore(dir);
@@ -150,6 +154,7 @@ async function harness(settings: OperatorChannelSettingsInput = {}): Promise<Har
     service,
     lookups,
     logger,
+    { isOn: () => autopilotOn } as unknown as AutopilotService,
   );
   notifier.coalesceMs = 0;
   notifier.minIntervalMs = 0;
@@ -319,6 +324,25 @@ describe("OperatorNotifier — thread bindings (Phase 3)", () => {
     const reply = h.service.fake.sent[1]!;
     expect(reply.notification).toMatchObject({ kind: "run-completed", threadTs: parent.ts });
     expect(await h.store.threads.get(reply.ref.channel, reply.ref.ts)).toBeNull();
+  });
+});
+
+describe("OperatorNotifier — autopilot gate", () => {
+  it("autopilot off: nothing is pushed", async () => {
+    const h = await harness();
+    autopilotOn = false;
+    await feed(h, MAPPED[0]![1]);
+    expect(h.service.fake.sent).toHaveLength(0);
+  });
+
+  it("autopilot off: a task with an open Slack thread is still answered there", async () => {
+    const h = await harness();
+    await feed(h, MAPPED[0]![1]);
+    const parent = h.service.fake.sent[0]!.ref;
+    await h.store.threads.addFollowUp(parent.channel, parent.ts, "t-plain");
+    autopilotOn = false;
+    await feed(h, MAPPED[1]![1]);
+    expect(h.service.fake.sent[1]?.notification).toMatchObject({ threadTs: parent.ts });
   });
 });
 

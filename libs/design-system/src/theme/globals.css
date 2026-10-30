@@ -353,6 +353,17 @@
   --bridge-border: transparent;
 }
 
+/* Phones (below `md`) — every density tightens to the same small gutter: page
+ * padding, card padding and gaps shrink with `--density`, the board keeps a slim
+ * edge. The board's row height and gap stay JS-measured (`BRIDGE_DENSITY`). */
+@media (max-width: 767.98px) {
+  :root,
+  [data-density] {
+    --density: 0.6;
+    --bridge-bp: 8px;
+  }
+}
+
 /* ---------------------------------------------------------------------------
  * Reduced motion opt-in (ZB-11 Appearance settings) — a per-viewer convenience
  * layered ON TOP of the OS `prefers-reduced-motion` query above: the app sets

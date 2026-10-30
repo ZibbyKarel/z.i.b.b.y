@@ -8,6 +8,7 @@ import type {
 } from "@zibby/contracts";
 import type { Subscription } from "rxjs";
 import { ActivityEventsService } from "../activity/activity-events.service";
+import { AutopilotService } from "../autopilot/autopilot.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import {
   type MessageRef,
@@ -54,6 +55,9 @@ export function inQuietHours(q: QuietHours | undefined, now: Date): boolean {
  * every existing emit point already feeds), maps each entry via
  * {@link toOperatorEvent} (unmapped = Tier-1 = never sent), then:
  *
+ * 0. **autopilot** — with autopilot off nothing is pushed, except into a thread the
+ *    operator already has open (a task started or announced on Slack); listening is
+ *    unaffected;
  * 1. **toggle** — the kind must be in `notify.events`, the channel `enabled`;
  * 2. **dedupe** — `kind + target + state` is sent once per {@link DEDUPE_WINDOW_MS};
  * 3. **coalesce** — events landing within {@link coalesceMs} of the first one go out
@@ -92,6 +96,7 @@ export class OperatorNotifier implements OnModuleInit, OnModuleDestroy {
     private readonly channel: OperatorChannelService,
     @Inject(OPERATOR_EVENT_LOOKUPS) private readonly lookups: OperatorEventLookups,
     logger: LoggerService,
+    private readonly autopilot: AutopilotService,
   ) {
     this.log = logger.child(OperatorNotifier.name);
   }
@@ -132,6 +137,11 @@ export class OperatorNotifier implements OnModuleInit, OnModuleDestroy {
       if (!settings.enabled) return;
       const event = await toOperatorEvent(entry, this.lookups);
       if (!event || !settings.notify.events.includes(event.kind)) return;
+      if (
+        !this.autopilot.isOn() &&
+        !(event.taskId && (await this.store.threads.forTask(event.taskId)))
+      )
+        return;
       const now = this.now().getTime();
       const key = `${event.kind}|${event.target}|${event.state}`;
       const last = this.seen.get(key);

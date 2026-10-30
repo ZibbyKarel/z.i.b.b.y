@@ -40,9 +40,11 @@ import { HIGH_RISK_TYPES, formatWaited } from "../../../features/approvals/appro
 import { counterSuffix } from "../../../features/inbox/inbox";
 import { useInboxCounts } from "../../../features/inbox/useInboxCounts";
 import { useLimitsQuery } from "../../../features/limits";
+import { useIsPhone } from "../../../hooks/useIsPhone";
 import { useNow } from "../../../hooks/useNow";
 import { MINUTE_MS, formatCountdown } from "../../../utils/time";
 import { NotificationBell } from "../../../features/notifications";
+import { AutopilotToggle } from "../../../features/autopilot";
 import {
   PinPageDialog,
   PinnedRail,
@@ -189,6 +191,7 @@ function SectionSubNav({
   const tShell = useTranslations("shell");
   const pathname = usePathname();
   const router = useRouter();
+  const phone = useIsPhone();
   const section = SECTIONS.find((s) => s.id === active) ?? SECTIONS[0];
   const activeHref = activeSubNavHref(section.tabs, pathname);
   // Inbox counters (global, actionable only) ride in the tab labels — `SubNavItem`
@@ -224,13 +227,14 @@ function SectionSubNav({
            *  stays reachable via the `N` shortcut). Hidden on that page itself. */}
           {pathname !== NEW_TASK_PAGE_HREF && (
             <Button
+              aria-label={tShell("newTask")}
               data-testid={AppShellTestId.NewTask}
               icon="plus"
               intent="primary"
               onClick={() => router.push(NEW_TASK_PAGE_HREF as Route)}
               size="sm"
             >
-              {tShell("newTask")}
+              {phone ? null : tShell("newTask")}
             </Button>
           )}
         </>
@@ -364,6 +368,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
           fullBleed={pathname === "/dashboard"}
           header={
             <AppHeader
+              autopilot={<AutopilotToggle />}
               homeHref="/dashboard"
               limits={trailing.limits}
               linkComponent={NavLink}

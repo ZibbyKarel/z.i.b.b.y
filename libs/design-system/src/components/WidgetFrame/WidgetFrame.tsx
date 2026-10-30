@@ -158,7 +158,7 @@ export function WidgetFrame({
           open
             ? "box-content h-[var(--bridge-head-h)] flex-none border-b border-line"
             : "box-border h-[calc(var(--bridge-rh)-2px)] flex-none",
-          "cursor-move",
+          onMovePointerDown && "cursor-move",
         )}
         data-testid={WidgetFrameTestId.Header}
         onPointerDown={onMovePointerDown}
@@ -283,25 +283,28 @@ export function WidgetFrame({
           {sizeLabel}
         </span>
       ) : null}
-      {(Object.keys(RESIZE_HANDLES) as ResizeCorner[]).map((corner) => {
-        const name = `${resizeLabel ?? "Resize"} (${resizeCornerLabels?.[corner] ?? CORNER_NAMES[corner]})`;
-        return (
-          <div
-            aria-label={name}
-            className={cn(
-              "absolute box-border h-[12px] w-[12px] border-ink",
-              "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
-              dragging && "opacity-100",
-              RESIZE_HANDLES[corner],
-            )}
-            data-testid={`${WidgetFrameTestId.Resize}-${corner}`}
-            key={corner}
-            onPointerDown={(e) => onResizePointerDown?.(e, corner)}
-            role="separator"
-            title={name}
-          />
-        );
-      })}
+      {/* No resize handler (e.g. a read-only stacked board) — no handles. */}
+      {(onResizePointerDown ? (Object.keys(RESIZE_HANDLES) as ResizeCorner[]) : []).map(
+        (corner) => {
+          const name = `${resizeLabel ?? "Resize"} (${resizeCornerLabels?.[corner] ?? CORNER_NAMES[corner]})`;
+          return (
+            <div
+              aria-label={name}
+              className={cn(
+                "absolute box-border h-[12px] w-[12px] border-ink",
+                "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+                dragging && "opacity-100",
+                RESIZE_HANDLES[corner],
+              )}
+              data-testid={`${WidgetFrameTestId.Resize}-${corner}`}
+              key={corner}
+              onPointerDown={(e) => onResizePointerDown?.(e, corner)}
+              role="separator"
+              title={name}
+            />
+          );
+        },
+      )}
     </section>
   );
 }

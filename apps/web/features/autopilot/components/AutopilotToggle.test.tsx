@@ -22,9 +22,9 @@ beforeEach(() => {
 describe("AutopilotToggle", () => {
   it("OFF: turning on goes through a confirm dialog that shows the pending count", async () => {
     render(<AutopilotToggle />);
-    expect(screen.queryByTestId(AutopilotToggleTestId.Status)).toBeNull();
-    const on = screen.getByTestId(AutopilotToggleTestId.TurnOn);
+    const on = screen.getByTestId(AutopilotToggleTestId.Toggle);
     expect(on).toHaveAccessibleName();
+    expect(on).toHaveAttribute("aria-pressed", "false");
     await userEvent.click(on);
     expect(mutate).not.toHaveBeenCalled();
     expect(screen.getByText(/3/)).toBeInTheDocument();
@@ -34,12 +34,12 @@ describe("AutopilotToggle", () => {
 
   it("cancel closes the dialog without switching", async () => {
     render(<AutopilotToggle />);
-    await userEvent.click(screen.getByTestId(AutopilotToggleTestId.TurnOn));
+    await userEvent.click(screen.getByTestId(AutopilotToggleTestId.Toggle));
     await userEvent.click(screen.getByTestId(AutopilotToggleTestId.Cancel));
     expect(mutate).not.toHaveBeenCalled();
   });
 
-  it("ON: shows the status pill and switches off in one click", async () => {
+  it("ON: the pressed toggle switches off in one click", async () => {
     status = {
       level: "full",
       since: "2026-10-29T12:00:00.000Z",
@@ -47,9 +47,9 @@ describe("AutopilotToggle", () => {
       pendingApprovals: 1,
     };
     render(<AutopilotToggle />);
-    expect(screen.getByTestId(AutopilotToggleTestId.Status)).toBeInTheDocument();
-    const off = screen.getByTestId(AutopilotToggleTestId.TurnOff);
+    const off = screen.getByTestId(AutopilotToggleTestId.Toggle);
     expect(off).toHaveAccessibleName();
+    expect(off).toHaveAttribute("aria-pressed", "true");
     await userEvent.click(off);
     expect(mutate).toHaveBeenCalledWith({ body: { level: "off" } });
   });
@@ -57,7 +57,7 @@ describe("AutopilotToggle", () => {
   it("a 401 says the operator token is missing", async () => {
     error = { status: 401, body: {} };
     render(<AutopilotToggle />);
-    await userEvent.click(screen.getByTestId(AutopilotToggleTestId.TurnOn));
+    await userEvent.click(screen.getByTestId(AutopilotToggleTestId.Toggle));
     expect(screen.getByTestId(AutopilotToggleTestId.Error)).toBeInTheDocument();
   });
 });

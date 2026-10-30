@@ -123,3 +123,16 @@ export function viewLayout(
 ): BridgeWidget[] {
   return compact(layout.map((it) => ({ ...it, h: shrinkIds.has(it.id) ? 1 : it.h })));
 }
+
+/** Phone view: every widget full width, one under another in reading order (y, then x),
+ *  each keeping its own height. */
+export function stackLayout(layout: readonly BridgeWidget[]): BridgeWidget[] {
+  let y = 0;
+  return [...layout]
+    .sort((a, b) => a.y - b.y || a.x - b.x)
+    .map((it) => {
+      const placed = { ...it, x: 0, w: COLS, y };
+      y += it.h;
+      return placed;
+    });
+}
