@@ -6,8 +6,15 @@ import { readOperatorToken } from "./operatorToken";
  * Base URL of the API. Configurable per environment via NEXT_PUBLIC_API_URL
  * (must be `NEXT_PUBLIC_` to reach the browser); falls back to the local API
  * dev server. No trailing slash — contract paths start with `/api`.
+ *
+ * A page opened from another host (the phone over the tailnet) can't reach the
+ * Mac's `localhost`, so it uses NEXT_PUBLIC_REMOTE_API_URL when that is set.
  */
-export const API_URL = process.env.NEXT_PUBLIC_API_URL!;
+const remoteApiUrl = process.env.NEXT_PUBLIC_REMOTE_API_URL;
+export const API_URL =
+  remoteApiUrl && typeof window !== "undefined" && window.location.hostname !== "localhost"
+    ? remoteApiUrl
+    : process.env.NEXT_PUBLIC_API_URL!;
 
 /**
  * App-wide ts-rest ↔ TanStack Query binding, derived from the `libs/contracts`

@@ -96,6 +96,17 @@ gitignored. It never contains a token.
 for example via `tailscale serve`). Then "Open in ZIBBY" buttons work from your phone on
 the tailnet and nowhere else. Without it, messages carry only the PR link.
 
+The page on the phone also has to reach the API, which the Mac serves on `localhost`:
+
+```bash
+tailscale serve --bg --https=443 http://localhost:3000    # web
+tailscale serve --bg --https=8443 http://localhost:3333   # API
+```
+
+Then set `NEXT_PUBLIC_REMOTE_API_URL=https://<host>.<tailnet>.ts.net:8443` in
+`apps/web/.env` (used only when the page isn't opened from `localhost`), and add
+`https://<host>.<tailnet>.ts.net` to `CORS_ORIGIN` in `apps/api/.env`.
+
 ## Events
 
 Only events ZIBBY **already records** are mapped. The notifier subscribes to the activity
