@@ -382,6 +382,14 @@ export type {
 // ---------------------------------------------------------------------------
 // Overlay and navigation (ZA-05)
 // ---------------------------------------------------------------------------
+export { MobileMenu, MobileMenuTestId } from "./components/MobileMenu/MobileMenu";
+export type {
+  MobileMenuItem,
+  MobileMenuProps,
+  MobileMenuSection,
+} from "./components/MobileMenu/MobileMenu";
+export { MobileToolbar, MobileToolbarTestId } from "./components/MobileToolbar/MobileToolbar";
+export type { MobileToolbarProps } from "./components/MobileToolbar/MobileToolbar";
 export { Sheet, SheetTestId } from "./components/Sheet/Sheet";
 export type { SheetProps, SheetSide, SheetWidth } from "./components/Sheet/Sheet";
 

@@ -10,9 +10,8 @@ import { Typography } from "../Typography/Typography";
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-/** Edge the sheet is anchored to — `"right"` only today; kept as a union so a
- *  future edge (e.g. `"bottom"` for a mobile sheet) is additive, not a rename. */
-export type SheetSide = "right";
+/** Edge the sheet is anchored to — a union so a future edge (e.g. `"bottom"`) is additive. */
+export type SheetSide = "left" | "right";
 
 /** Sealed width presets, distinct from {@link DialogWidth} — a Sheet is an
  *  edge-anchored panel, not a centred modal (I-5). */
@@ -53,7 +52,7 @@ export interface SheetProps {
 }
 
 /**
- * A right-edge slide-in panel (DS App mock's "Approval sheet") — full viewport
+ * A left- or right-edge (default right) slide-in panel (DS App mock's "Approval sheet") — full viewport
  * height, hairline `--ink` border on its leading edge, its own focus
  * trap/Escape/overlay-stack wiring (mirrors {@link Dialog}'s internals almost
  * verbatim). Deliberately NOT a `Dialog`: a Sheet is anchored to an edge and
@@ -126,7 +125,10 @@ export function Sheet({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex justify-end bg-[var(--color-overlay)]"
+      className={cn(
+        "fixed inset-0 z-50 flex bg-[var(--color-overlay)]",
+        side === "left" ? "justify-start" : "justify-end",
+      )}
       data-testid={SheetTestId.Overlay}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose?.();
@@ -145,8 +147,10 @@ export function Sheet({
         style={{
           width: sheetWidthPx[width],
           maxWidth: "calc(100vw - 32px)",
-          borderLeftWidth: side === "right" ? 1 : undefined,
-          borderLeftStyle: side === "right" ? "solid" : undefined,
+          // Never wider than the viewport (a phone), whatever the preset.
+          ...(side === "right"
+            ? { borderLeftWidth: 1, borderLeftStyle: "solid" }
+            : { borderRightWidth: 1, borderRightStyle: "solid" }),
         }}
         tabIndex={-1}
       >

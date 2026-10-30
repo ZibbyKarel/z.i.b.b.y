@@ -104,6 +104,23 @@ Server component — renders `AppShell` with children.
 
 Client component (`"use client"`):
 
+**Current shell (2026-10-30, supersedes the rail notes below).** There is no side
+rail: the Pinned / Needs-you / Tasks dock is gone, and those live on their pages and
+bridge widgets. The `AutopilotToggle` icon sits in the top bar on every page. Phones
+(`useIsPhone`, below `md`) get a different chrome:
+
+- `MobileToolbar` replaces `AppHeader`. The `MobileMenu` hamburger is on the left: a
+  left `Sheet` with the sections as an expandable tree of sub-pages. On the right are
+  the page actions slot, autopilot, pin, new task and notifications. On the
+  dashboard, the page actions slot holds the manage-layouts button.
+- There is no sub-nav row.
+- `ChatDock` is `compact`: a round launcher that opens a full-screen chat.
+- The bridge board stacks widgets full width, with no drag or resize. A widget row
+  that has a detail page (`BridgeSelection.href`) navigates to it instead of opening
+  the sheet.
+
+Every new screen has to work at 390px wide.
+
 - Uses `usePathname()` to derive the active nav item
 - Mounts `CatalogProvider` → `NewTaskProvider` → `ChatProvider` (in that
   nesting order; `NewTaskProvider` stays the outer task provider — the

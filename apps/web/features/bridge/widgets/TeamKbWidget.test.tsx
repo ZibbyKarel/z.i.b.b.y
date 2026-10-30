@@ -129,6 +129,7 @@ describe("TeamKbWidget", () => {
       id: "devrel:meetings/a b.md",
       widgetId: "w-kb",
       key: "w-kb:decisions:0",
+      href: "/knowledge/vault?source=team%3Adevrel&note=meetings%2Fa%20b.md",
     });
     expect(props.onCountChange).toHaveBeenLastCalledWith(
       expect.objectContaining({ count: 3, aside: "DevRel" }),

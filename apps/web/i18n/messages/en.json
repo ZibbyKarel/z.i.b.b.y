@@ -2097,6 +2097,7 @@
       "buttonTitle": "Open the chat with this as its context"
     },
     "dock": {
+      "launcher": "Open chat",
       "aboutChip": "About: {label}",
       "clearAbout": "Remove the context",
       "targetExplicit": "→ {name}",
@@ -2463,6 +2464,8 @@
     }
   },
   "shell": {
+    "menu": "Menu",
+    "menuClose": "Close menu",
     "newTask": "New task",
     "operatorFallback": "CEO",
     "active": "active",

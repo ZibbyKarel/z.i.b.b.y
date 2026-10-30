@@ -2097,6 +2097,7 @@
       "buttonTitle": "Otevřít chat s touto věcí jako kontextem"
     },
     "dock": {
+      "launcher": "Otevřít chat",
       "aboutChip": "O čem: {label}",
       "clearAbout": "Odebrat kontext",
       "targetExplicit": "→ {name}",
@@ -2463,6 +2464,8 @@
     }
   },
   "shell": {
+    "menu": "Menu",
+    "menuClose": "Zavřít menu",
     "newTask": "Nový úkol",
     "operatorFallback": "CEO",
     "active": "aktivních",

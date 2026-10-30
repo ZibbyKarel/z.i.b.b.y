@@ -112,7 +112,9 @@ export function AppFrame({
 
         <div
           className="relative grid min-h-0 min-w-0"
-          style={{ gridTemplateRows: "min-content minmax(0,1fr)" }}
+          // Without a subnav, `<main>` is the only row — it must take the 1fr track, not the
+          // min-content one (it would grow to its content and push the page past the viewport).
+          style={{ gridTemplateRows: subnav ? "min-content minmax(0,1fr)" : "minmax(0,1fr)" }}
         >
           {subnav && (
             <div

@@ -16,6 +16,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect } from "react";
 import { CommandLine, type ScopeKind } from "../../tasks/components/CommandLine/CommandLine";
+import { useIsPhone } from "../../../hooks/useIsPhone";
 import { useChat } from "../ChatContext";
 import { useChatDock } from "../hooks/useChatDock";
 import { useCreateChatHandoffMutation } from "../mutations";
@@ -78,6 +79,7 @@ function targetLabel(target: TaskTarget): string {
 export function ChatDock() {
   const t = useTranslations("chat");
   const router = useRouter();
+  const phone = useIsPhone();
   const {
     dockOpen,
     setDockOpen,
@@ -241,7 +243,9 @@ export function ChatDock() {
   return (
     <DockFrame
       closeLabel={t("close")}
+      compact={phone}
       composer={composer}
+      launcherLabel={t("dock.launcher")}
       newChatLabel={t("newChat")}
       onNewChat={newChat}
       onOpenChange={setDockOpen}

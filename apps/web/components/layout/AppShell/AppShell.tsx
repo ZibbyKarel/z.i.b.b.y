@@ -6,37 +6,24 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
-  ActivityDock,
   AppFrame,
   AppHeader,
-  ApprovalCard,
   Button,
-  Rail,
+  MobileMenu,
+  MobileToolbar,
   Stack,
   SubNav,
   Tab,
   TabList,
   Tabs,
-  Typography,
   UsagePanel,
 } from "@zibby/design-system";
 import { CatalogProvider } from "../../../state/store";
 import { NEW_TASK_PAGE_HREF, NewTaskProvider, useNewTaskPageHotkey } from "../../../features/tasks";
-import { useAgentSymbol } from "../../../features/agents";
 import { ChatDock, ChatProvider } from "../../../features/chat";
 import { CommandPaletteHost, useCommandPaletteHotkey } from "../../../features/command-palette";
-import {
-  useApprovalsQuery,
-  useApproveMutation,
-  useRejectMutation,
-} from "../../../features/approvals";
-import {
-  ApprovalSheet,
-  approvalRowKey,
-} from "../../../features/approvals/components/ApprovalSheet";
+import { ApprovalSheet } from "../../../features/approvals/components/ApprovalSheet";
 import { useApprovalSheetParam } from "../../../features/approvals/useApprovalSheetParam";
-import { TasksDockPanel, useLiveRuns } from "../../../features/runs/components/TasksDockPanel";
-import { HIGH_RISK_TYPES, formatWaited } from "../../../features/approvals/approval";
 import { counterSuffix } from "../../../features/inbox/inbox";
 import { useInboxCounts } from "../../../features/inbox/useInboxCounts";
 import { useLimitsQuery } from "../../../features/limits";
@@ -47,7 +34,6 @@ import { NotificationBell } from "../../../features/notifications";
 import { AutopilotToggle } from "../../../features/autopilot";
 import {
   PinPageDialog,
-  PinnedRail,
   SubnavPinButton,
   type SubnavPinEntityKind,
   pinHrefFor,
@@ -57,7 +43,6 @@ import { PageActionsSlotProvider } from "../PageActions";
 import { PageBreadcrumbSlotProvider } from "../PageBreadcrumb";
 import { SelfUpgrade } from "../SelfUpgrade";
 import { ThemeToggle } from "../ThemeToggle/ThemeToggle";
-import { useDockState } from "./useDockState";
 import { SECTIONS, type SectionId, type SubTabConfig, sectionForPath } from "../../../state/config";
 
 export enum AppShellTestId {
@@ -172,6 +157,46 @@ function PagePinToggle({
   );
 }
 
+/** Page-pin control: a company/project/team detail page (never /new) gets the
+ *  entity "+ PIN"/"PINNED" toggle (spec step 5), every other page the page toggle. */
+function PinControl({
+  pathname,
+  currentHref,
+  onPinRequested,
+}: {
+  pathname: string;
+  currentHref: string;
+  onPinRequested: () => void;
+}) {
+  const entity = matchEntityDetail(pathname);
+  return entity ? (
+    <SubnavPinButton href={entity.href} id={entity.id} key={entity.href} kind={entity.kind} />
+  ) : (
+    <PagePinToggle currentHref={currentHref} onPinRequested={onPinRequested} />
+  );
+}
+
+/** ZB-04b: "+ NEW TASK" opens the dedicated `/work/tasks/new` page (Option+N does
+ *  the same from anywhere; the classify-driven dialog stays reachable via the `N`
+ *  shortcut). Hidden on that page itself; icon-only on the phone toolbar. */
+function NewTaskButton({ pathname, iconOnly }: { pathname: string; iconOnly: boolean }) {
+  const tShell = useTranslations("shell");
+  const router = useRouter();
+  if (pathname === NEW_TASK_PAGE_HREF) return null;
+  return (
+    <Button
+      aria-label={tShell("newTask")}
+      data-testid={AppShellTestId.NewTask}
+      icon="plus"
+      intent="primary"
+      onClick={() => router.push(NEW_TASK_PAGE_HREF as Route)}
+      size="sm"
+    >
+      {iconOnly ? null : tShell("newTask")}
+    </Button>
+  );
+}
+
 function SectionSubNav({
   active,
   trail,
@@ -188,10 +213,7 @@ function SectionSubNav({
   onPinRequested: () => void;
 }) {
   const t = useTranslations("nav");
-  const tShell = useTranslations("shell");
   const pathname = usePathname();
-  const router = useRouter();
-  const phone = useIsPhone();
   const section = SECTIONS.find((s) => s.id === active) ?? SECTIONS[0];
   const activeHref = activeSubNavHref(section.tabs, pathname);
   // Inbox counters (global, actionable only) ride in the tab labels — `SubNavItem`
@@ -204,44 +226,52 @@ function SectionSubNav({
       (active === "dashboard" ? counterSuffix(tab.id, inboxCounts) : ""),
     active: tab.href === activeHref,
   }));
-  const entity = matchEntityDetail(pathname);
   return (
     <SubNav
       actions={
         <>
           {pageActions}
-          {/* Spec step 5: a company/project/team detail page (never /new) gets
-           *  a "+ PIN"/"PINNED" toggle before "+ NEW TASK". */}
-          {entity ? (
-            <SubnavPinButton
-              href={entity.href}
-              id={entity.id}
-              key={entity.href}
-              kind={entity.kind}
-            />
-          ) : (
-            <PagePinToggle currentHref={currentHref} onPinRequested={onPinRequested} />
-          )}
-          {/* ZB-04b: "+ NEW TASK" opens the dedicated `/work/tasks/new` page
-           *  (Option+N does the same from anywhere; the classify-driven dialog
-           *  stays reachable via the `N` shortcut). Hidden on that page itself. */}
-          {pathname !== NEW_TASK_PAGE_HREF && (
-            <Button
-              aria-label={tShell("newTask")}
-              data-testid={AppShellTestId.NewTask}
-              icon="plus"
-              intent="primary"
-              onClick={() => router.push(NEW_TASK_PAGE_HREF as Route)}
-              size="sm"
-            >
-              {phone ? null : tShell("newTask")}
-            </Button>
-          )}
+          <PinControl
+            currentHref={currentHref}
+            onPinRequested={onPinRequested}
+            pathname={pathname}
+          />
+          <NewTaskButton iconOnly={false} pathname={pathname} />
         </>
       }
       items={items}
       linkComponent={NavLink}
       trail={trail}
+    />
+  );
+}
+
+/** Phone navigation: the whole section/sub-page tree in a hamburger sheet. */
+function PhoneMenu({ pathname }: { pathname: string }) {
+  const t = useTranslations("nav");
+  const tShell = useTranslations("shell");
+  const activeId = sectionForPath(pathname);
+  const sections = SECTIONS.map((section) => {
+    const isActive = section.id === activeId;
+    const activeHref = isActive ? activeSubNavHref(section.tabs, pathname) : null;
+    return {
+      id: section.id,
+      label: t(section.id),
+      href: section.href,
+      active: isActive,
+      items: section.tabs.map((tab) => ({
+        href: tab.href,
+        label: t(`subtab.${section.id}.${tab.id}` as Parameters<typeof t>[0]),
+        active: tab.href === activeHref,
+      })),
+    };
+  });
+  return (
+    <MobileMenu
+      closeLabel={tShell("menuClose")}
+      label={tShell("menu")}
+      linkComponent={NavLink}
+      sections={sections}
     />
   );
 }
@@ -279,65 +309,10 @@ function useHeaderTrailing() {
   };
 }
 
-/** `Rail`'s "NEEDS YOU" — pending approvals as single-click `ApprovalCard`s
- * (D-014/O-13: no `HoldButton`, even for high-risk — `highRisk` is a marker
- * only). Approve/deny act directly from the card; the whole card is otherwise
- * the click target that opens the full approval sheet. */
-function NeedsYouRail({ onOpenApproval }: { onOpenApproval: (id: string) => void }) {
-  const t = useTranslations("shell");
-  const symbolOf = useAgentSymbol();
-  const { data: approvals } = useApprovalsQuery();
-  const approve = useApproveMutation();
-  const reject = useRejectMutation();
-  const pending = approvals ?? [];
-
-  return (
-    <Rail
-      count={pending.length}
-      empty={
-        <Typography type="note" variant="tertiary">
-          {t("needsYouEmpty")}
-        </Typography>
-      }
-      title={t("needsYou")}
-    >
-      {/* `Rail`'s `empty` fallback only renders when `children` is entirely
-       *  absent, not merely an empty array — an empty `.map()` result is
-       *  still "children present" to `Boolean([])`. */}
-      {pending.length === 0
-        ? undefined
-        : pending.map((a) => {
-            const highRisk = a.riskType != null && HIGH_RISK_TYPES.has(a.riskType);
-            return (
-              <ApprovalCard
-                agentName={a.skill}
-                approveLabel={t("needsYouApprove")}
-                approvePending={approve.isPending && approve.variables?.params.id === a.id}
-                data-rk={approvalRowKey(a.id)}
-                denyLabel={t("needsYouDeny")}
-                denyPending={reject.isPending && reject.variables?.params.id === a.id}
-                {...symbolOf(a.skill)}
-                highRisk={highRisk}
-                key={a.id}
-                meta={a.kind}
-                onApprove={() => approve.mutate({ params: { id: a.id }, body: {} })}
-                onDeny={() => reject.mutate({ params: { id: a.id }, body: {} })}
-                onOpen={() => onOpenApproval(a.id)}
-                openLabel={t("needsYouOpen", { agentName: a.skill })}
-                request={a.detail}
-                taskRef={a.runId}
-                waited={formatWaited(a.requestedAt)}
-              />
-            );
-          })}
-    </Rail>
-  );
-}
-
 function AppShellChrome({ children }: { children: ReactNode }) {
   const t = useTranslations("common");
-  const tShell = useTranslations("shell");
   const pathname = usePathname();
+  const phone = useIsPhone();
   const searchParams = useSearchParams();
   const active = sectionForPath(pathname);
   const trailing = useHeaderTrailing();
@@ -356,9 +331,17 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   useNewTaskPageHotkey();
 
   const currentHref = pinHrefFor(pathname, searchParams.toString());
-  const [dockActive, setDockActive] = useDockState({ collapsedHere: pathname === "/dashboard" });
-  const { data: approvals } = useApprovalsQuery();
-  const liveCount = useLiveRuns().length;
+  const onPinRequested = () => setPinDialogOpen(true);
+  // `display: contents` — the portalled controls join the actions row's own flex
+  // gap; an empty slot takes no room. The slot lives in the sub-nav (desktop) or
+  // the toolbar (phone).
+  const pageActions = (
+    <Stack
+      data-testid={AppShellTestId.PageActions}
+      ref={setActionsSlot}
+      style={{ display: "contents" }}
+    />
+  );
 
   return (
     <PageBreadcrumbSlotProvider activeHrefs={activeSubHrefs} element={crumbSlot}>
@@ -367,63 +350,47 @@ function AppShellChrome({ children }: { children: ReactNode }) {
           dock={<ChatDock />}
           fullBleed={pathname === "/dashboard"}
           header={
-            <AppHeader
-              autopilot={<AutopilotToggle />}
-              homeHref="/dashboard"
-              limits={trailing.limits}
-              linkComponent={NavLink}
-              nav={<SectionNav active={active} />}
-              notifications={<NotificationBell />}
-              onSearchClick={() => setPaletteOpen(true)}
-              themeToggle={<ThemeToggle />}
-            />
-          }
-          rail={
-            <ActivityDock
-              activeId={dockActive}
-              ariaLabel={tShell("dockAria")}
-              items={[
-                {
-                  id: "pinned",
-                  icon: "pin",
-                  label: tShell("dockPinned"),
-                  body: <PinnedRail currentHref={currentHref} />,
-                },
-                {
-                  id: "needs-you",
-                  icon: "shield",
-                  label: tShell("dockNeedsYou"),
-                  badge: approvals?.length,
-                  body: <NeedsYouRail onOpenApproval={approvalSheet.open} />,
-                },
-                {
-                  id: "tasks",
-                  icon: "pulse",
-                  label: tShell("dockTasks"),
-                  badge: liveCount,
-                  body: <TasksDockPanel />,
-                },
-              ]}
-              onActiveChange={setDockActive}
-            />
+            phone ? (
+              <MobileToolbar
+                actions={
+                  <>
+                    {pageActions}
+                    <AutopilotToggle />
+                    <PinControl
+                      currentHref={currentHref}
+                      onPinRequested={onPinRequested}
+                      pathname={pathname}
+                    />
+                    <NewTaskButton iconOnly pathname={pathname} />
+                    <NotificationBell />
+                  </>
+                }
+                leading={<PhoneMenu pathname={pathname} />}
+              />
+            ) : (
+              <AppHeader
+                autopilot={<AutopilotToggle />}
+                homeHref="/dashboard"
+                limits={trailing.limits}
+                linkComponent={NavLink}
+                nav={<SectionNav active={active} />}
+                notifications={<NotificationBell />}
+                onSearchClick={() => setPaletteOpen(true)}
+                themeToggle={<ThemeToggle />}
+              />
+            )
           }
           skipLinkLabel={t("skipToContent")}
           subnav={
-            <SectionSubNav
-              active={active}
-              currentHref={currentHref}
-              onPinRequested={() => setPinDialogOpen(true)}
-              pageActions={
-                // `display: contents` — the portalled controls join the actions
-                // row's own flex gap; an empty slot takes no room.
-                <Stack
-                  data-testid={AppShellTestId.PageActions}
-                  ref={setActionsSlot}
-                  style={{ display: "contents" }}
-                />
-              }
-              trail={<div ref={setCrumbSlot} />}
-            />
+            phone ? undefined : (
+              <SectionSubNav
+                active={active}
+                currentHref={currentHref}
+                onPinRequested={onPinRequested}
+                pageActions={pageActions}
+                trail={<div ref={setCrumbSlot} />}
+              />
+            )
           }
         >
           {children}

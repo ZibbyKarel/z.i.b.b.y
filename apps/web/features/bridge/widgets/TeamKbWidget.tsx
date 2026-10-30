@@ -207,7 +207,13 @@ function Group({
             }
             key={key}
             onClick={() =>
-              onOpen({ kind: "note", id: noteSelectionId(teamId, item.noteId), widgetId, key })
+              onOpen({
+                kind: "note",
+                id: noteSelectionId(teamId, item.noteId),
+                widgetId,
+                key,
+                href: teamNoteHref(teamId, item.noteId),
+              })
             }
             rowKey={key}
             selected={selection?.key === key}

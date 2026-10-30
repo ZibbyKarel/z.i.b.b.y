@@ -104,7 +104,14 @@ export function IssuesWidget({
                     key={r.key}
                     needsYou={!!r.needsYou}
                     onClick={() =>
-                      onOpen({ kind: "issue", id: r.id, widgetId: widget.id, key: r.key })
+                      onOpen({
+                        kind: "issue",
+                        id: r.id,
+                        widgetId: widget.id,
+                        key: r.key,
+                        // `r.id` is `chainKey(item)` = `<projectId>/<itemId>` — what `issueHref` builds.
+                        href: `/dashboard/inbox/issues/${r.id}`,
+                      })
                     }
                     rowKey={r.key}
                     selected={selection?.key === r.key}

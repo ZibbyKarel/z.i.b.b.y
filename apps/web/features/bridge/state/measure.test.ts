@@ -13,6 +13,12 @@ const root = rect(100, 50, 1200, 800); // right 1300, bottom 850
 const board = rect(100, 98, 1200, 752);
 
 describe("measureSheet", () => {
+  it("takes the full board width on a phone-sized board", () => {
+    const phoneRoot = rect(0, 50, 390, 800);
+    const a = measureSheet(phoneRoot, rect(10, 200, 370, 40), rect(0, 98, 390, 752));
+    expect(a).toMatchObject({ side: "r", left: 0, width: 390, top: 48, height: 752 });
+  });
+
   it("opens right when the right side has more room, flush to the row's right edge", () => {
     const row = rect(120, 200, 400, 30); // 20 left, 780 right
     const a = measureSheet(root, row, board);

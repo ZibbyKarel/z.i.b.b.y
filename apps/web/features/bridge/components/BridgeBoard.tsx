@@ -11,7 +11,7 @@ import {
   viewLayout,
 } from "../grid/layout";
 import type { BridgeState } from "../state/useBridgeState";
-import { type BridgeWidgetInfo, WIDGETS } from "../widgets/registry";
+import { type BridgeSelection, type BridgeWidgetInfo, WIDGETS } from "../widgets/registry";
 import { boardHeight, colWidth, widgetRect } from "../grid/positions";
 import type { Density, ResizeCorner } from "@zibby/design-system";
 
@@ -24,6 +24,7 @@ interface HostProps {
   widget: BridgeWidget;
   state: BridgeState;
   sheetSide: "left" | "right";
+  onOpen: (selection: BridgeSelection) => void;
   empty: boolean;
   configuring: boolean;
   info: BridgeWidgetInfo | undefined;
@@ -41,6 +42,7 @@ function BridgeWidgetHost({
   widget,
   state,
   sheetSide,
+  onOpen,
   empty,
   configuring,
   info,
@@ -102,7 +104,7 @@ function BridgeWidgetHost({
         onCountChange={onCountChange}
         onEmptyChange={onEmptyChange}
         onEpicToggle={state.setEpicClosed}
-        onOpen={state.setSelection}
+        onOpen={onOpen}
         onScopeChange={onScopeChange}
         selection={selection}
         sheetSide={sheetSide}
@@ -118,6 +120,8 @@ export interface BridgeBoardProps {
   sheetSide?: "left" | "right";
   /** Phone view: widgets one under another, full width, no drag/resize. */
   stacked?: boolean;
+  /** What a row click does — defaults to opening the detail sheet. */
+  onOpen?: (selection: BridgeSelection) => void;
 }
 
 /**
@@ -130,6 +134,7 @@ export function BridgeBoard({
   density,
   sheetSide = "right",
   stacked = false,
+  onOpen,
 }: BridgeBoardProps) {
   const { gap, rowHeight } = BRIDGE_DENSITY[density];
   const { layout, collapsed, draggingId } = state;
@@ -236,6 +241,7 @@ export function BridgeBoard({
                 onDragStart={stacked ? undefined : onDragStart}
                 onEmpty={onEmpty}
                 onInfo={onInfo}
+                onOpen={onOpen ?? state.setSelection}
                 onRemove={onRemove}
                 sheetSide={sheetSide}
                 state={state}

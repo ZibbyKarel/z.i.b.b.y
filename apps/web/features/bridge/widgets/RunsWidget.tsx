@@ -115,7 +115,13 @@ export function RunsWidget({
   if (active.length + finished.length === 0) return null;
 
   const open = (r: (typeof active)[number]) => () =>
-    onOpen({ kind: "run", id: r.runId, widgetId: widget.id, key: r.key });
+    onOpen({
+      kind: "run",
+      id: r.runId,
+      widgetId: widget.id,
+      key: r.key,
+      href: `/activity/runs/${r.runId}`,
+    });
   const header = (group: "active" | "finished", count: number) =>
     count === 0 ? null : (
       <RowGroupHeader

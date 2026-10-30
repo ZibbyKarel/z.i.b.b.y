@@ -194,6 +194,7 @@ describe("IssuesWidget", () => {
       id: "p1/a",
       widgetId: "w-issues",
       key: "w-issues:p1/a",
+      href: "/dashboard/inbox/issues/p1/a",
     });
 
     expect(props.onEmptyChange).toHaveBeenLastCalledWith(false);
@@ -355,6 +356,7 @@ describe("TasksWidget (task queue)", () => {
       id: "s",
       widgetId: "w-tasks",
       key: "w-tasks:s",
+      href: "/work/tasks/s",
     });
     expect(props.onCountChange).toHaveBeenLastCalledWith({
       count: 3,
@@ -415,6 +417,7 @@ describe("RunsWidget", () => {
       id: "r1",
       widgetId: "w-runs",
       key: "w-runs:r1",
+      href: "/activity/runs/r1",
     });
     expect(props.onEmptyChange).toHaveBeenLastCalledWith(false);
   });
@@ -497,6 +500,7 @@ describe("RunsWidget", () => {
       id: "r9",
       widgetId: "w-runs",
       key: "w-runs:r9",
+      href: "/activity/runs/r9",
     });
   });
 

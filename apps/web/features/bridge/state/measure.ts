@@ -7,6 +7,9 @@ export interface RectLike {
   height: number;
 }
 
+/** Boards narrower than this (px) are phones: the sheet is full-width. */
+const PHONE_BOARD_MAX = 768;
+
 /** Where the detail sheet sits, in px relative to the screen root. */
 export interface SheetAnchor {
   side: "r" | "l";
@@ -26,6 +29,20 @@ export interface SheetAnchor {
  * the board top to the root bottom. The 3px eraser covers the shared edge at the row's height.
  */
 export function measureSheet(root: RectLike, row: RectLike, board: RectLike): SheetAnchor {
+  // A phone-width board has no room beside a row: the sheet takes the full width.
+  if (root.right - root.left < PHONE_BOARD_MAX) {
+    const width = root.right - root.left;
+    return {
+      side: "r",
+      left: 0,
+      width,
+      top: board.top - root.top,
+      height: root.bottom - board.top,
+      eL: -2,
+      eT: row.top - board.top - 4,
+      eH: 0,
+    };
+  }
   const rightSpace = root.right - row.right;
   const leftSpace = row.left - root.left;
   const side = rightSpace >= leftSpace ? "r" : "l";

@@ -2,7 +2,9 @@
 import type { ReactNode, Ref } from "react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "../../utils/cn";
+import { focusRingOffset } from "../../utils/focus";
 import { Button } from "../Button/Button";
+import { Icon } from "../Icon/Icon";
 
 export enum ChatDockTestId {
   Root = "chat-dock-root",
@@ -16,6 +18,7 @@ export enum ChatDockTestId {
   Composer = "chat-dock-composer",
   SidebarButton = "chat-dock-sidebar-button",
   Sidebar = "chat-dock-sidebar",
+  Launcher = "chat-dock-launcher",
 }
 
 export interface ChatDockProps {
@@ -43,6 +46,13 @@ export interface ChatDockProps {
   sidebarOpen?: boolean;
   onSidebarOpenChange?: (open: boolean) => void;
   sidebarLabel?: string;
+  /**
+   * Phone mode: closed, the dock is only a round chat launcher; open, it is a
+   * full-screen panel (header, messages, composer — no history sidebar).
+   */
+  compact?: boolean;
+  /** Accessible name of the compact launcher. */
+  launcherLabel?: string;
   /** Any change scrolls the message list to the bottom (also on open). */
   scrollKey?: unknown;
   ref?: Ref<HTMLDivElement>;
@@ -70,13 +80,16 @@ export function ChatDock({
   sidebarOpen,
   onSidebarOpenChange,
   sidebarLabel = "History",
+  compact = false,
+  launcherLabel = "Open chat",
   scrollKey,
   ref,
 }: ChatDockProps) {
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const isOpen = open ?? internalOpen;
   const [internalSidebarOpen, setInternalSidebarOpen] = useState(false);
-  const isSidebarOpen = sidebar != null && (sidebarOpen ?? internalSidebarOpen);
+  const hasSidebar = sidebar != null && !compact;
+  const isSidebarOpen = hasSidebar && (sidebarOpen ?? internalSidebarOpen);
   const setSidebar = (next: boolean) => {
     setInternalSidebarOpen(next);
     onSidebarOpenChange?.(next);
@@ -106,17 +119,41 @@ export function ChatDock({
     return () => window.removeEventListener("keydown", onKey);
   });
 
+  if (compact && !isOpen) {
+    return (
+      <div data-testid={ChatDockTestId.Root} ref={ref}>
+        <button
+          aria-label={launcherLabel}
+          className={cn(
+            "inline-flex h-12 w-12 cursor-pointer items-center justify-center rounded-full",
+            "border border-accent bg-accent text-accent-contrast shadow-modal transition-colors",
+            "hover:bg-accent/90",
+            focusRingOffset,
+          )}
+          data-testid={ChatDockTestId.Launcher}
+          onClick={() => setOpen(true)}
+          type="button"
+        >
+          <Icon name="chat" size="lg" stroke="medium" />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(
-        "flex max-w-[calc(100vw-40px)] flex-col overflow-hidden rounded-xl border border-line-2 bg-panel shadow-modal",
+        compact
+          ? "fixed inset-0 z-50 flex flex-col overflow-hidden bg-panel"
+          : "flex max-w-[calc(100vw-40px)] flex-col overflow-hidden rounded-xl border border-line-2 bg-panel shadow-modal",
         // Open: 33% of the AppFrame dock area (never under 420px), three quarters of its height
         // (pane basis 440px grows into the 75%), capped to the area. Closed: just the 420px bar.
-        isOpen
-          ? isSidebarOpen
-            ? "max-h-full min-h-3/4 w-[max(660px,45%)]"
-            : "max-h-full min-h-3/4 w-[max(420px,33%)]"
-          : "w-[420px]",
+        !compact &&
+          (isOpen
+            ? isSidebarOpen
+              ? "max-h-full min-h-3/4 w-[max(660px,45%)]"
+              : "max-h-full min-h-3/4 w-[max(420px,33%)]"
+            : "w-[420px]"),
         isOpen && isSidebarOpen && "flex-row",
       )}
       data-testid={ChatDockTestId.Root}
@@ -133,14 +170,17 @@ export function ChatDock({
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {isOpen && (
           <div
-            className="flex min-h-0 grow basis-[440px] flex-col border-b border-line"
+            className={cn(
+              "flex min-h-0 grow flex-col border-b border-line",
+              compact ? "basis-0" : "basis-[440px]",
+            )}
             data-testid={ChatDockTestId.Transcript}
           >
             <div
               className="flex items-center gap-2.5 border-b border-line px-3.5 py-3"
               data-testid={ChatDockTestId.Header}
             >
-              {sidebar != null && (
+              {hasSidebar && (
                 <Button
                   aria-label={sidebarLabel}
                   aria-pressed={isSidebarOpen}

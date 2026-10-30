@@ -106,4 +106,44 @@ describe("ChatDock", () => {
     render(<ChatDock defaultOpen composer={composer} />);
     expect(screen.queryByTestId(ChatDockTestId.SidebarButton)).toBeNull();
   });
+
+  describe("compact", () => {
+    it("is only a round launcher while closed", () => {
+      render(<ChatDock compact composer={composer} launcherLabel="Otevřít chat" />);
+      expect(screen.getByTestId(ChatDockTestId.Launcher)).toHaveAccessibleName("Otevřít chat");
+      expect(screen.queryByTestId(ChatDockTestId.Composer)).toBeNull();
+      expect(screen.queryByTestId(ChatDockTestId.Transcript)).toBeNull();
+    });
+
+    it("launcher opens a full-screen panel; close and Esc close it", async () => {
+      const user = userEvent.setup();
+      render(
+        <ChatDock
+          compact
+          composer={composer}
+          sidebar={<div>History</div>}
+          transcript={<div>Hi there</div>}
+        />,
+      );
+      await user.click(screen.getByTestId(ChatDockTestId.Launcher));
+      expect(screen.getByTestId(ChatDockTestId.Root)).toHaveClass("fixed", "inset-0");
+      expect(screen.getByTestId(ChatDockTestId.Transcript)).toHaveTextContent("Hi there");
+      expect(screen.getByLabelText("Message")).toBeInTheDocument();
+      expect(screen.queryByTestId(ChatDockTestId.SidebarButton)).toBeNull();
+      await user.click(screen.getByTestId(ChatDockTestId.CloseButton));
+      expect(screen.getByTestId(ChatDockTestId.Launcher)).toBeInTheDocument();
+      await user.click(screen.getByTestId(ChatDockTestId.Launcher));
+      await user.keyboard("{Escape}");
+      expect(screen.getByTestId(ChatDockTestId.Launcher)).toBeInTheDocument();
+    });
+
+    it("respects controlled open/onOpenChange", async () => {
+      const onOpenChange = vi.fn();
+      const user = userEvent.setup();
+      render(<ChatDock compact composer={composer} onOpenChange={onOpenChange} open={false} />);
+      await user.click(screen.getByTestId(ChatDockTestId.Launcher));
+      expect(onOpenChange).toHaveBeenCalledWith(true);
+      expect(screen.getByTestId(ChatDockTestId.Launcher)).toBeInTheDocument();
+    });
+  });
 });

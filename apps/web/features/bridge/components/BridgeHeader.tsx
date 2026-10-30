@@ -24,6 +24,8 @@ export interface BridgeHeaderProps {
   onPreset: (name: string) => void;
   onManage: () => void;
   onToggleCatalog: () => void;
+  /** Phone toolbar: only the manage-layouts button. */
+  compact?: boolean;
 }
 
 /** The Bridge controls — layout presets, density (system-wide) and the edit
@@ -34,6 +36,7 @@ export function BridgeHeader({
   onPreset,
   onManage,
   onToggleCatalog,
+  compact = false,
 }: BridgeHeaderProps) {
   const t = useTranslations("bridge");
   const { ui, setDensity } = useUiSettings();
@@ -51,6 +54,23 @@ export function BridgeHeader({
     ...(layouts.hidden.includes(preset) ? [preset] : []),
     ...(preset === CUSTOM_PRESET ? [CUSTOM_PRESET] : []),
   ];
+
+  if (compact) {
+    return (
+      <PageActions>
+        <Container data-testid={BridgeHeaderTestId.Manage}>
+          <Button
+            aria-label={t("editLayout")}
+            icon="layout"
+            intent="ghost"
+            onClick={onManage}
+            size="sm"
+            title={t("editLayout")}
+          />
+        </Container>
+      </PageActions>
+    );
+  }
 
   return (
     <PageActions>

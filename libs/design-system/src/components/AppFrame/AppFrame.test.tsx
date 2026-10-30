@@ -104,4 +104,15 @@ describe("AppFrame", () => {
       gridTemplateColumns: "minmax(0,1fr)",
     });
   });
+
+  it("gives <main> the flexible row when there is no subnav", () => {
+    render(
+      <AppFrame header={<div>h</div>}>
+        <div>c</div>
+      </AppFrame>,
+    );
+    expect(screen.getByTestId(AppFrameTestId.Main).parentElement).toHaveStyle({
+      gridTemplateRows: "minmax(0,1fr)",
+    });
+  });
 });

@@ -23,6 +23,9 @@ export interface BridgeSelection {
   widgetId: string;
   /** Unique row key within the board — equals the row element's `data-rk`. */
   key: string;
+  /** The item's full detail page, when it has one — the phone dashboard navigates there
+   *  instead of opening the sheet. Omitted for kinds without a page (pr, quickAction). */
+  href?: string;
 }
 
 /** Header info a widget body reports to its frame (all optional). */

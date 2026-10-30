@@ -6,7 +6,7 @@ Never-rules and merge are not affected. Only the operator token can turn autopil
 Anyone in the operator chat can turn it off.
 
 Code: `apps/api/src/autopilot/`. Contract: `libs/contracts/src/autopilot/`.
-Web: the Autopilot toggle in the bridge dashboard header.
+Web: the Autopilot icon toggle in the top bar, on every page.
 
 ## State
 

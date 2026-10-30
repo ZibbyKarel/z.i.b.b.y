@@ -1,12 +1,12 @@
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   APP_FRAME_MAIN_CONTENT_ID,
-  ActivityDockTestId,
   AppFrameTestId,
   AppHeaderTestId,
   MenuButtonTestId,
-  RailTestId,
+  MobileMenuTestId,
+  MobileToolbarTestId,
   SubNavTestId,
   TabsTestId,
 } from "@zibby/design-system";
@@ -15,6 +15,8 @@ import { PinPageDialogTestId } from "../../../features/pins";
 import { AppShell, AppShellTestId } from "./AppShell";
 
 let mockPath = "/chat";
+let mockPhone = false;
+vi.mock("../../../hooks/useIsPhone", () => ({ useIsPhone: () => mockPhone }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn(), prefetch: vi.fn() }),
   usePathname: () => mockPath,
@@ -119,27 +121,13 @@ describe("AppShell", () => {
     expect(screen.getByTestId(PinPageDialogTestId.Name)).toBeInTheDocument();
   });
 
-  it("collapses the dock by default; each icon opens its panel, a second click closes it", async () => {
+  it("has no left rail or activity dock", () => {
     renderWithProviders(
       <AppShell>
         <div>obsah stránky</div>
       </AppShell>,
     );
-    expect(screen.queryByTestId(ActivityDockTestId.Body)).toBeNull();
-    const buttons = screen.getAllByTestId(ActivityDockTestId.Button);
-    expect(buttons).toHaveLength(3);
-    // No data in this harness: no badges.
-    expect(screen.queryAllByTestId(ActivityDockTestId.Badge)).toHaveLength(0);
-
-    await userEvent.click(buttons[0]!);
-    expect(screen.getAllByTestId(RailTestId.Root)).toHaveLength(1);
-    await userEvent.click(buttons[1]!);
-    expect(screen.getAllByTestId(RailTestId.Root)).toHaveLength(1);
-    expect(screen.getAllByTestId(RailTestId.Empty)).toHaveLength(1);
-    await userEvent.click(buttons[2]!);
-    expect(screen.getAllByTestId(RailTestId.Root)).toHaveLength(2);
-    await userEvent.click(buttons[2]!);
-    expect(screen.queryByTestId(ActivityDockTestId.Body)).toBeNull();
+    expect(screen.queryByTestId(AppFrameTestId.Rail)).toBeNull();
   });
 
   it.each([
@@ -232,5 +220,48 @@ describe("AppShell top menu sections", () => {
     } finally {
       mockPath = "/chat";
     }
+  });
+});
+
+describe("AppShell phone layout", () => {
+  const renderPhone = (path = "/work/tasks") => {
+    mockPhone = true;
+    mockPath = path;
+    return renderWithProviders(
+      <AppShell>
+        <div>obsah stránky</div>
+      </AppShell>,
+    );
+  };
+  afterEach(() => {
+    mockPhone = false;
+    mockPath = "/chat";
+  });
+
+  it("replaces the header and sub-nav with a toolbar holding the menu and actions", () => {
+    renderPhone();
+    expect(screen.getByTestId(MobileToolbarTestId.Root)).toBeInTheDocument();
+    expect(screen.getByTestId(MobileMenuTestId.Trigger)).toHaveAccessibleName("Menu");
+    expect(screen.queryByTestId(AppHeaderTestId.Root)).toBeNull();
+    expect(screen.queryByTestId(AppFrameTestId.SubNav)).toBeNull();
+    expect(screen.queryByTestId(AppFrameTestId.Rail)).toBeNull();
+    const actions = screen.getByTestId(MobileToolbarTestId.Actions);
+    expect(actions).toContainElement(screen.getByTestId(AppShellTestId.PinToggle));
+    expect(actions).toContainElement(screen.getByTestId(AppShellTestId.NewTask));
+    expect(actions).toContainElement(screen.getByTestId(AppShellTestId.PageActions));
+  });
+
+  it("opens the section tree with the active section expanded", async () => {
+    renderPhone();
+    await userEvent.click(screen.getByTestId(MobileMenuTestId.Trigger));
+    expect(screen.getByTestId(`${MobileMenuTestId.Item}-/work/tasks`)).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("hides the new-task button on the new-task page", () => {
+    renderPhone("/work/tasks/new");
+    expect(screen.queryByTestId(AppShellTestId.NewTask)).toBeNull();
   });
 });

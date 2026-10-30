@@ -130,4 +130,14 @@ describe("Sheet", () => {
     expect(onCloseInner).toHaveBeenCalledOnce();
     expect(onCloseOuter).not.toHaveBeenCalled();
   });
+
+  it("anchors to the left edge with side=left", () => {
+    render(
+      <Sheet open side="left" title="Menu">
+        x
+      </Sheet>,
+    );
+    expect(screen.getByTestId(SheetTestId.Root)).toHaveAttribute("data-side", "left");
+    expect(screen.getByTestId(SheetTestId.Overlay)).toHaveClass("justify-start");
+  });
 });

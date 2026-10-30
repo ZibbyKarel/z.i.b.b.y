@@ -63,7 +63,14 @@ export function TasksWidget({
           onClick={
             r.id === null
               ? undefined
-              : () => onOpen({ kind: "task", id: r.id as string, widgetId: widget.id, key: r.key })
+              : () =>
+                  onOpen({
+                    kind: "task",
+                    id: r.id as string,
+                    widgetId: widget.id,
+                    key: r.key,
+                    href: `/work/tasks/${r.id}`,
+                  })
           }
           rowKey={r.id === null ? undefined : r.key}
           selected={selection?.key === r.key}
