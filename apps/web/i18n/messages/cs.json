@@ -41,6 +41,7 @@
       "system": {
         "general": "Obecné",
         "runtime": "Runtime",
+        "ai-models": "AI modely",
         "activity": "Aktivita",
         "status": "Stav",
         "inventory": "Inventář stroje"
@@ -1051,6 +1052,17 @@
       "cloneRootLabel": "Kořen klonů",
       "cloneRootHint": "Kam ZIBBY na tomto stroji klonuje projekty, které tu ještě nemají lokální kopii (kořen/id projektu). Toto nastavení je per-stroj a nikdy se nesynchronizuje mezi stroji.",
       "save": "Uložit"
+    },
+    "aiModels": {
+      "openai": "OpenAI",
+      "openaiHint": "Klíč je uložen na tomto stroji v .zibby/data/ai-providers (ne v gitu) a workflowům se předává jako OPENAI_API_KEY. Pohání generování obrázků do omalovánek.",
+      "configured": "Nastaveno ({hint})",
+      "notConfigured": "Nenastaveno",
+      "keyLabel": "OpenAI API klíč",
+      "save": "Uložit",
+      "clear": "Smazat klíč",
+      "clearConfirm": "Potvrdit smazání",
+      "saveFailed": "Uložení klíče selhalo — zkontroluj operátorský token a formát klíče."
     },
     "operatorChannel": {
       "title": "Kanál operátora (Slack)",
@@ -2743,6 +2755,7 @@
       "general": "Obecné",
       "activity": "Aktivita",
       "runtime": "Runtime",
+      "ai-models": "AI modely",
       "status": "Stav"
     },
     "gateSection": {

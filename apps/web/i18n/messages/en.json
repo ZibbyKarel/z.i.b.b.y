@@ -41,6 +41,7 @@
       "system": {
         "general": "General",
         "runtime": "Runtime",
+        "ai-models": "AI models",
         "activity": "Activity",
         "status": "Status",
         "inventory": "Machine inventory"
@@ -1051,6 +1052,17 @@
       "cloneRootLabel": "Clone root",
       "cloneRootHint": "Where ZIBBY clones a project on this machine when it isn't already present locally (root/project id). This setting is per-machine and never syncs between machines.",
       "save": "Save"
+    },
+    "aiModels": {
+      "openai": "OpenAI",
+      "openaiHint": "The key is stored on this machine in .zibby/data/ai-providers (not in git) and passed to workflows as OPENAI_API_KEY. It powers coloring-book image generation.",
+      "configured": "Configured ({hint})",
+      "notConfigured": "Not configured",
+      "keyLabel": "OpenAI API key",
+      "save": "Save",
+      "clear": "Clear key",
+      "clearConfirm": "Confirm clear",
+      "saveFailed": "Saving the key failed — check the operator token and the key format."
     },
     "operatorChannel": {
       "title": "Operator channel (Slack)",
@@ -2743,6 +2755,7 @@
       "general": "General",
       "activity": "Activity",
       "runtime": "Runtime",
+      "ai-models": "AI models",
       "status": "Status"
     },
     "gateSection": {

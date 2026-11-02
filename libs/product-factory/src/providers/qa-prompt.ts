@@ -11,7 +11,7 @@ export const VerdictSchema = z.object({
   issues: z.array(QaIssueSchema),
 });
 
-/** JSON schema handed to LM Studio's `response_format`. */
+/** JSON schema for a structured verdict reply. */
 export const VERDICT_JSON_SCHEMA = {
   type: "object",
   properties: {

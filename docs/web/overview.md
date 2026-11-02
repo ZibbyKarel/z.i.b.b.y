@@ -277,6 +277,7 @@ ts-rest client bound to `@zibby/contracts`:
 ```
 features/
 ├── agents/         Agent CRUD, run launch
+├── ai-providers/   Global AI provider keys (OpenAI) for Settings → AI models
 ├── approvals/      Approval queue
 ├── automations/    Cron/event triggers
 ├── chat/           The chat engine behind the shell-global COO dock (ZB-12):

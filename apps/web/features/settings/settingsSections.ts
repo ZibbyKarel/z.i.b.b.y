@@ -10,5 +10,5 @@
  * pure constant out of the client component file sidesteps the boundary
  * entirely.
  */
-export const SETTINGS_SECTIONS = ["general", "activity", "runtime", "status"] as const;
+export const SETTINGS_SECTIONS = ["general", "activity", "runtime", "ai-models", "status"] as const;
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];

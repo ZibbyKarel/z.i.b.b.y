@@ -6,6 +6,7 @@ Deterministic CLI behind the `tool` phases of the coloring-book workflow. Runs o
 ```
 product-factory plan check <content-plan.md> [--out plan.json]   # exit 0 ok, 1 problems (plan-check.md)
 product-factory cast [--report f] [--rounds N]                     # character sheets + title buddies, exit 0 / 2 blocked
+product-factory jobs [--out jobs.json] [--report f]                # jobs from plan.json: prompt = scene (no illustrator)
 product-factory produce <jobs.json> [--report f] [--rounds N] [--pages a-b]   # exit 0 all approved, 2 blocked pages
 product-factory reject <pages> [--reason text]                     # un-approve pages (0 = cover) so produce redoes them
 product-factory render [--report f]                               # interior.pdf, cover.pdf, render-manifest.json
@@ -29,14 +30,14 @@ Reports end with `<verdict>pass</verdict>` or `<verdict>gap</verdict>`.
 | `PF_MIN_COLOR` / `PF_MAX_WHITE`                                   | 0.25 / 0.45                           | cover QA: min saturated / max near-white share                                                 |
 | `PF_MAX_BUSY`                                                     | 0.15                                  | cover QA: max busy share under the title / badges                                              |
 | `PF_CONCURRENCY`                                                  | 1                                     | vision QA concurrency                                                                          |
-| `PF_IMAGE_PROVIDER`                                               | `mock`                                | `mock`, `mflux` (local), `fal` (cloud)                                                         |
-| `PF_VISION_PROVIDER`                                              | `none`                                | `none` (pixel QA only), `mock`, `lmstudio`, `haiku`                                            |
+| `PF_IMAGE_PROVIDER`                                               | `mock`                                | `mock`, `mflux` (local), `fal`, `openai` (cloud)                                               |
+| `PF_VISION_PROVIDER`                                              | `none`                                | `none` (pixel QA only), `mock`, `haiku`                                                        |
 | `PF_MOCK_FAIL_PAGES`                                              | –                                     | e.g. `3,5`: mock emits a gray image for those pages on attempt 1; `0` = a white line-art cover |
 | `PF_SINGLE_SIDED`                                                 | `true`                                | blank back side after each coloring page                                                       |
 | `PF_CREATED_AT`                                                   | now                                   | timestamp in the book README                                                                   |
 
 Real-provider variables (`PF_IMAGE_MODEL`, `PF_IMAGE_SIZE`, `PF_MFLUX_*`, `FAL_KEY` (secret), `PF_FAL_PRICE_USD`,
-`LMSTUDIO_HOST`, `PF_LMSTUDIO_MODEL`, `PF_HAIKU_TIMEOUT_MS`), install steps, the 24 GB memory rules and licence
+`OPENAI_API_KEY` (secret, Settings → AI models → OpenAI), `PF_OPENAI_*`, `PF_HAIKU_TIMEOUT_MS`), install steps, the 24 GB memory rules and licence
 allow-list are in `docs/ops/product-factory.md`.
 
 ## Layout

@@ -57,6 +57,7 @@ graphify-out/
 .zibby/data/research-digest.json
 .zibby/data/mcp-credentials
 .zibby/data/project-secrets
+.zibby/data/ai-providers
 .zibby/data/_purged
 .zibby/data/chat
 

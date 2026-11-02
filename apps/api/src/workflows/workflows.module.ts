@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { AiProvidersModule } from "../ai-providers/ai-providers.module";
 import { AgentsModule } from "../agents/agents.module";
 import { ApprovalsModule } from "../approvals/approvals.module";
 import { ArtifactsModule } from "../artifacts/artifacts.module";
@@ -38,6 +39,7 @@ export function resolveWorkflowRunsDir(): string {
   // `research-artifact` signals through plain constructor injection.
   imports: [
     AgentsModule,
+    AiProvidersModule,
     ArtifactsModule,
     ClaudeRunModule,
     GatesModule,

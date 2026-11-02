@@ -4,7 +4,6 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { ALLOWED_IMAGE_MODELS, imageModelOf } from "./providers/licence.ts";
 import { mfluxPython } from "./providers/mflux.ts";
-import { lmstudioHost } from "./providers/lmstudio.ts";
 import type { Ctx } from "./ctx.ts";
 
 const onPath = (bin: string): string | null => {
@@ -54,23 +53,12 @@ export async function doctor(_argv: string[], ctx: Ctx): Promise<number> {
       : `${model} weights not cached (first run downloads several GB)`,
   );
 
-  const host = lmstudioHost(env);
-  const vmodel = env.PF_LMSTUDIO_MODEL || "qwen/qwen3-vl-8b";
-  try {
-    const res = await fetch(new URL("/v1/models", host), { signal: AbortSignal.timeout(3000) });
-    const body = (await res.json()) as { data?: { id: string }[] };
-    const has = (body.data ?? []).some((m) => m.id === vmodel);
-    out(true, `lm studio reachable at ${host}`);
-    out(
-      has,
-      has
-        ? `lm studio model ${vmodel} present`
-        : `lm studio model ${vmodel} not downloaded (lms get ${vmodel})`,
-    );
-  } catch {
-    out(false, `lm studio not reachable at ${host} (lms server start --port 1234)`);
-  }
-
+  out(
+    env.OPENAI_API_KEY ? true : "warn",
+    env.OPENAI_API_KEY
+      ? "OPENAI_API_KEY is set"
+      : "OPENAI_API_KEY not set (Settings → AI models → OpenAI)",
+  );
   out(!!env.FAL_KEY, env.FAL_KEY ? "FAL_KEY is set" : "FAL_KEY not set");
   const claude = onPath("claude");
   out(!!claude, claude ? `claude: ${claude}` : "claude not on PATH");

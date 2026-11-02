@@ -370,7 +370,8 @@ lives in its repo (CLAUDE.md / AGENTS.md / README / package scripts), not in ZIB
   as any phase), and `approval: ask`.
 - Exit code 0 = pass, anything else = fail. The `produces` file becomes the next
   phase's handoff.
-- Env: the project's env + secrets, plus `ZIBBY_RUN_DIR` (the run root) and
+- Env: the global AI provider keys (`OPENAI_API_KEY`, see `ai-providers.md`; tool
+  phases only, lowest precedence), the project's env + secrets, plus `ZIBBY_RUN_DIR` (the run root) and
   `ZIBBY_STAGE_DIR` (this stage's sandbox) so a tool can write run-wide artifacts
   (e.g. a `book/` folder) that survive a loop re-dispatch.
 - **PATH:** the repo's `node_modules/.bin` goes **first** for a tool stage, so workspace

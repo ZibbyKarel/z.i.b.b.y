@@ -116,4 +116,6 @@ export * from "./operator-channel/operator-channel.schema";
 export * from "./operator-channel/operator-channel.contract";
 export * from "./autopilot/autopilot.schema";
 export * from "./autopilot/autopilot.contract";
+export * from "./ai-providers/ai-providers.schema";
+export * from "./ai-providers/ai-providers.contract";
 export * from "./app.contract";

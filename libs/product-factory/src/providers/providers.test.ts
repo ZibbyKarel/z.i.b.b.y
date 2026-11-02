@@ -7,7 +7,7 @@ import { createFalImageProvider } from "./fal.ts";
 import { createHaikuVisionProvider } from "./haiku.ts";
 import { assertLicensed } from "./licence.ts";
 import { createMfluxImageProvider } from "./mflux.ts";
-import { createLmstudioVisionProvider, lmstudioUnloadAll } from "./lmstudio.ts";
+import { createOpenAiImageProvider } from "./openai.ts";
 import type { Run } from "./proc.ts";
 import { qaPrompt, strictVerdict } from "./qa-prompt.ts";
 
@@ -52,13 +52,11 @@ describe("mflux", () => {
         stderr: "",
       };
     });
-    const unload = vi.fn(async () => undefined);
-    const prov = createMfluxImageProvider({ PF_MFLUX_PYTHON: "/py" }, run, unload);
+    const prov = createMfluxImageProvider({ PF_MFLUX_PYTHON: "/py" }, run);
     const res = await prov.generateBatch(
       [item, { ...item, key: "p02", referenceImages: ["/cast.png"] }],
       dir,
     );
-    expect(unload).toHaveBeenCalledOnce();
     expect(run).toHaveBeenCalledOnce();
     const call = run.mock.calls[0];
     expect(call?.[0]).toBe("/py");
@@ -73,11 +71,11 @@ describe("mflux", () => {
     expect(res[0]?.costUsd).toBe(0);
   });
   it("fails when images are missing", async () => {
-    const prov = createMfluxImageProvider(
-      {},
-      async () => ({ code: 1, stdout: "", stderr: "boom" }),
-      async () => undefined,
-    );
+    const prov = createMfluxImageProvider({}, async () => ({
+      code: 1,
+      stdout: "",
+      stderr: "boom",
+    }));
     await expect(prov.generateBatch([item], tmp())).rejects.toThrow(/mflux batch failed/);
   });
 });
@@ -132,6 +130,81 @@ describe("fal", () => {
   it("missing key is a clear error", async () => {
     await expect(createFalImageProvider({}).generateBatch([item], tmp())).rejects.toThrow(
       /FAL_KEY is not set/,
+    );
+  });
+});
+
+describe("openai", () => {
+  const b64 = Buffer.from([9, 8, 7]).toString("base64");
+  const ok = (usage?: unknown): Response => json({ data: [{ b64_json: b64 }], usage });
+  const env = { OPENAI_API_KEY: "sk-x" };
+  it("sends the request, writes the decoded png, prices from usage", async () => {
+    const f = vi.fn<typeof fetch>(async () =>
+      ok({ input_tokens: 100, output_tokens: 1000, input_tokens_details: { text_tokens: 100 } }),
+    );
+    const dir = tmp();
+    const res = await createOpenAiImageProvider(env, f, 0).generateBatch([item], dir);
+    expect(fs.readFileSync(path.join(dir, "p01.png"))).toEqual(Buffer.from([9, 8, 7]));
+    expect(res[0]?.costUsd).toBeCloseTo((1000 * 30 + 100 * 5) / 1e6, 8);
+    expect(String(f.mock.calls[0]?.[0])).toBe("https://api.openai.com/v1/images/generations");
+    const headers = f.mock.calls[0]?.[1]?.headers as Record<string, string>;
+    expect(headers.Authorization).toBe("Bearer sk-x");
+    const body = JSON.parse(String(f.mock.calls[0]?.[1]?.body));
+    expect(body).toMatchObject({
+      model: "gpt-image-2.5-flare",
+      size: "1632x2112",
+      quality: "medium",
+      background: "opaque",
+      output_format: "png",
+      n: 1,
+    });
+    expect(body.prompt).toContain("thick clean black outlines");
+  });
+  it("env knobs override; no usage falls back to PF_OPENAI_PRICE_USD", async () => {
+    const f = vi.fn<typeof fetch>(async () => ok());
+    const res = await createOpenAiImageProvider(
+      {
+        ...env,
+        PF_OPENAI_IMAGE_MODEL: "gpt-image-2.5-sunburst",
+        PF_OPENAI_QUALITY: "high",
+        PF_OPENAI_SIZE: "1024x1536",
+        PF_OPENAI_PRICE_USD: "0.04",
+      },
+      f,
+      0,
+    ).generateBatch([item], tmp());
+    expect(JSON.parse(String(f.mock.calls[0]?.[1]?.body))).toMatchObject({
+      model: "gpt-image-2.5-sunburst",
+      quality: "high",
+      size: "1024x1536",
+    });
+    expect(res[0]?.costUsd).toBe(0.04);
+  });
+  it("retries 429 then succeeds", async () => {
+    let n = 0;
+    const f = vi.fn<typeof fetch>(async () => (++n === 1 ? json({}, 429) : ok()));
+    await createOpenAiImageProvider(env, f, 0).generateBatch([item], tmp());
+    expect(n).toBe(2);
+  });
+  it("missing key is a clear error", async () => {
+    await expect(createOpenAiImageProvider({}).generateBatch([item], tmp())).rejects.toThrow(
+      /OPENAI_API_KEY is not set/,
+    );
+  });
+  it("rejects reference images", async () => {
+    await expect(
+      createOpenAiImageProvider(env, vi.fn<typeof fetch>(), 0).generateBatch(
+        [{ ...item, referenceImages: ["/x.png"] }],
+        tmp(),
+      ),
+    ).rejects.toThrow(/reference images are not supported/);
+  });
+  it("moderation_blocked names the item", async () => {
+    const f = vi.fn<typeof fetch>(async () =>
+      json({ error: { code: "moderation_blocked", message: "nope" } }, 400),
+    );
+    await expect(createOpenAiImageProvider(env, f, 0).generateBatch([item], tmp())).rejects.toThrow(
+      /p01.*moderation_blocked/,
     );
   });
 });
@@ -206,84 +279,5 @@ describe("sheet verdict counts", () => {
     expect(p).toContain("a suit with buttons and antennae");
     expect(p).not.toMatch(/\b3\b|two antennae/);
     expect(p).toContain("- buttons");
-  });
-});
-
-describe("lmstudio", () => {
-  const input = async () => ({
-    file: await png(path.join(tmp(), "a.png")),
-    pageNumber: 1,
-    expectedSubjects: ["cat"],
-    styleGuide: "x",
-  });
-  const chat = (content: string): Response => json({ choices: [{ message: { content } }] });
-
-  it("sends an OpenAI chat request with json_schema + data-URI image and parses the verdict", async () => {
-    const reply = {
-      passed: false,
-      issues: [{ type: "wrong-subject", severity: "high", description: "a dog" }],
-    };
-    const f = vi.fn<typeof fetch>(async () => chat(JSON.stringify(reply)));
-    const v = await createLmstudioVisionProvider({}, f).judge(await input());
-    expect(v.issues[0]?.type).toBe("wrong-subject");
-    expect(v.costUsd).toBe(0);
-    expect(String(f.mock.calls[0]?.[0])).toBe("http://127.0.0.1:1234/v1/chat/completions");
-    const body = JSON.parse(String(f.mock.calls[0]?.[1]?.body));
-    expect(body).toMatchObject({ model: "qwen/qwen3-vl-8b", temperature: 0 });
-    expect(body.response_format.json_schema.schema.required).toContain("passed");
-    expect(body.messages[0].content[1].image_url.url).toMatch(/^data:image\/png;base64,/);
-  });
-  it("drops low and pixel-owned issues and derives passed", async () => {
-    const reply = {
-      passed: false,
-      issues: [
-        { type: "margin-violation", severity: "high", description: "near top" },
-        { type: "text-artifact", severity: "low", description: "no text, fine" },
-      ],
-    };
-    const f = vi.fn<typeof fetch>(async () => chat(JSON.stringify(reply)));
-    expect(await createLmstudioVisionProvider({}, f).judge(await input())).toMatchObject({
-      passed: true,
-      issues: [],
-    });
-  });
-  it("retries once on garbage, then reports judge-error", async () => {
-    const f = vi.fn<typeof fetch>(async () => chat("not json"));
-    const v = await createLmstudioVisionProvider({}, f).judge(await input());
-    expect(f).toHaveBeenCalledTimes(2);
-    expect(v.passed).toBe(false);
-    expect(v.issues[0]?.type).toBe("judge-error");
-  });
-  it("extracts the verdict after a leaked <think> block", async () => {
-    const f = vi.fn<typeof fetch>(async () =>
-      chat('<think>\nchecking {"x":1}\n</think>\n{"passed":true,"issues":[]}'),
-    );
-    expect((await createLmstudioVisionProvider({}, f).judge(await input())).passed).toBe(true);
-  });
-  it("page with characters: sends the reference sheet as a second image and asks for off-model", async () => {
-    const f = vi.fn<typeof fetch>(async () => chat(JSON.stringify({ passed: true, issues: [] })));
-    const ref = await png(path.join(tmp(), "cast.png"));
-    await createLmstudioVisionProvider({}, f).judge({
-      ...(await input()),
-      characters: [{ label: "the mouse", spec: "2 round ears, no whiskers" }],
-      scene: "the mouse is tiny",
-      referenceImage: ref,
-    });
-    const content = JSON.parse(String(f.mock.calls[0]?.[1]?.body)).messages[0].content;
-    expect(content).toHaveLength(3);
-    expect(content[0].text).toContain("off-model");
-    expect(content[0].text).toContain("2 round ears, no whiskers");
-    expect(content[0].text).toContain("the mouse is tiny");
-  });
-  it("falls back to reasoning_content when content is empty", async () => {
-    const f = vi.fn<typeof fetch>(async () =>
-      json({
-        choices: [{ message: { content: "", reasoning_content: '{"passed":true,"issues":[]}' } }],
-      }),
-    );
-    expect((await createLmstudioVisionProvider({}, f).judge(await input())).passed).toBe(true);
-  });
-  it("unloadAll never throws when lms is missing", async () => {
-    await expect(lmstudioUnloadAll({ PF_LMS_BIN: "/nonexistent/lms" })).resolves.toBeUndefined();
   });
 });

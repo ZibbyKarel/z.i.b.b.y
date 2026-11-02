@@ -1,6 +1,7 @@
 import { initContract } from "@ts-rest/core";
 import { activityContract } from "./activity/activity.contract";
 import { activityViewContract } from "./activity/activity-view.contract";
+import { aiProvidersContract } from "./ai-providers/ai-providers.contract";
 import { agentRunsContract, agentsContract } from "./agents/agents.contract";
 import { briefingContract } from "./briefing/briefing.contract";
 import { budgetContract } from "./budget/budget.contract";
@@ -122,6 +123,7 @@ export const appContract = c.router({
   chat: chatContract,
   speech: speechContract,
   registries: registriesContract,
+  aiProviders: aiProvidersContract,
 });
 
 export type AppContract = typeof appContract;

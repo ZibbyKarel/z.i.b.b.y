@@ -31,7 +31,7 @@ phases:
     consumes: plan.json
     produces: cast-report.md
     commands:
-      - product-factory cast --report cast-report.md
+      - PF_IMAGE_PROVIDER=mflux PF_VISION_PROVIDER=none product-factory cast --report cast-report.md
     loop:
       to: plan
       maxRetries: 1
@@ -49,7 +49,7 @@ phases:
     consumes: jobs.json
     produces: produce-report.md
     commands:
-      - product-factory produce jobs.json --report produce-report.md
+      - PF_IMAGE_PROVIDER=mflux PF_VISION_PROVIDER=none product-factory produce jobs.json --report produce-report.md
     loop:
       to: illustrate
       maxRetries: 2
@@ -148,8 +148,8 @@ tržiště dělá operátor ručně.
    **plan** (1×, zjednodušit specifikaci/pózu), pak park.
 5. **illustrate** (`illustrator`) — `jobs.json`, jen prompty. Vzhled opakujících se
    postav nepopisuje — ten dodá referenční obrázek a specifikace z plánu.
-6. **produce** (tool) — generování (mflux lokálně / fal.ai v cloudu / mock),
-   prahování, pixel QA, vision QA, opakování. Strana nebo obálka s opakující se postavou
+6. **produce** (tool) — generování (mflux lokálně),
+   prahování, pixel QA (vision QA jen je-li zapnutá), opakování. Strana nebo obálka s opakující se postavou
    dostane jako referenci obrázek s jejími listy (FLUX.2 klein edit), takže postava
    vypadá všude stejně. U obálky se navíc hlídá, že zóna titulku a odznaků je klidné
    pozadí (`busy-zone`). Zablokované strany → zpět na
@@ -174,8 +174,9 @@ reject` (0 = titulka) a kniha se vrací přes **illustrate** → produce → ren
 
 ## Nastavení
 
-Poskytovatele volí projekt **publishing** (Projekty → publishing → env):
-`PF_IMAGE_PROVIDER` = `mflux` | `fal` | `mock`, `PF_VISION_PROVIDER` = `lmstudio` |
-`haiku` | `none`. Klíč `FAL_KEY` patří jen do tajemství projektu. Lidskou kontrolu
-po libovolné fázi zapne `approval: ask` u fáze (výchozí je plně autonomní).
+Příběhová linka s opakujícími se postavami zatím běží lokálně: příkazy **cast** a
+**produce** mají napevno `PF_IMAGE_PROVIDER=mflux PF_VISION_PROVIDER=none` (bez vision
+soudce, jen pixel QA). Přechod na OpenAI Images API přijde později; zatím ho používá
+workflow **Coloring Book Random**. Lidskou kontrolu po libovolné fázi zapne
+`approval: ask` u fáze (výchozí je plně autonomní).
 Rozpočet běhu hlídá `budget` — při překročení se běh zastaví a čeká na schválení.

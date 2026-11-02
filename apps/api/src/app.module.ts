@@ -32,6 +32,7 @@ import { MemoryModule } from "./memory/memory.module";
 import { RunRecorderModule } from "./memory/run-recorder.module";
 import { MachineModule } from "./machine/machine.module";
 import { MonitorsModule } from "./monitors/monitors.module";
+import { AiProvidersModule } from "./ai-providers/ai-providers.module";
 import { OperatorChannelModule } from "./operator-channel/operator-channel.module";
 import { InventoryModule } from "./inventory/inventory.module";
 import { ProposalsModule } from "./proposals/proposals.module";
@@ -108,6 +109,7 @@ import { TeamsModule } from "./teams/teams.module";
     MonitorsModule,
     // Slack operator channel, Phase 1: outbound notifications to the operator DM.
     OperatorChannelModule,
+    AiProvidersModule,
     // TODO 11: per-project health checks (state + transition activity).
     ProjectHealthModule,
     // TODO 13: read-only machine inventory (Claude Code MCP/skills/plugins) + skill install.

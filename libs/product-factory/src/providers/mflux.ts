@@ -2,7 +2,6 @@ import os from "node:os";
 import path from "node:path";
 import fs from "node:fs";
 import { assertLicensed, imageModelOf, lorasOf } from "./licence.ts";
-import { lmstudioUnloadAll } from "./lmstudio.ts";
 import { run as defaultRun } from "./proc.ts";
 import type { Run } from "./proc.ts";
 import { promptFor } from "./image.ts";
@@ -17,7 +16,6 @@ export const DRIVER = path.resolve(import.meta.dirname, "../../py/mflux_batch.py
 export function createMfluxImageProvider(
   env: NodeJS.ProcessEnv,
   run: Run = defaultRun,
-  unload: () => Promise<void> = () => lmstudioUnloadAll(env),
 ): ImageProvider {
   const model = imageModelOf(env);
   assertLicensed(model);
@@ -30,7 +28,6 @@ export function createMfluxImageProvider(
     model,
     async generateBatch(items, outDir): Promise<ImageResult[]> {
       fs.mkdirSync(outDir, { recursive: true });
-      await unload();
       const payload = {
         model,
         quantize,

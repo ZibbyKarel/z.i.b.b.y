@@ -51,9 +51,8 @@
     "desc": "Workspace of the pub department: children's coloring books. Not a git repo; books land in each run's book/ folder. books.md lists the themes already made.",
     "category": "Publishing",
     "env": {
-      "PF_IMAGE_PROVIDER": "mflux",
-      "PF_VISION_PROVIDER": "lmstudio",
-      "PF_LMSTUDIO_MODEL": "qwen/qwen3-vl-8b"
+      "PF_IMAGE_PROVIDER": "openai",
+      "PF_VISION_PROVIDER": "none"
     }
   },
   {

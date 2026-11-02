@@ -41,7 +41,14 @@ describe("SECTIONS sub-menus", () => {
       "hooks",
       "marketplaces",
     ]);
-    expect(ids("system")).toEqual(["general", "runtime", "activity", "status", "inventory"]);
+    expect(ids("system")).toEqual([
+      "general",
+      "runtime",
+      "ai-models",
+      "activity",
+      "status",
+      "inventory",
+    ]);
     expect(SECTIONS.find((s) => s.id === "system")?.href).toBe("/system/settings/general");
   });
 });

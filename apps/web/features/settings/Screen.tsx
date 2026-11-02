@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { useHealthQuery } from "../health";
+import { AiModelsSection } from "./components/AiModelsSection";
 import { ActivitySection } from "./components/ActivitySection";
 import { AppearanceSection } from "./components/AppearanceSection";
 import { ChatSection } from "./components/ChatSection";
@@ -154,6 +155,7 @@ export function SettingsScreen({ section }: SettingsScreenProps) {
 
           {section === "activity" && <ActivitySection />}
           {section === "runtime" && <SystemSection />}
+          {section === "ai-models" && <AiModelsSection />}
 
           {section === "status" && (
             <Stack gap="250">

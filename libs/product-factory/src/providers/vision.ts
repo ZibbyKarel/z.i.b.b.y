@@ -25,7 +25,7 @@ export interface VisionVerdict {
 }
 
 export interface VisionProvider {
-  id: "mock" | "lmstudio" | "haiku";
+  id: "mock" | "haiku";
   model: string;
   judge(input: VisionInput): Promise<VisionVerdict>;
   /** Optional: release memory (unload models) after the phase. */

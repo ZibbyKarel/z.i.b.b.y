@@ -58,6 +58,7 @@ import { RunnerCore } from "../runner/runner-core";
 import { LimitsService } from "../limits/limits.service";
 import { ProjectLocalService } from "../projects/project-local.service";
 import { ProjectLocalUnresolvedError } from "../projects/projects.errors";
+import { AiProvidersStore } from "../ai-providers/ai-providers.store";
 import { ProjectSecretsStore } from "../projects/project-secrets.store";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { writeFileAtomic } from "../shared/file-storage/file-utils";
@@ -300,6 +301,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     @Optional() private readonly autopilot?: AutopilotService,
     // Phase 4 — the run's task, so only a real pr-review task's gate is signed off.
     @Optional() private readonly tasks?: ScheduledTasksStorageService,
+    // Global AI provider keys (OPENAI_API_KEY), lowest-precedence stage env.
+    @Optional() private readonly aiProviders?: AiProvidersStore,
   ) {
     this.dir = path.resolve(dir);
     this.log = logger.child(WorkflowRunnerService.name);
@@ -2536,17 +2539,21 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Phase D: the env vars to inject into a stage — the project's non-secret `env`
-   * overlaid with its write-only secrets (secrets win on a key clash). Returns
-   * undefined when the project is unresolved or carries neither. Secrets are read
-   * here and never logged; the core applies the ZIBBY-owned intent-dir pin after.
+   * The env vars to inject into a stage: global AI provider keys (OPENAI_API_KEY),
+   * overlaid with the project's non-secret `env`, overlaid with its write-only
+   * secrets (precedence: global < project env < project secrets). The global keys
+   * apply even with no project, but only to tool phases: an agent stage reads
+   * untrusted content and has a shell, so it never sees them. Returns undefined
+   * when there is nothing to inject. Secrets are read here and never logged; the
+   * core applies the ZIBBY-owned intent-dir pin after.
    */
   private async resolveProjectEnv(
     project: Project | null,
+    tool: boolean,
   ): Promise<Record<string, string> | undefined> {
-    if (!project) return undefined;
-    const secrets = await this.projectSecrets.read(project.id).catch(() => null);
-    const merged = { ...(project.env ?? {}), ...(secrets ?? {}) };
+    const global = tool ? ((await this.aiProviders?.env().catch(() => null)) ?? {}) : {};
+    const secrets = project ? await this.projectSecrets.read(project.id).catch(() => null) : null;
+    const merged = { ...global, ...(project?.env ?? {}), ...(secrets ?? {}) };
     return Object.keys(merged).length > 0 ? merged : undefined;
   }
 
@@ -2611,7 +2618,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     // phase also gets the repo's `node_modules/.bin` first on PATH, so workspace
     // CLIs (`product-factory`) resolve however the API was started.
     const env = {
-      ...(await this.resolveProjectEnv(project)),
+      ...(await this.resolveProjectEnv(project, phase.type === "tool")),
       ZIBBY_RUN_DIR: run.cwd,
       ZIBBY_STAGE_DIR: stageCwd,
       // Repo bins (e.g. `product-factory`): first for a tool phase; LAST for an agent

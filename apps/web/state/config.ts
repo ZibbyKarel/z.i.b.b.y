@@ -120,6 +120,7 @@ export const SECTIONS = [
     tabs: [
       { id: "general", href: "/system/settings/general" as Route },
       { id: "runtime", href: "/system/settings/runtime" as Route },
+      { id: "ai-models", href: "/system/settings/ai-models" as Route },
       { id: "activity", href: "/system/settings/activity" as Route },
       { id: "status", href: "/system/settings/status" as Route },
       { id: "inventory", href: "/system/inventory" as Route },

@@ -2,6 +2,7 @@ import { bakeoff } from "./bakeoff.ts";
 import { cast } from "./characters.ts";
 import { doctor } from "./doctor.ts";
 import { finalize } from "./finalize.ts";
+import { jobs } from "./jobs.ts";
 import { planCheck } from "./plan-check.ts";
 import { preflight } from "./preflight.ts";
 import { produce } from "./produce.ts";
@@ -13,6 +14,7 @@ const HELP = `product-factory <command>
 
   plan check <content-plan.md> [--out plan.json]
   cast [--report f] [--rounds N]        (character sheets + title buddies)
+  jobs [--out jobs.json] [--report f]   (jobs from plan.json: page prompt = scene, no illustrator)
   produce <jobs.json> [--report f] [--rounds N] [--pages a-b]
   render [--report f]
   reject <pages e.g. 3,5 (0 = cover)> [--reason text]
@@ -33,6 +35,7 @@ export async function main(argv: string[], ctx: Ctx): Promise<number> {
   }
   const commands: Record<string, Command> = {
     cast,
+    jobs,
     produce,
     reject,
     render,
