@@ -2,18 +2,23 @@ import { Controller, UseGuards } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { aiProvidersContract } from "@zibby/contracts";
 import { OperatorTokenGuard } from "../approvals/operator-token.guard";
+import { AiProvidersSpendService } from "./ai-providers-spend.service";
 import { AiProvidersStore } from "./ai-providers.store";
 
 /** Implements `aiProvidersContract`; mutating routes need the operator token. */
 @Controller()
 @UseGuards(OperatorTokenGuard)
 export class AiProvidersController {
-  constructor(private readonly store: AiProvidersStore) {}
+  constructor(
+    private readonly store: AiProvidersStore,
+    private readonly spend: AiProvidersSpendService,
+  ) {}
 
   @TsRestHandler(aiProvidersContract)
   handler() {
     return tsRestHandler(aiProvidersContract, {
       getAiProviders: async () => ({ status: 200, body: await this.store.status() }),
+      getAiProvidersSpend: async () => ({ status: 200 as const, body: await this.spend.spend() }),
       setOpenAiKey: async ({ body }) => {
         await this.store.writeOpenAiKey(body.apiKey);
         return { status: 200 as const, body: await this.store.status() };

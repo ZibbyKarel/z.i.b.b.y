@@ -82,7 +82,7 @@ const costUsd =
 const stageDir = process.env.ZIBBY_STAGE_DIR ?? path.dirname(producesAbs);
 await appendFile(
   path.join(stageDir, "costs.jsonl"),
-  `${JSON.stringify({ costUsd, source: "openai", model })}\n`,
+  `${JSON.stringify({ at: new Date().toISOString(), source: "text", provider: "openai", model, costUsd })}\n`,
 );
 console.log(
   `${model}: ${inTok} in (${cached} cached) / ${outTok} out tokens, $${costUsd.toFixed(4)}`,

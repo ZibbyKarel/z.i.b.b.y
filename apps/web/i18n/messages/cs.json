@@ -3323,6 +3323,8 @@
         "near": "dochází",
         "held": "{n} čeká nad limitem",
         "asideExhausted": "{n} vyčerpáno",
+        "providerOpenai": "OpenAI",
+        "providerSpent": "utraceno {amount} tento měsíc",
         "asideUnknown": "limity neznámé",
         "axis": {
           "daily": "dnes",

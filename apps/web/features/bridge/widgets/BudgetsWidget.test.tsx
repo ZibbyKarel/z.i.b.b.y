@@ -12,6 +12,8 @@ const d = vi.hoisted(() => ({
   companies: [] as unknown[],
   pending: false,
   error: false,
+  openaiConfigured: false,
+  openaiSpent: 0,
 }));
 
 vi.mock("../../projects/queries", () => ({
@@ -22,6 +24,12 @@ vi.mock("../../projects/queries", () => ({
     refetch: vi.fn(),
   }),
   useProjectsQuery: () => ({ data: d.projects, isPending: false, isError: false }),
+}));
+vi.mock("../../ai-providers", () => ({
+  useAiProvidersQuery: () => ({ data: { openai: { configured: d.openaiConfigured } } }),
+  useAiProvidersSpendQuery: () => ({
+    data: { month: "2026-11", openai: { spentUsd: d.openaiSpent } },
+  }),
 }));
 vi.mock("../../companies/queries", () => ({
   useCompaniesQuery: () => ({ data: d.companies, isPending: false, isError: false }),
@@ -70,6 +78,8 @@ beforeEach(() => {
   d.companies = [];
   d.pending = false;
   d.error = false;
+  d.openaiConfigured = false;
+  d.openaiSpent = 0;
 });
 
 const rows = () => screen.getAllByTestId(BudgetsWidgetTestId.Row);
@@ -198,5 +208,20 @@ describe("BudgetsWidget", () => {
     renderWithProviders(<BudgetsWidget {...props} />);
     expect(screen.getByTestId(LoadErrorTestId.Root)).toBeInTheDocument();
     expect(props.onEmptyChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it("shows this month's OpenAI spend once a key is set, even with nothing else to show", () => {
+    d.budget = { global: global({ stale: true }), projects: [] };
+    d.openaiConfigured = true;
+    d.openaiSpent = 1.5;
+    renderWithProviders(<BudgetsWidget {...setup()} />);
+    expect(screen.getByTestId(BudgetsWidgetTestId.ProviderRow)).toHaveTextContent("OpenAI");
+    expect(screen.getByTestId(BudgetsWidgetTestId.ProviderSpend)).toHaveTextContent("utraceno");
+    expect(screen.queryByTestId(BudgetsWidgetTestId.Empty)).not.toBeInTheDocument();
+  });
+
+  it("hides the OpenAI row when there is no key and no spend", () => {
+    renderWithProviders(<BudgetsWidget {...setup()} />);
+    expect(screen.queryByTestId(BudgetsWidgetTestId.ProviderRow)).not.toBeInTheDocument();
   });
 });

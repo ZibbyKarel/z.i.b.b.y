@@ -29,6 +29,16 @@ export const OpenAiTextModelSchema = z.enum([
 ]);
 export type OpenAiTextModel = z.infer<typeof OpenAiTextModelSchema>;
 
+/**
+ * What ZIBBY itself spent through each provider's API in the current month
+ * (Europe/Prague). OpenAI exposes no remaining-credit endpoint, so this is spend only.
+ */
+export const AiProvidersSpendSchema = z.object({
+  month: z.string().regex(/^\d{4}-\d{2}$/),
+  openai: z.object({ spentUsd: z.number().nonnegative() }),
+});
+export type AiProvidersSpend = z.infer<typeof AiProvidersSpendSchema>;
+
 export const SetOpenAiKeyInputSchema = z.object({
   apiKey: z
     .string()

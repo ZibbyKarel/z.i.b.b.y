@@ -21,6 +21,7 @@ import {
   type BudgetStatus,
   buildBudgetRows,
 } from "../../budget/budgetHealth";
+import { useAiProvidersQuery, useAiProvidersSpendQuery } from "../../ai-providers";
 import { useCompaniesQuery } from "../../companies/queries";
 import { useBudgetQuery, useProjectsQuery } from "../../projects/queries";
 import type { BridgeWidgetProps } from "./registry";
@@ -34,6 +35,8 @@ export enum BudgetsWidgetTestId {
   Percent = "budgets-widget-percent",
   Held = "budgets-widget-held",
   Empty = "budgets-widget-empty",
+  ProviderRow = "budgets-widget-provider-row",
+  ProviderSpend = "budgets-widget-provider-spend",
 }
 
 const TONE: Record<BudgetStatus, ProgressBarTone> = {
@@ -66,6 +69,14 @@ export function BudgetsWidget({ onEmptyChange, onCountChange }: BridgeWidgetProp
   const projectsQuery = useProjectsQuery();
   const companiesQuery = useCompaniesQuery();
 
+  // Provider credit rows are an extra: their queries never fail or hold up the widget.
+  const providers = useAiProvidersQuery().data;
+  const spend = useAiProvidersSpendQuery().data;
+  const openaiSpent =
+    providers?.openai.configured || (spend?.openai.spentUsd ?? 0) > 0
+      ? (spend?.openai.spentUsd ?? 0)
+      : undefined;
+
   const loading = budgetQuery.isPending || projectsQuery.isPending || companiesQuery.isPending;
   const failed = budgetQuery.isError || projectsQuery.isError || companiesQuery.isError;
 
@@ -93,7 +104,7 @@ export function BudgetsWidget({ onEmptyChange, onCountChange }: BridgeWidgetProp
   useWidgetReport(
     {
       loading,
-      count: loading || !built ? undefined : rows.length,
+      count: loading || !built ? undefined : rows.length + (openaiSpent === undefined ? 0 : 1),
       you: exhausted + near,
       aside,
       failed,
@@ -112,7 +123,7 @@ export function BudgetsWidget({ onEmptyChange, onCountChange }: BridgeWidgetProp
       />
     );
   if (loading || !built) return null;
-  if (rows.length === 0) {
+  if (rows.length === 0 && openaiSpent === undefined) {
     return (
       <BoardRow tone="neutral">
         <span data-testid={BudgetsWidgetTestId.Empty}>
@@ -128,7 +139,38 @@ export function BudgetsWidget({ onEmptyChange, onCountChange }: BridgeWidgetProp
       {rows.map((row) => (
         <BudgetRow key={`${row.kind}:${row.id}`} row={row} />
       ))}
+      {openaiSpent === undefined ? null : (
+        <ProviderSpendRow name={t("providerOpenai")} usd={openaiSpent} />
+      )}
     </>
+  );
+}
+
+/**
+ * One provider's API spend this month. OpenAI has no remaining-credit endpoint, so this
+ * reads what ZIBBY itself spent; the row opens Settings → AI models.
+ */
+function ProviderSpendRow({ name, usd }: { name: string; usd: number }) {
+  const t = useTranslations("bridge.widgets.budgets");
+  const locale = useLocale();
+  const money = new Intl.NumberFormat(locale, { style: "currency", currency: "USD" }).format(usd);
+  return (
+    <BoardRow tone="neutral">
+      <TextLink
+        data-testid={BudgetsWidgetTestId.ProviderRow}
+        href={"/system/settings/ai-models" as Route}
+        linkComponent={Link as SubNavLinkComponent}
+      >
+        <BoardLine between gap="6" indent={false}>
+          <BoardText kind="title">{name}</BoardText>
+          <span data-testid={BudgetsWidgetTestId.ProviderSpend}>
+            <BoardText kind="meta" tone="ink2">
+              {t("providerSpent", { amount: money })}
+            </BoardText>
+          </span>
+        </BoardLine>
+      </TextLink>
+    </BoardRow>
   );
 }
 

@@ -31,6 +31,15 @@ Every route requires the operator token.
   when the key is invalid.
 - `DELETE /api/ai-providers/openai` clears the key. It is idempotent and returns the
   status.
+- `GET /api/ai-providers/spend` returns `{ month: "YYYY-MM", openai: { spentUsd } }`: what
+  ZIBBY itself spent through the OpenAI API this month (Europe/Prague). OpenAI has no
+  remaining-credit endpoint, so this is spend only, not a balance.
+  `AiProvidersSpendService` sums every `costs.jsonl` under the workflow runs dir
+  (`<runs>/<run>/<stage>/costs.jsonl`) whose line has `provider: "openai"` and an `at`
+  in the current month. Image calls (product-factory) and OpenAI text steps
+  (`openai-stage.mjs`) both write such lines. The Bridge widget **Budgety a limity** shows the
+  figure as an "OpenAI" row (shown once a key is set or there is spend) that opens
+  Settings → AI models.
 
 ## How keys reach work
 

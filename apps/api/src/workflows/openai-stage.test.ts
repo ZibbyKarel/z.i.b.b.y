@@ -86,7 +86,7 @@ describe("openai-stage.mjs", () => {
     const line = JSON.parse((await fs.readFile(path.join(dir, "costs.jsonl"), "utf8")).trim());
     // (600*2 + 400*0.1 + 500*10) / 1e6
     expect(line.costUsd).toBeCloseTo(0.00624, 8);
-    expect(line).toMatchObject({ source: "openai", model: "gpt-6.1-sol" });
+    expect(line).toMatchObject({ source: "text", provider: "openai", model: "gpt-6.1-sol" });
   });
 
   it("retries a 500 and then succeeds", async () => {

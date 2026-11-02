@@ -1,6 +1,10 @@
 import { initContract } from "@ts-rest/core";
 import { ErrorSchema } from "../common.schema";
-import { AiProvidersStatusSchema, SetOpenAiKeyInputSchema } from "./ai-providers.schema";
+import {
+  AiProvidersSpendSchema,
+  AiProvidersStatusSchema,
+  SetOpenAiKeyInputSchema,
+} from "./ai-providers.schema";
 
 const c = initContract();
 
@@ -15,6 +19,12 @@ export const aiProvidersContract = c.router(
       path: "/ai-providers",
       responses: { 200: AiProvidersStatusSchema },
       summary: "Which AI providers have a key configured (never the key)",
+    },
+    getAiProvidersSpend: {
+      method: "GET",
+      path: "/ai-providers/spend",
+      responses: { 200: AiProvidersSpendSchema },
+      summary: "ZIBBY's own spend through each provider's API this month",
     },
     setOpenAiKey: {
       method: "PUT",

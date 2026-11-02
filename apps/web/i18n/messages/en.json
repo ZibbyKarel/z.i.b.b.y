@@ -3323,6 +3323,8 @@
         "near": "running low",
         "held": "{n} held over cap",
         "asideExhausted": "{n} exhausted",
+        "providerOpenai": "OpenAI",
+        "providerSpent": "{amount} spent this month",
         "asideUnknown": "limits unknown",
         "axis": {
           "daily": "today",
