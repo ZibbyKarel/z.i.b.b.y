@@ -50,17 +50,28 @@ Pure JSON (no Markdown around it):
 ```
 
 One job per plan page. Each prompt: start with the style guide phrases ("children's
-coloring page, thick uniform black outlines, pure white background, no shading, no
-gray, no text, closed shapes, large simple forms"), then the page's scene and
-subjects, then composition ("one centered subject, generous empty margins"). Refer
+coloring page, thick uniform black outlines, closed shapes, white fill, no shading,
+no gray, no text, large shapes"), then the page's scene and subjects, then
+composition: name what is in the foreground, the middle and the background ("big
+flower and a bucket in the foreground, the hero feeds a cow in the middle, red barn,
+fence, hills, clouds and sun behind; generous empty margins"). A page is a layered
+scene with roughly 8-15 big colourable regions for ages 3-5, never one object on an
+empty page and never tiny repeated detail. Refer
 to a recurring character ONLY by its `label` ("the little astronaut boy waters a moon
 flower") and say what it does and where — **never re-describe its looks** (no hair,
 clothes, counts: a second description fights the reference and the spec). Keep each
 prompt ≤ ~900 characters: the model reads ~512 tokens and the tool adds the specs.
 Off-model (`off-model`: a recurring character drawn with wrong counts or clothes) →
-simplify the pose, show the character larger and facing the viewer, change the seed. For a blocked page,
+simplify the pose, show the character larger and facing the viewer, change the seed.
+A page listed in `book/rejections.md` **two or more times** (or already rejected once
+with a duplicated or missing character) is a scene the model cannot draw — rewording
+again won't help. Simplify the scene itself: keep the caption's idea but draw at most
+**two** recurring characters in a plain side-by-side pose, and put them on the job:
+`"characters": ["hero", "baby-dino"]` (a subset of the plan page's `characters`) and
+`"subjects": [...]` (what the simpler scene shows). A dropped character may appear only
+as a plain prop without a face (a tail, a shadow) or not at all. For a blocked page,
 address its QA issues explicitly (gray-area → "no fill, no shadows, line art only";
-too-complex → fewer, larger shapes; text-artifact → "no letters, no words") and
+too-complex → drop background and foreground elements, keep larger shapes; text-artifact → "no letters, no words") and
 change the seed. No brands or licensed characters, ever. Never put a name or any
 word in a prompt as text to draw — describe the child only by looks (e.g. "a little
 girl with two pigtails and a striped dress"); prompts are always in English.

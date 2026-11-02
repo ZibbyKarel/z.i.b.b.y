@@ -100,6 +100,9 @@ export const JobSchema = z.strictObject({
   pageNumber: z.number().int().min(1),
   prompt: z.string().min(1).max(2000),
   seed: z.number().int().optional(),
+  /** Simplified page: a subset of the plan page's characters (and its subjects) for a scene the model keeps failing. */
+  characters: z.array(z.string()).max(4).optional(),
+  subjects: z.array(z.string()).min(1).optional(),
 });
 export type Job = z.infer<typeof JobSchema>;
 

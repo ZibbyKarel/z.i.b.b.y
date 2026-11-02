@@ -2812,6 +2812,11 @@
       "auto": "⌘K · auto",
       "manual": "Manual only"
     },
+    "skillSections": {
+      "external": "External",
+      "marketplaces": "From marketplaces",
+      "local": "Local"
+    },
     "skillTypeFallback": "Skill",
     "emptySkills": "No skills yet.",
     "emptyMcp": "No MCP servers yet.",

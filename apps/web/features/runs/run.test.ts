@@ -198,4 +198,9 @@ describe("parked workflow actions", () => {
     expect(isResumableRun(run)).toBe(true);
     expect(isStoppableRun(run)).toBe(true);
   });
+
+  it("a workflow awaiting approval can be stopped", () => {
+    expect(isStoppableRun({ kind: "workflow", status: "awaiting-approval" })).toBe(true);
+    expect(isStoppableRun({ kind: "agent", status: "awaiting-approval" })).toBe(false);
+  });
 });

@@ -45,7 +45,8 @@ visual QA) follows.
     one another in time, like a short picture story.
   - `personalFor` — the child's name when the book is made for one named child.
   - `style` (default `cute_simple_line_art`), `trim` 8.5x11, optional `title`.
-    "Jednoduché" / simple means very few, very large shapes.
+    "Jednoduché" / simple means large, clear shapes — but still a scene with a background
+    and foreground, never one object on an empty page.
 - A **personal book** (`personalFor` set — "pro Natálku", "o Natálce"): the child is
   the main character (a `## Characters` entry like any other — hair, clothes, in neutral
   visual words; never the name inside an image) and the title uses the name
@@ -57,9 +58,15 @@ visual QA) follows.
   and differs clearly from the last few, then add one line
   `- <YYYY-MM-DD> · <theme> · <title>` to `books.md` with the Edit tool (Write if it is missing).
 - Style rules that always hold **for the interior pages**: thick uniform black
-  outlines, pure white background, closed contours, no gray, no shading, no text
-  inside images, one main subject per page for ages ≤ 4, nothing within 0.5 in of the
-  page edge. The **cover is the exception — it is full colour** (see `## Cover concept`).
+  outlines, closed contours, white paper with no gray, no shading and no filled black
+  areas, no text inside images, nothing within 0.5 in of the page edge. Every page is
+  a **layered scene**, not a single object on an empty page: a foreground (a few big
+  props or plants at the bottom edge), the main subject or action in the middle, and a
+  background that sets the place (barn, fence, hills, trees, clouds, sun, pond...).
+  Roughly 8-15 clearly separate regions to colour for ages 3-5 (5-8 for ages 2-3, up to
+  ~20 for ages 6+), all still big enough for a crayon; no tiny repeated details (no
+  individual leaves, grass blades, bricks or scales). One main subject
+  per page for ages ≤ 4 (plus supporting props and background). The **cover is the exception — it is full colour** (see `## Cover concept`).
 - Cover instructions in the brief (an "OBÁLKA" / "cover" section: colours, background,
   badges, what the hero does) are authoritative — carry them into `## Cover concept`
   and fill in only what they leave open.

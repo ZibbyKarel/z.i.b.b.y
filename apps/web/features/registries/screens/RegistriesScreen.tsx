@@ -9,6 +9,7 @@ import {
   EntityCard,
   Grid,
   type IconName,
+  SectionLabel,
   Stack,
   StatusDot,
   Tag,
@@ -46,6 +47,7 @@ import { ExternalSkillSource } from "../../skills/components/ExternalSkillSource
 import { InstallExternalSkillDialog } from "../../skills/components/InstallExternalSkillDialog";
 import { useCreateSkillMutation, useSyncAllExternalSkillsMutation } from "../../skills/mutations";
 import { useSkillCategoriesQuery, useSkillsQuery } from "../../skills/queries";
+import { useMarketplaceSkillsQuery } from "../../marketplaces/queries";
 import { useRegistryBindingsQuery } from "../queries";
 import { type RegistryKindParam, registryHref } from "../registryKinds";
 
@@ -54,6 +56,8 @@ export enum RegistriesScreenTestId {
   InstallSkills = "registries-install-skills",
   Empty = "registries-empty",
   BoundIn = "registries-bound-in",
+  /** Suffixed with `external`, `marketplaces` or `local`. */
+  SkillSection = "registries-skill-section",
 }
 
 export interface RegistriesScreenProps {
@@ -253,35 +257,74 @@ function ExternalSkillActions() {
 
 type Bindings = Record<string, DepartmentId[]>;
 
+/** Skills page body: External (GitHub), From marketplaces (read-only), Local (the rest), in that order. */
 function SkillsCards({ bindings }: { bindings?: Bindings }) {
   const t = useTranslations("registries");
   const router = useRouter();
-  return (
-    <RegistryCards
-      empty={t("emptySkills")}
-      query={useSkillsQuery()}
-      renderCard={(s) => (
+  const query = useSkillsQuery();
+  const marketplaceSkills = useMarketplaceSkillsQuery().data ?? [];
+
+  if (query.isPending) return <QueryLoading />;
+  if (query.isError) return <QueryError onRetry={() => void query.refetch()} />;
+
+  const skills = query.data ?? [];
+  const external = skills.filter((s) => s.source);
+  const local = skills.filter((s) => !s.source);
+  if (skills.length + marketplaceSkills.length === 0)
+    return <EmptyState data-testid={RegistriesScreenTestId.Empty} title={t("emptySkills")} />;
+
+  const renderSkill = (s: (typeof skills)[number]) => (
+    <EntityCard
+      actions={boundIn("skills", bindings?.[s.id])}
+      badges={[
+        [
+          s.source ? (
+            <ExternalSkillSource key="source" source={s.source} />
+          ) : (
+            <Tag key="category">{s.category ?? t("skillTypeFallback")}</Tag>
+          ),
+        ],
+      ]}
+      description={s.desc}
+      glyph={(s.glyph as IconName | undefined) ?? "brain"}
+      key={s.id}
+      onClick={() => router.push(registryHref("skills", s.id) as Route)}
+      openLabel={t("openAria", { name: s.name })}
+      subtitle={s.id !== s.name ? s.id : undefined}
+      title={s.name}
+    />
+  );
+
+  const sections = [
+    { key: "external", label: t("skillSections.external"), cards: external.map(renderSkill) },
+    {
+      key: "marketplaces",
+      label: t("skillSections.marketplaces"),
+      // Read-only: the plugin owns the skill, so there is no detail page to open.
+      cards: marketplaceSkills.map((s) => (
         <EntityCard
-          actions={boundIn("skills", bindings?.[s.id])}
-          badges={[
-            [
-              s.source ? (
-                <ExternalSkillSource key="source" source={s.source} />
-              ) : (
-                <Tag key="category">{s.category ?? t("skillTypeFallback")}</Tag>
-              ),
-            ],
-          ]}
+          badges={[[<Tag key="marketplace">{`${s.marketplace} · ${s.plugin}`}</Tag>]]}
           description={s.desc}
-          glyph={(s.glyph as IconName | undefined) ?? "brain"}
+          glyph="brain"
           key={s.id}
-          onClick={() => router.push(registryHref("skills", s.id) as Route)}
-          openLabel={t("openAria", { name: s.name })}
-          subtitle={s.id !== s.name ? s.id : undefined}
           title={s.name}
         />
-      )}
-    />
+      )),
+    },
+    { key: "local", label: t("skillSections.local"), cards: local.map(renderSkill) },
+  ].filter((section) => section.cards.length > 0);
+
+  return (
+    <Stack gap="300">
+      {sections.map(({ key, label, cards }) => (
+        <Stack data-testid={`${RegistriesScreenTestId.SkillSection}-${key}`} gap="150" key={key}>
+          <SectionLabel>{`${label} · ${cards.length}`}</SectionLabel>
+          <Grid cols={1} gap="150" lg={3} md={2}>
+            {cards}
+          </Grid>
+        </Stack>
+      ))}
+    </Stack>
   );
 }
 

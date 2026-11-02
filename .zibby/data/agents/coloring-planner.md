@@ -85,8 +85,12 @@ Rules:
   theme - never two pages with the same subject or a near-identical scene.
 - `scene` is the **complete image prompt** for a toddler-friendly coloring page and is
   sent to the image model as is (the "black and white coloring page" style suffix is added
-  automatically): one big subject centred, few large simple shapes, thick outlines, a simple
-  background (a ground line, a cloud, a sun - never a busy scene), no text, no letters.
+  automatically): the page's subject plus a setting: a **layered scene**, not a single object on an empty page: a foreground (a few big
+  props or plants at the bottom edge), the main subject or action in the middle, and a
+  background that sets the place (barn, fence, hills, trees, clouds, sun, pond...).
+  Roughly 8-15 clearly separate regions to colour for ages 3-5 (5-8 for ages 2-3, up to
+  ~20 for ages 6+), all still big enough for a crayon; no tiny repeated details (no
+  individual leaves, grass blades, bricks or scales). Thick outlines, no text, no letters.
   Describe what is drawn, pose and count ("one big friendly fox sitting, round head, bushy
   tail, three small flowers beside it"). Self-contained: no reference to other pages.
   At most about 400 characters.

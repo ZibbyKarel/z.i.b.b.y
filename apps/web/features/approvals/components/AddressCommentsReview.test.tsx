@@ -76,10 +76,11 @@ describe("AddressCommentsReview", () => {
       />,
     );
     expect(screen.getByTestId(AddressCommentsReviewTestId.Summary)).toBeInTheDocument();
-    expect(screen.getAllByTestId(ReviewThreadTestId.Root)).toHaveLength(3);
+    expect(screen.getAllByTestId(ReviewThreadTestId.Root)).toHaveLength(2);
     expect(screen.getAllByTestId(ReviewThreadTestId.ReplyInput)).toHaveLength(2);
     expect(screen.getAllByTestId(ReviewThreadTestId.ReplyInput)[0]).toHaveValue("fixed it");
-    expect(screen.getByTestId(AddressCommentsReviewTestId.AlreadyResolved)).toBeInTheDocument();
+    // The skipped thread (B) is hidden, and with it the only already-resolved row.
+    expect(screen.queryByTestId(AddressCommentsReviewTestId.AlreadyResolved)).toBeNull();
     expect(screen.getByTestId(AddressCommentsReviewTestId.Report)).toBeInTheDocument();
   });
 

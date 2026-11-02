@@ -23,6 +23,20 @@ vi.mock("../queries", () => ({
   }),
 }));
 
+vi.mock("../../marketplaces/queries", () => ({
+  useMarketplaceSkillsQuery: () => ({
+    data: [
+      {
+        id: "zibby:todo",
+        name: "zibby:todo",
+        desc: "Manage TODO",
+        marketplace: "zibby",
+        plugin: "zibby",
+      },
+    ],
+  }),
+}));
+
 vi.mock("../../skills/queries", () => ({
   useSkillsQuery: () => ({
     data: [
@@ -109,22 +123,29 @@ describe("RegistriesScreen — /system/registries/[kind]", () => {
   it("renders skills as cards with a derived Bound in footer, not a table", () => {
     render(<RegistriesScreen kind="skills" />);
     expect(screen.queryByTestId(DataTableTestId.Root)).toBeNull();
-    const cards = screen.getAllByTestId(EntityCardTestId.Root);
-    expect(cards).toHaveLength(2);
+    // Order: External, From marketplaces, Local.
+    const sections = ["external", "marketplaces", "local"].map((k) =>
+      screen.getByTestId(`${RegistriesScreenTestId.SkillSection}-${k}`),
+    );
+    expect(within(sections[1]!).getByText("zibby:todo")).toBeInTheDocument();
+    expect(within(sections[0]!).getByText("security-audit")).toBeInTheDocument();
+    const cards = within(sections[2]!).getAllByTestId(EntityCardTestId.Root);
+    expect(cards).toHaveLength(1);
     expect(within(cards[0]!).getByText("Code review")).toBeInTheDocument();
     // Derived from the mocked bindings — department codes render as Tags in the footer.
     const boundIn = within(cards[0]!).getByTestId(RegistriesScreenTestId.BoundIn);
     expect(within(boundIn).getByText("DEV")).toBeInTheDocument();
     expect(within(boundIn).getByText("QA")).toBeInTheDocument();
     // An unbound skill draws no footer.
-    expect(within(cards[1]!).queryByTestId(RegistriesScreenTestId.BoundIn)).toBeNull();
+    expect(within(sections[0]!).queryByTestId(RegistriesScreenTestId.BoundIn)).toBeNull();
   });
 
   it("a card click opens the skill's detail page", async () => {
     render(<RegistriesScreen kind="skills" />);
-    const [first] = screen.getAllByTestId(EntityCardTestId.Open);
-    expect(first).toHaveAccessibleName("Otevřít Code review");
-    await userEvent.click(first!);
+    const local = screen.getByTestId(`${RegistriesScreenTestId.SkillSection}-local`);
+    const open = within(local).getByTestId(EntityCardTestId.Open);
+    expect(open).toHaveAccessibleName("Otevřít Code review");
+    await userEvent.click(open);
     expect(push).toHaveBeenCalledWith("/system/registries/skills/code-review");
   });
 

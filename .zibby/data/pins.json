@@ -8,5 +8,9 @@
     "kind": "page",
     "id": "/dashboard/inbox/issues?project=cms4",
     "label": "CMS4 - Issues"
+  },
+  {
+    "kind": "workflow",
+    "id": "coloring-book-random"
   }
 ]

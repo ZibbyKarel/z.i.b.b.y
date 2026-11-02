@@ -191,13 +191,20 @@ describe("openai", () => {
       /OPENAI_API_KEY is not set/,
     );
   });
-  it("rejects reference images", async () => {
-    await expect(
-      createOpenAiImageProvider(env, vi.fn<typeof fetch>(), 0).generateBatch(
-        [{ ...item, referenceImages: ["/x.png"] }],
-        tmp(),
-      ),
-    ).rejects.toThrow(/reference images are not supported/);
+  it("sends reference images to the edits endpoint as multipart image[]", async () => {
+    const ref = await png(path.join(tmp(), "cast.png"));
+    const f = vi.fn<typeof fetch>(async () => ok());
+    await createOpenAiImageProvider(env, f, 0).generateBatch(
+      [{ ...item, referenceImages: [ref, ref] }],
+      tmp(),
+    );
+    expect(String(f.mock.calls[0]?.[0])).toMatch(/images\/edits$/);
+    const init = f.mock.calls[0]?.[1];
+    expect((init?.headers as Record<string, string>).Authorization).toBe("Bearer sk-x");
+    const fd = init?.body as FormData;
+    expect(fd.getAll("image[]")).toHaveLength(2);
+    expect(fd.get("model")).toBe("gpt-image-2.5-flare");
+    expect(String(fd.get("prompt"))).toContain("thick clean black outlines");
   });
   it("moderation_blocked names the item", async () => {
     const f = vi.fn<typeof fetch>(async () =>

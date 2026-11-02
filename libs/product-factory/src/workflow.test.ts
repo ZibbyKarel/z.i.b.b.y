@@ -90,6 +90,15 @@ describe("produce", () => {
     ]);
   });
 
+  it("refuses a job that adds a character the plan page does not have", async () => {
+    const ctx = await prepared();
+    const j = JSON.parse(fs.readFileSync(jobs, "utf8")) as { jobs: { characters?: string[] }[] };
+    j.jobs[0]!.characters = ["nobody"];
+    const file = path.join(ctx.cwd, "jobs-extra.json");
+    fs.writeFileSync(file, JSON.stringify(j));
+    await expect(produce([file, "--rounds", "1"], ctx)).rejects.toThrow(/adds characters/);
+  });
+
   it("logs each batch and each judged image", async () => {
     const ctx = await prepared();
     const log = vi.spyOn(console, "log").mockImplementation(() => {});

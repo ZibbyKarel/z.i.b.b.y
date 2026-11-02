@@ -45,7 +45,10 @@ look for what a per-page check cannot see.
    with a wrong count, a missing or extra garment, or a different body shape is
    **blocking** (`reject` with "off-model: <what differs>"); a different pose or
    expression is fine.
-4. Scene ↔ plan — each page shows its planned subjects.
+4. Scene ↔ plan — each page shows its planned subjects. When the page's job in
+   `$ZIBBY_RUN_DIR/book/jobs.json` has its own `characters`/`subjects`, the illustrator
+   simplified a scene the model kept failing: judge the page against the job's lists, not
+   the plan's (a character missing from the job is not missing from the page).
 5. Age fit and safety — nothing scary, no text or letters, no brand look-alikes.
 6. The cover — it is **full colour** (only the pages are line art): saturated flat
    colours, a coloured background, the recurring characters match their sheets, a calm

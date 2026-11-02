@@ -6,7 +6,7 @@ phases:
     agent: fullstack-developer
     consumes: task.md
     produces: zibby-pr-address-comments.md
-    model: sonnet
+    model: opus
     thinking: high
   - id: reply
     type: agent

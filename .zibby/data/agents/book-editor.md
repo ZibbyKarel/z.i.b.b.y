@@ -92,6 +92,14 @@ A short Markdown intro, then ONE fenced ```json block that is exactly this shape
 }
 ```
 
+Every page `scene` describes a **layered scene**, not a single object on an empty page: a foreground (a few big
+  props or plants at the bottom edge), the main subject or action in the middle, and a
+  background that sets the place (barn, fence, hills, trees, clouds, sun, pond...).
+  Roughly 8-15 clearly separate regions to colour for ages 3-5 (5-8 for ages 2-3, up to
+  ~20 for ages 6+), all still big enough for a crayon; no tiny repeated details (no
+  individual leaves, grass blades, bricks or scales). Say what is in the foreground, what the characters
+do in the middle and what the background is. Raise the number of elements with `difficulty`.
+
 Rules: `pages.length` equals `brief.pageCount`, numbered 1..N; every scene is
 visually distinct (no two pages with the same subject + action); 1–3 subjects per
 page for ages ≤ 4; difficulty 1–3 rising gently; captions short, simple, correctly

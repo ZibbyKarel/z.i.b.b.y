@@ -1,6 +1,6 @@
 /** Appended to every coloring-page prompt by the real providers. */
 export const COLORING_SUFFIX =
-  "black and white coloring book page, thick clean black outlines, pure white background, no shading, no gray, no color, no text";
+  "black and white coloring book page, thick clean black outlines, a full scene with foreground, middle ground and background, plenty of open white areas to colour in, white fill inside all shapes, no shading, no gray, no color, no text";
 
 /** Appended to the cover prompt instead: the cover is the one full-colour image. */
 export const COVER_SUFFIX =

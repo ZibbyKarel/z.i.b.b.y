@@ -2812,6 +2812,11 @@
       "auto": "⌘K · automaticky",
       "manual": "Jen ručně"
     },
+    "skillSections": {
+      "external": "Externí",
+      "marketplaces": "Z marketplaces",
+      "local": "Lokální"
+    },
     "skillTypeFallback": "Skill",
     "emptySkills": "Zatím žádné skilly.",
     "emptyMcp": "Zatím žádné MCP servery.",

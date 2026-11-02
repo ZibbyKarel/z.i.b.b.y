@@ -4,6 +4,8 @@ import { promptFor } from "./image.ts";
 import type { ImageProvider, ImageResult } from "./image.ts";
 
 const ENDPOINT = "https://api.openai.com/v1/images/generations";
+/** Image-conditioned generation: the same call with the reference PNGs attached (multipart). */
+const EDIT_ENDPOINT = "https://api.openai.com/v1/images/edits";
 /** Token rates in USD per 1M tokens (developers.openai.com image generation pricing, checked 2026-11). */
 const USD_PER_M_IMAGE_OUTPUT = 30;
 const USD_PER_M_IMAGE_INPUT = 8;
@@ -31,7 +33,7 @@ const costOf = (u: Usage | undefined): number | null => {
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
-/** OpenAI Images API (text to image). Page art is portrait 8.5x11 whatever the item size says. */
+/** OpenAI Images API (text to image; with reference images, the edits endpoint). Page art is portrait 8.5x11 whatever the item size says. */
 export function createOpenAiImageProvider(
   env: NodeJS.ProcessEnv,
   f: typeof fetch = fetch,
@@ -46,14 +48,11 @@ export function createOpenAiImageProvider(
     async generateBatch(items, outDir): Promise<ImageResult[]> {
       const key = env.OPENAI_API_KEY;
       if (!key) throw new Error("OPENAI_API_KEY is not set (Settings → AI models → OpenAI)");
-      for (const item of items)
-        if (item.referenceImages?.length)
-          throw new Error("reference images are not supported by the openai provider yet");
       fs.mkdirSync(outDir, { recursive: true });
       const out: ImageResult[] = [];
       for (const item of items) {
         const t0 = performance.now();
-        const body = JSON.stringify({
+        const fields = {
           model,
           prompt: promptFor(item),
           size,
@@ -61,14 +60,32 @@ export function createOpenAiImageProvider(
           background: "opaque",
           output_format: "png",
           n: 1,
-        });
+        };
+        const refs = item.referenceImages ?? [];
+        const form = (): FormData => {
+          const fd = new FormData();
+          for (const [k, v] of Object.entries(fields)) fd.append(k, String(v));
+          for (const r of refs)
+            fd.append(
+              "image[]",
+              new Blob([fs.readFileSync(r)], { type: "image/png" }),
+              path.basename(r),
+            );
+          return fd;
+        };
+        const json_ = JSON.stringify(fields);
         let res: Response | undefined;
         for (let attempt = 0; attempt <= 2; attempt++) {
-          res = await f(ENDPOINT, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${key}`, "content-type": "application/json" },
-            body,
-          });
+          res = await f(
+            refs.length > 0 ? EDIT_ENDPOINT : ENDPOINT,
+            refs.length > 0
+              ? { method: "POST", headers: { Authorization: `Bearer ${key}` }, body: form() }
+              : {
+                  method: "POST",
+                  headers: { Authorization: `Bearer ${key}`, "content-type": "application/json" },
+                  body: json_,
+                },
+          );
           if (res.status !== 429 && res.status < 500) break;
           if (attempt < 2) await sleep(backoffMs * 2 ** attempt);
         }

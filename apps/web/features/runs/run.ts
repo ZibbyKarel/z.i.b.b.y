@@ -55,9 +55,12 @@ export function isCancellableRun(run: Pick<RunView, "kind" | "status">): boolean
 
 /** Whether the Stop action applies to `run` at all — a stoppable kind, currently running. */
 export function isStoppableRun(run: Pick<RunView, "kind" | "status">): boolean {
-  // A parked workflow has no process — stop cancels it (→ interrupted).
+  // A parked workflow has no process — stop cancels it (→ interrupted). An approval gate
+  // (`awaiting-approval`) is a parked workflow whose stage child is still held open.
   return (
-    (run.status === "running" || (run.status === "parked" && run.kind === "workflow")) &&
+    (run.status === "running" ||
+      ((run.status === "parked" || run.status === "awaiting-approval") &&
+        run.kind === "workflow")) &&
     STOPPABLE_KINDS.has(run.kind)
   );
 }

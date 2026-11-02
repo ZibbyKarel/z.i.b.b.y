@@ -6,7 +6,7 @@ tags:
   - department
   - dev
   - moc
-updated: '2026-10-27'
+updated: '2026-10-30'
 ---
 
 Development owns the delivery loop: Architekt → Kodér ⇄ Code-Review → Tester →
@@ -17,6 +17,7 @@ code. Mostly built.
 ## Poznatky
 
 [[zibby-index]] · [[north-star-2]]
+- [[ai-providers-api-roadmap]] — Budoucí fíčura: AI modely přes API (Anthropic, OpenAI), kombinace modelů, výběr modelu
 - [[distilled-2026-10-03]] — Destilace — 2026-10-03
 - [[distilled-2026-10-04]] — Destilace — 2026-10-04
 - [[distilled-2026-10-05]] — Destilace — 2026-10-05
@@ -28,3 +29,4 @@ code. Mostly built.
 - [[distilled-2026-10-22]] — Destilace — 2026-10-22
 - [[distilled-2026-10-24]] — Destilace — 2026-10-24
 - [[distilled-2026-10-27]] — Destilace — 2026-10-27
+- [[distilled-2026-10-30]] — Destilace — 2026-10-30

@@ -16,6 +16,7 @@ import { useAgentsQuery } from "../../agents/queries";
 import { ModelBadge } from "../../../components/RuntimeBadges/RuntimeBadges";
 import { toClientTarget } from "../../tasks";
 import { useWorkflowsQuery } from "../../workflows/queries";
+import { toolOpenAiImageModel } from "../../workflows/openaiImageModel";
 import type { RunView } from "../run";
 import type { StageRailRow } from "../runDetailModel";
 import { stageModel } from "../stageModel";
@@ -64,6 +65,8 @@ export function RunStageRail({ run, rows, selectedPhaseId, onSelect }: RunStageR
   const modelOf = (row: StageRailRow) => {
     const phase = phases?.find((p) => p.id === row.phaseId);
     const agentId = run.kind === "agent" ? run.owner : agentOf(row.phaseId);
+    const imageModel = toolOpenAiImageModel(phase?.commands);
+    if (imageModel) return imageModel;
     return stageModel(
       phase,
       agents?.find((a) => a.id === agentId),
@@ -92,7 +95,10 @@ export function RunStageRail({ run, rows, selectedPhaseId, onSelect }: RunStageR
                 <ModelBadge
                   model={modelOf(row) ?? t("rail.defaultModel")}
                   provider={
-                    phases?.find((p) => p.id === row.phaseId)?.openaiModel ? "openai" : undefined
+                    phases?.find((p) => p.id === row.phaseId)?.openaiModel ||
+                    toolOpenAiImageModel(phases?.find((p) => p.id === row.phaseId)?.commands)
+                      ? "openai"
+                      : undefined
                   }
                 />
               </span>

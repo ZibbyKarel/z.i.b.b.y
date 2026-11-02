@@ -14,6 +14,7 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { agentSymbol } from "../../../agents/agentSymbol";
+import { toolOpenAiImageModel } from "../../openaiImageModel";
 import { ModelBadge, ThinkBadge } from "../../../../components/RuntimeBadges/RuntimeBadges";
 import { ACCENT, BAD, SURFACE, SURFACE_HI, mix } from "./canvas-tokens";
 import { type GraphNode, NODE_H, NODE_W } from "./workflow-graph";
@@ -112,6 +113,8 @@ export function AgentNode({
   onNodeLeave,
 }: AgentNodeProps) {
   const t = useTranslations("forms.workflow");
+  const imageModel =
+    node.type === "tool" ? toolOpenAiImageModel(node.commands.split("\n")) : undefined;
   const label =
     node.type === "tool"
       ? t("typeTool")
@@ -280,13 +283,20 @@ export function AgentNode({
           )}
         </Stack>
       ) : (
-        <Typography mono size="2xs" style={{ marginTop: 6 }} type="note" variant="tertiary">
-          {node.type === "workflow"
-            ? node.workflow
-              ? t("typeWorkflow")
-              : t("workflowNone")
-            : node.commands.split("\n").filter((c) => c.trim()).length || t("commandsNone")}
-        </Typography>
+        <Stack align="center" direction="row" gap="50" style={{ marginTop: 6 }}>
+          {imageModel && (
+            <span data-testid="node-openai-tag">
+              <ModelBadge model={imageModel} provider="openai" />
+            </span>
+          )}
+          <Typography mono size="2xs" type="note" variant="tertiary">
+            {node.type === "workflow"
+              ? node.workflow
+                ? t("typeWorkflow")
+                : t("workflowNone")
+              : node.commands.split("\n").filter((c) => c.trim()).length || t("commandsNone")}
+          </Typography>
+        </Stack>
       )}
 
       {/* Terminal agent node: its output file has no arrow to carry it. */}

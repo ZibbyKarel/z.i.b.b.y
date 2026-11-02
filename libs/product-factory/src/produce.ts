@@ -115,12 +115,18 @@ export async function produce(argv: string[], ctx: Ctx): Promise<number> {
   for (const page of plan.pages.filter((p) => wanted.has(p.pageNumber))) {
     const job = jobs.jobs.find((j) => j.pageNumber === page.pageNumber);
     if (!job) throw new Error(`jobs file has no job for page ${page.pageNumber}`);
+    const ids = job.characters ?? page.characters;
+    const extra = ids.filter((id) => !page.characters.includes(id));
+    if (extra.length > 0)
+      throw new Error(
+        `job for page ${page.pageNumber} adds characters not on the plan page: ${extra.join(", ")}`,
+      );
     units.push({
       ...job,
-      ...(await withCharacters(book, plan, job.prompt, page.characters)),
-      subjects: page.subjects,
+      ...(await withCharacters(book, plan, job.prompt, ids)),
+      subjects: job.subjects ?? page.subjects,
       scene: job.prompt,
-      characters: pageCharacters(plan, page.characters),
+      characters: pageCharacters(plan, ids),
       dir: path.join(book, "illustrations", nn(page.pageNumber)),
       isCover: false,
       attempts: 0,

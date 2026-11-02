@@ -134,8 +134,10 @@ export function AddressCommentsReview({
     ? mergeReviewThreads(threadsQuery.data, outcomes, replies)
     : undefined;
   const count = (kind: PrThreadOutcome["kind"]) => outcomes.filter((o) => o.kind === kind).length;
-  const open = rows?.filter((r) => r.draft) ?? [];
-  const resolved = rows?.filter((r) => !r.draft) ?? [];
+  // Only threads the run actually handled — no skipped or outdated ones.
+  const shown = rows?.filter((r) => r.outcome?.kind !== "skipped" && !r.thread.isOutdated);
+  const open = shown?.filter((r) => r.draft) ?? [];
+  const resolved = shown?.filter((r) => !r.draft) ?? [];
 
   const change = (threadId: string, next: { body: string; resolve: boolean }) =>
     onRepliesChange(replies.map((r) => (r.threadId === threadId ? { ...r, ...next } : r)));

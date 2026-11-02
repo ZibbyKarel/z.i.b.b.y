@@ -31,7 +31,7 @@ phases:
     consumes: plan.json
     produces: cast-report.md
     commands:
-      - PF_IMAGE_PROVIDER=mflux PF_VISION_PROVIDER=none product-factory cast --report cast-report.md
+      - PF_IMAGE_PROVIDER=openai PF_VISION_PROVIDER=none product-factory cast --report cast-report.md
     loop:
       to: plan
       maxRetries: 1
@@ -49,7 +49,7 @@ phases:
     consumes: jobs.json
     produces: produce-report.md
     commands:
-      - PF_IMAGE_PROVIDER=mflux PF_VISION_PROVIDER=none product-factory produce jobs.json --report produce-report.md
+      - PF_IMAGE_PROVIDER=openai PF_VISION_PROVIDER=none product-factory produce jobs.json --report produce-report.md
     loop:
       to: illustrate
       maxRetries: 2
@@ -148,9 +148,9 @@ tržiště dělá operátor ručně.
    **plan** (1×, zjednodušit specifikaci/pózu), pak park.
 5. **illustrate** (`illustrator`) — `jobs.json`, jen prompty. Vzhled opakujících se
    postav nepopisuje — ten dodá referenční obrázek a specifikace z plánu.
-6. **produce** (tool) — generování (mflux lokálně),
+6. **produce** (tool) — generování přes OpenAI Images API,
    prahování, pixel QA (vision QA jen je-li zapnutá), opakování. Strana nebo obálka s opakující se postavou
-   dostane jako referenci obrázek s jejími listy (FLUX.2 klein edit), takže postava
+   dostane jako referenci obrázek s jejími listy (OpenAI Images edits endpoint), takže postava
    vypadá všude stejně. U obálky se navíc hlídá, že zóna titulku a odznaků je klidné
    pozadí (`busy-zone`). Zablokované strany → zpět na
    **illustrate** (2×), pak park.
@@ -174,9 +174,10 @@ reject` (0 = titulka) a kniha se vrací přes **illustrate** → produce → ren
 
 ## Nastavení
 
-Příběhová linka s opakujícími se postavami zatím běží lokálně: příkazy **cast** a
-**produce** mají napevno `PF_IMAGE_PROVIDER=mflux PF_VISION_PROVIDER=none` (bez vision
-soudce, jen pixel QA). Přechod na OpenAI Images API přijde později; zatím ho používá
-workflow **Coloring Book Random**. Lidskou kontrolu po libovolné fázi zapne
+Poskytovatel obrázků je v příkazech **cast** a **produce** fixně `openai` (bez vision
+soudce, `PF_VISION_PROVIDER=none`, jen pixel QA); referenční listy postav jdou do
+endpointu `images/edits`. Klíč `OPENAI_API_KEY` se bere z Nastavení → AI modely → OpenAI.
+Ladit lze `PF_OPENAI_QUALITY`, `PF_OPENAI_IMAGE_MODEL` a `PF_OPENAI_SIZE` v env projektu
+**publishing**. Lidskou kontrolu po libovolné fázi zapne
 `approval: ask` u fáze (výchozí je plně autonomní).
 Rozpočet běhu hlídá `budget` — při překročení se běh zastaví a čeká na schválení.
