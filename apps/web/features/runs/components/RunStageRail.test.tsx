@@ -140,6 +140,19 @@ describe("RunStageRail", () => {
       expect(model("phase3")).toHaveTextContent("výchozí");
     });
 
+    it("shows an OpenAI step as openai · <model>", () => {
+      workflowsMock.mockReturnValue({
+        data: [
+          {
+            id: "delivery",
+            phases: [{ id: "phase1", agent: "coder", model: "haiku", openaiModel: "gpt-6-luna" }],
+          },
+        ],
+      });
+      renderRail();
+      expect(model("phase1")).toHaveTextContent("openai · gpt-6-luna");
+    });
+
     it("is the first child of the row's meta", () => {
       renderRail();
       const meta = stage("phase1").querySelector(`[data-testid="${RailItemTestId.Meta}"]`);

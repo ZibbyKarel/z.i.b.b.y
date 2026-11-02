@@ -26,6 +26,14 @@ describe("stageModel", () => {
     const phase = { model: "sonnet" as const, loop: loop([{ thinking: "high" }]) };
     expect(stageModel(phase, undefined, 2)).toBe("sonnet");
   });
+  it("an OpenAI phase reads its OpenAI model, even on a retry", () => {
+    const phase = {
+      model: "sonnet" as const,
+      openaiModel: "gpt-6-luna" as const,
+      loop: loop([{ model: "opus" }]),
+    };
+    expect(stageModel(phase, { model: "opus" }, 3)).toBe("gpt-6-luna");
+  });
   it("is undefined when nothing resolves", () => {
     expect(stageModel(undefined, undefined, 1)).toBeUndefined();
   });

@@ -11,12 +11,12 @@ import { useTranslations } from "next-intl";
  * reach into the workflows canvas for them.
  */
 
-/** Per-run model badge (opus / sonnet / haiku …). */
-export function ModelBadge({ model }: { model: string }) {
+/** Per-run model badge (opus / sonnet / haiku …); an OpenAI model reads `openai · <id>` in its own tone. */
+export function ModelBadge({ model, provider }: { model: string; provider?: "openai" }) {
   const t = useTranslations("phase");
   return (
-    <Tag title={t("modelTitle")} tone="accent">
-      {model}
+    <Tag title={t("modelTitle")} tone={provider === "openai" ? "working" : "accent"}>
+      {provider ? `${provider} · ${model}` : model}
     </Tag>
   );
 }

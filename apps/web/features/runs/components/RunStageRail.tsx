@@ -89,7 +89,12 @@ export function RunStageRail({ run, rows, selectedPhaseId, onSelect }: RunStageR
           meta={
             <>
               <span data-testid={`${RunStageRailTestId.Model}-${row.phaseId}`}>
-                <ModelBadge model={modelOf(row) ?? t("rail.defaultModel")} />
+                <ModelBadge
+                  model={modelOf(row) ?? t("rail.defaultModel")}
+                  provider={
+                    phases?.find((p) => p.id === row.phaseId)?.openaiModel ? "openai" : undefined
+                  }
+                />
               </span>
               <StatusDot size="75" tone={row.state} />
               {`${t(`stage.${row.stateKey}`)} · ${row.meta}`}

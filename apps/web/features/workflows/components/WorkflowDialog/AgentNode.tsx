@@ -240,7 +240,9 @@ export function AgentNode({
           {readOnly ? (
             <>
               {node.openaiModel ? (
-                <Tag data-testid="node-openai-tag">{`openai · ${node.openaiModel}`}</Tag>
+                <span data-testid="node-openai-tag">
+                  <ModelBadge model={node.openaiModel} provider="openai" />
+                </span>
               ) : (
                 <ModelBadge model={node.model} />
               )}
@@ -249,7 +251,9 @@ export function AgentNode({
           ) : (
             <>
               {node.openaiModel ? (
-                <Tag data-testid="node-openai-tag">{`openai · ${node.openaiModel}`}</Tag>
+                <span data-testid="node-openai-tag">
+                  <ModelBadge model={node.openaiModel} provider="openai" />
+                </span>
               ) : (
                 <Pressable
                   aria-label={t("cycleModelAria", { agent: node.agent })}
