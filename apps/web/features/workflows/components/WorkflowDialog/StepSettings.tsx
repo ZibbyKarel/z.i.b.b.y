@@ -1,5 +1,6 @@
 "use client";
 import { useTranslations } from "next-intl";
+import { OPENAI_TEXT_MODELS, type OpenAiTextModel } from "@zibby/contracts";
 import {
   Container,
   SelectField,
@@ -100,6 +101,54 @@ export function StepSettings({ graph, setGraph, excludeWorkflowId }: StepSetting
                   showAttach={false}
                 />
               </Container>
+            )}
+            {n.type === "agent" && (
+              <Container data-testid={`step-runs-on-${n.id}`}>
+                <SelectField
+                  label={t("runsOnLabel")}
+                  onValueChange={(v) =>
+                    patch(
+                      n.id,
+                      v
+                        ? { openaiModel: v as OpenAiTextModel }
+                        : { openaiModel: undefined, include: undefined },
+                    )
+                  }
+                  options={[
+                    { value: "", label: t("runsOnClaude") },
+                    ...OPENAI_TEXT_MODELS.map((m) => ({
+                      value: m.id,
+                      label: `OpenAI · ${m.id}`,
+                    })),
+                  ]}
+                  value={n.openaiModel ?? ""}
+                />
+              </Container>
+            )}
+            {n.type === "agent" && n.openaiModel && (
+              <>
+                <Typography
+                  data-testid={`step-openai-hint-${n.id}`}
+                  leading="snug"
+                  size="2xs"
+                  type="note"
+                  variant="tertiary"
+                >
+                  {t("openaiHint")}
+                </Typography>
+                <TextAreaField
+                  data-testid={`step-include-${n.id}`}
+                  hint={t("includeHint")}
+                  label={t("includeLabel")}
+                  onChange={(e) => {
+                    const lines = e.target.value.split("\n").filter((l) => l.trim());
+                    patch(n.id, { include: lines.length ? e.target.value.split("\n") : undefined });
+                  }}
+                  placeholder="book/plan.json"
+                  rows={2}
+                  value={(n.include ?? []).join("\n")}
+                />
+              </>
             )}
             {n.type === "tool" && (
               <TextAreaField

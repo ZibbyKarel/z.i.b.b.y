@@ -1,5 +1,6 @@
 import { useState } from "react";
 import userEvent from "@testing-library/user-event";
+import { DropdownTestId } from "@zibby/design-system";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen, within } from "../../../../test/render";
 import { CommandLineTestId } from "../../../tasks/components/CommandLine/CommandLine";
@@ -107,5 +108,28 @@ describe("StepSettings — agent prompt", () => {
   it("does not steal focus on mount", () => {
     const { input } = renderSteps([agentNode()]);
     expect(input()).not.toHaveFocus();
+  });
+});
+
+describe("StepSettings — runs on", () => {
+  it("picking an OpenAI model shows hint + include; include patches; clearing drops both", async () => {
+    const user = userEvent.setup();
+    const { node } = renderSteps([agentNode()]);
+    expect(screen.queryByTestId("step-include-a1")).not.toBeInTheDocument();
+    expect(screen.getByTestId("step-runs-on-a1")).toBeInTheDocument();
+    await user.click(
+      within(screen.getByTestId("step-runs-on-a1")).getByTestId(DropdownTestId.Trigger),
+    );
+    await user.click(await screen.findByRole("option", { name: "OpenAI · gpt-6-luna" }));
+    expect(node()?.openaiModel).toBe("gpt-6-luna");
+    expect(screen.getByTestId("step-openai-hint-a1")).toBeInTheDocument();
+    await user.type(screen.getByTestId("step-include-a1"), "book/plan.json");
+    expect(node()?.include).toEqual(["book/plan.json"]);
+    await user.click(
+      within(screen.getByTestId("step-runs-on-a1")).getByTestId(DropdownTestId.Trigger),
+    );
+    await user.click(await screen.findByRole("option", { name: "Claude (lokálně)" }));
+    expect(node()?.openaiModel).toBeUndefined();
+    expect(node()?.include).toBeUndefined();
   });
 });

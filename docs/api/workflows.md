@@ -357,6 +357,24 @@ stages, loop iterations or sub-workflows it runs. See [tasks.md](./tasks.md) →
 slots_. There is no per-stage employee lease, no `no-employee` park, and stage runs carry
 no `employeeId` / `employeeName`.
 
+### Agent phase on OpenAI (`openaiModel`)
+
+An agent phase with `openaiModel` (one of `OPENAI_TEXT_MODELS` in
+`libs/contracts/src/ai-providers/ai-providers.schema.ts`) runs on the OpenAI Responses API
+instead of the local `claude` CLI. The operator picks it per step in the workflow editor
+("Kde běží"). It is **text in, text out**: no tools, no shell, no MCP.
+
+- The runner writes `<stageDir>/openai-request.json` and spawns
+  `apps/api/src/workflows/openai-stage.mjs`. `instructions` is the agent's
+  instructions plus its skill. `input` is the task plus the inlined `consumes` file and each
+  `include` path (run-relative, must stay inside the run folder, max 200 KB each).
+- The reply is written to `produces`. `qualify` still reads its `<verdict>` from it.
+- `thinking` (incl. an escalation rung) becomes `reasoning.effort`; `model` is ignored.
+- No memory grounding — vault content never leaves the machine.
+- The stage child gets `OPENAI_API_KEY`. It is ZIBBY's own script, not a model-driven
+  shell, so Law 4 still holds. The cost (from `usage` × the model's list price) goes to
+  `costs.jsonl` and counts toward the run's budget.
+
 ### Phase: tool
 
 A deterministic **transform** between agents — no model, no tokens, no intents.
@@ -371,7 +389,7 @@ lives in its repo (CLAUDE.md / AGENTS.md / README / package scripts), not in ZIB
 - Exit code 0 = pass, anything else = fail. The `produces` file becomes the next
   phase's handoff.
 - Env: the global AI provider keys (`OPENAI_API_KEY`, see `ai-providers.md`; tool
-  phases only, lowest precedence), the project's env + secrets, plus `ZIBBY_RUN_DIR` (the run root) and
+  and OpenAI agent phases only, lowest precedence), the project's env + secrets, plus `ZIBBY_RUN_DIR` (the run root) and
   `ZIBBY_STAGE_DIR` (this stage's sandbox) so a tool can write run-wide artifacts
   (e.g. a `book/` folder) that survive a loop re-dispatch.
 - **PATH:** the repo's `node_modules/.bin` goes **first** for a tool stage, so workspace

@@ -50,6 +50,9 @@ phases:
     produces: listing.md
     model: haiku
     thinking: low
+    openaiModel: gpt-6-luna
+    include:
+      - book/plan.json
   - id: finalize
     type: tool
     consumes: listing.md
@@ -109,7 +112,9 @@ Příběhovou variantu s postavami řeší workflow **Coloring Book**.
    omalovánky se tisknou jednostranně (prázdná zadní strana každé stránky), aby fixy
    neprosakovaly na další obrázek.
 6. **preflight** (tool) — kontrola KDP (rozměry, DPI, fonty, prázdné strany).
-7. **listing** (`listing-specialist`) — text listingu pro KDP.
+7. **listing** (`listing-specialist`) — text listingu pro KDP. Běží přes OpenAI
+   (`openaiModel: gpt-6-luna`, jen text). Dostane `preflight.md` a přiložený
+   `book/plan.json`.
 8. **finalize** (tool) — `README.md` knihy, součet nákladů, cesta ke složce.
 9. **review** (`book-reviewer`, qualify, `approval: ask`) — běh zaparkuje a čeká na
    operátora s hotovým `interior.pdf` a `cover.pdf`. „Schválit“ ukončí běh; „Požádat

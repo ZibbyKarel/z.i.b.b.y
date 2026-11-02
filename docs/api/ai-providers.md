@@ -35,13 +35,15 @@ Every route requires the operator token.
 ## How keys reach work
 
 `WorkflowRunnerService.resolveProjectEnv` places `OPENAI_API_KEY` into the env of every
-**tool** phase. It is the lowest-precedence layer:
+**tool** phase and every agent phase with `openaiModel`. The second case runs ZIBBY's own
+`openai-stage.mjs`, not a model with a shell (see `workflows.md`). It is the
+lowest-precedence layer:
 
 global key < project `env` < project secrets
 
 The key is injected even when the workflow has no project.
 
-Agent phases never receive the global keys. Those phases read untrusted content and
+Claude agent phases never receive the global keys. Those phases read untrusted content and
 have a shell, so the key stays out of their reach (Law 4).
 
 The store never logs the key.

@@ -239,21 +239,29 @@ export function AgentNode({
         <Stack direction="row" gap="50" style={{ marginTop: 6 }}>
           {readOnly ? (
             <>
-              <ModelBadge model={node.model} />
+              {node.openaiModel ? (
+                <Tag data-testid="node-openai-tag">{`openai · ${node.openaiModel}`}</Tag>
+              ) : (
+                <ModelBadge model={node.model} />
+              )}
               <ThinkBadge level={node.thinking} />
             </>
           ) : (
             <>
-              <Pressable
-                aria-label={t("cycleModelAria", { agent: node.agent })}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCycleModel(node.id);
-                }}
-                onMouseDown={stop}
-              >
-                <ModelBadge model={node.model} />
-              </Pressable>
+              {node.openaiModel ? (
+                <Tag data-testid="node-openai-tag">{`openai · ${node.openaiModel}`}</Tag>
+              ) : (
+                <Pressable
+                  aria-label={t("cycleModelAria", { agent: node.agent })}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCycleModel(node.id);
+                  }}
+                  onMouseDown={stop}
+                >
+                  <ModelBadge model={node.model} />
+                </Pressable>
+              )}
               <Pressable
                 aria-label={t("cycleThinkAria", { agent: node.agent })}
                 onClick={(e) => {

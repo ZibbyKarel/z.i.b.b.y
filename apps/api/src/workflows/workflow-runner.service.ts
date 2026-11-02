@@ -16,6 +16,7 @@ import {
   type ArtifactKind,
   type DepartmentId,
   type IntendedAction,
+  OPENAI_TEXT_MODELS,
   type PhaseEscalation,
   type PrReviewEvent,
   type Project,
@@ -68,7 +69,7 @@ import { LoggerService, type ScopedLogger } from "../shared/logging/logger.servi
 import { TraceContextService } from "../shared/logging/trace-context.service";
 import { prepareWorktreeDir } from "../shared/worktree-root";
 import { WorkspaceService, WorkspaceSetupError } from "../workspace/workspace.service";
-import { buildStageTask } from "./build-stage-task";
+import { QUALIFY_VERDICT_RIDER, buildStageTask } from "./build-stage-task";
 import { WorkflowsStorageService } from "./workflows.storage.service";
 import { type WorkflowStageRecord, workflowStageStrategy } from "./workflow-stage.record";
 import { renderProgress } from "./progress";
@@ -80,6 +81,9 @@ export const WORKFLOW_RUNS_DIR = "WORKFLOW_RUNS_DIR";
 
 const RETENTION_MS = 30 * 60 * 1000;
 /** Repo-root `node_modules/.bin` (anchored like `data-dir.ts`), on every stage's PATH. */
+const OPENAI_STAGE_SCRIPT = path.resolve(__dirname, "openai-stage.mjs");
+/** Per-file cap for `consumes`/`include` text inlined into an OpenAI request. */
+const OPENAI_FILE_CAP = 200 * 1024;
 const REPO_BIN_DIR = path.resolve(__dirname, "..", "..", "..", "..", "node_modules", ".bin");
 const MAX_LISTED = 50;
 const AGGREGATE_FILE = "run.json";
@@ -2549,9 +2553,9 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
    */
   private async resolveProjectEnv(
     project: Project | null,
-    tool: boolean,
+    withGlobalKeys: boolean,
   ): Promise<Record<string, string> | undefined> {
-    const global = tool ? ((await this.aiProviders?.env().catch(() => null)) ?? {}) : {};
+    const global = withGlobalKeys ? ((await this.aiProviders?.env().catch(() => null)) ?? {}) : {};
     const secrets = project ? await this.projectSecrets.read(project.id).catch(() => null) : null;
     const merged = { ...global, ...(project?.env ?? {}), ...(secrets ?? {}) };
     return Object.keys(merged).length > 0 ? merged : undefined;
@@ -2618,7 +2622,10 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     // phase also gets the repo's `node_modules/.bin` first on PATH, so workspace
     // CLIs (`product-factory`) resolve however the API was started.
     const env = {
-      ...(await this.resolveProjectEnv(project, phase.type === "tool")),
+      ...(await this.resolveProjectEnv(
+        project,
+        phase.type === "tool" || Boolean(phase.openaiModel),
+      )),
       ZIBBY_RUN_DIR: run.cwd,
       ZIBBY_STAGE_DIR: stageCwd,
       // Repo bins (e.g. `product-factory`): first for a tool phase; LAST for an agent
@@ -3096,6 +3103,19 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
           body: skillDir ? externalSkillPrompt(found, skillDir) : found.instructions,
         };
       }
+      if (phase.openaiModel) {
+        // No memory grounding on this path: it POSTs to a third party, and vault
+        // content must never leave the machine.
+        return this.buildOpenAiStage(
+          phase,
+          cwd,
+          agent,
+          skill,
+          escalation,
+          consumesAbs,
+          producesAbs,
+        );
+      }
       const task = buildStageTask({
         phaseId: phase.id,
         consumesAbs,
@@ -3165,6 +3185,73 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       command: process.execPath,
       args: [script, cwd, phase.id, phase.produces ?? "", phase.consumes ?? ""],
     };
+  }
+
+  /**
+   * An agent phase on an OpenAI text model: no tools, so every input (`consumes` +
+   * `include`) is inlined into one request file that `openai-stage.mjs` posts; the
+   * reply becomes `produces`. `include` paths must stay inside the run root.
+   */
+  private async buildOpenAiStage(
+    phase: WorkflowPhase,
+    cwd: string,
+    agent: { instructions: string; thinking?: string },
+    skill: { name: string; body: string } | undefined,
+    escalation: PhaseEscalation | null,
+    consumesAbs: string | null,
+    producesAbs: string | null,
+  ): Promise<{ command: string; args: string[] }> {
+    const price = OPENAI_TEXT_MODELS.find((m) => m.id === phase.openaiModel);
+    if (!price) throw new Error(`Unknown OpenAI model "${phase.openaiModel}"`);
+    if (!producesAbs) throw new Error(`OpenAI phase "${phase.id}" has no produces file`);
+    const runRoot = await fs.realpath(path.dirname(cwd));
+    const readCapped = async (file: string, rel: string): Promise<string> => {
+      const buf = await fs.readFile(file);
+      if (buf.length > OPENAI_FILE_CAP) throw new Error(`File "${rel}" is over 200 KB`);
+      return buf.toString("utf8");
+    };
+    const files: string[] = [];
+    if (consumesAbs && phase.consumes) {
+      const body = await readCapped(consumesAbs, phase.consumes).catch(
+        (e: NodeJS.ErrnoException) => {
+          if (e.code === "ENOENT") return null;
+          throw e;
+        },
+      );
+      files.push(
+        `## Soubor: ${phase.consumes}\n${body === null ? "(soubor chybí)" : "```\n" + body + "\n```"}`,
+      );
+    }
+    for (const rel of phase.include ?? []) {
+      const abs = await fs.realpath(path.join(runRoot, rel)).catch(() => {
+        throw new Error(`Include file "${rel}" not found`);
+      });
+      if (!abs.startsWith(runRoot + path.sep)) {
+        throw new Error(`Include "${rel}" escapes the run folder`);
+      }
+      files.push(`## Soubor: ${rel}\n\`\`\`\n${await readCapped(abs, rel)}\n\`\`\``);
+    }
+    const input = [
+      `Proveď fázi workflow "${phase.id}". Nemáš přístup k souborům ani nástrojům — všechny vstupy jsou níže a celá tvoje odpověď se uloží jako soubor "${phase.produces}". Odpověz jen obsahem toho souboru, bez úvodu a bez obalu do bloku kódu.`,
+      phase.qualify ? QUALIFY_VERDICT_RIDER : "",
+      phase.prompt ? `## Zadání kroku\n${phase.prompt}` : "",
+      skill ? `## Skill /${skill.name}\n${skill.body}` : "",
+      ...files,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+    const requestPath = path.join(cwd, "openai-request.json");
+    await fs.writeFile(
+      requestPath,
+      JSON.stringify({
+        model: phase.openaiModel,
+        effort: escalation?.thinking ?? phase.thinking ?? agent.thinking ?? "medium",
+        instructions: agent.instructions,
+        input,
+        price: { inputUsd: price.inputUsd, cachedUsd: price.cachedUsd, outputUsd: price.outputUsd },
+      }),
+    );
+    return { command: process.execPath, args: [OPENAI_STAGE_SCRIPT, requestPath, producesAbs] };
   }
 
   /** The run's folder inside the runs dir, or null if the id would escape it. */

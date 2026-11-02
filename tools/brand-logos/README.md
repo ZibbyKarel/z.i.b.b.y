@@ -17,6 +17,7 @@ fetched pre-filled with a per-kind hex chosen for contrast on the app's dark til
 | `jira`             | `jira`            | `2684FF` | `apps/web/public/logos/jira.svg`     |
 | `calendar`         | `googlecalendar`  | `4285F4` | `apps/web/public/logos/calendar.svg` |
 | `sentry`           | `sentry`          | `F6F6F8` | `apps/web/public/logos/sentry.svg`   |
+| (AI provider)      | `openai`          | `FFFFFF` | `apps/web/public/logos/openai.svg`   |
 
 `email` has no logo — the kind is generic IMAP/SMTP, not Gmail — and keeps its `server`
 DS glyph.

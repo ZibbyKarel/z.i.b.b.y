@@ -50,6 +50,8 @@ export function duplicateWorkflowBody(
       ...(ph.thinking ? { thinking: ph.thinking } : {}),
       ...(ph.commands ? { commands: ph.commands } : {}),
       ...(ph.loop ? { loop: ph.loop } : {}),
+      ...(ph.openaiModel ? { openaiModel: ph.openaiModel } : {}),
+      ...(ph.openaiModel && ph.include ? { include: ph.include } : {}),
     })),
     // Carry the delivery sinks (PR / file outputs) into the copy unchanged.
     outputs: workflow.outputs,

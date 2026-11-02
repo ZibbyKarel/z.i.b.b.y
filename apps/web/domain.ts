@@ -3,6 +3,7 @@ import type {
   AgentModel,
   AgentThinking,
   DepartmentId,
+  OpenAiTextModel,
   SkillSource,
   WorkflowComplexity,
 } from "@zibby/contracts";
@@ -93,6 +94,10 @@ export interface WorkflowPhase {
   prompt?: string;
   /** Agent phase: the skill id picked via `/` in the prompt. */
   skill?: string;
+  /** Agent phase: run on this OpenAI text model instead of local claude (`model` ignored). */
+  openaiModel?: OpenAiTextModel;
+  /** `openaiModel` phase only: extra run-relative files fed to the model. */
+  include?: string[];
 }
 
 export type WorkflowState = "done" | "parked" | "failed" | "running";

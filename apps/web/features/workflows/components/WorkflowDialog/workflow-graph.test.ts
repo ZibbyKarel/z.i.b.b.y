@@ -439,3 +439,37 @@ describe("agent prompt + skill round-trip", () => {
     expect(phases[0]).not.toHaveProperty("skill");
   });
 });
+
+describe("openaiModel + include round-trip", () => {
+  const wf: Workflow = {
+    ...existing,
+    phases: [
+      {
+        id: "plan",
+        type: "agent",
+        agent: "writer",
+        consumes: "task.md",
+        produces: "plan.md",
+        thinking: "low",
+        openaiModel: "gpt-6-luna",
+        include: ["book/plan.json"],
+      },
+      { id: "t", type: "tool", consumes: "plan.md", produces: "o.md", commands: ["x"] },
+    ],
+  };
+
+  it("carries both ways and only emits include alongside openaiModel", () => {
+    const g = phasesToGraph(wf, agents);
+    expect(g.nodes[0]).toMatchObject({ openaiModel: "gpt-6-luna", include: ["book/plan.json"] });
+    const phases = graphToPhases(g, INITIAL_ASSIGNMENT);
+    expect(phases[0]).toMatchObject({ openaiModel: "gpt-6-luna", include: ["book/plan.json"] });
+    expect(phases[1]).not.toHaveProperty("openaiModel");
+    const cleared = {
+      ...g,
+      nodes: g.nodes.map((n, i) => (i === 0 ? { ...n, openaiModel: undefined } : n)),
+    };
+    const out = graphToPhases(cleared, INITIAL_ASSIGNMENT)[0]!;
+    expect(out).not.toHaveProperty("openaiModel");
+    expect(out).not.toHaveProperty("include");
+  });
+});

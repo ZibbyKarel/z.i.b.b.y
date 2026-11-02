@@ -9,7 +9,13 @@
  * Node x/y positions are *not* persisted — `phasesToGraph` re-derives a
  * left-to-right layout when an existing workflow is opened.
  */
-import type { Agent, AgentModel, AgentThinking, CreateWorkflowInput } from "@zibby/contracts";
+import type {
+  Agent,
+  AgentModel,
+  AgentThinking,
+  CreateWorkflowInput,
+  OpenAiTextModel,
+} from "@zibby/contracts";
 import type { PhaseEscalation, PhaseLoop, Workflow } from "../../../../domain";
 import { slug } from "../../../../utils/slug";
 
@@ -52,6 +58,10 @@ export interface GraphNode {
   prompt?: string;
   /** Agent phase only: the skill id picked via `/` in the prompt. */
   skill?: string;
+  /** Agent phase only: run on this OpenAI text model instead of local claude. */
+  openaiModel?: OpenAiTextModel;
+  /** Agent phase with `openaiModel` only: extra run-relative files, one path per entry. */
+  include?: string[];
   model: AgentModel;
   thinking: AgentThinking;
   /**
@@ -164,6 +174,8 @@ export function phasesToGraph(initial: Workflow | undefined, agents: Agent[]): W
     ...(ph.qualify ? { qualify: ph.qualify } : {}),
     ...(ph.prompt ? { prompt: ph.prompt } : {}),
     ...(ph.skill ? { skill: ph.skill } : {}),
+    ...(ph.type === "agent" && ph.openaiModel ? { openaiModel: ph.openaiModel } : {}),
+    ...(ph.type === "agent" && ph.openaiModel && ph.include?.length ? { include: ph.include } : {}),
     model: ph.model ?? "sonnet",
     thinking: ph.thinking ?? "medium",
     x: LAYOUT_X0 + i * (NODE_W + GAP_X),
@@ -236,6 +248,9 @@ const splitCommands = (raw: string): string[] =>
     .map((c) => c.trim())
     .filter(Boolean);
 
+const cleanInclude = (n: GraphNode): string[] =>
+  (n.include ?? []).map((p) => p.trim()).filter(Boolean);
+
 export function graphToPhases(graph: WorkflowGraph, assignment: string): ContractPhase[] {
   const order = orderNodes(graph);
   const hasIncoming = new Set(graph.flow.map((e) => e.to));
@@ -301,6 +316,8 @@ export function graphToPhases(graph: WorkflowGraph, assignment: string): Contrac
       ...(node.qualify ? { qualify: true } : {}),
       ...(node.prompt?.trim() ? { prompt: node.prompt } : {}),
       ...(node.skill ? { skill: node.skill } : {}),
+      ...(node.openaiModel ? { openaiModel: node.openaiModel } : {}),
+      ...(node.openaiModel && cleanInclude(node).length ? { include: cleanInclude(node) } : {}),
       ...(loop ? { loop } : {}),
       ...approval,
     };

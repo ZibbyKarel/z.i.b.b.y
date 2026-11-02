@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AgentIdSchema, AgentModelSchema, AgentThinkingSchema } from "../agents/agent.schema";
+import { OpenAiTextModelSchema } from "../ai-providers/ai-providers.schema";
 import { AvatarSchema } from "../common.schema";
 import { DepartmentIdSchema } from "../departments/department.schema";
 import { SkillIdSchema } from "../skills/skill.schema";
@@ -85,6 +86,29 @@ export const WorkflowPhaseSchema = z.object({
   prompt: z.string().min(1).max(20_000).optional(),
   /** Agent phase only: one skill (own or external) whose body rides the stage task. */
   skill: SkillIdSchema.optional(),
+  /**
+   * Agent phase only: run the step on this OpenAI model over the Responses API
+   * instead of the local `claude` CLI. Text in, text out — no tools, no shell: the
+   * agent's instructions + the task + the `consumes`/`include` files go in, the reply
+   * is written to `produces`. `thinking` becomes the reasoning effort; `model` is
+   * ignored. Needs the OpenAI key (Settings → AI models).
+   */
+  openaiModel: OpenAiTextModelSchema.optional(),
+  /**
+   * `openaiModel` phase only: extra run-relative text files (e.g. `book/plan.json`)
+   * inlined into the request next to `consumes` — the model can't read files itself.
+   */
+  include: z
+    .array(
+      z
+        .string()
+        .min(1)
+        .refine((p) => !p.startsWith("/") && !p.split("/").includes(".."), {
+          message: "must be a path inside the run folder",
+        }),
+    )
+    .max(10)
+    .optional(),
   loop: PhaseLoopSchema.optional(),
   /**
    * P1-02 — an optional human checkpoint: once this phase lands green (its
@@ -326,6 +350,18 @@ function refineWorkflow(p: z.infer<typeof WorkflowObject>, ctx: z.RefinementCtx)
     }
     // A qualify gate is meaningless without a back-edge to take, makes no sense on a
     // deterministic phase, and its drift target must resolve like to/then.
+    if (ph.openaiModel && ph.type !== "agent")
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "openaiModel is for agent phases only",
+        path: ["phases", i, "openaiModel"],
+      });
+    if (ph.include && !ph.openaiModel)
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "include needs openaiModel (a claude step reads files itself)",
+        path: ["phases", i, "include"],
+      });
     if (ph.qualify) {
       if (ph.type !== "agent")
         ctx.addIssue({

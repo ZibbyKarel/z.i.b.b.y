@@ -737,6 +737,69 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
       expect(opts.streamTranscript).toBe(true);
     });
 
+    describe("openaiModel", () => {
+      let root: string;
+      beforeEach(async () => {
+        root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "openai-build-")));
+        await fs.mkdir(path.join(root, "stage"));
+        await fs.mkdir(path.join(root, "book"));
+        await fs.writeFile(path.join(root, "stage", "in.md"), "CONSUMED-BODY");
+        await fs.writeFile(path.join(root, "book", "plan.json"), "INCLUDED-BODY");
+        await fs.writeFile(path.join(root, "secret.txt"), "SECRET");
+        process.env.AGENT_RUNNER_MODE = "claude";
+        (h.service as unknown as { agents: unknown }).agents = {
+          get: vi.fn(async () => ({ id: "writer", instructions: "AGENT-INSTR", thinking: "high" })),
+        };
+      });
+      afterEach(() => fs.rm(root, { recursive: true, force: true }));
+
+      const buildAt = (phase: WorkflowPhase) =>
+        (
+          h.service as unknown as {
+            buildStageCommand(
+              phase: WorkflowPhase,
+              cwd: string,
+              project: Project | null,
+            ): Promise<{ command: string; args: string[]; spawnCwd?: string }>;
+          }
+        ).buildStageCommand(phase, path.join(root, "stage"), null);
+
+      it("writes a request with consumes + include inlined and runs openai-stage.mjs", async () => {
+        const cmd = await buildAt(
+          agentPhase({ openaiModel: "gpt-6-luna", include: ["book/plan.json"], prompt: "BRIEF" }),
+        );
+        expect(cmd.command).toBe(process.execPath);
+        expect(cmd.args[0]).toMatch(/openai-stage\.mjs$/);
+        expect(cmd.args[2]).toBe(path.join(root, "stage", "out.md"));
+        expect(cmd.spawnCwd).toBeUndefined();
+        const req = JSON.parse(await fs.readFile(cmd.args[1] as string, "utf8"));
+        expect(req).toMatchObject({
+          model: "gpt-6-luna",
+          effort: "medium",
+          instructions: "AGENT-INSTR",
+          price: { inputUsd: 0.1, cachedUsd: 0.01, outputUsd: 0.5 },
+        });
+        expect(req.input).toContain("CONSUMED-BODY");
+        expect(req.input).toContain("## Soubor: book/plan.json");
+        expect(req.input).toContain("INCLUDED-BODY");
+        expect(req.input).toContain("## Zadání kroku\nBRIEF");
+      });
+
+      it("rejects an include that escapes the run root", async () => {
+        await fs.symlink(path.join(root, "secret.txt"), path.join(root, "book", "link.txt"));
+        await expect(
+          buildAt(agentPhase({ openaiModel: "gpt-6-luna", include: ["book/link.txt"] })),
+        ).resolves.toBeDefined();
+        const outside = await fs.mkdtemp(path.join(os.tmpdir(), "openai-outside-"));
+        await fs.writeFile(path.join(outside, "x.txt"), "NOPE");
+        await fs.symlink(path.join(outside, "x.txt"), path.join(root, "book", "esc.txt"));
+        await expect(
+          buildAt(agentPhase({ openaiModel: "gpt-6-luna", include: ["book/esc.txt"] })),
+        ).rejects.toThrow(/escapes the run folder/);
+        await fs.rm(outside, { recursive: true, force: true });
+      });
+    });
+
     it("claude: without a project a consumes handoff still grants the run root (P1-T2)", async () => {
       process.env.AGENT_RUNNER_MODE = "claude";
       const buildClaude = vi.fn(async (opts: { task: string; grantDirs?: readonly string[] }) => ({

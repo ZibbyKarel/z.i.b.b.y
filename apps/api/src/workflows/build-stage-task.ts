@@ -1,3 +1,13 @@
+/** The qualify-phase rider: exactly one `<verdict>` tag + the anti-rationalization clause. */
+export const QUALIFY_VERDICT_RIDER =
+  "Na úplný konec výstupu zapiš svůj verdikt přesně jedním tagem: " +
+  "<verdict>pass</verdict> (práce splňuje zadání), " +
+  "<verdict>gap</verdict> (chybí část zadání → vrátí se k dopracování), nebo " +
+  "<verdict>drift</verdict> (řešení míří jinam → přeplánuje se). " +
+  'Nehodnoť shovívavě: „mělo by to fungovat", „už jsem to kontroloval" ani ' +
+  '„je to skoro hotové" nejsou pass — pokud sis nálezy znovu neověřil přímo ' +
+  "v souborech, je to gap. Bez tagu se práce automaticky vrací k přepracování.";
+
 /**
  * Assemble the task string handed to a workflow stage's agent. Pure (no I/O) so the
  * verdict contract can be unit-tested in isolation. A `qualify` phase gets an extra
@@ -33,15 +43,7 @@ export function buildStageTask(opts: {
         "najdeš v jejích podsložkách."
       : "",
     webUrl ? `Testovaný web (base URL): "${webUrl}" — testuj jen tuto adresu.` : "",
-    qualify
-      ? "Na úplný konec výstupu zapiš svůj verdikt přesně jedním tagem: " +
-        "<verdict>pass</verdict> (práce splňuje zadání), " +
-        "<verdict>gap</verdict> (chybí část zadání → vrátí se k dopracování), nebo " +
-        "<verdict>drift</verdict> (řešení míří jinam → přeplánuje se). " +
-        'Nehodnoť shovívavě: „mělo by to fungovat", „už jsem to kontroloval" ani ' +
-        '„je to skoro hotové" nejsou pass — pokud sis nálezy znovu neověřil přímo ' +
-        "v souborech, je to gap. Bez tagu se práce automaticky vrací k přepracování."
-      : "",
+    qualify ? QUALIFY_VERDICT_RIDER : "",
   ]
     .filter(Boolean)
     .join(" ");

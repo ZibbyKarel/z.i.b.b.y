@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import {
   Button,
   ConfirmDeleteButton,
+  IconTile,
   Panel,
   Stack,
   TextInputField,
@@ -19,6 +20,7 @@ import {
 /** Testids for the AI models card (the screen + tests select via these). */
 export enum AiModelsSectionTestId {
   Status = "ai-models-openai-status",
+  Logo = "ai-models-openai-logo",
   Input = "ai-models-openai-input",
   Save = "ai-models-openai-save",
 }
@@ -39,7 +41,21 @@ export function AiModelsSection() {
     set.mutate({ body: { apiKey: value.trim() } }, { onSuccess: () => setValue("") });
 
   return (
-    <Panel header={t("openai")} padding="300">
+    <Panel
+      header={
+        <Stack align="center" direction="row" gap="75">
+          <IconTile
+            alt=""
+            data-testid={AiModelsSectionTestId.Logo}
+            glyph="spark"
+            size="sm"
+            src="/logos/openai.svg"
+          />
+          {t("openai")}
+        </Stack>
+      }
+      padding="300"
+    >
       <Stack gap="200">
         <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
           {t("openaiHint")}
