@@ -88,7 +88,9 @@ claude -p <msg> [--resume <sid>] \
   auth (keychain) still works. (`CLAUDE_CONFIG_DIR` breaks auth — do not use
   it.)
 - **`--disallowedTools <built-ins>`** (`CHAT_HIDDEN_BUILTIN_TOOLS`) hides every
-  built-in tool (Bash/Read/Write/Edit/…). ZIBBY chat is a conversational butler,
+  built-in tool (Read/Write/Edit/…) except **Bash**, which the operator gave the
+  chat on purpose (same shell as their own `claude` session — e.g. `gh pr view`);
+  it is also on `--allowedTools`, so it runs without a prompt. ZIBBY chat is a conversational butler,
   not a coding agent — it may only act through the `zibby` MCP tools
   (`create_task` delegates the work to a workflow). Without this, the model tries
   to build the app itself via Bash/Write instead of dispatching. (Verified with a
@@ -96,6 +98,10 @@ claude -p <msg> [--resume <sid>] \
   `--setting-sources ""`, any `--tools` value also drops the operator's claude.ai
   connectors (verified 2026-10-26). Read-only built-ins (Read/Glob/Grep) run
   without a permission prompt, so they must stay on the denylist.
+- **Working directory.** A turn tagged with `#project`, or opened about a GitHub
+  URL whose repo matches a project's `gitRemote`, spawns with `cwd` set to that
+  project's local checkout (`ProjectLocalService.resolve`: `path`, else
+  `<cloneRoot>/<id>`); the scope line names the same path.
 - **Slack connector (read + draft).** The CLI loads the operator's claude.ai
   connectors from the login. `CHAT_SLACK_TOOLS` allow-lists the Slack connector's
   read/search tools plus `slack_send_message_draft`; sending, scheduling and
@@ -192,6 +198,16 @@ neither the sole nor any of the several addressed units) returns an MCP tool
 **error** (`isError: true`, `resolveMentionTarget` in `chat-mcp.controller.ts`)
 — never a silent fallback to the classifier. The model may call `create_task`
 more than once, once per addressed unit.
+
+**A single `@agent` runs inline.** When the turn's only mention is an `agent`,
+`ChatSessionService.buildArgs` hands the turn to that agent instead of the ZIBBY
+persona: the agent's `instructions` plus a chat adapter (`chat-agent-prompt.ts`)
+become the system prompt, its `model` is used (unless the operator picked one for
+the turn), and the answer streams back as a normal assistant message. No task or run
+is created — `mcp__zibby__create_task` is disallowed and only the agent's declared
+read-only built-ins (`Read`/`Glob`/`Grep`) stay enabled. Task creation stays with the
+"Vytvořit úlohu" button. An unknown agent id falls back to the normal ZIBBY turn;
+workflow/department mentions and multi-mention turns behave as in the table above.
 
 **Attachments reach the work.** `create_task` forwards the turn's
 `attachmentSetId` straight through to `TaskSchedulerService.createTask`, so

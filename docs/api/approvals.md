@@ -72,6 +72,7 @@ interface Approval {
   reason?: string; // ZB-08/O-12 — operator note on a rejection; the change request on `revised`
   suggestedReviewEvent?: "APPROVE" | "REQUEST_CHANGES" | "COMMENT"; // todo-10 — PR-review sign-off only: findings → REQUEST_CHANGES, none → APPROVE
   reviewEvent?: "APPROVE" | "REQUEST_CHANGES" | "COMMENT"; // todo-10 — the operator's pick on approve; absent → COMMENT
+  reviewDocument?: string; // PR-review gate only — the operator's edited review text (max 60 000 chars), replaces the agent's artifact on approve
   replies?: { threadId: string; body: string; resolve: boolean }[]; // pr-address-comments only — the operator's edited thread replies, sent in the approve body and handed to the runner
 }
 ```
@@ -176,8 +177,9 @@ Deciding an already-decided approval returns `409`
 GET  /api/approvals              list (optional ?status=pending|approved|rejected)
 GET  /api/approvals/:id          get one approval
 POST /api/approvals/:id/approve  approve (resumes the gated run) — 404 | 409
-                                  body: { reviewEvent?: "APPROVE" | "REQUEST_CHANGES" | "COMMENT", replies?: OperatorThreadReply[] }
+                                  body: { reviewEvent?: "APPROVE" | "REQUEST_CHANGES" | "COMMENT", reviewDocument?: string, replies?: OperatorThreadReply[] }
                                     reviewEvent — todo-10, PR-review sign-off only; absent → COMMENT
+                                    reviewDocument — PR-review gate only (approval carries suggestedReviewEvent); non-blank text is stored and written over the review artifact
                                     replies ({ threadId, body, resolve }) — pr-address-comments only; replace the parked drafts
 POST /api/approvals/:id/reject   reject (terminates the gated run, no action taken) — 404 | 409
                                   body: { reason?: string } — ZB-08/O-12, an optional operator note

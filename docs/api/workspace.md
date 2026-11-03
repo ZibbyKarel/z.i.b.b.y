@@ -36,11 +36,16 @@ apps/api/src` turns up only those call sites, never a route).
    only takes the worktree path when the target project is a git repo;
    otherwise it falls back to a direct checkout (non-git projects never get an
    isolated branch).
-2. **`createWorktree({ projectPath, runId, slug, dir })`** — cuts a fresh
+2. **`createWorktree({ projectPath, runId, slug, dir, taskText? })`** — cuts a fresh
    worktree at `dir` off the project's current `HEAD`, on branch
    `zibby/<runId>-<slug>` (the slug is sanitized by the pure, unit-tested
    `sanitizeBranchSlug` helper: lowercase, `[a-z0-9-]` only, capped at 60
-   chars, empty input becomes `run`). Returns the `Workspace` record
+   chars, empty input becomes `run`). When `taskText` contains a Jira issue key
+   (`[A-Z][A-Z0-9]+-\d+`), the branch is instead `<KEY>-<title-slug>` with no `zibby/`
+   prefix (`jiraBranchName`; the title is the text after the key up to the first URL or
+   newline, slug capped at 90 chars); if that branch already exists it becomes
+   `<KEY>-<runId>`. Autopilot recognises only `zibby/*` branches as ZIBBY's own, so
+   pushes to Jira-named branches wait for the operator. Returns the `Workspace` record
    (`{ branch, path, baseRef }`) that gets stored on the run aggregate. Throws
    `WorkspaceSetupError` on any git failure — the caller fails the run rather
    than silently falling back to the operator's main checkout. The

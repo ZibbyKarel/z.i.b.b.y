@@ -21,7 +21,7 @@ const GITHUB_TIMEOUT_MS = 15_000;
 // ponytail: first 100 threads x first 30 comments per PR; a bigger PR shows a truncated list.
 // upgrade = cursor pagination on reviewThreads / comments.
 const THREADS_QUERY =
-  "query($owner:String!,$name:String!,$n:Int!){repository(owner:$owner,name:$name){pullRequest(number:$n){reviewThreads(first:100){nodes{id isResolved isOutdated path line startLine comments(first:30){nodes{id author{login avatarUrl} createdAt body diffHunk}}}}}}}";
+  "query($owner:String!,$name:String!,$n:Int!){repository(owner:$owner,name:$name){pullRequest(number:$n){reviewThreads(first:100){nodes{id isResolved isOutdated path line startLine comments(first:30){nodes{id url author{login avatarUrl} createdAt body diffHunk}}}}}}}";
 const REPLY_MUTATION =
   "mutation($id:ID!,$body:String!){addPullRequestReviewThreadReply(input:{pullRequestReviewThreadId:$id,body:$body}){comment{id}}}";
 const RESOLVE_MUTATION = "mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{id}}}";
@@ -56,6 +56,7 @@ interface ThreadNode {
   comments: {
     nodes: {
       id: string;
+      url?: string;
       author: { login: string; avatarUrl: string } | null;
       createdAt: string;
       body: string;
@@ -171,6 +172,7 @@ export class InboxPrThreadsService {
       line: t.line,
       startLine: t.startLine,
       diffHunk: t.comments.nodes[0]?.diffHunk ?? "",
+      ...(t.comments.nodes[0]?.url ? { url: t.comments.nodes[0].url } : {}),
       comments: t.comments.nodes.map(({ id, author, createdAt, body }) => ({
         id,
         author,

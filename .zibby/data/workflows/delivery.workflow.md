@@ -60,6 +60,15 @@ phases:
     produces: docs.md
     model: sonnet
     thinking: low
+    prompt: |-
+      Write docs.md: the pull request description. Line 1 is `# <title>`, the rest is the PR body. ZIBBY pushes the branch and opens the PR from this file, so only write the file.
+
+      1. Look in the target repo for how PRs are written, in this order: a repo skill about PRs (`.agents/skills/*pr*/SKILL.md`, `.claude/skills/*pr*/SKILL.md`, or a PR section in AGENTS.md / CLAUDE.md), then `.github/pull_request_template.md` or `.github/PULL_REQUEST_TEMPLATE*`.
+      2. If a skill exists, Read it and follow its title style, body template and guidelines exactly. Fill every placeholder from the real diff (`git diff <base>...HEAD`, `git log`) and from the previous phases; write "None." for a section with nothing to say, never delete a heading. Skip the skill's mechanics (push, `gh pr create`, labels, learnings, stats scripts) — ZIBBY does that. Never invent values the skill wants generated (stats, durations, token counts): leave those out.
+      3. If there is only a template, fill it the same way.
+      4. If there is neither, write in English: title `<TICKET-KEY>: <imperative summary of the change>` (match the style of recent PRs: `gh pr list --state all --limit 10`), body with Why, What, Test Plan.
+
+      Rules: the title and body describe the code change, not the documentation work — never a title like "Documentation — ...", never a commit SHA in the title. Use real class, file and command names. Test Plan lists the checks that were actually run (with results, from test-automator.md) and the ones that were not. Write in English unless the repo's skill or template says otherwise.
 outputs:
   - type: pr
     from: docs.md
@@ -101,8 +110,11 @@ o zeď zaparkuje pro lidskou poznámku.
    Kodérovi, `drift` Architektovi, vyčerpání → park. Spouští kontroly
    repa podle jeho vlastní dokumentace a hlásí výsledky. Bez ní byl reviewerův
    souhlas poslední kontrolou před PR.
-5. **dokumentator** — `test-automator.md` → `docs.md`: changelog a poznámky pro PR
-   (`docs.md` má tvar `# titulek` + tělo — to je vstup pro PR výstup).
+5. **dokumentator** — `test-automator.md` → `docs.md`: popis PR
+   (`docs.md` má tvar `# titulek` + tělo — to je vstup pro PR výstup). Dokumentátor
+   nejdřív hledá v cílovém repu skill / šablonu pro PR (`.agents/skills/*pr*`,
+   `.claude/skills/*pr*`, `.github/pull_request_template.md`) a řídí se jimi;
+   bez nich píše anglicky (`<TICKET>: <shrnutí>` + Why / What / Test Plan).
 
 ## Výstup
 

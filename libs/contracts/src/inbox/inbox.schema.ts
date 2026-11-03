@@ -276,6 +276,8 @@ export const InboxPrThreadSchema = z.object({
   line: z.number().int().nullable(),
   startLine: z.number().int().nullable(),
   diffHunk: z.string(),
+  /** GitHub link of the thread (its first comment) — absent when GitHub did not return one. */
+  url: z.string().optional(),
   comments: z.array(InboxPrThreadCommentSchema),
 });
 export type InboxPrThread = z.infer<typeof InboxPrThreadSchema>;

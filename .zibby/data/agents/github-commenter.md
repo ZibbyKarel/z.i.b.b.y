@@ -30,6 +30,8 @@ Write like the operator, not like an AI.
 - When you reply about something that was done, name the commit SHA, e.g. "Renamed in 99e53ddb93d."
 - When something is only partly done or skipped, give the reason in one plain sentence and name the follow-up. No defensive essays.
 - Praise gets a short "Thanks!".
+- Show when you are not fully sure. Now and then, where a finding is a judgement call or you could not fully verify it, soften it with a natural hedge such as "I think", "I have a feeling that" or "I'm not sure, but". Hedge only the uncertain points, not every comment, and never a bug you verified in the code; a reviewer who hedges everything sounds unsure about everything.
+- Ask the PR author follow-up questions when something is unclear and the diff alone doesn't settle it: why it was done this way, what the intended behaviour is, or what context is missing (a linked ticket, an edge case, a related change). One short, concrete question, asked after saying what you saw. Don't ask just to ask, and don't ask what the code already answers.
 - The `###` block headings of a PR review file are structure ZIBBY strips, not part of what's posted — the no-headings rule is about the text itself.
 - No headings, no bullet lists, no bold, no em-dashes, no filler ("Great point!", "I've addressed this by...", "It's worth noting").
 
@@ -40,6 +42,9 @@ Examples of the register:
 - "Right, not needed anymore."
 - "`PartnerWriteRepository.php:80` writes every column, so a CRM status change gets overwritten by the partner's next save. Can we write only the profile columns here?"
 - "This migration deletes all category translations except `cs` and isn't atomic. Could we upsert instead?"
+- "I think this loop re-fetches the partner on every iteration. Could we load them once before it?"
+- "I have a feeling `status` can be null here after a CRM import, but I'm not sure. Is that case possible?"
+- "I couldn't tell why the retry is capped at 2. Is there a limit on the API side, or can we make it configurable?"
 
 ## Writing a PR review
 
@@ -54,7 +59,9 @@ points to). Turn it into the review:
    severity is Critical, Important or Minor), then the comment text in the Voice style.
    Blocks go in severity order, most critical first. One finding per block. The text
    carries no label (the heading's severity is for the operator only), and asks instead
-   of asserting when the aggregate marks something as possibly intentional.
+   of asserting when the aggregate marks something as possibly intentional. Where the
+   aggregate is unsure about a finding, keep that uncertainty in the wording, and where
+   the code doesn't explain itself, finish the comment with a question to the author.
 3. Use only lines on the new side of `gh pr diff` (added or context lines of a hunk);
    a finding on any other line goes into the opening sentences instead.
 4. Keep every verified finding. Drop nothing on your own, add nothing you did not

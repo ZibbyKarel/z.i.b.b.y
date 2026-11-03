@@ -101,12 +101,20 @@ export function addressApproveReplies(
   return base.map((r) => edits[r.threadId] ?? r);
 }
 
-/** The approve request body: `replies` for an address-comments approval, else the review event. */
+/**
+ * The approve request body: `replies` for an address-comments approval, else the review event
+ * (plus the operator's edited review document, when there is one).
+ */
 export function approveRequestBody(
   replies: OperatorThreadReply[] | undefined,
   reviewEvent: PrReviewEvent | undefined,
+  reviewDocument?: string,
 ) {
-  return replies ? { replies } : reviewEvent ? { reviewEvent } : {};
+  if (replies) return { replies };
+  return {
+    ...(reviewEvent ? { reviewEvent } : {}),
+    ...(reviewDocument ? { reviewDocument } : {}),
+  };
 }
 
 export interface AddressCommentsReviewProps {
@@ -136,7 +144,10 @@ export function AddressCommentsReview({
   const count = (kind: PrThreadOutcome["kind"]) => outcomes.filter((o) => o.kind === kind).length;
   // Only threads the run actually handled — no skipped or outdated ones.
   const shown = rows?.filter((r) => r.outcome?.kind !== "skipped" && !r.thread.isOutdated);
-  const open = shown?.filter((r) => r.draft) ?? [];
+  // Questions wait for the operator — they go first; the rest keeps the report order (stable sort).
+  const open = (shown?.filter((r) => r.draft) ?? []).sort(
+    (a, b) => Number(b.outcome?.kind === "question") - Number(a.outcome?.kind === "question"),
+  );
   const resolved = shown?.filter((r) => !r.draft) ?? [];
 
   const change = (threadId: string, next: { body: string; resolve: boolean }) =>
@@ -178,6 +189,7 @@ export function AddressCommentsReview({
           key={thread.id}
           now={now}
           outcome={outcome}
+          prRef={`${addr.repo}#${addr.number}`}
           reply={{
             body: draft?.body ?? "",
             resolve: draft?.resolve ?? false,
@@ -192,7 +204,13 @@ export function AddressCommentsReview({
             {t("addressAlreadyResolved")}
           </Typography>
           {resolved.map(({ thread, outcome }) => (
-            <ReviewThread key={thread.id} now={now} outcome={outcome} thread={thread} />
+            <ReviewThread
+              key={thread.id}
+              now={now}
+              outcome={outcome}
+              prRef={`${addr.repo}#${addr.number}`}
+              thread={thread}
+            />
           ))}
         </Stack>
       )}

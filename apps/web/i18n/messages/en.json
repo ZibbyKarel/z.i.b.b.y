@@ -945,6 +945,8 @@
     "waiting": "waiting for output…"
   },
   "approvals": {
+    "findingFileLink": "Open {where} in the PR",
+    "findingComment": "Review comment",
     "addressSummary": "Fixed {done} of {total} threads · {question} questions · {skipped} skipped",
     "addressReport": "Full report",
     "addressAlreadyResolved": "Already resolved on GitHub",
@@ -2864,6 +2866,8 @@
       },
       "outdated": "outdated",
       "new": "new since the run",
+      "openOnGithub": "Open thread on GitHub",
+      "copyLink": "Copy link",
       "unknownAuthor": "unknown",
       "reply": "Reply",
       "resolve": "Resolve thread",

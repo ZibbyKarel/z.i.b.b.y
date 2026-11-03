@@ -387,7 +387,13 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     // P1-02/P1-03: a run parked at a phase boundary (stage checkpoint or spend cap).
     this.approvals.register("workflow-gate", {
       resume: (workflowRunId, approval) =>
-        this.resumeGate(workflowRunId, "approved", undefined, approval?.reviewEvent),
+        this.resumeGate(
+          workflowRunId,
+          "approved",
+          undefined,
+          approval?.reviewEvent,
+          approval?.reviewDocument,
+        ),
       cancel: (workflowRunId) => void this.resumeGate(workflowRunId, "rejected"),
       revise: (workflowRunId, note) => this.resumeGate(workflowRunId, "revised", note),
     });
@@ -563,6 +569,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
             projectPath: local.path,
             runId: workflowRunId,
             slug: workflowId,
+            ...(input ? { taskText: input } : {}),
             // Phase 12.7: worktree OUTSIDE the repo/data tree (only artifacts stay under root).
             dir: await prepareWorktreeDir(workflowRunId),
           });
@@ -2229,6 +2236,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     decision: "approved" | "rejected" | "revised",
     note?: string,
     reviewEvent?: PrReviewEvent,
+    reviewDocument?: string,
   ): Promise<void> {
     try {
       const run = this.runs.get(workflowRunId) ?? (await this.readAggregate(workflowRunId));
@@ -2295,6 +2303,12 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         run.approvedFinalGate = gate.phaseId;
         // todo-10: the operator's PR-review pick travels with the run to parkPrReview.
         if (reviewEvent) run.approvedReviewEvent = reviewEvent;
+        // The operator edited the review text at the gate: it replaces the phase's artifact on
+        // disk, so the park step reads (and GitHub gets) the edited document. Files stay truth.
+        if (reviewDocument?.trim()) {
+          const file = await this.artifactPath(workflowRunId, PR_REVIEW_ARTIFACT);
+          if (file) await fs.writeFile(file, reviewDocument, "utf8");
+        }
       }
       await this.writeAggregate(run);
       if (gate.cursor === null) {

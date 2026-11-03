@@ -41,6 +41,7 @@ import { moon } from "./moon";
 import { sun } from "./sun";
 import { coffee } from "./coffee";
 import { link } from "./link";
+import { copy } from "./copy";
 import { warn } from "./warn";
 import { arrow } from "./arrow";
 import { butlerSign } from "./butlerSign";
@@ -106,6 +107,7 @@ export const iconNames = [
   "sun",
   "coffee",
   "link",
+  "copy",
   "warn",
   "arrow",
   "butlerSign",
@@ -174,6 +176,7 @@ export const paths: Record<IconName, ReactNode> = {
   sun,
   coffee,
   link,
+  copy,
   warn,
   arrow,
   butlerSign,

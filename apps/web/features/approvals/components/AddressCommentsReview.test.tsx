@@ -78,7 +78,9 @@ describe("AddressCommentsReview", () => {
     expect(screen.getByTestId(AddressCommentsReviewTestId.Summary)).toBeInTheDocument();
     expect(screen.getAllByTestId(ReviewThreadTestId.Root)).toHaveLength(2);
     expect(screen.getAllByTestId(ReviewThreadTestId.ReplyInput)).toHaveLength(2);
-    expect(screen.getAllByTestId(ReviewThreadTestId.ReplyInput)[0]).toHaveValue("fixed it");
+    // The question (PRRT_a) waits for the operator, so it is listed before the done thread.
+    expect(screen.getAllByTestId(ReviewThreadTestId.ReplyInput)[0]).toHaveValue("");
+    expect(screen.getAllByTestId(ReviewThreadTestId.ReplyInput)[1]).toHaveValue("fixed it");
     // The skipped thread (B) is hidden, and with it the only already-resolved row.
     expect(screen.queryByTestId(AddressCommentsReviewTestId.AlreadyResolved)).toBeNull();
     expect(screen.getByTestId(AddressCommentsReviewTestId.Report)).toBeInTheDocument();
@@ -97,7 +99,7 @@ describe("AddressCommentsReview", () => {
         task={task}
       />,
     );
-    fireEvent.change(screen.getAllByTestId(ReviewThreadTestId.ReplyInput)[1] as HTMLElement, {
+    fireEvent.change(screen.getAllByTestId(ReviewThreadTestId.ReplyInput)[0] as HTMLElement, {
       target: { value: "answer" },
     });
     expect(onRepliesChange).toHaveBeenCalledWith([
@@ -143,6 +145,10 @@ describe("approve payload", () => {
 
   it("a non-address kind sends no replies key", () => {
     expect(approveRequestBody(undefined, "APPROVE")).toEqual({ reviewEvent: "APPROVE" });
+    expect(approveRequestBody(undefined, "COMMENT", "doc")).toEqual({
+      reviewEvent: "COMMENT",
+      reviewDocument: "doc",
+    });
     expect(approveRequestBody(undefined, undefined)).toEqual({});
     expect("replies" in approveRequestBody(undefined, undefined)).toBe(false);
   });

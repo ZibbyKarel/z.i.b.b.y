@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { McpServerSchema, WorkflowSchema } from "@zibby/contracts";
 import {
   PR_ADDRESS_COMMENTS_ARTIFACT,
+  PR_DESCRIPTION_ARTIFACT,
   PR_FIX_CI_ARTIFACT,
   PR_REBASE_ARTIFACT,
   PR_REPLIES_ARTIFACT,
@@ -315,6 +316,7 @@ describe("pr-address-comments — the PR inbox's Address review comments button"
     expect(wf.phases.map((p) => [p.id, p.agent])).toEqual([
       ["address", "fullstack-developer"],
       ["reply", "github-commenter"], // the operator-voice agent, reused — no new prompt copy
+      ["describe", "documentation-engineer"], // refreshes the PR description after the fixes
     ]);
     expect(wf.phases[0]).toMatchObject({
       consumes: "task.md",
@@ -323,6 +325,10 @@ describe("pr-address-comments — the PR inbox's Address review comments button"
     expect(wf.phases[1]).toMatchObject({
       consumes: PR_ADDRESS_COMMENTS_ARTIFACT,
       produces: PR_REPLIES_ARTIFACT,
+    });
+    expect(wf.phases[2]).toMatchObject({
+      consumes: PR_ADDRESS_COMMENTS_ARTIFACT,
+      produces: PR_DESCRIPTION_ARTIFACT,
     });
     // The push/reply gate is ZIBBY's (TaskOutputService.parkPrAddressComments), not a workflow gate.
     expect(wf.phases.every((p) => p.approval === undefined)).toBe(true);

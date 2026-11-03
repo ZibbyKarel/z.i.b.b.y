@@ -15,6 +15,13 @@ phases:
     produces: zibby-pr-replies.json
     model: sonnet
     thinking: medium
+  - id: describe
+    type: agent
+    agent: documentation-engineer
+    consumes: zibby-pr-address-comments.md
+    produces: zibby-pr-description.md
+    model: sonnet
+    thinking: low
 desc: >-
   Interní linka PR inboxu — spouští ji jen tlačítko „Address review comments" u
   konkrétního GitHub PR. Nesměruj sem běžné úkoly: opravy kódu dělá `patch` nebo
@@ -33,7 +40,10 @@ a zapíše report. Druhá fáze **reply** (`github-commenter`, agent, který pí
 hlasem operátora): `zibby-pr-address-comments.md` → `zibby-pr-replies.json`, krátká
 odpověď na každé opravené vlákno („Good catch, fixed in abc1234."); u opravených vláken
 přidá `resolve: true` a ZIBBY je po odpovědi resolvne. Po pushi ZIBBY znovu vyžádá review
-od těch, kdo požadovali změny. Agenti nic nepushují, nic nepostují a vlákna neresolvují.
+od těch, kdo požadovali změny. Třetí fáze **describe** (`documentation-engineer`, dokumentátor): přečte report, aktuální
+popis PR a výsledný diff a přepíše popis tak, aby seděl s tím, co PR po opravách obsahuje
+(`zibby-pr-description.md` = `# titulek` + tělo; když nic nezastaralo, nezapíše nic). ZIBBY
+popis PR upraví až po pushi, spolu s odpověďmi. Agenti nic nepushují, nic nepostují a vlákna neresolvují.
 
 ## Push a odpovědi
 

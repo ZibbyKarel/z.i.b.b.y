@@ -856,6 +856,10 @@ export const ScheduledTaskSchema = z.object({
         .array(z.union([PrThreadReplySchema, OperatorThreadReplySchema]))
         .max(100)
         .optional(),
+      /** Refreshed PR title + body from the documentation phase; applied to GitHub after the push. */
+      description: z.object({ title: z.string().min(1), body: z.string().min(1) }).optional(),
+      /** Why updating the PR description failed (empty / absent = updated or nothing to update). */
+      descriptionNote: z.string().optional(),
       /** When the push + follow-up finished (`pushed`) — the inbox hides "Address" until the PR changes after it. */
       finishedAt: IsoDateTimeSchema.optional(),
       /** How many replies reached GitHub, and why any did not. */

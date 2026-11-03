@@ -198,7 +198,7 @@ GitHub link or GitHub 401/403, 502 any other GitHub failure.
 
 Read-only (Tier 1). One GitHub GraphQL query (`InboxPrThreadsService.list`):
 `reviewThreads(first:100)` with `comments(first:30)` each — more are not returned.
-Each thread is `{ id, isResolved, isOutdated, path, line, startLine, diffHunk, comments }`;
+Each thread is `{ id, isResolved, isOutdated, path, line, startLine, diffHunk, url?, comments }` (`url` = GitHub link of the first comment, absent when GitHub returns none);
 `diffHunk` is the first comment's hunk (it ends at the commented line), a comment is
 `{ id, author: { login, avatarUrl } | null, createdAt, body }`. Comment bodies are
 inbound data, rendered escaped.
@@ -248,7 +248,7 @@ ungated phases:
    threads (`gh api graphql … reviewThreads`), commits a focused fix per comment it accepts,
    runs quick checks, writes `zibby-pr-address-comments.md` whose first line is
    `Addressed: all` / `partial` / `checks failed` / `aborted`, then one `thread: <PRRT_…>` entry
-   per thread (`done in <sha>` or `skipped: <reason>`). It never pushes.
+   per thread (`done in <sha>` or `skipped: <reason>`; an optional leading `Outcome:` label is accepted by `parseThreadOutcomes`). It never pushes.
 2. `reply` (`github-commenter`, the existing operator-voice agent, reused — no new prompt; it
    also holds a `dev` seat because the runner staffs phases from the workflow's department):
    writes `zibby-pr-replies.json` = `[{ threadId, body, resolve? }]` (`resolve: true` only on
@@ -281,7 +281,11 @@ required when the operator sent no replies (a thread whose reply failed stays op
 (`latestOpinionatedReviews`) is `CHANGES_REQUESTED`, excluding the PR author and bots.
 `replied` / `repliesNote` record what was posted and why the rest was skipped; `resolved`,
 `reviewersRequested` and `followUpNote` record the rest. A follow-up failure leaves the push
-`pushed`, a push failure does nothing. A missing reply file never blocks the push. The Tier-2
+`pushed`, a push failure does nothing. A missing reply file never blocks the push. The third phase
+`describe` (`documentation-engineer`) may write `zibby-pr-description.md` (`# title` + body, parsed by
+`parsePrDescription`) with the PR description refreshed for the fixes; it is stored as
+`prAddressComments.description`, shown in the approval `detail`, and applied with
+`PATCH /repos/{repo}/pulls/{n}` right after the push (a failure lands in `descriptionNote`, the push stays `pushed`). The Tier-2
 task outcome says how many replies reached GitHub, how many threads were resolved, who was
 asked to re-review, and any follow-up failure.
 

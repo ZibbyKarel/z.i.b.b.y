@@ -1,4 +1,10 @@
-import type { ChatAbout, InboxRoadmapItem, TaskRun } from "@zibby/contracts";
+import type {
+  ChatAbout,
+  InboxPrThread,
+  InboxRoadmapItem,
+  PrThreadOutcome,
+  TaskRun,
+} from "@zibby/contracts";
 
 /** `ChatAboutSchema` caps (libs/contracts chat.schema.ts). */
 const LABEL_MAX = 200;
@@ -90,5 +96,60 @@ export function noteChatAbout(
     [`Note: ${oneLine(note.title)}`, `Team: ${team}`, `Path: ${note.id}`, ""],
     note.body,
     href,
+  );
+}
+
+/** The chat context for a PR review thread: location, state, code context and every comment. */
+export function threadChatAbout(
+  thread: InboxPrThread,
+  opts: { pr?: string; outcome?: PrThreadOutcome } = {},
+): ChatAbout {
+  const where = thread.line === null ? thread.path : `${thread.path}:${thread.line}`;
+  const comments = thread.comments
+    .map((c) => `${c.author?.login ?? "unknown"} (${c.createdAt}):\n${c.body}`)
+    .join("\n\n");
+  return build(
+    "thread",
+    thread.id,
+    `Thread · ${where}`,
+    [
+      opts.pr && `PR: ${oneLine(opts.pr)}`,
+      `File: ${where}`,
+      thread.url && `URL: ${thread.url}`,
+      `Resolved: ${thread.isResolved ? "yes" : "no"}`,
+      `Outdated: ${thread.isOutdated ? "yes" : "no"}`,
+      opts.outcome &&
+        `ZIBBY outcome: ${opts.outcome.kind}${opts.outcome.note ? ` — ${oneLine(opts.outcome.note)}` : ""}`,
+      "",
+      "Code context:",
+      thread.diffHunk || "(none)",
+      "",
+      `Comments (${thread.comments.length}):`,
+    ],
+    comments,
+    thread.url,
+  );
+}
+
+/** The chat context for one finding of a PR review the operator is about to post. */
+export function findingChatAbout(
+  finding: { path: string; line: number; severity?: string; body: string },
+  approvalId: string,
+  summary?: string,
+): ChatAbout {
+  const where = `${finding.path}:${finding.line}`;
+  return build(
+    "finding",
+    `${approvalId}:${where}`,
+    `Review finding · ${where}`,
+    [
+      `File: ${where}`,
+      finding.severity && `Severity: ${finding.severity}`,
+      "Draft review comment, not yet posted to GitHub.",
+      summary?.trim() && `Review summary: ${oneLine(summary)}`,
+      "",
+      "Comment:",
+    ],
+    finding.body,
   );
 }

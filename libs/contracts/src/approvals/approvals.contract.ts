@@ -41,6 +41,7 @@ export const approvalsContract = c.router(
       body: z
         .object({
           reviewEvent: PrReviewEventSchema.optional(),
+          reviewDocument: z.string().max(60_000).optional(),
           replies: z.array(OperatorThreadReplySchema).max(100).optional(),
         })
         .optional(),

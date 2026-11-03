@@ -945,6 +945,8 @@
     "waiting": "čekání na výstup…"
   },
   "approvals": {
+    "findingFileLink": "Otevřít {where} v PR",
+    "findingComment": "Komentář k review",
     "addressSummary": "Opraveno {done} z {total} vláken · {question} otázek · {skipped} přeskočeno",
     "addressReport": "Celý report",
     "addressAlreadyResolved": "Už vyřešeno na GitHubu",
@@ -2864,6 +2866,8 @@
       },
       "outdated": "zastaralé",
       "new": "nový od běhu",
+      "openOnGithub": "Otevřít thread na GitHubu",
+      "copyLink": "Kopírovat odkaz",
       "unknownAuthor": "neznámý",
       "reply": "Odpověď",
       "resolve": "Vyřešit thread",

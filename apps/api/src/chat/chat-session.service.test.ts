@@ -5,6 +5,7 @@ import * as path from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ChatPersona, ChatToolEvent, TaskTarget } from "@zibby/contracts";
+import type { AgentsStorageService } from "../agents/agents.storage.service";
 import { CompanyNotFoundError } from "../companies/companies.errors";
 import type { CompaniesStorageService } from "../companies/companies.storage.service";
 import { KbMcpAuthService } from "../kb/kb-mcp-auth.service";
@@ -41,6 +42,7 @@ class FakeClaude extends EventEmitter implements ClaudeProcess {
 
 class TestSession extends ChatSessionService {
   lastArgs: string[] = [];
+  lastCwd: string | undefined;
   constructor(
     store: ChatTranscriptStore,
     events: ChatEventsService,
@@ -67,10 +69,11 @@ class TestSession extends ChatSessionService {
         throw new SkillNotFoundError(id);
       },
     },
-    projects: Pick<ProjectsStorageService, "get"> = {
+    projects: Pick<ProjectsStorageService, "get" | "list"> = {
       get: async (id) => {
         throw new ProjectNotFoundError(id);
       },
+      list: async () => [],
     },
     companies: Pick<CompaniesStorageService, "get"> = {
       get: async (id) => {
@@ -82,6 +85,11 @@ class TestSession extends ChatSessionService {
       get: async (id) => {
         if (id === "devrel" || id === "platform") return { id, name: id };
         throw new TeamNotFoundError(id);
+      },
+    },
+    agents: Pick<AgentsStorageService, "get"> = {
+      get: async (id) => {
+        throw new Error(`unknown agent ${id}`);
       },
     },
   ) {
@@ -98,10 +106,12 @@ class TestSession extends ChatSessionService {
       projects as ProjectsStorageService,
       companies as CompaniesStorageService,
       teams as TeamsStorageService,
+      agents as AgentsStorageService,
     );
   }
-  protected createProcess(args: string[]): ClaudeProcess {
+  protected createProcess(args: string[], cwd?: string): ClaudeProcess {
     this.lastArgs = args;
+    this.lastCwd = cwd;
     return new FakeClaude(this.lines);
   }
 }
@@ -197,7 +207,10 @@ describe("ChatSessionService", () => {
     // built-in tools hidden via a denylist — `--tools` would also drop claude.ai connectors
     expect(args).not.toContain("--tools");
     const hidden = (args[args.indexOf("--disallowedTools") + 1] ?? "").split(",");
-    expect(hidden).toEqual(expect.arrayContaining(["Bash", "Read", "Write", "Edit", "Grep"]));
+    expect(hidden).toEqual(expect.arrayContaining(["Read", "Write", "Edit", "Grep"]));
+    // Bash is the operator's call: chat gets a shell, allowed without a prompt.
+    expect(hidden).not.toContain("Bash");
+    expect((args[args.indexOf("--allowedTools") + 1] ?? "").split(",")).toContain("Bash");
     expect(args).not.toContain("--resume");
   });
 
@@ -215,7 +228,7 @@ describe("ChatSessionService", () => {
     // Task 8: widened to cover BOTH mounted servers — a permission-list PROMPTING
     // hint (commit eb525567), not what makes either server reachable.
     const allowed = (args[args.indexOf("--allowedTools") + 1] ?? "").split(",");
-    expect(allowed.slice(0, 2)).toEqual(["mcp__zibby__*", "mcp__zibby-kb__*"]);
+    expect(allowed.slice(0, 3)).toEqual(["Bash", "mcp__zibby__*", "mcp__zibby-kb__*"]);
     // claude.ai Slack connector: read + draft only, never send.
     expect(allowed).toContain("mcp__claude_ai_Slack__slack_search_public_and_private");
     expect(allowed).toContain("mcp__claude_ai_Slack__slack_send_message_draft");
@@ -621,6 +634,42 @@ describe("ChatSessionService", () => {
       expect(transcript.messages[0]?.mentions).toEqual([agent]);
     });
 
+    it("runs a single @agent mention inline: agent prompt + model, read tools only, no create_task", async () => {
+      const builder = {
+        id: "builder",
+        instructions: "Jsi Builder, piš krátce.",
+        model: "opus",
+        tools: ["Read", "Write", "Bash"],
+      };
+      const svc = new TestSession(
+        store,
+        events,
+        [],
+        "jarvis",
+        new ChatToolResultRegistry(),
+        new ChatMcpAuthService(),
+        os.tmpdir(),
+        new KbMcpAuthService(),
+        new AttachmentStorageService(),
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        { get: async () => builder } as never,
+      );
+      svc["toolResults"].setMentions("c-agent", [agent as never]);
+      const args = await svc.buildArgs("ahoj", null, "c-agent");
+      const prompt = args[args.indexOf("--append-system-prompt") + 1] ?? "";
+      const denied = (args[args.indexOf("--disallowedTools") + 1] ?? "").split(",");
+      expect(prompt).toContain("Jsi Builder");
+      expect(prompt).toContain("přes @builder");
+      expect(prompt).not.toContain("JEDNEJ");
+      expect(args[args.indexOf("--model") + 1]).toBe("opus");
+      expect(denied).toContain("mcp__zibby__create_task");
+      expect(denied).toContain("Write");
+      expect(denied).not.toContain("Read");
+    });
+
     it("carries an explicit multi-mention list straight through, without folding in `target`", async () => {
       const svc = new TestSession(store, events, [
         line({ type: "system", subtype: "init", session_id: "s" }),
@@ -781,7 +830,8 @@ describe("ChatSessionService", () => {
         if (id !== "shop") throw new ProjectNotFoundError(id);
         return { id: "shop", name: "Shop", path: "/w/shop", teamId: "devrel" };
       },
-    } as unknown as Pick<ProjectsStorageService, "get">;
+      list: async () => [],
+    } as unknown as Pick<ProjectsStorageService, "get" | "list">;
     const companies = {
       get: async (id: string) => {
         if (id !== "acme") throw new CompanyNotFoundError(id);
@@ -810,6 +860,46 @@ describe("ChatSessionService", () => {
       const configPath = svc.lastArgs[svc.lastArgs.indexOf("--mcp-config") + 1] ?? "";
       return JSON.parse(await fs.readFile(configPath, "utf8")).mcpServers["zibby-kb"].url;
     };
+
+    it("runs a turn about a GitHub PR inside the project whose gitRemote is that repo", async () => {
+      const cms4 = {
+        id: "cms4",
+        name: "cms4",
+        gitRemote: "git@github.com:shoptet/cms4.git",
+        path: "/w/cms4",
+      };
+      const svc = new TestSession(
+        store,
+        events,
+        [],
+        "jarvis",
+        undefined,
+        undefined,
+        dir,
+        undefined,
+        undefined,
+        skills,
+        {
+          get: projects.get,
+          list: async () => [cms4],
+        } as unknown as Pick<ProjectsStorageService, "get" | "list">,
+      );
+      const result = await svc.sendMessage(
+        {
+          text: "go",
+          about: {
+            kind: "pr",
+            id: "pr",
+            label: "PR #1",
+            href: "https://github.com/shoptet/cms4/pull/1",
+          },
+        },
+        NOW,
+      );
+      await settled(result.turnId);
+      expect(svc.lastCwd).toBe("/w/cms4");
+      expect(promptOf(svc)).toContain("cesta: /w/cms4");
+    });
 
     it("appends a /-picked skill's instructions after the governor", async () => {
       const svc = make();

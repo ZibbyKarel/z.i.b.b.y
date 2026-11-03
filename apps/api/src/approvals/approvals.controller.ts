@@ -46,7 +46,12 @@ export class ApprovalsController {
       approveApproval: ({ params: { id }, body }) =>
         errors.or404(
           id,
-          () => this.approvals.approve(id, { reviewEvent: body?.reviewEvent, replies: body?.replies }),
+          () =>
+            this.approvals.approve(id, {
+              reviewEvent: body?.reviewEvent,
+              replies: body?.replies,
+              reviewDocument: body?.reviewDocument,
+            }),
           decided,
         ),
 

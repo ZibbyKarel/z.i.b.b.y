@@ -13,12 +13,16 @@ import {
   type ChatModel,
   ChatModelSchema,
   type ChatToolEvent,
+  type Project,
   type SendChatMessageBody,
   type SendChatMessageResult,
   type TaskTarget,
+  repoFromGitRemote,
 } from "@zibby/contracts";
+import { AgentsStorageService } from "../agents/agents.storage.service";
 import { CompaniesStorageService } from "../companies/companies.storage.service";
 import { KbMcpAuthService } from "../kb/kb-mcp-auth.service";
+import { ProjectLocalService } from "../projects/project-local.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { SkillsStorageService } from "../skills/skills.storage.service";
 import { collisionResistantId, ensureDir } from "../shared/file-storage";
@@ -29,6 +33,7 @@ import { buildAboutPromptSection } from "./chat-about-prompt";
 import { buildAttachmentPromptSection } from "./chat-attachment-prompt";
 import { ChatEventsService } from "./chat-events.service";
 import { ChatMcpAuthService } from "./chat-mcp-auth.service";
+import { buildAgentChatPrompt, chatAgentReadTools } from "./chat-agent-prompt";
 import { buildChatPrompt } from "./chat-persona";
 import { type ChatStreamEvent, parseChatStreamLine } from "./chat-stream-parser";
 import { type ChatCreateTaskMeta, ChatToolResultRegistry } from "./chat-tool-result.registry";
@@ -61,7 +66,6 @@ const TURN_TIMEOUT_MS = 120_000;
 export const CHAT_HIDDEN_BUILTIN_TOOLS = [
   "Agent",
   "Task",
-  "Bash",
   "Read",
   "Glob",
   "Grep",
@@ -96,6 +100,13 @@ export const CHAT_HIDDEN_BUILTIN_TOOLS = [
   "ReadMcpResourceTool",
   "ReadMcpResourceDirTool",
 ].join(",");
+
+/** {@link CHAT_HIDDEN_BUILTIN_TOOLS} minus the read-only tools an `@agent` turn keeps. */
+function hiddenBuiltinTools(keep: readonly string[]): string {
+  return CHAT_HIDDEN_BUILTIN_TOOLS.split(",")
+    .filter((t) => !keep.includes(t))
+    .join(",");
+}
 
 /**
  * The operator's claude.ai Slack connector, read + draft only. Sending, scheduling
@@ -191,7 +202,29 @@ export class ChatSessionService {
     private readonly companies: CompaniesStorageService,
     // Resolves a `#team` tag so an unknown teamId 404s like the other tags.
     private readonly teams: TeamsStorageService,
+    // An `@agent` mention runs that agent inline in the chat (see `buildArgs`).
+    private readonly agents: AgentsStorageService,
+    // The turn runs inside the project's local checkout (path or `<cloneRoot>/<id>`).
+    private readonly projectLocal?: ProjectLocalService,
   ) {}
+
+  /** The turn's project: the `#project` tag, else the project whose `gitRemote` is the
+   *  repo of the GitHub URL the chat is about. Its path is THIS machine's checkout. */
+  private async resolveTurnProject(
+    project: Project | undefined,
+    about: ChatAbout | undefined,
+  ): Promise<ChatTurnTags["project"]> {
+    const aboutRepo = /github\.com\/([^/]+\/[^/]+)/i.exec(about?.href ?? "")?.[1]?.toLowerCase();
+    const target =
+      project ??
+      (aboutRepo
+        ? (await this.projects.list()).find((p) => repoFromGitRemote(p.gitRemote) === aboutRepo)
+        : undefined);
+    if (!target) return undefined;
+    const local = await this.projectLocal?.resolve(target).catch(() => undefined);
+    const dir = local?.resolvedPath ?? target.path;
+    return { id: target.id, name: target.name, ...(dir ? { path: dir } : {}) };
+  }
 
   /**
    * Append the operator's turn and kick off the streaming assistant response. Returns
@@ -219,6 +252,7 @@ export class ChatSessionService {
       body.companyId ? this.companies.get(body.companyId) : undefined,
       body.teamId ? this.teams.get(body.teamId) : undefined,
     ]);
+    const turnProject = await this.resolveTurnProject(project, body.about);
     const tags: ChatTurnTags = {
       ...(skill
         ? {
@@ -230,7 +264,7 @@ export class ChatSessionService {
             },
           }
         : {}),
-      ...(project ? { project: { id: project.id, name: project.name, path: project.path } } : {}),
+      ...(turnProject ? { project: turnProject } : {}),
       ...(company ? { company: { id: company.id, name: company.name } } : {}),
       ...(body.about ? { about: body.about } : {}),
       ...(body.model ? { model: body.model } : {}),
@@ -289,14 +323,25 @@ export class ChatSessionService {
     tags?: ChatTurnTags,
   ): Promise<string[]> {
     const mentions = this.toolResults.getMentions(conversationId);
-    const persona = buildChatPrompt(this.systemConfig.current().chatPersona);
+    // A single `@agent` mention hands the turn to that agent: its own instructions
+    // replace the persona/governor, it answers in the chat, and `create_task` is off.
+    // A vanished agent falls back to the normal ZIBBY turn.
+    const mentioned =
+      mentions.length === 1 && mentions[0]?.kind === "agent" ? mentions[0] : undefined;
+    const agent = mentioned
+      ? await this.agents.get(mentioned.id).catch(() => undefined)
+      : undefined;
+    const persona = agent
+      ? buildAgentChatPrompt(agent)
+      : buildChatPrompt(this.systemConfig.current().chatPersona);
     // D-020: when the operator @mentioned one or more units, tell the model plainly —
     // it still decides WHETHER to call `create_task` (rule 3 of the governor), but if
     // it does, routing is already decided (mentions skip the classifier server-side).
     // With a SINGLE mention it's exactly the Fáze 14.2 line; with several the model is
     // told it must pass `mention` (`create_task`'s optional arg) naming which one.
-    const mentionLine =
-      mentions.length === 1 && mentions[0]
+    const mentionLine = agent
+      ? undefined
+      : mentions.length === 1 && mentions[0]
         ? `Operátor v této zprávě výslovně oslovil ${describeTarget(mentions[0])} (@mention). ` +
           "Pokud zavoláš create_task, tato volba už má přednost před klasifikací — nemusíš " +
           "znovu vybírat cíl."
@@ -360,7 +405,10 @@ export class ChatSessionService {
       // without a permission prompt, so they MUST stay on this list; everything else
       // is also denied by `dontAsk` + `--allowedTools`.
       "--disallowedTools",
-      CHAT_HIDDEN_BUILTIN_TOOLS,
+      // Inline delegation, not a run: an `@agent` turn may read, but never spawn a task.
+      agent
+        ? `${hiddenBuiltinTools(chatAgentReadTools(agent))},mcp__zibby__create_task`
+        : CHAT_HIDDEN_BUILTIN_TOOLS,
       // Persona (tone) is operator-selectable and read live from SystemConfig; the
       // answer/ask/act governor inside is constant across personas.
       "--append-system-prompt",
@@ -370,7 +418,7 @@ export class ChatSessionService {
       "--include-partial-messages",
       "--verbose",
       "--model",
-      this.effectiveModel(tags),
+      this.effectiveModel(tags, agent?.model),
       "--permission-mode",
       "dontAsk",
     ];
@@ -460,13 +508,15 @@ export class ChatSessionService {
       "--mcp-config",
       file,
       "--allowedTools",
-      ["mcp__zibby__*", "mcp__zibby-kb__*", ...CHAT_SLACK_TOOLS].join(","),
+      // Bash runs without a prompt (operator's call: chat gets the same shell as `cla`).
+      ["Bash", "mcp__zibby__*", "mcp__zibby-kb__*", ...CHAT_SLACK_TOOLS].join(","),
     ];
   }
 
   /** The real spawn; overridden in tests. Isolated stdin, piped stdout/stderr. */
-  protected createProcess(args: string[]): ClaudeProcess {
+  protected createProcess(args: string[], cwd?: string): ClaudeProcess {
     return spawn(process.env.CLAUDE_BIN ?? "claude", args, {
+      ...(cwd ? { cwd } : {}),
       stdio: ["ignore", "pipe", "pipe"],
       env: agentBaseEnv(),
     }) as ChildProcess;
@@ -502,6 +552,7 @@ export class ChatSessionService {
     const sessionId = await this.store.getSessionId(conversationId);
     const proc = this.createProcess(
       await this.buildArgs(text, sessionId, conversationId, teamId, tags),
+      tags?.project?.path,
     );
 
     let accumulated = "";
@@ -645,8 +696,8 @@ export class ChatSessionService {
     this.events.emit({ conversationId, turnId, type: "done", text: accumulated });
   }
 
-  private effectiveModel(tags?: ChatTurnTags): string {
-    return tags?.model ?? this.model;
+  private effectiveModel(tags?: ChatTurnTags, agentModel?: string): string {
+    return tags?.model ?? agentModel ?? this.model;
   }
 
   /**

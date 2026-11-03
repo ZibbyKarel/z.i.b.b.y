@@ -3,6 +3,8 @@ import { fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import messages from "../../../../i18n/messages/cs.json";
 import { renderWithProviders, screen } from "../../../../test/render";
+import { ChatProvider, useChat } from "../../../chat/ChatContext";
+import { ChatAboutButtonTestId } from "../../../chat/components/ChatAboutButton";
 import { ReviewThread, ReviewThreadTestId } from "./ReviewThread";
 
 const NOW = Date.parse("2026-10-22T12:00:00Z");
@@ -39,6 +41,40 @@ describe("ReviewThread", () => {
     expect(comments[0]).toHaveTextContent("alice");
     expect(comments[0]).toHaveTextContent("<script>x</script>");
     expect(comments[0]?.querySelector("script")).toBeNull();
+  });
+
+  it("links the file to the thread on GitHub and copies the link on demand", () => {
+    const writeText = vi.fn();
+    Object.assign(navigator, { clipboard: { writeText } });
+    const url = "https://github.com/o/r/pull/1#discussion_r9";
+    renderWithProviders(<ReviewThread now={NOW} thread={{ ...thread, url }} />);
+    const link = screen.getByTestId(ReviewThreadTestId.FileLink);
+    expect(link).toHaveAttribute("href", url);
+    expect(screen.queryByTestId(ReviewThreadTestId.CopyLink)).toBeNull();
+    fireEvent.mouseEnter(link);
+    fireEvent.click(screen.getByTestId(ReviewThreadTestId.CopyLink));
+    expect(writeText).toHaveBeenCalledWith(url);
+    expect(screen.getByTestId(ReviewThreadTestId.File)).toHaveTextContent("src/a.ts:12");
+  });
+
+  it("keeps the file as plain text without a url", () => {
+    renderWithProviders(<ReviewThread now={NOW} thread={thread} />);
+    expect(screen.queryByTestId(ReviewThreadTestId.FileLink)).toBeNull();
+  });
+
+  it("opens the chat dock about this thread", () => {
+    function Probe() {
+      const { about } = useChat();
+      return <span data-testid="probe">{about ? `${about.kind}:${about.id}` : "none"}</span>;
+    }
+    renderWithProviders(
+      <ChatProvider>
+        <ReviewThread now={NOW} thread={thread} />
+        <Probe />
+      </ChatProvider>,
+    );
+    fireEvent.click(screen.getByTestId(ChatAboutButtonTestId.Root));
+    expect(screen.getByTestId("probe")).toHaveTextContent("thread:PRRT_abc");
   });
 
   it("shows the question outcome tag", () => {

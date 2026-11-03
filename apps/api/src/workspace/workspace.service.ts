@@ -13,6 +13,8 @@ import { LoggerService, type ScopedLogger } from "../shared/logging/logger.servi
 
 /** Hard cap on a sanitized branch slug, leaving room under git's ref-name limits. */
 const SLUG_MAX = 60;
+/** Longer cap for a Jira title slug — the issue title is the readable part of the name. */
+const JIRA_SLUG_MAX = 90;
 
 /** Raised when worktree creation fails on a *git* project — the run must not silently
  * touch the operator's main checkout, so the caller surfaces this rather than falling
@@ -30,15 +32,29 @@ export class WorkspaceSetupError extends Error {
  * `[a-z0-9-]`, collapsed dash runs, trimmed, capped. Empty input → `run` so the
  * branch is always well-formed. A pure exported helper (unit-tested directly).
  */
-export function sanitizeBranchSlug(input: string): string {
+export function sanitizeBranchSlug(input: string, max = SLUG_MAX): string {
   const slug = input
     .toLowerCase()
     .replace(/[^a-z0-9-]+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, SLUG_MAX)
+    .slice(0, max)
     .replace(/-+$/g, "");
   return slug || "run";
+}
+
+/**
+ * Jira-style branch name from a task text: `<KEY>-<slug of the title after the key>`
+ * (e.g. `CZ3TDR1-856-portal-account-settings-page`). The title ends at the first
+ * newline or URL. `null` when the text carries no issue key — the caller then keeps
+ * the `zibby/<runId>-<slug>` name. Pure, unit-tested directly.
+ */
+export function jiraBranchName(text: string | undefined): string | null {
+  const match = text?.match(/\b([A-Z][A-Z0-9]+-\d+)\b([^\n]*)/);
+  if (!match?.[1]) return null;
+  const title = (match[2] ?? "").split(/\s*\(?https?:\/\//)[0] ?? "";
+  const slug = sanitizeBranchSlug(title, JIRA_SLUG_MAX);
+  return slug === "run" && !/[a-z0-9]/i.test(title) ? match[1] : `${match[1]}-${slug}`;
 }
 
 /**
@@ -66,6 +82,16 @@ export class WorkspaceService {
     return isGitRepoAt(dir);
   }
 
+  private async branchExists(projectPath: string, branch: string): Promise<boolean> {
+    return exec("git", ["show-ref", "--verify", "--quiet", `refs/heads/${branch}`], {
+      cwd: projectPath,
+      timeout: GIT_TIMEOUT_MS,
+    }).then(
+      () => true,
+      () => false,
+    );
+  }
+
   /**
    * Cut a fresh worktree + branch from the project's origin. `dir` must not exist
    * (git creates it). Phase 76: BEFORE cutting, fetches `origin` (the only network
@@ -84,9 +110,16 @@ export class WorkspaceService {
     runId: string;
     slug: string;
     dir: string;
+    /** Task text; a Jira key in it names the branch `<KEY>-<title-slug>` (no `zibby/` prefix). */
+    taskText?: string;
   }): Promise<Workspace> {
-    const branch = `zibby/${opts.runId}-${sanitizeBranchSlug(opts.slug)}`;
+    const jira = jiraBranchName(opts.taskText);
+    let branch = jira ?? `zibby/${opts.runId}-${sanitizeBranchSlug(opts.slug)}`;
     try {
+      // A re-run of the same issue finds its branch taken — suffix the run id, never reuse it.
+      if (jira && (await this.branchExists(opts.projectPath, branch))) {
+        branch = `${jira}-${opts.runId}`;
+      }
       const base = await this.resolveWorktreeBase(opts.projectPath);
       await exec("git", ["worktree", "add", "-b", branch, opts.dir, base.ref], {
         cwd: opts.projectPath,

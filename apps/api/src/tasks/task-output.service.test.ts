@@ -16,6 +16,7 @@ import {
   isAutoPushAddressComments,
   isAutoPushFixCi,
   isAutoPushPrRebase,
+  parsePrDescription,
   parseThreadOutcomes,
   parseThreadReplies,
   suggestReviewEvent,
@@ -26,6 +27,15 @@ import {
  * workflow route reuses the workflow runner's own gate (covered there); this is the
  * scheduler-layer counterpart for runs that have no durable park of their own.
  */
+describe("parsePrDescription", () => {
+  it("reads `# title` + body, rejects anything else", () => {
+    expect(parsePrDescription("# T\n\n## Why\nx\n")).toEqual({ title: "T", body: "## Why\nx" });
+    expect(parsePrDescription(undefined)).toBeUndefined();
+    expect(parsePrDescription("no heading")).toBeUndefined();
+    expect(parsePrDescription("# only title\n")).toBeUndefined();
+  });
+});
+
 describe("TaskOutputService", () => {
   let dir: string;
   let storage: ScheduledTasksStorageService;
@@ -475,6 +485,26 @@ describe("TaskOutputService", () => {
         { threadId: "PRRT_n", kind: "skipped", note: "unreadable report line" },
       ]);
       expect(parseThreadOutcomes(undefined)).toEqual([]);
+    });
+
+    it("parseThreadOutcomes accepts an `Outcome:` label before the verdict", () => {
+      const report = [
+        "thread: PRRT_a",
+        "a.php:1",
+        "Request (x): do it",
+        "Outcome: done in d6ae5be8a01 (chose the exemption)",
+        "",
+        "thread: PRRT_b",
+        "**Outcome:** skipped: not needed",
+        "",
+        "thread: PRRT_c",
+        "Outcome: question: intended?",
+      ].join("\n");
+      expect(parseThreadOutcomes(report).map((o) => [o.threadId, o.kind])).toEqual([
+        ["PRRT_a", "done"],
+        ["PRRT_b", "skipped"],
+        ["PRRT_c", "question"],
+      ]);
     });
 
     it("a question block is not misread when its Request line mentions done in", () => {

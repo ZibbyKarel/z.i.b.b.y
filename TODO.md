@@ -91,8 +91,11 @@
 37. [ ] Zapojit nainstalovaný Cloudflare skill security-audit do workflow (agent krok s /security-audit) a ověřit běh end-to-end
 38. [ ] Web musí podporovat push notifikace
 39. [ ] Postranní panel jsme smazali, takže připnuté stránky a workflow (pins.json) se nikde nezobrazují. Vymyslet nové místo, kde je zobrazit (např. widget nebo lišta v dashboardu), a rozhodnout, jestli se pin workflow a rychlá akce sloučí.
-40. [ ] process který obsluhuje chat by měl mít práva na to pouštět shell
+40. [ ] process který obsluhuje chat by měl mít práva stejná jako process claude který pouštím přes příkaz "cla"
 41. [ ] u Karel PR ve widgetu PRs musíme na pravé straně na konci uprostřed zobrazit ikonku pro konverzace s Badge kde bude číslo signalizující počet NEVYŘEŠENÝCH konverzací u PR. Ikonku zobrazujeme jen když nějaké nevyřešené konverzace jsou.
 42. [ ] název nového tasku bude optional. Pokud ho uživatel nezadá, použije se haiku na summarizaci zadání a vytvoření názvu pro task
 43. [ ] v dlouhém runnu fáze běhu například http://localhost:3000/dashboard?run=pr-address-comments_1793613537229 se volané nástroje (scripty) vyppisují úplně ve spod pod místem kam loguje claude. Problém je že pak nemám ale kontext o tom, kdy se co volalo. Místo jednoho místa na konci by se volané scripty a nástroje a ostatní měly vypisovat hned v průběhu a né až na konci. Jen to musíme vizuálně odlišit aby se logy s volanými scripty a nástroji nepletly.
 44. [ ] Widget Behy - pod progress barem budeme mít tyto informace - Kolik procent je hotovo (smažeme počet fází a necháme jen procenta) a jak dlouho task běží
+45. [ ] pokud mám otevřený detail schválení přímo z plachty detailu běhu. pokud zavřu plachtu běhu, měl by se zavřít i detail schválení
+46. [ ] při autocomplete (například v chatu) kdy se zobrazují výsledky (agenti, týmy, projekty, workflows,...) musí fungovat tabulátor na výběr. Momentálě funguje jen entr a mě to štve. Zároveň položky z autocomplete musí být zvýrazněny i v odeslané zprávě chatu (přpadně zadání tasku a další)
+47. [ ] v plachtě na kartě schválení nebude Výstup fáze. ten bude jen v detailu schválení. Celá karta bude otevírat detail a místo tlačítka "otevřít detail" bude tlačítko na otevření výstupu (pr v novém tabu, soubor v novém tabu nebo se otevře složka ve Finderu)

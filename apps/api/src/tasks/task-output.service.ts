@@ -44,6 +44,8 @@ export const PR_ADDRESS_COMMENTS_ARTIFACT = "zibby-pr-address-comments.md";
 export const PR_FIX_CI_ARTIFACT = "zibby-pr-fix-ci.md";
 /** PR inbox redesign — `github-commenter`'s thread replies (`PrThreadReply[]` JSON), posted by ZIBBY after the push. */
 export const PR_REPLIES_ARTIFACT = "zibby-pr-replies.json";
+/** The documentation agent's refreshed PR description (`# title` + body) — applied by ZIBBY after the push. */
+export const PR_DESCRIPTION_ARTIFACT = "zibby-pr-description.md";
 /** The only conflict-free first line of a rebase report. */
 const NO_CONFLICTS = /^Conflicts:\s*none\s*$/i;
 
@@ -100,9 +102,14 @@ export function parseThreadOutcomes(report: string | undefined): PrThreadOutcome
   const out: PrThreadOutcome[] = [];
   matches.forEach((m, i) => {
     const block = text.slice(m.index, matches[i + 1]?.index);
-    const done = /^[\s>*_-]*done in\s+([0-9a-f]{7,40}(?:\s+and\s+[0-9a-f]{7,40})*)/im.exec(block);
-    const skipped = /^[\s>*_-]*skipped:\s*(.+)/im.exec(block);
-    const question = /^[\s>*_-]*question:\s*(.+)/im.exec(block);
+    // The agent often prefixes the verdict with an `Outcome:` label — accept it.
+    const lead = String.raw`^[\s>*_-]*(?:outcome[*_]*:[*_\s]*)?`;
+    const done = new RegExp(
+      `${lead}done in\\s+([0-9a-f]{7,40}(?:\\s+and\\s+[0-9a-f]{7,40})*)`,
+      "im",
+    ).exec(block);
+    const skipped = new RegExp(`${lead}skipped:\\s*(.+)`, "im").exec(block);
+    const question = new RegExp(`${lead}question:\\s*(.+)`, "im").exec(block);
     const [kind, note] = done
       ? (["done", done[1]] as const)
       : skipped
@@ -116,6 +123,19 @@ export function parseThreadOutcomes(report: string | undefined): PrThreadOutcome
     }
   });
   return out;
+}
+
+/**
+ * `# title` + body → the PR description to apply after the push; `undefined` when the file is
+ * missing or has no title / body (agent output is data — a bad file just means no update).
+ */
+export function parsePrDescription(
+  raw: string | undefined,
+): { title: string; body: string } | undefined {
+  const m = /^\s*#\s+(.+)\n([\s\S]*)$/.exec(raw ?? "");
+  const title = m?.[1]?.trim().slice(0, 256);
+  const body = m?.[2]?.trim().slice(0, 60_000);
+  return title && body ? { title, body } : undefined;
 }
 
 /**
@@ -481,6 +501,7 @@ export class TaskOutputService implements OnModuleInit {
     raw: string,
     worktree?: string,
     rawReplies?: string,
+    rawDescription?: string,
   ): Promise<TaskTerminalDelivery> {
     const fix = task.prAddressComments;
     if (!fix) return {};
@@ -565,7 +586,11 @@ export class TaskOutputService implements OnModuleInit {
           .join("\n")}`
       : "";
     const resolving = replies.some((r) => r.resolve && done.has(r.threadId));
-    const followUpBlock = `${repliesBlock}\n\nThen ${resolving ? "resolves the threads marked (resolve) and " : ""}re-requests review from everyone whose latest review is "Changes requested".`;
+    const description = parsePrDescription(rawDescription);
+    const descriptionBlock = description
+      ? `\n\n## PR description ZIBBY will update after the push\n\n# ${description.title}\n\n${description.body}`
+      : "";
+    const followUpBlock = `${repliesBlock}${descriptionBlock}\n\nThen ${resolving ? "resolves the threads marked (resolve) and " : ""}re-requests review from everyone whose latest review is "Changes requested".`;
     const approval = await this.approvals.requestApproval({
       runId: task.id,
       kind: "pr-address-comments",
@@ -592,6 +617,7 @@ export class TaskOutputService implements OnModuleInit {
             approvalId: approval.id,
             ...(replies.length ? { replies } : {}),
             ...(outcomes.length ? { outcomes } : {}),
+            ...(description ? { description } : {}),
           }
         : c,
     );

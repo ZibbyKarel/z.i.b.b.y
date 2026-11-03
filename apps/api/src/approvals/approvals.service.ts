@@ -148,6 +148,7 @@ export class ApprovalsService {
     opts: {
       reviewEvent?: PrReviewEvent;
       replies?: OperatorThreadReply[];
+      reviewDocument?: string;
       decidedBy?: "autopilot";
     } = {},
   ): Promise<Approval> {
@@ -158,6 +159,7 @@ export class ApprovalsService {
       opts.reviewEvent,
       opts.replies,
       opts.decidedBy,
+      opts.reviewDocument,
     );
     if (opts.decidedBy === "autopilot") {
       void this.activity?.record({
@@ -281,6 +283,7 @@ export class ApprovalsService {
     reviewEvent?: PrReviewEvent,
     replies?: OperatorThreadReply[],
     decidedBy?: "autopilot",
+    reviewDocument?: string,
   ): Promise<Approval> {
     return withPathLock(`approval:${id}`, async () => {
       const approval = await this.storage.get(id);
@@ -294,6 +297,8 @@ export class ApprovalsService {
         ...(reviewEvent && approval.suggestedReviewEvent ? { reviewEvent } : {}),
         // The operator's edited thread replies — only a pr-address-comments push approval takes them.
         ...(replies && approval.kind === "pr-address-comments" ? { replies } : {}),
+        // The operator's edited review text — only a PR-review gate (it carries a suggestion) takes it.
+        ...(reviewDocument?.trim() && approval.suggestedReviewEvent ? { reviewDocument } : {}),
         ...(decidedBy ? { decidedBy } : {}),
       };
       void this.activity?.record({

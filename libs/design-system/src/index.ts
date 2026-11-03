@@ -205,6 +205,8 @@ export type { ProgressRingProps, ProgressRingSize } from "./components/ProgressR
 
 export { AgentBadge, AgentBadgeTestId } from "./components/AgentBadge/AgentBadge";
 export type { AgentBadgeProps } from "./components/AgentBadge/AgentBadge";
+export { Avatar, AvatarTestId } from "./components/Avatar/Avatar";
+export type { AvatarProps, AvatarSize } from "./components/Avatar/Avatar";
 export { StatusDot, StatusDotTestId } from "./components/StatusDot/StatusDot";
 export type { DotTone, StatusDotProps } from "./components/StatusDot/StatusDot";
 

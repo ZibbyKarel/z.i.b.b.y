@@ -1,3 +1,4 @@
+import { AgentsModule } from "../agents/agents.module";
 import { Module } from "@nestjs/common";
 import { MachineModule } from "../machine/machine.module";
 import { BriefingModule } from "../briefing/briefing.module";
@@ -55,6 +56,7 @@ export function resolveChatDir(): string {
   // `#company`, `#team`
   // tags (one-directional edges; none import chat).
   imports: [
+    AgentsModule,
     TasksModule,
     MemoryModule,
     BriefingModule,

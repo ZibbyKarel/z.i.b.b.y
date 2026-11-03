@@ -5,7 +5,12 @@ import * as path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as gitExec from "../shared/git-exec";
-import { WorkspaceService, WorkspaceSetupError, sanitizeBranchSlug } from "./workspace.service";
+import {
+  WorkspaceService,
+  WorkspaceSetupError,
+  jiraBranchName,
+  sanitizeBranchSlug,
+} from "./workspace.service";
 
 const exec = promisify(execFile);
 
@@ -65,6 +70,21 @@ describe("sanitizeBranchSlug", () => {
     const slug = sanitizeBranchSlug("a".repeat(200));
     expect(slug.length).toBeLessThanOrEqual(60);
     expect(slug.endsWith("-")).toBe(false);
+  });
+});
+
+describe("jiraBranchName", () => {
+  it("names the branch <KEY>-<title slug>, cutting the title at the URL", () => {
+    expect(
+      jiraBranchName(
+        "Zpracuj issue CZ3TDR1-856 [Portal] Account settings page: API access credentials (OAuth) section (https://x.atlassian.net/browse/CZ3TDR1-856, projekt cms4). Workflow: Delivery.",
+      ),
+    ).toBe("CZ3TDR1-856-portal-account-settings-page-api-access-credentials-oauth-section");
+  });
+  it("is the bare key when no title follows, null without a key", () => {
+    expect(jiraBranchName("Fix ABC-12")).toBe("ABC-12");
+    expect(jiraBranchName("fix the login bug")).toBeNull();
+    expect(jiraBranchName(undefined)).toBeNull();
   });
 });
 

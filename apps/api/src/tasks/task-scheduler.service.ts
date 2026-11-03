@@ -55,6 +55,7 @@ import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service"
 import { TaskClassifierService } from "./task-classifier.service";
 import {
   PR_ADDRESS_COMMENTS_ARTIFACT,
+  PR_DESCRIPTION_ARTIFACT,
   PR_FIX_CI_ARTIFACT,
   PR_REBASE_ARTIFACT,
   PR_REPLIES_ARTIFACT,
@@ -1986,12 +1987,16 @@ export class TaskSchedulerService
             const replies = await this.workflowRunner
               .readArtifact(run.workflowRunId, PR_REPLIES_ARTIFACT)
               .catch(() => null);
+            const description = await this.workflowRunner
+              .readArtifact(run.workflowRunId, PR_DESCRIPTION_ARTIFACT)
+              .catch(() => null);
             const delivery = await this.taskOutput
               .parkPrAddressComments(
                 existing,
                 artifact?.content ?? "",
                 run.workspace?.path,
                 replies?.content,
+                description?.content,
               )
               .catch(async (error: unknown) => {
                 this.log.warn("pr address-comments park failed (soft)", {

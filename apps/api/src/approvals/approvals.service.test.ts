@@ -117,6 +117,31 @@ describe("ApprovalsService", () => {
     );
   });
 
+  it("approve stores the operator's edited review document only on a PR-review gate", async () => {
+    const resume = vi.fn();
+    service.register("workflow-gate", { resume, cancel: vi.fn() });
+    const gate = await service.requestApproval({
+      runId: "wf_1",
+      kind: "workflow-gate",
+      skill: "PR Review",
+      action: "stage-approval",
+      detail: "Review it",
+      risk: "low",
+      suggestedReviewEvent: "COMMENT",
+    });
+    const decided = await service.approve(gate.id, { reviewDocument: "edited doc" });
+    expect(decided.reviewDocument).toBe("edited doc");
+    expect(resume).toHaveBeenCalledWith(
+      "wf_1",
+      expect.objectContaining({ reviewDocument: "edited doc" }),
+    );
+    // an approval with no review suggestion ignores it
+    const other = await request();
+    expect(
+      (await service.approve(other.id, { reviewDocument: "x" })).reviewDocument,
+    ).toBeUndefined();
+  });
+
   it("approve stores the operator's replies on the approval and hands them to the runner", async () => {
     const resume = vi.fn();
     service.register("pr-address-comments", { resume, cancel: vi.fn() });

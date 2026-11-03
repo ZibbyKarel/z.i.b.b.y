@@ -36,7 +36,7 @@ import {
   anchorChanged,
   measureSheet,
 } from "../../bridge/state/measure";
-import { useInboxPrThreadsQuery } from "../../inbox/queries";
+import { useInboxPrDiffQuery, useInboxPrThreadsQuery } from "../../inbox/queries";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
@@ -57,6 +57,8 @@ import {
   approveRequestBody,
 } from "./AddressCommentsReview";
 import { ApprovalPreview } from "./ApprovalPreview";
+import { ReviewFindings } from "./ReviewFindings";
+import { parseReviewDoc, serializeReviewDoc } from "../prReviewDoc";
 import { isOperatorTokenError } from "../../../state/operatorToken";
 import { useApproveMutation, useRejectMutation, useReviseMutation } from "../mutations";
 import { useApprovalQuery } from "../queries";
@@ -162,6 +164,11 @@ export function ApprovalSheet({
     id: string;
     byThread: Record<string, OperatorThreadReply>;
   } | null>(null);
+  // The operator's edits to the PR-review findings' comment text, by finding index, keyed by approval id.
+  const [reviewEdits, setReviewEdits] = useState<{
+    id: string;
+    byIndex: Record<number, string>;
+  } | null>(null);
   const [now] = useState(() => Date.now());
   const anchor = useRailAnchor(approvalId);
   // A 401 means the operator token is unset/wrong — say so instead of a bare failure.
@@ -224,6 +231,24 @@ export function ApprovalSheet({
   );
   const checkpoint = useCheckpointArtifact(approval, gatedRun);
   const artifacts = useRunArtifacts(gatedRun);
+  // A PR-review checkpoint (it carries a suggested review type) renders its findings as cards.
+  const reviewDoc =
+    checkpoint && approval?.suggestedReviewEvent ? parseReviewDoc(checkpoint) : null;
+  const findingEdits = reviewEdits && reviewEdits.id === approval?.id ? reviewEdits.byIndex : {};
+  // The review document to send: only when the operator changed something, else the agent's own.
+  const editedReviewDocument =
+    reviewDoc && Object.keys(findingEdits).length > 0
+      ? serializeReviewDoc(
+          reviewDoc.summary,
+          reviewDoc.findings.map((f, i) => ({ ...f, body: findingEdits[i] ?? f.body })),
+        )
+      : undefined;
+  // Code context for the findings: the PR of the review task behind the gated workflow run.
+  const reviewTask = useTaskQuery(reviewDoc ? (gatedRun?.taskId ?? "") : "").data;
+  const { data: reviewDiff } = useInboxPrDiffQuery(
+    reviewTask?.projectId,
+    reviewTask?.prReview?.number,
+  );
   const tArtifacts = useTranslations("runs.artifacts");
   const origin = approval ? approvalOrigin(approval, task) : null;
   const body = !approvalId ? null : isPending ? (
@@ -319,11 +344,26 @@ export function ApprovalSheet({
 
       {approval.consequence && <Typography type="text">{approval.consequence}</Typography>}
 
-      {checkpoint && (
+      {checkpoint && reviewDoc && reviewDoc.findings.length > 0 ? (
+        <ReviewFindings
+          approvalId={approval.id}
+          diff={reviewDiff?.diff}
+          edits={findingEdits}
+          findings={reviewDoc.findings}
+          onEdit={(index, body) =>
+            setReviewEdits({
+              id: approval.id,
+              byIndex: { ...findingEdits, [index]: body },
+            })
+          }
+          prUrl={reviewTask?.prReview?.url}
+          summary={reviewDoc.summary}
+        />
+      ) : checkpoint ? (
         <Container data-testid="checkpoint-output" maxHeight="50vh" overflow="auto">
           <Markdown escapeHtml source={checkpoint} />
         </Container>
-      )}
+      ) : null}
 
       {approval.kind === "pr-address-comments" && task?.prAddressComments && (
         <AddressCommentsReview
@@ -423,7 +463,11 @@ export function ApprovalSheet({
               approve.mutate(
                 {
                   params: { id: approval.id },
-                  body: approveRequestBody(address ? addressReplies : undefined, reviewEvent),
+                  body: approveRequestBody(
+                    address ? addressReplies : undefined,
+                    reviewEvent,
+                    editedReviewDocument,
+                  ),
                 },
                 { onSuccess: close },
               )

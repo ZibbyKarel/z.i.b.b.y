@@ -1,7 +1,7 @@
 "use client";
 
 import type { Ref, TextareaHTMLAttributes } from "react";
-import { useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { cn } from "../../../utils/cn";
 import { Field, fieldControlClass } from "../Field";
 
@@ -51,6 +51,10 @@ export interface HighlightTextAreaFieldProps extends Omit<
    * glyphs.
    */
   frameless?: boolean;
+  /**
+   * Grow with the text up to this many rows, then scroll. Omitted → fixed at `rows`.
+   */
+  maxRows?: number;
   /** Controlled text — the backdrop mirrors it to align the highlights. */
   value: string;
   /**
@@ -155,11 +159,25 @@ export function HighlightTextAreaField({
   value,
   highlights,
   rows = 6,
+  maxRows,
   onScroll,
   ref,
   ...props
 }: HighlightTextAreaFieldProps) {
   const backdropRef = useRef<HTMLDivElement>(null);
+  const controlRef = useRef<HTMLTextAreaElement | null>(null);
+  // Auto-grow: re-measure on every value change, cap at `maxRows` lines.
+  useLayoutEffect(() => {
+    const el = controlRef.current;
+    if (!maxRows || !el) return;
+    const css = getComputedStyle(el);
+    const line = Number.parseFloat(css.lineHeight) || Number.parseFloat(css.fontSize) * 1.4 || 22;
+    const chrome = Number.parseFloat(css.paddingTop) + Number.parseFloat(css.paddingBottom) || 0;
+    const max = line * maxRows + chrome;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, max)}px`;
+    el.style.overflowY = el.scrollHeight > max ? "auto" : "hidden";
+  }, [value, maxRows]);
   const segments = buildSegments(value, highlights);
   // Both layers read the SAME pair, so the marks keep sitting exactly under the glyphs.
   const controlClass = frameless ? framelessControlClass : fieldControlClass;
@@ -212,7 +230,11 @@ export function HighlightTextAreaField({
               }
               onScroll?.(event);
             }}
-            ref={ref}
+            ref={(node) => {
+              controlRef.current = node;
+              if (typeof ref === "function") ref(node);
+              else if (ref) ref.current = node;
+            }}
             rows={rows}
             value={value}
             {...props}
