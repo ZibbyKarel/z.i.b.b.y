@@ -4,9 +4,10 @@
 // .github/workflows/desktop-release.yml, which builds the app on a macOS runner and
 // publishes the GitHub Release the installed app's updater reads.
 //
-//   pnpm desktop:release            # patch: 0.1.0 → 0.1.1
-//   pnpm desktop:release minor      # 0.1.0 → 0.2.0
-//   pnpm desktop:release 1.0.0      # explicit
+//   pnpm release:patch    # 0.1.0 → 0.1.1
+//   pnpm release:minor    # 0.1.0 → 0.2.0
+//   pnpm release:major    # 0.1.0 → 1.0.0
+//   node apps/desktop/scripts/release.mjs 1.0.0   # explicit version
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -24,7 +25,7 @@ function git(args, opts = {}) {
 }
 
 function fail(message) {
-  console.error(`desktop:release: ${message}`);
+  console.error(`release: ${message}`);
   process.exit(1);
 }
 
@@ -49,7 +50,7 @@ const behind = git(["rev-list", "--count", "HEAD..origin/main"]);
 if (behind !== "0") fail(`main is ${behind} commit(s) behind origin/main — pull first`);
 
 const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
-const next = bump(pkg.version, process.argv[2] ?? "patch");
+const next = bump(pkg.version, process.argv[2] ?? fail("missing bump — use pnpm release:patch | release:minor | release:major"));
 const tag = `${TAG_PREFIX}${next}`;
 if (git(["tag", "-l", tag])) fail(`tag ${tag} already exists`);
 

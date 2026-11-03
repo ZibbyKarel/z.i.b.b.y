@@ -21,10 +21,14 @@ Artifacts land in `apps/desktop/release/`: `ZibbyOS-<version>-arm64.dmg` and `ma
 A push to main never builds the app. A release is cut explicitly:
 
 ```bash
-pnpm desktop:release          # patch bump (0.1.0 → 0.1.1); also: minor | major | x.y.z
+pnpm release:patch   # 0.1.0 → 0.1.1
+pnpm release:minor   # 0.1.0 → 0.2.0
+pnpm release:major   # 0.1.0 → 1.0.0
 ```
 
 The script bumps `apps/desktop/package.json`, commits only that file, tags `desktop-v<version>` and pushes main plus the tag. The tag triggers `.github/workflows/desktop-release.yml`: a macOS runner builds the app and publishes a GitHub Release with `ZibbyOS-<v>-arm64.zip`, its `.sha256` and the DMG. Running the workflow by hand (workflow_dispatch) builds main into a **draft** release, which the updater never sees, so you can test the pipeline.
+
+Links to anything outside the app (GitHub PRs, Jira, docs) open in the default browser, not inside the ZibbyOS window.
 
 The installed app checks the releases one minute after launch and then every 6 hours, or on demand via **ZibbyOS → Check for Updates…**. When a newer `desktop-v*` release exists it asks **Update / Later / Skip This Version**. On **Update** it:
 

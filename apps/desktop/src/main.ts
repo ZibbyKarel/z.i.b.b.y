@@ -3,6 +3,7 @@ import { createWriteStream, mkdirSync } from "node:fs";
 import path from "node:path";
 import { BrowserWindow, Menu, app, dialog } from "electron";
 import { API_BASE_URL, API_HEALTH_URL, API_PORT, WEB_HEALTH_URL, WEB_PORT } from "./config";
+import { routeExternalLinks } from "./externalLinks";
 import { findForeignOwner, isPidAlive, readLockFile } from "./instanceLock";
 import { apiEntry, instanceLockFile, logDir, readBuildInfo, webServerEntry } from "./paths";
 import {
@@ -23,6 +24,8 @@ let apiChild: ChildProcess | undefined;
 let webChild: ChildProcess | undefined;
 let mainWindow: BrowserWindow | undefined;
 let quitting = false;
+
+const WEB_ORIGIN = `http://localhost:${WEB_PORT}`;
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -155,7 +158,8 @@ function createWindow(): void {
   mainWindow.on("closed", () => {
     mainWindow = undefined;
   });
-  void mainWindow.loadURL(`http://localhost:${WEB_PORT}/`);
+  routeExternalLinks(mainWindow, WEB_ORIGIN);
+  void mainWindow.loadURL(`${WEB_ORIGIN}/`);
 }
 
 function fatal(title: string, message: string): void {

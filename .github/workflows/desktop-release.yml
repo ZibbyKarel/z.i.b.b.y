@@ -2,7 +2,7 @@ name: Desktop release
 
 # Builds ZibbyOS.app on a macOS runner and publishes it as a GitHub Release, which
 # the installed app's updater polls. Triggered only by a `desktop-v*` tag (cut with
-# `pnpm desktop:release`) — a plain push to main never builds the app.
+# `pnpm release:patch|minor|major`) — a plain push to main never builds the app.
 # A manual run (workflow_dispatch) builds the current main into a DRAFT release, to
 # test the pipeline: drafts are invisible to the updater.
 on:
