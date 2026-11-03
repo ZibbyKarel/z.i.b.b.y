@@ -81,11 +81,19 @@ import { isPrimaryInstance } from "../shared/instance-role";
 export const WORKFLOW_RUNS_DIR = "WORKFLOW_RUNS_DIR";
 
 const RETENTION_MS = 30 * 60 * 1000;
-/** Repo-root `node_modules/.bin` (anchored like `data-dir.ts`), on every stage's PATH. */
 const OPENAI_STAGE_SCRIPT = path.resolve(__dirname, "openai-stage.mjs");
 /** Per-file cap for `consumes`/`include` text inlined into an OpenAI request. */
 const OPENAI_FILE_CAP = 200 * 1024;
-const REPO_BIN_DIR = path.resolve(__dirname, "..", "..", "..", "..", "node_modules", ".bin");
+/**
+ * Repo-root `node_modules/.bin`, on every stage's PATH. The packaged app's code
+ * lives inside the .app bundle, so it points at the source checkout it was built
+ * from (`ZIBBY_SOURCE_ROOT`); a plain run anchors on this file like `data-dir.ts`.
+ */
+const REPO_BIN_DIR = path.join(
+  process.env.ZIBBY_SOURCE_ROOT ?? path.resolve(__dirname, "..", "..", "..", ".."),
+  "node_modules",
+  ".bin",
+);
 const MAX_LISTED = 50;
 const AGGREGATE_FILE = "run.json";
 

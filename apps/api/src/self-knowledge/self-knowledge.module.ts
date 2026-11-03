@@ -23,7 +23,11 @@ import { SelfKnowledgeController } from "./self-knowledge.controller";
 export function resolveGraphReportPath(): string {
   return (
     process.env.GRAPH_REPORT_PATH ??
-    path.resolve(__dirname, "..", "..", "..", "..", "graphify-out", "GRAPH_REPORT.md")
+    path.join(
+      process.env.ZIBBY_SOURCE_ROOT ?? path.resolve(__dirname, "..", "..", "..", ".."),
+      "graphify-out",
+      "GRAPH_REPORT.md",
+    )
   );
 }
 

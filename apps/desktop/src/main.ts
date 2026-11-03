@@ -72,6 +72,9 @@ async function bootstrap(): Promise<void> {
     PORT: String(API_PORT),
     CORS_ORIGIN: `http://localhost:${WEB_PORT}`,
     ZIBBY_ROLE: "primary",
+    // Dev reads this from apps/api/.env (cwd-relative, absent in the bundle). The
+    // app always runs real agents; without it workflows fall back to demo stages.
+    AGENT_RUNNER_MODE: "claude",
     ZIBBY_SOURCE_ROOT: sourceRoot,
   });
   pipeChildLogs(apiChild, "api");
