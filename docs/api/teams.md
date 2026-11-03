@@ -461,4 +461,4 @@ storage instances and the guard always agree on the same token pair.
   (`knowledgeBase`) into an existing external location (a vault path), not a
   file this module writes or owns.
 
-<!-- Last reviewed 2026-09-24 (ZibbyCorp rename): module code changed only by the subsystem → department rename; this doc has no subsystem references. -->
+<!-- Last reviewed 2026-09-24 (ZibbyOS rename): module code changed only by the subsystem → department rename; this doc has no subsystem references. -->

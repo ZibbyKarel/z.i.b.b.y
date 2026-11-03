@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ZibbyCorp names gate (ZC-05, roadmap invariant I-6): the retired subsystem
+// ZibbyOS names gate (ZC-05, roadmap invariant I-6): the retired subsystem
 // vocabulary (persona ids + "subsystem") must not come back into code. `ledger`
 // is a generic word, so only its use as a department id is checked.
 import { execFileSync } from "node:child_process";
@@ -26,7 +26,7 @@ const hits = [
     "tools",
     ...EXCLUDES,
   ]),
-  // LEDGER is also a ZibbyCorp UI *section* (ROUTE-MAP §1) — its section id and
+  // LEDGER is also a ZibbyOS UI *section* (ROUTE-MAP §1) — its section id and
   // nav i18n keys are not the retired department id, so those two homes are exempt.
   run([
     "grep",

@@ -6,27 +6,27 @@ Set in the plist's `EnvironmentVariables` (see `docs/ops/deployment.md`), or in 
 `.env` the API loads. Loaded via `@nestjs/config` (`ConfigModule.forRoot({ isGlobal:
 true })`).
 
-| Variable                   | Default                              | Purpose                                                                                                                                                             |
-| -------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PORT`                     | `3333`                               | API listen port                                                                                                                                                     |
-| `LOG_LEVEL`                | `info`                               | `debug` / `info` / `warn` / `error`                                                                                                                                 |
-| `CORS_ORIGIN`              | `http://localhost:3000`              | Allowed origins (comma-separated for more than one)                                                                                                                 |
-| `ZIBBY_DATA_DIR`           | `.zibby/data`                        | Single data-root switch — repoints every store at once                                                                                                              |
-| `VAULT_DIR`                | `$ZIBBY_DATA_DIR/vault`              | Obsidian vault (second brain)                                                                                                                                       |
-| `BUDGET_LEDGER_DIR`        | `$ZIBBY_DATA_DIR/budget-ledger`      | Dispatch ledger (enforcement; gitignored)                                                                                                                           |
-| `BUDGET_CONFIG_FILE`       | `$ZIBBY_DATA_DIR/budget.json`        | Operator global pause thresholds (committed)                                                                                                                        |
-| `SYSTEM_CONFIG_FILE`       | `$ZIBBY_DATA_DIR/system-config.json` | Path to the runtime system config file (see below) — a path/test-isolation knob, not a behavioral one                                                               |
-| `AGENT_RUNNER_MODE`        | `claude`                             | `claude` = real `claude -p`; `demo` = deterministic stand-in (tests/CI). Belongs in the **untracked** `.env`, not `.env.example` (which sets `demo`)                |
-| `CLAUDE_BIN`               | `claude` on `PATH`                   | Path to the `claude` binary — test seam (fake binary in e2e)                                                                                                        |
-| `ZIBBY_WORKTREE_ROOT`      | `$TMPDIR/zibby-worktrees`            | **Phase 12.7** — root for run worktrees, **outside** the repo/data tree. Deliberately does not derive from `ZIBBY_DATA_DIR`                                         |
-| `ZIBBY_BACKUP_DIR`         | _(unset)_                            | rsync destination root for `backup.sh` (backup script only)                                                                                                         |
-| `LOG_JSON`                 | _(unset)_                            | `1`/`true` = structured JSON log lines (`shared/logging/logger.service.ts`); unset = human-readable                                                                 |
-| `CLAUDE_CONFIG_DIR`        | `~/.claude`                          | Where the `claude` CLI's own config/usage-limit files live — read by the rate-limits reader (`limits/rate-limits.reader.ts`); a test seam for isolating limit reads |
-| `ZIBBY_CHAT_MODEL`         | `sonnet`                             | Model the chat session spawns `claude -p` with (`chat/chat-session.service.ts`)                                                                                     |
-| `ZIBBY_API_BASE`           | `http://localhost:$PORT`             | Base URL the chat session's own MCP client calls back into the API on (`chat/chat-session.service.ts`)                                                              |
-| `ZIBBY_INTENT_DIR`         | `input.cwd` / `process.cwd()`        | Working dir the approval hook (`runner/claude-approval-hook.mjs`) resolves relative paths against — a test seam                                                     |
-| `HEAP_SNAPSHOT_ON_SIGUSR2` | _(unset)_                            | `1` = write a heap snapshot on `SIGUSR2` (`main.ts`), for diagnosing memory growth in the running API process                                                       |
-| `HTTP_SHUTDOWN_GRACE_MS`   | `250`                                | How long an open connection may drain on SIGTERM before it is destroyed (`HttpConnectionReaper`) — see _Shutdown_ below                                             |
+| Variable                   | Default                                                             | Purpose                                                                                                                                                             |
+| -------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                     | `3333`                                                              | API listen port                                                                                                                                                     |
+| `LOG_LEVEL`                | `info`                                                              | `debug` / `info` / `warn` / `error`                                                                                                                                 |
+| `CORS_ORIGIN`              | `http://localhost:3000`                                             | Allowed origins (comma-separated for more than one)                                                                                                                 |
+| `ZIBBY_DATA_DIR`           | `~/Library/Application Support/ZibbyOS/data`                        | Single data-root switch — repoints every store at once                                                                                                              |
+| `VAULT_DIR`                | `~/AI/Vault` (`$ZIBBY_DATA_DIR/vault` when `ZIBBY_DATA_DIR` is set) | Obsidian vault (second brain)                                                                                                                                       |
+| `BUDGET_LEDGER_DIR`        | `$ZIBBY_DATA_DIR/budget-ledger`                                     | Dispatch ledger (enforcement; gitignored)                                                                                                                           |
+| `BUDGET_CONFIG_FILE`       | `$ZIBBY_DATA_DIR/budget.json`                                       | Operator global pause thresholds (committed)                                                                                                                        |
+| `SYSTEM_CONFIG_FILE`       | `$ZIBBY_DATA_DIR/system-config.json`                                | Path to the runtime system config file (see below) — a path/test-isolation knob, not a behavioral one                                                               |
+| `AGENT_RUNNER_MODE`        | `claude`                                                            | `claude` = real `claude -p`; `demo` = deterministic stand-in (tests/CI). Belongs in the **untracked** `.env`, not `.env.example` (which sets `demo`)                |
+| `CLAUDE_BIN`               | `claude` on `PATH`                                                  | Path to the `claude` binary — test seam (fake binary in e2e)                                                                                                        |
+| `ZIBBY_WORKTREE_ROOT`      | `$TMPDIR/zibby-worktrees`                                           | **Phase 12.7** — root for run worktrees, **outside** the repo/data tree. Deliberately does not derive from `ZIBBY_DATA_DIR`                                         |
+| `ZIBBY_BACKUP_DIR`         | _(unset)_                                                           | rsync destination root for `backup.sh` (backup script only)                                                                                                         |
+| `LOG_JSON`                 | _(unset)_                                                           | `1`/`true` = structured JSON log lines (`shared/logging/logger.service.ts`); unset = human-readable                                                                 |
+| `CLAUDE_CONFIG_DIR`        | `~/.claude`                                                         | Where the `claude` CLI's own config/usage-limit files live — read by the rate-limits reader (`limits/rate-limits.reader.ts`); a test seam for isolating limit reads |
+| `ZIBBY_CHAT_MODEL`         | `sonnet`                                                            | Model the chat session spawns `claude -p` with (`chat/chat-session.service.ts`)                                                                                     |
+| `ZIBBY_API_BASE`           | `http://localhost:$PORT`                                            | Base URL the chat session's own MCP client calls back into the API on (`chat/chat-session.service.ts`)                                                              |
+| `ZIBBY_INTENT_DIR`         | `input.cwd` / `process.cwd()`                                       | Working dir the approval hook (`runner/claude-approval-hook.mjs`) resolves relative paths against — a test seam                                                     |
+| `HEAP_SNAPSHOT_ON_SIGUSR2` | _(unset)_                                                           | `1` = write a heap snapshot on `SIGUSR2` (`main.ts`), for diagnosing memory growth in the running API process                                                       |
+| `HTTP_SHUTDOWN_GRACE_MS`   | `250`                                                               | How long an open connection may drain on SIGTERM before it is destroyed (`HttpConnectionReaper`) — see _Shutdown_ below                                             |
 
 Every entity store built on `EntityFileStore` (agents, workflows, goals, tasks,
 approvals, artifacts, channels, integrations, projects, companies, skills,
@@ -154,16 +154,49 @@ operator-facing config.
 PORT=3333
 LOG_LEVEL=debug
 CORS_ORIGIN=http://localhost:3000
-ZIBBY_DATA_DIR=.zibby/data
 ```
 
 `.env` is in `.gitignore` — never commit it.
 
 ## Data directories
 
-### Default (`.zibby/data/`)
+### Default (`~/Library/Application Support/ZibbyOS/data/`)
 
-Used by `pnpm api:dev` and `pnpm api:start`.
+The live data root lives **outside** the repo, shared by `pnpm api:dev`,
+`pnpm api:start` and the packaged ZibbyOS.app (see `apps/desktop/README.md`). The
+vault defaults to `~/AI/Vault`. The repo's tracked `.zibby/data/` is no longer read
+at runtime — it is the historical seed copy.
+
+### Instance roles (`ZIBBY_ROLE`)
+
+Several API processes may share the data root. Exactly one **primary** owns the
+autonomous work: every `TickingWatcherBase` heartbeat, the Slack Socket Mode
+listener, task recovery on boot, and boot-time run reconciliation in
+`RunnerCore.init` / workflow + goal `reconstruct`. A **secondary** serves the
+API/UI over the same files and runs what it is asked to run, but mirrors the
+primary's runs read-only and never relabels, resumes or sweeps them — so a dev
+server respawning on every source edit can't kill or fail the app's runs.
+
+Ownership is `<data root>/.instance.lock` (`{ pid, role, port, label, startedAt }`),
+resolved once in `main.ts` (`shared/instance-role.ts`):
+
+| `ZIBBY_ROLE`     | Behaviour                                                                  |
+| ---------------- | -------------------------------------------------------------------------- |
+| `auto` (default) | Takes the lock when free or stale (dead pid), else boots as secondary      |
+| `primary`        | Must own the lock; boot fails when another live process holds it (the app) |
+| `secondary`      | Never takes the lock                                                       |
+
+In `auto` the boot waits up to 8 s for a live holder to exit (a `ts-node-dev`
+respawn's old process). The role is fixed for the process lifetime — a secondary
+is not promoted when the primary quits; restart it. Start order matters: start
+ZibbyOS.app first, then the dev server (a dev server started first takes the lock,
+and the app then refuses to start).
+
+Known limits of a secondary: its view of the primary's runs is the snapshot read at
+boot (restart it to refresh); it refuses (409) to decide approvals it didn't request
+itself, since the gated child lives in the primary; and the lock is released at the
+end of a graceful shutdown (`InstanceLockReleaser`) — a lock left by a crash is
+detected as stale by its dead (or reused) pid.
 
 ### Test (`.zibby/data-test/`)
 

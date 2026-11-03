@@ -25,7 +25,7 @@ const toneBar: Record<ProgressBarTone, string> = {
 export interface ProgressProps extends Omit<HTMLAttributes<HTMLDivElement>, "className"> {
   /** Fill percentage, 0–100. Ignored when `indeterminate`. */
   value?: number;
-  /** Ignored when `indeterminate` — that fill is always the ZibbyCorp ink bar. */
+  /** Ignored when `indeterminate` — that fill is always the ZibbyOS ink bar. */
   tone?: ProgressBarTone;
   /** Track height as a spacing token. */
   height?: Spacing;
@@ -41,7 +41,7 @@ export interface ProgressProps extends Omit<HTMLAttributes<HTMLDivElement>, "cla
 }
 
 /** A thin matte progress bar — the dashboard's quota/usage readout, and (with
- *  `indeterminate`) the ZibbyCorp loading indicator for unknown-duration waits. */
+ *  `indeterminate`) the ZibbyOS loading indicator for unknown-duration waits. */
 export function Progress({
   value = 0,
   tone = "accent",

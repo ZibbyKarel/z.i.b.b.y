@@ -76,7 +76,7 @@ export interface AppHeaderProps {
 export function AppHeader({
   wordmark,
   homeHref,
-  homeLabel = "ZibbyCorp",
+  homeLabel = "ZibbyOS",
   nav,
   operator,
   activeCount,

@@ -1,4 +1,4 @@
-# ZibbyCorp — decisions still open ("co musíme rozhodnout")
+# ZibbyOS — decisions still open ("co musíme rozhodnout")
 
 Every question has a **default**. A night run applies the default, records it in
 `PROGRESS.md` under "Defaults applied", and continues. The operator can overturn a default
@@ -34,7 +34,7 @@ later; each one is scoped so that doing so is cheap.
 | O-18 | Task source. | Additive `source?: "operator" \| "department" \| "chain" \| "channel" \| "automation" \| "handoff"`, stamped at creation by the existing call sites. | 🟩 | ZB-04 |
 | O-19 | Agent PAUSE/RESUME and "message the agent in session". | PAUSE = stop the agent's current run (existing endpoint), and the label says STOP RUN. Session messaging is **not built** because no mechanism exists; the composer is omitted. | 🟩 | ZB-03 |
 | O-20 | Department direct chat (`org/chat/:id`). | No separate transcript. The COO dock opens pre-scoped with an **explicit department target**, which follows the DNA rule "explicit target overrides the classifier". | 🟨 | ZB-12 |
-| O-21 | Header "CEO" and company name. | Additive `SystemConfig.operatorName?` and `companyName?` (defaults: git user name, "ZibbyCorp"). The time zone comes from the browser. | 🟩 | ZB-01 |
+| O-21 | Header "CEO" and company name. | Additive `SystemConfig.operatorName?` and `companyName?` (defaults: git user name, "ZibbyOS"). The time zone comes from the browser. | 🟩 | ZB-01 |
 | O-22 | Voice: wake word, PTT, "speak replies". | Keep today's voice config (`ttsVoice`, idle-gated mic). Wake word and PTT are not built. The dock's VOICE button wires to the real `useSpeechRecognition`. | 🟩 | ZB-12 |
 | O-23 | Chain auto-pick by the COO. | v1 order: explicit pick, then the project default, then none (single department via the classifier). A classifier suggestion is a later arc. | 🟨 | ZB-05 |
 | O-24 | Vault folders (MOC/Company/Projects/…) versus the real tiers and shelves. | Use the real model: 3 tiers × department shelves. The design's folder names are not invented. | 🟩 | ZB-09 |

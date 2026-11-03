@@ -11,7 +11,7 @@ export type TypographyType =
   | "data"
   | "label"
   | "micro"
-  // DS.md §3.1/§3.2 — added additively alongside the pre-ZibbyCorp presets above
+  // DS.md §3.1/§3.2 — added additively alongside the pre-ZibbyOS presets above
   // (which stay for existing callers; `title`/`label` are updated in place below).
   | "display"
   | "h1"

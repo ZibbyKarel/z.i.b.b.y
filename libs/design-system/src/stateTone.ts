@@ -1,7 +1,7 @@
 /**
  * The canonical state vocabulary — ONE source of truth for "what state is this in".
  *
- * ZibbyCorp (ZA-01) redefines the vocabulary to the six states an agent's work can be
+ * ZibbyOS (ZA-01) redefines the vocabulary to the six states an agent's work can be
  * in, in canonical order: `working → thinking → blocked → error → done → idle`. Every
  * "is this alive and in what state" surface — `AgentBadge`, `StatePill`, `CellStrip`,
  * the HUD `Card`/`Corners`/`StatusDot`/`Tag`/`Stat`, the approvals gate, and the
@@ -40,7 +40,7 @@ export const STATE_LABEL: Record<StateTone, string> = {
   idle: "Idle",
 };
 
-/** The pre-ZibbyCorp five-tone vocabulary. */
+/** The pre-ZibbyOS five-tone vocabulary. */
 export type LegacyStateTone = "accent" | "ok" | "warn" | "bad" | "run";
 
 /**

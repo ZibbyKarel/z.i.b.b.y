@@ -1,22 +1,26 @@
 {
-  "appId": "com.zibby.desktop",
-  "productName": "ZIBBY",
+  "appId": "com.zibby.zibbyos",
+  "productName": "ZibbyOS",
   "directories": {
     "output": "release",
     "buildResources": "build"
   },
+  "afterSign": "scripts/adhoc-sign.cjs",
   "files": ["dist/**/*", "package.json"],
   "extraResources": [
     { "from": "resources/api", "to": "api" },
-    { "from": "resources/web", "to": "web" }
+    { "from": "resources/web", "to": "web" },
+    { "from": "resources/build-info.json", "to": "build-info.json" }
   ],
   "mac": {
     "icon": "build/icon.icns",
     "category": "public.app-category.developer-tools",
-    "target": ["dmg"],
-    "identity": null
+    "target": ["dmg", "dir"],
+    "identity": null,
+    "hardenedRuntime": false,
+    "gatekeeperAssess": false
   },
   "dmg": {
-    "title": "ZIBBY"
+    "title": "ZibbyOS"
   }
 }

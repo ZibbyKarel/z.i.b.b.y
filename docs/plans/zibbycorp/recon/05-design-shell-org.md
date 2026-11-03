@@ -1,15 +1,15 @@
-# ZibbyCorp design audit — App shell, ORG section, visual foundation
+# ZibbyOS design audit — App shell, ORG section, visual foundation
 
-Scope per assignment: `ZibbyCorp App.dc.html` (shell), `Org Screens.dc.html`,
+Scope per assignment: `ZibbyOS App.dc.html` (shell), `Org Screens.dc.html`,
 `Dashboard.dc.html`, `Blueprint Screen.dc.html`, `ZibbyCorp Splash.dc.html`,
 `ZibbyCorp Directions.dc.html`, `zibby.js`, `zc-data.js`. Cross-referenced against
-`ZibbyCorp Design System.md`, `Information Architecture.dc.html`, and the three
+`ZibbyOS Design System.md`, `Information Architecture.dc.html`, and the three
 prior research docs (`01-design-system.md`, `02-web-routes.md`,
 `03-backend-domain.md`) in this scratchpad. Read-only; no rendering was done (the
 markup is exhaustive inline-style HTML — every value below is read directly from
 source, not estimated).
 
-**Two design generations coexist in this folder.** `ZibbyCorp App.dc.html` +
+**Two design generations coexist in this folder.** `ZibbyOS App.dc.html` +
 `Org Screens.dc.html` are the **current, IA-aligned build**: they load
 `zc-data.js` (11 corporate departments dev/ops/sec/rel/inc/rnd/com/qa/knw/fin/per,
 COO=Zibby, CEO=operator, hash routing `org/...`). `Dashboard.dc.html` +
@@ -41,7 +41,7 @@ Row 1: `<header>`. Row 2: a nested grid `grid-template-columns: 280px minmax(0,1
 current shell** — Dashboard.dc.html's legacy 3-column `280px / 1fr / 400px` (rail
 + main + inspector) was collapsed to 2 columns in the real build; the Design
 System doc's `rail-right: 400px` token is carried over from Dashboard but is
-**not instantiated anywhere in ZibbyCorp App.dc.html**. The "inspector" role
+**not instantiated anywhere in ZibbyOS App.dc.html**. The "inspector" role
 (agent detail) moved to being its own routed screen (`org/agent/:id`, described
 §2.4) rather than a persistent right rail.
 
@@ -54,7 +54,7 @@ div, showing through every screen (screens sit on `--bg`, cards on `--panel`).
 solid var(--line); background:var(--panel)`. Left→right:
 
 1. **Logo button** (`goHome` → `org/map`): 22px `PixelGlyph` (seed "Zibby",
-   state idle) + `ZIBBYCORP` wordmark (mono 13/600/0.18em).
+   state idle) + `ZIBBYOS` wordmark (mono 13/600/0.18em).
 2. **Top nav** (`<nav>`, mono 11/0.14em, full header height): 6 buttons, one per
    section — `ORG, WORK, ACTIVITY, POLICY, KNOWLEDGE, LEDGER`. Active section:
    text `--ink` + 1px `--ink` bottom border; inactive: `--ink3`, transparent
@@ -302,7 +302,7 @@ state for the whole app, matching the "One interaction grammar" DNA principle
 ### 2.1 Org map — `org/map` (default landing)
 
 Top→bottom:
-1. Page header: `01 — ORG MAP` (mono 11, `--ink3`) + `ZibbyCorp` (h1, 32/500) +
+1. Page header: `01 — ORG MAP` (mono 11, `--ink3`) + `ZibbyOS` (h1, 32/500) +
    right-aligned meta `11 DEPARTMENTS · NN AGENTS IN POOL`.
 2. **COO root node**, centered: bordered `--line2`/bg `--panel` pill with 4
    corner-bracket ticks (8px), 50×50 `PixelGlyph` tile (bg `--panel2`) +
@@ -502,7 +502,7 @@ light-theme-only token set hardcoded — no theme switch here). A scripted,
 looping (or single-play; `loop`/`speed` are exposed as Design Canvas editor
 props) ~10.2s timeline entirely driven by `requestAnimationFrame` + manual
 easing functions (no CSS animation library):
-- **0–2.9s**: wordmark card (`ZIBBYCORP` mono 40/600/0.24em + `AGENT
+- **0–2.9s**: wordmark card (`ZIBBYOS` mono 40/600/0.24em + `AGENT
   OPERATIONS CONSOLE` subtitle + status dot/label) sits static; the Zibby
   glyph (state `idle`) creeps slightly and, 1.2–2.4s, shows a speech-bubble
   aside: "psst. still loading?" — a joke about the boot bar's slow fill.
@@ -559,7 +559,7 @@ implementation under a similar name; "New" = no DS analog exists at all.
 |---|---|---|
 | **PixelGlyph** (agent sprite) | seed (name), state (6: idle/working/thinking/blocked/error/done), size (18/20/22/30/38/40/48/56/128 seen in use), glow (bool, auto-off for idle/size<40), tint via `body`/`eye` colors | 🆕 **New**. Procedurally generated per-seed 8×8 mirrored pixel creature via `steps(1,end)` keyframe families per state (`zb-breathe/bob/arm/blink/key/dot/pulse/shake/hop/twinkle`), `shape-rendering:crispEdges`. Nothing in DS generates art from a seed; closest structural cousin is `Icon`/`IconTile` (closed glyph union, tone-tinted) but those are hand-drawn SVGs, not generative. Needs a wholly new DS component (`AgentGlyph`?) plus ~13 new `@theme` keyframes (already spec'd verbatim in the Design System doc §9) and per-state motion is more elaborate than the existing `StateTone`/`LivingGlow` 5-tone/2-intensity model (this needs 6 *state-specific animations*, not one shared pulse). |
 | **StatusDot** (square) | tone (6: work/think/block/err/done/idle — a superset of DS `StateTone`'s 5), size (6–9px), living (breathe for working, blink for blocked, static otherwise) | 🔁 **Restyle, with a gap.** DS `StatusDot` exists (`tone: DotTone`, `pulse`) and is close, but is round (`radiusFull`) — this design mandates **square** (`--dot-r:0`), and needs a distinct **"thinking"** tone that doesn't exist in `StateTone`/`DotTone` today (DS's 5-tone vocabulary is accent/ok/warn/bad/run; this design's 6-tone vocabulary is work/think/block/err/done/idle — closest is `run≈work`, `bad≈err`, but `think` has no DS analog at all and `done`/`idle` as *distinct hues* rather than "just not-live" is new). |
-| **StatusPod** (ring + glyph, pulsing) | size, state | ⚠️ **Defined in `zibby.js` (`pod()`) but never called anywhere in either the current build (`ZibbyCorp App.dc.html`, `Org Screens.dc.html`) or the legacy one** — dead code in the shared helper, evidently superseded by plain glyph+dot combos everywhere it might have been used. Do not implement unless a not-yet-seen screen (Work/Activity/Policy/Knowledge/Ledger — out of my scope) actually calls it. |
+| **StatusPod** (ring + glyph, pulsing) | size, state | ⚠️ **Defined in `zibby.js` (`pod()`) but never called anywhere in either the current build (`ZibbyOS App.dc.html`, `Org Screens.dc.html`) or the legacy one** — dead code in the shared helper, evidently superseded by plain glyph+dot combos everywhere it might have been used. Do not implement unless a not-yet-seen screen (Work/Activity/Policy/Knowledge/Ledger — out of my scope) actually calls it. |
 | **Cell strip** | array of tone dots, 9px, wrap | 🆕 New composition — trivial once `StatusDot` exists (just a flex-wrap row), no DS list-of-dots primitive today. |
 | **Corner brackets** | inset (8/10px), color `--ink`, 4 independently-positioned L-marks | 🔁 Maps directly onto DS's existing `Corners` component (already used by `Card`/`Panel`/`LivingGlow`, `CornersTone`=`StateTone`) — needs a square/0-radius mode and possibly a size variant (8/10px insets seen here vs. whatever `Corners`' current `inset` scale offers); largely a restyle, not new. |
 | **Org node** (department card on the map) | code, name, cell-strip, alert line (dot+label), selected/alert border states | 🆕🔁 New composite (nothing in DS is an "org-chart node"), but composes cleanly from `Card`/`Corners`/`StatusDot`/`Chip`-like parts already in DS — a domain composite (`apps/web/features/…`), not a DS primitive, matching the "department/employee has no visual home yet" gap flagged in `01-design-system.md`. |
@@ -613,7 +613,7 @@ implemented, frontend-only · 🆕🔌 not implemented, needs backend/contract w
 
 ### Legacy-segment migration (from `Information Architecture.dc.html` §05, cross-checked against `02-web-routes.md`'s actual route list)
 
-| Today's route | ZibbyCorp location (per IA) | Confirms/contradicts current code? |
+| Today's route | ZibbyOS location (per IA) | Confirms/contradicts current code? |
 |---|---|---|
 | `/` → `/chat` (overview/home) | `ORG → Org map (home)` | Consistent — both are "home" |
 | `/agents(+[id])` | `ORG → Agent pool + Agent profile` | Consistent |
@@ -669,13 +669,13 @@ contract fields that exist vs. are missing).
 
 ## Key files referenced
 
-- `/Users/zibby/Workspace/z.i.b.b.y/design/ZibbyCorp/ZibbyCorp App.dc.html` — shell (header, rail, dock, sheet, palette, theming, routing)
+- `/Users/zibby/Workspace/z.i.b.b.y/design/ZibbyCorp/ZibbyOS App.dc.html` — shell (header, rail, dock, sheet, palette, theming, routing)
 - `/Users/zibby/Workspace/z.i.b.b.y/design/ZibbyCorp/Org Screens.dc.html` — map/dept/pool/agent/chat
 - `/Users/zibby/Workspace/z.i.b.b.y/design/ZibbyCorp/Dashboard.dc.html`, `Blueprint Screen.dc.html` — superseded prototype (zibby.js-only, 8-dept model), reference for glyph/layout mechanics only
 - `/Users/zibby/Workspace/z.i.b.b.y/design/ZibbyCorp/ZibbyCorp Splash.dc.html`, `ZibbyCorp Directions.dc.html` — boot animation, design-reference doc (unconverted captions)
 - `/Users/zibby/Workspace/z.i.b.b.y/design/ZibbyCorp/zibby.js` — glyph/dot/pod/packet/caret generators, legacy 8-dept RAW data (superseded by zc-data.js for the department/agent model, but its glyph/dot/caret generator functions are still the live implementation `zc-data.js`-era screens call into)
 - `/Users/zibby/Workspace/z.i.b.b.y/design/ZibbyCorp/zc-data.js` — current 11-department data model (`ZC.depts/agents/chains/pipelines/tasks/companies/approvals/handoffRules/deptBudget/spend/registries/...`)
-- `/Users/zibby/Workspace/z.i.b.b.y/design/ZibbyCorp/ZibbyCorp Design System.md` — token/component canon
+- `/Users/zibby/Workspace/z.i.b.b.y/design/ZibbyCorp/ZibbyOS Design System.md` — token/component canon
 - `/Users/zibby/Workspace/z.i.b.b.y/design/ZibbyCorp/Information Architecture.dc.html` — product spec (sitemap, flows, migration table)
 - `/Users/zibby/Workspace/z.i.b.b.y/apps/web/components/layout/AppShell/AppShell.tsx`, `apps/web/features/chat/components/{ChatTopBar,ChatSearch,ChatToolDock,SubsystemOrbMap,StatusFlyoutPanel}.tsx` — current shell/home equivalents
 - `/Users/zibby/Workspace/z.i.b.b.y/apps/web/features/subsystems/components/SubsystemDrawer/` — current department-detail equivalent (modal, 5 tabs)

@@ -20,4 +20,4 @@ export const Overview: Story = {
   ),
 };
 
-export const Playground: Story = { args: { size: 30, label: "ZibbyCorp" } };
+export const Playground: Story = { args: { size: 30, label: "ZibbyOS" } };

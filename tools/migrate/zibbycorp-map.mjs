@@ -1,4 +1,4 @@
-// ZibbyCorp rename map (D-004 / D-016) — the ONE place persona ids live after the
+// ZibbyOS rename map (D-004 / D-016) — the ONE place persona ids live after the
 // migration. Shared by the code codemod (`zibbycorp-codemod.mjs`) and the data
 // migration (`zibbycorp-departments.mjs`) so both produce identical names.
 
@@ -67,10 +67,7 @@ export function rewrite(text, { personas = AUTO_PERSONAS, subsystemWords = true 
     const id = DEPARTMENT_ID[p];
     const fw = FUNCTION_WORD[p];
     const P = cap(p);
-    const FW = fw
-      .split("-")
-      .map(cap)
-      .join("");
+    const FW = fw.split("-").map(cap).join("");
     // UPPER_CASE constants: SENTINEL_FOO → SECURITY_FOO
     out = out.replace(new RegExp(`\\b${p.toUpperCase()}(?=_|\\b)`, "g"), fw.toUpperCase());
     // Capitalized (identifiers, prose): Sentinel / SentinelService → Security / SecurityService

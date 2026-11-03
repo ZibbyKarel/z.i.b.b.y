@@ -13,6 +13,10 @@ const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // The desktop staging build (apps/desktop/scripts/stage-resources.mjs) sets
+  // NEXT_DIST_DIR=.next-desktop so packaging ZibbyOS.app never overwrites the
+  // `.next` a running `pnpm web:dev` is serving from.
+  distDir: process.env.NEXT_DIST_DIR ?? ".next",
   transpilePackages: ["@zibby/design-system"],
   // Statically typed links: `<Link href>` / `router.push()` and our route
   // constants (state/config.ts) are checked against the real app routes, so a

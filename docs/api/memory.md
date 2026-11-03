@@ -208,7 +208,7 @@ mask orphans. Service: `vault-lint.service.ts`.
 ## Knowledge sources (web `/knowledge/*`)
 
 All three Knowledge pages (Trezor `/knowledge/vault`, Graf `/knowledge/graph`, Destilace
-`/knowledge/distill`) share one source bar: a switcher ZibbyCorp / team KBs and, for a team,
+`/knowledge/distill`) share one source bar: a switcher ZibbyOS / team KBs and, for a team,
 the "Sync KB" button (`POST /api/teams/:id/kb/sync`). The selection (`vault` | `team:<id>`) is
 held by `KnowledgeSourceProvider` in `app/(company)/knowledge/layout.tsx`, so it survives tab
 switches; it is initialised from `?source=` and the param is re-applied on every page (tab links

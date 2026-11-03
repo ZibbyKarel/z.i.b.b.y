@@ -105,7 +105,7 @@ libs/forms rootDir config) and the two gitignored-dir lint findings — nothing 
 ## Pre-existing uncommitted state (found at the start of this ZC-00 run, not created by it)
 
 Two things were already sitting in the working tree before this recon started — both
-appear to be preparatory work for the ZibbyCorp rename that predates this session:
+appear to be preparatory work for the ZibbyOS rename that predates this session:
 
 1. **`docs/plans/zibbycorp/DECISIONS.md` is modified (uncommitted):** it already contains a
    **D-016** entry ("No legacy read tolerance; the migration covers everything —

@@ -14,6 +14,7 @@ import { OperatorChannelService } from "./operator-channel.service";
 import { OperatorChannelStore } from "./operator-channel.store";
 import { OPERATOR_MESSAGES, escapeMrkdwn, fill, zibbyLink } from "./operator-messages";
 import type { ThreadBinding } from "./thread-binding.store";
+import { isPrimaryInstance } from "../shared/instance-role";
 
 /** Slack section text tops out at 3000 chars; a chunk leaves room for the run/notice lines. */
 const CHUNK_CHARS = 2500;
@@ -163,6 +164,9 @@ export class OperatorInboundService implements OnModuleInit, OnModuleDestroy {
   }
 
   onModuleInit(): void {
+    // One Socket Mode listener per Slack app: only the primary instance listens,
+    // so a secondary (dev) never receives — and double-answers — the same event.
+    if (!isPrimaryInstance()) return;
     void this.channel.listen((event) => this.handle(event));
   }
 

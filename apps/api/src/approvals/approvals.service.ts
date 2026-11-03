@@ -14,8 +14,10 @@ import {
   ApprovalAlreadyDecidedError,
   ApprovalNotAnswerableError,
   ApprovalNotRevisableError,
+  ApprovalOwnedElsewhereError,
 } from "./approvals.errors";
 import { ApprovalsStorageService } from "./approvals.storage.service";
+import { isPrimaryInstance } from "../shared/instance-role";
 
 /**
  * The capability the approvals service needs from a runner to act on a decision,
@@ -69,6 +71,8 @@ export interface RequestApprovalInput {
 @Injectable()
 export class ApprovalsService {
   private readonly runners = new Map<ApprovalRunKind, ResumableRunner>();
+  /** Approvals requested by THIS process — the only ones a secondary may decide. */
+  private readonly requestedHere = new Set<string>();
   private readonly log?: ScopedLogger;
 
   constructor(
@@ -124,7 +128,19 @@ export class ApprovalsService {
         ...(approval.department ? { department: approval.department } : {}),
       },
     });
+    this.requestedHere.add(approval.id);
     return this.storage.create(approval);
+  }
+
+  /**
+   * A secondary instance (shared/instance-role) shares the approvals dir with the
+   * primary but can only resume runs it spawned itself — refuse the rest before
+   * the decision is written, so the card stays pending for the primary.
+   */
+  private assertDecidableHere(id: string): void {
+    if (!isPrimaryInstance() && !this.requestedHere.has(id)) {
+      throw new ApprovalOwnedElsewhereError(id);
+    }
   }
 
   list(status?: Approval["status"]): Promise<Approval[]> {
@@ -152,6 +168,7 @@ export class ApprovalsService {
       decidedBy?: "autopilot";
     } = {},
   ): Promise<Approval> {
+    this.assertDecidableHere(id);
     const approval = await this.decide(
       id,
       "approved",
@@ -184,6 +201,7 @@ export class ApprovalsService {
 
   /** Reject a pending approval and terminate its gated run (no action taken). */
   async reject(id: string, reason?: string): Promise<Approval> {
+    this.assertDecidableHere(id);
     const approval = await this.decide(id, "rejected", reason);
     this.log?.info("approval rejected; cancelling run", {
       id,
@@ -202,6 +220,7 @@ export class ApprovalsService {
    * so a refused answer leaves the approval pending.
    */
   async answer(id: string, answer: string): Promise<Approval> {
+    this.assertDecidableHere(id);
     const pending = await this.storage.get(id);
     if (pending.action !== OPERATOR_QUESTION_ACTION) throw new ApprovalNotAnswerableError(id);
     const approval = await this.decide(id, "approved", answer);
@@ -220,6 +239,7 @@ export class ApprovalsService {
    * check runs before `decide`, so a refused revise leaves the approval pending.
    */
   async revise(id: string, note: string): Promise<Approval> {
+    this.assertDecidableHere(id);
     const pending = await this.storage.get(id);
     const runner = this.runners.get(pending.kind);
     if (pending.action !== "stage-approval" || !runner?.revise) {

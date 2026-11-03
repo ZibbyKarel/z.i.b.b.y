@@ -1,4 +1,4 @@
-# ZibbyCorp department migration (dry run)
+# ZibbyOS department migration (dry run)
 
 Data dir: `.zibby/data`
 

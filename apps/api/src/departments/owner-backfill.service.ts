@@ -2,6 +2,7 @@ import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { WorkflowsStorageService } from "../workflows/workflows.storage.service";
 import { agentOwnersFromWorkflows, workflowOwnerSeed } from "./owner-seed";
+import { isPrimaryInstance } from "../shared/instance-role";
 
 /**
  * NS2 F1b — one-shot, idempotent startup backfill that tags every pre-F1
@@ -28,6 +29,8 @@ export class OwnerBackfillService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
+    // One-shot shared-data rewrite: the primary instance does it (shared/instance-role).
+    if (!isPrimaryInstance()) return;
     await this.backfillWorkflows();
     await this.backfillAgents();
   }

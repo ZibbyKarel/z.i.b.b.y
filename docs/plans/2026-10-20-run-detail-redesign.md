@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Rebuild `/activity/runs/[runId]` to the ZibbyCorp "Run Detail" design (header, metrics, stage rail, LIVE/INPUT/OUTPUT views, composer) and ship the backend it needs: pause/resume, operator messages, agent questions and operator answers, reject-stops-run, per-stage timestamps, an output file tree, fresh vs. continue re-runs, and a structured diffstat.
+**Goal:** Rebuild `/activity/runs/[runId]` to the ZibbyOS "Run Detail" design (header, metrics, stage rail, LIVE/INPUT/OUTPUT views, composer) and ship the backend it needs: pause/resume, operator messages, agent questions and operator answers, reject-stops-run, per-stage timestamps, an output file tree, fresh vs. continue re-runs, and a structured diffstat.
 
 **Architecture:** Contract-first. Phase A extends `libs/contracts` (ts-rest + Zod). Phase B implements it in `apps/api`, mostly inside `WorkflowRunnerService.drive()`'s stage-boundary loop. Every state change goes through `writeAggregate`, which already emits the `workflow-runs` SSE status event, so the web needs no new live channel. Phase C adds the few DS components the design needs that no existing component passes. Phase D replaces the 927-line `RunDetail.tsx` with region composites under `apps/web/features/runs/components/`, plus one pure model module. Phase E checks the main regions with the design-match CLI.
 
@@ -527,7 +527,7 @@ Region-by-region decision record (why each region does or does not need DS work)
 |---|---|---|
 | breadcrumb line | app-local (Pressable + Typography) | DS `Breadcrumb` renders one separator; the design mixes `/` and `·` with link segments |
 | title, meta line | app-local (Typography, `StatePill`, `AgentGlyph`, `Pressable`) | existing primitives; `StatePill` = bordered chip + dot |
-| header actions | existing `Button` (primary/secondary) + `MenuButton variant="bordered"` | `bordered` is the ZibbyCorp header overflow trigger |
+| header actions | existing `Button` (primary/secondary) + `MenuButton variant="bordered"` | `bordered` is the ZibbyOS header overflow trigger |
 | 2px progress hairline | existing `Progress height` token | — |
 | 6 metrics | **extend `MetricStrip` `columns: 3 \| 4 \| 6`** | same skeleton; the column count is data, not a style variant |
 | body grid 260px rail + toolbar/feed/composer column at viewport height | **new DS `RailSplit`** | no `Grid` sidebar preset is 260px, and the right column's auto/1fr/auto rows plus a scroll ref are a reusable layout |

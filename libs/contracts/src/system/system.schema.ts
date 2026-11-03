@@ -155,11 +155,11 @@ export const SystemConfigSchema = z
      */
     dockDoneTasksLimit: z.number().int().min(1).max(100).default(20),
     /**
-     * O-21: the ZibbyCorp header's "CEO" identity and brand name. Both additive and
+     * O-21: the ZibbyOS header's "CEO" identity and brand name. Both additive and
      * optional (no default here — an absent value reads as `undefined`, not a
      * schema-picked string) because the real default is presentation-layer: the
      * header shows `operatorName ?? "CEO"`, and the shipped `companyName` fallback
-     * is `"ZibbyCorp"`. Nothing seeds `operatorName` from the git user automatically
+     * is `"ZibbyOS"`. Nothing seeds `operatorName` from the git user automatically
      * (that would silently expose git config); the operator sets it once from
      * `/system/settings/general`.
      */

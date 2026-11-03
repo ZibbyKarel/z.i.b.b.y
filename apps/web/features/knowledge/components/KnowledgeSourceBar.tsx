@@ -12,7 +12,7 @@ export enum KnowledgeSourceBarTestId {
 
 /**
  * The Knowledge pages' source bar, top-right of every page header: the switcher
- * (ZibbyCorp / team KBs), and for a team source the "Sync KB" button with its
+ * (ZibbyOS / team KBs), and for a team source the "Sync KB" button with its
  * result line underneath. Selection lives in `KnowledgeSourceProvider`.
  */
 export function KnowledgeSourceBar() {

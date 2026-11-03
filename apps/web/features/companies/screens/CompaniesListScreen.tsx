@@ -13,7 +13,7 @@ import { useCompaniesQuery } from "../queries";
 /**
  * `/companies` (ZB-06) — the company catalog, moved from `/companies`.
  * Mirrors `features/projects/screens/ProjectsListScreen.tsx`'s header pattern
- * (the ZibbyCorp `Container`/eyebrow/`h1` shell), minus the category taxonomy —
+ * (the ZibbyOS `Container`/eyebrow/`h1` shell), minus the category taxonomy —
  * companies have no category grouping.
  */
 export function CompaniesListScreen() {

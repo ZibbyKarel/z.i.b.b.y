@@ -1,4 +1,5 @@
 import { app } from "electron";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 
 /**
@@ -19,12 +20,23 @@ export function webServerEntry(): string {
   return path.join(resourcesRoot(), "web/apps/web/server.js");
 }
 
-/** Per-install data root — there's no repo checkout to anchor ZIBBY_DATA_DIR to. */
-export function dataRoot(): string {
-  return path.join(app.getPath("userData"), "data");
+/** Lock file the API writes when it owns background work (shared data dir). */
+export function instanceLockFile(): string {
+  return path.join(app.getPath("userData"), "data", ".instance.lock");
 }
 
-/** Kept outside the data root (Phase 12.7 convention: worktrees never live under the data tree). */
-export function worktreeRoot(): string {
-  return path.join(app.getPath("userData"), "worktrees");
+/** Baked at stage time by scripts/stage-resources.mjs. */
+export interface BuildInfo {
+  sourceRoot: string;
+  builtAt: string;
+  gitSha: string;
+}
+
+export function readBuildInfo(): BuildInfo {
+  const file = path.join(resourcesRoot(), "build-info.json");
+  return JSON.parse(readFileSync(file, "utf8")) as BuildInfo;
+}
+
+export function logDir(): string {
+  return path.join(app.getPath("home"), "Library/Logs/ZibbyOS");
 }

@@ -20,7 +20,7 @@ a second hand-rolled pulse.
 ## 1. The canonical state vocabulary — `StateTone`
 
 Defined once in `libs/design-system/src/stateTone.ts`, exported from
-`@zibby/design-system`. ZibbyCorp (ZA-01) redefines it to the six states an agent's
+`@zibby/design-system`. ZibbyOS (ZA-01) redefines it to the six states an agent's
 work can be in, in canonical order:
 
 ```ts
@@ -42,7 +42,7 @@ progress fills and flow packets — never on whole-card backgrounds or borders o
 
 ### The legacy vocabulary — `LegacyStateTone` / `LEGACY_TONE_MAP`
 
-The pre-ZibbyCorp five-tone vocabulary is kept as `LegacyStateTone`, and every DS
+The pre-ZibbyOS five-tone vocabulary is kept as `LegacyStateTone`, and every DS
 component that used to be typed `StateTone` at its public boundary now accepts
 `AnyStateTone = StateTone | LegacyStateTone` instead — so the many app call sites that
 still emit the old names (`features/runs/run.ts#runStateTone`, the approvals `UiTone`,
@@ -69,7 +69,7 @@ The **legacy CSS vars** (`--color-accent`, `--color-ok`, `--color-warn`, `--colo
 `--color-run`) are not deleted — they repoint to the new state colors via the exact
 same table (`--color-accent: var(--color-state-think)`, …), so every existing
 Tailwind-class-driven surface (`bg-accent`, `border-run`, `shadow-glow-accent`, …)
-automatically repaints in the ZibbyCorp palette without a class name changing.
+automatically repaints in the ZibbyOS palette without a class name changing.
 
 Companion exports (all from `stateTone.ts`):
 

@@ -4,7 +4,7 @@
 **Decisions:** D-007, D-010. **Defaults used:** O-01 (the light theme is built, but the
 default stays dark until ZB-01), O-04.
 
-**Canon:** `design/ZibbyCorp/ZibbyCorp Design System.md`, cited as "DS.md §n".
+**Canon:** `design/ZibbyCorp/ZibbyOS Design System.md`, cited as "DS.md §n".
 
 | DS.md § | Topic |
 |---|---|
@@ -17,7 +17,7 @@ default stays dark until ZB-01), O-04.
 | §8 | Component anatomy |
 | §9 | Motion |
 
-Visual reference screens: `ZibbyCorp App.dc.html`, `Org Screens.dc.html`,
+Visual reference screens: `ZibbyOS App.dc.html`, `Org Screens.dc.html`,
 `ZibbyCorp Directions.dc.html` (glyph state grid).
 
 **Status: "hned".** This part touches only the DS, the lint wall and the 20 files that
@@ -99,7 +99,7 @@ re-skin because tokens and primitives change underneath them. That is intended.
 - A Storybook "Tokens" story renders both themes side by side.
 - A screenshot compare against DS.md §2.4 swatches.
 
-**Commit:** `feat(ds)!: ZibbyCorp tokens, type, motion, light+dark theme`
+**Commit:** `feat(ds)!: ZibbyOS tokens, type, motion, light+dark theme`
 
 ---
 
@@ -262,7 +262,7 @@ All anatomy follows DS.md §8 and recon 05 §3, 06 §6, 07 §5.
    - Reduced motion means an instant fade.
    - Everything under `apps/web/components/LoadingScreen/*` is ported into it; those app
      files are deleted in ZA-07.
-6. **`Wordmark`** renders "ZIBBYCORP", mono 13/600/.18em.
+6. **`Wordmark`** renders "ZIBBYOS", mono 13/600/.18em.
 
 **Commit:** `feat(ds): AppFrame, AppHeader, Rail, ChatDock, Splash`
 

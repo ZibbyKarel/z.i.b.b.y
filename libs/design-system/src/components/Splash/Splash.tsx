@@ -63,7 +63,7 @@ export interface SplashProps {
 /**
  * The choreographed boot screen (`ZibbyCorp Splash.dc.html`): a glyph walk,
  * then the wordmark reveal, then a hold until `ready`, then an exit fade.
- * Ports `apps/web/components/LoadingScreen/*` onto the ZibbyCorp visual
+ * Ports `apps/web/components/LoadingScreen/*` onto the ZibbyOS visual
  * language (deleted in ZA-07 once the app is wired to this instead).
  *
  * The phase machine is driven entirely by `setTimeout`s against the exported

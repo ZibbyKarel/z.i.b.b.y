@@ -9,7 +9,7 @@ export const TEAM_SOURCE_PREFIX = "team:";
 export interface KnowledgeSourceValue {
   /** `"vault"` or `"team:<id>"` — the effective (validated) selection. */
   source: string;
-  /** The selected team's id, or null for the ZibbyCorp vault. */
+  /** The selected team's id, or null for the ZibbyOS vault. */
   teamId: string | null;
   isVault: boolean;
   /** Teams that own a (read-only) knowledge base — the switcher's options. */

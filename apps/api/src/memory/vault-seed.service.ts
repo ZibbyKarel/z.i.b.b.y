@@ -2,6 +2,7 @@ import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { composeSeedNotes } from "./vault-seed.content";
 import { VaultService } from "./vault.service";
+import { isPrimaryInstance } from "../shared/instance-role";
 
 /**
  * Fresh-install vault seeding (F4c): on boot, if the vault holds ZERO notes
@@ -26,6 +27,8 @@ export class VaultSeedService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
+    // One-shot shared-data rewrite: the primary instance does it (shared/instance-role).
+    if (!isPrimaryInstance()) return;
     try {
       const { nodes } = await this.vault.graph();
       if (nodes.length > 0) {

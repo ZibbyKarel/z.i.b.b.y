@@ -1,4 +1,4 @@
-# ZibbyCorp employees migration (applied)
+# ZibbyOS employees migration (applied)
 
 Data dir: `.zibby/data`
 

@@ -23,7 +23,7 @@ orphan goes. **Decisions:** D-001, D-002, D-003, D-005, D-009, D-011.
    - A **live browser** check in light and dark at 1440 and 390 px.
    - A **design-match** against the mock (≤5 rounds; park on thrash, attaching the diff
      screenshots).
-5. **Commit** once per screen: `feat(<section>): <screen> on ZibbyCorp shell`.
+5. **Commit** once per screen: `feat(<section>): <screen> on ZibbyOS shell`.
 
 ---
 
@@ -33,7 +33,7 @@ orphan goes. **Decisions:** D-001, D-002, D-003, D-005, D-009, D-011.
 - `apps/web/app/(company)/layout.tsx`, which replaces `(dashboard)/layout.tsx`.
 - `apps/web/components/layout/AppShell/**`, rewritten over DS `AppFrame`.
 - `apps/web/state/config.ts`: `NAV_ITEMS` → `SECTIONS`, a map of section → sub-tabs
-  mirroring `ZibbyCorp App.dc.html` SECTIONS, adjusted by ROUTE-MAP:
+  mirroring `ZibbyOS App.dc.html` SECTIONS, adjusted by ROUTE-MAP:
 
   | Section | Sub-tabs |
   |---|---|
@@ -79,7 +79,7 @@ orphan goes. **Decisions:** D-001, D-002, D-003, D-005, D-009, D-011.
 - The navigation spec is rewritten for sections and sub-tabs.
 - A redirect spec loops over the ROUTE-MAP § 2 table.
 
-**Commit:** `feat(web): ZibbyCorp shell — header, sections, NEEDS YOU rail, redirects`
+**Commit:** `feat(web): ZibbyOS shell — header, sections, NEEDS YOU rail, redirects`
 
 ---
 

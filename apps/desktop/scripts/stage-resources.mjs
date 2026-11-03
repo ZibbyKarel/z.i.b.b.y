@@ -3,7 +3,7 @@
 // mirroring the layout electron-builder's extraResources maps into
 // Contents/Resources at package time.
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdirSync, readdirSync, rmSync } from "node:fs";
+import { cpSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -38,20 +38,48 @@ mkdirSync(resourcesDir, { recursive: true });
 // API: compiled dist/ + production-only node_modules, with @zibby/contracts
 // swapped for its compiled dist (see apps/api/scripts/stage-prod.mjs — it
 // ships raw .ts source, which a plain `node` process can't require()).
-run("node", [path.join(apiRoot, "scripts/stage-prod.mjs"), path.join(resourcesDir, "api")], repoRoot);
+run(
+  "node",
+  [path.join(apiRoot, "scripts/stage-prod.mjs"), path.join(resourcesDir, "api")],
+  repoRoot,
+);
 
 // Web: Next's own traced `output: standalone` bundle, plus the two
 // directories it doesn't copy itself (static assets + public/), per Next's
 // own standalone-output docs.
-run("pnpm", ["web:build"], repoRoot);
+// NEXT_PUBLIC_API_URL is baked into the client bundle at build time: point the
+// packaged UI at the packaged API (4333), never the dev API on 3333. The remote
+// (tailnet) URL is blanked so the bundle never falls back to it.
+const PACKAGED_API_URL = "http://localhost:4333";
+const WEB_DIST_DIR = ".next-desktop";
+console.log(`$ NEXT_PUBLIC_API_URL=${PACKAGED_API_URL} pnpm web:build`);
+execFileSync("pnpm", ["web:build"], {
+  cwd: repoRoot,
+  stdio: "inherit",
+  env: {
+    ...process.env,
+    NEXT_PUBLIC_API_URL: PACKAGED_API_URL,
+    NEXT_PUBLIC_REMOTE_API_URL: "",
+    // Own build dir: never clobber the `.next` a running `pnpm web:dev` serves from.
+    NEXT_DIST_DIR: WEB_DIST_DIR,
+  },
+});
 const webResourcesDir = path.join(resourcesDir, "web");
 mkdirSync(webResourcesDir, { recursive: true });
 // Next's traced node_modules can still contain symlinks into the live pnpm
 // store (e.g. typescript) — dereference them into real copies so the staged
 // output doesn't depend on anything outside itself.
-rsyncDereferenced(path.join(webRoot, ".next/standalone"), webResourcesDir);
-cpSync(path.join(webRoot, ".next/static"), path.join(webResourcesDir, "apps/web/.next/static"), { recursive: true });
-cpSync(path.join(webRoot, "public"), path.join(webResourcesDir, "apps/web/public"), { recursive: true });
+rsyncDereferenced(path.join(webRoot, WEB_DIST_DIR, "standalone"), webResourcesDir);
+cpSync(
+  path.join(webRoot, WEB_DIST_DIR, "static"),
+  path.join(webResourcesDir, "apps/web", WEB_DIST_DIR, "static"),
+  {
+    recursive: true,
+  },
+);
+cpSync(path.join(webRoot, "public"), path.join(webResourcesDir, "apps/web/public"), {
+  recursive: true,
+});
 
 // Next's file tracer (@vercel/nft) misses a handful of packages it can't
 // see statically — required conditionally inside next/dist/server's own
@@ -66,10 +94,22 @@ for (const pkg of NFT_TRACING_GAPS) {
   const pnpmDir = path.join(repoRoot, "node_modules/.pnpm");
   const prefix = `${pkg.replace("/", "+")}@`;
   const [storeEntry] = readdirSync(pnpmDir).filter((name) => name.startsWith(prefix));
-  if (!storeEntry) throw new Error(`${pkg} not found in node_modules/.pnpm — check apps/web's dependencies`);
+  if (!storeEntry)
+    throw new Error(`${pkg} not found in node_modules/.pnpm — check apps/web's dependencies`);
   const dst = path.join(webResourcesDir, "node_modules", pkg);
   rmSync(dst, { recursive: true, force: true });
   rsyncDereferenced(path.join(pnpmDir, storeEntry, "node_modules", pkg), dst);
 }
+
+// Baked so the packaged app knows which checkout to run source-dependent
+// work (worktrees, git, etc.) against.
+const gitSha = execFileSync("git", ["rev-parse", "HEAD"], {
+  cwd: repoRoot,
+  encoding: "utf8",
+}).trim();
+writeFileSync(
+  path.join(resourcesDir, "build-info.json"),
+  JSON.stringify({ sourceRoot: repoRoot, builtAt: new Date().toISOString(), gitSha }, null, 2),
+);
 
 console.log(`Staged desktop resources at ${resourcesDir}`);

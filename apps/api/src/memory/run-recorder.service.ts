@@ -15,6 +15,7 @@ import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { fileExists, writeFileAtomic } from "../shared/file-storage/file-utils";
 import { shelfDailyLink } from "./department-shelf";
 import { VaultService } from "./vault.service";
+import { isPrimaryInstance } from "../shared/instance-role";
 
 /** Marker file written into a run's cwd once it has been recorded (at-most-once). */
 const MARKER = "memory-recorded.json";
@@ -71,6 +72,8 @@ export class RunRecorderService implements OnModuleInit, OnApplicationBootstrap,
    * from disk but does not re-emit their terminal status).
    */
   async onApplicationBootstrap(): Promise<void> {
+    // A secondary sees the primary's runs read-only; recording them is the primary's job.
+    if (!isPrimaryInstance()) return;
     for (const run of this.agentRunner.listRunning()) {
       if (TERMINAL_AGENT.has(run.status)) await this.recordAgent(run);
     }

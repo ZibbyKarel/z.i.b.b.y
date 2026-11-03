@@ -1,5 +1,5 @@
 import { Module, forwardRef } from "@nestjs/common";
-import { dataDir } from "../shared/data-dir";
+import { dataDir, resolveVaultDir } from "../shared/data-dir";
 import { IntegrationsModule } from "../integrations/integrations.module";
 import { MachineConfigModule } from "../machine/machine-config.module";
 import { MergeWatchModule } from "../release/merge-watch.module";
@@ -63,7 +63,7 @@ export function resolveProjectSecretsDir(): string {
     { provide: PROJECT_SECRETS_DIR, useFactory: resolveProjectSecretsDir },
     {
       provide: VAULT_DIR,
-      useFactory: () => process.env.VAULT_DIR ?? dataDir("vault"),
+      useFactory: resolveVaultDir,
     },
     ProjectsStorageService,
     ProjectCategoriesStorageService,

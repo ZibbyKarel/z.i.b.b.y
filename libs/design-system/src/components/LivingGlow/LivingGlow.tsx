@@ -48,7 +48,7 @@ export interface LivingGlowProps extends Omit<HTMLAttributes<HTMLSpanElement>, "
  * Renders into its nearest positioned ancestor (`absolute inset-0`), behind content,
  * and is decorative (`aria-hidden`). Honours `prefers-reduced-motion`.
  *
- * @deprecated ZibbyCorp (DS.md §1.2/§6) has no glow/blur/glass in its visual
+ * @deprecated ZibbyOS (DS.md §1.2/§6) has no glow/blur/glass in its visual
  * language — living state now reads through `StatusDot`'s breathe/blink
  * instead of an ambient glow shell. Kept
  * compiling for existing HUD callers (`Card living`, `Panel tone live`); slated

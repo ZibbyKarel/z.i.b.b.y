@@ -278,4 +278,4 @@ wherever the thing it gates is already visible:
 | `approval-approved`  | The operator approved   |
 | `approval-rejected`  | The operator rejected   |
 
-<!-- ZibbyCorp ZB-08 (2026-09-25): deny gains an optional operator reason (O-12). -->
+<!-- ZibbyOS ZB-08 (2026-09-25): deny gains an optional operator reason (O-12). -->

@@ -1,4 +1,4 @@
-# ZibbyCorp recon — read with these corrections
+# ZibbyOS recon — read with these corrections
 
 Seven Sonnet research reports written 2026-09-24 before the operator's decisions. They
 are **inputs, not specs**. Where a report disagrees with `../DECISIONS.md`, the decision

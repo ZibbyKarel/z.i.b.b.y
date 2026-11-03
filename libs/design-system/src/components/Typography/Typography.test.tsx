@@ -134,7 +134,7 @@ describe("Typography", () => {
   });
 
   it("renders the system voice: a sans caps wordmark, a mono un-capped `code`", () => {
-    const { rerender } = render(<Typography type="wordmark">Zibbycorp</Typography>);
+    const { rerender } = render(<Typography type="wordmark">Zibbyos</Typography>);
     let el = screen.getByTestId(TypographyTestId.Root);
     expect(el.className).toContain("font-sans");
     expect(el.className).toContain("uppercase");
@@ -148,7 +148,7 @@ describe("Typography", () => {
     expect(el.style.fontSize).toBe("11px");
   });
 
-  it("keeps the pre-ZibbyCorp `title` size updated in place (DS.md §3.1)", () => {
+  it("keeps the pre-ZibbyOS `title` size updated in place (DS.md §3.1)", () => {
     render(<Typography type="title">A</Typography>);
     const el = screen.getByTestId(TypographyTestId.Root);
     expect(el.tagName).toBe("H2");

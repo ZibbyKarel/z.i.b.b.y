@@ -37,3 +37,17 @@ export class ApprovalNotAnswerableError extends Error {
     this.name = "ApprovalNotAnswerableError";
   }
 }
+
+/**
+ * Raised on a secondary instance (shared/instance-role) when deciding an approval
+ * whose run it doesn't own: the gated child lives in the primary process, so a
+ * decision here could never resume it. Decide it in the primary (ZibbyOS.app).
+ */
+export class ApprovalOwnedElsewhereError extends Error {
+  constructor(public readonly id: string) {
+    super(
+      `Approval "${id}" belongs to a run owned by the primary ZibbyOS instance — decide it there`,
+    );
+    this.name = "ApprovalOwnedElsewhereError";
+  }
+}

@@ -64,7 +64,7 @@ export interface MenuButtonProps {
    * (horizontal `⋯`, `intent`/`size` apply), with a sentence-case item list —
    * unchanged for existing consumers (`RoadmapCard`, `RunDetail`).
    *
-   * `"bordered"` — the ZibbyCorp header overflow trigger: a square
+   * `"bordered"` — the ZibbyOS header overflow trigger: a square
    * outline button (vertical `⋮`) that solidifies to an ink border + panel-2
    * fill while open, opening a 220px mono-uppercase panel with label-left /
    * trailing-mark-right rows (`AppHeader`'s `menu` slot).

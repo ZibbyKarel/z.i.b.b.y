@@ -66,7 +66,7 @@ export function VaultScreen() {
   );
 }
 
-/** The ZibbyCorp vault: tier → shelf nav, editable notes, capture / import / create. */
+/** The ZibbyOS vault: tier → shelf nav, editable notes, capture / import / create. */
 function LocalVault() {
   const departments = useDepartmentLookup();
   const t = useTranslations("knowledge");

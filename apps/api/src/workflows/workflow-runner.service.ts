@@ -75,6 +75,7 @@ import { type WorkflowStageRecord, workflowStageStrategy } from "./workflow-stag
 import { renderProgress } from "./progress";
 import { buildOperatorMessagesBlock, buildResumeContext } from "./resume-context";
 import { parseStageVerdict } from "./stage-verdict";
+import { isPrimaryInstance } from "../shared/instance-role";
 
 /** DI token carrying the absolute path of the directory that holds workflow run artifacts. */
 export const WORKFLOW_RUNS_DIR = "WORKFLOW_RUNS_DIR";
@@ -3355,6 +3356,12 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       const parsed = WorkflowRunSchema.safeParse(data);
       if (!parsed.success) continue;
       let run = parsed.data;
+      if (!isPrimaryInstance()) {
+        // Secondary instance: the primary may be executing this run right now —
+        // mirror it read-only, never fail or re-sync it (shared/instance-role).
+        this.runs.set(run.workflowRunId, run);
+        continue;
+      }
       // A run left "running" lost its mid-flight child with the previous backend —
       // UNLESS that child survived as a live orphan (Phase 6): its stage record is
       // still `running` after `core.init()` reattached a pgid monitor, so honor
@@ -3401,6 +3408,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     // Second pass, once every aggregate is loaded: re-sync each waiting parent with
     // its sub-run (which the sweep above may just have failed). A vanished child
     // fails the parent's stage like a failed one.
+    if (!isPrimaryInstance()) return;
     for (const run of [...this.runs.values()]) {
       const pending = run.pendingChild;
       if (!pending) continue;

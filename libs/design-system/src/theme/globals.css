@@ -39,7 +39,7 @@
   --color-*: initial;
 
   /* ---------------------------------------------------------------------
-   * ZibbyCorp neutrals + state vocabulary (DS.md §2) — DARK defaults.
+   * ZibbyOS neutrals + state vocabulary (DS.md §2) — DARK defaults.
    * Single source of truth: `themes/darkTheme.ts`. These are the values
    * DesignSystemProvider injects at runtime (inline style, same var names);
    * this block is only the static/no-JS/SSR-before-hydration default, and
@@ -68,7 +68,7 @@
   --dot-r: 9999px;
 
   /* ---- Backgrounds — the app's legacy 6-level naming, flattened onto the
-   * 3 ZibbyCorp neutrals above (bg / panel / panel2). No blur/glass. -------- */
+   * 3 ZibbyOS neutrals above (bg / panel / panel2). No blur/glass. -------- */
   --color-background-deep: var(--color-bg);
   --color-background: var(--color-bg);
   --color-surface: var(--color-panel);
@@ -876,7 +876,7 @@
 }
 
 /* ---------------------------------------------------------------------------
- * ZibbyCorp motion (DS.md §9) — verbatim.
+ * ZibbyOS motion (DS.md §9) — verbatim.
  *
  * `steps(1,end)` for a pixel/LCD feel; UI transitions stay short (≤200ms, not
  * defined as keyframes here). Wrapped in `prefers-reduced-motion: no-preference`

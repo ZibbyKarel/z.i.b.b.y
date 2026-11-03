@@ -53,7 +53,7 @@ export interface EntityCardProps {
 }
 
 /**
- * The catalog list-item card (ZibbyCorp DS shape — square corners, hairline
+ * The catalog list-item card (ZibbyOS DS shape — square corners, hairline
  * border, mono labels): a leading glyph tile, mono title + clamped
  * description, wrapping badge rows and a footer action slot. Dumb by design —
  * all labels and behaviour come in as props (see `AgentCard` in the app for a

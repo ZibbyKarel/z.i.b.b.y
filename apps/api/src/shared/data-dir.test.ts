@@ -1,6 +1,12 @@
 import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { dataDir, defaultCloneRoot, installRoot, resolveDataRoot } from "./data-dir";
+import {
+  dataDir,
+  defaultCloneRoot,
+  installRoot,
+  resolveDataRoot,
+  resolveVaultDir,
+} from "./data-dir";
 
 /**
  * Phase 12.5 — the data-root resolver is the single switch every file-backed
@@ -26,7 +32,7 @@ describe("resolveDataRoot", () => {
     // VITEST is set for the whole run; removing the override must trip the guard.
     delete process.env.ZIBBY_DATA_DIR;
     expect(process.env.VITEST).toBeTruthy();
-    expect(() => resolveDataRoot()).toThrow(/refusing the live \.zibby\/data anchor/);
+    expect(() => resolveDataRoot()).toThrow(/refusing the live data root/);
   });
 });
 
@@ -44,6 +50,16 @@ describe("installRoot / defaultCloneRoot", () => {
     else process.env.ZIBBY_DATA_DIR = original;
   });
 
+  it("ZIBBY_SOURCE_ROOT wins (the packaged app points it at its source checkout)", () => {
+    process.env.ZIBBY_SOURCE_ROOT = "/tmp/zibby-src";
+    try {
+      expect(installRoot()).toBe("/tmp/zibby-src");
+      expect(defaultCloneRoot()).toBe("/tmp");
+    } finally {
+      delete process.env.ZIBBY_SOURCE_ROOT;
+    }
+  });
+
   it("installRoot is two levels up from resolveDataRoot() (the repo root)", () => {
     process.env.ZIBBY_DATA_DIR = "/tmp/zibby-fixture/.zibby/data";
     expect(installRoot()).toBe(path.resolve("/tmp/zibby-fixture"));
@@ -53,5 +69,31 @@ describe("installRoot / defaultCloneRoot", () => {
     process.env.ZIBBY_DATA_DIR = "/tmp/zibby-fixture/.zibby/data";
     expect(defaultCloneRoot()).toBe(path.resolve("/tmp"));
     expect(defaultCloneRoot()).toBe(path.resolve(installRoot(), ".."));
+  });
+});
+
+/**
+ * The vault defaults to the operator's `~/AI/Vault` only on the live root; any
+ * explicit/isolated data root (tests included) keeps its vault inside that root.
+ */
+describe("resolveVaultDir", () => {
+  const original = { vault: process.env.VAULT_DIR, data: process.env.ZIBBY_DATA_DIR };
+
+  afterEach(() => {
+    if (original.vault === undefined) delete process.env.VAULT_DIR;
+    else process.env.VAULT_DIR = original.vault;
+    if (original.data === undefined) delete process.env.ZIBBY_DATA_DIR;
+    else process.env.ZIBBY_DATA_DIR = original.data;
+  });
+
+  it("honours VAULT_DIR", () => {
+    process.env.VAULT_DIR = "/tmp/some-vault";
+    expect(resolveVaultDir()).toBe("/tmp/some-vault");
+  });
+
+  it("keeps the vault inside an explicit ZIBBY_DATA_DIR", () => {
+    delete process.env.VAULT_DIR;
+    process.env.ZIBBY_DATA_DIR = "/tmp/zibby-root";
+    expect(resolveVaultDir()).toBe("/tmp/zibby-root/vault");
   });
 });

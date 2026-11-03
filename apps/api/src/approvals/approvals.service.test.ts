@@ -7,7 +7,9 @@ import {
   ApprovalNotAnswerableError,
   ApprovalNotFoundError,
   ApprovalNotRevisableError,
+  ApprovalOwnedElsewhereError,
 } from "./approvals.errors";
+import { initInstanceRole, resetInstanceRoleForTest } from "../shared/instance-role";
 import { ApprovalsService } from "./approvals.service";
 import { ApprovalsStorageService } from "./approvals.storage.service";
 
@@ -54,6 +56,43 @@ describe("ApprovalsService", () => {
     expect(decided.decidedAt).toBeTruthy();
     expect(resume).toHaveBeenCalledWith("agent-007_1_p0", decided);
     expect(cancel).not.toHaveBeenCalled();
+  });
+
+  describe("secondary instance (shared data root)", () => {
+    afterEach(() => {
+      delete process.env.ZIBBY_ROLE;
+      resetInstanceRoleForTest();
+    });
+
+    it("refuses to decide an approval another process requested, leaving it pending", async () => {
+      // Requested by the "primary" (a separate service instance over the same store).
+      const created = await request();
+      process.env.ZIBBY_ROLE = "secondary";
+      initInstanceRole({ port: 0 });
+      const secondary = new ApprovalsService(storage);
+      const resume = vi.fn();
+      secondary.register("agent", { resume, cancel: vi.fn() });
+
+      await expect(secondary.approve(created.id)).rejects.toBeInstanceOf(
+        ApprovalOwnedElsewhereError,
+      );
+      await expect(secondary.reject(created.id)).rejects.toBeInstanceOf(
+        ApprovalOwnedElsewhereError,
+      );
+      expect(resume).not.toHaveBeenCalled();
+      expect((await storage.get(created.id)).status).toBe("pending");
+    });
+
+    it("still decides approvals its own runs requested", async () => {
+      process.env.ZIBBY_ROLE = "secondary";
+      initInstanceRole({ port: 0 });
+      const resume = vi.fn();
+      service.register("agent", { resume, cancel: vi.fn() });
+      const created = await request();
+
+      expect((await service.approve(created.id)).status).toBe("approved");
+      expect(resume).toHaveBeenCalledOnce();
+    });
   });
 
   describe("answer (D-ASK)", () => {

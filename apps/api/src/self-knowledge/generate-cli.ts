@@ -2,6 +2,7 @@ import "reflect-metadata";
 import * as path from "node:path";
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "../app.module";
+import { initInstanceRole } from "../shared/instance-role";
 import { SelfKnowledgeService } from "./self-knowledge.service";
 
 /**
@@ -40,6 +41,11 @@ function pinRelativeDataDir(): void {
  */
 export async function runSelfKnowledgeCli(argv: readonly string[]): Promise<void> {
   pinRelativeDataDir();
+  // A one-shot reader over the (possibly live, shared) data root: never claim the
+  // primary role, so booting AppModule here doesn't run recovery/backfills beside
+  // a running ZibbyOS.app or dev server.
+  process.env.ZIBBY_ROLE = "secondary";
+  initInstanceRole({ port: 0 });
   const check = argv.includes("--check");
   // `logger: false` — this is a CLI, not the server; Nest's boot banner is noise here.
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false });

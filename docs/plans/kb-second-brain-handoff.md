@@ -1,7 +1,7 @@
 # KB / second brain — handoff
 
 Goal (operator, 2026-10-09): adopt LLM-wiki practices (gist jakubkulhan/85686bab…), restore the
-"second brain" node graph with a switch between ZibbyCorp vault and a team KB, restore features
+"second brain" node graph with a switch between ZibbyOS vault and a team KB, restore features
 lost since tag `v3.0`, start actually using project/team KBs. Decisions: `kb-second-brain-decisions.md`.
 
 ## Work items

@@ -295,7 +295,7 @@ export const RUN_STATE: Record<FeedStatus, RunStateMeta> = {
 };
 
 /**
- * `RUN_STATE.badge`'s `TagTone` narrowed to the pre-ZibbyCorp {@link LegacyStateTone}
+ * `RUN_STATE.badge`'s `TagTone` narrowed to the pre-ZibbyOS {@link LegacyStateTone}
  * vocabulary (the DS component props this feeds — `Typography`'s `TypographyTone`,
  * `Progress`'s `ProgressTone`, `Icon`'s `IconTone` — stay on that vocabulary until
  * ZA-02 restyles them) — `undefined` for `neutral` (and the risk-kind tones,

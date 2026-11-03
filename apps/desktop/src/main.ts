@@ -1,27 +1,37 @@
 import type { ChildProcess } from "node:child_process";
-import { BrowserWindow, app, dialog } from "electron";
-import { apiEntry, dataRoot, webServerEntry, worktreeRoot } from "./paths";
-import { isHealthy, killChild, resolveLoginShellPath, spawnNodeChild, waitForHealthy } from "./processes";
+import { createWriteStream, mkdirSync } from "node:fs";
+import path from "node:path";
+import { BrowserWindow, Menu, app, dialog } from "electron";
+import { API_HEALTH_URL, API_PORT, WEB_HEALTH_URL, WEB_PORT } from "./config";
+import { findForeignOwner, isPidAlive, readLockFile } from "./instanceLock";
+import { apiEntry, instanceLockFile, logDir, readBuildInfo, webServerEntry } from "./paths";
+import {
+  isPortTaken,
+  killChild,
+  resolveLoginShellPath,
+  spawnNodeChild,
+  waitForHealthy,
+} from "./processes";
 
 // app.getPath('userData') otherwise derives from package.json's "name"
-// (@zibby/desktop) — set before any getPath() call so data lands under the
-// name an operator actually recognizes (~/Library/Application Support/ZIBBY).
-app.setName("ZIBBY");
-
-const API_PORT = 3333;
-const WEB_PORT = 3000;
-const API_HEALTH_URL = `http://localhost:${API_PORT}/api/health`;
-const WEB_HEALTH_URL = `http://localhost:${WEB_PORT}/`;
+// (@zibby/desktop) — set before any getPath() call so data lands under
+// ~/Library/Application Support/ZibbyOS.
+app.setName("ZibbyOS");
 
 let apiChild: ChildProcess | undefined;
 let webChild: ChildProcess | undefined;
 let mainWindow: BrowserWindow | undefined;
+let quitting = false;
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on("second-instance", () => {
-    if (!mainWindow) return;
+    if (!mainWindow) {
+      // Window closed but the app (and its servers) still running in the Dock.
+      if (apiChild && webChild) createWindow();
+      return;
+    }
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.focus();
   });
@@ -30,32 +40,49 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 async function bootstrap(): Promise<void> {
+  Menu.setApplicationMenu(Menu.buildFromTemplate(buildMenuTemplate()));
+
+  const owner = findForeignOwner(readLockFile(instanceLockFile()), API_PORT, isPidAlive);
+  if (owner) {
+    fatal(
+      "ZibbyOS can't start",
+      `Another ZibbyOS instance (pid ${owner.pid}, port ${owner.port}) owns background work. If it is the dev server: stop it, start ZibbyOS, then start the dev server again — it will join as secondary.`,
+    );
+    return;
+  }
+
+  const [apiTaken, webTaken] = await Promise.all([isPortTaken(API_PORT), isPortTaken(WEB_PORT)]);
+  if (apiTaken || webTaken) {
+    const ports = [apiTaken ? API_PORT : undefined, webTaken ? WEB_PORT : undefined]
+      .filter(Boolean)
+      .join(" and ");
+    fatal(
+      "ZibbyOS can't start",
+      `Port ${ports} is already in use. Probably a second copy of ZibbyOS is running or a stale process was left behind. Quit it and try again.`,
+    );
+    return;
+  }
+
   const loginShellPath = await resolveLoginShellPath();
+  const { sourceRoot } = readBuildInfo();
 
-  // Start-or-attach: if the operator already has the launchd daemon (or a
-  // dev server) running on these ports, don't spawn a second one — just
-  // point the window at what's already there.
-  if (!(await isHealthy(API_HEALTH_URL))) {
-    apiChild = spawnNodeChild(apiEntry(), {
-      ...process.env,
-      PATH: loginShellPath,
-      PORT: String(API_PORT),
-      CORS_ORIGIN: `http://localhost:${WEB_PORT}`,
-      ZIBBY_DATA_DIR: dataRoot(),
-      ZIBBY_WORKTREE_ROOT: worktreeRoot(),
-    });
-    pipeChildLogs(apiChild, "api");
-  }
+  apiChild = spawnNodeChild(apiEntry(), {
+    ...process.env,
+    PATH: loginShellPath,
+    PORT: String(API_PORT),
+    CORS_ORIGIN: `http://localhost:${WEB_PORT}`,
+    ZIBBY_ROLE: "primary",
+    ZIBBY_SOURCE_ROOT: sourceRoot,
+  });
+  pipeChildLogs(apiChild, "api");
 
-  if (!(await isHealthy(WEB_HEALTH_URL))) {
-    webChild = spawnNodeChild(webServerEntry(), {
-      ...process.env,
-      PATH: loginShellPath,
-      PORT: String(WEB_PORT),
-      HOSTNAME: "localhost",
-    });
-    pipeChildLogs(webChild, "web");
-  }
+  webChild = spawnNodeChild(webServerEntry(), {
+    ...process.env,
+    PATH: loginShellPath,
+    PORT: String(WEB_PORT),
+    HOSTNAME: "localhost",
+  });
+  pipeChildLogs(webChild, "web");
 
   const apiReady = await waitForHealthy(API_HEALTH_URL, { timeoutMs: 30_000, intervalMs: 500 });
   if (!apiReady) {
@@ -72,16 +99,30 @@ async function bootstrap(): Promise<void> {
   createWindow();
 }
 
-function pipeChildLogs(child: ChildProcess, label: string): void {
-  child.stdout?.on("data", (chunk: Buffer) => process.stdout.write(`[${label}] ${chunk}`));
-  child.stderr?.on("data", (chunk: Buffer) => process.stderr.write(`[${label}] ${chunk}`));
+function buildMenuTemplate(): Electron.MenuItemConstructorOptions[] {
+  return [{ role: "appMenu" }, { role: "editMenu" }, { role: "viewMenu" }, { role: "windowMenu" }];
+}
+
+function pipeChildLogs(child: ChildProcess, label: "api" | "web"): void {
+  mkdirSync(logDir(), { recursive: true });
+  const log = createWriteStream(path.join(logDir(), `${label}.log`), { flags: "a" });
+  log.write(`\n--- ${new Date().toISOString()} ${label} start ---\n`);
+  child.stdout?.on("data", (chunk: Buffer) => {
+    log.write(chunk);
+    process.stdout.write(`[${label}] ${chunk}`);
+  });
+  child.stderr?.on("data", (chunk: Buffer) => {
+    log.write(chunk);
+    process.stderr.write(`[${label}] ${chunk}`);
+  });
+  child.once("exit", () => log.end());
 }
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,
-    title: "ZIBBY",
+    title: "ZibbyOS",
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -93,26 +134,41 @@ function createWindow(): void {
   void mainWindow.loadURL(`http://localhost:${WEB_PORT}/`);
 }
 
+function fatal(title: string, message: string): void {
+  dialog.showErrorBox(title, message);
+  quitting = true;
+  app.exit(1);
+}
+
 function onStartupTimeout(what: string, port: number): void {
   dialog.showErrorBox(
-    "ZIBBY couldn't start",
-    `The ${what} didn't come up on port ${port} in time. Check that nothing else is using that port and try again.`,
+    "ZibbyOS couldn't start",
+    `The ${what} didn't come up on port ${port} in time. Check ${logDir()} for details and try again.`,
   );
   app.quit();
 }
 
 function onFatalStartupError(err: unknown): void {
-  dialog.showErrorBox("ZIBBY failed to start", err instanceof Error ? err.message : String(err));
+  dialog.showErrorBox("ZibbyOS failed to start", err instanceof Error ? err.message : String(err));
   app.quit();
 }
 
+// Standard macOS behaviour: closing the window keeps the app (and its
+// servers) running in the Dock. Cmd+Q quits.
 app.on("window-all-closed", () => {
-  app.quit();
+  if (process.platform !== "darwin") app.quit();
+});
+
+app.on("activate", () => {
+  if (!mainWindow && apiChild && webChild) createWindow();
 });
 
 app.on("before-quit", (event) => {
+  if (quitting) return;
+  quitting = true;
   event.preventDefault();
-  void Promise.all([apiChild ? killChild(apiChild) : Promise.resolve(), webChild ? killChild(webChild) : Promise.resolve()]).then(
-    () => app.exit(0),
-  );
+  void Promise.all([
+    apiChild ? killChild(apiChild) : Promise.resolve(),
+    webChild ? killChild(webChild) : Promise.resolve(),
+  ]).then(() => app.exit(0));
 });

@@ -22,7 +22,7 @@ image generation and vision QA run locally; Haiku is the vision tie-breaker.
 
 ## 0. The business in one loop, the product in one paragraph
 
-ZibbyCorp is a **digital product factory**, not a content generator. The asset is the
+ZibbyOS is a **digital product factory**, not a content generator. The asset is the
 loop, not any single book:
 
 ```

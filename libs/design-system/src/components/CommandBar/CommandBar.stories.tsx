@@ -7,7 +7,7 @@ const meta: Meta<typeof CommandBar> = {
   title: "DesignSystem/CommandBar",
   component: CommandBar,
   parameters: { layout: "fullscreen" },
-  args: { title: "ZIBBYCORP", subtitle: "/ BRIDGE" },
+  args: { title: "ZIBBYOS", subtitle: "/ BRIDGE" },
 };
 export default meta;
 

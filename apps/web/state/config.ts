@@ -25,7 +25,7 @@ export interface SectionConfig {
 }
 
 /**
- * ZB-01: the old flat `NAV_ITEMS` catalog list became the ZibbyCorp 7-section IA
+ * ZB-01: the old flat `NAV_ITEMS` catalog list became the ZibbyOS 7-section IA
  * (`ROUTE-MAP.md` §1) for the `AppHeader` section nav + `SubNav` sub-tabs.
  * `NAV_ITEMS`/`SETTINGS_ITEM` were removed in ZB-13 along with their last reader,
  * the old `ChatToolDock` leaf-level tool list.

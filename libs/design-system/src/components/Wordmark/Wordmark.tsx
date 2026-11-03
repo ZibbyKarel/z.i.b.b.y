@@ -16,7 +16,7 @@ export interface WordmarkProps {
  * `.18em`, uppercase). Standalone in `AppHeader`'s leading slot and animated
  * (opacity only, the text itself never changes) inside `Splash`.
  */
-export function Wordmark({ children = "ZIBBYCORP", ref }: WordmarkProps) {
+export function Wordmark({ children = "ZIBBYOS", ref }: WordmarkProps) {
   return (
     <Typography aria-label={children} data-testid={WordmarkTestId.Root} ref={ref} type="wordmark">
       {children}

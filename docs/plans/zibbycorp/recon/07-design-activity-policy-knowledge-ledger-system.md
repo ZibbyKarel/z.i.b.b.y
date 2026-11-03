@@ -11,7 +11,7 @@ branches on `route` (`"<section>/<screen>"`) — e.g. `activity/log`,
 `.dc.html`/`zc-data.js` source was exhaustive enough that a browser pass would add
 only pixel-precision, not structure; flagged as a follow-up if desired.
 
-Design-system tokens (`ZibbyCorp Design System.md`) referenced by name throughout:
+Design-system tokens (`ZibbyOS Design System.md`) referenced by name throughout:
 `--bg/--panel/--panel2/--line/--line2/--ink/--ink2/--ink3`, mono/sans type scale,
 `space-*` (4/8 rhythm), `radius:0` everywhere, status hues `--s-work/-think/-block/
 -err/-done/-idle` (canonical order **working → thinking → blocked → error → done →
@@ -345,7 +345,7 @@ Backend contract fields cited by file/schema name; "MISSING" = no equivalent fie
 
 ## 4. Where today's `/settings` tabs (and related config surfaces) land in the new IA
 
-| Current tab / surface | Component | Proposed ZibbyCorp destination |
+| Current tab / surface | Component | Proposed ZibbyOS destination |
 |---|---|---|
 | `preferences` (locale, caffeinate) | `Screen.tsx` inline | System → Settings → GENERAL (locale is language, not in the mock's 3 groups — needs a 4th row or folds into GENERAL) |
 | `gates` (global rule catalog + system floor panel) | `GateRulesSection`, `SystemFloorPanel` | Policy → Gate rules (fixed floor + per-project rules sections) |
@@ -373,10 +373,10 @@ Cross-referenced against the existing `libs/design-system/src/components/*` inve
 2. **FilterBar** (Live log's dept/agent/task selects + pause/clear; Runs' state segmented control; Gate rules' project-tab segmented control) — a row of label+control filter groups, mixed `<select>`/segmented-control children, with a trailing action-button slot.
 3. **SegmentedControl** (AUTO/ASK toggles throughout Policy; Settings' concurrency/voice/theme/motion rows; Registries tabs) — DS has `Tabs` and `ButtonGroup` which may already cover this; confirm whether either matches the "2–4 option, `--ink`-fill-on-select, mono 10" visual spec exactly or needs a dedicated `Segmented` component. Likely 🔁 (extend/reuse existing) rather than 🆕.
 4. **LiveLogStream** (Live log panel) — a scrolling/capped event-line list with newest-first ordering, per-line state-dot + mono columns, a blinking caret on the newest line, pause/resume semantics, and a client-side ring buffer — this is bespoke enough (animation, caret, streaming semantics) to warrant its own component rather than a DataTable variant.
-5. **MetricStrip** (Runs detail, Distillation run detail — "3 columns between top/bottom hairlines") — `{label, value}[]` fixed-column row with tabular-nums values; recurs identically in both screens (and per `ZibbyCorp Design System.md` §8 "Inspector" component spec — this is a documented, named pattern already).
+5. **MetricStrip** (Runs detail, Distillation run detail — "3 columns between top/bottom hairlines") — `{label, value}[]` fixed-column row with tabular-nums values; recurs identically in both screens (and per `ZibbyOS Design System.md` §8 "Inspector" component spec — this is a documented, named pattern already).
 6. **BudgetMeter** (Budgets cap cards, Spend meters) — a card with label/pct header, big value, thin progress bar (optionally with warn/stop tick markers overlaid), and a caption — two variants needed: simple (Budgets) and dual-threshold (Spend). `Progress`/`ProgressRing`/`Stat` exist in DS but not composed into this exact card shape with tick-marker overlays — likely a new composite built from existing primitives (🔁 compose, not build from scratch).
 7. **DeptSpendBar** (Spend "by department" list, Budgets "today" column) — a label+horizontal-bar+value row, repeated per department; a thin wrapper, possibly foldable into DataTable's per-cell renderer rather than its own component.
-8. **ApprovalCard/Row** — already spec'd in `ZibbyCorp Design System.md` §8 ("Approval card (NEEDS YOU)") as a named component with a defined anatomy (glyph+name+id·dept+wait, request text, APPROVE/DENY/→ actions) — needs building; the Policy → Approvals queue table is a DENSER row variant of the same data, so likely two presentations (card for a rail/inbox context elsewhere in the app, row for this table) sharing one data shape.
+8. **ApprovalCard/Row** — already spec'd in `ZibbyOS Design System.md` §8 ("Approval card (NEEDS YOU)") as a named component with a defined anatomy (glyph+name+id·dept+wait, request text, APPROVE/DENY/→ actions) — needs building; the Policy → Approvals queue table is a DENSER row variant of the same data, so likely two presentations (card for a rail/inbox context elsewhere in the app, row for this table) sharing one data shape.
 9. **DiffViewer / ArtifactPreview** (implied by `Approval.diff[]` in the mock, and Information Architecture Flow B's "shows the diff or artifact") — no DS component renders a unified diff, a draft-text preview, or a PR stat line today (`CodeBlock` exists for plain code display, not diff-hunk coloring). Needed for the (currently-external/shared) approval detail sheet, not this file's own screens, but flagged since the queue row wires to it.
 10. **RuleRow** (Handoff rules, per-project rules, gate-rule catalog) — `from→to` chips / action-pattern text + a mode toggle + optional edit/delete — `RuleCard` (`features/gates/components/RuleCard.tsx`) already exists for the richer agent/global rule model; the mock's simpler `{pattern, mode}` row is a lighter-weight sibling, not a replacement.
 11. **PatternCard** (Learned patterns) — header meta row, big suggestion sentence, an evidence "cell strip" (reusing the DS-documented `dot` primitives from `zibby.js`'s `B.dot`), evidence caption, accept/dismiss actions — novel composite, no existing analog.
@@ -391,7 +391,7 @@ Cross-referenced against the existing `libs/design-system/src/components/*` inve
 ## Key files referenced
 - Design source: `design/ZibbyCorp/Activity Screens.dc.html`, `Policy Screens.dc.html`,
   `Knowledge Screens.dc.html`, `Ledger Screens.dc.html`, `System Screens.dc.html`,
-  `zc-data.js`, `zibby.js`, `ZibbyCorp Design System.md`, `Information Architecture.dc.html`
+  `zc-data.js`, `zibby.js`, `ZibbyOS Design System.md`, `Information Architecture.dc.html`
 - Contracts: `libs/contracts/src/approvals/approval.schema.ts`,
   `libs/contracts/src/gates/gate.schema.ts` + `gate.contract.ts` + `gate-rules.contract.ts`,
   `libs/contracts/src/handoff/handoff.schema.ts`,

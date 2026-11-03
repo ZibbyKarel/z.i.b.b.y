@@ -14,7 +14,7 @@ import {
 } from "../integrations/integrations.storage.service";
 import { McpModule } from "../mcp/mcp.module";
 import { PROJECTS_DIR, ProjectsStorageService } from "../projects/projects.storage.service";
-import { dataDir } from "../shared/data-dir";
+import { dataDir, resolveVaultDir } from "../shared/data-dir";
 import { SkillsModule } from "../skills/skills.module";
 import { EntityMcpController } from "./entity-mcp.controller";
 import { GroundingService } from "./grounding.service";
@@ -25,14 +25,12 @@ import { VaultLintService } from "./vault-lint.service";
 import { VAULT_DIR, VaultService } from "./vault.service";
 
 /**
- * Default vault dir: `$VAULT_DIR` if set, else `dataDir("vault")` (i.e.
- * `.zibby/data/vault`). Real operation points `VAULT_DIR` at the operator's
- * Obsidian vault — a genuinely fresh/empty one is seeded on boot by
- * `VaultSeedService` (F4c), so first-run grounding is never empty.
+ * Default vault dir: see {@link resolveVaultDir} in `shared/data-dir` (`$VAULT_DIR`,
+ * else `~/AI/Vault` on the live root, else `<ZIBBY_DATA_DIR>/vault`). A genuinely
+ * fresh/empty vault is seeded on boot by `VaultSeedService` (F4c), so first-run
+ * grounding is never empty.
  */
-export function resolveVaultDir(): string {
-  return process.env.VAULT_DIR ?? dataDir("vault");
-}
+export { resolveVaultDir };
 
 /**
  * Phase 106: `EntityMcpController` (`list_entities` + `recall_memory`) needs

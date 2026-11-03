@@ -28,6 +28,7 @@ import {
 import * as swaggerUi from "swagger-ui-express";
 import { AppModule } from "./app.module";
 import { resolveDataRoot } from "./shared/data-dir";
+import { initInstanceRole } from "./shared/instance-role";
 import { LoggerService } from "./shared/logging/logger.service";
 import { migrateWorkflowRename } from "./shared/migrations/workflow-rename";
 
@@ -56,12 +57,23 @@ const apiContract = initContract().router({
 });
 
 async function bootstrap(): Promise<void> {
+  // Default to 3333 (Phase 8.3) so the launchd plist can omit PORT and dev keeps
+  // working — `Number(undefined)` was NaN. An explicit PORT (or a .env value) wins.
+  const port = Number(process.env.PORT ?? 3333);
+
+  // Decide primary vs. secondary BEFORE any module boots: the role gates every
+  // tick watcher, the Slack listener and boot-time run recovery (shared/instance-role).
+  const role = initInstanceRole({ port });
+  Logger.log(`instance role: ${role} (data root ${resolveDataRoot()})`, "Bootstrap");
+
   // The pipeline → workflow rename moved/rewrote persisted data: migrate once,
   // BEFORE any module reads the data root (idempotent; a failure must not stop boot).
-  await migrateWorkflowRename(resolveDataRoot(), (m) => new Logger("Migration").log(m)).catch(
-    (err: unknown) =>
-      new Logger("Migration").error(`workflow-rename migration failed: ${String(err)}`),
-  );
+  // Only the primary migrates — a secondary never rewrites shared data on boot.
+  if (role === "primary")
+    await migrateWorkflowRename(resolveDataRoot(), (m) => new Logger("Migration").log(m)).catch(
+      (err: unknown) =>
+        new Logger("Migration").error(`workflow-rename migration failed: ${String(err)}`),
+    );
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
@@ -130,9 +142,6 @@ async function bootstrap(): Promise<void> {
     });
   }
 
-  // Default to 3333 (Phase 8.3) so the launchd plist can omit PORT and dev keeps
-  // working — `Number(undefined)` was NaN. An explicit PORT (or a .env value) wins.
-  const port = Number(process.env.PORT ?? 3333);
   await app.listen(port);
   Logger.log(`api listening on http://localhost:${port} (docs at /docs)`, "Bootstrap");
 }

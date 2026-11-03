@@ -41,6 +41,7 @@ import {
   GoalRunNotParkedError,
   GoalRunNotStoppableError,
 } from "./goals.errors";
+import { isPrimaryInstance } from "../shared/instance-role";
 
 /** Max chars of a verifier's output captured into the verdict file / resume-context. */
 const VERDICT_MAX_CHARS = 4000;
@@ -969,6 +970,9 @@ export class GoalRunnerService implements OnModuleInit {
     for (const run of await this.readAllAggregates()) {
       this.runs.set(run.goalRunId, run);
       if (run.status !== "running" && run.status !== "paused-limit") continue;
+      // A secondary instance (shared/instance-role) only mirrors goals: the primary
+      // may be driving this one right now, so never park or re-dispatch it here.
+      if (!isPrimaryInstance()) continue;
       if (autoResume) {
         void this.reconcileGoal(run).catch((err) => this.onDriveError(run, err));
       } else {

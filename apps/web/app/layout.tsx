@@ -23,8 +23,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ZibbyCorp",
-  description: "ZibbyCorp — Zestful Intuitive Brainy Butler for You.",
+  title: "ZibbyOS",
+  description: "ZibbyOS — Zestful Intuitive Brainy Butler for You.",
 };
 
 export const viewport: Viewport = {

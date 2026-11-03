@@ -117,4 +117,4 @@ warning that the self project points at the running install and the runbook
 (Builder ≠ Subject) wants a separate clone. The inline error sits in a polite
 live region too.
 
-<!-- Last reviewed 2026-09-24 (ZibbyCorp rename): module code changed only by the subsystem → department rename; this doc has no subsystem references. -->
+<!-- Last reviewed 2026-09-24 (ZibbyOS rename): module code changed only by the subsystem → department rename; this doc has no subsystem references. -->

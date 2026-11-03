@@ -4,6 +4,7 @@ import * as path from "node:path";
 import type { IntendedAction } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
+import { initInstanceRole, resetInstanceRoleForTest } from "../shared/instance-role";
 import { formatClaudeStreamLine } from "./claude-stream-format";
 import {
   INTENT_DIR_ENV,
@@ -516,6 +517,35 @@ describe("RunnerCore", () => {
     expect(found?.status).toBe("interrupted");
     expect(found?.pct).toBe(40);
     expect(found?.kind).toBe("agent");
+  });
+
+  it("a secondary instance mirrors a 'running' sidecar read-only (no relabel, no write)", async () => {
+    // Shared data root (shared/instance-role): the primary may own this run's live
+    // child, so a secondary booting over the same runs dir must not reconcile it.
+    const runId = "shared_1780000000000_4243";
+    const file = path.join(dir, `${runId}.json`);
+    const sidecar = JSON.stringify({
+      runId,
+      status: "running",
+      pct: 10,
+      cwd: path.join(dir, "shared"),
+      startedAt: new Date().toISOString(),
+      pid: 4243,
+      logFile: path.join(dir, `${runId}.log`),
+    });
+    await fs.writeFile(file, sidecar, "utf8");
+
+    process.env.ZIBBY_ROLE = "secondary";
+    initInstanceRole({ port: 0 });
+    try {
+      const core = new RunnerCore(dir, strategy);
+      await core.init();
+      expect(core.list().find((r) => r.runId === runId)?.status).toBe("running");
+      expect(await fs.readFile(file, "utf8")).toBe(sidecar);
+    } finally {
+      delete process.env.ZIBBY_ROLE;
+      resetInstanceRoleForTest();
+    }
   });
 
   it("does NOT relabel a still-alive orphan to interrupted on restart (pgid)", async () => {

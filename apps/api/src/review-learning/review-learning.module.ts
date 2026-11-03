@@ -5,7 +5,7 @@ import { IntegrationsModule } from "../integrations/integrations.module";
 import { VAULT_DIR } from "../memory/vault.service";
 import { ProjectsModule } from "../projects/projects.module";
 import { ResolvedProjectModule } from "../projects/resolved-project.module";
-import { dataDir } from "../shared/data-dir";
+import { dataDir, resolveVaultDir } from "../shared/data-dir";
 import { ScheduledTasksStorageModule } from "../tasks/scheduled-tasks-storage.module";
 import { ReviewCommentDistiller } from "./review-comment.distiller";
 import { ReviewCommentFetcher } from "./review-comment.fetcher";
@@ -50,7 +50,7 @@ export function resolveReviewRulesDir(): string {
   controllers: [ReviewLearningController],
   providers: [
     { provide: REVIEW_RULES_DIR, useFactory: resolveReviewRulesDir },
-    { provide: VAULT_DIR, useFactory: () => process.env.VAULT_DIR ?? dataDir("vault") },
+    { provide: VAULT_DIR, useFactory: resolveVaultDir },
     ReviewRulesStore,
     ZibbyPrLocator,
     {

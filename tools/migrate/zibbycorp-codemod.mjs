@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ZibbyCorp code codemod (ZC-01..ZC-04): subsystem → department + persona ids →
+// ZibbyOS code codemod (ZC-01..ZC-04): subsystem → department + persona ids →
 // department ids / function words, over tracked source files, plus `git mv` of
 // every path whose name contains a token. Data dirs are NOT touched here — see
 // `zibbycorp-departments.mjs`. Usage:

@@ -1,4 +1,5 @@
 import type { WatcherHealth, WatcherId } from "@zibby/contracts";
+import { isPrimaryInstance } from "./instance-role";
 import type { ScopedLogger } from "./logging/logger.service";
 
 /**
@@ -50,12 +51,17 @@ export abstract class TickingWatcherBase {
   /** Each service supplies its own child `ScopedLogger` (tagged with its class name). */
   protected abstract readonly log: ScopedLogger;
 
-  /** (Re-)arm the timer from {@link tickMs}; `<= 0` leaves it disabled. */
+  /**
+   * (Re-)arm the timer from {@link tickMs}; `<= 0` leaves it disabled. A secondary
+   * instance (shared/instance-role) never arms: the primary owns every heartbeat
+   * over the shared data root, so two processes never double-fire the same work.
+   */
   protected arm(): void {
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
     }
+    if (!isPrimaryInstance()) return;
     const ms = this.tickMs();
     if (ms > 0) {
       this.timer = setInterval(() => void this.guardedTick(), ms);
@@ -88,6 +94,14 @@ export abstract class TickingWatcherBase {
   watcherHealth(now = Date.now(), staleFactor = 3): WatcherHealth {
     const tickMs = this.tickMs();
     if (tickMs <= 0) return { id: this.watcherId, status: "disabled", tickMs };
+    if (!isPrimaryInstance()) {
+      return {
+        id: this.watcherId,
+        status: "disabled",
+        tickMs,
+        detail: "secondary instance — the primary runs it",
+      };
+    }
     if (this.lastTickAt === null) {
       return { id: this.watcherId, status: "ok", tickMs, detail: "armed, not yet ticked" };
     }

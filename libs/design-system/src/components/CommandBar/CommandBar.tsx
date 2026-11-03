@@ -11,7 +11,7 @@ export enum CommandBarTestId {
 }
 
 export interface CommandBarProps {
-  /** Wordmark next to the logo, e.g. `ZIBBYCORP`. */
+  /** Wordmark next to the logo, e.g. `ZIBBYOS`. */
   title: string;
   /** Faint trailing path, e.g. `/ BRIDGE`. */
   subtitle?: string;

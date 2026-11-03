@@ -134,7 +134,7 @@ export function formatWaited(iso: string, now: Date = new Date()): string {
   return `${Math.round(hours / 24)}d`;
 }
 
-/** Tone usable for Card / Typography / StatusDot / Icon / Stat — the pre-ZibbyCorp
+/** Tone usable for Card / Typography / StatusDot / Icon / Stat — the pre-ZibbyOS
  * {@link LegacyStateTone} minus `run` (which collapses to `accent` in these
  * surfaces; those DS props stay on the legacy vocabulary until ZA-02 restyles
  * them — see `run.ts`'s `BADGE_TO_STATE_TONE`). */

@@ -15,7 +15,7 @@ export interface LoadingStateProps {
  * The loading twin of {@link EmptyState} / {@link LoadError} — a quiet placeholder shown
  * while a list query is still pending, so a cold load never flashes the empty state's
  * "create your first…" before the data arrives. A mono uppercase status line over an
- * indeterminate ink bar — the ZibbyCorp loading language (DS.md §1.2/§6: no glow, no blur).
+ * indeterminate ink bar — the ZibbyOS loading language (DS.md §1.2/§6: no glow, no blur).
  */
 export function LoadingState({ label }: LoadingStateProps) {
   return (

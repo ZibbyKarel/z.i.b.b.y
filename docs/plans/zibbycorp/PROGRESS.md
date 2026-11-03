@@ -1,4 +1,4 @@
-# ZibbyCorp — progress and handoff
+# ZibbyOS — progress and handoff
 
 **Read this first after a context loss.** Then run `rtk git log --oneline` on the current
 part's branch to see what actually landed.
@@ -529,12 +529,12 @@ The 14 vitest failures are container-only and green in CI: `backup.test` ×4, `p
 
 ### Butler's briefing
 
-The ZibbyCorp migration is complete and parked at the PR gate. PR #70 goes to `main`; merging it is yours.
+The ZibbyOS migration is complete and parked at the PR gate. PR #70 goes to `main`; merging it is yours.
 
 **What landed:**
 - **Part 0:** departments.
 - **Part E:** employees.
-- **Part A:** the ZibbyCorp design system, with a lint wall so `apps/web` has zero `className`.
+- **Part A:** the ZibbyOS design system, with a lint wall so `apps/web` has zero `className`.
 - **Part B:** the company IA, meaning ORG, WORK, ACTIVITY, POLICY, KNOWLEDGE, LEDGER and SYSTEM, plus the ⌘K palette and the shell-global COO dock.
 - **Part C:** parent tasks and chains.
 - **Cleanup:** the orb/HUD/glass UI and 314 dead i18n keys are gone.

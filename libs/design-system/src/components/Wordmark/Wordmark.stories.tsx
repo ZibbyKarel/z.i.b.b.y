@@ -20,5 +20,5 @@ export const Overview: Story = {
 };
 
 export const Playground: Story = {
-  args: { children: "ZIBBYCORP" },
+  args: { children: "ZIBBYOS" },
 };

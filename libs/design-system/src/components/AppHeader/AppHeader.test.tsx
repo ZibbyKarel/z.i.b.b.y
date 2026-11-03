@@ -7,7 +7,7 @@ import { AppHeader, AppHeaderTestId } from "./AppHeader";
 describe("AppHeader", () => {
   it("renders the default Wordmark when no wordmark slot is given", () => {
     render(<AppHeader />);
-    expect(screen.getByTestId(AppHeaderTestId.Wordmark)).toHaveTextContent("ZIBBYCORP");
+    expect(screen.getByTestId(AppHeaderTestId.Wordmark)).toHaveTextContent("ZIBBYOS");
   });
 
   it("renders the brand mark beside the default wordmark", () => {
@@ -115,7 +115,7 @@ describe("AppHeader", () => {
     const link = screen.getByTestId(AppHeaderTestId.HomeLink);
     expect(link.tagName).toBe("A");
     expect(link).toHaveAttribute("href", "/org");
-    expect(link).toHaveAccessibleName("ZibbyCorp");
+    expect(link).toHaveAccessibleName("ZibbyOS");
   });
 
   it("renders the home link through a custom linkComponent", () => {

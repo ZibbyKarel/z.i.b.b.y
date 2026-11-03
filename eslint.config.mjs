@@ -7,6 +7,7 @@ export default [
     ignores: [
       "**/node_modules/**",
       "**/.next/**",
+      "**/.next-desktop/**",
       "**/dist/**",
       "apps/desktop/resources/**",
       "apps/desktop/release/**",

@@ -1,4 +1,4 @@
-# ZibbyCorp — route, settings and feature relocation map
+# ZibbyOS — route, settings and feature relocation map
 
 ## Current IA (supersedes everything below)
 
@@ -50,7 +50,7 @@ The design reference for each area:
 
 | Area | Design file |
 |---|---|
-| Shell | `ZibbyCorp App.dc.html` |
+| Shell | `ZibbyOS App.dc.html` |
 | ORG | `Org Screens.dc.html` |
 | WORK | `Work Screens.dc.html` |
 | ACTIVITY | `Activity Screens.dc.html` |

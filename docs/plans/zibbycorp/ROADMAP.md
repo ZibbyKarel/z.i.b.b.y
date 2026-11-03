@@ -1,4 +1,4 @@
-# ZibbyCorp — roadmap (night-run executable)
+# ZibbyOS — roadmap (night-run executable)
 
 > **REVISED 2026-09-24 (night-run kickoff): D-012 … D-015 override this file.** They are at
 > the end of `DECISIONS.md`.
@@ -17,7 +17,7 @@
 - ZIBBY's root is the **COO**.
 - 11 **departments** own **employees** (agents) and **pipelines**.
 - Work crosses departments via **chains** and moves within a department via **pipelines**.
-- The whole UI is re-skinned to the ZibbyCorp design system and composed **only** from DS
+- The whole UI is re-skinned to the ZibbyOS design system and composed **only** from DS
   components.
 
 **Read first, in order:**
@@ -35,7 +35,7 @@ Recon lives in `recon/`; read `recon/README.md` for the overrides.
 cd design/ZibbyCorp && python3 -m http.server 8765
 ```
 
-Canon: `ZibbyCorp Design System.md` (tokens, type, motion, component anatomy) and
+Canon: `ZibbyOS Design System.md` (tokens, type, motion, component anatomy) and
 `zc-data.js` (mock model).
 
 ---

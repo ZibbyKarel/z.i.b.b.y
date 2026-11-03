@@ -6,7 +6,7 @@ import { Wordmark, WordmarkTestId } from "./Wordmark";
 describe("Wordmark", () => {
   it("renders the default brand text", () => {
     render(<Wordmark />);
-    expect(screen.getByTestId(WordmarkTestId.Root)).toHaveTextContent("ZIBBYCORP");
+    expect(screen.getByTestId(WordmarkTestId.Root)).toHaveTextContent("ZIBBYOS");
   });
 
   it("renders an overridden text", () => {
@@ -18,6 +18,6 @@ describe("Wordmark", () => {
     render(<Wordmark />);
     const el = screen.getByTestId(WordmarkTestId.Root);
     expect(el.tagName).toBe("SPAN");
-    expect(el).toHaveAccessibleName("ZIBBYCORP");
+    expect(el).toHaveAccessibleName("ZIBBYOS");
   });
 });

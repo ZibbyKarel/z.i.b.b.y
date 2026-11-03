@@ -7,6 +7,7 @@ import {
   ApprovalNotAnswerableError,
   ApprovalNotFoundError,
   ApprovalNotRevisableError,
+  ApprovalOwnedElsewhereError,
   InvalidApprovalIdError,
 } from "./approvals.errors";
 import { ApprovalsService } from "./approvals.service";
@@ -20,7 +21,8 @@ const errors = makeErrorMapper("Approval", {
 const decided = (error: unknown) =>
   error instanceof ApprovalAlreadyDecidedError ||
   error instanceof ApprovalNotRevisableError ||
-  error instanceof ApprovalNotAnswerableError
+  error instanceof ApprovalNotAnswerableError ||
+  error instanceof ApprovalOwnedElsewhereError
     ? ({ status: 409, body: { message: error.message } } as const)
     : undefined;
 

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Rebuild `/dashboard/inbox/pull-requests` to the ZibbyCorp "Inbox pull requests" design (stack-grouped list, state stripe cards, described review-mode menu, stack-aware detail header) and add the two missing backend capabilities: **Address review comments** (`pr-address-comments` workflow + endpoint + `addressComments` state on `InboxPr`) and the **browser** review level (`pr-review-browser` workflow).
+**Goal:** Rebuild `/dashboard/inbox/pull-requests` to the ZibbyOS "Inbox pull requests" design (stack-grouped list, state stripe cards, described review-mode menu, stack-aware detail header) and add the two missing backend capabilities: **Address review comments** (`pr-address-comments` workflow + endpoint + `addressComments` state on `InboxPr`) and the **browser** review level (`pr-review-browser` workflow).
 
 **Architecture:** Backend mirrors the existing todo-11 rebase flow end to end: a ts-rest endpoint starts a task with an explicit workflow target, stamps server-written provenance on the `ScheduledTask`, the scheduler hands the finished run's report to `TaskOutputService`, which records an approval that is approved on the spot (operator's click authorised it) or left pending (Tier-3), and the inbox service's approval runner does the push. The review level is one more `REVIEW_TARGETS` entry plus a brief section. Web: all stack/state logic is pure functions in `features/inbox/inbox.ts`; components compose DS primitives, with three small DS extensions (Card edge, DropDownButton item, new `IndentRail`).
 

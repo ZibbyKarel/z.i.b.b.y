@@ -97,9 +97,9 @@ Legend: ⬜ todo · 🟦 in progress · ✅ landed (sha) · ⛔ parked (reason)
 
 ## Night run 1 (started 2026-10-01 evening) — goal and operator answers
 
-**Goal (operator, verbatim intent):** in ZibbyCorp, start autonomous creation of
+**Goal (operator, verbatim intent):** in ZibbyOS, start autonomous creation of
 children's coloring books, runnable against a **local** model and against a **cloud**
-model; everything configurable through the ZibbyCorp UI; an automation that runs a
+model; everything configurable through the ZibbyOS UI; an automation that runs a
 pipeline **twice a week** and ends with a folder containing the book PDF as the output
 artifact.
 

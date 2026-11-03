@@ -44,7 +44,7 @@ export interface AppFrameProps {
 }
 
 /**
- * The ZibbyCorp app shell — DS.md §5's grid: a 56px header row over a
+ * The ZibbyOS app shell — DS.md §5's grid: a 56px header row over a
  * `auto | 1fr` body (rail + main) — the rail column is as wide as its child
  * (the `ActivityDock`: 50px bar, plus its body when open) — content spanning the
  * full width over the 24px grid background. At 390px nothing

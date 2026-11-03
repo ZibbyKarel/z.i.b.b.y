@@ -19,7 +19,7 @@ const TIER_FILTERS: TierFilter[] = ["all", "memory", "daily", "knowledge"];
 
 /**
  * The second-brain node graph. The shared source (`KnowledgeSourceBar`) shows either
- * the local ZibbyCorp vault (tier filter) or a team's read-only knowledge base. A node
+ * the local ZibbyOS vault (tier filter) or a team's read-only knowledge base. A node
  * click opens that note in the Trezor, for the same source.
  */
 export function GraphScreen() {

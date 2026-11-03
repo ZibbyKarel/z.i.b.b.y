@@ -17,6 +17,7 @@ import type {
   RunSpec,
   RunnerRunStatus,
 } from "./runner-core.types";
+import { isPrimaryInstance } from "../shared/instance-role";
 
 /**
  * Called when a live run announces a mid-run action with an external effect (a
@@ -301,6 +302,14 @@ export class RunnerCore<R extends BaseRun> {
       const parsed = this.strategy.schema.safeParse(data);
       if (!parsed.success) continue;
       let run = parsed.data;
+      if (!isPrimaryInstance()) {
+        // A secondary instance (shared/instance-role) shares this runs dir with the
+        // primary, whose children may be alive right now. Mirror the records
+        // read-only: no relabelling, no pgid monitor, no resumable spec — the
+        // primary alone reconciles, monitors and resumes what it spawned.
+        this.runs.set(run.runId, { run });
+        continue;
+      }
       if (run.status === "running") {
         // Phase 6: a run left "running" may be a live orphan that survived a hard
         // crash (kill -9 reparents a detached child to init). Probe its process

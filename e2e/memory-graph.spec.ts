@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
  * Throughline: the Vault screen (ZB-09, moved from `/memory`) lists the real
  * vault grouped by tier → department shelf and opens a note's reader on
  * selection, with its wikilinks navigable as chips. Exercises the memory graph
- * + note query wiring reused from the pre-ZibbyCorp `/memory` screen — the
+ * + note query wiring reused from the pre-ZibbyOS `/memory` screen — the
  * force-directed graph visualization itself was dropped (not part of the
  * `Knowledge Screens.dc.html` mock, which shows a folder list).
  */

@@ -31,7 +31,7 @@ export interface RailProps {
   empty?: ReactNode;
   children?: ReactNode;
   /** Makes the header a toggle button that shows/hides the body — the
-   *  ZibbyCorp "PINNED" rail section. Omitted (default `false`), `Rail`
+   *  ZibbyOS "PINNED" rail section. Omitted (default `false`), `Rail`
    *  behaves exactly as before: a static header, body always rendered,
    *  filling the available height. */
   collapsible?: boolean;
@@ -53,7 +53,7 @@ export interface RailProps {
  * `Rail` itself stays width-agnostic so it fits either context. Presentational
  * container only — `ApprovalCard` supplies the rows via `children`.
  *
- * `collapsible` (ZibbyCorp "PINNED" section, stacked above this same rail's
+ * `collapsible` (ZibbyOS "PINNED" section, stacked above this same rail's
  * NEEDS YOU/RUNNING) swaps the static `SectionLabel` header for a toggle
  * button with a rotating chevron, and bounds the body with `maxHeight`
  * instead of letting it grow — the caller (e.g. `PinnedRail`) owns the

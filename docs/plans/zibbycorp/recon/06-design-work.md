@@ -1,9 +1,9 @@
-# Design audit — Work Screens.dc.html (ZibbyCorp mockup) vs current z.i.b.b.y code
+# Design audit — Work Screens.dc.html (ZibbyOS mockup) vs current z.i.b.b.y code
 
 Scope per assignment: `design/ZibbyCorp/Work Screens.dc.html` (Tasks, Task detail,
 New task, Chains library+editor, Goals, Companies, Projects) + the task/chain/goal/
 company/project slices of `design/ZibbyCorp/zc-data.js`. Cross-referenced against
-`Information Architecture.dc.html` (product spec), `ZibbyCorp Design System.md`
+`Information Architecture.dc.html` (product spec), `ZibbyOS Design System.md`
 (tokens/components), and the real code: `libs/contracts/src`, `apps/api/src`,
 `apps/web/features`. Prior research consumed: `02-web-routes.md`,
 `03-backend-domain.md` (both already cover the full current web/backend surface in
@@ -17,9 +17,9 @@ read directly and is fully deterministic/traceable from the mock data).
 
 ## 0. Orienting facts that shape everything below
 
-- **ZibbyCorp is a *rename + reframe* of the existing 11-subsystem federation**,
+- **ZibbyOS is a *rename + reframe* of the existing 11-subsystem federation**,
   not a new backend: `Information Architecture.dc.html` §05 "Migration" table maps
-  every current nav segment 1:1 onto a ZibbyCorp location (`overview→ORG/Org map`,
+  every current nav segment 1:1 onto a ZibbyOS location (`overview→ORG/Org map`,
   `chains→WORK/Chains`, `gates→POLICY/Gate rules`, etc). UI shows corporate names
   only (Development, Monitoring & Ops, …); the 11 mythic ids (forge, puls, …) stay
   in code as-is — **no rename of `SubsystemIdSchema` members is implied**, only a
@@ -54,7 +54,7 @@ read directly and is fully deterministic/traceable from the mock data).
 
 Route key format below is the mock's own hash-router value (`this.props.route`,
 parsed as `work/<segment>[/<id>]`), matching the IA's proposed `WORK` section.
-Token/label sourcing: `ZibbyCorp Design System.md` (see that file for the full
+Token/label sourcing: `ZibbyOS Design System.md` (see that file for the full
 token sheet — not re-quoted per field below except where a concrete value matters).
 
 ### 1.1 Tasks — `work/tasks`
@@ -430,7 +430,7 @@ already flags for today's real `/pipelines`):**
     conditional `OPEN →` button (only when a company is set, → `work/companies/
     <id>`); below it a dynamic note: if linked, "Inherits <company> limits:
     $<daily>/day, $<monthly>/month. The stricter of this cap and the company's
-    wins."; if internal, "Internal projects draw on the company-wide ZibbyCorp
+    wins."; if internal, "Internal projects draw on the company-wide ZibbyOS
     budget." — **again documents that an "internal" (no-company) project still
     has an implicit ambient budget ceiling**, a concept with no obvious existing
     counterpart (today's global `Budget`/`GlobalBudgetSchema` is a *subscription
@@ -754,7 +754,7 @@ service (rather than summing at read time), and possibly a `chain-handoff`-speci
 ## 5. Real features NOT in this design scope — where they'd go / open decisions
 
 - **Teams entity** (`/teams`, "the layer between Company and Project", owns a
-  read-only knowledge base) — **absent from the entire ZibbyCorp mock set**
+  read-only knowledge base) — **absent from the entire ZibbyOS mock set**
   (checked: not in Work Screens, not in the IA sitemap's WORK section, not
   mentioned in the migration table). ❓ **Decision needed**: was Team deliberately
   dropped from the redesign (folded into Company or Project), or simply not yet
@@ -807,7 +807,7 @@ service (rather than summing at read time), and possibly a `chain-handoff`-speci
 
 ## 6. Reusable UI components implied by these screens
 
-All follow `ZibbyCorp Design System.md` §8 (radius 0, mono-uppercase controls,
+All follow `ZibbyOS Design System.md` §8 (radius 0, mono-uppercase controls,
 1px hairlines) — component names below are proposed, not mock-literal.
 
 1. **`FilterBar`** — a row of mixed controls: N `<select>`s + N segmented
@@ -886,7 +886,7 @@ All follow `ZibbyCorp Design System.md` §8 (radius 0, mono-uppercase controls,
 
 - Design: `design/ZibbyCorp/Work Screens.dc.html`, `design/ZibbyCorp/zc-data.js`,
   `design/ZibbyCorp/Information Architecture.dc.html`,
-  `design/ZibbyCorp/ZibbyCorp Design System.md`
+  `design/ZibbyCorp/ZibbyOS Design System.md`
 - Contracts: `libs/contracts/src/tasks/task.schema.ts` (`ScheduledTaskSchema`,
   `TaskTargetSchema`), `libs/contracts/src/pipelines/pipeline.schema.ts`
   (`PipelinePhaseSchema`, `PhaseLoopSchema`, `PipelineOutputSchema`),

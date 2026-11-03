@@ -23,7 +23,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-// ZB-01: `AppShell` is rebuilt over the ZibbyCorp DS `AppFrame` — a header
+// ZB-01: `AppShell` is rebuilt over the ZibbyOS DS `AppFrame` — a header
 // (section nav, limits), the PINNED/"NEEDS YOU"/RUNNING rails and the
 // page content, plus the same provider stack (catalog/new-task/chat) as
 // before. `usePathname`/`useRouter`/`useSearchParams` come from the global

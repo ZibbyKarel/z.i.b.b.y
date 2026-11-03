@@ -19,10 +19,10 @@ describe("BrandMark", () => {
   });
 
   it("is an image with an accessible name when labelled", () => {
-    render(<BrandMark label="ZibbyCorp" />);
+    render(<BrandMark label="ZibbyOS" />);
     const el = screen.getByTestId(BrandMarkTestId.Root);
     expect(el).toHaveRole("img");
-    expect(el).toHaveAccessibleName("ZibbyCorp");
+    expect(el).toHaveAccessibleName("ZibbyOS");
     expect(el).not.toHaveAttribute("aria-hidden");
   });
 });

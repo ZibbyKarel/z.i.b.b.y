@@ -64,7 +64,7 @@ export function DistillScreen() {
   );
 }
 
-/** The ZibbyCorp vault's distillation automations (memory-distill, gap-detect). */
+/** The ZibbyOS vault's distillation automations (memory-distill, gap-detect). */
 function LocalDistill() {
   const t = useTranslations("knowledge");
   const ta = useTranslations("settings");

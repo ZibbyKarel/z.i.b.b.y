@@ -1,4 +1,4 @@
-# ZibbyCorp — decisions log
+# ZibbyOS — decisions log
 
 This log is append-only. Each entry records the call, the alternatives, and the reason.
 A later session must read it before reopening any of these questions.
@@ -58,7 +58,7 @@ pool. Where the mock and this decision differ, this decision wins.
 - Re-skin both entities.
 - Companies go to WORK → Companies.
 - Teams become WORK → Teams, a sibling sub-tab.
-- "ZibbyCorp" is a **brand only** (wordmark, splash). It is never an entity, so there is no
+- "ZibbyOS" is a **brand only** (wordmark, splash). It is never an entity, so there is no
   naming collision with `Company`.
 
 ---
@@ -283,7 +283,7 @@ is the only sanctioned mutation.
 - `libs/design-system/src/immersive/*` (orb map, GlassSurface, HandoffFlare…) is
   **deleted** at the end of Part B (ZB-13), once nothing imports it.
 - Tokens have a single source: `tokens.ts` → generated `@theme` in `theme/globals.css`.
-  Light and dark are complete sets per `design/ZibbyCorp/ZibbyCorp Design System.md`.
+  Light and dark are complete sets per `design/ZibbyCorp/ZibbyOS Design System.md`.
 
 **Why:** the design's "instrument paper" language is incompatible with the WebGL orb scene
 (05 §5). Keeping both means two visual languages.
@@ -333,7 +333,7 @@ committed.
 | O-02 | **Czech is the default**, and English is switchable in System → Settings → General. |
 | O-13 | **Approve with a single click everywhere.** `HoldButton` is removed from approval surfaces. This is still an explicit operator decision, so Law 1 holds. |
 | O-26 | **The orb map is deleted.** |
-| Brand | **ZibbyCorp.** The operator is the CEO, and **Zibby is the COO** (the root orchestrator and chat). |
+| Brand | **ZibbyOS.** The operator is the CEO, and **Zibby is the COO** (the root orchestrator and chat). |
 | Priority, when time or context runs short | The rename comes first, then Employees, then visuals, then IA. **Chains come last** (Part C). |
 
 ## D-015 — Agents are positions; Employees are instances (refines D-002)

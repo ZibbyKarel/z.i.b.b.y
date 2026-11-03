@@ -612,7 +612,7 @@ A restart also drops every in-memory run slot — a stage found `running` with a
 PID reconciles to `interrupted` same as always, and a resumed run is not counted against
 the limit until it is dispatched again.
 
-<!-- ZibbyCorp ZB-05a (2026-09-25): recordArtifact gains the chain-step emitter (fail-soft, like the scout emission). -->
+<!-- ZibbyOS ZB-05a (2026-09-25): recordArtifact gains the chain-step emitter (fail-soft, like the scout emission). -->
 
 <!-- Publishing factory P1/P4 (2026-10-01): tool phase, approval: ask, budget, default project, run-folder line in the stage task, WORKFLOW_DEMO_FIXTURE_DIR. -->
 

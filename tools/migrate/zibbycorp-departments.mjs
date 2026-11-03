@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ZibbyCorp department migration (ZC-03 / D-004, D-013, D-016).
+// ZibbyOS department migration (ZC-03 / D-004, D-013, D-016).
 //
 // Rewrites a `.zibby/data`-shaped directory so every subsystem id, field name,
 // and vault note reflects the new department vocabulary. Dry-run by default;
@@ -260,7 +260,7 @@ function walkFiles(dir, base = dir, skipTopChains = true) {
     const isTop = dirname(rel) === ".";
     if (isTop && (TOP_SKIP.has(entry.name) || isBackupDir(entry.name))) continue;
     if (isTop && skipTopChains && entry.name === "chains") continue;
-      if (isTop && skipTopChains && INBOUND_SKIP.has(entry.name)) continue;
+    if (isTop && skipTopChains && INBOUND_SKIP.has(entry.name)) continue;
     if (entry.isDirectory()) {
       out.push(...walkFiles(full, base, skipTopChains));
     } else if (entry.isFile()) {
@@ -382,7 +382,7 @@ function classify(p) {
 
 function buildReport({ dataDir, apply, plans, chains, backupDir }) {
   const lines = [];
-  lines.push(`# ZibbyCorp department migration${apply ? " (applied)" : " (dry run)"}`);
+  lines.push(`# ZibbyOS department migration${apply ? " (applied)" : " (dry run)"}`);
   lines.push("");
   lines.push(`Data dir: \`${dataDir}\``);
   lines.push("");

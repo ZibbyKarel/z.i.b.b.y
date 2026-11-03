@@ -3,6 +3,7 @@ import type { ChannelItem } from "@zibby/contracts";
 import { ApprovalsService } from "../approvals/approvals.service";
 import { IntegrationsStorageService } from "../integrations/integrations.storage.service";
 import { ChannelItemStore } from "./channel-item.store";
+import { isPrimaryInstance } from "../shared/instance-role";
 
 /**
  * Phase 127 follow-up — one-shot, idempotent startup backfill (mirrors
@@ -31,6 +32,8 @@ export class SourceLinkBackfillService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
+    // One-shot shared-data rewrite: the primary instance does it (shared/instance-role).
+    if (!isPrimaryInstance()) return;
     await this.backfillItems();
     await this.backfillApprovals();
   }

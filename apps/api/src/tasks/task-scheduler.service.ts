@@ -64,6 +64,7 @@ import {
 } from "./task-output.service";
 import { sumStageCosts } from "./task-runs.service";
 import { taskTargetId } from "./task-target";
+import { isPrimaryInstance } from "../shared/instance-role";
 
 /** A create input with its attachment set resolved once (Task 6 — resolve, then thread). */
 type CreateTaskInputResolved = CreateTaskInput & { attachments: Attachment[] };
@@ -309,6 +310,8 @@ export class TaskSchedulerService
    * a slot may have freed while the API was down, so drain every project's queue once.
    */
   onApplicationBootstrap(): void {
+    // Recovery rewrites and re-dispatches shared task state — the primary's job only.
+    if (!isPrimaryInstance()) return;
     void this.sweepOutcomes()
       .then(() => this.drainQueues())
       .then(() => this.recoverPending());

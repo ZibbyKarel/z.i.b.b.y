@@ -1,4 +1,5 @@
 import { type ChildProcess, execFile, spawn } from "node:child_process";
+import net from "node:net";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
@@ -17,7 +18,9 @@ export async function resolveLoginShellPath(): Promise<string> {
   try {
     const { stdout } = await execFileAsync(shell, ["-ilc", 'echo -n "$PATH"'], { timeout: 5000 });
     const shellPath = stdout.trim();
-    const merged = new Set([...shellPath.split(":"), ...(process.env.PATH ?? "").split(":")].filter(Boolean));
+    const merged = new Set(
+      [...shellPath.split(":"), ...(process.env.PATH ?? "").split(":")].filter(Boolean),
+    );
     cachedLoginShellPath = [...merged].join(":");
   } catch {
     cachedLoginShellPath = process.env.PATH ?? "";
@@ -32,6 +35,18 @@ export async function isHealthy(url: string, timeoutMs = 1500): Promise<boolean>
   } catch {
     return false;
   }
+}
+
+/** True when something already accepts TCP connections on the port. */
+export function isPortTaken(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = net.connect({ port, host: "127.0.0.1" });
+    socket.once("connect", () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.once("error", () => resolve(false));
+  });
 }
 
 export async function waitForHealthy(

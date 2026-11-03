@@ -60,6 +60,7 @@ import { SystemModule } from "./system/system.module";
 import { AttachmentSetRefsModule } from "./tasks/attachment-set-refs.module";
 import { TasksModule } from "./tasks/tasks.module";
 import { TeamsModule } from "./teams/teams.module";
+import { InstanceLockReleaser } from "./shared/instance-role";
 
 @Module({
   imports: [
@@ -137,5 +138,7 @@ import { TeamsModule } from "./teams/teams.module";
     // doc for why this can't just be BriefingModule importing ChatModule directly.
     BriefingTranscriptSinkModule,
   ],
+  // Releases the primary-instance lock once shutdown hooks have reaped every run.
+  providers: [InstanceLockReleaser],
 })
 export class AppModule {}

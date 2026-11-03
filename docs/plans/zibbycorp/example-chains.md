@@ -3,7 +3,7 @@
 These are **suggestions**, not seed data — ZB-05a ships the chains _feature_
 (`ChainsService`, the CRUD endpoints, `HandoffService`'s hop-walking) with **no
 system chains pre-created**. The operator authors chains through the same PUT
-endpoint these examples describe. They're lifted from the ZibbyCorp design's
+endpoint these examples describe. They're lifted from the ZibbyOS design's
 `design/ZibbyCorp/zc-data.js` (`ZC.chains`), translated into the real
 `ChainInputSchema` shape (`entry` + `steps: {department, gate}[]`).
 

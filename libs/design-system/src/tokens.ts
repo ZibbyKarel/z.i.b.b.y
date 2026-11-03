@@ -13,7 +13,7 @@
 
 /**
  * Named spacing scale. Maps to px: 0/2/4/6/8/10/12/16/20/24/28/32/36/40, plus three
- * ZibbyCorp (DS.md §4) additions that don't already have a slot on the legacy scale:
+ * ZibbyOS (DS.md §4) additions that don't already have a slot on the legacy scale:
  * `175` (14px, DS.md `space-7`), `225` (18px, `space-9`) and `700` (56px, `space-14`,
  * the "document section gap" — the legacy scale tops out at 40px).
  */
@@ -61,7 +61,7 @@ export const spacingValues: Record<Spacing, string> = {
 };
 
 /**
- * ZibbyCorp layout constants (DS.md §5) — the app shell grid. Not part of `Theme`
+ * ZibbyOS layout constants (DS.md §5) — the app shell grid. Not part of `Theme`
  * (they don't swap with theme/context), just a fixed layout vocabulary `AppFrame`/
  * `AppHeader`/`Rail` (ZA-06) and any layout math read directly.
  */
@@ -188,7 +188,7 @@ export interface Theme {
   colorRiskPush: string;
   colorRiskSend: string;
 
-  // ---- ZibbyCorp neutrals (DS.md §2.1) — the instrument-paper/blueprint palette.
+  // ---- ZibbyOS neutrals (DS.md §2.1) — the instrument-paper/blueprint palette.
   // `colorBackground*`/`colorSurface`/… above stay the app's existing 6-level
   // vocabulary (their *values* now derive from these 3 flat levels); these are the
   // literal DS.md names for the new components (`StatePill`,
@@ -212,7 +212,7 @@ export interface Theme {
   /** Background grid line colour — DS.md `--grid`. */
   colorGrid: string;
 
-  // ---- ZibbyCorp state vocabulary (DS.md §2.2) — canonical order:
+  // ---- ZibbyOS state vocabulary (DS.md §2.2) — canonical order:
   // working → thinking → blocked → error → done → idle. The only hues in the
   // system; see `stateTone.ts` (`StateTone`, `stateToneVar`) for the TS-side
   // vocabulary these back. ----------------------------------------------------
@@ -294,7 +294,7 @@ export function tokensToCssVars(t: Theme): Record<string, string> {
     "--color-risk-deletion": t.colorRiskDeletion,
     "--color-risk-push": t.colorRiskPush,
     "--color-risk-send": t.colorRiskSend,
-    // ZibbyCorp neutrals (DS.md §2.1)
+    // ZibbyOS neutrals (DS.md §2.1)
     "--color-bg": t.colorBg,
     "--color-panel": t.colorPanel,
     "--color-panel-2": t.colorPanel2,
@@ -304,7 +304,7 @@ export function tokensToCssVars(t: Theme): Record<string, string> {
     "--color-ink-2": t.colorInk2,
     "--color-ink-3": t.colorInk3,
     "--color-grid": t.colorGrid,
-    // ZibbyCorp state vocabulary (DS.md §2.2) — working → thinking → blocked → error → done → idle
+    // ZibbyOS state vocabulary (DS.md §2.2) — working → thinking → blocked → error → done → idle
     "--color-state-work": t.colorStateWork,
     "--color-state-think": t.colorStateThink,
     "--color-state-block": t.colorStateBlock,
