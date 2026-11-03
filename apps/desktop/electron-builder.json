@@ -15,7 +15,8 @@
   "mac": {
     "icon": "build/icon.icns",
     "category": "public.app-category.developer-tools",
-    "target": ["dmg", "dir"],
+    "target": ["dmg", "zip", "dir"],
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
     "identity": null,
     "hardenedRuntime": false,
     "gatekeeperAssess": false

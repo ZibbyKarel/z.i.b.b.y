@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "stage:resources": "node scripts/stage-resources.mjs",
-    "dist": "electron-builder --mac dmg --config electron-builder.json"
+    "dist": "electron-builder --mac --publish never --config electron-builder.json",
+    "release": "node scripts/release.mjs"
   },
   "devDependencies": {
     "electron": "^34.0.0",

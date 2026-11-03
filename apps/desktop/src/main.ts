@@ -2,7 +2,7 @@ import type { ChildProcess } from "node:child_process";
 import { createWriteStream, mkdirSync } from "node:fs";
 import path from "node:path";
 import { BrowserWindow, Menu, app, dialog } from "electron";
-import { API_HEALTH_URL, API_PORT, WEB_HEALTH_URL, WEB_PORT } from "./config";
+import { API_BASE_URL, API_HEALTH_URL, API_PORT, WEB_HEALTH_URL, WEB_PORT } from "./config";
 import { findForeignOwner, isPidAlive, readLockFile } from "./instanceLock";
 import { apiEntry, instanceLockFile, logDir, readBuildInfo, webServerEntry } from "./paths";
 import {
@@ -12,6 +12,7 @@ import {
   spawnNodeChild,
   waitForHealthy,
 } from "./processes";
+import { checkForUpdates, startUpdateChecks } from "./updater";
 
 // app.getPath('userData') otherwise derives from package.json's "name"
 // (@zibby/desktop) — set before any getPath() call so data lands under
@@ -100,10 +101,30 @@ async function bootstrap(): Promise<void> {
   }
 
   createWindow();
+  startUpdateChecks({ apiBaseUrl: API_BASE_URL });
 }
 
 function buildMenuTemplate(): Electron.MenuItemConstructorOptions[] {
-  return [{ role: "appMenu" }, { role: "editMenu" }, { role: "viewMenu" }, { role: "windowMenu" }];
+  return [
+    {
+      label: app.name,
+      submenu: [
+        { role: "about" },
+        { label: "Check for Updates…", click: () => void checkForUpdates({ manual: true }) },
+        { type: "separator" },
+        { role: "services" },
+        { type: "separator" },
+        { role: "hide" },
+        { role: "hideOthers" },
+        { role: "unhide" },
+        { type: "separator" },
+        { role: "quit" },
+      ],
+    },
+    { role: "editMenu" },
+    { role: "viewMenu" },
+    { role: "windowMenu" },
+  ];
 }
 
 function pipeChildLogs(child: ChildProcess, label: "api" | "web"): void {

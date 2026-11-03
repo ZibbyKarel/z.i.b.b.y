@@ -102,14 +102,17 @@ for (const pkg of NFT_TRACING_GAPS) {
 }
 
 // Baked so the packaged app knows which checkout to run source-dependent
-// work (worktrees, git, etc.) against.
+// work (worktrees, git, etc.) against. A local build bakes this checkout; the
+// CI release build sets ZIBBY_BUILD_SOURCE_ROOT to a `~/`-relative path the app
+// expands at runtime (the runner's own checkout path means nothing on the Mac).
+const sourceRoot = process.env.ZIBBY_BUILD_SOURCE_ROOT || repoRoot;
 const gitSha = execFileSync("git", ["rev-parse", "HEAD"], {
   cwd: repoRoot,
   encoding: "utf8",
 }).trim();
 writeFileSync(
   path.join(resourcesDir, "build-info.json"),
-  JSON.stringify({ sourceRoot: repoRoot, builtAt: new Date().toISOString(), gitSha }, null, 2),
+  JSON.stringify({ sourceRoot, builtAt: new Date().toISOString(), gitSha }, null, 2),
 );
 
 console.log(`Staged desktop resources at ${resourcesDir}`);

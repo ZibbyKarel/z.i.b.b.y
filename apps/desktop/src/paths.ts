@@ -34,7 +34,14 @@ export interface BuildInfo {
 
 export function readBuildInfo(): BuildInfo {
   const file = path.join(resourcesRoot(), "build-info.json");
-  return JSON.parse(readFileSync(file, "utf8")) as BuildInfo;
+  const info = JSON.parse(readFileSync(file, "utf8")) as BuildInfo;
+  return { ...info, sourceRoot: expandHome(info.sourceRoot, app.getPath("home")) };
+}
+
+/** CI release builds bake `~/Workspace/z.i.b.b.y` — the runner's own path means nothing here. */
+export function expandHome(p: string, home: string): string {
+  if (p === "~") return home;
+  return p.startsWith("~/") ? path.join(home, p.slice(2)) : p;
 }
 
 export function logDir(): string {
