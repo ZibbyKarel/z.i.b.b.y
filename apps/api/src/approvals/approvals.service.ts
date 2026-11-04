@@ -165,6 +165,8 @@ export class ApprovalsService {
       reviewEvent?: PrReviewEvent;
       replies?: OperatorThreadReply[];
       reviewDocument?: string;
+      /** todo-36 — the operator discarded ZIBBY's review; `reviewDocument` (may be blank) replaces it. */
+      ownReview?: boolean;
       decidedBy?: "autopilot";
     } = {},
   ): Promise<Approval> {
@@ -177,6 +179,7 @@ export class ApprovalsService {
       opts.replies,
       opts.decidedBy,
       opts.reviewDocument,
+      opts.ownReview,
     );
     if (opts.decidedBy === "autopilot") {
       void this.activity?.record({
@@ -304,6 +307,7 @@ export class ApprovalsService {
     replies?: OperatorThreadReply[],
     decidedBy?: "autopilot",
     reviewDocument?: string,
+    ownReview?: boolean,
   ): Promise<Approval> {
     return withPathLock(`approval:${id}`, async () => {
       const approval = await this.storage.get(id);
@@ -319,6 +323,10 @@ export class ApprovalsService {
         ...(replies && approval.kind === "pr-address-comments" ? { replies } : {}),
         // The operator's edited review text — only a PR-review gate (it carries a suggestion) takes it.
         ...(reviewDocument?.trim() && approval.suggestedReviewEvent ? { reviewDocument } : {}),
+        // todo-36: the operator's own review replaces ZIBBY's — kept even blank (approve, no comment).
+        ...(ownReview && approval.suggestedReviewEvent
+          ? { ownReview: true as const, reviewDocument: reviewDocument ?? "" }
+          : {}),
         ...(decidedBy ? { decidedBy } : {}),
       };
       void this.activity?.record({

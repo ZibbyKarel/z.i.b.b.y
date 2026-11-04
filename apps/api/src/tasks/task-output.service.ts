@@ -324,18 +324,23 @@ export class TaskOutputService implements OnModuleInit {
    * to the phase. That gate WAS the decision on this exact text, so the approval is
    * recorded and approved in one go (the `pr-review` runner posts it) instead of
    * asking twice. `reviewEvent` — the operator's pick at that gate (todo-10); absent → COMMENT.
+   * `ownReview` (todo-36) — the operator replaced the text with their own at that gate; blank is
+   * then a deliberate "approve without comment", not a missing artifact.
    */
   async parkPrReview(
     task: ScheduledTask,
     raw: string,
     signedOffAtGate?: string,
     reviewEvent?: PrReviewEvent,
+    ownReview?: boolean,
   ): Promise<TaskTerminalDelivery> {
     const review = task.prReview;
     if (!review) return {};
     const body = raw.trim().slice(0, PR_REVIEW_MAX_CHARS);
     const ref = `${review.repo}#${review.number}`;
-    if (!body) {
+    // todo-36: the operator's own review signed off at the gate may be blank (approve, no comment).
+    const own = Boolean(ownReview && signedOffAtGate);
+    if (!body && !own) {
       await this.storage.setPrReview(task.id, (current) =>
         current ? { ...current, state: "failed", note: `no ${PR_REVIEW_ARTIFACT}` } : current,
       );
@@ -350,7 +355,7 @@ export class TaskOutputService implements OnModuleInit {
       kind: "pr-review",
       skill: "code-reviewer",
       action: "github.pr.review",
-      detail: `Post review to GitHub — ${ref}${signedOffAtGate ? ` (${reviewEvent ?? "COMMENT"}), approved at workflow gate "${signedOffAtGate}"` : ""}\n\n${body}`,
+      detail: `Post review to GitHub — ${ref}${signedOffAtGate ? ` (${reviewEvent ?? "COMMENT"}), approved at workflow gate "${signedOffAtGate}"${own ? " as the operator's own review" : ""}` : ""}\n\n${body}`,
       risk: "medium",
       sourceUrl: review.url,
       suggestedReviewEvent: suggestReviewEvent(body),

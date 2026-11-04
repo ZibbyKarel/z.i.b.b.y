@@ -169,6 +169,12 @@ project's resolved token, `state: "posted"`;
 a GitHub error sets `failed` + `note` and throws. **Reject** → `discarded`, nothing
 is sent. The PR row links to the task while the review is running or parked.
 
+**Own review (todo-36).** At the sign-off the operator can discard ZIBBY's review and write
+their own: approve with `ownReview: true` and `reviewDocument` = their text. It goes through the
+same path (gate → artifact → `pr-review` approval → this runner) and replaces ZIBBY's document
+entirely; a blank text is allowed only with `APPROVE` and posts `{ event: "APPROVE" }` with no
+body — "approve without comment".
+
 **Inline comments (todo-22).** `zibby-pr-review.md` is one readable document the operator
 approves as is: a short summary on top, then one `### <path>:<line> (Critical|Important|Minor)`
 block (or `<path>:<start>-<end>`) per finding. `parsePrReviewDoc` (`pr-review-doc.ts`) splits

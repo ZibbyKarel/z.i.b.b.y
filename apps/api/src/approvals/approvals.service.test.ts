@@ -181,6 +181,30 @@ describe("ApprovalsService", () => {
     ).toBeUndefined();
   });
 
+  it("todo-36: an own review is recorded (blank text kept) only on a PR-review sign-off", async () => {
+    const resume = vi.fn();
+    service.register("workflow-gate", { resume, cancel: vi.fn() });
+    const gate = await service.requestApproval({
+      runId: "wf_1",
+      kind: "workflow-gate",
+      skill: "PR Review",
+      action: "stage-approval",
+      detail: "Review it",
+      risk: "low",
+      suggestedReviewEvent: "REQUEST_CHANGES",
+    });
+    const decided = await service.approve(gate.id, { reviewEvent: "APPROVE", ownReview: true });
+    expect(decided).toMatchObject({ ownReview: true, reviewDocument: "", reviewEvent: "APPROVE" });
+    expect(resume).toHaveBeenCalledWith(
+      "wf_1",
+      expect.objectContaining({ ownReview: true, reviewDocument: "" }),
+    );
+    const other = await request();
+    const plain = await service.approve(other.id, { ownReview: true });
+    expect(plain.ownReview).toBeUndefined();
+    expect(plain.reviewDocument).toBeUndefined();
+  });
+
   it("approve stores the operator's replies on the approval and hands them to the runner", async () => {
     const resume = vi.fn();
     service.register("pr-address-comments", { resume, cancel: vi.fn() });

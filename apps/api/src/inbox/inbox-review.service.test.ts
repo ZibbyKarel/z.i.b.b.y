@@ -294,6 +294,35 @@ describe("InboxReviewService", () => {
     expect((await storage.get("task_r1")).prReview?.state).toBe("posted");
   });
 
+  it("todo-36: an own review replaces the parked body; blank approves with no body key", async () => {
+    await parkBody("Sum.\n\n### src/a.ts:42 (Important)\nCan we drop this?");
+    await service.post("task_r1", "APPROVE", "");
+    expect(sentBody()).toEqual({ event: "APPROVE" });
+    expect((await storage.get("task_r1")).prReview?.state).toBe("posted");
+
+    await storage.setPrReview("task_r1", (c) =>
+      c ? { ...c, state: "awaiting-approval", body: "Sum.\n\n### a.ts:1 (Minor)\nx" } : c,
+    );
+    fetchImpl.mockClear();
+    await service.post("task_r1", "COMMENT", "Mine.");
+    expect(sentBody()).toEqual({ body: "Mine.", event: "COMMENT" });
+  });
+
+  it("todo-36: a parked blank own review (gate path) posts as a bodiless approve", async () => {
+    await parkBody("");
+    await service.post("task_r1", "APPROVE");
+    expect(sentBody()).toEqual({ event: "APPROVE" });
+  });
+
+  it("todo-36: the runner posts the approval's own review", async () => {
+    await parkBody("Sum.");
+    const runner = register.mock.calls[0]?.[1] as {
+      resume: (id: string, a: unknown) => Promise<void>;
+    };
+    await runner.resume("task_r1", { reviewEvent: "APPROVE", ownReview: true, reviewDocument: "" });
+    expect(sentBody()).toEqual({ event: "APPROVE" });
+  });
+
   it("todo-22: a range block sets start_line/start_side", async () => {
     await parkBody("Sum.\n\n### a.ts:2-4 (Minor)\nNit.");
     await service.post("task_r1");

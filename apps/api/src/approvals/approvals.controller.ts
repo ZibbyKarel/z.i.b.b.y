@@ -53,6 +53,7 @@ export class ApprovalsController {
               reviewEvent: body?.reviewEvent,
               replies: body?.replies,
               reviewDocument: body?.reviewDocument,
+              ownReview: body?.ownReview,
             }),
           decided,
         ),
