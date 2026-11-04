@@ -11,12 +11,11 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
-import type { LogStreamLine } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
 import type { DashboardApproval } from "../../approvals/approval";
 import type { RunView } from "../run";
 import { agentBody } from "../runDetailModel";
-import type { FeedItem, RunMode, StageRailRow } from "../runDetailModel";
+import type { AgentBlock, FeedItem, RunMode, StageRailRow } from "../runDetailModel";
 import { useStageRunLogQuery } from "../queries/useStageRunLogQuery";
 import { GoalDetailPanel } from "./GoalDetailPanel";
 import {
@@ -32,6 +31,7 @@ export enum RunLiveFeedTestId {
   You = "run-feed-you",
   Delivery = "run-feed-delivery",
   Round = "run-feed-round",
+  Tools = "run-agent-tools",
 }
 
 export interface RunLiveFeedProps {
@@ -45,22 +45,18 @@ export interface RunLiveFeedProps {
 
 type Item<K extends FeedItem["kind"]> = Extract<FeedItem, { kind: K }>;
 
-function AgentBody({
-  markdown,
-  tools,
-  live,
-}: {
-  markdown: string;
-  tools: LogStreamLine[];
-  live: boolean;
-}) {
+/** Agent text as markdown; each run of tool calls inline, in its own framed mono panel. */
+function AgentBody({ blocks, live }: { blocks: AgentBlock[]; live: boolean }) {
   return (
     <Stack gap="75">
-      {markdown && <Markdown escapeHtml source={markdown} />}
-      {tools.length > 0 && (
-        <Panel padding={["100", "150"]}>
-          <LogStream lines={tools} paused={!live} />
-        </Panel>
+      {blocks.map((b, i) =>
+        b.kind === "text" ? (
+          <Markdown escapeHtml key={i} source={b.markdown} />
+        ) : (
+          <Panel data-testid={RunLiveFeedTestId.Tools} key={i} padding={["100", "150"]}>
+            <LogStream lines={b.lines} paused={!live} />
+          </Panel>
+        ),
       )}
     </Stack>
   );
@@ -90,7 +86,7 @@ function PriorRoundLog({
 function FeedAgent({ item, runId }: { item: Item<"agent">; runId: string }) {
   const t = useTranslations("runs.detail.feed");
   const { rounds } = item;
-  const body = <AgentBody live={item.live} markdown={item.markdown} tools={item.tools} />;
+  const body = <AgentBody blocks={item.blocks} live={item.live} />;
   return (
     <Container data-testid={RunLiveFeedTestId.Agent} maxWidth="760px">
       <Stack gap="75">
