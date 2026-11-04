@@ -1125,6 +1125,15 @@
       "disabled": "Vypnutý"
     },
     "footer": "ZIBBY — Zestful Intuitive Brainy Butler for You",
+    "webPush": {
+      "title": "Push notifikace",
+      "label": "Upozornění v prohlížeči",
+      "hint": "Pošle upozornění, když něco čeká na tebe (schválení, review, zaparkovaný běh, rozpočet). Funguje i se zavřeným panelem. Na iOS je nutné nejdřív přidat aplikaci na plochu.",
+      "unsupported": "Tento prohlížeč push notifikace nepodporuje (desktopová aplikace je také nemá).",
+      "denied": "Upozornění jsou v prohlížeči zablokovaná. Povol je v nastavení webu.",
+      "error": "Push se nepodařilo zapnout nebo vypnout. Zkus to znovu.",
+      "tokenRequired": "Nejdřív nastav operátorský token v Nastavení."
+    },
     "appearance": {
       "title": "Vzhled",
       "themeLabel": "Motiv",
