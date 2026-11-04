@@ -124,6 +124,23 @@ describe("pull requests", () => {
     expect(rows(pr({ number: 1, bucket: "to-review", unresolvedThreads: 2 }))).toBe(0);
   });
 
+  it("prRow mine follows each PR's own bucket, not the stack root", () => {
+    const { groups } = prGroups(
+      "prs",
+      [
+        pr({ number: 1, headRef: "a", baseRef: "main" }),
+        pr({ number: 2, headRef: "b", baseRef: "a", bucket: "to-review", author: "jana" }),
+        pr({ number: 3, headRef: "c", baseRef: "b" }),
+      ],
+      { company: [], team: [], project: [] },
+      ago,
+    );
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.section).toBe("mine");
+    const g = groups[0];
+    expect([g?.root, ...(g?.kids ?? [])].map((r) => r?.mine)).toEqual([true, false, true]);
+  });
+
   it("groups a stack under its root with ON / WAITS ON, urgent group first", () => {
     const root = pr({ number: 1, headRef: "a", baseRef: "main" });
     const kid = pr({ number: 2, headRef: "b", baseRef: "a", blocker: "ci-failing", ci: "failing" });

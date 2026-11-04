@@ -3,6 +3,7 @@
 import {
   BoardLine,
   BoardRow,
+  BoardTag,
   BoardText,
   IconBadge,
   IndentRail,
@@ -59,7 +60,9 @@ export function PrsWidget({
     { onEmptyChange, onCountChange },
   );
 
-  const card = (r: PrRowVm) => (
+  // A stack sits in its root's section; a row whose own ownership differs (a colleague's PR
+  // stacked on mine, or mine on theirs) is tagged so the section never claims it.
+  const card = (r: PrRowVm, sectionMine: boolean) => (
     <BoardRow
       key={r.key}
       onClick={() => onOpen({ kind: "pr", id: r.id, widgetId: widget.id, key: r.key })}
@@ -83,6 +86,9 @@ export function PrsWidget({
         <BoardText kind="prTitle">{r.title}</BoardText>
       </BoardLine>
       <BoardLine wrap gap="6">
+        {r.mine !== sectionMine ? (
+          <BoardTag variant="source">{t(r.mine ? "owner.mine" : "owner.other")}</BoardTag>
+        ) : null}
         <BoardText kind="prMeta">{r.meta}</BoardText>
       </BoardLine>
       <BoardLine wrap gap="8">
@@ -110,6 +116,7 @@ export function PrsWidget({
         const first = i === 0 || g.section !== groups[i - 1]?.section;
         const sectionKey = `${widget.id}:${g.section}`;
         const closed = !!epicClosed[sectionKey];
+        const sectionMine = g.section === "mine";
         const title = t(g.section === "review" ? "section.toReview" : `section.${g.section}`);
         return (
           <Fragment key={g.root.key}>
@@ -129,8 +136,10 @@ export function PrsWidget({
             ) : null}
             {closed ? null : (
               <>
-                {card(g.root)}
-                {g.kids.length > 0 ? <IndentRail>{g.kids.map(card)}</IndentRail> : null}
+                {card(g.root, sectionMine)}
+                {g.kids.length > 0 ? (
+                  <IndentRail>{g.kids.map((k) => card(k, sectionMine))}</IndentRail>
+                ) : null}
               </>
             )}
           </Fragment>

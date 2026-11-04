@@ -171,6 +171,8 @@ export interface PrRowVm {
   waits: string | null;
   /** Unresolved review threads on my PR; 0 for others' PRs or when unknown. */
   conversations: number;
+  /** This PR is the operator's own (its own bucket — never inherited from the stack root). */
+  mine: boolean;
 }
 
 export interface PrGroupVm {
@@ -202,23 +204,23 @@ export function prRow(widgetId: string, pr: InboxPr, all: InboxPr[], ago: Ago): 
   const need = prNeed(pr);
   const parent = parentPr(pr, all);
   const waits = prWaits(pr, all);
+  const mine = pr.bucket === "mine";
   return {
     key: rowKey(widgetId, pr.url),
     id: pr.url,
     number: `#${pr.number}`,
     title: pr.title,
-    meta: [
-      pr.repo.split("/")[1] ?? pr.repo,
-      pr.bucket === "mine" ? "YOU" : pr.author,
-      ago(pr.createdAt),
-    ].join(" · "),
+    meta: [pr.repo.split("/")[1] ?? pr.repo, mine ? "YOU" : pr.author, ago(pr.createdAt)].join(
+      " · ",
+    ),
     tone: PR_TONE[statusKey],
     statusKey,
     need,
     needsYou: need ? ago(pr.updatedAt ?? pr.createdAt) : null,
     on: parent ? `#${parent.number}` : null,
     waits: waits.length ? waits.map((w) => `#${w.number}`).join(", ") : null,
-    conversations: pr.bucket === "mine" ? (pr.unresolvedThreads ?? 0) : 0,
+    conversations: mine ? (pr.unresolvedThreads ?? 0) : 0,
+    mine,
   };
 }
 
