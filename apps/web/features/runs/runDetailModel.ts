@@ -304,8 +304,8 @@ export type FeedItem =
       kind: "agent";
       phaseId: string;
       who: string;
-      markdown: string;
-      tools: LogStreamLine[];
+      /** The round's log in order: agent text and the tool calls made between it. */
+      blocks: AgentBlock[];
       live: boolean;
       rounds: StageRound[];
       /** A tool phase: its rounds' logs are raw CLI output, not agent transcripts. */
@@ -334,14 +334,23 @@ const youItem = (m: OperatorMessage, terminal: boolean): FeedItem => ({
 // `product-factory:` is the CLI's stderr prefix for a failure line (e.g. "fal 500").
 const ERROR_LINE = /\b(error|rejected|blocked)\b|^product-factory:/i;
 
-/** Markdown + tool lines of one round's log (`raw`: a tool phase, CLI output instead of a transcript). */
+/** A run of agent text, or a run of consecutive tool calls (one framed panel). */
+export type AgentBlock =
+  | { kind: "text"; markdown: string }
+  | { kind: "tools"; lines: LogStreamLine[] };
+
+/**
+ * One round's log as ordered blocks, so each tool call shows where it happened
+ * between the agent's text (`raw`: a tool phase, CLI output instead of a transcript).
+ * The log has no timestamps — a two-digit ordinal across the round stands in.
+ */
 export function agentBody(
   phaseId: string,
   transcript: string,
   raw: boolean,
-): { markdown: string; tools: LogStreamLine[] } {
+): { blocks: AgentBlock[] } {
   if (raw) {
-    const tools = rawLogLines(transcript).map(
+    const lines = rawLogLines(transcript).map(
       (text, i): LogStreamLine => ({
         id: `${phaseId}-${i}`,
         ts: pad2(i + 1),
@@ -349,24 +358,26 @@ export function agentBody(
         ...(ERROR_LINE.test(text) && { state: "error" as const }),
       }),
     );
-    return { markdown: "", tools };
+    return { blocks: lines.length ? [{ kind: "tools", lines }] : [] };
   }
-  const groups = groupTranscript(parseTranscript(transcript));
-  const markdown = groups
-    .flatMap((g) => (g.kind === "text" ? [g.markdown.trim()] : []))
-    .filter(Boolean)
-    .join("\n\n");
-  const tools = groups
-    .flatMap((g) => (g.kind === "toolCall" ? [g] : []))
-    .map(
-      (g, i): LogStreamLine => ({
-        id: `${phaseId}-${i}`,
-        // The log has no timestamps — a two-digit ordinal stands in.
-        ts: pad2(i + 1),
+  const blocks: AgentBlock[] = [];
+  let n = 0;
+  for (const g of groupTranscript(parseTranscript(transcript))) {
+    if (g.kind === "text") {
+      const markdown = g.markdown.trim();
+      if (markdown) blocks.push({ kind: "text", markdown });
+    } else if (g.kind === "toolCall") {
+      const line: LogStreamLine = {
+        id: `${phaseId}-${n}`,
+        ts: pad2(++n),
         text: g.result ? `${g.tool} → ${g.result}` : g.tool,
-      }),
-    );
-  return { markdown, tools };
+      };
+      const last = blocks.at(-1);
+      if (last?.kind === "tools") last.lines.push(line);
+      else blocks.push({ kind: "tools", lines: [line] });
+    }
+  }
+  return { blocks };
 }
 
 function agentItem(row: StageRailRow, transcript: string, raw: boolean): FeedItem | null {

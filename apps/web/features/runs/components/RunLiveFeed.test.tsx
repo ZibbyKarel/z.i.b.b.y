@@ -54,8 +54,11 @@ const items: FeedItem[] = [
     kind: "agent",
     phaseId: "p2",
     who: "coder",
-    markdown: "Working on it",
-    tools: [{ id: "p2-0", ts: "01", text: "Read → ok" }],
+    blocks: [
+      { kind: "text", markdown: "Working on it" },
+      { kind: "tools", lines: [{ id: "p2-0", ts: "01", text: "Read → ok" }] },
+      { kind: "text", markdown: "Done reading" },
+    ],
     live: true,
     rounds: [],
   },
@@ -93,6 +96,17 @@ describe("RunLiveFeed", () => {
     expect(ids).toEqual([RunLiveFeedTestId.Agent, RunLiveFeedTestId.You, RunLiveFeedTestId.You]);
   });
 
+  it("renders tool calls inline between the agent's text, in their own panel", () => {
+    renderFeed();
+    const agent = screen.getByTestId(RunLiveFeedTestId.Agent);
+    const tools = screen.getByTestId(RunLiveFeedTestId.Tools);
+    expect(tools).toHaveTextContent("Read → ok");
+    expect(tools).not.toHaveTextContent("Working on it");
+    const text = agent.textContent ?? "";
+    expect(text.indexOf("Working on it")).toBeLessThan(text.indexOf("Read → ok"));
+    expect(text.indexOf("Read → ok")).toBeLessThan(text.indexOf("Done reading"));
+  });
+
   it("captions delivery: delivered names the stage, undelivered says NOT DELIVERED", () => {
     renderFeed();
     const captions = screen.getAllByTestId(RunLiveFeedTestId.Delivery);
@@ -120,8 +134,7 @@ describe("RunLiveFeed", () => {
       kind: "agent",
       phaseId: "illustrate",
       who: "illustrate",
-      markdown: "Latest text.",
-      tools: [],
+      blocks: [{ kind: "text", markdown: "Latest text." }],
       live: false,
       rounds: Array.from({ length: n }, (_, i) => ({
         n: i + 1,
