@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import type { Briefing } from "@zibby/contracts";
-import { FilePreviewTestId } from "@zibby/design-system";
+import { FilePreviewTestId, HighlightTextTestId } from "@zibby/design-system";
 import { renderWithProviders, screen, within } from "../../../test/render";
 import { BriefingMessageCardTestId } from "./BriefingMessageCard";
 import { ChatMessage, ChatMessageTestId } from "./ChatMessage";
@@ -50,6 +50,20 @@ vi.mock("../hooks/useAudioPlayback", () => ({
 let systemConfigResult: { data?: { ttsVoice: string | null } } = { data: undefined };
 vi.mock("../../system", () => ({ useSystemConfigQuery: () => systemConfigResult }));
 
+// The sent-turn highlighter reads the agent/workflow/… catalogs; stub it with the
+// real `mentionRanges` over a fixed catalog so the test stays query-free.
+vi.mock("../../tasks/hooks/useMentionHighlighter", async () => {
+  const { mentionRanges, ALL_TRIGGERS } =
+    await import("../../tasks/components/CommandLine/mentionRanges");
+  const known = [
+    { trigger: "@" as const, name: "Builder", tone: "accent" as const },
+    { trigger: "#" as const, name: "zibby", tone: "push" as const },
+  ];
+  return {
+    useMentionHighlighter: () => (text: string) => mentionRanges(text, known, ALL_TRIGGERS),
+  };
+});
+
 describe("ChatMessage", () => {
   beforeEach(() => {
     // Idle defaults — every test that renders an assistant, non-streaming
@@ -64,6 +78,19 @@ describe("ChatMessage", () => {
     renderWithProviders(<ChatMessage role="user" text="Ahoj ZIBBY" />);
     expect(screen.getByTestId(ChatMessageTestId.UserBubble)).toBeInTheDocument();
     expect(screen.getByTestId(ChatMessageTestId.Text)).toHaveTextContent("Ahoj ZIBBY");
+  });
+
+  it("highlights the mentions of a sent user turn like the composer did", () => {
+    renderWithProviders(<ChatMessage role="user" text="ask @Builder about #zibby" />);
+    const text = screen.getByTestId(ChatMessageTestId.Text);
+    expect(text).toHaveTextContent("ask @Builder about #zibby");
+    expect(screen.getByTestId(`${HighlightTextTestId.Mark}-4`)).toHaveTextContent("@Builder");
+    expect(screen.getByTestId(`${HighlightTextTestId.Mark}-19`)).toHaveTextContent("#zibby");
+  });
+
+  it("marks nothing in a user turn without mentions", () => {
+    renderWithProviders(<ChatMessage role="user" text="Ahoj ZIBBY" />);
+    expect(screen.queryAllByTestId(new RegExp(`^${HighlightTextTestId.Mark}-`))).toHaveLength(0);
   });
 
   it("renders an assistant turn in the assistant bubble", () => {

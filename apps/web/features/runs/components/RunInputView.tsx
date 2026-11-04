@@ -3,6 +3,7 @@
 import { Container, Divider, FilePreview, Markdown, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { API_URL } from "../../../state/api";
+import { useMentionHighlighter } from "../../tasks/hooks/useMentionHighlighter";
 import type { RunView } from "../run";
 
 export enum RunInputViewTestId {
@@ -19,15 +20,16 @@ export function attachmentOpenHref(attachmentSetId: string, name: string): strin
   return `${API_URL}/api/tasks/attachments/${attachmentSetId}/${encodeURIComponent(name)}`;
 }
 
-/** The INPUT view: the task text as escaped markdown, then its attachments (openable when the run has a set id). */
+/** The INPUT view: the task text as escaped markdown (mentions highlighted as typed), then its attachments (openable when the run has a set id). */
 export function RunInputView({ run }: RunInputViewProps) {
   const t = useTranslations("tasks.attachments");
   const attachments = run.attachments ?? [];
   const setId = run.attachmentSetId;
+  const highlight = useMentionHighlighter();
   return (
     <Container data-testid={RunInputViewTestId.Root} maxWidth="760px">
       <Stack gap="150">
-        {run.taskText && <Markdown escapeHtml source={run.taskText} />}
+        {run.taskText && <Markdown escapeHtml highlight={highlight} source={run.taskText} />}
         {attachments.length > 0 && (
           <Stack gap="75">
             <Divider />
