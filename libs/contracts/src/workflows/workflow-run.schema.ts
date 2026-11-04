@@ -230,6 +230,8 @@ export const WorkflowRunSchema = z.object({
    * gate (a PR-review run). Absent → the review posts as COMMENT.
    */
   approvedReviewEvent: PrReviewEventSchema.optional(),
+  /** todo-36 — that final gate was approved with the operator's own review (the artifact may be blank). */
+  approvedOwnReview: z.literal(true).optional(),
   /**
    * P1-02/P1-03 — present while `parkedReason` is `gate`, `budget` or `paused`: where
    * the driver re-enters on approve/resume (`cursor` null = the chain is finished,
