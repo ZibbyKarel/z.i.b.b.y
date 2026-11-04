@@ -32,6 +32,7 @@ import { healthContract } from "./health/health.contract";
 import { departmentsContract } from "./departments/departments.contract";
 import { notificationsContract } from "./notifications/notifications.contract";
 import { operatorChannelContract } from "./operator-channel/operator-channel.contract";
+import { webPushContract } from "./web-push/web-push.contract";
 import { autopilotContract } from "./autopilot/autopilot.contract";
 import { selfContract } from "./self/self.contract";
 import { selfKnowledgeContract } from "./self-knowledge/self-knowledge.contract";
@@ -100,6 +101,7 @@ export const appContract = c.router({
   departments: departmentsContract,
   notifications: notificationsContract,
   operatorChannel: operatorChannelContract,
+  webPush: webPushContract,
   autopilot: autopilotContract,
   self: selfContract,
   selfKnowledge: selfKnowledgeContract,
