@@ -88,7 +88,7 @@
 34. [x] vyřešit, proč v chatu nejdou načíst poznámky z devrel knowledge base, když operátor označí devrel tým. Zjištěno: search_team_kb vrací zásahy (např. wiki/notes/partner-portal-feasibility-meetingy.md, wiki/projects/partnerský-portál.md, wiki/notes/addon-repository.md), ale read_team_kb_note podle téže cesty (s prefixem wiki/ i bez něj, team=devrel) vrací „No note found in any reachable knowledge base (main@3469b14d)
 35. [x] U běhů, které vznikli z PR tedy code-review, rebase, vyřešení komentářů a případné další musí mít v detailu odkaz do systému na původní PR abychom se mohli podívat (main@8cb5cd2b)
 36. [ ] U code-review bychom měli mít možnost i ho ignorovat a poslat svoje vlastní. Například u http://localhost:3000/dashboard?run=pr-review-tested_1793279624199 se mi nelíbí a chtěl bych PR rovnou aproovnout bez komentáře ale nemám jak
-37. [ ] Zapojit nainstalovaný Cloudflare skill security-audit do workflow (agent krok s /security-audit) a ověřit běh end-to-end
+37. [x] Zapojit nainstalovaný Cloudflare skill security-audit do workflow (agent krok s /security-audit) a ověřit běh end-to-end (main@9dbfb8f3)
 38. [ ] Web musí podporovat push notifikace
 39. [ ] Postranní panel jsme smazali, takže připnuté stránky a workflow (pins.json) se nikde nezobrazují. Vymyslet nové místo, kde je zobrazit (např. widget nebo lišta v dashboardu), a rozhodnout, jestli se pin workflow a rychlá akce sloučí.
 40. [ ] process který obsluhuje chat by měl mít práva stejná jako process claude který pouštím přes příkaz "cla"
