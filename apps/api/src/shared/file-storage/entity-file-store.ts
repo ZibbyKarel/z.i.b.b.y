@@ -1,3 +1,4 @@
+import { Logger } from "@nestjs/common";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { type ZodType } from "zod";
@@ -5,6 +6,7 @@ import { withPathLock } from "./file-lock";
 import {
   ensureDir,
   fileExists,
+  isConflictCopyId,
   isErrnoException,
   resolveSafeFile,
   safeJson,
@@ -28,6 +30,7 @@ import {
  */
 export abstract class EntityFileStore<T> {
   protected readonly dir: string;
+  private readonly conflictLogger = new Logger(EntityFileStore.name);
 
   /** File suffix, e.g. `.md`, `.workflow.md`, `.json`. */
   protected abstract readonly fileExt: string;
@@ -170,6 +173,10 @@ export abstract class EntityFileStore<T> {
         .filter((entry) => entry.endsWith(this.fileExt))
         .map(async (entry) => {
           const id = entry.slice(0, -this.fileExt.length);
+          if (isConflictCopyId(id)) {
+            this.conflictLogger.warn(`skipping iCloud conflict copy ${entry} — resolve it by hand`);
+            return null;
+          }
           // Skip corrupt/unreadable files instead of failing the whole listing.
           const raw = await fs.readFile(path.join(this.dir, entry), "utf8").catch(() => null);
           if (raw === null) return null;

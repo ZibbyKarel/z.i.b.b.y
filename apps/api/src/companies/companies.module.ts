@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common";
-import { dataDir } from "../shared/data-dir";
+import { recipesDir } from "../shared/data-dir";
 import { CompaniesController } from "./companies.controller";
 import { COMPANIES_DIR, CompaniesStorageService } from "./companies.storage.service";
 
@@ -10,15 +10,12 @@ import { COMPANIES_DIR, CompaniesStorageService } from "./companies.storage.serv
  * `resolveProjectsDir`), so dev and the test runner resolve to the same place.
  */
 export function resolveCompaniesDir(): string {
-  return process.env.COMPANIES_DIR ?? dataDir("companies");
+  return process.env.COMPANIES_DIR ?? recipesDir("companies");
 }
 
 @Module({
   controllers: [CompaniesController],
-  providers: [
-    { provide: COMPANIES_DIR, useFactory: resolveCompaniesDir },
-    CompaniesStorageService,
-  ],
+  providers: [{ provide: COMPANIES_DIR, useFactory: resolveCompaniesDir }, CompaniesStorageService],
   exports: [CompaniesStorageService],
 })
 export class CompaniesModule {}

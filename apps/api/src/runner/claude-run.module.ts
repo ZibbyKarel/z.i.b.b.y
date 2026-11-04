@@ -19,7 +19,7 @@ import {
 } from "../marketplaces/marketplaces.store";
 import { MCP_CREDENTIALS_DIR, McpCredentialsStore } from "../mcp/mcp-credentials.store";
 import { MCP_DIR, McpServersStorageService } from "../mcp/mcp.storage.service";
-import { dataDir } from "../shared/data-dir";
+import { dataDir, recipesDir } from "../shared/data-dir";
 import { SKILLS_DIR, SkillsStorageService } from "../skills/skills.storage.service";
 import { ClaudePreflightService } from "./claude-preflight.service";
 import { ClaudeRunCommandService } from "./claude-run-command.service";
@@ -55,19 +55,19 @@ import { RunMcpController } from "./run-mcp.controller";
   controllers: [RunMcpController],
   providers: [
     KbMcpAuthGuard,
-    { provide: AGENTS_DIR, useFactory: () => process.env.AGENTS_DIR ?? dataDir("agents") },
-    { provide: SKILLS_DIR, useFactory: () => process.env.SKILLS_DIR ?? dataDir("skills") },
+    { provide: AGENTS_DIR, useFactory: () => process.env.AGENTS_DIR ?? recipesDir("agents") },
+    { provide: SKILLS_DIR, useFactory: () => process.env.SKILLS_DIR ?? recipesDir("skills") },
     // SkillsStorageService merges external (GitHub-installed) skills; re-read per call.
     { provide: EXTERNAL_SKILLS_FILE, useFactory: resolveExternalSkillsFile },
     { provide: EXTERNAL_SKILLS_DIR, useFactory: resolveExternalSkillsDir },
     ExternalSkillsStore,
-    { provide: HOOKS_DIR, useFactory: () => process.env.HOOKS_DIR ?? dataDir("hooks") },
-    { provide: MCP_DIR, useFactory: () => process.env.MCP_DIR ?? dataDir("mcp-servers") },
+    { provide: HOOKS_DIR, useFactory: () => process.env.HOOKS_DIR ?? recipesDir("hooks") },
+    { provide: MCP_DIR, useFactory: () => process.env.MCP_DIR ?? recipesDir("mcp-servers") },
     {
       provide: MCP_CREDENTIALS_DIR,
       useFactory: () => process.env.MCP_CREDENTIALS_DIR ?? dataDir("mcp-credentials"),
     },
-    { provide: COMMANDS_DIR, useFactory: () => process.env.COMMANDS_DIR ?? dataDir("commands") },
+    { provide: COMMANDS_DIR, useFactory: () => process.env.COMMANDS_DIR ?? recipesDir("commands") },
     AgentsStorageService,
     SkillsStorageService,
     HooksStorageService,

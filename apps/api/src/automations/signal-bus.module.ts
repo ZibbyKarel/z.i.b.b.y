@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ApprovalsModule } from "../approvals/approvals.module";
-import { dataDir } from "../shared/data-dir";
+import { dataDir, recipesDir } from "../shared/data-dir";
 import { AUTOMATIONS_DIR, AutomationsStorageService } from "./automations.storage.service";
 import { SignalBusService } from "./signal-bus.service";
 import { SIGNAL_BUS_DIR, SignalBusStore } from "./signal-bus.store";
@@ -17,7 +17,7 @@ import { SIGNAL_BUS_DIR, SignalBusStore } from "./signal-bus.store";
   providers: [
     {
       provide: AUTOMATIONS_DIR,
-      useFactory: () => process.env.AUTOMATIONS_DIR ?? dataDir("automations"),
+      useFactory: () => process.env.AUTOMATIONS_DIR ?? recipesDir("automations"),
     },
     AutomationsStorageService,
     {

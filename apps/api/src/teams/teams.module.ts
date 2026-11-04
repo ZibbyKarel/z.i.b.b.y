@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
 import { KbAnswerService } from "../kb/kb-answer.service";
 import { KbReaderService } from "../kb/kb-reader.service";
-import { dataDir } from "../shared/data-dir";
+import { recipesDir } from "../shared/data-dir";
 import { TeamKbSyncService } from "./team-kb-sync.service";
 import { TeamsController } from "./teams.controller";
 import { TEAMS_DIR, TeamsStorageService } from "./teams.storage.service";
@@ -13,7 +13,7 @@ import { TEAMS_DIR, TeamsStorageService } from "./teams.storage.service";
  * dev and the test runner resolve to the same place.
  */
 export function resolveTeamsDir(): string {
-  return process.env.TEAMS_DIR ?? dataDir("teams");
+  return process.env.TEAMS_DIR ?? recipesDir("teams");
 }
 
 @Module({

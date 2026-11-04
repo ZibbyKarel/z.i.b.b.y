@@ -70,3 +70,8 @@ export function collisionResistantId(prefix: string): string {
   const safe = prefix.replace(/[^a-zA-Z0-9._-]/g, "-");
   return `${safe}_${Date.now()}_${randomBytes(3).toString("hex")}`;
 }
+
+/** iCloud names conflict copies `<name> 2.md`, `<name> 3.json` — an id ending in ` <n>`. */
+export function isConflictCopyId(id: string): boolean {
+  return / \d+$/.test(id);
+}

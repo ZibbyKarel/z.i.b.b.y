@@ -9,7 +9,7 @@ import { MemoryModule } from "../memory/memory.module";
 import { ProjectsModule } from "../projects/projects.module";
 import { ClaudeRunModule } from "../runner/claude-run.module";
 import { WorkspaceModule } from "../workspace/workspace.module";
-import { dataDir } from "../shared/data-dir";
+import { dataDir, recipesDir } from "../shared/data-dir";
 import { AgentsController } from "./agents.controller";
 import { AGENTS_DIR, AgentsStorageService } from "./agents.storage.service";
 import { CategoriesController } from "./categories.controller";
@@ -23,7 +23,7 @@ import { CategoriesStorageService } from "./categories.storage.service";
  * `data/agents` wherever the process happened to start.
  */
 export function resolveAgentsDir(): string {
-  return process.env.AGENTS_DIR ?? dataDir("agents");
+  return process.env.AGENTS_DIR ?? recipesDir("agents");
 }
 
 /** Default directory for run artifacts (logs + per-run sandboxes); a sibling of the

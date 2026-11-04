@@ -13,7 +13,7 @@ import { WorkflowsModule } from "../workflows/workflows.module";
 import { ReviewLearningModule } from "../review-learning/review-learning.module";
 import { SelfKnowledgeModule } from "../self-knowledge/self-knowledge.module";
 import { SecurityModule } from "../security/security.module";
-import { dataDir } from "../shared/data-dir";
+import { recipesDir } from "../shared/data-dir";
 import { TasksModule } from "../tasks/tasks.module";
 import { SignalBusModule } from "./signal-bus.module";
 import { AUTOMATIONS_DIR, AutomationsStorageService } from "./automations.storage.service";
@@ -22,7 +22,7 @@ import { SchedulerService } from "./scheduler.service";
 
 /** Default automations dir, anchored to `apps/api/data/automations`. */
 export function resolveAutomationsDir(): string {
-  return process.env.AUTOMATIONS_DIR ?? dataDir("automations");
+  return process.env.AUTOMATIONS_DIR ?? recipesDir("automations");
 }
 
 /**

@@ -83,10 +83,7 @@ class TestEntityStore extends EntityFileStore<TestEntity> {
     return this.updateEntity(id, mutate);
   }
 
-  async publicCreateEntity(
-    id: string,
-    factory: () => TestEntity,
-  ): Promise<TestEntity | null> {
+  async publicCreateEntity(id: string, factory: () => TestEntity): Promise<TestEntity | null> {
     return this.createEntity(id, factory);
   }
 }
@@ -178,6 +175,14 @@ describe("EntityFileStore concurrency helpers (Task 3)", () => {
       }));
       expect(result).toEqual({ id: "fresh", counter: 7 });
       expect(await store.get("fresh")).toEqual({ id: "fresh", counter: 7 });
+    });
+  });
+
+  describe("list", () => {
+    it("skips iCloud conflict copies like `foo 2.json`", async () => {
+      await store.publicWriteEntity({ id: "foo", counter: 1 });
+      await fs.writeFile(path.join(dir, "foo 2.json"), JSON.stringify({ id: "foo 2", counter: 2 }));
+      expect((await store.list()).map((e) => e.id)).toEqual(["foo"]);
     });
   });
 });

@@ -14,7 +14,7 @@ import {
 } from "../integrations/integrations.storage.service";
 import { McpModule } from "../mcp/mcp.module";
 import { PROJECTS_DIR, ProjectsStorageService } from "../projects/projects.storage.service";
-import { dataDir, resolveVaultDir } from "../shared/data-dir";
+import { dataDir, recipesDir, resolveVaultDir } from "../shared/data-dir";
 import { SkillsModule } from "../skills/skills.module";
 import { EntityMcpController } from "./entity-mcp.controller";
 import { GroundingService } from "./grounding.service";
@@ -74,7 +74,7 @@ export { resolveVaultDir };
     GoalsStorageService,
     {
       provide: AUTOMATIONS_DIR,
-      useFactory: () => process.env.AUTOMATIONS_DIR ?? dataDir("automations"),
+      useFactory: () => process.env.AUTOMATIONS_DIR ?? recipesDir("automations"),
     },
     AutomationsStorageService,
   ],

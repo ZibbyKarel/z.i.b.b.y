@@ -1,3 +1,4 @@
+import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
@@ -21,6 +22,10 @@ export function zibbyHome(): string {
  * from the repo root lands in the repo's test fixture tree.
  *
  * Unset → the shared live root `<zibbyHome>/data`.
+ *
+ * Runtime state (runs, activity, approvals, locks, ledgers, credentials) always
+ * lives here; operator-authored recipes may live elsewhere — see
+ * {@link resolveRecipesRoot}.
  */
 export function resolveDataRoot(): string {
   const root = process.env.ZIBBY_DATA_DIR;
@@ -44,6 +49,44 @@ export function resolveDataRoot(): string {
 /** Join sub-path segments onto the resolved data root. */
 export function dataDir(...segments: string[]): string {
   return path.join(resolveDataRoot(), ...segments);
+}
+
+/** Opt-in iCloud Drive folder for recipes shared across the operator's machines. */
+export const ICLOUD_RECIPES_DIR = path.join(
+  os.homedir(),
+  "Library",
+  "Mobile Documents",
+  "com~apple~CloudDocs",
+  "ZibbyOS",
+  "recipes",
+);
+
+/**
+ * Root of the recipes: operator-authored definitions (agents, workflows, skills,
+ * automations, departments, teams, commands, hooks, mcp-servers, companies).
+ * Runtime state (runs, activity, approvals, locks, ledgers, credentials) NEVER
+ * goes here — iCloud has no cross-machine locking and makes conflict copies.
+ *
+ * Order: `ZIBBY_RECIPES_DIR`; an explicit `ZIBBY_DATA_DIR` / VITEST (isolated
+ * roots keep recipes inside their root); the iCloud folder if it exists
+ * (opt-in: create it, a second Mac picks it up once iCloud syncs); else the
+ * data root.
+ */
+export function resolveRecipesRoot(): string {
+  const explicit = process.env.ZIBBY_RECIPES_DIR;
+  if (explicit) return path.resolve(explicit);
+  if (process.env.ZIBBY_DATA_DIR || process.env.VITEST) return resolveDataRoot();
+  try {
+    if (fs.statSync(ICLOUD_RECIPES_DIR).isDirectory()) return ICLOUD_RECIPES_DIR;
+  } catch {
+    // not opted in
+  }
+  return resolveDataRoot();
+}
+
+/** Join sub-path segments onto the resolved recipes root. */
+export function recipesDir(...segments: string[]): string {
+  return path.join(resolveRecipesRoot(), ...segments);
 }
 
 /**

@@ -2,6 +2,7 @@ export {
   collisionResistantId,
   ensureDir,
   fileExists,
+  isConflictCopyId,
   isErrnoException,
   resolveSafeFile,
   safeJson,

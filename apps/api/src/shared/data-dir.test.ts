@@ -1,12 +1,22 @@
+import * as fs from "node:fs";
 import * as path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  ICLOUD_RECIPES_DIR,
   dataDir,
   defaultCloneRoot,
   installRoot,
+  recipesDir,
   resolveDataRoot,
+  resolveRecipesRoot,
   resolveVaultDir,
+  zibbyHome,
 } from "./data-dir";
+
+vi.mock("node:fs", async (orig) => {
+  const actual = await orig<typeof import("node:fs")>();
+  return { ...actual, statSync: vi.fn(actual.statSync) };
+});
 
 /**
  * Phase 12.5 — the data-root resolver is the single switch every file-backed
@@ -95,5 +105,40 @@ describe("resolveVaultDir", () => {
     delete process.env.VAULT_DIR;
     process.env.ZIBBY_DATA_DIR = "/tmp/zibby-root";
     expect(resolveVaultDir()).toBe("/tmp/zibby-root/vault");
+  });
+});
+
+describe("resolveRecipesRoot", () => {
+  const saved = { ...process.env };
+
+  afterEach(() => {
+    process.env = { ...saved };
+    vi.mocked(fs.statSync).mockReset();
+  });
+
+  it("ZIBBY_RECIPES_DIR wins", () => {
+    process.env.ZIBBY_RECIPES_DIR = "/tmp/r";
+    expect(resolveRecipesRoot()).toBe("/tmp/r");
+    expect(recipesDir("agents")).toBe("/tmp/r/agents");
+  });
+
+  it("ZIBBY_DATA_DIR keeps recipes in the data root even if the iCloud dir exists", () => {
+    delete process.env.ZIBBY_RECIPES_DIR;
+    process.env.ZIBBY_DATA_DIR = "/tmp/d";
+    vi.mocked(fs.statSync).mockReturnValue({ isDirectory: () => true } as fs.Stats);
+    expect(resolveRecipesRoot()).toBe("/tmp/d");
+  });
+
+  it("uses the iCloud dir when it exists, else the live data root", () => {
+    delete process.env.ZIBBY_RECIPES_DIR;
+    delete process.env.ZIBBY_DATA_DIR;
+    delete process.env.VITEST;
+    const stat = vi.mocked(fs.statSync);
+    stat.mockReturnValue({ isDirectory: () => true } as fs.Stats);
+    expect(resolveRecipesRoot()).toBe(ICLOUD_RECIPES_DIR);
+    stat.mockImplementation(() => {
+      throw new Error("ENOENT");
+    });
+    expect(resolveRecipesRoot()).toBe(path.join(zibbyHome(), "data"));
   });
 });

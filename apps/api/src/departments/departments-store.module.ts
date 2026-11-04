@@ -1,10 +1,10 @@
 import { Global, Module } from "@nestjs/common";
-import { dataDir } from "../shared/data-dir";
+import { recipesDir } from "../shared/data-dir";
 import { DEPARTMENTS_DIR, DepartmentsStorageService } from "./departments.storage.service";
 
 /** Default departments dir: `.zibby/data/departments` (override: `DEPARTMENTS_DIR`). */
 export function resolveDepartmentsDir(): string {
-  return process.env.DEPARTMENTS_DIR ?? dataDir("departments");
+  return process.env.DEPARTMENTS_DIR ?? recipesDir("departments");
 }
 
 /**

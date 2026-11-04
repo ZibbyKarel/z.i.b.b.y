@@ -12,6 +12,7 @@ import {
   type StateTone,
   Typography,
 } from "@zibby/design-system";
+import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
@@ -194,7 +195,7 @@ export function RunDetailHeader({
                   <Pressable
                     aria-label={t("detail.sourcePr", { ref: sourcePrRef })}
                     data-testid={RunDetailHeaderTestId.SourcePrLink}
-                    onClick={() => router.push(prListHref(sourcePr.url))}
+                    onClick={() => router.push(prListHref(sourcePr.url) as Route)}
                   >
                     <Typography as="span" type="code">
                       {`${sourcePrRef} →`}

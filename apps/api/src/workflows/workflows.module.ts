@@ -12,7 +12,7 @@ import { SkillsModule } from "../skills/skills.module";
 import { SignalBusModule } from "../automations/signal-bus.module";
 import { ScheduledTasksStorageModule } from "../tasks/scheduled-tasks-storage.module";
 import { WorkspaceModule } from "../workspace/workspace.module";
-import { dataDir } from "../shared/data-dir";
+import { dataDir, recipesDir } from "../shared/data-dir";
 import { WORKFLOW_RUNS_DIR, WorkflowRunnerService } from "./workflow-runner.service";
 import { WorkflowRunsController } from "./workflow-runs.controller";
 import { WorkflowsController } from "./workflows.controller";
@@ -20,7 +20,7 @@ import { WORKFLOWS_DIR, WorkflowsStorageService } from "./workflows.storage.serv
 
 /** Default workflows dir, anchored to `apps/api/data/workflows` like agents/skills. */
 export function resolveWorkflowsDir(): string {
-  return process.env.WORKFLOWS_DIR ?? process.env.PIPELINES_DIR ?? dataDir("workflows");
+  return process.env.WORKFLOWS_DIR ?? process.env.PIPELINES_DIR ?? recipesDir("workflows");
 }
 
 /** Default directory for workflow run artifacts (per-run roots with stage sandboxes). */
