@@ -90,7 +90,7 @@
 36. [x] U code-review bychom měli mít možnost i ho ignorovat a poslat svoje vlastní. Například u http://localhost:3000/dashboard?run=pr-review-tested_1793279624199 se mi nelíbí a chtěl bych PR rovnou aproovnout bez komentáře ale nemám jak (main@1d2af19a)
 37. [x] Zapojit nainstalovaný Cloudflare skill security-audit do workflow (agent krok s /security-audit) a ověřit běh end-to-end (main@9dbfb8f3)
 38. [ ] Web musí podporovat push notifikace
-39. [ ] Postranní panel jsme smazali, takže připnuté stránky a workflow (pins.json) se nikde nezobrazují. Vymyslet nové místo, kde je zobrazit (např. widget nebo lišta v dashboardu), a rozhodnout, jestli se pin workflow a rychlá akce sloučí.
+39. [x] Postranní panel jsme smazali, takže připnuté stránky a workflow (pins.json) se nikde nezobrazují. Vymyslet nové místo, kde je zobrazit (např. widget nebo lišta v dashboardu), a rozhodnout, jestli se pin workflow a rychlá akce sloučí. (main@77112bf9)
 40. [ ] process který obsluhuje chat by měl mít práva stejná jako process claude který pouštím přes příkaz "cla"
 41. [x] u Karel PR ve widgetu PRs musíme na pravé straně na konci uprostřed zobrazit ikonku pro konverzace s Badge kde bude číslo signalizující počet NEVYŘEŠENÝCH konverzací u PR. Ikonku zobrazujeme jen když nějaké nevyřešené konverzace jsou. (main@ec1f1472)
 42. [x] název nového tasku bude optional. Pokud ho uživatel nezadá, použije se haiku na summarizaci zadání a vytvoření názvu pro task (main@3d8c21c0)
