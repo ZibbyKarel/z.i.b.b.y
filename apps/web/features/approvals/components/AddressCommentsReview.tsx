@@ -103,14 +103,17 @@ export function addressApproveReplies(
 
 /**
  * The approve request body: `replies` for an address-comments approval, else the review event
- * (plus the operator's edited review document, when there is one).
+ * (plus the operator's edited review document, when there is one). `ownReview` (todo-36): the
+ * document is the operator's own review replacing ZIBBY's — sent even blank.
  */
 export function approveRequestBody(
   replies: OperatorThreadReply[] | undefined,
   reviewEvent: PrReviewEvent | undefined,
   reviewDocument?: string,
+  ownReview?: boolean,
 ) {
   if (replies) return { replies };
+  if (ownReview) return { reviewEvent, reviewDocument: reviewDocument ?? "", ownReview: true };
   return {
     ...(reviewEvent ? { reviewEvent } : {}),
     ...(reviewDocument ? { reviewDocument } : {}),

@@ -1941,6 +1941,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         "## Review\n\nbug at a.ts:3",
         undefined,
         undefined,
+        undefined,
       );
       expect((await storage.get(id)).outcome?.summary).toBe("parked");
     });
@@ -1956,6 +1957,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         expect.objectContaining({ id }),
         "x",
         "comment",
+        undefined,
         undefined,
       );
     });
@@ -1976,6 +1978,28 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         "x",
         "comment",
         "APPROVE",
+        undefined,
+      );
+    });
+
+    it("todo-36: passes the operator's own-review sign-off on to parkPrReview", async () => {
+      const id = await seedReview();
+      workflowRunner.readArtifact.mockResolvedValue({ name: PR_REVIEW_ARTIFACT, content: "" });
+      workflowListener?.({
+        ...done(id),
+        approvedFinalGate: "comment",
+        approvedReviewEvent: "APPROVE",
+        approvedOwnReview: true,
+      });
+      await vi.waitFor(async () => {
+        expect((await storage.get(id)).outcome).toBeDefined();
+      });
+      expect(taskOutput.parkPrReview).toHaveBeenCalledWith(
+        expect.objectContaining({ id }),
+        "",
+        "comment",
+        "APPROVE",
+        true,
       );
     });
 
@@ -1988,6 +2012,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       expect(taskOutput.parkPrReview).toHaveBeenCalledWith(
         expect.objectContaining({ id }),
         "",
+        undefined,
         undefined,
         undefined,
       );

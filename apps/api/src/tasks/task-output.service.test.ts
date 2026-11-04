@@ -1007,6 +1007,22 @@ describe("TaskOutputService", () => {
       expect(approvals.approve).toHaveBeenCalledWith("appr_1", { reviewEvent: "APPROVE" });
     });
 
+    it("todo-36: an own blank review signed off at the gate still parks and posts", async () => {
+      const task = await seedReview();
+      await service.parkPrReview(task, "", "comment", "APPROVE", true);
+      expect(approvals.requestApproval).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: "pr-review",
+          detail: expect.stringContaining("own review"),
+        }),
+      );
+      expect(approvals.approve).toHaveBeenCalledWith("appr_1", { reviewEvent: "APPROVE" });
+      expect((await storage.get("t_review")).prReview).toMatchObject({
+        state: "awaiting-approval",
+        body: "",
+      });
+    });
+
     it("parkPrReview without a gate sign-off leaves the approval pending", async () => {
       const task = await seedReview();
       await service.parkPrReview(task, "bug at a.ts:3");

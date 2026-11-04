@@ -402,6 +402,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
           undefined,
           approval?.reviewEvent,
           approval?.reviewDocument,
+          approval?.ownReview,
         ),
       cancel: (workflowRunId) => void this.resumeGate(workflowRunId, "rejected"),
       revise: (workflowRunId, note) => this.resumeGate(workflowRunId, "revised", note),
@@ -2246,6 +2247,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     note?: string,
     reviewEvent?: PrReviewEvent,
     reviewDocument?: string,
+    ownReview?: boolean,
   ): Promise<void> {
     try {
       const run = this.runs.get(workflowRunId) ?? (await this.readAggregate(workflowRunId));
@@ -2314,9 +2316,16 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         if (reviewEvent) run.approvedReviewEvent = reviewEvent;
         // The operator edited the review text at the gate: it replaces the phase's artifact on
         // disk, so the park step reads (and GitHub gets) the edited document. Files stay truth.
-        if (reviewDocument?.trim()) {
+        // todo-36: the operator's own review replaces it even when blank (approve, no comment).
+        if (ownReview) run.approvedOwnReview = true;
+        if (ownReview || reviewDocument?.trim()) {
           const file = await this.artifactPath(workflowRunId, PR_REVIEW_ARTIFACT);
-          if (file) await fs.writeFile(file, reviewDocument, "utf8");
+          if (file) {
+            // The phase left its `produces` read-only (P1-T2): lift it for the operator's text only.
+            await fs.chmod(file, 0o644).catch(() => {});
+            await fs.writeFile(file, reviewDocument ?? "", "utf8");
+            await fs.chmod(file, 0o444).catch(() => {});
+          }
         }
       }
       await this.writeAggregate(run);

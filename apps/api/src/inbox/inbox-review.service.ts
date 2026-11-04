@@ -139,7 +139,12 @@ export class InboxReviewService implements OnModuleInit {
 
   onModuleInit(): void {
     this.approvals.register("pr-review", {
-      resume: (taskId, approval) => this.post(taskId, approval?.reviewEvent),
+      resume: (taskId, approval) =>
+        this.post(
+          taskId,
+          approval?.reviewEvent,
+          approval?.ownReview ? (approval.reviewDocument ?? "") : undefined,
+        ),
       cancel: (taskId) => void this.discard(taskId),
     });
   }
@@ -248,11 +253,15 @@ export class InboxReviewService implements OnModuleInit {
     }
   }
 
-  /** Approve → post the parked review body with the operator-picked event (todo-10; none picked → COMMENT). */
-  async post(taskId: string, event: PrReviewEvent = "COMMENT"): Promise<void> {
+  /**
+   * Approve → post the parked review body with the operator-picked event (todo-10; none picked →
+   * COMMENT). `ownReview` (todo-36) — the operator's own text replacing ZIBBY's; blank → a bare
+   * approve. A parked blank body exists only as a gate-signed own review (parkPrReview).
+   */
+  async post(taskId: string, event: PrReviewEvent = "COMMENT", ownReview?: string): Promise<void> {
     const task = await this.tasks.get(taskId).catch(() => null);
     const review = task?.prReview;
-    if (!task || !review || review.state !== "awaiting-approval" || !review.body) {
+    if (!task || !review || review.state !== "awaiting-approval" || review.body == null) {
       this.log?.warn("pr review approve: nothing parked, not posting", { taskId });
       return;
     }
@@ -269,7 +278,7 @@ export class InboxReviewService implements OnModuleInit {
     if (!link || link.repo.toLowerCase() !== review.repo.toLowerCase()) {
       return fail(`no GitHub token for ${review.repo}`);
     }
-    const { summary, comments } = parsePrReviewDoc(review.body);
+    const { summary, comments } = parsePrReviewDoc(ownReview ?? review.body);
     const send = (payload: Record<string, unknown>) =>
       this.fetchImpl(`${GITHUB_API}/repos/${link.repo}/pulls/${review.number}/reviews`, {
         method: "POST",
@@ -284,7 +293,7 @@ export class InboxReviewService implements OnModuleInit {
     // REQUEST_CHANGES itself — no pick → COMMENT. todo-22: findings go inline.
     const commit = review.headSha ? { commit_id: review.headSha } : {};
     let res = await send({
-      body: summary,
+      ...(summary ? { body: summary } : {}),
       event,
       ...commit,
       ...(comments.length

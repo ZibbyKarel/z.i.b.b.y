@@ -2591,6 +2591,13 @@
         "highRisk": "Vysoké riziko",
         "waited": "čeká {waited}",
         "submitReview": "Odeslat review",
+        "ownReview": {
+          "start": "Napsat vlastní review",
+          "cancel": "Použít review od ZIBBY",
+          "label": "Tvoje review",
+          "hint": "Nahradí review od ZIBBY. Bez textu jde jen schválit (schválení bez komentáře).",
+          "submit": "Odeslat moje review"
+        },
         "approveFailed": "Schválení se nepodařilo",
         "reviewEvent": {
           "label": "Typ review",

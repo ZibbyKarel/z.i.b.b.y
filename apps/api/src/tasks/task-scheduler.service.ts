@@ -1943,6 +1943,7 @@ export class TaskSchedulerService
                 artifact?.content ?? "",
                 run.approvedFinalGate,
                 run.approvedReviewEvent,
+                run.approvedOwnReview,
               )
               .catch(async (error: unknown) => {
                 this.log.warn("pr review park failed (soft)", {

@@ -196,6 +196,42 @@ describe("ApprovalSheet (ZB-08 / D-014)", () => {
     expect(screen.getByTestId(item("APPROVE"))).toHaveAttribute("aria-checked", "true");
   });
 
+  it("todo-36: own review — approve without comment discards ZIBBY's review", async () => {
+    hooks.approval = { data: PR_REVIEW, isPending: false, isError: false, refetch: vi.fn() };
+    render(<ApprovalSheet approvalId="appr-pr" onClose={onClose} />);
+    await userEvent.click(screen.getByTestId("own-review-toggle"));
+    expect(screen.getByTestId("own-review-body")).toBeInTheDocument();
+    // Blank text can't request changes (GitHub needs a body) — submit stays disabled.
+    expect(screen.getByRole("button", { name: "Odeslat moje review" })).toBeDisabled();
+    await userEvent.click(screen.getByTestId(item("APPROVE")));
+    await userEvent.click(screen.getByRole("button", { name: "Odeslat moje review" }));
+    expect(hooks.approve).toHaveBeenCalledWith(
+      {
+        params: { id: "appr-pr" },
+        body: { reviewEvent: "APPROVE", reviewDocument: "", ownReview: true },
+      },
+      { onSuccess: expect.any(Function) },
+    );
+  });
+
+  it("todo-36: own review with text sends it with the picked event; cancel restores ZIBBY's", async () => {
+    hooks.approval = { data: PR_REVIEW, isPending: false, isError: false, refetch: vi.fn() };
+    render(<ApprovalSheet approvalId="appr-pr" onClose={onClose} />);
+    await userEvent.click(screen.getByTestId("own-review-toggle"));
+    await userEvent.type(screen.getByTestId("own-review-body"), "Needs a test.");
+    await userEvent.click(screen.getByRole("button", { name: "Odeslat moje review" }));
+    expect(hooks.approve).toHaveBeenCalledWith(
+      {
+        params: { id: "appr-pr" },
+        body: { reviewEvent: "REQUEST_CHANGES", reviewDocument: "Needs a test.", ownReview: true },
+      },
+      { onSuccess: expect.any(Function) },
+    );
+    await userEvent.click(screen.getByTestId("own-review-toggle"));
+    expect(screen.queryByTestId("own-review-body")).toBeNull();
+    expect(screen.getByRole("button", { name: "Odeslat review" })).toBeEnabled();
+  });
+
   it("todo-10: a decided PR-review approval shows no picker and no buttons", () => {
     hooks.approval = {
       data: { ...PR_REVIEW, status: "approved" },

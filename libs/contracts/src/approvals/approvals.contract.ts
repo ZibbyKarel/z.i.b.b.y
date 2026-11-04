@@ -42,7 +42,14 @@ export const approvalsContract = c.router(
         .object({
           reviewEvent: PrReviewEventSchema.optional(),
           reviewDocument: z.string().max(60_000).optional(),
+          // todo-36: the operator discarded ZIBBY's review; `reviewDocument` (may be blank) is
+          // the whole review. GitHub needs a body for anything but APPROVE.
+          ownReview: z.boolean().optional(),
           replies: z.array(OperatorThreadReplySchema).max(100).optional(),
+        })
+        .refine((b) => !b.ownReview || !!b.reviewDocument?.trim() || b.reviewEvent === "APPROVE", {
+          message: "an own review without text can only approve",
+          path: ["reviewDocument"],
         })
         .optional(),
       responses: { 200: ApprovalSchema, 401: ErrorSchema, 404: ErrorSchema, 409: ErrorSchema },

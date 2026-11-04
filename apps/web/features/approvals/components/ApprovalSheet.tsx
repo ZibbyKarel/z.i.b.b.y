@@ -136,7 +136,8 @@ function useRailAnchor(id: string | null): SheetAnchor | null {
  * shown only as a `Tag` marker. A workflow stage checkpoint also offers "request
  * changes": a required note sends the step back to re-run instead of failing the run,
  * shown next to the phase's output so questions can be answered from the sheet.
- * A PR-review sign-off (an approval carrying `suggestedReviewEvent`) adds a review-type picker above Approve (todo-10).
+ * A PR-review sign-off (an approval carrying `suggestedReviewEvent`) adds a review-type picker above Approve (todo-10),
+ * and "write my own review" (todo-36): the operator's text replaces ZIBBY's review; blank only approves.
  */
 export function ApprovalSheet({
   approvalId,
@@ -169,6 +170,8 @@ export function ApprovalSheet({
     id: string;
     byIndex: Record<number, string>;
   } | null>(null);
+  // todo-36: the operator's own review replacing ZIBBY's, keyed by approval id.
+  const [ownDraft, setOwnDraft] = useState<{ id: string; text: string } | null>(null);
   const [now] = useState(() => Date.now());
   const anchor = useRailAnchor(approvalId);
   // A 401 means the operator token is unset/wrong — say so instead of a bare failure.
@@ -180,6 +183,9 @@ export function ApprovalSheet({
         : t("approveFailed");
   const reviewEvent =
     approval && picked?.id === approval.id ? picked.event : approval?.suggestedReviewEvent;
+  const own = reviewEvent && ownDraft?.id === approval?.id ? ownDraft : null;
+  // GitHub needs a body for anything but APPROVE.
+  const ownBlocked = own !== null && !own.text.trim() && reviewEvent !== "APPROVE";
 
   // Best-effort parent chain: most gated runs ARE (or belong to) a task, whose
   // `subtasks` — when present — are this approval's chain route. A non-task
@@ -344,7 +350,15 @@ export function ApprovalSheet({
 
       {approval.consequence && <Typography type="text">{approval.consequence}</Typography>}
 
-      {checkpoint && reviewDoc && reviewDoc.findings.length > 0 ? (
+      {own ? (
+        <TextAreaField
+          data-testid="own-review-body"
+          hint={t("ownReview.hint")}
+          label={t("ownReview.label")}
+          onChange={(e) => setOwnDraft({ id: approval.id, text: e.target.value })}
+          value={own.text}
+        />
+      ) : checkpoint && reviewDoc && reviewDoc.findings.length > 0 ? (
         <ReviewFindings
           approvalId={approval.id}
           diff={reviewDiff?.diff}
@@ -457,6 +471,7 @@ export function ApprovalSheet({
         <Row wrap gap="100">
           <Button
             block={!compact}
+            disabled={ownBlocked}
             intent="primary"
             loading={approve.isPending}
             onClick={() =>
@@ -466,7 +481,8 @@ export function ApprovalSheet({
                   body: approveRequestBody(
                     address ? addressReplies : undefined,
                     reviewEvent,
-                    editedReviewDocument,
+                    own ? own.text.trim() : editedReviewDocument,
+                    own !== null,
                   ),
                 },
                 { onSuccess: close },
@@ -478,8 +494,19 @@ export function ApprovalSheet({
               ? tApprovals(address.fixedSha ? "approvePushReplies" : "approveReplies", {
                   n: filledReplies,
                 })
-              : t(reviewEvent ? "submitReview" : "approve")}
+              : t(own ? "ownReview.submit" : reviewEvent ? "submitReview" : "approve")}
           </Button>
+          {reviewEvent && (
+            <Button
+              block={!compact}
+              data-testid="own-review-toggle"
+              intent="ghost"
+              onClick={() => setOwnDraft(own ? null : { id: approval.id, text: "" })}
+              size={compact ? "sm" : undefined}
+            >
+              {t(own ? "ownReview.cancel" : "ownReview.start")}
+            </Button>
+          )}
           {gateKey === "stage-approval" && (
             <Button
               block={!compact}

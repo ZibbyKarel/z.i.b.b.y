@@ -183,6 +183,8 @@ export const ApprovalSchema = z.object({
   reviewEvent: PrReviewEventSchema.optional(),
   /** The operator's edited PR-review document, replacing the agent's on approve (PR-review gate only). */
   reviewDocument: z.string().max(60_000).optional(),
+  /** todo-36 — the operator discarded ZIBBY's review: `reviewDocument` (possibly blank) is posted as-is. */
+  ownReview: z.literal(true).optional(),
   /** The thread replies the operator approved (pr-address-comments push approval). */
   replies: z.array(OperatorThreadReplySchema).max(100).optional(),
   /** Phase 4 — set when the autopilot overlay approved it (no operator click). */

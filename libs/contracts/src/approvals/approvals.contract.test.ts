@@ -20,6 +20,20 @@ describe("approvalsContract", () => {
     expect(body.safeParse({ reviewEvent: "MERGE" }).success).toBe(false);
   });
 
+  it("todo-36: an own review (ownReview) may be blank only when it approves", () => {
+    const body = approvalsContract.approveApproval.body;
+    expect(body.safeParse({ ownReview: true, reviewEvent: "APPROVE" }).success).toBe(true);
+    expect(
+      body.safeParse({ ownReview: true, reviewEvent: "COMMENT", reviewDocument: "Mine" }).success,
+    ).toBe(true);
+    expect(body.safeParse({ ownReview: true, reviewEvent: "COMMENT" }).success).toBe(false);
+    expect(
+      body.safeParse({ ownReview: true, reviewEvent: "REQUEST_CHANGES", reviewDocument: "  " })
+        .success,
+    ).toBe(false);
+    expect(body.safeParse({ ownReview: true }).success).toBe(false);
+  });
+
   it("rejectApproval takes an optional reason (ZB-08 deny-with-reason), still accepting an empty body", () => {
     const body = approvalsContract.rejectApproval.body;
     expect(body.safeParse({}).success).toBe(true);

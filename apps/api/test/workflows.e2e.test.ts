@@ -505,6 +505,39 @@ describe("Workflows API (e2e)", () => {
     expect(done2.approvedReviewEvent).toBeUndefined();
   });
 
+  it("todo-36: an own blank review at the final gate empties the artifact and stamps the run", async () => {
+    const write = `printf 'Critical: null deref at a.ts:3\\n' > ${PR_REVIEW_ARTIFACT}`;
+    await request(app.getHttpServer())
+      .post("/api/workflows")
+      .send({
+        id: "pr-review-own",
+        phases: [
+          {
+            id: "comment",
+            type: "tool",
+            produces: PR_REVIEW_ARTIFACT,
+            commands: [write],
+            approval: "ask",
+          },
+        ],
+        instructions: "review → (human)",
+        department: "dev",
+      })
+      .expect(201);
+    const runner = app.get(WorkflowRunnerService);
+    const started = await runner.start("pr-review-own", undefined, undefined);
+    const gate = await until(() => pendingGate(started.workflowRunId));
+    await app.get(ApprovalsService).approve(gate.id, { reviewEvent: "APPROVE", ownReview: true });
+    const done = await until(async () => {
+      const r = runner.get(started.workflowRunId);
+      return r.status === "done" ? r : null;
+    });
+    expect(done.approvedOwnReview).toBe(true);
+    expect(done.approvedReviewEvent).toBe("APPROVE");
+    const artifact = await runner.readArtifact(started.workflowRunId, PR_REVIEW_ARTIFACT);
+    expect(artifact?.content ?? "").toBe("");
+  });
+
   it("budget: a tool's costs.jsonl pushes spend past the cap → parks before the next phase; approve raises the cap (P1-03)", async () => {
     const cost = `echo '{"at":"2026-10-01T00:00:00Z","source":"image","provider":"fal","model":"klein","costUsd":0.4,"durationMs":1}' >> costs.jsonl`;
     await request(app.getHttpServer())
