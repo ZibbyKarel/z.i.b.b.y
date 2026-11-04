@@ -99,4 +99,4 @@
 45. [x] pokud mám otevřený detail schválení přímo z plachty detailu běhu. pokud zavřu plachtu běhu, měl by se zavřít i detail schválení (main@63600785)
 46. [x] při autocomplete (například v chatu) kdy se zobrazují výsledky (agenti, týmy, projekty, workflows,...) musí fungovat tabulátor na výběr. Momentálě funguje jen entr a mě to štve. Zároveň položky z autocomplete musí být zvýrazněny i v odeslané zprávě chatu (přpadně zadání tasku a další) (main@759b9e9d)
 47. [ ] v plachtě na kartě schválení nebude Výstup fáze. ten bude jen v detailu schválení. Celá karta bude otevírat detail a místo tlačítka "otevřít detail" bude tlačítko na otevření výstupu (pr v novém tabu, soubor v novém tabu nebo se otevře složka ve Finderu)
-48. [ ] Potřebujeme rozlišit ve widgetu PR moje PRs. Teď se stal případ kdy je stack PRs master <- moje PR <- kolegovo PR <- moje PR. Celý stack je v sekci "Moje" ve widgetu ale není to pravda. Potřebujeme rozlišit
+48. [x] Potřebujeme rozlišit ve widgetu PR moje PRs. Teď se stal případ kdy je stack PRs master <- moje PR <- kolegovo PR <- moje PR. Celý stack je v sekci "Moje" ve widgetu ale není to pravda. Potřebujeme rozlišit (main@d2bb382b)
