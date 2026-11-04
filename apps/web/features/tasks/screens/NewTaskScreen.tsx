@@ -98,14 +98,16 @@ export function NewTaskScreen() {
       ? toClientTarget(classify.data.body.target)
       : null;
 
-  const canSubmit = title.trim().length > 0 && text.trim().length > 0 && !createTask.isPending;
+  // The title is optional — left blank, the server derives one from the brief (Haiku,
+  // with a deterministic first-line fallback).
+  const canSubmit = text.trim().length > 0 && !createTask.isPending;
 
   function submit() {
     if (!canSubmit) return;
     createTask.mutate(
       {
         body: {
-          title,
+          title: title.trim() || undefined,
           text,
           paths,
           attachmentSetId: attachmentSet.attachmentSetId,

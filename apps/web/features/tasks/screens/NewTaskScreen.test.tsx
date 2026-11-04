@@ -59,14 +59,37 @@ describe("NewTaskScreen (ZB-04b)", () => {
     searchParams = new URLSearchParams();
   });
 
-  it("disables submit until title and brief are filled", () => {
+  it("disables submit until the brief is filled", () => {
     render(<NewTaskScreen />);
     expect(screen.getByText("Vytvořit úkol")).toBeDisabled();
   });
 
+  it("submits without a title — the server derives one (TODO 42)", () => {
+    render(<NewTaskScreen />);
+    fireEvent.change(screen.getByLabelText("Zadání"), { target: { value: "Do the thing" } });
+    fireEvent.click(screen.getByText("Vytvořit úkol"));
+    expect(createMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({ text: "Do the thing", title: undefined }),
+      }),
+      expect.anything(),
+    );
+  });
+
+  it("sends a whitespace-only title as undefined", () => {
+    render(<NewTaskScreen />);
+    fireEvent.change(screen.getByLabelText("Název (volitelný)"), { target: { value: "   " } });
+    fireEvent.change(screen.getByLabelText("Zadání"), { target: { value: "Do the thing" } });
+    fireEvent.click(screen.getByText("Vytvořit úkol"));
+    expect(createMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ body: expect.objectContaining({ title: undefined }) }),
+      expect.anything(),
+    );
+  });
+
   it("submits the task with the typed title and brief", () => {
     render(<NewTaskScreen />);
-    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "Ship it" } });
+    fireEvent.change(screen.getByLabelText("Název (volitelný)"), { target: { value: "Ship it" } });
     fireEvent.change(screen.getByLabelText("Zadání"), { target: { value: "Do the thing" } });
     fireEvent.click(screen.getByText("Vytvořit úkol"));
     expect(createMutate).toHaveBeenCalledWith(
@@ -86,7 +109,7 @@ describe("NewTaskScreen (ZB-04b)", () => {
   it("prefills the brief and a valid department entry from the chat dock's CREATE TASK (ZB-12)", () => {
     searchParams = new URLSearchParams({ text: "Draft the release notes", entry: "dev" });
     render(<NewTaskScreen />);
-    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "Notes" } });
+    fireEvent.change(screen.getByLabelText("Název (volitelný)"), { target: { value: "Notes" } });
     expect(screen.getByLabelText("Zadání")).toHaveValue("Draft the release notes");
     fireEvent.click(screen.getByText("Vytvořit úkol"));
     expect(createMutate).toHaveBeenCalledWith(
@@ -103,7 +126,7 @@ describe("NewTaskScreen (ZB-04b)", () => {
   it("ignores an unknown entry and falls back to automatic", () => {
     searchParams = new URLSearchParams({ text: "x y z", entry: "not-a-department" });
     render(<NewTaskScreen />);
-    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
+    fireEvent.change(screen.getByLabelText("Název (volitelný)"), { target: { value: "T" } });
     fireEvent.click(screen.getByText("Vytvořit úkol"));
     const body = createMutate.mock.calls[0]?.[0]?.body as { target?: { kind: string } };
     expect(body.target?.kind).not.toBe("department");
@@ -112,7 +135,7 @@ describe("NewTaskScreen (ZB-04b)", () => {
   it("sends an @-mentioned agent as the explicit target", async () => {
     const user = userEvent.setup();
     render(<NewTaskScreen />);
-    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
+    fireEvent.change(screen.getByLabelText("Název (volitelný)"), { target: { value: "T" } });
     await user.type(screen.getByTestId(CommandLineTestId.Input), "fix it @Kod");
     await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-koder`));
     fireEvent.click(screen.getByText("Vytvořit úkol"));
@@ -129,7 +152,7 @@ describe("NewTaskScreen (ZB-04b)", () => {
   it("takes a #-picked project as the task's project (its path joins the dispatched paths)", async () => {
     const user = userEvent.setup();
     render(<NewTaskScreen />);
-    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
+    fireEvent.change(screen.getByLabelText("Název (volitelný)"), { target: { value: "T" } });
     await user.type(screen.getByTestId(CommandLineTestId.Input), "fix it #Zib");
     await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-project-zibby`));
     fireEvent.click(screen.getByText("Vytvořit úkol"));
@@ -141,7 +164,7 @@ describe("NewTaskScreen (ZB-04b)", () => {
   it("an @-picked multi-word workflow sets the target select and is sent as the workflow target", async () => {
     const user = userEvent.setup();
     render(<NewTaskScreen />);
-    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
+    fireEvent.change(screen.getByLabelText("Název (volitelný)"), { target: { value: "T" } });
     await user.type(screen.getByTestId(CommandLineTestId.Input), "make one @Color");
     await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-workflow-coloring-book`));
     expect(screen.getByTestId(CommandLineTestId.Input)).toHaveValue("make one @Coloring Book ");
@@ -163,7 +186,7 @@ describe("NewTaskScreen (ZB-04b)", () => {
 
   it("a typed (not picked) @Coloring Book sets the target select and is sent as the workflow target", () => {
     render(<NewTaskScreen />);
-    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
+    fireEvent.change(screen.getByLabelText("Název (volitelný)"), { target: { value: "T" } });
     fireEvent.change(screen.getByTestId(CommandLineTestId.Input), {
       target: { value: "make one @Coloring Book " },
     });
@@ -176,7 +199,7 @@ describe("NewTaskScreen (ZB-04b)", () => {
   it("deleting the @-tag reverts the target select to the entry and drops the target", async () => {
     const user = userEvent.setup();
     render(<NewTaskScreen />);
-    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
+    fireEvent.change(screen.getByLabelText("Název (volitelný)"), { target: { value: "T" } });
     await user.type(screen.getByTestId(CommandLineTestId.Input), "go @Kod");
     await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-koder`));
     expect(screen.getByLabelText("Vstup")).toHaveTextContent("Kodér");
@@ -190,7 +213,7 @@ describe("NewTaskScreen (ZB-04b)", () => {
   it("a department @-tag lands the select on that department's existing option", async () => {
     const user = userEvent.setup();
     render(<NewTaskScreen />);
-    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
+    fireEvent.change(screen.getByLabelText("Název (volitelný)"), { target: { value: "T" } });
     await user.type(screen.getByTestId(CommandLineTestId.Input), "go @Devel");
     await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-department-dev`));
     expect(screen.getByLabelText("Vstup")).toHaveTextContent("Development");
@@ -202,7 +225,7 @@ describe("NewTaskScreen (ZB-04b)", () => {
   it("deleting an @-tag reverts the select to a manually picked entry, not automatic", async () => {
     const user = userEvent.setup();
     render(<NewTaskScreen />);
-    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
+    fireEvent.change(screen.getByLabelText("Název (volitelný)"), { target: { value: "T" } });
     await user.click(screen.getByLabelText("Vstup"));
     await user.click(screen.getByRole("option", { name: /dev/i }));
     expect(screen.getByLabelText("Vstup")).toHaveTextContent("Development");
@@ -221,7 +244,7 @@ describe("NewTaskScreen (ZB-04b)", () => {
   it("a manual entry pick overrides an active @-tag", async () => {
     const user = userEvent.setup();
     render(<NewTaskScreen />);
-    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
+    fireEvent.change(screen.getByLabelText("Název (volitelný)"), { target: { value: "T" } });
     await user.type(screen.getByTestId(CommandLineTestId.Input), "go @Kod");
     await user.click(screen.getByTestId(`${CommandLineTestId.MentionItem}-agent-koder`));
     await user.click(screen.getByLabelText("Vstup"));
@@ -234,7 +257,7 @@ describe("NewTaskScreen (ZB-04b)", () => {
   it("seeds the title from ?title= (TODO 17)", () => {
     searchParams = new URLSearchParams({ text: "Do it", title: "Do it now" });
     render(<NewTaskScreen />);
-    expect(screen.getByLabelText("Název")).toHaveValue("Do it now");
+    expect(screen.getByLabelText("Název (volitelný)")).toHaveValue("Do it now");
   });
 
   it("sends ?todo= as todoId and refreshes the TODO list before navigating", () => {
@@ -257,7 +280,7 @@ describe("NewTaskScreen (ZB-04b)", () => {
 
   it("omits todoId when there is no ?todo=", () => {
     render(<NewTaskScreen />);
-    fireEvent.change(screen.getByLabelText("Název"), { target: { value: "T" } });
+    fireEvent.change(screen.getByLabelText("Název (volitelný)"), { target: { value: "T" } });
     fireEvent.change(screen.getByLabelText("Zadání"), { target: { value: "x y z" } });
     fireEvent.click(screen.getByText("Vytvořit úkol"));
     const body = createMutate.mock.calls[0]?.[0]?.body as { todoId?: string };

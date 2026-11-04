@@ -414,8 +414,8 @@
     "new": {
       "title": "Předat práci firmě",
       "field": {
-        "title": "Název",
-        "titlePlaceholder": "např. Přidat SSO do klientského portálu",
+        "title": "Název (volitelný)",
+        "titlePlaceholder": "Nevyplníte-li, vygeneruje se ze zadání",
         "brief": "Zadání",
         "briefPlaceholder": "Kontext, odkazy, jak vypadá hotovo",
         "entry": "Vstup",
