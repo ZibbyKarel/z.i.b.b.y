@@ -662,7 +662,8 @@ export class TaskSchedulerService
    */
   private async ensureTitle(input: CreateTaskInput): Promise<CreateTaskInput> {
     if (input.title?.trim()) return input;
-    const derived = (await this.namer.name(input.text)) ?? deriveTitleFallback(input.text);
+    const derived =
+      (await this.namer.name(input.text).catch(() => null)) ?? deriveTitleFallback(input.text);
     return { ...input, title: derived };
   }
 

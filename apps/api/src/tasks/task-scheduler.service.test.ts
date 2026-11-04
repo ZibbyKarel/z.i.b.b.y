@@ -60,6 +60,7 @@ function workflowRun(over: Partial<WorkflowRun>): WorkflowRun {
 describe("TaskSchedulerService — task → run → outcome linkage", () => {
   let dir: string;
   let storage: ScheduledTasksStorageService;
+  let namerName = vi.fn<(text: string) => Promise<string | null>>(async () => null);
   let agentListener: ((run: AgentRun) => void) | undefined;
   let workflowListener: ((run: WorkflowRun) => void) | undefined;
   let agentRunner: {
@@ -218,6 +219,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       parkPrAddressComments: vi.fn(async () => ({ summary: "fixes parked" })),
       parkPrFixCi: vi.fn(async () => ({ summary: "ci fix parked" })),
     };
+    namerName = vi.fn<(text: string) => Promise<string | null>>(async () => null);
     service = new TaskSchedulerService(
       storage,
       classifier as never,
@@ -239,9 +241,9 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       // nothing (a `done` run with no chosen output) → returns null, normal outcome.
       taskOutput as never,
       (systemConfig = fakeSystemConfigStore()),
-      // Namer double: returns null so title derivation falls back to the deterministic
-      // slice (the Haiku CLI path never spawns under test).
-      { name: async () => null } as never,
+      // Namer double: returns null by default so title derivation falls back to the
+      // deterministic slice (the Haiku CLI path never spawns under test).
+      { name: (text: string) => namerName(text) } as never,
       attachmentStorage,
       // F6c watcher-health registry double — registration is exercised in the
       // base/e2e specs, not here.
@@ -301,6 +303,40 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     expect(persisted.outcome).toBeUndefined();
     // Pure intent (no target) is exactly what the classifier routes.
     expect(classifier.classify).toHaveBeenCalledTimes(1);
+  });
+
+  describe("blank title (TODO 42)", () => {
+    it("derives the title via the namer when the operator leaves it blank", async () => {
+      namerName.mockResolvedValue("Haiku title");
+      const result = await service.createTask({ text: "fix the login bug\nmore", title: "   " });
+      expect(result.outcome).toBe("dispatched");
+      if (result.outcome !== "dispatched") return;
+      expect(result.task.title).toBe("Haiku title");
+      expect(namerName).toHaveBeenCalledWith("fix the login bug\nmore");
+    });
+
+    it("falls back to the first line of the description when the namer returns null", async () => {
+      const result = await service.createTask({ text: "\n Fix login \nmore" });
+      expect(result.outcome).toBe("dispatched");
+      if (result.outcome !== "dispatched") return;
+      expect(result.task.title).toBe("Fix login");
+    });
+
+    it("falls back when the namer rejects — creation never fails", async () => {
+      namerName.mockRejectedValue(new Error("timeout"));
+      const result = await service.createTask({ text: "do the thing" });
+      expect(result.outcome).toBe("dispatched");
+      if (result.outcome !== "dispatched") return;
+      expect(result.task.title).toBe("do the thing");
+    });
+
+    it("keeps an operator-given title and never calls the namer", async () => {
+      const result = await service.createTask({ text: "x", title: "Mine" });
+      expect(result.outcome).toBe("dispatched");
+      if (result.outcome !== "dispatched") return;
+      expect(result.task.title).toBe("Mine");
+      expect(namerName).not.toHaveBeenCalled();
+    });
   });
 
   describe("Phase 4a — orchestrator-fallback telemetry", () => {
