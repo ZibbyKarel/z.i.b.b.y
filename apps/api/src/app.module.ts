@@ -34,6 +34,7 @@ import { MachineModule } from "./machine/machine.module";
 import { MonitorsModule } from "./monitors/monitors.module";
 import { AiProvidersModule } from "./ai-providers/ai-providers.module";
 import { OperatorChannelModule } from "./operator-channel/operator-channel.module";
+import { WebPushModule } from "./web-push/web-push.module";
 import { InventoryModule } from "./inventory/inventory.module";
 import { ProposalsModule } from "./proposals/proposals.module";
 import { ProjectHealthModule } from "./project-health/project-health.module";
@@ -110,6 +111,7 @@ import { InstanceLockReleaser } from "./shared/instance-role";
     MonitorsModule,
     // Slack operator channel, Phase 1: outbound notifications to the operator DM.
     OperatorChannelModule,
+    WebPushModule,
     AiProvidersModule,
     // TODO 11: per-project health checks (state + transition activity).
     ProjectHealthModule,

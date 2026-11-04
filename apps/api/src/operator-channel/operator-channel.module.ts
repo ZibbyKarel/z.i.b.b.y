@@ -63,6 +63,6 @@ import { OPERATOR_EVENT_LOOKUPS, OperatorNotifier } from "./operator-notifier.se
     OperatorNotifier,
     OperatorInboundService,
   ],
-  exports: [OperatorChannelService, OperatorNotifier],
+  exports: [OperatorChannelService, OperatorNotifier, OPERATOR_EVENT_LOOKUPS],
 })
 export class OperatorChannelModule {}
