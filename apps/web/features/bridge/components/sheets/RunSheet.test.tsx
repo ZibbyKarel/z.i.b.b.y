@@ -88,12 +88,12 @@ const anchor = {
 } as const;
 
 describe("RunSheet", () => {
-  it("slots the phase output into the embedded run detail, with no second approval card", () => {
+  it("embeds the run detail without the phase output, with no second approval card", () => {
     renderWithProviders(<RunSheet anchor={anchor} id="wf_1" onClose={() => {}} />);
     expect(screen.getByTestId(AnchoredSheetTestId.Title)).toHaveTextContent("Book");
     expect(screen.queryByTestId(NeedsYouCardTestId.Root)).not.toBeInTheDocument();
     expect(screen.getByTestId("run-detail")).toHaveTextContent("wf_1 embedded");
-    expect(screen.getByTestId("run-detail")).toHaveTextContent("Audit report");
+    expect(screen.getByTestId("run-detail")).not.toHaveTextContent("Audit report");
   });
 
   it("puts the run actions in the sheet header", () => {

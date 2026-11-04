@@ -13,7 +13,7 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useApprovalsQuery } from "../../approvals";
 import { runChatAbout } from "../../chat/chatAbout";
 import { ChatAboutButton } from "../../chat/components/ChatAboutButton";
@@ -31,6 +31,7 @@ import {
 } from "../runDetailModel";
 import { useRunLogStream, useStageRunLogStream } from "../useRunLogStream";
 import { useRunActions } from "../useRunActions";
+import { useRunArtifacts } from "../useRunArtifacts";
 import { RunComposer } from "./RunComposer";
 import { RunDetailActions } from "./RunDetailActions";
 import { RunDetailHeader } from "./RunDetailHeader";
@@ -52,8 +53,6 @@ export interface RunDetailProps {
   embedded?: boolean;
   /** Opens the approval's detail sheet from its card. */
   onOpenApproval?: (approvalId: string) => void;
-  /** Rendered under the approval banner (the sheet's gated-phase output). */
-  children?: ReactNode;
 }
 
 type View = "live" | "input" | "output";
@@ -112,7 +111,7 @@ const pad2 = (n: number) => String(n).padStart(2, "0");
  * the composer. Embedded (sheet): status row, metrics, approval card (with the gated phase's output inside), then the tabs panel
  * with the rail as the LIVE tab's sidebar.
  */
-export function RunDetail({ run, embedded, onOpenApproval, children }: RunDetailProps) {
+export function RunDetail({ run, embedded, onOpenApproval }: RunDetailProps) {
   const t = useTranslations("runs.detail");
   const router = useRouter();
   const [view, setView] = useState<View>("live");
@@ -122,6 +121,7 @@ export function RunDetail({ run, embedded, onOpenApproval, children }: RunDetail
   const { data: queue = [] } = useApprovalsQuery();
   const approval = approvalForRun(queue, run);
   const mode = deriveRunMode(run, approval);
+  const [output] = useRunArtifacts(run);
 
   const actions = useRunActions(
     (id) => router.push(`/activity/runs/${id}`),
@@ -224,28 +224,19 @@ export function RunDetail({ run, embedded, onOpenApproval, children }: RunDetail
           diffstat={run.diffstat}
           onOpenDetail={onOpenApproval && (() => onOpenApproval(approval.id))}
           onToggleRevise={() => setReviseOpen((o) => !o)}
+          output={output}
           reviseOpen={reviseOpen}
-        >
-          {embedded ? children : null}
-        </RunApprovalBanner>
+        />
       </Container>
     ) : null;
 
   return (
     <Stack data-testid={RunDetailTestId.Root} gap="0">
       {!embedded && banner}
-      {!embedded && children}
       <RunDetailHeader
         // In a sheet the actions sit in the sheet header (`RunHeaderActions`), like every sheet.
         actions={embedded ? null : <RunHeaderActions run={run} />}
-        afterMetrics={
-          embedded ? (
-            <>
-              {banner}
-              {!banner && children}
-            </>
-          ) : undefined
-        }
+        afterMetrics={embedded ? banner : undefined}
         agent={agent}
         compact={embedded}
         metrics={metrics}

@@ -10,19 +10,21 @@ import {
   HoldButton,
   IconTile,
   Panel,
+  Pressable,
   Stack,
   StatusDot,
   TextAreaField,
   Typography,
 } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import { ConfirmDeleteDialog } from "../../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
 import { resumeEta } from "../../../utils/time";
 import { useApproveMutation, useRejectMutation, useReviseMutation } from "../../approvals";
 import { type DashboardApproval, RISK_META } from "../../approvals/approval";
 import type { RunView } from "../run";
 import type { StageRailRow } from "../runDetailModel";
+import type { RunArtifact } from "../useRunArtifacts";
 
 export enum RunFeedBannersTestId {
   Approval = "run-banner-approval",
@@ -35,6 +37,8 @@ export enum RunFeedBannersTestId {
   ReviseSend = "run-banner-revise-send",
   Reject = "run-banner-reject",
   Diff = "run-banner-diff",
+  Title = "run-banner-title",
+  Output = "run-banner-output",
 }
 
 /** What the approval asks for, as one line of plain text (agent content is data, never markup). */
@@ -48,10 +52,10 @@ export interface RunApprovalBannerProps {
   reviseOpen: boolean;
   onToggleRevise: () => void;
   onApproved?: () => void;
-  /** Opens the full approval detail sheet (the approval's own sheet). */
+  /** Opens the full approval detail sheet — given, the whole card is its click target. */
   onOpenDetail?: () => void;
-  /** The gated phase's output — part of the approval, so it lives inside the card. */
-  children?: ReactNode;
+  /** What the gated work produced (PR, phase file, run folder) — the card's "open output" button. */
+  output?: RunArtifact;
 }
 
 /** NEEDS YOU — hold to approve, revise (stage approvals only) or reject; the run's pending diffstat underneath. */
@@ -62,11 +66,12 @@ export function RunApprovalBanner({
   onToggleRevise,
   onApproved,
   onOpenDetail,
-  children,
+  output,
 }: RunApprovalBannerProps) {
   const t = useTranslations("runs.detail");
   const tApprovals = useTranslations("approvals");
   const tk = useTranslations();
+  const tArtifacts = useTranslations("runs.artifacts");
   const locale = useLocale();
   const approve = useApproveMutation();
   const reject = useRejectMutation();
@@ -84,7 +89,13 @@ export function RunApprovalBanner({
   const at = new Date(approval.requestedAt).toLocaleTimeString(locale);
 
   return (
-    <Card corners borderTone="ink" data-testid={RunFeedBannersTestId.Approval}>
+    <Card
+      corners
+      borderTone="ink"
+      data-testid={RunFeedBannersTestId.Approval}
+      interactive={Boolean(onOpenDetail)}
+      onClick={onOpenDetail}
+    >
       <Container padding={["150", "200"]}>
         <Stack direction="row" gap="250">
           <Container grow minW0>
@@ -98,7 +109,19 @@ export function RunApprovalBanner({
                   })}
                 </Typography>
               </Stack>
-              <Typography type="title">{title}</Typography>
+              {onOpenDetail ? (
+                <Pressable
+                  data-testid={RunFeedBannersTestId.Title}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenDetail();
+                  }}
+                >
+                  <Typography type="title">{title}</Typography>
+                </Pressable>
+              ) : (
+                <Typography type="title">{title}</Typography>
+              )}
               {consequence && (
                 <Typography type="bodySm" variant="secondary">
                   {consequence}
@@ -112,7 +135,13 @@ export function RunApprovalBanner({
               </Typography>
             </Stack>
           </Container>
-          <Container shrink={false} width="280px">
+          {/* Its own click zone — the buttons and the (portalled) reject dialog never open the detail. */}
+          <Container
+            cursor="auto"
+            onClick={(e) => e.stopPropagation()}
+            shrink={false}
+            width="280px"
+          >
             <Stack gap="75" justify="center">
               <HoldButton
                 block
@@ -129,9 +158,23 @@ export function RunApprovalBanner({
                 }
               />
               <Stack direction="row" gap="75">
-                {onOpenDetail && (
-                  <Button block intent="ghost" onClick={onOpenDetail} size="sm">
-                    {t("banner.openDetail")}
+                {output && (
+                  <Button
+                    block
+                    data-testid={RunFeedBannersTestId.Output}
+                    intent="ghost"
+                    onClick={() =>
+                      output.kind === "pr"
+                        ? window.open(output.href, "_blank", "noopener,noreferrer")
+                        : output.open()
+                    }
+                    size="sm"
+                  >
+                    {output.kind === "pr"
+                      ? tArtifacts("openPr")
+                      : output.kind === "folder"
+                        ? tArtifacts("openFolder")
+                        : tArtifacts("openFile", { name: output.label })}
                   </Button>
                 )}
                 {approval.action === "stage-approval" && (
@@ -157,11 +200,32 @@ export function RunApprovalBanner({
                 </Button>
               </Stack>
             </Stack>
+            {confirmReject && (
+              <ConfirmDeleteDialog
+                body={t("confirm.rejectBody", {
+                  action: title.charAt(0).toLowerCase() + title.slice(1),
+                })}
+                cancelLabel={tk("common.cancel")}
+                confirmLabel={t("banner.reject")}
+                icon="x"
+                onCancel={() => setConfirmReject(false)}
+                onConfirm={() => {
+                  setConfirmReject(false);
+                  reject.mutate({ params: { id: approval.id }, body: {} });
+                }}
+                pending={reject.isPending}
+                title={t("confirm.rejectTitle")}
+              />
+            )}
           </Container>
         </Stack>
       </Container>
       {reviseOpen && (
-        <Container padding={["0", "200", "150", "200"]}>
+        <Container
+          cursor="auto"
+          onClick={(e) => e.stopPropagation()}
+          padding={["0", "200", "150", "200"]}
+        >
           <Stack gap="100">
             <TextAreaField
               autoFocus
@@ -194,12 +258,6 @@ export function RunApprovalBanner({
           </Stack>
         </Container>
       )}
-      {children && (
-        <>
-          <Divider />
-          <Container padding={["100", "200", "150", "200"]}>{children}</Container>
-        </>
-      )}
       {diffstat && diffstat.files.length > 0 && (
         <>
           <Divider />
@@ -216,23 +274,6 @@ export function RunApprovalBanner({
             </Stack>
           </Container>
         </>
-      )}
-      {confirmReject && (
-        <ConfirmDeleteDialog
-          body={t("confirm.rejectBody", {
-            action: title.charAt(0).toLowerCase() + title.slice(1),
-          })}
-          cancelLabel={tk("common.cancel")}
-          confirmLabel={t("banner.reject")}
-          icon="x"
-          onCancel={() => setConfirmReject(false)}
-          onConfirm={() => {
-            setConfirmReject(false);
-            reject.mutate({ params: { id: approval.id }, body: {} });
-          }}
-          pending={reject.isPending}
-          title={t("confirm.rejectTitle")}
-        />
       )}
     </Card>
   );

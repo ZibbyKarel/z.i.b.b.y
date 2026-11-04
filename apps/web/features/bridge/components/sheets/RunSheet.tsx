@@ -1,32 +1,28 @@
 "use client";
 
-import { AnchoredSheet, Markdown, SheetBlock, normalizeStateTone } from "@zibby/design-system";
+import { AnchoredSheet, normalizeStateTone } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { useApprovalsQuery } from "../../../approvals";
 import { useApprovalSheetParam } from "../../../approvals/useApprovalSheetParam";
 import { useTaskRunQuery } from "../../../runs/queries/useTaskRunQuery";
 import { RunDetail, RunHeaderActions } from "../../../runs/components/RunDetail";
-import { approvalForRun, runStateTone } from "../../../runs/run";
-import { useCheckpointArtifact } from "../../../runs/useCheckpointArtifact";
+import { runStateTone } from "../../../runs/run";
 import { type SheetProps, geometry } from "./sheetTypes";
 
 /**
  * Run detail from `GET /api/tasks/runs/:id`: the very same `RunDetail` the run page renders
  * (approval banner, phases, metrics, LIVE / INPUT / OUTPUT, composer) — one source, so the two
- * never drift; its action buttons sit top-right in the sheet header like every sheet's — with the gated phase's output (a stage checkpoint) slotted inside the approval card. The
- * run / task pages are one footer click away.
+ * never drift; its action buttons sit top-right in the sheet header like every sheet's. The
+ * approval card opens the approval detail (where the gated phase's output lives). The run / task
+ * pages are one footer click away.
  */
 export function RunSheet({ id, anchor, onClose }: SheetProps) {
   const t = useTranslations();
   const router = useRouter();
   const approvalSheet = useApprovalSheetParam();
   const { data: run } = useTaskRunQuery(id);
-  const { data: approvals = [] } = useApprovalsQuery();
-  const approval = run ? approvalForRun(approvals, run) : undefined;
-  const checkpoint = useCheckpointArtifact(approval, run);
   // An approval detail opened from this sheet closes with it (and when J/K steps to another run).
   // `history.replaceState` like the bridge's `?run=` sync — Next mirrors it into `useSearchParams`.
   const openedApproval = useRef<string | null>(null);
@@ -68,13 +64,7 @@ export function RunSheet({ id, anchor, onClose }: SheetProps) {
       title={run.title || run.taskTitle || run.runId}
       tone={normalizeStateTone(runStateTone(run.status) ?? "idle")}
     >
-      <RunDetail embedded onOpenApproval={openApproval} run={run}>
-        {checkpoint ? (
-          <SheetBlock label={t("bridge.sheet.run.output")}>
-            <Markdown escapeHtml source={checkpoint} />
-          </SheetBlock>
-        ) : null}
-      </RunDetail>
+      <RunDetail embedded onOpenApproval={openApproval} run={run} />
     </AnchoredSheet>
   );
 }
