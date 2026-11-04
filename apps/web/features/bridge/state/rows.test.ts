@@ -116,6 +116,14 @@ describe("pull requests", () => {
     expect(prNeed(pr({ number: 1 }))).toBeNull();
   });
 
+  it("prRow conversations counts unresolved threads only on my PRs", () => {
+    const rows = (p: InboxPr) =>
+      prGroups("w", [p], { company: [], team: [], project: [] }, ago).groups[0]?.root.conversations;
+    expect(rows(pr({ number: 1, unresolvedThreads: 2 }))).toBe(2);
+    expect(rows(pr({ number: 1 }))).toBe(0);
+    expect(rows(pr({ number: 1, bucket: "to-review", unresolvedThreads: 2 }))).toBe(0);
+  });
+
   it("groups a stack under its root with ON / WAITS ON, urgent group first", () => {
     const root = pr({ number: 1, headRef: "a", baseRef: "main" });
     const kid = pr({ number: 2, headRef: "b", baseRef: "a", blocker: "ci-failing", ci: "failing" });

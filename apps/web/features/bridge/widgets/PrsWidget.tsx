@@ -1,6 +1,13 @@
 "use client";
 
-import { BoardLine, BoardRow, BoardText, IndentRail, RowGroupHeader } from "@zibby/design-system";
+import {
+  BoardLine,
+  BoardRow,
+  BoardText,
+  IconBadge,
+  IndentRail,
+  RowGroupHeader,
+} from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { Fragment, useCallback, useMemo } from "react";
 import { useNow } from "../../../hooks/useNow";
@@ -61,6 +68,15 @@ export function PrsWidget({
       selected={selection?.key === r.key}
       sheetSide={sheetSide}
       tone={r.tone}
+      trailing={
+        r.conversations > 0 ? (
+          <IconBadge
+            count={r.conversations}
+            icon="chat"
+            label={t("conversations", { count: r.conversations })}
+          />
+        ) : undefined
+      }
     >
       <BoardLine baseline gap="8">
         <BoardText kind="prNum">{r.number}</BoardText>

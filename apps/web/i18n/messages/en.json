@@ -3244,6 +3244,7 @@
         "you": "You · {wait}",
         "on": "On {base}",
         "waitsOn": "· Waits on {prs}",
+        "conversations": "{count, plural, one {# unresolved conversation} other {# unresolved conversations}}",
         "section": {
           "mine": "Mine",
           "toReview": "To review",
