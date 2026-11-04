@@ -342,7 +342,7 @@ const MENTION_QUERY_RE = /(?:^|\s)([@#/])([\w.-]*)$/;
 /** Keys the mention dropdown's own keyboard nav fully owns while open — skipped
  * by the keyup re-scan below so closing (Escape) or navigating (Arrow/Enter)
  * never immediately reopens the panel from the unchanged caret position. */
-const MENTION_NAV_KEYS = new Set(["ArrowUp", "ArrowDown", "Enter", "Escape"]);
+const MENTION_NAV_KEYS = new Set(["ArrowUp", "ArrowDown", "Enter", "Tab", "Escape"]);
 
 /** Re-derives the in-progress mention (or `null`) from the text up to the caret —
  * called on every change/click/keyup so the dropdown tracks the caret live, never
@@ -988,6 +988,16 @@ export function CommandLine({
           mentionResults.length === 0 ? 0 : (i - 1 + mentionResults.length) % mentionResults.length,
         );
         return;
+      }
+      // Tab picks like Enter — but only a real pick: Shift+Tab, or Tab over an
+      // empty panel, falls through to the browser's normal focus move.
+      if (e.key === "Tab" && !e.shiftKey) {
+        const active = mentionResults[activeMentionIndex];
+        if (active) {
+          e.preventDefault();
+          pickMentionResult(active);
+          return;
+        }
       }
       if (e.key === "Enter") {
         const active = mentionResults[activeMentionIndex];
