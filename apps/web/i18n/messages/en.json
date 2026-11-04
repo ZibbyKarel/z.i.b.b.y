@@ -2590,6 +2590,13 @@
         "highRisk": "High risk",
         "waited": "waited {waited}",
         "submitReview": "Submit review",
+        "ownReview": {
+          "start": "Write my own review",
+          "cancel": "Use ZIBBY's review",
+          "label": "Your review",
+          "hint": "Replaces ZIBBY's review. Without text you can only approve (approve without comment).",
+          "submit": "Submit my review"
+        },
         "approveFailed": "Approval failed",
         "reviewEvent": {
           "label": "Review type",

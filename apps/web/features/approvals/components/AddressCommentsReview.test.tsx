@@ -149,6 +149,11 @@ describe("approve payload", () => {
       reviewEvent: "COMMENT",
       reviewDocument: "doc",
     });
+    expect(approveRequestBody(undefined, "APPROVE", "", true)).toEqual({
+      reviewEvent: "APPROVE",
+      reviewDocument: "",
+      ownReview: true,
+    });
     expect(approveRequestBody(undefined, undefined)).toEqual({});
     expect("replies" in approveRequestBody(undefined, undefined)).toBe(false);
   });
