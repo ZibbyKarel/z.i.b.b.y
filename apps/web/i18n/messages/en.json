@@ -1131,7 +1131,8 @@
       "hint": "Notifies you when something waits on you (approval, review, parked run, budget cap). Works with the tab closed. On iOS, add the app to the Home Screen first.",
       "unsupported": "This browser does not support push notifications (the desktop app has none either).",
       "denied": "Notifications are blocked in this browser. Allow them in the site settings.",
-      "error": "Could not turn push on or off. Try again."
+      "error": "Could not turn push on or off. Try again.",
+      "tokenRequired": "Set the operator token in Settings first."
     },
     "appearance": {
       "title": "Appearance",

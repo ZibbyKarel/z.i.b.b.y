@@ -6,6 +6,6 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "ZIBBY",
     start_url: "/",
     display: "standalone",
-    icons: [{ src: "/icon.png", sizes: "any", type: "image/png" }],
+    icons: [{ src: "/icon.png", sizes: "192x192", type: "image/png" }],
   };
 }

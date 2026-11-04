@@ -21,8 +21,8 @@ export type WebPushSender = (
 
 export const defaultWebPushSender: WebPushSender = async (sub, payload, vapid) => {
   await webpush.sendNotification(sub, payload, {
-    vapidDetails: { subject: "mailto:zibby@localhost", ...vapid },
-    TTL: 3600,
+    vapidDetails: { subject: process.env.WEB_PUSH_SUBJECT ?? "mailto:zibby@example.com", ...vapid },
+    TTL: 86_400,
   });
 };
 

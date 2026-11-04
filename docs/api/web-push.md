@@ -12,6 +12,8 @@ Browser push notifications for Tier-3 operator events (what waits on the operato
 - A subscription the push service reports gone (404 / 410) is dropped.
 - Files in `<data>/web-push/` (`WEB_PUSH_DIR` overrides): `vapid.json` (0600, generated on first
   use), `subscriptions.json`, `deliveries.jsonl` (one line per push: `ts, kind, target, sent, failed`).
+- `WEB_PUSH_SUBJECT` sets the VAPID subject (default `mailto:zibby@example.com`; Apple rejects localhost subjects). TTL is 24 h.
+- Browsers need HTTPS (or localhost) for push; iOS needs the app installed to the Home Screen.
 
 ## Endpoints (`webPushContract`)
 
