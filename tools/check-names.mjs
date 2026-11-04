@@ -14,7 +14,12 @@ const run = (args) => {
   }
 };
 
-const EXCLUDES = [":!tools/migrate/**", ":!tools/check-names.mjs"];
+// Recipe fixtures are verbatim copies of operator data and a third-party skill, not code.
+const EXCLUDES = [
+  ":!tools/migrate/**",
+  ":!tools/check-names.mjs",
+  ":!apps/api/test/fixtures/recipes/**",
+];
 const hits = [
   run([
     "grep",

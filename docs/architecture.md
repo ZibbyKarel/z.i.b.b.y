@@ -74,8 +74,8 @@ defaults to `~/Library/Application Support/ZibbyOS/data` and is fully repointed 
 automations, departments, teams, commands, hooks, mcp-servers, companies — resolve
 through `recipesDir()` instead: `ZIBBY_RECIPES_DIR` wins; an explicit `ZIBBY_DATA_DIR`
 or the test runner keeps them in the data root; otherwise
-`iCloud Drive/ZibbyOS/recipes` is used **if that folder exists** (create it to opt in —
-a second Mac picks it up once iCloud syncs). Runtime state (runs, findings, activity,
+`~/Documents/AI/ZibbyOS/recipes` (synced by iCloud "Desktop & Documents") is used **if
+that folder exists** (create it to opt in — a second Mac picks it up once iCloud syncs). Runtime state (runs, findings, activity,
 approvals, locks, credentials, gate rules) always stays in the local data root. Entity
 listings skip iCloud conflict copies (`<id> 2.md`) with a warning. Only one machine
 should run as `primary` — the instance lock is local and does not span machines.

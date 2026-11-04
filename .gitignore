@@ -35,52 +35,11 @@ graphify-out/
 # `measure`, never cleaned up otherwise.
 .design-match-cached-*
 
-# Local agent storage (apps/api data dirs: live/dev + test, selected by ZIBBY_DATA_DIR)
+# Local/test data roots (ZIBBY_DATA_DIR). Live runtime data lives in
+# ~/Library/Application Support/ZibbyOS/data and recipes in
+# ~/Documents/AI/ZibbyOS/recipes (docs/architecture.md) — never in the repo.
+.zibby/data/
 .zibby/data-test/
-.zibby/data/**/runs
-.zibby/data/approvals
-.zibby/data/tasks
-.zibby/data/vault/daily
-.zibby/data/import
-.zibby/data/credentials
-.zibby/data/operator-channel
-.zibby/data/channels
-.zibby/data/integration-state
-.zibby/data/activity
-.zibby/data/budget-ledger
-.zibby/data/subsystem-seen.json
-.zibby/data/artifacts
-# roadmap items are a sync cache of Jira/GitHub; _config/_level-mapping stay tracked
-.zibby/data/roadmap/*/*.json
-!.zibby/data/roadmap/*/_*.json
-# Signal bus runtime state (fired fingerprints + parked dispatches) — regenerable.
-.zibby/data/automations-fired
-.zibby/data/research-digest.json
-.zibby/data/mcp-credentials
-.zibby/data/project-secrets
-.zibby/data/ai-providers
-.zibby/data/_purged
-.zibby/data/chat
-
-# Phase 76: per-machine clone-root config — never synced, differs per machine.
-.zibby/data/machine/config.json
-# Inbox hidden-items state — operator-personal, never synced (docs/api/inbox.md).
-.zibby/data/inbox-state.json
-
-# Phase 73: uploaded avatar image bytes live outside the (committed) .md
-# frontmatter — binary, regenerable from an upload, never versioned.
-.zibby/data/agents/assets/
-.zibby/data/workflows/assets/
-# pipeline → workflow data-migration marker (per machine; see apps/api/src/shared/migrations)
-.zibby/data/.workflow-rename.done
-.zibby/data/projects/assets/
-
-.!zibby/data/agents
-.!zibby/data/automations
-.!zibby/data/skills
-.!zibby/data/hooks
-.!zibby/data/commands
-.!zibby/data/mcp-servers
 
 
 # Env / secrets — never commit

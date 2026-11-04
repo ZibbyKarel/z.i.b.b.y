@@ -51,15 +51,11 @@ export function dataDir(...segments: string[]): string {
   return path.join(resolveDataRoot(), ...segments);
 }
 
-/** Opt-in iCloud Drive folder for recipes shared across the operator's machines. */
-export const ICLOUD_RECIPES_DIR = path.join(
-  os.homedir(),
-  "Library",
-  "Mobile Documents",
-  "com~apple~CloudDocs",
-  "ZibbyOS",
-  "recipes",
-);
+/**
+ * Opt-in shared folder for recipes: `~/Documents/AI/ZibbyOS/recipes`, which iCloud
+ * syncs across the operator's machines when "Desktop & Documents" is on.
+ */
+export const ICLOUD_RECIPES_DIR = path.join(os.homedir(), "Documents", "AI", "ZibbyOS", "recipes");
 
 /**
  * Root of the recipes: operator-authored definitions (agents, workflows, skills,

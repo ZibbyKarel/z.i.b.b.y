@@ -65,7 +65,16 @@ describe("coloring-book workflow (e2e, mock providers)", () => {
     process.env.WORKFLOW_DEMO_FIXTURE_DIR = fixtures;
 
     await fs.copyFile(
-      path.join(REPO, ".zibby", "data", "workflows", "coloring-book.workflow.md"),
+      path.join(
+        REPO,
+        "apps",
+        "api",
+        "test",
+        "fixtures",
+        "recipes",
+        "workflows",
+        "coloring-book.workflow.md",
+      ),
       path.join(workflowsDir, "coloring-book.workflow.md"),
     );
 

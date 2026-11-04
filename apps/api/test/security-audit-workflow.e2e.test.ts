@@ -10,8 +10,8 @@ import { AppModule } from "../src/app.module";
 import { WorkflowRunnerService } from "../src/workflows/workflow-runner.service";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-/** The committed production data (read-only here: copied into the suite's temp data dir). */
-const PROD = path.resolve(HERE, "../../../.zibby/data");
+/** A frozen copy of the production recipes (read-only here: copied into the suite's temp data dir). */
+const PROD = path.resolve(HERE, "fixtures/recipes");
 const AGENTS = [
   "security-auditor",
   "penetration-tester",
