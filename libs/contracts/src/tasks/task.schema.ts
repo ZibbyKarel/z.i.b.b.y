@@ -841,6 +841,8 @@ export const ScheduledTaskSchema = z.object({
       head: z.string().min(1),
       base: z.string().min(1),
       headSha: z.string().min(1),
+      /** The PR author is the operator — autopilot may then push onto any head, not only `zibby/*`. */
+      ownPr: z.boolean().optional(),
       state: PrAddressCommentsStateSchema,
       report: z.string().optional(),
       worktree: z.string().optional(),

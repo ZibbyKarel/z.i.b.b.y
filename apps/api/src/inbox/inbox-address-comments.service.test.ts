@@ -182,6 +182,7 @@ describe("InboxAddressCommentsService", () => {
       head: "feat",
       base: "main",
       headSha: "sha1",
+      ownPr: false,
       state: "running",
     });
   });

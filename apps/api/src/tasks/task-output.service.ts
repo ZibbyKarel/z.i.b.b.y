@@ -18,6 +18,7 @@ import { AgentsStorageService } from "../agents/agents.storage.service";
 import {
   AutopilotService,
   autopilotActors,
+  autopilotContextFor,
   autopilotIntentFor,
 } from "../autopilot/autopilot.service";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
@@ -236,16 +237,22 @@ export class TaskOutputService implements OnModuleInit {
     task: ScheduledTask,
     approval: Pick<Approval, "kind" | "action" | "suggestedReviewEvent">,
     headBranch?: string,
+    ownPr?: boolean,
   ): Promise<boolean> {
-    if (!this.autopilot?.coversApproval(approval, headBranch)) return false;
-    const intent = autopilotIntentFor(approval, headBranch);
+    if (!this.autopilot?.coversApproval(approval, headBranch, ownPr)) return false;
+    const intent = autopilotIntentFor(approval, headBranch, ownPr);
     if (!intent || !this.gates || !this.agents) return false;
     try {
       const actors = await autopilotActors(task.target, {
         agents: this.agents,
         workflows: this.workflows,
       });
-      return await this.gates.autopilotDecides(intent, actors.agents, actors.department);
+      return await this.gates.autopilotDecides(
+        intent,
+        actors.agents,
+        actors.department,
+        autopilotContextFor(approval, headBranch, ownPr),
+      );
     } catch (error) {
       this.log.warn("autopilot: gate check failed — leaving the approval for the operator", {
         taskId: task.id,
@@ -626,11 +633,11 @@ export class TaskOutputService implements OnModuleInit {
           }
         : c,
     );
-    // Phase 4 — autopilot pushes onto ZIBBY's own `zibby/*` head; a `question` still waits.
+    // Phase 4 — autopilot pushes onto ZIBBY's `zibby/*` head or the operator's own PR; a `question` still waits.
     const byAutopilot =
       !autoPush &&
       !outcomes.some((o) => o.kind === "question") &&
-      (await this.autopilotApproves(task, approval, fix.head));
+      (await this.autopilotApproves(task, approval, fix.head, fix.ownPr));
     if (!autoPush && !byAutopilot) {
       return { summary: `Review komentáře ${ref}: push oprav čeká na schválení` };
     }
@@ -721,9 +728,11 @@ export class TaskOutputService implements OnModuleInit {
           }
         : c,
     );
-    // Phase 4 — autopilot pushes onto ZIBBY's own `zibby/*` head of the operator's own PR.
+    // Phase 4 — autopilot pushes onto the operator's own PR (ZIBBY's PRs carry the operator's login).
     const byAutopilot =
-      !autoPush && fix.ownPr === true && (await this.autopilotApproves(task, approval, fix.head));
+      !autoPush &&
+      fix.ownPr === true &&
+      (await this.autopilotApproves(task, approval, fix.head, true));
     if (!autoPush && !byAutopilot) {
       return { summary: `Oprava CI ${ref}: push opravy čeká na schválení` };
     }

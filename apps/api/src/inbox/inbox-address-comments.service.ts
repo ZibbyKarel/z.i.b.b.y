@@ -136,7 +136,12 @@ export class InboxAddressCommentsService implements OnModuleInit {
         `addressing review comments on ${ref} is already ${state} (task ${latest.id})`,
       );
     }
-    const { head, base, headSha } = await readPushablePr(this.fetchImpl, link, input.number);
+    const { head, base, headSha, author } = await readPushablePr(
+      this.fetchImpl,
+      link,
+      input.number,
+    );
+    const ownPr = !!link.username && author.toLowerCase() === link.username.toLowerCase();
     const url = `https://github.com/${link.repo}/pull/${input.number}`;
     const title = input.title?.trim() ?? "";
     const result = await this.scheduler.createTask(
@@ -167,6 +172,7 @@ export class InboxAddressCommentsService implements OnModuleInit {
       head,
       base,
       headSha,
+      ownPr,
       state: "running",
       ...(opts.auto ? { auto: true as const } : {}),
     }));

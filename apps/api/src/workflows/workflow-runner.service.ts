@@ -44,6 +44,7 @@ import { ApprovalsService } from "../approvals/approvals.service";
 import {
   AutopilotService,
   autopilotActors,
+  autopilotContextFor,
   autopilotIntentFor,
 } from "../autopilot/autopilot.service";
 import { SignalBusService } from "../automations/signal-bus.service";
@@ -2224,7 +2225,12 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         { kind: "workflow", id: run.workflowId },
         { agents: this.agents, workflows: this.workflows },
       );
-      return await this.gates.autopilotDecides(intent, actors.agents, actors.department);
+      return await this.gates.autopilotDecides(
+        intent,
+        actors.agents,
+        actors.department,
+        autopilotContextFor(parked),
+      );
     } catch (error) {
       this.log.warn("autopilot gate check failed — left pending", {
         approvalId: parked.id,

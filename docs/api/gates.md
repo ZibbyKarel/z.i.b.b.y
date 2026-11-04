@@ -47,8 +47,8 @@ optional `name`/`desc`, an optional `department` and the derived `system` flag.
   and every other write stays `gh.api_write`. `gh.pr_comment` is a subclass of
   `gh.api_write`: any rule matching action `gh.api_write` also matches a comment.
 - **Autopilot overlay** (Phase 4, `docs/api/autopilot.md`). While it is on, a matching
-  `ask` from `floor-gh.pr_comment`, or from `floor-git.push` onto a `zibby/*` branch,
-  resolves as `notify` with `via: "autopilot"`. The overlay applies only to these locked
+  `ask` from `floor-gh.pr_comment` (when its scope toggle is on), or from `floor-git.push`
+  onto a `zibby/*` branch (or, approval side only, the operator's own PR head), resolves as `notify` with `via: "autopilot"`. The overlay applies only to these locked
   system rules and never touches the stored file. Own and department rules, and every
   other global `ask`/`deny`, still win through the strictest-bucket pick.
 - Agents and skills can carry `gateRuleIds: [...]` naming rules by id. This is

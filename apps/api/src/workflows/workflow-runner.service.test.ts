@@ -351,6 +351,7 @@ describe("WorkflowRunnerService — autopilot pr-review gate (Phase 4)", () => {
       { action: "gh.pr_comment" },
       [expect.objectContaining({ id: "writer" })],
       undefined,
+      { scope: "reviews" },
     );
     expect(approve).toHaveBeenCalledWith("g1", { decidedBy: "autopilot" });
   });

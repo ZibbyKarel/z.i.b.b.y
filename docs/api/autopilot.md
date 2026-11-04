@@ -13,21 +13,39 @@ Web: the Autopilot icon toggle in the top bar, on every page.
 `autopilot.json` in the data dir (`AUTOPILOT_DIR` overrides it) holds the state:
 
 ```json
-{ "level": "full", "since": "2026-10-29T12:00:00.000Z", "by": "operator" }
+{
+  "level": "full",
+  "since": "2026-10-29T12:00:00.000Z",
+  "by": "operator",
+  "scope": { "reviews": true, "comments": true, "communication": false }
+}
 ```
 
 `level` is `off` or `full`, and `by` is `operator` or `chat`. A missing or malformed file
-counts as `off`. The file is read once at boot and cached, because the gate evaluator is
+counts as `off`.
+
+`scope` is what the operator picked in the switch-on dialog (all three start on):
+
+| Toggle          | Covers                                                                                  |
+| --------------- | --------------------------------------------------------------------------------------- |
+| `reviews`       | `pr-review` and the pr-review `workflow-gate` sign-off (ZIBBY's code reviews)           |
+| `comments`      | `pr-address-comments` (the fix push and the thread replies), and a hook `gh.pr_comment` |
+| `communication` | `channel` replies (GitHub, GitLab, Jira, Slack, …)                                      |
+
+Pushes are not a toggle: a `pr-fix-ci` push and a hook `git.push` onto `zibby/*` are covered
+whenever autopilot is on. A `full` state without `scope` (written before the toggles) covers
+everything. The file is read once at boot and cached, because the gate evaluator is
 synchronous. Use the API to switch the level: a hand edit only takes effect after a restart.
 
 ## Endpoints
 
-| Route                | Auth                      | Notes                                                                        |
-| -------------------- | ------------------------- | ---------------------------------------------------------------------------- |
-| `GET /api/autopilot` | none                      | The state plus `pendingApprovals` (the count waiting now)                    |
-| `PUT /api/autopilot` | operator token for `full` | `{ level }`. `full` without the token returns `401`; `off` is always allowed |
+| Route                | Auth                      | Notes                                                                                |
+| -------------------- | ------------------------- | ------------------------------------------------------------------------------------ |
+| `GET /api/autopilot` | none                      | The state plus `pendingApprovals` (the count waiting now)                            |
+| `PUT /api/autopilot` | operator token for `full` | `{ level, scope? }`. `full` without the token returns `401`; `off` is always allowed |
 
-Setting the level it already has does nothing: the file isn't written and no notice is sent.
+`scope` only counts with `full`; omitted means all on. Setting the level (and scope) it already
+has does nothing: the file isn't written and no notice is sent.
 
 The chat MCP tool `autopilot_off` calls the same service with `by: "chat"`. There is no tool
 that turns it on. The self-API also denies the `autopilot` router, so `api_call` can't reach
@@ -53,7 +71,10 @@ the overlay:
   comment. If the operator moved it to `deny`, or any other rule on `gh.api_write` asks or
   denies, that still wins.
 - `floor-git.push` for intent `git.push`, but only onto a `zibby/<…>` branch (ZIBBY's own run
-  branches). The hook names that `branch` only for a push with exactly one refspec, with
+  branches), or onto the head of a PR the operator authored when the caller passes it as
+  `ownedBranch` (approval side only, see below; ZIBBY opens its PRs with the operator's token,
+  so those count too). The ownership is never part of `IntendedAction`, so a hook intent can't
+  claim it: a hook push onto a non-`zibby/*` branch still asks. The hook names that `branch` only for a push with exactly one refspec, with
   `src:dst` and `refs/heads/` normalised (`HEAD:zibby/x` counts). These are not covered:
   several refspecs, a `:dst` delete refspec, `--all`, `--mirror`, `--tags`, `--delete`/`-d`,
   push options (`-o`/`--push-option`), `--repo`, any flag other than `-u`/`-q`/`-v`, no
@@ -70,20 +91,22 @@ department's `ask`, `deny` or `requires_approval` also still wins: agent tighten
 **Approval side** (`autopilotCoversApproval`). A park site checks this right after it raises
 a fresh approval. A match alone is not enough: the park site then builds the gate intent the
 approval stands for (`autopilotIntentFor`: `gh.pr_comment` for a review or replies, or
-`git.push` with the exact head branch) and asks `GateEvaluatorService.autopilotDecides`. That
+`git.push` with the exact head branch) and asks `GateEvaluatorService.autopilotDecides` with an
+`AutopilotContext` (`autopilotContextFor`: the approval's scope toggle, and `ownedBranch` when
+the task's `ownPr` says the operator authored the PR). That
 call evaluates the intent for the run's own agents and department (an agent target: that
 agent; a workflow target: every phase agent and the workflow's department). It approves, with
 `decidedBy: "autopilot"`, only when every evaluation resolves through the overlay
 (`via: "autopilot"`). An operator, agent or department `ask`/`deny`, a department
 `tierDefault: ask`, an unresolvable target or a missing intent leave the approval pending.
 
-| Approval kind         | Covered when                                                                                                         |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `pr-review`           | action `github.pr.review`. Posted as `COMMENT`; autopilot never picks a review event                                 |
-| `workflow-gate`       | it carries `suggestedReviewEvent` and the run's task carries `prReview` (a real pr-review task). Posted as `COMMENT` |
-| `pr-address-comments` | action `github.pr.comment` (replies), or a `git.push` onto a `zibby/*` head that has no open question                |
-| `pr-fix-ci`           | a `git.push` onto a `zibby/*` head of ZIBBY's own PR                                                                 |
-| `channel`             | action `channel-reply`, and the draft is autopilot-eligible (below)                                                  |
+| Approval kind         | Covered when                                                                                                                |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `pr-review`           | action `github.pr.review`. Posted as `COMMENT`; autopilot never picks a review event                                        |
+| `workflow-gate`       | it carries `suggestedReviewEvent` and the run's task carries `prReview` (a real pr-review task). Posted as `COMMENT`        |
+| `pr-address-comments` | action `github.pr.comment` (replies), or a `git.push` onto a `zibby/*` head or the operator's own PR, with no open question |
+| `pr-fix-ci`           | a `git.push` onto the head of the operator's own PR (`prFixCi.ownPr`)                                                       |
+| `channel`             | action `channel-reply`, and the draft is autopilot-eligible (below)                                                         |
 
 A workflow gate is never covered by its artifact name alone: a workflow whose last phase
 writes `zibby-pr-review.md` but whose run has no pr-review task keeps its operator checkpoint.

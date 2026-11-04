@@ -102,8 +102,9 @@ Autonomy is **tiered**. The tier — not the channel — decides how ZIBBY acts.
 When unsure which tier applies, ZIBBY treats it as the higher one.
 
 **Autopilot** is a temporary overlay that the operator switches on. While it is on, the
-covered `ask` classes move to Tier 2: PR reviews and comments, pushes to ZIBBY's own PR
-branches, and concrete channel replies. Never-rules and merge are not affected. Only the
+covered `ask` classes the operator picks when switching it on (code reviews, addressing review
+comments, channel communication) move to Tier 2, plus pushes onto ZIBBY's or the operator's own
+PR branches. Never-rules and merge are not affected. Only the
 operator token turns it on; anyone in the operator chat can turn it off. See
 `docs/api/autopilot.md`.
 

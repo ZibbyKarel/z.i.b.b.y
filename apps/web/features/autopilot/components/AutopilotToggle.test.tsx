@@ -29,7 +29,43 @@ describe("AutopilotToggle", () => {
     expect(mutate).not.toHaveBeenCalled();
     expect(screen.getByText(/3/)).toBeInTheDocument();
     await userEvent.click(screen.getByTestId(AutopilotToggleTestId.Confirm));
-    expect(mutate).toHaveBeenCalledWith({ body: { level: "full" } }, expect.anything());
+    expect(mutate).toHaveBeenCalledWith(
+      { body: { level: "full", scope: { reviews: true, comments: true, communication: true } } },
+      expect.anything(),
+    );
+  });
+
+  it("the dialog shows three scope switches, all on by default", async () => {
+    render(<AutopilotToggle />);
+    await userEvent.click(screen.getByTestId(AutopilotToggleTestId.Toggle));
+    for (const id of [
+      AutopilotToggleTestId.ScopeReviews,
+      AutopilotToggleTestId.ScopeComments,
+      AutopilotToggleTestId.ScopeCommunication,
+    ]) {
+      expect(screen.getByTestId(id)).toHaveRole("switch");
+      expect(screen.getByTestId(id)).toBeChecked();
+    }
+  });
+
+  it("switching one off sends that scope", async () => {
+    render(<AutopilotToggle />);
+    await userEvent.click(screen.getByTestId(AutopilotToggleTestId.Toggle));
+    await userEvent.click(screen.getByTestId(AutopilotToggleTestId.ScopeComments));
+    await userEvent.click(screen.getByTestId(AutopilotToggleTestId.Confirm));
+    expect(mutate).toHaveBeenCalledWith(
+      { body: { level: "full", scope: { reviews: true, comments: false, communication: true } } },
+      expect.anything(),
+    );
+  });
+
+  it("all switches off disables confirm", async () => {
+    render(<AutopilotToggle />);
+    await userEvent.click(screen.getByTestId(AutopilotToggleTestId.Toggle));
+    await userEvent.click(screen.getByTestId(AutopilotToggleTestId.ScopeReviews));
+    await userEvent.click(screen.getByTestId(AutopilotToggleTestId.ScopeComments));
+    await userEvent.click(screen.getByTestId(AutopilotToggleTestId.ScopeCommunication));
+    expect(screen.getByTestId(AutopilotToggleTestId.Confirm)).toBeDisabled();
   });
 
   it("cancel closes the dialog without switching", async () => {

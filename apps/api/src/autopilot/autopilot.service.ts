@@ -6,10 +6,13 @@ import {
   type Approval,
   type AutopilotActor,
   type AutopilotLevel,
+  type AutopilotScope,
+  type AutopilotScopeKey,
   type AutopilotState,
   AutopilotStateSchema,
   type AutopilotStatus,
   type DepartmentId,
+  FULL_AUTOPILOT_SCOPE,
   type IntendedAction,
   type Workflow,
 } from "@zibby/contracts";
@@ -22,55 +25,90 @@ export const AUTOPILOT_DIR = "AUTOPILOT_DIR";
 
 const FILE = "autopilot.json";
 
-/** ZIBBY's own run branches (`WorkspaceService`: `zibby/<runId>-<slug>`) — the only push target autopilot covers. */
+/** ZIBBY's own run branches (`WorkspaceService`: `zibby/<runId>-<slug>`). */
 export function isZibbyBranch(branch: string | undefined): boolean {
   return !!branch && branch.startsWith("zibby/") && branch.length > "zibby/".length;
+}
+
+/**
+ * What a caller established about the intent, beyond the intent itself. Never part of
+ * `IntendedAction`, so a hook-posted intent can't claim it.
+ * - `ownedBranch` — the head of a PR the operator authored (ZIBBY opens its PRs with the
+ *   operator's token, so this is "ZIBBY's or the operator's" branch); a push onto it is
+ *   covered like a `zibby/*` one.
+ * - `scope` — the class the caller acts for; a hook intent (none given) counts as `comments`.
+ */
+export interface AutopilotContext {
+  ownedBranch?: string;
+  scope?: AutopilotScopeKey;
+}
+
+/** A push target autopilot covers: a `zibby/*` branch, or the given operator-owned PR head. */
+function isOwnBranch(branch: string | undefined, ownedBranch?: string): boolean {
+  return isZibbyBranch(branch) || (!!branch && branch === ownedBranch);
 }
 
 /**
  * Gate side of the allowlist: the system rule ids whose `ask` autopilot may turn into
  * act-then-report, each with the intent it covers (checked too, so a rule whose match
  * was edited never widens the overlay). Everything else — merge, deploy, payments,
- * spend past cap, deletes, force push, the generic `gh.api_write`, a push to any
- * non-`zibby/*` branch, operator questions — is not here and is untouched.
+ * spend past cap, deletes, force push, the generic `gh.api_write`, a push to a branch
+ * that is neither ZIBBY's nor the operator's, operator questions — is not here and is untouched.
  */
 export const AUTOPILOT_COVERED_RULES: Readonly<
-  Record<string, (action: IntendedAction) => boolean>
+  Record<string, (action: IntendedAction, context: AutopilotContext) => boolean>
 > = {
   "floor-gh.pr_comment": (a) => a.action === "gh.pr_comment",
   // A comment also matches its parent class's system rule (`gh.pr_comment` ⊂ `gh.api_write`);
   // only that rule's `ask` is lifted, and only for a comment — a deny there still wins.
   "floor-gh.api_write": (a) => a.action === "gh.pr_comment",
-  "floor-git.push": (a) => a.action === "git.push" && isZibbyBranch(a.branch),
+  "floor-git.push": (a, c) => a.action === "git.push" && isOwnBranch(a.branch, c.ownedBranch),
 };
+
+/** The scope toggle an approval kind falls under; `null` = covered whenever autopilot is on. */
+export function autopilotScopeFor(kind: Approval["kind"]): AutopilotScopeKey | null {
+  switch (kind) {
+    case "pr-review":
+    case "workflow-gate":
+      return "reviews";
+    case "pr-address-comments":
+      return "comments";
+    case "channel":
+      return "communication";
+    default:
+      return null;
+  }
+}
 
 /**
  * Approval side of the allowlist: the approvals ZIBBY's own outbound flows raise for
  * the covered classes. Approved by autopilot at creation (never one already pending).
- * `headBranch` is the PR head a push approval would push to.
+ * `headBranch` is the PR head a push approval would push to; `ownPr` = the operator
+ * authored that PR. Scope toggles are the service's ({@link AutopilotService.coversApproval}).
  *
  * - `pr-review` "github.pr.review" — post a finished code review (as COMMENT);
  * - `workflow-gate` carrying `suggestedReviewEvent` — the pr-review workflow's sign-off gate;
  * - `pr-address-comments` "github.pr.comment" — post review-thread replies;
- * - `pr-address-comments` / `pr-fix-ci` "git.push" — only onto a `zibby/*` head;
+ * - `pr-address-comments` / `pr-fix-ci` "git.push" — only onto a `zibby/*` head or the operator's own PR;
  * - `channel` "channel-reply" — send a researched (concrete) reply draft.
  */
 export function autopilotCoversApproval(
   approval: Pick<Approval, "kind" | "action" | "suggestedReviewEvent">,
   headBranch?: string,
+  ownPr?: boolean,
 ): boolean {
+  const ownPush =
+    approval.action === "git.push" &&
+    (isZibbyBranch(headBranch) || (ownPr === true && !!headBranch));
   switch (approval.kind) {
     case "pr-review":
       return approval.action === "github.pr.review";
     case "workflow-gate":
       return approval.suggestedReviewEvent !== undefined;
     case "pr-address-comments":
-      return (
-        approval.action === "github.pr.comment" ||
-        (approval.action === "git.push" && isZibbyBranch(headBranch))
-      );
+      return approval.action === "github.pr.comment" || ownPush;
     case "pr-fix-ci":
-      return approval.action === "git.push" && isZibbyBranch(headBranch);
+      return ownPush;
     case "channel":
       return approval.action === "channel-reply";
     default:
@@ -86,9 +124,12 @@ export function autopilotCoversApproval(
 export function autopilotIntentFor(
   approval: Pick<Approval, "kind" | "action">,
   headBranch?: string,
+  ownPr?: boolean,
 ): IntendedAction | null {
   if (approval.action === "git.push") {
-    return isZibbyBranch(headBranch) ? { action: "git.push", branch: headBranch } : null;
+    return headBranch && (isZibbyBranch(headBranch) || ownPr === true)
+      ? { action: "git.push", branch: headBranch }
+      : null;
   }
   if (approval.kind === "pr-review" || approval.kind === "workflow-gate") {
     return { action: "gh.pr_comment" };
@@ -97,6 +138,19 @@ export function autopilotIntentFor(
     return { action: "gh.pr_comment" };
   }
   return null;
+}
+
+/** The {@link AutopilotContext} the gate check of a covered approval runs with. */
+export function autopilotContextFor(
+  approval: Pick<Approval, "kind">,
+  headBranch?: string,
+  ownPr?: boolean,
+): AutopilotContext {
+  const scope = autopilotScopeFor(approval.kind);
+  return {
+    ...(scope ? { scope } : {}),
+    ...(ownPr === true && headBranch ? { ownedBranch: headBranch } : {}),
+  };
 }
 
 /** The gate rules of a run's acting unit: its agents' own rules and its department. */
@@ -132,6 +186,11 @@ export async function autopilotActors(
   throw new Error(`autopilot: no gate actors for a ${target?.kind ?? "missing"} target`);
 }
 
+function describeScope(scope: AutopilotScope): string {
+  const on = (Object.keys(scope) as AutopilotScopeKey[]).filter((k) => scope[k]);
+  return on.length ? on.join(", ") : "pushes only";
+}
+
 /**
  * Phase 4 — the autopilot switch. `autopilot.json` is the truth; it is read once at
  * boot and cached, because the gate evaluator asks synchronously on every intent.
@@ -161,17 +220,31 @@ export class AutopilotService implements OnModuleInit {
     return this.state.level === "full";
   }
 
+  /** The classes the operator picked; a `full` state from before the toggles covers all. */
+  scope(): AutopilotScope {
+    return this.state.scope ?? FULL_AUTOPILOT_SCOPE;
+  }
+
   /** Whether the overlay turns this system rule's `ask` into act-then-report right now. */
-  coversRule(ruleId: string, action: IntendedAction): boolean {
-    return this.isOn() && (AUTOPILOT_COVERED_RULES[ruleId]?.(action) ?? false);
+  coversRule(ruleId: string, action: IntendedAction, context: AutopilotContext = {}): boolean {
+    if (!this.isOn()) return false;
+    // A PR comment belongs to whichever class posts it; a push is never toggled off.
+    if (action.action === "gh.pr_comment" && !this.scope()[context.scope ?? "comments"]) {
+      return false;
+    }
+    return AUTOPILOT_COVERED_RULES[ruleId]?.(action, context) ?? false;
   }
 
   /** Whether autopilot approves this freshly requested approval right now. */
   coversApproval(
     approval: Pick<Approval, "kind" | "action" | "suggestedReviewEvent">,
     headBranch?: string,
+    ownPr?: boolean,
   ): boolean {
-    return this.isOn() && autopilotCoversApproval(approval, headBranch);
+    if (!this.isOn()) return false;
+    const key = autopilotScopeFor(approval.kind);
+    if (key && !this.scope()[key]) return false;
+    return autopilotCoversApproval(approval, headBranch, ownPr);
   }
 
   async status(): Promise<AutopilotStatus> {
@@ -183,9 +256,24 @@ export class AutopilotService implements OnModuleInit {
    * Switch the level. Authorization is the caller's: only the operator-token route may
    * pass `full`. Re-setting the current level is a no-op (no file write, no notice).
    */
-  async set(level: AutopilotLevel, by: AutopilotActor): Promise<AutopilotStatus> {
-    if (level === this.state.level) return this.status();
-    const next: AutopilotState = { level, since: new Date().toISOString(), by };
+  async set(
+    level: AutopilotLevel,
+    by: AutopilotActor,
+    scope?: AutopilotScope,
+  ): Promise<AutopilotStatus> {
+    const nextScope = level === "full" ? (scope ?? FULL_AUTOPILOT_SCOPE) : undefined;
+    if (
+      level === this.state.level &&
+      (level === "off" || JSON.stringify(nextScope) === JSON.stringify(this.scope()))
+    ) {
+      return this.status();
+    }
+    const next: AutopilotState = {
+      level,
+      since: new Date().toISOString(),
+      by,
+      ...(nextScope ? { scope: nextScope } : {}),
+    };
     await ensureDir(this.dir);
     await writeFileAtomic(path.join(this.dir, FILE), `${JSON.stringify(next, null, 2)}\n`);
     this.state = next;
@@ -194,7 +282,7 @@ export class AutopilotService implements OnModuleInit {
       kind: "autopilot-changed",
       summary:
         level === "full"
-          ? `autopilot ON (${by}) — ${status.pendingApprovals} approvals still pending, not auto-decided`
+          ? `autopilot ON (${by}; ${describeScope(this.scope())}) — ${status.pendingApprovals} approvals still pending, not auto-decided`
           : `autopilot OFF (${by}) — every gate asks again`,
       refs: { status: level, decision: by },
     });

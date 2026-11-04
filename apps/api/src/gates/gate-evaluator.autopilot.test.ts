@@ -259,6 +259,53 @@ describe("GateEvaluatorService — autopilot overlay", () => {
     expect((await evalFloor({ action: "deploy" })).decision).toBe("ask");
   });
 
+  it("a push onto the operator's own PR head is lifted only with that context", async () => {
+    await autopilot.set("full", "operator");
+    const push = { action: "git.push", branch: "feature/mine" };
+    expect(await evaluator.autopilotDecides(push, [])).toBe(false);
+    expect(
+      await evaluator.autopilotDecides(push, [], undefined, { ownedBranch: "feature/mine" }),
+    ).toBe(true);
+    expect(await evaluator.autopilotDecides(push, [], undefined, { ownedBranch: "other" })).toBe(
+      false,
+    );
+    // A hook intent never carries the context: the same push still asks.
+    expect((await evalFloor(push)).decision).toBe("ask");
+  });
+
+  it("a branch rule on the owned head still wins", async () => {
+    await catalog.create({
+      name: "No push to main",
+      match: [{ type: "action", action: "git.push", branch: "main" }],
+      decision: "deny",
+    });
+    await autopilot.set("full", "operator");
+    const push = { action: "git.push", branch: "main" };
+    expect(await evaluator.autopilotDecides(push, [], undefined, { ownedBranch: "main" })).toBe(
+      false,
+    );
+  });
+
+  it("a PR comment is lifted only when its scope is on", async () => {
+    await autopilot.set("full", "operator", {
+      reviews: true,
+      comments: false,
+      communication: false,
+    });
+    const comment = { action: "gh.pr_comment" };
+    expect((await evalFloor(comment)).decision).toBe("ask");
+    expect(await evaluator.autopilotDecides(comment, [], undefined, { scope: "reviews" })).toBe(
+      true,
+    );
+    expect(await evaluator.autopilotDecides(comment, [], undefined, { scope: "comments" })).toBe(
+      false,
+    );
+    // A zibby/* push is not a toggle.
+    expect(await evalFloor({ action: "git.push", branch: "zibby/run-1-fix" })).toMatchObject({
+      via: "autopilot",
+    });
+  });
+
   it("persists across a restart from autopilot.json", async () => {
     await autopilot.set("full", "operator");
     const again = new AutopilotService(dir);

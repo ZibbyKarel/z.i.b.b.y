@@ -1170,7 +1170,7 @@ describe("TaskOutputService", () => {
       expect(q.summary).toMatch(/čeká na schválení/);
     });
 
-    it("pushes a CI fix only onto a zibby/* head of the operator's own PR", async () => {
+    it("pushes a CI fix onto any head of the operator's own PR, never a colleague's", async () => {
       const seed = async (id: string, head: string, ownPr: boolean) => {
         await create(id);
         return storage.setPrFixCi(id, () => ({
@@ -1185,8 +1185,11 @@ describe("TaskOutputService", () => {
       await on.parkPrFixCi(await seed("c1", "zibby/run-1-x", true), "Fixed: partial", "/wt");
       expect(approvals.approve).toHaveBeenCalledWith("appr_1", { decidedBy: "autopilot" });
       approvals.approve.mockClear();
-      await on.parkPrFixCi(await seed("c2", "zibby/run-1-x", false), "Fixed: partial", "/wt");
       await on.parkPrFixCi(await seed("c3", "feat", true), "Fixed: partial", "/wt");
+      expect(approvals.approve).toHaveBeenCalledTimes(1);
+      approvals.approve.mockClear();
+      await on.parkPrFixCi(await seed("c2", "zibby/run-1-x", false), "Fixed: partial", "/wt");
+      await on.parkPrFixCi(await seed("c4", "feat", false), "Fixed: partial", "/wt");
       expect(approvals.approve).not.toHaveBeenCalled();
     });
 

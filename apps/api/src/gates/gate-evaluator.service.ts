@@ -10,7 +10,7 @@ import type {
   PolicyViolation,
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
-import { AutopilotService } from "../autopilot/autopilot.service";
+import { type AutopilotContext, AutopilotService } from "../autopilot/autopilot.service";
 import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import {
   GateRulesStorageService,
@@ -190,10 +190,11 @@ export class GateEvaluatorService {
     action: IntendedAction,
     agents: readonly AgentPolicyInput[],
     departmentId?: DepartmentId,
+    context?: AutopilotContext,
   ): Promise<boolean> {
     for (const input of agents.length ? agents : [{}]) {
       const rules = await this.rulesForAgentInDepartment(input, departmentId);
-      if (this.matchOnce(rules, action).via !== "autopilot") return false;
+      if (this.matchOnce(rules, action, context).via !== "autopilot") return false;
     }
     return true;
   }
@@ -251,7 +252,11 @@ export class GateEvaluatorService {
    * explicit `notify` floor rule, not via this fallback — see `DEFAULT_FLOOR` in
    * `policy.storage.service.ts`.
    */
-  private matchOnce(rules: GateRule[], action: IntendedAction): GateEvaluation {
+  private matchOnce(
+    rules: GateRule[],
+    action: IntendedAction,
+    autopilotContext?: AutopilotContext,
+  ): GateEvaluation {
     let own: GateEvaluation | null = null;
     let department: GateEvaluation | null = null;
     let floor: GateEvaluation | null = null;
@@ -268,7 +273,10 @@ export class GateEvaluatorService {
         // deny): a covered `ask` becomes act-then-report. The stored rule is never
         // touched, and the strictest-of-buckets below still lets any other matching
         // `ask`/`deny` (global, department or agent) win over it.
-        if (hit.decision === "ask" && this.autopilot?.coversRule(rule.id, action)) {
+        if (
+          hit.decision === "ask" &&
+          this.autopilot?.coversRule(rule.id, action, autopilotContext)
+        ) {
           const lifted: GateEvaluation = { decision: "notify", ruleId: rule.id, via: "autopilot" };
           if (!floor || DECISION_RANK[lifted.decision] > DECISION_RANK[floor.decision])
             floor = lifted;

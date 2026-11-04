@@ -1,6 +1,7 @@
 "use client";
 
-import { Button, Container, Dialog, Stack, Typography } from "@zibby/design-system";
+import { type AutopilotScope, FULL_AUTOPILOT_SCOPE } from "@zibby/contracts";
+import { Button, Container, Dialog, Stack, ToggleField, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { isOperatorTokenError } from "../../../state/operatorToken";
@@ -13,7 +14,36 @@ export enum AutopilotToggleTestId {
   Confirm = "autopilot-toggle-confirm",
   Cancel = "autopilot-toggle-cancel",
   Error = "autopilot-toggle-error",
+  ScopeReviews = "autopilot-toggle-scope-reviews",
+  ScopeComments = "autopilot-toggle-scope-comments",
+  ScopeCommunication = "autopilot-toggle-scope-communication",
 }
+
+const SCOPE_FIELDS = [
+  {
+    key: "reviews",
+    label: "scopeReviews",
+    hint: "scopeReviewsHint",
+    testId: AutopilotToggleTestId.ScopeReviews,
+  },
+  {
+    key: "comments",
+    label: "scopeComments",
+    hint: "scopeCommentsHint",
+    testId: AutopilotToggleTestId.ScopeComments,
+  },
+  {
+    key: "communication",
+    label: "scopeCommunication",
+    hint: "scopeCommunicationHint",
+    testId: AutopilotToggleTestId.ScopeCommunication,
+  },
+] as const satisfies readonly {
+  key: keyof AutopilotScope;
+  label: string;
+  hint: string;
+  testId: AutopilotToggleTestId;
+}[];
 
 /**
  * Phase 4 — the top-bar Autopilot switch, an icon toggle (`aria-pressed`). OFF → opens a
@@ -25,6 +55,8 @@ export function AutopilotToggle() {
   const { data } = useAutopilotQuery();
   const setAutopilot = useSetAutopilotMutation();
   const [confirming, setConfirming] = useState(false);
+  const [scope, setScope] = useState<AutopilotScope>(FULL_AUTOPILOT_SCOPE);
+  const anyScope = scope.reviews || scope.comments || scope.communication;
 
   const on = data?.level === "full";
   const pending = data?.pendingApprovals ?? 0;
@@ -36,7 +68,10 @@ export function AutopilotToggle() {
     : null;
 
   const turnOn = () =>
-    setAutopilot.mutate({ body: { level: "full" } }, { onSuccess: () => setConfirming(false) });
+    setAutopilot.mutate(
+      { body: { level: "full", scope } },
+      { onSuccess: () => setConfirming(false) },
+    );
   const close = () => {
     setConfirming(false);
     setAutopilot.reset();
@@ -51,7 +86,11 @@ export function AutopilotToggle() {
         icon="sparkles"
         intent={on ? "primary" : "ghost"}
         loading={on && setAutopilot.isPending}
-        onClick={() => (on ? setAutopilot.mutate({ body: { level: "off" } }) : setConfirming(true))}
+        onClick={() => {
+          if (on) return setAutopilot.mutate({ body: { level: "off" } });
+          setScope(FULL_AUTOPILOT_SCOPE);
+          setConfirming(true);
+        }}
         size="sm"
         title={on ? `${t("status", { pending })} — ${t("turnOff")}` : t("turnOn")}
       />
@@ -63,6 +102,7 @@ export function AutopilotToggle() {
             </Button>
             <Button
               data-testid={AutopilotToggleTestId.Confirm}
+              disabled={!anyScope}
               icon="bolt"
               intent="primary"
               loading={setAutopilot.isPending}
@@ -81,6 +121,16 @@ export function AutopilotToggle() {
         width="md"
       >
         <Stack gap="100">
+          {SCOPE_FIELDS.map(({ key, label, hint, testId }) => (
+            <ToggleField
+              checked={scope[key]}
+              data-testid={testId}
+              hint={t(hint)}
+              key={key}
+              label={t(label)}
+              onChange={(next) => setScope((prev) => ({ ...prev, [key]: next }))}
+            />
+          ))}
           <Typography type="text">{t("dialogPending", { pending })}</Typography>
           {errorText ? (
             <Typography data-testid={AutopilotToggleTestId.Error} tone="bad" type="text">

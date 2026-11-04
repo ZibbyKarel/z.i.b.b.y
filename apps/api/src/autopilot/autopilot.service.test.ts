@@ -23,6 +23,7 @@ describe("autopilotCoversApproval — the approval allowlist", () => {
     [{ kind: "pr-address-comments", action: "git.push" }, "feature/x", false],
     [{ kind: "pr-fix-ci", action: "git.push" }, "zibby/run-1-x", true],
     [{ kind: "pr-fix-ci", action: "git.push" }, "main", false],
+    [{ kind: "pr-fix-ci", action: "git.push" }, "feature/mine", false],
     [{ kind: "channel", action: "channel-reply" }, undefined, true],
     [{ kind: "pr-rebase", action: "git.force_push" }, "zibby/run-1-x", false],
     [{ kind: "workflow-output", action: "pr.open" }, undefined, false],
@@ -31,6 +32,21 @@ describe("autopilotCoversApproval — the approval allowlist", () => {
     [{ kind: "comms-graduation", action: "graduate" }, undefined, false],
   ])("%o on %s → %s", (approval, head, expected) => {
     expect(autopilotCoversApproval(approval, head)).toBe(expected);
+  });
+
+  it("covers a push onto any head of the operator's own PR", () => {
+    expect(
+      autopilotCoversApproval({ kind: "pr-fix-ci", action: "git.push" }, "feature/mine", true),
+    ).toBe(true);
+    expect(
+      autopilotCoversApproval({ kind: "pr-address-comments", action: "git.push" }, "fix/x", true),
+    ).toBe(true);
+    expect(
+      autopilotCoversApproval({ kind: "pr-fix-ci", action: "git.push" }, undefined, true),
+    ).toBe(false);
+    expect(
+      autopilotCoversApproval({ kind: "pr-rebase", action: "git.force_push" }, "fix/x", true),
+    ).toBe(false);
   });
 });
 
@@ -63,6 +79,29 @@ describe("AutopilotService", () => {
     await svc.onModuleInit();
     expect(await svc.set("full", "operator")).toMatchObject({ level: "full", pendingApprovals: 2 });
     expect(approve.calls).toBe(0);
+  });
+
+  it("honours the scope toggles; a push of fix-ci is never toggled off", async () => {
+    const svc = new AutopilotService(dir);
+    await svc.onModuleInit();
+    await svc.set("full", "operator", { reviews: false, comments: true, communication: false });
+    expect(svc.coversApproval({ kind: "pr-review", action: "github.pr.review" })).toBe(false);
+    expect(svc.coversApproval({ kind: "channel", action: "channel-reply" })).toBe(false);
+    expect(svc.coversApproval({ kind: "pr-address-comments", action: "github.pr.comment" })).toBe(
+      true,
+    );
+    expect(svc.coversApproval({ kind: "pr-fix-ci", action: "git.push" }, "f/x", true)).toBe(true);
+    // Persisted, and reloaded on boot.
+    const reloaded = new AutopilotService(dir);
+    await reloaded.onModuleInit();
+    expect(reloaded.scope()).toEqual({ reviews: false, comments: true, communication: false });
+  });
+
+  it("a legacy full state without scope covers everything", async () => {
+    await fs.writeFile(path.join(dir, "autopilot.json"), JSON.stringify({ level: "full" }));
+    const svc = new AutopilotService(dir);
+    await svc.onModuleInit();
+    expect(svc.scope()).toEqual({ reviews: true, comments: true, communication: true });
   });
 
   it("re-setting the current level is a no-op (no file write)", async () => {
