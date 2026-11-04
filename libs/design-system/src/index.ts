@@ -266,6 +266,8 @@ export type {
   HighlightTextAreaFieldProps,
   HighlightTone,
 } from "./components/form/HighlightTextAreaField/HighlightTextAreaField";
+export { HighlightText, HighlightTextTestId } from "./components/HighlightText/HighlightText";
+export type { HighlightTextProps } from "./components/HighlightText/HighlightText";
 
 export { SelectField } from "./components/form/SelectField/SelectField";
 export type {
