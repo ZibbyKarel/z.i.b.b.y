@@ -169,6 +169,8 @@ export interface PrRowVm {
   on: string | null;
   /** `#a, #b` unready ancestors. */
   waits: string | null;
+  /** Unresolved review threads on my PR; 0 for others' PRs or when unknown. */
+  conversations: number;
 }
 
 export interface PrGroupVm {
@@ -216,6 +218,7 @@ export function prRow(widgetId: string, pr: InboxPr, all: InboxPr[], ago: Ago): 
     needsYou: need ? ago(pr.updatedAt ?? pr.createdAt) : null,
     on: parent ? `#${parent.number}` : null,
     waits: waits.length ? waits.map((w) => `#${w.number}`).join(", ") : null,
+    conversations: pr.bucket === "mine" ? (pr.unresolvedThreads ?? 0) : 0,
   };
 }
 

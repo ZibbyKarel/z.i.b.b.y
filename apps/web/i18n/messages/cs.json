@@ -3244,6 +3244,7 @@
         "you": "Ty · {wait}",
         "on": "Na {base}",
         "waitsOn": "· Čeká na {prs}",
+        "conversations": "{count, plural, one {# nevyřešená konverzace} few {# nevyřešené konverzace} other {# nevyřešených konverzací}}",
         "section": {
           "mine": "Moje",
           "toReview": "K review",

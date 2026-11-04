@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { BoardTag } from "../BoardTag/BoardTag";
 import { Button } from "../Button/Button";
 import { BoardText } from "../BoardText/BoardText";
+import { IconBadge } from "../IconBadge/IconBadge";
 import { IconTile } from "../IconTile/IconTile";
 import { BoardColumnHeader, BoardGrid, BoardLine, BoardRow } from "./BoardRow";
 
@@ -78,6 +79,13 @@ export const Overview: Story = {
             · SHOP
           </BoardText>
         </BoardLine>
+      </BoardRow>
+      <BoardRow
+        onClick={() => {}}
+        tone="idle"
+        trailing={<IconBadge count={3} icon="chat" label="3 unresolved" />}
+      >
+        {issue()}
       </BoardRow>
       <BoardRow columns="run" tone="working">
         <BoardText kind="body">Refactor billing</BoardText>

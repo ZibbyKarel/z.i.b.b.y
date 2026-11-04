@@ -155,4 +155,27 @@ describe("BoardRow", () => {
     expect(screen.queryByTestId(BoardRowTestId.Action)).toBeNull();
     expect(screen.getByTestId(BoardRowTestId.Root)).toHaveClass("bg-panel");
   });
+
+  it("trailing renders inside the row body", () => {
+    render(
+      <BoardRow tone="idle" trailing={<span>T</span>}>
+        <span>child</span>
+      </BoardRow>,
+    );
+    const root = screen.getByTestId(BoardRowTestId.Root);
+    const trailing = screen.getByTestId(BoardRowTestId.Trailing);
+    expect(root).toContainElement(trailing);
+    expect(trailing).toHaveTextContent("T");
+    expect(screen.getByTestId(BoardRowTestId.Content)).toHaveTextContent("child");
+  });
+
+  it("no trailing keeps children directly in Root", () => {
+    render(
+      <BoardRow tone="idle">
+        <span>child</span>
+      </BoardRow>,
+    );
+    expect(screen.queryByTestId(BoardRowTestId.Trailing)).toBeNull();
+    expect(screen.queryByTestId(BoardRowTestId.Content)).toBeNull();
+  });
 });

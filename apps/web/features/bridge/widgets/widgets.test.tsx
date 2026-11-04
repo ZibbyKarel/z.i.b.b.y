@@ -1,6 +1,7 @@
 import type { InboxPr, InboxRoadmapItem } from "@zibby/contracts";
 import {
   BoardRowTestId,
+  IconBadgeTestId,
   KpiStripTestId,
   ProgressTestId,
   RowGroupHeaderTestId,
@@ -292,6 +293,17 @@ describe("PrsWidget", () => {
     expect(props.onCountChange).toHaveBeenLastCalledWith(
       expect.objectContaining({ count: 3, you: 0 }),
     );
+  });
+
+  it("own PR with unresolved threads shows the conversations badge, none at 0", () => {
+    d.prs = [pr(1, { unresolvedThreads: 2 }), pr(2, { unresolvedThreads: 0 })];
+    const props = setup({ widget: widget("w", "prs") });
+    renderWithProviders(<PrsWidget {...props} />);
+    const badge = screen.getByTestId(IconBadgeTestId.Root);
+    expect(badge).toHaveAccessibleName("2 nevyřešené konverzace");
+    expect(screen.getByTestId(IconBadgeTestId.Count)).toHaveTextContent("2");
+    expect(screen.getByText("PR 1").closest("button")).toContainElement(badge);
+    expect(screen.getAllByTestId(IconBadgeTestId.Root)).toHaveLength(1);
   });
 
   it("is empty with no PRs", () => {

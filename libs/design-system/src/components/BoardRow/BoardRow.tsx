@@ -11,6 +11,10 @@ export enum BoardRowTestId {
   Frame = "board-row-frame",
   /** The trailing `action` slot — a sibling of the row body, never inside it. */
   Action = "board-row-action",
+  /** The children wrapper, rendered only when `trailing` is set. */
+  Content = "board-row-content",
+  /** The `trailing` slot inside the row body. */
+  Trailing = "board-row-trailing",
 }
 
 export type BoardRowTone = StateTone | "neutral";
@@ -57,6 +61,11 @@ export interface BoardRowProps {
    * button inside a button. A click on the action never reaches the row's `onClick`.
    */
   action?: ReactNode;
+  /**
+   * Non-interactive content (phrasing only) at the right end of the row body, vertically centred
+   * over the whole row. Children are then wrapped in a `Content` span carrying the row layout.
+   */
+  trailing?: ReactNode;
   children?: ReactNode;
   ref?: Ref<HTMLButtonElement>;
 }
@@ -88,12 +97,14 @@ export function BoardRow({
   rowKey,
   onClick,
   action,
+  trailing,
   children,
   ref,
 }: BoardRowProps) {
   const interactive = onClick !== undefined;
   const Tag = interactive ? "button" : "div";
   const framed = action !== undefined && action !== null;
+  const hasTrailing = trailing !== undefined && trailing !== null;
 
   /** The visual row: bar, hairline, panel fill, hover and the selected / needsYou rings. */
   const chrome = cn(
@@ -109,14 +120,15 @@ export function BoardRow({
         )
       : needsYou && "shadow-[inset_0_0_0_1px_var(--color-ink)]",
   );
+  const layout = columns
+    ? cn("grid items-center", TEMPLATE[columns])
+    : "flex flex-col gap-[var(--bridge-inner-gap)]";
   /** The row body: padding, inner layout, the interactive affordances. */
   const body = cn(
     interactive && "cursor-pointer appearance-none",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
     PADDING[padding],
-    columns
-      ? cn("grid items-center", TEMPLATE[columns])
-      : "flex flex-col gap-[var(--bridge-inner-gap)]",
+    hasTrailing ? "flex items-center gap-[var(--bridge-inner-gap)]" : layout,
   );
 
   const row = (
@@ -133,7 +145,18 @@ export function BoardRow({
       ref={ref as Ref<HTMLDivElement & HTMLButtonElement>}
       type={interactive ? "button" : undefined}
     >
-      {children}
+      {hasTrailing ? (
+        <>
+          <span className={cn("min-w-0 flex-1", layout)} data-testid={BoardRowTestId.Content}>
+            {children}
+          </span>
+          <span className="flex flex-none" data-testid={BoardRowTestId.Trailing}>
+            {trailing}
+          </span>
+        </>
+      ) : (
+        children
+      )}
     </Tag>
   );
   if (!framed) return row;

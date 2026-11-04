@@ -96,6 +96,9 @@ export type { SurfaceProps } from "./components/Surface/Surface";
 export { Icon, IconTestId, iconNames } from "./components/Icon/Icon";
 export type { IconName, IconProps, IconStroke, IconTone } from "./components/Icon/Icon";
 
+export { IconBadge, IconBadgeTestId } from "./components/IconBadge/IconBadge";
+export type { IconBadgeProps } from "./components/IconBadge/IconBadge";
+
 export { IconTile, IconTileTestId } from "./components/IconTile/IconTile";
 export type {
   IconTileProps,
