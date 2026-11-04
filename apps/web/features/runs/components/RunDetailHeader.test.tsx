@@ -36,11 +36,12 @@ const metrics: RunMetric[] = (
   ["progress", "elapsed", "stage", "retries", "cost", "confidence"] as const
 ).map((key) => ({ key, value: "—" }));
 
-function renderHeader(over: Partial<RunView> = {}) {
+function renderHeader(over: Partial<RunView> = {}, compact = false) {
   render(
     <RunDetailHeader
       actions={<span data-testid="actions-slot" />}
       agent={{ id: "coder", name: "Ada", role: "Coder", state: "working" }}
+      compact={compact}
       metrics={metrics}
       mode="running"
       progressPct={33}
@@ -92,5 +93,35 @@ describe("RunDetailHeader", () => {
     projectsRef.current = [{ id: "p1", name: "Alpha" }];
     renderHeader();
     expect(screen.getByTestId(RunDetailHeaderTestId.AssignProject)).toBeInTheDocument();
+  });
+
+  describe("source PR link", () => {
+    const sourcePr = {
+      kind: "rebase" as const,
+      repo: "acme/api",
+      number: 7,
+      url: "https://github.com/acme/api/pull/7",
+    };
+
+    it("links to the in-app PR page", async () => {
+      renderHeader({ sourcePr });
+      const link = screen.getByTestId(RunDetailHeaderTestId.SourcePrLink);
+      expect(link).toHaveTextContent("acme/api#7");
+      expect(link).toHaveAccessibleName("Zdrojový PR acme/api#7");
+      await userEvent.click(link);
+      expect(push).toHaveBeenLastCalledWith(
+        "/dashboard/inbox/pull-requests?pr=https%3A%2F%2Fgithub.com%2Facme%2Fapi%2Fpull%2F7",
+      );
+    });
+
+    it("is also rendered in the compact (sheet) header", () => {
+      renderHeader({ sourcePr }, true);
+      expect(screen.getByTestId(RunDetailHeaderTestId.SourcePrLink)).toBeInTheDocument();
+    });
+
+    it("is absent without a source PR", () => {
+      renderHeader();
+      expect(screen.queryByTestId(RunDetailHeaderTestId.SourcePrLink)).not.toBeInTheDocument();
+    });
   });
 });

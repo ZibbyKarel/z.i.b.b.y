@@ -1336,6 +1336,7 @@
     "detail": {
       "backToRuns": "← Běhy",
       "assignProject": "+ Přiřadit projekt",
+      "sourcePr": "Zdrojový PR {ref}",
       "workflow": "Workflow · {name}",
       "action": {
         "pause": "Pozastavit",

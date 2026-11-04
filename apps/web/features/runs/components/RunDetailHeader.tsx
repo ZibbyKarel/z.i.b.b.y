@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useAgentSymbol } from "../../agents";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
+import { prListHref } from "../../inbox/inbox";
 import { useProjectsQuery } from "../../projects";
 import { useAssignRunProjectMutation } from "../mutations";
 import { type RunView, runTitle } from "../run";
@@ -30,6 +31,7 @@ export enum RunDetailHeaderTestId {
   State = "run-detail-state",
   AgentLink = "run-detail-agent-link",
   ProjectLink = "run-detail-project-link",
+  SourcePrLink = "run-detail-source-pr-link",
   AssignProject = "run-detail-assign-project",
   Progress = "run-detail-progress",
   Metrics = "run-detail-metrics",
@@ -96,7 +98,8 @@ export function RunDetailHeader({
   const router = useRouter();
   const departments = useDepartmentLookup();
   const symbolOf = useAgentSymbol();
-  const { taskId, projectId, department } = run;
+  const { taskId, projectId, department, sourcePr } = run;
+  const sourcePrRef = sourcePr ? `${sourcePr.repo}#${sourcePr.number}` : "";
 
   return (
     <Stack data-testid={RunDetailHeaderTestId.Root} gap="0">
@@ -184,6 +187,20 @@ export function RunDetailHeader({
                 </>
               ) : (
                 <AssignProject runId={run.runId} />
+              )}
+              {sourcePr && (
+                <>
+                  <Sep />
+                  <Pressable
+                    aria-label={t("detail.sourcePr", { ref: sourcePrRef })}
+                    data-testid={RunDetailHeaderTestId.SourcePrLink}
+                    onClick={() => router.push(prListHref(sourcePr.url))}
+                  >
+                    <Typography as="span" type="code">
+                      {`${sourcePrRef} →`}
+                    </Typography>
+                  </Pressable>
+                </>
               )}
               {run.kind === "workflow" && !compact && (
                 <>

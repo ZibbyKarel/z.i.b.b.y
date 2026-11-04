@@ -69,6 +69,14 @@ export type Processor = z.infer<typeof ProcessorSchema>;
  * workflow `stageRuns`/`currentStage`/`parked`/`checkpoints`, goal `iterations`/
  * `goalParked`. Most are optional and present only for the relevant kind.
  */
+export const TaskRunSourcePrSchema = z.object({
+  kind: z.enum(["review", "rebase", "address-comments", "fix-ci"]),
+  repo: z.string().min(1),
+  number: z.number().int().positive(),
+  url: z.string().min(1),
+});
+export type TaskRunSourcePr = z.infer<typeof TaskRunSourcePrSchema>;
+
 export const TaskRunSchema = z.object({
   runId: z.string().min(1),
   kind: RunKindSchema,
@@ -149,6 +157,12 @@ export const TaskRunSchema = z.object({
    */
   roadmapItemId: z.string().optional(),
   roadmapItemLabel: z.string().optional(),
+  /**
+   * Enriched from the task record: the PR a PR-action task (review, rebase,
+   * address-comments, fix-ci) was born from — drives the run-detail header link
+   * to ZIBBY's in-app PR page. Absent on every other run. Read-model only.
+   */
+  sourcePr: TaskRunSourcePrSchema.optional(),
   /** Held tasks: why the budget guard parked it. */
   heldReason: z.string().optional(),
   /** Held tasks: the spend-past-cap approval gating the override. */
