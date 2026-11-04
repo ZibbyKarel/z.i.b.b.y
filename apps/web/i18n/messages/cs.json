@@ -3263,7 +3263,7 @@
       "runs": {
         "colTask": "Úkol · krok",
         "progressLabel": "Průběh běhu",
-        "stages": "{done}/{total} fází · {pct} %",
+        "pct": "{pct} %",
         "colProgress": "Postup",
         "colIssue": "Issue",
         "group": {

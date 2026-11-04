@@ -15,7 +15,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { useNow } from "../../../hooks/useNow";
-import { compactAgo } from "../../../utils/time";
+import { compactAgo, formatDuration } from "../../../utils/time";
 import { useInvalidateOnTerminalRun, useLiveRuns } from "../../runs/components/TasksDockPanel";
 import { useRecentArchivedRunsQuery } from "../../runs/queries/useRecentArchivedRunsQuery";
 import { WAITING_STATES } from "../../runs/run";
@@ -45,13 +45,14 @@ const STATE_ICON: Record<StateTone, { name: IconName; tone: IconTone }> = {
 export enum RunsWidgetTestId {
   StateIcon = "runs-widget-state-icon",
   Progress = "runs-widget-progress",
+  Meta = "runs-widget-meta",
 }
 
 const FINISHED_LIMIT = 10;
 
 /**
  * Runs (running & finished): the active live runs (everything not waiting - those are the queue
- * widget's) as TASK · STEP / PROGRESS / ISSUE rows (a bar only while running: fill = completed phases, indeterminate without a phase list; a state icon otherwise), then the last 10 finished runs with a
+ * widget's) as TASK · STEP / PROGRESS / ISSUE rows (a bar only while running: fill = completed phases, indeterminate without a phase list, with the percent done and the elapsed time under it; a state icon otherwise), then the last 10 finished runs with a
  * state icon in their outcome colour and their age. A group header is omitted when empty. Every row
  * opens the run sheet (approval, phase output, artifacts).
  */
@@ -165,15 +166,18 @@ export function RunsWidget({
                     />
                   )}
                 </span>
-                <BoardText tabular kind="meta">
-                  {r.stages && r.pct !== null ? t("stages", { ...r.stages, pct: r.pct }) : "—"}
-                </BoardText>
+                <span data-testid={`${RunsWidgetTestId.Meta}-${r.key}`}>
+                  <BoardText tabular kind="meta">
+                    {r.pct !== null && `${t("pct", { pct: r.pct })} · `}
+                    <RunElapsed startedAt={r.startedAt} />
+                  </BoardText>
+                </span>
               </BoardLine>
             ) : (
               <BoardLine between gap="5">
                 <RunStateIcon runKey={r.key} tone={r.tone} />
                 <BoardText tabular kind="meta">
-                  {r.stages && r.pct !== null ? t("stages", { ...r.stages, pct: r.pct }) : "—"}
+                  {r.pct !== null ? t("pct", { pct: r.pct }) : "—"}
                 </BoardText>
               </BoardLine>
             )}
@@ -204,6 +208,12 @@ export function RunsWidget({
         ))}
     </>
   );
+}
+
+/** How long a running run has been going ("3m 12s"), ticking every second in its own leaf. */
+function RunElapsed({ startedAt }: { startedAt: string }) {
+  const now = useNow(1_000);
+  return formatDuration(now - Date.parse(startedAt));
 }
 
 /** Non-running rows show their state as an icon in the state colour. */

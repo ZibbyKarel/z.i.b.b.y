@@ -55,6 +55,18 @@ describe("RunsWidget", () => {
       expect(screen.queryByTestId(`${RunsWidgetTestId.Progress}-${key(id)}`)).toBeNull();
   });
 
+  it("shows only the elapsed time under a running bar without phases (no phase count)", () => {
+    vi.useFakeTimers({ now: Date.parse("2026-10-27T10:03:12Z"), toFake: ["Date"] });
+    try {
+      renderWithProviders(<RunsWidget {...props} />);
+      const meta = screen.getByTestId(`${RunsWidgetTestId.Meta}-${key("a")}`);
+      expect(meta).toHaveTextContent("3m 12s");
+      expect(meta).not.toHaveTextContent(/phase|fáz/);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("tints the icon by outcome", () => {
     renderWithProviders(<RunsWidget {...props} />);
     const icon = (id: string) =>

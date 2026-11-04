@@ -258,6 +258,8 @@ export interface RunRowVm {
   stages: RunStages | null;
   /** 0-100 stage percentage for workflows; null = indeterminate. */
   pct: number | null;
+  /** ISO start time — the widget's live elapsed readout. */
+  startedAt: string;
   /** Roadmap item label (`ZB-12`) — null when the run has no issue. */
   issue: string | null;
   /** Fallback right-hand text when there is no issue: the project. */
@@ -300,6 +302,7 @@ export function runRows(
       status: r.status,
       stages,
       pct: stages ? Math.round((stages.done / stages.total) * 100) : null,
+      startedAt: r.startedAt,
       issue: r.roadmapItemLabel ?? null,
       project: r.projectId ?? r.project,
     };

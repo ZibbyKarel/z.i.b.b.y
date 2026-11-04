@@ -3263,7 +3263,7 @@
       "runs": {
         "colTask": "Task · step",
         "progressLabel": "Run progress",
-        "stages": "{done}/{total} phases · {pct}%",
+        "pct": "{pct}%",
         "colProgress": "Progress",
         "colIssue": "Issue",
         "group": {
