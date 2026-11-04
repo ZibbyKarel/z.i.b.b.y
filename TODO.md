@@ -86,7 +86,7 @@
 32. [x] widget quick actions - u vytváření rychlých akcí, bych měl mít možnost začkrtnout "spustit okamžitě" (stejně tak i v editaci). Pokud zaškrtnu tak se spuštěná akce provede okamžitě aniž by se počítala do celkového stropu běžících úloh (main@d4bf6406)
 33. [x] Widget Otevřené Otázky - měl bych mít u otázek možnost kliknout na tlačíko "vyřešit", to by otevřelo plachtu nebo dialog s text areou kam bych zapsal odpověď na otázku. To by v knowledge base vytvořilo novou poznámku a prolinkovalo to s původním dokumentem, ze kterého otázka vznikla. (main@c9f7ef39)
 34. [x] vyřešit, proč v chatu nejdou načíst poznámky z devrel knowledge base, když operátor označí devrel tým. Zjištěno: search_team_kb vrací zásahy (např. wiki/notes/partner-portal-feasibility-meetingy.md, wiki/projects/partnerský-portál.md, wiki/notes/addon-repository.md), ale read_team_kb_note podle téže cesty (s prefixem wiki/ i bez něj, team=devrel) vrací „No note found in any reachable knowledge base (main@3469b14d)
-35. [ ] U běhů, které vznikli z PR tedy code-review, rebase, vyřešení komentářů a případné další musí mít v detailu odkaz do systému na původní PR abychom se mohli podívat
+35. [x] U běhů, které vznikli z PR tedy code-review, rebase, vyřešení komentářů a případné další musí mít v detailu odkaz do systému na původní PR abychom se mohli podívat (main@8cb5cd2b)
 36. [ ] U code-review bychom měli mít možnost i ho ignorovat a poslat svoje vlastní. Například u http://localhost:3000/dashboard?run=pr-review-tested_1793279624199 se mi nelíbí a chtěl bych PR rovnou aproovnout bez komentáře ale nemám jak
 37. [ ] Zapojit nainstalovaný Cloudflare skill security-audit do workflow (agent krok s /security-audit) a ověřit běh end-to-end
 38. [ ] Web musí podporovat push notifikace
