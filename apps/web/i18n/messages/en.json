@@ -414,8 +414,8 @@
     "new": {
       "title": "Hand work to the company",
       "field": {
-        "title": "Title",
-        "titlePlaceholder": "e.g. Add SSO to the client portal",
+        "title": "Title (optional)",
+        "titlePlaceholder": "Leave empty to generate one from the brief",
         "brief": "Brief",
         "briefPlaceholder": "Context, links, what done looks like",
         "entry": "Entry",
