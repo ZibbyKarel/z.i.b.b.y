@@ -67,8 +67,18 @@ Operator clicks in the UI
 
 All data is files on disk. There is no SQL database. Every file-backed store resolves
 its base directory from `resolveDataRoot()` (`apps/api/src/shared/data-dir.ts`), which
-defaults to `.zibby/data` and is fully repointed by the `ZIBBY_DATA_DIR` env var (used
-by tests and worktrees to isolate their data root).
+defaults to `~/Library/Application Support/ZibbyOS/data` and is fully repointed by the
+`ZIBBY_DATA_DIR` env var (used by tests and worktrees to isolate their data root).
+
+**Recipes vs runtime.** Operator-authored definitions — agents, workflows, skills,
+automations, departments, teams, commands, hooks, mcp-servers, companies — resolve
+through `recipesDir()` instead: `ZIBBY_RECIPES_DIR` wins; an explicit `ZIBBY_DATA_DIR`
+or the test runner keeps them in the data root; otherwise
+`iCloud Drive/ZibbyOS/recipes` is used **if that folder exists** (create it to opt in —
+a second Mac picks it up once iCloud syncs). Runtime state (runs, findings, activity,
+approvals, locks, credentials, gate rules) always stays in the local data root. Entity
+listings skip iCloud conflict copies (`<id> 2.md`) with a warning. Only one machine
+should run as `primary` — the instance lock is local and does not span machines.
 
 | Data                   | Format                      | Location                                             |
 | ---------------------- | --------------------------- | ---------------------------------------------------- |
