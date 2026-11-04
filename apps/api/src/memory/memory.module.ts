@@ -26,7 +26,7 @@ import { VAULT_DIR, VaultService } from "./vault.service";
 
 /**
  * Default vault dir: see {@link resolveVaultDir} in `shared/data-dir` (`$VAULT_DIR`,
- * else `~/AI/Vault` on the live root, else `<ZIBBY_DATA_DIR>/vault`). A genuinely
+ * else `~/Documents/AI/Vault` on the live root, else `<ZIBBY_DATA_DIR>/vault`). A genuinely
  * fresh/empty vault is seeded on boot by `VaultSeedService` (F4c), so first-run
  * grounding is never empty.
  */

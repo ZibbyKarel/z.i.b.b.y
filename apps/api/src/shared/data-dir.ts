@@ -87,7 +87,7 @@ export function recipesDir(...segments: string[]): string {
 
 /**
  * The Obsidian vault (second brain). `VAULT_DIR` wins; otherwise a run on the
- * live root uses the operator's vault at `~/AI/Vault`, while any explicit
+ * live root uses the operator's vault at `~/Documents/AI/Vault` (iCloud-synced), while any explicit
  * `ZIBBY_DATA_DIR` (tests, the `:test` scripts, an isolated root) keeps its
  * vault inside that root — so an isolated run can never write the real vault.
  */
@@ -95,7 +95,7 @@ export function resolveVaultDir(): string {
   const explicit = process.env.VAULT_DIR;
   if (explicit) return path.resolve(explicit);
   if (process.env.ZIBBY_DATA_DIR || process.env.VITEST) return dataDir("vault");
-  return path.join(os.homedir(), "AI", "Vault");
+  return path.join(os.homedir(), "Documents", "AI", "Vault");
 }
 
 /**

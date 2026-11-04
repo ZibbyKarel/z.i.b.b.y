@@ -83,7 +83,7 @@ describe("installRoot / defaultCloneRoot", () => {
 });
 
 /**
- * The vault defaults to the operator's `~/AI/Vault` only on the live root; any
+ * The vault defaults to the operator's `~/Documents/AI/Vault` only on the live root; any
  * explicit/isolated data root (tests included) keeps its vault inside that root.
  */
 describe("resolveVaultDir", () => {
