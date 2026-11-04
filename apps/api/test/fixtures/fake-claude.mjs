@@ -19,6 +19,7 @@
 //   FAKE_CLAUDE_DUMP_ARGS_FILE  absolute path; dump the session's argv as JSON there
 //                          (Phase 4: lets an e2e assert grounding reached
 //                          --append-system-prompt)
+//   FAKE_CLAUDE_DUMP_ARGS_DIR  absolute dir; like the above, one JSON file per session
 import { execFileSync } from "node:child_process";
 import { promises as fs } from "node:fs";
 import { existsSync, readFileSync, rmSync } from "node:fs";
@@ -65,6 +66,14 @@ if (process.env.FAKE_CLAUDE_DUMP_ARGS_FILE) {
   } catch {
     // never block the run on a dump failure
   }
+}
+// Same, but one file per invocation, so a multi-stage workflow keeps every stage's argv.
+if (process.env.FAKE_CLAUDE_DUMP_ARGS_DIR) {
+  const file = path.join(
+    process.env.FAKE_CLAUDE_DUMP_ARGS_DIR,
+    `${Date.now()}-${process.pid}.json`,
+  );
+  await fs.writeFile(file, JSON.stringify(argv), "utf8").catch(() => {});
 }
 
 /** Collect every `--add-dir <dir>` value the runner passed. */
