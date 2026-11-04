@@ -261,11 +261,23 @@ export class KbReaderService {
     }));
   }
 
-  async read(source: KnowledgeBaseSource, noteId: string): Promise<KbNote | null> {
+  /**
+   * One note by `noteRef`: the repo-relative path exactly as a search hit cites it
+   * (with or without `.md`), else the basename id. Both sides are NFC-normalized
+   * (macOS filenames are often NFD). The ref is only ever MATCHED against walked
+   * entries, never resolved on disk.
+   */
+  async read(source: KnowledgeBaseSource, noteRef: string): Promise<KbNote | null> {
     const notes = await this.scan(source);
+    const ref = noteRef.normalize("NFC");
     // `.vtt` sources are raw verbatim transcripts of real people speaking —
     // never parsed, and never handed back through `read()` either.
-    const found = notes.find((n) => n.id === noteId && !n.isVtt);
+    const readable = notes.filter((n) => !n.isVtt);
+    const found =
+      readable.find((n) => {
+        const rel = n.relPath.normalize("NFC");
+        return rel === ref || rel === `${ref}.md`;
+      }) ?? readable.find((n) => n.id.normalize("NFC") === ref);
     if (!found) return null;
     return { path: found.relPath, title: found.title, body: this.capBody(found.body) };
   }

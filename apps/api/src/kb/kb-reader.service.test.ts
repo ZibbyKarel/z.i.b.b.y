@@ -76,6 +76,45 @@ describe("KbReaderService", () => {
     expect(path.isAbsolute(hits[0]?.path ?? "")).toBe(false);
   });
 
+  it("reads a note by the exact path a search hit cites (search-hit → read-hit)", async () => {
+    const hits = await reader.search(source, "partner portal");
+    const cited = hits[0]?.path ?? "";
+    expect(cited).toBe("wiki/notes/partner-portal.md");
+    const note = await reader.read(source, cited);
+    expect(note?.path).toBe(cited);
+    expect(note?.title).toBe("Partner Portal");
+    expect((await reader.read(source, "wiki/notes/partner-portal"))?.path).toBe(cited);
+    expect((await reader.read(source, "partner-portal"))?.path).toBe(cited);
+  });
+
+  it("matches a non-ASCII path regardless of NFC/NFD normalization", async () => {
+    const name = "partnerský-portál";
+    await fs.writeFile(
+      path.join(root, "wiki", "notes", `${name.normalize("NFD")}.md`),
+      "---\ntitle: Partnerský portál\n---\nBody.\n",
+      "utf8",
+    );
+    expect((await reader.read(source, `wiki/notes/${name.normalize("NFC")}.md`))?.title).toBe(
+      "Partnerský portál",
+    );
+    expect((await reader.read(source, name.normalize("NFC")))?.title).toBe("Partnerský portál");
+  });
+
+  it("a full path disambiguates two notes sharing a basename", async () => {
+    await fs.mkdir(path.join(root, "wiki", "projects"), { recursive: true });
+    await fs.writeFile(
+      path.join(root, "wiki", "projects", "partner-portal.md"),
+      "---\ntitle: Project Partner Portal\n---\nx\n",
+      "utf8",
+    );
+    expect((await reader.read(source, "wiki/projects/partner-portal.md"))?.title).toBe(
+      "Project Partner Portal",
+    );
+    expect((await reader.read(source, "wiki/notes/partner-portal.md"))?.title).toBe(
+      "Partner Portal",
+    );
+  });
+
   it("builds a wiki-link graph of markdown notes only (no vtt, no outside files)", async () => {
     const g = await reader.graph(source);
     const ids = g.nodes.map((n) => n.id).sort();
