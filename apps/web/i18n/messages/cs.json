@@ -3384,6 +3384,13 @@
         "save": "Uložit",
         "cancel": "Zrušit",
         "error": "Změnu se nepodařilo uložit. Zkus to znovu."
+      },
+      "pins": {
+        "kind": {
+          "page": "Stránka",
+          "workflow": "Workflow",
+          "agent": "Agent"
+        }
       }
     },
     "you": "{n} ty",
@@ -3409,8 +3416,8 @@
         "desc": "Aktivní běhy a posledních 10 ukončených"
       },
       "pins": {
-        "label": "Připnuté stránky",
-        "desc": "Stránky připnuté z podmenu"
+        "label": "Připnuté",
+        "desc": "Připnuté stránky, workflow a agenti"
       },
       "todo": {
         "label": "TODO",
