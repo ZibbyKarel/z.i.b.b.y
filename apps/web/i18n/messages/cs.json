@@ -1400,7 +1400,6 @@
         "metaInput": "{task} · {n} příloh"
       },
       "banner": {
-        "openDetail": "Otevřít detail",
         "approvalHead": "Potřebuje tě · závažnost {sev} · {risk}",
         "approvalMeta": "Vyžádáno {at} · přes {via} · před provedením zkontrolováno",
         "hold": "Podrž pro schválení",
@@ -3521,8 +3520,7 @@
       },
       "run": {
         "open": "Otevřít běh ↗",
-        "openApproval": "Celé schválení ↗",
-        "output": "Výstup fáze"
+        "openApproval": "Celé schválení ↗"
       }
     },
     "moreLayouts": "Další layouty",

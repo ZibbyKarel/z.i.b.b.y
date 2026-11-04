@@ -1400,7 +1400,6 @@
         "metaInput": "{task} · {n} attachments"
       },
       "banner": {
-        "openDetail": "Open detail",
         "approvalHead": "Needs you · severity {sev} · {risk}",
         "approvalMeta": "Requested {at} · via {via} · reviewed before it takes effect",
         "hold": "Hold to approve",
@@ -3521,8 +3520,7 @@
       },
       "run": {
         "open": "Open run ↗",
-        "openApproval": "Full approval ↗",
-        "output": "Phase output"
+        "openApproval": "Full approval ↗"
       }
     },
     "moreLayouts": "More layouts",

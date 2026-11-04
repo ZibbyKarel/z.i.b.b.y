@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { DiffstatListTestId } from "@zibby/design-system";
 import type { DashboardApproval } from "../../approvals/approval";
 import type { RunView } from "../run";
+import type { RunArtifact } from "../useRunArtifacts";
 import {
   RunApprovalBanner,
   RunFeedBannersTestId,
@@ -55,6 +56,7 @@ function renderApproval(
   over: Partial<DashboardApproval> = {},
   diffstat?: RunView["diffstat"],
   reviseOpen = false,
+  extra: { onOpenDetail?: () => void; output?: RunArtifact } = {},
 ) {
   render(
     <RunApprovalBanner
@@ -62,6 +64,7 @@ function renderApproval(
       diffstat={diffstat}
       onToggleRevise={vi.fn()}
       reviseOpen={reviseOpen}
+      {...extra}
     />,
   );
 }
@@ -115,6 +118,77 @@ describe("RunApprovalBanner", () => {
     const dialog = screen.getByRole("dialog");
     await userEvent.click(within(dialog).getByRole("button", { name: "Zamítnout" }));
     expect(rejectMutate).toHaveBeenCalledWith({ params: { id: "ap-1" }, body: {} });
+  });
+
+  it("clicking the card opens the approval detail", async () => {
+    const onOpenDetail = vi.fn();
+    renderApproval({}, undefined, false, { onOpenDetail });
+    await userEvent.click(screen.getByTestId(RunFeedBannersTestId.Approval));
+    expect(onOpenDetail).toHaveBeenCalledOnce();
+  });
+
+  it("the title opens the detail for keyboard users", async () => {
+    const onOpenDetail = vi.fn();
+    renderApproval({}, undefined, false, { onOpenDetail });
+    screen.getByTestId(RunFeedBannersTestId.Title).focus();
+    await userEvent.keyboard("{Enter}");
+    expect(onOpenDetail).toHaveBeenCalledOnce();
+  });
+
+  it("the action buttons, revise form and reject dialog never open the detail", async () => {
+    const onOpenDetail = vi.fn();
+    renderApproval({}, undefined, true, { onOpenDetail });
+    await userEvent.click(screen.getByTestId(RunFeedBannersTestId.Revise));
+    await userEvent.click(screen.getByTestId(RunFeedBannersTestId.ReviseNote));
+    await userEvent.click(screen.getByTestId(RunFeedBannersTestId.Reject));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Zrušit" }),
+    );
+    expect(onOpenDetail).not.toHaveBeenCalled();
+  });
+
+  it("a PR output opens in a new tab without opening the detail", async () => {
+    const onOpenDetail = vi.fn();
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    renderApproval({}, undefined, false, {
+      onOpenDetail,
+      output: { kind: "pr", label: "github.com/o/r/pull/7", href: "https://github.com/o/r/pull/7" },
+    });
+    const button = screen.getByTestId(RunFeedBannersTestId.Output);
+    expect(button).toHaveAccessibleName("Otevřít PR");
+    await userEvent.click(button);
+    expect(open).toHaveBeenCalledWith(
+      "https://github.com/o/r/pull/7",
+      "_blank",
+      "noopener,noreferrer",
+    );
+    expect(onOpenDetail).not.toHaveBeenCalled();
+  });
+
+  it("a file output is opened through its own opener", async () => {
+    const onOpenDetail = vi.fn();
+    const openFile = vi.fn();
+    renderApproval({}, undefined, false, {
+      onOpenDetail,
+      output: { kind: "file", label: "audit.md", open: openFile },
+    });
+    const button = screen.getByTestId(RunFeedBannersTestId.Output);
+    expect(button).toHaveAccessibleName("Otevřít audit.md");
+    await userEvent.click(button);
+    expect(openFile).toHaveBeenCalledOnce();
+    expect(onOpenDetail).not.toHaveBeenCalled();
+  });
+
+  it("a folder output is labelled as a folder", () => {
+    renderApproval({}, undefined, false, {
+      output: { kind: "folder", label: "wf_1/", open: vi.fn() },
+    });
+    expect(screen.getByTestId(RunFeedBannersTestId.Output)).toHaveAccessibleName("Otevřít složku");
+  });
+
+  it("no output, no output button", () => {
+    renderApproval({}, undefined, false, { onOpenDetail: vi.fn() });
+    expect(screen.queryByTestId(RunFeedBannersTestId.Output)).not.toBeInTheDocument();
   });
 
   it("a diffstat renders one row per file", () => {
