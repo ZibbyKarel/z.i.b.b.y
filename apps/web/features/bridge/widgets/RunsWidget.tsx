@@ -213,7 +213,8 @@ export function RunsWidget({
 /** How long a running run has been going ("3m 12s"), ticking every second in its own leaf. */
 function RunElapsed({ startedAt }: { startedAt: string }) {
   const now = useNow(1_000);
-  return formatDuration(now - Date.parse(startedAt));
+  const start = Date.parse(startedAt);
+  return Number.isNaN(start) ? "—" : formatDuration(now - start);
 }
 
 /** Non-running rows show their state as an icon in the state colour. */

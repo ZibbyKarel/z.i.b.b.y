@@ -2,6 +2,7 @@ import type { InboxPr, InboxRoadmapItem } from "@zibby/contracts";
 import {
   BoardRowTestId,
   IconBadgeTestId,
+  IconTestId,
   KpiStripTestId,
   ProgressTestId,
   RowGroupHeaderTestId,
@@ -14,7 +15,7 @@ import { BriefingWidget } from "./BriefingWidget";
 import { IssuesWidget, IssuesWidgetTestId } from "./IssuesWidget";
 import { PrsWidget } from "./PrsWidget";
 import type { BridgeWidgetProps } from "./registry";
-import { RunsWidget } from "./RunsWidget";
+import { RunsWidget, RunsWidgetTestId } from "./RunsWidget";
 import { TasksWidget } from "./TasksWidget";
 
 const refreshMutate = vi.hoisted(() => vi.fn());
@@ -409,7 +410,6 @@ describe("RunsWidget", () => {
     const row = screen.getByTestId(BoardRowTestId.Root);
     expect(row).toHaveAttribute("data-rk", "w-runs:r1");
     expect(row).toHaveTextContent("Fix checkout");
-    expect(row).toHaveTextContent("Pracuje");
     expect(row).not.toHaveTextContent("40%");
     expect(row).toHaveTextContent("—");
     expect(
@@ -455,7 +455,8 @@ describe("RunsWidget", () => {
       },
     ];
     renderWithProviders(<RunsWidget {...setup({ widget: widget("w-runs", "runs") })} />);
-    expect(screen.getByTestId(BoardRowTestId.Root)).toHaveTextContent("1/4 fází · 25 %");
+    expect(screen.getByTestId(BoardRowTestId.Root)).toHaveTextContent("25 % · —");
+    expect(screen.getByTestId(BoardRowTestId.Root)).not.toHaveTextContent("fází");
     expect(
       within(screen.getByTestId(BoardRowTestId.Root)).getByTestId(ProgressTestId.Root),
     ).toHaveAttribute("aria-valuenow", "25");
@@ -529,8 +530,12 @@ describe("RunsWidget", () => {
       "w-runs:d",
       "w-runs:e",
     ]);
-    expect(rows[1]).toHaveTextContent("hotovo");
-    expect(rows[2]).toHaveTextContent("chyba");
+    const icon = (id: string) =>
+      within(screen.getByTestId(`${RunsWidgetTestId.StateIcon}-w-runs:${id}`)).getByTestId(
+        IconTestId.Root,
+      );
+    expect(icon("d")).toHaveClass("text-ok");
+    expect(icon("e")).toHaveClass("text-bad");
     expect(props.onCountChange).toHaveBeenLastCalledWith({
       count: 3,
       you: 0,
