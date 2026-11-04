@@ -1,6 +1,7 @@
 import type { InboxPr, InboxRoadmapItem } from "@zibby/contracts";
 import {
   BoardRowTestId,
+  BoardTagTestId,
   IconBadgeTestId,
   KpiStripTestId,
   ProgressTestId,
@@ -304,6 +305,27 @@ describe("PrsWidget", () => {
     expect(screen.getByTestId(IconBadgeTestId.Count)).toHaveTextContent("2");
     expect(screen.getByText("PR 1").closest("button")).toContainElement(badge);
     expect(screen.getAllByTestId(IconBadgeTestId.Root)).toHaveLength(1);
+  });
+
+  it("marks a colleague's PR inside my stack as not mine, without the conversations badge", () => {
+    d.prs = [
+      pr(1, { headRef: "a", baseRef: "main" }),
+      pr(2, {
+        headRef: "b",
+        baseRef: "a",
+        bucket: "to-review",
+        author: "jana",
+        unresolvedThreads: 3,
+      }),
+      pr(3, { headRef: "c", baseRef: "b" }),
+    ];
+    const props = setup({ widget: widget("w", "prs") });
+    renderWithProviders(<PrsWidget {...props} />);
+    expect(screen.getAllByTestId(RowGroupHeaderTestId.Root)).toHaveLength(1);
+    const tag = screen.getByTestId(BoardTagTestId.Root);
+    expect(tag).toHaveTextContent("Cizí");
+    expect(screen.getByText("PR 2").closest("button")).toContainElement(tag);
+    expect(screen.queryByTestId(IconBadgeTestId.Root)).toBeNull();
   });
 
   it("is empty with no PRs", () => {

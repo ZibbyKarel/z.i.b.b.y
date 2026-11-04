@@ -3253,6 +3253,10 @@
         "on": "On {base}",
         "waitsOn": "· Waits on {prs}",
         "conversations": "{count, plural, one {# unresolved conversation} other {# unresolved conversations}}",
+        "owner": {
+          "mine": "Mine",
+          "other": "Not mine"
+        },
         "section": {
           "mine": "Mine",
           "toReview": "To review",

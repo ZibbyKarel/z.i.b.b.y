@@ -3253,6 +3253,10 @@
         "on": "Na {base}",
         "waitsOn": "· Čeká na {prs}",
         "conversations": "{count, plural, one {# nevyřešená konverzace} few {# nevyřešené konverzace} other {# nevyřešených konverzací}}",
+        "owner": {
+          "mine": "Moje",
+          "other": "Cizí"
+        },
         "section": {
           "mine": "Moje",
           "toReview": "K review",
