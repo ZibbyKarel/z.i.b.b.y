@@ -141,6 +141,15 @@ describe("WebPushStore", () => {
     expect((await fs.stat(path.join(dir, "vapid.json"))).mode & 0o777).toBe(0o600);
   });
 
+  it("a failed first vapid() is retried, not cached", async () => {
+    const blocker = path.join(dir, "blocker");
+    await fs.writeFile(blocker, "x");
+    const store = new WebPushStore(path.join(blocker, "sub")); // ENOTDIR
+    await expect(store.vapid()).rejects.toThrow();
+    await fs.rm(blocker);
+    expect((await store.vapid()).publicKey).not.toBe("");
+  });
+
   it("vapid() is stable across instances over the same dir", async () => {
     const a = await new WebPushStore(dir).vapid();
     const b = await new WebPushStore(dir).vapid();

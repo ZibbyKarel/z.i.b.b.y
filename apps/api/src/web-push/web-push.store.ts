@@ -29,7 +29,10 @@ export class WebPushStore {
 
   /** Caches the promise, so concurrent first calls generate one key pair. */
   vapid(): Promise<VapidKeys> {
-    this.vapidCache ??= this.loadVapid();
+    this.vapidCache ??= this.loadVapid().catch((e: unknown) => {
+      this.vapidCache = null; // don't cache a failure forever
+      throw e;
+    });
     return this.vapidCache;
   }
 
