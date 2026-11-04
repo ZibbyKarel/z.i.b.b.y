@@ -179,6 +179,33 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       expect(screen.queryByTestId(CommandLineTestId.MentionMenu)).not.toBeInTheDocument();
     });
 
+    it("picks the highlighted suggestion with Tab, exactly like Enter", async () => {
+      const onSubmit = vi.fn();
+      const user = userEvent.setup();
+      render(<CommandLine onSubmit={onSubmit} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "@Bui");
+
+      await user.keyboard("{Tab}");
+
+      expect(input).toHaveFocus();
+      expect(input).toHaveValue("@Builder ");
+      expect(screen.queryByTestId(CommandLineTestId.MentionMenu)).not.toBeInTheDocument();
+      expect(onSubmit).not.toHaveBeenCalled();
+    });
+
+    it("Shift+Tab with the picker open never picks — it keeps normal focus behaviour", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine onSubmit={vi.fn()} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "@Bui");
+
+      await user.keyboard("{Shift>}{Tab}{/Shift}");
+
+      expect(input).toHaveValue("@Bui");
+      expect(input).not.toHaveFocus();
+    });
+
     it("closes on Escape without submitting or touching the typed text, and leaves the ordinary submit-on-Enter path intact", async () => {
       const onSubmit = vi.fn();
       const user = userEvent.setup();
@@ -657,6 +684,18 @@ describe("CommandLine (Phase 118d generic composer)", () => {
       await user.keyboard("{Enter}");
       expect(onSubmit).toHaveBeenCalledWith("/zzz", undefined, undefined);
       expect(screen.queryByTestId(CommandLineTestId.MentionMenu)).toBeNull();
+    });
+
+    it("Tab with the picker open but zero results is not swallowed — focus moves on", async () => {
+      const user = userEvent.setup();
+      render(<CommandLine allowSkillMentions onSubmit={vi.fn()} />);
+      const input = screen.getByTestId(CommandLineTestId.Input);
+      await user.type(input, "/zzz");
+      expect(screen.getByTestId(CommandLineTestId.MentionEmpty)).toBeInTheDocument();
+
+      await user.keyboard("{Tab}");
+      expect(input).toHaveValue("/zzz");
+      expect(input).not.toHaveFocus();
     });
 
     it("closes the empty picker on Enter-submit even when the draft is kept (resetOnSubmit={false})", async () => {

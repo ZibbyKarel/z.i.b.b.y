@@ -61,4 +61,26 @@ describe("Markdown", () => {
       items.forEach((item) => expect(item).toHaveRole("listitem"));
     });
   });
+
+  describe("highlight", () => {
+    const mentions = (text: string) =>
+      [...text.matchAll(/@Bob/g)].map((m) => ({
+        start: m.index ?? 0,
+        end: (m.index ?? 0) + 4,
+        tone: "accent" as const,
+      }));
+
+    it("marks the spans the highlight callback returns", () => {
+      render(<Markdown highlight={mentions} source={"ask @Bob **now**"} variant="prose" />);
+      const marks = screen.getAllByTestId(MarkdownTestId.Mark);
+      expect(marks).toHaveLength(1);
+      expect(marks[0]).toHaveTextContent("@Bob");
+      expect(marks[0]).toHaveClass("bg-accent/[0.14]");
+    });
+
+    it("never marks inside inline or fenced code", () => {
+      render(<Markdown highlight={mentions} source={"`@Bob`\n\n```\n@Bob\n```"} />);
+      expect(screen.queryAllByTestId(MarkdownTestId.Mark)).toHaveLength(0);
+    });
+  });
 });

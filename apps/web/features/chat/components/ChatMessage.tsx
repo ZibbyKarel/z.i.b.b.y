@@ -7,6 +7,7 @@ import {
   ChatBubble,
   Container,
   FilePreview,
+  HighlightText,
   Icon,
   Markdown,
   Stack,
@@ -22,6 +23,7 @@ import type {
   ChatToolEvent,
 } from "@zibby/contracts";
 import { useSystemConfigQuery } from "../../system";
+import { useMentionHighlighter } from "../../tasks/hooks/useMentionHighlighter";
 import { useAudioPlayback } from "../hooks/useAudioPlayback";
 import { useSynthesizeSpeechMutation } from "../mutations/useSynthesizeSpeechMutation";
 import { BriefingMessageCard } from "./BriefingMessageCard";
@@ -165,6 +167,16 @@ function ReadAloudButton({ text }: { text: string }) {
   );
 }
 
+/** The operator's turn text, its `@`/`#`/`/` mentions highlighted. */
+function UserText({ text }: { text: string }) {
+  const highlight = useMentionHighlighter();
+  return (
+    <Container data-testid={ChatMessageTestId.Text}>
+      <HighlightText highlights={highlight(text)} text={text} />
+    </Container>
+  );
+}
+
 /**
  * One transcript message. User turns sit to the right in a filled bubble;
  * assistant turns sit to the left, render their (possibly streaming) text and any
@@ -231,10 +243,11 @@ export function ChatMessage({
           data-testid={isUser ? ChatMessageTestId.UserBubble : ChatMessageTestId.AssistantBubble}
         >
           {isUser ? (
-            // The operator's own turn is plain text — render it verbatim, plus
-            // (D-020) the units they addressed and any files they attached.
+            // The operator's own turn is plain text — render it verbatim (its
+            // mentions marked exactly as the composer marked them), plus (D-020)
+            // the units they addressed and any files they attached.
             <Stack direction="col" gap="75">
-              <span data-testid={ChatMessageTestId.Text}>{text}</span>
+              <UserText text={text} />
               {mentions && mentions.length > 0 && (
                 <Container data-testid={ChatMessageTestId.Mentions}>
                   <TargetIdentity targets={mentions} />
