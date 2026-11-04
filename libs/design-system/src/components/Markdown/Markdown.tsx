@@ -3,6 +3,12 @@
 import { type CSSProperties, type ComponentProps } from "react";
 import MDEditor from "@uiw/react-md-editor";
 import "@uiw/react-md-editor/markdown-editor.css";
+import { cn } from "../../utils/cn";
+import {
+  type HighlightRange,
+  buildSegments,
+  markToneClass,
+} from "../form/HighlightTextAreaField/highlightSegments";
 
 /**
  * The renderer's `components` prop type, pulled off `MDEditor.Markdown` itself
@@ -18,6 +24,8 @@ export enum MarkdownTestId {
   ListItem = "markdown-list-item",
   Strong = "markdown-strong",
   CodeBlock = "markdown-code-block",
+  /** A span marked by the `highlight` prop. */
+  Mark = "markdown-mark",
 }
 
 /** Minimal shape of the mdast nodes the escape plugin walks (no external dep). */
@@ -46,6 +54,55 @@ function remarkEscapeRawHtml() {
 }
 
 const ESCAPE_HTML_PLUGINS = [remarkEscapeRawHtml];
+
+/** Minimal shape of the hast nodes the highlight plugin walks (no external dep). */
+interface HastNode {
+  type: string;
+  tagName?: string;
+  value?: string;
+  properties?: Record<string, unknown>;
+  children?: HastNode[];
+}
+
+/** Code is shown verbatim — a mention-looking token inside it is not a mention. */
+const NO_HIGHLIGHT_TAGS = new Set(["code", "pre"]);
+
+/**
+ * Rehype plugin: split every text node by `highlight(text)` into plain text and
+ * `<mark>` elements tinted like `HighlightTextAreaField`'s backdrop (same segmenter,
+ * same tones). Ranges are per text node, so a token split by inline formatting
+ * (`@Bob **Smith**`) is not matched across the boundary.
+ */
+function rehypeHighlight(highlight: (text: string) => HighlightRange[]) {
+  return () =>
+    (tree: HastNode): void => {
+      const walk = (node: HastNode): void => {
+        if (!node.children || (node.tagName && NO_HIGHLIGHT_TAGS.has(node.tagName))) return;
+        node.children = node.children.flatMap((child): HastNode[] => {
+          if (child.type !== "text" || !child.value) {
+            walk(child);
+            return [child];
+          }
+          const ranges = highlight(child.value);
+          if (ranges.length === 0) return [child];
+          return buildSegments(child.value, ranges).map((seg) =>
+            seg.mark
+              ? {
+                  type: "element",
+                  tagName: "mark",
+                  properties: {
+                    className: cn(markToneClass(seg.tone), "text-inherit"),
+                    "data-testid": MarkdownTestId.Mark,
+                  },
+                  children: [{ type: "text", value: seg.text }],
+                }
+              : { type: "text", value: seg.text },
+          );
+        });
+      };
+      walk(tree);
+    };
+}
 
 /**
  * Tags the rendered nodes tests (and any future caller) need to select by id
@@ -115,6 +172,13 @@ export interface MarkdownProps {
    * a new tab under `"prose"`.
    */
   variant?: MarkdownVariant;
+  /**
+   * Character spans to mark in each rendered text run (never inside code) — e.g. the
+   * `@mentions` of a submitted brief, so they read as highlighted as they did while
+   * typed. Called per text node with that node's text. Keep the callback stable
+   * (memoised) — it is part of the plugin list.
+   */
+  highlight?: (text: string) => HighlightRange[];
 }
 
 /**
@@ -124,12 +188,19 @@ export interface MarkdownProps {
  * {@link MarkdownEditor}), so it adds no new dependency and no hand-rolled parser.
  * Frontmatter is owned elsewhere and never rendered here.
  */
-export function Markdown({ source, escapeHtml = false, variant = "default" }: MarkdownProps) {
+export function Markdown({
+  source,
+  escapeHtml = false,
+  variant = "default",
+  highlight,
+}: MarkdownProps) {
+  const rehypePlugins = highlight ? [rehypeHighlight(highlight)] : undefined;
   if (variant === "prose") {
     return (
       <div className="md-prose" data-testid={MarkdownTestId.Root}>
         <MDEditor.Markdown
           components={proseComponents}
+          rehypePlugins={rehypePlugins}
           remarkPlugins={escapeHtml ? ESCAPE_HTML_PLUGINS : undefined}
           source={source}
           style={{ background: "transparent", color: "inherit", fontFamily: "inherit" }}
@@ -145,6 +216,7 @@ export function Markdown({ source, escapeHtml = false, variant = "default" }: Ma
           text on the light theme). */}
       <MDEditor.Markdown
         components={testIdComponents}
+        rehypePlugins={rehypePlugins}
         remarkPlugins={escapeHtml ? ESCAPE_HTML_PLUGINS : undefined}
         source={source}
         style={{ ...themeVars, background: "transparent" }}
