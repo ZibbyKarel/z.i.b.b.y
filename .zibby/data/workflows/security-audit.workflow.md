@@ -8,6 +8,13 @@ phases:
     produces: audit.md
     model: opus
     thinking: high
+    skill: security-audit
+    prompt: |-
+      Run /security-audit in full audit mode against the target repository (the project checkout this session runs in). The operator explicitly requested this audit, so do not ask which mode to use.
+
+      Use "$ZIBBY_RUN_DIR/security-audit" as the output directory: it is outside the target and already writable, so do not ask for another path and do not write into the repository. Pick the profile from task.md, defaulting to `standard`. Follow the skill's execution-safety rules exactly; anything the sandbox cannot enforce becomes a needs-validation item, never a live probe.
+
+      When the skill's run ends, write audit.md: the skill's REPORT.md content (findings with source evidence, priority and certainty, plus the coverage statement and needs-validation list), so the next phases can work from this one file.
   - id: exploit
     type: agent
     agent: penetration-tester
@@ -74,7 +81,11 @@ kde má mandát, a **nikdy nic nemění v běžícím prostředí**.
 
 1. **audit** — `task.md` → `audit.md`: model hrozeb a systematické hledání
    zranitelností — authn/authz, vstupy, secrets, kryptografie, konfigurace,
-   izolace tenantů. Nálezy s cestou k důkazu, ne domněnky.
+   izolace tenantů. Nálezy s cestou k důkazu, ne domněnky. Krok jede přes
+   nainstalovaný externí skill **`/security-audit`** (Cloudflare) v plném režimu;
+   jeho pracovní soubory (ledger, findings, REPORT.md) leží v
+   `$ZIBBY_RUN_DIR/security-audit/`, mimo cílové repo, a do `audit.md` jde obsah
+   jeho REPORT.md.
 2. **exploit** — `audit.md` → `exploits.md`: u každého nálezu ověří, zda je
    v tomhle nasazení opravdu dosažitelný, a rozdělí je na potvrzené,
    nedosažitelné a nerozhodnuté. **Jen autorizovaný rozsah** — na cizí
