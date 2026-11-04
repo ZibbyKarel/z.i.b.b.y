@@ -67,6 +67,29 @@ describe("TaskRunSchema — sessionId (Phase 49)", () => {
   });
 });
 
+describe("TaskRunSchema — sourcePr", () => {
+  const sourcePr = {
+    kind: "rebase",
+    repo: "acme/api",
+    number: 7,
+    url: "https://github.com/acme/api/pull/7",
+  };
+
+  it("leaves sourcePr undefined on a minimal run", () => {
+    expect(TaskRunSchema.parse(minimalRun).sourcePr).toBeUndefined();
+  });
+
+  it("round-trips a source PR", () => {
+    expect(TaskRunSchema.parse({ ...minimalRun, sourcePr }).sourcePr).toEqual(sourcePr);
+  });
+
+  it("rejects an unknown kind", () => {
+    expect(
+      TaskRunSchema.safeParse({ ...minimalRun, sourcePr: { ...sourcePr, kind: "merge" } }).success,
+    ).toBe(false);
+  });
+});
+
 describe("TaskRunSchema — classification (F2c)", () => {
   it("parses a run without a classification; the field stays undefined", () => {
     const parsed = TaskRunSchema.parse(minimalRun);
