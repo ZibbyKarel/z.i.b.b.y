@@ -301,10 +301,16 @@ export class KbMcpController {
       "read_team_kb_note",
       {
         description:
-          "Read one full note from the operator's team knowledge base by its note id " +
-          "(from a prior search_team_kb hit). Read-only.",
+          "Read one full note from the operator's team knowledge base by the note path " +
+          "exactly as cited in a search_team_kb hit (e.g. wiki/notes/foo.md); a bare " +
+          "note id (filename without extension) also works. Read-only.",
         inputSchema: {
-          noteId: z.string().describe("The note's id, as returned by search_team_kb."),
+          noteId: z
+            .string()
+            .describe(
+              "The note path exactly as cited by search_team_kb (e.g. wiki/notes/foo.md), " +
+                "or the bare note id (filename without extension).",
+            ),
           team: z
             .string()
             .optional()

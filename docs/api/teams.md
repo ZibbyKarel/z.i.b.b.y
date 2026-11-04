@@ -190,8 +190,9 @@ scoring shape, applied to the real KB layout (`team-context.md`,
 - **`.vtt` files are indexed by filename only, never parsed** — they are raw
   verbatim transcripts of real people speaking. `read()` on a `.vtt` id
   returns `null`; only `search()` can surface one, by filename.
-- **`noteId`** is the file's basename without extension (mirrors
-  `VaultService`'s note `id`), resolved by looking it up among the entries the
+- **`noteId`** is the repo-relative path a search hit cites (e.g.
+  `wiki/notes/foo.md`, `.md` optional), else the file's basename without
+  extension (mirrors `VaultService`'s note `id`); both NFC-normalized. Resolved by looking it up among the entries the
   walk already validated — never by resolving a caller-supplied path
   directly, which is what makes the traversal/symlink guards hold.
 
@@ -303,7 +304,8 @@ read_team_kb_note({ noteId: string, team?: string })
   so an oversized title can't crowd the snippet out of the shared budget) and
   combined into the same envelope as the snippet (Law 4 — untrusted vault
   content is data, not instructions).
-- `read_team_kb_note` reads one note from the first reachable root (in scope
+- `read_team_kb_note` reads one note, addressed by the path `search_team_kb`
+  cites (or a bare note id), from the first reachable root (in scope
   order) that has it; its path + title + body are enveloped together the
   same way.
 - **No write tool exists**, and none is planned — `KbReaderService` itself
