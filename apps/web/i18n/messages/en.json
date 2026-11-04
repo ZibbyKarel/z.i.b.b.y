@@ -1336,6 +1336,7 @@
     "detail": {
       "backToRuns": "← Runs",
       "assignProject": "+ Assign project",
+      "sourcePr": "Source PR {ref}",
       "workflow": "Workflow · {name}",
       "action": {
         "pause": "Pause",
