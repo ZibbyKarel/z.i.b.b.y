@@ -1,7 +1,7 @@
 import { AnchoredSheetTestId, NeedsYouCardTestId } from "@zibby/design-system";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { renderWithProviders, screen } from "../../../../test/render";
+import { fireEvent, renderWithProviders, screen } from "../../../../test/render";
 import { RunSheet } from "./RunSheet";
 
 vi.mock("next/navigation", () => ({
@@ -34,14 +34,19 @@ vi.mock("../../../runs/components/RunDetail", () => ({
     run,
     embedded,
     children,
+    onOpenApproval,
   }: {
     run: { runId: string };
     embedded?: boolean;
     children?: ReactNode;
+    onOpenApproval?: (id: string) => void;
   }) => (
     <div data-testid="run-detail">
       {`${run.runId}${embedded ? " embedded" : ""}`}
       {children}
+      <button data-testid="open-approval" onClick={() => onOpenApproval?.("g1")} type="button">
+        open approval
+      </button>
     </div>
   ),
   RunHeaderActions: () => <button type="button">Stop</button>,
@@ -94,5 +99,25 @@ describe("RunSheet", () => {
   it("puts the run actions in the sheet header", () => {
     renderWithProviders(<RunSheet anchor={anchor} id="wf_1" onClose={() => {}} />);
     expect(screen.getByTestId(AnchoredSheetTestId.Actions)).toHaveTextContent("Stop");
+  });
+
+  it("closes the approval detail it opened when the run sheet closes", () => {
+    window.history.replaceState(null, "", "/dashboard?run=wf_1");
+    const { unmount } = renderWithProviders(
+      <RunSheet anchor={anchor} id="wf_1" onClose={() => {}} />,
+    );
+    fireEvent.click(screen.getByTestId("open-approval"));
+    window.history.replaceState(null, "", "/dashboard?run=wf_1&approval=g1"); // the mocked router.push
+    unmount();
+    expect(window.location.search).toBe("?run=wf_1");
+  });
+
+  it("leaves an approval detail it did not open alone", () => {
+    window.history.replaceState(null, "", "/dashboard?run=wf_1&approval=g1");
+    const { unmount } = renderWithProviders(
+      <RunSheet anchor={anchor} id="wf_1" onClose={() => {}} />,
+    );
+    unmount();
+    expect(window.location.search).toBe("?run=wf_1&approval=g1");
   });
 });
