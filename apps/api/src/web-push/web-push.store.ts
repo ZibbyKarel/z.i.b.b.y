@@ -23,24 +23,25 @@ const VapidSchema = z.object({ publicKey: z.string().min(1), privateKey: z.strin
  */
 @Injectable()
 export class WebPushStore {
-  private vapidCache: VapidKeys | null = null;
+  private vapidCache: Promise<VapidKeys> | null = null;
 
   constructor(@Inject(WEB_PUSH_DIR) private readonly dir: string) {}
 
-  async vapid(): Promise<VapidKeys> {
-    if (this.vapidCache) return this.vapidCache;
+  /** Caches the promise, so concurrent first calls generate one key pair. */
+  vapid(): Promise<VapidKeys> {
+    this.vapidCache ??= this.loadVapid();
+    return this.vapidCache;
+  }
+
+  private async loadVapid(): Promise<VapidKeys> {
     const file = path.join(this.dir, "vapid.json");
     const raw = await fs.readFile(file, "utf8").catch(() => null);
     const parsed = VapidSchema.safeParse(raw === null ? null : safeJson(raw));
-    if (parsed.success) {
-      this.vapidCache = parsed.data;
-      return parsed.data;
-    }
+    if (parsed.success) return parsed.data;
     const keys = webpush.generateVAPIDKeys();
     await ensureDir(this.dir);
-    await writeFileAtomic(file, `${JSON.stringify(keys, null, 2)}\n`);
-    await fs.chmod(file, 0o600);
-    this.vapidCache = keys;
+    // mode at creation: the private key is never readable by others, not even briefly
+    await fs.writeFile(file, `${JSON.stringify(keys, null, 2)}\n`, { mode: 0o600 });
     return keys;
   }
 

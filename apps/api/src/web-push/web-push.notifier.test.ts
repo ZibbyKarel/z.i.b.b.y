@@ -3,6 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { ActivityEntry, WebPushSubscription } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { LoggerService } from "../shared/logging/logger.service";
 import type { ActivityEventsService } from "../activity/activity-events.service";
 import type { OperatorChannelStore } from "../operator-channel/operator-channel.store";
 import type { OperatorEventLookups } from "../operator-channel/operator-events";
@@ -34,7 +35,16 @@ afterEach(() => fs.rm(dir, { recursive: true, force: true }));
 
 const build = (send: WebPushSender) => {
   const store = new WebPushStore(dir);
-  const notifier = new WebPushNotifier({} as ActivityEventsService, store, settings, lookups, send);
+  const notifier = new WebPushNotifier(
+    {} as ActivityEventsService,
+    store,
+    settings,
+    lookups,
+    send,
+    {
+      child: () => ({ warn: vi.fn() }),
+    } as unknown as LoggerService,
+  );
   return { store, notifier };
 };
 
@@ -86,6 +96,28 @@ describe("WebPushNotifier", () => {
     expect((await store.list()).map((s) => s.endpoint)).toEqual([sub(2).endpoint]);
   });
 
+  it("dedupe window expires after 24h", async () => {
+    const send = vi.fn<WebPushSender>().mockResolvedValue();
+    const { store, notifier } = build(send);
+    await store.add(sub(1));
+    const e = entry("approval-requested");
+    await notifier.onActivity(e);
+    const later = Date.now() + 25 * 60 * 60 * 1000;
+    notifier.now = () => new Date(later);
+    await notifier.onActivity(e);
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries an event whose push fully failed", async () => {
+    const send = vi.fn<WebPushSender>().mockRejectedValueOnce(new Error("x")).mockResolvedValue();
+    const { store, notifier } = build(send);
+    await store.add(sub(1));
+    const e = entry("approval-requested");
+    await notifier.onActivity(e);
+    await notifier.onActivity(e);
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+
   it("does nothing without subscriptions", async () => {
     const send = vi.fn<WebPushSender>().mockResolvedValue();
     const { notifier } = build(send);
@@ -100,6 +132,13 @@ describe("WebPushStore", () => {
     await store.add(sub(1));
     await store.add(sub(1));
     expect(await store.list()).toHaveLength(1);
+  });
+
+  it("vapid.json is mode 0600 and concurrent first calls agree", async () => {
+    const store = new WebPushStore(dir);
+    const [a, b] = await Promise.all([store.vapid(), store.vapid()]);
+    expect(b).toEqual(a);
+    expect((await fs.stat(path.join(dir, "vapid.json"))).mode & 0o777).toBe(0o600);
   });
 
   it("vapid() is stable across instances over the same dir", async () => {

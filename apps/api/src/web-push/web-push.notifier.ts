@@ -2,6 +2,7 @@ import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@ne
 import type { ActivityEntry, WebPushSubscription } from "@zibby/contracts";
 import type { Subscription } from "rxjs";
 import webpush from "web-push";
+import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { ActivityEventsService } from "../activity/activity-events.service";
 import { OperatorChannelStore } from "../operator-channel/operator-channel.store";
 import { type OperatorEventLookups, toOperatorEvent } from "../operator-channel/operator-events";
@@ -37,6 +38,7 @@ const DEDUPE_WINDOW_MS = 24 * 60 * 60 * 1000;
 export class WebPushNotifier implements OnModuleInit, OnModuleDestroy {
   now: () => Date = () => new Date();
   private readonly seen = new Map<string, number>();
+  private readonly log: ScopedLogger;
   private pending: Promise<void>[] = [];
   private sub: Subscription | null = null;
 
@@ -46,7 +48,10 @@ export class WebPushNotifier implements OnModuleInit, OnModuleDestroy {
     private readonly settings: OperatorChannelStore,
     @Inject(OPERATOR_EVENT_LOOKUPS) private readonly lookups: OperatorEventLookups,
     @Inject(WEB_PUSH_SENDER) private readonly send: WebPushSender,
-  ) {}
+    logger: LoggerService,
+  ) {
+    this.log = logger.child(WebPushNotifier.name);
+  }
 
   onModuleInit(): void {
     this.sub = this.events.stream().subscribe(({ entry }) => {
@@ -99,6 +104,7 @@ export class WebPushNotifier implements OnModuleInit, OnModuleDestroy {
           if (status === 404 || status === 410) await this.store.remove(sub.endpoint);
         }
       }
+      if (sent === 0) this.seen.delete(key); // fully failed: retry on the next event
       await this.store.appendDelivery({
         ts: this.now().toISOString(),
         kind: event.kind,
@@ -106,8 +112,9 @@ export class WebPushNotifier implements OnModuleInit, OnModuleDestroy {
         sent,
         failed,
       });
-    } catch {
+    } catch (err) {
       // never break the activity stream over a notification
+      this.log.warn("web push failed", { error: err instanceof Error ? err.message : String(err) });
     }
   }
 }
