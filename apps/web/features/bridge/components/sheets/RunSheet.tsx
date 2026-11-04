@@ -4,6 +4,7 @@ import { AnchoredSheet, Markdown, SheetBlock, normalizeStateTone } from "@zibby/
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { useApprovalsQuery } from "../../../approvals";
 import { useApprovalSheetParam } from "../../../approvals/useApprovalSheetParam";
 import { useTaskRunQuery } from "../../../runs/queries/useTaskRunQuery";
@@ -26,6 +27,29 @@ export function RunSheet({ id, anchor, onClose }: SheetProps) {
   const { data: approvals = [] } = useApprovalsQuery();
   const approval = run ? approvalForRun(approvals, run) : undefined;
   const checkpoint = useCheckpointArtifact(approval, run);
+  // An approval detail opened from this sheet closes with it (and when J/K steps to another run).
+  // `history.replaceState` like the bridge's `?run=` sync — Next mirrors it into `useSearchParams`.
+  const openedApproval = useRef<string | null>(null);
+  useEffect(
+    () => () => {
+      const opened = openedApproval.current;
+      openedApproval.current = null;
+      const params = new URLSearchParams(window.location.search);
+      if (!opened || params.get("approval") !== opened) return;
+      params.delete("approval");
+      const qs = params.toString();
+      window.history.replaceState(
+        window.history.state,
+        "",
+        qs ? `?${qs}` : window.location.pathname,
+      );
+    },
+    [id],
+  );
+  const openApproval = (approvalId: string) => {
+    openedApproval.current = approvalId;
+    approvalSheet.open(approvalId);
+  };
 
   if (!run) return null;
 
@@ -44,7 +68,7 @@ export function RunSheet({ id, anchor, onClose }: SheetProps) {
       title={run.title || run.taskTitle || run.runId}
       tone={normalizeStateTone(runStateTone(run.status) ?? "idle")}
     >
-      <RunDetail embedded onOpenApproval={approvalSheet.open} run={run}>
+      <RunDetail embedded onOpenApproval={openApproval} run={run}>
         {checkpoint ? (
           <SheetBlock label={t("bridge.sheet.run.output")}>
             <Markdown escapeHtml source={checkpoint} />
