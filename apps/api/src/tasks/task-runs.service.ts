@@ -15,6 +15,7 @@ import {
   type ScheduledTask,
   type SendRunMessageInput,
   type TaskRun,
+  type TaskRunSourcePr,
   type TaskTarget,
   type Workflow,
   type WorkflowRun,
@@ -815,6 +816,20 @@ function goalRunToView(r: GoalRun, projectNames: ProjectNameMaps): TaskRun {
   };
 }
 
+/** The PR a PR-action task was born from: first present stamp wins. */
+function sourcePrOf(task: ScheduledTask): TaskRunSourcePr | undefined {
+  const stamps = [
+    ["review", task.prReview],
+    ["rebase", task.prRebase],
+    ["address-comments", task.prAddressComments],
+    ["fix-ci", task.prFixCi],
+  ] as const;
+  for (const [kind, stamp] of stamps) {
+    if (stamp) return { kind, repo: stamp.repo, number: stamp.number, url: stamp.url };
+  }
+  return undefined;
+}
+
 function enrichRunWithTask(run: TaskRun, tasksById: ReadonlyMap<string, ScheduledTask>): TaskRun {
   if (!run.taskId) return run;
   const task = tasksById.get(run.taskId);
@@ -826,8 +841,10 @@ function enrichRunWithTask(run: TaskRun, tasksById: ReadonlyMap<string, Schedule
   );
   // An operator "continue" waiting for a run slot reads as queued on the run itself.
   const continuing = task.status === "queued" && task.continueRun?.runRef === run.runId;
+  const sourcePr = sourcePrOf(task);
   return {
     ...run,
+    ...(sourcePr ? { sourcePr } : {}),
     ...(gated && run.status === "done" ? { status: "awaiting-approval" as const } : {}),
     ...(continuing ? { status: "queued" as const } : {}),
     taskTitle: task.title || task.text,
@@ -921,6 +938,7 @@ function scheduledTaskToView(t: ScheduledTask): TaskRun | null {
               ? "interrupted"
               : "error";
   const processor = scheduledProcessor(t.target);
+  const sourcePr = sourcePrOf(t);
   return {
     runId: t.id,
     kind: "scheduled",
@@ -939,6 +957,7 @@ function scheduledTaskToView(t: ScheduledTask): TaskRun | null {
     // link would blink out exactly while the operator is waiting on a slot.
     roadmapItemId: t.roadmapItemId,
     roadmapItemLabel: t.roadmapItemLabel,
+    ...(sourcePr ? { sourcePr } : {}),
     heldReason: t.heldReason,
     approvalId: t.approvalId,
     deferredLimit: t.deferredReason === "limit",

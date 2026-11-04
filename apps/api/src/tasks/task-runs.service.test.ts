@@ -486,6 +486,54 @@ describe("TaskRunsService", () => {
     });
   });
 
+  describe("source PR enrichment", () => {
+    const pr = { repo: "acme/api", number: 7, url: "https://github.com/acme/api/pull/7" };
+    const git = { head: "feat", base: "main", headSha: "abc123" };
+    const review = { ...pr, state: "posted" as const };
+    const rebase = { ...pr, ...git, conflictAtStart: false, state: "pushed" as const };
+    const fixCi = { ...pr, ...git, state: "pushed" as const };
+
+    it("joins a PR-action task's source PR onto its run", async () => {
+      const { service, scheduled } = build();
+      scheduled.list.mockResolvedValue([
+        { ...scheduledS, id: "task1", status: "dispatched", prRebase: rebase },
+      ]);
+      const run = (await service.listTaskRuns()).find((r) => r.runId === "researcher_1");
+      expect(run?.sourcePr).toEqual({ kind: "rebase", ...pr });
+    });
+
+    it("leaves sourcePr unset when the task has no PR stamp", async () => {
+      const { service, scheduled } = build();
+      scheduled.list.mockResolvedValue([{ ...scheduledS, id: "task1", status: "dispatched" }]);
+      const run = (await service.listTaskRuns()).find((r) => r.runId === "researcher_1");
+      expect(run?.sourcePr).toBeUndefined();
+    });
+
+    it("carries sourcePr on a still-QUEUED PR-action task", async () => {
+      const { service, scheduled } = build();
+      scheduled.list.mockResolvedValue([
+        { ...scheduledS, id: "queued-task", status: "queued", prReview: review },
+      ]);
+      const run = (await service.listTaskRuns()).find((r) => r.runId === "queued-task");
+      expect(run?.sourcePr?.kind).toBe("review");
+    });
+
+    it("prefers review over fix-ci when both stamps are present", async () => {
+      const { service, scheduled } = build();
+      scheduled.list.mockResolvedValue([
+        {
+          ...scheduledS,
+          id: "task1",
+          status: "dispatched",
+          prReview: review,
+          prFixCi: fixCi,
+        },
+      ]);
+      const run = (await service.listTaskRuns()).find((r) => r.runId === "researcher_1");
+      expect(run?.sourcePr?.kind).toBe("review");
+    });
+  });
+
   describe("project display label (regression: was showing the run's own sandbox id)", () => {
     it("resolves a workflow run's project from its resolved projectPath, not its sandbox cwd", async () => {
       const { service } = build();
