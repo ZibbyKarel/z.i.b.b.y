@@ -33,6 +33,8 @@ reach" below).
                                        // tolerance as Project.companyId, resolved
                                        // to "no company" at read time
   desc?: string;
+  slug?: string;                      // GitHub team slug (`team` or `org/team`); trimmed, leading `@`
+                                       // stripped; PATCH `slug: null` clears it
   knowledgeBase?: KnowledgeBaseSource; // where the team's read-only KB lives
 }
 ```

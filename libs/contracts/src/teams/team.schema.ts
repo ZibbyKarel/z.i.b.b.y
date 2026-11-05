@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { AgentIdSchema } from "../agents/agent.schema";
 import { isValidGitRemote } from "../projects/project.schema";
+import { TEAM_SLUG_RE } from "./team-slug";
 
 /** Filename-safe id — same constraint as agents/companies, no path traversal. */
 export const TeamIdSchema = AgentIdSchema;
@@ -48,6 +49,13 @@ export const KnowledgeBaseSourceSchema = z.discriminatedUnion("kind", [
 ]);
 export type KnowledgeBaseSource = z.infer<typeof KnowledgeBaseSourceSchema>;
 
+/** Trimmed, leading `@` stripped (CODEOWNERS form), then validated as `team` or `org/team`. */
+const TeamSlugSchema = z
+  .string()
+  .trim()
+  .transform((s) => s.replace(/^@/, ""))
+  .pipe(z.string().regex(TEAM_SLUG_RE, { message: "invalid GitHub team slug" }));
+
 /**
  * A team inside a company — the layer that owns a knowledge base.
  *
@@ -61,6 +69,8 @@ export const TeamSchema = z.object({
   name: z.string().min(1),
   companyId: z.string().optional(),
   desc: z.string().optional(),
+  /** GitHub team slug (`team` or `org/team`) — filters the PRs widget to reviews requested of this team. */
+  slug: TeamSlugSchema.optional(),
   knowledgeBase: KnowledgeBaseSourceSchema.optional(),
 });
 export type Team = z.infer<typeof TeamSchema>;
@@ -79,6 +89,7 @@ export type CreateTeamInput = z.infer<typeof CreateTeamSchema>;
  */
 export const UpdateTeamSchema = TeamSchema.omit({ id: true }).partial().extend({
   companyId: z.string().optional().nullable(),
+  slug: TeamSlugSchema.optional().nullable(),
   knowledgeBase: KnowledgeBaseSourceSchema.optional().nullable(),
 });
 export type UpdateTeamInput = z.infer<typeof UpdateTeamSchema>;
