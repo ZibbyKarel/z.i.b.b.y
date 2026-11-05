@@ -82,7 +82,7 @@ export function resolveAutopilotAutomation(
   state: Pick<AutopilotState, "level" | "automation">,
   at: { companyId?: string; teamId?: string },
 ): AutomationToggles {
-  if (state.level === "off" || !state.automation) return NO_AUTOMATION;
+  if (state.level === "off" || !state.automation) return { ...NO_AUTOMATION };
   const { global, companies, teams } = state.automation;
   const company = at.companyId ? companies[at.companyId] : undefined;
   const team = at.teamId ? teams[at.teamId] : undefined;

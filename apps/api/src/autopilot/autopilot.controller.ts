@@ -22,14 +22,17 @@ export class AutopilotController {
     return tsRestHandler(autopilotContract, {
       getAutopilot: async () => ({ status: 200, body: await this.autopilot.status() }),
 
-      setAutopilot: async ({ body: { level, scope }, headers }) => {
+      setAutopilot: async ({ body: { level, scope, automation }, headers }) => {
         if (level === "full" && !hasOperatorToken(this.tokens, headers)) {
           return {
             status: 401,
             body: { message: "Turning autopilot on requires the operator token." },
           };
         }
-        return { status: 200, body: await this.autopilot.set(level, "operator", scope) };
+        return {
+          status: 200,
+          body: await this.autopilot.set(level, "operator", scope, automation),
+        };
       },
     });
   }

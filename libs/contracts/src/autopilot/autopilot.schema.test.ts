@@ -62,3 +62,11 @@ describe("autopilot automation schemas", () => {
     );
   });
 });
+
+describe("resolveAutopilotAutomation copy", () => {
+  it("returns a fresh object when off, never the shared constant", () => {
+    const a = resolveAutopilotAutomation({ level: "off" }, {});
+    expect(a).toEqual(NO_AUTOMATION);
+    expect(a).not.toBe(NO_AUTOMATION);
+  });
+});

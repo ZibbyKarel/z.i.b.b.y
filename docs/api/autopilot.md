@@ -37,12 +37,33 @@ whenever autopilot is on. A `full` state without `scope` (written before the tog
 everything. The file is read once at boot and cached, because the gate evaluator is
 synchronous. Use the API to switch the level: a hand edit only takes effect after a restart.
 
+## Automation tree
+
+`automation` (optional) holds the roadmap automation toggles `autoImplement`, `autoReview` and
+`autoAddressComments` as a Global -> Company -> Team override tree:
+
+```json
+{
+  "automation": {
+    "global": { "autoImplement": true, "autoReview": false, "autoAddressComments": false },
+    "companies": { "acme": { "autoReview": true } },
+    "teams": { "frontend": { "autoImplement": false } }
+  }
+}
+```
+
+`companies` / `teams` are keyed by id and hold only the toggles the node overrides. Precedence is
+team > company > global (`resolveAutopilotAutomation`; `AutopilotService.automationFor`). While
+autopilot is `off` every effective toggle is `false`, but the stored tree is kept so the next
+switch-on pre-fills it. A state without `automation` means all three global toggles `false`.
+`PUT` with `automation` omitted keeps the stored tree. Autopilot may stay on indefinitely.
+
 ## Endpoints
 
-| Route                | Auth                      | Notes                                                                                |
-| -------------------- | ------------------------- | ------------------------------------------------------------------------------------ |
-| `GET /api/autopilot` | none                      | The state plus `pendingApprovals` (the count waiting now)                            |
-| `PUT /api/autopilot` | operator token for `full` | `{ level, scope? }`. `full` without the token returns `401`; `off` is always allowed |
+| Route                | Auth                      | Notes                                                                                             |
+| -------------------- | ------------------------- | ------------------------------------------------------------------------------------------------- |
+| `GET /api/autopilot` | none                      | The state plus `pendingApprovals` (the count waiting now)                                         |
+| `PUT /api/autopilot` | operator token for `full` | `{ level, scope?, automation? }`. `full` without the token returns `401`; `off` is always allowed |
 
 `scope` only counts with `full`; omitted means all on. Setting the level (and scope) it already
 has does nothing: the file isn't written and no notice is sent.
@@ -146,8 +167,7 @@ graduations, and so on.
   record and the approval id.
 - Switching it on or off records `autopilot-changed`. The summary includes the pending count
   when it is turned on.
-- Both kinds map to the operator-channel event `autopilot-action` (Tier 2, on by default,
-  toggled in `notify.events`). An approval that autopilot decided does not also send an
+- Only `autopilot-action` maps to the operator-channel event `autopilot-action` (Tier 2, on by
+  default, toggled in `notify.events`). The on/off switch (`autopilot-changed`) stays in the
+  activity log and is not pushed to Slack. An approval that autopilot decided does not also send an
   `approval-waiting` ping.
-- Outbound Slack notifications only go out while autopilot is on (see the policy in
-  `docs/api/operator-channel.md`). Switching off is therefore not announced on Slack.

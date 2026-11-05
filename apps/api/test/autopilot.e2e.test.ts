@@ -69,4 +69,20 @@ describe("Autopilot API (e2e)", () => {
     expect(off.body.level).toBe("off");
     expect((await evalComment()).decision).toBe("ask");
   });
+
+  it("stores and echoes the automation tree", async () => {
+    const automation = {
+      global: { autoImplement: true, autoReview: false, autoAddressComments: false },
+      companies: { acme: { autoReview: true } },
+      teams: {},
+    };
+    const put = await withOperator(request(server()).put("/api/autopilot"))
+      .send({ level: "full", automation })
+      .expect(200);
+    expect(put.body.automation).toEqual(automation);
+    expect((await request(server()).get("/api/autopilot").expect(200)).body.automation).toEqual(
+      automation,
+    );
+    await request(server()).put("/api/autopilot").send({ level: "off" }).expect(200);
+  });
 });

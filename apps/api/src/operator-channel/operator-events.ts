@@ -71,7 +71,7 @@ const isPrInboxTask = (t: ScheduledTask): boolean =>
  * - `workflow-parked` (retries/limit only) / `goal-parked` → `run-parked`
  * - `monitor-alert`, `post-merge-outcome` with a fix task → `ci-red` (being fixed)
  * - `briefing-generated` → `briefing`
- * - `autopilot-action` / `autopilot-changed` → `autopilot-action` (Phase 4)
+ * - `autopilot-action` → `autopilot-action` (Phase 4); `autopilot-changed` (on/off) is not pushed
  */
 export async function toOperatorEvent(
   entry: ActivityEntry,
@@ -215,14 +215,6 @@ export async function toOperatorEvent(
         state: "done",
         title: entry.summary,
         path: refs.approvalId ? "/governance/approvals" : "/activity",
-      });
-    case "autopilot-changed":
-      return event({
-        kind: "autopilot-action",
-        target: "autopilot",
-        state: `${refs.status ?? ""}:${entry.at}`,
-        title: entry.summary,
-        path: "/dashboard",
       });
     default:
       return null;

@@ -4,6 +4,7 @@ import * as path from "node:path";
 import type { Approval } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ApprovalsService } from "../approvals/approvals.service";
+import { FULL_AUTOPILOT_SCOPE } from "@zibby/contracts";
 import { AutopilotService, autopilotCoversApproval } from "./autopilot.service";
 
 type Covered = Pick<Approval, "kind" | "action" | "suggestedReviewEvent">;
@@ -109,5 +110,55 @@ describe("AutopilotService", () => {
     await svc.onModuleInit();
     await svc.set("off", "chat");
     await expect(fs.readFile(path.join(dir, "autopilot.json"), "utf8")).rejects.toThrow();
+  });
+
+  const tree = {
+    global: { autoImplement: true, autoReview: false, autoAddressComments: false },
+    companies: {},
+    teams: {},
+  };
+
+  it("stores the automation tree, keeps it across off, and resolves it only while on", async () => {
+    const svc = new AutopilotService(dir);
+    await svc.onModuleInit();
+    await svc.set("full", "operator", FULL_AUTOPILOT_SCOPE, tree);
+    expect(svc.automationFor({}).autoImplement).toBe(true);
+    expect(
+      JSON.parse(await fs.readFile(path.join(dir, "autopilot.json"), "utf8")).automation,
+    ).toEqual(tree);
+
+    await svc.set("off", "chat");
+    expect(svc.automationFor({})).toEqual({
+      autoImplement: false,
+      autoReview: false,
+      autoAddressComments: false,
+    });
+    expect((await svc.status()).automation).toEqual(tree);
+
+    await svc.set("full", "operator");
+    expect(svc.automationFor({}).autoImplement).toBe(true);
+
+    const reloaded = new AutopilotService(dir);
+    await reloaded.onModuleInit();
+    expect(reloaded.automationFor({}).autoImplement).toBe(true);
+  });
+
+  it("a changed tree alone counts as a change", async () => {
+    const svc = new AutopilotService(dir);
+    await svc.onModuleInit();
+    await svc.set("full", "operator", FULL_AUTOPILOT_SCOPE, tree);
+    const next = { ...tree, global: { ...tree.global, autoReview: true } };
+    await svc.set("full", "operator", FULL_AUTOPILOT_SCOPE, next);
+    expect(svc.automationFor({}).autoReview).toBe(true);
+  });
+
+  it("a malformed automation block makes the whole file read as off", async () => {
+    await fs.writeFile(
+      path.join(dir, "autopilot.json"),
+      JSON.stringify({ level: "full", automation: { global: { autoImplement: "yes" } } }),
+    );
+    const svc = new AutopilotService(dir);
+    await svc.onModuleInit();
+    expect(svc.isOn()).toBe(false);
   });
 });
