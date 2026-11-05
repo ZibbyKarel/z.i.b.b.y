@@ -15,7 +15,7 @@ Globální
       (auto implementace / auto review / auto zpracování komentářů)
 ```
 
-4. [ ] u widgetu PR
+4. [x] u widgetu PR (main@9134339b4)
        a. [ ] zvětšíme avatara tak aby byl velikostně jako dva řádky - to samé u JIRA ikonky u issues ve widgetu issues
        b. [ ] odstraníme jednolitý border z PRs a vrátíme STAVOVÝ border který se zobrazoval jako boder-left
        c. [ ] sjednotíme vertikální velikosti komponent ve filterch
