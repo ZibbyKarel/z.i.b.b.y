@@ -35,6 +35,14 @@ describe("TeamsStorageService", () => {
     expect(team.knowledgeBase).toEqual({ kind: "vault", path: "/tmp/kb", readOnly: true });
   });
 
+  it("stores, clears (null) and searches a slug", async () => {
+    await service.create(base);
+    expect((await service.update("devrel", { slug: "devrel-team" })).slug).toBe("devrel-team");
+    expect((await service.search("devrel-t")).map((t) => t.id)).toEqual(["devrel"]);
+    await service.update("devrel", { slug: null });
+    expect("slug" in (await service.get("devrel"))).toBe(false);
+  });
+
   it("rejects a duplicate id (conflict)", async () => {
     await service.create(base);
     await expect(service.create(base)).rejects.toBeInstanceOf(TeamConflictError);

@@ -60,7 +60,7 @@ export class TeamsStorageService {
 
   /** Free-text search over the registry by id, name and desc. */
   async search(query: string): Promise<Team[]> {
-    return searchByText(await this.list(), query, (t) => [t.id, t.name, t.desc]);
+    return searchByText(await this.list(), query, (t) => [t.id, t.name, t.desc, t.slug]);
   }
 
   async create(input: CreateTeamInput): Promise<Team> {
@@ -89,7 +89,8 @@ export class TeamsStorageService {
     // distinct from an ABSENT `knowledgeBase` key, which leaves the current
     // value alone (same rationale as `hasCompanyId` above).
     const hasKnowledgeBase = "knowledgeBase" in patch;
-    const { companyId, knowledgeBase, ...rest } = patch;
+    const hasSlug = "slug" in patch; // `slug: null` clears, same as above
+    const { companyId, knowledgeBase, slug, ...rest } = patch;
     const merged = TeamSchema.parse({
       ...existing,
       ...rest,
@@ -97,6 +98,7 @@ export class TeamsStorageService {
       ...(hasKnowledgeBase
         ? { knowledgeBase: knowledgeBase === null ? undefined : knowledgeBase }
         : {}),
+      ...(hasSlug ? { slug: slug === null ? undefined : slug } : {}),
       id: existing.id,
     });
     await this.writeAtomic(teams.map((t) => (t.id === id ? merged : t)));

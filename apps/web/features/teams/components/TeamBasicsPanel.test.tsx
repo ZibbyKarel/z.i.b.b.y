@@ -72,6 +72,33 @@ describe("TeamBasicsPanel", () => {
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ companyId: null }));
   });
 
+  it("saves the typed GitHub team slug as entered", async () => {
+    const onSave = vi.fn();
+    render(<TeamBasicsPanel isNew onSave={onSave} />);
+
+    await userEvent.type(screen.getByPlaceholderText("Platforma"), "Growth");
+    await userEvent.type(screen.getByTestId("team-slug-input"), "@shoptet/devrel-team");
+    await userEvent.click(screen.getByTestId("save-basics"));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ slug: "@shoptet/devrel-team" }));
+  });
+
+  it("sends slug: null when an existing team's slug is cleared", async () => {
+    const onSave = vi.fn();
+    render(
+      <TeamBasicsPanel
+        isNew={false}
+        onSave={onSave}
+        team={{ id: "platform", name: "Platform", slug: "shoptet/devrel-team" }}
+      />,
+    );
+
+    await userEvent.clear(screen.getByTestId("team-slug-input"));
+    await userEvent.click(screen.getByTestId("save-basics"));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ slug: null }));
+  });
+
   it("shows a delete button for an existing team but not for a new one", () => {
     const { rerender } = render(<TeamBasicsPanel isNew onSave={vi.fn()} />);
     expect(screen.queryByTestId("delete-team")).not.toBeInTheDocument();

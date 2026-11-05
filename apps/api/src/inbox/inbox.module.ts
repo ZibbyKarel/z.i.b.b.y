@@ -5,6 +5,7 @@ import { ProjectsModule } from "../projects/projects.module";
 import { ResolvedProjectModule } from "../projects/resolved-project.module";
 import { dataDir } from "../shared/data-dir";
 import { TasksModule } from "../tasks/tasks.module";
+import { TeamsModule } from "../teams/teams.module";
 import { WorkspaceModule } from "../workspace/workspace.module";
 import { INBOX_STATE_FILE, InboxStateStore } from "./inbox-state.store";
 import { InboxAddressCommentsService } from "./inbox-address-comments.service";
@@ -33,6 +34,7 @@ export function resolveInboxStateFile(): string {
     TasksModule,
     ApprovalsModule,
     WorkspaceModule,
+    TeamsModule, // configured team slugs for the team-review search; TeamsModule imports nothing here
   ],
   controllers: [InboxController],
   providers: [

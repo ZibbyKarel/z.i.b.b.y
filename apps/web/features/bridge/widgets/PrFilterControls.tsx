@@ -8,6 +8,7 @@ import {
   type IconTone,
   ToggleChip,
 } from "@zibby/design-system";
+import { teamSlugMatches } from "@zibby/contracts";
 import { useTranslations } from "next-intl";
 import {
   PR_CI_FILTERS,
@@ -17,7 +18,7 @@ import {
   type PrReviewFilter,
   type PrReviewState,
 } from "../state/prStatus";
-import { type PrFilterPick, prTeamLabel } from "../state/rows";
+import type { PrFilterPick, PrTeamOption } from "../state/rows";
 
 export enum PrFilterControlsTestId {
   Mine = "pr-filter-mine",
@@ -59,7 +60,7 @@ export interface PrFilterControlsProps {
   pick: PrFilterPick;
   onChange: (next: PrFilterPick) => void;
   /** Team slugs on offer; the team control is hidden when empty. */
-  teams: string[];
+  teams: PrTeamOption[];
   /** Per-option counts shown on the buttons; omitted in the settings dialog. */
   counts?: { review: Record<PrReviewFilter, number>; ci: Record<PrCiFilter, number> };
 }
@@ -79,6 +80,13 @@ export function PrFilterControls({ pick, onChange, teams, counts }: PrFilterCont
     leading: <Icon name={icon.name} size="sm" tone={icon.tone} />,
     trailing: count === undefined ? undefined : String(count),
   });
+
+  // Saved discovered `org/team` values show as (and normalise to) the configured option covering them.
+  const pickedTeams = [
+    ...new Set(
+      (pick.teams ?? []).map((v) => teams.find((o) => teamSlugMatches(v, o.value))?.value ?? v),
+    ),
+  ];
 
   return (
     <>
@@ -111,9 +119,9 @@ export function PrFilterControls({ pick, onChange, teams, counts }: PrFilterCont
           multi
           aria-label={t("filter.teams")}
           onChange={(v) => set({ teams: v })}
-          options={teams.map((slug) => ({ value: slug, label: prTeamLabel(slug) }))}
+          options={teams}
           placeholder={t("filter.teams")}
-          value={pick.teams ?? []}
+          value={pickedTeams}
         />
       ) : null}
     </>

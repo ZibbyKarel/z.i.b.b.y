@@ -151,3 +151,17 @@ describe("ResolveTeamKbQuestionSchema", () => {
     ).toBe(false);
   });
 });
+
+describe("Team slug", () => {
+  it("trims and strips a leading @", () => {
+    expect(TeamSchema.parse({ id: "t", name: "T", slug: " @shoptet/devrel-team " }).slug).toBe(
+      "shoptet/devrel-team",
+    );
+  });
+  it("rejects an invalid slug", () => {
+    expect(TeamSchema.safeParse({ id: "t", name: "T", slug: "a b" }).success).toBe(false);
+  });
+  it("update accepts null to clear", () => {
+    expect(UpdateTeamSchema.parse({ slug: null }).slug).toBeNull();
+  });
+});

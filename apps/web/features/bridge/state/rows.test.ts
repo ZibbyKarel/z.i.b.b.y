@@ -258,8 +258,42 @@ describe("pull requests", () => {
       prTree("p", all, none, { teams }, ago).nodes.map((n) => n.row.number);
     expect(nums(["o/blue"])).toEqual(["#1", "#4"]);
     expect(nums(["o/blue", "o/red"])).toEqual(["#1", "#2", "#4"]);
-    expect(prTeams(all, ["o/green"])).toEqual(["o/blue", "o/green", "o/red"]);
+    expect(prTeams(all, ["o/green"]).map((o) => o.value)).toEqual(["o/blue", "o/green", "o/red"]);
+    expect(prTeams(all, ["o/green"]).map((o) => o.label)).toEqual(["blue", "green", "red"]);
     expect(prTeamLabel("o/blue")).toBe("blue");
+  });
+
+  it("a PR requesting several teams passes a pick of any of them", () => {
+    const multi = pr({
+      number: 1,
+      reviewTeam: "shoptet/backend",
+      reviewTeams: ["shoptet/backend", "shoptet/devrel-team"],
+    });
+    const picked = prTree("p", [multi], none, { teams: ["devrel-team"] }, ago);
+    expect(picked.nodes.map((n) => n.row.number)).toEqual(["#1"]);
+    expect(prTeams([multi]).map((o) => o.value)).toEqual([
+      "shoptet/backend",
+      "shoptet/devrel-team",
+    ]);
+  });
+
+  it("configured team slugs become options and match PRs by team segment", () => {
+    const all = [
+      pr({ number: 1, reviewTeam: "shoptet/devrel-team" }),
+      pr({ number: 2, reviewTeam: "shoptet/other" }),
+    ];
+    const configured = [
+      { id: "devrel", name: "DevRel", slug: "devrel-team" },
+      { id: "quiet", name: "Quiet", slug: "quiet-team" },
+      { id: "noslug", name: "NoSlug" },
+    ];
+    expect(prTeams(all, [], configured)).toEqual([
+      { value: "devrel-team", label: "DevRel" },
+      { value: "shoptet/other", label: "other" },
+      { value: "quiet-team", label: "Quiet" },
+    ]);
+    const picked = prTree("p", all, none, { teams: ["devrel-team"] }, ago);
+    expect(picked.nodes.map((n) => n.row.number)).toEqual(["#1"]);
   });
 
   it("applies the inbox filters before anything else", () => {

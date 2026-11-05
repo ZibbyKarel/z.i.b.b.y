@@ -459,6 +459,7 @@ describe("InboxIssuesService.process / InboxService.processItem", () => {
       {} as never,
       {} as never,
       {} as never,
+      {} as never,
     );
     await expect(service.processItem("acme", "nope")).rejects.toBeInstanceOf(
       InboxItemNotFoundError,
