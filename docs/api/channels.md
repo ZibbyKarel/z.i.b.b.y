@@ -205,9 +205,9 @@ sets below, and nothing else:
 2. **Issues/PRs assigned to the operator** — `assignee:{username}`. Dropped in phase 126a
    as too leaky, then restored by the operator.
 3. **PRs ZIBBY itself opened** — read directly by number.
-4. **Opt-in `includeTeams`** — two more search legs per team,
-   `team-review-requested:{org}/{slug}` and `team:{org}/{slug}` (an explicit `@org/team`
-   mention), for the operator's teams in the repo owner's org only. Teams are discovered
+4. **Opt-in `includeTeams`** — one more search leg per team,
+   `team:{org}/{slug}` (an explicit `@org/team` mention; review requests are the Pull
+   Requests widget's, not a channel's), for the operator's teams in the repo owner's org only. Teams are discovered
    via `GET /user/teams`, which needs the token's `read:org` scope and is cached for an
    hour. If the token lacks the scope the poll stays personal-only and the watcher logs
    a warn; a transient failure fails the poll so it retries.
