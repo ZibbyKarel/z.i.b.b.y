@@ -8,6 +8,7 @@ import {
   type IconTone,
   ToggleChip,
 } from "@zibby/design-system";
+import { teamSlugMatches } from "@zibby/contracts";
 import { useTranslations } from "next-intl";
 import {
   PR_CI_FILTERS,
@@ -80,6 +81,13 @@ export function PrFilterControls({ pick, onChange, teams, counts }: PrFilterCont
     trailing: count === undefined ? undefined : String(count),
   });
 
+  // Saved discovered `org/team` values show as (and normalise to) the configured option covering them.
+  const pickedTeams = [
+    ...new Set(
+      (pick.teams ?? []).map((v) => teams.find((o) => teamSlugMatches(v, o.value))?.value ?? v),
+    ),
+  ];
+
   return (
     <>
       <ButtonGroup
@@ -113,7 +121,7 @@ export function PrFilterControls({ pick, onChange, teams, counts }: PrFilterCont
           onChange={(v) => set({ teams: v })}
           options={teams}
           placeholder={t("filter.teams")}
-          value={pick.teams ?? []}
+          value={pickedTeams}
         />
       ) : null}
     </>

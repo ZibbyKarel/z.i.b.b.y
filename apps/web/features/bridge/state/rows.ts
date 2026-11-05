@@ -307,13 +307,16 @@ export function prTree(
   const visible = all.filter((p) => passesFilters(filters, p));
   const shown = new Set(visible.map((p) => p.url));
   // AND across groups, OR within one; an empty group doesn't filter.
+  const teamHit = (p: InboxPr) => {
+    const rt = p.reviewTeam;
+    return !pick.teams?.length || (!!rt && pick.teams.some((v) => teamSlugMatches(rt, v)));
+  };
   const hit = visible.filter(
     (p) =>
       (!pick.review?.length || pick.review.includes(prReviewFilter(prReviewState(p)))) &&
       (!pick.ci?.length || (pick.ci as string[]).includes(prCiState(p))) &&
       (!pick.mine || p.bucket === "mine") &&
-      (!pick.teams?.length ||
-        (!!p.reviewTeam && pick.teams.some((v) => teamSlugMatches(p.reviewTeam!, v)))),
+      teamHit(p),
   );
   const hitUrls = new Set(hit.map((p) => p.url));
   const kept = new Set(hitUrls);
