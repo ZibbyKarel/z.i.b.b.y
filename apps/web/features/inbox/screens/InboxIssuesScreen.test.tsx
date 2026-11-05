@@ -159,3 +159,21 @@ describe("InboxIssuesScreen blocking chains", () => {
     expect(screen.queryByTestId(ChainLinksTestId.Root)).toBeNull();
   });
 });
+
+describe("InboxIssuesScreen source status", () => {
+  it("shows the Jira status instead of the ZIBBY new tag", () => {
+    setData([item({ id: "a", sourceStatus: { name: "To Do", done: false } })]);
+    renderWithProviders(<InboxIssuesScreen />);
+    const row = screen.getByTestId(`${IssueRowTestId.Root}-a`);
+    expect(within(row).getByText("To Do")).toBeInTheDocument();
+    expect(within(row).queryByText("Nové ve zdroji")).toBeNull();
+  });
+
+  it("keeps the ZIBBY label for a waiting item", () => {
+    setData([item({ id: "a", lifecycle: "failed", sourceStatus: { name: "To Do", done: false } })]);
+    renderWithProviders(<InboxIssuesScreen />);
+    const row = screen.getByTestId(`${IssueRowTestId.Root}-a`);
+    expect(within(row).getByText("To Do")).toBeInTheDocument();
+    expect(within(row).getByText("Čeká na vás")).toBeInTheDocument();
+  });
+});

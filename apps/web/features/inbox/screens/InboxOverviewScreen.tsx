@@ -13,6 +13,7 @@ import {
   comparePrs,
   isActionable,
   isMineBlocked,
+  isSourceStatusShown,
   itemKey,
   itemScope,
   pad2,
@@ -88,12 +89,20 @@ export function InboxOverviewScreen() {
               testId={`${InboxOverviewScreenTestId.Issues}-${item.id}`}
               title={item.name}
               trailing={
-                <Row gap="75">
-                  <StatusDot tone={ZIBBY_STATUS_TONE[zibbyStatus(item)]} />
-                  <Typography type="label" variant="primary">
-                    {t(`status.${zibbyStatus(item)}`)}
-                  </Typography>
-                </Row>
+                isSourceStatusShown(zibbyStatus(item)) ? (
+                  item.sourceStatus && (
+                    <Typography type="label" variant="primary">
+                      {item.sourceStatus.name}
+                    </Typography>
+                  )
+                ) : (
+                  <Row gap="75">
+                    <StatusDot tone={ZIBBY_STATUS_TONE[zibbyStatus(item)]} />
+                    <Typography type="label" variant="primary">
+                      {t(`status.${zibbyStatus(item)}`)}
+                    </Typography>
+                  </Row>
+                )
               }
             />
           ))}
