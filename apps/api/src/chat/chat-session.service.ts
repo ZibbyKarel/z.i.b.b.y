@@ -109,9 +109,9 @@ function hiddenBuiltinTools(keep: readonly string[]): string {
 }
 
 /**
- * The operator's claude.ai Slack connector, read + draft only. Sending, scheduling
- * and editing canvases/lists commit the operator to the outside world (Tier-3), so
- * they stay off this list and `dontAsk` denies them.
+ * The operator's claude.ai Slack connector, read + draft only — pre-approved. Under
+ * `--permission-mode auto` the tools off this list (send, schedule, canvas/list edits)
+ * are no longer hard-denied: the CLI's classifier decides them.
  */
 export const CHAT_SLACK_TOOLS = [
   "slack_read_channel",
@@ -403,7 +403,7 @@ export class ChatSessionService {
       // also drops the operator's claude.ai connectors (verified CLI behaviour), which
       // the Slack allowlist below needs. Read-only built-ins (Read/Glob/Grep) run
       // without a permission prompt, so they MUST stay on this list; everything else
-      // is also denied by `dontAsk` + `--allowedTools`.
+      // is left to the `auto` permission classifier.
       "--disallowedTools",
       // Inline delegation, not a run: an `@agent` turn may read, but never spawn a task.
       agent
@@ -419,8 +419,12 @@ export class ChatSessionService {
       "--verbose",
       "--model",
       this.effectiveModel(tags, agent?.model),
+      // Operator's call (2026-11-05): `auto`, not `dontAsk` — the chat is a window onto
+      // the operator's terminal and may use every claude.ai connector (Jira, …). The CLI's
+      // classifier decides off-list calls, so connector WRITES (Slack send, Jira
+      // create/transition) are no longer hard-denied; `--disallowedTools` still is.
       "--permission-mode",
-      "dontAsk",
+      "auto",
     ];
     if (sessionId) args.push("--resume", sessionId);
     args.push(...(await this.toolArgs(conversationId, teamId)));
@@ -480,8 +484,9 @@ export class ChatSessionService {
    * Per commit `eb525567`, this list is a PROMPTING hint, not a toolset filter — a
    * tool left off it still exists and still executes — so what actually makes the
    * KB tools reachable at all is the `mcpServers` entry above, not this list.
-   * (Verified 2026-10-26 for MCP tools under `dontAsk`: an off-list claude.ai
-   * connector tool IS denied — which is what keeps Slack send off-limits.)
+   * (Under the former `dontAsk` an off-list claude.ai connector tool was denied;
+   * since 2026-11-05 the chat runs `auto`, so off-list connector tools reach the
+   * classifier instead — that is how the chat gets Jira & co.)
    *
    * {@link CHAT_SLACK_TOOLS} adds the operator's claude.ai Slack connector, which the
    * CLI loads from the operator's login (not from `mcpServers`), read + draft only.

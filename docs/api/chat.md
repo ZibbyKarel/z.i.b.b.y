@@ -72,7 +72,7 @@ subscription). The verified recipe (spike, see spec §7):
 claude -p <msg> [--resume <sid>] \
   --setting-sources "" --disallowedTools <built-ins> --append-system-prompt <persona> \
   --output-format stream-json --include-partial-messages --verbose \
-  --model sonnet --permission-mode dontAsk \
+  --model sonnet --permission-mode auto \
   --mcp-config <0600 file: zibby + zibby-kb> \
   --allowedTools mcp__zibby__*,mcp__zibby-kb__*,<claude.ai Slack read+draft tools>
 ```
@@ -102,11 +102,14 @@ claude -p <msg> [--resume <sid>] \
   URL whose repo matches a project's `gitRemote`, spawns with `cwd` set to that
   project's local checkout (`ProjectLocalService.resolve`: `path`, else
   `<cloneRoot>/<id>`); the scope line names the same path.
-- **Slack connector (read + draft).** The CLI loads the operator's claude.ai
-  connectors from the login. `CHAT_SLACK_TOOLS` allow-lists the Slack connector's
-  read/search tools plus `slack_send_message_draft`; sending, scheduling and
-  canvas/list edits are left off, and `dontAsk` denies any off-list MCP tool
-  (verified), so chat can never post to Slack on its own.
+- **claude.ai connectors (`--permission-mode auto`).** The CLI loads the
+  operator's claude.ai connectors (Jira/Confluence, Slack, …) from the login.
+  Since 2026-11-05 (operator's call) the chat runs `auto`, not `dontAsk`: the
+  chat is a window onto the operator's terminal, so every connector is usable
+  (Jira verified live). `CHAT_SLACK_TOOLS` stays as the pre-approved Slack
+  read/draft set; any off-list tool — **including connector writes such as Slack
+  send or Jira create/transition** — is decided by the CLI's auto-mode
+  classifier, no longer hard-denied. `--disallowedTools` is still absolute.
 - The model is overridable via `ZIBBY_CHAT_MODEL` (default `sonnet`).
 
 Chat spawns get their env from `agentBaseEnv()`, which strips the operator-token env vars

@@ -201,7 +201,7 @@ describe("ChatSessionService", () => {
     expect(args).toContain("--include-partial-messages");
     expect(args).toContain("--model");
     expect(args[args.indexOf("--model") + 1]).toBe("sonnet");
-    expect(args[args.indexOf("--permission-mode") + 1]).toBe("dontAsk");
+    expect(args[args.indexOf("--permission-mode") + 1]).toBe("auto");
     // isolation: --setting-sources with an empty value
     expect(args[args.indexOf("--setting-sources") + 1]).toBe("");
     // built-in tools hidden via a denylist — `--tools` would also drop claude.ai connectors
