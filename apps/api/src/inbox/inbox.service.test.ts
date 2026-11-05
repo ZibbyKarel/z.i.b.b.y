@@ -374,6 +374,19 @@ describe("InboxService.listPrs", () => {
       expect(errors).toEqual([]);
     });
 
+    it("a team search failing with 429 keeps the repo's PRs and adds one error note", async () => {
+      const { service } = build([], {
+        teams: [{ slug: "busy" }],
+        teamSearches: { "Acme/busy": { status: 429 } },
+      });
+      const { prs, errors } = await service.listPrs();
+      expect(prs.map((p) => p.number).sort()).toEqual([1, 2, 3]);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toMatchObject({ projectId: "acme", source: "github" });
+      expect(errors[0]?.message).toContain("Acme/busy");
+      expect(errors[0]?.message).toContain("429");
+    });
+
     it("does not search a slug qualified for another org", async () => {
       const { service, searches } = build([], { teams: [{ slug: "other-org/x" }] });
       await service.listPrs();

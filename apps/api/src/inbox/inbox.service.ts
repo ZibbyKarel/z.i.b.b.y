@@ -344,7 +344,12 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
         const ownerTeams = [...all, ...configuredSlugs.map((s) => qualifyTeamSlug(s, repoOwner))]
           .filter((t) => t.toLowerCase().startsWith(`${owner}/`))
           .filter((t) => !seen.has(t.toLowerCase()) && seen.add(t.toLowerCase()));
-        prs.push(...(await this.repoPrs(repo, project, token, ownerTeams, await login)));
+        const notes: string[] = [];
+        prs.push(...(await this.repoPrs(repo, project, token, ownerTeams, await login, notes)));
+        for (const message of notes) {
+          if (!errors.some((e) => e.message === message))
+            errors.push({ projectId: project.id, source: "github", message });
+        }
       } catch (error) {
         errors.push({
           projectId: project.id,
@@ -367,6 +372,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
     token: string,
     teams: string[],
     login: string | undefined,
+    notes: string[] = [],
   ): Promise<InboxPr[]> {
     const base = `is:pr is:open repo:${repo}`;
     const mine = await this.search(token, `${base} author:@me`);
@@ -378,9 +384,14 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
     const buckets = new Map<number, Pick<InboxPr, "bucket" | "reviewReason" | "reviewTeam">>();
     for (const n of reviewed) buckets.set(n, { bucket: "reviewed" });
     for (const team of teams) {
-      // One team search failing (e.g. a configured slug GitHub does not know: 422) must not drop the repo.
+      // One team search failing must not drop the repo. 422 = GitHub does not know the team
+      // (a stale configured slug): silent; anything else (rate limit, 401/403, 5xx) leaves a note.
       const found = await this.search(token, `${base} team-review-requested:${team}`).catch(
-        () => [],
+        (error: Error) => {
+          if (!/HTTP 422$/.test(error.message))
+            notes.push(`${repo}: team ${team} search failed (${error.message || "unknown error"})`);
+          return [];
+        },
       );
       for (const n of found) {
         if (!buckets.has(n) || buckets.get(n)?.bucket === "reviewed")
