@@ -74,6 +74,31 @@ export function itemKey(item: Pick<InboxRoadmapItem, "id" | "source">): string {
   return item.source.externalKey ?? item.id;
 }
 
+/** TODO 7 — "process" in an issue's detail opens the new-task page linked to that issue. */
+export function newTaskFromIssueHref(item: Pick<InboxRoadmapItem, "projectId" | "id">): string {
+  return `/work/tasks/new?issue=${encodeURIComponent(`${item.projectId}/${item.id}`)}`;
+}
+
+/** The decoded `?issue=` value back into its parts; `null` when it is malformed. */
+export function parseIssueRef(ref: string): { projectId: string; itemId: string } | null {
+  const slash = ref.lastIndexOf("/");
+  if (slash <= 0 || slash === ref.length - 1) return null;
+  return { projectId: ref.slice(0, slash), itemId: ref.slice(slash + 1) };
+}
+
+/** The new-task page's prefill for an issue: a literal English title and the issue as the brief. */
+export function issueTaskPrefill(
+  item: Pick<InboxRoadmapItem, "id" | "source" | "name" | "description">,
+): { title: string; text: string } {
+  const key = itemKey(item);
+  const head = [`Issue ${key}: ${item.name}`, item.source.url].filter(Boolean).join("\n");
+  const description = item.description.trim();
+  return {
+    title: `Implementation of issue ${key}`,
+    text: description ? `${head}\n\n${description}` : head,
+  };
+}
+
 /** New → waiting → running → done, then the most recently updated first. */
 export function compareItems(a: InboxRoadmapItem, b: InboxRoadmapItem): number {
   return (
@@ -418,7 +443,7 @@ export function findPr(prs: InboxPr[], ref: ItemPrRef | null): InboxPr | undefin
 }
 
 /** The run `View run` opens: the latest one (a task id exists as soon as the gate released it). */
-export function latestTaskId(item: InboxRoadmapItem): string | undefined {
+export function latestTaskId(item: Pick<InboxRoadmapItem, "runs">): string | undefined {
   return [...item.runs].sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt))[0]
     ?.taskId;
 }

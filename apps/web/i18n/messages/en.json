@@ -428,7 +428,9 @@
       "submit": "Create task",
       "routePreviewHeader": "Route preview",
       "routeSuggest": "ZIBBY will hand this to {target}",
-      "routeIdle": "Describe the task to see the route."
+      "routeIdle": "Describe the task to see the route.",
+      "linkedIssue": "Linked issue {key}",
+      "issueMissing": "Issue not found in the inbox."
     }
   },
   "search": {

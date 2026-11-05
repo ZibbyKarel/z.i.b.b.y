@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import type { Attachment } from "@zibby/contracts";
+import type { Attachment, InboxRoadmapItem } from "@zibby/contracts";
 import {
   Button,
   ChainRouteStrip,
@@ -17,7 +17,12 @@ import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
+import { issueHref } from "../../inbox/components/IssueRow";
+import { issueTaskPrefill, itemKey, latestTaskId, parseIssueRef } from "../../inbox/inbox";
+import { useProcessInboxItemMutation } from "../../inbox/mutations";
+import { useInboxItemsQuery } from "../../inbox/queries";
 import { useProjectsQuery } from "../../projects";
 import { getTodoQueryKey } from "../../todo/queries/useTodoQuery";
 import { CommandLine } from "../components/CommandLine/CommandLine";
@@ -29,15 +34,39 @@ import { type TaskTarget, extractPaths, targetKey, toApiTarget, toClientTarget }
 const ENTRY_AUTO = "auto";
 
 /**
- * `/work/tasks/new` — ZB-04b: a simplified, dedicated create page (not the
+ * `/work/tasks/new`. TODO 7: `?issue=<projectId>/<itemId>` (the issue detail's "process") mounts
+ * the form linked to that inbox issue once it is loaded, so the prefill happens exactly once.
+ */
+export function NewTaskScreen() {
+  const issueRef = useSearchParams().get("issue");
+  return issueRef ? <IssueNewTask issueRef={issueRef} /> : <NewTaskForm />;
+}
+
+function IssueNewTask({ issueRef }: { issueRef: string }) {
+  const t = useTranslations("tasksWork");
+  const { data, isPending } = useInboxItemsQuery();
+  const ref = parseIssueRef(issueRef);
+  const issue = data?.items.find((i) => i.projectId === ref?.projectId && i.id === ref.itemId);
+  if (issue) return <NewTaskForm issue={issue} />;
+  if (isPending) return <QueryLoading />;
+  return (
+    <Container padding={["300", "350"]}>
+      <Typography type="text">{t("new.issueMissing")}</Typography>
+    </Container>
+  );
+}
+
+/**
+ * ZB-04b: a simplified, dedicated create page (not the
  * classify-driven `NewTaskDialog`/`CommandLine`). The **entry** choice is the
  * hard override this deliverable calls for: auto-classification, an explicit
  * department bypasses classification entirely (`TaskTargetSchema`'s
  * `{kind:"department"}`, DNA "explicit target overrides the classifier").
  */
-export function NewTaskScreen() {
+function NewTaskForm({ issue }: { issue?: InboxRoadmapItem }) {
   const t = useTranslations("tasksWork");
   const router = useRouter();
+  const [prefill] = useState(() => (issue ? issueTaskPrefill(issue) : undefined));
   // ZB-12: the chat dock's "CREATE TASK" lands here prefilled — `?text=` seeds
   // the description and `?entry=<departmentId>` the explicit entry (only a real
   // department id is honoured; anything else falls back to automatic).
@@ -50,14 +79,15 @@ export function NewTaskScreen() {
   const { data: projects = [] } = useProjectsQuery();
   const departments = useDepartmentLookup();
 
-  const [title, setTitle] = useState(() => searchParams.get("title") ?? "");
-  const [initialText] = useState(() => searchParams.get("text") ?? "");
+  const [title, setTitle] = useState(() => prefill?.title ?? searchParams.get("title") ?? "");
+  const [initialText] = useState(() => prefill?.text ?? searchParams.get("text") ?? "");
   const [text, setText] = useState(initialText);
   // An `@`-mention in the brief (picked or typed) is an explicit target — it wins
   // over the entry select until the operator picks an entry manually, and skips
   // classification, like the dialog's composer.
   const [mentionTarget, setMentionTarget] = useState<TaskTarget | undefined>();
-  const [projectId, setProjectId] = useState("");
+  // A linked issue belongs to its project — the select is locked to it (one option).
+  const [projectId, setProjectId] = useState(issue?.projectId ?? "");
   const [entry, setEntry] = useState<string>(() =>
     prefillEntry && departments.get(prefillEntry) ? prefillEntry : ENTRY_AUTO,
   );
@@ -85,6 +115,8 @@ export function NewTaskScreen() {
   }, [mentionTarget, entry, text, paths]);
 
   const createTask = useCreateTaskMutation();
+  const processIssue = useProcessInboxItemMutation();
+  const isPending = createTask.isPending || processIssue.isPending;
 
   const department = departments.get(entry);
   const chosenTarget = mentionTarget
@@ -100,10 +132,32 @@ export function NewTaskScreen() {
 
   // The title is optional — left blank, the server derives one from the brief (Haiku,
   // with a deterministic first-line fallback).
-  const canSubmit = text.trim().length > 0 && !createTask.isPending;
+  const canSubmit = text.trim().length > 0 && !isPending;
 
   function submit() {
     if (!canSubmit) return;
+    if (issue) {
+      // Through the inbox process endpoint, so the issue lifecycle, roadmap record, back-ref
+      // and PR flow stay as before; the edits ride along as a one-shot task override.
+      processIssue.mutate(
+        {
+          body: {
+            projectId: issue.projectId,
+            itemId: issue.id,
+            title: title.trim() || undefined,
+            text,
+            target: chosenTarget,
+          },
+        },
+        {
+          onSuccess: (res) => {
+            const taskId = latestTaskId(res.body);
+            router.push((taskId ? `/work/tasks/${taskId}` : issueHref(issue)) as Route);
+          },
+        },
+      );
+      return;
+    }
     createTask.mutate(
       {
         body: {
@@ -155,7 +209,7 @@ export function NewTaskScreen() {
             initialText={initialText}
             label={t("new.field.brief")}
             onScopeChange={(kind, id) => {
-              if (kind === "project") setProjectId(id ?? "");
+              if (kind === "project" && !issue) setProjectId(id ?? "");
             }}
             onSubmit={submit}
             onTargetChange={setMentionTarget}
@@ -187,26 +241,32 @@ export function NewTaskScreen() {
             <SelectField
               label={t("new.field.project")}
               onValueChange={setProjectId}
-              options={[
-                { value: "", label: t("filter.all") },
-                ...projects.map((p) => ({ value: p.id, label: p.name })),
-              ]}
+              options={
+                issue
+                  ? [{ value: issue.projectId, label: issue.project.name }]
+                  : [
+                      { value: "", label: t("filter.all") },
+                      ...projects.map((p) => ({ value: p.id, label: p.name })),
+                    ]
+              }
               value={projectId}
             />
           </Stack>
 
-          <TaskAttachments onChange={setAttachmentSet} value={attachmentSet} />
+          {issue ? (
+            <Typography size="sm" type="text">
+              {t("new.linkedIssue", { key: itemKey(issue) })}
+            </Typography>
+          ) : (
+            // The process endpoint carries no attachments — the issue's own are on its record.
+            <TaskAttachments onChange={setAttachmentSet} value={attachmentSet} />
+          )}
 
           <Stack direction="row" gap="100">
             <Button intent="ghost" onClick={() => router.push("/work/tasks" as Route)}>
               {t("new.cancel")}
             </Button>
-            <Button
-              disabled={!canSubmit}
-              intent="primary"
-              loading={createTask.isPending}
-              onClick={submit}
-            >
+            <Button disabled={!canSubmit} intent="primary" loading={isPending} onClick={submit}>
               {t("new.submit")}
             </Button>
           </Stack>

@@ -428,7 +428,9 @@
       "submit": "Vytvořit úkol",
       "routePreviewHeader": "Náhled trasy",
       "routeSuggest": "ZIBBY toto předá: {target}",
-      "routeIdle": "Popište úkol pro zobrazení trasy."
+      "routeIdle": "Popište úkol pro zobrazení trasy.",
+      "linkedIssue": "Propojené issue {key}",
+      "issueMissing": "Issue v inboxu nenalezeno."
     }
   },
   "search": {
