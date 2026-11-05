@@ -1,13 +1,16 @@
 import userEvent from "@testing-library/user-event";
 import type { AutopilotStatus } from "@zibby/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { renderWithProviders as render, screen } from "../../../test/render";
+import { renderWithProviders as render, screen, within } from "../../../test/render";
+import { AutomationTreeTestId } from "./AutomationTree";
 import { AutopilotToggle, AutopilotToggleTestId } from "./AutopilotToggle";
 
 let status: AutopilotStatus = { level: "off", pendingApprovals: 3 };
 let error: unknown = null;
 const mutate = vi.fn();
 
+vi.mock("../../companies", () => ({ useCompaniesQuery: () => ({ data: [] }) }));
+vi.mock("../../teams", () => ({ useTeamsQuery: () => ({ data: [] }) }));
 vi.mock("../queries", () => ({ useAutopilotQuery: () => ({ data: status }) }));
 vi.mock("../mutations", () => ({
   useSetAutopilotMutation: () => ({ mutate, reset: vi.fn(), isPending: false, error }),
@@ -30,7 +33,17 @@ describe("AutopilotToggle", () => {
     expect(screen.getByText(/3/)).toBeInTheDocument();
     await userEvent.click(screen.getByTestId(AutopilotToggleTestId.Confirm));
     expect(mutate).toHaveBeenCalledWith(
-      { body: { level: "full", scope: { reviews: true, comments: true, communication: true } } },
+      {
+        body: {
+          level: "full",
+          scope: { reviews: true, comments: true, communication: true },
+          automation: {
+            global: { autoImplement: false, autoReview: false, autoAddressComments: false },
+            companies: {},
+            teams: {},
+          },
+        },
+      },
       expect.anything(),
     );
   });
@@ -54,7 +67,17 @@ describe("AutopilotToggle", () => {
     await userEvent.click(screen.getByTestId(AutopilotToggleTestId.ScopeComments));
     await userEvent.click(screen.getByTestId(AutopilotToggleTestId.Confirm));
     expect(mutate).toHaveBeenCalledWith(
-      { body: { level: "full", scope: { reviews: true, comments: false, communication: true } } },
+      {
+        body: {
+          level: "full",
+          scope: { reviews: true, comments: false, communication: true },
+          automation: {
+            global: { autoImplement: false, autoReview: false, autoAddressComments: false },
+            companies: {},
+            teams: {},
+          },
+        },
+      },
       expect.anything(),
     );
   });
@@ -66,6 +89,38 @@ describe("AutopilotToggle", () => {
     await userEvent.click(screen.getByTestId(AutopilotToggleTestId.ScopeComments));
     await userEvent.click(screen.getByTestId(AutopilotToggleTestId.ScopeCommunication));
     expect(screen.getByTestId(AutopilotToggleTestId.Confirm)).toBeDisabled();
+  });
+
+  it("pre-fills the tree from the stored automation and sends it back", async () => {
+    status = {
+      level: "off",
+      pendingApprovals: 0,
+      automation: {
+        global: { autoImplement: false, autoReview: true, autoAddressComments: false },
+        companies: {},
+        teams: {},
+      },
+    };
+    render(<AutopilotToggle />);
+    await userEvent.click(screen.getByTestId(AutopilotToggleTestId.Toggle));
+    const global = screen
+      .getAllByTestId(AutomationTreeTestId.Node)
+      .find((el) => el.getAttribute("data-node") === "global") as HTMLElement;
+    const review = within(global)
+      .getAllByTestId(AutomationTreeTestId.Toggle)
+      .find((el) => el.getAttribute("data-key") === "autoReview") as HTMLElement;
+    expect(within(review).getByRole("switch")).toBeChecked();
+    await userEvent.click(screen.getByTestId(AutopilotToggleTestId.Confirm));
+    expect(mutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({
+          automation: expect.objectContaining({
+            global: { autoImplement: false, autoReview: true, autoAddressComments: false },
+          }),
+        }),
+      }),
+      expect.anything(),
+    );
   });
 
   it("cancel closes the dialog without switching", async () => {

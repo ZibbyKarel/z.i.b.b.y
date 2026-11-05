@@ -31,7 +31,6 @@ import { slug } from "../../../utils/slug";
 import { useProjectsQuery } from "../../projects";
 import { type CompanyBasicsBody, CompanyBasicsPanel } from "../components/CompanyBasicsPanel";
 import { CompanyIntegrationsPanel } from "../components/CompanyIntegrationsPanel";
-import { CompanyRoadmapDefaultsPanel } from "../components/CompanyRoadmapDefaultsPanel";
 import { LinkProjectDialog } from "../components/LinkProjectDialog";
 import {
   useCreateCompanyMutation,
@@ -189,7 +188,6 @@ export function CompanyDetailScreen({ companyId }: CompanyDetailScreenProps) {
         {!isNew && company && tab === "integrations" && (
           <Stack gap="250">
             <CompanyIntegrationsPanel companyId={id} />
-            <CompanyRoadmapDefaultsPanel company={company} />
           </Stack>
         )}
 

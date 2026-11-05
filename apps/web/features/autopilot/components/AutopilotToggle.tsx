@@ -1,12 +1,20 @@
 "use client";
 
-import { type AutopilotScope, FULL_AUTOPILOT_SCOPE } from "@zibby/contracts";
+import {
+  type AutopilotAutomation,
+  type AutopilotScope,
+  FULL_AUTOPILOT_SCOPE,
+  NO_AUTOMATION,
+} from "@zibby/contracts";
 import { Button, Container, Dialog, Stack, ToggleField, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { isOperatorTokenError } from "../../../state/operatorToken";
+import { useCompaniesQuery } from "../../companies";
+import { useTeamsQuery } from "../../teams";
 import { useSetAutopilotMutation } from "../mutations";
 import { useAutopilotQuery } from "../queries";
+import { AutomationTree } from "./AutomationTree";
 
 export enum AutopilotToggleTestId {
   Root = "autopilot-toggle",
@@ -45,6 +53,12 @@ const SCOPE_FIELDS = [
   testId: AutopilotToggleTestId;
 }[];
 
+const EMPTY_AUTOMATION: AutopilotAutomation = {
+  global: { ...NO_AUTOMATION },
+  companies: {},
+  teams: {},
+};
+
 /**
  * Phase 4 — the top-bar Autopilot switch, an icon toggle (`aria-pressed`). OFF → opens a
  * confirm dialog (ON needs the operator token); ON → filled, one click turns it off.
@@ -54,8 +68,11 @@ export function AutopilotToggle() {
   const tc = useTranslations("common");
   const { data } = useAutopilotQuery();
   const setAutopilot = useSetAutopilotMutation();
+  const { data: companies = [] } = useCompaniesQuery();
+  const { data: teams = [] } = useTeamsQuery();
   const [confirming, setConfirming] = useState(false);
   const [scope, setScope] = useState<AutopilotScope>(FULL_AUTOPILOT_SCOPE);
+  const [automation, setAutomation] = useState<AutopilotAutomation>(EMPTY_AUTOMATION);
   const anyScope = scope.reviews || scope.comments || scope.communication;
 
   const on = data?.level === "full";
@@ -69,7 +86,7 @@ export function AutopilotToggle() {
 
   const turnOn = () =>
     setAutopilot.mutate(
-      { body: { level: "full", scope } },
+      { body: { level: "full", scope, automation } },
       { onSuccess: () => setConfirming(false) },
     );
   const close = () => {
@@ -89,6 +106,7 @@ export function AutopilotToggle() {
         onClick={() => {
           if (on) return setAutopilot.mutate({ body: { level: "off" } });
           setScope(FULL_AUTOPILOT_SCOPE);
+          setAutomation(data?.automation ?? EMPTY_AUTOMATION);
           setConfirming(true);
         }}
         size="sm"
@@ -131,6 +149,12 @@ export function AutopilotToggle() {
               onChange={(next) => setScope((prev) => ({ ...prev, [key]: next }))}
             />
           ))}
+          <AutomationTree
+            companies={companies}
+            onChange={setAutomation}
+            teams={teams}
+            value={automation}
+          />
           <Typography type="text">{t("dialogPending", { pending })}</Typography>
           {errorText ? (
             <Typography data-testid={AutopilotToggleTestId.Error} tone="bad" type="text">
