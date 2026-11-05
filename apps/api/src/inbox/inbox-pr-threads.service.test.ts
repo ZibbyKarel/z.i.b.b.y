@@ -122,6 +122,12 @@ describe("InboxPrThreadsService", () => {
     ).rejects.toThrow();
     expect(bodies().some((b) => b.query.includes("addPullRequestReviewThreadReply"))).toBe(false);
     expect(record).not.toHaveBeenCalled();
+    expect(dropPrsCache).not.toHaveBeenCalled();
+  });
+
+  it("reply drops the PR cache so open-thread counts refresh", async () => {
+    await service.reply("acme", 7, "PRRT_1", { body: "done", resolve: true });
+    expect(dropPrsCache).toHaveBeenCalledTimes(1);
   });
 
   it("reply records an activity entry", async () => {

@@ -103,6 +103,8 @@ export class InboxPrThreadsService {
     // ponytail: a failure in the final re-read still 502s although the reply is live; activity is recorded right after it.
     if (input.resolve) await gql(RESOLVE_MUTATION, { id: threadId });
     if (input.body) await gql(REPLY_MUTATION, { id: threadId, body: input.body });
+    // Resolving changes the PR's open-thread count — don't serve the stale 30 s cache.
+    this.inbox.dropPrsCache();
     void this.activity?.record({
       kind: "channel-reply", // closest existing kind for an operator GitHub reply
       summary: `replied on ${repo}#${number}`,
