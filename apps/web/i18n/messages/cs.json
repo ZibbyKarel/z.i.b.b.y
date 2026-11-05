@@ -1934,6 +1934,9 @@
       "namePlaceholder": "Platforma",
       "desc": "Popis",
       "descPlaceholder": "Čím se tým zabývá",
+      "slug": "GitHub tým",
+      "slugPlaceholder": "shoptet/devrel-team",
+      "slugHint": "Id týmu jako v CODEOWNERS, např. shoptet/devrel-team",
       "company": "Firma",
       "companyNone": "Bez firmy"
     },

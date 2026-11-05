@@ -73,7 +73,14 @@ export function TeamDetailScreen({ teamId }: TeamDetailScreenProps) {
     if (isNew) {
       const newId = slug(body.name) || `team-${Date.now()}`;
       createTeam.mutate(
-        { body: { ...body, companyId: body.companyId ?? undefined, id: newId } },
+        {
+          body: {
+            ...body,
+            companyId: body.companyId ?? undefined,
+            slug: body.slug ?? undefined,
+            id: newId,
+          },
+        },
         { onSuccess: () => router.replace(`/teams/${newId}` as Route) },
       );
     } else {

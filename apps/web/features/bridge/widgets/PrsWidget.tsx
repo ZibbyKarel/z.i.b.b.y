@@ -20,6 +20,7 @@ import { useNow } from "../../../hooks/useNow";
 import { compactAgo } from "../../../utils/time";
 import { useRefreshInboxMutation } from "../../inbox/mutations";
 import { useInboxPrsQuery } from "../../inbox/queries";
+import { useTeamsQuery } from "../../teams/queries";
 import { type PrFilterPick, type PrNodeVm, type PrRowVm, prTeams, prTree } from "../state/rows";
 import { useBridgeInboxFilters } from "../state/useBridgeInboxFilters";
 import { CI_ICON, PrFilterControls, REVIEW_ICON } from "./PrFilterControls";
@@ -74,6 +75,7 @@ export function PrsWidget({
   // A failed sync just re-enables the button; the previous data stays on screen.
   const onRefresh = useCallback(() => mutate(), [mutate]);
   const prsQuery = useInboxPrsQuery();
+  const { data: configuredTeams } = useTeamsQuery();
   const defaults = widget.prFilters;
   const [pick, setPick] = useState<PrFilterPick>(defaults ?? {});
   // Saving new defaults in the widget settings resets the local pick to them. Keyed by content:
@@ -85,8 +87,8 @@ export function PrsWidget({
     setPick(defaults ?? {});
   }
   const teams = useMemo(
-    () => prTeams(prsQuery.data?.prs ?? [], defaults?.teams),
-    [prsQuery.data, defaults?.teams],
+    () => prTeams(prsQuery.data?.prs ?? [], defaults?.teams, configuredTeams),
+    [prsQuery.data, defaults?.teams, configuredTeams],
   );
 
   const { nodes, counts, total, you } = useMemo(

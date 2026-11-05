@@ -1934,6 +1934,9 @@
       "namePlaceholder": "Platform",
       "desc": "Description",
       "descPlaceholder": "What the team does",
+      "slug": "GitHub team",
+      "slugPlaceholder": "shoptet/devrel-team",
+      "slugHint": "Team id as in CODEOWNERS, e.g. shoptet/devrel-team",
       "company": "Company",
       "companyNone": "No company"
     },

@@ -20,6 +20,8 @@ export interface TeamBasicsBody {
   name: string;
   desc?: string;
   companyId?: string | null;
+  /** GitHub team slug; `null` clears it on edit. */
+  slug?: string | null;
 }
 
 export interface TeamBasicsPanelProps {
@@ -36,6 +38,7 @@ export interface TeamBasicsPanelProps {
 type TeamEditValues = {
   name: string;
   desc: string;
+  slug: string;
   companyId: string;
 };
 
@@ -57,12 +60,14 @@ export function TeamBasicsPanel({ team, isNew, saving, onSave, onDelete }: TeamB
     defaultValues: {
       name: team?.name ?? "",
       desc: team?.desc ?? "",
+      slug: team?.slug ?? "",
       companyId: team?.companyId ?? NO_COMPANY,
     },
     onSubmit: (values) => {
       onSave({
         name: values.name.trim(),
         desc: values.desc.trim() || undefined,
+        slug: values.slug.trim() || (isNew ? undefined : null),
         companyId: values.companyId === NO_COMPANY ? null : values.companyId,
       });
     },
@@ -111,6 +116,14 @@ export function TeamBasicsPanel({ team, isNew, saving, onSave, onDelete }: TeamB
           label={t("fields.desc")}
           name="desc"
           placeholder={t("fields.descPlaceholder")}
+        />
+
+        <FormTextInput<TeamEditValues>
+          data-testid="team-slug-input"
+          hint={t("fields.slugHint")}
+          label={t("fields.slug")}
+          name="slug"
+          placeholder={t("fields.slugPlaceholder")}
         />
 
         <FormSelect<string, TeamEditValues>

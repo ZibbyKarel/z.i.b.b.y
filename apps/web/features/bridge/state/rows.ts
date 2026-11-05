@@ -5,7 +5,9 @@ import type {
   InboxRoadmapItem,
   PrWidgetFilters,
   RoadmapSourceKind,
+  Team,
 } from "@zibby/contracts";
+import { teamSlugMatches } from "@zibby/contracts";
 import { type StateTone, normalizeStateTone } from "@zibby/design-system";
 import {
   type InboxFilters,
@@ -201,10 +203,29 @@ export interface PrNodeVm {
 /** The operator's pick; same shape as a widget's saved defaults. An empty group doesn't filter. */
 export type PrFilterPick = PrWidgetFilters;
 
-/** Distinct review-team slugs (`org/team`) of `prs` plus `extra` (saved defaults), sorted. */
-export function prTeams(prs: InboxPr[], extra: readonly string[] = []): string[] {
-  const all = [...prs.map((p) => p.reviewTeam), ...extra].filter((t): t is string => !!t);
-  return [...new Set(all)].sort();
+export interface PrTeamOption {
+  value: string;
+  label: string;
+}
+
+/**
+ * Team filter options: every configured team with a slug (value = slug, label = team name), plus
+ * each discovered `reviewTeam` / saved default (`org/team`) no configured slug already covers.
+ */
+export function prTeams(
+  prs: InboxPr[],
+  extra: readonly string[] = [],
+  configured: readonly Team[] = [],
+): PrTeamOption[] {
+  const slugs = configured.flatMap((t) => (t.slug ? [{ slug: t.slug, name: t.name }] : []));
+  const options = new Map<string, PrTeamOption>(
+    slugs.map(({ slug, name }) => [slug, { value: slug, label: name }]),
+  );
+  const found = [...prs.map((p) => p.reviewTeam), ...extra].filter((t): t is string => !!t);
+  for (const team of found)
+    if (!slugs.some(({ slug }) => teamSlugMatches(team, slug)))
+      options.set(team, { value: team, label: prTeamLabel(team) });
+  return [...options.values()].sort((a, b) => a.label.localeCompare(b.label));
 }
 
 /** `org/team` -> `team`. */
@@ -291,7 +312,8 @@ export function prTree(
       (!pick.review?.length || pick.review.includes(prReviewFilter(prReviewState(p)))) &&
       (!pick.ci?.length || (pick.ci as string[]).includes(prCiState(p))) &&
       (!pick.mine || p.bucket === "mine") &&
-      (!pick.teams?.length || (!!p.reviewTeam && pick.teams.includes(p.reviewTeam))),
+      (!pick.teams?.length ||
+        (!!p.reviewTeam && pick.teams.some((v) => teamSlugMatches(p.reviewTeam!, v)))),
   );
   const hitUrls = new Set(hit.map((p) => p.url));
   const kept = new Set(hitUrls);
