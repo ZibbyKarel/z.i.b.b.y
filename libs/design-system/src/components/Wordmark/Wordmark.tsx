@@ -16,7 +16,7 @@ export interface WordmarkProps {
 }
 
 /**
- * DS.md §8 brand mark — `Typography`'s `wordmark` preset (13 / 600), sans and
+ * DS.md §8 brand mark — `Typography`'s `wordmark` preset (mono 13 / 600), in
  * in the brand's own casing (`ZibbyOS`). Standalone in `AppHeader`'s leading slot
  * (optionally with the running `version` as an unobtrusive micro line below) and
  * animated (opacity only, the text itself never changes) inside `Splash`.
@@ -31,7 +31,6 @@ export function Wordmark({ children = "ZibbyOS", version, ref }: WordmarkProps) 
     >
       <Typography
         data-testid={WordmarkTestId.Name}
-        mono={false}
         tracking="wide"
         type="wordmark"
         uppercase={false}
