@@ -181,9 +181,14 @@ describe("InboxService.listPrs", () => {
       reviewedNumbers?: number[];
       reviewedStatus?: number;
       userStatus?: number;
+      teams?: { slug?: string }[];
+      userTeamsStatus?: number;
+      /** Extra team-review searches keyed by team (`shoptet/x`): HTTP status and/or hit numbers. */
+      teamSearches?: Record<string, { status?: number; numbers?: number[] }>;
     } = {},
   ) {
     const calls: string[] = [];
+    const searches: string[] = [];
     const gqlInits: (RequestInit | undefined)[] = [];
     const graphqlThreads = opts.graphqlThreads ?? [{ isResolved: true }, { isResolved: false }];
     const merged: (() => void)[] = [];
@@ -204,7 +209,9 @@ describe("InboxService.listPrs", () => {
         );
       }
       const q = u.searchParams.get("q") ?? "";
+      if (q) searches.push(q);
       if (u.pathname === "/user/teams") {
+        if (opts.userTeamsStatus) return json({}, opts.userTeamsStatus);
         return json([
           { slug: "core", organization: { login: "acme" } },
           { slug: "other", organization: { login: "elsewhere" } },
@@ -228,6 +235,13 @@ describe("InboxService.listPrs", () => {
           });
         if (q.includes("team-review-requested:acme/core"))
           return json({ items: [{ number: 1 }, { number: 2 }] });
+        for (const [team, r] of Object.entries(opts.teamSearches ?? {})) {
+          if (q.includes(`team-review-requested:${team}`))
+            return json(
+              r.status ? {} : { items: (r.numbers ?? []).map((number) => ({ number })) },
+              r.status,
+            );
+        }
         throw new Error(`unexpected search ${q}`);
       }
       const pull = u.pathname.match(/^\/repos\/Acme\/app\/pulls\/(\d+)$/);
@@ -291,9 +305,10 @@ describe("InboxService.listPrs", () => {
         },
       } as never,
       { stream: () => activity.asObservable() } as never,
+      { list: async () => opts.teams ?? [] } as never,
       fetchImpl,
     );
-    return { service, calls, gqlInits, merged, activity };
+    return { service, calls, searches, gqlInits, merged, activity };
   }
 
   it("keeps a PR you reviewed as reviewed-by-you; a direct request still wins", async () => {
@@ -321,6 +336,49 @@ describe("InboxService.listPrs", () => {
     expect(byNumber[2]?.myReview).toBeUndefined();
     expect(byNumber[3]?.myReview).toBeUndefined(); // never on my own PR
     expect(byNumber[3]?.authorName).toBeUndefined(); // the profile read failed: login only
+  });
+
+  describe("configured team slugs", () => {
+    const teamSearches = (searches: string[]) =>
+      searches.filter((q) => q.includes("team-review-requested:"));
+
+    it("searches a configured slug the user is not a member of (no /user/teams access)", async () => {
+      const { service, searches } = build([], {
+        teams: [{ slug: "devrel-team" }],
+        userTeamsStatus: 403,
+        teamSearches: { "Acme/devrel-team": { numbers: [5] } },
+      });
+      const pr = (await service.listPrs()).prs.find((p) => p.number === 5);
+      expect(pr).toMatchObject({
+        bucket: "to-review",
+        reviewReason: "team",
+        reviewTeam: "Acme/devrel-team",
+      });
+      expect(teamSearches(searches)).toHaveLength(1);
+    });
+
+    it("searches a team once when it is both a membership and a configured slug", async () => {
+      const { service, searches } = build([], { teams: [{ slug: "Core" }] });
+      await service.listPrs();
+      expect(teamSearches(searches)).toHaveLength(1);
+      expect(teamSearches(searches)[0]).toContain("team-review-requested:acme/core");
+    });
+
+    it("a configured slug GitHub rejects (422) drops only that search", async () => {
+      const { service } = build([], {
+        teams: [{ slug: "nope" }],
+        teamSearches: { "Acme/nope": { status: 422 } },
+      });
+      const { prs, errors } = await service.listPrs();
+      expect(prs.map((p) => p.number).sort()).toEqual([1, 2, 3]);
+      expect(errors).toEqual([]);
+    });
+
+    it("does not search a slug qualified for another org", async () => {
+      const { service, searches } = build([], { teams: [{ slug: "other-org/x" }] });
+      await service.listPrs();
+      expect(teamSearches(searches).some((q) => q.includes("other-org/x"))).toBe(false);
+    });
   });
 
   it("a failing reviewed-by search drops only those PRs", async () => {

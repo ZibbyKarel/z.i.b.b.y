@@ -1,6 +1,6 @@
 import { Injectable, type OnModuleDestroy, type OnModuleInit, Optional } from "@nestjs/common";
 import type { Subscription } from "rxjs";
-import { INBOX_REFRESH_ACTIVITY_KINDS } from "@zibby/contracts";
+import { INBOX_REFRESH_ACTIVITY_KINDS, qualifyTeamSlug } from "@zibby/contracts";
 import type {
   InboxItemsResponse,
   InboxPr,
@@ -23,6 +23,7 @@ import { ProjectPrService, resolveGithubToken } from "../projects/project-pr.ser
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ResolvedProjectService } from "../projects/resolved-project.service";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
+import { TeamsStorageService } from "../teams/teams.storage.service";
 import { InboxIssuesService, InboxItemNotFoundError } from "./inbox-issues.service";
 import { InboxStateStore } from "./inbox-state.store";
 
@@ -170,6 +171,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
     private readonly tasks: ScheduledTasksStorageService,
     private readonly projectPrs: ProjectPrService,
     private readonly activityEvents: ActivityEventsService,
+    private readonly teamsStorage: TeamsStorageService,
     @Optional() fetchImpl?: typeof fetch,
   ) {
     this.fetchImpl = fetchImpl ?? fetch;
@@ -318,6 +320,10 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
       if (link && !repos.has(link.repo)) repos.set(link.repo, { project, token: link.token });
     }
 
+    // Teams with a configured GitHub slug: searched in addition to the user's memberships.
+    const configuredSlugs = (await this.teamsStorage.list()).flatMap((t) =>
+      t.slug ? [t.slug] : [],
+    );
     const teamsByToken = new Map<string, Promise<{ teams: string[]; note?: string }>>();
     const loginByToken = new Map<string, Promise<string | undefined>>();
     const prs: InboxPr[] = [];
@@ -332,16 +338,13 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
         }
         let login = loginByToken.get(token);
         if (!login) loginByToken.set(token, (login = this.viewerLogin(token)));
-        const owner = repo.split("/")[0]?.toLowerCase() ?? "";
-        prs.push(
-          ...(await this.repoPrs(
-            repo,
-            project,
-            token,
-            all.filter((t) => t.toLowerCase().startsWith(`${owner}/`)),
-            await login,
-          )),
-        );
+        const repoOwner = repo.split("/")[0] ?? "";
+        const owner = repoOwner.toLowerCase();
+        const seen = new Set<string>();
+        const ownerTeams = [...all, ...configuredSlugs.map((s) => qualifyTeamSlug(s, repoOwner))]
+          .filter((t) => t.toLowerCase().startsWith(`${owner}/`))
+          .filter((t) => !seen.has(t.toLowerCase()) && seen.add(t.toLowerCase()));
+        prs.push(...(await this.repoPrs(repo, project, token, ownerTeams, await login)));
       } catch (error) {
         errors.push({
           projectId: project.id,
@@ -375,7 +378,11 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
     const buckets = new Map<number, Pick<InboxPr, "bucket" | "reviewReason" | "reviewTeam">>();
     for (const n of reviewed) buckets.set(n, { bucket: "reviewed" });
     for (const team of teams) {
-      for (const n of await this.search(token, `${base} team-review-requested:${team}`)) {
+      // One team search failing (e.g. a configured slug GitHub does not know: 422) must not drop the repo.
+      const found = await this.search(token, `${base} team-review-requested:${team}`).catch(
+        () => [],
+      );
+      for (const n of found) {
         if (!buckets.has(n) || buckets.get(n)?.bucket === "reviewed")
           buckets.set(n, { bucket: "to-review", reviewReason: "team", reviewTeam: team });
       }

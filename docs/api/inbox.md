@@ -90,7 +90,10 @@ For every distinct repo of a project with a GitHub integration (token via
 - **to review, direct** — `user-review-requested:@me`
 - **to review, team** — `team-review-requested:<org>/<slug>` for each of the user's
   teams (`GET /user/teams`) in the repo owner's org. 401/403/404 → no teams plus a
-  non-blocking `errors` note (token needs `read:org`).
+  non-blocking `errors` note (token needs `read:org`). Teams with a configured `slug`
+  (`Team.slug`, qualified with the repo owner when org-less) are searched too, deduped
+  case-insensitively against memberships; other-org slugs are skipped and a failing
+  team search (e.g. 422) degrades to none.
 
 Direct beats team; mine is never in to-review. GitHub drops a review request once the
 user reviews and re-adds it on a re-request, so a PR leaves/returns to "to review"
