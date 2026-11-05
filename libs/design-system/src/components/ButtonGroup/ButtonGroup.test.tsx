@@ -28,6 +28,11 @@ describe("ButtonGroup", () => {
     expect(screen.getByTestId(ButtonGroupTestId.Root)).toHaveClass("w-fit");
   });
 
+  it("is 32px tall", () => {
+    render(<ButtonGroup ariaLabel="Context" onChange={() => {}} options={options} value="home" />);
+    expect(screen.getByTestId(ButtonGroupTestId.Root)).toHaveClass("h-8");
+  });
+
   it("calls onChange on click", async () => {
     const onChange = vi.fn();
     render(<ButtonGroup ariaLabel="Context" onChange={onChange} options={options} value="home" />);

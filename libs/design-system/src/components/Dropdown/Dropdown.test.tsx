@@ -352,6 +352,18 @@ describe("Dropdown", () => {
     });
 
     describe("compact", () => {
+      it("is 42px tall by default and 32px with size=sm", () => {
+        const { rerender } = render(
+          <Dropdown compact multi onChange={vi.fn()} options={OPTIONS} value={["cs"]} />,
+        );
+        expect(screen.getByRole("combobox")).toHaveClass("h-[42px]");
+        rerender(
+          <Dropdown compact multi onChange={vi.fn()} options={OPTIONS} size="sm" value={["cs"]} />,
+        );
+        expect(screen.getByRole("combobox")).toHaveClass("h-8");
+        expect(screen.getByRole("combobox")).not.toHaveClass("h-[42px]");
+      });
+
       const MANY = [
         { value: "a", label: "Alpha" },
         { value: "b", label: "Bravo" },

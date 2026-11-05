@@ -207,4 +207,35 @@ describe("WidgetFrame", () => {
     render(<WidgetFrame label="X" />);
     expect(screen.queryByTestId(WidgetFrameTestId.Loading)).toBeNull();
   });
+
+  it("renders a filters toggle between refresh and settings, only with a handler", async () => {
+    const onToggle = vi.fn();
+    const { rerender } = render(
+      <WidgetFrame
+        label="X"
+        onRefresh={() => {}}
+        onSettings={() => {}}
+        onToggleFilters={onToggle}
+      />,
+    );
+    const btn = screen.getByTestId(WidgetFrameTestId.Filters);
+    expect(btn).toHaveAttribute("aria-pressed", "false");
+    expect(btn).not.toHaveAttribute("data-active");
+    expect(btn).toHaveAccessibleName("Filters");
+    await userEvent.click(btn);
+    expect(onToggle).toHaveBeenCalledOnce();
+    const ids = Array.from(
+      screen.getByTestId(WidgetFrameTestId.Header).querySelectorAll("button"),
+    ).map((b) => b.getAttribute("data-testid"));
+    expect(ids).toEqual([
+      WidgetFrameTestId.Refresh,
+      WidgetFrameTestId.Filters,
+      WidgetFrameTestId.Settings,
+    ]);
+    rerender(<WidgetFrame filtersActive filtersOpen label="X" onToggleFilters={onToggle} />);
+    expect(screen.getByTestId(WidgetFrameTestId.Filters)).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId(WidgetFrameTestId.Filters)).toHaveAttribute("data-active", "true");
+    rerender(<WidgetFrame label="X" />);
+    expect(screen.queryByTestId(WidgetFrameTestId.Filters)).not.toBeInTheDocument();
+  });
 });

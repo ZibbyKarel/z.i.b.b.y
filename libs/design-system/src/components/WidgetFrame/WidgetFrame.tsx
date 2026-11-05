@@ -17,6 +17,8 @@ export enum WidgetFrameTestId {
   Collapse = "widget-frame-collapse",
   /** The per-widget "add" (+) toggle (aria-pressed). */
   Add = "widget-frame-add",
+  /** The per-widget filters toggle (funnel, aria-pressed; `data-active` while a pick is applied). */
+  Filters = "widget-frame-filters",
   /** The per-widget settings (gear) button. */
   Settings = "widget-frame-settings",
   Body = "widget-frame-body",
@@ -63,6 +65,13 @@ export interface WidgetFrameProps {
   loadingLabel?: string;
   /** `W × H` label shown bottom-left while `dragging`. */
   sizeLabel?: string;
+  /** Shows a header filters toggle (funnel, `aria-pressed={filtersOpen}`) right after refresh. */
+  onToggleFilters?: () => void;
+  /** The filter bar is shown: toggle pressed. */
+  filtersOpen?: boolean;
+  /** A filter pick is applied: the toggle carries a small dot (`data-active`). */
+  filtersActive?: boolean;
+  filtersLabel?: string;
   /** Shows a header "add" toggle (`+`, `aria-pressed={adding}`). */
   onAdd?: () => void;
   /** The widget is in add mode: toggle pressed, body forced open. */
@@ -125,6 +134,10 @@ export function WidgetFrame({
   loading = false,
   loadingLabel,
   sizeLabel,
+  onToggleFilters,
+  filtersOpen = false,
+  filtersActive = false,
+  filtersLabel,
   onAdd,
   adding = false,
   addLabel,
@@ -201,6 +214,24 @@ export function WidgetFrame({
             >
               <Icon name="retry" size="sm" />
             </span>
+          </button>
+        ) : null}
+        {onToggleFilters ? (
+          <button
+            aria-label={filtersLabel ?? "Filters"}
+            aria-pressed={filtersOpen}
+            className={cn(headerBtn, "relative", filtersOpen && "text-ink")}
+            data-active={filtersActive || undefined}
+            data-testid={WidgetFrameTestId.Filters}
+            onClick={onToggleFilters}
+            onPointerDown={(e) => e.stopPropagation()}
+            title={filtersLabel ?? "Filters"}
+            type="button"
+          >
+            <Icon name="filter" size="sm" />
+            {filtersActive ? (
+              <span className="absolute right-[3px] top-[1px] h-[5px] w-[5px] rounded-full bg-ink" />
+            ) : null}
           </button>
         ) : null}
         {onAdd ? (

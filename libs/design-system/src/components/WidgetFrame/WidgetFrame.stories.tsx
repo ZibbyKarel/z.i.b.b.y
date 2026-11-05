@@ -23,5 +23,8 @@ export const View: Story = {};
 export const Collapsed: Story = { args: { collapsed: true } };
 export const EmptyAllClear: Story = { args: { empty: true, aside: "ALL CLEAR" } };
 export const Configurable: Story = { args: { onAdd: () => {}, onSettings: () => {} } };
+export const WithFilters: Story = { args: { onToggleFilters: () => {}, onRefresh: () => {} } };
+export const FiltersOpen: Story = { args: { ...WithFilters.args, filtersOpen: true } };
+export const FiltersActive: Story = { args: { ...WithFilters.args, filtersActive: true } };
 export const Adding: Story = { args: { ...Configurable.args, adding: true } };
 export const Dragging: Story = { args: { dragging: true, sizeLabel: "4 × 6" } };

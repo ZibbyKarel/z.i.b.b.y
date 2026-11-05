@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { cn } from "../../utils/cn";
 import { focusRing } from "../../utils/focus";
 import { Icon } from "../Icon/Icon";
-import { Stack } from "../Stack/Stack";
 
 export enum ButtonGroupTestId {
   Root = "button-group-root",
@@ -96,18 +95,18 @@ export function ButtonGroup({
       aria-describedby={ariaDescribedby}
       aria-label={ariaLabelledby ? undefined : ariaLabel}
       aria-labelledby={ariaLabelledby}
-      className="inline-block w-fit max-w-full rounded-md border border-border-strong bg-background p-0.5"
+      className="inline-block h-8 w-fit max-w-full rounded-md border border-border-strong bg-background p-0.5"
       data-testid={ButtonGroupTestId.Root}
       role="group"
     >
-      <Stack inline align="center" direction="row" gap="25">
+      <div className="inline-flex h-full items-stretch gap-0.5">
         {options.map((o) => {
           const active = isActive(o.id);
           return (
             <button
               aria-pressed={active}
               className={cn(
-                "inline-flex items-center gap-2 rounded-sm border-none px-[10px] py-[5px] font-sans text-[12px] font-medium transition-all",
+                "inline-flex items-center gap-2 rounded-sm border-none px-[10px] font-sans text-[12px] font-medium transition-all",
                 focusRing,
                 active
                   ? "bg-raised text-ink shadow-card"
@@ -143,7 +142,7 @@ export function ButtonGroup({
           <button
             aria-label={addLabel}
             className={cn(
-              "flex rounded-sm px-2 py-1.5 text-foreground-faint hover:bg-hover hover:text-foreground",
+              "flex items-center rounded-sm px-2 text-foreground-faint hover:bg-hover hover:text-foreground",
               focusRing,
             )}
             data-testid={ButtonGroupTestId.Add}
@@ -153,7 +152,7 @@ export function ButtonGroup({
             <Icon name="plus" size="sm" />
           </button>
         )}
-      </Stack>
+      </div>
     </div>
   );
 }

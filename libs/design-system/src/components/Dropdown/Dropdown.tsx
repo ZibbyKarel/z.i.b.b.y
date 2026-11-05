@@ -68,7 +68,8 @@ const toneTextClass: Record<DropdownTone, string> = {
 /** Trigger density.
  * - `md` — the default, matching `Button` `md` / form-control height.
  * - `sm` — a compact trigger sized to sit alongside `Button` `size="sm"` in dense
- *   chrome like the top bar (the language switcher). */
+ *   chrome like the top bar (the language switcher); a `compact` multi trigger is
+ *   32px tall instead of 42px (filter bars). */
 export type DropdownSize = "sm" | "md";
 
 interface DropdownBaseProps<T extends string = string> {
@@ -449,7 +450,9 @@ export function Dropdown<T extends string = string>(props: DropdownProps<T>) {
           aria-haspopup="listbox"
           className={cn(
             triggerClasses,
-            compact ? "flex-nowrap overflow-hidden h-[42px]" : "flex-wrap min-h-[42px]",
+            compact
+              ? cn("flex-nowrap overflow-hidden", size === "sm" ? "h-8" : "h-[42px]")
+              : "flex-wrap min-h-[42px]",
           )}
           onClick={() => (open ? close() : openMenu())}
           ref={triggerRef}
