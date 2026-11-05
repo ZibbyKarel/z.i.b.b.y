@@ -7,4 +7,4 @@
 5. [ ] Detail behu - řádek nad názvem běhu specifikující workflow/agenta musí pak obsahovat i ID běhu na ktéré když najedu tak se vedle objeví ikonka ke zkopírování ID stejně tak bude řešené i id issue v detailu issue
 6. [x] Nerefreshují se běhy. Když nějaký task skončí svůj běh tak musím refreshnout stránku abych viděl že task čeká na schválení (main@a5b74e604)
 7. [ ] Tlačíko Zapracovat do úkolu v detailu Issue zobrazí stránku nového tasku s předanou referencí na task a předvyplněným jménem tasku jako "Implementation of issue [ID]" a uživatel může promt upravit i název upravit. Target by se měl také automaticky předvyplnit ale můžu ho také pak upravit pokud by nevyhovoval.
-8. [ ] u issues smažeme příznak "Nové ve zdroji" a "Běží" místo toho budeme zobrazovat status jaký má issue v JIRA
+8. [x] u issues smažeme příznak "Nové ve zdroji" a "Běží" místo toho budeme zobrazovat status jaký má issue v JIRA (main@0d1e299ad)
