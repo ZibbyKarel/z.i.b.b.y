@@ -1,9 +1,14 @@
 import { apiClient } from "../../../state/api";
 import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
 
+/** Prefix of every task-detail key — invalidates all open task details at once. */
+export function getTaskDetailRootKey() {
+  return ["tasks", "detail"] as const;
+}
+
 /** Cache key for a single task's detail (`GET /api/tasks/:id`). */
 export function getTaskQueryKey(taskId: string) {
-  return ["tasks", "detail", taskId] as const;
+  return [...getTaskDetailRootKey(), taskId] as const;
 }
 
 /**
