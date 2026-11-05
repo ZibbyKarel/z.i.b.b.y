@@ -181,6 +181,7 @@
   },
   "common": {
     "stop": "Zastavit",
+    "copyId": "Kopírovat ID",
     "edit": "Editovat",
     "duplicate": "Duplikovat",
     "configure": "Konfigurovat",

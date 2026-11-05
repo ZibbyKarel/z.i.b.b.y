@@ -660,3 +660,6 @@ export type {
 } from "./components/DetailTable/DetailTable";
 export { StackCrumbs, StackCrumbsTestId } from "./components/StackCrumbs/StackCrumbs";
 export type { StackCrumb, StackCrumbsProps } from "./components/StackCrumbs/StackCrumbs";
+
+export { CopyableText, CopyableTextTestId } from "./components/CopyableText/CopyableText";
+export type { CopyableTextProps } from "./components/CopyableText/CopyableText";

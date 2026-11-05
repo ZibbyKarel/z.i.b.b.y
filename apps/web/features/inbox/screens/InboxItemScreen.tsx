@@ -5,6 +5,7 @@ import {
   Alert,
   Button,
   Container,
+  CopyableText,
   EmptyState,
   Grid,
   Markdown,
@@ -166,6 +167,7 @@ export function InboxItemScreen({ projectId, itemId }: InboxItemScreenProps) {
 
 function InboxItemView({ item: it }: { item: InboxRoadmapItem }) {
   const t = useTranslations("inboxPage");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const now = useNow(60_000);
   const elapsedLabel = useElapsedLabel();
@@ -245,7 +247,10 @@ function InboxItemView({ item: it }: { item: InboxRoadmapItem }) {
             >
               <Typography type="label">{t("detail.back")}</Typography>
             </TextLink>
-            <Typography type="label">{[key, sourceName, it.project.name].join(" · ")}</Typography>
+            <Typography type="label">
+              <CopyableText copyLabel={tCommon("copyId")} text={key} />
+              {` · ${[sourceName, it.project.name].join(" · ")}`}
+            </Typography>
             {it.source.url ? (
               <TextLink
                 data-testid={InboxItemScreenTestId.Title}

@@ -2,6 +2,7 @@
 
 import {
   AnchoredSheet,
+  CopyableText,
   DetailTable,
   type DetailTableRow,
   Markdown,
@@ -105,7 +106,12 @@ export function IssueSheet({ id, anchor, onClose }: SheetProps) {
         t("bridge.sheet.updated", { when: updated }),
       ]}
       closeLabel={t("bridge.sheet.close")}
-      kind={`${t("bridge.sheet.kind.issue")} · ${source} · ${itemKey(item)}`}
+      kind={
+        <>
+          {`${t("bridge.sheet.kind.issue")} · ${source} · `}
+          <CopyableText copyLabel={t("common.copyId")} text={itemKey(item)} />
+        </>
+      }
       onClose={onClose}
       stateLabel={stateLabel}
       title={item.name}

@@ -1,6 +1,6 @@
 "use client";
 
-import { AnchoredSheet, normalizeStateTone } from "@zibby/design-system";
+import { AnchoredSheet, CopyableText, normalizeStateTone } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -55,9 +55,13 @@ export function RunSheet({ id, anchor, onClose }: SheetProps) {
       actions={<RunHeaderActions run={run} />}
       closeLabel={t("bridge.sheet.close")}
       kind={
-        run.kind === "workflow"
-          ? t("runs.detail.workflow", { name: run.owner })
-          : `${t("bridge.sheet.kind.run")} · ${run.kind}`
+        <>
+          {run.kind === "workflow"
+            ? t("runs.detail.workflow", { name: run.owner })
+            : `${t("bridge.sheet.kind.run")} · ${run.kind}`}
+          {" · "}
+          <CopyableText copyLabel={t("common.copyId")} text={run.runId} />
+        </>
       }
       onClose={onClose}
       onTitleClick={() => router.push(`/activity/runs/${run.runId}` as Route)}

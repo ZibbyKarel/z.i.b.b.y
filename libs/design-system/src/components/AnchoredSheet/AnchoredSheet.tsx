@@ -22,7 +22,7 @@ export enum AnchoredSheetTestId {
 
 export interface AnchoredSheetProps {
   /** Mono eyebrow left of the state, e.g. `PULL REQUEST · #12`. */
-  kind: string;
+  kind: ReactNode;
   /** Bold state label next to it, e.g. `CI FAILING`. */
   stateLabel?: string;
   /** Right-aligned hint, e.g. `J / K · ESC`. */
