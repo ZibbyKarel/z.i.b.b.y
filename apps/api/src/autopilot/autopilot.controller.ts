@@ -22,14 +22,19 @@ export class AutopilotController {
     return tsRestHandler(autopilotContract, {
       getAutopilot: async () => ({ status: 200, body: await this.autopilot.status() }),
 
-      setAutopilot: async ({ body: { level, scope }, headers }) => {
+      setAutopilot: async ({ body: { level, scope, automation }, headers }) => {
         if (level === "full" && !hasOperatorToken(this.tokens, headers)) {
           return {
             status: 401,
             body: { message: "Turning autopilot on requires the operator token." },
           };
         }
-        return { status: 200, body: await this.autopilot.set(level, "operator", scope) };
+        // Tokenless callers may only tighten: a tree planted with `off` would be live at the next switch-on.
+        const tree = level === "full" ? automation : undefined;
+        return {
+          status: 200,
+          body: await this.autopilot.set(level, "operator", scope, tree),
+        };
       },
     });
   }

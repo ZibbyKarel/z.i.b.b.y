@@ -1903,16 +1903,6 @@
       "add": "Přidat integraci",
       "hint": "Sdílené všemi projekty této firmy. Každý projekt si položky přiřazuje vlastními pravidly směrování a může integraci přebít vlastní.",
       "empty": "Zatím žádné integrace firmy — přidej Jiru, GitHub nebo Slack jednou a sdílej je napříč projekty firmy."
-    },
-    "roadmapDefaults": {
-      "title": "Výchozí nastavení roadmapy",
-      "hint": "Dědí každý projekt této firmy, pokud si sám nenastaví Dědit / Zapnuto / Vypnuto.",
-      "autoPlay": "Automatická implementace",
-      "autoPlayHint": "Nezablokované úlohy dědících projektů se rozjedou samy. ZIBBY otevře PR a zastaví se — merge zůstává na tobě.",
-      "autoReview": "Automatické review PR",
-      "autoReviewHint": "Nové PR k review projde workflow vybrané podle obsahu. Komentáře se odešlou až po tvém schválení.",
-      "autoAddressComments": "Automatické zpracování komentářů",
-      "autoAddressCommentsHint": "Na tvých PR s požadovanými změnami opraví komentáře. Push čeká na tvé schválení."
     }
   },
   "teams": {
@@ -2394,27 +2384,6 @@
     "hint": "Vyber epik a uvidíš jeho tasky vpravo.",
     "emptyEpicsTitle": "Zatím žádné epiky",
     "emptyEpicsDescription": "Tento projekt zatím nemá žádnou roadmapu — naimportuj ji ze zdroje, nebo epiky vytvoř ručně.",
-    "automation": {
-      "title": "Automatizace roadmapy",
-      "hint": "Co smí ZIBBY u tohohle projektu dělat sám. Dědit bere výchozí hodnotu firmy, pak globální (vypnuto).",
-      "autoPlay": "Automatická implementace",
-      "autoPlayHint": "Nezablokované úlohy se rozjedou samy a epik bez potomků se sám rozfázuje. ZIBBY otevře PR a zastaví se — merge zůstává na tobě. Kolik úloh běží najednou, řídí Nastavení → Běhové parametry.",
-      "autoReview": "Automatické review PR",
-      "autoReviewHint": "Nové PR k review projde workflow vybrané podle obsahu. Komentáře se odešlou až po tvém schválení.",
-      "autoAddressComments": "Automatické zpracování komentářů",
-      "autoAddressCommentsHint": "Na tvých PR s požadovanými změnami opraví komentáře. Push čeká na tvé schválení.",
-      "state": {
-        "inherit": "Dědit",
-        "on": "Zapnuto",
-        "off": "Vypnuto"
-      },
-      "effective": "Aktuálně {state} — {source}",
-      "source": {
-        "company": "zděděno z firmy {name}",
-        "global": "globální výchozí",
-        "project": "nastaveno na tomto projektu"
-      }
-    },
     "epic": {
       "unphased": "nerozfázováno",
       "progress": "{done}/{total} tasků",
@@ -3646,7 +3615,7 @@
     "status": "Autopilot zapnutý · čeká {pending}",
     "confirm": "Zapnout",
     "dialogTitle": "Zapnout autopilota?",
-    "dialogBody": "Dokud je zapnutý, ZIBBY bez ptaní dělá vybrané akce níže a o každé dá vědět. Pushuje přitom jen do svých větví a do větví tvých PR. Merge, deploy, platby, mazání, force push a push do sdílených větví dál čekají na tebe. Upozornění na Slack posílá ZIBBY jen při zapnutém autopilotu.",
+    "dialogBody": "Dokud je zapnutý, ZIBBY provádí níže vybrané akce bez ptaní a každou ohlásí. Pushuje jen do vlastních větví a do větví tvých PR. Merge, deploy, platby, mazání, force push a push do sdílených větví dál čekají na tebe. Upozornění na Slack se posílají jen při zapnutém Autopilotu.",
     "scopeReviews": "Automatické code review",
     "scopeReviewsHint": "Posílá hotová code review na PR jako komentář.",
     "scopeComments": "Automatické zpracování komentářů",
@@ -3655,6 +3624,18 @@
     "scopeCommunicationHint": "Odpovídá na otázky na GitHubu, GitLabu, v Jiře a ve Slacku, když má konkrétní odpověď.",
     "dialogPending": "Schválení, která už čekají, čekají dál: {pending}.",
     "operatorTokenMissing": "Zapnutí autopilota vyžaduje operátorský token. Nejdřív ho nastav v Nastavení.",
-    "failed": "Autopilota se nepodařilo přepnout."
+    "failed": "Autopilota se nepodařilo přepnout.",
+    "automationTitle": "Automatizace roadmapy",
+    "automationHint": "Vyber, co smí ZIBBY dělat sama, když je autopilot zapnutý. Firma nebo tým může přepsat globální výchozí hodnotu; Zdědit převezme hodnotu z vyšší úrovně.",
+    "global": "Globálně",
+    "autoImplement": "Implementovat položky roadmapy",
+    "autoReview": "Reviewovat PR",
+    "autoAddressComments": "Řešit review komentáře",
+    "stateInherit": "Zdědit",
+    "stateOn": "Zapnuto",
+    "stateOff": "Vypnuto",
+    "inherits": "dědí: {state}",
+    "expand": "Rozbalit",
+    "collapse": "Sbalit"
   }
 }

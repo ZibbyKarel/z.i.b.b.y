@@ -1,16 +1,15 @@
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import {
-  type EffectiveRoadmapConfig,
+  type AutomationToggles,
   type InboxPr,
   type PrReviewLevel,
   type ScheduledTask,
-  resolveRoadmapConfig,
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
+import { AutopilotService } from "../autopilot/autopilot.service";
 import { WatcherHealthRegistry } from "../health/watcher-health.registry";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ResolvedProjectService } from "../projects/resolved-project.service";
-import { RoadmapStore } from "../roadmap/roadmap.store";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { TickingWatcherBase } from "../shared/ticking-watcher-base";
 import { SystemConfigStore } from "../system/system-config.store";
@@ -32,7 +31,7 @@ const errMsg = (error: unknown): string => (error instanceof Error ? error.messa
  * todo-16 — the PR automation heartbeat (docs/api/inbox.md "Automatic review & comment
  * handling"). Shares `systemConfig.roadmapTickMs` with the roadmap heartbeat (read live, `0`
  * disables; tests drive {@link tick} directly). Each tick reads the PR inbox and, per PR, the
- * project's EFFECTIVE roadmap toggles (own value, else the company's `roadmapDefaults`, else off):
+ * project's EFFECTIVE Autopilot automation toggles (team > company > global; all off while Autopilot is off):
  *
  * - **`autoReview`** — a non-draft `to-review` PR with a known head and no review task for that
  *   head (any state: a failed or discarded review of the same head is never retried) and none
@@ -60,9 +59,9 @@ export class PrAutomationService
     private readonly reviews: InboxReviewService,
     private readonly addressComments: InboxAddressCommentsService,
     private readonly tasks: ScheduledTasksStorageService,
-    private readonly roadmap: RoadmapStore,
     private readonly projects: ProjectsStorageService,
     private readonly resolvedProjects: ResolvedProjectService,
+    private readonly autopilot: AutopilotService,
     private readonly activity: ActivityLogService,
     private readonly systemConfig: SystemConfigStore,
     private readonly watcherHealthRegistry: WatcherHealthRegistry,
@@ -92,7 +91,7 @@ export class PrAutomationService
   }
 
   async tick(): Promise<{ started: number }> {
-    const configs = new Map<string, Promise<EffectiveRoadmapConfig>>();
+    const configs = new Map<string, Promise<AutomationToggles>>();
     // Idle installs never touch GitHub: the inbox sweep runs only while some project has a
     // toggle effectively on. The resolved configs are reused for the PRs below.
     if (!(await this.anyAutomationOn(configs))) return { started: 0 };
@@ -142,7 +141,7 @@ export class PrAutomationService
 
   /** Resolve every project's effective config into `configs`; true when any toggle is on. */
   private async anyAutomationOn(
-    configs: Map<string, Promise<EffectiveRoadmapConfig>>,
+    configs: Map<string, Promise<AutomationToggles>>,
   ): Promise<boolean> {
     const projects = await this.projects.list().catch((error: unknown) => {
       this.log.warn("pr automation: projects unreadable — tick skipped", { error: errMsg(error) });
@@ -198,12 +197,11 @@ export class PrAutomationService
     });
   }
 
-  /** Same inheritance as `RoadmapTickService`: own toggle, else company default, else off. */
-  private async effectiveConfig(projectId: string): Promise<EffectiveRoadmapConfig> {
-    const config = await this.roadmap.readConfig(projectId);
+  /** The project's Autopilot automation toggles (team > company > global; all off while off). */
+  private async effectiveConfig(projectId: string): Promise<AutomationToggles> {
     const project = await this.projects.get(projectId).catch(() => null);
     const company = project ? await this.resolvedProjects.resolveCompany(project) : undefined;
-    return resolveRoadmapConfig(config, company?.roadmapDefaults);
+    return this.autopilot.automationFor({ companyId: company?.id, teamId: project?.teamId });
   }
 }
 

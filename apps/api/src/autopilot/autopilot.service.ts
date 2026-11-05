@@ -4,7 +4,9 @@ import { Inject, Injectable, type OnModuleInit, Optional } from "@nestjs/common"
 import {
   type Agent,
   type Approval,
+  type AutomationToggles,
   type AutopilotActor,
+  type AutopilotAutomation,
   type AutopilotLevel,
   type AutopilotScope,
   type AutopilotScopeKey,
@@ -15,6 +17,7 @@ import {
   FULL_AUTOPILOT_SCOPE,
   type IntendedAction,
   type Workflow,
+  resolveAutopilotAutomation,
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { ApprovalsService } from "../approvals/approvals.service";
@@ -225,6 +228,11 @@ export class AutopilotService implements OnModuleInit {
     return this.state.scope ?? FULL_AUTOPILOT_SCOPE;
   }
 
+  /** Effective roadmap automation toggles at a company/team; all false while off. */
+  automationFor(at: { companyId?: string; teamId?: string }): AutomationToggles {
+    return resolveAutopilotAutomation(this.state, at);
+  }
+
   /** Whether the overlay turns this system rule's `ask` into act-then-report right now. */
   coversRule(ruleId: string, action: IntendedAction, context: AutopilotContext = {}): boolean {
     if (!this.isOn()) return false;
@@ -254,16 +262,21 @@ export class AutopilotService implements OnModuleInit {
 
   /**
    * Switch the level. Authorization is the caller's: only the operator-token route may
-   * pass `full`. Re-setting the current level is a no-op (no file write, no notice).
+   * pass `full`. A no-op (no file write) only when level, scope and automation tree are all unchanged.
+   * On/off is never pushed to Slack.
    */
   async set(
     level: AutopilotLevel,
     by: AutopilotActor,
     scope?: AutopilotScope,
+    automation?: AutopilotAutomation,
   ): Promise<AutopilotStatus> {
     const nextScope = level === "full" ? (scope ?? FULL_AUTOPILOT_SCOPE) : undefined;
+    // Omitted keeps the stored tree (also across `off`, so the next switch-on pre-fills it).
+    const nextAutomation = automation ?? this.state.automation;
     if (
       level === this.state.level &&
+      JSON.stringify(nextAutomation) === JSON.stringify(this.state.automation) &&
       (level === "off" || JSON.stringify(nextScope) === JSON.stringify(this.scope()))
     ) {
       return this.status();
@@ -273,6 +286,7 @@ export class AutopilotService implements OnModuleInit {
       since: new Date().toISOString(),
       by,
       ...(nextScope ? { scope: nextScope } : {}),
+      ...(nextAutomation ? { automation: nextAutomation } : {}),
     };
     await ensureDir(this.dir);
     await writeFileAtomic(path.join(this.dir, FILE), `${JSON.stringify(next, null, 2)}\n`);

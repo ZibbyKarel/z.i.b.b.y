@@ -1,5 +1,6 @@
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
-import { type EffectiveRoadmapConfig, resolveRoadmapConfig } from "@zibby/contracts";
+import type { AutomationToggles } from "@zibby/contracts";
+import { AutopilotService } from "../autopilot/autopilot.service";
 import { WatcherHealthRegistry } from "../health/watcher-health.registry";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ResolvedProjectService } from "../projects/resolved-project.service";
@@ -19,7 +20,7 @@ import { RoadmapStore } from "./roadmap.store";
  *    poll half of the two release signals (master plan "Release signals"): an
  *    operator who merges a PR straight on GitHub must still see its dependents
  *    released.
- * 2. **Auto-pickup** — if the project's effective `autoPlay` is `true`,
+ * 2. **Auto-pickup** — if the project's effective `autoImplement` is `true`,
  *    `RoadmapGateService.autoPickup` enqueues its unblocked `todo` tasks and
  *    decomposes its never-decomposed childless epics. Skipped entirely for a
  *    project with the toggle off. Runs LAST so it sees the slots the reconcile
@@ -30,8 +31,8 @@ import { RoadmapStore } from "./roadmap.store";
  * opted in — dispatches implementation work onto its own branch. It never
  * merges, never pushes to a shared branch, never deploys: the PR is where it
  * stops, exactly as when the operator clicks Play. A dispatch here is a
- * Tier-1/2 act with the operator's standing consent (the per-project `autoPlay`
- * toggle), not an autonomous commit to the outside world.
+ * Tier-1/2 act with the operator's standing consent (the Autopilot
+ * `autoImplement` toggle), not an autonomous commit to the outside world.
  *
  * Per-project AND per-step try/catch: one project's failure never blocks
  * another project's tick.
@@ -58,6 +59,7 @@ export class RoadmapTickService
     private readonly watcherHealthRegistry: WatcherHealthRegistry,
     private readonly projects: ProjectsStorageService,
     private readonly resolvedProjects: ResolvedProjectService,
+    private readonly autopilot: AutopilotService,
     logger: LoggerService,
   ) {
     super();
@@ -91,7 +93,7 @@ export class RoadmapTickService
    */
   async tick(): Promise<void> {
     const projectIds = await this.roadmap.projectIds();
-    const effective = new Map<string, EffectiveRoadmapConfig>();
+    const effective = new Map<string, AutomationToggles>();
     for (const projectId of projectIds) {
       const config = await this.effectiveConfig(projectId).catch((error: unknown) => {
         this.log.warn("roadmap config unreadable for one project — skipped this tick", {
@@ -115,17 +117,16 @@ export class RoadmapTickService
   }
 
   /**
-   * Phase 128 (D8) — the project's toggles with inheritance applied: own value,
-   * else its effective company's `roadmapDefaults`, else the global `false`.
+   * The project's Autopilot automation toggles (team > company > global; all `false`
+   * while Autopilot is off). The legacy `_config.json` / `roadmapDefaults` are not read.
    */
-  private async effectiveConfig(projectId: string): Promise<EffectiveRoadmapConfig> {
-    const config = await this.roadmap.readConfig(projectId);
+  private async effectiveConfig(projectId: string): Promise<AutomationToggles> {
     const project = await this.projects.get(projectId).catch(() => null);
     const company = project ? await this.resolvedProjects.resolveCompany(project) : undefined;
-    return resolveRoadmapConfig(config, company?.roadmapDefaults);
+    return this.autopilot.automationFor({ companyId: company?.id, teamId: project?.teamId });
   }
 
-  private async tickProject(projectId: string, config: EffectiveRoadmapConfig): Promise<void> {
+  private async tickProject(projectId: string, config: AutomationToggles): Promise<void> {
     // Independent of each other: one pass failing never skips the other.
     await this.gate.reconcileRunning(projectId).catch((error: unknown) => {
       this.log.warn("roadmap reconcileRunning failed for one project", {
@@ -141,10 +142,10 @@ export class RoadmapTickService
     });
     // LAST on purpose: both reconcile passes have just freed the slots of
     // everything that finished — so pickup sees the most current picture.
-    if (config.autoPlay) await this.autoPlayOne(projectId);
+    if (config.autoImplement) await this.autoPlayOne(projectId);
   }
 
-  /** Auto-pickup via `RoadmapGateService.autoPickup` (the caller checked the effective `autoPlay`). */
+  /** Auto-pickup via `RoadmapGateService.autoPickup` (the caller checked the effective `autoImplement`). */
   private async autoPlayOne(projectId: string): Promise<void> {
     try {
       await this.gate.autoPickup(projectId);

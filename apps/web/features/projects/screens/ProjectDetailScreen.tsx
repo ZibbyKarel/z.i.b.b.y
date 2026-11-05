@@ -34,7 +34,6 @@ import { PageContainer } from "../../../components/PageContainer/PageContainer";
 import { slug } from "../../../utils/slug";
 import { useCompaniesQuery } from "../../companies";
 import { InboxPanel } from "../../integrations/components/InboxPanel";
-import { RoadmapAutomationPanel } from "../../roadmap/components/RoadmapAutomationPanel";
 import { RoadmapPanel } from "../../roadmap/components/RoadmapPanel";
 import { type ProjectBasicsBody, ProjectBasicsPanel } from "../components/ProjectBasicsPanel";
 import { ProjectHealthPanel } from "../components/ProjectHealthPanel";
@@ -257,7 +256,6 @@ export function ProjectDetailScreen({ projectId, tab = "overview" }: ProjectDeta
   // resolves as "no company" downstream, so we don't validate it here — just
   // surface the pending link so the operator sees it before saving.
   const linkCompanyId = isNew ? searchParams.get("companyId") || undefined : undefined;
-  const resolvedCompanyName = companies.find((c) => c.id === project?.companyId)?.name;
   const linkCompanyName = companies.find((c) => c.id === linkCompanyId)?.name ?? linkCompanyId;
 
   function saveBasics(body: ProjectBasicsBody) {
@@ -683,8 +681,6 @@ export function ProjectDetailScreen({ projectId, tab = "overview" }: ProjectDeta
                     projectId={id}
                     routing={project.integrationRouting}
                   />
-                  {/* What ZIBBY may do with those sources unattended */}
-                  <RoadmapAutomationPanel companyName={resolvedCompanyName} projectId={id} />
                   {/* This project's recent channel items */}
                   <InboxPanel projectId={id} />
                   {/* What the project's integrations processed + outcome */}
