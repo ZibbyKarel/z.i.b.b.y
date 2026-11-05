@@ -73,6 +73,12 @@ Body `{projectId, itemId}`. Finds the item in the live list (404 when absent), w
 local roadmap record if none exists, then plays it via `RoadmapGateService.play` (201 with the
 roadmap item; 422 when the gate refuses, e.g. already in flight or `external`).
 
+Optional `title`, `text`, `target` (TODO 7 — the new-task page's `?issue=` flow) are stored on
+the record as `taskOverride`; the gate's release then uses them for the task's title, the
+description in its text/routing text, and as the explicit target (classification skipped).
+The override is one-shot: the successful release clears it, so a restart uses the issue's own
+words; a routing park or failed release keeps it. Processing without one drops a stale override.
+
 ## PRs (`GET /api/inbox/prs`)
 
 For every distinct repo of a project with a GitHub integration (token via

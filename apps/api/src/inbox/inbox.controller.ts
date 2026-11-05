@@ -42,11 +42,11 @@ export class InboxController {
         status: 200,
         body: await this.inbox.listItems(query.refresh === "true"),
       }),
-      processInboxItem: async ({ body }) => {
+      processInboxItem: async ({ body: { projectId, itemId, ...override } }) => {
         try {
           return {
             status: 201 as const,
-            body: await this.inbox.processItem(body.projectId, body.itemId),
+            body: await this.inbox.processItem(projectId, itemId, override),
           };
         } catch (error) {
           if (

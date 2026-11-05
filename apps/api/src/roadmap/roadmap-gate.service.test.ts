@@ -1053,6 +1053,47 @@ describe("RoadmapGateService", () => {
     });
   });
 
+  describe("taskOverride (TODO 7 — the operator edited the task before processing)", () => {
+    const TARGET = { kind: "agent" as const, id: "koder", name: "Kodér" };
+
+    it("releases with the override's title, text and target, skipping classification", async () => {
+      await store.put(
+        item({
+          taskOverride: {
+            title: "Implementation of issue X",
+            text: "Edited brief",
+            target: TARGET,
+          },
+        }),
+      );
+      const gate = makeGate();
+
+      const played = await gate.play("acme", "item-1");
+
+      expect(classifier.classifyDepartment).not.toHaveBeenCalled();
+      const [input, , , explicitTarget] = taskScheduler.createTask.mock.calls[0]!;
+      expect(input.title).toBe("Implementation of issue X");
+      expect(input.text).toContain("Edited brief");
+      expect(input.text).not.toContain("Zapnout novou detekci");
+      expect(input.routingText).toContain("Edited brief");
+      expect(explicitTarget).toEqual(TARGET);
+      // Consumed by the release: a later replay uses the issue's own words again.
+      expect(played.taskOverride).toBeUndefined();
+    });
+
+    it("a partial override keeps the item's own title and still classifies", async () => {
+      await store.put(item({ taskOverride: { text: "Only the brief" } }));
+      const gate = makeGate();
+
+      await gate.play("acme", "item-1");
+
+      expect(classifier.classifyDepartment).toHaveBeenCalledTimes(1);
+      const [input] = taskScheduler.createTask.mock.calls[0]!;
+      expect(input.title).toBe("Rollout za flagem");
+      expect(input.text).toContain("Only the brief");
+    });
+  });
+
   describe("releaseRouted (NS2 F10 — an approved routing decision)", () => {
     const APPROVED = { kind: "department" as const, id: "knw" as const, name: "Knowledge" };
 

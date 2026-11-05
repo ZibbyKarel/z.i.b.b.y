@@ -12,6 +12,7 @@ import {
   type RoadmapItem,
   type RoadmapItemLifecycle,
   type RoadmapLinkedPr,
+  type RoadmapTaskOverride,
   roadmapItemIdForSource,
 } from "@zibby/contracts";
 import { CredentialsStore } from "../integrations/credentials.store";
@@ -151,9 +152,16 @@ export class InboxIssuesService {
    * is already the overlay: a ZIBBY state when ZIBBY is on it, else the live `todo`/`external`
    * (fail-closed: an issue someone else is on stays `external`, so play refuses it).
    */
-  async process(item: InboxRoadmapItem): Promise<RoadmapItem> {
+  async process(item: InboxRoadmapItem, override?: RoadmapTaskOverride): Promise<RoadmapItem> {
     const now = new Date().toISOString();
-    const snapshot = { name: item.name, description: item.description, updatedAt: now };
+    // An empty override (the list's quick action) is none; `taskOverride: undefined` on a
+    // refresh drops a stale override from an earlier attempt.
+    const snapshot = {
+      name: item.name,
+      description: item.description,
+      updatedAt: now,
+      taskOverride: override?.title || override?.text || override?.target ? override : undefined,
+    };
     try {
       await this.roadmap.put({
         id: item.id,

@@ -7,6 +7,7 @@ import {
   InboxPrSchema,
   InboxPrThreadSchema,
   PR_REVIEW_LEVELS,
+  ProcessInboxItemInputSchema,
   RebaseInboxPrInputSchema,
   ReplyInboxPrThreadInputSchema,
   ReviewInboxPrInputSchema,
@@ -212,5 +213,19 @@ describe("fix CI", () => {
         head: "x",
       }).success,
     ).toBe(false);
+  });
+
+  it("ProcessInboxItemInput takes an optional task override (TODO 7)", () => {
+    const base = { projectId: "acme", itemId: "j1-acme-5" };
+    expect(ProcessInboxItemInputSchema.safeParse(base).success).toBe(true);
+    expect(
+      ProcessInboxItemInputSchema.safeParse({
+        ...base,
+        title: "Implementation of issue ACME-5",
+        text: "Edited",
+        target: { kind: "department", id: "dev", name: "Development" },
+      }).success,
+    ).toBe(true);
+    expect(ProcessInboxItemInputSchema.safeParse({ ...base, title: "" }).success).toBe(false);
   });
 });

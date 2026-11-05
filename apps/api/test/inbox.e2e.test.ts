@@ -117,6 +117,21 @@ describe("Inbox API (e2e)", () => {
       .expect(404);
   });
 
+  it("POST /api/inbox/items/process accepts the optional task override (TODO 7)", async () => {
+    await withOperator(request(app.getHttpServer()).post("/api/inbox/items/process"))
+      .send({
+        projectId: "acme",
+        itemId: "task-mine",
+        title: "Implementation of issue X",
+        text: "Edited",
+        target: { kind: "agent", id: "koder", name: "Kodér" },
+      })
+      .expect(404); // passes validation, then misses the live list
+    await withOperator(request(app.getHttpServer()).post("/api/inbox/items/process"))
+      .send({ projectId: "acme", itemId: "task-mine", target: { kind: "nope" } })
+      .expect(400);
+  });
+
   it("GET /api/inbox/prs/:projectId/:number/diff is 404 for an unknown project", async () => {
     await request(app.getHttpServer()).get("/api/inbox/prs/nope/7/diff").expect(404);
   });

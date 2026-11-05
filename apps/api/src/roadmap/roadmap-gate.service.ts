@@ -632,19 +632,22 @@ export class RoadmapGateService {
     // cloneRoot clone nor a `gitRemote` resolves anything — caught by `drain`'s
     // per-item try/catch same as any other release failure.
     const local = await this.projectLocal.resolveForRun(project);
-    const text = buildRoadmapTaskText(item, allItems);
+    // TODO 7 — the operator's edits from the new-task page replace the issue's own words and,
+    // with a target, are an explicit target like an approved one (classification skipped).
+    const override = item.taskOverride;
+    const target = approvedTarget ?? override?.target;
+    const worded = override?.text ? { ...item, description: override.text } : item;
+    const text = buildRoadmapTaskText(worded, allItems);
     // The item's own words, footer-free. Used for BOTH routing stages: stage 1 here and
     // stage 2 inside `createTask` (via `CreateTaskInput.routingText`), so the framing
     // `text` carries for the actor never reaches a ranker.
-    const routingText = buildRoadmapRoutingText(item);
+    const routingText = buildRoadmapRoutingText(worded);
     // The sink this release REQUIRES — the same value stamped on the task below, but
     // needed BEFORE routing, because it constrains which units are eligible at all
     // (`ClassifyTaskInput.output`). A roadmap item defaults to a PR: an imported issue
     // is by construction "implement this → PR".
     const output = item.output ?? { type: "pr" as const };
-    const routing = approvedTarget
-      ? null
-      : await this.classifyDepartment(routingText, local.path, output);
+    const routing = target ? null : await this.classifyDepartment(routingText, local.path, output);
     // NS2 F10 — the Tier-3 exit. An ambiguous stage-1 verdict means the switchboard
     // weighed two departments and couldn't separate them; on this path nobody is
     // watching a preview, and guessing wrong costs an entire wrong department's run.
@@ -657,7 +660,7 @@ export class RoadmapGateService {
     }
     const result = await this.taskScheduler.createTask(
       {
-        title: item.name,
+        title: override?.title ?? item.name,
         text,
         routingText,
         paths: [local.path],
@@ -684,7 +687,7 @@ export class RoadmapGateService {
       // NS2 F10: `approvedTarget` (an operator's answer to a parked routing
       // question) takes precedence — it IS the explicit target, and an explicit
       // target is a hard override by contract.
-      approvedTarget ?? routing?.target,
+      target ?? routing?.target,
       false,
     );
     // The reverse edge (task -> item), so the run detail can link back to the
@@ -700,8 +703,11 @@ export class RoadmapGateService {
       startedAt: now,
       outcome: "running",
     };
+    // The override is one-shot: consumed here, so a later restart uses the issue's own words.
+    // A park or a failed release keeps it, so the routing approval / retry still honours it.
     await this.roadmap.update(item.projectId, item.id, (current) => ({
       ...current,
+      taskOverride: undefined,
       lifecycle: "running",
       runs: [...current.runs, run],
       updatedAt: now,

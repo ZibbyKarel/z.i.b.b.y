@@ -2,7 +2,11 @@ import { z } from "zod";
 import { PrReviewEventSchema } from "../approvals/approval.schema";
 import type { ActivityKind } from "../activity/activity.schema";
 import { IsoDateTimeSchema } from "../common.schema";
-import { RoadmapItemSchema, RoadmapSourceKindSchema } from "../roadmap/roadmap-item.schema";
+import {
+  RoadmapItemSchema,
+  RoadmapSourceKindSchema,
+  RoadmapTaskOverrideSchema,
+} from "../roadmap/roadmap-item.schema";
 import {
   PrAddressCommentsStateSchema,
   PrFixCiStateSchema,
@@ -54,8 +58,12 @@ export type InboxSourceError = z.infer<typeof InboxSourceErrorSchema>;
 export const InboxRefreshQuerySchema = z.object({ refresh: z.enum(["true", "false"]).optional() });
 export type InboxRefreshQuery = z.infer<typeof InboxRefreshQuerySchema>;
 
-/** Body of `POST /api/inbox/items/process`: one live issue the operator hands to ZIBBY. */
-export const ProcessInboxItemInputSchema = z.object({
+/**
+ * Body of `POST /api/inbox/items/process`: one live issue the operator hands to ZIBBY.
+ * `title`/`text`/`target` (TODO 7) are the operator's edits from the new-task page; they ride
+ * the roadmap record as `taskOverride` and replace the issue's own words for the task.
+ */
+export const ProcessInboxItemInputSchema = RoadmapTaskOverrideSchema.extend({
   projectId: z.string().min(1),
   itemId: z.string().min(1),
 });
