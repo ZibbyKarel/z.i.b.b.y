@@ -1,7 +1,7 @@
 import type { ChildProcess } from "node:child_process";
 import { createWriteStream, mkdirSync } from "node:fs";
 import path from "node:path";
-import { BrowserWindow, Menu, app, dialog } from "electron";
+import { BrowserWindow, Menu, app, dialog, ipcMain } from "electron";
 import { API_BASE_URL, API_HEALTH_URL, API_PORT, WEB_HEALTH_URL, WEB_PORT } from "./config";
 import { routeExternalLinks } from "./externalLinks";
 import { findForeignOwner, isPidAlive, readLockFile } from "./instanceLock";
@@ -155,6 +155,8 @@ function createWindow(): void {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      // Compiled next to main.js (dist/preload.js) — exposes window.zibbyDesktop.
+      preload: path.join(__dirname, "preload.js"),
     },
   });
   mainWindow.on("closed", () => {
@@ -182,6 +184,12 @@ function onFatalStartupError(err: unknown): void {
   dialog.showErrorBox("ZibbyOS failed to start", err instanceof Error ? err.message : String(err));
   app.quit();
 }
+
+// The web UI's Upgrade button (via preload.ts) — only our own web origin may ask.
+ipcMain.handle("zibby:check-for-updates", (event) => {
+  if (!event.senderFrame?.url.startsWith(`${WEB_ORIGIN}/`)) return;
+  return checkForUpdates({ manual: true });
+});
 
 // Standard macOS behaviour: closing the window keeps the app (and its
 // servers) running in the Dock. Cmd+Q quits.
