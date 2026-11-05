@@ -9,17 +9,14 @@ import { fireEvent, renderWithProviders, screen } from "../../../../test/render"
 import { IssueSheet } from "./IssueSheet";
 import { TaskSheet } from "./TaskSheet";
 
-const { hooks, process, approve } = vi.hoisted(() => ({
+const { hooks, approve, push } = vi.hoisted(() => ({
   hooks: { items: [] as unknown[], task: undefined as unknown, approvals: [] as unknown[] },
-  process: vi.fn(),
   approve: vi.fn(),
+  push: vi.fn(),
 }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 vi.mock("../../../inbox/queries", () => ({
   useInboxItemsQuery: () => ({ data: { items: hooks.items, epics: [] } }),
-}));
-vi.mock("../../../inbox/useInboxItemActions", () => ({
-  useInboxItemActions: () => ({ process, isProcessing: () => false, toggleHidden: vi.fn() }),
 }));
 vi.mock("../../../teams", () => ({ useTeamsQuery: () => ({ data: [] }) }));
 vi.mock("../../../tasks", () => ({ useTaskQuery: () => ({ data: hooks.task }) }));
@@ -56,12 +53,12 @@ const item = (lifecycle: string) => ({
 afterEach(() => {
   hooks.items = [];
   hooks.approvals = [];
-  process.mockReset();
   approve.mockReset();
+  push.mockReset();
 });
 
 describe("IssueSheet", () => {
-  it("offers process for a new item; the title links to the source", () => {
+  it("offers process for a new item (opens the prefilled new-task page); the title links to the source", () => {
     hooks.items = [item("todo")];
     renderWithProviders(<IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />);
     expect(screen.getByTestId(AnchoredSheetTestId.Title)).toHaveTextContent("Fix login");
@@ -70,7 +67,7 @@ describe("IssueSheet", () => {
     expect(link).toHaveAttribute("target", "_blank");
     expect(screen.queryByText(/Otevřít v Jira/)).toBeNull();
     fireEvent.click(screen.getByText("Zpracovat do úkolu"));
-    expect(process).toHaveBeenCalledOnce();
+    expect(push).toHaveBeenCalledWith("/work/tasks/new?issue=p%2Fi1");
   });
 
   it("shows the source status instead of the ZIBBY state for new/running", () => {

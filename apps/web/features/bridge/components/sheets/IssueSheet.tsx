@@ -18,7 +18,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ChatAboutButton } from "../../../chat/components/ChatAboutButton";
 import { issueChatAbout } from "../../../chat/chatAbout";
-import { useInboxItemActions } from "../../../inbox/useInboxItemActions";
 import { useInboxItemsQuery } from "../../../inbox/queries";
 import {
   chainKey,
@@ -26,6 +25,7 @@ import {
   itemKey,
   latestTaskId,
   linkedPrOf,
+  newTaskFromIssueHref,
   zibbyStatus,
 } from "../../../inbox/inbox";
 import { issueHref } from "../../../inbox/components/IssueRow";
@@ -46,7 +46,6 @@ export function IssueSheet({ id, anchor, onClose }: SheetProps) {
   const router = useRouter();
   const { data } = useInboxItemsQuery();
   const { data: teams } = useTeamsQuery();
-  const actions = useInboxItemActions();
   const [now] = useState(() => Date.now());
 
   const item = data?.items.find((i) => chainKey(i) === id);
@@ -73,7 +72,10 @@ export function IssueSheet({ id, anchor, onClose }: SheetProps) {
   const href = issueHref(item);
   const primary =
     status === "new" ? (
-      <SheetAction intent="primary" onClick={() => actions.process(item)}>
+      <SheetAction
+        intent="primary"
+        onClick={() => router.push(newTaskFromIssueHref(item) as Route)}
+      >
         {t("bridge.sheet.issue.process")}
       </SheetAction>
     ) : status === "waiting" ? (
