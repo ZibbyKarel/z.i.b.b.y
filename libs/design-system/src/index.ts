@@ -608,6 +608,7 @@ export type {
 export {
   BoardColumnHeader,
   BoardGrid,
+  BoardLead,
   BoardLine,
   BoardRow,
   BoardRowTestId,
@@ -616,6 +617,7 @@ export type {
   BoardColumnHeaderProps,
   BoardColumns,
   BoardGridProps,
+  BoardLeadProps,
   BoardLineProps,
   BoardRowProps,
   BoardRowTone,

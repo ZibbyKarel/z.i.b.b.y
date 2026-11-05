@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  BoardGrid,
+  BoardLead,
   BoardLine,
   BoardRow,
   BoardText,
@@ -109,10 +109,8 @@ export function PrsWidget({
 
   const card = (r: PrRowVm) => (
     <BoardRow
-      bar={false}
       key={r.key}
       muted={r.muted}
-      needsYou={r.needsYou}
       onClick={() => onOpen({ kind: "pr", id: r.id, widgetId: widget.id, key: r.key })}
       padding="pr"
       rowKey={r.key}
@@ -137,36 +135,44 @@ export function PrsWidget({
         </BoardLine>
       }
     >
-      <BoardGrid columns="issue">
-        <IconTile
-          alt={r.author}
-          aria-label={r.author}
-          data-testid={PrsWidgetTestId.Avatar}
-          filled={false}
-          role="img"
-          shape="circle"
-          size="xs"
-          src={r.avatarUrl}
-          title={r.author}
-          tone="neutral"
+      <BoardLead
+        lead={
+          <IconTile
+            alt={r.author}
+            aria-label={r.author}
+            data-testid={PrsWidgetTestId.Avatar}
+            filled={false}
+            role="img"
+            shape="circle"
+            size="md"
+            src={r.avatarUrl}
+            title={r.author}
+            tone="neutral"
+          >
+            {r.author.charAt(0).toUpperCase()}
+          </IconTile>
+        }
+      >
+        <BoardLine
+          baseline
+          end={
+            <BoardText kind="meta" tone="ink3">
+              {r.age}
+            </BoardText>
+          }
+          gap="8"
         >
-          {r.author.charAt(0).toUpperCase()}
-        </IconTile>
-        <BoardLine baseline gap="8">
           <BoardText kind="prNum">{r.number}</BoardText>
           <BoardText kind="prTitle">{r.title}</BoardText>
         </BoardLine>
-        <BoardText kind="meta" tone="ink3">
-          {r.age}
-        </BoardText>
-      </BoardGrid>
-      {/* Not wrapped: when the line runs out of room the project clips first, then the name. */}
-      <BoardLine gap="6" indent="icon">
-        <BoardText kind="prMeta">{r.author}</BoardText>
-        <BoardText kind="prMeta" tone="ink3">
-          · {r.project}
-        </BoardText>
-      </BoardLine>
+        {/* Not wrapped: when the line runs out of room the project clips first, then the name. */}
+        <BoardLine gap="6">
+          <BoardText kind="prMeta">{r.author}</BoardText>
+          <BoardText kind="prMeta" tone="ink3">
+            · {r.project}
+          </BoardText>
+        </BoardLine>
+      </BoardLead>
     </BoardRow>
   );
 

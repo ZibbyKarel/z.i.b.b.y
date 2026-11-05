@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  BoardGrid,
+  BoardLead,
   BoardLine,
   BoardRow,
   BoardTag,
@@ -120,53 +120,57 @@ export function IssuesWidget({
                     sheetSide={sheetSide}
                     tone={r.tone}
                   >
-                    <BoardGrid columns="issue">
-                      <IconTile
-                        {...sourceIcon(r.sourceKind)}
-                        alt={r.source}
-                        aria-label={r.source}
-                        data-testid={IssuesWidgetTestId.Source}
-                        filled={false}
-                        radius="sm"
-                        role="img"
-                        size="xs"
-                        title={r.source}
-                        tone="neutral"
-                      />
-                      <BoardLine gap="6">
+                    <BoardLead
+                      lead={
+                        <IconTile
+                          {...sourceIcon(r.sourceKind)}
+                          alt={r.source}
+                          aria-label={r.source}
+                          data-testid={IssuesWidgetTestId.Source}
+                          filled={false}
+                          radius="sm"
+                          role="img"
+                          size="md"
+                          title={r.source}
+                          tone="neutral"
+                        />
+                      }
+                    >
+                      <BoardLine
+                        end={
+                          r.needsYou ? (
+                            <BoardTag variant="you">{t("you", { wait: r.needsYou })}</BoardTag>
+                          ) : undefined
+                        }
+                        gap="6"
+                      >
                         <BoardText kind="id">{r.code}</BoardText>
                         <BoardText kind="title">{r.title}</BoardText>
                       </BoardLine>
-                      {r.needsYou ? (
-                        <BoardTag variant="you">{t("you", { wait: r.needsYou })}</BoardTag>
-                      ) : (
-                        <span />
-                      )}
-                    </BoardGrid>
-                    <BoardLine
-                      end={
+                      <BoardLine
+                        end={
+                          <BoardText kind="meta" tone="ink3">
+                            {r.age}
+                          </BoardText>
+                        }
+                        gap="6"
+                      >
+                        {stateText(r) ? (
+                          <BoardText kind="meta" tone="ink">
+                            {stateText(r)}
+                          </BoardText>
+                        ) : null}
                         <BoardText kind="meta" tone="ink3">
-                          {r.age}
+                          {stateText(r) ? "· " : ""}
+                          {r.project}
                         </BoardText>
-                      }
-                      gap="6"
-                      indent="icon"
-                    >
-                      {stateText(r) ? (
-                        <BoardText kind="meta" tone="ink">
-                          {stateText(r)}
-                        </BoardText>
-                      ) : null}
-                      <BoardText kind="meta" tone="ink3">
-                        {stateText(r) ? "· " : ""}
-                        {r.project}
-                      </BoardText>
-                      {r.pr ? (
-                        <BoardText underline kind="meta">
-                          · {r.pr}
-                        </BoardText>
-                      ) : null}
-                    </BoardLine>
+                        {r.pr ? (
+                          <BoardText underline kind="meta">
+                            · {r.pr}
+                          </BoardText>
+                        ) : null}
+                      </BoardLine>
+                    </BoardLead>
                   </BoardRow>
                 ))}
           </Fragment>

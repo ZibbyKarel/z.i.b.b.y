@@ -4,7 +4,7 @@ import { Button } from "../Button/Button";
 import { BoardText } from "../BoardText/BoardText";
 import { IconBadge } from "../IconBadge/IconBadge";
 import { IconTile } from "../IconTile/IconTile";
-import { BoardColumnHeader, BoardGrid, BoardLine, BoardRow } from "./BoardRow";
+import { BoardColumnHeader, BoardGrid, BoardLead, BoardLine, BoardRow } from "./BoardRow";
 
 const meta: Meta<typeof BoardRow> = {
   title: "DesignSystem/BoardRow",
@@ -108,6 +108,22 @@ export const NoBar: Story = {
   render: (args) => (
     <BoardRow {...args} bar={false}>
       {issue()}
+    </BoardRow>
+  ),
+};
+
+export const TwoLineLead: Story = {
+  render: (args) => (
+    <BoardRow {...args}>
+      <BoardLead lead={<IconTile filled={false} glyph="checkpoint" size="md" tone="neutral" />}>
+        <BoardLine gap="6">
+          <BoardText kind="id">ZB-142</BoardText>
+          <BoardText kind="title">Checkout fails on empty cart</BoardText>
+        </BoardLine>
+        <BoardLine gap="6">
+          <BoardText kind="meta">orders</BoardText>
+        </BoardLine>
+      </BoardLead>
     </BoardRow>
   ),
 };

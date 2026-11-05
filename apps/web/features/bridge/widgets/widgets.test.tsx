@@ -155,6 +155,7 @@ describe("IssuesWidget", () => {
     d.items = [item("a")];
     renderWithProviders(<IssuesWidget {...setup({ widget: widget("w", "issues") })} />);
     expect(screen.getByTestId(IssuesWidgetTestId.Source)).toHaveAccessibleName("Jira");
+    expect(screen.getByTestId(IssuesWidgetTestId.Source)).toHaveStyle({ width: "34px" });
     expect(screen.queryByText("Jira")).toBeNull();
   });
 
@@ -298,6 +299,11 @@ describe("PrsWidget", () => {
     expect(theirs).toHaveTextContent("Jana Nová");
     expect(theirs).toHaveTextContent("orders");
     expect(within(theirs).getByTestId(PrsWidgetTestId.Avatar)).toHaveAccessibleName("Jana Nová");
+    expect(within(theirs).getByTestId(PrsWidgetTestId.Avatar)).toHaveStyle({ width: "34px" });
+    for (const row of rows) {
+      expect(row.className).toContain("border-l-[length:var(--bridge-bar)]");
+      expect(row.className).not.toContain("inset_0_0_0_1px");
+    }
     expect(within(theirs).getByTestId(PrsWidgetTestId.Review)).toHaveAccessibleName(
       "Čeká na tvoje review",
     );

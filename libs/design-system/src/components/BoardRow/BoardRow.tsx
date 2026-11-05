@@ -7,6 +7,8 @@ export enum BoardRowTestId {
   Grid = "board-row-grid",
   ColumnHeader = "board-row-column-header",
   Line = "board-row-line",
+  /** `BoardLead`: a leading slot beside a stack of lines. */
+  Lead = "board-row-lead",
   /** Wrapper drawn as the row when an `action` is set (bar, hairline, rings). */
   Frame = "board-row-frame",
   /** The trailing `action` slot — a sibling of the row body, never inside it. */
@@ -263,6 +265,23 @@ export function BoardLine({
     >
       {children}
       {end ? <span className="ml-auto flex">{end}</span> : null}
+    </span>
+  );
+}
+
+export interface BoardLeadProps {
+  /** Leading slot (avatar / source icon), top-aligned beside all the lines. */
+  lead: ReactNode;
+  /** The stacked lines. */
+  children?: ReactNode;
+}
+
+/** A leading slot spanning every line of a stacked row. */
+export function BoardLead({ lead, children }: BoardLeadProps) {
+  return (
+    <span className="flex min-w-0 items-start gap-[8px]" data-testid={BoardRowTestId.Lead}>
+      <span className="flex flex-none">{lead}</span>
+      <span className="flex min-w-0 flex-1 flex-col gap-[var(--bridge-inner-gap)]">{children}</span>
     </span>
   );
 }

@@ -2,7 +2,14 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "../../utils/testRender";
-import { BoardColumnHeader, BoardGrid, BoardLine, BoardRow, BoardRowTestId } from "./BoardRow";
+import {
+  BoardColumnHeader,
+  BoardGrid,
+  BoardLead,
+  BoardLine,
+  BoardRow,
+  BoardRowTestId,
+} from "./BoardRow";
 
 describe("BoardRow", () => {
   it("is a button carrying data-rk and firing onClick", async () => {
@@ -124,6 +131,18 @@ describe("BoardRow", () => {
     const line = screen.getByTestId(BoardRowTestId.Line);
     expect(line).toHaveClass("gap-[6px]", "pl-[92px]");
     expect(line).toHaveTextContent("chipage");
+  });
+
+  it("renders a top-aligned lead beside stacked lines", () => {
+    render(
+      <BoardLead lead={<i>av</i>}>
+        <b>one</b>
+        <b>two</b>
+      </BoardLead>,
+    );
+    const lead = screen.getByTestId(BoardRowTestId.Lead);
+    expect(lead).toHaveClass("items-start");
+    expect(lead).toHaveTextContent("avonetwo");
   });
 
   it('indent="icon" aligns under the text past a 16px icon', () => {
