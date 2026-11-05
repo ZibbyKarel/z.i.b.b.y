@@ -123,6 +123,9 @@ export function PrsWidget({
       tone={r.tone}
       trailing={
         <BoardLine gap="8">
+          <BoardText kind="meta" tone="ink3">
+            {r.age}
+          </BoardText>
           {r.conversations > 0 ? (
             <IconBadge
               count={r.conversations}
@@ -164,14 +167,7 @@ export function PrsWidget({
           </BoardText>
         </BoardLine>
         {/* Not wrapped: when the line runs out of room the project clips first, then the name. */}
-        <BoardLine
-          end={
-            <BoardText kind="meta" tone="ink3">
-              {r.age}
-            </BoardText>
-          }
-          gap="6"
-        >
+        <BoardLine gap="6">
           <BoardText kind="prMeta">{r.author}</BoardText>
           <BoardText kind="prMeta" tone="ink3">
             · {r.project}
