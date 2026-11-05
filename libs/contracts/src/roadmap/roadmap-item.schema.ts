@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { IsoDateTimeSchema } from "../common.schema";
 import { ProjectIdSchema } from "../projects/project.schema";
-import { AttachmentSchema, TaskOutputSchema } from "../tasks/task.schema";
+import { AttachmentSchema, TaskOutputSchema, TaskTargetSchema } from "../tasks/task.schema";
 
 /**
  * Allowed shape of a roadmap item `id`. The id doubles as the on-disk file
@@ -163,6 +163,20 @@ export const RoadmapSourceStatusSchema = z.object({
 });
 export type RoadmapSourceStatus = z.infer<typeof RoadmapSourceStatusSchema>;
 
+/**
+ * TODO 7 — what the operator edited on the new-task page before handing an issue to ZIBBY.
+ * The gate's release uses it instead of the item's own name/description/routing, then
+ * clears it — on dispatch and on a failed release alike, so a restart uses the issue's own
+ * words again. Only a routing park keeps it, for the approval's release.
+ */
+export const RoadmapTaskOverrideSchema = z.object({
+  // Same caps as `CreateTaskInputSchema`'s title/text.
+  title: z.string().min(1).max(200).optional(),
+  text: z.string().min(1).max(8000).optional(),
+  target: TaskTargetSchema.optional(),
+});
+export type RoadmapTaskOverride = z.infer<typeof RoadmapTaskOverrideSchema>;
+
 export const RoadmapScopeReasonSchema = z.enum(["assigned", "reported", "watched", "mentioned"]);
 export type RoadmapScopeReason = z.infer<typeof RoadmapScopeReasonSchema>;
 
@@ -260,6 +274,8 @@ export const RoadmapItemSchema = z.object({
    * leaves it out.
    */
   scopeReasons: z.array(RoadmapScopeReasonSchema).optional(),
+  /** Gate-owned one-shot; see {@link RoadmapTaskOverrideSchema}. */
+  taskOverride: RoadmapTaskOverrideSchema.optional(),
   createdAt: IsoDateTimeSchema,
   updatedAt: IsoDateTimeSchema,
   /** Last time a sync tick (125b) wrote this item from its source. Absent for manual items. */

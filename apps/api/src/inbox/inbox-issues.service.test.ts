@@ -408,6 +408,42 @@ describe("InboxIssuesService.process / InboxService.processItem", () => {
     });
   });
 
+  it("stores the operator's task override on a new record before playing", async () => {
+    const { service, roadmap } = build();
+    const override = { title: "Implementation of issue ACME-5", text: "Edited" };
+    await service.process(live, override);
+    expect(roadmap.put).toHaveBeenCalledWith(expect.objectContaining({ taskOverride: override }));
+  });
+
+  it("refreshing an existing record stores a new override and drops a stale one", async () => {
+    const stale = localItem("j1-acme-5", { taskOverride: { title: "Old" } });
+    const { service, roadmap } = build({ local: [stale] });
+    await service.process(live, { text: "New" });
+    await expect(roadmap.get("acme", "j1-acme-5")).resolves.toMatchObject({
+      taskOverride: { text: "New" },
+    });
+    await service.process(live);
+    expect((await roadmap.get("acme", "j1-acme-5")).taskOverride).toBeUndefined();
+  });
+
+  it("drops the override again when play refuses the item", async () => {
+    const { service, roadmap, gate } = build();
+    gate.play.mockRejectedValueOnce(new Error("already in flight"));
+    await expect(service.process(live, { title: "T" })).rejects.toThrow("already in flight");
+    expect((await roadmap.get("acme", "j1-acme-5")).taskOverride).toBeUndefined();
+  });
+
+  it("a refused play leaves the override of a record ZIBBY is working on alone", async () => {
+    const parked = localItem("j1-acme-5", {
+      lifecycle: "enqueued",
+      taskOverride: { title: "Mine" },
+    });
+    const { service, roadmap, gate } = build({ local: [parked] });
+    gate.play.mockRejectedValueOnce(new Error("already in flight"));
+    await expect(service.process(live, { title: "Other" })).rejects.toThrow();
+    expect((await roadmap.get("acme", "j1-acme-5")).taskOverride).toEqual({ title: "Mine" });
+  });
+
   it("processItem 404s (InboxItemNotFoundError) for an item that is not in the live list", async () => {
     const issues = {
       list: async () => ({ items: [{ ...(live as object) }] }),
@@ -427,7 +463,9 @@ describe("InboxIssuesService.process / InboxService.processItem", () => {
     await expect(service.processItem("acme", "nope")).rejects.toBeInstanceOf(
       InboxItemNotFoundError,
     );
-    await service.processItem("acme", "j1-acme-5");
-    expect(issues.process).toHaveBeenCalledTimes(1);
+    await service.processItem("acme", "j1-acme-5", { title: "T" });
+    expect(issues.process).toHaveBeenCalledWith(expect.objectContaining({ id: "j1-acme-5" }), {
+      title: "T",
+    });
   });
 });

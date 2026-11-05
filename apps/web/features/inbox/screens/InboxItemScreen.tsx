@@ -39,6 +39,7 @@ import {
   itemKey,
   latestTaskId,
   linkedPrOf,
+  newTaskFromIssueHref,
   prListHref,
   zibbyStatus,
 } from "../inbox";
@@ -280,8 +281,7 @@ function InboxItemView({ item: it }: { item: InboxRoadmapItem }) {
             {status === "new" && (
               <Button
                 data-testid={InboxItemScreenTestId.Process}
-                loading={actions.isProcessing(it)}
-                onClick={() => actions.process(it)}
+                onClick={() => router.push(newTaskFromIssueHref(it) as Route)}
                 size="sm"
               >
                 {t("row.process")}

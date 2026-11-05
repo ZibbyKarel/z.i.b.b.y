@@ -43,6 +43,25 @@ vi.mock("@tanstack/react-query", async (orig) => ({
 }));
 vi.mock("../../todo/queries/useTodoQuery", () => ({ getTodoQueryKey: () => ["todo"] }));
 
+const { inbox, processMutate } = vi.hoisted(() => ({
+  inbox: { data: undefined as unknown, isPending: false },
+  processMutate: vi.fn(),
+}));
+vi.mock("../../inbox/queries", () => ({ useInboxItemsQuery: () => inbox }));
+vi.mock("../../inbox/mutations", () => ({
+  useProcessInboxItemMutation: () => ({ mutate: processMutate, isPending: false }),
+}));
+
+const ISSUE = {
+  id: "j1-acme-5",
+  projectId: "acme",
+  project: { id: "acme", name: "Acme Shop" },
+  name: "Checkout breaks",
+  description: "Steps to reproduce.",
+  source: { kind: "jira", externalKey: "ACME-5", url: "https://jira.example/browse/ACME-5" },
+  runs: [],
+};
+
 const classifyMutate = vi.fn();
 const createMutate = vi.fn();
 vi.mock("../mutations", () => ({
@@ -56,6 +75,9 @@ describe("NewTaskScreen (ZB-04b)", () => {
     classifyMutate.mockClear();
     createMutate.mockReset();
     invalidate.mockClear();
+    processMutate.mockReset();
+    inbox.data = undefined;
+    inbox.isPending = false;
     searchParams = new URLSearchParams();
   });
 
@@ -294,5 +316,76 @@ describe("NewTaskScreen (ZB-04b)", () => {
     const body = createMutate.mock.calls[0]?.[0]?.body as { text: string; target?: unknown };
     expect(body.text).toBe("fix it @Kodér");
     expect(body.target).toEqual(expect.objectContaining({ kind: "agent", id: "koder" }));
+  });
+
+  describe("?issue= — process an issue as an edited task (TODO 7)", () => {
+    beforeEach(() => {
+      searchParams = new URLSearchParams({ issue: "acme/j1-acme-5" });
+      inbox.data = { items: [ISSUE] };
+    });
+
+    it("prefills the title, the brief, the issue's project and shows the linked issue", () => {
+      render(<NewTaskScreen />);
+      expect(screen.getByLabelText("Název (volitelný)")).toHaveValue(
+        "Implementation of issue ACME-5",
+      );
+      expect(screen.getByLabelText("Zadání")).toHaveValue(
+        "Issue ACME-5\nhttps://jira.example/browse/ACME-5\n\nSteps to reproduce.",
+      );
+      expect(screen.getByLabelText("Projekt")).toHaveTextContent("Acme Shop");
+      expect(screen.getByText("Propojené issue ACME-5")).toBeInTheDocument();
+    });
+
+    it("submits through the inbox process endpoint with the edits, never the plain create", () => {
+      render(<NewTaskScreen />);
+      fireEvent.change(screen.getByLabelText("Název (volitelný)"), { target: { value: "Fix it" } });
+      fireEvent.change(screen.getByLabelText("Zadání"), { target: { value: "Edited brief" } });
+      fireEvent.click(screen.getByText("Vytvořit úkol"));
+      expect(createMutate).not.toHaveBeenCalled();
+      expect(processMutate).toHaveBeenCalledWith(
+        {
+          body: {
+            projectId: "acme",
+            itemId: "j1-acme-5",
+            title: "Fix it",
+            text: "Edited brief",
+            target: undefined,
+          },
+        },
+        expect.anything(),
+      );
+    });
+
+    it("sends a picked entry as the target", async () => {
+      const user = userEvent.setup();
+      render(<NewTaskScreen />);
+      await user.click(screen.getByLabelText("Vstup"));
+      await user.click(screen.getByRole("option", { name: /dev/i }));
+      fireEvent.click(screen.getByText("Vytvořit úkol"));
+      const body = processMutate.mock.calls[0]?.[0]?.body as { target?: unknown };
+      expect(body.target).toMatchObject({ kind: "department", id: "dev" });
+    });
+
+    it("lands on the created task, or back on the issue when no run exists yet", () => {
+      processMutate.mockImplementationOnce((_vars, opts) =>
+        opts.onSuccess({
+          body: { runs: [{ taskId: "task-9", startedAt: "2026-11-05T00:00:00.000Z" }] },
+        }),
+      );
+      render(<NewTaskScreen />);
+      fireEvent.click(screen.getByText("Vytvořit úkol"));
+      expect(push).toHaveBeenLastCalledWith("/work/tasks/task-9");
+
+      processMutate.mockImplementationOnce((_vars, opts) => opts.onSuccess({ body: { runs: [] } }));
+      fireEvent.click(screen.getByText("Vytvořit úkol"));
+      expect(push).toHaveBeenLastCalledWith("/dashboard/inbox/issues/acme/j1-acme-5");
+    });
+
+    it("says so instead of rendering the form when the issue is not in the inbox", () => {
+      inbox.data = { items: [] };
+      render(<NewTaskScreen />);
+      expect(screen.getByText("Issue v inboxu nenalezeno.")).toBeInTheDocument();
+      expect(screen.queryByText("Vytvořit úkol")).not.toBeInTheDocument();
+    });
   });
 });

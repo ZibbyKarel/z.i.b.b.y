@@ -4,9 +4,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, renderWithProviders, screen } from "../../../test/render";
 import { InboxItemScreen, InboxItemScreenTestId } from "./InboxItemScreen";
 
-const { hooks } = vi.hoisted(() => ({
+const { hooks, process, push } = vi.hoisted(() => ({
   hooks: { data: undefined as unknown },
+  process: vi.fn(),
+  push: vi.fn(),
 }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 vi.mock("../queries", () => ({
   useInboxItemsQuery: () => ({
     data: hooks.data,
@@ -23,7 +26,7 @@ vi.mock("../queries", () => ({
 }));
 vi.mock("../useInboxItemActions", () => ({
   useInboxItemActions: () => ({
-    process: vi.fn(),
+    process,
     isProcessing: () => false,
     toggleHidden: vi.fn(),
   }),
@@ -166,5 +169,15 @@ describe("InboxItemScreen title", () => {
     setData([item({})]);
     renderWithProviders(<InboxItemScreen itemId="i1" projectId="api" />);
     expect(screen.getByTestId(InboxItemScreenTestId.Title)).not.toHaveAttribute("href");
+  });
+});
+
+describe("InboxItemScreen process", () => {
+  it("opens the new-task page linked to the issue instead of processing immediately (TODO 7)", () => {
+    setData([item({})]);
+    renderWithProviders(<InboxItemScreen itemId="i1" projectId="api" />);
+    fireEvent.click(screen.getByTestId(InboxItemScreenTestId.Process));
+    expect(push).toHaveBeenCalledWith("/work/tasks/new?issue=api%2Fi1");
+    expect(process).not.toHaveBeenCalled();
   });
 });

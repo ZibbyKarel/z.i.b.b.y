@@ -12,9 +12,12 @@ import {
   hiddenCount,
   inboxCounts,
   issueChains,
+  issueTaskPrefill,
   linkedPrOf,
+  newTaskFromIssueHref,
   normalizeSearch,
   parentPr,
+  parseIssueRef,
   passesFilters,
   prAncestors,
   prBaseLabel,
@@ -476,5 +479,30 @@ describe("prState", () => {
     [{ draft: true, bucket: "reviewed" as const }, "draft", "neutral"],
   ])("%j → %s / %s", (over, key, tone) => {
     expect(prState(pr(1, over))).toEqual({ key, tone });
+  });
+});
+
+describe("new task from an issue (TODO 7)", () => {
+  it("links to the new-task page with an encoded issue reference that parses back", () => {
+    const item = makeItem({ projectId: "my api", id: "jira-1-api-1" });
+    const href = newTaskFromIssueHref(item);
+    expect(href).toBe("/work/tasks/new?issue=my%20api%2Fjira-1-api-1");
+    const issue = new URLSearchParams(href.split("?")[1]).get("issue");
+    expect(parseIssueRef(issue ?? "")).toEqual({ projectId: "my api", itemId: "jira-1-api-1" });
+  });
+
+  it("prefills the title and the brief from the issue", () => {
+    const item = makeItem({
+      description: "Webhooks drop on 5xx.",
+      source: { kind: "jira", externalKey: "API-1", url: "https://jira.example/browse/API-1" },
+    });
+    expect(issueTaskPrefill(item)).toEqual({
+      title: "Implementation of issue API-1",
+      text: "Issue API-1\nhttps://jira.example/browse/API-1\n\nWebhooks drop on 5xx.",
+    });
+  });
+
+  it("leaves out the URL and the description when the issue has none", () => {
+    expect(issueTaskPrefill(makeItem()).text).toBe("Issue API-1");
   });
 });

@@ -13,6 +13,7 @@ import type {
   InboxState,
   Project,
   RoadmapItem,
+  RoadmapTaskOverride,
   ScheduledTask,
   SetInboxHidden,
 } from "@zibby/contracts";
@@ -208,11 +209,15 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** Hand one live issue to ZIBBY: local record if missing, then the roadmap gate's play. */
-  async processItem(projectId: string, itemId: string): Promise<RoadmapItem> {
+  async processItem(
+    projectId: string,
+    itemId: string,
+    override?: RoadmapTaskOverride,
+  ): Promise<RoadmapItem> {
     const { items } = await this.listItems();
     const item = items.find((i) => i.projectId === projectId && i.id === itemId);
     if (!item) throw new InboxItemNotFoundError(projectId, itemId);
-    return this.issues.process(item);
+    return this.issues.process(item, override);
   }
 
   /** Cached GitHub classification + the (uncached, local) review/rebase/address-comments task state per PR. */
