@@ -29,9 +29,11 @@ export class AutopilotController {
             body: { message: "Turning autopilot on requires the operator token." },
           };
         }
+        // Tokenless callers may only tighten: a tree planted with `off` would be live at the next switch-on.
+        const tree = level === "full" ? automation : undefined;
         return {
           status: 200,
-          body: await this.autopilot.set(level, "operator", scope, automation),
+          body: await this.autopilot.set(level, "operator", scope, tree),
         };
       },
     });

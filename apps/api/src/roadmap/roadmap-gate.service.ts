@@ -81,7 +81,7 @@ export function parsePrNumberFromUrl(url: string): number | undefined {
  * unblocked; how much actually runs is decided by the machine fuse
  * (`maxWorkingAgents`). `TaskSchedulerService.createTask` owns it — it decides
  * whether a release dispatches immediately or gets `queued`/held, and it is what
- * keeps an `autoPlay` project from starting a whole twenty-task epic at once. Either
+ * keeps an `autoImplement` project from starting a whole twenty-task epic at once. Either
  * way the roadmap item is `running` the moment its task exists; the task's own
  * queued-vs-dispatched fate is the scheduler's business.
  *
@@ -314,7 +314,7 @@ export class RoadmapGateService {
 
   /**
    * The standing-consent counterpart of `play` — what `RoadmapTickService` calls
-   * each tick for a project whose `RoadmapConfig.autoPlay` is on. The caller owns
+   * each tick for a project whose the effective Autopilot `autoImplement` is on. The caller owns
    * that check; this method assumes consent and only decides WHAT is eligible.
    *
    * Only `source.kind === "manual"` items are eligible (see the filter below).
@@ -555,7 +555,7 @@ export class RoadmapGateService {
         .sort((a, b) => (a.enqueuedAt ?? "").localeCompare(b.enqueuedAt ?? ""));
       // NS2 F10 — one parked routing question per item, by construction. Without
       // this the park would loop: `autoPickup` re-enqueues every unblocked item on
-      // each tick, so an `autoPlay` project would stack a fresh approval per tick for
+      // each tick, so an `autoImplement` project would stack a fresh approval per tick for
       // the same undecidable item. Checked HERE rather than by flipping the item's
       // lifecycle out of `enqueued`, because that flip would only move the loop —
       // `autoPickup` picks `todo` items up again — while also churning a file write

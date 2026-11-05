@@ -31,8 +31,8 @@ import { RoadmapStore } from "./roadmap.store";
  * opted in — dispatches implementation work onto its own branch. It never
  * merges, never pushes to a shared branch, never deploys: the PR is where it
  * stops, exactly as when the operator clicks Play. A dispatch here is a
- * Tier-1/2 act with the operator's standing consent (the per-project `autoPlay`
- * toggle), not an autonomous commit to the outside world.
+ * Tier-1/2 act with the operator's standing consent (the Autopilot
+ * `autoImplement` toggle), not an autonomous commit to the outside world.
  *
  * Per-project AND per-step try/catch: one project's failure never blocks
  * another project's tick.

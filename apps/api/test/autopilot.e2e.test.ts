@@ -85,4 +85,20 @@ describe("Autopilot API (e2e)", () => {
     );
     await request(server()).put("/api/autopilot").send({ level: "off" }).expect(200);
   });
+
+  it("a tokenless off request cannot plant or change the automation tree", async () => {
+    const stored = (await request(server()).get("/api/autopilot")).body.automation;
+    await request(server())
+      .put("/api/autopilot")
+      .send({
+        level: "off",
+        automation: {
+          global: { autoImplement: true, autoReview: true, autoAddressComments: true },
+          companies: {},
+          teams: {},
+        },
+      })
+      .expect(200);
+    expect((await request(server()).get("/api/autopilot")).body.automation).toEqual(stored);
+  });
 });

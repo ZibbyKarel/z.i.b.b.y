@@ -3612,7 +3612,7 @@
     "status": "Autopilot on · {pending} pending",
     "confirm": "Turn on",
     "dialogTitle": "Turn autopilot on?",
-    "dialogBody": "While it is on, ZIBBY does the actions selected below without asking and reports each one. It only pushes to its own branches and to the branches of your PRs. Merge, deploy, payments, deletes, force pushes and pushes to shared branches still wait for you.",
+    "dialogBody": "While it is on, ZIBBY does the actions selected below without asking and reports each one. It only pushes to its own branches and to the branches of your PRs. Merge, deploy, payments, deletes, force pushes and pushes to shared branches still wait for you. Slack notifications are only sent while Autopilot is on.",
     "scopeReviews": "Automatic code review",
     "scopeReviewsHint": "Posts finished code reviews on the PR as a comment.",
     "scopeComments": "Automatic comment handling",

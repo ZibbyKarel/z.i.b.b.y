@@ -60,14 +60,14 @@ switch-on pre-fills it. A state without `automation` means all three global togg
 
 ## Endpoints
 
-| Route                | Auth                      | Notes                                                                                             |
-| -------------------- | ------------------------- | ------------------------------------------------------------------------------------------------- |
-| `GET /api/autopilot` | none                      | The state plus `pendingApprovals` (the count waiting now)                                         |
-| `PUT /api/autopilot` | operator token for `full` | `{ level, scope?, automation? }`. `full` without the token returns `401`; `off` is always allowed |
+| Route                | Auth                      | Notes                                                                                                                                      |
+| -------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET /api/autopilot` | none                      | The state plus `pendingApprovals` (the count waiting now)                                                                                  |
+| `PUT /api/autopilot` | operator token for `full` | `{ level, scope?, automation? }`. `full` without the token returns `401`; `off` is always allowed (any `automation` it carries is ignored) |
 
 `scope` only counts with `full`; omitted means all on. Setting the same level, scope and
-automation tree again is a no-op (the file isn't written, no notice is sent). Switching on or off
-is never pushed to Slack.
+automation tree again is a no-op (the file isn't written). Slack notifications are only sent while Autopilot is on; switching
+on or off is never pushed to Slack.
 
 `automation` is the Global → Company → Team override tree of `autoImplement`, `autoReview` and
 `autoAddressComments` (team > company > global; all `false` while the level is `off`). The roadmap

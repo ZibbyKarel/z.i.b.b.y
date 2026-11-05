@@ -46,7 +46,7 @@ export function resolveInboxStateFile(): string {
     InboxFixCiService,
     InboxPrDiffService,
     InboxPrThreadsService,
-    // todo-16 — the PR automation heartbeat. RoadmapStore (config), SystemConfigStore,
+    // todo-16 — the PR automation heartbeat. AutopilotService (automation tree), SystemConfigStore,
     // WatcherHealthRegistry and ActivityLogService are all @Global — no new import, no cycle.
     PrAutomationService,
   ],

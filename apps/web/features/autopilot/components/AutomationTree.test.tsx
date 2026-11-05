@@ -37,7 +37,7 @@ describe("AutomationTree", () => {
     });
   });
 
-  it("company Off writes the override, Inherit removes the company key", async () => {
+  it("company Off writes the override", async () => {
     const onChange = setup();
     await userEvent.click(
       within(toggle("company:shoptet", "autoReview")).getByTestId("segmented-control-item-off"),
@@ -46,14 +46,19 @@ describe("AutomationTree", () => {
       ...empty,
       companies: { shoptet: { autoReview: false } },
     });
+  });
 
-    onChange.mockClear();
-    document.body.innerHTML = "";
-    const onChange2 = setup({ ...empty, companies: { shoptet: { autoReview: false } } });
+  it("company Inherit removes the company key", async () => {
+    const onChange = setup({ ...empty, companies: { shoptet: { autoReview: false } } });
     await userEvent.click(
       within(toggle("company:shoptet", "autoReview")).getByTestId("segmented-control-item-inherit"),
     );
-    expect(onChange2).toHaveBeenCalledWith(empty);
+    expect(onChange).toHaveBeenCalledWith(empty);
+  });
+
+  it("a company with a team override starts expanded", () => {
+    setup({ ...empty, teams: { devrel: { autoReview: true } } });
+    expect(row("team:devrel")).toBeDefined();
   });
 
   it("inherit shows the inherited effective value", () => {

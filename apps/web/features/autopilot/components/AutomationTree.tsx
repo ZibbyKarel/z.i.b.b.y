@@ -10,6 +10,7 @@ import type {
 } from "@zibby/contracts";
 import {
   Button,
+  IndentRail,
   Row,
   SegmentedControl,
   Stack,
@@ -51,18 +52,9 @@ interface OverrideRowProps {
   inherited: AutomationToggles;
   onSet: (key: AutomationKey, next: boolean | undefined) => void;
   expand?: { open: boolean; onToggle: () => void } | undefined;
-  indent?: boolean;
 }
 
-function OverrideRow({
-  node,
-  label,
-  override,
-  inherited,
-  onSet,
-  expand,
-  indent,
-}: OverrideRowProps) {
+function OverrideRow({ node, label, override, inherited, onSet, expand }: OverrideRowProps) {
   const t = useTranslations("autopilot");
   return (
     <Stack data-node={node} data-testid={AutomationTreeTestId.Node} gap="75">
@@ -78,7 +70,7 @@ function OverrideRow({
             size="sm"
           />
         ) : null}
-        <Typography type="label">{indent ? `– ${label}` : label}</Typography>
+        <Typography type="label">{label}</Typography>
       </Row>
       {KEYS.map((key) => {
         const own = override?.[key];
@@ -121,7 +113,15 @@ function OverrideRow({
  */
 export function AutomationTree({ value, onChange, companies, teams }: AutomationTreeProps) {
   const t = useTranslations("autopilot");
-  const [open, setOpen] = useState<Set<string>>(new Set());
+  // Companies holding a team override start expanded so hidden overrides stay visible.
+  const [open, setOpen] = useState<Set<string>>(
+    () =>
+      new Set(
+        teams
+          .filter((tm) => tm.companyId && value.teams[tm.id])
+          .map((tm) => tm.companyId as string),
+      ),
+  );
 
   const setOverride = (level: Level, id: string, key: AutomationKey, next: boolean | undefined) => {
     const { [id]: current, ...rest } = value[level];
@@ -131,9 +131,9 @@ export function AutomationTree({ value, onChange, companies, teams }: Automation
   };
 
   const companyIds = new Set(companies.map((c) => c.id));
-  const teamRow = (team: Team, inherited: AutomationToggles, indent: boolean) => (
+  // The web nests teams by `team.companyId`; the backend resolves `project.companyId ?? team.companyId`.
+  const teamRow = (team: Team, inherited: AutomationToggles) => (
     <OverrideRow
-      indent={indent}
       inherited={inherited}
       key={team.id}
       label={team.name}
@@ -183,13 +183,15 @@ export function AutomationTree({ value, onChange, companies, teams }: Automation
               onSet={(key, next) => setOverride("companies", company.id, key, next)}
               override={value.companies[company.id]}
             />
-            {isOpen && companyTeams.map((tm) => teamRow(tm, inherited, true))}
+            {isOpen && companyTeams.length > 0 ? (
+              <IndentRail>{companyTeams.map((tm) => teamRow(tm, inherited))}</IndentRail>
+            ) : null}
           </Stack>
         );
       })}
       {teams
         .filter((tm) => !tm.companyId || !companyIds.has(tm.companyId))
-        .map((tm) => teamRow(tm, value.global, false))}
+        .map((tm) => teamRow(tm, value.global))}
     </Stack>
   );
 }

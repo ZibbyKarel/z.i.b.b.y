@@ -3612,7 +3612,7 @@
     "status": "Autopilot zapnutý · čeká {pending}",
     "confirm": "Zapnout",
     "dialogTitle": "Zapnout autopilota?",
-    "dialogBody": "Dokud je zapnutý, ZIBBY provádí níže vybrané akce bez ptaní a každou ohlásí. Pushuje jen do vlastních větví a do větví tvých PR. Merge, deploy, platby, mazání, force push a push do sdílených větví dál čekají na tebe.",
+    "dialogBody": "Dokud je zapnutý, ZIBBY provádí níže vybrané akce bez ptaní a každou ohlásí. Pushuje jen do vlastních větví a do větví tvých PR. Merge, deploy, platby, mazání, force push a push do sdílených větví dál čekají na tebe. Upozornění na Slack se posílají jen při zapnutém Autopilotu.",
     "scopeReviews": "Automatické code review",
     "scopeReviewsHint": "Posílá hotová code review na PR jako komentář.",
     "scopeComments": "Automatické zpracování komentářů",
