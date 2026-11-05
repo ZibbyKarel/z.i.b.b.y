@@ -1,28 +1,82 @@
 "use client";
 
 import {
+  BoardGrid,
   BoardLine,
   BoardRow,
-  BoardTag,
   BoardText,
+  ButtonGroup,
+  Container,
+  FilterBar,
+  Icon,
   IconBadge,
+  type IconName,
+  IconTile,
+  type IconTone,
   IndentRail,
-  RowGroupHeader,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { Fragment, useCallback, useMemo } from "react";
+import { Fragment, type ReactNode, useCallback, useMemo, useState } from "react";
 import { useNow } from "../../../hooks/useNow";
 import { compactAgo } from "../../../utils/time";
 import { useRefreshInboxMutation } from "../../inbox/mutations";
 import { useInboxPrsQuery } from "../../inbox/queries";
-import { type PrRowVm, prGroups } from "../state/rows";
+import {
+  PR_CI_STATES,
+  PR_REVIEW_STATES,
+  type PrCiState,
+  type PrReviewState,
+} from "../state/prStatus";
+import { type PrFilterPick, type PrNodeVm, type PrRowVm, prTree } from "../state/rows";
 import { useBridgeInboxFilters } from "../state/useBridgeInboxFilters";
 import type { BridgeWidgetProps } from "./registry";
 import { useWidgetReport } from "./useWidgetReport";
 
+export enum PrsWidgetTestId {
+  Avatar = "prs-widget-avatar",
+  Ci = "prs-widget-ci",
+  Review = "prs-widget-review",
+}
+
+const CI_ICON: Record<PrCiState, { name: IconName; tone: IconTone }> = {
+  conflict: { name: "branch", tone: "bad" },
+  failing: { name: "x", tone: "bad" },
+  running: { name: "run", tone: "run" },
+  passing: { name: "ok", tone: "ok" },
+  none: { name: "dots", tone: "faint" },
+};
+
+const REVIEW_ICON: Record<PrReviewState, { name: IconName; tone: IconTone }> = {
+  review: { name: "search", tone: "accent" },
+  changes: { name: "edit", tone: "warn" },
+  approved: { name: "check", tone: "ok" },
+  waiting: { name: "wait", tone: "faint" },
+};
+
+/** Stack levels drawn as indentation; deeper PRs line up with the last one. */
+const MAX_INDENT = 3;
+
+/** A status glyph with its meaning as the accessible name and the hover tooltip. */
+function StateIcon({
+  icon,
+  label,
+  testId,
+}: {
+  icon: { name: IconName; tone: IconTone };
+  label: string;
+  testId: string;
+}) {
+  return (
+    <span aria-label={label} data-testid={testId} role="img" title={label}>
+      <Icon name={icon.name} size="sm" tone={icon.tone} />
+    </span>
+  );
+}
+
 /**
- * Pull requests: the set the `/dashboard/inbox/pull-requests` screen lists (stored filters),
- * grouped by stack — root card, children indented behind a rail — most urgent group first.
+ * Pull requests: the set the `/dashboard/inbox/pull-requests` screen lists (stored filters) as
+ * one flat list, newest first, each stack kept together (base -> head, indented behind a rail).
+ * The filter row above narrows by review / CI state and doubles as the legend of the card icons.
  * No action buttons here; they live in the detail sheet.
  */
 export function PrsWidget({
@@ -32,8 +86,6 @@ export function PrsWidget({
   selection,
   onOpen,
   sheetSide,
-  epicClosed,
-  onEpicToggle,
 }: BridgeWidgetProps) {
   const t = useTranslations("bridge.widgets.prs");
   const now = useNow(60_000);
@@ -43,28 +95,31 @@ export function PrsWidget({
   // A failed sync just re-enables the button; the previous data stays on screen.
   const onRefresh = useCallback(() => mutate(), [mutate]);
   const prsQuery = useInboxPrsQuery();
+  const [pick, setPick] = useState<PrFilterPick>({});
 
-  const { groups, visible } = useMemo(
-    () => prGroups(widget.id, prsQuery.data?.prs ?? [], filters, (iso) => compactAgo(iso, now)),
-    [widget.id, prsQuery.data, filters, now],
+  const { nodes, counts, total, you } = useMemo(
+    () => prTree(widget.id, prsQuery.data?.prs ?? [], filters, pick, (iso) => compactAgo(iso, now)),
+    [widget.id, prsQuery.data, filters, pick, now],
   );
+  // The header counts the whole set, not the picked slice: an empty pick must not collapse the
+  // widget (and its filter with it).
 
   useWidgetReport(
     {
       onRefresh,
       refreshing: refresh.isPending,
       loading: prsQuery.isPending,
-      count: prsQuery.isPending ? undefined : visible.length,
-      you: 0,
+      count: prsQuery.isPending ? undefined : total,
+      you,
     },
     { onEmptyChange, onCountChange },
   );
 
-  // A stack sits in its root's section; a row whose own ownership differs (a colleague's PR
-  // stacked on mine, or mine on theirs) is tagged so the section never claims it.
-  const card = (r: PrRowVm, sectionMine: boolean) => (
+  const card = (r: PrRowVm) => (
     <BoardRow
       key={r.key}
+      muted={r.muted}
+      needsYou={r.needsYou}
       onClick={() => onOpen({ kind: "pr", id: r.id, widgetId: widget.id, key: r.key })}
       padding="pr"
       rowKey={r.key}
@@ -72,79 +127,107 @@ export function PrsWidget({
       sheetSide={sheetSide}
       tone={r.tone}
       trailing={
-        r.conversations > 0 ? (
-          <IconBadge
-            count={r.conversations}
-            icon="chat"
-            label={t("conversations", { count: r.conversations })}
+        <BoardLine gap="8">
+          {r.conversations > 0 ? (
+            <IconBadge
+              count={r.conversations}
+              icon="chat"
+              label={t("conversations", { count: r.conversations })}
+            />
+          ) : null}
+          <StateIcon icon={CI_ICON[r.ci]} label={t(`ci.${r.ci}`)} testId={PrsWidgetTestId.Ci} />
+          <StateIcon
+            icon={REVIEW_ICON[r.review]}
+            label={t(`reviewHint.${r.reviewHint}`)}
+            testId={PrsWidgetTestId.Review}
           />
-        ) : undefined
+        </BoardLine>
       }
     >
-      <BoardLine baseline gap="8">
-        <BoardText kind="prNum">{r.number}</BoardText>
-        <BoardText kind="prTitle">{r.title}</BoardText>
-      </BoardLine>
-      <BoardLine wrap gap="6">
-        {r.mine !== sectionMine ? (
-          <BoardTag variant="source">{t(r.mine ? "owner.mine" : "owner.other")}</BoardTag>
-        ) : null}
-        <BoardText kind="prMeta">{r.meta}</BoardText>
-      </BoardLine>
-      <BoardLine wrap gap="8">
-        <BoardText bold kind="prMeta" tone="ink">
-          {t(`status.${r.statusKey}`)}
-          {r.need === "merge" ? ` · ${t("need.merge")}` : ""}
+      <BoardGrid columns="issue">
+        <IconTile
+          alt={r.author}
+          aria-label={r.author}
+          data-testid={PrsWidgetTestId.Avatar}
+          filled={false}
+          role="img"
+          shape="circle"
+          size="xs"
+          src={r.avatarUrl}
+          title={r.author}
+          tone="neutral"
+        >
+          {r.author.charAt(0).toUpperCase()}
+        </IconTile>
+        <BoardLine baseline gap="8">
+          <BoardText kind="prNum">{r.number}</BoardText>
+          <BoardText kind="prTitle">{r.title}</BoardText>
+        </BoardLine>
+        <BoardText kind="meta" tone="ink3">
+          {r.age}
         </BoardText>
-        {r.on ? (
-          <BoardText kind="prMeta" tone="ink3">
-            {t("on", { base: r.on })}
-          </BoardText>
-        ) : null}
-        {r.waits ? (
-          <BoardText kind="prMeta" tone="ink3">
-            {t("waitsOn", { prs: r.waits })}
-          </BoardText>
-        ) : null}
+      </BoardGrid>
+      {/* Not wrapped: when the line runs out of room the project clips first, then the name. */}
+      <BoardLine gap="6" indent="icon">
+        <BoardText kind="prMeta">{r.author}</BoardText>
+        <BoardText kind="prMeta" tone="ink3">
+          · {r.project}
+        </BoardText>
       </BoardLine>
     </BoardRow>
   );
 
+  const tree = (n: PrNodeVm, depth: number): ReactNode => {
+    const kids = n.kids.map((k) => tree(k, depth + 1));
+    return (
+      <Fragment key={n.row.key}>
+        {card(n.row)}
+        {kids.length === 0 ? null : depth < MAX_INDENT ? <IndentRail>{kids}</IndentRail> : kids}
+      </Fragment>
+    );
+  };
+
+  const option = <K extends string>(
+    id: K,
+    label: string,
+    icon: { name: IconName; tone: IconTone },
+    count: number,
+  ) => ({
+    id,
+    label,
+    leading: <Icon name={icon.name} size="sm" tone={icon.tone} />,
+    trailing: String(count),
+  });
+
   return (
     <>
-      {groups.map((g, i) => {
-        const first = i === 0 || g.section !== groups[i - 1]?.section;
-        const sectionKey = `${widget.id}:${g.section}`;
-        const closed = !!epicClosed[sectionKey];
-        const sectionMine = g.section === "mine";
-        const title = t(g.section === "review" ? "section.toReview" : `section.${g.section}`);
-        return (
-          <Fragment key={g.root.key}>
-            {first ? (
-              <RowGroupHeader
-                closed={closed}
-                count={String(
-                  groups
-                    .filter((x) => x.section === g.section)
-                    .reduce((n, x) => n + 1 + x.kids.length, 0),
-                )}
-                groupKey=""
-                label={t("section.toggle", { title })}
-                onToggle={() => onEpicToggle(sectionKey, !closed)}
-                title={title}
-              />
-            ) : null}
-            {closed ? null : (
-              <>
-                {card(g.root, sectionMine)}
-                {g.kids.length > 0 ? (
-                  <IndentRail>{g.kids.map((k) => card(k, sectionMine))}</IndentRail>
-                ) : null}
-              </>
-            )}
-          </Fragment>
-        );
-      })}
+      <Container padding={["100", "150"]}>
+        <FilterBar>
+          <ButtonGroup
+            ariaLabel={t("filter.review")}
+            onChange={(v) =>
+              setPick((p) => ({ ...p, review: PR_REVIEW_STATES.find((s) => s === v) }))
+            }
+            options={[
+              { id: "all", label: t("filter.all") },
+              ...PR_REVIEW_STATES.map((s) =>
+                option(s, t(`review.${s}`), REVIEW_ICON[s], counts.review[s]),
+              ),
+            ]}
+            value={pick.review ?? "all"}
+          />
+          <ButtonGroup
+            ariaLabel={t("filter.ci")}
+            onChange={(v) => setPick((p) => ({ ...p, ci: PR_CI_STATES.find((s) => s === v) }))}
+            options={[
+              { id: "all", label: t("filter.all") },
+              ...PR_CI_STATES.map((s) => option(s, t(`ci.${s}`), CI_ICON[s], counts.ci[s])),
+            ]}
+            value={pick.ci ?? "all"}
+          />
+        </FilterBar>
+      </Container>
+      {nodes.map((n) => tree(n, 0))}
     </>
   );
 }

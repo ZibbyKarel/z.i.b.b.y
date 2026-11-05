@@ -20,6 +20,17 @@ describe("BoardRow", () => {
     expect(onClick).toHaveBeenCalledOnce();
   });
 
+  it("draws a muted row at half opacity", () => {
+    const { rerender } = render(<BoardRow tone="idle">x</BoardRow>);
+    expect(screen.getByTestId(BoardRowTestId.Root)).not.toHaveClass("opacity-50");
+    rerender(
+      <BoardRow muted tone="idle">
+        x
+      </BoardRow>,
+    );
+    expect(screen.getByTestId(BoardRowTestId.Root)).toHaveClass("opacity-50");
+  });
+
   it("marks selected and needsYou", () => {
     const { rerender } = render(
       <BoardRow needsYou tone="blocked">

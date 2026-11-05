@@ -1,6 +1,6 @@
 import type { InboxPr } from "@zibby/contracts";
 import { describe, expect, it } from "vitest";
-import { prStack, prStatus } from "./prStatus";
+import { prCiState, prReviewState, prStack, prStatus } from "./prStatus";
 
 const pr = (over: Partial<InboxPr> = {}): InboxPr => ({
   source: "github",
@@ -60,5 +60,53 @@ describe("prStack", () => {
     expect(prStack(c, [a, b, c, other]).map((p) => p.number)).toEqual([1, 2]);
     expect(prStack(a, [a, b, c])).toEqual([]);
     expect(prStack(other, [a, b, c, other])).toEqual([]);
+  });
+});
+
+describe("card slots", () => {
+  const head = "b".repeat(40);
+  it("CI: conflict > failing > running > passing > none", () => {
+    expect(prCiState(pr({ mergeable: false, ci: "failing" }))).toBe("conflict");
+    expect(prCiState(pr({ ci: "failing" }))).toBe("failing");
+    expect(prCiState(pr({ ci: "pending" }))).toBe("running");
+    expect(prCiState(pr())).toBe("passing");
+    expect(prCiState(pr({ ci: "unknown", mergeable: null }))).toBe("none");
+  });
+
+  it("own PR: changes > approved by a colleague > awaiting review", () => {
+    expect(prReviewState(pr({ review: "changes-requested" }))).toBe("changes");
+    expect(prReviewState(pr({ review: "approved" }))).toBe("approved");
+    expect(prReviewState(pr())).toBe("review");
+  });
+
+  it("others' PR: my current approval wins, even over changes from someone else", () => {
+    const approved = { myReview: "approved" as const, myReviewSha: head, headSha: head };
+    expect(
+      prReviewState(pr({ bucket: "reviewed", review: "changes-requested", ...approved })),
+    ).toBe("approved");
+    // a team request still open after my approval doesn't bring it back
+    expect(prReviewState(pr({ bucket: "to-review", reviewReason: "team", ...approved }))).toBe(
+      "approved",
+    );
+  });
+
+  it("others' PR: a re-request or new commits after my approval want my review again", () => {
+    const approved = { myReview: "approved" as const, myReviewSha: head, headSha: head };
+    expect(prReviewState(pr({ bucket: "to-review", reviewReason: "direct", ...approved }))).toBe(
+      "review",
+    );
+    expect(prReviewState(pr({ bucket: "reviewed", ...approved, headSha: "c".repeat(40) }))).toBe(
+      "review",
+    );
+    expect(prReviewState(pr({ bucket: "to-review" }))).toBe("review");
+  });
+
+  it("others' PR: changes requested, else waiting", () => {
+    expect(
+      prReviewState(
+        pr({ bucket: "reviewed", myReview: "changes-requested", review: "changes-requested" }),
+      ),
+    ).toBe("changes");
+    expect(prReviewState(pr({ bucket: "reviewed", myReview: "commented" }))).toBe("waiting");
   });
 });

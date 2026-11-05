@@ -3241,35 +3241,34 @@
         "epicToggle": "Přepnout epic {title}"
       },
       "prs": {
-        "status": {
-          "reviewRequested": "Žádost o review",
-          "draft": "Koncept",
-          "ciFailing": "CI selhává",
-          "mergeConflict": "Konflikt při mergi",
-          "changesRequested": "Požadované změny",
-          "checksRunning": "Kontroly běží",
-          "approved": "Schváleno",
-          "awaitingReview": "Čeká na review",
-          "reviewedApproved": "Schváleno tebou",
-          "reviewedChangesRequested": "Požadoval jsi změny",
-          "reviewedCommented": "Okomentováno tebou"
-        },
-        "need": {
-          "merge": "Merge"
-        },
-        "you": "Ty · {wait}",
-        "on": "Na {base}",
-        "waitsOn": "· Čeká na {prs}",
         "conversations": "{count, plural, one {# nevyřešená konverzace} few {# nevyřešené konverzace} other {# nevyřešených konverzací}}",
-        "owner": {
-          "mine": "Moje",
-          "other": "Cizí"
+        "filter": {
+          "review": "Filtrovat podle stavu review",
+          "ci": "Filtrovat podle CI",
+          "all": "Vše"
         },
-        "section": {
-          "mine": "Moje",
-          "toReview": "K review",
-          "reviewed": "Zrevidováno tebou",
-          "toggle": "Sbalit / rozbalit {title}"
+        "review": {
+          "review": "Čeká na review",
+          "changes": "Požadované změny",
+          "approved": "Schváleno",
+          "waiting": "Čeká"
+        },
+        "reviewHint": {
+          "reviewMine": "Čeká na review kolegů",
+          "reviewYou": "Čeká na tvoje review",
+          "reviewStale": "Nové commity od tvého schválení",
+          "approvedYou": "Schváleno tebou",
+          "approvedOther": "Schváleno kolegou",
+          "changesYou": "Požadoval jsi změny",
+          "changes": "Požadované změny",
+          "waiting": "Čeká na ostatní"
+        },
+        "ci": {
+          "conflict": "Konflikt",
+          "failing": "CI selhává",
+          "running": "CI běží",
+          "passing": "CI v pořádku",
+          "none": "Bez CI"
         }
       },
       "runs": {

@@ -176,6 +176,7 @@ describe("InboxService.listPrs", () => {
       graphqlStatus?: number;
       graphqlBody?: unknown;
       headSha?: string;
+      myApproval?: boolean;
       reviewed?: boolean;
       reviewedNumbers?: number[];
       reviewedStatus?: number;
@@ -212,6 +213,7 @@ describe("InboxService.listPrs", () => {
       if (u.pathname === "/user") {
         return json({ login: "me" }, opts.userStatus ?? 200);
       }
+      if (u.pathname === "/users/alice") return json({ name: "Alice Novak" });
       if (u.pathname === "/search/issues") {
         if (q.includes("reviewed-by:@me") && opts.reviewedStatus)
           return json({}, opts.reviewedStatus);
@@ -239,7 +241,7 @@ describe("InboxService.listPrs", () => {
           mergeable: n === 2 ? false : true,
           mergeable_state: n === 3 ? "behind" : "clean",
           created_at: "2026-10-01T10:00:00Z",
-          user: { login: n === 3 ? "me" : "alice" },
+          user: { login: n === 3 ? "me" : "alice", avatar_url: "https://avatars.example/u/1" },
           head: {
             sha: opts.headSha ?? `sha${n}`,
             ref: `feat-${n}`,
@@ -252,6 +254,8 @@ describe("InboxService.listPrs", () => {
       if (u.pathname.endsWith("/reviews")) {
         if (u.pathname.includes("/pulls/7/"))
           return json([{ user: { login: "me" }, state: "CHANGES_REQUESTED" }]);
+        if (u.pathname.includes("/pulls/1/") && opts.myApproval)
+          return json([{ user: { login: "me" }, state: "APPROVED", commit_id: "a".repeat(40) }]);
         return json(
           u.pathname.includes("/pulls/3/")
             ? [
@@ -302,6 +306,21 @@ describe("InboxService.listPrs", () => {
     });
     expect(byNumber[8]).toMatchObject({ bucket: "to-review", reviewReason: "direct" });
     expect(byNumber[8]?.myReview).toBeUndefined();
+  });
+
+  it("a review request you already gave a verdict on carries it with its commit, plus author name + avatar", async () => {
+    const { service } = build([], { myApproval: true });
+    const byNumber = Object.fromEntries((await service.listPrs()).prs.map((p) => [p.number, p]));
+    expect(byNumber[1]).toMatchObject({
+      bucket: "to-review",
+      myReview: "approved",
+      myReviewSha: "a".repeat(40),
+      authorName: "Alice Novak",
+      authorAvatarUrl: "https://avatars.example/u/1",
+    });
+    expect(byNumber[2]?.myReview).toBeUndefined();
+    expect(byNumber[3]?.myReview).toBeUndefined(); // never on my own PR
+    expect(byNumber[3]?.authorName).toBeUndefined(); // the profile read failed: login only
   });
 
   it("a failing reviewed-by search drops only those PRs", async () => {

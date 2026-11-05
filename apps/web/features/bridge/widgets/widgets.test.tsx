@@ -1,9 +1,10 @@
 import type { InboxPr, InboxRoadmapItem } from "@zibby/contracts";
 import {
   BoardRowTestId,
-  BoardTagTestId,
+  ButtonGroupTestId,
   IconBadgeTestId,
   IconTestId,
+  IndentRailTestId,
   KpiStripTestId,
   ProgressTestId,
   RowGroupHeaderTestId,
@@ -14,7 +15,7 @@ import { renderWithProviders, screen, within } from "../../../test/render";
 import type { BridgeWidget } from "../grid/layout";
 import { BriefingWidget } from "./BriefingWidget";
 import { IssuesWidget, IssuesWidgetTestId } from "./IssuesWidget";
-import { PrsWidget } from "./PrsWidget";
+import { PrsWidget, PrsWidgetTestId } from "./PrsWidget";
 import type { BridgeWidgetProps } from "./registry";
 import { RunsWidget, RunsWidgetTestId } from "./RunsWidget";
 import { TasksWidget } from "./TasksWidget";
@@ -261,29 +262,33 @@ describe("header sync button", () => {
 });
 
 describe("PrsWidget", () => {
-  it("renders stacks (kids behind the rail), status, ON / WAITS ON and opens by url", async () => {
+  it("renders one flat list, stacks nested behind the rail, icons named by their meaning; opens by url", async () => {
     d.prs = [
       pr(1, { headRef: "a", baseRef: "main" }),
       pr(2, { headRef: "b", baseRef: "a", ci: "failing", blocker: "ci-failing" }),
-      pr(3, { bucket: "to-review", author: "jana" }),
+      pr(3, { bucket: "to-review", author: "jana", authorName: "Jana Nová" }),
     ];
     const props = setup({ widget: widget("w-prs", "prs") });
     renderWithProviders(<PrsWidget {...props} />);
 
-    const headers = screen.getAllByTestId(RowGroupHeaderTestId.Root);
-    expect(headers).toHaveLength(2); // own PRs first, review requests in their own section
-    expect(headers[0]).toHaveTextContent("Moje");
-    expect(headers[1]).toHaveTextContent("K review");
+    expect(screen.queryAllByTestId(RowGroupHeaderTestId.Root)).toHaveLength(0); // no sections
     const rows = screen.getAllByTestId(BoardRowTestId.Root);
     expect(rows).toHaveLength(3);
-    expect(rows[2]).toHaveAttribute("data-rk", "w-prs:https://github.com/o/r/pull/3");
-    expect(rows[2]).toHaveTextContent("Žádost o review");
-    expect(rows[2]).toHaveTextContent("jana");
     const kid = screen.getByText("PR 2").closest("button") as HTMLElement;
-    expect(kid).toHaveTextContent("CI selhává");
-    expect(kid).toHaveTextContent("Na #1");
-    expect(kid).toHaveTextContent("Čeká na #1");
-    expect(within(rows[2] as HTMLElement).queryAllByRole("button")).toHaveLength(0); // no action buttons
+    expect(screen.getByTestId(IndentRailTestId.Root)).toContainElement(kid);
+    expect(within(kid).getByTestId(PrsWidgetTestId.Ci)).toHaveAccessibleName("CI selhává");
+    expect(within(kid).getByTestId(PrsWidgetTestId.Review)).toHaveAccessibleName(
+      "Čeká na review kolegů",
+    );
+    const theirs = screen.getByText("PR 3").closest("button") as HTMLElement;
+    expect(theirs).toHaveAttribute("data-rk", "w-prs:https://github.com/o/r/pull/3");
+    expect(theirs).toHaveTextContent("Jana Nová");
+    expect(theirs).toHaveTextContent("orders");
+    expect(within(theirs).getByTestId(PrsWidgetTestId.Avatar)).toHaveAccessibleName("Jana Nová");
+    expect(within(theirs).getByTestId(PrsWidgetTestId.Review)).toHaveAccessibleName(
+      "Čeká na tvoje review",
+    );
+    expect(within(theirs).queryAllByRole("button")).toHaveLength(0); // no action buttons
 
     await userEvent.click(kid);
     expect(props.onOpen).toHaveBeenCalledWith({
@@ -293,7 +298,7 @@ describe("PrsWidget", () => {
       key: "w-prs:https://github.com/o/r/pull/2",
     });
     expect(props.onCountChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({ count: 3, you: 0 }),
+      expect.objectContaining({ count: 3, you: 1 }),
     );
   });
 
@@ -308,25 +313,30 @@ describe("PrsWidget", () => {
     expect(screen.getAllByTestId(IconBadgeTestId.Root)).toHaveLength(1);
   });
 
-  it("marks a colleague's PR inside my stack as not mine, without the conversations badge", () => {
+  it("the filter picks one state; the picked PR keeps its stack as muted context", async () => {
     d.prs = [
       pr(1, { headRef: "a", baseRef: "main" }),
-      pr(2, {
-        headRef: "b",
-        baseRef: "a",
-        bucket: "to-review",
-        author: "jana",
-        unresolvedThreads: 3,
-      }),
-      pr(3, { headRef: "c", baseRef: "b" }),
+      pr(2, { headRef: "b", baseRef: "a", mergeable: false }),
+      pr(3),
     ];
     const props = setup({ widget: widget("w", "prs") });
     renderWithProviders(<PrsWidget {...props} />);
-    expect(screen.getAllByTestId(RowGroupHeaderTestId.Root)).toHaveLength(1);
-    const tag = screen.getByTestId(BoardTagTestId.Root);
-    expect(tag).toHaveTextContent("Cizí");
-    expect(screen.getByText("PR 2").closest("button")).toContainElement(tag);
-    expect(screen.queryByTestId(IconBadgeTestId.Root)).toBeNull();
+    const conflict = screen.getByTestId(`${ButtonGroupTestId.Option}-conflict`);
+    expect(conflict).toHaveTextContent("Konflikt1");
+
+    await userEvent.click(conflict);
+    expect(conflict).toHaveAttribute("aria-pressed", "true");
+    const rows = screen.getAllByTestId(BoardRowTestId.Root);
+    expect(rows).toHaveLength(2);
+    expect(screen.getByText("PR 1").closest("button")).toHaveClass("opacity-50");
+    expect(screen.getByText("PR 2").closest("button")).not.toHaveClass("opacity-50");
+    // the header still counts the whole set, so the widget never collapses under a pick
+    expect(props.onCountChange).toHaveBeenLastCalledWith(expect.objectContaining({ count: 3 }));
+
+    await userEvent.click(
+      screen.getAllByTestId(`${ButtonGroupTestId.Option}-all`)[1] as HTMLElement,
+    );
+    expect(screen.getAllByTestId(BoardRowTestId.Root)).toHaveLength(3);
   });
 
   it("is empty with no PRs", () => {

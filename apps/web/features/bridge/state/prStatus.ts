@@ -63,6 +63,55 @@ export function prStatus(pr: InboxPr): { tone: PrTone; label: string } {
   return STATUS[prStatusKey(pr)];
 }
 
+/** The PR card's CI slot. A merge conflict takes it: it blocks the merge just like red CI. */
+export type PrCiState = "conflict" | "failing" | "running" | "passing" | "none";
+export const PR_CI_STATES: readonly PrCiState[] = [
+  "conflict",
+  "failing",
+  "running",
+  "passing",
+  "none",
+];
+
+export function prCiState(pr: InboxPr): PrCiState {
+  if (pr.mergeable === false) return "conflict";
+  if (pr.ci === "failing") return "failing";
+  if (pr.ci === "pending") return "running";
+  return pr.ci === "passing" ? "passing" : "none";
+}
+
+/**
+ * The PR card's review slot, from the operator's seat. Own PR: changes requested > approved
+ * (by a colleague) > awaiting review. Someone else's: approved by me (current) > awaiting my
+ * review (a request, a re-request, or new commits since my approval) > changes requested > waiting.
+ */
+export type PrReviewState = "review" | "approved" | "changes" | "waiting";
+export const PR_REVIEW_STATES: readonly PrReviewState[] = [
+  "review",
+  "changes",
+  "approved",
+  "waiting",
+];
+
+/** My approval no longer covers the head: commits landed after it. */
+export function prApprovalStale(pr: InboxPr): boolean {
+  return (
+    pr.myReview === "approved" && !!pr.myReviewSha && !!pr.headSha && pr.myReviewSha !== pr.headSha
+  );
+}
+
+export function prReviewState(pr: InboxPr): PrReviewState {
+  if (pr.bucket === "mine") {
+    if (pr.review === "changes-requested") return "changes";
+    return pr.review === "approved" ? "approved" : "review";
+  }
+  // GitHub drops my direct request when I review and re-adds it on a re-request.
+  const reRequested = pr.bucket === "to-review" && pr.reviewReason === "direct";
+  if (pr.myReview === "approved" && !prApprovalStale(pr) && !reRequested) return "approved";
+  if (pr.bucket === "to-review" || pr.myReview === "approved") return "review";
+  return pr.review === "changes-requested" ? "changes" : "waiting";
+}
+
 /** Ancestors of `pr` through `baseRef === other.headRef` in the same repo, root (bottom) first. */
 export function prStack(pr: InboxPr, all: InboxPr[]): InboxPr[] {
   return prAncestors(pr, all);

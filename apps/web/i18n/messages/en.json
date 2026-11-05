@@ -3241,35 +3241,34 @@
         "epicToggle": "Toggle epic {title}"
       },
       "prs": {
-        "status": {
-          "reviewRequested": "Review requested",
-          "draft": "Draft",
-          "ciFailing": "CI failing",
-          "mergeConflict": "Merge conflict",
-          "changesRequested": "Changes requested",
-          "checksRunning": "Checks running",
-          "approved": "Approved",
-          "awaitingReview": "Awaiting review",
-          "reviewedApproved": "You approved",
-          "reviewedChangesRequested": "You requested changes",
-          "reviewedCommented": "You commented"
-        },
-        "need": {
-          "merge": "Merge"
-        },
-        "you": "You · {wait}",
-        "on": "On {base}",
-        "waitsOn": "· Waits on {prs}",
         "conversations": "{count, plural, one {# unresolved conversation} other {# unresolved conversations}}",
-        "owner": {
-          "mine": "Mine",
-          "other": "Not mine"
+        "filter": {
+          "review": "Filter by review state",
+          "ci": "Filter by CI",
+          "all": "All"
         },
-        "section": {
-          "mine": "Mine",
-          "toReview": "To review",
-          "reviewed": "Reviewed by you",
-          "toggle": "Toggle {title}"
+        "review": {
+          "review": "Awaiting review",
+          "changes": "Changes requested",
+          "approved": "Approved",
+          "waiting": "Waiting"
+        },
+        "reviewHint": {
+          "reviewMine": "Awaiting colleagues' review",
+          "reviewYou": "Awaiting your review",
+          "reviewStale": "New commits since your approval",
+          "approvedYou": "Approved by you",
+          "approvedOther": "Approved by a colleague",
+          "changesYou": "You requested changes",
+          "changes": "Changes requested",
+          "waiting": "Waiting on others"
+        },
+        "ci": {
+          "conflict": "Conflict",
+          "failing": "CI failing",
+          "running": "CI running",
+          "passing": "CI passing",
+          "none": "No CI"
         }
       },
       "runs": {

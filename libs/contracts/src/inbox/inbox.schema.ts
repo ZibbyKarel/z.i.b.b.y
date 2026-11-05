@@ -115,6 +115,10 @@ export const InboxPrSchema = z.object({
   url: z.string().url(),
   repo: z.string().min(1),
   author: z.string(),
+  /** The author's GitHub display name; absent when the profile has none or the read failed. */
+  authorName: z.string().min(1).optional(),
+  /** The author's GitHub avatar image. */
+  authorAvatarUrl: z.string().url().optional(),
   createdAt: IsoDateTimeSchema,
   /** GitHub's `updated_at` — bumped by any comment, review, push or re-request on the PR. */
   updatedAt: IsoDateTimeSchema.optional(),
@@ -124,8 +128,17 @@ export const InboxPrSchema = z.object({
   /** `null` while GitHub is still computing mergeability. */
   mergeable: z.boolean().nullable(),
   bucket: z.enum(["to-review", "mine", "reviewed"]),
-  /** Your own latest review verdict; set only on `bucket: "reviewed"`. */
+  /**
+   * Your own latest review verdict on someone else's PR. Always set on `bucket: "reviewed"`
+   * (`commented` when there is no verdict); on `to-review` only when you gave a verdict earlier
+   * (a re-request, or a team request still open after your review).
+   */
   myReview: z.enum(["approved", "changes-requested", "commented"]).optional(),
+  /** The commit your `myReview` verdict was given on; an approval is stale once `headSha` moves past it. */
+  myReviewSha: z
+    .string()
+    .regex(/^[0-9a-f]{40}$/)
+    .optional(),
   reviewReason: z.enum(["direct", "team"]).optional(),
   /** `org/team` slug when `reviewReason === "team"`. */
   reviewTeam: z.string().min(1).optional(),

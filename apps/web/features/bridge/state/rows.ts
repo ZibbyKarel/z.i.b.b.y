@@ -13,19 +13,25 @@ import {
   chainKey,
   findPr,
   groupByEpic,
-  groupPrStacks,
   itemKey,
   linkedPrOf,
   pad2,
-  parentPr,
   passesFilters,
-  prWaits,
+  prAncestors,
   zibbyStatus,
 } from "../../inbox/inbox";
 import { type RunView, runTitle } from "../../runs/run";
 import { buildPhaseNodes } from "../../runs/stagePhases";
 import { runStateTone } from "../../runs/run";
-import { type PrStatusKey, prStatusKey } from "./prStatus";
+import {
+  PR_CI_STATES,
+  PR_REVIEW_STATES,
+  type PrCiState,
+  type PrReviewState,
+  prApprovalStale,
+  prCiState,
+  prReviewState,
+} from "./prStatus";
 
 /** Row tone = DS state tone, or `neutral` (the `--line2` stripe of a draft PR). */
 export type RowTone = StateTone | "neutral";
@@ -143,15 +149,16 @@ export function issueGroups(
 // Pull requests
 // ---------------------------------------------------------------------------
 
-export type PrNeed = "review" | "merge" | "fix";
-
-/** What the PR asks of the operator: a pending review, a merge, or (own PR) a blocker to fix. */
-export function prNeed(pr: InboxPr): PrNeed | null {
-  if (pr.bucket === "to-review" && pr.blocker !== "ready-to-merge") return "review";
-  if (pr.bucket !== "mine") return null;
-  if (pr.blocker === "ready-to-merge") return "merge";
-  return pr.blocker === "awaiting-review" ? null : "fix";
-}
+/** A card's tooltip for its review icon — the icon is shared, the wording follows whose PR it is. */
+export type PrReviewHint =
+  | "reviewMine"
+  | "reviewYou"
+  | "reviewStale"
+  | "approvedYou"
+  | "approvedOther"
+  | "changesYou"
+  | "changes"
+  | "waiting";
 
 export interface PrRowVm {
   key: string;
@@ -159,87 +166,149 @@ export interface PrRowVm {
   id: string;
   number: string;
   title: string;
-  /** `REPO · AUTHOR · AGE` (own PRs read `YOU`). */
-  meta: string;
+  age: string;
+  /** The author's display name, else the login. */
+  author: string;
+  avatarUrl: string | undefined;
+  /** Repo name without the owner. */
+  project: string;
   tone: RowTone;
-  statusKey: PrStatusKey;
-  need: PrNeed | null;
-  needsYou: string | null;
-  /** `#parent` when stacked on a listed PR. */
-  on: string | null;
-  /** `#a, #b` unready ancestors. */
-  waits: string | null;
+  ci: PrCiState;
+  review: PrReviewState;
+  reviewHint: PrReviewHint;
+  /** Someone else's PR waiting on my review: the ink ring. */
+  needsYou: boolean;
+  /** Shown only as stack context for a filter hit above it. */
+  muted: boolean;
   /** Unresolved review threads on my PR; 0 for others' PRs or when unknown. */
   conversations: number;
-  /** This PR is the operator's own (its own bucket — never inherited from the stack root). */
   mine: boolean;
 }
 
-export interface PrGroupVm {
-  /** Own PRs, PRs waiting on the operator's review, or PRs the operator already reviewed. */
-  section: "mine" | "review" | "reviewed";
-  root: PrRowVm;
-  kids: PrRowVm[];
+/** One card and the PRs stacked directly on it (base -> head). */
+export interface PrNodeVm {
+  row: PrRowVm;
+  kids: PrNodeVm[];
 }
 
-const PR_TONE: Record<ReturnType<typeof prStatusKey>, RowTone> = {
-  reviewRequested: "thinking",
-  draft: "neutral",
-  ciFailing: "error",
-  mergeConflict: "error",
-  changesRequested: "blocked",
-  checksRunning: "thinking",
-  approved: "done",
-  awaitingReview: "idle",
-  reviewedApproved: "done",
-  reviewedChangesRequested: "blocked",
-  reviewedCommented: "idle",
-};
+export interface PrFilterPick {
+  review?: PrReviewState;
+  ci?: PrCiState;
+}
 
-const PR_SECTION = { mine: "mine", "to-review": "review", reviewed: "reviewed" } as const;
-const SECTION_ORDER = { mine: 0, review: 1, reviewed: 2 };
+function prReviewHint(pr: InboxPr, review: PrReviewState): PrReviewHint {
+  const mine = pr.bucket === "mine";
+  switch (review) {
+    case "review":
+      return mine ? "reviewMine" : prApprovalStale(pr) ? "reviewStale" : "reviewYou";
+    case "approved":
+      return mine ? "approvedOther" : "approvedYou";
+    case "changes":
+      return pr.myReview === "changes-requested" ? "changesYou" : "changes";
+    default:
+      return "waiting";
+  }
+}
 
-export function prRow(widgetId: string, pr: InboxPr, all: InboxPr[], ago: Ago): PrRowVm {
-  const statusKey = prStatusKey(pr);
-  const need = prNeed(pr);
-  const parent = parentPr(pr, all);
-  const waits = prWaits(pr, all);
+/** Own PRs colour by what blocks them; others' only by what they ask of me (their CI is theirs). */
+function prTone(pr: InboxPr, ci: PrCiState, review: PrReviewState): RowTone {
+  if (pr.draft) return "neutral";
+  const mine = pr.bucket === "mine";
+  if (mine && (ci === "conflict" || ci === "failing")) return "error";
+  if (review === "changes") return "blocked";
+  if ((!mine && review === "review") || (mine && ci === "running")) return "thinking";
+  return review === "approved" ? "done" : "idle";
+}
+
+export function prRow(widgetId: string, pr: InboxPr, ago: Ago, muted = false): PrRowVm {
+  const ci = prCiState(pr);
+  const review = prReviewState(pr);
   const mine = pr.bucket === "mine";
   return {
     key: rowKey(widgetId, pr.url),
     id: pr.url,
     number: `#${pr.number}`,
     title: pr.title,
-    meta: [pr.repo.split("/")[1] ?? pr.repo, mine ? "YOU" : pr.author, ago(pr.createdAt)].join(
-      " · ",
-    ),
-    tone: PR_TONE[statusKey],
-    statusKey,
-    need,
-    needsYou: need ? ago(pr.updatedAt ?? pr.createdAt) : null,
-    on: parent ? `#${parent.number}` : null,
-    waits: waits.length ? waits.map((w) => `#${w.number}`).join(", ") : null,
+    age: ago(pr.createdAt),
+    author: pr.authorName ?? pr.author,
+    avatarUrl: pr.authorAvatarUrl,
+    project: pr.repo.split("/")[1] ?? pr.repo,
+    tone: prTone(pr, ci, review),
+    ci,
+    review,
+    reviewHint: prReviewHint(pr, review),
+    needsYou: !mine && review === "review",
+    muted,
     conversations: mine ? (pr.unresolvedThreads ?? 0) : 0,
     mine,
   };
 }
 
-/** The Pull requests screen's set (unfiltered list for stack relations, filtered for display), grouped by stack. */
-export function prGroups(
+const countBy = <K extends string>(keys: readonly K[], list: InboxPr[], of: (p: InboxPr) => K) =>
+  Object.fromEntries(keys.map((k) => [k, list.filter((p) => of(p) === k).length])) as Record<
+    K,
+    number
+  >;
+
+/**
+ * The Pull requests screen's set (stored filters) as one flat list of stack trees, newest first.
+ * `pick` narrows it to a review / CI state; a picked PR keeps its listed ancestors as muted
+ * context so a stack never loses its middle. Siblings and roots sort by their subtree's newest PR.
+ */
+export function prTree(
   widgetId: string,
   all: InboxPr[],
   filters: InboxFilters,
+  pick: PrFilterPick,
   ago: Ago,
-): { groups: PrGroupVm[]; visible: InboxPr[] } {
+): {
+  nodes: PrNodeVm[];
+  /** The whole listed set, before `pick`. */
+  total: number;
+  /** Others' PRs waiting on my review. */
+  you: number;
+  counts: { review: Record<PrReviewState, number>; ci: Record<PrCiState, number> };
+} {
   const visible = all.filter((p) => passesFilters(filters, p));
-  const groups = groupPrStacks(all, visible).map((g) => ({
-    section: PR_SECTION[g.root.bucket],
-    root: prRow(widgetId, g.root, all, ago),
-    kids: g.kids.map((k) => prRow(widgetId, k, all, ago)),
-  }));
-  // Own PRs first, then to-review, then reviewed; the sort is stable, so the urgency order within each section is kept.
-  groups.sort((a, b) => SECTION_ORDER[a.section] - SECTION_ORDER[b.section]);
-  return { groups, visible };
+  const shown = new Set(visible.map((p) => p.url));
+  const hit = visible.filter(
+    (p) =>
+      (!pick.review || prReviewState(p) === pick.review) && (!pick.ci || prCiState(p) === pick.ci),
+  );
+  const hitUrls = new Set(hit.map((p) => p.url));
+  const kept = new Set(hitUrls);
+  for (const p of hit) for (const a of prAncestors(p, all)) if (shown.has(a.url)) kept.add(a.url);
+
+  // Each kept PR hangs under its nearest kept ancestor; none = a root.
+  const kids = new Map<string, InboxPr[]>();
+  const roots: InboxPr[] = [];
+  for (const p of visible) {
+    if (!kept.has(p.url)) continue;
+    const up = prAncestors(p, all)
+      .reverse()
+      .find((a) => kept.has(a.url));
+    if (up) kids.set(up.url, [...(kids.get(up.url) ?? []), p]);
+    else roots.push(p);
+  }
+  const newest = (p: InboxPr): number =>
+    Math.max(Date.parse(p.createdAt), ...(kids.get(p.url) ?? []).map(newest));
+  const build = (list: InboxPr[]): PrNodeVm[] =>
+    [...list]
+      .sort((a, b) => newest(b) - newest(a))
+      .map((p) => ({
+        row: prRow(widgetId, p, ago, !hitUrls.has(p.url)),
+        kids: build(kids.get(p.url) ?? []),
+      }));
+
+  return {
+    nodes: build(roots),
+    total: visible.length,
+    you: visible.filter((p) => p.bucket !== "mine" && prReviewState(p) === "review").length,
+    counts: {
+      review: countBy(PR_REVIEW_STATES, visible, prReviewState),
+      ci: countBy(PR_CI_STATES, visible, prCiState),
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------

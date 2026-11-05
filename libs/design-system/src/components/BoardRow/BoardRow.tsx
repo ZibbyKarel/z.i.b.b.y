@@ -51,6 +51,8 @@ export interface BoardRowProps {
   sheetSide?: "left" | "right";
   /** Needs the operator: 1px ink ring. */
   needsYou?: boolean;
+  /** Context-only row (e.g. a stack member a filter didn't pick): drawn at half opacity. */
+  muted?: boolean;
   /** Unique row key within the board; set as `data-rk` (the sheet anchors to it). */
   rowKey?: string;
   onClick?: () => void;
@@ -94,6 +96,7 @@ export function BoardRow({
   selected = false,
   sheetSide = "right",
   needsYou = false,
+  muted = false,
   rowKey,
   onClick,
   action,
@@ -110,6 +113,7 @@ export function BoardRow({
   const chrome = cn(
     "relative box-border w-full border-solid bg-panel text-left text-ink",
     interactive && "hover:bg-panel-2",
+    muted && "opacity-50",
     "border-l-[length:var(--bridge-bar)] [border-bottom:var(--bridge-row-border)]",
     BAR[tone],
     selected

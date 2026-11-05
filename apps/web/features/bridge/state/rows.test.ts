@@ -2,11 +2,11 @@ import type { BudgetStatus, InboxEpic, InboxPr, InboxRoadmapItem } from "@zibby/
 import { describe, expect, it } from "vitest";
 import type { RunView } from "../../runs/run";
 import {
+  type PrNodeVm,
   compareIssues,
   formatUsd,
   issueGroups,
-  prGroups,
-  prNeed,
+  prTree,
   runRows,
   spendTodayUsd,
 } from "./rows";
@@ -109,98 +109,105 @@ describe("issues", () => {
 });
 
 describe("pull requests", () => {
-  it("prNeed", () => {
-    expect(prNeed(pr({ number: 1, bucket: "to-review" }))).toBe("review");
-    expect(prNeed(pr({ number: 1, blocker: "ready-to-merge" }))).toBe("merge");
-    expect(prNeed(pr({ number: 1, blocker: "ci-failing" }))).toBe("fix");
-    expect(prNeed(pr({ number: 1 }))).toBeNull();
-  });
+  const none = { company: [], team: [], project: [] };
+  const flat = (nodes: PrNodeVm[], depth = 0): [string, number][] =>
+    nodes.flatMap((n) => [[n.row.number, depth] as [string, number], ...flat(n.kids, depth + 1)]);
 
   it("prRow conversations counts unresolved threads only on my PRs", () => {
-    const rows = (p: InboxPr) =>
-      prGroups("w", [p], { company: [], team: [], project: [] }, ago).groups[0]?.root.conversations;
-    expect(rows(pr({ number: 1, unresolvedThreads: 2 }))).toBe(2);
-    expect(rows(pr({ number: 1 }))).toBe(0);
-    expect(rows(pr({ number: 1, bucket: "to-review", unresolvedThreads: 2 }))).toBe(0);
+    const conv = (p: InboxPr) => prTree("w", [p], none, {}, ago).nodes[0]?.row.conversations;
+    expect(conv(pr({ number: 1, unresolvedThreads: 2 }))).toBe(2);
+    expect(conv(pr({ number: 1 }))).toBe(0);
+    expect(conv(pr({ number: 1, bucket: "to-review", unresolvedThreads: 2 }))).toBe(0);
   });
 
-  it("prRow mine follows each PR's own bucket, not the stack root", () => {
-    const { groups } = prGroups(
+  it("one flat list, newest first; a stack nests base -> head and sorts by its newest PR", () => {
+    const { nodes } = prTree(
       "prs",
       [
-        pr({ number: 1, headRef: "a", baseRef: "main" }),
+        pr({ number: 1, headRef: "a", baseRef: "main", createdAt: "2026-09-01T00:00:00.000Z" }),
         pr({ number: 2, headRef: "b", baseRef: "a", bucket: "to-review", author: "jana" }),
-        pr({ number: 3, headRef: "c", baseRef: "b" }),
+        pr({ number: 3, headRef: "c", baseRef: "b", createdAt: "2026-10-05T00:00:00.000Z" }),
+        pr({ number: 4, headRef: "d", baseRef: "main", createdAt: "2026-10-03T00:00:00.000Z" }),
       ],
-      { company: [], team: [], project: [] },
+      none,
+      {},
       ago,
     );
-    expect(groups).toHaveLength(1);
-    expect(groups[0]?.section).toBe("mine");
-    const g = groups[0];
-    expect([g?.root, ...(g?.kids ?? [])].map((r) => r?.mine)).toEqual([true, false, true]);
+    expect(flat(nodes)).toEqual([
+      ["#1", 0],
+      ["#2", 1],
+      ["#3", 2],
+      ["#4", 0],
+    ]);
+    expect(nodes[0]?.kids[0]?.row).toMatchObject({ mine: false, author: "jana" });
   });
 
-  it("groups a stack under its root with ON / WAITS ON, urgent group first", () => {
-    const root = pr({ number: 1, headRef: "a", baseRef: "main" });
-    const kid = pr({ number: 2, headRef: "b", baseRef: "a", blocker: "ci-failing", ci: "failing" });
-    const calm = pr({
-      number: 3,
-      headRef: "c",
-      baseRef: "main",
-      createdAt: "2026-09-01T00:00:00.000Z",
-    });
-    const { groups, visible } = prGroups(
-      "prs",
-      [calm, root, kid],
-      { company: [], team: [], project: [] },
-      ago,
-    );
-    expect(visible).toHaveLength(3);
-    expect(groups.map((g) => g.root.number)).toEqual(["#1", "#3"]);
-    const k = groups[0]?.kids[0];
-    expect(k).toMatchObject({
-      number: "#2",
-      on: "#1",
-      waits: "#1",
-      statusKey: "ciFailing",
-      tone: "error",
-    });
-    expect(groups[0]?.root.meta).toBe("orders · YOU · ago:2026-10-01");
-  });
-
-  it("puts PRs you reviewed in their own group after to-review, with a reviewed status", () => {
-    const { groups } = prGroups(
+  it("row: author name or login, avatar, repo, age, icons and tone", () => {
+    const [n] = prTree(
       "prs",
       [
-        pr({ number: 1, bucket: "reviewed", myReview: "changes-requested" }),
-        pr({ number: 2, bucket: "to-review", blocker: "awaiting-review" }),
-        pr({ number: 3, bucket: "reviewed" }),
+        pr({
+          number: 5,
+          bucket: "to-review",
+          author: "jana",
+          authorName: "Jana Nová",
+          authorAvatarUrl: "https://a/j.png",
+          ci: "failing",
+        }),
       ],
-      { company: [], team: [], project: [] },
+      none,
+      {},
       ago,
-    );
-    expect(groups.map((g) => [g.root.number, g.section])).toEqual([
-      ["#2", "review"],
-      ["#1", "reviewed"],
-      ["#3", "reviewed"],
-    ]);
-    expect(groups[1]?.root).toMatchObject({
-      statusKey: "reviewedChangesRequested",
-      tone: "blocked",
-      need: null,
+    ).nodes;
+    expect(n?.row).toMatchObject({
+      author: "Jana Nová",
+      avatarUrl: "https://a/j.png",
+      project: "orders",
+      age: "ago:2026-10-01",
+      ci: "failing",
+      review: "review",
+      reviewHint: "reviewYou",
+      needsYou: true,
+      tone: "thinking", // someone else's red CI is not my blocker
     });
-    expect(groups[2]?.root).toMatchObject({ statusKey: "reviewedCommented", tone: "idle" });
+    const mine = prTree("p", [pr({ number: 6, ci: "failing" })], none, {}, ago).nodes[0]?.row;
+    expect(mine).toMatchObject({ author: "karel", tone: "error", needsYou: false });
   });
 
-  it("applies the inbox filters to the visible set only", () => {
-    const { groups } = prGroups(
+  it("a pick keeps a hit's listed ancestors as muted context and drops the rest", () => {
+    const all = [
+      pr({ number: 1, headRef: "a", baseRef: "main" }),
+      pr({ number: 2, headRef: "b", baseRef: "a", bucket: "to-review" }),
+      pr({ number: 3, headRef: "c", baseRef: "b", mergeable: false }),
+      pr({ number: 4, headRef: "d", baseRef: "main" }),
+    ];
+    const { nodes, total, you, counts } = prTree("p", all, none, { ci: "conflict" }, ago);
+    expect(flat(nodes)).toEqual([
+      ["#1", 0],
+      ["#2", 1],
+      ["#3", 2],
+    ]);
+    const muted = (n?: PrNodeVm) => n?.row.muted;
+    expect(muted(nodes[0])).toBe(true);
+    expect(muted(nodes[0]?.kids[0])).toBe(true);
+    expect(muted(nodes[0]?.kids[0]?.kids[0])).toBe(false);
+    expect(prTree("p", all, none, { review: "approved" }, ago).nodes).toEqual([]);
+    // counts and totals describe the whole listed set, whatever is picked
+    expect({ total, you }).toEqual({ total: 4, you: 1 });
+    expect(counts.review).toEqual({ review: 4, changes: 0, approved: 0, waiting: 0 });
+    expect(counts.ci).toEqual({ conflict: 1, failing: 0, running: 0, passing: 3, none: 0 });
+  });
+
+  it("applies the inbox filters before anything else", () => {
+    const { nodes, total } = prTree(
       "prs",
       [pr({ number: 1, projectId: "p1" }), pr({ number: 2, projectId: "p2" })],
       { company: [], team: [], project: ["p2"] },
+      {},
       ago,
     );
-    expect(groups.map((g) => g.root.number)).toEqual(["#2"]);
+    expect(nodes.map((n) => n.row.number)).toEqual(["#2"]);
+    expect(total).toBe(1);
   });
 });
 

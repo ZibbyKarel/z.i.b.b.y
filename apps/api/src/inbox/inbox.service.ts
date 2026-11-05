@@ -34,6 +34,7 @@ const PRS_TTL_MS = 30_000;
 interface GhReview {
   user?: { login?: string } | null;
   state?: string;
+  commit_id?: string;
 }
 interface GhCheckRun {
   status?: string;
@@ -48,7 +49,7 @@ interface GhPull {
   mergeable_state?: string;
   created_at?: string;
   updated_at?: string;
-  user?: { login?: string } | null;
+  user?: { login?: string; avatar_url?: string } | null;
   head?: { sha?: string; ref?: string; repo?: { full_name?: string } | null };
   base?: { ref?: string };
 }
@@ -70,11 +71,27 @@ export function myReviewState(
   reviews: readonly GhReview[],
   login: string | undefined,
 ): "approved" | "changes-requested" | "commented" {
-  const mine = login ? reviews.filter((r) => r.user?.login === login) : [];
-  const verdict = mine
-    .filter((r) => r.state === "APPROVED" || r.state === "CHANGES_REQUESTED")
-    .at(-1);
-  return verdict?.state === "APPROVED" ? "approved" : verdict ? "changes-requested" : "commented";
+  return myVerdict(reviews, login)?.state ?? "commented";
+}
+
+/** The operator's own latest APPROVED/CHANGES_REQUESTED review and the commit it was given on. */
+export function myVerdict(
+  reviews: readonly GhReview[],
+  login: string | undefined,
+): { state: "approved" | "changes-requested"; sha?: string } | undefined {
+  const verdict = login
+    ? reviews
+        .filter((r) => r.user?.login === login)
+        .filter((r) => r.state === "APPROVED" || r.state === "CHANGES_REQUESTED")
+        .at(-1)
+    : undefined;
+  if (!verdict) return undefined;
+  return {
+    state: verdict.state === "APPROVED" ? "approved" : "changes-requested",
+    ...(verdict.commit_id && /^[0-9a-f]{40}$/.test(verdict.commit_id)
+      ? { sha: verdict.commit_id }
+      : {}),
+  };
 }
 
 /** CI from check-runs only (no combined commit status). */
@@ -385,13 +402,23 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
           bucket.bucket === "mine"
             ? await this.unresolvedThreads(token, repo, number).catch(() => undefined)
             : undefined;
+        const verdict =
+          bucket.bucket === "mine"
+            ? undefined
+            : myVerdict(Array.isArray(reviews) ? reviews : [], login);
+        const author = pull.user?.login ?? "";
+        const authorName = author ? await this.userName(token, author) : undefined;
         return {
           source: "github" as const,
           number,
           title: pull.title ?? "",
           url: pull.html_url ?? `https://github.com/${repo}/pull/${number}`,
           repo,
-          author: pull.user?.login ?? "",
+          author,
+          ...(authorName ? { authorName } : {}),
+          ...(pull.user?.avatar_url?.startsWith("https://")
+            ? { authorAvatarUrl: pull.user.avatar_url }
+            : {}),
           createdAt: new Date(pull.created_at ?? Date.now()).toISOString(),
           ...(pull.updated_at ? { updatedAt: new Date(pull.updated_at).toISOString() } : {}),
           draft: pull.draft === true,
@@ -409,9 +436,11 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
             : {}),
           ...(unresolvedThreads !== undefined ? { unresolvedThreads } : {}),
           ...bucket,
-          ...(bucket.bucket === "reviewed"
-            ? { myReview: myReviewState(Array.isArray(reviews) ? reviews : [], login) }
-            : {}),
+          ...(verdict
+            ? { myReview: verdict.state, ...(verdict.sha ? { myReviewSha: verdict.sha } : {}) }
+            : bucket.bucket === "reviewed"
+              ? { myReview: "commented" as const }
+              : {}),
           blocker: blockerOf({ ci, review, mergeable }),
           section: sectionOf({ ...bucket, ci, review, mergeable, draft: pull.draft === true }),
           projectId: project.id,
@@ -420,6 +449,24 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
       }),
     );
     return settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+  }
+
+  /**
+   * A PR author's GitHub display name, cached per login for the service's lifetime; a missing
+   * name or a failed read → undefined (the row falls back to the login).
+   */
+  // ponytail: never-expiring cache; a renamed profile shows the old name until the API restarts.
+  private readonly names = new Map<string, Promise<string | undefined>>();
+  private userName(token: string, login: string): Promise<string | undefined> {
+    let name = this.names.get(login);
+    if (!name) {
+      name = this.gh<{ name?: string | null }>(token, `/users/${encodeURIComponent(login)}`).then(
+        (u) => u.name?.trim() || undefined,
+        () => undefined,
+      );
+      this.names.set(login, name);
+    }
+    return name;
   }
 
   /** Login of the token's user; any failure → undefined (reviewed PRs then read "commented"). */
