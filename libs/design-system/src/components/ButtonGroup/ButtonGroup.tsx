@@ -106,7 +106,7 @@ export function ButtonGroup({
             <button
               aria-pressed={active}
               className={cn(
-                "inline-flex items-center gap-2 rounded-sm border-none px-[10px] font-sans text-[12px] font-medium transition-all",
+                "inline-flex items-center gap-2 whitespace-nowrap rounded-sm border-none px-[10px] font-sans text-[12px] font-medium transition-all",
                 focusRing,
                 active
                   ? "bg-raised text-ink shadow-card"

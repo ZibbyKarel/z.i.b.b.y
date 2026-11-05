@@ -55,7 +55,7 @@ export interface PrFilterControlsProps {
   counts?: { review: Record<PrReviewFilter, number>; ci: Record<PrCiFilter, number> };
 }
 
-/** The PR widget's filters (review, CI, mine, teams), shared by the widget and its settings. */
+/** The PR widget's filters (review, CI, owner, teams), shared by the widget and its settings. */
 export function PrFilterControls({ pick, onChange, teams, counts }: PrFilterControlsProps) {
   const t = useTranslations("bridge.widgets.prs");
   // `mine` is dropped from the base so an explicit owner patch (or its removal) wins over it.

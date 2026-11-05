@@ -334,7 +334,7 @@ export function prTree(
   const hitUrls = new Set(hit.map((p) => p.url));
   const kept = new Set(hitUrls);
   for (const p of hit) for (const a of prAncestors(p, all)) if (shown.has(a.url)) kept.add(a.url);
-  // "Mine only" also keeps what is stacked on my PRs (others' descendants), greyed out.
+  // Owner "mine" also keeps what is stacked on my PRs (others' descendants), greyed out.
   if (owner === "mine")
     for (const p of visible)
       if (prAncestors(p, all).some((a) => hitUrls.has(a.url))) kept.add(p.url);
