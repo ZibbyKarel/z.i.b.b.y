@@ -73,11 +73,13 @@ Body `{projectId, itemId}`. Finds the item in the live list (404 when absent), w
 local roadmap record if none exists, then plays it via `RoadmapGateService.play` (201 with the
 roadmap item; 422 when the gate refuses, e.g. already in flight or `external`).
 
-Optional `title`, `text`, `target` (TODO 7 — the new-task page's `?issue=` flow) are stored on
-the record as `taskOverride`; the gate's release then uses them for the task's title, the
-description in its text/routing text, and as the explicit target (classification skipped).
-The override is one-shot: the successful release clears it, so a restart uses the issue's own
-words; a routing park or failed release keeps it. Processing without one drops a stale override.
+Optional `title` (≤200), `text` (≤8000), `target` (TODO 7 — the new-task page's `?issue=` flow)
+are stored on the record as `taskOverride`; the gate's release then uses them for the task's
+title, the description in its text/routing text, and as the explicit target (classification
+skipped). The override is one-shot: a successful or a failed release clears it, so a restart
+uses the issue's own words; only a routing park keeps it, and the approval's release uses it with
+the approved target. A refused play (422) takes back the override this call wrote. Processing
+without one drops a stale override.
 
 ## PRs (`GET /api/inbox/prs`)
 

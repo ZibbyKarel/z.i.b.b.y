@@ -87,11 +87,13 @@ export function parseIssueRef(ref: string): { projectId: string; itemId: string 
 }
 
 /** The new-task page's prefill for an issue: a literal English title and the issue as the brief. */
-export function issueTaskPrefill(
-  item: Pick<InboxRoadmapItem, "id" | "source" | "name" | "description">,
-): { title: string; text: string } {
+export function issueTaskPrefill(item: Pick<InboxRoadmapItem, "id" | "source" | "description">): {
+  title: string;
+  text: string;
+} {
   const key = itemKey(item);
-  const head = [`Issue ${key}: ${item.name}`, item.source.url].filter(Boolean).join("\n");
+  // No name here: the gate's task text already starts with the issue's name.
+  const head = [`Issue ${key}`, item.source.url].filter(Boolean).join("\n");
   const description = item.description.trim();
   return {
     title: `Implementation of issue ${key}`,

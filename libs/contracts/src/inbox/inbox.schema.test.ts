@@ -227,5 +227,12 @@ describe("fix CI", () => {
       }).success,
     ).toBe(true);
     expect(ProcessInboxItemInputSchema.safeParse({ ...base, title: "" }).success).toBe(false);
+    // Same caps as a plain task's title/text (CreateTaskInputSchema).
+    expect(ProcessInboxItemInputSchema.safeParse({ ...base, title: "x".repeat(201) }).success).toBe(
+      false,
+    );
+    expect(ProcessInboxItemInputSchema.safeParse({ ...base, text: "x".repeat(8001) }).success).toBe(
+      false,
+    );
   });
 });

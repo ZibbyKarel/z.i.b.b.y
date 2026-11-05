@@ -426,6 +426,24 @@ describe("InboxIssuesService.process / InboxService.processItem", () => {
     expect((await roadmap.get("acme", "j1-acme-5")).taskOverride).toBeUndefined();
   });
 
+  it("drops the override again when play refuses the item", async () => {
+    const { service, roadmap, gate } = build();
+    gate.play.mockRejectedValueOnce(new Error("already in flight"));
+    await expect(service.process(live, { title: "T" })).rejects.toThrow("already in flight");
+    expect((await roadmap.get("acme", "j1-acme-5")).taskOverride).toBeUndefined();
+  });
+
+  it("a refused play leaves the override of a record ZIBBY is working on alone", async () => {
+    const parked = localItem("j1-acme-5", {
+      lifecycle: "enqueued",
+      taskOverride: { title: "Mine" },
+    });
+    const { service, roadmap, gate } = build({ local: [parked] });
+    gate.play.mockRejectedValueOnce(new Error("already in flight"));
+    await expect(service.process(live, { title: "Other" })).rejects.toThrow();
+    expect((await roadmap.get("acme", "j1-acme-5")).taskOverride).toEqual({ title: "Mine" });
+  });
+
   it("processItem 404s (InboxItemNotFoundError) for an item that is not in the live list", async () => {
     const issues = {
       list: async () => ({ items: [{ ...(live as object) }] }),

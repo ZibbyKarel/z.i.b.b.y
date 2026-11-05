@@ -703,8 +703,8 @@ export class RoadmapGateService {
       startedAt: now,
       outcome: "running",
     };
-    // The override is one-shot: consumed here, so a later restart uses the issue's own words.
-    // A park or a failed release keeps it, so the routing approval / retry still honours it.
+    // The override is one-shot: consumed here (and by `markReleaseFailed`), so a later restart
+    // uses the issue's own words. Only a routing park keeps it, for the approval's release.
     await this.roadmap.update(item.projectId, item.id, (current) => ({
       ...current,
       taskOverride: undefined,
@@ -934,6 +934,9 @@ export class RoadmapGateService {
     });
     await this.roadmap.update(projectId, itemId, (current) => ({
       ...current,
+      // TODO 7 — a failed release consumes the operator's override too: a restart must not
+      // replay the same (possibly failing) edit the operator has no way to clear.
+      taskOverride: undefined,
       lifecycle: "failed",
       lastFailureReason: reason,
       updatedAt: new Date().toISOString(),

@@ -166,11 +166,13 @@ export type RoadmapSourceStatus = z.infer<typeof RoadmapSourceStatusSchema>;
 /**
  * TODO 7 — what the operator edited on the new-task page before handing an issue to ZIBBY.
  * The gate's release uses it instead of the item's own name/description/routing, then
- * clears it (one-shot: a later restart uses the issue's own words again).
+ * clears it — on dispatch and on a failed release alike, so a restart uses the issue's own
+ * words again. Only a routing park keeps it, for the approval's release.
  */
 export const RoadmapTaskOverrideSchema = z.object({
-  title: z.string().min(1).max(512).optional(),
-  text: z.string().min(1).optional(),
+  // Same caps as `CreateTaskInputSchema`'s title/text.
+  title: z.string().min(1).max(200).optional(),
+  text: z.string().min(1).max(8000).optional(),
   target: TaskTargetSchema.optional(),
 });
 export type RoadmapTaskOverride = z.infer<typeof RoadmapTaskOverrideSchema>;

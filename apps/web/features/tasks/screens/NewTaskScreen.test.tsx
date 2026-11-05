@@ -330,7 +330,7 @@ describe("NewTaskScreen (ZB-04b)", () => {
         "Implementation of issue ACME-5",
       );
       expect(screen.getByLabelText("Zadání")).toHaveValue(
-        "Issue ACME-5: Checkout breaks\nhttps://jira.example/browse/ACME-5\n\nSteps to reproduce.",
+        "Issue ACME-5\nhttps://jira.example/browse/ACME-5\n\nSteps to reproduce.",
       );
       expect(screen.getByLabelText("Projekt")).toHaveTextContent("Acme Shop");
       expect(screen.getByText("Propojené issue ACME-5")).toBeInTheDocument();

@@ -498,11 +498,11 @@ describe("new task from an issue (TODO 7)", () => {
     });
     expect(issueTaskPrefill(item)).toEqual({
       title: "Implementation of issue API-1",
-      text: "Issue API-1: Retry webhook deliveries\nhttps://jira.example/browse/API-1\n\nWebhooks drop on 5xx.",
+      text: "Issue API-1\nhttps://jira.example/browse/API-1\n\nWebhooks drop on 5xx.",
     });
   });
 
   it("leaves out the URL and the description when the issue has none", () => {
-    expect(issueTaskPrefill(makeItem()).text).toBe("Issue API-1: Retry webhook deliveries");
+    expect(issueTaskPrefill(makeItem()).text).toBe("Issue API-1");
   });
 });

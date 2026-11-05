@@ -156,12 +156,17 @@ export class InboxIssuesService {
     const now = new Date().toISOString();
     // An empty override (the list's quick action) is none; `taskOverride: undefined` on a
     // refresh drops a stale override from an earlier attempt.
+    const taskOverride =
+      override?.title || override?.text || override?.target ? override : undefined;
     const snapshot = {
       name: item.name,
       description: item.description,
       updatedAt: now,
-      taskOverride: override?.title || override?.text || override?.target ? override : undefined,
+      taskOverride,
     };
+    // Whether THIS call wrote the override — only then may a refused play take it back (a
+    // record ZIBBY is already on keeps its own, e.g. one parked for a routing decision).
+    let wrote = true;
     try {
       await this.roadmap.put({
         id: item.id,
@@ -179,13 +184,23 @@ export class InboxIssuesService {
       });
     } catch (error) {
       if (!(error instanceof RoadmapItemConflictError)) throw error;
-      await this.roadmap.update(item.projectId, item.id, (current) =>
-        ZIBBY_LIFECYCLES.includes(current.lifecycle)
-          ? current
-          : { ...current, ...snapshot, lifecycle: item.lifecycle },
-      );
+      await this.roadmap.update(item.projectId, item.id, (current) => {
+        wrote = !ZIBBY_LIFECYCLES.includes(current.lifecycle);
+        return wrote ? { ...current, ...snapshot, lifecycle: item.lifecycle } : current;
+      });
     }
-    return this.gate.play(item.projectId, item.id);
+    try {
+      return await this.gate.play(item.projectId, item.id);
+    } catch (error) {
+      // An unconfirmed override must not linger on a record the gate refused (409/external).
+      if (wrote && taskOverride) {
+        await this.roadmap.update(item.projectId, item.id, (current) => ({
+          ...current,
+          taskOverride: undefined,
+        }));
+      }
+      throw error;
+    }
   }
 
   private async fetchLive(getPrs: () => Promise<InboxPrsResponse>): Promise<LiveList> {
