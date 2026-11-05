@@ -93,7 +93,7 @@ export class ApprovalsService {
   }
 
   /** Create a pending approval for a paused run. */
-  requestApproval(input: RequestApprovalInput): Promise<Approval> {
+  async requestApproval(input: RequestApprovalInput): Promise<Approval> {
     const approval: Approval = {
       id: this.storage.newId(input.kind),
       runId: input.runId,
@@ -115,6 +115,10 @@ export class ApprovalsService {
       action: approval.action,
       risk: approval.risk,
     });
+    this.requestedHere.add(approval.id);
+    // Persist before announcing: a client refetching on `approval-requested` (the run
+    // feed's awaiting-approval overlay) must already find the pending approval on disk.
+    const saved = await this.storage.create(approval);
     void this.activity?.record({
       kind: "approval-requested",
       summary: `approval needed: ${approval.skill} wants to ${approval.action}`,
@@ -128,8 +132,7 @@ export class ApprovalsService {
         ...(approval.department ? { department: approval.department } : {}),
       },
     });
-    this.requestedHere.add(approval.id);
-    return this.storage.create(approval);
+    return saved;
   }
 
   /**

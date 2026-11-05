@@ -1,6 +1,7 @@
 import type {
   Agent,
   AgentRun,
+  Approval,
   Goal,
   GoalRun,
   Project,
@@ -12,6 +13,7 @@ import { NO_DEPARTMENT } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
 import type { AgentRunnerService } from "../agents/agent-runner.service";
 import type { AgentsStorageService } from "../agents/agents.storage.service";
+import type { ApprovalsService } from "../approvals/approvals.service";
 import type { GoalRunnerService } from "../goals/goal-runner.service";
 import { GoalRunNotStoppableError } from "../goals/goals.errors";
 import type { GoalsStorageService } from "../goals/goals.storage.service";
@@ -172,6 +174,8 @@ function build() {
     queueContinue: vi.fn(async () => {}),
   };
 
+  const approvals = { list: vi.fn(async (): Promise<Approval[]> => []) };
+
   const opener = vi.fn(async () => {});
   const service = new TaskRunsService(
     agentRunner as unknown as AgentRunnerService,
@@ -183,11 +187,13 @@ function build() {
     projectsStore as unknown as ProjectsStorageService,
     scheduled as unknown as ScheduledTasksStorageService,
     scheduler as unknown as TaskSchedulerService,
+    approvals as unknown as ApprovalsService,
     opener,
   );
   return {
     service,
     opener,
+    approvals,
     agentRunner,
     workflowRunner,
     goalRunner,
@@ -686,6 +692,61 @@ describe("TaskRunsService", () => {
           prAddressComments: addressComments("pushed"),
         },
       ]);
+      const run = await service.getTaskRun(pipeP.workflowRunId);
+      expect(run.status).toBe("done");
+    });
+
+    // The gate stamp is written only after the approval exists, so the approval itself
+    // is the earliest signal a refetch can see.
+    const approval = (runId: string, status: Approval["status"]): Approval => ({
+      id: `pr-review-${runId}-${status}`,
+      runId,
+      kind: "pr-review",
+      skill: "code-reviewer",
+      action: "github.pr.review",
+      detail: "post review",
+      risk: "medium",
+      status,
+      requestedAt: "2026-06-16T00:00:00.000Z",
+    });
+    const dispatchedTask1 = { ...scheduledS, id: "task1", status: "dispatched" as const };
+
+    it("a done run whose task has a pending approval reads as awaiting-approval", async () => {
+      const { service, workflowRunner, scheduled, approvals } = build();
+      workflowRunner.listAll.mockResolvedValue([{ ...pipeP, status: "done", taskId: "task1" }]);
+      scheduled.list.mockResolvedValue([dispatchedTask1]);
+      approvals.list.mockResolvedValue([approval("task1", "pending")]);
+      const run = await service.getTaskRun(pipeP.workflowRunId);
+      expect(run.status).toBe("awaiting-approval");
+    });
+
+    it("a decided approval does not gate the run", async () => {
+      const { service, workflowRunner, scheduled, approvals } = build();
+      workflowRunner.listAll.mockResolvedValue([{ ...pipeP, status: "done", taskId: "task1" }]);
+      scheduled.list.mockResolvedValue([dispatchedTask1]);
+      approvals.list.mockResolvedValue([
+        approval("task1", "approved"),
+        approval("task1", "rejected"),
+        approval("task1", "revised"),
+      ]);
+      const run = await service.getTaskRun(pipeP.workflowRunId);
+      expect(run.status).toBe("done");
+    });
+
+    it("a running run with a pending approval keeps running", async () => {
+      const { service, workflowRunner, scheduled, approvals } = build();
+      workflowRunner.listAll.mockResolvedValue([{ ...pipeP, status: "running", taskId: "task1" }]);
+      scheduled.list.mockResolvedValue([dispatchedTask1]);
+      approvals.list.mockResolvedValue([approval("task1", "pending")]);
+      const run = await service.getTaskRun(pipeP.workflowRunId);
+      expect(run.status).toBe("running");
+    });
+
+    it("a pending approval keyed by a raw run id does not gate another task's run", async () => {
+      const { service, workflowRunner, scheduled, approvals } = build();
+      workflowRunner.listAll.mockResolvedValue([{ ...pipeP, status: "done", taskId: "task1" }]);
+      scheduled.list.mockResolvedValue([dispatchedTask1]);
+      approvals.list.mockResolvedValue([approval(pipeP.workflowRunId, "pending")]);
       const run = await service.getTaskRun(pipeP.workflowRunId);
       expect(run.status).toBe("done");
     });

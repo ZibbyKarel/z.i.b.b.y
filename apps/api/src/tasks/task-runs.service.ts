@@ -22,6 +22,7 @@ import {
 } from "@zibby/contracts";
 import { AgentRunnerService } from "../agents/agent-runner.service";
 import { AgentsStorageService } from "../agents/agents.storage.service";
+import { ApprovalsService } from "../approvals/approvals.service";
 import { GoalRunnerService } from "../goals/goal-runner.service";
 import { GoalRunNotStoppableError } from "../goals/goals.errors";
 import { GoalsStorageService } from "../goals/goals.storage.service";
@@ -137,6 +138,7 @@ export class TaskRunsService {
     private readonly projectsStore: ProjectsStorageService,
     private readonly scheduled: ScheduledTasksStorageService,
     private readonly scheduler: TaskSchedulerService,
+    private readonly approvals: ApprovalsService,
     // Optional so Nest doesn't DI-resolve it — tests inject a stub so nothing launches.
     @Optional() private readonly opener: FolderOpener = openInFinder,
   ) {}
@@ -542,17 +544,27 @@ export class TaskRunsService {
     childRunIds: Set<string>;
     workflowDefsById: ReadonlyMap<string, Workflow>;
   }> {
-    const [agents, workflows, goals, scheduled, agentDefs, workflowDefs, goalDefs, projects] =
-      await Promise.all([
-        this.agentRunner.listAll(),
-        this.workflowRunner.listAll(),
-        this.goalRunner.listAll(),
-        this.scheduled.list(),
-        this.agentsStore.list(),
-        this.workflowsStore.list(),
-        this.goalsStore.list(),
-        this.projectsStore.list(),
-      ]);
+    const [
+      agents,
+      workflows,
+      goals,
+      scheduled,
+      agentDefs,
+      workflowDefs,
+      goalDefs,
+      projects,
+      approvals,
+    ] = await Promise.all([
+      this.agentRunner.listAll(),
+      this.workflowRunner.listAll(),
+      this.goalRunner.listAll(),
+      this.scheduled.list(),
+      this.agentsStore.list(),
+      this.workflowsStore.list(),
+      this.goalsStore.list(),
+      this.projectsStore.list(),
+      this.approvals.list(),
+    ]);
 
     const names: NameMaps = {
       agent: new Map(agentDefs.map((d) => [d.id, d.name ?? d.id])),
@@ -566,6 +578,10 @@ export class TaskRunsService {
       byPath: new Map(projects.flatMap((p) => (p.path ? [[p.path, p.name] as const] : []))),
     };
     const tasksById = new Map(scheduled.map((t) => [t.id, t]));
+    // Task-backed park sites key the approval by the task id (`runId: task.id`).
+    const pendingTaskIds = new Set(
+      approvals.filter((a) => a.status === "pending").map((a) => a.runId),
+    );
     const workflowDefsById = new Map(workflowDefs.map((d) => [d.id, d]));
 
     const childRunIds = new Set<string>();
@@ -581,7 +597,11 @@ export class TaskRunsService {
     const runViews: TaskRun[] = [
       ...agents.map((r) =>
         resolveProjectDisplay(
-          enrichRunWithTask(this.withProcessor(agentRunToView(r, projectNames), names), tasksById),
+          enrichRunWithTask(
+            this.withProcessor(agentRunToView(r, projectNames), names),
+            tasksById,
+            pendingTaskIds,
+          ),
           projectNames,
         ),
       ),
@@ -593,13 +613,18 @@ export class TaskRunsService {
               names,
             ),
             tasksById,
+            pendingTaskIds,
           ),
           projectNames,
         ),
       ),
       ...goals.map((r) =>
         resolveProjectDisplay(
-          enrichRunWithTask(this.withProcessor(goalRunToView(r, projectNames), names), tasksById),
+          enrichRunWithTask(
+            this.withProcessor(goalRunToView(r, projectNames), names),
+            tasksById,
+            pendingTaskIds,
+          ),
           projectNames,
         ),
       ),
@@ -830,15 +855,22 @@ function sourcePrOf(task: ScheduledTask): TaskRunSourcePr | undefined {
   return undefined;
 }
 
-function enrichRunWithTask(run: TaskRun, tasksById: ReadonlyMap<string, ScheduledTask>): TaskRun {
+function enrichRunWithTask(
+  run: TaskRun,
+  tasksById: ReadonlyMap<string, ScheduledTask>,
+  pendingTaskIds: ReadonlySet<string>,
+): TaskRun {
   if (!run.taskId) return run;
   const task = tasksById.get(run.taskId);
   if (!task) return run;
   // A finished run whose task still holds a PR-inbox gate (review post, rebase
-  // force-push, review-fix push) is waiting on the operator, not done.
-  const gated = [task.prReview, task.prRebase, task.prAddressComments, task.prFixCi].some(
-    (gate) => gate?.state === "awaiting-approval",
-  );
+  // force-push, review-fix push) is waiting on the operator, not done. The pending
+  // approval itself counts too: the stamp lands only after the approval exists, so a
+  // refetch triggered by `approval-requested` may see the approval but not the stamp yet.
+  const gated =
+    [task.prReview, task.prRebase, task.prAddressComments, task.prFixCi].some(
+      (gate) => gate?.state === "awaiting-approval",
+    ) || pendingTaskIds.has(task.id);
   // An operator "continue" waiting for a run slot reads as queued on the run itself.
   const continuing = task.status === "queued" && task.continueRun?.runRef === run.runId;
   const sourcePr = sourcePrOf(task);
