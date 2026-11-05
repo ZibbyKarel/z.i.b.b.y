@@ -357,6 +357,22 @@ describe("InboxService.listPrs", () => {
       expect(teamSearches(searches)).toHaveLength(1);
     });
 
+    it("keeps every team whose search returned the PR in reviewTeams", async () => {
+      const { service } = build([], {
+        teams: [{ slug: "devrel-team" }],
+        teamSearches: { "Acme/devrel-team": { numbers: [1, 2] } },
+      });
+      const prs = (await service.listPrs()).prs;
+      const two = prs.find((p) => p.number === 2);
+      expect(two?.reviewTeam).toBe("acme/core");
+      expect(two?.reviewTeams).toEqual(["acme/core", "Acme/devrel-team"]);
+      // direct bucket still wins, but the teams are kept
+      const one = prs.find((p) => p.number === 1);
+      expect(one).toMatchObject({ reviewReason: "direct" });
+      expect(one?.reviewTeam).toBeUndefined();
+      expect(one?.reviewTeams).toEqual(["acme/core", "Acme/devrel-team"]);
+    });
+
     it("searches a team once when it is both a membership and a configured slug", async () => {
       const { service, searches } = build([], { teams: [{ slug: "Core" }] });
       await service.listPrs();

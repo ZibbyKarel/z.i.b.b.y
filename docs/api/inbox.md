@@ -93,7 +93,8 @@ For every distinct repo of a project with a GitHub integration (token via
   non-blocking `errors` note (token needs `read:org`). Teams with a configured `slug`
   (`Team.slug`, qualified with the repo owner when org-less) are searched too, deduped
   case-insensitively against memberships; other-org slugs are skipped and a failing
-  team search (e.g. 422) degrades to none.
+  team search (e.g. 422) degrades to none. `reviewTeams` lists every such team whose search
+  returned the PR (deduped, any bucket); `reviewTeam` stays the first/display team.
 
 Direct beats team; mine is never in to-review. GitHub drops a review request once the
 user reviews and re-adds it on a re-request, so a PR leaves/returns to "to review"

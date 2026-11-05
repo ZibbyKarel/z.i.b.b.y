@@ -208,6 +208,10 @@ export interface PrTeamOption {
   label: string;
 }
 
+/** Every team asked to review `p` (`org/team`); falls back to the single display team. */
+const prRequestedTeams = (p: InboxPr): readonly string[] =>
+  p.reviewTeams ?? (p.reviewTeam ? [p.reviewTeam] : []);
+
 /**
  * Team filter options: every configured team with a slug (value = slug, label = team name), plus
  * each discovered `reviewTeam` / saved default (`org/team`) no configured slug already covers.
@@ -221,7 +225,7 @@ export function prTeams(
   const options = new Map<string, PrTeamOption>(
     slugs.map(({ slug, name }) => [slug, { value: slug, label: name }]),
   );
-  const found = [...prs.map((p) => p.reviewTeam), ...extra].filter((t): t is string => !!t);
+  const found = [...prs.flatMap(prRequestedTeams), ...extra];
   for (const team of found)
     if (!slugs.some(({ slug }) => teamSlugMatches(team, slug)))
       options.set(team, { value: team, label: prTeamLabel(team) });
@@ -308,8 +312,10 @@ export function prTree(
   const shown = new Set(visible.map((p) => p.url));
   // AND across groups, OR within one; an empty group doesn't filter.
   const teamHit = (p: InboxPr) => {
-    const rt = p.reviewTeam;
-    return !pick.teams?.length || (!!rt && pick.teams.some((v) => teamSlugMatches(rt, v)));
+    const requested = prRequestedTeams(p);
+    return (
+      !pick.teams?.length || requested.some((rt) => pick.teams?.some((v) => teamSlugMatches(rt, v)))
+    );
   };
   const hit = visible.filter(
     (p) =>

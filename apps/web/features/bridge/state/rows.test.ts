@@ -263,6 +263,20 @@ describe("pull requests", () => {
     expect(prTeamLabel("o/blue")).toBe("blue");
   });
 
+  it("a PR requesting several teams passes a pick of any of them", () => {
+    const multi = pr({
+      number: 1,
+      reviewTeam: "shoptet/backend",
+      reviewTeams: ["shoptet/backend", "shoptet/devrel-team"],
+    });
+    const picked = prTree("p", [multi], none, { teams: ["devrel-team"] }, ago);
+    expect(picked.nodes.map((n) => n.row.number)).toEqual(["#1"]);
+    expect(prTeams([multi]).map((o) => o.value)).toEqual([
+      "shoptet/backend",
+      "shoptet/devrel-team",
+    ]);
+  });
+
   it("configured team slugs become options and match PRs by team segment", () => {
     const all = [
       pr({ number: 1, reviewTeam: "shoptet/devrel-team" }),

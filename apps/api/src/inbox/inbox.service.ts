@@ -383,6 +383,8 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
     );
     const buckets = new Map<number, Pick<InboxPr, "bucket" | "reviewReason" | "reviewTeam">>();
     for (const n of reviewed) buckets.set(n, { bucket: "reviewed" });
+    // Every team whose search returned the PR, whichever bucket it ends up in.
+    const requested = new Map<number, string[]>();
     for (const team of teams) {
       // One team search failing must not drop the repo. 422 = GitHub does not know the team
       // (a stale configured slug): silent; anything else (rate limit, 401/403, 5xx) leaves a note.
@@ -394,6 +396,9 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
         },
       );
       for (const n of found) {
+        const list = requested.get(n) ?? [];
+        if (!list.some((t) => t.toLowerCase() === team.toLowerCase())) list.push(team);
+        requested.set(n, list);
         if (!buckets.has(n) || buckets.get(n)?.bucket === "reviewed")
           buckets.set(n, { bucket: "to-review", reviewReason: "team", reviewTeam: team });
       }
@@ -459,6 +464,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
             : {}),
           ...(unresolvedThreads !== undefined ? { unresolvedThreads } : {}),
           ...bucket,
+          ...(requested.has(number) ? { reviewTeams: requested.get(number) } : {}),
           ...(verdict
             ? { myReview: verdict.state, ...(verdict.sha ? { myReviewSha: verdict.sha } : {}) }
             : bucket.bucket === "reviewed"
