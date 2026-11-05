@@ -39,9 +39,9 @@ function tokenOf(creds: CredentialsInput): string | null {
  * later instruction — phase-126a had dropped it on the reasoning that "assigned to
  * me at work" ≠ "concerns ZIBBY"
  * (`docs/plans/phase-126a-github-question-scope.md`), which the operator has since
- * overruled: an issue assigned to them is theirs to see. With `includeTeams`, two team
- * legs per operator team in the repo owner's org join the union
- * (`team-review-requested:` and `team:` — an explicit `@org/team` mention); nothing
+ * overruled: an issue assigned to them is theirs to see. With `includeTeams`, one team
+ * leg per operator team in the repo owner's org joins the union (`team:` — an explicit
+ * `@org/team` mention; review requests are the Pull Requests widget's, not a channel's); nothing
  * outside this union may be ingested. A fresh integration (no
  * persisted cursor) seeds the cursor to "now" and ingests nothing on that first poll —
  * every later poll fetches only what changed since the last sync, never a full
@@ -248,14 +248,11 @@ export class GitHubChannelAdapter implements ChannelAdapter {
         ]
       : await this.listAll(repo, cursor, creds);
     const teamScoped: GitHubIssue[] = [];
-    // ponytail: two sequential Search calls per team per poll (Search API ~30/min);
+    // ponytail: one Search call per team per poll (Search API ~30/min);
     // batch/OR the legs if an operator has many teams.
     for (const team of teams) {
-      // Two legs per team, never a wider one: a pending review request to the team,
-      // and an explicit @org/team mention. "Everything the team can see" is out of scope.
-      teamScoped.push(
-        ...(await this.searchScoped(repo, `team-review-requested:${team}`, cursor, creds)),
-      );
+      // One leg per team, never a wider one: an explicit @org/team mention. Review
+      // requests are the Pull Requests widget's, not a channel's.
       teamScoped.push(...(await this.searchScoped(repo, `team:${team}`, cursor, creds)));
     }
     const zibbyNumbers = ctx?.zibbyPrNumbers ?? [];

@@ -84,8 +84,8 @@ export type JiraConfig = z.infer<typeof JiraConfigSchema>;
  * adapter ignores it). Defaults to the conversational pair. `username` (required,
  * the operator's GitHub handle) scopes polling and roadmap sync to items that
  * mention or are assigned to that user via the Search API. `includeTeams` (opt-in)
- * also ingests PRs whose review is requested from one of the operator's teams in the
- * repo's org and items that `@org/team`-mention such a team (needs `read:org` on the
+ * also ingests items that `@org/team`-mention one of the operator's teams in the
+ * repo's org (review requests are the Pull Requests widget's, not a channel's) (needs `read:org` on the
  * token; without it polling stays personal-only). `.strict()`.
  */
 export const GitHubConfigSchema = z

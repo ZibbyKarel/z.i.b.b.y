@@ -34,9 +34,9 @@ adapters deliberately differ:
 
 - **`github.adapter.ts` — mentions + assignee** (`q=repo:{repo} is:open mentions:{username}`
   and `assignee:{username}`; the latter was dropped in phase 126a and restored by the
-  operator), plus PRs ZIBBY itself opened. Opt-in `includeTeams` adds two legs per team —
-  `team-review-requested:{org/team}` and `team:{org/team}` (explicit `@org/team` mention)
-  — for the operator's teams in the repo owner's org only, discovered via `GET /user/teams`
+  operator), plus PRs ZIBBY itself opened. Opt-in `includeTeams` adds one leg per team —
+  `team:{org/team}` (explicit `@org/team` mention; review requests are the Pull Requests
+  widget's, not a channel's) — for the operator's teams in the repo owner's org only, discovered via `GET /user/teams`
   (needs `read:org`; cached an hour; on failure polling stays personal-only and the watcher
   logs a warn). Never a team's whole visible activity.
 - **`slack.adapter.ts` — DMs + mentions.** Needs a Slack user token. Ingests every human

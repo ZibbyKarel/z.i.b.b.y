@@ -331,7 +331,7 @@ describe("GitHubChannelAdapter", () => {
                 pull_request: {},
               },
             ],
-          });
+          }); // a review-request leg must never be queried; item 11 proves it
         if (decoded.includes("team:acme/core"))
           return json({
             items: [
@@ -345,7 +345,7 @@ describe("GitHubChannelAdapter", () => {
       return { impl, calls };
     }
 
-    it("adds team-review-requested + team legs for teams in the repo owner's org only", async () => {
+    it("adds only the team-mention leg (no review-request leg) for teams in the repo owner's org", async () => {
       const { impl, calls } = teamFetch([
         { slug: "core", organization: { login: "Acme" } },
         { slug: "other", organization: { login: "elsewhere" } },
@@ -355,11 +355,9 @@ describe("GitHubChannelAdapter", () => {
         { token: "ghp" },
         "2026-06-17T08:00:00.000Z",
       );
-      expect(items.map((i) => i.id)).toEqual([
-        "gh-acme-app-issue-1",
-        "gh-acme-app-pr-11",
-        "gh-acme-app-issue-12",
-      ]);
+      expect(items.map((i) => i.id)).toEqual(["gh-acme-app-issue-1", "gh-acme-app-issue-12"]);
+      expect(calls.some((c) => c.includes("team-review-requested:"))).toBe(false);
+      expect(calls.some((c) => c.includes("team:acme/core"))).toBe(true);
       expect(calls.some((c) => c.includes("elsewhere"))).toBe(false);
       expect(
         calls.filter((c) => c.includes("/search/issues")).every((c) => c.includes("is:open")),
