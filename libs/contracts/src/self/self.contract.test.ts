@@ -18,6 +18,7 @@ const okStatus = {
   openPrCount: 0,
   prs: [],
   ghAvailable: true,
+  appUpdateAvailable: false,
 };
 
 describe("selfContract", () => {
@@ -66,6 +67,21 @@ describe("selfContract", () => {
     );
   });
 
+  it("status requires appUpdateAvailable and accepts the optional app release fields", () => {
+    const withoutFlag: Partial<typeof okStatus> = { ...okStatus };
+    delete withoutFlag.appUpdateAvailable;
+    expect(SelfStatusSchema.safeParse(withoutFlag).success).toBe(false);
+    expect(
+      SelfStatusSchema.safeParse({
+        ...okStatus,
+        appVersion: "0.2.1",
+        latestAppVersion: "0.3.0",
+        latestAppReleaseUrl: "https://github.com/o/r/releases/tag/desktop-v0.3.0",
+        appUpdateAvailable: true,
+      }).success,
+    ).toBe(true);
+  });
+
   it("updateSelf's empty body IS the shared EmptyBodySchema (T11 dedup, finding #37)", () => {
     expect(selfContract.updateSelf.body).toBe(EmptyBodySchema);
   });
@@ -110,6 +126,7 @@ describe("SelfStatusSchema", () => {
       openPrCount: 0,
       prs: [],
       ghAvailable: false,
+      appUpdateAvailable: false,
     });
     expect(parsed.success).toBe(true);
   });

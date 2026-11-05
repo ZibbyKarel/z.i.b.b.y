@@ -50,6 +50,14 @@ export const SelfStatusSchema = z.object({
    * builder's own tree instead of a separate clone (Builder ≠ Subject risk).
    */
   projectUsesInstallTree: z.boolean().optional(),
+  /** The running ZibbyOS.app version (`0.2.1`, no `v`); absent when unknown. */
+  appVersion: z.string().optional(),
+  /** The newest published `desktop-v*` GitHub release; absent when the lookup failed. */
+  latestAppVersion: z.string().optional(),
+  /** That release's GitHub page — the plain-browser fallback for the Upgrade button. */
+  latestAppReleaseUrl: z.string().optional(),
+  /** `true` only when both versions are known and `latestAppVersion` is strictly newer. */
+  appUpdateAvailable: z.boolean(),
 });
 export type SelfStatus = z.infer<typeof SelfStatusSchema>;
 

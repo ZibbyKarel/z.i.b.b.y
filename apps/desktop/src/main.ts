@@ -80,6 +80,8 @@ async function bootstrap(): Promise<void> {
     // app always runs real agents; without it workflows fall back to demo stages.
     AGENT_RUNNER_MODE: "claude",
     ZIBBY_SOURCE_ROOT: sourceRoot,
+    // The top bar shows this and compares it with the newest desktop-v* release.
+    ZIBBY_APP_VERSION: app.getVersion(),
   });
   pipeChildLogs(apiChild, "api");
 

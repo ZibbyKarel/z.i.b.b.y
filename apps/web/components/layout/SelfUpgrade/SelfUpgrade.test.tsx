@@ -28,6 +28,7 @@ const BASE: SelfStatus = {
   openPrCount: 0,
   prs: [],
   ghAvailable: true,
+  appUpdateAvailable: false,
 };
 
 type Options = { onSuccess?: (r: unknown) => void; onError?: (e: unknown) => void };

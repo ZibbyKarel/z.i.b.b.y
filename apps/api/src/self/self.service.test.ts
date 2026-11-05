@@ -95,6 +95,16 @@ const CLEAN_UP_TO_DATE = {
   [GH_PR_LIST]: { stdout: "[]" },
 };
 
+// No test may hit the real GitHub releases API; the app version is pinned.
+beforeEach(() => {
+  vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline (test)")));
+  vi.stubEnv("ZIBBY_APP_VERSION", "0.2.1");
+});
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
+
 describe("SelfService.status", () => {
   beforeEach(() => {
     execFileMock.mockReset();
@@ -113,7 +123,58 @@ describe("SelfService.status", () => {
       openPrCount: 0,
       prs: [],
       ghAvailable: false,
+      appVersion: "0.2.1",
+      appUpdateAvailable: false,
     });
+  });
+
+  it("flags appUpdateAvailable when a newer desktop-v* release exists than the running app", async () => {
+    mockGit({ [REPO_OK]: { error: new Error("not a git repository") } });
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => [
+        {
+          tag_name: "desktop-v0.3.0",
+          draft: false,
+          prerelease: false,
+          html_url: "https://x/0.3.0",
+        },
+      ],
+    } as Response);
+    const status = await new SelfService(undefined, undefined, undefined, fetchImpl).status();
+    expect(status).toMatchObject({
+      appVersion: "0.2.1",
+      latestAppVersion: "0.3.0",
+      latestAppReleaseUrl: "https://x/0.3.0",
+      appUpdateAvailable: true,
+    });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api.github.com/repos/ZibbyKarel/z.i.b.b.y/releases?per_page=30",
+      expect.anything(),
+    );
+  });
+
+  it("no update when the running app is equal to or ahead of the latest release", async () => {
+    vi.stubEnv("ZIBBY_APP_VERSION", "0.4.0");
+    mockGit({ ...CLEAN_UP_TO_DATE });
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => [{ tag_name: "desktop-v0.3.0", draft: false, prerelease: false }],
+    } as Response);
+    const status = await new SelfService(undefined, undefined, undefined, fetchImpl).status();
+    expect(status.latestAppVersion).toBe("0.3.0");
+    expect(status.appUpdateAvailable).toBe(false);
+  });
+
+  it("degrades to appUpdateAvailable:false (and still resolves) when the GitHub fetch rejects", async () => {
+    mockGit({ ...CLEAN_UP_TO_DATE });
+    const fetchImpl = vi.fn().mockRejectedValue(new Error("offline"));
+    const status = await new SelfService(undefined, undefined, undefined, fetchImpl).status();
+    expect(status.appUpdateAvailable).toBe(false);
+    expect(status.latestAppVersion).toBeUndefined();
+    expect(status.currentBranch).toBe("main");
   });
 
   it("reports behind/ahead counts from git and an ISO fetchedAt when the fetch succeeds", async () => {

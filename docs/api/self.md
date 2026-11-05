@@ -12,6 +12,7 @@ top-bar freshness indicator. Unlike every other resource, this is about the ZIBB
 | Contract   | `libs/contracts/src/self/self.schema.ts`   | `SelfPrSchema`, `SelfStatusSchema` (incl. `projectId`, `projectUsesInstallTree`), `SelfUpdateResultSchema`, `EnsureSelfProjectResultSchema`                         |
 | Contract   | `libs/contracts/src/self/self.contract.ts` | `selfContract` — `getSelfStatus` (`GET /api/self/status`), `updateSelf` (`POST /api/self/update`, 200/409), `ensureSelfProject` (`POST /api/self/project`, 200/409) |
 | Service    | `apps/api/src/self/self.service.ts`        | `SelfService` — git/`gh` reads via bounded `execFile`, all soft-fail                                                                                                |
+| Helpers    | `apps/api/src/self/app-release.ts`         | `pickLatestDesktopVersion`, `isNewer`, `LatestDesktopReleaseCache` (GitHub releases, 1 h cache, never throws)                                                       |
 | Helpers    | `apps/api/src/self/self-remote.ts`         | `normalizeRemote` (match key `host/owner/repo`), `redactRemote` (strip credentials)                                                                                 |
 | Controller | `apps/api/src/self/self.controller.ts`     | implements `selfContract`; maps the two refusal errors to 409                                                                                                       |
 | Module     | `apps/api/src/self/self.module.ts`         | imports `ProjectsModule` + `MachineConfigModule` (for `ensureSelfProject` only)                                                                                     |
@@ -37,6 +38,16 @@ Reads local git state in `installRoot()`:
   CLI is available (`gh --version` succeeds) — any `gh` failure (missing, not
   authenticated, API error) soft-fails to `ghAvailable: false, prs: []`, never
   throws.
+- App release (also for a non-git install): `appVersion` is `ZIBBY_APP_VERSION`
+  (the desktop app passes `app.getVersion()` when it spawns the API), else the
+  `version` of `apps/desktop/package.json` under `installRoot()`.
+  `latestAppVersion` / `latestAppReleaseUrl` are the highest non-draft,
+  non-prerelease `desktop-v*` release from
+  `api.github.com/repos/ZibbyKarel/z.i.b.b.y/releases?per_page=30`, cached in
+  memory 1 h (a failed lookup is retried after 5 min). `appUpdateAvailable` is
+  `true` only when both are known and the latest is strictly newer (numeric
+  `major.minor.patch`). Offline / 403 rate limit / garbage body → no
+  `latestAppVersion`, `appUpdateAvailable: false`.
 
 Every sub-step is defensive — the endpoint never 500s on a normal machine.
 
