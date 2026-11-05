@@ -4,7 +4,6 @@ import {
   ButtonGroup,
   Container,
   Divider,
-  Icon,
   Panel,
   Stack,
   Toggle,
@@ -185,15 +184,6 @@ export function SettingsScreen({ section }: SettingsScreenProps) {
               <SelfDevelopmentPanel />
             </Stack>
           )}
-
-          <Stack align="center">
-            <Stack align="center" direction="row" gap="75">
-              <Icon name="butlerSign" size="sm" tone="faint" />
-              <Typography mono size="2xs" type="note" variant="tertiary">
-                {t("footer")}
-              </Typography>
-            </Stack>
-          </Stack>
         </Stack>
       </PageContainer>
     </Container>

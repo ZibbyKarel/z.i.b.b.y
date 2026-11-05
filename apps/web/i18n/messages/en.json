@@ -1124,7 +1124,6 @@
       "stale": "Stale",
       "disabled": "Disabled"
     },
-    "footer": "ZIBBY — Zestful Intuitive Brainy Butler for You",
     "webPush": {
       "title": "Push notifications",
       "label": "Browser notifications",

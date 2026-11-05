@@ -77,8 +77,8 @@ describe("SettingsScreen — /system/settings/[section]", () => {
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
-  it("shows the butler footer on every section", () => {
+  it("shows no butler footer on any section", () => {
     render(<SettingsScreen section="activity" />);
-    expect(screen.getByText("ZIBBY — Zestful Intuitive Brainy Butler for You")).toBeInTheDocument();
+    expect(screen.queryByText(/Brainy Butler/)).not.toBeInTheDocument();
   });
 });
