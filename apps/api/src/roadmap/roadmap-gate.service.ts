@@ -314,7 +314,7 @@ export class RoadmapGateService {
 
   /**
    * The standing-consent counterpart of `play` — what `RoadmapTickService` calls
-   * each tick for a project whose the effective Autopilot `autoImplement` is on. The caller owns
+   * each tick for a project whose effective Autopilot `autoImplement` is on. The caller owns
    * that check; this method assumes consent and only decides WHAT is eligible.
    *
    * Only `source.kind === "manual"` items are eligible (see the filter below).
