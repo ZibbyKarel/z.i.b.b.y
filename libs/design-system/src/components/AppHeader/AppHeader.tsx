@@ -26,6 +26,9 @@ export enum AppHeaderTestId {
 export interface AppHeaderProps {
   /** Brand mark, leading the header. Defaults to the `BrandMark` + `<Wordmark />` lockup. */
   wordmark?: ReactNode;
+  /** Running release shown small under the default wordmark, e.g. `v0.2.1`.
+   *  Ignored when a custom `wordmark` is passed. */
+  version?: string;
   /** Href the brand mark (glyph + wordmark) links to. Omit to render it inert. */
   homeHref?: string;
   /** Accessible name for the brand mark link (only used when `homeHref` is set). */
@@ -75,6 +78,7 @@ export interface AppHeaderProps {
  */
 export function AppHeader({
   wordmark,
+  version,
   homeHref,
   homeLabel = "ZibbyOS",
   nav,
@@ -95,7 +99,7 @@ export function AppHeader({
     <Row align="center" style={{ gap: 10 }}>
       <BrandMark />
       <span className="hidden md:inline-flex">
-        <Wordmark />
+        <Wordmark version={version} />
       </span>
     </Row>
   );

@@ -41,7 +41,7 @@ type Story = StoryObj<typeof AppHeader>;
 export const Overview: Story = {
   render: () => (
     <div className="flex flex-col gap-6">
-      <AppHeader homeHref="/org" nav={nav} onSearchClick={() => {}} />
+      <AppHeader homeHref="/org" nav={nav} onSearchClick={() => {}} version="v0.2.1" />
       <AppHeader
         activeCount={<Typography type="labelSm">6 active</Typography>}
         homeHref="/org"

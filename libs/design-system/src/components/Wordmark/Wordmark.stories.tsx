@@ -14,11 +14,12 @@ export const Overview: Story = {
   render: () => (
     <div className="flex flex-col gap-4">
       <Wordmark />
+      <Wordmark version="v0.2.1" />
       <Wordmark>ACME CORP</Wordmark>
     </div>
   ),
 };
 
 export const Playground: Story = {
-  args: { children: "ZIBBYOS" },
+  args: { children: "ZibbyOS", version: "v0.2.1" },
 };

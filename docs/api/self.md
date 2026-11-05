@@ -12,6 +12,7 @@ top-bar freshness indicator. Unlike every other resource, this is about the ZIBB
 | Contract   | `libs/contracts/src/self/self.schema.ts`   | `SelfPrSchema`, `SelfStatusSchema` (incl. `projectId`, `projectUsesInstallTree`), `SelfUpdateResultSchema`, `EnsureSelfProjectResultSchema`                         |
 | Contract   | `libs/contracts/src/self/self.contract.ts` | `selfContract` — `getSelfStatus` (`GET /api/self/status`), `updateSelf` (`POST /api/self/update`, 200/409), `ensureSelfProject` (`POST /api/self/project`, 200/409) |
 | Service    | `apps/api/src/self/self.service.ts`        | `SelfService` — git/`gh` reads via bounded `execFile`, all soft-fail                                                                                                |
+| Helpers    | `apps/api/src/self/app-release.ts`         | `pickLatestDesktopVersion`, `isNewer`, `LatestDesktopReleaseCache` (GitHub releases, 1 h cache, never throws)                                                       |
 | Helpers    | `apps/api/src/self/self-remote.ts`         | `normalizeRemote` (match key `host/owner/repo`), `redactRemote` (strip credentials)                                                                                 |
 | Controller | `apps/api/src/self/self.controller.ts`     | implements `selfContract`; maps the two refusal errors to 409                                                                                                       |
 | Module     | `apps/api/src/self/self.module.ts`         | imports `ProjectsModule` + `MachineConfigModule` (for `ensureSelfProject` only)                                                                                     |
@@ -37,13 +38,24 @@ Reads local git state in `installRoot()`:
   CLI is available (`gh --version` succeeds) — any `gh` failure (missing, not
   authenticated, API error) soft-fails to `ghAvailable: false, prs: []`, never
   throws.
+- App release (also for a non-git install): `appVersion` is `ZIBBY_APP_VERSION`
+  (the desktop app passes `app.getVersion()` when it spawns the API), else the
+  `version` of `apps/desktop/package.json` under `installRoot()`.
+  `latestAppVersion` / `latestAppReleaseUrl` are the highest non-draft,
+  non-prerelease `desktop-v*` release from
+  `api.github.com/repos/ZibbyKarel/z.i.b.b.y/releases?per_page=30`, cached in
+  memory 1 h (a failed lookup is retried after 5 min). `appUpdateAvailable` is
+  `true` only when both are known and the latest is strictly newer (numeric
+  `major.minor.patch`). Offline / 403 rate limit / garbage body → no
+  `latestAppVersion`, `appUpdateAvailable: false`.
 
 Every sub-step is defensive — the endpoint never 500s on a normal machine.
 
 ## `updateSelf` — the one sanctioned self-update
 
 `git pull --ff-only origin <default>` in `installRoot()`. Operator-triggered
-only (the "Aktualizovat" button), never called autonomously, and NEVER falls
+only, never called autonomously (no UI calls it since the top-bar button moved to
+the desktop updater — kept as an API surface), and NEVER falls
 back to `--force`/`reset --hard`:
 
 - Dirty tree → 409 (`SelfDirtyError`) — never touches uncommitted work.
@@ -94,20 +106,21 @@ or in an error message.
 ## Frontend
 
 `apps/web/features/self/` — `useSelfStatusQuery` polls `getSelfStatus` (~2m,
-`select: selectApiResponseBody`). `useSelfUpdateMutation` (`updateSelf`) and
-`useEnsureSelfProjectMutation` (`ensureSelfProject`) both invalidate the status
-key in `onSettled` (any outcome, so a refusal refreshes `dirty`/`projectId` at
-once) and set `meta: { inlineError: true }`: ts-rest throws on any non-2xx, so a
-409 lands in `onError`, the call site shows the body's `message` inline
+`select: selectApiResponseBody`). `useEnsureSelfProjectMutation`
+(`ensureSelfProject`) invalidates the status key in `onSettled` and sets
+`meta: { inlineError: true }`: ts-rest throws on any non-2xx, so a 409 lands in
+`onError`, the call site shows the body's `message` inline
 (`updateErrorMessage`), and `providers.tsx`'s `MutationCache.onError` skips the
 generic toast for such mutations (`isInlineErrorMutation`, `toastBus.ts`).
 
-`apps/web/components/layout/SelfUpgrade/SelfUpgrade.tsx` — the header
-"Upgrade ↓N" button next to the limits (hidden for a non-git install, disabled on
-a dirty tree). Its accessible name starts with the visible word ("Upgrade —
-update ZIBBY (branch …, N behind origin)", WCAG 2.5.3). The result ("Updated" /
-"Up to date", 5 s) and any 409 message render beside it in an always-mounted
-`role="status"` / `aria-live="polite"` region.
+`apps/web/components/layout/SelfUpgrade/SelfUpgrade.tsx` — the header Upgrade
+icon button (DS `Button intent="primary" icon="upgrade"`, no text) next to the
+limits, rendered only when `appUpdateAvailable` is true. Its `aria-label`/`title`
+name the newer version. In ZibbyOS.app it calls `window.zibbyDesktop.checkForUpdates()`
+(the preload bridge, `apps/desktop/src/preload.ts` → IPC `zibby:check-for-updates`
+→ the same updater as the menu's "Check for Updates…"); in a plain browser it opens
+`latestAppReleaseUrl` in a new tab. `AppShell` passes `v<appVersion>` to
+`AppHeader`'s `version`, shown small under the `ZibbyOS` wordmark.
 
 `apps/web/features/settings/components/SelfDevelopmentPanel.tsx` — Settings
 panel: branch, ↓/↑ vs origin, dirty, open PRs (DS `TextLink`,

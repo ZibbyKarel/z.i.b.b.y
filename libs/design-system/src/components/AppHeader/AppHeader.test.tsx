@@ -2,12 +2,20 @@ import { screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "../../utils/testRender";
 import { BrandMarkTestId } from "../BrandMark/BrandMark";
+import { WordmarkTestId } from "../Wordmark/Wordmark";
 import { AppHeader, AppHeaderTestId } from "./AppHeader";
 
 describe("AppHeader", () => {
   it("renders the default Wordmark when no wordmark slot is given", () => {
     render(<AppHeader />);
-    expect(screen.getByTestId(AppHeaderTestId.Wordmark)).toHaveTextContent("ZIBBYOS");
+    expect(screen.getByTestId(AppHeaderTestId.Wordmark)).toHaveTextContent("ZibbyOS");
+  });
+
+  it("passes the version to the default Wordmark, inside its small-screen-hidden wrapper", () => {
+    render(<AppHeader version="v0.2.1" />);
+    const version = screen.getByTestId(WordmarkTestId.Version);
+    expect(version).toHaveTextContent("v0.2.1");
+    expect(version.closest(".hidden.md\\:inline-flex")).not.toBeNull();
   });
 
   it("renders the brand mark beside the default wordmark", () => {

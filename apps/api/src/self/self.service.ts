@@ -20,6 +20,7 @@ import {
   isGitRepo as isGitRepoAt,
 } from "../shared/git-exec";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
+import { LatestDesktopReleaseCache, isNewer } from "./app-release";
 import { normalizeRemote, redactRemote } from "./self-remote";
 
 /** The id ZIBBY registers itself under as a project. */
@@ -34,7 +35,7 @@ const GH_TIMEOUT_MS = 15_000;
 
 /** The benign readout for a non-git install (or one with no configured remote
  * this method can't even probe) — never an error, just "nothing to report". */
-const NOT_A_REPO_STATUS: SelfStatus = {
+const NOT_A_REPO_STATUS: Omit<SelfStatus, "appUpdateAvailable"> = {
   currentBranch: "",
   defaultBranch: "",
   behind: 0,
@@ -116,13 +117,50 @@ interface SelfProjectMatch {
 @Injectable()
 export class SelfService {
   private readonly log?: ScopedLogger;
+  private readonly latestRelease: LatestDesktopReleaseCache;
+  private appVersionCache?: Promise<string | undefined>;
 
   constructor(
     @Optional() logger?: LoggerService,
     @Optional() private readonly projects?: ProjectsStorageService,
     @Optional() private readonly machineConfig?: MachineConfigStore,
+    @Optional() fetchImpl?: typeof fetch,
   ) {
     this.log = logger?.child(SelfService.name);
+    this.latestRelease = new LatestDesktopReleaseCache(fetchImpl ?? fetch);
+  }
+
+  /** The running ZibbyOS.app version: `ZIBBY_APP_VERSION` (set by the desktop app
+   * when it spawns the API), else `apps/desktop/package.json` in the install. */
+  private appVersion(): Promise<string | undefined> {
+    const fromEnv = process.env.ZIBBY_APP_VERSION?.trim();
+    if (fromEnv) return Promise.resolve(fromEnv);
+    this.appVersionCache ??= fs
+      .readFile(path.join(this.cwd(), "apps", "desktop", "package.json"), "utf8")
+      .then((raw) => {
+        const version: unknown = (JSON.parse(raw) as { version?: unknown }).version;
+        return typeof version === "string" && version ? version : undefined;
+      })
+      .catch(() => undefined);
+    return this.appVersionCache;
+  }
+
+  /** App version vs. the newest `desktop-v*` release. Never throws — a failed
+   * GitHub lookup just means no update is offered. */
+  private async appReleaseFields(): Promise<
+    Pick<
+      SelfStatus,
+      "appVersion" | "latestAppVersion" | "latestAppReleaseUrl" | "appUpdateAvailable"
+    >
+  > {
+    const [appVersion, latest] = await Promise.all([this.appVersion(), this.latestRelease.get()]);
+    return {
+      ...(appVersion ? { appVersion } : {}),
+      ...(latest ? { latestAppVersion: latest.version } : {}),
+      ...(latest?.url ? { latestAppReleaseUrl: latest.url } : {}),
+      appUpdateAvailable:
+        appVersion !== undefined && latest !== undefined && isNewer(latest.version, appVersion),
+    };
   }
 
   /** The install's `origin` URL, or `""` when there is none / not a repo. */
@@ -294,6 +332,11 @@ export class SelfService {
    * returns {@link NOT_A_REPO_STATUS} outright.
    */
   async status(): Promise<SelfStatus> {
+    const [repo, app] = await Promise.all([this.repoStatus(), this.appReleaseFields()]);
+    return { ...repo, ...app };
+  }
+
+  private async repoStatus(): Promise<Omit<SelfStatus, "appUpdateAvailable">> {
     const match = await this.selfProjectMatch();
     const projectField = match
       ? { projectId: match.project.id, projectUsesInstallTree: match.usesInstallTree }

@@ -63,6 +63,7 @@ import { book } from "./book";
 import { layout } from "./layout";
 import { sparkles } from "./sparkles";
 import { menu } from "./menu";
+import { upgrade } from "./upgrade";
 
 /** Every glyph available in the dashboard icon set. */
 export const iconNames = [
@@ -129,6 +130,7 @@ export const iconNames = [
   "layout",
   "sparkles",
   "menu",
+  "upgrade",
 ] as const;
 
 export type IconName = (typeof iconNames)[number];
@@ -198,4 +200,5 @@ export const paths: Record<IconName, ReactNode> = {
   layout,
   sparkles,
   menu,
+  upgrade,
 };

@@ -33,6 +33,7 @@ const BASE: SelfStatus = {
     { number: 13, title: "Add feature", url: "https://github.com/o/r/pull/13" },
   ],
   ghAvailable: true,
+  appUpdateAvailable: false,
 };
 
 type Options = { onSuccess?: (r: unknown) => void; onError?: (e: unknown) => void };
