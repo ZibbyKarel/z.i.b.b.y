@@ -529,8 +529,10 @@ gitignored; only the `_`-prefixed settings file `_config.json` is versioned. Eac
 per project with a roadmap:
 
 1. drives `reconcileRunning` + `reconcileAwaitingMerge`;
-2. runs `RoadmapGateService.autoPickup` for every project whose effective `autoPlay`
-   is true (a company default `autoPlay: true` enables it for inheriting projects).
+2. runs `RoadmapGateService.autoPickup` for every project whose effective Autopilot
+   `autoImplement` is true (team > company > global, `docs/api/autopilot.md`; always false while
+   Autopilot is off). The legacy `_config.json` `autoPlay` / `Company.roadmapDefaults` are
+   deprecated and no longer read.
 
 Step 1 is the **poll half** of the two release signals. It is what catches a PR
 **merged directly on GitHub**, where the eager `recordMerge` hook never fires at all —

@@ -65,8 +65,15 @@ switch-on pre-fills it. A state without `automation` means all three global togg
 | `GET /api/autopilot` | none                      | The state plus `pendingApprovals` (the count waiting now)                                         |
 | `PUT /api/autopilot` | operator token for `full` | `{ level, scope?, automation? }`. `full` without the token returns `401`; `off` is always allowed |
 
-`scope` only counts with `full`; omitted means all on. Setting the level (and scope) it already
-has does nothing: the file isn't written and no notice is sent.
+`scope` only counts with `full`; omitted means all on. Setting the same level, scope and
+automation tree again is a no-op (the file isn't written, no notice is sent). Switching on or off
+is never pushed to Slack.
+
+`automation` is the Global → Company → Team override tree of `autoImplement`, `autoReview` and
+`autoAddressComments` (team > company > global; all `false` while the level is `off`). The roadmap
+tick (`autoImplement`) and `PrAutomationService` (`autoReview`, `autoAddressComments`) read it via
+`AutopilotService.automationFor`; the per-project `_config.json` toggles and
+`Company.roadmapDefaults` are deprecated and no longer read.
 
 The chat MCP tool `autopilot_off` calls the same service with `by: "chat"`. There is no tool
 that turns it on. The self-API also denies the `autopilot` router, so `api_call` can't reach

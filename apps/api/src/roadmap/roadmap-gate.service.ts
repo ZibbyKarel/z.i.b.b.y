@@ -60,8 +60,8 @@ export function parsePrNumberFromUrl(url: string): number | undefined {
  *
  * **Where a dispatch may come from.** Two provenances, and only two: an operator's
  * `play`/`playBulk`/`restart`/`resume` click, or {@link autoPickup} on a project
- * that has explicitly opted in via `RoadmapConfig.autoPlay` (off by default, set
- * per project on the Integrations tab). The opt-in IS the operator's consent —
+ * that the Autopilot `autoImplement` toggle covers (Global → Company → Team tree,
+ * off while Autopilot is off). The toggle IS the operator's consent —
  * standing instead of per-item. Neither provenance reaches past the merge gate:
  * this service only ever creates a task on its own branch and waits, so Law 3
  * ("no autonomous commit to the outside world") holds unchanged — nothing here

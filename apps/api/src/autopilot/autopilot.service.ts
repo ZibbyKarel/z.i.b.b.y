@@ -262,7 +262,8 @@ export class AutopilotService implements OnModuleInit {
 
   /**
    * Switch the level. Authorization is the caller's: only the operator-token route may
-   * pass `full`. Re-setting the current level is a no-op (no file write, no notice).
+   * pass `full`. A no-op (no file write) only when level, scope and automation tree are all unchanged.
+   * On/off is never pushed to Slack.
    */
   async set(
     level: AutopilotLevel,

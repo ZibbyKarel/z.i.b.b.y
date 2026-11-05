@@ -1,7 +1,7 @@
 import type {
+  AutomationToggles,
   Company,
   InboxPr,
-  RoadmapConfig,
   ScheduledTask,
   SystemConfig,
 } from "@zibby/contracts";
@@ -96,13 +96,30 @@ function addressTask(
 describe("PrAutomationService (todo-16)", () => {
   let prs: InboxPr[];
   let tasks: ScheduledTask[];
-  let configs: Record<string, Partial<RoadmapConfig>>;
+  // Per-project team overrides (the stub maps teamId === project id), company overrides by id.
+  let configs: Record<string, Partial<AutomationToggles>>;
+  let companyTree: Record<string, Partial<AutomationToggles>>;
+  let companyByProject: Record<string, Company>;
   let company: Company | undefined;
+  let autopilotOn: boolean;
   let inbox: { listPrs: ReturnType<typeof vi.fn> };
   let review: { start: ReturnType<typeof vi.fn>; listPrFiles: ReturnType<typeof vi.fn> };
   let address: { start: ReturnType<typeof vi.fn> };
   let activity: { record: ReturnType<typeof vi.fn> };
   let taskCounter: number;
+
+  const autopilot = {
+    automationFor: ({ companyId, teamId }: { companyId?: string; teamId?: string }) => {
+      if (teamId === "broken") throw new Error("unsafe id");
+      const off = { autoImplement: false, autoReview: false, autoAddressComments: false };
+      if (!autopilotOn) return off;
+      return {
+        ...off,
+        ...(companyId ? companyTree[companyId] : {}),
+        ...(teamId ? configs[teamId] : {}),
+      };
+    },
+  };
 
   const make = (sys: Partial<SystemConfig> = {}) =>
     new PrAutomationService(
@@ -111,22 +128,12 @@ describe("PrAutomationService (todo-16)", () => {
       address as never,
       { list: async () => tasks } as never,
       {
-        readConfig: async (id: string) => {
-          if (id === "broken") throw new Error("unsafe id");
-          return {
-            autoPlay: null,
-            autoReview: null,
-            autoAddressComments: null,
-            ...configs[id],
-          };
-        },
-      } as never,
-      {
-        get: async (id: string) => ({ id, name: id, path: `/repos/${id}` }),
+        get: async (id: string) => ({ id, name: id, path: `/repos/${id}`, teamId: id }),
         list: async () =>
           Object.keys(configs).map((id) => ({ id, name: id, path: `/repos/${id}` })),
       } as never,
-      { resolveCompany: async () => company } as never,
+      { resolveCompany: async (p: { id: string }) => companyByProject[p.id] ?? company } as never,
+      autopilot as never,
       activity as never,
       fakeSystemConfigStore(sys),
       { register: () => {} } as never,
@@ -138,6 +145,9 @@ describe("PrAutomationService (todo-16)", () => {
     tasks = [];
     configs = { p1: { autoReview: true, autoAddressComments: true } };
     company = undefined;
+    companyTree = {};
+    companyByProject = {};
+    autopilotOn = true;
     taskCounter = 0;
     inbox = { listPrs: vi.fn(async () => ({ prs, errors: [] })) };
     review = {
@@ -186,16 +196,18 @@ describe("PrAutomationService (todo-16)", () => {
       expect(review.start).not.toHaveBeenCalled();
     });
 
-    it("inherits autoReview from the company's roadmapDefaults", async () => {
+    it("inherits autoReview from the company's Autopilot override", async () => {
       configs = { p1: {} };
-      company = { id: "co", name: "Co", roadmapDefaults: { autoReview: true } };
+      company = { id: "co", name: "Co" };
+      companyTree = { co: { autoReview: true } };
       await make().tick();
       expect(review.start).toHaveBeenCalledTimes(1);
     });
 
-    it("a project's explicit false beats the company default", async () => {
+    it("a team's explicit false beats the company override", async () => {
       configs = { p1: { autoReview: false } };
-      company = { id: "co", name: "Co", roadmapDefaults: { autoReview: true } };
+      company = { id: "co", name: "Co" };
+      companyTree = { co: { autoReview: true } };
       await make().tick();
       expect(review.start).not.toHaveBeenCalled();
     });
@@ -374,11 +386,31 @@ describe("PrAutomationService (todo-16)", () => {
     expect(inbox.listPrs).not.toHaveBeenCalled();
   });
 
-  it("m1 — a company default alone switches the inbox read on", async () => {
+  it("m1 — a company override alone switches the inbox read on", async () => {
     configs = { p1: {} };
-    company = { id: "co", name: "Co", roadmapDefaults: { autoAddressComments: true } };
+    company = { id: "co", name: "Co" };
+    companyTree = { co: { autoAddressComments: true } };
     await make().tick();
     expect(inbox.listPrs).toHaveBeenCalledTimes(1);
+  });
+
+  it("autopilot off → every toggle false: GitHub is not queried even with a stored tree", async () => {
+    autopilotOn = false;
+    expect(await make().tick()).toEqual({ started: 0 });
+    expect(inbox.listPrs).not.toHaveBeenCalled();
+  });
+
+  it("autoReview via a company override reviews only that company's project", async () => {
+    configs = { p1: {}, p2: {} };
+    companyByProject = { p1: { id: "co", name: "Co" }, p2: { id: "other", name: "Other" } };
+    companyTree = { co: { autoReview: true } };
+    prs = [pr({ projectId: "p1", number: 1 }), pr({ projectId: "p2", number: 2 })];
+    expect(await make().tick()).toEqual({ started: 1 });
+    expect(review.start).toHaveBeenCalledTimes(1);
+    expect(review.start).toHaveBeenCalledWith(
+      expect.objectContaining({ projectId: "p1", number: 1 }),
+      expect.anything(),
+    );
   });
 
   it("fails open per PR: one start throwing does not stop the tick", async () => {
@@ -412,9 +444,15 @@ describe("PrAutomationService (todo-16)", () => {
           throw new Error("disk");
         },
       } as never,
-      { readConfig: async () => ({ autoReview: true }) } as never,
       { get: async (id: string) => ({ id }), list: async () => [{ id: "p1" }] } as never,
       { resolveCompany: async () => undefined } as never,
+      {
+        automationFor: () => ({
+          autoImplement: false,
+          autoReview: true,
+          autoAddressComments: false,
+        }),
+      } as never,
       activity as never,
       fakeSystemConfigStore(),
       { register: () => {} } as never,

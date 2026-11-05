@@ -1,7 +1,13 @@
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { Company, Project, RoadmapItem, ScheduledTask } from "@zibby/contracts";
+import type {
+  AutomationToggles,
+  Company,
+  Project,
+  RoadmapItem,
+  ScheduledTask,
+} from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
 import { RoadmapGateService } from "./roadmap-gate.service";
@@ -22,8 +28,26 @@ describe("RoadmapTickService", () => {
   };
   let activity: { record: ReturnType<typeof vi.fn> };
   let company: Company | undefined;
-  const projects = { get: async (id: string) => ({ id, name: id, path: `/repos/${id}` }) };
+  let autopilotOn: boolean;
+  let globalToggles: Partial<AutomationToggles>;
+  let companyToggles: Record<string, Partial<AutomationToggles>>;
+  let teamToggles: Record<string, Partial<AutomationToggles>>;
+  const projects = {
+    get: async (id: string) => ({ id, name: id, path: `/repos/${id}`, teamId: "team-1" }),
+  };
   const resolvedProjects = { resolveCompany: async () => company };
+  const autopilot = {
+    automationFor: ({ companyId, teamId }: { companyId?: string; teamId?: string }) => {
+      const off = { autoImplement: false, autoReview: false, autoAddressComments: false };
+      if (!autopilotOn) return off;
+      return {
+        ...off,
+        ...globalToggles,
+        ...(companyId ? companyToggles[companyId] : {}),
+        ...(teamId ? teamToggles[teamId] : {}),
+      };
+    },
+  };
 
   const makeTick = () =>
     new RoadmapTickService(
@@ -33,6 +57,7 @@ describe("RoadmapTickService", () => {
       { register: () => {} } as never,
       projects as never,
       resolvedProjects as never,
+      autopilot as never,
       fakeLogger as never,
     );
 
@@ -41,6 +66,10 @@ describe("RoadmapTickService", () => {
     store = new RoadmapStore(dir);
     await store.onModuleInit();
     company = undefined;
+    autopilotOn = true;
+    globalToggles = {};
+    companyToggles = {};
+    teamToggles = {};
     gate = {
       reconcileRunning: vi.fn(async () => {}),
       reconcileAwaitingMerge: vi.fn(async () => {}),
@@ -64,37 +93,57 @@ describe("RoadmapTickService", () => {
     expect(gate.autoPickup).not.toHaveBeenCalled();
   });
 
-  it("picks up work for a project with autoPlay: true", async () => {
+  it("picks up work when autopilot is on and the global autoImplement is true", async () => {
+    await store.writeConfig("acme", {});
+    globalToggles = { autoImplement: true };
+
+    await makeTick().tick();
+
+    expect(gate.autoPickup).toHaveBeenCalledWith("acme");
+  });
+
+  it("does NOT pick up while autopilot is off, even with the tree saying true", async () => {
+    await store.writeConfig("acme", {});
+    globalToggles = { autoImplement: true };
+    autopilotOn = false;
+
+    await makeTick().tick();
+
+    expect(gate.reconcileRunning).toHaveBeenCalledWith("acme");
+    expect(gate.autoPickup).not.toHaveBeenCalled();
+  });
+
+  it("a team override autoImplement:false beats the global true", async () => {
+    await store.writeConfig("acme", {});
+    globalToggles = { autoImplement: true };
+    teamToggles = { "team-1": { autoImplement: false } };
+
+    await makeTick().tick();
+
+    expect(gate.autoPickup).not.toHaveBeenCalled();
+  });
+
+  it("a company override applies to its project", async () => {
+    await store.writeConfig("acme", {});
+    company = { id: "co", name: "Co" };
+    companyToggles = { co: { autoImplement: true } };
+
+    await makeTick().tick();
+
+    expect(gate.autoPickup).toHaveBeenCalledWith("acme");
+  });
+
+  it("the legacy _config.json autoPlay:true alone no longer triggers pickup", async () => {
     await store.writeConfig("acme", { autoPlay: true });
-    const tick = makeTick();
 
-    await tick.tick();
-
-    expect(gate.autoPickup).toHaveBeenCalledWith("acme");
-  });
-
-  it("inherits autoPlay from the company's roadmapDefaults when the project says null (D8)", async () => {
-    await store.writeConfig("acme", { autoPlay: null });
-    company = { id: "co", name: "Co", roadmapDefaults: { autoPlay: true } };
-    const tick = makeTick();
-
-    await tick.tick();
-
-    expect(gate.autoPickup).toHaveBeenCalledWith("acme");
-  });
-
-  it("a project's explicit false beats the company default", async () => {
-    await store.writeConfig("acme", { autoPlay: false });
-    company = { id: "co", name: "Co", roadmapDefaults: { autoPlay: true } };
-    const tick = makeTick();
-
-    await tick.tick();
+    await makeTick().tick();
 
     expect(gate.autoPickup).not.toHaveBeenCalled();
   });
 
   it("picks up LAST — after both reconcile passes have run", async () => {
-    await store.writeConfig("acme", { autoPlay: true });
+    await store.writeConfig("acme", {});
+    globalToggles = { autoImplement: true };
     const order: string[] = [];
     gate.reconcileRunning.mockImplementation(async () => void order.push("reconcileRunning"));
     gate.reconcileAwaitingMerge.mockImplementation(
@@ -110,8 +159,9 @@ describe("RoadmapTickService", () => {
   });
 
   it("one project's auto-pickup failure never blocks another project's tick", async () => {
-    await store.writeConfig("broken", { autoPlay: true });
-    await store.writeConfig("fine", { autoPlay: true });
+    await store.writeConfig("broken", {});
+    await store.writeConfig("fine", {});
+    globalToggles = { autoImplement: true };
     gate.autoPickup.mockImplementation(async (projectId: string) => {
       if (projectId === "broken") throw new Error("boom");
     });
@@ -137,27 +187,17 @@ describe("RoadmapTickService", () => {
     expect(gate.reconcileAwaitingMerge).toHaveBeenCalledWith("fine");
   });
 
-  it("a project whose readConfig itself throws never blocks another project's tick", async () => {
-    await store.writeConfig("fine", { autoPlay: true });
-    // "broken" has no _config.json at all but IS a real directory under the
-    // root (readConfig degrades to defaults for a missing file, so simulate a
-    // harder failure — projectIds() lists a dir that readConfig then rejects).
-    const readConfigSpy = vi
-      .spyOn(store, "readConfig")
-      .mockImplementation(async (projectId: string) => {
-        if (projectId === "broken") throw new Error("unreadable");
-        return { autoPlay: true, autoReview: null, autoAddressComments: null };
-      });
-    await fs.mkdir(path.join(dir, "broken"), { recursive: true });
-    const tick = makeTick();
+  it("a project whose toggle resolution throws never blocks another project's tick", async () => {
+    await store.writeConfig("broken", {});
+    await store.writeConfig("fine", {});
+    const spy = vi.spyOn(autopilot, "automationFor");
+    spy.mockImplementationOnce(() => {
+      throw new Error("unreadable");
+    });
+    await makeTick().tick();
 
-    await tick.tick();
-
-    // "broken"'s readConfig threw, so its whole tickProject step aborted —
-    // but "fine" still ran to completion.
-    expect(gate.reconcileRunning).toHaveBeenCalledWith("fine");
-    expect(gate.reconcileRunning).not.toHaveBeenCalledWith("broken");
-    readConfigSpy.mockRestore();
+    expect(gate.reconcileRunning).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
   });
 
   describe("poll path — a PR merged directly on GitHub (real RoadmapGateService)", () => {
@@ -266,6 +306,7 @@ describe("RoadmapTickService", () => {
         { register: () => {} } as never,
         projects as never,
         resolvedProjects as never,
+        { automationFor: () => ({ autoImplement: false }) } as never,
         fakeLogger as never,
       );
 
