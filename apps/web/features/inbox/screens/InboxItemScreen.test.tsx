@@ -1,6 +1,7 @@
 import type { InboxItemsResponse, InboxRoadmapItem } from "@zibby/contracts";
-import { describe, expect, it, vi } from "vitest";
-import { renderWithProviders, screen } from "../../../test/render";
+import { CopyableTextTestId } from "@zibby/design-system";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, renderWithProviders, screen } from "../../../test/render";
 import { InboxItemScreen, InboxItemScreenTestId } from "./InboxItemScreen";
 
 const { hooks } = vi.hoisted(() => ({
@@ -61,6 +62,18 @@ function setData(items: InboxRoadmapItem[], epics: InboxItemsResponse["epics"] =
 }
 
 describe("InboxItemScreen meta panel", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("shows the issue key with a copy button that copies it", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    setData([item({})]);
+    renderWithProviders(<InboxItemScreen itemId="i1" projectId="api" />);
+    expect(screen.getByTestId(CopyableTextTestId.Text)).toHaveTextContent("API-1");
+    fireEvent.click(screen.getByTestId(CopyableTextTestId.Copy));
+    expect(writeText).toHaveBeenCalledWith("API-1");
+  });
+
   it("links project, company and team names to their detail pages", () => {
     setData([item({ companyId: "acme", teamId: "core" })]);
     renderWithProviders(<InboxItemScreen itemId="i1" projectId="api" />);

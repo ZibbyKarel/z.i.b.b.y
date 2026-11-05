@@ -1,5 +1,6 @@
 import {
   AnchoredSheetTestId,
+  CopyableTextTestId,
   MarkdownTestId,
   NeedsYouCardTestId,
   StatCellTestId,
@@ -71,6 +72,13 @@ describe("IssueSheet", () => {
     expect(screen.queryByText(/Otevřít v Jira/)).toBeNull();
     fireEvent.click(screen.getByText("Zpracovat do úkolu"));
     expect(process).toHaveBeenCalledOnce();
+  });
+
+  it("shows the issue key in the eyebrow with a copy button", () => {
+    hooks.items = [item("todo")];
+    renderWithProviders(<IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />);
+    expect(screen.getByTestId(CopyableTextTestId.Text)).toHaveTextContent("ZB-1");
+    expect(screen.getByTestId(CopyableTextTestId.Copy)).toBeInTheDocument();
   });
 
   it("shows the source status instead of the ZIBBY state for new/running", () => {

@@ -28,13 +28,14 @@ export function CopyableText({ text, copyLabel = "Copy", mono = true }: Copyable
       >
         {text}
       </span>
-      <span className="inline-flex opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+      {/* negative margin cancels the button's padding so the text line height is unchanged */}
+      <span className="-my-[7px] inline-flex opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
         <Button
           aria-label={copyLabel}
           data-testid={CopyableTextTestId.Copy}
           icon="copy"
           intent="ghost"
-          onClick={() => void navigator.clipboard?.writeText(text)}
+          onClick={() => void navigator.clipboard?.writeText(text).catch(() => {})}
           size="sm"
           title={copyLabel}
         />

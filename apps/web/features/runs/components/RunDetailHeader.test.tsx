@@ -1,5 +1,5 @@
 import { renderWithProviders as render, screen, within } from "../../../test/render";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { CopyableTextTestId, MetricStripTestId, StatePillTestId } from "@zibby/design-system";
 import type { RunView } from "../run";
@@ -51,6 +51,8 @@ function renderHeader(over: Partial<RunView> = {}, compact = false) {
 }
 
 describe("RunDetailHeader", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   beforeEach(() => {
     push.mockClear();
     projectsRef.current = [];
@@ -74,7 +76,6 @@ describe("RunDetailHeader", () => {
     expect(screen.getByTestId(CopyableTextTestId.Text)).toHaveTextContent("delivery_42");
     await userEvent.click(screen.getByTestId(CopyableTextTestId.Copy));
     expect(writeText).toHaveBeenCalledWith("delivery_42");
-    vi.unstubAllGlobals();
   });
 
   it("back, task and agent links navigate", async () => {
